@@ -50,27 +50,24 @@ def __parallel_for_body(SAM, all_genes,n_genes, exp_idx,chr_list, order, read_le
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     subparsers = parser.add_subparsers(dest='operation')
-
-# create the parser for the "input" command
-    parser_input = subparsers.add_parser('input', help='input file and create binary file')
+    # create the parser for the "input" command
+    parser_input = subparsers.add_parser('input', help='Input file and create binary file')
     parser_input.add_argument('transcripts', action= "store", help='read file in SAM format')
     parser_input.add_argument('junc_dir', action= "store", help='reads directory in SAM format')
     parser_input.add_argument('-r', action='store_true', default=False)
     parser_input.add_argument('-o','--output', dest='output',action= "store", help='casete exon list file')
-# create the parser for the "load" command
-    parser_input = subparsers.add_parser('load', help='load binary file')
-    parser_input.add_argument('bin', action= "store", help='read file in SAM format')
-    parser_input.add_argument('junc', action= "store", help='read file in SAM format')
+    # create the parser for the "load" command
+    parser_input = subparsers.add_parser('load', help='Load binary file')
+    parser_input.add_argument('bin', action= "store", help='read binary file')
+    parser_input.add_argument('junc', action= "store", help='read read binary juntion file')
     parser_input.add_argument('-o','--output', dest='output',action= "store", help='casete exon list file')
-# create the parser for the "test" command
+    # create the parser for the "test" command
     parser_input = subparsers.add_parser('test', help='Execute test file')
     parser_input.add_argument('test_file', action= "store", help='read file in SAM format')
-
     parser.add_argument('-g','--genome', dest="genome",help='Genome version an species"')
     parser.add_argument('-l','--readlen', dest="readlen",type=int,default='76',help='Length of reads in the samfile"')
     parser.add_argument('-t','--ncpus', dest="ncpus",    type=int,default='4',help='Length of reads in the samfile"')
     args = parser.parse_args()
-
     print args
 
     if args.operation == 'test':

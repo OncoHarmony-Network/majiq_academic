@@ -5,10 +5,8 @@ from pylab import *
 from matplotlib import pyplot
 
 
-
 file = '/Volumes/data/ucsc/reads/test_1k/test.mat'
-
-heart1 = scipy.io.loadmat( file)
+heart1 = scipy.io.loadmat(file)
 
 
 RPKMlist = []

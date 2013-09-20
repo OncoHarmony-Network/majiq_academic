@@ -8,8 +8,6 @@ from matplotlib import pyplot
 from scipy.stats import poisson
 from scipy.stats.mstats import mquantiles
 
-
-
 tissues = {'Heart':[0,1,2,3],'Hippocampus':[4,5,6,7],'Lung':[8,9,10,11],'Spleen':[12,13,14,15],'Thymus':[16,17,18,19,20]}
 #tissues = {'Heart':[0,1],'Hippocampus':[2,3],'Lung':[4,5],'Spleen':[6,7],'Thymus':[8,9]}
 tissues = {'Heart':[0]}
@@ -40,17 +38,12 @@ for fl_idx, fl in enumerate(files):
     fil = dr+'test_'+fl
     print fl
     heart1 = scipy.io.loadmat( fil)
-    
-
-
     readxpos_mean = [0]*77
     readxpos_var = [0]*77
     id2 = 0
-
     list_p = []
     p2 = []
     xpos = [[] for ii in range(77)]
-
     total_gen = len(heart1['RNASEQ_INFO'][0])
     for ii in heart1['RNASEQ_INFO'][0]:
         if id2 % 100 ==0: print "%d/%d"%(id2,total_gen)

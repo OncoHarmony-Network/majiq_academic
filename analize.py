@@ -7,18 +7,14 @@ from utils import utils, stats
 import globals
 
 def analize_genes(gene_list, out_file, pos_list, neg_list, ASvsConst = 'AS'):
-
  #   of = open("%s_%s"%(out_file,ASvsConst), 'w+')
     ok_detect = 0
     wrong_detect = 0
     total = 0
     out_list=set()
 
-
-
     for strand,glist in gene_list.items():
         for gn in glist:
-
             as_db_list = []
             gn.get_exon_list()
             if len(gn.transcript_list ) == 1 and ASvsConst == 'AS': continue
@@ -31,7 +27,9 @@ def analize_genes(gene_list, out_file, pos_list, neg_list, ASvsConst = 'AS'):
                         mat[idx_t,g_ex.id-1]= 1
                     else:
                         mat[idx_t,g_ex.id-1]= 0
+
                 idx_t +=1
+                
             if ASvsConst == 'AS':
                 out = analize_gene_bin_matrix(mat)
             else:
@@ -228,16 +226,22 @@ def analize_junction_reads_with_DB(gene_list, alt_list, const_list, b_list ):
                             del pp
                             break
                 idxn +=1
+
     if not False in b_list:
         print "RESULT ALL ENABLED"
-    elif b_list[0]== False:
+
+    elif not b_list[0]:
         print "RESULT I"
-    elif b_list[1]== False:
+
+    elif not b_list[1]:
         print "RESULT II"
-    elif b_list[2]== False:
+
+    elif not b_list[2]:
         print "RESULT III"
+
     for idxn in range(2):
         print "%s \tCORRECT: %d, FALSE: %d, TOTAL: %d"%(ASvsConst[idxn],ok_detect[idxn], wrong_detect[idxn],total[idxn])
+    
     return conj_list
 
 
@@ -424,7 +428,6 @@ def analize_junction_reads( gene_list,chr ):
     return
 
 def rnaSeq_const_detection(mat, exon_to_ss, b_list, pre_list=None):
-
     '''
        Rules for const are:
         1. All the junction from A should go to C1 or C2
