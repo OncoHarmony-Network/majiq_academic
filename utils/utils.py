@@ -3,6 +3,19 @@ import numpy as np
 #from scipy.sparse import lil_matrix
 import scipy.sparse
 import pickle,sys
+import globals
+
+
+def prepare_junctions_gc( junc , exp_idx):
+    
+    gc = np.zeros(shape=(globals.readLen - 16+1))
+    gci = np.zeros(shape=(globals.readLen - 16+1))
+    for jj in range(globals.readLen - 16+1) :
+        if not junc is None and junc.get_gc_content()[exp_idx,jj] != 0:
+            gci[jj] = __gc_factor_ind(junc.get_gc_content()[exp_idx,jj],exp_idx)
+            gc[jj] = globals.gc_factor[exp_idx](junc.get_gc_content()[exp_idx,jj])
+
+    return gc, gci
 
 
 '''

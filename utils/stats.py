@@ -1,7 +1,6 @@
 import numpy as np
 import globals
 
-
 def junction_expression( junc_pos_array, gc, gc_factor_per_pos, k ):
 
     num_pos = junc_pos_array.shape[0]

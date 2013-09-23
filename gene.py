@@ -29,6 +29,7 @@ class Gene:
         self.RPKM = [float(0)]*globals.num_experiments
 
         self.transAScandidates = []
+        self.transCONSTcandidates = []
 
     def __hash__(self):
         return hash((self.id,self.chromosome, self.strand, self.start, self.end))
@@ -50,14 +51,18 @@ class Gene:
 
     def get_transcript_AS_candidates(self):
         return (self.transAScandidates)
+    def get_transcript_CONST_candidates(self):
+        return (self.transCONSTcandidates)
 
     ''' Set functions '''
 
     def add_transcript_AS_candidates(self,list_candidates):
         self.transAScandidates += list_candidates
-
         return
 
+    def add_transcript_CONST_candidates(self,list_candidates):
+        self.transCONSTcandidates += list_candidates
+        return
 
     def add_transcript(self, tcrpt ):
         if tcrpt.txstart < self.start :

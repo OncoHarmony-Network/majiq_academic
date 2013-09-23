@@ -85,7 +85,8 @@ def reads_for_junc_coverage(filename, gene_list, readlen, exp_index):
                 j_list = gene.get_all_junctions()
                 for (junc_start,junc_end) in read.get_junctions_info():
                     if junc_start - r_start > readlen : 
-                        r_start = junc_start - readlen
+                        r_start = junc_start - (readlen - 16) -1
+                    elif junc_start - r_start >= readlen -8 or junc_start -r_start <= 8: continue
                     found = False
                     if junc_end - junc_start < 10 :
                         counter[0] +=1
@@ -97,7 +98,7 @@ def reads_for_junc_coverage(filename, gene_list, readlen, exp_index):
                         elif junc_start == j_st and junc_end == j_ed:
                             ''' update junction and add to list'''
                             counter[3] +=1
-                            jj.update_junction_read(exp_index,n_reads,r_start, read.get_GCcontent())
+                            jj.update_junction_read(exp_index,n_reads,r_start, read.get_GCcontent(), read.get_unique())
                             if not (junc_start,'5prime',jj) in junctions[strand]:
                                 junctions[strand].append((junc_start,'5prime',jj))
                                 junctions[strand].append((junc_end,'3prime',jj))
@@ -111,7 +112,7 @@ def reads_for_junc_coverage(filename, gene_list, readlen, exp_index):
                         for (coord,t,j) in junctions[gene.strand]:
                             if (j.start == junc_start and j.end == junc_end):
                                 junc = j
-                                junc.update_junction_read(exp_index, n_reads, r_start, read.get_GCcontent())
+                                junc.update_junction_read(exp_index, n_reads, r_start, read.get_GCcontent(), read.get_unique())
                                 break
                             #end if (j.start) == ...
                         #end for (coord,t,j) ...
@@ -119,7 +120,7 @@ def reads_for_junc_coverage(filename, gene_list, readlen, exp_index):
                             '''mark a new junction '''
                             counter[4] += 1
                             junc = Junction( junc_start, junc_end, None, None, gene, readN=n_reads)
-                            junc.update_junction_read(exp_index, n_reads, r_start, read.get_GCcontent())
+                            junc.update_junction_read(exp_index, n_reads, r_start, read.get_GCcontent(), read.get_unique())
                             junctions[strand].append((junc_start,'5prime',junc))
                             junctions[strand].append((junc_end,'3prime',junc))
                     #end if not found ...

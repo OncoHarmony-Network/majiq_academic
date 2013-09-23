@@ -18,7 +18,6 @@ except:
     import pickle
 
 
-
 def __parallel_for_splc_quant(sam_dir, gene_list,n_genes, chr, order,as_db):
 #    reference_genes = copy.deepcopy(all_genes)
     print "START child,", multiprocessing.current_process().name
@@ -27,6 +26,7 @@ def __parallel_for_splc_quant(sam_dir, gene_list,n_genes, chr, order,as_db):
         rnaseq_io.reads_for_junc_coverage(SAM, gene_list, globals.readLen, idx )
     print "END child, ", multiprocessing.current_process().name
     TAS = analize.analize_genes(gene_list, "kk", as_db, None, 'AS')
+    CONST = analize.analize_genes(gene_list, "kk", as_db, None, 'CONST')
     analize.analize_junction_reads( gene_list,chr )
     return gene_list
 
