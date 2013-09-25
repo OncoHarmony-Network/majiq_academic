@@ -37,6 +37,7 @@ def global_init(readL):
     num_experiments = len(exp_list)
     readLen = readL
     gc_factor = [None]*num_experiments
+    """
     with open(r"/home/jordi/working/GCcontent/gc_content_factors.dat", "rb") as input_file:
         temp = cPickle.load(input_file)
     for idx, exp in enumerate(exp_list):
@@ -46,3 +47,4 @@ def global_init(readL):
             print "error at global init, not found experiment", exp
             exit(1)
         gc_factor[idx] = interpolate.interp1d(temp[exp][0], temp[exp][1], kind='cubic',bounds_error=False )
+    """

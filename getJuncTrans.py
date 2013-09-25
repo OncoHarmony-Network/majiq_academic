@@ -66,15 +66,14 @@ if __name__ == "__main__":
     parser_input.add_argument('test_file', action= "store", help='read file in SAM format')
     parser.add_argument('-g','--genome', dest="genome",help='Genome version an species"')
     parser.add_argument('-l','--readlen', dest="readlen",type=int,default='76',help='Length of reads in the samfile"')
-    parser.add_argument('-t','--ncpus', dest="ncpus",    type=int,default='4',help='Length of reads in the samfile"')
+    parser.add_argument('-t','--ncpus', dest="ncpus",    type=int,default='4',help='Number of CPUs to use')
     args = parser.parse_args()
     print args
 
     if args.operation == 'test':
         read_test_file(args.transcripts)
-        exit
+       
     elif args.operation == 'input':
-
         globals.global_init(args.readlen)
         print globals.num_experiments,globals.readLen
         all_genes = rnaseq_io.read_transcript_ucsc(args.transcripts,refSeq=args.r)
