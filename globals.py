@@ -1,14 +1,32 @@
 import cPickle
 from scipy import interpolate
+import numpy as np
 
 num_experiments = 0
 exp_list=[]
 readLen = 0
 gc_factor = []
 
-def global_init(readL):
-    global num_experiments, exp_list,readLen, gc_factor,weigh_factor
+
+#def global_init(config_file):
+#
+#
+#    global num_experiments, exp_list,readLen, gc_factor,weigh_factor
+#   
+#
+#    fp = open(config_file)
+#
+#    for ii in fp.readline() :
+#        if ii.startswith('#') : continue
+#        tab = ii.strip().split('=')
+#        if tab[0] == 'EXPERIMENTS' :
+#            tab[1].replace('\s','')
+            
+
     
+def global_init(readL):
+
+    global num_experiments, exp_list,readLen, gc_factor,weigh_factor, gc_bins,gc_bins_val, tissue_repl
     exp_list = ['Heart1.chr1','Heart3.chr1','Heart5.chr1','Heart6.chr1',
                 'Hippocampus1.chr1','Hippocampus2.chr1','Hippocampus4.chr1','Hippocampus5.chr1','Hippocampus6.chr1',
                 'Liver1.chr1','Liver2.chr1','Liver3.chr1','Liver4.chr1','Liver5.chr1','Liver6.chr1',
@@ -24,9 +42,14 @@ def global_init(readL):
  #               'Thymus1.chr1','Thymus2.chr1']
     
 #    exp_list =  ['Heart1.chr6','Hippocampus1.chr6']
-    exp_list =  ['Heart1.chr1','Hippocampus1.chr1']
-#    exp_list =  ['Hrt_CT22.chr1','Hyp_CT22.chr1']
-#exp_list =  ['Heart1.chr1','Heart3.chr1','Heart5.chr1','Heart6.chr1']
+    #exp_list =  ['Heart1.chr1','Hippocampus1.chr1']
+#    exp_list =  ['Hippocampus1.chr1','Liver1.chr1']
+#    exp_list =  ['Liv_CT22.chr1','Hyp_CT22.chr1']
+    exp_list =  ['Heart1.chr1','Heart3.chr1']
+    exp_list = [ 'Hippocampus1.chr1','Hippocampus2.chr1','Hippocampus4.chr1','Hippocampus5.chr1','Hippocampus6.chr1',
+                'Liver1.chr1','Liver2.chr1','Liver3.chr1','Liver4.chr1','Liver5.chr1','Liver6.chr1']
+    tissue_repl = {'Hippocampus.chr1':[0,1,2,3,4],'Liver.chr1':[5,6,7,8,9,10]}
+#    tissue_repl = {'Heart.chr1':[0,1,]}
 #    exp_list =  ['Heart1.chr1']
     
     weigh_factor = [0, 0, 0, 0, 0, 0, 0, 0, 0.0, 0.67221794713393235, 
@@ -37,14 +60,19 @@ def global_init(readL):
     num_experiments = len(exp_list)
     readLen = readL
     gc_factor = [None]*num_experiments
-    """
+    gc_bins_val = [None]*num_experiments
     with open(r"/home/jordi/working/GCcontent/gc_content_factors.dat", "rb") as input_file:
-        temp = cPickle.load(input_file)
+#    with open(r"/data/ucsc/reads/test_1k/hog/gc_content_factors_Hog.dat", "rb") as input_file:
+        temp,gc_bins = cPickle.load(input_file)
+#    print temp
     for idx, exp in enumerate(exp_list):
         exp = exp.replace(".chr1","").lower()
-        print temp
+#        exp = exp.replace(".chr1","")
+#        print temp
         if exp not in temp :
             print "error at global init, not found experiment", exp
             exit(1)
-        gc_factor[idx] = interpolate.interp1d(temp[exp][0], temp[exp][1], kind='cubic',bounds_error=False )
-    """
+        gc_bins_val[idx] = temp[exp][1]
+        a = np.append(temp[exp][1],temp[exp][1][-1])
+#        print gc_bins[idx], a
+        gc_factor[idx] = interpolate.interp1d(gc_bins[idx], a,bounds_error=False )

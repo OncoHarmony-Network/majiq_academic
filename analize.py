@@ -5,6 +5,8 @@ from exon import Exon
 from junction import Junction
 from utils import utils, stats
 import globals
+import random
+import scipy.io
 
 def analize_genes(gene_list, out_file, pos_list, neg_list, ASvsConst = 'AS'):
  #   of = open("%s_%s"%(out_file,ASvsConst), 'w+')
@@ -38,9 +40,12 @@ def analize_genes(gene_list, out_file, pos_list, neg_list, ASvsConst = 'AS'):
             if gn in pos_list:
                 for (ex1,ex2,ex3) in pos_list[gn]:
                     as_db_list.append((ex1.get_id(),ex2.get_id(), ex3.get_id()))
-            merge_as = set(out).union(set(as_db_list))
-            
-            gn.add_transcript_AS_candidates(list(merge_as))
+            if ASvsConst == 'AS': 
+                merge_as = set(out).union(set(as_db_list))
+                gn.add_transcript_AS_candidates(list(merge_as))
+            else:
+                gn.add_transcript_CONST_candidates(out)
+
 #            gn.add_transcript_AS_candidates(out)
             total += len(out)
 ##            for extrip in out:
@@ -122,7 +127,7 @@ def analize_bin_matrix_const_firstlast(mat):
     for idx,ii in enumerate(crrct) :
         if not ii in incrrct:
             #out.append((trans[idx],ii[0],ii[1],ii[2]))
-            out.append((ii[0],ii[1],ii[2]))
+            out.append(ii)
     return out
 
 def analize_gene_bin_matrix(mat):
@@ -260,6 +265,8 @@ def __junction_filter_check( junc):
                 if val >0 : cov_cnt += 1
             if cov_cnt < 3 : continue
             count +=1
+        else:
+            continue
         if count > (0.1 * (globals.num_experiments)) :
             filter = True
             break
@@ -267,23 +274,23 @@ def __junction_filter_check( junc):
     return (filter)
 
 
-def __get_enabled_junction(con):
-    print "KK"
+def __get_enabled_junction(con,exp_list):
+    max = 0
     for jrow in con:
         for jj in jrow:
-            print jj
-            if jj is None: continue
+            #print jj
+            if jj is None or jj.get_readN(exp_list) == 0: continue
             break
         else: 
             continue
         break
     return jj
 
+
 def analize_junction_reads( gene_list,chr ):
 
 
     num_discard = 0
-    junc_set = [[]]*globals.num_experiments
 
     tab_out = [0]*globals.num_experiments
     for exp_idx in range(globals.num_experiments) :
@@ -297,9 +304,19 @@ def analize_junction_reads( gene_list,chr ):
     overlp = 0
     notjunc = 0
     ss_variant = 0
+
+    
+    #gci = [[] for xx in range(globals.num_experiments), [] for xx in range(globals.num_experiments)]
+
+    junc_set = [ [] for xx in range(globals.num_experiments)]
+    rand10k  = [set() for xx in range(globals.num_experiments)]
+    jun = [set() for xx in range(globals.num_experiments)]
+
     for strand, glist  in gene_list.items():
         for gn in glist:
             count = 0
+
+            const_cand = gn.get_transcript_CONST_candidates()
             for ll in gn.get_RNAread_list():
                count += len(ll)
             if count == 0: continue
@@ -313,8 +330,8 @@ def analize_junction_reads( gene_list,chr ):
                 if ex.id is None: continue
                 s3 = [ss3 for ss3 in set(ex.ss_3p_list)]
                 s5 = [ss5 for ss5 in set(ex.ss_5p_list)]
-                s3 = sorted(list(set(s3)))
-                s5 = sorted(list(set(s5)))
+                s3.sort()
+                s5.sort()
                 st3 = len(ss3_l)
                 st5 = len(ss5_l)
                 ss3_l += s3
@@ -328,7 +345,6 @@ def analize_junction_reads( gene_list,chr ):
             junc_list = gn.get_all_junctions()
 #            print junc_list
             for junc in junc_list:
-#                print "PREE" , junc.get_coordinates(), junc.readN
                 st,end = junc.get_coordinates()
                 if not st in ss5_l or not end in ss3_l:
                     notjunc += 1
@@ -338,19 +354,25 @@ def analize_junction_reads( gene_list,chr ):
                 y = ss3_l.index(end)
                 mat [ x, y ] = junc.readN.sum()
                 jmat[ x, y ] = junc
+                in_DB = False
+ #               eid = junc.get_acceptor().get_id()
+ #               if (eid-1,eid,eid+1) in const_cand : in_DB = True
+ #               eid = junc.get_donor().get_id()
+ #               if (eid-1,eid,eid+1) in const_cand : in_DB = (in_DB and True)
 
-            print "KAKAKAKAKA",len(gn.get_transcript_AS_candidates())
-            print gn.get_transcript_AS_candidates()
+                for exp_idx in range(globals.num_experiments):
+                    if junc.get_readN(exp_idx) >= 10 : #and in_DB:
+                        rand10k[exp_idx].add(junc)
+
             (alt, cisfrm,aisfrm) = rnaSeq_const_detection(mat, tlb, (True,True,True),gn.get_transcript_AS_candidates())
-
+            
 #            if len(alt) > 0:
 #                print "VALUES : ",gn.id, "CANDIDATES:",alt
 #                utils.print_junc_matrices(mat,tlb,1)
 #                print "END VALUES"
-            total += len(alt) 
             total_cisfrm += len(cisfrm)
             total_aisfrm += len(aisfrm)
-            for ii in alt:
+            for ii in (alt+cisfrm):
                 a  = tlb[ii]
                 c1 = tlb[ii-1]
                 c2 = tlb[ii+1]
@@ -364,7 +386,7 @@ def analize_junction_reads( gene_list,chr ):
 #                    continue
 #                print jj,c1a,ac2,c1c2
     
-                pass_filter = (True)
+                pass_filter = (False)
                 variant = False
                 for junc_idx, junc in enumerate((c1_a,c1c2)):
                     pre = 0
@@ -374,49 +396,42 @@ def analize_junction_reads( gene_list,chr ):
 #                            print "KK",jj
                             if jj is None: continue
                             pre +=1
-                            print "START", junc_idx
-                            print jj.readN, jj.coverage
-                            print "END"
+#                            print "START", junc_idx
+#                            print jj.readN, jj.coverage
+#                            print "END"
                             junc_or = junc_or or __junction_filter_check(jj)
                     pass_filter = pass_filter or junc_or
-                    if pre >2: 
-                        variant = True 
+                    if pre >2:
+                        variant = True
                 if variant:
                     ss_variant +=1
                     continue
-                if not pass_filter: 
+                if not pass_filter:
                     num_discard +=1
                     continue
-                    
                 elif pre < 2:
                     some_none +=1
 #                    continue
-            
-                jc1a  = __get_enabled_junction(c1_a)
-                jc1c2 = __get_enabled_junction(c1c2)
-                for exp_idx in range(globals.num_experiments):
-                    junc_set[exp_idx].append((jc1a,jc1c2))
-                    
-                    ''' Correlation check: Createing tab files for experiment '''
-                    
-                    x,y = jc1c2.coverage.shape
-                    if jc1a is None:
-                        n1 = 0
-                    else:
-                        n1 =  jc1a.coverage[exp_idx][y-38]
-                    n2 = jc1c2.coverage[exp_idx][y-38]
-                    n3 = jc1c2.coverage[exp_idx][y-60]
 
-#                    print "####", jc1a.coverage[exp_idx],jc1c2.coverage[exp_idx]
-                    print "#######", n1, n2 ,n3
-#                    exit()
-                    tab_out[exp_idx].write("%s.%s\t%s\t%s\t%s\n"%(name,ii+1,n1,n2,n3))
+                total += 1
+                
+                for name, ind_list in globals.tissue_repl.items() :
+                    for exp_idx in ind_list:
+                        jc1a  = __get_enabled_junction(c1_a,exp_idx)
+                        jc1c2 = __get_enabled_junction(c1c2,exp_idx)
+                        if jc1a is None and jc1c2 is None : continue
+                        junc_set[exp_idx].append((jc1a,jc1c2))
+                        for j_idx,jnc in enumerate((jc1a, jc1c2)):
+                            jun[exp_idx].add(jnc)
+                            utils.prepare_junctions_gc(jnc,exp_idx)
 
 
-                #STEP 3: Delete stacked
+                    #STEP 3: Delete stacked
 
-                #STEP 4:  multinomial distribution
-                stats.junction_expression(jc1c2.coverage[exp_idx],jc1c2.get_gc_content()[exp_idx],globals.gc_factor[exp_idx],0.8)
+                    #STEP 4:  multinomial distribution
+#                    expression = stats.junction_expression(jc1c2.coverage[exp_idx],jc1c2.get_gc_content()[exp_idx],globals.gc_factor[exp_idx],0.8)
+    
+        
 
 #print len(junc_set[0])
     [x.close() for x in tab_out]
@@ -425,7 +440,8 @@ def analize_junction_reads( gene_list,chr ):
     print "AS %s AS isoform present in transcript analysis"%total_aisfrm
     print "AS %s SKIPPEDO junction"%chr, notjunc,"/",overlp
     print "AS %s How many events with ss variants"%chr, ss_variant
-    return
+
+    return junc_set, rand10k
 
 def rnaSeq_const_detection(mat, exon_to_ss, b_list, pre_list=None):
     '''
@@ -433,7 +449,7 @@ def rnaSeq_const_detection(mat, exon_to_ss, b_list, pre_list=None):
         1. All the junction from A should go to C1 or C2
         2. All the junction from C1 should go to A
         3. All the junction to C2 should come from A
-        4. Nomber of reads from C1-A should be equivalent to number of reads from A-C2
+        4. Number of reads from C1-A should be equivalent to number of reads from A-C2
     '''
     alt_list = []
     alt_Cisfrm = []
@@ -481,8 +497,8 @@ def rnaSeq_const_detection(mat, exon_to_ss, b_list, pre_list=None):
                 alt_Aisfrm.append((ii-1,ii,ii+1))
         else:
             if (not pre_list is None) and (ii-1,ii,ii+1) in pre_list:
-                print "LLL"
-                alt_Cisfrm.append((ii-1,ii,ii+1))
+                alt_Cisfrm.append(ii)
+#                alt_Cisfrm.append((ii-1,ii,ii+1))
 
 
     return (alt_list,alt_Cisfrm,alt_Aisfrm)
