@@ -4,7 +4,125 @@ import numpy as np
 import scipy.sparse
 import pickle,sys
 import globals
+import random
 
+def __gc_factor_ind(val, exp_idx):
+    res = 0
+    for ii,jj in enumerate(globals.gc_bins[exp_idx]):
+        if val < jj:
+            res = ii
+
+    return res
+
+
+def prepare_MAJIQ_matlab_table(junc_list_per_chr, rand_junc_list_per_chr):
+
+    for chr  in junc_list_per_chr.keys():
+        junc_set = junc_list_per_chr[chr]
+        rand10k = rand_junc_list_per_chr[chr]
+        for name, ind_list in globals.tissue_repl.items() :
+            aggr_set = set()
+            aggr_rand = set()
+
+            for exp_idx in ind_list :
+                jun = set(junc_set[exp_idx])
+                print rand10k[exp_idx]
+                rand10k[exp_idx].difference(jun)
+                list = junc_set[exp_idx]
+
+                aggr_set.union(set(list))
+                aggr_rand.union(rand10k[exp_idx])
+
+                mat_file = {}
+                mat_file ['experiment'] = globals.exp_list[exp_idx]
+                mat_file ['GC_bins'] = globals.gc_bins[exp_idx]
+                mat_file ['GC_bins_val'] = globals.gc_bins_val[exp_idx]
+                mat_file ['weigh_factor'] = globals.weigh_factor
+                mat_file ['Inc'] = {}
+                mat_file ['Exc'] = {}
+                mat_file ['Inc']['cov'] = np.zeros(shape=(len(list),globals.readLen - 16+1))
+                mat_file ['Exc']['cov'] = np.zeros(shape=(len(list),globals.readLen - 16+1))
+                mat_file ['Inc']['gc_idx'] = np.zeros(shape=(len(list),globals.readLen - 16+1))
+                mat_file ['Exc']['gc_idx'] = np.zeros(shape=(len(list),globals.readLen - 16+1))
+                mat_file ['Inc']['gc_val'] = np.zeros(shape=(len(list),globals.readLen - 16+1))
+                mat_file ['Exc']['gc_val'] = np.zeros(shape=(len(list),globals.readLen - 16+1))
+    
+    #            print "SET:", junc_set[exp_idx]
+                for ii in range(len(list)) :
+                    jinc = list[ii][0]
+                    jexc = list[ii][1]
+                    gci_inc = np.zeros(shape=(globals.num_experiments,(globals.readLen-16)+1),dtype=np.int)
+                    gci_exc = np.zeros(shape=(globals.num_experiments,(globals.readLen-16)+1),dtype=np.int)
+                    if not jinc is None:
+                        mat_file['Inc']['cov'][ii] = jinc.coverage[exp_idx]
+                        gci_inc, gc_inc = jinc.get_gc_factors()
+                    if not jexc is None:
+                        mat_file['Exc']['cov'][ii] = jexc.coverage[exp_idx]
+                        gci_exc, gc_exc = jexc.get_gc_factors()
+                    mat_file['Inc']['gc_idx'][ii] = gci_inc[exp_idx,ii]
+                    mat_file['Exc']['gc_idx'][ii] = gci_exc[exp_idx,ii]
+        #            mat_file['Inc']['gc_val'][ii] = gc_inc[exp_idx,ii]
+        #            mat_file['Exc']['gc_val'][ii] = gc_exc[exp_idx,ii]
+                    for jj in range(globals.readLen-16+1):
+                        print exp_idx, ii, jj
+                        dummy = gci_inc[exp_idx,jj]
+                        if dummy > 0 :
+                            mat_file['Inc']['gc_val'][ii,jj] = globals.gc_bins_val[exp_idx][ dummy -1 ]
+                        dummy = gci_exc[exp_idx,jj]
+                        if dummy > 0 :
+                            mat_file['Exc']['gc_val'][ii,jj] = globals.gc_bins_val[exp_idx][ dummy -1 ]
+                if len(rand10k[exp_idx]) < 10000:
+                    rand_size = len(rand10k[exp_idx])
+                else:
+                    rand_size = 10000
+                print "RAND", rand_size, "LEN"
+                mat_file['rand10k'] = {}
+                mat_file['rand10k']['cov'] = np.zeros(shape=(rand_size,globals.readLen - 16+1))
+                mat_file['rand10k']['gc_idx'] = np.zeros(shape=(rand_size,globals.readLen - 16+1))
+                mat_file['rand10k']['gc_val'] = np.zeros(shape=(rand_size,globals.readLen - 16+1))
+                for ii, j in enumerate(random.sample(rand10k[exp_idx], rand_size)) :
+                    mat_file['rand10k']['cov'][ii] = j.coverage[exp_idx]
+                    for jj in range(globals.readLen-16+1):
+                        dummy = __gc_factor_ind(j.get_gc_content()[exp_idx,jj],exp_idx)
+                        if dummy>0:
+                            mat_file['rand10k']['gc_idx'][ii,jj] = dummy
+                            mat_file['rand10k']['gc_val'][ii,jj] = globals.gc_bins_val[exp_idx][dummy-1]
+
+                scipy.io.savemat("./test%s"%globals.exp_list[exp_idx],mat_file,oned_as='row')
+            #END for exp_idx
+
+            agreg_file = {}
+            agreg_file ['Inc'] = {}
+            agreg_file ['Exc'] = {}
+            agreg_file ['Inc']['cov'] = np.zeros(shape=(len(aggr_set),globals.readLen - 16+1))
+            agreg_file ['Exc']['cov'] = np.zeros(shape=(len(aggr_set),globals.readLen - 16+1))
+            for ii,nn in enumerate(aggr_set):
+                for exp_idx in ind_list:
+                    for jj in range(globals.readLen-16+1):
+                        dummy = __gc_factor_ind(j.get_gc_content()[exp_idx,jj],exp_idx)
+                        if not nn[0] is None and dummy > 0:
+                            agreg_file['Inc']['cov'][ii] += nn[0].coverage[exp_idx] * globals.gc_bins_val[exp_idx][ dummy -1 ]
+                        if not nn[1] is None and dummy > 0:
+                            agreg_file['Exc']['cov'][ii] += nn[1].coverage[exp_idx]
+            if len(aggr_rand) < 10000:
+                rand_size = len(aggr_rand)
+            else:
+                rand_size = 10000
+            print "RAND", rand_size, "LEN"
+            agreg_file['rand10k'] = {}
+            agreg_file['rand10k']['cov'] = np.zeros(shape=(rand_size,globals.readLen - 16+1))
+            agreg_file['rand10k']['gc_idx'] = np.zeros(shape=(rand_size,globals.readLen - 16+1))
+            agreg_file['rand10k']['gc_val'] = np.zeros(shape=(rand_size,globals.readLen - 16+1))
+            for ii, j in enumerate(random.sample(aggr_rand, rand_size)) :
+                agreg_file['rand10k']['cov'][ii] = j.coverage[exp_idx]
+                for jj in range(globals.readLen-16+1):
+                    dummy = __gc_factor_ind(j.get_gc_content()[exp_idx,jj],exp_idx)
+                    if dummy>0:
+                        agreg_file['rand10k']['gc_idx'][ii,jj] = dummy
+                        agreg_file['rand10k']['gc_val'][ii,jj] = globals.gc_bins_val[exp_idx][dummy-1]
+
+            scipy.io.savemat("./agreg_%s"%globals.exp_list[exp_idx],agreg_file,oned_as='row')
+    return
 
 def prepare_junctions_gc( junc , exp_idx):
     
@@ -15,7 +133,9 @@ def prepare_junctions_gc( junc , exp_idx):
             gci[jj] = __gc_factor_ind(junc.get_gc_content()[exp_idx,jj],exp_idx)
             gc[jj] = globals.gc_factor[exp_idx](junc.get_gc_content()[exp_idx,jj])
 
-    return gc, gci
+    if not junc is None:
+        junc.add_gc_factor_positions(exp_idx, gci,gc)
+    return
 
 
 '''

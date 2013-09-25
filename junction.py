@@ -29,6 +29,10 @@ class Junction:
         self.coverage = np.zeros(shape=(globals.num_experiments,(readLength-16)+1),dtype=np.int)
         self.out_info = {}
 
+        self.gc_index = np.zeros(shape=(globals.num_experiments,(readLength-16)+1),dtype=np.int)
+        self.gc_factor = np.zeros(shape=(globals.num_experiments,(readLength-16)+1),dtype=np.float)
+ 
+
     def __hash__(self):
         return hash(self.start) ^ hash(self.end) ^ hash(self.gene.id)
 
@@ -51,8 +55,15 @@ class Junction:
         return (self.gccontent_x_pos)
     def get_readN(self, idx):
         return (self.readN[idx])
+    def get_gc_factors(self):
+        return(self.gc_index, self.gc_factor)
 
     #MODIFIERs
+
+    def add_gc_factor_positions(self, exp_idx, gc_index, gc_factor):
+        self.gc_index[exp_idx] = gc_index
+        self.gc_factor[exp_idx] = gc_factor
+
     def add_donor(self, donor):
         self.donor = donor
 

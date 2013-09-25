@@ -45,11 +45,11 @@ def global_init(readL):
     #exp_list =  ['Heart1.chr1','Hippocampus1.chr1']
 #    exp_list =  ['Hippocampus1.chr1','Liver1.chr1']
 #    exp_list =  ['Liv_CT22.chr1','Hyp_CT22.chr1']
-    #exp_list =  ['Heart1.chr1','Heart3.chr1','Heart5.chr1','Heart6.chr1']
+    exp_list =  ['Heart1.chr1','Heart3.chr1']
     exp_list = [ 'Hippocampus1.chr1','Hippocampus2.chr1','Hippocampus4.chr1','Hippocampus5.chr1','Hippocampus6.chr1',
                 'Liver1.chr1','Liver2.chr1','Liver3.chr1','Liver4.chr1','Liver5.chr1','Liver6.chr1']
     tissue_repl = {'Hippocampus.chr1':[0,1,2,3,4],'Liver.chr1':[5,6,7,8,9,10]}
-    #tissue_repl = {'Heart.chr1':[0,1,2,3]}
+#    tissue_repl = {'Heart.chr1':[0,1,]}
 #    exp_list =  ['Heart1.chr1']
     
     weigh_factor = [0, 0, 0, 0, 0, 0, 0, 0, 0.0, 0.67221794713393235, 
@@ -64,7 +64,7 @@ def global_init(readL):
     with open(r"/home/jordi/working/GCcontent/gc_content_factors.dat", "rb") as input_file:
 #    with open(r"/data/ucsc/reads/test_1k/hog/gc_content_factors_Hog.dat", "rb") as input_file:
         temp,gc_bins = cPickle.load(input_file)
-    print temp
+#    print temp
     for idx, exp in enumerate(exp_list):
         exp = exp.replace(".chr1","").lower()
 #        exp = exp.replace(".chr1","")
@@ -74,5 +74,5 @@ def global_init(readL):
             exit(1)
         gc_bins_val[idx] = temp[exp][1]
         a = np.append(temp[exp][1],temp[exp][1][-1])
-        print gc_bins[idx], a
+#        print gc_bins[idx], a
         gc_factor[idx] = interpolate.interp1d(gc_bins[idx], a,bounds_error=False )

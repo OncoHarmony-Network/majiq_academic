@@ -6,7 +6,7 @@ import numpy as np
 import analize
 import globals 
 import rnaseq_io
-import utils
+from utils import utils
 import copy
 #from matplotlib import pyplot as plt
 import multiprocessing
@@ -27,8 +27,8 @@ def __parallel_for_splc_quant(sam_dir, gene_list,n_genes, chr, order,as_db):
     print "END child, ", multiprocessing.current_process().name
     TAS = analize.analize_genes(gene_list, "kk", as_db, None, 'AS')
     CONST = analize.analize_genes(gene_list, "kk", as_db, None, 'CONST')
-    analize.analize_junction_reads( gene_list,chr )
-    return gene_list
+    a,b = analize.analize_junction_reads( gene_list,chr )
+    return (a,b)
 
 def __parallel_for_body(SAM, all_genes,n_genes, exp_idx,chr_list, order, read_len):
 #    reference_genes = copy.deepcopy(all_genes)
@@ -97,11 +97,13 @@ if __name__ == "__main__":
 #            order[chr] = all_genes[chr]
 
 #        print TAS
+        cand = {}
+        non_cand = {}
         for chr in chr_list:
 #            all_experiments[idx] = RNAexperiment(exp,1,args.genome,all_genes)
 #            gene_list = all_experiments[idx].get_gene_list()
             if int(args.ncpus) == 1:
-                __parallel_for_splc_quant(args.junc_dir,all_genes[chr],n_genes,chr,order,av_altern)
+                cand[chr],non_cand[chr] = __parallel_for_splc_quant(args.junc_dir,all_genes[chr],n_genes,chr,order,av_altern)
 #                __parallel_for_body(SAM,all_genes,n_genes,idx,chr_list,order,args.readlen)
             else:
                 jobs.append(pool.apply_async(__parallel_for_splc_quant, [SAM,all_genes[chr],n_genes,chr,order],av_alter ))
@@ -114,7 +116,10 @@ if __name__ == "__main__":
             for idx, j in enumerate(jobs):
                 gene[idx]=j.get()
             pool.join()
-        print "analize junctions"
+
+        print "GEN MATLAB"
+
+        utils.prepare_MAJIQ_matlab_table(cand,non_cand)
 
 
 #            print idx,command

@@ -282,13 +282,6 @@ def __get_enabled_junction(con,exp_list):
         break
     return jj
 
-def __gc_factor_ind(val, exp_idx):
-    res = 0
-    for ii,jj in enumerate(globals.gc_bins[exp_idx]):
-        if val < jj:
-            res = ii
-
-    return res
 
 def analize_junction_reads( gene_list,chr ):
 
@@ -309,11 +302,9 @@ def analize_junction_reads( gene_list,chr ):
     ss_variant = 0
 
     
+    #gci = [[] for xx in range(globals.num_experiments), [] for xx in range(globals.num_experiments)]
+
     junc_set = [ [] for xx in range(globals.num_experiments)]
-    gc_inc   = [ [] for xx in range(globals.num_experiments)]
-    gc_exc   = [ [] for xx in range(globals.num_experiments)]
-    gci_inc  = [ [] for xx in range(globals.num_experiments)]
-    gci_exc  = [ [] for xx in range(globals.num_experiments)]
     rand10k  = [set() for xx in range(globals.num_experiments)]
     jun = [set() for xx in range(globals.num_experiments)]
 
@@ -419,118 +410,23 @@ def analize_junction_reads( gene_list,chr ):
 #                    continue
 
                 total += 1
-                for exp_idx in range(globals.num_experiments):
-                    jc1a  = __get_enabled_junction(c1_a,exp_idx)
-                    jc1c2 = __get_enabled_junction(c1c2,exp_idx)
-                    if jc1a is None and jc1c2 is None : continue
-                    junc_set[exp_idx].append((jc1a,jc1c2))
-                    jun[exp_idx].add(jc1a)
-                    jun[exp_idx].add(jc1c2)
+                
+                for name, ind_list in globals.tissue_repl.items() :
+                    for exp_idx in ind_list:
+                        jc1a  = __get_enabled_junction(c1_a,exp_idx)
+                        jc1c2 = __get_enabled_junction(c1c2,exp_idx)
+                        if jc1a is None and jc1c2 is None : continue
+                        junc_set[exp_idx].append((jc1a,jc1c2))
+                        for j_idx,jnc in enumerate((jc1a, jc1c2)):
+                            jun[exp_idx].add(jnc)
+                            utils.prepare_junctions_gc(jnc,exp_idx)
 
-                    ''' Correlation check: Createing tab files for experiment '''
-
-                    gc1 = np.zeros(shape=(globals.readLen - 16+1))
-                    gc2 = np.zeros(shape=(globals.readLen - 16+1))
-                    gci1 = np.zeros(shape=(globals.readLen - 16+1))
-                    gci2 = np.zeros(shape=(globals.readLen - 16+1))
-                    temp = None
-                    for jj in range(globals.readLen - 16+1) :
-                        if not jc1a is None and jc1a.get_gc_content()[exp_idx,jj] != 0:
-                            gci1[jj] = __gc_factor_ind(jc1a.get_gc_content()[exp_idx,jj],exp_idx)
-                            gc1[jj] = globals.gc_factor[exp_idx](jc1a.get_gc_content()[exp_idx,jj])
-                        if not jc1c2 is None and jc1c2.get_gc_content()[exp_idx,jj] != 0:
-                            temp = jc1c2.get_gc_content()[exp_idx]
-                            gci2[jj] = __gc_factor_ind(jc1c2.get_gc_content()[exp_idx,jj],exp_idx)
-                            gc2[jj] = globals.gc_factor[exp_idx](jc1c2.get_gc_content()[exp_idx,jj])
-                    gci_inc[exp_idx].append( gci1 )
-                    gci_exc[exp_idx].append( gci2 )
-                    gc_inc[exp_idx].append( gc1 )
-                    gc_exc[exp_idx].append( gc2 )
 
                     #STEP 3: Delete stacked
 
                     #STEP 4:  multinomial distribution
 #                    expression = stats.junction_expression(jc1c2.coverage[exp_idx],jc1c2.get_gc_content()[exp_idx],globals.gc_factor[exp_idx],0.8)
     
-    for name, ind_list in globals.tissue_repl.items() :
-        pre_junc = set()
-        agreg_file = {}
-        agreg_file['Inc'] = {}
-        agreg_file['Exc'] = {}
-
-        for exp_idx in ind_list :
-            list = junc_set[exp_idx]
-#        for exp_idx, list in enumerate(junc_set) :
-                
-            rand10k[exp_idx].difference(jun[exp_idx])
-            mat_file = {}
-            mat_file ['experiment'] = globals.exp_list[exp_idx]
-            mat_file ['GC_bins'] = globals.gc_bins[exp_idx]
-            mat_file ['GC_bins_val'] = globals.gc_bins_val[exp_idx]
-            mat_file ['weigh_factor'] = globals.weigh_factor
-            mat_file ['Inc'] = {}
-            mat_file ['Exc'] = {}
-            mat_file ['Inc']['cov'] = np.zeros(shape=(len(list),globals.readLen - 16+1))
-            mat_file ['Exc']['cov'] = np.zeros(shape=(len(list),globals.readLen - 16+1))
-            mat_file ['Inc']['gc_idx'] = np.zeros(shape=(len(list),globals.readLen - 16+1))
-            mat_file ['Exc']['gc_idx'] = np.zeros(shape=(len(list),globals.readLen - 16+1))
-            mat_file ['Inc']['gc_val'] = np.zeros(shape=(len(list),globals.readLen - 16+1))
-            mat_file ['Exc']['gc_val'] = np.zeros(shape=(len(list),globals.readLen - 16+1))
-
-#            print "SET:", junc_set[exp_idx]
-            for ii in range(len(list)) :
-                if not list[ii] in pre_junc:
-                    pre_junc.add(list[ii])
-                if not list[ii][0] is None:
-                    mat_file['Inc']['cov'][ii] = list[ii][0].coverage[exp_idx]
-                if not list[ii][1] is None:
-                    mat_file['Exc']['cov'][ii] = list[ii][1].coverage[exp_idx]
-                print ii,len(gci_inc[exp_idx])
-                mat_file['Inc']['gc_idx'][ii] = gci_inc[exp_idx][ii]
-                mat_file['Exc']['gc_idx'][ii] = gci_exc[exp_idx][ii]
-    #            mat_file['Inc']['gc_val'][ii] = gc_inc[exp_idx][ii]
-    #            mat_file['Exc']['gc_val'][ii] = gc_exc[exp_idx][ii]
-                for jj in range(globals.readLen-16+1):
-                    dummy = gci_inc[exp_idx][ii][jj]
-                    if dummy > 0 :
-                        mat_file['Inc']['gc_val'][ii,jj] = globals.gc_bins_val[exp_idx][ dummy -1 ]
-                    dummy = gci_exc[exp_idx][ii][jj]
-                    if dummy > 0 :
-                        mat_file['Exc']['gc_val'][ii,jj] = globals.gc_bins_val[exp_idx][ dummy -1 ]
-            if len(rand10k[exp_idx]) < 10000:
-                rand_size = len(rand10k[exp_idx])
-            else:
-                rand_size = 10000
-            print "RAND", rand_size, "LEN"
-            mat_file['rand10k'] = {}
-            mat_file['rand10k']['cov'] = np.zeros(shape=(rand_size,globals.readLen - 16+1))
-            mat_file['rand10k']['gc_idx'] = np.zeros(shape=(rand_size,globals.readLen - 16+1))
-            mat_file['rand10k']['gc_val'] = np.zeros(shape=(rand_size,globals.readLen - 16+1))
-            for ii, j in enumerate(random.sample(rand10k[exp_idx], rand_size)) :
-                mat_file['rand10k']['cov'][ii] = j.coverage[exp_idx]
-                for jj in range(globals.readLen-16+1):
-
-                    dummy = __gc_factor_ind(j.get_gc_content()[exp_idx,jj],exp_idx)
-                    if dummy>0:
-                        mat_file['rand10k']['gc_idx'][ii,jj] = dummy
-                        mat_file['rand10k']['gc_val'][ii,jj] = globals.gc_bins_val[exp_idx][dummy-1]
-
-            scipy.io.savemat("./test%s"%globals.exp_list[exp_idx],mat_file,oned_as='row')
-        #END for exp_idx
-
-        agreg_file ['Inc']['cov'] = np.zeros(shape=(len(pre_junc),globals.readLen - 16+1))
-        agreg_file ['Exc']['cov'] = np.zeros(shape=(len(pre_junc),globals.readLen - 16+1))
-        for ii,nn in enumerate(pre_junc):
-            
-            for exp_idx in ind_list:
-                for jj in range(globals.readLen-16+1):
-                    dummy = __gc_factor_ind(j.get_gc_content()[exp_idx,jj],exp_idx)
-                    if not nn[0] is None and dummy > 0:
-                        agreg_file['Inc']['cov'][ii] += nn[0].coverage[exp_idx] * globals.gc_bins_val[exp_idx][ dummy -1 ]
-                    if not nn[1] is None and dummy > 0:
-                        agreg_file['Exc']['cov'][ii] += nn[1].coverage[exp_idx]
-
-        scipy.io.savemat("./agreg_%s"%globals.exp_list[exp_idx],agreg_file,oned_as='row')
         
 
 #print len(junc_set[0])
@@ -540,7 +436,8 @@ def analize_junction_reads( gene_list,chr ):
     print "AS %s AS isoform present in transcript analysis"%total_aisfrm
     print "AS %s SKIPPEDO junction"%chr, notjunc,"/",overlp
     print "AS %s How many events with ss variants"%chr, ss_variant
-    return
+
+    return junc_set, rand10k
 
 def rnaSeq_const_detection(mat, exon_to_ss, b_list, pre_list=None):
 
