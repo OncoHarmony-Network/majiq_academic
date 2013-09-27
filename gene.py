@@ -1,6 +1,6 @@
 #!/usr/bin/python
 import globals
-
+import numpy as np
 class Gene:
 
     __eq__ = lambda self, other: self.chromosome == other.chromosome and self.strand == other.strand and self.start < other.end and self.end > other.start
@@ -23,10 +23,11 @@ class Gene:
         self.start = start
         self.end = end
         self.otherNames = [gene_id]
-        self.RNAread_list = [[]]*globals.num_experiments
+#        self.RNAread_list = np.zeros(shape=(globals.num_experiments),dtype=np.dtype('object'))
+#        self.RNAread_list.fill([])
         self.exonNum = 0
-        self.readNum = [0]*globals.num_experiments
-        self.RPKM = [float(0)]*globals.num_experiments
+        self.readNum = np.zeros(shape=(globals.num_experiments),dtype=np.int)
+        self.RPKM = np.zeros(shape=(globals.num_experiments),dtype=np.float)
 
         self.transAScandidates = []
         self.transCONSTcandidates = []
@@ -79,14 +80,14 @@ class Gene:
 
     def add_read(self, read, exp_idx ):
         self.readNum[exp_idx] += read.get_read_count()
-        (self.RNAread_list[exp_idx]).append(read)
+#        (self.RNAread_list[exp_idx]).append(read)
         return
     def add_exon(self, exon ):
         (self.exons).append(exon)
         return
 
     def in_transcript_list(self,tcrpt_name):
-        res = None
+        res = False
         for ff in self.transcript_list :
             if ff.get_id() == tcrpt_name:
                 res = True
@@ -100,10 +101,8 @@ class Gene:
                 res = ll
                 if not name in ll.otherNames:
                     ll.otherNames.append(name)
-                if self.start < ll.start :
-                    ll.start = self.start
-                if self.end > ll.end :
-                    ll.end = self.end
+                ll.start = min(ll.start,self.start)
+                ll.end = min(ll.end,self.end)
                 break
         return res
 

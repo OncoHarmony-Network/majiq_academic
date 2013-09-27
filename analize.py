@@ -314,11 +314,9 @@ def analize_junction_reads( gene_list,chr ):
 
     for strand, glist  in gene_list.items():
         for gn in glist:
-            count = 0
+            count = gn.get_read_count().sum()
 
             const_cand = gn.get_transcript_CONST_candidates()
-            for ll in gn.get_RNAread_list():
-               count += len(ll)
             if count == 0: continue
 #            print "gene",name
             ex_list = gn.get_exon_list()

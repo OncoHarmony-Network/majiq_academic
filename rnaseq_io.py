@@ -5,7 +5,6 @@ from rna_reads import RNA_read, parse_read
 from RNAexperiment import RNAexperiment
 from matplotlib import pyplot as plt
 
-import globals
 import numpy as np
 
 
@@ -20,14 +19,12 @@ def reads_for_junc_coverage(filename, gene_list, readlen, exp_index):
     idx = {'+':0,'-':0}
     junctions = {'+':[],'-':[]}
     print "START READING ",filename
-#    sorted_gene_list = sorted(gene_list.values())
     sorted_gene_list = gene_list
     BUFFER = int(10E8) #1 gigabyte buffer
     file = open(filename, 'r')
     text = file.readlines(BUFFER)
     while text != []:
         print "New Buffer"
-        #for ii in fp.readlines(): # each line is a read of the experiment
         for ii in text:
             if ii.startswith('@'): continue
             tab = ii.strip().split()
@@ -38,20 +35,10 @@ def reads_for_junc_coverage(filename, gene_list, readlen, exp_index):
             if not isRead :
                 r_start = int(tab[3])
                 n_reads = read
-    #            continue
             else:
                 n_reads = read.get_read_count()
                 r_start, r_end = read.get_coordinates()
-#                print "KKK 1", read.get_junctions_info(), strand
-#            if chrom != g_chromosome :
-#                if not chrom in all_gene: continue
-#                gene_list = all_gene[chrom]
-#                g_chromosome = chrom
-#                sorted_gene_list = sorted(gene_list.values())
-#                idx = {'+':0,'-':0}
-#                if not chrom in junctions :
-#                    junctions[chrom] = {'+':[],'-':[]}
-            #end if chrom ...
+
             while idx[strand] < len (sorted_gene_list[strand]):
                 gene = sorted_gene_list[strand][idx[strand]]
 #                gene = sorted_gene_list[idx[strand]]
@@ -79,7 +66,6 @@ def reads_for_junc_coverage(filename, gene_list, readlen, exp_index):
                     gene.add_read_count(n_reads,exp_index)
                     break
                 gene.add_read(read,exp_index)
-#                print "KKK 2", read.get_junctions_info()
                 counter[2] += 1
                 
                 j_list = gene.get_all_junctions()
@@ -196,7 +182,6 @@ def read_transcript_ucsc(filename, refSeq = False):
                 ex_end = [0]*nblocks
                 for ii in range(nblocks):
                     ex_start[ii] = int(off_start[ii])+start
-                    
                     ex_end[ii] = ex_start[ii] + int(off_len[ii])-1
 
 #            print "New Transcript %s"%transcript_id
@@ -206,7 +191,7 @@ def read_transcript_ucsc(filename, refSeq = False):
                 all_genes[chrom] = {'+':[],'-':[]}
             gene = gn.is_gene_in_list(all_genes[chrom][strand], gene_id)
             if not gene is None:
-#                del gn
+                del gn
                 gn = gene
             else:
                 all_genes[chrom][strand].append(gn)
@@ -214,7 +199,6 @@ def read_transcript_ucsc(filename, refSeq = False):
 #                gn = all_genes[chrom][gene_id]
             trcpt = Transcript(transcript_id, gn,start,end )
             gn.add_transcript(trcpt)
-
             pre_end = None
             pre_ex = None
             for ii in range(nblocks):
@@ -233,20 +217,22 @@ def read_transcript_ucsc(filename, refSeq = False):
                     trcpt.add_junction(junc)
                 pre_end = end
                 pre_ex = ex
-
             #END for ii in range(nblocks)
             trcpt._sort_in_list(strand)
         #end for t in text
         text = file.readlines(BUFFER)
     #END WHILE
     file.close()
-
+    print "SORTING GENES"
+    n_genes = 0
     for chr in all_genes.keys():
-#        print chr,"::",len(all_genes[chr])
         for strand, gg in all_genes[chr].items():
-            all_genes[chr][strand] = sorted(sorted(gg))
+            n_genes += len(gg)
+            print strand
+            all_genes[chr][strand] = sorted(gg)
             for gene in all_genes[chr][strand]:
                 gene.prepare_exons()
+    print "NUM_GENES",n_genes
     return all_genes
 
 
