@@ -115,7 +115,7 @@ if __name__ == "__main__":
 
         print "GEN MATLAB"
 
-        utils.prepare_MAJIQ_matlab_table(cand,non_cand)
+#        utils.prepare_MAJIQ_matlab_table(cand,non_cand)
 
 
 #            print idx,command

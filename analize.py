@@ -260,7 +260,7 @@ def __junction_filter_check( junc):
     count = 0
     for exp_idx in range(globals.num_experiments) :
         cov_cnt = 0
-        if junc.readN[exp_idx] >= 10: 
+        if junc.readN[exp_idx,:] >= 10: 
             for val in junc.coverage[exp_idx]:
                 if val >0 : cov_cnt += 1
             if cov_cnt < 3 : continue

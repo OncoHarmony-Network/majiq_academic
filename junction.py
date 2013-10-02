@@ -24,10 +24,10 @@ class Junction:
         self.gene = gene
         self.txN = 1
         self.readN           = np.zeros((globals.num_experiments),dtype=np.int)
-        self.gccontent_x_pos = scipy.sparse.coo_matrix((globals.num_experiments,(readLength-16)+1),dtype=np.float)
-        self.coverage        = scipy.sparse.coo_matrix((globals.num_experiments,(readLength-16)+1),dtype=np.int)
-        self.gc_index        = scipy.sparse.coo_matrix((globals.num_experiments,(readLength-16)+1),dtype=np.int)
-        self.gc_factor       = scipy.sparse.coo_matrix((globals.num_experiments,(readLength-16)+1),dtype=np.float)
+        self.gccontent_x_pos = scipy.sparse.lil_matrix((globals.num_experiments,(readLength-16)+1),dtype=np.float)
+        self.coverage        = scipy.sparse.lil_matrix((globals.num_experiments,(readLength-16)+1),dtype=np.int)
+        self.gc_index        = scipy.sparse.lil_matrix((globals.num_experiments,(readLength-16)+1),dtype=np.int)
+        self.gc_factor       = scipy.sparse.lil_matrix((globals.num_experiments,(readLength-16)+1),dtype=np.float)
  
 
     def __hash__(self):
