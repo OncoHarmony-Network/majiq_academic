@@ -48,25 +48,29 @@ def __parallel_for_body(SAM, all_genes,n_genes, exp_idx,chr_list, order, read_le
 # MAIN
 
 if __name__ == "__main__":
+    #parser for the basic flags that all subcommands share
+    basic_flags = argparse.ArgumentParser(add_help=False)
+    basic_flags.add_argument('-l','--readlen', dest="readlen", type=int,default='76', help='Length of reads in the samfile"')
+    basic_flags.add_argument('-g','--genome', dest="genome", help='Genome version an species"')
+    basic_flags.add_argument('-t','--ncpus', dest="ncpus", type=int,default='4', help='Number of CPUs to use')
+    #main parser    
     parser = argparse.ArgumentParser()
     subparsers = parser.add_subparsers(dest='operation')
-    # create the parser for the "input" command
-    parser_input = subparsers.add_parser('input', help='Input file and create binary file')
+    #subparser "input", to start from the SAM files
+    parser_input = subparsers.add_parser('input', help='Input file and create binary file', parents=[basic_flags])
     parser_input.add_argument('transcripts', action= "store", help='read file in SAM format')
     parser_input.add_argument('junc_dir', action= "store", help='reads directory in SAM format')
     parser_input.add_argument('-r', action='store_true', default=False)
     parser_input.add_argument('-o','--output', dest='output',action= "store", help='casete exon list file')
-    # create the parser for the "load" command
-    parser_input = subparsers.add_parser('load', help='Load binary file')
-    parser_input.add_argument('bin', action= "store", help='read binary file')
-    parser_input.add_argument('junc', action= "store", help='read read binary juntion file')
-    parser_input.add_argument('-o','--output', dest='output',action= "store", help='casete exon list file')
-    # create the parser for the "test" command
-    parser_input = subparsers.add_parser('test', help='Execute test file')
+    # subparser "load", to start from processed files
+    parser_load = subparsers.add_parser('load', help='Load binary file', parents=[basic_flags])
+    parser_load.add_argument('bin', action= "store", help='read binary file')
+    parser_load.add_argument('junc', action= "store", help='read read binary juntion file')
+    parser_load.add_argument('-o','--output', dest='output',action= "store", help='casete exon list file')
+    # subparser "test"
+    parser_input = subparsers.add_parser('test', help='Execute test file', parents=[basic_flags])
     parser_input.add_argument('test_file', action= "store", help='read file in SAM format')
-    parser.add_argument('-g','--genome', dest="genome",help='Genome version an species"')
-    parser.add_argument('-l','--readlen', dest="readlen",type=int,default='76',help='Length of reads in the samfile"')
-    parser.add_argument('-t','--ncpus', dest="ncpus",    type=int,default='4',help='Number of CPUs to use')
+    
     args = parser.parse_args()
     print args
 
@@ -74,7 +78,7 @@ if __name__ == "__main__":
         read_test_file(args.transcripts)
        
     elif args.operation == 'input':
-        globals.global_init(args.readlen)
+        globals.global_init(args.readlen, args.junc_dir)
         print globals.num_experiments,globals.readLen
         all_genes = rnaseq_io.read_transcript_ucsc(args.transcripts,refSeq=args.r)
         av_altern = rnaseq_io.read_triplets_bed("/data/ucsc/reads/test_1k/annotated_db/alt.chr1.sorted.mm10.bed",all_genes)
