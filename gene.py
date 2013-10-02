@@ -1,8 +1,9 @@
 #!/usr/bin/python
-import globals
 import numpy as np
-class Gene:
 
+import my_globals
+
+class Gene:
     __eq__ = lambda self, other: self.chromosome == other.chromosome and self.strand == other.strand and self.start < other.end and self.end > other.start
     __ne__ = lambda self, other: self.chromosome != other.chromosome or self.strand != other.strand or self.start >= other.end or self.end <= other.start
     __lt__ = lambda self, other: ( self.chromosome < other.chromosome  or ( self.chromosome == other.chromosome and  (self.end < other.start or (self.end > other.start and self.start < other.end and self.strand == '+' and other.strand == '-'))))
@@ -26,8 +27,8 @@ class Gene:
 #        self.RNAread_list = np.zeros(shape=(globals.num_experiments),dtype=np.dtype('object'))
 #        self.RNAread_list.fill([])
         self.exonNum = 0
-        self.readNum = np.zeros(shape=(globals.num_experiments),dtype=np.int)
-        self.RPKM = np.zeros(shape=(globals.num_experiments),dtype=np.float)
+        self.readNum = np.zeros(shape=(my_globals.num_experiments),dtype=np.int)
+        self.RPKM = np.zeros(shape=(my_globals.num_experiments),dtype=np.float)
 
         self.transAScandidates = []
         self.transCONSTcandidates = []
@@ -37,21 +38,28 @@ class Gene:
 
     def get_id (self):
         return self.id
+
     def get_strand(self):
         return self.strand
+
     def get_RNAread_list(self):
         return self.RNAread_list
+
     def get_read_count(self):
         return self.readNum
+
     def get_RPKM(self):
         return self.RPKM
+
     def get_chromosome(self):
         return self.chromosome
+
     def get_coordinates( self ):
         return (self.start,self.end)
 
     def get_transcript_AS_candidates(self):
         return (self.transAScandidates)
+
     def get_transcript_CONST_candidates(self):
         return (self.transCONSTcandidates)
 
@@ -82,6 +90,7 @@ class Gene:
         self.readNum[exp_idx] += read.get_read_count()
 #        (self.RNAread_list[exp_idx]).append(read)
         return
+
     def add_exon(self, exon ):
         (self.exons).append(exon)
         return
@@ -105,7 +114,6 @@ class Gene:
                 ll.end = min(ll.end,self.end)
                 break
         return res
-
 
     def calculate_RPKM( self, experiment_index, total_Reads ) :
         '''

@@ -4,7 +4,7 @@ from junction import  Junction
 from rna_reads import RNA_read, parse_read
 from RNAexperiment import RNAexperiment
 from matplotlib import pyplot as plt
-
+import gc
 import numpy as np
 
 
@@ -114,6 +114,7 @@ def reads_for_junc_coverage(filename, gene_list, readlen, exp_index):
                 break
             #end while ...
         #end for t in text
+        gc.collect()
         text = file.readlines(BUFFER)
     #END WHILE
     file.close()
@@ -186,22 +187,20 @@ def read_transcript_ucsc(filename, refSeq = False):
 
 #            print "New Transcript %s"%transcript_id
 #            if not gene_id in all_genes :
-            gn = Gene(gene_id,chrom,strand,start,end)
             if not chrom in all_genes:
                 all_genes[chrom] = {'+':[],'-':[]}
+            gn = Gene(gene_id,chrom,strand,start,end)
             gene = gn.is_gene_in_list(all_genes[chrom][strand], gene_id)
             if not gene is None:
                 del gn
                 gn = gene
             else:
                 all_genes[chrom][strand].append(gn)
-#            else:
-#                gn = all_genes[chrom][gene_id]
             trcpt = Transcript(transcript_id, gn,start,end )
             gn.add_transcript(trcpt)
             pre_end = None
             pre_ex = None
-            for ii in range(nblocks):
+            for ii in xrange(nblocks):
                 start = ex_start[ii]
                 end = ex_end[ii]
                 ex = gn.exist_exon(start,end)
@@ -228,7 +227,6 @@ def read_transcript_ucsc(filename, refSeq = False):
     for chr in all_genes.keys():
         for strand, gg in all_genes[chr].items():
             n_genes += len(gg)
-            print strand
             all_genes[chr][strand] = sorted(gg)
             for gene in all_genes[chr][strand]:
                 gene.prepare_exons()
