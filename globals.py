@@ -50,8 +50,8 @@ def global_init(readL):
 #    exp_list = [ 'Hippocampus1.chr1','Hippocampus2.chr1','Hippocampus4.chr1','Hippocampus5.chr1','Hippocampus6.chr1',
 #                'Liver1.chr1','Liver2.chr1','Liver3.chr1','Liver4.chr1','Liver5.chr1','Liver6.chr1']
 #    tissue_repl = {'Hippocampus.chr1':[0,1,2,3,4],'Liver.chr1':[5,6,7,8,9,10]}
-    exp_list =  ['Heart1.chr1','Heart3.chr1']
-    tissue_repl = {'Heart.chr1':[0,1,]}
+    exp_list =  ['Heart1','Heart3']
+    tissue_repl = {'Heart':[0,1,]}
 #    exp_list =  ['Heart1.chr1']
     
     weigh_factor = [0, 0, 0, 0, 0, 0, 0, 0, 0.0, 0.67221794713393235, 

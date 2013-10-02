@@ -28,6 +28,7 @@ def __parallel_for_splc_quant(sam_dir, gene_list,n_genes, chr, order,as_db):
     TAS = analize.analize_genes(gene_list, "kk", as_db, None, 'AS')
     CONST = analize.analize_genes(gene_list, "kk", as_db, None, 'CONST')
     a,b = analize.analize_junction_reads( gene_list,chr )
+    cand[chr] = a
     return (a,b)
 
 def __parallel_for_body(SAM, all_genes,n_genes, exp_idx,chr_list, order, read_len):
@@ -48,6 +49,7 @@ def __parallel_for_body(SAM, all_genes,n_genes, exp_idx,chr_list, order, read_le
 # MAIN
 
 if __name__ == "__main__":
+    global all_genes, cand
     #parser for the basic flags that all subcommands share
     basic_flags = argparse.ArgumentParser(add_help=False)
     basic_flags.add_argument('-l','--readlen', dest="readlen", type=int,default='76', help='Length of reads in the samfile"')
@@ -78,10 +80,10 @@ if __name__ == "__main__":
         read_test_file(args.transcripts)
        
     elif args.operation == 'input':
-        globals.global_init(args.readlen, args.junc_dir)
+        globals.global_init(args.readlen)
         print globals.num_experiments,globals.readLen
         all_genes = rnaseq_io.read_transcript_ucsc(args.transcripts,refSeq=args.r)
-        av_altern = rnaseq_io.read_triplets_bed("/data/ucsc/reads/test_1k/annotated_db/alt.chr1.sorted.mm10.bed",all_genes)
+        av_altern = rnaseq_io.read_triplets_bed("/data/ucsc/reads/test_1k/annotated_db/alt.sorted.mm10.bed",all_genes)
         print "AV_ALTERN:",len(av_altern)
         n_genes = 0
         for chr,gg in all_genes.items():
@@ -99,6 +101,8 @@ if __name__ == "__main__":
 #        print TAS
         cand = {}
         non_cand = {}
+
+
         for chr in chr_list:
 #            all_experiments[idx] = RNAexperiment(exp,1,args.genome,all_genes)
 #            gene_list = all_experiments[idx].get_gene_list()
@@ -109,6 +113,7 @@ if __name__ == "__main__":
                 jobs.append(pool.apply_async(__parallel_for_splc_quant, [SAM,all_genes[chr],n_genes,chr,order],av_alter ))
 #                jobs.append(pool.apply_async(__parallel_for_body,[SAM, all_genes, n_genes, idx, chr_list, order, args.readlen] ))
 
+
         print "MASTER JOB.... waiting childs"
         genes = np.zeros(shape=(len(globals.exp_list)),dtype=np.dtype('object'))
         if int(args.ncpus) >1:
@@ -118,8 +123,9 @@ if __name__ == "__main__":
             pool.join()
 
         print "GEN MATLAB"
+        print cand[chr]
 
-#        utils.prepare_MAJIQ_matlab_table(cand,non_cand)
+        utils.prepare_MAJIQ_matlab_table(cand,non_cand)
 
 
 #            print idx,command
