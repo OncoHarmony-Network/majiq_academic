@@ -1,7 +1,8 @@
-import globals
 import numpy as np
 from utils.decorators import *
 import scipy
+
+import my_globals
 
 class Junction:
 
@@ -15,7 +16,7 @@ class Junction:
     def __init__ (self, start, end,donor, acceptor,gene,readN=0):
         ''' The start and end in junctions are the last exon in '''
         
-        readLength = globals.readLen
+        readLength = my_globals.readLen
 
         self.start = start
         self.end = end
@@ -23,11 +24,11 @@ class Junction:
         self.acceptor = acceptor
         self.gene = gene
         self.txN = 1
-        self.readN           = np.zeros((globals.num_experiments),dtype=np.int)
-        self.gccontent_x_pos = scipy.sparse.coo_matrix((globals.num_experiments,(readLength-16)+1),dtype=np.float)
-        self.coverage        = scipy.sparse.coo_matrix((globals.num_experiments,(readLength-16)+1),dtype=np.int)
-        self.gc_index        = scipy.sparse.coo_matrix((globals.num_experiments,(readLength-16)+1),dtype=np.int)
-        self.gc_factor       = scipy.sparse.coo_matrix((globals.num_experiments,(readLength-16)+1),dtype=np.float)
+        self.readN           = np.zeros((my_globals.num_experiments),dtype=np.int)
+        self.gccontent_x_pos = scipy.sparse.coo_matrix((my_globals.num_experiments,(readLength-16)+1),dtype=np.float)
+        self.coverage        = scipy.sparse.coo_matrix((my_globals.num_experiments,(readLength-16)+1),dtype=np.int)
+        self.gc_index        = scipy.sparse.coo_matrix((my_globals.num_experiments,(readLength-16)+1),dtype=np.int)
+        self.gc_factor       = scipy.sparse.coo_matrix((my_globals.num_experiments,(readLength-16)+1),dtype=np.float)
  
 
     def __hash__(self):
@@ -69,7 +70,7 @@ class Junction:
 
     def update_junction_read( self, exp_idx, readN, start,gc,unique ) :
         self.readN[exp_idx] += readN
-        left_ind = globals.readLen - (self.start - start) - 8 +1
+        left_ind = my_globals.readLen - (self.start - start) - 8 +1
         if unique :
             self.coverage[exp_idx,left_ind]+= readN
         else:
