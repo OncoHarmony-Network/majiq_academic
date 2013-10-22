@@ -24,19 +24,11 @@ class Junction:
         self.acceptor = acceptor
         self.gene = gene
         self.txN = 1
-<<<<<<< HEAD
         self.readN           = np.zeros((globals.num_experiments),dtype=np.int)
         self.gccontent_x_pos = scipy.sparse.lil_matrix((globals.num_experiments,(readLength-16)+1),dtype=np.float)
         self.coverage        = scipy.sparse.lil_matrix((globals.num_experiments,(readLength-16)+1),dtype=np.int)
         self.gc_index        = scipy.sparse.lil_matrix((globals.num_experiments,(readLength-16)+1),dtype=np.int)
         self.gc_factor       = scipy.sparse.lil_matrix((globals.num_experiments,(readLength-16)+1),dtype=np.float)
-=======
-        self.readN           = np.zeros((my_globals.num_experiments),dtype=np.int)
-        self.gccontent_x_pos = scipy.sparse.lil_matrix((my_globals.num_experiments,(readLength-16)+1),dtype=np.float)
-        self.coverage        = scipy.sparse.lil_matrix((my_globals.num_experiments,(readLength-16)+1),dtype=np.int)
-        self.gc_index        = scipy.sparse.lil_matrix((my_globals.num_experiments,(readLength-16)+1),dtype=np.int)
-        self.gc_factor       = scipy.sparse.lil_matrix((my_globals.num_experiments,(readLength-16)+1),dtype=np.float)
->>>>>>> dc884df63010785ad9d4c3cf6d3b58260f8a6308
  
 
     def __hash__(self):
