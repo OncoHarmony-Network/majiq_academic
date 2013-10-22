@@ -4,7 +4,7 @@ from gene import Gene, Transcript
 from exon import Exon
 from junction import Junction
 from utils import utils, stats
-import my_globals
+import globals
 import random
 import scipy.io
 
@@ -252,29 +252,30 @@ def analize_junction_reads_with_DB(gene_list, alt_list, const_list, b_list ):
 
 
 
-def __junction_filter_check( junc): 
+def __junction_filter_check( junc ): 
 
     ''' Check total_read >= 10 '''
     filter = False
 #    if junc.readN[exp_idx] < 10 : return False 
     count = 0
-    for exp_idx in range(my_globals.num_experiments) :
+    dummy = junc.coverage.toarray()
+    for exp_idx in range(globals.num_experiments) :
         cov_cnt = 0
-        if junc.readN[exp_idx] >= 10: 
-            for val in junc.coverage[exp_idx,:]:
+        if junc.readN[exp_idx] >= 10:
+            for val in dummy[exp_idx]:
                 if val >0 : cov_cnt += 1
             if cov_cnt < 3 : continue
             count +=1
         else:
             continue
-        if count > (0.1 * (my_globals.num_experiments)) :
+        if count > (0.1 * (globals.num_experiments)) :
             filter = True
             break
-
+#    print "JUNC:", count
     return (filter)
 
 
-def __get_enabled_junction(con,exp_list):
+def __get_enabled_junction(con, exp_list):
     max = 0
     for jrow in con:
         for jj in jrow:
@@ -292,9 +293,9 @@ def analize_junction_reads( gene_list,chr ):
 
     num_discard = 0
 
-    tab_out = [0]*my_globals.num_experiments
-    for exp_idx in range(my_globals.num_experiments) :
-        name = my_globals.exp_list[exp_idx]
+    tab_out = [0]*globals.num_experiments
+    for exp_idx in range(globals.num_experiments) :
+        name = globals.exp_list[exp_idx]
         tab_out[exp_idx] = open("./%s.corr.tab"%name,"w+")
 
     total = 0
@@ -308,9 +309,9 @@ def analize_junction_reads( gene_list,chr ):
     
     #gci = [[] for xx in range(globals.num_experiments), [] for xx in range(globals.num_experiments)]
 
-    junc_set = [ [] for xx in range(my_globals.num_experiments)]
-    rand10k  = [set() for xx in range(my_globals.num_experiments)]
-    jun = [set() for xx in range(my_globals.num_experiments)]
+    junc_set = [ [] for xx in range(globals.num_experiments)]
+    rand10k  = [set() for xx in range(globals.num_experiments)]
+    jun = [set() for xx in range(globals.num_experiments)]
 
     for strand, glist  in gene_list.items():
         for gn in glist:
@@ -318,7 +319,6 @@ def analize_junction_reads( gene_list,chr ):
 
             const_cand = gn.get_transcript_CONST_candidates()
             if count == 0: continue
-#            print "gene",name
             ex_list = gn.get_exon_list()
             ss3_l = []
             ss5_l = []
@@ -358,10 +358,10 @@ def analize_junction_reads( gene_list,chr ):
  #               eid = junc.get_donor().get_id()
  #               if (eid-1,eid,eid+1) in const_cand : in_DB = (in_DB and True)
 
-                for exp_idx in range(my_globals.num_experiments):
+                for exp_idx in range(globals.num_experiments):
                     if junc.get_readN(exp_idx) >= 10 : #and in_DB:
                         rand10k[exp_idx].add(junc)
-
+#            print "KAAKAKAKAKAKA"
             (alt, cisfrm,aisfrm) = rnaSeq_const_detection(mat, tlb, (True,True,True),gn.get_transcript_AS_candidates())
             
 #            if len(alt) > 0:
@@ -370,6 +370,7 @@ def analize_junction_reads( gene_list,chr ):
 #                print "END VALUES"
             total_cisfrm += len(cisfrm)
             total_aisfrm += len(aisfrm)
+#            print "LLLL IN LOPP:, ", len(alt), len(cisfrm)
             for ii in (alt+cisfrm):
                 a  = tlb[ii]
                 c1 = tlb[ii-1]
@@ -391,12 +392,8 @@ def analize_junction_reads( gene_list,chr ):
                     junc_or = False
                     for junc_row in junc:
                         for jj in junc_row:
-#                            print "KK",jj
                             if jj is None: continue
                             pre +=1
-#                            print "START", junc_idx
-#                            print jj.readN, jj.coverage
-#                            print "END"
                             junc_or = junc_or or __junction_filter_check(jj)
                     pass_filter = pass_filter or junc_or
                     if pre >2:
@@ -412,8 +409,7 @@ def analize_junction_reads( gene_list,chr ):
 #                    continue
 
                 total += 1
-                
-                for name, ind_list in my_globals.tissue_repl.items() :
+                for name, ind_list in globals.tissue_repl.items() :
                     for exp_idx in ind_list:
                         jc1a  = __get_enabled_junction(c1_a,exp_idx)
                         jc1c2 = __get_enabled_junction(c1c2,exp_idx)

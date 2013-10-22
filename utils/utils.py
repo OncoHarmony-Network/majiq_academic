@@ -15,114 +15,172 @@ def __gc_factor_ind(val, exp_idx):
     return res
 
 
-def prepare_MAJIQ_matlab_table(junc_list_per_chr, rand_junc_list_per_chr):
 
-    for chr  in junc_list_per_chr.keys():
-        junc_set = junc_list_per_chr[chr]
-        rand10k = rand_junc_list_per_chr[chr]
-        for name, ind_list in globals.tissue_repl.items() :
-            aggr_set = set()
-            aggr_rand = set()
+def _create_mat_dict(exp_idx, junc_list,rand_list):
 
-            for exp_idx in ind_list :
-                jun = set(junc_set[exp_idx])
-                print rand10k[exp_idx]
-                rand10k[exp_idx].difference(jun)
-                list = junc_set[exp_idx]
+    mat_file = {}
+    mat_file ['experiment'] = globals.exp_list[exp_idx]
+    mat_file ['GC_bins'] = globals.gc_bins[exp_idx]
+    mat_file ['GC_bins_val'] = globals.gc_bins_val[exp_idx]
+    mat_file ['weigh_factor'] = globals.weigh_factor
 
-                aggr_set.union(set(list))
-                aggr_rand.union(rand10k[exp_idx])
+    for lab_idx, label in enumerate(('Inc','Exc')):
+        mat_file [label] = {}
+        mat_file [label]['cov']    = np.zeros(shape=(len(junc_list),globals.readLen - 16+1))
+        mat_file [label]['gc_idx'] = np.zeros(shape=(len(junc_list),globals.readLen - 16+1))
+        mat_file [label]['gc_val'] = np.zeros(shape=(len(junc_list),globals.readLen - 16+1))
+
+        for ii in range(len(junc_list)) :
+            jnc = junc_list[ii][lab_idx]
+            gci = np.zeros(shape=((globals.readLen-16)+1),dtype=np.int)
+            if not jnc is None:
+                mat_file[label]['cov'][ii] = jnc.coverage[exp_idx,:].toarray()
+                #gci_inc, gc_inc = jinc.get_gc_factors()
+                gci = jnc.get_gc_factors()[0][exp_idx,:].toarray()[0]
+            mat_file[label]['gc_idx'][ii] = gci
+            #mat_file['Inc']['gc_val'][ii] = gc_inc[exp_idx,ii]
+            for jj in range(globals.readLen-16+1):
+                dummy = gci[jj]
+                if dummy > 0 :
+                    mat_file[label]['gc_val'][ii,jj] = globals.gc_bins_val[exp_idx][ dummy -1 ]
+
+    rand_size = len(rand_list)
+    mat_file['rand10k'] = {}
+    mat_file['rand10k']['cov']    = np.zeros(shape=(rand_size,globals.readLen - 16+1))
+    mat_file['rand10k']['gc_idx'] = np.zeros(shape=(rand_size,globals.readLen - 16+1))
+    mat_file['rand10k']['gc_val'] = np.zeros(shape=(rand_size,globals.readLen - 16+1))
+    for ii, j in enumerate(rand_list):
+        mat_file['rand10k']['cov'][ii] = j.coverage[exp_idx,:].toarray()
+        for jj in range(globals.readLen-16+1):
+            dummy = __gc_factor_ind(j.get_gc_content()[exp_idx,jj],exp_idx)
+            if dummy>0:
+                mat_file['rand10k']['gc_idx'][ii,jj] = dummy
+                mat_file['rand10k']['gc_val'][ii,jj] = globals.gc_bins_val[exp_idx][dummy-1]
+
+    return mat_file
+
+
+def prepare_MAJIQ_matlab_table(junc_set, rand10k):
+
+    result_per_tiss = {}
+    result_per_exp = {}
+    result_p2p  = {}
+
+    for name, ind_list in globals.tissue_repl.items() :
+        aggr_set = set()
+        aggr_rand = set()
+
+        for idx,exp_idx in enumerate(ind_list) :
+            jun = set(junc_set[exp_idx])
+            rand10k[exp_idx].difference(jun)
+            jlist = junc_set[exp_idx]
+
+            aggr_set.union(jun)
+            aggr_rand.union(rand10k[exp_idx])
+
+            if len(rand10k[exp_idx]) < 10000: rand_size = len(rand10k[exp_idx])
+            else: rand_size = 10000
+            rand_list = random.sample(rand10k[exp_idx], rand_size)
+
+            result_per_exp[exp_idx]= _create_mat_dict(exp_idx,jlist,rand_list)
+#            scipy.io.savemat("./test%s"%globals.exp_list[exp_idx],mat_file,oned_as='row')
+            
+            #paired
+            rand_pair = set(rand10k[exp_idx])
+            jidx = idx +1
+            while jidx < len(ind_list) :
+                exp_idx2 = ind_list[jidx]
+                rand_pair.intersection(set(rand10k[exp_idx2]))
+                jun.intersection(set(junc_set[exp_idx2]))
+
+                if len(rand10k[exp_idx]) < 10000: rand_size = len(rand10k[exp_idx])
+                else: rand_size = 10000
+                rand_pair_list = random.sample(rand_pair, rand_size)
 
                 mat_file = {}
-                mat_file ['experiment'] = globals.exp_list[exp_idx]
-                mat_file ['GC_bins'] = globals.gc_bins[exp_idx]
-                mat_file ['GC_bins_val'] = globals.gc_bins_val[exp_idx]
-                mat_file ['weigh_factor'] = globals.weigh_factor
-                mat_file ['Inc'] = {}
-                mat_file ['Exc'] = {}
-                mat_file ['Inc']['cov'] = np.zeros(shape=(len(list),globals.readLen - 16+1))
-                mat_file ['Exc']['cov'] = np.zeros(shape=(len(list),globals.readLen - 16+1))
-                mat_file ['Inc']['gc_idx'] = np.zeros(shape=(len(list),globals.readLen - 16+1))
-                mat_file ['Exc']['gc_idx'] = np.zeros(shape=(len(list),globals.readLen - 16+1))
-                mat_file ['Inc']['gc_val'] = np.zeros(shape=(len(list),globals.readLen - 16+1))
-                mat_file ['Exc']['gc_val'] = np.zeros(shape=(len(list),globals.readLen - 16+1))
-    
-    #            print "SET:", junc_set[exp_idx]
-                for ii in range(len(list)) :
-                    jinc = list[ii][0]
-                    jexc = list[ii][1]
-                    gci_inc = np.zeros(shape=(globals.num_experiments,(globals.readLen-16)+1),dtype=np.int)
-                    gci_exc = np.zeros(shape=(globals.num_experiments,(globals.readLen-16)+1),dtype=np.int)
-                    if not jinc is None:
-                        mat_file['Inc']['cov'][ii] = jinc.coverage[exp_idx]
-                        gci_inc, gc_inc = jinc.get_gc_factors()
-                    if not jexc is None:
-                        mat_file['Exc']['cov'][ii] = jexc.coverage[exp_idx]
-                        gci_exc, gc_exc = jexc.get_gc_factors()
-                    mat_file['Inc']['gc_idx'][ii] = gci_inc[exp_idx,ii]
-                    mat_file['Exc']['gc_idx'][ii] = gci_exc[exp_idx,ii]
-        #            mat_file['Inc']['gc_val'][ii] = gc_inc[exp_idx,ii]
-        #            mat_file['Exc']['gc_val'][ii] = gc_exc[exp_idx,ii]
-                    for jj in range(globals.readLen-16+1):
-                        print exp_idx, ii, jj
-                        dummy = gci_inc[exp_idx,jj]
-                        if dummy > 0 :
-                            mat_file['Inc']['gc_val'][ii,jj] = globals.gc_bins_val[exp_idx][ dummy -1 ]
-                        dummy = gci_exc[exp_idx,jj]
-                        if dummy > 0 :
-                            mat_file['Exc']['gc_val'][ii,jj] = globals.gc_bins_val[exp_idx][ dummy -1 ]
-                if len(rand10k[exp_idx]) < 10000:
-                    rand_size = len(rand10k[exp_idx])
-                else:
-                    rand_size = 10000
-                print "RAND", rand_size, "LEN"
-                mat_file['rand10k'] = {}
-                mat_file['rand10k']['cov'] = np.zeros(shape=(rand_size,globals.readLen - 16+1))
-                mat_file['rand10k']['gc_idx'] = np.zeros(shape=(rand_size,globals.readLen - 16+1))
-                mat_file['rand10k']['gc_val'] = np.zeros(shape=(rand_size,globals.readLen - 16+1))
-                for ii, j in enumerate(random.sample(rand10k[exp_idx], rand_size)) :
-                    mat_file['rand10k']['cov'][ii] = j.coverage[exp_idx]
-                    for jj in range(globals.readLen-16+1):
-                        dummy = __gc_factor_ind(j.get_gc_content()[exp_idx,jj],exp_idx)
-                        if dummy>0:
-                            mat_file['rand10k']['gc_idx'][ii,jj] = dummy
-                            mat_file['rand10k']['gc_val'][ii,jj] = globals.gc_bins_val[exp_idx][dummy-1]
+                mat_file[globals.exp_list[exp_idx]] = _create_mat_dict(exp_idx,list(jun), rand_pair_list)
+                mat_file[globals.exp_list[exp_idx2]] = _create_mat_dict(exp_idx2,list(jun), rand_pair_list)
+                p2p_id = "%s_%s"%(globals.exp_list[exp_idx],globals.exp_list[exp_idx2])
+                result_p2p[p2p_id] = mat_file
+                jidx += 1
+        #END for exp_idx
+        
+            
 
-                scipy.io.savemat("./test%s"%globals.exp_list[exp_idx],mat_file,oned_as='row')
-            #END for exp_idx
-
-            agreg_file = {}
-            agreg_file ['Inc'] = {}
-            agreg_file ['Exc'] = {}
-            agreg_file ['Inc']['cov'] = np.zeros(shape=(len(aggr_set),globals.readLen - 16+1))
-            agreg_file ['Exc']['cov'] = np.zeros(shape=(len(aggr_set),globals.readLen - 16+1))
+        agreg_file = {}
+        for lab_idx, label in enumerate(('Inc','Exc')):
+            agreg_file [label] = {}
+            agreg_file [label]['cov'] = np.zeros(shape=(len(aggr_set),globals.readLen - 16+1), dtype = np.dtype("float"))
             for ii,nn in enumerate(aggr_set):
                 for exp_idx in ind_list:
                     for jj in range(globals.readLen-16+1):
                         dummy = __gc_factor_ind(j.get_gc_content()[exp_idx,jj],exp_idx)
-                        if not nn[0] is None and dummy > 0:
-                            agreg_file['Inc']['cov'][ii] += nn[0].coverage[exp_idx] * globals.gc_bins_val[exp_idx][ dummy -1 ]
-                        if not nn[1] is None and dummy > 0:
-                            agreg_file['Exc']['cov'][ii] += nn[1].coverage[exp_idx]
-            if len(aggr_rand) < 10000:
-                rand_size = len(aggr_rand)
-            else:
-                rand_size = 10000
-            print "RAND", rand_size, "LEN"
-            agreg_file['rand10k'] = {}
-            agreg_file['rand10k']['cov'] = np.zeros(shape=(rand_size,globals.readLen - 16+1))
-            agreg_file['rand10k']['gc_idx'] = np.zeros(shape=(rand_size,globals.readLen - 16+1))
-            agreg_file['rand10k']['gc_val'] = np.zeros(shape=(rand_size,globals.readLen - 16+1))
-            for ii, j in enumerate(random.sample(aggr_rand, rand_size)) :
-                agreg_file['rand10k']['cov'][ii] = j.coverage[exp_idx]
-                for jj in range(globals.readLen-16+1):
-                    dummy = __gc_factor_ind(j.get_gc_content()[exp_idx,jj],exp_idx)
-                    if dummy>0:
-                        agreg_file['rand10k']['gc_idx'][ii,jj] = dummy
-                        agreg_file['rand10k']['gc_val'][ii,jj] = globals.gc_bins_val[exp_idx][dummy-1]
+                        if not nn[lab_idx] is None and dummy > 0:
+                            agreg_file[label]['cov'][ii] += nn[lab_idx].coverage[exp_idx,jj]*  dummy 
 
-            scipy.io.savemat("./agreg_%s"%globals.exp_list[exp_idx],agreg_file,oned_as='row')
-    return
+        if len(aggr_rand) < 10000:
+            rand_size = len(aggr_rand)
+        else:
+            rand_size = 10000
+        print "RAND", rand_size, "LEN"
+        agreg_file['rand10k'] = {}
+        agreg_file['rand10k']['cov'] = np.zeros(shape=(rand_size,globals.readLen - 16+1))
+        for ii, j in enumerate(random.sample(aggr_rand, rand_size)) :
+            for jj in range(globals.readLen-16+1):
+                dummy = __gc_factor_ind(j.get_gc_content()[exp_idx,jj],exp_idx)
+                agreg_file['rand10k']['cov'][ii] += j.coverage[exp_idx,jj]*dummy
+
+        result_per_tiss[name]=agreg_file
+        #scipy.io.savemat("./agreg_%s"%globals.exp_list[exp_idx],agreg_file,oned_as='row')
+    return (result_per_tiss, result_per_exp,result_p2p)
+
+
+def merge_and_create_MAJIQ_matlab(res_x_tiss,res_x_exp, res_p2p):
+
+    header = ['Inc','Exc','rand10k']
+
+    label = ['cov','gc_idx','gc_val']
+
+    for name, ind_list in globals.tissue_repl.items():
+        print name
+        agreg_file = {}
+        for hh in header:
+            agreg_file[hh] = {}
+            agreg_file[hh]['cov'] = []
+            for chrom in res_x_tiss.keys():
+                for row in res_x_tiss[chrom][name][hh]['cov']: 
+                    agreg_file[hh]['cov'].append(row)
+        scipy.io.savemat("./agreg_%s"%name,agreg_file,oned_as='row')
+
+        for idx, exp_idx in enumerate(ind_list) :
+            mat_file = {}
+            for hh in header:
+                mat_file[hh] = {}
+                for ll in label:
+                    mat_file[hh][ll] = []
+                    for chrom in res_x_exp.keys():
+                        for row in res_x_exp[chrom][exp_idx][hh][ll]: mat_file[hh][ll].append(row)
+            scipy.io.savemat("./%s"%globals.exp_list[exp_idx],mat_file,oned_as='row')
+
+            jidx = idx +1
+
+            while jidx < len(ind_list) :
+                exp_idx2 = ind_list[jidx]
+                p2p_id = "%s_%s"%(globals.exp_list[exp_idx],globals.exp_list[exp_idx2])
+                mat_file = {}
+                for idx_e in (exp_idx,exp_idx2):
+                    exp = globals.exp_list[idx_e]
+                    mat_file[exp] = {}
+                    for hh in header:
+                        mat_file[exp][hh] = {}
+                        for ll in label:
+                            mat_file[exp][hh][ll] = []
+                            for chrom in res_p2p.keys():
+#                                p2p_temp = res_p2p[chrom][p2p_id][exp][hh][ll]
+                                for row in res_p2p[chrom][p2p_id][exp][hh][ll]: mat_file[exp][hh][ll].append(row)
+
+                scipy.io.savemat("./%s_%s"%(globals.exp_list[exp_idx],globals.exp_list[exp_idx2]),mat_file,oned_as='row')
+                jidx +=1
 
 def prepare_junctions_gc( junc , exp_idx):
     
@@ -278,78 +336,4 @@ def print_junc_matrices(mat, tlb=None,fp=None):
     out.write("\n=== END %s === \n\n"%id)
     if fp is None: out.close()
 
-
-'''
- @deprecated 
-'''
-def prepare_const_set(wei,T,M,user_lab=''):
-    '''
-    (W) Weijun set
-    (T) Transcript const set
-    (M) MGP ReadSeq const set
-    '''
-
-    TM = set(T).intersection(set(M))
-    fp1 = open("./new","w+")
-    fp2 = open("./new.coord","w+")
-    for ii in TM:
-        if ii.gene.strand == '+':
-            invj = ii.gene.exonNum - (ii.id-1)
-            j = ii.id
-        else:
-            j = ii.gene.exonNum - (ii.id -1)
-            invj = ii.id
-        fp1.write("%s.%s:%s:%s:%s\n"%(ii.gene.id,j,str(j-1),invj,ii.gene.exonNum))
-        ii.print_triplet_coord(fp2)
-        
-    fp1.close()
-    fp2.close()
-    fp1 = open("./wei","w+")
-    for ii in wei:
-        if ii[1].gene.strand == '+':
-            invj = ii[1].gene.exonNum - (ii[1].id-1)
-            j = ii[1].id
-        else:
-            j = ii[1].gene.exonNum  - (ii[1].id-1)
-            invj = ii[1].id
-        fp1.write("%s.%s:%s:%s:%s\n"%(ii[1].gene.id,j,str(j-1),invj,ii[1].gene.exonNum))
-    fp1.close()
-
-    return
-
-
-'''
-@deprecated
-'''
-def store_binaries(foldername, all_gene_by_chrom):
-
-    if not os.path.exists(foldername):
-            os.makedirs(foldername)
-    for chr, list in all_gene_by_chrom.items():
-        file_pi = open("%s/%s.data"%(foldername,chr), 'wb')
-        pickle.dump(list, file_pi)
-        file_pi.close()
-
-'''
-@deprecated
-'''
-def load_binaries(foldername, all_gene_by_chrom):
-
-    if not os.path.exists(foldername):
-        print "incorrect bin folder"
-        return None
-
-    data = {}
-    for ff in  os.listdir(foldername) :
-        inp = open("%s/%s"%(foldername,ff),'rb')
-        tab = ff.split('.')
-        if tab[1] == 'data' and tab[0].starswith('chr'):
-            chr = tab[0]
-        else:
-            continue
-        pk = pickle.Unpickler(inp)
-        data[chr] = pk.load()
-        inp.close()
-
-    return data
 

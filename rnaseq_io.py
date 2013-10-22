@@ -3,7 +3,6 @@ from exon import Exon, detect_exons
 from junction import  Junction
 from rna_reads import RNA_read, parse_read
 from RNAexperiment import RNAexperiment
-from matplotlib import pyplot as plt
 import gc
 import numpy as np
 
@@ -48,9 +47,8 @@ def reads_for_junc_coverage(filename, gene_list, readlen, exp_index):
                 if r_start < g_start :
                     ''' That means that we found new junctions out of any transcript'''
                     '''mark as non-transcript one and next junction'''
-#                    print ii 
-                    if isRead:
-                        counter[1] += 1
+#                   print ii 
+                    counter[1] += 1
                     break
                 elif r_start > g_end or (strand != gene.strand):
                     '''next_gene'''
@@ -219,6 +217,7 @@ def read_transcript_ucsc(filename, refSeq = False):
             #END for ii in range(nblocks)
             trcpt._sort_in_list(strand)
         #end for t in text
+        gc.collect()
         text = file.readlines(BUFFER)
     #END WHILE
     file.close()

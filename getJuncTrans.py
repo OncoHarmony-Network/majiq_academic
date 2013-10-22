@@ -10,7 +10,7 @@ from utils import utils
 import copy
 #from matplotlib import pyplot as plt
 import multiprocessing
-from multiprocessing import Pool
+from multiprocessing import Pool, Manager
 
 try:
     import cPickle as pickle
@@ -22,14 +22,20 @@ def __parallel_for_splc_quant(sam_dir, gene_list,n_genes, chr, order,as_db):
 #    reference_genes = copy.deepcopy(all_genes)
     print "START child,", multiprocessing.current_process().name
     for idx,exp in enumerate(globals.exp_list):
-        SAM = sam_dir+"/"+exp+".sorted.sam"
-        rnaseq_io.reads_for_junc_coverage(SAM, gene_list, globals.readLen, idx )
-    print "END child, ", multiprocessing.current_process().name
+        SAM = "%s/%s.%s.sorted.sam"%(sam_dir,exp,chr)
+        print SAM
+        if os.path.exists(SAM):
+            rnaseq_io.reads_for_junc_coverage(SAM, gene_list, globals.readLen, idx )
     TAS = analize.analize_genes(gene_list, "kk", as_db, None, 'AS')
     CONST = analize.analize_genes(gene_list, "kk", as_db, None, 'CONST')
     a,b = analize.analize_junction_reads( gene_list,chr )
-    cand[chr] = a
-    return (a,b)
+#    print a
+    tiss, exp,p2p = utils.prepare_MAJIQ_matlab_table( a,b)
+    file_pi = open('genelist_%s.obj'%(chr), 'w+') 
+    pickle.dump((tiss,exp,p2p), file_pi)
+    file_pi.close()
+    print "END child, ", multiprocessing.current_process().name
+    return 
 
 def __parallel_for_body(SAM, all_genes,n_genes, exp_idx,chr_list, order, read_len):
 #    reference_genes = copy.deepcopy(all_genes)
@@ -89,10 +95,10 @@ if __name__ == "__main__":
         for chr,gg in all_genes.items():
             n_genes += len(gg) 
         print n_genes
-        pool = Pool(processes=2)              # start 4 worker processes
         jobs = []
         order= {}
         chr_list = all_genes.keys()
+        chr_list = ['chr1','chr2']
 #        for chr in chr_list:
 #            if not chr in order:
 #                order[chr]=[]
@@ -102,15 +108,17 @@ if __name__ == "__main__":
         cand = {}
         non_cand = {}
 
-
+        if int(args.ncpus) >1:
+            pool = Pool(processes=args.ncpus)              # start 4 worker processes
         for chr in chr_list:
 #            all_experiments[idx] = RNAexperiment(exp,1,args.genome,all_genes)
 #            gene_list = all_experiments[idx].get_gene_list()
             if int(args.ncpus) == 1:
-                cand[chr],non_cand[chr] = __parallel_for_splc_quant(args.junc_dir,all_genes[chr],n_genes,chr,order,av_altern)
+                __parallel_for_splc_quant(args.junc_dir,all_genes[chr],n_genes,chr,order,av_altern)
 #                __parallel_for_body(SAM,all_genes,n_genes,idx,chr_list,order,args.readlen)
             else:
-                jobs.append(pool.apply_async(__parallel_for_splc_quant, [SAM,all_genes[chr],n_genes,chr,order],av_alter ))
+                print "MULTITHREAD"
+                jobs.append(pool.apply_async(__parallel_for_splc_quant, [args.junc_dir,all_genes[chr],n_genes,chr,order,av_altern] ))
 #                jobs.append(pool.apply_async(__parallel_for_body,[SAM, all_genes, n_genes, idx, chr_list, order, args.readlen] ))
 
 
@@ -119,13 +127,17 @@ if __name__ == "__main__":
         if int(args.ncpus) >1:
             pool.close()
             for idx, j in enumerate(jobs):
-                gene[idx]=j.get()
+                print j.get()
             pool.join()
-
         print "GEN MATLAB"
-        print cand[chr]
-
-        utils.prepare_MAJIQ_matlab_table(cand,non_cand)
+        
+        tiss = {}
+        exp = {}
+        p2p = {}
+        for chrom in chr_list:
+            file_pi2 = open('genelist_%s.obj'%chrom, 'rb')
+            tiss[chrom],exp[chrom],p2p[chrom] = pickle.load(file_pi2)
+        utils.merge_and_create_MAJIQ_matlab(tiss,exp,p2p)
 
 
 #            print idx,command

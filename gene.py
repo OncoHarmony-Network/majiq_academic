@@ -1,7 +1,7 @@
 #!/usr/bin/python
 import numpy as np
 
-import my_globals
+import globals
 
 class Gene:
     __eq__ = lambda self, other: self.chromosome == other.chromosome and self.strand == other.strand and self.start < other.end and self.end > other.start
@@ -27,8 +27,8 @@ class Gene:
 #        self.RNAread_list = np.zeros(shape=(globals.num_experiments),dtype=np.dtype('object'))
 #        self.RNAread_list.fill([])
         self.exonNum = 0
-        self.readNum = np.zeros(shape=(my_globals.num_experiments),dtype=np.int)
-        self.RPKM = np.zeros(shape=(my_globals.num_experiments),dtype=np.float)
+        self.readNum = np.zeros(shape=(globals.num_experiments),dtype=np.int)
+        self.RPKM = np.zeros(shape=(globals.num_experiments),dtype=np.float)
 
         self.transAScandidates = []
         self.transCONSTcandidates = []
@@ -111,7 +111,7 @@ class Gene:
                 if not name in ll.otherNames:
                     ll.otherNames.append(name)
                 ll.start = min(ll.start,self.start)
-                ll.end = min(ll.end,self.end)
+                ll.end = max(ll.end,self.end)
                 break
         return res
 
