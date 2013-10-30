@@ -28,7 +28,7 @@ We want to plot the variance of method A vs method B in a scatter plot.
 Same scatterplot for the winning method and the different normalizations.
 
 """
-DEBUG = True
+DEBUG = False
 TESTBREAK = 100
 LIM = 100
 EPSILON = 1./sys.maxint
@@ -292,10 +292,10 @@ def main():
     if args.output:
         print "Calculating PSI between %s and %s..."%(name1, name2)
         psi_scores = calc_psi(my_mean1, my_mean2) #psi_scores X= Y=Replica 
-        pickle.dump(psi_scores, open("%s/%s_vs_%s_psivalues.pickle"%(args.output, name1, name2), 'w'))
+        pickle.dump(psi_scores, open("%s%s_vs_%s_psivalues.pickle"%(args.output, name1, name2), 'w'))
         print "...saved.\nCalculating Delta PSI..."
         delta_psi = abs(sample_psi(psi_scores[: ,0]) - sample_psi(psi_scores[:, 1]))
-        pickle.dump(delta_psi, open("%s/%s_vs_%s_deltapsi.pickle"%(args.output, name1, name2), 'w'))
+        pickle.dump(delta_psi, open("%s%s_vs_%s_deltapsi.pickle"%(args.output, name1, name2), 'w'))
         print "Saved! Done."
 
 if __name__ == '__main__':
