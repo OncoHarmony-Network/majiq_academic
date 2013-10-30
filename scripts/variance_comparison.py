@@ -7,7 +7,7 @@ from pylab import *
 from numpy.ma import masked_less
 from matplotlib import rcParams
 
-from junction_sample import sample_from_junctions, norm_junctions, calc_nonzeromeanvar, DEBUG, TESTBREAK, EPSILON
+from junction_sample import sample_from_junctions, norm_junctions, calc_nonzeromeanvar, discardlow, discardhigh, DEBUG, TESTBREAK, EPSILON
 
 
 def _numzeros(junctions):
@@ -23,16 +23,36 @@ def _save_or_show(plotpath, plotname=None):
         show()
 
 
-def plot_varvsvar(score1, score2, my_title="", score1_name="", score2_name="", plotpath=None):
-    title(my_title)
+def calc_score(mean_sample1, var_sample1, mean_sample2, var_sample2):
+    return abs(var_sample1-var_sample2)/((mean_sample1+mean_sample2)*0.5)
+
+
+
+def plot_varvsvar(score1, score2, score1_name, score2_name, replica1_name, replica2_name, plotpath=None, plotname=None):
+    total_junctions = float(len(score1))
+    better_in_method1 = sum(score1 < score2)
+    equal_in_both = sum(score1 == score2)
+    better_in_method2 = sum(score1 > score2)
+    """
+    print score1_name
+    print score1
+    print
+    print score2_name
+    print score2
+    print
+    print better_in_method1
+    print better_in_method2
+    """
+    print "Better in %s: %s (%.2f%%) Equal: %s Better in %s: %s (%.2f%%)"%(score1_name, better_in_method1, (better_in_method1/total_junctions)*100, equal_in_both, score2_name, better_in_method2, (better_in_method2/total_junctions)*100)
+    title("%s vs %s\n%s and %s"%(score1_name, score2_name, replica1_name, replica2_name))
     max_value = max(max(score1), max(score2))
-    xlabel(score2_name)
-    ylabel(score1_name)
+    xlabel(score1_name)
+    ylabel(score2_name)
     xlim(0, max_value)
     ylim(0, max_value)
     plot([0, max_value], [0, max_value])
     plot(score1, score2, '.')
-    _save_or_show(plotpath)
+    _save_or_show(plotpath, plotname)
 
 
 def main():
@@ -41,9 +61,11 @@ def main():
     parser.add_argument('par1', help='Path for parameters of replica1')
     parser.add_argument('par2', help='Path for parameters of replica2')  
     parser.add_argument('--k', default=50, type=int, help='Number of positions to sample per iteration')
-    parser.add_argument('--m', default=100, type=int, help='Number of samples') 
+    parser.add_argument('--m', default=100, type=int, help='Number of samples')     
     parser.add_argument('--junctype', default='rand10k', help='The type of junction to analyze. (Inc, Exc or rand10k for now)')
     parser.add_argument('--plotpath', default=None, help='Path to save the plot to, if not provided will show on a matplotlib popup window') 
+    parser.add_argument('--minnonzero', default=0, type=int, help='Minimum number of positive positions to consider the junction')   
+    parser.add_argument('--maxnonzero', default=0, type=int, help='Maximum number of positive positions to consider the junction') 
     args = parser.parse_args()
 
     my_mat = loadmat(args.matpath)
@@ -55,92 +77,83 @@ def main():
     replica1_gc = my_mat[name1][args.junctype][0, 0][0, 0]['gc_val']
     replica2_gc = my_mat[name2][args.junctype][0, 0][0, 0]['gc_val']
 
+    if args.maxnonzero:
+        print "Before Maxnonzero %s. replica1: %s replica2: %s"%(args.maxnonzero, replica1.shape, replica2.shape)
+        replica1, replica1_gc, replica2, replica2_gc = discardhigh(replica1, replica1_gc, replica2, replica2_gc, args.maxnonzero)
+        print "After Maxnonzero %s. replica1: %s replica2: %s"%(args.maxnonzero, replica1.shape, replica2.shape)      
+
+    if args.minnonzero:
+        print "Before Minnonzero %s. replica1: %s replica2: %s"%(args.minnonzero, replica1.shape, replica2.shape)
+        replica1, replica1_gc, replica2, replica2_gc = discardlow(replica1, replica1_gc, replica2, replica2_gc, args.minnonzero)
+        print "After Minnonzero %s. replica1: %s replica2: %s"%(args.minnonzero, replica1.shape, replica2.shape)      
+
     #every method discards the -1, no one likes them :'(
-    #replica1 = replica1[numpy > -EPSILON]  
-    #replica2 = replica2[replica2 > -EPSILON] 
     replica1 = masked_less(replica1, 0) 
     replica2 = masked_less(replica2, 0) 
-
-    print replica1
-
+    replica1_gcnorm = norm_junctions(replica1, gc_factors=replica1_gc, gcnorm=True)
+    replica2_gcnorm = norm_junctions(replica2, gc_factors=replica2_gc, gcnorm=True)
+    """
     empirical_mean1 = replica1.mean(axis=1)
     empirical_var1 = replica1.var(axis=1)
     empirical_mean2 = replica2.mean(axis=1)
     empirical_var2 = replica2.var(axis=1)
     empnozero_mean1, empnozero_var1 = calc_nonzeromeanvar(replica1)
     empnozero_mean2, empnozero_var2 = calc_nonzeromeanvar(replica2)
-
     if DEBUG:
+        empirical_mean1 = empirical_mean1[:TESTBREAK]
+        empirical_mean2 = empirical_mean2[:TESTBREAK]
+        empnozero_mean1 = empnozero_mean1[:TESTBREAK]
+        empnozero_mean2 = empnozero_mean2[:TESTBREAK]         
         empirical_var1 = empirical_var1[:TESTBREAK]
         empirical_var2 = empirical_var2[:TESTBREAK]
         empnozero_var1 = empnozero_var1[:TESTBREAK]
         empnozero_var2 = empnozero_var2[:TESTBREAK] 
-
+    """
     replica1_gcnorm = norm_junctions(replica1, gc_factors=replica1_gc, gcnorm=True)
     replica2_gcnorm = norm_junctions(replica2, gc_factors=replica2_gc, gcnorm=True)
 
-    #Bootstrapping method
-    bootstrapping_zeros_mean1, bootstrapping_zeros_var1 = sample_from_junctions(replica1, args.m, args.k, discardzeros=False, nb=False, parameters=args.par1)
-    bootstrapping_zeros_mean2, bootstrapping_zeros_var2 = sample_from_junctions(replica2, args.m, args.k, discardzeros=False, nb=False, parameters=args.par2)
-    #Majiq without normalizing
-    majiq_nonorm_mean1, majiq_nonorm_var1 = sample_from_junctions(replica1, args.m, args.k, discardzeros=False, nb=True, parameters=args.par1)
-    majiq_nonorm_mean2, majiq_nonorm_var2  = sample_from_junctions(replica2, args.m, args.k, discardzeros=False, nb=True, parameters=args.par2)
+    #Sampling methods    REFERENCE (junctions, m, k, discardzeros=False, nb=False, trimborder=False, parameters=None)
+    #Naive bootstrapping
+    boots_mean1, boots_var1 = sample_from_junctions(replica1, args.m, args.k, parameters=args.par1)
+    boots_mean2, boots_var2 = sample_from_junctions(replica2, args.m, args.k, parameters=args.par2)
+    #Naive bootstrapping with GC normalization
+    boots_norm_mean1, boots_norm_var1 = sample_from_junctions(replica1_gcnorm, args.m, args.k, parameters=args.par1)
+    boots_norm_mean2, boots_norm_var2 = sample_from_junctions(replica2_gcnorm, args.m, args.k, parameters=args.par2)
+    #Naive bootstrapping with trimming of borders
+    boots_trim_mean1, boots_trim_var1 = sample_from_junctions(replica1_gcnorm, args.m, args.k, trimborder=True, parameters=args.par1)
+    boots_trim_mean2, boots_trim_var2 = sample_from_junctions(replica2_gcnorm, args.m, args.k, trimborder=True, parameters=args.par2)
+    #Naive bootstrapping discarding zeros
+    boots_zeros_mean1, boots_zeros_var1 = sample_from_junctions(replica1_gcnorm, args.m, args.k, discardzeros=True, parameters=args.par1)
+    boots_zeros_mean2, boots_zeros_var2 = sample_from_junctions(replica2_gcnorm, args.m, args.k, discardzeros=True, parameters=args.par2)
+    #Bootstrapping sampling from a NB distribution
+    boots_nb_mean1, boots_nb_var1  = sample_from_junctions(replica1_gcnorm, args.m, args.k, nb=True, parameters=args.par1)
+    boots_nb_mean2, boots_nb_var2  = sample_from_junctions(replica2_gcnorm, args.m, args.k, nb=True, parameters=args.par2)
     #Majiq with zeros
-    majiq_zero_mean1, majiq_zero_var1 = sample_from_junctions(replica1_gcnorm, args.m, args.k, discardzeros=False, nb=True, parameters=args.par1)
-    majiq_zero_mean2, majiq_zero_var2  = sample_from_junctions(replica1_gcnorm, args.m, args.k, discardzeros=False, nb=True, parameters=args.par2)
+    majiq_mean1, majiq_var1 = sample_from_junctions(replica1_gcnorm, args.m, args.k,  discardzeros=True, nb=True, trimborder=True, parameters=args.par1)
+    majiq_mean2, majiq_var2  = sample_from_junctions(replica2_gcnorm, args.m, args.k, discardzeros=True, nb=True, trimborder=True, parameters=args.par2)
 
-    minnonzero = 5
-    num_before1 = replica1_gcnorm.shape[0]
-    num_before2 = replica2_gcnorm.shape[0]
-    numzeros1 = _numzeros(replica1_gcnorm) 
-    numzeros2 = _numzeros(replica2_gcnorm)   
-    pass_threshold1 = (numzeros1 < replica1_gcnorm.shape[1]-minnonzero)
-    pass_threshold2 = (numzeros2 < replica2_gcnorm.shape[1]-minnonzero)
-    pass_threshold = all([pass_threshold1, pass_threshold2], axis=0)
-    print sum(pass_threshold)
-    print sum(pass_threshold1)
-    print sum(pass_threshold2)
-    #junctions = junctions[pass_threshold]
-    replica1 = replica1[pass_threshold]
-    replica2 = replica2[pass_threshold]  
-    replica1_gcnorm = replica1_gcnorm[pass_threshold]
-    replica2_gcnorm = replica2_gcnorm[pass_threshold] 
-
-    #Bootstrapping method without zeroes
-    bootstrapping_nozeros_mean1, bootstrapping_nozeros_var1 = sample_from_junctions(replica1, args.m, args.k, discardzeros=True, nb=False, parameters=args.par1)
-    bootstrapping_nozeros_mean2, bootstrapping_nozeros_var2 = sample_from_junctions(replica2, args.m, args.k, discardzeros=True, nb=False, parameters=args.par2)
-    #Majiq without zeros
-    majiq_nozero_mean1, majiq_nozero_var1 = sample_from_junctions(replica1_gcnorm, args.m, args.k, discardzeros=True, nb=True, parameters=args.par1)
-    majiq_nozero_mean2, majiq_nozero_var2 = sample_from_junctions(replica2_gcnorm, args.m, args.k, discardzeros=True, nb=True, parameters=args.par2)
     #calculate scores for different methods
-    scores_poisson       = abs(bootstrapping_zeros_mean1-empirical_var2)
-    scores_zero_boots = abs(bootstrapping_zeros_var1-empirical_var2)
-    scores_nozero_boots = abs(bootstrapping_nozeros_var1-empnozero_var2)
-    scores_notnorm_majiq = abs(majiq_nonorm_var1-empirical_var2)
-    scores_zero_majiq    = abs(majiq_zero_var1-empirical_var2)
-    scores_nonzero_majiq = abs(majiq_nozero_var1-empnozero_var2)
+    #scores_empirical    = calc_score(empirical_mean1, empirical_var1, empirical_mean2, empirical_var2)    
+    scores_poisson      = calc_score(boots_zeros_mean1, boots_zeros_var1, boots_zeros_mean2, boots_zeros_mean2)
+    scores_boots        = calc_score(boots_mean1, boots_var1, boots_mean2, boots_var2)
+    scores_boots_norm   = calc_score(boots_norm_mean1, boots_norm_var1, boots_norm_mean2, boots_norm_var2)
+    scores_boots_trim   = calc_score(boots_trim_mean1, boots_trim_var1, boots_trim_mean2, boots_trim_var2)
+    scores_boots_zero   = calc_score(boots_zeros_mean1, boots_zeros_var1, boots_zeros_mean2, boots_zeros_var2)
+    scores_boots_nb     = calc_score(boots_nb_mean1, boots_nb_var1, boots_nb_mean2, boots_nb_var2)
+    scores_majiq        = calc_score(majiq_mean1, majiq_var1, majiq_mean2, majiq_var2)
 
-    print "Better junctions in MAJIQ than Poisson: %s (%.2f%%)"%(sum(scores_poisson > scores_zero_majiq), (sum(scores_poisson > scores_zero_majiq)/float(len(scores_zero_majiq)))*100)
-    print "Better junctions in MAJIQ than Bootstrapping (with zeros): %s (%.2f%%)"%(sum(scores_zero_boots > scores_zero_majiq), (sum(scores_zero_boots > scores_zero_majiq)/float(len(scores_zero_majiq)))*100)
-    print "Better junctions in MAJIQ than Bootstrapping (without zeros): %s (%.2f%%)"%(sum(scores_nozero_boots > scores_nonzero_majiq), (sum(scores_nozero_boots > scores_nonzero_majiq)/float(len(scores_nonzero_majiq)))*100)
-    print "Better junctions in MAJIQ without 0s than MAJIQ with 0s: %s (%.2f%%)"%(sum(scores_zero_majiq > scores_nonzero_majiq), (sum(scores_zero_majiq > scores_nonzero_majiq)/float(len(scores_zero_majiq)))*100)
-
-    #MAJIQ vs Poisson
-    plot_varvsvar(scores_poisson, scores_zero_majiq, "Poisson sampling variance(=mean) vs MAJIQ variance\n(with 0s)", 
-                                                     "Poisson %s - Empirical %s"%(name1, name2), 
-                                                     "MAJIQ %s - Empirical %s"%(name1, name2))
-    plot_varvsvar(scores_zero_boots, scores_zero_majiq, "Bootstrapping sampling variance vs MAJIQ variance\n(with 0s)", 
-                                                     "Bootstrapping %s - Empirical %s"%(name1, name2), 
-                                                     "MAJIQ %s - Empirical %s"%(name1, name2))
-
-    plot_varvsvar(scores_zero_majiq, scores_nonzero_majiq, "MAJIQ (with 0s) variance vs MAJIQ (without 0s)\n(with 0s)", 
-                                                           "MAJIQ (with 0) %s - Empirical (with 0) %s"%(name1, name2), 
-                                                           "MAJIQ (without 0) %s - Empirical (without 0) %s"%(name1, name2))
+    #Strawman
+    plot_varvsvar(scores_poisson, scores_majiq, "Poisson",  "MAJIQ", name1, name2, args.plotpath, "PoissonvsMAJIQ")
+    #Testing GC normalization
+    plot_varvsvar(scores_boots, scores_boots_norm, "Naive Bootstrapping", "Naive Bootstrapping GC norm", name1, name2, args.plotpath, "GCnorm")
+    #testing Parametric NB sampling
+    plot_varvsvar(scores_boots_norm, scores_boots_nb, "Naive bootstrapping", "Parametric Bootstrapping",  name1, name2, args.plotpath, "NBVSparametric")
+    #testing trimmming 
+    plot_varvsvar(scores_boots_norm, scores_boots_trim, "Naive bootstrapping", "Naive bootstrapping (trimming borders)", name1, name2, args.plotpath, "Trimming")
+    #FINAL test
+    plot_varvsvar(scores_boots_zero, scores_majiq, "Naive Bootstrapping", "MAJIQ", name1, name2, args.plotpath, "naiveNoZeroVSMAJIQ")
 
 
-    plot_varvsvar(scores_zero_majiq, scores_nonzero_majiq, "MAJIQ (with 0s) variance vs MAJIQ (without 0s)\n(with 0s)", 
-                                                           "MAJIQ (with 0) %s - Empirical (with 0) %s"%(name1, name2), 
-                                                           "MAJIQ (without 0) %s - Empirical (without 0) %s"%(name1, name2))
 
 
 if __name__ == '__main__':

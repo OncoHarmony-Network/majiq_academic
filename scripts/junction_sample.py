@@ -4,12 +4,9 @@ import pickle
 import argparse
 from random import choice
 
-import matplotlib
-matplotlib = reload(matplotlib)
-matplotlib.use('GTKAgg')
-
 from scipy.io import loadmat
 from pylab import *
+import numpy as np
 from matplotlib import rcParams
 from scipy.stats import pearsonr
 from numpy.random import dirichlet
@@ -28,7 +25,7 @@ We want to plot the variance of method A vs method B in a scatter plot.
 Same scatterplot for the winning method and the different normalizations.
 
 """
-DEBUG = True
+DEBUG = False
 TESTBREAK = 800
 LIM = 10
 EPSILON = 1./sys.maxint
@@ -106,7 +103,6 @@ def sample_from_junctions(junctions, m, k, discardzeros=False, nb=False, trimbor
         junction = junction[junction > -EPSILON]  #discard the -1 (or lower) positions regardless of the dzero treatment
         if trimborder: 
             junction = _trimborders(junction) #trim the zeroes from the borders regardless of the discardzeros flag
-
         if discardzeros:
             junction = junction[junction!=0] #a junction array without the zeroes
 
@@ -132,25 +128,25 @@ def sample_from_junctions(junctions, m, k, discardzeros=False, nb=False, trimbor
             samples = []
             #sample m times
             for iternumber in xrange(m):
+                junction_samples = []
                 if nb:
-                    samples.extend(negative_binomial(r_nb, p_nb, k))
+                    junction_samples.extend(negative_binomial(r_nb, p_nb, k))
                 else:
                     #for the regular sampling with replacement
                     #weights = calc_weights(junction)
-                    #junction_samples = multinomial(k, weights, junction) #This function is very slow
-                    junction_samples = []                    
+                    #junction_samples = multinomial(k, weights, junction) #This function is very slow                    
                     for numsamples in xrange(k):
                         junction_samples.append(choice(junction))
                       
-                    samples.extend(junction_samples)
+                samples.extend(junction_samples)
 
             #calculate the mean and the variance for simple sampling
             sampled_mean.append(mean(samples))
             sampled_var.append(var(samples))
 
-    return sampled_mean, sampled_var
+    return array(sampled_mean), array(sampled_var)
 
-def plot_pearsoncorr(var1, var2, my_title, my_xlabel, my_ylabel, plotpath=None):
+def plot_pearsoncorr(var1, var2, my_title, my_xlabel, my_ylabel, plotpath=None, max_value=None):
     if DEBUG:
         var1 = var1[:TESTBREAK]
         var2 = var2[:TESTBREAK]
@@ -159,9 +155,13 @@ def plot_pearsoncorr(var1, var2, my_title, my_xlabel, my_ylabel, plotpath=None):
     var2 = array(var2)
     xlabel(my_xlabel)
     ylabel(my_ylabel)
-    max_value = max(max(var1), max(var2))
+
+    if not max_value:
+        max_value = max(max(var1), max(var2))
+
     xlim(0, max_value)
     ylim(0, max_value)
+    
     #plot([0, max_value], [0, max_value])
     pear, pvalue = pearsonr(var1, var2)
     r_squared = pear**2
@@ -185,11 +185,43 @@ def calc_psi(*samples):
     for event in event_matrix:
         event_psi_samples = dirichlet(alpha+event, numsamples)
         #discretize the samples 
+        print event_psi_samples
 
     print psi_matrix
 
 
+def discardhigh(junctions1, junctions1_gc, junctions2, junctions2_gc, maxnonzero):
+    numnonzeros1 = (junctions1 > 0).sum(axis=1)   
+    pass_threshold = (numnonzeros1 < maxnonzero)
+    junctions1 = junctions1[pass_threshold]
+    junctions1_gc = junctions1_gc[pass_threshold]
+    junctions2 = junctions2[pass_threshold]
+    junctions2_gc = junctions2_gc[pass_threshold]
+    #after and *not* before filtering the first replica, we calculate the second threshold
+    numnonzeros2 = (junctions2 > 0).sum(axis=1)     
+    pass_threshold = (numnonzeros2 < maxnonzero)
+    return junctions1[pass_threshold], junctions1_gc[pass_threshold], junctions2[pass_threshold], junctions2_gc[pass_threshold] 
+
+
+def discardlow(junctions1, junctions1_gc, junctions2, junctions2_gc, minnonzero):
+    numnonzeros1 = (junctions1 > 0).sum(axis=1) 
+    print numnonzeros1, minnonzero
+    pass_threshold = (numnonzeros1 > minnonzero)
+    junctions1 = junctions1[pass_threshold]
+    junctions1_gc = junctions1_gc[pass_threshold]
+    junctions2 = junctions2[pass_threshold]
+    junctions2_gc = junctions2_gc[pass_threshold]
+    print junctions1.shape, junctions2.shape
+    #after and *not* before filtering the first replica, we calculate the second threshold
+    numnonzeros2 = (junctions2 > 0).sum(axis=1)     
+    pass_threshold = (numnonzeros2 > minnonzero)
+    return junctions1[pass_threshold], junctions1_gc[pass_threshold], junctions2[pass_threshold], junctions2_gc[pass_threshold] 
+
 def main():
+    import matplotlib
+    matplotlib = reload(matplotlib)
+    matplotlib.use('GTKAgg')
+
     parser = argparse.ArgumentParser()
     parser.add_argument('matpath', help='Path with matfile with replica1 and replica2')    
     parser.add_argument('par1', help='Path for parameters of replica1')
@@ -203,7 +235,11 @@ def main():
     parser.add_argument('--junctype', default='rand10k', help='The type of junction to analyze. (Inc, Exc or rand10k for now)')
     parser.add_argument('--norm', default=False, action='store_true', help='Normalize by GC and weight factors')
     parser.add_argument('--poisson', default=False, action='store_true', help='Compare using the poisson distribution (Means=Variance)')   
-    parser.add_argument('--trimborder', default=False, action='store_true', help='Trim the borders when sampling (keeping the ones with reads)')   
+    parser.add_argument('--trimborder', default=False, action='store_true', help='Trim the borders when sampling (keeping the ones with reads)')
+    parser.add_argument('--minnonzero', default=0, type=int, help='Minimum number of positive positions to consider the junction')   
+    parser.add_argument('--maxnonzero', default=0, type=int, help='Maximum number of positive positions to consider the junction') 
+    parser.add_argument('--meanlim', default=25, type=int, help='Plot limit for the mean plotting (for comparison purposes)')
+    parser.add_argument('--varlim', default=1500, type=int, help='Plot limit for the var plotting (for comparison purposes)')
     args = parser.parse_args()
 
     my_mat = loadmat(args.matpath)
@@ -214,6 +250,22 @@ def main():
     replica2 = my_mat[name2][args.junctype][0, 0][0, 0]['cov']
     replica1_gc = my_mat[name1][args.junctype][0, 0][0, 0]['gc_val']
     replica2_gc = my_mat[name2][args.junctype][0, 0][0, 0]['gc_val']
+
+
+    if args.maxnonzero:
+        print "Before Maxnonzero %s. replica1: %s replica2: %s"%(args.maxnonzero, replica1.shape, replica2.shape)
+        replica1, replica1_gc, replica2, replica2_gc = discardhigh(replica1, replica1_gc, replica2, replica2_gc, args.maxnonzero)
+        print "After Maxnonzero %s. replica1: %s replica2: %s"%(args.maxnonzero, replica1.shape, replica2.shape)      
+
+    if args.minnonzero:
+        print "Before Minnonzero %s. replica1: %s replica2: %s"%(args.minnonzero, replica1.shape, replica2.shape)
+        replica1, replica1_gc, replica2, replica2_gc = discardlow(replica1, replica1_gc, replica2, replica2_gc, args.minnonzero)
+        print "After Minnonzero %s. replica1: %s replica2: %s"%(args.minnonzero, replica1.shape, replica2.shape)      
+
+
+    replica1 = masked_less(replica1, 0) 
+    replica2 = masked_less(replica2, 0)
+
 
     if args.norm:
         replica1 = norm_junctions(replica1, gc_factors=replica1_gc, gcnorm=True)
@@ -229,9 +281,9 @@ def main():
             print "Made Variance of %s equal to Mean"%name1
             main_title += " (Poisson)"
         elif args.nb:
-            main_title += " (NB)"
+            main_title += " (Negative Binomial)"
         else:
-            main_title += " (Direct)"
+            main_title += " (Naive Boostrapping)"
 
         main_title += '\n'
 
@@ -254,13 +306,14 @@ def main():
         main_title += " Discarding 0s"    
 
 
+
     fig = figure(figsize=[12, 20])
 
     suptitle(main_title, fontsize=24)
     subplot(2,1,1)
-    plot_pearsoncorr(my_mean1, my_mean2, "Means", name1, name2)
+    plot_pearsoncorr(my_mean1, my_mean2, "Means", name1, name2, max_value=args.meanlim)
     subplot(2,1,2)
-    plot_pearsoncorr(my_var1, my_var2, "Variances", name1, name2)
+    plot_pearsoncorr(my_var1, my_var2, "Variances", name1, name2,  max_value=args.varlim)
     _save_or_show(args.plotpath, "")
     #calculate PSI
     print "PSI between %s and %s"%(name1, name2)
