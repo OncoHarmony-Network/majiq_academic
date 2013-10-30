@@ -4,6 +4,10 @@ import pickle
 import argparse
 from random import choice
 
+#import matplotlib
+#matplotlib = reload(matplotlib)
+#matplotlib.use('GTKAgg')
+
 from scipy.io import loadmat
 from pylab import *
 import numpy as np
@@ -25,9 +29,9 @@ We want to plot the variance of method A vs method B in a scatter plot.
 Same scatterplot for the winning method and the different normalizations.
 
 """
-DEBUG = False
-TESTBREAK = 800
-LIM = 10
+DEBUG = True
+TESTBREAK = 100
+LIM = 100
 EPSILON = 1./sys.maxint
 BORDER = 5 #definition of what a border is
 
@@ -177,17 +181,35 @@ def plot_pearsoncorr(var1, var2, my_title, my_xlabel, my_ylabel, plotpath=None, 
         _save_or_show(plotpath, my_title)
 
 
-def calc_psi(*samples):
+def calc_psi(*events):
     alpha = 0.5 
-    numsamples = 100
-    event_matrix = array(samples).reshape(-1, len(samples))
+    numsamples = 200
+    event_matrix = array(events).reshape(-1, len(events))
     psi_matrix = []
     for event in event_matrix:
-        event_psi_samples = dirichlet(alpha+event, numsamples)
-        #discretize the samples 
-        print event_psi_samples
+        event_psi_samples = array(dirichlet(alpha+event, numsamples)).transpose() #sample several PSI values, transpose the matrix for discretization later
+        dicrete_psis = []
+        for sample_num in xrange(len(events)):
+            counts, limits = histogram(event_psi_samples[sample_num], bins=100)
+            dicrete_psis.append([counts/float(sum(counts)), limits])
 
-    print psi_matrix
+        psi_matrix.append(dicrete_psis)
+
+    return array(psi_matrix)
+
+
+def sample_psi(psi_scores):
+    """Input is all junctions PSI distributions for 1 replica"""
+    samples = []
+    for pval, limits in psi_scores:
+        event_samples = []
+        sample_pos = multinomial(100, pval)
+        for p in sample_pos:
+            event_samples.append(limits[p])
+
+        samples.append(mean(event_samples))
+
+    return array(samples)
 
 
 def discardhigh(junctions1, junctions1_gc, junctions2, junctions2_gc, maxnonzero):
@@ -218,10 +240,11 @@ def discardlow(junctions1, junctions1_gc, junctions2, junctions2_gc, minnonzero)
     return junctions1[pass_threshold], junctions1_gc[pass_threshold], junctions2[pass_threshold], junctions2_gc[pass_threshold] 
 
 def main():
-    import matplotlib
-    matplotlib = reload(matplotlib)
-    matplotlib.use('GTKAgg')
+    """
+    Script for initial testing of the MAJIQ algorithms for sampling and initial PSI values generator. 
 
+    TODO: Many functions from this script will be extracted for general usage in the pipeline. 
+    """
     parser = argparse.ArgumentParser()
     parser.add_argument('matpath', help='Path with matfile with replica1 and replica2')    
     parser.add_argument('par1', help='Path for parameters of replica1')
@@ -316,8 +339,15 @@ def main():
     plot_pearsoncorr(my_var1, my_var2, "Variances", name1, name2,  max_value=args.varlim)
     _save_or_show(args.plotpath, "")
     #calculate PSI
-    print "PSI between %s and %s"%(name1, name2)
-    calc_psi(my_mean1, my_mean2, my_var2)
+
+    if args.output:
+        print "Calculating PSI between %s and %s..."%(name1, name2)
+        psi_scores = calc_psi(my_mean1, my_mean2) #psi_scores X= Y=Replica 
+        pickle.dump(psi_scores, open("%s/%s_vs_%s_psivalues.pickle"%(args.output, name1, name2), 'w'))
+        print "...saved.\nCalculating Delta PSI..."
+        delta_psi = abs(sample_psi(psi_scores[: ,0]) - sample_psi(psi_scores[:, 1]))
+        pickle.dump(delta_psi, open("%s/%s_vs_%s_deltapsi.pickle"%(args.output, name1, name2), 'w'))
+        print "Saved! Done."
 
 if __name__ == '__main__':
     main()
