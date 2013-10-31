@@ -4,10 +4,6 @@ import pickle
 import argparse
 from random import choice
 
-#import matplotlib
-#matplotlib = reload(matplotlib)
-#matplotlib.use('GTKAgg')
-
 from scipy.io import loadmat
 from pylab import *
 import numpy as np
@@ -30,7 +26,7 @@ Same scatterplot for the winning method and the different normalizations.
 
 """
 DEBUG = False
-TESTBREAK = 100
+TESTBREAK = 800
 LIM = 100
 EPSILON = 1./sys.maxint
 BORDER = 5 #definition of what a border is
@@ -101,54 +97,58 @@ def sample_from_junctions(junctions, m, k, discardzeros=False, nb=False, trimbor
         fitted_func = pickle.load(open('%sfitfunc.pickle'%parameters))
         a, b = fitted_func.c
 
-    sampled_mean = []
+    sampled_means = []
     sampled_var = []
+    all_samples = []
     for i, junction in enumerate(junctions):
+        if i % 100 == 0:
+            print "junction %s"%i
+            if DEBUG and i == TESTBREAK: break
+
         junction = junction[junction > -EPSILON]  #discard the -1 (or lower) positions regardless of the dzero treatment
         if trimborder: 
             junction = _trimborders(junction) #trim the zeroes from the borders regardless of the discardzeros flag
         if discardzeros:
             junction = junction[junction!=0] #a junction array without the zeroes
 
-        nb_samples = []
-        if i % 100 == 0:
-            print "junction %s"%i
-            if DEBUG and i == TESTBREAK: break
-
         if len(junction) == 0:
-            sampled_mean.append(0)
+            sampled_means.append(0)
             sampled_var.append(0)
+            all_samples.append([0]*(k*m)) #k*m zeroes
         else:
-            if nb:
-                emp_mean = mean(junction)
-                #recalculating
-                if (a*emp_mean)**2 > (emp_mean+dispersion*emp_mean**2):
-                    r_nb = emp_mean**2 / ((a*emp_mean+b)**2 - emp_mean)
-                else:
-                    r_nb = 1/dispersion
-
-                p_nb = r_nb / (r_nb+emp_mean)
-
             samples = []
-            #sample m times
-            for iternumber in xrange(m):
-                junction_samples = []
-                if nb:
-                    junction_samples.extend(negative_binomial(r_nb, p_nb, k))
-                else:
-                    #for the regular sampling with replacement
+            if nb:
+                for iternumber in xrange(m):
+                    junction_samples = []
+                    for numsamples in xrange(k):
+                        junction_samples.append(choice(junction))
+
+                    sampled_mean = mean(junction_samples)
+                    #recalculating
+                    if (a*sampled_mean)**2 > (sampled_mean+dispersion*sampled_mean**2):
+                        r_nb = sampled_mean**2 / ((a*sampled_mean+b)**2 - sampled_mean)
+                    else:
+                        r_nb = 1/dispersion
+
+                    p_nb = r_nb / (r_nb+sampled_mean)
+                    samples.extend(negative_binomial(r_nb, p_nb, k)) 
+            else:
+                for iternumber in xrange(m):
+                    junction_samples = []
+                    #using the matrix
                     #weights = calc_weights(junction)
                     #junction_samples = multinomial(k, weights, junction) #This function is very slow                    
                     for numsamples in xrange(k):
                         junction_samples.append(choice(junction))
-                      
-                samples.extend(junction_samples)
+                    
+                    samples.extend(junction_samples)
 
-            #calculate the mean and the variance for simple sampling
-            sampled_mean.append(mean(samples))
+            #calculate the mean and the variance 
+            sampled_means.append(mean(samples))
             sampled_var.append(var(samples))
+            all_samples.append(samples)
 
-    return array(sampled_mean), array(sampled_var)
+    return array(sampled_means), array(sampled_var), array(all_samples)
 
 def plot_pearsoncorr(var1, var2, my_title, my_xlabel, my_ylabel, plotpath=None, max_value=None):
     if DEBUG:
@@ -181,25 +181,36 @@ def plot_pearsoncorr(var1, var2, my_title, my_xlabel, my_ylabel, plotpath=None, 
         _save_or_show(plotpath, my_title)
 
 
-def calc_psi(*events):
-    alpha = 0.5 
-    numsamples = 200
-    event_matrix = array(events).reshape(-1, len(events))
+def calc_psi(alpha, *samples_events):
     psi_matrix = []
-    for event in event_matrix:
-        event_psi_samples = array(dirichlet(alpha+event, numsamples)).transpose() #sample several PSI values, transpose the matrix for discretization later
-        dicrete_psis = []
-        for sample_num in xrange(len(events)):
-            counts, limits = histogram(event_psi_samples[sample_num], bins=100)
-            dicrete_psis.append([counts/float(sum(counts)), limits])
+    samples_events = array(samples_events) 
+    print "Samples matrix shape:", samples_events.shape
+    for i, event_samples in enumerate(np.rollaxis(samples_events, 1)): #we iterate through the second dimension of the matrix, which corresponds to the paired samples per event for different experiments    
+        if i % 50 == 0:
+            print "event %s"%i        
 
-        psi_matrix.append(dicrete_psis)
+        event_psi_samples = []
+
+        #sampling with all the pairs
+        for paired_samples in event_samples.T:
+            event_psi_samples.extend(dirichlet(paired_samples+alpha, 1))
+
+        #discretization step
+        psi_dists = []
+        for psi_dist in array(event_psi_samples).transpose():
+            counts, limits = histogram(psi_dist, bins=100)
+            psi_dists.append([counts/float(sum(counts)), limits])
+
+        psi_matrix.append(psi_dists)
+        #print "Junction %s PSI distribution:"%i, psi_matrix[-1]
 
     return array(psi_matrix)
 
 
 def sample_psi(psi_scores):
-    """Input is all junctions PSI distributions for 1 replica"""
+    """
+    Input is all junctions PSI distributions for 1 replica
+    """
     samples = []
     for pval, limits in psi_scores:
         event_samples = []
@@ -210,7 +221,6 @@ def sample_psi(psi_scores):
         samples.append(mean(event_samples))
 
     return array(samples)
-
 
 def discardhigh(junctions1, junctions1_gc, junctions2, junctions2_gc, maxnonzero):
     numnonzeros1 = (junctions1 > 0).sum(axis=1)   
@@ -245,15 +255,19 @@ def main():
 
     TODO: Many functions from this script will be extracted for general usage in the pipeline. 
     """
+    samples1 = None
+    samples2 = None
     parser = argparse.ArgumentParser()
     parser.add_argument('matpath', help='Path with matfile with replica1 and replica2')    
     parser.add_argument('par1', help='Path for parameters of replica1')
     parser.add_argument('par2', help='Path for parameters of replica2')
-    parser.add_argument('--sample', default=False, action='store_true', help='Use the negative binomial to sample')    
+    parser.add_argument('--sample', default=False, action='store_true', help='Use sampling')    
     parser.add_argument('--nb', default=False, action='store_true', help='Use the negative binomial to sample')
     parser.add_argument('--discardzeros', default=False, action='store_true', help='Discard the zeros from the junctions when computing means and variances')
     parser.add_argument('--k', default=50, type=int, help='Number of positions to sample per iteration')
-    parser.add_argument('--m', default=100, type=int, help='Number of samples') 
+    parser.add_argument('--m', default=50, type=int, help='Number of bootstrapping samples') 
+    #parser.add_argument('--n', default=100, type=int, help='Number of PSI samples (also, how many to save)') 
+    parser.add_argument('--alpha', default=0.5, type=int, help='Alpha hyperparameter for the dirichlet distribution') 
     parser.add_argument('--plotpath', default=None, help='Path to save the plot to, if not provided will show on a matplotlib popup window') 
     parser.add_argument('--junctype', default='rand10k', help='The type of junction to analyze. (Inc, Exc or rand10k for now)')
     parser.add_argument('--norm', default=False, action='store_true', help='Normalize by GC and weight factors')
@@ -263,6 +277,8 @@ def main():
     parser.add_argument('--maxnonzero', default=0, type=int, help='Maximum number of positive positions to consider the junction') 
     parser.add_argument('--meanlim', default=25, type=int, help='Plot limit for the mean plotting (for comparison purposes)')
     parser.add_argument('--varlim', default=1500, type=int, help='Plot limit for the var plotting (for comparison purposes)')
+    parser.add_argument('--output', default=None, help="Path to save the results to.")
+
     args = parser.parse_args()
 
     my_mat = loadmat(args.matpath)
@@ -289,15 +305,14 @@ def main():
     replica1 = masked_less(replica1, 0) 
     replica2 = masked_less(replica2, 0)
 
-
     if args.norm:
         replica1 = norm_junctions(replica1, gc_factors=replica1_gc, gcnorm=True)
         replica2 = norm_junctions(replica2, gc_factors=replica2_gc, gcnorm=True)
 
     if args.sample:
         main_title += " Sampling with repetition"
-        my_mean1, my_var1 = sample_from_junctions(replica1, args.m, args.k, discardzeros=args.discardzeros, nb=args.nb, trimborder=args.trimborder, parameters=args.par1)
-        my_mean2, my_var2 = sample_from_junctions(replica2, args.m, args.k, discardzeros=args.discardzeros, nb=args.nb, trimborder=args.trimborder, parameters=args.par2)
+        my_mean1, my_var1, samples1 = sample_from_junctions(replica1, args.m, args.k, discardzeros=args.discardzeros, nb=args.nb, trimborder=args.trimborder, parameters=args.par1)
+        my_mean2, my_var2, samples2 = sample_from_junctions(replica2, args.m, args.k, discardzeros=args.discardzeros, nb=args.nb, trimborder=args.trimborder, parameters=args.par2)
 
         if args.poisson:
             my_var1 = my_mean1
@@ -328,8 +343,6 @@ def main():
     if args.discardzeros:
         main_title += " Discarding 0s"    
 
-
-
     fig = figure(figsize=[12, 20])
 
     suptitle(main_title, fontsize=24)
@@ -339,15 +352,18 @@ def main():
     plot_pearsoncorr(my_var1, my_var2, "Variances", name1, name2,  max_value=args.varlim)
     _save_or_show(args.plotpath, "")
     #calculate PSI
-
     if args.output:
-        print "Calculating PSI between %s and %s..."%(name1, name2)
-        psi_scores = calc_psi(my_mean1, my_mean2) #psi_scores X= Y=Replica 
-        pickle.dump(psi_scores, open("%s%s_vs_%s_psivalues.pickle"%(args.output, name1, name2), 'w'))
-        print "...saved.\nCalculating Delta PSI..."
-        delta_psi = abs(sample_psi(psi_scores[: ,0]) - sample_psi(psi_scores[:, 1]))
-        pickle.dump(delta_psi, open("%s%s_vs_%s_deltapsi.pickle"%(args.output, name1, name2), 'w'))
-        print "Saved! Done."
+        if args.sample:
+            print "Calculating PSI between %s and %s..."%(name1, name2)
+            psi_scores = calc_psi(args.alpha, samples1, samples2) #psi_scores X= Y= Replica 
+            pickle.dump(psi_scores, open("%s%s_vs_%s_psivalues.pickle"%(args.output, name1, name2), 'w'))
+            print "...saved.\nCalculating Delta PSI..."
+            delta_psi = abs(sample_psi(psi_scores[: ,0, :]) - sample_psi(psi_scores[:, 1, :]))
+            pickle.dump(delta_psi, open("%s%s_vs_%s_deltapsi.pickle"%(args.output, name1, name2), 'w'))
+            print "Saved! Done."
+        else:
+            print "NO PSI calculated. Calculation of PSI needs --sample!"
+
 
 if __name__ == '__main__':
     main()
