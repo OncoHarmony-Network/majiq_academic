@@ -3,11 +3,11 @@
 #from __future__ import division
 import argparse,math, os
 import numpy as np
-import analize
-import globals 
-import rnaseq_io
-from utils import utils
 import copy
+import globals 
+import grimoire.analize as analize
+import grimoire.rnaseq_io as rnaseq_io
+import grimoire.utils.utils as utils
 #from matplotlib import pyplot as plt
 import multiprocessing
 from multiprocessing import Pool, Manager
@@ -21,12 +21,17 @@ except:
 def __parallel_for_splc_quant(sam_dir, gene_list,n_genes, chr, order,as_db):
 #    reference_genes = copy.deepcopy(all_genes)
     print "START child,", multiprocessing.current_process().name
+    p = 0
     for idx,exp in enumerate(globals.exp_list):
         SAM = "%s/%s.%s.sorted.sam"%(sam_dir,exp,chr)
         print SAM
-        if os.path.exists(SAM):
-            rnaseq_io.reads_for_junc_coverage(SAM, gene_list, globals.readLen, idx )
+        if not os.path.exists(SAM): continue
+        rnaseq_io.reads_for_junc_coverage(SAM, gene_list, globals.readLen, idx )
+        p +=1
+    if p == 0 : return
+    print "analize genes AS"
     TAS = analize.analize_genes(gene_list, "kk", as_db, None, 'AS')
+    print "analize genes CONST"
     CONST = analize.analize_genes(gene_list, "kk", as_db, None, 'CONST')
     a,b = analize.analize_junction_reads( gene_list,chr )
 #    print a
@@ -98,9 +103,9 @@ if __name__ == "__main__":
         jobs = []
         order= {}
         chr_list = all_genes.keys()
-        chr_list = ['chr1','chr2']
+#        chr_list = ['chr1','chr2']
 #        for chr in chr_list:
-#            if not chr in order:
+#            if not chr in orders = {}
 #                order[chr]=[]
 #            order[chr] = all_genes[chr]
 
@@ -117,7 +122,7 @@ if __name__ == "__main__":
                 __parallel_for_splc_quant(args.junc_dir,all_genes[chr],n_genes,chr,order,av_altern)
 #                __parallel_for_body(SAM,all_genes,n_genes,idx,chr_list,order,args.readlen)
             else:
-                print "MULTITHREAD"
+                print "MULTITHREAD: %s"%(chr)
                 jobs.append(pool.apply_async(__parallel_for_splc_quant, [args.junc_dir,all_genes[chr],n_genes,chr,order,av_altern] ))
 #                jobs.append(pool.apply_async(__parallel_for_body,[SAM, all_genes, n_genes, idx, chr_list, order, args.readlen] ))
 

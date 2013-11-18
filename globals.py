@@ -27,13 +27,13 @@ gc_factor = []
 def global_init(readL):
 
     global num_experiments, exp_list,readLen, gc_factor,weigh_factor, gc_bins,gc_bins_val, tissue_repl
-    exp_list = ['Heart1.chr1','Heart3.chr1','Heart5.chr1','Heart6.chr1',
-                'Hippocampus1.chr1','Hippocampus2.chr1','Hippocampus4.chr1','Hippocampus5.chr1','Hippocampus6.chr1',
-                'Liver1.chr1','Liver2.chr1','Liver3.chr1','Liver4.chr1','Liver5.chr1','Liver6.chr1',
-                'Lung2.chr1','Lung3.chr1','Lung5.chr1','Lung6.chr1',
-#                'Spleen1.chr1','Spleen2.chr1','Spleen3.chr1','Spleen5.chr1',
-                'Spleen1.chr1','Spleen2.chr1','Spleen5.chr1',
-                'Thymus1.chr1','Thymus2.chr1','Thymus3.chr1','Thymus4.chr1','Thymus6.chr1']
+#    exp_list = ['Heart1.chr1','Heart3.chr1','Heart5.chr1','Heart6.chr1',
+#                'Hippocampus1.chr1','Hippocampus2.chr1','Hippocampus4.chr1','Hippocampus5.chr1','Hippocampus6.chr1',
+#                'Liver1.chr1','Liver2.chr1','Liver3.chr1','Liver4.chr1','Liver5.chr1','Liver6.chr1',
+#                'Lung2.chr1','Lung3.chr1','Lung5.chr1','Lung6.chr1',
+##                'Spleen1.chr1','Spleen2.chr1','Spleen3.chr1','Spleen5.chr1',
+#                'Spleen1.chr1','Spleen2.chr1','Spleen5.chr1',
+#                'Thymus1.chr1','Thymus2.chr1','Thymus3.chr1','Thymus4.chr1','Thymus6.chr1']
  #   exp_list = ['Heart1.chr1','Heart3.chr1',
  #               'Hippocampus1.chr1','Hippocampus2.chr1',
  #               'Liver1.chr1','Liver2.chr1',
@@ -42,14 +42,15 @@ def global_init(readL):
  #               'Thymus1.chr1','Thymus2.chr1']
     
 #    exp_list =  ['Heart1.chr6','Hippocampus1.chr6']
-    #exp_list =  ['Heart1.chr1','Hippocampus1.chr1']
-#    exp_list =  ['Hippocampus1.chr1','Liver1.chr1']
+#    exp_list =  ['Heart1.chr1','Hippocampus1.chr1']
+    exp_list =  ['Hippocampus1','Liver1']
+    tissue_repl = {'Hippocampus':[0],'Liver':[1]}
 #    exp_list =  [ 'Liv_CT22.chr1', 'Liv_CT28.chr1','Liv_CT34.chr1','Liv_CT40.chr1','Liv_CT46.chr1','Liv_CT52.chr1','Liv_CT58.chr1','Liv_CT64.chr1',
 #                  'Hyp_CT22.chr1', 'Hyp_CT28.chr1','Hyp_CT34.chr1','Hyp_CT40.chr1','Hyp_CT46.chr1','Hyp_CT52.chr1','Hyp_CT58.chr1','Hyp_CT64.chr1' ]
 #    tissue_repl = { 'Liv':[0,1,2,3,4,5,6,7],'Hyp':[8,9,10,11,12,13,14,15] }
-    exp_list = [ 'Hippocampus1','Hippocampus2','Hippocampus4','Hippocampus5','Hippocampus6',
-                'Liver1','Liver2','Liver3','Liver4','Liver5','Liver6']
-    tissue_repl = {'Hippocampus':[0,1,2,3,4],'Liver':[5,6,7,8,9,10]}
+#    exp_list = [ 'Hippocampus1','Hippocampus2','Hippocampus4','Hippocampus5','Hippocampus6',
+#                'Liver1','Liver2','Liver3','Liver4','Liver5','Liver6']
+#    tissue_repl = {'Hippocampus':[0,1,2,3,4],'Liver':[5,6,7,8,9,10]}
 #    exp_list =  ['Heart1','Heart3']
 #    tissue_repl = {'Heart':[0,1,]}
     weigh_factor = [0, 0, 0, 0, 0, 0, 0, 0, 0.0, 0.67221794713393235, 
