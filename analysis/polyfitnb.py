@@ -7,16 +7,6 @@ from scipy.io import loadmat
 from scipy.stats import nbinom
 from pylab import *
 
-#### SNIPPETS  #######
-#Get the names of the columns in an ndarray
-#print my_mat['rand10k'].dtype.names
-
-
-### Plot the samples from the curve fit #####
-        #for i in xrange(len(nb_r)):
-        #    z = negative_binomial(nb_r[i], nb_p[i], size=200) #from the NB distribution of each point, we sample a few values and then plot them to see how they fit 
-        #    plot(z.mean(), z.std(), "+k", markersize=10)
-
 
 def nb_from_func(poly_func, max_line):
     """
@@ -29,10 +19,8 @@ def nb_from_func(poly_func, max_line):
     """
     dispersion = 0.1 #for low coverage junctions
     a, b = poly_func.c
-    #x = arange(0.01, max_line, 0.01)
     r = []
     p = []
-    #points = arange(0.01, max_line, 0.01)
     points = linspace(0.01, max_line, num=800)
     for x in points:
         if (a*x)**2 > (x+dispersion*x**2):
@@ -43,8 +31,6 @@ def nb_from_func(poly_func, max_line):
         r.append(r_val)
         p.append(r_val / (r_val+x))
 
-    #r = (x**2) / ((a*x+b)**2 - x) 
-    #p = r / (r+x)
     return r, p, points
 
 def _save_or_show(plotpath, plotname=None):
@@ -134,43 +120,11 @@ def adjust_fit(starting_a, b, sum_junctions, nonzeros, precision, previous_score
     print "Do I hit??"
     return corrected_a, score, ecdf, pvalues #I am not sure if this return will be hit at all
 
-def norm_junctions(junctions, gc_factors=None, gcnorm=False, trim=False, minnonzero=False, plotmapzeros=False):
-    if gcnorm:
-        print "Normalizing by GC factor"
-        junctions = junctions*gc_factors
-
-    #number of zeros before
-    if trim:
-        numzeros = _numzeros(junctions) 
-        print "Previous junction length: %s Total number of zeros: %s\n"%(junctions.shape[1], sum(numzeros))
-        if plotmapzeros:
-            plot_mappability_zeros(junctions, plotpath, numzeros, "before_trim")
-
-        junctions = junctions[:,trim:junctions.shape[1]-trim] #trim the junctions according to the flag
-        if plotmapzeros:
-            plot_mappability_zeros(junctions, plotpath, "after_trim (%s bases)"%trim)
-
-    if minnonzero:
-        print "Filter out the junctions with less than %s positions bigger than 0"%minnonzero
-        num_before =  junctions.shape[0]
-        numzeros = _numzeros(junctions) 
-        pass_threshold = (numzeros < junctions.shape[1]-minnonzero)
-        junctions = junctions[pass_threshold]
-        print "Before: %s junctions. Now: %s junctions. Discarded %s"%(num_before, junctions.shape[0], num_before-junctions.shape[0])    
-
-    return junctions
-
-def process(path, output, plotpath, gcnorm, trim, minnonzero, plotmapzeros, discardb):
+def fit_nb(junctions, outpath, plotpath, gcnorm=True, trim=True, minnonzero=5, plotmapzeros=False, discardb=False):
     #copied from Jordis script, this will have to go at some point
-    my_mat = loadmat(path)
-    gc_factors = my_mat['rand10k']['gc_val'][0, 0]
-    junctions = my_mat['rand10k']['cov'][0, 0] # We do [0,0] because matlab 
-    outpath = "%s/%s"%(output, os.path.basename(path).replace(".mat", ""))
-    plotpath = "%s/%s"%(plotpath, os.path.basename(path).replace(".mat", ""))
     print "Results will be written in %s..."%outpath
     print "Plots will be drawn in %s..."%plotpath
     #normalize the junctions
-    junctions = norm_junctions(junctions, gc_factors, gcnorm, trim, minnonzero, plotmapzeros)
     mean_junc = junctions.mean(axis=1)
     std_junc = junctions.std(axis=1)
     #linear regression, retrieve the a and the b plus 
@@ -213,32 +167,12 @@ def process(path, output, plotpath, gcnorm, trim, minnonzero, plotmapzeros, disc
     print "Calculating the nb_r and nb_p with the new fitted function"
     nb_r, nb_p, matching_x = nb_from_func(fit_function, max(mean_junc)) #
     plot_negbinomial_fit(mean_junc, std_junc, fit_function, plotpath, "After correction") 
-    #Save everything in pickle objects
+
+    #Save everything into pickle objects
     pickle.dump(ecdf, open("%s_ecdf.pickle"%outpath, 'w'))
     pickle.dump(fit_function, open("%s_fitfunc.pickle"%outpath, 'w'))
     pickle.dump(nb_r, open("%s_nb_r.pickle"%outpath, 'w'))
     pickle.dump(nb_p, open("%s_nb_p.pickle"%outpath, 'w'))
-    pickle.dump(matching_x, open("%s_nb_index.pickle"%outpath, 'w'))
-    pickle.dump(junctions, open("%s_filtered_junctions.pickle"%outpath, 'w'))    
+    pickle.dump(matching_x, open("%s_nb_index.pickle"%outpath, 'w')) 
 
-def main():
-    parser = argparse.ArgumentParser()
-    parser.add_argument('matfiles', nargs='+', help='The matlab files that we read. Can be used as a glob.')
-    parser.add_argument('--trim', default=0, type=int, help='Trim the borders of the junctions because of poor mappability')
-    parser.add_argument('--minnonzero', default=0, type=int, help='Minimum number of positions ')
-    parser.add_argument('--gcnorm', action='store_true',  default=False, help='Correct by GC content')
-    parser.add_argument('--discardb', action='store_true',  default=False, help='Discard the b from the polynomial, since we expect our fit to start from 0, 0')
-    parser.add_argument('--weightnorm', action='store_true',  default=False, help='Correct using the weight factor')
-    parser.add_argument('--plotmapzeros', action='store_true', default=False, help='Plot the zeros study')
-    parser.add_argument('--plotpath', default=None, help='Path to save the plot to, if not provided will show on a matplotlib popup window')
-    parser.add_argument('--output', required=True, help='Path to save the pickle output to.')
-    args = parser.parse_args()
-    for path in args.matfiles:
-        print "\n\n\nProcessing %s..."%path
-        process(path, args.output, args.plotpath, args.gcnorm, args.trim, args.minnonzero, args.plotmapzeros, args.discardb)
-
-if __name__ == '__main__':
-    main()
-
-
-
+    return fit_function

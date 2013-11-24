@@ -114,23 +114,23 @@ def main():
 
     #Sampling methods    REFERENCE (junctions, m, k, discardzeros=False, nb=False, trimborder=False, parameters=None)
     #Naive bootstrapping
-    boots_mean1, boots_var1 = sample_from_junctions(replica1, args.m, args.k, parameters=args.par1)
-    boots_mean2, boots_var2 = sample_from_junctions(replica2, args.m, args.k, parameters=args.par2)
+    boots_mean1, boots_var1, samples = sample_from_junctions(replica1, args.m, args.k, parameters=args.par1)
+    boots_mean2, boots_var2, samples = sample_from_junctions(replica2, args.m, args.k, parameters=args.par2)
     #Naive bootstrapping with GC normalization
-    boots_norm_mean1, boots_norm_var1 = sample_from_junctions(replica1_gcnorm, args.m, args.k, parameters=args.par1)
-    boots_norm_mean2, boots_norm_var2 = sample_from_junctions(replica2_gcnorm, args.m, args.k, parameters=args.par2)
+    boots_norm_mean1, boots_norm_var1, samples = sample_from_junctions(replica1_gcnorm, args.m, args.k, parameters=args.par1)
+    boots_norm_mean2, boots_norm_var2, samples = sample_from_junctions(replica2_gcnorm, args.m, args.k, parameters=args.par2)
     #Naive bootstrapping with trimming of borders
-    boots_trim_mean1, boots_trim_var1 = sample_from_junctions(replica1_gcnorm, args.m, args.k, trimborder=True, parameters=args.par1)
-    boots_trim_mean2, boots_trim_var2 = sample_from_junctions(replica2_gcnorm, args.m, args.k, trimborder=True, parameters=args.par2)
+    boots_trim_mean1, boots_trim_var1, samples = sample_from_junctions(replica1_gcnorm, args.m, args.k, trimborder=True, parameters=args.par1)
+    boots_trim_mean2, boots_trim_var2, samples = sample_from_junctions(replica2_gcnorm, args.m, args.k, trimborder=True, parameters=args.par2)
     #Naive bootstrapping discarding zeros
-    boots_zeros_mean1, boots_zeros_var1 = sample_from_junctions(replica1_gcnorm, args.m, args.k, discardzeros=True, parameters=args.par1)
-    boots_zeros_mean2, boots_zeros_var2 = sample_from_junctions(replica2_gcnorm, args.m, args.k, discardzeros=True, parameters=args.par2)
+    boots_zeros_mean1, boots_zeros_var1, samples = sample_from_junctions(replica1_gcnorm, args.m, args.k, discardzeros=True, parameters=args.par1)
+    boots_zeros_mean2, boots_zeros_var2, samples = sample_from_junctions(replica2_gcnorm, args.m, args.k, discardzeros=True, parameters=args.par2)
     #Bootstrapping sampling from a NB distribution
-    boots_nb_mean1, boots_nb_var1  = sample_from_junctions(replica1_gcnorm, args.m, args.k, nb=True, parameters=args.par1)
-    boots_nb_mean2, boots_nb_var2  = sample_from_junctions(replica2_gcnorm, args.m, args.k, nb=True, parameters=args.par2)
+    boots_nb_mean1, boots_nb_var1 , samples = sample_from_junctions(replica1_gcnorm, args.m, args.k, nb=True, parameters=args.par1)
+    boots_nb_mean2, boots_nb_var2 , samples = sample_from_junctions(replica2_gcnorm, args.m, args.k, nb=True, parameters=args.par2)
     #Majiq with zeros
-    majiq_mean1, majiq_var1 = sample_from_junctions(replica1_gcnorm, args.m, args.k,  discardzeros=True, nb=True, trimborder=True, parameters=args.par1)
-    majiq_mean2, majiq_var2  = sample_from_junctions(replica2_gcnorm, args.m, args.k, discardzeros=True, nb=True, trimborder=True, parameters=args.par2)
+    majiq_mean1, majiq_var1, samples = sample_from_junctions(replica1_gcnorm, args.m, args.k,  discardzeros=True, nb=True, trimborder=True, parameters=args.par1)
+    majiq_mean2, majiq_var2 , samples = sample_from_junctions(replica2_gcnorm, args.m, args.k, discardzeros=True, nb=True, trimborder=True, parameters=args.par2)
 
     #calculate scores for different methods
     #scores_empirical    = calc_score(empirical_mean1, empirical_var1, empirical_mean2, empirical_var2)    
@@ -151,9 +151,8 @@ def main():
     #testing trimmming 
     plot_varvsvar(scores_boots_norm, scores_boots_trim, "Naive bootstrapping", "Naive bootstrapping (trimming borders)", name1, name2, args.plotpath, "Trimming")
     #FINAL test
-    plot_varvsvar(scores_boots_zero, scores_majiq, "Naive Bootstrapping", "MAJIQ", name1, name2, args.plotpath, "naiveNoZeroVSMAJIQ")
-
-
+    plot_varvsvar(scores_boots_zero, scores_majiq, "Naive Bootstrapping", "MAJIQ", name1, name2, args.plotpath, "naiveVSMAJIQ")
+   
 
 
 if __name__ == '__main__':

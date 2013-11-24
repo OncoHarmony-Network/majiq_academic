@@ -25,8 +25,8 @@ We want to plot the variance of method A vs method B in a scatter plot.
 Same scatterplot for the winning method and the different normalizations.
 
 """
-DEBUG = False
-TESTBREAK = 800
+DEBUG = True
+TESTBREAK = 1500
 LIM = 100
 EPSILON = 1./sys.maxint
 BORDER = 5 #definition of what a border is
@@ -90,10 +90,9 @@ def sample_from_junctions(junctions, m, k, discardzeros=False, nb=False, trimbor
     dispersion = 0.1
     if parameters:
         print "Loading parameters from %s..."%parameters
-        #poly_func = pickle.load(open('%sfitfunc.pickle'%args.par1))
-        fitted_r = pickle.load(open('%snb_r.pickle'%parameters))
-        fitted_p = pickle.load(open('%snb_p.pickle'%parameters))
-        fitted_index = pickle.load(open('%snb_index.pickle'%parameters))
+        #fitted_r = pickle.load(open('%snb_r.pickle'%parameters))
+        #fitted_p = pickle.load(open('%snb_p.pickle'%parameters))
+        #fitted_index = pickle.load(open('%snb_index.pickle'%parameters))
         fitted_func = pickle.load(open('%sfitfunc.pickle'%parameters))
         a, b = fitted_func.c
 
@@ -101,9 +100,10 @@ def sample_from_junctions(junctions, m, k, discardzeros=False, nb=False, trimbor
     sampled_var = []
     all_samples = []
     for i, junction in enumerate(junctions):
+        if DEBUG and i == TESTBREAK: break
         if i % 100 == 0:
-            print "junction %s"%i
-            if DEBUG and i == TESTBREAK: break
+            print "junction %s..."%i,
+            sys.stdout.flush()
 
         junction = junction[junction > -EPSILON]  #discard the -1 (or lower) positions regardless of the dzero treatment
         if trimborder: 
@@ -180,74 +180,97 @@ def plot_pearsoncorr(var1, var2, my_title, my_xlabel, my_ylabel, plotpath=None, 
     if plotpath:
         _save_or_show(plotpath, my_title)
 
+def filter_bulk(matrix_filter, *matrices):
+    ret = []
+    for m in matrices:
+        ret.append(m[matrix_filter])
 
-def calc_psi(alpha, *samples_events):
-    psi_matrix = []
-    samples_events = array(samples_events) 
-    print "Samples matrix shape:", samples_events.shape
-    for i, event_samples in enumerate(np.rollaxis(samples_events, 1)): #we iterate through the second dimension of the matrix, which corresponds to the paired samples per event for different experiments    
-        if i % 50 == 0:
-            print "event %s"%i        
+    return ret
 
-        event_psi_samples = []
+def discardhigh(j1, j1_gc, j2, j2_gc, max0, orfilter=False):
+    if orfilter:
+        j1_filtered = [] 
+        j1_gc_filtered = [] 
+        j2_filtered = [] 
+        j2_gc_filtered = [] 
+        for i in range(j1.shape[0]):
+            if ((j1[i] > 0).sum() < max0) or ((j2[i] > 0).sum() < max0):
+                j1_filtered.append(j1[i])
+                j1_gc_filtered.append(j1_gc[i])
+                j2_filtered.append(j2[i])
+                j2_gc_filtered.append(j2_gc[i])
 
-        #sampling with all the pairs
-        for paired_samples in event_samples.T:
-            event_psi_samples.extend(dirichlet(paired_samples+alpha, 1))
+        return array(j1_filtered), array(j1_gc_filtered), array(j2_filtered), array(j2_gc_filtered)
 
-        #discretization step
-        psi_dists = []
-        for psi_dist in array(event_psi_samples).transpose():
-            counts, limits = histogram(psi_dist, bins=100)
-            psi_dists.append([counts/float(sum(counts)), limits])
-
-        psi_matrix.append(psi_dists)
-        #print "Junction %s PSI distribution:"%i, psi_matrix[-1]
-
-    return array(psi_matrix)
-
-
-def sample_psi(psi_scores):
-    """
-    Input is all junctions PSI distributions for 1 replica
-    """
-    samples = []
-    for pval, limits in psi_scores:
-        event_samples = []
-        sample_pos = multinomial(100, pval)
-        for p in sample_pos:
-            event_samples.append(limits[p])
-
-        samples.append(mean(event_samples))
-
-    return array(samples)
-
-def discardhigh(junctions1, junctions1_gc, junctions2, junctions2_gc, maxnonzero):
-    numnonzeros1 = (junctions1 > 0).sum(axis=1)   
-    pass_threshold = (numnonzeros1 < maxnonzero)
-    junctions1 = junctions1[pass_threshold]
-    junctions1_gc = junctions1_gc[pass_threshold]
-    junctions2 = junctions2[pass_threshold]
-    junctions2_gc = junctions2_gc[pass_threshold]
-    #after and *not* before filtering the first replica, we calculate the second threshold
-    numnonzeros2 = (junctions2 > 0).sum(axis=1)     
-    pass_threshold = (numnonzeros2 < maxnonzero)
-    return junctions1[pass_threshold], junctions1_gc[pass_threshold], junctions2[pass_threshold], junctions2_gc[pass_threshold] 
+    else:
+        #NOTE: For this kind of calculation, numnonzeros2 *MUST* be calculated after the first filter, or else it will not fit the new matrix. Unless you find a way of make combined filters...
+        numnonzeros1 = (j1 > 0).sum(axis=1)
+        j1, j1_gc, j2, j2_gc = filter_bulk((numnonzeros1 < max0), j1, j1_gc, j2, j2_gc)
+        numnonzeros2 = (j2 > 0).sum(axis=1)
+        return filter_bulk((numnonzeros2 < max0), j1, j1_gc, j2, j2_gc)
 
 
-def discardlow(junctions1, junctions1_gc, junctions2, junctions2_gc, minnonzero):
-    numnonzeros1 = (junctions1 > 0).sum(axis=1) 
-    print numnonzeros1, minnonzero
-    pass_threshold = (numnonzeros1 > minnonzero)
-    junctions1 = junctions1[pass_threshold]
-    junctions1_gc = junctions1_gc[pass_threshold]
-    junctions2 = junctions2[pass_threshold]
-    junctions2_gc = junctions2_gc[pass_threshold]
-    print junctions1.shape, junctions2.shape
-    #after and *not* before filtering the first replica, we calculate the second threshold
-    numnonzeros2 = (junctions2 > 0).sum(axis=1)     
-    pass_threshold = (numnonzeros2 > minnonzero)
-    return junctions1[pass_threshold], junctions1_gc[pass_threshold], junctions2[pass_threshold], junctions2_gc[pass_threshold] 
+def discardminreads(j1, j1_gc, j2, j2_gc, minreads, orfilter=False):
+    if orfilter:
+        j1_filtered = [] 
+        j1_gc_filtered = [] 
+        j2_filtered = [] 
+        j2_gc_filtered = [] 
+        for i in range(j1.shape[0]):
+            if (j1[i].sum() >= minreads) or (j2[i].sum() >= minreads):
+                j1_filtered.append(j1[i])
+                j1_gc_filtered.append(j1_gc[i])
+                j2_filtered.append(j2[i])
+                j2_gc_filtered.append(j2_gc[i])
+
+        return array(j1_filtered), array(j1_gc_filtered), array(j2_filtered), array(j2_gc_filtered)
+    else:
+        readsj1 = j1.sum(axis=1)
+        j1, j1_gc, j2, j2_gc = filter_bulk((readsj1 >= minreads), j1, j1_gc, j2, j2_gc)
+        readsj2 = j2.sum(axis=1)
+        return filter_bulk((readsj2 >= minreads), j1, j1_gc, j2, j2_gc)
+
+def discardmaxreads(j1, j1_gc, j2, j2_gc, maxreads, orfilter=False):
+    if orfilter:
+        j1_filtered = [] 
+        j1_gc_filtered = [] 
+        j2_filtered = [] 
+        j2_gc_filtered = [] 
+        for i in range(j1.shape[0]):
+            if (j1[i].sum() <= maxreads) or (j2[i].sum() <= maxreads):
+                j1_filtered.append(j1[i])
+                j1_gc_filtered.append(j1_gc[i])
+                j2_filtered.append(j2[i])
+                j2_gc_filtered.append(j2_gc[i])
+
+        return array(j1_filtered), array(j1_gc_filtered), array(j2_filtered), array(j2_gc_filtered)
+    else:
+        readsj1 = j1.sum(axis=1)
+        j1, j1_gc, j2, j2_gc = filter_bulk((readsj1 <= maxreads), j1, j1_gc, j2, j2_gc)
+        readsj2 = j2.sum(axis=1)
+        return filter_bulk((readsj2 <= maxreads), j1, j1_gc, j2, j2_gc)
+
+
+def discardlow(j1, j1_gc, j2, j2_gc, min0, orfilter=False):
+    if orfilter:
+        j1_filtered = [] 
+        j1_gc_filtered = [] 
+        j2_filtered = [] 
+        j2_gc_filtered = [] 
+        for i in range(j1.shape[0]):
+            if ((j1[i] > 0).sum() > min0) or ((j2[i] > 0).sum() > min0):
+                j1_filtered.append(j1[i])
+                j1_gc_filtered.append(j1_gc[i])
+                j2_filtered.append(j2[i])
+                j2_gc_filtered.append(j2_gc[i])
+
+        return array(j1_filtered), array(j1_gc_filtered), array(j2_filtered), array(j2_gc_filtered)
+
+    else:        
+        numnonzeros1 = (j1 > 0).sum(axis=1)
+        j1, j1_gc, j2, j2_gc = filter_bulk((numnonzeros1 > min0), j1, j1_gc, j2, j2_gc)
+        numnonzeros2 = (j2 > 0).sum(axis=1)
+        return filter_bulk((numnonzeros2 > min0), j1, j1_gc, j2, j2_gc)
 
 def main():
     """
@@ -265,7 +288,7 @@ def main():
     parser.add_argument('--nb', default=False, action='store_true', help='Use the negative binomial to sample')
     parser.add_argument('--discardzeros', default=False, action='store_true', help='Discard the zeros from the junctions when computing means and variances')
     parser.add_argument('--k', default=50, type=int, help='Number of positions to sample per iteration')
-    parser.add_argument('--m', default=50, type=int, help='Number of bootstrapping samples') 
+    parser.add_argument('--m', default=100, type=int, help='Number of bootstrapping samples') 
     #parser.add_argument('--n', default=100, type=int, help='Number of PSI samples (also, how many to save)') 
     parser.add_argument('--alpha', default=0.5, type=int, help='Alpha hyperparameter for the dirichlet distribution') 
     parser.add_argument('--plotpath', default=None, help='Path to save the plot to, if not provided will show on a matplotlib popup window') 
@@ -275,36 +298,48 @@ def main():
     parser.add_argument('--trimborder', default=False, action='store_true', help='Trim the borders when sampling (keeping the ones with reads)')
     parser.add_argument('--minnonzero', default=0, type=int, help='Minimum number of positive positions to consider the junction')   
     parser.add_argument('--maxnonzero', default=0, type=int, help='Maximum number of positive positions to consider the junction') 
+    parser.add_argument('--minreads', default=0, type=int, help='Minimum number of reads combining all positions in a junction to be considered') 
+    parser.add_argument('--maxreads', default=0, type=int, help='Maximum number of reads combining all positions in a junction to be considered') 
     parser.add_argument('--meanlim', default=25, type=int, help='Plot limit for the mean plotting (for comparison purposes)')
+    parser.add_argument('--miso', default=False, action='store_true', help='Generate MISO like counts')
     parser.add_argument('--varlim', default=1500, type=int, help='Plot limit for the var plotting (for comparison purposes)')
+    parser.add_argument('--orfilter', default=False, action='store_true', help='When filtering, select sets of junctions where at least one passes the filter, instead of all passing the filter.')
     parser.add_argument('--output', default=None, help="Path to save the results to.")
-
     args = parser.parse_args()
-
+    #load matlab matrices and get names of experiments from file name (TODO:All this should change)
     my_mat = loadmat(args.matpath)
     name1, name2 = os.path.basename(args.matpath).split('.')[0].split("_") #Get the experiment names from the mat file
     main_title = "%s VS %s\n"%(name1, name2) #main title of the plot generation
-
     replica1 = my_mat[name1][args.junctype][0, 0][0, 0]['cov']
     replica2 = my_mat[name2][args.junctype][0, 0][0, 0]['cov']
     replica1_gc = my_mat[name1][args.junctype][0, 0][0, 0]['gc_val']
     replica2_gc = my_mat[name2][args.junctype][0, 0][0, 0]['gc_val']
 
-
+    #Coverage filters
     if args.maxnonzero:
         print "Before Maxnonzero %s. replica1: %s replica2: %s"%(args.maxnonzero, replica1.shape, replica2.shape)
-        replica1, replica1_gc, replica2, replica2_gc = discardhigh(replica1, replica1_gc, replica2, replica2_gc, args.maxnonzero)
+        replica1, replica1_gc, replica2, replica2_gc = discardhigh(replica1, replica1_gc, replica2, replica2_gc, args.maxnonzero, args.orfilter)
         print "After Maxnonzero %s. replica1: %s replica2: %s"%(args.maxnonzero, replica1.shape, replica2.shape)      
 
     if args.minnonzero:
         print "Before Minnonzero %s. replica1: %s replica2: %s"%(args.minnonzero, replica1.shape, replica2.shape)
-        replica1, replica1_gc, replica2, replica2_gc = discardlow(replica1, replica1_gc, replica2, replica2_gc, args.minnonzero)
+        replica1, replica1_gc, replica2, replica2_gc = discardlow(replica1, replica1_gc, replica2, replica2_gc, args.minnonzero, args.orfilter)
         print "After Minnonzero %s. replica1: %s replica2: %s"%(args.minnonzero, replica1.shape, replica2.shape)      
 
+    if args.minreads:
+        print "Before Minreads %s. replica1: %s replica2: %s"%(args.minreads, replica1.shape, replica2.shape)
+        replica1, replica1_gc, replica2, replica2_gc = discardminreads(replica1, replica1_gc, replica2, replica2_gc, args.minreads, args.orfilter)
+        print "After Minreads %s. replica1: %s replica2: %s"%(args.minreads, replica1.shape, replica2.shape)      
 
+    if args.maxreads:
+        print "Before maxreads %s. replica1: %s replica2: %s"%(args.maxreads, replica1.shape, replica2.shape)
+        replica1, replica1_gc, replica2, replica2_gc = discardmaxreads(replica1, replica1_gc, replica2, replica2_gc, args.maxreads, args.orfilter)
+        print "After maxreads %s. replica1: %s replica2: %s"%(args.maxreads, replica1.shape, replica2.shape)      
+
+
+    #mask everything under 0
     replica1 = masked_less(replica1, 0) 
     replica2 = masked_less(replica2, 0)
-
     if args.norm:
         replica1 = norm_junctions(replica1, gc_factors=replica1_gc, gcnorm=True)
         replica2 = norm_junctions(replica2, gc_factors=replica2_gc, gcnorm=True)
@@ -325,6 +360,13 @@ def main():
 
         main_title += '\n'
 
+    elif args.miso:
+        samples1 = replica1.sum(axis=1)
+        samples2 = replica2.sum(axis=1)
+        if DEBUG:
+            samples1 = samples1[:TESTBREAK]
+            samples2 = samples2[:TESTBREAK]
+
     else:
         main_title += " Empirical\n"
         replica1 = masked_less(replica1, 0) 
@@ -338,31 +380,31 @@ def main():
             my_mean2 = replica2.mean(axis=1)
             my_var2 = replica2.var(axis=1) 
 
-    rcParams.update({'font.size': 18})
 
-    if args.discardzeros:
-        main_title += " Discarding 0s"    
+    #plot the means and the variances
+    if not args.miso:
+        rcParams.update({'font.size': 18})
 
-    fig = figure(figsize=[12, 20])
+        if args.discardzeros:
+            main_title += " Discarding 0s"    
 
-    suptitle(main_title, fontsize=24)
-    subplot(2,1,1)
-    plot_pearsoncorr(my_mean1, my_mean2, "Means", name1, name2, max_value=args.meanlim)
-    subplot(2,1,2)
-    plot_pearsoncorr(my_var1, my_var2, "Variances", name1, name2,  max_value=args.varlim)
-    _save_or_show(args.plotpath, "")
+        fig = figure(figsize=[12, 20])
+
+        suptitle(main_title, fontsize=24)
+        subplot(2,1,1)
+        plot_pearsoncorr(my_mean1, my_mean2, "Means", name1, name2, max_value=args.meanlim)
+        subplot(2,1,2)
+        plot_pearsoncorr(my_var1, my_var2, "Variances", name1, name2,  max_value=args.varlim)
+        _save_or_show(args.plotpath, "")
+
     #calculate PSI
     if args.output:
-        if args.sample:
-            print "Calculating PSI between %s and %s..."%(name1, name2)
-            psi_scores = calc_psi(args.alpha, samples1, samples2) #psi_scores X= Y= Replica 
-            pickle.dump(psi_scores, open("%s%s_vs_%s_psivalues.pickle"%(args.output, name1, name2), 'w'))
-            print "...saved.\nCalculating Delta PSI..."
-            delta_psi = abs(sample_psi(psi_scores[: ,0, :]) - sample_psi(psi_scores[:, 1, :]))
-            pickle.dump(delta_psi, open("%s%s_vs_%s_deltapsi.pickle"%(args.output, name1, name2), 'w'))
-            print "Saved! Done."
-        else:
-            print "NO PSI calculated. Calculation of PSI needs --sample!"
+        if args.sample or args.miso:
+            print "Saving samples..."
+            pickle.dump(samples1, open("%s_%s_samples.pickle"%(args.output, name1), 'w'))
+            pickle.dump(samples2, open("%s_%s_samples.pickle"%(args.output, name2), 'w'))
+            print "Done!"
+
 
 
 if __name__ == '__main__':
