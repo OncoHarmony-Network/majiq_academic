@@ -13,16 +13,7 @@ from numpy.random import dirichlet
 
 
 """
-We want to estimate the variability in sample1 and compare it, per junction with the empirical variability of sample2. The methods we want to compare are:
-
-- Poisson (straw man) mean = variance
-- Toronto bootstrapping
-- Our improved bootstrapping using the fitted function and the NB
-
-We want to plot the variance of method A vs method B in a scatter plot.
-
-Same scatterplot for the winning method and the different normalizations.
-
+Sampling from junctions using a Negative Binomial model.
 """
 LIM = 100
 EPSILON = 1./sys.maxint

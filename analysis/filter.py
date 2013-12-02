@@ -1,7 +1,11 @@
 """
 Functions to filter junction pairs by number of positions covered or number of reads
 """
+import sys
 from pylab import *
+
+from polyfitnb import func2nb
+from scipy.stats import nbinom
 
 def filter_bulk(matrix_filter, *matrices):
     ret = []
@@ -142,3 +146,21 @@ def norm_junctions(junctions, gc_factors=None, gcnorm=False, trim=False, debug=F
     return junctions
 
 
+def mark_stacks(junctions, fitfunc, pvalue_limit, dispersion):
+    a, b = fitfunc.c
+    minstack = sys.maxint #the minimum value marked as stack
+    numstacks = 0
+    for i, junction in enumerate(junctions):
+        for j, value in enumerate(junction):
+            if value > 0:
+                r, p = func2nb(a, b, value, dispersion)
+                my_nb = nbinom(r, p)
+                pval = 1-my_nb.cdf(value)
+                if pval < pvalue_limit:
+                    junctions[i, j] = -2
+                    minstack = min(minstack, value)
+                    numstacks += 1
+
+    print "Out of %s values, %s marked as stacks with a p-value threshold of %s (%.3f%%)"%(junctions.size, numstacks, pvalue_limit, (float(numstacks)/junctions.size)*100)
+
+    return junctions

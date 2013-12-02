@@ -6,7 +6,8 @@ from math import log
 
 from pylab import *
 from matplotlib import rcParams
-from numpy.random import choice
+from scipy.spatial.distance import cityblock
+
 """
 Calculate PSI values
 """
@@ -30,18 +31,13 @@ def calculate_dkl(p, q):
     Dkl(P|Q) = sum_i ln(P(i)/Q(i))*P(i)
     """
     pseudo = 0.001
-    """psi_samples += pseudo
-    p = psi_samples[:, 0]
-    q = psi_samples[:, 1]"""
-
     p += pseudo
     q += pseudo
-    p /= p.sum(axis=1).reshape(-1,1)
-    q /= q.sum(axis=1).reshape(-1,1)
     left = log(array(p/q))
-    return left*p
+    return (left*p).sum(axis=1)
 
-
+def calculate_l1(p, q):
+    return (abs(p - q)).sum(axis=1)
 
 def calculate_ead(psi_samples):
     """
@@ -106,13 +102,12 @@ def main():
     dkl_junctions = calculate_dkl(inclusion1, inclusion2)
     mean_dkl = mean(dkl_junctions)
     var_dkl = var(dkl_junctions)
-    plot(dkl_junctions, label=args.name)
     print "DKL: Mean: %.5f Var: %.6f Acum: %.3f"%(mean_dkl, var_dkl, sum(dkl_junctions))
-    #print "EAD: %.3f"%calculate_ead(psi_scores)
-    print
 
-    legend()
-    show()
+    l1_junctions = calculate_l1(inclusion1, inclusion2)
+
+    print "L1: Mean: %.5f Var: %.6f Acum: %.3f"%(mean(l1_junctions), var(l1_junctions), sum(l1_junctions))
+
 
 
 if __name__ == '__main__':

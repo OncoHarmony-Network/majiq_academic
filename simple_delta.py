@@ -73,6 +73,7 @@ def main():
     exclusion1 = masked_less(exclusion1, 0) 
     exclusion2 = masked_less(exclusion2, 0)
 
+
     inc_reads1 = inclusion1.mean(axis=1)+pseudo
     inc_reads2 = inclusion2.mean(axis=1)+pseudo
     exc_reads1 = exclusion1.mean(axis=1)+pseudo

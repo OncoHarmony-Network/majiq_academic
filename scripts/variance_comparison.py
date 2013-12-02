@@ -26,8 +26,6 @@ def _save_or_show(plotpath, plotname=None):
 def calc_score(mean_sample1, var_sample1, mean_sample2, var_sample2):
     return abs(var_sample1-var_sample2)/((mean_sample1+mean_sample2)*0.5)
 
-
-
 def plot_varvsvar(score1, score2, score1_name, score2_name, replica1_name, replica2_name, plotpath=None, plotname=None):
     total_junctions = float(len(score1))
     better_in_method1 = sum(score1 < score2)

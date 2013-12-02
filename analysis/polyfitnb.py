@@ -8,26 +8,35 @@ from scipy.stats import nbinom
 from pylab import *
 
 
-def nb_from_func(poly_func, max_line):
+#TODO: every function that translates a, b to r, p should use this function if needed for single values, or the one below for a whole ndarray
+def func2nb(a, b, x, dispersion):
+    """
+    Given a and b from the linear fit, calculate the nb parameters for x and return its r and p parameters.
+    """
+    if (a*x)**2 > (x+dispersion*x**2):
+        r = x**2 / ((a*x+b)**2 - x)
+    else:
+        r = 1/dispersion
+
+    p = 1 - (r / (r+x))
+    return r, p
+
+
+def nb_from_func(poly_func, max_line=1, dispersion=0.1):
     """
     From a linear function that describes the distribution of junctions mean/variance, get the NB values
 
     We use a combined approach to avoid having values of r < 0. 
     For small values, we fit the r *global* negative binomial with a dispersion parameter (1/r in the NB formula)
-    of 0.1, which is a bit bigger variance than a simple Poisson. 
+    of 0.01, which is a bit bigger variance than a simple Poisson. 
 
     """
-    dispersion = 0.1 #for low coverage junctions
     a, b = poly_func.c
     r = []
     p = []
     points = linspace(0.01, max_line, num=800)
     for x in points:
-        if (a*x)**2 > (x+dispersion*x**2):
-            r_val = x**2 / ((a*x+b)**2 - x)
-        else:
-            r_val = 1/dispersion
-
+        r_val, p_val = func2nb(a, b, x, dispersion)
         r.append(r_val)
         p.append(r_val / (r_val+x))
 
@@ -83,26 +92,29 @@ def plot_negbinomial_fit(mean_junc, std_junc, fit_function, plotpath, plotname):
     _save_or_show(plotpath, plotname)
 
 
-def get_pvalues(sum_junctions, a, b, nonzeros):
+def get_pvalues(sum_junctions, a, b, nonzeros, dispersion):
     pvalues = []
     b = 0
     for i, junction in enumerate(sum_junctions):
-        junction_value = junction/nonzeros[i]
-        r = junction_value**2 /  ((a*junction_value+b)**2 - junction_value)
-        p = 1 - (r / (r+junction_value))
-        my_nb = nbinom(r, p)
-        pval = 1-my_nb.cdf(junction_value)
+        if nonzeros[i] > 0:
+            junction_value = junction/nonzeros[i]
+            r, p = func2nb(a, b, junction_value, dispersion)
+            my_nb = nbinom(r, p)
+            pval = 1-my_nb.cdf(junction_value)
+        else:
+            pval = 1 #if no reads, p-value is 1 
+
         #if not isnan(pval):  #only include nonnan palues
         pvalues.append(pval) 
         #print "Discarded NAN pvalue: %s out of %s junctions (%.2f%%)"%(len(sum_junctions)-len(pvalues), len(sum_junctions), (len(sum_junctions)-len(pvalues))/float(len(sum_junctions))*100)
     
     return pvalues
 
-def adjust_fit(starting_a, b, sum_junctions, nonzeros, precision, previous_score, final=False):
+def adjust_fit(starting_a, b, sum_junctions, nonzeros, precision, previous_score, dispersion, final=False):
     previous_a = -1
     print "Starting from %s with precision %s"%(starting_a, precision)
     for corrected_a in arange(starting_a, 0, -precision): #since we are reducing the "a" from the fit and the problem is too much variability, we expect optimization to be getting the "a" below 
-        pvalues = get_pvalues(sum_junctions, corrected_a, b, nonzeros)
+        pvalues = get_pvalues(sum_junctions, corrected_a, b, nonzeros, dispersion)
         ecdf = get_ecdf(pvalues)
         score = score_ecdf(ecdf)
         if previous_score < score: #the best fit are previous_a and previous_score
@@ -120,7 +132,7 @@ def adjust_fit(starting_a, b, sum_junctions, nonzeros, precision, previous_score
     print "Do I hit??"
     return corrected_a, score, ecdf, pvalues #I am not sure if this return will be hit at all
 
-def fit_nb(junctions, outpath, plotpath, gcnorm=True, trim=True, minnonzero=5, plotmapzeros=False, discardb=False):
+def fit_nb(junctions, outpath, plotpath, gcnorm=True, trim=True, minnonzero=5, plotmapzeros=False, discardb=False, nbdisp=0.1):
     #copied from Jordis script, this will have to go at some point
     print "Results will be written in %s..."%outpath
     print "Plots will be drawn in %s..."%plotpath
@@ -131,7 +143,7 @@ def fit_nb(junctions, outpath, plotpath, gcnorm=True, trim=True, minnonzero=5, p
     a, b = polyfit(mean_junc, std_junc, 1)
     print "Fitting function: y = x*a+b. a=%s b=%s"%(a, b)
     fit_function = poly1d([a, b])
-    nb_r, nb_p, matching_x = nb_from_func(fit_function, max(mean_junc)) #We calculate both r and p parameters of the negative binomial distribution along the function
+    nb_r, nb_p, matching_x = nb_from_func(fit_function, max(mean_junc), dispersion=nbdisp) #We calculate both r and p parameters of the negative binomial distribution along the function
     plot_negbinomial_fit(mean_junc, std_junc, fit_function, plotpath, "Before correction")    
     #pvalue study
     nonzeros = _numnonzeros(junctions) 
@@ -147,11 +159,11 @@ def fit_nb(junctions, outpath, plotpath, gcnorm=True, trim=True, minnonzero=5, p
         b = 0
 
     for i, precision in enumerate(precision_values):
-        corrected_a, score, ecdf, pvalues = adjust_fit(corrected_a, b, sum_junctions, nonzeros, precision, score)
+        corrected_a, score, ecdf, pvalues = adjust_fit(corrected_a, b, sum_junctions, nonzeros, precision, score, nbdisp)
         print "Corrected to %s with precision %s. Current score is %s\n"%(corrected_a, precision, score)
         if i+1 != len(precision_values): #go "up" in the scale so we dont miss better solution
             corrected_a += precision-precision_values[i+1]
-            pvalues = get_pvalues(sum_junctions, corrected_a, b, nonzeros)
+            pvalues = get_pvalues(sum_junctions, corrected_a, b, nonzeros, nbdisp)
             ecdf    = get_ecdf(pvalues)
             score   = score_ecdf(ecdf)
 
@@ -165,7 +177,7 @@ def fit_nb(junctions, outpath, plotpath, gcnorm=True, trim=True, minnonzero=5, p
 
     fit_function = poly1d([corrected_a, b])
     print "Calculating the nb_r and nb_p with the new fitted function"
-    nb_r, nb_p, matching_x = nb_from_func(fit_function, max(mean_junc)) #
+    nb_r, nb_p, matching_x = nb_from_func(fit_function, max(mean_junc), dispersion=nbdisp) 
     plot_negbinomial_fit(mean_junc, std_junc, fit_function, plotpath, "After correction") 
 
     #Save everything into pickle objects

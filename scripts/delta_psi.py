@@ -4,7 +4,7 @@ import pickle
 
 
 from pylab import *
-from numpy.random import choice
+from scipy.io import savemat
    
 BINS = linspace(0, 1, num=99)
 
@@ -18,7 +18,8 @@ def mean_psi(psi_events):
     return array(ret)
 
 def sample_psi(psi_events):
-    "Get a random point estimate"
+    from numpy.random import choice
+    "Get a random point estimate NOTE: REQUIRES python 2.7 for numpy new version"
     ret = []
     for psi_dist in psi_events:
         ret.append(choice(BINS, p=psi_dist))
@@ -41,6 +42,7 @@ def main():
     parser.add_argument('psi2', help='Path for pickle with the psi values')
     parser.add_argument('--plotpath', default=None, help='Path to save the plot to, if not provided will show on a matplotlib popup window') 
     parser.add_argument('--title', default=None, help='') 
+    parser.add_argument('--output', required=True, help='Path to save the pickle output to.')
     args = parser.parse_args()
     psi_values1 = pickle.load(open(args.psi1))
     psi_values2 = pickle.load(open(args.psi2))
@@ -53,16 +55,15 @@ def main():
     #delta_dist, bin_edges = histogram(delta_psi, range=[0,1], bins=len(delta_psi)/10)
     #plot(bin_edges, delta_dist)
     xlim(-1, 1)
-
+    savemat("%s.mat"%args.plotpath, {"DeltaPSI:" : list(delta_psi)})
+    pickle.dump(delta_psi, open("%s_deltapsi.pickle"%(args.output), 'w'))
     hist(delta_psi, bins = 60, histtype='step')
 
     if args.title:
         title(args.title)
 
     xlabel("Delta PSI")
-
     _save_or_show(args.plotpath, "deltapsi")
-
 
 
 if __name__ == '__main__':
