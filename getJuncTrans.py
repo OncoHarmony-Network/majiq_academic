@@ -29,13 +29,11 @@ def __parallel_for_splc_quant(sam_dir, gene_list,n_genes, chr, order,as_db):
         rnaseq_io.reads_for_junc_coverage(SAM, gene_list, globals.readLen, idx )
         p +=1
     if p == 0 : return
-    print "analize genes AS"
-    TAS = analize.analize_genes(gene_list, "kk", as_db, None, 'AS')
-    print "analize genes CONST"
-    CONST = analize.analize_genes(gene_list, "kk", as_db, None, 'CONST')
+    analize.analize_genes(gene_list, "kk", as_db, None, 'AS')
+    analize.analize_genes(gene_list, "kk", as_db, None, 'CONST')
     a,b = analize.analize_junction_reads( gene_list,chr )
-#    print a
     tiss, exp,p2p = utils.prepare_MAJIQ_matlab_table( a,b)
+
     file_pi = open('genelist_%s.obj'%(chr), 'w+') 
     pickle.dump((tiss,exp,p2p), file_pi)
     file_pi.close()
@@ -48,8 +46,6 @@ def __parallel_for_body(SAM, all_genes,n_genes, exp_idx,chr_list, order, read_le
     print "START child,", multiprocessing.current_process().name
 #    gen = np.zeros( shape=(n_genes), dtype=np.dtype('object'))
     rnaseq_io.reads_for_junc_coverage(SAM,all_genes,read_len,exp_idx)
-
-
 #    print "Creating matlab file"
 #    utils.create_junction_matlab_file(all_genes,'./test_'+exp+'.mat', chr_list,order)
     print "END child, ", multiprocessing.current_process().name
@@ -140,7 +136,9 @@ if __name__ == "__main__":
         exp = {}
         p2p = {}
         for chrom in chr_list:
-            file_pi2 = open('genelist_%s.obj'%chrom, 'rb')
+            filen = 'genelist_%s.obj'%chrom
+            if not os.path.exists(filen): continue
+            file_pi2 = open(filen, 'rb')
             tiss[chrom],exp[chrom],p2p[chrom] = pickle.load(file_pi2)
         utils.merge_and_create_MAJIQ_matlab(tiss,exp,p2p)
 

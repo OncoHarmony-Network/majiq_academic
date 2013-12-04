@@ -43,7 +43,7 @@ def global_init(readL):
     
 #    exp_list =  ['Heart1.chr6','Hippocampus1.chr6']
 #    exp_list =  ['Heart1.chr1','Hippocampus1.chr1']
-    exp_list =  ['Hippocampus1','Liver1']
+    exp_list =  ['Hippocampus4','Liver4']
     tissue_repl = {'Hippocampus':[0],'Liver':[1]}
 #    exp_list =  [ 'Liv_CT22.chr1', 'Liv_CT28.chr1','Liv_CT34.chr1','Liv_CT40.chr1','Liv_CT46.chr1','Liv_CT52.chr1','Liv_CT58.chr1','Liv_CT64.chr1',
 #                  'Hyp_CT22.chr1', 'Hyp_CT28.chr1','Hyp_CT34.chr1','Hyp_CT40.chr1','Hyp_CT46.chr1','Hyp_CT52.chr1','Hyp_CT58.chr1','Hyp_CT64.chr1' ]
