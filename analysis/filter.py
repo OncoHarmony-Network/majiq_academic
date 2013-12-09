@@ -153,7 +153,14 @@ def mark_stacks(junctions, fitfunc, pvalue_limit, dispersion):
     for i, junction in enumerate(junctions):
         for j, value in enumerate(junction):
             if value > 0:
-                r, p = func2nb(a, b, value, dispersion)
+                #TODO Use masker, and marking stacks will probably be faster.
+                copy_junc = list(junction)
+                copy_junc.pop(j)
+                copy_junc = array(copy_junc)
+                copy_junc = copy_junc[copy_junc > 0]
+                #FINISH TODO
+                mean_rest = mean(copy_junc)
+                r, p = func2nb(a, b, mean_rest, dispersion)
                 my_nb = nbinom(r, p)
                 pval = 1-my_nb.cdf(value)
                 if pval < pvalue_limit:

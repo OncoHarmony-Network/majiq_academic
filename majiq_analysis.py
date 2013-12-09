@@ -58,30 +58,31 @@ def main():
     parser.add_argument('--nodiscardzeros', default=True, dest="discardzeros", action='store_false', help='Skip discarding zeroes')
     parser.add_argument('--nbdisp', default=0.1, type=int, help='Dispersion for the fallback NB function. [Default: %(default)s]')
     parser.add_argument('--orfilter', default=False, action='store_true', help='When filtering, select sets of junctions where at least one passes the filter, instead of all passing the filter. [Default: %(default)s]')
+    parser.add_argument('--ONLYSTACKS', action='store_true', help="Useless flag for analysis. Used to test if stacks are worth masking.")
     args = parser.parse_args()
 
+    #create directories if they dont exist
     if not os.path.exists(args.output):
-        print "Creating directory %s..."%args.output
+        print "\nCreating directory %s..."%args.output
         os.makedirs(args.output)
 
     if args.plotpath:
         if not os.path.exists(args.plotpath):
-            print "Creating directory %s..."%args.plotpath
+            print "\nCreating directory %s..."%args.plotpath
             os.makedirs(args.plotpath)
 
     for path in args.files:
-        print "\n\n\nProcessing %s..."%path
+        print "\nProcessing %s..."%path
         inc1, exc1, const1, inc2, exc2, const2 = load_data(path, args.names[0], args.names[1]) #loading the paired matrixes
         
         all_junctions = {"inc1": inc1, "exc1": exc1, "const1": const1, 
                          "inc2": inc2, "exc2": exc2, "const2": const2 } #TODO Generalize to N junctions
 
+
         print "GC content normalization..."
         for junc_set in all_junctions.keys():
             all_junctions[junc_set] = norm_junctions(all_junctions[junc_set]["junctions"], 
                                                      all_junctions[junc_set]["gc_content"])
-
-
 
         print "Masking non unique..."
         for junc_set in all_junctions.keys():
@@ -93,8 +94,8 @@ def main():
             fitfunc2 = poly1d([1, 0])
         else:
             print "Fitting NB function with constitutive events..."
-            fitfunc1 = fit_nb(all_junctions["const1"], "%s/const1"%args.output, args.plotpath, nbdisp=args.nbdisp)
-            fitfunc2 = fit_nb(all_junctions["const2"], "%s/const2"%args.output, args.plotpath, nbdisp=args.nbdisp)
+            fitfunc1 = fit_nb(all_junctions["const1"], "%s_nbfit1"%args.output, args.plotpath, nbdisp=args.nbdisp)
+            fitfunc2 = fit_nb(all_junctions["const2"], "%s_nbfit2"%args.output, args.plotpath, nbdisp=args.nbdisp)
 
         if args.markstacks >= 0:
             print "Marking and masking stacks..."
@@ -107,14 +108,41 @@ def main():
 
                     print "... %s"%junc_set
                     all_junctions[junc_set] = mark_stacks(all_junctions[junc_set], f, args.markstacks, args.nbdisp)
-                    all_junctions[junc_set] = masked_less(all_junctions[junc_set], 0) #remask the stacks
+                    if not args.ONLYSTACKS:
+                        all_junctions[junc_set] = masked_less(all_junctions[junc_set], 0) #remask the stacks
 
-        print all_junctions[junc_set] 
+        #START Just for analysis, should go into a script
+        if args.ONLYSTACKS:
+            print "Before", all_junctions["inc1"].shape
+            only_stacks_inc1 = []
+            only_stacks_exc1 = []
+            only_stacks_inc2 = []
+            only_stacks_exc2 = []        
+            stacks_ids = [] #the ones we know are being filtered    
+            for i in range(all_junctions["inc1"].shape[0]): 
+                if ((all_junctions["inc1"][i] == -2).sum() > 0) or ((all_junctions["exc1"][i] == -2).sum() > 0) or (all_junctions["inc2"][i] == -2).sum() > 0 or (all_junctions["exc2"][i] == -2).sum() > 0:
+                    only_stacks_inc1.append(all_junctions["inc1"][i])
+                    only_stacks_exc1.append(all_junctions["exc1"][i])
+                    only_stacks_inc2.append(all_junctions["inc2"][i])
+                    only_stacks_exc2.append(all_junctions["exc2"][i])    
+                    stacks_ids.append(i)
+
+            all_junctions["inc1"] = array(only_stacks_inc1)
+            all_junctions["inc1"] = masked_less(all_junctions["inc1"], 0) #remask the stacks
+            all_junctions["exc1"] = array(only_stacks_exc1)
+            all_junctions["exc1"] = masked_less(all_junctions["exc1"], 0) #remask the stacks
+            all_junctions["inc2"] = array(only_stacks_inc2)
+            all_junctions["inc2"] = masked_less(all_junctions["inc2"], 0) #remask the stacks            
+            all_junctions["exc2"] = array(only_stacks_exc2)
+            all_junctions["exc2"] = masked_less(all_junctions["exc2"], 0) #remask the stacks
+            print "Saving indexes..."
+            pickle.dump(stacks_ids, open("%s_%s_vs_%s_indexesSTACKS.pickle"%(args.output, args.names[0], args.names[1]), 'w'))
+            print "After", all_junctions["inc1"].shape
+        #END Just for analysis
 
 
         if args.maxnonzero or args.minnonzero or args.minreads or args.maxreads:
             print "Filtering..."
-
 
         if args.maxnonzero:
             all_junctions["exc1"], all_junctions["inc1"], all_junctions["exc2"], all_junctions["inc2"] = discardhigh(args.maxnonzero, args.orfilter, args.debug, all_junctions["exc1"], all_junctions["inc1"], all_junctions["exc2"], all_junctions["inc2"])

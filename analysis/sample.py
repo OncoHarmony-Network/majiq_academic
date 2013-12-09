@@ -87,9 +87,11 @@ def sample_from_junctions(junctions, m, k, dispersion=0.1, discardzeros=True, tr
             print "junction %s..."%i,
             sys.stdout.flush()
 
-        junction = junction[junction > -EPSILON]  #discard the -1 (or lower) positions regardless of the dzero treatment
         if trimborder: 
             junction = _trimborders(junction, trimborder) #trim the zeroes from the borders regardless of the discardzeros flag
+
+        junction = junction[junction > -EPSILON]  #discard the -1 (or lower) positions regardless of the dzero treatment
+
         if discardzeros:
             junction = junction[junction!=0] #a junction array without the zeroes
 

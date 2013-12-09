@@ -8,7 +8,7 @@ from numpy.random import choice
 from scipy.io import loadmat
 from numpy.ma import masked_less
  
-from analysis.filter import discardhigh, discardlow, discardminreads, discardmaxreads, norm_junctions
+from analysis.filter import discardhigh, discardlow, discardminreads, discardmaxreads, norm_junctions, mark_stacks
 
 BINS = linspace(0, 1, num=99)
 
@@ -32,8 +32,11 @@ def main():
     parser.add_argument('--maxnonzero', default=0, type=int, help='Maximum number of positive positions to consider the junction') 
     parser.add_argument('--minreads', default=0, type=int, help='Minimum number of reads combining all positions in a junction to be considered') 
     parser.add_argument('--maxreads', default=0, type=int, help='Maximum number of reads combining all positions in a junction to be considered') 
+    parser.add_argument('--markstacks', default=0.001, type=float, help='Mark stack positions. Expects a p-value. Use a negative value in order to disable it. [Default: %(default)s]')  
     parser.add_argument('--orfilter', default=False, action='store_true', help='When filtering, select sets of junctions where at least one passes the filter, instead of all passing the filter.')
     parser.add_argument('--output', default=None, help="Path to save the results to.")
+    parser.add_argument('--ONLYSTACKS', action='store_true', help="Useless flag for analysis. Used to test if stacks are worth masking.")
+    parser.add_argument('--names', nargs='+', required=True, help="The names that identify each of the experiments. [Default: %(default)s]")    
     args = parser.parse_args()
     #load matlab matrices and get names of experiments from file name (TODO:All this should change)
     my_mat = loadmat(args.matpath)
@@ -73,6 +76,49 @@ def main():
     exclusion1 = masked_less(exclusion1, 0) 
     exclusion2 = masked_less(exclusion2, 0)
 
+    if args.markstacks >= 0:
+        print "Marking and masking stacks..."
+        inclusion1 = mark_stacks(inclusion1, poly1d([1, 0]), args.markstacks, 0.01)
+        inclusion2 = mark_stacks(inclusion2, poly1d([1, 0]), args.markstacks, 0.01)
+        exclusion1 = mark_stacks(exclusion1, poly1d([1, 0]), args.markstacks, 0.01)
+        exclusion2 = mark_stacks(exclusion2, poly1d([1, 0]), args.markstacks, 0.01)
+        if not args.ONLYSTACKS:
+            inclusion1 = masked_less(inclusion1, 0) #remask the stacks
+            exclusion2 = masked_less(exclusion2, 0) #remask the stacks
+            exclusion1 = masked_less(exclusion1, 0) #remask the stacks
+            inclusion2 = masked_less(inclusion2, 0) #remask the stacks
+
+    #START Just for analysis, should go into a script
+    if args.ONLYSTACKS:
+        print "Before", inclusion1.shape
+        only_stacks_inc1 = []
+        only_stacks_exc1 = []
+        only_stacks_inc2 = []
+        only_stacks_exc2 = []        
+        stacks_ids = [] #the ones we know are being filtered    
+        for i in range(inclusion1.shape[0]): 
+            if ((inclusion1[i] == -2).sum() > 0) or ((exclusion1[i] == -2).sum() > 0) or (inclusion2[i] == -2).sum() > 0 or (exclusion2[i] == -2).sum() > 0:
+                only_stacks_inc1.append(inclusion1[i])
+                only_stacks_exc1.append(exclusion1[i])
+                only_stacks_inc2.append(inclusion2[i])
+                only_stacks_exc2.append(exclusion2[i])    
+                stacks_ids.append(i)
+
+        inclusion1 = array(only_stacks_inc1)
+        inclusion1 = masked_less(inclusion1, 0) #remask the stacks
+        exclusion1 = array(only_stacks_exc1)
+        exclusion1 = masked_less(exclusion1, 0) #remask the stacks
+        inclusion2 = array(only_stacks_inc2)
+        inclusion2 = masked_less(inclusion2, 0) #remask the stacks            
+        exclusion2 = array(only_stacks_exc2)
+        exclusion2 = masked_less(exclusion2, 0) #remask the stacks
+        print "Saving indexes..."
+        pickle.dump(stacks_ids, open("%s_%s_vs_%s_indexesSTACKS.pickle"%(args.output, args.names[0], args.names[1]), 'w'))
+        print "After", inclusion1.shape
+    #END Just for analysis
+
+
+
 
     inc_reads1 = inclusion1.mean(axis=1)+pseudo
     inc_reads2 = inclusion2.mean(axis=1)+pseudo
@@ -92,7 +138,7 @@ def main():
     xlabel("Delta PSI")
 
     _save_or_show(args.plotpath, "deltapsi")
-
+    pickle.dump(delta_psi, open("%s_deltapsi.pickle"%(args.output), 'w'))
 
 
 if __name__ == '__main__':
