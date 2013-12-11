@@ -9,25 +9,49 @@ from scipy.stats import beta
 
 """
 TODO: Use the Beta distribution with 2 parameters and then fit them in the 3 mixed distributions.
+
+Do the following:
+
+1. Transform your original values from the range X \in [-1,1] to Z \in [0,1]. with the simple 
+transformation Z = 0.5*(X+1). You can now work only in the transformed space with all the mixture components 
+and that will simplify the code and make it faster.
+
+2. Initialize the 3 mixtures in the following way: take the %V right most values 
+(where V is a global param, say 10 or 20), compute their mean and variance and use these 
+to set the a,b for the right component. Do the same for the left component. 
+Take the remaining 1-2V% points that are more in the center and do the same to initialize 
+the middle component. You now also have an initial guess for the proportion of Pi i.e. 
+the prior for each mixture component (V% for each side one and 100-2V for the middle one). 
+Alternatively, you could use the same technique you used here where the variances are 
+the same but the means are shifted for each component and you start of by having Pi = 1/3 for each of them.
+ This is simpler. Probably will give very similar/same results, but may take longer to converge. 
+
+3. Run the EM now on the modified Z space, do the plots and everything in this space.
+
+4. At the end, you will need to go back to the X space between -1 and 1. The transformation 
+between your mixture PDF in the Z space and the X space is simple: P(X) = P(Z)/2. 
+So, when you get a value in X space, transform it to Z space, compute the PDF 
+from the mixture of beta distributions, and divide the result by 2. That will be the returned value.
+
+Other comments:
+The mixture plots are nice, but these only give the shape of each distribution separately. 
+You should plot (a) the combined PDF as we discussed, where you plot P(x) for  x = -1:0.1:+1 
+by the mixture distribution and (b) plot the Pi i.e. the probabilitiy for each mixture 
+component at each step e.g. as a bar chart.
+
 """
 
-def _add_pi_pdf(pi, pdf):
-    if pdf > 0:
-        return logaddexp(pi, log(pdf))
-    else:
-        return 0
 
-def likelihood(loc_left, loc_right, loc_center, a_left, b_left, a_right, b_right, a_center, b_center, pi_left, pi_right, pi_center, deltadata):
+def likelihood(a_left, b_left, a_right, b_right, a_center, b_center, pi_left, pi_right, pi_center, deltadata):
     first = True
     pi_left = log(pi_left)
     pi_right = log(pi_right)
     pi_center = log(pi_center)
     for value in deltadata:
         if value > 0:
-
-            left_prob = _add_pi_pdf(pi_left, beta.pdf(x=value, a=a_left, b=b_left, loc=loc_left))
-            right_prob = logaddexp(pi_right, beta.pdf(x=value, a=a_right, b=b_right, loc=loc_right))
-            center_prob = logaddexp(pi_center, beta.pdf(x=value, a=a_center, b=b_center, loc=loc_center))
+            left_prob = logaddexp(pi_left, beta.pdf(x=value, a=a_left, b=b_left))
+            right_prob = logaddexp(pi_right, beta.pdf(x=value, a=a_right, b=b_right))
+            center_prob = logaddexp(pi_center, beta.pdf(x=value, a=a_center, b=b_center))
             all_prob = logaddexp(left_prob, right_prob)
             all_prob = logaddexp(all_prob, center_prob)
             if first:
@@ -51,7 +75,7 @@ def a_from_meanvar(mean, var):
 def b_from_meanvar(mean, var):
     return (1-mean)*(((mean*(1-mean))/var)-1)
 
-def estimate_parameters(a_left, b_left, a_right, b_right, a_center, b_center, loc_left, loc_right, loc_center, pi_left, pi_right, pi_center, deltadata):
+def estimate_parameters(a_left, b_left, a_right, b_right, a_center, b_center, pi_left, pi_right, pi_center, deltadata):
     #calculate the number of values that fall in one of the distributions
     N_left = 0
     N_right = 0
@@ -60,10 +84,11 @@ def estimate_parameters(a_left, b_left, a_right, b_right, a_center, b_center, lo
     mu_right_acum = 0
     mu_center_acum = 0
     respons = []
+    #calculate responsability functions and 
     for value in deltadata:
-        left_prob = pi_left*beta.pdf(x=value, a=a_left, b=b_left, loc=loc_left)
-        right_prob = pi_right*beta.pdf(x=value, a=a_right, b=b_right, loc=loc_right)
-        center_prob = pi_center*beta.pdf(x=value, a=a_center, b=b_center, loc=loc_center)
+        left_prob = pi_left*beta.pdf(x=value, a=a_left, b=b_left)
+        right_prob = pi_right*beta.pdf(x=value, a=a_right, b=b_right)
+        center_prob = pi_center*beta.pdf(x=value, a=a_center, b=b_center)
         #total probability
         total_prob = left_prob + right_prob + center_prob
 
@@ -102,13 +127,6 @@ def estimate_parameters(a_left, b_left, a_right, b_right, a_center, b_center, lo
     var_left = acum_var_left/N_left
     var_right = acum_var_right/N_right
     var_center = acum_var_center/N_center    
-    #end calculate var
-
-    #mu and var on the left and center are not in the 0,1 interval, replace
-    mu_left = mu_transform(mu_left, loc_left, loc_left+1)
-    mu_center = mu_transform(mu_center, loc_center, loc_center+1)
-    var_left = var_transform(var_left, loc_left, loc_left+1)
-    var_center = var_transform(var_center, loc_center, loc_center+1)
 
     a_left = a_from_meanvar(mu_left, var_left)
     a_right = a_from_meanvar(mu_right, var_right)
@@ -119,33 +137,73 @@ def estimate_parameters(a_left, b_left, a_right, b_right, a_center, b_center, lo
 
     return a_left, b_left, a_right, b_right, a_center, b_center, pi_left, pi_right, pi_center
 
-def EM(a_left, b_left, a_right, b_right, a_center, b_center, loc_left, loc_right, loc_center, pi_left, pi_right, pi_center, deltadata, num_iter):
-    #direction = True, bigger values, false, smaller
-    prev_likelihood = likelihood(loc_left, loc_right, loc_center, a_left, b_left, 
+def label_beta(a, b, pi):
+    return "(a=%.2f b=%.2f pi=%.4f)"%(a, b, pi)
+
+def plot_densities(deltadata, my_title):
+    subplot(2,1,1)
+    suptitle(my_title, fontsize=24)
+    xlim(-1, 1)
+    xlabel("Delta PSI")
+    ylabel("Density")
+    hist(deltadata, bins = 60, histtype='step')      
+
+def plot_beta(a, b, pi, label_name):
+    subplot(2,1,2)
+    points, x_pos = calc_beta_pdf(a, b)
+    xlabel("Delta PSI")
+    ylabel("Density")
+    plot(x_pos, points, label="%s %s"%(label_name, label_beta(a, b, pi)))
+
+def _save_or_show(plotpath, name):
+    xlim(0, 1)
+    legend()
+    if plotpath:
+        savefig("%s_%s.png"%(plotpath, name), bbox_inches='tight', width=200, height=100, dpi=100)
+        clf()
+    else:
+        show()  
+
+def EM(a_left, b_left, a_right, b_right, a_center, b_center, pi_left, pi_right, pi_center, deltadata, num_iter, plotpath):
+   
+    fig = figure(figsize=[10, 5])
+    plot_densities(deltadata, "Initial Parameters")
+    prev_likelihood = likelihood(a_left, b_left, 
                                  a_right, b_right, a_center, b_center, 
                                  pi_left, pi_right, pi_center, deltadata)
-    print "INIT: Left (a=%.2f b=%.2f pi=%.4f) Center (a=%.2f b=%.2f pi=%.4f) Right (a=%.2f b=%.2f pi=%.4f) Likelihood: %.5f"%(a_left, b_left, pi_left, a_center, b_center, pi_center, a_right, b_right, pi_right, prev_likelihood)
+    print "INIT: Left %s Center %s Right %s Likelihood: %.5f"%(label_beta(a_left, b_left, pi_left), label_beta(a_center, b_center, pi_center), label_beta(a_right, b_right, pi_right), prev_likelihood)
+    plot_beta(a_left, b_left, pi_left, "Left")
+    plot_beta(a_center, b_center, pi_center, "Center")
+    plot_beta(a_right, b_right, pi_right, "Right")
+    _save_or_show(plotpath, "init")    
     for iteration in xrange(num_iter):
-        print "EM iteration %s..."%(iteration)
-        a_left, b_left, a_right, b_right, a_center, b_center, pi_left, pi_right, pi_center = estimate_parameters(a_left, b_left, a_right, b_right, a_center, b_center, loc_left, loc_right, loc_center, pi_left, pi_right, pi_center, deltadata)
-        current_likelihood = likelihood(loc_left, loc_right, loc_center, 
-                                        a_left, b_left, a_right, b_right, a_center, b_center, 
+        plot_densities(deltadata, "EM Iteration %s"%iteration)
+        a_left, b_left, a_right, b_right, a_center, b_center, pi_left, pi_right, pi_center = estimate_parameters(a_left, b_left, a_right, b_right, a_center, b_center, pi_left, pi_right, pi_center, deltadata)
+        current_likelihood = likelihood(a_left, b_left, a_right, b_right, a_center, b_center, 
                                         pi_left, pi_right, pi_center, deltadata)
-        print "Left (a=%.2f b=%.2f pi=%.4f) Center (a=%.2f b=%.2f pi=%.4f) Right (a=%.2f b=%.2f pi=%.4f) Likelihood: %.5f"%(a_left, b_left, pi_left, a_center, b_center, pi_center, a_right, b_right, pi_right, current_likelihood)
-        
+        print "EM iteration %s: Left %s Center %s Right %s Likelihood: %.5f"%(iteration, label_beta(a_left, b_left, pi_left), label_beta(a_center, b_center, pi_center), label_beta(a_right, b_right, pi_right), current_likelihood)        
+
+        plot_beta(a_left, b_left, pi_left, "Left")
+        plot_beta(a_center, b_center, pi_center, "Center")
+        plot_beta(a_right, b_right, pi_right, "Right")
+        _save_or_show(plotpath, "iter%05d"%iteration)   
 
         prev_likelihood = current_likelihood
 
     return a_left, b_left, a_right, b_right, a_center, b_center
 
 
-def calc_beta_pdf(a, b, loc):
-    x_pos = arange(loc, loc+1, 0.01)
+def calc_beta_pdf(a, b):
+    x_pos = arange(0, 1, 0.01)
     beta_pdfs = []
     for x in x_pos:
-        beta_pdfs.append(beta.pdf(x=x, a=a, b=b, loc=loc))    
+        beta_pdfs.append(beta.pdf(x=x, a=a, b=b))    
 
     return array(beta_pdfs), x_pos
+
+def ab_from_meanvar(mean, var):
+    return a_from_meanvar(mean, var), b_from_meanvar(mean, var)
+
 
 def main():
     parser = argparse.ArgumentParser()
@@ -155,35 +213,32 @@ def main():
     parser.add_argument('--output', required=True, help='Path to save the pickle output to.')
     parser.add_argument('--iter', default=20, type=int, help='Max number of iterations of the EM')
     parser.add_argument('--breakiter', default=0.01, type=float, help='If the log likelihood increases')
+    parser.add_argument('--V', default=20, type=float, help='Percentage for initialization of the EM model')
     args = parser.parse_args()
     deltapsi = pickle.load(open(args.deltapsi))
 
-    subplot(2,1,1)
-    xlim(-1, 1)
-    hist(deltapsi, bins = 60, histtype='step')    
+    #transform to z-space
+    z_deltapsi = 0.5*(deltapsi+1)
 
-    ######  PARAMETERS    #####
-    #loc values are the start of the interval of the interval 0,1 (default 0) in a beta distribution for the numpy function
-    loc_left   = -1 
-    loc_center = -0.5
-    loc_right  = 0
-    a_left = b_left = a_center = b_center = a_right = b_right = 2 #A and B of the beta distribution
-    pi_left = pi_right = pi_center = 1./3
+    left_percentile = percentile(z_deltapsi, args.V)
+    right_percentile = 1-left_percentile
+    right_delta = z_deltapsi[z_deltapsi > right_percentile]
+    left_delta = z_deltapsi[z_deltapsi < left_percentile]
+    center_delta = z_deltapsi[z_deltapsi > left_percentile]
+    center_delta = center_delta[center_delta < right_percentile]
 
-    a_left, b_left, a_right, b_right, a_center, b_center = EM(a_left, b_left, a_right, b_right, a_center, b_center, loc_left, loc_right, loc_center, pi_left, pi_right, pi_center, deltapsi, args.iter)
+    a_left, b_left = ab_from_meanvar(mean(left_delta), var(left_delta))
+    a_right, b_right = ab_from_meanvar(mean(right_delta), var(right_delta))
+    a_center, b_center = ab_from_meanvar(mean(center_delta), var(center_delta))
 
-    center_points, x_pos_center = calc_beta_pdf(a_center, b_center, loc_center)
-    right_points, x_pos_right  = calc_beta_pdf(a_right, b_right, loc_right)
-    left_points, x_pos_left = calc_beta_pdf(a_left, b_left, loc_left)
+    pi_left = len(left_delta)/float(len(z_deltapsi))
+    pi_right = len(right_delta)/float(len(z_deltapsi))
+    pi_center = len(center_delta)/float(len(z_deltapsi))
 
-    subplot(2,1,2)
+    a_left, b_left, a_right, b_right, a_center, b_center = EM(a_left, b_left, a_right, b_right, a_center, b_center, 
+                                                              pi_left, pi_right, pi_center, 
+                                                              z_deltapsi, args.iter, args.plotpath)
 
-    plot(x_pos_center, center_points, label="center")
-    plot(x_pos_right, right_points, label="right")
-    plot(x_pos_left, left_points, label="left")
-    xlim(-1, 1)
-    legend()
-    show()
 
 if __name__ == '__main__':
     main()
