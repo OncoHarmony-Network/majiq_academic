@@ -15,7 +15,8 @@ from numpy.random import dirichlet
 """
 Calculate PSI values
 """
-BINS = linspace(0, 1, num=100)
+#TODO 4o should go in parser
+BINS = linspace(0, 1, num=40)
 
 
 def calc_psi(alpha, n, samples_events, debug=False):

@@ -6,8 +6,7 @@ import pickle
 from pylab import *
 from scipy.io import savemat
    
-BINS = linspace(0, 1, num=99)
-
+BINS = linspace(0, 1, num=40)
 
 def mean_psi(psi_events):
     "Calculate the mean for every junction"
