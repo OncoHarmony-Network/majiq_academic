@@ -78,7 +78,7 @@ def estimate_parameters(a_left, b_left, a_right, b_right, a_center, b_center, pi
     mu_right_acum = 0
     mu_center_acum = 0
     respons = []
-    #calculate responsability functions and 
+    #calculate responsability functions, means and N 
     for value in deltadata:
         left_prob = pi_left*beta.pdf(x=value, a=a_left, b=b_left)
         right_prob = pi_right*beta.pdf(x=value, a=a_right, b=b_right)
@@ -135,29 +135,30 @@ def label_beta(a, b, pi):
     return "(a=%.2f b=%.2f pi=%.4f)"%(a, b, pi)
 
 
-def plot_all(a_left, b_left, pi_left, label_left, a_center, b_center, pi_center, label_center, a_right, b_right, pi_right, label_right, density_title, deltadata):
-    plot_densities(deltadata, density_title)
+def plot_all(a_left, b_left, pi_left, label_left, a_center, b_center, pi_center, label_center, a_right, b_right, pi_right, label_right, figure_title, deltadata):
+    plot_densities(deltadata)
     plot_mixture(a_left, b_left, pi_left, label_left)
     plot_mixture(a_center, b_center, pi_center, label_center)
     plot_mixture(a_right, b_right, pi_right, label_right)
     plot_combpdf([[a_left, b_left, pi_left], [a_center, b_center, pi_center], [a_right, b_right, pi_right]])   
     plot_pi(pi_left, pi_center, pi_right)
+    suptitle(figure_title, fontsize=24)
 
-def plot_densities(deltadata, my_title):
-    subplot(4,1,1)
-    suptitle(my_title, fontsize=24)
+
+def plot_densities(deltadata):
+    subplot(2,2,1)
     title("Empirical Data")
     xlim(0, 1)
     xlabel("Delta PSI")
     ylabel("Density")
-    hist(deltadata, bins = 60, histtype='step')      
+    hist(deltadata, bins = 40, histtype='step')      
 
 
 def plot_combpdf(beta_dists):
-    subplot(4,1,2)
+    subplot(2,2,3)
     xlim(0, 1)
     mixture_pdf = []
-    title("Beta mixture PDF")
+    title("Mixture PDF")
     xlabel("PDF")
     ylabel("Density")
     x_pos = arange(0, 1, 0.01)
@@ -170,29 +171,33 @@ def plot_combpdf(beta_dists):
     plot(x_pos, mixture_pdf)
 
 def plot_mixture(a, b, pi, label_name):
-    subplot(4,1,3)
+    subplot(2,2,2)
     xlim(0, 1)
     points, x_pos = calc_beta_pdf(a, b)
+    title("Beta mixtures")
     xlabel("Delta PSI")
     ylabel("Density")
     plot(x_pos, points, label="%s %s"%(label_name, label_beta(a, b, pi)))
     legend()
 
 def plot_pi(pi_left, pi_center, pi_right):
-    subplot(4,1,4)
+    subplot(2,2,4)
+    title("Pi distributions")
+    ylim(0, 1)
+    ylabel("Weight")
     bar(arange(3), [pi_left, pi_center, pi_right])
     xticks(arange(3)+0.3, ["Left", "Center", "Right"], rotation=50)
 
 def _save_or_show(plotpath, name):
     if plotpath:
-        savefig("%s_%s.png"%(plotpath, name), bbox_inches='tight', width=200, height=400, dpi=100)
+        savefig("%s_%s.png"%(plotpath, name), width=200, height=400, dpi=100)
         clf()
     else:
         show()  
 
 
 def EM(a_left, b_left, a_right, b_right, a_center, b_center, pi_left, pi_right, pi_center, deltadata, num_iter, plotpath):
-    fig = figure(figsize=[10, 25])
+    fig = figure(figsize=[15, 10])
     prev_likelihood = likelihood(a_left, b_left, 
                                  a_right, b_right, a_center, b_center, 
                                  pi_left, pi_right, pi_center, deltadata)
@@ -262,7 +267,7 @@ def main():
                                                               z_deltapsi, args.iter, args.plotpath)
 
     #TODO convert back to 1-:1 space and pickle save
-    
+    arange(-98.75, 100, 2.5)
 
 
 if __name__ == '__main__':

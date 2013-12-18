@@ -74,10 +74,8 @@ def main():
     for path in args.files:
         print "\nProcessing %s..."%path
         inc1, exc1, const1, inc2, exc2, const2 = load_data(path, args.names[0], args.names[1]) #loading the paired matrixes
-        
         all_junctions = {"inc1": inc1, "exc1": exc1, "const1": const1, 
                          "inc2": inc2, "exc2": exc2, "const2": const2 } #TODO Generalize to N junctions
-
 
         print "GC content normalization..."
         for junc_set in all_junctions.keys():
