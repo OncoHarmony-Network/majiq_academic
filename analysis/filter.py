@@ -20,7 +20,7 @@ def filter_message(when, value, debug, junc):
         print "%s (Filter=%s). %s"%(when, value, junc[0].shape)
 
 
-def discardhigh(max0=0, orfilter=False, debug=False, *junc):
+def discardhigh(max0=0, orfilter=True, debug=False, *junc):
 
     filter_message("Before discardhigh", max0, debug, junc)
 
@@ -36,18 +36,20 @@ def discardhigh(max0=0, orfilter=False, debug=False, *junc):
 
     else:
         raise NotImplemented
+        """
         #NOTE: For this kind of calculation, numnonzeros2 *MUST* be calculated after the first filter, or else it will not fit the new matrix. Unless you find a way of make combined filters...
         numnonzeros1 = (j1 > 0).sum(axis=1)
         j1, j2= filter_bulk((numnonzeros1 < max0), j1,j2)
         numnonzeros2 = (j2 > 0).sum(axis=1)
         ret = filter_bulk((numnonzeros2 < max0), j1, j2)
+        """
 
     filter_message("After discardhigh", max0, debug, junc)
 
     return ret
 
 
-def discardminreads(minreads=0, orfilter=False, debug=False, *junc):
+def discardminreads(minreads=0, orfilter=True, debug=False, *junc):
 
     filter_message("Before discardminreads", minreads, debug, junc)
 
@@ -65,18 +67,13 @@ def discardminreads(minreads=0, orfilter=False, debug=False, *junc):
 
     else:
         raise NotImplemented
-        """
-        readsj1 = j1.sum(axis=1)
-        j1, j2 = filter_bulk((readsj1 >= minreads), j1, j2)
-        readsj2 = j2.sum(axis=1)
-        ret = filter_bulk((readsj2 >= minreads), j1, j2)
-        """
+
     filter_message("After discardminreads", minreads, debug, ret)
     
     return ret
 
 
-def discardmaxreads(maxreads=0, orfilter=False, debug=False, *junc):
+def discardmaxreads(maxreads=0, orfilter=True, debug=False, *junc):
 
     filter_message("Before discardmaxreads", maxreads, debug, junc)
 
@@ -94,17 +91,13 @@ def discardmaxreads(maxreads=0, orfilter=False, debug=False, *junc):
 
     else:
         raise NotImplemented
-        readsj1 = j1.sum(axis=1)
-        j1, j2 = filter_bulk((readsj1 <= maxreads), j1, j2)
-        readsj2 = j2.sum(axis=1)
-        ret = filter_bulk((readsj2 <= maxreads), j1, j2)
 
     filter_message("After discardmaxreads", maxreads, debug, ret)
 
     return ret
 
 
-def discardlow(min0=0, orfilter=False, debug=False, *junc):
+def discardlow(min0=0, orfilter=True, debug=False, *junc):
     filter_message("Before discardlow", min0, debug, junc)
     filtered_juncs = [[] for x in xrange(len(junc))]
     if orfilter:
@@ -120,12 +113,7 @@ def discardlow(min0=0, orfilter=False, debug=False, *junc):
 
     else:    
         raise NotImplemented 
-        """  
-        numnonzeros1 = (j1 > 0).sum(axis=1)
-        j1, j2 = filter_bulk((numnonzeros1 > min0), j1, j2)
-        numnonzeros2 = (j2 > 0).sum(axis=1)
-        ret = filter_bulk((numnonzeros2 > min0), j1, j2)
-        """
+
     filter_message("After discardlow", min0, debug, ret)
 
     return ret
@@ -164,7 +152,7 @@ def mark_stacks(junctions, fitfunc, pvalue_limit, dispersion):
                 my_nb = nbinom(r, p)
                 pval = 1-my_nb.cdf(value)
                 if pval < pvalue_limit:
-                    junctions[i, j] = -2
+                    junctions[i, j] = -2 
                     minstack = min(minstack, value)
                     numstacks += 1
 

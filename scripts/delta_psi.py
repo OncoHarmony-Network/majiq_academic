@@ -16,6 +16,7 @@ def mean_psi(psi_events):
 
     return array(ret)
 
+#deprecated
 def sample_psi(psi_events):
     from numpy.random import choice
     "Get a random point estimate NOTE: REQUIRES python 2.7 for numpy new version"

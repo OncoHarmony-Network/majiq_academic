@@ -1,6 +1,7 @@
 import sys
 import os
 import argparse
+from collections import defaultdict
 try:
     import cPickle as pickle
 except:
@@ -10,12 +11,13 @@ from scipy.io import loadmat
 from scipy.stats import nbinom
 from pylab import *
 from numpy.ma import masked_less
+from scipy.io import savemat
 
 from analysis.polyfitnb import fit_nb 
 from analysis.filter import norm_junctions, discardlow, discardhigh, discardminreads, discardmaxreads, mark_stacks
 from analysis.sample import sample_from_junctions
-from analysis.psi import calc_psi
-
+from analysis.psi import calc_psi, mean_psi, DirichletCalc, BINS_CENTER
+from analysis.adjustdelta import adjustdelta
 
 def _load_data3(my_mat, name, my_type):
     return {"junctions":my_mat[name][my_type][0, 0][0, 0]['cov'], "gc_content": my_mat[name][my_type][0, 0][0, 0]['gc_val']}
@@ -34,48 +36,62 @@ def load_data(path, name1, name2):
     inc2, exc2, const2 = _load_data2(my_mat, name2)
     return inc1, exc1, const1, inc2, exc2, const2
 
+def _create_if_not_exists(my_dir):
+    if not os.path.exists(my_dir):
+        print "\nCreating directory %s..."%my_dir
+        os.makedirs(my_dir)    
+
+
+def __write_samples(sample, output, names, num):
+    pickle.dump(sample, open("%s%s_exc%s_samples.pickle"%(output, names[num], num), 'w'))
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('files', nargs='+', help='The matlab files pairs that we read. Can be used as a glob.')
-    parser.add_argument('--trim', default=0, type=int, help='Trim the borders of the junctions because of poor mappability')
-    parser.add_argument('--minnonzero', default=0, type=int, help='Minimum number of positions ')
-    parser.add_argument('--skipgc', dest="norm", action='store_true', default=True, help='Disable GC content')
-    parser.add_argument('--nodiscardb', dest="discardb", action='store_false',  default=True, help='Skip biscarding the b from the NB polynomial function, since we expect our fit to start from x=0, y=0')
-    parser.add_argument('--plotpath', default=None, help='Path to save the plot to, if not provided will show on a matplotlib popup window')
+    #required flags
     parser.add_argument('--tmp', required=True, help='Path to save the temporary files.')
     parser.add_argument('--output', required=True, help='Path to save the pickle output to.')
-    parser.add_argument('--debug', type=int,  default=0)
+    #optional flags
+    parser.add_argument('--trim', default=0, type=int, help='Trim the borders of the junctions because of poor mappability')
+
+    parser.add_argument('--plotpath', default=None, help='Path to save the plot to, if not provided will show on a matplotlib popup window')
     parser.add_argument('--k', default=50, type=int, help='Number of positions to sample per iteration. [Default: %(default)s]')
     parser.add_argument('--m', default=100, type=int, help='Number of bootstrapping samples. [Default: %(default)s]')  
     parser.add_argument('--trimborder', default=5, type=int, help='Trim the borders when sampling (keeping the ones with reads). [Default: %(default)s]')
-    parser.add_argument('--maxnonzero', default=0, type=int, help='Maximum number of positive positions to consider the junction.') 
-    parser.add_argument('--minreads', default=0, type=int, help='Minimum number of reads combining all positions in a junction to be considered. [Default: %(default)s]') 
-    parser.add_argument('--maxreads', default=0, type=int, help='Maximum number of reads combining all positions in a junction to be considered. [Default: %(default)s]')    
     parser.add_argument('--names', nargs='+', required=True, help="The names that identify each of the experiments. [Default: %(default)s]")
     parser.add_argument('--n', default=1, type=int, help='Number of PSI samples per sample paired. [Default: %(default)s]') 
     parser.add_argument('--alpha', default=0.5, type=float, help='Alpha hyperparameter for the dirichlet distribution. [Default: %(default)s]') 
     parser.add_argument('--markstacks', default=0.001, type=float, help='Mark stack positions. Expects a p-value. Use a negative value in order to disable it. [Default: %(default)s]') 
-    parser.add_argument('--nodiscardzeros', default=True, dest="discardzeros", action='store_false', help='Skip discarding zeroes')
     parser.add_argument('--nbdisp', default=0.1, type=int, help='Dispersion for the fallback NB function. [Default: %(default)s]')
-    parser.add_argument('--orfilter', default=False, action='store_true', help='When filtering, select sets of junctions where at least one passes the filter, instead of all passing the filter. [Default: %(default)s]')
+    parser.add_argument('--psiparam', default=False, action='store_true', help='Instead of sampling, use a parametric form for the PSI calculation. [Default: %(default)s]')
+    #parser.add_argument('--orfilter', default=False, action='store_true', help='When filtering, select sets of junctions where at least one passes the filter, instead of all passing the filter. [Default: %(default)s]')
+    #EM flags
+    parser.add_argument('--minreads', default=30, type=int, help='Minimum number of reads combining all positions in a junction to be considered. [Default: %(default)s]') 
+    parser.add_argument('--minnonzero', default=15, type=int, help='Minimum number of positions for the best set.')
+    parser.add_argument('--iter', default=10, type=int, help='Max number of iterations of the EM')
+    parser.add_argument('--breakiter', default=0.01, type=float, help='If the log likelihood increases less that this flag, do not do another EM step')
+    parser.add_argument('--V', default=0.1, type=float, help='Value of DeltaPSI used for initialization of the EM model [Default: %(default)s]')
+    #Disable flags
+    parser.add_argument('--nogc', dest="norm", action='store_true', default=True, help='Disable GC content normalization')
+    parser.add_argument('--nodiscardb', dest="discardb", action='store_false',  default=True, help='Skip biscarding the b from the NB polynomial function, since we expect our fit to start from x=0, y=0')
+    parser.add_argument('--nodiscardzeros', default=True, dest="discardzeros", action='store_false', help='Skip discarding zeroes')
+    #Debug flags  
     parser.add_argument('--ONLYSTACKS', action='store_true', help="Useless flag for analysis. Used to test if stacks are worth masking.")
+    parser.add_argument('--debug', type=int,  default=0)
+
+
+
     args = parser.parse_args()
 
     #create directories if they dont exist
-    if not os.path.exists(args.output):
-        print "\nCreating directory %s..."%args.output
-        os.makedirs(args.output)
-
-    if args.plotpath:
-        if not os.path.exists(args.plotpath):
-            print "\nCreating directory %s..."%args.plotpath
-            os.makedirs(args.plotpath)
+    _create_if_not_exists(args.output)
+    _create_if_not_exists(args.plotpath)
 
     for path in args.files:
         print "\nProcessing %s..."%path
         inc1, exc1, const1, inc2, exc2, const2 = load_data(path, args.names[0], args.names[1]) #loading the paired matrixes
         all_junctions = {"inc1": inc1, "exc1": exc1, "const1": const1, 
-                         "inc2": inc2, "exc2": exc2, "const2": const2 } #TODO Generalize to N junctions
+                         "inc2": inc2, "exc2": exc2, "const2": const2 }
 
         print "GC content normalization..."
         for junc_set in all_junctions.keys():
@@ -109,7 +125,7 @@ def main():
                     if not args.ONLYSTACKS:
                         all_junctions[junc_set] = masked_less(all_junctions[junc_set], 0) #remask the stacks
 
-        #START Just for analysis, should go into a script
+        #START Just for analysis and debugging of stacks, should go into a script
         if args.ONLYSTACKS:
             print "Before", all_junctions["inc1"].shape
             only_stacks_inc1 = []
@@ -138,40 +154,49 @@ def main():
             print "After", all_junctions["inc1"].shape
         #END Just for analysis
 
-
-        if args.maxnonzero or args.minnonzero or args.minreads or args.maxreads:
-            print "Filtering..."
-
-        if args.maxnonzero:
-            all_junctions["exc1"], all_junctions["inc1"], all_junctions["exc2"], all_junctions["inc2"] = discardhigh(args.maxnonzero, args.orfilter, args.debug, all_junctions["exc1"], all_junctions["inc1"], all_junctions["exc2"], all_junctions["inc2"])
-            
-        if args.minnonzero:
-            all_junctions["exc1"], all_junctions["inc1"], all_junctions["exc2"], all_junctions["inc2"] = discardlow(args.minnonzero, args.orfilter, args.debug, all_junctions["exc1"], all_junctions["inc1"], all_junctions["exc2"], all_junctions["inc2"])
-
-        if args.minreads:
-            all_junctions["exc1"], all_junctions["inc1"], all_junctions["exc2"], all_junctions["inc2"] = discardminreads(args.minreads, args.orfilter, args.debug, all_junctions["exc1"], all_junctions["inc1"], all_junctions["exc2"], all_junctions["inc2"])
-
-        if args.maxreads:
-            all_junctions["exc1"], all_junctions["inc1"], all_junctions["exc2"], all_junctions["inc2"] = discardmaxreads(args.maxreads, args.orfilter, args.debug, all_junctions["exc1"], all_junctions["inc1"], all_junctions["exc2"], all_junctions["inc2"])
-
+        print "Bootstrapping calculation..."
         mean_exc1, var_exc1, exc_samples1 = sample_from_junctions(all_junctions["exc1"], args.m, args.k, discardzeros=args.discardzeros, trimborder=args.trimborder, fitted_func=fitfunc1, debug=args.debug)
         mean_inc1, var_inc1, inc_samples1 = sample_from_junctions(all_junctions["inc1"], args.m, args.k, discardzeros=args.discardzeros, trimborder=args.trimborder, fitted_func=fitfunc1, debug=args.debug)      
-        
         mean_exc2, var_exc2, exc_samples2 = sample_from_junctions(all_junctions["exc2"], args.m, args.k, discardzeros=args.discardzeros, trimborder=args.trimborder, fitted_func=fitfunc2, debug=args.debug)
         mean_inc2, var_inc2, inc_samples2 = sample_from_junctions(all_junctions["inc2"], args.m, args.k, discardzeros=args.discardzeros, trimborder=args.trimborder, fitted_func=fitfunc2, debug=args.debug)
+  
+        print "Writing samples in disk..."
+        __write_samples(exc_samples1, args.output, args.names, 0)
+        __write_samples(inc_samples1, args.output, args.names, 1)
+        __write_samples(exc_samples2, args.output, args.names, 0)
+        __write_samples(inc_samples2, args.output, args.names, 1)
         
-        pickle.dump(exc_samples1, open("%s_%s_exc_samples.pickle"%(args.output, args.names[0]), 'w'))
-        pickle.dump(inc_samples1, open("%s_%s_inc_samples.pickle"%(args.output, args.names[1]), 'w'))
-        pickle.dump(exc_samples2, open("%s_%s_exc_samples.pickle"%(args.output, args.names[0]), 'w'))
-        pickle.dump(inc_samples1, open("%s_%s_inc_samples.pickle"%(args.output, args.names[1]), 'w'))
+        print "\nCalculating PSI for %s ..."%(args.names)
+        psi1 = calc_psi(inc_samples1, exc_samples1, args.names[0], args.output, args.alpha, args.n, args.debug, args.psiparam)
+        psi2 = calc_psi(inc_samples2, exc_samples2, args.names[1], args.output, args.alpha, args.n, args.debug, args.psiparam)
+
+        print "Calculating Delta PSI %s ..."%(args.names)
+        delta_psi = mean_psi(psi1) - mean_psi(psi2)
+
+        print 'Filtering to obtain "best set"...'
+        best_set = defaultdict(array)
+        best_set["exc1"], best_set["inc1"], best_set["exc2"], best_set["inc2"] = discardlow(args.minnonzero, True, args.debug, all_junctions["exc1"], all_junctions["inc1"], all_junctions["exc2"], all_junctions["inc2"])
+        best_set["exc1"], best_set["inc1"], best_set["exc2"], best_set["inc2"] = discardminreads(args.minreads, True, args.debug, all_junctions["exc1"], all_junctions["inc1"], all_junctions["exc2"], all_junctions["inc2"])
+         
+        print "\nCalculating delta PSI for 'best set' %s ..."%(args.names)
+        best_psi1 = calc_psi(inc_samples1, exc_samples1, args.names[0], args.output, args.alpha, args.n, args.debug, args.psiparam)
+        best_psi2 = calc_psi(inc_samples2, exc_samples2, args.names[1], args.output, args.alpha, args.n, args.debug, args.psiparam)
+        best_delta_psi = mean_psi(best_psi1) - mean_psi(best_psi2)
+        print "Getting prior matrix for 'best set'.."
+        mixture_pdf = adjustdelta(best_delta_psi, args.output, plotpath=args.plotpath, title=" ".join(args.names), iter=args.iter, breakiter=args.breakiter, V=args.V)
+        dircalc = DirichletCalc() 
         
-        print "\nCalculating PSI for %s"%(args.names)
-        samples1 = vstack([inc_samples1, exc_samples1]).reshape(2, inc_samples1.shape[0], inc_samples1.shape[1])
-        samples2 = vstack([inc_samples2, exc_samples2]).reshape(2, inc_samples2.shape[0], inc_samples2.shape[1])
-        psi_scores1 = calc_psi(args.alpha, args.n, samples1, debug=args.debug)
-        pickle.dump(psi_scores1, open("%s_%s_inc_vs_exc_psivalues.pickle"%(args.output, args.names[0]), 'w'))
-        psi_scores2 = calc_psi(args.alpha, args.n, samples2, debug=args.debug)
-        pickle.dump(psi_scores2, open("%s_%s_inc_vs_exc_psivalues.pickle"%(args.output, args.names[1]), 'w'))
+        print [dircalc.pdf([x, 1-x], [0.5]) for x in BINS_CENTER]
+
+        print "Calculating Delta PSI for all %s ..."%(args.names)
+        delta_psi = mean_psi(psi1) - mean_psi(psi2)
+
+        
+
+
+
+        savemat("%s.mat"%args.plotpath, {"DeltaPSI:" : list(delta_psi)})
+        pickle.dump(delta_psi, open("%sdeltapsi.pickle"%(args.output), 'w'))
 
 
 if __name__ == '__main__':

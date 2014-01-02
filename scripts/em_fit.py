@@ -266,6 +266,7 @@ def main():
                                                               pi_left, pi_right, pi_center, 
                                                               z_deltapsi, args.iter, args.plotpath)
 
+    #TODO truncate matrixes by calculating the mean and variance from 0 to 1 for every beta(a, b) and use a_from_meanvar() and b_from_meanvar()
     #TODO convert back to 1-:1 space and pickle save
     arange(-98.75, 100, 2.5)
 
