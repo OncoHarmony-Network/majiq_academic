@@ -83,6 +83,9 @@ def main():
 
     args = parser.parse_args()
 
+
+    
+
     #create directories if they dont exist
     _create_if_not_exists(args.output)
     _create_if_not_exists(args.plotpath)
@@ -183,17 +186,16 @@ def main():
         best_psi2 = calc_psi(inc_samples2, exc_samples2, args.names[1], args.output, args.alpha, args.n, args.debug, args.psiparam)
         best_delta_psi = mean_psi(best_psi1) - mean_psi(best_psi2)
         print "Getting prior matrix for 'best set'.."
+        #also reshape the array so when 
         mixture_pdf = adjustdelta(best_delta_psi, args.output, plotpath=args.plotpath, title=" ".join(args.names), iter=args.iter, breakiter=args.breakiter, V=args.V)
-        dircalc = DirichletCalc() 
-        
-        print [dircalc.pdf([x, 1-x], [0.5]) for x in BINS_CENTER]
 
+        dircalc = DirichletCalc() 
+        jefferies = array([dircalc.pdf([x, 1-x], [0.5, 0.5]) for x in BINS_CENTER]).reshape([len(BINS_CENTER), 1])
+        #Calculate and normalize so sum_n = 1
+        prior_matrix = (mixture_pdf*jefferies)/sum(prior_matrix)
+        
         print "Calculating Delta PSI for all %s ..."%(args.names)
         delta_psi = mean_psi(psi1) - mean_psi(psi2)
-
-        
-
-
 
         savemat("%s.mat"%args.plotpath, {"DeltaPSI:" : list(delta_psi)})
         pickle.dump(delta_psi, open("%sdeltapsi.pickle"%(args.output), 'w'))

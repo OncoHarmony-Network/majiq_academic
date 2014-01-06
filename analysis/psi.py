@@ -3,12 +3,12 @@ import os
 import pickle
 import argparse
 from random import choice
-from scipy.special import gamma
 import operator
 from collections import defaultdict
 
-from scipy.io import loadmat
 from pylab import *
+from scipy.special import gamma
+from scipy.io import loadmat
 import numpy as np
 from matplotlib import rcParams
 from scipy.stats import pearsonr
