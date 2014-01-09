@@ -13,7 +13,7 @@ import numpy as np
 from matplotlib import rcParams
 from scipy.stats import pearsonr
 from numpy.random import dirichlet
-
+from scipy.stats import binom_test
 
 """
 Calculate and manipulate PSI and Delta PSI values
@@ -21,6 +21,21 @@ Calculate and manipulate PSI and Delta PSI values
 BSIZE = 0.025 #TODO To parameters
 BINS = arange(0, 1, BSIZE) # The bins for PSI values. With a BSIZE of 0.025, we have 40 BINS
 BINS_CENTER = arange(0+BSIZE/2, 1, BSIZE) #The center of the previous BINS. This is used to calculate the mean value of each bin.
+
+
+def reads_given_psi(inc_samples, exc_samples):
+    #P(vector_i | PSI_i)
+    "We do a simple binomial test to evaluate how probable is the data given a PSI range"
+    ret = []
+    inc = inc_samples.sum(axis=1)
+    exc = exc_samples.sum(axis=1)
+    for i in xrange(inc.shape[0]):
+        for psi_val in BINS_CENTER:
+            ret.append(binom_test(inc[i], exc[i]+inc[i], p=psi_val))
+    
+    return array(ret)
+
+
 
 class DirichletCalc:
     def __init__(self):
@@ -48,11 +63,7 @@ def calc_psi(inc_samples, exc_samples, name, output, alpha, n, debug, psinosampl
     "Given a set of matching inclusion and exclusion samples, calculate psi, save it in disk, and return the psi-per-juntion matrix"
     samples = vstack([inc_samples, exc_samples]).reshape(2, inc_samples.shape[0], inc_samples.shape[1])
     psi_scores = calc_dirichlet(alpha, n, samples, debug=debug, psinosample=psinosample)
-    psi = psi_scores[:,0] #psi_scores[:,1] is PSE
-    outpath = "%s_%s_psi.pickle"%(output, name)
-    print "Writing PSI result into %s ..."%outpath
-    pickle.dump(psi, open(outpath, 'w'))
-    return psi
+    return psi_scores[:,0] #psi_scores[:,1] is PSE
 
 
 def mean_psi(psi_events):
