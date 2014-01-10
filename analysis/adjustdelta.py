@@ -26,7 +26,6 @@ def likelihood(a_left, b_left, a_right, b_right, a_center, b_center, pi_left, pi
             else:
                 result = logaddexp(result, all_prob)
 
-
     return result
 
 def a_from_meanvar(mean, var):
@@ -200,7 +199,7 @@ def EM(a_left, b_left, a_right, b_right, a_center, b_center, pi_left, pi_right, 
         print "EM iteration %s: Left %s Center %s Right %s Likelihood: %.5f"%(iteration, label_beta(a_left, b_left, pi_left), label_beta(a_center, b_center, pi_center), label_beta(a_right, b_right, pi_right), current_likelihood)        
 
         plot_all(a_left, b_left, pi_left, "Left", a_center, b_center, pi_center, "Center", a_right, b_right, pi_right, "Right", "iteration %s (likelihood: %.5f)"%(iteration, current_likelihood), deltadata)
-        _save_or_show(plotpath, "iter%05d"%iteration)   
+        _save_or_show(plotpath, "iter%05d"%iteration)
 
         prev_likelihood = current_likelihood
 
@@ -211,14 +210,14 @@ def calc_beta_pdf(a, b):
     x_pos = arange(0, 1, 0.025)
     beta_pdfs = []
     for x in x_pos:
-        beta_pdfs.append(beta.pdf(x=x, a=a, b=b))    
+        beta_pdfs.append(beta.pdf(x=x, a=a, b=b))
 
     return array(beta_pdfs), x_pos
 
 def ab_from_meanvar(mean, var):
     return a_from_meanvar(mean, var), b_from_meanvar(mean, var)
 
-def adjustdelta(deltapsi, output, plotpath=None, title=None, iter=10, breakiter=0.01, V=0.1):
+def adjustdelta(deltapsi, output, plotpath=None, title=None, numiter=10, breakiter=0.01, V=0.1):
     #TODO make breakiter work
     #transform to z-space
     z_deltapsi = 0.5*(deltapsi+1)
@@ -235,7 +234,7 @@ def adjustdelta(deltapsi, output, plotpath=None, title=None, iter=10, breakiter=
     pi_left = len(left_delta)/float(len(z_deltapsi))
     pi_right = len(right_delta)/float(len(z_deltapsi))
     pi_center = len(center_delta)/float(len(z_deltapsi))
-    beta_dists = EM(a_left, b_left, a_right, b_right, a_center, b_center, pi_left, pi_right, pi_center, z_deltapsi, iter, plotpath)
+    beta_dists = EM(a_left, b_left, a_right, b_right, a_center, b_center, pi_left, pi_right, pi_center, z_deltapsi, numiter, plotpath)
     #truncate the beta distributions limiting them to the 0 to 1 space
     beta_dists = truncate_betadists(beta_dists) 
     x_pos, z_mixture_pdf = calc_mixture_pdf(beta_dists)

@@ -93,9 +93,10 @@ def main():
     parser.add_argument('--nbdisp', default=0.1, type=int, help='Dispersion for the fallback NB function. [Default: %(default)s]')
     parser.add_argument('--psiparam', default=False, action='store_true', help='Instead of sampling, use a parametric form for the PSI calculation. [Default: %(default)s]')
     #parser.add_argument('--orfilter', default=False, action='store_true', help='When filtering, select sets of junctions where at least one passes the filter, instead of all passing the filter. [Default: %(default)s]')
-    #EM flags
-    parser.add_argument('--minreads', default=35, type=int, help='Minimum number of reads combining all positions in a junction to be considered. [Default: %(default)s]') 
-    parser.add_argument('--minnonzero', default=20, type=int, help='Minimum number of positions for the best set.')
+    #EM flag
+    parser.add_argument('--binsize', default=0.025, type=int, help='The bins for PSI values. With a --binsize of 0.025 (default), we have 40 bins')   
+    parser.add_argument('--minreads', default=50, type=int, help='Minimum number of reads combining all positions in a junction to be considered. [Default: %(default)s]') 
+    parser.add_argument('--minnonzero', default=10, type=int, help='Minimum number of positions for the best set.')
     parser.add_argument('--iter', default=10, type=int, help='Max number of iterations of the EM')
     parser.add_argument('--breakiter', default=0.01, type=float, help='If the log likelihood increases less that this flag, do not do another EM step')
     parser.add_argument('--V', default=0.1, type=float, help='Value of DeltaPSI used for initialization of the EM model [Default: %(default)s]')
@@ -155,7 +156,54 @@ def main():
             if args.ONLYSTACKS: #Just for analysis and debugging of stacks
                 __debug_stacks(args, all_junctions)
 
-        print "Bootstrapping calculation..."
+
+        #TODO This should be happening for every pair of N/M experiments (for N in exp: for M in exp:)
+        print 'Filtering to obtain "best set"...'
+        best_set = defaultdict(array)
+        best_set["exc1"], best_set["inc1"], best_set["exc2"], best_set["inc2"] = discardlow(args.minnonzero, True, args.debug, all_junctions["exc1"], all_junctions["inc1"], all_junctions["exc2"], all_junctions["inc2"])
+        best_set["exc1"], best_set["inc1"], best_set["exc2"], best_set["inc2"] = discardminreads(args.minreads, True, args.debug, best_set["exc1"], best_set["inc1"], best_set["exc2"], best_set["inc2"])
+         
+        print "Bootstrapping for 'best set'..."
+        mean_exc1, var_exc1, exc_best_samples1 = sample_from_junctions(best_set["exc1"], args.m, args.k, discardzeros=args.discardzeros, trimborder=args.trimborder, fitted_func=fitfunc1, debug=args.debug)
+        mean_inc1, var_inc1, inc_best_samples1 = sample_from_junctions(best_set["inc1"], args.m, args.k, discardzeros=args.discardzeros, trimborder=args.trimborder, fitted_func=fitfunc1, debug=args.debug)      
+        mean_exc2, var_exc2, exc_best_samples2 = sample_from_junctions(best_set["exc2"], args.m, args.k, discardzeros=args.discardzeros, trimborder=args.trimborder, fitted_func=fitfunc2, debug=args.debug)
+        mean_inc2, var_inc2, inc_best_samples2 = sample_from_junctions(best_set["inc2"], args.m, args.k, discardzeros=args.discardzeros, trimborder=args.trimborder, fitted_func=fitfunc2, debug=args.debug)
+
+        print "\nCalculating PSI for 'best set' %s ..."%(args.names)
+        best_psi1 = calc_psi(inc_best_samples1, exc_best_samples1, args.names[0], args.output, args.alpha, args.n, args.debug, args.psiparam)
+        best_psi2 = calc_psi(inc_best_samples2, exc_best_samples2, args.names[1], args.output, args.alpha, args.n, args.debug, args.psiparam)
+        
+        print "\nCalculating delta PSI for 'best set' %s ..."%(args.names)
+        best_delta_psi = mean_psi(best_psi1) - mean_psi(best_psi2)
+
+        print "Obtaning prior matrix for 'best set'..."
+        mixture_pdf = adjustdelta(best_delta_psi, args.output, plotpath=args.plotpath, title=" ".join(args.names), numiter=args.iter, breakiter=args.breakiter, V=args.V)
+
+        print "Calculating prior matrix..."
+        numbins = int(round(len(mixture_pdf)/2)) #the middle value of the delta
+        dircalc = DirichletCalc() 
+        #Calculate prior matrix
+        prior_matrix = []
+        for i in xrange(numbins):
+            prior_matrix.extend(mixture_pdf[numbins-i:(numbins*2)-i])
+
+        prior_matrix = array(prior_matrix).reshape(numbins, -1)
+
+
+        #Adjust prior matrix with Jefferies prior        
+        psi_space = linspace(0, 1-args.binsize, num=numbins) + args.binsize/2
+        jefferies = array([dircalc.pdf([x, 1-x], [0.5, 0.5]) for x in psi_space])
+        print jefferies
+        for i in xrange(prior_matrix.shape[0]):
+            prior_matrix[i] *= jefferies #Normalize PSI_i
+            prior_matrix[:,i] *= jefferies #Normalize PSI_j
+        #renormalize so it sums 1
+        prior_matrix /= sum(prior_matrix)/1000000
+
+        print "Saving prior matrix for %s..."%(args.names)
+        pickle.dump(prior_matrix, open("%s%s_%s_priormatrix.pickle"%(args.output, args.names[0], args.names[1]), 'w'))
+
+        print "Bootstrapping for all samples..."
         mean_exc1, var_exc1, exc_samples1 = sample_from_junctions(all_junctions["exc1"], args.m, args.k, discardzeros=args.discardzeros, trimborder=args.trimborder, fitted_func=fitfunc1, debug=args.debug)
         mean_inc1, var_inc1, inc_samples1 = sample_from_junctions(all_junctions["inc1"], args.m, args.k, discardzeros=args.discardzeros, trimborder=args.trimborder, fitted_func=fitfunc1, debug=args.debug)      
         mean_exc2, var_exc2, exc_samples2 = sample_from_junctions(all_junctions["exc2"], args.m, args.k, discardzeros=args.discardzeros, trimborder=args.trimborder, fitted_func=fitfunc2, debug=args.debug)
@@ -166,48 +214,6 @@ def main():
         __write_samples(inc_samples1, args.output, args.names, 1)
         __write_samples(exc_samples2, args.output, args.names, 0)
         __write_samples(inc_samples2, args.output, args.names, 1)
-
-        #TODO This should be happening for every pair of N/M experiments (for N in exp: for M in exp:)
-        print "\nCalculating PSI for all %s ..."%(args.names)
-        psi1 = calc_psi(inc_samples1, exc_samples1, args.names[0], args.output, args.alpha, args.n, args.debug, args.psiparam)
-        psi2 = calc_psi(inc_samples2, exc_samples2, args.names[1], args.output, args.alpha, args.n, args.debug, args.psiparam)
-
-        print 'Filtering to obtain "best set"...'
-        best_set = defaultdict(array)
-        best_set["exc1"], best_set["inc1"], best_set["exc2"], best_set["inc2"] = discardlow(args.minnonzero, True, args.debug, all_junctions["exc1"], all_junctions["inc1"], all_junctions["exc2"], all_junctions["inc2"])
-        best_set["exc1"], best_set["inc1"], best_set["exc2"], best_set["inc2"] = discardminreads(args.minreads, True, args.debug, all_junctions["exc1"], all_junctions["inc1"], all_junctions["exc2"], all_junctions["inc2"])
-         
-        print "\nCalculating delta PSI for 'best set' %s ..."%(args.names)
-        best_psi1 = calc_psi(best_set["inc1"], best_set["exc1"], args.names[0], args.output, args.alpha, args.n, args.debug, args.psiparam)
-        best_psi2 = calc_psi(best_set["inc2"], best_set["exc2"], args.names[1], args.output, args.alpha, args.n, args.debug, args.psiparam)
-        best_delta_psi = mean_psi(best_psi1) - mean_psi(best_psi2)
-        print "Obtaning prior matrix for 'best set'..."
-        mixture_pdf = adjustdelta(best_delta_psi, args.output, plotpath=args.plotpath, title=" ".join(args.names), iter=args.iter, breakiter=args.breakiter, V=args.V)
-
-        print mixture_pdf
-        print "Calculating prior matrix..."
-        numbins = len(BINS_CENTER)
-        dircalc = DirichletCalc() 
-        #Calculate prior matrix
-        prior_matrix = []
-        base_index = int(round(len(mixture_pdf)/2))
-        for i in xrange(len(mixture_pdf)):
-            prior_matrix.extend(mixture_pdf[base_index-i:])
-            prior_matrix.extend((mixture_pdf[:base_index-i]))
-
-        prior_matrix = array(prior_matrix).reshape(len(mixture_pdf), -1)
-        #Adjust prior matrix with Jefferies prior
-        
-        jefferies = array([dircalc.pdf([x, 1-x], [0.5, 0.5]) for x in BINS_CENTER])
-        for i in xrange(prior_matrix.shape[0]):
-            prior_matrix[i] *= jefferies #Normalize PSI_i
-            prior_matrix[:,i] *= jefferies #Normalize PSI_j
-        #renormalize so it sums 1
-        
-        prior_matrix /= sum(prior_matrix)
-
-        print "Saving prior matrix for %s..."%(args.names)
-        pickle.dump(prior_matrix, open("%s%s_%s_priormatrix.pickle"%(args.output, args.names[0], args.names[1]), 'w'))
 
         print "Calculating P(Data | PSI_i, PSI_j)..."
         #P(Data | PSI_i, PSI_j) = P(vector_i | PSI_i) * P(vector_j | PSI_j)
