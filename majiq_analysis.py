@@ -19,6 +19,16 @@ from analysis.sample import sample_from_junctions
 from analysis.psi import calc_psi, mean_psi, DirichletCalc, reads_given_psi, BINS_CENTER
 from analysis.adjustdelta import adjustdelta
 
+
+def _save_or_show(plotpath, plotname=None):
+    """Generic function that either shows in a popup or saves the figure, depending if the plotpath flag"""
+    if plotpath:
+        savefig("%s%s.png"%(plotpath, plotname), bbox_inches='tight') 
+        clf()
+    else:
+        show()
+
+
 def _load_data3(my_mat, name, my_type):
     return {"junctions":my_mat[name][my_type][0, 0][0, 0]['cov'], "gc_content": my_mat[name][my_type][0, 0][0, 0]['gc_val']}
 
@@ -109,6 +119,8 @@ def main():
     parser.add_argument('--usetensor', action='store_true')
     parser.add_argument('--debug', type=int,  default=0)
 
+
+
     args = parser.parse_args()
 
     #create directories if they dont exist
@@ -116,6 +128,7 @@ def main():
     _create_if_not_exists(args.plotpath)
 
     for path in args.files:
+
         print "\nProcessing %s..."%path
         inc1, exc1, const1, inc2, exc2, const2 = load_data(path, args.names[0], args.names[1]) #loading the paired matrixes
         all_junctions = {"inc1": inc1, "exc1": exc1, "const1": const1, 
@@ -189,16 +202,43 @@ def main():
 
         prior_matrix = array(prior_matrix).reshape(numbins, -1)
 
+        clf()
+        title("Prior Matrix")
+        imshow(prior_matrix)
+        xlabel("PSI_i")
+        ylabel("PSI_j")
+        _save_or_show(args.plotpath, plotname="prior_matrix_no_jefferies")
+
 
         #Adjust prior matrix with Jefferies prior        
+        jefferies = []
         psi_space = linspace(0, 1-args.binsize, num=numbins) + args.binsize/2
-        jefferies = array([dircalc.pdf([x, 1-x], [0.5, 0.5]) for x in psi_space])
-        print jefferies
-        for i in xrange(prior_matrix.shape[0]):
-            prior_matrix[i] *= jefferies #Normalize PSI_i
-            prior_matrix[:,i] *= jefferies #Normalize PSI_j
+        for i in psi_space:
+            jefferies.append([])
+            for j in psi_space:
+                jefferies[-1].append(dircalc.pdf([i, 1-i, j, 1-j], [0.5, 0.5, 0.5, 0.5]))
+
+        #jefferies = array([dircalc.pdf([x, 1-x], [0.5, 0.5]) for x in psi_space])
+        jefferies = array(jefferies)
+        jefferies /= sum(jefferies)
+
+        clf()
+        title("Jefferies Matrix")
+        imshow(jefferies)
+        xlabel("PSI_i")
+        ylabel("PSI_j")
+        _save_or_show(args.plotpath, plotname="jefferies_matrix")
+
+        prior_matrix *= jefferies #Normalize PSI_i
         #renormalize so it sums 1
-        prior_matrix /= sum(prior_matrix)/1000000
+        prior_matrix /= sum(prior_matrix)
+
+        clf()
+        title("Prior Matrix")
+        imshow(prior_matrix)
+        xlabel("PSI_i")
+        ylabel("PSI_j")
+        _save_or_show(args.plotpath, plotname="prior_matrix")
 
         print "Saving prior matrix for %s..."%(args.names)
         pickle.dump(prior_matrix, open("%s%s_%s_priormatrix.pickle"%(args.output, args.names[0], args.names[1]), 'w'))
@@ -217,7 +257,7 @@ def main():
 
         print "Calculating P(Data | PSI_i, PSI_j)..."
         #P(Data | PSI_i, PSI_j) = P(vector_i | PSI_i) * P(vector_j | PSI_j)
-        #TODO Tensor product is calculated with scipy.stats.kron. Have to figure out if its worth doing it, and if its worth it
+        #TODO Tensor product is calculated with scipy.stats.kron. Probably faster, have to make sure I am using it correctly.
         data_given_psi = reads_given_psi(inc_samples1, exc_samples1) * reads_given_psi(inc_samples2, exc_samples2)
         data_given_psi = data_given_psi.reshape(-1, numbins)
 
@@ -235,9 +275,14 @@ def main():
             if pdata[sample] == 0: 
                 print "Warning: P(Data) is zero..., Delta matrix set to zeroes. Sample: %s"%sample
                 posterior_matrix.append(array([0]*numbins**2).reshape(numbins, -1))
-
             else:
                 posterior_matrix.append((prior_matrix * data_given_psi[sample]) / pdata[sample])
+                clf()
+                title("Posterior Delta Sample %s"%sample)
+                imshow(posterior_matrix[-1])
+                xlabel("PSI_i")
+                ylabel("PSI_j")
+                _save_or_show(args.plotpath, plotname="postdelta_sample%s"%sample)
 
         pickle.dump(posterior_matrix, open("%s%s_%s_deltamatrix.pickle"%(args.output, args.names[0], args.names[1]), 'w'))
         print "Done!"
