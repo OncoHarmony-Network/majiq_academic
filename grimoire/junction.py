@@ -90,6 +90,7 @@ class majiq_junc:
             self.name     = "%s:%s-%s"%(jnc.get_gene().get_id(),jnc.get_ss_5p(),jnc.get_ss_3p())
             self.coverage = jnc.coverage[exp_idx,:].toarray()
             self.gc_index = jnc.get_gc_factors()[0][exp_idx,:].toarray()[0]
+            self.gc_factor = np.zeros(shape=((mglobals.readLen-16)+1))
             for jj in range(mglobals.readLen-16+1):
                 dummy = self.gc_index [jj]
                 if dummy > 0 :

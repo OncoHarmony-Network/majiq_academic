@@ -20,16 +20,17 @@ import grimoire.mglobals as mglobals
 def __parallel_for_splc_quant(samfiles_list, gene_list, chr, as_db):
     print "START child,", multiprocessing.current_process().name
     for idx,exp in enumerate(samfiles_list):
-        print "READING ", exp
-        rnaseq_io.reads_for_junc_coverage(exp, gene_list, mglobals.readLen, idx )
+        print "READING ", idx, exp
+        rnaseq_io.read_sam_file(exp, gene_list, mglobals.readLen, chr, idx )
+#        rnaseq_io.reads_for_junc_coverage(exp, gene_list, mglobals.readLen, idx )
+#    return
 
     analize.analize_genes(gene_list, "kk", as_db, None, 'AS')
     analize.analize_genes(gene_list, "kk", as_db, None, 'CONST')
     a,b = analize.analize_junction_reads( gene_list,chr )
-    file_name = 'genelist_%s.obj'%(chr)
+    file_name = '%s.obj'%(chr)
     utils.prepare_MAJIQ_table( a,b,file_name)
-#    pickle.dump((tiss,exp,p2p), file_pi)
-#    file_pi.close()
+
     print "END child, ", multiprocessing.current_process().name
 
 def __parallel_for_body(SAM, all_genes, exp_idx, chr_list, read_len):
@@ -64,35 +65,50 @@ def _generate_parser():
 def main() :
 
     args = _generate_parser()
-    
+    print args
     if os.path.exists(args.conf) :
         mglobals.global_conf_ini(args.conf)
     else:
+        print "NO CONF"
         mglobals.global_init(args.readlen, args.dir, args.paths)
 
     all_genes = rnaseq_io.read_transcript_ucsc(args.transcripts)
     av_altern = rnaseq_io.read_triplets_bed("/data/ucsc/reads/test_1k/annotated_db/alt.chr1.sorted.mm10.bed", all_genes)
 
     n_genes = 0
-    for gg in all_genes.values(): n_genes += len(gg) 
+    temp = []
+    for gl in all_genes.values(): 
+        n_genes += len(gl) 
+#        for genes_l in gl.values():
+#            for gg in genes_l:
+#                temp += gg.get_exon_list()
 
     if int(args.ncpus) >1:
         pool = Pool(processes=args.ncpus)              # start 4 worker processes
     chr_list = all_genes.keys()
 
     jobs = []
+    sam_list = []
+    for exp_idx, exp in enumerate(mglobals.exp_list):
+#        SAM = "%s/%s.%s.sorted.sam"%(mglobals.sam_dir,exp,chrom)
+        SAM = "%s/%s.sorted.bam"%(mglobals.sam_dir,exp)
+        print SAM
+        if not os.path.exists(SAM): continue
+        sam_list.append(SAM)
+        rnaseq_io.count_mapped_reads(SAM,exp_idx)
+    if len(sam_list) == 0: return
+
+
+
     for chrom in chr_list:
-        sam_list = []
-        for exp in mglobals.exp_list:
-            SAM = "%s/%s.%s.sorted.sam"%(mglobals.sam_dir,exp,chrom)
-            if not os.path.exists(SAM): continue
-            sam_list.append(SAM)
-        if len(sam_list) == 0: continue
         if int(args.ncpus) == 1:
             __parallel_for_splc_quant(sam_list, all_genes[chrom], chrom, av_altern)
         else:
-            jobs.append(pool.apply_async(__parallel_for_splc_quant, [SAM,all_genes[chr], chr], av_altern))
+            jobs.append(pool.apply_async(__parallel_for_splc_quant, [sam_list, all_genes[chr], chr, av_altern]))
 
+
+
+    
     print "MASTER JOB.... waiting childs"
     genes = np.zeros(shape=(len(mglobals.exp_list)),dtype=np.dtype('object'))
     if int(args.ncpus) >1:
@@ -102,21 +118,21 @@ def main() :
             
         pool.join()
 
+    for gl in all_genes.values(): 
+        for genes_l in gl.values():
+            for gg in genes_l:
+                temp += gg.get_exon_list()
+
+
+    print "number of gcs", len(temp)
+#    utils.gc_factor_calculation(temp, 10)
+#    utils.plot_gc_content()
     #print "GEN MATLAB"
-    #tiss = {}
-    #exp = {}
-    #p2p = {}
-    #for chrom in chr_list:
-    #    filename = 'genelist_%s.obj'%chrom
-    #    if not os.path.exists(filename): continue
-    #    file_pi2 = open(filename, 'rb')
-    #    tiss[chrom],exp[chrom],p2p[chrom] = pickle.load(file_pi2)
-    #
-    #utils.merge_and_create_MAJIQ_matlab(tiss,exp,p2p)
+   # tiss = {}
+   # exp = {}
+   # p2p = {}
 
-
-
-
+    utils.merge_and_create_MAJIQ( chr_list, 'tojuan.majiq')
 
 if __name__ == "__main__":
     main()

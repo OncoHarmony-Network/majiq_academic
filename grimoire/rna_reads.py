@@ -45,6 +45,7 @@ def parse_CIGAR (string):
     return lst
 
 
+
 '''
     @parse_read
     @param read_string: This string has the SAM line that define

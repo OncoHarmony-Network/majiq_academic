@@ -1,7 +1,8 @@
 #!/usr/bin/python
 import numpy as np
-
+import grimoire.utils.utils as utils
 import mglobals
+import analize
 
 class Gene:
     __eq__ = lambda self, other: self.chromosome == other.chromosome and self.strand == other.strand and self.start < other.end and self.end > other.start
@@ -218,6 +219,34 @@ class Gene:
                 print "ERROR id is already in "
             ss[name] = sorted(list(ss3_l)+list(ss5_l))
         return ss
+
+
+    def annottated_SE_events (self, ASvsConst='AS'):
+
+        print "%s events for Gene %s "%(ASvsConst, self.id),
+        total = 0
+        if len( self.transcript_list ) == 1 and ASvsConst == 'AS': continue
+        if len(self.exons) < 3: continue
+        mat = np.ndarray(shape=(len(self.transcript_list),len(self.exons)),dtype='bool')
+
+        for idx_t, tpt in enumerate(self.transcript_list):
+            for g_ex in self.exons:
+                if set(tpt.exon_list).intersection( set(g_ex.exonTx_list)) :
+                    mat[idx_t,g_ex.id-1]= 1
+                else:
+                    mat[idx_t,g_ex.id-1]= 0
+
+#        print mat
+        if ASvsConst == 'AS':
+            out = analize.analize_gene_bin_matrix(mat)
+            self.add_transcript_AS_candidates(out)
+        else:
+            out = analize.analize_bin_matrix_const_firstlast(mat)
+            self.add_transcript_CONST_candidates(out)
+
+        total += len(out)
+        print "..... %s"%total
+        return total
 
 
 class Transcript :

@@ -33,16 +33,22 @@ class Exon:
         self.ss_5p_list = []
         self.id = None
         self.strand = strand
+        self.gc_content = None
+        self.coverage = np.zeros(shape=(mglobals.num_experiments))
 
     def __hash__(self):
         return hash(self.id) ^ hash(self.gene.id)
-    
+
+    def get_id(self):
+        return self.id
+
+    def get_strand( self ):
+        return self.strand
+
     def get_coordinates( self ):
         '''
          .. function:: get_coordinates(self)
-
             Get the exon start and end.
-
             :rtype: tuple of 2 integers, (exon start, exon end)
         '''
         return (self.start, self.end)
@@ -61,10 +67,21 @@ class Exon:
             print "error"
         return res
 
+    def get_rna_ss(self):
+        ss3 = set()
+        ss5 = set()
+
+        for ii in self.exonRead_list:
+            ss3.add(ii.start)
+            ss5.add(ii.end)
+        ss3_l = sorted(list(ss3))
+        ss5_l = sorted(list(ss5))
+        return (ss3_l,ss5_l)
+
     def add_new_read(self, start, end, readSeq, s3p_junc, s5p_junc):
         
         if start > end :
-            print "CAGONDIOOOOOOOSSSS 2",start, end
+            print " INCORRECT exon definition",start, end
             exit()
         if start < self.start :
             self.start = start
@@ -89,17 +106,6 @@ class Exon:
             self.exonRead_list.append(res)
         return res
 
-    def get_rna_ss(self):
-        ss3 = set()
-        ss5 = set()
-
-        for ii in self.exonRead_list:
-            ss3.add(ii.start)
-            ss5.add(ii.end)
-        ss3_l = sorted(list(ss3))
-        ss5_l = sorted(list(ss5))
-        return (ss3_l,ss5_l)
-
     def add_new_definition ( self,start,end,trncpt ):
         if start < self.start :
             self.start = start
@@ -122,6 +128,23 @@ class Exon:
             res = ExonTx(start,end,trncpt,self)
             self.exonTx_list.append(res)
         return res
+
+    def get_coverage( self,exp_idx ):
+        return self.coverage[exp_idx]
+
+    def get_gc_content( self ):
+        return self.gc_content
+
+    def update_coverage( self, exp_idx, num ):
+        self.coverage[exp_idx] += num
+
+    def set_gc_content(self, sequence):
+#        if len(self.exonTx_list) != 0 and len(self.exonRead_list) != 0 :
+        cs = sequence.count('c') + sequence.count('C')
+        gs = sequence.count('g') + sequence.count('G')
+        if len(sequence) == 0 : return
+        self.gc_content = float( cs + gs) / float(len(sequence))
+            
 
     def print_triplet_coord(self, fp):
         gene = self.gene
@@ -148,8 +171,6 @@ class Exon:
         fp.write("%s\t%d\t%d\t%s_A\t0\t%s\n"%(chr,startA,endA,name,strand))
         fp.write("%s\t%d\t%d\t%s_C2\t0\t%s\n"%(chr,startC2,endC2,name,strand))
 
-    def get_id(self):
-        return self.id
 
     def bed_format(self):
         str = ""
