@@ -101,22 +101,26 @@ def label_beta(a, b, pi):
 
 
 def plot_all(a_left, b_left, pi_left, label_left, a_center, b_center, pi_center, label_center, a_right, b_right, pi_right, label_right, figure_title, deltadata):
+    subplot(2,2,1)
     plot_densities(deltadata)
+    subplot(2,2,2)
     plot_mixture(a_left, b_left, pi_left, label_left)
     plot_mixture(a_center, b_center, pi_center, label_center)
     plot_mixture(a_right, b_right, pi_right, label_right)
+    subplot(2,2,3)
     plot_combpdf([[a_left, b_left, pi_left], [a_center, b_center, pi_center], [a_right, b_right, pi_right]])   
+    subplot(2,2,4)
     plot_pi(pi_left, pi_center, pi_right)
     suptitle(figure_title, fontsize=24)
 
 
 def plot_densities(deltadata):
-    subplot(2,2,1)
     title("Empirical Data")
-    xlim(0, 1)
+    xlim(-1, 1)
     xlabel("Delta PSI")
     ylabel("Density")
-    hist(deltadata, bins = 40, histtype='step')      
+    values, edges = histogram(deltadata / 2, bins = 40)      
+    plot(linspace(-1, 1, num=len(values)), values / 2)    
 
 
 def truncate_betadists(beta_dists):
@@ -138,7 +142,7 @@ def truncate_betadists(beta_dists):
 
 def calc_mixture_pdf(beta_dists):
     mixture_pdf = []
-    x_pos = arange(0, 1, 0.025)
+    x_pos = arange(0, 1, 0.025) #TODO Should come from parameter
     for x in x_pos:
         local_sum = 0
         for a, b, pi in beta_dists:
@@ -149,26 +153,23 @@ def calc_mixture_pdf(beta_dists):
     return x_pos, array(mixture_pdf)
 
 def plot_combpdf(beta_dists):
-    subplot(2,2,3)
-    xlim(0, 1)
+    xlim(-1, 1)
     title("Mixture PDF")
     xlabel("PDF")
     ylabel("Density")
     x_pos, mixture_pdf = calc_mixture_pdf(beta_dists)
-    plot(x_pos, mixture_pdf)
+    plot(linspace(-1, 1, num=len(mixture_pdf)), mixture_pdf / 2)
 
 def plot_mixture(a, b, pi, label_name):
-    subplot(2,2,2)
-    xlim(0, 1)
+    xlim(-1, 1)
     points, x_pos = calc_beta_pdf(a, b)
     title("Beta mixtures")
     xlabel("Delta PSI")
     ylabel("Density")
-    plot(x_pos, points, label="%s %s"%(label_name, label_beta(a, b, pi)))
+    plot(linspace(-1, 1, num=len(points)), points / 2, label="%s %s"%(label_name, label_beta(a, b, pi)))
     legend()
 
 def plot_pi(pi_left, pi_center, pi_right):
-    subplot(2,2,4)
     title("Pi distributions")
     ylim(0, 1)
     ylabel("Weight")
@@ -239,9 +240,8 @@ def adjustdelta(deltapsi, output, plotpath=None, title=None, numiter=10, breakit
     beta_dists = truncate_betadists(beta_dists) 
     x_pos, z_mixture_pdf = calc_mixture_pdf(beta_dists)
     #convert back to the X space from Z space
-    mixture_pdf = z_mixture_pdf / 2
 
-    return mixture_pdf
+    return z_mixture_pdf / 2
 
 if __name__ == '__main__':
     main()

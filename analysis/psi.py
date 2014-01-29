@@ -23,18 +23,24 @@ BINS = arange(0, 1, BSIZE) # The bins for PSI values. With a BSIZE of 0.025, we 
 BINS_CENTER = arange(0+BSIZE/2, 1, BSIZE) #The center of the previous BINS. This is used to calculate the mean value of each bin.
 
 
-def reads_given_psi(inc_samples, exc_samples):
+def simple_psi(inc, exc):
+    """Simple PSI calculation without involving a dirichlet prior, coming from reads from junctions"""
+    return inc/(exc+inc)
+
+def reads_given_psi(inc_samples, exc_samples, psi_space):
     #P(vector_i | PSI_i)
     "We do a simple binomial test to evaluate how probable is the data given a PSI range"
     ret = []
     inc = inc_samples.sum(axis=1)
     exc = exc_samples.sum(axis=1)
     for i in xrange(inc.shape[0]):
-        for psi_val in BINS_CENTER:
-            ret.append(binom_test(inc[i], exc[i]+inc[i], p=psi_val))
-    
-    return array(ret)
+        event = []
+        for psi_val in psi_space:
+            event.append(binom_test(inc[i], exc[i]+inc[i], p=psi_val))
 
+        ret.append(array(event) / sum(event))
+    
+    return array(ret).reshape(-1, len(psi_space)) 
 
 
 class DirichletCalc:
@@ -59,18 +65,23 @@ def recalibrate_delta(deltapsi):
     arange(-98.75, 100, 2.5)
 
 
-def calc_psi(inc_samples, exc_samples, name, output, alpha, n, debug, psinosample):
+def calc_psi(inc_samples, exc_samples, name, alpha, n, debug, psinosample):
     "Given a set of matching inclusion and exclusion samples, calculate psi, save it in disk, and return the psi-per-juntion matrix"
     samples = vstack([inc_samples, exc_samples]).reshape(2, inc_samples.shape[0], inc_samples.shape[1])
     psi_scores = calc_dirichlet(alpha, n, samples, debug=debug, psinosample=psinosample)
-    return psi_scores[:,0] #psi_scores[:,1] is PSE
+    if psinosample:
+        return psi_scores
+    else:
+        return psi_scores[:,0] #psi_scores[:,1] is PSE
 
 
 def mean_psi(psi_events):
     "Calculate the mean for every junction. Used for delta PSI calculation."
     ret = []
     for psi_dist in psi_events:
-        ret.append(sum(psi_dist*BINS_CENTER[:-1]))
+        #print "PSI_DIST", psi_dist
+        #print "sum(PSI_DIST)", sum(psi_dist)
+        ret.append(sum(psi_dist*BINS_CENTER))
 
     return array(ret)
 
@@ -93,7 +104,7 @@ def calc_dirichlet(alpha, n, samples_events, debug=False, psinosample=False):
             for h, paired_samples in enumerate(event_samples.T):
                 dir_pdf = [dircalc.pdf([x, 1-x], alpha+paired_samples) for x in BINS_CENTER]
                 acum_samples += dir_pdf
-                total_acum += sum(dir_pdf) #TODO repasar
+                total_acum += sum(dir_pdf) 
 
             #if debug: print "Dividing by total acum..."
             psi_matrix.append(acum_samples/total_acum)
@@ -118,14 +129,17 @@ def calc_dirichlet(alpha, n, samples_events, debug=False, psinosample=False):
             #discretization step. Get the psi samples and transform them into a histogram-like distribution
             event_psi_discrete = []
             for psi_dist in array(event_psi_samples).transpose():
-                counts, limits = histogram(psi_dist, bins=BINS)
+                my_bins = list(BINS)
+                my_bins.extend([1]) #extend because:  If `bins` is a sequence,it defines the bin edges, including the rightmost edge, allowing for non-uniform bin widths (form histogram docs)
+                counts, limits = histogram(psi_dist, bins=my_bins) 
                 event_psi_discrete.append(counts/float(sum(counts)))
 
             #print event_psi_discrete[-1], len(event_psi_discrete), len(event_psi_discrete[-1])
             psi_matrix.append(event_psi_discrete)
             #print "Junction %s PSI distribution:"%i, psi_matrix[-1]
 
-    return array(psi_matrix)
+    psi_matrix = array(psi_matrix)
+    return psi_matrix
 
 #deprecated
 def sample_psi(psi_scores):

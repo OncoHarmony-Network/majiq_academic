@@ -17,6 +17,7 @@ Sampling from junctions using a Negative Binomial model.
 """
 LIM = 100
 EPSILON = 1./sys.maxint
+PSEUDO = 0.0000000001 # EPSILON is too small for some calculations
 
 def _save_or_show(plotpath, plotname=None):
     """Generic function that either shows in a popup or saves the figure, depending if the plotpath flag"""
@@ -80,6 +81,22 @@ def remove_masked(junction):
     for value in junction:
         if value > -EPSILON: #zero and bigger than zero
             ret.append(value)
+
+    return array(ret)
+
+
+def mean_junction(junctions, discardzeros=True):
+    """Simple mean of junctions without bootstrapping, but discarding zeroes and flagged stuff"""
+    ret = []
+    for junc in junctions:
+        junc = junc[junc > -EPSILON]  #mask the -1 (or lower) positions regardless of the discardzero treatment
+        if discardzeros:
+            junc = junc[junc!=0] #a junc array without the zeroes
+
+        if len(junc) == 0:
+            ret.append(0) 
+        else:
+            ret.append(junc.mean())
 
     return array(ret)
 
