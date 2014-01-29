@@ -17,6 +17,7 @@ Sampling from junctions using a Negative Binomial model.
 """
 LIM = 100
 EPSILON = 1./sys.maxint
+PSEUDO = 0.0000000001 # EPSILON is too small for some calculations
 
 def _save_or_show(plotpath, plotname=None):
     """Generic function that either shows in a popup or saves the figure, depending if the plotpath flag"""
@@ -59,13 +60,14 @@ def calc_weights(junction):
 
 def _trimborders(junction, border):
     "Discard the borders of the junctions unless they have reads"
+    #TODO use a masker strategy instead of generating a new array (warning: Assigning values in a numpy array creates a new one, so it is more inneficient than this)
     #discard left side
     new_junction = []
     for i in range(0, border):
         if junction[i] > 0:
             new_junction.append(junction[i])
 
-    new_junction.extend(junction[border:-border]) #add the middle positions
+    new_junction.extend(junction[border:-border]) #add the middle positions, disregard masked positions
     #discard right side
     for i in range(len(junction)-1, len(junction)-border-1, -1):
         if junction[i] > 0:
@@ -73,23 +75,49 @@ def _trimborders(junction, border):
 
     return array(new_junction)
 
-def sample_from_junctions(junctions, m, k, dispersion=0.1, discardzeros=True, trimborder=True, fitted_func=None, debug=False):
-    if type(fitted_func) != poly1d:
-        fitted_func = pickle.load(open(fitted_func))
+def remove_masked(junction):
+    "For performance: Less values to sample from, faster execution time"
+    ret = []
+    for value in junction:
+        if value > -EPSILON: #zero and bigger than zero
+            ret.append(value)
 
+    return array(ret)
+
+
+def mean_junction(junctions, discardzeros=True):
+    """Simple mean of junctions without bootstrapping, but discarding zeroes and flagged stuff"""
+    ret = []
+    for junc in junctions:
+        junc = junc[junc > -EPSILON]  #mask the -1 (or lower) positions regardless of the discardzero treatment
+        if discardzeros:
+            junc = junc[junc!=0] #a junc array without the zeroes
+
+        if len(junc) == 0:
+            ret.append(0) 
+        else:
+            ret.append(junc.mean())
+
+    return array(ret)
+
+def sample_from_junctions(junctions, m, k, dispersion=0.1, discardzeros=True, trimborder=True, fitted_func=None, debug=False):
+    "Given the filtered reads, bootstrap samples from every junction"
     a, b = fitted_func.c
     sampled_means = []
     sampled_var = []
     all_samples = []
+    
     for i, junction in enumerate(junctions):
         if debug > 0 and i == debug: break
         if i % 100 == 0:
             print "junction %s..."%i,
             sys.stdout.flush()
 
-        junction = junction[junction > -EPSILON]  #discard the -1 (or lower) positions regardless of the dzero treatment
         if trimborder: 
             junction = _trimborders(junction, trimborder) #trim the zeroes from the borders regardless of the discardzeros flag
+
+        junction = junction[junction > -EPSILON]  #mask the -1 (or lower) positions regardless of the discardzero treatment
+
         if discardzeros:
             junction = junction[junction!=0] #a junction array without the zeroes
 

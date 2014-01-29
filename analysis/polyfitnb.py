@@ -2,6 +2,7 @@ import sys
 import os
 import argparse
 import pickle
+from collections import defaultdict
 
 from scipy.io import loadmat
 from scipy.stats import nbinom
@@ -110,9 +111,9 @@ def get_pvalues(sum_junctions, a, b, nonzeros, dispersion):
     
     return pvalues
 
-def adjust_fit(starting_a, b, sum_junctions, nonzeros, precision, previous_score, dispersion, final=False):
+def adjust_fit(starting_a, b, sum_junctions, nonzeros, precision, previous_score, dispersion, final=False, logger=None):
     previous_a = -1
-    print "Starting from %s with precision %s"%(starting_a, precision)
+    if logger: logger.info("Starting from %s with precision %s"%(starting_a, precision))
     for corrected_a in arange(starting_a, 0, -precision): #since we are reducing the "a" from the fit and the problem is too much variability, we expect optimization to be getting the "a" below 
         pvalues = get_pvalues(sum_junctions, corrected_a, b, nonzeros, dispersion)
         ecdf = get_ecdf(pvalues)
@@ -129,19 +130,17 @@ def adjust_fit(starting_a, b, sum_junctions, nonzeros, precision, previous_score
         previous_pvalues = pvalues
         pvalues = []    
 
-    print "Do I hit??"
-    return corrected_a, score, ecdf, pvalues #I am not sure if this return will be hit at all
+    if logger: logger.warning("WARNING: Something is wrong, please contact Biociphers!")
+    return corrected_a, score, ecdf, pvalues #this return should not be hit
 
-def fit_nb(junctions, outpath, plotpath, gcnorm=True, trim=True, minnonzero=5, plotmapzeros=False, discardb=False, nbdisp=0.1):
-    #copied from Jordis script, this will have to go at some point
-    print "Results will be written in %s..."%outpath
-    print "Plots will be drawn in %s..."%plotpath
+def fit_nb(junctions, outpath, plotpath, gcnorm=True, trim=True, minnonzero=5, plotmapzeros=False, discardb=False, nbdisp=0.1, logger=None):
+    if logger: logger.info("NBFit: Plots will be drawn in %s..."%plotpath)
     #normalize the junctions
     mean_junc = junctions.mean(axis=1)
     std_junc = junctions.std(axis=1)
     #linear regression, retrieve the a and the b plus 
     a, b = polyfit(mean_junc, std_junc, 1)
-    print "Fitting function: y = x*a+b. a=%s b=%s"%(a, b)
+    if logger: logger.info("Fitting function: y = x*a+b. a=%.5f b=%.5f"%(a, b))
     fit_function = poly1d([a, b])
     nb_r, nb_p, matching_x = nb_from_func(fit_function, max(mean_junc), dispersion=nbdisp) #We calculate both r and p parameters of the negative binomial distribution along the function
     plot_negbinomial_fit(mean_junc, std_junc, fit_function, plotpath, "Before correction")    
@@ -155,19 +154,19 @@ def fit_nb(junctions, outpath, plotpath, gcnorm=True, trim=True, minnonzero=5, p
     prev_precision = 0
     precision_values = [0.1, 0.01]
     if discardb:
-        print "Discarded b from the polyfit"
+        if logger: logger.debug("Discarded b from the polyfit")
         b = 0
 
     for i, precision in enumerate(precision_values):
-        corrected_a, score, ecdf, pvalues = adjust_fit(corrected_a, b, sum_junctions, nonzeros, precision, score, nbdisp)
-        print "Corrected to %s with precision %s. Current score is %s\n"%(corrected_a, precision, score)
+        corrected_a, score, ecdf, pvalues = adjust_fit(corrected_a, b, sum_junctions, nonzeros, precision, score, nbdisp, logger)
+        if logger: logger.info("Corrected to %.5f with precision %s. Current score is %.5f"%(corrected_a, precision, score))
         if i+1 != len(precision_values): #go "up" in the scale so we dont miss better solution
             corrected_a += precision-precision_values[i+1]
             pvalues = get_pvalues(sum_junctions, corrected_a, b, nonzeros, nbdisp)
             ecdf    = get_ecdf(pvalues)
             score   = score_ecdf(ecdf)
 
-    print "Final Score: %.3f Final function A: %.3f"%(score, corrected_a)
+    if logger: logger.debug("Final Score: %.3f Final function A: %.3f"%(score, corrected_a))
     xlabel("P-value")
     ylabel("ECDF")
     plot(linspace(0, 1, num=len(ecdf)), ecdf)
@@ -176,15 +175,11 @@ def fit_nb(junctions, outpath, plotpath, gcnorm=True, trim=True, minnonzero=5, p
     _save_or_show(plotpath, "Corrected ECDF")
 
     fit_function = poly1d([corrected_a, b])
-    print "Calculating the nb_r and nb_p with the new fitted function"
+    if logger: logger.debug("Calculating the nb_r and nb_p with the new fitted function")
     nb_r, nb_p, matching_x = nb_from_func(fit_function, max(mean_junc), dispersion=nbdisp) 
     plot_negbinomial_fit(mean_junc, std_junc, fit_function, plotpath, "After correction") 
 
-    #Save everything into pickle objects
-    pickle.dump(ecdf, open("%s_ecdf.pickle"%outpath, 'w'))
+    #Save everything into pickle object to maybe later reuse?
     pickle.dump(fit_function, open("%s_fitfunc.pickle"%outpath, 'w'))
-    pickle.dump(nb_r, open("%s_nb_r.pickle"%outpath, 'w'))
-    pickle.dump(nb_p, open("%s_nb_p.pickle"%outpath, 'w'))
-    pickle.dump(matching_x, open("%s_nb_index.pickle"%outpath, 'w')) 
 
     return fit_function

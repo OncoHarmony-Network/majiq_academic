@@ -2,10 +2,11 @@
 Functions to filter junction pairs by number of positions covered or number of reads
 """
 import sys
-from pylab import *
 
+from pylab import *
 from polyfitnb import func2nb
 from scipy.stats import nbinom
+
 
 def filter_bulk(matrix_filter, *matrices):
     ret = []
@@ -15,14 +16,18 @@ def filter_bulk(matrix_filter, *matrices):
     return ret
 
 
-def filter_message(when, value, debug, junc):
-    if debug: 
-        print "%s (Filter=%s). %s"%(when, value, junc[0].shape)
+def filter_message(when, value, logger, junc):
+    message = "%s (Filter=%s). %s"%(when, value, junc[0].shape)
+    if logger:
+        if type(logger) == bool:
+            print message
+        else: 
+            logger.debug(message)
 
 
-def discardhigh(max0=0, orfilter=False, debug=False, *junc):
-
-    filter_message("Before discardhigh", max0, debug, junc)
+def discardhigh(max0=0, orfilter=True, logger=False, *junc):
+    
+    filter_message("Before discardhigh", max0, logger, junc)
 
     if orfilter:
         j1_filtered = [] 
@@ -36,49 +41,79 @@ def discardhigh(max0=0, orfilter=False, debug=False, *junc):
 
     else:
         raise NotImplemented
-        #NOTE: For this kind of calculation, numnonzeros2 *MUST* be calculated after the first filter, or else it will not fit the new matrix. Unless you find a way of make combined filters...
-        numnonzeros1 = (j1 > 0).sum(axis=1)
-        j1, j2= filter_bulk((numnonzeros1 < max0), j1,j2)
-        numnonzeros2 = (j2 > 0).sum(axis=1)
-        ret = filter_bulk((numnonzeros2 < max0), j1, j2)
 
-    filter_message("After discardhigh", max0, debug, junc)
+    filter_message("After discardhigh", max0, logger, junc)
 
     return ret
 
 
-def discardminreads(minreads=0, orfilter=False, debug=False, *junc):
+def discardminreads_and(incexcpairs, minreads=0, logger=False):
+    """
+    Discard events that have at least one inclusion/exclusion pair that have less than minreads reads at least in exclusion or inclusion 
+    """
+    all_pairs = []
+    ret = []
+    for inc, exc, in incexcpairs:
+        inc, exc = discardminreads(minreads, True, logger, True, array(inc), array(exc)) 
+        all_pairs.append(inc)
+        all_pairs.append(exc)
 
-    filter_message("Before discardminreads", minreads, debug, junc)
+    #convert to numpy arrays
+    all_pairs = [array(x) for x in all_pairs]
 
+    print all_pairs
+
+    return discardminreads(-1, False, logger, False, *all_pairs)
+
+
+def discardminreads(minreads=0, orfilter=True, logger=False, returnempty=False, *junc):
+    """
+    Given a collection of N experiments with matching junctions, discard junctions that have less reads than *minreads* flag. 
+    With *orfilter*, keeps every junction if at least one passes the filter. Without it, all junctions should pass the filter.
+    With *returnempty*, returns empty lines instead of no lines. Useful so we don't lose the match with another discard
+    """
+
+    filter_message("Before discardminreads", minreads, logger, junc)
     filtered_juncs = [[] for x in xrange(len(junc))]
-    if orfilter:
-        for i in range(junc[0].shape[0]): #for all junctions
+
+    for i in range(junc[0].shape[0]): #for all events
+        if orfilter:
+            already = False
             for junc_num, junction in enumerate(junc):
                 if (junction[i].sum() >= minreads):
-                    #if one passes the filter, add all to resultset
+                    #if one passes the filter, add all to the resultset and break the loop, since at least one passes the threshold
                     for junc_num, junction2 in enumerate(junc):
                         filtered_juncs[junc_num].append(junction2[i])
+                        already = True
                     break
 
-        ret = [array(x) for x in filtered_juncs]
+            if not already and returnempty:
+                for junc_num, junction2 in enumerate(junc):
+                    filtered_juncs[junc_num].append([-100]*junction2[i])                
 
-    else:
-        raise NotImplemented
-        """
-        readsj1 = j1.sum(axis=1)
-        j1, j2 = filter_bulk((readsj1 >= minreads), j1, j2)
-        readsj2 = j2.sum(axis=1)
-        ret = filter_bulk((readsj2 >= minreads), j1, j2)
-        """
-    filter_message("After discardminreads", minreads, debug, ret)
-    
+        else: #AND filter: All should pass the filter
+            for junc_num, junction in enumerate(junc):
+                all_pass = True
+                if not (junction[i].sum() >= minreads): #if one of them doesn't pass the filter, flag and break
+                    all_pass = False
+                    break
+
+            if all_pass:
+                for junc_num, junction2 in enumerate(junc):
+                    filtered_juncs[junc_num].append(junction2[i])   
+
+            elif returnempty: 
+                for junc_num, junction2 in enumerate(junc):
+                    filtered_juncs[junc_num].append([-100]*len(junction2[i]))
+
+
+    ret = [array(x) for x in filtered_juncs]
+    filter_message("After discardminreads", minreads, logger, ret)
     return ret
 
 
-def discardmaxreads(maxreads=0, orfilter=False, debug=False, *junc):
-
-    filter_message("Before discardmaxreads", maxreads, debug, junc)
+def discardmaxreads(maxreads=0, orfilter=True, logger=False, *junc):
+    filter_message("Before discardmaxreads", maxreads, logger, junc)
 
     filtered_juncs = [[] for x in xrange(len(junc))]
     if orfilter:
@@ -94,18 +129,14 @@ def discardmaxreads(maxreads=0, orfilter=False, debug=False, *junc):
 
     else:
         raise NotImplemented
-        readsj1 = j1.sum(axis=1)
-        j1, j2 = filter_bulk((readsj1 <= maxreads), j1, j2)
-        readsj2 = j2.sum(axis=1)
-        ret = filter_bulk((readsj2 <= maxreads), j1, j2)
 
-    filter_message("After discardmaxreads", maxreads, debug, ret)
+    filter_message("After discardmaxreads", maxreads, logger, ret)
 
     return ret
 
 
-def discardlow(min0=0, orfilter=False, debug=False, *junc):
-    filter_message("Before discardlow", min0, debug, junc)
+def discardlow(min0=0, orfilter=True, logger=False, *junc):
+    filter_message("Before discardlow", min0, logger, junc)
     filtered_juncs = [[] for x in xrange(len(junc))]
     if orfilter:
         for i in range(junc[0].shape[0]): #for all junctions
@@ -120,18 +151,13 @@ def discardlow(min0=0, orfilter=False, debug=False, *junc):
 
     else:    
         raise NotImplemented 
-        """  
-        numnonzeros1 = (j1 > 0).sum(axis=1)
-        j1, j2 = filter_bulk((numnonzeros1 > min0), j1, j2)
-        numnonzeros2 = (j2 > 0).sum(axis=1)
-        ret = filter_bulk((numnonzeros2 > min0), j1, j2)
-        """
-    filter_message("After discardlow", min0, debug, ret)
+
+    filter_message("After discardlow", min0, logger, ret)
 
     return ret
 
 
-def norm_junctions(junctions, gc_factors=None, gcnorm=False, trim=False, debug=False):
+def norm_junctions(junctions, gc_factors=None, gcnorm=False, trim=False, logger=False):
     "Junction normalization by GC content and/or trimming borders"
     if gcnorm:
         print "Normalizing by GC factor"
@@ -153,11 +179,18 @@ def mark_stacks(junctions, fitfunc, pvalue_limit, dispersion):
     for i, junction in enumerate(junctions):
         for j, value in enumerate(junction):
             if value > 0:
-                r, p = func2nb(a, b, value, dispersion)
+                #TODO Use masker, and marking stacks will probably be faster.
+                copy_junc = list(junction)
+                copy_junc.pop(j)
+                copy_junc = array(copy_junc)
+                copy_junc = copy_junc[copy_junc > 0]
+                #FINISH TODO
+                mean_rest = mean(copy_junc)
+                r, p = func2nb(a, b, mean_rest, dispersion)
                 my_nb = nbinom(r, p)
                 pval = 1-my_nb.cdf(value)
                 if pval < pvalue_limit:
-                    junctions[i, j] = -2
+                    junctions[i, j] = -2 
                     minstack = min(minstack, value)
                     numstacks += 1
 
