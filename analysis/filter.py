@@ -61,8 +61,6 @@ def discardminreads_and(incexcpairs, minreads=0, logger=False):
     #convert to numpy arrays
     all_pairs = [array(x) for x in all_pairs]
 
-    print all_pairs
-
     return discardminreads(-1, False, logger, False, *all_pairs)
 
 

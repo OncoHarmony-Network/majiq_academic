@@ -222,6 +222,9 @@ class Gene:
 
 
     def annottated_SE_events (self, ASvsConst='AS'):
+        """
+
+        Juan: Comentado porque peta. 
 
         print "%s events for Gene %s "%(ASvsConst, self.id),
         total = 0
@@ -247,7 +250,8 @@ class Gene:
         total += len(out)
         print "..... %s"%total
         return total
-
+        """
+        return
 
 class Transcript :
 

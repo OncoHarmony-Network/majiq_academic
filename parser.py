@@ -32,7 +32,7 @@ def main():
     psianddelta.add_argument('--alpha', default=0.5, type=float, help='Alpha hyperparameter for the dirichlet distribution. [Default: %(default)s]') 
     psianddelta.add_argument('--markstacks', default=0.001, type=float, help='Mark stack positions. Expects a p-value. Use a negative value in order to disable it. [Default: %(default)s]') 
     psianddelta.add_argument('--nbdisp', default=0.1, type=int, help='Dispersion for the fallback Negative Binomial function. [Default: %(default)s]')
-    psianddelta.add_argument('--nogc', dest="norm", action='store_true', default=False, help='psianddelta GC content normalization')
+    psianddelta.add_argument('--nogc', dest="gcnorm", action='store_false', default=True, help='psianddelta GC content normalization [Default: GC content normalization activated]')
     psianddelta.add_argument('--nodiscardb', dest="discardb", action='store_false',  default=True, help='Skip biscarding the b from the NB polynomial function, since we expect our fit to start from x=0, y=0')
     psianddelta.add_argument('--nodiscardzeros', action='store_false', default=True, dest="discardzeros", help='Skip discarding zeroes')
     #psianddelta.add_argument('--ONLYSTACKS', action='store_true', help="Debug flag that should dissapear. Used to test if stacks are worth masking.")
@@ -43,13 +43,16 @@ def main():
     #... are mostly EM adjust flags
     delta.add_argument('file1')  
     delta.add_argument('file2') #TODO activar cuando venga lo nuevo
+    delta.add_argument('--names', nargs='+', required=True, help="The names that identify each of the experiments. [Default: %(default)s]")
     delta.add_argument('--binsize', default=0.025, type=int, help='The bins for PSI values. With a --binsize of 0.025 (default), we have 40 bins')   
-    delta.add_argument('--minreads', default=50, type=int, help='Minimum number of reads combining all positions in a junction to be considered (for the "best set" calculation). [Default: %(default)s]') 
-    delta.add_argument('--minandreads', default=50, type=int, help='Minimum number of reads combining all positions in a junction to be considered (for the "best set" calculation). [Default: %(default)s]') 
+    delta.add_argument('--minreads', default=20, type=int, help='Minimum number of reads combining all positions in a junction to be considered (for the "best set" calculation). [Default: %(default)s]') 
+    delta.add_argument('--minandreads', default=1, type=int, help='Minimum number of reads combining all positions in a junction to be considered (for the "best set" calculation). [Default: %(default)s]') 
     delta.add_argument('--minnonzero', default=10, type=int, help='Minimum number of positions for the best set.')
     delta.add_argument('--iter', default=10, type=int, help='Max number of iterations of the EM')
     delta.add_argument('--breakiter', default=0.01, type=float, help='If the log likelihood increases less that this flag, do not do another EM step')
     delta.add_argument('--V', default=0.1, type=float, help='Value of DeltaPSI used for initialization of the EM model [Default: %(default)s]')
+    parser.add_argument('--n', default=1, type=int, help='Number of PSI samples per sample paired. [Default: %(default)s]') 
+
 
     #calcpsi flags
     psi = new_subparser()
@@ -60,6 +63,8 @@ def main():
     parser.add_argument('--minnonzero', default=0, type=int, help='Minimum number of start positions with at least 1 read for an event to be considered.')
 
     subparsers = parser.add_subparsers(help='')
+
+
 
     parser_preprocess = subparsers.add_parser('preprocess', help='Preprocess SAM/BAM files as preparation for the rest of the tools (calcpsi, deltapair, deltagroup)', parents=[common])
     parser_preprocess.set_defaults(func=preprocess)
@@ -76,6 +81,7 @@ def main():
     args = parser.parse_args()
 
     args.func(args)
+
 
 
 if __name__ == '__main__':
