@@ -91,9 +91,9 @@ def load_data_pair(path1, path2, logger=None):
         if hasattr(junction[0], 'coverage') and hasattr(junction[1], 'coverage'):
             paired_samples[junction[0].name].extend([junction[0].coverage[0], junction[1].coverage[0]])    
 
-    #paired events
+    #pair the events: Only keep the paired events
     ret = []
-    for event_name, junctions in paired_samples.items():
+    for event_name, junctions in paired_samples.items(): 
         if len(junctions) == 4:
             ret.append(junctions)
 
@@ -210,7 +210,6 @@ def plot_matrix(matrix, title, plotname):
 ################################
 #          Delta PSI           #
 ################################
-
 
 def deltapair(args):
     _pipeline_run(DeltaPair(args))
