@@ -66,11 +66,11 @@ def prepare_MAJIQ_table(junc_set, non_as, temp_file):
     for name, ind_list in mglobals.tissue_repl.items() :
 
         for idx,exp_idx in enumerate(ind_list) :
-            info = {}
+#            info = {}
 #            info ['weigh_factor'] = mglobals.weigh_factor
-            info ['experiment']   = mglobals.exp_list[exp_idx]
-            info ['GC_bins']      = mglobals.gc_bins[exp_idx]
-            info ['GC_bins_val']  = mglobals.gc_bins_val[exp_idx]
+#            info ['experiment']   = mglobals.exp_list[exp_idx]
+#            info ['GC_bins']      = mglobals.gc_bins[exp_idx]
+#            info ['GC_bins_val']  = mglobals.gc_bins_val[exp_idx]
 
             jun = set(junc_set[exp_idx])
             non_as[exp_idx].difference(jun)
@@ -87,21 +87,25 @@ def prepare_MAJIQ_table(junc_set, non_as, temp_file):
                     majiq_table_nonas[jix] = majiq_junc( jn , exp_idx)
 
             file_pi = open("%s/temp_%s.%s"%(mglobals.temp_oDir[exp_idx],mglobals.exp_list[exp_idx], temp_file), 'w+')
-            pickle.dump((info,majiq_table_as, majiq_table_nonas), file_pi)
+            pickle.dump((majiq_table_as, majiq_table_nonas), file_pi)
             file_pi.close()
 
 
 def merge_and_create_MAJIQ ( chr_list, ofile ):
     for name, ind_list in mglobals.tissue_repl.items() :
         for idx,exp_idx in enumerate(ind_list) :
-            info = {}
             as_table = []
             nonas_table = []
+            info = {}
+#            info ['weigh_factor'] = mglobals.weigh_factor
+            info ['experiment']   = mglobals.exp_list[exp_idx]
+            info ['GC_bins']      = mglobals.gc_bins[exp_idx]
+            info ['GC_bins_val']  = mglobals.gc_bins_val[exp_idx]
             for chrom in chr_list:
                 filename = '%s/temp_%s.%s.obj'%(mglobals.temp_oDir[exp_idx], mglobals.exp_list[exp_idx], chrom)
                 if not os.path.exists(filename): continue
                 file_pi2 = open(filename, 'rb')
-                info,as_t,non_as = pickle.load(file_pi2)
+                as_t,non_as = pickle.load(file_pi2)
                 as_table.append(as_t)
                 nonas_table.append(non_as)
             if len(as_table)==0: continue
@@ -160,7 +164,7 @@ def prepare_junctions_gc( junc , exp_idx):
     gci = np.zeros(shape=(mglobals.readLen - 16+1))
     for jj in range(mglobals.readLen - 16+1) :
         if not junc is None and junc.get_gc_content()[exp_idx,jj] != 0:
-            gci[jj] = __gc_factor_ind(junc.get_gc_content()[exp_idx,jj],exp_idx)
+            #gci[jj] = __gc_factor_ind(junc.get_gc_content()[exp_idx,jj],exp_idx)
             pass
             #gc[jj] = mglobals.gc_factor[exp_idx](junc.get_gc_content()[exp_idx,jj])
 
@@ -220,7 +224,7 @@ def gc_factor_calculation(exon_list, nb):
 #                    print ex.strand, st, end
 
 
-                if  gc_val is None or end-st < 30  or cov > 5: continue
+                if  gc_val is None or end-st < 30  or cov < 5: continue
                 count.append( cov )
                 gc.append( gc_val )
             if len(gc) == 0 : continue

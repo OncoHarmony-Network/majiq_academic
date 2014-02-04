@@ -21,10 +21,8 @@ def __parallel_for_splc_quant(samfiles_list, gene_list, chr, as_db):
         print "READING ", idx, exp
         rnaseq_io.read_sam_or_bam(exp, gene_list, mglobals.readLen, chr, idx )
 #        rnaseq_io.reads_for_junc_coverage(exp, gene_list, mglobals.readLen, idx )
-    return
     analize.annotated_AS_events(gene_list, 'AS')
     a,b = analize.rnaseq_AS_events( gene_list, chr )
-#    a,b = analize.analize_junction_reads( gene_list, chr )
     file_name = '%s.obj'%(chr)
     utils.prepare_MAJIQ_table( a,b,file_name)
 
