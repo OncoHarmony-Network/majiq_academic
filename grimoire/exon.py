@@ -96,12 +96,15 @@ class Exon:
                 break
         if not found :
 #            if self.strand == '+':
+            ssf = False
             for idx1, i1 in enumerate(self.ss_3p_list):
                 if i1 != start : continue
-                if self.ss_3p_list[idx1]== end:
-                    self.ss_3p_list.append(start)
-                    self.ss_5p_list.append(end)
+                if self.ss_5p_list[idx1]== end:
+                    ssf = True
                     break
+            else:
+                self.ss_3p_list.append(start)
+                self.ss_5p_list.append(end)
             res = ExonRead( start, end, self, s3p_junc, s5p_junc, readSeq )
             self.exonRead_list.append(res)
         return res
@@ -118,6 +121,7 @@ class Exon:
                 ii.add_transcript(trncpt)
                 found = True
                 break
+        if start == 74289871: print "NOUUUUNN", found
         if not found :
 #            if self.strand == '+':
             self.ss_3p_list.append(start)

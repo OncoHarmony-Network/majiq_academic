@@ -253,6 +253,7 @@ def read_transcript_ucsc(filename, refSeq = False):
                     ex = Exon(start,end,gn,strand)
                     temp_ex[chrom].append(ex)
                     gn.add_exon(ex)
+                if start == 74289871: print "I FOUND IT"
                 txex = ex.add_new_definition(start, end, trcpt)
                 trcpt.add_exon(txex)
                 if not pre_end is None:

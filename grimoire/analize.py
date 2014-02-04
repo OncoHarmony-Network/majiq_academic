@@ -155,7 +155,7 @@ def rnaseq_AS_events( gene_list, chr ):
 
     SE_events = 0
 
-    num_SS_var = [[0]*10,[0]*10]
+    num_SS_var = [[0]*20,[0]*20]
 
     SE_events = [0]*5
     total_SE = 0
@@ -197,9 +197,9 @@ def rnaseq_AS_events( gene_list, chr ):
                 c1 = tlb[ii-1]
                 c2 = tlb[ii+1]
 
-                print c1
-                print a
-                print c2
+#                print c1
+#                print a
+#                print c2
 
                 c1_a = jmat[ c1[1][0] : c1[1][-1]+1,  a[0][0] :  a[0][-1]+1 ]
                 a_c2 = jmat[  a[1][0] :  a[1][-1]+1, c2[0][0] : c2[0][-1]+1 ]
@@ -245,7 +245,7 @@ def rnaseq_AS_events( gene_list, chr ):
     print "AS %s AS isoform present in transcript analysis"%total_aisfrm
     print "AS %s SKIPPEDO junction"%chr, notjunc,"/",overlp
     print "AS %s How many events with ss variants"%chr, ss_variant
-
+    print "SE skipped isoform detected",total_SE
     print "SE events %s"%(SE_events)
     print "#Exons with A3SS %s"%num_SS_var[0]
     print "#Exons with A5SS %s"%num_SS_var[1]
