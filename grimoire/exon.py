@@ -79,7 +79,7 @@ class Exon:
         return (ss3_l,ss5_l)
 
     def add_new_read(self, start, end, readSeq, s3p_junc, s5p_junc):
-        
+
         if start > end :
             print " INCORRECT exon definition",start, end
             exit()
@@ -96,12 +96,12 @@ class Exon:
                 break
         if not found :
 #            if self.strand == '+':
-            self.ss_3p_list.append(start)
-            self.ss_5p_list.append(end)
-#            else:
-#                self.ss_5p_list.append(start)
-#                self.ss_3p_list.append(end)
-#            print "####",s3p_junc, s5p_junc
+            for idx1, i1 in enumerate(self.ss_3p_list):
+                if i1 != start : continue
+                if self.ss_3p_list[idx1]== end:
+                    self.ss_3p_list.append(start)
+                    self.ss_5p_list.append(end)
+                    break
             res = ExonRead( start, end, self, s3p_junc, s5p_junc, readSeq )
             self.exonRead_list.append(res)
         return res
@@ -170,7 +170,6 @@ class Exon:
         fp.write("%s\t%d\t%d\t%s_C1\t0\t%s\n"%(chr,startC1,endC1,name,strand))
         fp.write("%s\t%d\t%d\t%s_A\t0\t%s\n"%(chr,startA,endA,name,strand))
         fp.write("%s\t%d\t%d\t%s_C2\t0\t%s\n"%(chr,startC2,endC2,name,strand))
-
 
     def bed_format(self):
         str = ""
@@ -286,12 +285,7 @@ def detect_exons(gene_list, junction_list, readRNA):
                     if jj_gene != prev_gene :
                         ''' New Gene will start with 5prime SS. 
                         But there are non-paired 3'ss elements.'''
-#                        if last_5prime is None or last_5prime.get_gene() != jj_gene:
                         newExons +=  __half_exon('3prime',opened_exon[-1],readRNA)
-#                        else:
-#                            end = last_5prime.get_ss_5p()
-#                            start = ss.get_ss_3p()+1
-#                            newExons += new_exon_definition(start,end,readRNA, opened_exon[-1],last_5prime)
                         opened = 0
                         opened_exon = []
                         last_5prime = None

@@ -41,22 +41,23 @@ def __is_unique(read):
     except KeyError:
         if read.flag & 0x100 == 1: 
             unique = False
-    return unique
+    return True
+    #return unique
 
 def __get_num_reads(read):
     try:
         nreads = int(read.opt('HI'))
     except KeyError:
         nreads = 1
-
-    return nreads
+    return 1
+    #return nreads
 
 def count_mapped_reads( filename, exp_idx):
     stats = pysam.flagstat(filename)
     mapped_reads = int(stats[2].split()[0])
     mglobals.num_mapped_reads[exp_idx] = mapped_reads
 
-def read_sam_file(filename, gene_list, readlen, chrom, exp_index):
+def read_sam_or_bam(filename, gene_list, readlen, chrom, exp_index):
 
     counter = [0] * 6
     junctions = {}
@@ -77,24 +78,36 @@ def read_sam_file(filename, gene_list, readlen, chrom, exp_index):
             ex_list = gne.get_exon_list()
             ex_idx = 0
             for read in read_iter:
+                
+
                 strand_read = '+' if not read.is_reverse else '-'
                 if strand_read != strand: continue
                 unique = __is_unique(read)
-                if not unique : 
-                    NUnum  += 1
-                    continue
+#                if not unique : 
+#                    NUnum  += 1
+#                    continue
                 nreads = __get_num_reads(read)
                 gne.add_read_count(nreads, exp_index)
                 is_cross, junc_list = __cross_junctions(read)
                 r_start = read.pos
                 
+                #TEST
+
+
+#                if r_start >= 34181135 and r_start <= 34183903 and strand_read == '+': print "KKKKKK DELA VAACAAAAA", r_start
+#                print "START WHILE ", ex_idx, len(ex_list)
+                ex_idx = 0
+
                 while ex_idx < len(ex_list):
                     ex_start, ex_end = ex_list[ex_idx].get_coordinates()
+#                    print "EXON:",ex_start, ex_end, r_start
                     if r_start >= ex_start and r_start <= ex_end :
+#                        print r_start
                         ex_list[ex_idx].update_coverage(exp_index, nreads)
                         temp_ex.append(ex_list[ex_idx])
                         break
                     ex_idx += 1
+#                print "END WHILE"
                 #else:
                 #    break
 
@@ -174,138 +187,6 @@ def read_sam_file(filename, gene_list, readlen, chrom, exp_index):
     return 
 
 
-def reads_for_junc_coverage(filename, gene_list, readlen, exp_index):
-
-    ''' Read and parse reads by junctions '''
-    junctions = {}
-    g_chromosome = ''
-    counter = [0]*6
-    total_reads = 0
-    idx = {'+':0,'-':0}
-    junctions = {'+':[],'-':[]}
-    print "START READING ",filename
-    sorted_gene_list = gene_list
-    BUFFER = int(10E8) #1 gigabyte buffer
-    file = open(filename, 'r')
-    text = file.readlines(BUFFER)
-    while text != []:
-        print "New Buffer"
-        for ii in text:
-            if ii.startswith('@'): continue
-            tab = ii.strip().split()
-            chrom = tab[2]
-            flag = int(tab[1])
-            strand = '+' if flag & 0x10 == 0 else '-'
-            (isRead,read) = parse_read( tab, readlen )
-            if not isRead :
-                r_start = int(tab[3])
-                n_reads = read
-            else:
-                n_reads = read.get_read_count()
-                r_start, r_end = read.get_coordinates()
-
-            while idx[strand] < len (sorted_gene_list[strand]):
-                gene = sorted_gene_list[strand][idx[strand]]
-#                gene = sorted_gene_list[idx[strand]]
-                (g_start, g_end) = gene.get_coordinates()
-#                if isRead:
-#                    print "###", r_start, g_start, read.get_junctions_info()
-                if r_start < g_start :
-                    ''' That means that we found new junctions out of any transcript'''
-                    '''mark as non-transcript one and next junction'''
-#                   print ii 
-                    counter[1] += 1
-                    break
-                elif r_start > g_end or (strand != gene.strand):
-                    '''next_gene'''
-                    idx[strand] += 1
-                    continue
-                #end elif junc_start ...
-                '''
-                If the read is not a junction read, we add the count to the gene 
-                and continue with the next read 
-                '''
-                total_reads += n_reads
-                if not isRead : 
-                    gene.add_read_count(n_reads,exp_index)
-                    break
-                gene.add_read(read,exp_index)
-                counter[2] += 1
-                j_list = gene.get_all_junctions()
-                for (junc_start,junc_end) in read.get_junctions_info():
-                    if junc_start - r_start > readlen : 
-                        r_start = junc_start - (readlen - 16) -1
-                    elif junc_start - r_start >= readlen -8 or junc_start -r_start <= 8: continue
-                    found = False
-                    if junc_end - junc_start < 10 :
-                        counter[0] +=1
-                        continue
-                    for jj in j_list:
-                        ( j_st,j_ed ) = jj.get_coordinates()
-                        if   j_st > junc_start  or (j_st == junc_start and j_ed > junc_end): break
-                        elif j_st < junc_start  or (j_st == junc_start and j_ed < junc_end): continue
-                        elif junc_start == j_st and junc_end == j_ed:
-                            ''' update junction and add to list'''
-                            counter[3] +=1
-                            jj.update_junction_read(exp_index,n_reads,r_start, read.get_GCcontent(), read.get_unique())
-                            if not (junc_start,'5prime',jj) in junctions[strand]:
-                                junctions[strand].append((junc_start,'5prime',jj))
-                                junctions[strand].append((junc_end,'3prime',jj))
-                            found = True
-                            break
-                        #end elif junc_start == ...
-                    #end for jj in j_list
-                    if not found :
-                        ''' update junction and add to list'''
-                        junc = None
-                        for (coord,t,j) in junctions[gene.strand]:
-                            if (j.start == junc_start and j.end == junc_end):
-                                junc = j
-                                junc.update_junction_read(exp_index, n_reads, r_start, read.get_GCcontent(), read.get_unique())
-                                break
-                            #end if (j.start) == ...
-                        #end for (coord,t,j) ...
-                        if junc is None:
-                            '''mark a new junction '''
-                            counter[4] += 1
-                            junc = Junction( junc_start, junc_end, None, None, gene, readN=n_reads)
-                            junc.update_junction_read(exp_index, n_reads, r_start, read.get_GCcontent(), read.get_unique())
-                            junctions[strand].append((junc_start,'5prime',junc))
-                            junctions[strand].append((junc_end,'3prime',junc))
-                    #end if not found ...
-                #end for junc ...
-                break
-            #end while ...
-        #end for t in text
-        gc.collect()
-        text = file.readlines(BUFFER)
-    #END WHILE
-    file.close()
-
-    print "INVALID JUNC",    counter[0]
-    print "READ WRONG GENE", counter[1]
-    print "READ IN GENE",    counter[2]
-    print "READ FOUND JUNC", counter[3]
-    print "READ NEW JUNC",   counter[4]
-    print "READ ALL JUNC",   counter[5]
-
-    for str, ll2 in junctions.items():
-        junctions[str].sort()
-    detect_exons(gene_list, junctions,None)
-    skip_gene = 0
-    non_skip = 0
-    for strand, glist in gene_list.items():
-        for gene in glist:
-            gene.prepare_exons( gc_calc = True )
-            re = gene.calculate_RPKM(exp_index, total_reads)
-            if re == 0 :
-                #print "SIN READS??? :",gene.id
-                skip_gene +=1
-            else:
-                non_skip +=1
-    print "Skipped genes without exons",skip_gene
-    print " Non skipped",non_skip
-    return 
 
 def read_transcript_ucsc(filename, refSeq = False):
     print "Reading transcript ucsc format"
@@ -672,4 +553,137 @@ def read_triplets_bed(filename,all_genes):
     return  ex_found
 
 
+#@deprecated
+def reads_for_junc_coverage(filename, gene_list, readlen, exp_index):
+
+    ''' Read and parse reads by junctions '''
+    junctions = {}
+    g_chromosome = ''
+    counter = [0]*6
+    total_reads = 0
+    idx = {'+':0,'-':0}
+    junctions = {'+':[],'-':[]}
+    print "START READING ",filename
+    sorted_gene_list = gene_list
+    BUFFER = int(10E8) #1 gigabyte buffer
+    file = open(filename, 'r')
+    text = file.readlines(BUFFER)
+    while text != []:
+        print "New Buffer"
+        for ii in text:
+            if ii.startswith('@'): continue
+            tab = ii.strip().split()
+            chrom = tab[2]
+            flag = int(tab[1])
+            strand = '+' if flag & 0x10 == 0 else '-'
+            (isRead,read) = parse_read( tab, readlen )
+            if not isRead :
+                r_start = int(tab[3])
+                n_reads = read
+            else:
+                n_reads = read.get_read_count()
+                r_start, r_end = read.get_coordinates()
+
+            while idx[strand] < len (sorted_gene_list[strand]):
+                gene = sorted_gene_list[strand][idx[strand]]
+#                gene = sorted_gene_list[idx[strand]]
+                (g_start, g_end) = gene.get_coordinates()
+#                if isRead:
+#                    print "###", r_start, g_start, read.get_junctions_info()
+                if r_start < g_start :
+                    ''' That means that we found new junctions out of any transcript'''
+                    '''mark as non-transcript one and next junction'''
+#                   print ii 
+                    counter[1] += 1
+                    break
+                elif r_start > g_end or (strand != gene.strand):
+                    '''next_gene'''
+                    idx[strand] += 1
+                    continue
+                #end elif junc_start ...
+                '''
+                If the read is not a junction read, we add the count to the gene 
+                and continue with the next read 
+                '''
+                total_reads += n_reads
+                if not isRead : 
+                    gene.add_read_count(n_reads,exp_index)
+                    break
+                gene.add_read(read,exp_index)
+                counter[2] += 1
+                j_list = gene.get_all_junctions()
+                for (junc_start,junc_end) in read.get_junctions_info():
+                    if junc_start - r_start > readlen : 
+                        r_start = junc_start - (readlen - 16) -1
+                    elif junc_start - r_start >= readlen -8 or junc_start -r_start <= 8: continue
+                    found = False
+                    if junc_end - junc_start < 10 :
+                        counter[0] +=1
+                        continue
+                    for jj in j_list:
+                        ( j_st,j_ed ) = jj.get_coordinates()
+                        if   j_st > junc_start  or (j_st == junc_start and j_ed > junc_end): break
+                        elif j_st < junc_start  or (j_st == junc_start and j_ed < junc_end): continue
+                        elif junc_start == j_st and junc_end == j_ed:
+                            ''' update junction and add to list'''
+                            counter[3] +=1
+                            jj.update_junction_read(exp_index,n_reads,r_start, read.get_GCcontent(), read.get_unique())
+                            if not (junc_start,'5prime',jj) in junctions[strand]:
+                                junctions[strand].append((junc_start,'5prime',jj))
+                                junctions[strand].append((junc_end,'3prime',jj))
+                            found = True
+                            break
+                        #end elif junc_start == ...
+                    #end for jj in j_list
+                    if not found :
+                        ''' update junction and add to list'''
+                        junc = None
+                        for (coord,t,j) in junctions[gene.strand]:
+                            if (j.start == junc_start and j.end == junc_end):
+                                junc = j
+                                junc.update_junction_read(exp_index, n_reads, r_start, read.get_GCcontent(), read.get_unique())
+                                break
+                            #end if (j.start) == ...
+                        #end for (coord,t,j) ...
+                        if junc is None:
+                            '''mark a new junction '''
+                            counter[4] += 1
+                            junc = Junction( junc_start, junc_end, None, None, gene, readN=n_reads)
+                            junc.update_junction_read(exp_index, n_reads, r_start, read.get_GCcontent(), read.get_unique())
+                            junctions[strand].append((junc_start,'5prime',junc))
+                            junctions[strand].append((junc_end,'3prime',junc))
+                    #end if not found ...
+                #end for junc ...
+                break
+            #end while ...
+        #end for t in text
+        gc.collect()
+        text = file.readlines(BUFFER)
+    #END WHILE
+    file.close()
+
+    print "INVALID JUNC",    counter[0]
+    print "READ WRONG GENE", counter[1]
+    print "READ IN GENE",    counter[2]
+    print "READ FOUND JUNC", counter[3]
+    print "READ NEW JUNC",   counter[4]
+    print "READ ALL JUNC",   counter[5]
+
+    for str, ll2 in junctions.items():
+        junctions[str].sort()
+    detect_exons(gene_list, junctions,None)
+    skip_gene = 0
+    non_skip = 0
+    for strand, glist in gene_list.items():
+        for gene in glist:
+            gene.prepare_exons( gc_calc = True )
+            re = gene.calculate_RPKM(exp_index, total_reads)
+            if re == 0 :
+                #print "SIN READS??? :",gene.id
+                skip_gene +=1
+            else:
+                non_skip +=1
+    print "Skipped genes without exons",skip_gene
+    print " Non skipped",non_skip
+    return 
 

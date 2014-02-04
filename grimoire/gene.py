@@ -2,7 +2,6 @@
 import numpy as np
 import grimoire.utils.utils as utils
 import mglobals
-import analize
 
 class Gene:
     __eq__ = lambda self, other: self.chromosome == other.chromosome and self.strand == other.strand and self.start < other.end and self.end > other.start
@@ -221,14 +220,11 @@ class Gene:
         return ss
 
 
-    def annottated_SE_events (self, ASvsConst='AS'):
+    def get_transcript_mat (self, ASvsConst):
 
-        print "%s events for Gene %s "%(ASvsConst, self.id),
-        total = 0
-        if len( self.transcript_list ) == 1 and ASvsConst == 'AS': continue
-        if len(self.exons) < 3: continue
+        if (len( self.transcript_list ) == 1 and ASvsConst == 'AS') or len(self.exons) <3 : return None
+
         mat = np.ndarray(shape=(len(self.transcript_list),len(self.exons)),dtype='bool')
-
         for idx_t, tpt in enumerate(self.transcript_list):
             for g_ex in self.exons:
                 if set(tpt.exon_list).intersection( set(g_ex.exonTx_list)) :
@@ -236,17 +232,63 @@ class Gene:
                 else:
                     mat[idx_t,g_ex.id-1]= 0
 
-#        print mat
-        if ASvsConst == 'AS':
-            out = analize.analize_gene_bin_matrix(mat)
-            self.add_transcript_AS_candidates(out)
-        else:
-            out = analize.analize_bin_matrix_const_firstlast(mat)
-            self.add_transcript_CONST_candidates(out)
+        return mat
 
-        total += len(out)
-        print "..... %s"%total
-        return total
+
+    def get_rnaseq_mat(self, rand10k):
+
+        A5ss = 0
+        A3ss = 0
+        ex_list = self.get_exon_list()
+        ss3_l = []
+        ss5_l = []
+        tlb = {}
+        exidx = 0
+        ss_3p_vars = [0]*10
+        ss_5p_vars = [0]*10
+        for ex in ex_list:
+            if ex.id is None: continue
+            s3rna, s5rna = ex.get_rna_ss()
+#            print "EXONS "
+#            print "ASS3",ex.ss_3p_list
+#            print "ASS5",ex.ss_5p_list
+
+#            if len(s3rna) == 0 : continue
+#            if len(set(s3rna)) > 1:  ss_3p_vars +=1
+#            if len(set(s5rna)) > 1:  ss_5p_vars +=1
+            
+           # if len(set(ex.ss_3p_list)) > 1:  ss_3p_vars +=1
+           # if len(set(ex.ss_5p_list)) > 1:  ss_5p_vars +=1
+            ss_3p_vars[len(set(ex.ss_3p_list))] += 1
+            ss_5p_vars[len(set(ex.ss_5p_list))] += 1
+
+            st3 = len(ss3_l)
+            st5 = len(ss5_l)
+            ss3_l += sorted([ss3 for ss3 in set(ex.ss_3p_list)])
+            ss5_l += sorted([ss5 for ss5 in set(ex.ss_5p_list)])
+            if len(ex.ss_3p_list) ==0 : continue
+            tlb[exidx] = [range(st3,len(ss3_l)),range(st5,len(ss5_l))]
+            exidx += 1
+
+        mat  = np.zeros(shape=(len(ss5_l),len(ss3_l)),dtype='int')
+        jmat = np.zeros(shape=(len(ss5_l),len(ss3_l)),dtype='object')
+        jmat.fill(None)
+
+
+        junc_list = self.get_all_junctions()
+        for junc in junc_list:
+            st,end = junc.get_coordinates()
+            if not st in ss5_l or not end in ss3_l: continue
+            x = ss5_l.index(st)
+            y = ss3_l.index(end)
+            mat [ x, y ] = junc.readN.sum()
+            jmat[ x, y ] = junc
+
+            for exp_idx in range(mglobals.num_experiments):
+                if junc.get_readN(exp_idx) >= 10 : #and in_DB:
+                    rand10k[exp_idx].add(junc)
+
+        return mat, jmat, tlb, [ss_3p_vars, ss_5p_vars]
 
 
 class Transcript :

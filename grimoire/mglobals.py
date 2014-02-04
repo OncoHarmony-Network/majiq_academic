@@ -91,8 +91,8 @@ def set_gc_factors(bins, factor, means):
         print "AA", a
         print "BINS", bins[idx]
         print "MEANS", means[idx]
-#        gc_factor[idx] = interpolate.interp1d( means[idx], a , bounds_error=False) 
-        gc_factor[idx] = interpolate.interp1d( means[idx], factor[idx] , bounds_error=False) 
+        gc_factor[idx] = interpolate.interp1d( means[idx], factor[idx], bounds_error=False) 
+#        gc_factor[idx] = interpolate.interp1d( bins[idx], a , bounds_error=False) 
         
         mn = bins[idx].min()
         mx = bins[idx].max()

@@ -69,8 +69,8 @@ def prepare_MAJIQ_table(junc_set, non_as, temp_file):
             info = {}
 #            info ['weigh_factor'] = mglobals.weigh_factor
             info ['experiment']   = mglobals.exp_list[exp_idx]
-#            info ['GC_bins']      = mglobals.gc_bins[exp_idx]
-#            info ['GC_bins_val']  = mglobals.gc_bins_val[exp_idx]
+            info ['GC_bins']      = mglobals.gc_bins[exp_idx]
+            info ['GC_bins_val']  = mglobals.gc_bins_val[exp_idx]
 
             jun = set(junc_set[exp_idx])
             non_as[exp_idx].difference(jun)
@@ -160,8 +160,8 @@ def prepare_junctions_gc( junc , exp_idx):
     gci = np.zeros(shape=(mglobals.readLen - 16+1))
     for jj in range(mglobals.readLen - 16+1) :
         if not junc is None and junc.get_gc_content()[exp_idx,jj] != 0:
+            gci[jj] = __gc_factor_ind(junc.get_gc_content()[exp_idx,jj],exp_idx)
             pass
-            # JV TO CHANGEgci[jj] = __gc_factor_ind(junc.get_gc_content()[exp_idx,jj],exp_idx)
             #gc[jj] = mglobals.gc_factor[exp_idx](junc.get_gc_content()[exp_idx,jj])
 
     if not junc is None:
@@ -214,7 +214,13 @@ def gc_factor_calculation(exon_list, nb):
                 gc_val = ex.get_gc_content()
                 st,end = ex.get_coordinates()
                 cov = ex.get_coverage(exp_n)
-                if  gc_val is None or cov<1 : continue
+
+                # TEST AND CHECK
+#                if gc_val is None or cov == 0:
+#                    print ex.strand, st, end
+
+
+                if  gc_val is None or end-st < 30  or cov > 5: continue
                 count.append( cov )
                 gc.append( gc_val )
             if len(gc) == 0 : continue
@@ -283,8 +289,8 @@ def plot_gc_content():
         for exp_n in list_idx :
 #            f = interpolate.interp1d(mglobals.gc_means[exp_n], mglobals.gc_bins_vaL[exp_n])
             print mglobals.gc_means[exp_n]
-            mn = mglobals.gc_bins[exp_n].min()
-            mx = mglobals.gc_bins[exp_n].max()
+            mn = mglobals.gc_means[exp_n].min()
+            mx = mglobals.gc_means[exp_n].max()
             xx = np.arange(mn, mx ,0.001)
             yy = mglobals.gc_factor[exp_n](xx)
             print "XX",xx
