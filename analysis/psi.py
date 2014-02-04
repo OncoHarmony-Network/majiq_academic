@@ -35,7 +35,9 @@ def median_psi(junctions, discardzeros=True):
 
 def simple_psi(inc, exc):
     """Simple PSI calculation without involving a dirichlet prior, coming from reads from junctions"""
-    return inc/(exc+inc)
+    psi = inc/(exc+inc)
+    psi[isnan(psi)] = 0.5 #if NaN, is because exc+inc = 0. If we know nothing, then we don't know if its 0 (exclusion) or 1 (inclusion)
+    return psi 
 
 def reads_given_psi(inc_samples, exc_samples, psi_space):
     #P(vector_i | PSI_i)

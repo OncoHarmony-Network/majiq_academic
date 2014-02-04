@@ -16,7 +16,7 @@ def main():
 
     #common flags (first ones are required)
     common = new_subparser()
-    common.add_argument('--tmp', required=True, help='Path to save the temporary files.')
+    common.add_argument('--tmp', default="/tmp/", help='Path to save the temporary files. [Default: %(default)s]')
     common.add_argument('--output', required=True, help='Path to save the pickle output to.')
     common.add_argument('--logger', default=None, help='Path for the logger. Default is output directory')
     common.add_argument('--silent', action='store_true', default=False, help='Silence the logger.')
@@ -34,7 +34,7 @@ def main():
     psianddelta.add_argument('--nbdisp', default=0.1, type=int, help='Dispersion for the fallback Negative Binomial function. [Default: %(default)s]')
     psianddelta.add_argument('--nogc', dest="gcnorm", action='store_false', default=True, help='psianddelta GC content normalization [Default: GC content normalization activated]')
     psianddelta.add_argument('--nodiscardb', dest="discardb", action='store_false',  default=True, help='Skip biscarding the b from the NB polynomial function, since we expect our fit to start from x=0, y=0')
-    psianddelta.add_argument('--nodiscardzeros', action='store_false', default=True, dest="discardzeros", help='Skip discarding zeroes')
+    psianddelta.add_argument('--nodiscardzeros', action='store_false', default=True, dest="discardzeros", help='Skip discarding zeroes')    
     #psianddelta.add_argument('--ONLYSTACKS', action='store_true', help="Debug flag that should dissapear. Used to test if stacks are worth masking.")
     #psianddelta.add_argument('--usetensor', action='store_true')
 
@@ -51,35 +51,25 @@ def main():
     delta.add_argument('--iter', default=10, type=int, help='Max number of iterations of the EM')
     delta.add_argument('--breakiter', default=0.01, type=float, help='If the log likelihood increases less that this flag, do not do another EM step')
     delta.add_argument('--V', default=0.1, type=float, help='Value of DeltaPSI used for initialization of the EM model [Default: %(default)s]')
-    delta.add_argument('--n', default=1, type=int, help='Number of PSI samples per sample paired. [Default: %(default)s]') 
-    delta.add_argument('--psiparam', default=False, action='store_true', help='Instead of sampling, use a parametric form for the PSI calculation. [Default: %(default)s]')
 
     #calcpsi flags
     psi = new_subparser()
     psi.add_argument('files', nargs='+', help='The experiment files to analyze. You can include more than one (they will all be analyzed independently though) Glob syntax supported.')
     psi.add_argument('--n', default=1, type=int, help='Number of PSI samples per sample paired. [Default: %(default)s]') 
     psi.add_argument('--psiparam', default=False, action='store_true', help='Instead of sampling, use a parametric form for the PSI calculation. [Default: %(default)s]')
-    parser.add_argument('--minreads', default=0, type=int, help='Minimum number of reads combining all positions in an event to be considered. [Default: %(default)s]') 
-    parser.add_argument('--minnonzero', default=0, type=int, help='Minimum number of start positions with at least 1 read for an event to be considered.')
+    psi.add_argument('--minreads', default=0, type=int, help='Minimum number of reads combining all positions in an event to be considered. [Default: %(default)s]') 
+    psi.add_argument('--minnonzero', default=0, type=int, help='Minimum number of start positions with at least 1 read for an event to be considered.')
 
     subparsers = parser.add_subparsers(help='')
-
-
-
     parser_preprocess = subparsers.add_parser('preprocess', help='Preprocess SAM/BAM files as preparation for the rest of the tools (calcpsi, deltapair, deltagroup)', parents=[common])
     parser_preprocess.set_defaults(func=preprocess)
-    
     parser_calcpsi = subparsers.add_parser('calcpsi', help="Calculate PSI values for N experiments, given a folder of preprocessed events by 'majiq preprocess' or SAM/BAM files (This last not implemented yet)", parents=[common, psi, psianddelta])
     parser_calcpsi.set_defaults(func=calcpsi)
-    
     parser_deltapair = subparsers.add_parser('deltapair', help='Calculate Delta PSI values given a pair of experiments (1 VS 1 conditions without replicas)', parents=[common, delta, psianddelta])
     parser_deltapair.set_defaults(func=deltapair)
-    
     parser_deltagroup = subparsers.add_parser('deltagroup', help='Calculate Delta PSI values given a pair of experiments (1 VS 1 conditions *with* replicas)', parents=[common])
     parser_deltagroup.set_defaults(func=deltagroup)
-
     args = parser.parse_args()
-
     args.func(args)
 
 
