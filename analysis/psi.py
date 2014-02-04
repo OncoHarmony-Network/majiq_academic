@@ -7,14 +7,11 @@ import operator
 from collections import defaultdict
 
 from pylab import *
-from scipy.special import gamma
-from scipy.io import loadmat
-import numpy as np
-from matplotlib import rcParams
-from scipy.stats import pearsonr
+from scipy.special import gamma #deprecation WARNING comes from this import!!! 
+from scipy.stats import pearsonr, binom_test
 from numpy.random import dirichlet
-from scipy.stats import binom_test
-
+from numpy import rollaxis
+from matplotlib import rcParams
 """
 Calculate and manipulate PSI and Delta PSI values
 """
@@ -23,9 +20,24 @@ BINS = arange(0, 1, BSIZE) # The bins for PSI values. With a BSIZE of 0.025, we 
 BINS_CENTER = arange(0+BSIZE/2, 1, BSIZE) #The center of the previous BINS. This is used to calculate the mean value of each bin.
 
 
+
+def median_psi(junctions, discardzeros=True):
+    "Calculates the median PSI for all events"
+    medians = []
+    for junction in junctions:
+        if discardzeros:
+            junction = junction[junction!=0] #a junction array without the zeroes
+
+        medians.append(median(junction))
+
+    return array(medians)
+
+
 def simple_psi(inc, exc):
     """Simple PSI calculation without involving a dirichlet prior, coming from reads from junctions"""
-    return inc/(exc+inc)
+    psi = inc/(exc+inc)
+    psi[isnan(psi)] = 0.5 #if NaN, is because exc+inc = 0. If we know nothing, then we don't know if its 0 (exclusion) or 1 (inclusion)
+    return psi 
 
 def reads_given_psi(inc_samples, exc_samples, psi_space):
     #P(vector_i | PSI_i)
@@ -91,7 +103,7 @@ def calc_dirichlet(alpha, n, samples_events, debug=False, psinosample=False):
     psi_matrix = []
     dircalc = DirichletCalc() 
     if psinosample:
-        for i, event_samples in enumerate(np.rollaxis(samples_events, 1)): #The second dimension of the matrix corresponds to the paired samples per event (3rd dimension) for different experiments (1st dimension)       
+        for i, event_samples in enumerate(rollaxis(samples_events, 1)): #The second dimension of the matrix corresponds to the paired samples per event (3rd dimension) for different experiments (1st dimension)       
             if i % 5 == 0:
                 print "event %s..."%i,
                 sys.stdout.flush()
@@ -110,7 +122,7 @@ def calc_dirichlet(alpha, n, samples_events, debug=False, psinosample=False):
             psi_matrix.append(acum_samples/total_acum)
             #print "Junction %s PSI distribution: %s sum_N: %s"%(i, psi_matrix[-1], sum(psi_matrix[-1]))
     else:
-        for i, event_samples in enumerate(np.rollaxis(samples_events, 1)): #we iterate through the second dimension of the matrix, which corresponds to the paired samples per event for different experiments        
+        for i, event_samples in enumerate(rollaxis(samples_events, 1)): #we iterate through the second dimension of the matrix, which corresponds to the paired samples per event for different experiments        
             #This is sampling the PSI. Instead of doing this, we want to fit a parametric form.
             if i % 50 == 0:
                 print "event %s..."%i,

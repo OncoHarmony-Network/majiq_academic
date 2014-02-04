@@ -2,11 +2,8 @@ import sys
 import argparse
 import pickle
 from pylab import *
-#import warnings
-#warnings.filterwarnings('error')
 
 from scipy.stats import beta
-
 
 def likelihood(a_left, b_left, a_right, b_right, a_center, b_center, pi_left, pi_right, pi_center, deltadata):
     first = True
@@ -101,7 +98,6 @@ def label_beta(a, b, pi):
 
 
 def plot_all(a_left, b_left, pi_left, label_left, a_center, b_center, pi_center, label_center, a_right, b_right, pi_right, label_right, figure_title, deltadata):
-    subplot(2,2,1)
     plot_densities(deltadata)
     subplot(2,2,2)
     plot_mixture(a_left, b_left, pi_left, label_left)
@@ -114,13 +110,25 @@ def plot_all(a_left, b_left, pi_left, label_left, a_center, b_center, pi_center,
     suptitle(figure_title, fontsize=24)
 
 
-def plot_densities(deltadata):
-    title("Empirical Data")
-    xlim(-1, 1)
+def plot_densities(deltadata, my_title="Empirical Data"):
+    ax = subplot(2,2,1)
+    deltadata = nan_to_num(deltadata) #substitute nan with zero, because histogram is a shitty function that cant take nans. Shame, shame on histogram. You should be a more manly function and take NaNs without crying, you are part of matplotlib.
+    title(my_title)
+    xlim(0, 1)
     xlabel("Delta PSI")
     ylabel("Density")
-    values, edges = histogram(deltadata / 2, bins = 40)      
-    plot(linspace(-1, 1, num=len(values)), values / 2)    
+    if len(deltadata[deltadata > 1]):
+        print "DELTADATA BAD", deltadata[deltadata > 1]
+        sys.exit(1)
+
+    values, bins = histogram(deltadata, bins = 100, range=(-1, 1))
+    width = 0.7 * (bins[1] - bins[0])
+    center = (bins[:-1] + bins[1:]) / 2
+    bar(center, values, align='center', width=width)
+    ax.set_xticks([0, 0.25, 0.5, 0.75, 1]) #for cosmetics because of the z-space
+    ax.set_xticklabels([-1, -0.5, 0, 0.5, 1]) #for cosmetics because of the z-space
+    #print "VALUES", values
+    #print "EDGES", bins    
 
 
 def truncate_betadists(beta_dists):
@@ -224,24 +232,29 @@ def adjustdelta(deltapsi, output, plotpath=None, title=None, numiter=10, breakit
     z_deltapsi = 0.5*(deltapsi+1)
     z_right_value = 0.5*(V+1)
     z_left_value = 1-z_right_value
+
     #calculate init values
     right_delta = z_deltapsi[z_deltapsi > z_right_value]
     left_delta = z_deltapsi[z_deltapsi < z_left_value]
     center_delta = z_deltapsi[z_deltapsi > z_left_value]
     center_delta = center_delta[center_delta < z_right_value]
+
+    #This is supposed to be better, but it throws away my EM...
     a_left, b_left = ab_from_meanvar(mean(left_delta), var(left_delta))
     a_right, b_right = ab_from_meanvar(mean(right_delta), var(right_delta))
     a_center, b_center = ab_from_meanvar(mean(center_delta), var(center_delta))
+
     pi_left = len(left_delta)/float(len(z_deltapsi))
     pi_right = len(right_delta)/float(len(z_deltapsi))
     pi_center = len(center_delta)/float(len(z_deltapsi))
+    
     beta_dists = EM(a_left, b_left, a_right, b_right, a_center, b_center, pi_left, pi_right, pi_center, z_deltapsi, numiter, plotpath)
     #truncate the beta distributions limiting them to the 0 to 1 space
     beta_dists = truncate_betadists(beta_dists) 
     x_pos, z_mixture_pdf = calc_mixture_pdf(beta_dists)
-    #convert back to the X space from Z space
 
-    return z_mixture_pdf / 2
+    #No need to convert back to the z space, it is a distribution
+    return z_mixture_pdf 
 
 if __name__ == '__main__':
     main()
