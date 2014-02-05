@@ -185,7 +185,6 @@ def rnaseq_AS_events( gene_list, chr ):
             total_cisfrm += len(cisfrm)
             total_aisfrm += len(aisfrm)
 
-            '''counter for AS variants'''
 
 
 
@@ -193,9 +192,37 @@ def rnaseq_AS_events( gene_list, chr ):
 
 
             for ii in (alt+cisfrm):
-                a  = tlb[ii]
-                c1 = tlb[ii-1]
-                c2 = tlb[ii+1]
+                a  = np.asarray(tlb[ii])
+                c1 = np.asarray(tlb[ii-1])
+                c2 = np.asarray(tlb[ii+1])
+
+                ''' counter for AS variants'''
+                
+                c1_5ss=c1.shape[0]
+                a_5ss=a.shape[0]
+
+                try:
+                    c2_3ss=c2.shape[1]
+                except IndexError:
+                    c2_3ss=1
+
+                try:
+                    a_3ss=a.shape[1]
+                except IndexError:
+                    a_3ss = 1 
+                print "SE,ss",c1_5ss, a_3ss,a_5ss,c2_3ss
+#                c1_5ss = np.count_nonzero(np.sum(c1,axis=1))
+#                c2_3ss = np.count_nonzero(np.sum(c1,axis=0))
+#                a_5ss = np.count_nonzero(np.sum(c1,axis=1))
+#                a_3ss = np.count_nonzero(np.sum(c1,axis=0))
+                if c1_5ss > 1: 
+                    SE_events[1] +=1
+                if c2_3ss >1:
+                    SE_events[4] +=1
+                if a_5ss > 1 :
+                    SE_events[3] +=1
+                if a_3ss>1:
+                    SE_events[2] +=1
 
 #                print c1
 #                print a

@@ -84,22 +84,10 @@ def set_gc_factors(bins, factor, means):
     gc_factor = [None]*num_experiments
     for idx, exp in enumerate(exp_list):
 #        gc_factor[idx] = interpolate.interp1d( bins[idx], factor[idx],bounds_error=False )
-        print "FACT",factor[idx]
-#        print factor[idx][-1]
         a = np.append(factor[idx],factor[idx][-1])
-##        print gc_bins[idx], a
-        print "AA", a
-        print "BINS", bins[idx]
-        print "MEANS", means[idx]
         gc_factor[idx] = interpolate.interp1d( means[idx], factor[idx], bounds_error=False) 
 #        gc_factor[idx] = interpolate.interp1d( bins[idx], a , bounds_error=False) 
         
-        mn = bins[idx].min()
-        mx = bins[idx].max()
-        xx = np.arange(mn, mx ,0.001)
-        yy = gc_factor[idx](xx)
-        print "KKKK XX",xx
-        print "KKKK YY",yy
     gc_bins_val = factor
     gc_bins = bins
     gc_means = means

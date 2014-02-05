@@ -248,17 +248,12 @@ class Gene:
         ss_5p_vars = [0]*20
         for ex in ex_list:
             if ex.id is None: continue
-            s3rna, s5rna = ex.get_rna_ss()
+            l3 = len(set(ex.ss_3p_list))
+            l5 = len(set(ex.ss_5p_list))
+            if l3 == 0 or l5 == 0: continue
 #            print "EXONS "
 #            print "ASS3",ex.ss_3p_list
 #            print "ASS5",ex.ss_5p_list
-
-            if  len(set(ex.ss_3p_list)) == 0 : 
-                print "MERDA DE EXON", ex.get_coordinates()
-                # continue
-#            if len(set(s3rna)) > 1:  ss_3p_vars +=1
-#            if len(set(s5rna)) > 1:  ss_5p_vars +=1
-           
 
 
             
@@ -267,8 +262,6 @@ class Gene:
                 print "EXON RARO",ex.get_coordinates(), sorted(set(ex.ss_3p_list)),"3pSS", sorted(set(ex.ss_5p_list)), "5pSS"
 #            print len(set(ex.ss_3p_list)), len(set(ex.ss_5p_list))
 
-            l3 =len(set(ex.ss_3p_list))
-            l5 = len(set(ex.ss_5p_list))
 
             if l3 > 19 : l3 = 19
             if l5 > 19 : l5 = 19
@@ -279,7 +272,6 @@ class Gene:
             st5 = len(ss5_l)
             ss3_l += sorted([ss3 for ss3 in set(ex.ss_3p_list)])
             ss5_l += sorted([ss5 for ss5 in set(ex.ss_5p_list)])
-            if len(ex.ss_3p_list) ==0 : continue
             tlb[exidx] = [range(st3,len(ss3_l)),range(st5,len(ss5_l))]
             exidx += 1
 

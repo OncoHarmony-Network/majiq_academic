@@ -49,8 +49,8 @@ def __get_num_reads(read):
         nreads = int(read.opt('HI'))
     except KeyError:
         nreads = 1
-    return 1
-    #return nreads
+#    return 1
+    return nreads
 
 def count_mapped_reads( filename, exp_idx):
     stats = pysam.flagstat(filename)
@@ -83,9 +83,9 @@ def read_sam_or_bam(filename, gene_list, readlen, chrom, exp_index):
                 strand_read = '+' if not read.is_reverse else '-'
                 if strand_read != strand: continue
                 unique = __is_unique(read)
-#                if not unique : 
-#                    NUnum  += 1
-#                    continue
+                if not unique : 
+                    NUnum  += 1
+                    continue
                 nreads = __get_num_reads(read)
                 gne.add_read_count(nreads, exp_index)
                 is_cross, junc_list = __cross_junctions(read)

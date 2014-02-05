@@ -304,5 +304,5 @@ def plot_gc_content():
             pyplot.grid()
             pyplot.legend(loc='upper left')
 #        pyplot.show()
-        pyplot.savefig('./gcontent_%s.png'%tissue)
+        pyplot.savefig('%s/gcontent_%s.png'%(mglobals.outDir,tissue))
         idx += 1
