@@ -128,6 +128,11 @@ def __junction_filter_check( junc ):
     return (filter)
 
 
+def __total_ss_minreads( junc_mat, minreads):
+
+
+
+
 def __get_enabled_junction(con, exp_list):
     max = 0
     for jrow in con:
@@ -155,14 +160,14 @@ def rnaseq_AS_events( gene_list, chr ):
 
     SE_events = 0
 
-    num_SS_var = [[0]*20,[0]*20]
+    num_SS_var = [[0]*20,[0]*20, 0]
 
     SE_events = [0]*5
     total_SE = 0
 
 
     junc_set = [ [] for xx in range(mglobals.num_experiments)]
-    rand10k  = [set() for xx in range(mglobals.num_experiments)]
+    const_set  = [set() for xx in range(mglobals.num_experiments)]
     jun = [set() for xx in range(mglobals.num_experiments)]
 
     for strand, glist  in gene_list.items():
@@ -170,51 +175,34 @@ def rnaseq_AS_events( gene_list, chr ):
             count = gn.get_read_count().sum()
 
             if count == 0: continue
-            mat, jmat, tlb, varSS = gn.get_rnaseq_mat(rand10k)
+            mat, jmat, tlb, varSS = gn.get_rnaseq_mat(const_set)
 
 
             for ss in range(2):
-                for ssnum in range(10):
+                for ssnum in range(20):
                     num_SS_var[ss][ssnum] +=varSS[ss][ssnum]
-            #num_SS_var [0]+= varSS[0]
+            num_SS_var [2]+= varSS[2]
             #num_SS_var [1]+= varSS[1]
 
-            (alt, cisfrm,aisfrm) = rnaSeq_const_detection(mat, tlb, (True, True, True),gn.get_transcript_AS_candidates())
+            (alt, cisfrm,aisfrm) = rnaSeq_const_detection(mat, tlb, (False, False, False),gn.get_transcript_AS_candidates())
 
 
             total_cisfrm += len(cisfrm)
             total_aisfrm += len(aisfrm)
 
-
-
-
             total_SE += len(alt)
 
-
             for ii in (alt+cisfrm):
-                a  = np.asarray(tlb[ii])
-                c1 = np.asarray(tlb[ii-1])
-                c2 = np.asarray(tlb[ii+1])
+                a  = tlb[ii]
+                c1 = tlb[ii-1]
+                c2 = tlb[ii+1]
 
                 ''' counter for AS variants'''
-                
-                c1_5ss=c1.shape[0]
-                a_5ss=a.shape[0]
+                c1_5ss = len(c1[1])
+                a_5ss  = len(a[1])
+                c2_3ss = len(c2[0])
+                a_3ss  = len(a[0])
 
-                try:
-                    c2_3ss=c2.shape[1]
-                except IndexError:
-                    c2_3ss=1
-
-                try:
-                    a_3ss=a.shape[1]
-                except IndexError:
-                    a_3ss = 1 
-                print "SE,ss",c1_5ss, a_3ss,a_5ss,c2_3ss
-#                c1_5ss = np.count_nonzero(np.sum(c1,axis=1))
-#                c2_3ss = np.count_nonzero(np.sum(c1,axis=0))
-#                a_5ss = np.count_nonzero(np.sum(c1,axis=1))
-#                a_3ss = np.count_nonzero(np.sum(c1,axis=0))
                 if c1_5ss > 1: 
                     SE_events[1] +=1
                 if c2_3ss >1:
@@ -223,7 +211,8 @@ def rnaseq_AS_events( gene_list, chr ):
                     SE_events[3] +=1
                 if a_3ss>1:
                     SE_events[2] +=1
-
+                if c1_5ss == 1 and a_5ss==1  and c2_3ss ==1 and a_3ss==1:
+                    SE_events[0] +=1
 #                print c1
 #                print a
 #                print c2
@@ -266,6 +255,9 @@ def rnaseq_AS_events( gene_list, chr ):
                             jun[exp_idx].add(jnc)
                             utils.prepare_junctions_gc(jnc,exp_idx)
 
+                        const_set[exp_idx].difference(jun[exp_idx])
+
+    mglobals.keep_info(SE_events, num_SS_var[0],num_SS_var[1], num_SS_var[2], total_SE)
 
     print "AS %s DISCARDED JUNCTIONS PER experiment"%chr,num_discard,"/",total, some_none
     print "AS %s constitutive isoform"%total_cisfrm
@@ -273,11 +265,13 @@ def rnaseq_AS_events( gene_list, chr ):
     print "AS %s SKIPPEDO junction"%chr, notjunc,"/",overlp
     print "AS %s How many events with ss variants"%chr, ss_variant
     print "SE skipped isoform detected",total_SE
-    print "SE events %s"%(SE_events)
+    print "SE events %s"%(SE_events), num_SS_var[2]
     print "#Exons with A3SS %s"%num_SS_var[0]
     print "#Exons with A5SS %s"%num_SS_var[1]
 
-    return junc_set, rand10k
+    
+
+    return junc_set, const_set
 
 
 def rnaSeq_const_detection(mat, exon_to_ss, b_list, pre_list=None):

@@ -10,6 +10,7 @@ import grimoire.analize as analize
 import grimoire.rnaseq_io as rnaseq_io
 import grimoire.utils.utils as utils
 import grimoire.mglobals as mglobals
+
 try:
     import cPickle as pickle
 except:
@@ -128,6 +129,8 @@ def main() :
    # p2p = {}
 
     utils.merge_and_create_MAJIQ( chr_list, 'tojuan.majiq')
+    mglobals.print_numbers()
+
 
 if __name__ == "__main__":
     main()

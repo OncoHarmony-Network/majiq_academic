@@ -80,7 +80,7 @@ class Exon:
 
     def add_new_read(self, start, end, readSeq, s3p_junc, s5p_junc):
 
-        if start > end :
+        if start > end : 
             print " INCORRECT exon definition",start, end
             exit()
         if start < self.start :

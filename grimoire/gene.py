@@ -246,6 +246,7 @@ class Gene:
         exidx = 0
         ss_3p_vars = [0]*20
         ss_5p_vars = [0]*20
+        ss_both_var = 0
         for ex in ex_list:
             if ex.id is None: continue
             l3 = len(set(ex.ss_3p_list))
@@ -255,8 +256,8 @@ class Gene:
 #            print "ASS3",ex.ss_3p_list
 #            print "ASS5",ex.ss_5p_list
 
+        
 
-            
 
             if len(set(ex.ss_3p_list)) > 6 or len(set(ex.ss_5p_list)) > 6:  
                 print "EXON RARO",ex.get_coordinates(), sorted(set(ex.ss_3p_list)),"3pSS", sorted(set(ex.ss_5p_list)), "5pSS"
@@ -265,16 +266,32 @@ class Gene:
 
             if l3 > 19 : l3 = 19
             if l5 > 19 : l5 = 19
-            ss_3p_vars[l3] += 1
-            ss_5p_vars[l5] += 1
+            if l3 > 1 and l5 >1 : ss_both_var += 1
+            minreads = 5
+
+            for ss3p in  ex.ss_3p_list:
+                for exread in ex.exonRead_list:
+                    if ss3p != exread.start : continue
+                    if exread.p3_junc is None: continue
+                    if exread.p3_junc.readN.sum() >= minreads : 
+                        ss_3p_vars[l3] += 1
+            for ss5p in  ex.ss_5p_list:
+                for exread in ex.exonRead_list:
+                    if ss5p != exread.end : continue
+                    if exread.p5_junc is None: continue
+                    if exread.p5_junc.readN.sum() >= minreads : 
+                        ss_5p_vars[l5] += 1
+
 
             st3 = len(ss3_l)
             st5 = len(ss5_l)
             ss3_l += sorted([ss3 for ss3 in set(ex.ss_3p_list)])
             ss5_l += sorted([ss5 for ss5 in set(ex.ss_5p_list)])
             tlb[exidx] = [range(st3,len(ss3_l)),range(st5,len(ss5_l))]
-            exidx += 1
 
+            exidx += 1
+        print "A5",ss5_l
+        print "A3",ss3_l
         mat  = np.zeros(shape=(len(ss5_l),len(ss3_l)),dtype='int')
         jmat = np.zeros(shape=(len(ss5_l),len(ss3_l)),dtype='object')
         jmat.fill(None)
@@ -293,7 +310,7 @@ class Gene:
                 if junc.get_readN(exp_idx) >= 10 : #and in_DB:
                     rand10k[exp_idx].add(junc)
 
-        return mat, jmat, tlb, [ss_3p_vars, ss_5p_vars]
+        return mat, jmat, tlb, [ss_3p_vars, ss_5p_vars,ss_both_var]
 
 
 class Transcript :
