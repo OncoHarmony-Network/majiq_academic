@@ -66,9 +66,9 @@ def prepare_MAJIQ_table(junc_set, non_as, temp_file):
     for name, ind_list in mglobals.tissue_repl.items() :
 
         for idx,exp_idx in enumerate(ind_list) :
-            info = {}
+#            info = {}
 #            info ['weigh_factor'] = mglobals.weigh_factor
-            info ['experiment']   = mglobals.exp_list[exp_idx]
+#            info ['experiment']   = mglobals.exp_list[exp_idx]
 #            info ['GC_bins']      = mglobals.gc_bins[exp_idx]
 #            info ['GC_bins_val']  = mglobals.gc_bins_val[exp_idx]
 
@@ -87,21 +87,25 @@ def prepare_MAJIQ_table(junc_set, non_as, temp_file):
                     majiq_table_nonas[jix] = majiq_junc( jn , exp_idx)
 
             file_pi = open("%s/temp_%s.%s"%(mglobals.temp_oDir[exp_idx],mglobals.exp_list[exp_idx], temp_file), 'w+')
-            pickle.dump((info,majiq_table_as, majiq_table_nonas), file_pi)
+            pickle.dump((majiq_table_as, majiq_table_nonas), file_pi)
             file_pi.close()
 
 
 def merge_and_create_MAJIQ ( chr_list, ofile ):
     for name, ind_list in mglobals.tissue_repl.items() :
         for idx,exp_idx in enumerate(ind_list) :
-            info = {}
             as_table = []
             nonas_table = []
+            info = {}
+#            info ['weigh_factor'] = mglobals.weigh_factor
+            info ['experiment']   = mglobals.exp_list[exp_idx]
+            info ['GC_bins']      = mglobals.gc_bins[exp_idx]
+            info ['GC_bins_val']  = mglobals.gc_bins_val[exp_idx]
             for chrom in chr_list:
                 filename = '%s/temp_%s.%s.obj'%(mglobals.temp_oDir[exp_idx], mglobals.exp_list[exp_idx], chrom)
                 if not os.path.exists(filename): continue
                 file_pi2 = open(filename, 'rb')
-                info,as_t,non_as = pickle.load(file_pi2)
+                as_t,non_as = pickle.load(file_pi2)
                 as_table.append(as_t)
                 nonas_table.append(non_as)
             if len(as_table)==0: continue
@@ -160,8 +164,8 @@ def prepare_junctions_gc( junc , exp_idx):
     gci = np.zeros(shape=(mglobals.readLen - 16+1))
     for jj in range(mglobals.readLen - 16+1) :
         if not junc is None and junc.get_gc_content()[exp_idx,jj] != 0:
+            #gci[jj] = __gc_factor_ind(junc.get_gc_content()[exp_idx,jj],exp_idx)
             pass
-            # JV TO CHANGEgci[jj] = __gc_factor_ind(junc.get_gc_content()[exp_idx,jj],exp_idx)
             #gc[jj] = mglobals.gc_factor[exp_idx](junc.get_gc_content()[exp_idx,jj])
 
     if not junc is None:
@@ -214,7 +218,13 @@ def gc_factor_calculation(exon_list, nb):
                 gc_val = ex.get_gc_content()
                 st,end = ex.get_coordinates()
                 cov = ex.get_coverage(exp_n)
-                if  gc_val is None or cov<1 : continue
+
+                # TEST AND CHECK
+#                if gc_val is None or cov == 0:
+#                    print ex.strand, st, end
+
+
+                if  gc_val is None or end-st < 30  or cov < 5: continue
                 count.append( cov )
                 gc.append( gc_val )
             if len(gc) == 0 : continue
@@ -283,8 +293,8 @@ def plot_gc_content():
         for exp_n in list_idx :
 #            f = interpolate.interp1d(mglobals.gc_means[exp_n], mglobals.gc_bins_vaL[exp_n])
             print mglobals.gc_means[exp_n]
-            mn = mglobals.gc_bins[exp_n].min()
-            mx = mglobals.gc_bins[exp_n].max()
+            mn = mglobals.gc_means[exp_n].min()
+            mx = mglobals.gc_means[exp_n].max()
             xx = np.arange(mn, mx ,0.001)
             yy = mglobals.gc_factor[exp_n](xx)
             print "XX",xx
@@ -294,5 +304,5 @@ def plot_gc_content():
             pyplot.grid()
             pyplot.legend(loc='upper left')
 #        pyplot.show()
-        pyplot.savefig('./gcontent_%s.png'%tissue)
+        pyplot.savefig('%s/gcontent_%s.png'%(mglobals.outDir,tissue))
         idx += 1
