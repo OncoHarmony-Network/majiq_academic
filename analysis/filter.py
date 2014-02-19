@@ -53,15 +53,15 @@ def discardminreads_and(incexcpairs, minreads=0, logger=False):
     """
     all_pairs = []
     ret = []
-    for inc, exc, in incexcpairs:
-        inc, exc = discardminreads(minreads, True, logger, True, array(inc), array(exc)) 
+    for exc, inc in incexcpairs:
+        exc, inc = discardminreads(minreads, False, logger, True, array(exc), array(inc)) 
         all_pairs.append(inc)
         all_pairs.append(exc)
 
     #convert to numpy arrays
     all_pairs = [array(x) for x in all_pairs]
 
-    return discardminreads(-1, False, logger, False, *all_pairs)
+    return discardminreads(0, True, logger, False, *all_pairs)
 
 
 def discardminreads(minreads=0, orfilter=True, logger=False, returnempty=False, *junc):

@@ -165,7 +165,6 @@ def main():
 
         best_set["exc1"], best_set["inc1"], best_set["exc2"], best_set["inc2"] = discardminreads_and(incexcpairs=[[all_junctions["inc1"], all_junctions["exc1"]], [all_junctions["inc2"], all_junctions["exc2"]]], minreads=minandreads, logger=False)
 
-
         """
         mylogger = True
         orfilter = True

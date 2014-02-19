@@ -28,7 +28,6 @@ def _save_or_show(plotpath, plotname=None):
     else:
         show()
 
-
 def _load_data3(my_mat, name, my_type):
     return {"junctions":my_mat[name][my_type][0, 0][0, 0]['cov'], "gc_content": my_mat[name][my_type][0, 0][0, 0]['gc_val']}
 

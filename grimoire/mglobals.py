@@ -20,9 +20,29 @@ def ConfigSectionMap(Config, section):
 
 
 
+def keep_info(SEevents, a3 , a5, both, SE) :
+    global SEev,A3SS,A5SS, bothSS, totalSE
+    for idx in range(20):
+        A3SS[idx] += a3[idx]
+        A5SS[idx] += a5[idx]
+
+    for idx,ii in enumerate(SEevents):
+        SEev[idx] += ii
+
+    bothSS += both
+    totalSE += SE
+
+def print_numbers():
+    print "A3SS",A3SS
+    print "A5SS",A5SS
+    print "SE events",SEev
+    print "Total SE",totalSE
+    print "BOTH",bothSS
+
 def global_conf_ini(filename):
 
     global num_experiments, exp_list, readLen, gc_factor, weigh_factor, gc_bins, gc_bins_val, tissue_repl, sam_dir, num_mapped_reads, genome, outDir, temp_oDir
+    global A3SS, A5SS,SEev, bothSS, totalSE
 
     Config = ConfigParser.ConfigParser()
     Config.read(filename)
@@ -49,11 +69,17 @@ def global_conf_ini(filename):
                 os.makedirs(temp_oDir[count])
             count +=1
     num_experiments = len(exp_list)
-    
+
 
     num_mapped_reads = [0] * num_experiments
 
     genome = 'mm10'
+
+    A3SS = [0]*20
+    A5SS = [0]*20
+    bothSS = 0
+    SEev = [0]*5
+    totalSE = 0
 #    #ad hoc data
 #    gc_factor = [None]*num_experiments
 #    gc_bins_val = [0]*num_experiments
@@ -84,22 +110,10 @@ def set_gc_factors(bins, factor, means):
     gc_factor = [None]*num_experiments
     for idx, exp in enumerate(exp_list):
 #        gc_factor[idx] = interpolate.interp1d( bins[idx], factor[idx],bounds_error=False )
-        print "FACT",factor[idx]
-#        print factor[idx][-1]
         a = np.append(factor[idx],factor[idx][-1])
-##        print gc_bins[idx], a
-        print "AA", a
-        print "BINS", bins[idx]
-        print "MEANS", means[idx]
-#        gc_factor[idx] = interpolate.interp1d( means[idx], a , bounds_error=False) 
-        gc_factor[idx] = interpolate.interp1d( means[idx], factor[idx] , bounds_error=False) 
+        gc_factor[idx] = interpolate.interp1d( means[idx], factor[idx], bounds_error=False) 
+#        gc_factor[idx] = interpolate.interp1d( bins[idx], a , bounds_error=False) 
         
-        mn = bins[idx].min()
-        mx = bins[idx].max()
-        xx = np.arange(mn, mx ,0.001)
-        yy = gc_factor[idx](xx)
-        print "KKKK XX",xx
-        print "KKKK YY",yy
     gc_bins_val = factor
     gc_bins = bins
     gc_means = means
