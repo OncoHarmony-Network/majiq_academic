@@ -264,23 +264,35 @@ class Gene:
 #            print len(set(ex.ss_3p_list)), len(set(ex.ss_5p_list))
 
 
-            if l3 > 19 : l3 = 19
-            if l5 > 19 : l5 = 19
-            if l3 > 1 and l5 >1 : ss_both_var += 1
             minreads = 5
+            local_3p = 0
+            local_5p = 0
+
+            temp_Set = set()
 
             for ss3p in  ex.ss_3p_list:
                 for exread in ex.exonRead_list:
                     if ss3p != exread.start : continue
                     if exread.p3_junc is None: continue
                     if exread.p3_junc.readN.sum() >= minreads : 
-                        ss_3p_vars[l3] += 1
+                        temp_Set.add(ss3p)
+            local_3p = len(temp_Set)
+
+            temp_Set = set()
             for ss5p in  ex.ss_5p_list:
                 for exread in ex.exonRead_list:
                     if ss5p != exread.end : continue
                     if exread.p5_junc is None: continue
                     if exread.p5_junc.readN.sum() >= minreads : 
-                        ss_5p_vars[l5] += 1
+                        temp_Set.add(ss5p)
+            local_5p = len(temp_Set)
+            if local_3p > 1 and local_5p >1 : ss_both_var += 1
+            print local_3p
+            if local_3p > 19 : local_3p = 19
+            if local_5p > 19 : local_5p = 19
+            ss_3p_vars[local_3p] += 1
+            ss_5p_vars[local_5p] += 1
+            
 
 
             st3 = len(ss3_l)

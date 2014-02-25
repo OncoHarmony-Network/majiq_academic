@@ -128,10 +128,18 @@ def __junction_filter_check( junc ):
     return (filter)
 
 
-def __total_ss_minreads( junc_mat, minreads):
+def __total_ss_minreads( junc_mat, minreads=5):
+    print " MIN READS on "
+    print junc_mat
 
+    js = set()
 
+    for jlst in junc_mat:
+        for jj in jlst:
+            if jj is None: continue
+            if jj.readN.sum()> minreads : js.add(jj)
 
+    return len(js)
 
 def __get_enabled_junction(con, exp_list):
     max = 0
@@ -198,10 +206,17 @@ def rnaseq_AS_events( gene_list, chr ):
                 c2 = tlb[ii+1]
 
                 ''' counter for AS variants'''
-                c1_5ss = len(c1[1])
-                a_5ss  = len(a[1])
-                c2_3ss = len(c2[0])
-                a_3ss  = len(a[0])
+
+                print "KKKKKKVACA", c1[1]
+                print "LLLLLLVACA", a[1]
+                c1_5ss =__total_ss_minreads( jmat[ c1[1][0] : c1[1][-1]+1])
+                a_5ss =__total_ss_minreads(  jmat[  a[1][0] :  a[1][-1]+1])
+                c2_3ss =__total_ss_minreads( jmat[ :,  a[0][0]: a[0][-1]+1])
+                a_3ss =__total_ss_minreads(  jmat[ :, c2[0][0]:c2[0][-1]+1])
+#                c1_5ss = len(c1[1])
+                #a_5ss  = len(a[1])
+                #c2_3ss = len(c2[0])
+                #a_3ss  = len(a[0])
 
                 if c1_5ss > 1: 
                     SE_events[1] +=1

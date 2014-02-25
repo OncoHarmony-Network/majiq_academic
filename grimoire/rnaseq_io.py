@@ -29,6 +29,8 @@ def __cross_junctions(read):
             cross = True
         #end else ...
     except KeyError:
+
+        
         print"THIS IS NOT a WELL defined STAR output"
     return (cross,jlist)
 

@@ -119,7 +119,7 @@ def main() :
             for gg in genes_l:
                 temp += gg.get_exon_list()
 
-
+    #utils.generate_visualization_output(all_genes)
     print "number of gcs", len(temp)
     utils.gc_factor_calculation(temp, 10)
     utils.plot_gc_content()

@@ -115,7 +115,16 @@ def merge_and_create_MAJIQ ( chr_list, ofile ):
             pickle.dump((info,AT, NAT), file_pi)
             file_pi.close()
 
+            exp_info = {}
+            exp_info ['file']       = "%s/%s.sorted.bam"%(mglobals.sam_dir,mglobals.exp_list[exp_idx])
+            exp_info ['genome']     = mglobals.genome 
+            exp_info ['gc']         = mglobals.gc_bins[exp_idx]
+#            exp_info ['transcript'] = mglobals.transcripts
+            exp_info ['num_reads']  = mglobals.num_mapped_reads[exp_idx]
 
+            file_pi = open('%s/info.%s.majiq'%(mglobals.outDir,mglobals.exp_list[exp_idx]), 'w+')
+            pickle.dump(exp_info, file_pi)
+            file_pi.close()
 
 def set_exons_gc_content(chrom, exon_list ):
 
@@ -156,6 +165,42 @@ def set_exons_gc_content(chrom, exon_list ):
         if len(sequence) == 0 : 
             print "KKKKseq",exon.get_coordinates()
         exon.set_gc_content(sequence)
+
+
+
+def generate_visualization_output( allgenes ):
+
+    from collections import namedtuple
+    vExon = namedtuple("MyStruct", "start end a3 a5")
+    
+    gene_list = []
+    for gl in allgenes.values(): 
+        for genes_l in gl.values():
+            for gg in genes_l:
+                junc_l = np.asarray([jj.get_coordinates() for jj in gg.get_all_junctions()])
+
+                exon_list = []
+                for ex in gg.get_exon_list():
+                    cc = ex.get_coordinates()
+
+                    a3 = []
+                    for ss3 in ex.ss_3p_list:
+                        for jidx, jjl in enumerate(junc_l):
+                            if ss3 != jjl[1]: continue
+                            a3.append(jidx)
+                    a5 = []
+                    for ss5 in ex.ss_5p_list:
+                        for jidx, jjl in enumerate(junc_l):
+                            if ss5 != jjl[0]: continue
+                            a5.append(jidx)
+                    vx = vExon(start=cc[0],end=cc[1],a3=a3,a5=a5)
+                    exon_list.append(vx)
+            gene_list.append((exon_list,junc_l))
+
+    file_pi = open('%s/visual_LSE.majiq'%(mglobals.outDir),'w+')
+    pickle.dump((gene_list), file_pi)
+    file_pi.close()
+
 
 
 def prepare_junctions_gc( junc , exp_idx):
@@ -292,14 +337,15 @@ def plot_gc_content():
         pyplot.figure(idx)
         for exp_n in list_idx :
 #            f = interpolate.interp1d(mglobals.gc_means[exp_n], mglobals.gc_bins_vaL[exp_n])
-            print mglobals.gc_means[exp_n]
+#            print mglobals.gc_means[exp_n]
             mn = mglobals.gc_means[exp_n].min()
             mx = mglobals.gc_means[exp_n].max()
             xx = np.arange(mn, mx ,0.001)
             yy = mglobals.gc_factor[exp_n](xx)
-            print "XX",xx
-            print "Yy",yy
+#            print "XX",xx
+#            print "Yy",yy
             pyplot.plot(xx,yy,label=mglobals.exp_list[exp_n])
+            pyplot.axis((0.3,0.7,0.5,1.5))
             pyplot.title("Gc factor")
             pyplot.grid()
             pyplot.legend(loc='upper left')
