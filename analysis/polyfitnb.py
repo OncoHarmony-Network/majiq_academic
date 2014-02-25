@@ -4,6 +4,7 @@ import argparse
 import pickle
 from collections import defaultdict
 
+from numpy.ma import masked_less
 from scipy.io import loadmat
 from scipy.stats import nbinom
 from pylab import *
@@ -54,14 +55,6 @@ def _save_or_show(plotpath, plotname=None):
     else:
         show()
 
-def _numzeros(junctions):
-    "Obtain the number of zeros for every junction"
-    return (junctions == 0).sum(axis=1)
-
-def _numnonzeros(junctions):
-    "Obtain the number NON zero positions for every junction"
-    return (junctions != 0).sum(axis=1)
-
 def get_ecdf(pvalues):
     hist, bin_edges = histogram(pvalues, range=[0,1], bins=len(pvalues)/10, density=True)
     return cumsum(hist)/len(bin_edges)
@@ -93,29 +86,27 @@ def plot_negbinomial_fit(mean_junc, std_junc, fit_function, plotpath, plotname):
     _save_or_show(plotpath, plotname)
 
 
-def get_pvalues(sum_junctions, a, b, nonzeros, dispersion):
+def get_pvalues(junctions, a, b, dispersion):
     pvalues = []
     b = 0
-    for i, junction in enumerate(sum_junctions):
-        if nonzeros[i] > 0:
-            junction_value = junction/nonzeros[i]
+    for i, junction in enumerate(junctions):
+        if junction.any():
+            junction_value = junction.mean()
             r, p = func2nb(a, b, junction_value, dispersion)
             my_nb = nbinom(r, p)
             pval = 1-my_nb.cdf(junction_value)
         else:
             pval = 1 #if no reads, p-value is 1 
 
-        #if not isnan(pval):  #only include nonnan palues
         pvalues.append(pval) 
-        #print "Discarded NAN pvalue: %s out of %s junctions (%.2f%%)"%(len(sum_junctions)-len(pvalues), len(sum_junctions), (len(sum_junctions)-len(pvalues))/float(len(sum_junctions))*100)
-    
+         
     return pvalues
 
-def adjust_fit(starting_a, b, sum_junctions, nonzeros, precision, previous_score, dispersion, final=False, logger=None):
+def adjust_fit(starting_a, b, junctions, precision, previous_score, dispersion, final=False, logger=None):
     previous_a = -1
     if logger: logger.info("Starting from %s with precision %s"%(starting_a, precision))
     for corrected_a in arange(starting_a, 0, -precision): #since we are reducing the "a" from the fit and the problem is too much variability, we expect optimization to be getting the "a" below 
-        pvalues = get_pvalues(sum_junctions, corrected_a, b, nonzeros, dispersion)
+        pvalues = get_pvalues(junctions, corrected_a, b, dispersion)
         ecdf = get_ecdf(pvalues)
         score = score_ecdf(ecdf)
         if previous_score < score: #the best fit are previous_a and previous_score
@@ -136,17 +127,16 @@ def adjust_fit(starting_a, b, sum_junctions, nonzeros, precision, previous_score
 def fit_nb(junctions, outpath, plotpath, gcnorm=True, trim=True, minnonzero=5, plotmapzeros=False, discardb=False, nbdisp=0.1, logger=None):
     if logger: logger.info("NBFit: Plots will be drawn in %s..."%plotpath)
     #normalize the junctions
+    junctions = masked_less(junctions, 1) #mask everything below zero 
     mean_junc = junctions.mean(axis=1)
     std_junc = junctions.std(axis=1)
     #linear regression, retrieve the a and the b plus 
     a, b = polyfit(mean_junc, std_junc, 1)
     if logger: logger.info("Fitting function: y = x*a+b. a=%.5f b=%.5f"%(a, b))
     fit_function = poly1d([a, b])
-    nb_r, nb_p, matching_x = nb_from_func(fit_function, max(mean_junc), dispersion=nbdisp) #We calculate both r and p parameters of the negative binomial distribution along the function
+    nb_r, nb_p, matching_x = nb_from_func(fit_function, max(mean_junc), dispersion=nbdisp) #We calculate both r and p parameters of the negative binomial distribution along with the function
     plot_negbinomial_fit(mean_junc, std_junc, fit_function, plotpath, "Before correction")    
     #pvalue study
-    nonzeros = _numnonzeros(junctions) 
-    sum_junctions = junctions.sum(axis=1)
      
     #find the corresponding NB parameters to the junction mean
     score = sys.maxint
@@ -158,11 +148,11 @@ def fit_nb(junctions, outpath, plotpath, gcnorm=True, trim=True, minnonzero=5, p
         b = 0
 
     for i, precision in enumerate(precision_values):
-        corrected_a, score, ecdf, pvalues = adjust_fit(corrected_a, b, sum_junctions, nonzeros, precision, score, nbdisp, logger)
+        corrected_a, score, ecdf, pvalues = adjust_fit(corrected_a, b, junctions, precision, score, nbdisp, logger)
         if logger: logger.info("Corrected to %.5f with precision %s. Current score is %.5f"%(corrected_a, precision, score))
         if i+1 != len(precision_values): #go "up" in the scale so we dont miss better solution
             corrected_a += precision-precision_values[i+1]
-            pvalues = get_pvalues(sum_junctions, corrected_a, b, nonzeros, nbdisp)
+            pvalues = get_pvalues(junctions, corrected_a, b, nbdisp)
             ecdf    = get_ecdf(pvalues)
             score   = score_ecdf(ecdf)
 

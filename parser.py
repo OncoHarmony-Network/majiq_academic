@@ -35,6 +35,9 @@ def main():
     psianddelta.add_argument('--nogc', dest="gcnorm", action='store_false', default=True, help='psianddelta GC content normalization [Default: GC content normalization activated]')
     psianddelta.add_argument('--nodiscardb', dest="discardb", action='store_false',  default=True, help='Skip biscarding the b from the NB polynomial function, since we expect our fit to start from x=0, y=0')
     psianddelta.add_argument('--nodiscardzeros', action='store_false', default=True, dest="discardzeros", help='Skip discarding zeroes')    
+    psianddelta.add_argument('--n', default=1, type=int, help='Number of PSI samples per sample paired. [Default: %(default)s]') 
+    psianddelta.add_argument('--psiparam', default=False, action='store_true', help='Instead of sampling, use a parametric form for the PSI calculation. [Default: %(default)s]')
+
     #psianddelta.add_argument('--ONLYSTACKS', action='store_true', help="Debug flag that should dissapear. Used to test if stacks are worth masking.")
     #psianddelta.add_argument('--usetensor', action='store_true')
 
@@ -51,12 +54,13 @@ def main():
     delta.add_argument('--iter', default=10, type=int, help='Max number of iterations of the EM')
     delta.add_argument('--breakiter', default=0.01, type=float, help='If the log likelihood increases less that this flag, do not do another EM step')
     delta.add_argument('--V', default=0.1, type=float, help='Value of DeltaPSI used for initialization of the EM model [Default: %(default)s]')
+    delta.add_argument('--synthprior', action='store_true', default=False, help=' Generate the prior for DELTA PSI using our assumptions instead of the empirical data [Default: %(default)s]')
+    delta.add_argument('--priorstd', default=0.2, type=float, help="Standard deviation from the 0.5 PSI mean that the synthetic prior matrix has. Only works with --synthprior. [Default: %(default)s]")
+    delta.add_argument('--prioruniform', default=0.2, type=float, help="Uniform distribution to give a bit more of a chance to values out of the normal distribution. that the synthetic prior matrix has. Only works with --synthprior. [Default: %(default)s]")
 
     #calcpsi flags
     psi = new_subparser()
     psi.add_argument('files', nargs='+', help='The experiment files to analyze. You can include more than one (they will all be analyzed independently though) Glob syntax supported.')
-    psi.add_argument('--n', default=1, type=int, help='Number of PSI samples per sample paired. [Default: %(default)s]') 
-    psi.add_argument('--psiparam', default=False, action='store_true', help='Instead of sampling, use a parametric form for the PSI calculation. [Default: %(default)s]')
     psi.add_argument('--minreads', default=0, type=int, help='Minimum number of reads combining all positions in an event to be considered. [Default: %(default)s]') 
     psi.add_argument('--minnonzero', default=0, type=int, help='Minimum number of start positions with at least 1 read for an event to be considered.')
 
