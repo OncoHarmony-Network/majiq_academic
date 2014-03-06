@@ -4,6 +4,7 @@ from gene import Gene, Transcript
 from exon import Exon
 from junction import Junction
 from utils import utils, stats
+from slv import SLV, SSOURCE, STARGET
 import mglobals
 import random
 import scipy.io
@@ -129,11 +130,10 @@ def __junction_filter_check( junc ):
 
 
 def __total_ss_minreads( junc_mat, minreads=5):
-    print " MIN READS on "
-    print junc_mat
+#    print " MIN READS on "
+#    print junc_mat
 
     js = set()
-
     for jlst in junc_mat:
         for jj in jlst:
             if jj is None: continue
@@ -152,6 +152,112 @@ def __get_enabled_junction(con, exp_list):
             continue
         break
     return jj
+
+
+def LSV_detection( gene_list, chr ):
+
+    num_discard = 0
+    total = 0
+    total_cisfrm = 0
+    total_aisfrm = 0
+    some_none = 0
+    overlp = 0
+    notjunc = 0
+    ss_variant = 0
+
+    SE_events = 0
+
+    num_SS_var = [[0]*20,[0]*20, 0]
+
+    SE_events = [0]*5
+    total_SE = 0
+
+
+#    junc_set = [ [] for xx in range(mglobals.num_experiments)]
+    const_set  = [set() for xx in range(mglobals.num_experiments)]
+#    jun = [set() for xx in range(mglobals.num_experiments)]
+
+    slv_list = []
+
+    for strand, glist  in gene_list.items():
+        for gn in glist:
+            count = gn.get_read_count().sum()
+
+            if count == 0: continue
+            mat, exon_list, tlb, varSS = gn.get_rnaseq_mat(const_set,lsv = True)
+            for ss in range(2):
+                for ssnum in range(20):
+                    num_SS_var[ss][ssnum] +=varSS[ss][ssnum]
+            num_SS_var [2]+= varSS[2]
+            #num_SS_var [1]+= varSS[1]
+
+            SS, ST = LSV_matrix_detection(mat, tlb, (False, False, False))
+#            print SS
+#            print ST
+#            print "Single source ",len(SS)
+#            print "SINGLE TARGET ", len(ST)
+            for slv_index, slv_lst in enumerate((SS,ST)):
+                slv_type = (SSOURCE,STARGET)[slv_index]
+                sstype = ['5prime','3prime'][slv_index]
+#                print slv_lst
+                for idx in slv_lst:
+                    coord = exon_list[idx].get_coordinates()
+                    jlist = exon_list[idx].get_junctions(sstype)
+                    slv_list.append(SLV(coord, "%s-%s"%coord,jlist, slv_type))
+
+#    mglobals.keep_info(SE_events, num_SS_var[0],num_SS_var[1], num_SS_var[2], total_SE)
+
+#    print "AS %s DISCARDED JUNCTIONS PER experiment"%chr,num_discard,"/",total, some_none
+#    print "AS %s constitutive isoform"%total_cisfrm
+#    print "AS %s AS isoform present in transcript analysis"%total_aisfrm
+#    print "AS %s SKIPPEDO junction"%chr, notjunc,"/",overlp
+#    print "AS %s How many events with ss variants"%chr, ss_variant
+#    print "SE skipped isoform detected",total_SE
+#    print "SE events %s"%(SE_events), num_SS_var[2]
+#    print "#Exons with A3SS %s"%num_SS_var[0]
+#    print "#Exons with A5SS %s"%num_SS_var[1]
+
+    return slv_list
+
+def LSV_matrix_detection( mat, exon_to_ss, b_list ):
+    '''
+       Rules for const are:
+        1. All the junction from A should go to C1 or C2
+        2. All the junction from C1 should go to A
+        3. All the junction to C2 should come from A
+        4. Number of reads from C1-A should be equivalent to number of reads from A-C2
+    '''
+    SLV_list = [[],[]]
+    const = abs(math.log(1.5/1.0,2))
+
+    #change bucle for iterate by exons
+    for ii in range( 1, len(exon_to_ss) -1 ) :
+
+        slv = exon_to_ss[ii]
+
+        if len(slv[0]) <=1 and len(slv[1]) <=1: continue
+
+        
+
+        pre_slv = exon_to_ss[ii-1]
+        post_slv = exon_to_ss[ii+1]
+
+#        c1_a = mat[ c1[1][0] : c1[1][-1]+1,  a[0][0] :  a[0][-1]+1 ]
+#        a_c2 = mat[  a[1][0] :  a[1][-1]+1, c2[0][0] : c2[0][-1]+1 ]
+#        c1c2 = mat[ c1[1][0] : c1[1][-1]+1, c2[0][0] : c2[0][-1]+1 ]
+
+        single_entry_SS  = mat[ : pre_slv[1][0], post_slv[0][0] :  ]
+        single_source_ST = mat[ : pre_slv[1][0], post_slv[0][0] :  ]
+
+        if np.count_nonzero(single_entry_SS) > 0 : continue
+
+        if len(slv[1]) >1:
+            SLV_list[0].append(ii)
+
+        if len(slv[0]) >1:
+            SLV_list[1].append(ii)
+
+    return SLV_list
 
 
 
@@ -207,8 +313,8 @@ def rnaseq_AS_events( gene_list, chr ):
 
                 ''' counter for AS variants'''
 
-                print "KKKKKKVACA", c1[1]
-                print "LLLLLLVACA", a[1]
+                #print "KKKKKKVACA", c1[1]
+                #print "LLLLLLVACA", a[1]
                 c1_5ss =__total_ss_minreads( jmat[ c1[1][0] : c1[1][-1]+1])
                 a_5ss =__total_ss_minreads(  jmat[  a[1][0] :  a[1][-1]+1])
                 c2_3ss =__total_ss_minreads( jmat[ :,  a[0][0]: a[0][-1]+1])

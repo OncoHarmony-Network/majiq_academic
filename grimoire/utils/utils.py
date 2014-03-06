@@ -57,8 +57,35 @@ def __gc_factor_ind(val, exp_idx):
     for ii,jj in enumerate(mglobals.gc_bins[exp_idx]):
         if val < jj:
             res = ii
-
     return res
+
+def prepare_SLV_table(SLV_list, non_as, temp_file):
+
+    for name, ind_list in mglobals.tissue_repl.items() :
+        for idx,exp_idx in enumerate(ind_list) :
+#            info = {}
+#            info ['weigh_factor'] = mglobals.weigh_factor
+#            info ['experiment']   = mglobals.exp_list[exp_idx]
+#            info ['GC_bins']      = mglobals.gc_bins[exp_idx]
+#            info ['GC_bins_val']  = mglobals.gc_bins_val[exp_idx]
+
+            jun = set(SLV_list)
+            non_as[exp_idx].difference(jun)
+            majiq_table_as    = np.zeros( shape=(len(junc_set[exp_idx]),2), dtype=np.dtype('object'))
+            majiq_table_nonas = np.zeros( shape=(len(non_as[exp_idx]),1), dtype=np.dtype('object'))
+
+            # We iterate over the inc and exc in order to fill the majiq_junc_matrix
+            
+            for iix, jn_lst in enumerate(junc_set[exp_idx]) :
+                for lab_idx in range(2):
+                    #print jn_lst
+                    majiq_table_as[iix, lab_idx] = majiq_junc( jn_lst[lab_idx], exp_idx)
+            for jix, jn in enumerate(non_as[exp_idx]) :
+                    majiq_table_nonas[jix] = majiq_junc( jn , exp_idx)
+
+            file_pi = open("%s/temp_%s.%s"%(mglobals.temp_oDir[exp_idx],mglobals.exp_list[exp_idx], temp_file), 'w+')
+            pickle.dump((majiq_table_as, majiq_table_nonas), file_pi)
+            file_pi.close()
 
 def prepare_MAJIQ_table(junc_set, non_as, temp_file):
 
@@ -171,7 +198,7 @@ def set_exons_gc_content(chrom, exon_list ):
 def generate_visualization_output( allgenes ):
 
     from collections import namedtuple
-    vExon = namedtuple("MyStruct", "start end a3 a5")
+    #vExon = namedtuple("MyStruct", "start end a3 a5")
     
     gene_list = []
     for gl in allgenes.values(): 
@@ -193,7 +220,7 @@ def generate_visualization_output( allgenes ):
                         for jidx, jjl in enumerate(junc_l):
                             if ss5 != jjl[0]: continue
                             a5.append(jidx)
-                    vx = vExon(start=cc[0],end=cc[1],a3=a3,a5=a5)
+                    vx = {'coordinates':cc,'a3':a3,'a5':a5}
                     exon_list.append(vx)
             gene_list.append((exon_list,junc_l))
 
@@ -269,7 +296,7 @@ def gc_factor_calculation(exon_list, nb):
 #                    print ex.strand, st, end
 
 
-                if  gc_val is None or end-st < 30  or cov < 5: continue
+                if  gc_val is None or end-st < 30  or cov < 1: continue
                 count.append( cov )
                 gc.append( gc_val )
             if len(gc) == 0 : continue
@@ -303,8 +330,8 @@ def gc_factor_calculation(exon_list, nb):
                 if ii == nb -1 :
                     local_bins[exp_n,ii+1] = np.max(t)
 
-                mean_bins[ii] = np.median(t)
-#                mean_bins[ii] = np.mean(t)
+                #mean_bins[ii] = np.median(t)
+                mean_bins[ii] = np.mean(t)
                 bins[ii] = mquantiles(a,prob=np.arange(0.1,0.9,0.1))
                 print "quantiles",bins[ii]
             print bins
@@ -312,16 +339,17 @@ def gc_factor_calculation(exon_list, nb):
                 qnt_bns = np.ndarray(len(bins))
                 for idx,bb in enumerate(bins):
                     qnt_bns[idx] = bb[qnt]
-    #            print "BINS",qnt_bns
-                quant_median[qnt]=np.median(qnt_bns)
+                print "BINS",qnt_bns
+                #quant_median[qnt]=np.median(qnt_bns)
+                quant_median[qnt]=np.mean(qnt_bns)
 
             print quant_median
             gc_factor = np.zeros(nb,dtype=np.dtype('float'))
             for ii in range(nb):
                 offst = np.zeros(len(quant_median),dtype=np.dtype('float'))
                 for idx,xx in enumerate(quant_median):
-                    offst[idx] = float(bins[ii][idx]) / float(xx+1)
-                gc_factor[ii] = np.median(offst)
+                    offst[idx] = float(bins[ii][idx]) / float(xx)
+                gc_factor[ii] = np.mean(offst)
 
             print 'MMMMM', gc_factor
             local_meanbins[exp_n] = mean_bins
@@ -342,8 +370,8 @@ def plot_gc_content():
             mx = mglobals.gc_means[exp_n].max()
             xx = np.arange(mn, mx ,0.001)
             yy = mglobals.gc_factor[exp_n](xx)
-#            print "XX",xx
-#            print "Yy",yy
+            print "XX",xx
+            print "Yy",yy
             pyplot.plot(xx,yy,label=mglobals.exp_list[exp_n])
             pyplot.axis((0.3,0.7,0.5,1.5))
             pyplot.title("Gc factor")

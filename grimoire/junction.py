@@ -85,9 +85,9 @@ class majiq_junc:
 
     def __init__ (self, jnc, exp_idx ) :
         if jnc is None:
-            self.gc_index = scipy.sparse.lil_matrix(((mglobals.readLen-16)+1),dtype=np.int)
+            self.gc_index = scipy.sparse.lil_matrix((1,(mglobals.readLen-16)+1),dtype=np.int)
             self.name = None
-            self.coverage = scipy.sparse.lil_matrix(((mglobals.readLen-16)+1),dtype=np.int)
+            self.coverage = scipy.sparse.lil_matrix((1,(mglobals.readLen-16)+1),dtype=np.int)
         else:
             self.name     = "%s:%s-%s"%(jnc.get_gene().get_id(),jnc.get_ss_5p(),jnc.get_ss_3p())
             self.coverage = jnc.coverage[exp_idx,:]
