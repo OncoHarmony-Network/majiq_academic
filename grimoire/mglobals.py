@@ -73,7 +73,7 @@ def global_conf_ini(filename):
 
     num_mapped_reads = [0] * num_experiments
 
-    genome = 'mm10'
+    genome = general['genome']
 
     A3SS = [0]*20
     A5SS = [0]*20

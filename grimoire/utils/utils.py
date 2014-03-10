@@ -57,8 +57,35 @@ def __gc_factor_ind(val, exp_idx):
     for ii,jj in enumerate(mglobals.gc_bins[exp_idx]):
         if val < jj:
             res = ii
-
     return res
+
+def prepare_SLV_table(SLV_list, non_as, temp_file):
+
+    for name, ind_list in mglobals.tissue_repl.items() :
+        for idx,exp_idx in enumerate(ind_list) :
+#            info = {}
+#            info ['weigh_factor'] = mglobals.weigh_factor
+#            info ['experiment']   = mglobals.exp_list[exp_idx]
+#            info ['GC_bins']      = mglobals.gc_bins[exp_idx]
+#            info ['GC_bins_val']  = mglobals.gc_bins_val[exp_idx]
+
+            jun = set(SLV_list)
+            non_as[exp_idx].difference(jun)
+            majiq_table_as    = np.zeros( shape=(len(junc_set[exp_idx]),2), dtype=np.dtype('object'))
+            majiq_table_nonas = np.zeros( shape=(len(non_as[exp_idx]),1), dtype=np.dtype('object'))
+
+            # We iterate over the inc and exc in order to fill the majiq_junc_matrix
+            
+            for iix, jn_lst in enumerate(junc_set[exp_idx]) :
+                for lab_idx in range(2):
+                    #print jn_lst
+                    majiq_table_as[iix, lab_idx] = majiq_junc( jn_lst[lab_idx], exp_idx)
+            for jix, jn in enumerate(non_as[exp_idx]) :
+                    majiq_table_nonas[jix] = majiq_junc( jn , exp_idx)
+
+            file_pi = open("%s/temp_%s.%s"%(mglobals.temp_oDir[exp_idx],mglobals.exp_list[exp_idx], temp_file), 'w+')
+            pickle.dump((majiq_table_as, majiq_table_nonas), file_pi)
+            file_pi.close()
 
 def prepare_MAJIQ_table(junc_set, non_as, temp_file):
 
@@ -115,7 +142,16 @@ def merge_and_create_MAJIQ ( chr_list, ofile ):
             pickle.dump((info,AT, NAT), file_pi)
             file_pi.close()
 
+            exp_info = {}
+            exp_info ['file']       = "%s/%s.sorted.bam"%(mglobals.sam_dir,mglobals.exp_list[exp_idx])
+            exp_info ['genome']     = mglobals.genome 
+            exp_info ['gc']         = mglobals.gc_bins[exp_idx]
+#            exp_info ['transcript'] = mglobals.transcripts
+            exp_info ['num_reads']  = mglobals.num_mapped_reads[exp_idx]
 
+            file_pi = open('%s/info.%s.majiq'%(mglobals.outDir,mglobals.exp_list[exp_idx]), 'w+')
+            pickle.dump(exp_info, file_pi)
+            file_pi.close()
 
 def set_exons_gc_content(chrom, exon_list ):
 
@@ -156,6 +192,42 @@ def set_exons_gc_content(chrom, exon_list ):
         if len(sequence) == 0 : 
             print "KKKKseq",exon.get_coordinates()
         exon.set_gc_content(sequence)
+
+
+
+def generate_visualization_output( allgenes ):
+
+    from collections import namedtuple
+    #vExon = namedtuple("MyStruct", "start end a3 a5")
+    
+    gene_list = []
+    for gl in allgenes.values(): 
+        for genes_l in gl.values():
+            for gg in genes_l:
+                junc_l = np.asarray([jj.get_coordinates() for jj in gg.get_all_junctions()])
+
+                exon_list = []
+                for ex in gg.get_exon_list():
+                    cc = ex.get_coordinates()
+
+                    a3 = []
+                    for ss3 in ex.ss_3p_list:
+                        for jidx, jjl in enumerate(junc_l):
+                            if ss3 != jjl[1]: continue
+                            a3.append(jidx)
+                    a5 = []
+                    for ss5 in ex.ss_5p_list:
+                        for jidx, jjl in enumerate(junc_l):
+                            if ss5 != jjl[0]: continue
+                            a5.append(jidx)
+                    vx = {'coordinates':cc,'a3':a3,'a5':a5}
+                    exon_list.append(vx)
+            gene_list.append((exon_list,junc_l))
+
+    file_pi = open('%s/visual_LSE.majiq'%(mglobals.outDir),'w+')
+    pickle.dump((gene_list), file_pi)
+    file_pi.close()
+
 
 
 def prepare_junctions_gc( junc , exp_idx):
@@ -224,7 +296,7 @@ def gc_factor_calculation(exon_list, nb):
 #                    print ex.strand, st, end
 
 
-                if  gc_val is None or end-st < 30  or cov < 5: continue
+                if  gc_val is None or end-st < 30  or cov < 1: continue
                 count.append( cov )
                 gc.append( gc_val )
             if len(gc) == 0 : continue
@@ -258,8 +330,8 @@ def gc_factor_calculation(exon_list, nb):
                 if ii == nb -1 :
                     local_bins[exp_n,ii+1] = np.max(t)
 
-                mean_bins[ii] = np.median(t)
-#                mean_bins[ii] = np.mean(t)
+                #mean_bins[ii] = np.median(t)
+                mean_bins[ii] = np.mean(t)
                 bins[ii] = mquantiles(a,prob=np.arange(0.1,0.9,0.1))
                 print "quantiles",bins[ii]
             print bins
@@ -267,16 +339,17 @@ def gc_factor_calculation(exon_list, nb):
                 qnt_bns = np.ndarray(len(bins))
                 for idx,bb in enumerate(bins):
                     qnt_bns[idx] = bb[qnt]
-    #            print "BINS",qnt_bns
-                quant_median[qnt]=np.median(qnt_bns)
+                print "BINS",qnt_bns
+                #quant_median[qnt]=np.median(qnt_bns)
+                quant_median[qnt]=np.mean(qnt_bns)
 
             print quant_median
             gc_factor = np.zeros(nb,dtype=np.dtype('float'))
             for ii in range(nb):
                 offst = np.zeros(len(quant_median),dtype=np.dtype('float'))
                 for idx,xx in enumerate(quant_median):
-                    offst[idx] = float(bins[ii][idx]) / float(xx+1)
-                gc_factor[ii] = np.median(offst)
+                    offst[idx] = float(bins[ii][idx]) / float(xx)
+                gc_factor[ii] = np.mean(offst)
 
             print 'MMMMM', gc_factor
             local_meanbins[exp_n] = mean_bins
@@ -292,7 +365,7 @@ def plot_gc_content():
         pyplot.figure(idx)
         for exp_n in list_idx :
 #            f = interpolate.interp1d(mglobals.gc_means[exp_n], mglobals.gc_bins_vaL[exp_n])
-            print mglobals.gc_means[exp_n]
+#            print mglobals.gc_means[exp_n]
             mn = mglobals.gc_means[exp_n].min()
             mx = mglobals.gc_means[exp_n].max()
             xx = np.arange(mn, mx ,0.001)
@@ -300,6 +373,7 @@ def plot_gc_content():
             print "XX",xx
             print "Yy",yy
             pyplot.plot(xx,yy,label=mglobals.exp_list[exp_n])
+            pyplot.axis((0.3,0.7,0.5,1.5))
             pyplot.title("Gc factor")
             pyplot.grid()
             pyplot.legend(loc='upper left')

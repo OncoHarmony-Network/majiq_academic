@@ -121,7 +121,6 @@ class Exon:
                 ii.add_transcript(trncpt)
                 found = True
                 break
-        if start == 74289871: print "NOUUUUNN", found
         if not found :
 #            if self.strand == '+':
             self.ss_3p_list.append(start)
@@ -148,7 +147,19 @@ class Exon:
         gs = sequence.count('g') + sequence.count('G')
         if len(sequence) == 0 : return
         self.gc_content = float( cs + gs) / float(len(sequence))
-            
+
+    def get_junctions(self, type):
+        if type != '3prime' and type != '5prime':
+            raise RuntimeError('Incorrect splicesite type %s'%type)
+
+        jlist = []
+        for exon_list in (self.exonTx_list, self.exonRead_list):
+            for ex in exon_list:
+                if type == '3prime': 
+                    jlist.append(ex.p3_junc)
+                else : 
+                    jlist.append(ex.p5_junc)
+        return jlist
 
     def print_triplet_coord(self, fp):
         gene = self.gene
@@ -211,8 +222,8 @@ class ExonTx(object):
         self.start = start
         self.end = end
         self.transcript = [trnscpt]
-        #self.p3_junc = pre_junc
-        #self.p5_junc = post_junc
+        self.p3_junc = None
+        self.p5_junc = None
         self.exon = exon
 
     def get_coordinates( self ):

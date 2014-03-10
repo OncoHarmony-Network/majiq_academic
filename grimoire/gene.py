@@ -235,7 +235,7 @@ class Gene:
         return mat
 
 
-    def get_rnaseq_mat(self, rand10k):
+    def get_rnaseq_mat(self, rand10k, lsv=False):
 
         A5ss = 0
         A3ss = 0
@@ -247,40 +247,48 @@ class Gene:
         ss_3p_vars = [0]*20
         ss_5p_vars = [0]*20
         ss_both_var = 0
+        exon_list = []
         for ex in ex_list:
             if ex.id is None: continue
             l3 = len(set(ex.ss_3p_list))
             l5 = len(set(ex.ss_5p_list))
             if l3 == 0 or l5 == 0: continue
-#            print "EXONS "
-#            print "ASS3",ex.ss_3p_list
-#            print "ASS5",ex.ss_5p_list
-
-        
-
 
             if len(set(ex.ss_3p_list)) > 6 or len(set(ex.ss_5p_list)) > 6:  
                 print "EXON RARO",ex.get_coordinates(), sorted(set(ex.ss_3p_list)),"3pSS", sorted(set(ex.ss_5p_list)), "5pSS"
 #            print len(set(ex.ss_3p_list)), len(set(ex.ss_5p_list))
 
 
-            if l3 > 19 : l3 = 19
-            if l5 > 19 : l5 = 19
-            if l3 > 1 and l5 >1 : ss_both_var += 1
             minreads = 5
+            local_3p = 0
+            local_5p = 0
+
+            temp_Set = set()
 
             for ss3p in  ex.ss_3p_list:
                 for exread in ex.exonRead_list:
                     if ss3p != exread.start : continue
                     if exread.p3_junc is None: continue
                     if exread.p3_junc.readN.sum() >= minreads : 
-                        ss_3p_vars[l3] += 1
+                        temp_Set.add(ss3p)
+            local_3p = len(temp_Set)
+
+            temp_Set = set()
             for ss5p in  ex.ss_5p_list:
                 for exread in ex.exonRead_list:
                     if ss5p != exread.end : continue
                     if exread.p5_junc is None: continue
                     if exread.p5_junc.readN.sum() >= minreads : 
-                        ss_5p_vars[l5] += 1
+                        temp_Set.add(ss5p)
+            local_5p = len(temp_Set)
+            if local_3p > 1 and local_5p >1 : ss_both_var += 1
+
+#            print local_3p
+            if local_3p > 19 : local_3p = 19
+            if local_5p > 19 : local_5p = 19
+            ss_3p_vars[local_3p] += 1
+            ss_5p_vars[local_5p] += 1
+            
 
 
             st3 = len(ss3_l)
@@ -288,14 +296,15 @@ class Gene:
             ss3_l += sorted([ss3 for ss3 in set(ex.ss_3p_list)])
             ss5_l += sorted([ss5 for ss5 in set(ex.ss_5p_list)])
             tlb[exidx] = [range(st3,len(ss3_l)),range(st5,len(ss5_l))]
-
+            exon_list.append(ex)
             exidx += 1
-        print "A5",ss5_l
-        print "A3",ss3_l
-        mat  = np.zeros(shape=(len(ss5_l),len(ss3_l)),dtype='int')
-        jmat = np.zeros(shape=(len(ss5_l),len(ss3_l)),dtype='object')
+#        print "A5",ss5_l
+#        print "A3",ss3_l
+        mat  = np.empty(shape=(len(ss5_l),len(ss3_l)),dtype='int')
+        jmat = np.empty(shape=(len(ss5_l),len(ss3_l)),dtype='object')
+        mat.fill(0)
+#        mat.fill(-1)
         jmat.fill(None)
-
 
         junc_list = self.get_all_junctions()
         for junc in junc_list:
@@ -310,7 +319,10 @@ class Gene:
                 if junc.get_readN(exp_idx) >= 10 : #and in_DB:
                     rand10k[exp_idx].add(junc)
 
-        return mat, jmat, tlb, [ss_3p_vars, ss_5p_vars,ss_both_var]
+        if not lsv :
+            return mat, jmat, tlb, [ss_3p_vars, ss_5p_vars,ss_both_var]
+        else:
+            return mat, exon_list, tlb, [ss_3p_vars, ss_5p_vars,ss_both_var]
 
 
 class Transcript :

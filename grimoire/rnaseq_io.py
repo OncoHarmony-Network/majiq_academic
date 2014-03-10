@@ -29,7 +29,21 @@ def __cross_junctions(read):
             cross = True
         #end else ...
     except KeyError:
-        print"THIS IS NOT a WELL defined STAR output"
+#    if len(jlist) != 0: print "STAR ::",jlist
+#    print"THIS IS NOT a WELL defined STAR output"
+        off = 0
+        for op, num in read.cigar:
+            if op in [0,5,6,7,8] : 
+                off += num
+            elif op in [1,5]:
+                off += 0
+            elif op == 2:
+                off+= num
+            elif op == 3:
+                jlist.append((read.pos+off,read.pos+off+num+1))
+                off += num
+#    if len(jlist) !=0 : print "NOSTAR:", jlist, read.cigar
+        
     return (cross,jlist)
 
 
