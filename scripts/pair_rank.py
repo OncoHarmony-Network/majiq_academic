@@ -85,16 +85,21 @@ def v_sum(matrix):
 
     return ret
 
-def rank_majiq(path, names, V=0.2, absolute=True, dofilter=True, E=False):
+def rank_majiq(path, names, V=0.2, absolute=True, dofilter=True, E=False, ranknochange=False):
+    MINTHRESHOLD = 0.2 # minimum threshold in order to consider a prob. significant enough to be included in the ranking
     rank = []
     names = pickle.load(open(names))
     for i, dmatrix in enumerate(pickle.load(open(path))):
         if E:
-            rank.append([names[i].split(":")[0], v_sum(dmatrix)])
+            v_prob = v_sum(dmatrix)
+            rank.append([names[i].split(":")[0], v_prob])
         else:
             area = matrix_area(dmatrix, V, absolute)
-            if area > 0.2 or not dofilter:
-                rank.append([names[i].split(":")[0], matrix_area(dmatrix, V, absolute)])
+            if ranknochange: #P(Delta PSI < V) = 1 - P(Delta PSI > V)
+                area = 1 - area
+
+            if area > MINTHRESHOLD or not dofilter:
+                rank.append([names[i].split(":")[0], area])
 
     rank.sort(key=lambda x: -x[1])
     return rank
@@ -120,13 +125,17 @@ def miso_reader(path, dofilter=True):
     return ret
 
 
-def rank_miso(path, dofilter=True):
+def rank_miso(path, dofilter=True, ranknochange=False):
     rank = miso_reader(path, dofilter)
-    rank.sort(key=lambda x: (-abs(x[1]), -x[2])) #sort first by delta PSI, then by bayes factor
+    if ranknochange: 
+        rank.sort(key=lambda x: (abs(x[1]), x[2])) #sort first by smallest delta PSI, then by bayes factor
+    else:
+        rank.sort(key=lambda x: (-abs(x[1]), -x[2])) #sort first by biggest delta PSI, then by inverse bayes factor
+    
     return rank
 
 
-def rank_mats(path, dofilter=True):
+def rank_mats(path, dofilter=True, ranknochange=False):
     """
     ID      GeneID      geneSymbol  chr strand  exonStart_0base exonEnd upstreamES  upstreamEE  downstreamES    downstreamEE    ID  IC_SAMPLE_1 SC_SAMPLE_1 IC_SAMPLE_2 SC_SAMPLE_2 IncFormLen  SkipFormLen PValue  FDR IncLevel1   IncLevel2   IncLevelDifference
     10357   "AK076509"  NA  chr16   +   23109119    23109259    23108718    23108851    23109984    23110153    10357   2471,4440,3021,3043,4596    6,35,10,8,11    321,601,628,702,730,572 7,17,17,13,15,22    187 61  0.0 0.0 0.993,0.976,0.99,0.992,0.993    0.937,0.92,0.923,0.946,0.941,0.895  0.062
@@ -143,7 +152,11 @@ def rank_mats(path, dofilter=True):
             if pvalue < 0.05 or not dofilter:
                 rank.append([geneID, delta_psi, pvalue])
 
-    rank.sort(key=lambda x: (-abs(x[1]), x[2]))
+    if ranknochange:
+        rank.sort(key=lambda x: (abs(x[1]), x[2])) #biggest delta PSI first, small p-value
+    else:
+        rank.sort(key=lambda x: (-abs(x[1]), x[2])) #biggest delta PSI first, small p-value
+
     return rank
 
 
@@ -177,19 +190,19 @@ def main():
     parser.add_argument('--nofilter', dest="filter", default=True, action="store_false", help="Skip filtering by BF, p-value, etc")
     parser.add_argument('--fullrank', default=False, action='store_true', help="Benchmark searching for events in full ranking on rank2")
     parser.add_argument('--fdr', default=None, help="In addition to the rank, calculate the False Discovery Rate. Only works with --fullrank")
-    
+    parser.add_argument('--ranknochange', default=False, action='store_true', help="Calculate P(deltaPSI < V) instead of P(deltaPSI > V) to rank first the ones with low delta PSI")
     args = parser.parse_args()
 
     print "Calculating ranks..."
     if args.miso:
-        rank1 = array(rank_miso(args.pair[0], args.filter))
-        rank2 = array(rank_miso(args.pair[1], args.filter))
+        rank1 = array(rank_miso(args.pair[0], args.filter, args.ranknochange))
+        rank2 = array(rank_miso(args.pair[1], args.filter, args.ranknochange))
     elif args.mats:
-        rank1 = array(rank_mats(args.pair[0], args.filter))
-        rank2 = array(rank_mats(args.pair[1], args.filter))
+        rank1 = array(rank_mats(args.pair[0], args.filter, args.ranknochange))
+        rank2 = array(rank_mats(args.pair[1], args.filter, args.ranknochange))
     else:
-        rank1 = rank_majiq(args.pair[0], args.evnames[0], args.V, args.absolute, args.filter, args.E)
-        rank2 = rank_majiq(args.pair[1], args.evnames[1], args.V, args.absolute, args.filter, args.E)
+        rank1 = rank_majiq(args.pair[0], args.evnames[0], args.V, args.absolute, args.filter, args.E, args.ranknochange)
+        rank2 = rank_majiq(args.pair[1], args.evnames[1], args.V, args.absolute, args.filter, args.E, args.ranknochange)
 
     print "Calculating the ratios..."
     #calculate the ratios
@@ -252,7 +265,7 @@ def main():
     pickle.dump(ratios, open(args.output, 'w'))
 
     if args.fdr:
-        print "FDR:", fdr[0:10], "...", fdr[-10:], "length", fdr.shape
+        #print "FDR:", fdr[0:10], "...", fdr[-10:], "length", fdr.shape
         pickle.dump(fdr, open("%s.pickle"%args.fdr, 'w'))
         pickle.dump(v_values, open("%s_v.pickle"%args.fdr, 'w'))
 

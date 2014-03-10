@@ -43,20 +43,29 @@ def main():
 
     #deltapair flags
     delta = new_subparser()
-    #... are mostly EM adjust flags
     delta.add_argument('file1')  
-    delta.add_argument('file2') #TODO activar cuando venga lo nuevo
-    delta.add_argument('--names', nargs='+', required=True, help="The names that identify each of the experiments. [Default: %(default)s]")
-    delta.add_argument('--binsize', default=0.025, type=int, help='The bins for PSI values. With a --binsize of 0.025 (default), we have 40 bins')   
-    delta.add_argument('--minreads', default=20, type=int, help='Minimum number of reads combining all positions in a junction to be considered (for the "best set" calculation). [Default: %(default)s]') 
-    delta.add_argument('--minandreads', default=1, type=int, help='Minimum number of reads combining all positions in a junction to be considered (for the "best set" calculation). [Default: %(default)s]') 
-    delta.add_argument('--minnonzero', default=10, type=int, help='Minimum number of positions for the best set.')
-    delta.add_argument('--iter', default=10, type=int, help='Max number of iterations of the EM')
-    delta.add_argument('--breakiter', default=0.01, type=float, help='If the log likelihood increases less that this flag, do not do another EM step')
-    delta.add_argument('--V', default=0.1, type=float, help='Value of DeltaPSI used for initialization of the EM model [Default: %(default)s]')
-    delta.add_argument('--synthprior', action='store_true', default=False, help=' Generate the prior for DELTA PSI using our assumptions instead of the empirical data [Default: %(default)s]')
-    delta.add_argument('--priorstd', default=0.2, type=float, help="Standard deviation from the 0.5 PSI mean that the synthetic prior matrix has. Only works with --synthprior. [Default: %(default)s]")
-    delta.add_argument('--prioruniform', default=0.2, type=float, help="Uniform distribution to give a bit more of a chance to values out of the normal distribution. that the synthetic prior matrix has. Only works with --synthprior. [Default: %(default)s]")
+    delta.add_argument('file2') 
+
+    #deltapair and deltagroup flags
+    pairandgroup = new_subparser() 
+    pairandgroup.add_argument('--names', nargs='+', required=True, help="The names that identify each of the experiments. [Default: %(default)s]")
+    pairandgroup.add_argument('--binsize', default=0.025, type=int, help='The bins for PSI values. With a --binsize of 0.025 (default), we have 40 bins')   
+    pairandgroup.add_argument('--minreads', default=20, type=int, help='Minimum number of reads combining all positions in a junction to be considered (for the "best set" calculation). [Default: %(default)s]') 
+    pairandgroup.add_argument('--minandreads', default=1, type=int, help='Minimum number of reads combining all positions in a junction to be considered (for the "best set" calculation). [Default: %(default)s]') 
+    pairandgroup.add_argument('--minnonzero', default=10, type=int, help='Minimum number of positions for the best set.')
+    pairandgroup.add_argument('--iter', default=10, type=int, help='Max number of iterations of the EM')
+    pairandgroup.add_argument('--breakiter', default=0.01, type=float, help='If the log likelihood increases less that this flag, do not do another EM step')
+    pairandgroup.add_argument('--V', default=0.1, type=float, help='Value of DeltaPSI used for initialization of the EM model [Default: %(default)s]')
+    pairandgroup.add_argument('--synthprior', action='store_true', default=False, help=' Generate the prior for DELTA PSI using our assumptions instead of the empirical data [Default: %(default)s]')
+    pairandgroup.add_argument('--jefferiesprior', action='store_true', default=False, help='Use only the jefferies prior, without including the  [Default: %(default)s]')
+    pairandgroup.add_argument('--priorstd', default=0.15, type=float, help="Standard deviation from the 0.5 PSI mean that the synthetic prior matrix has. Only works with --synthprior. [Default: %(default)s]")
+    pairandgroup.add_argument('--prioruniform', default=3, type=float, help="Uniform distribution to give a bit more of a chance to values out of the normal distribution. that the synthetic prior matrix has. Only works with --synthprior. [Default: %(default)s]")
+
+
+    group = new_subparser()
+    group.add_argument('--1', dest="files1", nargs='+')  
+    group.add_argument('--2', dest="files2", nargs='+')
+    group.add_argument('--changinglimit')
 
     #calcpsi flags
     psi = new_subparser()
@@ -69,9 +78,9 @@ def main():
     parser_preprocess.set_defaults(func=preprocess)
     parser_calcpsi = subparsers.add_parser('calcpsi', help="Calculate PSI values for N experiments, given a folder of preprocessed events by 'majiq preprocess' or SAM/BAM files (This last not implemented yet)", parents=[common, psi, psianddelta])
     parser_calcpsi.set_defaults(func=calcpsi)
-    parser_deltapair = subparsers.add_parser('deltapair', help='Calculate Delta PSI values given a pair of experiments (1 VS 1 conditions without replicas)', parents=[common, delta, psianddelta])
+    parser_deltapair = subparsers.add_parser('deltapair', help='Calculate Delta PSI values given a pair of experiments (1 VS 1 conditions without replicas)', parents=[common, delta, psianddelta, pairandgroup])
     parser_deltapair.set_defaults(func=deltapair)
-    parser_deltagroup = subparsers.add_parser('deltagroup', help='Calculate Delta PSI values given a pair of experiments (1 VS 1 conditions *with* replicas)', parents=[common])
+    parser_deltagroup = subparsers.add_parser('deltagroup', help='Calculate Delta PSI values given a pair of experiments (1 VS 1 conditions *with* replicas)', parents=[common, group, psianddelta, pairandgroup])
     parser_deltagroup.set_defaults(func=deltagroup)
     args = parser.parse_args()
     args.func(args)
