@@ -36,8 +36,9 @@ def _find_len(grimoire_obj, logger):
             else:
                 junc_len = junction[0].coverage[0].shape[0]
 
-            if logger: logger.debug("Junction length is %s"%junc_len)
-            return junc_len  
+            if junc_len != 1: 
+                if logger: logger.debug("Junction length is %s"%junc_len)
+                return junc_len  
 
 def _find_len2(grimoire_obj, logger):
     junc_len = 666
@@ -46,6 +47,8 @@ def _find_len2(grimoire_obj, logger):
             junc_len = junction.coverage[0].shape[0]
             if logger: logger.debug("Junction length is %s"%junc_len)
             return junc_len 
+
+
 
 def _load_data_const(grimoire_obj, logger=None):
     CONST_MAX = 2000 # we don't really need more than 2000 constitutive exons 
@@ -62,6 +65,7 @@ def _load_data_const(grimoire_obj, logger=None):
     for i, junction in enumerate(grimoire_obj):
         if i == CONST_MAX: # we don't need more constitutive junctions
             return array(ret)
+            
         if type(junction[0].coverage[0]) == lil_matrix:
             event = junction[0].coverage[0].toarray()
             event = event[0]
@@ -117,7 +121,7 @@ def load_data_n(paths, logger=None, const=False):
 
     pair_length = len(paths) * 2 # the length of an event that has all replicas is double the number of experiments (each experiment has both inc and exc) 
 
-    print "PAIRED SAMPLES", len(paired_samples)
+    #print "PAIRED SAMPLES", len(paired_samples)
     event_names = [] 
     ret = []
     for event_name, junctions in paired_samples.items():
@@ -188,6 +192,8 @@ def _pipeline_run(pipeline, logger=None):
 
     except KeyboardInterrupt:
         if pipeline.logger: pipeline.logger.info("MAJIQ manually interrupted. Avada kedavra...")
+
+
 # PLOTTING STUFF. All this should eventually go to a plotting module 
 def _save_or_show(plotpath, plotname=None):
     """Generic function that either shows in a popup or saves the figure, depending if the plotpath flag"""
@@ -523,15 +529,9 @@ class DeltaGroup(DeltaPair):
         #filtering
         self.logger.info("WEIGHTS: Calculating local weights...")
         psis = []
-        #paired_replicas_norm = discardlow(self.minnonzero, True, self.logger, *paired_replicas_norm)
-        #paired_replicas_norm = discardminreads(self.minreads, True, self.logger, False, *paired_replicas_norm)
-        #paired_replicas_norm = array(paired_replicas_norm)
         for replica_num in xrange(0, len(replicas)*2, 2): 
             #self.logger.info("WEIGHTS: 'High coverage' is %s events (out of %s)"%(high_inc.shape[0], inc.shape[0]))
-            
             a = array(paired_replicas_norm[replica_num])
-            print a
-            print a.shape
             psis.append(simple_psi(array(paired_replicas_norm[replica_num]), array(paired_replicas_norm[replica_num+1])))
 
         lw = local_weights(psis)
@@ -548,9 +548,9 @@ class DeltaGroup(DeltaPair):
 
             max_diffs.append(max_diff * len(replicas)) #store proportional difference to the number of replicas
         
-        #filter the weights with the greatest changing the percentile of distance length
-        PERCENTILE = 90
-        mindiff = scoreatpercentile(max_diffs, PERCENTILE) # use the 20% most changing events
+        #filter the weights with the greatest changing the percentile of distance length, but leaving the ones that change the most (as they could be stacks)
+        mindiff = scoreatpercentile(max_diffs, self.changsetpercentile) 
+        #maxdiff = scoreatpercentile(max_diffs, MAXPERCENTILE) 
         self.logger.info("WEIGHTS: Total number of events is %s..."%lw.shape[1])  
         filter_lw = []
         for i, diff in enumerate(max_diffs):
@@ -559,7 +559,7 @@ class DeltaGroup(DeltaPair):
 
         filter_lw = array(filter_lw)
         filter_lw = filter_lw.transpose(1, 0)
-        self.logger.info("... total used for weights calculation is %s (%s %%) events that change the most"%(filter_lw.shape[1], PERCENTILE))
+        self.logger.info("... total used for weights calculation is %s (%s %%) events that change the most"%(filter_lw.shape[1], self.changsetpercentile))
         
         gweights = global_weights(locweights=filter_lw)
         lweights_path = "%s_%s_%s_localweights.pickle"%(self.output, self.names[0], self.names[1])
@@ -569,16 +569,22 @@ class DeltaGroup(DeltaPair):
         return gweights
 
 
+    def _sub_calcweights(self, files, fixweights):
+        if fixweights:
+            weights = fixweights
+        else:
+            weights = self.calc_weights(files1)
+
+        self.logger.info("Weights for %s are %s (respectively)"%(files, weights))
+        return weights
 
     def run(self):
         self.logger.info("")
         #calculate weights for both sets
-        weights1 = self.calc_weights(self.files1)
-        self.logger.info("Weights for %s are %s (respectively)"%(self.files1, weights1))
-        weights2 = self.calc_weights(self.files2)
-        self.logger.info("Weights for %s are %s (respectively)"%(self.files2, weights2))
+        weights1 = self._sub_calcweights(self.files1, self.fixweights1)
+        weights2 = self._sub_calcweights(self.files2, self.fixweights2)
 
-        #calculate weights for self.files2
+
         #NOTE: global_weights better
         self.logger.info("Running deltagroups...")
         self.logger.info("GROUP 1: %s"%self.files1)
@@ -586,23 +592,36 @@ class DeltaGroup(DeltaPair):
         self.logger.info("Calculating pairs...")
         pairs_posteriors = defaultdict(list)
 
+        k_ref = [] #maps the i, j reference for every matrix (this could be do in less lines with div and mod, but this is safer) 
         for i in xrange(len(self.files1)):
             for j in xrange(len(self.files2)):
-                if i != j:
-                    matrices, names = self.pairdelta(self.files1[i], self.files2[j], "%s%s_%s_"%(self.output, i, j))
+                k_ref.append([i, j])
+                path = "%s%s_%s_"%(self.output, i, j)
+                matrix_path = "%s%s_%s_deltamatrix.pickle"%(path, self.names[0], self.names[1])
+                events_path = "%s%s_%s_eventnames.pickle"%(path, self.names[0], self.names[1]) 
+                if os.path.exists(matrix_path):
+                    self.logger.info("%s exists! Loading..."%path)
+                    matrices = pickle.load(open(matrix_path))
+                    names = pickle.load(open(events_path))
+                else:
+                    self.logger.info("Calculating pair %s"%path)
+                    matrices, names = self.pairdelta(self.files1[i], self.files2[j], path)
                     self.logger.info("Saving pair posterior for %s, %s"%(i, j))
-                    for k, name in enumerate(names):
-                        pairs_posteriors[name].append(matrices[k])
+                for k, name in enumerate(names):
+                    pairs_posteriors[name].append(matrices[k]) #pairing all runs events
 
         self.logger.info("Normalizing with weights...")
         comb_matrix = []
         comb_names = []
         for name, matrices in pairs_posteriors.items():
-            for i, matrix in enumerate(matrices):
-                if i == 0:
-                    comb = matrix*weights1[i]*weights2[i]
+            for k, matrix in enumerate(matrices):
+                #i = k / len(self.files1) #infers the weight1 index given the position of the matrix
+                #j = k % len(self.files2)
+                i, j = k_ref[k]
+                if k == 0: #first iteration
+                    comb = matrix*weights1[i]*weights2[j]
                 else:
-                    comb += matrix*weights1[i]*weights2[i]
+                    comb += matrix*weights1[i]*weights2[j]
 
             comb /= sum(comb) #renormalize so it sums 1
             comb_matrix.append(comb)
@@ -610,9 +629,8 @@ class DeltaGroup(DeltaPair):
 
         pickle_path = "%s%s_%s_deltacombmatrix.pickle"%(self.output, self.names[0], self.names[1])
         name_path = "%s%s_%s_combeventnames.pickle"%(self.output, self.names[0], self.names[1])
-        pickle.dump(comb_matrix, open(pickle_path, 'w'))        
-        pickle.dump(comb_names, open(name_path, 'w'))  
-
+        pickle.dump(comb_matrix, open(pickle_path, 'w'))      
+        pickle.dump(comb_names, open(name_path, 'w'))
         self.logger.info("Alakazam! Done.")
 
 

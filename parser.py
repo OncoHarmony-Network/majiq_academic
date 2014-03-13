@@ -66,6 +66,10 @@ def main():
     group.add_argument('--1', dest="files1", nargs='+')  
     group.add_argument('--2', dest="files2", nargs='+')
     group.add_argument('--changinglimit')
+    group.add_argument('--changsetpercentile', type=float, default=90., help="Percentile of events that go into the 'best changing events' set")
+    group.add_argument('--fixweights1', nargs='*', type=float, help='Manually fix the weights for the replicas [Default: Automatic weight calculation]')
+    group.add_argument('--fixweights2', nargs='*', type=float, help='Manually fix the weights for the replicas [Default: Automatic weight calculation]')
+        
 
     #calcpsi flags
     psi = new_subparser()

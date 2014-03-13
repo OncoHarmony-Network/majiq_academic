@@ -29,7 +29,7 @@ def local_weights(replicas):
     #with all the KL divergences per event and pair, acumulate weights 
     weights = zeros(shape=array(divergences[0]).shape) #generates a matrix with zeroes to acumulate al the local KL divergences
     for key in divergences.keys():
-        pseudo = 0.000000000000000001
+        pseudo = 0.00000000000000000000001
         weight_matrix = array(divergences[key])
         weight_matrix += pseudo
         weight_matrix /= weight_matrix.sum(axis=0)
