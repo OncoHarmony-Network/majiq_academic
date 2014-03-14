@@ -13,7 +13,7 @@ class Junction:
     __gt__ = lambda self, other: self.start > other.start   or (self.start == other.start and self.end > other.end)
     __ge__ = lambda self, other: self.start >= other.start  or (self.start == other.start and self.end >= other.end)
 
-    def __init__ (self, start, end,donor, acceptor,gene,readN=0):
+    def __init__ (self, start, end,donor, acceptor,gene,readN=0, annotated=False):
         ''' The start and end in junctions are the last exon in '''
         
         readLength = mglobals.readLen
@@ -29,7 +29,8 @@ class Junction:
         self.coverage        = scipy.sparse.lil_matrix((mglobals.num_experiments,(readLength-16)+1),dtype=np.int)
         self.gc_index        = scipy.sparse.lil_matrix((mglobals.num_experiments,(readLength-16)+1),dtype=np.int)
         self.gc_factor       = scipy.sparse.lil_matrix((mglobals.num_experiments,(readLength-16)+1),dtype=np.float)
- 
+        self.annotated = annotated
+
 
     def __hash__(self):
         return hash(self.start) ^ hash(self.end) ^ hash(self.gene.id)
@@ -55,6 +56,8 @@ class Junction:
         return (self.readN[idx])
     def get_gc_factors(self):
         return(self.gc_index, self.gc_factor)
+    def is_annotated(self):
+        return(self.annotated)
 
     #MODIFIERs
 

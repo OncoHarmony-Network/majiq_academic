@@ -16,7 +16,7 @@ try:
 except:
     import pickle
 
-def __parallel_for_splc_quant(samfiles_list, gene_list, chr, as_db):
+def __parallel_for_splc_quant(samfiles_list, gene_list, chr, as_db, pcr_validation = {}):
     print "START child,", current_process().name
     for idx,exp in enumerate(samfiles_list):
         print "READING ", idx, exp
@@ -24,6 +24,8 @@ def __parallel_for_splc_quant(samfiles_list, gene_list, chr, as_db):
 #        rnaseq_io.reads_for_junc_coverage(exp, gene_list, mglobals.readLen, idx )
     analize.annotated_AS_events(gene_list, 'AS')
     a,b = analize.rnaseq_AS_events( gene_list, chr )
+    if pcr_validation is not None:
+        utils.get_validated_pcr_events(pcr_validation,a)
     file_name = '%s.obj'%(chr)
     utils.prepare_MAJIQ_table( a,b,file_name)
     print "END child, ", current_process().name
@@ -52,6 +54,7 @@ def _generate_parser():
     parser.add_argument('transcripts', action= "store", help='read file in SAM format')
     parser.add_argument('-l','--readlen', dest="readlen", type=int,default='76', help='Length of reads in the samfile"')
     parser.add_argument('-g','--genome', dest="genome", help='Genome version an species"')
+    parser.add_argument('-pcr', dest='pcr_filename',action= "store", help='PCR bed file as gold_standard')
     parser.add_argument('-lsv', dest="lsv", action="store_true", default=False, help='Using lsv analysis')
     parser.add_argument('-t','--ncpus', dest="ncpus", type=int,default='4', help='Number of CPUs to use')
     parser.add_argument('-o','--output', dest='output',action= "store", help='casete exon list file')
@@ -81,9 +84,13 @@ def main( args ) :
 
     jobs = []
     sam_list = []
+    if args.pcr_filename is not None:
+        rnaseq_io.read_bed_pcr( args.pcr_filename , all_genes)
     for exp_idx, exp in enumerate(mglobals.exp_list):
         SAM = "%s/%s.sorted.bam"%(mglobals.sam_dir,exp)
-        if not os.path.exists(SAM): continue
+        if not os.path.exists(SAM): 
+            print "Skipping %s.... notfound"%SAM
+            continue
         sam_list.append(SAM)
         rnaseq_io.count_mapped_reads(SAM,exp_idx)
     if len(sam_list) == 0: return

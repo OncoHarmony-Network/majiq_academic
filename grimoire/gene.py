@@ -156,8 +156,11 @@ class Gene:
 
         res = None
         for ee in self.exons:
+#            print "EX GEN:",ee.start, ee.end
+#            print "New EX:",start, end
             if (start < ee.end and end > ee.start) :
                 res = ee
+                break
 #                fnd +=1
 #            elif (end < ee.start):
 #                if fnd >1 : # overlapping more than one exon.... intron retention
@@ -180,6 +183,15 @@ class Gene:
             for ex_rna in ex.exonRead_list:
                 if not ex_rna.p5_junc is None:
                     lst.add(ex_rna.p5_junc)
+        for tt in self.transcript_list:
+            for jj in tt.get_junction_list():
+                if not jj is None and not jj in lst :
+                    lst.add(jj)
+        s_junc = list(lst)
+        return sorted(s_junc)
+
+    def get_annotated_junctions(self):
+        lst = set()
         for tt in self.transcript_list:
             for jj in tt.get_junction_list():
                 if not jj is None and not jj in lst :

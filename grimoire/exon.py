@@ -35,6 +35,8 @@ class Exon:
         self.strand = strand
         self.gc_content = None
         self.coverage = np.zeros(shape=(mglobals.num_experiments))
+        self.score = None
+        self.pcr_name = None
 
     def __hash__(self):
         return hash(self.id) ^ hash(self.gene.id)
@@ -77,6 +79,11 @@ class Exon:
         ss3_l = sorted(list(ss3))
         ss5_l = sorted(list(ss5))
         return (ss3_l,ss5_l)
+
+    def set_pcr_score(self, pcr_name, score):
+        self.pcr_name = pcr_name
+        self.score = score
+
 
     def add_new_read(self, start, end, readSeq, s3p_junc, s5p_junc):
 
@@ -269,11 +276,13 @@ def new_exon_definition(start, end, readRNA, s3prime_junc, s5prime_junc, gene):
 
     if  end - start < 10 : return 0
 
+    if gene.get_id() == "NM_001145806": print "EXON RARO READ",start, end, s3prime_junc.coverage.sum()
+
     ex = gene.exist_exon(start,end)
     newExons = 0
     if ex is None :
         newExons = 1
-        #print "CREATE1::",start, end
+        if gene.get_id() == "NM_001145806": print "CREATE1::",start, end
         ex = Exon(start,end,gene,gene.get_strand())
         gene.add_exon(ex)
     #print "ADD1::",start, end
@@ -284,56 +293,70 @@ def new_exon_definition(start, end, readRNA, s3prime_junc, s5prime_junc, gene):
     return newExons
 
 
-def detect_exons(gene_list, junction_list, readRNA):
+def detect_exons(gene, junction_list, readRNA):
+
 
     newExons = 0
-    for strand, j_list in junction_list.items():
-        opened = 0
-        opened_exon = []
-        last_5prime = None
-        first_3prime = None
-        for (coord,type, jj) in j_list :
-            jj_gene = jj.get_gene()
-            if type == '5prime':
-                if opened >0 :
-                    prev_gene = opened_exon[-1].get_gene()
-                    if jj_gene != prev_gene :
-                        ''' New Gene will start with 5prime SS. 
-                        But there are non-paired 3'ss elements.'''
-                        newExons +=  __half_exon('3prime',opened_exon[-1],readRNA)
-                        opened = 0
-                        opened_exon = []
-                        last_5prime = None
-                        newExons += __half_exon('5prime',jj,readRNA)
-                    else:
-                        start = opened_exon[-1].get_ss_3p()
-                        end = coord
-                        newExons += new_exon_definition(start,end,readRNA, opened_exon[-1],jj, jj_gene)
-                        last_5prime = jj
-                        opened_exon.pop()
-                        opened -=1
-                elif opened == 0 :
+    opened = 0
+    opened_exon = []
+    last_5prime = None
+    first_3prime = None
+
+
+    for jj in  gene.get_annotated_junctions():
+        if not (jj.get_ss_5p(),'5prime',jj) in junction_list:
+            junction_list.append((jj.get_ss_5p(),'5prime',jj))
+            junction_list.append((jj.get_ss_3p(),'3prime',jj))
+
+    junction_list.sort()
+#    print "JUNC", junction_list
+
+    for (coord,type, jj) in junction_list :
+        if jj.coverage.sum() < 5 and not jj.is_annotated(): 
+            del jj
+            continue
+#        print "----------------------------------------------------------------"
+#        print coord, type, jj, jj.coverage.sum() 
+#        print "LIST",opened_exon
+#        print "LASTS",first_3prime, last_5prime
+        jj_gene = jj.get_gene()
+        if type == '5prime':
+#            print "CHECK 1",coord,jj.get_ss_5p()
+            if opened >0 :
+                start = opened_exon[-1].get_ss_3p()
+                end = coord
+                if jj_gene.get_id() == "NM_011465": print "EXON RARO READ 2",start, end
+                newExons += new_exon_definition(start,end,readRNA, opened_exon[-1],jj, jj_gene)
+                pp = opened_exon.pop()
+                opened -=1
+            elif opened == 0 :
+                if first_3prime is None:
                     newExons += __half_exon('5prime',jj,readRNA)
-                #end elif opened
-            else:
-                if opened >0 :
-                    if not last_5prime is None:
-                        end = last_5prime.get_ss_5p()
-                        for ss in opened_exon:
-                            if ss.get_gene() != last_5prime.get_gene(): continue
-                            start = ss.get_ss_3p()
-                            newExons += new_exon_definition(start,end,readRNA, ss, last_5prime, ss.get_gene())
-                    else:
-                        for ss in opened_exon:
-                            newExons += __half_exon('3prime', ss, readRNA)
-                    #end else ...
+                else:
+                    newExons += new_exon_definition(first_3prime.get_ss_3p(), coord, readRNA, first_3prime,jj, jj_gene)
+            last_5prime = jj
+                
+            #end elif opened
+        else:
+#            print "CHECK 2",coord,jj.get_ss_3p()
+            if opened >0 :
+                if not last_5prime is None:
+                    end = last_5prime.get_ss_5p()
+                    for ss in opened_exon:
+                        if ss.get_gene() != last_5prime.get_gene(): continue
+                        start = ss.get_ss_3p()
+                        if jj_gene.get_id() == "NM_011465": print "EXON RARO READi 3",start, end
+                        newExons += new_exon_definition(start,end,readRNA, ss, last_5prime, ss.get_gene())
+                    last_5prime = None
                     opened = 0
                     opened_exon = []
-                else:
                     first_3prime = jj
+            else:
                 last_5prime = None
-                opened_exon.append(jj)
-                opened +=1
+                first_3prime = jj
+            #end else ...
+            opened_exon.append(jj)
+            opened +=1
 
     print "FOUND new %d exons"%newExons
     return 

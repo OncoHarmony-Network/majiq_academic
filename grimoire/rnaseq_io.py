@@ -74,15 +74,15 @@ def count_mapped_reads( filename, exp_idx):
 def read_sam_or_bam(filename, gene_list, readlen, chrom, exp_index):
 
     counter = [0] * 6
-    junctions = {}
-    junctions = {'+':[],'-':[]}
     samfile = pysam.Samfile( filename, "rb" )
     temp_ex = []
     NUnum = 0
+    skip_gene = 0
+    non_skip = 0
 
     for strand in ('+','-') :
         for gne in gene_list[strand]:
-
+            junctions = []
             strt,end = gne.get_coordinates()
             try:
                 read_iter = samfile.fetch( chrom, strt, end)
@@ -90,10 +90,7 @@ def read_sam_or_bam(filename, gene_list, readlen, chrom, exp_index):
                 continue
             j_list = gne.get_all_junctions()
             ex_list = gne.get_exon_list()
-            ex_idx = 0
             for read in read_iter:
-                
-
                 strand_read = '+' if not read.is_reverse else '-'
                 if strand_read != strand: continue
                 unique = __is_unique(read)
@@ -104,24 +101,13 @@ def read_sam_or_bam(filename, gene_list, readlen, chrom, exp_index):
                 gne.add_read_count(nreads, exp_index)
                 is_cross, junc_list = __cross_junctions(read)
                 r_start = read.pos
-                
-                #TEST
 
-
-#                if r_start >= 34181135 and r_start <= 34183903 and strand_read == '+': print "KKKKKK DELA VAACAAAAA", r_start
-#                print "START WHILE ", ex_idx, len(ex_list)
-                ex_idx = 0
-
-                while ex_idx < len(ex_list):
+                for ex_idx in range(len(ex_list)):
                     ex_start, ex_end = ex_list[ex_idx].get_coordinates()
-#                    print "EXON:",ex_start, ex_end, r_start
                     if r_start >= ex_start and r_start <= ex_end :
-#                        print r_start
                         ex_list[ex_idx].update_coverage(exp_index, nreads)
                         temp_ex.append(ex_list[ex_idx])
                         break
-                    ex_idx += 1
-#                print "END WHILE"
                 #else:
                 #    break
 
@@ -145,9 +131,9 @@ def read_sam_or_bam(filename, gene_list, readlen, chrom, exp_index):
                             ''' update junction and add to list'''
                             counter[3] +=1
                             jj.update_junction_read(exp_index,nreads,r_start, gc_content, unique)
-                            if not (junc_start,'5prime',jj) in junctions[strand]:
-                                junctions[strand].append((junc_start,'5prime',jj))
-                                junctions[strand].append((junc_end,'3prime',jj))
+                            if not (junc_start,'5prime',jj) in junctions:
+                                junctions.append((junc_start,'5prime',jj))
+                                junctions.append((junc_end,'3prime',jj))
                             found = True
                             break
                         #end elif junc_start == ...
@@ -155,10 +141,13 @@ def read_sam_or_bam(filename, gene_list, readlen, chrom, exp_index):
                     if not found :
                         ''' update junction and add to list'''
                         junc = None
-                        for (coord,t,j) in junctions[strand]:
+                        for (coord,t,j) in junctions:
                             if (j.start == junc_start and j.end == junc_end):
                                 junc = j
                                 junc.update_junction_read(exp_index, nreads, r_start, gc_content, unique)
+                                if not (junc_start,'5prime',junc) in junctions:
+                                    junctions.append((junc_start,'5prime',junc))
+                                    junctions.append((junc_end,'3prime',junc))
                                 break
                             #end if (j.start) == ...
                         #end for (coord,t,j) ...
@@ -167,34 +156,27 @@ def read_sam_or_bam(filename, gene_list, readlen, chrom, exp_index):
                             counter[4] += 1
                             junc = Junction( junc_start, junc_end, None, None, gne, readN=nreads)
                             junc.update_junction_read(exp_index, nreads, r_start, gc_content, unique)
-                            junctions[strand].append((junc_start,'5prime',junc))
-                            junctions[strand].append((junc_end,'3prime',junc))
+                            junctions.append((junc_start,'5prime',junc))
+                            junctions.append((junc_end,'3prime',junc))
                     #end if not found ...
                 #end for junc ...
-
+            
+            if len(junctions) > 0 :
+                detect_exons(gne, junctions, None)
+            gne.prepare_exons()
+            re = gne.calculate_RPKM(exp_index, mglobals.num_mapped_reads[exp_index])
+            if re == 0 :
+                #print "SIN READS??? :",gene.id
+                skip_gene +=1
+            else:
+                non_skip +=1
     print "INVALID JUNC",    counter[0]
     print "READ WRONG GENE", counter[1]
     print "READ IN GENE",    counter[2]
     print "READ FOUND JUNC", counter[3]
     print "READ NEW JUNC",   counter[4]
     print "READ ALL JUNC",   counter[5]
-
     print "Non Unique", NUnum
-
-    for str, ll2 in junctions.items():
-        junctions[str].sort()
-    detect_exons(gene_list, junctions,None)
-    skip_gene = 0
-    non_skip = 0
-    for strand, glist in gene_list.items():
-        for gene in glist:
-            gene.prepare_exons()
-            re = gene.calculate_RPKM(exp_index, mglobals.num_mapped_reads[exp_index])
-            if re == 0 :
-                #print "SIN READS??? :",gene.id
-                skip_gene +=1
-            else:
-                non_skip +=1
             
     print "Skipped genes without exons",skip_gene
     print " Non skipped",non_skip
@@ -267,13 +249,12 @@ def read_transcript_ucsc(filename, refSeq = False):
                     ex = Exon(start,end,gn,strand)
                     temp_ex[chrom].append(ex)
                     gn.add_exon(ex)
-                if start == 74289871: print "I FOUND IT"
                 txex = ex.add_new_definition(start, end, trcpt)
                 trcpt.add_exon(txex)
                 if not pre_end is None:
                     junc = gn.exist_junction(pre_end,start)
                     if junc is None:
-                        junc = Junction(pre_end,start, pre_ex, ex,gn)
+                        junc = Junction(pre_end,start, pre_ex, ex,gn,annotated=True)
                     trcpt.add_junction(junc)
                 pre_end = end
                 pre_ex = ex
@@ -342,6 +323,59 @@ def read_test_file(filename):
     return
 
 
+
+def read_bed_pcr( filename , list_genes):
+    
+    input_f = open(filename,'r')
+    readlines = input_f.readlines()
+    alt_exon = {}
+    pre_chrom = ''
+    gene_list = {}
+    for rl in readlines:
+        tab = rl.strip().split()
+        chrom = tab[0]
+        exon_start = int(tab[1])
+        exon_end = int(tab[2])
+        name = tab[3]
+        score = float(tab[4])
+        strand = tab[5]
+
+#        print rl
+        if chrom != pre_chrom :
+            try:
+                gene_list = list_genes[chrom]
+            except KeyError:
+                continue
+            if chrom not in alt_exon:
+                alt_exon[chrom] = []
+                
+            pre_chrom = chrom
+            idx = {'+':0, '-':0}
+
+        while idx[strand]< len(gene_list[strand]):
+            gn = gene_list[strand][idx[strand]]
+            (g_start, g_end) = gn.get_coordinates()
+#            print "BED_PCR", g_start, g_end, exon_start, exon_end
+            if exon_end < g_start:  break
+            elif exon_start > g_end :
+                idx[strand] +=1
+                continue
+            ex = gn.exist_exon(exon_start,exon_end)
+            if ex is None :
+                print "NOT FOUND2::",rl
+                break
+            ex.set_pcr_score(name, score)
+            alt_exon[chrom].append((ex,score))
+            break
+        else:
+            print "NOT FOUND1::",rl
+    print "ALT_EXON",alt_exon
+    print "CHECK ALT",alt_exon['chr1'][0][0].score
+    return alt_exon
+
+
+
+#@deprecated
 def get_junctions_STAR( filename, gene_list_per_chrom ):
     input_f = open(filename,'r')
     junctions = {}

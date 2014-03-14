@@ -203,7 +203,25 @@ def LSV_detection( gene_list, chr ):
                 for idx in slv_lst:
                     coord = exon_list[idx].get_coordinates()
                     jlist = exon_list[idx].get_junctions(sstype)
-                    slv_list.append(SLV(coord, "%s-%s"%coord,jlist, slv_type))
+
+                    for name, ind_list in mglobals.tissue_repl.items() :
+                        for exp_idx in ind_list:
+                            for jj in jlist:
+                                if jj is None: continue
+                                break
+                            else: 
+                                continue
+                            
+                            slv_list[exp_idx].append(SLV(coord, "%s-%s"%coord,jlist, slv_type))
+                            for j_idx,jnc in enumerate((jc1a, jc1c2)):
+                                jun[exp_idx].add(jnc)
+                                utils.prepare_junctions_gc(jnc,exp_idx)
+
+                        jc1a  = __get_enabled_junction(c1_a,exp_idx)
+                        jc1c2 = __get_enabled_junction(c1c2,exp_idx)
+
+                        const_set[exp_idx].difference(jun[exp_idx])
+
 
 #    mglobals.keep_info(SE_events, num_SS_var[0],num_SS_var[1], num_SS_var[2], total_SE)
 
@@ -232,12 +250,8 @@ def LSV_matrix_detection( mat, exon_to_ss, b_list ):
 
     #change bucle for iterate by exons
     for ii in range( 1, len(exon_to_ss) -1 ) :
-
         slv = exon_to_ss[ii]
-
         if len(slv[0]) <=1 and len(slv[1]) <=1: continue
-
-        
 
         pre_slv = exon_to_ss[ii-1]
         post_slv = exon_to_ss[ii+1]
@@ -245,7 +259,6 @@ def LSV_matrix_detection( mat, exon_to_ss, b_list ):
 #        c1_a = mat[ c1[1][0] : c1[1][-1]+1,  a[0][0] :  a[0][-1]+1 ]
 #        a_c2 = mat[  a[1][0] :  a[1][-1]+1, c2[0][0] : c2[0][-1]+1 ]
 #        c1c2 = mat[ c1[1][0] : c1[1][-1]+1, c2[0][0] : c2[0][-1]+1 ]
-
         single_entry_SS  = mat[ : pre_slv[1][0], post_slv[0][0] :  ]
         single_source_ST = mat[ : pre_slv[1][0], post_slv[0][0] :  ]
 

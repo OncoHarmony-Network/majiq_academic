@@ -190,7 +190,7 @@ def set_exons_gc_content(chrom, exon_list ):
                     new_seq.append(char)
             sequence = ''.join(new_seq)
         if len(sequence) == 0 : 
-            print "KKKKseq",exon.get_coordinates()
+            print "KKKKseq",exon.get_coordinates(), sequence
         exon.set_gc_content(sequence)
 
 
@@ -205,24 +205,22 @@ def generate_visualization_output( allgenes ):
         for genes_l in gl.values():
             for gg in genes_l:
                 junc_l = np.asarray([jj.get_coordinates() for jj in gg.get_all_junctions()])
-
                 exon_list = []
                 for ex in gg.get_exon_list():
                     cc = ex.get_coordinates()
-
                     a3 = []
-                    for ss3 in ex.ss_3p_list:
+                    for ss3 in set(ex.ss_3p_list):
                         for jidx, jjl in enumerate(junc_l):
-                            if ss3 != jjl[1]: continue
+                            if ss3 != jjl[1] : continue
                             a3.append(jidx)
                     a5 = []
-                    for ss5 in ex.ss_5p_list:
+                    for ss5 in set(ex.ss_5p_list):
                         for jidx, jjl in enumerate(junc_l):
-                            if ss5 != jjl[0]: continue
+                            if ss5 != jjl[0] : continue
                             a5.append(jidx)
                     vx = {'coordinates':cc,'a3':a3,'a5':a5}
                     exon_list.append(vx)
-            gene_list.append((exon_list,junc_l))
+                gene_list.append((gg.get_id(),gg.get_strand(),exon_list,junc_l))
 
     file_pi = open('%s/visual_LSE.majiq'%(mglobals.outDir),'w+')
     pickle.dump((gene_list), file_pi)
@@ -272,12 +270,26 @@ def print_junc_matrices(mat, tlb=None,fp=None):
     if fp is None: out.close()
 
 
+def get_validated_pcr_events( pcr, candidates ):
+
+    # TODO: TO BE CHANGED FOR LSV
+    print "get_validated_pcr_events", len(candidates[0])
+    for ev in candidates[0]:
+        jinc = ev[0]
+        #print "[1]:",jinc
+        if jinc is None or jinc.acceptor is None: continue
+        print "[2]:",jinc.acceptor, jinc.acceptor.score
+        if jinc.acceptor.score is not None :
+            name = "%s:%s-%s"%(jinc.get_gene().get_id(),jinc.get_ss_5p(),jinc.get_ss_3p())
+            print "PCR", jinc.acceptor.pcr_name, name
+
+
 def gc_factor_calculation(exon_list, nb):
 
-    local_bins     = np.zeros( shape=(mglobals.num_experiments,nb+1),dtype=np.dtype('float'))
-    local_meanbins = np.zeros( shape=(mglobals.num_experiments,nb),dtype=np.dtype('float'))
-    local_factor   = np.zeros( shape=(mglobals.num_experiments,nb),dtype=np.dtype('float'))
-    
+    local_bins     = np.zeros( shape=(mglobals.num_experiments,nb+1), dtype=np.dtype('float'))
+    local_meanbins = np.zeros( shape=(mglobals.num_experiments,nb),   dtype=np.dtype('float'))
+    local_factor   = np.zeros( shape=(mglobals.num_experiments,nb),   dtype=np.dtype('float'))
+
     dummy_counter = 0
 
     print mglobals.tissue_repl
