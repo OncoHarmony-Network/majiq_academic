@@ -72,6 +72,7 @@ def main():
     parser.add_argument('--name', default="")
     parser.add_argument('--plotpsidist', default=False, help="Plot the PSI distributions for ALL junctions. Slow.")
     parser.add_argument('--plotpath', default=None, help='Path to save the plot to, if not provided will show on a matplotlib popup window') 
+    parser.add_argument('--output')
     args = parser.parse_args()
 
     psivalue1 = pickle.load(open(args.psivalue1))
@@ -98,14 +99,15 @@ def main():
             xlim(-0.1,1.1)
             plot(BINS[:-1], psi_scores[i, 1])
             _save_or_show(args.plotpath, "psi_%s"%(i))
-
+    """
     dkl_junctions = calculate_dkl(inclusion1, inclusion2)
     mean_dkl = mean(dkl_junctions)
     var_dkl = var(dkl_junctions)
     print "DKL: Mean: %.5f Var: %.6f Acum: %.3f"%(mean_dkl, var_dkl, sum(dkl_junctions))
-
+    """
+    
     l1_junctions = calculate_l1(inclusion1, inclusion2)
-
+    pickle.dump(l1_junctions, open(args.output, 'w'))
     print "L1: Mean: %.5f Var: %.6f Acum: %.3f"%(mean(l1_junctions), var(l1_junctions), sum(l1_junctions))
 
 
