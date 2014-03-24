@@ -18,11 +18,14 @@ def main():
     parser.add_argument('--labels', nargs='+', help='The labels for the plot lines of the ratios.')
     parser.add_argument('--title', help='The title of the plot')
     parser.add_argument('--fdr', nargs='+', type=int, help="Determine which plots are FDR lines (1) and which are not (0), and paint them as a dotted line [Example: --fdr 0 1 0 0 1]")
-    parser.add_argument('--colors', nargs='*',  default = ["blue", "green", "red"], help="Steps of best events to take")
+    parser.add_argument('--colors', nargs='*',  help="Steps of best events to take")
     args = parser.parse_args()
 
     fig = figure(figsize=[7, 7])
     #figure out how many groups of events exist
+
+    font = {'size': 16} #here also 'weight' and 'family'
+    matplotlib.rc('font', **font)
 
     first = True
     #plot the lines of all ratios (pairs of ranks)
@@ -33,12 +36,13 @@ def main():
         if first:
             #plot the diagonal if we are in the first step
             diagonal = linspace(0, 1, num=numevents+1)
-            plot(range(0, numevents+1), diagonal, '--', color="#cccccc") 
+            plot(diagonal, diagonal, '--', color="#cccccc") 
             first = False
 
-        xlabel("Events (ranked)", fontsize=20)
-        ylabel("Ratio (total %s events)"%numevents, fontsize=20)
-        xlim(0, numevents)
+
+        xlabel("Fraction of selected events", fontsize=20)
+        ylabel("fraction of events reproduced", fontsize=20)
+        xlim(0, 1)
         ylim(0, 1) #a ratio
         linetype = '-'
         if args.fdr:
@@ -51,10 +55,12 @@ def main():
         else:
             my_label = ratio_path.split(".pickle")[0].split("/")[-1] #.replace('_', ' V=')
 
+        x_space = linspace(0, 1, len(ratio))
         if args.colors:
-            plot(range(numevents), ratio, linetype, label=my_label, linewidth=2, color=args.colors[i])          
+            plot(x_space, ratio, linetype, label=my_label, linewidth=2, color=args.colors[i])          
         else: 
-            plot(range(numevents), ratio, linetype, label=my_label, linewidth=2)
+            print 
+            plot(x_space, ratio, linetype, label=my_label, linewidth=2)
 
 
 

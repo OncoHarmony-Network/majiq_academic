@@ -17,6 +17,7 @@ from analysis.sample import sample_from_junctions, mean_junction
 from analysis.psi import calc_psi, mean_psi, simple_psi, DirichletCalc, reads_given_psi, BINS_CENTER
 from analysis.adjustdelta import adjustdelta
 from analysis.weight import local_weights, global_weights
+from analysis.matrix import rank_deltas, collapse_matrix
 
 
 ################################
@@ -504,8 +505,7 @@ def deltagroup(args):
 
 class DeltaGroup(DeltaPair):
 
-
-    def calc_weights(self, replicas):
+    def calc_weights(self, replicas, relevant=None):
         self.logger.info("Loading data...")
         paired_replicas, event_names = load_data_n(replicas, logger=self.logger)
         self.logger.info("Calculating weights for %s..."%replicas)        
@@ -532,58 +532,118 @@ class DeltaGroup(DeltaPair):
         for replica_num in xrange(0, len(replicas)*2, 2): 
             #self.logger.info("WEIGHTS: 'High coverage' is %s events (out of %s)"%(high_inc.shape[0], inc.shape[0]))
             a = array(paired_replicas_norm[replica_num])
-            psis.append(simple_psi(array(paired_replicas_norm[replica_num]), array(paired_replicas_norm[replica_num+1])))
+            psis.append(calc_psi(array(paired_replicas_norm[replica_num]), array(paired_replicas_norm[replica_num+1]), None, self.alpha, self.n, self.debug, self.psiparam))
 
-        lw = local_weights(psis)
-
-        self.logger.info("WEIGHTS: Filtering local weights...")
-        max_diffs = []
-        #calculate the maximum difference between the weights
-        for event_weights in rollaxis(lw, 1):
-            max_diff = 0
-            #print event_weights
-            for i in xrange(len(event_weights)):
-                for j in xrange(len(event_weights)):
-                    max_diff = max(max_diff, event_weights[i]-event_weights[j])
-
-            max_diffs.append(max_diff * len(replicas)) #store proportional difference to the number of replicas
         
-        #filter the weights with the greatest changing the percentile of distance length, but leaving the ones that change the most (as they could be stacks)
-        mindiff = scoreatpercentile(max_diffs, self.changsetpercentile) 
-        #maxdiff = scoreatpercentile(max_diffs, MAXPERCENTILE) 
-        self.logger.info("WEIGHTS: Total number of events is %s..."%lw.shape[1])  
-        filter_lw = []
-        for i, diff in enumerate(max_diffs):
-            if diff >= mindiff:
-                filter_lw.append(lw[:,i])
+        if relevant: #if we have a relevant set, calculate weigths from the delta
+            filtered_psis = defaultdict(list) #to hold the filtered PSI values in the relevant "best changing" set
+            filtered_psis_paired = defaultdict(list) #to calculate the median PSI
+            median_ref = [] #will hold the median values for each median reference
+            for i, experiment in enumerate(psis):
+                print "experiment", i
+                for event_num, event in enumerate(experiment):
+                    event_name = event_names[event_num] 
+                    if event_name in relevant: #all the psis in the relevant set
+                        filtered_psis_paired[event_name].append(event)
+                        filtered_psis[i].append(event)
 
-        filter_lw = array(filter_lw)
-        filter_lw = filter_lw.transpose(1, 0)
-        self.logger.info("... total used for weights calculation is %s (%s %%) events that change the most"%(filter_lw.shape[1], self.changsetpercentile))
-        
+            #calculate median PSI      
+            for event_name, events in filtered_psis_paired.items():
+                median_ref.append(median(array(events), axis=0))
+                median_ref[-1] /= sum(median_ref[-1])
+                #print "#%s EVENTS"%len(events), events
+                #print "MEDIAN", median_ref[-1], sum(median_ref[-1]), '\n'
+
+            filter_lw = local_weights(array(filtered_psis.values()), False, array(median_ref))
+
+        else:
+            lw = local_weights(psis)
+            self.logger.info("WEIGHTS: Filtering local weights...")
+            max_diffs = []
+            #calculate the maximum difference between the weights
+            #Also filter out the events that are not present in all experiments
+             
+            for event_weights in rollaxis(lw, 1):
+                max_diff = 0
+                #print event_weights
+                num_experiments = 0
+                max_experiments = len(event_weights)**2 #maximum number of matrices per event
+                for i in xrange(len(event_weights)):
+                    for j in xrange(len(event_weights)):
+                        num_experiments += 1
+                        max_diff = max(max_diff, event_weights[i]-event_weights[j])
+
+                if num_experiments == max_experiments:
+                    max_diffs.append(max_diff) 
+            
+            #filter the weights with the greatest changing the percentile of distance length, but leaving the ones that change the most (as they could be stacks)
+            mindiff = scoreatpercentile(max_diffs, self.changsetpercentile)  
+            self.logger.info("WEIGHTS: Total number of events is %s..."%lw.shape[1])  
+            filter_lw = []
+            for k, diff in enumerate(max_diffs):
+                if diff >= mindiff:
+                    filter_lw.append(lw[:,k])
+
+            filter_lw = array(filter_lw)
+            filter_lw = filter_lw.transpose(1, 0)
+            print filter_lw
+            self.logger.info("... total used for weights calculation is %s (%s %%) events that change the most"%(filter_lw.shape[1], self.changsetpercentile))
+            
         gweights = global_weights(locweights=filter_lw)
         lweights_path = "%s_%s_%s_localweights.pickle"%(self.output, self.names[0], self.names[1])
         gweights_path = "%s_%s_%s_globalweights.pickle"%(self.output, self.names[0], self.names[1])
-        pickle.dump(local_weights(psis),  open(lweights_path, 'w'))
+        pickle.dump(filter_lw,  open(lweights_path, 'w'))
         pickle.dump(gweights, open(gweights_path, 'w'))
         return gweights
 
 
-    def _sub_calcweights(self, files, fixweights):
+    def _sub_calcweights(self, files, fixweights, relevant):
         if fixweights:
             weights = fixweights
         else:
-            weights = self.calc_weights(files1)
+            weights = self.calc_weights(files, relevant=relevant)
 
         self.logger.info("Weights for %s are %s (respectively)"%(files, weights))
         return weights
 
+    def equal_if_not(self, weights):
+        "If weigths havent been set, automatically fix them equally"
+        if weights.size:
+            numpairs = len(self.k_ref)
+            return [1./numpairs]*numpairs
+
+        return weights
+
+    def comb_replicas(self, pairs_posteriors, weights1=None, weights2=None):
+        "Combine all replicas per event into a single average replica. Weights per experiment can be provided"
+        weights1 = self.equal_if_not(weights1) 
+        weights2 = self.equal_if_not(weights2) 
+        comb_matrix = []
+        comb_names = []
+        FILTERMIN = len(self.k_ref)-1 #filter events that show on all replicas
+        for name, matrices in pairs_posteriors.items():
+            for k, matrix in enumerate(matrices):
+                #i = k / len(self.files1) #infers the weight1 index given the position of the matrix
+                #j = k % len(self.files2)
+                i, j = self.k_ref[k]
+                if k == 0: #first iteration
+                    comb = matrix*weights1[i]*weights2[j]
+                else:
+                    comb += matrix*weights1[i]*weights2[j]
+
+            if k == FILTERMIN:
+                comb /= sum(comb) #renormalize so it sums 1
+                comb_matrix.append(comb)
+                comb_names.append(name)
+
+        return comb_matrix, comb_names
+
     def run(self):
         self.logger.info("")
         #calculate weights for both sets
-        weights1 = self._sub_calcweights(self.files1, self.fixweights1)
-        weights2 = self._sub_calcweights(self.files2, self.fixweights2)
-
+        if self.replicaweights or self.fixweights1:
+            weights1 = self._sub_calcweights(self.files1, self.fixweights1)
+            weights2 = self._sub_calcweights(self.files2, self.fixweights2)
 
         #NOTE: global_weights better
         self.logger.info("Running deltagroups...")
@@ -592,10 +652,12 @@ class DeltaGroup(DeltaPair):
         self.logger.info("Calculating pairs...")
         pairs_posteriors = defaultdict(list)
 
-        k_ref = [] #maps the i, j reference for every matrix (this could be do in less lines with div and mod, but this is safer) 
+        self.k_ref = [] #maps the i, j reference for every matrix (this could be do in less lines with div and mod, but this is safer) 
+        relevant_events = []
+        NUMEVENTS = 400 #this should be calculated using the FDR
         for i in xrange(len(self.files1)):
             for j in xrange(len(self.files2)):
-                k_ref.append([i, j])
+                self.k_ref.append([i, j])
                 path = "%s%s_%s_"%(self.output, i, j)
                 matrix_path = "%s%s_%s_deltamatrix.pickle"%(path, self.names[0], self.names[1])
                 events_path = "%s%s_%s_eventnames.pickle"%(path, self.names[0], self.names[1]) 
@@ -607,32 +669,41 @@ class DeltaGroup(DeltaPair):
                     self.logger.info("Calculating pair %s"%path)
                     matrices, names = self.pairdelta(self.files1[i], self.files2[j], path)
                     self.logger.info("Saving pair posterior for %s, %s"%(i, j))
+
+                if not self.replicaweights and not self.fixweights1: #get relevant events for weights calculation
+                    relevant_events.extend(rank_deltas(matrices, names, E=True)[:NUMEVENTS])
+
                 for k, name in enumerate(names):
                     pairs_posteriors[name].append(matrices[k]) #pairing all runs events
 
+        #sort again the combined ranks
+        relevant_events.sort(key=lambda x: -x[1])
+        #print relevant_events
+        #print len(relevant_events)
+        #gather the first NUMEVENTS names
+        relevant = []
+        for name, matrix in relevant_events:
+            if name not in relevant_events: #ignore duplicated entries
+                relevant.append(name)
+
+            if len(relevant) == NUMEVENTS:
+                break #we got enough elements
+
+        #print relevant[:20], "...", relevant[-20:]
+        if not self.replicaweights and not self.fixweights1:
+            #relevant = self.get_relevant(pairs_posteriors)
+            self.logger.info("Obtaining weights from Delta PSI...")
+            weights1 = self._sub_calcweights(self.files1, None, relevant=relevant)
+            weights2 = self._sub_calcweights(self.files2, None, relevant=relevant)
+
         self.logger.info("Normalizing with weights...")
-        comb_matrix = []
-        comb_names = []
-        for name, matrices in pairs_posteriors.items():
-            for k, matrix in enumerate(matrices):
-                #i = k / len(self.files1) #infers the weight1 index given the position of the matrix
-                #j = k % len(self.files2)
-                i, j = k_ref[k]
-                if k == 0: #first iteration
-                    comb = matrix*weights1[i]*weights2[j]
-                else:
-                    comb += matrix*weights1[i]*weights2[j]
-
-            comb /= sum(comb) #renormalize so it sums 1
-            comb_matrix.append(comb)
-            comb_names.append(name)
-
+        comb_matrix, comb_names = self.comb_replicas(pairs_posteriors, weights1=weights1, weights2=weights2)        
+        self.logger.info("%s events matrices calculated"%len(comb_names))
         pickle_path = "%s%s_%s_deltacombmatrix.pickle"%(self.output, self.names[0], self.names[1])
         name_path = "%s%s_%s_combeventnames.pickle"%(self.output, self.names[0], self.names[1])
-        pickle.dump(comb_matrix, open(pickle_path, 'w'))      
+        pickle.dump(comb_matrix, open(pickle_path, 'w'))
         pickle.dump(comb_names, open(name_path, 'w'))
         self.logger.info("Alakazam! Done.")
-
 
 
 
