@@ -1,0 +1,87 @@
+"""
+Functions to handle the matrices operations
+"""
+from pylab import *
+
+
+def print_matrix(matrix):
+    "Print MAJIQ delta PSI matrix in screen"
+    for i in range(matrix.shape[0]):
+        for j in range(matrix.shape[1]):
+            print "%.4f"%matrix[i][j],
+        print
+
+    print ret
+    print
+
+
+def collapse_matrix(matrix):
+    "Collapse the diagonals probabilities in 1-D and return them"
+    collapse = []
+    #FOR TEST matrix = array([[0, 1, 2, 3, 4, 500], [0, 1, 2, 3, 4, 5], [0, 1, 2, 3, 4, 5], [100, 1, 2, 3, 4, 5], ])
+
+    matrix_corner = matrix.shape[0]+1
+    for i in xrange(-matrix_corner, matrix_corner):
+        collapse.append(diagonal(matrix, offset=i).sum())   
+
+    return array(collapse)
+
+    
+def _find_delta_border(V, numbins):
+    "Finds the border index to which a V corresponds in its delta_space given the number of bins the matrix will have"
+    delta_space = list(linspace(-1, 1, num=numbins+1))
+    delta_space.pop(0) #first border to the left is -1, and we are not interested in it
+    #get the index position that corresponds to the V threshold
+    for i, value in enumerate(delta_space):
+        if value > V:
+            return i  
+    #if nothing hit, V = 1
+    return numbins
+
+def matrix_area(matrix, V=0.2, absolute=True):
+    """Returns the probability of an event to be above a certain threshold. The absolute flag describes if the value is absolute"""
+    collapse = collapse_matrix(matrix)
+    #get the delta psi histogram borders based on the size of 'collapse'
+    border = _find_delta_border(V, collapse.shape[0])
+    #grab the values inside the area of interest
+    area = []
+    if V < 0: 
+        area.append(collapse[0:border+1])
+        if absolute: #if absolute V, pick the other side of the array
+            area.append(collapse[-border-1:])
+    else:
+        area.append(collapse[border:])
+        if absolute: #if absolute V, pick the other side of the array
+            area.append(collapse[0:len(collapse)-border])
+
+    return sum(area)
+
+
+def v_sum(matrix):
+    """
+    Calculate sum_v v*P(Delta PSI > V)
+    """
+    absolute = True
+    ret = 0.
+    for v in arange(0, 1, 0.1):
+        ret += matrix_area(matrix, V=v, absolute=absolute)*v
+
+    return ret
+
+
+def rank_deltas(matrices, names, V=0.2, absolute=True, E=False, ranknochange=False):
+    "Rank all deltas in an event by level of change. V sets a threshold for change, E overrides V and calculates an average of V values"
+    rank = []
+    for i, dmatrix in enumerate(matrices):
+        if E:
+            v_prob = v_sum(dmatrix)
+            rank.append([names[i], v_prob])
+        else:
+            area = matrix_area(dmatrix, V, absolute)
+            if ranknochange: #P(Delta PSI < V) = 1 - P(Delta PSI > V)
+                area = 1 - area
+
+            rank.append([names[i], area])
+
+    rank.sort(key=lambda x: -x[1])
+    return rank
