@@ -18,36 +18,45 @@ def _kullback_lieber(p, q):
     return (pq*p).sum(axis=1)
 
 
+def _local_distance(a, b, l1):
+        if l1:
+            return _l1(a, b)
+        else:
+            return _kullback_lieber(a, b)    
+
 def local_weights(replicas, l1=False, median_ref=array([])):
     """
     Using a KL divergence, calculate the weight for every event in every replica in a group of replicas
     """
-    divergences = defaultdict(list)
-    for i, replica_i in enumerate(replicas):
-        for j, replica_j in enumerate(replicas):
-            if i == j:
-                divergences[i].append([0.]*len(replica_i)) #for performance
-            else:
-                if median_ref.size: #if we have a median reference, compare all 
-                    replica_j = median_ref
-
-                if l1:
-                    distance = _l1(replica_i, replica_j)
+    pseudo = 0.00000000000000000000001
+    distances = []
+    if median_ref.size: #if we have a median reference, compare all 
+        for i, replica_i in enumerate(replicas):
+            distances.append(_local_distance(replica_i, median_ref, l1))   
+        
+        distances = array(distances)
+        distances += pseudo
+        weights = (1 - distances)
+                
+    else:
+        divergences = defaultdict(list)
+        for i, replica_i in enumerate(replicas):
+            for j, replica_j in enumerate(replicas):
+                if i == j:
+                    divergences[i].append([0.]*len(replica_i)) #for performance
                 else:
-                    distance = _kullback_lieber(replica_i, replica_j)
+                    divergences[i].append(_local_distance(replica_i, replica_j, l1))  
 
-                divergences[i].append(distance)
-
-    #with all the KL divergences per event and pair, acumulate weights 
-    weights = zeros(shape=array(divergences[0]).shape) #generates a matrix with zeroes to acumulate al the local KL divergences
-    for key in divergences.keys():
-        pseudo = 0.00000000000000000000001
-        weight_matrix = array(divergences[key])
-        weight_matrix += pseudo
-        weight_matrix /= weight_matrix.sum(axis=0)
-        weights += (1 - weight_matrix)
+        #with all the divergences per event and pair, acumulate weights 
+        weights = zeros(shape=array(divergences[0]).shape) #generates a matrix with zeroes to acumulate al the local KL/L1 divergences
+        for key in divergences.keys():
+            weight_matrix = array(divergences[key])
+            weight_matrix += pseudo
+            weight_matrix /= weight_matrix.sum(axis=0)
+            weights += (1 - weight_matrix)
 
     weights /= weights.sum(axis=0)
+    
     return weights
 
 
@@ -72,7 +81,7 @@ if __name__ == '__main__':
 
     a = array([[0.2,0.3,0.4,0.1], [0.2,0.3,0.4,0.1], [0.2,0.3,0.4,0.1], [0.2,0.3,0.4,0.1]])
     b = array([[0.8,0.1,0.1,0.0], [0.1,0.3,0.4,0.2], [0.2,0.3,0.4,0.1], [0.2,0.3,0.4,0.1]])
-    
+    """
     print "WEIGHTS (a VS a)"
     print "----------------"
     print "- DKL"
@@ -95,8 +104,9 @@ if __name__ == '__main__':
     print "WEIGHTS (a VS a VS b)"
     print local_weights([a, a, b])
     print global_weights([a, a, b])
-    print 
+    print
+    """ 
     print "WEIGHTS (a VS a VS a VS b)"
-    print local_weights([a, a, a, b])
-    print global_weights([a, a, a, b])
+    print local_weights([a, a, a, b], median_ref=a)
+    #print global_weights([a, a, a, b])
     

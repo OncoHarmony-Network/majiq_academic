@@ -555,6 +555,7 @@ class DeltaGroup(DeltaPair):
                 #print "MEDIAN", median_ref[-1], sum(median_ref[-1]), '\n'
 
             filter_lw = local_weights(array(filtered_psis.values()), False, array(median_ref))
+            print filter_lw
 
         else:
             lw = local_weights(psis)
@@ -608,7 +609,7 @@ class DeltaGroup(DeltaPair):
 
     def equal_if_not(self, weights):
         "If weigths havent been set, automatically fix them equally"
-        if weights.size:
+        if not weights.size:
             numpairs = len(self.k_ref)
             return [1./numpairs]*numpairs
 
