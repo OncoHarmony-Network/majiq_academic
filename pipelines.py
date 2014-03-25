@@ -532,8 +532,9 @@ class DeltaGroup(DeltaPair):
         for replica_num in xrange(0, len(replicas)*2, 2): 
             #self.logger.info("WEIGHTS: 'High coverage' is %s events (out of %s)"%(high_inc.shape[0], inc.shape[0]))
             a = array(paired_replicas_norm[replica_num])
+            #AQUI
             psis.append(calc_psi(array(paired_replicas_norm[replica_num]), array(paired_replicas_norm[replica_num+1]), None, self.alpha, self.n, self.debug, self.psiparam))
-
+            #AQUI
         
         if relevant: #if we have a relevant set, calculate weigths from the delta
             filtered_psis = defaultdict(list) #to hold the filtered PSI values in the relevant "best changing" set
@@ -641,6 +642,7 @@ class DeltaGroup(DeltaPair):
 
     def run(self):
         self.logger.info("")
+        print self.numbestchanging
         #calculate weights for both sets
         if self.replicaweights or self.fixweights1:
             weights1 = self._sub_calcweights(self.files1, self.fixweights1)
@@ -655,7 +657,6 @@ class DeltaGroup(DeltaPair):
 
         self.k_ref = [] #maps the i, j reference for every matrix (this could be do in less lines with div and mod, but this is safer) 
         relevant_events = []
-        NUMEVENTS = 400 #this should be calculated using the FDR
         for i in xrange(len(self.files1)):
             for j in xrange(len(self.files2)):
                 self.k_ref.append([i, j])
@@ -672,22 +673,21 @@ class DeltaGroup(DeltaPair):
                     self.logger.info("Saving pair posterior for %s, %s"%(i, j))
 
                 if not self.replicaweights and not self.fixweights1: #get relevant events for weights calculation
-                    relevant_events.extend(rank_deltas(matrices, names, E=True)[:NUMEVENTS])
+                    relevant_events.extend(rank_deltas(matrices, names, E=True)[:self.numbestchanging])
 
                 for k, name in enumerate(names):
                     pairs_posteriors[name].append(matrices[k]) #pairing all runs events
 
         #sort again the combined ranks
         relevant_events.sort(key=lambda x: -x[1])
-        #print relevant_events
-        #print len(relevant_events)
+
         #gather the first NUMEVENTS names
         relevant = []
         for name, matrix in relevant_events:
             if name not in relevant_events: #ignore duplicated entries
                 relevant.append(name)
 
-            if len(relevant) == NUMEVENTS:
+            if len(relevant) == self.numbestchanging:
                 break #we got enough elements
 
         #print relevant[:20], "...", relevant[-20:]

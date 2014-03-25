@@ -81,6 +81,7 @@ if __name__ == '__main__':
 
     a = array([[0.2,0.3,0.4,0.1], [0.2,0.3,0.4,0.1], [0.2,0.3,0.4,0.1], [0.2,0.3,0.4,0.1]])
     b = array([[0.8,0.1,0.1,0.0], [0.1,0.3,0.4,0.2], [0.2,0.3,0.4,0.1], [0.2,0.3,0.4,0.1]])
+    c = array([[0.8,0.1,0.1,0.0], [0.8,0.1,0.1,0.0], [0.8,0.1,0.1,0.0], [0.8,0.1,0.1,0.0]])
     """
     print "WEIGHTS (a VS a)"
     print "----------------"
@@ -106,7 +107,9 @@ if __name__ == '__main__':
     print global_weights([a, a, b])
     print
     """ 
-    print "WEIGHTS (a VS a VS a VS b)"
-    print local_weights([a, a, a, b], median_ref=a)
+    print "WEIGHTS (a VS a VS a VS b VS c)"
+    print local_weights([a, a, a, b, c])
+    print
+    print local_weights([a, a, a, b, c], median_ref=a)
     #print global_weights([a, a, a, b])
     
