@@ -264,6 +264,18 @@ class BasicPipeline:
             self.logger.info("Fitting NB function with constitutive events...")
             return fit_nb(const_junctions, "%s_nbfit"%self.output, self.plotpath, nbdisp=self.nbdisp, logger=self.logger, discardb=True)
 
+    def mark_stacks(self, all_junctions, fitfunc):
+        if self.markstacks >= 0:
+            self.logger.info("Marking and masking stacks...")
+            for junc_set in all_junctions.keys():
+                if junc_set.find("const") == -1:
+                    print "... %s"%junc_set
+                    all_junctions[junc_set] = mark_stacks(all_junctions[junc_set], fitfunc, self.markstacks, self.nbdisp)
+
+                all_junctions[junc_set] = masked_less(all_junctions[junc_set], 0) #remask the stacks
+
+        return all_junctions
+
 ################################
 # PSI calculation pipeline     #
 ################################
@@ -276,6 +288,7 @@ class CalcPsi(BasicPipeline):
     def run(self):
         for path in self.files:
             self.calcpsi(path)
+
 
     def calcpsi(self, path, write_pickle=True):
         """
@@ -296,16 +309,7 @@ class CalcPsi(BasicPipeline):
             all_junctions[junc_set] = masked_less(all_junctions[junc_set], 0) 
 
         fitfunc = self.fitfunc(all_junctions["const"])
-        #MARKSTACKS
-        if self.markstacks >= 0:
-            self.logger.info("Marking and masking stacks...")
-            for junc_set in all_junctions.keys():
-                if junc_set.find("const") == -1:
-                    print "... %s"%junc_set
-                    all_junctions[junc_set] = mark_stacks(all_junctions[junc_set], fitfunc, self.markstacks, self.nbdisp)
-
-                all_junctions[junc_set] = masked_less(all_junctions[junc_set], 0) #remask the stacks
-
+        all_junctions = self.mark_stacks(all_junctions, fitfunc)
         #FILTER_JUNCTIONS?
         self.logger.info('Filtering ...')
         filter_junctions = defaultdict(array)
@@ -537,32 +541,31 @@ class DeltaGroup(DeltaPair, CalcPsi):
             for junc_set in all_junctions.keys():
                 all_junctions[junc_set] = masked_less(all_junctions[junc_set], 0) 
 
-            paired_replicas_norm.extend([list(all_junctions["inc"]), list(all_junctions["exc"])])
+            paired_replicas_norm.append([all_junctions["exc"], all_junctions["inc"]])
 
         paired_replicas_norm = array(paired_replicas_norm)
         print "PAIRED", paired_replicas_norm.shape
         #filtering
         self.logger.info("WEIGHTS: Calculating local weights...")
         psis = []
-        for replica_num in xrange(0, len(replicas)*2, 2): 
+        for exc, inc in paired_replicas_norm: 
             #self.logger.info("WEIGHTS: 'High coverage' is %s events (out of %s)"%(high_inc.shape[0], inc.shape[0]))
-            a = array(paired_replicas_norm[replica_num])
-            #AQUI
-            psis.append(calc_psi(array(paired_replicas_norm[replica_num]), array(paired_replicas_norm[replica_num+1]), None, self.alpha, self.n, self.debug, self.psiparam))
-            #AQUI
-        
+            mean_exc, var_exc, exc_samples = sample_from_junctions(exc, self.m, self.k, discardzeros=self.discardzeros, trimborder=self.trimborder, fitted_func=poly1d([1,0]), debug=self.debug)
+            mean_inc, var_inc, inc_samples = sample_from_junctions(inc, self.m, self.k, discardzeros=self.discardzeros, trimborder=self.trimborder, fitted_func=poly1d([1,0]), debug=self.debug)      
+            psis.append(calc_psi(exc_samples, inc_samples, None, self.alpha, self.n, self.debug, self.psiparam))
+            
         if relevant: #if we have a relevant set, calculate weigths from the delta
             filtered_psis = defaultdict(list) #to hold the filtered PSI values in the relevant "best changing" set
             filtered_psis_paired = defaultdict(list) #to calculate the median PSI
 
             for i, experiment in enumerate(psis):
                 for event_num, event in enumerate(experiment):
-                    event_name = event_names[event_num] 
+                    event_name = event_names[event_num]
                     if event_name in relevant: #all the psis in the relevant set
                         filtered_psis_paired[event_name].append(event)
-                        filtered_psis[i].append(event)
+                        filtered_psis[i].append(list(event))
 
-            #calculate median PSI   
+            #calculate median PSI
             median_ref = [] #will hold the median values for each median reference   
             for event_name, events in filtered_psis_paired.items():
                 median_ref.append(median(array(events), axis=0))
@@ -570,15 +573,14 @@ class DeltaGroup(DeltaPair, CalcPsi):
                 #print "#%s EVENTS"%len(events), events
                 #print "MEDIAN", median_ref[-1], sum(median_ref[-1]), '\n'
 
-            filter_lw = local_weights(array(filtered_psis.values()), False, array(median_ref))
+            filter_lw = local_weights(array(filtered_psis.values()), self.weightsL1, array(median_ref))
 
-        else:
+        else: 
             lw = local_weights(psis)
             self.logger.info("WEIGHTS: Filtering local weights...")
             max_diffs = []
             #calculate the maximum difference between the weights
             #Also filter out the events that are not present in all experiments
-             
             for event_weights in rollaxis(lw, 1):
                 max_diff = 0
                 #print event_weights
