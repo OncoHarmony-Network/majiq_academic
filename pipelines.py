@@ -45,9 +45,15 @@ def _find_len2(grimoire_obj, logger):
     junc_len = 666
     for junction in grimoire_obj:
         if hasattr(junction, 'coverage'):
-            junc_len = junction.coverage[0].shape[0]
-            if logger: logger.debug("Junction length is %s"%junc_len)
-            return junc_len 
+            if type(junction.coverage[0]) == lil_matrix:
+                event = junction.coverage[0].toarray()
+                junc_len = event[0].shape[0]
+            else:
+                junc_len = junction.coverage[0].shape[0]
+
+            if junc_len != 1: 
+                if logger: logger.debug("Junction length is %s"%junc_len)
+                return junc_len  
 
 
 
@@ -88,18 +94,18 @@ def _load_data2(grimoire_obj, logger=None, getnames = False):
     ret = []
     #first get junction length, should be almost always the first entry
     my_len = _find_len2(grimoire_obj, logger)
-
-    for junction in grimoire_obj:   
-        if hasattr(junction, 'coverage'):
-            cov = list(junction.coverage[0])
-            if type(cov[0]) == lil_matrix:
-                cov = [0]*my_len
-
-            ret.append(cov)
-            #print "Empirical", len(ret[-1])
+    for i, junction in enumerate(grimoire_obj):  
+        if type(junction.coverage[0]) == lil_matrix:
+            event = junction.coverage[0].toarray()
+            event = event[0]
         else:
-            ret.append([0]*my_len)
-            #print "Theoretical", len(ret[-1])
+            event = junction.coverage[0]
+
+        if event.shape[0] == 1:
+            event = [0]*my_len
+
+
+        ret.append(list(event))
 
     return array(ret)
 
@@ -269,47 +275,58 @@ class CalcPsi(BasicPipeline):
 
     def run(self):
         for path in self.files:
-            name = os.path.basename(path)
-            self.logger.info("")
-            self.logger.info("Loading %s..."%path)
-            inc, exc, const = load_data(path, self.logger) 
-            self.logger.debug("SHAPES for inclusion, %s exclusion, %s constitutive %s"%(inc.shape, exc.shape, const.shape))
-            self.logger.info("Loaded.")
-            all_junctions = {"inc": inc, "exc": exc, "const": const }
-            all_junctions = self.gc_content_norm(all_junctions)
+            self.calcpsi(path)
 
-            self.logger.info("Masking non unique...")
+    def calcpsi(self, path, write_pickle=True):
+        """
+        Given a file path with the junctions, return psi distributions. 
+        write_pickle indicates if a .pickle should be saved in disk
+        """
+        name = os.path.basename(path)
+        self.logger.info("")
+        self.logger.info("Loading %s..."%path)
+        inc, exc, const = load_data(path, self.logger) 
+        self.logger.debug("SHAPES for inclusion, %s exclusion, %s constitutive %s"%(inc.shape, exc.shape, const.shape))
+        self.logger.info("Loaded.")
+        all_junctions = {"inc": inc, "exc": exc, "const": const }
+        all_junctions = self.gc_content_norm(all_junctions)
+
+        self.logger.info("Masking non unique...")
+        for junc_set in all_junctions.keys():
+            all_junctions[junc_set] = masked_less(all_junctions[junc_set], 0) 
+
+        fitfunc = self.fitfunc(all_junctions["const"])
+        #MARKSTACKS
+        if self.markstacks >= 0:
+            self.logger.info("Marking and masking stacks...")
             for junc_set in all_junctions.keys():
-                all_junctions[junc_set] = masked_less(all_junctions[junc_set], 0) 
+                if junc_set.find("const") == -1:
+                    print "... %s"%junc_set
+                    all_junctions[junc_set] = mark_stacks(all_junctions[junc_set], fitfunc, self.markstacks, self.nbdisp)
 
-            fitfunc = self.fitfunc(all_junctions["const"])
-            #MARKSTACKS
-            if self.markstacks >= 0:
-                self.logger.info("Marking and masking stacks...")
-                for junc_set in all_junctions.keys():
-                    if junc_set.find("const") == -1:
-                        print "... %s"%junc_set
-                        all_junctions[junc_set] = mark_stacks(all_junctions[junc_set], fitfunc, self.markstacks, self.nbdisp)
+                all_junctions[junc_set] = masked_less(all_junctions[junc_set], 0) #remask the stacks
 
-                    all_junctions[junc_set] = masked_less(all_junctions[junc_set], 0) #remask the stacks
+        #FILTER_JUNCTIONS?
+        self.logger.info('Filtering ...')
+        filter_junctions = defaultdict(array)
+        filter_junctions["exc"], filter_junctions["inc"] = discardlow(self.minnonzero, True, self.logger, all_junctions["exc"], all_junctions["inc"])
+        filter_junctions["exc"], filter_junctions["inc"] = discardminreads(self.minreads, True, self.logger, False, filter_junctions["exc"], filter_junctions["inc"])
+        
+        self.logger.info("Bootstrapping samples...") 
+        mean_exc, var_exc, exc_samples = sample_from_junctions(filter_junctions["exc"], self.m, self.k, discardzeros=self.discardzeros, trimborder=self.trimborder, fitted_func=fitfunc, debug=self.debug)
+        mean_inc, var_inc, inc_samples = sample_from_junctions(filter_junctions["inc"], self.m, self.k, discardzeros=self.discardzeros, trimborder=self.trimborder, fitted_func=fitfunc, debug=self.debug)      
 
-            #FILTER_JUNCTIONS?
-            self.logger.info('Filtering ...')
-            filter_junctions = defaultdict(array)
-            filter_junctions["exc"], filter_junctions["inc"] = discardlow(self.minnonzero, True, self.logger, all_junctions["exc"], all_junctions["inc"])
-            filter_junctions["exc"], filter_junctions["inc"] = discardminreads(self.minreads, True, self.logger, False, filter_junctions["exc"], filter_junctions["inc"])
-            
-            self.logger.info("Bootstrapping samples...")
-            mean_exc, var_exc, exc_samples = sample_from_junctions(filter_junctions["exc"], self.m, self.k, discardzeros=False, trimborder=self.trimborder, fitted_func=fitfunc, debug=self.debug)
-            mean_inc, var_inc, inc_samples = sample_from_junctions(filter_junctions["inc"], self.m, self.k, discardzeros=False, trimborder=self.trimborder, fitted_func=fitfunc, debug=self.debug)      
+        self.logger.info("\nCalculating PSI for %s ..."%(name))
+        psi = calc_psi(inc_samples, exc_samples, name, self.alpha, self.n, self.debug, self.psiparam)
 
-            self.logger.info("\nCalculating PSI for %s ..."%(name))
-            psi = calc_psi(inc_samples, exc_samples, name, self.alpha, self.n, self.debug, self.psiparam)
-
-            self.logger.info("Saving PSI...")
+        self.logger.info("Saving PSI...")
+        if write_pickle:
             output = open("%s%s_psi.pickle"%(self.output, name), 'w')
             pickle.dump(psi, output)
             self.logger.info("PSI calculation for %s ended succesfully! Result can be found at %s"%(name, output.name))
+
+        return psi
+
 
 
 ################################
@@ -349,14 +366,12 @@ class DeltaPair(BasicPipeline):
         self.logger.info("")
         self.logger.info("Processing pair %s - %s..."%(file1, file2))
         inc1, exc1, const1, inc2, exc2, const2, event_names = load_data_pair(file1, file2, self.logger) 
-        print inc1
-        print inc1.shape
         self.logger.debug("Shapes for inclusion, %s exclusion, %s constitutive %s"%(inc1.shape, exc1.shape, const1.shape))
         all_junctions = {"inc1": inc1, "exc1": exc1, "const1": const1, "inc2": inc2, "exc2": exc2, "const2": const2 }
         all_junctions = self.gc_content_norm(all_junctions)
         self.logger.info("Masking non unique...")
         for junc_set in all_junctions.keys():
-            print junc_set, all_junctions[junc_set], all_junctions[junc_set].shape
+            #print junc_set, all_junctions[junc_set], all_junctions[junc_set].shape
             all_junctions[junc_set] = masked_less(array(all_junctions[junc_set]), 0) 
 
         fitfunc1 = self.fitfunc(all_junctions["const1"])
@@ -503,7 +518,7 @@ def deltagroup(args):
     _pipeline_run(DeltaGroup(args))
 
 
-class DeltaGroup(DeltaPair):
+class DeltaGroup(DeltaPair, CalcPsi):
 
     def calc_weights(self, replicas, relevant=None):
         self.logger.info("Loading data...")
@@ -539,16 +554,16 @@ class DeltaGroup(DeltaPair):
         if relevant: #if we have a relevant set, calculate weigths from the delta
             filtered_psis = defaultdict(list) #to hold the filtered PSI values in the relevant "best changing" set
             filtered_psis_paired = defaultdict(list) #to calculate the median PSI
-            median_ref = [] #will hold the median values for each median reference
+
             for i, experiment in enumerate(psis):
-                print "experiment", i
                 for event_num, event in enumerate(experiment):
                     event_name = event_names[event_num] 
                     if event_name in relevant: #all the psis in the relevant set
                         filtered_psis_paired[event_name].append(event)
                         filtered_psis[i].append(event)
 
-            #calculate median PSI      
+            #calculate median PSI   
+            median_ref = [] #will hold the median values for each median reference   
             for event_name, events in filtered_psis_paired.items():
                 median_ref.append(median(array(events), axis=0))
                 median_ref[-1] /= sum(median_ref[-1])
@@ -556,7 +571,6 @@ class DeltaGroup(DeltaPair):
                 #print "MEDIAN", median_ref[-1], sum(median_ref[-1]), '\n'
 
             filter_lw = local_weights(array(filtered_psis.values()), False, array(median_ref))
-            print filter_lw
 
         else:
             lw = local_weights(psis)
@@ -573,10 +587,10 @@ class DeltaGroup(DeltaPair):
                 for i in xrange(len(event_weights)):
                     for j in xrange(len(event_weights)):
                         num_experiments += 1
-                        max_diff = max(max_diff, event_weights[i]-event_weights[j])
+                        max_diff = max(max_diff, event_weights[i] - event_weights[j] )
 
                 if num_experiments == max_experiments:
-                    max_diffs.append(max_diff) 
+                    max_diffs.append(max_diff)
             
             #filter the weights with the greatest changing the percentile of distance length, but leaving the ones that change the most (as they could be stacks)
             mindiff = scoreatpercentile(max_diffs, self.changsetpercentile)  
@@ -588,7 +602,6 @@ class DeltaGroup(DeltaPair):
 
             filter_lw = array(filter_lw)
             filter_lw = filter_lw.transpose(1, 0)
-            print filter_lw
             self.logger.info("... total used for weights calculation is %s (%s %%) events that change the most"%(filter_lw.shape[1], self.changsetpercentile))
             
         gweights = global_weights(locweights=filter_lw)
@@ -642,7 +655,6 @@ class DeltaGroup(DeltaPair):
 
     def run(self):
         self.logger.info("")
-        print self.numbestchanging
         #calculate weights for both sets
         if self.replicaweights or self.fixweights1:
             weights1 = self._sub_calcweights(self.files1, self.fixweights1)

@@ -3,7 +3,6 @@ from collections import defaultdict
 from pylab import *
 
 
-
 def _l1(p, q):
     return (abs(p - q)).sum(axis=1)
 
@@ -14,8 +13,11 @@ def _kullback_lieber(p, q):
     Dkl(P|Q) = sum_i ln(P(i)/Q(i))*P(i)
     """
     pseudo = 1./sys.maxint
-    pq = log(p+pseudo) - log(q+pseudo)
-    return (pq*p).sum(axis=1)
+    p = p+pseudo #add pseudocount
+    p /= p.sum(axis=0) #normalize to 1
+    q = q+pseudo #add pseudocount  
+    q /= q.sum(axis=0) #normalize to 1
+    return ((log(p) - log(q))*(p)).sum(axis=1)
 
 
 def _local_distance(a, b, l1):
@@ -26,7 +28,7 @@ def _local_distance(a, b, l1):
 
 def local_weights(replicas, l1=False, median_ref=array([])):
     """
-    Using a KL divergence, calculate the weight for every event in every replica in a group of replicas
+    Using either L1 or DKL, calculate the weight for every event in every replica in a group of replicas
     """
     pseudo = 0.00000000000000000000001
     distances = []
@@ -36,8 +38,12 @@ def local_weights(replicas, l1=False, median_ref=array([])):
         
         distances = array(distances)
         distances += pseudo
+        distances /= distances.sum(axis=0)
+        #print "DISTANCES", distances
+        #print distances.shape
         weights = (1 - distances)
-                
+        weights /= weights.sum(axis=0)
+        #print "WEIGHTS", weights
     else:
         divergences = defaultdict(list)
         for i, replica_i in enumerate(replicas):
@@ -55,7 +61,7 @@ def local_weights(replicas, l1=False, median_ref=array([])):
             weight_matrix /= weight_matrix.sum(axis=0)
             weights += (1 - weight_matrix)
 
-    weights /= weights.sum(axis=0)
+        weights /= weights.sum(axis=0)
     
     return weights
 
@@ -82,7 +88,14 @@ if __name__ == '__main__':
     a = array([[0.2,0.3,0.4,0.1], [0.2,0.3,0.4,0.1], [0.2,0.3,0.4,0.1], [0.2,0.3,0.4,0.1]])
     b = array([[0.8,0.1,0.1,0.0], [0.1,0.3,0.4,0.2], [0.2,0.3,0.4,0.1], [0.2,0.3,0.4,0.1]])
     c = array([[0.8,0.1,0.1,0.0], [0.8,0.1,0.1,0.0], [0.8,0.1,0.1,0.0], [0.8,0.1,0.1,0.0]])
-    """
+
+    print "A"
+    print a
+    print "B"
+    print b
+    print "C"
+    print c
+    print
     print "WEIGHTS (a VS a)"
     print "----------------"
     print "- DKL"
@@ -106,7 +119,7 @@ if __name__ == '__main__':
     print local_weights([a, a, b])
     print global_weights([a, a, b])
     print
-    """ 
+
     print "WEIGHTS (a VS a VS a VS b VS c)"
     print local_weights([a, a, a, b, c])
     print

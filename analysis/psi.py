@@ -79,6 +79,8 @@ def recalibrate_delta(deltapsi):
 
 def calc_psi(inc_samples, exc_samples, name, alpha, n, debug, psinosample):
     "Given a set of matching inclusion and exclusion samples, calculate psi, save it in disk, and return the psi-per-juntion matrix"
+    
+    print inc_samples.shape
     samples = vstack([inc_samples, exc_samples]).reshape(2, inc_samples.shape[0], inc_samples.shape[1])
     psi_scores = calc_dirichlet(alpha, n, samples, debug=debug, psinosample=psinosample)
     if psinosample:
