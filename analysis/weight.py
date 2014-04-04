@@ -12,12 +12,20 @@ def _kullback_lieber(p, q):
 
     Dkl(P|Q) = sum_i ln(P(i)/Q(i))*P(i)
     """
-    pseudo = 1./sys.maxint
+    """
+    pseudo = 0
     p = p+pseudo #add pseudocount
     p /= p.sum(axis=0) #normalize to 1
     q = q+pseudo #add pseudocount  
     q /= q.sum(axis=0) #normalize to 1
-    return ((log(p) - log(q))*(p)).sum(axis=1)
+    print "P", p
+    print p.shape
+    print p.sum(axis=1)
+    print "Q", q
+    print q.shape
+    print q.sum(axis=1)
+    """
+    return (log(p / q)*p).sum(axis=1)
 
 
 def _local_distance(a, b, l1):
@@ -40,11 +48,13 @@ def local_weights(replicas, l1=False, median_ref=array([])):
         distances = array(distances)
         distances += pseudo
         distances /= distances.sum(axis=0)
-        #print "DISTANCES", distances
-        #print distances.shape
+        print "DISTANCES", distances
+        print distances.shape
         weights = (1 - distances)
+        print "WEIGHTS", weights
         weights /= weights.sum(axis=0)
-        #print "WEIGHTS", weights
+        print "WEIGHTS NORM", weights
+
     else:
         divergences = defaultdict(list)
         for i, replica_i in enumerate(replicas):
