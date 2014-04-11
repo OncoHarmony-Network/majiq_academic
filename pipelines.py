@@ -28,7 +28,7 @@ DELTA_RATIO = 0.2 #TODO to parameters
 
 
 def _find_len(grimoire_obj, logger):
-    junc_len = 666
+    junc_len = 666 #this value should never be 
     for junction in grimoire_obj:
         if hasattr(junction[0], 'coverage'):
             if type(junction[0].coverage[0]) == lil_matrix:
@@ -266,11 +266,11 @@ class BasicPipeline:
 
     def mark_stacks(self, all_junctions, fitfunc):
         if self.markstacks >= 0:
-            self.logger.info("Marking and masking stacks...")
+            self.logger.info("Marking and masking stacks for...")
             for junc_set in all_junctions.keys():
                 if junc_set.find("const") == -1:
-                    print "... %s"%junc_set
-                    all_junctions[junc_set] = mark_stacks(all_junctions[junc_set], fitfunc, self.markstacks, self.nbdisp)
+                    self.logger.info("... %s"%junc_set)
+                    all_junctions[junc_set] = mark_stacks(all_junctions[junc_set], fitfunc, self.markstacks, self.nbdisp, self.logger)
 
                 all_junctions[junc_set] = masked_less(all_junctions[junc_set], 0) #remask the stacks
 
@@ -390,7 +390,7 @@ class DeltaPair(BasicPipeline):
                     else:
                         f = fitfunc2
 
-                    print "... %s"%junc_set
+                    if self.logger: self.logger.info("... %s"%junc_set)
                     all_junctions[junc_set] = mark_stacks(all_junctions[junc_set], f, self.markstacks, self.nbdisp)
 
         #Start prior matrix
@@ -452,7 +452,7 @@ class DeltaPair(BasicPipeline):
             best_delta_psi = array(best_psi1 - best_psi2)
 
             self.logger.info("Parametrizing 'best set'...")
-            mixture_pdf = adjustdelta(best_delta_psi, output, plotpath=self.plotpath, title=" ".join(self.names), numiter=self.iter, breakiter=self.breakiter, V=self.V)
+            mixture_pdf = adjustdelta(best_delta_psi, output, plotpath=self.plotpath, title=" ".join(self.names), numiter=self.iter, breakiter=self.breakiter, V=self.V, logger=self.logger)
 
             pickle.dump(mixture_pdf, open("%s%s_%s_bestset.pickle"%(output, self.names[0], self.names[1]), 'w'))
         

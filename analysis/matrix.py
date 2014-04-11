@@ -1,5 +1,5 @@
 """
-Functions to handle the matrices operations
+Functions to handle the matrices operations over the delta PSI 
 """
 from pylab import *
 
@@ -39,7 +39,9 @@ def _find_delta_border(V, numbins):
     return numbins
 
 def matrix_area(matrix, V=0.2, absolute=True):
-    """Returns the probability of an event to be above a certain threshold. The absolute flag describes if the value is absolute"""
+    """
+    Returns the probability of an event to be above a certain threshold. The absolute flag describes if the value is absolute
+    """
     collapse = collapse_matrix(matrix)
     #get the delta psi histogram borders based on the size of 'collapse'
     border = _find_delta_border(V, collapse.shape[0])
@@ -57,7 +59,7 @@ def matrix_area(matrix, V=0.2, absolute=True):
     return sum(area)
 
 
-def v_sum(matrix):
+def matrix_prob_e(matrix):
     """
     Calculate sum_v v*P(Delta PSI > V)
     """
@@ -68,13 +70,22 @@ def v_sum(matrix):
 
     return ret
 
+def matrix_e(matrix):
+    "Calculates the expected value of delta PSI E()"
+    collapse = collapse_matrix(matrix) #one dimensional discrete distribution of psi
+    delta_space = list(linspace(-1, 1, num=len(collapse))) #the values that correspond to the different delta psi [-1, 1] 
+    e = 0
+    for i, value in enumerate(collapse):
+        e += value*delta_space[i]
+
+    return e
 
 def rank_deltas(matrices, names, V=0.2, absolute=True, E=False, ranknochange=False):
     "Rank all deltas in an event by level of change. V sets a threshold for change, E overrides V and calculates an average of V values"
     rank = []
     for i, dmatrix in enumerate(matrices):
         if E:
-            v_prob = v_sum(dmatrix)
+            v_prob = matrix_prob_e(dmatrix)
             rank.append([names[i], v_prob])
         else:
             area = matrix_area(dmatrix, V, absolute)
@@ -85,3 +96,10 @@ def rank_deltas(matrices, names, V=0.2, absolute=True, E=False, ranknochange=Fal
 
     rank.sort(key=lambda x: -x[1])
     return rank
+
+
+
+
+
+
+    

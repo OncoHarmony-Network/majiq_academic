@@ -170,7 +170,7 @@ def norm_junctions(junctions, gc_factors=None, gcnorm=False, trim=False, logger=
     return junctions
 
 
-def mark_stacks(junctions, fitfunc, pvalue_limit, dispersion):
+def mark_stacks(junctions, fitfunc, pvalue_limit, dispersion, logger=False):
     a, b = fitfunc.c
     minstack = sys.maxint #the minimum value marked as stack
     numstacks = 0
@@ -192,6 +192,6 @@ def mark_stacks(junctions, fitfunc, pvalue_limit, dispersion):
                     minstack = min(minstack, value)
                     numstacks += 1
 
-    print "Out of %s values, %s marked as stacks with a p-value threshold of %s (%.3f%%)"%(junctions.size, numstacks, pvalue_limit, (float(numstacks)/junctions.size)*100)
+    if logger: logger.info("Out of %s values, %s marked as stacks with a p-value threshold of %s (%.3f%%)"%(junctions.size, numstacks, pvalue_limit, (float(numstacks)/junctions.size)*100))
 
     return junctions
