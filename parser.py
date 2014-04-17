@@ -69,7 +69,9 @@ def main():
     group.add_argument('--changsetpercentile', type=float, default=90., help="Percentile of events that go into the 'best changing events' set")
     group.add_argument('--fixweights1', nargs='*', type=float, help='Manually fix the weights for the replicas [Default: Automatic weight calculation]')
     group.add_argument('--fixweights2', nargs='*', type=float, help='Manually fix the weights for the replicas [Default: Automatic weight calculation]')
-        
+    group.add_argument('--weightsL1', action='store_true', default=False, help='Use L1 instead of DKL in the weights algorithm')    
+    group.add_argument('--replicaweights', action='store_true', default=False, help='Weight the experiments according to the events that change the most within replicas')
+    group.add_argument('--numbestchanging', default=200, type=int, help="Number of events included in the best changing set (default %(default)s, should be automatically calculated using FDR)")
 
     #calcpsi flags
     psi = new_subparser()
