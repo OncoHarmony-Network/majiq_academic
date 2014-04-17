@@ -4,7 +4,7 @@ from gene import Gene, Transcript
 from exon import Exon
 from junction import Junction
 from utils import utils, stats
-from slv import SLV, SSOURCE, STARGET
+from lsv import LSV, SSOURCE, STARGET
 import mglobals
 import random
 import scipy.io
@@ -175,15 +175,16 @@ def LSV_detection( gene_list, chr ):
 
 #    junc_set = [ [] for xx in range(mglobals.num_experiments)]
     const_set  = [set() for xx in range(mglobals.num_experiments)]
-#    jun = [set() for xx in range(mglobals.num_experiments)]
+    jun = [set() for xx in range(mglobals.num_experiments)]
 
-    slv_list = []
+    lsv_list = [ [] for xx in range(mglobals.num_experiments)]
 
     for strand, glist  in gene_list.items():
         for gn in glist:
             count = gn.get_read_count().sum()
-
+            
             if count == 0: continue
+            print "---------------- %s --------------"%gn.get_id()
             mat, exon_list, tlb, varSS = gn.get_rnaseq_mat(const_set,lsv = True)
             for ss in range(2):
                 for ssnum in range(20):
@@ -191,37 +192,39 @@ def LSV_detection( gene_list, chr ):
             num_SS_var [2]+= varSS[2]
             #num_SS_var [1]+= varSS[1]
 
+            utils.print_junc_matrices(mat, tlb=tlb,fp=True)
             SS, ST = LSV_matrix_detection(mat, tlb, (False, False, False))
 #            print SS
 #            print ST
-#            print "Single source ",len(SS)
-#            print "SINGLE TARGET ", len(ST)
-            for slv_index, slv_lst in enumerate((SS,ST)):
-                slv_type = (SSOURCE,STARGET)[slv_index]
-                sstype = ['5prime','3prime'][slv_index]
-#                print slv_lst
-                for idx in slv_lst:
+            print "Single source ",len(SS)
+            print "SINGLE TARGET ", len(ST)
+
+
+            for lsv_index, lsv_lst in enumerate((SS,ST)):
+                lsv_type = (SSOURCE,STARGET)[lsv_index]
+                sstype = ['5prime','3prime'][lsv_index]
+#                print lsv_lst
+                for idx in lsv_lst:
                     coord = exon_list[idx].get_coordinates()
                     jlist = exon_list[idx].get_junctions(sstype)
-
+                    print "JUNC LIST", idx, jlist
                     for name, ind_list in mglobals.tissue_repl.items() :
                         for exp_idx in ind_list:
                             for jj in jlist:
                                 if jj is None: continue
-                                break
+                                jun[exp_idx].add(jj)
+                                utils.prepare_junctions_gc(jj,exp_idx)
                             else: 
                                 continue
-                            
-                            slv_list[exp_idx].append(SLV(coord, "%s-%s"%coord,jlist, slv_type))
-                            for j_idx,jnc in enumerate((jc1a, jc1c2)):
-                                jun[exp_idx].add(jnc)
-                                utils.prepare_junctions_gc(jnc,exp_idx)
-
-                        jc1a  = __get_enabled_junction(c1_a,exp_idx)
-                        jc1c2 = __get_enabled_junction(c1c2,exp_idx)
-
+                        lsv_in = LSV(coord, "%s:%d-%d"%(gn.get_id(),coord[0], coord[1]),jlist, lsv_type,exp_idx)
+                        for lsvinlist in lsv_list[exp_idx]:
+                            if lsv_in.is_equivalent(lsvinlist): 
+                                del lsv_in
+                                break
+                        else:
+                            lsv_list[exp_idx].append( lsv_in )#LSV(coord, "%s:%d-%d"%(gn.get_id(),coord[0], coord[1]),jlist, lsv_type,exp_idx))
                         const_set[exp_idx].difference(jun[exp_idx])
-
+            
 
 #    mglobals.keep_info(SE_events, num_SS_var[0],num_SS_var[1], num_SS_var[2], total_SE)
 
@@ -235,7 +238,7 @@ def LSV_detection( gene_list, chr ):
 #    print "#Exons with A3SS %s"%num_SS_var[0]
 #    print "#Exons with A5SS %s"%num_SS_var[1]
 
-    return slv_list
+    return lsv_list, const_set
 
 def LSV_matrix_detection( mat, exon_to_ss, b_list ):
     '''
@@ -245,32 +248,36 @@ def LSV_matrix_detection( mat, exon_to_ss, b_list ):
         3. All the junction to C2 should come from A
         4. Number of reads from C1-A should be equivalent to number of reads from A-C2
     '''
-    SLV_list = [[],[]]
+    LSV_list = [[],[]]
     const = abs(math.log(1.5/1.0,2))
 
     #change bucle for iterate by exons
     for ii in range( 1, len(exon_to_ss) -1 ) :
-        slv = exon_to_ss[ii]
-        if len(slv[0]) <=1 and len(slv[1]) <=1: continue
+        lsv = exon_to_ss[ii]
+        SS = mat[lsv[1][0]:lsv[1][-1]+1,:]
+        ST = mat[:,lsv[0][0]:lsv[0][-1]+1]
 
-        pre_slv = exon_to_ss[ii-1]
-        post_slv = exon_to_ss[ii+1]
+#        print "MATLSV: SS",SS
+#        print "MATLSV: ST",ST
+
+        pre_lsv = exon_to_ss[ii-1]
+        post_lsv = exon_to_ss[ii+1]
 
 #        c1_a = mat[ c1[1][0] : c1[1][-1]+1,  a[0][0] :  a[0][-1]+1 ]
 #        a_c2 = mat[  a[1][0] :  a[1][-1]+1, c2[0][0] : c2[0][-1]+1 ]
 #        c1c2 = mat[ c1[1][0] : c1[1][-1]+1, c2[0][0] : c2[0][-1]+1 ]
-        single_entry_SS  = mat[ : pre_slv[1][0], post_slv[0][0] :  ]
-        single_source_ST = mat[ : pre_slv[1][0], post_slv[0][0] :  ]
+        single_entry_SS  = mat[ : pre_lsv[1][0]+1, post_lsv[0][0] :  ]
+        single_source_ST = mat[ : pre_lsv[1][0]+1, post_lsv[0][0] :  ]
 
         if np.count_nonzero(single_entry_SS) > 0 : continue
 
-        if len(slv[1]) >1:
-            SLV_list[0].append(ii)
+        if np.count_nonzero(SS) >1:
+            LSV_list[0].append(ii)
 
-        if len(slv[0]) >1:
-            SLV_list[1].append(ii)
+        if np.count_nonzero(ST) >1:
+            LSV_list[1].append(ii)
 
-    return SLV_list
+    return LSV_list
 
 
 

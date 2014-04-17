@@ -90,9 +90,31 @@ class majiq_junc:
         if jnc is None:
             self.gc_index = scipy.sparse.lil_matrix((1,(mglobals.readLen-16)+1),dtype=np.int)
             self.name = None
+            self.id = "None"
+            self.exons = {}
+            self.exons['chrom']= None
+            self.exons['coord1'] = [0,0]
+            self.exons['coord2'] = [0,0]
+            self.exons['strand'] = None
             self.coverage = scipy.sparse.lil_matrix((1,(mglobals.readLen-16)+1),dtype=np.int)
         else:
             self.name     = "%s:%s-%s"%(jnc.get_gene().get_id(),jnc.get_ss_5p(),jnc.get_ss_3p())
+            self.id     = "%s:%s-%s"%(jnc.get_gene().get_chromosome(),jnc.get_ss_5p(),jnc.get_ss_3p())
+
+            self.exons = {}
+            self.exons['chrom']  = jnc.get_gene().get_chromosome()
+            self.exons['strand'] = jnc.get_gene().get_strand()
+            if jnc.get_donor() is None:
+                self.exons['coord1'] = [0,0]
+            else:
+                self.exons['coord1'] = jnc.get_donor().get_coordinates()
+
+            if jnc.get_acceptor() is None:
+                self.exons['coord2'] = [0,0]
+            else:
+                self.exons['coord2'] = jnc.get_acceptor().get_coordinates()
+
+
             self.coverage = jnc.coverage[exp_idx,:]
             #self.coverage = jnc.coverage[exp_idx,:].toarray()
             self.gc_index = jnc.get_gc_factors()[0][exp_idx,:].toarray()[0]
