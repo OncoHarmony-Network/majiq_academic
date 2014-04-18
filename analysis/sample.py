@@ -100,7 +100,7 @@ def mean_junction(junctions, discardzeros=True):
 
     return array(ret)
 
-def sample_from_junctions(junctions, m, k, dispersion=0.1, discardzeros=True, trimborder=True, fitted_func=None, debug=False):
+def sample_from_junctions(junctions, m, k, dispersion=0.1, discardzeros=True, trimborder=True, fitted_func=None, debug=False, tracklist=None, names=None):
     "Given the filtered reads, bootstrap samples from every junction"
     a, b = fitted_func.c
     sampled_means = []
@@ -145,8 +145,10 @@ def sample_from_junctions(junctions, m, k, dispersion=0.1, discardzeros=True, tr
             #calculate the mean and the variance 
             sampled_means.append(mean(samples))
             sampled_var.append(var(samples))
-
             all_samples.append(samples)
+            if names and tracklist:
+                if names[i] in tracklist:
+                    logger.info("TRACKLIST (%s): %s"%(event_name, junctions))
 
     return array(sampled_means), array(sampled_var), array(all_samples)
 

@@ -55,8 +55,6 @@ def _find_len2(grimoire_obj, logger):
                 if logger: logger.debug("Junction length is %s"%junc_len)
                 return junc_len  
 
-
-
 def _load_data_const(grimoire_obj, logger=None):
     CONST_MAX = 2000 # we don't really need more than 2000 constitutive exons 
     """
@@ -138,7 +136,6 @@ def load_data_n(paths, logger=None, const=False):
 
     return ret, event_names
 
-
 def _load_data_pair2(data, paired_samples, logger=None):
     "Load the information in data inside paired_samples defaultdict"
     my_len = _find_len(data, logger)
@@ -169,7 +166,7 @@ def _load_data_pair2(data, paired_samples, logger=None):
 
             paired_samples[my_name].extend([list(my_inc), list(my_exc)])    
 
-def load_data_pair(path1, path2, logger=None):
+def load_data_pair(path1, path2, logger=None, tracklist=None):
     """Pairing functionality should be extracted of this function"""
     #const extracting doesnt change
     data1 = pickle.load(open(path1))
@@ -184,8 +181,15 @@ def load_data_pair(path1, path2, logger=None):
     #pair the events: Only keep the paired events
     ret = []
     event_names = [] 
+    out_file_borrame = open('%s_%s_all_kirsten.txt'%(os.path.basename(path1), os.path.basename(path2)), 'w')
     for event_name, junctions in paired_samples.items():
+
+        if tracklist:
+            if event_name in tracklist:
+                logger.info("TRACKLIST (%s): inclusion1: %s \n exclusion1: %s \n inclusion2: %s \n exclusion2: %s \n"%(event_name, junctions[0], junctions[1], junctions[2], junctions[3]))
+
         if len(junctions) == 4:
+            out_file_borrame.write("%s: inc1: %s exc1: %s inc2: %s exc2: %s \n"%(event_name, junctions[0], junctions[1], junctions[2], junctions[3]))
             ret.append(junctions)
             event_names.append(event_name)
 
@@ -199,7 +203,6 @@ def _pipeline_run(pipeline, logger=None):
 
     except KeyboardInterrupt:
         if pipeline.logger: pipeline.logger.info("MAJIQ manually interrupted. Avada kedavra...")
-
 
 # PLOTTING STUFF. All this should eventually go to a plotting module 
 def _save_or_show(plotpath, plotname=None):
@@ -230,7 +233,6 @@ class BasicPipeline:
         """Basic configuration shared by all pipelines"""
         #trick to dump argparse arguments into self
         self.__dict__.update(args.__dict__)
-
         create_if_not_exists(self.output)
         if self.plotpath:
             create_if_not_exists(self.plotpath)
@@ -240,6 +242,8 @@ class BasicPipeline:
             logger_path = self.output
 
         self.logger = get_logger("%smajiq.log"%logger_path, silent=self.silent, debug=self.debug)
+        self.psi_paths = []
+
 
     @abc.abstractmethod
     def run(self):
@@ -313,8 +317,8 @@ class CalcPsi(BasicPipeline):
         #FILTER_JUNCTIONS?
         self.logger.info('Filtering ...')
         filter_junctions = defaultdict(array)
-        filter_junctions["exc"], filter_junctions["inc"] = discardlow(self.minnonzero, True, self.logger, all_junctions["exc"], all_junctions["inc"])
-        filter_junctions["exc"], filter_junctions["inc"] = discardminreads(self.minreads, True, self.logger, False, filter_junctions["exc"], filter_junctions["inc"])
+        filter_junctions["exc"], filter_junctions["inc"] = discardlow(self.minnonzero, True, self.logger, None, all_junctions["exc"], all_junctions["inc"])
+        filter_junctions["exc"], filter_junctions["inc"] = discardminreads(self.minreads, True, self.logger, False, None, filter_junctions["exc"], filter_junctions["inc"])
         
         self.logger.info("Bootstrapping samples...") 
         mean_exc, var_exc, exc_samples = sample_from_junctions(filter_junctions["exc"], self.m, self.k, discardzeros=self.discardzeros, trimborder=self.trimborder, fitted_func=fitfunc, debug=self.debug)
@@ -369,7 +373,7 @@ class DeltaPair(BasicPipeline):
     def pairdelta(self, file1, file2, output):
         self.logger.info("")
         self.logger.info("Processing pair %s - %s..."%(file1, file2))
-        inc1, exc1, const1, inc2, exc2, const2, event_names = load_data_pair(file1, file2, self.logger) 
+        inc1, exc1, const1, inc2, exc2, const2, event_names = load_data_pair(file1, file2, self.logger, self.tracklist) 
         self.logger.debug("Shapes for inclusion, %s exclusion, %s constitutive %s"%(inc1.shape, exc1.shape, const1.shape))
         all_junctions = {"inc1": inc1, "exc1": exc1, "const1": const1, "inc2": inc2, "exc2": exc2, "const2": const2 }
         all_junctions = self.gc_content_norm(all_junctions)
@@ -378,9 +382,13 @@ class DeltaPair(BasicPipeline):
             #print junc_set, all_junctions[junc_set], all_junctions[junc_set].shape
             all_junctions[junc_set] = masked_less(array(all_junctions[junc_set]), 0) 
 
+        #Quantifiable junctions filter
+        self.logger.info('Filtering ...')
+        all_junctions["exc1"], all_junctions["inc1"], all_junctions["exc2"], all_junctions["inc2"], event_names = discardlow(self.minnonzero, True, self.logger, event_names, all_junctions["exc1"], all_junctions["inc1"], all_junctions["exc2"], all_junctions["inc2"],)
+        all_junctions["exc1"], all_junctions["inc1"], all_junctions["exc2"], all_junctions["inc2"], event_names = discardminreads(self.minreads, True, self.logger, False, event_names, all_junctions["exc1"], all_junctions["inc1"], all_junctions["exc2"], all_junctions["inc2"],)
+        #fitting the function
         fitfunc1 = self.fitfunc(all_junctions["const1"])
         fitfunc2 = self.fitfunc(all_junctions["const2"])
-
         if self.markstacks >= 0:
             self.logger.info("Marking and masking stacks...")
             for junc_set in all_junctions.keys():
@@ -398,7 +406,7 @@ class DeltaPair(BasicPipeline):
         numbins = 20 #half the delta bins TODO to parameters
 
         self.logger.info("Calculate jefferies matrix...")
-        dircalc = DirichletCalc() 
+        dircalc = DirichletCalc()
         #Adjust prior matrix with Jefferies prior        
         jefferies = []
         psi_space = linspace(0, 1-self.binsize, num=numbins) + self.binsize/2
@@ -407,11 +415,16 @@ class DeltaPair(BasicPipeline):
             for j in psi_space:
                 jefferies[-1].append(dircalc.pdf([i, 1-i, j, 1-j], [self.alpha, self.alpha, self.alpha, self.alpha]))
 
+        if self.tracklist:
+            self.logger.info("TRACKLIST: After filters")
+            for i, event_name in enumerate(event_names):
+                if event_name in self.tracklist:
+                    logger.info("TRACKLIST After filters (%s): %s"%(event_name, all_junctions['inc1'][i], all_junctions['exc1'][i], all_junctions['exc2'][i], all_junctions['inc2'][i]))
+
         #jefferies = array([dircalc.pdf([x, 1-x], [0.5, 0.5]) for x in psi_space])
         jefferies = array(jefferies)
         jefferies /= sum(jefferies)
         plot_matrix(jefferies, "Jefferies Matrix", "jefferies_matrix", self.plotpath)
- 
         if self.synthprior:
             #Use a synthetic matrix to generate the values
             prior_matrix = [] 
@@ -419,9 +432,7 @@ class DeltaPair(BasicPipeline):
             mydist = norm(loc=0, scale=self.priorstd)
             norm_space = linspace(-1, 1-self.binsize, num=numbins*2) + self.binsize/2
             pdfnorm = mydist.pdf(norm_space)
-
             newdist = (pdfnorm+uniform)/(pdfnorm+uniform).sum()
-
             plot(linspace(-1, 1, num=len(list(pdfnorm))), pdfnorm)
             _save_or_show(self.plotpath, plotname="prior_distribution")
             #generate the matrix
@@ -437,9 +448,9 @@ class DeltaPair(BasicPipeline):
             #Using the empirical data to get the prior matrix
             self.logger.info('Filtering to obtain "best set"...')
             best_set = defaultdict(array)
-            best_set["exc1"], best_set["inc1"], best_set["exc2"], best_set["inc2"] = discardminreads_and(incexcpairs=[[all_junctions["exc1"], all_junctions["inc1"]], [all_junctions["exc2"], all_junctions["inc2"]]], minreads=self.minandreads, logger=self.logger)
-            best_set["exc1"], best_set["inc1"], best_set["exc2"], best_set["inc2"] = discardlow(self.minnonzero, True, self.logger, best_set["exc1"], best_set["inc1"], best_set["exc2"], best_set["inc2"])
-            best_set["exc1"], best_set["inc1"], best_set["exc2"], best_set["inc2"] = discardminreads(self.minreads, True, self.logger, False, best_set["exc1"], best_set["inc1"], best_set["exc2"], best_set["inc2"])
+            best_set["exc1"], best_set["inc1"], best_set["exc2"], best_set["inc2"] = discardminreads_and(incexcpairs=[[all_junctions["exc1"], all_junctions["inc1"]], [all_junctions["exc2"], all_junctions["inc2"]]], minreads=self.priorminandreads, logger=self.logger)
+            best_set["exc1"], best_set["inc1"], best_set["exc2"], best_set["inc2"] = discardlow(self.priorminnonzero, True, self.logger, best_set["exc1"], best_set["inc1"], best_set["exc2"], best_set["inc2"])
+            best_set["exc1"], best_set["inc1"], best_set["exc2"], best_set["inc2"] = discardminreads(self.priorminreads, True, self.logger, False, None, best_set["exc1"], best_set["inc1"], best_set["exc2"], best_set["inc2"])
             best_exc_reads1 = mean_junction(best_set['exc1'])
             best_inc_reads1 = mean_junction(best_set['inc1'])
             best_exc_reads2 = mean_junction(best_set['exc2'])
@@ -476,23 +487,19 @@ class DeltaPair(BasicPipeline):
             prior_matrix *= jefferies 
 
         prior_matrix /= sum(prior_matrix) #renormalize so it sums 1
-        
         plot_matrix(prior_matrix, "Prior Matrix", "prior_matrix", self.plotpath)
-
         self.logger.info("Saving prior matrix for %s..."%(self.names))
         pickle.dump(prior_matrix, open("%s%s_%s_priormatrix.pickle"%(output, self.names[0], self.names[1]), 'w'))
-
         self.logger.info("Bootstrapping for all samples...")
-        mean_exc1, var_exc1, exc_samples1 = sample_from_junctions(all_junctions["exc1"], self.m, self.k, discardzeros=self.discardzeros, trimborder=self.trimborder, fitted_func=fitfunc1, debug=self.debug)
-        mean_inc1, var_inc1, inc_samples1 = sample_from_junctions(all_junctions["inc1"], self.m, self.k, discardzeros=self.discardzeros, trimborder=self.trimborder, fitted_func=fitfunc1, debug=self.debug)      
-        mean_exc2, var_exc2, exc_samples2 = sample_from_junctions(all_junctions["exc2"], self.m, self.k, discardzeros=self.discardzeros, trimborder=self.trimborder, fitted_func=fitfunc2, debug=self.debug)
-        mean_inc2, var_inc2, inc_samples2 = sample_from_junctions(all_junctions["inc2"], self.m, self.k, discardzeros=self.discardzeros, trimborder=self.trimborder, fitted_func=fitfunc2, debug=self.debug)
-
+        mean_exc1, var_exc1, exc_samples1 = sample_from_junctions(all_junctions["exc1"], self.m, self.k, discardzeros=self.discardzeros, trimborder=self.trimborder, fitted_func=fitfunc1, debug=self.debug, tracklist=self.tracklist, names=event_names)
+        mean_inc1, var_inc1, inc_samples1 = sample_from_junctions(all_junctions["inc1"], self.m, self.k, discardzeros=self.discardzeros, trimborder=self.trimborder, fitted_func=fitfunc1, debug=self.debug, tracklist=self.tracklist, names=event_names)      
+        mean_exc2, var_exc2, exc_samples2 = sample_from_junctions(all_junctions["exc2"], self.m, self.k, discardzeros=self.discardzeros, trimborder=self.trimborder, fitted_func=fitfunc2, debug=self.debug, tracklist=self.tracklist, names=event_names)
+        mean_inc2, var_inc2, inc_samples2 = sample_from_junctions(all_junctions["inc2"], self.m, self.k, discardzeros=self.discardzeros, trimborder=self.trimborder, fitted_func=fitfunc2, debug=self.debug, tracklist=self.tracklist, names=event_names)
         self.logger.info("\nCalculating PSI (just for reference) for %s and %s..."%(self.names[0], self.names[1]))
         psi1 = calc_psi(inc_samples1, exc_samples1, self.names[0], self.alpha, self.n, self.debug, self.psiparam)
-        psi2 = calc_psi(inc_samples2, exc_samples2, self.names[1], self.alpha, self.n, self.debug, self.psiparam)        
-        pickle.dump(psi1, open("%s%s_psipaired.pickle"%(output, self.names[0]), 'w'))
-        pickle.dump(psi2, open("%s%s_psipaired.pickle"%(output, self.names[1]), 'w'))
+        psi2 = calc_psi(inc_samples2, exc_samples2, self.names[1], self.alpha, self.n, self.debug, self.psiparam) 
+        psi_path = "%s%s_%s_psipaired.pickle"%(output, self.names[0], self.names[1])
+        pickle.dump([psi1, psi2], open(psi_path, 'w'))
 
         self.logger.info("Calculating P(Data | PSI_i, PSI_j)...")
         #P(Data | PSI_i, PSI_j) = P(vector_i | PSI_i) * P(vector_j | PSI_j)
@@ -518,94 +525,49 @@ class DeltaPair(BasicPipeline):
         self.logger.info("Done!")
         return posterior_matrix, event_names
 
+
+
 def deltagroup(args):
     _pipeline_run(DeltaGroup(args))
 
 
 class DeltaGroup(DeltaPair, CalcPsi):
 
-    def calc_weights(self, replicas, relevant=None):
-        self.logger.info("Loading data...")
-        paired_replicas, event_names = load_data_n(replicas, logger=self.logger)
-        self.logger.info("Calculating weights for %s..."%replicas)        
-
-        paired_replicas = array(paired_replicas)
-        paired_replicas_norm = []
-        #gc content norm and masking
-        for replica_num in xrange(0, len(replicas)*2, 2): 
-            inc, exc = array(paired_replicas[:,replica_num]), array(paired_replicas[:,replica_num+1])
-            self.logger.info("WEIGHTS: Calculating PSI for 'High coverage'...")
-            all_junctions = {"inc": inc, "exc": exc }
-            all_junctions = self.gc_content_norm(all_junctions)
-            self.logger.info("Masking non unique...")
-            for junc_set in all_junctions.keys():
-                all_junctions[junc_set] = masked_less(all_junctions[junc_set], 0) 
-
-            paired_replicas_norm.append([all_junctions["exc"], all_junctions["inc"]])
-
-        paired_replicas_norm = array(paired_replicas_norm)
-        print "PAIRED", paired_replicas_norm.shape
-        #filtering
-        self.logger.info("WEIGHTS: Calculating local weights...")
+    def _load_psis(self):
+        "Load the already calculated PSI paired, and their corresponding names"
         psis = []
-        for exc, inc in paired_replicas_norm: 
-            #self.logger.info("WEIGHTS: 'High coverage' is %s events (out of %s)"%(high_inc.shape[0], inc.shape[0]))
-            mean_exc, var_exc, exc_samples = sample_from_junctions(exc, self.m, self.k, discardzeros=self.discardzeros, trimborder=self.trimborder, fitted_func=poly1d([1,0]), debug=self.debug)
-            mean_inc, var_inc, inc_samples = sample_from_junctions(inc, self.m, self.k, discardzeros=self.discardzeros, trimborder=self.trimborder, fitted_func=poly1d([1,0]), debug=self.debug)      
-            psis.append(calc_psi(exc_samples, inc_samples, None, self.alpha, self.n, self.debug, self.psiparam))
-            
-        if relevant: #if we have a relevant set, calculate weigths from the delta
-            filtered_psis = defaultdict(list) #to hold the filtered PSI values in the relevant "best changing" set
-            filtered_psis_paired = defaultdict(list) #to calculate the median PSI
+        for i in xrange(len(self.files1)):
+            for j in xrange(len(self.files2)):
+                psi_path = "%s%s_%s_psipaired.pickle"%(self._pair_path(i, j), self.names[0], self.names[1])
+                print "Loading PSI %s for weights..."%psi_path
+                psis.extend(pickle.load(open(psi_path)))
+        
+        return psis
 
-            for i, experiment in enumerate(psis):
-                for event_num, event in enumerate(experiment):
-                    event_name = event_names[event_num]
-                    if event_name in relevant: #all the psis in the relevant set
-                        filtered_psis_paired[event_name].append(event)
-                        filtered_psis[i].append(list(event))
+    def calc_weights(self, relevant):
+        """with relevant set, calculate weigths from the PSIs between experiments (kind of delta PSI)"""
+        self.logger.info("Loading PSIS...")
+        psis, event_names = self._load_psis()
 
-            #calculate median PSI
-            median_ref = [] #will hold the median values for each median reference   
-            for event_name, events in filtered_psis_paired.items():
-                median_ref.append(median(array(events), axis=0))
-                median_ref[-1] /= sum(median_ref[-1])
-                #print "#%s EVENTS"%len(events), events
-                #print "MEDIAN", median_ref[-1], sum(median_ref[-1]), '\n'
+        filtered_psis = defaultdict(list) #to hold the filtered PSI values in the relevant "best changing" set
+        filtered_psis_paired = defaultdict(list) #to calculate the median PSI
+        for i, experiment in enumerate(psis):
+            for event_num, event in enumerate(experiment):
+                event_name = event_names[event_num]
+                if event_name in relevant: #all the psis in the relevant set
+                    filtered_psis_paired[event_name].append(event)
+                    filtered_psis[i].append(list(event))
 
-            filter_lw = local_weights(array(filtered_psis.values()), self.weightsL1, array(median_ref))
+        #calculate median PSI
+        median_ref = [] #will hold the median values for each median reference   
+        for event_name, events in filtered_psis_paired.items():
+            median_ref.append(median(array(events), axis=0))
+            median_ref[-1] /= sum(median_ref[-1])
+            #print "#%s EVENTS"%len(events), events
+            #print "MEDIAN", median_ref[-1], sum(median_ref[-1]), '\n'
 
-        else: 
-            lw = local_weights(psis)
-            self.logger.info("WEIGHTS: Filtering local weights...")
-            max_diffs = []
-            #calculate the maximum difference between the weights
-            #Also filter out the events that are not present in all experiments
-            for event_weights in rollaxis(lw, 1):
-                max_diff = 0
-                #print event_weights
-                num_experiments = 0
-                max_experiments = len(event_weights)**2 #maximum number of matrices per event
-                for i in xrange(len(event_weights)):
-                    for j in xrange(len(event_weights)):
-                        num_experiments += 1
-                        max_diff = max(max_diff, event_weights[i] - event_weights[j] )
+        filter_lw = local_weights(array(filtered_psis.values()), self.weightsL1, array(median_ref))
 
-                if num_experiments == max_experiments:
-                    max_diffs.append(max_diff)
-            
-            #filter the weights with the greatest changing the percentile of distance length, but leaving the ones that change the most (as they could be stacks)
-            mindiff = scoreatpercentile(max_diffs, self.changsetpercentile)  
-            self.logger.info("WEIGHTS: Total number of events is %s..."%lw.shape[1])  
-            filter_lw = []
-            for k, diff in enumerate(max_diffs):
-                if diff >= mindiff:
-                    filter_lw.append(lw[:,k])
-
-            filter_lw = array(filter_lw)
-            filter_lw = filter_lw.transpose(1, 0)
-            self.logger.info("... total used for weights calculation is %s (%s %%) events that change the most"%(filter_lw.shape[1], self.changsetpercentile))
-            
         gweights = global_weights(locweights=filter_lw)
         lweights_path = "%s_%s_%s_localweights.pickle"%(self.output, self.names[0], self.names[1])
         gweights_path = "%s_%s_%s_globalweights.pickle"%(self.output, self.names[0], self.names[1])
@@ -614,14 +576,14 @@ class DeltaGroup(DeltaPair, CalcPsi):
         return gweights
 
 
-    def _sub_calcweights(self, files, fixweights, relevant):
+    def _sub_calcweights(self, files, fixweights=None, relevant=None):
         if fixweights:
-            weights = fixweights
+            self.logger.info("Weights for %s are fixed to %s (respectively)"%(files, fixweights))
+            return fixweights
         else:
             weights = self.calc_weights(files, relevant=relevant)
-
-        self.logger.info("Weights for %s are %s (respectively)"%(files, weights))
-        return weights
+            self.logger.info("Weights for %s are %s (respectively)"%(files, weights))
+            return weights
 
     def equal_if_not(self, weights):
         "If weigths havent been set, automatically fix them equally"
@@ -655,12 +617,22 @@ class DeltaGroup(DeltaPair, CalcPsi):
 
         return comb_matrix, comb_names
 
+    def _pair_path(self, i, j):
+        return "%s%s_%s_"%(self.output, i, j)
+
+    def _events_path(self, i, j):
+        return "%s%s_%s_eventnames.pickle"%(self._pair_path(i, j), self.names[0], self.names[1]) 
+
+    def _matrix_path(self, i, j):
+        return "%s%s_%s_deltamatrix.pickle"%(self._pair_path(i, j), self.names[0], self.names[1])
+
     def run(self):
         self.logger.info("")
-        #calculate weights for both sets
-        if self.replicaweights or self.fixweights1:
-            weights1 = self._sub_calcweights(self.files1, self.fixweights1)
-            weights2 = self._sub_calcweights(self.files2, self.fixweights2)
+
+        #Just fix the weights
+        if self.fixweights1:
+            weights1 = self._sub_calcweights(self.files1, fixweights=self.fixweights1)
+            weights2 = self._sub_calcweights(self.files2, fixweights=self.fixweights2)
 
         #NOTE: global_weights better
         self.logger.info("Running deltagroups...")
@@ -674,9 +646,9 @@ class DeltaGroup(DeltaPair, CalcPsi):
         for i in xrange(len(self.files1)):
             for j in xrange(len(self.files2)):
                 self.k_ref.append([i, j])
-                path = "%s%s_%s_"%(self.output, i, j)
-                matrix_path = "%s%s_%s_deltamatrix.pickle"%(path, self.names[0], self.names[1])
-                events_path = "%s%s_%s_eventnames.pickle"%(path, self.names[0], self.names[1]) 
+                path = self._pair_path(i, j)
+                matrix_path = self._matrix_path(i, j)
+                events_path = self._events_path(i, j)
                 if os.path.exists(matrix_path):
                     self.logger.info("%s exists! Loading..."%path)
                     matrices = pickle.load(open(matrix_path))
@@ -704,12 +676,11 @@ class DeltaGroup(DeltaPair, CalcPsi):
             if len(relevant) == self.numbestchanging:
                 break #we got enough elements
 
-        #print relevant[:20], "...", relevant[-20:]
         if not self.replicaweights and not self.fixweights1:
             #relevant = self.get_relevant(pairs_posteriors)
             self.logger.info("Obtaining weights from Delta PSI...")
-            weights1 = self._sub_calcweights(self.files1, None, relevant=relevant)
-            weights2 = self._sub_calcweights(self.files2, None, relevant=relevant)
+            weights1 = self._sub_calcweights(self.files1, relevant=relevant)
+            weights2 = self._sub_calcweights(self.files2, relevant=relevant)
 
         self.logger.info("Normalizing with weights...")
         comb_matrix, comb_names = self.comb_replicas(pairs_posteriors, weights1=weights1, weights2=weights2)        

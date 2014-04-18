@@ -4,7 +4,7 @@ from gene import Gene, Transcript
 from exon import Exon
 from junction import Junction
 from utils import utils, stats
-from slv import SLV, SSOURCE, STARGET
+#from slv import SLV, SSOURCE, STARGET
 import mglobals
 import random
 import scipy.io
