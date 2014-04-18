@@ -16,6 +16,7 @@ import scipy.io
 from scipy.stats.mstats import mquantiles
 from scipy import interpolate
 from matplotlib import pyplot
+from grimoire.lsv import print_lsv_extype
 
 def create_if_not_exists(my_dir, logger=False):
     "Create a directory path if it does not exist"
@@ -59,7 +60,7 @@ def __gc_factor_ind(val, exp_idx):
             res = ii
     return res
 
-def prepare_SLV_table(SLV_list, non_as, temp_file):
+def prepare_LSV_table(LSV_list, non_as, temp_file):
 
     for name, ind_list in mglobals.tissue_repl.items() :
         for idx,exp_idx in enumerate(ind_list) :
@@ -69,19 +70,18 @@ def prepare_SLV_table(SLV_list, non_as, temp_file):
 #            info ['GC_bins']      = mglobals.gc_bins[exp_idx]
 #            info ['GC_bins_val']  = mglobals.gc_bins_val[exp_idx]
 
-            jun = set(SLV_list)
-            non_as[exp_idx].difference(jun)
-            majiq_table_as    = np.zeros( shape=(len(junc_set[exp_idx]),2), dtype=np.dtype('object'))
-            majiq_table_nonas = np.zeros( shape=(len(non_as[exp_idx]),1), dtype=np.dtype('object'))
+            jun = set(LSV_list[exp_idx])
+            #non_as[exp_idx].difference(jun)
+            majiq_table_as    = np.zeros( shape=(len(LSV_list[exp_idx])), dtype=np.dtype('object'))
+            majiq_table_nonas = np.zeros( shape=(len(non_as[exp_idx])), dtype=np.dtype('object'))
 
             # We iterate over the inc and exc in order to fill the majiq_junc_matrix
             
-            for iix, jn_lst in enumerate(junc_set[exp_idx]) :
-                for lab_idx in range(2):
-                    #print jn_lst
-                    majiq_table_as[iix, lab_idx] = majiq_junc( jn_lst[lab_idx], exp_idx)
+            for iix, lsv in enumerate(LSV_list[exp_idx]) :
+                #print jn_lst
+                majiq_table_as[iix] = lsv.to_majiqLSV()
             for jix, jn in enumerate(non_as[exp_idx]) :
-                    majiq_table_nonas[jix] = majiq_junc( jn , exp_idx)
+                majiq_table_nonas[jix] = majiq_junc( jn , exp_idx)
 
             file_pi = open("%s/temp_%s.%s"%(mglobals.temp_oDir[exp_idx],mglobals.exp_list[exp_idx], temp_file), 'w+')
             pickle.dump((majiq_table_as, majiq_table_nonas), file_pi)
@@ -89,7 +89,7 @@ def prepare_SLV_table(SLV_list, non_as, temp_file):
 
 def prepare_MAJIQ_table(junc_set, non_as, temp_file):
 
-    print "PREPAAAER",  mglobals.tissue_repl
+#    print "PREPAAAER",  mglobals.tissue_repl
     for name, ind_list in mglobals.tissue_repl.items() :
 
         for idx,exp_idx in enumerate(ind_list) :
@@ -107,6 +107,7 @@ def prepare_MAJIQ_table(junc_set, non_as, temp_file):
             # We iterate over the inc and exc in order to fill the majiq_junc_matrix
             
             for iix, jn_lst in enumerate(junc_set[exp_idx]) :
+#                if jn_lst[0] == None and jn_lst[1] == None: continue
                 for lab_idx in range(2):
                     #print jn_lst
                     majiq_table_as[iix, lab_idx] = majiq_junc( jn_lst[lab_idx], exp_idx)
@@ -152,6 +153,10 @@ def merge_and_create_MAJIQ ( chr_list, ofile ):
             file_pi = open('%s/info.%s.majiq'%(mglobals.outDir,mglobals.exp_list[exp_idx]), 'w+')
             pickle.dump(exp_info, file_pi)
             file_pi.close()
+            
+#            print_lsv_extype(AT,'%s/LSV.%s.types'%(mglobals.outDir,mglobals.exp_list[exp_idx]))
+            
+
 
 def set_exons_gc_content(chrom, exon_list ):
 
@@ -197,14 +202,41 @@ def set_exons_gc_content(chrom, exon_list ):
 
 def generate_visualization_output( allgenes ):
 
-    from collections import namedtuple
+
+    from splice_graphics.exonGraphic import ExonGraphic 
+    from splice_graphics.geneGraphic import GeneGraphic 
+    from splice_graphics.junctionGraphic import JunctionGraphic 
+
     #vExon = namedtuple("MyStruct", "start end a3 a5")
     
     gene_list = []
     for gl in allgenes.values(): 
         for genes_l in gl.values():
             for gg in genes_l:
-                junc_l = np.asarray([jj.get_coordinates() for jj in gg.get_all_junctions()])
+
+                junc_list = []
+                junc_l = []
+#                IRlist = gene.get_IRlist()
+
+                for jj in gg.get_all_junctions():
+                    print "JUNC",jj, jj.get_coordinates()
+                    if jj.get_coordinates()[0] == None or jj.donor is None or jj.acceptor is None: continue
+                    print "NEXTJUNC", jj
+                    if jj.is_annotated() and jj.readN.sum() == 0:
+                        jtype= 2
+                    elif jj.is_annotated() and jj.readN.sum() > 0:
+                        jtype = 0
+                    elif not jj.is_annotated() and jj.readN.sum() > 5: 
+                        jtype = 1
+                    else:
+                        jtype = 1
+                        print "ERROR VIZ"
+                        continue
+                    junc_l.append(jj.get_coordinates())
+                    junc_list.append(JunctionGraphic( jj.get_coordinates(), jtype, jj.readN.sum()))
+                    print "MMMM",jj.donor, jj.acceptor
+                junc_l = np.asarray(junc_l)
+                print junc_l
                 exon_list = []
                 for ex in gg.get_exon_list():
                     cc = ex.get_coordinates()
@@ -218,9 +250,32 @@ def generate_visualization_output( allgenes ):
                         for jidx, jjl in enumerate(junc_l):
                             if ss5 != jjl[0] : continue
                             a5.append(jidx)
-                    vx = {'coordinates':cc,'a3':a3,'a5':a5}
-                    exon_list.append(vx)
-                gene_list.append((gg.get_id(),gg.get_strand(),exon_list,junc_l))
+                    print "VIZ INFO",ex.annotated, ex.coverage.sum()
+                    if ex.annotated and ex.coverage.sum() == 0.0:
+                        type = 2
+                    elif ex.annotated and ex.coverage.sum() > 0.0:
+                        type = 0
+                    elif not ex.annotated and ex.coverage.sum() > 0.0:
+                        type = 1
+                    else:
+                        type = 1
+                        print "ERROR VIZ 2"
+#                        continue
+                    extra_coords = []
+                    if ex.start < ex.db_coord[0]:
+                        extra_coords.append([ex.start, ex.db_coord[0]-1])
+                    if ex.end > ex.db_coord[1]:
+                        extra_coords.append([ex.db_coord[1]+1, ex.end])
+
+                    eg = ExonGraphic(a3, a5, cc, type, intron_retention = ex.ir , coords_extra = extra_coords) 
+                    exon_list.append( eg )
+
+                    #if len(IRlist) == 0: continue
+                    #for ir in IRlist:
+                    #    irst, irend = ir.get_coordinates()
+                    #    if irs
+
+                gene_list.append(GeneGraphic(gg.get_id(),gg.get_strand(), exon_list, junc_list))
 
     file_pi = open('%s/visual_LSE.majiq'%(mglobals.outDir),'w+')
     pickle.dump((gene_list), file_pi)
@@ -307,6 +362,8 @@ def gc_factor_calculation(exon_list, nb):
 #                if gc_val is None or cov == 0:
 #                    print ex.strand, st, end
 
+                print "GC_VA:",gc_val 
+                print "COV",cov
 
                 if  gc_val is None or end-st < 30  or cov < 1: continue
                 count.append( cov )

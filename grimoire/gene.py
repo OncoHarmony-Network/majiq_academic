@@ -2,7 +2,7 @@
 import numpy as np
 import grimoire.utils.utils as utils
 import mglobals
-
+from grimoire.exon import Exon, ExonTx, collapse_list_exons, print_list_exons
 class Gene:
     __eq__ = lambda self, other: self.chromosome == other.chromosome and self.strand == other.strand and self.start < other.end and self.end > other.start
     __ne__ = lambda self, other: self.chromosome != other.chromosome or self.strand != other.strand or self.start >= other.end or self.end <= other.start
@@ -29,9 +29,10 @@ class Gene:
         self.exonNum = 0
         self.readNum = np.zeros(shape=(mglobals.num_experiments),dtype=np.int)
         self.RPKM = np.zeros(shape=(mglobals.num_experiments),dtype=np.float)
-
+        self.temp_txex_list = []
         self.transAScandidates = []
         self.transCONSTcandidates = []
+        self.ir_list = []
 
     def __hash__(self):
         return hash((self.id,self.chromosome, self.strand, self.start, self.end))
@@ -83,6 +84,10 @@ class Gene:
         (self.transcript_list).append(tcrpt)
         return
     
+    def add_intron_retention(self, lsv_IR):
+        self.ir_list.append(lsv_IR)
+
+
     def add_read_count(self, readNum,exp_idx):
         self.readNum[exp_idx] += readNum
         return
@@ -115,6 +120,7 @@ class Gene:
                 ll.end = max(ll.end,self.end)
                 break
         return res
+
 
     def calculate_RPKM( self, experiment_index, total_Reads ) :
         '''
@@ -173,7 +179,7 @@ class Gene:
         res = None
         for ff in self.transcript_list :
             res = ff.in_junction_list(start,end)
-            if res is None:
+            if not res is None:
                 break
         return res
 
@@ -181,14 +187,19 @@ class Gene:
         lst = set()
         for ex in self.get_exon_list():
             for ex_rna in ex.exonRead_list:
-                if not ex_rna.p5_junc is None:
-                    lst.add(ex_rna.p5_junc)
+                print "RNA", ex_rna, ex_rna.p5_junc, len(ex_rna.p5_junc)
+                if len(ex_rna.p5_junc) > 0:
+                    print "set", lst
+                    lst = lst.union(set(ex_rna.p5_junc))
+                    print "set2",lst
+        print "ALL_JUNC",lst
+
         for tt in self.transcript_list:
             for jj in tt.get_junction_list():
                 if not jj is None and not jj in lst :
                     lst.add(jj)
         s_junc = list(lst)
-        return sorted(s_junc)
+        return sorted([xx for xx in s_junc if not xx is None])
 
     def get_annotated_junctions(self):
         lst = set()
@@ -203,8 +214,8 @@ class Gene:
         lst = []
         for ex in self.get_exon_list():
             for ex_rna in ex.exonRead_list:
-                if not ex_rna.p5_junc is None:
-                    lst.append(ex_rna.p5_junc)
+                if len(ex_rna.p5_junc) > 0:
+                    lst.union(set(ex_rna.p5_junc))
         lst.sort()
         return lst
 
@@ -219,17 +230,46 @@ class Gene:
     def get_exon_list( self ):
         return self.exons
 
-    def get_all_ss( self ):
+    def get_all_ss( self, anot_only = False ):
 
-        ss = {}
+        ss = set()
         for ex in self.exons:
-            ss3_l = [(ss3,'3prime') for ss3 in set(ex.ss_3p_list)]
-            ss5_l = [(ss5,'5prime') for ss5 in set(ex.ss_5p_list)]
-            name = ex.get_id()
-            if name in ss:
-                print "ERROR id is already in "
-            ss[name] = sorted(list(ss3_l)+list(ss5_l))
-        return ss
+            tx_list = ex.get_annotated_exon()
+            for txex in tx_list:
+                for junc in txex.get_3prime_junc():
+                    ss.add((junc.get_ss_3p(),'3prime',junc))
+                for junc in txex.get_5prime_junc():
+                    ss.add((junc.get_ss_5p(),'5prime',junc))
+
+        return sorted(ss)
+
+    def collapse_exons ( self ):
+
+        
+        self.temp_txex_list.sort()
+
+#        print "GEN",self.temp_txex_list
+#        print_list_exons(self.temp_txex_list)
+
+        list_ex = collapse_list_exons(self.temp_txex_list, self)
+        self.exons.extend(list_ex)
+        self.prepare_exons()
+        self.remove_temp_attributes()
+
+
+    def remove_temp_attributes(self):
+        del self.temp_txex_list
+
+    def new_annotated_exon( self, start, end, transcript, bl = True):
+        res = None
+        for txex in self.temp_txex_list:
+            if txex.start == start and txex.end == end:
+                res = txex
+                break
+        else:
+            res = ExonTx(start,end,transcript, None)
+            if bl : self.temp_txex_list.append(res)
+        return res
 
 
     def get_transcript_mat (self, ASvsConst):
@@ -249,9 +289,6 @@ class Gene:
 
     def get_rnaseq_mat(self, rand10k, lsv=False):
 
-        A5ss = 0
-        A3ss = 0
-        ex_list = self.get_exon_list()
         ss3_l = []
         ss5_l = []
         tlb = {}
@@ -260,48 +297,18 @@ class Gene:
         ss_5p_vars = [0]*20
         ss_both_var = 0
         exon_list = []
+        ex_list = self.get_exon_list()
         for ex in ex_list:
             if ex.id is None: continue
             l3 = len(set(ex.ss_3p_list))
             l5 = len(set(ex.ss_5p_list))
             if l3 == 0 or l5 == 0: continue
 
-            if len(set(ex.ss_3p_list)) > 6 or len(set(ex.ss_5p_list)) > 6:  
-                print "EXON RARO",ex.get_coordinates(), sorted(set(ex.ss_3p_list)),"3pSS", sorted(set(ex.ss_5p_list)), "5pSS"
-#            print len(set(ex.ss_3p_list)), len(set(ex.ss_5p_list))
-
-
-            minreads = 5
-            local_3p = 0
-            local_5p = 0
-
-            temp_Set = set()
-
-            for ss3p in  ex.ss_3p_list:
-                for exread in ex.exonRead_list:
-                    if ss3p != exread.start : continue
-                    if exread.p3_junc is None: continue
-                    if exread.p3_junc.readN.sum() >= minreads : 
-                        temp_Set.add(ss3p)
-            local_3p = len(temp_Set)
-
-            temp_Set = set()
-            for ss5p in  ex.ss_5p_list:
-                for exread in ex.exonRead_list:
-                    if ss5p != exread.end : continue
-                    if exread.p5_junc is None: continue
-                    if exread.p5_junc.readN.sum() >= minreads : 
-                        temp_Set.add(ss5p)
-            local_5p = len(temp_Set)
+            local_3p, local_5p = ex.ss_variant_counts()
             if local_3p > 1 and local_5p >1 : ss_both_var += 1
 
-#            print local_3p
-            if local_3p > 19 : local_3p = 19
-            if local_5p > 19 : local_5p = 19
             ss_3p_vars[local_3p] += 1
             ss_5p_vars[local_5p] += 1
-            
-
 
             st3 = len(ss3_l)
             st5 = len(ss5_l)
@@ -310,12 +317,10 @@ class Gene:
             tlb[exidx] = [range(st3,len(ss3_l)),range(st5,len(ss5_l))]
             exon_list.append(ex)
             exidx += 1
-#        print "A5",ss5_l
-#        print "A3",ss3_l
+
         mat  = np.empty(shape=(len(ss5_l),len(ss3_l)),dtype='int')
         jmat = np.empty(shape=(len(ss5_l),len(ss3_l)),dtype='object')
         mat.fill(0)
-#        mat.fill(-1)
         jmat.fill(None)
 
         junc_list = self.get_all_junctions()
@@ -324,7 +329,14 @@ class Gene:
             if not st in ss5_l or not end in ss3_l: continue
             x = ss5_l.index(st)
             y = ss3_l.index(end)
-            mat [ x, y ] = junc.readN.sum()
+
+            if junc.readN.sum() >0:
+                count_mat = junc.readN.sum()
+            elif junc.is_annotated() and lsv :
+                count_mat = -1
+            else:
+                count_mat = 0
+            mat [ x, y ] = count_mat
             jmat[ x, y ] = junc
 
             for exp_idx in range(mglobals.num_experiments):
@@ -361,19 +373,20 @@ class Transcript :
 
     def in_junction_list(self,start,end):
         res = None 
-        if self.gene.strand == '-':
-            tmp = start
-            start = end
-            end = tmp
+#        if self.gene.strand == '-':
+#            tmp = start
+#            start = end
+#            end = tmp
         for jj in self.junction_list:
             if jj.start == start and jj.end == end:
-                jj.txN += 1
+#                jj.txN += 1
                 res = jj
                 break
         return res
 
     def add_junction (self, junc):
-        self.junction_list.append(junc)
+        if junc not in self.junction_list:
+            self.junction_list.append(junc)
 
     def _sort_in_list(self,strand):
         if strand == '+':

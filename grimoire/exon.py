@@ -2,6 +2,9 @@
 
 import numpy as np
 import mglobals
+from grimoire.lsv import LSV_IR
+from grimoire.junction import Junction
+import copy
 
 class Exon:
 
@@ -22,7 +25,7 @@ class Exon:
 #or (self.end>=other.start and (self.start>other.start or (self.start==other.start and self.end>other.end)))
     __ge__ = lambda self, other: self.start >= other.end  or (self.start < other.end and self.end > other.start)
 
-    def __init__ ( self, start, end, gene, strand ):
+    def __init__ ( self, start, end, gene, strand, annot = False ):
 #        print "Creating Exon",start,end, self
         self.start = start
         self.end = end
@@ -37,6 +40,9 @@ class Exon:
         self.coverage = np.zeros(shape=(mglobals.num_experiments))
         self.score = None
         self.pcr_name = None
+        self.ir = False
+        self.db_coord = (start, end)
+        self.annotated = annot
 
     def __hash__(self):
         return hash(self.id) ^ hash(self.gene.id)
@@ -57,6 +63,9 @@ class Exon:
 
     def get_gene(self):
         return self.gene
+
+    def get_annotated_exon(self):
+        return self.exonTx_list
 
     def get_exon_definition(self, transcript):
         res = None
@@ -80,6 +89,9 @@ class Exon:
         ss5_l = sorted(list(ss5))
         return (ss3_l,ss5_l)
 
+    def set_ir(self, ir) :
+        self.ir |= ir
+
     def set_pcr_score(self, pcr_name, score):
         self.pcr_name = pcr_name
         self.score = score
@@ -98,11 +110,10 @@ class Exon:
         for ii in self.exonRead_list:
             if start == ii.start and end == ii.end:
                 res = ii
-                self.exonRead_list.append(res)
+                #self.exonRead_list.append(res)
                 found = True
                 break
         if not found :
-#            if self.strand == '+':
             ssf = False
             for idx1, i1 in enumerate(self.ss_3p_list):
                 if i1 != start : continue
@@ -137,7 +148,11 @@ class Exon:
 #                self.ss_3p_list.append(end)
             res = ExonTx(start,end,trncpt,self)
             self.exonTx_list.append(res)
+
         return res
+
+    
+
 
     def get_coverage( self,exp_idx ):
         return self.coverage[exp_idx]
@@ -158,14 +173,24 @@ class Exon:
     def get_junctions(self, type):
         if type != '3prime' and type != '5prime':
             raise RuntimeError('Incorrect splicesite type %s'%type)
-
-        jlist = []
+        print "------------- EXON %s--------" %self.id
+        jlist = set()
         for exon_list in (self.exonTx_list, self.exonRead_list):
+            print "exonlist", self.id, exon_list
             for ex in exon_list:
                 if type == '3prime': 
-                    jlist.append(ex.p3_junc)
+                    for junc in ex.p3_junc:
+#                        print "\t ",junc.start, junc.end
+                        print "\t KKK EXr1:",junc, junc.__hash__()
+                        jlist.add(junc)
                 else : 
-                    jlist.append(ex.p5_junc)
+                    print ex.p5_junc
+                    for junc in ex.p5_junc:
+#                        print "\t ", junc.start, junc.end
+                        print "\t  KKK EXr2:",junc, junc.__hash__()
+                        jlist.add(junc)
+#            print "TEMP",jlist
+        print "--- LAST",jlist
         return jlist
 
     def print_triplet_coord(self, fp):
@@ -200,6 +225,40 @@ class Exon:
 
         return str
 
+
+    def ss_variant_counts( self, minreads =5 ):
+        local_3p = 0
+        local_5p = 0
+
+        temp_Set = set()
+        for ss3p in  self.ss_3p_list:
+            for exread in self.exonRead_list:
+                if ss3p != exread.start : continue
+                sum_reads = 0
+                for jj in exread.p3_junc:
+                    if jj is None: continue
+                    sum_reads += jj.readN.sum()
+                if sum_reads >= minreads : 
+                    temp_Set.add(ss3p)
+        local_3p = len(temp_Set)
+
+        temp_Set = set()
+        for ss5p in  self.ss_5p_list:
+            for exread in self.exonRead_list:
+                if ss5p != exread.end : continue
+                sum_reads = 0
+                for jj in exread.p3_junc:
+                    if jj is None: continue
+                    sum_reads += jj.readN.sum()
+                if sum_reads >= minreads : 
+                    temp_Set.add(ss5p)
+        local_5p = len(temp_Set)
+
+        if local_3p > 19 : local_3p = 19
+        if local_5p > 19 : local_5p = 19
+
+        return (local_3p, local_5p)
+
 class ExonRead(object):
     
     def __init__ ( self, start, end, exon,pre_junc, post_junc,rnaSeq=None):
@@ -207,14 +266,11 @@ class ExonRead(object):
         self.end = end
         self.exon = exon
         self.RNASeq = rnaSeq
-        self.p3_junc = pre_junc
-        self.p5_junc = post_junc
+        self.p3_junc = [pre_junc]
+        self.p5_junc = [post_junc]
 
     def get_coordinates( self ):
         return ( self.start, self.end )
-
-    def get_3p_exon(self):
-        return self.p5_junc.get_acceptor()
 
     def get_5p_junc(self):
         return self.p5_junc
@@ -225,22 +281,190 @@ class ExonRead(object):
         return str
 
 class ExonTx(object):
+
+    __eq__ = lambda self, other: self.start == other.start  and self.end == other.end
+    __ne__ = lambda self, other: self.start != other.start  or  self.end != other.end
+    __lt__ = lambda self, other: self.start < other.start   or (self.start == other.start and self.end < other.end)
+    __le__ = lambda self, other: self.start <= other.start  or (self.start == other.start and self.end <= other.end)
+    __gt__ = lambda self, other: self.start > other.start   or (self.start == other.start and self.end > other.end)
+    __ge__ = lambda self, other: self.start >= other.start  or (self.start == other.start and self.end >= other.end)
+
     def __init__ ( self, start, end, trnscpt, exon):
         self.start = start
         self.end = end
         self.transcript = [trnscpt]
-        self.p3_junc = None
-        self.p5_junc = None
+        self.p3_junc = []
+        self.p5_junc = []
         self.exon = exon
+        self.ir = False
 
     def get_coordinates( self ):
         return ( self.start, self.end )
 
     def add_transcript( self, trans ):
         self.transcript.append(trans)
-        return
 
+    def add_5prime_junc( self, p5_junc):
+        if p5_junc not in self.p5_junc:
+            self.p5_junc.append(p5_junc)
 
+    def add_3prime_junc( self, p3_junc):
+        if p3_junc not in self.p3_junc:
+            self.p3_junc.append(p3_junc)
+
+    def get_5prime_junc ( self ):
+        return self.p5_junc
+
+    def get_3prime_junc ( self ):
+        return self.p3_junc
+
+    def overlaps ( self, start, end ):
+        res = False
+        if self.start < end and self.end > start:
+            res = True
+        return res
+
+    def split_exon ( self, intron_coords, gn):
+
+        print "BEFORE SPLIT ::", self.get_coordinates(), intron_coords
+        res = []
+        exb1 = False
+        exb2 = False
+        if self.end - intron_coords[1]+1 > 5:
+            txex1 = gn.new_annotated_exon(intron_coords[1]+1, self.end, self.transcript[0], bl = False)
+            txex1.p5_junc.extend(self.p5_junc)
+            res.append(txex1)
+            exb1 = True
+        if intron_coords[0]-1 -self.start > 5:
+            txex2 = gn.new_annotated_exon(self.start, intron_coords[0]-1, self.transcript[0], bl= False)
+            txex2.p3_junc.extend(self.p3_junc)
+            exb2 = True
+            res.append(txex2)
+
+        exb = exb1 & exb2
+
+        if exb:
+            junc = gn.exist_junction(txex2.end,txex1.start)
+            if junc is None:
+                junc = Junction(txex2.end,txex1.start, None, None,gn,annotated=True)
+            txex2.p5_junc.append(junc)
+            txex1.p3_junc.append(junc)
+            print "AFTER SPLIT ::",txex2.get_coordinates(),txex1.get_coordinates()
+
+        for trn in self.transcript:
+            if exb : trn.add_junction(junc)
+            if exb1: txex1.add_transcript(trn)
+            if exb2: txex2.add_transcript(trn)
+        del self
+        return res
+
+    def collapse ( self, list_exontx, gne ):
+    
+        print "####################################"
+        print "EXONS",list_exontx
+
+        all_5prime = [ xx.end for xx in list_exontx]
+        all_3prime = [ xx.start for xx in list_exontx]
+        all_5prime = sorted(set(all_5prime))
+        all_3prime = sorted(set(all_3prime))
+        exlist = []
+
+        if max(all_3prime) > min(all_5prime) :
+            ''' Intron retention '''
+            #print_list_exons(list_exontx, msg='in COLL pre')
+            introns = []
+            last_p5 = 0
+            jdx = 0
+            in_found = False
+            for idx,p5 in enumerate(all_5prime):
+                while (jdx < len(all_3prime)):
+                    p3 = all_3prime[jdx]
+                    if p3 < p5:
+                        if in_found :
+                         #   introns.append((last_p5+1, max(p3-1,last_p5+1)))
+                            introns.append((last_p5+1, max(p3-1,last_p5+1)))
+                            in_found = False
+                        jdx +=1
+                    else:
+                        last_p5 = p5
+                        in_found = True
+                        break
+            print "INTRONS",introns
+
+#            new_list = copy.copy(list_exontx)
+#            new_list = list_exontx[:]
+            for idx, txex in enumerate(list_exontx):
+                for intr in introns:
+                    #print "INTRON", intr
+                    if not txex.overlaps(intr[0],intr[1]): 
+                        if  intr[0] > txex.end or (intr[0] <= txex.end and intr[1] > txex.end ):
+                            txex.ir = True
+                        continue
+                    ''' intron retention'''
+                    LSV_IR( txex.start, txex.end, [], gne )
+                    dummy = txex.split_exon(intr,gne)
+                    list_exontx.remove(txex)
+                    for dm in dummy:
+                        if dm not in list_exontx :
+                            list_exontx.append(dm)
+                    break
+
+            list_exontx.sort()
+            #print_list_exons(list_exontx, msg='in COLL')
+            exlist.extend(collapse_list_exons ( list_exontx, gne ))
+
+        else:
+            ex = Exon(min(all_3prime), max(all_5prime), gne, gne.get_strand(), annot=True)
+            for txex in list_exontx:
+                ex.set_ir(txex.ir)
+                ex.ss_3p_list.append(txex.start)
+                ex.ss_5p_list.append(txex.end)
+                ex.exonTx_list.append(txex)
+                txex.exon = ex
+                for p3_junc in txex.p3_junc:
+                    p3_junc.add_acceptor(ex)
+                for p5_junc in txex.p5_junc:
+                    p5_junc.add_donor(ex)
+            exlist.append(ex)
+        return exlist
+
+def print_list_exons( list_ex, msg=""):
+    #list_ex.sort()
+    print "%%%%%%%%%%%%LIST_EXONS %s"%msg
+    for ex in list_ex:
+        print "\t\t",ex.get_coordinates(), ex
+    print "%%%%%%%%%%%%%%%%%%%%%%"
+
+num_it = 0
+
+def collapse_list_exons( listexons, gne ):
+    global num_it
+    num_it +=1
+    #print "[%s] INIT COLLAPSE_LIST EXONS "%(num_it)
+    #print_list_exons(listexons,"[%s] IN INIT"%num_it)
+    overlp = []
+    exlist = []
+    start = 0
+    end = 0
+    for idx, ex in enumerate(listexons):
+        if ex.overlaps(start, end):
+            print "[%s] OVERLAP"%(num_it)
+            if start > ex.start : start = ex.start
+            if end < ex.end: end = ex.end
+            overlp.append(ex)
+#            continue
+        else:
+            print "[%s] NO OVERLAP"%num_it, start, end, ex.get_coordinates()
+            if len(overlp) > 0 : exlist.extend(ex.collapse(overlp,gne))
+            print_list_exons(listexons[idx+1:],"[%s] IN FOR LOOP"%num_it)
+
+            overlp = [ex]
+            start, end = ex.get_coordinates()
+        if idx == len(listexons)-1 :
+            exlist.extend(ex.collapse(overlp,gne))
+    print "[%s] END COLLAPSE_LIST"%num_it, exlist
+    num_it -=1
+    return exlist
 
 def __half_exon(type,junc,readRNA):
 
@@ -266,7 +490,9 @@ def __half_exon(type,junc,readRNA):
                 to = None
                 frm = junc
             #print "half",type,"::",ex_start, ex_end, junc.start, junc.end, end 
-            if end - start < 10 : continue
+#            if end - start < 10 : continue
+            ex.ss_3p_list.append(start)
+            ex.ss_5p_list.append(end)
             ex.add_new_read( start, end, readRNA, to, frm )
 
             break
@@ -276,13 +502,10 @@ def new_exon_definition(start, end, readRNA, s3prime_junc, s5prime_junc, gene):
 
     if  end - start < 10 : return 0
 
-    if gene.get_id() == "NM_001145806": print "EXON RARO READ",start, end, s3prime_junc.coverage.sum()
-
     ex = gene.exist_exon(start,end)
     newExons = 0
     if ex is None :
         newExons = 1
-        if gene.get_id() == "NM_001145806": print "CREATE1::",start, end
         ex = Exon(start,end,gene,gene.get_strand())
         gene.add_exon(ex)
     #print "ADD1::",start, end
@@ -302,30 +525,33 @@ def detect_exons(gene, junction_list, readRNA):
     last_5prime = None
     first_3prime = None
 
-
-    for jj in  gene.get_annotated_junctions():
-        if not (jj.get_ss_5p(),'5prime',jj) in junction_list:
-            junction_list.append((jj.get_ss_5p(),'5prime',jj))
-            junction_list.append((jj.get_ss_3p(),'3prime',jj))
+    junction_list.extend(gene.get_all_ss())
+#
+#for jj in  gene.get_annotated_junctions():
+#        if not (jj.get_ss_5p(),'5prime',jj) in junction_list:
+#            junction_list.append((jj.get_ss_5p(),'5prime',jj))
+#            junction_list.append((jj.get_ss_3p(),'3prime',jj))
 
     junction_list.sort()
-#    print "JUNC", junction_list
-
+    #print "DETECT EXONS::",gene.get_id()
+    print "DETECT JUNC", junction_list
     for (coord,type, jj) in junction_list :
+        #print "---NEW-------------------------------------------------------------"
+        #print coord, type, jj, jj.coverage.sum() 
         if jj.coverage.sum() < 5 and not jj.is_annotated(): 
-            del jj
+#            junction_list.remove((coord,type, jj))
+#            del jj
             continue
-#        print "----------------------------------------------------------------"
-#        print coord, type, jj, jj.coverage.sum() 
-#        print "LIST",opened_exon
-#        print "LASTS",first_3prime, last_5prime
+        #print "----------------------------------------------------------------"
+        #print coord, type, jj, jj.coverage.sum() 
+        #print "LIST",opened_exon
+        #print "LASTS",first_3prime, last_5prime
         jj_gene = jj.get_gene()
         if type == '5prime':
 #            print "CHECK 1",coord,jj.get_ss_5p()
             if opened >0 :
                 start = opened_exon[-1].get_ss_3p()
                 end = coord
-                if jj_gene.get_id() == "NM_011465": print "EXON RARO READ 2",start, end
                 newExons += new_exon_definition(start,end,readRNA, opened_exon[-1],jj, jj_gene)
                 pp = opened_exon.pop()
                 opened -=1
@@ -335,28 +561,43 @@ def detect_exons(gene, junction_list, readRNA):
                 else:
                     newExons += new_exon_definition(first_3prime.get_ss_3p(), coord, readRNA, first_3prime,jj, jj_gene)
             last_5prime = jj
-                
             #end elif opened
         else:
-#            print "CHECK 2",coord,jj.get_ss_3p()
             if opened >0 :
                 if not last_5prime is None:
                     end = last_5prime.get_ss_5p()
                     for ss in opened_exon:
                         if ss.get_gene() != last_5prime.get_gene(): continue
                         start = ss.get_ss_3p()
-                        if jj_gene.get_id() == "NM_011465": print "EXON RARO READi 3",start, end
                         newExons += new_exon_definition(start,end,readRNA, ss, last_5prime, ss.get_gene())
                     last_5prime = None
                     opened = 0
                     opened_exon = []
                     first_3prime = jj
             else:
+                #print "CHECK 2.2",coord,jj.get_ss_3p()
                 last_5prime = None
                 first_3prime = jj
             #end else ...
             opened_exon.append(jj)
             opened +=1
+
+    for ss in opened_exon:
+        newExons += __half_exon('3prime',ss,readRNA)
+
+    for (coord,type, jj) in junction_list :
+        if jj.coverage.sum() < 5 and not jj.is_annotated() :
+            junction_list.remove((coord,type, jj))
+            del jj
+            
+            continue
+        #print "JUNCTIONS MISSING EXONS",jj.donor, jj.acceptor, jj.readN.sum(), jj.start, jj.end
+        if jj.donor is None and jj.acceptor is None:
+            junction_list.remove((coord,type, jj))
+            del jj
+            
+
+
 
     print "FOUND new %d exons"%newExons
     return 
