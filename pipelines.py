@@ -537,6 +537,7 @@ class DeltaGroup(DeltaPair, CalcPsi):
             self.logger.info("WEIGHTS: Calculating PSI for 'High coverage'...")
             all_junctions = {"inc": inc, "exc": exc }
             all_junctions = self.gc_content_norm(all_junctions)
+            all_junctions = self.mark_stacks(all_junctions, fitfunc)
             self.logger.info("Masking non unique...")
             for junc_set in all_junctions.keys():
                 all_junctions[junc_set] = masked_less(all_junctions[junc_set], 0) 
