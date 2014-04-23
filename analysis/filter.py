@@ -22,7 +22,7 @@ def filter_message(when, value, logger, junc):
         if type(logger) == bool:
             print message
         else: 
-            logger.debug(message)
+            logger.info(message)
 
 
 def discardhigh(max0=0, orfilter=True, logger=False, *junc):
@@ -54,17 +54,17 @@ def discardminreads_and(incexcpairs, minreads=0, logger=False):
     all_pairs = []
     ret = []
     for exc, inc in incexcpairs:
-        exc, inc = discardminreads(minreads, False, logger, True, array(exc), array(inc)) 
+        exc, inc = discardminreads(minreads, False, logger, True, None, array(exc), array(inc)) 
         all_pairs.append(inc)
         all_pairs.append(exc)
 
     #convert to numpy arrays
     all_pairs = [array(x) for x in all_pairs]
 
-    return discardminreads(0, True, logger, False, *all_pairs)
+    return discardminreads(0, True, logger, False, None, *all_pairs)
 
 
-def discardminreads(minreads=0, orfilter=True, logger=False, returnempty=False, *junc):
+def discardminreads(minreads=0, orfilter=True, logger=False, returnempty=False, names=None, *junc):
     """
     Given a collection of N experiments with matching junctions, discard junctions that have less reads than *minreads* flag. 
     With *orfilter*, keeps every junction if at least one passes the filter. Without it, all junctions should pass the filter.
@@ -73,21 +73,25 @@ def discardminreads(minreads=0, orfilter=True, logger=False, returnempty=False, 
 
     filter_message("Before discardminreads", minreads, logger, junc)
     filtered_juncs = [[] for x in xrange(len(junc))]
-
+    filtered_names = []
     for i in range(junc[0].shape[0]): #for all events
         if orfilter:
             already = False
             for junc_num, junction in enumerate(junc):
                 if (junction[i].sum() >= minreads):
                     #if one passes the filter, add all to the resultset and break the loop, since at least one passes the threshold
-                    for junc_num, junction2 in enumerate(junc):
-                        filtered_juncs[junc_num].append(junction2[i])
+                    for junc_num2, junction2 in enumerate(junc):
+                        filtered_juncs[junc_num2].append(junction2[i])
                         already = True
+
+                    if names:
+                        filtered_names.append(names[i])
+
                     break
 
-            if not already and returnempty:
-                for junc_num, junction2 in enumerate(junc):
-                    filtered_juncs[junc_num].append([-100]*junction2[i])                
+            if not already and returnempty: #special case for further filtering with discardminreads_and. The -100 values will be eliminated in a posterior filter (as they are always above 0)
+                for junc_num2, junction2 in enumerate(junc):
+                    filtered_juncs[junc_num2].append([-100]*junction2[i])                
 
         else: #AND filter: All should pass the filter
             for junc_num, junction in enumerate(junc):
@@ -97,16 +101,22 @@ def discardminreads(minreads=0, orfilter=True, logger=False, returnempty=False, 
                     break
 
             if all_pass:
-                for junc_num, junction2 in enumerate(junc):
-                    filtered_juncs[junc_num].append(junction2[i])   
+                for junc_num2, junction2 in enumerate(junc):
+                    filtered_juncs[junc_num2].append(junction2[i]) 
+                
+                if names:
+                    filtered_names.append(names[i])  
 
             elif returnempty: 
-                for junc_num, junction2 in enumerate(junc):
-                    filtered_juncs[junc_num].append([-100]*len(junction2[i]))
+                for junc_num2, junction2 in enumerate(junc):
+                    filtered_juncs[junc_num2].append([-100]*len(junction2[i]))
 
 
     ret = [array(x) for x in filtered_juncs]
     filter_message("After discardminreads", minreads, logger, ret)
+    if names: #if reference names were provided, include them
+        ret.append(list(filtered_names))
+
     return ret
 
 
@@ -133,16 +143,21 @@ def discardmaxreads(maxreads=0, orfilter=True, logger=False, *junc):
     return ret
 
 
-def discardlow(min0=0, orfilter=True, logger=False, *junc):
+def discardlow(min0=0, orfilter=True, logger=False, names=None, *junc):
     filter_message("Before discardlow", min0, logger, junc)
     filtered_juncs = [[] for x in xrange(len(junc))]
+    filtered_names = []
     if orfilter:
         for i in range(junc[0].shape[0]): #for all junctions
             for junc_num, junction in enumerate(junc):
                 if ((junction[i] > 0).sum() > min0):
                     #if one passes the filter, add all to resultset
-                    for junc_num, junction2 in enumerate(junc):
-                        filtered_juncs[junc_num].append(junction2[i])
+                    for junc_num2, junction2 in enumerate(junc):
+                        filtered_juncs[junc_num2].append(junction2[i])
+                        
+                    if names:
+                        filtered_names.append(names[i])
+
                     break
 
         ret = [array(x) for x in filtered_juncs]
@@ -151,6 +166,9 @@ def discardlow(min0=0, orfilter=True, logger=False, *junc):
         raise NotImplemented 
 
     filter_message("After discardlow", min0, logger, ret)
+
+    if names:
+        ret.append(list(filtered_names))
 
     return ret
 
@@ -170,7 +188,7 @@ def norm_junctions(junctions, gc_factors=None, gcnorm=False, trim=False, logger=
     return junctions
 
 
-def mark_stacks(junctions, fitfunc, pvalue_limit, dispersion):
+def mark_stacks(junctions, fitfunc, pvalue_limit, dispersion, logger=False):
     a, b = fitfunc.c
     minstack = sys.maxint #the minimum value marked as stack
     numstacks = 0
@@ -192,6 +210,6 @@ def mark_stacks(junctions, fitfunc, pvalue_limit, dispersion):
                     minstack = min(minstack, value)
                     numstacks += 1
 
-    print "Out of %s values, %s marked as stacks with a p-value threshold of %s (%.3f%%)"%(junctions.size, numstacks, pvalue_limit, (float(numstacks)/junctions.size)*100)
+    if logger: logger.info("Out of %s values, %s marked as stacks with a p-value threshold of %s (%.3f%%)"%(junctions.size, numstacks, pvalue_limit, (float(numstacks)/junctions.size)*100))
 
     return junctions

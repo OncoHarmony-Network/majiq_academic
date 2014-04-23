@@ -77,13 +77,13 @@ def recalibrate_delta(deltapsi):
     arange(-98.75, 100, 2.5)
 
 
-def calc_psi(inc_samples, exc_samples, name, alpha, n, debug, psinosample):
+def calc_psi(inc_samples, exc_samples, name, alpha, n, debug, psiparam):
     "Given a set of matching inclusion and exclusion samples, calculate psi, save it in disk, and return the psi-per-juntion matrix"
     
     print inc_samples.shape
     samples = vstack([inc_samples, exc_samples]).reshape(2, inc_samples.shape[0], inc_samples.shape[1])
-    psi_scores = calc_dirichlet(alpha, n, samples, debug=debug, psinosample=psinosample)
-    if psinosample:
+    psi_scores = calc_dirichlet(alpha, n, samples, debug=debug, psiparam=psiparam)
+    if psiparam:
         return psi_scores
     else:
         return psi_scores[:,0] #psi_scores[:,1] is PSE
@@ -100,11 +100,11 @@ def mean_psi(psi_events):
     return array(ret)
 
 
-def calc_dirichlet(alpha, n, samples_events, debug=False, psinosample=False):
+def calc_dirichlet(alpha, n, samples_events, debug=False, psiparam=False):
     "Expects 3 dimensional matrix in samples_events"
     psi_matrix = []
     dircalc = DirichletCalc() 
-    if psinosample:
+    if psiparam:
         for i, event_samples in enumerate(rollaxis(samples_events, 1)): #The second dimension of the matrix corresponds to the paired samples per event (3rd dimension) for different experiments (1st dimension)       
             if i % 5 == 0:
                 print "event %s..."%i,

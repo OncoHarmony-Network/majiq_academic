@@ -92,14 +92,14 @@ def rank_majiq(path, names, V=0.2, absolute=True, dofilter=True, E=False, rankno
     for i, dmatrix in enumerate(pickle.load(open(path))):
         if E:
             v_prob = v_sum(dmatrix)
-            rank.append([names[i].split(":")[0], v_prob])
+            rank.append([names[i], round(v_prob, 2)])
         else:
             area = matrix_area(dmatrix, V, absolute)
             if ranknochange: #P(Delta PSI < V) = 1 - P(Delta PSI > V)
                 area = 1 - area
 
             if area > MINTHRESHOLD or not dofilter:
-                rank.append([names[i].split(":")[0], area])
+                rank.append([names[i], area])
 
     rank.sort(key=lambda x: -x[1])
     return rank
@@ -116,6 +116,8 @@ def miso_reader(path, dofilter=True):
             transcripts = sline[9].split(",")
             delta_psi = sline[7].split(",")
             bayes_factor = sline[8]
+            print bayes_factor
+            print delta_psi
             if len(transcripts) == 2: #only interested in 2 transcripts events for now
                 if float(bayes_factor) > 2 or not dofilter: # below 2 means no change according to tables
                     exons1 = transcripts[0].split('_')
@@ -128,9 +130,9 @@ def miso_reader(path, dofilter=True):
 def rank_miso(path, dofilter=True, ranknochange=False):
     rank = miso_reader(path, dofilter)
     if ranknochange: 
-        rank.sort(key=lambda x: (abs(x[1]), x[2])) #sort first by smallest delta PSI, then by bayes factor
+        rank.sort(key=lambda x: (abs(x[1]))) #sort first by smallest delta PSI, then by bayes factor
     else:
-        rank.sort(key=lambda x: (-abs(x[1]), -x[2])) #sort first by biggest delta PSI, then by inverse bayes factor
+        rank.sort(key=lambda x: (-abs(x[1]))) #sort first by biggest delta PSI, then by inverse bayes factor
     
     return rank
 
@@ -203,6 +205,9 @@ def main():
     else:
         rank1 = rank_majiq(args.pair[0], args.evnames[0], args.V, args.absolute, args.filter, args.E, args.ranknochange)
         rank2 = rank_majiq(args.pair[1], args.evnames[1], args.V, args.absolute, args.filter, args.E, args.ranknochange)
+
+
+    print "Num events", len(rank1), len(rank2)
 
     print "Calculating the ratios..."
     #calculate the ratios

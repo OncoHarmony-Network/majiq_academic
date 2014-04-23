@@ -35,9 +35,9 @@ def __parallel_lsv_quant(samfiles_list, gene_list, chr, as_db):
     for idx,exp in enumerate(samfiles_list):
         print "READING ", idx, exp
         rnaseq_io.read_sam_or_bam(exp, gene_list, mglobals.readLen, chr, idx )
-    lsv, b = analize.LSV_detection( gene_list, chr )
+    lsv, const = analize.LSV_detection( gene_list, chr )
     file_name = '%s.obj'%(chr)
-    utils.prepare_MAJIQ_table( lsv,b,file_name)
+    utils.prepare_LSV_table( lsv,const ,file_name)
     #print "END child, ", current_process().name
 
 def _new_subparser():
@@ -95,23 +95,22 @@ def main( args ) :
         rnaseq_io.count_mapped_reads(SAM,exp_idx)
     if len(sam_list) == 0: return
 
-
     if args.lsv: exec_pipe = __parallel_lsv_quant
     else: exec_pipe = __parallel_for_splc_quant
-
 
     for chrom in chr_list:
         if int(args.ncpus) == 1:
             exec_pipe(sam_list, all_genes[chrom], chrom, None)
         else:
-            jobs.append(pool.apply_async( exec_pipe, [sam_list, all_genes[chr], chr, av_altern]))
+            jobs.append(pool.apply_async( exec_pipe, [sam_list, all_genes[chrom], chrom, None]))
 
     print "MASTER JOB.... waiting childs"
     genes = np.zeros(shape=(len(mglobals.exp_list)),dtype=np.dtype('object'))
     if int(args.ncpus) >1:
         pool.close()
         for idx, j in enumerate(jobs):
-            gene[idx]=j.get()
+            p=j.get()
+            print p
             
         pool.join()
 

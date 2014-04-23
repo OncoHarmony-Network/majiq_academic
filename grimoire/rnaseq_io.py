@@ -71,6 +71,15 @@ def count_mapped_reads( filename, exp_idx):
     mapped_reads = int(stats[2].split()[0])
     mglobals.num_mapped_reads[exp_idx] = mapped_reads
 
+
+def is_neg_strand (read):
+    res = False
+    if read.flag & 0x10 == 0x10 : 
+#        print "FLAG",read.flag
+        res = True
+
+    return res 
+
 def read_sam_or_bam(filename, gene_list, readlen, chrom, exp_index):
 
     counter = [0] * 6
@@ -91,7 +100,9 @@ def read_sam_or_bam(filename, gene_list, readlen, chrom, exp_index):
             j_list = gne.get_all_junctions()
             ex_list = gne.get_exon_list()
             for read in read_iter:
-                strand_read = '+' if not read.is_reverse else '-'
+                strand_read = '+' if not is_neg_strand(read) else '-'
+#                strand_read = '+' if not read.is_reverse else '-'
+#                print "STRAND",strand_read, strand
                 if strand_read != strand: continue
                 unique = __is_unique(read)
                 if not unique : 
@@ -101,6 +112,8 @@ def read_sam_or_bam(filename, gene_list, readlen, chrom, exp_index):
                 gne.add_read_count(nreads, exp_index)
                 is_cross, junc_list = __cross_junctions(read)
                 r_start = read.pos
+                if r_start < strt or r_start > end : continue
+#                print "READ",strt,end, r_start, read
 
                 for ex_idx in range(len(ex_list)):
                     ex_start, ex_end = ex_list[ex_idx].get_coordinates()
@@ -160,7 +173,7 @@ def read_sam_or_bam(filename, gene_list, readlen, chrom, exp_index):
                             junctions.append((junc_end,'3prime',junc))
                     #end if not found ...
                 #end for junc ...
-            
+            print "JJJunctions", junctions
             if len(junctions) > 0 :
                 detect_exons(gne, junctions, None)
             gne.prepare_exons()
@@ -241,23 +254,32 @@ def read_transcript_ucsc(filename, refSeq = False):
             gn.add_transcript(trcpt)
             pre_end = None
             pre_ex = None
+            pre_txex = None
             for ii in xrange(nblocks):
                 start = ex_start[ii]
                 end = ex_end[ii]
-                ex = gn.exist_exon(start,end)
-                if ex is None :
-                    ex = Exon(start,end,gn,strand)
-                    temp_ex[chrom].append(ex)
-                    gn.add_exon(ex)
-                txex = ex.add_new_definition(start, end, trcpt)
+#                ex = gn.exist_exon(start,end)
+#                if ex is None :
+#                    ex = Exon(start,end,gn,strand)
+#                    temp_ex[chrom].append(ex)
+#                    gn.add_exon(ex)
+#                txex = ex.add_new_definition(start, end, trcpt)
+                txex = gn.new_annotated_exon(start, end, trcpt)
                 trcpt.add_exon(txex)
+                junc = gn.exist_junction(pre_end,start)
+                if junc is None:
+                    junc = Junction(pre_end,start, None, None,gn,annotated=True)
+#                    junc = Junction(pre_end,start, pre_ex, ex,gn,annotated=True)
+                trcpt.add_junction(junc)
+#                junctions.append((junc_start,'5prime',junc))
+#                junctions.append((junc_end,'3prime',junc))
+                txex.add_3prime_junc(junc)
                 if not pre_end is None:
-                    junc = gn.exist_junction(pre_end,start)
-                    if junc is None:
-                        junc = Junction(pre_end,start, pre_ex, ex,gn,annotated=True)
-                    trcpt.add_junction(junc)
+                    pre_txex.add_5prime_junc(junc)
+
                 pre_end = end
-                pre_ex = ex
+#                pre_ex = ex
+                pre_txex = txex
             #END for ii in range(nblocks)
             trcpt._sort_in_list(strand)
         #end for t in text
@@ -265,17 +287,22 @@ def read_transcript_ucsc(filename, refSeq = False):
         text = file.readlines(BUFFER)
     #END WHILE
     file.close()
-    print "SORTING GENES"
+
     n_genes = 0
     for chr in all_genes.keys():
-        print "Calculating gc_content.........",
-        utils.set_exons_gc_content(chr, temp_ex[chr])
-        print "Done."
+        temp_ex = []
         for strand, gg in all_genes[chr].items():
             n_genes += len(gg)
             all_genes[chr][strand] = sorted(gg)
             for gene in all_genes[chr][strand]:
-                gene.prepare_exons()
+                print "COLLAPSING GENE", gene.get_id()
+                gene.collapse_exons()
+                temp_ex.extend(gene.get_exon_list())
+                print "NUM IR:", len(gene.ir_list)
+        print "Calculating gc_content.........",
+        utils.set_exons_gc_content(chr, temp_ex)
+        print "Done."
+
     print "NUM_GENES",n_genes
     return all_genes
 

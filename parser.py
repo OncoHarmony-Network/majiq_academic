@@ -22,7 +22,10 @@ def main():
     common.add_argument('--silent', action='store_true', default=False, help='Silence the logger.')
     common.add_argument('--plotpath', default=None, help='Path to save the plot to, if not provided will show on a matplotlib popup window')
     common.add_argument('--debug', type=int, default=0, help="Activate this flag for debugging purposes, activates logger and jumps some processing steps.")
-
+    common.add_argument('--minreads', default=20, type=int, help='Minimum number of reads combining all positions in an event to be considered. [Default: %(default)s]') 
+    common.add_argument('--minnonzero', default=5, type=int, help='Minimum number of start positions with at least 1 read for an event to be considered.')
+    common.add_argument('--tracklist', nargs='+', help='A list of identifiers to track in detail, for debugging purposes')
+    
     #flags shared by calcpsi and deltapair
     psianddelta = new_subparser()
     psianddelta.add_argument('--trim', default=0, type=int, help='Trim the borders of the junctions because of poor mappability')
@@ -50,9 +53,9 @@ def main():
     pairandgroup = new_subparser() 
     pairandgroup.add_argument('--names', nargs='+', required=True, help="The names that identify each of the experiments. [Default: %(default)s]")
     pairandgroup.add_argument('--binsize', default=0.025, type=int, help='The bins for PSI values. With a --binsize of 0.025 (default), we have 40 bins')   
-    pairandgroup.add_argument('--minreads', default=20, type=int, help='Minimum number of reads combining all positions in a junction to be considered (for the "best set" calculation). [Default: %(default)s]') 
-    pairandgroup.add_argument('--minandreads', default=1, type=int, help='Minimum number of reads combining all positions in a junction to be considered (for the "best set" calculation). [Default: %(default)s]') 
-    pairandgroup.add_argument('--minnonzero', default=10, type=int, help='Minimum number of positions for the best set.')
+    pairandgroup.add_argument('--priorminreads', default=20, type=int, help='Minimum number of reads combining all positions in a junction to be considered (for the "best set" calculation). [Default: %(default)s]') 
+    pairandgroup.add_argument('--priorminandreads', default=1, type=int, help='Minimum number of reads combining all positions in a junction to be considered (for the "best set" calculation). [Default: %(default)s]') 
+    pairandgroup.add_argument('--priorminnonzero', default=10, type=int, help='Minimum number of positions for the best set.')
     pairandgroup.add_argument('--iter', default=10, type=int, help='Max number of iterations of the EM')
     pairandgroup.add_argument('--breakiter', default=0.01, type=float, help='If the log likelihood increases less that this flag, do not do another EM step')
     pairandgroup.add_argument('--V', default=0.1, type=float, help='Value of DeltaPSI used for initialization of the EM model [Default: %(default)s]')
@@ -76,8 +79,7 @@ def main():
     #calcpsi flags
     psi = new_subparser()
     psi.add_argument('files', nargs='+', help='The experiment files to analyze. You can include more than one (they will all be analyzed independently though) Glob syntax supported.')
-    psi.add_argument('--minreads', default=0, type=int, help='Minimum number of reads combining all positions in an event to be considered. [Default: %(default)s]') 
-    psi.add_argument('--minnonzero', default=0, type=int, help='Minimum number of start positions with at least 1 read for an event to be considered.')
+
 
     subparsers = parser.add_subparsers(help='')
     parser_preprocess = subparsers.add_parser('preprocess', help='Preprocess SAM/BAM files as preparation for the rest of the tools (calcpsi, deltapair, deltagroup)', parents=[common])

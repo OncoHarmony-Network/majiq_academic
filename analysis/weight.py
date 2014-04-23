@@ -39,7 +39,6 @@ def local_weights(replicas, l1=False, median_ref=array([])):
     Using either L1 or DKL, calculate the weight for every event in every replica in a group of replicas
     """
     pseudo = 0.00000000000000000000001
-    print replicas.shape
     distances = []
     if median_ref.size: #if we have a median reference, compare all 
         for i, replica_i in enumerate(replicas):
@@ -48,12 +47,12 @@ def local_weights(replicas, l1=False, median_ref=array([])):
         distances = array(distances)
         distances += pseudo
         distances /= distances.sum(axis=0)
-        print "DISTANCES", distances
-        print distances.shape
+        #print "DISTANCES", distances
+        #print distances.shape
         weights = (1 - distances)
-        print "WEIGHTS", weights
+        #print "WEIGHTS", weights
         weights /= weights.sum(axis=0)
-        print "WEIGHTS NORM", weights
+        #print "WEIGHTS NORM", weights
 
     else:
         divergences = defaultdict(list)
