@@ -1,0 +1,146 @@
+{% extends "base_template.html" %}
+{% block title %}MAJIQ &Delta;&Psi; Summary{% endblock %}
+{% block css %}
+    {# Evaluate if we should divide different css in files #}
+
+{% endblock %}
+
+{% block js %}
+    <script src="../templates/static/js/jquery-1.10.2.js" type="text/javascript"></script>
+    <script src="../templates/static/js/jquery.tablesorter.js" type="text/javascript"></script>
+    <script src="../templates/static/js/jquery.tablesorter.pager.js" type="text/javascript"></script>
+    <script src="../templates/static/js/jquery.mousewheel.js" type="text/javascript"></script>
+    <script src="../templates/static/js/Chart.js" type="text/javascript"></script>
+    <script src="../templates/static/js/application.js" type="text/javascript"></script>
+{% endblock %}
+
+{% block content %}
+    <div class="descriptive_summary">
+        <h1>&Delta;&Psi; summary: Brain1 Vs Liver1 <button class='hideshow_extended hidden'>Extended info</button></h1>
+        <!--<h2>Execution information</h2>-->
+        <!--<div style="background-color:{{ expList[0].color }};width:195px;height:25px;border:1px solid #000">-->
+            <!--<a href="{{ expList[0].link }}">Experiment 1: {{ expList[0].name}}</a>-->
+        <!--</div> &lt;!&ndash;TODO: create CSS for experiment 1 y 2&ndash;&gt;-->
+        <!--<div style="background-color:{{ expList[1].color }};width:195px;height:25px;border:1px solid #000">-->
+            <!--<a href="{{ expList[1].link }}" style="color: white">Experiment 2: {{ expList[1].name}}</a>-->
+        <!--</div>-->
+
+        <!--<p><i>TODO: Inputs: information about data provided to majiq and its execution (resources used like memory, CPU,..).</i></p>-->
+        <h2>Stats summary</h2>
+        <ul>
+            <li>Number of exons: 322</li>
+            <li>Type of events: {Exon Skipping}</li>
+            <li>...</li>
+        </ul>
+
+        <!--<h2>Screened out elements</h2>-->
+        <!--<ul>-->
+            <!--<li>Number of stacks filtered out</li>-->
+            <!--<li>Number of non-unique stacks</li>-->
+            <!--<li>Number of non-unique positions</li>-->
+            <!--<li>etc.</li>-->
+        <!--</ul>-->
+
+        <!--<div class="extended-info hidden">-->
+        <!--<ul>-->
+            <!--<li>GC content profile</li>-->
+            <!--<li>Position bias</li>-->
+            <!--<li>&mu; and &sigma; plots</li>-->
+            <!--<li>P-val fit</li>-->
+            <!--<li>Distributions of: numbers of reads and positions per junction</li>-->
+        <!--</ul>-->
+        <!--</div> {#toggable div for extended information #}-->
+    </div>
+    <div class="events-summary">
+        <h1>Events summary</h1>
+        <h2>Table of &Delta;&Psi; information by event</h2>
+        <table id="event_table" class="tablesorter deltaTable">
+            <thead>
+            <tr>
+                <th class="short-header">#</th>
+                <th class="short-header">Event ID</th>
+                <th class="medium-header">Type</th>
+                <th class="mean-header">mean(&Psi;)</th>
+                <th>
+                    <p style="color: #377e80; margin: 0; text-align: left; float: left; width: 50%;" > P(&Delta;&Psi;)<{{ threshold }}</p>
+                    <p style="color: #e41a1c; margin: 0; text-align: right; float: right; width: 50%;" > P(&Delta;&Psi;)>{{ threshold }}</p>
+                    <!--<p style="color: blue; margin: 0; text-align: left; float: left; width: 50%;" > P(&Delta;&Psi;)<{{ threshold }}</p>-->
+                    <!--<p style="color: red; margin: 0; text-align: right; float: right; width: 50%;" > P(&Delta;&Psi;)>{{ threshold }}</p>-->
+                </th>
+                <th class="short-header">Matrix heatmap</th>
+                <th class="short-header">Coordinates</th>
+            </tr>
+            </thead>
+            <tfoot>
+            <tr>
+                <th>#</th>
+                <th>Event ID</th>
+                <th>Type</th>
+                <th>mean(&Psi;)</th>
+                <th></th>
+                <th>Matrix heatmap</th>
+                <th>Coordinates</th>
+            </tr>
+            </tfoot>
+            <tbody>
+            {% for event in eventList  -%}
+                <tr>
+                    <td>{{ event.number }}</td>
+                    <td>{{ event.id }}</td>
+                    <td>{{ event.type }}</td>
+                    <td>{{ event.mean_psi|round(4) }}</td>
+                    <td>
+                        <img class="expandDelta" id="expandDelta{{ event.number }}" src="../templates/static/img/arrow_down.png" data-is-expanded=0 />
+
+                        <canvas id="deltaPsi{{ event.number }}" class="deltaCondensed" width="200px" height="20px"
+                                data-excl-incl="{{ event.excl_incl }}">
+                            This browser or document mode doesn't support canvas
+                        </canvas>
+                        <canvas id="extendedDeltaPsi{{ event.number }}" class="extendedDeltaPsi hidden" width="419px"
+                                height="400px" data-mean-psi="{{ event.mean_psi}}" data-bins="{{ event.bins }}"
+                                data-threshold="{{ threshold }}">
+                                This browser or document mode doesn't support canvas
+                        </canvas>
+                        <!--<canvas id="lineChart{{ event.number }}" class="lineChart" width="400px" height="400px"-->
+                                <!--data-bins1="{{ event.bins }}" data-bins2="{{ event.bins }}">-->
+                        <!--</canvas>-->
+
+                    </td>
+                    <!--<td><input type="image" class="extraPlots" id="{{ event.id }}" src="../templates/static/img/zoom_in.png" data-link-matrix="{{ event.matrix_link }}" alt="Extra plots" border="0"></td>-->
+
+                    <td>
+                        <img class="zoomMatrix" id="zoomMatrix{{ event.number }}" src="../templates/static/img/zoom_in.png" data-is-expanded=0 />
+
+                        <img class="matrixPlot hidden" id="matrixPlot{{ event.number }}" width="419px" src="{{ event.matrix_link }}"
+                             height="400px" data-link-matrix="{{ event.matrix_link }}" alt="Extra plots" border="0">
+                    </td>
+
+                    <td>{{ event.coords }}</td>
+
+
+                </tr>
+            {%- endfor %}
+            </tbody>
+        </table>
+        <div class="pager">
+            <form>
+                <img src="../templates/static/img/icons/first.png" class="first"/>
+                <img src="../templates/static/img/icons/prev.png" class="prev"/>
+                <input type="text" class="pagedisplay"/>
+                <img src="../templates/static/img/icons/next.png" class="next"/>
+                <img src="../templates/static/img/icons/last.png" class="last"/>
+                <select class="pagesize" autocomplete="off">
+                    {% for mark in tableMarks -%}
+                        {% if loop.first %}
+                            <option selected="selected"  value="{{ mark }}">{{ mark }}</option>
+                        {% else %}
+                            <option value="{{ mark }}">{{ mark }}</option>
+                        {% endif %}
+                    {%- endfor %}
+                    <option value="{{ eventList|length }}">All</option>
+                </select>
+            </form>
+        </div>
+    </div>
+{% endblock %}
+
