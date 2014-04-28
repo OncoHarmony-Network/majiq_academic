@@ -243,9 +243,11 @@ class BasicPipeline:
 
         self.logger = get_logger("%smajiq.log"%logger_path, silent=self.silent, debug=self.debug)
         self.psi_paths = []
-        if self.files1:
+        
+        try:
             self.replica_len = [len(self.files1), len(self.files2)]
-
+        except AttributeError:
+            pass
 
 
     @abc.abstractmethod
@@ -707,6 +709,7 @@ class DeltaGroup(DeltaPair, CalcPsi):
 
                 if len(relevant) == self.numbestchanging:
                     break #we got enough elements
+                    
             self.logger.info("Obtaining weights for relevant set...")
             weights1 = self.calc_weights(relevant, group=0)
             self.logger.info("Weigths for %s are (respectively) %s"%(self.files1, weights1))

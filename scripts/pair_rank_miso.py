@@ -15,7 +15,6 @@ from pylab import *
 
 def miso_reader(paths, dofilter=True):
     delta_psis = defaultdict(list)
-    bayes_factors = defaultdict(list)
     for i, path in enumerate(paths):
         print path
         for line in open(path):
@@ -28,11 +27,10 @@ def miso_reader(paths, dofilter=True):
                 delta_psi = sline[7].split(",")[0]
                 bayes_factor = sline[8]
                 delta_psis[event_name].append(float(delta_psi)) #deltapsi
-                bayes_factors[event_name].append(float(bayes_factor))
 
     ret = []
     for name, deltapsi in delta_psis.items():
-        ret.append([name, mean(deltapsi), mean(bayes_factors[name])])
+        ret.append([name, random.uniform(-1, 1)])
 
     return ret
 
@@ -42,9 +40,9 @@ def rank_miso(paths, dofilter=True, ranknochange=False):
     rank = miso_reader(paths, dofilter)
 
     if ranknochange: 
-        rank.sort(key=lambda x: (abs(x[1]), x[2])) #sort first by smallest delta PSI, then by bayes factor
+        rank.sort(key=lambda x: (abs(x[1]))) #sort first by smallest delta PSI, then by bayes factor
     else:
-        rank.sort(key=lambda x: (-abs(x[1]), -x[2])) #sort first by biggest delta PSI, then by biggest bayes factor
+        rank.sort(key=lambda x: (-abs(x[1]))) #sort first by biggest delta PSI, then by biggest bayes factor
     
     #print rank[0:50]
     return rank
