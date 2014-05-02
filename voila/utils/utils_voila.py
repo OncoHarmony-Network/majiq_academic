@@ -1,6 +1,7 @@
 from __future__ import division
 import json
-
+import matplotlib
+matplotlib.use('Agg')
 from pylab import *
 import numpy
 from event import Event
