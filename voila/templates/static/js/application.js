@@ -477,7 +477,6 @@ function renderLargeCanvas(canvas, zoomInc){
 
 }
 
-
 function removeResetZoomLink(canvas){
     $(canvas).closest("td").children().first().removeClass('hidden');
 }
@@ -532,7 +531,6 @@ function drawBoxplotHeatmap(canvas) {
 
     }
 }
-
 
 function drawLSVGroups(canvas){
     // Get Color from Brewer Palette
@@ -874,7 +872,6 @@ function drawLSVGroupsCompactStackBars(canvas, fillMode){
     }
 }
 
-
 function drawLSEBoxplots(canvas) {
     if (canvas.getContext) {  // check for support
         var ctx = canvas.getContext("2d");
@@ -1019,8 +1016,6 @@ function drawLSEBoxplots(canvas) {
     }
 }
 
-
-
 function drawDeltaBox(canvas) {
     if (canvas.getContext) {  // check for support
         var ctx = canvas.getContext("2d");
@@ -1073,7 +1068,6 @@ function drawDeltaBox(canvas) {
         drawLine(ctx, halfCanvasWidth, parseInt(margin_top/2), halfCanvasWidth, canvas.height-margin_bottom+margin_top/2);
     }
 }
-
 
 function drawDeltaBarChart(context, bins, settingsCanvasDelta, zoomLevel, pThreshold) {
 
@@ -1207,7 +1201,6 @@ function drawExpDeltaWithCanvasId(eventOrCanvasid, zoomInc){
     renderExpandedDeltaCanvas(canvas, zoomInc);
 }
 
-
 function renderExpandedDeltaCanvas(canvas, zoomInc){
     if (canvas.getContext) {  // check for support
         var ctx = canvas.getContext("2d");
@@ -1245,6 +1238,7 @@ function forEach(array, action) {
     for (var i = 0; i < array.length; i++)
         action(array[i]);
 }
+
 function reduce(combine, base, array) {
     forEach(array, function (element) {
         base = combine(base, element);
