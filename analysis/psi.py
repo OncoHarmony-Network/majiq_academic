@@ -76,6 +76,46 @@ def recalibrate_delta(deltapsi):
     #TODO make deltaPSI follow the following binning system
     arange(-98.75, 100, 2.5)
 
+def lsv_psi(samples_events, name, alpha, n, debug):
+    "Given a set of matching inclusion and exclusion samples, calculate psi, save it in disk, and return the psi-per-juntion matrix"
+    
+    psi_scores = []
+    dircalc = DirichletCalc() 
+    for i, lsv in enumerate(samples_events):
+        if i % 50 == 0:
+            print "event %s..."%i,
+            sys.stdout.flush()
+        if debug > 0 and i == debug: break
+        psi = np.zeros(shape=(lsv.shape[0],BINS.shape[0]), dtype=np.float)
+        #if debug: print "Paired samples to dirichlet..."
+        #sampling PSI by pairing the samples of the previous step sequentially
+        for idx, junc in enumerate(lsv):
+            total_acum = 0.
+            acum_samples = np.zeros(shape=(BINS.shape[0]))
+            aggr = np.zeros(shape=(junc.shape[0]))
+            for xidx, xx in enumerate(lsv):
+                if idx == xidx : continue
+                aggr += xx
+
+            samples    = np.ndarray(shape=(2,junc.shape[0]))
+            samples[0,:] = junc
+            samples[1,:] = aggr
+
+            for paired_samples in samples.T:
+
+                dir_pdf = [dircalc.pdf([x, 1-x], alpha+paired_samples) for x in BINS_CENTER]
+                dir_pdf = np.asarray(dir_pdf)
+                acum_samples += dir_pdf
+                total_acum += sum(dir_pdf) 
+
+            psi[idx]=acum_samples/total_acum
+
+        #if debug: print "Dividing by total acum..."
+        psi_scores.append( psi )
+        #print "Junction %s PSI distribution: %s sum_N: %s"%(i, psi_matrix[-1], sum(psi_matrix[-1]))
+
+
+    return psi_scores
 
 def calc_psi(inc_samples, exc_samples, name, alpha, n, debug, psiparam):
     "Given a set of matching inclusion and exclusion samples, calculate psi, save it in disk, and return the psi-per-juntion matrix"

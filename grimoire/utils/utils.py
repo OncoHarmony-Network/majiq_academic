@@ -75,14 +75,13 @@ def prepare_LSV_table(LSV_list, non_as, temp_file):
             majiq_table_as    = np.zeros( shape=(len(LSV_list[exp_idx])), dtype=np.dtype('object'))
             majiq_table_nonas = np.zeros( shape=(len(non_as[exp_idx])), dtype=np.dtype('object'))
 
-            # We iterate over the inc and exc in order to fill the majiq_junc_matrix
             
             for iix, lsv in enumerate(LSV_list[exp_idx]) :
-                #print jn_lst
+                print "KKKKKK::",lsv
                 majiq_table_as[iix] = lsv.to_majiqLSV()
             for jix, jn in enumerate(non_as[exp_idx]) :
                 majiq_table_nonas[jix] = majiq_junc( jn , exp_idx)
-
+            print "majiq_table",majiq_table_as
             file_pi = open("%s/temp_%s.%s"%(mglobals.temp_oDir[exp_idx],mglobals.exp_list[exp_idx], temp_file), 'w+')
             pickle.dump((majiq_table_as, majiq_table_nonas), file_pi)
             file_pi.close()

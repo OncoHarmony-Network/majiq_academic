@@ -1043,7 +1043,8 @@
                             largeCanvas.setAttribute('bins', $(this).closest("td").children(".psiPlot")[0].getAttribute('bins'));
                             drawInitialBarplotCanvas(event.data.canvas);
                         }
-                });
+                    }
+                );
             });
 
             $('.largePsiPlot').on('mousewheel', function(event) {
@@ -1109,6 +1110,34 @@
                 $(this)[0].focus();
             });
 
+            /**
+             * Single LSV visualization
+             */
+
+            $('.psiPlot').each( function(){
+                drawBoxplotHeatmap($(this)[0]);
+
+                // For each compact view of the psiPlot, we want to add to the associated detailed view link
+                var closestTd =$(this).closest("td");
+                var largeCanvas = closestTd.children(".largePsiPlot")[0];
+                closestTd.children(".detailedPsiLink").on('click',
+                    {canvas: largeCanvas}, function(event) {
+                        if (this.getAttribute('isExpanded') == true){
+                            largeCanvas.setAttribute('bins', $(this).closest("td").children(".psiPlot")[0].getAttribute('bins'));
+                            drawInitialBarplotCanvas(event.data.canvas);
+                        }
+                    }
+                );
+            });
+
+            $('.largePsiPlot').on('mousewheel', function(event) {
+                event.preventDefault();
+                if (event.deltaY > 0){
+                    drawBarchartWithCanvasId($(this)[0].id, 1);
+                } else if(event.deltaY < 0){
+                    drawBarchartWithCanvasId($(this)[0].id, -1);
+                }
+            });
 
         }
     });

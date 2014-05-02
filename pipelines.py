@@ -3,6 +3,8 @@ from collections import defaultdict
 import abc
 import pickle
 
+import matplotlib
+matplotlib.use('Agg')
 from pylab import *
 from numpy.ma import masked_less
 from scipy.io import loadmat
@@ -13,11 +15,13 @@ from scipy.stats import scoreatpercentile
 from grimoire.utils.utils import create_if_not_exists, get_logger
 from analysis.polyfitnb import fit_nb 
 from analysis.filter import norm_junctions, discardlow, discardhigh, discardminreads, discardmaxreads, discardminreads_and, mark_stacks
+import analysis.filter as filter
 from analysis.sample import sample_from_junctions, mean_junction
-from analysis.psi import calc_psi, mean_psi, simple_psi, DirichletCalc, reads_given_psi, BINS_CENTER
+from analysis.psi import calc_psi, mean_psi, simple_psi, DirichletCalc, reads_given_psi, BINS_CENTER, lsv_psi
 from analysis.adjustdelta import adjustdelta
 from analysis.weight import local_weights, global_weights
 from analysis.matrix import rank_deltas, collapse_matrix
+
 
 
 ################################
@@ -31,11 +35,11 @@ def _find_len(grimoire_obj, logger):
     junc_len = 666 #this value should never be 
     for junction in grimoire_obj:
         if hasattr(junction[0], 'coverage'):
-            if type(junction[0].coverage[0]) == lil_matrix:
-                event = junction[0].coverage[0].toarray()
+            if type(junction[0].coverage) == lil_matrix:
+                event = junction[0].coverage.toarray()
                 junc_len = event[0].shape[0]
             else:
-                junc_len = junction[0].coverage[0].shape[0]
+                junc_len = junction[0].coverage.shape[0]
 
             if junc_len != 1: 
                 if logger: logger.debug("Junction length is %s"%junc_len)
@@ -45,11 +49,11 @@ def _find_len2(grimoire_obj, logger):
     junc_len = 666
     for junction in grimoire_obj:
         if hasattr(junction, 'coverage'):
-            if type(junction.coverage[0]) == lil_matrix:
-                event = junction.coverage[0].toarray()
+            if type(junction.coverage) == lil_matrix:
+                event = junction.coverage.toarray()
                 junc_len = event[0].shape[0]
             else:
-                junc_len = junction.coverage[0].shape[0]
+                junc_len = junction.coverage.shape[0]
 
             if junc_len != 1: 
                 if logger: logger.debug("Junction length is %s"%junc_len)
@@ -71,11 +75,11 @@ def _load_data_const(grimoire_obj, logger=None):
         if i == CONST_MAX: # we don't need more constitutive junctions
             return array(ret)
             
-        if type(junction[0].coverage[0]) == lil_matrix:
-            event = junction[0].coverage[0].toarray()
+        if type(junction[0].coverage) == lil_matrix:
+            event = junction[0].coverage.toarray()
             event = event[0]
         else:
-            event = junction[0].coverage[0]
+            event = junction[0].coverage
 
         if event.shape[0] == 1:
             event = [0]*my_len
@@ -93,11 +97,11 @@ def _load_data2(grimoire_obj, logger=None, getnames = False):
     #first get junction length, should be almost always the first entry
     my_len = _find_len2(grimoire_obj, logger)
     for i, junction in enumerate(grimoire_obj):  
-        if type(junction.coverage[0]) == lil_matrix:
-            event = junction.coverage[0].toarray()
+        if type(junction.coverage) == lil_matrix:
+            event = junction.coverage.toarray()
             event = event[0]
         else:
-            event = junction.coverage[0]
+            event = junction.coverage
 
         if event.shape[0] == 1:
             event = [0]*my_len
@@ -106,6 +110,30 @@ def _load_data2(grimoire_obj, logger=None, getnames = False):
         ret.append(list(event))
 
     return array(ret)
+
+def load_data_lsv(path, logger=None):
+    "Load data from the preprocess step. Could change to a DDBB someday"
+    data = pickle.load(open(path))
+    lsv_cov_list = []
+    const_list = []
+    lsv_info = []
+    num_pos = data[1][0].junction_list[0].shape[1]
+    for lsv in data[1]:
+        lsv_info.append([lsv.coords,lsv.id, lsv.type])
+
+        cov = np.zeros(shape=(len(lsv.junction_list), num_pos), dtype=np.dtype('object'))
+        for ii, lsvcov in enumerate(lsv.junction_list):
+            cov[ii,:] = lsvcov.toarray()
+
+        lsv_cov_list.append( cov )
+
+#    print "LSV COV",lsv_cov_list
+    const_list = np.zeros(shape=(len(data[2]),num_pos), dtype=np.dtype('object'))
+    for cidx,const in enumerate(data[2]):
+        const_list[cidx,:]=const.coverage.toarray()
+        #        const_list.append(const.coverage.toarray())
+
+    return (lsv_cov_list, lsv_info), const_list
 
 def load_data(path, logger=None):
     "Load data from the preprocess step. Could change to a DDBB someday"
@@ -196,10 +224,10 @@ def load_data_pair(path1, path2, logger=None, tracklist=None):
     ret = array(ret)
     return ret[:,0], ret[:,1], const1, ret[:,2], ret[:,3], const2, event_names
 
-def _pipeline_run(pipeline, logger=None):
+def _pipeline_run(pipeline, lsv=False, logger=None):
     "Exception catching for all the pipelines"
     try:
-        pipeline.run()
+        pipeline.run(lsv)
 
     except KeyboardInterrupt:
         if pipeline.logger: pipeline.logger.info("MAJIQ manually interrupted. Avada kedavra...")
@@ -242,6 +270,7 @@ class BasicPipeline:
             logger_path = self.output
 
         self.logger = get_logger("%smajiq.log"%logger_path, silent=self.silent, debug=self.debug)
+        self.lsv = args.lsv
         self.psi_paths = []
         
         try:
@@ -251,7 +280,7 @@ class BasicPipeline:
 
 
     @abc.abstractmethod
-    def run(self):
+    def run(self, lsv):
         """This is the entry point for all pipelines"""
         return
 
@@ -290,13 +319,60 @@ class BasicPipeline:
 ################################
 
 def calcpsi(args):
-    _pipeline_run(CalcPsi(args))
+    _pipeline_run(CalcPsi(args), args.lsv)
 
 class CalcPsi(BasicPipeline):
 
-    def run(self):
+    def run(self, lsv=False):
         for path in self.files:
-            self.calcpsi(path)
+            print "LSV",lsv
+            if lsv :
+                self.calcpsi_lsv(path)
+            else:
+                self.calcpsi(path)
+
+    def calcpsi_lsv(self, path, write_pickle=True):
+        """
+        Given a file path with the junctions, return psi distributions. 
+        write_pickle indicates if a .pickle should be saved in disk
+        """
+        name = os.path.basename(path)
+        self.logger.info("")
+        self.logger.info("Loading %s..."%path)
+        lsv_junc, const = load_data_lsv(path, self.logger) 
+        self.logger.debug("SHAPES for lsv %s,  constitutive %s"%(len(lsv_junc[0]), const.shape))
+        self.logger.info("Loaded.")
+#        all_junctions = {"inc": inc, "exc": exc, "const": const }
+#        all_junctions = self.gc_content_norm(all_junctions)
+
+       # self.logger.info("Masking non unique...")
+
+
+        #for junc_set in all_junctions.keys():
+        #    all_junctions[junc_set] = masked_less(all_junctions[junc_set], 0) 
+
+        fitfunc = self.fitfunc(const)
+        #all_junctions = self.mark_stacks(all_junctions, fitfunc)
+        #FILTER_JUNCTIONS?
+        self.logger.info('Filtering ...')
+        filter_lsv = filter.lsv_quantifiable( lsv_junc[0], self.minnonzero, self.minreads, self.logger )
+
+        self.logger.info("Bootstrapping samples...") 
+        lsv_sample = []
+        for ii in filter_lsv:
+            m_lsv, var_lsv, s_lsv = sample_from_junctions(ii, self.m, self.k, discardzeros=self.discardzeros, trimborder=self.trimborder, fitted_func=fitfunc, debug=self.debug) 
+            lsv_sample.append( s_lsv )
+
+        self.logger.info("\nCalculating PSI for %s ..."%(name))
+        psi = lsv_psi(lsv_sample, name, self.alpha, self.n, self.debug)
+
+        self.logger.info("Saving PSI...")
+        if write_pickle:
+            output = open("%s%s_psi.pickle"%(self.output, name), 'w')
+            pickle.dump(psi, output)
+            self.logger.info("PSI calculation for %s ended succesfully! Result can be found at %s"%(name, output.name))
+
+        return psi
 
 
     def calcpsi(self, path, write_pickle=True):
@@ -324,7 +400,7 @@ class CalcPsi(BasicPipeline):
         filter_junctions = defaultdict(array)
         filter_junctions["exc"], filter_junctions["inc"] = discardlow(self.minnonzero, True, self.logger, None, all_junctions["exc"], all_junctions["inc"])
         filter_junctions["exc"], filter_junctions["inc"] = discardminreads(self.minreads, True, self.logger, False, None, filter_junctions["exc"], filter_junctions["inc"])
-        
+
         self.logger.info("Bootstrapping samples...") 
         mean_exc, var_exc, exc_samples = sample_from_junctions(filter_junctions["exc"], self.m, self.k, discardzeros=self.discardzeros, trimborder=self.trimborder, fitted_func=fitfunc, debug=self.debug)
         mean_inc, var_inc, inc_samples = sample_from_junctions(filter_junctions["inc"], self.m, self.k, discardzeros=self.discardzeros, trimborder=self.trimborder, fitted_func=fitfunc, debug=self.debug)      

@@ -3,16 +3,21 @@ import os
 import pickle
 import argparse
 from random import choice
+import matplotlib
+matplotlib.use('Agg')
 
-from scipy.io import loadmat
 from pylab import *
 import numpy as np
 from matplotlib import rcParams
 from scipy.stats import pearsonr
 from numpy.random import dirichlet
 from numpy.ma import masked_less
-
 from polyfit_ectf import norm_junctions
+
+import pipelines
+import analysis.sample 
+
+
 """
 We want to estimate the variability in sample1 and compare it, per junction with the empirical variability of sample2. The methods we want to compare are:
 
@@ -167,8 +172,10 @@ def plot_pearsoncorr(var1, var2, my_title, my_xlabel, my_ylabel, plotpath=None, 
     ylim(0, max_value)
     
     #plot([0, max_value], [0, max_value])
+    print "PEARSON",var1, var2
     pear, pvalue = pearsonr(var1, var2)
     r_squared = pear**2
+
     a, b = polyfit(var1, var2, 1)
     fit_func = poly1d([a, b])
     plot(var1, fit_func(var1), '-r')
@@ -281,9 +288,10 @@ def main():
     samples1 = None
     samples2 = None
     parser = argparse.ArgumentParser()
-    parser.add_argument('matpath', help='Path with matfile with replica1 and replica2')    
-    parser.add_argument('par1', help='Path for parameters of replica1')
-    parser.add_argument('par2', help='Path for parameters of replica2')
+    parser.add_argument('rep1', help='Path for replica1')    
+    parser.add_argument('rep2', help='Path for replica2')    
+#    parser.add_argument('par1', help='Path for parameters of replica1')
+#    parser.add_argument('par2', help='Path for parameters of replica2')
     parser.add_argument('--sample', default=False, action='store_true', help='Use sampling')    
     parser.add_argument('--nb', default=False, action='store_true', help='Use the negative binomial to sample')
     parser.add_argument('--discardzeros', default=False, action='store_true', help='Discard the zeros from the junctions when computing means and variances')
@@ -307,47 +315,95 @@ def main():
     parser.add_argument('--output', default=None, help="Path to save the results to.")
     args = parser.parse_args()
     #load matlab matrices and get names of experiments from file name (TODO:All this should change)
-    my_mat = loadmat(args.matpath)
-    name1, name2 = os.path.basename(args.matpath).split('.')[0].split("_") #Get the experiment names from the mat file
+
+
+
+
+    lsv_junc1, const1 = pipelines.load_data_lsv( args.rep1 )
+    lsv_junc2, const2 = pipelines.load_data_lsv( args.rep2 )
+
+    al_const = np.concatenate([const1,const2])
+
+
+
+    name1 = os.path.basename(args.rep1).split('.')[-2] #Get the experiment names from the mat file
+    name2 = os.path.basename(args.rep2).split('.')[-2] #Get the experiment names from the mat file
     main_title = "%s VS %s\n"%(name1, name2) #main title of the plot generation
-    replica1 = my_mat[name1][args.junctype][0, 0][0, 0]['cov']
-    replica2 = my_mat[name2][args.junctype][0, 0][0, 0]['cov']
-    replica1_gc = my_mat[name1][args.junctype][0, 0][0, 0]['gc_val']
-    replica2_gc = my_mat[name2][args.junctype][0, 0][0, 0]['gc_val']
+
+    ids1 = set([x[1] for x in lsv_junc1[1]])
+    ids2 = set([x[1] for x in lsv_junc2[1]])
+
+
+    matched_names = ids1.intersection(ids2)
+
+
+
+    print len(ids1), len(ids2)
+    print len(matched_names)
+    replica1 = []
+    replica2 = []
+    for ii in matched_names:
+        for idx, nm in enumerate(lsv_junc1[1]):
+            if nm[1] == ii:
+                replica1.append(lsv_junc1[0][idx])
+                dummy=lsv_junc1[0][idx].shape
+                break
+        for idx, nm in enumerate(lsv_junc2[1]):
+            if nm[1] == ii:
+                dummy2=lsv_junc2[0][idx].shape
+                if dummy!= dummy2 : 
+                    print "ERRRRORRRRRR", dummy, dummy2
+                    replica1 = replica1[:-1]
+                else:
+                    replica2.append(lsv_junc2[0][idx])
+
+                break
+
+    replica1 = np.concatenate(replica1)
+    replica1 = replica1.astype(np.float)
+    replica2 = np.concatenate(replica2)
+    replica2 = replica2.astype(np.float)
+
+
+    print replica1.shape, replica2.shape
+
+#    replica1_gc = my_mat[name1][args.junctype][0, 0][0, 0]['gc_val']
+#    replica2_gc = my_mat[name2][args.junctype][0, 0][0, 0]['gc_val']
 
     #Coverage filters
-    if args.maxnonzero:
-        print "Before Maxnonzero %s. replica1: %s replica2: %s"%(args.maxnonzero, replica1.shape, replica2.shape)
-        replica1, replica1_gc, replica2, replica2_gc = discardhigh(replica1, replica1_gc, replica2, replica2_gc, args.maxnonzero, args.orfilter)
-        print "After Maxnonzero %s. replica1: %s replica2: %s"%(args.maxnonzero, replica1.shape, replica2.shape)      
-
-    if args.minnonzero:
-        print "Before Minnonzero %s. replica1: %s replica2: %s"%(args.minnonzero, replica1.shape, replica2.shape)
-        replica1, replica1_gc, replica2, replica2_gc = discardlow(replica1, replica1_gc, replica2, replica2_gc, args.minnonzero, args.orfilter)
-        print "After Minnonzero %s. replica1: %s replica2: %s"%(args.minnonzero, replica1.shape, replica2.shape)      
-
-    if args.minreads:
-        print "Before Minreads %s. replica1: %s replica2: %s"%(args.minreads, replica1.shape, replica2.shape)
-        replica1, replica1_gc, replica2, replica2_gc = discardminreads(replica1, replica1_gc, replica2, replica2_gc, args.minreads, args.orfilter)
-        print "After Minreads %s. replica1: %s replica2: %s"%(args.minreads, replica1.shape, replica2.shape)      
-
-    if args.maxreads:
-        print "Before maxreads %s. replica1: %s replica2: %s"%(args.maxreads, replica1.shape, replica2.shape)
-        replica1, replica1_gc, replica2, replica2_gc = discardmaxreads(replica1, replica1_gc, replica2, replica2_gc, args.maxreads, args.orfilter)
-        print "After maxreads %s. replica1: %s replica2: %s"%(args.maxreads, replica1.shape, replica2.shape)      
+#    if args.maxnonzero:
+#        print "Before Maxnonzero %s. replica1: %s replica2: %s"%(args.maxnonzero, replica1.shape, replica2.shape)
+#        replica1, replica1_gc, replica2, replica2_gc = discardhigh(replica1, replica1_gc, replica2, replica2_gc, args.maxnonzero, args.orfilter)
+#        print "After Maxnonzero %s. replica1: %s replica2: %s"%(args.maxnonzero, replica1.shape, replica2.shape)      
+#
+#    if args.minnonzero:
+#        print "Before Minnonzero %s. replica1: %s replica2: %s"%(args.minnonzero, replica1.shape, replica2.shape)
+#        replica1, replica1_gc, replica2, replica2_gc = discardlow(replica1, replica1_gc, replica2, replica2_gc, args.minnonzero, args.orfilter)
+#        print "After Minnonzero %s. replica1: %s replica2: %s"%(args.minnonzero, replica1.shape, replica2.shape)      
+#
+#    if args.minreads:
+#        print "Before Minreads %s. replica1: %s replica2: %s"%(args.minreads, replica1.shape, replica2.shape)
+#        replica1, replica1_gc, replica2, replica2_gc = discardminreads(replica1, replica1_gc, replica2, replica2_gc, args.minreads, args.orfilter)
+#        print "After Minreads %s. replica1: %s replica2: %s"%(args.minreads, replica1.shape, replica2.shape)      
+#
+#    if args.maxreads:
+#        print "Before maxreads %s. replica1: %s replica2: %s"%(args.maxreads, replica1.shape, replica2.shape)
+#        replica1, replica1_gc, replica2, replica2_gc = discardmaxreads(replica1, replica1_gc, replica2, replica2_gc, args.maxreads, args.orfilter)
+#        print "After maxreads %s. replica1: %s replica2: %s"%(args.maxreads, replica1.shape, replica2.shape)      
 
 
     #mask everything under 0
-    replica1 = masked_less(replica1, 0) 
-    replica2 = masked_less(replica2, 0)
-    if args.norm:
-        replica1 = norm_junctions(replica1, gc_factors=replica1_gc, gcnorm=True)
-        replica2 = norm_junctions(replica2, gc_factors=replica2_gc, gcnorm=True)
+#    if args.norm:
+#        replica1 = norm_junctions(replica1, gc_factors=replica1_gc, gcnorm=True)
+#        replica2 = norm_junctions(replica2, gc_factors=replica2_gc, gcnorm=True)
 
     if args.sample:
         main_title += " Sampling with repetition"
-        my_mean1, my_var1, samples1 = sample_from_junctions(replica1, args.m, args.k, discardzeros=args.discardzeros, nb=args.nb, trimborder=args.trimborder, parameters=args.par1)
-        my_mean2, my_var2, samples2 = sample_from_junctions(replica2, args.m, args.k, discardzeros=args.discardzeros, nb=args.nb, trimborder=args.trimborder, parameters=args.par2)
+        my_mean1, my_var1, samples1 = sample_from_junctions(replica1, args.m, args.k, discardzeros=args.discardzeros, nb=args.nb, trimborder=args.trimborder)
+        my_mean2, my_var2, samples2 = sample_from_junctions(replica2, args.m, args.k, discardzeros=args.discardzeros, nb=args.nb, trimborder=args.trimborder)
+#        fit_nb(all_const, "%s_nbfit"%args.output, args.plotpath, nbdisp=self.nbdisp, logger=None, discardb=True)
+#        my_mean1, my_var1, samples1 = sample.sample_from_junctions(replica1, args.m, args.k, discardzeros=args.discardzeros, nbdisp=0.1, trimborder=args.trimborder, fitted_func=fitfunc, debug=self.debug) 
+#        my_mean2, my_var2, samples2 = sample.sample_from_junctions(replica2, args.m, args.k, discardzeros=args.discardzeros, nbdisp=0.1, trimborder=args.trimborder, fitted_func=fitfunc, debug=self.debug) 
 
         if args.poisson:
             my_var1 = my_mean1
@@ -369,16 +425,17 @@ def main():
 
     else:
         main_title += " Empirical\n"
-        replica1 = masked_less(replica1, 0) 
-        replica2 = masked_less(replica2, 0) 
+#        replica1 = masked_less(replica1, 0) 
+#        replica2 = masked_less(replica2, 0) 
+        print replica1.shape
         if args.discardzeros:
             my_mean1, my_var1 = calc_nonzeromeanvar(replica1)
             my_mean2, my_var2 = calc_nonzeromeanvar(replica2)
         else:
-            my_mean1 = replica1.mean(axis=1)
-            my_var1 = replica1.var(axis=1)
-            my_mean2 = replica2.mean(axis=1)
-            my_var2 = replica2.var(axis=1) 
+            my_mean1 = np.mean(replica1,axis=1)
+            my_var1 =  np.var(replica1,axis=1)
+            my_mean2 = np.mean(replica2,axis=1)
+            my_var2 =  np.var(replica2,axis=1) 
 
 
     #plot the means and the variances

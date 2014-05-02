@@ -2,6 +2,9 @@ from __future__ import division
 import json
 import matplotlib
 matplotlib.use('Agg')
+import shutil
+import errno
+
 from pylab import *
 import numpy
 from event import Event
@@ -388,12 +391,13 @@ def get_lsv_single_exp_data(majiq_bins_file, meta_preprocess, confidence):
         print "[Error] :: %s doesn't exists." % + majiq_bins_file
         sys.exit(1)
 
-    event_counter = 0
-    event_list = []
+    lsv_counter = 0
+    lsv_list = []
 
-    for bins_array in bins_matrix[range(0, 50)]:
-        event_counter += 1
-        event_list.append(Event(generate_event(event_counter, bins_array, confidence)))
+    for bins_array_list in bins_matrix:
+        for bins_array in bins_array_list:
+            lsv_counter += 1
+            lsv_list.append(Event(generate_event(lsv_counter, bins_array, confidence)))
 
     metadata = None
     # Load metadata
@@ -407,7 +411,7 @@ def get_lsv_single_exp_data(majiq_bins_file, meta_preprocess, confidence):
             print "[Error] :: %s doesn't exists." % + meta_preprocess
             sys.exit(1)
 
-    return {'event_list': event_list,
+    return {'event_list': lsv_list,
             'metadata': metadata}
 
 
@@ -421,7 +425,7 @@ def collapse_matrix(matrix):
 
     return np.array(collapse)
 
-
+8
 # So far, this is not called anywhere cos the data should be coming in python format already. This is an ad-hoc solution
 # to read Matlab data. Using ipython, load this function, use it with a Matlab matrix and dump it using json.
 def load_matlab_mat(matlab_mat):
@@ -452,4 +456,23 @@ class PickleEncoder(json.JSONEncoder):
         if isinstance(obj, numpy.int64):
             return int(obj)
 
+<<<<<<< HEAD
         return json.JSONEncoder.default(self, obj)
+||||||| merged common ancestors
+        return json.JSONEncoder.default(self, obj)
+=======
+        return json.JSONEncoder.default(self, obj)
+
+
+def copyanything(src, dst):
+    try:
+        shutil.copytree(src, dst)
+    except OSError as exc:  # python >2.5
+        if exc.errno == errno.ENOTDIR:
+            shutil.copy(src, dst)
+        if exc.errno == errno.EEXIST:  # Static folder exists
+            shutil.rmtree(dst)
+            copyanything(src, dst)
+        else:
+            raise
+>>>>>>> 080bf10c1aa94677309bca88bad08ded47a5145b

@@ -25,6 +25,20 @@ def filter_message(when, value, logger, junc):
             logger.info(message)
 
 
+
+def lsv_quantifiable ( list_lsv , minnonzero, min_reads, logger=False):
+
+    filter_message("Before quantifiable_filter", minnonzero, logger, array(list_lsv))
+    filtered = []
+    for lsv in list_lsv:
+        for idx in range(lsv.shape[0]):
+            if (np.count_nonzero(lsv[idx]) > minnonzero and lsv[idx].sum() >  min_reads):
+                filtered.append(lsv)
+                break
+    filter_message("After quantifiable_filter", minnonzero, logger, array(filtered))
+    return filtered
+
+
 def discardhigh(max0=0, orfilter=True, logger=False, *junc):
     
     filter_message("Before discardhigh", max0, logger, junc)
@@ -45,7 +59,6 @@ def discardhigh(max0=0, orfilter=True, logger=False, *junc):
     filter_message("After discardhigh", max0, logger, junc)
 
     return ret
-
 
 def discardminreads_and(incexcpairs, minreads=0, logger=False):
     """
@@ -132,12 +145,9 @@ def discardmaxreads(maxreads=0, orfilter=True, logger=False, *junc):
                     for junc_num, junction2 in enumerate(junc):
                         filtered_juncs[junc_num].append(junction2[i])
                     break
-
         ret = [array(x) for x in filtered_juncs]
-
     else:
         raise NotImplemented
-
     filter_message("After discardmaxreads", maxreads, logger, ret)
 
     return ret

@@ -1,1 +1,5 @@
 *.pyc
+.DS_Store
+voila/.idea
+voila/templates/.idea
+voila/templates/static/matrix_plots

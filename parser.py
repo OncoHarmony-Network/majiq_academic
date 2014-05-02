@@ -16,6 +16,7 @@ def main():
 
     #common flags (first ones are required)
     common = new_subparser()
+    common.add_argument('--lsv', default=False, action='store_true', help='Execute pipeline for lsv')
     common.add_argument('--tmp', default="/tmp/", help='Path to save the temporary files. [Default: %(default)s]')
     common.add_argument('--output', required=True, help='Path to save the pickle output to.')
     common.add_argument('--logger', default=None, help='Path for the logger. Default is output directory')

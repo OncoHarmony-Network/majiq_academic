@@ -4,6 +4,7 @@ import utils.utils_voila as utils_voila
 
 __author__ = 'abarrera'
 
+EXEC_DIR = os.path.dirname(os.path.realpath(__file__)) + "/"
 
 def table_marks_set(size):
     # TODO: Customizable by script options
@@ -30,7 +31,7 @@ def _render_template(output_dir, output_html, majiq_output, type_summary, thresh
     @param type_summary: defines summary template used
     """
     from jinja2 import Environment, FileSystemLoader
-    env = Environment(loader=FileSystemLoader("templates/"))
+    env = Environment(loader=FileSystemLoader(EXEC_DIR + "templates/"))
     sum_template = env.get_template(type_summary + "_summary_template.html")
 
     if not output_dir.endswith('/'):
@@ -72,6 +73,8 @@ def _render_template(output_dir, output_html, majiq_output, type_summary, thresh
         import sys
         sys.exit(1)
 
+    # Copy static files to the output directory
+    utils_voila.copyanything(EXEC_DIR+"templates/static", output_dir+"static")
     voila_output.close()
 
 
