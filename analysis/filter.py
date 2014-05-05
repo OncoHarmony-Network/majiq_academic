@@ -6,6 +6,7 @@ import sys
 from pylab import *
 from polyfitnb import func2nb
 from scipy.stats import nbinom
+from numpy.ma import masked_less
 
 
 def filter_bulk(matrix_filter, *matrices):
@@ -24,6 +25,35 @@ def filter_message(when, value, logger, junc):
         else: 
             logger.info(message)
 
+
+def lsv_mark_stacks(lsv_list, fitfunc, pvalue_limit, dispersion, logger=False):
+    a, b = fitfunc.c
+    minstack = sys.maxint #the minimum value marked as stack
+    numstacks = 0
+    for lidx, junctions in enumerate(lsv_list):
+        for i, junction in enumerate(junctions):
+            for j, value in enumerate(junction):
+                if value > 0:
+                    #TODO Use masker, and marking stacks will probably be faster.
+                    copy_junc = list(junction)
+                    copy_junc.pop(j)
+                    copy_junc = array(copy_junc)
+                    copy_junc = copy_junc[copy_junc > 0]
+                    #FINISH TODO
+                    mean_rest = mean(copy_junc)
+                    r, p = func2nb(a, b, mean_rest, dispersion)
+                    my_nb = nbinom(r, p)
+                    pval = 1-my_nb.cdf(value)
+                    if pval < pvalue_limit:
+                        lsv_list[lidx][i, j] = -2 
+                        minstack = min(minstack, value)
+                        numstacks += 1
+        masked_less(lsv_list[lidx], 0) #remask the stacks
+
+    if logger: logger.info("Out of %s values, %s marked as stacks with a p-value threshold of %s (%.3f%%)"%(junctions.size, numstacks, pvalue_limit, (float(numstacks)/junctions.size)*100))
+
+#TODO: (Jordi) I don't think this return is necessary.
+    return lsv_list
 
 
 def lsv_quantifiable ( list_lsv , minnonzero, min_reads, logger=False):

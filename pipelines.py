@@ -121,14 +121,14 @@ def load_data_lsv(path, logger=None):
     for lsv in data[1]:
         lsv_info.append([lsv.coords,lsv.id, lsv.type])
 
-        cov = np.zeros(shape=(len(lsv.junction_list), num_pos), dtype=np.dtype('object'))
+        cov = np.zeros(shape=(len(lsv.junction_list), num_pos), dtype=np.dtype('int'))
         for ii, lsvcov in enumerate(lsv.junction_list):
             cov[ii,:] = lsvcov.toarray()
 
         lsv_cov_list.append( cov )
 
 #    print "LSV COV",lsv_cov_list
-    const_list = np.zeros(shape=(len(data[2]),num_pos), dtype=np.dtype('object'))
+    const_list = np.zeros(shape=(len(data[2]),num_pos), dtype=np.dtype('int'))
     for cidx,const in enumerate(data[2]):
         const_list[cidx,:]=const.coverage.toarray()
         #        const_list.append(const.coverage.toarray())
@@ -302,6 +302,13 @@ class BasicPipeline:
             self.logger.info("Fitting NB function with constitutive events...")
             return fit_nb(const_junctions, "%s_nbfit"%self.output, self.plotpath, nbdisp=self.nbdisp, logger=self.logger, discardb=True)
 
+    def mark_stacks_lsv(self, lsv_list, fitfunc):
+        if self.markstacks >= 0:
+            self.logger.info("Marking and masking stacks for...")
+            lsv_list = filter.lsv_mark_stacks(lsv_list, fitfunc, self.markstacks, self.nbdisp, self.logger)
+
+        return lsv_list
+
     def mark_stacks(self, all_junctions, fitfunc):
         if self.markstacks >= 0:
             self.logger.info("Marking and masking stacks for...")
@@ -352,10 +359,10 @@ class CalcPsi(BasicPipeline):
         #    all_junctions[junc_set] = masked_less(all_junctions[junc_set], 0) 
 
         fitfunc = self.fitfunc(const)
-        #all_junctions = self.mark_stacks(all_junctions, fitfunc)
+        filter_lsv = self.mark_stacks_lsv( lsv_junc[0], fitfunc)
         #FILTER_JUNCTIONS?
         self.logger.info('Filtering ...')
-        filter_lsv = filter.lsv_quantifiable( lsv_junc[0], self.minnonzero, self.minreads, self.logger )
+        filter_lsv = filter.lsv_quantifiable( filter_lsv, self.minnonzero, self.minreads, self.logger )
 
         self.logger.info("Bootstrapping samples...") 
         lsv_sample = []

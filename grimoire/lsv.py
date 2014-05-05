@@ -17,7 +17,7 @@ class LSV(object):
         self.junctions = np.asarray(junction_list)
         self.type = type
         self.ext_type = self.set_type(junction_list, type)
-        self.exp_idx = exp_idx
+#        self.exp_idx = exp_idx
         print "LSV :::::::::::::::::", self.ext_type, self.id
 
     def get_coordinates(self):

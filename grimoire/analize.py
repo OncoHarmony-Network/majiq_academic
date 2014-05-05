@@ -130,6 +130,15 @@ def __junction_filter_check( junc ):
     return (filter)
 
 
+def __reliable_in_data ( junc, exp_idx ) :
+    
+    MIN_READ_X_EXP = 5
+    MIN_NPOS_X_EXP = 3
+    filter = False
+    cover = junc.coverage.toarray()[exp_idx]
+    if junc.readN[exp_idx] > MIN_READ_X_EXP and np.count_nonzeros(cover) >= MIN_NPOS_X_EXP: filter = True
+    return True
+
 def __total_ss_minreads( junc_mat, minreads=5):
 #    print " MIN READS on "
 #    print junc_mat
@@ -176,7 +185,9 @@ def LSV_detection( gene_list, chr ):
 
 #    junc_set = [ [] for xx in range(mglobals.num_experiments)]
     const_set  = [set() for xx in range(mglobals.num_experiments)]
-    jun = [set() for xx in range(mglobals.num_experiments)]
+    jun = {}
+    for xx in mglobals.tissue_repl.keys():
+        jun[xx] = set()
 
     lsv_list = [ [] for xx in range(mglobals.num_experiments)]
 
@@ -208,23 +219,34 @@ def LSV_detection( gene_list, chr ):
                 for idx in lsv_lst:
                     coord = exon_list[idx].get_coordinates()
                     jlist = exon_list[idx].get_junctions(sstype)
-                    print "JUNC LIST", idx, jlist
+
+                    jlist = [x for x in  jlist if x is not None]
+                    if len(jlist) == 0 : continue
+
+
+
                     for name, ind_list in mglobals.tissue_repl.items() :
-                        for exp_idx in ind_list:
-                            for jj in jlist:
-                                if jj is None: continue
-                                jun[exp_idx].add(jj)
+                        counter = 0
+                        eData = 0
+                        for jj in jlist:
+                            for exp_idx in ind_list:
                                 utils.prepare_junctions_gc(jj,exp_idx)
-                            else: 
-                                continue
-                        lsv_in = LSV(coord, "%s:%d-%d"%(gn.get_id(),coord[0], coord[1]),jlist, lsv_type,exp_idx)
-                        for lsvinlist in lsv_list[exp_idx]:
-                            if lsv_in.is_equivalent(lsvinlist): 
-                                del lsv_in
-                                break
-                        else:
-                            lsv_list[exp_idx].append( lsv_in )#LSV(coord, "%s:%d-%d"%(gn.get_id(),coord[0], coord[1]),jlist, lsv_type,exp_idx))
-                        const_set[exp_idx].difference(jun[exp_idx])
+                                if __reliable_in_data( jj, exp_idx ):
+                                    counter +=1
+                            if counter < 0.1*len(ind_list): continue
+                            eData +=1
+                            jun[name].add(jj)
+                        if eData == 0 : continue
+                        lsv_in = gn.new_lsv_definition( coord, jlist, lsv_type )
+                        for exp_idx in ind_list:
+                            for lsvinlist in lsv_list[exp_idx]:
+                                if lsv_in.is_equivalent(lsvinlist): break
+                            else:
+                                lsv_list[exp_idx].append( lsv_in )
+
+    for name, ind_list in mglobals.tissue_repl.items() :
+        for exp_idx in ind_list:
+            const_set[exp_idx].difference(jun[name])
             
 
 #    mglobals.keep_info(SE_events, num_SS_var[0],num_SS_var[1], num_SS_var[2], total_SE)

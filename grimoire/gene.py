@@ -33,6 +33,8 @@ class Gene:
         self.transAScandidates = []
         self.transCONSTcandidates = []
         self.ir_list = []
+        self.lsv_list = []
+
 
     def __hash__(self):
         return hash((self.id,self.chromosome, self.strand, self.start, self.end))
@@ -256,6 +258,21 @@ class Gene:
         self.prepare_exons()
         self.remove_temp_attributes()
 
+
+    def new_lsv_definition(self, coords, jlist, type ):
+
+        ret = None
+        id = "%s:%d-%d"%(self.get_id(),coords[0], coords[1])
+        for lsv in self.lsv_list:
+            if lsv.id == id:
+                del varianti
+                ret = lsv
+                break
+        else:
+            ret = LSV(coord, id, jlist, type )
+            self.lsv_list.append( ret )
+
+        return ret
 
     def remove_temp_attributes(self):
         del self.temp_txex_list
