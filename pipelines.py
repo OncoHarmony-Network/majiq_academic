@@ -366,7 +366,7 @@ class CalcPsi(BasicPipeline):
 
         self.logger.info("Bootstrapping samples...") 
         lsv_sample = []
-        for ii in lsv_junc:
+        for ii in lsv_junc[0]:
             m_lsv, var_lsv, s_lsv = sample_from_junctions(ii, self.m, self.k, discardzeros=self.discardzeros, trimborder=self.trimborder, fitted_func=fitfunc, debug=self.debug) 
             lsv_sample.append( s_lsv )
 
