@@ -136,7 +136,7 @@ def __reliable_in_data ( junc, exp_idx ) :
     MIN_NPOS_X_EXP = 3
     filter = False
     cover = junc.coverage.toarray()[exp_idx]
-    if junc.readN[exp_idx] > MIN_READ_X_EXP and np.count_nonzeros(cover) >= MIN_NPOS_X_EXP: filter = True
+    if junc.readN[exp_idx] > MIN_READ_X_EXP and np.count_nonzero(cover) >= MIN_NPOS_X_EXP: filter = True
     return True
 
 def __total_ss_minreads( junc_mat, minreads=5):

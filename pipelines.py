@@ -362,11 +362,11 @@ class CalcPsi(BasicPipeline):
         filter_lsv = self.mark_stacks_lsv( lsv_junc[0], fitfunc)
         #FILTER_JUNCTIONS?
         self.logger.info('Filtering ...')
-        filter_lsv = filter.lsv_quantifiable( filter_lsv, self.minnonzero, self.minreads, self.logger )
+        lsv_junc = filter.lsv_quantifiable( filter_lsv, self.minnonzero, self.minreads, self.logger )
 
         self.logger.info("Bootstrapping samples...") 
         lsv_sample = []
-        for ii in filter_lsv:
+        for ii in lsv_junc:
             m_lsv, var_lsv, s_lsv = sample_from_junctions(ii, self.m, self.k, discardzeros=self.discardzeros, trimborder=self.trimborder, fitted_func=fitfunc, debug=self.debug) 
             lsv_sample.append( s_lsv )
 
@@ -430,7 +430,7 @@ class CalcPsi(BasicPipeline):
 ################################
 
 def deltapair(args):
-    _pipeline_run(DeltaPair(args))
+    _pipeline_run( DeltaPair(args), args.lsv )
 
 class DeltaPair(BasicPipeline):
 
@@ -455,8 +455,174 @@ class DeltaPair(BasicPipeline):
         self.logger.info(message)
         title(message)
 
-    def run(self):
-        self.pairdelta(self.file1, self.file2, self.output)
+    def run( self, lsv=False ):
+        if lsv :
+            self.pairdelta_lsv(self.file1, self.file2, self.output)
+        else:
+            self.pairdelta(self.file1, self.file2, self.output)
+
+    def pairdelta(self, file1, file2, output):
+        self.logger.info("")
+        self.logger.info("Processing pair %s - %s..."%(file1, file2))
+        inc1, exc1, const1, inc2, exc2, const2, event_names = load_data_pair(file1, file2, self.logger, self.tracklist) 
+        self.logger.debug("Shapes for inclusion, %s exclusion, %s constitutive %s"%(inc1.shape, exc1.shape, const1.shape))
+        all_junctions = {"inc1": inc1, "exc1": exc1, "const1": const1, "inc2": inc2, "exc2": exc2, "const2": const2 }
+        all_junctions = self.gc_content_norm(all_junctions)
+        self.logger.info("Masking non unique...")
+        for junc_set in all_junctions.keys():
+            #print junc_set, all_junctions[junc_set], all_junctions[junc_set].shape
+            all_junctions[junc_set] = masked_less(array(all_junctions[junc_set]), 0) 
+
+        #Quantifiable junctions filter
+        self.logger.info('Filtering ...')
+        all_junctions["exc1"], all_junctions["inc1"], all_junctions["exc2"], all_junctions["inc2"], event_names = discardlow(self.minnonzero, True, self.logger, event_names, all_junctions["exc1"], all_junctions["inc1"], all_junctions["exc2"], all_junctions["inc2"],)
+        all_junctions["exc1"], all_junctions["inc1"], all_junctions["exc2"], all_junctions["inc2"], event_names = discardminreads(self.minreads, True, self.logger, False, event_names, all_junctions["exc1"], all_junctions["inc1"], all_junctions["exc2"], all_junctions["inc2"],)
+
+        #fitting the function
+        fitfunc1 = self.fitfunc(all_junctions["const1"])
+        fitfunc2 = self.fitfunc(all_junctions["const2"])
+        if self.markstacks >= 0:
+            self.logger.info("Marking and masking stacks...")
+            for junc_set in all_junctions.keys():
+                if junc_set.find("const") == -1:
+                    if junc_set.endswith("1"):
+                        f = fitfunc1
+                    else:
+                        f = fitfunc2
+
+                    if self.logger: self.logger.info("... %s"%junc_set)
+                    all_junctions[junc_set] = mark_stacks(all_junctions[junc_set], f, self.markstacks, self.nbdisp)
+
+        #Start prior matrix
+        self.logger.info("Calculating prior matrix...")
+        numbins = 20 #half the delta bins TODO to parameters
+
+        self.logger.info("Calculate jefferies matrix...")
+        dircalc = DirichletCalc()
+        #Adjust prior matrix with Jefferies prior        
+        jefferies = []
+        psi_space = linspace(0, 1-self.binsize, num=numbins) + self.binsize/2
+        for i in psi_space:
+            jefferies.append([])
+            for j in psi_space:
+                jefferies[-1].append(dircalc.pdf([i, 1-i, j, 1-j], [self.alpha, self.alpha, self.alpha, self.alpha]))
+
+        if self.tracklist:
+            self.logger.info("TRACKLIST: After filters")
+            for i, event_name in enumerate(event_names):
+                if event_name in self.tracklist:
+                    logger.info("TRACKLIST After filters (%s): %s"%(event_name, all_junctions['inc1'][i], all_junctions['exc1'][i], all_junctions['exc2'][i], all_junctions['inc2'][i]))
+
+        #jefferies = array([dircalc.pdf([x, 1-x], [0.5, 0.5]) for x in psi_space])
+        jefferies = array(jefferies)
+        jefferies /= sum(jefferies)
+        plot_matrix(jefferies, "Jefferies Matrix", "jefferies_matrix", self.plotpath)
+        if self.synthprior:
+            #Use a synthetic matrix to generate the values
+            prior_matrix = [] 
+            uniform = self.prioruniform/numbins 
+            mydist = norm(loc=0, scale=self.priorstd)
+            norm_space = linspace(-1, 1-self.binsize, num=numbins*2) + self.binsize/2
+            pdfnorm = mydist.pdf(norm_space)
+            newdist = (pdfnorm+uniform)/(pdfnorm+uniform).sum()
+            plot(linspace(-1, 1, num=len(list(pdfnorm))), pdfnorm)
+            _save_or_show(self.plotpath, plotname="prior_distribution")
+            #generate the matrix
+            for i in xrange(numbins):
+                prior_matrix.append(list(newdist[numbins-i:(numbins*2)-i]))
+
+            prior_matrix = array(prior_matrix)
+            prior_matrix /= sum(prior_matrix) #renormalize so it sums 1
+            self._get_delta_info(newdist, norm_space)
+            plot_matrix(prior_matrix, "Prior Matrix (before Jefferies)", "prior_matrix_no_jefferies", self.plotpath)
+
+        elif not self.jefferiesprior:
+            #Using the empirical data to get the prior matrix
+            self.logger.info('Filtering to obtain "best set"...')
+            best_set = defaultdict(array)
+            best_set["exc1"], best_set["inc1"], best_set["exc2"], best_set["inc2"] = discardminreads_and(incexcpairs=[[all_junctions["exc1"], all_junctions["inc1"]], [all_junctions["exc2"], all_junctions["inc2"]]], minreads=self.priorminandreads, logger=self.logger)
+            best_set["exc1"], best_set["inc1"], best_set["exc2"], best_set["inc2"] = discardlow(self.priorminnonzero, True, self.logger, None, best_set["exc1"], best_set["inc1"], best_set["exc2"], best_set["inc2"])
+            best_set["exc1"], best_set["inc1"], best_set["exc2"], best_set["inc2"] = discardminreads(self.priorminreads, True, self.logger, False, None, best_set["exc1"], best_set["inc1"], best_set["exc2"], best_set["inc2"])
+            best_exc_reads1 = mean_junction(best_set['exc1'])
+            best_inc_reads1 = mean_junction(best_set['inc1'])
+            best_exc_reads2 = mean_junction(best_set['exc2'])
+            best_inc_reads2 = mean_junction(best_set['inc2'])
+            self.logger.info("'Best set' is %s events (out of %s)"%(best_set["inc1"].shape[0], all_junctions["inc1"].shape[0]))
+            self.logger.info("Calculating PSI for 'best set'...")
+            best_psi1 = simple_psi(best_inc_reads1, best_exc_reads1)
+            best_psi2 = simple_psi(best_inc_reads2, best_exc_reads2)
+            self.logger.info("Calculating delta PSI for 'best set'...")
+            best_delta_psi = array(best_psi1 - best_psi2)
+
+            self.logger.info("Parametrizing 'best set'...")
+            mixture_pdf = adjustdelta(best_delta_psi, output, plotpath=self.plotpath, title=" ".join(self.names), numiter=self.iter, breakiter=self.breakiter, V=self.V, logger=self.logger)
+
+            pickle.dump(mixture_pdf, open("%s%s_%s_bestset.pickle"%(output, self.names[0], self.names[1]), 'w'))
+        
+            prior_matrix = []
+            for i in xrange(numbins):
+                prior_matrix.extend(mixture_pdf[numbins-i:(numbins*2)-i])
+            prior_matrix = array(prior_matrix).reshape(numbins, -1)
+
+        #some info for later analysis
+        pickle.dump(event_names, open("%s%s_%s_eventnames.pickle"%(output, self.names[0], self.names[1]), 'w')) 
+        if not self.jefferiesprior:
+            plot_matrix(prior_matrix, "Prior Matrix (before Jefferies)", "prior_matrix_no_jefferies", self.plotpath)
+
+        #Calculate prior matrix
+        self.logger.info("Adding a Jefferies prior to prior (alpha=%s)..."%(self.alpha))
+        #Normalize prior with jefferies
+        if self.jefferiesprior:
+            self.logger.info("Using the Uniform distribution + Jefferies...")
+            prior_matrix = jefferies + (self.prioruniform/numbins)
+        else: 
+            prior_matrix *= jefferies 
+
+        prior_matrix /= sum(prior_matrix) #renormalize so it sums 1
+        plot_matrix(prior_matrix, "Prior Matrix", "prior_matrix", self.plotpath)
+        self.logger.info("Saving prior matrix for %s..."%(self.names))
+        pickle.dump(prior_matrix, open("%s%s_%s_priormatrix.pickle"%(output, self.names[0], self.names[1]), 'w'))
+        self.logger.info("Bootstrapping for all samples...")
+        mean_exc1, var_exc1, exc_samples1 = sample_from_junctions(all_junctions["exc1"], self.m, self.k, discardzeros=self.discardzeros, trimborder=self.trimborder, fitted_func=fitfunc1, debug=self.debug, tracklist=self.tracklist, names=event_names)
+        mean_inc1, var_inc1, inc_samples1 = sample_from_junctions(all_junctions["inc1"], self.m, self.k, discardzeros=self.discardzeros, trimborder=self.trimborder, fitted_func=fitfunc1, debug=self.debug, tracklist=self.tracklist, names=event_names)      
+        mean_exc2, var_exc2, exc_samples2 = sample_from_junctions(all_junctions["exc2"], self.m, self.k, discardzeros=self.discardzeros, trimborder=self.trimborder, fitted_func=fitfunc2, debug=self.debug, tracklist=self.tracklist, names=event_names)
+        mean_inc2, var_inc2, inc_samples2 = sample_from_junctions(all_junctions["inc2"], self.m, self.k, discardzeros=self.discardzeros, trimborder=self.trimborder, fitted_func=fitfunc2, debug=self.debug, tracklist=self.tracklist, names=event_names)
+        self.logger.info("\nCalculating PSI (just for reference) for %s and %s..."%(self.names[0], self.names[1]))
+        psi1 = calc_psi(inc_samples1, exc_samples1, self.names[0], self.alpha, self.n, self.debug, self.psiparam)
+        psi2 = calc_psi(inc_samples2, exc_samples2, self.names[1], self.alpha, self.n, self.debug, self.psiparam) 
+        psi_path = "%s%s_%s_psipaired.pickle"%(output, self.names[0], self.names[1])
+        pickle.dump([psi1, psi2], open(psi_path, 'w'))
+
+        self.logger.info("Calculating P(Data | PSI_i, PSI_j)...")
+        #P(Data | PSI_i, PSI_j) = P(vector_i | PSI_i) * P(vector_j | PSI_j)
+        data_given_psi1 = reads_given_psi(inc_samples1, exc_samples1, psi_space)
+        data_given_psi2 = reads_given_psi(inc_samples2, exc_samples2, psi_space)
+
+        data_given_psi = []
+        for sample in xrange(data_given_psi1.shape[0]):
+            #TODO Tensor product is calculated with scipy.stats.kron. Probably faster, have to make sure I am using it correctly.
+            data_given_psi.append(data_given_psi1[sample].reshape(-1, numbins) * data_given_psi2[sample].reshape(numbins, -1))
+            if self.debug: plot_matrix(data_given_psi[sample], "P(Data | PSI 1, PSI 2) Event %s (Inc1: %s, Exc1: %s Inc2: %s Exc2: %s)"%(sample, sum(inc_samples1[sample]), sum(exc_samples1[sample]), sum(inc_samples2[sample]), sum(exc_samples2[sample])), "datagpsi_sample%s"%sample, self.plotpath)
+
+        #Finally, P(PSI_i, PSI_j | Data) equivalent to P(PSI_i, PSI_j)* P(Data | PSI_i, PSI_j) 
+        self.logger.info("Calculate Posterior Delta Matrices...")
+        posterior_matrix = []
+        for sample in xrange(len(data_given_psi)):
+            pm = (prior_matrix * data_given_psi[sample])
+            posterior_matrix.append(pm / sum(pm))
+            if self.debug: plot_matrix(posterior_matrix[-1], "Posterior Delta Event %s (Inc1: %s, Exc1: %s Inc2: %s Exc2: %s)"%(sample, sum(inc_samples1[sample]), sum(exc_samples1[sample]), sum(inc_samples2[sample]), sum(exc_samples2[sample])), "postdelta_sample%s"%sample, self.plotpath)
+
+        pickle_path = "%s%s_%s_deltamatrix.pickle"%(output, self.names[0], self.names[1])
+        pickle.dump(posterior_matrix, open(pickle_path, 'w'))
+        self.logger.info("Done!")
+        return posterior_matrix, event_names
+
+
+
+
+
+
+
 
     def pairdelta(self, file1, file2, output):
         self.logger.info("")

@@ -3,6 +3,8 @@ import numpy as np
 import grimoire.utils.utils as utils
 import mglobals
 from grimoire.exon import Exon, ExonTx, collapse_list_exons, print_list_exons
+from grimoire.lsv import LSV
+
 class Gene:
     __eq__ = lambda self, other: self.chromosome == other.chromosome and self.strand == other.strand and self.start < other.end and self.end > other.start
     __ne__ = lambda self, other: self.chromosome != other.chromosome or self.strand != other.strand or self.start >= other.end or self.end <= other.start
@@ -265,11 +267,10 @@ class Gene:
         id = "%s:%d-%d"%(self.get_id(),coords[0], coords[1])
         for lsv in self.lsv_list:
             if lsv.id == id:
-                del varianti
                 ret = lsv
                 break
         else:
-            ret = LSV(coord, id, jlist, type )
+            ret = LSV(coords, id, jlist, type )
             self.lsv_list.append( ret )
 
         return ret

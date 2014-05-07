@@ -56,14 +56,14 @@ def lsv_mark_stacks(lsv_list, fitfunc, pvalue_limit, dispersion, logger=False):
     return lsv_list
 
 
-def lsv_quantifiable ( list_lsv , minnonzero, min_reads, logger=False):
+def lsv_quantifiable ( list_lsv_tuple , minnonzero, min_reads, logger=False):
 
     filter_message("Before quantifiable_filter", minnonzero, logger, array(list_lsv))
     filtered = []
-    for lsv in list_lsv:
+    for lsvdx, lsv in enumerate(list_lsv[0]):
         for idx in range(lsv.shape[0]):
             if (np.count_nonzero(lsv[idx]) > minnonzero and lsv[idx].sum() >  min_reads):
-                filtered.append(lsv)
+                filtered.append((lsv,list_lsv_tuple[1][lsvdx]))
                 break
     filter_message("After quantifiable_filter", minnonzero, logger, array(filtered))
     return filtered

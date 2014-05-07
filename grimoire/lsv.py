@@ -7,7 +7,7 @@ STARGET = 'target'
 
 class LSV(object):
 
-    def __init__ ( self, coords, id, junctions, type, exp_idx ):
+    def __init__ ( self, coords, id, junctions, type ):
         if type != SSOURCE and type != STARGET: raise RuntimeError('Incorrect LSV type %s'%type)
         self.coords = coords
         self.id = id
@@ -88,8 +88,92 @@ class LSV(object):
         if self.type == variant.type : return False
         return np.array_equal(self.junctions, variant.junctions)
 
-    def to_majiqLSV (self):
-        return Majiq_LSV(self)
+    def to_majiqLSV (self, exp_idx):
+        return Majiq_LSV(self, exp_idx)
+
+def extract_SE_events( list_lsv_per_gene ):
+
+    sslist = list_lsv_per_gene[0]
+    stlist = list_lsv_per_gene[1]
+    
+    for ss in sslist:
+        slist = ss.junction_list
+        if len(slist) != 2: continue
+        if slist[0].acceptor == slist[1].acceptor: continue
+        
+        sindx = None
+        tindx = None
+        C2 = None
+
+        for st in stlist:
+            tlist = st.junction_list
+            if len(tlist) != 2: continue
+            if tlist[0].donor == tlist[1].donor: continue
+
+            for ii in range(2):
+                for jj in range(2):
+                    if slist[ii] == tlist[jj]:
+                        sindx = 1-ii
+                        tindx = 1-jj
+                        break
+                else:
+                    continue
+                break
+            else:
+                continue
+            if slist[sindx].acceptor == tlist[tindx].donor: 
+                C2 = st.coords
+                break
+        else:
+            continue
+        
+        C1 = ss.coords
+        A = slist[sindx].acceptor.get_coordinates()
+        #ret_list.append( (C1.)
+
+
+
+def lsv_to_gff( list_lsv ):
+
+
+    gtf = []
+    for lsv in list_lsv:
+        jlist = sorted(lsv.junctions)
+        lsv_coord = lsv.get_coordinates()
+
+        gene = '%s\tscript\tgene\t'%chrom
+        if type==SSOURCE:
+
+            gene += '%d\t%d\t'%(lsv.get_coordinates()[0],jlist[-1].acceptor.get_coordinates()[1])
+        else:
+            gene += '%d\t%d\t'%(jlist[0].donor.get_coordinates()[0],lsv.get_coordinates()[1])
+
+        gene += '.\t%s\t.\tName=%s;Parent=%s;ID=%s'%(lsv.id, lsv.id, lsv.id)
+        gtf.append(gene)  
+
+        for jidx,junc in enumerate(jlist):
+            mrna = '%s\tscript\tmRNA\t'%chrom
+            mrna_id = '%s.%d'%(lsv.id,jidx)
+            ex1 = '%s\tscript\texon\t%d\t%d\t.\t%s\t.\tName=%s.lsv;Parent=%s;ID=%s.lsv'%(chrom, lsv_coord[0], lsv_coord[1], strand, mrna_id, mrna_id,mrna_id)
+            ex2 = '%s\tscript\texon\t'%chrom
+
+            if type == SSOURCE:
+                excoord = junc.acceptor.get_coordinates()
+                mrna +='%d\t%d\t'%(lsv_coord[0],excoord[1])
+                ex2 += '%d\t%d\t'%(excoord[0],excoord[1])
+            else:
+                excoord = junc.acceptor.get_coordinates()
+                mrna +='%d\t%d\t'%(junc.donor.get_coordinates()[0],lsv.get_coordinates()[1])
+                ex2 += '%d\t%d\t'%(excoord[0],excoord[1])
+            mrna += '.\t%s\t.\tName=%s;Parent=%s;ID=%s'%(strand,mrna_id,lsv.id,mrna_id)
+            ex2  += '.\t%s\t.\tName=%s.ex;Parent=%s;ID=%s.ex'%(strand, mrna_id, mrna_id, mrna_id)
+
+            gtf.append(mrna)  
+            gtf.append(ex1)
+            gtf.append(ex2)
+
+    return gtf
+
 
 def print_lsv_extype ( list_lsv, filename ):
     fp = open(filename,'w+')
@@ -113,12 +197,12 @@ class LSV_IR ( object):
 
 class Majiq_LSV(object):
 
-    def __init__ (self, LSV):
+    def __init__ (self, LSV, exp_idx):
 
         self.coords = LSV.coords
         self.id = LSV.id
         self.type = LSV.ext_type
-        exp_idx = LSV.exp_idx
+#        exp_idx = LSV.exp_idx
         self.junction_list = np.zeros( shape=(len(LSV.junctions)),dtype=np.dtype('object'))
         for idx,jj in enumerate(LSV.junctions):
             self.junction_list[idx] = jj.coverage[exp_idx,:]

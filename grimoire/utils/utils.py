@@ -78,7 +78,7 @@ def prepare_LSV_table(LSV_list, non_as, temp_file):
             
             for iix, lsv in enumerate(LSV_list[exp_idx]) :
                 print "KKKKKK::",lsv
-                majiq_table_as[iix] = lsv.to_majiqLSV()
+                majiq_table_as[iix] = lsv.to_majiqLSV(exp_idx)
             for jix, jn in enumerate(non_as[exp_idx]) :
                 majiq_table_nonas[jix] = majiq_junc( jn , exp_idx)
             print "majiq_table",majiq_table_as
