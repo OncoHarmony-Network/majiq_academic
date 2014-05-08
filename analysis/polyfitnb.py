@@ -50,7 +50,9 @@ def _save_or_show(plotpath, plotname=None):
         title(plotname)
 
     if plotpath:
-        savefig("%s%s.png"%(plotpath, plotname.replace(" ", "_")), bbox_inches='tight') #WNo spaces allowed, underscores!
+        if not os.path.exists(plotpath):
+            os.makedirs(plotpath)
+        savefig("%s/%s.png"%(plotpath, plotname.replace(" ", "_")), bbox_inches='tight') #WNo spaces allowed, underscores!
         clf()
     else:
         show()
@@ -170,6 +172,8 @@ def fit_nb(junctions, outpath, plotpath, gcnorm=True, trim=True, minnonzero=5, p
     plot_negbinomial_fit(mean_junc, std_junc, fit_function, plotpath, "After correction") 
 
     #Save everything into pickle object to maybe later reuse?
-    pickle.dump(fit_function, open("%s_fitfunc.pickle"%outpath, 'w'))
+    if not os.path.exists(outpath):
+        os.makedirs(outpath)
+    pickle.dump(fit_function, open("%s/fitfunc.pickle"%outpath, 'w'))
 
     return fit_function
