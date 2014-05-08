@@ -132,8 +132,8 @@ def __junction_filter_check( junc ):
 
 def __reliable_in_data ( junc, exp_idx ) :
     
-    MIN_READ_X_EXP = 5
-    MIN_NPOS_X_EXP = 3
+    MIN_READ_X_EXP = mglobals.MINREADS
+    MIN_NPOS_X_EXP = mglobals.MINPOS
     filter = False
     cover = junc.coverage.toarray()[exp_idx]
     if junc.readN[exp_idx] > MIN_READ_X_EXP and np.count_nonzero(cover) >= MIN_NPOS_X_EXP: filter = True

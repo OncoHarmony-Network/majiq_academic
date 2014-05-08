@@ -1,10 +1,10 @@
+from matplotlib import use
+use('Agg')
 import os
 from collections import defaultdict
 import abc
 import pickle
 
-import matplotlib
-matplotlib.use('Agg')
 from pylab import *
 from numpy.ma import masked_less
 from scipy.io import loadmat

@@ -137,19 +137,24 @@ def lsv_to_gff( list_lsv ):
 
 
     gtf = []
-    for lsv in list_lsv:
+    for lsv in list_lsv[0]:
+        trans = []
         jlist = sorted(lsv.junctions)
         lsv_coord = lsv.get_coordinates()
 
+        gne = jlist[0].gene
+        chrom = gne.get_chromosome()
+        strand = gne.get_strand()
         gene = '%s\tscript\tgene\t'%chrom
-        if type==SSOURCE:
-
+        if lsv.type==SSOURCE:
+            if jlist[-1].acceptor is None: continue
             gene += '%d\t%d\t'%(lsv.get_coordinates()[0],jlist[-1].acceptor.get_coordinates()[1])
         else:
+            if jlist[0].donor is None: continue
             gene += '%d\t%d\t'%(jlist[0].donor.get_coordinates()[0],lsv.get_coordinates()[1])
 
-        gene += '.\t%s\t.\tName=%s;Parent=%s;ID=%s'%(lsv.id, lsv.id, lsv.id)
-        gtf.append(gene)  
+        gene += '.\t%s\t.\tName=%s;Parent=%s;ID=%s'%(strand,lsv.id, lsv.id, lsv.id)
+        trans.append(gene)  
 
         for jidx,junc in enumerate(jlist):
             mrna = '%s\tscript\tmRNA\t'%chrom
@@ -157,20 +162,24 @@ def lsv_to_gff( list_lsv ):
             ex1 = '%s\tscript\texon\t%d\t%d\t.\t%s\t.\tName=%s.lsv;Parent=%s;ID=%s.lsv'%(chrom, lsv_coord[0], lsv_coord[1], strand, mrna_id, mrna_id,mrna_id)
             ex2 = '%s\tscript\texon\t'%chrom
 
-            if type == SSOURCE:
+            if lsv.type == SSOURCE:
+                if junc.acceptor is None: break
                 excoord = junc.acceptor.get_coordinates()
                 mrna +='%d\t%d\t'%(lsv_coord[0],excoord[1])
                 ex2 += '%d\t%d\t'%(excoord[0],excoord[1])
             else:
+                if junc.donor is None: break
                 excoord = junc.acceptor.get_coordinates()
                 mrna +='%d\t%d\t'%(junc.donor.get_coordinates()[0],lsv.get_coordinates()[1])
                 ex2 += '%d\t%d\t'%(excoord[0],excoord[1])
             mrna += '.\t%s\t.\tName=%s;Parent=%s;ID=%s'%(strand,mrna_id,lsv.id,mrna_id)
             ex2  += '.\t%s\t.\tName=%s.ex;Parent=%s;ID=%s.ex'%(strand, mrna_id, mrna_id, mrna_id)
-
-            gtf.append(mrna)  
-            gtf.append(ex1)
-            gtf.append(ex2)
+        
+            trans.append(mrna)  
+            trans.append(ex1)
+            trans.append(ex2)
+        else:
+            gtf.extend(trans)
 
     return gtf
 

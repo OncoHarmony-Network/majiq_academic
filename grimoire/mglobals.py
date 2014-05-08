@@ -43,7 +43,7 @@ def global_conf_ini(filename):
 
     global num_experiments, exp_list, readLen, gc_factor, weigh_factor, gc_bins, gc_bins_val, tissue_repl, sam_dir, num_mapped_reads, genome, outDir, temp_oDir
     global A3SS, A5SS,SEev, bothSS, totalSE
-
+    global MINREADS , MINPOS
     Config = ConfigParser.ConfigParser()
     Config.read(filename)
     exp = ConfigSectionMap(Config,"experiments")
@@ -53,6 +53,8 @@ def global_conf_ini(filename):
     temp_oDir = []
     count = 0
     
+    MINREADS = 5
+    MINPOS = 3
     readLen = int(general['readlen'])
     sam_dir = general['samdir']
     outDir = general['output']
