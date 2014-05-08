@@ -231,13 +231,14 @@ def check_junctions_in_replicates(lsv_junc1, lsv_junc2, discard_empty_junctions=
     return replica1, replica2
 
 
-def discard_empty_junctions( replica ):
+def discard_empty_junctions( replica1, replica2 ):
     idx_list = []
-    for idx in range(replica.shape[0]):
-        if np.count_nonzero(replica[idx]) == 0 : idx_list.append(idx)
-    replica = np.delete(replica, idx_list, axis=0)
+    for idx in range(replica1.shape[0]):
+        if np.count_nonzero(replica1[idx]) == 0 or np.count_nonzero(replica2[idx]) ==0 : idx_list.append(idx)
+    replica1 = np.delete(replica1, idx_list, axis=0)
+    replica2 = np.delete(replica2, idx_list, axis=0)
 
-    return replica
+    return replica1,replica2
 
 def load_junctions(filename1, filename2, args, fromlsv=False):
 
@@ -251,8 +252,7 @@ def load_junctions(filename1, filename2, args, fromlsv=False):
     if fromlsv:
         replica1, replica2 = junction_sample.check_junctions_in_replicates(lsv_junc1, lsv_junc2, discard_empty_junctions=True)
     else:
-        replica1 = discard_empty_junctions(const1)
-        replica2 = discard_empty_junctions(const2)
+        replica1, replica2 = discard_empty_junctions(const1, const2)
 
     return replica1, replica2, fit_func1, fit_func2
 
