@@ -27,7 +27,6 @@ def _save_or_show(plotpath, plotname=None):
         show()
 
 def calc_score_tmp(mean_sample1, var_sample1, mean_sample2, var_sample2):
-    print abs(mean_sample1-mean_sample2)/((mean_sample1+mean_sample2)*0.5)
     return {'mean': abs(mean_sample1-mean_sample2)/((mean_sample1+mean_sample2)*0.5),
             'variance': abs(var_sample1-var_sample2)/((var_sample1+var_sample2)*0.5)}
 
@@ -35,23 +34,38 @@ def calc_score(mean_sample1, var_sample1, mean_sample2, var_sample2):
     return calc_score_tmp(mean_sample1, var_sample1, mean_sample2, var_sample2)
     # return abs(var_sample1-var_sample2)/((mean_sample1+mean_sample2)*0.5)
 
-def plot_method1Vsmethod2(score1, score2, score1_name, score2_name, replica1_name, replica2_name, plotpath=None):
+def plot_method1Vsmethod2(scores1, scores2, score1_name, score2_name, replica1_name, replica2_name, plotpath=None, coverage=None):
     """Compute 2 plots: one for the variance, one for the mean"""
     plotname="%sVs%s" % (score1_name, score2_name)
-    total_junctions = float(len(score1))
-    better_in_method1 = sum(score1 < score2)
-    equal_in_both = sum(score1 == score2)
-    better_in_method2 = sum(score1 > score2)
 
-    print "Better in %s: %s (%.2f%%) Equal: %s Better in %s: %s (%.2f%%)"%(score1_name, better_in_method1, (better_in_method1/total_junctions)*100, equal_in_both, score2_name, better_in_method2, (better_in_method2/total_junctions)*100)
+    total_junctions = float(len(scores1['mean']))  # The same in all mean/variance scores1/scores2
+
+    stats_names = ['mean', 'variance']
+
+
+    f, axarr = subplots(2, 1, sharex='cols')
+    for name_i, stat_name in enumerate(stats_names):
+
+        # subplot(2, 1, name_i)
+        axarr[name_i-1, 0].set_title(stat_name)
+
+        score1, score2 = scores1[stat_name], scores2[stat_name]
+        better_in_method1 = sum(score1 < score2)
+        equal_in_both = sum(score1 == score2)
+        better_in_method2 = sum(score1 > score2)
+
+        max_value = max(max(score1), max(score2))
+        xlabel(score1_name)
+        ylabel(score2_name)
+        xlim(0, max_value)
+        ylim(0, max_value)
+        axarr[name_i, 0].plot([0, max_value], [0, max_value])
+        axarr[name_i, 0].plot(score1, score2, '.')
+
+        print "[For %s]::\t\tBetter in %s: %s (%.2f%%) Equal: %s Better in %s: %s (%.2f%%)"%(stat_name, score1_name, better_in_method1, (better_in_method1/total_junctions)*100, equal_in_both, score2_name, better_in_method2, (better_in_method2/total_junctions)*100)
+
     title("%s vs %s\n%s and %s"%(score1_name, score2_name, replica1_name, replica2_name))
-    max_value = max(max(score1), max(score2))
-    xlabel(score1_name)
-    ylabel(score2_name)
-    xlim(0, max_value)
-    ylim(0, max_value)
-    plot([0, max_value], [0, max_value])
-    plot(score1, score2, '.')
+
     _save_or_show(plotpath, plotname)
 
 
@@ -109,7 +123,7 @@ def main():
     lsv_junc1 = analysis.filter.lsv_quantifiable( lsv_junc1, args.minnonzero, args.minreads, None )
     lsv_junc2 = analysis.filter.lsv_quantifiable( lsv_junc2, args.minnonzero, args.minreads, None )
 
-    replica1, replica2 = junction_sample.check_junctions_in_replicates(lsv_junc1, lsv_junc2)
+    replica1, replica2 = junction_sample.check_junctions_in_replicates(lsv_junc1, lsv_junc2, discard_empty_junctions=True)
 
     #Get the experiment names
     rep1_name = os.path.basename(args.par1).split('.')[-2]
