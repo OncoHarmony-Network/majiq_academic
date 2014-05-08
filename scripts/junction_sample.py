@@ -29,7 +29,7 @@ from polyfit_ectf import norm_junctions
 
 import pipelines
 import analysis.sample
-import analysis.polyfitnb
+import analysis.polyfitnb as polyfitnb
 
 
 DEBUG = True
@@ -231,7 +231,7 @@ def check_junctions_in_replicates(lsv_junc1, lsv_junc2, discard_empty_junctions=
     return replica1, replica2
 
 
-def discard_emtpy_junctions( replica ):
+def discard_empty_junctions( replica ):
     idx_list = []
     for idx in range(replica.shape[0]):
         if np.count_nonzero(replica[idx]) == 0 : idx_list.append(idx)
@@ -266,7 +266,21 @@ def split_junction_pool ( replica1, replica2 ):
     for idx in range(replica1.shape[0]):
         if np.count_nonzero(replica1[idx]) in range(1,6) :
             low.append(replica1[idx])
+        elif np.count_nonzero(replica1[idx]) in range(6,16) :
+            mid.append(replica1[idx])
+        elif np.count_nonzero(replica1[idx]) >15 :
+            high.append(replica1[idx])
 
+    
+#    low = np.concatenate(low)
+#    low = low.astype(np.float64)
+#    mid = np.concatenate(mid)
+#    mid = mid.astype(np.float64)
+#    high = np.concatenate(high)
+#    high = high.astype(np.float64)
+
+#    return low,mid,high
+    return array(low), array(mid), array(high)
 
 def main():
     """Script for initial testing of the MAJIQ algorithms for sampling and initial PSI values generator."""
@@ -300,15 +314,25 @@ def main():
     parser.add_argument('--dispersion', default=0.1, type=float, help='Dispersion factor (used in junctions sampling).')
     args = parser.parse_args()
 
-    # Parse LSV files
-    lsv_junc1, const1 = pipelines.load_data_lsv(args.rep1)
-    lsv_junc2, const2 = pipelines.load_data_lsv(args.rep2)
 
-    # Check that all LSVs have the same num. of junctions in both replicates
-    replica1, replica2 = check_junctions_in_replicates(lsv_junc1, lsv_junc2)
+    replica1, replica2, fitfunc1, fitfunc2 = load_junctions(args.rep1,args.rep2,args)
 
-    # Collapse all constitutive junctions for sampling models
-    all_const = np.concatenate([const1, const2])
+    l,m,h = split_junction_pool(replica1,replica2)
+
+    print l.shape
+    print m.shape
+    print h.shape
+
+
+#    # Parse LSV files
+#    lsv_junc1, const1 = pipelines.load_data_lsv(args.rep1)
+#    lsv_junc2, const2 = pipelines.load_data_lsv(args.rep2)
+#
+#    # Check that all LSVs have the same num. of junctions in both replicates
+#    replica1, replica2 = check_junctions_in_replicates(lsv_junc1, lsv_junc2)
+#
+#    # Collapse all constitutive junctions for sampling models
+#    all_const = np.concatenate([const1, const2])
 
     #Get the experiment names
     name1 = os.path.basename(args.rep1).split('.')[-2]
