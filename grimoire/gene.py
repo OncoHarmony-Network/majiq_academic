@@ -191,12 +191,8 @@ class Gene:
         lst = set()
         for ex in self.get_exon_list():
             for ex_rna in ex.exonRead_list:
-                print "RNA", ex_rna, ex_rna.p5_junc, len(ex_rna.p5_junc)
                 if len(ex_rna.p5_junc) > 0:
-                    print "set", lst
                     lst = lst.union(set(ex_rna.p5_junc))
-                    print "set2",lst
-        print "ALL_JUNC",lst
 
         for tt in self.transcript_list:
             for jj in tt.get_junction_list():

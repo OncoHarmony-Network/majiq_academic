@@ -184,7 +184,7 @@ def filter_bulk(matrix_filter, *matrices):
     return ret
 
 
-def check_junctions_in_replicates(lsv_junc1, lsv_junc2):
+def check_junctions_in_replicates(lsv_junc1, lsv_junc2, discard_empty_junctions=False):
     ids1 = set([x[1] for x in lsv_junc1[1]])
     ids2 = set([x[1] for x in lsv_junc2[1]])
 
@@ -214,6 +214,13 @@ def check_junctions_in_replicates(lsv_junc1, lsv_junc2):
     replica1 = replica1.astype(np.float64)
     replica2 = np.concatenate(replica2)
     replica2 = replica2.astype(np.float64)
+
+    if discard_empty_junctions:
+        idx_list = []
+        for idx in range(replica1.shape[0]):
+            if np.count_nonzero(replica1[idx]) == 0 and np.count_nonzero(replica2[idx]) ==0 : idx_list.append(idx)
+        replica1 = np.delete(replica1, idx_list, axis=0)
+        replica2 = np.delete(replica2, idx_list, axis=0)
 
     return replica1, replica2
 

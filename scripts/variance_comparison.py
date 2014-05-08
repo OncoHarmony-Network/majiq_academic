@@ -1,3 +1,5 @@
+from matplotlib import use
+use('Agg', warn=False)
 import sys
 import os
 from analysis import polyfitnb

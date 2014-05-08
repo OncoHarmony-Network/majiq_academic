@@ -77,11 +77,9 @@ def prepare_LSV_table(LSV_list, non_as, temp_file):
 
             
             for iix, lsv in enumerate(LSV_list[exp_idx]) :
-                print "KKKKKK::",lsv
                 majiq_table_as[iix] = lsv.to_majiqLSV(exp_idx)
             for jix, jn in enumerate(non_as[exp_idx]) :
                 majiq_table_nonas[jix] = majiq_junc( jn , exp_idx)
-            print "majiq_table",majiq_table_as
             file_pi = open("%s/temp_%s.%s"%(mglobals.temp_oDir[exp_idx],mglobals.exp_list[exp_idx], temp_file), 'w+')
             pickle.dump((majiq_table_as, majiq_table_nonas), file_pi)
             file_pi.close()
@@ -218,9 +216,7 @@ def generate_visualization_output( allgenes ):
 #                IRlist = gene.get_IRlist()
 
                 for jj in gg.get_all_junctions():
-                    print "JUNC",jj, jj.get_coordinates()
                     if jj.get_coordinates()[0] == None or jj.donor is None or jj.acceptor is None: continue
-                    print "NEXTJUNC", jj
                     if jj.is_annotated() and jj.readN.sum() == 0:
                         jtype= 2
                     elif jj.is_annotated() and jj.readN.sum() > 0:
@@ -233,9 +229,7 @@ def generate_visualization_output( allgenes ):
                         continue
                     junc_l.append(jj.get_coordinates())
                     junc_list.append(JunctionGraphic( jj.get_coordinates(), jtype, jj.readN.sum()))
-                    print "MMMM",jj.donor, jj.acceptor
                 junc_l = np.asarray(junc_l)
-                print junc_l
                 exon_list = []
                 for ex in gg.get_exon_list():
                     cc = ex.get_coordinates()
@@ -249,7 +243,6 @@ def generate_visualization_output( allgenes ):
                         for jidx, jjl in enumerate(junc_l):
                             if ss5 != jjl[0] : continue
                             a5.append(jidx)
-                    print "VIZ INFO",ex.annotated, ex.coverage.sum()
                     if ex.annotated and ex.coverage.sum() == 0.0:
                         type = 2
                     elif ex.annotated and ex.coverage.sum() > 0.0:
@@ -361,8 +354,8 @@ def gc_factor_calculation(exon_list, nb):
 #                if gc_val is None or cov == 0:
 #                    print ex.strand, st, end
 
-                print "GC_VA:",gc_val 
-                print "COV",cov
+#                print "GC_VA:",gc_val 
+#                print "COV",cov
 
                 if  gc_val is None or end-st < 30  or cov < 1: continue
                 count.append( cov )

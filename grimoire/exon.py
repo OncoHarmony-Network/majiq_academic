@@ -538,7 +538,7 @@ def detect_exons(gene, junction_list, readRNA):
     for (coord,type, jj) in junction_list :
         #print "---NEW-------------------------------------------------------------"
         #print coord, type, jj, jj.coverage.sum() 
-        if jj.coverage.sum() < 5 and not jj.is_annotated(): 
+        if jj.coverage.sum() < mglobals.MINREADS and not jj.is_annotated(): 
 #            junction_list.remove((coord,type, jj))
 #            del jj
             continue
@@ -586,7 +586,7 @@ def detect_exons(gene, junction_list, readRNA):
         newExons += __half_exon('3prime',ss,readRNA)
 
     for (coord,type, jj) in junction_list :
-        if jj.coverage.sum() < 5 and not jj.is_annotated() :
+        if jj.coverage.sum() < mglobals.MINREADS and not jj.is_annotated() :
             junction_list.remove((coord,type, jj))
             del jj
             
