@@ -1,4 +1,6 @@
 from matplotlib import use
+from scipy.stats import pearsonr
+
 use('Agg', warn=False)
 import sys
 import os
@@ -44,12 +46,13 @@ def plot_method1Vsmethod2(scores1, scores2, score1_name, score2_name, replica1_n
 
     stats_names = ['mean', 'variance']
 
+    f, axarr = subplots(2, 1, sharex=True)
+    axarr[0].set_ylabel(score2_name)
+    axarr[-1].set_xlabel(score1_name)
 
-    f, axarr = subplots(2, 1, sharex='cols')
     for name_i, stat_name in enumerate(stats_names):
 
-        # subplot(2, 1, name_i)
-        axarr[name_i-1, 0].set_title(stat_name)
+        axarr[name_i].set_title(stat_name, fontsize=10)
 
         score1, score2 = scores1[stat_name], scores2[stat_name]
         better_in_method1 = sum(score1 < score2)
@@ -57,16 +60,20 @@ def plot_method1Vsmethod2(scores1, scores2, score1_name, score2_name, replica1_n
         better_in_method2 = sum(score1 > score2)
 
         max_value = max(max(score1), max(score2))
-        xlabel(score1_name)
-        ylabel(score2_name)
+
         xlim(0, max_value)
         ylim(0, max_value)
-        axarr[name_i, 0].plot([0, max_value], [0, max_value])
-        axarr[name_i, 0].plot(score1, score2, '.')
+        axarr[name_i].plot([0, max_value], [0, max_value])
+        axarr[name_i].plot(score1, score2, '.')
 
-        print "[For %s]::\t\tBetter in %s: %s (%.2f%%) Equal: %s Better in %s: %s (%.2f%%)"%(stat_name, score1_name, better_in_method1, (better_in_method1/total_junctions)*100, equal_in_both, score2_name, better_in_method2, (better_in_method2/total_junctions)*100)
+        pear, pvalue = pearsonr(score1, score2)
+        r_squared = pear**2
 
-    title("%s vs %s\n%s and %s"%(score1_name, score2_name, replica1_name, replica2_name))
+        axarr[name_i].text(abs(max_value)*0.1, max_value-abs(max_value)*0.2, r'$R^2$: %.2f (p-value: %.2E)'%(r_squared, pvalue), fontsize=12, bbox={'facecolor':'yellow', 'alpha':0.3, 'pad':10})
+
+        print "[For %8s]:: Better in %s: %s (%.2f%%) Equal: %s Better in %s: %s (%.2f%%)"%(stat_name, score1_name, better_in_method1, (better_in_method1/total_junctions)*100, equal_in_both, score2_name, better_in_method2, (better_in_method2/total_junctions)*100)
+
+    suptitle("%s vs %s\n%s and %s"%(score1_name, score2_name, replica1_name, replica2_name))
 
     _save_or_show(plotpath, plotname)
 
@@ -76,16 +83,17 @@ def compare_methods(m, k, replica1, replica2, rep1_name, rep2_name, fit_func1, f
     if method1_name in scores_cached:
         score_method1 = scores_cached[method1_name]
     else:
-        mean_method1_rep1, var_method1_rep1, samples_not_used = junction_sample.sample_from_junctions(replica1, m, k, fit_func=fit_func1, **methods[method1_name])
-        mean_method1_rep2, var_method1_rep2, samples_not_used = junction_sample.sample_from_junctions(replica2, m, k, fit_func=fit_func2, **methods[method1_name])
+        mean_method1_rep1, var_method1_rep1, samples_not_used = junction_sample.sample_from_junctions(replica1, m, k, fit_func=fit_func1, poisson=method1_name=='Poisson', **methods[method1_name])
+        mean_method1_rep2, var_method1_rep2, samples_not_used = junction_sample.sample_from_junctions(replica2, m, k, fit_func=fit_func2, poisson=method1_name=='Poisson', **methods[method1_name])
+
         score_method1 = calc_score_tmp(mean_method1_rep1, var_method1_rep1, mean_method1_rep2, var_method1_rep2)
         scores_cached[method1_name] = score_method1
 
     if method2_name in scores_cached:
         score_method2 = scores_cached[method2_name]
     else:
-        mean_method2_rep1, var_method2_rep1, samples_not_used = junction_sample.sample_from_junctions(replica1, m, k, fit_func=fit_func1, **methods[method2_name])
-        mean_method2_rep2, var_method2_rep2, samples_not_used = junction_sample.sample_from_junctions(replica2, m, k, fit_func=fit_func2, **methods[method2_name])
+        mean_method2_rep1, var_method2_rep1, samples_not_used = junction_sample.sample_from_junctions(replica1, m, k, fit_func=fit_func1, poisson=method2_name=='Poisson', **methods[method2_name])
+        mean_method2_rep2, var_method2_rep2, samples_not_used = junction_sample.sample_from_junctions(replica2, m, k, fit_func=fit_func2, poisson=method2_name=='Poisson', **methods[method2_name])
         score_method2 = calc_score_tmp(mean_method2_rep1, var_method2_rep1, mean_method2_rep2, var_method2_rep2)
         scores_cached[method2_name] = score_method2
 

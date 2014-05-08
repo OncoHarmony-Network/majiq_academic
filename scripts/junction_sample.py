@@ -96,7 +96,7 @@ def _trimborders(junction):
     return array(new_junction)
 
 
-def sample_from_junctions(junctions, m, k, discardzeros=False, nb=False, trimborder=False, parameters=None, dispersion=0.1, fit_func=None):
+def sample_from_junctions(junctions, m, k, discardzeros=False, nb=False, trimborder=False, parameters=None, dispersion=0.1, fit_func=None, poisson=False):
 
     if nb:
         return analysis.sample.sample_from_junctions(junctions, m, k, discardzeros=discardzeros, dispersion=dispersion, trimborder=trimborder, fitted_func=fit_func)
@@ -121,26 +121,32 @@ def sample_from_junctions(junctions, m, k, discardzeros=False, nb=False, trimbor
         if discardzeros:
             junction = junction[junction!=0] #a junction array without the zeroes
 
-        if len(junction) == 0:
-            sampled_means.append(0)
-            sampled_var.append(0)
-            all_samples.append([0]*(k*m)) #k*m zeroes
+        if (poisson):
+            mean_poisson = np.mean(junction, axis=0)
+            sampled_means.append(mean_poisson)
+            sampled_var.append(mean_poisson)
+            all_samples.append(junction)
         else:
-            samples = []
-            for iternumber in xrange(m):
-                junction_samples = []
-                #using the matrix
-                #weights = calc_weights(junction)
-                #junction_samples = multinomial(k, weights, junction) #This function is very slow
-                for numsamples in xrange(k):
-                    junction_samples.append(choice(junction))
+            if len(junction) == 0:
+                sampled_means.append(0)
+                sampled_var.append(0)
+                all_samples.append([0]*(k*m)) #k*m zeroes
+            else:
+                samples = []
+                for iternumber in xrange(m):
+                    junction_samples = []
+                    #using the matrix
+                    #weights = calc_weights(junction)
+                    #junction_samples = multinomial(k, weights, junction) #This function is very slow
+                    for numsamples in xrange(k):
+                        junction_samples.append(choice(junction))
 
-                samples.extend(junction_samples)
+                    samples.extend(junction_samples)
 
-            #calculate the mean and the variance
-            sampled_means.append(mean(samples))
-            sampled_var.append(var(samples))
-            all_samples.append(samples)
+                #calculate the mean and the variance
+                sampled_means.append(mean(samples))
+                sampled_var.append(var(samples))
+                all_samples.append(samples)
 
     return array(sampled_means), array(sampled_var), array(all_samples)
 
