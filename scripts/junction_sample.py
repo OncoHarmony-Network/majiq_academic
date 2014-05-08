@@ -218,12 +218,37 @@ def check_junctions_in_replicates(lsv_junc1, lsv_junc2, discard_empty_junctions=
     if discard_empty_junctions:
         idx_list = []
         for idx in range(replica1.shape[0]):
-            if np.count_nonzero(replica1[idx]) == 0 and np.count_nonzero(replica2[idx]) ==0 : idx_list.append(idx)
+            if np.count_nonzero(replica1[idx]) == 0 or np.count_nonzero(replica2[idx]) ==0 : idx_list.append(idx)
         replica1 = np.delete(replica1, idx_list, axis=0)
         replica2 = np.delete(replica2, idx_list, axis=0)
 
     return replica1, replica2
 
+
+def discard_emtpy_junctions( replica ):
+    idx_list = []
+    for idx in range(replica.shape[0]):
+        if np.count_nonzero(replica[idx]) == 0 : idx_list.append(idx)
+    replica = np.delete(replica, idx_list, axis=0)
+
+    return replica
+
+def load_junctions(filename1, filename2, fromlsv=False):
+
+    # Parse LSV files
+    lsv_junc1, const1 = pipelines.load_data_lsv(filename1)
+    lsv_junc2, const2 = pipelines.load_data_lsv(filename2)
+
+    fit_func1 = polyfitnb.fit_nb(const1, "%s_nbfit" % args.output, args.plotpath, nbdisp=args.dispersion, logger=None, discardb=True)
+    fit_func2 = polyfitnb.fit_nb(const2, "%s_nbfit" % args.output, args.plotpath, nbdisp=args.dispersion, logger=None, discardb=True)
+
+    if fromlsv:
+        replica1, replica2 = junction_sample.check_junctions_in_replicates(lsv_junc1, lsv_junc2, discard_empty_junctions=True)
+    else:
+        replica1 = discard_empty_junctions(const1)
+        replica2 = discard_empty_junctions(const2)
+
+    return replica1, replica2, fit_func1, fit_func2
 
 def main():
     """Script for initial testing of the MAJIQ algorithms for sampling and initial PSI values generator."""
