@@ -111,7 +111,7 @@ def main():
     lsv_junc1 = analysis.filter.lsv_quantifiable( lsv_junc1, args.minnonzero, args.minreads, None )
     lsv_junc2 = analysis.filter.lsv_quantifiable( lsv_junc2, args.minnonzero, args.minreads, None )
 
-    replica1, replica2 = junction_sample.check_junctions_in_replicates(lsv_junc1, lsv_junc2,discard_empty_junctions=True)
+    replica1, replica2 = junction_sample.check_junctions_in_replicates(lsv_junc1, lsv_junc2, discard_empty_junctions=True)
 
     #Get the experiment names
     rep1_name = os.path.basename(args.par1).split('.')[-2]

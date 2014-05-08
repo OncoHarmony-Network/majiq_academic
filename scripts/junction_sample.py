@@ -219,7 +219,6 @@ def check_junctions_in_replicates(lsv_junc1, lsv_junc2, discard_empty_junctions=
         idx_list = []
         for idx in range(replica1.shape[0]):
             if np.count_nonzero(replica1[idx]) == 0 and np.count_nonzero(replica2[idx]) ==0 : idx_list.append(idx)
-        
         replica1 = np.delete(replica1, idx_list, axis=0)
         replica2 = np.delete(replica2, idx_list, axis=0)
 
