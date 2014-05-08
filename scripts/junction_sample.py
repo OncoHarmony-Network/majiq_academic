@@ -233,7 +233,7 @@ def discard_emtpy_junctions( replica ):
 
     return replica
 
-def load_junctions(filename1, filename2, fromlsv=False):
+def load_junctions(filename1, filename2, args, fromlsv=False):
 
     # Parse LSV files
     lsv_junc1, const1 = pipelines.load_data_lsv(filename1)
@@ -249,6 +249,18 @@ def load_junctions(filename1, filename2, fromlsv=False):
         replica2 = discard_empty_junctions(const2)
 
     return replica1, replica2, fit_func1, fit_func2
+
+
+def split_junction_pool ( replica1, replica2 ):
+
+    low = []
+    mid = []
+    high = []
+
+    for idx in range(replica1.shape[0]):
+        if np.count_nonzero(replica1[idx]) in range(1,6) :
+            low.append(replica1[idx])
+
 
 def main():
     """Script for initial testing of the MAJIQ algorithms for sampling and initial PSI values generator."""
