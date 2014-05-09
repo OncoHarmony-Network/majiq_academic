@@ -305,14 +305,6 @@ def split_junction_pool ( replica1, replica2 ):
             rep2[2].append(replica2[idx])
 
     
-#    low = np.concatenate(low)
-#    low = low.astype(np.float64)
-#    mid = np.concatenate(mid)
-#    mid = mid.astype(np.float64)
-#    high = np.concatenate(high)
-#    high = high.astype(np.float64)
-
-#    return low,mid,high
     for idx in range(3):
         rep1[idx]=array(rep1[idx])
         rep2[idx]=array(rep1[idx])
