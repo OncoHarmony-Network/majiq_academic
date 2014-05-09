@@ -231,14 +231,41 @@ def check_junctions_in_replicates(lsv_junc1, lsv_junc2, discard_empty_junctions=
     return replica1, replica2
 
 
-def discard_empty_junctions( replica1, replica2 ):
-    idx_list = []
-    for idx in range(replica1.shape[0]):
-        if np.count_nonzero(replica1[idx]) == 0 or np.count_nonzero(replica2[idx]) ==0 : idx_list.append(idx)
-    replica1 = np.delete(replica1, idx_list, axis=0)
-    replica2 = np.delete(replica2, idx_list, axis=0)
+def discard_empty_junctions( junc_list1, junc_list2 ):
 
-    return replica1,replica2
+    ids1 = set(junc_list1[1])
+    ids2 = set(junc_list2[1])
+
+    matched_names = ids1.intersection(ids2)
+    print len(ids1), len(ids2)
+#    print matched_names
+
+    replica1 = []
+    replica2 = []
+    for ii in matched_names:
+        for idx, nm in enumerate(junc_list1[1]):
+            if nm == ii:
+                replica1.append(junc_list1[0][idx])
+                break
+        for idx, nm in enumerate(junc_list2[1]):
+            if nm == ii:
+                replica2.append(junc_list2[0][idx])
+                break
+
+    print replica1 
+    replica1 = array(replica1)
+    replica1 = replica1.astype(np.float64)
+    replica2 = array(replica2)
+    replica2 = replica2.astype(np.float64)
+
+    if discard_empty_junctions:
+        idx_list = []
+        for idx in range(replica1.shape[0]):
+            if np.count_nonzero(replica1[idx]) == 0 or np.count_nonzero(replica2[idx]) ==0 : idx_list.append(idx)
+        replica1 = np.delete(replica1, idx_list, axis=0)
+        replica2 = np.delete(replica2, idx_list, axis=0)
+
+    return replica1, replica2
 
 def load_junctions(filename1, filename2, args, fromlsv=False):
 
@@ -246,8 +273,11 @@ def load_junctions(filename1, filename2, args, fromlsv=False):
     lsv_junc1, const1 = pipelines.load_data_lsv(filename1)
     lsv_junc2, const2 = pipelines.load_data_lsv(filename2)
 
-    fit_func1 = polyfitnb.fit_nb(const1, "%s_nbfit" % args.output, args.plotpath, nbdisp=args.dispersion, logger=None, discardb=True)
-    fit_func2 = polyfitnb.fit_nb(const2, "%s_nbfit" % args.output, args.plotpath, nbdisp=args.dispersion, logger=None, discardb=True)
+    print const1[0].shape
+    print const2[0].shape
+
+    fit_func1 = polyfitnb.fit_nb(const1[0], "%s_nbfit" % args.output, args.plotpath, nbdisp=args.dispersion, logger=None, discardb=True)
+    fit_func2 = polyfitnb.fit_nb(const2[0], "%s_nbfit" % args.output, args.plotpath, nbdisp=args.dispersion, logger=None, discardb=True)
 
     if fromlsv:
         replica1, replica2 = junction_sample.check_junctions_in_replicates(lsv_junc1, lsv_junc2, discard_empty_junctions=True)
@@ -259,17 +289,20 @@ def load_junctions(filename1, filename2, args, fromlsv=False):
 
 def split_junction_pool ( replica1, replica2 ):
 
-    low = []
-    mid = []
-    high = []
+
+    rep1 = [[],[],[]]
+    rep2 = [[],[],[]]
 
     for idx in range(replica1.shape[0]):
         if np.count_nonzero(replica1[idx]) in range(1,6) :
-            low.append(replica1[idx])
+            rep1[0].append(replica1[idx])
+            rep2[0].append(replica2[idx])
         elif np.count_nonzero(replica1[idx]) in range(6,16) :
-            mid.append(replica1[idx])
+            rep1[1].append(replica1[idx])
+            rep2[1].append(replica2[idx])
         elif np.count_nonzero(replica1[idx]) >15 :
-            high.append(replica1[idx])
+            rep1[2].append(replica1[idx])
+            rep2[2].append(replica2[idx])
 
     
 #    low = np.concatenate(low)
@@ -280,7 +313,10 @@ def split_junction_pool ( replica1, replica2 ):
 #    high = high.astype(np.float64)
 
 #    return low,mid,high
-    return array(low), array(mid), array(high)
+    for idx in range(3):
+        rep1[idx]=array(rep1[idx])
+        rep2[idx]=array(rep1[idx])
+    return rep1, rep2
 
 def main():
     """Script for initial testing of the MAJIQ algorithms for sampling and initial PSI values generator."""
@@ -317,12 +353,11 @@ def main():
 
     replica1, replica2, fitfunc1, fitfunc2 = load_junctions(args.rep1,args.rep2,args)
 
-    l,m,h = split_junction_pool(replica1,replica2)
+    l1, l2 = split_junction_pool(replica1,replica2)
 
-    print l.shape
-    print m.shape
-    print h.shape
 
+    print replica1.shape
+    print replica2.shape
 
 #    # Parse LSV files
 #    lsv_junc1, const1 = pipelines.load_data_lsv(args.rep1)

@@ -116,6 +116,7 @@ def load_data_lsv(path, logger=None):
     data = pickle.load(open(path))
     lsv_cov_list = []
     const_list = []
+    const_info = []
     lsv_info = []
     num_pos = data[1][0].junction_list[0].shape[1]
     for lsv in data[1]:
@@ -130,10 +131,11 @@ def load_data_lsv(path, logger=None):
 #    print "LSV COV",lsv_cov_list
     const_list = np.zeros(shape=(len(data[2]),num_pos), dtype=np.dtype('int'))
     for cidx,const in enumerate(data[2]):
+        const_info.append(const.id)
         const_list[cidx,:]=const.coverage.toarray()
         #        const_list.append(const.coverage.toarray())
 
-    return (lsv_cov_list, lsv_info), const_list
+    return (lsv_cov_list, lsv_info), (const_list, const_info)
 
 def load_data(path, logger=None):
     "Load data from the preprocess step. Could change to a DDBB someday"
@@ -358,7 +360,7 @@ class CalcPsi(BasicPipeline):
         #for junc_set in all_junctions.keys():
         #    all_junctions[junc_set] = masked_less(all_junctions[junc_set], 0) 
 
-        fitfunc = self.fitfunc(const)
+        fitfunc = self.fitfunc(const[0])
         filter_lsv = self.mark_stacks_lsv( lsv_junc[0], fitfunc)
         #FILTER_JUNCTIONS?
         self.logger.info('Filtering ...')
