@@ -126,21 +126,23 @@ def main():
     args = parser.parse_args()
 
     # Parse LSV files
-    lsv_junc1, const1 = pipelines.load_data_lsv(args.par1)
-    lsv_junc2, const2 = pipelines.load_data_lsv(args.par2)
-
-    # Filter non-quantifiable
-    lsv_junc1 = analysis.filter.lsv_quantifiable( lsv_junc1, args.minnonzero, args.minreads, None )
-    lsv_junc2 = analysis.filter.lsv_quantifiable( lsv_junc2, args.minnonzero, args.minreads, None )
-
-    replica1, replica2 = junction_sample.check_junctions_in_replicates(lsv_junc1, lsv_junc2, discard_empty_junctions=True)
+    # lsv_junc1, const1 = pipelines.load_data_lsv(args.par1)
+    # lsv_junc2, const2 = pipelines.load_data_lsv(args.par2)
+    #
+    # # Filter non-quantifiable
+    # lsv_junc1 = analysis.filter.lsv_quantifiable( lsv_junc1, args.minnonzero, args.minreads, None )
+    # lsv_junc2 = analysis.filter.lsv_quantifiable( lsv_junc2, args.minnonzero, args.minreads, None )
+    #
+    # replica1, replica2 = junction_sample.check_junctions_in_replicates(lsv_junc1, lsv_junc2, discard_empty_junctions=True)
 
     #Get the experiment names
     rep1_name = os.path.basename(args.par1).split('.')[-2]
     rep2_name = os.path.basename(args.par2).split('.')[-2]
 
-    fit_func1 = polyfitnb.fit_nb(const1, "%s_nbfit" % args.output, args.plotpath, nbdisp=args.dispersion, logger=None, discardb=True)
-    fit_func2 = polyfitnb.fit_nb(const2, "%s_nbfit" % args.output, args.plotpath, nbdisp=args.dispersion, logger=None, discardb=True)
+    replica1, replica2, fit_func1, fit_func2 = junction_sample.load_junctions(args.par1, args.par2, args, fromlsv=False)
+
+    # fit_func1 = polyfitnb.fit_nb(const1, "%s_nbfit" % args.output, args.plotpath, nbdisp=args.dispersion, logger=None, discardb=True)
+    # fit_func2 = polyfitnb.fit_nb(const2, "%s_nbfit" % args.output, args.plotpath, nbdisp=args.dispersion, logger=None, discardb=True)
 
     methods = {
         'Poisson':                  {'discardzeros': False, 'trimborder': False,   'nb': False},
