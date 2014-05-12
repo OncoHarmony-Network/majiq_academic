@@ -11,6 +11,7 @@ from matplotlib import rcParams
 from scipy.stats import pearsonr
 from numpy.random import dirichlet
 
+import analysis.polyfitnb as polyfitnb
 
 """
 Sampling from junctions using a Negative Binomial model.
@@ -134,12 +135,13 @@ def sample_from_junctions(junctions, m, k, dispersion=0.1, discardzeros=True, tr
 
                 sampled_mean = mean(junction_samples)
                 #recalculating
-                if (a*sampled_mean)**2 > (sampled_mean+dispersion*sampled_mean**2):
-                    r_nb = sampled_mean**2 / ((a*sampled_mean+b)**2 - sampled_mean)
-                else:
-                    r_nb = 1/dispersion
-
-                p_nb = r_nb / (r_nb+sampled_mean)
+                r_nb, p_nb = polyfitnb.func2nb( a, b, sampled_mean, dispersion )
+#                if (a*sampled_mean)**2 > (sampled_mean+dispersion*sampled_mean**2):
+#                    r_nb = sampled_mean**2 / ((a*sampled_mean+b)**2 - sampled_mean)
+#                else:
+#                    r_nb = 1/dispersion
+#
+#                p_nb = r_nb / (r_nb+sampled_mean)
                 samples.extend(negative_binomial(r_nb, p_nb, k)) 
             
             #calculate the mean and the variance 

@@ -42,7 +42,7 @@ def lsv_mark_stacks(lsv_list, fitfunc, pvalue_limit, dispersion, logger=False):
                     #FINISH TODO
                     mean_rest = mean(copy_junc)
                     r, p = func2nb(a, b, mean_rest, dispersion)
-                    my_nb = nbinom(r, p)
+                    my_nb = nbinom(r, 1-p)
                     pval = 1-my_nb.cdf(value)
                     if pval < pvalue_limit:
                         lsv_list[lidx][i, j] = -2 
@@ -245,7 +245,7 @@ def mark_stacks(junctions, fitfunc, pvalue_limit, dispersion, logger=False):
                 #FINISH TODO
                 mean_rest = mean(copy_junc)
                 r, p = func2nb(a, b, mean_rest, dispersion)
-                my_nb = nbinom(r, p)
+                my_nb = nbinom(r, 1-p)
                 pval = 1-my_nb.cdf(value)
                 if pval < pvalue_limit:
                     junctions[i, j] = -2 

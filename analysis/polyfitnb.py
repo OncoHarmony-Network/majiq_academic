@@ -16,11 +16,13 @@ def func2nb(a, b, x, dispersion):
     Given a and b from the linear fit, calculate the nb parameters for x and return its r and p parameters.
     """
     if (a*x)**2 > (x+dispersion*x**2):
-        r = x**2 / ((a*x+b)**2 - x)
+#        r = x**2 / ((a*x+b)**2 - x)
+        r = x / ( a*x +b - 1 )
     else:
         r = 1/dispersion
 
-    p = 1 - (r / (r+x))
+    p =  (r / (r+x))
+#    p = 1 - (r / (r+x))
     return r, p
 
 
@@ -36,11 +38,14 @@ def nb_from_func(poly_func, max_line=1, dispersion=0.1):
     a, b = poly_func.c
     r = []
     p = []
+
+#    b= 0
     points = linspace(0.01, max_line, num=800)
     for x in points:
         r_val, p_val = func2nb(a, b, x, dispersion)
-        r.append(r_val)
-        p.append(r_val / (r_val+x))
+        r.append( r_val )
+        p.append( p_val )
+#        p.append(r_val / (r_val+x))
 
     return r, p, points
 
@@ -95,7 +100,7 @@ def get_pvalues(junctions, a, b, dispersion):
         if junction.any():
             junction_value = junction.mean()
             r, p = func2nb(a, b, junction_value, dispersion)
-            my_nb = nbinom(r, p)
+            my_nb = nbinom(r, 1-p)
             pval = 1-my_nb.cdf(junction_value)
         else:
             pval = 1 #if no reads, p-value is 1 
@@ -126,7 +131,7 @@ def adjust_fit(starting_a, b, junctions, precision, previous_score, dispersion, 
     if logger: logger.warning("WARNING: Something is wrong, please contact Biociphers!")
     return corrected_a, score, ecdf, pvalues #this return should not be hit
 
-def fit_nb(junctions, outpath, plotpath, gcnorm=True, trim=True, minnonzero=5, plotmapzeros=False, discardb=False, nbdisp=0.1, logger=None):
+def fit_nb(junctions, outpath, plotpath, gcnorm=True, trim=True, minnonzero=5, plotmapzeros=False, discardb=False, nbdisp=0.1, logger=None, bval=False):
     if logger: logger.info("NBFit: Plots will be drawn in %s..."%plotpath)
     #normalize the junctions
     junctions = masked_less(junctions, 1) #mask everything below zero 
@@ -139,7 +144,16 @@ def fit_nb(junctions, outpath, plotpath, gcnorm=True, trim=True, minnonzero=5, p
     nb_r, nb_p, matching_x = nb_from_func(fit_function, max(mean_junc), dispersion=nbdisp) #We calculate both r and p parameters of the negative binomial distribution along with the function
     plot_negbinomial_fit(mean_junc, std_junc, fit_function, plotpath, "Before correction")    
     #pvalue study
-     
+
+
+    pvalues = get_pvalues(junctions, a, b, nbdisp)
+    ecdf    = get_ecdf(pvalues)
+    xlabel("P-value")
+    ylabel("non_corrected ECDF")
+    plot(linspace(0, 1, num=len(ecdf)), ecdf)
+    plot([0, 1], 'k')
+    _save_or_show(plotpath, "NON-Corrected ECDF")
+
     #find the corresponding NB parameters to the junction mean
     score = sys.maxint
     corrected_a = a
@@ -147,7 +161,12 @@ def fit_nb(junctions, outpath, plotpath, gcnorm=True, trim=True, minnonzero=5, p
     precision_values = [0.1, 0.01]
     if discardb:
         if logger: logger.debug("Discarded b from the polyfit")
-        b = 0
+        if bval:
+            print "fitnb, b=1"
+            b = 1
+        else:
+            print "fitnb, b=0"
+            b = 0
 
     for i, precision in enumerate(precision_values):
         corrected_a, score, ecdf, pvalues = adjust_fit(corrected_a, b, junctions, precision, score, nbdisp, logger)

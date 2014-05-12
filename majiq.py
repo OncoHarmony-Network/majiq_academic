@@ -39,11 +39,13 @@ def __parallel_lsv_quant(samfiles_list, gene_list, chr, as_db):
         rnaseq_io.read_sam_or_bam(exp, gene_list, mglobals.readLen, chr, idx )
     lsv, const = analize.LSV_detection( gene_list, chr )
     file_name = '%s.obj'%(chr)
-    gtf = lsv_to_gff(lsv)
 
-    print "GTF"
-    print gtf
-
+    ''' TEST FOR GTF'''
+    gtf_list = lsv_to_gff(lsv)
+    fp = open('%s/lsv_miso.gtf'%(mglobals.outDir), 'w+') 
+    for gtf in gtf_list:
+        fp.write("%s\n"%gtf)
+    fp.close()
     utils.prepare_LSV_table( lsv,const ,file_name)
     #print "END child, ", current_process().name
 

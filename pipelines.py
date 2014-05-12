@@ -1,5 +1,3 @@
-from matplotlib import use
-use('Agg')
 import os
 from collections import defaultdict
 import abc
@@ -7,224 +5,27 @@ import pickle
 
 from pylab import *
 from numpy.ma import masked_less
-from scipy.io import loadmat
 from scipy.stats import norm
-from scipy.sparse import lil_matrix
 from scipy.stats import scoreatpercentile
-
 from grimoire.utils.utils import create_if_not_exists, get_logger
+
 from analysis.polyfitnb import fit_nb 
-from analysis.filter import norm_junctions, discardlow, discardhigh, discardminreads, discardmaxreads, discardminreads_and, mark_stacks
-import analysis.filter as filter
 from analysis.sample import sample_from_junctions, mean_junction
 from analysis.psi import calc_psi, mean_psi, simple_psi, DirichletCalc, reads_given_psi, BINS_CENTER, lsv_psi
 from analysis.adjustdelta import adjustdelta
 from analysis.weight import local_weights, global_weights
 from analysis.matrix import rank_deltas, collapse_matrix
-
-
+import analysis.filter as majiq_filter
+import analysis.io as majiq_io
+#from analysis.filter import norm_junctions, discardlow, discardhigh, discardminreads, discardmaxreads, discardminreads_and, mark_stacks
 
 ################################
 # Data loading and Boilerplate #
 ################################
 
-DELTA_RATIO = 0.2 #TODO to parameters
 
 
-def _find_len(grimoire_obj, logger):
-    junc_len = 666 #this value should never be 
-    for junction in grimoire_obj:
-        if hasattr(junction[0], 'coverage'):
-            if type(junction[0].coverage) == lil_matrix:
-                event = junction[0].coverage.toarray()
-                junc_len = event[0].shape[0]
-            else:
-                junc_len = junction[0].coverage.shape[0]
 
-            if junc_len != 1: 
-                if logger: logger.debug("Junction length is %s"%junc_len)
-                return junc_len  
-
-def _find_len2(grimoire_obj, logger):
-    junc_len = 666
-    for junction in grimoire_obj:
-        if hasattr(junction, 'coverage'):
-            if type(junction.coverage) == lil_matrix:
-                event = junction.coverage.toarray()
-                junc_len = event[0].shape[0]
-            else:
-                junc_len = junction.coverage.shape[0]
-
-            if junc_len != 1: 
-                if logger: logger.debug("Junction length is %s"%junc_len)
-                return junc_len  
-
-def _load_data_const(grimoire_obj, logger=None):
-    CONST_MAX = 2000 # we don't really need more than 2000 constitutive exons 
-    """
-    Overriding Jordis objects. 
-    Should be deleted at some point as the majiq.analysis should instead read them and the object should be extended
-
-    Plus, this should change when the gc_content becomes available again.
-    """
-    ret = []
-    #first get junction length, should be almost always the first entry
-    my_len = _find_len(grimoire_obj, logger)
-
-    for i, junction in enumerate(grimoire_obj):
-        if i == CONST_MAX: # we don't need more constitutive junctions
-            return array(ret)
-            
-        if type(junction[0].coverage) == lil_matrix:
-            event = junction[0].coverage.toarray()
-            event = event[0]
-        else:
-            event = junction[0].coverage
-
-        if event.shape[0] == 1:
-            event = [0]*my_len
-
-
-        ret.append(list(event))
-
-    return array(ret)
-
-def _load_data2(grimoire_obj, logger=None, getnames = False):
-    """
-    Same as above
-    """
-    ret = []
-    #first get junction length, should be almost always the first entry
-    my_len = _find_len2(grimoire_obj, logger)
-    for i, junction in enumerate(grimoire_obj):  
-        if type(junction.coverage) == lil_matrix:
-            event = junction.coverage.toarray()
-            event = event[0]
-        else:
-            event = junction.coverage
-
-        if event.shape[0] == 1:
-            event = [0]*my_len
-
-
-        ret.append(list(event))
-
-    return array(ret)
-
-def load_data_lsv(path, logger=None):
-    "Load data from the preprocess step. Could change to a DDBB someday"
-    data = pickle.load(open(path))
-    lsv_cov_list = []
-    const_list = []
-    const_info = []
-    lsv_info = []
-    num_pos = data[1][0].junction_list[0].shape[1]
-    for lsv in data[1]:
-        lsv_info.append([lsv.coords,lsv.id, lsv.type])
-
-        cov = np.zeros(shape=(len(lsv.junction_list), num_pos), dtype=np.dtype('int'))
-        for ii, lsvcov in enumerate(lsv.junction_list):
-            cov[ii,:] = lsvcov.toarray()
-
-        lsv_cov_list.append( cov )
-
-#    print "LSV COV",lsv_cov_list
-    const_list = np.zeros(shape=(len(data[2]),num_pos), dtype=np.dtype('int'))
-    for cidx,const in enumerate(data[2]):
-        const_info.append(const.id)
-        const_list[cidx,:]=const.coverage.toarray()
-        #        const_list.append(const.coverage.toarray())
-
-    return (lsv_cov_list, lsv_info), (const_list, const_info)
-
-def load_data(path, logger=None):
-    "Load data from the preprocess step. Could change to a DDBB someday"
-    data = pickle.load(open(path))
-    return _load_data2(data[1][:,0], logger), _load_data2(data[1][:,1], logger), _load_data_const(data[2], logger) #inc, exc, const
-
-def load_data_n(paths, logger=None, const=False):
-    "Load and pair n replicas (for the groups). Doesn't get the constitutive data"
-    datas = []
-    for path in paths:
-        if logger: logger.info("Loading %s..."%path)
-        datas.append(pickle.load(open(path))) 
-
-    if logger: logger.info("Combining all matrices into 'paired_samples'...")
-    paired_samples = defaultdict(list)
-    for data in datas:
-        _load_data_pair2(data[1], paired_samples, logger)
-
-    pair_length = len(paths) * 2 # the length of an event that has all replicas is double the number of experiments (each experiment has both inc and exc) 
-
-    #print "PAIRED SAMPLES", len(paired_samples)
-    event_names = [] 
-    ret = []
-    for event_name, junctions in paired_samples.items():
-        if len(junctions) == pair_length:
-            ret.append(junctions)
-            event_names.append(event_name)
-
-    return ret, event_names
-
-def _load_data_pair2(data, paired_samples, logger=None):
-    "Load the information in data inside paired_samples defaultdict"
-    my_len = _find_len(data, logger)
-    for i, junction in enumerate(data): #iterate junctions in 1 and add to the inc and exc to the dictionary
-        if hasattr(junction[0], 'coverage') and hasattr(junction[1], 'coverage'):
-
-            if type(junction[0].coverage[0]) == lil_matrix:  
-                my_inc = junction[0].coverage[0].toarray()
-                my_inc = my_inc[0]
-            else:
-                my_inc = junction[0].coverage[0]
-
-            if type(junction[1].coverage[0]) == lil_matrix:  
-                my_exc = junction[1].coverage[0].toarray()
-                my_exc = my_exc[0]
-            else:
-                my_exc = junction[1].coverage[0]
-
-            if my_inc.shape[0] == 1:
-                my_inc = [0]*my_len
-
-            if my_exc.shape[0] == 1:
-                my_exc = [0]*my_len
-
-            my_name = junction[0].name
-            if not my_name:
-                my_name = junction[1].name
-
-            paired_samples[my_name].extend([list(my_inc), list(my_exc)])    
-
-def load_data_pair(path1, path2, logger=None, tracklist=None):
-    """Pairing functionality should be extracted of this function"""
-    #const extracting doesnt change
-    data1 = pickle.load(open(path1))
-    data2 = pickle.load(open(path2))
-    const1 = _load_data_const(data1[2], logger)
-    const2 = _load_data_const(data2[2], logger)
-
-    paired_samples = defaultdict(list)
-    _load_data_pair2(data1[1], paired_samples, logger)
-    _load_data_pair2(data2[1], paired_samples, logger)
-
-    #pair the events: Only keep the paired events
-    ret = []
-    event_names = [] 
-    out_file_borrame = open('%s_%s_all_kirsten.txt'%(os.path.basename(path1), os.path.basename(path2)), 'w')
-    for event_name, junctions in paired_samples.items():
-
-        if tracklist:
-            if event_name in tracklist:
-                logger.info("TRACKLIST (%s): inclusion1: %s \n exclusion1: %s \n inclusion2: %s \n exclusion2: %s \n"%(event_name, junctions[0], junctions[1], junctions[2], junctions[3]))
-
-        if len(junctions) == 4:
-            out_file_borrame.write("%s: inc1: %s exc1: %s inc2: %s exc2: %s \n"%(event_name, junctions[0], junctions[1], junctions[2], junctions[3]))
-            ret.append(junctions)
-            event_names.append(event_name)
-
-    ret = array(ret)
-    return ret[:,0], ret[:,1], const1, ret[:,2], ret[:,3], const2, event_names
 
 def _pipeline_run(pipeline, lsv=False, logger=None):
     "Exception catching for all the pipelines"
@@ -291,7 +92,7 @@ class BasicPipeline:
         self.logger.info("GC content normalization...")
         if self.gcnorm:
             for junc_set in all_junctions.keys():
-                all_junctions[junc_set] = norm_junctions(all_junctions[junc_set]["junctions"], all_junctions[junc_set]["gc_content"])
+                all_junctions[junc_set] = majiq_filter.norm_junctions(all_junctions[junc_set]["junctions"], all_junctions[junc_set]["gc_content"])
 
         return all_junctions
 
@@ -302,12 +103,12 @@ class BasicPipeline:
             return poly1d([1, 0])
         else:
             self.logger.info("Fitting NB function with constitutive events...")
-            return fit_nb(const_junctions, "%s_nbfit"%self.output, self.plotpath, nbdisp=self.nbdisp, logger=self.logger, discardb=True)
+            return fit_nb(const_junctions, "%s_nbfit"%self.output, self.plotpath, nbdisp=self.nbdisp, logger=self.logger, discardb=True, bval=True)
 
     def mark_stacks_lsv(self, lsv_list, fitfunc):
         if self.markstacks >= 0:
             self.logger.info("Marking and masking stacks for...")
-            lsv_list = filter.lsv_mark_stacks(lsv_list, fitfunc, self.markstacks, self.nbdisp, self.logger)
+            lsv_list = majiq_filter.lsv_mark_stacks(lsv_list, fitfunc, self.markstacks, self.nbdisp, self.logger)
 
         return lsv_list
 
@@ -317,7 +118,7 @@ class BasicPipeline:
             for junc_set in all_junctions.keys():
                 if junc_set.find("const") == -1:
                     self.logger.info("... %s"%junc_set)
-                    all_junctions[junc_set] = mark_stacks(all_junctions[junc_set], fitfunc, self.markstacks, self.nbdisp, self.logger)
+                    all_junctions[junc_set] = majiq_filter.mark_stacks(all_junctions[junc_set], fitfunc, self.markstacks, self.nbdisp, self.logger)
 
                 all_junctions[junc_set] = masked_less(all_junctions[junc_set], 0) #remask the stacks
 
@@ -348,8 +149,8 @@ class CalcPsi(BasicPipeline):
         name = os.path.basename(path)
         self.logger.info("")
         self.logger.info("Loading %s..."%path)
-        lsv_junc, const = load_data_lsv(path, self.logger) 
-        self.logger.debug("SHAPES for lsv %s,  constitutive %s"%(len(lsv_junc[0]), const.shape))
+        lsv_junc, const = majiq_io.load_data_lsv(path, self.logger) 
+        self.logger.debug("SHAPES for lsv %s,  constitutive %s"%(len(lsv_junc[0]), const[0].shape))
         self.logger.info("Loaded.")
 #        all_junctions = {"inc": inc, "exc": exc, "const": const }
 #        all_junctions = self.gc_content_norm(all_junctions)
@@ -364,7 +165,7 @@ class CalcPsi(BasicPipeline):
         filter_lsv = self.mark_stacks_lsv( lsv_junc[0], fitfunc)
         #FILTER_JUNCTIONS?
         self.logger.info('Filtering ...')
-        lsv_junc = filter.lsv_quantifiable( filter_lsv, self.minnonzero, self.minreads, self.logger )
+        lsv_junc = majiq_filter.lsv_quantifiable( filter_lsv, self.minnonzero, self.minreads, self.logger )
 
         self.logger.info("Bootstrapping samples...") 
         lsv_sample = []
@@ -392,7 +193,7 @@ class CalcPsi(BasicPipeline):
         name = os.path.basename(path)
         self.logger.info("")
         self.logger.info("Loading %s..."%path)
-        inc, exc, const = load_data(path, self.logger) 
+        inc, exc, const = majiq_io.load_data(path, self.logger) 
         self.logger.debug("SHAPES for inclusion, %s exclusion, %s constitutive %s"%(inc.shape, exc.shape, const.shape))
         self.logger.info("Loaded.")
         all_junctions = {"inc": inc, "exc": exc, "const": const }
@@ -407,8 +208,8 @@ class CalcPsi(BasicPipeline):
         #FILTER_JUNCTIONS?
         self.logger.info('Filtering ...')
         filter_junctions = defaultdict(array)
-        filter_junctions["exc"], filter_junctions["inc"] = discardlow(self.minnonzero, True, self.logger, None, all_junctions["exc"], all_junctions["inc"])
-        filter_junctions["exc"], filter_junctions["inc"] = discardminreads(self.minreads, True, self.logger, False, None, filter_junctions["exc"], filter_junctions["inc"])
+        filter_junctions["exc"], filter_junctions["inc"] = majiq_filter.discardlow(self.minnonzero, True, self.logger, None, all_junctions["exc"], all_junctions["inc"])
+        filter_junctions["exc"], filter_junctions["inc"] = majiq_filter.discardminreads(self.minreads, True, self.logger, False, None, filter_junctions["exc"], filter_junctions["inc"])
 
         self.logger.info("Bootstrapping samples...") 
         mean_exc, var_exc, exc_samples = sample_from_junctions(filter_junctions["exc"], self.m, self.k, discardzeros=self.discardzeros, trimborder=self.trimborder, fitted_func=fitfunc, debug=self.debug)
@@ -463,142 +264,58 @@ class DeltaPair(BasicPipeline):
         else:
             self.pairdelta(self.file1, self.file2, self.output)
 
-    def pairdelta(self, file1, file2, output):
+    def pairdelta_lsv(self, file1, file2, output):
         self.logger.info("")
         self.logger.info("Processing pair %s - %s..."%(file1, file2))
-        inc1, exc1, const1, inc2, exc2, const2, event_names = load_data_pair(file1, file2, self.logger, self.tracklist) 
-        self.logger.debug("Shapes for inclusion, %s exclusion, %s constitutive %s"%(inc1.shape, exc1.shape, const1.shape))
-        all_junctions = {"inc1": inc1, "exc1": exc1, "const1": const1, "inc2": inc2, "exc2": exc2, "const2": const2 }
-        all_junctions = self.gc_content_norm(all_junctions)
+
+        lsv_junc1, const1 = majiq_io.load_data_lsv(path, self.logger) 
+        lsv_junc2, const2 = majiq_io.load_data_lsv(path, self.logger) 
+
+#        self.logger.debug("Shapes for inclusion, %s exclusion, %s constitutive %s"%(inc1.shape, exc1.shape, const1.shape))
+#        all_junctions = {"inc1": inc1, "exc1": exc1, "const1": const1, "inc2": inc2, "exc2": exc2, "const2": const2 }
+#        all_junctions = self.gc_content_norm(all_junctions)
         self.logger.info("Masking non unique...")
         for junc_set in all_junctions.keys():
             #print junc_set, all_junctions[junc_set], all_junctions[junc_set].shape
             all_junctions[junc_set] = masked_less(array(all_junctions[junc_set]), 0) 
 
-        #Quantifiable junctions filter
-        self.logger.info('Filtering ...')
-        all_junctions["exc1"], all_junctions["inc1"], all_junctions["exc2"], all_junctions["inc2"], event_names = discardlow(self.minnonzero, True, self.logger, event_names, all_junctions["exc1"], all_junctions["inc1"], all_junctions["exc2"], all_junctions["inc2"],)
-        all_junctions["exc1"], all_junctions["inc1"], all_junctions["exc2"], all_junctions["inc2"], event_names = discardminreads(self.minreads, True, self.logger, False, event_names, all_junctions["exc1"], all_junctions["inc1"], all_junctions["exc2"], all_junctions["inc2"],)
-
         #fitting the function
-        fitfunc1 = self.fitfunc(all_junctions["const1"])
-        fitfunc2 = self.fitfunc(all_junctions["const2"])
-        if self.markstacks >= 0:
-            self.logger.info("Marking and masking stacks...")
-            for junc_set in all_junctions.keys():
-                if junc_set.find("const") == -1:
-                    if junc_set.endswith("1"):
-                        f = fitfunc1
-                    else:
-                        f = fitfunc2
+        fitfunc1 = self.fitfunc(const1[0])
+        fitfunc2 = self.fitfunc(const2[0])
+        filtered_lsv1 = self.mark_stacks_lsv( lsv_junc1[0], fitfunc1)
+        filtered_lsv2 = self.mark_stacks_lsv( lsv_junc1[0], fitfunc1)
 
-                    if self.logger: self.logger.info("... %s"%junc_set)
-                    all_junctions[junc_set] = mark_stacks(all_junctions[junc_set], f, self.markstacks, self.nbdisp)
+        #Quantifiable junctions filter
+        ''' Quantify and unify '''
+        self.logger.info('Filtering ...')
+#        all_junctions["exc1"], all_junctions["inc1"], all_junctions["exc2"], all_junctions["inc2"], event_names = majiq_filter.discardlow(self.minnonzero, True, self.logger, event_names, all_junctions["exc1"], all_junctions["inc1"], all_junctions["exc2"], all_junctions["inc2"],)
+#        all_junctions["exc1"], all_junctions["inc1"], all_junctions["exc2"], all_junctions["inc2"], event_names = majiq_filter.discardminreads(self.minreads, True, self.logger, False, event_names, all_junctions["exc1"], all_junctions["inc1"], all_junctions["exc2"], all_junctions["inc2"],)
 
-        #Start prior matrix
-        self.logger.info("Calculating prior matrix...")
-        numbins = 20 #half the delta bins TODO to parameters
+        psi_space, prior_matrix = majiq_psi.gen_prior_matrix()
 
-        self.logger.info("Calculate jefferies matrix...")
-        dircalc = DirichletCalc()
-        #Adjust prior matrix with Jefferies prior        
-        jefferies = []
-        psi_space = linspace(0, 1-self.binsize, num=numbins) + self.binsize/2
-        for i in psi_space:
-            jefferies.append([])
-            for j in psi_space:
-                jefferies[-1].append(dircalc.pdf([i, 1-i, j, 1-j], [self.alpha, self.alpha, self.alpha, self.alpha]))
-
-        if self.tracklist:
-            self.logger.info("TRACKLIST: After filters")
-            for i, event_name in enumerate(event_names):
-                if event_name in self.tracklist:
-                    logger.info("TRACKLIST After filters (%s): %s"%(event_name, all_junctions['inc1'][i], all_junctions['exc1'][i], all_junctions['exc2'][i], all_junctions['inc2'][i]))
-
-        #jefferies = array([dircalc.pdf([x, 1-x], [0.5, 0.5]) for x in psi_space])
-        jefferies = array(jefferies)
-        jefferies /= sum(jefferies)
-        plot_matrix(jefferies, "Jefferies Matrix", "jefferies_matrix", self.plotpath)
-        if self.synthprior:
-            #Use a synthetic matrix to generate the values
-            prior_matrix = [] 
-            uniform = self.prioruniform/numbins 
-            mydist = norm(loc=0, scale=self.priorstd)
-            norm_space = linspace(-1, 1-self.binsize, num=numbins*2) + self.binsize/2
-            pdfnorm = mydist.pdf(norm_space)
-            newdist = (pdfnorm+uniform)/(pdfnorm+uniform).sum()
-            plot(linspace(-1, 1, num=len(list(pdfnorm))), pdfnorm)
-            _save_or_show(self.plotpath, plotname="prior_distribution")
-            #generate the matrix
-            for i in xrange(numbins):
-                prior_matrix.append(list(newdist[numbins-i:(numbins*2)-i]))
-
-            prior_matrix = array(prior_matrix)
-            prior_matrix /= sum(prior_matrix) #renormalize so it sums 1
-            self._get_delta_info(newdist, norm_space)
-            plot_matrix(prior_matrix, "Prior Matrix (before Jefferies)", "prior_matrix_no_jefferies", self.plotpath)
-
-        elif not self.jefferiesprior:
-            #Using the empirical data to get the prior matrix
-            self.logger.info('Filtering to obtain "best set"...')
-            best_set = defaultdict(array)
-            best_set["exc1"], best_set["inc1"], best_set["exc2"], best_set["inc2"] = discardminreads_and(incexcpairs=[[all_junctions["exc1"], all_junctions["inc1"]], [all_junctions["exc2"], all_junctions["inc2"]]], minreads=self.priorminandreads, logger=self.logger)
-            best_set["exc1"], best_set["inc1"], best_set["exc2"], best_set["inc2"] = discardlow(self.priorminnonzero, True, self.logger, None, best_set["exc1"], best_set["inc1"], best_set["exc2"], best_set["inc2"])
-            best_set["exc1"], best_set["inc1"], best_set["exc2"], best_set["inc2"] = discardminreads(self.priorminreads, True, self.logger, False, None, best_set["exc1"], best_set["inc1"], best_set["exc2"], best_set["inc2"])
-            best_exc_reads1 = mean_junction(best_set['exc1'])
-            best_inc_reads1 = mean_junction(best_set['inc1'])
-            best_exc_reads2 = mean_junction(best_set['exc2'])
-            best_inc_reads2 = mean_junction(best_set['inc2'])
-            self.logger.info("'Best set' is %s events (out of %s)"%(best_set["inc1"].shape[0], all_junctions["inc1"].shape[0]))
-            self.logger.info("Calculating PSI for 'best set'...")
-            best_psi1 = simple_psi(best_inc_reads1, best_exc_reads1)
-            best_psi2 = simple_psi(best_inc_reads2, best_exc_reads2)
-            self.logger.info("Calculating delta PSI for 'best set'...")
-            best_delta_psi = array(best_psi1 - best_psi2)
-
-            self.logger.info("Parametrizing 'best set'...")
-            mixture_pdf = adjustdelta(best_delta_psi, output, plotpath=self.plotpath, title=" ".join(self.names), numiter=self.iter, breakiter=self.breakiter, V=self.V, logger=self.logger)
-
-            pickle.dump(mixture_pdf, open("%s%s_%s_bestset.pickle"%(output, self.names[0], self.names[1]), 'w'))
-        
-            prior_matrix = []
-            for i in xrange(numbins):
-                prior_matrix.extend(mixture_pdf[numbins-i:(numbins*2)-i])
-            prior_matrix = array(prior_matrix).reshape(numbins, -1)
-
-        #some info for later analysis
-        pickle.dump(event_names, open("%s%s_%s_eventnames.pickle"%(output, self.names[0], self.names[1]), 'w')) 
-        if not self.jefferiesprior:
-            plot_matrix(prior_matrix, "Prior Matrix (before Jefferies)", "prior_matrix_no_jefferies", self.plotpath)
-
-        #Calculate prior matrix
-        self.logger.info("Adding a Jefferies prior to prior (alpha=%s)..."%(self.alpha))
-        #Normalize prior with jefferies
-        if self.jefferiesprior:
-            self.logger.info("Using the Uniform distribution + Jefferies...")
-            prior_matrix = jefferies + (self.prioruniform/numbins)
-        else: 
-            prior_matrix *= jefferies 
-
-        prior_matrix /= sum(prior_matrix) #renormalize so it sums 1
-        plot_matrix(prior_matrix, "Prior Matrix", "prior_matrix", self.plotpath)
-        self.logger.info("Saving prior matrix for %s..."%(self.names))
-        pickle.dump(prior_matrix, open("%s%s_%s_priormatrix.pickle"%(output, self.names[0], self.names[1]), 'w'))
         self.logger.info("Bootstrapping for all samples...")
-        mean_exc1, var_exc1, exc_samples1 = sample_from_junctions(all_junctions["exc1"], self.m, self.k, discardzeros=self.discardzeros, trimborder=self.trimborder, fitted_func=fitfunc1, debug=self.debug, tracklist=self.tracklist, names=event_names)
-        mean_inc1, var_inc1, inc_samples1 = sample_from_junctions(all_junctions["inc1"], self.m, self.k, discardzeros=self.discardzeros, trimborder=self.trimborder, fitted_func=fitfunc1, debug=self.debug, tracklist=self.tracklist, names=event_names)      
-        mean_exc2, var_exc2, exc_samples2 = sample_from_junctions(all_junctions["exc2"], self.m, self.k, discardzeros=self.discardzeros, trimborder=self.trimborder, fitted_func=fitfunc2, debug=self.debug, tracklist=self.tracklist, names=event_names)
-        mean_inc2, var_inc2, inc_samples2 = sample_from_junctions(all_junctions["inc2"], self.m, self.k, discardzeros=self.discardzeros, trimborder=self.trimborder, fitted_func=fitfunc2, debug=self.debug, tracklist=self.tracklist, names=event_names)
-        self.logger.info("\nCalculating PSI (just for reference) for %s and %s..."%(self.names[0], self.names[1]))
-        psi1 = calc_psi(inc_samples1, exc_samples1, self.names[0], self.alpha, self.n, self.debug, self.psiparam)
-        psi2 = calc_psi(inc_samples2, exc_samples2, self.names[1], self.alpha, self.n, self.debug, self.psiparam) 
-        psi_path = "%s%s_%s_psipaired.pickle"%(output, self.names[0], self.names[1])
-        pickle.dump([psi1, psi2], open(psi_path, 'w'))
+        lsv_sample1 = []
+        for ii in lsv_junc1[0]:
+            m_lsv, var_lsv, s_lsv = sample_from_junctions(ii, self.m, self.k, discardzeros=self.discardzeros, trimborder=self.trimborder, fitted_func=fitfunc, debug=self.debug) 
+            lsv_sample1.append( s_lsv )
+        lsv_sample2 = []
+        for ii in lsv_junc2[0]:
+            m_lsv, var_lsv, s_lsv = sample_from_junctions(ii, self.m, self.k, discardzeros=self.discardzeros, trimborder=self.trimborder, fitted_func=fitfunc, debug=self.debug) 
+            lsv_sample2.append( s_lsv )
+
+        ''' This should be debug code '''
+#        self.logger.info("\nCalculating PSI (just for reference) for %s and %s..."%(self.names[0], self.names[1]))
+#        psi1 = calc_psi(inc_samples1, exc_samples1, self.names[0], self.alpha, self.n, self.debug, self.psiparam)
+#        psi2 = calc_psi(inc_samples2, exc_samples2, self.names[1], self.alpha, self.n, self.debug, self.psiparam) 
+#        psi_path = "%s%s_%s_psipaired.pickle"%(output, self.names[0], self.names[1])
+#        pickle.dump([psi1, psi2], open(psi_path, 'w'))
 
         self.logger.info("Calculating P(Data | PSI_i, PSI_j)...")
         #P(Data | PSI_i, PSI_j) = P(vector_i | PSI_i) * P(vector_j | PSI_j)
-        data_given_psi1 = reads_given_psi(inc_samples1, exc_samples1, psi_space)
-        data_given_psi2 = reads_given_psi(inc_samples2, exc_samples2, psi_space)
+
+        #for num_psi:
+        #    data_given_psi1 = reads_given_psi(inc_samples1, exc_samples1, psi_space)
+        #    data_given_psi2 = reads_given_psi(inc_samples2, exc_samples2, psi_space)
 
         data_given_psi = []
         for sample in xrange(data_given_psi1.shape[0]):
@@ -629,7 +346,7 @@ class DeltaPair(BasicPipeline):
     def pairdelta(self, file1, file2, output):
         self.logger.info("")
         self.logger.info("Processing pair %s - %s..."%(file1, file2))
-        inc1, exc1, const1, inc2, exc2, const2, event_names = load_data_pair(file1, file2, self.logger, self.tracklist) 
+        inc1, exc1, const1, inc2, exc2, const2, event_names = majiq_io.load_data_pair(file1, file2, self.logger, self.tracklist) 
         self.logger.debug("Shapes for inclusion, %s exclusion, %s constitutive %s"%(inc1.shape, exc1.shape, const1.shape))
         all_junctions = {"inc1": inc1, "exc1": exc1, "const1": const1, "inc2": inc2, "exc2": exc2, "const2": const2 }
         all_junctions = self.gc_content_norm(all_junctions)
@@ -640,8 +357,8 @@ class DeltaPair(BasicPipeline):
 
         #Quantifiable junctions filter
         self.logger.info('Filtering ...')
-        all_junctions["exc1"], all_junctions["inc1"], all_junctions["exc2"], all_junctions["inc2"], event_names = discardlow(self.minnonzero, True, self.logger, event_names, all_junctions["exc1"], all_junctions["inc1"], all_junctions["exc2"], all_junctions["inc2"],)
-        all_junctions["exc1"], all_junctions["inc1"], all_junctions["exc2"], all_junctions["inc2"], event_names = discardminreads(self.minreads, True, self.logger, False, event_names, all_junctions["exc1"], all_junctions["inc1"], all_junctions["exc2"], all_junctions["inc2"],)
+        all_junctions["exc1"], all_junctions["inc1"], all_junctions["exc2"], all_junctions["inc2"], event_names = majiq_filter.discardlow(self.minnonzero, True, self.logger, event_names, all_junctions["exc1"], all_junctions["inc1"], all_junctions["exc2"], all_junctions["inc2"],)
+        all_junctions["exc1"], all_junctions["inc1"], all_junctions["exc2"], all_junctions["inc2"], event_names = majiq_filter.discardminreads(self.minreads, True, self.logger, False, event_names, all_junctions["exc1"], all_junctions["inc1"], all_junctions["exc2"], all_junctions["inc2"],)
 
         #fitting the function
         fitfunc1 = self.fitfunc(all_junctions["const1"])
@@ -705,9 +422,9 @@ class DeltaPair(BasicPipeline):
             #Using the empirical data to get the prior matrix
             self.logger.info('Filtering to obtain "best set"...')
             best_set = defaultdict(array)
-            best_set["exc1"], best_set["inc1"], best_set["exc2"], best_set["inc2"] = discardminreads_and(incexcpairs=[[all_junctions["exc1"], all_junctions["inc1"]], [all_junctions["exc2"], all_junctions["inc2"]]], minreads=self.priorminandreads, logger=self.logger)
-            best_set["exc1"], best_set["inc1"], best_set["exc2"], best_set["inc2"] = discardlow(self.priorminnonzero, True, self.logger, None, best_set["exc1"], best_set["inc1"], best_set["exc2"], best_set["inc2"])
-            best_set["exc1"], best_set["inc1"], best_set["exc2"], best_set["inc2"] = discardminreads(self.priorminreads, True, self.logger, False, None, best_set["exc1"], best_set["inc1"], best_set["exc2"], best_set["inc2"])
+            best_set["exc1"], best_set["inc1"], best_set["exc2"], best_set["inc2"] = majiq_filter.discardminreads_and(incexcpairs=[[all_junctions["exc1"], all_junctions["inc1"]], [all_junctions["exc2"], all_junctions["inc2"]]], minreads=self.priorminandreads, logger=self.logger)
+            best_set["exc1"], best_set["inc1"], best_set["exc2"], best_set["inc2"] = majiq_filter.discardlow(self.priorminnonzero, True, self.logger, None, best_set["exc1"], best_set["inc1"], best_set["exc2"], best_set["inc2"])
+            best_set["exc1"], best_set["inc1"], best_set["exc2"], best_set["inc2"] = majiq_filter.discardminreads(self.priorminreads, True, self.logger, False, None, best_set["exc1"], best_set["inc1"], best_set["exc2"], best_set["inc2"])
             best_exc_reads1 = mean_junction(best_set['exc1'])
             best_inc_reads1 = mean_junction(best_set['inc1'])
             best_exc_reads2 = mean_junction(best_set['exc2'])
