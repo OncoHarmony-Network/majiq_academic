@@ -101,13 +101,12 @@ def mean_junction(junctions, discardzeros=True):
 
     return array(ret)
 
-def sample_from_junctions(junctions, m, k, dispersion=0.1, discardzeros=True, trimborder=True, fitted_func=None, debug=False, tracklist=None, names=None):
+def sample_from_junctions(junctions, m, k, dispersion=0.1, discardzeros=5, trimborder=True, fitted_func=None, debug=False, tracklist=None, names=None):
     "Given the filtered reads, bootstrap samples from every junction"
     a, b = fitted_func.c
     sampled_means = []
     sampled_var = []
     all_samples = []
-    
     for i, junction in enumerate(junctions):
         if debug > 0 and i == debug: break
         if i % 100 == 0:
@@ -119,8 +118,13 @@ def sample_from_junctions(junctions, m, k, dispersion=0.1, discardzeros=True, tr
 
         junction = junction[junction > -EPSILON]  #mask the -1 (or lower) positions regardless of the discardzero treatment
 
-        if discardzeros:
+        if discardzeros > 0:
             junction = junction[junction!=0] #a junction array without the zeroes
+            sys.stdout.flush()
+
+            if junction.shape[0]< discardzeros:
+                z = np.zeros(shape=(discardzeros-junction.shape[0]), dtype=int)
+                junction = np.concatenate((junction,z), axis=1) #a junction array without the zeroes
 
         if len(junction) == 0:
             sampled_means.append(0)

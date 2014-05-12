@@ -156,13 +156,11 @@ def fit_nb(junctions, outpath, plotpath, gcnorm=True, trim=True, minnonzero=5, p
     plot([0, 1], 'k')
     _save_or_show(plotpath, "NON-Corrected ECDF b_%s"%b)
 
-
     if logger: logger.info("Fitting function: y = x*a+b. a=%.5f b=%.5f"%(a, b))
     fit_function = poly1d([a, b])
     nb_r, nb_p, matching_x = nb_from_func(fit_function, max(mean_junc), dispersion=nbdisp) #We calculate both r and p parameters of the negative binomial distribution along with the function
     plot_negbinomial_fit(mean_junc, std_junc, fit_function, plotpath, "Before correction")    
     #pvalue study
-
 
     #find the corresponding NB parameters to the junction mean
     score = sys.maxint

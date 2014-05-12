@@ -162,15 +162,16 @@ class CalcPsi(BasicPipeline):
         #    all_junctions[junc_set] = masked_less(all_junctions[junc_set], 0) 
 
         fitfunc = self.fitfunc(const[0])
-        filter_lsv = self.mark_stacks_lsv( lsv_junc[0], fitfunc)
+#        filter_lsv = self.mark_stacks_lsv( lsv_junc[0], fitfunc)
         #FILTER_JUNCTIONS?
         self.logger.info('Filtering ...')
-        lsv_junc = majiq_filter.lsv_quantifiable( filter_lsv, self.minnonzero, self.minreads, self.logger )
+        lsv_junc = majiq_filter.lsv_quantifiable( lsv_junc, self.minnonzero, self.minreads, self.logger )
 
         self.logger.info("Bootstrapping samples...") 
         lsv_sample = []
         for ii in lsv_junc[0]:
-            m_lsv, var_lsv, s_lsv = sample_from_junctions(ii, self.m, self.k, discardzeros=self.discardzeros, trimborder=self.trimborder, fitted_func=fitfunc, debug=self.debug) 
+            
+            m_lsv, var_lsv, s_lsv = sample_from_junctions(ii, self.m, self.k, discardzeros=5, trimborder=self.trimborder, fitted_func=fitfunc, debug=self.debug) 
             lsv_sample.append( s_lsv )
 
         self.logger.info("\nCalculating PSI for %s ..."%(name))
