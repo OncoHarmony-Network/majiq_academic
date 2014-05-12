@@ -15,7 +15,7 @@ def func2nb(a, b, x, dispersion):
     """
     Given a and b from the linear fit, calculate the nb parameters for x and return its r and p parameters.
     """
-    if (a*x)**2 > (x+dispersion*x**2):
+    if (a*x) > (x+dispersion*x**2):
 #        r = x**2 / ((a*x+b)**2 - x)
         r = x / ( a*x +b - 1 )
     else:
