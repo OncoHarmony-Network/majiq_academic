@@ -39,7 +39,6 @@ def nb_from_func(poly_func, max_line=1, dispersion=0.1):
     r = []
     p = []
 
-#    b= 0
     points = linspace(0.01, max_line, num=800)
     for x in points:
         r_val, p_val = func2nb(a, b, x, dispersion)
@@ -95,7 +94,6 @@ def plot_negbinomial_fit(mean_junc, std_junc, fit_function, plotpath, plotname):
 
 def get_pvalues(junctions, a, b, dispersion):
     pvalues = []
-    b = 0
     for i, junction in enumerate(junctions):
         if junction.any():
             junction_value = junction.mean()
@@ -139,20 +137,31 @@ def fit_nb(junctions, outpath, plotpath, gcnorm=True, trim=True, minnonzero=5, p
     std_junc = junctions.std(axis=1)
     #linear regression, retrieve the a and the b plus 
     a, b = polyfit(mean_junc, std_junc, 1)
-    if logger: logger.info("Fitting function: y = x*a+b. a=%.5f b=%.5f"%(a, b))
-    fit_function = poly1d([a, b])
-    nb_r, nb_p, matching_x = nb_from_func(fit_function, max(mean_junc), dispersion=nbdisp) #We calculate both r and p parameters of the negative binomial distribution along with the function
-    plot_negbinomial_fit(mean_junc, std_junc, fit_function, plotpath, "Before correction")    
-    #pvalue study
+    if discardb:
+        if logger: logger.debug("Discarded b from the polyfit")
+        if bval:
+            print "fitnb, b=1"
+            b = 1
+        else:
+            print "fitnb, b=0"
+            b = 0
 
-
+    print "GET_PVALS",b
     pvalues = get_pvalues(junctions, a, b, nbdisp)
     ecdf    = get_ecdf(pvalues)
     xlabel("P-value")
     ylabel("non_corrected ECDF")
     plot(linspace(0, 1, num=len(ecdf)), ecdf)
     plot([0, 1], 'k')
-    _save_or_show(plotpath, "NON-Corrected ECDF")
+    _save_or_show(plotpath, "NON-Corrected ECDF b_%s"%b)
+
+
+    if logger: logger.info("Fitting function: y = x*a+b. a=%.5f b=%.5f"%(a, b))
+    fit_function = poly1d([a, b])
+    nb_r, nb_p, matching_x = nb_from_func(fit_function, max(mean_junc), dispersion=nbdisp) #We calculate both r and p parameters of the negative binomial distribution along with the function
+    plot_negbinomial_fit(mean_junc, std_junc, fit_function, plotpath, "Before correction")    
+    #pvalue study
+
 
     #find the corresponding NB parameters to the junction mean
     score = sys.maxint
@@ -183,7 +192,7 @@ def fit_nb(junctions, outpath, plotpath, gcnorm=True, trim=True, minnonzero=5, p
     plot(linspace(0, 1, num=len(ecdf)), ecdf)
     plot([0, 1], 'k')
     
-    _save_or_show(plotpath, "Corrected ECDF")
+    _save_or_show(plotpath, "Corrected ECDF b_%s"%b)
 
     fit_function = poly1d([corrected_a, b])
     if logger: logger.debug("Calculating the nb_r and nb_p with the new fitted function")

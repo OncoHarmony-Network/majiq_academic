@@ -103,7 +103,7 @@ class BasicPipeline:
             return poly1d([1, 0])
         else:
             self.logger.info("Fitting NB function with constitutive events...")
-            return fit_nb(const_junctions, "%s_nbfit"%self.output, self.plotpath, nbdisp=self.nbdisp, logger=self.logger, discardb=True)
+            return fit_nb(const_junctions, "%s_nbfit"%self.output, self.plotpath, nbdisp=self.nbdisp, logger=self.logger, discardb=True, bval=False)
 
     def mark_stacks_lsv(self, lsv_list, fitfunc):
         if self.markstacks >= 0:
