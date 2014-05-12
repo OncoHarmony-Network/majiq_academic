@@ -30,7 +30,7 @@ from polyfit_ectf import norm_junctions
 import pipelines
 import analysis.sample
 import analysis.polyfitnb as polyfitnb
-
+import analysis.io as majiqio
 
 DEBUG = True
 TESTBREAK = 1500
@@ -270,8 +270,8 @@ def discard_empty_junctions( junc_list1, junc_list2 ):
 def load_junctions(filename1, filename2, args, fromlsv=False):
 
     # Parse LSV files
-    lsv_junc1, const1 = pipelines.load_data_lsv(filename1)
-    lsv_junc2, const2 = pipelines.load_data_lsv(filename2)
+    lsv_junc1, const1 = majiqio.load_data_lsv(filename1)
+    lsv_junc2, const2 = majiqio.load_data_lsv(filename2)
 
     print const1[0].shape
     print const2[0].shape
