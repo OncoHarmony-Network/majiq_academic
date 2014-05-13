@@ -117,7 +117,7 @@ def sample_from_junctions(junctions, m, k, discardzeros=False, nb=False, trimbor
         junction = junction[junction > -EPSILON]  #discard the -1 (or lower) positions regardless of the dzero treatment
 
         if trimborder:
-            junction = analysis.sample._trimborders(junction) #trim the zeroes from the borders regardless of the discardzeros flag
+            junction = analysis.sample._trimborders(junction, 5) #trim the zeroes from the borders regardless of the discardzeros flag
         if discardzeros:
             junction = junction[junction!=0] #a junction array without the zeroes
 
@@ -237,8 +237,6 @@ def discard_empty_junctions( junc_list1, junc_list2 ):
     ids2 = set(junc_list2[1])
 
     matched_names = ids1.intersection(ids2)
-    print len(ids1), len(ids2)
-#    print matched_names
 
     replica1 = []
     replica2 = []
@@ -252,7 +250,7 @@ def discard_empty_junctions( junc_list1, junc_list2 ):
                 replica2.append(junc_list2[0][idx])
                 break
 
-    print replica1 
+    # print replica1
     replica1 = array(replica1)
     replica1 = replica1.astype(np.float64)
     replica2 = array(replica2)
@@ -276,11 +274,11 @@ def load_junctions(filename1, filename2, args, fromlsv=False):
     print const1[0].shape
     print const2[0].shape
 
-    fit_func1 = polyfitnb.fit_nb(const1[0], "%s_nbfit" % args.output, args.plotpath, nbdisp=args.dispersion, logger=None, discardb=True)
-    fit_func2 = polyfitnb.fit_nb(const2[0], "%s_nbfit" % args.output, args.plotpath, nbdisp=args.dispersion, logger=None, discardb=True)
+    fit_func1 = polyfitnb.fit_nb(const1[0], "%s_nbfit" % args.output, args.plotpath, nbdisp=args.dispersion, logger=None, discardb=True, bval=True)
+    fit_func2 = polyfitnb.fit_nb(const2[0], "%s_nbfit" % args.output, args.plotpath, nbdisp=args.dispersion, logger=None, discardb=True, bval=True)
 
     if fromlsv:
-        replica1, replica2 = junction_sample.check_junctions_in_replicates(lsv_junc1, lsv_junc2, discard_empty_junctions=True)
+        replica1, replica2 = check_junctions_in_replicates(lsv_junc1, lsv_junc2, discard_empty_junctions=True)
     else:
         replica1, replica2 = discard_empty_junctions(const1, const2)
 
