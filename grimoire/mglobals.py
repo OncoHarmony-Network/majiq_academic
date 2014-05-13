@@ -53,8 +53,8 @@ def global_conf_ini(filename):
     temp_oDir = []
     count = 0
     
-    MINREADS = 1
-    MINPOS = 1
+    MINREADS = 2
+    MINPOS = 2
     readLen = int(general['readlen'])
     sam_dir = general['samdir']
     outDir = general['output']

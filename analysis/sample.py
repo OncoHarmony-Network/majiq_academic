@@ -109,7 +109,7 @@ def sample_from_junctions(junctions, m, k, dispersion=0.1, discardzeros=5, trimb
     all_samples = []
     for i, junction in enumerate(junctions):
         if debug > 0 and i == debug: break
-        if i % 100 == 0:
+        if i % 100 == 0 and debug > 0:
             print "junction %s..."%i,
             sys.stdout.flush()
 
@@ -121,7 +121,6 @@ def sample_from_junctions(junctions, m, k, dispersion=0.1, discardzeros=5, trimb
         if discardzeros > 0:
             junction = junction[junction!=0] #a junction array without the zeroes
             sys.stdout.flush()
-
             if junction.shape[0]< discardzeros:
                 z = np.zeros(shape=(discardzeros-junction.shape[0]), dtype=int)
                 junction = np.concatenate((junction,z), axis=1) #a junction array without the zeroes
@@ -140,12 +139,6 @@ def sample_from_junctions(junctions, m, k, dispersion=0.1, discardzeros=5, trimb
                 sampled_mean = mean(junction_samples)
                 #recalculating
                 r_nb, p_nb = polyfitnb.func2nb( a, b, sampled_mean, dispersion )
-#                if (a*sampled_mean)**2 > (sampled_mean+dispersion*sampled_mean**2):
-#                    r_nb = sampled_mean**2 / ((a*sampled_mean+b)**2 - sampled_mean)
-#                else:
-#                    r_nb = 1/dispersion
-#
-#                p_nb = r_nb / (r_nb+sampled_mean)
                 samples.extend(negative_binomial(r_nb, p_nb, k)) 
             
             #calculate the mean and the variance 
