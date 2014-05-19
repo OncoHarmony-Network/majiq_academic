@@ -25,10 +25,10 @@ class Junction:
         self.gene = gene
         self.txN = 1
         self.readN           = np.zeros((mglobals.num_experiments),dtype=np.int)
-        self.gccontent_x_pos = scipy.sparse.lil_matrix((mglobals.num_experiments,(readLength-16)+1),dtype=np.float)
+#        self.gc_content = scipy.sparse.lil_matrix((mglobals.num_experiments,(readLength-16)+1),dtype=np.float)
         self.coverage        = scipy.sparse.lil_matrix((mglobals.num_experiments,(readLength-16)+1),dtype=np.int)
-        self.gc_index        = scipy.sparse.lil_matrix((mglobals.num_experiments,(readLength-16)+1),dtype=np.int)
-        self.gc_factor       = scipy.sparse.lil_matrix((mglobals.num_experiments,(readLength-16)+1),dtype=np.float)
+        self.gc_content        = np.zeros( shape=((readLength-16)+1), dtype=np.float )
+#        self.gc_factor       = scipy.sparse.lil_matrix((mglobals.num_experiments,(readLength-16)+1),dtype=np.float)
         self.annotated = annotated
 
 
@@ -51,19 +51,19 @@ class Junction:
     def get_acceptor (self):
         return (self.acceptor)
     def get_gc_content(self):
-        return (self.gccontent_x_pos)
+        return (self.gc_content)
     def get_readN(self, idx):
         return (self.readN[idx])
-    def get_gc_factors(self):
-        return(self.gc_index, self.gc_factor)
+#    def get_gc_content(self):
+#        return(self.gc_index, self.gc_factor)
     def is_annotated(self):
         return(self.annotated)
 
     #MODIFIERs
 
-    def add_gc_factor_positions(self, exp_idx, gc_index, gc_factor):
-        self.gc_index[exp_idx,:] = gc_index
-        self.gc_factor[exp_idx,:] = gc_factor
+    def add_gc_content_positions(self, pos, gc):
+        self.gc_content[pos] = gc
+#        self.gc_factor[exp_idx,:] = gc_factor
 
     def add_donor(self, donor):
         self.donor = donor
@@ -78,7 +78,7 @@ class Junction:
             self.coverage[exp_idx,left_ind]+= readN
         else:
             self.coverage[exp_idx,left_ind]= -1
-        self.gccontent_x_pos[exp_idx,left_ind] = gc
+        self.gc_content[left_ind] = gc
 
     def add_read_number(self,exp_idx,readN):
         self.readN[exp_idx] += readN
@@ -117,10 +117,24 @@ class majiq_junc:
 
             self.coverage = jnc.coverage[exp_idx,:]
             #self.coverage = jnc.coverage[exp_idx,:].toarray()
-            self.gc_index = jnc.get_gc_factors()[0][exp_idx,:].toarray()[0]
-            self.gc_factor = np.zeros(shape=((mglobals.readLen-16)+1))
+#            self.gc_index = jnc.get_gc_factors()[0][exp_idx,:].toarray()[0]
+            self.gc_factor = scipy.sparse.lil_matrix((1,(mglobals.readLen-16)+1),dtype=np.float)
+#            self.gc_factor = np.zeros(shape=((mglobals.readLen-16)+1))
             for jj in range(mglobals.readLen-16+1):
-                dummy = self.gc_index [jj]
-                if dummy > 0 :
-                    self.gc_factor [jj] = mglobals.gc_bins_val[exp_idx][ dummy -1 ]
+                dummy = jnc.gc_content[jj]
+                self.gc_factor[0,jj] = dummy
+
+
+    def set_gc_factor(self, exp_idx):
+        for jj in xrange(self.gc_factor.shape[0]):
+            dummy = self.gc_factor [0,jj]
+            if dummy == 0 :
+                gc_f = 0
+            else:
+                gc_f = mglobals.gc_factor[exp_idx]( dummy )
+            self.gc_factor[0,jj] = gc_f
+#            self.gc_factor[jj] = mglobals.gc_content[exp_idx](dummy)
+
+#                if dummy > 0 :
+#                    self.gc_factor [jj] = mglobals.gc_bins_val[exp_idx][ dummy -1 ]
 

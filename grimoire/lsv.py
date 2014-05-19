@@ -1,5 +1,6 @@
 import numpy as np
-import mglobals
+import grimoire.mglobals as mglobals
+import scipy
 
 
 SSOURCE = 'source'
@@ -49,16 +50,18 @@ class LSV(object):
                 #    print "ERRORRR set_type SS:", ex_id, junc.donor.get_id(), junc
                     intron_ret = True
                     break
-                if junc.acceptor is None: continue
-                ex_set.add(junc.acceptor.get_id())
+                if not junc.acceptor is None: 
+                    ex_set.add( junc.acceptor.get_id() )
+#                    continue
             else:
                 #print "MMM",ex_id, junc.acceptor.get_id()
                 if junc.acceptor.get_id() != ex_id : 
                 #    print "ERRORRR set_type ST:", ex_id, junc.acceptor.get_id(), junc
                     intron_ret = True
                     break
-                if junc.donor is None: continue
-                ex_set.add(junc.donor.get_id())
+                if not junc.donor is None: 
+                    ex_set.add( junc.donor.get_id() )
+                   # continue
         if intron_ret : return "intron ret"
         #print type, spsite
         ex_list = sorted(list(ex_set))
@@ -67,16 +70,27 @@ class LSV(object):
         for junc in jlist:
             if type == SSOURCE:
                 #print junc.start, junc.acceptor
-                if junc.acceptor is None: continue
-                s3 = sorted(list(set(junc.acceptor.ss_3p_list)))
-                type_set.add("|%se%s.%s"%(spsite.index(junc.start)+1,ex_list.index(junc.acceptor.get_id())+1,s3.index(junc.end)+1))
+                if junc.acceptor is None: 
+                    exs3 = ''
+                    ex = '0'
+                else:
+                    s3 = sorted(list(set(junc.acceptor.ss_3p_list)))
+                    ex1 = ex_list.index(junc.acceptor.get_id())+1
+                    ex = '%s.%s'%(ex1,s3.index(junc.end)+1)
+                type_set.add("|%se%s"%(spsite.index(junc.start)+1,ex))
             else:
-                if junc.donor is None: continue
-                s5 = sorted(list(set(junc.donor.ss_5p_list)))
+                if junc.donor is None:
+                    exs5 = ''
+                    ex = '0'
+                else:
+                    s5 = sorted(list(set(junc.donor.ss_5p_list)))
+                    ex1 = ex_list.index(junc.donor.get_id())+1
+                    ex = '%s.%s'%(ex1,s5.index(junc.start)+1)
+                    
                 #print junc.end, spsite
                 #print junc.donor.get_id(), ex_list
                 #print junc.start, s5
-                type_set.add("|%se%s.%s"%(spsite.index(junc.end)+1,ex_list.index(junc.donor.get_id())+1,s5.index(junc.start)+1))
+                type_set.add("|%se%s"%(spsite.index(junc.end)+1,ex))
         
         for tt in sorted(list(type_set)):
             ext_type += tt
@@ -130,8 +144,6 @@ def extract_SE_events( list_lsv_per_gene ):
         C1 = ss.coords
         A = slist[sindx].acceptor.get_coordinates()
         #ret_list.append( (C1.)
-
-
 
 def lsv_to_gff( list_lsv ):
 
@@ -211,14 +223,29 @@ class Majiq_LSV(object):
         self.coords = LSV.coords
         self.id = LSV.id
         self.type = LSV.ext_type
-#        exp_idx = LSV.exp_idx
-        self.junction_list = np.zeros( shape=(len(LSV.junctions)),dtype=np.dtype('object'))
+        self.junction_list = scipy.sparse.lil_matrix((len(LSV.junctions),(mglobals.readLen-16)+1),dtype=np.int)
+#        self.junction_list = np.zeros( shape=(len(LSV.junctions),(mglobals.readLen-16)+1), dtype=np.dtype('int') )
+        self.gc_factor = scipy.sparse.lil_matrix( (len(LSV.junctions),(mglobals.readLen-16)+1), dtype=np.dtype('float') )
+#np.zeros( shape=(len(LSV.junctions),(mglobals.readLen-16)+1), dtype=np.dtype('float') )
         for idx,jj in enumerate(LSV.junctions):
-            self.junction_list[idx] = jj.coverage[exp_idx,:]
-            self.gc_index  = jj.get_gc_factors()[0][exp_idx,:].toarray()[0]
-            self.gc_factor = np.zeros(shape=((mglobals.readLen-16)+1))
+#            self.junction_list[idx,:] = jj.coverage[exp_idx,:].toarray()
+            self.junction_list[idx,:] = jj.coverage[exp_idx,:]
             for jidx in range(mglobals.readLen-16+1):
-                dummy = self.gc_index [jidx]
-                if dummy > 0 :
-                    self.gc_factor [jidx] = mglobals.gc_bins_val[exp_idx][ dummy -1 ]
+                dummy = jj.get_gc_content()[jidx]
+                print "GC_CONTENT", dummy
+                self.gc_factor[idx,jidx] = dummy
+        print 'GC2',self.gc_factor
 
+
+    def set_gc_factor( self , exp_idx):
+        print 'GCKKK',self.gc_factor
+        for idx in xrange(self.gc_factor.shape[0]):
+            for jidx in xrange(self.gc_factor.shape[1]):
+                dummy = self.gc_factor[idx,jidx]
+                print "GC LSV", dummy
+                print "GC FACT", mglobals.gc_factor[exp_idx]( dummy )
+                if dummy == 0 :
+                    gc_f = 0
+                else:
+                    gc_f = mglobals.gc_factor[exp_idx]( dummy )
+                self.gc_factor[idx,jidx] = gc_f

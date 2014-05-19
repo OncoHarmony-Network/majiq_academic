@@ -32,6 +32,32 @@ def median_psi(junctions, discardzeros=True):
 
     return array(medians)
 
+def empirical_delta_psi( lsv_list1, lsv_list2, logger=None):
+    """Simple PSI calculation without involving a dirichlet prior, coming from reads from junctions"""
+
+#    if  not logger: logger.info("Calculating PSI for 'best set'...")
+
+    delta_psi = []
+    for idx, lsv in enumerate(lsv_list1):
+        psi1 = np.zeros(shape=len(lsv), dtype=np.dtype('float'))
+        psi2 = np.zeros(shape=len(lsv), dtype=np.dtype('float'))
+        for ii, rate in enumerate(lsv):
+            val = rate /  np.sum(lsv)
+            if isnan(val): val = 0.5
+            psi1[ii] = val
+        
+        for ii, rate in enumerate(lsv_list2[idx]):
+            val = rate /  np.sum(lsv_list2[idx])
+            if isnan(val): val = 0.5
+            psi2[ii] = val
+
+        print "LLLL",psi1
+        print "LLLL@",psi2
+        sys.stdout.flush()
+
+        delta_psi.append( psi1 - psi2 )
+ #   if logger: logger.info("Calculating delta PSI for 'best set'...")
+    return delta_psi 
 
 def simple_psi(inc, exc):
     """Simple PSI calculation without involving a dirichlet prior, coming from reads from junctions"""
@@ -238,20 +264,33 @@ def gen_prior_matrix( pip ):
     elif not pip.jefferiesprior:
         #Using the empirical data to get the prior matrix
         pip.logger.info('Filtering to obtain "best set"...')
-        best_set = defaultdict(array)
-        best_set["exc1"], best_set["inc1"], best_set["exc2"], best_set["inc2"] = majiq_filter.discardminreads_and(incexcpairs=[[all_junctions["exc1"], all_junctions["inc1"]], [all_junctions["exc2"], all_junctions["inc2"]]], minreads=self.priorminandreads, logger=pip.logger)
-        best_set["exc1"], best_set["inc1"], best_set["exc2"], best_set["inc2"] = majiq_filter.discardlow(pip.priorminnonzero, True, pip.logger, None, best_set["exc1"], best_set["inc1"], best_set["exc2"], best_set["inc2"])
-        best_set["exc1"], best_set["inc1"], best_set["exc2"], best_set["inc2"] = majiq_filter.discardminreads(pip.priorminreads, True, pip.logger, False, None, best_set["exc1"], best_set["inc1"], best_set["exc2"], best_set["inc2"])
-        best_exc_reads1 = mean_junction(best_set['exc1'])
-        best_inc_reads1 = mean_junction(best_set['inc1'])
-        best_exc_reads2 = mean_junction(best_set['exc2'])
-        best_inc_reads2 = mean_junction(best_set['inc2'])
-        pip.logger.info("'Best set' is %s events (out of %s)"%(best_set["inc1"].shape[0], all_junctions["inc1"].shape[0]))
-        pip.logger.info("Calculating PSI for 'best set'...")
-        best_psi1 = simple_psi(best_inc_reads1, best_exc_reads1)
-        best_psi2 = simple_psi(best_inc_reads2, best_exc_reads2)
-        pip.logger.info("Calculating delta PSI for 'best set'...")
-        best_delta_psi = array(best_psi1 - best_psi2)
+
+        filtered_lsv1 = filter.lsv_quantifiable(lsv_exp1, minnonzero=5, min_reads=20, logger=pip.logger)
+        filtered_lsv2 = filter.lsv_quantifiable(lsv_exp2, minnonzero=5, min_reads=20, logger=pip.logger)
+
+    
+        ids1 = set(filtered_lsv1[1])
+        ids2 = set(filtered_lsv2[1])
+        matched_names = ids1.intersection(ids2)
+    
+        best_set_mean1 = [[],[]]
+        best_set_mean2 = [[],[]]
+    
+        for ii in matched_names:
+            for idx, nm in enumerate(filtered_lsv1[1]):
+                if nm == ii:
+                    best_set_mean1[0].append(mean_junction(filtered_lsv1[0][idx]))
+                    best_set_mean1[1].append(mean_junction(filtered_lsv1[1][idx]))
+                    break
+            for idx, nm in enumerate(filtered_lsv2[1]):
+                if nm == ii:
+                    best_set_mean2[0].append(mean_junction(filtered_lsv1[0][idx]))
+                    best_set_mean2[1].append(mean_junction(filtered_lsv1[1][idx]))
+                    break
+
+        pip.logger.info("'Best set' is %s events (out of %s)"%(len(best_set_mean1), len(lsv_exp1)))
+
+        best_delta_psi = empirical_delta_psi(best_set_mean1, best_set_mean2)
 
         pip.logger.info("Parametrizing 'best set'...")
         mixture_pdf = adjustdelta(best_delta_psi, output, plotpath=pip.plotpath, title=" ".join(pip.names), numiter=pip.iter, breakiter=pip.breakiter, V=pip.V, logger=pip.logger)

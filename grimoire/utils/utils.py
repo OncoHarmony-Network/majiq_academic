@@ -135,7 +135,10 @@ def merge_and_create_MAJIQ ( chr_list, ofile ):
                 nonas_table.append(non_as)
             if len(as_table)==0: continue
             AT  = np.concatenate((as_table))
+            for lsv in AT: lsv.set_gc_factor( exp_idx )
             NAT = np.concatenate((nonas_table))
+            for jnc in NAT: jnc.set_gc_factor( exp_idx )
+
             file_pi = open('%s/toJuan.%s.majiq'%(mglobals.outDir,mglobals.exp_list[exp_idx]), 'w+')
             pickle.dump((info,AT, NAT), file_pi)
             file_pi.close()
@@ -286,7 +289,7 @@ def prepare_junctions_gc( junc , exp_idx):
             #gc[jj] = mglobals.gc_factor[exp_idx](junc.get_gc_content()[exp_idx,jj])
 
     if not junc is None:
-        junc.add_gc_factor_positions(exp_idx, gci,gc)
+        junc.add_gc_content_positions( gci,gc)
     return
 
 def print_junc_matrices(mat, tlb=None,fp=None):

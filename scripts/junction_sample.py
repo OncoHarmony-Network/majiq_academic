@@ -197,12 +197,15 @@ def check_junctions_in_replicates(lsv_junc1, lsv_junc2, discard_empty_junctions=
     matched_names = ids1.intersection(ids2)
     print len(ids1), len(ids2)
     print len(matched_names)
+    gc1 = []
+    gc2 = []
     replica1 = []
     replica2 = []
     for ii in matched_names:
         for idx, nm in enumerate(lsv_junc1[1]):
             if nm[1] == ii:
                 replica1.append(lsv_junc1[0][idx])
+                gc1.append(lsv_junc1[2])
                 dummy=lsv_junc1[0][idx].shape
                 break
         for idx, nm in enumerate(lsv_junc2[1]):
@@ -211,8 +214,10 @@ def check_junctions_in_replicates(lsv_junc1, lsv_junc2, discard_empty_junctions=
                 if dummy != dummy2:
                     print "ERRRRORRRRRR", dummy, dummy2
                     replica1 = replica1[:-1]
+                    gc1 = gc1[:-1]
                 else:
                     replica2.append(lsv_junc2[0][idx])
+                    gc2.append(lsv_junc2[2])
 
                 break
 
@@ -221,14 +226,24 @@ def check_junctions_in_replicates(lsv_junc1, lsv_junc2, discard_empty_junctions=
     replica2 = np.concatenate(replica2)
     replica2 = replica2.astype(np.float64)
 
+    gc1 = np.concatenate(gc1)
+    gc1 = gc1.astype(np.float64)
+    gc2 = np.concatenate(gc2)
+    gc2 = gc2.astype(np.float64)
+    
+
+
     if discard_empty_junctions:
         idx_list = []
         for idx in range(replica1.shape[0]):
             if np.count_nonzero(replica1[idx]) == 0 or np.count_nonzero(replica2[idx]) ==0 : idx_list.append(idx)
         replica1 = np.delete(replica1, idx_list, axis=0)
         replica2 = np.delete(replica2, idx_list, axis=0)
+        gc1 = np.delete(gc1, idx_list, axis=0)
+        gc2 = np.delete(gc2, idx_list, axis=0)
+        
 
-    return replica1, replica2
+    return replica1, replica2, gc1, gc2
 
 
 def discard_empty_junctions( junc_list1, junc_list2 ):
@@ -273,18 +288,18 @@ def load_junctions(filename1, filename2, args, fromlsv=False):
     lsv_junc1, const1 = majiqio.load_data_lsv(filename1)
     lsv_junc2, const2 = majiqio.load_data_lsv(filename2)
 
-    print const1[0].shape
-    print const2[0].shape
+#    print const1[0].shape
+#    print const2[0].shape
 
     fit_func1 = polyfitnb.fit_nb(const1[0], "%s_nbfit" % args.output, args.plotpath, nbdisp=args.dispersion, logger=None, discardb=True)
     fit_func2 = polyfitnb.fit_nb(const2[0], "%s_nbfit" % args.output, args.plotpath, nbdisp=args.dispersion, logger=None, discardb=True)
 
     if fromlsv:
-        replica1, replica2 = junction_sample.check_junctions_in_replicates(lsv_junc1, lsv_junc2, discard_empty_junctions=True)
+        replica1, replica2, gc1, gc2 = junction_sample.check_junctions_in_replicates(lsv_junc1, lsv_junc2, discard_empty_junctions=True)
     else:
         replica1, replica2 = discard_empty_junctions(const1, const2)
 
-    return replica1, replica2, fit_func1, fit_func2
+    return replica1, replica2, fit_func1, fit_func2, gc1, gc2
 
 
 def split_junction_pool ( replica1, replica2 ):

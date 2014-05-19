@@ -87,6 +87,15 @@ class BasicPipeline:
         """This is the entry point for all pipelines"""
         return
 
+    def gc_content_norm_lsv( self, lsv_list, const_list ) :
+        "Normalize the matrix using the gc content"
+        self.logger.info("GC content normalization...")
+        if self.gcnorm:
+            for lidx, lsv in enumerate(lsv_list[0]):
+                lsv = lsv * lsv_list[2][lidx]
+            conts_list[0] = const_list[0] * const_list[2]
+        return lsv_list, const_list
+
     def gc_content_norm(self, all_junctions):
         "Normalize the matrix using the gc content"
         self.logger.info("GC content normalization...")
@@ -153,7 +162,7 @@ class CalcPsi(BasicPipeline):
         self.logger.debug("SHAPES for lsv %s,  constitutive %s"%(len(lsv_junc[0]), const[0].shape))
         self.logger.info("Loaded.")
 #        all_junctions = {"inc": inc, "exc": exc, "const": const }
-#        all_junctions = self.gc_content_norm(all_junctions)
+        all_junctions = self.gc_content_norm_lsv( lsv_junc, const )
 
        # self.logger.info("Masking non unique...")
 
@@ -479,7 +488,7 @@ class DeltaPair(BasicPipeline):
         self.logger.info("Calculating P(Data | PSI_i, PSI_j)...")
         #P(Data | PSI_i, PSI_j) = P(vector_i | PSI_i) * P(vector_j | PSI_j)
         data_given_psi1 = reads_given_psi(inc_samples1, exc_samples1, psi_space)
-        data_given_psi2 = reads_given_psi(inc_samples2, exc_samples2, psi_space)
+        data_given_psi2 = reads_given_psi(INC_SAMPles2, exc_samples2, psi_space)
 
         data_given_psi = []
         for sample in xrange(data_given_psi1.shape[0]):

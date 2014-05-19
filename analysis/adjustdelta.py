@@ -214,7 +214,34 @@ def check_valid(a_b):
     else:
         return a, b
 
+
 def adjustdelta(deltapsi, output, plotpath=None, title=None, numiter=10, breakiter=0.01, V=0.1, logger=False):
+    #TODO make breakiter work
+    #transform to z-space
+    z_deltapsi = 0.5*(deltapsi+1)
+
+    #calculate init values
+    a_change = b_change = 1
+    a_center = b_center = 2000
+
+    #pi_change = len(change_delta)/float(len(z_deltapsi))
+    #pi_center = len(center_delta)/float(len(z_deltapsi))
+    pi_change = 0.05
+    pi_center = 0.95
+
+    if not pi_change or not pi_center: #if any of the 'pi' parameters are 0, one of the distributions will never be considered, so reboot all pi to equal.
+        pi_change = 0.05
+        pi_center = 0.95
+
+    beta_dists = EM(a_change, b_change, a_center, b_center, pi_change, pi_center, z_deltapsi, numiter, plotpath, logger)
+    #truncate the beta distributions limiting them to the 0 to 1 space
+    beta_dists = truncate_betadists(beta_dists) 
+    x_pos, z_mixture_pdf = calc_mixture_pdf(beta_dists)
+    #No need to convert back from the z space, it is a distribution
+    return z_mixture_pdf 
+
+
+def adjustdelta_lsv( deltapsi, output, plotpath=None, title=None, numiter=10, breakiter=0.01, V=0.1, logger=False ) :
     #TODO make breakiter work
     #transform to z-space
     z_deltapsi = 0.5*(deltapsi+1)

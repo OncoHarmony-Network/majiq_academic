@@ -230,7 +230,7 @@ def LSV_detection( gene_list, chr ):
                         eData = 0
                         for jj in jlist:
                             for exp_idx in ind_list:
-                                utils.prepare_junctions_gc(jj,exp_idx)
+#                                utils.prepare_junctions_gc(jj,exp_idx)
                                 if __reliable_in_data( jj, exp_idx ):
                                     counter +=1
                             if counter < 0.1*len(ind_list): continue
