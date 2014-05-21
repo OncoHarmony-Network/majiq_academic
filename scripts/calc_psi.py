@@ -121,10 +121,13 @@ def main():
     args.__dict__.update(methods['Majiq'])
     psi_scores = pipelines.calcpsi(args)
 
+    print "Number of files analyzed: %d\nshapes: (%d, %s)\t(%d, %s)" % (len(psi_scores), len(psi_scores[0]), str(psi_scores[0][0][0].shape), len(psi_scores[1]), str(psi_scores[1][0][0].shape))
     lsv_match, match_info = analysis.filter.lsv_intersection(psi_scores[0], psi_scores[1])
 
-    pickle.dump((lsv_match, match_info), open("%s/%s_psivalues.pickle"%(args.output, "_vs_".join([f for f in args.files])), 'w'))
-    print "Done."
+    from os.path import basename
+    output_file_name = "_vs_".join([basename(f) for f in args.files])
+    pickle.dump((lsv_match, match_info), open("%s%s_psivalues.pickle"%(args.output, output_file_name), 'w'))
+    print "Done. Output file can be found at:\n%s%s_psivalues.pickle" % (args.output, output_file_name)
 
 if __name__ == '__main__':
     main()
