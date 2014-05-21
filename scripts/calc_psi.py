@@ -1,3 +1,5 @@
+from matplotlib import use
+use('Agg', warn=False)
 import sys
 import os
 import pickle
