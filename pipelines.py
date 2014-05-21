@@ -17,6 +17,7 @@ from analysis.weight import local_weights, global_weights
 from analysis.matrix import rank_deltas, collapse_matrix
 import analysis.filter as majiq_filter
 import analysis.io as majiq_io
+import analysis.psi as  majiq_psi
 #from analysis.filter import norm_junctions, discardlow, discardhigh, discardminreads, discardmaxreads, discardminreads_and, mark_stacks
 
 ################################
@@ -44,17 +45,6 @@ def _save_or_show(plotpath, plotname=None):
     else:
         show()
 
-def plot_matrix(matrix, my_title, plotname, plotpath):
-    clf()
-    ax = subplot(1,1,1)
-    title(my_title)
-    imshow(matrix)
-    xlabel(u"PSI i")
-    ylabel(u"PSI j")
-    ax.set_xticklabels([0, 0, 0.25, 0.5, 0.75, 1])
-    ax.set_yticklabels([0, 0, 0.25, 0.5, 0.75, 1])
-
-    _save_or_show(plotpath, plotname=plotname)
 
 def preprocess(args):
     raise NotImplemented
@@ -143,12 +133,13 @@ def calcpsi(args):
 class CalcPsi(BasicPipeline):
 
     def run(self, lsv=False):
+        ret = []
         for path in self.files:
-            print "LSV",lsv
             if lsv :
-                self.calcpsi_lsv(path)
+                ret.append(self.calcpsi_lsv(path))
             else:
                 self.calcpsi(path)
+        return ret
 
     def calcpsi_lsv(self, path, write_pickle=True):
         """
@@ -189,10 +180,10 @@ class CalcPsi(BasicPipeline):
         self.logger.info("Saving PSI...")
         if write_pickle:
             output = open("%s%s_psi.pickle"%(self.output, name), 'w')
-            pickle.dump(psi, output)
+            pickle.dump((psi, lsv_junc[1]), output)
             self.logger.info("PSI calculation for %s ended succesfully! Result can be found at %s"%(name, output.name))
 
-        return psi
+        return psi, lsv_junc[1]
 
 
     def calcpsi(self, path, write_pickle=True):
@@ -278,79 +269,79 @@ class DeltaPair(BasicPipeline):
         self.logger.info("")
         self.logger.info("Processing pair %s - %s..."%(file1, file2))
 
-        lsv_junc1, const1 = majiq_io.load_data_lsv(path, self.logger) 
-        lsv_junc2, const2 = majiq_io.load_data_lsv(path, self.logger) 
+        lsv_junc1, const1 = majiq_io.load_data_lsv(file1, self.logger) 
+        lsv_junc2, const2 = majiq_io.load_data_lsv(file2, self.logger) 
 
 #        self.logger.debug("Shapes for inclusion, %s exclusion, %s constitutive %s"%(inc1.shape, exc1.shape, const1.shape))
 #        all_junctions = {"inc1": inc1, "exc1": exc1, "const1": const1, "inc2": inc2, "exc2": exc2, "const2": const2 }
 #        all_junctions = self.gc_content_norm(all_junctions)
         self.logger.info("Masking non unique...")
-        for junc_set in all_junctions.keys():
+        #for junc_set in all_junctions.keys():
             #print junc_set, all_junctions[junc_set], all_junctions[junc_set].shape
-            all_junctions[junc_set] = masked_less(array(all_junctions[junc_set]), 0) 
+        #    all_junctions[junc_set] = masked_less(array(all_junctions[junc_set]), 0) 
 
         #fitting the function
         fitfunc1 = self.fitfunc(const1[0])
         fitfunc2 = self.fitfunc(const2[0])
-        filtered_lsv1 = self.mark_stacks_lsv( lsv_junc1[0], fitfunc1)
-        filtered_lsv2 = self.mark_stacks_lsv( lsv_junc1[0], fitfunc1)
+       # filtered_lsv1 = iself.mark_stacks_lsv( lsv_junc1[0], fitfunc1)
+       # filtered_lsv2 = self.mark_stacks_lsv( lsv_junc1[0], fitfunc1)
 
+        filtered_lsv1 = lsv_junc1
+        filtered_lsv2 = lsv_junc2
         #Quantifiable junctions filter
         ''' Quantify and unify '''
         self.logger.info('Filtering ...')
 #        all_junctions["exc1"], all_junctions["inc1"], all_junctions["exc2"], all_junctions["inc2"], event_names = majiq_filter.discardlow(self.minnonzero, True, self.logger, event_names, all_junctions["exc1"], all_junctions["inc1"], all_junctions["exc2"], all_junctions["inc2"],)
 #        all_junctions["exc1"], all_junctions["inc1"], all_junctions["exc2"], all_junctions["inc2"], event_names = majiq_filter.discardminreads(self.minreads, True, self.logger, False, event_names, all_junctions["exc1"], all_junctions["inc1"], all_junctions["exc2"], all_junctions["inc2"],)
 
-        psi_space, prior_matrix = majiq_psi.gen_prior_matrix()
+        
+        psi_space, prior_matrix = majiq_psi.gen_prior_matrix(self, filtered_lsv1, filtered_lsv2, output)
 
         self.logger.info("Bootstrapping for all samples...")
-        lsv_sample1 = []
-        for ii in lsv_junc1[0]:
-            m_lsv, var_lsv, s_lsv = sample_from_junctions(ii, self.m, self.k, discardzeros=self.discardzeros, trimborder=self.trimborder, fitted_func=fitfunc, debug=self.debug) 
-            lsv_sample1.append( s_lsv )
-        lsv_sample2 = []
-        for ii in lsv_junc2[0]:
-            m_lsv, var_lsv, s_lsv = sample_from_junctions(ii, self.m, self.k, discardzeros=self.discardzeros, trimborder=self.trimborder, fitted_func=fitfunc, debug=self.debug) 
-            lsv_sample2.append( s_lsv )
+        lsv_sample1 = [[],[]]
+        for idx, ii in enumerate(lsv_junc1[0]):
+            m_lsv, var_lsv, s_lsv = sample_from_junctions(ii, self.m, self.k, discardzeros=self.discardzeros, trimborder=self.trimborder, fitted_func=fitfunc1, debug=self.debug) 
+            lsv_sample1[0].append( s_lsv )
+            lsv_sample1[1].append(lsv_junc1[1][idx])
 
-        ''' This should be debug code '''
-#        self.logger.info("\nCalculating PSI (just for reference) for %s and %s..."%(self.names[0], self.names[1]))
-#        psi1 = calc_psi(inc_samples1, exc_samples1, self.names[0], self.alpha, self.n, self.debug, self.psiparam)
-#        psi2 = calc_psi(inc_samples2, exc_samples2, self.names[1], self.alpha, self.n, self.debug, self.psiparam) 
-#        psi_path = "%s%s_%s_psipaired.pickle"%(output, self.names[0], self.names[1])
-#        pickle.dump([psi1, psi2], open(psi_path, 'w'))
+        lsv_sample2 = [[],[]]
+        for idx, ii in enumerate(lsv_junc2[0]):
+            m_lsv, var_lsv, s_lsv = sample_from_junctions(ii, self.m, self.k, discardzeros=self.discardzeros, trimborder=self.trimborder, fitted_func=fitfunc2, debug=self.debug) 
+            lsv_sample2[0].append( s_lsv )
+            lsv_sample2[1].append(lsv_junc2[1][idx])
 
         self.logger.info("Calculating P(Data | PSI_i, PSI_j)...")
         #P(Data | PSI_i, PSI_j) = P(vector_i | PSI_i) * P(vector_j | PSI_j)
 
-        #for num_psi:
-        #    data_given_psi1 = reads_given_psi(inc_samples1, exc_samples1, psi_space)
-        #    data_given_psi2 = reads_given_psi(inc_samples2, exc_samples2, psi_space)
-
+        matched_lsv, matched_info = majiq_filter.lsv_intersection( lsv_sample1, lsv_sample2 )
+        numbins= 20
         data_given_psi = []
-        for sample in xrange(data_given_psi1.shape[0]):
+        for lsv_idx, lsv in enumerate(matched_lsv):
+            data_given_psi1 = majiq_psi.reads_given_psi_lsv( lsv[0], psi_space )
+            data_given_psi2 = majiq_psi.reads_given_psi_lsv( lsv[1], psi_space )
+            data_psi = []
+            for psi in range(data_given_psi1.shape[0]) :
             #TODO Tensor product is calculated with scipy.stats.kron. Probably faster, have to make sure I am using it correctly.
-            data_given_psi.append(data_given_psi1[sample].reshape(-1, numbins) * data_given_psi2[sample].reshape(numbins, -1))
-            if self.debug: plot_matrix(data_given_psi[sample], "P(Data | PSI 1, PSI 2) Event %s (Inc1: %s, Exc1: %s Inc2: %s Exc2: %s)"%(sample, sum(inc_samples1[sample]), sum(exc_samples1[sample]), sum(inc_samples2[sample]), sum(exc_samples2[sample])), "datagpsi_sample%s"%sample, self.plotpath)
+                data_psi.append(data_given_psi1[psi].reshape(-1, numbins) * data_given_psi2[psi].reshape(numbins, -1))
+#                if self.debug: majiq_psi.plot_matrix(data_psi[sample], "P(Data | PSI 1, PSI 2) Event %s (Inc1: %s, Exc1: %s Inc2: %s Exc2: %s)"%(sample, sum(inc_samples1[sample]), sum(exc_samples1[sample]), sum(inc_samples2[sample]), sum(exc_samples2[sample])), "datagpsi_sample%s"%sample, self.plotpath)
+            data_given_psi.append(data_psi)
 
         #Finally, P(PSI_i, PSI_j | Data) equivalent to P(PSI_i, PSI_j)* P(Data | PSI_i, PSI_j) 
         self.logger.info("Calculate Posterior Delta Matrices...")
         posterior_matrix = []
-        for sample in xrange(len(data_given_psi)):
-            pm = (prior_matrix * data_given_psi[sample])
-            posterior_matrix.append(pm / sum(pm))
-            if self.debug: plot_matrix(posterior_matrix[-1], "Posterior Delta Event %s (Inc1: %s, Exc1: %s Inc2: %s Exc2: %s)"%(sample, sum(inc_samples1[sample]), sum(exc_samples1[sample]), sum(inc_samples2[sample]), sum(exc_samples2[sample])), "postdelta_sample%s"%sample, self.plotpath)
+        for lidx, lsv in enumerate(matched_lsv) :
+            lsv_psi_matrix = []
+            for psi in range(len(data_given_psi[lidx])) :
+                pm = (prior_matrix * data_given_psi[lidx][psi])
+                lsv_psi_matrix.append(pm / sum(pm))
+            posterior_matrix.append(lsv_psi_matrix)
+                #if self.debug: plot_matrix(posterior_matrix[-1], "Posterior Delta Event %s (Inc1: %s, Exc1: %s Inc2: %s Exc2: %s)"%(sample, sum(inc_samples1[sample]), sum(exc_samples1[sample]), sum(inc_samples2[sample]), sum(exc_samples2[sample])), "postdelta_sample%s"%sample, self.plotpath)
 
         pickle_path = "%s%s_%s_deltamatrix.pickle"%(output, self.names[0], self.names[1])
-        pickle.dump(posterior_matrix, open(pickle_path, 'w'))
+        pickle.dump([posterior_matrix,matched_info], open(pickle_path, 'w'))
         self.logger.info("Done!")
-        return posterior_matrix, event_names
-
-
-
-
-
-
+        return posterior_matrix, matched_info
+#        return posterior_matrix, event_names
 
 
     def pairdelta(self, file1, file2, output):
@@ -408,7 +399,7 @@ class DeltaPair(BasicPipeline):
         #jefferies = array([dircalc.pdf([x, 1-x], [0.5, 0.5]) for x in psi_space])
         jefferies = array(jefferies)
         jefferies /= sum(jefferies)
-        plot_matrix(jefferies, "Jefferies Matrix", "jefferies_matrix", self.plotpath)
+        majiq_psi.plot_matrix(jefferies, "Jefferies Matrix", "jefferies_matrix", self.plotpath)
         if self.synthprior:
             #Use a synthetic matrix to generate the values
             prior_matrix = [] 
@@ -426,7 +417,7 @@ class DeltaPair(BasicPipeline):
             prior_matrix = array(prior_matrix)
             prior_matrix /= sum(prior_matrix) #renormalize so it sums 1
             self._get_delta_info(newdist, norm_space)
-            plot_matrix(prior_matrix, "Prior Matrix (before Jefferies)", "prior_matrix_no_jefferies", self.plotpath)
+            majiq_psi.plot_matrix(prior_matrix, "Prior Matrix (before Jefferies)", "prior_matrix_no_jefferies", self.plotpath)
 
         elif not self.jefferiesprior:
             #Using the empirical data to get the prior matrix
@@ -459,7 +450,7 @@ class DeltaPair(BasicPipeline):
         #some info for later analysis
         pickle.dump(event_names, open("%s%s_%s_eventnames.pickle"%(output, self.names[0], self.names[1]), 'w')) 
         if not self.jefferiesprior:
-            plot_matrix(prior_matrix, "Prior Matrix (before Jefferies)", "prior_matrix_no_jefferies", self.plotpath)
+            majiq_psi.plot_matrix(prior_matrix, "Prior Matrix (before Jefferies)", "prior_matrix_no_jefferies", self.plotpath)
 
         #Calculate prior matrix
         self.logger.info("Adding a Jefferies prior to prior (alpha=%s)..."%(self.alpha))
@@ -471,7 +462,7 @@ class DeltaPair(BasicPipeline):
             prior_matrix *= jefferies 
 
         prior_matrix /= sum(prior_matrix) #renormalize so it sums 1
-        plot_matrix(prior_matrix, "Prior Matrix", "prior_matrix", self.plotpath)
+        majiq_psi.plot_matrix(prior_matrix, "Prior Matrix", "prior_matrix", self.plotpath)
         self.logger.info("Saving prior matrix for %s..."%(self.names))
         pickle.dump(prior_matrix, open("%s%s_%s_priormatrix.pickle"%(output, self.names[0], self.names[1]), 'w'))
         self.logger.info("Bootstrapping for all samples...")
@@ -494,7 +485,7 @@ class DeltaPair(BasicPipeline):
         for sample in xrange(data_given_psi1.shape[0]):
             #TODO Tensor product is calculated with scipy.stats.kron. Probably faster, have to make sure I am using it correctly.
             data_given_psi.append(data_given_psi1[sample].reshape(-1, numbins) * data_given_psi2[sample].reshape(numbins, -1))
-            if self.debug: plot_matrix(data_given_psi[sample], "P(Data | PSI 1, PSI 2) Event %s (Inc1: %s, Exc1: %s Inc2: %s Exc2: %s)"%(sample, sum(inc_samples1[sample]), sum(exc_samples1[sample]), sum(inc_samples2[sample]), sum(exc_samples2[sample])), "datagpsi_sample%s"%sample, self.plotpath)
+            if self.debug: majiq_psi.plot_matrix(data_given_psi[sample], "P(Data | PSI 1, PSI 2) Event %s (Inc1: %s, Exc1: %s Inc2: %s Exc2: %s)"%(sample, sum(inc_samples1[sample]), sum(exc_samples1[sample]), sum(inc_samples2[sample]), sum(exc_samples2[sample])), "datagpsi_sample%s"%sample, self.plotpath)
 
         #Finally, P(PSI_i, PSI_j | Data) equivalent to P(PSI_i, PSI_j)* P(Data | PSI_i, PSI_j) 
         self.logger.info("Calculate Posterior Delta Matrices...")
@@ -502,7 +493,7 @@ class DeltaPair(BasicPipeline):
         for sample in xrange(len(data_given_psi)):
             pm = (prior_matrix * data_given_psi[sample])
             posterior_matrix.append(pm / sum(pm))
-            if self.debug: plot_matrix(posterior_matrix[-1], "Posterior Delta Event %s (Inc1: %s, Exc1: %s Inc2: %s Exc2: %s)"%(sample, sum(inc_samples1[sample]), sum(exc_samples1[sample]), sum(inc_samples2[sample]), sum(exc_samples2[sample])), "postdelta_sample%s"%sample, self.plotpath)
+            if self.debug: majiq_psi.plot_matrix(posterior_matrix[-1], "Posterior Delta Event %s (Inc1: %s, Exc1: %s Inc2: %s Exc2: %s)"%(sample, sum(inc_samples1[sample]), sum(exc_samples1[sample]), sum(inc_samples2[sample]), sum(exc_samples2[sample])), "postdelta_sample%s"%sample, self.plotpath)
 
         pickle_path = "%s%s_%s_deltamatrix.pickle"%(output, self.names[0], self.names[1])
         pickle.dump(posterior_matrix, open(pickle_path, 'w'))

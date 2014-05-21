@@ -70,6 +70,28 @@ def lsv_quantifiable ( list_lsv_tuple , minnonzero, min_reads, logger=False):
 #    filter_message("After quantifiable_filter", minnonzero, logger, array(filtered))
     return filtered, filtered_info
 
+def lsv_intersection( lsv_list1, lsv_list2 ):
+
+    lsv_match = [[],[]]
+    match_info = [[],[]]
+
+    ids1 = set([xx[1] for xx in lsv_list1[1]])
+    ids2 = set([xx[1] for xx in lsv_list2[1]])
+    matched_names = ids1.intersection(ids2)
+
+    for ii in matched_names:
+        for idx, nm in enumerate(lsv_list1[1]):
+            if nm[1] == ii:
+                lsv_match[0].append(lsv_list1[0][idx])
+                match_info.append(lsv_list1[1][idx])
+                break
+        for idx, nm in enumerate(lsv_list2[1]):
+            if nm[1] == ii:
+                lsv_match[1].append(lsv_list2[0][idx])
+#                match_info.append(lsv_list2[1][idx])
+                break
+
+    return lsv_match, match_info
 
 def discardhigh(max0=0, orfilter=True, logger=False, *junc):
     
