@@ -293,13 +293,7 @@ def load_junctions(filename1, filename2, args, fromlsv=False):
     fit_func2 = polyfitnb.fit_nb(const2[0], "%s_nbfit" % args.output, args.plotpath, nbdisp=args.dispersion, logger=None, discardb=True, bval=True)
 
     if fromlsv:
-<<<<<<< HEAD
         replica1, replica2, gc1, gc2 = junction_sample.check_junctions_in_replicates(lsv_junc1, lsv_junc2, discard_empty_junctions=True)
-||||||| merged common ancestors
-        replica1, replica2 = junction_sample.check_junctions_in_replicates(lsv_junc1, lsv_junc2, discard_empty_junctions=True)
-=======
-        replica1, replica2 = check_junctions_in_replicates(lsv_junc1, lsv_junc2, discard_empty_junctions=True)
->>>>>>> 2cf61a9e2a922be6e2cc20ed5c64a78ce656d4b0
     else:
         replica1, replica2 = discard_empty_junctions(const1, const2)
 

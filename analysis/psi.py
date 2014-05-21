@@ -12,6 +12,11 @@ from scipy.stats import pearsonr, binom_test
 from numpy.random import dirichlet
 from numpy import rollaxis
 from matplotlib import rcParams
+
+import analysis.filter as majiq_filter
+import analysis.adjustdelta as majiq_delta
+import analysis.sample as majiq_sample
+
 """
 Calculate and manipulate PSI and Delta PSI values
 """
@@ -19,6 +24,26 @@ BSIZE = 0.025 #TODO To parameters
 BINS = arange(0, 1, BSIZE) # The bins for PSI values. With a BSIZE of 0.025, we have 40 BINS
 BINS_CENTER = arange(0+BSIZE/2, 1, BSIZE) #The center of the previous BINS. This is used to calculate the mean value of each bin.
 
+
+def plot_matrix(matrix, my_title, plotname, plotpath):
+    clf()
+    ax = subplot(1,1,1)
+    title(my_title)
+    imshow(matrix)
+    xlabel(u"PSI i")
+    ylabel(u"PSI j")
+    ax.set_xticklabels([0, 0, 0.25, 0.5, 0.75, 1])
+    ax.set_yticklabels([0, 0, 0.25, 0.5, 0.75, 1])
+
+    _save_or_show(plotpath, plotname=plotname)
+
+def _save_or_show(plotpath, plotname=None):
+    """Generic function that either shows in a popup or saves the figure, depending if the plotpath flag"""
+    if plotpath:
+        savefig("%s%s.png"%(plotpath, plotname), bbox_inches='tight') 
+        clf()
+    else:
+        show()
 
 
 def median_psi(junctions, discardzeros=True):
@@ -51,8 +76,6 @@ def empirical_delta_psi( lsv_list1, lsv_list2, logger=None):
             if isnan(val): val = 0.5
             psi2[ii] = val
 
-        print "LLLL",psi1
-        print "LLLL@",psi2
         sys.stdout.flush()
 
         delta_psi.append( psi1 - psi2 )
@@ -64,6 +87,20 @@ def simple_psi(inc, exc):
     psi = inc/(exc+inc)
     psi[isnan(psi)] = 0.5 #if NaN, is because exc+inc = 0. If we know nothing, then we don't know if its 0 (exclusion) or 1 (inclusion)
     return psi 
+
+def reads_given_psi_lsv(lsv_junc, psi_space):
+    #P(vector_i | PSI_i)
+    "We do a simple binomial test to evaluate how probable is the data given a PSI range"
+    ret = []
+    lsv = lsv_junc.sum(axis=1)
+    for idx in range(lsv.shape[0]):
+        event = []
+        for psi_val in psi_space:
+            event.append(binom_test(lsv[idx], lsv.sum(), p=psi_val))
+
+        ret.append(array(event) / sum(event))
+        print ret
+    return array(ret).reshape(-1, len(psi_space)) 
 
 def reads_given_psi(inc_samples, exc_samples, psi_space):
     #P(vector_i | PSI_i)
@@ -222,7 +259,7 @@ def calc_dirichlet(alpha, n, samples_events, debug=False, psiparam=False):
     return psi_matrix
 
 
-def gen_prior_matrix( pip ):
+def gen_prior_matrix( pip, lsv_exp1, lsv_exp2, output ):
 
     #Start prior matrix
     pip.logger.info("Calculating prior matrix...")
@@ -232,7 +269,7 @@ def gen_prior_matrix( pip ):
     dircalc = DirichletCalc()
     #Adjust prior matrix with Jefferies prior        
     jefferies = []
-    psi_space = linspace(0, 1-pip.binsize, num=numbins) + pp.binsize/2
+    psi_space = linspace(0, 1-pip.binsize, num=numbins) + pip.binsize/2
     for i in psi_space:
         jefferies.append([])
         for j in psi_space:
@@ -265,61 +302,63 @@ def gen_prior_matrix( pip ):
         #Using the empirical data to get the prior matrix
         pip.logger.info('Filtering to obtain "best set"...')
 
-        filtered_lsv1 = filter.lsv_quantifiable(lsv_exp1, minnonzero=5, min_reads=20, logger=pip.logger)
-        filtered_lsv2 = filter.lsv_quantifiable(lsv_exp2, minnonzero=5, min_reads=20, logger=pip.logger)
+        filtered_lsv1 = majiq_filter.lsv_quantifiable(lsv_exp1, minnonzero=5, min_reads=20, logger=pip.logger)
+        filtered_lsv2 = majiq_filter.lsv_quantifiable(lsv_exp2, minnonzero=5, min_reads=20, logger=pip.logger)
 
-    
-        ids1 = set(filtered_lsv1[1])
-        ids2 = set(filtered_lsv2[1])
+
+#        print "FILTER1",filtered_lsv1[1]
+#        print "FILTER2",filtered_lsv2[1]
+
+        ids1 = set([xx[1] for xx in filtered_lsv1[1]])
+        ids2 = set([xx[1] for xx in filtered_lsv2[1]])
         matched_names = ids1.intersection(ids2)
-    
         best_set_mean1 = [[],[]]
         best_set_mean2 = [[],[]]
     
         for ii in matched_names:
             for idx, nm in enumerate(filtered_lsv1[1]):
-                if nm == ii:
-                    best_set_mean1[0].append(mean_junction(filtered_lsv1[0][idx]))
-                    best_set_mean1[1].append(mean_junction(filtered_lsv1[1][idx]))
+                if nm[1] == ii:
+                    best_set_mean1[0].append(majiq_sample.mean_junction(filtered_lsv1[0][idx]))
+                    best_set_mean1[1].append(filtered_lsv1[1][idx])
                     break
             for idx, nm in enumerate(filtered_lsv2[1]):
-                if nm == ii:
-                    best_set_mean2[0].append(mean_junction(filtered_lsv1[0][idx]))
-                    best_set_mean2[1].append(mean_junction(filtered_lsv1[1][idx]))
+                if nm[1] == ii:
+                    best_set_mean2[0].append(majiq_sample.mean_junction(filtered_lsv2[0][idx]))
+                    best_set_mean2[1].append(filtered_lsv2[1][idx])
                     break
 
         pip.logger.info("'Best set' is %s events (out of %s)"%(len(best_set_mean1), len(lsv_exp1)))
-
-        best_delta_psi = empirical_delta_psi(best_set_mean1, best_set_mean2)
+        best_delta_psi = empirical_delta_psi(best_set_mean1[0], best_set_mean2[0])
+        best_delta_psi = np.concatenate(best_delta_psi)
 
         pip.logger.info("Parametrizing 'best set'...")
-        mixture_pdf = adjustdelta(best_delta_psi, output, plotpath=pip.plotpath, title=" ".join(pip.names), numiter=pip.iter, breakiter=pip.breakiter, V=pip.V, logger=pip.logger)
+        mixture_pdf = majiq_delta.adjustdelta(best_delta_psi, output, plotpath=pip.plotpath, title=" ".join(pip.names), numiter=pip.iter, breakiter=pip.breakiter, V=pip.V, logger=pip.logger)
 
         pickle.dump(mixture_pdf, open("%s%s_%s_bestset.pickle"%(output, pip.names[0], pip.names[1]), 'w'))
-    
+
         prior_matrix = []
         for i in xrange(numbins):
             prior_matrix.extend(mixture_pdf[numbins-i:(numbins*2)-i])
         prior_matrix = array(prior_matrix).reshape(numbins, -1)
 
         #some info for later analysis
-        pickle.dump(event_names, open("%s%s_%s_eventnames.pickle"%(output, self.names[0], self.names[1]), 'w')) 
-        if not self.jefferiesprior:
-            plot_matrix(prior_matrix, "Prior Matrix (before Jefferies)", "prior_matrix_no_jefferies", self.plotpath)
+#        pickle.dump(event_names, open("%s%s_%s_eventnames.pickle"%(output, self.names[0], self.names[1]), 'w')) 
+        if not pip.jefferiesprior:
+            plot_matrix(prior_matrix, "Prior Matrix (before Jefferies)", "prior_matrix_no_jefferies", pip.plotpath)
 
         #Calculate prior matrix
-        self.logger.info("Adding a Jefferies prior to prior (alpha=%s)..."%(self.alpha))
+        pip.logger.info("Adding a Jefferies prior to prior (alpha=%s)..."%(pip.alpha))
         #Normalize prior with jefferies
-        if self.jefferiesprior:
-            self.logger.info("Using the Uniform distribution + Jefferies...")
-            prior_matrix = jefferies + (self.prioruniform/numbins)
+        if pip.jefferiesprior:
+            pip.logger.info("Using the Uniform distribution + Jefferies...")
+            prior_matrix = jefferies + (pip.prioruniform/numbins)
         else: 
             prior_matrix *= jefferies 
 
         prior_matrix /= sum(prior_matrix) #renormalize so it sums 1
-        plot_matrix(prior_matrix, "Prior Matrix", "prior_matrix", self.plotpath)
-        self.logger.info("Saving prior matrix for %s..."%(self.names))
-        pickle.dump(prior_matrix, open("%s%s_%s_priormatrix.pickle"%(output, self.names[0], self.names[1]), 'w'))
+        plot_matrix(prior_matrix, "Prior Matrix", "prior_matrix", pip.plotpath)
+        pip.logger.info("Saving prior matrix for %s..."%(pip.names))
+        pickle.dump(prior_matrix, open("%s%s_%s_priormatrix.pickle"%(output, pip.names[0], pip.names[1]), 'w'))
     
     return psi_space, prior_matrix
 

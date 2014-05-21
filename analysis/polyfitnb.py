@@ -140,14 +140,8 @@ def fit_nb(junctions, outpath, plotpath, gcnorm=True, trim=True, minnonzero=5, p
     a, b = polyfit(mean_junc, std_junc, 1)
     if discardb:
         if logger: logger.debug("Discarded b from the polyfit")
-        if bval:
-            print "fitnb, b=1"
-            b = 1
-        else:
-            print "fitnb, b=0"
-            b = 0
-
-    print "GET_PVALS",b
+        if bval: b = 1
+        else: b = 0
     pvalues = get_pvalues(junctions, a, b, nbdisp)
     ecdf    = get_ecdf(pvalues)
     xlabel("P-value")
@@ -169,12 +163,8 @@ def fit_nb(junctions, outpath, plotpath, gcnorm=True, trim=True, minnonzero=5, p
     precision_values = [0.1, 0.01]
     if discardb:
         if logger: logger.debug("Discarded b from the polyfit")
-        if bval:
-            print "fitnb, b=1"
-            b = 1
-        else:
-            print "fitnb, b=0"
-            b = 0
+        if bval: b = 1
+        else: b = 0
 
     for i, precision in enumerate(precision_values):
         corrected_a, score, ecdf, pvalues = adjust_fit(corrected_a, b, junctions, precision, score, nbdisp, logger)

@@ -413,7 +413,7 @@ def gc_factor_calculation(exon_list, nb):
                 offst = np.zeros(len(quant_median),dtype=np.dtype('float'))
                 for idx,xx in enumerate(quant_median):
                     offst[idx] = float(bins[ii][idx]) / float(xx)
-                gc_factor[ii] = np.mean(offst)
+                gc_factor[ii] = 1/np.mean(offst)
 
             print 'MMMMM', gc_factor
             local_meanbins[exp_n] = mean_bins
