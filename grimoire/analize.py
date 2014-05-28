@@ -242,7 +242,8 @@ def LSV_detection( gene_list, chr ):
                             for lsvinlist in lsv_list[exp_idx]:
                                 if lsv_in.is_equivalent(lsvinlist): break
                             else:
-                                lsv_list[exp_idx].append( lsv_in )
+                                if lsv_in.get_junctions_list().shape[0] >= 2:
+                                    lsv_list[exp_idx].append( lsv_in )
 
     for name, ind_list in mglobals.tissue_repl.items() :
         for exp_idx in ind_list:

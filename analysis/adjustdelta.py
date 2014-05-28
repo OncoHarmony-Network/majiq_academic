@@ -1,11 +1,19 @@
+from matplotlib import use
+use('Agg')
 import sys
 import argparse
 import pickle
 from pylab import *
+import numpy as np
+import numpy.ma as ma
+
 
 from scipy.stats import beta
-
+from scipy.misc import logsumexp
 PSEUDO = 0.0001
+
+import pdb
+
 
 def likelihood(a_change, b_change, a_center, b_center, pi_change, pi_center, deltadata):
     first = True
@@ -39,12 +47,17 @@ def estimate_parameters(a_change, b_change, a_center, b_center, pi_change, pi_ce
     respons = []
     #calculate responsability functions, means and N (total responsability) 
     for value in deltadata:
-        change_prob = pi_change*beta.pdf(x=value, a=a_change, b=b_change)
-        center_prob = pi_center*beta.pdf(x=value, a=a_center, b=b_center)
+        change_prob = beta.pdf(x=value, a=a_change, b=b_change)
+        center_prob = beta.pdf(x=value, a=a_center, b=b_center)
+#        change_prob = pi_change*beta.pdf(x=value, a=a_change, b=b_change)
+#        center_prob = pi_center*beta.pdf(x=value, a=a_center, b=b_center)
+
         #total probability
         total_prob = change_prob + center_prob
-        respons_change = change_prob / total_prob
-        respons_center = center_prob / total_prob
+#        respons_change = change_prob / total_prob
+#        respons_center = center_prob / total_prob
+        respons_change = pi_change*change_prob / total_prob
+        respons_center = pi_center*center_prob / total_prob
         respons.append([respons_change, respons_center])
         N_change += respons_change
         N_center += respons_center
@@ -97,22 +110,23 @@ def plot_all(a_center, b_center, pi_center, label_center, a_change, b_change, pi
 
 
 def plot_densities(deltadata, ax = None, my_title="Empirical Data"):
-    deltadata = nan_to_num(deltadata) #substitute nan with zero, because histogram is a shitty function that cant take nans. Shame, shame on histogram. You should be a more manly function and take NaNs without crying, you are part of matplotlib.
-    title(my_title)
-    xlim(0, 1)
-    xlabel("Delta PSI")
-    ylabel("Density")
-    if len(deltadata[deltadata > 1]):
-        print "DELTADATA BAD", deltadata[deltadata > 1]
-        sys.exit(1)
+#    deltadata = nan_to_num(deltadata) #substitute nan with zero, because histogram is a shitty function that cant take nans. Shame, shame on histogram. You should be a more manly function and take NaNs without crying, you are part of matplotlib.
+    ax.bar(deltadata[:,0]-0.0125, deltadata[:,1], width = 0.025)
+    ax.set_title(my_title)
+    ax.set_xlim(-1, 1)
+    ax.set_xlabel("Delta PSI")
+    ax.set_ylabel("Density")
+#    if len(deltadata[deltadata > 1]):
+#        print "DELTADATA BAD", deltadata[deltadata > 1]
+#        sys.exit(1)
 
-    values, bins = histogram(deltadata, bins = 100, range=(-1, 1))
-    width = 0.7 * (bins[1] - bins[0])
-    center = (bins[:-1] + bins[1:]) / 2
-    bar(center, values, align='center', width=width)
-    if ax:
-        ax.set_xticks([0, 0.25, 0.5, 0.75, 1]) #for cosmetics because of the z-space
-        ax.set_xticklabels([-1, -0.5, 0, 0.5, 1]) #for cosmetics because of the z-space
+#    values, bins = histogram(deltadata, bins = 100, range=(-1, 1))
+    
+#    width = 0.7 * (bins[1] - bins[0])
+#    center = (bins[:-1] + bins[1:]) / 2
+#    if ax:
+#        ax.set_xticks([0, 0.25, 0.5, 0.75, 1]) #for cosmetics because of the z-space
+#        ax.set_xticklabels([-1, -0.5, 0, 0.5, 1]) #for cosmetics because of the z-space
 
 
 def truncate_betadists(beta_dists):
@@ -144,29 +158,37 @@ def calc_mixture_pdf(beta_dists):
 
     return x_pos, array(mixture_pdf)
 
-def plot_combpdf(beta_dists):
-    xlim(-1, 1)
-    title("Mixture PDF")
-    xlabel("PDF")
-    ylabel("Density")
+def plot_combpdf(beta_dists, fig):
+    fig.set_xlim(-1, 1)
+    fig.set_title("Mixture PDF")
+    fig.set_xlabel("PDF")
+    fig.set_ylabel("Density")
     x_pos, mixture_pdf = calc_mixture_pdf(beta_dists)
-    plot(linspace(-1, 1, num=len(mixture_pdf)), mixture_pdf / 2)
+    fig.plot(linspace(-1, 1, num=len(mixture_pdf)), mixture_pdf / 2)
 
-def plot_mixture(a, b, pi, label_name):
-    xlim(-1, 1)
+def plot_mixture(a, b, pi, label_name, fig):
+    fig.set_xlim(-1, 1)
     points, x_pos = calc_beta_pdf(a, b)
-    title("Beta mixtures")
-    xlabel("Delta PSI")
-    ylabel("Density")
-    plot(linspace(-1, 1, num=len(points)), points / 2, label="%s %s"%(label_name, label_beta(a, b, pi)))
-    legend()
+    fig.set_title("Beta mixtures")
+    fig.set_xlabel("Delta PSI")
+    fig.set_ylabel("Density")
+    fig.plot(linspace(-1, 1, num=len(points)), points / 2, label="%s %s"%(label_name, label_beta(a, b, pi)))
+   # legend()
 
-def plot_pi(pi_center, pi_change):
-    title("Pi distributions")
-    ylim(0, 1)
-    ylabel("Weight")
-    bar(arange(2), [pi_center, pi_change])
-    xticks(arange(2)+0.3, ["Center", "change"], rotation=50)
+def plot_pi(p_mixture, fig):
+    fig.set_title("Pi distributions")
+    fig.set_ylim(0, 1)
+    fig.set_ylabel("Weight")
+    fig.bar(arange(len(p_mixture)), p_mixture)
+    #fig.set_xticks(arange(2)+0.3, ["Center", "change"], rotation=50)
+    fig.set_xticks(arange(2)+0.3, ["Center", "change"])
+
+#def plot_pi(pi_center, pi_change):
+#    title("Pi distributions")
+#    ylim(0, 1)
+#    ylabel("Weight")
+#    bar(arange(2), [pi_center, pi_change])
+#    xticks(arange(2)+0.3, ["Center", "change"], rotation=50)
 
 def _save_or_show(plotpath, name):
     if plotpath:
@@ -240,29 +262,150 @@ def adjustdelta(deltapsi, output, plotpath=None, title=None, numiter=10, breakit
     #No need to convert back from the z space, it is a distribution
     return z_mixture_pdf 
 
+def calc_mixture_pdf_lsv(beta_param, pmix):
+    mixture_pdf = []
+    x_pos = arange(0, 1, 0.025) #TODO Should come from parameter
+    for x in x_pos:
+        local_sum = 0
+        for ii, bt in enumerate(beta_param):
+            local_sum += beta.pdf(x=x, a=bt[0], b=bt[1])* pmix[ii]
+        mixture_pdf.append(local_sum)    
+
+    return x_pos, array(mixture_pdf)
 
 def adjustdelta_lsv( deltapsi, output, plotpath=None, title=None, numiter=10, breakiter=0.01, V=0.1, logger=False ) :
-    #TODO make breakiter work
-    #transform to z-space
-    z_deltapsi = 0.5*(deltapsi+1)
 
-    #calculate init values
-    a_change = b_change = 1
-    a_center = b_center = 2000
+    p_mixture = np.array([0.05, 0.95])
+    beta_params = np.array([ [1 , 1], [2000, 2000]])
 
-    #pi_change = len(change_delta)/float(len(z_deltapsi))
-    #pi_center = len(center_delta)/float(len(z_deltapsi))
-    pi_change = 0.05
-    pi_center = 0.95
+    D = np.zeros(shape=(79,2),dtype=np.float)
+    xpos = arange(-1+(0.025/2), 1, 0.025)
 
-    if not pi_change or not pi_center: #if any of the 'pi' parameters are 0, one of the distributions will never be considered, so reboot all pi to equal.
-        pi_change = 0.05
-        pi_center = 0.95
+    for idx, ii in enumerate(xpos[:-1]):
+        D[idx,0] = round((ii +xpos[idx+1] )/2,5)
 
-    beta_dists = EM(a_change, b_change, a_center, b_center, pi_change, pi_center, z_deltapsi, numiter, plotpath, logger)
-    #truncate the beta distributions limiting them to the 0 to 1 space
-    beta_dists = truncate_betadists(beta_dists) 
-    x_pos, z_mixture_pdf = calc_mixture_pdf(beta_dists)
-    #No need to convert back from the z space, it is a distribution
+    for ppv in deltapsi:
+        for idx, ii in enumerate(xpos[:-1]):
+            if ppv >= ii and ppv<xpos[idx+1]:
+                D[idx,1] +=1
+                break
+
+    temp = open('./temp.pickle', 'wb')
+    pickle.dump((D,p_mixture, beta_params), temp)
+    temp.close()
+
+    beta_params, pmix = EMBetaMixture( D, p_mixture, beta_params, 100, logger=logger, plotpath=plotpath )
+
+    x_pos, z_mixture_pdf = calc_mixture_pdf_lsv(beta_params, pmix)
     return z_mixture_pdf 
+
+
+def plot_all_lsv( deltadata, beta_params, pmix, labels, figure_title):
+
+    f,sp = subplots(2,2)
+    subplots_adjust(hspace=.4)
+#    print deltadata
+    plot_densities(deltadata, sp[0,0])
+    cmb = []
+
+    for pl in xrange(beta_params.shape[0]):
+        plot_mixture( beta_params[pl,0], beta_params[pl,1], pmix[pl], labels[pl], sp[0,1])
+        cmb.append([beta_params[pl,0], beta_params[pl,1], pmix[pl]])
+
+    plot_combpdf(cmb, sp[1,0])
+    plot_pi(pmix, sp[1,1])
+    suptitle(figure_title, fontsize=24)
+
+
+
+def loglikelihood(D, beta_mix, logp_mix, logger=False ):
+    N = D.shape[0]
+    K = beta_mix.shape[0]
+    ''' logp_DgK = log P (D | model K ) for each data point without the weight '''
+    logp_DgK = np.zeros(shape=( N, K), dtype = np.float)
+    logp_DgK = ma.asarray(logp_DgK)
+    print "logp_mix=%s"%(logp_mix)
+    for k in xrange(K):
+        print "beta_mix[%d] = %s"%(k, beta_mix[k])
+        logp_DgK[:,k] = ma.log ( beta.pdf ( D[:,0], beta_mix[k,0], beta_mix[k,1] ) )
+
+    logp_D = logp_DgK + logp_mix * np.ones( shape=(N,1), dtype = np.float)
+
+    dm = np.sum(logp_DgK.mask,axis=1)
+    zrow = dm.astype(np.bool)
+    no_zrow = np.logical_not(zrow)
+
+    logp_Dsum = np.zeros(shape=(N), dtype= np.float)
+    logp_Dsum[no_zrow] = logsumexp( logp_D[no_zrow,:], axis=1 )
+    logp_Dsum[zrow] = logsumexp(logp_D[zrow,:-1],axis=1)
+
+    LL = np.sum(logp_Dsum * D[:, 1], axis=0)
+
+
+    return logp_D, logp_Dsum, LL, zrow
+
+
+
+def EMBetaMixture( D, p0_mix, beta0_mix, num_iter, min_ratio = 1e-5, logger= False, plotpath = None ):
+
+    D0 = D.copy()
+    N = D.shape[0]
+    K = beta0_mix.shape[0]
+
+    c = 1
+    a = -1
+    #transform the data to a z-space of 0-1
+    if min(D[:,0])<0.0 : D[:,0] = (D[:,0] +1) / ( c - a)
+    pmix = p0_mix
+    beta_mix = beta0_mix
+    logp_mix = log(pmix)
+
+    logp_D, logp_Dsum, LL, zrow = loglikelihood(D, beta_mix, logp_mix )
+    plot_all_lsv( D0, beta_mix, pmix,['Uniform','beta'] , 'iteration 0')
+    _save_or_show(plotpath, "iter_0")
+    if logger: logger.info("Initial Log_Likelihood %d \n"%(LL))
+
+    ones_1k = np.ones( shape=(1,K), dtype = np.float)
+    for mm in xrange( num_iter ):
+        new_beta_mix = beta_mix
+        new_pmix = pmix
+        
+
+        ''' E STEP: '''
+        p_KgD = np.exp( logp_D - (logp_Dsum * ones_1k.T).T )
+        p_KgD[zrow,K-1] = 0
+#        pdb.set_trace()
+
+        avgxPerK = np.sum( p_KgD * ( D[:,0]* ones_1k.T ).T * (D[:,1] * ones_1k.T).T, axis=0 ) / np.sum( p_KgD * ( D[:,1] * ones_1k.T ).T, axis=0)
+        avgx2PerK = np.sum( p_KgD * np.square( (D[:,0]* ones_1k.T ).T) * (D[:,1] * ones_1k.T).T,axis=0 ) / np.sum( p_KgD * ( D[:,1] * ones_1k.T ).T, axis=0)
+        varxPerK = avgx2PerK - (np.square(avgxPerK))
+
+        new_beta_mix = np.zeros( shape=beta0_mix.shape , dtype=np.float )
+        new_beta_mix[:,0] = avgxPerK * ( ((avgxPerK * (1-avgxPerK)) /varxPerK) - 1 )
+        new_beta_mix[:,1] = ( 1-avgxPerK ) * ( ((avgxPerK * (1-avgxPerK)) /varxPerK) - 1 )
+
+        new_pmix = np.sum( p_KgD * (D[:,1] * ones_1k.T).T, axis=0 )
+        new_pmix = new_pmix / np.sum(new_pmix, axis=0)
+
+        pmix = new_pmix
+        beta_mix = new_beta_mix
+        logp_mix = log(pmix)
+
+        LLold = LL
+        logp_D, logp_Dsum, LL, zrow = loglikelihood(D, beta_mix, logp_mix )
+        if logger: logger.info("EM Iteration %d:\t LL: %.3f\n"%(mm,LL))
+        plot_all_lsv( D0, beta_mix, pmix,['Uniform','beta'] , 'iteration %s'%str(mm+1) )
+        _save_or_show(plotpath, "iter_%05d"%str(mm+1))
+
+        if LL < LLold :
+            if logger: logger.info("Log_Likelihood DECREASE new %d old %d - Aborting ....\n"%(LL, LLold))
+            break
+
+        if np.exp(LL-LLold) < (1.0+min_ratio) :
+            if logger: logger.info("Ratio = %3. < 1+R(%.3f) - Aborting ... \n"%(LL-LLold, min_ratio) )
+            break
+
+
+        return beta_mix, np.array(pmix)
+
 

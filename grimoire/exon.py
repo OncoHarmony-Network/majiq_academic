@@ -99,9 +99,7 @@ class Exon:
 
     def add_new_read(self, start, end, readSeq, s3p_junc, s5p_junc):
 
-        if start > end : 
-            print " INCORRECT exon definition",start, end
-            exit()
+        assert start < end , " INCORRECT exon definition %s - %s "%(start, end)
         if start < self.start :
             self.start = start
         if end > self.end :
@@ -173,24 +171,15 @@ class Exon:
     def get_junctions(self, type):
         if type != '3prime' and type != '5prime':
             raise RuntimeError('Incorrect splicesite type %s'%type)
-        print "------------- EXON %s--------" %self.id
         jlist = set()
         for exon_list in (self.exonTx_list, self.exonRead_list):
-            print "exonlist", self.id, exon_list
             for ex in exon_list:
                 if type == '3prime': 
                     for junc in ex.p3_junc:
-#                        print "\t ",junc.start, junc.end
-                        print "\t KKK EXr1:",junc, junc.__hash__()
                         jlist.add(junc)
                 else : 
-                    print ex.p5_junc
                     for junc in ex.p5_junc:
-#                        print "\t ", junc.start, junc.end
-                        print "\t  KKK EXr2:",junc, junc.__hash__()
                         jlist.add(junc)
-#            print "TEMP",jlist
-        print "--- LAST",jlist
         return jlist
 
     def print_triplet_coord(self, fp):
@@ -326,7 +315,6 @@ class ExonTx(object):
 
     def split_exon ( self, intron_coords, gn):
 
-        print "BEFORE SPLIT ::", self.get_coordinates(), intron_coords
         res = []
         exb1 = False
         exb2 = False
@@ -349,7 +337,6 @@ class ExonTx(object):
                 junc = Junction(txex2.end,txex1.start, None, None,gn,annotated=True)
             txex2.p5_junc.append(junc)
             txex1.p3_junc.append(junc)
-            print "AFTER SPLIT ::",txex2.get_coordinates(),txex1.get_coordinates()
 
         for trn in self.transcript:
             if exb : trn.add_junction(junc)
@@ -360,9 +347,6 @@ class ExonTx(object):
 
     def collapse ( self, list_exontx, gne ):
     
-        print "####################################"
-        print "EXONS",list_exontx
-
         all_5prime = [ xx.end for xx in list_exontx]
         all_3prime = [ xx.start for xx in list_exontx]
         all_5prime = sorted(set(all_5prime))
@@ -371,7 +355,6 @@ class ExonTx(object):
 
         if max(all_3prime) > min(all_5prime) :
             ''' Intron retention '''
-            #print_list_exons(list_exontx, msg='in COLL pre')
             introns = []
             last_p5 = 0
             jdx = 0
@@ -389,7 +372,6 @@ class ExonTx(object):
                         last_p5 = p5
                         in_found = True
                         break
-            print "INTRONS",introns
 
 #            new_list = copy.copy(list_exontx)
 #            new_list = list_exontx[:]
@@ -448,21 +430,17 @@ def collapse_list_exons( listexons, gne ):
     end = 0
     for idx, ex in enumerate(listexons):
         if ex.overlaps(start, end):
-            print "[%s] OVERLAP"%(num_it)
             if start > ex.start : start = ex.start
             if end < ex.end: end = ex.end
             overlp.append(ex)
 #            continue
         else:
-            print "[%s] NO OVERLAP"%num_it, start, end, ex.get_coordinates()
             if len(overlp) > 0 : exlist.extend(ex.collapse(overlp,gne))
-            print_list_exons(listexons[idx+1:],"[%s] IN FOR LOOP"%num_it)
 
             overlp = [ex]
             start, end = ex.get_coordinates()
         if idx == len(listexons)-1 :
             exlist.extend(ex.collapse(overlp,gne))
-    print "[%s] END COLLAPSE_LIST"%num_it, exlist
     num_it -=1
     return exlist
 
@@ -534,7 +512,6 @@ def detect_exons(gene, junction_list, readRNA):
 
     junction_list.sort()
     #print "DETECT EXONS::",gene.get_id()
-    print "DETECT JUNC", junction_list
     for (coord,type, jj) in junction_list :
         #print "---NEW-------------------------------------------------------------"
         #print coord, type, jj, jj.coverage.sum() 
