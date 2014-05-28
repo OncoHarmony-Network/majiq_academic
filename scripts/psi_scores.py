@@ -1,6 +1,9 @@
+from collections import defaultdict
 import sys
 import os
 import pickle
+from scipy.stats import pearsonr
+import analysis.psi
 import argparse
 from math import log
 
@@ -13,7 +16,42 @@ Calculate PSI values
 """
 DEBUG = False
 TESTBREAK = 50
-BINS = linspace(0, 1, num=100)
+BINS = linspace(0, 1, num=40)
+
+
+
+def plot_PSIs1VsPSIs2(score1, score2, replica1_name, replica2_name, plotpath=None):
+    """Compute 2 plots: one for the variance, one for the mean"""
+    plotname="%sVs%s" % (replica1_name, replica2_name)
+
+    total_psis = float(len(score1))
+
+    f = figure()
+    ylabel(replica2_name)
+    xlabel(replica1_name)
+
+
+    title(plotname, fontsize=10)
+
+    better_in_method1 = np.sum(array(score1) < array(score2))
+    better_in_method2 = np.sum(array(score1) > array(score2))
+
+    max_value = max(max(score1), max(score2))
+
+    xlim(0, max_value)
+    ylim(0, max_value)
+    plot([0, max_value], [0, max_value])
+    plot(score1, score2, '.')
+
+    pear, pvalue = pearsonr(score1, score2)
+    r_squared = pear**2
+
+    # axarr[name_i].text(abs(max_value)*0.1, max_value-abs(max_value)*0.2, r'$R^2$: %.2f (p-value: %.2E)'%(r_squared, pvalue), fontsize=12, bbox={'facecolor':'yellow', 'alpha':0.3, 'pad':10})
+    text(abs(max_value)*0.1, max_value-abs(max_value)*0.2, '%.2f%%' % ((better_in_method1/total_psis)*100), fontsize=16)
+    text(abs(max_value)*0.8, max_value-abs(max_value)*0.8, '%.2f%%' % ((better_in_method2/total_psis)*100), fontsize=16)
+
+    _save_or_show(plotpath, plotname)
+
 
 def _save_or_show(plotpath, plotname=None):
     """Generic function that either shows in a popup or saves the figure, depending if the plotpath flag"""
@@ -62,54 +100,82 @@ def calculate_ead(psi_samples):
 
 def main():
     """
-    Script for initial testing of the MAJIQ algorithms for sampling and initial PSI values generator. 
+    Script for testing MAJIQ against other algorithms for PSIs.
 
-    TODO: Many functions from this script will be extracted for general usage in the pipeline. 
+    - Notice that the first file is for MAJIQ results, whereas the second file is reserved for others (initially, MISO).
+    - All LSVs 'ways' are equally considered. The order of each way within a LSV should be the same in MAJIQ and MISO.
     """
     parser = argparse.ArgumentParser() 
-    parser.add_argument('psivalue1', help='Path for psi pickles to evaluate')
-    parser.add_argument('psivalue2', help='Path for psi pickles to evaluate')
-    parser.add_argument('--name', default="")
+    parser.add_argument('psivalues_met1', help='Path for psi pickles to evaluate')
+    parser.add_argument('psivalues_met2', nargs='+',  help='Path for psi pickles to evaluate')
+    parser.add_argument('--name1', default='replica1')
+    parser.add_argument('--name2', default='replica2')
     parser.add_argument('--plotpsidist', default=False, help="Plot the PSI distributions for ALL junctions. Slow.")
     parser.add_argument('--plotpath', default=None, help='Path to save the plot to, if not provided will show on a matplotlib popup window') 
     parser.add_argument('--output')
     args = parser.parse_args()
 
-    psivalue1 = pickle.load(open(args.psivalue1))
-    psivalue2 = pickle.load(open(args.psivalue2))
-    
-    #add together the inclusion values
-    inclusion1 = psivalue1[:, 0] #Inclusion values 
-    inclusion2 = psivalue2[:, 0] #Inclusion values 
-    """
-    print "\nAnalysis of %s\n------------------------------------------------------------"%val
-    print "Number of junctions:", psi_scores.shape[0]         
-    print "Number of Experiments:", psi_scores.shape[1] 
-    print "Number of BINS:", psi_scores.shape[2]
-    print
-    """
-    if args.plotpsidist:
-        for i in range(psi_scores.shape[0]):
-            print "%s..."%i,
-            sys.stdout.flush()
-            subplot(2,1,1)
-            xlim(-0.1,1.1)
-            plot(BINS[:-1], psi_scores[i, 0])
-            subplot(2,1,2)
-            xlim(-0.1,1.1)
-            plot(BINS[:-1], psi_scores[i, 1])
-            _save_or_show(args.plotpath, "psi_%s"%(i))
-    """
-    dkl_junctions = calculate_dkl(inclusion1, inclusion2)
-    mean_dkl = mean(dkl_junctions)
-    var_dkl = var(dkl_junctions)
-    print "DKL: Mean: %.5f Var: %.6f Acum: %.3f"%(mean_dkl, var_dkl, sum(dkl_junctions))
-    """
-    
-    l1_junctions = calculate_l1(inclusion1, inclusion2)
-    pickle.dump(l1_junctions, open(args.output, 'w'))
-    print "L1: Mean: %.5f Var: %.6f Acum: %.3f"%(mean(l1_junctions), var(l1_junctions), sum(l1_junctions))
+    # For debugging, method1 is MAJIQ, method2 is MISO
+    psivalues = pickle.load(open(args.psivalues_met1))
+    psi_values_lsv1 = psivalues[0][0]
+    psi_values_lsv2 = psivalues[0][1]
 
+    # MAJIQ psi scores
+    psi_list1 = []
+    psi_list2 = []
+
+    majiq_psi_names = defaultdict()
+
+    for i, psis_lsv in enumerate(psi_values_lsv1):
+        if len(psis_lsv) < 2 or len(psi_values_lsv2[i]) < 2:
+            continue # TODO: check that skipping is not necessary. LSVs with only 1 PSI are wrong..
+        majiq_psi_names[psivalues[1][i][1]] = i
+
+    #TODO: Needs to be tested
+    miso_psis_list = []
+    miso_psis_dict = defaultdict()
+
+    debug_dict1 = {}
+    debug_dict2 = {}
+    for miso_file in args.psivalues_met2:
+        miso_psis = []
+        with open(miso_file, 'r') as miso_res:
+            for miso_line in miso_res:
+                if miso_line.startswith("event"): continue
+                miso_fields = miso_line.split('\t')
+                if miso_fields[0] not in majiq_psi_names:
+                    continue
+                miso_psis_dict[miso_fields[0]] = miso_fields[1]
+
+        for psi_name in sorted(majiq_psi_names.keys()):
+            try:
+                miso_psis_values = [float(miso_psi) for miso_psi in miso_psis_dict[psi_name].split(",")]
+                if len(miso_psis_values) == 1:
+                    miso_psis_values.append(1.0 - miso_psis_values[0])
+                debug_dict1[psi_name] = len(miso_psis_values)
+                miso_psis.extend(miso_psis_values)
+
+            except KeyError, e:
+                # print "LSV %s is in MAJIS but not in MISO!" % e
+                del majiq_psi_names[psi_name]
+                continue
+        miso_psis_list.append(miso_psis)
+
+    for psi_name in sorted(majiq_psi_names.keys()):
+        debug_dict2[psi_name] = len(psi_values_lsv1[majiq_psi_names[psi_name]])
+        for j, psi_lsv in enumerate(psi_values_lsv1[majiq_psi_names[psi_name]]):
+            psi_list1.append(sum(psi_lsv*analysis.psi.BINS_CENTER))
+            psi_list2.append(sum(psi_values_lsv2[majiq_psi_names[psi_name]][j]*analysis.psi.BINS_CENTER))
+
+    for k in sorted(debug_dict1):
+        if debug_dict2[k] - debug_dict1[k]:
+            print "Num junctions for LSV %s: MAJIQ - %d MISO: %d" % (k, debug_dict2[k], debug_dict1[k])
+            print "MAJIQ LSV and juncs:"
+            print "\t", psivalues[1][majiq_psi_names[k]]
+            print "\t", psivalues[0][0][majiq_psi_names[k]]
+
+
+    plot_PSIs1VsPSIs2(abs(np.array(psi_list1) - np.array(psi_list2)), abs(np.array(miso_psis_list[0]) - np.array(miso_psis_list[1])), args.name1, args.name2)
 
 
 if __name__ == '__main__':

@@ -1,0 +1,45 @@
+{% extends "base_template.html" %}
+{% block title %}MAJIQ LSV &Psi; Summary{% endblock %}
+{% block css %}
+    {# Evaluate if we should divide different css in files #}
+
+{% endblock %}
+
+{% block js %}
+    <script src="static/js/jquery-1.10.2.js" type="text/javascript"></script>
+
+    <script src="static/js/splice.graph.js" type="text/javascript" language="javascript" ></script>
+    <script type="text/javascript" language="javascript" src="http://d3js.org/d3.v3.min.js" ></script>
+    <script src="static/js/jquery.tablesorter.js" type="text/javascript"></script>
+    <script src="static/js/jquery.tablesorter.pager.js" type="text/javascript"></script>
+    <script src="static/js/jquery.mousewheel.js" type="text/javascript"></script>
+    <script src="static/js/application.js" type="text/javascript"></script>
+
+
+
+{% endblock %}
+
+{% block content %}
+    <div class="events-summary">
+        <h1>LSV &psi; Single experiment</h1>
+        <table id="event_table" class="tablesorter">
+            <tbody>
+            {% for lsv_signature in lsvList  -%}
+            <tr>
+                <td>{{ loop.index }}</td>
+                <td>
+                    <a class="lsv_type" id="{{ lsv_signature }}" download="{{ lsv_signature }}.png" href="#">{{ lsv_signature }}</a>
+                    <canvas class="lsvLegend" width="300px" height="150px" data-lsv-string="{{ lsv_signature }}" >
+                        This browser or document mode doesn't support canvas
+                    </canvas>
+                </td>
+
+            </tr>
+            {%- endfor %}
+            </tbody>
+        </table>
+
+    </div>
+
+{% endblock %}
+

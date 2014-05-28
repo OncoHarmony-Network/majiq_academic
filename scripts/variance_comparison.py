@@ -226,7 +226,6 @@ def compare_methods(m, k, replica1, replica2, rep1_name, rep2_name, fit_func1, f
 
         plot_method1Vsmethod2(score_method1, score_method2, method1_name,  method2_name, rep1_name, rep2_name, plotpath)
 
-
     else:
         mean_method1_rep1, var_method1_rep1, samples_not_used = junction_sample.sample_from_junctions(replica1, m, k, fit_func=fit_func1, poisson=method1_name=='Poisson', **methods[method1_name])
         mean_method1_rep2, var_method1_rep2, samples_not_used = junction_sample.sample_from_junctions(replica2, m, k, fit_func=fit_func2, poisson=method1_name=='Poisson', **methods[method1_name])
@@ -254,7 +253,6 @@ def compare_methods(m, k, replica1, replica2, rep1_name, rep2_name, fit_func1, f
     #             'var2'  : var_method2_rep2
     #         }
     #     }
-
     # plot_sigmaVsMu_met1_met2(mean_var_by_replicate, score_method1, score_method2, method1_name,  method2_name, plotpath)
 
 
@@ -289,46 +287,6 @@ def mark_stacks(junctions, fitfunc, pvalue_limit, dispersion, logger=False):
     if logger: logger.info("Out of %s values, %s marked as stacks with a p-value threshold of %s (%.3f%%)"%(junctions.size, numstacks, pvalue_limit, (float(numstacks)/junctions.size)*100))
 
     return filtered
-
-
-# #!/usr/bin/env python
-# # a bar plot with errorbars
-# import numpy as np
-# import matplotlib.pyplot as plt
-#
-# N = 5
-# menMeans = (20, 35, 30, 35, 27)
-# menStd =   (2, 3, 4, 1, 2)
-#
-# ind = np.arange(N)  # the x locations for the groups
-# width = 0.35       # the width of the bars
-#
-# fig, ax = plt.subplots()
-# rects1 = ax.bar(ind, menMeans, width, color='r', yerr=menStd)
-#
-# womenMeans = (25, 32, 34, 20, 25)
-# womenStd =   (3, 5, 2, 3, 3)
-# rects2 = ax.bar(ind+width, womenMeans, width, color='y', yerr=womenStd)
-#
-# # add some
-# ax.set_ylabel('Scores')
-# ax.set_title('Scores by group and gender')
-# ax.set_xticks(ind+width)
-# ax.set_xticklabels( ('G1', 'G2', 'G3', 'G4', 'G5') )
-#
-# ax.legend( (rects1[0], rects2[0]), ('Men', 'Women') )
-#
-# def autolabel(rects):
-#     # attach some text labels
-#     for rect in rects:
-#         height = rect.get_height()
-#         ax.text(rect.get_x()+rect.get_width()/2., 1.05*height, '%d'%int(height),
-#                 ha='center', va='bottom')
-#
-# autolabel(rects1)
-# autolabel(rects2)
-#
-# plt.show()
 
 
 def plot_stacks_method1Vsmethod2(stacks_data, score1_name, score2_name, replica1_name, replica2_name, total_junc, plotpath=None):
@@ -426,22 +384,21 @@ def main():
 
     scores_cached = {}
 
-    compare_methods(args.m, args.k, np.array(replica1), np.array(replica2), rep1_name, rep2_name, fit_func1, fit_func2, methods, 'Majiq_padding_10',      'Majiq', args.plotpath, scores_cached)
-    compare_methods(args.m, args.k, np.array(replica1), np.array(replica2), rep1_name, rep2_name, fit_func1, fit_func2, methods, 'Majiq_padding_10',      'Majiq_with_zeros', args.plotpath, scores_cached)
-    compare_methods(args.m, args.k, np.array(replica1), np.array(replica2), rep1_name, rep2_name, fit_func1, fit_func2, methods, 'Majiq_padding_5',      'Majiq', args.plotpath, scores_cached)
-    compare_methods(args.m, args.k, np.array(replica1), np.array(replica2), rep1_name, rep2_name, fit_func1, fit_func2, methods, 'Majiq_padding_5',      'Majiq_with_zeros', args.plotpath, scores_cached)
-    compare_methods(args.m, args.k, np.array(replica1), np.array(replica2), rep1_name, rep2_name, fit_func1, fit_func2, methods, 'Majiq_padding_10',      'Majiq_padding_5', args.plotpath, scores_cached)
-    compare_methods(args.m, args.k, np.array(replica1), np.array(replica2), rep1_name, rep2_name, fit_func1, fit_func2, methods, 'Poisson',       'Majiq', args.plotpath, scores_cached, coverage=True )
-    compare_methods(args.m, args.k, np.array(replica1), np.array(replica2), rep1_name, rep2_name, fit_func1, fit_func2, methods, 'Poisson',       'Majiq_padding_5', args.plotpath, scores_cached )
-    compare_methods(args.m, args.k, np.array(replica1), np.array(replica2), rep1_name, rep2_name, fit_func1, fit_func2, methods, 'Poisson',       'Majiq_padding_10', args.plotpath, scores_cached )
+    compare_methods(args.m, args.k, np.array(replica1), np.array(replica2), rep1_name, rep2_name, fit_func1, fit_func2, methods, 'Majiq_padding_10','Majiq', args.plotpath, scores_cached)
+    compare_methods(args.m, args.k, np.array(replica1), np.array(replica2), rep1_name, rep2_name, fit_func1, fit_func2, methods, 'Majiq_padding_10','Majiq_with_zeros', args.plotpath, scores_cached)
+    compare_methods(args.m, args.k, np.array(replica1), np.array(replica2), rep1_name, rep2_name, fit_func1, fit_func2, methods, 'Majiq_padding_5', 'Majiq', args.plotpath, scores_cached)
+    compare_methods(args.m, args.k, np.array(replica1), np.array(replica2), rep1_name, rep2_name, fit_func1, fit_func2, methods, 'Majiq_padding_5', 'Majiq_with_zeros', args.plotpath, scores_cached)
+    compare_methods(args.m, args.k, np.array(replica1), np.array(replica2), rep1_name, rep2_name, fit_func1, fit_func2, methods, 'Majiq_padding_10','Majiq_padding_5', args.plotpath, scores_cached)
+    compare_methods(args.m, args.k, np.array(replica1), np.array(replica2), rep1_name, rep2_name, fit_func1, fit_func2, methods, 'Poisson',         'Majiq', args.plotpath, scores_cached, coverage=True )
+    compare_methods(args.m, args.k, np.array(replica1), np.array(replica2), rep1_name, rep2_name, fit_func1, fit_func2, methods, 'Poisson',         'Majiq_padding_5', args.plotpath, scores_cached )
+    compare_methods(args.m, args.k, np.array(replica1), np.array(replica2), rep1_name, rep2_name, fit_func1, fit_func2, methods, 'Poisson',         'Majiq_padding_10', args.plotpath, scores_cached )
 
-    compare_methods(args.m, args.k, np.array(replica1), np.array(replica2), rep1_name, rep2_name, fit_func1, fit_func2, methods, 'Naive_Boots',   'Majiq', args.plotpath, scores_cached)
-    compare_methods(args.m, args.k, np.array(replica1), np.array(replica2), rep1_name, rep2_name, fit_func1, fit_func2, methods, 'Naive_Boots_no_zeros',  'Majiq', args.plotpath, scores_cached)
-    compare_methods(args.m, args.k, np.array(replica1), np.array(replica2), rep1_name, rep2_name, fit_func1, fit_func2, methods, 'Majiq_with_zeros',      'Majiq', args.plotpath, scores_cached)
+    compare_methods(args.m, args.k, np.array(replica1), np.array(replica2), rep1_name, rep2_name, fit_func1, fit_func2, methods, 'Naive_Boots',         'Majiq', args.plotpath, scores_cached)
+    compare_methods(args.m, args.k, np.array(replica1), np.array(replica2), rep1_name, rep2_name, fit_func1, fit_func2, methods, 'Naive_Boots_no_zeros','Majiq', args.plotpath, scores_cached)
+    compare_methods(args.m, args.k, np.array(replica1), np.array(replica2), rep1_name, rep2_name, fit_func1, fit_func2, methods, 'Majiq_with_zeros',    'Majiq', args.plotpath, scores_cached)
 
-    compare_methods(args.m, args.k, np.array(replica1), np.array(replica2), rep1_name, rep2_name, fit_func1, fit_func2, methods, 'Naive_Boots',   'Neg_Binomial', args.plotpath, scores_cached)
-    compare_methods(args.m, args.k, np.array(replica1), np.array(replica2), rep1_name, rep2_name, fit_func1, fit_func2, methods, 'Naive_Boots',   'Naive_Boots_trim_borders', args.plotpath, scores_cached)
-
+    compare_methods(args.m, args.k, np.array(replica1), np.array(replica2), rep1_name, rep2_name, fit_func1, fit_func2, methods, 'Naive_Boots',     'Neg_Binomial', args.plotpath, scores_cached)
+    compare_methods(args.m, args.k, np.array(replica1), np.array(replica2), rep1_name, rep2_name, fit_func1, fit_func2, methods, 'Naive_Boots',     'Naive_Boots_trim_borders', args.plotpath, scores_cached)
 
     compare_methods(args.m, args.k, np.array(replica1), np.array(replica2), rep1_name, rep2_name, fit_func1, fit_func2, methods, 'Majiq_gc_norm',      'Majiq', args.plotpath, scores_cached, rep1_gc=rep1_gc, rep2_gc=rep2_gc)
 

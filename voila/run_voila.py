@@ -1,6 +1,9 @@
 #!/usr/bin/python
+import json
 import os
-import utils.utils_voila as utils_voila
+
+import utils_voila
+
 
 __author__ = 'abarrera'
 
@@ -30,8 +33,12 @@ def _render_template(output_dir, output_html, majiq_output, type_summary, thresh
     @param majiq_output: event list from MAJIQ output used as input in Voila
     @param type_summary: defines summary template used
     """
-    from jinja2 import Environment, FileSystemLoader
+    from jinja2 import Environment, FileSystemLoader, escape
+    def to_json(value):
+        return escape(json.dumps(value, cls=utils_voila.PickleEncoder))
+
     env = Environment(loader=FileSystemLoader(EXEC_DIR + "templates/"))
+    env.filters.update({'to_json': to_json})
     sum_template = env.get_template(type_summary + "_summary_template.html")
 
     if not output_dir.endswith('/'):
@@ -55,19 +62,13 @@ def _render_template(output_dir, output_html, majiq_output, type_summary, thresh
                                                ))
 
     elif type_summary == 'lsv_single':
-        voila_output.write(sum_template.render(eventList=majiq_output['event_list'][:1],
+        voila_output.write(sum_template.render(lsvList=majiq_output['event_list'],
                                                tableMarks=table_marks_set(len(majiq_output['event_list'])),
-                                               arrayBins=[majiq_output['event_list'][0].bins,
-                                                          majiq_output['event_list'][1].bins,
-                                                          majiq_output['event_list'][2].bins],
-                                               arrayQuartiles=[majiq_output['event_list'][0].quartiles,
-                                                               majiq_output['event_list'][1].quartiles,
-                                                               majiq_output['event_list'][2].quartiles],
-                                               arrayMeans=[majiq_output['event_list'][0].mean_psi,
-                                                           majiq_output['event_list'][1].mean_psi,
-                                                           majiq_output['event_list'][2].mean_psi],
-                                               arrayNames=['PSI1', 'PSI2', 'PSI3']
+                                               metadata=majiq_output['metadata']
                                                ))
+    elif type_summary == 'lsv_thumbnails':
+        voila_output.write(sum_template.render(lsvList=majiq_output))
+
     else:
         print "summary type not recognized %s." % type_summary
         import sys
@@ -88,6 +89,8 @@ def create_summary(majiq_bins_file, output_dir, meta_preprocess, meta_postproces
         majiq_output = utils_voila.get_delta_exp_data(majiq_bins_file, meta_postprocess, confidence, threshold)
     elif type_summary == 'lsv_single':
         majiq_output = utils_voila.get_lsv_single_exp_data(majiq_bins_file, meta_preprocess, confidence)
+    elif type_summary == 'lsv_thumbnails':
+        majiq_output = ['s|1e1.2|2e1.2', 's|1e1.2|2e1.1', 't|1e1.1|1e2.2', 't|1e1.1|1e2.1', 's|1e1.2|1e2.1', 's|1e1.1|2e1.1', 's|1e1.1|2e1.2', 't|1e1.1|1e1.2', 's|1e1.1|1e2.1', 's|1e1.1|1e1.2', 's|1e1.1|1e2.2', 's|2e1.1|2e2.1', 's|2e1.1|2e1.2', 't|1e1.1|2e1.1', 't|1e2.1|2e1.1', 's|2e1.1|3e1.1', 's|1e1.1|2e2.1', 't|1e1.2|1e2.1', 't|1e0|2e1.1|2e2.1', 's|1e1.1|1e2.1|1e3.1']
 
     _render_template(output_dir, output_html, majiq_output, type_summary, threshold)
     return
@@ -102,7 +105,7 @@ def main():
     parser.add_argument('--meta-pre', metavar='metadata_pre.majiq', dest='meta_preprocess', type=str, help='Metadata preprocess.')
     parser.add_argument('--event-names', metavar='event_names.majiq', dest='event_names', type=str, help='Event names.')
     parser.add_argument('--key-plots', metavar='keysplots.pickle', dest='keys_plots', type=str, help='Heatmap plots.')
-    parser.add_argument('-t', '--type', type=str, choices=['single', 'delta', 'lsv_single'], dest='type_summary', default='single', help='Type of summary generated.')
+    parser.add_argument('-t', '--type', type=str, choices=['single', 'delta', 'lsv_single', 'lsv_thumbnails'], dest='type_summary', default='single', help='Type of summary generated.')
     parser.add_argument('--threshold', type=float, dest='threshold', default=0.2, help='Probability threshold used to sum the accumulative probability of inclusion/exclusion.')
 
     # parser.add_argument('-c', '--confidence', metavar=0.95, dest='confidence', type=float,
@@ -115,3 +118,4 @@ def main():
 
 if __name__ == '__main__':
     main()
+

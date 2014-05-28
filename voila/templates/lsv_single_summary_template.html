@@ -7,21 +7,26 @@
 
 {% block js %}
     <script src="static/js/jquery-1.10.2.js" type="text/javascript"></script>
+
+    <script src="static/js/splice.graph.js" type="text/javascript" language="javascript" ></script>
+    <script type="text/javascript" language="javascript" src="http://d3js.org/d3.v3.min.js" ></script>
     <script src="static/js/jquery.tablesorter.js" type="text/javascript"></script>
     <script src="static/js/jquery.tablesorter.pager.js" type="text/javascript"></script>
     <script src="static/js/jquery.mousewheel.js" type="text/javascript"></script>
     <script src="static/js/application.js" type="text/javascript"></script>
+
+
 {% endblock %}
 
 {% block content %}
     <div class="events-summary">
         <h1>LSV &psi; Single experiment</h1>
-        <table id="event_table" class="tablesorter deltaTable">
+        <table id="event_table" class="tablesorter">
             <thead>
             <tr>
                 <th class="short-header">#</th>
                 <th class="short-header">Event ID</th>
-                <th class="medium-header">Type</th>
+                <th class="short-header">Type</th>
                 <th class="short-header"></th>
                 <th class="short-header">Coordinates</th>
             </tr>
@@ -38,104 +43,52 @@
             <tbody>
             {% for lsv in lsvList  -%}
             <tr>
-                <td>{{ lsv.number }}</td>
-                <td>{{ lsv.id }}</td>
-                <td>{{ lsv.name }}</td>
-                <td>s|1e1.1|1e1.2|1e1.3</td>
+                <td>{{ loop.index }}</td>
+                <td>{{ metadata[loop.index-1][1] }}</td>
                 <td>
-                    <img class="expandLsv" src="static/img/arrow_down.png" data-is-expanded=0 data-bins="{{ lsv.bins }}"/>
-                    <canvas class="lsvSingleCompactPercentiles" width="200px" height="50px" style="border: solid; border-width: 2pt; border-color: darkgrey;"
-                            data-psis="{{ lsv.psi_list }}">
+                    <p style="top:0;">{{ metadata[loop.index-1][2] }}</p>
+                    <canvas class="lsvLegend" width="300px" height="150px" data-lsv-string="{{ metadata[loop.index-1][2] }}">
                         This browser or document mode doesn't support canvas
                     </canvas>
-                    <canvas class="lsvSingleExtended hidden" width="1000px" height="500px" style="border: solid">
-                        This browser or document mode doesn't support canvas
-                    </canvas>
-                    <!--<canvas id="extendedDeltaPsi{{ lsv.number }}" class="extendedDeltaPsi hidden" width="419px"-->
-                            <!--height="400px" data-mean-psi="{{ lsv.mean_psi}}" data-bins="{{ lsv.bins }}"-->
-                            <!--data-threshold="{{ threshold }}">-->
-                        <!--This browser or document mode doesn't support canvas-->
-                    <!--</canvas>-->
                 </td>
-                <td>{{ lsv.coords }}</td>
+                <td id="data_td{{ loop.index }}">
+                    <img class="expandLsv" src="static/img/arrow_down.png" data-is-expanded=0/>
+                    <canvas class="lsvSingleCompactPercentiles" id="lsvSingleCompact{{ loop.index }}" width="100px" height="100px" style="border: solid; border-width: 2pt; border-color: darkgrey;" data-lsv="[{{ lsv|to_json }}]">
+                        This browser or document mode doesn't support canvas
+                    </canvas>
+                    <canvas class="lsvSingleExtendedBoxplot hidden" width="500px" height="500px"  data-lsv="{{ lsv|to_json }}">
+                        This browser or document mode doesn't support canvas
+                    </canvas>
+                    <!--<div class="lsvViolinPlot" id="svgViolin{{ loop.index }}" data-lsv="[{{ lsv|to_json }}]" width=300 height=200></div>-->
+
+                </td>
+                <td>{{ metadata[loop.index-1][0] }}</td>
 
             </tr>
             {%- endfor %}
             </tbody>
         </table>
 
+        <div class="pager">
+            <form>
+                <img src="static/img/icons/first.png" class="first"/>
+                <img src="static/img/icons/prev.png" class="prev"/>
+                <input type="text" class="pagedisplay"/>
+                <img src="static/img/icons/next.png" class="next"/>
+                <img src="static/img/icons/last.png" class="last"/>
+                <select class="pagesize" autocomplete="off">
+                    {% for mark in tableMarks -%}
+                    {% if loop.first %}
+                    <option selected="selected"  value="{{ mark }}">{{ mark }}</option>
+                    {% else %}
+                    <option value="{{ mark }}">{{ mark }}</option>
+                    {% endif %}
+                    {%- endfor %}
+                    <option value="{{ lsvList|length }}">All</option>
+                </select>
+            </form>
+        </div>
 
-        <!--<h2>Local Single Variant (LSV) &psi; example</h2>-->
-        <!--<canvas class="lseGraph" width="500px" height="500px" data-array-bins="{{ arrayBins }}"-->
-                <!--data-array-quartiles="{{ arrayQuartiles }}" data-array-means="{{ arrayMeans }}" data-array-names="{{ arrayNames }}">-->
-            <!--This browser or document mode doesn't support canvas-->
-        <!--</canvas>-->
-
-        <!--<h2>LSV &psi; Distribution Groups - Compact View</h2>-->
-        <!--<h3>Area width representing 1 - "the distance between 90 and 10 percentile"</h3>-->
-        <!--<h4>Centered</h4>-->
-        <!--<canvas class="lsvGroupsCompactPercentiles" width="200px" height="50px" style="border: solid; border-width: .5pt;">-->
-            <!--This browser or document mode doesn't support canvas-->
-        <!--</canvas>-->
-
-        <!--<h2>LSV &psi; Distribution Groups - Compact View</h2>-->
-        <!--<h3>Area width representing 1 - "the distance between 90 and 10 percentile"</h3>-->
-        <!--<h4>Aligned to the left</h4>-->
-        <!--<canvas class="lsvGroupsCompactPercentilesLeftAligned" width="200px" height="50px" style="border: solid; border-width: .5pt;">-->
-            <!--This browser or document mode doesn't support canvas-->
-        <!--</canvas>-->
-
-        <!--<h2>LSV &psi; Distribution Groups - Compact View</h2>-->
-        <!--<h3>Area width representing 1 - "the variance"</h3>-->
-        <!--<canvas class="lsvGroupsCompactVariance" width="200px" height="50px" style="border: solid; border-width: .5pt;">-->
-            <!--This browser or document mode doesn't support canvas-->
-        <!--</canvas>-->
-
-        <!--<h2>LSV &psi; Distribution Groups - Compact View</h2>-->
-        <!--<h3>Area hue/color intensity representing 1 - "the distance between 90 and 10 percentile"</h3>-->
-        <!--<canvas class="lsvGroupsCompactPercentilesHue" width="200px" height="50px" style="border: solid; border-width: .5pt;">-->
-            <!--This browser or document mode doesn't support canvas-->
-        <!--</canvas>-->
-
-
-        <!--&lt;!&ndash;BIGGER ONES&ndash;&gt;-->
-
-        <!--<h2>LSV &psi; Distribution Groups - Compact View (BIG)</h2>-->
-        <!--<h3>Area width representing 1 - "the distance between 90 and 10 percentile"</h3>-->
-        <!--<h4>Centered</h4>-->
-        <!--<canvas class="lsvGroupsCompactPercentiles" width="800px" height="200px" style="border: solid; border-width: .5pt;">-->
-            <!--This browser or document mode doesn't support canvas-->
-        <!--</canvas>-->
-
-        <!--<h2>LSV &psi; Distribution Groups - Compact View (BIG)</h2>-->
-        <!--<h3>Area width representing 1 - "the distance between 90 and 10 percentile"</h3>-->
-        <!--<h4>Aligned to the left</h4>-->
-        <!--<canvas class="lsvGroupsCompactPercentilesLeftAligned" width="800px" height="200px" style="border: solid; border-width: .5pt;">-->
-            <!--This browser or document mode doesn't support canvas-->
-        <!--</canvas>-->
-
-        <!--<h2>LSV &psi; Distribution Groups - Compact View (BIG)</h2>-->
-        <!--<h3>Area width representing 1 - "the variance"</h3>-->
-        <!--<canvas class="lsvGroupsCompactVariance" width="800px" height="200px" style="border: solid; border-width: .5pt;">-->
-            <!--This browser or document mode doesn't support canvas-->
-        <!--</canvas>-->
-
-        <!--<h2>LSV &psi; Distribution Groups - Compact View (BIG)</h2>-->
-        <!--<h3>Area hue/color intensity representing 1 - "the distance between 90 and 10 percentile"</h3>-->
-        <!--<canvas class="lsvGroupsCompactPercentilesHue" width="800px" height="200px" style="border: solid; border-width: .5pt;">-->
-            <!--This browser or document mode doesn't support canvas-->
-        <!--</canvas>-->
-
-        <!--<h2>LSV &psi; Distribution Groups - Compact View (BIG)</h2>-->
-        <!--<h3>Area hue/color intensity representing 1 - "the variance"</h3>-->
-        <!--<canvas class="lsvGroupsCompactVarianceHue" width="800px" height="200px" style="border: solid; border-width: .5pt;">-->
-            <!--This browser or document mode doesn't support canvas-->
-        <!--</canvas>-->
-
-        <!--<h2>Local Single Variant (LSV) &psi; Distribution Groups - Extended View</h2>-->
-        <!--<canvas class="lsvGroups" width="1000px" height="500px" style="border: solid">-->
-            <!--This browser or document mode doesn't support canvas-->
-        <!--</canvas>-->
 
     </div>
 {% endblock %}
