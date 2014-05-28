@@ -25,7 +25,7 @@ class LSV(object):
         return self.coords
 
     def get_junctions_list(self):
-        return self.junction_list
+        return self.junctions
 
     def is_Ssource(self):
         return bool(self.type==SSOURCE)
@@ -45,31 +45,20 @@ class LSV(object):
         intron_ret = False
         for junc in jlist:
             if type == SSOURCE:
-                #print "MMM",ex_id, junc.donor.get_id()
-                if junc.donor.get_id() != ex_id : 
-                #    print "ERRORRR set_type SS:", ex_id, junc.donor.get_id(), junc
-                    intron_ret = True
-                    break
+                lsv_exon = junc.donor
+                assert lsv_exon.get_id() == ex_id , "junc_id %s is different than lsv id %s\n lsv_exon coords %s, ex_idx coords %s"%(junc.donor.get_id(), ex_id, lsv_exon.get_coordinates(),self.coords)
                 if not junc.acceptor is None: 
                     ex_set.add( junc.acceptor.get_id() )
-#                    continue
             else:
-                #print "MMM",ex_id, junc.acceptor.get_id()
-                if junc.acceptor.get_id() != ex_id : 
-                #    print "ERRORRR set_type ST:", ex_id, junc.acceptor.get_id(), junc
-                    intron_ret = True
-                    break
+                lsv_exon = junc.acceptor
+                assert lsv_exon.get_id() == ex_id , "junc_id %s is different than lsv id %s\n lsv_exon coords %s, ex_idx coords %s"%(junc.acceptor.get_id(), ex_id, lsv_exon.get_coordinates(),self.coords)
                 if not junc.donor is None: 
                     ex_set.add( junc.donor.get_id() )
-                   # continue
-        if intron_ret : return "intron ret"
-        #print type, spsite
         ex_list = sorted(list(ex_set))
         ext_type = "%s"%(self.type[0])
         type_set = set()
         for junc in jlist:
             if type == SSOURCE:
-                #print junc.start, junc.acceptor
                 if junc.acceptor is None: 
                     exs3 = ''
                     ex = '0'
@@ -86,16 +75,11 @@ class LSV(object):
                     s5 = sorted(list(set(junc.donor.ss_5p_list)))
                     ex1 = ex_list.index(junc.donor.get_id())+1
                     ex = '%s.%s'%(ex1,s5.index(junc.start)+1)
-                    
-                #print junc.end, spsite
-                #print junc.donor.get_id(), ex_list
-                #print junc.start, s5
                 type_set.add("|%se%s"%(spsite.index(junc.end)+1,ex))
-        
+
         for tt in sorted(list(type_set)):
             ext_type += tt
 
-        print "LSV::::::::::::::::::", ext_type 
         return ext_type
 
     def is_equivalent (self, variant):
@@ -160,31 +144,37 @@ def lsv_to_gff( list_lsv ):
         gene = '%s\tscript\tgene\t'%chrom
         if lsv.type==SSOURCE:
             if jlist[-1].acceptor is None: continue
-            gene += '%d\t%d\t'%(lsv.get_coordinates()[0],jlist[-1].acceptor.get_coordinates()[1])
+            gene += '%d\t%d\t'%(lsv_coord[0],jlist[-1].acceptor.get_coordinates()[1])
         else:
             if jlist[0].donor is None: continue
-            gene += '%d\t%d\t'%(jlist[0].donor.get_coordinates()[0],lsv.get_coordinates()[1])
+            gene += '%d\t%d\t'%(jlist[0].donor.get_coordinates()[0],lsv_coord[1])
 
         gene += '.\t%s\t.\tName=%s;Parent=%s;ID=%s'%(strand,lsv.id, lsv.id, lsv.id)
         trans.append(gene)  
 
         for jidx,junc in enumerate(jlist):
+
             mrna = '%s\tscript\tmRNA\t'%chrom
             mrna_id = '%s.%d'%(lsv.id,jidx)
-            ex1 = '%s\tscript\texon\t%d\t%d\t.\t%s\t.\tName=%s.lsv;Parent=%s;ID=%s.lsv'%(chrom, lsv_coord[0], lsv_coord[1], strand, mrna_id, mrna_id,mrna_id)
+            ex1 = '%s\tscript\texon\t'%chrom 
             ex2 = '%s\tscript\texon\t'%chrom
 
             if lsv.type == SSOURCE:
                 if junc.acceptor is None: break
                 excoord = junc.acceptor.get_coordinates()
-                mrna +='%d\t%d\t'%(lsv_coord[0],excoord[1])
-                ex2 += '%d\t%d\t'%(excoord[0],excoord[1])
+                variant = junc.get_coordinates()
+                mrna +='%d\t%d\t'%(lsv_coord[0], excoord[1])
+                ex1 += '%d\t%d\t'%(lsv_coord[0], variant[0])
+                ex2 += '%d\t%d\t'%(variant[1],excoord[1])
             else:
                 if junc.donor is None: break
-                excoord = junc.acceptor.get_coordinates()
-                mrna +='%d\t%d\t'%(junc.donor.get_coordinates()[0],lsv.get_coordinates()[1])
-                ex2 += '%d\t%d\t'%(excoord[0],excoord[1])
+                excoord = junc.donor.get_coordinates()
+                variant = junc.get_coordinates()
+                mrna +='%d\t%d\t'%(excoord[0], lsv_coord[1])
+                ex1 += '%d\t%d\t'%(variant[1], lsv_coord[1])
+                ex2 += '%d\t%d\t'%(excoord[0], variant[0])
             mrna += '.\t%s\t.\tName=%s;Parent=%s;ID=%s'%(strand,mrna_id,lsv.id,mrna_id)
+            ex1  += '.\t%s\t.\tName=%s.lsv;Parent=%s;ID=%s.lsv'%(strand, mrna_id, mrna_id,mrna_id)
             ex2  += '.\t%s\t.\tName=%s.ex;Parent=%s;ID=%s.ex'%(strand, mrna_id, mrna_id, mrna_id)
         
             trans.append(mrna)  
@@ -212,8 +202,6 @@ class LSV_IR ( object):
         self.exonlist = exon_list
         self.gene = gene
         gene.add_intron_retention(self)
-
-
 
 
 class Majiq_LSV(object):

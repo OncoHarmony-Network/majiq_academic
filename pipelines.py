@@ -165,7 +165,15 @@ class CalcPsi(BasicPipeline):
 #        filter_lsv = self.mark_stacks_lsv( lsv_junc[0], fitfunc)
         #FILTER_JUNCTIONS?
         self.logger.info('Filtering ...')
-        lsv_junc = majiq_filter.lsv_quantifiable( lsv_junc, self.minnonzero, self.minreads, self.logger )
+        num_lsv = len(lsv_junc[0])
+
+        ''' 
+            fon[0] = False deactivates num_reads >= 20
+            fon[1] = False deactivates npos >= 5
+        '''
+        fon = [False, False]
+        lsv_junc = majiq_filter.lsv_quantifiable( lsv_junc, self.minnonzero, self.minreads, self.logger , fon)
+        self.logger.info('%s/%s lsv remaining'%(len(lsv_junc[0]),num_lsv))
 
         self.logger.info("Bootstrapping samples...") 
         lsv_sample = []

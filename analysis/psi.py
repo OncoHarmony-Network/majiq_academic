@@ -67,17 +67,16 @@ def empirical_delta_psi( lsv_list1, lsv_list2, logger=None):
         psi1 = np.zeros(shape=len(lsv), dtype=np.dtype('float'))
         psi2 = np.zeros(shape=len(lsv), dtype=np.dtype('float'))
         for ii, rate in enumerate(lsv):
-            val = rate /  np.sum(lsv)
+            val = float(rate) /  float(np.sum(lsv))
             if isnan(val): val = 0.5
             psi1[ii] = val
         
         for ii, rate in enumerate(lsv_list2[idx]):
-            val = rate /  np.sum(lsv_list2[idx])
+            val = float(rate) /  float(np.sum(lsv_list2[idx]))
             if isnan(val): val = 0.5
             psi2[ii] = val
 
         sys.stdout.flush()
-
         delta_psi.append( psi1 - psi2 )
  #   if logger: logger.info("Calculating delta PSI for 'best set'...")
     return delta_psi 
@@ -327,12 +326,26 @@ def gen_prior_matrix( pip, lsv_exp1, lsv_exp2, output ):
                     best_set_mean2[1].append(filtered_lsv2[1][idx])
                     break
 
+
+
         pip.logger.info("'Best set' is %s events (out of %s)"%(len(best_set_mean1), len(lsv_exp1)))
         best_delta_psi = empirical_delta_psi(best_set_mean1[0], best_set_mean2[0])
+    #    __extract_cassette(best_delta_psi, best_set_mean1[1], best_set_mean1, best_set_mean2)
+
+
+#        best_dpsi = [[],[],[],[]]
+#        print best_delta_psi
+#        for idx, lsv in best_delta_psi:
+#            if len(lsv) >= 4 : continue
+#            for jidx, jj in lsv:
+#            #    if jidx >= len(best_dpsi): 
+#                best_dpsi[jidx].append(jj)
+            
+
         best_delta_psi = np.concatenate(best_delta_psi)
 
         pip.logger.info("Parametrizing 'best set'...")
-        mixture_pdf = majiq_delta.adjustdelta(best_delta_psi, output, plotpath=pip.plotpath, title=" ".join(pip.names), numiter=pip.iter, breakiter=pip.breakiter, V=pip.V, logger=pip.logger)
+        mixture_pdf = majiq_delta.adjustdelta_lsv( best_delta_psi, output, plotpath=pip.plotpath, title=" ".join(pip.names), numiter=pip.iter, breakiter=pip.breakiter, logger=pip.logger)
 
         pickle.dump(mixture_pdf, open("%s%s_%s_bestset.pickle"%(output, pip.names[0], pip.names[1]), 'w'))
 
@@ -362,6 +375,36 @@ def gen_prior_matrix( pip, lsv_exp1, lsv_exp2, output ):
     
     return psi_space, prior_matrix
 
+
+
+def __extract_cassette( delta_psi, info, psi1, psi2):
+    cas = "|1e1.1|1e2.1"
+#    print "EXTRACT"
+    listd = []
+    for idx, linfo in enumerate(info):
+#        print "linfo",linfo[2]
+#        if len(linfo[2].split('|')) == 3 and linfo[2].find('e0')==-1:
+        if linfo[2][1:] == cas:
+            listd.append(delta_psi[idx][0])
+
+    fp = open('./toyoseph.pickle','wb')
+    pickle.dump(listd,fp)
+    fp.close()
+
+    out = open('./psi_delta0.tab','w+')
+    for idx, linfo in enumerate(info):
+        if linfo[2][1:] == cas:
+#        if len(linfo[2].split('|')) == 3 and linfo[2].find('e0')==-1:
+            lsv = delta_psi[idx]
+            if lsv[0] < 0.0125 and lsv[0] >= -0.0125:
+#                print psi1, idx, np.sum(psi1[idx][0]), np.sum(psi1[0][idx])
+                val1 = float(np.sum(psi1[0][idx][0])) /  float(np.sum(psi1[0][idx]))
+                if isnan(val1): val1 = 0.5
+                val2 = float(np.sum(psi2[0][idx][0])) /  float(np.sum(psi2[0][idx]))
+                if isnan(val2): val2 = 0.5
+                out.write("%d\t%d\n"%(val1,val2))
+
+    out.close()
 
 
 #deprecated
