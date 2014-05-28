@@ -1,3 +1,5 @@
+from matplotlib import use
+use('Agg', warn=False)
 import sys
 import os
 import pickle
@@ -11,6 +13,9 @@ import numpy as np
 from matplotlib import rcParams
 from scipy.stats import pearsonr
 from numpy.random import dirichlet
+import pipelines
+import analysis.filter
+
 
 """
 Calculate PSI values
@@ -21,10 +26,9 @@ BINS = linspace(0, 1, num=100)
 
 
 def calc_psi(alpha, n, debug, *samples_events):
-    "Expects N 2D matrices in samples_events"
+    """Expects N 2D matrices in samples_events"""
     psi_matrix = []
-    num_events = samples_events[0].shape[0]
-    for event_num, event_samples in enumerate(range(samples_events[0].shape[0])): #we iterate through the second dimension of the matrix, which corresponds to the paired samples per event for different experiments    
+    for event_num, event_samples in enumerate(range(samples_events[0].shape[0])): #we iterate through the second dimension of the matrix, which corresponds to the paired samples per event for different experiments
         if event_num % 50 == 0:
             print "event %s..."%event_num,
             sys.stdout.flush()
@@ -74,28 +78,56 @@ def main():
 
     TODO: Many functions from this script will be extracted for general usage in the pipeline. 
     """
-    parser = argparse.ArgumentParser() 
-    parser.add_argument('samples', nargs='+', help='Path for samples of conditions 1 to N')
-    parser.add_argument('--n', default=1, type=int, help='Number of PSI samples per sample paired') 
-    parser.add_argument('--alpha', default=0.5, type=float, help='Alpha hyperparameter for the dirichlet distribution') 
-    parser.add_argument('--output', required=True, help="Path to save the results to.")
-    parser.add_argument('--name1', default='Inc')
-    parser.add_argument('--name2', default='Exc')
+    parser = argparse.ArgumentParser()
+
+    parser.add_argument('--lsv', default=True, action='store_true', help='Execute pipeline for lsv')
+    parser.add_argument('--tmp', default="/tmp/", help='Path to save the temporary files. [Default: %(default)s]')
+    parser.add_argument('--output', required=True, help='Path to save the pickle output to.')
+    parser.add_argument('--logger', default=None, help='Path for the logger. Default is output directory')
+    parser.add_argument('--silent', action='store_true', default=False, help='Silence the logger.')
+    parser.add_argument('--plotpath', default=None, help='Path to save the plot to, if not provided will show on a matplotlib popup window')
+    parser.add_argument('--debug', type=int, default=0, help="Activate this flag for debugging purposes, activates logger and jumps some processing steps.")
+    parser.add_argument('--minreads', default=20, type=int, help='Minimum number of reads combining all positions in an event to be considered. [Default: %(default)s]')
+    parser.add_argument('--minnonzero', default=5, type=int, help='Minimum number of start positions with at least 1 read for an event to be considered.')
+    parser.add_argument('--tracklist', nargs='+', help='A list of identifiers to track in detail, for debugging purposes')
+
+    parser.add_argument('files', nargs='+', help='Path for replicas of conditions 1 to N')
+    parser.add_argument('--n', default=50, type=int, help='Number of PSI samples per sample paired')
+    parser.add_argument('--alpha', default=0.5, type=float, help='Alpha hyperparameter for the dirichlet distribution')
+
+    parser.add_argument('--gcnorm', default=None, help='Flag for GC normalization.')
+    parser.add_argument('--nbdisp', default=0.1, type=float, help='Dispersion factor (used in junctions sampling).')
+    parser.add_argument('--k', default=50, type=int, help='Number of positions to sample per iteration')
+    parser.add_argument('--m', default=100, type=int, help='Number of samples')
+
     args = parser.parse_args()
 
-    print "Loading samples..."
-    samples = []
-    for sample in args.samples:
-        samples.append(pickle.load(open(sample)))
 
-    samples = vstack(samples)
+    methods = {
+        'Poisson':                  {'discardzeros': 0, 'trimborder': False,   'nb': False},
+        'Naive_Boots':              {'discardzeros': 0, 'trimborder': False,   'nb': False},
+        'Naive_Boots_trim_borders': {'discardzeros': 1, 'trimborder': True,    'nb': False},
+        'Naive_Boots_no_zeros':     {'discardzeros': 1, 'trimborder': False,   'nb': False},
+        'Neg_Binomial':             {'discardzeros': 0, 'trimborder': False,   'nb': True},
+        'Majiq':                    {'discardzeros': 1, 'trimborder': True,    'nb': True},
+        'Majiq_with_zeros':         {'discardzeros': 0, 'trimborder': True,    'nb': True},
+        'Majiq_no_stacks':          {'discardzeros': 1, 'trimborder': True,    'nb': True},
+        'Majiq_padding_5':          {'discardzeros': 5, 'trimborder': True,    'nb': True},
+        'Majiq_padding_10':         {'discardzeros': 10,'trimborder': True,    'nb': True},
+        'Majiq_gc_norm':            {'discardzeros': 1, 'trimborder': True,    'nb': True},
 
-    print "Calculating PSI for %s and %s..."%(args.name1, args.name2)
+    }
 
-    print samples.shape
-    psi_scores = calc_psi(args.alpha, args.n, samples)  
-    pickle.dump(psi_scores, open("%s%s_vs_%s_psivalues.pickle"%(args.output, args.name1, args.name2), 'w'))
-    print "Done."
+    args.__dict__.update(methods['Majiq'])
+    psi_scores = pipelines.calcpsi(args)
+
+    print "Number of files analyzed: %d\nshapes: (%d, %s)\t(%d, %s)" % (len(psi_scores), len(psi_scores[0]), str(psi_scores[0][0][0].shape), len(psi_scores[1]), str(psi_scores[1][0][0].shape))
+    lsv_match, match_info = analysis.filter.lsv_intersection(psi_scores[0], psi_scores[1])
+
+    from os.path import basename
+    output_file_name = "_vs_".join([basename(f) for f in args.files])
+    pickle.dump((lsv_match, match_info), open("%s%s_psivalues.pickle"%(args.output, output_file_name), 'w'))
+    print "Done. Output file can be found at:\n%s%s_psivalues.pickle" % (args.output, output_file_name)
 
 if __name__ == '__main__':
     main()

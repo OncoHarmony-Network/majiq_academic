@@ -320,7 +320,7 @@ def split_junction_pool ( replica1, replica2 ):
     
     for idx in range(3):
         rep1[idx]=array(rep1[idx])
-        rep2[idx]=array(rep1[idx])
+        rep2[idx]=array(rep2[idx])
     return rep1, rep2
 
 def main():

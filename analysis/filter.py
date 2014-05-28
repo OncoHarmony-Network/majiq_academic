@@ -75,7 +75,7 @@ def lsv_quantifiable ( list_lsv_tuple , minnonzero, min_reads, logger=False, fon
 def lsv_intersection( lsv_list1, lsv_list2 ):
 
     lsv_match = [[],[]]
-    match_info = [[],[]]
+    match_info = []
 
     ids1 = set([xx[1] for xx in lsv_list1[1]])
     ids2 = set([xx[1] for xx in lsv_list2[1]])

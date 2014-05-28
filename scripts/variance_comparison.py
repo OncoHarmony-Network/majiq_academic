@@ -1,11 +1,14 @@
-from matplotlib import use
-use('Agg', warn=False)
+from collections import defaultdict
+# from matplotlib import use
+# use('Agg', warn=False)
 
 from scipy.stats import pearsonr
 import argparse
 from pylab import *
 import analysis.filter
 import junction_sample
+from scipy.stats import nbinom
+import os.path
 
 
 def _numzeros(junctions):
@@ -70,32 +73,25 @@ def plot_method1Vsmethod2(scores1, scores2, score1_name, score2_name, replica1_n
     _save_or_show(plotpath, plotname)
 
 
-def plot_method1Vsmethod2_by_coverage(scores1, scores2, score1_name, score2_name, replica1_name, replica2_name, plotpath=None):
+def plot_method1Vsmethod2_by_coverage(scores1_list, scores2_list, score1_name, score2_name, replica1_name, replica2_name, plotpath=None):
     """Compute 6 plots, one for each coverage subset, variance and mean"""
 
     # TODO: THIS IS NOT WORKING PROPERLY YET. Review why scores1 has zeros
     plotname="%sVs%s-Coverage" % (score1_name, score2_name)
 
-    print scores1
-
     stats_names = ['mean', 'variance']
 
-    f, axarr = subplots(len(stats_names), len(scores1), sharex=True, sharey=True)
+    f, axarr = subplots(len(stats_names), len(scores1_list), sharex=True, sharey=True)
     axarr[0][0].set_ylabel(score2_name)
     axarr[0][-1].set_xlabel(score1_name)
 
 
-    for score_idx in range(len(scores1)):
-        total_junctions = float(len(scores1[score_idx]['mean']))  # The same in all mean/variance scores1/scores2
+    for score_idx in range(len(scores1_list)):
+        total_junctions = float(len(scores1_list[score_idx]['mean']))  # The same in all mean/variance scores1/scores2
 
         for name_i, stat_name in enumerate(stats_names):
             axarr[name_i][0].set_title(stat_name, fontsize=10)
-            score1, score2 = scores1[score_idx][stat_name], scores2[score_idx][stat_name]
-
-            print score1
-
-            print "\n\n"
-            print score2[0]
+            score1, score2 = scores1_list[score_idx][stat_name], scores2_list[score_idx][stat_name]
 
             better_in_method1 = sum(score1 < score2)
             equal_in_both = sum(score1 == score2)
@@ -112,8 +108,8 @@ def plot_method1Vsmethod2_by_coverage(scores1, scores2, score1_name, score2_name
             r_squared = pear**2
 
             # axarr[name_i][score_idx].text(abs(max_value)*0.1, max_value-abs(max_value)*0.2, r'$R^2$: %.2f (p-value: %.2E)'%(r_squared, pvalue), fontsize=12, bbox={'facecolor':'yellow', 'alpha':0.3, 'pad':10})
-            axarr[name_i][score_idx].text(abs(max_value)*0.1, max_value-abs(max_value)*0.2, "(%.2f%%)" % (better_in_method1/total_junctions)*100, fontsize=12, bbox={'facecolor':'yellow', 'alpha':0.3, 'pad':10})
-            axarr[name_i][score_idx].text(abs(max_value)*0.8, max_value-abs(max_value)*0.8, "(%.2f%%)" % (better_in_method2/total_junctions)*100, fontsize=12, bbox={'facecolor':'yellow', 'alpha':0.3, 'pad':10})
+            axarr[name_i][score_idx].text(abs(max_value)*0.2, max_value-abs(max_value)*0.2, "%.2f%%" % ((better_in_method1/total_junctions)*100), fontsize=12)
+            axarr[name_i][score_idx].text(abs(max_value)*0.7, max_value-abs(max_value)*0.8, "%.2f%%" % ((better_in_method2/total_junctions)*100), fontsize=12)
 
             print "[For %8s]:: Better in %s: %s (%.2f%%) Equal: %s Better in %s: %s (%.2f%%)"%(stat_name, score1_name, better_in_method1, (better_in_method1/total_junctions)*100, equal_in_both, score2_name, better_in_method2, (better_in_method2/total_junctions)*100)
 
@@ -187,7 +183,7 @@ def plot_sigmaVsMu_met1_met2(mean_var_by_replicate, scores1, scores2, score1_nam
     _save_or_show(plotpath, plotname)
 
 
-def compare_methods(m, k, replica1, replica2, rep1_name, rep2_name, fit_func1, fit_func2, methods, method1_name, method2_name, plotpath, scores_cached, coverage=False):
+def compare_methods(m, k, replica1, replica2, rep1_name, rep2_name, fit_func1, fit_func2, methods, method1_name, method2_name, plotpath, scores_cached, coverage=False, rep1_gc=None, rep2_gc=None):
 
     if coverage:
         rep1_pool, rep2_pool = junction_sample.split_junction_pool(replica1, replica2)
@@ -198,52 +194,197 @@ def compare_methods(m, k, replica1, replica2, rep1_name, rep2_name, fit_func1, f
             mean_method1_rep1, var_method1_rep1, samples_not_used = junction_sample.sample_from_junctions(rep1_pool[rep_index], m, k, fit_func=fit_func1, poisson=method1_name=='Poisson', **methods[method1_name])
             mean_method1_rep2, var_method1_rep2, samples_not_used = junction_sample.sample_from_junctions(rep2_pool[rep_index], m, k, fit_func=fit_func2, poisson=method1_name=='Poisson', **methods[method1_name])
             score_method1_list.append(calc_score_tmp(mean_method1_rep1, var_method1_rep1, mean_method1_rep2, var_method1_rep2))
-
             mean_method2_rep1, var_method2_rep1, samples_not_used = junction_sample.sample_from_junctions(rep1_pool[rep_index], m, k, fit_func=fit_func1, poisson=method2_name=='Poisson', **methods[method2_name])
             mean_method2_rep2, var_method2_rep2, samples_not_used = junction_sample.sample_from_junctions(rep2_pool[rep_index], m, k, fit_func=fit_func2, poisson=method2_name=='Poisson', **methods[method2_name])
             score_method2_list.append(calc_score_tmp(mean_method2_rep1, var_method2_rep1, mean_method2_rep2, var_method2_rep2))
 
         plot_method1Vsmethod2_by_coverage(score_method1_list, score_method2_list, method1_name,  method2_name, rep1_name, rep2_name, plotpath)
 
+    elif rep1_gc:  # GC normalitation
 
-    mean_method1_rep1, var_method1_rep1, samples_not_used = junction_sample.sample_from_junctions(replica1, m, k, fit_func=fit_func1, poisson=method1_name=='Poisson', **methods[method1_name])
-    mean_method1_rep2, var_method1_rep2, samples_not_used = junction_sample.sample_from_junctions(replica2, m, k, fit_func=fit_func2, poisson=method1_name=='Poisson', **methods[method1_name])
+        if 'gc' in method1_name:
+            replica_data1 = rep1_gc
+            replica_data2 = rep2_gc
+        else:
+            replica_data1 = replica1
+            replica_data2 = replica2
 
-    if method1_name in scores_cached:
-        score_method1 = scores_cached[method1_name]
-    else:
+        mean_method1_rep1, var_method1_rep1, samples_not_used = junction_sample.sample_from_junctions(replica_data1, m, k, fit_func=fit_func1, poisson=method1_name=='Poisson', **methods[method1_name])
+        mean_method1_rep2, var_method1_rep2, samples_not_used = junction_sample.sample_from_junctions(replica_data2, m, k, fit_func=fit_func2, poisson=method1_name=='Poisson', **methods[method1_name])
         score_method1 = calc_score_tmp(mean_method1_rep1, var_method1_rep1, mean_method1_rep2, var_method1_rep2)
-        scores_cached[method1_name] = score_method1
 
-    mean_method2_rep1, var_method2_rep1, samples_not_used = junction_sample.sample_from_junctions(replica1, m, k, fit_func=fit_func1, poisson=method2_name=='Poisson', **methods[method2_name])
-    mean_method2_rep2, var_method2_rep2, samples_not_used = junction_sample.sample_from_junctions(replica2, m, k, fit_func=fit_func2, poisson=method2_name=='Poisson', **methods[method2_name])
+        if 'gc' in method2_name:
+            replica_data1 = rep1_gc
+            replica_data2 = rep2_gc
+        else:
+            replica_data1 = replica1
+            replica_data2 = replica2
 
-    if method2_name in scores_cached:
-        score_method2 = scores_cached[method2_name]
-    else:
+        mean_method2_rep1, var_method2_rep1, samples_not_used = junction_sample.sample_from_junctions(replica_data1, m, k, fit_func=fit_func1, poisson=method2_name=='Poisson', **methods[method2_name])
+        mean_method2_rep2, var_method2_rep2, samples_not_used = junction_sample.sample_from_junctions(replica_data2, m, k, fit_func=fit_func2, poisson=method2_name=='Poisson', **methods[method2_name])
         score_method2 = calc_score_tmp(mean_method2_rep1, var_method2_rep1, mean_method2_rep2, var_method2_rep2)
-        scores_cached[method2_name] = score_method2
 
-    plot_method1Vsmethod2(score_method1, score_method2, method1_name,  method2_name, rep1_name, rep2_name, plotpath)
+        plot_method1Vsmethod2(score_method1, score_method2, method1_name,  method2_name, rep1_name, rep2_name, plotpath)
 
-    mean_var_by_replicate = {
-            'rep1': {
-                'name'  : rep1_name,
-                'mean1' : mean_method1_rep1,
-                'var1'  : var_method1_rep1,
-                'mean2' : mean_method2_rep1,
-                'var2'  : var_method2_rep1
-            },
-            'rep2': {
-                'name'  : rep2_name,
-                'mean1' : mean_method1_rep2,
-                'var1'  : var_method1_rep2,
-                'mean2' : mean_method2_rep2,
-                'var2'  : var_method2_rep2
-            }
-        }
 
-    plot_sigmaVsMu_met1_met2(mean_var_by_replicate, score_method1, score_method2, method1_name,  method2_name, plotpath)
+    else:
+        mean_method1_rep1, var_method1_rep1, samples_not_used = junction_sample.sample_from_junctions(replica1, m, k, fit_func=fit_func1, poisson=method1_name=='Poisson', **methods[method1_name])
+        mean_method1_rep2, var_method1_rep2, samples_not_used = junction_sample.sample_from_junctions(replica2, m, k, fit_func=fit_func2, poisson=method1_name=='Poisson', **methods[method1_name])
+        score_method1 = calc_score_tmp(mean_method1_rep1, var_method1_rep1, mean_method1_rep2, var_method1_rep2)
+
+        mean_method2_rep1, var_method2_rep1, samples_not_used = junction_sample.sample_from_junctions(replica1, m, k, fit_func=fit_func1, poisson=method2_name=='Poisson', **methods[method2_name])
+        mean_method2_rep2, var_method2_rep2, samples_not_used = junction_sample.sample_from_junctions(replica2, m, k, fit_func=fit_func2, poisson=method2_name=='Poisson', **methods[method2_name])
+        score_method2 = calc_score_tmp(mean_method2_rep1, var_method2_rep1, mean_method2_rep2, var_method2_rep2)
+
+        plot_method1Vsmethod2(score_method1, score_method2, method1_name,  method2_name, rep1_name, rep2_name, plotpath)
+
+    # mean_var_by_replicate = {
+    #         'rep1': {
+    #             'name'  : rep1_name,
+    #             'mean1' : mean_method1_rep1,
+    #             'var1'  : var_method1_rep1,
+    #             'mean2' : mean_method2_rep1,
+    #             'var2'  : var_method2_rep1
+    #         },
+    #         'rep2': {
+    #             'name'  : rep2_name,
+    #             'mean1' : mean_method1_rep2,
+    #             'var1'  : var_method1_rep2,
+    #             'mean2' : mean_method2_rep2,
+    #             'var2'  : var_method2_rep2
+    #         }
+    #     }
+
+    # plot_sigmaVsMu_met1_met2(mean_var_by_replicate, score_method1, score_method2, method1_name,  method2_name, plotpath)
+
+
+def mark_stacks(junctions, fitfunc, pvalue_limit, dispersion, logger=False):
+    """Mark stacks with zeros and return a logic index vector for modified junctions
+
+    NOTE: Use ONLY for testing the variances (otherwise use analysis.filter in majiq)"""
+
+    a, b = fitfunc.c
+    minstack = sys.maxint #the minimum value marked as stack
+    numstacks = 0
+    filtered = [False]*len(junctions)
+    for i, junction in enumerate(junctions):
+        for j, value in enumerate(junction):
+            if value > 0:
+                #TODO Use masker, and marking stacks will probably be faster.
+                copy_junc = list(junction)
+                copy_junc.pop(j)
+                copy_junc = array(copy_junc)
+                copy_junc = copy_junc[copy_junc > 0]
+                #FINISH TODO
+                mean_rest = mean(copy_junc)
+                r, p = analysis.filter.func2nb(a, b, mean_rest, dispersion)
+                my_nb = nbinom(r, 1-p)
+                pval = 1-my_nb.cdf(value)
+                if pval < pvalue_limit:
+                    junctions[i, j] = 0
+                    minstack = min(minstack, value)
+                    numstacks += 1
+                    filtered[i] = True
+
+    if logger: logger.info("Out of %s values, %s marked as stacks with a p-value threshold of %s (%.3f%%)"%(junctions.size, numstacks, pvalue_limit, (float(numstacks)/junctions.size)*100))
+
+    return filtered
+
+
+# #!/usr/bin/env python
+# # a bar plot with errorbars
+# import numpy as np
+# import matplotlib.pyplot as plt
+#
+# N = 5
+# menMeans = (20, 35, 30, 35, 27)
+# menStd =   (2, 3, 4, 1, 2)
+#
+# ind = np.arange(N)  # the x locations for the groups
+# width = 0.35       # the width of the bars
+#
+# fig, ax = plt.subplots()
+# rects1 = ax.bar(ind, menMeans, width, color='r', yerr=menStd)
+#
+# womenMeans = (25, 32, 34, 20, 25)
+# womenStd =   (3, 5, 2, 3, 3)
+# rects2 = ax.bar(ind+width, womenMeans, width, color='y', yerr=womenStd)
+#
+# # add some
+# ax.set_ylabel('Scores')
+# ax.set_title('Scores by group and gender')
+# ax.set_xticks(ind+width)
+# ax.set_xticklabels( ('G1', 'G2', 'G3', 'G4', 'G5') )
+#
+# ax.legend( (rects1[0], rects2[0]), ('Men', 'Women') )
+#
+# def autolabel(rects):
+#     # attach some text labels
+#     for rect in rects:
+#         height = rect.get_height()
+#         ax.text(rect.get_x()+rect.get_width()/2., 1.05*height, '%d'%int(height),
+#                 ha='center', va='bottom')
+#
+# autolabel(rects1)
+# autolabel(rects2)
+#
+# plt.show()
+
+
+def plot_stacks_method1Vsmethod2(stacks_data, score1_name, score2_name, replica1_name, replica2_name, total_junc, plotpath=None):
+    """Compute 2 plots: one for the variance, one for the mean"""
+
+    def autolabel(rects, direction=1):
+        # attach some text labels
+        pos_number=1.02
+        for rect in rects:
+            if direction<0:
+                pos_number=1.06
+            height = rect.get_height()
+            ax.text(rect.get_x()+rect.get_width()/2., pos_number*height*direction, '%.2f' % height, ha='center', va='bottom', size='x-small')
+
+    stats_names = ['mean', 'variance']
+    for name_i, stat_name in enumerate(stats_names):
+        better = []
+        worse = []
+        plotname="Majiq_stack_analysis_%s:%sVs%s" % (stat_name, score1_name, score2_name)
+
+        for pval in sorted(stacks_data.keys(), reverse=True):
+            score1 = stacks_data[pval][score1_name][stat_name]
+            score2 = stacks_data[pval][score2_name][stat_name]
+
+            better_in_method1 = sum(score1 < score2)
+            better_in_method2 = sum(score1 > score2)
+
+            better.append((float(better_in_method1)/total_junc)*100)
+            worse.append((float(better_in_method2)/total_junc)*100)
+
+            print "[%8s for pval=%.1e]:: Total junctions: %d; Better in %s: %s (%.2f%%); Better in %s: %s (%.2f%%)" % \
+                  (stat_name, pval, total_junc, score1_name, better_in_method1, (float(better_in_method1)/total_junc)*100, score2_name, better_in_method2, (float(better_in_method2)/total_junc)*100)
+
+        ind = np.arange(len(better))    # the x locations for the groups
+        width = 0.35                    # the width of the bars
+
+        fig, ax = plt.subplots()
+        rects1 = ax.bar(ind, better, width, color='g')
+        rects2 = ax.bar(ind, [-val for val in worse], width, color='r')
+        rects3 = ax.bar(ind+width, add(better, [-val for val in worse]), width, color='b')
+
+        # add some
+        ax.set_ylabel('Percentage of junctions')
+        ax.set_title('Threshold p-value')
+        ax.set_xticks(ind+width)
+        ax.set_xticklabels(sorted(stacks_data.keys(), reverse=True), size='x-small')
+
+        ax.legend((rects1[0], rects2[0], rects3[0]), ('improved', 'worsen', 'difference'),  prop={'size': 6})
+        autolabel(rects1)
+        autolabel(rects2, direction=-1)
+        autolabel(rects3)
+
+        suptitle(plotname)
+
+        _save_or_show(plotpath, plotname)
+
 
 
 def main():
@@ -266,7 +407,7 @@ def main():
     rep1_name = os.path.basename(args.par1).split('.')[-2]
     rep2_name = os.path.basename(args.par2).split('.')[-2]
 
-    replica1, replica2, fit_func1, fit_func2 = junction_sample.load_junctions(args.par1, args.par2, args, fromlsv=False)
+    replica1, replica2, fit_func1, fit_func2, rep1_gc, rep2_gc = junction_sample.load_junctions(args.par1, args.par2, args, fromlsv=False)
 
     methods = {
         'Poisson':                  {'discardzeros': 0, 'trimborder': False,   'nb': False},
@@ -276,42 +417,62 @@ def main():
         'Neg_Binomial':             {'discardzeros': 0, 'trimborder': False,   'nb': True},
         'Majiq':                    {'discardzeros': 1, 'trimborder': True,    'nb': True},
         'Majiq_with_zeros':         {'discardzeros': 0, 'trimborder': True,    'nb': True},
-        'Majiq_no_stacks_0001':     {'discardzeros': 1, 'trimborder': True,    'nb': True},
-        'Majiq_no_stacks_0005':     {'discardzeros': 1, 'trimborder': True,    'nb': True},
-        'Majiq_no_stacks_001':      {'discardzeros': 1, 'trimborder': True,    'nb': True},
+        'Majiq_no_stacks':          {'discardzeros': 1, 'trimborder': True,    'nb': True},
         'Majiq_padding_5':          {'discardzeros': 5, 'trimborder': True,    'nb': True},
         'Majiq_padding_10':         {'discardzeros': 10,'trimborder': True,    'nb': True},
+        'Majiq_gc_norm':            {'discardzeros': 1, 'trimborder': True,    'nb': True},
+
     }
 
     scores_cached = {}
 
-    compare_methods(args.m, args.k, list(replica1), list(replica2), rep1_name, rep2_name, fit_func1, fit_func2, methods, 'Majiq_padding_10',      'Majiq', args.plotpath, scores_cached)
-    compare_methods(args.m, args.k, list(replica1), list(replica2), rep1_name, rep2_name, fit_func1, fit_func2, methods, 'Majiq_padding_10',      'Majiq_with_zeros', args.plotpath, scores_cached)
+    compare_methods(args.m, args.k, np.array(replica1), np.array(replica2), rep1_name, rep2_name, fit_func1, fit_func2, methods, 'Majiq_padding_10',      'Majiq', args.plotpath, scores_cached)
+    compare_methods(args.m, args.k, np.array(replica1), np.array(replica2), rep1_name, rep2_name, fit_func1, fit_func2, methods, 'Majiq_padding_10',      'Majiq_with_zeros', args.plotpath, scores_cached)
+    compare_methods(args.m, args.k, np.array(replica1), np.array(replica2), rep1_name, rep2_name, fit_func1, fit_func2, methods, 'Majiq_padding_5',      'Majiq', args.plotpath, scores_cached)
+    compare_methods(args.m, args.k, np.array(replica1), np.array(replica2), rep1_name, rep2_name, fit_func1, fit_func2, methods, 'Majiq_padding_5',      'Majiq_with_zeros', args.plotpath, scores_cached)
+    compare_methods(args.m, args.k, np.array(replica1), np.array(replica2), rep1_name, rep2_name, fit_func1, fit_func2, methods, 'Majiq_padding_10',      'Majiq_padding_5', args.plotpath, scores_cached)
+    compare_methods(args.m, args.k, np.array(replica1), np.array(replica2), rep1_name, rep2_name, fit_func1, fit_func2, methods, 'Poisson',       'Majiq', args.plotpath, scores_cached, coverage=True )
+    compare_methods(args.m, args.k, np.array(replica1), np.array(replica2), rep1_name, rep2_name, fit_func1, fit_func2, methods, 'Poisson',       'Majiq_padding_5', args.plotpath, scores_cached )
+    compare_methods(args.m, args.k, np.array(replica1), np.array(replica2), rep1_name, rep2_name, fit_func1, fit_func2, methods, 'Poisson',       'Majiq_padding_10', args.plotpath, scores_cached )
 
-    compare_methods(args.m, args.k, list(replica1), list(replica2), rep1_name, rep2_name, fit_func1, fit_func2, methods, 'Majiq_padding_5',      'Majiq', args.plotpath, scores_cached)
-    compare_methods(args.m, args.k, list(replica1), list(replica2), rep1_name, rep2_name, fit_func1, fit_func2, methods, 'Majiq_padding_5',      'Majiq_with_zeros', args.plotpath, scores_cached)
+    compare_methods(args.m, args.k, np.array(replica1), np.array(replica2), rep1_name, rep2_name, fit_func1, fit_func2, methods, 'Naive_Boots',   'Majiq', args.plotpath, scores_cached)
+    compare_methods(args.m, args.k, np.array(replica1), np.array(replica2), rep1_name, rep2_name, fit_func1, fit_func2, methods, 'Naive_Boots_no_zeros',  'Majiq', args.plotpath, scores_cached)
+    compare_methods(args.m, args.k, np.array(replica1), np.array(replica2), rep1_name, rep2_name, fit_func1, fit_func2, methods, 'Majiq_with_zeros',      'Majiq', args.plotpath, scores_cached)
 
-    compare_methods(args.m, args.k, list(replica1), list(replica2), rep1_name, rep2_name, fit_func1, fit_func2, methods, 'Majiq_padding_10',      'Majiq_padding_5', args.plotpath, scores_cached)
+    compare_methods(args.m, args.k, np.array(replica1), np.array(replica2), rep1_name, rep2_name, fit_func1, fit_func2, methods, 'Naive_Boots',   'Neg_Binomial', args.plotpath, scores_cached)
+    compare_methods(args.m, args.k, np.array(replica1), np.array(replica2), rep1_name, rep2_name, fit_func1, fit_func2, methods, 'Naive_Boots',   'Naive_Boots_trim_borders', args.plotpath, scores_cached)
 
-    compare_methods(args.m, args.k, list(replica1), list(replica2), rep1_name, rep2_name, fit_func1, fit_func2, methods, 'Poisson',       'Majiq', args.plotpath, scores_cached )
-    compare_methods(args.m, args.k, list(replica1), list(replica2), rep1_name, rep2_name, fit_func1, fit_func2, methods, 'Poisson',       'Majiq_padding_5', args.plotpath, scores_cached )
-    compare_methods(args.m, args.k, list(replica1), list(replica2), rep1_name, rep2_name, fit_func1, fit_func2, methods, 'Poisson',       'Majiq_padding_10', args.plotpath, scores_cached )
 
-    compare_methods(args.m, args.k, list(replica1), list(replica2), rep1_name, rep2_name, fit_func1, fit_func2, methods, 'Naive_Boots',   'Majiq', args.plotpath, scores_cached)
-    compare_methods(args.m, args.k, list(replica1), list(replica2), rep1_name, rep2_name, fit_func1, fit_func2, methods, 'Naive_Boots_no_zeros',  'Majiq', args.plotpath, scores_cached)
-    compare_methods(args.m, args.k, list(replica1), list(replica2), rep1_name, rep2_name, fit_func1, fit_func2, methods, 'Majiq_with_zeros',      'Majiq', args.plotpath, scores_cached)
-
-    compare_methods(args.m, args.k, list(replica1), list(replica2), rep1_name, rep2_name, fit_func1, fit_func2, methods, 'Naive_Boots',   'Neg_Binomial', args.plotpath, scores_cached)
-    compare_methods(args.m, args.k, list(replica1), list(replica2), rep1_name, rep2_name, fit_func1, fit_func2, methods, 'Naive_Boots',   'Naive_Boots_trim_borders', args.plotpath, scores_cached)
-
+    compare_methods(args.m, args.k, np.array(replica1), np.array(replica2), rep1_name, rep2_name, fit_func1, fit_func2, methods, 'Majiq_gc_norm',      'Majiq', args.plotpath, scores_cached, rep1_gc=rep1_gc, rep2_gc=rep2_gc)
 
     # Majiq with stacks
-    marks_stacks = [0.0001, 0.0005, 0.001]  # Note that this array has to be sorted in ascending order
-    for mark_stacks in marks_stacks:
-        analysis.filter.mark_stacks(replica1, fit_func1, mark_stacks, args.dispersion)
-        analysis.filter.mark_stacks(replica2, fit_func2, mark_stacks, args.dispersion)
+    stacks_data = defaultdict(lambda: defaultdict())
 
-        compare_methods(args.m, args.k, list(replica1), list(replica2), rep1_name, rep2_name, fit_func1, fit_func2, methods, 'Majiq_no_stacks_'+str(mark_stacks).split('.')[1], 'Majiq', args.plotpath, scores_cached)
+    pvals_stacks = [1.0/10**power for power in xrange(1,18)]
+    total_junc = len(replica1)
+    for pval_stack in pvals_stacks:
+        rep1_fresh = np.array(replica1)
+        rep2_fresh = np.array(replica2)
+        stacks_filtered_rep1 = mark_stacks(rep1_fresh, fit_func1, pval_stack, args.dispersion)
+        stacks_filtered_rep2 = mark_stacks(rep2_fresh, fit_func2, pval_stack, args.dispersion)
+        filtered_all = map(lambda a, b: a or b, stacks_filtered_rep1, stacks_filtered_rep2)
+
+        rep1_filtered = rep1_fresh[np.array(filtered_all)]
+        rep2_filtered = rep2_fresh[np.array(filtered_all)]
+
+        # compare_methods(args.m, args.k, rep1_filtered, rep2_filtered, rep1_name, rep2_name, fit_func1, fit_func2, methods, method_stacks_name, 'Majiq', args.plotpath, scores_cached)  NOT USED!!
+
+        mean_method1_rep1, var_method1_rep1, samples_not_used = junction_sample.sample_from_junctions(rep1_filtered, args.m, args.k, fit_func=fit_func1, poisson=False, **methods['Majiq_no_stacks'])
+        mean_method1_rep2, var_method1_rep2, samples_not_used = junction_sample.sample_from_junctions(rep2_filtered, args.m, args.k, fit_func=fit_func2, poisson=False, **methods['Majiq_no_stacks'])
+        score_method1 = calc_score_tmp(mean_method1_rep1, var_method1_rep1, mean_method1_rep2, var_method1_rep2)
+        mean_method2_rep1, var_method2_rep1, samples_not_used = junction_sample.sample_from_junctions(replica1[np.array(filtered_all)], args.m, args.k, fit_func=fit_func1, poisson=False, **methods['Majiq'])
+        mean_method2_rep2, var_method2_rep2, samples_not_used = junction_sample.sample_from_junctions(replica2[np.array(filtered_all)], args.m, args.k, fit_func=fit_func2, poisson=False, **methods['Majiq'])
+        score_method2 = calc_score_tmp(mean_method2_rep1, var_method2_rep1, mean_method2_rep2, var_method2_rep2)
+
+        stacks_data[pval_stack]['Majiq_no_stacks'] = score_method1
+        stacks_data[pval_stack]['Majiq'] = score_method2
+
+    plot_stacks_method1Vsmethod2(stacks_data, 'Majiq_no_stacks',  'Majiq', rep1_name, rep2_name, total_junc, args.plotpath)
 
 
 if __name__ == '__main__':

@@ -31,7 +31,7 @@ import analysis.psi as  majiq_psi
 def _pipeline_run(pipeline, lsv=False, logger=None):
     "Exception catching for all the pipelines"
     try:
-        pipeline.run(lsv)
+        return pipeline.run(lsv)
 
     except KeyboardInterrupt:
         if pipeline.logger: pipeline.logger.info("MAJIQ manually interrupted. Avada kedavra...")
@@ -128,7 +128,7 @@ class BasicPipeline:
 ################################
 
 def calcpsi(args):
-    _pipeline_run(CalcPsi(args), args.lsv)
+    return _pipeline_run(CalcPsi(args), args.lsv)
 
 class CalcPsi(BasicPipeline):
 
@@ -178,8 +178,8 @@ class CalcPsi(BasicPipeline):
         self.logger.info("Bootstrapping samples...") 
         lsv_sample = []
         for ii in lsv_junc[0]:
-            
-            m_lsv, var_lsv, s_lsv = sample_from_junctions(ii, self.m, self.k, discardzeros=5, trimborder=self.trimborder, fitted_func=fitfunc, debug=self.debug) 
+
+            m_lsv, var_lsv, s_lsv = sample_from_junctions(ii, self.m, self.k, discardzeros=5, trimborder=self.trimborder, fitted_func=fitfunc, debug=self.debug)
             lsv_sample.append( s_lsv )
 
         self.logger.info("\nCalculating PSI for %s ..."%(name))
@@ -191,6 +191,8 @@ class CalcPsi(BasicPipeline):
             pickle.dump((psi, lsv_junc[1]), output)
             self.logger.info("PSI calculation for %s ended succesfully! Result can be found at %s"%(name, output.name))
 
+        if self.debug > 0:
+            return psi, lsv_junc[1][:self.debug]
         return psi, lsv_junc[1]
 
 
