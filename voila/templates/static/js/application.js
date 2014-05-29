@@ -141,7 +141,7 @@ $( document ).ready(function(){
 //    }
 
     // Single LSVs - TODO: Move from here to jquery.tablesorter.js
-    $('.lsvLegend').each( function(){
+    $('.lsvLegendThumb').each( function(){
         splicegraph().renderLsvSpliceGraph(this);
         var can = this;
         function dlCanvas() {

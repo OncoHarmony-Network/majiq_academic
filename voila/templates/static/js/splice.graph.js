@@ -67,6 +67,16 @@ window.splicegraph = function (){
             if (fill) contextO.fill();
         }
 
+        function drawArrow(context, fromx, fromy, tox, toy, headlen){
+            var angle = Math.atan2(toy-fromy,tox-fromx);
+            context.beginPath();
+            context.moveTo(fromx, fromy);
+            context.lineTo(tox, toy);
+            context.lineTo(tox-headlen*Math.cos(angle-Math.PI/6),toy-headlen*Math.sin(angle-Math.PI/6));
+            context.moveTo(tox, toy);
+            context.lineTo(tox-headlen*Math.cos(angle+Math.PI/6),toy-headlen*Math.sin(angle+Math.PI/6));
+            context.stroke();
+        }
 
         // Utils functions
         function forEach(array, action) {
@@ -679,7 +689,16 @@ window.splicegraph = function (){
 
                     // splice sites dashed lines
                     if (ss != num_ss) {
-                        drawDashedLine(ctx, Math.round(coords_x_start_e), Math.round(coords[1]), Math.round(coords_x_start_e), Math.round(coords[1] + exon_height), 2);
+                        // Check if is a special exon (started or finisher)
+                        if (lsvs_fields[1].indexOf('.') === -1) {
+                            // render special marker
+                            drawLine(ctx, Math.round(coords_x_start_e), Math.round(coords[1]), Math.round(coords_x_start_e), Math.round(coords[1] + exon_height));
+                            drawArrow(ctx, Math.round(coords_x_start_e - Math.max(10, percentage_exon/2 * exon_width)), Math.round(coords[1] + exon_height/2), Math.round(coords_x_start_e - 2), Math.round(coords[1] + exon_height/2), Math.max(5, Math.round((percentage_exon/2 * exon_width)/2)));
+                            console.log((percentage_exon/2 * exon_width)/2);
+                        }
+                        else{
+                            drawDashedLine(ctx, Math.round(coords_x_start_e), Math.round(coords[1]), Math.round(coords_x_start_e), Math.round(coords[1] + exon_height), 2);
+                        }
                     }
                     if (parseInt(lsvs_fields[1].split('.')[1]) != 1) {
                         drawDashedLine(ctx, Math.round(coords_x_target_e), Math.round(coords[1]), Math.round(coords_x_target_e), Math.round(coords[1] + exon_height), 2);
