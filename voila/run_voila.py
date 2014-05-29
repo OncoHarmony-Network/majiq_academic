@@ -95,7 +95,6 @@ def create_summary(majiq_bins_file, output_dir, meta_preprocess, meta_postproces
             majiq_output = []
             with open(majiq_bins_file, 'r') as types_file:
                 for line in types_file:
-                    print line.rstrip()
                     majiq_output.append(line.rstrip())
 
         except IOError, e:

@@ -67,6 +67,7 @@ window.splicegraph = function (){
             if (fill) contextO.fill();
         }
 
+
         function drawArrow(context, fromx, fromy, tox, toy, headlen){
             var angle = Math.atan2(toy-fromy,tox-fromx);
             context.beginPath();
@@ -692,8 +693,9 @@ window.splicegraph = function (){
                         // Check if is a special exon (started or finisher)
                         if (lsvs_fields[1].indexOf('.') === -1) {
                             // render special marker
+                            ctx.strokeStyle = "rgba(0, 0, 0, 0.6)";
                             drawLine(ctx, Math.round(coords_x_start_e), Math.round(coords[1]), Math.round(coords_x_start_e), Math.round(coords[1] + exon_height));
-                            drawArrow(ctx, Math.round(coords_x_start_e - Math.max(10, percentage_exon/2 * exon_width)), Math.round(coords[1] + exon_height/2), Math.round(coords_x_start_e - 2), Math.round(coords[1] + exon_height/2), Math.max(5, Math.round((percentage_exon/2 * exon_width)/2)));
+                            drawArrow(ctx, Math.round(coords_x_start_e + direction * Math.max(10, percentage_exon/2 * exon_width)), Math.round(coords[1] + exon_height/2), Math.round(coords_x_start_e + direction * 2), Math.round(coords[1] + exon_height/2), Math.max(5, Math.round((percentage_exon/2 * exon_width)/2)));
                             console.log((percentage_exon/2 * exon_width)/2);
                         }
                         else{
