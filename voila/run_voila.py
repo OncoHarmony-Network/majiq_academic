@@ -82,6 +82,7 @@ def _render_template(output_dir, output_html, majiq_output, type_summary, thresh
 def create_summary(majiq_bins_file, output_dir, meta_preprocess, meta_postprocess, type_summary, threshold, confidence=.95):
     """This method generates an html summary from a majiq output file"""
     output_html = os.path.splitext(os.path.split(majiq_bins_file)[1])[0] + "_" + type_summary + "_" + str(threshold) + '.html'
+    majiq_output = None
 
     if type_summary == 'single':
         majiq_output = utils_voila.get_single_exp_data(majiq_bins_file, meta_preprocess, meta_postprocess, confidence)
@@ -90,8 +91,18 @@ def create_summary(majiq_bins_file, output_dir, meta_preprocess, meta_postproces
     elif type_summary == 'lsv_single':
         majiq_output = utils_voila.get_lsv_single_exp_data(majiq_bins_file, meta_preprocess, confidence)
     elif type_summary == 'lsv_thumbnails':
-        majiq_output = ['s|1e1.2|2e1.2', 's|1e1.2|2e1.1', 't|1e1.1|1e2.2', 't|1e1.1|1e2.1', 's|1e1.2|1e2.1', 's|1e1.1|2e1.1', 's|1e1.1|2e1.2', 't|1e1.1|1e1.2', 's|1e1.1|1e2.1', 's|1e1.1|1e1.2', 's|1e1.1|1e2.2', 's|2e1.1|2e2.1', 's|2e1.1|2e1.2', 't|1e1.1|2e1.1', 't|1e2.1|2e1.1', 's|2e1.1|3e1.1', 's|1e1.1|2e2.1', 't|1e1.2|1e2.1', 't|1e0|2e1.1|2e2.1', 's|1e1.1|1e2.1|1e3.1']
+        try:
+            majiq_output = []
+            with open(majiq_bins_file, 'r') as types_file:
+                for line in types_file:
+                    print line.rstrip()
+                    majiq_output.append(line.rstrip())
 
+        except IOError, e:
+            print e.message
+            import sys
+            sys.exit(1)
+        # majiq_output = ['s|1e1.2|2e1.2', 's|1e1.2|2e1.1', 't|1e1.1|1e2.2', 't|1e1.1|1e2.1', 's|1e1.2|1e2.1', 's|1e1.1|2e1.1', 's|1e1.1|2e1.2', 't|1e1.1|1e1.2', 's|1e1.1|1e2.1', 's|1e1.1|1e1.2', 's|1e1.1|1e2.2', 's|2e1.1|2e2.1', 's|2e1.1|2e1.2', 't|1e1.1|2e1.1', 't|1e2.1|2e1.1', 's|2e1.1|3e1.1', 's|1e1.1|2e2.1', 't|1e1.2|1e2.1', 't|1e0|2e1.1|2e2.1', 's|1e1.1|1e2.1|1e3.1']
     _render_template(output_dir, output_html, majiq_output, type_summary, threshold)
     return
 
