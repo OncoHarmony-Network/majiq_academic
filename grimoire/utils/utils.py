@@ -341,10 +341,10 @@ def get_validated_pcr_lsv( pcr, candidates ):
     for lsv in candidates[0]:
         for jidx,jj in enumerate(lsv.junctions):
             if jj is None or jj.acceptor is None: continue
-            print "[2]:",jj.acceptor, jinc.acceptor.score
+            print "[2]:",jj.acceptor, jj.acceptor.score
             if jj.acceptor.score is not None :
                 name = "%s#%s"%(lsv.id,jidx) 
-                print "PCR", jinc.acceptor.pcr_name, name
+                print "PCR", jinc.acceptor.pcr_name, name, jj.acceptor.score
 
 
 
