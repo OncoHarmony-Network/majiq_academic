@@ -171,7 +171,7 @@ class CalcPsi(BasicPipeline):
             fon[0] = False deactivates num_reads >= 20
             fon[1] = False deactivates npos >= 5
         '''
-        fon = [False, False]
+        fon = [True, True]
         lsv_junc = majiq_filter.lsv_quantifiable( lsv_junc, self.minnonzero, self.minreads, self.logger , fon)
         self.logger.info('%s/%s lsv remaining'%(len(lsv_junc[0]),num_lsv))
 

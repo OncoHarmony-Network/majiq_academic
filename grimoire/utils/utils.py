@@ -344,7 +344,7 @@ def get_validated_pcr_lsv( pcr, candidates ):
             print "[2]:",jj.acceptor, jj.acceptor.score
             if jj.acceptor.score is not None :
                 name = "%s#%s"%(lsv.id,jidx) 
-                print "PCR", jinc.acceptor.pcr_name, name, jj.acceptor.score
+                print "PCR", jj.acceptor.pcr_name, name, jj.acceptor.score
 
 
 
