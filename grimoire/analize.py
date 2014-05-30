@@ -166,35 +166,19 @@ def __get_enabled_junction(con, exp_list):
 
 def LSV_detection( gene_list, chr ):
 
-    num_discard = 0
-    total = 0
-    total_cisfrm = 0
-    total_aisfrm = 0
-    some_none = 0
-    overlp = 0
-    notjunc = 0
-    ss_variant = 0
-
-    SE_events = 0
-
     num_SS_var = [[0]*20,[0]*20, 0]
 
-    SE_events = [0]*5
-    total_SE = 0
-
-
-#    junc_set = [ [] for xx in range(mglobals.num_experiments)]
     const_set  = [set() for xx in range(mglobals.num_experiments)]
+    lsv_list = [ [] for xx in range(mglobals.num_experiments)]
     jun = {}
     for xx in mglobals.tissue_repl.keys():
         jun[xx] = set()
 
-    lsv_list = [ [] for xx in range(mglobals.num_experiments)]
-
     for strand, glist  in gene_list.items():
         for gn in glist:
+
+            gn.check_exons()
             count = gn.get_read_count().sum()
-            
             if count == 0: continue
             print "---------------- %s --------------"%gn.get_id()
             mat, exon_list, tlb, varSS = gn.get_rnaseq_mat(const_set,lsv = True)
@@ -206,11 +190,6 @@ def LSV_detection( gene_list, chr ):
 
             utils.print_junc_matrices(mat, tlb=tlb,fp=True)
             SS, ST = LSV_matrix_detection(mat, tlb, (False, False, False))
-#            print SS
-#            print ST
-            print "Single source ",len(SS)
-            print "SINGLE TARGET ", len(ST)
-
 
             for lsv_index, lsv_lst in enumerate((SS,ST)):
                 lsv_type = (SSOURCE,STARGET)[lsv_index]
@@ -223,21 +202,19 @@ def LSV_detection( gene_list, chr ):
                     jlist = [x for x in  jlist if x is not None]
                     if len(jlist) == 0 : continue
 
-
-
                     for name, ind_list in mglobals.tissue_repl.items() :
                         counter = 0
                         eData = 0
                         for jj in jlist:
                             for exp_idx in ind_list:
-#                                utils.prepare_junctions_gc(jj,exp_idx)
                                 if __reliable_in_data( jj, exp_idx ):
                                     counter +=1
                             if counter < 0.1*len(ind_list): continue
                             eData +=1
                             jun[name].add(jj)
                         if eData == 0 : continue
-                        lsv_in = gn.new_lsv_definition( coord, jlist, lsv_type )
+                        lsv_in = gn.new_lsv_definition( exon_list[idx], jlist, lsv_type )
+                        if lsv_in is None : continue
                         for exp_idx in ind_list:
                             for lsvinlist in lsv_list[exp_idx]:
                                 if lsv_in.is_equivalent(lsvinlist): break
@@ -248,19 +225,6 @@ def LSV_detection( gene_list, chr ):
     for name, ind_list in mglobals.tissue_repl.items() :
         for exp_idx in ind_list:
             const_set[exp_idx].difference(jun[name])
-            
-
-#    mglobals.keep_info(SE_events, num_SS_var[0],num_SS_var[1], num_SS_var[2], total_SE)
-
-#    print "AS %s DISCARDED JUNCTIONS PER experiment"%chr,num_discard,"/",total, some_none
-#    print "AS %s constitutive isoform"%total_cisfrm
-#    print "AS %s AS isoform present in transcript analysis"%total_aisfrm
-#    print "AS %s SKIPPEDO junction"%chr, notjunc,"/",overlp
-#    print "AS %s How many events with ss variants"%chr, ss_variant
-#    print "SE skipped isoform detected",total_SE
-#    print "SE events %s"%(SE_events), num_SS_var[2]
-#    print "#Exons with A3SS %s"%num_SS_var[0]
-#    print "#Exons with A5SS %s"%num_SS_var[1]
 
     return lsv_list, const_set
 
@@ -281,15 +245,9 @@ def LSV_matrix_detection( mat, exon_to_ss, b_list ):
         SS = mat[lsv[1][0]:lsv[1][-1]+1,:]
         ST = mat[:,lsv[0][0]:lsv[0][-1]+1]
 
-#        print "MATLSV: SS",SS
-#        print "MATLSV: ST",ST
-
         pre_lsv = exon_to_ss[ii-1]
         post_lsv = exon_to_ss[ii+1]
 
-#        c1_a = mat[ c1[1][0] : c1[1][-1]+1,  a[0][0] :  a[0][-1]+1 ]
-#        a_c2 = mat[  a[1][0] :  a[1][-1]+1, c2[0][0] : c2[0][-1]+1 ]
-#        c1c2 = mat[ c1[1][0] : c1[1][-1]+1, c2[0][0] : c2[0][-1]+1 ]
         single_entry_SS  = mat[ : pre_lsv[1][0]+1, post_lsv[0][0] :  ]
         single_source_ST = mat[ : pre_lsv[1][0]+1, post_lsv[0][0] :  ]
 

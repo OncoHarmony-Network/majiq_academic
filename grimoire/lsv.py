@@ -2,24 +2,39 @@ import numpy as np
 import grimoire.mglobals as mglobals
 import scipy
 
+import pdb
 
 SSOURCE = 'source'
 STARGET = 'target'
 
 class LSV(object):
 
-    def __init__ ( self, coords, id, junctions, type ):
+    def __init__ ( self, exon, id, junctions, type ):
         if type != SSOURCE and type != STARGET: raise RuntimeError('Incorrect LSV type %s'%type)
-        self.coords = coords
+        self.coords = exon.get_coordinates()
         self.id = id
-        #print "INIT",junctions
         junction_list = [ x for x in  junctions if x is not None] 
-        if len(junction_list) == 0 : return
+        if len(junction_list) < 2 or exon.ir : raise ValueError
         self.junctions = np.asarray(junction_list)
         self.type = type
-        self.ext_type = self.set_type(junction_list, type)
-#        self.exp_idx = exp_idx
-        print "LSV :::::::::::::::::", self.ext_type, self.id
+        self.exon = exon
+
+        self.tlb_junc = {}
+        self.ext_type = self.set_type(junction_list, self.tlb_junc)
+        if self.ext_type == 'intron':
+            raise ValueError
+
+        if len(junction_list) > len(self.ext_type.split('|')) -1 :
+            print " ERROR_LSV :: with inconsistent junction-type %s, %s"%(len(junction_list), len(self.ext_type.split('|')))
+
+        print "TLB:",self.tlb_junc
+        for jj in self.junctions:
+            print "TLB_JUNC", jj.coverage[0].toarray()
+        for kk,vv in self.tlb_junc.items():
+            count = np.sum(self.junctions[vv].coverage[0].toarray())
+            if kk.find('e0') != -1  and count != 0:
+                print "CCCC"
+                raise ValueError
 
     def get_coordinates(self):
         return self.coords
@@ -34,31 +49,38 @@ class LSV(object):
         return bool(self.type == STARGET)
 
 
-    def set_type( self, jlist, type ):
-        if type == SSOURCE:
-            ex_id = jlist[0].donor.get_id()
-            spsite = sorted(list(set(jlist[0].donor.ss_5p_list)))
+    def set_type( self, jlist, tlb_junc ):
+        ex_id = self.exon.get_id()
+        if self.type == SSOURCE:
+            spsite = sorted(set(self.exon.ss_5p_list))
         else:
-            ex_id = jlist[0].acceptor.get_id()
-            spsite = sorted(list(set(jlist[0].acceptor.ss_3p_list)))
+            spsite = sorted(set(self.exon.ss_3p_list))
         ex_set = set()
-        intron_ret = False
+        skip = False
         for junc in jlist:
-            if type == SSOURCE:
+            if self.type == SSOURCE:
                 lsv_exon = junc.donor
-                assert lsv_exon.get_id() == ex_id , "junc_id %s is different than lsv id %s\n lsv_exon coords %s, ex_idx coords %s"%(junc.donor.get_id(), ex_id, lsv_exon.get_coordinates(),self.coords)
+                if lsv_exon.get_id() != ex_id:
+                    skip = True
+                    break
+#                assert lsv_exon.get_id() == ex_id , "SOURCE, Gene: %s, junc_id %s is different than lsv id %s\n lsv_exon coords %s, ex_idx coords %s, %s"%(junc.get_gene().get_id(), lsv_exon.get_id(), ex_id, lsv_exon.get_coordinates(),jlist[0].donor.get_coordinates(), self.coords)
+                
                 if not junc.acceptor is None: 
                     ex_set.add( junc.acceptor.get_id() )
             else:
                 lsv_exon = junc.acceptor
-                assert lsv_exon.get_id() == ex_id , "junc_id %s is different than lsv id %s\n lsv_exon coords %s, ex_idx coords %s"%(junc.acceptor.get_id(), ex_id, lsv_exon.get_coordinates(),self.coords)
+                if lsv_exon.get_id() != ex_id:
+                    skip = True
+                    break
+#                assert lsv_exon.get_id() == ex_id , "TARGET, Gene: %s, junc_id %s is different than lsv id %s\n lsv_exon coords %s, ex_idx coords %s, %s"%(junc.get_gene().get_id(),junc.acceptor.get_id(), ex_id, lsv_exon.get_coordinates(), jlist[0].acceptor.get_coordinates(),self.coords)
                 if not junc.donor is None: 
                     ex_set.add( junc.donor.get_id() )
+        if skip : return 'intron'
         ex_list = sorted(list(ex_set))
         ext_type = "%s"%(self.type[0])
         type_set = set()
-        for junc in jlist:
-            if type == SSOURCE:
+        for jidx, junc in enumerate(jlist):
+            if self.type == SSOURCE:
                 if junc.acceptor is None: 
                     exs3 = ''
                     ex = '0'
@@ -66,7 +88,7 @@ class LSV(object):
                     s3 = sorted(list(set(junc.acceptor.ss_3p_list)))
                     ex1 = ex_list.index(junc.acceptor.get_id())+1
                     ex = '%s.%s'%(ex1,s3.index(junc.end)+1)
-                type_set.add("|%se%s"%(spsite.index(junc.start)+1,ex))
+                jtype="|%se%s"%(spsite.index(junc.start)+1,ex)
             else:
                 if junc.donor is None:
                     exs5 = ''
@@ -75,8 +97,9 @@ class LSV(object):
                     s5 = sorted(list(set(junc.donor.ss_5p_list)))
                     ex1 = ex_list.index(junc.donor.get_id())+1
                     ex = '%s.%s'%(ex1,s5.index(junc.start)+1)
-                type_set.add("|%se%s"%(spsite.index(junc.end)+1,ex))
-
+                jtype = "|%se%s"%(spsite.index(junc.end)+1,ex)
+            type_set.add( jtype )
+            tlb_junc[jtype[1:]] = jidx
         for tt in sorted(list(type_set)):
             ext_type += tt
 
@@ -211,15 +234,22 @@ class Majiq_LSV(object):
         self.coords = LSV.coords
         self.id = LSV.id
         self.type = LSV.ext_type
-        self.junction_list = scipy.sparse.lil_matrix((len(LSV.junctions),(mglobals.readLen-16)+1),dtype=np.int)
-#        self.junction_list = np.zeros( shape=(len(LSV.junctions),(mglobals.readLen-16)+1), dtype=np.dtype('int') )
-        self.gc_factor = scipy.sparse.lil_matrix( (len(LSV.junctions),(mglobals.readLen-16)+1), dtype=np.dtype('float') )
-#np.zeros( shape=(len(LSV.junctions),(mglobals.readLen-16)+1), dtype=np.dtype('float') )
-        for idx,jj in enumerate(LSV.junctions):
+
+
+        ind_list = []
+        order = LSV.ext_type.split('|')[1:]
+        for idx,jj in enumerate(order):
+            if jj[-2:] == 'e0': continue
+            ind_list.append(LSV.tlb_junc[jj])
+
+        self.junction_list = scipy.sparse.lil_matrix((len(ind_list),(mglobals.readLen-16)+1),dtype=np.int)
+        self.gc_factor = scipy.sparse.lil_matrix( (len(ind_list),(mglobals.readLen-16)+1), dtype=np.dtype('float') )
+        for idx,jj in enumerate(ind_list):
+            junc = LSV.junctions[jj]
 #            self.junction_list[idx,:] = jj.coverage[exp_idx,:].toarray()
-            self.junction_list[idx,:] = jj.coverage[exp_idx,:]
+            self.junction_list[idx,:] = junc.coverage[exp_idx,:]
             for jidx in range(mglobals.readLen-16+1):
-                dummy = jj.get_gc_content()[jidx]
+                dummy = junc.get_gc_content()[jidx]
                 print "GC_CONTENT", dummy
                 self.gc_factor[idx,jidx] = dummy
         print 'GC2',self.gc_factor

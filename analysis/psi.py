@@ -162,9 +162,9 @@ def lsv_psi(samples_events, name, alpha, n, debug):
             samples    = np.ndarray(shape=(2,junc.shape[0]))
             samples[0,:] = junc
             samples[1,:] = aggr
-
+            print samples.T
             for paired_samples in samples.T:
-
+                
                 dir_pdf = [dircalc.pdf([x, 1-x], alpha+paired_samples) for x in BINS_CENTER]
                 dir_pdf = np.asarray(dir_pdf)
                 acum_samples += dir_pdf
@@ -330,49 +330,51 @@ def gen_prior_matrix( pip, lsv_exp1, lsv_exp2, output ):
 
         pip.logger.info("'Best set' is %s events (out of %s)"%(len(best_set_mean1), len(lsv_exp1)))
         best_delta_psi = empirical_delta_psi(best_set_mean1[0], best_set_mean2[0])
-    #    __extract_cassette(best_delta_psi, best_set_mean1[1], best_set_mean1, best_set_mean2)
+
+        njun_prior = []
+        for lsv in best_delta_psi:
+            for jidx in range(lsv.shape[0]):
+                if len(njun_prior) <= jidx:
+                    njun_prior.append([])
+                njun_prior[jidx].append(lsv[jidx])
 
 
-#        best_dpsi = [[],[],[],[]]
-#        print best_delta_psi
-#        for idx, lsv in best_delta_psi:
-#            if len(lsv) >= 4 : continue
-#            for jidx, jj in lsv:
-#            #    if jidx >= len(best_dpsi): 
-#                best_dpsi[jidx].append(jj)
-            
 
-        best_delta_psi = np.concatenate(best_delta_psi)
+        for nj in range(len(njun_prior)):
+            best_delta_psi = array(njun_prior[nj])
 
-        pip.logger.info("Parametrizing 'best set'...")
-        mixture_pdf = majiq_delta.adjustdelta_lsv( best_delta_psi, output, plotpath=pip.plotpath, title=" ".join(pip.names), numiter=pip.iter, breakiter=pip.breakiter, logger=pip.logger)
 
-        pickle.dump(mixture_pdf, open("%s%s_%s_bestset.pickle"%(output, pip.names[0], pip.names[1]), 'w'))
+#        best_delta_psi = np.concatenate(best_delta_psi)
 
-        prior_matrix = []
-        for i in xrange(numbins):
-            prior_matrix.extend(mixture_pdf[numbins-i:(numbins*2)-i])
-        prior_matrix = array(prior_matrix).reshape(numbins, -1)
+            pip.logger.info("Parametrizing 'best set'...%s",  nj)
+            mixture_pdf = majiq_delta.adjustdelta_lsv( best_delta_psi, output, plotpath=pip.plotpath, title=" ".join(pip.names), numiter=pip.iter, breakiter=pip.breakiter, njunc=nj, logger=pip.logger)
 
-        #some info for later analysis
-#        pickle.dump(event_names, open("%s%s_%s_eventnames.pickle"%(output, self.names[0], self.names[1]), 'w')) 
-        if not pip.jefferiesprior:
-            plot_matrix(prior_matrix, "Prior Matrix (before Jefferies)", "prior_matrix_no_jefferies", pip.plotpath)
+            pickle.dump(mixture_pdf, open("%s%s_%s_bestset_junc_%s.pickle"%(output, pip.names[0], pip.names[1], nj), 'w'))
 
-        #Calculate prior matrix
-        pip.logger.info("Adding a Jefferies prior to prior (alpha=%s)..."%(pip.alpha))
-        #Normalize prior with jefferies
-        if pip.jefferiesprior:
-            pip.logger.info("Using the Uniform distribution + Jefferies...")
-            prior_matrix = jefferies + (pip.prioruniform/numbins)
-        else: 
-            prior_matrix *= jefferies 
+            prior_matrix = []
+            for i in xrange(numbins):
+                prior_matrix.extend(mixture_pdf[numbins-i:(numbins*2)-i])
+            prior_matrix = array(prior_matrix).reshape(numbins, -1)
 
-        prior_matrix /= sum(prior_matrix) #renormalize so it sums 1
-        plot_matrix(prior_matrix, "Prior Matrix", "prior_matrix", pip.plotpath)
-        pip.logger.info("Saving prior matrix for %s..."%(pip.names))
-        pickle.dump(prior_matrix, open("%s%s_%s_priormatrix.pickle"%(output, pip.names[0], pip.names[1]), 'w'))
-    
+            #some info for later analysis
+    #        pickle.dump(event_names, open("%s%s_%s_eventnames.pickle"%(output, self.names[0], self.names[1]), 'w')) 
+            if not pip.jefferiesprior:
+                plot_matrix(prior_matrix, "Prior Matrix (before Jefferies), junctions %s"%nj, "prior_matrix_no_jefferies_junc_%s"%nj, pip.plotpath)
+
+            #Calculate prior matrix
+            pip.logger.info("Adding a Jefferies prior to prior (alpha=%s), jun %s..."%(pip.alpha, nj))
+            #Normalize prior with jefferies
+            if pip.jefferiesprior:
+                pip.logger.info("Using the Uniform distribution + Jefferies...")
+                prior_matrix = jefferies + (pip.prioruniform/numbins)
+            else: 
+                prior_matrix *= jefferies 
+
+            prior_matrix /= sum(prior_matrix) #renormalize so it sums 1
+            plot_matrix(prior_matrix, "Prior Matrix nj%s"%nj, "prior_matrix_jun_%s"%nj, pip.plotpath)
+            pip.logger.info("Saving prior matrix for %s..."%(pip.names))
+            pickle.dump(prior_matrix, open("%s%s_%s_priormatrix_jun_%s.pickle"%(output, pip.names[0], pip.names[1],nj), 'w'))
+
     return psi_space, prior_matrix
 
 

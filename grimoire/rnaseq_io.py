@@ -80,6 +80,8 @@ def is_neg_strand (read):
 
     return res 
 
+
+import pdb
 def read_sam_or_bam(filename, gene_list, readlen, chrom, exp_index):
 
     counter = [0] * 6
@@ -98,6 +100,9 @@ def read_sam_or_bam(filename, gene_list, readlen, chrom, exp_index):
             except ValueError:
                 continue
             j_list = gne.get_all_junctions()
+#            if gne.get_id() == 'NM_001205314':
+#                pdb.set_trace()
+
             ex_list = gne.get_exon_list()
             for read in read_iter:
                 strand_read = '+' if not is_neg_strand(read) else '-'

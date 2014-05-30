@@ -245,29 +245,41 @@ class Gene:
 
     def collapse_exons ( self ):
 
-        
         self.temp_txex_list.sort()
-
 #        print "GEN",self.temp_txex_list
 #        print_list_exons(self.temp_txex_list)
-
         list_ex = collapse_list_exons(self.temp_txex_list, self)
         self.exons.extend(list_ex)
         self.prepare_exons()
         self.remove_temp_attributes()
 
 
-    def new_lsv_definition(self, coords, jlist, type ):
 
+    def check_exons ( self ):
+
+        s_exons = set()
+
+        for ex in self.exons:
+            s_exons.add(ex.get_coordinates())
+            
+        assert len(s_exons) == len(self.exons), "Exist duplicates in exons in Gene %s"%(self.id)
+
+
+    def new_lsv_definition(self, exon, jlist, type ):
+
+        coords = exon.get_coordinates()
         ret = None
-        id = "%s:%d-%d"%(self.get_id(),coords[0], coords[1])
+        id = "%s:%d-%d:%s"%(self.get_id(),coords[0], coords[1], type)
         for lsv in self.lsv_list:
             if lsv.id == id:
                 ret = lsv
                 break
         else:
-            ret = LSV(coords, id, jlist, type )
-            self.lsv_list.append( ret )
+            try:
+                ret = LSV(exon, id, jlist, type )
+                self.lsv_list.append( ret )
+            except ValueError:
+                print "Attempt to create LSV with wrong type or not enought junction coverage"
 
         return ret
 

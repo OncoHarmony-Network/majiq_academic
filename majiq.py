@@ -41,7 +41,7 @@ def __parallel_lsv_quant(samfiles_list, gene_list, chr, as_db):
     file_name = '%s.obj'%(chr)
 
     ''' TEST FOR GTF'''
-    gtf_list = lsv_to_gff(list(set(lsv)))
+    gtf_list = lsv_to_gff(lsv)
     fp = open('%s/lsv_miso.gtf'%(mglobals.outDir), 'w+') 
     for gtf in gtf_list:
         fp.write("%s\n"%gtf)
