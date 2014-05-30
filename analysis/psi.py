@@ -184,7 +184,6 @@ def lsv_psi(samples_events, name, alpha, n, debug):
 
             psi[idx]=acum_samples/total_acum
             temp.append(mean_psi(psi[idx]))
-        pdb.set_trace() 
         print "PSI_mean",temp, np.sum(temp)
         #if debug: print "Dividing by total acum..."
         psi_scores.append( psi )
