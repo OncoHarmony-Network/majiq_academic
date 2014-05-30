@@ -32,13 +32,15 @@ def __parallel_for_splc_quant(samfiles_list, gene_list, chr, as_db, pcr_validati
     utils.prepare_MAJIQ_table( a,b,file_name)
     print "END child, ", current_process().name
 
-def __parallel_lsv_quant(samfiles_list, gene_list, chr, as_db):
+def __parallel_lsv_quant(samfiles_list, gene_list, chr, as_db, pcr_validation = {}):
     #print "START child,", current_process().name
     for idx,exp in enumerate(samfiles_list):
         print "READING ", idx, exp
         rnaseq_io.read_sam_or_bam(exp, gene_list, mglobals.readLen, chr, idx )
     lsv, const = analize.LSV_detection( gene_list, chr )
     file_name = '%s.obj'%(chr)
+    if pcr_validation is not None:
+        utils.get_validated_pcr_lsv(pcr_validation,lsv)
 
     ''' TEST FOR GTF'''
     gtf_list = lsv_to_gff(lsv)

@@ -334,6 +334,20 @@ def get_validated_pcr_events( pcr, candidates ):
             print "PCR", jinc.acceptor.pcr_name, name
 
 
+def get_validated_pcr_lsv( pcr, candidates ):
+
+    # TODO: TO BE CHANGED FOR LSV
+    print "get_validated_pcr_lsv", len(candidates[0])
+    for lsv in candidates[0]:
+        for jidx,jj in enumerate(lsv.junctions):
+            if jj is None or jj.acceptor is None: continue
+            print "[2]:",jj.acceptor, jinc.acceptor.score
+            if jj.acceptor.score is not None :
+                name = "%s#%s"%(lsv.id,jidx) 
+                print "PCR", jinc.acceptor.pcr_name, name
+
+
+
 def gc_factor_calculation(exon_list, nb):
 
     local_bins     = np.zeros( shape=(mglobals.num_experiments,nb+1), dtype=np.dtype('float'))
