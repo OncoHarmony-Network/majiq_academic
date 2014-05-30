@@ -152,7 +152,6 @@ def lsv_psi(samples_events, name, alpha, n, debug):
     psi_scores = []
     dircalc = DirichletCalc() 
     for i, lsv in enumerate(samples_events):
-        temp = []
         if i % 50 == 0:
             print "event %s..."%i,
             sys.stdout.flush()
@@ -172,7 +171,6 @@ def lsv_psi(samples_events, name, alpha, n, debug):
             samples[0,:] = junc + alpha
             samples[1,:] = aggr
 
-            print len(samples[0,:]),len(samples[1,:])
             #pdb.set_trace()
             for paired_samples in samples.T:
                 
@@ -183,9 +181,6 @@ def lsv_psi(samples_events, name, alpha, n, debug):
                 total_acum += sum(dir_pdf) 
 
             psi[idx]=acum_samples/total_acum
-            temp.append(mean_psi(psi[idx]))
-        print "PSI_mean",temp, np.sum(temp)
-        #if debug: print "Dividing by total acum..."
         psi_scores.append( psi )
         #print "Junction %s PSI distribution: %s sum_N: %s"%(i, psi_matrix[-1], sum(psi_matrix[-1]))
 
