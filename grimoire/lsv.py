@@ -36,6 +36,40 @@ class LSV(object):
                 print "CCCC"
                 raise ValueError
 
+        if self.check_type(self.ext_type) == -1:
+        #    pdb.set_trace()
+            pass
+
+
+    def check_type(self, type):
+        tab = type.split('|')[1:]
+        
+        exss = []
+        targ = {}
+        for tt in tab:
+            dum = tt.split('e')
+            exss.append(int(dum[0]))
+            tr = dum[1].split('.')
+            if len(tr) == 1 and dum[1]=='0' : continue
+            if int(tr[0]) not in targ:
+                targ[int(tr[0])] = []
+            targ[int(tr[0])].append(int(tr[1]))
+
+        exss.sort()
+        for iidx, ii in enumerate(exss[1:]):
+            if ii != exss[iidx]+1 and ii != exss[iidx]:
+                    print "ERROR 1", type
+                    return -1
+
+        for kk, vlist in targ.items():
+            vlist.sort()
+            for vidx, vv in enumerate(vlist[1:]):
+                if vv != vlist[vidx]+1 and vv != vlist[vidx]:
+                    print "ERROR 2", type
+                    return -1
+
+        return 0
+
     def get_coordinates(self):
         return self.coords
 

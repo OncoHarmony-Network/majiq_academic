@@ -58,7 +58,6 @@ def analize_bin_matrix_const_firstlast(mat):
 #            while i_post < mat.shape[1] :
 #                if mat[ii,i_post] == 1: break
 #                i_post +=1
-
 #            if i_pre >= 0 and i_post < mat.shape[1]: 
 #                continue
 
