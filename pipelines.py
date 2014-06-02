@@ -559,6 +559,25 @@ class DeltaGroup(DeltaPair, CalcPsi):
         #print "LOCAL VALUES", local_values
         return local_values, array(median_ref)
 
+    def calc_weights_lsv(self, relevant, group=0):
+
+        
+
+        
+
+
+
+        self.logger.info("WEIGHTS: Calculating intersection of events and median...")
+        local_values, median_ref = self.get_local_and_median_psi(filtered_psis_dict, group)
+        self.logger.info("WEIGHTS: Calculating local weights...")
+        filter_lw = local_weights(local_values, self.weightsL1, median_ref)
+        self.logger.info("WEIGHTS: Calculating global weights...")
+        gweights = global_weights(locweights=filter_lw)
+        gweights_path = "%s%s_weights.pickle"%(self.output, self.names[group])
+        pickle.dump(gweights, open(gweights_path, 'w'))
+        self.logger.info("WEIGHTS: Done")
+        return gweights
+
     def calc_weights(self, relevant, group=0):
         """
         With relevant set, calculate weigths from the PSIs between experiments (kind of delta PSI)
@@ -688,11 +707,11 @@ class DeltaGroup(DeltaPair, CalcPsi):
 
                 if len(relevant) == self.numbestchanging:
                     break #we got enough elements
-                    
+            
             self.logger.info("Obtaining weights for relevant set...")
-            weights1 = self.calc_weights(relevant, group=0)
+            weights1 = self.calc_weights_lsv(relevant, group=0)
             self.logger.info("Weigths for %s are (respectively) %s"%(self.files1, weights1))
-            weights2 = self.calc_weights(relevant, group=1)
+            weights2 = self.calc_weights_lsv(relevant, group=1)
             self.logger.info("Weigths for %s are (respectively) %s"%(self.files2, weights2))
 
         self.logger.info("Normalizing with weights...")

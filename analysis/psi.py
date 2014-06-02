@@ -7,7 +7,7 @@ import operator
 from collections import defaultdict
 
 from pylab import *
-from scipy.special import gamma #deprecation WARNING comes from this import!!! 
+from scipy.special import gamma , gammaln#deprecation WARNING comes from this import!!! 
 from scipy.stats import pearsonr, binom_test
 from numpy.random import dirichlet
 from numpy import rollaxis
@@ -141,7 +141,7 @@ def dirichlet_pdf(x, alpha):
     '''Returns a Dirichlet PDF function'''
     alphap = alpha - 1
     c = np.exp(gammaln(alpha.sum()) - gammaln(alpha).sum())
-    return c * (x**alphap).prod(axis=1)
+    return c * (x**alphap).prod()
     
 
 
@@ -181,14 +181,16 @@ def lsv_psi(samples_events, name, alpha, n, debug):
 
             for pidx, paired_samples in enumerate(samples.T):
                 
-                dir_pdf = [dircalc.pdf([x, 1-x], paired_samples) for x in BINS_CENTER]
+                dir_pdf = dirichlet_pdf([BINS_CENTER, 1-BINS_CENTER], paired_samples)
+#                dir_pdf = [dirichlet_pdf([x, 1-x], paired_samples) for x in BINS_CENTER]
+#                dir_pdf = [dircalc.pdf([x, 1-x], paired_samples) for x in BINS_CENTER]
 #                dir_pdf = [dircalc.pdf([x, 1-x], alpha+paired_samples) for x in BINS_CENTER]
                 dir_pdf = np.asarray(dir_pdf)
                 acum_samples += dir_pdf
-                if i == 204 and np.isnan(acum_samples[0]): 
+                total_acum += sum(dir_pdf) 
+                if np.isnan(acum_samples[0]): 
                     print pidx, paired_samples, acum_samples
                     pdb.set_trace()
-                total_acum += sum(dir_pdf) 
 
             psi[idx]=acum_samples/total_acum
             

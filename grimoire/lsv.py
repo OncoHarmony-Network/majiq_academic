@@ -15,7 +15,6 @@ class LSV(object):
         self.id = id
         junction_list = [ x for x in  junctions if x is not None] 
         if len(junction_list) < 2 or exon.ir : raise ValueError
-        self.junctions = np.asarray(junction_list)
         self.type = type
         self.exon = exon
 
@@ -27,18 +26,23 @@ class LSV(object):
         if len(junction_list) > len(self.ext_type.split('|')) -1 :
             print " ERROR_LSV :: with inconsistent junction-type %s, %s"%(len(junction_list), len(self.ext_type.split('|')))
 
-        print "TLB:",self.tlb_junc
-        for jj in self.junctions:
-            print "TLB_JUNC", jj.coverage[0].toarray()
         for kk,vv in self.tlb_junc.items():
-            count = np.sum(self.junctions[vv].coverage[0].toarray())
+            count = np.sum(junction_list[vv].coverage[0].toarray())
             if kk.find('e0') != -1  and count != 0:
-                print "CCCC"
                 raise ValueError
 
-        if self.check_type(self.ext_type) == -1:
+
+        self.junctions = []
+        order = self.ext_type.split('|')[1:]
+        for idx,jj in enumerate(order):
+            if jj[-2:] == 'e0': continue
+            self.junctions.append(LSV.tlb_junc[jj])
+
+        self.junctions=np.array(self.junctions)
+
+#        if self.check_type(self.ext_type) == -1:
         #    pdb.set_trace()
-            pass
+#            pass
 
 
     def check_type(self, type):
@@ -268,34 +272,20 @@ class Majiq_LSV(object):
         self.coords = LSV.coords
         self.id = LSV.id
         self.type = LSV.ext_type
-
-
-        ind_list = []
-        order = LSV.ext_type.split('|')[1:]
-        for idx,jj in enumerate(order):
-            if jj[-2:] == 'e0': continue
-            ind_list.append(LSV.tlb_junc[jj])
-
         self.junction_list = scipy.sparse.lil_matrix((len(ind_list),(mglobals.readLen-16)+1),dtype=np.int)
         self.gc_factor = scipy.sparse.lil_matrix( (len(ind_list),(mglobals.readLen-16)+1), dtype=np.dtype('float') )
-        for idx,jj in enumerate(ind_list):
-            junc = LSV.junctions[jj]
-#            self.junction_list[idx,:] = jj.coverage[exp_idx,:].toarray()
+
+        for idx,junc in enumerate(LSV.junctions):
             self.junction_list[idx,:] = junc.coverage[exp_idx,:]
             for jidx in range(mglobals.readLen-16+1):
                 dummy = junc.get_gc_content()[jidx]
-                print "GC_CONTENT", dummy
                 self.gc_factor[idx,jidx] = dummy
-        print 'GC2',self.gc_factor
 
 
     def set_gc_factor( self , exp_idx):
-        print 'GCKKK',self.gc_factor
         for idx in xrange(self.gc_factor.shape[0]):
             for jidx in xrange(self.gc_factor.shape[1]):
                 dummy = self.gc_factor[idx,jidx]
-                print "GC LSV", dummy
-                print "GC FACT", mglobals.gc_factor[exp_idx]( dummy )
                 if dummy == 0 :
                     gc_f = 0
                 else:
