@@ -1,7 +1,7 @@
 #!/usr/bin/python
 import json
 import os
-
+import sys
 import utils_voila
 
 
@@ -69,6 +69,14 @@ def _render_template(output_dir, output_html, majiq_output, type_summary, thresh
     elif type_summary == 'lsv_thumbnails':
         voila_output.write(sum_template.render(lsvList=majiq_output))
 
+    elif type_summary == 'lsv_gene':
+        voila_output.write(sum_template.render( lsvList=majiq_output['event_list'],
+                                                tableMarks=table_marks_set(len(majiq_output['event_list'])),
+                                                metadata=majiq_output['metadata'],
+                                                gene_json=majiq_output['gene_json'],
+                                                gene=majiq_output['gene']
+        ))
+
     else:
         print "summary type not recognized %s." % type_summary
         import sys
@@ -89,19 +97,36 @@ def create_summary(majiq_bins_file, output_dir, meta_preprocess, meta_postproces
     elif type_summary == 'delta':
         majiq_output = utils_voila.get_delta_exp_data(majiq_bins_file, meta_postprocess, confidence, threshold)
     elif type_summary == 'lsv_single':
-        majiq_output = utils_voila.get_lsv_single_exp_data(majiq_bins_file, meta_preprocess, confidence)
+        majiq_output = utils_voila.get_lsv_single_exp_data(majiq_bins_file, confidence)
     elif type_summary == 'lsv_thumbnails':
         try:
             majiq_output = []
             with open(majiq_bins_file, 'r') as types_file:
                 for line in types_file:
                     majiq_output.append(line.rstrip())
-
         except IOError, e:
             print e.message
-            import sys
             sys.exit(1)
-        # majiq_output = ['s|1e1.2|2e1.2', 's|1e1.2|2e1.1', 't|1e1.1|1e2.2', 't|1e1.1|1e2.1', 's|1e1.2|1e2.1', 's|1e1.1|2e1.1', 's|1e1.1|2e1.2', 't|1e1.1|1e1.2', 's|1e1.1|1e2.1', 's|1e1.1|1e1.2', 's|1e1.1|1e2.2', 's|2e1.1|2e2.1', 's|2e1.1|2e1.2', 't|1e1.1|2e1.1', 't|1e2.1|2e1.1', 's|2e1.1|3e1.1', 's|1e1.1|2e2.1', 't|1e1.2|1e2.1', 't|1e0|2e1.1|2e2.1', 's|1e1.1|1e2.1|1e3.1']
+
+    elif type_summary == 'lsv_gene':
+        majiq_output = utils_voila.get_lsv_single_exp_data(majiq_bins_file, confidence, gene_name=meta_postprocess['gene_name'])
+
+        # Get gene info
+        try:
+            if not meta_postprocess['genes_file']:
+                print "[ERROR] :: parameter genes-file-info needed for filtering results by gene name."
+                sys.exit(1)
+            import pickle as pkl
+            genes_file = pkl.load(open(meta_postprocess['genes_file'], 'r'))
+            for gene_obj in genes_file:
+                if gene_obj.get_name() == meta_postprocess['gene_name']:
+                    majiq_output['gene_json'] = json.dumps(gene_obj, cls=utils_voila.LsvGraphicEncoder).replace("\"", "'")
+                    majiq_output['gene'] = gene_obj
+                    continue
+        except Exception, e:
+            print e.message
+            # sys.exit(1)
+
     _render_template(output_dir, output_html, majiq_output, type_summary, threshold)
     return
 
@@ -115,15 +140,23 @@ def main():
     parser.add_argument('--meta-pre', metavar='metadata_pre.majiq', dest='meta_preprocess', type=str, help='Metadata preprocess.')
     parser.add_argument('--event-names', metavar='event_names.majiq', dest='event_names', type=str, help='Event names.')
     parser.add_argument('--key-plots', metavar='keysplots.pickle', dest='keys_plots', type=str, help='Heatmap plots.')
-    parser.add_argument('-t', '--type', type=str, choices=['single', 'delta', 'lsv_single', 'lsv_thumbnails'], dest='type_summary', default='single', help='Type of summary generated.')
+    parser.add_argument('-t', '--type', type=str, choices=['single', 'delta', 'lsv_single', 'lsv_thumbnails', 'lsv_gene'], dest='type_summary', default='single', help='Type of summary generated.')
     parser.add_argument('--threshold', type=float, dest='threshold', default=0.2, help='Probability threshold used to sum the accumulative probability of inclusion/exclusion.')
+
+    parser.add_argument('--genes-file-info', dest='genes_file', metavar='visual_LSE.majiq', type=str, help='Pickle file with gene coords info.')
+    parser.add_argument('--gene-name', type=str, dest='gene_name', help='Gene name to filter the results. [ONLY for analysis type lsv_single]')
 
     # parser.add_argument('-c', '--confidence', metavar=0.95, dest='confidence', type=float,
     #                     default=0.95, help='Percentage of confidence required (by default, 0.95).')
     # TODO: add options to filter the output summary file by: genes, events, etc.
 
     args = parser.parse_args()
-    create_summary(args.majiq_bins, args.output_dir, args.meta_preprocess, {'names': args.event_names, 'keys_plots': args.keys_plots}, args.type_summary, args.threshold)
+    create_summary(args.majiq_bins,
+                   args.output_dir,
+                   args.meta_preprocess,
+                   {'names': args.event_names, 'keys_plots': args.keys_plots, 'gene_name': args.gene_name, 'genes_file': args.genes_file},
+                   args.type_summary,
+                   args.threshold)
 
 
 if __name__ == '__main__':
