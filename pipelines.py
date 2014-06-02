@@ -640,6 +640,70 @@ class DeltaGroup(DeltaPair, CalcPsi):
     def _matrix_path(self, i, j):
         return "%s%s_%s_deltamatrix.pickle"%(self._pair_path(i, j), self.names[0], self.names[1])
 
+    def run_lsv(self):
+        self.logger.info("")
+        self.logger.info("Running deltagroups...")
+        self.logger.info("GROUP 1: %s"%self.files1)
+        self.logger.info("GROUP 2: %s"%self.files2)
+        self.logger.info("Calculating pairs...")
+        pairs_posteriors = defaultdict(list)
+        self.k_ref = [] #maps the i, j reference for every matrix (this could be do in less lines with div and mod, but this is safer) 
+        relevant_events = []
+        for i in xrange(len(self.files1)):
+            for j in xrange(len(self.files2)):
+                self.k_ref.append([i, j])
+                path = self._pair_path(i, j)
+                matrix_path = self._matrix_path(i, j)
+                events_path = self._events_path(i, j)
+                if os.path.exists(matrix_path):
+                    self.logger.info("%s exists! Loading..."%path)
+                    matrices = pickle.load(open(matrix_path))
+                    names = pickle.load(open(events_path))
+                else:
+                    self.logger.info("Calculating pair %s"%path)
+                    matrices, names = self.pairdelta_lsv(self.files1[i], self.files2[j], path)
+                    self.logger.info("Saving pair posterior for %s, %s"%(i, j))
+
+                if not self.fixweights1: #get relevant events for weights calculation
+                    relevant_events.extend(rank_deltas(matrices, names, E=True)[:self.numbestchanging])
+
+                for k, name in enumerate(names):
+                    pairs_posteriors[name].append(matrices[k]) #pairing all runs events
+
+        self.logger.info("All pairs calculated, calculating weights...")
+        if self.fixweights1: #Weights are manually fixed
+            weights1 = self.fixweights1
+            weights2 = self.fixweights2
+        else:
+            self.logger.info("Obtaining weights from Delta PSI...")
+            self.logger.info("... obtaining 'relevant set'")
+            #sort again the combined ranks
+            relevant_events.sort(key=lambda x: -x[1])
+
+            #gather the first NUMEVENTS names
+            relevant = []
+            for name, matrix in relevant_events:
+                if name not in relevant_events: #ignore duplicated entries
+                    relevant.append(name)
+
+                if len(relevant) == self.numbestchanging:
+                    break #we got enough elements
+                    
+            self.logger.info("Obtaining weights for relevant set...")
+            weights1 = self.calc_weights(relevant, group=0)
+            self.logger.info("Weigths for %s are (respectively) %s"%(self.files1, weights1))
+            weights2 = self.calc_weights(relevant, group=1)
+            self.logger.info("Weigths for %s are (respectively) %s"%(self.files2, weights2))
+
+        self.logger.info("Normalizing with weights...")
+        comb_matrix, comb_names = self.comb_replicas(pairs_posteriors, weights1=weights1, weights2=weights2)        
+        self.logger.info("%s events matrices calculated"%len(comb_names))
+        pickle_path = "%s%s_%s_deltacombmatrix.pickle"%(self.output, self.names[0], self.names[1])
+        name_path = "%s%s_%s_combeventnames.pickle"%(self.output, self.names[0], self.names[1])
+        pickle.dump(comb_matrix, open(pickle_path, 'w'))
+        pickle.dump(comb_names, open(name_path, 'w'))
+        self.logger.info("Alakazam! Done.")
+
     def run(self):
         self.logger.info("")
         self.logger.info("Running deltagroups...")
@@ -665,7 +729,7 @@ class DeltaGroup(DeltaPair, CalcPsi):
                     self.logger.info("Saving pair posterior for %s, %s"%(i, j))
 
                 if not self.fixweights1: #get relevant events for weights calculation
-                    relevant_events.extend(rank_deltas(matrices, names, E=True)[:self.numbestchanging])
+                    relevant_events.extend(rank_deltas_lsv(matrices, names, E=True)[:self.numbestchanging])
 
                 for k, name in enumerate(names):
                     pairs_posteriors[name].append(matrices[k]) #pairing all runs events

@@ -137,9 +137,12 @@ class DirichletCalc:
 
 
 def dirichlet_pdf(x, alpha):
-    nom = gamma(sum(alpha)) * reduce(operator.mul, [x[i]**(alpha[i]-1.0) for i in range(len(alpha))])
-    den = reduce(operator.mul, [gamma(a) for a in alpha])
-    return nom/den
+
+    '''Returns a Dirichlet PDF function'''
+    alphap = alpha - 1
+    c = np.exp(gammaln(alpha.sum()) - gammaln(alpha).sum())
+    return c * (x**alphap).prod(axis=1)
+    
 
 
 def recalibrate_delta(deltapsi):
@@ -152,6 +155,7 @@ def lsv_psi(samples_events, name, alpha, n, debug):
     psi_scores = []
     dircalc = DirichletCalc() 
     for i, lsv in enumerate(samples_events):
+
         if i % 50 == 0:
             print "event %s..."%i,
             sys.stdout.flush()
@@ -170,18 +174,28 @@ def lsv_psi(samples_events, name, alpha, n, debug):
             samples    = np.ndarray(shape=(2,junc.shape[0]))
             samples[0,:] = junc + alpha
             samples[1,:] = aggr
+            
 
-            #pdb.set_trace()
-            for paired_samples in samples.T:
+
+
+
+            for pidx, paired_samples in enumerate(samples.T):
                 
                 dir_pdf = [dircalc.pdf([x, 1-x], paired_samples) for x in BINS_CENTER]
 #                dir_pdf = [dircalc.pdf([x, 1-x], alpha+paired_samples) for x in BINS_CENTER]
                 dir_pdf = np.asarray(dir_pdf)
                 acum_samples += dir_pdf
+                if i == 204 and np.isnan(acum_samples[0]): 
+                    print pidx, paired_samples, acum_samples
+                    pdb.set_trace()
                 total_acum += sum(dir_pdf) 
 
             psi[idx]=acum_samples/total_acum
-        psi_scores.append( psi )
+            
+#            for pp in psi[idx]:
+#                    if np.isnan(pp):
+#                        pdb.set_trace()
+#        psi_scores.append( psi )
         #print "Junction %s PSI distribution: %s sum_N: %s"%(i, psi_matrix[-1], sum(psi_matrix[-1]))
 
 
