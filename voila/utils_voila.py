@@ -4,6 +4,9 @@ import json
 import matplotlib
 
 from lsv import Lsv
+from splice_graphics.exonGraphic import ExonGraphic
+from splice_graphics.junctionGraphic import JunctionGraphic
+from splice_graphics.geneGraphic import GeneGraphic
 
 matplotlib.use('Agg')
 import shutil
@@ -364,7 +367,7 @@ def get_delta_exp_data(majiq_out_file, metadata_post=None, confidence=.95, thres
     return {'event_list': events_list, 'experiments_info': experiments_info}
 
 
-def get_lsv_single_exp_data(majiq_bins_file, meta_preprocess, confidence):
+def get_lsv_single_exp_data(majiq_bins_file, confidence, gene_name=None):
     """
     Create a dictionary to summarize the information from majiq output file.
     """
@@ -378,19 +381,21 @@ def get_lsv_single_exp_data(majiq_bins_file, meta_preprocess, confidence):
         print "[Error] :: %s doesn't exists." % + majiq_bins_file
         sys.exit(1)
 
-    lsv_counter = 0
-    lsv_list = []
-
-    for bins_array_list in bins_matrix[0]:
-        lsv_counter += 1
-        lsv_list.append(Lsv(generate_lsv(lsv_counter, bins_array_list, confidence)))
-
     # Load metadata
     metadata_pre = bins_matrix[1]
     metadata = []
-    for lsv_meta in metadata_pre:
+
+    lsv_counter = 0
+    lsv_list = []
+
+    for i, lsv_meta in enumerate(metadata_pre):
         # print "%s --> %s" % (lsv_meta[2], collapse_lsv(lsv_meta[2]))
-        metadata.append([lsv_meta[0], lsv_meta[1], lsv_meta[2]]) #collapse_lsv(lsv_meta[2])])
+        if not gene_name or gene_name in str(lsv_meta[1]):
+            metadata.append([lsv_meta[0], lsv_meta[1], lsv_meta[2]]) #collapse_lsv(lsv_meta[2])])
+            bins_array_list = bins_matrix[0][i]
+            lsv_counter += 1
+            lsv_list.append(Lsv(generate_lsv(lsv_counter, bins_array_list, confidence)))
+
 
     return {'event_list':   lsv_list,
             'metadata':     metadata}
@@ -436,6 +441,26 @@ class PickleEncoder(json.JSONEncoder):
         if isinstance(obj, numpy.int64):
             return int(obj)
         if isinstance(obj, Lsv):
+            return obj.to_JSON(PickleEncoder)
+
+        return json.JSONEncoder.default(self, obj)
+
+
+class LsvGraphicEncoder(json.JSONEncoder):
+    def default(self, obj):
+        if isinstance(obj, set):
+            return list(obj)
+        if isinstance(obj, np.ndarray):
+            return list(obj)
+        if isinstance(obj, tuple):
+            return list(obj)
+        if isinstance(obj, np.int64):
+            return int(obj)
+        if isinstance(obj, ExonGraphic):
+            return obj.to_JSON(PickleEncoder)
+        if isinstance(obj, JunctionGraphic):
+            return obj.to_JSON(PickleEncoder)
+        if isinstance(obj, GeneGraphic):
             return obj.to_JSON(PickleEncoder)
 
         return json.JSONEncoder.default(self, obj)

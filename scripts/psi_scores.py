@@ -36,6 +36,7 @@ def plot_PSIs1VsPSIs2(score1, score2, replica1_name, replica2_name, plotpath=Non
     better_in_method1 = np.sum(array(score1) < array(score2))
     better_in_method2 = np.sum(array(score1) > array(score2))
 
+    print score1 , score2
     max_value = max(max(score1), max(score2))
 
     xlim(0, max_value)
