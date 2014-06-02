@@ -24,18 +24,18 @@ class Junction:
         self.acceptor = acceptor
         self.gene = gene
         self.txN = 1
-        self.readN           = np.zeros((mglobals.num_experiments),dtype=np.int)
-#        self.gc_content = scipy.sparse.lil_matrix((mglobals.num_experiments,(readLength-16)+1),dtype=np.float)
-        self.coverage        = scipy.sparse.lil_matrix((mglobals.num_experiments,(readLength-16)+1),dtype=np.int)
-        self.gc_content        = np.zeros( shape=((readLength-16)+1), dtype=np.float )
-#        self.gc_factor       = scipy.sparse.lil_matrix((mglobals.num_experiments,(readLength-16)+1),dtype=np.float)
         self.annotated = annotated
-
+        self.readN      = np.zeros((mglobals.num_experiments),dtype=np.int)
+        self.coverage   = scipy.sparse.lil_matrix((mglobals.num_experiments,(readLength-16)+1),dtype=np.int)
+        self.gc_content = np.zeros( shape=((readLength-16)+1), dtype=np.float )
+        self.id         = "%s:%s-%s"%(self.get_gene().get_id(),self.get_ss_5p(),self.get_ss_3p())
 
     def __hash__(self):
         return hash(self.start) ^ hash(self.end) ^ hash(self.gene.id)
 
     # GETTERs
+    def get_id(self):
+        return self.id
     def get_ss_5p(self):
         return self.start
     def get_ss_3p(self):

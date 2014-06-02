@@ -540,7 +540,7 @@ def detect_exons(gene, junction_list, readRNA):
             junction_list.append(jj)
 
     junction_list.sort()
-    print "DETECT EXONS::",gene.get_id()
+    #print "DETECT EXONS::",gene.get_id()
     for (coord,type, jj) in junction_list :
         #print "---NEW-------------------------------------------------------------"
         #print coord, type, jj, jj.coverage.sum() 

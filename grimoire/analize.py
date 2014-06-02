@@ -187,7 +187,7 @@ def LSV_detection( gene_list, chr ):
             num_SS_var [2]+= varSS[2]
             #num_SS_var [1]+= varSS[1]
 
-            utils.print_junc_matrices(mat, tlb=tlb,fp=True)
+#            utils.print_junc_matrices(mat, tlb=tlb,fp=True)
             SS, ST = LSV_matrix_detection(mat, tlb, (False, False, False))
 
             for lsv_index, lsv_lst in enumerate((SS,ST)):

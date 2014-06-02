@@ -141,7 +141,8 @@ def dirichlet_pdf(x, alpha):
     '''Returns a Dirichlet PDF function'''
     alphap = alpha - 1
     c = np.exp(gammaln(alpha.sum()) - gammaln(alpha).sum())
-    return c * (x**alphap).prod()
+#    pdb.set_trace()
+    return c * (x**alphap).prod(axis=1)
     
 
 
@@ -175,13 +176,9 @@ def lsv_psi(samples_events, name, alpha, n, debug):
             samples[0,:] = junc + alpha
             samples[1,:] = aggr
             
-
-
-
-
             for pidx, paired_samples in enumerate(samples.T):
                 
-                dir_pdf = dirichlet_pdf([BINS_CENTER, 1-BINS_CENTER], paired_samples)
+                dir_pdf = dirichlet_pdf(array([BINS_CENTER, 1-BINS_CENTER]).T, paired_samples)
 #                dir_pdf = [dirichlet_pdf([x, 1-x], paired_samples) for x in BINS_CENTER]
 #                dir_pdf = [dircalc.pdf([x, 1-x], paired_samples) for x in BINS_CENTER]
 #                dir_pdf = [dircalc.pdf([x, 1-x], alpha+paired_samples) for x in BINS_CENTER]

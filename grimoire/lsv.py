@@ -36,7 +36,7 @@ class LSV(object):
         order = self.ext_type.split('|')[1:]
         for idx,jj in enumerate(order):
             if jj[-2:] == 'e0': continue
-            self.junctions.append(LSV.tlb_junc[jj])
+            self.junctions.append(junction_list[self.tlb_junc[jj]])
 
         self.junctions=np.array(self.junctions)
 
@@ -272,11 +272,14 @@ class Majiq_LSV(object):
         self.coords = LSV.coords
         self.id = LSV.id
         self.type = LSV.ext_type
-        self.junction_list = scipy.sparse.lil_matrix((len(ind_list),(mglobals.readLen-16)+1),dtype=np.int)
-        self.gc_factor = scipy.sparse.lil_matrix( (len(ind_list),(mglobals.readLen-16)+1), dtype=np.dtype('float') )
+        self.junction_list = scipy.sparse.lil_matrix((LSV.junctions.shape[0],(mglobals.readLen-16)+1),dtype=np.int)
+        self.junction_id = []
+
+        self.gc_factor = scipy.sparse.lil_matrix( (LSV.junctions.shape[0],(mglobals.readLen-16)+1), dtype=np.dtype('float') )
 
         for idx,junc in enumerate(LSV.junctions):
             self.junction_list[idx,:] = junc.coverage[exp_idx,:]
+            self.junction_id.append(junc.get_id())
             for jidx in range(mglobals.readLen-16+1):
                 dummy = junc.get_gc_content()[jidx]
                 self.gc_factor[idx,jidx] = dummy

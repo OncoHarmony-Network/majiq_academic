@@ -178,7 +178,7 @@ def read_sam_or_bam(filename, gene_list, readlen, chrom, exp_index):
                             junctions.append((junc_end,'3prime',junc))
                     #end if not found ...
                 #end for junc ...
-            print "JJJunctions", junctions
+#            print "JJJunctions", junctions
             if len(junctions) > 0 :
                 detect_exons(gne, junctions, None)
             gne.prepare_exons()
