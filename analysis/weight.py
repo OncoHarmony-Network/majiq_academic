@@ -1,5 +1,5 @@
 from collections import defaultdict
-
+from scipy.stats import beta
 from pylab import *
 
 
@@ -36,10 +36,31 @@ def _local_distance(a, b, l1):
 
 
 def local_weight_eta ( group ):
-   pass
 
+    alpha = bta = 1
+    jeffreys = beta.pdf(x,alpha,bta)
 
+    eta = np.zeros(shape= group.shape, dtype=np.float)
+    for eidx, exp in enumerate(group):
+        for lidx, lsv in enumerate(exp):
+            eta_e = np.zeros(shape=(lsv.shape[0]), dtype=np.float)
+            for ii, psi in enumerate(lsv):
+                eta_e[ii] = _local_distance(psi,jeffreys, l1 = false)
 
+            eta.append(eta_e.sum()/float(lsv.shape[0]))
+    return eta
+
+def local_weight_nu ( group , median_psi):
+
+    nu = np.zeros(shape= group.shape, dtype=np.float)
+    for eidx, exp in enumerate(group):
+        for lidx, lsv in enumerate(exp):
+            nu_e = np.zeros(shape=(lsv.shape[0]), dtype=np.float)
+            for ii, psi in enumerate(lsv):
+                nu_e[ii] = _local_distance(psi,median_psi[lidx, ii], l1 = false)
+    
+            nu.append(nu_e.sum()/float(lsv.shape[0]))
+    return nu
 
 
 def local_weights(replicas, l1=False, median_ref=array([])):

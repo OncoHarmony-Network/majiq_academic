@@ -185,16 +185,13 @@ def lsv_psi(samples_events, name, alpha, n, debug):
                 dir_pdf = np.asarray(dir_pdf)
                 acum_samples += dir_pdf
                 total_acum += sum(dir_pdf) 
-                if np.isnan(acum_samples[0]): 
-                    print pidx, paired_samples, acum_samples
-                    pdb.set_trace()
 
             psi[idx]=acum_samples/total_acum
             
 #            for pp in psi[idx]:
 #                    if np.isnan(pp):
 #                        pdb.set_trace()
-#        psi_scores.append( psi )
+        psi_scores.append( psi )
         #print "Junction %s PSI distribution: %s sum_N: %s"%(i, psi_matrix[-1], sum(psi_matrix[-1]))
 
 

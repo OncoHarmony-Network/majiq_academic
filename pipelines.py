@@ -563,10 +563,12 @@ class DeltaGroup(DeltaPair, CalcPsi):
 
         
 
-        local_weight_eta ( group )
-        local_weight_nu ( group, lsv_medians )
+        eta_wgt = local_weight_eta( group )
 
 
+        nu_wgt = local_weight_nu( group, lsv_medians )
+
+        ro_wgt = global_weight_ro( group, lsv_medians )
 
         self.logger.info("WEIGHTS: Calculating intersection of events and median...")
         local_values, median_ref = self.get_local_and_median_psi(filtered_psis_dict, group)
