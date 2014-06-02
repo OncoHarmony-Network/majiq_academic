@@ -559,7 +559,7 @@ class DeltaGroup(DeltaPair, CalcPsi):
         #print "LOCAL VALUES", local_values
         return local_values, array(median_ref)
 
-    def calc_weights_lsv(self, group, group=0):
+    def calc_weights_lsv(self, group):
 
         
 

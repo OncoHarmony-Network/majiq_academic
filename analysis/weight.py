@@ -34,6 +34,14 @@ def _local_distance(a, b, l1):
         else:
             return _kullback_lieber(a, b)    
 
+
+def local_weight_eta ( group ):
+   pass
+
+
+
+
+
 def local_weights(replicas, l1=False, median_ref=array([])):
     """
     Using either L1 or DKL, calculate the weight for every event in every replica in a group of replicas
