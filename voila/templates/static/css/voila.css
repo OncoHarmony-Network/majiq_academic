@@ -156,7 +156,7 @@ background-color: #8dbdd8;
 }
 
 .floatingCanvas {
-    position: fixed;
+    position: absolute; /*fixed*/
     top: 2%;
     right: 2%;
     padding: 5px;

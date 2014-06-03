@@ -17,8 +17,7 @@
 {% block content %}
     <div class="events-summary">
         <h2>Gene name: {{ gene.name }}; Strand: {{ gene.strand }};</h2>
-        <h2>LSV summary</h2>
-        <p>Coordinates 0-based and closed interval</p>
+        <!--<p>Coordinates 0-based and closed interval</p>-->
 
         <div class="floatingCanvas">
             <canvas class="floatingLegend" width="500px" height="40px">
@@ -30,11 +29,11 @@
             This browser or document mode doesn't support canvas
         </canvas>
 
+        <h2>LSV summary</h2>
         <table id="event_table" class="tablesorter">
             <thead>
             <tr>
-                <th class="short-header">#</th>
-                <th class="short-header">Event ID</th>
+                <th class="short-header">LSV ID</th>
                 <th class="short-header">Type</th>
                 <th class="short-header"></th>
                 <th class="short-header">Coordinates</th>
@@ -42,7 +41,6 @@
             </thead>
             <tfoot>
             <tr>
-                <th>#</th>
                 <th>LSV ID</th>
                 <th>Type</th>
                 <th></th>
@@ -52,7 +50,6 @@
             <tbody>
             {% for lsv in lsvList  -%}
             <tr>
-                <td>{{ loop.index }}</td>
                 <td>{{ metadata[loop.index-1][1] }}</td>
                 <td>
                     <p style="top:0;">{{ metadata[loop.index-1][2] }}</p>

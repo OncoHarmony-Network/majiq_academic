@@ -1140,7 +1140,60 @@
             });
 
 
+            var gene_obj = null;
+            $('.spliceGraph').each( function(){
+                gene_obj = splicegraph().renderSpliceGraph(this);
+                splicegraph().renderSpliceGraphZoomedPopUp(this);
+
+            });
+
+            $('.floatingLegend').each(function () {
+                if ($(this)[0].getContext) {
+                    splicegraph().renderFloatingLegend($(this)[0]);
+                }
+            });
+
+
+            $('.lsvLegend').each( function(){
+                splicegraph().renderLsvSpliceGraph(this);
+
+            }, gene_obj);
+
+
             $('.lsvSingleCompactPercentiles').each(function(){
+                drawLSVCompactStackBars($(this)[0], 1);
+
+                $(this).on("click", function(e){
+                    e.preventDefault();
+
+                    $(this).toggle("show");
+                    var svg_children = $(this).parent().children("svg");
+                    if (svg_children.length) {
+                        $(svg_children[0]).toggle();
+                        return;
+                    }
+
+                    var lsv_data = JSON.parse($(this)[0].getAttribute("data-lsv").replace(/\\\"/g, "\'").replace(/\"/g,"").replace(/'/g, "\""));  // NOTE: lsv_data is an array to support groups
+                    var sampled_bins = translate_lsv_bins(lsv_data[0].bins, 1000);
+//                    var sampled_bins = translate_delta_lsv_bins(lsv_data[0].bins, 1000);
+
+                    var svg = renderViolin($(this).parent()[0].id, sampled_bins);
+                    $(svg).on("click", function(e){
+                        e.preventDefault();
+                        $(this).toggle("show");
+                        var lsvCompact = $(this).parent().children('.'+'lsvSingleCompactPercentiles');
+                        if (lsvCompact.length) {
+                            $(lsvCompact[0]).toggle();
+                        }
+                    });
+
+
+                });
+
+            });
+
+
+            $('.lsvDeltaCompact').each(function(){
                 drawLSVCompactStackBars($(this)[0], 1);
 
                 $(this).on("click", function(e){
@@ -1170,35 +1223,6 @@
 
             });
 
-            $('.lsvLegend').each( function(){
-                splicegraph().renderLsvSpliceGraph(this);
-
-            });
-
-
-//            $('.lsvViolinPlot').each(function(){
-//                if ($($(this)[0]).children("svg").length) return;
-//                var bins_sampled = 1000;
-//                var lsv_data = JSON.parse(this.getAttribute("data-lsv").replace(/\\\"/g, "\'").replace(/\"/g,"").replace(/'/g, "\""));  // NOTE: lsv_data is an array to support groups
-//                var adjusted_bins = [];
-//                for (var lsv_way=0; lsv_way<lsv_data[0].bins.length; lsv_way++){
-//                    var tmp_bins = [];
-//                    var bins_size = lsv_data[0].bins[lsv_way].length;
-//                    for (var ii=1; ii< bins_size + 1; ii++) {
-//                        var num_samples = Math.round(bins_sampled * lsv_data[0].bins[lsv_way][ii - 1]);
-//                        for (var bins_i=0; bins_i<num_samples; bins_i++){
-//                            tmp_bins.push(ii / bins_size);
-//                        }
-//                    }
-//                    adjusted_bins.push(tmp_bins);
-//                }
-//                renderViolin($(this)[0].id, adjusted_bins);
-//            });
-
-//
-//            $('.lsvSingleExtendedBoxplot').each(function(){
-//                drawLSEBoxplots($(this)[0]);
-//            });
 
 
         }

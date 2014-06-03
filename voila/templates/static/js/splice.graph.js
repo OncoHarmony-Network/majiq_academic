@@ -240,6 +240,10 @@ window.splicegraph = function (){
 
         function renderFloatingLegend(canvas) {
             var ctx = canvas.getContext("2d");
+
+            // Clear previous draw
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
             var MARGINS = [4, 2, 2, 2];
             var SEP_FIG_TEXT = canvas.height * .05;
             var SEP_FIG = canvas.width * .02;
@@ -415,6 +419,7 @@ window.splicegraph = function (){
         function reshape_intron(exon1, exon2, reduce_exon) {
 
             function constant_size(intron_size) {
+                var MAX_INTRON = 300;
                 if (intron_size > MAX_INTRON) {
                     return intron_size - MAX_INTRON;
                 } else {
@@ -432,6 +437,7 @@ window.splicegraph = function (){
         }
 
         function resize_exon(exon, reduce_exon) {
+            var MAX_EXON = 300;
             if (reduce_exon) {
                 var exon_length = exon[1] - exon[0];
                 if (exon_length > MAX_EXON) {
@@ -455,17 +461,21 @@ window.splicegraph = function (){
 
             // Note: to account for overlapping exons where exons within a very large exon have long introns, we should
             // ^^^^^ store the last
+            var coords_extra = [];
+            for (var k = 0; k < exons[0].coords_extra.length; k++) {
+                coords_extra.push(map(function (x) {
+                    return add(x, -acc_offset);
+                }, exons[0].coords_extra[k]));
+            }
             exon_tmp = {
                 'coords': map(function (x) {
                     return add(x, -acc_offset);
                 }, resize_exon(exons[0].coords, reshape_exons)),
-                'coords_extra': map(function (x) {
-                    return add(x, -acc_offset);
-                }, exons[0].coords_extra),
                 'type': exons[0].type_exon,
                 'intron_retention': exons[0].intron_retention,
                 'lsv_type': exons[0].lsv_type
             };
+            exon_tmp.coords_extra = coords_extra;
 //        exons_mapped.push({'coords': map(function(x) { return add(x, -acc_offset);}, resize_exon(exons[0].coords, reshape_exons)), 'type': exons[0].type_exon});
 
             exons_mapped_tmp[0] = exon_tmp;
@@ -485,7 +495,7 @@ window.splicegraph = function (){
                 acc_offset += offset;
 
                 // Check if there are exons to make shorter (intron retention)
-                var coords_extra = [];
+                coords_extra = [];
                 for (var k = 0; k < exons[i].coords_extra.length; k++) {
                     coords_extra.push(map(function (x) {
                         return add(x, -acc_offset);
@@ -557,6 +567,10 @@ window.splicegraph = function (){
         function renderSpliceGraph(canvas) {
             if (canvas.getContext) {
 
+                // Clear previous draw
+                var ctx = canvas.getContext("2d");
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+
                 // NOTE: The list of exons is assumed to be sorted.
                 // NEW 20140318: Exons have type: 0=Both reads & annotations; 1=New (no annotations); 2=Missing (annotated, no reads)
                 var genomic_data = JSON.parse(canvas.getAttribute('data-exon-list').replace(/\\'/g, "\"").replace(/'/g, ""));   // RESTORE ME WHEN DEBUGGING FINISH!
@@ -596,7 +610,6 @@ window.splicegraph = function (){
 
                     // Render lsv shadow rectangle
                     if (exon.lsv_type) {
-//                if (i==2){
                         exon.lsv_type = 3;
                         if (exon.lsv_type === 1) {  // Single source
                             render_lsv_marker(canvas, exon, exons[i + 1], pixel_factor, MARGIN);
@@ -613,6 +626,8 @@ window.splicegraph = function (){
                         }
                     }
                 }
+
+                return genomic_data;
             }
         }
 
@@ -625,7 +640,6 @@ window.splicegraph = function (){
 
                 // Clear previous draw
                 ctx.clearRect(0, 0, canvas.width, canvas.height);
-
                 var margins = [1, 1, 1, 1],
                     pixel_factor = 1,
                     percentage_exon = .2,
@@ -637,10 +651,19 @@ window.splicegraph = function (){
                 // Num exons
                 var num_exons = 0;
                 var num_ss = 0;
+                var ss_reg = {};
                 for (var n_ways = 1; n_ways<lsvs.length; n_ways++){
                     var lsvs_fields = lsvs[n_ways].split('e');
                     num_exons = Math.max(num_exons, parseInt(lsvs_fields[1][0]));
                     num_ss = Math.max(num_ss, parseInt(lsvs_fields[0]));
+
+                    if (lsvs_fields[1] == 0)
+                        continue;
+                    var exonNum_ss = lsvs_fields[1].split('.');
+                    if (ss_reg[exonNum_ss[0]])
+                        ss_reg[exonNum_ss[0]] = Math.max(ss_reg[exonNum_ss[0]], parseInt(exonNum_ss[1]));
+                    else
+                        ss_reg[exonNum_ss[0]] = parseInt(exonNum_ss[1]);
                 }
                 num_exons++;  // source or target exon is implicit
 
@@ -659,25 +682,40 @@ window.splicegraph = function (){
                         'type': (direction > 0 && i === 0 || direction < 0 && i === num_exons - 1 ? 1 : 0)
                     };
                     exons.push(exon);
-                    render_exon(canvas, exon, pixel_factor, margins, percentage_exon, '');
+                    var number_exon = (direction > 0 ? i : i + 1 );
+                    number_exon = (number_exon == 0 || number_exon == num_exons ? '' : number_exon);
+                    render_exon(canvas, exon, pixel_factor, margins, percentage_exon, number_exon );
                     start += exon_width + percentage_intron*area[0];
                 }
 
                 // Render junctions
                 var index_first = direction > 0 ? 0 : exons.length - 1;
-                var coords = exons[index_first].coords.slice(0);
+                var coords = exons[index_first].coords;
                 var exon_height = percentage_exon * canvas.height;
-                coords[0] += exon_width / 2 + direction * (exon_width/2) / num_ss;
+
+                // If source, we move the coords to the first splice site
+                if (direction > 0) {
+                    coords[0] += exon_width / 2 + direction * (exon_width / 2) / num_ss;
+                }
                 coords[1] = canvas.height - exon_height - margins[3];
 
                 var previous_ctx = [ctx.lineWidth, ctx.strokeStyle];
                 for (n_ways = 1; n_ways<lsvs.length; n_ways++){
                     lsvs_fields = lsvs[n_ways].split('e');
                     var ss = parseInt(lsvs_fields[0]);
-                    var coords_x_start_e    = coords[0] + direction * ((exon_width/2) / num_ss ) * (ss-1);
-                    var target_exon = (direction > 0 ? exons[lsvs_fields[1][0]] : exons[num_exons -1 - lsvs_fields[1][0]]);
+//                    var coords_x_start_e    = coords[0] + direction * ((exon_width/2) / num_ss ) * (ss-1);
+                    var coords_x_start_e    = coords[0] + ((exon_width/2) / num_ss ) * (ss-1);
+//                    var target_exon = (direction > 0 ? exons[lsvs_fields[1][0]] : exons[num_exons -1 - lsvs_fields[1][0]]);
+                    var target_exon = (direction > 0 ? exons[lsvs_fields[1][0]] : exons[lsvs_fields[1][0] -1] );
                     var coords_x_target_e   = target_exon.coords[ direction > 0 ? 0 : 1 ];
-                    var offset_ss = (parseInt(lsvs_fields[1].split('.')[1]) - 1) * percentage_exon/2 * exon_width ;
+
+                    var offset_ss = 0;
+                    if (direction > 0) {
+                        offset_ss = (parseInt(lsvs_fields[1].split('.')[1]) - 1) * percentage_exon/2 * exon_width ;
+                    } else {
+                        offset_ss = ( ss_reg[lsvs_fields[1].split('.')[0]] - parseInt(lsvs_fields[1].split('.')[1])) * percentage_exon / 2 * exon_width;
+                    }
+
                     coords_x_target_e += direction*offset_ss;
 
                     var mid_x = (coords_x_start_e + coords_x_target_e) /2;
@@ -689,20 +727,20 @@ window.splicegraph = function (){
                     drawLine(ctx, Math.round(mid_x), Math.round(margins[3]*8*ss), Math.round(coords_x_target_e), Math.round(coords[1]));
 
                     // splice sites dashed lines
-                    if (ss != num_ss) {
+                    if (direction>0 && ss != num_ss || direction<0 && ss!=1) {
                         // Check if is a special exon (started or finisher)
                         if (lsvs_fields[1].indexOf('.') === -1) {
                             // render special marker
                             ctx.strokeStyle = "rgba(0, 0, 0, 0.6)";
                             drawLine(ctx, Math.round(coords_x_start_e), Math.round(coords[1]), Math.round(coords_x_start_e), Math.round(coords[1] + exon_height));
                             drawArrow(ctx, Math.round(coords_x_start_e + direction * Math.max(10, percentage_exon/2 * exon_width)), Math.round(coords[1] + exon_height/2), Math.round(coords_x_start_e + direction * 2), Math.round(coords[1] + exon_height/2), Math.max(5, Math.round((percentage_exon/2 * exon_width)/2)));
-                            console.log((percentage_exon/2 * exon_width)/2);
+
                         }
                         else{
                             drawDashedLine(ctx, Math.round(coords_x_start_e), Math.round(coords[1]), Math.round(coords_x_start_e), Math.round(coords[1] + exon_height), 2);
                         }
                     }
-                    if (parseInt(lsvs_fields[1].split('.')[1]) != 1) {
+                    if (parseInt(lsvs_fields[1].split('.')[1]) != 1 && direction > 0 || parseInt(lsvs_fields[1].split('.')[1]) != ss_reg[lsvs_fields[1].split('.')[0]] && direction < 0  ) {
                         drawDashedLine(ctx, Math.round(coords_x_target_e), Math.round(coords[1]), Math.round(coords_x_target_e), Math.round(coords[1] + exon_height), 2);
                     }
 
@@ -808,11 +846,11 @@ window.splicegraph = function (){
          * Main - Beginning of the execution
          * */
 
-        $('.floatingLegend').each(function () {
-            if ($(this)[0].getContext) {
-                renderFloatingLegend($(this)[0]);
-            }
-        });
+//        $('.floatingLegend').each(function () {
+//            if ($(this)[0].getContext) {
+//                renderFloatingLegend($(this)[0]);
+//            }
+//        });
 
         // add sortable functionality to the table
         var exon_table = $('.exon_table')
@@ -826,57 +864,61 @@ window.splicegraph = function (){
 //        }
 
         var canvases = $('.spliceGraph');
-        for (var canvas_index = 0; canvas_index < canvases.length; canvas_index++) {
-            var canvas = canvases[canvas_index];
-            var MAX_INTRON = 300;   // Global
-            var MAX_EXON = 300;   // Global
 
-            renderSpliceGraph(canvas);
+    function renderSpliceGraphZoomedPopUp(canvas) {
+        /*
+         * Adding extraPlots functionality
+         */
+        $(canvas).on("click", {exon_list: canvas.getAttribute('data-exon-list')}, function (e) {
+            e.preventDefault();
+            var my_window = window.open("", "Zoomed Splice Graph", "status=1,width=2000,height=420,scrollbars=yes", true);
+            my_window.document.writeln(
+                    '<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">' +
+                    '<html>' +
+                    '<head> ' +
+                    '<script type="text/javascript">' +
+                    '    CanvasRenderingContext2D.prototype.dashedLine = function (x1, y1, x2, y2, dashLen) {' +
+                    '        if (dashLen == undefined) dashLen = 2;' +
+                    '            this.moveTo(x1, y1);' +
+                    '            var dX = x2 - x1;' +
+                    '            var dY = y2 - y1;' +
+                    '            var dashes = Math.floor(Math.sqrt(dX * dX + dY * dY) / dashLen);' +
+                    '            var dashX = dX / dashes;' +
+                    '            var dashY = dY / dashes;' +
+                    '            var q = 0;' +
+                    '            while (q++ < dashes) {' +
+                    '                x1 += dashX;' +
+                    '                y1 += dashY;' +
+                    '                this[q % 2 == 0 ? \'moveTo\' : \'lineTo\'](x1, y1);' +
+                    '            }' +
+                    '            this[q % 2 == 0 ? \'moveTo\' : \'lineTo\'](x2, y2);' +
+                    '    };' +
+                    '</script>' +
+                    '<title>' + $(this)[0].id + '</title>' +
+                    '</head>' +
+                    '<body>' +
+                    '<canvas id="spliceGraph1" class="spliceGraph" width="4000px" height="400px" data-exon-list="' + e.data.exon_list + '">' +
+                    'This browser or document mode doesn\'t support canvas' +
+                    '</canvas>' +
+                    '</body>' +
+                    '</html>'
+            );
+            my_window.document.close();
+            my_window.focus();
+            renderSpliceGraph($('.spliceGraph', my_window.document.documentElement)[0]);
 
-            /*
-             * Adding extraPlots functionality
-             */
-            $(canvas).on("click", {exon_list: canvas.getAttribute('data-exon-list')}, function (e) {
-                e.preventDefault();
-                var my_window = window.open("", "Zoomed Splice Graph", "status=1,width=2000,height=420,scrollbars=yes", true);
-                my_window.document.writeln(
-                        '<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">' +
-                        '<html>' +
-                        '<head> ' +
-                        '<script type="text/javascript">' +
-                        '    CanvasRenderingContext2D.prototype.dashedLine = function (x1, y1, x2, y2, dashLen) {' +
-                        '        if (dashLen == undefined) dashLen = 2;' +
-                        '            this.moveTo(x1, y1);' +
-                        '            var dX = x2 - x1;' +
-                        '            var dY = y2 - y1;' +
-                        '            var dashes = Math.floor(Math.sqrt(dX * dX + dY * dY) / dashLen);' +
-                        '            var dashX = dX / dashes;' +
-                        '            var dashY = dY / dashes;' +
-                        '            var q = 0;' +
-                        '            while (q++ < dashes) {' +
-                        '                x1 += dashX;' +
-                        '                y1 += dashY;' +
-                        '                this[q % 2 == 0 ? \'moveTo\' : \'lineTo\'](x1, y1);' +
-                        '            }' +
-                        '            this[q % 2 == 0 ? \'moveTo\' : \'lineTo\'](x2, y2);' +
-                        '    };' +
-                        '</script>' +
-                        '<title>' + $(this)[0].id + '</title>' +
-                        '</head>' +
-                        '<body>' +
-                        '<canvas id="spliceGraph1" class="spliceGraph" width="4000px" height="400px" data-exon-list="' + e.data.exon_list + '">' +
-                        'This browser or document mode doesn\'t support canvas' +
-                        '</canvas>' +
-                        '</body>' +
-                        '</html>'
-                );
-                my_window.document.close();
-                my_window.focus();
-                renderSpliceGraph($('.spliceGraph', my_window.document.documentElement)[0]);
+        });
 
-            });
+    }
 
-        }
+//        for (var canvas_index = 0; canvas_index < canvases.length; canvas_index++) {
+//            var canvas = canvases[canvas_index];
+//
+//            renderSpliceGraph(canvas);
+//
+//            renderSpliceGraphZoomedPopUp();
+//
+//        }
 
         return {
             renderLsvLegend: function(canvas){
@@ -884,6 +926,17 @@ window.splicegraph = function (){
             },
             renderLsvSpliceGraph: function(canvas){
                 return renderLsvSpliceGraph(canvas);
+            },
+            renderSpliceGraph: function(canvas){
+                var MAX_INTRON = 300;   // Global
+                var MAX_EXON = 300;   // Global
+                return renderSpliceGraph(canvas);
+            },
+            renderSpliceGraphZoomedPopUp: function(canvas){
+                return renderSpliceGraphZoomedPopUp(canvas);
+            },
+            renderFloatingLegend: function(canvas){
+                return renderFloatingLegend(canvas);
             }
         }
 };

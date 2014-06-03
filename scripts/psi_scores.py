@@ -20,23 +20,23 @@ BINS = linspace(0, 1, num=40)
 
 
 
-def plot_PSIs1VsPSIs2(score1, score2, replica1_name, replica2_name, plotpath=None):
+def plot_PSIs1VsPSIs2(score1, score2, replica1_name, replica2_name, method1, method2, plotpath=None):
     """Compute 2 plots: one for the variance, one for the mean"""
-    plotname="%sVs%s" % (replica1_name, replica2_name)
+    plotname="%sVs%s\nDelta PSIs for %s - %s" % (method1, method2, replica1_name, replica2_name)
 
     total_psis = float(len(score1))
 
     f = figure()
-    ylabel(replica2_name)
-    xlabel(replica1_name)
-
+    ylabel(method2)
+    xlabel(method1)
 
     title(plotname, fontsize=10)
 
     better_in_method1 = np.sum(array(score1) < array(score2))
     better_in_method2 = np.sum(array(score1) > array(score2))
 
-    print score1 , score2
+    print score1, score2
+    print len(score1), len(score2), len(score2) - np.count_nonzero(score2), better_in_method1, better_in_method2
     max_value = max(max(score1), max(score2))
 
     xlim(0, max_value)
@@ -127,18 +127,24 @@ def main():
 
     majiq_psi_names = defaultdict()
 
+    # Discard LSVs with only one PSI
     for i, psis_lsv in enumerate(psi_values_lsv1):
         if len(psis_lsv) < 2 or len(psi_values_lsv2[i]) < 2:
-            continue # TODO: check that skipping is not necessary. LSVs with only 1 PSI are wrong..
+            continue  # TODO: check that skipping is not necessary. LSVs with only 1 PSI are wrong..
         majiq_psi_names[psivalues[1][i][1]] = i
 
-    #TODO: Needs to be tested
+    # print len(majiq_psi_names.keys()), "##########"
+
+    # MISO: Parse file,
     miso_psis_list = []
-    miso_psis_dict = defaultdict()
 
     debug_dict1 = {}
     debug_dict2 = {}
+
+    debug_names_miso_list = defaultdict(list)
+
     for miso_file in args.psivalues_met2:
+        miso_psis_dict = defaultdict()
         miso_psis = []
         with open(miso_file, 'r') as miso_res:
             for miso_line in miso_res:
@@ -151,32 +157,41 @@ def main():
         for psi_name in sorted(majiq_psi_names.keys()):
             try:
                 miso_psis_values = [float(miso_psi) for miso_psi in miso_psis_dict[psi_name].split(",")]
+                # if len(miso_psis_values) < 2:
+                #     del majiq_psi_names[psi_name]
+                #     continue
                 if len(miso_psis_values) == 1:
+                    # print miso_psis_values[0], 1 - miso_psis_values[0]
                     miso_psis_values.append(1.0 - miso_psis_values[0])
                 debug_dict1[psi_name] = len(miso_psis_values)
                 miso_psis.extend(miso_psis_values)
+                debug_names_miso_list[psi_name].append(miso_psis_values)
 
             except KeyError, e:
-                # print "LSV %s is in MAJIS but not in MISO!" % e
+                print "LSV %s is in MAJIQ but not in MISO!" % e
                 del majiq_psi_names[psi_name]
                 continue
         miso_psis_list.append(miso_psis)
 
     for psi_name in sorted(majiq_psi_names.keys()):
         debug_dict2[psi_name] = len(psi_values_lsv1[majiq_psi_names[psi_name]])
+        print "%s: " % psi_name
+        sys.stdout.flush()
         for j, psi_lsv in enumerate(psi_values_lsv1[majiq_psi_names[psi_name]]):
             psi_list1.append(sum(psi_lsv*analysis.psi.BINS_CENTER))
             psi_list2.append(sum(psi_values_lsv2[majiq_psi_names[psi_name]][j]*analysis.psi.BINS_CENTER))
+            print "MAJIQ:\t%f - %f" % (sum(psi_lsv*analysis.psi.BINS_CENTER), sum(psi_values_lsv2[majiq_psi_names[psi_name]][j]*analysis.psi.BINS_CENTER))
+            print "MISO:\t%s - %s" % (str(debug_names_miso_list[psi_name][0][j]), str(debug_names_miso_list[psi_name][1][j]))
+
 
     for k in sorted(debug_dict1):
-        if debug_dict2[k] - debug_dict1[k]:
+        if debug_dict2[k] - debug_dict1[k]:  # LSVs where the number of junctions in one method differs with the other
             print "Num junctions for LSV %s: MAJIQ - %d MISO: %d" % (k, debug_dict2[k], debug_dict1[k])
             print "MAJIQ LSV and juncs:"
             print "\t", psivalues[1][majiq_psi_names[k]]
             print "\t", psivalues[0][0][majiq_psi_names[k]]
 
-
-    plot_PSIs1VsPSIs2(abs(np.array(psi_list1) - np.array(psi_list2)), abs(np.array(miso_psis_list[0]) - np.array(miso_psis_list[1])), args.name1, args.name2)
+    plot_PSIs1VsPSIs2(abs(np.array(psi_list1) - np.array(psi_list2)), abs(np.array(miso_psis_list[0]) - np.array(miso_psis_list[1])), args.name1, args.name2, "MAJIQ", "MISO")
 
 
 if __name__ == '__main__':

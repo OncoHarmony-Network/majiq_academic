@@ -87,8 +87,9 @@ def main():
     parser.add_argument('--silent', action='store_true', default=False, help='Silence the logger.')
     parser.add_argument('--plotpath', default=None, help='Path to save the plot to, if not provided will show on a matplotlib popup window')
     parser.add_argument('--debug', type=int, default=0, help="Activate this flag for debugging purposes, activates logger and jumps some processing steps.")
-    parser.add_argument('--minreads', default=20, type=int, help='Minimum number of reads combining all positions in an event to be considered. [Default: %(default)s]')
+    parser.add_argument('--minreads', default=10, type=int, help='Minimum number of reads combining all positions in an event to be considered. [Default: %(default)s]')
     parser.add_argument('--minnonzero', default=5, type=int, help='Minimum number of start positions with at least 1 read for an event to be considered.')
+    parser.add_argument('--markstacks', default=0.001, type=float, help='Mark stack positions. Expects a p-value. Use a negative value in order to disable it. [Default: %(default)s]')
     parser.add_argument('--tracklist', nargs='+', help='A list of identifiers to track in detail, for debugging purposes')
 
     parser.add_argument('files', nargs='+', help='Path for replicas of conditions 1 to N')
@@ -118,7 +119,7 @@ def main():
 
     }
 
-    args.__dict__.update(methods['Majiq'])
+    args.__dict__.update(methods['Majiq_padding_5'])
     psi_scores = pipelines.calcpsi(args)
 
     print "Number of files analyzed: %d\nshapes: (%d, %s)\t(%d, %s)" % (len(psi_scores), len(psi_scores[0]), str(psi_scores[0][0][0].shape), len(psi_scores[1]), str(psi_scores[1][0][0].shape))

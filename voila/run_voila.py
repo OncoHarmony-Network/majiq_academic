@@ -111,6 +111,7 @@ def create_summary(majiq_bins_file, output_dir, meta_preprocess, meta_postproces
     elif type_summary == 'lsv_gene':
         majiq_output = utils_voila.get_lsv_single_exp_data(majiq_bins_file, confidence, gene_name=meta_postprocess['gene_name'])
 
+        # if len(majiq_output)
         # Get gene info
         try:
             if not meta_postprocess['genes_file']:

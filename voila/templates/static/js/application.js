@@ -33,7 +33,7 @@ $( document ).ready(function(){
 
     // add sortable functionality to the table
     var eventTable = $('#event_table');
-    eventTable.tablesorter({headers: {4: {sorter: false}, 5: {sorter: false}}}); // Disable sort function in column PDF
+    eventTable.tablesorter({sortList: [[0,0]], headers: {4: {sorter: false}, 5: {sorter: false}}}); // Disable sort function in column PDF
     eventTable.tablesorterPager({widthFixed: true, widgets: ['zebra', 'renderCanvas'], container: $(".pager")});
 
     var initLargeCanvasSettings = function (num_bins, canvas) {
@@ -114,31 +114,6 @@ $( document ).ready(function(){
         my_window.document.write('<img src="' + $(this)[0].getAttribute('data-gc-src') + '" alt="GC Content" border="0">');
     });
 
-//
-//    if ($('.lsvGroups').length){
-//        drawLSVGroups($('.lsvGroups')[0]);
-//    }
-//
-//    for ( var lsv=0; lsv<$('.lsvGroupsCompactPercentiles').length; lsv++){
-//        drawLSVCompactStackBars($('.lsvGroupsCompactPercentiles')[lsv], 0);
-//    }
-//
-//    for (var lsv=0; lsv<$('.lsvGroupsCompactVariance').length; lsv++){
-//        drawLSVCompactStackBars($('.lsvGroupsCompactVariance')[lsv], 1);
-//    }
-//
-//
-//    for ( var lsv=0; lsv<$('.lsvGroupsCompactPercentilesHue').length; lsv++){
-//        drawLSVCompactStackBars($('.lsvGroupsCompactPercentilesHue')[lsv], 2);
-//    }
-//
-//    for ( var lsv=0; lsv<$('.lsvGroupsCompactVarianceHue').length; lsv++){
-//        drawLSVCompactStackBars($('.lsvGroupsCompactVarianceHue')[lsv], 3);
-//    }
-//
-//    for ( var lsv=0; lsv<$('.lsvGroupsCompactPercentilesLeftAligned').length; lsv++){
-//        drawLSVCompactStackBars($('.lsvGroupsCompactPercentilesLeftAligned')[lsv], 4);
-//    }
 
     // Single LSVs - TODO: Move from here to jquery.tablesorter.js
     $('.lsvLegendThumb').each( function(){
@@ -155,18 +130,6 @@ $( document ).ready(function(){
     });
 
 });
-
-// Brewer Set1 color scales
-//# 8 color palettes
-//# 8 color palettes
-var set18qual1 = "rgba(228,26,28)";
-var set18qual2 = "rgba(55,126,184)";
-var set18qual3 = "rgba(77,175,74)";
-var set18qual4 = "rgba(152,78,163)";
-var set18qual5 = "rgba(255,127,0)";
-var set18qual6 = "rgba(255,255,51)";
-var set18qual7 = "rgba(166,86,40)";
-var set18qual8 = "rgba(247,129,191)";
 
 
 function addExpandedViewFunction(){
@@ -1496,3 +1459,19 @@ function translate_lsv_bins(lsv_bins, num_samples) {
     return adjusted_bins
 }
 
+
+function translate_delta_lsv_bins(lsv_bins, num_samples) {
+    var adjusted_bins = [];
+    for (var lsv_way=0; lsv_way<lsv_bins.length; lsv_way++){
+        var tmp_bins = [];
+        var bins_size = lsv_bins[lsv_way].length;
+        for (var ii=1; ii< bins_size + 1; ii++) {
+            var num_copies = Math.round(num_samples * lsv_bins[lsv_way][ii - 1]);
+            for (var bins_i=0; bins_i<num_copies; bins_i++){
+                tmp_bins.push(-.975 + ii * 2 / bins_size);
+            }
+        }
+        adjusted_bins.push(tmp_bins);
+    }
+    return adjusted_bins
+}

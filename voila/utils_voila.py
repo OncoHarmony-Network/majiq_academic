@@ -391,11 +391,14 @@ def get_lsv_single_exp_data(majiq_bins_file, confidence, gene_name=None):
     for i, lsv_meta in enumerate(metadata_pre):
         # print "%s --> %s" % (lsv_meta[2], collapse_lsv(lsv_meta[2]))
         if not gene_name or gene_name in str(lsv_meta[1]):
+            print lsv_meta[0], lsv_meta[1], lsv_meta[2]
             metadata.append([lsv_meta[0], lsv_meta[1], lsv_meta[2]]) #collapse_lsv(lsv_meta[2])])
             bins_array_list = bins_matrix[0][i]
             lsv_counter += 1
-            lsv_list.append(Lsv(generate_lsv(lsv_counter, bins_array_list, confidence)))
-
+            try:
+                lsv_list.append(Lsv(generate_lsv(lsv_counter, bins_array_list, confidence)))
+            except ValueError, e:
+                print "[WARNING] :: %s produced an error:\n%s" % (bins_array_list, e)
 
     return {'event_list':   lsv_list,
             'metadata':     metadata}
