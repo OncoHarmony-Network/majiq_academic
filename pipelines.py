@@ -339,7 +339,10 @@ class DeltaPair(BasicPipeline):
         #Finally, P(PSI_i, PSI_j | Data) equivalent to P(PSI_i, PSI_j)* P(Data | PSI_i, PSI_j) 
         self.logger.info("Calculate Posterior Delta Matrices...")
         posterior_matrix = []
-        for lidx, lsv in enumerate(matched_lsv) :
+
+        import pdb
+        pdb.set_trace()
+        for lidx, lsv in enumerate(matched_info) :
             lsv_psi_matrix = []
             for psi in range(len(data_given_psi[lidx])) :
                 pm = (prior_matrix * data_given_psi[lidx][psi])
@@ -351,7 +354,6 @@ class DeltaPair(BasicPipeline):
         pickle.dump([posterior_matrix,matched_info], open(pickle_path, 'w'))
         self.logger.info("Done!")
         return posterior_matrix, matched_info
-#        return posterior_matrix, event_names
 
 
     def pairdelta(self, file1, file2, output):

@@ -47,7 +47,7 @@ def local_weight_eta ( group ):
             for ii, psi in enumerate(lsv):
                 eta_e[ii] = _local_distance(psi,jeffreys, l1 = false)
 
-            eta.append(eta_e.sum()/float(lsv.shape[0]))
+            eta[eidx, lidx] = (eta_e.sum()/float(lsv.shape[0]))
     return eta
 
 def local_weight_nu ( group , median_psi):
@@ -59,9 +59,25 @@ def local_weight_nu ( group , median_psi):
             for ii, psi in enumerate(lsv):
                 nu_e[ii] = _local_distance(psi,median_psi[lidx, ii], l1 = false)
     
-            nu.append(nu_e.sum()/float(lsv.shape[0]))
+            nu = (nu_e.sum()/float(lsv.shape[0]))
     return nu
 
+
+def global_weight_ro ( group , median_psi ):
+    
+    ro = np.zeros( shape = (group.shape[0]), dtype= np.float)
+    ro_lsv = np.zeros(shape= group.shape, dtype=np.float)
+    for eidx, exp in enumerate(group):
+        for lidx, lsv in enumerate(exp):
+            for ii, psi in enumerate(lsv):
+                ro_lsv[lidx, eidx] += _local_distance(psi,median_psi[lidx, ii], l1 = false)
+
+    
+    ro = ro_lsv.sum(axis=0)
+
+    ro = ro / ro.sum()
+
+    return ro
 
 def local_weights(replicas, l1=False, median_ref=array([])):
     """
@@ -111,7 +127,7 @@ def global_weights(experiments=None, locweights=None, l1=False):
         locweights = local_weights(experiments, l1)
 
     return locweights.sum(axis=1) / locweights.shape[1] 
-    
+    1
 
 if __name__ == '__main__':
     #some simple tests

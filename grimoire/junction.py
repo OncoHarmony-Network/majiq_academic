@@ -3,6 +3,7 @@ from utils.decorators import *
 import scipy
 
 import mglobals
+from sys import getrefcount
 
 class Junction:
 
@@ -29,7 +30,8 @@ class Junction:
         self.coverage   = scipy.sparse.lil_matrix((mglobals.num_experiments,(readLength-16)+1),dtype=np.int)
         self.gc_content = np.zeros( shape=((readLength-16)+1), dtype=np.float )
         self.id         = "%s:%s-%s"%(self.get_gene().get_id(),self.get_ss_5p(),self.get_ss_3p())
-
+#        print "J1",self, getrefcount(self)
+            
     def __hash__(self):
         return hash(self.start) ^ hash(self.end) ^ hash(self.gene.id)
 
@@ -54,8 +56,6 @@ class Junction:
         return (self.gc_content)
     def get_readN(self, idx):
         return (self.readN[idx])
-#    def get_gc_content(self):
-#        return(self.gc_index, self.gc_factor)
     def is_annotated(self):
         return(self.annotated)
 
@@ -73,6 +73,8 @@ class Junction:
         self.acceptor = acceptor
 
     def update_junction_read( self, exp_idx, readN, start,gc,unique ) :
+#        print "J3",self, getrefcount(self)
+
         self.readN[exp_idx] += readN
         left_ind = mglobals.readLen - (self.start - start) - 8 +1
         if unique :

@@ -18,6 +18,9 @@ from scipy import interpolate
 from matplotlib import pyplot
 from grimoire.lsv import print_lsv_extype
 
+
+import pdb
+
 def create_if_not_exists(my_dir, logger=False):
     "Create a directory path if it does not exist"
     if not os.path.exists(my_dir):
@@ -224,11 +227,12 @@ def generate_visualization_output( allgenes ):
                         jtype= 2
                     elif jj.is_annotated() and jj.readN.sum() > 0:
                         jtype = 0
-                    elif not jj.is_annotated() and jj.readN.sum() > 5: 
+                    elif not jj.is_annotated() and jj.readN.sum() > mglobals.MINREADS: 
                         jtype = 1
                     else:
                         jtype = 1
-                        print "ERROR VIZ"
+                        print "ERROR VIZ", jj, jj.readN.sum(), jj.is_annotated()
+#                        pdb.set_trace()
                         continue
                     junc_l.append(jj.get_coordinates())
                     junc_list.append(JunctionGraphic( jj.get_coordinates(), jtype, jj.readN.sum()))
@@ -254,13 +258,14 @@ def generate_visualization_output( allgenes ):
                         type = 1
                     else:
                         type = 1
-                        print "ERROR VIZ 2"
+                        print "ERROR VIZ 2", ex, ex.annotated, ex.coverage.sum()
 #                        continue
                     extra_coords = []
-                    if ex.start < ex.db_coord[0]:
-                        extra_coords.append([ex.start, ex.db_coord[0]-1])
-                    if ex.end > ex.db_coord[1]:
-                        extra_coords.append([ex.db_coord[1]+1, ex.end])
+                    if ex.annotated :
+                        if ex.start < ex.db_coord[0]:
+                            extra_coords.append([ex.start, ex.db_coord[0]-1])
+                        if ex.end > ex.db_coord[1]:
+                            extra_coords.append([ex.db_coord[1]+1, ex.end])
 
                     eg = ExonGraphic(a3, a5, cc, type, intron_retention = ex.ir , coords_extra = extra_coords) 
                     exon_list.append( eg )
@@ -404,7 +409,10 @@ def gc_factor_calculation(exon_list, nb):
                 t = np.asarray(gc[lb:ub])
 #                print "a",a
 #                print "t",t
-                local_bins[exp_n,ii] = t.min()
+                try:
+                    local_bins[exp_n,ii] = t.min()
+                except ValueError:
+                    local_bins[exp_n,ii] = 0
                 if ii == nb -1 :
                     local_bins[exp_n,ii+1] = np.max(t)
 

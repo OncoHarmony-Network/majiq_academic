@@ -398,7 +398,7 @@ def EMBetaMixture( D, p0_mix, beta0_mix, num_iter, min_ratio = 1e-5, logger= Fal
         logp_mix = log(pmix)
 
         if np.exp(LL-LLold) < (1.0+min_ratio) :
-            if logger: logger.info("Ratio = %3. < 1+R(%.3f) - Aborting ... \n"%(LL-LLold, min_ratio) )
+            if logger: logger.info("Ratio = %.3f < 1+R(%.3f) - Aborting ... \n"%(LL-LLold, min_ratio) )
             break
 
 

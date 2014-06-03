@@ -241,6 +241,7 @@ class Gene:
                 for junc in txex.get_5prime_junc():
                     ss.add((junc.get_ss_5p(),'5prime',junc))
 
+        print sorted(ss)
         return sorted(ss)
 
     def collapse_exons ( self ):
@@ -269,7 +270,7 @@ class Gene:
 
         coords = exon.get_coordinates()
         ret = None
-        id = "%s:%d-%d:%s"%(self.get_id(),coords[0], coords[1], type)
+        id = "%s:%d-%d:%s"%(self.get_id(), coords[0], coords[1], type)
         for lsv in self.lsv_list:
             if lsv.id == id:
                 ret = lsv

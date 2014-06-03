@@ -179,7 +179,6 @@ def LSV_detection( gene_list, chr ):
             gn.check_exons()
             count = gn.get_read_count().sum()
             if count == 0: continue
-            print "---------------- %s --------------"%gn.get_id()
             mat, exon_list, tlb, varSS = gn.get_rnaseq_mat(const_set,lsv = True)
             for ss in range(2):
                 for ssnum in range(20):
@@ -187,7 +186,9 @@ def LSV_detection( gene_list, chr ):
             num_SS_var [2]+= varSS[2]
             #num_SS_var [1]+= varSS[1]
 
-#            utils.print_junc_matrices(mat, tlb=tlb,fp=True)
+            
+            print "---------------- %s --------------"%gn.get_id()
+            utils.print_junc_matrices(mat, tlb=tlb,fp=True)
             SS, ST = LSV_matrix_detection(mat, tlb, (False, False, False))
 
             for lsv_index, lsv_lst in enumerate((SS,ST)):

@@ -5,6 +5,7 @@ import mglobals
 from grimoire.lsv import LSV_IR
 from grimoire.junction import Junction
 import copy
+import pdb 
 
 class Exon:
 
@@ -426,6 +427,8 @@ class ExonTx(object):
 
         else:
             ex = Exon(min(all_3prime), max(all_5prime), gne, gne.get_strand(), annot=True)
+
+
             for txex in list_exontx:
                 ex.set_ir(txex.ir)
                 ex.ss_3p_list.append(txex.start)
@@ -474,7 +477,7 @@ def collapse_list_exons( listexons, gne ):
     return exlist
 
 def __half_exon(type,junc,readRNA):
-
+    print "NEW HALF EXON"
     gene = junc.get_gene()
     if type == '3prime':
         coord = junc.get_ss_3p()
@@ -508,7 +511,8 @@ def __half_exon(type,junc,readRNA):
 
 def new_exon_definition(start, end, readRNA, s3prime_junc, s5prime_junc, gene):
 
-    if  end - start < 10 : return 0
+    if  end - start < 5 : return 0
+    print "NEW DEFINITION::",start, end
 
     ex = gene.exist_exon(start,end)
     newExons = 0
@@ -516,7 +520,8 @@ def new_exon_definition(start, end, readRNA, s3prime_junc, s5prime_junc, gene):
         newExons = 1
         ex = Exon(start,end,gene,gene.get_strand())
         gene.add_exon(ex)
-    #print "ADD1::",start, end
+    else:
+        print "EXON FOUND", ex, ex.get_coordinates(), ex.annotated
     ex.add_new_read( start, end, readRNA, s3prime_junc, s5prime_junc )
     s3prime_junc.add_acceptor(ex)
     s5prime_junc.add_donor(ex)
@@ -533,28 +538,29 @@ def detect_exons(gene, junction_list, readRNA):
     last_5prime = None
     first_3prime = None
 
-#    junction_list.extend(gene.get_all_ss())
-#
-    for jj in  gene.get_all_ss():
-        if not jj in junction_list:
-            junction_list.append(jj)
+#    for jj in  gene.get_annotated_junctions():
+#        if not (jj.get_ss_5p(),'5prime',jj) in junction_list:
+#            junction_list.append((jj.get_ss_5p(),'5prime',jj))
+#        if not (jj.get_ss_3p(),'3prime',jj) in junction_list:
+#            junction_list.append((jj.get_ss_3p(),'3prime',jj))
+
+    junction_list.extend(gene.get_all_ss())
 
     junction_list.sort()
-    #print "DETECT EXONS::",gene.get_id()
+    print "JUNC EXTENDED", junction_list
+    print "DETECT EXONS::",gene.get_id()
     for (coord,type, jj) in junction_list :
-        #print "---NEW-------------------------------------------------------------"
-        #print coord, type, jj, jj.coverage.sum() 
-        if jj.coverage.sum() < mglobals.MINREADS and not jj.is_annotated(): 
-#            junction_list.remove((coord,type, jj))
-#            del jj
-            continue
-        #print "----------------------------------------------------------------"
-        #print coord, type, jj, jj.coverage.sum() 
-        #print "LIST",opened_exon
-        #print "LASTS",first_3prime, last_5prime
+        print "---NEW-------------------------------------------------------------"
+        print coord, type, jj, jj.coverage.sum(), jj.annotated, jj.is_annotated() 
+        if jj.coverage.sum() < mglobals.MINREADS and not jj.is_annotated(): continue
+        print coord, type, jj, jj.coverage.sum(), jj.annotated 
+        print "LIST",opened_exon
+        print "LASTS",first_3prime, last_5prime
+#        if coord == 5109672:
+#            pdb.set_trace()
         jj_gene = jj.get_gene()
         if type == '5prime':
-#            print "CHECK 1",coord,jj.get_ss_5p()
+            print "CHECK 1",coord,jj.get_ss_5p()
             if opened >0 :
                 start = opened_exon[-1].get_ss_3p()
                 end = coord
@@ -581,7 +587,7 @@ def detect_exons(gene, junction_list, readRNA):
                     opened_exon = []
                     first_3prime = jj
             else:
-                #print "CHECK 2.2",coord,jj.get_ss_3p()
+                print "CHECK 2.2",coord,jj.get_ss_3p()
                 last_5prime = None
                 first_3prime = jj
             #end else ...
@@ -595,10 +601,9 @@ def detect_exons(gene, junction_list, readRNA):
         if jj.coverage.sum() < mglobals.MINREADS and not jj.is_annotated() :
             junction_list.remove((coord,type, jj))
             del jj
-            
             continue
-        #print "JUNCTIONS MISSING EXONS",jj.donor, jj.acceptor, jj.readN.sum(), jj.start, jj.end
         if jj.donor is None and jj.acceptor is None:
+#            print "JUNCTIONS MISSING EXONS",jj.donor, jj.acceptor, jj.readN.sum(), jj.start, jj.end
             junction_list.remove((coord,type, jj))
             del jj
 

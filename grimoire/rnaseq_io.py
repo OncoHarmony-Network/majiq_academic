@@ -8,6 +8,9 @@ import pysam
 import gc
 import numpy as np
 import mglobals
+from sys import getrefcount
+import pdb
+
 
 
 def __cross_junctions(read):
@@ -82,10 +85,11 @@ def is_neg_strand (read):
 
 
 import pdb
-def read_sam_or_bam(filename, gene_list, readlen, chrom, exp_index):
+def read_sam_or_bam(filenames, gene_list, readlen, chrom):
+#def read_sam_or_bam(filename, gene_list, readlen, chrom, exp_index):
 
     counter = [0] * 6
-    samfile = pysam.Samfile( filename, "rb" )
+    samfile = [ pysam.Samfile( xx, "rb" ) for xx in filenames ]
     temp_ex = []
     NUnum = 0
     skip_gene = 0
@@ -95,90 +99,90 @@ def read_sam_or_bam(filename, gene_list, readlen, chrom, exp_index):
         for gne in gene_list[strand]:
             junctions = []
             strt,end = gne.get_coordinates()
-            try:
-                read_iter = samfile.fetch( chrom, strt, end)
-            except ValueError:
-                continue
             j_list = gne.get_all_junctions()
-#            if gne.get_id() == 'NM_001205314':
-#                pdb.set_trace()
-
             ex_list = gne.get_exon_list()
-            for read in read_iter:
-                strand_read = '+' if not is_neg_strand(read) else '-'
-#                strand_read = '+' if not read.is_reverse else '-'
-#                print "STRAND",strand_read, strand
-                if strand_read != strand: continue
-                unique = __is_unique(read)
-                if not unique : 
-                    NUnum  += 1
+
+            for exp_index in range(len(filenames)):
+                try:
+                    read_iter = samfile[exp_index].fetch( chrom, strt, end)
+                except ValueError:
                     continue
-                nreads = __get_num_reads(read)
-                gne.add_read_count(nreads, exp_index)
-                is_cross, junc_list = __cross_junctions(read)
-                r_start = read.pos
-                if r_start < strt or r_start > end : continue
-#                print "READ",strt,end, r_start, read
-
-                for ex_idx in range(len(ex_list)):
-                    ex_start, ex_end = ex_list[ex_idx].get_coordinates()
-                    if r_start >= ex_start and r_start <= ex_end :
-                        ex_list[ex_idx].update_coverage(exp_index, nreads)
-                        temp_ex.append(ex_list[ex_idx])
-                        break
-                #else:
-                #    break
-
-                if not is_cross : continue
-                nc = read.seq.count('C') + read.seq.count('c') 
-                ng = read.seq.count('g') + read.seq.count('G') 
-                gc_content = float( nc + ng ) / float(len(read.seq))
-                for (junc_start,junc_end) in junc_list:
-                    if junc_start - r_start > readlen : 
-                        r_start = junc_start - (readlen - 16) -1
-                    elif junc_start - r_start >= readlen - 8 or junc_start -r_start <= 8: continue
-                    found = False
-                    if junc_end - junc_start < 10 :
-                        counter[0] +=1
+                for read in read_iter:
+                    strand_read = '+' if not is_neg_strand(read) else '-'
+    #                strand_read = '+' if not read.is_reverse else '-'
+    #                print "STRAND",strand_read, strand
+                    if strand_read != strand: continue
+                    unique = __is_unique(read)
+                    if not unique : 
+                        NUnum  += 1
                         continue
-                    for jj in j_list:
-                        ( j_st,j_ed ) = jj.get_coordinates()
-                        if   j_st > junc_start  or (j_st == junc_start and j_ed > junc_end): break
-                        elif j_st < junc_start  or (j_st == junc_start and j_ed < junc_end): continue
-                        elif junc_start == j_st and junc_end == j_ed:
-                            ''' update junction and add to list'''
-                            counter[3] +=1
-                            jj.update_junction_read(exp_index,nreads,r_start, gc_content, unique)
-                            if not (junc_start,'5prime',jj) in junctions:
-                                junctions.append((junc_start,'5prime',jj))
-                                junctions.append((junc_end,'3prime',jj))
-                            found = True
+                    nreads = __get_num_reads(read)
+                    gne.add_read_count(nreads, exp_index)
+                    is_cross, junc_list = __cross_junctions(read)
+                    r_start = read.pos
+                    if r_start < strt or r_start > end : continue
+    #                print "READ",strt,end, r_start, read
+    
+                    for ex_idx in range(len(ex_list)):
+                        ex_start, ex_end = ex_list[ex_idx].get_coordinates()
+                        if r_start >= ex_start and r_start <= ex_end :
+                            ex_list[ex_idx].update_coverage(exp_index, nreads)
+                            temp_ex.append(ex_list[ex_idx])
                             break
-                        #end elif junc_start == ...
-                    #end for jj in j_list
-                    if not found :
-                        ''' update junction and add to list'''
-                        junc = None
-                        for (coord,t,j) in junctions:
-                            if (j.start == junc_start and j.end == junc_end):
-                                junc = j
-                                junc.update_junction_read(exp_index, nreads, r_start, gc_content, unique)
-                                if not (junc_start,'5prime',junc) in junctions:
-                                    junctions.append((junc_start,'5prime',junc))
-                                    junctions.append((junc_end,'3prime',junc))
+                    #else:
+                    #    break
+    
+                    if not is_cross : continue
+                    nc = read.seq.count('C') + read.seq.count('c') 
+                    ng = read.seq.count('g') + read.seq.count('G') 
+                    gc_content = float( nc + ng ) / float(len(read.seq))
+                    for (junc_start,junc_end) in junc_list:
+                        if junc_start - r_start > readlen : 
+                            r_start = junc_start - (readlen - 16) -1
+                        elif junc_start - r_start >= readlen - 8 or junc_start -r_start <= 8: continue
+                        found = False
+                        if junc_end - junc_start < 10 :
+                            counter[0] +=1
+                            continue
+
+                        for jj in j_list:
+                            ( j_st,j_ed ) = jj.get_coordinates()
+                            if   j_st > junc_start  or (j_st == junc_start and j_ed > junc_end): break
+                            elif j_st < junc_start  or (j_st == junc_start and j_ed < junc_end): continue
+                            elif junc_start == j_st and junc_end == j_ed:
+                                ''' update junction and add to list'''
+                                counter[3] +=1
+                                jj.update_junction_read(exp_index,nreads,r_start, gc_content, unique)
+                                if not (junc_start,'5prime',jj) in junctions:
+                                    junctions.append((junc_start,'5prime',jj))
+                                    junctions.append((junc_end,'3prime',jj))
+                                found = True
                                 break
-                            #end if (j.start) == ...
-                        #end for (coord,t,j) ...
-                        if junc is None:
-                            '''mark a new junction '''
-                            counter[4] += 1
-                            junc = Junction( junc_start, junc_end, None, None, gne, readN=nreads)
-                            junc.update_junction_read(exp_index, nreads, r_start, gc_content, unique)
-                            junctions.append((junc_start,'5prime',junc))
-                            junctions.append((junc_end,'3prime',junc))
-                    #end if not found ...
-                #end for junc ...
-#            print "JJJunctions", junctions
+                            #end elif junc_start == ...
+                        #end for jj in j_list
+
+                        if not found :
+                            ''' update junction and add to list'''
+                            junc = None
+                            for (coord,t,junc) in junctions:
+                                if (junc.start == junc_start and junc.end == junc_end):
+                                    junc.update_junction_read(exp_index, nreads, r_start, gc_content, unique)
+                                    if not (junc_start,'5prime',junc) in junctions:
+                                        junctions.append((junc_start,'5prime',junc))
+                                        junctions.append((junc_end,'3prime',junc))
+                                    break
+                                #end if (j.start) == ...
+                            #end for (coord,t,j) ...
+                            if junc is None:
+                                '''mark a new junction '''
+                                counter[4] += 1
+                                junc = Junction( junc_start, junc_end, None, None, gne, readN=nreads)
+                                junc.update_junction_read(exp_index, nreads, r_start, gc_content, unique)
+                                junctions.append((junc_start,'5prime',junc))
+                                junctions.append((junc_end,'3prime',junc))
+                        #end if not found ...
+                    #end for junc ...
+    #            print "JJJunctions", junctions
             if len(junctions) > 0 :
                 detect_exons(gne, junctions, None)
             gne.prepare_exons()
@@ -255,6 +259,7 @@ def read_transcript_ucsc(filename, refSeq = False):
                 gn = gene
             else:
                 all_genes[chrom][strand].append(gn)
+
             trcpt = Transcript(transcript_id, gn,start,end )
             gn.add_transcript(trcpt)
             pre_end = None
@@ -263,29 +268,23 @@ def read_transcript_ucsc(filename, refSeq = False):
             for ii in xrange(nblocks):
                 start = ex_start[ii]
                 end = ex_end[ii]
-#                ex = gn.exist_exon(start,end)
-#                if ex is None :
-#                    ex = Exon(start,end,gn,strand)
-#                    temp_ex[chrom].append(ex)
-#                    gn.add_exon(ex)
-#                txex = ex.add_new_definition(start, end, trcpt)
+
                 txex = gn.new_annotated_exon(start, end, trcpt)
                 trcpt.add_exon(txex)
                 junc = gn.exist_junction(pre_end,start)
                 if junc is None:
                     junc = Junction(pre_end,start, None, None,gn,annotated=True)
-#                    junc = Junction(pre_end,start, pre_ex, ex,gn,annotated=True)
                 trcpt.add_junction(junc)
-#                junctions.append((junc_start,'5prime',junc))
-#                junctions.append((junc_end,'3prime',junc))
                 txex.add_3prime_junc(junc)
                 if not pre_end is None:
                     pre_txex.add_5prime_junc(junc)
-
                 pre_end = end
-#                pre_ex = ex
                 pre_txex = txex
             #END for ii in range(nblocks)
+            if not pre_end is None: 
+                junc = Junction( pre_end,None, None, None, gn,annotated=True )
+                trcpt.add_junction(junc)
+                pre_txex.add_5prime_junc(junc)
             trcpt._sort_in_list(strand)
         #end for t in text
         gc.collect()

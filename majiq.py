@@ -34,9 +34,10 @@ def __parallel_for_splc_quant(samfiles_list, gene_list, chr, as_db, pcr_validati
 
 def __parallel_lsv_quant(samfiles_list, gene_list, chr, as_db, pcr_validation = {}):
     #print "START child,", current_process().name
-    for idx,exp in enumerate(samfiles_list):
-        print "READING ", idx, exp
-        rnaseq_io.read_sam_or_bam(exp, gene_list, mglobals.readLen, chr, idx )
+#    for idx,exp in enumerate(samfiles_list):
+#        print "READING ", idx, exp
+#        rnaseq_io.read_sam_or_bam(exp, gene_list, mglobals.readLen, chr, idx )
+    rnaseq_io.read_sam_or_bam(samfiles_list, gene_list, mglobals.readLen, chr )
     lsv, const = analize.LSV_detection( gene_list, chr )
     file_name = '%s.obj'%(chr)
     if pcr_validation is not None:
@@ -133,7 +134,7 @@ def main( args ) :
     utils.generate_visualization_output(all_genes)
     print "number of gcs", len(temp)
     utils.gc_factor_calculation(temp, 10)
-    utils.plot_gc_content()
+    #utils.plot_gc_content()
     utils.merge_and_create_MAJIQ( chr_list, 'tojuan.majiq')
     mglobals.print_numbers()
 

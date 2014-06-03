@@ -191,6 +191,7 @@ def lsv_psi(samples_events, name, alpha, n, debug):
 #            for pp in psi[idx]:
 #                    if np.isnan(pp):
 #                        pdb.set_trace()
+        print "PSI",psi
         psi_scores.append( psi )
         #print "Junction %s PSI distribution: %s sum_N: %s"%(i, psi_matrix[-1], sum(psi_matrix[-1]))
 
