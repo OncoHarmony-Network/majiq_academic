@@ -1,3 +1,6 @@
+from matplotlib import use
+use('Agg')
+
 from collections import defaultdict
 import sys
 import os

@@ -355,9 +355,10 @@ def gen_prior_matrix( pip, lsv_exp1, lsv_exp2, output ):
             for jidx in range(lsv.shape[0]):
                 if len(njun_prior) <= jidx:
                     njun_prior.append([])
+                if jidx > 2 :continue
                 njun_prior[jidx].append(lsv[jidx])
 
-
+        
 
         for nj in range(len(njun_prior)):
             best_delta_psi = array(njun_prior[nj])

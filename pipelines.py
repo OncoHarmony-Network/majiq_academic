@@ -162,7 +162,7 @@ class CalcPsi(BasicPipeline):
         #    all_junctions[junc_set] = masked_less(all_junctions[junc_set], 0) 
 
         fitfunc = self.fitfunc(const[0])
-#        filter_lsv = self.mark_stacks_lsv( lsv_junc[0], fitfunc)
+        filter_lsv = self.mark_stacks_lsv( lsv_junc, fitfunc)
         #FILTER_JUNCTIONS?
         self.logger.info('Filtering ...')
         num_lsv = len(lsv_junc[0])
@@ -179,7 +179,7 @@ class CalcPsi(BasicPipeline):
         lsv_sample = []
         for ii in lsv_junc[0]:
 
-            m_lsv, var_lsv, s_lsv = sample_from_junctions(ii, self.m, self.k, discardzeros=5, trimborder=self.trimborder, fitted_func=fitfunc, debug=self.debug)
+            m_lsv, var_lsv, s_lsv = sample_from_junctions(ii, self.m, self.k, discardzeros=self.discardzeros, trimborder=self.trimborder, fitted_func=fitfunc, debug=self.debug)
             lsv_sample.append( s_lsv )
 
         self.logger.info("\nCalculating PSI for %s ..."%(name))
@@ -282,27 +282,28 @@ class DeltaPair(BasicPipeline):
         lsv_junc1, const1 = majiq_io.load_data_lsv(file1, self.logger) 
         lsv_junc2, const2 = majiq_io.load_data_lsv(file2, self.logger) 
 
-#        self.logger.debug("Shapes for inclusion, %s exclusion, %s constitutive %s"%(inc1.shape, exc1.shape, const1.shape))
-#        all_junctions = {"inc1": inc1, "exc1": exc1, "const1": const1, "inc2": inc2, "exc2": exc2, "const2": const2 }
-#        all_junctions = self.gc_content_norm(all_junctions)
-        self.logger.info("Masking non unique...")
-        #for junc_set in all_junctions.keys():
-            #print junc_set, all_junctions[junc_set], all_junctions[junc_set].shape
-        #    all_junctions[junc_set] = masked_less(array(all_junctions[junc_set]), 0) 
-
         #fitting the function
         fitfunc1 = self.fitfunc(const1[0])
         fitfunc2 = self.fitfunc(const2[0])
-       # filtered_lsv1 = iself.mark_stacks_lsv( lsv_junc1[0], fitfunc1)
-       # filtered_lsv2 = self.mark_stacks_lsv( lsv_junc1[0], fitfunc1)
 
-        filtered_lsv1 = lsv_junc1
-        filtered_lsv2 = lsv_junc2
+        filtered_lsv1 = self.mark_stacks_lsv( lsv_junc1, fitfunc2)
+        filtered_lsv2 = self.mark_stacks_lsv( lsv_junc1, fitfunc2)
+
         #Quantifiable junctions filter
         ''' Quantify and unify '''
         self.logger.info('Filtering ...')
-#        all_junctions["exc1"], all_junctions["inc1"], all_junctions["exc2"], all_junctions["inc2"], event_names = majiq_filter.discardlow(self.minnonzero, True, self.logger, event_names, all_junctions["exc1"], all_junctions["inc1"], all_junctions["exc2"], all_junctions["inc2"],)
-#        all_junctions["exc1"], all_junctions["inc1"], all_junctions["exc2"], all_junctions["inc2"], event_names = majiq_filter.discardminreads(self.minreads, True, self.logger, False, event_names, all_junctions["exc1"], all_junctions["inc1"], all_junctions["exc2"], all_junctions["inc2"],)
+        num_lsv1 = len(filtered_lsv1[0])
+        num_lsv2 = len(filtered_lsv2[0])
+
+        ''' 
+            fon[0] = False deactivates num_reads >= 20
+            fon[1] = False deactivates npos >= 5
+        '''
+        fon = [True, True]
+        filtered_lsv1 = majiq_filter.lsv_quantifiable( filtered_lsv1, self.minnonzero, self.minreads, self.logger , fon)
+        self.logger.info('%s/%s lsv remaining'%(len(filtered_lsv1[0]),num_lsv1))
+        filtered_lsv2 = majiq_filter.lsv_quantifiable( filtered_lsv2, self.minnonzero, self.minreads, self.logger , fon)
+        self.logger.info('%s/%s lsv remaining'%(len(filtered_lsv2[0]),num_lsv2))
 
         
         psi_space, prior_matrix = majiq_psi.gen_prior_matrix(self, filtered_lsv1, filtered_lsv2, output)
@@ -326,9 +327,10 @@ class DeltaPair(BasicPipeline):
         matched_lsv, matched_info = majiq_filter.lsv_intersection( lsv_sample1, lsv_sample2 )
         numbins= 20
         data_given_psi = []
-        for lsv_idx, lsv in enumerate(matched_lsv):
-            data_given_psi1 = majiq_psi.reads_given_psi_lsv( lsv[0], psi_space )
-            data_given_psi2 = majiq_psi.reads_given_psi_lsv( lsv[1], psi_space )
+        for lsv_idx, info in enumerate(matched_info):
+            
+            data_given_psi1 = majiq_psi.reads_given_psi_lsv( matched_lsv[0][lsv_idx], psi_space )
+            data_given_psi2 = majiq_psi.reads_given_psi_lsv( matched_lsv[1][lsv_idx], psi_space )
             data_psi = []
             for psi in range(data_given_psi1.shape[0]) :
             #TODO Tensor product is calculated with scipy.stats.kron. Probably faster, have to make sure I am using it correctly.
@@ -340,8 +342,6 @@ class DeltaPair(BasicPipeline):
         self.logger.info("Calculate Posterior Delta Matrices...")
         posterior_matrix = []
 
-        import pdb
-        pdb.set_trace()
         for lidx, lsv in enumerate(matched_info) :
             lsv_psi_matrix = []
             for psi in range(len(data_given_psi[lidx])) :
@@ -628,6 +628,28 @@ class DeltaGroup(DeltaPair, CalcPsi):
 
         return weights
 
+    def comb_replicas_lsv(self, pairs_posteriors, weights1=None, weights2=None):
+        "Combine all replicas per event into a single average replica. Weights per experiment can be provided"
+        weights1 = self.equal_if_not(weights1) 
+        weights2 = self.equal_if_not(weights2) 
+        comb_matrix = []
+        comb_names = []
+        FILTERMIN = len(self.k_ref)-1 #filter events that show on all replicas
+        for name, matrices in pairs_posteriors.items():
+            for k, matrix in enumerate(matrices):
+                #i = k / len(self.files1) #infers the weight1 index given the position of the matrix
+                #j = k % len(self.files2)
+                i, j = self.k_ref[k]
+                if k == 0: #first iteration
+                    comb = matrix*weights1[i]*weights2[j]
+                else:
+                    comb += matrix*weights1[i]*weights2[j]
+
+            if k == FILTERMIN:
+                comb /= sum(comb) #renormalize so it sums 1
+                comb_matrix.append(comb)
+                comb_names.append(name)
+
     def comb_replicas(self, pairs_posteriors, weights1=None, weights2=None):
         "Combine all replicas per event into a single average replica. Weights per experiment can be provided"
         weights1 = self.equal_if_not(weights1) 
@@ -681,17 +703,15 @@ class DeltaGroup(DeltaPair, CalcPsi):
                 events_path = self._events_path(i, j)
                 if os.path.exists(matrix_path):
                     self.logger.info("%s exists! Loading..."%path)
-                    matrices = pickle.load(open(matrix_path))
-                    names = pickle.load(open(events_path))
+                    matrices[i,j], info[i,j] = pickle.load(open(matrix_path))
                 else:
                     self.logger.info("Calculating pair %s"%path)
-                    matrices, names = self.pairdelta_lsv(self.files1[i], self.files2[j], path)
+                    matrices[i,j], info[i,j] = self.pairdelta_lsv(self.files1[i], self.files2[j], path)
                     self.logger.info("Saving pair posterior for %s, %s"%(i, j))
 
                 if not self.fixweights1: #get relevant events for weights calculation
                     relevant_events.extend(rank_deltas(matrices, names, E=True)[:self.numbestchanging])
 
-                for k, name in enumerate(names):
                     pairs_posteriors[name].append(matrices[k]) #pairing all runs events
 
         self.logger.info("All pairs calculated, calculating weights...")
@@ -714,13 +734,13 @@ class DeltaGroup(DeltaPair, CalcPsi):
                     break #we got enough elements
             
             self.logger.info("Obtaining weights for relevant set...")
-            weights1 = self.calc_weights_lsv(relevant, group=0)
+            weights1 = self.calc_weights_lsv(relevant, group=0, global_version=3)
             self.logger.info("Weigths for %s are (respectively) %s"%(self.files1, weights1))
-            weights2 = self.calc_weights_lsv(relevant, group=1)
+            weights2 = self.calc_weights_lsv(relevant, group=1, type, globa_version=3)
             self.logger.info("Weigths for %s are (respectively) %s"%(self.files2, weights2))
 
         self.logger.info("Normalizing with weights...")
-        comb_matrix, comb_names = self.comb_replicas(pairs_posteriors, weights1=weights1, weights2=weights2)        
+        comb_matrix, comb_names = self.comb_replicas_lsv( pairs_posteriors, weights1=weights1, weights2=weights2 )
         self.logger.info("%s events matrices calculated"%len(comb_names))
         pickle_path = "%s%s_%s_deltacombmatrix.pickle"%(self.output, self.names[0], self.names[1])
         name_path = "%s%s_%s_combeventnames.pickle"%(self.output, self.names[0], self.names[1])
