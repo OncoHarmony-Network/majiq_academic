@@ -561,7 +561,7 @@ class DeltaGroup(DeltaPair, CalcPsi):
         #print "LOCAL VALUES", local_values
         return local_values, array(median_ref)
 
-    def calc_weights_lsv(self, group, ):
+    def calc_weights_lsv(self, group, releveant, type=3 ):
 
         #for i in xrange(len(self.files1)):
         #    for j in xrange(len(self.files2)):
@@ -735,7 +735,7 @@ class DeltaGroup(DeltaPair, CalcPsi):
             self.logger.info("Obtaining weights for relevant set...")
             weights1 = self.calc_weights_lsv(relevant, group=0, global_version=3)
             self.logger.info("Weigths for %s are (respectively) %s"%(self.files1, weights1))
-            weights2 = self.calc_weights_lsv(relevant, group=1, type, globa_version=3)
+            weights2 = self.calc_weights_lsv(relevant, group=0, globa_version=3)
             self.logger.info("Weigths for %s are (respectively) %s"%(self.files2, weights2))
 
         self.logger.info("Normalizing with weights...")
