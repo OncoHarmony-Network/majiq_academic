@@ -137,6 +137,14 @@ def main():
 
     # MISO: Parse file,
     miso_psis_list = []
+    lsv_types_dict = {
+        's|1e1.1|1e2.1':'SE',
+        't|1e1.1|1e2.1':'SE',
+        's|1e1.1|1e1.2':'A3SS',
+        't|1e1.1|2e1.1':'A3SS',
+        't|1e1.1|1e1.2':'A5SS',
+        's|1e1.1|2e1.1':'A5SS'
+    }
 
     debug_dict1 = {}
     debug_dict2 = {}
@@ -191,7 +199,7 @@ def main():
             print "\t", psivalues[1][majiq_psi_names[k]]
             print "\t", psivalues[0][0][majiq_psi_names[k]]
 
-    plot_PSIs1VsPSIs2(abs(np.array(psi_list1) - np.array(psi_list2)), abs(np.array(miso_psis_list[0]) - np.array(miso_psis_list[1])), args.name1, args.name2, "MAJIQ", "MISO")
+    plot_PSIs1VsPSIs2(abs(np.array(psi_list1) - np.array(psi_list2)), abs(np.array(miso_psis_list[0]) - np.array(miso_psis_list[1])), args.name1, args.name2, "MAJIQ", "MISO", args.plotpath)
 
 
 if __name__ == '__main__':
