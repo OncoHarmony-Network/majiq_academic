@@ -1140,6 +1140,12 @@
             });
 
 
+            $('.floatingLegend').each(function () {
+                if ($(this)[0].getContext) {
+                    splicegraph().renderFloatingLegend($(this)[0]);
+                }
+            });
+
             var gene_obj = null;
             $('.spliceGraph').each( function(){
                 gene_obj = splicegraph().renderSpliceGraph(this);
@@ -1147,17 +1153,9 @@
 
             });
 
-            $('.floatingLegend').each(function () {
-                if ($(this)[0].getContext) {
-                    splicegraph().renderFloatingLegend($(this)[0]);
-                }
-            });
-
-
             $('.lsvLegend').each( function(){
-                splicegraph().renderLsvSpliceGraph(this);
-
-            }, gene_obj);
+                splicegraph().renderLsvSpliceGraph(this, gene_obj);
+            });
 
 
             $('.lsvSingleCompactPercentiles').each(function(){

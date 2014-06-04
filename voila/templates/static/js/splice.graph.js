@@ -632,7 +632,7 @@ window.splicegraph = function (){
         }
 
 
-        function renderLsvSpliceGraph(canvas) {
+        function renderLsvSpliceGraph(canvas, gene) {
             if (canvas.getContext) {
                 // Render LSV representation from a string text representing the REAL LSV i.e.: s|1e1.3|2e1.2|3e1.2|4e1.1
                 //                                                             Another example: s|1e0|2e0|3e1.1|4e1.1
@@ -644,6 +644,15 @@ window.splicegraph = function (){
                     pixel_factor = 1,
                     percentage_exon = .2,
                     percentage_intron = .15;
+
+                var exon_lsv_coords = canvas.getAttribute('data-coord-exon').replace('(', '').replace(')', '').replace(' ', '').split(',');
+                var exon_lsv_number = -1;
+                for (var exon_i = 0; exon_i <gene.exons.length; exon_i++){
+                    if (gene.exons[exon_i].coords[0] == exon_lsv_coords[0] && gene.exons[exon_i].coords[1] == exon_lsv_coords[1]){
+                        exon_lsv_number = exon_i + 1;
+                        break;
+                    }
+                }
 
                 var lsv_data = canvas.getAttribute('data-lsv-string');
                 var lsvs = lsv_data.split('|');
@@ -683,7 +692,7 @@ window.splicegraph = function (){
                     };
                     exons.push(exon);
                     var number_exon = (direction > 0 ? i : i + 1 );
-                    number_exon = (number_exon == 0 || number_exon == num_exons ? '' : number_exon);
+                    number_exon = (number_exon == 0 || number_exon == num_exons ? exon_lsv_number : '');
                     render_exon(canvas, exon, pixel_factor, margins, percentage_exon, number_exon );
                     start += exon_width + percentage_intron*area[0];
                 }
@@ -924,8 +933,8 @@ window.splicegraph = function (){
             renderLsvLegend: function(canvas){
                 return renderLsvLegend(canvas);
             },
-            renderLsvSpliceGraph: function(canvas){
-                return renderLsvSpliceGraph(canvas);
+            renderLsvSpliceGraph: function(canvas, gene){
+                return renderLsvSpliceGraph(canvas, gene);
             },
             renderSpliceGraph: function(canvas){
                 var MAX_INTRON = 300;   // Global

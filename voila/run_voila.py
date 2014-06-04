@@ -25,7 +25,7 @@ def mocked_get_array_bins():
     pass
 
 
-def _render_template(output_dir, output_html, majiq_output, type_summary, threshold):
+def _render_template(output_dir, output_html, majiq_output, type_summary, threshold, post_process_info=None):
     """
     Rendering the summary template to create the HTML file.
 
@@ -67,7 +67,8 @@ def _render_template(output_dir, output_html, majiq_output, type_summary, thresh
                                                metadata=majiq_output['metadata']
                                                ))
     elif type_summary == 'lsv_thumbnails':
-        voila_output.write(sum_template.render(lsvList=majiq_output))
+        voila_output.write(sum_template.render(lsvList=majiq_output,
+                                               collapsed=post_process_info['collapsed']))
 
     elif type_summary == 'lsv_gene':
         voila_output.write(sum_template.render( lsvList=majiq_output['event_list'],
@@ -128,7 +129,7 @@ def create_summary(majiq_bins_file, output_dir, meta_preprocess, meta_postproces
             print e.message
             # sys.exit(1)
 
-    _render_template(output_dir, output_html, majiq_output, type_summary, threshold)
+    _render_template(output_dir, output_html, majiq_output, type_summary, threshold, meta_postprocess)
     return
 
 
@@ -146,6 +147,8 @@ def main():
 
     parser.add_argument('--genes-file-info', dest='genes_file', metavar='visual_LSE.majiq', type=str, help='Pickle file with gene coords info.')
     parser.add_argument('--gene-name', type=str, dest='gene_name', help='Gene name to filter the results. [ONLY for analysis type lsv_single]')
+    parser.add_argument('--collapsed', type=bool, default=False, help='Gene name to filter the results. [ONLY for analysis type lsv_single]')
+
 
     # parser.add_argument('-c', '--confidence', metavar=0.95, dest='confidence', type=float,
     #                     default=0.95, help='Percentage of confidence required (by default, 0.95).')
@@ -155,7 +158,7 @@ def main():
     create_summary(args.majiq_bins,
                    args.output_dir,
                    args.meta_preprocess,
-                   {'names': args.event_names, 'keys_plots': args.keys_plots, 'gene_name': args.gene_name, 'genes_file': args.genes_file},
+                   {'names': args.event_names, 'keys_plots': args.keys_plots, 'gene_name': args.gene_name, 'genes_file': args.genes_file, 'collapsed': args.collapsed},
                    args.type_summary,
                    args.threshold)
 

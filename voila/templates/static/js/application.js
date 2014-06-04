@@ -117,7 +117,12 @@ $( document ).ready(function(){
 
     // Single LSVs - TODO: Move from here to jquery.tablesorter.js
     $('.lsvLegendThumb').each( function(){
-        splicegraph().renderLsvSpliceGraph(this);
+        var collapsed = this.getAttribute('data-collapsed');
+        if (collapsed){
+            splicegraph().renderLsvLegend(this);
+        } else {
+            splicegraph().renderLsvSpliceGraph(this);
+        }
         var can = this;
         function dlCanvas() {
             var dt = can.toDataURL('image/png');

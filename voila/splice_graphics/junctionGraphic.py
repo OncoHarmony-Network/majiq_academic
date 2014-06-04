@@ -5,7 +5,7 @@ __author__ = 'abarrera'
 
 class JunctionGraphic(object):
     def __init__(self, coords, type_junction, num_reads):
-        self.coords = coords
+        self.coords = list(coords)
         self.type_junction = type_junction
         self.num_reads = num_reads
 
