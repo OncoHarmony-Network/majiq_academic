@@ -23,8 +23,8 @@ def main():
     common.add_argument('--silent', action='store_true', default=False, help='Silence the logger.')
     common.add_argument('--plotpath', default=None, help='Path to save the plot to, if not provided will show on a matplotlib popup window')
     common.add_argument('--debug', type=int, default=0, help="Activate this flag for debugging purposes, activates logger and jumps some processing steps.")
-    common.add_argument('--minreads', default=20, type=int, help='Minimum number of reads combining all positions in an event to be considered. [Default: %(default)s]') 
-    common.add_argument('--minnonzero', default=5, type=int, help='Minimum number of start positions with at least 1 read for an event to be considered.')
+    common.add_argument('--minreads', default=10, type=int, help='Minimum number of reads combining all positions in an event to be considered. [Default: %(default)s]') 
+    common.add_argument('--minnonzero', default=3, type=int, help='Minimum number of start positions with at least 1 read for an event to be considered.')
     common.add_argument('--tracklist', nargs='+', help='A list of identifiers to track in detail, for debugging purposes')
     
     #flags shared by calcpsi and deltapair
@@ -34,7 +34,7 @@ def main():
     psianddelta.add_argument('--m', default=100, type=int, help='Number of bootstrapping samples. [Default: %(default)s]')  
     psianddelta.add_argument('--trimborder', default=5, type=int, help='Trim the borders when sampling (keeping the ones with reads). [Default: %(default)s]')
     psianddelta.add_argument('--alpha', default=0.5, type=float, help='Alpha hyperparameter for the dirichlet distribution. [Default: %(default)s]') 
-    psianddelta.add_argument('--markstacks', default=0.001, type=float, help='Mark stack positions. Expects a p-value. Use a negative value in order to disable it. [Default: %(default)s]') 
+    psianddelta.add_argument('--markstacks', default=0.0000001, type=float, help='Mark stack positions. Expects a p-value. Use a negative value in order to disable it. [Default: %(default)s]') 
     psianddelta.add_argument('--nbdisp', default=0.1, type=int, help='Dispersion for the fallback Negative Binomial function. [Default: %(default)s]')
     psianddelta.add_argument('--nogc', dest="gcnorm", action='store_false', default=True, help='psianddelta GC content normalization [Default: GC content normalization activated]')
     psianddelta.add_argument('--nodiscardb', dest="discardb", action='store_false',  default=True, help='Skip biscarding the b from the NB polynomial function, since we expect our fit to start from x=0, y=0')

@@ -100,7 +100,7 @@ def reads_given_psi_lsv(lsv_junc, psi_space):
             event.append(binom_test(lsv[idx], lsv.sum(), p=psi_val))
 
         ret.append(array(event) / sum(event))
-        print ret
+#        print ret
     return array(ret).reshape(-1, len(psi_space)) 
 
 def reads_given_psi(inc_samples, exc_samples, psi_space):
