@@ -179,7 +179,7 @@ class CalcPsi(BasicPipeline):
         lsv_sample = []
         for ii in lsv_junc[0]:
 
-            m_lsv, var_lsv, s_lsv = sample_from_junctions(ii, self.m, self.k, discardzeros=self.discardzeros, trimborder=self.trimborder, fitted_func=fitfunc, debug=self.debug)
+            m_lsv, var_lsv, s_lsv = sample_from_junctions(ii, self.m, self.k, discardzeros=5, trimborder=self.trimborder, fitted_func=fitfunc, debug=self.debug)
             lsv_sample.append( s_lsv )
 
         self.logger.info("\nCalculating PSI for %s ..."%(name))
@@ -341,7 +341,8 @@ class DeltaPair(BasicPipeline):
         #Finally, P(PSI_i, PSI_j | Data) equivalent to P(PSI_i, PSI_j)* P(Data | PSI_i, PSI_j) 
         self.logger.info("Calculate Posterior Delta Matrices...")
         posterior_matrix = []
-
+        import pdb
+        pdb.set_trace()
         for lidx, lsv in enumerate(matched_info) :
             lsv_psi_matrix = []
             for psi in range(len(data_given_psi[lidx])) :
