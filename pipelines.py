@@ -561,9 +561,26 @@ class DeltaGroup(DeltaPair, CalcPsi):
         #print "LOCAL VALUES", local_values
         return local_values, array(median_ref)
 
-    def calc_weights_lsv(self, group):
+    def calc_weights_lsv(self, group, ):
 
-        
+        #for i in xrange(len(self.files1)):
+        #    for j in xrange(len(self.files2)):
+        #        self.k_ref.append([i, j])
+        #        path = self._pair_path(i, j)
+        #        matrix_path = self._matrix_path(i, j)
+        #        events_path = self._events_path(i, j)
+        #        if os.path.exists(matrix_path):
+        #            self.logger.info("%s exists! Loading..."%path)
+        #            matrices[i,j], info[i,j] = pickle.load(open(matrix_path))
+        #        else:
+        #            self.logger.info("Calculating pair %s"%path)
+        #            matrices[i,j], info[i,j] = self.pairdelta_lsv(self.files1[i], self.files2[j], path)
+        #            self.logger.info("Saving pair posterior for %s, %s"%(i, j))
+
+        #        if not self.fixweights1: #get relevant events for weights calculation
+        #            relevant_events.extend(rank_deltas(matrices, names, E=True)[:self.numbestchanging])
+
+        #            pairs_posteriors[name].append(matrices[k]) #pairing all runs events
 
         eta_wgt = local_weight_eta( group )
 
@@ -695,24 +712,6 @@ class DeltaGroup(DeltaPair, CalcPsi):
         pairs_posteriors = defaultdict(list)
         self.k_ref = [] #maps the i, j reference for every matrix (this could be do in less lines with div and mod, but this is safer) 
         relevant_events = []
-        for i in xrange(len(self.files1)):
-            for j in xrange(len(self.files2)):
-                self.k_ref.append([i, j])
-                path = self._pair_path(i, j)
-                matrix_path = self._matrix_path(i, j)
-                events_path = self._events_path(i, j)
-                if os.path.exists(matrix_path):
-                    self.logger.info("%s exists! Loading..."%path)
-                    matrices[i,j], info[i,j] = pickle.load(open(matrix_path))
-                else:
-                    self.logger.info("Calculating pair %s"%path)
-                    matrices[i,j], info[i,j] = self.pairdelta_lsv(self.files1[i], self.files2[j], path)
-                    self.logger.info("Saving pair posterior for %s, %s"%(i, j))
-
-                if not self.fixweights1: #get relevant events for weights calculation
-                    relevant_events.extend(rank_deltas(matrices, names, E=True)[:self.numbestchanging])
-
-                    pairs_posteriors[name].append(matrices[k]) #pairing all runs events
 
         self.logger.info("All pairs calculated, calculating weights...")
         if self.fixweights1: #Weights are manually fixed
