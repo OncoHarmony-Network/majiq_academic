@@ -804,7 +804,7 @@ window.splicegraph = function (){
                 var box_length = area[0] * 0.05,
                     box_coords = [
                         (sourceOrTarget === 's' ? Math.round(margins[0] + exon_width * 1 - box_length / 2) : Math.round(-exon_width + margins[0] + exon_width * ((num_exons * 2 - 1) - 1) - box_length / 2)),
-                            canvas.height - margins[3] - 2 * percentage_exon * canvas.height
+                             1.5 * percentage_exon * canvas.height
                     ];
 
                 ctx.strokeStyle = "rgba(0, 0, 0, 1)";

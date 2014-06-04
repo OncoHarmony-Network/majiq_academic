@@ -89,7 +89,7 @@ def main():
     parser.add_argument('--debug', type=int, default=0, help="Activate this flag for debugging purposes, activates logger and jumps some processing steps.")
     parser.add_argument('--minreads', default=10, type=int, help='Minimum number of reads combining all positions in an event to be considered. [Default: %(default)s]')
     parser.add_argument('--minnonzero', default=5, type=int, help='Minimum number of start positions with at least 1 read for an event to be considered.')
-    parser.add_argument('--markstacks', default=0.001, type=float, help='Mark stack positions. Expects a p-value. Use a negative value in order to disable it. [Default: %(default)s]')
+    parser.add_argument('--markstacks', default=0.0000001, type=float, help='Mark stack positions. Expects a p-value. Use a negative value in order to disable it. [Default: %(default)s]')
     parser.add_argument('--tracklist', nargs='+', help='A list of identifiers to track in detail, for debugging purposes')
 
     parser.add_argument('files', nargs='+', help='Path for replicas of conditions 1 to N')

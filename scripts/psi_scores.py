@@ -79,7 +79,7 @@ def calculate_dkl(p, q):
     return (left*p).sum(axis=1)
 
 def calculate_l1(p, q):
-    return (abs(p - q)).sum(axis=1)
+    return (abs(p - q)).sum()
 
 def calculate_ead(psi_samples):
     """
@@ -130,24 +130,29 @@ def main():
 
     majiq_psi_names = defaultdict()
 
+    lsv_types_dict = {
+        's|1e1.1|1e2.1':'SE',
+        't|1e1.1|1e2.1':'SE',
+        # 's|1e1.1|1e1.2':'A3SS',
+        # 't|1e1.1|2e1.1':'A3SS',
+        # 't|1e1.1|1e1.2':'A5SS',
+        # 's|1e1.1|2e1.1':'A5SS'
+    }
+
+
     # Discard LSVs with only one PSI
     for i, psis_lsv in enumerate(psi_values_lsv1):
         if len(psis_lsv) < 2 or len(psi_values_lsv2[i]) < 2:
             continue  # TODO: check that skipping is not necessary. LSVs with only 1 PSI are wrong..
+        if psivalues[1][i][2] not in lsv_types_dict.keys():
+            continue
         majiq_psi_names[psivalues[1][i][1]] = i
+        print psivalues[1][i]
 
     # print len(majiq_psi_names.keys()), "##########"
 
     # MISO: Parse file,
     miso_psis_list = []
-    lsv_types_dict = {
-        's|1e1.1|1e2.1':'SE',
-        't|1e1.1|1e2.1':'SE',
-        's|1e1.1|1e1.2':'A3SS',
-        't|1e1.1|2e1.1':'A3SS',
-        't|1e1.1|1e1.2':'A5SS',
-        's|1e1.1|2e1.1':'A5SS'
-    }
 
     debug_dict1 = {}
     debug_dict2 = {}
@@ -189,9 +194,14 @@ def main():
         print "%s: " % psi_name
         sys.stdout.flush()
         for j, psi_lsv in enumerate(psi_values_lsv1[majiq_psi_names[psi_name]]):
+
+            # Try L1 distance
             psi_list1.append(sum(psi_lsv*analysis.psi.BINS_CENTER))
             psi_list2.append(sum(psi_values_lsv2[majiq_psi_names[psi_name]][j]*analysis.psi.BINS_CENTER))
             print "MAJIQ:\t%f - %f" % (sum(psi_lsv*analysis.psi.BINS_CENTER), sum(psi_values_lsv2[majiq_psi_names[psi_name]][j]*analysis.psi.BINS_CENTER))
+
+            print "MAJIQ L1 distance:\t%f" % (calculate_l1(psi_lsv, psi_values_lsv2[majiq_psi_names[psi_name]][j]))
+
             print "MISO:\t%s - %s" % (str(debug_names_miso_list[psi_name][0][j]), str(debug_names_miso_list[psi_name][1][j]))
 
 
