@@ -1,3 +1,6 @@
+from matplotlib import use
+use('Agg')
+
 from collections import defaultdict
 import sys
 import os
@@ -191,7 +194,7 @@ def main():
             print "\t", psivalues[1][majiq_psi_names[k]]
             print "\t", psivalues[0][0][majiq_psi_names[k]]
 
-    plot_PSIs1VsPSIs2(abs(np.array(psi_list1) - np.array(psi_list2)), abs(np.array(miso_psis_list[0]) - np.array(miso_psis_list[1])), args.name1, args.name2, "MAJIQ", "MISO")
+    plot_PSIs1VsPSIs2(abs(np.array(psi_list1) - np.array(psi_list2)), abs(np.array(miso_psis_list[0]) - np.array(miso_psis_list[1])), args.name1, args.name2, "MAJIQ", "MISO", args.plotpath)
 
 
 if __name__ == '__main__':

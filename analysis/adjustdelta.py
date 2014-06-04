@@ -324,9 +324,9 @@ def loglikelihood(D, beta_mix, logp_mix, logger=False ):
     ''' logp_DgK = log P (D | model K ) for each data point without the weight '''
     logp_DgK = np.zeros(shape=( N, K), dtype = np.float)
     logp_DgK = ma.asarray(logp_DgK)
-    print "logp_mix=%s"%(logp_mix)
+    #print "logp_mix=%s"%(logp_mix)
     for k in xrange(K):
-        print "beta_mix[%d] = %s"%(k, beta_mix[k])
+        #print "beta_mix[%d] = %s"%(k, beta_mix[k])
         logp_DgK[:,k] = ma.log ( beta.pdf ( D[:,0], beta_mix[k,0], beta_mix[k,1] ) )
 
     logp_D = logp_DgK + logp_mix * np.ones( shape=(N,1), dtype = np.float)

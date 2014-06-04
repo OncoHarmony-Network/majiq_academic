@@ -30,7 +30,7 @@ def lsv_mark_stacks(lsv_list, fitfunc, pvalue_limit, dispersion, logger=False):
     a, b = fitfunc.c
     minstack = sys.maxint #the minimum value marked as stack
     numstacks = 0
-    for lidx, junctions in enumerate(lsv_list):
+    for lidx, junctions in enumerate(lsv_list[0]):
         for i, junction in enumerate(junctions):
             for j, value in enumerate(junction):
                 if value > 0:
@@ -45,10 +45,10 @@ def lsv_mark_stacks(lsv_list, fitfunc, pvalue_limit, dispersion, logger=False):
                     my_nb = nbinom(r, 1-p)
                     pval = 1-my_nb.cdf(value)
                     if pval < pvalue_limit:
-                        lsv_list[lidx][i, j] = -2 
+                        lsv_list[0][lidx][i, j] = -2 
                         minstack = min(minstack, value)
                         numstacks += 1
-        masked_less(lsv_list[lidx], 0) #remask the stacks
+        masked_less(lsv_list[0][lidx], 0) #remask the stacks
 
     if logger: logger.info("Out of %s values, %s marked as stacks with a p-value threshold of %s (%.3f%%)"%(junctions.size, numstacks, pvalue_limit, (float(numstacks)/junctions.size)*100))
 
