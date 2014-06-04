@@ -340,7 +340,7 @@ window.splicegraph = function (){
             // render number as text
             if (parseInt(num_reads) === 0) return;
             ctx.fillStyle = "rgba(0, 0, 0, .8)";
-//        ctx.font = "8pt Arial";
+            ctx.font = "10pt Arial";
             ctx.textAlign = "center";
             ctx.fillText(num_reads, x, y - 2);
         }
@@ -804,7 +804,7 @@ window.splicegraph = function (){
                 var box_length = area[0] * 0.05,
                     box_coords = [
                         (sourceOrTarget === 's' ? Math.round(margins[0] + exon_width * 1 - box_length / 2) : Math.round(-exon_width + margins[0] + exon_width * ((num_exons * 2 - 1) - 1) - box_length / 2)),
-                             1.5 * percentage_exon * canvas.height
+                             2.2 * percentage_exon * canvas.height
                     ];
 
                 ctx.strokeStyle = "rgba(0, 0, 0, 1)";

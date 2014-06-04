@@ -4,10 +4,8 @@ Rank MAJIQ, MISO or MATS events to test delta PSI reproducibility
 
 
 """
-import sys
 import argparse
-import pickle
-from collections import defaultdict 
+import pickle as pkl
 
 from pylab import *
 
@@ -203,6 +201,8 @@ def main():
         rank1 = array(rank_mats(args.pair[0], args.filter, args.ranknochange))
         rank2 = array(rank_mats(args.pair[1], args.filter, args.ranknochange))
     else:
+        # NEW
+
         rank1 = rank_majiq(args.pair[0], args.evnames[0], args.V, args.absolute, args.filter, args.E, args.ranknochange)
         rank2 = rank_majiq(args.pair[1], args.evnames[1], args.V, args.absolute, args.filter, args.E, args.ranknochange)
 
