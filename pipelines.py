@@ -341,8 +341,6 @@ class DeltaPair(BasicPipeline):
         #Finally, P(PSI_i, PSI_j | Data) equivalent to P(PSI_i, PSI_j)* P(Data | PSI_i, PSI_j) 
         self.logger.info("Calculate Posterior Delta Matrices...")
         posterior_matrix = []
-        import pdb
-        pdb.set_trace()
         for lidx, lsv in enumerate(matched_info) :
             lsv_psi_matrix = []
             for psi in range(len(data_given_psi[lidx])) :
