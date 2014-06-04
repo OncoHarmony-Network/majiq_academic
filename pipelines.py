@@ -287,7 +287,7 @@ class DeltaPair(BasicPipeline):
         fitfunc2 = self.fitfunc(const2[0])
 
         filtered_lsv1 = self.mark_stacks_lsv( lsv_junc1, fitfunc2)
-        filtered_lsv2 = self.mark_stacks_lsv( lsv_junc1, fitfunc2)
+        filtered_lsv2 = self.mark_stacks_lsv( lsv_junc2, fitfunc2)
 
         #Quantifiable junctions filter
         ''' Quantify and unify '''
