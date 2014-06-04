@@ -317,7 +317,7 @@ class DeltaPair(BasicPipeline):
 
         lsv_sample2 = [[],[]]
         for idx, ii in enumerate(lsv_junc2[0]):
-            m_lsv, var_lsv, s_lsv = sample_from_junctions(ii, self.m, self.k, discardzeros=self.discardzeros, trimborder=self.trimborder, fitted_func=fitfunc2, debug=self.debug) 
+            m_lsv, var_lsv, s_lsv = sample_from_junctions(ii, self.m, self.k, discardzeros=5, trimborder=self.trimborder, fitted_func=fitfunc2, debug=self.debug) 
             lsv_sample2[0].append( s_lsv )
             lsv_sample2[1].append(lsv_junc2[1][idx])
 
