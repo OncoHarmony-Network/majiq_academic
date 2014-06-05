@@ -38,8 +38,8 @@ def plot_PSIs1VsPSIs2(score1, score2, replica1_name, replica2_name, method1, met
     better_in_method1 = np.sum(array(score1) < array(score2))
     better_in_method2 = np.sum(array(score1) > array(score2))
 
-    print score1, score2
-    print len(score1), len(score2), len(score2) - np.count_nonzero(score2), better_in_method1, better_in_method2
+    print "Better in method %s: %.2f%%" % (method1, (better_in_method1/total_psis)*100)
+    print "Better in method %s: %.2f%%" % (method2, (better_in_method2/total_psis)*100)
     max_value = max(max(score1), max(score2))
 
     xlim(0, max_value)
@@ -77,6 +77,9 @@ def calculate_dkl(p, q):
     q += pseudo
     left = log(array(p/q))
     return (left*p).sum(axis=1)
+
+def calculate_l1_expected(p, q):
+    return sum(abs(p - q)*analysis.psi.BINS_CENTER)
 
 def calculate_l1(p, q):
     return (abs(p - q)).sum()
@@ -144,14 +147,11 @@ def main():
     for i, psis_lsv in enumerate(psi_values_lsv1):
         if len(psis_lsv) < 2 or len(psi_values_lsv2[i]) < 2:
             continue  # TODO: check that skipping is not necessary. LSVs with only 1 PSI are wrong..
-        # if psivalues[1][i][2] not in lsv_types_dict.keys():
-        #     continue
+        if psivalues[1][i][2] not in lsv_types_dict.keys():
+            continue
         majiq_psi_names[psivalues[1][i][1]] = i
-        print psivalues[1][i]
+        # print psivalues[1][i]
 
-    # print len(majiq_psi_names.keys()), "##########"
-
-    # MISO: Parse file,
     miso_psis_list = []
 
     debug_dict1 = {}
@@ -159,9 +159,10 @@ def main():
 
     debug_names_miso_list = defaultdict(list)
 
+
+    miso_all = []
     for miso_file in args.psivalues_met2:
         miso_psis_dict = defaultdict()
-        miso_psis = []
         with open(miso_file, 'r') as miso_res:
             for miso_line in miso_res:
                 if miso_line.startswith("event"): continue
@@ -169,49 +170,71 @@ def main():
                 if miso_fields[0] not in majiq_psi_names:
                     continue
                 miso_psis_dict[miso_fields[0]] = miso_fields[1]
+        miso_all.append(miso_psis_dict)
 
+    miso_common_names = set(miso_all[0].keys()).intersection(miso_all[1].keys())
+
+    for miso_psis_dict in miso_all:
+        miso_psis = []
         for psi_name in sorted(majiq_psi_names.keys()):
+            if psi_name not in miso_common_names:
+                print "%s is not in all MISO replicates" % psi_name
+                del majiq_psi_names[psi_name]
+                continue
             try:
                 miso_psis_values = [float(miso_psi) for miso_psi in miso_psis_dict[psi_name].split(",")]
-                # if len(miso_psis_values) < 2:
-                #     del majiq_psi_names[psi_name]
-                #     continue
-                if len(miso_psis_values) == 1:
-                    # print miso_psis_values[0], 1 - miso_psis_values[0]
-                    miso_psis_values.append(1.0 - miso_psis_values[0])
-                debug_dict1[psi_name] = len(miso_psis_values)
-                miso_psis.extend(miso_psis_values)
-                debug_names_miso_list[psi_name].append(miso_psis_values)
-
             except KeyError, e:
                 print "LSV %s is in MAJIQ but not in MISO!" % e
                 del majiq_psi_names[psi_name]
                 continue
+                # if len(miso_psis_values) < 2:
+                #     del majiq_psi_names[psi_name]
+                #     continue
+
+            if len(miso_psis_values) == 1:
+                # print miso_psis_values[0], 1 - miso_psis_values[0]
+                miso_psis_values.append(1.0 - miso_psis_values[0])
+            debug_dict1[psi_name] = len(miso_psis_values)
+            miso_psis.extend(miso_psis_values)
+            debug_names_miso_list[psi_name].append(miso_psis_values)
+
         miso_psis_list.append(miso_psis)
 
+    # set_final = set(miso_psis_names[0]).intersection(set(miso_psis_names[1]))
+    # print set_final
+    # for miso_list in debug_names_miso_list.keys():
+    #     for miso_elem in miso_list:
+    #         if miso_elem not in set_final:
+    #             print "Remove %s" % miso_elem
+    #             miso_list.remove(miso_elem)
+
+
+    list_l1_expected = []
     for psi_name in sorted(majiq_psi_names.keys()):
         debug_dict2[psi_name] = len(psi_values_lsv1[majiq_psi_names[psi_name]])
-        print "%s: " % psi_name
+        # print "%s: " % psi_name
         sys.stdout.flush()
         for j, psi_lsv in enumerate(psi_values_lsv1[majiq_psi_names[psi_name]]):
 
             # Try L1 distance
             psi_list1.append(sum(psi_lsv*analysis.psi.BINS_CENTER))
             psi_list2.append(sum(psi_values_lsv2[majiq_psi_names[psi_name]][j]*analysis.psi.BINS_CENTER))
-            print "MAJIQ:\t%f - %f" % (sum(psi_lsv*analysis.psi.BINS_CENTER), sum(psi_values_lsv2[majiq_psi_names[psi_name]][j]*analysis.psi.BINS_CENTER))
+            list_l1_expected.append(calculate_l1_expected(psi_lsv, psi_values_lsv2[majiq_psi_names[psi_name]][j]))
+            # print "MAJIQ:\t%f - %f" % (sum(psi_lsv*analysis.psi.BINS_CENTER), sum(psi_values_lsv2[majiq_psi_names[psi_name]][j]*analysis.psi.BINS_CENTER))
+            # print "MAJIQ L1 distance:\t%f" % (calculate_l1_expected(psi_lsv, psi_values_lsv2[majiq_psi_names[psi_name]][j]))
+            # print "MISO:\t%s - %s" % (str(debug_names_miso_list[psi_name][0][j]), str(debug_names_miso_list[psi_name][1][j]))
 
-            print "MAJIQ L1 distance:\t%f" % (calculate_l1(psi_lsv, psi_values_lsv2[majiq_psi_names[psi_name]][j]))
 
-            print "MISO:\t%s - %s" % (str(debug_names_miso_list[psi_name][0][j]), str(debug_names_miso_list[psi_name][1][j]))
-
-
+    print len(debug_dict1), len(debug_dict2)
     for k in sorted(debug_dict1):
-        if debug_dict2[k] - debug_dict1[k]:  # LSVs where the number of junctions in one method differs with the other
-            print "Num junctions for LSV %s: MAJIQ - %d MISO: %d" % (k, debug_dict2[k], debug_dict1[k])
-            print "MAJIQ LSV and juncs:"
-            print "\t", psivalues[1][majiq_psi_names[k]]
-            print "\t", psivalues[0][0][majiq_psi_names[k]]
-
+        if k in debug_dict1 and k not in debug_dict2:
+            print "This is the guy!! %s" % k
+        # if debug_dict2[k] - debug_dict1[k]:  # LSVs where the number of junctions in one method differs with the other
+        #     print "Num junctions for LSV %s: MAJIQ - %d MISO: %d" % (k, debug_dict2[k], debug_dict1[k])
+        #     print "MAJIQ LSV and juncs:"
+        #     print "\t", psivalues[1][majiq_psi_names[k]]
+        #     print "\t", psivalues[0][0][majiq_psi_names[k]]
+    # plot_PSIs1VsPSIs2(np.array(list_l1_expected), abs(np.array(miso_psis_list[0]) - np.array(miso_psis_list[1])), args.name1, args.name2, "MAJIQ", "MISO", args.plotpath)
     plot_PSIs1VsPSIs2(abs(np.array(psi_list1) - np.array(psi_list2)), abs(np.array(miso_psis_list[0]) - np.array(miso_psis_list[1])), args.name1, args.name2, "MAJIQ", "MISO", args.plotpath)
 
 

@@ -1,11 +1,12 @@
 import argparse
 import pickle
-
+import os
 from pylab import *
 
 def _save_or_show(plotpath, name):
     if plotpath:
-
+        if not os.path.exists(plotpath):
+            os.makedirs(plotpath)
         savefig("%s_%s.png"%(plotpath, name), width=300, height=300, dpi=100)
         clf()
     else:
@@ -59,15 +60,15 @@ def main():
         if args.colors:
             plot(x_space, ratio, linetype, label=my_label, linewidth=2, color=args.colors[i])          
         else: 
-            print 
+            print
             plot(x_space, ratio, linetype, label=my_label, linewidth=2)
 
 
 
 
     title(args.title, fontsize=16)    
-    legend(loc=2, fontsize=12)
-    _save_or_show(args.plotpath, "rankcomp")
+    legend(loc=2)
+    _save_or_show(plotpath=None, name="rankcomp")
 
 
 if __name__ == '__main__':
