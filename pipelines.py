@@ -179,7 +179,7 @@ class CalcPsi(BasicPipeline):
         lsv_sample = []
         for ii in lsv_junc[0]:
 
-            m_lsv, var_lsv, s_lsv = sample_from_junctions(ii, self.m, self.k, discardzeros=self.discardzeros, trimborder=self.trimborder, fitted_func=fitfunc, debug=self.debug)
+            m_lsv, var_lsv, s_lsv = sample_from_junctions(ii, self.m, self.k, discardzeros=5, trimborder=self.trimborder, fitted_func=fitfunc, debug=self.debug)
             lsv_sample.append( s_lsv )
 
         self.logger.info("\nCalculating PSI for %s ..."%(name))
@@ -286,8 +286,8 @@ class DeltaPair(BasicPipeline):
         fitfunc1 = self.fitfunc(const1[0])
         fitfunc2 = self.fitfunc(const2[0])
 
-        filtered_lsv1 = self.mark_stacks_lsv( lsv_junc1, fitfunc2)
-        filtered_lsv2 = self.mark_stacks_lsv( lsv_junc1, fitfunc2)
+        filtered_lsv1 = self.mark_stacks_lsv( lsv_junc1, fitfunc1)
+        filtered_lsv2 = self.mark_stacks_lsv( lsv_junc2, fitfunc2)
 
         #Quantifiable junctions filter
         ''' Quantify and unify '''
@@ -317,7 +317,7 @@ class DeltaPair(BasicPipeline):
 
         lsv_sample2 = [[],[]]
         for idx, ii in enumerate(lsv_junc2[0]):
-            m_lsv, var_lsv, s_lsv = sample_from_junctions(ii, self.m, self.k, discardzeros=self.discardzeros, trimborder=self.trimborder, fitted_func=fitfunc2, debug=self.debug) 
+            m_lsv, var_lsv, s_lsv = sample_from_junctions(ii, self.m, self.k, discardzeros=5, trimborder=self.trimborder, fitted_func=fitfunc2, debug=self.debug) 
             lsv_sample2[0].append( s_lsv )
             lsv_sample2[1].append(lsv_junc2[1][idx])
 
@@ -341,7 +341,6 @@ class DeltaPair(BasicPipeline):
         #Finally, P(PSI_i, PSI_j | Data) equivalent to P(PSI_i, PSI_j)* P(Data | PSI_i, PSI_j) 
         self.logger.info("Calculate Posterior Delta Matrices...")
         posterior_matrix = []
-
         for lidx, lsv in enumerate(matched_info) :
             lsv_psi_matrix = []
             for psi in range(len(data_given_psi[lidx])) :

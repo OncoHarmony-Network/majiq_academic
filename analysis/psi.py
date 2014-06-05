@@ -100,7 +100,7 @@ def reads_given_psi_lsv(lsv_junc, psi_space):
             event.append(binom_test(lsv[idx], lsv.sum(), p=psi_val))
 
         ret.append(array(event) / sum(event))
-        print ret
+#        print ret
     return array(ret).reshape(-1, len(psi_space)) 
 
 def reads_given_psi(inc_samples, exc_samples, psi_space):
@@ -350,16 +350,19 @@ def gen_prior_matrix( pip, lsv_exp1, lsv_exp2, output ):
         pip.logger.info("'Best set' is %s events (out of %s)"%(len(best_set_mean1), len(lsv_exp1)))
         best_delta_psi = empirical_delta_psi(best_set_mean1[0], best_set_mean2[0])
 
-        njun_prior = []
+#        njun_prior = []
+#        for lsv in best_delta_psi:
+#            for jidx in range(lsv.shape[0]):
+#                if jidx > 2 :continue
+#                if len(njun_prior) <= jidx:
+#                    njun_prior.append([])
+#                njun_prior[jidx].append(lsv[jidx])
+
+        njun_prior = [[]]
         for lsv in best_delta_psi:
-            for jidx in range(lsv.shape[0]):
-                if len(njun_prior) <= jidx:
-                    njun_prior.append([])
-                if jidx > 2 :continue
-                njun_prior[jidx].append(lsv[jidx])
-
+            if lsv.shape[0] == 2 : continue
+            njun_prior[0].append(lsv[0])
         
-
         for nj in range(len(njun_prior)):
             best_delta_psi = array(njun_prior[nj])
 
