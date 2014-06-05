@@ -133,10 +133,10 @@ def main():
     lsv_types_dict = {
         's|1e1.1|1e2.1':'SE',
         't|1e1.1|1e2.1':'SE',
-        # 's|1e1.1|1e1.2':'A3SS',
-        # 't|1e1.1|2e1.1':'A3SS',
-        # 't|1e1.1|1e1.2':'A5SS',
-        # 's|1e1.1|2e1.1':'A5SS'
+        's|1e1.1|1e1.2':'A3SS',
+        't|1e1.1|2e1.1':'A3SS',
+        't|1e1.1|1e1.2':'A5SS',
+        's|1e1.1|2e1.1':'A5SS'
     }
 
 
@@ -144,8 +144,8 @@ def main():
     for i, psis_lsv in enumerate(psi_values_lsv1):
         if len(psis_lsv) < 2 or len(psi_values_lsv2[i]) < 2:
             continue  # TODO: check that skipping is not necessary. LSVs with only 1 PSI are wrong..
-        if psivalues[1][i][2] not in lsv_types_dict.keys():
-            continue
+        # if psivalues[1][i][2] not in lsv_types_dict.keys():
+        #     continue
         majiq_psi_names[psivalues[1][i][1]] = i
         print psivalues[1][i]
 
