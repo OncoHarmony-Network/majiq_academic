@@ -25,7 +25,7 @@ BINS = linspace(0, 1, num=40)
 
 def plot_PSIs1VsPSIs2(score1, score2, replica1_name, replica2_name, method1, method2, plotpath=None):
     """Compute 2 plots: one for the variance, one for the mean"""
-    plotname="%sVs%s\nDelta PSIs for %s - %s" % (method1, method2, replica1_name, replica2_name)
+    plotname="%sVs%s -- Delta PSIs for %s - %s" % (method1, method2, replica1_name, replica2_name)
 
     total_psis = float(len(score1))
 
@@ -42,6 +42,7 @@ def plot_PSIs1VsPSIs2(score1, score2, replica1_name, replica2_name, method1, met
     print "Better in method %s: %.2f%%" % (method2, (better_in_method2/total_psis)*100)
     max_value = max(max(score1), max(score2))
 
+    max_value = 1.0
     xlim(0, max_value)
     ylim(0, max_value)
     plot([0, max_value], [0, max_value])
@@ -60,7 +61,9 @@ def plot_PSIs1VsPSIs2(score1, score2, replica1_name, replica2_name, method1, met
 def _save_or_show(plotpath, plotname=None):
     """Generic function that either shows in a popup or saves the figure, depending if the plotpath flag"""
     if plotpath:
-        savefig("%s%s.png"%(plotpath, plotname), bbox_inches='tight') 
+        if not os.path.exists(plotpath):
+            os.makedirs(plotpath)
+        savefig("%s/%s.png"%(plotpath, plotname), bbox_inches='tight')
         clf()
     else:
         show()
@@ -236,6 +239,9 @@ def main():
         #     print "\t", psivalues[0][0][majiq_psi_names[k]]
     # plot_PSIs1VsPSIs2(np.array(list_l1_expected), abs(np.array(miso_psis_list[0]) - np.array(miso_psis_list[1])), args.name1, args.name2, "MAJIQ", "MISO", args.plotpath)
     plot_PSIs1VsPSIs2(abs(np.array(psi_list1) - np.array(psi_list2)), abs(np.array(miso_psis_list[0]) - np.array(miso_psis_list[1])), args.name1, args.name2, "MAJIQ", "MISO", args.plotpath)
+
+    plot_PSIs1VsPSIs2(np.array(psi_list1), np.array(psi_list2), args.name1, args.name2, "MAJIQ", "MAJIQ", args.plotpath)
+    plot_PSIs1VsPSIs2(np.array(miso_psis_list[0]), np.array(miso_psis_list[1]), args.name1, args.name2, "MISO", "MISO", args.plotpath)
 
 
 if __name__ == '__main__':

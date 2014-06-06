@@ -645,12 +645,16 @@ window.splicegraph = function (){
                     percentage_exon = .2,
                     percentage_intron = .15;
 
-                var exon_lsv_coords = canvas.getAttribute('data-coord-exon').replace('(', '').replace(')', '').replace(' ', '').split(',');
-                var exon_lsv_number = -1;
-                for (var exon_i = 0; exon_i <gene.exons.length; exon_i++){
-                    if (gene.exons[exon_i].coords[0] == exon_lsv_coords[0] && gene.exons[exon_i].coords[1] == exon_lsv_coords[1]){
-                        exon_lsv_number = exon_i + 1;
-                        break;
+                var exon_lsv_number = '';
+                var exon_lsv_coords = canvas.getAttribute('data-coord-exon');
+                if (exon_lsv_coords) {
+                    exon_lsv_coords = exon_lsv_coords.replace('(', '').replace(')', '').replace(' ', '').split(',');
+
+                    for (var exon_i = 0; exon_i < gene.exons.length; exon_i++) {
+                        if (gene.exons[exon_i].coords[0] == exon_lsv_coords[0] && gene.exons[exon_i].coords[1] == exon_lsv_coords[1]) {
+                            exon_lsv_number = exon_i + 1;
+                            break;
+                        }
                     }
                 }
 
@@ -698,6 +702,7 @@ window.splicegraph = function (){
                 }
 
                 // Render junctions
+                var count_starts_ends = 0;
                 var index_first = direction > 0 ? 0 : exons.length - 1;
                 var coords = exons[index_first].coords;
                 var exon_height = percentage_exon * canvas.height;
@@ -715,8 +720,15 @@ window.splicegraph = function (){
 //                    var coords_x_start_e    = coords[0] + direction * ((exon_width/2) / num_ss ) * (ss-1);
                     var coords_x_start_e    = coords[0] + ((exon_width/2) / num_ss ) * (ss-1);
 //                    var target_exon = (direction > 0 ? exons[lsvs_fields[1][0]] : exons[num_exons -1 - lsvs_fields[1][0]]);
-                    var target_exon = (direction > 0 ? exons[lsvs_fields[1][0]] : exons[lsvs_fields[1][0] -1] );
-                    var coords_x_target_e   = target_exon.coords[ direction > 0 ? 0 : 1 ];
+
+                    var coords_x_target_e = null;
+                    if (lsvs_fields[1] == 0){
+                        coords_x_target_e = coords_x_start_e;
+                        count_starts_ends++;
+                    } else {
+                        var target_exon = (direction > 0 ? exons[lsvs_fields[1][0]] : exons[lsvs_fields[1][0] -1] );
+                        coords_x_target_e = target_exon.coords[ direction > 0 ? 0 : 1 ];
+                    }
 
                     var offset_ss = 0;
                     if (direction > 0) {
@@ -729,7 +741,7 @@ window.splicegraph = function (){
 
                     var mid_x = (coords_x_start_e + coords_x_target_e) /2;
                     ctx.lineWidth =2;
-                    ctx.strokeStyle = getColor(n_ways-1, BREWER_PALETTE, 0.9);
+                    ctx.strokeStyle = getColor(Math.max(0, n_ways-1 - count_starts_ends), BREWER_PALETTE, 0.9);
 
                     // junctions lines
                     drawLine(ctx, Math.round(coords_x_start_e), Math.round(coords[1]), Math.round(mid_x), Math.round(margins[3]*8*ss));
