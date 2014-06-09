@@ -178,13 +178,13 @@ def lsv_psi(samples_events, name, alpha, n, debug):
             
             for pidx, paired_samples in enumerate(samples.T):
                 
-                dir_pdf = dirichlet_pdf(array([BINS_CENTER, 1-BINS_CENTER]).T, paired_samples)
-#                dir_pdf = [dirichlet_pdf([x, 1-x], paired_samples) for x in BINS_CENTER]
-#                dir_pdf = [dircalc.pdf([x, 1-x], paired_samples) for x in BINS_CENTER]
+                # dir_pdf = dirichlet_pdf(array([BINS_CENTER, 1-BINS_CENTER]).T, paired_samples)
+                # dir_pdf = [dirichlet_pdf([x, 1-x], paired_samples) for x in BINS_CENTER]
+                dir_pdf = [dircalc.pdf([x, 1-x], paired_samples) for x in BINS_CENTER]
 #                dir_pdf = [dircalc.pdf([x, 1-x], alpha+paired_samples) for x in BINS_CENTER]
                 dir_pdf = np.asarray(dir_pdf)
                 acum_samples += dir_pdf
-                total_acum += sum(dir_pdf) 
+                total_acum += sum(dir_pdf)
 
             psi[idx]=acum_samples/total_acum
             

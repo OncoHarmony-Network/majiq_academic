@@ -1,5 +1,5 @@
-from matplotlib import use
-use('Agg')
+# from matplotlib import use
+# use('Agg')
 
 from collections import defaultdict
 import sys
@@ -29,17 +29,17 @@ def plot_PSIs1VsPSIs2(score1, score2, replica1_name, replica2_name, method1, met
 
     total_psis = float(len(score1))
 
-    f = figure()
-    ylabel(method2)
-    xlabel(method1)
-
-    title(plotname, fontsize=10)
-
     better_in_method1 = np.sum(array(score1) < array(score2))
     better_in_method2 = np.sum(array(score1) > array(score2))
 
     print "Better in method %s: %.2f%%" % (method1, (better_in_method1/total_psis)*100)
     print "Better in method %s: %.2f%%" % (method2, (better_in_method2/total_psis)*100)
+
+    f = figure()
+    ylabel(method2)
+    xlabel(method1)
+
+    title(plotname, fontsize=10)
     max_value = max(max(score1), max(score2))
 
     max_value = 1.0
@@ -148,8 +148,8 @@ def main():
 
     # Discard LSVs with only one PSI
     for i, psis_lsv in enumerate(psi_values_lsv1):
-        if len(psis_lsv) < 2 or len(psi_values_lsv2[i]) < 2:
-            continue  # TODO: check that skipping is not necessary. LSVs with only 1 PSI are wrong..
+        # if len(psis_lsv) < 2 or len(psi_values_lsv2[i]) < 2:
+        #     continue  # TODO: check that skipping is not necessary. LSVs with only 1 PSI are wrong..
         if psivalues[1][i][2] not in lsv_types_dict.keys():
             continue
         majiq_psi_names[psivalues[1][i][1]] = i
@@ -238,10 +238,27 @@ def main():
         #     print "\t", psivalues[1][majiq_psi_names[k]]
         #     print "\t", psivalues[0][0][majiq_psi_names[k]]
     # plot_PSIs1VsPSIs2(np.array(list_l1_expected), abs(np.array(miso_psis_list[0]) - np.array(miso_psis_list[1])), args.name1, args.name2, "MAJIQ", "MISO", args.plotpath)
+
+    f = figure()
+    ylabel('Number of Junctions')
+    xlabel('Expected PSI')
+    title('MISO and MAJIQ expected PSIs\nHippo1 Vs Hippo2', fontsize=10)
+
+    hist(np.array(miso_psis_list[0]), bins=40, label="MISO")
+    hist(np.array(psi_list1), bins=40, label="MAJIQ")
+    legend()
+
+    # plot([0, 1], [0, 1])
+    # hist(np.array(miso_psis_list[0])[abs(np.array(psi_list1) - np.array(psi_list2)) > abs(np.array(miso_psis_list[0]) - np.array(miso_psis_list[1]))], nbins=40)
+    # hist(
+    #     np.array(miso_psis_list[1])[abs(np.array(psi_list1) - np.array(psi_list2)) > abs(np.array(miso_psis_list[0]) - np.array(miso_psis_list[1]))]
+    # )
+    _save_or_show(plotpath=None, plotname='MISO')
+
     plot_PSIs1VsPSIs2(abs(np.array(psi_list1) - np.array(psi_list2)), abs(np.array(miso_psis_list[0]) - np.array(miso_psis_list[1])), args.name1, args.name2, "MAJIQ", "MISO", args.plotpath)
 
-    plot_PSIs1VsPSIs2(np.array(psi_list1), np.array(psi_list2), args.name1, args.name2, "MAJIQ", "MAJIQ", args.plotpath)
-    plot_PSIs1VsPSIs2(np.array(miso_psis_list[0]), np.array(miso_psis_list[1]), args.name1, args.name2, "MISO", "MISO", args.plotpath)
+    # plot_PSIs1VsPSIs2(np.array(psi_list1), np.array(psi_list2), args.name1, args.name2, "MAJIQ", "MAJIQ", args.plotpath)
+    # plot_PSIs1VsPSIs2(np.array(miso_psis_list[0]), np.array(miso_psis_list[1]), args.name1, args.name2, "MISO", "MISO", args.plotpath)
 
 
 if __name__ == '__main__':
