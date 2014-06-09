@@ -16,7 +16,6 @@
 
 {% block content %}
     <div class="events-summary">
-        <h2>Gene name: {{ gene.name }}; Strand: {{ gene.strand }};</h2>
         <!--<p>Coordinates 0-based and closed interval</p>-->
 
         <div class="floatingCanvas">
@@ -25,76 +24,80 @@
             </canvas>
         </div>
 
-        <canvas class="spliceGraph" width="2000px" height="200px" data-exon-list="{{ gene_json }}">
-            This browser or document mode doesn't support canvas
-        </canvas>
-
         <h2>LSV summary</h2>
-        <table id="event_table" class="tablesorter">
-            <thead>
-            <tr>
-                <th class="short-header">LSV ID</th>
-                <th class="short-header">Type</th>
-                <th class="short-header"></th>
-                <th class="short-header">Coordinates</th>
-            </tr>
-            </thead>
-            <tfoot>
-            <tr>
-                <th>LSV ID</th>
-                <th>Type</th>
-                <th></th>
-                <th>Coordinates</th>
-            </tr>
-            </tfoot>
-            <tbody>
-            {% for lsv in lsvList  -%}
-            <tr>
-                <td>{{ metadata[loop.index-1][1] }}</td>
-                <td>
-                    <p style="top:0;">{{ metadata[loop.index-1][2] }}</p>
-                    <canvas class="lsvLegend" width="300px" height="150px" data-lsv-string="{{ metadata[loop.index-1][2] }}" data-coord-exon="{{ metadata[loop.index-1][0] }}">
-                        This browser or document mode doesn't support canvas
-                    </canvas>
-                </td>
-                <td id="data_td{{ loop.index }}">
-                    <!--<img class="expandLsv" src="static/img/arrow_down.png" data-is-expanded=0/>-->
-                    <canvas class="lsvSingleCompactPercentiles" id="lsvSingleCompact{{ loop.index }}" width="100px" height="100px" style="border: solid; border-width: 2pt; border-color: darkgrey;" data-lsv="[{{ lsv|to_json }}]">
-                        This browser or document mode doesn't support canvas
-                    </canvas>
-                    <canvas class="lsvSingleExtendedBoxplot hidden" width="500px" height="500px"  data-lsv="{{ lsv|to_json }}">
-                        This browser or document mode doesn't support canvas
-                    </canvas>
-                    <!--<div class="lsvViolinPlot" id="svgViolin{{ loop.index }}" data-lsv="[{{ lsv|to_json }}]" width=300 height=200></div>-->
 
-                </td>
-                <td>{{ metadata[loop.index-1][0] }}</td>
+        {% for gene_name, gene_value in genes_dict.iteritems() %}
+            <h2>Gene name: {{ gene_name }}; Strand: {{ gene_value[0][0].strand }};</h2>
+            <canvas class="spliceGraph" width="2000px" height="200px" data-exon-list="{{ genes_json[gene_name][0] }}">
+                This browser or document mode doesn't support canvas
+            </canvas>
 
-            </tr>
-            {%- endfor %}
-            </tbody>
-        </table>
+            <table id="event_table{{ loop.index }}" class="tablesorter">
+                <thead>
+                <tr>
+                    <th class="short-header">LSV ID</th>
+                    <th class="short-header">Type</th>
+                    <th class="short-header"></th>
+                    <th class="short-header">Coordinates</th>
+                </tr>
+                </thead>
+                <tfoot>
+                <tr>
+                    <th>LSV ID</th>
+                    <th>Type</th>
+                    <th></th>
+                    <th>Coordinates</th>
+                </tr>
+                </tfoot>
+                <tbody>
+                {% for gene in gene_value %}
+                <tr>
+                    <td>{{ gene[1][1] }}</td>
+                    <td>
+                        <p style="top:0;">{{ gene[1][2] }}</p>
+                        <canvas class="lsvLegend" width="300px" height="150px" data-lsv-string="{{ gene[1][2] }}" data-coord-exon="{{ gene[1][0] }}">
+                            This browser or document mode doesn't support canvas
+                        </canvas>
+                    </td>
+                    <td id="data_td{{ loop.index }}">
+                        <!--<img class="expandLsv" src="static/img/arrow_down.png" data-is-expanded=0/>-->
+                        <canvas class="lsvSingleCompactPercentiles" id="lsvSingleCompact{{ loop.index }}" width="100px" height="100px" style="border: solid; border-width: 2pt; border-color: darkgrey;" data-lsv="[{{ gene[0]|to_json }}]">
+                            This browser or document mode doesn't support canvas
+                        </canvas>
+                        {#<canvas class="lsvSingleExtendedBoxplot hidden" width="500px" height="500px"  data-lsv="{{ lsv|to_json }}">#}
+                            {#This browser or document mode doesn't support canvas#}
+                        {#</canvas>#}
+                        {#<div class="lsvViolinPlot" id="svgViolin{{ loop.index }}" data-lsv="[{{ lsv|to_json }}]" width=300 height=200></div>#}
 
-        <div class="pager">
-            <form>
-                <img src="static/img/icons/first.png" class="first"/>
-                <img src="static/img/icons/prev.png" class="prev"/>
-                <input type="text" class="pagedisplay"/>
-                <img src="static/img/icons/next.png" class="next"/>
-                <img src="static/img/icons/last.png" class="last"/>
-                <select class="pagesize" autocomplete="off">
-                    {% for mark in tableMarks -%}
-                    {% if loop.first %}
-                    <option selected="selected"  value="{{ mark }}">{{ mark }}</option>
-                    {% else %}
-                    <option value="{{ mark }}">{{ mark }}</option>
-                    {% endif %}
-                    {%- endfor %}
-                    <option value="{{ lsvList|length }}">All</option>
-                </select>
-            </form>
-        </div>
+                    </td>
+                    <td>{{ gene[1][0] }}</td>
 
+                </tr>
+                {%- endfor %}
+                </tbody>
+            </table>
+            <div class="pager{{ loop.index }}">
+                <form>
+                    <img src="static/img/icons/first.png" class="first"/>
+                    <img src="static/img/icons/prev.png" class="prev"/>
+                    <input type="text" class="pagedisplay"/>
+                    <img src="static/img/icons/next.png" class="next"/>
+                    <img src="static/img/icons/last.png" class="last"/>
+                    <select class="pagesize" autocomplete="off">
+                        {% set index = loop.index %}
+                        {% for mark in tableMarks[index - 1] -%}
+                            {% if loop.first %}
+                                <option selected="selected"  value="{{ mark }}">{{ mark }}</option>
+                            {% else %}
+                                <option value="{{ mark }}">{{ mark }}</option>
+                            {% endif %}
+                        {%- endfor %}
+                        <option value="{{ gene_value|length }}">All</option>
+                    </select>
+                </form>
+            </div>
+
+        {% endfor %}
 
     </div>
 {% endblock %}

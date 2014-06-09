@@ -1,4 +1,5 @@
 #!/usr/bin/python
+from collections import defaultdict
 import json
 import os
 import sys
@@ -24,6 +25,9 @@ def table_marks_set(size):
 def mocked_get_array_bins():
     pass
 
+def debug(text):
+    print text
+    return ''
 
 def _render_template(output_dir, output_html, majiq_output, type_summary, threshold, post_process_info=None):
     """
@@ -38,7 +42,7 @@ def _render_template(output_dir, output_html, majiq_output, type_summary, thresh
         return escape(json.dumps(value, cls=utils_voila.PickleEncoder))
 
     env = Environment(loader=FileSystemLoader(EXEC_DIR + "templates/"))
-    env.filters.update({'to_json': to_json})
+    env.filters.update({'to_json': to_json, 'debug': debug})
     sum_template = env.get_template(type_summary + "_summary_template.html")
 
     if not output_dir.endswith('/'):
@@ -72,10 +76,10 @@ def _render_template(output_dir, output_html, majiq_output, type_summary, thresh
 
     elif type_summary == 'lsv_gene':
         voila_output.write(sum_template.render( lsvList=majiq_output['event_list'],
-                                                tableMarks=table_marks_set(len(majiq_output['event_list'])),
+                                                tableMarks=[table_marks_set(len(gene_set)) for gene_set in majiq_output['genes_dict']],
                                                 metadata=majiq_output['metadata'],
-                                                gene_json=majiq_output['gene_json'],
-                                                gene=majiq_output['gene']
+                                                genes_json=majiq_output['genes_json'],
+                                                genes_dict=majiq_output['genes_dict']
         ))
 
     else:
@@ -110,24 +114,36 @@ def create_summary(majiq_bins_file, output_dir, meta_preprocess, meta_postproces
             sys.exit(1)
 
     elif type_summary == 'lsv_gene':
-        majiq_output = utils_voila.get_lsv_single_exp_data(majiq_bins_file, confidence, gene_name=meta_postprocess['gene_name'])
+        if not meta_postprocess['genes_file']:
+            print "[ERROR] :: parameter genes-file-info needed for filtering results by gene name."
+            sys.exit(1)
+        import pickle as pkl
+        genes_file = pkl.load(open(meta_postprocess['genes_file'], 'r'))
 
-        # if len(majiq_output)
+        import fileinput
+        gene_name_list = []
+        for gene_name in fileinput.input(meta_postprocess['gene_names']):
+            gene_name_list.append(gene_name.rstrip())
+
+        majiq_output = utils_voila.get_lsv_single_exp_data(majiq_bins_file, confidence, gene_name_list=gene_name_list)
+
         # Get gene info
         try:
-            if not meta_postprocess['genes_file']:
-                print "[ERROR] :: parameter genes-file-info needed for filtering results by gene name."
-                sys.exit(1)
-            import pickle as pkl
-            genes_file = pkl.load(open(meta_postprocess['genes_file'], 'r'))
+            genes_graphic = defaultdict(list)
             for gene_obj in genes_file:
-                if gene_obj.get_name() == meta_postprocess['gene_name']:
-                    majiq_output['gene_json'] = json.dumps(gene_obj, cls=utils_voila.LsvGraphicEncoder).replace("\"", "'")
-                    majiq_output['gene'] = gene_obj
-                    continue
+                if gene_obj.get_name() in gene_name_list:
+                    genes_graphic[gene_obj.get_name()].append(json.dumps(gene_obj, cls=utils_voila.LsvGraphicEncoder).replace("\"", "'"))
+                    genes_graphic[gene_obj.get_name()].append(gene_obj.get_strand())
+                    # majiq_output['gene_json'] = json.dumps(gene_obj, cls=utils_voila.LsvGraphicEncoder).replace("\"", "'")
+                    # majiq_output['gene'] = gene_obj
+
+            if not len(genes_graphic.keys()): raise Exception("[ERROR] :: No gene matching the visual information file.")
+            majiq_output['genes_json'] = genes_graphic
+            # majiq_output['genes'] = genes_graphic[1]
+
         except Exception, e:
             print e.message
-            # sys.exit(1)
+            sys.exit(1)
 
     _render_template(output_dir, output_html, majiq_output, type_summary, threshold, meta_postprocess)
     return
@@ -146,7 +162,7 @@ def main():
     parser.add_argument('--threshold', type=float, dest='threshold', default=0.2, help='Probability threshold used to sum the accumulative probability of inclusion/exclusion.')
 
     parser.add_argument('--genes-file-info', dest='genes_file', metavar='visual_LSE.majiq', type=str, help='Pickle file with gene coords info.')
-    parser.add_argument('--gene-name', type=str, dest='gene_name', help='Gene name to filter the results. [ONLY for analysis type lsv_single]')
+    parser.add_argument('--gene-names', type=str, dest='gene_names', help='Gene names to filter the results. [ONLY for analysis type lsv_single]')
     parser.add_argument('--collapsed', type=bool, default=False, help='Gene name to filter the results. [ONLY for analysis type lsv_single]')
 
 
@@ -158,7 +174,7 @@ def main():
     create_summary(args.majiq_bins,
                    args.output_dir,
                    args.meta_preprocess,
-                   {'names': args.event_names, 'keys_plots': args.keys_plots, 'gene_name': args.gene_name, 'genes_file': args.genes_file, 'collapsed': args.collapsed},
+                   {'names': args.event_names, 'keys_plots': args.keys_plots, 'gene_names': args.gene_names, 'genes_file': args.genes_file, 'collapsed': args.collapsed},
                    args.type_summary,
                    args.threshold)
 

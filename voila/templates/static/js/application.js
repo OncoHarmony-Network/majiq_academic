@@ -32,9 +32,15 @@ $( document ).ready(function(){
     });
 
     // add sortable functionality to the table
-    var eventTable = $('#event_table');
-    eventTable.tablesorter({sortList: [[0,0]], headers: {4: {sorter: false}, 5: {sorter: false}}}); // Disable sort function in column PDF
-    eventTable.tablesorterPager({widthFixed: true, widgets: ['zebra', 'renderCanvas'], container: $(".pager")});
+    $('.tablesorter').each(function() {
+        $(this).tablesorter({sortList: [
+            [0, 0]
+        ], headers: {4: {sorter: false}, 5: {sorter: false}}}); // Disable sort function in column PDF
+        $(this).tablesorterPager({widthFixed: true, widgets: ['zebra', 'renderCanvas'], container: $(".pager")});
+    });
+//    var eventTable = $('#event_table');
+//    eventTable.tablesorter({sortList: [[0,0]], headers: {4: {sorter: false}, 5: {sorter: false}}}); // Disable sort function in column PDF
+//    eventTable.tablesorterPager({widthFixed: true, widgets: ['zebra', 'renderCanvas'], container: $(".pager")});
 
     var initLargeCanvasSettings = function (num_bins, canvas) {
 
