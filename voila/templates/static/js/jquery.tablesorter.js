@@ -1024,7 +1024,7 @@
     // add customized widgets
     ts.addWidget({
         id: "renderCanvas",
-        format: function () {
+        format: function (table) {
             addExpandedViewFunction();
 
             /**
@@ -1114,7 +1114,7 @@
              * Single LSV visualization
              */
 
-            $('.psiPlot').each( function(){
+            $('.psiPlot', table).each( function(){
                 drawBoxplotHeatmap($(this)[0]);
 
                 // For each compact view of the psiPlot, we want to add to the associated detailed view link
@@ -1130,7 +1130,7 @@
                 );
             });
 
-            $('.largePsiPlot').on('mousewheel', function(event) {
+            $('.largePsiPlot', table).on('mousewheel', function(event) {
                 event.preventDefault();
                 if (event.deltaY > 0){
                     drawBarchartWithCanvasId($(this)[0].id, 1);
@@ -1146,19 +1146,19 @@
                 }
             });
 
-            var gene_obj = null;
+            var gene_obj_list = [];
             $('.spliceGraph').each( function(){
-                gene_obj = splicegraph().renderSpliceGraph(this);
+                gene_obj_list.push(splicegraph().renderSpliceGraph(this));
                 splicegraph().renderSpliceGraphZoomedPopUp(this);
 
             });
 
-            $('.lsvLegend').each( function(){
-                splicegraph().renderLsvSpliceGraph(this, gene_obj);
+            $('.lsvLegend', table).each( function(){
+                splicegraph().renderLsvSpliceGraph(this, gene_obj_list[this.id]);
             });
 
 
-            $('.lsvSingleCompactPercentiles').each(function(){
+            $('.lsvSingleCompactPercentiles', table).each(function(){
                 drawLSVCompactStackBars($(this)[0], 1);
 
                 $(this).on("click", function(e){
@@ -1175,7 +1175,7 @@
                     var sampled_bins = translate_lsv_bins(lsv_data[0].bins, 1000);
 //                    var sampled_bins = translate_delta_lsv_bins(lsv_data[0].bins, 1000);
 
-                    var svg = renderViolin($(this).parent()[0].id, sampled_bins);
+                    var svg = renderViolin($(this).parent()[0].id, sampled_bins, table.id);
                     $(svg).on("click", function(e){
                         e.preventDefault();
                         $(this).toggle("show");
@@ -1191,7 +1191,7 @@
             });
 
 
-            $('.lsvDeltaCompact').each(function(){
+            $('.lsvDeltaCompact', table).each(function(){
                 drawLSVCompactStackBars($(this)[0], 1);
 
                 $(this).on("click", function(e){
