@@ -222,13 +222,13 @@ def main():
             # Try L1 distance
             psi_list1.append(sum(psi_lsv*analysis.psi.BINS_CENTER))
             psi_list2.append(sum(psi_values_lsv2[majiq_psi_names[psi_name]][j]*analysis.psi.BINS_CENTER))
-            list_l1_expected.append(calculate_l1_expected(psi_lsv, psi_values_lsv2[majiq_psi_names[psi_name]][j]))
+            # list_l1_expected.append(calculate_l1_expected(psi_lsv, psi_values_lsv2[majiq_psi_names[psi_name]][j]))
             # print "MAJIQ:\t%f - %f" % (sum(psi_lsv*analysis.psi.BINS_CENTER), sum(psi_values_lsv2[majiq_psi_names[psi_name]][j]*analysis.psi.BINS_CENTER))
             # print "MAJIQ L1 distance:\t%f" % (calculate_l1_expected(psi_lsv, psi_values_lsv2[majiq_psi_names[psi_name]][j]))
             # print "MISO:\t%s - %s" % (str(debug_names_miso_list[psi_name][0][j]), str(debug_names_miso_list[psi_name][1][j]))
 
 
-    print len(debug_dict1), len(debug_dict2)
+    print len(debug_dict1), len(debug_dict2), len(psi_list1), len(psi_list2)
     for k in sorted(debug_dict1):
         if k in debug_dict1 and k not in debug_dict2:
             print "This is the guy!! %s" % k
@@ -239,13 +239,18 @@ def main():
         #     print "\t", psivalues[0][0][majiq_psi_names[k]]
     # plot_PSIs1VsPSIs2(np.array(list_l1_expected), abs(np.array(miso_psis_list[0]) - np.array(miso_psis_list[1])), args.name1, args.name2, "MAJIQ", "MISO", args.plotpath)
 
+    names_duplicated = [x for x in sorted(debug_dict1) for _ in (0, 1)]
+    names_lsv_where_majiq_lose = np.array(names_duplicated)[abs(np.array(psi_list1) - np.array(psi_list2)) > abs(np.array(miso_psis_list[0]) - np.array(miso_psis_list[1]))][::2]
+    print names_lsv_where_majiq_lose
+    pickle.dump(names_lsv_where_majiq_lose, open('names_lsv_where_majiq_lose.pickle', 'w'))
+
     f = figure()
     ylabel('Number of Junctions')
     xlabel('Expected PSI')
     title('MISO and MAJIQ expected PSIs\nHippo1 Vs Hippo2', fontsize=10)
 
-    hist(np.array(miso_psis_list[0]), bins=40, label="MISO")
-    hist(np.array(psi_list1), bins=40, label="MAJIQ")
+    hist(np.array(miso_psis_list[1]), bins=40, label="MISO")
+    hist(np.array(psi_list2), bins=40, label="MAJIQ")
     legend()
 
     # plot([0, 1], [0, 1])
