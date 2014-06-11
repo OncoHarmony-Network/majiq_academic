@@ -5,7 +5,7 @@ Rank MAJIQ, MISO or MATS events to test delta PSI reproducibility
 
 """
 import argparse
-import pickle as pkl
+import pickle
 
 from pylab import *
 
@@ -17,7 +17,7 @@ def print_matrix(matrix):
             print "%.4f"%matrix[i][j],
         print
 
-    print ret
+    print
     print
 
 
@@ -83,11 +83,27 @@ def v_sum(matrix):
 
     return ret
 
-def rank_majiq(path, names, V=0.2, absolute=True, dofilter=True, E=False, ranknochange=False):
+def rank_majiq(bins_list, names, V=0.2, absolute=True, dofilter=True, E=False, ranknochange=False):
     MINTHRESHOLD = 0.2 # minimum threshold in order to consider a prob. significant enough to be included in the ranking
     rank = []
-    names = pickle.load(open(names))
-    for i, dmatrix in enumerate(pickle.load(open(path))):
+    # lsv_types_dict = {
+    #     's|1e1.1|1e2.1':'SE',
+    #     't|1e1.1|1e2.1':'SE',
+    #     # 's|1e1.1|1e1.2':'A3SS',
+    #     # 't|1e1.1|2e1.1':'A3SS',
+    #     # 't|1e1.1|1e1.2':'A5SS',
+    #     # 's|1e1.1|2e1.1':'A5SS'
+    # }
+
+    # names = pickle.load(open(names))
+    print len(names), len(bins_list)
+    for i, lsv_bins in enumerate(bins_list):
+        # if names[i][2] not in lsv_types_dict.keys():
+        #     continue
+        if len(lsv_bins)>2:
+            continue
+        # for dmatrix in lsv_bins:
+        dmatrix = lsv_bins[0]
         if E:
             v_prob = v_sum(dmatrix)
             rank.append([names[i], round(v_prob, 2)])
@@ -193,6 +209,8 @@ def main():
     parser.add_argument('--ranknochange', default=False, action='store_true', help="Calculate P(deltaPSI < V) instead of P(deltaPSI > V) to rank first the ones with low delta PSI")
     args = parser.parse_args()
 
+    print args
+
     print "Calculating ranks..."
     if args.miso:
         rank1 = array(rank_miso(args.pair[0], args.filter, args.ranknochange))
@@ -202,18 +220,33 @@ def main():
         rank2 = array(rank_mats(args.pair[1], args.filter, args.ranknochange))
     else:
         # NEW
-
-        rank1 = rank_majiq(args.pair[0], args.evnames[0], args.V, args.absolute, args.filter, args.E, args.ranknochange)
-        rank2 = rank_majiq(args.pair[1], args.evnames[1], args.V, args.absolute, args.filter, args.E, args.ranknochange)
+        majiq1 = pickle.load(open(args.pair[0], 'r'))
+        majiq2 = pickle.load(open(args.pair[1], 'r'))
+        rank1 = rank_majiq(majiq1[0], majiq1[1], args.V, args.absolute, args.filter, args.E, args.ranknochange)
+        rank2 = rank_majiq(majiq2[0], majiq2[1], args.V, args.absolute, args.filter, args.E, args.ranknochange)
 
 
     print "Num events", len(rank1), len(rank2)
+
+    for kk, ran1 in enumerate(rank1):
+        for ll, ran2 in enumerate(rank2):
+            if ran1[0] == ran2[0]:
+                if ran1[1] != ran2[1]:
+                    print "not equal!",ran1[1], ran2[1]
+                else:
+                    print "equal!",ran1[1], ran2[1]
+                break
+        else:
+            continue
+
 
     print "Calculating the ratios..."
     #calculate the ratios
     ratios = []
 
+    max_events = min(args.max +1, min(len(rank1), len(rank2)))
 
+    fdr = []
     if args.proximity or args.fullrank:
         #Using proximity or full rank window
         if args.proximity: print "Using proximity window of %s..."%args.proximity
@@ -221,14 +254,14 @@ def main():
         found = 0
         fdr = [0] #zero to avoid using "first" flag for first element
         v_values = []
-        for i in xrange(args.max+1):
+        for i in xrange(max_events):
             if args.proximity:
                 min_chunk = max(0, i-args.proximity/2)
                 max_chunk = min_chunk+args.proximity
 
             elif args.fullrank: #check in the whole set instead of subsets
                 min_chunk = 0
-                max_chunk = args.max
+                max_chunk = max_events
 
             if i % 20 == 0:
                 print "Event rank1 n=%s. Window rank2: %s-%s"%(i, min_chunk, max_chunk)  
@@ -250,7 +283,7 @@ def main():
             fdr /= fdr.shape[0]
 
     else: #"equalrank" chunks of same n size in both ranks
-        for i in xrange(args.max+1):
+        for i in xrange(max_events):
             chunk1 = list(rank1[0:i]) 
             chunk2 = list(rank2[0:i])
             #check if event1 is into chunk2
@@ -267,6 +300,12 @@ def main():
     
     print "RESULT:", ratios[0:10], "...", ratios[-10:], "length", ratios.shape
     print "Saving..."
+
+    import os
+
+    if not os.path.exists(os.path.dirname(args.output)):
+        os.makedirs(os.path.dirname(args.output))
+
     pickle.dump(ratios, open(args.output, 'w'))
 
     if args.fdr:

@@ -1,4 +1,5 @@
 from __future__ import division
+from collections import defaultdict
 import json
 
 import matplotlib
@@ -367,7 +368,7 @@ def get_delta_exp_data(majiq_out_file, metadata_post=None, confidence=.95, thres
     return {'event_list': events_list, 'experiments_info': experiments_info}
 
 
-def get_lsv_single_exp_data(majiq_bins_file, confidence, gene_name=None):
+def get_lsv_single_exp_data(majiq_bins_file, confidence, gene_name_list=None):
     """
     Create a dictionary to summarize the information from majiq output file.
     """
@@ -388,9 +389,11 @@ def get_lsv_single_exp_data(majiq_bins_file, confidence, gene_name=None):
     lsv_counter = 0
     lsv_list = []
 
+    genes_dict = defaultdict(list)
+
     for i, lsv_meta in enumerate(metadata_pre):
         # print "%s --> %s" % (lsv_meta[2], collapse_lsv(lsv_meta[2]))
-        if not gene_name or gene_name in str(lsv_meta[1]):
+        if not gene_name_list or str(lsv_meta[1]).split(':')[0] in gene_name_list:
             print lsv_meta[0], lsv_meta[1], lsv_meta[2]
             metadata.append([lsv_meta[0], lsv_meta[1], lsv_meta[2]]) #collapse_lsv(lsv_meta[2])])
             bins_array_list = bins_matrix[0][i]
@@ -398,10 +401,12 @@ def get_lsv_single_exp_data(majiq_bins_file, confidence, gene_name=None):
             try:
                 lsv_list.append(Lsv(generate_lsv(lsv_counter, bins_array_list, confidence)))
             except ValueError, e:
-                print "[WARNING] :: %s produced an error:\n%s" % (bins_array_list, e)
+                print "[WARNING] :: %s produced an error:\n%s (Skipped)" % (bins_array_list, e)
+            genes_dict[str(lsv_meta[1]).split(':')[0]].append([Lsv(generate_lsv(lsv_counter, bins_array_list, confidence)), [lsv_meta[0], lsv_meta[1], lsv_meta[2]]])
 
     return {'event_list':   lsv_list,
-            'metadata':     metadata}
+            'metadata':     metadata,
+            'genes_dict':    genes_dict }
 
 
 def collapse_matrix(matrix):

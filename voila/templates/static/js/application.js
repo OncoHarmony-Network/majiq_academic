@@ -32,9 +32,15 @@ $( document ).ready(function(){
     });
 
     // add sortable functionality to the table
-    var eventTable = $('#event_table');
-    eventTable.tablesorter({sortList: [[0,0]], headers: {4: {sorter: false}, 5: {sorter: false}}}); // Disable sort function in column PDF
-    eventTable.tablesorterPager({widthFixed: true, widgets: ['zebra', 'renderCanvas'], container: $(".pager")});
+    $('.tablesorter').each(function() {
+        $(this).tablesorter({sortList: [
+            [0, 0]
+        ], headers: {4: {sorter: false}, 5: {sorter: false}}}); // Disable sort function in column PDF
+        $(this).tablesorterPager({widthFixed: true, widgets: ['zebra', 'renderCanvas'], container: $(".pager", this)});
+    });
+//    var eventTable = $('#event_table');
+//    eventTable.tablesorter({sortList: [[0,0]], headers: {4: {sorter: false}, 5: {sorter: false}}}); // Disable sort function in column PDF
+//    eventTable.tablesorterPager({widthFixed: true, widgets: ['zebra', 'renderCanvas'], container: $(".pager")});
 
     var initLargeCanvasSettings = function (num_bins, canvas) {
 
@@ -1235,10 +1241,10 @@ function rgbToHex(r, g, b) {
     return "#" + componentToHex(r) + componentToHex(g) + componentToHex(b);
 }
 
-function renderViolin(htmlElementId, results){
+function renderViolin(htmlElementId, results, tableId){
 
 
-    function addViolin(svg, results, height, width, domain, imposeMax, count, id_svg){
+    function addViolin(svg, results, height, width, domain, imposeMax, count, id_svg, id_table){
 
 
         var data = d3.layout.histogram()
@@ -1275,7 +1281,7 @@ function renderViolin(htmlElementId, results){
             .y(function(d) { return y(d.y); });
 
         svg.append("linearGradient")
-            .attr("id", "violin-gradient"+id_svg+count)
+            .attr("id", "violin-gradient"+id_svg+count+id_table)
             .attr("gradientUnits", "userSpaceOnUse")
             .attr("x1", margin.top).attr("y1", 0 )
             .attr("x2", height-margin.bottom).attr("y2", 0)
@@ -1320,8 +1326,8 @@ function renderViolin(htmlElementId, results){
         gPlus.attr("transform", "rotate(90,0,0)  translate(0,-"+width+")");
         gMinus.attr("transform", "rotate(90,0,0) scale(1,-1)");
 
-        gPlus.attr('fill','url(#violin-gradient' +id_svg+count +')');
-        gMinus.attr('fill','url(#violin-gradient' +id_svg+count +')');
+        gPlus.attr('fill','url(#violin-gradient' +id_svg+count+id_table +')');
+        gMinus.attr('fill','url(#violin-gradient' +id_svg+count+id_table +')');
 
 
 
@@ -1435,7 +1441,7 @@ function renderViolin(htmlElementId, results){
     for(var i=0; i<results.length; i++){
         results[i]=results[i]; //.sort(d3.ascending);
         var g=svg.append("g").attr("transform", "translate("+(i*(boxWidth+boxSpacing)+margin.left)+",0)");
-        addViolin(g, results[i], height, boxWidth, domain, 0.25, i, htmlElementId);
+        addViolin(g, results[i], height, boxWidth, domain, 0.25, i, htmlElementId, tableId);
         addBoxPlot(g, results[i], height, boxWidth, domain, .15);
 
     }
