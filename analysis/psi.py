@@ -177,26 +177,10 @@ def lsv_psi(samples_events, name, alpha, n, debug):
 
             total_psi = np.zeros(shape=(100,BINS.shape[0]),dtype=np.float)
             for pidx, paired_samples in enumerate(samples.T):
-<<<<<<< HEAD
 
                 dir_pdf = dirichlet_pdf(array([BINS_CENTER, 1-BINS_CENTER]).T, paired_samples)
-||||||| merged common ancestors
-                
-                dir_pdf = dirichlet_pdf(array([BINS_CENTER, 1-BINS_CENTER]).T, paired_samples)
-#                dir_pdf = [dirichlet_pdf([x, 1-x], paired_samples) for x in BINS_CENTER]
-#                dir_pdf = [dircalc.pdf([x, 1-x], paired_samples) for x in BINS_CENTER]
-#                dir_pdf = [dircalc.pdf([x, 1-x], alpha+paired_samples) for x in BINS_CENTER]
                 dir_pdf = np.asarray(dir_pdf)
-=======
-                
-                # dir_pdf = dirichlet_pdf(array([BINS_CENTER, 1-BINS_CENTER]).T, paired_samples)
-                # dir_pdf = [dirichlet_pdf([x, 1-x], paired_samples) for x in BINS_CENTER]
-                dir_pdf = [dircalc.pdf([x, 1-x], paired_samples) for x in BINS_CENTER]
-#                dir_pdf = [dircalc.pdf([x, 1-x], alpha+paired_samples) for x in BINS_CENTER]
-                dir_pdf = np.asarray(dir_pdf)
->>>>>>> 0e322ab846f3f0a357c7768dc4e5fb17d496d9cc
                 acum_samples += dir_pdf
-<<<<<<< HEAD
                 total_acum += sum(dir_pdf) 
                 if (pidx+1) % 50 == 0 :
                     total_psi[(pidx)/50]=(acum_samples/total_acum)
@@ -206,27 +190,7 @@ def lsv_psi(samples_events, name, alpha, n, debug):
             total_psi = np.median(total_psi,axis=0)
             psi[idx] = total_psi/total_psi.sum()
 
-#            print samples[0,:].sum()/5000
-#            print samples[1,:].sum()/5000
-#            if samples[0,:].sum()/5000 < samples[1,:].sum()/50000:
-#                pdb.set_trace()
-||||||| merged common ancestors
-                total_acum += sum(dir_pdf) 
-
-            psi[idx]=acum_samples/total_acum
-            
-=======
-                total_acum += sum(dir_pdf)
-
-            psi[idx]=acum_samples/total_acum
-            
->>>>>>> 0e322ab846f3f0a357c7768dc4e5fb17d496d9cc
-#            for pp in psi[idx]:
-#                    if np.isnan(pp):
-#                        pdb.set_trace()
-#         print "PSI",psi
         psi_scores.append( psi )
-        #print "Junction %s PSI distribution: %s sum_N: %s"%(i, psi_matrix[-1], sum(psi_matrix[-1]))
 
 
     return psi_scores
