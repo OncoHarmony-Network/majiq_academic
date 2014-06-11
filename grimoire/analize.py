@@ -202,6 +202,9 @@ def LSV_detection( gene_list, chr ):
                     jlist = [x for x in  jlist if x is not None]
                     if len(jlist) == 0 : continue
 
+                    lsv_in = gn.new_lsv_definition( exon_list[idx], jlist, lsv_type )
+                    if lsv_in is None : continue
+
                     for name, ind_list in mglobals.tissue_repl.items() :
                         counter = 0
                         eData = 0
@@ -213,8 +216,6 @@ def LSV_detection( gene_list, chr ):
                             eData +=1
                             jun[name].add(jj)
                         if eData == 0 : continue
-                        lsv_in = gn.new_lsv_definition( exon_list[idx], jlist, lsv_type )
-                        if lsv_in is None : continue
                         for exp_idx in ind_list:
                             for lsvinlist in lsv_list[exp_idx]:
                                 if lsv_in.is_equivalent(lsvinlist): break

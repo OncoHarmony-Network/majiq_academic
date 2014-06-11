@@ -152,13 +152,9 @@ class CalcPsi(BasicPipeline):
         lsv_junc, const = majiq_io.load_data_lsv(path, self.logger) 
         self.logger.debug("SHAPES for lsv %s,  constitutive %s"%(len(lsv_junc[0]), const[0].shape))
         self.logger.info("Loaded.")
-#        all_junctions = {"inc": inc, "exc": exc, "const": const }
+
         all_junctions = self.gc_content_norm_lsv( lsv_junc, const )
 
-       # self.logger.info("Masking non unique...")
-
-
-        #for junc_set in all_junctions.keys():
         #    all_junctions[junc_set] = masked_less(all_junctions[junc_set], 0) 
 
         fitfunc = self.fitfunc(const[0])
@@ -177,10 +173,14 @@ class CalcPsi(BasicPipeline):
 
         self.logger.info("Bootstrapping samples...") 
         lsv_sample = []
+        dummy_test = []
         for ii in lsv_junc[0]:
 
-            m_lsv, var_lsv, s_lsv = sample_from_junctions(ii, self.m, self.k, discardzeros=5, trimborder=self.trimborder, fitted_func=fitfunc, debug=self.debug)
+            m_lsv, var_lsv, s_lsv = sample_from_junctions(ii, self.m, self.k, discardzeros=5, trimborder=self.trimborder, fitted_func=fitfunc, debug=self.debug, dummy_test=dummy_test)
             lsv_sample.append( s_lsv )
+
+        dum_fp = open('./dummy_test.pickle','w')
+        pickle.dump(dummy_test, dum_fp)
 
         self.logger.info("\nCalculating PSI for %s ..."%(name))
         psi = lsv_psi(lsv_sample, name, self.alpha, self.n, self.debug)
@@ -318,6 +318,7 @@ class DeltaPair(BasicPipeline):
         lsv_sample2 = [[],[]]
         for idx, ii in enumerate(lsv_junc2[0]):
             m_lsv, var_lsv, s_lsv = sample_from_junctions(ii, self.m, self.k, discardzeros=5, trimborder=self.trimborder, fitted_func=fitfunc2, debug=self.debug) 
+#        pdb.set_trace()
             lsv_sample2[0].append( s_lsv )
             lsv_sample2[1].append(lsv_junc2[1][idx])
 
@@ -562,24 +563,6 @@ class DeltaGroup(DeltaPair, CalcPsi):
 
     def calc_weights_lsv(self, group, releveant, type=3 ):
 
-        #for i in xrange(len(self.files1)):
-        #    for j in xrange(len(self.files2)):
-        #        self.k_ref.append([i, j])
-        #        path = self._pair_path(i, j)
-        #        matrix_path = self._matrix_path(i, j)
-        #        events_path = self._events_path(i, j)
-        #        if os.path.exists(matrix_path):
-        #            self.logger.info("%s exists! Loading..."%path)
-        #            matrices[i,j], info[i,j] = pickle.load(open(matrix_path))
-        #        else:
-        #            self.logger.info("Calculating pair %s"%path)
-        #            matrices[i,j], info[i,j] = self.pairdelta_lsv(self.files1[i], self.files2[j], path)
-        #            self.logger.info("Saving pair posterior for %s, %s"%(i, j))
-
-        #        if not self.fixweights1: #get relevant events for weights calculation
-        #            relevant_events.extend(rank_deltas(matrices, names, E=True)[:self.numbestchanging])
-
-        #            pairs_posteriors[name].append(matrices[k]) #pairing all runs events
 
         eta_wgt = local_weight_eta( group )
 
@@ -644,27 +627,31 @@ class DeltaGroup(DeltaPair, CalcPsi):
 
         return weights
 
-    def comb_replicas_lsv(self, pairs_posteriors, weights1=None, weights2=None):
+    def comb_replicas_lsv(self, delta_posterior_lsv, weights1=None, weights2=None):
         "Combine all replicas per event into a single average replica. Weights per experiment can be provided"
         weights1 = self.equal_if_not(weights1) 
         weights2 = self.equal_if_not(weights2) 
         comb_matrix = []
         comb_names = []
         FILTERMIN = len(self.k_ref)-1 #filter events that show on all replicas
-        for name, matrices in pairs_posteriors.items():
-            for k, matrix in enumerate(matrices):
-                #i = k / len(self.files1) #infers the weight1 index given the position of the matrix
-                #j = k % len(self.files2)
-                i, j = self.k_ref[k]
-                if k == 0: #first iteration
-                    comb = matrix*weights1[i]*weights2[j]
-                else:
-                    comb += matrix*weights1[i]*weights2[j]
 
-            if k == FILTERMIN:
-                comb /= sum(comb) #renormalize so it sums 1
-                comb_matrix.append(comb)
-                comb_names.append(name)
+        for l_idx,lsv in enumerate( delta_posterior_lsv):
+            comb_matrix.append([])
+#            name = 
+            for  matrices in lsv.items():
+                for k, matrix in enumerate(matrices):
+                    #i = k / len(self.files1) #infers the weight1 index given the position of the matrix
+                    #j = k % len(self.files2)
+                    i, j = self.k_ref[k]
+                    comb += matrix*weights1[l_idx][i]*weights2[l_idx][j]
+
+                if k == FILTERMIN:
+                    comb /= sum(comb) #renormalize so it sums 1
+                    comb_matrix[l_idx].append(comb)
+                    comb_names.append(name)
+
+        return comb_matrix, comb_names
+
 
     def comb_replicas(self, pairs_posteriors, weights1=None, weights2=None):
         "Combine all replicas per event into a single average replica. Weights per experiment can be provided"
@@ -712,30 +699,34 @@ class DeltaGroup(DeltaPair, CalcPsi):
         self.k_ref = [] #maps the i, j reference for every matrix (this could be do in less lines with div and mod, but this is safer) 
         relevant_events = []
 
+        for i in xrange(len(self.files1)):
+            for j in xrange(len(self.files2)):
+                self.k_ref.append([i, j])
+                path = self._pair_path(i, j)
+                matrix_path = self._matrix_path(i, j)
+                if os.path.exists(matrix_path):
+                    self.logger.info("%s exists! Loading..."%path)
+                    matrices[i,j], info[i,j] = pickle.load(open(matrix_path))
+                else:
+                    self.logger.info("Calculating pair %s"%path)
+                    matrices[i,j], info[i,j] = self.pairdelta_lsv(self.files1[i], self.files2[j], path)
+                    self.logger.info("Saving pair posterior for %s, %s"%(i, j))
+
+                if not self.fixweights1: #get relevant events for weights calculation
+                    relevant_events.extend(rank_deltas_lsv(matrices, info, E=True)[:self.numbestchanging])
+                    pairs_posteriors[name].append(matrices[k]) #pairing all runs events
+
         self.logger.info("All pairs calculated, calculating weights...")
-        if self.fixweights1: #Weights are manually fixed
-            weights1 = self.fixweights1
-            weights2 = self.fixweights2
-        else:
-            self.logger.info("Obtaining weights from Delta PSI...")
-            self.logger.info("... obtaining 'relevant set'")
-            #sort again the combined ranks
-            relevant_events.sort(key=lambda x: -x[1])
-
-            #gather the first NUMEVENTS names
-            relevant = []
-            for name, matrix in relevant_events:
-                if name not in relevant_events: #ignore duplicated entries
-                    relevant.append(name)
-
-                if len(relevant) == self.numbestchanging:
-                    break #we got enough elements
-            
-            self.logger.info("Obtaining weights for relevant set...")
-            weights1 = self.calc_weights_lsv(relevant, group=0, global_version=3)
-            self.logger.info("Weigths for %s are (respectively) %s"%(self.files1, weights1))
-            weights2 = self.calc_weights_lsv(relevant, group=0, globa_version=3)
-            self.logger.info("Weigths for %s are (respectively) %s"%(self.files2, weights2))
+        self.logger.info("Obtaining weights from Delta PSI...")
+        self.logger.info("... obtaining 'relevant set'")
+        #sort again the combined ranks
+        relevant_events.sort(key=lambda x: -x[1])
+        
+        self.logger.info("Obtaining weights for relevant set...")
+        weights1 = self.calc_weights_lsv(relevant_events, ro_type = self.ro_type )
+        self.logger.info("Weigths for %s are (respectively) %s"%(self.files1, weights1))
+        weights2 = self.calc_weights_lsv(relevant_events, ro_type = self.ro_type )
+        self.logger.info("Weigths for %s are (respectively) %s"%(self.files2, weights2))
 
         self.logger.info("Normalizing with weights...")
         comb_matrix, comb_names = self.comb_replicas_lsv( pairs_posteriors, weights1=weights1, weights2=weights2 )

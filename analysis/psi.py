@@ -141,9 +141,8 @@ def dirichlet_pdf(x, alpha):
     '''Returns a Dirichlet PDF function'''
     alphap = alpha - 1
     c = np.exp(gammaln(alpha.sum()) - gammaln(alpha).sum())
-#    pdb.set_trace()
     return c * (x**alphap).prod(axis=1)
-    
+
 
 
 def recalibrate_delta(deltapsi):
@@ -152,7 +151,7 @@ def recalibrate_delta(deltapsi):
 
 def lsv_psi(samples_events, name, alpha, n, debug):
     "Given a set of matching inclusion and exclusion samples, calculate psi, save it in disk, and return the psi-per-juntion matrix"
-    
+
     psi_scores = []
     dircalc = DirichletCalc() 
     for i, lsv in enumerate(samples_events):
@@ -175,19 +174,25 @@ def lsv_psi(samples_events, name, alpha, n, debug):
             samples    = np.ndarray(shape=(2,junc.shape[0]))
             samples[0,:] = junc + alpha
             samples[1,:] = aggr
-            
+
+            total_psi = np.zeros(shape=(100,BINS.shape[0]),dtype=np.float)
             for pidx, paired_samples in enumerate(samples.T):
-                
+
                 dir_pdf = dirichlet_pdf(array([BINS_CENTER, 1-BINS_CENTER]).T, paired_samples)
-#                dir_pdf = [dirichlet_pdf([x, 1-x], paired_samples) for x in BINS_CENTER]
-#                dir_pdf = [dircalc.pdf([x, 1-x], paired_samples) for x in BINS_CENTER]
-#                dir_pdf = [dircalc.pdf([x, 1-x], alpha+paired_samples) for x in BINS_CENTER]
-                dir_pdf = np.asarray(dir_pdf)
                 acum_samples += dir_pdf
                 total_acum += sum(dir_pdf) 
+                if (pidx+1) % 50 == 0 :
+                    total_psi[(pidx)/50]=(acum_samples/total_acum)
+                    acum_samples = np.zeros(shape=(BINS.shape[0]), dtype = np.float)
+                    total_acum = 0.
 
-            psi[idx]=acum_samples/total_acum
-            
+            total_psi = np.median(total_psi,axis=0)
+            psi[idx] = total_psi/total_psi.sum()
+
+#            print samples[0,:].sum()/5000
+#            print samples[1,:].sum()/5000
+#            if samples[0,:].sum()/5000 < samples[1,:].sum()/50000:
+#                pdb.set_trace()
 #            for pp in psi[idx]:
 #                    if np.isnan(pp):
 #                        pdb.set_trace()

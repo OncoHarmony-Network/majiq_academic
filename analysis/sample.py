@@ -101,13 +101,18 @@ def mean_junction(junctions, discardzeros=True):
 
     return array(ret)
 
-def sample_from_junctions(junctions, m, k, dispersion=0.1, discardzeros=5, trimborder=True, fitted_func=None, debug=False, tracklist=None, names=None):
+global EMPIRICAL_NZ, BINOMIAL_NZ 
+EMPIRICAL_NZ = 0
+BINOMIAL_NZ = -1
+
+def sample_from_junctions(junction_list, m, k, dispersion=0.1, discardzeros=5, trimborder=True, fitted_func=None, debug=False, tracklist=None, Nz = 0, names=None, dummy_test=None):
     "Given the filtered reads, bootstrap samples from every junction"
     a, b = fitted_func.c
     sampled_means = []
     sampled_var = []
     all_samples = []
-    for i, junction in enumerate(junctions):
+    
+    for i, junction in enumerate(junction_list):
         if debug > 0 and i == debug: break
         if i % 100 == 0 and debug > 0:
             print "junction %s..."%i,
@@ -117,19 +122,27 @@ def sample_from_junctions(junctions, m, k, dispersion=0.1, discardzeros=5, trimb
             junction = _trimborders(junction, trimborder) #trim the zeroes from the borders regardless of the discardzeros flag
 
         junction = junction[junction > -EPSILON]  #mask the -1 (or lower) positions regardless of the discardzero treatment
-
+        
         if discardzeros > 0:
             junction = junction[junction!=0] #a junction array without the zeroes
             sys.stdout.flush()
+            print "SAMPL %s"%i,junction.shape[0], np.count_nonzero(junction)
             if junction.shape[0]< discardzeros:
                 z = np.zeros(shape=(discardzeros-junction.shape[0]), dtype=int)
                 junction = np.concatenate((junction,z), axis=1) #a junction array without the zeroes
 
-        if len(junction) == 0:
+        if np.count_nonzero(junction) == 0:
             sampled_means.append(0)
             sampled_var.append(0)
             all_samples.append([0]*(k*m)) #k*m zeroes
         else:
+
+            if Nz == EMPIRICAL_NZ:
+                npos_mult = np.count_nonzero(junction)
+                print "LATER %s"%i, Nz, junction
+            elif Nz == BINOMIAL_NZ:
+                pass
+
             samples = []
             for iternumber in xrange(m):
                 junction_samples = []
@@ -140,16 +153,20 @@ def sample_from_junctions(junctions, m, k, dispersion=0.1, discardzeros=5, trimb
                 #recalculating
                 r_nb, p_nb = polyfitnb.func2nb( a, b, sampled_mean, dispersion )
                 samples.extend(negative_binomial(r_nb, p_nb, k)) 
-            
             #calculate the mean and the variance 
+
+            dummy_test.append((mean(samples), npos_mult, len(samples)-np.count_nonzero(samples)))
+
             sampled_means.append(mean(samples))
             sampled_var.append(var(samples))
+            samples = [ npos_mult* (x+1) for x in samples]
+#            print i, Nz, samples
             all_samples.append(samples)
             if names and tracklist:
                 if names[i] in tracklist:
-                    logger.info("TRACKLIST (%s): %s"%(event_name, junctions))
-
+                    logger.info("TRACKLIST (%s): %s"%(event_name, junction_list))
     return array(sampled_means), array(sampled_var), array(all_samples)
+
 
 def plot_pearsoncorr(var1, var2, my_title, my_xlabel, my_ylabel, plotpath=None, max_value=None):
     if DEBUG:

@@ -205,13 +205,15 @@ def main():
             print "MISO:\t%s - %s" % (str(debug_names_miso_list[psi_name][0][j]), str(debug_names_miso_list[psi_name][1][j]))
 
 
-    for k in sorted(debug_dict1):
-        if debug_dict2[k] - debug_dict1[k]:  # LSVs where the number of junctions in one method differs with the other
-            print "Num junctions for LSV %s: MAJIQ - %d MISO: %d" % (k, debug_dict2[k], debug_dict1[k])
-            print "MAJIQ LSV and juncs:"
-            print "\t", psivalues[1][majiq_psi_names[k]]
-            print "\t", psivalues[0][0][majiq_psi_names[k]]
+#    for k in sorted(debug_dict1):
+#        if debug_dict2[k] - debug_dict1[k]:  # LSVs where the number of junctions in one method differs with the other
+#            print "Num junctions for LSV %s: MAJIQ - %d MISO: %d" % (k, debug_dict2[k], debug_dict1[k])
+#            print "MAJIQ LSV and juncs:"
+#            print "\t", psivalues[1][majiq_psi_names[k]]
+#            print "\t", psivalues[0][0][majiq_psi_names[k]]
 
+
+    print len(psi_list1), len(psi_list2), len(miso_psis_list[0]), len(miso_psis_list[1])
     plot_PSIs1VsPSIs2(abs(np.array(psi_list1) - np.array(psi_list2)), abs(np.array(miso_psis_list[0]) - np.array(miso_psis_list[1])), args.name1, args.name2, "MAJIQ", "MISO", args.plotpath)
 
 

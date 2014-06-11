@@ -31,7 +31,6 @@ class LSV(object):
             if kk.find('e0') != -1  and count != 0:
                 raise ValueError
 
-
         self.junctions = []
         order = self.ext_type.split('|')[1:]
         for idx,jj in enumerate(order):
@@ -47,7 +46,6 @@ class LSV(object):
 
     def check_type(self, type):
         tab = type.split('|')[1:]
-        
         exss = []
         targ = {}
         for tt in tab:
