@@ -105,7 +105,7 @@ global EMPIRICAL_NZ, BINOMIAL_NZ
 EMPIRICAL_NZ = 0
 BINOMIAL_NZ = -1
 
-def sample_from_junctions(junction_list, m, k, dispersion=0.1, discardzeros=5, trimborder=True, fitted_func=None, debug=False, tracklist=None, Nz = 0, names=None, dummy_test=None):
+def sample_from_junctions(junction_list, m, k, dispersion=0.1, discardzeros=5, trimborder=True, fitted_func=None, debug=False, tracklist=None, Nz = 0, names=None):
     "Given the filtered reads, bootstrap samples from every junction"
     a, b = fitted_func.c
     sampled_means = []
@@ -126,7 +126,6 @@ def sample_from_junctions(junction_list, m, k, dispersion=0.1, discardzeros=5, t
         if discardzeros > 0:
             junction = junction[junction!=0] #a junction array without the zeroes
             sys.stdout.flush()
-            print "SAMPL %s"%i,junction.shape[0], np.count_nonzero(junction)
             if junction.shape[0]< discardzeros:
                 z = np.zeros(shape=(discardzeros-junction.shape[0]), dtype=int)
                 junction = np.concatenate((junction,z), axis=1) #a junction array without the zeroes
@@ -139,9 +138,8 @@ def sample_from_junctions(junction_list, m, k, dispersion=0.1, discardzeros=5, t
 
             if Nz == EMPIRICAL_NZ:
                 npos_mult = np.count_nonzero(junction)
-                print "LATER %s"%i, Nz, junction
             elif Nz == BINOMIAL_NZ:
-                pass
+                npos=binomial(k,float(np.count_nonzero(junctions))/float(k), k)
 
             samples = []
             for iternumber in xrange(m):
@@ -155,11 +153,11 @@ def sample_from_junctions(junction_list, m, k, dispersion=0.1, discardzeros=5, t
                 samples.extend(negative_binomial(r_nb, p_nb, k)) 
             #calculate the mean and the variance 
 
-            dummy_test.append((mean(samples), npos_mult, len(samples)-np.count_nonzero(samples)))
-
             sampled_means.append(mean(samples))
             sampled_var.append(var(samples))
-            samples = [ npos_mult* (x+1) for x in samples]
+           
+#            samples = [ npos_mult* (x+1) for x in samples]
+            samples = npos_mult * (np.array(samples)+1)
 #            print i, Nz, samples
             all_samples.append(samples)
             if names and tracklist:

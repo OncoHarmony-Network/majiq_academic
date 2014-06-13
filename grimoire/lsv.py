@@ -191,58 +191,56 @@ def extract_SE_events( list_lsv_per_gene ):
 def lsv_to_gff( list_lsv ):
 
 
-    gtf = []
-    for lsv in list_lsv[0]:
-        trans = []
-        jlist = sorted(lsv.junctions)
-        lsv_coord = lsv.get_coordinates()
+    gtf = set()
+    for lsv_l in list_lsv:
+        for lsv in lsv_l:
+            trans = []
+            jlist = lsv.junctions
+            lsv_coord = lsv.get_coordinates()
 
-        gne = jlist[0].gene
-        chrom = gne.get_chromosome()
-        strand = gne.get_strand()
-        gene = '%s\tscript\tgene\t'%chrom
-        if lsv.type==SSOURCE:
-            if jlist[-1].acceptor is None: continue
-            gene += '%d\t%d\t'%(lsv_coord[0],jlist[-1].acceptor.get_coordinates()[1])
-        else:
-            if jlist[0].donor is None: continue
-            gene += '%d\t%d\t'%(jlist[0].donor.get_coordinates()[0],lsv_coord[1])
-
-        gene += '.\t%s\t.\tName=%s;Parent=%s;ID=%s'%(strand,lsv.id, lsv.id, lsv.id)
-        trans.append(gene)  
-
-        for jidx,junc in enumerate(jlist):
-
-            mrna = '%s\tscript\tmRNA\t'%chrom
-            mrna_id = '%s.%d'%(lsv.id,jidx)
-            ex1 = '%s\tscript\texon\t'%chrom 
-            ex2 = '%s\tscript\texon\t'%chrom
-
-            if lsv.type == SSOURCE:
-                if junc.acceptor is None: break
-                excoord = junc.acceptor.get_coordinates()
-                variant = junc.get_coordinates()
-                mrna +='%d\t%d\t'%(lsv_coord[0], excoord[1])
-                ex1 += '%d\t%d\t'%(lsv_coord[0], variant[0])
-                ex2 += '%d\t%d\t'%(variant[1],excoord[1])
+            gne = jlist[0].gene
+            chrom = gne.get_chromosome()
+            strand = gne.get_strand()
+            gene = '%s\tscript\tgene\t'%chrom
+            if lsv.type==SSOURCE:
+                if jlist[-1].acceptor is None: continue
+                gene += '%d\t%d\t'%(lsv_coord[0],jlist[-1].acceptor.get_coordinates()[1])
             else:
-                if junc.donor is None: break
-                excoord = junc.donor.get_coordinates()
-                variant = junc.get_coordinates()
-                mrna +='%d\t%d\t'%(excoord[0], lsv_coord[1])
-                ex1 += '%d\t%d\t'%(variant[1], lsv_coord[1])
-                ex2 += '%d\t%d\t'%(excoord[0], variant[0])
-            mrna += '.\t%s\t.\tName=%s;Parent=%s;ID=%s'%(strand,mrna_id,lsv.id,mrna_id)
-            ex1  += '.\t%s\t.\tName=%s.lsv;Parent=%s;ID=%s.lsv'%(strand, mrna_id, mrna_id,mrna_id)
-            ex2  += '.\t%s\t.\tName=%s.ex;Parent=%s;ID=%s.ex'%(strand, mrna_id, mrna_id, mrna_id)
-        
-            trans.append(mrna)  
-            trans.append(ex1)
-            trans.append(ex2)
-        else:
-            gtf.extend(trans)
+                if jlist[0].donor is None: continue
+                gene += '%d\t%d\t'%(jlist[0].donor.get_coordinates()[0],lsv_coord[1])
 
-    return gtf
+            gene += '.\t%s\t.\tName=%s;Parent=%s;ID=%s'%(strand,lsv.id, lsv.id, lsv.id)
+            trans.append(gene)  
+            for jidx,junc in enumerate(jlist):
+                mrna = '%s\tscript\tmRNA\t'%chrom
+                mrna_id = '%s.%d'%(lsv.id,jidx)
+                ex1 = '%s\tscript\texon\t'%chrom 
+                ex2 = '%s\tscript\texon\t'%chrom
+                if lsv.type == SSOURCE:
+                    if junc.acceptor is None: break
+                    excoord = junc.acceptor.get_coordinates()
+                    variant = junc.get_coordinates()
+                    mrna +='%d\t%d\t'%(lsv_coord[0], excoord[1])
+                    ex1 += '%d\t%d\t'%(lsv_coord[0], variant[0])
+                    ex2 += '%d\t%d\t'%(variant[1],excoord[1])
+                else:
+                    if junc.donor is None: break
+                    excoord = junc.donor.get_coordinates()
+                    variant = junc.get_coordinates()
+                    mrna +='%d\t%d\t'%(excoord[0], lsv_coord[1])
+                    ex1 += '%d\t%d\t'%(variant[1], lsv_coord[1])
+                    ex2 += '%d\t%d\t'%(excoord[0], variant[0])
+                mrna += '.\t%s\t.\tName=%s;Parent=%s;ID=%s'%(strand,mrna_id,lsv.id,mrna_id)
+                ex1  += '.\t%s\t.\tName=%s.lsv;Parent=%s;ID=%s.lsv'%(strand, mrna_id, mrna_id,mrna_id)
+                ex2  += '.\t%s\t.\tName=%s.ex;Parent=%s;ID=%s.ex'%(strand, mrna_id, mrna_id, mrna_id)
+                trans.append(mrna)  
+                trans.append(ex1)
+                trans.append(ex2)
+            else:
+                lsv_gtf = '\n'.join(trans)
+                gtf.add(lsv_gtf)
+
+    return sorted(gtf)
 
 
 def print_lsv_extype ( list_lsv, filename ):

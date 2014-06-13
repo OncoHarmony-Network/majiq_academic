@@ -34,9 +34,6 @@ def __parallel_for_splc_quant(samfiles_list, gene_list, chr, as_db, pcr_validati
 
 def __parallel_lsv_quant(samfiles_list, gene_list, chr, as_db, pcr_validation = {}):
     #print "START child,", current_process().name
-#    for idx,exp in enumerate(samfiles_list):
-#        print "READING ", idx, exp
-#        rnaseq_io.read_sam_or_bam(exp, gene_list, mglobals.readLen, chr, idx )
     rnaseq_io.read_sam_or_bam(samfiles_list, gene_list, mglobals.readLen, chr )
     lsv, const = analize.LSV_detection( gene_list, chr )
     file_name = '%s.obj'%(chr)
@@ -45,11 +42,10 @@ def __parallel_lsv_quant(samfiles_list, gene_list, chr, as_db, pcr_validation = 
 
     ''' TEST FOR GTF'''
     gtf_list = lsv_to_gff(lsv)
-    fp = open('%s/lsv_miso.gtf'%(mglobals.outDir), 'a+') 
-    for gtf in gtf_list:
-        fp.write("%s\n"%gtf)
+    fp = open('%s/lsv_miso.%s.pickle'%(mglobals.outDir, chr), 'wb+') 
+    pickle.dump(gtf_list,fp)
     fp.close()
-    utils.prepare_LSV_table( lsv,const ,file_name)
+    utils.prepare_LSV_table( lsv, const ,file_name)
     #print "END child, ", current_process().name
 
 def _new_subparser():
@@ -98,6 +94,7 @@ def main( args ) :
     sam_list = []
     if args.pcr_filename is not None:
         rnaseq_io.read_bed_pcr( args.pcr_filename , all_genes)
+
     for exp_idx, exp in enumerate(mglobals.exp_list):
         SAM = "%s/%s.sorted.bam"%(mglobals.sam_dir,exp)
         if not os.path.exists(SAM): 
@@ -123,19 +120,22 @@ def main( args ) :
         for idx, j in enumerate(jobs):
             p=j.get()
             print p
-            
         pool.join()
-
-    #for gl in all_genes.values(): 
-    #    for genes_l in gl.values():
-    #        for gg in genes_l:
-    #            temp += gg.get_exon_list()
 
     utils.generate_visualization_output(all_genes)
     print "number of gcs", len(temp)
     utils.gc_factor_calculation(temp, 10)
     #utils.plot_gc_content()
     utils.merge_and_create_MAJIQ( chr_list, 'tojuan.majiq')
+
+
+    fp = open('%s/lsv_miso.gtf'%(mglobals.outDir),'w+')
+    for chrom in chr_list:
+        gtf_list = pickle.load(open('%s/lsv_miso.%s.pickle'%(mglobals.outDir, chrom), 'rb'))
+        for gtf in gtf_list:
+            fp.write("%s\n"%gtf)
+    fp.close()
+
     mglobals.print_numbers()
 
 

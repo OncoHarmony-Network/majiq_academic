@@ -2,6 +2,7 @@ import os
 from collections import defaultdict
 import abc
 import pickle
+from multiprocessing import Pool, Manager, current_process
 
 from pylab import *
 from numpy.ma import masked_less
@@ -23,8 +24,6 @@ import analysis.psi as  majiq_psi
 ################################
 # Data loading and Boilerplate #
 ################################
-
-
 
 
 
@@ -64,6 +63,7 @@ class BasicPipeline:
 
         self.logger = get_logger("%smajiq.log"%logger_path, silent=self.silent, debug=self.debug)
         self.lsv = args.lsv
+        self.nthreads = args.nthreads
         self.psi_paths = []
         
         try:
@@ -123,12 +123,61 @@ class BasicPipeline:
 
         return all_junctions
 
+
+
+
+
+
+def parallel_calcpsi ( conf, lsv_junc, fitfunc, name, chunk, tempdir):
+    __parallel_calcpsi_lsv( conf, lsv_junc, fitfunc, name, chunk, tempdir)
+    return "FIN"
+
+
 ################################
 # PSI calculation pipeline     #
 ################################
 
 def calcpsi(args):
     return _pipeline_run(CalcPsi(args), args.lsv)
+
+def __parallel_calcpsi_lsv( conf , lsv_junc, fitfunc, name, chunk, tempdir):
+
+        if not os.path.isdir(tempdir):
+            os.mkdir(tempdir)
+        thread_logger = get_logger("%s/majiq.w%s.log"%(tempdir,chunk), silent=False, debug=conf['debug'])
+        thread_logger.info( "[Th %s]: START child,%s"%(chunk,current_process().name))
+        thread_logger.info('[Th %s]: Filtering ...'%(chunk))
+
+
+        num_lsv = len(lsv_junc[0])
+        ''' 
+            fon[0] = False deactivates num_reads >= 20
+            fon[1] = False deactivates npos >= 5
+        '''
+        fon = [True, True]
+        lsv_junc = majiq_filter.lsv_quantifiable( lsv_junc, conf['minnonzero'], conf['minreads'], thread_logger , fon)
+        thread_logger.info('[Th %s]: %s/%s lsv remaining'%(chunk, len(lsv_junc[0]), num_lsv))
+
+        thread_logger.info("[Th %s]: Bootstrapping samples..."%(chunk)) 
+        lsv_sample = []
+        for ii in lsv_junc[0]:
+
+            m_lsv, var_lsv, s_lsv = sample_from_junctions(  ii,
+                                                            conf['m'],
+                                                            conf['k'],
+                                                            discardzeros= conf['discardzeros'],
+                                                            trimborder  = conf['trimborder'],
+                                                            fitted_func = fitfunc,
+                                                            debug       = conf['debug'] )
+            lsv_sample.append( s_lsv )
+
+        thread_logger.info("[Th %s]: Calculating PSI for %s ..."%(chunk, name))
+        psi = lsv_psi(lsv_sample, conf['alpha'], conf['n'], conf['debug'])
+
+        thread_logger.info("[Th %s]: Saving PSI..."%chunk)
+        output = open("%s/%s_th%s.psi.pickle"%(tempdir, name, chunk), 'w')
+        pickle.dump((psi, lsv_junc[1]), output)
+        thread_logger.info("[Th %s]: PSI calculation for %s ended succesfully! Result can be found at %s"%(chunk, name, output.name))
 
 class CalcPsi(BasicPipeline):
 
@@ -140,6 +189,9 @@ class CalcPsi(BasicPipeline):
             else:
                 self.calcpsi(path)
         return ret
+
+
+
 
     def calcpsi_lsv(self, path, write_pickle=True):
         """
@@ -155,45 +207,64 @@ class CalcPsi(BasicPipeline):
 
         all_junctions = self.gc_content_norm_lsv( lsv_junc, const )
 
-        #    all_junctions[junc_set] = masked_less(all_junctions[junc_set], 0) 
-
         fitfunc = self.fitfunc(const[0])
         filter_lsv = self.mark_stacks_lsv( lsv_junc, fitfunc)
-        #FILTER_JUNCTIONS?
-        self.logger.info('Filtering ...')
-        num_lsv = len(lsv_junc[0])
 
-        ''' 
-            fon[0] = False deactivates num_reads >= 20
-            fon[1] = False deactivates npos >= 5
-        '''
-        fon = [True, True]
-        lsv_junc = majiq_filter.lsv_quantifiable( lsv_junc, self.minnonzero, self.minreads, self.logger , fon)
-        self.logger.info('%s/%s lsv remaining'%(len(lsv_junc[0]),num_lsv))
 
-        self.logger.info("Bootstrapping samples...") 
-        lsv_sample = []
-        dummy_test = []
-        for ii in lsv_junc[0]:
+        if self.nthreads == 1: 
+            self.__parallel_calcpsi_lsv( filter_lsv, fitfunc, name, 0)
+            tempfile = open("%s/tmp/%s_th0.psi.pickle"%(self.output, name))
+            ptempt = pickle.load( tempfile )
+            psi = ptempt[0] 
+            info =  ptempt[1] 
+        else:
+            try:
+                pool = Pool(processes=self.nthreads)
+                csize = len(filter_lsv[0]) / int(self.nthreads)
+                self.logger.info("CREATING THREADS %s"%self.nthreads)
+                jobs = []
+                conf = { 'minnonzero':self.minnonzero,
+                         'minreads': self.minreads,
+                         'm':self.m,
+                         'k':self.k,
+                         'discardzeros':self.discardzeros,
+                         'trimborder':self.trimborder,
+                         'debug':self.debug,
+                         'alpha':self.alpha,
+                         'n':self.n }
+    
+                for nt in xrange(self.nthreads):
+                    lb = nt * csize
+                    ub = min( (nt+1) * csize, len(filter_lsv[0]) )
+                    lsv_list = [filter_lsv[0][lb:ub],filter_lsv[1][lb:ub]]
+                    jobs.append(pool.apply_async( parallel_calcpsi, [conf, lsv_list, fitfunc, name, nt, '%s/tmp'%os.path.dirname(self.output)] ))
+    
+                pool.close()
+#                for jidx, jj in enumerate(jobs):
+#                    print jj.get()
+                pool.join()
+            except Exception as e:
+                print e
 
-            m_lsv, var_lsv, s_lsv = sample_from_junctions(ii, self.m, self.k, discardzeros=5, trimborder=self.trimborder, fitted_func=fitfunc, debug=self.debug, dummy_test=dummy_test)
-            lsv_sample.append( s_lsv )
+            psi = []
+            info = []
+            self.logger.info("GATHER pickles")
+            for nt in xrange(self.nthreads):
+                tempfile = open("%s/tmp/%s_th%s.psi.pickle"%(os.path.dirname(self.output), name, nt))
+                ptempt = pickle.load( tempfile )
+                psi.extend( ptempt[0] )
+                info.extend( ptempt[1] )
 
-        dum_fp = open('./dummy_test.pickle','w')
-        pickle.dump(dummy_test, dum_fp)
-
-        self.logger.info("\nCalculating PSI for %s ..."%(name))
-        psi = lsv_psi(lsv_sample, name, self.alpha, self.n, self.debug)
 
         self.logger.info("Saving PSI...")
         if write_pickle:
             output = open("%s%s_psi.pickle"%(self.output, name), 'w')
-            pickle.dump((psi, lsv_junc[1]), output)
+            pickle.dump((psi, info), output)
             self.logger.info("PSI calculation for %s ended succesfully! Result can be found at %s"%(name, output.name))
-
+            
         if self.debug > 0:
-            return psi, lsv_junc[1][:self.debug]
-        return psi, lsv_junc[1]
+            return psi, info[:self.debug]
+        return psi, info
 
 
     def calcpsi(self, path, write_pickle=True):
