@@ -335,7 +335,7 @@ class DeltaPair(BasicPipeline):
         self.logger.info("Bootstrapping for all samples...")
         lsv_sample1 = [[],[]]
         for idx, ii in enumerate(lsv_junc1[0]):
-            m_lsv, var_lsv, s_lsv = sample_from_junctions(  junctions_list  = ii,
+            m_lsv, var_lsv, s_lsv = sample_from_junctions(  junction_list  = ii,
                                                             m               = self.m,
                                                             k               = self.k,
                                                             discardzeros    = self.discardzeros,
@@ -348,7 +348,7 @@ class DeltaPair(BasicPipeline):
 
         lsv_sample2 = [[],[]]
         for idx, ii in enumerate(lsv_junc2[0]):
-            m_lsv, var_lsv, s_lsv = sample_from_junctions(  junctions_list  = ii,
+            m_lsv, var_lsv, s_lsv = sample_from_junctions(  junction_list  = ii,
                                                             m               = self.m,
                                                             k               = self.k,
                                                             discardzeros    = self.discardzeros,
