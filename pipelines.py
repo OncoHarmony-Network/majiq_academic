@@ -329,7 +329,7 @@ class DeltaPair(BasicPipeline):
         filtered_lsv2 = majiq_filter.lsv_quantifiable( filtered_lsv2, self.minnonzero, self.minreads, self.logger , fon)
         self.logger.info('%s/%s lsv remaining'%(len(filtered_lsv2[0]),num_lsv2))
 
-        
+
         psi_space, prior_matrix = majiq_psi.gen_prior_matrix(self, filtered_lsv1, filtered_lsv2, output)
 
         self.logger.info("Bootstrapping for all samples...")

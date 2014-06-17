@@ -317,8 +317,8 @@ def gen_prior_matrix( pip, lsv_exp1, lsv_exp2, output ):
         #Using the empirical data to get the prior matrix
         pip.logger.info('Filtering to obtain "best set"...')
 
-        filtered_lsv1 = majiq_filter.lsv_quantifiable(lsv_exp1, minnonzero=5, min_reads=20, logger=pip.logger)
-        filtered_lsv2 = majiq_filter.lsv_quantifiable(lsv_exp2, minnonzero=5, min_reads=20, logger=pip.logger)
+        filtered_lsv1 = majiq_filter.lsv_quantifiable(lsv_exp1, minnonzero=10, min_reads=20, logger=pip.logger)
+        filtered_lsv2 = majiq_filter.lsv_quantifiable(lsv_exp2, minnonzero=10, min_reads=20, logger=pip.logger)
 
 
 #        print "FILTER1",filtered_lsv1[1]
