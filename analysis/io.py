@@ -3,6 +3,9 @@ import pickle
 from scipy.sparse import lil_matrix
 from grimoire.utils.utils import create_if_not_exists, get_logger
 import numpy as np
+import random
+
+
 
 DELTA_RATIO = 0.2 #TODO to parameters
 
@@ -200,9 +203,12 @@ def load_data_lsv(path, logger=None):
         lsv_gc.append(gc)
 
 #    print "LSV COV",lsv_cov_list
-    const_list = np.zeros(shape=(len(data[2]),num_pos), dtype=np.dtype('int'))
-    const_gc   = np.zeros(shape=(len(data[2]),num_pos), dtype=np.dtype('float'))
-    for cidx,const in enumerate(data[2]):
+
+
+    clist = random.sample(data[2], min(10000, len(data[2])))
+    const_list = np.zeros(shape=(len(clist),num_pos), dtype=np.dtype('int'))
+    const_gc   = np.zeros(shape=(len(clist),num_pos), dtype=np.dtype('float'))
+    for cidx,const in enumerate(clist):
         const_info.append(const.id)
         const_list[cidx,:] = const.coverage.toarray()
         const_gc [cidx,:]  = const.gc_factor.toarray()

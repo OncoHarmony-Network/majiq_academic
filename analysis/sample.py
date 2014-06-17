@@ -128,7 +128,7 @@ def sample_from_junctions(junction_list, m, k, dispersion=0.1, discardzeros=5, t
             sys.stdout.flush()
             if junction.shape[0]< discardzeros:
                 z = np.zeros(shape=(discardzeros-junction.shape[0]), dtype=int)
-                junction = np.concatenate((junction,z), axis=1) #a junction array without the zeroes
+                junction = np.concatenate((junction,z)) #a junction array without the zeroes
 
         if np.count_nonzero(junction) == 0:
             sampled_means.append(0)
@@ -139,7 +139,9 @@ def sample_from_junctions(junction_list, m, k, dispersion=0.1, discardzeros=5, t
             if Nz == EMPIRICAL_NZ:
                 npos_mult = np.count_nonzero(junction)
             elif Nz == BINOMIAL_NZ:
-                npos=binomial(k,float(np.count_nonzero(junctions))/float(k), k)
+                npos_mult = binomial(k,float(np.count_nonzero(junction))/float(k), k*m)
+            else:
+                npos_mult = Nz
 
             samples = []
             for iternumber in xrange(m):
