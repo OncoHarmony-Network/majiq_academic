@@ -144,9 +144,9 @@ def miso_reader(path, dofilter=True):
 def rank_miso(path, dofilter=True, ranknochange=False):
     rank = miso_reader(path, dofilter)
     if ranknochange: 
-        rank.sort(key=lambda x: (abs(x[1]))) #sort first by smallest delta PSI, then by bayes factor
+        rank.sort(key=lambda x: (abs(x[2]))) #sort first by smallest delta PSI, then by bayes factor
     else:
-        rank.sort(key=lambda x: (-abs(x[1]))) #sort first by biggest delta PSI, then by inverse bayes factor
+        rank.sort(key=lambda x: (-abs(x[2]))) #sort first by biggest delta PSI, then by inverse bayes factor
     
     return rank
 
@@ -227,19 +227,6 @@ def main():
 
 
     print "Num events", len(rank1), len(rank2)
-
-    for kk, ran1 in enumerate(rank1):
-        for ll, ran2 in enumerate(rank2):
-            if ran1[0] == ran2[0]:
-                if ran1[1] != ran2[1]:
-                    print "not equal!",ran1[1], ran2[1]
-                else:
-                    print "equal!",ran1[1], ran2[1]
-                break
-        else:
-            continue
-
-
     print "Calculating the ratios..."
     #calculate the ratios
     ratios = []
@@ -299,22 +286,20 @@ def main():
         ratios = array(ratios)
     
     print "RESULT:", ratios[0:10], "...", ratios[-10:], "length", ratios.shape
-    print "Saving..."
+    print "Saving... in %s" % args.output
 
     import os
 
     if not os.path.exists(os.path.dirname(args.output)):
         os.makedirs(os.path.dirname(args.output))
 
-    pickle.dump(ratios, open(args.output, 'w'))
+    pickle.dump(ratios, open(args.output+"/ratios.pickle", 'w'))
 
     if args.fdr:
         #print "FDR:", fdr[0:10], "...", fdr[-10:], "length", fdr.shape
         pickle.dump(fdr, open("%s.pickle"%args.fdr, 'w'))
-        pickle.dump(v_values, open("%s_v.pickle"%args.fdr, 'w'))
+        # pickle.dump(v_values, open("%s_v.pickle"%args.fdr, 'w'))
 
-
-    
     print "Done!"
 
 if __name__ == '__main__':
