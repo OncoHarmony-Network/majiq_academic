@@ -7,7 +7,7 @@ def _save_or_show(plotpath, name):
     if plotpath:
         if not os.path.exists(plotpath):
             os.makedirs(plotpath)
-        savefig("%s_%s.png"%(plotpath, name), width=300, height=300, dpi=100)
+        savefig("%s/%s.png"%(plotpath, name), width=300, height=300, dpi=100)
         clf()
     else:
         show()  
@@ -68,7 +68,7 @@ def main():
 
     title(args.title, fontsize=16)    
     legend(loc=2)
-    _save_or_show(plotpath=None, name="rankcomp")
+    _save_or_show(plotpath=args.plotpath, name="rankcomp")
 
 
 if __name__ == '__main__':
