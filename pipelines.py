@@ -334,7 +334,7 @@ class DeltaPair(BasicPipeline):
 
         self.logger.info("Bootstrapping for all samples...")
         lsv_sample1 = [[],[]]
-        for idx, ii in enumerate(lsv_junc1[0]):
+        for idx, ii in enumerate(filtered_lsv1[0]):
             m_lsv, var_lsv, s_lsv = sample_from_junctions(  junction_list  = ii,
                                                             m               = self.m,
                                                             k               = self.k,
@@ -344,10 +344,10 @@ class DeltaPair(BasicPipeline):
                                                             debug           = self.debug,
                                                             Nz              = self.nz )
             lsv_sample1[0].append( s_lsv )
-            lsv_sample1[1].append(lsv_junc1[1][idx])
+            lsv_sample1[1].append(filtered_lsv1[1][idx])
 
         lsv_sample2 = [[],[]]
-        for idx, ii in enumerate(lsv_junc2[0]):
+        for idx, ii in enumerate(filtered_lsv2[0]):
             m_lsv, var_lsv, s_lsv = sample_from_junctions(  junction_list  = ii,
                                                             m               = self.m,
                                                             k               = self.k,
@@ -357,7 +357,7 @@ class DeltaPair(BasicPipeline):
                                                             debug           = self.debug,
                                                             Nz              = self.nz )
             lsv_sample2[0].append( s_lsv )
-            lsv_sample2[1].append(lsv_junc2[1][idx])
+            lsv_sample2[1].append(filtered_lsv2[1][idx])
 
         self.logger.info("Calculating P(Data | PSI_i, PSI_j)...")
         #P(Data | PSI_i, PSI_j) = P(vector_i | PSI_i) * P(vector_j | PSI_j)
@@ -365,20 +365,20 @@ class DeltaPair(BasicPipeline):
         matched_lsv, matched_info = majiq_filter.lsv_intersection( lsv_sample1, lsv_sample2 )
         numbins= 20
         data_given_psi = []
-        import pdb
+#        import pdb
         for lsv_idx, info in enumerate(matched_info):
-            
+
             data_given_psi1 = majiq_psi.reads_given_psi_lsv( matched_lsv[0][lsv_idx], psi_space )
             data_given_psi2 = majiq_psi.reads_given_psi_lsv( matched_lsv[1][lsv_idx], psi_space )
             data_psi = []
             for psi in range(data_given_psi1.shape[0]) :
             #TODO Tensor product is calculated with scipy.stats.kron. Probably faster, have to make sure I am using it correctly.
                 data_psi.append(data_given_psi1[psi].reshape(-1, numbins) * data_given_psi2[psi].reshape(numbins, -1))
-                
-                majiq_psi.plot_matrix(  data_psi[-1],
-                                        "P(Data | PSI 1, PSI 2) Event %s.%s (Psi1: %s Psi2: %s)"%(lsv_idx,psi, sum(data_given_psi1[psi]), sum(data_given_psi2[psi])), 
-                                        "datagpsi_%s.%s"%(lsv_idx,psi),
-                                        self.plotpath )
+
+#                majiq_psi.plot_matrix(  data_psi[-1],
+#                                        "P(Data | PSI 1, PSI 2) Event %s.%s (Psi1: %s Psi2: %s)"%(lsv_idx,psi, sum(data_given_psi1[psi]), sum(data_given_psi2[psi])), 
+#                                        "datagpsi_%s.%s"%(lsv_idx,psi),
+#                                        self.plotpath )
 
             data_given_psi.append(data_psi)
 
@@ -391,11 +391,11 @@ class DeltaPair(BasicPipeline):
                 pm = (prior_matrix * data_given_psi[lidx][psi])
                 psi_mat = (pm / sum(pm))
                 lsv_psi_matrix.append( psi_mat )
-                if psi == 0:
-                    majiq_psi.plot_matrix(  psi_mat,
-                                        "Posterior Delta Event %s.%s (Psi1: %s Psi2: %s)"%(lsv_idx,psi, sum(data_given_psi1[psi]), sum(data_given_psi2[psi])), 
-                                        "posterior_dpsi_%s.%s"%(lsv_idx,psi),
-                                        self.plotpath )
+#                if psi == 0:
+#                    majiq_psi.plot_matrix(  psi_mat,
+#                                        "Posterior Delta Event %s.%s (Psi1: %s Psi2: %s)"%(lsv_idx,psi, sum(data_given_psi1[psi]), sum(data_given_psi2[psi])), 
+#                                        "posterior_dpsi_%s.%s"%(lsv_idx,psi),
+#                                        self.plotpath )
             posterior_matrix.append(lsv_psi_matrix)
                 #if self.debug: plot_matrix(posterior_matrix[-1], "Posterior Delta Event %s (Inc1: %s, Exc1: %s Inc2: %s Exc2: %s)"%(sample, sum(inc_samples1[sample]), sum(exc_samples1[sample]), sum(inc_samples2[sample]), sum(exc_samples2[sample])), "postdelta_sample%s"%sample, self.plotpath)
 
