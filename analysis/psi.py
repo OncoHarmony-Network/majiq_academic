@@ -70,12 +70,12 @@ def empirical_delta_psi( lsv_list1, lsv_list2, logger=None):
         psi2 = np.zeros(shape=len(lsv), dtype=np.dtype('float'))
         for ii, rate in enumerate(lsv):
             val = float(rate) /  float(np.sum(lsv))
-            if isnan(val): val = 0.5
+            if np.isnan(val): val = 0.5
             psi1[ii] = val
         
         for ii, rate in enumerate(lsv_list2[idx]):
             val = float(rate) /  float(np.sum(lsv_list2[idx]))
-            if isnan(val): val = 0.5
+            if np.isnan(val): val = 0.5
             psi2[ii] = val
 
         sys.stdout.flush()
@@ -317,8 +317,8 @@ def gen_prior_matrix( pip, lsv_exp1, lsv_exp2, output ):
         #Using the empirical data to get the prior matrix
         pip.logger.info('Filtering to obtain "best set"...')
 
-        filtered_lsv1 = majiq_filter.lsv_quantifiable(lsv_exp1, minnonzero=5, min_reads=20, logger=pip.logger)
-        filtered_lsv2 = majiq_filter.lsv_quantifiable(lsv_exp2, minnonzero=5, min_reads=20, logger=pip.logger)
+        filtered_lsv1 = majiq_filter.lsv_quantifiable(lsv_exp1, minnonzero=10, min_reads=20, logger=pip.logger)
+        filtered_lsv2 = majiq_filter.lsv_quantifiable(lsv_exp2, minnonzero=10, min_reads=20, logger=pip.logger)
 
 
 #        print "FILTER1",filtered_lsv1[1]
@@ -333,18 +333,20 @@ def gen_prior_matrix( pip, lsv_exp1, lsv_exp2, output ):
         for ii in matched_names:
             for idx, nm in enumerate(filtered_lsv1[1]):
                 if nm[1] == ii:
-                    best_set_mean1[0].append(majiq_sample.mean_junction(filtered_lsv1[0][idx]))
+                    nz = np.count_nonzero(filtered_lsv1[0][idx])
+                    best_set_mean1[0].append(nz * majiq_sample.mean_junction(filtered_lsv1[0][idx]))
                     best_set_mean1[1].append(filtered_lsv1[1][idx])
                     break
             for idx, nm in enumerate(filtered_lsv2[1]):
                 if nm[1] == ii:
-                    best_set_mean2[0].append(majiq_sample.mean_junction(filtered_lsv2[0][idx]))
+                    nz = np.count_nonzero(filtered_lsv2[0][idx])
+                    best_set_mean2[0].append(nz * majiq_sample.mean_junction(filtered_lsv2[0][idx]))
                     best_set_mean2[1].append(filtered_lsv2[1][idx])
                     break
 
 
 
-        pip.logger.info("'Best set' is %s events (out of %s)"%(len(best_set_mean1), len(lsv_exp1)))
+        pip.logger.info("'Best set' is %s events (out of %s)"%(len(best_set_mean1[0]), len(lsv_exp1[0])))
         best_delta_psi = empirical_delta_psi(best_set_mean1[0], best_set_mean2[0])
 
 #        njun_prior = []
@@ -357,9 +359,9 @@ def gen_prior_matrix( pip, lsv_exp1, lsv_exp2, output ):
 
         njun_prior = [[]]
         for lsv in best_delta_psi:
-            if lsv.shape[0] == 2 : continue
+            if lsv.shape[0] != 2 : continue
             njun_prior[0].append(lsv[0])
-        
+
         for nj in range(len(njun_prior)):
             best_delta_psi = array(njun_prior[nj])
 
@@ -388,7 +390,7 @@ def gen_prior_matrix( pip, lsv_exp1, lsv_exp2, output ):
                 pip.logger.info("Using the Uniform distribution + Jefferies...")
                 prior_matrix = jefferies + (pip.prioruniform/numbins)
             else: 
-                prior_matrix *= jefferies 
+                prior_matrix *= jefferies
 
             prior_matrix /= sum(prior_matrix) #renormalize so it sums 1
             plot_matrix(prior_matrix, "Prior Matrix nj%s"%nj, "prior_matrix_jun_%s"%nj, pip.plotpath)

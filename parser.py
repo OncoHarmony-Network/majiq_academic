@@ -36,12 +36,14 @@ def main():
     psianddelta.add_argument('--trimborder', default=5, type=int, help='Trim the borders when sampling (keeping the ones with reads). [Default: %(default)s]')
     psianddelta.add_argument('--alpha', default=0.5, type=float, help='Alpha hyperparameter for the dirichlet distribution. [Default: %(default)s]') 
     psianddelta.add_argument('--markstacks', default=0.0000001, type=float, help='Mark stack positions. Expects a p-value. Use a negative value in order to disable it. [Default: %(default)s]') 
-    psianddelta.add_argument('--nbdisp', default=0.1, type=float, help='Dispersion for the fallback Negative Binomial function. [Default: %(default)s]')
+    psianddelta.add_argument('--nbdisp', default=0.1, type=float, help='Dispersion for the fallback Negative Binomial function. Default: %(default)s]')
     psianddelta.add_argument('--nogc', dest="gcnorm", action='store_false', default=True, help='psianddelta GC content normalization [Default: GC content normalization activated]')
     psianddelta.add_argument('--nodiscardb', dest="discardb", action='store_false',  default=True, help='Skip biscarding the b from the NB polynomial function, since we expect our fit to start from x=0, y=0')
-    psianddelta.add_argument('--nodiscardzeros', action='store_false', default=True, dest="discardzeros", help='Skip discarding zeroes')    
+    psianddelta.add_argument('--discardzeros', default=5, type=int, dest="discardzeros", help='Discarding zeroes, up to a minimum of N positions per junction. [Default: 5]')
     psianddelta.add_argument('--n', default=1, type=int, help='Number of PSI samples per sample paired. [Default: %(default)s]') 
     psianddelta.add_argument('--psiparam', default=False, action='store_true', help='Instead of sampling, use a parametric form for the PSI calculation. [Default: %(default)s]')
+    psianddelta.add_argument('--nz', default=0, type=int, help='Method for number of non-zero position estimation.[0 - empirical, -1 - Binamial, >0 - Fized Value ]. Default: %(default)s]')
+
 
     #psianddelta.add_argument('--ONLYSTACKS', action='store_true', help="Debug flag that should dissapear. Used to test if stacks are worth masking.")
     #psianddelta.add_argument('--usetensor', action='store_true')
