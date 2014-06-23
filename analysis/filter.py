@@ -85,7 +85,7 @@ def lsv_intersection( lsv_list1, lsv_list2 ):
         for idx, nm in enumerate(lsv_list1[1]):
             if nm[1] == ii:
                 lsv_match[0].append(lsv_list1[0][idx])
-                match_info.append(lsv_list1[1][idx])
+                match_info.append( nm )
                 break
         for idx, nm in enumerate(lsv_list2[1]):
             if nm[1] == ii:
