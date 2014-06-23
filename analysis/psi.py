@@ -111,7 +111,7 @@ def reads_given_psi_lsv(lsv, psi_space):
             bin_test = [binom_test(paired_samples[0], paired_samples[1], p = x) for x in psi_space]
             bin_test = np.asarray(bin_test)
             total_acum = float(sum(bin_test))
-            total_psi[(pidx)/50]=(bin_test/total_acum)
+            total_psi[pidx]=(bin_test/total_acum)
 #        print
         total_psi = np.mean(total_psi,axis=0)
         psi[idx] = total_psi/total_psi.sum()
@@ -195,13 +195,9 @@ def lsv_psi(samples_events, alpha, n, debug):
             for pidx, paired_samples in enumerate(samples.T):
 
                 dir_pdf = dirichlet_pdf(array([BINS_CENTER, 1-BINS_CENTER]).T, paired_samples)
-                dir_pdf = np.asarray(dir_pdf)
-                acum_samples += dir_pdf
-                total_acum += sum(dir_pdf) 
-                if (pidx+1) % 50 == 0 :
-                    total_psi[(pidx)/50]=(acum_samples/total_acum)
-                    acum_samples = np.zeros(shape=(BINS.shape[0]), dtype = np.float)
-                    total_acum = 0.
+                dir_pdf = np.array(dir_pdf)
+                total_acum = float(dir_pdf.sum())
+                total_psi[pidx] = dir_pdf/total_acum
 
             total_psi = np.median(total_psi,axis=0)
             psi[idx] = total_psi/total_psi.sum()
