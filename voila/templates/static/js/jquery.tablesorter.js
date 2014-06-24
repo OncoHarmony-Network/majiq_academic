@@ -1172,7 +1172,7 @@
                     }
 
                     var lsv_data = JSON.parse($(this)[0].getAttribute("data-lsv").replace(/\\\"/g, "\'").replace(/\"/g,"").replace(/'/g, "\""));  // NOTE: lsv_data is an array to support groups
-                    var sampled_bins = translate_lsv_bins(lsv_data[0].bins, 1000);
+                    var sampled_bins = translate_lsv_bins(lsv_data[0].bins, 100000);
 //                    var sampled_bins = translate_delta_lsv_bins(lsv_data[0].bins, 1000);
 
                     var svg = renderViolin($(this).parent()[0].id, sampled_bins, table.id);
@@ -1192,7 +1192,7 @@
 
 
             $('.lsvDeltaCompact', table).each(function(){
-                drawLSVCompactStackBars($(this)[0], 1);
+                drawDeltaLSVCompactStackBars($(this)[0], 1);
 
                 $(this).on("click", function(e){
                     e.preventDefault();
@@ -1205,12 +1205,12 @@
                     }
 
                     var lsv_data = JSON.parse($(this)[0].getAttribute("data-lsv").replace(/\\\"/g, "\'").replace(/\"/g,"").replace(/'/g, "\""));  // NOTE: lsv_data is an array to support groups
-                    var sampled_bins = translate_lsv_bins(lsv_data[0].bins, 1000);
+                    var sampled_bins = translate_delta_lsv_bins(lsv_data[0].bins, 1000);
                     var svg = renderViolin($(this).parent()[0].id, sampled_bins);
                     $(svg).on("click", function(e){
                         e.preventDefault();
                         $(this).toggle("show");
-                        var lsvCompact = $(this).parent().children('.'+'lsvSingleCompactPercentiles');
+                        var lsvCompact = $(this).parent().children('.'+'lsvDeltaCompact');
                         if (lsvCompact.length) {
                             $(lsvCompact[0]).toggle();
                         }

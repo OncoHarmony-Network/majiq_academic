@@ -839,6 +839,64 @@ function drawLSVCompactStackBars(canvas, fillMode){
     }
 }
 
+
+function drawDeltaLSVCompactStackBars(canvas){
+
+    if (canvas.getContext) {  // check for support
+        var ctx = canvas.getContext("2d");
+
+        // Clear canvas
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+        var excl_incl_set = JSON.parse(canvas.dataset.exclIncl);
+        var halfCanvasWidth = parseInt(canvas.width/2);
+        var margin_top = 2;
+        var margin_bottom = 10;
+        // Create gradient exclusion/inclusion
+
+        ctx.fillStyle = "grey";
+        ctx.lineWidth = 0.5;
+        drawRectangle(ctx, 1, 1, canvas.width-2, canvas.height-margin_bottom, 0); // Canvas box
+        // Fill with gradient
+//        ctx.fillStyle=createGradientDeltaPlots(ctx, 0, canvas.width);
+
+        // draw exclusion/inclusion Box
+        ctx.fillStyle = "blue";
+        ctx.fillStyle = rgbToHex(55, 126, 184); // blue
+        var set18qual1 = "rgba(228,26,28)";
+        var set18qual2 = "rgba(55,126,184)";
+        ctx.fillRect(halfCanvasWidth, margin_top, -parseInt(excl_incl_set[0]*canvas.width/2), canvas.height-margin_top-margin_bottom);
+        ctx.fillStyle = "red";
+        ctx.fillStyle = rgbToHex(228, 26, 28); // red
+        ctx.fillRect(halfCanvasWidth, margin_top, parseInt(excl_incl_set[1]*canvas.width/2), canvas.height-margin_top-margin_bottom);
+
+
+
+        // draw -1, 0 and 1
+        ctx.textAlign = "center";
+        ctx.font = "bold 8pt Arial";
+        ctx.fillStyle = "blue";
+        ctx.fillStyle = rgbToHex(55, 126, 184); // blue
+        ctx.fillText("-"+(excl_incl_set[0]*100).toFixed(1)+" ", Math.max(halfCanvasWidth-Math.max(parseInt(excl_incl_set[0]*canvas.width/2), 10), 20), canvas.height);
+        ctx.fillStyle = "red";
+        ctx.fillStyle = rgbToHex(228, 26, 28); // red
+//        ctx.fillText("1", canvas.width - margin_top, canvas.height);
+        ctx.fillText("+"+(excl_incl_set[1]*100).toFixed(1), Math.min(halfCanvasWidth+Math.max(parseInt(excl_incl_set[1]*canvas.width/2), 10), halfCanvasWidth*2-20), canvas.height);
+        ctx.fillStyle = "black";
+//        ctx.fillText("0", halfCanvasWidth, canvas.height);
+
+
+
+        // draw middle bar (0)
+        ctx.lineWidth = 1.5;
+        ctx.strokeStyle = "black";
+        drawLine(ctx, halfCanvasWidth, parseInt(margin_top/2), halfCanvasWidth, canvas.height-margin_bottom+margin_top/2);
+    }
+}
+
+
+
+
 function drawLSEBoxplots(canvas) {
     if (canvas.getContext) {  // check for support
         var ctx = canvas.getContext("2d");
@@ -1257,7 +1315,7 @@ function renderViolin(htmlElementId, results, tableId){
             .domain([0, Math.max(imposeMax, d3.max(data, function(d) { return d.y; }))]);
 
         var x = d3.scale.linear()
-            .range([height-margin.bottom, margin.top])
+            .range([height-margin.left, margin.right]) //-margin.bottom, margin.top])
             .domain(domain)
             .nice();
 
@@ -1411,8 +1469,8 @@ function renderViolin(htmlElementId, results, tableId){
 
     var domain=[0,max_domain];
 
-    var resolution=20;
-    var interpolation='basis'; // 'step-before';
+    var resolution=10;
+    var interpolation='basis'; // 'step-before'; 'basis'
 
     var y = d3.scale.linear()
         .range([height-margin.bottom, margin.top])
@@ -1467,6 +1525,7 @@ function translate_lsv_bins(lsv_bins, num_samples) {
         }
         adjusted_bins.push(tmp_bins);
     }
+    console.log(adjusted_bins);
     return adjusted_bins
 }
 

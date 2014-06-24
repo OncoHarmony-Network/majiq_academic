@@ -100,7 +100,7 @@ def main():
     parser.add_argument('--nbdisp', default=0.1, type=float, help='Dispersion factor (used in junctions sampling).')
     parser.add_argument('--k', default=50, type=int, help='Number of positions to sample per iteration')
     parser.add_argument('--m', default=100, type=int, help='Number of samples')
-    parser.add_argument('--files-contain-scores', dest="files_contain_scores", action='store_true', default=False, help='Two feed the script with psis already computed.')
+    parser.add_argument('--files-contain-scores', dest="files_contain_scores", action='store_true', default=False, help='Feed the script with psis already computed.')
 
     args = parser.parse_args()
 

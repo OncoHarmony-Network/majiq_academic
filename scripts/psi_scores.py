@@ -42,11 +42,11 @@ def plot_PSIs1VsPSIs2(score1, score2, replica1_name, replica2_name, method1, met
     title(plotname, fontsize=10)
     max_value = max(max(score1), max(score2))
 
-    max_value = 1.0
+    max_value = 1
     xlim(0, max_value)
     ylim(0, max_value)
-    plot([0, max_value], [0, max_value])
-    plot(score1, score2, '.')
+    plot(score1, score2, 'b.')
+    plot([0, max_value], [0, max_value], '--', color="#cccccc")
 
     pear, pvalue = pearsonr(score1, score2)
     r_squared = pear**2
@@ -108,6 +108,15 @@ def calculate_ead(psi_samples):
     #return (cellcalc.sum(axis=1)).sum(axis=0)
 
 
+def calculate_cov(psi_list1, psi_list2):
+    return abs(np.array(psi_list1) - np.array(psi_list2)) / ((np.array(psi_list1) + np.array(psi_list2))/2.0)
+
+
+def calculate_ead_simple(psi_list1, psi_list2):
+    return abs(np.array(psi_list1) - np.array(psi_list2))
+
+
+
 def main():
     """
     Script for testing MAJIQ against other algorithms for PSIs.
@@ -123,18 +132,15 @@ def main():
     parser.add_argument('--plotpsidist', default=False, help="Plot the PSI distributions for ALL junctions. Slow.")
     parser.add_argument('--plotpath', default=None, help='Path to save the plot to, if not provided will show on a matplotlib popup window') 
     parser.add_argument('--output')
+    parser.add_argument('--type', default='majiq-miso', choices=['majiq-miso', 'majiq-majiq'])
     args = parser.parse_args()
 
     # For debugging, method1 is MAJIQ, method2 is MISO
     psivalues = pickle.load(open(args.psivalues_met1))
-    psi_values_lsv1 = psivalues[0][0]
-    psi_values_lsv2 = psivalues[0][1]
+    psi_met1_rep1 = psivalues[0][0]
+    psi_met1_rep2 = psivalues[0][1]
 
-    # MAJIQ psi scores
-    psi_list1 = []
-    psi_list2 = []
-
-    majiq_psi_names = defaultdict()
+    psi_names_met1 = defaultdict()
 
     lsv_types_dict = {
         's|1e1.1|1e2.1':'SE',
@@ -145,140 +151,147 @@ def main():
         's|1e1.1|2e1.1':'A5SS'
     }
 
-
     # Discard LSVs with only one PSI
-    for i, psis_lsv in enumerate(psi_values_lsv1):
-        # if len(psis_lsv) < 2 or len(psi_values_lsv2[i]) < 2:
-        #     continue  # TODO: check that skipping is not necessary. LSVs with only 1 PSI are wrong..
+    for i, psis_lsv_met1 in enumerate(psi_met1_rep1):
+        if len(psis_lsv_met1) < 2 or len(psi_met1_rep2[i]) < 2:
+            continue  # TODO: check that skipping is not necessary. LSVs with only 1 PSI are wrong..
         if psivalues[1][i][2] not in lsv_types_dict.keys():
             continue
-        majiq_psi_names[psivalues[1][i][1]] = i
-        # print psivalues[1][i]
+        psi_names_met1[psivalues[1][i][1]] = i
 
-    miso_psis_list = []
+    # Method1 (MAJIQ) psi scores
+    psi_list1_met1 = []
+    psi_list2_met1 = []
+
+    psi_lists_met2 = []
 
     debug_dict1 = {}
     debug_dict2 = {}
 
     debug_names_miso_list = defaultdict(list)
 
-
     miso_all = []
-    for miso_file in args.psivalues_met2:
-        miso_psis_dict = defaultdict()
-        with open(miso_file, 'r') as miso_res:
-            for miso_line in miso_res:
-                if miso_line.startswith("event"): continue
-                miso_fields = miso_line.split('\t')
-                if miso_fields[0] not in majiq_psi_names:
+    if args.type == 'majiq-miso':
+        for miso_file in args.psivalues_met2:
+            miso_psis_dict = defaultdict()
+            with open(miso_file, 'r') as miso_res:
+                for miso_line in miso_res:
+                    if miso_line.startswith("event"): continue
+                    miso_fields = miso_line.split('\t')
+                    if miso_fields[0] not in psi_names_met1:
+                        continue
+                    miso_psis_dict[miso_fields[0]] = miso_fields[1]
+            miso_all.append(miso_psis_dict)
+
+        miso_common_names = set(miso_all[0].keys()).intersection(miso_all[1].keys())
+        for miso_psis_dict in miso_all:
+            miso_psis = []
+            for psi_name in sorted(psi_names_met1.keys()):
+                if psi_name not in miso_common_names:
+                    print "%s is not in all MISO replicates" % psi_name
+                    del psi_names_met1[psi_name]
                     continue
-                miso_psis_dict[miso_fields[0]] = miso_fields[1]
-        miso_all.append(miso_psis_dict)
+                try:
+                    miso_psis_values = [float(miso_psi) for miso_psi in miso_psis_dict[psi_name].split(",")]
+                except KeyError, e:
+                    print "LSV %s is in MAJIQ but not in MISO!" % e
+                    del psi_names_met1[psi_name]
+                    continue
+                    # if len(miso_psis_values) < 2:
+                    #     del majiq_psi_names[psi_name]
+                    #     continue
 
-    miso_common_names = set(miso_all[0].keys()).intersection(miso_all[1].keys())
+                if len(miso_psis_values) == 1:
+                    # print miso_psis_values[0], 1 - miso_psis_values[0]
+                    miso_psis_values.append(1.0 - miso_psis_values[0])
+                debug_dict1[psi_name] = len(miso_psis_values)
+                miso_psis.extend(miso_psis_values)
+                debug_names_miso_list[psi_name].append(miso_psis_values)
 
-    for miso_psis_dict in miso_all:
-        miso_psis = []
-        for psi_name in sorted(majiq_psi_names.keys()):
-            if psi_name not in miso_common_names:
-                print "%s is not in all MISO replicates" % psi_name
-                del majiq_psi_names[psi_name]
+            psi_lists_met2.append(miso_psis)
+
+    elif args.type == 'majiq-majiq':
+        psi_names_met2 = defaultdict()
+        psi_list1_met2 = []
+        psi_list2_met2 = []
+
+        psivalues_met2 = pickle.load(open(args.psivalues_met2[0]))
+        psi_met2_rep1 = psivalues_met2[0][0]
+        psi_met2_rep2 = psivalues_met2[0][1]
+
+        set_common_names = set([n[1] for n in psivalues_met2[1]]).intersection(set([n[1] for n in psivalues[1]]))
+
+        for i, psis_lsv_met2 in enumerate(psi_met2_rep1):
+            if psivalues_met2[1][i][1] not in set_common_names:
+                print "[WARNING] :: %s in replica 1 but not in replica 2" % psivalues_met2[1][i][1]
                 continue
-            try:
-                miso_psis_values = [float(miso_psi) for miso_psi in miso_psis_dict[psi_name].split(",")]
-            except KeyError, e:
-                print "LSV %s is in MAJIQ but not in MISO!" % e
-                del majiq_psi_names[psi_name]
+            if len(psis_lsv_met2) < 2 or len(psi_met2_rep2[i]) < 2:
+                continue  # TODO: check that skipping is not necessary. LSVs with only 1 PSI are wrong..
+            if psivalues_met2[1][i][2] not in lsv_types_dict.keys():
                 continue
-                # if len(miso_psis_values) < 2:
-                #     del majiq_psi_names[psi_name]
-                #     continue
+            psi_names_met2[psivalues_met2[1][i][1]] = i
 
-            if len(miso_psis_values) == 1:
-                # print miso_psis_values[0], 1 - miso_psis_values[0]
-                miso_psis_values.append(1.0 - miso_psis_values[0])
-            debug_dict1[psi_name] = len(miso_psis_values)
-            miso_psis.extend(miso_psis_values)
-            debug_names_miso_list[psi_name].append(miso_psis_values)
+        for psi_name in sorted(psi_names_met1.keys()):
+            if psi_name not in set_common_names:
+                del psi_names_met1[psi_name]
+                continue
+            for j, psi_lsv in enumerate(psi_met2_rep1[psi_names_met2[psi_name]]):
+                # Try L1 distance
+                psi_list1_met2.append(sum(psi_lsv*analysis.psi.BINS_CENTER))
+                psi_list2_met2.append(sum(psi_met2_rep2[psi_names_met2[psi_name]][j]*analysis.psi.BINS_CENTER))
 
-        miso_psis_list.append(miso_psis)
-
-    # set_final = set(miso_psis_names[0]).intersection(set(miso_psis_names[1]))
-    # print set_final
-    # for miso_list in debug_names_miso_list.keys():
-    #     for miso_elem in miso_list:
-    #         if miso_elem not in set_final:
-    #             print "Remove %s" % miso_elem
-    #             miso_list.remove(miso_elem)
+        psi_lists_met2.append(psi_list1_met2)
+        psi_lists_met2.append(psi_list2_met2)
 
 
     list_l1_expected = []
-    for psi_name in sorted(majiq_psi_names.keys()):
-        debug_dict2[psi_name] = len(psi_values_lsv1[majiq_psi_names[psi_name]])
-        # print "%s: " % psi_name
-        sys.stdout.flush()
-        for j, psi_lsv in enumerate(psi_values_lsv1[majiq_psi_names[psi_name]]):
+    for psi_name in sorted(psi_names_met1.keys()):
+        debug_dict2[psi_name] = len(psi_met1_rep1[psi_names_met1[psi_name]])
+        for j, psi_lsv in enumerate(psi_met1_rep1[psi_names_met1[psi_name]]):
 
             # Try L1 distance
-            psi_list1.append(sum(psi_lsv*analysis.psi.BINS_CENTER))
-            psi_list2.append(sum(psi_values_lsv2[majiq_psi_names[psi_name]][j]*analysis.psi.BINS_CENTER))
+            psi_list1_met1.append(sum(psi_lsv*analysis.psi.BINS_CENTER))
+            psi_list2_met1.append(sum(psi_met1_rep2[psi_names_met1[psi_name]][j]*analysis.psi.BINS_CENTER))
             # list_l1_expected.append(calculate_l1_expected(psi_lsv, psi_values_lsv2[majiq_psi_names[psi_name]][j]))
-            # print "MAJIQ:\t%f - %f" % (sum(psi_lsv*analysis.psi.BINS_CENTER), sum(psi_values_lsv2[majiq_psi_names[psi_name]][j]*analysis.psi.BINS_CENTER))
+            print "%s - MAJIQ:\t%f - %f" % (psi_name, sum(psi_lsv*analysis.psi.BINS_CENTER), sum(psi_met1_rep2[psi_names_met1[psi_name]][j]*analysis.psi.BINS_CENTER))
+            # print "%s - MISO:\t%s - %s" % (psi_name, str(debug_names_miso_list[psi_name][0][j]), str(debug_names_miso_list[psi_name][1][j]))
             # print "MAJIQ L1 distance:\t%f" % (calculate_l1_expected(psi_lsv, psi_values_lsv2[majiq_psi_names[psi_name]][j]))
-            # print "MISO:\t%s - %s" % (str(debug_names_miso_list[psi_name][0][j]), str(debug_names_miso_list[psi_name][1][j]))
+        print "-----"
 
-
-    print len(debug_dict1), len(debug_dict2), len(psi_list1), len(psi_list2)
+    # print len(debug_dict1), len(debug_dict2), len(psi_list1), len(psi_list2)
+    low_med_high = get_low_med_high_psis(psi_list1, psi_list2, miso_psis_list[0], miso_psis_list[1])
     for k in sorted(debug_dict1):
         if k in debug_dict1 and k not in debug_dict2:
             print "This is the guy!! %s" % k
-        # if debug_dict2[k] - debug_dict1[k]:  # LSVs where the number of junctions in one method differs with the other
-        #     print "Num junctions for LSV %s: MAJIQ - %d MISO: %d" % (k, debug_dict2[k], debug_dict1[k])
-        #     print "MAJIQ LSV and juncs:"
-        #     print "\t", psivalues[1][majiq_psi_names[k]]
-        #     print "\t", psivalues[0][0][majiq_psi_names[k]]
-    # plot_PSIs1VsPSIs2(np.array(list_l1_expected), abs(np.array(miso_psis_list[0]) - np.array(miso_psis_list[1])), args.name1, args.name2, "MAJIQ", "MISO", args.plotpath)
-
-    names_duplicated = [x for x in sorted(debug_dict1) for _ in (0, 1)]
-    names_lsv_where_majiq_lose = np.array(names_duplicated)[abs(np.array(psi_list1) - np.array(psi_list2)) > abs(np.array(miso_psis_list[0]) - np.array(miso_psis_list[1]))][::2]
-    print names_lsv_where_majiq_lose
-    pickle.dump(names_lsv_where_majiq_lose, open('names_lsv_where_majiq_lose.pickle', 'w'))
-
-    f = figure()
-    ylabel('Number of Junctions')
-    xlabel('Expected PSI')
-    title('MISO and MAJIQ expected PSIs\nHippo1 Vs Hippo2', fontsize=10)
-
-    hist(np.array(miso_psis_list[1]), bins=40, label="MISO")
-    hist(np.array(psi_list2), bins=40, label="MAJIQ")
-    legend()
-
-<<<<<<< HEAD
-#    for k in sorted(debug_dict1):
-#        if debug_dict2[k] - debug_dict1[k]:  # LSVs where the number of junctions in one method differs with the other
-#            print "Num junctions for LSV %s: MAJIQ - %d MISO: %d" % (k, debug_dict2[k], debug_dict1[k])
-#            print "MAJIQ LSV and juncs:"
-#            print "\t", psivalues[1][majiq_psi_names[k]]
-#            print "\t", psivalues[0][0][majiq_psi_names[k]]
-||||||| merged common ancestors
-    for k in sorted(debug_dict1):
         if debug_dict2[k] - debug_dict1[k]:  # LSVs where the number of junctions in one method differs with the other
             print "Num junctions for LSV %s: MAJIQ - %d MISO: %d" % (k, debug_dict2[k], debug_dict1[k])
             print "MAJIQ LSV and juncs:"
-            print "\t", psivalues[1][majiq_psi_names[k]]
-            print "\t", psivalues[0][0][majiq_psi_names[k]]
-=======
-    # plot([0, 1], [0, 1])
-    # hist(np.array(miso_psis_list[0])[abs(np.array(psi_list1) - np.array(psi_list2)) > abs(np.array(miso_psis_list[0]) - np.array(miso_psis_list[1]))], nbins=40)
-    # hist(
-    #     np.array(miso_psis_list[1])[abs(np.array(psi_list1) - np.array(psi_list2)) > abs(np.array(miso_psis_list[0]) - np.array(miso_psis_list[1]))]
-    # )
-    _save_or_show(plotpath=None, plotname='MISO')
->>>>>>> 0e322ab846f3f0a357c7768dc4e5fb17d496d9cc
+            print "\t", psivalues[1][psi_names_met1[k]]
+            print "\t", psivalues[0][0][psi_names_met1[k]]
+    # plot_delta_expected_method1Vsmethod2(low_med_high, "MAJIQ", "MISO")
 
+    # plot_PSIs1VsPSIs2(np.array(list_l1_expected), abs(np.array(miso_psis_list[0]) - np.array(miso_psis_list[1])), args.name1, args.name2, "MAJIQ", "MISO", args.plotpath)
 
-    print len(psi_list1), len(psi_list2), len(miso_psis_list[0]), len(miso_psis_list[1])
-    plot_PSIs1VsPSIs2(abs(np.array(psi_list1) - np.array(psi_list2)), abs(np.array(miso_psis_list[0]) - np.array(miso_psis_list[1])), args.name1, args.name2, "MAJIQ", "MISO", args.plotpath)
+    # names_duplicated = [x for x in sorted(debug_dict1) for _ in (0, 1)]
+    # names_lsv_where_majiq_lose = np.array(names_duplicated)[abs(np.array(psi_list1) - np.array(psi_list2)) > abs(np.array(miso_psis_list[0]) - np.array(miso_psis_list[1]))][::2]
+    # print names_lsv_where_majiq_lose
+    # pickle.dump(names_lsv_where_majiq_lose, open('names_lsv_where_majiq_lose.pickle', 'w'))
+
+    # f = figure()
+    # ylabel('Number of Junctions')
+    # xlabel('Expected PSI')
+    # title('MISO and MAJIQ expected PSIs\nHippo1 Vs Hippo2', fontsize=10)
+    #
+    # hist(np.array(miso_psis_list[1]), bins=40, label="MISO", histtype='step', cumulative=True)
+    # hist(np.array(psi_list2), bins=40, label="MAJIQ", histtype='step', cumulative=Truez)
+    # legend()
+    #
+    # _save_or_show(plotpath=None, plotname='MISO')
+
+    print len(psi_list1_met1), len(psi_list2_met1), len(psi_lists_met2[0]), len(psi_lists_met2[1])
+
+    # plot_PSIs1VsPSIs2(calculate_cov(psi_list1, psi_list2), calculate_cov(miso_psis_list[0], miso_psis_list[1]), args.name1, args.name2, "MAJIQ", "MISO", args.plotpath)
+    plot_PSIs1VsPSIs2(calculate_ead_simple(psi_list1_met1, psi_list2_met1), calculate_ead_simple(psi_lists_met2[0], psi_lists_met2[1]), args.name1, args.name2, "MAJIQ Empirical", "MAJIQ Binomial", args.plotpath)
 
     # plot_PSIs1VsPSIs2(np.array(psi_list1), np.array(psi_list2), args.name1, args.name2, "MAJIQ", "MAJIQ", args.plotpath)
     # plot_PSIs1VsPSIs2(np.array(miso_psis_list[0]), np.array(miso_psis_list[1]), args.name1, args.name2, "MISO", "MISO", args.plotpath)

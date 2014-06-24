@@ -1,0 +1,438 @@
+from __future__ import division
+from matplotlib import use
+use('Agg')
+
+from collections import defaultdict
+import pickle
+import analysis
+from scripts.psi_scores import calculate_ead_simple, _save_or_show
+import argparse
+from pylab import *
+from itertools import izip
+from grimoire import lsv
+import os
+
+LSV_TYPES_DICT = {
+    's|1e1.1|1e2.1':'SE',
+    't|1e1.1|1e2.1':'SE',
+    's|1e1.1|1e1.2':'A3SS',
+    't|1e1.1|2e1.1':'A3SS',
+    't|1e1.1|1e1.2':'A5SS',
+    's|1e1.1|2e1.1':'A5SS'
+}
+
+BUILDER_OUT_FILE_TEMPLATE = "data/builder_output/toJuan.%s.majiq"
+
+def grouped(iterable, n):
+    "s -> (s0,s1,s2,...sn-1), (sn,sn+1,sn+2,...s2n-1), (s2n,s2n+1,s2n+2,...s3n-1), ..."
+    return izip(*[iter(iterable)]*n)
+
+
+def get_low_med_high_psis(psi1_met1, psi2_met1, psi1_met2, psi2_met2, low_thres = .1):
+    low_med_high_psis_set = [[0, 0, 0, 0] , [0, 0, 0, 0]]
+
+    better_in_majiq_mask = array(calculate_ead_simple(psi1_met1, psi2_met1)) < array(calculate_ead_simple(psi1_met2, psi2_met2))
+    better_in_miso_mask = array(calculate_ead_simple(psi1_met1, psi2_met1)) > array(calculate_ead_simple(psi1_met2, psi2_met2))
+
+    low_med_high_psis_set[0][0] = np.count_nonzero((array(psi1_met1) <= low_thres) & better_in_majiq_mask)
+    low_med_high_psis_set[1][0] = np.count_nonzero((array(psi1_met1) <= low_thres) & better_in_miso_mask)
+    low_med_high_psis_set[0][1] = np.count_nonzero((array(psi1_met1) < 1 - low_thres) & (array(psi1_met1) > low_thres) & better_in_majiq_mask)
+    low_med_high_psis_set[1][1] = np.count_nonzero((array(psi1_met1) < 1 - low_thres) & (array(psi1_met1) > low_thres) & better_in_miso_mask)
+    low_med_high_psis_set[0][2] = np.count_nonzero((array(psi1_met1) >= 1 - low_thres) & better_in_majiq_mask)
+    low_med_high_psis_set[1][2] = np.count_nonzero((array(psi1_met1) >= 1 - low_thres) & better_in_miso_mask)
+    low_med_high_psis_set[0][3] = np.count_nonzero(better_in_majiq_mask)
+    low_med_high_psis_set[1][3] = np.count_nonzero(better_in_miso_mask)
+
+    low_med_high_psi_diff = []
+    low_med_high_psi_diff.append(np.mean(array(calculate_ead_simple(psi1_met1, psi2_met1))[(array(psi1_met1) <= low_thres) ]) - np.mean(array(calculate_ead_simple(psi1_met2, psi2_met2))[(array(psi1_met2) <= low_thres) ]))
+    low_med_high_psi_diff.append(np.mean(array(calculate_ead_simple(psi1_met1, psi2_met1))[(array(psi1_met1) > low_thres) & (array(psi1_met1) < 1-low_thres) ]) - np.mean(array(calculate_ead_simple(psi1_met2, psi2_met2))[(array(psi1_met2) > low_thres) & (array(psi1_met2) < 1-low_thres) ]))
+    low_med_high_psi_diff.append(np.mean(array(calculate_ead_simple(psi1_met1, psi2_met1))[(array(psi1_met1) >= 1- low_thres)]) - np.mean(array(calculate_ead_simple(psi1_met2, psi2_met2))[(array(psi1_met2) >= 1- low_thres)]))
+    low_med_high_psi_diff.append(np.mean(array(calculate_ead_simple(psi1_met1, psi2_met1))) - np.mean(array(calculate_ead_simple(psi1_met2, psi2_met2))))
+
+    return low_med_high_psis_set, len(psi1_met1), low_med_high_psi_diff
+
+
+def get_low_med_high_cov(psi1_met1, psi2_met1, psi1_met2, psi2_met2, coverage_mat):
+    low_med_high_psis_set = [[0, 0, 0, 0], [0, 0, 0, 0]]
+
+    LOW_BOUND = 15
+    HIGH_BOUND = 40
+
+    better_in_majiq_mask = array(calculate_ead_simple(psi1_met1, psi2_met1)) < array(calculate_ead_simple(psi1_met2, psi2_met2))
+    better_in_miso_mask = array(calculate_ead_simple(psi1_met1, psi2_met1)) > array(calculate_ead_simple(psi1_met2, psi2_met2))
+
+    low_med_high_psis_set[0][0] = np.count_nonzero([(coverage_mat <= LOW_BOUND) & (better_in_majiq_mask)])
+    low_med_high_psis_set[1][0] = np.count_nonzero([(coverage_mat <= LOW_BOUND) & better_in_miso_mask])
+    low_med_high_psis_set[0][1] = np.count_nonzero([(coverage_mat >= LOW_BOUND) & (coverage_mat < HIGH_BOUND) & better_in_majiq_mask])
+    low_med_high_psis_set[1][1] = np.count_nonzero([(coverage_mat >= LOW_BOUND) & (coverage_mat < HIGH_BOUND) & better_in_miso_mask])
+    low_med_high_psis_set[0][2] = np.count_nonzero([(coverage_mat >= HIGH_BOUND) & better_in_majiq_mask])
+    low_med_high_psis_set[1][2] = np.count_nonzero([(coverage_mat >= HIGH_BOUND) & better_in_miso_mask])
+    low_med_high_psis_set[0][3] = np.count_nonzero(better_in_majiq_mask)
+    low_med_high_psis_set[1][3] = np.count_nonzero(better_in_miso_mask)
+
+    low_med_high_psi_diff = []
+    low_med_high_psi_diff.append(-(np.mean(array(calculate_ead_simple(psi1_met1, psi2_met1))[coverage_mat <= LOW_BOUND]) - np.mean(array(calculate_ead_simple(psi1_met2, psi2_met2))[(coverage_mat <= LOW_BOUND)])))
+    low_med_high_psi_diff.append(-(np.mean(array(calculate_ead_simple(psi1_met1, psi2_met1))[(coverage_mat > LOW_BOUND) & (coverage_mat < HIGH_BOUND)]) - np.mean(array(calculate_ead_simple(psi1_met2, psi2_met2))[(coverage_mat >= LOW_BOUND) & (coverage_mat < HIGH_BOUND)])))
+    low_med_high_psi_diff.append(-(np.mean(array(calculate_ead_simple(psi1_met1, psi2_met1))[coverage_mat >= HIGH_BOUND]) - np.mean(array(calculate_ead_simple(psi1_met2, psi2_met2))[coverage_mat >= HIGH_BOUND])))
+    low_med_high_psi_diff.append(-(np.mean(array(calculate_ead_simple(psi1_met1, psi2_met1))) - np.mean(array(calculate_ead_simple(psi1_met2, psi2_met2)))))
+
+    return low_med_high_psis_set, len(psi1_met1), low_med_high_psi_diff
+
+def get_low_med_high_cov_psi(psi1_met1, psi2_met1, psi1_met2, psi2_met2, coverage_mat):
+    low_med_high_psis_set = [
+        [0, 0, 0, 0,
+         0, 0, 0, 0,
+         0, 0, 0, 0,
+         0, 0, 0, 0],
+        [0, 0, 0, 0,
+         0, 0, 0, 0,
+         0, 0, 0, 0,
+         0, 0, 0, 0]
+    ]
+    low_med_high_psi_diff = []
+
+    LOW_THRES = .1
+    tmp_sorted_coverage = np.array(coverage_mat)
+    tmp_sorted_coverage.sort()
+    LOW_BOUND = tmp_sorted_coverage[coverage_mat.size/3]
+    HIGH_BOUND = tmp_sorted_coverage[2*coverage_mat.size/3]
+    print "LOW BOUND: %d, HIGH_BOUND %d" % (LOW_BOUND, HIGH_BOUND)
+    print coverage_mat.size, len(tmp_sorted_coverage[:coverage_mat.size/3]), len(tmp_sorted_coverage[coverage_mat.size/3: 2*coverage_mat.size/3]), len(tmp_sorted_coverage[2*coverage_mat.size/3:])
+    COV_CONDS = [
+        (coverage_mat < LOW_BOUND),
+        (coverage_mat >= LOW_BOUND) & (coverage_mat < HIGH_BOUND),
+        (coverage_mat >= HIGH_BOUND),
+        True
+    ]
+    PSI_COND = [
+        (array(psi1_met1) <= LOW_THRES),
+        (array(psi1_met1) < 1 - LOW_THRES) & (array(psi1_met1) > LOW_THRES),
+        (array(psi1_met1) >= (1- LOW_THRES)),
+        True
+    ]
+
+    better_in_majiq_mask = array(calculate_ead_simple(psi1_met1, psi2_met1)) < array(calculate_ead_simple(psi1_met2, psi2_met2))
+    better_in_miso_mask = array(calculate_ead_simple(psi1_met1, psi2_met1)) > array(calculate_ead_simple(psi1_met2, psi2_met2))
+
+    for i, cov_cond in enumerate(COV_CONDS):
+        for j, psi_cond in enumerate(PSI_COND):
+            low_med_high_psis_set[0][i*len(COV_CONDS)+j] = np.count_nonzero([cov_cond & psi_cond & better_in_majiq_mask])
+            low_med_high_psis_set[1][i*len(COV_CONDS)+j] = np.count_nonzero([cov_cond & psi_cond & better_in_miso_mask])
+            low_med_high_psi_diff.append(-(np.mean(array(calculate_ead_simple(psi1_met1, psi2_met1))[cov_cond & psi_cond]) - np.mean(array(calculate_ead_simple(psi1_met2, psi2_met2))[cov_cond & psi_cond])))
+            if np.count_nonzero(cov_cond & psi_cond) == 1:
+                sys.stdout.write(str(coverage_mat.size)+"\t")
+            else:
+                sys.stdout.write(str(np.count_nonzero(cov_cond & psi_cond))+"\t")
+        sys.stdout.write("\n")
+    sys.stdout.flush()
+
+    return low_med_high_psis_set, len(psi1_met1), low_med_high_psi_diff, (COV_CONDS[1] & better_in_miso_mask)
+
+
+def plot_delta_bars_perc_all_in_grid(cov_psi_ndmatrix, majiq_num_events_list, majiq_diff_ndmatrix, replica_names, plotpath=None, alpha=0.5):
+
+    replica_names_joint = '; '.join(["%s%s" % (name1, name2) for name1, name2 in grouped(replica_names, 2)])
+    plotname="MAJIQ_Vs_MISO_delta_expected_psi_grid_alpha_%.1f. \nReplicates %s" % (float(alpha), replica_names_joint)
+
+    print cov_psi_ndmatrix
+    print np.reshape(np.repeat(np.array(majiq_num_events_list), cov_psi_ndmatrix.size/len(majiq_num_events_list)), cov_psi_ndmatrix.shape)
+    psi_ndmatrix_perc = cov_psi_ndmatrix/np.reshape(np.repeat(np.array(majiq_num_events_list), cov_psi_ndmatrix.size/len(majiq_num_events_list)), cov_psi_ndmatrix.shape)
+
+    means_psis_meth1 = np.apply_along_axis( np.mean, axis=2, arr=psi_ndmatrix_perc.T)[:, 0]
+    means_psis_meth2 = np.apply_along_axis( np.mean, axis=2, arr=psi_ndmatrix_perc.T)[:, 1]
+
+    stds_psis_meth1 = np.apply_along_axis( np.std, axis=2, arr=psi_ndmatrix_perc.T)[:, 0]
+    stds_psis_meth2 = np.apply_along_axis( np.std, axis=2, arr=psi_ndmatrix_perc.T)[:, 1]
+
+    n_groups = 4
+    fig, axxs = plt.subplots(n_groups, n_groups, sharex=True, sharey=True, figsize=[12, 12], dpi=300)
+
+    for ii in xrange(n_groups):
+        for jj in xrange(n_groups):
+            ax1 = axxs[ii][jj]
+
+            index = np.arange(1)
+            bar_width = 0.35
+            # bar_width = 0.8
+
+            opacity = 0.4
+            error_config = {'ecolor': '0.3'}
+            ax1.bar(index, np.array([means_psis_meth1[ii*n_groups+jj]-means_psis_meth2[ii*n_groups+jj]]), bar_width,
+                     alpha=opacity,
+                     color='b',
+                     yerr=stds_psis_meth1[ii*n_groups+jj]-stds_psis_meth2[ii*n_groups+jj],
+                     error_kw=error_config,
+                     label='MAJIQ')
+                     # label='Better in MAJIQ')
+            # ax1.set_xlabel('PSIs values')
+            # if is_coverage:
+            #     ax1.set_xlabel('Coverage')
+            if jj==0:
+                ax1.set_ylabel('% of improved Events (LSVs)')
+            ax1.set_ylim([-.1, .25])
+            ax2 = ax1.twinx()
+            ax2.bar(index + bar_width, np.mean(majiq_diff_ndmatrix, axis=0)[ii*n_groups+jj], bar_width,
+                     alpha=opacity,
+                     color='r',
+                     yerr=np.std(majiq_diff_ndmatrix, axis=0)[ii*n_groups+jj],
+                     error_kw=error_config,
+                     label='Better in MISO')
+
+            if jj == n_groups-1:
+                ax2.set_ylabel('-E(Delta(Delta(PSI)))')
+            else:
+                ax2.axes.get_yaxis().set_ticks([])
+            ax2.set_ylim([-.1, .25])
+            plt.xlabel('PSIs values')
+
+
+    # plt.ylabel('% of improved # Events (LSVs)')
+    # plt.title(plotname)
+    # plt.title('Delta in expected PSI between %s.' % (replica_names_joint))
+    # plt.xticks(index + bar_width, psi_ranges)
+    # plt.legend(loc=2)
+
+    plt.tight_layout()
+    _save_or_show(plotpath, plotname.replace('\n', ' - ') + '_percentages')
+
+
+def plot_delta_bars_percentages(psi_ndmatrix, majiq_num_events_list, majiq_diff_ndmatrix, replica_names, plotpath=None, is_coverage=False):
+
+    replica_names_joint = '; '.join(["%s%s" % (name1, name2) for name1, name2 in grouped(replica_names, 2)])
+    plotname="MAJIQ_Vs_MISO_delta_expected_psi. \nReplicates %s" % (replica_names_joint)
+
+    psi_ranges = ['low', 'med', 'high', 'all']
+    psi_ndmatrix_perc = psi_ndmatrix/np.reshape(np.repeat(np.array(majiq_num_events_list), psi_ndmatrix.size/len(majiq_num_events_list)), psi_ndmatrix.shape)
+
+    means_psis_meth1 = np.apply_along_axis( np.mean, axis=2, arr=psi_ndmatrix_perc.T)[:, 0]
+    means_psis_meth2 = np.apply_along_axis( np.mean, axis=2, arr=psi_ndmatrix_perc.T)[:, 1]
+
+    stds_psis_meth1 = np.apply_along_axis( np.std, axis=2, arr=psi_ndmatrix_perc.T)[:, 0]
+    stds_psis_meth2 = np.apply_along_axis( np.std, axis=2, arr=psi_ndmatrix_perc.T)[:, 1]
+
+
+    n_groups = 4
+
+
+    fig, ax1 = plt.subplots()
+
+    index = np.arange(n_groups)
+    bar_width = 0.35
+    # bar_width = 0.8
+
+    opacity = 0.4
+    error_config = {'ecolor': '0.3'}
+
+    ax1.bar(index, means_psis_meth1-means_psis_meth2, bar_width,
+             alpha=opacity,
+             color='b',
+             yerr=stds_psis_meth1-stds_psis_meth2,
+             error_kw=error_config,
+             label='MAJIQ')
+             # label='Better in MAJIQ')
+    ax1.set_xlabel('PSIs values')
+    if is_coverage:
+        ax1.set_xlabel('Coverage')
+    ax1.set_ylabel('% of improved Events (LSVs)')
+    ax1.set_ylim([-.1, .25])
+    ax2 = ax1.twinx()
+    ax2.bar(index + bar_width, np.mean(majiq_diff_ndmatrix, axis=0), bar_width,
+             alpha=opacity,
+             color='r',
+             yerr=np.std(majiq_diff_ndmatrix, axis=0),
+             error_kw=error_config,
+             label='Better in MISO')
+
+    ax2.set_ylabel('E(Delta(Delta(PSI)))')
+    ax2.set_ylim([-.1, .25])
+    # plt.xlabel('PSIs values')
+    # plt.ylabel('% of improved # Events (LSVs)')
+    plt.title(plotname)
+    # plt.title('Delta in expected PSI between %s.' % (replica_names_joint))
+    plt.xticks(index + bar_width, psi_ranges)
+    # plt.legend(loc=2)
+
+    plt.tight_layout()
+    _save_or_show(plotpath, plotname.replace('\n', ' - ') + '_percentages')
+
+
+
+def plot_delta_expected_method1Vsmethod2(psi_list_data_set, replica_names, plotpath=None):
+
+    replica_names_joint = '; '.join(["%s%s" % (name1, name2) for name1, name2 in grouped(replica_names, 2)])
+    plotname="MAJIQ_Vs_MISO_delta_expected_psi. \nReplicates %s" % (replica_names_joint)
+
+    psi_ranges = ['low', 'med', 'high', 'all']
+
+    means_psis_meth1 = np.apply_along_axis( np.mean, axis=2, arr=array(psi_list_data_set).T)[:,0] #psi_list_data_set[0][0]
+    means_psis_meth2 = np.apply_along_axis( np.mean, axis=2, arr=array(psi_list_data_set).T)[:,1] #psi_list_data_set[1][1]
+
+    stds_psis_meth1 = np.apply_along_axis( np.std, axis=2, arr=array(psi_list_data_set).T)[:,0]
+    stds_psis_meth2 = np.apply_along_axis( np.std, axis=2, arr=array(psi_list_data_set).T)[:,1]
+
+
+    n_groups = 4
+
+
+    fig, ax = plt.subplots()
+
+    index = np.arange(n_groups)
+    bar_width = 0.35
+
+    opacity = 0.4
+    error_config = {'ecolor': '0.3'}
+
+    plt.bar(index, means_psis_meth1, bar_width,
+             alpha=opacity,
+             color='b',
+             yerr=stds_psis_meth1,
+             error_kw=error_config,
+             label='Better in MAJIQ')
+
+    plt.bar(index + bar_width, means_psis_meth2, bar_width,
+             alpha=opacity,
+             color='r',
+             yerr=stds_psis_meth2,
+             error_kw=error_config,
+             label='Better in MISO')
+
+    plt.xlabel('PSIs values')
+    plt.ylabel('# Events (LSVs)')
+    plt.title(plotname)
+    # plt.title('Delta in expected PSI between %s.' % (replica_names_joint))
+    plt.xticks(index + bar_width, psi_ranges)
+    plt.legend(loc=2)
+
+    plt.tight_layout()
+    _save_or_show(plotpath, plotname.replace('\n', ' - '))
+
+
+def main():
+    """
+    Script for testing MAJIQ against other algorithms for PSIs across several replicates
+
+    - Notice that the first file is for MAJIQ results, whereas the second file is reserved for others (initially, MISO).
+    - All LSVs 'ways' are equally considered. The order of each way within a LSV should be the same in MAJIQ and MISO.
+    """
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--majiq-files', dest='majiq_files', nargs='+', help='Path for MAJIQ psi pickles to evaluate')
+    parser.add_argument('--miso-files', dest='miso_files', nargs='+',  help='Path for MISO psi pickles to evaluate')
+    parser.add_argument('--replica-names', dest='replica_names', nargs='+', required=True)
+    parser.add_argument('--plotpath', default=None, help='Path to save the plot to, if not provided will show on a matplotlib popup window')
+    parser.add_argument('--builder-files-dir', dest='builder_files_dir')
+    parser.add_argument('--cached-cov', dest='cached_cov')
+    parser.add_argument('--alpha', default=0.5, help='Alpha used in MAJIQ (for naming purposes only).')
+    args = parser.parse_args()
+
+    if len(args.majiq_files)*2 != len(args.miso_files):
+        print "[ERROR] :: for each MAJIQ file containing psi comparisons 2 MISO files are expected. You provided %d files for MAJIQ and %d for MISO. Are you sure you are providing the results of calc_psi.py execution?"
+
+    majiq_better_worse_list = []
+    majiq_num_events_list = []
+    majiq_low_med_high_diff_list = []
+    majiq_coverage_list = []
+
+    if args.cached_cov:
+        majiq_coverage_list = pickle.load(open(args.cached_cov, 'r'))
+
+    for ii, majiq_file in enumerate(args.majiq_files):
+        psivalues = pickle.load(open(majiq_file))
+        psi_met1_rep1 = psivalues[0][0]
+        psi_met1_rep2 = psivalues[0][1]
+
+        psi_names_met1 = defaultdict()
+
+        # Discard LSVs with only one PSI
+        for i, psis_lsv_met1 in enumerate(psi_met1_rep1):
+            if len(psis_lsv_met1) < 2 or len(psi_met1_rep2[i]) < 2:
+                continue  # TODO: check that skipping is not necessary. LSVs with only 1 PSI are wrong..
+            if psivalues[1][i][2] not in LSV_TYPES_DICT.keys():
+                continue
+            psi_names_met1[psivalues[1][i][1]] = i
+
+        # Method1 (MAJIQ) psi scores
+        psi_list1_met1 = []
+        psi_list2_met1 = []
+
+        psi_lists_met2 = []
+
+        miso_all = []
+        for miso_file_index in range(2):
+            miso_file = args.miso_files[2*ii + miso_file_index]
+            miso_psis_dict = defaultdict()
+            with open(miso_file, 'r') as miso_res:
+                for miso_line in miso_res:
+                    if miso_line.startswith("event"): continue
+                    miso_fields = miso_line.split('\t')
+                    if miso_fields[0] not in psi_names_met1:
+                        continue
+                    miso_psis_dict[miso_fields[0]] = miso_fields[1]
+            miso_all.append(miso_psis_dict)
+
+        miso_common_names = set(miso_all[0].keys()).intersection(miso_all[1].keys())
+        for miso_psis_dict in miso_all:
+            miso_psis = []
+            for psi_name in sorted(psi_names_met1.keys()):
+                if psi_name not in miso_common_names:
+                    print "%s is not in all MISO replicates" % psi_name
+                    del psi_names_met1[psi_name]
+                    continue
+                try:
+                    miso_psis_values = [float(miso_psi) for miso_psi in miso_psis_dict[psi_name].split(",")]
+                except KeyError, e:
+                    print "LSV %s is in MAJIQ but not in MISO!" % e
+                    del psi_names_met1[psi_name]
+                    continue
+                    # if len(miso_psis_values) < 2:
+                    #     del majiq_psi_names[psi_name]
+                    #     continue
+
+                # if len(miso_psis_values) == 1:
+                #     miso_psis_values.append(1.0 - miso_psis_values[0])
+                miso_psis.extend(miso_psis_values)
+
+            psi_lists_met2.append(miso_psis)
+
+        for psi_name in sorted(psi_names_met1.keys()):
+            # for j, psi_lsv in enumerate(psi_met1_rep1[psi_names_met1[psi_name]]):
+            #     psi_list1_met1.append(sum(psi_lsv*analysis.psi.BINS_CENTER))
+            #     psi_list2_met1.append(sum(psi_met1_rep2[psi_names_met1[psi_name]][j]*analysis.psi.BINS_CENTER))
+            psi_list1_met1.append(sum(psi_met1_rep1[psi_names_met1[psi_name]][0]*analysis.psi.BINS_CENTER))
+            psi_list2_met1.append(sum(psi_met1_rep2[psi_names_met1[psi_name]][0]*analysis.psi.BINS_CENTER))
+
+        # Compute mean coverage in the 2 compared experiments
+        # lsvtoJuan.Hippocampus1.majiq_psi.pickle_vs_lsvtoJuan.Hippocampus2.majiq_psi.pickle_psivalues.pickle
+        experiments_str_list = os.path.basename(majiq_file).split('lsvtoJuan.')
+        exp1_name = str(experiments_str_list[1]).split('.')[0]
+        exp2_name = str(experiments_str_list[2]).split('.')[0]
+        coverage_list = []
+        if args.cached_cov:
+            coverage_list = majiq_coverage_list[ii]
+        else:
+            with open(BUILDER_OUT_FILE_TEMPLATE % exp1_name, 'r') as exp1_build_file:
+                with open(BUILDER_OUT_FILE_TEMPLATE % exp2_name, 'r') as exp2_build_file:
+                    exp1_build_data = pickle.load(exp1_build_file)
+                    exp2_build_data = pickle.load(exp2_build_file)
+                    for i, lsv_majiq in enumerate(exp1_build_data[1]):
+                        if lsv_majiq.id in psi_names_met1.keys():
+                            coverage_list.append(np.mean([lsv_majiq.junction_list.sum(), exp2_build_data[1][i].junction_list.sum()]))
+            majiq_coverage_list.append(coverage_list)
+
+        lo_me_hi_mat, num_events, lo_med_high_diff, suspicous_guys = get_low_med_high_cov_psi(psi_list1_met1, psi_list2_met1, psi_lists_met2[0], psi_lists_met2[1], np.array(coverage_list))
+        # lo_me_hi_mat, num_events, lo_med_high_diff = get_low_med_high_cov(psi_list1_met1, psi_list2_met1, psi_lists_met2[0], psi_lists_met2[1], np.array(coverage_list))
+        # lo_me_hi_mat, num_events, lo_med_high_diff = get_low_med_high_psis(psi_list1_met1, psi_list2_met1, psi_lists_met2[0], psi_lists_met2[1])
+        pickle.dump(np.array(psi_names_met1.keys())[suspicous_guys], open('suspicious.pkl', 'w'))
+        sys.exit(1)
+        majiq_better_worse_list.append(lo_me_hi_mat)
+        majiq_num_events_list.append(num_events)
+        majiq_low_med_high_diff_list.append(lo_med_high_diff)
+
+    if not args.cached_cov:
+        pickle.dump(majiq_coverage_list, open('coverage_tmp.pickle', 'w'))
+
+    # plot_delta_expected_method1Vsmethod2(majiq_better_worse_list, args.replica_names, args.plotpath)
+    # plot_delta_bars_percentages(np.array(majiq_better_worse_list), majiq_num_events_list, np.array(majiq_low_med_high_diff_list), args.replica_names, args.plotpath, is_coverage=True)
+    plot_delta_bars_perc_all_in_grid(np.array(majiq_better_worse_list), majiq_num_events_list, np.array(majiq_low_med_high_diff_list), args.replica_names, plotpath=args.plotpath, alpha=args.alpha)
+
+if __name__ == '__main__':
+    main()

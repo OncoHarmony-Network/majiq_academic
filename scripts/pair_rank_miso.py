@@ -20,9 +20,7 @@ def miso_reader(paths, dofilter=True):
         for line in open(path):
             sline = line.split('\t')
             if sline[0] != "event_name":
-                #event_name  sample1_posterior_mean  sample1_ci_low  sample1_ci_high sample2_posterior_mean  
-                #sample2_ci_low  sample2_ci_high diff    bayes_factor    isoforms    sample1_counts  
-                #sample1_assigned_counts sample2_counts  sample2_assigned_counts chrom   strand  mRNA_starts mRNA_ends
+                #event_name  sample1_posterior_mean  sample1_ci_low  sample1_ci_high sample2_posterior_mean sample2_ci_low  sample2_ci_high diff    bayes_factor    isoforms    sample1_counts  sample1_assigned_counts sample2_counts  sample2_assigned_counts chrom   strand  mRNA_starts mRNA_ends
                 event_name = sline[0]
                 delta_psi = sline[7].split(",")[0]
                 bayes_factor = sline[8]

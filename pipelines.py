@@ -279,7 +279,6 @@ def deltapsi_calc( matched_list, matched_info, fitfunc, conf, chunk, prior_matri
     lsv_samples = [[],[]]
     for idx_exp, experiment in enumerate(matched_list):
         for idx, ii in enumerate(experiment):
-    
             m_lsv, var_lsv, s_lsv = sample_from_junctions(  junction_list = ii,
                                                             m = conf['m'],
                                                             k = conf['k'],
@@ -292,14 +291,11 @@ def deltapsi_calc( matched_list, matched_info, fitfunc, conf, chunk, prior_matri
 
     logr.info("[Th %s]: Calculating P(Data | PSI_i, PSI_j)..."%chunk)
     #P(Data | PSI_i, PSI_j) = P(vector_i | PSI_i) * P(vector_j | PSI_j)
-
     numbins= 20
     data_given_psi = []
-    import pdb
     try:
         for lsv_idx, info in enumerate(matched_info):
-    
-            if lsv_idx % 1 == 0:
+            if lsv_idx % 50 == 0:
                 print "%s...."%lsv_idx,
                 sys.stdout.flush()
             data_given_psi1 = majiq_psi.reads_given_psi_lsv( lsv_samples[0][lsv_idx], conf['psi_space'] )
@@ -328,7 +324,7 @@ def deltapsi_calc( matched_list, matched_info, fitfunc, conf, chunk, prior_matri
     logr.info("[Th %s]: Calculate Posterior Delta Matrices..."%chunk)
     posterior_matrix = []
     for lidx, lsv in enumerate(matched_info) :
-        if lsv_idx %1 == 0: 
+        if lsv_idx % 50 == 0: 
             print "%s...."%lsv_idx,
             sys.stdout.flush()
         lsv_psi_matrix = []
@@ -448,7 +444,7 @@ class DeltaPair(BasicPipeline):
             try:
                 pool = Pool(processes=self.nthreads)
                 csize = len(matched_lsv[0]) / int(self.nthreads)
-                self.logger.info("CREATING THREADS %s"%self.nthreads)
+                self.logger.info("CREATING THREADS %s with <= %s lsv"%(self.nthreads,csize))
                 jobs = []
     
                 for nt in xrange(self.nthreads):
