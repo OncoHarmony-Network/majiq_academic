@@ -306,11 +306,11 @@ def deltapsi_calc( matched_list, matched_info, fitfunc, conf, chunk, prior_matri
                 sys.stdout.flush()
 
                 data_psi.append(data_given_psi1[psi].reshape(-1, numbins) * data_given_psi2[psi].reshape(numbins, -1))
-
-    #            majiq_psi.plot_matrix(  data_psi[-1],
-    #                                    "P(Data | PSI 1, PSI 2) Event %s.%s (Psi1: %s Psi2: %s)"%(lsv_idx,psi, sum(data_given_psi1[psi]), sum(data_given_psi2[psi])), 
-    #                                    "datagpsi_%s.%s"%(lsv_idx,psi),
-    #                                    self.plotpath )
+                if psi == 0 :
+                    majiq_psi.plot_matrix(  data_psi[-1],
+                                            "P(Data | PSI 1, PSI 2) Event %s.%s (Psi1: %s Psi2: %s)"%(lsv_idx,psi, sum(data_given_psi1[psi]), sum(data_given_psi2[psi])), 
+                                            "datagpsi_th%s_%s.%s"%(chunk,lsv_idx,psi),
+                                            self.plotpath )
 
             data_given_psi.append(data_psi)
         print 
@@ -332,11 +332,11 @@ def deltapsi_calc( matched_list, matched_info, fitfunc, conf, chunk, prior_matri
             pm = (prior_matrix * data_given_psi[lidx][psi])
             psi_mat = (pm / sum(pm))
             lsv_psi_matrix.append( psi_mat )
-#            if psi == 0:
-#                majiq_psi.plot_matrix(  psi_mat,
-#                                    "Posterior Delta Event %s.%s (Psi1: %s Psi2: %s)"%(lsv_idx,psi, sum(data_given_psi1[psi]), sum(data_given_psi2[psi])), 
-#                                    "posterior_dpsi_%s.%s"%(lsv_idx,psi),
-#                                    self.plotpath )
+            if psi == 0:
+                majiq_psi.plot_matrix(  psi_mat,
+                                    "Posterior Delta Event %s.%s (Psi1: %s Psi2: %s)"%(lsv_idx,psi, sum(data_given_psi1[psi]), sum(data_given_psi2[psi])), 
+                                    "posterior_dpsi_th%s_%s.%s"%(chunk,lsv_idx,psi),
+                                    self.plotpath )
         posterior_matrix.append(lsv_psi_matrix)
 
     return posterior_matrix
