@@ -133,7 +133,7 @@ def miso_reader(path, dofilter=True):
             print bayes_factor
             print delta_psi
             if len(transcripts) == 2: #only interested in 2 transcripts events for now
-                if float(bayes_factor) > 2 or not dofilter: # below 2 means no change according to tables
+                if dofilter: # below 2 means no change according to tables
                     exons1 = transcripts[0].split('_')
                     exons2 = transcripts[1].split('_')                
                     trans_name = exons1[0].split('.')[0].strip("'")
@@ -144,9 +144,9 @@ def miso_reader(path, dofilter=True):
 def rank_miso(path, dofilter=True, ranknochange=False):
     rank = miso_reader(path, dofilter)
     if ranknochange: 
-        rank.sort(key=lambda x: (abs(x[2]))) #sort first by smallest delta PSI, then by bayes factor
+        rank.sort(key=lambda x: (abs(x[1]))) #sort first by smallest delta PSI, then by bayes factor
     else:
-        rank.sort(key=lambda x: (-abs(x[2]))) #sort first by biggest delta PSI, then by inverse bayes factor
+        rank.sort(key=lambda x: (-abs(x[1]))) #sort first by biggest delta PSI, then by inverse bayes factor
     
     return rank
 
