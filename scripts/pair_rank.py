@@ -114,7 +114,7 @@ def rank_majiq(bins_list, names, V=0.2, absolute=True, dofilter=True, E=False, r
 
             if area > MINTHRESHOLD or not dofilter:
                 rank.append([names[i], area])
-
+    
     rank.sort(key=lambda x: -x[1])
     return rank
 
@@ -224,6 +224,16 @@ def main():
         majiq2 = pickle.load(open(args.pair[1], 'r'))
         rank1 = rank_majiq(majiq1[0], majiq1[1], args.V, args.absolute, args.filter, args.E, args.ranknochange)
         rank2 = rank_majiq(majiq2[0], majiq2[1], args.V, args.absolute, args.filter, args.E, args.ranknochange)
+
+
+
+    app = []
+    for xidx, xx in enumerate(rank1):
+        print xx[0][1], xx[1]
+        app.append(xx[0][1])
+    ot = open('./rank.pkl','w+')
+    pickle.dump(app,ot)
+    ot.close()
 
 
     print "Num events", len(rank1), len(rank2)
