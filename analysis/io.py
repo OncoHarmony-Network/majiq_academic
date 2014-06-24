@@ -193,8 +193,6 @@ def load_data_lsv(path, logger=None):
     num_pos = data[1][0].junction_list.shape[1]
 
     for lsv in data[1]:
-        print "REMOVE"
-        if lsv.id != 'ENSMUST00000045303:72474705-72474770:source': continue
         lsv_info.append([lsv.coords,lsv.id, lsv.type])
 #        cov = np.zeros(shape=(len(lsv.junction_list.shape)), dtype=np.dtype('int'))
 #        for ii, lsvcov in enumerate(lsv.junction_list.toarray()):
