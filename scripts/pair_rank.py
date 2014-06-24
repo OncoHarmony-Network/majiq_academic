@@ -116,6 +116,7 @@ def rank_majiq(bins_list, names, V=0.2, absolute=True, dofilter=True, E=False, r
                 rank.append([names[i], area])
 
     rank.sort(key=lambda x: -x[1])
+    print rank
     return rank
 
 

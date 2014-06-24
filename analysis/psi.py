@@ -93,24 +93,13 @@ def reads_given_psi_lsv(lsv, psi_space):
     #P(vector_i | PSI_i)
     "We do a simple binomial test to evaluate how probable is the data given a PSI range"
     psi = np.zeros(shape=(lsv.shape[0],psi_space.shape[0]), dtype=np.float)
-    #if debug: print "Paired samples to dirichlet..."
-    #sampling PSI by pairing the samples of the previous step sequentially
-#    pdb.set_trace()
     for idx, junc in enumerate(lsv):
-#        print "JUNC", idx
-        total_acum = 0.
-        acum_samples = np.zeros(shape=(psi_space.shape[0]))
-
         total_psi = np.zeros(shape=(100,psi_space.shape[0]),dtype=np.float)
-#        print "BUCLE",
-#        pdb.set_trace()
         for pidx, smpl in enumerate(junc):
-#            print pidx,"..",
             bin_test = [binom_test(smpl, junc.sum(), p = x) for x in psi_space]
             bin_test = np.asarray(bin_test)
             total_acum = float(sum(bin_test))
             total_psi[pidx]=(bin_test/total_acum)
-#        print
         total_psi = np.mean(total_psi,axis=0)
         psi[idx] = total_psi/total_psi.sum()
 
@@ -369,10 +358,9 @@ def gen_prior_matrix( pip, lsv_exp1, lsv_exp2, output , numbins=20 ):
 
         #Calculate prior matrix
         pip.logger.info("Adding a Jefferies prior to prior (alpha=%s), jun %s..."%(pip.alpha, nj))
-        #Normalize prior with jefferies
         prior_matrix *= jefferies
-
         prior_matrix /= sum(prior_matrix) #renormalize so it sums 1
+
         plot_matrix(prior_matrix, "Prior Matrix nj%s"%nj, "prior_matrix_jun_%s"%nj, pip.plotpath)
         pip.logger.info("Saving prior matrix for %s..."%(pip.names))
         pickle.dump(prior_matrix, open("%s%s_%s_priormatrix_jun_%s.pickle"%(output, pip.names[0], pip.names[1],nj), 'w'))
