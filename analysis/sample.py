@@ -133,7 +133,7 @@ def sample_from_junctions(junction_list, m, k, dispersion=0.1, discardzeros=5, t
         if np.count_nonzero(junction) == 0:
             sampled_means.append(0)
             sampled_var.append(0)
-            all_samples.append([0]*(k*m)) #k*m zeroes
+            all_samples.append([0]*m) #k*m zeroes
         else:
 
             if Nz == EMPIRICAL_NZ:
@@ -152,7 +152,9 @@ def sample_from_junctions(junction_list, m, k, dispersion=0.1, discardzeros=5, t
                 sampled_mean = mean(junction_samples)
                 #recalculating
                 r_nb, p_nb = polyfitnb.func2nb( a, b, sampled_mean, dispersion )
-                samples.extend(negative_binomial(r_nb, p_nb, k)) 
+                nb50 = negative_binomial(r_nb, p_nb, k)
+                smpl = mean(nb50)
+                samples.append( smpl )
             #calculate the mean and the variance 
 
             sampled_means.append(mean(samples))
