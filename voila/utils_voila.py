@@ -3,6 +3,7 @@ from collections import defaultdict
 import json
 
 import matplotlib
+from analysis.matrix import collapse_matrix
 
 from lsv import Lsv
 from splice_graphics.exonGraphic import ExonGraphic
@@ -34,6 +35,45 @@ except ImportError:
     sys.exit(1)
 
 
+
+class PickleEncoder(json.JSONEncoder):
+    def default(self, obj):
+        if isinstance(obj, set):
+            return list(obj)
+        if isinstance(obj, numpy.ndarray):
+            return list(obj)
+        if isinstance(obj, tuple):
+            return list(obj)
+        if isinstance(obj, numpy.int64):
+            return int(obj)
+        if isinstance(obj, Lsv):
+            return obj.to_JSON(PickleEncoder)
+
+        return json.JSONEncoder.default(self, obj)
+
+
+class LsvGraphicEncoder(json.JSONEncoder):
+    def default(self, obj):
+        if isinstance(obj, set):
+            return list(obj)
+        if isinstance(obj, np.ndarray):
+            return list(obj)
+        if isinstance(obj, tuple):
+            return list(obj)
+        if isinstance(obj, np.int64):
+            return int(obj)
+        if isinstance(obj, ExonGraphic):
+            return obj.to_JSON(PickleEncoder)
+        if isinstance(obj, JunctionGraphic):
+            return obj.to_JSON(PickleEncoder)
+        if isinstance(obj, GeneGraphic):
+            return obj.to_JSON(PickleEncoder)
+
+        return json.JSONEncoder.default(self, obj)
+
+
+
+
 def find_excl_incl_percentages(bins, threshold):
     """
     Calculate the percentage of inclusion/exclusion given the differential bins set
@@ -57,8 +97,8 @@ def padding(accumulated, converted_confidence, bins, position, direction):
     @param accumulated:
     @param converted_confidence:
     @param bins:
-    @param right:
-    @param left:
+    @param position:
+    @param direction:
     @return: position of the bin where the confidence is reached
     """
     bins_len = bins.size
@@ -131,6 +171,7 @@ def find_quartiles(bins):
 
 
 def get_mean_step(bins):
+    bins = numpy.array(bins)
     step = 1 / bins.size
     projection_prod = bins * np.arange(step / 2, 1, step)
     return step, np.sum(projection_prod)
@@ -138,6 +179,7 @@ def get_mean_step(bins):
 
 def get_variance(bins, mean):
     """Compute the variance = E[X^2] - (E[X])^2"""
+    bins = numpy.array(bins)
     step = 1 / bins.size
     projection_prod = bins * np.arange(step / 2, 1, step)**2
     return np.sum(projection_prod) - mean**2
@@ -153,7 +195,7 @@ def create_array_bins(bins, confidence):
      *.- the coordinates of the confidence interval [coord1, coord2].
 
     """
-
+    bins = numpy.array(bins)
     step, mean = get_mean_step(bins)
     conf_interval = find_confidence_interval(bins, mean / step, confidence)
     quartiles_set = find_quartiles(bins)
@@ -203,7 +245,7 @@ def generate_lsv(i, lsvs_bins, confidence, **post_metadata):
         'id': id,
         # TODO: information missing
         'type': 'Exon skipping',  # TODO: information missing
-        'bins_list': lsvs_bins.tolist(),  # bins array
+        'bins_list': lsvs_bins,  # bins array
         'mean_psi': means_psi_list,
         'conf_interval': conf_interval_list,
         'quartiles': quartile_list,
@@ -218,7 +260,7 @@ def generate_event(i, events_bins, confidence, **post_metadata):
     PREFIX = "../templates/static/matrix_plots/"
 
     # type_set = ('Exon skipping', '5-prime', '3-prime')
-    random_num = random()  # Random number between 0 and 1
+    random_num = random.random()  # Random number between 0 and 1
     bins_info = create_array_bins(events_bins, confidence)
     events_bins.tolist()
 
@@ -356,7 +398,7 @@ def get_delta_exp_data(majiq_out_file, metadata_post=None, confidence=.95, thres
         event.mean_psi = event.mean_psi * 2 - 1
         events_list.append(event)
 
-    events_list = sample_event_list(events_list)
+    # events_list = sample_event_list(events_list)
     # events_indexes = []
     # for event in events_list:
     #     events_indexes.append(int(event.number)-1)
@@ -409,15 +451,54 @@ def get_lsv_single_exp_data(majiq_bins_file, confidence, gene_name_list=None):
             'genes_dict':    genes_dict }
 
 
-def collapse_matrix(matrix):
-    """Collapse the diagonals probabilities in 1-D and return them"""
-    collapse = []
+def get_lsv_delta_exp_data(majiq_out_file, metadata_post=None, confidence=.95, threshold=.2, gene_name_list=None):
+    """
+    Load lsv delta psi pickle file. It contains a list with 2 elements:
+        [0] List with LSV bins matrices
+        [1] List with info per LSV
 
-    matrix_corner = matrix.shape[0]
-    for i in xrange(-matrix_corner, matrix_corner):
-        collapse.append(diagonal(matrix, offset=i).sum())
+    :param majiq_out_file:
+    :param metadata_post:
+    :param confidence:
+    :param threshold:
+    @return: dictionary
+    """
+    # Collapse matrix in diagonal
+    try:
+        lsv_matrix_list_info_list = np.array(pkl.load(open(majiq_out_file, 'rb')))
+    except pkl.PickleError, e:
+        print "[Error] :: Loading the file %s: %s." % (majiq_out_file, e.message)
+        sys.exit(1)
 
-    return np.array(collapse)
+    genes_dict = defaultdict(list)
+
+    lsv_list = lsv_matrix_list_info_list[0]
+    lsv_info = lsv_matrix_list_info_list[1]
+
+    for i, lsv in enumerate(lsv_list):
+        expected_psis_bins = []
+        excl_inc_perc_list = []
+        gene_name = str(lsv_info[i][1]).split(':')[0]
+
+        if not gene_name_list or gene_name in gene_name_list:
+            for junc_matrix in lsv:
+                bins = collapse_matrix(np.array(junc_matrix))
+                expected_psis_bins.append(list(bins))
+                excl_inc_perc_list.append(find_excl_incl_percentages(bins, threshold))
+            try:
+                lsv = Lsv(generate_lsv(i, expected_psis_bins, confidence))
+                lsv.set_excl_incl(excl_inc_perc_list)
+                # lsv_list.append(lsv)
+            except ValueError, e:
+                print "[WARNING] :: %s produced an error:\n%s (Skipped)" % (bins, e)
+
+            genes_dict[gene_name].append([lsv, lsv_info[i]])
+
+    # TODO: Extract experiments info from Majiq output file
+    experiments_info = [{'name': 'experiment1', 'link': '#', 'color': '#e41a1c'},
+                        {'name': 'experiment2', 'link': '#', 'color': '#377e80'}]
+
+    return {'genes_dict': genes_dict, 'experiments_info': experiments_info}
 
 # So far, this is not called anywhere cos the data should be coming in python format already. This is an ad-hoc solution
 # to read Matlab data. Using ipython, load this function, use it with a Matlab matrix and dump it using json.
@@ -436,42 +517,6 @@ def load_matlab_mat(matlab_mat):
                 to_voila[key]["PSI"+str(way+1)]['mean'] = np.mean(mat[key][:, way])
                 to_voila[key]["PSI"+str(way+1)]['quantiles'] = mquantiles(mat[key][:, way], prob=(.1, .25, .5, .75, .9))
                 to_voila[key]["PSI"+str(way+1)]['var'] = np.var(mat[key][:, way])
-
-
-class PickleEncoder(json.JSONEncoder):
-    def default(self, obj):
-        if isinstance(obj, set):
-            return list(obj)
-        if isinstance(obj, numpy.ndarray):
-            return list(obj)
-        if isinstance(obj, tuple):
-            return list(obj)
-        if isinstance(obj, numpy.int64):
-            return int(obj)
-        if isinstance(obj, Lsv):
-            return obj.to_JSON(PickleEncoder)
-
-        return json.JSONEncoder.default(self, obj)
-
-
-class LsvGraphicEncoder(json.JSONEncoder):
-    def default(self, obj):
-        if isinstance(obj, set):
-            return list(obj)
-        if isinstance(obj, np.ndarray):
-            return list(obj)
-        if isinstance(obj, tuple):
-            return list(obj)
-        if isinstance(obj, np.int64):
-            return int(obj)
-        if isinstance(obj, ExonGraphic):
-            return obj.to_JSON(PickleEncoder)
-        if isinstance(obj, JunctionGraphic):
-            return obj.to_JSON(PickleEncoder)
-        if isinstance(obj, GeneGraphic):
-            return obj.to_JSON(PickleEncoder)
-
-        return json.JSONEncoder.default(self, obj)
 
 
 def copyanything(src, dst):

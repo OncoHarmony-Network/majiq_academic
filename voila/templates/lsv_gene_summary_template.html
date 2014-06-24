@@ -28,6 +28,7 @@
 
         {% for gene_name, gene_value in genes_dict.iteritems() %}
             {% set gene_index = loop.index -1 %}
+            {{ gene_value[0][0]|debug }}
             <h2>Gene name: {{ gene_name }}; Strand: {{ gene_value[0][0].strand }};</h2>
             <canvas class="spliceGraph" width="2000px" height="200px" data-exon-list="{{ genes_json[gene_name][0] }}">
                 This browser or document mode doesn't support canvas

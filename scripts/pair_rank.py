@@ -115,7 +115,7 @@ def rank_majiq(bins_list, names, V=0.2, absolute=True, dofilter=True, E=False, r
             if area > MINTHRESHOLD or not dofilter:
                 rank.append([names[i], area])
 
-    rank.sort(key=lambda x: -x[1])
+    rank.sort(key=lambda x: x[1], reverse=True)
     return rank
 
 
@@ -144,9 +144,9 @@ def miso_reader(path, dofilter=True):
 def rank_miso(path, dofilter=True, ranknochange=False):
     rank = miso_reader(path, dofilter)
     if ranknochange: 
-        rank.sort(key=lambda x: (abs(x[2]))) #sort first by smallest delta PSI, then by bayes factor
+        rank.sort(key=lambda x: abs(x[1])) #sort first by smallest delta PSI, then by bayes factor
     else:
-        rank.sort(key=lambda x: (-abs(x[2]))) #sort first by biggest delta PSI, then by inverse bayes factor
+        rank.sort(key=lambda x: abs(x[1]), reverse=True) #sort first by biggest delta PSI, then by inverse bayes factor
     
     return rank
 
@@ -290,8 +290,8 @@ def main():
 
     import os
 
-    if not os.path.exists(os.path.dirname(args.output)):
-        os.makedirs(os.path.dirname(args.output))
+    if not os.path.exists(args.output):
+        os.makedirs(args.output)
 
     pickle.dump(ratios, open(args.output+"/ratios.pickle", 'w'))
 
