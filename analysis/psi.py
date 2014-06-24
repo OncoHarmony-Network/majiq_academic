@@ -100,15 +100,13 @@ def reads_given_psi_lsv(lsv, psi_space):
 #        print "JUNC", idx
         total_acum = 0.
         acum_samples = np.zeros(shape=(psi_space.shape[0]))
-        samples    = np.ndarray(shape=(2,junc.shape[0]))
-        samples[0,:] = junc
-        samples[1,:] = lsv.sum()
 
         total_psi = np.zeros(shape=(100,psi_space.shape[0]),dtype=np.float)
 #        print "BUCLE",
-        for pidx, paired_samples in enumerate(samples.T):
+#        pdb.set_trace()
+        for pidx, smpl in enumerate(junc):
 #            print pidx,"..",
-            bin_test = [binom_test(paired_samples[0], paired_samples[1], p = x) for x in psi_space]
+            bin_test = [binom_test(smpl, junc.sum(), p = x) for x in psi_space]
             bin_test = np.asarray(bin_test)
             total_acum = float(sum(bin_test))
             total_psi[pidx]=(bin_test/total_acum)
