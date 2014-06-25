@@ -95,8 +95,9 @@ def reads_given_psi_lsv(lsv, psi_space):
     psi = np.zeros(shape=(lsv.shape[0],psi_space.shape[0]), dtype=np.float)
     for idx, junc in enumerate(lsv):
         total_psi = np.zeros(shape=(100,psi_space.shape[0]),dtype=np.float)
+#        pdb.set_trace()
         for pidx, smpl in enumerate(junc):
-            bin_test = [binom_test(smpl, junc.sum(), p = x) for x in psi_space]
+            bin_test = [binom_test(smpl, lsv[:,pidx].sum(), p = x) for x in psi_space]
             bin_test = np.asarray(bin_test)
             total_acum = float(sum(bin_test))
             total_psi[pidx]=(bin_test/total_acum)
