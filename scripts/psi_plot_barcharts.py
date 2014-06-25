@@ -44,10 +44,10 @@ def get_low_med_high_psis(psi1_met1, psi2_met1, psi1_met2, psi2_met2, low_thres 
     low_med_high_psis_set[1][3] = np.count_nonzero(better_in_miso_mask)
 
     low_med_high_psi_diff = []
-    low_med_high_psi_diff.append(np.mean(array(calculate_ead_simple(psi1_met1, psi2_met1))[(array(psi1_met1) <= low_thres) ]) - np.mean(array(calculate_ead_simple(psi1_met2, psi2_met2))[(array(psi1_met2) <= low_thres) ]))
-    low_med_high_psi_diff.append(np.mean(array(calculate_ead_simple(psi1_met1, psi2_met1))[(array(psi1_met1) > low_thres) & (array(psi1_met1) < 1-low_thres) ]) - np.mean(array(calculate_ead_simple(psi1_met2, psi2_met2))[(array(psi1_met2) > low_thres) & (array(psi1_met2) < 1-low_thres) ]))
-    low_med_high_psi_diff.append(np.mean(array(calculate_ead_simple(psi1_met1, psi2_met1))[(array(psi1_met1) >= 1- low_thres)]) - np.mean(array(calculate_ead_simple(psi1_met2, psi2_met2))[(array(psi1_met2) >= 1- low_thres)]))
-    low_med_high_psi_diff.append(np.mean(array(calculate_ead_simple(psi1_met1, psi2_met1))) - np.mean(array(calculate_ead_simple(psi1_met2, psi2_met2))))
+    low_med_high_psi_diff.append(-(np.mean(array(calculate_ead_simple(psi1_met1, psi2_met1))[(array(psi1_met1) <= low_thres) ]) - np.mean(array(calculate_ead_simple(psi1_met2, psi2_met2))[(array(psi1_met2) <= low_thres) ])))
+    low_med_high_psi_diff.append(-(np.mean(array(calculate_ead_simple(psi1_met1, psi2_met1))[(array(psi1_met1) > low_thres) & (array(psi1_met1) < 1-low_thres) ]) - np.mean(array(calculate_ead_simple(psi1_met2, psi2_met2))[(array(psi1_met2) > low_thres) & (array(psi1_met2) < 1-low_thres) ])))
+    low_med_high_psi_diff.append(-(np.mean(array(calculate_ead_simple(psi1_met1, psi2_met1))[(array(psi1_met1) >= 1- low_thres)]) - np.mean(array(calculate_ead_simple(psi1_met2, psi2_met2))[(array(psi1_met2) >= 1- low_thres)])))
+    low_med_high_psi_diff.append(-(np.mean(array(calculate_ead_simple(psi1_met1, psi2_met1))) - np.mean(array(calculate_ead_simple(psi1_met2, psi2_met2)))))
 
     return low_med_high_psis_set, len(psi1_met1), low_med_high_psi_diff
 
@@ -234,7 +234,7 @@ def plot_delta_bars_percentages(psi_ndmatrix, majiq_num_events_list, majiq_diff_
     if is_coverage:
         ax1.set_xlabel('Coverage')
     ax1.set_ylabel('% of improved Events (LSVs)')
-    ax1.set_ylim([-.1, .25])
+    ax1.set_ylim([-.1, .35])
     ax2 = ax1.twinx()
     ax2.bar(index + bar_width, np.mean(majiq_diff_ndmatrix, axis=0), bar_width,
              alpha=opacity,
@@ -244,7 +244,7 @@ def plot_delta_bars_percentages(psi_ndmatrix, majiq_num_events_list, majiq_diff_
              label='Better in MISO')
 
     ax2.set_ylabel('E(Delta(Delta(PSI)))')
-    ax2.set_ylim([-.1, .25])
+    ax2.set_ylim([-.1, .35])
     # plt.xlabel('PSIs values')
     # plt.ylabel('% of improved # Events (LSVs)')
     plt.title(plotname)
@@ -422,6 +422,10 @@ def main():
         # lo_me_hi_mat, num_events, lo_med_high_diff = get_low_med_high_cov(psi_list1_met1, psi_list2_met1, psi_lists_met2[0], psi_lists_met2[1], np.array(coverage_list))
         # lo_me_hi_mat, num_events, lo_med_high_diff = get_low_med_high_psis(psi_list1_met1, psi_list2_met1, psi_lists_met2[0], psi_lists_met2[1])
         pickle.dump(np.array(psi_names_met1.keys())[suspicous_guys], open('suspicious.pkl', 'w'))
+        for sus_guy in np.array(psi_names_met1.keys())[suspicous_guys]:
+            print str(sus_guy).split(':')[0]
+
+        import sys
         sys.exit(1)
         majiq_better_worse_list.append(lo_me_hi_mat)
         majiq_num_events_list.append(num_events)

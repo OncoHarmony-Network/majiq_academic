@@ -1453,12 +1453,20 @@ function renderViolin(htmlElementId, results, tableId){
 
     }
 
+    function addExpectedPSI(svg, mean_value, height, boxWidth){
+        svg.append("text")
+            .attr("x", boxWidth/2)
+            .attr("y", height)
+            .attr("text-anchor", "middle")
+            .text(mean_value.toFixed(2));
+    }
+
 
     var margin={top:10, bottom:30, left:30, right:10};
 
 //    var element_jq = $("#"+htmlElementId)[0];
-    var width = 100 * results.length; //element_jq.getAttribute('width');
-    var height= 300; //element_jq.getAttribute('height');
+    var width = 150 * results.length; //element_jq.getAttribute('width');
+    var height= 150; //element_jq.getAttribute('height');
     var spacing_space = (width - margin.left - margin.right)*.05;
     var boxWidth=Math.round(((width - margin.left - margin.right)-spacing_space)/results.length);
     var boxSpacing=Math.round(spacing_space/results.length);
@@ -1501,6 +1509,7 @@ function renderViolin(htmlElementId, results, tableId){
         var g=svg.append("g").attr("transform", "translate("+(i*(boxWidth+boxSpacing)+margin.left)+",0)");
         addViolin(g, results[i], height, boxWidth, domain, 0.25, i, htmlElementId, tableId);
         addBoxPlot(g, results[i], height, boxWidth, domain, .15);
+        addExpectedPSI(g, d3.mean(results[i]), height, boxWidth);
 
     }
 
@@ -1520,12 +1529,13 @@ function translate_lsv_bins(lsv_bins, num_samples) {
         for (var ii=1; ii< bins_size + 1; ii++) {
             var num_copies = Math.round(num_samples * lsv_bins[lsv_way][ii - 1]);
             for (var bins_i=0; bins_i<num_copies; bins_i++){
-                tmp_bins.push(ii / bins_size);
+                tmp_bins.push((1/bins_size)/2 + ((ii-1) / bins_size));
             }
+            console.log((1/bins_size)/2 + ((ii-1) / bins_size));
         }
         adjusted_bins.push(tmp_bins);
     }
-    console.log(adjusted_bins);
+
     return adjusted_bins
 }
 
