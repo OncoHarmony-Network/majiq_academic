@@ -1172,7 +1172,7 @@
                     }
 
                     var lsv_data = JSON.parse($(this)[0].getAttribute("data-lsv").replace(/\\\"/g, "\'").replace(/\"/g,"").replace(/'/g, "\""));  // NOTE: lsv_data is an array to support groups
-                    var sampled_bins = translate_lsv_bins(lsv_data[0].bins, 100000);
+                    var sampled_bins = translate_lsv_bins(lsv_data[0].bins, 10000);
 //                    var sampled_bins = translate_delta_lsv_bins(lsv_data[0].bins, 1000);
 
                     var svg = renderViolin($(this).parent()[0].id, sampled_bins, table.id);
