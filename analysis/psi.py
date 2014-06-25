@@ -72,7 +72,7 @@ def empirical_delta_psi( lsv_list1, lsv_list2, logger=None):
             val = float(rate) /  float(np.sum(lsv))
             if np.isnan(val): val = 0.5
             psi1[ii] = val
-        
+
         for ii, rate in enumerate(lsv_list2[idx]):
             val = float(rate) /  float(np.sum(lsv_list2[idx]))
             if np.isnan(val): val = 0.5

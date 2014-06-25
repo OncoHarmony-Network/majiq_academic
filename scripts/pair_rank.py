@@ -306,7 +306,7 @@ def main():
     if args.fdr:
         #print "FDR:", fdr[0:10], "...", fdr[-10:], "length", fdr.shape
         pickle.dump(fdr, open("%s.pickle"%args.fdr, 'w'))
-        # pickle.dump(v_values, open("%s_v.pickle"%args.fdr, 'w'))
+        pickle.dump(v_values, open("%s_v.pickle"%args.fdr, 'w'))
 
     print "Done!"
 
