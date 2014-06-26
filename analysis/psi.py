@@ -72,7 +72,7 @@ def empirical_delta_psi( lsv_list1, lsv_list2, logger=None):
             val = float(rate) /  float(np.sum(lsv))
             if np.isnan(val): val = 0.5
             psi1[ii] = val
-        
+
         for ii, rate in enumerate(lsv_list2[idx]):
             val = float(rate) /  float(np.sum(lsv_list2[idx]))
             if np.isnan(val): val = 0.5
@@ -95,12 +95,10 @@ def reads_given_psi_lsv(lsv, psi_space):
     psi = np.zeros(shape=(lsv.shape[0],psi_space.shape[0]), dtype=np.float)
     for idx, junc in enumerate(lsv):
         total_psi = np.zeros(shape=(100,psi_space.shape[0]),dtype=np.float)
-#        pdb.set_trace()
         for pidx, smpl in enumerate(junc):
             bin_test = [binom_test(smpl, lsv[:,pidx].sum(), p = x) for x in psi_space]
-            bin_test = np.asarray(bin_test)
-            total_acum = float(sum(bin_test))
-            total_psi[pidx]=(bin_test/total_acum)
+            bin_test = np.array(bin_test)
+            total_psi[pidx]=(bin_test/bin_test.sum())
         total_psi = np.mean(total_psi,axis=0)
         psi[idx] = total_psi/total_psi.sum()
 

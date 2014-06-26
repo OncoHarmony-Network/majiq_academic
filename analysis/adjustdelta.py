@@ -275,20 +275,25 @@ def calc_mixture_pdf_lsv(beta_param, pmix):
 
 def adjustdelta_lsv( deltapsi, output, plotpath=None, title=None, numiter=10, breakiter=0.01, V=0.1, njunc=1, logger=False ) :
 
-    p_mixture = np.array([0.05, 0.95])
-    beta_params = np.array([ [1 , 1], [2000, 2000]])
 
     D = np.zeros(shape=(79,2),dtype=np.float)
     xpos = arange(-1+(0.025/2), 1, 0.025)
 
     for idx, ii in enumerate(xpos[:-1]):
         D[idx,0] = round((ii +xpos[idx+1] )/2,5)
-
     for ppv in deltapsi:
         for idx, ii in enumerate(xpos[:-1]):
             if ppv >= ii and ppv<xpos[idx+1]:
                 D[idx,1] +=1
                 break
+
+
+#    p_mixture = np.array([0.05, 0.95]) 
+#    beta_params = np.array([ [1 , 1], [2000, 2000]])
+
+    p_mixture = np.array([0.03, 0.03, 0.03, 0.91]) 
+    beta_params = np.array([[2.5, 3],[3, 2.5],[2, 2],[2000, 2000]])
+
 
     temp = open('./temp.pickle', 'wb')
     pickle.dump((D,p_mixture, beta_params), temp)
@@ -309,6 +314,7 @@ def plot_all_lsv( deltadata, beta_params, pmix, labels, figure_title):
     cmb = []
 
     for pl in xrange(beta_params.shape[0]):
+        
         plot_mixture( beta_params[pl,0], beta_params[pl,1], pmix[pl], labels[pl], sp[0,1])
         cmb.append([beta_params[pl,0], beta_params[pl,1], pmix[pl]])
 
@@ -358,7 +364,7 @@ def EMBetaMixture( D, p0_mix, beta0_mix, num_iter, min_ratio = 1e-5, logger= Fal
     logp_mix = log(pmix)
 
     logp_D, logp_Dsum, LL, zrow = loglikelihood(D, beta_mix, logp_mix )
-    plot_all_lsv( D0, beta_mix, pmix,['Uniform','beta'] , 'iteration 0')
+    plot_all_lsv( D0, beta_mix, pmix,['beta left', 'beta center', 'beta right','delta'] , 'iteration 0')
     _save_or_show(plotpath, "iter_0.jun_%s"%nj)
     if logger: logger.info("[NJ:%s] Initial Log_Likelihood %d \n"%(nj,LL))
 
@@ -386,7 +392,7 @@ def EMBetaMixture( D, p0_mix, beta0_mix, num_iter, min_ratio = 1e-5, logger= Fal
         LLold = LL
         logp_D, logp_Dsum, LL, zrow = loglikelihood(D, new_beta_mix, log(new_pmix) )
         if logger: logger.info("[NJ:%s] EM Iteration %d:\t LL: %.3f\n"%(nj,mm,LL))
-        plot_all_lsv( D0, beta_mix, pmix,['Uniform','beta'] , 'iteration %s'%str(mm+1) )
+        plot_all_lsv( D0, beta_mix, pmix,['beta left', 'beta center', 'beta right','delta'], 'iteration %s'%str(mm+1) )
         _save_or_show(plotpath, "iter_%05d.jun_%s"%(mm+1,nj))
 
         if LL < LLold :
