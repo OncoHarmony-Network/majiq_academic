@@ -273,7 +273,7 @@ def deltapair(args):
 
 
 
-def deltapsi_calc( matched_list, matched_info, fitfunc, conf, chunk, prior_matrix, logr):
+def deltapsi_calc( matched_list, matched_info, fitfunc, conf, chunk, prior_matrix, logr ):
 
     logr.info("[Th %s]: Bootstrapping for all samples..."%chunk)
     lsv_samples = [[],[]]
@@ -334,7 +334,7 @@ def deltapsi_calc( matched_list, matched_info, fitfunc, conf, chunk, prior_matri
             lsv_psi_matrix.append( psi_mat )
             if psi == 0: 
                 majiq_psi.plot_matrix(  psi_mat,
-                                    "Posterior Delta Event %s.%s (Psi1: %s Psi2: %s)"%(lsv_idx,psi, sum(data_given_psi1[psi]), sum(data_given_psi2[psi])), 
+                                    "Posterior Delta Event %s.%s (Psi1: %s Psi2: %s)"%(lidx,psi, sum(data_given_psi1[psi]), sum(data_given_psi2[psi])),
                                     "posterior_dpsi.%s.%s"%(lsv[1],psi),
                                     conf['plotpath'] )
         posterior_matrix.append(lsv_psi_matrix)

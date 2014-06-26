@@ -225,19 +225,19 @@ def generate_visualization_output( allgenes ):
         
                         for jj in gg.get_all_junctions():
                             if jj.get_coordinates()[0] == None or jj.donor is None or jj.acceptor is None: continue
-                            if jj.is_annotated() and jj.readN.sum() == 0:
+                            if jj.is_annotated() and jj.readN[exp_idx].sum() == 0:
                                 jtype= 2
-                            elif jj.is_annotated() and jj.readN.sum() > 0:
+                            elif jj.is_annotated() and jj.readN[exp_idx].sum() > 0:
                                 jtype = 0
-                            elif not jj.is_annotated() and jj.readN.sum() > mglobals.MINREADS: 
+                            elif not jj.is_annotated() and jj.readN[exp_idx].sum() > mglobals.MINREADS: 
                                 jtype = 1
                             else:
                                 jtype = 1
-                                print "ERROR VIZ", jj, jj.readN.sum(), jj.is_annotated()
+                                print "ERROR VIZ", jj, jj.readN[exp_idx].sum(), jj.is_annotated()
         #                        pdb.set_trace()
                                 continue
                             junc_l.append(jj.get_coordinates())
-                            junc_list.append(JunctionGraphic( jj.get_coordinates(), jtype, jj.readN.sum()))
+                            junc_list.append(JunctionGraphic( jj.get_coordinates(), jtype, jj.readN[exp_idx].sum()))
                         junc_l = np.asarray(junc_l)
                         exon_list = []
                         for ex in gg.get_exon_list():
@@ -252,15 +252,15 @@ def generate_visualization_output( allgenes ):
                                 for jidx, jjl in enumerate(junc_l):
                                     if ss5 != jjl[0] : continue
                                     a5.append(jidx)
-                            if ex.annotated and ex.coverage.sum() == 0.0:
+                            if ex.annotated and ex.coverage[exp_idx].sum() == 0.0:
                                 type = 2
-                            elif ex.annotated and ex.coverage.sum() > 0.0:
+                            elif ex.annotated and ex.coverage[exp_idx].sum() > 0.0:
                                 type = 0
-                            elif not ex.annotated and ex.coverage.sum() > 0.0:
+                            elif not ex.annotated and ex.coverage[exp_idx].sum() > 0.0:
                                 type = 1
                             else:
                                 type = 1
-                                print "ERROR VIZ 2", ex, ex.annotated, ex.coverage.sum()
+                                print "ERROR VIZ 2", ex, ex.annotated, ex.coverage[exp_idx].sum()
         #                        continue
                             extra_coords = []
                             if ex.annotated :
@@ -279,7 +279,7 @@ def generate_visualization_output( allgenes ):
         
                         gene_list.append(GeneGraphic(gg.get_id(),gg.get_strand(), exon_list, junc_list))
         
-            file_pi = open('%s/visual_LSE.majiq'%(mglobals.outDir),'w+')
+            file_pi = open('%s/%s.splicegraph'%(mglobals.outDir, mglobals.exp_list[exp_idx]),'w+')
             pickle.dump((gene_list), file_pi)
             file_pi.close()
 
