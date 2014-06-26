@@ -126,7 +126,11 @@ def miso_reader(path, dofilter=True):
             #event_name  sample1_posterior_mean  sample1_ci_low  sample1_ci_high sample2_posterior_mean  
             #sample2_ci_low  sample2_ci_high diff    bayes_factor    isoforms    sample1_counts  
             #sample1_assigned_counts sample2_counts  sample2_assigned_counts chrom   strand  mRNA_starts mRNA_ends
-            transcripts = sline[9].split(",")
+            try:
+                transcripts = sline[9].split(",")
+            except:
+                print line
+                raise
             delta_psi = sline[7].split(",")
             bayes_factor = sline[8]
             print bayes_factor
@@ -306,7 +310,7 @@ def main():
     if args.fdr:
         #print "FDR:", fdr[0:10], "...", fdr[-10:], "length", fdr.shape
         pickle.dump(fdr, open("%s.pickle"%args.fdr, 'w'))
-        pickle.dump(v_values, open("%s_v.pickle"%args.fdr, 'w'))
+#        pickle.dump(v_values, open("%s_v.pickle"%args.fdr, 'w'))
 
     print "Done!"
 

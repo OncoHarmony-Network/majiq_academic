@@ -64,8 +64,8 @@ def lsv_quantifiable ( list_lsv_tuple , minnonzero, min_reads, logger=False, fon
     k = 2
     for lsvdx, lsv in enumerate(list_lsv_tuple[0]):
 
-       total_count  = lsv.sum()
-       thresh_reads = min_reads + (lsv.shape[0] -2)*k
+        total_count  = lsv.sum()
+        thresh_reads = min_reads + (lsv.shape[0] -2)*k
         for idx in range(lsv.shape[0]):
             if ((not fon[1] or np.count_nonzero(lsv[idx]) >= minnonzero ) and 
                 (not fon[0] or total_count >=  thresh_reads)) :
