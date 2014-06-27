@@ -6,7 +6,7 @@ Rank MAJIQ, MISO or MATS events to test delta PSI reproducibility
 """
 import argparse
 import pickle
-
+import os
 from pylab import *
 
 
@@ -95,7 +95,6 @@ def rank_majiq(bins_list, names, V=0.2, absolute=True, dofilter=True, E=False, r
     #     # 's|1e1.1|2e1.1':'A5SS'
     # }
 
-    # names = pickle.load(open(names))
     print len(names), len(bins_list)
     for i, lsv_bins in enumerate(bins_list):
         # if names[i][2] not in lsv_types_dict.keys():
@@ -133,23 +132,18 @@ def miso_reader(path, dofilter=True):
                 raise
             delta_psi = sline[7].split(",")
             bayes_factor = sline[8]
-            print bayes_factor
-            print delta_psi
+            trans_name = sline[0]
             if len(transcripts) == 2: #only interested in 2 transcripts events for now
-                if dofilter: # below 2 means no change according to tables
-                    exons1 = transcripts[0].split('_')
-                    exons2 = transcripts[1].split('_')                
-                    trans_name = exons1[0].split('.')[0].strip("'")
-                    ret.append([trans_name, float(delta_psi[0]), float(bayes_factor)])
+                ret.append([trans_name, float(delta_psi[0]), float(bayes_factor)])
     return ret
 
 
 def rank_miso(path, dofilter=True, ranknochange=False):
     rank = miso_reader(path, dofilter)
     if ranknochange: 
-        rank.sort(key=lambda x: abs(x[1])) #sort first by smallest delta PSI, then by bayes factor
+        rank.sort(key=lambda x: (abs(x[1]), x[2])) #sort first by smallest delta PSI, then by bayes factor
     else:
-        rank.sort(key=lambda x: abs(x[1]), reverse=True) #sort first by biggest delta PSI, then by inverse bayes factor
+        rank.sort(key=lambda x: (abs(x[1]), x[2]), reverse=True) #sort first by biggest delta PSI, then by inverse bayes factor
     return rank
 
 
@@ -189,16 +183,39 @@ def _save_or_show(plotpath, name):
 def _is_in_chunk(event1, chunk):
     for event2 in chunk: 
         if event1[0] == event2[0]: #event[0] is the name of the event
-            return 1   
-
+            return 1
     return 0
+
+
+def event_names_set_mats(rank):
+    pass
+
+
+def event_names_set_miso(rank):
+    return {ranked_pair[0] for ranked_pair in rank}
+
+
+def event_names_set_majiq(rank):
+    return {ranked_pair[0][1] for ranked_pair in rank}
+
+
+def skim_rank(rank, common_names, method):
+    # print "Before filter: %d" % len(rank)
+    if method == 'majiq':
+        names = [ranked_pair[0][1] for ranked_pair in rank]
+    if method == 'miso':
+        names = [ranked_pair[0] for ranked_pair in rank]
+
+    common_index = np.array([name in common_names for name in names])
+    # print "After filter: %d" % np.array(rank)[common_index].size
+    return np.array(rank)[common_index]
 
 def main():
     parser = argparse.ArgumentParser(description="")
-    parser.add_argument('pair', nargs='+', help='')
+    parser.add_argument('--majiq-files', required=True, dest='majiq_files', nargs=2, help='MAJIQ files with paired events to analyze')
+    parser.add_argument('--miso-files', dest='miso_files', nargs=2, help='MISO files with paired events to analyze')
+    parser.add_argument('--mats-files', dest='mats_files', nargs=2,help='MATS files with paired events to analyze')
     parser.add_argument('--output', required=True, help='Output file path')
-    parser.add_argument('--miso', default=False, action = 'store_true', help='Analyze MISO input')
-    parser.add_argument('--mats', default=False, action= 'store_true', help='Analyze MATS input')
     parser.add_argument('--max',  default=1000, type = int, help="Max number of events to analyze")
     parser.add_argument('--V', default=0.2, type = float, help="Steps of best events to take")
     parser.add_argument('--E', default=False, action="store_true", help="For MAJIQ, calculate sum_v P(deltaPSI > V)")
@@ -209,108 +226,126 @@ def main():
     parser.add_argument('--fullrank', default=False, action='store_true', help="Benchmark searching for events in full ranking on rank2")
     parser.add_argument('--fdr', default=None, help="In addition to the rank, calculate the False Discovery Rate. Only works with --fullrank")
     parser.add_argument('--ranknochange', default=False, action='store_true', help="Calculate P(deltaPSI < V) instead of P(deltaPSI > V) to rank first the ones with low delta PSI")
+    parser.add_argument('--intersect-events', dest='intersect_events', default=False, action='store_true', help="Intersect the events among all the pairs")
     args = parser.parse_args()
 
     print args
 
     print "Calculating ranks..."
-    if args.miso:
-        rank1 = array(rank_miso(args.pair[0], args.filter, args.ranknochange))
-        rank2 = array(rank_miso(args.pair[1], args.filter, args.ranknochange))
-    elif args.mats:
-        rank1 = array(rank_mats(args.pair[0], args.filter, args.ranknochange))
-        rank2 = array(rank_mats(args.pair[1], args.filter, args.ranknochange))
-    else:
-        # NEW
-        majiq1 = pickle.load(open(args.pair[0], 'r'))
-        majiq2 = pickle.load(open(args.pair[1], 'r'))
-        rank1 = rank_majiq(majiq1[0], majiq1[1], args.V, args.absolute, args.filter, args.E, args.ranknochange)
-        rank2 = rank_majiq(majiq2[0], majiq2[1], args.V, args.absolute, args.filter, args.E, args.ranknochange)
+    ranks = {'majiq': [],
+             'miso': [],
+             'mats': []}
+
+    if args.miso_files:
+        for file in args.miso_files:
+            ranks['miso'].append(array(rank_miso(file, args.filter, args.ranknochange)))
+    if args.mats_files:
+        for file in args.mats_files:
+            ranks['mats'].append(array(rank_mats(file, args.filter, args.ranknochange)))
+    if args.majiq_files:
+        for file in args.majiq_files:
+            majiq_data = pickle.load(open(file, 'r'))
+            ranks['majiq'].append(rank_majiq(majiq_data[0], majiq_data[1], args.V, args.absolute, args.filter, args.E, args.ranknochange))
+
+    if args.intersect_events:
+        print "Computing intersection of events..."
+        common_names = event_names_set_majiq(ranks['majiq'][0]).intersection(event_names_set_majiq(ranks['majiq'][1]))
+
+        print "Initial set (from MAJIQ): %d LSVs" % len(common_names)
+        if args.mats_files:
+            mats_set = event_names_set_mats(ranks['mats'][0]).intersection(event_names_set_mats(ranks['mats'][1]))
+            common_names = common_names.intersection(mats_set)
+            print "After intersected with MATS: %d LSVs" % len(common_names)
+        else:
+            del ranks['mats']
+        if args.miso_files:
+            miso_set = event_names_set_miso(ranks['miso'][0]).intersection(event_names_set_miso(ranks['miso'][1]))
+            common_names = common_names.intersection(miso_set)
+            print "After intersected with MISO: %d LSVs" % len(common_names)
+        else:
+            del ranks['miso']
 
 
+    for method_name, ranks_pair in ranks.items():
+        print "Ranking %s...." % method_name
+        if args.intersect_events:
+            print "Skimming rankings, discarding events (LSVs) not common for %s..." % method_name
+            for ii, rank in enumerate(ranks_pair):
+                ranks_pair[ii] = skim_rank(rank, common_names, method_name)
 
-        app = []
-        for xidx, xx in enumerate(rank1):
-            print xx[0][1], xx[1]
-            app.append(xx[0][1])
-        ot = open('./rank.pkl','w+')
-        pickle.dump(app,ot)
-        ot.close()
+        print "Final lengths: %d, %d"  % (len(ranks_pair[0]), len(ranks_pair[1]))
+        rank1, rank2 = ranks_pair
+        print "Num events", len(rank1), len(rank2)
+        print "Calculating the ratios..."
+        #calculate the ratios
+        ratios = []
 
+        max_events = min(args.max +1, min(len(rank1), len(rank2)))
 
-    print "Num events", len(rank1), len(rank2)
-    print "Calculating the ratios..."
-    #calculate the ratios
-    ratios = []
-
-    max_events = min(args.max +1, min(len(rank1), len(rank2)))
-
-    fdr = []
-    if args.proximity or args.fullrank:
-        #Using proximity or full rank window
-        if args.proximity: print "Using proximity window of %s..."%args.proximity
-        else: print "Using full rank2 for all events %s..."%args.max
-        found = 0
-        fdr = [0] #zero to avoid using "first" flag for first element
-        v_values = []
-        for i in xrange(max_events):
-            if args.proximity:
-                min_chunk = max(0, i-args.proximity/2)
-                max_chunk = min_chunk+args.proximity
-
-            elif args.fullrank: #check in the whole set instead of subsets
-                min_chunk = 0
-                max_chunk = max_events
-
-            if i % 20 == 0:
-                print "Event rank1 n=%s. Window rank2: %s-%s"%(i, min_chunk, max_chunk)  
-            
-            #check if event1 is inside the window of rank2
-            found += _is_in_chunk(rank1[i], list(rank2[min_chunk:max_chunk]))
-            if args.fdr:
-                v_values.append(rank1[i][1])
-                fdr.append(fdr[-1]+v_values[-1])
-
-            ratios.append(float(found))
-
-        fdr.pop(0) #remove now useless first item
-        #normalize ratios
-        ratios = array(ratios)
-        ratios /= ratios.shape[0]
-        if args.fdr: #normalize fdr if we are calculating it
-            fdr = array(fdr)
-            fdr /= fdr.shape[0]
-
-    else: #"equalrank" chunks of same n size in both ranks
-        for i in xrange(max_events):
-            chunk1 = list(rank1[0:i]) 
-            chunk2 = list(rank2[0:i])
-            #check if event1 is into chunk2
+        fdr = []
+        if args.proximity or args.fullrank:
+            #Using proximity or full rank window
+            if args.proximity: print "Using proximity window of %s..."%args.proximity
+            else: print "Using full rank2 for all events %s..."%args.max
             found = 0
-            for event1 in chunk1:
-                found += _is_in_chunk(event1, chunk2)
-                        
-            ratios.append(float(found) / args.max)
-            if i % 20 == 0:
-                print "%s..."%i,
-                sys.stdout.flush()
+            fdr = [0] #zero to avoid using "first" flag for first element
+            v_values = []
+            for i in xrange(max_events):
+                if args.proximity:
+                    min_chunk = max(0, i-args.proximity/2)
+                    max_chunk = min_chunk+args.proximity
 
-        ratios = array(ratios)
-    
-    print "RESULT:", ratios[0:10], "...", ratios[-10:], "length", ratios.shape
-    print "Saving... in %s" % args.output
+                elif args.fullrank: #check in the whole set instead of subsets
+                    min_chunk = 0
+                    max_chunk = max_events
 
-    import os
+                if i % 20 == 0:
+                    print "Event rank1 n=%s. Window rank2: %s-%s"%(i, min_chunk, max_chunk)
 
-    if not os.path.exists(args.output):
-        os.makedirs(args.output)
+                #check if event1 is inside the window of rank2
+                found += _is_in_chunk(rank1[i], list(rank2[min_chunk:max_chunk]))
+                if args.fdr:
+                    v_values.append(rank1[i][1])
+                    fdr.append(fdr[-1]+v_values[-1])
 
-    pickle.dump(ratios, open(args.output+"/ratios.pickle", 'w'))
+                ratios.append(float(found))
 
-    if args.fdr:
-        #print "FDR:", fdr[0:10], "...", fdr[-10:], "length", fdr.shape
-        pickle.dump(fdr, open("%s.pickle"%args.fdr, 'w'))
-#        pickle.dump(v_values, open("%s_v.pickle"%args.fdr, 'w'))
+            fdr.pop(0) #remove now useless first item
+            #normalize ratios
+            ratios = array(ratios)
+            ratios /= ratios.shape[0]
+            if args.fdr: #normalize fdr if we are calculating it
+                fdr = array(fdr)
+                fdr /= fdr.shape[0]
+
+        else: #"equalrank" chunks of same n size in both ranks
+            for i in xrange(max_events):
+                chunk1 = list(rank1[0:i])
+                chunk2 = list(rank2[0:i])
+                #check if event1 is into chunk2
+                found = 0
+                for event1 in chunk1:
+                    found += _is_in_chunk(event1, chunk2)
+
+                ratios.append(float(found) / args.max)
+                if i % 20 == 0:
+                    print "%s..."%i,
+                    sys.stdout.flush()
+
+            ratios = array(ratios)
+
+        print "RESULT:", ratios[0:10], "...", ratios[-10:], "length", ratios.shape
+        print "Saving... in %s" % args.output
+
+        if not os.path.exists(args.output):
+            os.makedirs(args.output)
+
+        pickle.dump(ratios, open(args.output+"/ratios.%s.pickle" % method_name, 'w'))
+
+        if args.fdr:
+            #print "FDR:", fdr[0:10], "...", fdr[-10:], "length", fdr.shape
+            pickle.dump(fdr, open("%s.%s.pickle" % (args.fdr, method_name), 'w'))
+            # pickle.dump(v_values, open("%s_v.pickle"%args.fdr, 'w'))
 
     print "Done!"
 
