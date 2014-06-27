@@ -4,6 +4,7 @@ Rank MAJIQ, MISO or MATS events to test delta PSI reproducibility
 
 
 """
+from collections import defaultdict
 import argparse
 import pickle
 import os
@@ -232,9 +233,7 @@ def main():
     print args
 
     print "Calculating ranks..."
-    ranks = {'majiq': [],
-             'miso': [],
-             'mats': []}
+    ranks = defaultdict(list)
 
     if args.miso_files:
         for file in args.miso_files:
@@ -256,14 +255,12 @@ def main():
             mats_set = event_names_set_mats(ranks['mats'][0]).intersection(event_names_set_mats(ranks['mats'][1]))
             common_names = common_names.intersection(mats_set)
             print "After intersected with MATS: %d LSVs" % len(common_names)
-        else:
-            del ranks['mats']
+
         if args.miso_files:
             miso_set = event_names_set_miso(ranks['miso'][0]).intersection(event_names_set_miso(ranks['miso'][1]))
             common_names = common_names.intersection(miso_set)
             print "After intersected with MISO: %d LSVs" % len(common_names)
-        else:
-            del ranks['miso']
+
 
 
     for method_name, ranks_pair in ranks.items():
@@ -272,8 +269,8 @@ def main():
             print "Skimming rankings, discarding events (LSVs) not common for %s..." % method_name
             for ii, rank in enumerate(ranks_pair):
                 ranks_pair[ii] = skim_rank(rank, common_names, method_name)
+            print "Final lengths: %d, %d"  % (len(ranks_pair[0]), len(ranks_pair[1]))
 
-        print "Final lengths: %d, %d"  % (len(ranks_pair[0]), len(ranks_pair[1]))
         rank1, rank2 = ranks_pair
         print "Num events", len(rank1), len(rank2)
         print "Calculating the ratios..."
