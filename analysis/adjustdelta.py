@@ -143,7 +143,7 @@ def truncate_betadists(beta_dists):
         new_a, new_b = ab_from_meanvar(mean, variance)
         new_betadist.append([new_a, new_b, pi])
 
-    return new_betadist
+    returnnew_betadist
 
 
 def calc_mixture_pdf(beta_dists):
@@ -273,6 +273,15 @@ def calc_mixture_pdf_lsv(beta_param, pmix):
 
     return x_pos, array(mixture_pdf)
 
+
+def calculate_beta_params( mean, vari, sample_size ):
+
+    b = (1 - mean) * sample_size
+    a = mean *sample_size
+
+    return [a, b]
+
+
 def adjustdelta_lsv( deltapsi, output, plotpath=None, title=None, numiter=10, breakiter=0.01, V=0.1, njunc=1, logger=False ) :
 
 
@@ -281,6 +290,8 @@ def adjustdelta_lsv( deltapsi, output, plotpath=None, title=None, numiter=10, br
 
     for idx, ii in enumerate(xpos[:-1]):
         D[idx,0] = round((ii +xpos[idx+1] )/2,5)
+        if D[idx,0] == 0 : zero_idx = idx 
+
     for ppv in deltapsi:
         for idx, ii in enumerate(xpos[:-1]):
             if ppv >= ii and ppv<xpos[idx+1]:
@@ -288,9 +299,26 @@ def adjustdelta_lsv( deltapsi, output, plotpath=None, title=None, numiter=10, br
                 break
 
 
-    p_mixture = np.array([0.05, 0.95]) 
-    beta_params = np.array([ [1 , 1], [2000, 2000]])
-    labels = ['Uniform','Center']
+    total = D[:,1].sum()
+    num_center = D[zero_idx-3,1].sum()+D[zero_idx+3,1].sum() * D[zero_idx,1]
+
+    p_mixture = np.zeros(shape=3,dtype = np.float)
+    
+    spike = calculate_beta_params ( 0.5 , 0, D[zero_idx,1] )
+    p_mixture[2] = D[zero_idx,1] / total
+    center = calculate_beta_params ( 0.5 , 0, D[zero_idx-3,1].sum()+D[zero_idx+3,1].sum() )
+    p_mixture[1] = num_center / total
+    uniform = [1,1]
+    p_mixture[0] = 1 - ((num_center + D[zero_idx,1])/total)
+    beta_params = np.array([uniform, center, spike])
+
+
+    labels = ['Uniform','center','spike']
+
+
+#    p_mixture = np.array([0.05, 0.95]) 
+#    beta_params = np.array([ [1 , 1], [2000, 2000]])
+#    labels = ['Uniform','Center']
 
 #    p_mixture = np.array([0.03, 0.03, 0.03, 0.91]) 
 #    beta_params = np.array([[2.5, 3],[3, 2.5],[2, 2],[2000, 2000]])
@@ -406,6 +434,9 @@ def EMBetaMixture( D, p0_mix, beta0_mix, num_iter, min_ratio = 1e-5, logger= Fal
         pmix = new_pmix
         beta_mix = new_beta_mix
         logp_mix = log(pmix)
+
+        #JORDI
+        beta_mix[0] = [1,1]
 
         if np.exp(LL-LLold) < (1.0+min_ratio) :
             if logger: logger.info("Ratio = %.3f < 1+R(%.3f) - Aborting ... \n"%(LL-LLold, min_ratio) )
