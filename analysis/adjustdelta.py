@@ -288,18 +288,22 @@ def adjustdelta_lsv( deltapsi, output, plotpath=None, title=None, numiter=10, br
                 break
 
 
-#    p_mixture = np.array([0.05, 0.95]) 
-#    beta_params = np.array([ [1 , 1], [2000, 2000]])
+    p_mixture = np.array([0.05, 0.95]) 
+    beta_params = np.array([ [1 , 1], [2000, 2000]])
+    labels = ['Uniform','Center']
 
-    p_mixture = np.array([0.03, 0.03, 0.03, 0.91]) 
-    beta_params = np.array([[2.5, 3],[3, 2.5],[2, 2],[2000, 2000]])
+#    p_mixture = np.array([0.03, 0.03, 0.03, 0.91]) 
+#    beta_params = np.array([[2.5, 3],[3, 2.5],[2, 2],[2000, 2000]])
+#    labels = ['beta left', 'beta center', 'beta right','delta']
 
+    
 
     temp = open('./temp.pickle', 'wb')
     pickle.dump((D,p_mixture, beta_params), temp)
     temp.close()
 
-    beta_params, pmix = EMBetaMixture( D, p_mixture, beta_params, 100, logger=logger, plotpath=plotpath, nj=njunc )
+
+    beta_params, pmix = EMBetaMixture( D, p_mixture, beta_params, 100, logger=logger, plotpath=plotpath, nj=njunc, labels=labels )
 
     x_pos, z_mixture_pdf = calc_mixture_pdf_lsv(beta_params, pmix)
     return z_mixture_pdf 
@@ -349,7 +353,7 @@ def loglikelihood(D, beta_mix, logp_mix, logger=False ):
 
     return logp_D, logp_Dsum, LL, zrow
 
-def EMBetaMixture( D, p0_mix, beta0_mix, num_iter, min_ratio = 1e-5, logger= False, plotpath = None, nj=1 ):
+def EMBetaMixture( D, p0_mix, beta0_mix, num_iter, min_ratio = 1e-5, logger= False, plotpath = None, nj=0, labels= None  ):
 
     D0 = D.copy()
     N = D.shape[0]
@@ -364,7 +368,7 @@ def EMBetaMixture( D, p0_mix, beta0_mix, num_iter, min_ratio = 1e-5, logger= Fal
     logp_mix = log(pmix)
 
     logp_D, logp_Dsum, LL, zrow = loglikelihood(D, beta_mix, logp_mix )
-    plot_all_lsv( D0, beta_mix, pmix,['beta left', 'beta center', 'beta right','delta'] , 'iteration 0')
+    plot_all_lsv( D0, beta_mix, pmix, labels , 'iteration 0')
     _save_or_show(plotpath, "iter_0.jun_%s"%nj)
     if logger: logger.info("[NJ:%s] Initial Log_Likelihood %d \n"%(nj,LL))
 
@@ -392,7 +396,7 @@ def EMBetaMixture( D, p0_mix, beta0_mix, num_iter, min_ratio = 1e-5, logger= Fal
         LLold = LL
         logp_D, logp_Dsum, LL, zrow = loglikelihood(D, new_beta_mix, log(new_pmix) )
         if logger: logger.info("[NJ:%s] EM Iteration %d:\t LL: %.3f\n"%(nj,mm,LL))
-        plot_all_lsv( D0, beta_mix, pmix,['beta left', 'beta center', 'beta right','delta'], 'iteration %s'%str(mm+1) )
+        plot_all_lsv( D0, beta_mix, pmix, labels, 'iteration %s'%str(mm+1) )
         _save_or_show(plotpath, "iter_%05d.jun_%s"%(mm+1,nj))
 
         if LL < LLold :
