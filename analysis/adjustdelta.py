@@ -331,7 +331,7 @@ def adjustdelta_lsv( deltapsi, output, plotpath=None, title=None, numiter=10, br
     temp.close()
 
 
-    beta_params, pmix = EMBetaMixture( D, p_mixture, beta_params, 100, logger=logger, plotpath=plotpath, nj=njunc, labels=labels )
+    beta_params, pmix = EMBetaMixture( D[zero_idx-3:zero_idx+4], p_mixture[1:], beta_params[1:], 100, logger=logger, plotpath=plotpath, nj=njunc, labels=labels )
 
     x_pos, z_mixture_pdf = calc_mixture_pdf_lsv(beta_params, pmix)
     return z_mixture_pdf 
@@ -399,7 +399,7 @@ def EMBetaMixture( D, p0_mix, beta0_mix, num_iter, min_ratio = 1e-5, logger= Fal
     plot_all_lsv( D0, beta_mix, pmix, labels , 'iteration 0')
     _save_or_show(plotpath, "iter_0.jun_%s"%nj)
     if logger: logger.info("[NJ:%s] Initial Log_Likelihood %.3f \n"%(nj,LL))
-
+#    pdb.set_trace()
     ones_1k = np.ones( shape=(1,K), dtype = np.float)
     for mm in xrange( num_iter ):
         new_beta_mix = beta_mix
@@ -434,9 +434,6 @@ def EMBetaMixture( D, p0_mix, beta0_mix, num_iter, min_ratio = 1e-5, logger= Fal
         pmix = new_pmix
         beta_mix = new_beta_mix
         logp_mix = log(pmix)
-
-        #JORDI
-        beta_mix[0] = [1,1]
 
         if np.exp(LL-LLold) < (1.0+min_ratio) :
             if logger: logger.info("Ratio = %.3f < 1+R(%.3f) - Aborting ... \n"%(LL-LLold, min_ratio) )
