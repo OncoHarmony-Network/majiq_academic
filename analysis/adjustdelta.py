@@ -398,7 +398,7 @@ def EMBetaMixture( D, p0_mix, beta0_mix, num_iter, min_ratio = 1e-5, logger= Fal
     logp_D, logp_Dsum, LL, zrow = loglikelihood(D, beta_mix, logp_mix )
     plot_all_lsv( D0, beta_mix, pmix, labels , 'iteration 0')
     _save_or_show(plotpath, "iter_0.jun_%s"%nj)
-    if logger: logger.info("[NJ:%s] Initial Log_Likelihood %d \n"%(nj,LL))
+    if logger: logger.info("[NJ:%s] Initial Log_Likelihood %.3f \n"%(nj,LL))
 
     ones_1k = np.ones( shape=(1,K), dtype = np.float)
     for mm in xrange( num_iter ):
