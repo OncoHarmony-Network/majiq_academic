@@ -5,9 +5,16 @@ from pylab import *
 
 def _save_or_show(plotpath, name):
     if plotpath:
-        if not os.path.exists(plotpath):
-            os.makedirs(plotpath)
-        savefig("%s/%s.png"%(plotpath, name), width=300, height=300, dpi=100)
+        if os.path.isdir(plotpath):
+            plot_base_path, plot_name = plotpath, name
+        else:
+            plot_base_path, plot_name = os.path.split(plotpath)
+            if not os.path.exists(plot_base_path):
+                os.makedirs(plot_base_path)
+            if not plot_name:
+                plot_name = name
+        print plot_base_path, plot_name
+        savefig("%s/%s.png"%(plot_base_path, plot_name), width=300, height=300, dpi=100)
         clf()
     else:
         show()  
@@ -22,7 +29,7 @@ def main():
     parser.add_argument('--colors', nargs='*',  help="Steps of best events to take")
     args = parser.parse_args()
 
-    fig = figure(figsize=[7, 7])
+    fig = figure(figsize=[7, 7]) # In inches
     #figure out how many groups of events exist
 
     font = {'size': 16} #here also 'weight' and 'family'
@@ -62,9 +69,6 @@ def main():
         else: 
             print
             plot(x_space, ratio, linetype, label=my_label, linewidth=2)
-
-
-
 
     title(args.title, fontsize=16)    
     legend(loc=2)
