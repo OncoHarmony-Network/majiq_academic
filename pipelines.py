@@ -274,7 +274,7 @@ def deltapair(args):
 
 
 def deltapsi_calc( matched_list, matched_info, fitfunc, conf, chunk, prior_matrix, logr ):
-
+    import pdb
     logr.info("[Th %s]: Bootstrapping for all samples..."%chunk)
     lsv_samples = [[],[]]
     for idx_exp, experiment in enumerate(matched_list):
