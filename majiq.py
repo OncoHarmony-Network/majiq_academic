@@ -5,48 +5,37 @@
 import argparse,math, os
 import numpy as np
 import copy
+import sys
 from multiprocessing import Pool, Manager, current_process
 import grimoire.analize as analize
 import grimoire.rnaseq_io as rnaseq_io
 import grimoire.utils.utils as utils
 import grimoire.mglobals as mglobals
-
-from grimoire.lsv import lsv_to_gff
+import grimoire.lsv  as majiq_lsv
 
 try:
     import cPickle as pickle
 except:
     import pickle
 
-def __parallel_for_splc_quant(samfiles_list, gene_list, chr, as_db, pcr_validation = {}):
-    print "START child,", current_process().name
-    for idx,exp in enumerate(samfiles_list):
-        print "READING ", idx, exp
-        rnaseq_io.read_sam_or_bam(exp, gene_list, mglobals.readLen, chr, idx )
-#        rnaseq_io.reads_for_junc_coverage(exp, gene_list, mglobals.readLen, idx )
-    analize.annotated_AS_events(gene_list, 'AS')
-    a,b = analize.rnaseq_AS_events( gene_list, chr )
-    if pcr_validation is not None:
-        utils.get_validated_pcr_events(pcr_validation,a)
-    file_name = '%s.obj'%(chr)
-    utils.prepare_MAJIQ_table( a,b,file_name)
-    print "END child, ", current_process().name
 
-def __parallel_lsv_quant(samfiles_list, gene_list, chr, as_db, pcr_validation = {}):
+def __parallel_lsv_quant(samfiles_list, gene_list, chr, as_db, pcr_validation = False):
     #print "START child,", current_process().name
-    rnaseq_io.read_sam_or_bam(samfiles_list, gene_list, mglobals.readLen, chr )
-    lsv, const = analize.LSV_detection( gene_list, chr )
-    file_name = '%s.obj'%(chr)
-    if pcr_validation is not None:
-        utils.get_validated_pcr_lsv(pcr_validation,lsv)
+    try : 
+        temp_dir = "%s/tmp/%s"%(mglobals.outDir,chr)
+        utils.create_if_not_exists(temp_dir)
+        rnaseq_io.read_sam_or_bam(samfiles_list, gene_list, mglobals.readLen, chr )
+        lsv, const = analize.LSV_detection( gene_list, chr )
+        file_name = '%s.obj'%(chr)
+        if pcr_validation :
+            utils.get_validated_pcr_lsv( lsv, temp_dir )
 
-    ''' TEST FOR GTF'''
-    gtf_list = lsv_to_gff(lsv)
-    fp = open('%s/lsv_miso.%s.pickle'%(mglobals.outDir, chr), 'wb+') 
-    pickle.dump(gtf_list,fp)
-    fp.close()
-    utils.prepare_LSV_table( lsv, const ,file_name)
+        majiq_lsv.extract_gff(lsv, temp_dir)
+        utils.prepare_LSV_table( lsv, const ,file_name)
     #print "END child, ", current_process().name
+    except Exception as e:
+        print "%s"%sys.exc_traceback.tb_lineno, e
+        sys.stdout.flush()
 
 def _new_subparser():
     return argparse.ArgumentParser(add_help=False)
@@ -86,15 +75,12 @@ def main( args ) :
             for gg in genes_l:
                 temp += gg.get_exon_list()
 
-    if int(args.ncpus) >1:
-        pool = Pool(processes=args.ncpus)              # start 4 worker processes
     chr_list = all_genes.keys()
 
-    jobs = []
-    sam_list = []
     if args.pcr_filename is not None:
         rnaseq_io.read_bed_pcr( args.pcr_filename , all_genes)
 
+    sam_list = []
     for exp_idx, exp in enumerate(mglobals.exp_list):
         SAM = "%s/%s.sorted.bam"%(mglobals.sam_dir,exp)
         if not os.path.exists(SAM): 
@@ -107,19 +93,18 @@ def main( args ) :
     if args.lsv: exec_pipe = __parallel_lsv_quant
     else: exec_pipe = __parallel_for_splc_quant
 
+    if int(args.ncpus) >1: pool = Pool(processes=args.ncpus)              # start 4 worker processes
+
     for chrom in chr_list:
         if int(args.ncpus) == 1:
             exec_pipe(sam_list, all_genes[chrom], chrom, None)
         else:
-            jobs.append(pool.apply_async( exec_pipe, [sam_list, all_genes[chrom], chrom, None]))
+            pool.apply_async( exec_pipe, [sam_list, all_genes[chrom], chrom, None])
 
     print "MASTER JOB.... waiting childs"
     genes = np.zeros(shape=(len(mglobals.exp_list)),dtype=np.dtype('object'))
     if int(args.ncpus) >1:
         pool.close()
-        for idx, j in enumerate(jobs):
-            p=j.get()
-            print p
         pool.join()
 
     utils.generate_visualization_output(all_genes)
@@ -128,10 +113,10 @@ def main( args ) :
     #utils.plot_gc_content()
     utils.merge_and_create_MAJIQ( chr_list, 'tojuan.majiq')
 
-
     fp = open('%s/lsv_miso.gtf'%(mglobals.outDir),'w+')
     for chrom in chr_list:
-        gtf_list = pickle.load(open('%s/lsv_miso.%s.pickle'%(mglobals.outDir, chrom), 'rb'))
+        temp_dir = "%s/tmp/%s"%(mglobals.outDir,chrom)
+        gtf_list = pickle.load(open('%s/temp_gff.pkl'%(temp_dir), 'rb'))
         for gtf in gtf_list:
             fp.write("%s\n"%gtf)
     fp.close()
