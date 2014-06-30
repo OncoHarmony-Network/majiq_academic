@@ -41,6 +41,7 @@ class Exon:
         self.coverage = np.zeros(shape=(mglobals.num_experiments))
         self.score = None
         self.pcr_name = None
+        self.pcr_candidate = None
         self.ir = False
         self.db_coord = (start, end)
         self.annotated = annot
@@ -93,10 +94,19 @@ class Exon:
     def set_ir(self, ir) :
         self.ir |= ir
 
-    def set_pcr_score(self, pcr_name, score):
+    def set_pcr_score(self, pcr_name, score, candidate):
         self.pcr_name = pcr_name
         self.score = score
+        self.pcr_candidate = candidate
 
+    def get_pcr_score(self):
+        return self.score
+
+    def get_pcr_candidate(self):
+        return self.pcr_candidate
+
+    def get_pcr_name(self):
+        return self.pcr_name
 
     def add_new_read(self, start, end, readSeq, s3p_junc, s5p_junc):
 

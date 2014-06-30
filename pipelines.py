@@ -451,6 +451,7 @@ class DeltaPair(BasicPipeline):
                 for nt in xrange(self.nthreads):
                     lb = nt * csize
                     ub = min( (nt+1) * csize, len(matched_lsv[0]) )
+                    if nt == self.nthreads - 1 : ub = len(matched_lsv[0]) )
                     lsv_list = [matched_lsv[0][lb:ub],matched_lsv[1][lb:ub]]
                     lsv_info = matched_info[lb:ub]
                     jobs.append(pool.apply_async( parallel_delta_psi_wrapper, [ lsv_list, 

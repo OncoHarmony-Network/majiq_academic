@@ -84,6 +84,11 @@ class LSV(object):
     def is_Starget(self):
         return bool(self.type == STARGET)
 
+    def has_pcr_score(self):
+        return (self.exon.get_score()!= None)
+
+    def get_pcr_score(self):
+        return self.exon.get_score()
 
     def set_type( self, jlist, tlb_junc ):
         ex_id = self.exon.get_id()
@@ -188,7 +193,7 @@ def extract_SE_events( list_lsv_per_gene ):
         A = slist[sindx].acceptor.get_coordinates()
         #ret_list.append( (C1.)
 
-def lsv_to_gff( list_lsv ):
+def extract_gff( list_lsv, outDir ):
 
 
     gtf = set()
@@ -240,7 +245,12 @@ def lsv_to_gff( list_lsv ):
                 lsv_gtf = '\n'.join(trans)
                 gtf.add(lsv_gtf)
 
-    return sorted(gtf)
+    gtf.sort()
+    fp = open('%s/temp_gff.pkl'%(outDir), 'wb+') 
+    pickle.dump(gtf,fp)
+    fp.close()
+
+    return gtf
 
 
 def print_lsv_extype ( list_lsv, filename ):
