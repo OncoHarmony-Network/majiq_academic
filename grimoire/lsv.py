@@ -1,7 +1,7 @@
 import numpy as np
 import grimoire.mglobals as mglobals
 import scipy
-
+import pickle
 import pdb
 
 SSOURCE = 'source'
@@ -245,7 +245,7 @@ def extract_gff( list_lsv, outDir ):
                 lsv_gtf = '\n'.join(trans)
                 gtf.add(lsv_gtf)
 
-    gtf.sort()
+    gtf = sorted(gtf)
     fp = open('%s/temp_gff.pkl'%(outDir), 'wb+') 
     pickle.dump(gtf,fp)
     fp.close()
