@@ -300,16 +300,18 @@ def adjustdelta_lsv( deltapsi, output, plotpath=None, title=None, numiter=10, br
 
 
     total = D[:,1].sum()
-    num_center = D[zero_idx-3,1].sum()+D[zero_idx+3,1].sum() * D[zero_idx,1]
+    num_spike = D[zero_idx,1]
+    num_lowcenter = D[zero_idx-3:zero_idx+3,1].sum() - num_spike
 
     p_mixture = np.zeros(shape=3,dtype = np.float)
     
-    spike = calculate_beta_params ( 0.5 , 0, D[zero_idx,1] )
-    p_mixture[2] = D[zero_idx,1] / total
-    center = calculate_beta_params ( 0.5 , 0, D[zero_idx-3,1].sum()+D[zero_idx+3,1].sum() )
-    p_mixture[1] = num_center / total
+    spike = calculate_beta_params ( 0.5 , 0, num_spike )
+    p_mixture[2] = num_spike / total
+#    pdb.set_trace()
+    center = calculate_beta_params ( 0.5 , 0, num_lowcenter ) 
+    p_mixture[1] = num_lowcenter / total
     uniform = [1,1]
-    p_mixture[0] = 1 - ((num_center + D[zero_idx,1])/total)
+    p_mixture[0] = 1 - ((num_lowcenter + num_spike)/total)
     beta_params = np.array([uniform, center, spike])
 
 
@@ -331,7 +333,7 @@ def adjustdelta_lsv( deltapsi, output, plotpath=None, title=None, numiter=10, br
     temp.close()
 
 
-    beta_params, pmix = EMBetaMixture( D[zero_idx-3:zero_idx+4], p_mixture[1:], beta_params[1:], 100, logger=logger, plotpath=plotpath, nj=njunc, labels=labels )
+    beta_params, pmix = EMBetaMixture( D, p_mixture, beta_params, 0, logger=logger, plotpath=plotpath, nj=njunc, labels=labels )
 
     x_pos, z_mixture_pdf = calc_mixture_pdf_lsv(beta_params, pmix)
     return z_mixture_pdf 

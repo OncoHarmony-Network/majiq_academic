@@ -193,11 +193,11 @@ def event_names_set_mats(rank):
 
 
 def event_names_set_miso(rank):
-    return {ranked_pair[0] for ranked_pair in rank}
+    return set([ranked_pair[0] for ranked_pair in rank])
 
 
 def event_names_set_majiq(rank):
-    return {ranked_pair[0][1] for ranked_pair in rank}
+    return set([ranked_pair[0][1] for ranked_pair in rank])
 
 
 def skim_rank(rank, common_names, method):

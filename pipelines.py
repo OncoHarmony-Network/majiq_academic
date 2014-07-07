@@ -274,7 +274,7 @@ def deltapair(args):
 
 
 def deltapsi_calc( matched_list, matched_info, fitfunc, conf, chunk, prior_matrix, logr ):
-
+    import pdb
     logr.info("[Th %s]: Bootstrapping for all samples..."%chunk)
     lsv_samples = [[],[]]
     for idx_exp, experiment in enumerate(matched_list):
@@ -451,7 +451,7 @@ class DeltaPair(BasicPipeline):
                 for nt in xrange(self.nthreads):
                     lb = nt * csize
                     ub = min( (nt+1) * csize, len(matched_lsv[0]) )
-                    if nt == self.nthreads - 1 : ub = len(matched_lsv[0]) )
+                    if nt == self.nthreads - 1 : ub = len(matched_lsv[0]) 
                     lsv_list = [matched_lsv[0][lb:ub],matched_lsv[1][lb:ub]]
                     lsv_info = matched_info[lb:ub]
                     jobs.append(pool.apply_async( parallel_delta_psi_wrapper, [ lsv_list, 

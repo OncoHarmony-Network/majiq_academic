@@ -16,9 +16,9 @@ from matplotlib import pyplot
 import grimoire.mglobals as mglobals
 from grimoire.junction import majiq_junc
 from grimoire.lsv import print_lsv_extype
-from splice_graphics.exonGraphic import ExonGraphic 
-from splice_graphics.geneGraphic import GeneGraphic 
-from splice_graphics.junctionGraphic import JunctionGraphic 
+from voila.splice_graphics.exonGraphic import ExonGraphic 
+from voila.splice_graphics.geneGraphic import GeneGraphic 
+from voila.splice_graphics.junctionGraphic import JunctionGraphic 
 
 def create_if_not_exists(my_dir, logger=False):
     "Create a directory path if it does not exist"

@@ -125,7 +125,9 @@ def main( args ) :
     fp2 = open('%s/pcr_match.tab'%(mglobals.outDir),'w+')
     for chrom in chr_list:
         temp_dir = "%s/tmp/%s"%(mglobals.outDir,chrom)
-        gtf_list = pickle.load(open('%s/temp_gff.pkl'%(temp_dir), 'rb'))
+        yfile = '%s/temp_gff.pkl'%(temp_dir)
+        if not os.path.exists(yfile): continue
+        gtf_list = pickle.load(yfile)
         for gtf in gtf_list:
             fp.write("%s\n"%gtf)
         pcr_l = pickle.load(open('%s/pcr.pkl'%(temp_dir),'rb'))
