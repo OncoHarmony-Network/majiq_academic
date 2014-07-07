@@ -619,31 +619,6 @@ class DeltaGroup(DeltaPair, CalcPsi):
 
         return comb_matrix, comb_names
 
-
-    def comb_replicas(self, pairs_posteriors, weights1=None, weights2=None):
-        "Combine all replicas per event into a single average replica. Weights per experiment can be provided"
-        weights1 = self.equal_if_not(weights1) 
-        weights2 = self.equal_if_not(weights2) 
-        comb_matrix = []
-        comb_names = []
-        FILTERMIN = len(self.k_ref)-1 #filter events that show on all replicas
-        for name, matrices in pairs_posteriors.items():
-            for k, matrix in enumerate(matrices):
-                #i = k / len(self.files1) #infers the weight1 index given the position of the matrix
-                #j = k % len(self.files2)
-                i, j = self.k_ref[k]
-                if k == 0: #first iteration
-                    comb = matrix*weights1[i]*weights2[j]
-                else:
-                    comb += matrix*weights1[i]*weights2[j]
-
-            if k == FILTERMIN:
-                comb /= sum(comb) #renormalize so it sums 1
-                comb_matrix.append(comb)
-                comb_names.append(name)
-
-        return comb_matrix, comb_names
-
     def _pair_path(self, i, j):
         return "%s%s_%s_"%(self.output, i, j)
 
@@ -661,6 +636,57 @@ class DeltaGroup(DeltaPair, CalcPsi):
         self.logger.info("Running deltagroups...")
         self.logger.info("GROUP 1: %s"%self.files1)
         self.logger.info("GROUP 2: %s"%self.files2)
+
+        for ii, file in enumerate(self.files1):
+            lsv_junc, const = majiq_io.load_data_lsv(file, self.logger) 
+
+            #fitting the function
+            fitfunc1[ii] = self.fitfunc(const)
+            filtered_lsv1[ii] = self.mark_stacks_lsv( lsv_junc, fitfunc1[ii])
+
+        filtered_lsv1 = filter.quantifiable_in group( filtered_lsv1 )
+
+        for ii, file in enumerate(self.files2):
+            lsv_junc, const = majiq_io.load_data_lsv(file, self.logger) 
+
+            #fitting the function
+            fitfunc1[ii] = self.fitfunc(const)
+            filtered_lsv2[ii] = self.mark_stacks_lsv( lsv_junc, fitfunc2[ii])
+
+        filtered_lsv2 = filter.quantifiable_in group( filtered_lsv2 )
+
+
+        lsv_samples1 = [[] for xx in self.files1]
+        for ii, file in enumerate(self.files1):
+            psi_space, prior_matrix[ii] = majiq_psi.gen_prior_matrix(self, filtered_lsv1, filtered_lsv2, output)
+            logr.info("[Th %s]: Bootstrapping for all samples..."%chunk)
+            for idx, jj in enumerate(filtered_lsv1[0][ii]):
+                m_lsv, var_lsv, s_lsv = sample_from_junctions(  junction_list = jj,
+                                                                m = conf['m'],
+                                                                k = conf['k'],
+                                                                discardzeros= conf['discardzeros'],
+                                                                trimborder  = conf['trimborder'],
+                                                                fitted_func = fitfunc[idx_exp],
+                                                                debug       = conf['debug'],
+                                                                Nz          = conf['Nz'])
+                lsv_samples1[ii].append( s_lsv )
+
+        matrices =[]
+        for idx, exp_ii in enumerate(lsv_samples1):
+            for jdx, exp_jj in enumerate(lsv_samples2):
+                 matrices[idx][jdx] = delta_calculations()
+
+                if not self.fixweights1: #get relevant events for weights calculation
+                    relevant_events.extend(rank_deltas_lsv(matrices, info, E=True)[:self.numbestchanging])
+                    pairs_posteriors[name].append(matrices[k]) #pairing all runs events
+
+
+
+
+
+
+
+
         self.logger.info("Calculating pairs...")
         pairs_posteriors = defaultdict(list)
         self.k_ref = [] #maps the i, j reference for every matrix (this could be do in less lines with div and mod, but this is safer) 
@@ -679,9 +705,9 @@ class DeltaGroup(DeltaPair, CalcPsi):
                     matrices[i,j], info[i,j] = self.pairdelta_lsv(self.files1[i], self.files2[j], path)
                     self.logger.info("Saving pair posterior for %s, %s"%(i, j))
 
-                if not self.fixweights1: #get relevant events for weights calculation
-                    relevant_events.extend(rank_deltas_lsv(matrices, info, E=True)[:self.numbestchanging])
-                    pairs_posteriors[name].append(matrices[k]) #pairing all runs events
+#        if not self.fixweights1: #get relevant events for weights calculation
+#             relevant_events.extend(rank_deltas_lsv(matrices, info, E=True)[:self.numbestchanging])
+#             pairs_posteriors[name].append(matrices[k]) #pairing all runs events
 
         self.logger.info("All pairs calculated, calculating weights...")
         self.logger.info("Obtaining weights from Delta PSI...")
