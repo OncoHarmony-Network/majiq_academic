@@ -179,17 +179,23 @@ def LSV_detection( gene_list, chr ):
             gn.check_exons()
             count = gn.get_read_count().sum()
             if count == 0: continue
-            mat, exon_list, tlb, varSS = gn.get_rnaseq_mat(const_set,lsv = True)
+            mat, exon_list, tlb, varSS = gn.get_rnaseq_mat(const_set, lsv = True)
+            vip = []
+            for ex in exon_list:
+                sc = ex.get_pcr_score()
+                if sc is None: continue
+                vip.append(sc)
+
             for ss in range(2):
                 for ssnum in range(20):
                     num_SS_var[ss][ssnum] +=varSS[ss][ssnum]
             num_SS_var [2]+= varSS[2]
             #num_SS_var [1]+= varSS[1]
 
-            print "---------------- %s --------------"%gn.get_id()
+#            print "---------------- %s --------------"%gn.get_id()
             utils.print_junc_matrices(mat, tlb=tlb,fp=True)
-            SS, ST = LSV_matrix_detection(mat, tlb, (False, False, False))
-
+            SS, ST = LSV_matrix_detection(mat, tlb, (False, False, False), vip)
+            print "CONT"
             for lsv_index, lsv_lst in enumerate((SS,ST)):
                 lsv_type = (SSOURCE,STARGET)[lsv_index]
                 sstype = ['5prime','3prime'][lsv_index]
@@ -228,7 +234,7 @@ def LSV_detection( gene_list, chr ):
 
     return lsv_list, const_set
 
-def LSV_matrix_detection( mat, exon_to_ss, b_list ):
+def LSV_matrix_detection( mat, exon_to_ss, b_list, vip_set=[]):
     '''
        Rules for const are:
         1. All the junction from A should go to C1 or C2
@@ -242,21 +248,39 @@ def LSV_matrix_detection( mat, exon_to_ss, b_list ):
     #change bucle for iterate by exons
     for ii in range( 1, len(exon_to_ss) -1 ) :
         lsv = exon_to_ss[ii]
-        SS = mat[lsv[1][0]:lsv[1][-1]+1,:]
-        ST = mat[:,lsv[0][0]:lsv[0][-1]+1]
-
         pre_lsv = exon_to_ss[ii-1]
         post_lsv = exon_to_ss[ii+1]
 
-        single_entry_SS  = mat[ : pre_lsv[1][0]+1, post_lsv[0][0] :  ]
-        single_source_ST = mat[ : pre_lsv[1][0]+1, post_lsv[0][0] :  ]
+        #Single Source detection
+        SS = mat[lsv[1][0]:lsv[1][-1]+1,:]
+        ss_valid = False
+        cand = range(ii+1,len(exon_to_ss))
+        for ex_idx, ex in enumerate(cand):
+            pt = exon_to_ss[ex_idx]
+            junc_cand = mat[lsv[1][0]:lsv[1][-1]+1, pt[0][0]:pt[0][-1]+1]
+            if np.count_nonzero(junc_cand) < 1 : continue
+            to_trgt = mat[: pre_lsv[1][0]+1, pt[0][0]:pt[0][-1]+1]
+            if np.count_nonzero(to_trgt) > 0  and not ex_idx in vip_set: 
+                ss_valid = False
+                break
 
-        if np.count_nonzero(single_entry_SS) > 0 : continue
-
-        if np.count_nonzero(SS) >1:
+        if ss_valid and np.count_nonzero(SS) >1:
             LSV_list[0].append(ii)
 
-        if np.count_nonzero(ST) >1:
+        #Single Targe detection
+        ST = mat[:,lsv[0][0]:lsv[0][-1]+1]
+        st_valid = False
+        cand = range(0, ii)
+        for ex_idx, ex in enumerate(cand):
+            pt = exon_to_ss[ex_idx]
+            junc_cand = mat[pt[1][0]:pt[1][-1]+1, lsv[0][0]:lsv[0][-1]+1]
+            if np.count_nonzero(junc_cand) < 1 : continue
+            from_src = mat[pt[1][0]:pt[1][-1]+1,post_lsv[0][0]:]
+            if np.count_nonzero(from_src) > 0  and not ex_idx in vip_set: 
+                st_valid = False
+                break
+
+        if st_valid and  np.count_nonzero(ST) >1:
             LSV_list[1].append(ii)
 
     return LSV_list

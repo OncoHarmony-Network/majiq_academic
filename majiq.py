@@ -19,23 +19,31 @@ except:
     import pickle
 
 
-def __parallel_lsv_quant(samfiles_list, gene_list, chr, as_db, pcr_validation = False):
-    #print "START child,", current_process().name
-    try : 
-        temp_dir = "%s/tmp/%s"%(mglobals.outDir,chr)
-        utils.create_if_not_exists(temp_dir)
-        rnaseq_io.read_sam_or_bam(samfiles_list, gene_list, mglobals.readLen, chr )
-        lsv, const = analize.LSV_detection( gene_list, chr )
-        file_name = '%s.obj'%(chr)
-        if pcr_validation :
-            utils.get_validated_pcr_lsv( lsv, temp_dir )
+def majiq_builder( samfiles_list, gene_list, chr, as_db, pcr_validation = False):
 
-        majiq_lsv.extract_gff(lsv, temp_dir)
-        utils.prepare_LSV_table( lsv, const ,file_name)
-    #print "END child, ", current_process().name
+    temp_dir = "%s/tmp/%s"%(mglobals.outDir,chr)
+    utils.create_if_not_exists(temp_dir)
+    rnaseq_io.read_sam_or_bam(samfiles_list, gene_list, mglobals.readLen, chr )
+    lsv, const = analize.LSV_detection( gene_list, chr )
+    file_name = '%s.obj'%(chr)
+    if pcr_validation :
+        utils.get_validated_pcr_lsv( lsv, temp_dir )
+
+    majiq_lsv.extract_gff(lsv, temp_dir)
+    utils.prepare_LSV_table( lsv, const ,file_name)
+
+
+
+def __parallel_lsv_quant(samfiles_list, gene_list, chr, as_db, pcr_validation = False):
+    try : 
+        print "START child,", current_process().name
+        majiq_builder(samfiles_list, gene_list, chr, as_db, pcr_validation)
+
+        print "END child, ", current_process().name
     except Exception as e:
-        print "%s"%sys.exc_traceback.tb_lineno, e
+        print "Line %s:"%sys.exc_traceback.tb_lineno, e
         sys.stdout.flush()
+        raise()
 
 def _new_subparser():
     return argparse.ArgumentParser(add_help=False)
@@ -97,7 +105,7 @@ def main( args ) :
 
     for chrom in chr_list:
         if int(args.ncpus) == 1:
-            exec_pipe(sam_list, all_genes[chrom], chrom, None)
+            majiq_builder(sam_list, all_genes[chrom], chrom, None, pcr_validation=args.pcr_filename )
         else:
             pool.apply_async( exec_pipe, [sam_list, all_genes[chrom], chrom, None])
 
@@ -114,6 +122,7 @@ def main( args ) :
     utils.merge_and_create_MAJIQ( chr_list, 'tojuan.majiq')
 
     fp = open('%s/lsv_miso.gtf'%(mglobals.outDir),'w+')
+    fp2 = open('%s/pcr_match.tab'%(mglobals.outDir),'w+')
     for chrom in chr_list:
         temp_dir = "%s/tmp/%s"%(mglobals.outDir,chrom)
         yfile = '%s/temp_gff.pkl'%(temp_dir)
@@ -121,6 +130,10 @@ def main( args ) :
         gtf_list = pickle.load(yfile)
         for gtf in gtf_list:
             fp.write("%s\n"%gtf)
+        pcr_l = pickle.load(open('%s/pcr.pkl'%(temp_dir),'rb'))
+        for pcr in pcr_l:
+            fp2.write("%s\n"%pcr)
+    fp2.close()
     fp.close()
 
     mglobals.print_numbers()

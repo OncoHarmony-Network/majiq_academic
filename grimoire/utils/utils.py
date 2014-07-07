@@ -284,7 +284,7 @@ def get_validated_pcr_lsv( candidates, outDir ):
                 pcr_lsv = [lsv.exon.get_pcr_name(), name, score]
                 pcr_list.append( pcr_lsv )
                 print "PCR", ' '.join(pcr_lsv)
-    op = open('%s/pcr.pkl','w+')
+    op = open('%s/pcr.pkl'%outDir,'w+')
     pickle.dump(pcr_list, op)
     op.close()
 
