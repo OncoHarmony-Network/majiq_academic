@@ -116,7 +116,9 @@ def main( args ) :
     fp = open('%s/lsv_miso.gtf'%(mglobals.outDir),'w+')
     for chrom in chr_list:
         temp_dir = "%s/tmp/%s"%(mglobals.outDir,chrom)
-        gtf_list = pickle.load(open('%s/temp_gff.pkl'%(temp_dir), 'rb'))
+        yfile = '%s/temp_gff.pkl'%(temp_dir)
+        if not os.path.exists(yfile): continue
+        gtf_list = pickle.load(yfile)
         for gtf in gtf_list:
             fp.write("%s\n"%gtf)
     fp.close()
