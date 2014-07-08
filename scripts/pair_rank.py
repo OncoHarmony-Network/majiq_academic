@@ -10,6 +10,7 @@ import pickle
 import os
 from pylab import *
 
+RANK_TYPES = ['all', 'intersected', 'only_exp1', 'exp1_and_exp2']
 
 def print_matrix(matrix):
     "Print MAJIQ delta PSI matrix in screen"
@@ -193,10 +194,12 @@ def event_names_set_mats(rank):
 
 
 def event_names_set_miso(rank):
+    print "MISO set: %d" % len({ranked_pair[0] for ranked_pair in rank})
     return {ranked_pair[0] for ranked_pair in rank}
 
 
 def event_names_set_majiq(rank):
+    print "MAJIQ set: %d" % len({ranked_pair[0][1] for ranked_pair in rank})
     return {ranked_pair[0][1] for ranked_pair in rank}
 
 
@@ -211,9 +214,24 @@ def skim_rank(rank, common_names, method):
     # print "After filter: %d" % np.array(rank)[common_index].size
     return np.array(rank)[common_index]
 
+
+def create_restrict_plot(ratios_list):
+    import prettyplotlib as ppl
+    from scipy.integrate import simps, trapz
+
+    method_name = 'majiq'
+    for ratios in ratios_list:
+        area_simp = simps(ratios, dx=1)
+        area_trap = trapz(ratios, dx=1)
+        print "Method: %s. Last point\t\t: %.3f " % (method_name, ratios[-1])
+        print "Method: %s. Area Under Curve (Simpson)\t: %.3f " % (method_name, area_simp)
+        print "Method: %s. Area Under Curve (Trapezoid)\t: %.3f " % (method_name, area_trap)
+
+
+
 def main():
     parser = argparse.ArgumentParser(description="")
-    parser.add_argument('--majiq-files', required=True, dest='majiq_files', nargs=2, help='MAJIQ files with paired events to analyze')
+    parser.add_argument('--majiq-files', required=True, dest='majiq_files', nargs='+', help='MAJIQ files with paired events to analyze')
     parser.add_argument('--miso-files', dest='miso_files', nargs=2, help='MISO files with paired events to analyze')
     parser.add_argument('--mats-files', dest='mats_files', nargs=2,help='MATS files with paired events to analyze')
     parser.add_argument('--output', required=True, help='Output file path')
@@ -228,6 +246,8 @@ def main():
     parser.add_argument('--fdr', default=None, help="In addition to the rank, calculate the False Discovery Rate. Only works with --fullrank")
     parser.add_argument('--ranknochange', default=False, action='store_true', help="Calculate P(deltaPSI < V) instead of P(deltaPSI > V) to rank first the ones with low delta PSI")
     parser.add_argument('--intersect-events', dest='intersect_events', default=False, action='store_true', help="Intersect the events among all the pairs")
+    parser.add_argument('--type-rank', dest='type_rank', default='all', choices=RANK_TYPES, help='Configure which events are chosen for the ranking.')
+    parser.add_argument('--create_restrict_plot', dest='create_restrict_plot', default=False, action='store_true', help="Create plot for only_ex1 ranks in different restrictive conditions. Only works with --type-rank only_exp1")
     args = parser.parse_args()
 
     print args
@@ -235,16 +255,69 @@ def main():
     print "Calculating ranks..."
     ranks = defaultdict(list)
 
+    if args.majiq_files:
+        if args.type_rank == 'exp1_and_exp2':
+            # Union over events that made it into Exp1 or Exp2, then use this set for the rankings over Exp1 and Exp2 no filtered
+            # 4 files expected: exp1_filtered, exp1_nofiltered, exp2_filtered, exp2_nofiltered
+            if len(args.majiq_files) != 4:
+                print "[ERROR] :: 4 files expected (exp1_filtered, exp1_nofiltered, exp2_filtered, exp2_nofiltered), only %d given. " % len(args.majiq_files)
+                import sys
+                sys.exit(1)
+
+            # Calculated the union:
+            majiq_exp1_filt = pickle.load(open(args.majiq_files[0], 'r'))
+            majiq_exp1_nofilt = pickle.load(open(args.majiq_files[1], 'r'))
+            majiq_exp2_filt = pickle.load(open(args.majiq_files[2], 'r'))
+            majiq_exp2_nofilt = pickle.load(open(args.majiq_files[3], 'r'))
+
+            print "%s: %d" % (args.majiq_files[0], len(majiq_exp1_filt[1]))
+            print "%s: %d" % (args.majiq_files[1], len(majiq_exp1_nofilt[1]))
+            print "%s: %d" % (args.majiq_files[2], len(majiq_exp2_filt[1]))
+            print "%s: %d" % (args.majiq_files[3], len(majiq_exp2_nofilt[1]))
+
+            event_union_set = set([ranked_pair[1] for ranked_pair in majiq_exp1_filt[1]]).union(set([ranked_pair[1] for ranked_pair in majiq_exp2_filt[1]]))
+
+            names_exp1_nofilt = [info[1] for info in majiq_exp1_nofilt[1]]
+            names_exp2_nofilt = [info[1] for info in majiq_exp2_nofilt[1]]
+
+            exp1_index = np.array([name in names_exp1_nofilt for name in event_union_set])
+            exp2_index = np.array([name in names_exp2_nofilt for name in event_union_set])
+
+            ranks['majiq'].append(rank_majiq(np.array(majiq_exp1_nofilt[0])[exp1_index].tolist(), np.array(majiq_exp1_nofilt[1])[exp1_index].tolist(), args.V, args.absolute, args.filter, args.E, args.ranknochange))
+            ranks['majiq'].append(rank_majiq(np.array(majiq_exp2_nofilt[0])[exp2_index].tolist(), np.array(majiq_exp2_nofilt[1])[exp2_index].tolist(), args.V, args.absolute, args.filter, args.E, args.ranknochange))
+
+        else:
+            count_pairs = 0
+            for file_nr, file in enumerate(args.majiq_files):
+                majiq_data = pickle.load(open(file, 'r'))
+                if file_nr % 2 == 0:
+                    count_pairs += 1
+                    majiq_file1_names = majiq_data[1]
+                    ranks['majiq_' + str(count_pairs)].append(rank_majiq(majiq_data[0], majiq_data[1], args.V, args.absolute, args.filter, args.E, args.ranknochange))
+                    continue
+
+                if args.type_rank != 'all':
+                    if args.type_rank == 'only_exp1':
+                        # Select events from experiment 1
+                        exp1_index = np.array([name in majiq_file1_names for name in majiq_data[1][:len(majiq_data[0])]])
+                        ranks['majiq_' + str(count_pairs)].append(rank_majiq(np.array(majiq_data[0])[exp1_index].tolist(), np.array(majiq_data[1])[exp1_index].tolist(), args.V, args.absolute, args.filter, args.E, args.ranknochange))
+                else:
+                    ranks['majiq'].append(rank_majiq(majiq_data[0], majiq_data[1], args.V, args.absolute, args.filter, args.E, args.ranknochange))
+
     if args.miso_files:
         for file in args.miso_files:
-            ranks['miso'].append(array(rank_miso(file, args.filter, args.ranknochange)))
+            if args.type_rank == 'only_exp1':
+                # Use only MAJIQ selected events for experiment 1
+                names_miso = [miso_info[0] for miso_info in rank_miso(file, args.filter, args.ranknochange)]
+                names_majiq_exp1 = [m[1] for m in majiq_file1_names]
+                exp1_index = np.array([name in names_majiq_exp1 for name in names_miso])
+                ranks['miso'].append(array(rank_miso(file, args.filter, args.ranknochange))[exp1_index])
+            else:
+                ranks['miso'].append(array(rank_miso(file, args.filter, args.ranknochange)))
+
     if args.mats_files:
         for file in args.mats_files:
             ranks['mats'].append(array(rank_mats(file, args.filter, args.ranknochange)))
-    if args.majiq_files:
-        for file in args.majiq_files:
-            majiq_data = pickle.load(open(file, 'r'))
-            ranks['majiq'].append(rank_majiq(majiq_data[0], majiq_data[1], args.V, args.absolute, args.filter, args.E, args.ranknochange))
 
     if args.intersect_events:
         print "Computing intersection of events..."
@@ -258,11 +331,12 @@ def main():
 
         if args.miso_files:
             miso_set = event_names_set_miso(ranks['miso'][0]).intersection(event_names_set_miso(ranks['miso'][1]))
+            print "MISO intersected with itself %d " % len(miso_set)
             common_names = common_names.intersection(miso_set)
             print "After intersected with MISO: %d LSVs" % len(common_names)
 
 
-
+    only_exp1_ranks = []
     for method_name, ranks_pair in ranks.items():
         print "Ranking %s...." % method_name
         if args.intersect_events:
@@ -277,7 +351,7 @@ def main():
         #calculate the ratios
         ratios = []
 
-        max_events = min(args.max +1, min(len(rank1), len(rank2)))
+        max_events = min(args.max, min(len(rank1), len(rank2)))
 
         fdr = []
         if args.proximity or args.fullrank:
@@ -302,6 +376,7 @@ def main():
                 #check if event1 is inside the window of rank2
                 found += _is_in_chunk(rank1[i], list(rank2[min_chunk:max_chunk]))
                 if args.fdr:
+                    print rank1[i][1]
                     v_values.append(rank1[i][1])
                     fdr.append(fdr[-1]+v_values[-1])
 
@@ -316,6 +391,7 @@ def main():
                 fdr /= fdr.shape[0]
 
         else: #"equalrank" chunks of same n size in both ranks
+            import sys
             for i in xrange(max_events):
                 chunk1 = list(rank1[0:i])
                 chunk2 = list(rank2[0:i])
@@ -342,7 +418,14 @@ def main():
         if args.fdr:
             #print "FDR:", fdr[0:10], "...", fdr[-10:], "length", fdr.shape
             pickle.dump(fdr, open("%s.%s.pickle" % (args.fdr, method_name), 'w'))
-            # pickle.dump(v_values, open("%s_v.pickle"%args.fdr, 'w'))
+            pickle.dump(v_values, open("%s.%s_v.pickle" % (args.fdr, method_name), 'w'))
+
+        if "majiq" in method_name:
+            only_exp1_ranks.append(ratios)
+
+    # Debugginggg
+    if args.create_restrict_plot:
+        create_restrict_plot(ranks)
 
     print "Done!"
 
