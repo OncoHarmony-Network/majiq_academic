@@ -7,19 +7,18 @@ import logging
 import scipy.io
 import numpy as np
 import pickle,sys
-import grimoire.mglobals as mglobals
-
-from grimoire.junction import majiq_junc
 from itertools import izip
-import scipy.sparse
-import scipy.io
 from scipy.stats.mstats import mquantiles
 from scipy import interpolate
+import scipy.sparse
+import scipy.io
 from matplotlib import pyplot
+import grimoire.mglobals as mglobals
+from grimoire.junction import majiq_junc
 from grimoire.lsv import print_lsv_extype
-
-
-import pdb
+from voila.splice_graphics.exonGraphic import ExonGraphic 
+from voila.splice_graphics.geneGraphic import GeneGraphic 
+from voila.splice_graphics.junctionGraphic import JunctionGraphic 
 
 def create_if_not_exists(my_dir, logger=False):
     "Create a directory path if it does not exist"
@@ -67,53 +66,15 @@ def prepare_LSV_table(LSV_list, non_as, temp_file):
 
     for name, ind_list in mglobals.tissue_repl.items() :
         for idx,exp_idx in enumerate(ind_list) :
-#            info = {}
-#            info ['weigh_factor'] = mglobals.weigh_factor
-#            info ['experiment']   = mglobals.exp_list[exp_idx]
-#            info ['GC_bins']      = mglobals.gc_bins[exp_idx]
-#            info ['GC_bins_val']  = mglobals.gc_bins_val[exp_idx]
 
             jun = set(LSV_list[exp_idx])
-            #non_as[exp_idx].difference(jun)
             majiq_table_as    = np.zeros( shape=(len(LSV_list[exp_idx])), dtype=np.dtype('object'))
             majiq_table_nonas = np.zeros( shape=(len(non_as[exp_idx])), dtype=np.dtype('object'))
 
-            
             for iix, lsv in enumerate(LSV_list[exp_idx]) :
                 majiq_table_as[iix] = lsv.to_majiqLSV(exp_idx)
             for jix, jn in enumerate(non_as[exp_idx]) :
                 majiq_table_nonas[jix] = majiq_junc( jn , exp_idx)
-            file_pi = open("%s/temp_%s.%s"%(mglobals.temp_oDir[exp_idx],mglobals.exp_list[exp_idx], temp_file), 'w+')
-            pickle.dump((majiq_table_as, majiq_table_nonas), file_pi)
-            file_pi.close()
-
-def prepare_MAJIQ_table(junc_set, non_as, temp_file):
-
-#    print "PREPAAAER",  mglobals.tissue_repl
-    for name, ind_list in mglobals.tissue_repl.items() :
-
-        for idx,exp_idx in enumerate(ind_list) :
-#            info = {}
-#            info ['weigh_factor'] = mglobals.weigh_factor
-#            info ['experiment']   = mglobals.exp_list[exp_idx]
-#            info ['GC_bins']      = mglobals.gc_bins[exp_idx]
-#            info ['GC_bins_val']  = mglobals.gc_bins_val[exp_idx]
-
-            jun = set(junc_set[exp_idx])
-            non_as[exp_idx].difference(jun)
-            majiq_table_as    = np.zeros( shape=(len(junc_set[exp_idx]),2), dtype=np.dtype('object'))
-            majiq_table_nonas = np.zeros( shape=(len(non_as[exp_idx]),1), dtype=np.dtype('object'))
-
-            # We iterate over the inc and exc in order to fill the majiq_junc_matrix
-            
-            for iix, jn_lst in enumerate(junc_set[exp_idx]) :
-#                if jn_lst[0] == None and jn_lst[1] == None: continue
-                for lab_idx in range(2):
-                    #print jn_lst
-                    majiq_table_as[iix, lab_idx] = majiq_junc( jn_lst[lab_idx], exp_idx)
-            for jix, jn in enumerate(non_as[exp_idx]) :
-                    majiq_table_nonas[jix] = majiq_junc( jn , exp_idx)
-
             file_pi = open("%s/temp_%s.%s"%(mglobals.temp_oDir[exp_idx],mglobals.exp_list[exp_idx], temp_file), 'w+')
             pickle.dump((majiq_table_as, majiq_table_nonas), file_pi)
             file_pi.close()
@@ -205,24 +166,14 @@ def set_exons_gc_content(chrom, exon_list ):
 
 def generate_visualization_output( allgenes ):
 
-
-    from splice_graphics.exonGraphic import ExonGraphic 
-    from splice_graphics.geneGraphic import GeneGraphic 
-    from splice_graphics.junctionGraphic import JunctionGraphic 
-
-    #vExon = namedtuple("MyStruct", "start end a3 a5")
-    
     for name, ind_list in mglobals.tissue_repl.items() :
         for idx,exp_idx in enumerate(ind_list) :
             gene_list = []
             for gl in allgenes.values(): 
                 for genes_l in gl.values():
                     for gg in genes_l:
-        
                         junc_list = []
                         junc_l = []
-        #                IRlist = gene.get_IRlist()
-        
                         for jj in gg.get_all_junctions():
                             if jj.get_coordinates()[0] == None or jj.donor is None or jj.acceptor is None: continue
                             if jj.is_annotated() and jj.readN[exp_idx].sum() == 0:
@@ -233,8 +184,6 @@ def generate_visualization_output( allgenes ):
                                 jtype = 1
                             else:
                                 jtype = 1
-                                print "ERROR VIZ", jj, jj.readN[exp_idx].sum(), jj.is_annotated()
-        #                        pdb.set_trace()
                                 continue
                             junc_l.append(jj.get_coordinates())
                             junc_list.append(JunctionGraphic( jj.get_coordinates(), jtype, jj.readN[exp_idx].sum()))
@@ -260,7 +209,6 @@ def generate_visualization_output( allgenes ):
                                 type = 1
                             else:
                                 type = 1
-                                print "ERROR VIZ 2", ex, ex.annotated, ex.coverage[exp_idx].sum()
         #                        continue
                             extra_coords = []
                             if ex.annotated :
@@ -268,17 +216,9 @@ def generate_visualization_output( allgenes ):
                                     extra_coords.append([ex.start, ex.db_coord[0]-1])
                                 if ex.end > ex.db_coord[1]:
                                     extra_coords.append([ex.db_coord[1]+1, ex.end])
-        
                             eg = ExonGraphic(a3, a5, cc, type, intron_retention = ex.ir , coords_extra = extra_coords) 
                             exon_list.append( eg )
-        
-                            #if len(IRlist) == 0: continue
-                            #for ir in IRlist:
-                            #    irst, irend = ir.get_coordinates()
-                            #    if irs
-        
                         gene_list.append(GeneGraphic(gg.get_id(),gg.get_strand(), exon_list, junc_list))
-        
             file_pi = open('%s/%s.splicegraph'%(mglobals.outDir, mglobals.exp_list[exp_idx]),'w+')
             pickle.dump((gene_list), file_pi)
             file_pi.close()
@@ -305,7 +245,6 @@ def print_junc_matrices(mat, tlb=None,fp=None):
     else:
         out = sys.stdout
     out.write("\n=== BEGIN %s === \n\n"%id)
-
     (N,M)= mat.shape
     header = [0]*N
     if not tlb is None:
@@ -318,7 +257,7 @@ def print_junc_matrices(mat, tlb=None,fp=None):
                 header[n] = "%d"%(ex+1)
     out.write("\n")
     for ii in np.arange(N):
-        out.write("%s\t"%header[ii])
+        if not tlb is None: out.write("%s\t"%header[ii])
         for jj in np.arange(M):
             val = mat[ii,jj]
             out.write("%s\t"%val)
@@ -327,32 +266,27 @@ def print_junc_matrices(mat, tlb=None,fp=None):
     if fp is None: out.close()
 
 
-def get_validated_pcr_events( pcr, candidates ):
+def get_validated_pcr_lsv( candidates, outDir ):
 
-    # TODO: TO BE CHANGED FOR LSV
-    print "get_validated_pcr_events", len(candidates[0])
-    for ev in candidates[0]:
-        jinc = ev[0]
-        #print "[1]:",jinc
-        if jinc is None or jinc.acceptor is None: continue
-        print "[2]:",jinc.acceptor, jinc.acceptor.score
-        if jinc.acceptor.score is not None :
-            name = "%s:%s-%s"%(jinc.get_gene().get_id(),jinc.get_ss_5p(),jinc.get_ss_3p())
-            print "PCR", jinc.acceptor.pcr_name, name
-
-
-def get_validated_pcr_lsv( pcr, candidates ):
-
-    # TODO: TO BE CHANGED FOR LSV
+    pcr_list = []
     print "get_validated_pcr_lsv", len(candidates[0])
     for lsv in candidates[0]:
+        if not lsv.has_pcr_score() : continue
+        alt_coord = lsv.exon.get_pcr_candidate()
+        score = lsv.get_pcr_score()
         for jidx,jj in enumerate(lsv.junctions):
-            if jj is None or jj.acceptor is None: continue
-            print "[2]:",jj.acceptor, jj.acceptor.score
-            if jj.acceptor.score is not None :
+            if lsv.is_Ssource:
+                excoord = jj.acceptor.get_coordinates()
+            else:
+                excoord = jj.donor.get_coordinates()
+            if excoord[1]> alt_coord[0] and excoord[0] < alt_coord[1]:
                 name = "%s#%s"%(lsv.id,jidx) 
-                print "PCR", jj.acceptor.pcr_name, name, jj.acceptor.score
-
+                pcr_lsv = [lsv.exon.get_pcr_name(), name, score]
+                pcr_list.append( pcr_lsv )
+                print "PCR", ' '.join(pcr_lsv)
+    op = open('%s/pcr.pkl'%outDir,'w+')
+    pickle.dump(pcr_list, op)
+    op.close()
 
 
 def gc_factor_calculation(exon_list, nb):

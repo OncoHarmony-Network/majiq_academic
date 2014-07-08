@@ -254,8 +254,6 @@ class Gene:
         self.prepare_exons()
         self.remove_temp_attributes()
 
-
-
     def check_exons ( self ):
 
         s_exons = set()

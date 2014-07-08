@@ -4,7 +4,10 @@ import numpy as np
 import mglobals
 from grimoire.lsv import LSV_IR
 from grimoire.junction import Junction
+import pickle
 import copy
+
+
 import pdb 
 
 class Exon:
@@ -41,6 +44,7 @@ class Exon:
         self.coverage = np.zeros(shape=(mglobals.num_experiments))
         self.score = None
         self.pcr_name = None
+        self.pcr_candidate = None
         self.ir = False
         self.db_coord = (start, end)
         self.annotated = annot
@@ -93,10 +97,19 @@ class Exon:
     def set_ir(self, ir) :
         self.ir |= ir
 
-    def set_pcr_score(self, pcr_name, score):
+    def set_pcr_score(self, pcr_name, score, candidate):
         self.pcr_name = pcr_name
         self.score = score
+        self.pcr_candidate = candidate
 
+    def get_pcr_score(self):
+        return self.score
+
+    def get_pcr_candidate(self):
+        return self.pcr_candidate
+
+    def get_pcr_name(self):
+        return self.pcr_name
 
     def add_new_read(self, start, end, readSeq, s3p_junc, s5p_junc):
 
@@ -477,7 +490,6 @@ def collapse_list_exons( listexons, gne ):
     return exlist
 
 def __half_exon(type,junc,readRNA):
-    print "NEW HALF EXON"
     gene = junc.get_gene()
     if type == '3prime':
         coord = junc.get_ss_3p()
@@ -512,7 +524,7 @@ def __half_exon(type,junc,readRNA):
 def new_exon_definition(start, end, readRNA, s3prime_junc, s5prime_junc, gene):
 
     if  end - start < 5 : return 0
-    print "NEW DEFINITION::",start, end
+#    print "NEW DEFINITION::",start, end
 
     ex = gene.exist_exon(start,end)
     newExons = 0
@@ -520,8 +532,8 @@ def new_exon_definition(start, end, readRNA, s3prime_junc, s5prime_junc, gene):
         newExons = 1
         ex = Exon(start,end,gene,gene.get_strand())
         gene.add_exon(ex)
-    else:
-        print "EXON FOUND", ex, ex.get_coordinates(), ex.annotated
+#    else:
+#        print "EXON FOUND", ex, ex.get_coordinates(), ex.annotated
     ex.add_new_read( start, end, readRNA, s3prime_junc, s5prime_junc )
     s3prime_junc.add_acceptor(ex)
     s5prime_junc.add_donor(ex)
@@ -547,20 +559,18 @@ def detect_exons(gene, junction_list, readRNA):
     junction_list.extend(gene.get_all_ss())
 
     junction_list.sort()
-    print "JUNC EXTENDED", junction_list
-    print "DETECT EXONS::",gene.get_id()
+#    print "JUNC EXTENDED", junction_list
+#    print "DETECT EXONS::",gene.get_id()
     for (coord,type, jj) in junction_list :
-        print "---NEW-------------------------------------------------------------"
-        print coord, type, jj, jj.coverage.sum(), jj.annotated, jj.is_annotated() 
+#        print "---NEW-------------------------------------------------------------"
+#        print coord, type, jj, jj.coverage.sum(), jj.annotated, jj.is_annotated() 
         if jj.coverage.sum() < mglobals.MINREADS and not jj.is_annotated(): continue
-        print coord, type, jj, jj.coverage.sum(), jj.annotated 
-        print "LIST",opened_exon
-        print "LASTS",first_3prime, last_5prime
-#        if coord == 5109672:
-#            pdb.set_trace()
+#        print coord, type, jj, jj.coverage.sum(), jj.annotated 
+#        print "LIST",opened_exon
+#        print "LASTS",first_3prime, last_5prime
         jj_gene = jj.get_gene()
         if type == '5prime':
-            print "CHECK 1",coord,jj.get_ss_5p()
+#            print "CHECK 1",coord,jj.get_ss_5p()
             if opened >0 :
                 start = opened_exon[-1].get_ss_3p()
                 end = coord
@@ -587,7 +597,7 @@ def detect_exons(gene, junction_list, readRNA):
                     opened_exon = []
                     first_3prime = jj
             else:
-                print "CHECK 2.2",coord,jj.get_ss_3p()
+#                print "CHECK 2.2",coord,jj.get_ss_3p()
                 last_5prime = None
                 first_3prime = jj
             #end else ...
