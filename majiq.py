@@ -130,7 +130,9 @@ def main( args ) :
         gtf_list = pickle.load(yfile)
         for gtf in gtf_list:
             fp.write("%s\n"%gtf)
-        pcr_l = pickle.load(open('%s/pcr.pkl'%(temp_dir),'rb'))
+        yfile = '%s/pcr.pkl'%(temp_dir)
+        if not os.path.exists(yfile): continue
+        pcr_l = pickle.load(open(yfile,'rb'))
         for pcr in pcr_l:
             fp2.write("%s\n"%pcr)
     fp2.close()

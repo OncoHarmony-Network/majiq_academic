@@ -644,7 +644,7 @@ class DeltaGroup(DeltaPair, CalcPsi):
             fitfunc1[ii] = self.fitfunc(const)
             filtered_lsv1[ii] = self.mark_stacks_lsv( lsv_junc, fitfunc1[ii])
 
-        filtered_lsv1 = filter.quantifiable_in group( filtered_lsv1 )
+        filtered_lsv1 = filter.quantifiable_in_group( filtered_lsv1 )
 
         for ii, file in enumerate(self.files2):
             lsv_junc, const = majiq_io.load_data_lsv(file, self.logger) 
@@ -653,7 +653,7 @@ class DeltaGroup(DeltaPair, CalcPsi):
             fitfunc1[ii] = self.fitfunc(const)
             filtered_lsv2[ii] = self.mark_stacks_lsv( lsv_junc, fitfunc2[ii])
 
-        filtered_lsv2 = filter.quantifiable_in group( filtered_lsv2 )
+        filtered_lsv2 = filter.quantifiable_in_group( filtered_lsv2 )
 
 
         lsv_samples1 = [[] for xx in self.files1]
