@@ -257,7 +257,7 @@ def print_junc_matrices(mat, tlb=None,fp=None):
                 header[n] = "%d"%(ex+1)
     out.write("\n")
     for ii in np.arange(N):
-        out.write("%s\t"%header[ii])
+        if not tlb is None: out.write("%s\t"%header[ii])
         for jj in np.arange(M):
             val = mat[ii,jj]
             out.write("%s\t"%val)

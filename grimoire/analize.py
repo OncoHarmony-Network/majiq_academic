@@ -244,16 +244,16 @@ def LSV_matrix_detection( mat, exon_to_ss, b_list, vip_set=[]):
     '''
     LSV_list = [[],[]]
     const = abs(math.log(1.5/1.0,2))
+    print "LSV matrix"
 
     #change bucle for iterate by exons
     for ii in range( 1, len(exon_to_ss) -1 ) :
         lsv = exon_to_ss[ii]
         pre_lsv = exon_to_ss[ii-1]
         post_lsv = exon_to_ss[ii+1]
-
         #Single Source detection
         SS = mat[lsv[1][0]:lsv[1][-1]+1,:]
-        ss_valid = False
+        ss_valid = True
         cand = range(ii+1,len(exon_to_ss))
         for ex_idx, ex in enumerate(cand):
             pt = exon_to_ss[ex_idx]
@@ -269,7 +269,7 @@ def LSV_matrix_detection( mat, exon_to_ss, b_list, vip_set=[]):
 
         #Single Targe detection
         ST = mat[:,lsv[0][0]:lsv[0][-1]+1]
-        st_valid = False
+        st_valid = True
         cand = range(0, ii)
         for ex_idx, ex in enumerate(cand):
             pt = exon_to_ss[ex_idx]

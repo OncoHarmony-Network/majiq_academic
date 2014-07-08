@@ -127,7 +127,7 @@ def main( args ) :
         temp_dir = "%s/tmp/%s"%(mglobals.outDir,chrom)
         yfile = '%s/temp_gff.pkl'%(temp_dir)
         if not os.path.exists(yfile): continue
-        gtf_list = pickle.load(yfile)
+        gtf_list = pickle.load(open(yfile,'rb'))
         for gtf in gtf_list:
             fp.write("%s\n"%gtf)
         yfile = '%s/pcr.pkl'%(temp_dir)
