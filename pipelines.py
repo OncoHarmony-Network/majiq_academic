@@ -674,7 +674,7 @@ class DeltaGroup(DeltaPair, CalcPsi):
         matrices =[]
         for idx, exp_ii in enumerate(lsv_samples1):
             for jdx, exp_jj in enumerate(lsv_samples2):
-                 matrices[idx][jdx] = delta_calculations()
+                matrices[idx][jdx] = delta_calculations()
 
                 if not self.fixweights1: #get relevant events for weights calculation
                     relevant_events.extend(rank_deltas_lsv(matrices, info, E=True)[:self.numbestchanging])
