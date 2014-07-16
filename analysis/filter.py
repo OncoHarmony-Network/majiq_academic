@@ -56,6 +56,37 @@ def lsv_mark_stacks(lsv_list, fitfunc, pvalue_limit, dispersion, logger=False):
     return lsv_list
 
 
+def quantifiable_in_group( list_of_experiments, minnonzero, min_reads, logger, per_exp  ):
+    import pdb
+    filt_exp = []
+    for idx, exp in enumerate(list_of_experiments):
+        filt_exp.append(lsv_quantifiable( exp, minnonzero, min_reads, logger ))
+
+    tlb = {}
+    filtered = []
+    filtered_info = []
+    
+    nexp = len(list_of_experiments)
+    for idx, exp in enumerate(list_of_experiments):
+        for idx_lsv, lsv in enumerate(exp[1]):
+            if not lsv[1] in tlb: tlb[lsv[1]] = [-1]*nexp
+            tlb[lsv[1]][idx]= idx_lsv
+    info = tlb.keys()
+    for ii in info:
+        pres = nexp - tlb[ii].count(-1)
+        if pres < (per_exp*pres): continue
+        lsv = []
+        id = list_of_experiments[0][1][tlb[ii][0]]
+        for idx, exp in enumerate(list_of_experiments):
+            local_indx = tlb[ii][idx]
+#            pdb.set_trace()
+            lsv.append(exp[0][local_indx])
+        filtered.append(lsv)
+        filtered_info.append( id )
+
+    return filtered, filtered_info
+
+
 def lsv_quantifiable ( list_lsv_tuple , minnonzero, min_reads, logger=False, fon = [True,True]):
 
     filter_message("Before quantifiable_filter", minnonzero, logger, array(list_lsv_tuple))
