@@ -736,6 +736,7 @@ class DeltaGroup(DeltaPair, CalcPsi):
         for idx, exp_ii in enumerate(lsv_samples1):
             matrices.append([])
             for jdx, exp_jj in enumerate(lsv_samples2):
+<<<<<<< HEAD
                 psi_space, prior_matrix = majiq_psi.gen_prior_matrix(   self,
                                                                             [filtered_lsv1[0][idx], filtered_lsv1[1]],
                                                                             [filtered_lsv2[0][jdx], filtered_lsv2[1]],
@@ -743,6 +744,11 @@ class DeltaGroup(DeltaPair, CalcPsi):
                 matched_lsv, matched_info = majiq_filter.lsv_intersection( [filtered_lsv1[0][idx], filtered_lsv1[1]],
                                                                            [filtered_lsv2[0][jdx], filtered_lsv2[1]])
                 matrices[idx].append( delta_calculation( matched_info, matched_info, psi_space, prior_matrix[ii], self.logger) )
+||||||| merged common ancestors
+                 matrices[idx][jdx] = delta_calculations()
+=======
+                matrices[idx][jdx] = delta_calculations()
+>>>>>>> 0e652c8a050a0c82f812e893f16f8d123ee9b2ca
 
                 if not self.fixweights1: #get relevant events for weights calculation
                     relevant_events.extend(rank_deltas_lsv(matrices, info, E=True)[:self.numbestchanging])
