@@ -643,13 +643,13 @@ class DeltaGroup(DeltaPair, CalcPsi):
 
         for lidx, lsv in enumerate(matched_info):
             comb_matrix.append([])
-#            name = 
             for matrices in data_posterior_lsv[lidx]:
-                for k, matrix in enumerate(matrices):
+                for k, junc in enumerate(matrices):
+                    for jidx, matrix in enumerate(junc):
                     #i = k / len(self.files1) #infers the weight1 index given the position of the matrix
                     #j = k % len(self.files2)
-                    i, j = self.k_ref[k]
-                    comb += matrix*weights1[lidx][i]*weights2[lidx][j]
+                        i, j = self.k_ref[k]
+                        comb += matrix*weights1[lidx][i]*weights2[lidx][j]
 
                 if k == FILTERMIN:
                     comb /= sum(comb) #renormalize so it sums 1
@@ -703,7 +703,8 @@ class DeltaGroup(DeltaPair, CalcPsi):
         lsv_samples1 = [[] for xx in self.files1]
         for ii, file in enumerate(self.files1):
             self.logger.info("Bootstrapping for all samples...")
-            for idx, jj in enumerate(filtered_lsv1[0][ii]):
+            lsv_exp = [ xx[ii] for xx in filtered_lsv1[0] ]
+            for idx, jj in enumerate( lsv_exp ):
                 m_lsv, var_lsv, s_lsv = sample_from_junctions(  junction_list = jj,
                                                                 m = self.m,
                                                                 k = self.k,
@@ -717,7 +718,8 @@ class DeltaGroup(DeltaPair, CalcPsi):
         lsv_samples2 = [[] for xx in self.files2]
         for ii, file in enumerate(self.files2):
             self.logger.info("Bootstrapping for all samples...")
-            for idx, jj in enumerate(filtered_lsv2[0][ii]):
+            lsv_exp = [ xx[ii] for xx in filtered_lsv1[0] ]
+            for idx, jj in enumerate(lsv_exp):
                 m_lsv, var_lsv, s_lsv = sample_from_junctions(  junction_list = jj,
                                                                 m = self.m,
                                                                 k = self.k,
@@ -733,6 +735,8 @@ class DeltaGroup(DeltaPair, CalcPsi):
         relevant_events = []
         matrices =[]
 #        pairs_posteriors = defaultdict(list)
+
+        pdb.set_trace()
         for idx, exp_ii in enumerate(lsv_samples1):
             matrices.append([])
             for jdx, exp_jj in enumerate(lsv_samples2):

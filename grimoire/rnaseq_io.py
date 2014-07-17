@@ -324,6 +324,7 @@ def read_bed_pcr( filename , list_genes):
 
         chrom = event['chrom']
         strand = event['strand']
+        print event
         exon_start = event['C1'][0]
         exon_end = event['C1'][1]
 

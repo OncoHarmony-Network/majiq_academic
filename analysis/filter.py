@@ -112,6 +112,8 @@ def lsv_intersection( lsv_list1, lsv_list2 ):
     lsv_match = [[],[]]
     match_info = []
 
+    import pdb
+
     ids1 = set([xx[1] for xx in lsv_list1[1]])
     ids2 = set([xx[1] for xx in lsv_list2[1]])
     matched_names = ids1.intersection(ids2)
@@ -119,6 +121,7 @@ def lsv_intersection( lsv_list1, lsv_list2 ):
     for ii in matched_names:
         for idx, nm in enumerate(lsv_list1[1]):
             if nm[1] == ii:
+                pdb.set_trace()
                 lsv_match[0].append(lsv_list1[0][idx])
                 match_info.append( nm )
                 break
