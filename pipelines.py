@@ -699,11 +699,12 @@ class DeltaGroup(DeltaPair, CalcPsi):
             filtered_lsv2[ii] = self.mark_stacks_lsv( lsv_junc, fitfunc2[ii])
         filtered_lsv2 = majiq_filter.quantifiable_in_group( filtered_lsv2, self.minnonzero, self.minreads, self.logger , 0.10 )
 
+        matched_lsv, matched_info = majiq_filter.lsv_intersection( filtered_lsv1, filtered_lsv2 )
 
         lsv_samples1 = [[] for xx in self.files1]
         for ii, file in enumerate(self.files1):
             self.logger.info("Bootstrapping for all samples...")
-            lsv_exp = [ xx[ii] for xx in filtered_lsv1[0] ]
+            lsv_exp = [ xx[ii] for xx in matched_lsv[0] ]
             for idx, jj in enumerate( lsv_exp ):
                 m_lsv, var_lsv, s_lsv = sample_from_junctions(  junction_list = jj,
                                                                 m = self.m,
@@ -718,7 +719,7 @@ class DeltaGroup(DeltaPair, CalcPsi):
         lsv_samples2 = [[] for xx in self.files2]
         for ii, file in enumerate(self.files2):
             self.logger.info("Bootstrapping for all samples...")
-            lsv_exp = [ xx[ii] for xx in filtered_lsv1[0] ]
+            lsv_exp = [ xx[ii] for xx in matched_lsv[1] ]
             for idx, jj in enumerate(lsv_exp):
                 m_lsv, var_lsv, s_lsv = sample_from_junctions(  junction_list = jj,
                                                                 m = self.m,
@@ -733,26 +734,28 @@ class DeltaGroup(DeltaPair, CalcPsi):
 
         self.logger.info("Calculating pairs...")
         relevant_events = []
-        matrices =[]
-#        pairs_posteriors = defaultdict(list)
+        #matched_lsv, matched_info = majiq_filter.lsv_intersection( [lsv_samples1[idx], filtered_lsv1[1]],
+        # [lsv_samples2[jdx], filtered_lsv2[1]])
+        pairs_posteriors = [[] for xx in xrange(len(matched_info))]
 
-        pdb.set_trace()
         for idx, exp_ii in enumerate(lsv_samples1):
-            matrices.append([])
+            pairs_posteriors.append([])
             for jdx, exp_jj in enumerate(lsv_samples2):
-                lsv_exp1 = [ xx[idx] for xx in filtered_lsv1[0] ]
-                lsv_exp2 = [ xx[jdx] for xx in filtered_lsv2[0] ]
+                lsv_exp1 = [ xx[idx] for xx in matched_lsv[0] ]
+                lsv_exp2 = [ xx[jdx] for xx in matched_lsv[1] ]
                 psi_space, prior_matrix = majiq_psi.gen_prior_matrix(   self,
-                                                                        [lsv_exp1, filtered_lsv1[1]],
-                                                                        [lsv_exp2, filtered_lsv2[1]],
+                                                                        [lsv_exp1, matched_info],
+                                                                        [lsv_exp2, matched_info],
                                                                         self.output)
-                matched_lsv, matched_info = majiq_filter.lsv_intersection( [lsv_samples1[idx], filtered_lsv1[1]],
-                                                                           [lsv_samples2[jdx], filtered_lsv2[1]])
-                matrices[idx].append( delta_calculation( matched_lsv, matched_info, psi_space, prior_matrix[ii], self.logger) )
+                Dt1_Dt2 = [lsv_samples1[idx],lsv_samples2[jdx]]
+                matrices = delta_calculation( Dt1_Dt2, matched_info, psi_space, prior_matrix[ii], self.logger)
 
                 if not self.fixweights1: #get relevant events for weights calculation
                     relevant_events.extend(rank_deltas_lsv(matrices, info, E=True)[:self.numbestchanging])
-                pairs_posteriors[name].append(matrices[idx]) #pairing all runs events
+                for lidx, matrix_lsv in matrices:
+                    pairs_posteriors[lidx][idx].append( matrix_lsv )
+
+#                pairs_posteriors[name].append(matrices[idx]) #pairing all runs events
 
 
         self.logger.info("All pairs calculated, calculating weights...")
@@ -768,7 +771,7 @@ class DeltaGroup(DeltaPair, CalcPsi):
         self.logger.info("Weigths for %s are (respectively) %s"%(self.files2, num_exp[1], weights2))
 
         self.logger.info("Normalizing with weights...")
-        comb_matrix, comb_names = self.comb_replicas_lsv( matrices, weights1=weights1, weights2=weights2 )
+        comb_matrix, comb_names = self.comb_replicas_lsv( pairs_posteriors, weights1=weights1, weights2=weights2 )
         self.logger.info("%s events matrices calculated"%len(comb_names))
         pickle_path = "%s%s_%s_deltacombmatrix.pickle"%(self.output, self.names[0], self.names[1])
         name_path = "%s%s_%s_combeventnames.pickle"%(self.output, self.names[0], self.names[1])

@@ -102,6 +102,7 @@ def rank_deltas_lsv( matrices, names, V=0.2, absolute=True, E=False, ranknochang
     rank = []
     for lsv in enumerate(matrices):
         v_prob = []
+        if lsv.shape[0] > 2: continue
         for dmatrix in lsv:
             if E:
                 v_prob.append( matrix_prob_e(dmatrix) )

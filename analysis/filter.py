@@ -100,7 +100,6 @@ def lsv_quantifiable ( list_lsv_tuple , minnonzero, min_reads, logger=False, fon
             if ((not fon[1] or np.count_nonzero(lsv[idx]) >= minnonzero ) and 
                 (not fon[0] or total_count >=  thresh_reads)) :
 #                (not fon[0] or lsv[idx].sum() >=  min_reads)) :
-
                 filtered.append(lsv)
                 filtered_info.append(list_lsv_tuple[1][lsvdx])
                 break
@@ -121,7 +120,6 @@ def lsv_intersection( lsv_list1, lsv_list2 ):
     for ii in matched_names:
         for idx, nm in enumerate(lsv_list1[1]):
             if nm[1] == ii:
-                pdb.set_trace()
                 lsv_match[0].append(lsv_list1[0][idx])
                 match_info.append( nm )
                 break

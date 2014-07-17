@@ -318,13 +318,14 @@ def read_bed_pcr( filename , list_genes):
             event['chrom'] = tab[0]
             event['strand'] = tab[5]
             event[reg] = [int(tab[1]), int(tab[2])]
-            score = float(tab[4].split('|')[0])
+            score = tab[4].split('|')[0]
+            if score == '?': score = 0
+            score = float(score)
             if reg in ['A','A2']: alt_exon = event[reg]
             lnum +=1
 
         chrom = event['chrom']
         strand = event['strand']
-        print event
         exon_start = event['C1'][0]
         exon_end = event['C1'][1]
 
