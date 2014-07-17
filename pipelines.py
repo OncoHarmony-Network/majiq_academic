@@ -343,6 +343,7 @@ def deltapsi_calc( matched_list, matched_info, fitfunc, conf, chunk, prior_matri
 
 def delta_calculation(matched_info, lsv_samples, psi_space, prior_matrix, logr=None):
     chunk = 0
+    numbins = 20
     try:
         for lsv_idx, info in enumerate(matched_info):
             if lsv_idx % 50 == 0:
@@ -360,7 +361,7 @@ def delta_calculation(matched_info, lsv_samples, psi_space, prior_matrix, logr=N
                     majiq_psi.plot_matrix(  data_psi[-1],
                                             "P(Data | PSI 1, PSI 2) Event %s.%s (Psi1: %s Psi2: %s)"%(lsv_idx,psi, sum(data_given_psi1[psi]), sum(data_given_psi2[psi])), 
                                             "datagpsi_%s.%s"%(info[1], psi),
-                                            conf['plotpath'] )
+                                            self.plotpath )
 
             data_given_psi.append(data_psi)
         print 
@@ -383,7 +384,7 @@ def delta_calculation(matched_info, lsv_samples, psi_space, prior_matrix, logr=N
                     majiq_psi.plot_matrix(  psi_mat,
                                         "Posterior Delta Event %s.%s (Psi1: %s Psi2: %s)"%(lidx,psi, sum(data_given_psi1[psi]), sum(data_given_psi2[psi])),
                                         "posterior_dpsi.%s.%s"%(lsv[1],psi),
-                                        conf['plotpath'] )
+                                        self.plotpath )
             posterior_matrix.append(lsv_psi_matrix)
     except Exception as e:
         print "%s"%sys.exc_traceback.tb_lineno, e
@@ -748,7 +749,7 @@ class DeltaGroup(DeltaPair, CalcPsi):
                                                                         [lsv_exp2, matched_info],
                                                                         self.output)
                 Dt1_Dt2 = [lsv_samples1[idx],lsv_samples2[jdx]]
-                matrices = delta_calculation( Dt1_Dt2, matched_info, psi_space, prior_matrix[ii], self.logger)
+                matrices = delta_calculation( matched_info, Dt1_Dt2, psi_space, prior_matrix[ii], self.logger)
 
                 if not self.fixweights1: #get relevant events for weights calculation
                     relevant_events.extend(rank_deltas_lsv(matrices, info, E=True)[:self.numbestchanging])

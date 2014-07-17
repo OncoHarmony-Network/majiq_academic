@@ -85,10 +85,10 @@ class LSV(object):
         return bool(self.type == STARGET)
 
     def has_pcr_score(self):
-        return (self.exon.get_score()!= None)
+        return (self.exon.get_pcr_score()!= None)
 
     def get_pcr_score(self):
-        return self.exon.get_score()
+        return self.exon.get_pcr_score()
 
     def set_type( self, jlist, tlb_junc ):
         ex_id = self.exon.get_id()
