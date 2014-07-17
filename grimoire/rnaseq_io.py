@@ -335,7 +335,7 @@ def read_bed_pcr( filename , list_genes):
 
             pre_chrom = chrom
             idx = {'+':0, '-':0}
-
+        name = event['name']
         while idx[strand]< len(gene_list[strand]):
             gn = gene_list[strand][idx[strand]]
             (g_start, g_end) = gn.get_coordinates()

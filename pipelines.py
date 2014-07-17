@@ -503,8 +503,8 @@ class DeltaPair(BasicPipeline):
                     if nt == self.nthreads - 1 : ub = len(matched_lsv[0]) 
                     lsv_list = [matched_lsv[0][lb:ub],matched_lsv[1][lb:ub]]
                     lsv_info = matched_info[lb:ub]
-                    jobs.append(pool.apply_async( parallel_delta_psi_wrapper, [ lsv_list, 
-                                                                                lsv_info, 
+                    jobs.append(pool.apply_async( parallel_delta_psi_wrapper, [ lsv_list,
+                                                                                lsv_info,
                                                                                 [fitfunc1,fitfunc2], 
                                                                                 conf, 
                                                                                 prior_matrix, 
@@ -633,13 +633,13 @@ class DeltaGroup(DeltaPair, CalcPsi):
 
         return weights
 
-    def comb_replicas_lsv(self, delta_posterior_lsv, weights1=None, weights2=None):
+    def comb_replicas_lsv(self, delta_posterior_lsv, matched_info, weights1=None, weights2=None):
         "Combine all replicas per event into a single average replica. Weights per experiment can be provided"
         weights1 = self.equal_if_not(weights1) 
         weights2 = self.equal_if_not(weights2) 
         comb_matrix = []
         comb_names = []
-        FILTERMIN = len(self.k_ref)-1 #filter events that show on all replicas
+        #FILTERMIN = len(self.k_ref)-1 #filter events that show on all replicas
 
         for l_idx,lsv in enumerate( delta_posterior_lsv):
             comb_matrix.append([])
@@ -695,37 +695,37 @@ class DeltaGroup(DeltaPair, CalcPsi):
             lsv_junc, const = majiq_io.load_data_lsv(file, self.logger) 
 
             #fitting the function
-            fitfunc1[ii] = self.fitfunc(const[0])
+            fitfunc2[ii] = self.fitfunc(const[0])
             filtered_lsv2[ii] = self.mark_stacks_lsv( lsv_junc, fitfunc2[ii])
         filtered_lsv2 = majiq_filter.quantifiable_in_group( filtered_lsv2, self.minnonzero, self.minreads, self.logger , 0.10 )
 
 
         lsv_samples1 = [[] for xx in self.files1]
         for ii, file in enumerate(self.files1):
-            logr.info("[Th %s]: Bootstrapping for all samples..."%chunk)
+            self.logger.info("Bootstrapping for all samples...")
             for idx, jj in enumerate(filtered_lsv1[0][ii]):
                 m_lsv, var_lsv, s_lsv = sample_from_junctions(  junction_list = jj,
-                                                                m = conf['m'],
-                                                                k = conf['k'],
-                                                                discardzeros= conf['discardzeros'],
-                                                                trimborder  = conf['trimborder'],
-                                                                fitted_func = fitfunc[idx_exp],
-                                                                debug       = conf['debug'],
-                                                                Nz          = conf['Nz'])
+                                                                m = self.m,
+                                                                k = self.k,
+                                                                discardzeros= self.discardzeros,
+                                                                trimborder  = self.trimborder,
+                                                                fitted_func = fitfunc1[ii],
+                                                                debug       = self.debug,
+                                                                Nz          = self.nz)
                 lsv_samples1[ii].append( s_lsv )
 
         lsv_samples2 = [[] for xx in self.files2]
         for ii, file in enumerate(self.files2):
-            logr.info("[Th %s]: Bootstrapping for all samples..."%chunk)
+            self.logger.info("Bootstrapping for all samples...")
             for idx, jj in enumerate(filtered_lsv2[0][ii]):
                 m_lsv, var_lsv, s_lsv = sample_from_junctions(  junction_list = jj,
-                                                                m = conf['m'],
-                                                                k = conf['k'],
-                                                                discardzeros= conf['discardzeros'],
-                                                                trimborder  = conf['trimborder'],
-                                                                fitted_func = fitfunc[idx_exp],
-                                                                debug       = conf['debug'],
-                                                                Nz          = conf['Nz'])
+                                                                m = self.m,
+                                                                k = self.k,
+                                                                discardzeros= self.discardzeros,
+                                                                trimborder  = self.trimborder,
+                                                                fitted_func = fitfunc2[ii],
+                                                                debug       = self.debug,
+                                                                Nz          = self.nz)
                 lsv_samples2[ii].append( s_lsv )
 
 
@@ -736,23 +736,18 @@ class DeltaGroup(DeltaPair, CalcPsi):
         for idx, exp_ii in enumerate(lsv_samples1):
             matrices.append([])
             for jdx, exp_jj in enumerate(lsv_samples2):
-<<<<<<< HEAD
+                pdb.set_trace()
                 psi_space, prior_matrix = majiq_psi.gen_prior_matrix(   self,
-                                                                            [filtered_lsv1[0][idx], filtered_lsv1[1]],
-                                                                            [filtered_lsv2[0][jdx], filtered_lsv2[1]],
-                                                                            output)
+                                                                        [filtered_lsv1[0][idx], filtered_lsv1[1]],
+                                                                        [filtered_lsv2[0][jdx], filtered_lsv2[1]],
+                                                                        self.output)
                 matched_lsv, matched_info = majiq_filter.lsv_intersection( [filtered_lsv1[0][idx], filtered_lsv1[1]],
                                                                            [filtered_lsv2[0][jdx], filtered_lsv2[1]])
                 matrices[idx].append( delta_calculation( matched_info, matched_info, psi_space, prior_matrix[ii], self.logger) )
-||||||| merged common ancestors
-                 matrices[idx][jdx] = delta_calculations()
-=======
-                matrices[idx][jdx] = delta_calculations()
->>>>>>> 0e652c8a050a0c82f812e893f16f8d123ee9b2ca
 
                 if not self.fixweights1: #get relevant events for weights calculation
                     relevant_events.extend(rank_deltas_lsv(matrices, info, E=True)[:self.numbestchanging])
-                pairs_posteriors[name].append(matrices[k]) #pairing all runs events
+                pairs_posteriors[name].append(matrices[idx]) #pairing all runs events
 
 
         self.logger.info("All pairs calculated, calculating weights...")
@@ -768,7 +763,7 @@ class DeltaGroup(DeltaPair, CalcPsi):
         self.logger.info("Weigths for %s are (respectively) %s"%(self.files2, num_exp[1], weights2))
 
         self.logger.info("Normalizing with weights...")
-        comb_matrix, comb_names = self.comb_replicas_lsv( pairs_posteriors, weights1=weights1, weights2=weights2 )
+        comb_matrix, comb_names = self.comb_replicas_lsv( matrices, weights1=weights1, weights2=weights2 )
         self.logger.info("%s events matrices calculated"%len(comb_names))
         pickle_path = "%s%s_%s_deltacombmatrix.pickle"%(self.output, self.names[0], self.names[1])
         name_path = "%s%s_%s_combeventnames.pickle"%(self.output, self.names[0], self.names[1])
