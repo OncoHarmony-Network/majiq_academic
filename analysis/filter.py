@@ -88,8 +88,6 @@ def quantifiable_in_group( list_of_experiments, minnonzero, min_reads, logger, p
 
 def lsv_quantifiable ( list_lsv_tuple , minnonzero, min_reads, logger=False, fon = [True,True]):
 
-    import pdb
-    pdb.set_trace()
     filter_message("Before quantifiable_filter", minnonzero, logger, array(list_lsv_tuple))
     filtered = []
     filtered_info = []

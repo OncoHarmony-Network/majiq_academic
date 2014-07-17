@@ -318,7 +318,7 @@ def read_bed_pcr( filename , list_genes):
             event['chrom'] = tab[0]
             event['strand'] = tab[5]
             event[reg] = [int(tab[1]), int(tab[2])]
-            score = float(tab[4])
+            score = float(tab[4].split('|')[0])
             if reg in ['A','A2']: alt_exon = event[reg]
             lnum +=1
 

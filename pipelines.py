@@ -365,29 +365,29 @@ def delta_calculation(matched_info, lsv_samples, psi_space, prior_matrix, logr=N
             data_given_psi.append(data_psi)
         print 
         sys.stdout.flush()
+
+
+        #Finally, P(PSI_i, PSI_j | Data) equivalent to P(PSI_i, PSI_j)* P(Data | PSI_i, PSI_j) 
+        logr.info("[Th %s]: Calculate Posterior Delta Matrices..."%chunk)
+        posterior_matrix = []
+        for lidx, lsv in enumerate(matched_info) :
+            if lsv_idx % 50 == 0: 
+                print "%s...."%lidx,
+                sys.stdout.flush()
+            lsv_psi_matrix = []
+            for psi in range(len(data_given_psi[lidx])) :
+                pm = (prior_matrix * data_given_psi[lidx][psi])
+                psi_mat = (pm / sum(pm))
+                lsv_psi_matrix.append( psi_mat )
+                if psi == 0: 
+                    majiq_psi.plot_matrix(  psi_mat,
+                                        "Posterior Delta Event %s.%s (Psi1: %s Psi2: %s)"%(lidx,psi, sum(data_given_psi1[psi]), sum(data_given_psi2[psi])),
+                                        "posterior_dpsi.%s.%s"%(lsv[1],psi),
+                                        conf['plotpath'] )
+            posterior_matrix.append(lsv_psi_matrix)
     except Exception as e:
         print "%s"%sys.exc_traceback.tb_lineno, e
         sys.stdout.flush()
-
-
-    #Finally, P(PSI_i, PSI_j | Data) equivalent to P(PSI_i, PSI_j)* P(Data | PSI_i, PSI_j) 
-    logr.info("[Th %s]: Calculate Posterior Delta Matrices..."%chunk)
-    posterior_matrix = []
-    for lidx, lsv in enumerate(matched_info) :
-        if lsv_idx % 50 == 0: 
-            print "%s...."%lidx,
-            sys.stdout.flush()
-        lsv_psi_matrix = []
-        for psi in range(len(data_given_psi[lidx])) :
-            pm = (prior_matrix * data_given_psi[lidx][psi])
-            psi_mat = (pm / sum(pm))
-            lsv_psi_matrix.append( psi_mat )
-            if psi == 0: 
-                majiq_psi.plot_matrix(  psi_mat,
-                                    "Posterior Delta Event %s.%s (Psi1: %s Psi2: %s)"%(lidx,psi, sum(data_given_psi1[psi]), sum(data_given_psi2[psi])),
-                                    "posterior_dpsi.%s.%s"%(lsv[1],psi),
-                                    conf['plotpath'] )
-        posterior_matrix.append(lsv_psi_matrix)
 
     return posterior_matrix
 
@@ -641,20 +641,20 @@ class DeltaGroup(DeltaPair, CalcPsi):
         comb_names = []
         #FILTERMIN = len(self.k_ref)-1 #filter events that show on all replicas
 
-        for l_idx,lsv in enumerate( delta_posterior_lsv):
+        for lidx, lsv in enumerate(matched_info):
             comb_matrix.append([])
 #            name = 
-            for  matrices in lsv.items():
+            for matrices in data_posterior_lsv[lidx]:
                 for k, matrix in enumerate(matrices):
                     #i = k / len(self.files1) #infers the weight1 index given the position of the matrix
                     #j = k % len(self.files2)
                     i, j = self.k_ref[k]
-                    comb += matrix*weights1[l_idx][i]*weights2[l_idx][j]
+                    comb += matrix*weights1[lidx][i]*weights2[lidx][j]
 
                 if k == FILTERMIN:
                     comb /= sum(comb) #renormalize so it sums 1
-                    comb_matrix[l_idx].append(comb)
-                    comb_names.append(name)
+                    comb_matrix[lidx].append(comb)
+                    comb_names.append(lsv)
 
         return comb_matrix, comb_names
 
@@ -736,14 +736,15 @@ class DeltaGroup(DeltaPair, CalcPsi):
         for idx, exp_ii in enumerate(lsv_samples1):
             matrices.append([])
             for jdx, exp_jj in enumerate(lsv_samples2):
-                pdb.set_trace()
+                lsv_exp1 = [ xx[idx] for xx in filtered_lsv1[0] ]
+                lsv_exp2 = [ xx[jdx] for xx in filtered_lsv2[0] ]
                 psi_space, prior_matrix = majiq_psi.gen_prior_matrix(   self,
-                                                                        [filtered_lsv1[0][idx], filtered_lsv1[1]],
-                                                                        [filtered_lsv2[0][jdx], filtered_lsv2[1]],
+                                                                        [lsv_exp1, filtered_lsv1[1]],
+                                                                        [lsv_exp2, filtered_lsv2[1]],
                                                                         self.output)
-                matched_lsv, matched_info = majiq_filter.lsv_intersection( [filtered_lsv1[0][idx], filtered_lsv1[1]],
-                                                                           [filtered_lsv2[0][jdx], filtered_lsv2[1]])
-                matrices[idx].append( delta_calculation( matched_info, matched_info, psi_space, prior_matrix[ii], self.logger) )
+                matched_lsv, matched_info = majiq_filter.lsv_intersection( [lsv_samples1[idx], filtered_lsv1[1]],
+                                                                           [lsv_samples2[jdx], filtered_lsv2[1]])
+                matrices[idx].append( delta_calculation( matched_lsv, matched_info, psi_space, prior_matrix[ii], self.logger) )
 
                 if not self.fixweights1: #get relevant events for weights calculation
                     relevant_events.extend(rank_deltas_lsv(matrices, info, E=True)[:self.numbestchanging])
