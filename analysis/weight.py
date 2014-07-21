@@ -1,10 +1,12 @@
 from collections import defaultdict
 from scipy.stats import beta
+import analysis.psi as majiq_psi
+import numpy as np
 from pylab import *
 
 
 def _l1(p, q):
-    return (abs(p - q)).sum(axis=1)
+    return (abs(p - q)).sum(axis=0)
 
 def _kullback_lieber(p, q):
     """
@@ -34,26 +36,31 @@ def _local_distance(a, b, l1, inv=False):
         if inv: res = 1 -res
     else:
         res = _kullback_lieber(a, b)
-    return re
+    return res
 
 
 def local_weight_eta_nu ( group, nexp ):
 
     alpha = bta = 0.5
-    jeffreys = beta.pdf(x,alpha,bta)
+    x = np.array([majiq_psi.BINS_CENTER, 1-majiq_psi.BINS_CENTER]).T
+    jeffreys = majiq_psi.dirichlet_pdf(x,np.array([alpha,bta]))
 
+    max_eta_idx = np.zeros(shape=(nexp, len(group)), dtype=np.int)
     eta = np.zeros(shape=(nexp, len(group)), dtype=np.float)
+    median_psi = np.zeros(shape=(len(group), nexp), dtype=np.float)
+    print " SIZES nexx", nexp, "num_lsv", len(group)
     for lidx, lsv in enumerate(group):
         for eidx, exp_lsv in enumerate(lsv):
             mpsi = []
+            max_junc_eta = 0
             for jidx in xrange(exp_lsv.shape[0]):
                 eta_e = np.zeros(shape=(exp_lsv.shape[1]), dtype=np.float)
                 for sample in xrange(exp_lsv.shape[1]):
                     total = exp_lsv[:,sample].sum()
                     cov   = exp_lsv[jidx, sample]
                     smpl  = np.array([cov, total-cov]) + 0.5
-                    mpsi.append( majiq_psi.dirichlet_pdf(array([BINS_CENTER, 1-BINS_CENTER]).T, smpl) )
-                    eta_e[sample] = _local_distance( psi[-1], jeffreys, l1 = True )
+                    mpsi.append( majiq_psi.dirichlet_pdf( x , smpl) )
+                    eta_e[sample] = _local_distance( mpsi[-1], jeffreys, l1 = True )
 
                 d_eta =  eta_e.sum()/float(exp_lsv.shape[1]) 
                 if max_junc_eta < d_eta: 
@@ -79,7 +86,7 @@ def local_weight_eta_nu ( group, nexp ):
 
     return eta, nu
 
-def global_weight_ro ( group , relevant, num_exp ):
+def global_weight_ro ( group , relevant, num_exp, n=100 ):
 
     ''' Calculate psi for global_weight '''
     
@@ -88,7 +95,7 @@ def global_weight_ro ( group , relevant, num_exp ):
     ev = []
     for lidx, lsv in enumerate(group):
         for eidx, exp in enumerate(lsv):
-            psi = lsv_psi( exp,  0.5, 50, 0 )
+            psi = lsv_psi( exp,  0.5, n, 0 )
             tmp.append(psi)
             psis[eidx][lidx] = psi
         median_ref[lidx].append(median(array(tmp), axis=0))

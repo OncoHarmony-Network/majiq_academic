@@ -14,8 +14,8 @@ from analysis.polyfitnb import fit_nb
 from analysis.sample import sample_from_junctions, mean_junction
 from analysis.psi import calc_psi, mean_psi, simple_psi, DirichletCalc, reads_given_psi, BINS_CENTER, lsv_psi
 from analysis.adjustdelta import adjustdelta
-from analysis.weight import local_weights, global_weights
-from analysis.matrix import rank_deltas, collapse_matrix
+from analysis.weight import local_weight_eta_nu, global_weights
+from analysis.matrix import rank_deltas_lsv, collapse_matrix
 import analysis.filter as majiq_filter
 import analysis.io as majiq_io
 import analysis.psi as  majiq_psi
@@ -341,9 +341,10 @@ def deltapsi_calc( matched_list, matched_info, fitfunc, conf, chunk, prior_matri
 
     return posterior_matrix
 
-def delta_calculation(matched_info, lsv_samples, psi_space, prior_matrix, logr=None):
+def delta_calculation(matched_info, lsv_samples, psi_space, prior_matrix, logr=None, plotpath='./'):
     chunk = 0
     numbins = 20
+    data_given_psi = []
     try:
         for lsv_idx, info in enumerate(matched_info):
             if lsv_idx % 50 == 0:
@@ -361,7 +362,7 @@ def delta_calculation(matched_info, lsv_samples, psi_space, prior_matrix, logr=N
                     majiq_psi.plot_matrix(  data_psi[-1],
                                             "P(Data | PSI 1, PSI 2) Event %s.%s (Psi1: %s Psi2: %s)"%(lsv_idx,psi, sum(data_given_psi1[psi]), sum(data_given_psi2[psi])), 
                                             "datagpsi_%s.%s"%(info[1], psi),
-                                            self.plotpath )
+                                            plotpath )
 
             data_given_psi.append(data_psi)
         print 
@@ -384,7 +385,7 @@ def delta_calculation(matched_info, lsv_samples, psi_space, prior_matrix, logr=N
                     majiq_psi.plot_matrix(  psi_mat,
                                         "Posterior Delta Event %s.%s (Psi1: %s Psi2: %s)"%(lidx,psi, sum(data_given_psi1[psi]), sum(data_given_psi2[psi])),
                                         "posterior_dpsi.%s.%s"%(lsv[1],psi),
-                                        self.plotpath )
+                                        plotpath )
             posterior_matrix.append(lsv_psi_matrix)
     except Exception as e:
         print "%s"%sys.exc_traceback.tb_lineno, e
@@ -405,11 +406,29 @@ def parallel_delta_psi_wrapper ( matched_list, matched_info, fitfunc, conf, prio
 
     print "%s/%s_%s_th%s.deltapsi.pickle"%(tempdir, conf['names'][0], conf['names'][1], chunk)
     sys.stdout.flush()
-    thread_logger.info("[Th %s]: Saving PSI..."%chunk)
+    thread_logger.info("[Th %s]: Saving DeltaPSI..."%chunk)
     output = open("%s/%s_%s_th%s.deltapsi.pickle"%(tempdir, conf['names'][0], conf['names'][1], chunk), 'w')
     pickle.dump((post_matrix, matched_info), output)
-    thread_logger.info("[Th %s]: PSI calculation for %s ended succesfully! Result can be found at %s"%(chunk, name, output.name))
+    thread_logger.info("[Th %s]: DeltaPSI calculation for %s ended succesfully! Result can be found at %s"%(chunk, name, output.name))
     return
+
+def delta_precomputed( name1, name2, outDir, chunk=0, logger=None ):
+    matrices = None
+    matrix_path = "%s/%s_%s_th%s.deltapsi.pickle"%(outDir, name1, name2, chunk)
+    print "matrix_path", matrix_path
+    if os.path.exists(matrix_path):
+        logger.info("%s exists! Loading..."%matrix_path)
+        matrices= pickle.load(open(matrix_path))
+        
+    return matrices
+
+def store_delta_psi(posterior, name1, name2, outDir, chunk=0, thread_logger=None):
+
+    thread_logger.info("[Th %s]: Saving DeltaPSI..."%chunk)
+    output = open("%s/%s_%s_th%s.deltapsi.pickle"%(outDir, name1, name2, chunk), 'w')
+    pickle.dump(posterior, output)
+    thread_logger.info("[Th %s]: DeltaPSI calculation for %s|%s ended succesfully! Result can be found at %s"%(chunk, name1, name2, outDir))
+
 
 class DeltaPair(BasicPipeline):
 
@@ -578,7 +597,8 @@ class DeltaGroup(DeltaPair, CalcPsi):
         #print "LOCAL VALUES", local_values
         return local_values, array(median_ref)
 
-    def calc_weights_lsv(self, lsv_samples, relevant, nexp, type=3 ):
+    def calc_weights_lsv(self, lsv_samples, relevant, nexp, ro_type=3 ):
+
 
         self.logger.info("WEIGHTS: Calculating local weights...")
         eta_wgt, nu_wgt = local_weight_eta_nu( lsv_samples, nexp )
@@ -737,26 +757,33 @@ class DeltaGroup(DeltaPair, CalcPsi):
         relevant_events = []
         #matched_lsv, matched_info = majiq_filter.lsv_intersection( [lsv_samples1[idx], filtered_lsv1[1]],
         # [lsv_samples2[jdx], filtered_lsv2[1]])
-        pairs_posteriors = [[] for xx in xrange(len(matched_info))]
+#        pairs_posteriors = [[] for xx in xrange(len(matched_info))]
+        pairs_posteriors = np.zeros(shape=(len(matched_info), len(self.files1), len(self.files2)), dtype=np.dtype('object'))
 
         for idx, exp_ii in enumerate(lsv_samples1):
-            pairs_posteriors.append([])
             for jdx, exp_jj in enumerate(lsv_samples2):
-                lsv_exp1 = [ xx[idx] for xx in matched_lsv[0] ]
-                lsv_exp2 = [ xx[jdx] for xx in matched_lsv[1] ]
-                psi_space, prior_matrix = majiq_psi.gen_prior_matrix(   self,
-                                                                        [lsv_exp1, matched_info],
-                                                                        [lsv_exp2, matched_info],
-                                                                        self.output)
-                Dt1_Dt2 = [lsv_samples1[idx],lsv_samples2[jdx]]
-                matrices = delta_calculation( matched_info, Dt1_Dt2, psi_space, prior_matrix[ii], self.logger)
+                name1 = "%s%d"%(self.names[0],idx)
+                name2 = "%s%d"%(self.names[1],jdx)
+                self.logger.info("Calculating %s | %s"%(name1, name2))
+                matrices = delta_precomputed( name1, name2, self.output, logger=self.logger)
+
+                if matrices is None:
+                    lsv_exp1 = [ xx[idx] for xx in matched_lsv[0] ]
+                    lsv_exp2 = [ xx[jdx] for xx in matched_lsv[1] ]
+                    psi_space, prior_matrix = majiq_psi.gen_prior_matrix(   self,
+                                                                            [lsv_exp1, matched_info],
+                                                                            [lsv_exp2, matched_info],
+                                                                            self.output)
+                    Dt1_Dt2 = [lsv_samples1[idx],lsv_samples2[jdx]]
+                    matrices = delta_calculation( matched_info, Dt1_Dt2, psi_space, prior_matrix[ii], self.logger, self.plotpath)
+
+                    store_delta_psi( matrices, name1, name2, self.output, thread_logger=self.logger)
 
                 if not self.fixweights1: #get relevant events for weights calculation
-                    relevant_events.extend(rank_deltas_lsv(matrices, info, E=True)[:self.numbestchanging])
-                for lidx, matrix_lsv in matrices:
-                    pairs_posteriors[lidx][idx].append( matrix_lsv )
-
-#                pairs_posteriors[name].append(matrices[idx]) #pairing all runs events
+                    relevant_events.extend(rank_deltas_lsv(matrices, matched_info, E=True)[:self.numbestchanging])
+                for lidx, matrix_lsv in enumerate(matrices):
+#                    pairs_posteriors[lidx][idx].append( matrix_lsv )
+                    pairs_posteriors[lidx,idx,jdx] = matrix_lsv
 
 
         self.logger.info("All pairs calculated, calculating weights...")
@@ -766,9 +793,9 @@ class DeltaGroup(DeltaPair, CalcPsi):
         relevant_events.sort(key=lambda x: -x[1])
 
         self.logger.info("Obtaining weights for relevant set...")
-        weights1 = self.calc_weights_lsv( lsv_samples1, relevant_events, num_exp[0], ro_type = self.ro_type )
+        weights1 = self.calc_weights_lsv( lsv_samples1, relevant_events, num_exp[0], ro_type = 3 )
         self.logger.info("Weigths for %s are (respectively) %s"%(self.files1, weights1))
-        weights2 = self.calc_weights_lsv( lsv_samples2, relevant_events, ro_type = self.ro_type )
+        weights2 = self.calc_weights_lsv( lsv_samples2, relevant_events, ro_type = 3)
         self.logger.info("Weigths for %s are (respectively) %s"%(self.files2, num_exp[1], weights2))
 
         self.logger.info("Normalizing with weights...")

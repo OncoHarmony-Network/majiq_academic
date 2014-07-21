@@ -181,10 +181,10 @@ def LSV_detection( gene_list, chr ):
             if count == 0: continue
             mat, exon_list, tlb, varSS = gn.get_rnaseq_mat(const_set, lsv = True)
             vip = []
-            for ex in exon_list:
+            for idx, ex in enumerate(exon_list):
                 sc = ex.get_pcr_score()
                 if sc is None: continue
-                vip.append(sc)
+                vip.append(idx)
 
             for ss in range(2):
                 for ssnum in range(20):
