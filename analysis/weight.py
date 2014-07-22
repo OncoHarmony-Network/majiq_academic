@@ -45,8 +45,8 @@ def local_weight_eta_nu ( group, nexp ):
     x = np.array([majiq_psi.BINS_CENTER, 1-majiq_psi.BINS_CENTER]).T
     jeffreys = majiq_psi.dirichlet_pdf(x,np.array([alpha,bta]))
 
-    max_eta_idx = np.zeros(shape=(nexp, len(group)), dtype=np.int)
-    eta = np.zeros(shape=(nexp, len(group)), dtype=np.float)
+    max_eta_idx = np.zeros(shape=(len(group), nexp), dtype=np.int)
+    eta = np.zeros(shape=(len(group), nexp), dtype=np.float)
     median_psi = np.zeros(shape=(len(group), nexp), dtype=np.float)
     print " SIZES nexx", nexp, "num_lsv", len(group)
     for lidx, lsv in enumerate(group):
@@ -65,24 +65,24 @@ def local_weight_eta_nu ( group, nexp ):
                 d_eta =  eta_e.sum()/float(exp_lsv.shape[1]) 
                 if max_junc_eta < d_eta: 
                     max_junc_eta = d_eta
-                    max_eta_idx[eidx, lidx] = jidx
+                    max_eta_idx[lidx, eidx] = jidx
 
-            median_psi[lidx, eidx] = median(array(mpsi[max_eta_idx[eidx, lidx]]), axis=0)
-            eta[eidx, lidx] = max_junc_eta
+            median_psi[lidx, eidx] = median(array(mpsi[max_eta_idx[lidx, eidx]]), axis=0)
+            eta[lidx, eidx] = max_junc_eta
 
 
-    nu = np.zeros(shape=(nexp, len(group)), dtype=np.float)
+    nu = np.zeros(shape=(len(group), nexp), dtype=np.float)
     for lidx, lsv_exp in enumerate(group):
         for eidx, lsv in enumerate(lsv_exp):
             nu_e = np.zeros(shape=(lsv.shape[1]), dtype=np.float)
-            jidx = max_eta_idx[eidx, lidx]
+            jidx = max_eta_idx[lidx, eidx]
             for sample in xrange(lsv.shape[1]):
                     total = lsv[:,sample].sum()
                     cov = lsv[jidx, sample]
                     smpl = np.array([cov, total-cov]) + 0.5
-                    psi = majiq_psi.dirichlet_pdf(array([BINS_CENTER, 1-BINS_CENTER]).T, smpl)
+                    psi = majiq_psi.dirichlet_pdf(x, smpl)
                     nu_e[sample] = _local_distance(psi, median_psi[lidx, eidx], l1 = True, inv=True)
-            nu[eidx, lidx] = (nu_e_e.sum()/float(lsv.shape[1]))
+            nu[lidx, eidx] = (nu_e.sum()/float(lsv.shape[1]))
 
     return eta, nu
 
@@ -93,18 +93,22 @@ def global_weight_ro ( group , relevant, num_exp, n=100 ):
     median_ref = [] 
     #ev = [None]*len(group)
     ev = []
-    for lidx, lsv in enumerate(group):
-        for eidx, exp in enumerate(lsv):
-            psi = lsv_psi( exp,  0.5, n, 0 )
-            tmp.append(psi)
-            psis[eidx][lidx] = psi
-        median_ref[lidx].append(median(array(tmp), axis=0))
+    psis = np.zeros(shape=(num_exp, len(group)), dtype=np.dtype('object'))
+
+    for eidx in xrange( num_exp):
+        lsv_list = group[:,eidx]
+        psi = majiq_psi.lsv_psi( lsv_list,  0.5, n, 0 )
+        psis[eidx,:] = psi
+
+    for lidx in xrange( len(group)):
+        tmp = np.array([xx[0] for xx in psis[:,lidx]])
+        median_ref.append(np.median(tmp, axis=0))
 
     ro = np.zeros( shape=(num_exp), dtype= np.float)
     ro_lsv = np.zeros(shape=num_exp, dtype=np.float)
     for eidx, exp in enumerate(psis):
         for lidx, psi in enumerate(exp):
-            ro_lsv[eidx] += _local_distance(psi,median_ref[lidx], l1 = True)
+            ro_lsv[eidx] += _local_distance(psi[0],median_ref[lidx], l1 = True)
 
     ro = ro_lsv / ro_lsv.sum()
     return ro

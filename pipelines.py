@@ -14,7 +14,7 @@ from analysis.polyfitnb import fit_nb
 from analysis.sample import sample_from_junctions, mean_junction
 from analysis.psi import calc_psi, mean_psi, simple_psi, DirichletCalc, reads_given_psi, BINS_CENTER, lsv_psi
 from analysis.adjustdelta import adjustdelta
-from analysis.weight import local_weight_eta_nu, global_weights
+from analysis.weight import local_weight_eta_nu, global_weight_ro
 from analysis.matrix import rank_deltas_lsv, collapse_matrix
 import analysis.filter as majiq_filter
 import analysis.io as majiq_io
@@ -341,57 +341,72 @@ def deltapsi_calc( matched_list, matched_info, fitfunc, conf, chunk, prior_matri
 
     return posterior_matrix
 
-def delta_calculation(matched_info, lsv_samples, psi_space, prior_matrix, logr=None, plotpath='./'):
-    chunk = 0
-    numbins = 20
+def delta_calculation(matched_info, lsv_samples, conf, prior_matrix, logr=None, chunk=0):
+    numbins= 20
     data_given_psi = []
+    for lsv_idx, info in enumerate(matched_info):
+        if lsv_idx % 50 == 0:
+            print "%s...."%lsv_idx,
+            sys.stdout.flush()
+        data_given_psi1 = majiq_psi.reads_given_psi_lsv( lsv_samples[0][lsv_idx], conf['psi_space'] )
+        data_given_psi2 = majiq_psi.reads_given_psi_lsv( lsv_samples[1][lsv_idx], conf['psi_space'] )
+        data_psi = []
+        for psi, data1 in enumerate(data_given_psi1) :
+        #TODO Tensor product is calculated with scipy.stats.kron. Probably faster, have to make sure I am using it correctly.
+            sys.stdout.flush()
+
+            data_psi.append(data_given_psi1[psi].reshape(-1, numbins) * data_given_psi2[psi].reshape(numbins, -1))
+            if psi == 0: 
+                majiq_psi.plot_matrix(  data_psi[-1],
+                                        "P(Data | PSI 1, PSI 2) Event %s.%s (Psi1: %s Psi2: %s)"%(lsv_idx,psi, sum(data_given_psi1[psi]), sum(data_given_psi2[psi])), 
+                                        "datagpsi_%s.%s"%(info[1], psi),
+                                        conf['plotpath'] )
+
+        data_given_psi.append(data_psi)
+    print
+    sys.stdout.flush()
+
+    #Finally, P(PSI_i, PSI_j | Data) equivalent to P(PSI_i, PSI_j)* P(Data | PSI_i, PSI_j) 
+    logr.info("[Th %s]: Calculate Posterior Delta Matrices..."%chunk)
+    posterior_matrix = []
+    for lidx, lsv in enumerate(matched_info) :
+        if lsv_idx % 50 == 0: 
+            print "%s...."%lsv_idx,
+            sys.stdout.flush()
+        lsv_psi_matrix = []
+        for psi in range(len(data_given_psi[lidx])) :
+            pm = (prior_matrix * data_given_psi[lidx][psi])
+            psi_mat = (pm / sum(pm))
+            lsv_psi_matrix.append( psi_mat )
+            if psi == 0: 
+                majiq_psi.plot_matrix(  psi_mat,
+                                    "Posterior Delta Event %s.%s (Psi1: %s Psi2: %s)"%(lidx,psi, sum(data_given_psi1[psi]), sum(data_given_psi2[psi])),
+                                    "posterior_dpsi.%s.%s"%(lsv[1],psi),
+                                    conf['plotpath'] )
+        posterior_matrix.append(lsv_psi_matrix)
+
+    return posterior_matrix
+
+def parallel_delta_calculation ( matched_info, lsv_samples, conf, prior_matrix, tempdir, chunk):
+
     try:
-        for lsv_idx, info in enumerate(matched_info):
-            if lsv_idx % 50 == 0:
-                print "%s...."%lsv_idx,
-                sys.stdout.flush()
-            data_given_psi1 = majiq_psi.reads_given_psi_lsv( lsv_samples[0][lsv_idx], psi_space )
-            data_given_psi2 = majiq_psi.reads_given_psi_lsv( lsv_samples[1][lsv_idx], psi_space )
-            data_psi = []
-            for psi, data1 in enumerate(data_given_psi1) :
-            #TODO Tensor product is calculated with scipy.stats.kron. Probably faster, have to make sure I am using it correctly.
-                sys.stdout.flush()
-
-                data_psi.append(data_given_psi1[psi].reshape(-1, numbins) * data_given_psi2[psi].reshape(numbins, -1))
-                if psi == 0: 
-                    majiq_psi.plot_matrix(  data_psi[-1],
-                                            "P(Data | PSI 1, PSI 2) Event %s.%s (Psi1: %s Psi2: %s)"%(lsv_idx,psi, sum(data_given_psi1[psi]), sum(data_given_psi2[psi])), 
-                                            "datagpsi_%s.%s"%(info[1], psi),
-                                            plotpath )
-
-            data_given_psi.append(data_psi)
-        print 
+        if not os.path.isdir(tempdir):
+                os.mkdir(tempdir)
+        thread_logger = get_logger("%s/majiq.w%s.log"%(tempdir,chunk), silent=False, debug=conf['debug'])
+        thread_logger.info( "[Th %s]: START child,%s"%(chunk,current_process().name))
+        thread_logger.info('[Th %s]: Filtering ...'%(chunk))
+        post_matrix = delta_calculation( matched_info, lsv_samples, conf, prior_matrix, logr=thread_logger, chunk=chunk)
+        print "%s/%s_%s_th%s.deltapsi.pickle"%(tempdir, conf['names'][0], conf['names'][1], chunk)
         sys.stdout.flush()
-
-
-        #Finally, P(PSI_i, PSI_j | Data) equivalent to P(PSI_i, PSI_j)* P(Data | PSI_i, PSI_j) 
-        logr.info("[Th %s]: Calculate Posterior Delta Matrices..."%chunk)
-        posterior_matrix = []
-        for lidx, lsv in enumerate(matched_info) :
-            if lsv_idx % 50 == 0: 
-                print "%s...."%lidx,
-                sys.stdout.flush()
-            lsv_psi_matrix = []
-            for psi in range(len(data_given_psi[lidx])) :
-                pm = (prior_matrix * data_given_psi[lidx][psi])
-                psi_mat = (pm / sum(pm))
-                lsv_psi_matrix.append( psi_mat )
-                if psi == 0: 
-                    majiq_psi.plot_matrix(  psi_mat,
-                                        "Posterior Delta Event %s.%s (Psi1: %s Psi2: %s)"%(lidx,psi, sum(data_given_psi1[psi]), sum(data_given_psi2[psi])),
-                                        "posterior_dpsi.%s.%s"%(lsv[1],psi),
-                                        plotpath )
-            posterior_matrix.append(lsv_psi_matrix)
+        thread_logger.info("[Th %s]: Saving DeltaPSI..."%chunk)
+        output = open("%s/%s_%s_th%s.deltapsi.pickle"%(tempdir, conf['names'][0], conf['names'][1], chunk), 'w')
+        pickle.dump((post_matrix, matched_info), output)
+        thread_logger.info("[Th %s]: DeltaPSI calculation for XX ended succesfully! Result can be found at %s"%(chunk, output.name))
     except Exception as e:
         print "%s"%sys.exc_traceback.tb_lineno, e
         sys.stdout.flush()
 
-    return posterior_matrix
+    return
 
 def parallel_delta_psi_wrapper ( matched_list, matched_info, fitfunc, conf, prior_matrix, tempdir, chunk):
 
@@ -603,11 +618,14 @@ class DeltaGroup(DeltaPair, CalcPsi):
         self.logger.info("WEIGHTS: Calculating local weights...")
         eta_wgt, nu_wgt = local_weight_eta_nu( lsv_samples, nexp )
 
-        gweights = eta_wgt * nu_wgt
         
         self.logger.info("WEIGHTS: Calculating global weights...")
         ro_wgt = global_weight_ro( lsv_samples, relevant, nexp )
-        gweights *= ro_wgt
+        print "GLOBALS",ro_wgt
+       
+        gweights = np.zeros(shape=(len(lsv_samples),nexp), dtype=np.float)
+        for ne in range(nexp):
+            gweights[:,ne] = ro_wgt[ne] * eta_wgt[:,ne]*nu_wgt[:,ne]
         self.logger.info("WEIGHTS: Done")
         return gweights
 
@@ -654,7 +672,7 @@ class DeltaGroup(DeltaPair, CalcPsi):
 
         return weights
 
-    def comb_replicas_lsv(self, delta_posterior_lsv, matched_info, weights1=None, weights2=None):
+    def comb_replicas_lsv(self, data_posterior_lsv, matched_info, weights1=None, weights2=None):
         "Combine all replicas per event into a single average replica. Weights per experiment can be provided"
         weights1 = self.equal_if_not(weights1) 
         weights2 = self.equal_if_not(weights2) 
@@ -664,18 +682,18 @@ class DeltaGroup(DeltaPair, CalcPsi):
 
         for lidx, lsv in enumerate(matched_info):
             comb_matrix.append([])
-            for matrices in data_posterior_lsv[lidx]:
-                for k, junc in enumerate(matrices):
-                    for jidx, matrix in enumerate(junc):
-                    #i = k / len(self.files1) #infers the weight1 index given the position of the matrix
-                    #j = k % len(self.files2)
-                        i, j = self.k_ref[k]
-                        comb += matrix*weights1[lidx][i]*weights2[lidx][j]
-
-                if k == FILTERMIN:
-                    comb /= sum(comb) #renormalize so it sums 1
-                    comb_matrix[lidx].append(comb)
-                    comb_names.append(lsv)
+            njunc = len(data_posterior_lsv[lidx][0][0])
+            comb = [ np.zeros(shape=(20,20),dtype=np.float) for xx in range(njunc)]
+            for idx, matrices in enumerate(data_posterior_lsv[lidx]):
+                for jdx, junc in enumerate(matrices):
+                    for k, matrix in enumerate(junc):
+#                        import pdb
+#                        pdb.set_trace()
+                        comb[k] += matrix*weights1[lidx][idx]*weights2[lidx][jdx]
+            for junc_idx, cmb in enumerate(comb):
+                cmb /= sum(cmb) #renormalize so it sums 1
+                comb_matrix[lidx].append(cmb)
+                comb_names.append(lsv)
 
         return comb_matrix, comb_names
 
@@ -723,45 +741,53 @@ class DeltaGroup(DeltaPair, CalcPsi):
         matched_lsv, matched_info = majiq_filter.lsv_intersection( filtered_lsv1, filtered_lsv2 )
 
         lsv_samples1 = [[] for xx in self.files1]
-        for ii, file in enumerate(self.files1):
-            self.logger.info("Bootstrapping for all samples...")
-            lsv_exp = [ xx[ii] for xx in matched_lsv[0] ]
-            for idx, jj in enumerate( lsv_exp ):
-                m_lsv, var_lsv, s_lsv = sample_from_junctions(  junction_list = jj,
-                                                                m = self.m,
-                                                                k = self.k,
-                                                                discardzeros= self.discardzeros,
-                                                                trimborder  = self.trimborder,
-                                                                fitted_func = fitfunc1[ii],
-                                                                debug       = self.debug,
-                                                                Nz          = self.nz)
-                lsv_samples1[ii].append( s_lsv )
+        lsv_samples1 = np.zeros(shape=(len(matched_info), len(self.files1)), dtype=np.dtype('object'))
+        lsv_samples2 = np.zeros(shape=(len(matched_info), len(self.files2)), dtype=np.dtype('object'))
 
-        lsv_samples2 = [[] for xx in self.files2]
-        for ii, file in enumerate(self.files2):
-            self.logger.info("Bootstrapping for all samples...")
-            lsv_exp = [ xx[ii] for xx in matched_lsv[1] ]
-            for idx, jj in enumerate(lsv_exp):
-                m_lsv, var_lsv, s_lsv = sample_from_junctions(  junction_list = jj,
-                                                                m = self.m,
-                                                                k = self.k,
-                                                                discardzeros= self.discardzeros,
-                                                                trimborder  = self.trimborder,
-                                                                fitted_func = fitfunc2[ii],
-                                                                debug       = self.debug,
-                                                                Nz          = self.nz)
-                lsv_samples2[ii].append( s_lsv )
+        self.logger.info("Bootstrapping for all samples...")
+        for grp_idx, group in enumerate(matched_lsv):
+            for lidx, lsv_all in enumerate(group):
+                for eidx, lsv in enumerate(lsv_all):
+                    m_lsv, var_lsv, s_lsv = sample_from_junctions(  junction_list = lsv,
+                                                                    m = self.m,
+                                                                    k = self.k,
+                                                                    discardzeros= self.discardzeros,
+                                                                    trimborder  = self.trimborder,
+                                                                    fitted_func = fitfunc1[ii],
+                                                                    debug       = self.debug,
+                                                                    Nz          = self.nz)
+                    if grp_idx == 0:
+                        lsv_samples1[lidx,eidx] = s_lsv
+                    else:
+                        lsv_samples2[lidx,eidx] = s_lsv
+
+
 
 
         self.logger.info("Calculating pairs...")
+
+        conf = { 'minnonzero':self.minnonzero,
+                 'minreads': self.minreads,
+                 'm':self.m,
+                 'k':self.k,
+                 'discardzeros':self.discardzeros,
+                 'trimborder':self.trimborder,
+                 'debug':self.debug,
+                 'alpha':self.alpha,
+                 'n':self.n, 
+                 'plotpath':self.plotpath,
+                 'Nz':self.nz,
+                 'names':self.names}
+
+
         relevant_events = []
         #matched_lsv, matched_info = majiq_filter.lsv_intersection( [lsv_samples1[idx], filtered_lsv1[1]],
         # [lsv_samples2[jdx], filtered_lsv2[1]])
 #        pairs_posteriors = [[] for xx in xrange(len(matched_info))]
         pairs_posteriors = np.zeros(shape=(len(matched_info), len(self.files1), len(self.files2)), dtype=np.dtype('object'))
 
-        for idx, exp_ii in enumerate(lsv_samples1):
-            for jdx, exp_jj in enumerate(lsv_samples2):
+        for idx in xrange(num_exp[0]):
+            for jdx in xrange(num_exp[1]):
                 name1 = "%s%d"%(self.names[0],idx)
                 name2 = "%s%d"%(self.names[1],jdx)
                 self.logger.info("Calculating %s | %s"%(name1, name2))
@@ -774,8 +800,38 @@ class DeltaGroup(DeltaPair, CalcPsi):
                                                                             [lsv_exp1, matched_info],
                                                                             [lsv_exp2, matched_info],
                                                                             self.output)
-                    Dt1_Dt2 = [lsv_samples1[idx],lsv_samples2[jdx]]
-                    matrices = delta_calculation( matched_info, Dt1_Dt2, psi_space, prior_matrix[ii], self.logger, self.plotpath)
+                    conf['psi_space'] =psi_space
+
+                    if self.nthreads == 1:
+                        Dt1_Dt2 = [lsv_samples1[:,idx],lsv_samples2[:,jdx]]
+                        matrices = delta_calculation( matched_info, Dt1_Dt2, conf, prior_matrix[ii], self.logger )
+                    else:
+                        pool = Pool(processes=self.nthreads)
+                        csize = len(matched_lsv[0]) / int(self.nthreads)
+                        self.logger.info("CREATING THREADS %s with <= %s lsv"%(self.nthreads,csize))
+                        jobs = []
+
+                        for nt in xrange(self.nthreads):
+                            lb = nt * csize
+                            ub = min( (nt+1) * csize, len(matched_lsv[0]) )
+                            if nt == self.nthreads - 1 : ub = len(matched_lsv[0]) 
+                            Dt1_Dt2 = [lsv_samples1[lb:ub,idx],lsv_samples2[lb:ub,jdx]]
+                            lsv_info = matched_info[lb:ub]
+                            jobs.append(pool.apply_async( parallel_delta_calculation, [ lsv_info,
+                                                                                        Dt1_Dt2,
+                                                                                        conf,
+                                                                                        prior_matrix[ii],
+                                                                                        '%s/tmp'%os.path.dirname(self.output),
+                                                                                        nt]))
+                        pool.close()
+                        pool.join()
+                        posterior_matrix = []
+                        self.logger.info("GATHER pickles")
+                        matrices = []
+                        for nt in xrange(self.nthreads):
+                            tempfile = open("%s/tmp/%s_%s_th%s.deltapsi.pickle"%(os.path.dirname(self.output), self.names[0], self.names[1], nt))
+                            ptempt = pickle.load( tempfile )
+                            matrices.extend( ptempt[0] )
 
                     store_delta_psi( matrices, name1, name2, self.output, thread_logger=self.logger)
 
@@ -795,11 +851,11 @@ class DeltaGroup(DeltaPair, CalcPsi):
         self.logger.info("Obtaining weights for relevant set...")
         weights1 = self.calc_weights_lsv( lsv_samples1, relevant_events, num_exp[0], ro_type = 3 )
         self.logger.info("Weigths for %s are (respectively) %s"%(self.files1, weights1))
-        weights2 = self.calc_weights_lsv( lsv_samples2, relevant_events, ro_type = 3)
-        self.logger.info("Weigths for %s are (respectively) %s"%(self.files2, num_exp[1], weights2))
+        weights2 = self.calc_weights_lsv( lsv_samples2, relevant_events, num_exp[1], ro_type = 3)
+        self.logger.info("Weigths for %s are (respectively) %s"%(self.files2, weights2))
 
         self.logger.info("Normalizing with weights...")
-        comb_matrix, comb_names = self.comb_replicas_lsv( pairs_posteriors, weights1=weights1, weights2=weights2 )
+        comb_matrix, comb_names = self.comb_replicas_lsv( pairs_posteriors, matched_info, weights1=weights1, weights2=weights2 )
         self.logger.info("%s events matrices calculated"%len(comb_names))
         pickle_path = "%s%s_%s_deltacombmatrix.pickle"%(self.output, self.names[0], self.names[1])
         name_path = "%s%s_%s_combeventnames.pickle"%(self.output, self.names[0], self.names[1])

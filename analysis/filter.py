@@ -86,24 +86,34 @@ def quantifiable_in_group( list_of_experiments, minnonzero, min_reads, logger, p
     return filtered, filtered_info
 
 
-def lsv_quantifiable ( list_lsv_tuple , minnonzero, min_reads, logger=False, fon = [True,True]):
+def lsv_quantifiable ( list_lsv_tuple , minnonzero, min_reads, logger=False, fon = [True,True], type='majiq'):
 
     filter_message("Before quantifiable_filter", minnonzero, logger, array(list_lsv_tuple))
     filtered = []
     filtered_info = []
     k = 2
-    for lsvdx, lsv in enumerate(list_lsv_tuple[0]):
+    if type == 'majiq':
+        for lsvdx, lsv in enumerate(list_lsv_tuple[0]):
+            for idx in range(lsv.shape[0]):
+                if ((not fon[1] or np.count_nonzero(lsv[idx]) >= minnonzero ) and
+                    (not fon[0] or lsv[idx].sum() >=  min_reads)):
+                    filtered.append(lsv)
+                    filtered_info.append(list_lsv_tuple[1][lsvdx])
+                    break
 
-        total_count  = lsv.sum()
-        thresh_reads = min_reads + (lsv.shape[0] -2)*k
-        for idx in range(lsv.shape[0]):
-            if ((not fon[1] or np.count_nonzero(lsv[idx]) >= minnonzero ) and 
-                (not fon[0] or total_count >=  thresh_reads)) :
-#                (not fon[0] or lsv[idx].sum() >=  min_reads)) :
-                filtered.append(lsv)
-                filtered_info.append(list_lsv_tuple[1][lsvdx])
-                break
-#    filter_message("After quantifiable_filter", minnonzero, logger, array(filtered))
+    elif type== 'miso':
+
+        for lsvdx, lsv in enumerate(list_lsv_tuple[0]):
+            total_count  = lsv.sum()
+            thresh_reads = min_reads + (lsv.shape[0] -2)*k
+            for idx in range(lsv.shape[0]):
+                if ((not fon[1] or np.count_nonzero(lsv[idx]) >= minnonzero ) and 
+                    (not fon[0] or total_count >=  thresh_reads)) :
+    #                (not fon[0] or lsv[idx].sum() >=  min_reads)) :
+                    filtered.append(lsv)
+                    filtered_info.append(list_lsv_tuple[1][lsvdx])
+                    break
+    #    filter_message("After quantifiable_filter", minnonzero, logger, array(filtered))
     return filtered, filtered_info
 
 def lsv_intersection( lsv_list1, lsv_list2 ):

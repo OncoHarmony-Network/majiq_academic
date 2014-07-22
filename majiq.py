@@ -107,8 +107,7 @@ def main( args ) :
         if int(args.ncpus) == 1:
             majiq_builder(sam_list, all_genes[chrom], chrom, None, pcr_validation=args.pcr_filename )
         else:
-            pool.apply_async( exec_pipe, [sam_list, all_genes[chrom], chrom, None])
-
+            pool.apply_async( __parallel_lsv_quant, [sam_list, all_genes[chrom], chrom, None, args.pcr_filename] )
     print "MASTER JOB.... waiting childs"
     genes = np.zeros(shape=(len(mglobals.exp_list)),dtype=np.dtype('object'))
     if int(args.ncpus) >1:
