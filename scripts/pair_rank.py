@@ -4,6 +4,9 @@ Rank MAJIQ, MISO or MATS events to test delta PSI reproducibility
 
 
 """
+import matplotlib as mplot
+mplot.use('Agg')
+
 from collections import defaultdict
 import argparse
 import pickle

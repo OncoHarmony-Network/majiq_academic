@@ -796,6 +796,8 @@ class DeltaGroup(DeltaPair, CalcPsi):
                 if matrices is None:
                     lsv_exp1 = [ xx[idx] for xx in matched_lsv[0] ]
                     lsv_exp2 = [ xx[jdx] for xx in matched_lsv[1] ]
+#                    import pdb
+#                    pdb.set_trace()
                     psi_space, prior_matrix = majiq_psi.gen_prior_matrix(   self,
                                                                             [lsv_exp1, matched_info],
                                                                             [lsv_exp2, matched_info],
