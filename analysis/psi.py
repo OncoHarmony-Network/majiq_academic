@@ -143,13 +143,20 @@ def dirichlet_pdf(x, alpha):
     '''Returns a Dirichlet PDF function'''
     alphap = alpha - 1
     c = np.exp(gammaln(alpha.sum()) - gammaln(alpha).sum())
-    return c * (x**alphap).prod(axis=1)
+    dir_res = c * (x**alphap).prod(axis=1)
+    dir_res = np.array(dir_res)
+    psi = dir_res / float(dir_res.sum())
 
+    return psi
 
 
 def recalibrate_delta(deltapsi):
     #TODO make deltaPSI follow the following binning system
     arange(-98.75, 100, 2.5)
+
+
+
+
 
 def lsv_psi(samples_events, alpha, n, debug):
     "Given a set of matching inclusion and exclusion samples, calculate psi, save it in disk, and return the psi-per-juntion matrix"
@@ -179,17 +186,12 @@ def lsv_psi(samples_events, alpha, n, debug):
 
             total_psi = np.zeros(shape=(100,BINS.shape[0]),dtype=np.float)
             for pidx, paired_samples in enumerate(samples.T):
-
-                dir_pdf = dirichlet_pdf(array([BINS_CENTER, 1-BINS_CENTER]).T, paired_samples)
-                dir_pdf = np.array(dir_pdf)
-                total_acum = float(dir_pdf.sum())
-                total_psi[pidx] = dir_pdf/total_acum
+                total_psi[pidx] = dirichlet_pdf(array([BINS_CENTER, 1-BINS_CENTER]).T, paired_samples)
 
             total_psi = np.median(total_psi,axis=0)
             psi[idx] = total_psi/total_psi.sum()
 
         psi_scores.append( psi )
-
 
     return psi_scores
 
@@ -274,6 +276,8 @@ def calc_dirichlet(alpha, n, samples_events, debug=False, psiparam=False):
 
 def gen_prior_matrix( pip, lsv_exp1, lsv_exp2, output , numbins=20 ):
 
+
+    import pdb
     #Start prior matrix
     pip.logger.info("Calculating prior matrix...")
 

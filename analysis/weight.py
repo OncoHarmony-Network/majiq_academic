@@ -1,10 +1,12 @@
 from collections import defaultdict
 from scipy.stats import beta
+import analysis.psi as majiq_psi
+import numpy as np
 from pylab import *
 
 
 def _l1(p, q):
-    return (abs(p - q)).sum(axis=1)
+    return (abs(p - q)).sum(axis=0)
 
 def _kullback_lieber(p, q):
     """
@@ -28,55 +30,87 @@ def _kullback_lieber(p, q):
     return (log(p / q)*p).sum(axis=1)
 
 
-def _local_distance(a, b, l1):
-        if l1:
-            return _l1(a, b)
-        else:
-            return _kullback_lieber(a, b)    
+def _local_distance(a, b, l1, inv=False):
+    if l1:
+        res =  _l1(a, b)
+        if inv: res = 1 -res
+    else:
+        res = _kullback_lieber(a, b)
+    return res
 
 
-def local_weight_eta ( group ):
+def local_weight_eta_nu ( group, nexp ):
 
-    alpha = bta = 1
-    jeffreys = beta.pdf(x,alpha,bta)
+    alpha = bta = 0.5
+    x = np.array([majiq_psi.BINS_CENTER, 1-majiq_psi.BINS_CENTER]).T
+    jeffreys = majiq_psi.dirichlet_pdf(x,np.array([alpha,bta]))
 
-    eta = np.zeros(shape= group.shape, dtype=np.float)
-    for eidx, exp in enumerate(group):
-        for lidx, lsv in enumerate(exp):
-            eta_e = np.zeros(shape=(lsv.shape[0]), dtype=np.float)
-            for ii, psi in enumerate(lsv):
-                eta_e[ii] = _local_distance(psi,jeffreys, l1 = false)
+    max_eta_idx = np.zeros(shape=(len(group), nexp), dtype=np.int)
+    eta = np.zeros(shape=(len(group), nexp), dtype=np.float)
+    median_psi = np.zeros(shape=(len(group), nexp), dtype=np.float)
+    print " SIZES nexx", nexp, "num_lsv", len(group)
+    for lidx, lsv in enumerate(group):
+        for eidx, exp_lsv in enumerate(lsv):
+            mpsi = []
+            max_junc_eta = 0
+            for jidx in xrange(exp_lsv.shape[0]):
+                eta_e = np.zeros(shape=(exp_lsv.shape[1]), dtype=np.float)
+                for sample in xrange(exp_lsv.shape[1]):
+                    total = exp_lsv[:,sample].sum()
+                    cov   = exp_lsv[jidx, sample]
+                    smpl  = np.array([cov, total-cov]) + 0.5
+                    mpsi.append( majiq_psi.dirichlet_pdf( x , smpl) )
+                    eta_e[sample] = _local_distance( mpsi[-1], jeffreys, l1 = True )
 
-            eta[eidx, lidx] = (eta_e.sum()/float(lsv.shape[0]))
-    return eta
+                d_eta =  eta_e.sum()/float(exp_lsv.shape[1]) 
+                if max_junc_eta < d_eta: 
+                    max_junc_eta = d_eta
+                    max_eta_idx[lidx, eidx] = jidx
 
-def local_weight_nu ( group , median_psi):
+            median_psi[lidx, eidx] = median(array(mpsi[max_eta_idx[lidx, eidx]]), axis=0)
+            eta[lidx, eidx] = max_junc_eta
 
-    nu = np.zeros(shape= group.shape, dtype=np.float)
-    for eidx, exp in enumerate(group):
-        for lidx, lsv in enumerate(exp):
-            nu_e = np.zeros(shape=(lsv.shape[0]), dtype=np.float)
-            for ii, psi in enumerate(lsv):
-                nu_e[ii] = _local_distance(psi,median_psi[lidx, ii], l1 = false)
+
+    nu = np.zeros(shape=(len(group), nexp), dtype=np.float)
+    for lidx, lsv_exp in enumerate(group):
+        for eidx, lsv in enumerate(lsv_exp):
+            nu_e = np.zeros(shape=(lsv.shape[1]), dtype=np.float)
+            jidx = max_eta_idx[lidx, eidx]
+            for sample in xrange(lsv.shape[1]):
+                    total = lsv[:,sample].sum()
+                    cov = lsv[jidx, sample]
+                    smpl = np.array([cov, total-cov]) + 0.5
+                    psi = majiq_psi.dirichlet_pdf(x, smpl)
+                    nu_e[sample] = _local_distance(psi, median_psi[lidx, eidx], l1 = True, inv=True)
+            nu[lidx, eidx] = (nu_e.sum()/float(lsv.shape[1]))
+
+    return eta, nu
+
+def global_weight_ro ( group , relevant, num_exp, n=100 ):
+
+    ''' Calculate psi for global_weight '''
     
-            nu = (nu_e.sum()/float(lsv.shape[0]))
-    return nu
+    median_ref = [] 
+    #ev = [None]*len(group)
+    ev = []
+    psis = np.zeros(shape=(num_exp, len(group)), dtype=np.dtype('object'))
 
+    for eidx in xrange( num_exp):
+        lsv_list = group[:,eidx]
+        psi = majiq_psi.lsv_psi( lsv_list,  0.5, n, 0 )
+        psis[eidx,:] = psi
 
-def global_weight_ro ( group , median_psi ):
-    
-    ro = np.zeros( shape = (group.shape[0]), dtype= np.float)
-    ro_lsv = np.zeros(shape= group.shape, dtype=np.float)
-    for eidx, exp in enumerate(group):
-        for lidx, lsv in enumerate(exp):
-            for ii, psi in enumerate(lsv):
-                ro_lsv[lidx, eidx] += _local_distance(psi,median_psi[lidx, ii], l1 = false)
+    for lidx in xrange( len(group)):
+        tmp = np.array([xx[0] for xx in psis[:,lidx]])
+        median_ref.append(np.median(tmp, axis=0))
 
-    
-    ro = ro_lsv.sum(axis=0)
+    ro = np.zeros( shape=(num_exp), dtype= np.float)
+    ro_lsv = np.zeros(shape=num_exp, dtype=np.float)
+    for eidx, exp in enumerate(psis):
+        for lidx, psi in enumerate(exp):
+            ro_lsv[eidx] += _local_distance(psi[0],median_ref[lidx], l1 = True)
 
-    ro = ro / ro.sum()
-
+    ro = ro_lsv / ro_lsv.sum()
     return ro
 
 def local_weights(replicas, l1=False, median_ref=array([])):

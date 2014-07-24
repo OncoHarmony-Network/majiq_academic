@@ -100,8 +100,11 @@ def rank_deltas(matrices, names, V=0.2, absolute=True, E=False, ranknochange=Fal
 def rank_deltas_lsv( matrices, names, V=0.2, absolute=True, E=False, ranknochange=False):
     "Rank all deltas in an event by level of change. V sets a threshold for change, E overrides V and calculates an average of V values"
     rank = []
-    for lsv in enumerate(matrices):
+    for lidx, lsv in enumerate(matrices):
         v_prob = []
+        import pdb 
+#        pdb.set_trace()
+        if len(lsv) > 2: continue
         for dmatrix in lsv:
             if E:
                 v_prob.append( matrix_prob_e(dmatrix) )
@@ -111,7 +114,7 @@ def rank_deltas_lsv( matrices, names, V=0.2, absolute=True, E=False, ranknochang
                 if ranknochange: #P(Delta PSI < V) = 1 - P(Delta PSI > V)
                     area = 1 - area
                 v_prob.append( area )
-        rank.append([names[i], max(v_prob)])
+        rank.append([names[lidx][1], max(v_prob)])
 
     rank.sort(key=lambda x: -x[1])
     return rank
