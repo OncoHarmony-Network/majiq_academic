@@ -22,39 +22,13 @@ CanvasRenderingContext2D.prototype.dashedLine = function (x1, y1, x2, y2, dashLe
 
 $( document ).ready(function(){
 
-
-    /**
-     * Single experiment PSI rendering
-     * */
-    // add button functionality to toggle extended summary info
-    $(".hideshow_extended").click(function(event){
-        $(".extended-info").toggle("show");
-    });
-
     // add sortable functionality to the table
     $('.tablesorter').each(function() {
         $(this).tablesorter({sortList: [
             [0, 0]
-        ], headers: {4: {sorter: false}, 5: {sorter: false}}}); // Disable sort function in column PDF
-        $(this).tablesorterPager({widthFixed: true, widgets: ['zebra', 'renderCanvas'], container: $(".pager", this)});
+        ], headers: {3: {sorter: false}, 4: {sorter: false}, 5: {sorter: false}}}); // Disable sort function in column PDF
+        $(this).tablesorterPager({widthFixed: true, widgets: ['zebra', 'renderCanvas'], container: $(this).parent().children(".pager")});
     });
-//    var eventTable = $('#event_table');
-//    eventTable.tablesorter({sortList: [[0,0]], headers: {4: {sorter: false}, 5: {sorter: false}}}); // Disable sort function in column PDF
-//    eventTable.tablesorterPager({widthFixed: true, widgets: ['zebra', 'renderCanvas'], container: $(".pager")});
-
-    var initLargeCanvasSettings = function (num_bins, canvas) {
-
-        // Calculate canvas drawable settings
-        var settingsCanvas = {};
-        settingsCanvas.margin_y = [10, 25];
-        settingsCanvas.margin_x = [30, 1];
-        settingsCanvas.area_pixels = [canvas.width - settingsCanvas.margin_x.reduce(add, 0),
-            canvas.height - settingsCanvas.margin_y.reduce(add, 0)];
-        settingsCanvas.coords_origin = [settingsCanvas.margin_x[0], settingsCanvas.margin_y[0] + settingsCanvas.area_pixels[1]];
-        settingsCanvas.bar_width = settingsCanvas.area_pixels[0]/num_bins;
-        settingsCanvas.labels_steps = [Math.ceil((num_bins+1)/8), 4];
-        return settingsCanvas;
-    };
 
     // Check if the html has psiPlots and largePsiPlots (render legend if so)
     if ($(document).find('.psiPlot').length){
@@ -140,8 +114,33 @@ $( document ).ready(function(){
 
     });
 
+    $('.tooltip').tooltipster({
+        theme: 'tooltipster-light'
+    });
+
 });
 
+var initLargeCanvasSettings = function (num_bins, canvas) {
+
+    // Calculate canvas drawable settings
+    var settingsCanvas;
+
+    return function(){
+        if (settingsCanvas){
+            return settingsCanvas;
+        }
+        settingsCanvas = {};
+        settingsCanvas.margin_y = [10, 25];
+        settingsCanvas.margin_x = [30, 1];
+        settingsCanvas.area_pixels = [canvas.width - settingsCanvas.margin_x.reduce(add, 0),
+                canvas.height - settingsCanvas.margin_y.reduce(add, 0)];
+        settingsCanvas.coords_origin = [settingsCanvas.margin_x[0], settingsCanvas.margin_y[0] + settingsCanvas.area_pixels[1]];
+        settingsCanvas.bar_width = settingsCanvas.area_pixels[0]/num_bins;
+        settingsCanvas.labels_steps = [Math.ceil((num_bins+1)/8), 4];
+        return settingsCanvas;
+    }();
+
+};
 
 function addExpandedViewFunction(){
     // detailed view buttons behaviour
@@ -316,24 +315,23 @@ function createGradientSinglePlots(ctx, canvas, margins){
     return gradient;
 }
 
-function createGradientDeltaPlots(ctx, gradientFrom, gradientTo, pThreshold){
+function createGradientDeltaPlots(ctx, gradientFrom, gradientTo, fromColor, toColor, pThreshold){
     //create a gradient object from the canvas context
     var gradient = ctx.createLinearGradient(gradientFrom, 0, gradientTo, 0);
 
-
     // Add the colors with fixed stops.
-    gradient.addColorStop(0,rgbToHex(55, 126, 184));
+    gradient.addColorStop(0, getColor(fromColor, BREWER_PALETTE, 1));
     gradient.addColorStop(0.5-pThreshold/2,"white");
     gradient.addColorStop(0.5-pThreshold/2,"grey");
 //    gradient.addColorStop(0.5,"white");
     gradient.addColorStop(0.5+pThreshold/2,"grey");
     gradient.addColorStop(0.5+pThreshold/2,"white");
-    gradient.addColorStop(1,rgbToHex(228, 26, 28));
+    gradient.addColorStop(1, getColor(toColor, BREWER_PALETTE, 1));
 
     return gradient;
 }
 
-function drawBarchartWithCanvasId(eventOrCanvasid, zoomInc){
+function drawBarchartWithCanvasId(eventOrCanvasid, zoomInc, canvasSettings){
     // To cover the case when the reset button is clicked and when we just render the canvas passing a canvas id
 
     var canvasId;
@@ -345,14 +343,14 @@ function drawBarchartWithCanvasId(eventOrCanvasid, zoomInc){
         canvasId = eventOrCanvasid;
     }
     canvas = $("#".concat(canvasId))[0];
-    renderLargeCanvas(canvas, zoomInc);
+    renderLargeCanvas(canvas, zoomInc, canvasSettings);
 }
 
-function attachResetZoomLink(canvas, drawFunction) {
+function attachResetZoomLink(canvas, drawFunction, canvasSettingsP) {
     var idResetImage = 'resetZoom'.concat(canvas.getAttribute('id'));
     //find the td in which we need to append the reset button
-    $(canvas).closest("td").prepend('<img id="'.concat(idResetImage).concat('" src="../templates/static/img/undo.png" class="hidden resetZoom" />'));
-    $("#".concat(idResetImage)).on("click", {canvasId: canvas.id, zoomInc: 0}, drawFunction);
+    $(canvas).parent().prepend('<img id="'.concat(idResetImage).concat('" src="static/img/undo.png" class="hidden resetZoom tooltip" title="Reset zoom" />'));
+    $("#".concat(idResetImage)).on("click", {canvasId: canvas.id, zoomInc: 0, canvasSettings: canvasSettingsP}, drawFunction);
 }
 
 function drawInitialBarplotCanvas(canvas){
@@ -456,19 +454,19 @@ function renderLargeCanvas(canvas, zoomInc){
         // Compute the zoom
         canvas.zoom = Math.max(canvas.zoom + zoomInc*15, 0); // Only positive zoom
         canvas.zoom = Math.abs(zoomInc)*canvas.zoom; // To reset zoom
-        (canvas.zoom == 0) ? hideResetZoomLink(canvas) : removeResetZoomLink(canvas);
+        (canvas.zoom == 0) ? hideResetZoomLink(canvas) : showResetZoomLink(canvas);
 
         drawBarChart(ctx, bins, window.settingsCanvasSingle, canvas.zoom); // Canvas settings shared by all (in window)
     }
 
 }
 
-function removeResetZoomLink(canvas){
-    $(canvas).closest("td").children().first().removeClass('hidden');
+function showResetZoomLink(canvas){
+    $(canvas).parent().children('.resetZoom').removeClass('hidden');
 }
 
 function hideResetZoomLink(canvas){
-    $(canvas).closest("td").children().first().addClass('hidden');
+    $(canvas).parent().children('.resetZoom').addClass('hidden');
 }
 
 function drawBoxplotHeatmap(canvas) {
@@ -839,62 +837,122 @@ function drawLSVCompactStackBars(canvas, fillMode){
     }
 }
 
+function drawDeltaLSVCompactSVG(htmlElementId, lsv) {
+    /* TODO: Create SVG component; Draw canvas rectangle; Draw for each of the excl-incl pairs, the bars.*/
+    var width = 200,
+        height = 20;
+    var margin = {top: 1, bottom: 8, left: 2, right: 2};
+    var domain = [-1, 1];
+    var x = d3.scale.linear()
+        .range([margin.left, margin.right])
+        .domain(domain);
+    var border_frame = 2;
 
-function drawDeltaLSVCompactStackBars(canvas){
+    var svgContainer = d3.select("#" + htmlElementId)
+        .append("svg")
+        .attr("class", "excl-incl-rect")
+        .attr("width", width)
+        .attr("height", height);
 
-    if (canvas.getContext) {  // check for support
-        var ctx = canvas.getContext("2d");
+    // Draw excl-incl bars
+    var last_excl_pos = width / 2,
+        last_incl_pos = width / 2;
+    for (var ii = 0; ii < lsv.excl_incl.length; ii++) {
+        svgContainer.append("rect")
+            .attr("x", last_excl_pos - Math.round((width / 2 - margin.left) * lsv.excl_incl[ii][0]))
+            .attr("y", margin.top)
+            .attr("width", Math.round((width / 2 - margin.left) * lsv.excl_incl[ii][0]))
+            .attr("height", height - margin.bottom - margin.top)
+            .style('fill', getColor(ii, BREWER_PALETTE, 1));
+        svgContainer.append("rect")
+            .attr("x", last_incl_pos)
+            .attr("y", margin.top)
+            .attr("width", Math.round((width / 2 - margin.right) * lsv.excl_incl[ii][1]))
+            .attr("height", height - margin.bottom - margin.top)
+            .style('fill', getColor(ii, BREWER_PALETTE, 1));
 
-        // Clear canvas
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        if (last_excl_pos != width / 2 && (Math.round(width / 2 - margin.left) * lsv.excl_incl[ii][0]) >= 1) {
+            console.log("This guys has more than 2 ways with exclusion >= 1: " + htmlElementId);
+            console.log(last_excl_pos + ", " + (width / 2 - margin.left) * lsv.excl_incl[ii][0])
+        }
+        if (last_incl_pos != width / 2 && Math.round((width / 2 - margin.right) * lsv.excl_incl[ii][1]) >= 1) {
+            console.log("This guys has more than 2 ways with inclusion >= 1: " + htmlElementId);
+            console.log(last_incl_pos + ", " + (width / 2 - margin.right) * lsv.excl_incl[ii][1])
+        }
 
-        var excl_incl_set = JSON.parse(canvas.dataset.exclIncl);
-        var halfCanvasWidth = parseInt(canvas.width/2);
-        var margin_top = 2;
-        var margin_bottom = 10;
-        // Create gradient exclusion/inclusion
+        // Draw percentages text
+        if (Math.round((width / 2 - margin.left) * lsv.excl_incl[ii][0]) >= 1){
+            last_excl_pos -= Math.round((width / 2 - margin.left) * lsv.excl_incl[ii][0]);
+            svgContainer.append("text")
+                .attr("x", last_excl_pos)
+                .attr("y", height)
+                .attr("text-anchor", "middle")
+                .attr("font-size", "9px")
+                .attr("fill", getColor(ii, BREWER_PALETTE, 1))
+                .text("-" + Math.round((width / 2 - margin.left) * lsv.excl_incl[ii][0]));
 
-        ctx.fillStyle = "grey";
-        ctx.lineWidth = 0.5;
-        drawRectangle(ctx, 1, 1, canvas.width-2, canvas.height-margin_bottom, 0); // Canvas box
-        // Fill with gradient
-//        ctx.fillStyle=createGradientDeltaPlots(ctx, 0, canvas.width);
+        }
 
-        // draw exclusion/inclusion Box
-        ctx.fillStyle = "blue";
-        ctx.fillStyle = rgbToHex(55, 126, 184); // blue
-        var set18qual1 = "rgba(228,26,28)";
-        var set18qual2 = "rgba(55,126,184)";
-        ctx.fillRect(halfCanvasWidth, margin_top, -parseInt(excl_incl_set[0]*canvas.width/2), canvas.height-margin_top-margin_bottom);
-        ctx.fillStyle = "red";
-        ctx.fillStyle = rgbToHex(228, 26, 28); // red
-        ctx.fillRect(halfCanvasWidth, margin_top, parseInt(excl_incl_set[1]*canvas.width/2), canvas.height-margin_top-margin_bottom);
+        if (Math.round((width / 2 - margin.right) * lsv.excl_incl[ii][1]) >= 1){
+            last_incl_pos += Math.round((width / 2 - margin.right) * lsv.excl_incl[ii][1]);
+            svgContainer.append("text")
+                .attr("x", last_incl_pos)
+                .attr("y", height)
+                .attr("text-anchor", "middle")
+                .attr("font-size", "9px")
+                .attr("fill", getColor(ii, BREWER_PALETTE, 1))
+                .text("+" + Math.round((width / 2 - margin.right) * lsv.excl_incl[ii][1]));
+        }
 
-
-
-        // draw -1, 0 and 1
-        ctx.textAlign = "center";
-        ctx.font = "bold 8pt Arial";
-        ctx.fillStyle = "blue";
-        ctx.fillStyle = rgbToHex(55, 126, 184); // blue
-        ctx.fillText("-"+(excl_incl_set[0]*100).toFixed(1)+" ", Math.max(halfCanvasWidth-Math.max(parseInt(excl_incl_set[0]*canvas.width/2), 10), 20), canvas.height);
-        ctx.fillStyle = "red";
-        ctx.fillStyle = rgbToHex(228, 26, 28); // red
-//        ctx.fillText("1", canvas.width - margin_top, canvas.height);
-        ctx.fillText("+"+(excl_incl_set[1]*100).toFixed(1), Math.min(halfCanvasWidth+Math.max(parseInt(excl_incl_set[1]*canvas.width/2), 10), halfCanvasWidth*2-20), canvas.height);
-        ctx.fillStyle = "black";
-//        ctx.fillText("0", halfCanvasWidth, canvas.height);
-
-
-
-        // draw middle bar (0)
-        ctx.lineWidth = 1.5;
-        ctx.strokeStyle = "black";
-        drawLine(ctx, halfCanvasWidth, parseInt(margin_top/2), halfCanvasWidth, canvas.height-margin_bottom+margin_top/2);
     }
+
+    // Draw canvas frame
+    svgContainer.append("rect")
+        .attr("x", margin.left)
+        .attr("y", margin.top)
+        .attr("width", width - margin.right - margin.left)
+        .attr("height", height - margin.bottom - margin.top)
+        .style('stroke', 'black')
+        .style('stroke-width', border_frame)
+        .attr("stroke-opacity", .5)
+        .style('fill', 'none');
+
+    // Draw x-axis ticks
+    svgContainer.append("text")
+        .attr("x", width / 2)
+        .attr("y", height)
+        .attr("text-anchor", "middle")
+        .attr("font-size", "10px")
+        .attr("fill", "black")
+        .text("0");
+    svgContainer.append("text")
+        .attr("x", 0)
+        .attr("y", height)
+        .attr("text-anchor", "start")
+        .attr("font-size", "10px")
+        .attr("fill", "black")
+        .text("-1");
+    svgContainer.append("text")
+        .attr("x", width)
+        .attr("y", height)
+        .attr("text-anchor", "end")
+        .attr("font-size", "10px")
+        .attr("fill", "black")
+        .text("+1");
+
+    // Draw separator
+    svgContainer.append("line")
+        .attr("x1", width / 2)
+        .attr("y1", margin.top)
+        .attr("x2", width / 2)
+        .attr("y2", height - margin.bottom)
+        .attr("stroke-width", 2)
+        .attr("stroke-opacity", .8)
+        .attr("stroke", "black");
+
+    return svgContainer;
+
 }
-
-
 
 
 function drawLSEBoxplots(canvas) {
@@ -1038,6 +1096,7 @@ function drawLSEBoxplots(canvas) {
 
         }
     }
+
 }
 
 function drawDeltaBox(canvas) {
@@ -1093,7 +1152,7 @@ function drawDeltaBox(canvas) {
     }
 }
 
-function drawDeltaBarChart(context, bins, settingsCanvasDelta, zoomLevel, pThreshold) {
+function drawDeltaBarChart(context, binsArray, settingsCanvasDelta, zoomLevel, pThreshold) {
 
     // Draw the x and y axes
     context.lineWidth = "1.0";
@@ -1115,84 +1174,87 @@ function drawDeltaBarChart(context, bins, settingsCanvasDelta, zoomLevel, pThres
     chartHeight += zoomLevel;
     var maxValue = 0;
 
-    //Preserve the gradient color style
-    var gradientColorStyle = createGradientDeltaPlots(context, settingsCanvasDelta.coords_origin[0],
-        settingsCanvasDelta.coords_origin[0]+settingsCanvasDelta.area_pixels[0], pThreshold);
 
-    context.fillStyle = gradientColorStyle;
+    for (var binsCount=0; binsCount<binsArray.length; binsCount++) {
+        var bins = binsArray[binsCount];
+        //Preserve the gradient color style
+        var gradientColorStyle = createGradientDeltaPlots(context, settingsCanvasDelta.coords_origin[0],
+                settingsCanvasDelta.coords_origin[0] + settingsCanvasDelta.area_pixels[0], binsCount, binsCount, pThreshold);
 
-    // Offset from origin to write the labels in x-axis
-//    var xLabelsCoordX = Math.min(15, settingsCanvasDelta.margin_y[1]);
+        context.fillStyle = gradientColorStyle;
 
-    for (var i=0; i < bins.length; i++) {
-        var name = i/bins.length;
-        var height = Math.round(bins[i]*chartHeight);
-        if (height > maxValue) maxValue = height;
+        // Offset from origin to write the labels in x-axis
+        //    var xLabelsCoordX = Math.min(15, settingsCanvasDelta.margin_y[1]);
 
-        // Write the data to the chart
-        drawRectangle(context,
-            settingsCanvasDelta.coords_origin[0] + (i * settingsCanvasDelta.bar_width),
-            settingsCanvasDelta.coords_origin[1] - height,
-            settingsCanvasDelta.bar_width,
-            height,
-            true);
+        for (var i = 0; i < bins.length; i++) {
+            var name = i / bins.length;
+            var height = Math.round(bins[i] * chartHeight);
+            if (height > maxValue) maxValue = height;
 
+            // Write the data to the chart
+            drawRectangle(context,
+                    settingsCanvasDelta.coords_origin[0] + (i * settingsCanvasDelta.bar_width),
+                    settingsCanvasDelta.coords_origin[1] - height,
+                settingsCanvasDelta.bar_width,
+                height,
+                true);
+
+        }
+
+        // Add the column title to the x-axis
+        context.textAlign = "center";
+        context.fillStyle = "black";
+
+        name = name * 100;
+        context.fillText("-1", settingsCanvasDelta.coords_origin[0], settingsCanvasDelta.coords_origin[1] + 15);
+        drawLine(context, settingsCanvasDelta.coords_origin[0],
+            settingsCanvasDelta.coords_origin[1],
+            settingsCanvasDelta.coords_origin[0],
+                settingsCanvasDelta.coords_origin[1] + 2 // size of the delimiter=4
+        );
+
+        context.fillText("0", settingsCanvasDelta.coords_origin[0] + (settingsCanvasDelta.area_pixels[0]) / 2, settingsCanvasDelta.coords_origin[1] + 15);
+        drawLine(context, settingsCanvasDelta.coords_origin[0] + (settingsCanvasDelta.area_pixels[0]) / 2,
+            settingsCanvasDelta.coords_origin[1],
+                settingsCanvasDelta.coords_origin[0] + (settingsCanvasDelta.area_pixels[0]) / 2,
+                settingsCanvasDelta.coords_origin[1] + 2 // size of the delimiter=4
+        );
+
+        context.textAlign = "right";
+        context.fillText("1", settingsCanvasDelta.coords_origin[0] + settingsCanvasDelta.area_pixels[0], settingsCanvasDelta.coords_origin[1] + 15);
+        drawLine(context, settingsCanvasDelta.coords_origin[0] + settingsCanvasDelta.area_pixels[0],
+            settingsCanvasDelta.coords_origin[1], // +1 to don't overlap
+                settingsCanvasDelta.coords_origin[0] + settingsCanvasDelta.area_pixels[0],
+                settingsCanvasDelta.coords_origin[1] + 2 // size of the delimiter=4
+        );
+
+        // Vertical bars for percentages of inclusion/exclusion (by Default, in -20 and +20)
+        context.textAlign = "center";
+        context.dashedLine(
+                settingsCanvasDelta.coords_origin[0] + settingsCanvasDelta.area_pixels[0] / 2 - parseInt(settingsCanvasDelta.area_pixels[0] / 2 * pThreshold),
+                settingsCanvasDelta.coords_origin[1] + 5, //Mark axis
+                settingsCanvasDelta.coords_origin[0] + settingsCanvasDelta.area_pixels[0] / 2 - parseInt(settingsCanvasDelta.area_pixels[0] / 2 * pThreshold),
+                settingsCanvasDelta.coords_origin[1] - settingsCanvasDelta.area_pixels[1]
+        );
+        context.stroke();
+        context.fillText("-" + pThreshold + " ",
+                settingsCanvasDelta.coords_origin[0] + settingsCanvasDelta.area_pixels[0] / 2 - parseInt(settingsCanvasDelta.area_pixels[0] / 2 * pThreshold),
+                settingsCanvasDelta.coords_origin[1] + 15 //Mark axis
+        );
+
+        context.dashedLine(
+                settingsCanvasDelta.coords_origin[0] + settingsCanvasDelta.area_pixels[0] / 2 + parseInt(settingsCanvasDelta.area_pixels[0] / 2 * pThreshold),
+                settingsCanvasDelta.coords_origin[1] + 5, //Mark axis
+                settingsCanvasDelta.coords_origin[0] + settingsCanvasDelta.area_pixels[0] / 2 + parseInt(settingsCanvasDelta.area_pixels[0] / 2 * pThreshold),
+                settingsCanvasDelta.coords_origin[1] - settingsCanvasDelta.area_pixels[1]
+        );
+        context.stroke();
+        context.fillText(pThreshold,
+                settingsCanvasDelta.coords_origin[0] + settingsCanvasDelta.area_pixels[0] / 2 + parseInt(settingsCanvasDelta.area_pixels[0] / 2 * pThreshold),
+                settingsCanvasDelta.coords_origin[1] + 15 //Mark axis
+        );
+        // End Vertical bars
     }
-
-    // Add the column title to the x-axis
-    context.textAlign = "center";
-    context.fillStyle = "black";
-
-    name = name * 100;
-    context.fillText("-1", settingsCanvasDelta.coords_origin[0], settingsCanvasDelta.coords_origin[1] + 15);
-    drawLine(context, settingsCanvasDelta.coords_origin[0],
-        settingsCanvasDelta.coords_origin[1],
-        settingsCanvasDelta.coords_origin[0],
-        settingsCanvasDelta.coords_origin[1] + 2 // size of the delimiter=4
-    );
-
-    context.fillText("0", settingsCanvasDelta.coords_origin[0] + (settingsCanvasDelta.area_pixels[0])/2, settingsCanvasDelta.coords_origin[1] + 15);
-    drawLine(context, settingsCanvasDelta.coords_origin[0] + (settingsCanvasDelta.area_pixels[0])/2,
-        settingsCanvasDelta.coords_origin[1],
-        settingsCanvasDelta.coords_origin[0] + (settingsCanvasDelta.area_pixels[0])/2,
-        settingsCanvasDelta.coords_origin[1] + 2 // size of the delimiter=4
-    );
-
-    context.textAlign = "right";
-    context.fillText("1", settingsCanvasDelta.coords_origin[0] + settingsCanvasDelta.area_pixels[0], settingsCanvasDelta.coords_origin[1] + 15);
-    drawLine(context, settingsCanvasDelta.coords_origin[0] + settingsCanvasDelta.area_pixels[0],
-        settingsCanvasDelta.coords_origin[1], // +1 to don't overlap
-        settingsCanvasDelta.coords_origin[0] + settingsCanvasDelta.area_pixels[0],
-        settingsCanvasDelta.coords_origin[1] + 2 // size of the delimiter=4
-    );
-
-    // Vertical bars for percentages of inclusion/exclusion (by Default, in -20 and +20)
-    context.textAlign = "center";
-    context.dashedLine(
-        settingsCanvasDelta.coords_origin[0] + settingsCanvasDelta.area_pixels[0]/2 -parseInt(settingsCanvasDelta.area_pixels[0]/2 * pThreshold),
-        settingsCanvasDelta.coords_origin[1]+5, //Mark axis
-        settingsCanvasDelta.coords_origin[0] + settingsCanvasDelta.area_pixels[0]/2 - parseInt(settingsCanvasDelta.area_pixels[0]/2 * pThreshold),
-        settingsCanvasDelta.coords_origin[1] - settingsCanvasDelta.area_pixels[1]
-    );
-    context.stroke();
-    context.fillText("-"+pThreshold+" ",
-        settingsCanvasDelta.coords_origin[0] + settingsCanvasDelta.area_pixels[0]/2 -parseInt(settingsCanvasDelta.area_pixels[0]/2 * pThreshold),
-        settingsCanvasDelta.coords_origin[1]+15 //Mark axis
-    );
-
-    context.dashedLine(
-        settingsCanvasDelta.coords_origin[0] + settingsCanvasDelta.area_pixels[0]/2 + parseInt(settingsCanvasDelta.area_pixels[0]/2 * pThreshold),
-        settingsCanvasDelta.coords_origin[1]+5, //Mark axis
-        settingsCanvasDelta.coords_origin[0] + settingsCanvasDelta.area_pixels[0]/2 + parseInt(settingsCanvasDelta.area_pixels[0]/2 * pThreshold),
-        settingsCanvasDelta.coords_origin[1] - settingsCanvasDelta.area_pixels[1]
-    );
-    context.stroke();
-    context.fillText(pThreshold,
-        settingsCanvasDelta.coords_origin[0] + settingsCanvasDelta.area_pixels[0]/2 + parseInt(settingsCanvasDelta.area_pixels[0]/2 * pThreshold),
-        settingsCanvasDelta.coords_origin[1]+15 //Mark axis
-    );
-    // End Vertical bars
-
 
     // Add some data markers to the y-axis
     var convertedMarkDataIncrementsIn = settingsCanvasDelta.area_pixels[1]/settingsCanvasDelta.labels_steps[1]; // chartHeight/settingsCanvasDelta.labels_steps[1];
@@ -1210,7 +1272,7 @@ function drawDeltaBarChart(context, bins, settingsCanvasDelta, zoomLevel, pThres
 
 }
 
-function drawExpDeltaWithCanvasId(eventOrCanvasid, zoomInc){
+function drawExpDeltaWithCanvasId(eventOrCanvasid, zoomInc, canvasSettings){
     // To cover the case when the reset button is clicked and when we just render the canvas passing a canvas id
 
     var canvasId;
@@ -1218,14 +1280,15 @@ function drawExpDeltaWithCanvasId(eventOrCanvasid, zoomInc){
         // This method was fired by a click event! We need to retrieve the params...
         zoomInc = eventOrCanvasid.data.zoomInc;
         canvasId = eventOrCanvasid.data.canvasId;
+        canvasSettings = eventOrCanvasid.data.canvasSettings;
     } else {
         canvasId = eventOrCanvasid;
     }
     canvas = $("#".concat(canvasId))[0];
-    renderExpandedDeltaCanvas(canvas, zoomInc);
+    renderExpandedDeltaCanvas(canvas, zoomInc, canvasSettings);
 }
 
-function renderExpandedDeltaCanvas(canvas, zoomInc){
+function renderExpandedDeltaCanvas(canvas, zoomInc, canvasSettings){
     if (canvas.getContext) {  // check for support
         var ctx = canvas.getContext("2d");
 
@@ -1235,7 +1298,7 @@ function renderExpandedDeltaCanvas(canvas, zoomInc){
         // Create gradient for coloured barchart
 //        ctx.fillStyle = createGradientSinglePlots(ctx, canvas);
 
-        var bins = JSON.parse(canvas.getAttribute('data-bins'));
+        var bins = JSON.parse(canvas.getAttribute('data-lsv')).bins;
 
         // Compute the zoom
         var zoom = parseInt(canvas.getAttribute('data-zoom'));
@@ -1243,19 +1306,21 @@ function renderExpandedDeltaCanvas(canvas, zoomInc){
         zoom = Math.abs(zoomInc)*zoom; // To reset zoom
 
 //        canvas.zoom = Math.abs(zoomInc)*canvas.zoom; // To reset zoom
-        (zoom == 0) ? hideResetZoomLink(canvas) : removeResetZoomLink(canvas);
+        (zoom == 0) ? hideResetZoomLink(canvas) : showResetZoomLink(canvas);
+
+        // Canvas attributes to reset barchart from zoom view
         canvas.setAttribute('data-zoom', zoom.toString());
+
         var pThreshold = canvas.getAttribute('data-threshold');
-        drawDeltaBarChart(ctx, bins, window.settingsCanvasDelta, zoom, pThreshold); // Canvas settings shared by all (in window)
+        drawDeltaBarChart(ctx, bins, canvasSettings, zoom, pThreshold); // Canvas settings shared by all (in window)
     }
 
 }
 
-function initExpandedDeltaCanvas(canvas){
-    canvas.setAttribute('data-zoom', '0'); // TODO: refactor, change local attributes with "element".setAttribute('att_name', 'att_value')
-
-    attachResetZoomLink(canvas, drawExpDeltaWithCanvasId);
-    renderExpandedDeltaCanvas(canvas, 0);
+function initExpandedDeltaCanvas(canvas, canvasSettings){
+    canvas.setAttribute('data-zoom', '0');
+    attachResetZoomLink(canvas, drawExpDeltaWithCanvasId, canvasSettings);
+    renderExpandedDeltaCanvas(canvas, 0, canvasSettings);
 }
 
 function forEach(array, action) {
@@ -1299,15 +1364,15 @@ function rgbToHex(r, g, b) {
     return "#" + componentToHex(r) + componentToHex(g) + componentToHex(b);
 }
 
-function renderViolin(htmlElementId, results, tableId){
+function renderViolin(htmlElementId, results, tableId, params){
 
 
     function addViolin(svg, results, height, width, domain, imposeMax, count, id_svg, id_table){
 
 
         var data = d3.layout.histogram()
-            .bins(resolution)
-            .frequency(0)
+            .bins(42)
+            .range(domain)
         (results);
 
         var y = d3.scale.linear()
@@ -1420,7 +1485,7 @@ function renderViolin(htmlElementId, results, tableId){
             .attr("class", "boxplot mean")
             .attr("cx", x(0.5))
             .attr("cy", y(d3.mean(results)))
-            .attr("r", x(boxPlotWidth/5));
+            .attr("r", x(boxPlotWidth/10));
 
         var iS=[0,2,4];
         var iSclass=["","median",""];
@@ -1453,31 +1518,39 @@ function renderViolin(htmlElementId, results, tableId){
 
     }
 
-    function addExpectedPSI(svg, mean_value, height, boxWidth){
+    function addExpectedPSI(svg, mean_value, height, boxWidth, count){
         svg.append("text")
             .attr("x", boxWidth/2)
             .attr("y", height)
             .attr("text-anchor", "middle")
-            .text(mean_value.toFixed(2));
+            .attr("font-size", "12px")
+            .attr("fill", getColor(count, BREWER_PALETTE, 1))
+            .text(mean_value.toFixed(3));
     }
 
 
     var margin={top:10, bottom:30, left:30, right:10};
 
 //    var element_jq = $("#"+htmlElementId)[0];
-    var width = 150 * results.length; //element_jq.getAttribute('width');
-    var height= 150; //element_jq.getAttribute('height');
+    var width =  300 * results.length; //element_jq.getAttribute('width');
+    var height=  300; //element_jq.getAttribute('height');
     var spacing_space = (width - margin.left - margin.right)*.05;
     var boxWidth=Math.round(((width - margin.left - margin.right)-spacing_space)/results.length);
     var boxSpacing=Math.round(spacing_space/results.length);
-    var max_domain =0;
-    for (var bins_list=0; bins_list<results.length;bins_list++){
-        max_domain = Math.max( Math.max.apply(null, results[bins_list]), max_domain);
+//    var max_domain =0;
+//    var min_domain =0;
+//    for (var bins_list=0; bins_list<results.length;bins_list++){
+//        max_domain = Math.max( Math.max.apply(null, results[bins_list]), max_domain);
+//        max_domain = Math.min( Math.min.apply(null, results[bins_list]), min_domain);
+//    }
+
+//    var domain=[min_domain,max_domain];
+    var domain=[0,1];
+    if (params.delta){
+        domain=[-1,1];
     }
 
-    var domain=[0,max_domain];
-
-    var resolution=10;
+    var resolution=42;
     var interpolation='basis'; // 'step-before'; 'basis'
 
     var y = d3.scale.linear()
@@ -1507,9 +1580,9 @@ function renderViolin(htmlElementId, results, tableId){
     for(var i=0; i<results.length; i++){
         results[i]=results[i]; //.sort(d3.ascending);
         var g=svg.append("g").attr("transform", "translate("+(i*(boxWidth+boxSpacing)+margin.left)+",0)");
-        addViolin(g, results[i], height, boxWidth, domain, 0.25, i, htmlElementId, tableId);
         addBoxPlot(g, results[i], height, boxWidth, domain, .15);
-        addExpectedPSI(g, d3.mean(results[i]), height, boxWidth);
+        addViolin(g, results[i], height, boxWidth, domain, 0.25, i, htmlElementId, tableId);
+        addExpectedPSI(g, d3.mean(results[i]), height, boxWidth, i);
 
     }
 

@@ -6,9 +6,9 @@ import matplotlib
 from analysis.matrix import collapse_matrix
 
 from lsv import Lsv
-from splice_graphics.exonGraphic import ExonGraphic
-from splice_graphics.junctionGraphic import JunctionGraphic
-from splice_graphics.geneGraphic import GeneGraphic
+from voila.splice_graphics.exonGraphic import ExonGraphic
+from voila.splice_graphics.junctionGraphic import JunctionGraphic
+from voila.splice_graphics.geneGraphic import GeneGraphic
 
 matplotlib.use('Agg')
 import shutil
@@ -209,7 +209,7 @@ def generate_lsv(i, lsvs_bins, confidence, **post_metadata):
     PREFIX = "../templates/static/matrix_plots/"
 
     # type_set = ('Exon skipping', '5-prime', '3-prime')
-    random_num = random()  # Random number between 0 and 1
+    random_num = random  # Random number between 0 and 1
     means_psi_list = []
     conf_interval_list = []
     quartile_list = []
@@ -451,7 +451,7 @@ def get_lsv_single_exp_data(majiq_bins_file, confidence, gene_name_list=None):
             'genes_dict':    genes_dict }
 
 
-def get_lsv_delta_exp_data(majiq_out_file, metadata_post=None, confidence=.95, threshold=.2, gene_name_list=None):
+def get_lsv_delta_exp_data(majiq_out_file, confidence=.95, threshold=.2, show_all=False, gene_name_list=None):
     """
     Load lsv delta psi pickle file. It contains a list with 2 elements:
         [0] List with LSV bins matrices
@@ -479,12 +479,19 @@ def get_lsv_delta_exp_data(majiq_out_file, metadata_post=None, confidence=.95, t
         expected_psis_bins = []
         excl_inc_perc_list = []
         gene_name = str(lsv_info[i][1]).split(':')[0]
+        include_lsv = show_all
 
         if not gene_name_list or gene_name in gene_name_list:
             for junc_matrix in lsv:
                 bins = collapse_matrix(np.array(junc_matrix))
                 expected_psis_bins.append(list(bins))
-                excl_inc_perc_list.append(find_excl_incl_percentages(bins, threshold))
+                excl_inc_tuple = find_excl_incl_percentages(bins, threshold)
+                excl_inc_perc_list.append(excl_inc_tuple)
+
+                # If the delta is significant (over the threshold) or 'show-all' option, include LSV
+                include_lsv = include_lsv or np.any(np.array(excl_inc_tuple)[np.array(excl_inc_tuple)>threshold])
+            if not include_lsv: continue
+
             try:
                 lsv = Lsv(generate_lsv(i, expected_psis_bins, confidence))
                 lsv.set_excl_incl(excl_inc_perc_list)

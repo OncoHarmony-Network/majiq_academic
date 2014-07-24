@@ -1027,61 +1027,61 @@
         format: function (table) {
             addExpandedViewFunction();
 
-            /**
-             * Single experiment visualization elements
-             */
+//            /**
+//             * Single experiment visualization elements
+//             */
+//
+//            $('.psiPlot').each( function(){
+//                drawBoxplotHeatmap($(this)[0]);
+//
+//                // For each compact view of the psiPlot, we want to add to the associated detailed view link
+//                var closestTd =$(this).closest("td");
+//                var largeCanvas = closestTd.children(".largePsiPlot")[0];
+//                closestTd.children(".detailedPsiLink").on('click',
+//                    {canvas: largeCanvas}, function(event) {
+//                        if (this.getAttribute('isExpanded') == true){
+//                            largeCanvas.setAttribute('bins', $(this).closest("td").children(".psiPlot")[0].getAttribute('bins'));
+//                            drawInitialBarplotCanvas(event.data.canvas);
+//                        }
+//                    }
+//                );
+//            });
+//
+//            $('.largePsiPlot').on('mousewheel', function(event) {
+//                event.preventDefault();
+//                if (event.deltaY > 0){
+//                    drawBarchartWithCanvasId($(this)[0].id, 1);
+//                } else if(event.deltaY < 0){
+//                    drawBarchartWithCanvasId($(this)[0].id, -1);
+//                }
+//            });
+//
+//            /**
+//             * Delta PSI visualization elements
+//             */
+//            $('.deltaCondensed').each( function(){
+//                drawDeltaBox($(this)[0]);
+//
+//                // For each compact view of the psiPlot, we want to add to the associated detailed view link
+//                var closestTd =$(this).closest("td");
+//                var largeCanvas = closestTd.children(".extendedDeltaPsi")[0]; //TODO: Refactor
+//                closestTd.children(".expandDelta").on('click',
+//                    {canvas: largeCanvas}, function(event) {
+//                        if (this.dataset.isExpanded == true){
+//                            largeCanvas.setAttribute('bins', $(this).closest("td").children(".deltaCondensed")[0].dataset.bins);
+//                            initExpandedDeltaCanvas(event.data.canvas); //TODO: Draw expanded Delta PSI plot
+//                        }
+//                    });
+//            });
 
-            $('.psiPlot').each( function(){
-                drawBoxplotHeatmap($(this)[0]);
-
-                // For each compact view of the psiPlot, we want to add to the associated detailed view link
-                var closestTd =$(this).closest("td");
-                var largeCanvas = closestTd.children(".largePsiPlot")[0];
-                closestTd.children(".detailedPsiLink").on('click',
-                    {canvas: largeCanvas}, function(event) {
-                        if (this.getAttribute('isExpanded') == true){
-                            largeCanvas.setAttribute('bins', $(this).closest("td").children(".psiPlot")[0].getAttribute('bins'));
-                            drawInitialBarplotCanvas(event.data.canvas);
-                        }
-                    }
-                );
-            });
-
-            $('.largePsiPlot').on('mousewheel', function(event) {
-                event.preventDefault();
-                if (event.deltaY > 0){
-                    drawBarchartWithCanvasId($(this)[0].id, 1);
-                } else if(event.deltaY < 0){
-                    drawBarchartWithCanvasId($(this)[0].id, -1);
-                }
-            });
-
-            /**
-             * Delta PSI visualization elements
-             */
-            $('.deltaCondensed').each( function(){
-                drawDeltaBox($(this)[0]);
-
-                // For each compact view of the psiPlot, we want to add to the associated detailed view link
-                var closestTd =$(this).closest("td");
-                var largeCanvas = closestTd.children(".extendedDeltaPsi")[0]; //TODO: Refactor
-                closestTd.children(".expandDelta").on('click',
-                    {canvas: largeCanvas}, function(event) {
-                        if (this.dataset.isExpanded == true){
-                            largeCanvas.setAttribute('bins', $(this).closest("td").children(".deltaCondensed")[0].dataset.bins);
-                            initExpandedDeltaCanvas(event.data.canvas); //TODO: Draw expanded Delta PSI plot
-                        }
-                    });
-            });
-
-            $('.extendedDeltaPsi').on('mousewheel', function(event) {
-                event.preventDefault();
-                if (event.deltaY > 0){
-                    drawExpDeltaWithCanvasId($(this)[0].id, 1);
-                } else if(event.deltaY < 0){
-                    drawExpDeltaWithCanvasId($(this)[0].id, -1);
-                }
-            });
+//            $('.extendedDeltaPsi').on('mousewheel', function(event) {
+//                event.preventDefault();
+//                if (event.deltaY > 0){
+//                    drawExpDeltaWithCanvasId($(this)[0].id, 1);
+//                } else if(event.deltaY < 0){
+//                    drawExpDeltaWithCanvasId($(this)[0].id, -1);
+//                }
+//            });
 
 
             /**
@@ -1175,54 +1175,149 @@
                     var sampled_bins = translate_lsv_bins(lsv_data[0].bins, 10000);
 //                    var sampled_bins = translate_delta_lsv_bins(lsv_data[0].bins, 1000);
 
-                    var svg = renderViolin($(this).parent()[0].id, sampled_bins, table.id);
+                    var svg = renderViolin($(this).parent()[0].id, sampled_bins, table.id, {'delta': 0});
                     $(svg).on("click", function(e){
                         e.preventDefault();
                         $(this).toggle("show");
-                        var lsvCompact = $(this).parent().children('.'+'lsvSingleCompactPercentiles');
+                        var lsvCompact = $(this).parent().children('.lsvSingleCompactPercentiles');
                         if (lsvCompact.length) {
                             $(lsvCompact[0]).toggle();
                         }
                     });
-
-
                 });
 
             });
 
 
             $('.lsvDeltaCompact', table).each(function(){
-                drawDeltaLSVCompactStackBars($(this)[0], 1);
+                var lsv = JSON.parse($(this)[0].getAttribute("data-lsv").replace(/\\\"/g, "\'").replace(/\"/g,"").replace(/'/g, "\""));
+                var threshold = $(this)[0].getAttribute("data-threshold");
 
-                $(this).on("click", function(e){
+                var svg_children = $(this).children(".excl-incl-rect"),
+                    svgExclInclRect;
+
+                if (svg_children.length) {
+                    svgExclInclRect = svg_children[0];
+                } else {
+                    svgExclInclRect = drawDeltaLSVCompactSVG(this.id, lsv)[0];
+                }
+
+                $(svgExclInclRect).on("click", function (e) {
                     e.preventDefault();
-
                     $(this).toggle("show");
-                    var svg_children = $(this).parent().children("svg");
-                    if (svg_children.length) {
-                        $(svg_children[0]).toggle();
-                        return;
-                    }
 
-                    var lsv_data = JSON.parse($(this)[0].getAttribute("data-lsv").replace(/\\\"/g, "\'").replace(/\"/g,"").replace(/'/g, "\""));  // NOTE: lsv_data is an array to support groups
-                    var sampled_bins = translate_delta_lsv_bins(lsv_data[0].bins, 1000);
-                    var svg = renderViolin($(this).parent()[0].id, sampled_bins);
-                    $(svg).on("click", function(e){
-                        e.preventDefault();
-                        $(this).toggle("show");
-                        var lsvCompact = $(this).parent().children('.'+'lsvDeltaCompact');
-                        if (lsvCompact.length) {
-                            $(lsvCompact[0]).toggle();
+
+                    // For now: if LSV has 2 ways, show zoomable barchart, otherwise violin boxplots
+                    if (lsv.bins.length > 2){
+                        var svgViolin;
+
+                        var svg_children = $(this).parent().children("violin-boxplot");
+
+                        if (svg_children.length) {
+                            svgViolin = svg_children[0];
+                            $(svgViolin).toggle();
+                        } else {
+                            var sampled_bins = translate_delta_lsv_bins(lsv.bins, 1000);
+                            svgViolin = renderViolin($(this).parent()[0].id, sampled_bins, table.id, {'delta': 1})[0];
                         }
-                    });
+                        $(svgViolin).on("click", function (e) {
+                            e.preventDefault();
+                            $(this).toggle("show");
+                            var lsvCompact = $(this).parent().children(".excl-incl-rect");
+                            if (lsvCompact.length) {
+                                $(lsvCompact[0]).toggle();
+                            }
+                        });
+                    } else {
+                        var parentTd = $(this).parent()[0];
+                        var canvasChildren = $(parentTd).children('.extendedDeltaPsi');
+                        var canvasBarchart,
+                            canvasSettings;
+                        if (canvasChildren.length){
+                            canvasBarchart = canvasChildren[0];
+                            canvasSettings = initLargeCanvasSettings(lsv.bins[0].length, canvasBarchart);
+                            $(canvasBarchart).toggle();
+                        } else{
+                            canvasBarchart = $('<canvas/>',{'id': "barchart_" + $(this).closest('td')[0].id, 'class':'extendedDeltaPsi tooltip', 'Title': 'Mousewheel up/down to zoom in/out'})[0];
+                            canvasBarchart.width = 419;
+                            canvasBarchart.height = 400;
+                            canvasBarchart.setAttribute('data-lsv', JSON.stringify(lsv));
+                            canvasBarchart.setAttribute('data-threshold', threshold);
+
+                            canvasSettings = initLargeCanvasSettings(lsv.bins[0].length, canvasBarchart);
+                            $(parentTd).append(canvasBarchart);
+                            initExpandedDeltaCanvas(canvasBarchart, canvasSettings); //TODO: Draw expanded Delta PSI plot
+
+                            $(canvasBarchart).on("click", function (e) {
+                                e.preventDefault();
+                                $(this).toggle("show");
+                                var lsvCompact = $(this).parent().children(".excl-incl-rect");
+                                if (lsvCompact.length) {
+                                    $(lsvCompact[0]).toggle();
+                                }
+                            });
+
+                            $(canvasBarchart).on('mousewheel', function(event) {
+                                event.preventDefault();
+                                if (event.deltaY > 0){
+                                    drawExpDeltaWithCanvasId($(this)[0].id, 1, canvasSettings);
+                                } else if(event.deltaY < 0){
+                                    drawExpDeltaWithCanvasId($(this)[0].id, -1, canvasSettings);
+                                }
+                            });
+
+                            $('.tooltip').tooltipster({
+                                theme: 'tooltipster-shadow'
+                            });
+                        }
 
 
+                    }
                 });
-
             });
 
+            $(".violin-boxplot", table).on("click", function (e) {
+                e.preventDefault();
+                $(this).toggle("show");
+                var lsvCompact = $(this).parent().children(".excl-incl-rect");
+                if (lsvCompact.length) {
+                    $(lsvCompact[0]).toggle();
+                }
+            });
 
+            var canvasBarcharts = $('.extendedDeltaPsi', table);
+            $(canvasBarcharts).on("click", function (e) {
+                e.preventDefault();
+                $(this).toggle("show");
+                var lsvCompact = $(this).parent().children(".excl-incl-rect");
+                if (lsvCompact.length) {
+                    $(lsvCompact[0]).toggle();
+                }
+            });
 
+            $(canvasBarcharts).on('mousewheel', function(event) {
+                event.preventDefault();
+
+                var lsv = JSON.parse($(this)[0].getAttribute('data-lsv'));
+                var canvasSettings = initLargeCanvasSettings(lsv.bins[0].length, this);
+
+                if (event.deltaY > 0){
+                    drawExpDeltaWithCanvasId($(this)[0].id, 1, canvasSettings);
+                } else if(event.deltaY < 0){
+                    drawExpDeltaWithCanvasId($(this)[0].id, -1, canvasSettings);
+                }
+            });
+
+            $('.resetZoom').on("click", function(){
+                var canvas = $(this).parent().children('.extendedDeltaPsi')[0];
+                var lsv = JSON.parse(canvas.getAttribute('data-lsv'));
+                var canvasSettings = initLargeCanvasSettings(lsv.bins[0].length, canvas);
+                drawExpDeltaWithCanvasId(canvas.id, 0, canvasSettings);
+            });
+
+            $('.tooltip').tooltipster({
+                theme: 'tooltipster-shadow'
+            });
         }
     });
 })(jQuery);

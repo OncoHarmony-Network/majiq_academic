@@ -155,6 +155,10 @@ background-color: #8dbdd8;
     cursor: -webkit-zoom-out;
 }
 
+.excl-incl-rect{
+    cursor: -webkit-zoom-in;
+}
+
 .floatingCanvas {
     position: absolute; /*fixed*/
     top: 2%;
@@ -169,4 +173,8 @@ background-color: #8dbdd8;
 
 .spliceGraph {
     cursor: -webkit-zoom-in;
+}
+
+.extendedDeltaPsi{
+    cursor: -webkit-zoom-out;
 }

@@ -1,4 +1,5 @@
 import json
+import numpy
 
 
 class Lsv(object):
@@ -8,7 +9,9 @@ class Lsv(object):
         self.id = input_data['id']
         self.name = input_data['name']
         self.type = input_data['type']
-        self.bins = input_data['bins_list'].tolist()
+        self.bins = input_data['bins_list']
+        if type(self.bins) == numpy.ndarray:
+            self.bins = input_data['bins_list'].tolist()
         self.means = input_data['mean_psi']
         self.conf_interval = input_data['conf_interval']
         self.quartiles = input_data['quartiles']

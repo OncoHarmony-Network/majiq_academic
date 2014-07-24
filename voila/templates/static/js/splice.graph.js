@@ -340,7 +340,7 @@ window.splicegraph = function (){
             // render number as text
             if (parseInt(num_reads) === 0) return;
             ctx.fillStyle = "rgba(0, 0, 0, .8)";
-            ctx.font = "10pt Arial";
+            ctx.font = "8pt Arial";
             ctx.textAlign = "center";
             ctx.fillText(num_reads, x, y - 2);
         }
