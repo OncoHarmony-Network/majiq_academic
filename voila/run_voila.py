@@ -10,6 +10,7 @@ __author__ = 'abarrera'
 
 EXEC_DIR = os.path.dirname(os.path.realpath(__file__)) + "/"
 VOILA_ANALYSIS_TYPES = ['single', 'delta', 'lsv_single', 'lsv_delta', 'lsv_thumbnails', 'lsv_gene']
+VERSION = 'alpha'
 
 def table_marks_set(size):
     # TODO: Customizable by script options
@@ -58,7 +59,6 @@ def _render_template(output_dir, output_html, majiq_output, type_summary, thresh
         voila_output.write(sum_template.render(eventList=majiq_output['event_list'],
                                                tableMarks=table_marks_set(len(majiq_output['event_list'])),
                                                metadata=majiq_output['metadata_pre']))
-    # TODO: Add experiment 1 and 2 info for the template
     elif type_summary == 'delta':
         voila_output.write(sum_template.render(eventList=majiq_output['event_list'],
                                                tableMarks=table_marks_set(len(majiq_output['event_list'])),
@@ -88,6 +88,7 @@ def _render_template(output_dir, output_html, majiq_output, type_summary, thresh
             voila_output.write(sum_template.render( lsvList=majiq_output['event_list'],
                                                     tableMarks=table_marks_set(len(majiq_output['event_list'])),
                                                     metadata=majiq_output['metadata'],
+                                                    threshold=threshold
             ))
 
     else:
@@ -100,18 +101,26 @@ def _render_template(output_dir, output_html, majiq_output, type_summary, thresh
     voila_output.close()
 
 
-def create_summary(majiq_bins_file, output_dir, meta_preprocess, meta_postprocess, type_summary, threshold, confidence=.95):
+def create_summary(args):
     """This method generates an html summary from a majiq output file"""
-    output_html = os.path.splitext(os.path.split(majiq_bins_file)[1])[0] + "_" + type_summary + "_" + str(threshold) + '.html'
-    majiq_output = None
 
-    if type_summary == 'single':
-        majiq_output = utils_voila.get_single_exp_data(majiq_bins_file, meta_preprocess, meta_postprocess, confidence)
-    elif type_summary == 'delta':
-        majiq_output = utils_voila.get_delta_exp_data(majiq_bins_file, meta_postprocess, confidence, threshold)
-    elif type_summary == 'lsv_single':
-        majiq_output = utils_voila.get_lsv_single_exp_data(majiq_bins_file, confidence)
-    elif type_summary == 'lsv_thumbnails':
+    type_summary    = args.type_analysis.replace('-', '_')  # Notation preference
+    majiq_bins_file = args.majiq_bins
+    output_dir      = args.output_dir
+    meta_preprocess = args.meta_preprocess
+
+    output_html = os.path.splitext(os.path.split(majiq_bins_file)[1])[0] + "_" + type_summary + '.html'
+    majiq_output = None
+    meta_postprocess = {}
+
+    # if type_summary == 'single':
+    #     majiq_output = utils_voila.get_single_exp_data(majiq_bins_file, meta_preprocess, meta_postprocess, confidence)
+    # elif type_summary == 'delta':
+    #     majiq_output = utils_voila.get_delta_exp_data(majiq_bins_file, meta_postprocess, confidence, threshold)
+    # el
+    if type_summary == 'lsv_single':
+        majiq_output = utils_voila.get_lsv_single_exp_data(majiq_bins_file, args.confidence)
+    if type_summary == 'lsv_thumbnails':
         try:
             majiq_output = []
             with open(majiq_bins_file, 'r') as types_file:
@@ -120,20 +129,21 @@ def create_summary(majiq_bins_file, output_dir, meta_preprocess, meta_postproces
         except IOError, e:
             print e.message
             sys.exit(1)
+        meta_postprocess['collapsed'] = args.collapsed
 
-    elif type_summary == 'lsv_gene':
-        if not meta_postprocess['genes_file']:
+    if type_summary == 'lsv_single_gene':
+        if not args.genes_file:
             print "[ERROR] :: parameter genes-file-info needed for filtering results by gene name."
             sys.exit(1)
         import pickle as pkl
-        genes_file = pkl.load(open(meta_postprocess['genes_file'], 'r'))
+        genes_file = pkl.load(open(args.genes_file, 'r'))
 
         import fileinput
         gene_name_list = []
-        for gene_name in fileinput.input(meta_postprocess['gene_names']):
+        for gene_name in fileinput.input(args.gene_names):
             gene_name_list.append(gene_name.rstrip())
 
-        majiq_output = utils_voila.get_lsv_single_exp_data(majiq_bins_file, confidence, gene_name_list=gene_name_list)
+        majiq_output = utils_voila.get_lsv_single_exp_data(majiq_bins_file, args.confidence, gene_name_list=gene_name_list)
 
         # Get gene info
         try:
@@ -153,20 +163,20 @@ def create_summary(majiq_bins_file, output_dir, meta_preprocess, meta_postproces
             print e.message
             sys.exit(1)
 
-    elif type_summary == 'lsv_delta':
-        if meta_postprocess['gene_names']:
-            if not meta_postprocess['genes_file']:
+    if type_summary == 'lsv_delta':
+        if 'gene_names' in args:
+            if 'genes_file' not in args :
                 print "[ERROR] :: parameter genes-file-info needed for filtering results by gene name."
                 sys.exit(1)
             import pickle as pkl
-            genes_file = pkl.load(open(meta_postprocess['genes_file'], 'r'))
+            genes_file = pkl.load(open(args.genes_file, 'r'))
 
             import fileinput
             gene_name_list = []
-            for gene_name in fileinput.input(meta_postprocess['gene_names']):
+            for gene_name in fileinput.input(args.gene_names):
                 gene_name_list.append(gene_name.rstrip())
 
-            majiq_output = utils_voila.get_lsv_delta_exp_data(majiq_bins_file, meta_postprocess, confidence, threshold)
+            majiq_output = utils_voila.get_lsv_delta_exp_data(majiq_bins_file, args.confidence, args.threshold, args.show_all)
 
             # Get gene info
             try:
@@ -176,56 +186,72 @@ def create_summary(majiq_bins_file, output_dir, meta_preprocess, meta_postproces
                         genes_graphic[gene_obj.get_name()].append(json.dumps(gene_obj, cls=utils_voila.LsvGraphicEncoder).replace("\"", "'"))
                         genes_graphic[gene_obj.get_name()].append(gene_obj.get_strand())
 
-                if not len(genes_graphic.keys()): raise Exception("[ERROR] :: No gene matching the visual information file.")
+                if not len(genes_graphic.keys()): raise Exception("[ERROR] :: No gene matching the splice graph information file.")
                 majiq_output['genes_json'] = genes_graphic
 
             except Exception, e:
                 print e.message
                 sys.exit(1)
         else:
-            majiq_output = utils_voila.get_lsv_delta_exp_data(majiq_bins_file, meta_postprocess, confidence, threshold)
+            majiq_output = utils_voila.get_lsv_delta_exp_data(majiq_bins_file, args.confidence, args.threshold)
             majiq_output['event_list'] = []
             majiq_output['metadata'] = []
             for elem_list in majiq_output['genes_dict'].values():
                 for elem in elem_list:
-                    print elem
                     majiq_output['event_list'].append(elem[0])
                     majiq_output['metadata'].append(elem[1])
             del majiq_output['genes_dict']
 
-    _render_template(output_dir, output_html, majiq_output, type_summary, threshold, meta_postprocess)
+    _render_template(output_dir, output_html, majiq_output, type_summary, args.threshold, meta_postprocess)
     return
 
 
 def main():
 
     import argparse
-    parser = argparse.ArgumentParser(description='Generate an HTML summary of Majiq output.')
-    parser.add_argument('-b', '--bins', metavar='majiq_output.pickle', dest='majiq_bins', type=str, required=True, help='Pickle file with the bins produced by Majiq.')
-    parser.add_argument('-o', '--output', metavar='output_dir', dest='output_dir', type=str, required=True, help='Output directory where the files will be placed.')
-    parser.add_argument('--meta-pre', metavar='metadata_pre.majiq', dest='meta_preprocess', type=str, help='Metadata preprocess.')
-    parser.add_argument('--event-names', metavar='event_names.majiq', dest='event_names', type=str, help='Event names.')
-    parser.add_argument('--key-plots', metavar='keysplots.pickle', dest='keys_plots', type=str, help='Heatmap plots.')
-    parser.add_argument('-t', '--type', type=str, choices=VOILA_ANALYSIS_TYPES, dest='type_summary', default='single', help='Type of summary generated.')
-    parser.add_argument('--threshold', type=float, dest='threshold', default=0.2, help='Probability threshold used to sum the accumulative probability of inclusion/exclusion.')
+    parser = argparse.ArgumentParser(description="VOILA is a visualization package for Alternative Splicing Events and Quantifications.")
+    parser.add_argument('-v', action='version', version=VERSION)
 
-    parser.add_argument('--genes-file-info', dest='genes_file', metavar='visual_LSE.majiq', type=str, help='Pickle file with gene coords info.')
-    parser.add_argument('--gene-names', type=str, dest='gene_names', help='Gene names to filter the results. [ONLY for analysis type lsv_single]')
-    parser.add_argument('--collapsed', type=bool, default=False, help='Gene name to filter the results. [ONLY for analysis type lsv_single]')
+    # Common script options
+    common_parser = argparse.ArgumentParser(add_help=False)
+    common_parser.add_argument('-b', '--bins', metavar='majiq_output.pickle', dest='majiq_bins', type=str, required=True, help='Pickle file with the bins produced by Majiq.')
+    common_parser.add_argument('-o', '--output', metavar='output_dir', dest='output_dir', type=str, required=True, help='Output directory where the files will be placed.')
+    common_parser.add_argument('--metadata_builder', metavar='metadata_pre.majiq', dest='meta_preprocess', type=str, help='Metadata from MAJIQ builder.')
+    common_parser.add_argument('--event-names', metavar='event_names.majiq', dest='event_names', type=str, help='Event names.')
+    common_parser.add_argument('-c', '--confidence', metavar=0.95, dest='confidence', type=float, default=0.95, help='Percentage of confidence required (by default, 0.95).')
 
+    # Subparser module to agglutinate all subparsers
+    subparsers = parser.add_subparsers(dest='type_analysis')
+    subparsers.required = True
 
-    # parser.add_argument('-c', '--confidence', metavar=0.95, dest='confidence', type=float,
-    #                     default=0.95, help='Percentage of confidence required (by default, 0.95).')
-    # TODO: add options to filter the output summary file by: genes, events, etc.
+    # Single LSV
+    parser_single = argparse.ArgumentParser(add_help=False)
+    parser_single.add_argument('--key-plots', metavar='keysplots.pickle', dest='keys_plots', type=str, help='Heatmap plots.')
+    subparsers.add_parser('lsv-single', help='Single LSV analysis.', parents=[common_parser, parser_single])
+
+    # Delta LSV
+    parser_delta = argparse.ArgumentParser(add_help=False)
+    parser_delta.add_argument('--threshold-significant', type=float, dest='threshold', default=0.2, help='Filter out LSVs with no junction predicted to change over a certain value (in percentage).')  # Probability threshold used to sum the accumulative probability of inclusion/exclusion.
+    parser_delta.add_argument('--show-all', dest='show_all', action='store_true', default=False, help='Show all LSVs including those with no junction with significant change predicted')
+    subparsers.add_parser('lsv-delta', help='Delta LSV analysis.', parents=[common_parser, parser_delta])
+
+    # Single LSV by Gene(s) of interest
+    parser_single_gene = argparse.ArgumentParser(add_help=False)
+    parser_single_gene.add_argument('--genes-file-info', dest='genes_file', metavar='visual_LSE.majiq', type=str, help='Pickle file with gene coords info.')
+    parser_single_gene.add_argument('--gene-names', type=str, dest='gene_names', help='Gene names to filter the results. ')
+    subparsers.add_parser('lsv-single-gene', description='Single LSV analysis by gene(s) of interest.', parents=[common_parser, parser_single_gene])
+
+    # Thumbnails generation option (dev) TODO: Delete
+    parser_thumbs = argparse.ArgumentParser(add_help=False)
+    parser_thumbs.add_argument('--collapsed', type=bool, default=False, help='Collapsed LSVs thumbnails in the HTML summary.')
+    subparsers.add_parser('lsv-thumbnails', help='Generate LSV thumbnails [DEBUGING!].', parents=[common_parser, parser_thumbs])  # TODO: GET RID OF THESE OR GIVE IT A BETTER SHAPE!!!
+
 
     args = parser.parse_args()
     print args
-    create_summary(args.majiq_bins,
-                   args.output_dir,
-                   args.meta_preprocess,
-                   {'names': args.event_names, 'keys_plots': args.keys_plots, 'gene_names': args.gene_names, 'genes_file': args.genes_file, 'collapsed': args.collapsed},
-                   args.type_summary,
-                   args.threshold)
+
+    create_summary(args)
+
 
 
 if __name__ == '__main__':

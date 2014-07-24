@@ -15,22 +15,23 @@
 {% endblock %}
 
 {% block content %}
+<div class="floatingCanvas">
+    <canvas class="floatingLegend" width="500px" height="40px">
+        This browser or document mode doesn't support canvas
+    </canvas>
+</div>
+
     <div class="events-summary">
         <!--<p>Coordinates 0-based and closed interval</p>-->
 
-        <div class="floatingCanvas">
-            <canvas class="floatingLegend" width="500px" height="40px">
-                This browser or document mode doesn't support canvas
-            </canvas>
-        </div>
 
         <h2>LSV summary</h2>
 
         {% for gene_name, gene_value in genes_dict.iteritems() %}
             {% set gene_index = loop.index -1 %}
             {{ gene_value[0][0]|debug }}
-            <h2>Gene name: {{ gene_name }}; Strand: {{ gene_value[0][0].strand }};</h2>
-            <canvas class="spliceGraph" width="2000px" height="200px" data-exon-list="{{ genes_json[gene_name][0] }}">
+            <h2>Gene name: {{ gene_name }}; Strand: +;</h2> {# {{ gene_value[0][0].strand }} #}
+            <canvas class="spliceGraph" width="1000px" height="200px" data-exon-list="{{ genes_json[gene_name][0] }}">
                 This browser or document mode doesn't support canvas
             </canvas>
 
@@ -66,11 +67,6 @@
                         <canvas class="lsvSingleCompactPercentiles" id="lsvSingleCompact{{ loop.index }}" width="100px" height="100px" style="border: solid; border-width: 2pt; border-color: darkgrey;" data-lsv="[{{ gene[0]|to_json }}]">
                             This browser or document mode doesn't support canvas
                         </canvas>
-                        {#<canvas class="lsvSingleExtendedBoxplot hidden" width="500px" height="500px"  data-lsv="{{ lsv|to_json }}">#}
-                            {#This browser or document mode doesn't support canvas#}
-                        {#</canvas>#}
-                        {#<div class="lsvViolinPlot" id="svgViolin{{ loop.index }}" data-lsv="[{{ lsv|to_json }}]" width=300 height=200></div>#}
-
                     </td>
                     <td>{{ gene[1][0] }}</td>
 
@@ -78,7 +74,7 @@
                 {%- endfor %}
                 </tbody>
             </table>
-            <div class="pager{{ loop.index }}">
+            <div class="pager" id="pager{{ loop.index }}">
                 <form>
                     <img src="static/img/icons/first.png" class="first"/>
                     <img src="static/img/icons/prev.png" class="prev"/>
