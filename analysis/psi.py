@@ -184,7 +184,7 @@ def lsv_psi(samples_events, alpha, n, debug):
             samples[0,:] = junc + alpha
             samples[1,:] = aggr
 
-            total_psi = np.zeros(shape=(100,BINS.shape[0]),dtype=np.float)
+            total_psi = np.zeros(shape=(n,BINS.shape[0]),dtype=np.float)
             for pidx, paired_samples in enumerate(samples.T):
                 total_psi[pidx] = dirichlet_pdf(array([BINS_CENTER, 1-BINS_CENTER]).T, paired_samples)
 
