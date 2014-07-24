@@ -259,7 +259,6 @@ def main():
         print "-----"
 
     # print len(debug_dict1), len(debug_dict2), len(psi_list1), len(psi_list2)
-    low_med_high = get_low_med_high_psis(psi_list1, psi_list2, miso_psis_list[0], miso_psis_list[1])
     for k in sorted(debug_dict1):
         if k in debug_dict1 and k not in debug_dict2:
             print "This is the guy!! %s" % k

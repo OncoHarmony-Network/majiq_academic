@@ -13,8 +13,9 @@ def _save_or_show(plotpath, name):
                 os.makedirs(plot_base_path)
             if not plot_name:
                 plot_name = name
-        print plot_base_path, plot_name
         savefig("%s/%s.png"%(plot_base_path, plot_name), width=300, height=300, dpi=100)
+        print "Saved in:\n%s/%s" % (plot_base_path, plot_name)
+
         clf()
     else:
         show()  
@@ -29,7 +30,7 @@ def main():
     parser.add_argument('--colors', nargs='*',  help="Steps of best events to take")
     args = parser.parse_args()
 
-    fig = figure(figsize=[7, 7]) # In inches
+    fig = figure(figsize=[10, 10]) # In inches
     #figure out how many groups of events exist
 
     font = {'size': 16} #here also 'weight' and 'family'
@@ -59,18 +60,17 @@ def main():
 
         #label is file path if not specified
         if args.labels:
-            my_label = args.labels[i]
+            my_label = "%s (N=%d)" % (args.labels[i], numevents)
         else:
-            my_label = ratio_path.split(".pickle")[0].split("/")[-1] #.replace('_', ' V=')
+            my_label = ratio_path.split(".pickle")[0].split("/")[-1]
 
         x_space = linspace(0, 1, len(ratio))
         if args.colors:
             plot(x_space, ratio, linetype, label=my_label, linewidth=2, color=args.colors[i])          
         else: 
-            print
             plot(x_space, ratio, linetype, label=my_label, linewidth=2)
 
-    title(args.title, fontsize=16)    
+    title("%s" % (args.title) , fontsize=16)
     legend(loc=2)
     _save_or_show(plotpath=args.plotpath, name="rankcomp")
 
