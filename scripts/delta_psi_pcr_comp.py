@@ -1,12 +1,11 @@
 # from __future__ import division
 from collections import defaultdict
 import pickle
-import numpy
+import numpy as np
 import argparse
 import ast
 import os
 import matplotlib.pyplot as ppl
-from numpy import ma
 from scripts.utils import _save_or_show
 
 __author__ = 'abarrera'
@@ -41,35 +40,35 @@ def plot_rtpcr_majiq_boxplot(rt_pcr, majiq, coverage, plotpath):
 
     LOW_COV = 15
     MED_COV = 40
-    coverage = numpy.array(coverage)
+    coverage = np.array(coverage)
     low_cov_mask = (coverage <= LOW_COV)
     med_cov_mask = (coverage > LOW_COV) & (coverage <= MED_COV)
     high_cov_mask = (coverage > MED_COV)
 
     fig, axx = ppl.subplots(2, 2, sharex=True, sharey=True, figsize=[12, 12], dpi=300)
     ppl.suptitle("Delta PSI comparison: RT-PCR Vs MAJIQ (N=%d)" % len(rt_pcr))
-    diagonal = numpy.linspace(-1, 1, num=len(rt_pcr))
+    diagonal = np.linspace(-1, 1, num=len(rt_pcr))
 
     # All
-    axx[0][0].scatter(numpy.array(majiq)[low_cov_mask], numpy.array(rt_pcr)[low_cov_mask], c=get_brewer_color(0), alpha=.5, s=50)
-    axx[0][0].scatter(numpy.array(majiq)[med_cov_mask], numpy.array(rt_pcr)[med_cov_mask], c=get_brewer_color(1), alpha=.5, s=50)
-    axx[0][0].scatter(numpy.array(majiq)[high_cov_mask], numpy.array(rt_pcr)[high_cov_mask], c=get_brewer_color(2), alpha=.5, s=50)
+    axx[0][0].scatter(np.array(majiq)[low_cov_mask], np.array(rt_pcr)[low_cov_mask], c=get_brewer_color(0), alpha=.5, s=50)
+    axx[0][0].scatter(np.array(majiq)[med_cov_mask], np.array(rt_pcr)[med_cov_mask], c=get_brewer_color(1), alpha=.5, s=50)
+    axx[0][0].scatter(np.array(majiq)[high_cov_mask], np.array(rt_pcr)[high_cov_mask], c=get_brewer_color(2), alpha=.5, s=50)
     axx[0][0].set_ylim([-1, 1])
     axx[0][0].set_xlim([-1, 1])
     axx[0][0].set_xlabel('MAJIQ')
     axx[0][0].set_ylabel('RT-PCR')
     axx[0][0].set_title('All')
-    fit = numpy.polyfit(majiq, rt_pcr, 1)
-    fit_fn = numpy.poly1d(fit) # fit_fn is now a function which takes in x and returns an estimate for y
+    fit = np.polyfit(majiq, rt_pcr, 1)
+    fit_fn = np.poly1d(fit) # fit_fn is now a function which takes in x and returns an estimate for y
     axx[0][0].plot(majiq, fit_fn(majiq), '--k')
     axx[0][0].plot(diagonal, diagonal, '--', color="#cccccc")
 
-    majiq_arrays = [numpy.array(majiq)[low_cov_mask], numpy.array(majiq)[med_cov_mask], numpy.array(majiq)[high_cov_mask]]
-    rtpcr_arrays = [numpy.array(rt_pcr)[low_cov_mask], numpy.array(rt_pcr)[med_cov_mask], numpy.array(rt_pcr)[high_cov_mask]]
+    majiq_arrays = [np.array(majiq)[low_cov_mask], np.array(majiq)[med_cov_mask], np.array(majiq)[high_cov_mask]]
+    rtpcr_arrays = [np.array(rt_pcr)[low_cov_mask], np.array(rt_pcr)[med_cov_mask], np.array(rt_pcr)[high_cov_mask]]
     titles = [
-        "Cov <= %d (N=%d)" % (LOW_COV, numpy.count_nonzero(low_cov_mask)),
-        "%d < Cov <= %d (N=%d)" % (LOW_COV, MED_COV, numpy.count_nonzero(med_cov_mask)),
-        "Cov > %d (N=%d)" % (MED_COV, numpy.count_nonzero(high_cov_mask)),
+        "Cov <= %d (N=%d)" % (LOW_COV, np.count_nonzero(low_cov_mask)),
+        "%d < Cov <= %d (N=%d)" % (LOW_COV, MED_COV, np.count_nonzero(med_cov_mask)),
+        "Cov > %d (N=%d)" % (MED_COV, np.count_nonzero(high_cov_mask)),
     ]
 
     for n in xrange(3):
@@ -85,17 +84,17 @@ def plot_rtpcr_majiq_boxplot(rt_pcr, majiq, coverage, plotpath):
         axx[x][y].set_xlabel('MAJIQ')
         axx[x][y].set_ylabel('RT-PCR')
         axx[x][y].set_title(titles[n])
-        fit = numpy.polyfit(majiq_arrays[n], rtpcr_arrays[n], 1)
-        fit_fn = numpy.poly1d(fit) # fit_fn is now a function which takes in x and returns an estimate for y
+        fit = np.polyfit(majiq_arrays[n], rtpcr_arrays[n], 1)
+        fit_fn = np.poly1d(fit) # fit_fn is now a function which takes in x and returns an estimate for y
         axx[x][y].plot(majiq_arrays[n], fit_fn(majiq_arrays[n]), '--k')
         axx[x][y].plot(diagonal, diagonal, '--', color="#cccccc")
 
     print majiq, rt_pcr
-    # fit = numpy.polyfit(majiq, rt_pcr, 1)
-    # fit_fn = numpy.poly1d(fit) # fit_fn is now a function which takes in x and returns an estimate for y
+    # fit = np.polyfit(majiq, rt_pcr, 1)
+    # fit_fn = np.poly1d(fit) # fit_fn is now a function which takes in x and returns an estimate for y
     # ppl.plot(majiq, fit_fn(majiq), '--k')
 
-    # diagonal = numpy.linspace(-1, 1, num=len(rt_pcr))
+    # diagonal = np.linspace(-1, 1, num=len(rt_pcr))
     # ppl.plot(diagonal, diagonal, '--', color="#cccccc")
     # ppl.ylim([-1, 1])
     # pyplot.plot(majiq, rt_pcr, '.', color='r')
@@ -117,29 +116,29 @@ def collapse_matrix(matrix):
     collapsed = []
     matrix_corner = matrix.shape[0]
     for i in xrange(-matrix_corner, matrix_corner):
-        collapsed.append(numpy.diagonal(matrix, offset=i).sum())
-    return numpy.array(collapsed)
+        collapsed.append(np.diagonal(matrix, offset=i).sum())
+    return np.array(collapsed)
 
 
 def delta_expected_psi(bins, file_name):
     step = 2.0 / bins.size
-    projection_prod = bins * numpy.arange(-1+step/2, 1, step)
-    print "%s: %f" % (file_name, numpy.sum(projection_prod))
+    projection_prod = bins * np.arange(-1+step/2, 1, step)
+    print "%s: %f" % (file_name, np.sum(projection_prod))
 
-    return numpy.sum(projection_prod)
+    return np.sum(projection_prod)
 
 
 def avg_expected_delta_psi(bins_list):
-    return numpy.mean([delta_expected_psi(collapse_matrix(bins[0]), bins[1]) for bins in bins_list])
+    return np.mean([delta_expected_psi(collapse_matrix(bins[0]), bins[1]) for bins in bins_list])
 
 
 def coverage_from_file(file, cov_suffix):
-    result_dict = defaultdict(float)
+    result_dict = defaultdict(list)  # First the num. reads, second the positions
     with open(file) as majiq_file:
         majiq_builder = pickle.load(majiq_file)
         for lsv in majiq_builder[1]:
             for i, junc in enumerate(lsv.junction_list):
-                result_dict[lsv.id+"#"+str(i)] = junc.nnz
+                result_dict[lsv.id+"#"+str(i)].append([np.sum(junc.data[0]), junc.nnz])
     # Save results
     pickle.dump(result_dict, open(file+cov_suffix, 'w'))
     print "Coverage saved in: %s" % file+cov_suffix
@@ -200,7 +199,7 @@ def get_coverage(majiq_files_or_dir, save_coverage=True):
 
 
 def get_min_coverage(coverage_list, name):
-    return min(numpy.mean([c[name] for c in coverage_list[0]]), numpy.mean([c[name] for c in coverage_list[1]]))
+    return min(np.mean([c[name][0] for c in coverage_list[0]]), np.mean([c[name][0] for c in coverage_list[1]]))
 
 
 def main():
