@@ -46,6 +46,7 @@ def plot_rtpcr_majiq_boxplot(rt_pcr, majiq, plotpath):
     ax1.set_xlabel('MAJIQ')
     ax1.set_ylabel('RT-PCR')
     ax1.set_title('Resting')
+    ax1.set_ylim([0,1])
 
     fit = numpy.polyfit(majiq[1], rt_pcr[1], 1)
     fit_fn = numpy.poly1d(fit)
@@ -55,15 +56,16 @@ def plot_rtpcr_majiq_boxplot(rt_pcr, majiq, plotpath):
 
     ax2.set_xlabel('MAJIQ')
     ax2.set_title('Stimuli')
+    ax2.set_ylim([0,1])
 
     _save_or_show(plotpath, "psi_comparison_rtpcr_majiq")
 
 
 def barchart_expected(expected_psis, plotpath, mfile):
-     f = pyplot.figure()
-     pyplot.hist(expected_psis, bins=40)
-     name = os.path.basename(mfile)
-     _save_or_show(plotpath, name +'_expected_dist')
+    pyplot.figure()
+    pyplot.hist(expected_psis, bins=40)
+    name = os.path.basename(mfile)
+    _save_or_show(plotpath, name +'_expected_dist')
 
 
 def expected_psi(bins):
@@ -198,7 +200,7 @@ def main():
 
                 # check if event has expected PSIs suspicious of being flipped
                 if abs(majiq_rest_stat - pcr_rest_stim[names_majiq2pcr_dict[name]][0]) > flipped_thres or abs(majiq_stim_stat - pcr_rest_stim[names_majiq2pcr_dict[name]][1]) > flipped_thres:
-                    flipped_lsv_dict[name] = "%s\t%s\t%f\t%f\t%f\t%f\t%d\t%d\n" % (names_majiq2pcr_dict[name], name, pcr_rest_stim[names_majiq2pcr_dict[name]][0], majiq_rest_stat, pcr_rest_stim[names_majiq2pcr_dict[name]][1], majiq_stim_stat, int(gene_names_counts[names_majiq2pcr_dict[name]]<2), int(len(names_junc_majiq[str(name).split('#')[0]])<2) )
+                    flipped_lsv_dict[name] = "%s\t%s\t%f\t%f\t%f\t%f\t%d\t%d" % (names_majiq2pcr_dict[name], name, pcr_rest_stim[names_majiq2pcr_dict[name]][0], majiq_rest_stat, pcr_rest_stim[names_majiq2pcr_dict[name]][1], majiq_stim_stat, int(gene_names_counts[names_majiq2pcr_dict[name]]<2), int(len(names_junc_majiq[str(name).split('#')[0]])<2) )
                     continue
 
                 print "%s - %s" % (name, names_majiq2pcr_dict[name])
@@ -231,7 +233,7 @@ def main():
                 if lsv.id in flipped_lsv_names:
                     for flip_key in flipped_lsv_dict:
                         if lsv.id in flip_key:
-                            flipped_lsv_dict[flip_key] += "\t%s" % str(lsv.junction_id[str(flip_key).split('#')[1]])
+                            flipped_lsv_dict[flip_key] = flipped_lsv_dict[flip_key] + "\t%s\n" % str(lsv.junction_id[int(str(flip_key).split('#')[1])])
         for flipped_lsv in flipped_lsv_dict:
             flipped_file.write(flipped_lsv_dict[flipped_lsv])
 

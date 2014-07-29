@@ -2,40 +2,112 @@
 from collections import defaultdict
 import pickle
 import numpy
-from scipy.stats import pearsonr
 import argparse
 import ast
 import os
-import matplotlib.pyplot as pyplot
+import matplotlib.pyplot as ppl
+from numpy import ma
 from scripts.utils import _save_or_show
 
 __author__ = 'abarrera'
 
 
-def plot_rtpcr_majiq_boxplot(rt_pcr, majiq, plotpath):
+def get_brewer_color(n):
+    BP = [
+       [228,26,28],
+       [55,126,184],
+       [77,175,74],
+       [152,78,163],
+       [255,127,0],
+       [255,255,51],
+       [166,86,40],
+       [247,129,191],
+       [153,153,153],
+
+       [28,126,128],
+       [155,226,29],
+       [177,275,19],
+       [252,178,8],
+       [55,227,100],
+       [55,55,151],
+       [266,186,140],
+       [47,229,36],
+       [253,253,253]
+    ]
+    return "#"+"".join(format(n, 'x') for n in BP[n])
+
+def plot_rtpcr_majiq_boxplot(rt_pcr, majiq, coverage, plotpath):
     #figure out how many groups of events exist
 
-    fig = pyplot.plot(figsize=[6, 6], dpi=300)
-    pyplot.title("Delta PSI comparison: RT-PCR Vs MAJIQ (N=%d)" % len(rt_pcr))
+    LOW_COV = 15
+    MED_COV = 40
+    coverage = numpy.array(coverage)
+    low_cov_mask = (coverage <= LOW_COV)
+    med_cov_mask = (coverage > LOW_COV) & (coverage <= MED_COV)
+    high_cov_mask = (coverage > MED_COV)
 
-    print majiq, rt_pcr
+    fig, axx = ppl.subplots(2, 2, sharex=True, sharey=True, figsize=[12, 12], dpi=300)
+    ppl.suptitle("Delta PSI comparison: RT-PCR Vs MAJIQ (N=%d)" % len(rt_pcr))
+    diagonal = numpy.linspace(-1, 1, num=len(rt_pcr))
+
+    # All
+    axx[0][0].scatter(numpy.array(majiq)[low_cov_mask], numpy.array(rt_pcr)[low_cov_mask], c=get_brewer_color(0), alpha=.5, s=50)
+    axx[0][0].scatter(numpy.array(majiq)[med_cov_mask], numpy.array(rt_pcr)[med_cov_mask], c=get_brewer_color(1), alpha=.5, s=50)
+    axx[0][0].scatter(numpy.array(majiq)[high_cov_mask], numpy.array(rt_pcr)[high_cov_mask], c=get_brewer_color(2), alpha=.5, s=50)
+    axx[0][0].set_ylim([-1, 1])
+    axx[0][0].set_xlim([-1, 1])
+    axx[0][0].set_xlabel('MAJIQ')
+    axx[0][0].set_ylabel('RT-PCR')
+    axx[0][0].set_title('All')
     fit = numpy.polyfit(majiq, rt_pcr, 1)
     fit_fn = numpy.poly1d(fit) # fit_fn is now a function which takes in x and returns an estimate for y
-    pyplot.plot(majiq, fit_fn(majiq), '--k')
+    axx[0][0].plot(majiq, fit_fn(majiq), '--k')
+    axx[0][0].plot(diagonal, diagonal, '--', color="#cccccc")
 
-    diagonal = numpy.linspace(-1, 1, num=len(rt_pcr))
-    pyplot.plot(diagonal, diagonal, '--', color="#cccccc")
-    pyplot.ylim([-1, 1])
-    pyplot.plot(majiq, rt_pcr, '.', color='r')
+    majiq_arrays = [numpy.array(majiq)[low_cov_mask], numpy.array(majiq)[med_cov_mask], numpy.array(majiq)[high_cov_mask]]
+    rtpcr_arrays = [numpy.array(rt_pcr)[low_cov_mask], numpy.array(rt_pcr)[med_cov_mask], numpy.array(rt_pcr)[high_cov_mask]]
+    titles = [
+        "Cov <= %d (N=%d)" % (LOW_COV, numpy.count_nonzero(low_cov_mask)),
+        "%d < Cov <= %d (N=%d)" % (LOW_COV, MED_COV, numpy.count_nonzero(med_cov_mask)),
+        "Cov > %d (N=%d)" % (MED_COV, numpy.count_nonzero(high_cov_mask)),
+    ]
 
-    pyplot.xlabel('MAJIQ')
-    pyplot.ylabel('RT-PCR')
+    for n in xrange(3):
+        if n==0:
+            x=0
+            y=1
+        else:
+            x=1
+            y=n-1
+        axx[x][y].scatter(majiq_arrays[n], rtpcr_arrays[n], c=get_brewer_color(n), alpha=.5, s=50)
+        axx[x][y].set_ylim([-1, 1])
+        axx[x][y].set_xlim([-1, 1])
+        axx[x][y].set_xlabel('MAJIQ')
+        axx[x][y].set_ylabel('RT-PCR')
+        axx[x][y].set_title(titles[n])
+        fit = numpy.polyfit(majiq_arrays[n], rtpcr_arrays[n], 1)
+        fit_fn = numpy.poly1d(fit) # fit_fn is now a function which takes in x and returns an estimate for y
+        axx[x][y].plot(majiq_arrays[n], fit_fn(majiq_arrays[n]), '--k')
+        axx[x][y].plot(diagonal, diagonal, '--', color="#cccccc")
+
+    print majiq, rt_pcr
+    # fit = numpy.polyfit(majiq, rt_pcr, 1)
+    # fit_fn = numpy.poly1d(fit) # fit_fn is now a function which takes in x and returns an estimate for y
+    # ppl.plot(majiq, fit_fn(majiq), '--k')
+
+    # diagonal = numpy.linspace(-1, 1, num=len(rt_pcr))
+    # ppl.plot(diagonal, diagonal, '--', color="#cccccc")
+    # ppl.ylim([-1, 1])
+    # pyplot.plot(majiq, rt_pcr, '.', color='r')
+    #
+    # ppl.xlabel('MAJIQ')
+    # ppl.ylabel('RT-PCR')
     _save_or_show(plotpath, "delta_psi_comparison_rtpcr_majiq")
 
 
 def barchart_expected(expected_psis, plotpath, mfile):
-    pyplot.figure()
-    pyplot.hist(expected_psis, bins=40)
+    ppl.figure()
+    ppl.hist(expected_psis, bins=40)
     name = os.path.basename(mfile)
     _save_or_show(plotpath, name +'_expected_dist')
 
@@ -49,25 +121,25 @@ def collapse_matrix(matrix):
     return numpy.array(collapsed)
 
 
-def delta_expected_psi(bins):
+def delta_expected_psi(bins, file_name):
     step = 2.0 / bins.size
     projection_prod = bins * numpy.arange(-1+step/2, 1, step)
-    # if numpy.any(numpy.apply_along_axis(numpy.isnan, 0, numpy.array(projection_prod))):
-    print numpy.sum(projection_prod)
+    print "%s: %f" % (file_name, numpy.sum(projection_prod))
 
     return numpy.sum(projection_prod)
 
 
 def avg_expected_delta_psi(bins_list):
-    return numpy.mean([delta_expected_psi(collapse_matrix(bins)) for bins in bins_list])
+    return numpy.mean([delta_expected_psi(collapse_matrix(bins[0]), bins[1]) for bins in bins_list])
 
 
-def coverage_from_file(file, result_dict, cov_suffix):
+def coverage_from_file(file, cov_suffix):
+    result_dict = defaultdict(float)
     with open(file) as majiq_file:
         majiq_builder = pickle.load(majiq_file)
         for lsv in majiq_builder[1]:
             for i, junc in enumerate(lsv.junction_list):
-                result_dict[lsv.id+"#"+str(i)].append(junc.nnz)
+                result_dict[lsv.id+"#"+str(i)] = junc.nnz
     # Save results
     pickle.dump(result_dict, open(file+cov_suffix, 'w'))
     print "Coverage saved in: %s" % file+cov_suffix
@@ -111,25 +183,24 @@ def get_coverage(majiq_files_or_dir, save_coverage=True):
 
     from multiprocessing import Pool
     pool = Pool()
-    rest_cov_dict_list = []
-    stim_cov_dict_list = []
     jobs_list = []
 
     for rest_file in rest_file_list:
-        rest_cov_dict = defaultdict(list)
-        jobs_list.append(pool.apply_async(coverage_from_file, args=[rest_file, rest_cov_dict, COV_SUFFIX]))
+        jobs_list.append(pool.apply_async(coverage_from_file, args=[rest_file, COV_SUFFIX]))
 
     for stim_file in stim_file_list:
-        stim_cov_dict = defaultdict(list)
-        jobs_list.append(pool.apply_async(coverage_from_file, args=[stim_file, stim_cov_dict, COV_SUFFIX]))
+        jobs_list.append(pool.apply_async(coverage_from_file, args=[stim_file, COV_SUFFIX]))
 
     pool.close()
     pool.join()
 
-
     coverage_lists.append(load_coverage(rest_file_list, COV_SUFFIX))
     coverage_lists.append(load_coverage(stim_file_list, COV_SUFFIX))
     return coverage_lists
+
+
+def get_min_coverage(coverage_list, name):
+    return min(numpy.mean([c[name] for c in coverage_list[0]]), numpy.mean([c[name] for c in coverage_list[1]]))
 
 
 def main():
@@ -142,7 +213,7 @@ def main():
     args = parser.parse_args()
 
     ## Analyze coverage, saving it for later
-    coverage_list = get_coverage(args.majiq_builder_files)
+    coverage_list = get_coverage(args.majiq_builder_files)  # List of lists of dicts
 
     # Read name mapping file
     names_pcr2majiq_dict = {}  # key RT-PCR, value MAJIQ
@@ -213,7 +284,7 @@ def main():
                 # Find all junctions from that LSV that are included
                 for j, lsv_way in enumerate(mpickle[0][i]):
                     if j in names_junc_majiq[lsv_info[1]]:
-                        majiq_delta_dict[lsv_info[1]+"#"+str(j)].append(mpickle[0][i][j])  # add bins from delta psis
+                        majiq_delta_dict[lsv_info[1]+"#"+str(j)].append([mpickle[0][i][j], mfile])  # add bins from delta psis
         # barchart_expected(expected_psis, args.plotpath, mfile)
         print "Number of events found in %s: %d" % (mfile, len(majiq_delta_dict.keys()))
 
@@ -223,6 +294,7 @@ def main():
 
     rt_pcr = []
     majiq = []
+    coverage = []
 
     flipped_thres = 1.0
     flipped_lsv_dict = defaultdict(str)  # List of strings with flipped LSVs info
@@ -234,6 +306,8 @@ def main():
                 if not len(majiq_delta_dict[name]):
                     print "%s - %s: Not found in majiq_dict" % (name_majiq, name_pcr)
                     continue
+                print "Found: %s - %s" % (name, names_majiq2pcr_dict[name])
+
                 # For Majiq, compute mean over Expected PSIs
                 majiq_delta = avg_expected_delta_psi(majiq_delta_dict[name])
                 min_delta = 10
@@ -242,15 +316,18 @@ def main():
                     if abs(rtpcr_delta_entry - majiq_delta) < min_delta:
                         rtpcr_delta = rtpcr_delta_entry
                 # check if event has expected PSIs suspicious of being flipped
+                if abs(majiq_delta - rtpcr_delta) > .5:
+                    print "%s has an abs. expected difference in delta psi of %.2f. Coverage: %d " % (name, abs(majiq_delta - rtpcr_delta), get_min_coverage(coverage_list, name))
                 if abs(majiq_delta - rtpcr_delta) > flipped_thres:
                     flipped_lsv_dict[name] = "%s\t%s\t%f\t%f\t%d\t%d\n" % (names_majiq2pcr_dict[name], name, rtpcr_delta, majiq_delta, int(gene_names_counts[names_majiq2pcr_dict[name]]<2), int(len(names_junc_majiq[str(name).split('#')[0]])<2) )
                     continue
 
-                print "Found: %s - %s" % (name, names_majiq2pcr_dict[name])
+
                 rt_pcr.append(rtpcr_delta)
                 majiq.append(majiq_delta)
+                coverage.append(get_min_coverage(coverage_list, name))
 
-    plot_rtpcr_majiq_boxplot(rt_pcr, majiq, args.plotpath)
+    plot_rtpcr_majiq_boxplot(rt_pcr, majiq, coverage, args.plotpath)
 
     print "%d elements flipped" % len(flipped_lsv_dict.keys())
     # Save presumably flipped events
