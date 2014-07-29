@@ -320,13 +320,13 @@ function createGradientDeltaPlots(ctx, gradientFrom, gradientTo, fromColor, toCo
     var gradient = ctx.createLinearGradient(gradientFrom, 0, gradientTo, 0);
 
     // Add the colors with fixed stops.
-    gradient.addColorStop(0, getColor(fromColor, BREWER_PALETTE, 1));
-    gradient.addColorStop(0.5-pThreshold/2,"white");
-    gradient.addColorStop(0.5-pThreshold/2,"grey");
-//    gradient.addColorStop(0.5,"white");
-    gradient.addColorStop(0.5+pThreshold/2,"grey");
-    gradient.addColorStop(0.5+pThreshold/2,"white");
-    gradient.addColorStop(1, getColor(toColor, BREWER_PALETTE, 1));
+    gradient.addColorStop(0, getColor(fromColor, BREWER_PALETTE,.5));
+//    gradient.addColorStop(0.5-pThreshold/2,"white");
+//    gradient.addColorStop(0.5-pThreshold/2,"grey");
+////    gradient.addColorStop(0.5,"white");
+//    gradient.addColorStop(0.5+pThreshold/2,"grey");
+//    gradient.addColorStop(0.5+pThreshold/2,"white");
+    gradient.addColorStop(1, getColor(toColor, BREWER_PALETTE,.5));
 
     return gradient;
 }
@@ -925,20 +925,20 @@ function drawDeltaLSVCompactSVG(htmlElementId, lsv) {
         .attr("font-size", "10px")
         .attr("fill", "black")
         .text("0");
-    svgContainer.append("text")
-        .attr("x", 0)
-        .attr("y", height)
-        .attr("text-anchor", "start")
-        .attr("font-size", "10px")
-        .attr("fill", "black")
-        .text("-1");
-    svgContainer.append("text")
-        .attr("x", width)
-        .attr("y", height)
-        .attr("text-anchor", "end")
-        .attr("font-size", "10px")
-        .attr("fill", "black")
-        .text("+1");
+//    svgContainer.append("text")
+//        .attr("x", 0)
+//        .attr("y", height)
+//        .attr("text-anchor", "start")
+//        .attr("font-size", "10px")
+//        .attr("fill", "black")
+//        .text("-1");
+//    svgContainer.append("text")
+//        .attr("x", width)
+//        .attr("y", height)
+//        .attr("text-anchor", "end")
+//        .attr("font-size", "10px")
+//        .attr("fill", "black")
+//        .text("+1");
 
     // Draw separator
     svgContainer.append("line")
@@ -1174,14 +1174,14 @@ function drawDeltaBarChart(context, binsArray, settingsCanvasDelta, zoomLevel, p
     chartHeight += zoomLevel;
     var maxValue = 0;
 
-
     for (var binsCount=0; binsCount<binsArray.length; binsCount++) {
         var bins = binsArray[binsCount];
         //Preserve the gradient color style
         var gradientColorStyle = createGradientDeltaPlots(context, settingsCanvasDelta.coords_origin[0],
                 settingsCanvasDelta.coords_origin[0] + settingsCanvasDelta.area_pixels[0], binsCount, binsCount, pThreshold);
 
-        context.fillStyle = gradientColorStyle;
+        context.fillStyle = getColor(binsCount, BREWER_PALETTE,.5); //gradientColorStyle;
+        context.strokeStyle = getColor(binsCount, BREWER_PALETTE,1);
 
         // Offset from origin to write the labels in x-axis
         //    var xLabelsCoordX = Math.min(15, settingsCanvasDelta.margin_y[1]);
@@ -1193,69 +1193,71 @@ function drawDeltaBarChart(context, binsArray, settingsCanvasDelta, zoomLevel, p
 
             // Write the data to the chart
             drawRectangle(context,
-                    settingsCanvasDelta.coords_origin[0] + (i * settingsCanvasDelta.bar_width),
-                    settingsCanvasDelta.coords_origin[1] - height,
+                    Math.round(settingsCanvasDelta.coords_origin[0] + (i * settingsCanvasDelta.bar_width)),
+                    Math.round(settingsCanvasDelta.coords_origin[1] - height),
                 settingsCanvasDelta.bar_width,
                 height,
                 true);
 
         }
 
-        // Add the column title to the x-axis
-        context.textAlign = "center";
-        context.fillStyle = "black";
 
-        name = name * 100;
-        context.fillText("-1", settingsCanvasDelta.coords_origin[0], settingsCanvasDelta.coords_origin[1] + 15);
-        drawLine(context, settingsCanvasDelta.coords_origin[0],
-            settingsCanvasDelta.coords_origin[1],
-            settingsCanvasDelta.coords_origin[0],
-                settingsCanvasDelta.coords_origin[1] + 2 // size of the delimiter=4
-        );
-
-        context.fillText("0", settingsCanvasDelta.coords_origin[0] + (settingsCanvasDelta.area_pixels[0]) / 2, settingsCanvasDelta.coords_origin[1] + 15);
-        drawLine(context, settingsCanvasDelta.coords_origin[0] + (settingsCanvasDelta.area_pixels[0]) / 2,
-            settingsCanvasDelta.coords_origin[1],
-                settingsCanvasDelta.coords_origin[0] + (settingsCanvasDelta.area_pixels[0]) / 2,
-                settingsCanvasDelta.coords_origin[1] + 2 // size of the delimiter=4
-        );
-
-        context.textAlign = "right";
-        context.fillText("1", settingsCanvasDelta.coords_origin[0] + settingsCanvasDelta.area_pixels[0], settingsCanvasDelta.coords_origin[1] + 15);
-        drawLine(context, settingsCanvasDelta.coords_origin[0] + settingsCanvasDelta.area_pixels[0],
-            settingsCanvasDelta.coords_origin[1], // +1 to don't overlap
-                settingsCanvasDelta.coords_origin[0] + settingsCanvasDelta.area_pixels[0],
-                settingsCanvasDelta.coords_origin[1] + 2 // size of the delimiter=4
-        );
-
-        // Vertical bars for percentages of inclusion/exclusion (by Default, in -20 and +20)
-        context.textAlign = "center";
-        context.dashedLine(
-                settingsCanvasDelta.coords_origin[0] + settingsCanvasDelta.area_pixels[0] / 2 - parseInt(settingsCanvasDelta.area_pixels[0] / 2 * pThreshold),
-                settingsCanvasDelta.coords_origin[1] + 5, //Mark axis
-                settingsCanvasDelta.coords_origin[0] + settingsCanvasDelta.area_pixels[0] / 2 - parseInt(settingsCanvasDelta.area_pixels[0] / 2 * pThreshold),
-                settingsCanvasDelta.coords_origin[1] - settingsCanvasDelta.area_pixels[1]
-        );
-        context.stroke();
-        context.fillText("-" + pThreshold + " ",
-                settingsCanvasDelta.coords_origin[0] + settingsCanvasDelta.area_pixels[0] / 2 - parseInt(settingsCanvasDelta.area_pixels[0] / 2 * pThreshold),
-                settingsCanvasDelta.coords_origin[1] + 15 //Mark axis
-        );
-
-        context.dashedLine(
-                settingsCanvasDelta.coords_origin[0] + settingsCanvasDelta.area_pixels[0] / 2 + parseInt(settingsCanvasDelta.area_pixels[0] / 2 * pThreshold),
-                settingsCanvasDelta.coords_origin[1] + 5, //Mark axis
-                settingsCanvasDelta.coords_origin[0] + settingsCanvasDelta.area_pixels[0] / 2 + parseInt(settingsCanvasDelta.area_pixels[0] / 2 * pThreshold),
-                settingsCanvasDelta.coords_origin[1] - settingsCanvasDelta.area_pixels[1]
-        );
-        context.stroke();
-        context.fillText(pThreshold,
-                settingsCanvasDelta.coords_origin[0] + settingsCanvasDelta.area_pixels[0] / 2 + parseInt(settingsCanvasDelta.area_pixels[0] / 2 * pThreshold),
-                settingsCanvasDelta.coords_origin[1] + 15 //Mark axis
-        );
         // End Vertical bars
     }
 
+        // Add the column title to the x-axis
+    context.textAlign = "center";
+    context.fillStyle = "black";
+    context.strokeStyle = "black";
+
+    name = name * 100;
+    context.fillText("-1", settingsCanvasDelta.coords_origin[0], settingsCanvasDelta.coords_origin[1] + 15);
+    drawLine(context, settingsCanvasDelta.coords_origin[0],
+        settingsCanvasDelta.coords_origin[1],
+        settingsCanvasDelta.coords_origin[0],
+            settingsCanvasDelta.coords_origin[1] + 2 // size of the delimiter=4
+    );
+
+    context.fillText("0", settingsCanvasDelta.coords_origin[0] + (settingsCanvasDelta.area_pixels[0]) / 2, settingsCanvasDelta.coords_origin[1] + 15);
+    drawLine(context, settingsCanvasDelta.coords_origin[0] + (settingsCanvasDelta.area_pixels[0]) / 2,
+        settingsCanvasDelta.coords_origin[1],
+            settingsCanvasDelta.coords_origin[0] + (settingsCanvasDelta.area_pixels[0]) / 2,
+            settingsCanvasDelta.coords_origin[1] + 2 // size of the delimiter=4
+    );
+
+    context.textAlign = "right";
+    context.fillText("1", settingsCanvasDelta.coords_origin[0] + settingsCanvasDelta.area_pixels[0], settingsCanvasDelta.coords_origin[1] + 15);
+    drawLine(context, settingsCanvasDelta.coords_origin[0] + settingsCanvasDelta.area_pixels[0],
+        settingsCanvasDelta.coords_origin[1], // +1 to don't overlap
+            settingsCanvasDelta.coords_origin[0] + settingsCanvasDelta.area_pixels[0],
+            settingsCanvasDelta.coords_origin[1] + 2 // size of the delimiter=4
+    );
+
+    // Vertical bars for percentages of inclusion/exclusion (by Default, in -20 and +20)
+    context.textAlign = "center";
+    context.dashedLine(
+            settingsCanvasDelta.coords_origin[0] + settingsCanvasDelta.area_pixels[0] / 2 - parseInt(settingsCanvasDelta.area_pixels[0] / 2 * pThreshold),
+            settingsCanvasDelta.coords_origin[1] + 5, //Mark axis
+            settingsCanvasDelta.coords_origin[0] + settingsCanvasDelta.area_pixels[0] / 2 - parseInt(settingsCanvasDelta.area_pixels[0] / 2 * pThreshold),
+            settingsCanvasDelta.coords_origin[1] - settingsCanvasDelta.area_pixels[1]
+    );
+    context.stroke();
+    context.fillText("-" + pThreshold + " ",
+            settingsCanvasDelta.coords_origin[0] + settingsCanvasDelta.area_pixels[0] / 2 - parseInt(settingsCanvasDelta.area_pixels[0] / 2 * pThreshold),
+            settingsCanvasDelta.coords_origin[1] + 15 //Mark axis
+    );
+
+    context.dashedLine(
+            settingsCanvasDelta.coords_origin[0] + settingsCanvasDelta.area_pixels[0] / 2 + parseInt(settingsCanvasDelta.area_pixels[0] / 2 * pThreshold),
+            settingsCanvasDelta.coords_origin[1] + 5, //Mark axis
+            settingsCanvasDelta.coords_origin[0] + settingsCanvasDelta.area_pixels[0] / 2 + parseInt(settingsCanvasDelta.area_pixels[0] / 2 * pThreshold),
+            settingsCanvasDelta.coords_origin[1] - settingsCanvasDelta.area_pixels[1]
+    );
+    context.stroke();
+    context.fillText(pThreshold,
+            settingsCanvasDelta.coords_origin[0] + settingsCanvasDelta.area_pixels[0] / 2 + parseInt(settingsCanvasDelta.area_pixels[0] / 2 * pThreshold),
+            settingsCanvasDelta.coords_origin[1] + 15 //Mark axis
+    );
     // Add some data markers to the y-axis
     var convertedMarkDataIncrementsIn = settingsCanvasDelta.area_pixels[1]/settingsCanvasDelta.labels_steps[1]; // chartHeight/settingsCanvasDelta.labels_steps[1];
 
@@ -1380,7 +1382,7 @@ function renderViolin(htmlElementId, results, tableId, params){
             .domain([0, Math.max(imposeMax, d3.max(data, function(d) { return d.y; }))]);
 
         var x = d3.scale.linear()
-            .range([height-margin.left, margin.right]) //-margin.bottom, margin.top])
+            .range([height-margin.bottom, margin.top]) //-margin.left, margin.right])
             .domain(domain)
             .nice();
 
@@ -1429,10 +1431,10 @@ function renderViolin(htmlElementId, results, tableId, params){
             .attr("class", "area")
             .attr("d", area);
 
-        gPlus.append("path")
-            .datum(data)
-            .attr("class", "violin")
-            .attr("d", line);
+//        gPlus.append("path")
+//            .datum(data)
+//            .attr("class", "violin")
+//            .attr("d", line);
 
 
         gMinus.append("path")
@@ -1440,10 +1442,10 @@ function renderViolin(htmlElementId, results, tableId, params){
             .attr("class", "area")
             .attr("d", area);
 
-        gMinus.append("path")
-            .datum(data)
-            .attr("class", "violin")
-            .attr("d", line);
+//        gMinus.append("path")
+//            .datum(data)
+//            .attr("class", "violin")
+//            .attr("d", line);
 
 
         gPlus.attr("transform", "rotate(90,0,0)  translate(0,-"+width+")");
@@ -1485,7 +1487,7 @@ function renderViolin(htmlElementId, results, tableId, params){
             .attr("class", "boxplot mean")
             .attr("cx", x(0.5))
             .attr("cy", y(d3.mean(results)))
-            .attr("r", x(boxPlotWidth/10));
+            .attr("r", x(boxPlotWidth/5));
 
         var iS=[0,2,4];
         var iSclass=["","median",""];
@@ -1530,21 +1532,12 @@ function renderViolin(htmlElementId, results, tableId, params){
 
 
     var margin={top:10, bottom:30, left:30, right:10};
-
-//    var element_jq = $("#"+htmlElementId)[0];
-    var width =  300 * results.length; //element_jq.getAttribute('width');
-    var height=  300; //element_jq.getAttribute('height');
+    var width =  100 * results.length ; //element_jq.getAttribute('width');
+    var height=  200; //element_jq.getAttribute('height');
     var spacing_space = (width - margin.left - margin.right)*.05;
     var boxWidth=Math.round(((width - margin.left - margin.right)-spacing_space)/results.length);
     var boxSpacing=Math.round(spacing_space/results.length);
-//    var max_domain =0;
-//    var min_domain =0;
-//    for (var bins_list=0; bins_list<results.length;bins_list++){
-//        max_domain = Math.max( Math.max.apply(null, results[bins_list]), max_domain);
-//        max_domain = Math.min( Math.min.apply(null, results[bins_list]), min_domain);
-//    }
 
-//    var domain=[min_domain,max_domain];
     var domain=[0,1];
     if (params.delta){
         domain=[-1,1];
@@ -1559,7 +1552,7 @@ function renderViolin(htmlElementId, results, tableId, params){
 
     var yAxis = d3.svg.axis()
         .scale(y)
-        .ticks(5)
+        .ticks(11)
         .orient("left")
         .tickSize(5,0,5);
 
@@ -1580,8 +1573,8 @@ function renderViolin(htmlElementId, results, tableId, params){
     for(var i=0; i<results.length; i++){
         results[i]=results[i]; //.sort(d3.ascending);
         var g=svg.append("g").attr("transform", "translate("+(i*(boxWidth+boxSpacing)+margin.left)+",0)");
-        addBoxPlot(g, results[i], height, boxWidth, domain, .15);
         addViolin(g, results[i], height, boxWidth, domain, 0.25, i, htmlElementId, tableId);
+        addBoxPlot(g, results[i], height, boxWidth, domain, .15);
         addExpectedPSI(g, d3.mean(results[i]), height, boxWidth, i);
 
     }

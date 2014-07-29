@@ -15,6 +15,10 @@ table
 
 .hidden { display: none; }
 
+.extra-short-header{
+    width:5px;
+}
+
 .short-header{
     width:20px;
 }

@@ -25,11 +25,11 @@
     <table id="event_table" class="tablesorter">
         <thead>
         <tr>
-            <th class="short-header">#</th>
+            <th class="extra-short-header">#</th>
             <th class="short-header">LSV ID</th>
             <th class="short-header">Type</th>
             <th class="short-header"></th>
-            <th class="short-header">Coordinates</th>
+            <th class="medium-header">Coordinates</th>
         </tr>
         </thead>
         <tfoot>
@@ -48,7 +48,7 @@
             <td>{{ metadata[loop.index-1][1] }}</td>
             <td>
                 <p class="hidden" style="top:0;">{{ metadata[loop.index-1][2] }}</p>
-                <canvas class="lsvLegend" width="300px" height="150px" data-lsv-string="{{ metadata[loop.index-1][2] }}">
+                <canvas class="lsvLegend" width="200px" height="60px" data-lsv-string="{{ metadata[loop.index-1][2] }}">
                     This browser or document mode doesn't support canvas
                 </canvas>
             </td>
