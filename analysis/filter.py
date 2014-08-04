@@ -18,7 +18,7 @@ def filter_bulk(matrix_filter, *matrices):
 
 
 def filter_message(when, value, logger, junc):
-    message = "%s (Filter=%s). %s"%(when, value, junc[0].shape)
+    message = "%s (Filter=%s). %s"%(when, value, len(junc[0]))
     if logger:
         if type(logger) == bool:
             print message
@@ -56,10 +56,14 @@ def lsv_mark_stacks(lsv_list, fitfunc, pvalue_limit, dispersion, logger=False):
     return lsv_list
 
 
-def quantifiable_in_group( list_of_experiments, minnonzero, min_reads, logger, per_exp  ):
-    filt_exp = []
+def quantifiable_in_group( list_of_experiments, minnonzero, min_reads, logger, per_exp = 0.10  ):
+    filt_exp = {}
     for idx, exp in enumerate(list_of_experiments):
-        filt_exp.append(lsv_quantifiable( exp, minnonzero, min_reads, logger ))
+        temp = lsv_quantifiable( exp, minnonzero, min_reads, logger )
+        for ldx, lsv in enumerate(temp[1]):
+            if not lsv[1] in filt_exp:
+                filt_exp[lsv[1]] = 0
+            filt_exp[lsv[1]] += 1
 
     tlb = {}
     filtered = []
@@ -70,10 +74,12 @@ def quantifiable_in_group( list_of_experiments, minnonzero, min_reads, logger, p
         for idx_lsv, lsv in enumerate(exp[1]):
             if not lsv[1] in tlb: tlb[lsv[1]] = [-1]*nexp
             tlb[lsv[1]][idx]= idx_lsv
+
     info = tlb.keys()
     for ii in info:
-        pres = nexp - tlb[ii].count(-1)
-        if pres < (per_exp*pres): continue
+        if not ii in filt_exp: continue
+        pres = filt_exp[ii]
+        if pres < (per_exp*float(nexp)): continue
         lsv = []
         id = list_of_experiments[0][1][tlb[ii][0]]
         for idx, exp in enumerate(list_of_experiments):
@@ -120,8 +126,6 @@ def lsv_intersection( lsv_list1, lsv_list2 ):
 
     lsv_match = [[],[]]
     match_info = []
-
-    import pdb
 
     ids1 = set([xx[1] for xx in lsv_list1[1]])
     ids2 = set([xx[1] for xx in lsv_list2[1]])

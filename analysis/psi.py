@@ -76,7 +76,11 @@ def empirical_delta_psi( lsv_list1, lsv_list2, logger=None):
         for ii, rate in enumerate(lsv_list2[idx]):
             val = float(rate) /  float(np.sum(lsv_list2[idx]))
             if np.isnan(val): val = 0.5
-            psi2[ii] = val
+            try:
+                psi2[ii] = val
+            except:
+                pdb.set_trace()
+                
 
         sys.stdout.flush()
         delta_psi.append( psi1 - psi2 )
@@ -310,7 +314,6 @@ def gen_prior_matrix( pip, lsv_exp1, lsv_exp2, output , numbins=20 ):
     matched_names = ids1.intersection(ids2)
     best_set_mean1 = [[],[]]
     best_set_mean2 = [[],[]]
-    
     for ii in matched_names:
         for idx, nm in enumerate(filtered_lsv1[1]):
             if nm[1] == ii:
@@ -324,7 +327,6 @@ def gen_prior_matrix( pip, lsv_exp1, lsv_exp2, output , numbins=20 ):
                 best_set_mean2[0].append(nz * majiq_sample.mean_junction(filtered_lsv2[0][idx]))
                 best_set_mean2[1].append(filtered_lsv2[1][idx])
                 break
-
 
 
     pip.logger.info("'Best set' is %s events (out of %s)"%(len(best_set_mean1[0]), len(lsv_exp1[0])))
