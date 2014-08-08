@@ -119,6 +119,19 @@ def rank_deltas_lsv( matrices, names, V=0.2, absolute=True, E=False, ranknochang
     rank.sort(key=lambda x: -x[1])
     return rank
 
+def rank_empirical_delta_lsv( list_events, info):
+
+    rank = []
+    for lidx, lsv in enumerate( list_events ):
+        rank.append([info[lidx][1], max(lsv)])
+
+    rank.sort(key=lambda x: -x[1])
+    return rank
+
+
+
+
+
 
 
 
