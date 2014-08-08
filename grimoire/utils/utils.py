@@ -402,3 +402,64 @@ def plot_gc_content():
 #        pyplot.show()
         pyplot.savefig('%s/gcontent_%s.png'%(mglobals.outDir,tissue))
         idx += 1
+
+
+def to_gtf(wfile, seq_name, source, gene, mRNA, start_trans, end_trans, strand, exon_l, frame_l):
+    SSCORE = "0"
+    # Iterate over each exon
+    exonOrCDS_list = []
+    for i, exon in enumerate(exon_l):
+        exonOrCDS_list.append("\t".join([seq_name, source, "%s", exon[0], exon[1], SSCORE, strand, str(frame_l[i]), "gene_id \"%s\"; transcript_id \"%s\";\n"%(gene, mRNA)]))
+
+    if strand == '+':
+        first_codon = "\t".join([seq_name, source, "start_codon", start_trans, str(int(start_trans) + 2), SSCORE, strand, ".", "gene_id \"%s\"; transcript_id \"%s\";\n"%(gene, mRNA)])
+        last_codon = "\t".join([seq_name, source, "stop_codon", str(int(end_trans) + 1), str(int(end_trans) + 3), SSCORE, strand, ".", "gene_id \"%s\"; transcript_id \"%s\";\n"%(gene, mRNA)])
+
+    else:
+        last_codon = "\t".join([seq_name, source, "start_codon", str(int(end_trans) - 2), end_trans, SSCORE, strand, ".", "gene_id \"%s\"; transcript_id \"%s\";\n"%(gene, mRNA)])
+        first_codon = "\t".join([seq_name, source, "stop_codon", str(int(start_trans) - 3), str(int(start_trans) - 1), SSCORE, strand, ".", "gene_id \"%s\"; transcript_id \"%s\";\n"%(gene, mRNA)])
+
+    wfile.write(first_codon)
+    for eCDS in exonOrCDS_list:
+        wfile.write(eCDS % "CDS")
+        wfile.write(eCDS % "exon")
+    wfile.write(last_codon)
+
+
+def gff2gtf(gff_f, out_f=None):
+    """Parse a GFF file created by MAJIQ and create a GTF"""
+
+    mRNA = None
+    with file_or_stdout(out_f) as wfile:
+        with open(gff_f) as gff:
+            for gff_l in gff:
+                gff_fields = gff_l.strip().split()
+                if gff_fields[2] == 'mRNA':
+                    if mRNA:
+                        to_gtf(wfile, seq_name, source, gene, mRNA, start_trans, end_trans, strand, exon_l, frame_l)
+                    exon_l = []
+                    frame_l = []
+                    ids = gff_fields[8].split(';Parent=')
+                    gene = ids[1].split(';')[0]
+                    mRNA = ids[0][5:]
+                    seq_name = gff_fields[0]
+                    source = gff_fields[1]
+                    start_trans = gff_fields[3]
+                    end_trans = gff_fields[4]
+                    strand = gff_fields[6]
+                    len_frame = 0
+
+                if gff_fields[2] == 'exon':
+                    exon_l.append([gff_fields[3], gff_fields[4]])
+                    frame_l.append((3 - (len_frame % 3)) % 3)
+                    len_frame = int(gff_fields[4]) - int(gff_fields[3])
+        to_gtf(wfile, seq_name, source, gene, mRNA, start_trans, end_trans, strand, exon_l, frame_l)
+
+from contextlib import contextmanager as ctx
+@ctx
+def file_or_stdout(file_name):
+    if file_name is None:
+        yield sys.stdout
+    else:
+        with open(file_name, 'w') as out_file:
+            yield out_file
