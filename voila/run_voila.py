@@ -31,7 +31,7 @@ def debug(text):
     print text
     return ''
 
-def _render_template(output_dir, output_html, majiq_output, type_summary, threshold, post_process_info=None):
+def _render_template(output_dir, output_html, majiq_output, type_summary, threshold=None, post_process_info=None):
     """
     Rendering the summary template to create the HTML file.
 
@@ -53,43 +53,74 @@ def _render_template(output_dir, output_html, majiq_output, type_summary, thresh
     if not os.path.exists(output_dir):
         os.makedirs(output_dir)
 
-    voila_output = open(output_dir+output_html, 'w+')
-
     if type_summary == 'single':
+        voila_output = open(output_dir+output_html, 'w')
         voila_output.write(sum_template.render(eventList=majiq_output['event_list'],
                                                tableMarks=table_marks_set(len(majiq_output['event_list'])),
                                                metadata=majiq_output['metadata_pre']))
+        voila_output.close()
     elif type_summary == 'delta':
+        voila_output = open(output_dir+output_html, 'w')
         voila_output.write(sum_template.render(eventList=majiq_output['event_list'],
                                                tableMarks=table_marks_set(len(majiq_output['event_list'])),
                                                expList=majiq_output['experiments_info'],
                                                threshold=threshold
                                                ))
+        voila_output.close()
 
     elif type_summary == 'lsv_single':
+        voila_output = open(output_dir+output_html, 'w')
         voila_output.write(sum_template.render(lsvList=majiq_output['event_list'],
                                                tableMarks=table_marks_set(len(majiq_output['event_list'])),
                                                metadata=majiq_output['metadata']
                                                ))
+        voila_output.close()
     elif type_summary == 'lsv_thumbnails':
+        voila_output = open(output_dir+output_html, 'w')
         voila_output.write(sum_template.render(lsvList=majiq_output,
                                                collapsed=post_process_info['collapsed']))
+        voila_output.close()
 
-    elif type_summary == 'lsv_gene':
-        voila_output.write(sum_template.render( lsvList=majiq_output['event_list'],
-                                                tableMarks=[table_marks_set(len(gene_set)) for gene_set in majiq_output['genes_dict']],
-                                                metadata=majiq_output['metadata'],
-                                                genes_json=majiq_output['genes_json'],
-                                                genes_dict=majiq_output['genes_dict']
-        ))
+    elif type_summary == 'lsv_single_gene':
+        # Max. 10 genes per page, create as many HTMLs as needed
+        from collections import OrderedDict as od
+        MAX_GENES = 10
+        count_pages = 0
+        gene_keys = sorted(majiq_output['genes_dict'].keys())
+        while count_pages*MAX_GENES < len(majiq_output['genes_json']):
+            prev_page = None
+            next_page = None
+
+            subset_keys = gene_keys[count_pages*MAX_GENES: MAX_GENES*(count_pages+1)]
+
+            genes_dict = od(dict((k, majiq_output['genes_dict'][k]) for k in subset_keys).items())
+            genes_json_dict = od(dict((k, majiq_output['genes_json'][k]) for k in subset_keys).items())
+            if (count_pages+1)*MAX_GENES < len(majiq_output['genes_dict']):
+                print (count_pages+1)*MAX_GENES, len(majiq_output['genes_dict'])
+                next_page = str(count_pages+1) + "_" + output_html
+            if not count_pages == 0:
+                prev_page = str(count_pages - 1) + "_" + output_html
+
+            voila_output = open(output_dir+str(count_pages) + "_" + output_html, 'w')
+            voila_output.write(sum_template.render( tableMarks=[table_marks_set(len(gene_set)) for gene_set in genes_dict],
+                                                    # metadata=majiq_output['metadata'],
+                                                    genes_json=genes_json_dict,
+                                                    genes_dict=genes_dict,
+                                                    prevPage = prev_page,
+                                                    nextPage= next_page
+            ))
+            voila_output.close()
+            count_pages += 1
 
     elif type_summary == 'lsv_delta':
         if 'genes_dict' not in majiq_output:
+            voila_output = open(output_dir+output_html, 'w')
             voila_output.write(sum_template.render( lsvList=majiq_output['event_list'],
                                                     tableMarks=table_marks_set(len(majiq_output['event_list'])),
                                                     metadata=majiq_output['metadata'],
                                                     threshold=threshold
             ))
+            voila_output.close()
 
     else:
         print "summary type not recognized %s." % type_summary
@@ -98,7 +129,6 @@ def _render_template(output_dir, output_html, majiq_output, type_summary, thresh
 
     # Copy static files to the output directory
     utils_voila.copyanything(EXEC_DIR+"templates/static", output_dir+"static")
-    voila_output.close()
 
 
 def create_summary(args):
@@ -107,7 +137,10 @@ def create_summary(args):
     type_summary    = args.type_analysis.replace('-', '_')  # Notation preference
     majiq_bins_file = args.majiq_bins
     output_dir      = args.output_dir
+    if not str(output_dir).endswith('/'):
+        output_dir += '/'
     meta_preprocess = args.meta_preprocess
+    threshold       = None
 
     output_html = os.path.splitext(os.path.split(majiq_bins_file)[1])[0] + "_" + type_summary + '.html'
     majiq_output = None
@@ -136,14 +169,17 @@ def create_summary(args):
             print "[ERROR] :: parameter genes-file-info needed for filtering results by gene name."
             sys.exit(1)
         import pickle as pkl
-        genes_file = pkl.load(open(args.genes_file, 'r'))
+        if args.genes_file:
+            genes_file = pkl.load(open(args.genes_file, 'r'))
 
-        import fileinput
-        gene_name_list = []
-        for gene_name in fileinput.input(args.gene_names):
-            gene_name_list.append(gene_name.rstrip())
-
-        majiq_output = utils_voila.get_lsv_single_exp_data(majiq_bins_file, args.confidence, gene_name_list=gene_name_list)
+            import fileinput
+            gene_name_list = []
+            if args.gene_names:
+                for gene_name in fileinput.input(args.gene_names):
+                    gene_name_list.append(gene_name.rstrip().split(":")[0])
+        else:
+            gene_name_list = []
+        majiq_output = utils_voila.get_lsv_single_exp_data(majiq_bins_file, args.confidence, gene_name_list=gene_name_list, lsv_type=args.lsv_type )
 
         # Get gene info
         try:
@@ -161,9 +197,11 @@ def create_summary(args):
 
         except Exception, e:
             print e.message
-            sys.exit(1)
+            raise e
+
 
     if type_summary == 'lsv_delta':
+        threshold = args.threshold
         if 'gene_names' in args:
             if 'genes_file' not in args :
                 print "[ERROR] :: parameter genes-file-info needed for filtering results by gene name."
@@ -202,7 +240,8 @@ def create_summary(args):
                     majiq_output['metadata'].append(elem[1])
             del majiq_output['genes_dict']
 
-    _render_template(output_dir, output_html, majiq_output, type_summary, args.threshold, meta_postprocess)
+    _render_template(output_dir, output_html, majiq_output, type_summary, threshold, meta_postprocess)
+    print "Summary created in:\n%s" % output_dir
     return
 
 
@@ -238,8 +277,9 @@ def main():
     # Single LSV by Gene(s) of interest
     parser_single_gene = argparse.ArgumentParser(add_help=False)
     parser_single_gene.add_argument('--genes-file-info', dest='genes_file', metavar='visual_LSE.majiq', type=str, help='Pickle file with gene coords info.')
-    parser_single_gene.add_argument('--gene-names', type=str, dest='gene_names', help='Gene names to filter the results. ')
-    subparsers.add_parser('lsv-single-gene', description='Single LSV analysis by gene(s) of interest.', parents=[common_parser, parser_single_gene])
+    parser_single_gene.add_argument('--gene-names', type=str, dest='gene_names', help='Gene names to filter the results.')
+    parser_single_gene.add_argument('--lsv-type', type=str, dest='lsv_type', help='LSV type to filter the results. (If no gene list is provided, this option will display only genes containing LSVs of the specified type).')
+    subparsers.add_parser('lsv-single-gene', help='Single LSV analysis by gene(s) of interest.', parents=[common_parser, parser_single_gene])
 
     # Thumbnails generation option (dev) TODO: Delete
     parser_thumbs = argparse.ArgumentParser(add_help=False)

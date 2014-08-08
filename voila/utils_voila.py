@@ -410,7 +410,7 @@ def get_delta_exp_data(majiq_out_file, metadata_post=None, confidence=.95, thres
     return {'event_list': events_list, 'experiments_info': experiments_info}
 
 
-def get_lsv_single_exp_data(majiq_bins_file, confidence, gene_name_list=None):
+def get_lsv_single_exp_data(majiq_bins_file, confidence, gene_name_list=None, lsv_type=None):
     """
     Create a dictionary to summarize the information from majiq output file.
     """
@@ -435,7 +435,7 @@ def get_lsv_single_exp_data(majiq_bins_file, confidence, gene_name_list=None):
 
     for i, lsv_meta in enumerate(metadata_pre):
         # print "%s --> %s" % (lsv_meta[2], collapse_lsv(lsv_meta[2]))
-        if not gene_name_list or str(lsv_meta[1]).split(':')[0] in gene_name_list:
+        if gene_name_list == None or str(lsv_meta[1]).split(':')[0] in gene_name_list or lsv_type == lsv_meta[2]:
             print lsv_meta[0], lsv_meta[1], lsv_meta[2]
             metadata.append([lsv_meta[0], lsv_meta[1], lsv_meta[2]]) #collapse_lsv(lsv_meta[2])])
             bins_array_list = bins_matrix[0][i]
@@ -445,6 +445,9 @@ def get_lsv_single_exp_data(majiq_bins_file, confidence, gene_name_list=None):
             except ValueError, e:
                 print "[WARNING] :: %s produced an error:\n%s (Skipped)" % (bins_array_list, e)
             genes_dict[str(lsv_meta[1]).split(':')[0]].append([Lsv(generate_lsv(lsv_counter, bins_array_list, confidence)), [lsv_meta[0], lsv_meta[1], lsv_meta[2]]])
+
+            if gene_name_list != None and str(lsv_meta[1]).split(':')[0] not in gene_name_list:
+                gene_name_list.append(str(lsv_meta[1]).split(':')[0])
 
     return {'event_list':   lsv_list,
             'metadata':     metadata,
