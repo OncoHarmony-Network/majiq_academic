@@ -5,6 +5,8 @@ Rank MAJIQ, MISO or MATS events to test delta PSI reproducibility
 
 """
 import matplotlib as mplot
+import scripts.utils
+
 mplot.use('Agg')
 
 from collections import defaultdict
@@ -122,29 +124,9 @@ def rank_majiq(bins_list, names, V=0.2, absolute=True, dofilter=True, E=False, r
     return rank
 
 
-def miso_reader(path, dofilter=True):
-    ret = []
-    for line in open(path):
-        sline = line.split('\t')
-        if sline[0] != "event_name":
-            #event_name  sample1_posterior_mean  sample1_ci_low  sample1_ci_high sample2_posterior_mean  
-            #sample2_ci_low  sample2_ci_high diff    bayes_factor    isoforms    sample1_counts  
-            #sample1_assigned_counts sample2_counts  sample2_assigned_counts chrom   strand  mRNA_starts mRNA_ends
-            try:
-                transcripts = sline[9].split(",")
-            except:
-                print line
-                raise
-            delta_psi = sline[7].split(",")
-            bayes_factor = sline[8]
-            trans_name = sline[0]
-            if len(transcripts) == 2: #only interested in 2 transcripts events for now
-                ret.append([trans_name, float(delta_psi[0]), float(bayes_factor)])
-    return ret
-
 
 def rank_miso(path, dofilter=True, ranknochange=False):
-    rank = miso_reader(path, dofilter)
+    rank = scripts.utils.miso_delta_reader(path, filter_complex=dofilter)
     if ranknochange: 
         rank.sort(key=lambda x: (abs(x[1]), x[2])) #sort first by smallest delta PSI, then by bayes factor
     else:
@@ -166,8 +148,9 @@ def rank_mats(path, dofilter=True, ranknochange=False):
             pvalue = float(sline[-4])
             #fdr = float(sline[-3])
             delta_psi =  float(sline[-1])
-            if pvalue < 0.05 or not dofilter:
-                rank.append([geneID, delta_psi, pvalue])
+            # if pvalue < 0.05 or not dofilter:
+            #     rank.append([geneID, delta_psi, pvalue])
+            rank.append([geneID.replace('"', ''), delta_psi, pvalue])
 
     if ranknochange:
         rank.sort(key=lambda x: (abs(x[1]), x[2])) #biggest delta PSI first, small p-value
@@ -230,9 +213,25 @@ def create_restrict_plot(ratios_list):
 
 
 
+# python ~/Projects/majiq/scripts/pair_rank.py --majiq-files
+# ~/workspace/majiq/data/deltapsi/genomewise/Hippo1_Liver1_deltamatrix.pickle
+# ~/workspace/majiq/data/deltapsi/genomewise/results_nofilter/Hippo1_Liver1_deltamatrix.pickle
+# ~/workspace/majiq/data/deltapsi/genomewise/Hippo2_Liver2_deltamatrix.pickle
+# ~/workspace/majiq/data/deltapsi/genomewise/results_nofilter/Hippo2_Liver2_deltamatrix.pickle
+# --output output/repro/pair_rank_all/nooutlier/exp1_union_exp2 --nofilter --type-rank exp1_and_exp2 --max 300 $conf_ranks
+
+# python ~/Projects/majiq/scripts/pair_rank.py --majiq-files
+# ~/workspace/majiq/data/deltapsi/genomewise/Hippo1_Liver1_deltamatrix.pickle
+# ~/workspace/majiq/data/deltapsi/genomewise/results_nofilter/Hippo2_Liver2_deltamatrix.pickle
+# --miso-files
+# data/genomewise/miso/comparison_Hip1Liv1/Hip1_vs_Liv1/bayes-factors/Hip1_vs_Liv1.miso_bf
+# data/genomewise/miso/comparison_Hip2Liv2/Hip2_vs_Liv2/bayes-factors/Hip2_vs_Liv2.miso_bf
+# --output output/repro/pair_rank_all/nooutlier/only_exp1 --nofilter --type-rank only_exp1 --max 140  $conf_ranks
+
+
 def main():
     parser = argparse.ArgumentParser(description="")
-    parser.add_argument('--majiq-files', required=True, dest='majiq_files', nargs='+', help='MAJIQ files with paired events to analyze')
+    parser.add_argument('--majiq-files', dest='majiq_files', nargs='*', help='MAJIQ files with paired events to analyze')
     parser.add_argument('--miso-files', dest='miso_files', nargs=2, help='MISO files with paired events to analyze')
     parser.add_argument('--mats-files', dest='mats_files', nargs=2,help='MATS files with paired events to analyze')
     parser.add_argument('--output', required=True, help='Output file path')
@@ -244,7 +243,7 @@ def main():
     parser.add_argument('--noabsolute', dest="absolute", default=True, action="store_false", help="Determine if V is absolute")
     parser.add_argument('--nofilter', dest="filter", default=True, action="store_false", help="Skip filtering by BF, p-value, etc")
     parser.add_argument('--fullrank', default=False, action='store_true', help="Benchmark searching for events in full ranking on rank2")
-    parser.add_argument('--fdr', default=None, help="In addition to the rank, calculate the False Discovery Rate. Only works with --fullrank")
+    parser.add_argument('--fdr', action="store_true", default=None, help="In addition to the rank, calculate the False Discovery Rate. Only works with --fullrank")
     parser.add_argument('--ranknochange', default=False, action='store_true', help="Calculate P(deltaPSI < V) instead of P(deltaPSI > V) to rank first the ones with low delta PSI")
     parser.add_argument('--intersect-events', dest='intersect_events', default=False, action='store_true', help="Intersect the events among all the pairs")
     parser.add_argument('--type-rank', dest='type_rank', default='all', choices=RANK_TYPES, help='Configure which events are chosen for the ranking.')
@@ -304,21 +303,33 @@ def main():
                         ranks['majiq_' + str(count_pairs)].append(rank_majiq(np.array(majiq_data[0])[exp1_index].tolist(), np.array(majiq_data[1])[exp1_index].tolist(), args.V, args.absolute, args.filter, args.E, args.ranknochange))
                 else:
                     ranks['majiq'].append(rank_majiq(majiq_data[0], majiq_data[1], args.V, args.absolute, args.filter, args.E, args.ranknochange))
+            names_majiq_exp1 = [m[1] for m in majiq_file1_names]
 
     if args.miso_files:
         for file in args.miso_files:
+            miso_rank = rank_miso(file, args.filter, args.ranknochange)
             if args.type_rank == 'only_exp1':
                 # Use only MAJIQ selected events for experiment 1
-                names_miso = [miso_info[0] for miso_info in rank_miso(file, args.filter, args.ranknochange)]
-                names_majiq_exp1 = [m[1] for m in majiq_file1_names]
+                names_miso = [miso_info[0] for miso_info in miso_rank]
+
                 exp1_index = np.array([name in names_majiq_exp1 for name in names_miso])
-                ranks['miso'].append(array(rank_miso(file, args.filter, args.ranknochange))[exp1_index])
+                ranks['miso'].append(array(miso_rank)[exp1_index])
             else:
-                ranks['miso'].append(array(rank_miso(file, args.filter, args.ranknochange)))
+                ranks['miso'].append(array(miso_rank))
 
     if args.mats_files:
         for file in args.mats_files:
-            ranks['mats'].append(array(rank_mats(file, args.filter, args.ranknochange)))
+
+            mats_rank = rank_mats(file, args.filter, args.ranknochange)
+            if args.type_rank == 'only_exp1':
+                # Use only MAJIQ selected events for experiment 1
+                names_mats = [mats_info[0] for mats_info in mats_rank]
+                exp1_index = np.array([name in names_majiq_exp1 for name in names_mats])
+                ranks['mats'].append(array(mats_rank)[exp1_index])
+            else:
+                ranks['mats'].append(array(mats_rank))
+
+
 
     if args.intersect_events:
         print "Computing intersection of events..."
@@ -414,12 +425,12 @@ def main():
         if not os.path.exists(args.output):
             os.makedirs(args.output)
 
-        pickle.dump(ratios, open(args.output+"/ratios.%s.pickle" % method_name, 'w'))
+        pickle.dump(ratios, open(args.output+"/ratios.%s.%s.pickle" % (str(args.type_rank).replace('-','_'), method_name), 'w'))
 
         if args.fdr:
             #print "FDR:", fdr[0:10], "...", fdr[-10:], "length", fdr.shape
-            pickle.dump(fdr, open("%s.%s.pickle" % (args.fdr, method_name), 'w'))
-            pickle.dump(v_values, open("%s.%s_v.pickle" % (args.fdr, method_name), 'w'))
+            pickle.dump(fdr, open("%s/%s_%s.pickle" % (args.output, method_name, str(args.type_rank).replace('-','_')), 'w'))
+            pickle.dump(v_values, open("%s/%s_%s_v.pickle" % (args.output, method_name, str(args.type_rank).replace('-','_')), 'w'))
 
         if "majiq" in method_name:
             only_exp1_ranks.append(ratios)
