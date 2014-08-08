@@ -28,6 +28,7 @@ def main():
     parser.add_argument('--title', help='The title of the plot')
     parser.add_argument('--fdr', nargs='+', type=int, help="Determine which plots are FDR lines (1) and which are not (0), and paint them as a dotted line [Example: --fdr 0 1 0 0 1]")
     parser.add_argument('--colors', nargs='*',  help="Steps of best events to take")
+    parser.add_argument('--plotname', default='rankcomp', help='Plot name')
     args = parser.parse_args()
 
     fig = figure(figsize=[10, 10]) # In inches
@@ -72,7 +73,7 @@ def main():
 
     title("%s" % (args.title) , fontsize=16)
     legend(loc=2)
-    _save_or_show(plotpath=args.plotpath, name="rankcomp")
+    _save_or_show(plotpath=args.plotpath, name=args.plotname)
 
 
 if __name__ == '__main__':
