@@ -939,28 +939,47 @@ class DeltaGroup(DeltaPair, CalcPsi):
         self.logger.info("GROUP 1: %s"%self.files1)
         self.logger.info("GROUP 2: %s"%self.files2)
 
+        exec_id = '%s_%s'%(self.names[0],self.names[1])
+        tempfile = '%s/%s_temp_mid_exec.pickle'%(self.output,exec_id)
+        print tempfile
         num_exp = [len(self.files1), len(self.files2)]
+        if not os.path.exists(tempfile):
 
-        filtered_lsv1 = [None]*num_exp[0]
-        fitfunc = [ [None]*num_exp[0], [None]*num_exp[1] ]
-        for ii, file in enumerate(self.files1):
-            lsv_junc, const = majiq_io.load_data_lsv(file, self.logger) 
 
-            #fitting the function
-            fitfunc[0][ii] = self.fitfunc(const[0])
-            filtered_lsv1[ii] = self.mark_stacks_lsv( lsv_junc, fitfunc[0][ii])
-        filtered_lsv1 = majiq_filter.quantifiable_in_group( filtered_lsv1, self.minnonzero, self.minreads, self.logger , 0.10 )
+            filtered_lsv1 = [None]*num_exp[0]
+            fitfunc = [ [None]*num_exp[0], [None]*num_exp[1] ]
+            for ii, file in enumerate(self.files1):
+                lsv_junc, const = majiq_io.load_data_lsv(file, self.logger) 
 
-        filtered_lsv2 = [None]*num_exp[1]
-        for ii, file in enumerate(self.files2):
-            lsv_junc, const = majiq_io.load_data_lsv(file, self.logger) 
+                #fitting the function
+                fitfunc[0][ii] = self.fitfunc(const[0])
+                filtered_lsv1[ii] = self.mark_stacks_lsv( lsv_junc, fitfunc[0][ii])
+            filtered_lsv1 = majiq_filter.quantifiable_in_group( filtered_lsv1, self.minnonzero, self.minreads, self.logger , 0.10 )
 
-            #fitting the function
-            fitfunc[1][ii] = self.fitfunc(const[0])
-            filtered_lsv2[ii] = self.mark_stacks_lsv( lsv_junc, fitfunc[1][ii])
-        filtered_lsv2 = majiq_filter.quantifiable_in_group( filtered_lsv2, self.minnonzero, self.minreads, self.logger , 0.10 )
+            filtered_lsv2 = [None]*num_exp[1]
+            for ii, file in enumerate(self.files2):
+                lsv_junc, const = majiq_io.load_data_lsv(file, self.logger) 
 
-        matched_lsv, matched_info = majiq_filter.lsv_intersection( filtered_lsv1, filtered_lsv2 )
+                #fitting the function
+                fitfunc[1][ii] = self.fitfunc(const[0])
+                filtered_lsv2[ii] = self.mark_stacks_lsv( lsv_junc, fitfunc[1][ii])
+            filtered_lsv2 = majiq_filter.quantifiable_in_group( filtered_lsv2, self.minnonzero, self.minreads, self.logger , 0.10 )
+
+            matched_lsv, matched_info = majiq_filter.lsv_intersection( filtered_lsv1, filtered_lsv2 )
+
+
+            group1, group2 = pipe.combine_for_priormatrix( matched_lsv[0], matched_lsv[1], matched_info, num_exp)
+            psi_space, prior_matrix = majiq_psi.gen_prior_matrix( self, group1, group2, self.output)
+
+
+            #TEMP 
+            tout = open(tempfile, 'w+')
+            pickle.dump([matched_info, matched_lsv, psi_space, prior_matrix, fitfunc], tout)
+            tout.close()
+            #END TEMP
+
+        else:
+            matched_info, matched_lsv, psi_space, prior_matrix, fitfunc = pickle.load(open(tempfile))
 
         conf = { 'minnonzero':self.minnonzero,
                  'minreads': self.minreads,
@@ -975,11 +994,10 @@ class DeltaGroup(DeltaPair, CalcPsi):
                  'nz':self.nz,
                  'names':self.names}
 
-        group1, group2 = pipe.combine_for_priormatrix( matched_lsv[0], matched_lsv[1], matched_info, num_exp)
-        psi_space, prior_matrix = majiq_psi.gen_prior_matrix( self, group1, group2, self.output)
         if self.nthreads == 1:
             pipe.model2( matched_lsv, matched_info, num_exp, conf, prior_matrix, psi_space)
         else:
+
 
             pool = Pool(processes=self.nthreads)
             csize = len(matched_lsv[0]) / int(self.nthreads)
@@ -993,10 +1011,11 @@ class DeltaGroup(DeltaPair, CalcPsi):
                 lsv_list = [matched_lsv[0][lb:ub],matched_lsv[1][lb:ub]]
                 lsv_info = matched_info[lb:ub]
                 pool.apply_async( pipe.parallel_lsv_child_calculation, [ [ lsv_list, lsv_info, num_exp, conf, prior_matrix, fitfunc, psi_space ],
-                #pipe.parallel_lsv_child_calculation ( [ matched_lsv, matched_info, num_exp, conf, prior_matrix, psi_space ],
+#                pipe.parallel_lsv_child_calculation ( [ matched_lsv, matched_info, num_exp, conf, prior_matrix, fitfunc, psi_space ],
                                                                          matched_info,
                                                                          '%s/tmp'%os.path.dirname(self.output),
                                                                          self.names,
+#                                                                         nt )
                                                                          nt] )
             pool.close()
             pool.join()

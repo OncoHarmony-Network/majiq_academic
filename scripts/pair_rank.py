@@ -5,9 +5,9 @@ Rank MAJIQ, MISO or MATS events to test delta PSI reproducibility
 
 """
 import matplotlib as mplot
+mplot.use('Agg')
 import scripts.utils
 
-mplot.use('Agg')
 
 from collections import defaultdict
 import argparse
@@ -125,28 +125,16 @@ def rank_majiq(bins_list, names, V=0.2, absolute=True, dofilter=True, E=False, r
         #     continue
         if not complex_lsvs and len(lsv_bins)>2:
             continue
-<<<<<<< HEAD
-        # for dmatrix in lsv_bins:
-        import pdb
-        try:
-            dmatrix = np.array(lsv_bins[0])
-        except:
-            pdb.set_trace()
-||||||| merged common ancestors
-        # for dmatrix in lsv_bins:
-        dmatrix = lsv_bins[0]
-=======
         if ranknochange:
             dmatrix = exp(log(lsv_bins[0]) - log(prior))
             dmatrix = dmatrix/sum(dmatrix)
         else:
-            dmatrix = lsv_bins[0]
+            dmatrix = np.array(lsv_bins[0])
 
->>>>>>> 73bd7387149b728185fc9c3345f35f9f89ee4fe4
         if E:
             # v_prob = v_sum(dmatrix)
             v_prob = expected_dpsi(dmatrix)
-            rank.append([names[i], v_prob])
+            rank.append([names[i], round(v_prob,2)])
         else:
             area = matrix_area(dmatrix, V, absolute)
             if ranknochange: #P(Delta PSI < V) = 1 - P(Delta PSI > V)
@@ -474,16 +462,8 @@ def main():
 
         if args.fdr:
             #print "FDR:", fdr[0:10], "...", fdr[-10:], "length", fdr.shape
-<<<<<<< HEAD
-            pickle.dump(fdr, open("%s.%s.pickle" % (args.fdr, method_name), 'w+'))
-            pickle.dump(v_values, open("%s.%s_v.pickle" % (args.fdr, method_name), 'w+'))
-||||||| merged common ancestors
-            pickle.dump(fdr, open("%s.%s.pickle" % (args.fdr, method_name), 'w'))
-            pickle.dump(v_values, open("%s.%s_v.pickle" % (args.fdr, method_name), 'w'))
-=======
             pickle.dump(fdr, open("%s/fdr.%s.%s.pickle" % (args.output, method_name, str(args.type_rank).replace('-','_')), 'w'))
             pickle.dump(v_values, open("%s/fdr.%s.%s_v.pickle" % (args.output, method_name, str(args.type_rank).replace('-','_')), 'w'))
->>>>>>> 73bd7387149b728185fc9c3345f35f9f89ee4fe4
 
         if "majiq" in method_name:
             only_exp1_ranks.append(ratios)
