@@ -1,7 +1,10 @@
+from collections import defaultdict
 import fnmatch
 import os
+import pickle
 from matplotlib import pyplot
 import numpy
+import numpy as np
 
 __author__ = 'abarrera'
 
@@ -48,7 +51,8 @@ def list_files_or_dir(file_or_dir_list, suffix='*'):
     return files
 
 
-def miso_delta_reader(path, filter_complex=True, result_dict=None):
+def miso_delta_reader(path, dofilter=False, complex_lsvs=False, result_dict=None):
+    """Read delta psi calculations from MISO."""
     ret = []
     for line in open(path):
         sline = line.split('\t')
@@ -64,10 +68,22 @@ def miso_delta_reader(path, filter_complex=True, result_dict=None):
             bayes_factor = sline[8]
             event_name = sline[0]
 
-            if not filter_complex or len(transcripts) == 2:  # only interested in 2 transcripts events for now
+            if complex_lsvs or len(transcripts) == 2:  # only interested in 2 transcripts events for now
                 if result_dict is not None:
                     for i, dpsi in enumerate(delta_psi):
                         result_dict["%s#%d" % (event_name, i)].append(float(dpsi))
                 else:
                     ret.append([event_name, float(delta_psi[0]), float(bayes_factor)])
     return ret
+
+
+def coverage_from_file(file, cov_suffix):
+    result_dict = defaultdict(list)  # First the num. reads, second the positions
+    with open(file) as majiq_file:
+        majiq_builder = pickle.load(majiq_file)
+        for lsv in majiq_builder[1]:
+            for i, junc in enumerate(lsv.junction_list):
+                result_dict[lsv.id+"#"+str(i)].append([np.sum(junc.data[0]), junc.nnz])
+    # Save results
+    pickle.dump(result_dict, open(file+cov_suffix, 'w'))
+    print "Coverage saved in: %s" % file+cov_suffix

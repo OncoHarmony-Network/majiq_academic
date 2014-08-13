@@ -90,8 +90,21 @@ def v_sum(matrix):
 
     return ret
 
-def rank_majiq(bins_list, names, V=0.2, absolute=True, dofilter=True, E=False, ranknochange=False):
-    MINTHRESHOLD = 0.2 # minimum threshold in order to consider a prob. significant enough to be included in the ranking
+def expected_dpsi(matrix):
+    """
+    Calculate sum_dpsi=Prob(dpsi)*dpsi == sum_v = v*P(Delta PSI)
+    """
+    absolute = True
+    ret = 0.
+    collapsed = collapse_matrix(matrix)
+    for i, v in enumerate(linspace(-1, 1, num=collapsed.shape[0])):
+        ret += collapsed[i]*abs(v)
+
+    return ret
+
+
+def rank_majiq(bins_list, names, V=0.2, absolute=True, dofilter=True, E=False, ranknochange=False, complex_lsvs=False, prior=None):
+    MINTHRESHOLD = 0. # minimum threshold in order to consider a prob. significant enough to be included in the ranking
     rank = []
     # lsv_types_dict = {
     #     's|1e1.1|1e2.1':'SE',
@@ -101,18 +114,24 @@ def rank_majiq(bins_list, names, V=0.2, absolute=True, dofilter=True, E=False, r
     #     # 't|1e1.1|1e1.2':'A5SS',
     #     # 's|1e1.1|2e1.1':'A5SS'
     # }
+    olderr = np.seterr(divide='ignore')
 
     print len(names), len(bins_list)
     for i, lsv_bins in enumerate(bins_list):
         # if names[i][2] not in lsv_types_dict.keys():
         #     continue
-        if len(lsv_bins)>2:
+        if not complex_lsvs and len(lsv_bins)>2:
             continue
-        # for dmatrix in lsv_bins:
-        dmatrix = lsv_bins[0]
+        if ranknochange:
+            dmatrix = exp(log(lsv_bins[0]) - log(prior))
+            dmatrix = dmatrix/sum(dmatrix)
+        else:
+            dmatrix = lsv_bins[0]
+
         if E:
-            v_prob = v_sum(dmatrix)
-            rank.append([names[i], round(v_prob, 2)])
+            # v_prob = v_sum(dmatrix)
+            v_prob = expected_dpsi(dmatrix)
+            rank.append([names[i], v_prob])
         else:
             area = matrix_area(dmatrix, V, absolute)
             if ranknochange: #P(Delta PSI < V) = 1 - P(Delta PSI > V)
@@ -120,13 +139,17 @@ def rank_majiq(bins_list, names, V=0.2, absolute=True, dofilter=True, E=False, r
 
             if area > MINTHRESHOLD or not dofilter:
                 rank.append([names[i], area])
-    rank.sort(key=lambda x: x[1], reverse=True)
+    if ranknochange:
+        rank.sort(key=lambda x: x[1])
+    else:
+        rank.sort(key=lambda x: x[1], reverse=True)
+    # rank.sort(key=lambda x: x[1], reverse=True)
+    # print '\n'.join([str(t[1]) for t in rank])
     return rank
 
 
-
-def rank_miso(path, dofilter=True, ranknochange=False):
-    rank = scripts.utils.miso_delta_reader(path, filter_complex=dofilter)
+def rank_miso(path, dofilter=True, ranknochange=False, complex_lsvs=False):
+    rank = scripts.utils.miso_delta_reader(path, dofilter=dofilter, complex_lsvs=complex_lsvs)
     if ranknochange: 
         rank.sort(key=lambda x: (abs(x[1]), x[2])) #sort first by smallest delta PSI, then by bayes factor
     else:
@@ -168,6 +191,7 @@ def _save_or_show(plotpath, name):
     else:
         show()  
 
+
 def _is_in_chunk(event1, chunk):
     for event2 in chunk: 
         if event1[0] == event2[0]: #event[0] is the name of the event
@@ -200,7 +224,6 @@ def skim_rank(rank, common_names, method):
 
 
 def create_restrict_plot(ratios_list):
-    import prettyplotlib as ppl
     from scipy.integrate import simps, trapz
 
     method_name = 'majiq'
@@ -248,6 +271,7 @@ def main():
     parser.add_argument('--intersect-events', dest='intersect_events', default=False, action='store_true', help="Intersect the events among all the pairs")
     parser.add_argument('--type-rank', dest='type_rank', default='all', choices=RANK_TYPES, help='Configure which events are chosen for the ranking.')
     parser.add_argument('--create_restrict_plot', dest='create_restrict_plot', default=False, action='store_true', help="Create plot for only_ex1 ranks in different restrictive conditions. Only works with --type-rank only_exp1")
+    parser.add_argument('--complex-lsvs', dest="complex_lsvs", default=False, action="store_true", help="Include complex LSVs")
     args = parser.parse_args()
 
     print args
@@ -283,31 +307,32 @@ def main():
             exp1_index = np.array([name in names_exp1_nofilt for name in event_union_set])
             exp2_index = np.array([name in names_exp2_nofilt for name in event_union_set])
 
-            ranks['majiq'].append(rank_majiq(np.array(majiq_exp1_nofilt[0])[exp1_index].tolist(), np.array(majiq_exp1_nofilt[1])[exp1_index].tolist(), args.V, args.absolute, args.filter, args.E, args.ranknochange))
-            ranks['majiq'].append(rank_majiq(np.array(majiq_exp2_nofilt[0])[exp2_index].tolist(), np.array(majiq_exp2_nofilt[1])[exp2_index].tolist(), args.V, args.absolute, args.filter, args.E, args.ranknochange))
+            ranks['majiq'].append(rank_majiq(np.array(majiq_exp1_nofilt[0])[exp1_index].tolist(), np.array(majiq_exp1_nofilt[1])[exp1_index].tolist(), args.V, args.absolute, args.filter, args.E, args.ranknochange, args.complex_lsvs))
+            ranks['majiq'].append(rank_majiq(np.array(majiq_exp2_nofilt[0])[exp2_index].tolist(), np.array(majiq_exp2_nofilt[1])[exp2_index].tolist(), args.V, args.absolute, args.filter, args.E, args.ranknochange, args.complex_lsvs))
 
         else:
             count_pairs = 0
             for file_nr, file in enumerate(args.majiq_files):
                 majiq_data = pickle.load(open(file, 'r'))
+                prior = pickle.load(open(str(file).replace('deltamatrix', 'priormatrix_jun_0')))
                 if file_nr % 2 == 0:
                     count_pairs += 1
                     majiq_file1_names = majiq_data[1]
-                    ranks['majiq_' + str(count_pairs)].append(rank_majiq(majiq_data[0], majiq_data[1], args.V, args.absolute, args.filter, args.E, args.ranknochange))
+                    ranks['majiq_' + str(count_pairs)].append(rank_majiq(majiq_data[0], majiq_data[1], args.V, args.absolute, args.filter, args.E, args.ranknochange, args.complex_lsvs,  prior=prior))
                     continue
 
                 if args.type_rank != 'all':
                     if args.type_rank == 'only_exp1':
                         # Select events from experiment 1
                         exp1_index = np.array([name in majiq_file1_names for name in majiq_data[1][:len(majiq_data[0])]])
-                        ranks['majiq_' + str(count_pairs)].append(rank_majiq(np.array(majiq_data[0])[exp1_index].tolist(), np.array(majiq_data[1])[exp1_index].tolist(), args.V, args.absolute, args.filter, args.E, args.ranknochange))
+                        ranks['majiq_' + str(count_pairs)].append(rank_majiq(np.array(majiq_data[0])[exp1_index].tolist(), np.array(majiq_data[1])[exp1_index].tolist(), args.V, args.absolute, args.filter, args.E, args.ranknochange, args.complex_lsvs, prior=prior))
                 else:
-                    ranks['majiq'].append(rank_majiq(majiq_data[0], majiq_data[1], args.V, args.absolute, args.filter, args.E, args.ranknochange))
+                    ranks['majiq'].append(rank_majiq(majiq_data[0], majiq_data[1], args.V, args.absolute, args.filter, args.E, args.ranknochange, args.complex_lsvs, prior=prior))
             names_majiq_exp1 = [m[1] for m in majiq_file1_names]
 
     if args.miso_files:
         for file in args.miso_files:
-            miso_rank = rank_miso(file, args.filter, args.ranknochange)
+            miso_rank = rank_miso(file, args.filter, args.ranknochange, args.complex_lsvs)
             if args.type_rank == 'only_exp1':
                 # Use only MAJIQ selected events for experiment 1
                 names_miso = [miso_info[0] for miso_info in miso_rank]
@@ -328,8 +353,6 @@ def main():
                 ranks['mats'].append(array(mats_rank)[exp1_index])
             else:
                 ranks['mats'].append(array(mats_rank))
-
-
 
     if args.intersect_events:
         print "Computing intersection of events..."
@@ -362,6 +385,7 @@ def main():
         print "Calculating the ratios..."
         #calculate the ratios
         ratios = []
+        events = []
 
         max_events = min(args.max, min(len(rank1), len(rank2)))
 
@@ -393,6 +417,7 @@ def main():
                     fdr.append(fdr[-1]+v_values[-1])
 
                 ratios.append(float(found))
+                events.append([rank1[i], _is_in_chunk(rank1[i], list(rank2[min_chunk:max_chunk]))])
 
             fdr.pop(0) #remove now useless first item
             #normalize ratios
@@ -405,13 +430,14 @@ def main():
         else: #"equalrank" chunks of same n size in both ranks
             import sys
             for i in xrange(max_events):
-                chunk1 = list(rank1[0:i])
-                chunk2 = list(rank2[0:i])
+                chunk1 = list(rank1[0:i+1])
+                chunk2 = list(rank2[0:i+1])
                 #check if event1 is into chunk2
                 found = 0
                 for event1 in chunk1:
                     found += _is_in_chunk(event1, chunk2)
-
+                    if i == max_events-1:
+                        events.append([event1, _is_in_chunk(event1, chunk2)])
                 ratios.append(float(found) / args.max)
                 if i % 20 == 0:
                     print "%s..."%i,
@@ -419,18 +445,22 @@ def main():
 
             ratios = array(ratios)
 
+
         print "RESULT:", ratios[0:10], "...", ratios[-10:], "length", ratios.shape
-        print "Saving... in %s" % args.output
+        print "Saving in %s" % args.output
 
         if not os.path.exists(args.output):
             os.makedirs(args.output)
 
         pickle.dump(ratios, open(args.output+"/ratios.%s.%s.pickle" % (str(args.type_rank).replace('-','_'), method_name), 'w'))
 
+        print "Saving events... in %s " % args.output
+        pickle.dump(events, open(args.output+"/events.%s.%s.pickle" % (str(args.type_rank).replace('-','_'), method_name), 'w'))
+
         if args.fdr:
             #print "FDR:", fdr[0:10], "...", fdr[-10:], "length", fdr.shape
-            pickle.dump(fdr, open("%s/%s_%s.pickle" % (args.output, method_name, str(args.type_rank).replace('-','_')), 'w'))
-            pickle.dump(v_values, open("%s/%s_%s_v.pickle" % (args.output, method_name, str(args.type_rank).replace('-','_')), 'w'))
+            pickle.dump(fdr, open("%s/fdr.%s.%s.pickle" % (args.output, method_name, str(args.type_rank).replace('-','_')), 'w'))
+            pickle.dump(v_values, open("%s/fdr.%s.%s_v.pickle" % (args.output, method_name, str(args.type_rank).replace('-','_')), 'w'))
 
         if "majiq" in method_name:
             only_exp1_ranks.append(ratios)

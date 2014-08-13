@@ -1,13 +1,17 @@
 # from __future__ import division
 from collections import defaultdict
 import pickle
-import numpy as np
-import argparse
 import ast
 import os
+
+import numpy as np
 import matplotlib.pyplot as ppl
 import numpy.ma as ma
+
+import argparse
 import scripts.utils
+from scripts.utils import coverage_from_file
+
 
 __author__ = 'abarrera'
 
@@ -318,18 +322,6 @@ def avg_expected_delta_psi(bins_list):
     return np.mean([delta_expected_psi(collapse_matrix(bins[0]), bins[1]) for bins in bins_list])
 
 
-def coverage_from_file(file, cov_suffix):
-    result_dict = defaultdict(list)  # First the num. reads, second the positions
-    with open(file) as majiq_file:
-        majiq_builder = pickle.load(majiq_file)
-        for lsv in majiq_builder[1]:
-            for i, junc in enumerate(lsv.junction_list):
-                result_dict[lsv.id+"#"+str(i)].append([np.sum(junc.data[0]), junc.nnz])
-    # Save results
-    pickle.dump(result_dict, open(file+cov_suffix, 'w'))
-    print "Coverage saved in: %s" % file+cov_suffix
-
-
 def load_coverage(cov_file_list, cov_suffix):
     coverage_list = []
     try:
@@ -422,7 +414,7 @@ def main():
         miso_delta_files = scripts.utils.list_files_or_dir(args.miso_deltas, ".miso_bf")
         miso_delta_dict = defaultdict(list)
         for mfile in miso_delta_files:
-            scripts.utils.miso_delta_reader(mfile, filter_complex=False, result_dict=miso_delta_dict)
+            scripts.utils.miso_delta_reader(mfile, complex_lsvs=False, result_dict=miso_delta_dict)
 
     ## Analyze coverage, saving it for later
     if args.majiq_builder_files:
