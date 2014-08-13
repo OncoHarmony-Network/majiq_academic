@@ -43,12 +43,6 @@ def _local_distance(a, b, l1, inv=False):
     return res
 
 
-
-
-
-
-
-
 def local_weight_eta_nu_per_lsv ( group, nexp ):
 
     alpha = bta = 0.5
@@ -98,15 +92,15 @@ def local_weight_eta_nu_per_lsv ( group, nexp ):
 
 
 
-def local_weight_eta_nu ( group, nexp ):
+def local_weight_eta_nu ( group, nexp, nbins = 40 ):
+
 
     alpha = bta = 0.5
     x = np.array([majiq_psi.BINS_CENTER, 1-majiq_psi.BINS_CENTER]).T
     jeffreys = majiq_psi.dirichlet_pdf(x,np.array([alpha,bta]))
 
-    max_eta_idx = np.zeros(shape=(len(group), nexp), dtype=np.int)
-    eta = np.zeros(shape=(len(group), nexp), dtype=np.float)
-    median_psi = np.zeros(shape=(len(group), nexp), dtype=np.float)
+    eta = np.zeros(shape=(len(group), nexp), dtype=np.dtype('object'))
+    median_psi = np.zeros(shape=(len(group), nexp), dtype=np.dtype('object'))
     print " SIZES nexx", nexp, "num_lsv", len(group)
 
     # loop over the experiments
@@ -115,7 +109,7 @@ def local_weight_eta_nu ( group, nexp ):
         for eidx, exp_lsv in enumerate(lsv):
             junc_eta  = []
             junc_mpsi = []
-            mpsi = np.zeros(shape = (exp_lsv.shape[0],majiq_psi.nbins), dtype=np.float)
+            mpsi = np.zeros(shape = (exp_lsv.shape[0],nbins), dtype=np.float)
             #loop over the junctions
             for jidx in xrange(exp_lsv.shape[0]):
                 eta_e = 0.0
@@ -131,20 +125,20 @@ def local_weight_eta_nu ( group, nexp ):
                 d_eta = median(mpsi, axis=0)
                 junc_mpsi.append( d_eta )
 
-            median_psi[lidx, eidx] = junc.mpsi 
+            median_psi[lidx, eidx] = junc_mpsi 
             eta[lidx, eidx] = junc_eta
 
 #    import pdb
 #    pdb.set_trace()
 
     # loop over the experiments
-    nu = np.zeros(shape=(len(group), nexp), dtype=np.float)
+    nu = np.zeros(shape=(len(group), nexp), dtype=np.dtype('object'))
     for lidx, lsv_exp in enumerate(group):
         #loop over the LSVs
         for eidx, lsv in enumerate(lsv_exp):
             junc_nu = []
             #loop over the junctions
-            for jidx in xrange(exp_lsv.shape[0]):
+            for jidx in xrange(lsv.shape[0]):
                 nu_e = 0.0
                 for sample in xrange(lsv.shape[1]):
                     total = lsv[:,sample].sum()
@@ -161,7 +155,7 @@ def local_weight_eta_nu ( group, nexp ):
 def global_weight_ro ( group , num_exp, n=100 ):
 
     ''' Calculate psi for global_weight '''
-    
+
     median_ref = [] 
     #ev = [None]*len(group)
     ev = []
@@ -180,7 +174,7 @@ def global_weight_ro ( group , num_exp, n=100 ):
     ro_lsv = np.zeros(shape=num_exp, dtype=np.float)
     for eidx, exp in enumerate(psis):
         for lidx, psi in enumerate(exp):
-            ro_lsv[eidx] += _local_distance(psi[0],median_ref[lidx], l1 = True)
+            ro_lsv[eidx] += _local_distance(psi[0],median_ref[lidx], l1 = True, inv=True)
 
     ro = ro_lsv / ro_lsv.sum()
     return ro
@@ -194,7 +188,7 @@ def local_weights(replicas, l1=False, median_ref=array([])):
     if median_ref.size: #if we have a median reference, compare all 
         for i, replica_i in enumerate(replicas):
             distances.append(_local_distance(replica_i, median_ref, l1))   
-        
+
         distances = array(distances)
         distances += pseudo
         distances /= distances.sum(axis=0)

@@ -22,6 +22,7 @@ def main():
     common.add_argument('--output', required=True, help='Path to save the pickle output to.')
     common.add_argument('--logger', default=None, help='Path for the logger. Default is output directory')
     common.add_argument('--silent', action='store_true', default=False, help='Silence the logger.')
+    common.add_argument('--newmodel', action='store_true', default=False, help='execute new model.')
     common.add_argument('--plotpath', default=None, help='Path to save the plot to, if not provided will show on a matplotlib popup window')
     common.add_argument('--debug', type=int, default=0, help="Activate this flag for debugging purposes, activates logger and jumps some processing steps.")
     common.add_argument('--minreads', default=10, type=int, help='Minimum number of reads combining all positions in an event to be considered. [Default: %(default)s]') 

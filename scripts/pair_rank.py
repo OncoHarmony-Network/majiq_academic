@@ -30,8 +30,11 @@ def collapse_matrix(matrix):
     "Collapse the diagonals probabilities in 1-D and return them"
     collapse = []
     #FOR TEST matrix = array([[0, 1, 2, 3, 4, 500], [0, 1, 2, 3, 4, 5], [0, 1, 2, 3, 4, 5], [100, 1, 2, 3, 4, 5], ])
-
-    matrix_corner = matrix.shape[0]+1
+    try:
+        matrix_corner = matrix.shape[0]+1
+    except:
+        import pdb
+        pdb.set_trace()
     for i in xrange(-matrix_corner, matrix_corner):
         collapse.append(diagonal(matrix, offset=i).sum())   
 
@@ -107,7 +110,11 @@ def rank_majiq(bins_list, names, V=0.2, absolute=True, dofilter=True, E=False, r
         if len(lsv_bins)>2:
             continue
         # for dmatrix in lsv_bins:
-        dmatrix = lsv_bins[0]
+        import pdb
+        try:
+            dmatrix = np.array(lsv_bins[0])
+        except:
+            pdb.set_trace()
         if E:
             v_prob = v_sum(dmatrix)
             rank.append([names[i], round(v_prob, 2)])
@@ -418,8 +425,8 @@ def main():
 
         if args.fdr:
             #print "FDR:", fdr[0:10], "...", fdr[-10:], "length", fdr.shape
-            pickle.dump(fdr, open("%s.%s.pickle" % (args.fdr, method_name), 'w'))
-            pickle.dump(v_values, open("%s.%s_v.pickle" % (args.fdr, method_name), 'w'))
+            pickle.dump(fdr, open("%s.%s.pickle" % (args.fdr, method_name), 'w+'))
+            pickle.dump(v_values, open("%s.%s_v.pickle" % (args.fdr, method_name), 'w+'))
 
         if "majiq" in method_name:
             only_exp1_ranks.append(ratios)
