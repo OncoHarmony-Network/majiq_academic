@@ -1,12 +1,13 @@
 # from __future__ import division
 from collections import defaultdict
 import pickle
-import numpy
+import numpy as np
 from scipy.stats import pearsonr
 import argparse
 import ast
 import os
 import matplotlib.pyplot as pyplot
+import scripts.utils
 
 __author__ = 'abarrera'
 
@@ -28,37 +29,63 @@ def _save_or_show(plotpath, name):
     else:
         pyplot.show()
 
-def plot_rtpcr_majiq_boxplot(rt_pcr, majiq, plotpath):
+
+def plot_rtpcr_majiq_boxplot(rt_pcr_majiq, rt_pcr_miso, majiq, miso, plotpath):
     #figure out how many groups of events exist
 
-    fig, (ax1, ax2) = pyplot.subplots(1, 2, sharex=True, sharey=True, figsize=[12, 6], dpi=300)
-    fig.suptitle("PSI comparison: RT-PCR Vs MAJIQ (N=%d)" % len(rt_pcr[0]))
+    fig, axx = pyplot.subplots(2, 2, sharex=True, sharey=True, figsize=[12, 12], dpi=300)
+    fig.suptitle("PSI comparison: RT-PCR Vs (MAJIQ N=%d & MISO N=%d) " % (len(rt_pcr_majiq[0]), len(rt_pcr_miso[0])))
 
-    diagonal = numpy.linspace(0, 1, num=len(rt_pcr[0]))
-    print majiq[0], rt_pcr[0]
-    fit = numpy.polyfit(majiq[0], rt_pcr[0], 1)
-    fit_fn = numpy.poly1d(fit) # fit_fn is now a function which takes in x and returns an estimate for y
+    diagonal = np.linspace(0, 1, num=len(rt_pcr_majiq[0]))
+    print majiq[0], rt_pcr_majiq[0], miso[0]
+    fit = np.polyfit(majiq[0], rt_pcr_majiq[0], 1)
+    fit_fn = np.poly1d(fit) # fit_fn is now a function which takes in x and returns an estimate for y
 
-    ax1.plot(majiq[0], fit_fn(majiq[0]), '--k')
-    ax1.plot(diagonal, diagonal, '--', color="#cccccc")
-    ax1.plot(majiq[0], rt_pcr[0], '.', color='r')
+    axx[0][0].plot(majiq[0], fit_fn(majiq[0]), '--k')
+    axx[0][0].plot(diagonal, diagonal, '--', color="#cccccc")
+    axx[0][0].plot(majiq[0], rt_pcr_majiq[0], '.', color='r', label='MAJIQ')
 
-    ax1.set_xlabel('MAJIQ')
-    ax1.set_ylabel('RT-PCR')
-    ax1.set_title('Resting')
-    ax1.set_ylim([0,1])
+    axx[0][0].set_xlabel('MAJIQ')
+    axx[0][0].set_ylabel('RT-PCR')
+    axx[0][0].set_title('Resting')
+    axx[0][0].set_ylim([0,1])
+    # axx[0][0].legend(loc=4)
 
-    fit = numpy.polyfit(majiq[1], rt_pcr[1], 1)
-    fit_fn = numpy.poly1d(fit)
-    ax2.plot(diagonal, diagonal, '--', color="#cccccc")
-    ax2.plot(majiq[1], rt_pcr[1], '.', color='b')
-    ax2.plot(majiq[1], fit_fn(majiq[1]), '--k')
+    fit = np.polyfit(majiq[1], rt_pcr_majiq[1], 1)
+    fit_fn = np.poly1d(fit)
+    axx[0][1].plot(diagonal, diagonal, '--', color="#cccccc")
+    axx[0][1].plot(majiq[1], rt_pcr_majiq[1], '.', color='r', label='MAJIQ')
+    axx[0][1].plot(majiq[1], fit_fn(majiq[1]), '--k')
 
-    ax2.set_xlabel('MAJIQ')
-    ax2.set_title('Stimuli')
-    ax2.set_ylim([0,1])
+    axx[0][1].set_xlabel('MAJIQ')
+    axx[0][1].set_title('Stimuli')
+    axx[0][1].set_ylim([0,1])
+    # axx[0][1].legend(loc=4)
 
-    _save_or_show(plotpath, "psi_comparison_rtpcr_majiq")
+    fit = np.polyfit(miso[0], rt_pcr_miso[0], 1)
+    fit_fn = np.poly1d(fit) # fit_fn is now a function which takes in x and returns an estimate for y
+
+    axx[1][0].plot(miso[0], fit_fn(miso[0]), '--k')
+    axx[1][0].plot(diagonal, diagonal, '--', color="#cccccc")
+    axx[1][0].plot(miso[0], rt_pcr_miso[0], '.', color='b', label='MISO')
+
+    axx[1][0].set_xlabel('MISO')
+    axx[1][0].set_ylabel('RT-PCR')
+    axx[1][0].set_title('Resting')
+    axx[1][0].set_ylim([0,1])
+    # axx[1][0].legend(loc=4)
+
+    fit = np.polyfit(miso[1], rt_pcr_miso[1], 1)
+    fit_fn = np.poly1d(fit)
+    axx[1][1].plot(diagonal, diagonal, '--', color="#cccccc")
+    axx[1][1].plot(miso[1], rt_pcr_miso[1], '.', color='b')
+    axx[1][1].plot(miso[1], fit_fn(miso[1]), '--k')
+
+    axx[1][1].set_xlabel('MISO')
+    axx[1][1].set_title('Stimuli')
+    axx[1][1].set_ylim([0,1])
+    # axx[1][1].legend(loc=4)
+    _save_or_show(plotpath, "psi_comp_rtpcr_majiq_miso")
 
 
 def barchart_expected(expected_psis, plotpath, mfile):
@@ -69,24 +96,92 @@ def barchart_expected(expected_psis, plotpath, mfile):
 
 
 def expected_psi(bins):
-    bins = numpy.array(bins)
+    bins = np.array(bins)
     step = 1.0 / bins.size
-    projection_prod = bins * numpy.arange(step / 2, 1, step)
-    return numpy.sum(projection_prod)
+    projection_prod = bins * np.arange(step / 2, 1, step)
+    return np.sum(projection_prod)
 
 
 def avg_expected_psi(bins_list):
-    return numpy.mean([expected_psi(bins) for bins in bins_list])
+    return np.mean([expected_psi(bins) for bins in bins_list])
 
 
 def expected_avg_psi(bins_list):
-    return expected_psi(numpy.mean(bins_list, axis=0))
+    return expected_psi(np.mean(bins_list, axis=0))
 
 
 def expected_delta_psi(bins_list, rtpcr_psi):
     step = 1.0 / 40
-    bins_index = numpy.arange(step / 2, 1, step)
-    return numpy.mean([numpy.sum([bins[i]*abs(psi - rtpcr_psi) for i, psi in enumerate(bins_index)]) for bins in bins_list])
+    bins_index = np.arange(step / 2, 1, step)
+    return np.mean([np.sum([bins[i]*abs(psi - rtpcr_psi) for i, psi in enumerate(bins_index)]) for bins in bins_list])
+
+
+def parse_rtpcr_results(pcr_file, names_pcr2majiq_dict):
+    pcr_rest_stim = defaultdict(list)
+    with open(pcr_file, 'r') as pcr_file:
+        for i, pcr_line in enumerate(pcr_file):
+            if i<1: continue  # headers
+            pcr_fields = pcr_line.rstrip().split()
+
+            if pcr_fields[0] not in names_pcr2majiq_dict.keys(): continue  # If the event is not in the list of events selected, skip it
+            try:
+                pcr_rest_stim[pcr_fields[0]].append([float(pcr_fields[1])/100, float(pcr_fields[2])/100])
+            except IndexError:
+                print "%s value not found, assigned 0..." % pcr_fields[0]
+                pcr_rest_stim[pcr_fields[0]].append([0, 0])
+            except ValueError, e:
+                print e.message
+                print "Event PSI could not be converted into float, wrong parsing??"
+                pcr_rest_stim[pcr_fields[0]].append([0, 0])
+    print "Number of events found in RT-PCR file: %d" % len(pcr_rest_stim)
+    return pcr_rest_stim
+
+
+def parse_majiq_results(files_majiq, names_junc_majiq):
+    majiq_dict = defaultdict(list)
+    files_majiq = scripts.utils.list_files_or_dir(files_majiq)
+    for mfile in files_majiq:
+        expected_psis = []
+        with open(mfile) as mfile_open:
+            mpickle = pickle.load(mfile_open)
+            for i, lsv_info in enumerate(mpickle[1]):
+                if len(mpickle[0][i])<3:
+                    expected_psis.append(expected_psi(mpickle[0][i][0]))
+                if lsv_info[1] not in names_junc_majiq.keys():
+                    continue # If the event is not in the list of events selected, skip it
+
+                # Find all junctions from that LSV that are included
+                for j, lsv_way in enumerate(mpickle[0][i]):
+                    if j in names_junc_majiq[lsv_info[1]]:
+                        majiq_dict[lsv_info[1]+"#"+str(j)].append(mpickle[0][i][j])
+        # barchart_expected(expected_psis, args.plotpath, mfile)
+    print "Number of events found in MAJIQ %s: %d" % ("; ".join([mf for mf in files_majiq]), len(majiq_dict.keys()))
+    return majiq_dict
+
+
+def parse_miso_results(files_miso, names_junc_majiq):
+
+    # event_name	miso_posterior_mean	ci_low	ci_high	isoforms	counts	assigned_counts	chrom	strand	mRNA_starts	mRNA_ends
+    # ENST00000301332:145697325-145697429:target	0.98	0.91	1.00	'ENST00000301332:145697325-145697429:target.0.ex_ENST00000301332:145697325-145697429:target.0.lsv','ENST00000301332:145697325-145697429:target.1.ex_ENST00000301332:145697325-145697429:target.1.lsv'	(0,0):36,(1,0):37	0:37	chr8	+	145694873,145695965	145697429,145697429
+
+    miso_dict = defaultdict(list)
+    files_miso = scripts.utils.list_files_or_dir(files_miso)
+
+    for mfile in files_miso:
+        with open(mfile) as mfile_open:
+            for line in mfile_open:
+                miso_fields = line.rstrip().split()
+                if miso_fields[0] not in names_junc_majiq.keys(): continue # If the event is not in the list of events selected, skip it
+
+                lsv_name = miso_fields[0]
+                miso_psis = miso_fields[1]
+                # Find all junctions from that LSV that are included
+
+                for i, miso_psi in enumerate(miso_psis.split(',')):
+                    miso_dict[lsv_name+"#"+str(i)].append(float(miso_psi))
+
+    print "Number of events found in MISO %s: %d" % ("; ".join([mf for mf in files_miso]), len(miso_dict.keys()))
+    return miso_dict
 
 
 def main():
@@ -94,8 +189,10 @@ def main():
     parser.add_argument("pcr", help="Tab-delimted file with the RT-PCR scores")
     parser.add_argument("--majiq-rest", required=True, dest='majiq_rest', nargs='+', help='MAJIQ PSI predictions for resting RNA-Seq data.')
     parser.add_argument("--majiq-stim", required=True, dest='majiq_stim', nargs='+', help='MAJIQ PSI predictions for stimulated RNA-Seq data.')
+    parser.add_argument("--miso-rest", required=True, dest='miso_rest', nargs='*', help='MISO PSI predictions for resting RNA-Seq data.')
+    parser.add_argument("--miso-stim", required=True, dest='miso_stim', nargs='*', help='MISO PSI predictions for stimulated RNA-Seq data.')
     parser.add_argument("--names-map-file", required=True, dest='names_map_file', help='File containing the mapping for events names used in MAJIQ and RT-PCR files.')
-    parser.add_argument("--builder-file", required=True, dest='majiq_builder_file', help='File containing MAJIQ builder output file.')
+    # parser.add_argument("--builder-file", required=True, dest='majiq_builder_file', help='File containing MAJIQ builder output file.')
     parser.add_argument('--plotpath', default='output')
     args = parser.parse_args()
 
@@ -125,70 +222,34 @@ def main():
     print "Number of events in names-map-file MAJIQ: %d" % len(names_junc_majiq.keys())
 
     # Parse RT-PCR results
-    pcr_rest_stim = defaultdict(list)
-    with open(args.pcr, 'r') as pcr_file:
-        for i, pcr_line in enumerate(pcr_file):
-            if i<1: continue  # headers
-            pcr_fields = pcr_line.rstrip().split()
-
-            if pcr_fields[0] not in names_pcr2majiq_dict.keys(): continue  # If the event is not in the list of events selected, skip it
-            try:
-                pcr_rest_stim[pcr_fields[0]] = [float(pcr_fields[1])/100, float(pcr_fields[2])/100]
-            except IndexError:
-                print "%s value not found, assigned 0..." % pcr_fields[0]
-                pcr_rest_stim[pcr_fields[0]] = [0, 0]
-            except ValueError, e:
-                print e.message
-                print "Event PSI could not be converted into float, wrong parsing??"
-                pcr_rest_stim[pcr_fields[0]] = [0, 0]
-
-    print "Number of events found in RT-PCR file: %d" % len(pcr_rest_stim)
+    pcr_rest_stim = parse_rtpcr_results(args.pcr, names_pcr2majiq_dict)
 
     # Process MAJIQ files for resting RNA-Seq data
-    majiq_rest_dict = defaultdict(list)
-    for mfile in args.majiq_rest:
-        expected_psis = []
-        with open(mfile) as mfile_open:
-            mpickle = pickle.load(mfile_open)
-            for i, lsv_info in enumerate(mpickle[1]):
-                if len(mpickle[0][i])<3:
-                    expected_psis.append(expected_psi(mpickle[0][i][0]))
-                if lsv_info[1] not in names_junc_majiq.keys(): continue # If the event is not in the list of events selected, skip it
-
-                # Find all junctions from that LSV that are included
-                for j, lsv_way in enumerate(mpickle[0][i]):
-                    if j in names_junc_majiq[lsv_info[1]]:
-                        majiq_rest_dict[lsv_info[1]+"#"+str(j)].append(mpickle[0][i][j])
-        # barchart_expected(expected_psis, args.plotpath, mfile)
-    print "Number of events found in MAJIQ rest RNA-Seq: %d" % len(majiq_rest_dict.keys())
+    majiq_rest_dict = parse_majiq_results(args.majiq_rest, names_junc_majiq)
 
     # Process MAJIQ files for stimuli RNA-Seq data
-    majiq_stim_dict = defaultdict(list)
-    for mfile in args.majiq_stim:
-        expected_psis = []
-        with open(mfile) as mfile_open:
-            mpickle = pickle.load(mfile_open)
-            for i, lsv_info in enumerate(mpickle[1]):
-                if len(mpickle[0][i])<3:
-                    expected_psis.append(expected_psi(mpickle[0][i][0]))
-                if lsv_info[1] not in names_junc_majiq.keys(): continue # If the event is not in the list of events selected, skip it
+    majiq_stim_dict = parse_majiq_results(args.majiq_stim, names_junc_majiq)
 
-                # Find all junctions from that LSV that are included
-                for j, lsv_way in enumerate(mpickle[0][i]):
-                    if j in names_junc_majiq[lsv_info[1]]:
-                        majiq_stim_dict[lsv_info[1]+"#"+str(j)].append(mpickle[0][i][j])
-                # majiq_stim_dict[lsv_info[1]+"#"+names_junc_majiq[lsv_info[1]]].append(get_mean_step(mpickle[0][i][int(names_junc_majiq[lsv_info[1]])]))
-        # barchart_expected(expected_psis, args.plotpath, mfile)
-    print "Number of events found in MAJIQ stim RNA-Seq: %d" % len(majiq_stim_dict.keys())
+    # Process MAJIQ files for resting RNA-Seq data
+    miso_rest_dict = parse_miso_results(args.miso_rest, names_junc_majiq)
+
+    # Process MAJIQ files for stimuli RNA-Seq data
+    miso_stim_dict = parse_miso_results(args.miso_stim, names_junc_majiq)
 
     ## Intersect names from RT-PCR and MAJIQ
     common_names_set = set([names_pcr2majiq_dict[k] for k in pcr_rest_stim.keys()]).intersection(set(majiq_rest_dict.keys())).intersection(set(majiq_stim_dict.keys()))
+    print "Common names afer intersection with MAJIQ: %d" % len(common_names_set)
+    common_names_set = common_names_set.intersection(set(miso_rest_dict.keys())).intersection(set(miso_stim_dict.keys()))
+    print "Common names afer intersection with MISO: %d" % len(common_names_set)
 
-    rt_pcr = [[], []]
+    rt_pcr_majiq = [[], []]
+    rt_pcr_miso = [[], []]
     majiq = [[], []]
+    miso = [[], []]
 
-    flipped_thres = .35
-    flipped_lsv_dict = defaultdict(str)  # List of strings with flipped LSVs info
+    flipped_thres = .8
+    flipped_majiq_dict = defaultdict(str)  # List of strings with flipped LSVs info
+    flipped_miso_dict = defaultdict(str)  # List of strings with flipped LSVs info
     for common_name in common_names_set:
         for name_majiq, name_pcr in names_majiq2pcr_dict.iteritems():
             if names_majiq2pcr_dict[common_name] == name_pcr:
@@ -198,44 +259,117 @@ def main():
                 majiq_rest_stat = avg_expected_psi(majiq_rest_dict[name])
                 majiq_stim_stat = avg_expected_psi(majiq_stim_dict[name])
 
-                # check if event has expected PSIs suspicious of being flipped
-                if abs(majiq_rest_stat - pcr_rest_stim[names_majiq2pcr_dict[name]][0]) > flipped_thres or abs(majiq_stim_stat - pcr_rest_stim[names_majiq2pcr_dict[name]][1]) > flipped_thres:
-                    flipped_lsv_dict[name] = "%s\t%s\t%f\t%f\t%f\t%f\t%d\t%d" % (names_majiq2pcr_dict[name], name, pcr_rest_stim[names_majiq2pcr_dict[name]][0], majiq_rest_stat, pcr_rest_stim[names_majiq2pcr_dict[name]][1], majiq_stim_stat, int(gene_names_counts[names_majiq2pcr_dict[name]]<2), int(len(names_junc_majiq[str(name).split('#')[0]])<2) )
-                    continue
+                # For MISO, compute mean
+                miso_rest_stat = np.mean(miso_rest_dict[name])
+                miso_stim_stat = np.mean(miso_stim_dict[name])
 
+                
                 print "%s - %s" % (name, names_majiq2pcr_dict[name])
                 print "---- RT-PCR ----"
-                rt_pcr[0].append(pcr_rest_stim[names_majiq2pcr_dict[name]][0])
-                rt_pcr[1].append(pcr_rest_stim[names_majiq2pcr_dict[name]][1])
-                print "[Resting]:\t%f" % (pcr_rest_stim[names_majiq2pcr_dict[name]][0])
-                print "[Stimuli]:\t%f" % (pcr_rest_stim[names_majiq2pcr_dict[name]][1])
+
+                rtpcr_rest = pcr_rest_stim[names_majiq2pcr_dict[name]][0][0]
+                rtpcr_stim = pcr_rest_stim[names_majiq2pcr_dict[name]][0][1]
+                min_rest = abs(rtpcr_rest - majiq_rest_stat)
+                min_stim = abs(rtpcr_stim - majiq_stim_stat)
+                for rtpcr_psi_value in pcr_rest_stim[names_majiq2pcr_dict[name]]:
+                    if abs(rtpcr_psi_value[0] - majiq_rest_stat) < min_rest:
+                        rtpcr_rest = rtpcr_psi_value[0]
+                        min_rest = abs(rtpcr_rest - majiq_rest_stat)
+
+                    if abs(rtpcr_psi_value[1] - majiq_rest_stat) < min_stim:
+                        rtpcr_stim = rtpcr_psi_value[1]
+                        min_stim = abs(rtpcr_stim - majiq_stim_stat)
+
+                # rt_pcr[0].append(pcr_rest_stim[names_majiq2pcr_dict[name]][0])
+                # rt_pcr[1].append(pcr_rest_stim[names_majiq2pcr_dict[name]][1])
+                rt_pcr_majiq[0].append(rtpcr_rest)
+                rt_pcr_majiq[1].append(rtpcr_stim)
+                # print "[Resting]:\t%f" % (pcr_rest_stim[names_majiq2pcr_dict[name]][0])
+                # print "[Stimuli]:\t%f" % (pcr_rest_stim[names_majiq2pcr_dict[name]][1])
+
+                rtpcr_rest = pcr_rest_stim[names_majiq2pcr_dict[name]][0][0]
+                rtpcr_stim = pcr_rest_stim[names_majiq2pcr_dict[name]][0][1]
+                min_rest = abs(rtpcr_rest - miso_rest_stat)
+                min_stim = abs(rtpcr_stim - miso_stim_stat)
+                for rtpcr_psi_value in pcr_rest_stim[names_majiq2pcr_dict[name]]:
+                    if abs(rtpcr_psi_value[0] - miso_rest_stat) < min_rest:
+                        rtpcr_rest = rtpcr_psi_value[0]
+                        min_rest = abs(rtpcr_rest - miso_rest_stat)
+
+                    if abs(rtpcr_psi_value[1] - miso_rest_stat) < min_stim:
+                        rtpcr_stim = rtpcr_psi_value[1]
+                        min_stim = abs(rtpcr_stim - miso_stim_stat)
+
+                rt_pcr_miso[0].append(rtpcr_rest)
+                rt_pcr_miso[1].append(rtpcr_stim)
+
+                # check if event has expected PSIs suspicious of being flipped
+                if abs(majiq_rest_stat - rt_pcr_majiq[0][-1]) > flipped_thres or abs(majiq_stim_stat - rt_pcr_majiq[1][-1]) > flipped_thres:
+                    flipped_majiq_dict[name] = "%s\t%s\t%f\t%f\t%f\t%f\t%d\t%d\n" % (names_majiq2pcr_dict[name], name, rt_pcr_majiq[0][-1], majiq_rest_stat, rt_pcr_majiq[1][-1], majiq_stim_stat, int(gene_names_counts[names_majiq2pcr_dict[name]]<2), int(len(names_junc_majiq[str(name).split('#')[0]])<2) )
+                    del rt_pcr_majiq[0][-1]
+                    del rt_pcr_majiq[1][-1]
+                else:
+                    majiq[0].append(majiq_rest_stat)
+                    majiq[1].append(majiq_stim_stat)
+
+                if abs(miso_rest_stat - rt_pcr_miso[0][-1]) > flipped_thres or abs(miso_stim_stat - rt_pcr_miso[1][-1]) > flipped_thres:
+                    flipped_miso_dict[name] = "%s\t%s\t%f\t%f\t%f\t%f\t%d\t%d\n" % (names_majiq2pcr_dict[name], name, rt_pcr_miso[0][-1], miso_rest_stat, rt_pcr_miso[1][-1], miso_stim_stat, int(gene_names_counts[names_majiq2pcr_dict[name]]<2), int(len(names_junc_majiq[str(name).split('#')[0]])<2) )
+                    del rt_pcr_miso[0][-1]
+                    del rt_pcr_miso[1][-1]
+                else:
+                    miso[0].append(miso_rest_stat)
+                    miso[1].append(miso_stim_stat)
+
+
+                print "[Resting - MAJIQ]:\t%f" % rtpcr_rest
+                print "[Stimuli - MAJIQ]:\t%f" % rtpcr_stim
 
                 print "---- MAJIQ ----"
-                print "[Resting]: Mean of expected:\t%f" % (float(majiq_rest_stat))
-                print "[Resting]: Expected delta psi statistic: %f" % (float(expected_delta_psi(majiq_rest_dict[name], pcr_rest_stim[names_majiq2pcr_dict[name]][0])))
+                print "[Resting]: Mean of expected:\t%f" % (float(majiq_rest_stat ))
+                # print "[Resting]: Expected delta psi statistic: %f" % (float(expected_delta_psi(majiq_rest_dict[name], pcr_rest_stim[names_majiq2pcr_dict[name]][0])))
                 print "[Stimuli]: Mean of expected:\t%f" % (float(majiq_stim_stat))
-                print "[Stimuli]: Expected delta psi statistic: %f" % (float(expected_delta_psi(majiq_stim_dict[name], pcr_rest_stim[names_majiq2pcr_dict[name]][1])))
+                # print "[Stimuli]: Expected delta psi statistic: %f" % (float(expected_delta_psi(majiq_stim_dict[name], pcr_rest_stim[names_majiq2pcr_dict[name]][1])))
+
+                print "---- MISO -----"
+                print "[Resting]: Mean of psi:\t%f" % (float(miso_rest_stat))
+                print "[Stimuli]: Mean of psi:\t%f" % (float(miso_stim_stat))
+
+
                 # print "[Resting]: Mean of %s:\t%f" % (majiq_rest_dict[name], float(majiq_rest_stat))
                 # print "[Stimuli]: Mean of %s:\t%f" % (majiq_stim_dict[name], float(majiq_stim_stat))
-                majiq[0].append(majiq_rest_stat)
-                majiq[1].append(majiq_stim_stat)
+
+
     # print repr(rt_pcr), repr(majiq)
 
-    plot_rtpcr_majiq_boxplot(rt_pcr, majiq, args.plotpath)
+    plot_rtpcr_majiq_boxplot(rt_pcr_majiq, rt_pcr_miso, majiq, miso, args.plotpath)
 
-    # Save presumably flipped events
-    flipped_lsv_names = [str(name_str).split("#")[0] for name_str in flipped_lsv_dict.keys()]
-    with open('flipped_events_threshold_%.2f.txt' % flipped_thres, 'w') as flipped_file:
+    # Save presumably flipped events in majiq
+    # flipped_lsv_names = [str(name_str).split("#")[0] for name_str in flipped_majiq_dict.keys()]
+    with open('flipped_majiq_thres_%.2f.txt' % flipped_thres, 'w') as flipped_file:
         flipped_file.write("name_rtpcr\tname_majiq\trtpcr_rest%f\tmajiq_rest\trtpcr_stim\tmajiq_stim\tunique_rtpcr_name?\tlsv_1_way?\ttarget_junction_coord\n")
-        with open(args.majiq_builder_file) as majiq_builder_file:
-            majiq_builder = pickle.load(majiq_builder_file)
-            for lsv in majiq_builder[1]:
-                if lsv.id in flipped_lsv_names:
-                    for flip_key in flipped_lsv_dict:
-                        if lsv.id in flip_key:
-                            flipped_lsv_dict[flip_key] = flipped_lsv_dict[flip_key] + "\t%s\n" % str(lsv.junction_id[int(str(flip_key).split('#')[1])])
-        for flipped_lsv in flipped_lsv_dict:
-            flipped_file.write(flipped_lsv_dict[flipped_lsv])
+        # with open(args.majiq_builder_file) as majiq_builder_file:
+        #     majiq_builder = pickle.load(majiq_builder_file)
+        #     for lsv in majiq_builder[1]:
+        #         if lsv.id in flipped_lsv_names:
+        #             for flip_key in flipped_majiq_dict:
+        #                 if lsv.id in flip_key:
+        #                     flipped_majiq_dict[flip_key] = flipped_majiq_dict[flip_key] + "\t%s\n" % str(lsv.junction_id[int(str(flip_key).split('#')[1])])
+        for flipped_lsv in flipped_majiq_dict:
+            flipped_file.write(flipped_majiq_dict[flipped_lsv])
+
+    # Save presumably flipped events in miso
+    # flipped_lsv_names = [str(name_str).split("#")[0] for name_str in flipped_miso_dict.keys()]
+    with open('flipped_miso_thres_%.2f.txt' % flipped_thres, 'w') as flipped_file:
+        flipped_file.write("name_rtpcr\tname_majiq\trtpcr_rest%f\tmajiq_rest\trtpcr_stim\tmajiq_stim\tunique_rtpcr_name?\tlsv_1_way?\ttarget_junction_coord\n")
+        # with open(args.majiq_builder_file) as majiq_builder_file:
+        #     majiq_builder = pickle.load(majiq_builder_file)
+        #     for lsv in majiq_builder[1]:
+        #         if lsv.id in flipped_lsv_names:
+        #             for flip_key in flipped_majiq_dict:
+        #                 if lsv.id in flip_key:
+        #                     flipped_majiq_dict[flip_key] = flipped_majiq_dict[flip_key] + "\t%s\n" % str(lsv.junction_id[int(str(flip_key).split('#')[1])])
+        for flipped_lsv in flipped_miso_dict:
+            flipped_file.write(flipped_miso_dict[flipped_lsv])
 
 
 if __name__ == '__main__':

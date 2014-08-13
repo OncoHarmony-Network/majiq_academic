@@ -114,9 +114,12 @@ $( document ).ready(function(){
 
     });
 
-    $('.tooltip').tooltipster({
-        theme: 'tooltipster-light'
-    });
+    var tooltips = $('.tooltip');
+    if (tooltips.length){
+        $('.tooltip').tooltipster({
+            theme: 'tooltipster-light'
+        });
+    }
 
 });
 

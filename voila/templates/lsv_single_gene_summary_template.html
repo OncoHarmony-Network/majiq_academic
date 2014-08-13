@@ -15,6 +15,7 @@
 {% endblock %}
 
 {% block content %}
+
 <div class="floatingCanvas">
     <canvas class="floatingLegend" width="500px" height="40px">
         This browser or document mode doesn't support canvas
@@ -26,12 +27,22 @@
 
 
         <h2>LSV summary</h2>
+        <h3>Result pages:
+            {% if prevPage %}
+            <a href="{{ prevPage }}">Previous &lt&lt</a>
+            {% endif %}
+            {% if nextPage and prevPage %}|{% endif %}
+            {% if nextPage %}
+            <a href="{{ nextPage }}">&gt&gt Next</a>
+            {% endif %}
+        </h3>
+
 
         {% for gene_name, gene_value in genes_dict.iteritems() %}
             {% set gene_index = loop.index -1 %}
             {{ gene_value[0][0]|debug }}
-            <h2>Gene name: {{ gene_name }}; Strand: +;</h2> {# {{ gene_value[0][0].strand }} #}
-            <canvas class="spliceGraph" width="1000px" height="200px" data-exon-list="{{ genes_json[gene_name][0] }}">
+            <h2>Gene name: {{ gene_name }}; Strand: {{ genes_json[gene_name][1] }};</h2> {# {{ gene_value[0][0].strand }} #}
+            <canvas class="spliceGraph" width="1800px" height="200px" data-exon-list="{{ genes_json[gene_name][0] }}">
                 This browser or document mode doesn't support canvas
             </canvas>
 

@@ -1315,9 +1315,13 @@
                 drawExpDeltaWithCanvasId(canvas.id, 0, canvasSettings);
             });
 
-            $('.tooltip').tooltipster({
-                theme: 'tooltipster-shadow'
-            });
+            var tooltip = $('.tooltip');
+            if (tooltip.length){
+                tooltip.tooltipster({
+                    theme: 'tooltipster-shadow'
+                });
+            }
+
         }
     });
 })(jQuery);
