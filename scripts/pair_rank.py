@@ -4,10 +4,11 @@ Rank MAJIQ, MISO or MATS events to test delta PSI reproducibility
 
 
 """
-import matplotlib as mplot
+import matplotlib as mpl
+mpl.use('Agg')
 import scripts.utils
+# import prettyplotlib as ppl
 
-mplot.use('Agg')
 
 from collections import defaultdict
 import argparse
@@ -183,15 +184,6 @@ def rank_mats(path, dofilter=True, ranknochange=False):
     return rank
 
 
-def _save_or_show(plotpath, name):
-    if plotpath:
-        figure(figsize=[50, 10])
-        savefig("%s_%s.png"%(plotpath, name), width=200, height=200, dpi=100)
-        clf()
-    else:
-        show()  
-
-
 def _is_in_chunk(event1, chunk):
     for event2 in chunk: 
         if event1[0] == event2[0]: #event[0] is the name of the event
@@ -250,6 +242,24 @@ def create_restrict_plot(ratios_list):
 # data/genomewise/miso/comparison_Hip1Liv1/Hip1_vs_Liv1/bayes-factors/Hip1_vs_Liv1.miso_bf
 # data/genomewise/miso/comparison_Hip2Liv2/Hip2_vs_Liv2/bayes-factors/Hip2_vs_Liv2.miso_bf
 # --output output/repro/pair_rank_all/nooutlier/only_exp1 --nofilter --type-rank only_exp1 --max 140  $conf_ranks
+
+
+def plot_fdr(output, method_name, fdr):
+
+    diagonaly = np.linspace(0, 1, len(fdr))
+    diagonalx = np.linspace(0, len(fdr), len(fdr))
+
+    fig = figure(figsize=[10, 10]) # In inches
+    #figure out how many groups of events exist
+
+    font = {'size': 16} #here also 'weight' and 'family'
+    matplotlib.rc('font', **font)
+
+    plot(diagonalx, diagonaly, '--', color="#cccccc")
+    plot(fdr, label='FDR %s' % method_name)
+    legend(loc=2)
+    scripts.utils._save_or_show(output, "fdr.%s" % method_name)
+
 
 
 def main():
@@ -412,7 +422,6 @@ def main():
                 #check if event1 is inside the window of rank2
                 found += _is_in_chunk(rank1[i], list(rank2[min_chunk:max_chunk]))
                 if args.fdr:
-                    print rank1[i][1]
                     v_values.append(rank1[i][1])
                     fdr.append(fdr[-1]+v_values[-1])
 
@@ -461,6 +470,7 @@ def main():
             #print "FDR:", fdr[0:10], "...", fdr[-10:], "length", fdr.shape
             pickle.dump(fdr, open("%s/fdr.%s.%s.pickle" % (args.output, method_name, str(args.type_rank).replace('-','_')), 'w'))
             pickle.dump(v_values, open("%s/fdr.%s.%s_v.pickle" % (args.output, method_name, str(args.type_rank).replace('-','_')), 'w'))
+            plot_fdr(args.output, method_name, fdr)
 
         if "majiq" in method_name:
             only_exp1_ranks.append(ratios)
