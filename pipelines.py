@@ -159,6 +159,7 @@ def calcpsi(args):
 
 def __parallel_calcpsi_lsv( conf , lsv_junc, fitfunc, name, chunk, tempdir):
 
+    try:
         if not os.path.isdir(tempdir):
             os.mkdir(tempdir)
         thread_logger = get_logger("%s/majiq.w%s.log"%(tempdir,chunk), silent=False, debug=conf['debug'])
@@ -196,6 +197,9 @@ def __parallel_calcpsi_lsv( conf , lsv_junc, fitfunc, name, chunk, tempdir):
         output = open("%s/%s_th%s.psi.pickle"%(tempdir, name, chunk), 'w')
         pickle.dump((psi, lsv_junc[1]), output)
         thread_logger.info("[Th %s]: PSI calculation for %s ended succesfully! Result can be found at %s"%(chunk, name, output.name))
+    except Exception as e:
+        print "%s"%sys.exc_traceback.tb_lineno, e
+        sys.stdout.flush()
 
 class CalcPsi(BasicPipeline):
 
@@ -667,8 +671,8 @@ class DeltaGroup(DeltaPair, CalcPsi):
                 gweights[lidx,ne] = []
                 for jinc in xrange(len(eta_wgt[lidx,ne])):
                     try:
-                        gweights[lidx,ne].append( ro_wgt[ne] )
-#                        gweights[lidx,ne].append( ro_wgt[ne] * eta_wgt[lidx,ne][jinc] * nu_wgt[lidx,ne][jinc] )
+#                        gweights[lidx,ne].append( ro_wgt[ne] )
+                        gweights[lidx,ne].append( ro_wgt[ne] * eta_wgt[lidx,ne][jinc] * nu_wgt[lidx,ne][jinc] )
                     except:
                         pdb.set_trace()
 #            for ii in range(len(lsv_samples)):
@@ -995,7 +999,7 @@ class DeltaGroup(DeltaPair, CalcPsi):
                  'names':self.names}
 
         if self.nthreads == 1:
-            pipe.model2( matched_lsv, matched_info, num_exp, conf, prior_matrix, psi_space)
+            posterior_matrix, names = pipe.model2( matched_lsv, matched_info, num_exp, conf, prior_matrix, fitfunc, psi_space, self.logger)
         else:
 
 
