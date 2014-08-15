@@ -57,8 +57,7 @@ def combine_for_priormatrix( group1, group2, matched_info, num_exp ):
 def prob_data_sample_given_psi( sample, all_sample, psi_space ):
     bin_test = [binom_test(sample, all_sample, p = x) for x in psi_space]
     bin_test = np.array(bin_test)+ 1e-10
-    psi=(bin_test/bin_test.sum())
-    return psi
+    return bin_test
 
 def model2( matched_lsv, info, num_exp, conf, prior_matrix,  fitfunc, psi_space, logger):
 
@@ -92,6 +91,7 @@ def model2( matched_lsv, info, num_exp, conf, prior_matrix,  fitfunc, psi_space,
 
         post_matrix = []
         new_info = []
+        ones_n = np.ones( shape=(1,nbins), dtype = np.float)
         for lidx, lsv_info in enumerate(info):
             if lidx % 50 == 0 : 
                 print "Event %d ..."%(lidx),
@@ -109,26 +109,23 @@ def model2( matched_lsv, info, num_exp, conf, prior_matrix,  fitfunc, psi_space,
                     for exp_idx in xrange(num_exp[0]):
                         psi1 = lsv_samples1[lidx,exp_idx][p_idx][m]
                         all_psi = np.array([xx[m] for xx in lsv_samples1[lidx,exp_idx]])
-                        import pdb
-                        try:
-                            data_given_psi1[exp_idx] = np.log(prob_data_sample_given_psi (psi1, all_psi.sum(), psi_space))
-                        except RuntimeWarning:
-                            pdb.set_trace()
+                        data_given_psi1[exp_idx] = np.log(prob_data_sample_given_psi (psi1, all_psi.sum(), psi_space))
                     V1 = data_given_psi1.sum(axis=0)
+                    V1 = V1.reshape(nbins,-1) 
 
 
                     data_given_psi2 = np.zeros( shape=(num_exp[1], nbins), dtype = np.float)
                     for exp_idx in xrange(num_exp[1]):
                         psi2 = lsv_samples2[lidx,exp_idx][p_idx][m]
                         all_psi = np.array([xx[m] for xx in lsv_samples2[lidx,exp_idx]])
-                        import pdb
-                        try:
-                            data_given_psi2[exp_idx] = np.log(prob_data_sample_given_psi (psi2, all_psi.sum(), psi_space))
-                        except RuntimeWarning:
-                            pdb.set_trace()
+                        data_given_psi2[exp_idx] = np.log(prob_data_sample_given_psi (psi2, all_psi.sum(), psi_space))
                     V2 = data_given_psi2.sum(axis=0)
-
-                    A = (V1.reshape(-1, nbins) * V2.reshape(nbins, -1)) + np.log(prior_matrix)
+                    V2 = V2.reshape(-1,nbins)
+                    
+                    A = (V1 * ones_n  + V2 *  ones_n.T) + np.log(prior_matrix)
+#i#                    import ipdb
+#                    ipdb.set_trace()
+#                    A = (V1.reshape(-1, nbins) * V2.reshape(nbins, -1)) + np.log(prior_matrix)
                     posterior += np.exp(A - scipy.misc.logsumexp(A ))
                 post_matrix[-1].append( posterior / conf['m'] )
 #                if p_idx == 0: 
