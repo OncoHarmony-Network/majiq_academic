@@ -205,7 +205,7 @@ def load_data_lsv(path, logger=None):
 #    print "LSV COV",lsv_cov_list
 
 
-    clist = random.sample(data[2], min(10000, len(data[2])))
+    clist = random.sample(data[2], min(5000, len(data[2])))
     const_list = np.zeros(shape=(len(clist),num_pos), dtype=np.dtype('int'))
     const_gc   = np.zeros(shape=(len(clist),num_pos), dtype=np.dtype('float'))
     for cidx,const in enumerate(clist):

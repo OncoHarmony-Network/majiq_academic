@@ -4,8 +4,8 @@ Rank MAJIQ, MISO or MATS events to test delta PSI reproducibility
 
 
 """
-import matplotlib as mpl
-mpl.use('Agg')
+import matplotlib as mplot
+mplot.use('Agg')
 import scripts.utils
 # import prettyplotlib as ppl
 
@@ -33,8 +33,11 @@ def collapse_matrix(matrix):
     "Collapse the diagonals probabilities in 1-D and return them"
     collapse = []
     #FOR TEST matrix = array([[0, 1, 2, 3, 4, 500], [0, 1, 2, 3, 4, 5], [0, 1, 2, 3, 4, 5], [100, 1, 2, 3, 4, 5], ])
-
-    matrix_corner = matrix.shape[0]+1
+    try:
+        matrix_corner = matrix.shape[0]+1
+    except:
+        import pdb
+        pdb.set_trace()
     for i in xrange(-matrix_corner, matrix_corner):
         collapse.append(diagonal(matrix, offset=i).sum())   
 
@@ -127,7 +130,7 @@ def rank_majiq(bins_list, names, V=0.2, absolute=True, dofilter=True, E=False, r
             dmatrix = exp(log(lsv_bins[0]) - log(prior))
             dmatrix = dmatrix/sum(dmatrix)
         else:
-            dmatrix = lsv_bins[0]
+            dmatrix = np.array(lsv_bins[0])
 
         if E:
             # v_prob = v_sum(dmatrix)
