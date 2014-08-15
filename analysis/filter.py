@@ -61,7 +61,7 @@ def quantifiable_in_group( list_of_experiments, minnonzero, min_reads, logger, p
     nexp = len(list_of_experiments)
     filtr = per_exp*float(nexp)
     filtr = 2
-    if nexp ==2 :
+    if nexp <=2 :
         filtr = 1
     
     filt_exp = {}
