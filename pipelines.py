@@ -1070,7 +1070,7 @@ class DeltaGroup(DeltaPair, CalcPsi):
                  'nz':self.nz,
                  'names':self.names}
 
-        get_clean_raw_reads( matched_info, matched_lsv, output, self.names )
+        get_clean_raw_reads( matched_info, matched_lsv, self.output, self.names )
 
         if self.nthreads == 1:
             posterior_matrix, names = pipe.model2( matched_lsv, matched_info, num_exp, conf, prior_matrix, fitfunc, psi_space, self.logger)
