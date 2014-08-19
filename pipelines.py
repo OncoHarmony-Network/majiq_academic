@@ -282,7 +282,7 @@ class CalcPsi(BasicPipeline):
 
         pickle_path = "%s/%s_psigroup.pickle"%(self.output, self.name)
         pickle.dump([posterior_matrix, names], open(pickle_path, 'w'))
-        self.logger.info("PSI calculation for %s ended succesfully! Result can be found at %s"%(self.names, self.output))
+        self.logger.info("PSI calculation for %s ended succesfully! Result can be found at %s"%(self.name, self.output))
         self.logger.info("Alakazam! Done.")
 
 
@@ -1091,7 +1091,7 @@ class DeltaGroup(DeltaPair, CalcPsi):
 #                pipe.parallel_lsv_child_calculation ( [ matched_lsv, matched_info, num_exp, conf, prior_matrix, fitfunc, psi_space ],
                                                                          matched_info,
                                                                          '%s/tmp'%os.path.dirname(self.output),
-                                                                         self.names,
+                                                                         '%s_%s'%(self.names[0], self.names[1]),
 #                                                                         nt )
                                                                          nt] )
             pool.close()
