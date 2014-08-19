@@ -29,7 +29,7 @@ import pipe as pipe
 
 
 
-def get_clean_raw_reads( matched_info, matched_lsv, outdir, names ):
+def get_clean_raw_reads( matched_info, matched_lsv, outdir, names, num_exp ):
 
     res = []
 
@@ -1070,8 +1070,8 @@ class DeltaGroup(DeltaPair, CalcPsi):
                  'nz':self.nz,
                  'names':self.names}
 
-        get_clean_raw_reads( matched_info, matched_lsv[0], self.output, self.names[0] )
-        get_clean_raw_reads( matched_info, matched_lsv[1], self.output, self.names[1] )
+        get_clean_raw_reads( matched_info, matched_lsv[0], self.output, self.names[0], num_exp[0] )
+        get_clean_raw_reads( matched_info, matched_lsv[1], self.output, self.names[1], num_exp[1] )
 
         if self.nthreads == 1:
             posterior_matrix, names = pipe.model2( matched_lsv, matched_info, num_exp, conf, prior_matrix, fitfunc, psi_space, self.logger)
