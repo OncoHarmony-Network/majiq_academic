@@ -1102,13 +1102,13 @@ class DeltaGroup(DeltaPair, CalcPsi):
             names = []
             self.logger.info("GATHER pickles")
             for nt in xrange(self.nthreads):
-                tempfile = open("%s/tmp/%s_%s_th%s.deltapsi.pickle"%(os.path.dirname(self.output), self.names[0], self.names[1], nt))
+                tempfile = open("%s/tmp/%s_%s_th%s.%s.pickle"%(os.path.dirname(self.output), self.names[0], self.names[1], nt, pipe.model2.__name__))
                 ptempt = pickle.load( tempfile )
                 posterior_matrix.extend( ptempt[0] )
                 names.extend(ptempt[1])
 
 
-        pickle_path = "%s%s_%s_deltagroup.pickle"%(self.output, self.names[0], self.names[1])
+        pickle_path = "%s%s_%s.%s.pickle"%(self.output, self.names[0], self.names[1],pipe.model2.__name__)
         pickle.dump([posterior_matrix, names], open(pickle_path, 'w'))
         self.logger.info("DeltaPSI calculation for %s_%s ended succesfully! Result can be found at %s"%(self.names[0],self.names[1], self.output))
         self.logger.info("Alakazam! Done.")
