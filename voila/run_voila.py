@@ -4,6 +4,7 @@ import json
 import os
 import sys
 import utils_voila
+import collections as cc
 
 
 __author__ = 'abarrera'
@@ -83,7 +84,7 @@ def _render_template(output_dir, output_html, majiq_output, type_summary, thresh
 
     elif type_summary == 'lsv_single_gene':
         # Max. 10 genes per page, create as many HTMLs as needed
-        from collections import OrderedDict as od
+
         MAX_GENES = 10
         count_pages = 0
         gene_keys = sorted(majiq_output['genes_dict'].keys())
@@ -93,8 +94,8 @@ def _render_template(output_dir, output_html, majiq_output, type_summary, thresh
 
             subset_keys = gene_keys[count_pages*MAX_GENES: MAX_GENES*(count_pages+1)]
 
-            genes_dict = od(dict((k, majiq_output['genes_dict'][k]) for k in subset_keys).items())
-            genes_json_dict = od(dict((k, majiq_output['genes_json'][k]) for k in subset_keys).items())
+            genes_dict = cc.OrderedDict(dict((k, majiq_output['genes_dict'][k]) for k in subset_keys).items())
+            genes_json_dict = cc.OrderedDict(dict((k, majiq_output['genes_json'][k]) for k in subset_keys).items())
             if (count_pages+1)*MAX_GENES < len(majiq_output['genes_dict']):
                 print (count_pages+1)*MAX_GENES, len(majiq_output['genes_dict'])
                 next_page = str(count_pages+1) + "_" + output_html
