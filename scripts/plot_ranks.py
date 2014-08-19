@@ -56,7 +56,7 @@ def main():
         ylabel("fraction of events reproduced", fontsize=20)
         xlim(0, 1)
         ylim(0, 1) #a ratio
-        linetype = '-'
+        linetype = '.'
         if args.fdr:
             if args.fdr[i]: 
                 linetype = '--'
@@ -74,7 +74,7 @@ def main():
             plot(x_space, ratio, linetype, label=my_label, linewidth=2)
 
     title("%s" % (args.title) , fontsize=16)
-    legend(loc=2)
+    #legend(loc=2)
     _save_or_show(plotpath=args.plotpath, name=args.plotname)
 
 

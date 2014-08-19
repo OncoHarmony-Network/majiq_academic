@@ -22,9 +22,11 @@ from voila.splice_graphics.junctionGraphic import JunctionGraphic
 
 def create_if_not_exists(my_dir, logger=False):
     "Create a directory path if it does not exist"
-    if not os.path.exists(my_dir):
+    try:
         if logger: logger.info("\nCreating directory %s..."%my_dir)
-        os.makedirs(my_dir)   
+	os.makedirs(my_dir)
+    except OSError, e:
+	 if logger: logger.info("\nDirectory %s already exists..."%my_dir)
 
 
 def get_logger(logger_name, silent=False, debug=False): 
