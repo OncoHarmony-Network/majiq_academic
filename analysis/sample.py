@@ -105,69 +105,6 @@ global EMPIRICAL_NZ, BINOMIAL_NZ
 EMPIRICAL_NZ = 0
 BINOMIAL_NZ = -1
 
-def sample_from_junctions_naiveB(junction_list, m, k, dispersion=0.1, discardzeros=5, trimborder=True, fitted_func=None, debug=False, tracklist=None, Nz = 0, names=None):
-    "Given the filtered reads, bootstrap samples from every junction"
-    a, b = fitted_func.c
-    sampled_means = []
-    sampled_var = []
-    all_samples = []
-    
-    for i, junction in enumerate(junction_list):
-        if debug > 0 and i == debug: break
-        if i % 100 == 0 and debug > 0:
-            print "junction %s..."%i,
-            sys.stdout.flush()
-
-        if trimborder: 
-            junction = _trimborders(junction, trimborder) #trim the zeroes from the borders regardless of the discardzeros flag
-
-        junction = junction[junction > -EPSILON]  #mask the -1 (or lower) positions regardless of the discardzero treatment
-        
-        if discardzeros > 0:
-            junction = junction[junction!=0] #a junction array without the zeroes
-            sys.stdout.flush()
-            if junction.shape[0]< discardzeros:
-                z = np.zeros(shape=(discardzeros-junction.shape[0]), dtype=int)
-                junction = np.concatenate((junction,z)) #a junction array without the zeroes
-
-        if np.count_nonzero(junction) == 0:
-            sampled_means.append(0)
-            sampled_var.append(0)
-            all_samples.append([0]*m) #k*m zeroes
-        else:
-
-            if Nz == EMPIRICAL_NZ:
-                npos_mult = np.count_nonzero(junction)
-            elif Nz == BINOMIAL_NZ:
-                npos_mult = binomial(k,float(np.count_nonzero(junction))/float(k), k*m)
-            else:
-                npos_mult = Nz
-
-            samples = []
-            for iternumber in xrange(m):
-                junction_samples = []
-                for numsamples in xrange(k):
-                    junction_samples.append(choice(junction))
-
-                sampled_mean = mean(junction_samples)
-                #recalculating
-                r_nb, p_nb = polyfitnb.func2nb( a, b, sampled_mean, dispersion )
-                nb50 = negative_binomial(r_nb, p_nb, k)
-                smpl = mean(nb50)
-                samples.append( smpl )
-            #calculate the mean and the variance 
-
-            sampled_means.append(mean(samples))
-            sampled_var.append(var(samples))
-           
-#            samples = [ npos_mult* (x+1) for x in samples]
-            samples = npos_mult * (np.array(samples)+1)
-#            print i, Nz, samples
-            all_samples.append(samples)
-            if names and tracklist:
-                if names[i] in tracklist:
-                    logger.info("TRACKLIST (%s): %s"%(event_name, junction_list))
-    return array(sampled_means), array(sampled_var), array(all_samples)
 
 def sample_from_junctions(junction_list, m, k, dispersion=0.1, discardzeros=5, trimborder=True, fitted_func=None, debug=False, tracklist=None, Nz = 0, names=None, naive=False):
     "Given the filtered reads, bootstrap samples from every junction"
