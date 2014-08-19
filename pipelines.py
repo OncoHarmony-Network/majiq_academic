@@ -32,9 +32,6 @@ import pipe as pipe
 def get_clean_raw_reads( matched_info, matched_lsv, outdir, names, num_exp ):
 
     res = []
-
-    import ipdb
-    ipdb.set_trace()
     for eidx in xrange(num_exp):
         for ldx, lsv in enumerate(matched_info):
             num = matched_lsv[ldx][eidx].sum()
