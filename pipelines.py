@@ -34,12 +34,12 @@ def get_clean_raw_reads( matched_info, matched_lsv, outdir, names ):
     res = []
 
 
-    for eidx, name in enumerate(names):
+    for eidx in xrange(num_exp):
         for ldx, lsv in enumerate(matched_info):
             num = matched_lsv[eidx][ldx].sum()
             res.append([lsv[1],num])
 
-        with open('%s/clean_reads.%s.pkl'%(outdir, name),'wb') as fp:
+        with open('%s/clean_reads.%s%d.pkl'%(outdir, names,eidx),'wb') as fp:
             pickle.dump(res, fp)
 
 
@@ -1070,7 +1070,8 @@ class DeltaGroup(DeltaPair, CalcPsi):
                  'nz':self.nz,
                  'names':self.names}
 
-        get_clean_raw_reads( matched_info, matched_lsv, self.output, self.names )
+        get_clean_raw_reads( matched_info, matched_lsv[0], self.output, self.names[0] )
+        get_clean_raw_reads( matched_info, matched_lsv[1], self.output, self.names[1] )
 
         if self.nthreads == 1:
             posterior_matrix, names = pipe.model2( matched_lsv, matched_info, num_exp, conf, prior_matrix, fitfunc, psi_space, self.logger)
