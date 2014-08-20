@@ -220,7 +220,7 @@ def generate_visualization_output( allgenes ):
                                     extra_coords.append([ex.db_coord[1]+1, ex.end])
                             eg = ExonGraphic(a3, a5, cc, type, intron_retention = ex.ir , coords_extra = extra_coords) 
                             exon_list.append( eg )
-                        gene_list.append(GeneGraphic(gg.get_id(),gg.get_strand(), exon_list, junc_list))
+                        gene_list.append(GeneGraphic(gg.get_id(),gg.get_strand(), exon_list, junc_list, gg.get_chromosome()))
             file_pi = open('%s/%s.splicegraph'%(mglobals.outDir, mglobals.exp_list[exp_idx]),'w+')
             pickle.dump((gene_list), file_pi)
             file_pi.close()
