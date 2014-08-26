@@ -145,10 +145,10 @@ def parse_majiq_results(files_majiq, names_junc_majiq):
         with open(mfile) as mfile_open:
             mpickle = pickle.load(mfile_open)
             for i, lsv_info in enumerate(mpickle[1]):
-                if len(mpickle[0][i])<3:
-                    expected_psis.append(expected_psi(mpickle[0][i][0]))
                 if lsv_info[1] not in names_junc_majiq.keys():
                     continue # If the event is not in the list of events selected, skip it
+                if len(mpickle[0][i])<3:
+                    expected_psis.append(expected_psi(mpickle[0][i][0]))
 
                 # Find all junctions from that LSV that are included
                 for j, lsv_way in enumerate(mpickle[0][i]):

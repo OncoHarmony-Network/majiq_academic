@@ -29,6 +29,8 @@ def plot_PSIs1VsPSIs2(score1, score2, replica1_name, replica2_name, method1, met
 
     total_psis = float(len(score1))
 
+    print len(score1), len(score2)
+
     better_in_method1 = np.sum(array(score1) < array(score2))
     better_in_method2 = np.sum(array(score1) > array(score2))
 
@@ -87,26 +89,6 @@ def calculate_l1_expected(p, q):
 def calculate_l1(p, q):
     return (abs(p - q)).sum()
 
-def calculate_ead(psi_samples):
-    """
-    P(S = |PSI_1 - PSI_2|) = sum_psi_1 sum_psi_2 p(psi_1)*p(psi_2)*|psi_1 - psi_2| 
-
-    Expected Absolute Difference = EAD 
-    """
-    sample1 = psi_samples[:, 0]
-    sample2 = psi_samples[:, 1]
-    score = 0
-    for event_num in xrange(sample1.shape[0]):
-        for i in xrange(sample1.shape[1]):
-            for j in xrange(sample2.shape[1]):
-                psi_val1 = BINS[i]
-                psi_val2 = BINS[j]
-                score += sample1[event_num][i]*sample2[event_num][j]*abs(psi_val1 - psi_val2)
-            
-    return score
-    #cellcalc = sample1*sample2*abs(sample1 - sample2)
-    #return (cellcalc.sum(axis=1)).sum(axis=0)
-
 
 def calculate_cov(psi_list1, psi_list2):
     return abs(np.array(psi_list1) - np.array(psi_list2)) / ((np.array(psi_list1) + np.array(psi_list2))/2.0)
@@ -154,6 +136,7 @@ def main():
     # Discard LSVs with only one PSI
     for i, psis_lsv_met1 in enumerate(psi_met1_rep1):
         if len(psis_lsv_met1) < 2 or len(psi_met1_rep2[i]) < 2:
+            print "1-way LSV skipped..."
             continue  # TODO: check that skipping is not necessary. LSVs with only 1 PSI are wrong..
         if psivalues[1][i][2] not in lsv_types_dict.keys():
             continue
@@ -250,8 +233,10 @@ def main():
         for j, psi_lsv in enumerate(psi_met1_rep1[psi_names_met1[psi_name]]):
 
             # Try L1 distance
-            psi_list1_met1.append(sum(psi_lsv*analysis.psi.BINS_CENTER))
-            psi_list2_met1.append(sum(psi_met1_rep2[psi_names_met1[psi_name]][j]*analysis.psi.BINS_CENTER))
+            # psi_list1_met1.append(sum(psi_lsv*analysis.psi.BINS_CENTER))
+            # psi_list2_met1.append(sum(psi_met1_rep2[psi_names_met1[psi_name]][j]*analysis.psi.BINS_CENTER))
+            psi_list1_met1.append(psi_lsv)
+            psi_list2_met1.append(psi_met1_rep2[psi_names_met1[psi_name]][j])
             # list_l1_expected.append(calculate_l1_expected(psi_lsv, psi_values_lsv2[majiq_psi_names[psi_name]][j]))
             print "%s - MAJIQ:\t%f - %f" % (psi_name, sum(psi_lsv*analysis.psi.BINS_CENTER), sum(psi_met1_rep2[psi_names_met1[psi_name]][j]*analysis.psi.BINS_CENTER))
             # print "%s - MISO:\t%s - %s" % (psi_name, str(debug_names_miso_list[psi_name][0][j]), str(debug_names_miso_list[psi_name][1][j]))
@@ -289,11 +274,9 @@ def main():
 
     print len(psi_list1_met1), len(psi_list2_met1), len(psi_lists_met2[0]), len(psi_lists_met2[1])
 
-    # plot_PSIs1VsPSIs2(calculate_cov(psi_list1, psi_list2), calculate_cov(miso_psis_list[0], miso_psis_list[1]), args.name1, args.name2, "MAJIQ", "MISO", args.plotpath)
+    # plot_PSIs1VsPSIs2(calculate_cov(psi_list1_met1, psi_list2_met1), calculate_cov(psi_lists_met2[0], psi_lists_met2[1]), args.name1, args.name2, "MAJIQ", "MISO", args.plotpath)
     plot_PSIs1VsPSIs2(calculate_ead_simple(psi_list1_met1, psi_list2_met1), calculate_ead_simple(psi_lists_met2[0], psi_lists_met2[1]), args.name1, args.name2, "MAJIQ Empirical", "MAJIQ Binomial", args.plotpath)
-
-    # plot_PSIs1VsPSIs2(np.array(psi_list1), np.array(psi_list2), args.name1, args.name2, "MAJIQ", "MAJIQ", args.plotpath)
-    # plot_PSIs1VsPSIs2(np.array(miso_psis_list[0]), np.array(miso_psis_list[1]), args.name1, args.name2, "MISO", "MISO", args.plotpath)
+    # plot_PSIs1VsPSIs2(calculate_dkl(np.array(psi_list1_met1), np.array(psi_list2_met1)), calculate_ead_simple(psi_lists_met2[0], psi_lists_met2[1]), args.name1, args.name2, "MAJIQ", "MISO", args.plotpath)
 
 
 if __name__ == '__main__':
