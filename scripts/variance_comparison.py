@@ -365,7 +365,7 @@ def main():
     rep1_name = os.path.basename(args.par1).split('.')[-2]
     rep2_name = os.path.basename(args.par2).split('.')[-2]
 
-    replica1, replica2, fit_func1, fit_func2, rep1_gc, rep2_gc = junction_sample.load_junctions(args.par1, args.par2, args, fromlsv=False)
+    replica1, replica2, fit_func1, fit_func2, rep1_gc, rep2_gc = junction_sample.load_junctions(args.par1, args.par2, args, fromlsv=True)
 
     methods = {
         'Poisson':                  {'discardzeros': 0, 'trimborder': False,   'nb': False},

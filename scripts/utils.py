@@ -34,14 +34,14 @@ def _save_or_show(plotpath=None, name=None):
         pyplot.show()
 
 
-def list_files_or_dir(file_or_dir_list, suffix='*'):
+def list_files_or_dir(file_or_dir_list, suffix='*', containing='*'):
     if type(file_or_dir_list) != list: return file_or_dir_list
 
     files = []
     for file_or_dir in file_or_dir_list:
         if os.path.isdir(file_or_dir):
             for root, dirnames, filenames in os.walk(file_or_dir):
-                for filename in fnmatch.filter(filenames, '*%s' % suffix):
+                for filename in fnmatch.filter(filenames, '*%s*%s' % (containing, suffix)):
                     files.append(os.path.join(root, filename))
             # for file in os.listdir(file_or_dir):
             #     if not suffix or file.endswith(suffix):

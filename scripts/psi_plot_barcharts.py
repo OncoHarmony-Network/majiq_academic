@@ -1,7 +1,7 @@
 from __future__ import division
 from matplotlib import use
 use('Agg')
-
+from scripts import utils as utils_scripts
 from collections import defaultdict
 import pickle
 import analysis
@@ -307,25 +307,34 @@ def plot_delta_expected_method1Vsmethod2(psi_list_data_set, replica_names, plotp
     _save_or_show(plotpath, plotname.replace('\n', ' - '))
 
 
+
+
+
+
+def intersect_sets(majiq1, majiq2):
+    """Find common names and return their psi values in 2 lists"""
+    names1 = [m[1] for m in majiq1[1]]
+    names2 = [m[1] for m in majiq2[1]]
+    common_names = set(names1).intersection(set(names2))
+    return np.array(majiq1[0])[np.array([name in common_names for name in names1])], np.array(majiq2[0])[np.array([name in common_names for name in names2])]
+
+
 def main():
     """
     Script for testing MAJIQ against other algorithms for PSIs across several replicates
 
-    - Notice that the first file is for MAJIQ results, whereas the second file is reserved for others (initially, MISO).
     - All LSVs 'ways' are equally considered. The order of each way within a LSV should be the same in MAJIQ and MISO.
     """
     parser = argparse.ArgumentParser()
-    parser.add_argument('--majiq-files', dest='majiq_files', nargs='+', help='Path for MAJIQ psi pickles to evaluate')
-    parser.add_argument('--miso-files', dest='miso_files', nargs='+',  help='Path for MISO psi pickles to evaluate')
-    parser.add_argument('--replica-names', dest='replica_names', nargs='+', required=True)
+    parser.add_argument('--majiq', dest='majiq_dir', type=str, help='Path for MAJIQ psi pickles to evaluate')
+    parser.add_argument('--miso', dest='miso_dir', type=str,  help='Path for MISO psi pickles to evaluate')
+    parser.add_argument('--nb', dest='nb_dir', required=False, type=str,  help='Path for Naive Bootstrapping psi pickles to evaluate')
+    parser.add_argument('--names', dest='rep_names', nargs='+', required=True, help='Replicate names used to identify each pair [NOTE that the order in which the names are provided defines the pairs]')
     parser.add_argument('--plotpath', default=None, help='Path to save the plot to, if not provided will show on a matplotlib popup window')
     parser.add_argument('--builder-files-dir', dest='builder_files_dir')
     parser.add_argument('--cached-cov', dest='cached_cov')
     parser.add_argument('--alpha', default=0.5, help='Alpha used in MAJIQ (for naming purposes only).')
     args = parser.parse_args()
-
-    if len(args.majiq_files)*2 != len(args.miso_files):
-        print "[ERROR] :: for each MAJIQ file containing psi comparisons 2 MISO files are expected. You provided %d files for MAJIQ and %d for MISO. Are you sure you are providing the results of calc_psi.py execution?"
 
     majiq_better_worse_list = []
     majiq_num_events_list = []
@@ -335,108 +344,137 @@ def main():
     if args.cached_cov:
         majiq_coverage_list = pickle.load(open(args.cached_cov, 'r'))
 
-    for ii, majiq_file in enumerate(args.majiq_files):
-        psivalues = pickle.load(open(majiq_file))
-        psi_met1_rep1 = psivalues[0][0]
-        psi_met1_rep2 = psivalues[0][1]
+    majiq_files = []
+    miso_files = []
+    foo_dict = {
+        'Hip1': 'Hippocampus1',
+        'Hip2': 'Hippocampus2',
+        'Liv1': 'Liver1',
+        'Liv3': 'Liver3',
+        'Hip4': 'Hippocampus4',
+        'Hip5': 'Hippocampus5',
+        'Liv4': 'Liver4',
+        'Liv5': 'Liver5',
+        'Spl1': 'Spleen1',
+        'Spl2': 'Spleen2',
 
-        psi_names_met1 = defaultdict()
+    }
+    for rep_name in args.rep_names:
+        # majiq_files.extend(utils_scripts.list_files_or_dir([args.majiq_dir], suffix='majiq_psi.pickle', containing=foo_dict[rep_name])) #psigroup.pickle #'psigroup.pickle'
+        majiq_files.extend(utils_scripts.list_files_or_dir([args.majiq_dir], suffix='psigroup.pickle', containing=rep_name)) #psigroup.pickle #
+        miso_files.extend(utils_scripts.list_files_or_dir([args.miso_dir], suffix='miso_summary', containing=rep_name))
 
-        # Discard LSVs with only one PSI
-        for i, psis_lsv_met1 in enumerate(psi_met1_rep1):
-            if len(psis_lsv_met1) < 2 or len(psi_met1_rep2[i]) < 2:
-                continue  # TODO: check that skipping is not necessary. LSVs with only 1 PSI are wrong..
-            if psivalues[1][i][2] not in LSV_TYPES_DICT.keys():
-                continue
-            psi_names_met1[psivalues[1][i][1]] = i
+    for ii, majiq_file in enumerate(majiq_files):
+        if ii % 2:
+            majiq2 = pickle.load(open(majiq_file))
+            majiq1 = pickle.load(open(majiq_files[ii-1]))
+            print "Events in MAJIQ: rep1=%d; rep2=%d" % (len(majiq1[1]), len(majiq2[1]))
+            psi_met1_rep1, psi_met1_rep2 = intersect_sets(majiq1, majiq2)
+            # psi_met1_rep2 = psivalues[0]
+            psi_names_met1 = defaultdict()
 
-        # Method1 (MAJIQ) psi scores
-        psi_list1_met1 = []
-        psi_list2_met1 = []
+            print "Events after intersection in MAJIQ: rep1=%d; rep2=%d" % (len(psi_met1_rep1), len(psi_met1_rep2))
+            # Discard LSVs with only one PSI
+            for i, psis_lsv_met1 in enumerate(psi_met1_rep1):
+                # if len(psis_lsv_met1) < 2 or len(psi_met1_rep2[i]) < 2:
+                #     continue  # TODO: check that skipping is not necessary. LSVs with only 1 PSI are wrong..
+                if majiq2[1][i][2] not in LSV_TYPES_DICT.keys():
+                    continue
+                psi_names_met1[majiq2[1][i][1]] = i
 
-        psi_lists_met2 = []
+            # Method1 (MAJIQ) psi scores
+            psi_list1_met1 = []
+            psi_list2_met1 = []
 
-        miso_all = []
-        for miso_file_index in range(2):
-            miso_file = args.miso_files[2*ii + miso_file_index]
-            miso_psis_dict = defaultdict()
-            with open(miso_file, 'r') as miso_res:
-                for miso_line in miso_res:
-                    if miso_line.startswith("event"): continue
-                    miso_fields = miso_line.split('\t')
-                    if miso_fields[0] not in psi_names_met1:
+            psi_lists_met2 = []
+
+            miso_all = []
+            for miso_file_index in [ii-1, ii]:
+                miso_file = miso_files[miso_file_index]
+                miso_psis_dict = defaultdict()
+                num_events = 0
+                with open(miso_file, 'r') as miso_res:
+                    for miso_line in miso_res:
+                        if miso_line.startswith("event"): continue
+                        num_events+=1
+                        miso_fields = miso_line.split('\t')
+                        if miso_fields[0] not in psi_names_met1:
+                            continue
+                        miso_psis_dict[miso_fields[0]] = miso_fields[1]
+
+                print "Events in MISO: rep%d=%d" % ((miso_file_index % 2) + 1, num_events)
+                miso_all.append(miso_psis_dict)
+
+            print "Events in MISO after intersection with MAJIQ: rep1=%d; rep2=%d" % (len(miso_all[0]), len(miso_all[1]))
+            miso_common_names = set(miso_all[0].keys()).intersection(miso_all[1].keys())
+            print "Events common in MISO: %d" % len(miso_common_names)
+
+            for miso_psis_dict in miso_all:
+                miso_psis = []
+                for psi_name in sorted(psi_names_met1.keys()):
+                    if psi_name not in miso_common_names:
+                        print "%s is not in all MISO replicates" % psi_name
+                        del psi_names_met1[psi_name]
                         continue
-                    miso_psis_dict[miso_fields[0]] = miso_fields[1]
-            miso_all.append(miso_psis_dict)
+                    try:
+                        miso_psis_values = [float(miso_psi) for miso_psi in miso_psis_dict[psi_name].split(",")]
+                    except KeyError, e:
+                        print "LSV %s is in MAJIQ but not in MISO!" % e
+                        del psi_names_met1[psi_name]
+                        continue
+                        # if len(miso_psis_values) < 2:
+                        #     del majiq_psi_names[psi_name]
+                        #     continue
 
-        miso_common_names = set(miso_all[0].keys()).intersection(miso_all[1].keys())
-        for miso_psis_dict in miso_all:
-            miso_psis = []
+                    # if len(miso_psis_values) == 1:
+                    #     miso_psis_values.append(1.0 - miso_psis_values[0])
+                    miso_psis.extend(miso_psis_values)
+
+                psi_lists_met2.append(miso_psis)
+
+            print "Events after intersection of MAJIQ and MISO: %d" % len(psi_names_met1.keys())
             for psi_name in sorted(psi_names_met1.keys()):
-                if psi_name not in miso_common_names:
-                    print "%s is not in all MISO replicates" % psi_name
-                    del psi_names_met1[psi_name]
-                    continue
-                try:
-                    miso_psis_values = [float(miso_psi) for miso_psi in miso_psis_dict[psi_name].split(",")]
-                except KeyError, e:
-                    print "LSV %s is in MAJIQ but not in MISO!" % e
-                    del psi_names_met1[psi_name]
-                    continue
-                    # if len(miso_psis_values) < 2:
-                    #     del majiq_psi_names[psi_name]
-                    #     continue
+                # for j, psi_lsv in enumerate(psi_met1_rep1[psi_names_met1[psi_name]]):
+                #     psi_list1_met1.append(sum(psi_lsv*analysis.psi.BINS_CENTER))
+                #     psi_list2_met1.append(sum(psi_met1_rep2[psi_names_met1[psi_name]][j]*analysis.psi.BINS_CENTER))
+                psi_list1_met1.append(sum(psi_met1_rep1[psi_names_met1[psi_name]][0]*analysis.psi.BINS_CENTER))
+                psi_list2_met1.append(sum(psi_met1_rep2[psi_names_met1[psi_name]][0]*analysis.psi.BINS_CENTER))
 
-                # if len(miso_psis_values) == 1:
-                #     miso_psis_values.append(1.0 - miso_psis_values[0])
-                miso_psis.extend(miso_psis_values)
+            # Compute mean coverage in the 2 compared experiments
+            # lsvtoJuan.Hippocampus1.majiq_psi.pickle_vs_lsvtoJuan.Hippocampus2.majiq_psi.pickle_psivalues.pickle
+            # experiments_str_list = os.path.basename(majiq_file).split('lsvtoJuan.')
+            # exp1_name = str(experiments_str_list[1]).split('.')[0]
+            # exp2_name = str(experiments_str_list[2]).split('.')[0]
+            # coverage_list = []
+            # if args.cached_cov:
+            #     coverage_list = majiq_coverage_list[ii]
+            # else:
+            #     with open(BUILDER_OUT_FILE_TEMPLATE % exp1_name, 'r') as exp1_build_file:
+            #         with open(BUILDER_OUT_FILE_TEMPLATE % exp2_name, 'r') as exp2_build_file:
+            #             exp1_build_data = pickle.load(exp1_build_file)
+            #             exp2_build_data = pickle.load(exp2_build_file)
+            #             for i, lsv_majiq in enumerate(exp1_build_data[1]):
+            #                 if lsv_majiq.id in psi_names_met1.keys():
+            #                     coverage_list.append(np.mean([lsv_majiq.junction_list.sum(), exp2_build_data[1][i].junction_list.sum()]))
+            #     majiq_coverage_list.append(coverage_list)
 
-            psi_lists_met2.append(miso_psis)
+            # lo_me_hi_mat, num_events, lo_med_high_diff, suspicous_guys = get_low_med_high_cov_psi(psi_list1_met1, psi_list2_met1, psi_lists_met2[0], psi_lists_met2[1], np.array(coverage_list))
+            # lo_me_hi_mat, num_events, lo_med_high_diff = get_low_med_high_cov(psi_list1_met1, psi_list2_met1, psi_lists_met2[0], psi_lists_met2[1], np.array(coverage_list))
+            lo_me_hi_mat, num_events, lo_med_high_diff = get_low_med_high_psis(psi_list1_met1, psi_list2_met1, psi_lists_met2[0], psi_lists_met2[1])
+            # pickle.dump(np.array(psi_names_met1.keys())[suspicous_guys], open('suspicious.pkl', 'w'))
+            # for sus_guy in np.array(psi_names_met1.keys())[suspicous_guys]:
+            #     print str(sus_guy).split(':')[0]
 
-        for psi_name in sorted(psi_names_met1.keys()):
-            # for j, psi_lsv in enumerate(psi_met1_rep1[psi_names_met1[psi_name]]):
-            #     psi_list1_met1.append(sum(psi_lsv*analysis.psi.BINS_CENTER))
-            #     psi_list2_met1.append(sum(psi_met1_rep2[psi_names_met1[psi_name]][j]*analysis.psi.BINS_CENTER))
-            psi_list1_met1.append(sum(psi_met1_rep1[psi_names_met1[psi_name]][0]*analysis.psi.BINS_CENTER))
-            psi_list2_met1.append(sum(psi_met1_rep2[psi_names_met1[psi_name]][0]*analysis.psi.BINS_CENTER))
+            majiq_better_worse_list.append(lo_me_hi_mat)
+    #         majiq_num_events_list.append(num_events)
+    #         majiq_low_med_high_diff_list.append(lo_med_high_diff)
+    #
+    # if not args.cached_cov:
+    #     pickle.dump(majiq_coverage_list, open('coverage_tmp.pickle', 'w'))
 
-        # Compute mean coverage in the 2 compared experiments
-        # lsvtoJuan.Hippocampus1.majiq_psi.pickle_vs_lsvtoJuan.Hippocampus2.majiq_psi.pickle_psivalues.pickle
-        experiments_str_list = os.path.basename(majiq_file).split('lsvtoJuan.')
-        exp1_name = str(experiments_str_list[1]).split('.')[0]
-        exp2_name = str(experiments_str_list[2]).split('.')[0]
-        coverage_list = []
-        if args.cached_cov:
-            coverage_list = majiq_coverage_list[ii]
-        else:
-            with open(BUILDER_OUT_FILE_TEMPLATE % exp1_name, 'r') as exp1_build_file:
-                with open(BUILDER_OUT_FILE_TEMPLATE % exp2_name, 'r') as exp2_build_file:
-                    exp1_build_data = pickle.load(exp1_build_file)
-                    exp2_build_data = pickle.load(exp2_build_file)
-                    for i, lsv_majiq in enumerate(exp1_build_data[1]):
-                        if lsv_majiq.id in psi_names_met1.keys():
-                            coverage_list.append(np.mean([lsv_majiq.junction_list.sum(), exp2_build_data[1][i].junction_list.sum()]))
-            majiq_coverage_list.append(coverage_list)
-
-        lo_me_hi_mat, num_events, lo_med_high_diff, suspicous_guys = get_low_med_high_cov_psi(psi_list1_met1, psi_list2_met1, psi_lists_met2[0], psi_lists_met2[1], np.array(coverage_list))
-        # lo_me_hi_mat, num_events, lo_med_high_diff = get_low_med_high_cov(psi_list1_met1, psi_list2_met1, psi_lists_met2[0], psi_lists_met2[1], np.array(coverage_list))
-        # lo_me_hi_mat, num_events, lo_med_high_diff = get_low_med_high_psis(psi_list1_met1, psi_list2_met1, psi_lists_met2[0], psi_lists_met2[1])
-        pickle.dump(np.array(psi_names_met1.keys())[suspicous_guys], open('suspicious.pkl', 'w'))
-        for sus_guy in np.array(psi_names_met1.keys())[suspicous_guys]:
-            print str(sus_guy).split(':')[0]
-
-        import sys
-        sys.exit(1)
-        majiq_better_worse_list.append(lo_me_hi_mat)
-        majiq_num_events_list.append(num_events)
-        majiq_low_med_high_diff_list.append(lo_med_high_diff)
-
-    if not args.cached_cov:
-        pickle.dump(majiq_coverage_list, open('coverage_tmp.pickle', 'w'))
-
-    # plot_delta_expected_method1Vsmethod2(majiq_better_worse_list, args.replica_names, args.plotpath)
-    # plot_delta_bars_percentages(np.array(majiq_better_worse_list), majiq_num_events_list, np.array(majiq_low_med_high_diff_list), args.replica_names, args.plotpath, is_coverage=True)
-    plot_delta_bars_perc_all_in_grid(np.array(majiq_better_worse_list), majiq_num_events_list, np.array(majiq_low_med_high_diff_list), args.replica_names, plotpath=args.plotpath, alpha=args.alpha)
+    plot_delta_expected_method1Vsmethod2(majiq_better_worse_list, args.rep_names, args.plotpath)
+    # plot_delta_bars_percentages(np.array(majiq_better_worse_list), majiq_num_events_list, np.array(majiq_low_med_high_diff_list), args.rep_names, args.plotpath, is_coverage=True)
+    # plot_delta_bars_perc_all_in_grid(np.array(majiq_better_worse_list), majiq_num_events_list, np.array(majiq_low_med_high_diff_list), args.replica_names, plotpath=args.plotpath, alpha=args.alpha)
 
 if __name__ == '__main__':
     main()

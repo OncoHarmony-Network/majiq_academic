@@ -93,36 +93,15 @@ def plot_bins(read_bins, names, plotpath):
 
 
 def main():
-    """Distribution of reproduced LSVs by coverage"""
+    """Compare PSI reproducibility in different methods."""
     parser = argparse.ArgumentParser(description="")
-    parser.add_argument('events', type=str, help='Events files from reproducibility ranking.')
-    parser.add_argument('--builder-files', dest='builder_f', nargs='+', help='MAJIQ builder files used to compute lsv coverage.')
+    parser.add_argument('majiqpsis', nargs=2, help='MAJIQ Events files from reproducibility ranking.')
+    parser.add_argument('--naiveboots', nargs='*', help='Naive Bootstrapping PSIs computations files')
+    parser.add_argument('--miso', nargs='*', help='MISO files with PSIs computations')
     parser.add_argument('--output', help='Output file path')
     args = parser.parse_args()
 
-    lsvs = pkl.load(open(args.events))
-    coverages = []
-    for majiq_f in args.builder_f:
-        # coverages.append(coverage_from_file(majiq_f, '.coverage'))
-        coverages.append(load_clean_reads(majiq_f))
-    common_cov = cov_combined(coverages)
 
-    BINNAMES = ['0-15','15-20','20-40','40-100','100-xx']
-    ranges = [15,20,40,100,90000]
-
-    read_bins = [[],[],[],[],[]]
-
-    for lsv in lsvs:
-        for i, ran in enumerate(ranges):
-            if lsv[0][0][1] in common_cov.keys():
-                if common_cov[lsv[0][0][1]] < ran:
-                    read_bins[i].append(lsv[1]) # event[0][0][1]
-                    break
-
-    for j, r in enumerate(read_bins):
-        print "#Reads %s; from %d events, percentage reproduced %.2f%%" % (BINNAMES[j], len(r), (sum(r)*1.0/max(1.0, len(r))*100))
-
-    plot_bins(read_bins, BINNAMES, args.output)
 
 
 if __name__ == '__main__':

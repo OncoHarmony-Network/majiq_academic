@@ -41,7 +41,7 @@ def get_brewer_color(n):
     return "#"+"".join(format(n, 'x') for n in BP[n])
 
 
-def plot_rtpcr_majiq_var(rt_pcr, majiq, coverage, delta_delta_psi, plotpath):
+def plot_rtpcr_majiq_var(rt_pcr, majiq, coverage, delta_delta_psi, plotpath, names=None):
     """Analyze:
         -   Delta(PSI),
         -   Prob(Delta(PSI))>V) and
@@ -120,6 +120,10 @@ def plot_rtpcr_majiq_var(rt_pcr, majiq, coverage, delta_delta_psi, plotpath):
     ]
 
     for n in xrange(3):
+        if n == 1:
+            print repr(names[masks[n][2]])
+            print repr(coverage[masks[n][2]])
+
         axx[n][0].scatter(pairs[n][0][masks[n][0]], pairs[n][1][masks[n][0]], marker='o', c=get_brewer_color(0), alpha=.8, s=50, label="%s < %.1f" % (color_labels[n], thres[n][0]))
         axx[n][0].scatter(pairs[n][0][masks[n][1]], pairs[n][1][masks[n][1]], marker='o', c=get_brewer_color(1), alpha=.8, s=50, label=" %.1f < %s < %.1f" % (thres[n][0], color_labels[n], thres[n][1]))
         axx[n][0].scatter(pairs[n][0][masks[n][2]], pairs[n][1][masks[n][2]], marker='o', c=get_brewer_color(2), alpha=.8, s=50, label="%s > %.1f" % (color_labels[n], thres[n][1]))
@@ -394,7 +398,7 @@ def prob_out_expected_psi(bins, rtpcr_delta, V=.2):
             left = i-1
         if right == bins.size*2 and w > (rtpcr_delta + abs(rtpcr_delta*V)):
             right = i
-    print np.sum(bins[:left]), np.sum(bins[right:])
+    # print np.sum(bins[:left]), np.sum(bins[right:])
     return (np.sum(bins[:left]) + np.sum(bins[right:]))
 
 
@@ -501,6 +505,7 @@ def main():
     majiq = []
     miso = []
     delta_delta_psi = []
+    final_names = []
 
     with open("toJordi.txt", "w") as toJordi:
         flipped_thres = 1.0
@@ -535,6 +540,7 @@ def main():
                     rt_pcr.append(rtpcr_delta)
                     majiq.append(majiq_delta)
                     delta_delta_psi.append(mean_prob_out_exp_psi(majiq_delta_dict[name], rtpcr_delta))
+                    final_names.append(name)
 
                     if args.miso_deltas:
                         miso.append(np.mean(miso_delta_dict[name]))
@@ -550,7 +556,7 @@ def main():
         plot_rtpcr_majiq_miso(rt_pcr, majiq, miso, args.plotpath)
     if args.majiq_builder_files:
         # plot_rtpcr_majiq(rt_pcr, majiq, coverage, args.plotpath)
-        plot_rtpcr_majiq_var(np.array(rt_pcr), np.array(majiq), np.array(coverage), np.array(delta_delta_psi), args.plotpath)
+        plot_rtpcr_majiq_var(np.array(rt_pcr), np.array(majiq), np.array(coverage), np.array(delta_delta_psi), args.plotpath, final_names)
         # plot_rtpcr_majiq_reads_deltas(rt_pcr, majiq, coverage, delta_delta_psi, args.plotpath)
 
     print "%d elements flipped" % len(flipped_lsv_dict.keys())
