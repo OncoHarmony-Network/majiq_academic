@@ -32,6 +32,8 @@ import analysis.sample
 import analysis.polyfitnb as polyfitnb
 import analysis.io as majiqio
 
+from ipdb import set_trace
+
 DEBUG = True
 TESTBREAK = 1500
 LIM = 100
@@ -232,7 +234,7 @@ def check_junctions_in_replicates(lsv_junc1, lsv_junc2, discard_empty_junctions=
     gc2 = gc2.astype(np.float64)
     
 
-
+    set_trace()
     if discard_empty_junctions:
         idx_list = []
         for idx in range(replica1.shape[0]):
@@ -292,10 +294,10 @@ def load_junctions(filename1, filename2, args, fromlsv=False):
     fit_func1 = polyfitnb.fit_nb(const1[0], "%s_nbfit" % args.output, args.plotpath, nbdisp=args.dispersion, logger=None, discardb=True, bval=True)
     fit_func2 = polyfitnb.fit_nb(const2[0], "%s_nbfit" % args.output, args.plotpath, nbdisp=args.dispersion, logger=None, discardb=True, bval=True)
 
-    if fromlsv:
-        replica1, replica2, gc1, gc2 = junction_sample.check_junctions_in_replicates(lsv_junc1, lsv_junc2, discard_empty_junctions=True)
-    else:
-        replica1, replica2 = discard_empty_junctions(const1, const2)
+#    if fromlsv:
+    replica1, replica2, gc1, gc2 = check_junctions_in_replicates(lsv_junc1, lsv_junc2, discard_empty_junctions=True)
+#    else:
+#        replica1, replica2 = discard_empty_junctions(const1, const2)
 
     return replica1, replica2, fit_func1, fit_func2, gc1, gc2
 
