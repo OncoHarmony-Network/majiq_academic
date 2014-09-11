@@ -193,10 +193,17 @@ def load_data_lsv(path, logger=None):
     num_pos = data[1][0].junction_list.shape[1]
 
     for lsv in data[1]:
+<<<<<<< HEAD
+#        lsv_info.append([lsv.coords,lsv.id, lsv.type,0, lsv.visual ])
+        lsv_info.append([lsv.coords,lsv.id, lsv.type,0 ])
+||||||| merged common ancestors
+        lsv_info.append([lsv.coords,lsv.id, lsv.type,0, lsv.visual ])
+=======
         try:
             lsv_info.append([lsv.coords,lsv.id, lsv.type,0, lsv.visual ])
         except AttributeError, e:
             lsv_info.append([lsv.coords,lsv.id, lsv.type,0])
+>>>>>>> 263dd5396e400c9b76b1bc876c83b5b18891369c
 #        cov = np.zeros(shape=(len(lsv.junction_list.shape)), dtype=np.dtype('int'))
 #        for ii, lsvcov in enumerate(lsv.junction_list.toarray()):
 #            cov[ii,:] = lsvcov

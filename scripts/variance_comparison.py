@@ -1,6 +1,6 @@
 from collections import defaultdict
-# from matplotlib import use
-# use('Agg', warn=False)
+from matplotlib import use
+use('Agg', warn=False)
 
 from scipy.stats import pearsonr
 import argparse
@@ -9,7 +9,7 @@ import analysis.filter
 import junction_sample
 from scipy.stats import nbinom
 import os.path
-
+from ipdb import set_trace
 
 def _numzeros(junctions):
     "Obtain the number of zeros for every junction"
