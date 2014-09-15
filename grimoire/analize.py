@@ -1,15 +1,8 @@
 import numpy as np
 import math
-from gene import Gene, Transcript
-from exon import Exon
-from junction import Junction
-from utils import utils, stats
+from utils import utils
 from lsv import LSV, SSOURCE, STARGET
-
 import mglobals
-import random
-import scipy.io
-
 
 
 def annotated_AS_events( gene_list, ASvsConst) :
@@ -35,6 +28,7 @@ def annotated_AS_events( gene_list, ASvsConst) :
             print "..... %s"%per_gene
 
     print "TOTAL ANNOTATED AS events:",total
+
 
 def analize_bin_matrix_const_firstlast(mat):
     
@@ -71,6 +65,7 @@ def analize_bin_matrix_const_firstlast(mat):
             out.append(ii)
     return out
 
+
 def detecting_annotated_SE_events(mat):
     out = []
     v_101 = []
@@ -103,7 +98,6 @@ def detecting_annotated_SE_events(mat):
             #out.append((trans[idx],ii[0],ii[1],ii[2]))
             out.append(ii)
     return out
-
 
 
 def __junction_filter_check( junc ): 
@@ -149,6 +143,7 @@ def __total_ss_minreads( junc_mat, minreads=5):
             if jj.readN.sum()> minreads : js.add(jj)
 
     return len(js)
+
 
 def __get_enabled_junction(con, exp_list):
     max = 0
