@@ -119,7 +119,7 @@ window.splicegraph = function (){
             [77, 175, 74],
             [152, 78, 163],
             [255, 127, 0],
-            [255, 255, 51],
+//            [255, 255, 51],
             [166, 86, 40],
             [247, 129, 191],
             [153, 153, 153],
@@ -129,7 +129,7 @@ window.splicegraph = function (){
             [177,275,19],
             [252,178,8],
             [55,227,100],
-            [55,55,151],
+//            [55,55,151],
             [266,186,140],
             [47,229,36],
             [253,253,253]
@@ -260,7 +260,7 @@ window.splicegraph = function (){
             ctx.textAlign = "center";
 
             /**
-             * Legend exons
+             * Legend exons_obj
              * */
                 // DB & RNASeq
             ctx.strokeStyle = "rgba(0, 0, 0, 0.8)";
@@ -281,7 +281,7 @@ window.splicegraph = function (){
             // DB Only
             ctx.strokeStyle = "rgba(0, 0, 0, 0.8)";
             ctx.fillStyle = "rgba(0, 0, 0, 0.01)";
-            ;
+
             drawDashedRectangle(ctx, Math.round(x), y + Math.round(area_figures[1]), Math.round(area_figures[0] / num_fig - SEP_FIG), Math.round(area_figures[1]), 4, true);
             ctx.fillStyle = "rgba(0, 0, 0, 1)";
             ctx.fillText("DB Only", Math.round(x + (area_figures[0] / num_fig - SEP_FIG) / 2), canvas.height - MARGINS[3]);
@@ -453,13 +453,13 @@ window.splicegraph = function (){
             var reshape_exons = false,
                 exons_mapped_tmp = [],
                 exon_tmp,
-                index_exons_to_update = [];  // For exons that need to be updated (shorted)
+                index_exons_to_update = [];  // For exons_obj that need to be updated (shorted)
 
             // First offset (first exon can have  long intron
             var offset = reshape_intron({'coords': [0, 0]}, exons[0], reshape_exons);
             var acc_offset = offset;
 
-            // Note: to account for overlapping exons where exons within a very large exon have long introns, we should
+            // Note: to account for overlapping exons_obj where exons_obj within a very large exon have long introns, we should
             // ^^^^^ store the last
             var coords_extra = [];
             for (var k = 0; k < exons[0].coords_extra.length; k++) {
@@ -476,7 +476,7 @@ window.splicegraph = function (){
                 'lsv_type': exons[0].lsv_type
             };
             exon_tmp.coords_extra = coords_extra;
-//        exons_mapped.push({'coords': map(function(x) { return add(x, -acc_offset);}, resize_exon(exons[0].coords, reshape_exons)), 'type': exons[0].type_exon});
+//        exons_mapped.push({'coords': map(function(x) { return add(x, -acc_offset);}, resize_exon(exons_obj[0].coords, reshape_exons)), 'type': exons_obj[0].type_exon});
 
             exons_mapped_tmp[0] = exon_tmp;
             last_end = exon_tmp.coords[1];
@@ -494,7 +494,7 @@ window.splicegraph = function (){
                 offset = reshape_intron(exons[i - 1], exons[i], reshape_exons);
                 acc_offset += offset;
 
-                // Check if there are exons to make shorter (intron retention)
+                // Check if there are exons_obj to make shorter (intron retention)
                 coords_extra = [];
                 for (var k = 0; k < exons[i].coords_extra.length; k++) {
                     coords_extra.push(map(function (x) {
@@ -526,7 +526,7 @@ window.splicegraph = function (){
                     }
                 }
 
-//            exons_mapped.push({'coords': map(function(x) { return add(x, -acc_offset);}, resize_exon(exons[i].coords, reshape_exons)), 'type': exons[i].type_exon});
+//            exons_mapped.push({'coords': map(function(x) { return add(x, -acc_offset);}, resize_exon(exons_obj[i].coords, reshape_exons)), 'type': exons_obj[i].type_exon});
                 for (var j = 0; j < exons[i]['a3'].length; j++) {
                     junctions[exons[i]['a3'][j]].coords[1] -= acc_offset;
                 }
@@ -571,7 +571,7 @@ window.splicegraph = function (){
                 var ctx = canvas.getContext("2d");
                 ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-                // NOTE: The list of exons is assumed to be sorted.
+                // NOTE: The list of exons_obj is assumed to be sorted.
                 // NEW 20140318: Exons have type: 0=Both reads & annotations; 1=New (no annotations); 2=Missing (annotated, no reads)
                 var genomic_data = JSON.parse(canvas.getAttribute('data-exon-list').replace(/\\'/g, "\"").replace(/'/g, ""));   // RESTORE ME WHEN DEBUGGING FINISH!
 
@@ -661,7 +661,7 @@ window.splicegraph = function (){
                 var lsv_data = canvas.getAttribute('data-lsv-string');
                 var lsvs = lsv_data.split('|');
 
-                // Num exons
+                // Num exons_obj
                 var num_exons = 0;
                 var num_ss = 0;
                 var ss_reg = {};
@@ -687,7 +687,7 @@ window.splicegraph = function (){
                 var start = margins[0];
                 var direction = sourceOrTarget === 's' ? 1 : -1;
 
-                // Render exons
+                // Render exons_obj
                 var exons = [];
                 for (var i = 0; i < num_exons; i++) {
                     var exon = {
@@ -719,7 +719,7 @@ window.splicegraph = function (){
                     var ss = parseInt(lsvs_fields[0]);
 //                    var coords_x_start_e    = coords[0] + direction * ((exon_width/2) / num_ss ) * (ss-1);
                     var coords_x_start_e    = coords[0] + ((exon_width/2) / num_ss ) * (ss-1);
-//                    var target_exon = (direction > 0 ? exons[lsvs_fields[1][0]] : exons[num_exons -1 - lsvs_fields[1][0]]);
+//                    var target_exon = (direction > 0 ? exons_obj[lsvs_fields[1][0]] : exons_obj[num_exons -1 - lsvs_fields[1][0]]);
 
                     var coords_x_target_e = null;
                     if (lsvs_fields[1] == 0){
@@ -803,7 +803,7 @@ window.splicegraph = function (){
                 var start = -exon_width / 2;// margins[0];
                 var direction = sourceOrTarget === 's' ? 1 : -1;
 
-                // Render exons
+                // Render exons_obj
                 var exons = [];
                 for (var i = 0; i < num_exons; i++) {
                     var exon = {'coords': [Math.round(start), Math.round(start + exon_width)], 'type': (direction > 0 && i === 0 || direction < 0 && i === num_exons - 1 ? 1 : 0)};
@@ -935,7 +935,7 @@ window.splicegraph = function (){
 //        for (var canvas_index = 0; canvas_index < canvases.length; canvas_index++) {
 //            var canvas = canvases[canvas_index];
 //
-//            renderSpliceGraph(canvas);
+//            spliceGraphD3(canvas);
 //
 //            renderSpliceGraphZoomedPopUp();
 //

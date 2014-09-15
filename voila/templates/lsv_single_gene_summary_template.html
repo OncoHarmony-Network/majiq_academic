@@ -16,24 +16,23 @@
 
 {% block content %}
 
-<div class="floatingCanvas">
-    <canvas class="floatingLegend" width="500px" height="40px">
-        This browser or document mode doesn't support canvas
-    </canvas>
-</div>
 
     <div class="events-summary">
+        <div class="floatingCanvas">
+            <canvas class="floatingLegend" width="500px" height="40px">
+                This browser or document mode doesn't support canvas
+            </canvas>
+        </div>
+
         <!--<p>Coordinates 0-based and closed interval</p>-->
-
-
         <h2>LSV summary</h2>
         <h3>Result pages:
             {% if prevPage %}
-            <a href="{{ prevPage }}">Previous &lt&lt</a>
+                <a href="{{ prevPage }}">Previous &lt&lt</a>
             {% endif %}
             {% if nextPage and prevPage %}|{% endif %}
             {% if nextPage %}
-            <a href="{{ nextPage }}">&gt&gt Next</a>
+                <a href="{{ nextPage }}">&gt&gt Next</a>
             {% endif %}
         </h3>
 
@@ -41,8 +40,12 @@
         {% for gene_name, gene_value in genes_dict.iteritems() %}
             {% set gene_index = loop.index -1 %}
             {{ gene_value[0][0]|debug }}
-            <h2>Gene name: {{ gene_name }}; Strand: {{ genes_json[gene_name][1] }};</h2> {# {{ gene_value[0][0].strand }} #}
-            <canvas class="spliceGraph" width="1800px" height="200px" data-exon-list="{{ genes_json[gene_name][0] }}">
+            <h2>Gene name: {{ gene_name }}; Strand: {{ genes_json[gene_name][1] }};
+                {# <!-- TODO: Replace hardcoded organism and species with metadata --> #}
+                <a href="http://genome.ucsc.edu/cgi-bin/hgTracks?org=mouse&db=mm10&position={{ gene_value[0][1][3] }}:{{ genes_json[gene_name][2][0] }}-{{ genes_json[gene_name][2][1] }}" target="_blank"><img src="static/img/icons/ucsc2.png" title="{{ gene_value[0][1][3] }}:{{ genes_json[gene_name][2][0] }}-{{ genes_json[gene_name][2][1] }}"/></a>
+                <a href="http://www.ensembl.org/Mus_musculus/transview?transcript={{ gene_name }}" target="_blank"><img src="static/img/icons/ensembl.jpg" title="http://www.ensembl.org/Mus_musculus/transview?transcript={{ gene_name }}"/></a>
+            </h2> {# {{ gene_value[0][0].strand }} #}
+            <canvas class="spliceGraph" width="1000px" height="200px" data-exon-list="{{ genes_json[gene_name][0] }}">
                 This browser or document mode doesn't support canvas
             </canvas>
 
@@ -52,7 +55,7 @@
                     <th class="short-header">LSV ID</th>
                     <th class="short-header">Type</th>
                     <th class="short-header"></th>
-                    <th class="short-header">Coordinates</th>
+                    <th class="short-header">UCSC link</th>
                 </tr>
                 </thead>
                 <tfoot>
@@ -60,7 +63,7 @@
                     <th>LSV ID</th>
                     <th>Type</th>
                     <th></th>
-                    <th>Coordinates</th>
+                    <th>UCSC link</th>
                 </tr>
                 </tfoot>
                 <tbody>
@@ -68,18 +71,21 @@
                 <tr>
                     <td>{{ gene[1][1] }}</td>
                     <td>
-                        <p style="top:0;">{{ gene[1][2] }}</p>
+                        <p class="hidden" style="top:0;">{{ gene[1][2] }}</p>
+                        <a href="http://genome.ucsc.edu/cgi-bin/hgTracks?org=mouse&db=mm10&position={{ gene_value[0][1][3] }}:{{ gene[0].extension[0] }}-{{ gene[0].extension[1] }}" target="_blank"><img src="static/img/icons/ucsc2.png" title="http://genome.ucsc.edu/cgi-bin/hgTracks?org=mouse&db=mm10&position={{ gene_value[0][1][3] }}:{{ gene[0].extension[0] }}-{{ gene[0].extension[1] }}"/></a>
                         <canvas class="lsvLegend" id="{{ gene_index }}" width="300px" height="150px" data-lsv-string="{{ gene[1][2] }}" data-coord-exon="{{ gene[1][0] }}">
                             This browser or document mode doesn't support canvas
                         </canvas>
                     </td>
                     <td id="data_td{{ gene_index }}{{ loop.index }}">
                         <!--<img class="expandLsv" src="static/img/arrow_down.png" data-is-expanded=0/>-->
-                        <canvas class="lsvSingleCompactPercentiles" id="lsvSingleCompact{{ loop.index }}" width="100px" height="100px" style="border: solid; border-width: 2pt; border-color: darkgrey;" data-lsv="[{{ gene[0]|to_json }}]">
+                        <canvas class="lsvSingleCompactPercentiles" id="lsvSingleCompact{{ loop.index }}" width="100px" height="100px" style="border: solid; border-width: 2pt; border-color: darkgrey;" data-lsv="[{{ gene[0]|to_json }}]" >
                             This browser or document mode doesn't support canvas
                         </canvas>
                     </td>
-                    <td>{{ gene[1][0] }}</td>
+                    <td>
+                        <a href="http://genome.ucsc.edu/cgi-bin/hgTracks?org=mouse&db=mm10&position={{ gene[1][3] }}:{{ gene[1][0][0] }}-{{ gene[1][4] }}" target="_blank">{{ gene[1][3] }}:{{ gene[1][0][0] }}-{{ gene[1][4] }}</a>
+                    </td>
 
                 </tr>
                 {%- endfor %}
