@@ -1,14 +1,14 @@
 from gene import Gene, Transcript
 from exon import Exon, detect_exons
 from junction import  Junction
-from rna_reads import RNA_read, parse_read
-from RNAexperiment import RNAexperiment
+
 import grimoire.utils.utils as utils
 import pysam
 import gc
-import numpy as np
+import pickle
 import mglobals
-from sys import getrefcount
+from collections import namedtuple
+
 import pdb
 
 
@@ -359,3 +359,136 @@ def read_bed_pcr( filename , list_genes):
 
                 break
 
+
+gffInfoFields = ["seqid", "source", "type", "start", "end", "score", "strand", "phase", "attributes"]
+GFFRecord = namedtuple("GFFRecord", gffInfoFields)
+
+def __parse_gff_attributes(attributeString):
+    """Parse the GFF3 attribute column and return a dict"""#
+    if attributeString == ".": return {}
+    ret = {}
+    for attribute in attributeString.split(";"):
+        key, value = attribute.split("=")
+        ret[urllib.unquote(key)] = urllib.unquote(value)
+    return ret
+
+def __parse_gff3(filename):
+    """
+    A minimalistic GFF3 format parser.
+    Yields objects that contain info about a single GFF3 feature.
+
+    Supports transparent gzip decompression.
+    """
+    #Parse with transparent decompression
+    openFunc = gzip.open if filename.endswith(".gz") else open
+    with openFunc(filename) as infile:
+        for line in infile:
+            if line.startswith("#"): continue
+            parts = line.strip().split("\t")
+            #If this fails, the file format is not standard-compatible
+            assert len(parts) == len(gffInfoFields)
+            #Normalize data
+            normalizedInfo = {
+                "seqid": None if parts[0] == "." else urllib.unquote(parts[0]),
+                "source": None if parts[1] == "." else urllib.unquote(parts[1]),
+                "type": None if parts[2] == "." else urllib.unquote(parts[2]),
+                "start": None if parts[3] == "." else int(parts[3]),
+                "end": None if parts[4] == "." else int(parts[4]),
+                "score": None if parts[5] == "." else float(parts[5]),
+                "strand": None if parts[6] == "." else urllib.unquote(parts[6]),
+                "phase": None if parts[7] == "." else urllib.unquote(parts[7]),
+                "attributes": __parse_gff_attributes(parts[8])
+            }
+            #Alternatively, you can emit the dictionary here, if you need mutabwility:
+            #    yield normalizedInfo
+            yield GFFRecord(**normalizedInfo)
+
+
+def _prepare_and_dump(genes):
+    n_genes = 0
+    for chrom in genes.keys():
+        temp_dir = "%s/tmp/%s" % (mglobals.outDir, chrom)
+        temp_ex = []
+        for strand, gg in genes[chrom].items():
+            n_genes += len(gg)
+            genes[chrom][strand] = sorted(gg)
+            for gene in genes[chrom][strand]:
+                gene.collapse_exons()
+                temp_ex.extend(gene.get_exon_list())
+        print "Calculating gc_content.........",
+        utils.set_exons_gc_content(chrom, temp_ex)
+        print "Done."
+        gc.collect()
+        utils.create_if_not_exists(temp_dir)
+        with open('%s/annot_genes.pkl' % temp_dir, '+w') as ofp:
+            pickle.dump(genes[chrom], ofp)
+
+    print "NUM_GENES", n_genes
+
+
+def read_gff(filename):
+
+    all_genes = {}
+    gene_id_dict = {}
+    trcpt_id_dict = {}
+    last_end = {}
+    for record in __parse_gff3(filename):
+        chrom = record.seqid
+        strand = record.strand
+        start = record.start
+        end = record.end
+
+        if record.type == 'gene':
+            gene_name = record.attributes['Name']
+            if not chrom in all_genes:
+                all_genes[chrom] = {'+': [], '-': []}
+            gn = Gene(gene_name, chrom, strand, start, end)
+            gene = gn.is_gene_in_list(all_genes[chrom][strand], gene_name)
+            if not gene is None:
+                del gn
+                gn = gene
+            else:
+                all_genes[chrom][strand].append(gn)
+            gene_id_dict[record.attributes['ID']] = gn
+            print record.attributes['ID']
+
+        elif record.type == 'mRNA':
+            transcript_name = record.attributes['Name']
+            parent = record.attributes['Parent']
+            try:
+                gn = gene_id_dict[parent]
+                trcpt = Transcript(transcript_name, gn, start, end)
+                gn.add_transcript(trcpt)
+                trcpt_id_dict[record.attributes['ID']] = trcpt
+                last_end[record.attributes['ID']] = (None, None)
+            except KeyError:
+                print "Error, incorrect gff. mRNA %s doesn't have valid gene %s" % (transcript_name, parent)
+
+        elif record.type == 'exon':
+            try:
+                parent_tx = record.attributes['Parent']
+                gn = parent_tx.get_gene()
+                txex = gn.new_annotated_exon(start, end, parent_tx)
+                parent_tx.add_exon(txex)
+                pre_end, pre_txex = last_end[parent_tx]
+
+                junc = gn.exist_junction(pre_end, start)
+                if junc is None:
+                    junc = Junction(pre_end, start, None, None, gn, annotated=True)
+                parent_tx.add_junction(junc)
+                txex.add_3prime_junc(junc)
+                if not pre_end is None:
+                    pre_txex.add_5prime_junc(junc)
+                last_end[parent_tx] = (end, txex)
+            except KeyError:
+                print "Error, incorrect gff. exon %s doesn't have valid mRNA %s" % (record.attributes['ID'], parent_tx)
+        #end elif
+    #end for
+    for kk, trcpt in trcpt_id_dict.items():
+        pre_end, pre_txex = last_end[kk]
+        if not pre_end is None:
+            junc = Junction(pre_end, None, None, None, trcpt.get_gene(), annotated=True)
+            trcpt.add_junction(junc)
+            pre_txex.add_5prime_junc(junc)
+        trcpt.sort_in_list()
+    #end for

@@ -2,11 +2,11 @@
 
 #standard python libraries
 
-import argparse,math, os
+import argparse, os
 import numpy as np
-import copy
+
 import sys
-from multiprocessing import Pool, Manager, current_process
+from multiprocessing import Pool, current_process
 import grimoire.analize as analize
 import grimoire.rnaseq_io as rnaseq_io
 import grimoire.utils.utils as utils
@@ -19,29 +19,29 @@ except:
     import pickle
 
 
-def majiq_builder( samfiles_list, gene_list, chr, as_db, pcr_validation = False):
+def majiq_builder(samfiles_list, gene_list, chrom, as_db, pcr_validation=False):
 
-    temp_dir = "%s/tmp/%s"%(mglobals.outDir,chr)
+    temp_dir = "%s/tmp/%s" % (mglobals.outDir, chrom)
     utils.create_if_not_exists(temp_dir)
-    rnaseq_io.read_sam_or_bam(samfiles_list, gene_list, mglobals.readLen, chr )
-    lsv, const = analize.LSV_detection( gene_list, chr )
-    file_name = '%s.obj'%(chr)
-    if pcr_validation :
-        utils.get_validated_pcr_lsv( lsv, temp_dir )
+    rnaseq_io.read_sam_or_bam(samfiles_list, gene_list, mglobals.readLen, chrom)
+    lsv, const = analize.LSV_detection(gene_list, chrom)
+    file_name = '%s.obj' % chrom
+    if pcr_validation:
+        utils.get_validated_pcr_lsv(lsv, temp_dir)
 
     majiq_lsv.extract_gff(lsv, temp_dir)
-    utils.prepare_LSV_table( lsv, const ,file_name)
+    utils.prepare_LSV_table(lsv, const, file_name)
 
 
 
-def __parallel_lsv_quant(samfiles_list, gene_list, chr, as_db, pcr_validation = False):
-    try : 
+def __parallel_lsv_quant(samfiles_list, gene_list, chrom, as_db, pcr_validation=False):
+
+    try:
         print "START child,", current_process().name
-        majiq_builder(samfiles_list, gene_list, chr, as_db, pcr_validation)
-
+        majiq_builder(samfiles_list, gene_list, chrom, as_db, pcr_validation)
         print "END child, ", current_process().name
     except Exception as e:
-        print "Line %s:"%sys.exc_traceback.tb_lineno, e
+        print "Line %s:"%sys.exc_traceback.tb_lineno, e1
         sys.stdout.flush()
         raise()
 
@@ -69,14 +69,15 @@ def _generate_parser():
 # MAIN  #
 #########
 
-def main( args ) :
 
-    if os.path.exists(args.conf) :
-        mglobals.global_conf_ini(args.conf)
+def main(params):
+
+    if os.path.exists(params.conf):
+        mglobals.global_conf_ini(params.conf)
     else:
-        mglobals.global_init(args.readlen, args.dir, args.paths)
+        mglobals.global_init(params.readlen, params.dir, params.paths)
 
-    all_genes = rnaseq_io.read_transcript_ucsc(args.transcripts)
+    all_genes = rnaseq_io.read_gff(params.transcripts)
     temp = []
     for gl in all_genes.values(): 
         for genes_l in gl.values():
@@ -85,32 +86,31 @@ def main( args ) :
 
     chr_list = all_genes.keys()
 
-    if args.pcr_filename is not None:
-        rnaseq_io.read_bed_pcr( args.pcr_filename , all_genes)
+    if params.pcr_filename is not None:
+        rnaseq_io.read_bed_pcr(params.pcr_filename, all_genes)
 
     sam_list = []
     for exp_idx, exp in enumerate(mglobals.exp_list):
-        SAM = "%s/%s.sorted.bam"%(mglobals.sam_dir,exp)
-        if not os.path.exists(SAM): 
-            print "Skipping %s.... notfound"%SAM
+        samfile = "%s/%s.sorted.bam" % (mglobals.sam_dir, exp)
+        if not os.path.exists(samfile):
+            print "Skipping %s.... not found" % samfile
             continue
-        sam_list.append(SAM)
-        rnaseq_io.count_mapped_reads(SAM,exp_idx)
-    if len(sam_list) == 0: return
+        sam_list.append(samfile)
+        rnaseq_io.count_mapped_reads(samfile, exp_idx)
+    if len(sam_list) == 0:
+        return
 
-    if args.lsv: exec_pipe = __parallel_lsv_quant
-    else: exec_pipe = __parallel_for_splc_quant
-
-    if int(args.ncpus) >1: pool = Pool(processes=args.ncpus)              # start 4 worker processes
+    if int(params.ncpus) > 1:
+        pool = Pool(processes=params.ncpus)
 
     for chrom in chr_list:
-        if int(args.ncpus) == 1:
-            majiq_builder(sam_list, all_genes[chrom], chrom, None, pcr_validation=args.pcr_filename )
+        if int(params.ncpus) == 1:
+            majiq_builder(sam_list, all_genes[chrom], chrom, None, pcr_validation=params.pcr_filename)
         else:
-            pool.apply_async( __parallel_lsv_quant, [sam_list, all_genes[chrom], chrom, None, args.pcr_filename] )
+            pool.apply_async(majiq_builder, [sam_list, all_genes[chrom], chrom, None, params.pcr_filename])
+
     print "MASTER JOB.... waiting childs"
-    genes = np.zeros(shape=(len(mglobals.exp_list)),dtype=np.dtype('object'))
-    if int(args.ncpus) >1:
+    if int(params.ncpus) > 1:
         pool.close()
         pool.join()
 
@@ -120,20 +120,22 @@ def main( args ) :
     #utils.plot_gc_content()
     utils.merge_and_create_MAJIQ( chr_list, 'tojuan.majiq')
 
-    fp = open('%s/lsv_miso.gtf'%(mglobals.outDir),'w+')
-    fp2 = open('%s/pcr_match.tab'%(mglobals.outDir),'w+')
+    fp = open('%s/lsv_miso.gtf' % (mglobals.outDir), 'w+')
+    fp2 = open('%s/pcr_match.tab' % (mglobals.outDir), 'w+')
     for chrom in chr_list:
-        temp_dir = "%s/tmp/%s"%(mglobals.outDir,chrom)
-        yfile = '%s/temp_gff.pkl'%(temp_dir)
-        if not os.path.exists(yfile): continue
-        gtf_list = pickle.load(open(yfile,'rb'))
+        temp_dir = "%s/tmp/%s" % (mglobals.outDir, chrom)
+        yfile = '%s/temp_gff.pkl' % (temp_dir)
+        if not os.path.exists(yfile):
+            continue
+        gtf_list = pickle.load(open(yfile, 'rb'))
         for gtf in gtf_list:
-            fp.write("%s\n"%gtf)
-        yfile = '%s/pcr.pkl'%(temp_dir)
-        if not os.path.exists(yfile): continue
-        pcr_l = pickle.load(open(yfile,'rb'))
+            fp.write("%s\n" % gtf)
+        yfile = '%s/pcr.pkl' % temp_dir
+        if not os.path.exists(yfile):
+            continue
+        pcr_l = pickle.load(open(yfile, 'rb'))
         for pcr in pcr_l:
-            fp2.write("%s\n"%pcr)
+            fp2.write("%s\n" % pcr)
     fp2.close()
     fp.close()
 
@@ -143,4 +145,4 @@ def main( args ) :
 if __name__ == "__main__":
     args = _generate_parser()
     print args
-    main( args )
+    main(args)
