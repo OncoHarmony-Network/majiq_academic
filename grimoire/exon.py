@@ -266,35 +266,36 @@ class Exon:
 
 class ExonRead(object):
     
-    def __init__ ( self, start, end, exon,pre_junc, post_junc,rnaSeq=None):
+    def __init__(self, start, end, exon, pre_junc, post_junc, rna_seq=None):
         self.start = start
         self.end = end
         self.exon = exon
-        self.RNASeq = rnaSeq
+        self.RNASeq = rna_seq
         self.p3_junc = [pre_junc]
         self.p5_junc = [post_junc]
 
     def get_coordinates( self ):
-        return ( self.start, self.end )
+        return (self.start, self.end)
 
     def get_5p_junc(self):
         return self.p5_junc
 
     def bed_format(self):
-        chr = self.exon.get_gene().get_chromosome() 
-        str = "%s\t%s\t%s\t.\t0\t.\t%s\t%s"%(chr,self.start,self.end,self.start,self.end)
-        return str
+        chrom = self.exon.get_gene().get_chromosome()
+        strng = "%s\t%s\t%s\t.\t0\t.\t%s\t%s"%(chrom, self.start, self.end, self.start, self.end)
+        return strng
+
 
 class ExonTx(object):
 
-    __eq__ = lambda self, other: self.start == other.start  and self.end == other.end
-    __ne__ = lambda self, other: self.start != other.start  or  self.end != other.end
-    __lt__ = lambda self, other: self.start < other.start   or (self.start == other.start and self.end < other.end)
-    __le__ = lambda self, other: self.start <= other.start  or (self.start == other.start and self.end <= other.end)
-    __gt__ = lambda self, other: self.start > other.start   or (self.start == other.start and self.end > other.end)
-    __ge__ = lambda self, other: self.start >= other.start  or (self.start == other.start and self.end >= other.end)
+    __eq__ = lambda self, other: self.start == other.start and self.end == other.end
+    __ne__ = lambda self, other: self.start != other.start or self.end != other.end
+    __lt__ = lambda self, other: self.start < other.start or (self.start == other.start and self.end < other.end)
+    __le__ = lambda self, other: self.start <= other.start or (self.start == other.start and self.end <= other.end)
+    __gt__ = lambda self, other: self.start > other.start or (self.start == other.start and self.end > other.end)
+    __ge__ = lambda self, other: self.start >= other.start or (self.start == other.start and self.end >= other.end)
 
-    def __init__ ( self, start, end, trnscpt, exon):
+    def __init__(self, start, end, trnscpt, exon):
         self.start = start
         self.end = end
         self.transcript = [trnscpt]
@@ -366,37 +367,35 @@ class ExonTx(object):
         del self
         return res
 
+    def junction_consistency(self):
 
-    def junction_consistency( self ) :
-
-        print "EXONTX:", self.start, self.end
+        #print "EXONTX:", self.start, self.end
 
         j5_list = []
         for j5 in self.p5_junc:
             jcoord = j5.get_coordinates()
-            print 'P5',j5.get_gene().get_id(), j5.get_coordinates(), self.start, self.end
-            if jcoord[1] >= self.start  and jcoord[1] <= self.end:
+            #print 'P5',j5.get_gene().get_id(), j5.get_coordinates(), self.start, self.end
+            if jcoord[1] >= self.start and jcoord[1] <= self.end:
                 #j5.add_donor(self)
                 j5_list.append(j5)
                 
         j3_list = []
         for j3 in self.p3_junc:
             jcoord = j3.get_coordinates()
-            print 'P3::',j3.get_gene().get_id(), j3.get_coordinates(), self.start, self.end
-            if jcoord[1] >= self.start  and jcoord[1] <= self.end:
+            #print 'P3::',j3.get_gene().get_id(), j3.get_coordinates(), self.start, self.end
+            if jcoord[1] >= self.start and jcoord[1] <= self.end:
                 #j3.add_acceptor(self)
                 j3_list.append(j3)
-
 
         self.p3_junc = j3_list[:]
         self.p5_junc = j5_list[:]
 
         return
 
-    def collapse ( self, list_exontx, gne ):
+    def collapse(self, list_exontx, gne):
     
-        all_5prime = [ xx.end for xx in list_exontx]
-        all_3prime = [ xx.start for xx in list_exontx]
+        all_5prime = [xx.end for xx in list_exontx]
+        all_3prime = [xx.start for xx in list_exontx]
         all_5prime = sorted(set(all_5prime))
         all_3prime = sorted(set(all_3prime))
         exlist = []
@@ -408,13 +407,13 @@ class ExonTx(object):
             jdx = 0
             in_found = False
             for idx,p5 in enumerate(all_5prime):
-                while (jdx < len(all_3prime)):
+                while jdx < len(all_3prime):
                     p3 = all_3prime[jdx]
                     if p3 < p5:
-                        if in_found :
-                            introns.append((last_p5+1, max(p3-1,last_p5+1)))
+                        if in_found:
+                            introns.append((last_p5+1, max(p3-1, last_p5+1)))
                             in_found = False
-                        jdx +=1
+                        jdx += 1
                     else:
                         last_p5 = p5
                         in_found = True
@@ -427,8 +426,8 @@ class ExonTx(object):
                             txex.ir = True
                         continue
                     ''' intron retention'''
-                    LSV_IR( txex.start, txex.end, [], gne )
-                    dummy = txex.split_exon(intr,gne)
+                    LSV_IR( txex.start, txex.end, [], gne)
+                    dummy = txex.split_exon(intr, gne)
                     list_exontx.remove(txex)
                     for dm in dummy:
                         if dm not in list_exontx :
@@ -436,7 +435,7 @@ class ExonTx(object):
                     break
 
             list_exontx.sort()
-            exlist.extend(collapse_list_exons ( list_exontx, gne ))
+            exlist.extend(collapse_list_exons(list_exontx, gne))
 
         else:
             ex = Exon(min(all_3prime), max(all_5prime), gne, gne.get_strand(), annot=True)
@@ -455,7 +454,8 @@ class ExonTx(object):
             exlist.append(ex)
         return exlist
 
-def print_list_exons( list_ex, msg=""):
+
+def print_list_exons(list_ex, msg=""):
     #list_ex.sort()
     print "%%%%%%%%%%%%LIST_EXONS %s"%msg
     for ex in list_ex:
@@ -464,7 +464,8 @@ def print_list_exons( list_ex, msg=""):
 
 num_it = 0
 
-def collapse_list_exons( listexons, gne ):
+
+def collapse_list_exons(listexons, gne):
     global num_it
     num_it +=1
     #print "[%s] INIT COLLAPSE_LIST EXONS "%(num_it)
@@ -489,7 +490,8 @@ def collapse_list_exons( listexons, gne ):
     num_it -=1
     return exlist
 
-def __half_exon(type,junc,readRNA):
+
+def __half_exon(type, junc, readRNA):
     gene = junc.get_gene()
     if type == '3prime':
         coord = junc.get_ss_3p()
@@ -585,7 +587,7 @@ def detect_exons(gene, junction_list, readRNA):
             last_5prime = jj
             #end elif opened
         else:
-            if opened >0 :
+            if opened >0:
                 if not last_5prime is None:
                     end = last_5prime.get_ss_5p()
                     for ss in opened_exon:
@@ -602,7 +604,7 @@ def detect_exons(gene, junction_list, readRNA):
                 first_3prime = jj
             #end else ...
             opened_exon.append(jj)
-            opened +=1
+            opened += 1
 
     for ss in opened_exon:
         newExons += __half_exon('3prime',ss,readRNA)

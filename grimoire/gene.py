@@ -85,7 +85,7 @@ class Gene:
         if tcrpt.txend > self.end :
             self.end = tcrpt.txend
 
-        (self.transcript_list).append(tcrpt)
+        self.transcript_list.append(tcrpt)
         return
     
     def add_intron_retention(self, lsv_IR):
@@ -101,8 +101,8 @@ class Gene:
 #        (self.RNAread_list[exp_idx]).append(read)
         return
 
-    def add_exon(self, exon ):
-        (self.exons).append(exon)
+    def add_exon(self, exon):
+        self.exons.append(exon)
         return
 
     def in_transcript_list(self,tcrpt_name):
@@ -390,6 +390,9 @@ class Transcript :
         self.exon_list.append(exon)
         return
 
+    def get_gene(self):
+        return self.gene
+
     def get_id(self):
         return self.id
 
@@ -413,7 +416,8 @@ class Transcript :
         if junc not in self.junction_list:
             self.junction_list.append(junc)
 
-    def _sort_in_list(self,strand):
+    def sort_in_list(self):
+        strand = self.gene.get_strand()
         if strand == '+':
             isneg=False
         else:

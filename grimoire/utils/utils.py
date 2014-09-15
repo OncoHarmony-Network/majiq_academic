@@ -129,9 +129,11 @@ def set_exons_gc_content(chrom, exon_list ):
     out_list = {}
     current_chrom = None
     loaded_chrom = ''
-    fastadir_path = "%s/Genomes/goldenPath/%s/"%(os.environ["ASP_DATA_ROOT"],mglobals.genome)
+#    fastadir_path = "%s/Genomes/goldenPath/%s/"%(os.environ["ASP_DATA_ROOT"],mglobals.genome)
+    seqdir = '/Volumes/data-1/WASP_DATA'
+    fastadir_path = "%s/Genomes/goldenPath/%s/"%(seqdir, mglobals.genome)
 
-    print "Loading chromosome... %s"%chrom
+    #print "Loading chromosome... %s"%chrom
     chrom_path = fastadir_path + chrom + ".fa"
     if not os.path.exists(chrom_path): return 
     chrom_file = open(chrom_path)
@@ -165,11 +167,10 @@ def set_exons_gc_content(chrom, exon_list ):
         exon.set_gc_content(sequence)
 
 
+def generate_visualization_output(allgenes):
 
-def generate_visualization_output( allgenes ):
-
-    for name, ind_list in mglobals.tissue_repl.items() :
-        for idx,exp_idx in enumerate(ind_list) :
+    for name, ind_list in mglobals.tissue_repl.items():
+        for idx,exp_idx in enumerate(ind_list):
             gene_list = []
             for gl in allgenes.values(): 
                 for genes_l in gl.values():
@@ -177,9 +178,10 @@ def generate_visualization_output( allgenes ):
                         junc_list = []
                         junc_l = []
                         for jj in gg.get_all_junctions():
-                            if jj.get_coordinates()[0] == None or jj.donor is None or jj.acceptor is None: continue
+                            if jj.get_coordinates()[0] is None or jj.donor is None or jj.acceptor is None:
+                                continue
                             if jj.is_annotated() and jj.readN[exp_idx].sum() == 0:
-                                jtype= 2
+                                jtype = 2
                             elif jj.is_annotated() and jj.readN[exp_idx].sum() > 0:
                                 jtype = 0
                             elif not jj.is_annotated() and jj.readN[exp_idx].sum() > mglobals.MINREADS: 
@@ -204,13 +206,13 @@ def generate_visualization_output( allgenes ):
                                     if ss5 != jjl[0] : continue
                                     a5.append(jidx)
                             if ex.annotated and ex.coverage[exp_idx].sum() == 0.0:
-                                type = 2
+                                visual_type = 2
                             elif ex.annotated and ex.coverage[exp_idx].sum() > 0.0:
-                                type = 0
+                                visual_type = 0
                             elif not ex.annotated and ex.coverage[exp_idx].sum() > 0.0:
-                                type = 1
+                                visual_type = 1
                             else:
-                                type = 1
+                                visual_type = 1
         #                        continue
                             extra_coords = []
                             if ex.annotated :
@@ -218,16 +220,16 @@ def generate_visualization_output( allgenes ):
                                     extra_coords.append([ex.start, ex.db_coord[0]-1])
                                 if ex.end > ex.db_coord[1]:
                                     extra_coords.append([ex.db_coord[1]+1, ex.end])
-                            eg = ExonGraphic(a3, a5, cc, type, intron_retention = ex.ir , coords_extra = extra_coords) 
+                            eg = ExonGraphic(a3, a5, cc, visual_type, intron_retention = ex.ir , coords_extra = extra_coords)
                             exon_list.append( eg )
-                        gene_list.append(GeneGraphic(gg.get_id(),gg.get_strand(), exon_list, junc_list, gg.get_chromosome()))
+                        gene_list.append(GeneGraphic(gg.get_id(), gg.get_strand(), exon_list, junc_list, gg.get_chromosome()))
             file_pi = open('%s/%s.splicegraph'%(mglobals.outDir, mglobals.exp_list[exp_idx]),'w+')
             pickle.dump((gene_list), file_pi)
             file_pi.close()
 
 
 
-def prepare_junctions_gc( junc , exp_idx):
+def prepare_junctions_gc(junc, exp_idx):
 
     gc = np.zeros(shape=(mglobals.readLen - 16+1))
     gci = np.zeros(shape=(mglobals.readLen - 16+1))
@@ -240,6 +242,7 @@ def prepare_junctions_gc( junc , exp_idx):
     if not junc is None:
         junc.add_gc_content_positions( gci,gc)
     return
+
 
 def print_junc_matrices(mat, tlb=None,fp=None):
     if fp is None:
@@ -299,15 +302,15 @@ def gc_factor_calculation(exon_list, nb):
 
     dummy_counter = 0
 
-    print mglobals.tissue_repl
+    #print mglobals.tissue_repl
     for tissue, list_idx in mglobals.tissue_repl.items():
         for exp_n in list_idx :
-            print "EXP", exp_n
+            #print "EXP", exp_n
             count = []
             gc = []
             for idx, ex in enumerate(exon_list):
                 gc_val = ex.get_gc_content()
-                st,end = ex.get_coordinates()
+                st, end = ex.get_coordinates()
                 cov = ex.get_coverage(exp_n)
 
                 # TEST AND CHECK
@@ -317,16 +320,16 @@ def gc_factor_calculation(exon_list, nb):
 #                print "GC_VA:",gc_val 
 #                print "COV",cov
 
-                if  gc_val is None or end-st < 30  or cov < 1: continue
-                count.append( cov )
-                gc.append( gc_val )
-            if len(gc) == 0 : continue
-            print "cont", len(count)
-            print count
-            print gc
+                if gc_val is None or end-st < 30 or cov < 1:
+                    continue
+                count.append(cov)
+                gc.append(gc_val)
+            if len(gc) == 0:
+                continue
+            # print "cont", len(count)
+            # print count
+            # print gc
             count,gc = izip(*sorted(izip(count, gc), key=lambda x: x[1]))
-            print count
-            print gc
 
             num_regions = len(count)
             nperbin =  num_regions / nb
@@ -358,7 +361,7 @@ def gc_factor_calculation(exon_list, nb):
                 mean_bins[ii] = np.mean(t)
                 bins[ii] = mquantiles(a,prob=np.arange(0.1,0.9,0.1))
                 print "quantiles",bins[ii]
-            print bins
+            #print bins
             for qnt in range(8):
                 qnt_bns = np.ndarray(len(bins))
                 for idx,bb in enumerate(bins):
@@ -367,7 +370,7 @@ def gc_factor_calculation(exon_list, nb):
                 #quant_median[qnt]=np.median(qnt_bns)
                 quant_median[qnt]=np.mean(qnt_bns)
 
-            print quant_median
+            #print quant_median
             gc_factor = np.zeros(nb,dtype=np.dtype('float'))
             for ii in range(nb):
                 offst = np.zeros(len(quant_median),dtype=np.dtype('float'))
@@ -375,7 +378,7 @@ def gc_factor_calculation(exon_list, nb):
                     offst[idx] = float(bins[ii][idx]) / float(xx)
                 gc_factor[ii] = 1/np.mean(offst)
 
-            print 'MMMMM', gc_factor
+            #print 'MMMMM', gc_factor
             local_meanbins[exp_n] = mean_bins
             local_factor[exp_n] = gc_factor
 

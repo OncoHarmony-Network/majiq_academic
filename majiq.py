@@ -3,15 +3,13 @@
 #standard python libraries
 
 import argparse, os
-import numpy as np
-
 import sys
 from multiprocessing import Pool, current_process
 import grimoire.analize as analize
 import grimoire.rnaseq_io as rnaseq_io
 import grimoire.utils.utils as utils
 import grimoire.mglobals as mglobals
-import grimoire.lsv  as majiq_lsv
+import grimoire.lsv as majiq_lsv
 
 try:
     import cPickle as pickle
@@ -19,7 +17,7 @@ except:
     import pickle
 
 
-def majiq_builder(samfiles_list, gene_list, chrom, as_db, pcr_validation=False):
+def majiq_builder(samfiles_list, gene_list, chrom, pcr_validation=False):
 
     temp_dir = "%s/tmp/%s" % (mglobals.outDir, chrom)
     utils.create_if_not_exists(temp_dir)
@@ -34,14 +32,14 @@ def majiq_builder(samfiles_list, gene_list, chrom, as_db, pcr_validation=False):
 
 
 
-def __parallel_lsv_quant(samfiles_list, gene_list, chrom, as_db, pcr_validation=False):
+def __parallel_lsv_quant(samfiles_list, gene_list, chrom, pcr_validation=False):
 
     try:
         print "START child,", current_process().name
-        majiq_builder(samfiles_list, gene_list, chrom, as_db, pcr_validation)
+        majiq_builder(samfiles_list, gene_list, chrom, pcr_validation)
         print "END child, ", current_process().name
     except Exception as e:
-        print "Line %s:"%sys.exc_traceback.tb_lineno, e1
+        print "Line %s:" % sys.exc_traceback.tb_lineno, e
         sys.stdout.flush()
         raise()
 
@@ -105,9 +103,10 @@ def main(params):
 
     for chrom in chr_list:
         if int(params.ncpus) == 1:
-            majiq_builder(sam_list, all_genes[chrom], chrom, None, pcr_validation=params.pcr_filename)
+            print "CHROM", chrom
+            majiq_builder(sam_list, all_genes[chrom], chrom, pcr_validation=params.pcr_filename)
         else:
-            pool.apply_async(majiq_builder, [sam_list, all_genes[chrom], chrom, None, params.pcr_filename])
+            pool.apply_async(majiq_builder, [sam_list, all_genes[chrom], chrom, params.pcr_filename])
 
     print "MASTER JOB.... waiting childs"
     if int(params.ncpus) > 1:

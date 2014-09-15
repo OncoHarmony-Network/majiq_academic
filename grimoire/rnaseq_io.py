@@ -1,6 +1,6 @@
 from gene import Gene, Transcript
 from exon import Exon, detect_exons
-from junction import  Junction
+from junction import Junction
 
 import grimoire.utils.utils as utils
 import pysam
@@ -8,6 +8,8 @@ import gc
 import pickle
 import mglobals
 from collections import namedtuple
+import gzip
+import urllib
 
 import pdb
 
@@ -390,7 +392,7 @@ def __parse_gff3(filename):
             #Normalize data
             normalizedInfo = {
                 "seqid": None if parts[0] == "." else urllib.unquote(parts[0]),
-                "source": None if parts[1] == "." else urllib.unquote(parts[1]),
+                "source": None if parts[1] == "." else urllib.unquote(parts[0]),
                 "type": None if parts[2] == "." else urllib.unquote(parts[2]),
                 "start": None if parts[3] == "." else int(parts[3]),
                 "end": None if parts[4] == "." else int(parts[4]),
@@ -415,12 +417,12 @@ def _prepare_and_dump(genes):
             for gene in genes[chrom][strand]:
                 gene.collapse_exons()
                 temp_ex.extend(gene.get_exon_list())
-        print "Calculating gc_content.........",
+        print "Calculating gc_content chromosome %s........." % chrom,
         utils.set_exons_gc_content(chrom, temp_ex)
         print "Done."
         gc.collect()
         utils.create_if_not_exists(temp_dir)
-        with open('%s/annot_genes.pkl' % temp_dir, '+w') as ofp:
+        with open('%s/annot_genes.pkl' % temp_dir, 'w+b') as ofp:
             pickle.dump(genes[chrom], ofp)
 
     print "NUM_GENES", n_genes
@@ -450,10 +452,9 @@ def read_gff(filename):
             else:
                 all_genes[chrom][strand].append(gn)
             gene_id_dict[record.attributes['ID']] = gn
-            print record.attributes['ID']
 
         elif record.type == 'mRNA':
-            transcript_name = record.attributes['Name']
+            transcript_name = record.attributes['ID']
             parent = record.attributes['Parent']
             try:
                 gn = gene_id_dict[parent]
@@ -466,11 +467,12 @@ def read_gff(filename):
 
         elif record.type == 'exon':
             try:
-                parent_tx = record.attributes['Parent']
+                parent_tx_id = record.attributes['Parent']
+                parent_tx = trcpt_id_dict[parent_tx_id]
                 gn = parent_tx.get_gene()
                 txex = gn.new_annotated_exon(start, end, parent_tx)
                 parent_tx.add_exon(txex)
-                pre_end, pre_txex = last_end[parent_tx]
+                pre_end, pre_txex = last_end[parent_tx_id]
 
                 junc = gn.exist_junction(pre_end, start)
                 if junc is None:
@@ -479,9 +481,9 @@ def read_gff(filename):
                 txex.add_3prime_junc(junc)
                 if not pre_end is None:
                     pre_txex.add_5prime_junc(junc)
-                last_end[parent_tx] = (end, txex)
+                last_end[parent_tx_id] = (end, txex)
             except KeyError:
-                print "Error, incorrect gff. exon %s doesn't have valid mRNA %s" % (record.attributes['ID'], parent_tx)
+                print "Error, incorrect gff. exon %s doesn't have valid mRNA %s" % (record.attributes['ID'], parent_tx_id)
         #end elif
     #end for
     for kk, trcpt in trcpt_id_dict.items():
@@ -492,3 +494,5 @@ def read_gff(filename):
             pre_txex.add_5prime_junc(junc)
         trcpt.sort_in_list()
     #end for
+    _prepare_and_dump(all_genes)
+    return all_genes
