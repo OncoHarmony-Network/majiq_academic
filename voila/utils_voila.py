@@ -1,20 +1,21 @@
 from __future__ import division
+import matplotlib
+matplotlib.use('Agg')
+
 from collections import defaultdict
 import json
 
-import matplotlib
+import sys
 from analysis.matrix import collapse_matrix
 
 from lsv import Lsv
-from voila.splice_graphics.exonGraphic import ExonGraphic
-from voila.splice_graphics.junctionGraphic import JunctionGraphic
-from voila.splice_graphics.geneGraphic import GeneGraphic
+from splice_graphics.exonGraphic import ExonGraphic
+from splice_graphics.junctionGraphic import JunctionGraphic
+from splice_graphics.geneGraphic import GeneGraphic
 
-matplotlib.use('Agg')
 import shutil
 import errno
 
-from pylab import *
 import numpy
 from event import Event
 
@@ -179,9 +180,10 @@ def get_mean_step(bins):
 
 def get_variance(bins, mean):
     """Compute the variance = E[X^2] - (E[X])^2"""
+    return 0  # TODO: for now, we are going to skip the variance display
     bins = numpy.array(bins)
-    step = 1 / bins.size
-    projection_prod = bins * np.arange(step / 2, 1, step)**2
+    step_bins = 1 / bins.size
+    projection_prod = bins * np.arange(step_bins / 2, 1, step_bins)**2
     return np.sum(projection_prod) - mean**2
 
 
@@ -209,7 +211,7 @@ def generate_lsv(i, lsvs_bins, confidence, **post_metadata):
     PREFIX = "../templates/static/matrix_plots/"
 
     # type_set = ('Exon skipping', '5-prime', '3-prime')
-    random_num = random  # Random number between 0 and 1
+    random_num = np.random.random()  # Random number between 0 and 1
     means_psi_list = []
     conf_interval_list = []
     quartile_list = []
@@ -260,7 +262,7 @@ def generate_event(i, events_bins, confidence, **post_metadata):
     PREFIX = "../templates/static/matrix_plots/"
 
     # type_set = ('Exon skipping', '5-prime', '3-prime')
-    random_num = random.random()  # Random number between 0 and 1
+    random_num = numpy.random.random()  # Random number between 0 and 1
     bins_info = create_array_bins(events_bins, confidence)
     events_bins.tolist()
 
@@ -410,7 +412,7 @@ def get_delta_exp_data(majiq_out_file, metadata_post=None, confidence=.95, thres
     return {'event_list': events_list, 'experiments_info': experiments_info}
 
 
-def get_lsv_single_exp_data(majiq_bins_file, confidence, gene_name_list=None, lsv_type=None):
+def get_lsv_single_exp_data(majiq_bins_file, confidence, gene_name_list=None, lsv_types=None, bed_file=None):
     """
     Create a dictionary to summarize the information from majiq output file.
     """
@@ -433,25 +435,67 @@ def get_lsv_single_exp_data(majiq_bins_file, confidence, gene_name_list=None, ls
 
     genes_dict = defaultdict(list)
 
+    bed_dict = defaultdict(str)
+    if bed_file:
+        try:
+            #'/Users/abarrera/workspace/majiq/data/builder_output/ensambl.mm10.sorted.bed.tailored'
+            with open(bed_file) as bedfile:
+                for line in bedfile:
+                    fields = line.rstrip().split()
+                    bed_dict[fields[3]] = fields[0]
+        except Exception, e:
+            print e.message
+            pass
+
+    nofilter_genes = not gene_name_list and not lsv_types
+    if gene_name_list is None:
+        gene_name_list = []
+
     for i, lsv_meta in enumerate(metadata_pre):
-        # print "%s --> %s" % (lsv_meta[2], collapse_lsv(lsv_meta[2]))
-        if gene_name_list == None or str(lsv_meta[1]).split(':')[0] in gene_name_list or lsv_type == lsv_meta[2]:
+        if nofilter_genes or str(lsv_meta[1]).split(':')[0] in gene_name_list or lsv_meta[2] in lsv_types:
             print lsv_meta[0], lsv_meta[1], lsv_meta[2]
+
             metadata.append([lsv_meta[0], lsv_meta[1], lsv_meta[2]]) #collapse_lsv(lsv_meta[2])])
             bins_array_list = bins_matrix[0][i]
+
+            # In 1-way LSVs, create the additional bins set for commodity
+            if len(bins_array_list) == 1:
+                bins_array_list.append(bins_array_list[-1][::-1])
+
             lsv_counter += 1
+            lsv_list.append(Lsv(generate_lsv(lsv_counter, bins_array_list, confidence)))
             try:
                 lsv_list.append(Lsv(generate_lsv(lsv_counter, bins_array_list, confidence)))
             except ValueError, e:
                 print "[WARNING] :: %s produced an error:\n%s (Skipped)" % (bins_array_list, e)
-            genes_dict[str(lsv_meta[1]).split(':')[0]].append([Lsv(generate_lsv(lsv_counter, bins_array_list, confidence)), [lsv_meta[0], lsv_meta[1], lsv_meta[2]]])
+                continue
 
-            if gene_name_list != None and str(lsv_meta[1]).split(':')[0] not in gene_name_list:
-                gene_name_list.append(str(lsv_meta[1]).split(':')[0])
+            genes_dict[str(lsv_meta[1]).split(':')[0]].append([lsv_list[-1], [lsv_meta[0], lsv_meta[1], lsv_meta[2], bed_dict[lsv_meta[1].split(':')[0]]]])
 
     return {'event_list':   lsv_list,
             'metadata':     metadata,
             'genes_dict':    genes_dict }
+
+
+def extract_bins_info(lsv, threshold, include_lsv):
+    expected_psis_bins = []
+    excl_inc_perc_list = []
+    collapsed_matrices = []
+
+    for junc_matrix in lsv:
+        collapsed_matrices.append(collapse_matrix(np.array(junc_matrix)))
+
+    if len(collapsed_matrices)<2:
+        collapsed_matrices.append(collapsed_matrices[-1][::-1])
+
+    for bins in collapsed_matrices:
+        expected_psis_bins.append(list(bins))
+        excl_inc_tuple = find_excl_incl_percentages(bins, threshold)
+        excl_inc_perc_list.append(excl_inc_tuple)
+
+        # If the delta is significant (over the threshold) or 'show-all' option, include LSV
+        include_lsv = include_lsv or np.any(np.array(excl_inc_tuple)[np.array(excl_inc_tuple)>threshold])
+    return expected_psis_bins, excl_inc_perc_list, include_lsv
 
 
 def get_lsv_delta_exp_data(majiq_out_file, confidence=.95, threshold=.2, show_all=False, gene_name_list=None):
@@ -479,55 +523,27 @@ def get_lsv_delta_exp_data(majiq_out_file, confidence=.95, threshold=.2, show_al
     lsv_info = lsv_matrix_list_info_list[1]
 
     for i, lsv in enumerate(lsv_list):
-        expected_psis_bins = []
-        excl_inc_perc_list = []
-        gene_name = str(lsv_info[i][1]).split(':')[0]
         include_lsv = show_all
-
+        gene_name = str(lsv_info[i][1]).split(':')[0]
         if not gene_name_list or gene_name in gene_name_list:
-            for junc_matrix in lsv:
-                bins = collapse_matrix(np.array(junc_matrix))
-                expected_psis_bins.append(list(bins))
-                excl_inc_tuple = find_excl_incl_percentages(bins, threshold)
-                excl_inc_perc_list.append(excl_inc_tuple)
-
-                # If the delta is significant (over the threshold) or 'show-all' option, include LSV
-                include_lsv = include_lsv or np.any(np.array(excl_inc_tuple)[np.array(excl_inc_tuple)>threshold])
+            collapsed_bins, excl_inc_perc_list, include_lsv = extract_bins_info(lsv, threshold, include_lsv)
             if not include_lsv: continue
-
             try:
-                lsv = Lsv(generate_lsv(i, expected_psis_bins, confidence))
-                lsv.set_excl_incl(excl_inc_perc_list)
+                lsv_o = Lsv(generate_lsv(i, collapsed_bins, confidence))
+                lsv_o.set_excl_incl(excl_inc_perc_list)
                 # lsv_list.append(lsv)
+                genes_dict[gene_name].append([lsv_o, lsv_info[i]])
+
             except ValueError, e:
-                print "[WARNING] :: %s produced an error:\n%s (Skipped)" % (bins, e)
+                print "[WARNING] :: %s produced an error:\n%s (Skipped)" % (repr(lsv_o), e)
 
-            genes_dict[gene_name].append([lsv, lsv_info[i]])
 
+    print "Number of genes added: %d" % len(genes_dict.keys())
     # TODO: Extract experiments info from Majiq output file
     experiments_info = [{'name': 'experiment1', 'link': '#', 'color': '#e41a1c'},
                         {'name': 'experiment2', 'link': '#', 'color': '#377e80'}]
 
     return {'genes_dict': genes_dict, 'experiments_info': experiments_info}
-
-# So far, this is not called anywhere cos the data should be coming in python format already. This is an ad-hoc solution
-# to read Matlab data. Using ipython, load this function, use it with a Matlab matrix and dump it using json.
-def load_matlab_mat(matlab_mat):
-    import scipy.io
-    from scipy.stats.mstats import mquantiles
-    from collections import defaultdict
-
-    mat = scipy.io.loadmat(matlab_mat)
-    to_voila = defaultdict(lambda: defaultdict(lambda: defaultdict()))
-
-    for key in mat:
-        if not key.startswith('__'):
-            for way in range(mat[key].shape[1]):
-                # print key, way, np.mean(mat[key][:,way]), mquantiles(mat[key][:,way], prob=(.1,.25, .5, .75, .9))
-                to_voila[key]["PSI"+str(way+1)]['mean'] = np.mean(mat[key][:, way])
-                to_voila[key]["PSI"+str(way+1)]['quantiles'] = mquantiles(mat[key][:, way], prob=(.1, .25, .5, .75, .9))
-                to_voila[key]["PSI"+str(way+1)]['var'] = np.var(mat[key][:, way])
-
 
 def copyanything(src, dst):
     try:

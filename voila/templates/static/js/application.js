@@ -26,7 +26,7 @@ $( document ).ready(function(){
     $('.tablesorter').each(function() {
         $(this).tablesorter({sortList: [
             [0, 0]
-        ], headers: {3: {sorter: false}, 4: {sorter: false}, 5: {sorter: false}}}); // Disable sort function in column PDF
+        ]}); // Disable sort function in column PDF  , headers: {3: {sorter: false}, 4: {sorter: false}, 5: {sorter: false}}
         $(this).tablesorterPager({widthFixed: true, widgets: ['zebra', 'renderCanvas'], container: $(this).parent().children(".pager")});
     });
 
@@ -526,7 +526,7 @@ BREWER_PALETTE = [
     [77,175,74],
     [152,78,163],
     [255,127,0],
-    [255,255,51],
+//    [255,255,51],
     [166,86,40],
     [247,129,191],
     [153,153,153],
@@ -536,7 +536,7 @@ BREWER_PALETTE = [
     [177,275,19],
     [252,178,8],
     [55,227,100],
-    [55,55,151],
+//    [55,55,151],
     [266,186,140],
     [47,229,36],
     [253,253,253]
@@ -1160,18 +1160,7 @@ function drawDeltaBarChart(context, binsArray, settingsCanvasDelta, zoomLevel, p
     // Draw the x and y axes
     context.lineWidth = "1.0";
 
-    // Y-axis
-    drawLine(context,
-        settingsCanvasDelta.coords_origin[0] + (settingsCanvasDelta.area_pixels[0])/2,
-        settingsCanvasDelta.coords_origin[1]+5, //Mark axis
-        settingsCanvasDelta.coords_origin[0] + (settingsCanvasDelta.area_pixels[0])/2,
-        settingsCanvasDelta.coords_origin[1] - settingsCanvasDelta.area_pixels[1]);
-    // X-axis
-    drawLine(context,
-        settingsCanvasDelta.coords_origin[0], //Mark axis
-        settingsCanvasDelta.coords_origin[1],
-        settingsCanvasDelta.coords_origin[0] + settingsCanvasDelta.area_pixels[0],
-        settingsCanvasDelta.coords_origin[1]);
+
 
     var chartHeight = settingsCanvasDelta.area_pixels[1];
     chartHeight += zoomLevel;
@@ -1212,6 +1201,20 @@ function drawDeltaBarChart(context, binsArray, settingsCanvasDelta, zoomLevel, p
     context.textAlign = "center";
     context.fillStyle = "black";
     context.strokeStyle = "black";
+
+
+    // Y-axis
+    drawLine(context,
+            settingsCanvasDelta.coords_origin[0] + (settingsCanvasDelta.area_pixels[0])/2,
+            settingsCanvasDelta.coords_origin[1]+5, //Mark axis
+            settingsCanvasDelta.coords_origin[0] + (settingsCanvasDelta.area_pixels[0])/2,
+            settingsCanvasDelta.coords_origin[1] - settingsCanvasDelta.area_pixels[1]);
+    // X-axis
+    drawLine(context,
+        settingsCanvasDelta.coords_origin[0], //Mark axis
+        settingsCanvasDelta.coords_origin[1],
+            settingsCanvasDelta.coords_origin[0] + settingsCanvasDelta.area_pixels[0],
+        settingsCanvasDelta.coords_origin[1]);
 
     name = name * 100;
     context.fillText("-1", settingsCanvasDelta.coords_origin[0], settingsCanvasDelta.coords_origin[1] + 15);
@@ -1555,7 +1558,7 @@ function renderViolin(htmlElementId, results, tableId, params){
 
     var yAxis = d3.svg.axis()
         .scale(y)
-        .ticks(11)
+        .ticks(6)
         .orient("left")
         .tickSize(5,0,5);
 

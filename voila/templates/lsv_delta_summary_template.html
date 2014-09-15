@@ -1,5 +1,5 @@
 {% extends "base_template.html" %}
-{% block title %}MAJIQ LSV &Psi; Summary{% endblock %}
+{% block title %}MAJIQ LSV &Delta;&Psi; Summary{% endblock %}
 {% block css %}
 {# Evaluate if we should divide different css in files #}
 
@@ -21,14 +21,17 @@
 
 {% block content %}
 <div class="events-summary">
-    <h1>LSV &psi; Single experiment</h1>
+    <h1>LSV &Delta;&Psi; Summary</h1>
     <table id="event_table" class="tablesorter">
         <thead>
         <tr>
             <th class="extra-short-header">#</th>
             <th class="short-header">LSV ID</th>
             <th class="short-header">Type</th>
-            <th class="short-header"></th>
+            <th class="short-header">
+                <p style="color: #377e80; margin: 0; text-align: left; float: left; width: 50%;" > P(&Delta;&Psi;)<{{ threshold }}</p>
+                <p style="color: #e41a1c; margin: 0; text-align: right; float: right; width: 30%; padding-right: 17px;" > P(&Delta;&Psi;)>{{ threshold }}</p>
+            </th>
             <th class="medium-header">Coordinates</th>
         </tr>
         </thead>
@@ -53,6 +56,15 @@
                 </canvas>
             </td>
             <td id="data_td{{ loop.index }}" class="lsvDeltaCompact" data-lsv="{{ lsv|to_json }}" data-threshold="{{ threshold }}">
+                <p class="hidden">
+                    {% set max_diff = [0.0] %}
+                    {% for excl_incl in lsv.excl_incl %}
+                        {% if ((excl_incl[0]|abs + excl_incl[1]) > max_diff[-1]) %}
+                            {% do max_diff.append(excl_incl[0]|abs + excl_incl[1]) %}
+                        {% endif%}
+                    {%- endfor %}
+                    {{ max_diff[-1] }}
+                </p>
 
                 <!--<canvas id="deltaPsi{{ lsv.number }}" class="deltaCondensed" width="200px" height="20px"-->
                         <!--data-excl-incl="{{ lsv.excl_incl }}">-->

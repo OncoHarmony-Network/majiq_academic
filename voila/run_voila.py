@@ -2,6 +2,7 @@
 from collections import defaultdict
 import json
 import os
+import subprocess
 import sys
 import utils_voila
 import collections as cc
@@ -44,7 +45,7 @@ def _render_template(output_dir, output_html, majiq_output, type_summary, thresh
     def to_json(value):
         return escape(json.dumps(value, cls=utils_voila.PickleEncoder))
 
-    env = Environment(loader=FileSystemLoader(EXEC_DIR + "templates/"))
+    env = Environment(extensions=["jinja2.ext.do"], loader=FileSystemLoader(EXEC_DIR + "templates/"))
     env.filters.update({'to_json': to_json, 'debug': debug})
     sum_template = env.get_template(type_summary + "_summary_template.html")
 
@@ -93,9 +94,8 @@ def _render_template(output_dir, output_html, majiq_output, type_summary, thresh
             next_page = None
 
             subset_keys = gene_keys[count_pages*MAX_GENES: MAX_GENES*(count_pages+1)]
-
-            genes_dict = cc.OrderedDict(dict((k, majiq_output['genes_dict'][k]) for k in subset_keys).items())
-            genes_json_dict = cc.OrderedDict(dict((k, majiq_output['genes_json'][k]) for k in subset_keys).items())
+            genes_dict = cc.OrderedDict((k, majiq_output['genes_dict'][k]) for k in subset_keys)
+            genes_json_dict = cc.OrderedDict((k, majiq_output['genes_json'][k]) for k in subset_keys)
             if (count_pages+1)*MAX_GENES < len(majiq_output['genes_dict']):
                 print (count_pages+1)*MAX_GENES, len(majiq_output['genes_dict'])
                 next_page = str(count_pages+1) + "_" + output_html
@@ -166,10 +166,11 @@ def create_summary(args):
         meta_postprocess['collapsed'] = args.collapsed
 
     if type_summary == 'lsv_single_gene':
-        if not args.genes_file:
-            print "[ERROR] :: parameter genes-file-info needed for filtering results by gene name."
-            sys.exit(1)
-        import pickle as pkl
+
+        lsv_types = args.lsv_types
+        bed_file  = args.bed_file
+
+        import cPickle as pkl
         if args.genes_file:
             genes_file = pkl.load(open(args.genes_file, 'r'))
 
@@ -180,17 +181,27 @@ def create_summary(args):
                     gene_name_list.append(gene_name.rstrip().split(":")[0])
         else:
             gene_name_list = []
-        majiq_output = utils_voila.get_lsv_single_exp_data(majiq_bins_file, args.confidence, gene_name_list=gene_name_list, lsv_type=args.lsv_type )
+        majiq_output = utils_voila.get_lsv_single_exp_data(majiq_bins_file, args.confidence, gene_name_list=gene_name_list, lsv_types=lsv_types, bed_file=bed_file)
 
         # Get gene info
         try:
             genes_graphic = defaultdict(list)
             for gene_obj in genes_file:
-                if gene_obj.get_name() in gene_name_list:
+                if gene_obj.get_name() in majiq_output['genes_dict']:
                     genes_graphic[gene_obj.get_name()].append(json.dumps(gene_obj, cls=utils_voila.LsvGraphicEncoder).replace("\"", "'"))
                     genes_graphic[gene_obj.get_name()].append(gene_obj.get_strand())
+                    genes_graphic[gene_obj.get_name()].append(gene_obj.get_coords())
                     # majiq_output['gene_json'] = json.dumps(gene_obj, cls=utils_voila.LsvGraphicEncoder).replace("\"", "'")
                     # majiq_output['gene'] = gene_obj
+
+
+                    for lsv_data in majiq_output['genes_dict'][gene_obj.get_name()]:
+                        # Find which is the ending coordinate of the LSV
+                        lsv_data[1].append(gene_obj.get_exons()[-1].get_coords()[1])
+
+                        # Calculate extension of LSV
+                        lsv_data[0].set_coords(lsv_data[1][0])
+                        lsv_data[0].set_extension(gene_obj, lsv_data[1][2])
 
             if not len(genes_graphic.keys()): raise Exception("[ERROR] :: No gene matching the visual information file.")
             majiq_output['genes_json'] = genes_graphic
@@ -279,7 +290,8 @@ def main():
     parser_single_gene = argparse.ArgumentParser(add_help=False)
     parser_single_gene.add_argument('--genes-file-info', dest='genes_file', metavar='visual_LSE.majiq', type=str, help='Pickle file with gene coords info.')
     parser_single_gene.add_argument('--gene-names', type=str, dest='gene_names', help='Gene names to filter the results.')
-    parser_single_gene.add_argument('--lsv-type', type=str, dest='lsv_type', help='LSV type to filter the results. (If no gene list is provided, this option will display only genes containing LSVs of the specified type).')
+    parser_single_gene.add_argument('--bed-file', type=str, dest='bed_file', help='Bed file with coordinates and genes mapping.')
+    parser_single_gene.add_argument('--lsv-types', nargs='*', default=[], type=str, dest='lsv_types', help='LSV type to filter the results. (If no gene list is provided, this option will display only genes containing LSVs of the specified type).')
     subparsers.add_parser('lsv-single-gene', help='Single LSV analysis by gene(s) of interest.', parents=[common_parser, parser_single_gene])
 
     # Thumbnails generation option (dev) TODO: Delete
@@ -291,6 +303,10 @@ def main():
     args = parser.parse_args()
     print args
 
+    # try:
+    #     subprocess.call('http-server')
+    # except OSError, e:
+    #     print "Starting up http-server failed, which is the default option in VOILA to properly display its HTML summaries. Please install *node.js* (http://nodejs.org) and *http-server* (`sudo npm install http-server -g`) unless you have another webserver. You will still have the results in the output directory"
     create_summary(args)
 
 
