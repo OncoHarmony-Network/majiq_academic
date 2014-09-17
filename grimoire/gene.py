@@ -5,6 +5,7 @@ import mglobals
 from grimoire.exon import Exon, ExonTx, collapse_list_exons, print_list_exons
 from grimoire.lsv import LSV
 
+
 class Gene:
     __eq__ = lambda self, other: self.chromosome == other.chromosome and self.strand == other.strand and self.start < other.end and self.end > other.start
     __ne__ = lambda self, other: self.chromosome != other.chromosome or self.strand != other.strand or self.start >= other.end or self.end <= other.start
@@ -17,7 +18,7 @@ class Gene:
 #    __gt__ = lambda self, other: ( self.chromosome > other.chromosome  or ( self.chromosome == other.chromosome and  ((self.strand == '-' and other.strand == '+') or (self.strand == other.strand and self.start > other.end))))
 #    __ge__ = lambda self, other: ( self.chromosome > other.chromosome  or ( self.chromosome == other.chromosome and  ((self.strand == '-' and other.strand == '+') or (self.strand == other.strand and self.start > other.end and self.end <= other.start))))
 
-    def __init__(self,gene_id,chrom,strand,start,end):
+    def __init__(self, gene_id, chrom, strand, start, end):
         self.id = gene_id
         self.chromosome = chrom
         self.strand = strand
@@ -26,14 +27,9 @@ class Gene:
         self.start = start
         self.end = end
         self.otherNames = [gene_id]
-#        self.RNAread_list = np.zeros(shape=(mglobals.num_experiments),dtype=np.dtype('object'))
-#        self.RNAread_list.fill([])
         self.exonNum = 0
-        self.readNum = np.zeros(shape=(mglobals.num_experiments),dtype=np.int)
-        self.RPKM = np.zeros(shape=(mglobals.num_experiments),dtype=np.float)
+        self.readNum = np.zeros(shape=(mglobals.num_experiments), dtype=np.int)
         self.temp_txex_list = []
-        self.transAScandidates = []
-        self.transCONSTcandidates = []
         self.ir_list = []
         self.lsv_list = []
 
@@ -60,24 +56,24 @@ class Gene:
     def get_chromosome(self):
         return self.chromosome
 
-    def get_coordinates( self ):
-        return (self.start,self.end)
+    def get_coordinates(self):
+        return self.start, self.end
 
     def get_transcript_AS_candidates(self):
-        return (self.transAScandidates)
+        return self.transAScandidates
 
     def get_transcript_CONST_candidates(self):
-        return (self.transCONSTcandidates)
+        return self.transCONSTcandidates
 
     ''' Set functions '''
 
-    def add_transcript_AS_candidates(self,list_candidates):
-        self.transAScandidates += list_candidates
-        return
-
-    def add_transcript_CONST_candidates(self,list_candidates):
-        self.transCONSTcandidates += list_candidates
-        return
+    # def add_transcript_AS_candidates(self,list_candidates):
+    #     self.transAScandidates += list_candidates
+    #     return
+    #
+    # def add_transcript_CONST_candidates(self,list_candidates):
+    #     self.transCONSTcandidates += list_candidates
+    #     return
 
     def add_transcript(self, tcrpt ):
         if tcrpt.txstart < self.start :
@@ -254,7 +250,7 @@ class Gene:
         self.prepare_exons()
         self.remove_temp_attributes()
 
-    def check_exons ( self ):
+    def check_exons (self):
 
         s_exons = set()
 
@@ -263,20 +259,19 @@ class Gene:
             
         assert len(s_exons) == len(self.exons), "Exist duplicates in exons in Gene %s"%(self.id)
 
-
-    def new_lsv_definition(self, exon, jlist, type ):
+    def new_lsv_definition(self, exon, jlist, lsv_type):
 
         coords = exon.get_coordinates()
         ret = None
-        id = "%s:%d-%d:%s"%(self.get_id(), coords[0], coords[1], type)
+        id = "%s:%d-%d:%s" % (self.get_id(), coords[0], coords[1], lsv_type)
         for lsv in self.lsv_list:
             if lsv.id == id:
                 ret = lsv
                 break
         else:
             try:
-                ret = LSV(exon, id, jlist, type )
-                self.lsv_list.append( ret )
+                ret = LSV(exon, id, jlist, lsv_type)
+                self.lsv_list.append(ret)
             except ValueError:
                 print "Attempt to create LSV with wrong type or not enought junction coverage"
 
@@ -285,29 +280,30 @@ class Gene:
     def remove_temp_attributes(self):
         del self.temp_txex_list
 
-    def new_annotated_exon( self, start, end, transcript, bl = True):
-        res = None
+    def new_annotated_exon(self, start, end, transcript, bl=True):
         for txex in self.temp_txex_list:
             if txex.start == start and txex.end == end:
                 res = txex
                 break
         else:
-            res = ExonTx(start,end,transcript, None)
-            if bl : self.temp_txex_list.append(res)
+            res = ExonTx(start, end, transcript, None)
+            if bl:
+                self.temp_txex_list.append(res)
         return res
 
+    # mark for delete
+    def get_transcript_mat(self, ASvsConst):
 
-    def get_transcript_mat (self, ASvsConst):
+        if (len(self.transcript_list) == 1 and ASvsConst == 'AS') or len(self.exons) <3:
+            return None
 
-        if (len( self.transcript_list ) == 1 and ASvsConst == 'AS') or len(self.exons) <3 : return None
-
-        mat = np.ndarray(shape=(len(self.transcript_list),len(self.exons)),dtype='bool')
+        mat = np.ndarray(shape=(len(self.transcript_list), len(self.exons)), dtype='bool')
         for idx_t, tpt in enumerate(self.transcript_list):
             for g_ex in self.exons:
-                if set(tpt.exon_list).intersection( set(g_ex.exonTx_list)) :
-                    mat[idx_t,g_ex.id-1]= 1
+                if set(tpt.exon_list).intersection(set(g_ex.exonTx_list)):
+                    mat[idx_t, g_ex.id-1] = 1
                 else:
-                    mat[idx_t,g_ex.id-1]= 0
+                    mat[idx_t, g_ex.id-1] = 0
 
         return mat
 

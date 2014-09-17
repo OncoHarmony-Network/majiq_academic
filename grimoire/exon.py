@@ -304,33 +304,33 @@ class ExonTx(object):
         self.exon = exon
         self.ir = False
 
-    def get_coordinates( self ):
-        return ( self.start, self.end )
+    def get_coordinates(self):
+        return self.start, self.end
 
-    def add_transcript( self, trans ):
+    def add_transcript(self, trans):
         self.transcript.append(trans)
 
-    def add_5prime_junc( self, p5_junc):
+    def add_5prime_junc(self, p5_junc):
         if p5_junc not in self.p5_junc:
             self.p5_junc.append(p5_junc)
 
-    def add_3prime_junc( self, p3_junc):
+    def add_3prime_junc(self, p3_junc):
         if p3_junc not in self.p3_junc:
             self.p3_junc.append(p3_junc)
 
-    def get_5prime_junc ( self ):
+    def get_5prime_junc(self):
         return self.p5_junc
 
-    def get_3prime_junc ( self ):
+    def get_3prime_junc(self):
         return self.p3_junc
 
-    def overlaps ( self, start, end ):
+    def overlaps(self, start, end):
         res = False
         if self.start < end and self.end > start:
             res = True
         return res
 
-    def split_exon ( self, intron_coords, gn):
+    def split_exon(self, intron_coords, gn):
 
         res = []
         exb1 = False
@@ -341,7 +341,7 @@ class ExonTx(object):
             res.append(txex1)
             txex1.junction_consistency()
             exb1 = True
-        if intron_coords[0]-1 -self.start > 5:
+        if intron_coords[0] - 1 - self.start > 5:
             txex2 = gn.new_annotated_exon(self.start, intron_coords[0]-1, self.transcript[0], bl= False)
             txex2.p3_junc.extend(self.p3_junc)
             exb2 = True
@@ -351,18 +351,21 @@ class ExonTx(object):
         exb = exb1 & exb2
 
         if exb:
-            junc = gn.exist_junction(txex2.end,txex1.start)
+            junc = gn.exist_junction(txex2.end, txex1.start)
             if junc is None:
-                junc = Junction(txex2.end,txex1.start, None, None,gn,annotated=True)
+                junc = Junction(txex2.end, txex1.start, None, None, gn, annotated=True)
 #                junc.add_donor(txex2)
 #                junc.add_acceptor(txex1)
             txex2.p5_junc.append(junc)
             txex1.p3_junc.append(junc)
 
         for trn in self.transcript:
-            if exb : trn.add_junction(junc)
-            if exb1: txex1.add_transcript(trn)
-            if exb2: txex2.add_transcript(trn)
+            if exb:
+                trn.add_junction(junc)
+            if exb1:
+                txex1.add_transcript(trn)
+            if exb2:
+                txex2.add_transcript(trn)
 
         del self
         return res
@@ -422,11 +425,11 @@ class ExonTx(object):
             for idx, txex in enumerate(list_exontx):
                 for intr in introns:
                     if not txex.overlaps(intr[0],intr[1]): 
-                        if  intr[0] > txex.end or (intr[0] <= txex.end and intr[1] > txex.end ):
+                        if intr[0] > txex.end or (intr[0] <= txex.end and intr[1] > txex.end ):
                             txex.ir = True
                         continue
                     ''' intron retention'''
-                    LSV_IR( txex.start, txex.end, [], gne)
+                    LSV_IR(txex.start, txex.end, [], gne)
                     dummy = txex.split_exon(intr, gne)
                     list_exontx.remove(txex)
                     for dm in dummy:
@@ -481,12 +484,12 @@ def collapse_list_exons(listexons, gne):
             overlp.append(ex)
 #            continue
         else:
-            if len(overlp) > 0 : exlist.extend(ex.collapse(overlp,gne))
+            if len(overlp) > 0 : exlist.extend(ex.collapse(overlp, gne))
 
             overlp = [ex]
             start, end = ex.get_coordinates()
-        if idx == len(listexons)-1 :
-            exlist.extend(ex.collapse(overlp,gne))
+        if idx == len(listexons)-1:
+            exlist.extend(ex.collapse(overlp, gne))
     num_it -=1
     return exlist
 

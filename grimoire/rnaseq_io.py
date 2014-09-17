@@ -11,9 +11,9 @@ from collections import namedtuple
 import gzip
 import urllib
 
-import pdb
+import ipdb
 
-
+import objgraph
 
 def __cross_junctions(read):
     '''
@@ -409,7 +409,7 @@ def __parse_gff3(filename):
 def _prepare_and_dump(genes):
     n_genes = 0
     for chrom in genes.keys():
-        temp_dir = "%s/tmp/%s" % (mglobals.outDir, chrom)
+
         temp_ex = []
         for strand, gg in genes[chrom].items():
             n_genes += len(gg)
@@ -422,6 +422,10 @@ def _prepare_and_dump(genes):
         print "Done."
         gc.collect()
         utils.create_if_not_exists(temp_dir)
+        temp_dir = "%s/tmp/%s" % (mglobals.outDir, chrom)
+        ipdb.set_trace()
+426     objgraph.show_most_common_types(limit=20)
+
         with open('%s/annot_genes.pkl' % temp_dir, 'w+b') as ofp:
             pickle.dump(genes[chrom], ofp)
 
@@ -453,7 +457,7 @@ def read_gff(filename):
                 all_genes[chrom][strand].append(gn)
             gene_id_dict[record.attributes['ID']] = gn
 
-        elif record.type == 'mRNA':
+        elif record.type == 'mRNA' or record.type == 'transcript':
             transcript_name = record.attributes['ID']
             parent = record.attributes['Parent']
             try:
@@ -466,8 +470,8 @@ def read_gff(filename):
                 print "Error, incorrect gff. mRNA %s doesn't have valid gene %s" % (transcript_name, parent)
 
         elif record.type == 'exon':
+            parent_tx_id = record.attributes['Parent']
             try:
-                parent_tx_id = record.attributes['Parent']
                 parent_tx = trcpt_id_dict[parent_tx_id]
                 gn = parent_tx.get_gene()
                 txex = gn.new_annotated_exon(start, end, parent_tx)
