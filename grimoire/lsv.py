@@ -2,18 +2,18 @@ import numpy as np
 import grimoire.mglobals as mglobals
 import scipy
 import pickle
-import pdb
-from voila.splice_graphics.exonGraphic import ExonGraphic 
+from voila.splice_graphics.exonGraphic import ExonGraphic
 from voila.splice_graphics.geneGraphic import GeneGraphic 
 from voila.splice_graphics.junctionGraphic import JunctionGraphic 
 
 SSOURCE = 'source'
 STARGET = 'target'
 
+
 class LSV(object):
 
-    def __init__ ( self, exon, id, junctions, type ):
-        if type != SSOURCE and type != STARGET: raise RuntimeError('Incorrect LSV type %s'%type)
+    def __init__(self, exon, id, junctions, type):
+        if type != SSOURCE and type != STARGET: raise RuntimeError('Incorrect LSV type %s' % type)
         self.coords = exon.get_coordinates()
         self.id = id
         junction_list = [ x for x in  junctions if x is not None] 
@@ -27,7 +27,7 @@ class LSV(object):
             raise ValueError
 
         if len(junction_list) > len(self.ext_type.split('|')) -1 :
-            print " ERROR_LSV :: with inconsistent junction-type %s, %s"%(len(junction_list), len(self.ext_type.split('|')))
+            print " ERROR_LSV :: with inconsistent junction-type %s, %s" % (len(junction_list), len(self.ext_type.split('|')))
 
         for kk,vv in self.tlb_junc.items():
             count = np.sum(junction_list[vv].coverage[0].toarray())
@@ -40,7 +40,7 @@ class LSV(object):
             if jj[-2:] == 'e0': continue
             self.junctions.append(junction_list[self.tlb_junc[jj]])
 
-        self.junctions=np.array(self.junctions)
+        self.junctions = np.array(self.junctions)
 
 #        if self.check_type(self.ext_type) == -1:
         #    pdb.set_trace()
@@ -55,7 +55,8 @@ class LSV(object):
             dum = tt.split('e')
             exss.append(int(dum[0]))
             tr = dum[1].split('.')
-            if len(tr) == 1 and dum[1]=='0' : continue
+            if len(tr) == 1 and dum[1] == '0':
+                continue
             if int(tr[0]) not in targ:
                 targ[int(tr[0])] = []
             targ[int(tr[0])].append(int(tr[1]))
@@ -88,7 +89,7 @@ class LSV(object):
         return bool(self.type == STARGET)
 
     def has_pcr_score(self):
-        return (self.exon.get_pcr_score()!= None)
+        return not self.exon.get_pcr_score() is None
 
     def get_pcr_score(self):
         return self.exon.get_pcr_score()
@@ -99,8 +100,7 @@ class LSV(object):
     def get_chromosome(self):
         return self.exon.get_gene().get_chromosome()
 
-
-    def set_type( self, jlist, tlb_junc ):
+    def set_type(self, jlist, tlb_junc):
         ex_id = self.exon.get_id()
         if self.type == SSOURCE:
             spsite = sorted(set(self.exon.ss_5p_list))
@@ -166,7 +166,8 @@ class LSV(object):
         return np.array_equal(self.junctions, variant.junctions)
 
     def to_majiqLSV (self, exp_idx):
-        return Majiq_LSV(self, exp_idx)
+        return MajiqLsv(self, exp_idx)
+
 
 def extract_SE_events( list_lsv_per_gene ):
 
@@ -207,6 +208,7 @@ def extract_SE_events( list_lsv_per_gene ):
         C1 = ss.coords
         A = slist[sindx].acceptor.get_coordinates()
         #ret_list.append( (C1.)
+
 
 def extract_gff( list_lsv, outDir ):
 
@@ -268,15 +270,15 @@ def extract_gff( list_lsv, outDir ):
     return gtf
 
 
-def print_lsv_extype ( list_lsv, filename ):
-    fp = open(filename,'w+')
+def print_lsv_extype(list_lsv, filename):
+    fp = open(filename, 'w+')
     print list_lsv.shape
     for idx in range(list_lsv.shape[0]):
         lsv = list_lsv[idx]
-        fp.write("%s\n"%(lsv.type))
+        fp.write("%s\n" % (lsv.type))
     fp.close()
 
-class LSV_IR ( object):
+class LSV_IR(object):
 
     def __init__ (self, start, end, exon_list, gene):
         self.start = start
@@ -286,7 +288,7 @@ class LSV_IR ( object):
         gene.add_intron_retention(self)
 
 
-class Majiq_LSV(object):
+class MajiqLsv(object):
 
     def __init__ (self, LSV, exp_idx):
 

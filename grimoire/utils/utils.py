@@ -14,19 +14,22 @@ import scipy.sparse
 import scipy.io
 from matplotlib import pyplot
 import grimoire.mglobals as mglobals
-from grimoire.junction import majiq_junc
+from grimoire.junction import MajiqJunc
 from grimoire.lsv import print_lsv_extype
 from voila.splice_graphics.exonGraphic import ExonGraphic 
 from voila.splice_graphics.geneGraphic import GeneGraphic 
 from voila.splice_graphics.junctionGraphic import JunctionGraphic 
 
+
 def create_if_not_exists(my_dir, logger=False):
     "Create a directory path if it does not exist"
     try:
-        if logger: logger.info("\nCreating directory %s..."%my_dir)
-	os.makedirs(my_dir)
+        if logger:
+            logger.info("\nCreating directory %s..." % my_dir)
+        os.makedirs(my_dir)
     except OSError, e:
-	 if logger: logger.info("\nDirectory %s already exists..."%my_dir)
+        if logger:
+            logger.info("\nDirectory %s already exists..." % my_dir)
 
 
 def get_logger(logger_name, silent=False, debug=False): 
@@ -56,13 +59,13 @@ def get_logger(logger_name, silent=False, debug=False):
     return logger
 
 
-
 def __gc_factor_ind(val, exp_idx):
     res = 0
     for ii,jj in enumerate(mglobals.gc_bins[exp_idx]):
         if val < jj:
             res = ii
     return res
+
 
 def prepare_LSV_table(LSV_list, non_as, temp_file):
 
@@ -76,7 +79,7 @@ def prepare_LSV_table(LSV_list, non_as, temp_file):
             for iix, lsv in enumerate(LSV_list[exp_idx]) :
                 majiq_table_as[iix] = lsv.to_majiqLSV(exp_idx)
             for jix, jn in enumerate(non_as[exp_idx]) :
-                majiq_table_nonas[jix] = majiq_junc( jn , exp_idx)
+                majiq_table_nonas[jix] = MajiqJunc( jn , exp_idx)
             file_pi = open("%s/temp_%s.%s"%(mglobals.temp_oDir[exp_idx],mglobals.exp_list[exp_idx], temp_file), 'w+')
             pickle.dump((majiq_table_as, majiq_table_nonas), file_pi)
             file_pi.close()
@@ -123,25 +126,22 @@ def merge_and_create_MAJIQ ( chr_list, ofile ):
 #            print_lsv_extype(AT,'%s/LSV.%s.types'%(mglobals.outDir,mglobals.exp_list[exp_idx]))
             
 
+def set_exons_gc_content(chrom, exon_list):
 
-def set_exons_gc_content(chrom, exon_list ):
-
-    out_list = {}
-    current_chrom = None
-    loaded_chrom = ''
 #    fastadir_path = "%s/Genomes/goldenPath/%s/"%(os.environ["ASP_DATA_ROOT"],mglobals.genome)
     seqdir = '/Volumes/data-1/WASP_DATA'
-    fastadir_path = "%s/Genomes/goldenPath/%s/"%(seqdir, mglobals.genome)
+    fastadir_path = "%s/Genomes/goldenPath/%s/" % (seqdir, mglobals.genome)
 
     #print "Loading chromosome... %s"%chrom
     chrom_path = fastadir_path + chrom + ".fa"
-    if not os.path.exists(chrom_path): return 
+    if not os.path.exists(chrom_path):
+        return
     chrom_file = open(chrom_path)
     loaded_chrom = []
     for chrom_line in chrom_file:
         if not chrom_line.startswith(">"):
             loaded_chrom.append(chrom_line.strip("\n"))
-    loaded_chrom  = ''.join(loaded_chrom)
+    loaded_chrom = ''.join(loaded_chrom)
 
     for exon in exon_list:
         strt,end = exon.get_coordinates()
@@ -162,8 +162,8 @@ def set_exons_gc_content(chrom, exon_list ):
                 else:
                     new_seq.append(char)
             sequence = ''.join(new_seq)
-        if len(sequence) == 0 : 
-            print "KKKKseq",exon.get_coordinates(), sequence
+        if len(sequence) == 0:
+            print "KKKKseq", exon.get_coordinates(), sequence
         exon.set_gc_content(sequence)
 
 

@@ -33,7 +33,6 @@ class Gene:
         self.ir_list = []
         self.lsv_list = []
 
-
     def __hash__(self):
         return hash((self.id,self.chromosome, self.strand, self.start, self.end))
 
@@ -223,10 +222,10 @@ class Gene:
         self.exonNum = len(self.exons)
         return
 
-    def get_exon_list( self ):
+    def get_exon_list(self):
         return self.exons
 
-    def get_all_ss( self, anot_only = False ):
+    def get_all_ss(self, anot_only = False ):
 
         ss = set()
         for ex in self.exons:
@@ -240,7 +239,7 @@ class Gene:
         print sorted(ss)
         return sorted(ss)
 
-    def collapse_exons ( self ):
+    def collapse_exons(self):
 
         self.temp_txex_list.sort()
 #        print "GEN",self.temp_txex_list
@@ -250,7 +249,7 @@ class Gene:
         self.prepare_exons()
         self.remove_temp_attributes()
 
-    def check_exons (self):
+    def check_exons(self):
 
         s_exons = set()
 

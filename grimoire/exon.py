@@ -10,16 +10,9 @@ import copy
 
 import pdb 
 
+
 class Exon:
 
-
-#    __eq__ = lambda self, other: self.start == other.start  and self.end == other.end
-#    __ne__ = lambda self, other: self.start != other.start  or  self.end != other.end
-#    __lt__ = lambda self, other: self.start < other.start   or (self.start == other.start and self.end < other.end)
-#    __le__ = lambda self, other: self.start <= other.start  or (self.start == other.start and self.end <= other.end)
-#    __gt__ = lambda self, other: self.start > other.start   or (self.start == other.start and self.end > other.end)
-#    __ge__ = lambda self, other: self.start >= other.start  or (self.start == other.start and self.end >= other.end)
-    
     __eq__ = lambda self, other: self.start < other.end and  self.end > other.start
     __ne__ = lambda self, other: self.start >= other.end or   self.end <= other.start
     __lt__ = lambda self, other: self.end <= other.start 
@@ -29,7 +22,7 @@ class Exon:
 #or (self.end>=other.start and (self.start>other.start or (self.start==other.start and self.end>other.end)))
     __ge__ = lambda self, other: self.start >= other.end  or (self.start < other.end and self.end > other.start)
 
-    def __init__ ( self, start, end, gene, strand, annot = False ):
+    def __init__(self, start, end, gene, strand, annot = False):
 #        print "Creating Exon",start,end, self
         self.start = start
         self.end = end
@@ -64,7 +57,7 @@ class Exon:
             Get the exon start and end.
             :rtype: tuple of 2 integers, (exon start, exon end)
         '''
-        return (self.start, self.end)
+        return self.start, self.end
 
     def get_gene(self):
         return self.gene
@@ -79,7 +72,7 @@ class Exon:
             if transcript in ii.transcript:
                 res = ii
                 break
-        if res ==  None:
+        if res is None:
             print "error"
         return res
 
@@ -92,7 +85,7 @@ class Exon:
             ss5.add(ii.end)
         ss3_l = sorted(list(ss3))
         ss5_l = sorted(list(ss5))
-        return (ss3_l,ss5_l)
+        return ss3_l, ss5_l
 
     def set_ir(self, ir) :
         self.ir |= ir

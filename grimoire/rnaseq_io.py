@@ -1,7 +1,6 @@
 from gene import Gene, Transcript
-from exon import Exon, detect_exons
+from exon import detect_exons
 from junction import Junction
-
 import grimoire.utils.utils as utils
 import pysam
 import gc
@@ -12,8 +11,8 @@ import gzip
 import urllib
 
 import ipdb
-
 import objgraph
+
 
 def __cross_junctions(read):
     '''
@@ -45,11 +44,11 @@ def __cross_junctions(read):
             elif op == 2:
                 off+= num
             elif op == 3:
-                jlist.append((read.pos+off,read.pos+off+num+1))
+                jlist.append((read.pos+off, read.pos+off+num+1))
                 off += num
 #    if len(jlist) !=0 : print "NOSTAR:", jlist, read.cigar
         
-    return (cross,jlist)
+    return cross, jlist
 
 
 def __is_unique(read):
@@ -63,6 +62,7 @@ def __is_unique(read):
     return True
     #return unique
 
+
 def __get_num_reads(read):
     try:
         nreads = int(read.opt('HI'))
@@ -71,7 +71,8 @@ def __get_num_reads(read):
 #    return 1
     return nreads
 
-def count_mapped_reads( filename, exp_idx):
+
+def count_mapped_reads(filename, exp_idx):
     stats = pysam.flagstat(filename)
     mapped_reads = int(stats[2].split()[0])
     mglobals.num_mapped_reads[exp_idx] = mapped_reads
@@ -97,7 +98,7 @@ def read_sam_or_bam(filenames, gene_list, readlen, chrom):
     skip_gene = 0
     non_skip = 0
 
-    for strand in ('+','-') :
+    for strand in ('+', '-'):
         for gne in gene_list[strand]:
             junctions = []
             strt,end = gne.get_coordinates()
@@ -191,9 +192,9 @@ def read_sam_or_bam(filenames, gene_list, readlen, chrom):
             re = gne.calculate_RPKM(exp_index, mglobals.num_mapped_reads[exp_index])
             if re == 0 :
                 #print "SIN READS??? :",gene.id
-                skip_gene +=1
+                skip_gene += 1
             else:
-                non_skip +=1
+                non_skip += 1
     print "INVALID JUNC",    counter[0]
     print "READ WRONG GENE", counter[1]
     print "READ IN GENE",    counter[2]
@@ -273,7 +274,7 @@ def read_transcript_ucsc( filename ):
                 junc = Junction( pre_end,None, None, None, gn,annotated=True )
                 trcpt.add_junction(junc)
                 pre_txex.add_5prime_junc(junc)
-            trcpt._sort_in_list(strand)
+            trcpt.sort_in_list()
         #end for t in text
         gc.collect()
         text = file.readlines(BUFFER)
@@ -299,9 +300,9 @@ def read_transcript_ucsc( filename ):
     return all_genes
 
 
-def read_bed_pcr( filename , list_genes):
+def read_bed_pcr(filename, list_genes):
     
-    input_f = open(filename,'r')
+    input_f = open(filename, 'r')
     readlines = input_f.readlines()
     alt_exon = []
     pre_chrom = ''
@@ -310,53 +311,58 @@ def read_bed_pcr( filename , list_genes):
     while lnum < len(readlines):
         more = True
         event = {}
-        while more :
+        while more:
             rl = readlines[lnum]
             tab = rl.strip().split()
             t = tab[3].split('_')
             event['name'] = '_'.join(t[:-1])
             reg = t[-1]
-            if reg == 'C2' : more = False
+            if reg == 'C2':
+                more = False
             event['chrom'] = tab[0]
             event['strand'] = tab[5]
             event[reg] = [int(tab[1]), int(tab[2])]
             score = tab[4].split('|')[0]
-            if score == '?': score = 0
+            if score == '?':
+                score = 0
             score = float(score)
-            if reg in ['A','A2']: alt_exon = event[reg]
-            lnum +=1
+            if reg in ['A', 'A2']:
+                alt_exon = event[reg]
+            lnum += 1
 
         chrom = event['chrom']
         strand = event['strand']
 
-        if chrom != pre_chrom :
+        if chrom != pre_chrom:
             try:
                 gene_list = list_genes[chrom]
             except KeyError:
                 continue
 
             pre_chrom = chrom
-            idx = {'+':0, '-':0}
+            idx = {'+': 0, '-': 0}
         name = event['name']
 
         if strand == '-':
-            region_list = ('C2','C1')
+            region_list = ('C2', 'C1')
         else:
-            region_list = ('C1','C2')
+            region_list = ('C1', 'C2')
 
         for reg in region_list:
             exon_start = event[reg][0]
             exon_end = event[reg][1]
 
-            while idx[strand]< len(gene_list[strand]):
+            while idx[strand] < len(gene_list[strand]):
                 gn = gene_list[strand][idx[strand]]
                 (g_start, g_end) = gn.get_coordinates()
-                if exon_end < g_start:  break
-                elif exon_start > g_end :
-                    idx[strand] +=1
+                if exon_end < g_start:
+                    break
+                elif exon_start > g_end:
+                    idx[strand] += 1
                     continue
-                ex = gn.exist_exon(exon_start,exon_end)
-                if ex is None : break
+                ex = gn.exist_exon(exon_start, exon_end)
+                if ex is None:
+                    break
                 ex.set_pcr_score(name, score, alt_exon)
 
                 break
@@ -365,14 +371,18 @@ def read_bed_pcr( filename , list_genes):
 gffInfoFields = ["seqid", "source", "type", "start", "end", "score", "strand", "phase", "attributes"]
 GFFRecord = namedtuple("GFFRecord", gffInfoFields)
 
+
 def __parse_gff_attributes(attributeString):
-    """Parse the GFF3 attribute column and return a dict"""#
+    """Parse the GFF3 attribute column and return a dict
+    :param attributeString:
+    """  #
     if attributeString == ".": return {}
     ret = {}
     for attribute in attributeString.split(";"):
         key, value = attribute.split("=")
         ret[urllib.unquote(key)] = urllib.unquote(value)
     return ret
+
 
 def __parse_gff3(filename):
     """
@@ -390,7 +400,7 @@ def __parse_gff3(filename):
             #If this fails, the file format is not standard-compatible
             assert len(parts) == len(gffInfoFields)
             #Normalize data
-            normalizedInfo = {
+            normalized_info = {
                 "seqid": None if parts[0] == "." else urllib.unquote(parts[0]),
                 "source": None if parts[1] == "." else urllib.unquote(parts[0]),
                 "type": None if parts[2] == "." else urllib.unquote(parts[2]),
@@ -402,14 +412,13 @@ def __parse_gff3(filename):
                 "attributes": __parse_gff_attributes(parts[8])
             }
             #Alternatively, you can emit the dictionary here, if you need mutabwility:
-            #    yield normalizedInfo
-            yield GFFRecord(**normalizedInfo)
+            #    yield normalized_info
+            yield GFFRecord(**normalized_info)
 
 
 def _prepare_and_dump(genes):
     n_genes = 0
     for chrom in genes.keys():
-
         temp_ex = []
         for strand, gg in genes[chrom].items():
             n_genes += len(gg)
@@ -424,7 +433,7 @@ def _prepare_and_dump(genes):
         utils.create_if_not_exists(temp_dir)
         temp_dir = "%s/tmp/%s" % (mglobals.outDir, chrom)
         ipdb.set_trace()
-426     objgraph.show_most_common_types(limit=20)
+        objgraph.show_most_common_types(limit=20)
 
         with open('%s/annot_genes.pkl' % temp_dir, 'w+b') as ofp:
             pickle.dump(genes[chrom], ofp)
