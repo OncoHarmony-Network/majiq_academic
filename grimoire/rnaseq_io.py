@@ -430,8 +430,8 @@ def _prepare_and_dump(genes):
         utils.set_exons_gc_content(chrom, temp_ex)
         print "Done."
         gc.collect()
-        utils.create_if_not_exists(temp_dir)
         temp_dir = "%s/tmp/%s" % (mglobals.outDir, chrom)
+        utils.create_if_not_exists(temp_dir)
         ipdb.set_trace()
         objgraph.show_most_common_types(limit=20)
 
