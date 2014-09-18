@@ -149,7 +149,6 @@ class Exon:
 #                self.ss_3p_list.append(end)
             res = ExonTx(start, end, trncpt, self)
             self.exonTx_list.append(res)
-
         return res
 
     def get_coverage(self, exp_idx):
