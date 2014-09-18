@@ -137,7 +137,7 @@ class Exon:
         for ii in self.exonTx_list:
             if start == ii.start and end == ii.end:
                 res = ii
-                ii.add_transcript(trncpt)
+                # ii.add_transcript(trncpt)
                 found = True
                 break
         if not found:
@@ -288,7 +288,7 @@ class ExonTx(object):
     def __init__(self, start, end, trnscpt, exon):
         self.start = start
         self.end = end
-        self.transcript = [trnscpt]
+        #self.transcript = [trnscpt]
         self.p3_junc = []
         self.p5_junc = []
 #        self.exon = exon
@@ -352,10 +352,10 @@ class ExonTx(object):
         for trn in self.transcript:
             if exb:
                 trn.add_junction(junc)
-            if exb1:
-                txex1.add_transcript(trn)
-            if exb2:
-                txex2.add_transcript(trn)
+            # if exb1:
+            #     txex1.add_transcript(trn)
+            # if exb2:
+            #     txex2.add_transcript(trn)
 
         del self
         return res
@@ -368,7 +368,7 @@ class ExonTx(object):
         for j5 in self.p5_junc:
             jcoord = j5.get_coordinates()
             #print 'P5',j5.get_gene().get_id(), j5.get_coordinates(), self.start, self.end
-            if jcoord[1] >= self.start and jcoord[1] <= self.end:
+            if self.start <= jcoord[1] <= self.end:
                 #j5.add_donor(self)
                 j5_list.append(j5)
                 
@@ -376,7 +376,7 @@ class ExonTx(object):
         for j3 in self.p3_junc:
             jcoord = j3.get_coordinates()
             #print 'P3::',j3.get_gene().get_id(), j3.get_coordinates(), self.start, self.end
-            if jcoord[1] >= self.start and jcoord[1] <= self.end:
+            if self.start <= jcoord[1] <= self.end:
                 #j3.add_acceptor(self)
                 j3_list.append(j3)
 
@@ -414,8 +414,8 @@ class ExonTx(object):
 
             for idx, txex in enumerate(list_exontx):
                 for intr in introns:
-                    if not txex.overlaps(intr[0],intr[1]): 
-                        if intr[0] > txex.end or (intr[0] <= txex.end and intr[1] > txex.end ):
+                    if not txex.overlaps(intr[0], intr[1]):
+                        if intr[0] > txex.end or (intr[0] <= txex.end < intr[1] ):
                             txex.ir = True
                         continue
                     ''' intron retention'''
