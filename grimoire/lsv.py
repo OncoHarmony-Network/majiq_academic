@@ -12,13 +12,15 @@ STARGET = 'target'
 
 class LSV(object):
 
-    def __init__(self, exon, id, junctions, type):
-        if type != SSOURCE and type != STARGET: raise RuntimeError('Incorrect LSV type %s' % type)
+    def __init__(self, exon, lsv_id, junctions, lsv_type):
+        if lsv_type != SSOURCE and lsv_type != STARGET:
+            raise RuntimeError('Incorrect LSV type %s' % lsv_type)
         self.coords = exon.get_coordinates()
-        self.id = id
-        junction_list = [x for x in  junctions if x is not None]
-        if len(junction_list) < 2 or exon.ir : raise ValueError
-        self.type = type
+        self.id = lsv_id
+        junction_list = [x for x in junctions if x is not None]
+        if len(junction_list) < 2 or exon.ir:
+            raise ValueError
+        self.type = lsv_type
         self.exon = exon
 
         self.tlb_junc = {}
@@ -26,12 +28,12 @@ class LSV(object):
         if self.ext_type == 'intron':
             raise ValueError
 
-        if len(junction_list) > len(self.ext_type.split('|')) -1 :
+        if len(junction_list) > len(self.ext_type.split('|')) - 1:
             print " ERROR_LSV :: with inconsistent junction-type %s, %s" % (len(junction_list), len(self.ext_type.split('|')))
 
         for kk,vv in self.tlb_junc.items():
             count = np.sum(junction_list[vv].coverage[0].toarray())
-            if kk.find('e0') != -1  and count != 0:
+            if kk.find('e0') != -1 and count != 0:
                 raise ValueError
 
         self.junctions = []
@@ -45,7 +47,6 @@ class LSV(object):
 #        if self.check_type(self.ext_type) == -1:
         #    pdb.set_trace()
 #            pass
-
 
     def check_type(self, type):
         tab = type.split('|')[1:]
@@ -83,7 +84,7 @@ class LSV(object):
         return self.junctions
 
     def is_Ssource(self):
-        return bool(self.type==SSOURCE)
+        return bool(self.type ==  SSOURCE)
 
     def is_Starget(self):
         return bool(self.type == STARGET)

@@ -18,11 +18,11 @@ class Junction:
         self.start = start
         self.end = end
         if donor is None:
-            self.donor = -1
+            self.donor_id = -1
         else:
             self.donor_id = donor.get_id()
         if acceptor is None:
-            self.acceptor = -1
+            self.acceptor_id = -1
         else:
             self.acceptor_id = acceptor.get_id()
         self.gene_name = gene.get_id()
@@ -85,10 +85,16 @@ class Junction:
 #        self.gc_factor[exp_idx,:] = gc_factor
 
     def add_donor(self, donor):
-        self.donor = donor
+        if donor is None:
+            self.donor_id = -1
+        else:
+            self.donor_id = donor.get_id()
 
     def add_acceptor(self, acceptor):
-        self.acceptor = acceptor
+        if acceptor is None:
+            self.acceptor_id = -1
+        else:
+            self.acceptor_id = acceptor.get_id()
 
     def update_junction_read(self, exp_idx, read_n, start, gc, unique):
 #        print "J3",self, getrefcount(self)
