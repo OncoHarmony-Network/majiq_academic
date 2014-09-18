@@ -459,7 +459,7 @@ def read_gff(filename):
                 all_genes[chrom] = {'+': [], '-': []}
             gn = Gene(gene_name, chrom, strand, start, end)
 
-            if gene_name in mglobals.gene_tlb and gene != mglobals.gene_tlb[gene_name]:
+            if gene_name in mglobals.gene_tlb and gn != mglobals.gene_tlb[gene_name]:
                 raise RuntimeError('Two Different Genes with the same name %s' % gene_name)
             mglobals.gene_tlb[gene_name] = gn
             gene = gn.is_gene_in_list(all_genes[chrom][strand], gene_name)

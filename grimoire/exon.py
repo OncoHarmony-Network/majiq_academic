@@ -200,7 +200,7 @@ class Exon:
 
         startC1, endC1 = gene.exons[vidC1].get_coordinates()
         startC2, endC2 = gene.exons[vidC2].get_coordinates()
-
+ 
         name = "%s.%s" % (gene.id,idA)
         
         fp.write("%s\t%d\t%d\t%s_C1\t0\t%s\n" % (chrom, startC1, endC1, name, strand))
@@ -288,6 +288,8 @@ class ExonTx(object):
         self.start = start
         self.end = end
         #self.transcript = [trnscpt]
+        self.transcript_name = [trnscpt.get_id()]
+        self.gene_name = trnscpt.get_gene().get_id()
         self.p3_junc = []
         self.p5_junc = []
 #        self.exon = exon
@@ -307,6 +309,13 @@ class ExonTx(object):
         if p3_junc not in self.p3_junc:
             self.p3_junc.append(p3_junc)
 
+    def get_transcript(self):
+        res = []
+        for tx_name in self.transcript_name:
+            res.append(mglobals.gene_tlb[self.gene_name].get_transcript(tx_name))
+        return res
+
+
     def get_5prime_junc(self):
         return self.p5_junc
 
@@ -325,13 +334,13 @@ class ExonTx(object):
         exb1 = False
         exb2 = False
         if self.end - intron_coords[1]+1 > 5:
-            txex1 = gn.new_annotated_exon(intron_coords[1]+1, self.end, self.transcript[0], bl = False)
+            txex1 = gn.new_annotated_exon(intron_coords[1]+1, self.end, self.get_transcript()[0], bl=False)
             txex1.p5_junc.extend(self.p5_junc)
             res.append(txex1)
             txex1.junction_consistency()
             exb1 = True
         if intron_coords[0] - 1 - self.start > 5:
-            txex2 = gn.new_annotated_exon(self.start, intron_coords[0]-1, self.transcript[0], bl= False)
+            txex2 = gn.new_annotated_exon(self.start, intron_coords[0]-1, self.get_transcript()[0], bl=False)
             txex2.p3_junc.extend(self.p3_junc)
             exb2 = True
             res.append(txex2)
@@ -348,7 +357,7 @@ class ExonTx(object):
             txex2.p5_junc.append(junc)
             txex1.p3_junc.append(junc)
 
-        for trn in self.transcript:
+        for trn in self.get_transcript():
             if exb:
                 trn.add_junction(junc)
             # if exb1:
