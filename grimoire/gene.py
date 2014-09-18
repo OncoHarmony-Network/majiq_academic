@@ -2,7 +2,6 @@
 import numpy as np
 
 import mglobals
-from grimoire.utils.singleton import Singleton
 from grimoire.exon import Exon, ExonTx, collapse_list_exons, print_list_exons
 from grimoire.lsv import LSV
 
