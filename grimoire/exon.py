@@ -200,7 +200,7 @@ class Exon:
 
         startC1, endC1 = gene.exons[vidC1].get_coordinates()
         startC2, endC2 = gene.exons[vidC2].get_coordinates()
- 
+
         name = "%s.%s" % (gene.id,idA)
         
         fp.write("%s\t%d\t%d\t%s_C1\t0\t%s\n" % (chrom, startC1, endC1, name, strand))
@@ -239,9 +239,10 @@ class Exon:
                     continue
                 sum_reads = 0
                 for jj in exread.p3_junc:
-                    if jj is None: continue
+                    if jj is None:
+                        continue
                     sum_reads += jj.readN.sum()
-                if sum_reads >= minreads : 
+                if sum_reads >= minreads:
                     temp_set.add(ss5p)
         local_5p = len(temp_set)
 
@@ -264,7 +265,7 @@ class ExonRead(object):
         self.p5_junc = [post_junc]
 
     def get_coordinates( self ):
-        return (self.start, self.end)
+        return self.start, self.end
 
     def get_5p_junc(self):
         return self.p5_junc
@@ -314,7 +315,6 @@ class ExonTx(object):
         for tx_name in self.transcript_name:
             res.append(mglobals.gene_tlb[self.gene_name].get_transcript(tx_name))
         return res
-
 
     def get_5prime_junc(self):
         return self.p5_junc

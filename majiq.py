@@ -21,6 +21,7 @@ except Exception:
 
 def majiq_builder(samfiles_list, chrom, pcr_validation=False):
 
+    print "running chromosome" % chrom
     temp_dir = "%s/tmp/%s" % (mglobals.outDir, chrom)
     temp_file = open('%s/annot_genes.pkl' % temp_dir, 'rb')
     gene_list = pickle.load(temp_file)

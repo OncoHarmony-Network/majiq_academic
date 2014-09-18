@@ -78,6 +78,9 @@ class Gene:
     def get_transcript(self, trans_id):
         return self.transcript_tlb[trans_id]
 
+    def get_exon_by_id(self, ex_id):
+        return self.exons[ex_id-1]
+
     # def get_transcript_AS_candidates(self):
     #     return self.transAScandidates
 
@@ -236,7 +239,7 @@ class Gene:
     def prepare_exons(self):
 #        self.exons.sort(reverse = isneg)
         self.exons.sort()
-        for idx,exs in enumerate(self.exons):
+        for idx, exs in enumerate(self.exons):
             exs.id = idx+1
         self.exonNum = len(self.exons)
         return

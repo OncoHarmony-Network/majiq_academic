@@ -17,15 +17,21 @@ class Junction:
         
         self.start = start
         self.end = end
-        self.donor = donor
-        self.acceptor = acceptor
+        if donor is None:
+            self.donor = -1
+        else:
+            self.donor_id = donor.get_id()
+        if acceptor is None:
+            self.acceptor = -1
+        else:
+            self.acceptor_id = acceptor.get_id()
         self.gene_name = gene.get_id()
         self.txN = 1
         self.annotated = annotated
-        self.readN      = np.zeros(shape=(mglobals.num_experiments), dtype=np.int)
-        self.coverage   = scipy.sparse.lil_matrix((mglobals.num_experiments, (mglobals.readLen-16)+1), dtype=np.int)
+        self.readN = np.zeros(shape=(mglobals.num_experiments), dtype=np.int)
+        self.coverage = scipy.sparse.lil_matrix((mglobals.num_experiments, (mglobals.readLen-16)+1), dtype=np.int)
         self.gc_content = np.zeros(shape=((mglobals.readLen-16)+1), dtype=np.float)
-        self.id         = "%s:%s-%s" % (self.gene_name, start, end)
+        self.id = "%s:%s-%s" % (self.gene_name, start, end)
 
     def __hash__(self):
         return hash(self.start) ^ hash(self.end) ^ hash(self.gene_name)
@@ -50,10 +56,18 @@ class Junction:
         return self.start, self.end
 
     def get_donor(self):
-        return self.donor
+        if self.donor_id == -1:
+            ex = None
+        else:
+            ex = self.get_gene().get_exon_by_id(self.donor_id)
+        return ex
 
     def get_acceptor(self):
-        return self.acceptor
+        if self.acceptor_id == -1:
+            ex = None
+        else:
+            ex = self.get_gene().get_exon_by_id(self.acceptor_id)
+        return ex
 
     def get_gc_content(self):
         return self.gc_content

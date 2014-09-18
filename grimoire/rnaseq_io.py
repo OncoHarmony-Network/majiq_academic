@@ -262,7 +262,7 @@ def read_transcript_ucsc( filename ):
                 trcpt.add_exon(txex)
                 junc = gn.exist_junction(pre_end,start)
                 if junc is None:
-                    junc = Junction(pre_end,start, None, None,gn,annotated=True)
+                    junc = Junction(pre_end,start, None, None, gn, annotated=True)
                 trcpt.add_junction(junc)
                 txex.add_3prime_junc(junc)
                 if not pre_end is None:
