@@ -259,7 +259,7 @@ class ExonRead(object):
     def __init__(self, start, end, exon, pre_junc, post_junc, rna_seq=None):
         self.start = start
         self.end = end
-        self.exon = exon
+#        self.exon = exon
         self.RNASeq = rna_seq
         self.p3_junc = [pre_junc]
         self.p5_junc = [post_junc]
@@ -291,7 +291,7 @@ class ExonTx(object):
         self.transcript = [trnscpt]
         self.p3_junc = []
         self.p5_junc = []
-        self.exon = exon
+#        self.exon = exon
         self.ir = False
 
     def get_coordinates(self):
