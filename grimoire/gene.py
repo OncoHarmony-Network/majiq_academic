@@ -1,22 +1,40 @@
 #!/usr/bin/python
 import numpy as np
-import grimoire.utils.utils as utils
+
 import mglobals
+from grimoire.utils.singleton import Singleton
 from grimoire.exon import Exon, ExonTx, collapse_list_exons, print_list_exons
 from grimoire.lsv import LSV
 
 
+# class GeneTLB(Singleton):
+#     trans = {}
+#
+#     def get_gene(self, gid):
+#         return self.trans[gid]
+#
+#     def add_gene(self, gid, gene):
+#         if gid in gene and gene != self.trans[gid]:
+#             raise
+#         self.trans[gid] = gene
+
+
+
 class Gene:
-    __eq__ = lambda self, other: self.chromosome == other.chromosome and self.strand == other.strand and self.start < other.end and self.end > other.start
-    __ne__ = lambda self, other: self.chromosome != other.chromosome or self.strand != other.strand or self.start >= other.end or self.end <= other.start
-    __lt__ = lambda self, other: ( self.chromosome < other.chromosome  or ( self.chromosome == other.chromosome and  (self.end < other.start or (self.end > other.start and self.start < other.end and self.strand == '+' and other.strand == '-'))))
-#    __le__ = lambda self, other: ( self.chromosome < other.chromosome  or ( self.chromosome == other.chromosome and  (self.end < other.start or (self.start == other.start and self.end == other.end and )))
-    __gt__ = lambda self, other: ( self.chromosome > other.chromosome  or ( self.chromosome == other.chromosome and (self.start > other.end or (self.end > other.start and self.start < other.end and self.strand == '-' and other.strand == '+'))))
-#    __ge__ = lambda self, other: ( self.chromosome > other.chromosome  or ( self.chromosome == other.chromosome and  (self.start > other.end and self.end <= other.start)))
-#    __lt__ = lambda self, other: ( self.chromosome < other.chromosome  or ( self.chromosome == other.chromosome and  ((self.strand == '+' and other.strand == '-') or (self.strand == other.strand and self.end < other.start))))
-#    __le__ = lambda self, other: ( self.chromosome < other.chromosome  or ( self.chromosome == other.chromosome and  ((self.strand == '+' and other.strand == '-') or (self.strand == other.strand and self.start <= other.end and self.end >= other.start))))
-#    __gt__ = lambda self, other: ( self.chromosome > other.chromosome  or ( self.chromosome == other.chromosome and  ((self.strand == '-' and other.strand == '+') or (self.strand == other.strand and self.start > other.end))))
-#    __ge__ = lambda self, other: ( self.chromosome > other.chromosome  or ( self.chromosome == other.chromosome and  ((self.strand == '-' and other.strand == '+') or (self.strand == other.strand and self.start > other.end and self.end <= other.start))))
+    __eq__ = lambda self, other: (self.chromosome == other.chromosome and self.strand == other.strand
+                                  and self.start < other.end and self.end > other.start)
+    __ne__ = lambda self, other: (self.chromosome != other.chromosome or self.strand != other.strand
+                                  or self.start >= other.end or self.end <= other.start)
+    __lt__ = lambda self, other: (self.chromosome < other.chromosome
+                                  or (self.chromosome == other.chromosome
+                                      and (self.end < other.start
+                                           or (self.end > other.start and self.start < other.end
+                                               and self.strand == '+' and other.strand == '-'))))
+    __gt__ = lambda self, other: (self.chromosome > other.chromosome
+                                  or (self.chromosome == other.chromosome
+                                      and (self.start > other.end
+                                           or (self.end > other.start and self.start < other.end
+                                               and self.strand == '-' and other.strand == '+'))))
 
     def __init__(self, gene_id, chrom, strand, start, end):
         self.id = gene_id
@@ -36,21 +54,21 @@ class Gene:
     def __hash__(self):
         return hash((self.id,self.chromosome, self.strand, self.start, self.end))
 
-    def get_id (self):
+    def get_id(self):
         return self.id
 
     def get_strand(self):
         return self.strand
 
-    def get_RNAread_list(self):
-#        print "GET RNAlist",len(self.RNAread_list[0])
-        return self.RNAread_list
+#     def get_RNAread_list(self):
+# #        print "GET RNAlist",len(self.RNAread_list[0])
+#         return self.RNAread_list
 
     def get_read_count(self):
         return self.readNum
-
-    def get_RPKM(self):
-        return self.RPKM
+    #
+    # def get_RPKM(self):
+    #     return self.RPKM
 
     def get_chromosome(self):
         return self.chromosome
@@ -58,11 +76,11 @@ class Gene:
     def get_coordinates(self):
         return self.start, self.end
 
-    def get_transcript_AS_candidates(self):
-        return self.transAScandidates
+    # def get_transcript_AS_candidates(self):
+    #     return self.transAScandidates
 
-    def get_transcript_CONST_candidates(self):
-        return self.transCONSTcandidates
+    # def get_transcript_CONST_candidates(self):
+    #     return self.transCONSTcandidates
 
     ''' Set functions '''
 
@@ -111,12 +129,13 @@ class Gene:
     def is_gene_in_list(self, list, name):
         res = None
         for ll in list:
-            if ( self.chromosome == ll.chromosome and self.strand == ll.strand and self.start < ll.end and self.end > ll.start):
+            if self.chromosome == ll.chromosome and self.strand == ll.strand \
+                    and self.start < ll.end and self.end > ll.start:
                 res = ll
                 if not name in ll.otherNames:
                     ll.otherNames.append(name)
-                ll.start = min(ll.start,self.start)
-                ll.end = max(ll.end,self.end)
+                ll.start = min(ll.start, self.start)
+                ll.end = max(ll.end, self.end)
                 break
         return res
 
@@ -148,7 +167,7 @@ class Gene:
         self.RPKM[experiment_index] = rpkm
         return rpkm
 
-    def exist_exon (self, start, end):
+    def exist_exon(self, start, end):
         '''
          .. function: exist_exon (self, start, end):
             Check if the pair (start, end) are in a known exon in the gene. If not return None. We assume 
@@ -163,7 +182,7 @@ class Gene:
         for ee in self.exons:
 #            print "EX GEN:",ee.start, ee.end
 #            print "New EX:",start, end
-            if (start < ee.end and end > ee.start) :
+            if start < ee.end and end > ee.start:
                 res = ee
                 break
 #                fnd +=1
@@ -172,12 +191,12 @@ class Gene:
 #                    res = None
         return res
 
-    def exist_junction(self,start,end):
-        if start == None or end == None:
+    def exist_junction(self, start, end):
+        if start is None or end is None:
             return
         res = None
-        for ff in self.transcript_list :
-            res = ff.in_junction_list(start,end)
+        for ff in self.transcript_list:
+            res = ff.in_junction_list(start, end)
             if not res is None:
                 break
         return res
@@ -214,7 +233,7 @@ class Gene:
         lst.sort()
         return lst
 
-    def prepare_exons( self ) :
+    def prepare_exons(self):
 #        self.exons.sort(reverse = isneg)
         self.exons.sort()
         for idx,exs in enumerate(self.exons):
@@ -256,7 +275,7 @@ class Gene:
         for ex in self.exons:
             s_exons.add(ex.get_coordinates())
             
-        assert len(s_exons) == len(self.exons), "Exist duplicates in exons in Gene %s"%(self.id)
+        assert len(s_exons) == len(self.exons), "Exist duplicates in exons in Gene %s" % (self.id)
 
     def new_lsv_definition(self, exon, jlist, lsv_type):
 
@@ -293,7 +312,7 @@ class Gene:
     # mark for delete
     def get_transcript_mat(self, ASvsConst):
 
-        if (len(self.transcript_list) == 1 and ASvsConst == 'AS') or len(self.exons) <3:
+        if (len(self.transcript_list) == 1 and ASvsConst == 'AS') or len(self.exons) < 3:
             return None
 
         mat = np.ndarray(shape=(len(self.transcript_list), len(self.exons)), dtype='bool')
@@ -305,7 +324,6 @@ class Gene:
                     mat[idx_t, g_ex.id-1] = 0
 
         return mat
-
 
     def get_rnaseq_mat(self, rand10k, lsv=False):
 
@@ -319,13 +337,16 @@ class Gene:
         exon_list = []
         ex_list = self.get_exon_list()
         for ex in ex_list:
-            if ex.id is None: continue
+            if ex.id is None:
+                continue
             l3 = len(set(ex.ss_3p_list))
             l5 = len(set(ex.ss_5p_list))
-            if l3 == 0 or l5 == 0: continue
+            if l3 == 0 or l5 == 0:
+                continue
 
             local_3p, local_5p = ex.ss_variant_counts()
-            if local_3p > 1 and local_5p >1 : ss_both_var += 1
+            if local_3p > 1 and local_5p > 1:
+                ss_both_var += 1
 
             ss_3p_vars[local_3p] += 1
             ss_5p_vars[local_5p] += 1
@@ -334,13 +355,12 @@ class Gene:
             st5 = len(ss5_l)
             ss3_l += sorted([ss3 for ss3 in set(ex.ss_3p_list)])
             ss5_l += sorted([ss5 for ss5 in set(ex.ss_5p_list)])
-            tlb[exidx] = [range(st3,len(ss3_l)),range(st5,len(ss5_l))]
+            tlb[exidx] = [range(st3, len(ss3_l)), range(st5, len(ss5_l))]
             exon_list.append(ex)
             exidx += 1
 
-        mat  = np.empty(shape=(len(ss5_l),len(ss3_l)),dtype='int')
-        jmat = np.empty(shape=(len(ss5_l),len(ss3_l)),dtype='object')
-        mat.fill(0)
+        mat = np.zeros(shape=(len(ss5_l), len(ss3_l)), dtype='int')
+        jmat = np.empty(shape=(len(ss5_l), len(ss3_l)), dtype='object')
         jmat.fill(None)
 
         junc_list = self.get_all_junctions()
@@ -350,30 +370,30 @@ class Gene:
             x = ss5_l.index(st)
             y = ss3_l.index(end)
 
-            if junc.readN.sum() >0:
+            if junc.readN.sum() > 0:
                 count_mat = junc.readN.sum()
-            elif junc.is_annotated() and lsv :
+            elif junc.is_annotated() and lsv:
                 count_mat = -1
             else:
                 count_mat = 0
-            mat [ x, y ] = count_mat
-            jmat[ x, y ] = junc
+            mat[x, y] = count_mat
+            jmat[x, y] = junc
 
             for exp_idx in range(mglobals.num_experiments):
-                if junc.get_readN(exp_idx) >= 10 : #and in_DB:
+                if junc.get_readN(exp_idx) >= 10:
                     rand10k[exp_idx].add(junc)
 
-        if not lsv :
-            return mat, jmat, tlb, [ss_3p_vars, ss_5p_vars,ss_both_var]
+        if not lsv:
+            return mat, jmat, tlb, [ss_3p_vars, ss_5p_vars, ss_both_var]
         else:
-            return mat, exon_list, tlb, [ss_3p_vars, ss_5p_vars,ss_both_var]
+            return mat, exon_list, tlb, [ss_3p_vars, ss_5p_vars, ss_both_var]
 
 
-class Transcript :
+class Transcript(object):
 
-    def __init__( self, name, gene,txstart,txend ):
+    def __init__(self, name, gene, txstart, txend):
         self.id = name
-        self.gene = gene
+        self.gene_name = gene.get_id()
         self.exon_list = []
         self.junction_list = []
         self.txstart = txstart
@@ -386,7 +406,7 @@ class Transcript :
         return
 
     def get_gene(self):
-        return self.gene
+        return mglobals.gene_tlb[self.gene_name]
 
     def get_id(self):
         return self.id
@@ -394,7 +414,7 @@ class Transcript :
     def get_junction_list(self):
         return self.junction_list
 
-    def in_junction_list(self,start,end):
+    def in_junction_list(self, start, end):
         res = None 
 #        if self.gene.strand == '-':
 #            tmp = start
@@ -407,17 +427,16 @@ class Transcript :
                 break
         return res
 
-    def add_junction (self, junc):
+    def add_junction(self, junc):
         if junc not in self.junction_list:
             self.junction_list.append(junc)
 
     def sort_in_list(self):
-        strand = self.gene.get_strand()
-        if strand == '+':
-            isneg=False
-        else:
-            isneg = True
+        # strand = self.get_gene().get_strand()
+        # if strand == '+':
+        #     isneg = False
+        # else:
+        #     isneg = True
         self.junction_list.sort()
 #        self.exon_list.sort(reverse=isneg)
         self.exon_list.sort()
-

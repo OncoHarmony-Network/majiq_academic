@@ -37,12 +37,12 @@ def __cross_junctions(read):
 #    print"THIS IS NOT a WELL defined STAR output"
         off = 0
         for op, num in read.cigar:
-            if op in [0,5,6,7,8] : 
+            if op in [0, 5, 6, 7, 8] :
                 off += num
-            elif op in [1,5]:
+            elif op in [1, 5]:
                 off += 0
             elif op == 2:
-                off+= num
+                off += num
             elif op == 3:
                 jlist.append((read.pos+off, read.pos+off+num+1))
                 off += num
@@ -54,7 +54,7 @@ def __cross_junctions(read):
 def __is_unique(read):
     unique = True
     try:
-        if read.opt('NH') >1 :
+        if read.opt('NH') > 1:
             unique = False
     except KeyError:
         if read.flag & 0x100 == 1: 
@@ -78,7 +78,7 @@ def count_mapped_reads(filename, exp_idx):
     mglobals.num_mapped_reads[exp_idx] = mapped_reads
 
 
-def is_neg_strand (read):
+def is_neg_strand(read):
     res = False
     if read.flag & 0x10 == 0x10 : 
 #        print "FLAG",read.flag
@@ -92,7 +92,7 @@ def read_sam_or_bam(filenames, gene_list, readlen, chrom):
 #def read_sam_or_bam(filename, gene_list, readlen, chrom, exp_index):
 
     counter = [0] * 6
-    samfile = [ pysam.Samfile( xx, "rb" ) for xx in filenames ]
+    samfile = [pysam.Samfile(xx, "rb") for xx in filenames]
     temp_ex = []
     NUnum = 0
     skip_gene = 0
@@ -101,7 +101,7 @@ def read_sam_or_bam(filenames, gene_list, readlen, chrom):
     for strand in ('+', '-'):
         for gne in gene_list[strand]:
             junctions = []
-            strt,end = gne.get_coordinates()
+            strt, end = gne.get_coordinates()
             j_list = gne.get_all_junctions()
             ex_list = gne.get_exon_list()
 
@@ -432,8 +432,8 @@ def _prepare_and_dump(genes):
         gc.collect()
         temp_dir = "%s/tmp/%s" % (mglobals.outDir, chrom)
         utils.create_if_not_exists(temp_dir)
-        ipdb.set_trace()
-        objgraph.show_most_common_types(limit=20)
+        # ipdb.set_trace()
+        # objgraph.show_most_common_types(limit=20)
 
         with open('%s/annot_genes.pkl' % temp_dir, 'w+b') as ofp:
             pickle.dump(genes[chrom], ofp)
@@ -458,6 +458,10 @@ def read_gff(filename):
             if not chrom in all_genes:
                 all_genes[chrom] = {'+': [], '-': []}
             gn = Gene(gene_name, chrom, strand, start, end)
+
+            if gene_name in mglobals.gene_tlb and gene != mglobals.gene_tlb[gene_name]:
+                raise RuntimeError('Two Different Genes with the same name %s' % gene_name)
+            mglobals.gene_tlb[gene_name] = gn
             gene = gn.is_gene_in_list(all_genes[chrom][strand], gene_name)
             if not gene is None:
                 del gn

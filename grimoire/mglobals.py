@@ -3,6 +3,8 @@ import numpy as np
 import os
 import ConfigParser
 
+global gene_tlb
+
 def ConfigSectionMap(Config, section):
     dict1 = {}
     options = Config.options(section)
@@ -42,12 +44,12 @@ def global_conf_ini(filename):
 
     global num_experiments, exp_list, readLen, tissue_repl, sam_dir, num_mapped_reads, genome, outDir, temp_oDir
     global A3SS, A5SS, SEev, bothSS, totalSE
-    global MINREADS , MINPOS
+    global MINREADS, MINPOS
 
     config = ConfigParser.ConfigParser()
     config.read(filename)
-    exp = ConfigSectionMap(config,"experiments")
-    general = ConfigSectionMap(config,"info")
+    exp = ConfigSectionMap(config, "experiments")
+    general = ConfigSectionMap(config, "info")
     exp_list = []
     tissue_repl = {}
     temp_oDir = []

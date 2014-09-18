@@ -16,7 +16,7 @@ class LSV(object):
         if type != SSOURCE and type != STARGET: raise RuntimeError('Incorrect LSV type %s' % type)
         self.coords = exon.get_coordinates()
         self.id = id
-        junction_list = [ x for x in  junctions if x is not None] 
+        junction_list = [x for x in  junctions if x is not None]
         if len(junction_list) < 2 or exon.ir : raise ValueError
         self.type = type
         self.exon = exon
@@ -98,7 +98,7 @@ class LSV(object):
         return self.exon.get_strand()
 
     def get_chromosome(self):
-        return self.exon.get_gene().get_chromosome()
+        return self.exon.get_gene.get_chromosome()
 
     def set_type(self, jlist, tlb_junc):
         ex_id = self.exon.get_id()

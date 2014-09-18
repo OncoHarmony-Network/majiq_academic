@@ -5,33 +5,30 @@ import mglobals
 
 class Junction:
 
-    __eq__ = lambda self, other: self.start == other.start  and self.end == other.end
-    __ne__ = lambda self, other: self.start != other.start  or  self.end != other.end
-    __lt__ = lambda self, other: self.start < other.start   or (self.start == other.start and self.end < other.end)
-    __le__ = lambda self, other: self.start <= other.start  or (self.start == other.start and self.end <= other.end)
-    __gt__ = lambda self, other: self.start > other.start   or (self.start == other.start and self.end > other.end)
-    __ge__ = lambda self, other: self.start >= other.start  or (self.start == other.start and self.end >= other.end)
+    __eq__ = lambda self, other: self.start == other.start and self.end == other.end
+    __ne__ = lambda self, other: self.start != other.start or self.end != other.end
+    __lt__ = lambda self, other: self.start < other.start or (self.start == other.start and self.end < other.end)
+    __le__ = lambda self, other: self.start <= other.start or (self.start == other.start and self.end <= other.end)
+    __gt__ = lambda self, other: self.start > other.start or (self.start == other.start and self.end > other.end)
+    __ge__ = lambda self, other: self.start >= other.start or (self.start == other.start and self.end >= other.end)
 
-    def __init__ (self, start, end,donor, acceptor, gene, readN=0, annotated=False):
+    def __init__(self, start, end, donor, acceptor, gene, readN=0, annotated=False):
         ''' The start and end in junctions are the last exon in '''
         
-        readLength = mglobals.readLen
-
         self.start = start
         self.end = end
         self.donor = donor
         self.acceptor = acceptor
-        self.gene = gene
+        self.gene_name = gene.get_id()
         self.txN = 1
         self.annotated = annotated
         self.readN      = np.zeros(shape=(mglobals.num_experiments), dtype=np.int)
-        self.coverage   = scipy.sparse.lil_matrix((mglobals.num_experiments, (readLength-16)+1), dtype=np.int)
-        self.gc_content = np.zeros(shape=((readLength-16)+1), dtype=np.float)
-        self.id         = "%s:%s-%s"%(self.get_gene().get_id(),self.get_ss_5p(),self.get_ss_3p())
+        self.coverage   = scipy.sparse.lil_matrix((mglobals.num_experiments, (mglobals.readLen-16)+1), dtype=np.int)
+        self.gc_content = np.zeros(shape=((mglobals.readLen-16)+1), dtype=np.float)
+        self.id         = "%s:%s-%s" % (self.gene_name, start, end)
 
-            
     def __hash__(self):
-        return hash(self.start) ^ hash(self.end) ^ hash(self.gene.id)
+        return hash(self.start) ^ hash(self.end) ^ hash(self.gene_name)
 
     # GETTERs
     def get_id(self):
@@ -47,7 +44,7 @@ class Junction:
         return self.txN
 
     def get_gene(self):
-        return self.gene
+        return mglobals.gene_tlb[self.gene_name]
 
     def get_coordinates(self):
         return self.start, self.end
@@ -79,19 +76,19 @@ class Junction:
     def add_acceptor(self, acceptor):
         self.acceptor = acceptor
 
-    def update_junction_read( self, exp_idx, readN, start, gc, unique) :
+    def update_junction_read(self, exp_idx, read_n, start, gc, unique):
 #        print "J3",self, getrefcount(self)
 
-        self.readN[exp_idx] += readN
-        left_ind = mglobals.readLen - (self.start - start) - 8 +1
-        if unique :
-            self.coverage[exp_idx,left_ind]+= readN
+        self.readN[exp_idx] += read_n
+        left_ind = mglobals.readLen - (self.start - start) - 8 + 1
+        if unique:
+            self.coverage[exp_idx, left_ind] += read_n
         else:
-            self.coverage[exp_idx,left_ind]= -1
+            self.coverage[exp_idx, left_ind] = -1
         self.gc_content[left_ind] = gc
 
-    def add_read_number(self, exp_idx, readN):
-        self.readN[exp_idx] += readN
+    def add_read_number(self, exp_idx, read_n):
+        self.readN[exp_idx] += read_n
 
 
 class MajiqJunc:
@@ -99,7 +96,7 @@ class MajiqJunc:
     def __init__(self, jnc, exp_idx):
         self.exons = {}
         if jnc is None:
-            self.gc_index = scipy.sparse.lil_matrix((1,(mglobals.readLen-16)+1),dtype=np.int)
+            self.gc_index = scipy.sparse.lil_matrix((1,(mglobals.readLen-16)+1), dtype=np.int)
             self.name = None
             self.id = "None"
 
@@ -109,11 +106,11 @@ class MajiqJunc:
             self.exons['strand'] = None
             self.coverage = scipy.sparse.lil_matrix((1,(mglobals.readLen-16)+1), dtype=np.int)
         else:
-            self.name = "%s:%s-%s" % (jnc.get_gene().get_id(), jnc.get_ss_5p(), jnc.get_ss_3p())
-            self.id = "%s:%s-%s" % (jnc.get_gene().get_chromosome(), jnc.get_ss_5p(), jnc.get_ss_3p())
+            self.name = "%s:%s-%s" % (jnc.get_gene.get_id(), jnc.get_ss_5p(), jnc.get_ss_3p())
+            self.id = "%s:%s-%s" % (jnc.get_gene.get_chromosome(), jnc.get_ss_5p(), jnc.get_ss_3p())
 
-            self.exons['chrom'] = jnc.get_gene().get_chromosome()
-            self.exons['strand'] = jnc.get_gene().get_strand()
+            self.exons['chrom'] = jnc.get_gene.get_chromosome()
+            self.exons['strand'] = jnc.get_gene.get_strand()
             if jnc.get_donor() is None:
                 self.exons['coord1'] = [0, 0]
             else:
