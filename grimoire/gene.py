@@ -39,7 +39,7 @@ class Gene:
         self.id = gene_id
         self.chromosome = chrom
         self.strand = strand
-        self.transcript_list = []
+        self.transcript_tlb = {}
         self.exons = []
         self.start = start
         self.end = end
@@ -75,6 +75,9 @@ class Gene:
     def get_coordinates(self):
         return self.start, self.end
 
+    def get_transcript(self, trans_id):
+        return self.transcript_tlb[trans_id]
+
     # def get_transcript_AS_candidates(self):
     #     return self.transAScandidates
 
@@ -91,24 +94,23 @@ class Gene:
     #     self.transCONSTcandidates += list_candidates
     #     return
 
-    def add_transcript(self, tcrpt ):
-        if tcrpt.txstart < self.start :
+    def add_transcript(self, tcrpt):
+        if tcrpt.txstart < self.start:
             self.start = tcrpt.txstart
-        if tcrpt.txend > self.end :
+        if tcrpt.txend > self.end:
             self.end = tcrpt.txend
 
-        self.transcript_list.append(tcrpt)
-        return
-    
-    def add_intron_retention(self, lsv_IR):
-        self.ir_list.append(lsv_IR)
-
-
-    def add_read_count(self, readNum,exp_idx):
-        self.readNum[exp_idx] += readNum
+        self.transcript_tlb[tcrpt.get_id()] = tcrpt
         return
 
-    def add_read(self, read, exp_idx ):
+    def add_intron_retention(self, lsv_ir):
+        self.ir_list.append(lsv_ir)
+
+    def add_read_count(self, read_num, exp_idx):
+        self.readNum[exp_idx] += read_num
+        return
+
+    def add_read(self, read, exp_idx):
         self.readNum[exp_idx] += read.get_read_count()
 #        (self.RNAread_list[exp_idx]).append(read)
         return
@@ -117,9 +119,9 @@ class Gene:
         self.exons.append(exon)
         return
 
-    def in_transcript_list(self,tcrpt_name):
+    def in_transcript_list(self, tcrpt_name):
         res = False
-        for ff in self.transcript_list :
+        for ff in self.transcript_list:
             if ff.get_id() == tcrpt_name:
                 res = True
                 break
@@ -138,8 +140,7 @@ class Gene:
                 break
         return res
 
-
-    def calculate_RPKM( self, experiment_index, total_Reads ) :
+    def calculate_RPKM(self, experiment_index, total_reads):
         '''
          .. function: calculate_RPKM( self, experiment_index, total_Reads )
 
@@ -148,7 +149,7 @@ class Gene:
             rpkm = rpk / (#total reads/1000000)
 
             :param experiment_index: Index of the experiment from the origrinal experiment list
-            :param total_Reads: Total Number of reads of the gene.
+            :param total_reads: Total Number of reads of the gene.
             :rtype: RPKM value for this gene
         '''
         if len(self.exons) == 0 : return 0
@@ -160,7 +161,7 @@ class Gene:
 
 #        print self.readNum, experiment_index
         rpk = float(self.readNum[experiment_index]) / float(total_kb/1000)
-        mreads = float(total_Reads)/ float(1000000)
+        mreads = float(total_reads)/float(1000000)
         rpkm = float(rpk)/mreads
         #print "Strand",self.strand,"::",total_kb, self.readNum, rpk, mreads, rpkm
         self.RPKM[experiment_index] = rpkm
@@ -194,8 +195,8 @@ class Gene:
         if start is None or end is None:
             return
         res = None
-        for ff in self.transcript_list:
-            res = ff.in_junction_list(start, end)
+        for txcpt in self.transcript_tlb.values():
+            res = txcpt.in_junction_list(start, end)
             if not res is None:
                 break
         return res
@@ -209,7 +210,7 @@ class Gene:
 
         for tt in self.transcript_list:
             for jj in tt.get_junction_list():
-                if not jj is None and not jj in lst :
+                if not jj is None and not jj in lst:
                     lst.add(jj)
         s_junc = list(lst)
         return sorted([xx for xx in s_junc if not xx is None])
@@ -218,7 +219,7 @@ class Gene:
         lst = set()
         for tt in self.transcript_list:
             for jj in tt.get_junction_list():
-                if not jj is None and not jj in lst :
+                if not jj is None and not jj in lst:
                     lst.add(jj)
         s_junc = list(lst)
         return sorted(s_junc)
@@ -243,7 +244,7 @@ class Gene:
     def get_exon_list(self):
         return self.exons
 
-    def get_all_ss(self, anot_only = False ):
+    def get_all_ss(self, anot_only=False):
 
         ss = set()
         for ex in self.exons:
@@ -274,7 +275,7 @@ class Gene:
         for ex in self.exons:
             s_exons.add(ex.get_coordinates())
             
-        assert len(s_exons) == len(self.exons), "Exist duplicates in exons in Gene %s" % (self.id)
+        assert len(s_exons) == len(self.exons), "Exist duplicates in exons in Gene %s" % self.id
 
     def new_lsv_definition(self, exon, jlist, lsv_type):
 
