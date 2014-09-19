@@ -91,8 +91,8 @@ def merge_and_create_majiq_file(chr_list, pref_file):
 
             info = dict()
             info['experiment'] = mglobals.exp_list[exp_idx]
-            info['GC_bins'] = mglobals.gc_bins[exp_idx]
-            info['GC_bins_val'] = mglobals.gc_bins_val[exp_idx]
+            # info['GC_bins'] = mglobals.gc_bins[exp_idx]
+            # info['GC_bins_val'] = mglobals.gc_bins_val[exp_idx]
             info['genome'] = mglobals.genome
             info['num_reads'] = mglobals.num_mapped_reads[exp_idx]
 
@@ -204,12 +204,14 @@ def generate_visualization_output(allgenes, temp_dir):
                         a3 = []
                         for ss3 in set(ex.ss_3p_list):
                             for jidx, jjl in enumerate(junc_l):
-                                if ss3 != jjl[1] : continue
+                                if ss3 != jjl[1]:
+                                    continue
                                 a3.append(jidx)
                         a5 = []
                         for ss5 in set(ex.ss_5p_list):
                             for jidx, jjl in enumerate(junc_l):
-                                if ss5 != jjl[0] : continue
+                                if ss5 != jjl[0]:
+                                    continue
                                 a5.append(jidx)
                         if ex.annotated and ex.coverage[exp_idx].sum() == 0.0:
                             visual_type = 2
@@ -230,8 +232,7 @@ def generate_visualization_output(allgenes, temp_dir):
                         exon_list.append( eg )
                     gene_list.append(GeneGraphic(gg.get_id(), gg.get_strand(), exon_list, junc_list, gg.get_chromosome()))
 
-
-            file_pi = open('%s/%s.splicegraph' % (temp_dir, mglobals.exp_list[exp_idx]),'w+')
+            file_pi = open('%s/%s.splicegraph' % (temp_dir, mglobals.exp_list[exp_idx]), 'w+')
             pickle.dump(gene_list, file_pi)
             file_pi.close()
 
@@ -240,72 +241,75 @@ def prepare_junctions_gc(junc, exp_idx):
 
     gc = np.zeros(shape=(mglobals.readLen - 16+1))
     gci = np.zeros(shape=(mglobals.readLen - 16+1))
-    for jj in range(mglobals.readLen - 16+1) :
-        if not junc is None and junc.get_gc_content()[exp_idx,jj] != 0:
+    for jj in range(mglobals.readLen - 16+1):
+        if not junc is None and junc.get_gc_content()[exp_idx, jj] != 0:
             #gci[jj] = __gc_factor_ind(junc.get_gc_content()[exp_idx,jj],exp_idx)
             pass
             #gc[jj] = mglobals.gc_factor[exp_idx](junc.get_gc_content()[exp_idx,jj])
 
     if not junc is None:
-        junc.add_gc_content_positions( gci,gc)
+        junc.add_gc_content_positions(gci, gc)
     return
 
 
-def print_junc_matrices(mat, tlb=None,fp=None):
+def print_junc_matrices(mat, tlb=None, fp=None):
     if fp is None:
-        out = open ('./junc_matrix.tab', 'a+')
+        out = open('./junc_matrix.tab', 'a+')
     else:
         out = sys.stdout
-    out.write("\n=== BEGIN %s === \n\n"%id)
-    (N,M)= mat.shape
+    out.write("\n=== BEGIN %s === \n\n" % id)
+    N, M = mat.shape
     header = [0]*N
     if not tlb is None:
         out.write("Nan\t")
-        for ex,(p1,p2) in tlb.items():
-            for nid,n in enumerate(p1):
-                out.write("%d\t"%(ex+1))
-            for nid,n in enumerate(p2):
+        for ex, (p1, p2) in tlb.items():
+            for nid, n in enumerate(p1):
+                out.write("%d\t" % (ex+1))
+            for nid, n in enumerate(p2):
 #                header[nid] = "%d:%d\t"%(ex,nid)
-                header[n] = "%d"%(ex+1)
+                header[n] = "%d" % (ex+1)
     out.write("\n")
     for ii in np.arange(N):
-        if not tlb is None: out.write("%s\t"%header[ii])
+        if not tlb is None:
+            out.write("%s\t" % header[ii])
         for jj in np.arange(M):
-            val = mat[ii,jj]
-            out.write("%s\t"%val)
+            val = mat[ii, jj]
+            out.write("%s\t" % val)
         out.write("\n")
-    out.write("\n=== END %s === \n\n"%id)
-    if fp is None: out.close()
+    out.write("\n=== END %s === \n\n" % id)
+    if fp is None:
+        out.close()
 
 
-def get_validated_pcr_lsv( candidates, outDir ):
+def get_validated_pcr_lsv(candidates, out_dir):
 
     pcr_list = []
     print "get_validated_pcr_lsv", len(candidates[0])
     for lsv in candidates[0]:
-        if not lsv.has_pcr_score() : continue
+        if not lsv.has_pcr_score():
+            continue
         alt_coord = lsv.exon.get_pcr_candidate()
         score = lsv.get_pcr_score()
-        for jidx,jj in enumerate(lsv.junctions):
+        for jidx, jj in enumerate(lsv.junctions):
             if lsv.is_Ssource:
                 excoord = jj.acceptor.get_coordinates()
             else:
                 excoord = jj.donor.get_coordinates()
-            if excoord[1]> alt_coord[0] and excoord[0] < alt_coord[1]:
-                name = "%s#%s"%(lsv.id,jidx) 
+            if excoord[1] > alt_coord[0] and excoord[0] < alt_coord[1]:
+                name = "%s#%s" % (lsv.id, jidx)
                 pcr_lsv = [lsv.exon.get_pcr_name(), name, score]
-                pcr_list.append( pcr_lsv )
+                pcr_list.append(pcr_lsv)
                 print "PCR", ' '.join(pcr_lsv)
-    op = open('%s/pcr.pkl'%outDir,'w+')
+    op = open('%s/pcr.pkl' % out_dir, 'w+')
     pickle.dump(pcr_list, op)
     op.close()
 
 
 def gc_factor_calculation(exon_list, nb):
 
-    local_bins     = np.zeros( shape=(mglobals.num_experiments,nb+1), dtype=np.dtype('float'))
-    local_meanbins = np.zeros( shape=(mglobals.num_experiments,nb),   dtype=np.dtype('float'))
-    local_factor   = np.zeros( shape=(mglobals.num_experiments,nb),   dtype=np.dtype('float'))
+    local_bins = np.zeros(shape=(mglobals.num_experiments, nb+1), dtype=np.dtype('float'))
+    local_meanbins = np.zeros(shape=(mglobals.num_experiments, nb),   dtype=np.dtype('float'))
+    local_factor = np.zeros(shape=(mglobals.num_experiments, nb),   dtype=np.dtype('float'))
 
     dummy_counter = 0
 
@@ -336,7 +340,7 @@ def gc_factor_calculation(exon_list, nb):
             # print "cont", len(count)
             # print count
             # print gc
-            count,gc = izip(*sorted(izip(count, gc), key=lambda x: x[1]))
+            count, gc = izip(*sorted(izip(count, gc), key=lambda x: x[1]))
 
             num_regions = len(count)
             nperbin =  num_regions / nb
@@ -350,7 +354,7 @@ def gc_factor_calculation(exon_list, nb):
                 if ii == nb-1:
                     ub = num_regions
                 else:
-                    ub = (ii+1)*nperbin
+                    ub = (ii+1) * nperbin
 #                print "LB",lb , ub
 
                 a = np.asarray(count[lb:ub])
@@ -358,30 +362,30 @@ def gc_factor_calculation(exon_list, nb):
 #                print "a",a
 #                print "t",t
                 try:
-                    local_bins[exp_n,ii] = t.min()
+                    local_bins[exp_n, ii] = t.min()
                 except ValueError:
-                    local_bins[exp_n,ii] = 0
-                if ii == nb -1 :
-                    local_bins[exp_n,ii+1] = np.max(t)
+                    local_bins[exp_n, ii] = 0
+                if ii == nb -1:
+                    local_bins[exp_n, ii+1] = np.max(t)
 
                 #mean_bins[ii] = np.median(t)
                 mean_bins[ii] = np.mean(t)
-                bins[ii] = mquantiles(a,prob=np.arange(0.1,0.9,0.1))
-                print "quantiles",bins[ii]
+                bins[ii] = mquantiles(a, prob=np.arange(0.1, 0.9, 0.1))
+                print "quantiles", bins[ii]
             #print bins
             for qnt in range(8):
                 qnt_bns = np.ndarray(len(bins))
                 for idx,bb in enumerate(bins):
                     qnt_bns[idx] = bb[qnt]
-                print "BINS",qnt_bns
+                print "BINS", qnt_bns
                 #quant_median[qnt]=np.median(qnt_bns)
-                quant_median[qnt]=np.mean(qnt_bns)
+                quant_median[qnt] = np.mean(qnt_bns)
 
             #print quant_median
             gc_factor = np.zeros(nb,dtype=np.dtype('float'))
             for ii in range(nb):
-                offst = np.zeros(len(quant_median),dtype=np.dtype('float'))
-                for idx,xx in enumerate(quant_median):
+                offst = np.zeros(len(quant_median), dtype=np.dtype('float'))
+                for idx, xx in enumerate(quant_median):
                     offst[idx] = float(bins[ii][idx]) / float(xx)
                 gc_factor[ii] = 1/np.mean(offst)
 
@@ -397,22 +401,22 @@ def plot_gc_content():
     idx = 0
     for tissue, list_idx in mglobals.tissue_repl.items():
         pyplot.figure(idx)
-        for exp_n in list_idx :
+        for exp_n in list_idx:
 #            f = interpolate.interp1d(mglobals.gc_means[exp_n], mglobals.gc_bins_vaL[exp_n])
 #            print mglobals.gc_means[exp_n]
             mn = mglobals.gc_means[exp_n].min()
             mx = mglobals.gc_means[exp_n].max()
-            xx = np.arange(mn, mx ,0.001)
+            xx = np.arange(mn, mx , 0.001)
             yy = mglobals.gc_factor[exp_n](xx)
-            print "XX",xx
-            print "Yy",yy
-            pyplot.plot(xx,yy,label=mglobals.exp_list[exp_n])
-            pyplot.axis((0.3,0.7,0.5,1.5))
+            print "XX", xx
+            print "Yy", yy
+            pyplot.plot(xx, yy, label=mglobals.exp_list[exp_n])
+            pyplot.axis((0.3, 0.7, 0.5, 1.5))
             pyplot.title("Gc factor")
             pyplot.grid()
             pyplot.legend(loc='upper left')
 #        pyplot.show()
-        pyplot.savefig('%s/gcontent_%s.png'%(mglobals.outDir,tissue))
+        pyplot.savefig('%s/gcontent_%s.png' % (mglobals.outDir,tissue))
         idx += 1
 
 

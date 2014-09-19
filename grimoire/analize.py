@@ -1,108 +1,7 @@
 import numpy as np
-import math
 from utils import utils
-from lsv import LSV, SSOURCE, STARGET
+from lsv import SSOURCE, STARGET
 import mglobals
-
-
-def annotated_AS_events( gene_list, ASvsConst):
-
-    total = 0
-    for strand,glist in gene_list.items():
-        for gn in glist:
-
-            per_gene = 0
-            mat = gn.get_transcript_mat(ASvsConst)
-            if mat is None:
-                continue
-            print "%s events for Gene %s " % (ASvsConst, gn.get_id()),
-    #        print mat
-            if ASvsConst == 'AS':
-                out = detecting_annotated_SE_events(mat)
-                gn.add_transcript_AS_candidates(out)
-            else:
-                out = analize_bin_matrix_const_firstlast(mat)
-                gn.add_transcript_CONST_candidates(out)
-    
-            per_gene += len(out)
-            total += per_gene
-            print "..... %s" % per_gene
-
-    print "TOTAL ANNOTATED AS events:", total
-
-
-def analize_bin_matrix_const_firstlast(mat):
-    
-    crrct = []
-    incrrct = []
-    trans = []
-    out = []
-    for jj in range(1, mat.shape[1]-1):
-        bords = (jj-1, jj, jj+1)
-        for ii in range(mat.shape[0]):
-            if mat[ii, jj-1] != mat[ii, jj] or mat[ii, jj+1] != mat[ii, jj]:
-                if not bords in incrrct:
-                    incrrct.append(bords)
-                break
-#            i_pre = jj -2
-#            while i_pre >= 0 :
-#                if mat[ii,i_pre] == 1: break
-#                i_pre -=1
-#
-#            i_post = jj +2
-#            while i_post < mat.shape[1] :
-#                if mat[ii,i_post] == 1: break
-#                i_post +=1
-#            if i_pre >= 0 and i_post < mat.shape[1]: 
-#                continue
-
-            if mat[ii,jj] == 1:
-                if not bords in crrct:
-                    crrct.append(bords)
-                    trans.append(ii)
-    for idx, ii in enumerate(crrct):
-        if not ii in incrrct:
-            #out.append((trans[idx],ii[0],ii[1],ii[2]))
-            out.append(ii)
-    return out
-
-
-def detecting_annotated_SE_events(mat):
-    out = []
-    v_101 = []
-    v_111 = []
-    trans = []
-    for jj in range(1, mat.shape[1]-1):
-        for ii in range(mat.shape[0]):
-            i_pre = jj - 1
-            while i_pre >= 0:
-                if mat[ii, i_pre] == 1:
-                    break
-                i_pre -= 1
-            if i_pre < 0:
-                continue
-
-            i_post = jj + 1
-            while i_post < mat.shape[1]:
-                if mat[ii, i_post] == 1:
-                    break
-                i_post += 1
-            if i_post >= mat.shape[1]:
-                continue
-
-            bords = (i_pre, jj, i_post)
-            if mat[ii, jj] == 1:
-                if not bords in v_111:
-                    v_111.append(bords)
-                    trans.append(ii)
-            else:
-                if not bords in v_101:
-                    v_101.append(bords)
-    for idx, ii in enumerate(v_111):
-        if ii in v_101:
-            #out.append((trans[idx],ii[0],ii[1],ii[2]))
-            out.append(ii)
-    return out
 
 
 def __junction_filter_check(junc):
@@ -157,7 +56,6 @@ def __total_ss_minreads(junc_mat, minreads=5):
 
 
 def __get_enabled_junction(con, exp_list):
-    max = 0
     for jrow in con:
         for jj in jrow:
             #print jj
@@ -170,7 +68,7 @@ def __get_enabled_junction(con, exp_list):
     return jj
 
 
-def LSV_detection(gene_list, chr):
+def lsv_detection(gene_list, chr):
 
     num_ss_var = [[0]*20, [0]*20, 0]
 
@@ -191,7 +89,8 @@ def LSV_detection(gene_list, chr):
             vip = []
             for idx, ex in enumerate(exon_list):
                 sc = ex.get_pcr_score()
-                if sc is None: continue
+                if sc is None:
+                    continue
                 vip.append(idx)
 
             for ss in range(2):
@@ -202,7 +101,7 @@ def LSV_detection(gene_list, chr):
 
 #            print "---------------- %s --------------"%gn.get_id()
             utils.print_junc_matrices(mat, tlb=tlb, fp=True)
-            SS, ST = LSV_matrix_detection(mat, tlb, (False, False, False), vip)
+            SS, ST = lsv_matrix_detection(mat, tlb, (False, False, False), vip)
             for lsv_index, lsv_lst in enumerate((SS, ST)):
                 lsv_type = (SSOURCE, STARGET)[lsv_index]
                 sstype = ['5prime', '3prime'][lsv_index]
@@ -247,7 +146,7 @@ def LSV_detection(gene_list, chr):
     return lsv_list, const_set
 
 
-def LSV_matrix_detection( mat, exon_to_ss, b_list, vip_set=[]):
+def lsv_matrix_detection( mat, exon_to_ss, b_list, vip_set=[]):
     '''
        Rules for const are:
         1. All the junction from A should go to C1 or C2
@@ -256,8 +155,6 @@ def LSV_matrix_detection( mat, exon_to_ss, b_list, vip_set=[]):
         4. Number of reads from C1-A should be equivalent to number of reads from A-C2
     '''
     lsv_list = [[], []]
-
-    print "LSV matrix"
 
     #change bucle for iterate by exons
     for ii in range(1, len(exon_to_ss) - 1):

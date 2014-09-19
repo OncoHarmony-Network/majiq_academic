@@ -29,7 +29,7 @@ def majiq_builder(samfiles_list, chrom, pcr_validation=False, logging=None):
     logging.info("[%s] Reading BAM files" % chrom)
     rnaseq_io.read_sam_or_bam(samfiles_list, gene_list, mglobals.readLen, chrom, logging=logging)
     logging.info("[%s] Detecting LSV" % chrom)
-    lsv, const = analize.LSV_detection(gene_list, chrom, logging=logging)
+    lsv, const = analize.lsv_detection(gene_list, chrom, logging=logging)
     file_name = '%s.obj' % chrom
     if pcr_validation:
         utils.get_validated_pcr_lsv(lsv, temp_dir)
