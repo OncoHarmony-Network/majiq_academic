@@ -124,13 +124,13 @@ class MajiqJunc:
             self.exons['coord1'] = [0, 0]
             self.exons['coord2'] = [0, 0]
             self.exons['strand'] = None
-            self.coverage = scipy.sparse.lil_matrix((1,(mglobals.readLen-16)+1), dtype=np.int)
+            self.coverage = scipy.sparse.lil_matrix((1, (mglobals.readLen-16)+1), dtype=np.int)
         else:
-            self.name = "%s:%s-%s" % (jnc.get_gene.get_id(), jnc.get_ss_5p(), jnc.get_ss_3p())
-            self.id = "%s:%s-%s" % (jnc.get_gene.get_chromosome(), jnc.get_ss_5p(), jnc.get_ss_3p())
+            self.name = "%s:%s-%s" % (jnc.get_gene().get_id(), jnc.get_ss_5p(), jnc.get_ss_3p())
+            self.id = "%s:%s-%s" % (jnc.get_gene().get_chromosome(), jnc.get_ss_5p(), jnc.get_ss_3p())
 
-            self.exons['chrom'] = jnc.get_gene.get_chromosome()
-            self.exons['strand'] = jnc.get_gene.get_strand()
+            self.exons['chrom'] = jnc.get_gene().get_chromosome()
+            self.exons['strand'] = jnc.get_gene().get_strand()
             if jnc.get_donor() is None:
                 self.exons['coord1'] = [0, 0]
             else:
@@ -142,7 +142,7 @@ class MajiqJunc:
                 self.exons['coord2'] = jnc.get_acceptor().get_coordinates()
 
             self.coverage = jnc.coverage[exp_idx, :]
-            self.gc_factor = scipy.sparse.lil_matrix((1,(mglobals.readLen-16)+1), dtype=np.float)
+            self.gc_factor = scipy.sparse.lil_matrix((1, (mglobals.readLen-16)+1), dtype=np.float)
             for jj in range(mglobals.readLen-16+1):
                 dummy = jnc.gc_content[jj]
                 self.gc_factor[0, jj] = dummy

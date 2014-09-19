@@ -271,7 +271,7 @@ class ExonRead(object):
         return self.p5_junc
 
     def bed_format(self):
-        chrom = self.exon.get_gene.get_chromosome()
+        chrom = self.exon.get_gene().get_chromosome()
         strng = "%s\t%s\t%s\t.\t0\t.\t%s\t%s" % (chrom, self.start, self.end, self.start, self.end)
         return strng
 
@@ -495,7 +495,7 @@ def collapse_list_exons(listexons, gne):
 
 
 def __half_exon(ss_type, junc, read_rna):
-    gene = junc.get_gene
+    gene = junc.get_gene()
     if ss_type == '3prime':
         coord = junc.get_ss_3p()
     else:
@@ -598,10 +598,10 @@ def detect_exons(gene, junction_list, read_rna):
                 if not last_5prime is None:
                     end = last_5prime.get_ss_5p()
                     for ss in opened_exon:
-                        if ss.get_gene != last_5prime.get_gene:
+                        if ss.get_gene() != last_5prime.get_gene():
                             continue
                         start = ss.get_ss_3p()
-                        new_exons += new_exon_definition(start, end, read_rna, ss, last_5prime, ss.get_gene)
+                        new_exons += new_exon_definition(start, end, read_rna, ss, last_5prime, ss.get_gene())
                     last_5prime = None
                     opened = 0
                     opened_exon = []

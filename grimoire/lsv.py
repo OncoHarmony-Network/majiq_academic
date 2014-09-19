@@ -99,7 +99,7 @@ class LSV(object):
         return self.exon.get_strand()
 
     def get_chromosome(self):
-        return self.exon.get_gene.get_chromosome()
+        return self.exon.get_gene().get_chromosome()
 
     def set_type(self, jlist, tlb_junc):
         ex_id = self.exon.get_id()

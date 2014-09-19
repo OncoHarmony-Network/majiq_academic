@@ -67,16 +67,16 @@ def __gc_factor_ind(val, exp_idx):
     return res
 
 
-def prepare_LSV_table(LSV_list, non_as, temp_file):
+def prepare_LSV_table(lsv_list, non_as, temp_file):
 
     for name, ind_list in mglobals.tissue_repl.items():
         for idx, exp_idx in enumerate(ind_list):
 
-            jun = set(LSV_list[exp_idx])
-            majiq_table_as = np.zeros(shape=(len(LSV_list[exp_idx])), dtype=np.dtype('object'))
+            jun = set(lsv_list[exp_idx])
+            majiq_table_as = np.zeros(shape=(len(lsv_list[exp_idx])), dtype=np.dtype('object'))
             majiq_table_nonas = np.zeros(shape=(len(non_as[exp_idx])), dtype=np.dtype('object'))
 
-            for iix, lsv in enumerate(LSV_list[exp_idx]):
+            for iix, lsv in enumerate(lsv_list[exp_idx]):
                 majiq_table_as[iix] = lsv.to_majiqLSV(exp_idx)
             for jix, jn in enumerate(non_as[exp_idx]):
                 majiq_table_nonas[jix] = MajiqJunc(jn, exp_idx)
@@ -125,7 +125,10 @@ def merge_and_create_majiq_file(chr_list, pref_file):
             all_visual = list()
             for chrom in chr_list:
                 temp_dir = "%s/tmp/%s" % (mglobals.outDir, chrom)
-                temp_file = open('%s/%s.splicegraph' % (temp_dir, mglobals.exp_list[exp_idx]), 'rb')
+                temp_filename = '%s/%s.splicegraph' % (temp_dir, mglobals.exp_list[exp_idx])
+                if not os.path.exists(temp_filename):
+                    continue
+                temp_file = open(temp_filename, 'rb')
                 visual_gene_list = pickle.load(temp_file)
                 all_visual.extend(visual_gene_list)
             file_pi = open('%s/%s%s.splicegraph' % (mglobals.outDir, pref_file, mglobals.exp_list[exp_idx]), 'w+')
