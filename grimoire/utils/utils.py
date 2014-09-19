@@ -69,62 +69,69 @@ def __gc_factor_ind(val, exp_idx):
 
 def prepare_LSV_table(LSV_list, non_as, temp_file):
 
-    for name, ind_list in mglobals.tissue_repl.items() :
-        for idx,exp_idx in enumerate(ind_list) :
+    for name, ind_list in mglobals.tissue_repl.items():
+        for idx, exp_idx in enumerate(ind_list):
 
             jun = set(LSV_list[exp_idx])
-            majiq_table_as    = np.zeros( shape=(len(LSV_list[exp_idx])), dtype=np.dtype('object'))
-            majiq_table_nonas = np.zeros( shape=(len(non_as[exp_idx])), dtype=np.dtype('object'))
+            majiq_table_as = np.zeros(shape=(len(LSV_list[exp_idx])), dtype=np.dtype('object'))
+            majiq_table_nonas = np.zeros(shape=(len(non_as[exp_idx])), dtype=np.dtype('object'))
 
-            for iix, lsv in enumerate(LSV_list[exp_idx]) :
+            for iix, lsv in enumerate(LSV_list[exp_idx]):
                 majiq_table_as[iix] = lsv.to_majiqLSV(exp_idx)
-            for jix, jn in enumerate(non_as[exp_idx]) :
-                majiq_table_nonas[jix] = MajiqJunc( jn , exp_idx)
-            file_pi = open("%s/temp_%s.%s"%(mglobals.temp_oDir[exp_idx],mglobals.exp_list[exp_idx], temp_file), 'w+')
+            for jix, jn in enumerate(non_as[exp_idx]):
+                majiq_table_nonas[jix] = MajiqJunc(jn, exp_idx)
+            file_pi = open("%s/temp_%s.%s" % (mglobals.temp_oDir[exp_idx], mglobals.exp_list[exp_idx], temp_file), 'w+')
             pickle.dump((majiq_table_as, majiq_table_nonas), file_pi)
             file_pi.close()
 
 
-def merge_and_create_MAJIQ ( chr_list, ofile ):
-    for name, ind_list in mglobals.tissue_repl.items() :
-        for idx,exp_idx in enumerate(ind_list) :
+def merge_and_create_majiq_file(chr_list, pref_file):
+    for name, ind_list in mglobals.tissue_repl.items():
+        for idx, exp_idx in enumerate(ind_list):
+
+            info = dict()
+            info['experiment'] = mglobals.exp_list[exp_idx]
+            info['GC_bins'] = mglobals.gc_bins[exp_idx]
+            info['GC_bins_val'] = mglobals.gc_bins_val[exp_idx]
+            info['genome'] = mglobals.genome
+            info['num_reads'] = mglobals.num_mapped_reads[exp_idx]
+
             as_table = []
             nonas_table = []
-            info = {}
-#            info ['weigh_factor'] = mglobals.weigh_factor
-            info ['experiment']   = mglobals.exp_list[exp_idx]
-            info ['GC_bins']      = mglobals.gc_bins[exp_idx]
-            info ['GC_bins_val']  = mglobals.gc_bins_val[exp_idx]
             for chrom in chr_list:
-                filename = '%s/temp_%s.%s.obj'%(mglobals.temp_oDir[exp_idx], mglobals.exp_list[exp_idx], chrom)
-                if not os.path.exists(filename): continue
+                filename = '%s/temp_%s.%s.obj' % (mglobals.temp_oDir[exp_idx], mglobals.exp_list[exp_idx], chrom)
+                if not os.path.exists(filename):
+                    continue
                 file_pi2 = open(filename, 'rb')
-                as_t,non_as = pickle.load(file_pi2)
+                as_t, non_as = pickle.load(file_pi2)
                 as_table.append(as_t)
                 nonas_table.append(non_as)
-            if len(as_table)==0: continue
-            AT  = np.concatenate((as_table))
-            for lsv in AT: lsv.set_gc_factor( exp_idx )
-            NAT = np.concatenate((nonas_table))
-            for jnc in NAT: jnc.set_gc_factor( exp_idx )
+            if len(as_table) == 0:
+                continue
+            AT = np.concatenate(as_table)
+            for lsv in AT:
+                lsv.set_gc_factor(exp_idx)
+            NAT = np.concatenate(nonas_table)
+            for jnc in NAT:
+                jnc.set_gc_factor(exp_idx)
 
-            file_pi = open('%s/toJuan.%s.majiq'%(mglobals.outDir,mglobals.exp_list[exp_idx]), 'w+')
-            pickle.dump((info,AT, NAT), file_pi)
+            if pref_file == '':
+                pref_file = '%s.' % pref_file
+
+            file_pi = open('%s/%s%s.majiq' % (mglobals.outDir, pref_file, mglobals.exp_list[exp_idx]), 'w+')
+            pickle.dump((info, AT, NAT), file_pi)
             file_pi.close()
 
-            exp_info = {}
-            exp_info ['file']       = "%s/%s.sorted.bam"%(mglobals.sam_dir,mglobals.exp_list[exp_idx])
-            exp_info ['genome']     = mglobals.genome 
-            exp_info ['gc']         = mglobals.gc_bins[exp_idx]
-#            exp_info ['transcript'] = mglobals.transcripts
-            exp_info ['num_reads']  = mglobals.num_mapped_reads[exp_idx]
-
-            file_pi = open('%s/info.%s.majiq'%(mglobals.outDir,mglobals.exp_list[exp_idx]), 'w+')
-            pickle.dump(exp_info, file_pi)
+            all_visual = list()
+            for chrom in chr_list:
+                temp_dir = "%s/tmp/%s" % (mglobals.outDir, chrom)
+                temp_file = open('%s/%s.splicegraph' % (temp_dir, mglobals.exp_list[exp_idx]), 'rb')
+                visual_gene_list = pickle.load(temp_file)
+                all_visual.extend(visual_gene_list)
+            file_pi = open('%s/%s%s.splicegraph' % (mglobals.outDir, pref_file, mglobals.exp_list[exp_idx]), 'w+')
+            pickle.dump(all_visual, file_pi)
             file_pi.close()
-            
-#            print_lsv_extype(AT,'%s/LSV.%s.types'%(mglobals.outDir,mglobals.exp_list[exp_idx]))
-            
+
 
 def set_exons_gc_content(chrom, exon_list):
 
@@ -167,68 +174,66 @@ def set_exons_gc_content(chrom, exon_list):
         exon.set_gc_content(sequence)
 
 
-def generate_visualization_output(allgenes):
+def generate_visualization_output(allgenes, temp_dir):
 
     for name, ind_list in mglobals.tissue_repl.items():
         for idx, exp_idx in enumerate(ind_list):
             gene_list = []
-            for gl in allgenes.values():
-                for genes_l in gl.values():
-                    for gg in genes_l:
-                        junc_list = []
-                        junc_l = []
-                        for jj in gg.get_all_junctions():
-                            if jj.get_coordinates()[0] is None or jj.donor is None or jj.acceptor is None:
-                                continue
-                            if jj.is_annotated() and jj.readN[exp_idx].sum() == 0:
-                                jtype = 2
-                            elif jj.is_annotated() and jj.readN[exp_idx].sum() > 0:
-                                jtype = 0
-                            elif not jj.is_annotated() and jj.readN[exp_idx].sum() > mglobals.MINREADS: 
-                                jtype = 1
-                            else:
-                                jtype = 1
-                                continue
-                            junc_l.append(jj.get_coordinates())
-                            junc_list.append(JunctionGraphic( jj.get_coordinates(), jtype, jj.readN[exp_idx].sum()))
-                        junc_l = np.asarray(junc_l)
-                        exon_list = []
-                        for ex in gg.get_exon_list():
-                            cc = ex.get_coordinates()
-                            a3 = []
-                            for ss3 in set(ex.ss_3p_list):
-                                for jidx, jjl in enumerate(junc_l):
-                                    if ss3 != jjl[1] : continue
-                                    a3.append(jidx)
-                            a5 = []
-                            for ss5 in set(ex.ss_5p_list):
-                                for jidx, jjl in enumerate(junc_l):
-                                    if ss5 != jjl[0] : continue
-                                    a5.append(jidx)
-                            if ex.annotated and ex.coverage[exp_idx].sum() == 0.0:
-                                visual_type = 2
-                            elif ex.annotated and ex.coverage[exp_idx].sum() > 0.0:
-                                visual_type = 0
-                            elif not ex.annotated and ex.coverage[exp_idx].sum() > 0.0:
-                                visual_type = 1
-                            else:
-                                visual_type = 1
-        #                        continue
-                            extra_coords = []
-                            if ex.annotated :
-                                if ex.start < ex.db_coord[0]:
-                                    extra_coords.append([ex.start, ex.db_coord[0]-1])
-                                if ex.end > ex.db_coord[1]:
-                                    extra_coords.append([ex.db_coord[1]+1, ex.end])
-                            eg = ExonGraphic(a3, a5, cc, visual_type, intron_retention = ex.ir , coords_extra = extra_coords)
-                            exon_list.append( eg )
-                        gene_list.append(GeneGraphic(gg.get_id(), gg.get_strand(), exon_list, junc_list, gg.get_chromosome()))
+            for genes_l in allgenes.values():
+                for gg in genes_l:
+                    junc_list = []
+                    junc_l = []
+                    for jj in gg.get_all_junctions():
+                        if jj.get_coordinates()[0] is None or jj.donor is None or jj.acceptor is None:
+                            continue
+                        if jj.is_annotated() and jj.readN[exp_idx].sum() == 0:
+                            jtype = 2
+                        elif jj.is_annotated() and jj.readN[exp_idx].sum() > 0:
+                            jtype = 0
+                        elif not jj.is_annotated() and jj.readN[exp_idx].sum() > mglobals.MINREADS:
+                            jtype = 1
+                        else:
+                            jtype = 1
+                            continue
+                        junc_l.append(jj.get_coordinates())
+                        junc_list.append(JunctionGraphic(jj.get_coordinates(), jtype, jj.readN[exp_idx].sum()))
+                    junc_l = np.asarray(junc_l)
+                    exon_list = []
+                    for ex in gg.get_exon_list():
+                        cc = ex.get_coordinates()
+                        a3 = []
+                        for ss3 in set(ex.ss_3p_list):
+                            for jidx, jjl in enumerate(junc_l):
+                                if ss3 != jjl[1] : continue
+                                a3.append(jidx)
+                        a5 = []
+                        for ss5 in set(ex.ss_5p_list):
+                            for jidx, jjl in enumerate(junc_l):
+                                if ss5 != jjl[0] : continue
+                                a5.append(jidx)
+                        if ex.annotated and ex.coverage[exp_idx].sum() == 0.0:
+                            visual_type = 2
+                        elif ex.annotated and ex.coverage[exp_idx].sum() > 0.0:
+                            visual_type = 0
+                        elif not ex.annotated and ex.coverage[exp_idx].sum() > 0.0:
+                            visual_type = 1
+                        else:
+                            visual_type = 1
+    #                        continue
+                        extra_coords = []
+                        if ex.annotated :
+                            if ex.start < ex.db_coord[0]:
+                                extra_coords.append([ex.start, ex.db_coord[0]-1])
+                            if ex.end > ex.db_coord[1]:
+                                extra_coords.append([ex.db_coord[1]+1, ex.end])
+                        eg = ExonGraphic(a3, a5, cc, visual_type, intron_retention=ex.ir, coords_extra = extra_coords)
+                        exon_list.append( eg )
+                    gene_list.append(GeneGraphic(gg.get_id(), gg.get_strand(), exon_list, junc_list, gg.get_chromosome()))
 
 
-            file_pi = open('%s/%s.splicegraph' % (mglobals.outDir, mglobals.exp_list[exp_idx]),'w+')
-            pickle.dump((gene_list), file_pi)
+            file_pi = open('%s/%s.splicegraph' % (temp_dir, mglobals.exp_list[exp_idx]),'w+')
+            pickle.dump(gene_list, file_pi)
             file_pi.close()
-
 
 
 def prepare_junctions_gc(junc, exp_idx):

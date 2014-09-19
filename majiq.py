@@ -34,7 +34,7 @@ def majiq_builder(samfiles_list, chrom, pcr_validation=False):
         utils.get_validated_pcr_lsv(lsv, temp_dir)
 
     majiq_lsv.extract_gff(lsv, temp_dir)
-    utils.generate_visualization_output(gene_list)
+    #utils.generate_visualization_output(gene_list)
 
     utils.prepare_LSV_table(lsv, const, file_name)
 
@@ -84,11 +84,8 @@ def main(params):
     else:
         mglobals.global_init(params.readlen, params.dir, params.paths)
 
-    # global gene_tlb
-    # gene_tlb = grimoire.gene.GeneTLB()
     mglobals.gene_tlb = {}
 
-#    all_genes = rnaseq_io.read_gff(params.transcripts)
     chr_list = rnaseq_io.read_gff(params.transcripts)
     #chr_list = all_genes.keys()
     # temp = []
@@ -125,11 +122,11 @@ def main(params):
         pool.close()
         pool.join()
 
-    #utils.generate_visualization_output(all_genes)
-
     # utils.gc_factor_calculation(temp, 10)
     #utils.plot_gc_content()
-    utils.merge_and_create_MAJIQ(chr_list, 'tojuan.majiq')
+
+    #GATHER
+    utils.merge_and_create_majiq_file(chr_list, 'tojuan.majiq')
 
     fp = open('%s/lsv_miso.gtf' % mglobals.outDir, 'w+')
     fp2 = open('%s/pcr_match.tab' % mglobals.outDir, 'w+')
