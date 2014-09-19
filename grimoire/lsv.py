@@ -15,7 +15,7 @@ class LSV(object):
     def __init__(self, exon, lsv_id, junctions, lsv_type):
         if lsv_type != SSOURCE and lsv_type != STARGET:
             raise RuntimeError('Incorrect LSV type %s' % lsv_type)
-        self.coords = exon.get_coordinates()
+        self.coords = exon.get_coordinates
         self.id = lsv_id
         junction_list = [x for x in junctions if x is not None]
         if len(junction_list) < 2 or exon.ir:
@@ -207,7 +207,7 @@ def extract_SE_events( list_lsv_per_gene ):
             continue
         
         C1 = ss.coords
-        A = slist[sindx].acceptor.get_coordinates()
+        A = slist[sindx].acceptor.get_coordinates
         #ret_list.append( (C1.)
 
 
@@ -219,7 +219,7 @@ def extract_gff( list_lsv, outDir ):
         for lsv in lsv_l:
             trans = []
             jlist = lsv.junctions
-            lsv_coord = lsv.get_coordinates()
+            lsv_coord = lsv.get_coordinates
 
             gne = jlist[0].gene
             chrom = gne.get_chromosome()
@@ -227,10 +227,10 @@ def extract_gff( list_lsv, outDir ):
             gene = '%s\tscript\tgene\t'%chrom
             if lsv.type==SSOURCE:
                 if jlist[-1].acceptor is None: continue
-                gene += '%d\t%d\t'%(lsv_coord[0],jlist[-1].acceptor.get_coordinates()[1])
+                gene += '%d\t%d\t'%(lsv_coord[0],jlist[-1].acceptor.get_coordinates[1])
             else:
                 if jlist[0].donor is None: continue
-                gene += '%d\t%d\t'%(jlist[0].donor.get_coordinates()[0],lsv_coord[1])
+                gene += '%d\t%d\t'%(jlist[0].donor.get_coordinates[0],lsv_coord[1])
 
             gene += '.\t%s\t.\tName=%s;Parent=%s;ID=%s'%(strand,lsv.id, lsv.id, lsv.id)
             trans.append(gene)  
@@ -241,15 +241,15 @@ def extract_gff( list_lsv, outDir ):
                 ex2 = '%s\tscript\texon\t'%chrom
                 if lsv.type == SSOURCE:
                     if junc.acceptor is None: break
-                    excoord = junc.acceptor.get_coordinates()
-                    variant = junc.get_coordinates()
+                    excoord = junc.acceptor.get_coordinates
+                    variant = junc.get_coordinates
                     mrna +='%d\t%d\t'%(lsv_coord[0], excoord[1])
                     ex1 += '%d\t%d\t'%(lsv_coord[0], variant[0])
                     ex2 += '%d\t%d\t'%(variant[1],excoord[1])
                 else:
                     if junc.donor is None: break
-                    excoord = junc.donor.get_coordinates()
-                    variant = junc.get_coordinates()
+                    excoord = junc.donor.get_coordinates
+                    variant = junc.get_coordinates
                     mrna +='%d\t%d\t'%(excoord[0], lsv_coord[1])
                     ex1 += '%d\t%d\t'%(variant[1], lsv_coord[1])
                     ex2 += '%d\t%d\t'%(excoord[0], variant[0])
@@ -331,7 +331,7 @@ class MajiqLsv(object):
             if jj.acceptor != LSV.exon : lsv_exon_list.append(jj.acceptor)
             if jj.donor != LSV.exon : lsv_exon_list.append(jj.donor)
 
-            if jj.get_coordinates()[0] == None or jj.donor is None or jj.acceptor is None: continue
+            if jj.get_coordinates[0] == None or jj.donor is None or jj.acceptor is None: continue
             if jj.is_annotated() and jj.readN[exp_idx].sum() == 0:
                 jtype= 2
             elif jj.is_annotated() and jj.readN[exp_idx].sum() > 0:
@@ -341,13 +341,13 @@ class MajiqLsv(object):
             else:
                 jtype = 1
                 continue
-            junc_l.append(jj.get_coordinates())
-            junc_list.append(JunctionGraphic( jj.get_coordinates(), jtype, jj.readN[exp_idx].sum()))
+            junc_l.append(jj.get_coordinates)
+            junc_list.append(JunctionGraphic( jj.get_coordinates, jtype, jj.readN[exp_idx].sum()))
         junc_l = np.asarray(junc_l)
         lsv_exon_list.sort()
         exon_list = []
         for ex in lsv_exon_list:
-            cc = ex.get_coordinates()
+            cc = ex.get_coordinates
             a3 = []
             for ss3 in set(ex.ss_3p_list):
                 for jidx, jjl in enumerate(junc_l):

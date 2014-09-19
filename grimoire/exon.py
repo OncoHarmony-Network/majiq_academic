@@ -27,7 +27,7 @@ class Exon:
         self.id = None
         self.strand = strand
         self.gc_content = None
-        self.coverage = np.zeros(shape=(mglobals.num_experiments))
+        self.coverage = np.zeros(shape=mglobals.num_experiments)
         self.score = None
         self.pcr_name = None
         self.pcr_candidate = None
@@ -45,11 +45,11 @@ class Exon:
         return self.strand
 
     def get_coordinates(self):
-        '''
+        """
          .. function:: get_coordinates(self)
             Get the exon start and end.
             :rtype: tuple of 2 integers, (exon start, exon end)
-        '''
+        """
         return self.start, self.end
 
     def get_gene(self):
@@ -97,7 +97,7 @@ class Exon:
     def get_pcr_name(self):
         return self.pcr_name
 
-    def add_new_read(self, start, end, readSeq, s3p_junc, s5p_junc):
+    def add_new_read(self, start, end, read_seq, s3p_junc, s5p_junc):
 
         #assert start < end , " INCORRECT exon definition %s - %s "%(start, end)
         if start >= end:
@@ -124,7 +124,7 @@ class Exon:
             else:
                 self.ss_3p_list.append(start)
                 self.ss_5p_list.append(end)
-            res = ExonRead(start, end, self, s3p_junc, s5p_junc, readSeq)
+            res = ExonRead(start, end, self, s3p_junc, s5p_junc, read_seq)
             self.exonRead_list.append(res)
         return res
 
@@ -198,8 +198,8 @@ class Exon:
             vidC1 = self.id - 2
             vidC2 = self.id
 
-        startC1, endC1 = gene.exons[vidC1].get_coordinates()
-        startC2, endC2 = gene.exons[vidC2].get_coordinates()
+        startC1, endC1 = gene.exons[vidC1].get_coordinates
+        startC2, endC2 = gene.exons[vidC2].get_coordinates
 
         name = "%s.%s" % (gene.id,idA)
         
@@ -374,7 +374,7 @@ class ExonTx(object):
 
         j5_list = []
         for j5 in self.p5_junc:
-            jcoord = j5.get_coordinates()
+            jcoord = j5.get_coordinates
             #print 'P5',j5.get_gene().get_id(), j5.get_coordinates(), self.start, self.end
             if self.start <= jcoord[1] <= self.end:
                 #j5.add_donor(self)
@@ -382,7 +382,7 @@ class ExonTx(object):
                 
         j3_list = []
         for j3 in self.p3_junc:
-            jcoord = j3.get_coordinates()
+            jcoord = j3.get_coordinates
             #print 'P3::',j3.get_gene().get_id(), j3.get_coordinates(), self.start, self.end
             if self.start <= jcoord[1] <= self.end:
                 #j3.add_acceptor(self)
@@ -460,7 +460,7 @@ def print_list_exons(list_ex, msg=""):
     #list_ex.sort()
     print "%%%%%%%%%%%%LIST_EXONS %s"%msg
     for ex in list_ex:
-        print "\t\t",ex.get_coordinates(), ex
+        print "\t\t",ex.get_coordinates, ex
     print "%%%%%%%%%%%%%%%%%%%%%%"
 
 num_it = 0
@@ -488,7 +488,7 @@ def collapse_list_exons(listexons, gne):
                 exlist.extend(ex.collapse(overlp, gne))
 
             overlp = [ex]
-            start, end = ex.get_coordinates()
+            start, end = ex.get_coordinates
         if idx == len(listexons)-1:
             exlist.extend(ex.collapse(overlp, gne))
     num_it -= 1
@@ -503,7 +503,7 @@ def __half_exon(ss_type, junc, readRNA):
         coord = junc.get_ss_5p()
 
     for ex in gene.get_exon_list():
-        (ex_start, ex_end) = ex.get_coordinates()
+        (ex_start, ex_end) = ex.get_coordinates
         if ex_start <= coord <= ex_end:
             if ss_type == '3prime':
                 start = coord

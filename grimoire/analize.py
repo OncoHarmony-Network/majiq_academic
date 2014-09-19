@@ -107,7 +107,7 @@ def lsv_detection(gene_list, chr):
                 sstype = ['5prime', '3prime'][lsv_index]
 #                print lsv_lst
                 for idx in lsv_lst:
-                    coord = exon_list[idx].get_coordinates()
+                    coord = exon_list[idx].get_coordinates
                     jlist = exon_list[idx].get_junctions(sstype)
 
                     jlist = [x for x in jlist if x is not None]

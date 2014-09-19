@@ -2,7 +2,7 @@
 import numpy as np
 
 import mglobals
-from grimoire.exon import Exon, ExonTx, collapse_list_exons, print_list_exons
+from grimoire.exon import ExonTx, collapse_list_exons
 from grimoire.lsv import LSV
 
 
@@ -16,7 +16,6 @@ from grimoire.lsv import LSV
 #         if gid in gene and gene != self.trans[gid]:
 #             raise
 #         self.trans[gid] = gene
-
 
 
 class Gene:
@@ -45,14 +44,14 @@ class Gene:
         self.end = end
         self.otherNames = [gene_id]
         self.exonNum = 0
-        self.readNum = np.zeros(shape=(mglobals.num_experiments), dtype=np.int)
+        self.readNum = np.zeros(shape=mglobals.num_experiments, dtype=np.int)
         self.temp_txex_list = []
         self.ir_list = []
         self.lsv_list = []
-        self.RPKM = 0
+        self.RPKM = np.zeros(shape=mglobals.num_experiments, dtype=np.float)
 
     def __hash__(self):
-        return hash((self.id,self.chromosome, self.strand, self.start, self.end))
+        return hash((self.id, self.chromosome, self.strand, self.start, self.end))
 
     def get_id(self):
         return self.id
@@ -131,9 +130,9 @@ class Gene:
                 break
         return res
 
-    def is_gene_in_list(self, list, name):
+    def is_gene_in_list(self, list_of_genes, name):
         res = None
-        for ll in list:
+        for ll in list_of_genes:
             if self.chromosome == ll.chromosome and self.strand == ll.strand \
                     and self.start < ll.end and self.end > ll.start:
                 res = ll
@@ -144,8 +143,8 @@ class Gene:
                 break
         return res
 
-    def calculate_RPKM(self, experiment_index, total_reads):
-        '''
+    def calculate_rpkm(self, experiment_index, total_reads):
+        """
          .. function: calculate_RPKM( self, experiment_index, total_Reads )
 
             This function calculates the RPKM as follows
@@ -155,12 +154,13 @@ class Gene:
             :param experiment_index: Index of the experiment from the origrinal experiment list
             :param total_reads: Total Number of reads of the gene.
             :rtype: RPKM value for this gene
-        '''
-        if len(self.exons) == 0 : return 0
+        """
+        if len(self.exons) == 0:
+            return 0
         total_kb = float(0)
         for ex in self.exons:
-            start, end = ex.get_coordinates()
-#            print "EXON ::",ex.id,end, start
+            start, end = ex.get_coordinates
+            #            print "EXON ::",ex.id,end, start
             total_kb += float(end-start)
 
 #        print self.readNum, experiment_index
@@ -172,15 +172,15 @@ class Gene:
         return rpkm
 
     def exist_exon(self, start, end):
-        '''
+        """
          .. function: exist_exon (self, start, end):
-            Check if the pair (start, end) are in a known exon in the gene. If not return None. We assume 
+            Check if the pair (start, end) are in a known exon in the gene. If not return None. We assume
             that the given exon is for the same chromosome and strand than the gene.
 
             :param start: Start position of the input exon.
             :param end: End Position of te input exon.
             :rtype: exon instance or None
-        '''
+        """
 
         res = None
         for ee in self.exons:
@@ -255,9 +255,9 @@ class Gene:
             tx_list = ex.get_annotated_exon()
             for txex in tx_list:
                 for junc in txex.get_3prime_junc():
-                    ss.add((junc.get_ss_3p(),'3prime',junc))
+                    ss.add((junc.get_ss_3p(), '3prime', junc))
                 for junc in txex.get_5prime_junc():
-                    ss.add((junc.get_ss_5p(),'5prime',junc))
+                    ss.add((junc.get_ss_5p(), '5prime', junc))
 
         print sorted(ss)
         return sorted(ss)
@@ -277,22 +277,22 @@ class Gene:
         s_exons = set()
 
         for ex in self.exons:
-            s_exons.add(ex.get_coordinates())
+            s_exons.add(ex.get_coordinates)
             
         assert len(s_exons) == len(self.exons), "Exist duplicates in exons in Gene %s" % self.id
 
     def new_lsv_definition(self, exon, jlist, lsv_type):
 
-        coords = exon.get_coordinates()
+        coords = exon.get_coordinates
         ret = None
-        id = "%s:%d-%d:%s" % (self.get_id(), coords[0], coords[1], lsv_type)
+        lsv_id = "%s:%d-%d:%s" % (self.get_id(), coords[0], coords[1], lsv_type)
         for lsv in self.lsv_list:
-            if lsv.id == id:
+            if lsv.id == lsv_id:
                 ret = lsv
                 break
         else:
             try:
-                ret = LSV(exon, id, jlist, lsv_type)
+                ret = LSV(exon, lsv_id, jlist, lsv_type)
                 self.lsv_list.append(ret)
             except ValueError:
                 print "Attempt to create LSV with wrong type or not enought junction coverage"
@@ -314,9 +314,9 @@ class Gene:
         return res
 
     # mark for delete
-    def get_transcript_mat(self, ASvsConst):
+    def get_transcript_mat(self, as_vs_const):
 
-        if (len(self.transcript_list) == 1 and ASvsConst == 'AS') or len(self.exons) < 3:
+        if (len(self.transcript_list) == 1 and as_vs_const == 'AS') or len(self.exons) < 3:
             return None
 
         mat = np.ndarray(shape=(len(self.transcript_list), len(self.exons)), dtype='bool')
@@ -369,8 +369,9 @@ class Gene:
 
         junc_list = self.get_all_junctions()
         for junc in junc_list:
-            st,end = junc.get_coordinates()
-            if not st in ss5_l or not end in ss3_l: continue
+            st, end = junc.get_coordinates
+            if not st in ss5_l or not end in ss3_l:
+                continue
             x = ss5_l.index(st)
             y = ss3_l.index(end)
 

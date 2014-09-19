@@ -95,7 +95,7 @@ def read_sam_or_bam(filenames, gene_list, readlen, chrom, logging=None):
     for strand in ('+', '-'):
         for gne in gene_list[strand]:
             junctions = []
-            strt, end = gne.get_coordinates()
+            strt, end = gne.get_coordinates
             j_list = gne.get_all_junctions()
             ex_list = gne.get_exon_list()
 
@@ -121,7 +121,7 @@ def read_sam_or_bam(filenames, gene_list, readlen, chrom, logging=None):
                         continue
 
                     for ex_idx in range(len(ex_list)):
-                        ex_start, ex_end = ex_list[ex_idx].get_coordinates()
+                        ex_start, ex_end = ex_list[ex_idx].get_coordinates
                         if ex_start <= r_start <= ex_end:
                             ex_list[ex_idx].update_coverage(exp_index, nreads)
                             temp_ex.append(ex_list[ex_idx])
@@ -145,7 +145,7 @@ def read_sam_or_bam(filenames, gene_list, readlen, chrom, logging=None):
                             continue
 
                         for jj in j_list:
-                            (j_st, j_ed) = jj.get_coordinates()
+                            (j_st, j_ed) = jj.get_coordinates
                             if j_st > junc_start or (j_st == junc_start and j_ed > junc_end):
                                 break
                             elif j_st < junc_start or (j_st == junc_start and j_ed < junc_end):
@@ -187,7 +187,7 @@ def read_sam_or_bam(filenames, gene_list, readlen, chrom, logging=None):
             if len(junctions) > 0:
                 detect_exons(gne, junctions, None)
             gne.prepare_exons()
-            re = gne.calculate_RPKM(exp_index, mglobals.num_mapped_reads[exp_index])
+            re = gne.calculate_rpkm(exp_index, mglobals.num_mapped_reads[exp_index])
             if re == 0:
                 #print "SIN READS??? :",gene.id
                 skip_gene += 1
@@ -352,7 +352,7 @@ def read_bed_pcr(filename, list_genes):
 
             while idx[strand] < len(gene_list[strand]):
                 gn = gene_list[strand][idx[strand]]
-                (g_start, g_end) = gn.get_coordinates()
+                (g_start, g_end) = gn.get_coordinates
                 if exon_end < g_start:
                     break
                 elif exon_start > g_end:

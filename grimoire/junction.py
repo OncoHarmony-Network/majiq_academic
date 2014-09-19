@@ -134,12 +134,12 @@ class MajiqJunc:
             if jnc.get_donor() is None:
                 self.exons['coord1'] = [0, 0]
             else:
-                self.exons['coord1'] = jnc.get_donor().get_coordinates()
+                self.exons['coord1'] = jnc.get_donor().get_coordinates
 
             if jnc.get_acceptor() is None:
                 self.exons['coord2'] = [0, 0]
             else:
-                self.exons['coord2'] = jnc.get_acceptor().get_coordinates()
+                self.exons['coord2'] = jnc.get_acceptor().get_coordinates
 
             self.coverage = jnc.coverage[exp_idx, :]
             self.gc_factor = scipy.sparse.lil_matrix((1,(mglobals.readLen-16)+1), dtype=np.float)
