@@ -172,7 +172,7 @@ def generate_visualization_output(allgenes):
     for name, ind_list in mglobals.tissue_repl.items():
         for idx, exp_idx in enumerate(ind_list):
             gene_list = []
-            for gl in allgenes.values(): 
+            for gl in allgenes.values():
                 for genes_l in gl.values():
                     for gg in genes_l:
                         junc_list = []
@@ -223,6 +223,8 @@ def generate_visualization_output(allgenes):
                             eg = ExonGraphic(a3, a5, cc, visual_type, intron_retention = ex.ir , coords_extra = extra_coords)
                             exon_list.append( eg )
                         gene_list.append(GeneGraphic(gg.get_id(), gg.get_strand(), exon_list, junc_list, gg.get_chromosome()))
+
+
             file_pi = open('%s/%s.splicegraph' % (mglobals.outDir, mglobals.exp_list[exp_idx]),'w+')
             pickle.dump((gene_list), file_pi)
             file_pi.close()

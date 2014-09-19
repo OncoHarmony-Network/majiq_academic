@@ -65,12 +65,12 @@ def global_conf_ini(filename):
     if not os.path.exists(outDir):
         os.makedirs(outDir)
     for exp_idx, lstnames in exp.items():
-        tissue_repl[exp_idx]=[]
+        tissue_repl[exp_idx] = []
         elist = lstnames.split(',')
         for exp in elist:
             exp_list.append(exp)
             tissue_repl[exp_idx].append(count)
-            temp_oDir.append( "%s/%s" % (outDir,exp))
+            temp_oDir.append("%s/%s" % (outDir, exp))
             if not os.path.exists(temp_oDir[count]):
                 os.makedirs(temp_oDir[count])
             count += 1

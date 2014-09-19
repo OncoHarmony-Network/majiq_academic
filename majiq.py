@@ -21,7 +21,7 @@ except Exception:
 
 def majiq_builder(samfiles_list, chrom, pcr_validation=False):
 
-    print "running chromosome" % chrom
+    print "running chromosome %s" % chrom
     temp_dir = "%s/tmp/%s" % (mglobals.outDir, chrom)
     temp_file = open('%s/annot_genes.pkl' % temp_dir, 'rb')
     gene_list = pickle.load(temp_file)
@@ -34,6 +34,8 @@ def majiq_builder(samfiles_list, chrom, pcr_validation=False):
         utils.get_validated_pcr_lsv(lsv, temp_dir)
 
     majiq_lsv.extract_gff(lsv, temp_dir)
+    utils.generate_visualization_output(gene_list)
+
     utils.prepare_LSV_table(lsv, const, file_name)
 
 
