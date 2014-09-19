@@ -198,8 +198,8 @@ class Exon:
             vid_c1 = self.id - 2
             vid_c2 = self.id
 
-        start_c1, end_c1 = gene.exons[vid_c1].get_coordinates
-        start_c2, end_c2 = gene.exons[vid_c2].get_coordinates
+        start_c1, end_c1 = gene.exons[vid_c1].get_coordinates()
+        start_c2, end_c2 = gene.exons[vid_c2].get_coordinates()
 
         name = "%s.%s" % (gene.id, id_a)
         
@@ -459,7 +459,7 @@ def print_list_exons(list_ex, msg=""):
     #list_ex.sort()
     print "%%%%%%%%%%%%LIST_EXONS %s" % msg
     for ex in list_ex:
-        print "\t\t", ex.get_coordinates, ex
+        print "\t\t", ex.get_coordinates(), ex
     print "%%%%%%%%%%%%%%%%%%%%%%"
 
 num_it = 0

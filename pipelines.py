@@ -29,12 +29,12 @@ def get_clean_raw_reads(matched_info, matched_lsv, outdir, names, num_exp):
             num = matched_lsv[ldx][eidx].sum()
             res.append([lsv[1],num])
 
-        with open('%s/clean_reads.%s%d.pkl'%(outdir, names,eidx),'wb') as fp:
+        with open('%s/clean_reads.%s%d.pkl' % (outdir, names, eidx), 'wb') as fp:
             pickle.dump(res, fp)
 
 
 def _pipeline_run(pipeline, lsv=False, logger=None):
-    "Exception catching for all the pipelines"
+    """ Exception catching for all the pipelines """
     try:
         return pipeline.run(lsv)
     except KeyboardInterrupt:

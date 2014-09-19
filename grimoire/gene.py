@@ -159,7 +159,7 @@ class Gene:
             return 0
         total_kb = float(0)
         for ex in self.exons:
-            start, end = ex.get_coordinates
+            start, end = ex.get_coordinates()
             #            print "EXON ::",ex.id,end, start
             total_kb += float(end-start)
 
@@ -277,13 +277,13 @@ class Gene:
         s_exons = set()
 
         for ex in self.exons:
-            s_exons.add(ex.get_coordinates)
+            s_exons.add(ex.get_coordinates())
             
         assert len(s_exons) == len(self.exons), "Exist duplicates in exons in Gene %s" % self.id
 
     def new_lsv_definition(self, exon, jlist, lsv_type):
 
-        coords = exon.get_coordinates
+        coords = exon.get_coordinates()
         ret = None
         lsv_id = "%s:%d-%d:%s" % (self.get_id(), coords[0], coords[1], lsv_type)
         for lsv in self.lsv_list:
@@ -369,7 +369,7 @@ class Gene:
 
         junc_list = self.get_all_junctions()
         for junc in junc_list:
-            st, end = junc.get_coordinates
+            st, end = junc.get_coordinates()
             if not st in ss5_l or not end in ss3_l:
                 continue
             x = ss5_l.index(st)

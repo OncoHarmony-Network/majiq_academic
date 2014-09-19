@@ -151,7 +151,7 @@ def set_exons_gc_content(chrom, exon_list):
     loaded_chrom = ''.join(loaded_chrom)
 
     for exon in exon_list:
-        strt,end = exon.get_coordinates
+        strt,end = exon.get_coordinates()
         sequence = loaded_chrom[strt:end]
         #reverse the sequence if the strand is reverse
         sequence = sequence.lower()
@@ -170,7 +170,7 @@ def set_exons_gc_content(chrom, exon_list):
                     new_seq.append(char)
             sequence = ''.join(new_seq)
         if len(sequence) == 0:
-            print "KKKKseq", exon.get_coordinates, sequence
+            print "KKKKseq", exon.get_coordinates(), sequence
         exon.set_gc_content(sequence)
 
 
@@ -184,7 +184,7 @@ def generate_visualization_output(allgenes, temp_dir):
                     junc_list = []
                     junc_l = []
                     for jj in gg.get_all_junctions():
-                        if jj.get_coordinates[0] is None or jj.donor is None or jj.acceptor is None:
+                        if jj.get_coordinates()[0] is None or jj.donor is None or jj.acceptor is None:
                             continue
                         if jj.is_annotated() and jj.readN[exp_idx].sum() == 0:
                             jtype = 2
@@ -195,12 +195,12 @@ def generate_visualization_output(allgenes, temp_dir):
                         else:
                             jtype = 1
                             continue
-                        junc_l.append(jj.get_coordinates)
-                        junc_list.append(JunctionGraphic(jj.get_coordinates, jtype, jj.readN[exp_idx].sum()))
+                        junc_l.append(jj.get_coordinates())
+                        junc_list.append(JunctionGraphic(jj.get_coordinates(), jtype, jj.readN[exp_idx].sum()))
                     junc_l = np.asarray(junc_l)
                     exon_list = []
                     for ex in gg.get_exon_list():
-                        cc = ex.get_coordinates
+                        cc = ex.get_coordinates()
                         a3 = []
                         for ss3 in set(ex.ss_3p_list):
                             for jidx, jjl in enumerate(junc_l):
@@ -292,9 +292,9 @@ def get_validated_pcr_lsv(candidates, out_dir):
         score = lsv.get_pcr_score()
         for jidx, jj in enumerate(lsv.junctions):
             if lsv.is_Ssource:
-                excoord = jj.acceptor.get_coordinates
+                excoord = jj.acceptor.get_coordinates()
             else:
-                excoord = jj.donor.get_coordinates
+                excoord = jj.donor.get_coordinates()
             if excoord[1] > alt_coord[0] and excoord[0] < alt_coord[1]:
                 name = "%s#%s" % (lsv.id, jidx)
                 pcr_lsv = [lsv.exon.get_pcr_name(), name, score]
@@ -321,7 +321,7 @@ def gc_factor_calculation(exon_list, nb):
             gc = []
             for idx, ex in enumerate(exon_list):
                 gc_val = ex.get_gc_content()
-                st, end = ex.get_coordinates
+                st, end = ex.get_coordinates()
                 cov = ex.get_coverage(exp_n)
 
                 # TEST AND CHECK
