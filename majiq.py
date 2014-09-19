@@ -92,7 +92,12 @@ def main(params):
 
     mglobals.gene_tlb = {}
 
-    chr_list = rnaseq_io.read_gff(params.transcripts)
+    logger = utils.get_logger("%s/majiq.log" % mglobals.outDir, silent=args.silent, debug=args.debug)
+    logger.info("")
+    logger.info("Command: %s" % params)
+
+    chr_list = rnaseq_io.read_gff(params.transcripts, logging=logger)
+
     #chr_list = all_genes.keys()
     # temp = []
     # for gl in all_genes.values():
@@ -103,9 +108,7 @@ def main(params):
     # if params.pcr_filename is not None:
     #     rnaseq_io.read_bed_pcr(params.pcr_filename, all_genes)
 
-    logger = utils.get_logger("%s/majiq.log" % mglobals.outDir, silent=args.silent, debug=args.debug)
-    logger.info("")
-    logger.info("Command: %s" % params)
+
     sam_list = []
     for exp_idx, exp in enumerate(mglobals.exp_list):
         samfile = "%s/%s.sorted.bam" % (mglobals.sam_dir, exp)
