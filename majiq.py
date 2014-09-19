@@ -44,7 +44,8 @@ def __parallel_lsv_quant(samfiles_list, gene_list, chrom, pcr_validation=False):
 
     try:
         print "START child,", current_process().name
-        majiq_builder(samfiles_list, gene_list, chrom, pcr_validation)
+        tlogger = utils.get_logger("%s/majiq.log" % mglobals.outDir, silent=args.silent, debug=args.debug)
+        majiq_builder(samfiles_list, gene_list, chrom, pcr_validation, tlogger)
         print "END child, ", current_process().name
     except Exception as e:
         print "Line %s:" % sys.exc_traceback.tb_lineno, e
@@ -123,7 +124,7 @@ def main(params):
         if int(params.ncpus) == 1:
             majiq_builder(sam_list, chrom, pcr_validation=params.pcr_filename, logging=logger)
         else:
-            pool.apply_async(majiq_builder, [sam_list, chrom, params.pcr_filename, logger])
+            pool.apply_async(majiq_builder, [sam_list, chrom, params.pcr_filename])
 
     if int(params.ncpus) > 1:
         logger.info("... waiting childs")

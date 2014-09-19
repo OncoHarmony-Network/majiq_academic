@@ -37,7 +37,7 @@ def get_logger(logger_name, silent=False, debug=False):
     Returns a logger instance. verbose = False will silence the logger, debug will give 
     more information intended for debugging purposes.
     """
-    logging_format= "%(asctime)s (PID:%(process)s) - %(levelname)s - %(message)s"
+    logging_format = "%(asctime)s (PID:%(process)s) - %(levelname)s - %(message)s"
     logging.basicConfig(filename=logger_name, format=logging_format)
     logger = logging.getLogger(logger_name)
     if debug:
@@ -223,13 +223,13 @@ def generate_visualization_output(allgenes, temp_dir):
                             visual_type = 1
     #                        continue
                         extra_coords = []
-                        if ex.annotated :
+                        if ex.annotated:
                             if ex.start < ex.db_coord[0]:
                                 extra_coords.append([ex.start, ex.db_coord[0]-1])
                             if ex.end > ex.db_coord[1]:
                                 extra_coords.append([ex.db_coord[1]+1, ex.end])
-                        eg = ExonGraphic(a3, a5, cc, visual_type, intron_retention=ex.ir, coords_extra = extra_coords)
-                        exon_list.append( eg )
+                        eg = ExonGraphic(a3, a5, cc, visual_type, intron_retention=ex.ir, coords_extra=extra_coords)
+                        exon_list.append(eg)
                     gene_list.append(GeneGraphic(gg.get_id(), gg.get_strand(), exon_list, junc_list, gg.get_chromosome()))
 
             file_pi = open('%s/%s.splicegraph' % (temp_dir, mglobals.exp_list[exp_idx]), 'w+')
@@ -315,7 +315,7 @@ def gc_factor_calculation(exon_list, nb):
 
     #print mglobals.tissue_repl
     for tissue, list_idx in mglobals.tissue_repl.items():
-        for exp_n in list_idx :
+        for exp_n in list_idx:
             #print "EXP", exp_n
             count = []
             gc = []
@@ -350,7 +350,7 @@ def gc_factor_calculation(exon_list, nb):
             bins = [0]*nb
 
             for ii in range(nb):
-                lb = ii* nperbin
+                lb = ii * nperbin
                 if ii == nb-1:
                     ub = num_regions
                 else:

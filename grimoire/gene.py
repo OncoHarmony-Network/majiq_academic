@@ -212,7 +212,7 @@ class Gene:
                 if len(ex_rna.p5_junc) > 0:
                     lst = lst.union(set(ex_rna.p5_junc))
 
-        for tt in self.transcript_list:
+        for tt in self.transcript_tlb.values():
             for jj in tt.get_junction_list():
                 if not jj is None and not jj in lst:
                     lst.add(jj)
@@ -221,7 +221,7 @@ class Gene:
 
     def get_annotated_junctions(self):
         lst = set()
-        for tt in self.transcript_list:
+        for tt in self.transcript_tlb.values():
             for jj in tt.get_junction_list():
                 if not jj is None and not jj in lst:
                     lst.add(jj)
