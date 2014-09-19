@@ -21,9 +21,7 @@ import pipe as pipe
 ################################
 
 
-
-
-def get_clean_raw_reads( matched_info, matched_lsv, outdir, names, num_exp ):
+def get_clean_raw_reads(matched_info, matched_lsv, outdir, names, num_exp):
 
     res = []
     for eidx in xrange(num_exp):
@@ -33,8 +31,6 @@ def get_clean_raw_reads( matched_info, matched_lsv, outdir, names, num_exp ):
 
         with open('%s/clean_reads.%s%d.pkl'%(outdir, names,eidx),'wb') as fp:
             pickle.dump(res, fp)
-
-
 
 
 def _pipeline_run(pipeline, lsv=False, logger=None):
@@ -48,7 +44,7 @@ def _pipeline_run(pipeline, lsv=False, logger=None):
 def _save_or_show(plotpath, plotname=None):
     """Generic function that either shows in a popup or saves the figure, depending if the plotpath flag"""
     if plotpath:
-        savefig("%s%s.png"%(plotpath, plotname), bbox_inches='tight') 
+        savefig("%s%s.png" % (plotpath, plotname), bbox_inches='tight')
         clf()
     else:
         show()
@@ -56,6 +52,7 @@ def _save_or_show(plotpath, plotname=None):
 
 def preprocess(args):
     raise NotImplemented
+
 
 class BasicPipeline:
     def __init__(self, args):
@@ -70,7 +67,7 @@ class BasicPipeline:
         if not logger_path:
             logger_path = self.output
 
-        self.logger = get_logger("%smajiq.log"%logger_path, silent=self.silent, debug=self.debug)
+        self.logger = get_logger("%smajiq.log" % logger_path, silent=self.silent, debug=self.debug)
         self.lsv = args.lsv
         self.nthreads = args.nthreads
         self.nz = args.nz

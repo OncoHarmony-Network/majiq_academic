@@ -49,6 +49,7 @@ class Gene:
         self.temp_txex_list = []
         self.ir_list = []
         self.lsv_list = []
+        self.RPKM = 0
 
     def __hash__(self):
         return hash((self.id,self.chromosome, self.strand, self.start, self.end))
@@ -65,9 +66,9 @@ class Gene:
 
     def get_read_count(self):
         return self.readNum
-    #
-    # def get_RPKM(self):
-    #     return self.RPKM
+
+    def get_rpkm(self):
+        return self.RPKM
 
     def get_chromosome(self):
         return self.chromosome

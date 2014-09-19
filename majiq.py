@@ -12,30 +12,31 @@ import grimoire.utils.utils as utils
 import grimoire.mglobals as mglobals
 import grimoire.lsv as majiq_lsv
 
-
 try:
     import cPickle as pickle
 except Exception:
     import pickle
 
 
-def majiq_builder(samfiles_list, chrom, pcr_validation=False):
+def majiq_builder(samfiles_list, chrom, pcr_validation=False, logging=None):
 
-    print "running chromosome %s" % chrom
+    logging.info("Building for chromosome %s" % chrom)
     temp_dir = "%s/tmp/%s" % (mglobals.outDir, chrom)
     temp_file = open('%s/annot_genes.pkl' % temp_dir, 'rb')
     gene_list = pickle.load(temp_file)
 
     utils.create_if_not_exists(temp_dir)
-    rnaseq_io.read_sam_or_bam(samfiles_list, gene_list, mglobals.readLen, chrom)
-    lsv, const = analize.LSV_detection(gene_list, chrom)
+    logging.info("[%s] Reading BAM files" % chrom)
+    rnaseq_io.read_sam_or_bam(samfiles_list, gene_list, mglobals.readLen, chrom, logging=logging)
+    logging.info("[%s] Detecting LSV" % chrom)
+    lsv, const = analize.LSV_detection(gene_list, chrom, logging=logging)
     file_name = '%s.obj' % chrom
     if pcr_validation:
         utils.get_validated_pcr_lsv(lsv, temp_dir)
 
     majiq_lsv.extract_gff(lsv, temp_dir)
     #utils.generate_visualization_output(gene_list)
-
+    logging.info("[%s] Preparing output" % chrom)
     utils.prepare_LSV_table(lsv, const, file_name)
 
 
@@ -60,16 +61,20 @@ def _generate_parser():
     mutexc = dir_or_paths.add_mutually_exclusive_group(required=True)
     mutexc.add_argument('-dir', action="store", help='Provide a directory with all the files')
     mutexc.add_argument('-paths', default=None, nargs='+', help='Provide the list of files to analyze')
-    mutexc.add_argument('-conf', default=None, help='Provide study configuration file with all the execution information')
+    mutexc.add_argument('-conf', default=None, help='Provide study configuration file with all '
+                                                    'the execution information')
 
     parser = argparse.ArgumentParser(parents=[dir_or_paths])
-    parser.add_argument('transcripts', action= "store", help='read file in SAM format')
-    parser.add_argument('-l', '--readlen', dest="readlen", type=int,default='76', help='Length of reads in the samfile"')
+    parser.add_argument('transcripts', action="store", help='read file in SAM format')
+    parser.add_argument('-l', '--readlen', dest="readlen", type=int, default='76', help='Length of reads in the '
+                                                                                        'samfile"')
     parser.add_argument('-g', '--genome', dest="genome", help='Genome version an species"')
     parser.add_argument('-pcr', dest='pcr_filename', action="store", help='PCR bed file as gold_standard')
-    parser.add_argument('-lsv', dest="lsv", action="store_true", default=False, help='Using lsv analysis')
     parser.add_argument('-t', '--ncpus', dest="ncpus", type=int, default='4', help='Number of CPUs to use')
     parser.add_argument('-o', '--output', dest='output', action="store", help='casete exon list file')
+    parser.add_argument('--silent', action='store_true', default=False, help='Silence the logger.')
+    parser.add_argument('--debug', type=int, default=0, help="Activate this flag for debugging purposes, activates "
+                                                             "logger and jumps some processing steps.")
     return parser.parse_args()
 
 #########
@@ -97,11 +102,14 @@ def main(params):
     # if params.pcr_filename is not None:
     #     rnaseq_io.read_bed_pcr(params.pcr_filename, all_genes)
 
+    logger = utils.get_logger("%s/majiq.log" % mglobals.outDir, silent=args.silent, debug=args.debug)
+    logger.info("")
+    logger.info("Command: %s" % params)
     sam_list = []
     for exp_idx, exp in enumerate(mglobals.exp_list):
         samfile = "%s/%s.sorted.bam" % (mglobals.sam_dir, exp)
         if not os.path.exists(samfile):
-            print "Skipping %s.... not found" % samfile
+            logger.info("Skipping %s.... not found" % samfile)
             continue
         sam_list.append(samfile)
         rnaseq_io.count_mapped_reads(samfile, exp_idx)
@@ -113,12 +121,12 @@ def main(params):
 
     for chrom in chr_list:
         if int(params.ncpus) == 1:
-            majiq_builder(sam_list, chrom, pcr_validation=params.pcr_filename)
+            majiq_builder(sam_list, chrom, pcr_validation=params.pcr_filename, logging=logger)
         else:
-            pool.apply_async(majiq_builder, [sam_list, chrom, params.pcr_filename])
+            pool.apply_async(majiq_builder, [sam_list, chrom, params.pcr_filename, logger])
 
-    print "MASTER JOB.... waiting childs"
     if int(params.ncpus) > 1:
+        logger.info("... waiting childs")
         pool.close()
         pool.join()
 
@@ -152,5 +160,4 @@ def main(params):
 
 if __name__ == "__main__":
     args = _generate_parser()
-    print args
     main(args)
