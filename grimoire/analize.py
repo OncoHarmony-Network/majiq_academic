@@ -68,7 +68,7 @@ def __get_enabled_junction(con, exp_list):
     return jj
 
 
-def lsv_detection(gene_list, chr):
+def lsv_detection(gene_list, chr, logging=None):
 
     num_ss_var = [[0]*20, [0]*20, 0]
 
