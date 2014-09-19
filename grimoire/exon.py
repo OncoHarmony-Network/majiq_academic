@@ -177,7 +177,7 @@ class Exon:
                 if jtype == '3prime':
                     for junc in ex.p3_junc:
                         jlist.add(junc)
-                else : 
+                else:
                     for junc in ex.p5_junc:
                         jlist.add(junc)
         return jlist
@@ -186,33 +186,33 @@ class Exon:
         gene = mglobals.gene_tlb[self.gene_name]
         chrom = gene.chromosome
         strand = gene.get_strand()
-        startA = self.start
-        endA = self.end
+        start_a = self.start
+        end_a = self.end
 
         if strand == '-':
-            idA = gene.exonNum - (self.id - 1)
-            vidC1 = self.id
-            vidC2 = self.id - 2
+            id_a = gene.exonNum - (self.id - 1)
+            vid_c1 = self.id
+            vid_c2 = self.id - 2
         else:
-            idA = self.id
-            vidC1 = self.id - 2
-            vidC2 = self.id
+            id_a = self.id
+            vid_c1 = self.id - 2
+            vid_c2 = self.id
 
-        startC1, endC1 = gene.exons[vidC1].get_coordinates
-        startC2, endC2 = gene.exons[vidC2].get_coordinates
+        start_c1, end_c1 = gene.exons[vid_c1].get_coordinates
+        start_c2, end_c2 = gene.exons[vid_c2].get_coordinates
 
-        name = "%s.%s" % (gene.id,idA)
+        name = "%s.%s" % (gene.id, id_a)
         
-        fp.write("%s\t%d\t%d\t%s_C1\t0\t%s\n" % (chrom, startC1, endC1, name, strand))
-        fp.write("%s\t%d\t%d\t%s_A\t0\t%s\n" % (chrom, startA, endA, name, strand))
-        fp.write("%s\t%d\t%d\t%s_C2\t0\t%s\n" % (chrom, startC2, endC2, name, strand))
+        fp.write("%s\t%d\t%d\t%s_C1\t0\t%s\n" % (chrom, start_c1, end_c1, name, strand))
+        fp.write("%s\t%d\t%d\t%s_A\t0\t%s\n" % (chrom, start_a, end_a, name, strand))
+        fp.write("%s\t%d\t%d\t%s_C2\t0\t%s\n" % (chrom, start_c2, end_c2, name, strand))
 
     def bed_format(self):
-        str = ""
+        bed_str = ""
         for eRead in self.exonRead_list:
-            str += "%s\n" % eRead.bed_format()
+            bed_str += "%s\n" % eRead.bed_format()
 
-        return str
+        return bed_str
 
     def ss_variant_counts(self, minreads=5):
         local_3p = 0
@@ -233,7 +233,7 @@ class Exon:
         local_3p = len(temp_set)
 
         temp_set = set()
-        for ss5p in  self.ss_5p_list:
+        for ss5p in self.ss_5p_list:
             for exread in self.exonRead_list:
                 if ss5p != exread.end:
                     continue
@@ -264,7 +264,7 @@ class ExonRead(object):
         self.p3_junc = [pre_junc]
         self.p5_junc = [post_junc]
 
-    def get_coordinates( self ):
+    def get_coordinates(self):
         return self.start, self.end
 
     def get_5p_junc(self):
@@ -272,7 +272,7 @@ class ExonRead(object):
 
     def bed_format(self):
         chrom = self.exon.get_gene.get_chromosome()
-        strng = "%s\t%s\t%s\t.\t0\t.\t%s\t%s"%(chrom, self.start, self.end, self.start, self.end)
+        strng = "%s\t%s\t%s\t.\t0\t.\t%s\t%s" % (chrom, self.start, self.end, self.start, self.end)
         return strng
 
 
@@ -374,7 +374,7 @@ class ExonTx(object):
 
         j5_list = []
         for j5 in self.p5_junc:
-            jcoord = j5.get_coordinates
+            jcoord = j5.get_coordinates()
             #print 'P5',j5.get_gene().get_id(), j5.get_coordinates(), self.start, self.end
             if self.start <= jcoord[1] <= self.end:
                 #j5.add_donor(self)
@@ -382,7 +382,7 @@ class ExonTx(object):
                 
         j3_list = []
         for j3 in self.p3_junc:
-            jcoord = j3.get_coordinates
+            jcoord = j3.get_coordinates()
             #print 'P3::',j3.get_gene().get_id(), j3.get_coordinates(), self.start, self.end
             if self.start <= jcoord[1] <= self.end:
                 #j3.add_acceptor(self)
@@ -401,13 +401,13 @@ class ExonTx(object):
         all_3prime = sorted(set(all_3prime))
         exlist = []
 
-        if max(all_3prime) > min(all_5prime) :
+        if max(all_3prime) > min(all_5prime):
             ''' Intron retention '''
             introns = []
             last_p5 = 0
             jdx = 0
             in_found = False
-            for idx,p5 in enumerate(all_5prime):
+            for idx, p5 in enumerate(all_5prime):
                 while jdx < len(all_3prime):
                     p3 = all_3prime[jdx]
                     if p3 < p5:
@@ -423,7 +423,7 @@ class ExonTx(object):
             for idx, txex in enumerate(list_exontx):
                 for intr in introns:
                     if not txex.overlaps(intr[0], intr[1]):
-                        if intr[0] > txex.end or (intr[0] <= txex.end < intr[1] ):
+                        if intr[0] > txex.end or (intr[0] <= txex.end < intr[1]):
                             txex.ir = True
                         continue
                     ''' intron retention'''
@@ -431,7 +431,7 @@ class ExonTx(object):
                     dummy = txex.split_exon(intr, gne)
                     list_exontx.remove(txex)
                     for dm in dummy:
-                        if dm not in list_exontx :
+                        if dm not in list_exontx:
                             list_exontx.append(dm)
                     break
 
@@ -440,7 +440,6 @@ class ExonTx(object):
 
         else:
             ex = Exon(min(all_3prime), max(all_5prime), gne, gne.get_strand(), annot=True)
-
 
             for txex in list_exontx:
                 ex.set_ir(txex.ir)
@@ -458,9 +457,9 @@ class ExonTx(object):
 
 def print_list_exons(list_ex, msg=""):
     #list_ex.sort()
-    print "%%%%%%%%%%%%LIST_EXONS %s"%msg
+    print "%%%%%%%%%%%%LIST_EXONS %s" % msg
     for ex in list_ex:
-        print "\t\t",ex.get_coordinates, ex
+        print "\t\t", ex.get_coordinates, ex
     print "%%%%%%%%%%%%%%%%%%%%%%"
 
 num_it = 0
@@ -488,14 +487,14 @@ def collapse_list_exons(listexons, gne):
                 exlist.extend(ex.collapse(overlp, gne))
 
             overlp = [ex]
-            start, end = ex.get_coordinates
+            start, end = ex.get_coordinates()
         if idx == len(listexons)-1:
             exlist.extend(ex.collapse(overlp, gne))
     num_it -= 1
     return exlist
 
 
-def __half_exon(ss_type, junc, readRNA):
+def __half_exon(ss_type, junc, read_rna):
     gene = junc.get_gene
     if ss_type == '3prime':
         coord = junc.get_ss_3p()
@@ -503,7 +502,7 @@ def __half_exon(ss_type, junc, readRNA):
         coord = junc.get_ss_5p()
 
     for ex in gene.get_exon_list():
-        (ex_start, ex_end) = ex.get_coordinates
+        (ex_start, ex_end) = ex.get_coordinates()
         if ex_start <= coord <= ex_end:
             if ss_type == '3prime':
                 start = coord
@@ -519,7 +518,7 @@ def __half_exon(ss_type, junc, readRNA):
                 frm = junc
             #print "half",type,"::",ex_start, ex_end, junc.start, junc.end, end 
 #            if end - start < 10 : continue
-            res = ex.add_new_read(start, end, readRNA, to, frm)
+            res = ex.add_new_read(start, end, read_rna, to, frm)
             if res:
                 ex.ss_3p_list.append(start)
                 ex.ss_5p_list.append(end)
@@ -528,9 +527,9 @@ def __half_exon(ss_type, junc, readRNA):
     return 0
 
 
-def new_exon_definition(start, end, readRNA, s3prime_junc, s5prime_junc, gene):
+def new_exon_definition(start, end, read_rna, s3prime_junc, s5prime_junc, gene):
 
-    if  end - start < 5:
+    if end - start < 5:
         return 0
 #    print "NEW DEFINITION::",start, end
 
@@ -542,14 +541,14 @@ def new_exon_definition(start, end, readRNA, s3prime_junc, s5prime_junc, gene):
         gene.add_exon(ex)
 #    else:
 #        print "EXON FOUND", ex, ex.get_coordinates(), ex.annotated
-    ex.add_new_read( start, end, readRNA, s3prime_junc, s5prime_junc )
+    ex.add_new_read(start, end, read_rna, s3prime_junc, s5prime_junc)
     s3prime_junc.add_acceptor(ex)
     s5prime_junc.add_donor(ex)
 
     return new_exons
 
 
-def detect_exons(gene, junction_list, readRNA):
+def detect_exons(gene, junction_list, read_rna):
 
     new_exons = 0
     opened = 0
@@ -582,14 +581,16 @@ def detect_exons(gene, junction_list, readRNA):
             if opened > 0:
                 start = opened_exon[-1].get_ss_3p()
                 end = coord
-                new_exons += new_exon_definition(start, end, readRNA, opened_exon[-1], jj, jj_gene)
+                new_exons += new_exon_definition(start, end, read_rna, opened_exon[-1], jj, jj_gene)
                 pp = opened_exon.pop()
                 opened -= 1
             elif opened == 0:
                 if first_3prime is None:
-                    new_exons += __half_exon('5prime', jj, readRNA)
+                    new_exons += __half_exon('5prime', jj, read_rna)
                 else:
-                    new_exons += new_exon_definition(first_3prime.get_ss_3p(), coord, readRNA, first_3prime, jj, jj_gene)
+                    new_exons += new_exon_definition(first_3prime.get_ss_3p(),
+                                                     coord, read_rna, first_3prime,
+                                                     jj, jj_gene)
             last_5prime = jj
             #end elif opened
         else:
@@ -600,7 +601,7 @@ def detect_exons(gene, junction_list, readRNA):
                         if ss.get_gene != last_5prime.get_gene:
                             continue
                         start = ss.get_ss_3p()
-                        new_exons += new_exon_definition(start, end, readRNA, ss, last_5prime, ss.get_gene)
+                        new_exons += new_exon_definition(start, end, read_rna, ss, last_5prime, ss.get_gene)
                     last_5prime = None
                     opened = 0
                     opened_exon = []
@@ -614,7 +615,7 @@ def detect_exons(gene, junction_list, readRNA):
             opened += 1
 
     for ss in opened_exon:
-        new_exons += __half_exon('3prime', ss, readRNA)
+        new_exons += __half_exon('3prime', ss, read_rna)
 
     for (coord, jtype, jj) in junction_list:
         if jj.coverage.sum() < mglobals.MINREADS and not jj.is_annotated():
