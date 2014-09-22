@@ -37,7 +37,7 @@ def majiq_builder(samfiles_list, chrom, pcr_validation=False, logging=None):
     majiq_lsv.extract_gff(lsv, temp_dir)
     #utils.generate_visualization_output(gene_list)
     logging.info("[%s] Preparing output" % chrom)
-    utils.prepare_LSV_table(lsv, const, file_name)
+    utils.prepare_lsv_table(lsv, const, file_name)
 
 
 def __parallel_lsv_quant(samfiles_list, chrom, pcr_validation=False):
@@ -69,6 +69,9 @@ def _generate_parser():
     parser.add_argument('transcripts', action="store", help='read file in SAM format')
     parser.add_argument('-l', '--readlen', dest="readlen", type=int, default='76', help='Length of reads in the '
                                                                                         'samfile"')
+    parser.add_argument('-p', '--prefix', dest="prefix", type=str, default='', help='Output prefix string to '
+                                                                                    'personalize partially the output '
+                                                                                    'file.')
     parser.add_argument('-g', '--genome', dest="genome", help='Genome version an species"')
     parser.add_argument('-pcr', dest='pcr_filename', action="store", help='PCR bed file as gold_standard')
     parser.add_argument('-t', '--ncpus', dest="ncpus", type=int, default='4', help='Number of CPUs to use')
@@ -122,7 +125,7 @@ def main(params):
 
     if int(params.ncpus) > 1:
         pool = Pool(processes=params.ncpus)
-
+    logger.info("Scatter in Chromosomes")
     for chrom in chr_list:
         if int(params.ncpus) == 1:
             majiq_builder(sam_list, chrom, pcr_validation=params.pcr_filename, logging=logger)
@@ -135,8 +138,8 @@ def main(params):
         pool.join()
 
     # utils.gc_factor_calculation(temp, 10)
-    #utils.plot_gc_content()
-
+    # utils.plot_gc_content()
+    logger.info("Gather outputs")
     #GATHER
     utils.merge_and_create_majiq_file(chr_list, 'tojuan.majiq')
 

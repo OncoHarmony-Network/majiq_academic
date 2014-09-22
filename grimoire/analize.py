@@ -100,16 +100,14 @@ def lsv_detection(gene_list, chr, logging=None):
             #num_ss_var [1]+= var_ss[1]
 
 #            print "---------------- %s --------------"%gn.get_id()
-            utils.print_junc_matrices(mat, tlb=tlb, fp=True)
+            #utils.print_junc_matrices(mat, tlb=tlb, fp=True)
             SS, ST = lsv_matrix_detection(mat, tlb, (False, False, False), vip)
             for lsv_index, lsv_lst in enumerate((SS, ST)):
                 lsv_type = (SSOURCE, STARGET)[lsv_index]
                 sstype = ['5prime', '3prime'][lsv_index]
 #                print lsv_lst
                 for idx in lsv_lst:
-                    coord = exon_list[idx].get_coordinates
                     jlist = exon_list[idx].get_junctions(sstype)
-
                     jlist = [x for x in jlist if x is not None]
                     if len(jlist) == 0:
                         continue
@@ -120,16 +118,16 @@ def lsv_detection(gene_list, chr, logging=None):
 
                     for name, ind_list in mglobals.tissue_repl.items():
                         counter = 0
-                        eData = 0
+                        e_data = 0
                         for jj in jlist:
                             for exp_idx in ind_list:
                                 if __reliable_in_data(jj, exp_idx):
                                     counter += 1
                             if counter < 0.1*len(ind_list):
                                 continue
-                            eData += 1
+                            e_data += 1
                             jun[name].add(jj)
-                        if eData == 0:
+                        if e_data == 0:
                             continue
                         for exp_idx in ind_list:
                             for lsvinlist in lsv_list[exp_idx]:
