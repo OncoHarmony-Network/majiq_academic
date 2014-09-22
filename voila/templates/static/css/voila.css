@@ -8,6 +8,12 @@ h2 {
     padding-top: 10px;
 }
 
+fieldset legend {
+    font-weight:bold;
+    color: #006afc;
+    font-size: 1.5em;
+}
+
 table
 {
     border-style: none none none none;
@@ -164,14 +170,15 @@ background-color: #8dbdd8;
 }
 
 .floatingCanvas {
-    position: absolute; /*fixed*/
-    top: 2%;
-    right: 2%;
+    position: relative;
+    top: -24px;
     padding: 5px;
     font-family: Arial;
     background: #fffec9;
     border: 2px solid #fc0;
-    /*border-radius: 5%;*/
+    border-radius: 5px;
+    width: 500px;
+    float: right;
 }
 /*#fffea1*/
 
@@ -181,4 +188,64 @@ background-color: #8dbdd8;
 
 .extendedDeltaPsi{
     cursor: -webkit-zoom-out;
+}
+
+.section-border{
+    padding: 25px;
+    border: 3px solid #006afc;
+    margin: 10px;
+    border-radius: 7px;
+}
+
+.prime3hidden, .prime5hidden, .EShidden, .targethidden, .sourcehidden, .njuncsfromhidden, .njuncstohidden, .nexonsfromhidden, .nexonstohidden{
+    display: none;
+}
+header {
+    background-color:#006afc;
+    color:white;
+    text-align:center;
+    padding:5px;
+    font-size: 1em;
+}
+nav {
+    line-height:30px;
+    background-color:#eeeeee;
+    height:300px;
+    width:100px;
+    float:left;
+    padding:5px;
+}
+section {
+    width:auto;
+    float:left;
+    /*padding:10px;*/
+}
+footer {
+    background-color:black;
+    color:white;
+    clear:both;
+    text-align:center;
+    padding:5px;
+}
+
+.filters {
+    background: white;
+    position: fixed;
+    left: 1080px;
+}
+
+
+.prevPage, .nextPage {
+    position: absolute;
+    color: #ffffff;
+}
+
+.prevPage {
+    left:0;
+    padding-left: 30px;
+}
+
+.nextPage{
+    right: 0;
+    padding-right: 30px;
 }

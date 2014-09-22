@@ -107,13 +107,14 @@ $( document ).ready(function(){
         function dlCanvas() {
             var dt = can.toDataURL('image/png');
             this.href = dt;
-        };
+        }
         var dl_canvas_link = $(this).parent().children(".lsv_type")[0];
         dl_canvas_link.addEventListener('click', dlCanvas, false);
 
 
     });
 
+    /** Tooltip for barchart */
     var tooltips = $('.tooltip');
     if (tooltips.length){
         $('.tooltip').tooltipster({
@@ -121,6 +122,47 @@ $( document ).ready(function(){
         });
     }
 
+    /**
+     * LSV Filters funcitonality
+     * */
+    var lsvFilters = $('#lsv-filters');
+    if (lsvFilters.length) {
+        lsvFilters.on('focusin', ":input", function(){
+            $(this).data('oldValue', $(this).val());
+        });
+        lsvFilters.on("change", ":input", function () {
+            console.log($(this)[0].name + ": " +$(this).val());  // TODO: delete after debug!
+            var eventFired = $(this)[0];
+            if (eventFired.name in {'ES':null, 'prime3':null, 'prime5':null, 'source':null, 'target':null }){
+                $('.'+eventFired.name).each(function(){
+                    $(this).toggleClass(eventFired.name+'hidden');
+                });
+            }
+            else{
+                var nval = parseInt(eventFired.value);
+                if (nval){
+                    $('.lsvrow').each(function(){
+                        if (eventFired.name.indexOf('from') > -1) {
+                        if (parseInt($(this)[0].getAttribute("data-" + eventFired.name.split('from')[0])) < nval) {
+                            $(this).addClass(eventFired.name + 'hidden');
+                        }else{
+                            $(this).removeClass(eventFired.name + 'hidden');
+                        }
+                    }
+                    if (eventFired.name.indexOf('to') > -1) {
+                        if (parseInt($(this)[0].getAttribute("data-" + eventFired.name.split('to')[0])) > nval) {
+                            $(this).addClass(eventFired.name + 'hidden');
+                        }else{
+                            $(this).removeClass(eventFired.name + 'hidden');
+                        }
+                    }
+                    });
+                }else{
+                    eventFired.value = $(this).data('oldValue');
+                }
+            }
+        });
+    }
 });
 
 var initLargeCanvasSettings = function (num_bins, canvas) {
@@ -874,14 +916,15 @@ function drawDeltaLSVCompactSVG(htmlElementId, lsv) {
             .attr("height", height - margin.bottom - margin.top)
             .style('fill', getColor(ii, BREWER_PALETTE, 1));
 
-        if (last_excl_pos != width / 2 && (Math.round(width / 2 - margin.left) * lsv.excl_incl[ii][0]) >= 1) {
-            console.log("This guys has more than 2 ways with exclusion >= 1: " + htmlElementId);
-            console.log(last_excl_pos + ", " + (width / 2 - margin.left) * lsv.excl_incl[ii][0])
-        }
-        if (last_incl_pos != width / 2 && Math.round((width / 2 - margin.right) * lsv.excl_incl[ii][1]) >= 1) {
-            console.log("This guys has more than 2 ways with inclusion >= 1: " + htmlElementId);
-            console.log(last_incl_pos + ", " + (width / 2 - margin.right) * lsv.excl_incl[ii][1])
-        }
+        //TODO: delete console.log anywhere!
+//        if (last_excl_pos != width / 2 && (Math.round(width / 2 - margin.left) * lsv.excl_incl[ii][0]) >= 1) {
+//            console.log("This guys has more than 2 ways with exclusion >= 1: " + htmlElementId);
+//            console.log(last_excl_pos + ", " + (width / 2 - margin.left) * lsv.excl_incl[ii][0])
+//        }
+//        if (last_incl_pos != width / 2 && Math.round((width / 2 - margin.right) * lsv.excl_incl[ii][1]) >= 1) {
+//            console.log("This guys has more than 2 ways with inclusion >= 1: " + htmlElementId);
+//            console.log(last_incl_pos + ", " + (width / 2 - margin.right) * lsv.excl_incl[ii][1])
+//        }
 
         // Draw percentages text
         if (Math.round((width / 2 - margin.left) * lsv.excl_incl[ii][0]) >= 1){
@@ -910,24 +953,68 @@ function drawDeltaLSVCompactSVG(htmlElementId, lsv) {
     }
 
     // Draw canvas frame
-    svgContainer.append("rect")
-        .attr("x", margin.left)
-        .attr("y", margin.top)
-        .attr("width", width - margin.right - margin.left)
-        .attr("height", height - margin.bottom - margin.top)
+//    svgContainer.append("rect")
+//        .attr("x", margin.left)
+//        .attr("y", margin.top)
+//        .attr("width", width - margin.right - margin.left)
+//        .attr("height", height - margin.bottom - margin.top)
+//        .style('stroke', 'black')
+//        .style('stroke-width', border_frame)
+//        .attr("stroke-opacity", .5)
+//        .style('fill', 'none');
+    var markerWidth = 6,
+        markerHeight = 6,
+        cRadius = 30, // play with the cRadius value
+        refX = cRadius + (markerWidth * 2),
+        refY = -Math.sqrt(cRadius);
+
+    // Per-type markers, as they don't inherit styles.
+    svgContainer.append("defs")
+        .append("marker")
+        .attr("id", "arrowhead-right")
+        .attr("viewBox", "0 -5 5 10")
+        .attr("refX", 5)
+        .attr("refY", 0)
+        .attr("markerWidth", 4)
+        .attr("markerHeight", 3)
+        .attr("orient", "auto")
+        .append("path")
+        .attr("d", "M0,-5L10,0L0,5");
+
+    svgContainer.append("defs")
+        .append("marker")
+        .attr("id", "arrowhead-left")
+        .attr("viewBox", "-5 -5 5 10")
+        .attr("refX", -5)
+        .attr("refY", 0)
+        .attr("markerWidth", 4)
+        .attr("markerHeight", 3)
+        .attr("orient", "auto")
+        .append("path")
+        .attr("d", "M0,-5L-10,0L0,5");
+
+
+    svgContainer.append("line")
+        .attr("x1", margin.left)
+        .attr("y1", height - margin.bottom)
+        .attr("x2", width - margin.right - margin.left)
+        .attr("y2", height - margin.bottom)
         .style('stroke', 'black')
         .style('stroke-width', border_frame)
-        .attr("stroke-opacity", .5)
-        .style('fill', 'none');
+//        .attr("stroke-opacity", .5)
+        .style('fill', 'none')
+        .attr("marker-end", "url(#arrowhead-right)")
+        .attr("marker-start", "url(#arrowhead-left)");
+
 
     // Draw x-axis ticks
-    svgContainer.append("text")
-        .attr("x", width / 2)
-        .attr("y", height)
-        .attr("text-anchor", "middle")
-        .attr("font-size", "10px")
-        .attr("fill", "black")
-        .text("0");
+//    svgContainer.append("text")
+//        .attr("x", width / 2)
+//        .attr("y", height)
+//        .attr("text-anchor", "middle")
+//        .attr("font-size", "10px")
+//        .attr("fill", "black")
+//        .text("0");
 //    svgContainer.append("text")
 //        .attr("x", 0)
 //        .attr("y", height)
@@ -946,7 +1033,7 @@ function drawDeltaLSVCompactSVG(htmlElementId, lsv) {
     // Draw separator
     svgContainer.append("line")
         .attr("x1", width / 2)
-        .attr("y1", margin.top)
+        .attr("y1", 0)
         .attr("x2", width / 2)
         .attr("y2", height - margin.bottom)
         .attr("stroke-width", 2)

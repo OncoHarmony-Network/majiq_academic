@@ -28,10 +28,10 @@ class GeneGraphic(object):
         return self.chrom
 
     def get_coords(self):
-        if self.strand == '+':
-            return [self.exons[0].coords[0], self.exons[-1].coords[1]]
-        if self.strand == '-':
-            return [self.exons[-1].coords[1], self.exons[0].coords[0]]
+        # if self.strand == '+':
+        return [self.exons[0].coords[0], self.exons[-1].coords[1]]
+        # if self.strand == '-':
+        #     return [self.exons[-1].coords[1], self.exons[0].coords[0]]
 
     def to_JSON(self, encoder=json.JSONEncoder):
         return json.dumps(self, default=lambda o: o.__dict__, sort_keys=True, cls=encoder)

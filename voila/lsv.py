@@ -1,3 +1,4 @@
+from collections import defaultdict
 import json
 import numpy
 from splice_graphics.geneGraphic import GeneGraphic
@@ -10,15 +11,19 @@ class Lsv(object):
         self.id = input_data['id']
         self.name = input_data['name']
         self.type = input_data['type']
-        self.bins = input_data['bins_list']
+        # self.bins = input_data['bins_list']
         self.bins = numpy.array(input_data['bins_list']).tolist()
-        self.means = input_data['mean_psi']
-        self.conf_interval = input_data['conf_interval']
-        self.quartiles = input_data['quartiles']
+
         self.coords = input_data['coords']
         self.matrix_link = input_data['matrix_link']
         self.variances = input_data['variance_list']
         self.extension = None
+        self.means = input_data['mean_psi']
+        self.conf_interval = input_data['conf_interval']
+        self.quartiles = input_data['quartiles']
+
+        # For LSV filtering
+        self.set_categories()
 
     def get_id(self):
         return self.id
@@ -66,12 +71,53 @@ class Lsv(object):
                     return e
 
         lsv_exon = _find_lsv(self.coords, geneG.get_exons())
-        print lsv_type
+
         if lsv_type.startswith('s'):
             self.extension = [self.coords[0], geneG.get_junctions()[lsv_exon.get_a5_list()[-1]].get_coords()[1] + 100]
         else:
             self.extension = [geneG.get_junctions()[lsv_exon.get_a3_list()[0]].get_coords()[0] - 100, self.coords[1]]
 
+    def set_categories(self):
+        self.categories = defaultdict()
+        j = self.type.split('|')
+        ssites = set(int(s[0]) for s in j[1:])
+        exons = defaultdict(list)
+        for s in j[1:]:
+            exs = s[1:].split('.')
+            try:
+                exons[exs[0]].append(int(exs[1]))
+            except IndexError:
+                pass
+        self.categories['ES'] = len(exons.keys()) > 1
+        self.categories['prime5'] = len(ssites) > 1
+        self.categories['prime3'] = max([len(exons[e]) for e in exons]) > 1
+        self.categories['njuncs'] = len(j[1:])
+        self.categories['nexons'] = len(exons.keys()) + 1
+        self.categories['source'] = j[0] == 's'
+        self.categories['target'] = j[0] == 't'
+
+        if j[0] == 't':
+            self.categories['prime5'], self.categories['prime3'] = self.categories['prime3'], self.categories['prime5']
+
+
+    def get_categories(self):
+        return self.categories
+
+    def njuncs(self):
+        return self.categories['njuncs']
+
+    def nexons(self):
+        return self.categories['nexons']
+
+    def categories2css(self):
+        css_cats = []
+        for c in self.categories:
+            if type(self.categories[c]) == bool and self.categories[c]:
+                css_cats.append(c)
+        return ' '.join(css_cats)
+
+    def is_three_prime(self):
+        pass
 
     def to_JSON(self, encoder=json.JSONEncoder):
         return json.dumps(self, default=lambda o: o.__dict__, sort_keys=True, cls=encoder)

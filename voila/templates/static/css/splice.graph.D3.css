@@ -1,0 +1,120 @@
+.exon {
+    fill: grey;
+    fill-opacity: .3;
+    stroke: black;
+    stroke-lineca: round;
+    stroke-linejoin: round;
+    alpha: 9;
+}
+
+.exon.found{
+    fill: grey;
+    stroke: black;
+
+}
+
+.exon.novel{
+    stroke:green;
+    fill: green;
+}
+
+.exon.missing{
+    stroke:black;
+    stroke-dasharray: 5,2;
+    fill:none;
+}
+
+
+.ssite3, .ssite5, .junction{
+    fill:black;
+    fill-opacity:0;
+    stroke:red;
+    stroke-width:1.5;
+    pointer-events: visibleStroke;
+
+}
+
+.ssite3, .ssite5{
+    stroke-opacity: 0.2;
+    stroke-dasharray: 2,2;
+    alpha:1;
+}
+.ssite3.found, .ssite5.found, .junction.found{
+    stroke:red;
+}
+
+.ssite5.novel, .ssite5.novel, .junction.novel{
+    stroke:green;
+}
+
+.ssite3.missing, .ssite5.missing, .junction.missing{
+    stroke:grey;
+    stroke-width:1;
+    stroke-dasharray: 5,2;
+}
+
+
+.ssite3.highlighted, .ssite5.highlighted, .exon.hovered, .junction.hovered{
+    fill: orange;
+    stroke: orange;
+    stroke-width:2;
+    stroke-opacity: 1;
+}
+
+.numexon, .readcounts{
+    text-anchor: middle;
+    font-family: sans-serif;
+    font-size: 11px;
+    pointer-events: none;
+}
+
+.numexon{
+    font-size: 13px;
+    font-weight: bold;
+    z-index:1;
+}
+
+.blurred{
+    stroke-opacity: 0.1;
+}
+
+.ssite3.blurred, .ssite5.blurred, .readcounts.blurred{
+    fill-opacity: 0.1;
+}
+
+.readcounts.highlighted{
+    font-size: 15px;
+}
+
+.tooltipD3 {
+    position: absolute;
+    width: 200px;
+    height: auto;
+    padding: 10px;
+    background-color: white;
+    -webkit-border-radius: 10px;
+    -moz-border-radius: 10px;
+    border-radius: 10px;
+    -webkit-box-shadow: 4px 4px 10px rgba(0, 0, 0, 0.4);
+    -moz-box-shadow: 4px 4px 10px rgba(0, 0, 0, 0.4);
+    box-shadow: 4px 4px 10px rgba(0, 0, 0, 0.4);
+    pointer-events: none;
+    display: inline-block;
+}
+
+.tooltipD3.hidden {
+    display: none;
+}
+
+.tooltipD3 p {
+    margin: 0;
+    font-family: sans-serif;
+    font-size: 16px;
+    line-height: 20px;
+}
+
+.toogleScale{
+    cursor: pointer;
+    float: right;
+    position: absolute;
+}

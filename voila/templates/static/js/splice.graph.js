@@ -197,7 +197,7 @@ window.splicegraph = function (){
 
             // Draw exon name (number)
             ctx.textAlign = "center";
-            ctx.font = "11pt Arial";
+            ctx.font = "11px Arial";
             ctx.strokeStyle = "rgba(0, 0, 0, 1)";
             ctx.fillStyle = "rgba(0, 0, 0, 1)";
             ctx.fillText(counter_exon,

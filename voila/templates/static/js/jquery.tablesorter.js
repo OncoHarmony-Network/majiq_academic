@@ -1027,89 +1027,6 @@
         format: function (table) {
             addExpandedViewFunction();
 
-//            /**
-//             * Single experiment visualization elements
-//             */
-//
-//            $('.psiPlot').each( function(){
-//                drawBoxplotHeatmap($(this)[0]);
-//
-//                // For each compact view of the psiPlot, we want to add to the associated detailed view link
-//                var closestTd =$(this).closest("td");
-//                var largeCanvas = closestTd.children(".largePsiPlot")[0];
-//                closestTd.children(".detailedPsiLink").on('click',
-//                    {canvas: largeCanvas}, function(event) {
-//                        if (this.getAttribute('isExpanded') == true){
-//                            largeCanvas.setAttribute('bins', $(this).closest("td").children(".psiPlot")[0].getAttribute('bins'));
-//                            drawInitialBarplotCanvas(event.data.canvas);
-//                        }
-//                    }
-//                );
-//            });
-//
-//            $('.largePsiPlot').on('mousewheel', function(event) {
-//                event.preventDefault();
-//                if (event.deltaY > 0){
-//                    drawBarchartWithCanvasId($(this)[0].id, 1);
-//                } else if(event.deltaY < 0){
-//                    drawBarchartWithCanvasId($(this)[0].id, -1);
-//                }
-//            });
-//
-//            /**
-//             * Delta PSI visualization elements
-//             */
-//            $('.deltaCondensed').each( function(){
-//                drawDeltaBox($(this)[0]);
-//
-//                // For each compact view of the psiPlot, we want to add to the associated detailed view link
-//                var closestTd =$(this).closest("td");
-//                var largeCanvas = closestTd.children(".extendedDeltaPsi")[0]; //TODO: Refactor
-//                closestTd.children(".expandDelta").on('click',
-//                    {canvas: largeCanvas}, function(event) {
-//                        if (this.dataset.isExpanded == true){
-//                            largeCanvas.setAttribute('bins', $(this).closest("td").children(".deltaCondensed")[0].dataset.bins);
-//                            initExpandedDeltaCanvas(event.data.canvas); //TODO: Draw expanded Delta PSI plot
-//                        }
-//                    });
-//            });
-
-//            $('.extendedDeltaPsi').on('mousewheel', function(event) {
-//                event.preventDefault();
-//                if (event.deltaY > 0){
-//                    drawExpDeltaWithCanvasId($(this)[0].id, 1);
-//                } else if(event.deltaY < 0){
-//                    drawExpDeltaWithCanvasId($(this)[0].id, -1);
-//                }
-//            });
-
-
-            /**
-             * Adding extraPlots functionality
-             */
-            $('.extraPlots').on("click", function(e){
-                e.preventDefault();
-                my_window = window.open("", "More plots", "status=1,width=800, height=800, scrollbars=yes", true);
-                my_window.document.close();
-                my_window.document.write('<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">');
-                my_window.document.write(
-                    '<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">' +
-                        '<html>' +
-                        '<head>                    ' +
-                        '<title>' + $(this)[0].id + '</title>' +
-                        '<link type="text/css" rel="stylesheet" href="../templates/static/css/voila.css" />' +
-                        '</head>' +
-                        '<body>' +
-                        '<h1>Brain1 Vs Liver1:</h1>' +
-                        '<h2>'+$(this)[0].id+'</h2>' +
-                        '<img width="500px" height="500px" src="'+ $(this)[0].getAttribute('data-link-matrix') +'">' +
-                        '</body>' +
-                        '</html>'
-                );
-                my_window.focus();
-                $(this)[0].focus();
-            });
-
             /**
              * Single LSV visualization
              */
@@ -1146,10 +1063,54 @@
                 }
             });
 
-            var gene_obj_list = [];
-            $('.spliceGraph').each( function(){
-                gene_obj_list.push(splicegraph().renderSpliceGraph(this));
-                splicegraph().renderSpliceGraphZoomedPopUp(this);
+            var gene_objs = [],
+                gene_obj_list = [];
+            $('.spliceDiv').each( function(){
+                /**
+                 * D3 - SpliceGraph
+                 * */
+
+                var genes_obj =  JSON.parse($(this)[0].getAttribute('data-exon-list').replace(/\\'/g, "\"").replace(/'/g, ""));
+
+                var exons_obj = genes_obj.exons;
+                var junctions_obj = genes_obj.junctions;
+
+                var orig_objs = {'exons': add_keys(clone(exons_obj)), 'junc': clone(junctions_obj)};
+
+                var exons_mapped = map_exon_list(exons_obj, junctions_obj); //exons_obj; //
+                exons_mapped = add_keys(exons_mapped);
+
+                var gene_obj_cpy = {'orig': orig_objs, 'mapped': [exons_mapped, junctions_obj]};
+
+                /** Render initial splice graph */
+                var chart = spliceGraphD3().orig_objs(orig_objs);
+
+                var spliceg = d3.select("#" + this.id)
+                    .datum([exons_mapped, junctions_obj])
+                    .call(chart);
+
+                d3.select(this).select('.toogleScale').on('click', function(){
+
+                    if (d3.select(this).classed('scaled')) {
+                        d3.select(this.parentNode)
+//                            .datum([orig_objs.exons, orig_objs.junc])
+                            .datum([gene_objs[parseInt(this.parentNode.id.split("_")[1])].orig.exons, gene_objs[parseInt(this.parentNode.id.split("_")[1])].orig.junc])
+                            .call(chart);
+                        d3.select(this).classed('scaled', false);
+                    } else {
+                        d3.select(this.parentNode)
+                            .datum(gene_objs[parseInt(this.parentNode.id.split("_")[1])].mapped)
+//                            .datum([exons_mapped, junctions_obj])
+                            .call(chart);
+                        d3.select(this).classed('scaled', true);
+                    }
+
+                });
+
+                gene_obj_list.push(genes_obj);
+                gene_objs.push(gene_obj_cpy);
+//                gene_obj_list.push(splicegraph().renderSpliceGraph(this));
+//                splicegraph().renderSpliceGraphZoomedPopUp(this);
 
             });
 

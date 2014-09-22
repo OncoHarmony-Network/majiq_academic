@@ -6,7 +6,10 @@ import subprocess
 import sys
 import utils_voila
 import collections as cc
-
+try:
+    import cPickle as pkl
+except:
+    import pickle as pkl
 
 __author__ = 'abarrera'
 
@@ -55,21 +58,6 @@ def _render_template(output_dir, output_html, majiq_output, type_summary, thresh
     if not os.path.exists(output_dir):
         os.makedirs(output_dir)
 
-    if type_summary == 'single':
-        voila_output = open(output_dir+output_html, 'w')
-        voila_output.write(sum_template.render(eventList=majiq_output['event_list'],
-                                               tableMarks=table_marks_set(len(majiq_output['event_list'])),
-                                               metadata=majiq_output['metadata_pre']))
-        voila_output.close()
-    elif type_summary == 'delta':
-        voila_output = open(output_dir+output_html, 'w')
-        voila_output.write(sum_template.render(eventList=majiq_output['event_list'],
-                                               tableMarks=table_marks_set(len(majiq_output['event_list'])),
-                                               expList=majiq_output['experiments_info'],
-                                               threshold=threshold
-                                               ))
-        voila_output.close()
-
     elif type_summary == 'lsv_single':
         voila_output = open(output_dir+output_html, 'w')
         voila_output.write(sum_template.render(lsvList=majiq_output['event_list'],
@@ -102,13 +90,15 @@ def _render_template(output_dir, output_html, majiq_output, type_summary, thresh
             if not count_pages == 0:
                 prev_page = str(count_pages - 1) + "_" + output_html
 
-            voila_output = open(output_dir+str(count_pages) + "_" + output_html, 'w')
+            name_page = str(count_pages) + "_" + output_html
+            voila_output = open(output_dir+name_page, 'w')
             voila_output.write(sum_template.render( tableMarks=[table_marks_set(len(gene_set)) for gene_set in genes_dict],
                                                     # metadata=majiq_output['metadata'],
                                                     genes_json=genes_json_dict,
                                                     genes_dict=genes_dict,
                                                     prevPage = prev_page,
-                                                    nextPage= next_page
+                                                    nextPage= next_page,
+                                                    namePage= name_page
             ))
             voila_output.close()
             count_pages += 1
@@ -119,6 +109,7 @@ def _render_template(output_dir, output_html, majiq_output, type_summary, thresh
             voila_output.write(sum_template.render( lsvList=majiq_output['event_list'],
                                                     tableMarks=table_marks_set(len(majiq_output['event_list'])),
                                                     metadata=majiq_output['metadata'],
+                                                    expList=majiq_output['experiments_info'],
                                                     threshold=threshold
             ))
             voila_output.close()
@@ -170,46 +161,45 @@ def create_summary(args):
         lsv_types = args.lsv_types
         bed_file  = args.bed_file
 
-        import cPickle as pkl
-        if args.genes_file:
-            genes_file = pkl.load(open(args.genes_file, 'r'))
+        genes_file = pkl.load(open(args.genes_file, 'r'))
 
-            import fileinput
-            gene_name_list = []
-            if args.gene_names:
-                for gene_name in fileinput.input(args.gene_names):
-                    gene_name_list.append(gene_name.rstrip().split(":")[0])
+        import fileinput
+        gene_name_list = []
+        if args.gene_names:
+            for gene_name in fileinput.input(args.gene_names):
+                gene_name_list.append(gene_name.rstrip().split(":")[0])
         else:
             gene_name_list = []
-        majiq_output = utils_voila.get_lsv_single_exp_data(majiq_bins_file, args.confidence, gene_name_list=gene_name_list, lsv_types=lsv_types, bed_file=bed_file)
+        majiq_output = utils_voila.get_lsv_single_exp_data(majiq_bins_file, args.confidence, gene_name_list=gene_name_list, lsv_types=lsv_types)  #, bed_file=bed_file
 
         # Get gene info
-        try:
-            genes_graphic = defaultdict(list)
-            for gene_obj in genes_file:
-                if gene_obj.get_name() in majiq_output['genes_dict']:
-                    genes_graphic[gene_obj.get_name()].append(json.dumps(gene_obj, cls=utils_voila.LsvGraphicEncoder).replace("\"", "'"))
-                    genes_graphic[gene_obj.get_name()].append(gene_obj.get_strand())
-                    genes_graphic[gene_obj.get_name()].append(gene_obj.get_coords())
-                    # majiq_output['gene_json'] = json.dumps(gene_obj, cls=utils_voila.LsvGraphicEncoder).replace("\"", "'")
-                    # majiq_output['gene'] = gene_obj
+        # try:
+        genes_graphic = defaultdict(list)
+        for gene_obj in genes_file:
+            if gene_obj.get_name() in majiq_output['genes_dict']:
+                genes_graphic[gene_obj.get_name()].append(json.dumps(gene_obj, cls=utils_voila.LsvGraphicEncoder).replace("\"", "'"))
+                genes_graphic[gene_obj.get_name()].append(gene_obj.get_strand())
+                genes_graphic[gene_obj.get_name()].append(gene_obj.get_coords())
+                # genes_graphic[gene_obj.get_name()].append(gene_obj.get_chrom())
+                # majiq_output['gene_json'] = json.dumps(gene_obj, cls=utils_voila.LsvGraphicEncoder).replace("\"", "'")
+                # majiq_output['gene'] = gene_obj
 
 
-                    for lsv_data in majiq_output['genes_dict'][gene_obj.get_name()]:
-                        # Find which is the ending coordinate of the LSV
-                        lsv_data[1].append(gene_obj.get_exons()[-1].get_coords()[1])
+                for lsv_data in majiq_output['genes_dict'][gene_obj.get_name()]:
+                    # Find which is the ending coordinate of the LSV
+                    lsv_data[1].append(gene_obj.get_exons()[-1].get_coords()[1])
 
-                        # Calculate extension of LSV
-                        lsv_data[0].set_coords(lsv_data[1][0])
-                        lsv_data[0].set_extension(gene_obj, lsv_data[1][2])
+                    # Calculate extension of LSV
+                    lsv_data[0].set_coords(lsv_data[1][0])
+                    lsv_data[0].set_extension(gene_obj, lsv_data[1][2])
 
-            if not len(genes_graphic.keys()): raise Exception("[ERROR] :: No gene matching the visual information file.")
-            majiq_output['genes_json'] = genes_graphic
-            # majiq_output['genes'] = genes_graphic[1]
+        if not len(genes_graphic.keys()): raise Exception("[ERROR] :: No gene matching the visual information file.")
+        majiq_output['genes_json'] = genes_graphic
+        # majiq_output['genes'] = genes_graphic[1]
 
-        except Exception, e:
-            print e.message
-            raise e
+        # except Exception, e:
+        #     print e.message
+        #     raise e
 
 
     if type_summary == 'lsv_delta':
@@ -218,7 +208,6 @@ def create_summary(args):
             if 'genes_file' not in args :
                 print "[ERROR] :: parameter genes-file-info needed for filtering results by gene name."
                 sys.exit(1)
-            import pickle as pkl
             genes_file = pkl.load(open(args.genes_file, 'r'))
 
             import fileinput
@@ -288,7 +277,7 @@ def main():
 
     # Single LSV by Gene(s) of interest
     parser_single_gene = argparse.ArgumentParser(add_help=False)
-    parser_single_gene.add_argument('--genes-file-info', dest='genes_file', metavar='visual_LSE.majiq', type=str, help='Pickle file with gene coords info.')
+    parser_single_gene.add_argument('--genes-file-info', required=True, dest='genes_file', metavar='visual_LSE.majiq', type=str, help='Pickle file with gene coords info.')
     parser_single_gene.add_argument('--gene-names', type=str, dest='gene_names', help='Gene names to filter the results.')
     parser_single_gene.add_argument('--bed-file', type=str, dest='bed_file', help='Bed file with coordinates and genes mapping.')
     parser_single_gene.add_argument('--lsv-types', nargs='*', default=[], type=str, dest='lsv_types', help='LSV type to filter the results. (If no gene list is provided, this option will display only genes containing LSVs of the specified type).')
