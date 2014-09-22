@@ -5,6 +5,8 @@ Rank MAJIQ, MISO or MATS events to test delta PSI reproducibility
 
 """
 import matplotlib as mplot
+import analysis.psi
+
 mplot.use('Agg')
 import scripts.utils
 # import prettyplotlib as ppl
@@ -15,6 +17,7 @@ import argparse
 import pickle
 import os
 from pylab import *
+from pdb import set_trace as st
 
 RANK_TYPES = ['all', 'intersected', 'only_exp1', 'exp1_and_exp2']
 
@@ -121,14 +124,30 @@ def rank_majiq(bins_list, names, V=0.2, absolute=True, dofilter=True, E=False, r
     olderr = np.seterr(divide='ignore')
 
     print len(names), len(bins_list)
+    dircalc = analysis.psi.DirichletCalc()
+
+    #Adjust prior matrix with Jefferies prior
+    jefferies = []
+    psi_space = linspace(0, 1-1./40, num=20) + 1.0/80
+    for i in psi_space:
+        jefferies.append([])
+        for j in psi_space:
+            jefferies[-1].append(dircalc.pdf([i, 1-i, j, 1-j], [0.5, 0.5, 0.5, 0.5]))
+
+    #jefferies = array([dircalc.pdf([x, 1-x], [0.5, 0.5]) for x in psi_space])
+
+    jefferies = array(jefferies)
+    jefferies /= np.sum(jefferies)
+    diff_priors = log(prior) + log(jefferies)
     for i, lsv_bins in enumerate(bins_list):
         # if names[i][2] not in lsv_types_dict.keys():
         #     continue
         if not complex_lsvs and len(lsv_bins)>2:
             continue
         if ranknochange:
-            dmatrix = exp(log(lsv_bins[0]) - log(prior))
-            dmatrix = dmatrix/sum(dmatrix)
+            dmatrix = exp(log(lsv_bins[0]) - diff_priors)
+            dmatrix /= sum(dmatrix)
+
         else:
             dmatrix = np.array(lsv_bins[0])
 
@@ -139,12 +158,12 @@ def rank_majiq(bins_list, names, V=0.2, absolute=True, dofilter=True, E=False, r
         else:
             area = matrix_area(dmatrix, V, absolute)
             if ranknochange: #P(Delta PSI < V) = 1 - P(Delta PSI > V)
-                area = 1 - area
+                area = 1.0 - area
 
             if area > MINTHRESHOLD or not dofilter:
                 rank.append([names[i], area])
     if ranknochange:
-        rank.sort(key=lambda x: x[1])
+        rank.sort(key=lambda x: x[1], reverse=True)
     else:
         rank.sort(key=lambda x: x[1], reverse=True)
     # rank.sort(key=lambda x: x[1], reverse=True)

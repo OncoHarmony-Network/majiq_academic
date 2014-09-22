@@ -11,6 +11,7 @@ import numpy.ma as ma
 import argparse
 import scripts.utils
 from scripts.utils import coverage_from_file
+from pdb import set_trace as st
 
 
 __author__ = 'abarrera'
@@ -65,7 +66,7 @@ def plot_rtpcr_majiq_var(rt_pcr, majiq, coverage, delta_delta_psi, plotpath, nam
     print "Delta Expected PSI: ", delta_psi
     low_de_mask = ma.mask_or((delta_psi >= -LOW_DE), (delta_psi <= LOW_DE))
     med_de_mask = ma.mask_or((delta_psi < -LOW_DE) & (delta_psi >= -MED_DE),  (delta_psi > LOW_DE) & (delta_psi <= MED_DE))
-    high_de_mask = ma.mask_or((delta_psi > MED_DE), (delta_psi < -MED_DE))
+    high_de_mask = (delta_psi > MED_DE)
 
     print "Delta of Delta Expected PSI: ", delta_delta_psi
     LOW_PIED = .10
@@ -121,7 +122,7 @@ def plot_rtpcr_majiq_var(rt_pcr, majiq, coverage, delta_delta_psi, plotpath, nam
 
     for n in xrange(3):
         if n == 1:
-            print repr(names[masks[n][2]])
+            print repr(np.array(names)[masks[n][2]])
             print repr(coverage[masks[n][2]])
 
         axx[n][0].scatter(pairs[n][0][masks[n][0]], pairs[n][1][masks[n][0]], marker='o', c=get_brewer_color(0), alpha=.8, s=50, label="%s < %.1f" % (color_labels[n], thres[n][0]))
@@ -144,9 +145,12 @@ def plot_rtpcr_majiq_var(rt_pcr, majiq, coverage, delta_delta_psi, plotpath, nam
             axx[n][j].set_xlabel(pairs_labels[n][0])
             axx[n][j].set_ylabel(pairs_labels[n][1])
             # axx[n][j].set_title(titles[n])
-            fit = np.polyfit(pairs[n][0][masks[n][j-1]], pairs[n][1][masks[n][j-1]], 1)
-            fit_fn = np.poly1d(fit) # fit_fn is now a function which takes in x and returns an estimate for y
-            axx[n][j].plot(pairs[n][0][masks[n][j-1]], fit_fn(pairs[n][0][masks[n][j-1]]), '--k')
+            try:
+                fit = np.polyfit(pairs[n][0][masks[n][j-1]], pairs[n][1][masks[n][j-1]], 1)
+                fit_fn = np.poly1d(fit) # fit_fn is now a function which takes in x and returns an estimate for y
+                axx[n][j].plot(pairs[n][0][masks[n][j-1]], fit_fn(pairs[n][0][masks[n][j-1]]), '--k')
+            except TypeError, e:
+                print e.message
 
 
     print majiq, rt_pcr
@@ -326,38 +330,51 @@ def avg_expected_delta_psi(bins_list):
     return np.mean([delta_expected_psi(collapse_matrix(bins[0]), bins[1]) for bins in bins_list])
 
 
-def load_coverage(cov_file_list, cov_suffix):
+def load_coverage(cov_file_list, cov_suffix, are_clean_reads):
     coverage_list = []
     try:
         for file in cov_file_list:
-            coverage_list.append(pickle.load(open(file+cov_suffix)))
+            if are_clean_reads:
+                coverage_list.append(dict(pickle.load(open(file))))
+            else:
+                coverage_list.append(pickle.load(open(file + cov_suffix)))
     except IOError:
         print "[INFO]::Coverage not found for %s..." % file
         return []
 
     return coverage_list
 
-def get_coverage(majiq_files_or_dir):
-    rest_file_list = []
-    stim_file_list = []
-    COV_SUFFIX = ".coverage"
+def get_coverage(majiq_files_or_dir, are_clean_reads=False):
+
+    cond1_flist = []
+    cond2_flist = []
+    cond_keyws = ['clean_reads.Cer_CT28_40_520', 'clean_reads.Liv_CT28_40_520']
+    COV_SUFFIX = ".pkl"
     coverage_lists = []
 
-    if os.path.isdir(majiq_files_or_dir):
-        for file in os.listdir(majiq_files_or_dir):
-            if file.endswith(".majiq") and "toJuan.resting" in file:
-                rest_file_list.append(majiq_files_or_dir+'/'+file)
-            if file.endswith(".majiq") and "toJuan.stim" in file:
-                stim_file_list.append(majiq_files_or_dir+'/'+file)
+    if are_clean_reads:
+        if os.path.isdir(majiq_files_or_dir):
+            for file in os.listdir(majiq_files_or_dir):
+                if file.endswith(COV_SUFFIX) and cond_keyws[0] in file:
+                    cond1_flist.append(majiq_files_or_dir+'/'+file)
+                if file.endswith(COV_SUFFIX) and cond_keyws[1] in file:
+                    cond2_flist.append(majiq_files_or_dir+'/'+file)
     else:
-        for file in majiq_files_or_dir:
-            if "toJuan.resting" in file:
-                rest_file_list.append(file)
-            if "toJuan.stim" in file:
-                stim_file_list.append(file)
+        if os.path.isdir(majiq_files_or_dir):
+            for file in os.listdir(majiq_files_or_dir):
+                if file.endswith(".majiq") and "toJuan.resting" in file:
+                    cond1_flist.append(majiq_files_or_dir+'/'+file)
+                if file.endswith(".majiq") and "toJuan.stim" in file:
+                    cond2_flist.append(majiq_files_or_dir+'/'+file)
+        else:
+            for file in majiq_files_or_dir:
+                if "toJuan.resting" in file:
+                    cond1_flist.append(file)
+                if "toJuan.stim" in file:
+                    cond2_flist.append(file)
 
-    coverage_lists.append(load_coverage(rest_file_list, COV_SUFFIX))
-    coverage_lists.append(load_coverage(stim_file_list, COV_SUFFIX))
+    coverage_lists.append(load_coverage(cond1_flist, COV_SUFFIX, are_clean_reads))
+    coverage_lists.append(load_coverage(cond2_flist, COV_SUFFIX, are_clean_reads))
 
     if len(coverage_lists[0]) and len(coverage_lists[1]):
         return coverage_lists
@@ -366,21 +383,24 @@ def get_coverage(majiq_files_or_dir):
     pool = Pool()
     jobs_list = []
 
-    for rest_file in rest_file_list:
+    for rest_file in cond1_flist:
         jobs_list.append(pool.apply_async(coverage_from_file, args=[rest_file, COV_SUFFIX]))
 
-    for stim_file in stim_file_list:
+    for stim_file in cond2_flist:
         jobs_list.append(pool.apply_async(coverage_from_file, args=[stim_file, COV_SUFFIX]))
 
     pool.close()
     pool.join()
 
-    coverage_lists.append(load_coverage(rest_file_list, COV_SUFFIX))
-    coverage_lists.append(load_coverage(stim_file_list, COV_SUFFIX))
+    coverage_lists.append(load_coverage(cond1_flist, COV_SUFFIX))
+    coverage_lists.append(load_coverage(cond2_flist, COV_SUFFIX))
     return coverage_lists
 
 
-def get_min_coverage(coverage_list, name):
+def get_min_coverage(coverage_list, name, are_clean_reads=False):
+    if are_clean_reads:
+        name = str(name).split("#")[0]
+        return min(np.mean([c[name] for c in coverage_list[0]]), np.mean([c[name] for c in coverage_list[1]]))
     return min(np.mean([c[name][0] for c in coverage_list[0]]), np.mean([c[name][0] for c in coverage_list[1]]))
 
 
@@ -402,13 +422,30 @@ def prob_out_expected_psi(bins, rtpcr_delta, V=.2):
     return (np.sum(bins[:left]) + np.sum(bins[right:]))
 
 
+def load_rtpcr_results(pcr_file):
+
+    # Parse RT-PCR results
+    pcr_rest_stim_delta = defaultdict(list)
+    for i, pcr_line in enumerate(pcr_file):
+        if i<1: continue  # headers
+        pcr_fields = pcr_line.rstrip().split()
+        if "target" in pcr_fields[0]:
+            lsv_name = "%s#%s" % (pcr_fields[0], "1")
+        else:
+            lsv_name = "%s#%s" % (pcr_fields[0], "0")
+        pcr_rest_stim_delta[lsv_name].append((float(pcr_fields[1]) - float(pcr_fields[2]))/100)
+
+    return pcr_rest_stim_delta
+
+
 def main():
     parser = argparse.ArgumentParser(description="Compare Delta PSIs computed with MAJIQ against the RT-PCR results.")
     parser.add_argument("pcr", help="Tab-delimted file with the RT-PCR scores")
     parser.add_argument("--majiq-deltas", required=True, dest='majiq_deltas', nargs='+', help='MAJIQ Delta PSI predictions for resting and stimuli RNA-Seq data.')
     parser.add_argument("--miso-deltas", dest='miso_deltas', nargs='+', help='MISO Delta PSI predictions for resting and stimuli RNA-Seq data.')
-    parser.add_argument("--names-map-file", required=True, dest='names_map_file', help='File containing the mapping for events names used in MAJIQ and RT-PCR files.')
+    parser.add_argument("--names-map-file", dest='names_map_file', help='File containing the mapping for events names used in MAJIQ and RT-PCR files.')
     parser.add_argument("--builder-files", dest='majiq_builder_files', help='File containing MAJIQ builder output file.')
+    parser.add_argument("--clean-reads", dest='clean_reads', action='store_true', default=False, help='Are you using clean reads?.')
     parser.add_argument('--plotpath', default='output')
     args = parser.parse_args()
 
@@ -422,7 +459,7 @@ def main():
 
     ## Analyze coverage, saving it for later
     if args.majiq_builder_files:
-        coverage_list = get_coverage(args.majiq_builder_files)  # List of lists of dicts
+        coverage_list = get_coverage(args.majiq_builder_files, args.clean_reads)  # List of lists of dicts
         coverage = []
 
     # Read name mapping file
@@ -430,134 +467,208 @@ def main():
     names_majiq2pcr_dict = {}
     names_junc_majiq = defaultdict(list)
     gene_names_counts = defaultdict(lambda: 0)
-    with open(args.names_map_file) as names_map:
-        for name_map in names_map:
-            # MAJIQ
-            mapped_name = ast.literal_eval(name_map)
-            [majiq_name, junc_num] = mapped_name[1].split('#')
-            names_junc_majiq[majiq_name].append(int(junc_num))
 
-            # RT-PCR
-            if ':' in mapped_name[0]:
-                names_pcr2majiq_dict[mapped_name[0].split(':')[1]] = mapped_name[1]
-                names_majiq2pcr_dict[mapped_name[1]] = mapped_name[0].split(':')[1]
-                gene_names_counts[mapped_name[0].split(':')[1]] += 1
-            else:
-                names_pcr2majiq_dict[mapped_name[0]] = mapped_name[1]
-                names_majiq2pcr_dict[mapped_name[1]] = mapped_name[0]
-                gene_names_counts[mapped_name[0]] += 1
+    if args.clean_reads:
+        with open(args.pcr, 'r') as pcr_file:
+            pcr_rest_stim_delta = load_rtpcr_results(pcr_file)
 
-    print "Number of events names for RT-PCR in names-map-file: %d" % len(names_pcr2majiq_dict.keys())
-    print "Number of events names for MAJIQ in names-map-file: %d" % len(names_junc_majiq.keys())
+        # Process MAJIQ files for resting RNA-Seq data
+        majiq_delta_dict = defaultdict(list)
+        majiq_delta_files = scripts.utils.list_files_or_dir(args.majiq_deltas, "model2.pickle")
 
-    # Parse RT-PCR results
-    pcr_rest_stim_delta = defaultdict(list)
-    with open(args.pcr, 'r') as pcr_file:
-        for i, pcr_line in enumerate(pcr_file):
-            if i<1: continue  # headers
-            pcr_fields = pcr_line.rstrip().split()
+        for mfile in majiq_delta_files:
+            # expected_delta_psi = []
+            with open(mfile) as mfile_open:
+                mpickle = pickle.load(mfile_open)
+                for i, lsv_info in enumerate(mpickle[1]):
+                    if len(mpickle[0][i])>2:
+                        continue
+                    if len(mpickle[0][i]) == 1:
+                        mpickle[0][i].append(mpickle[0][i][-1].T)
 
-            if pcr_fields[0] not in names_pcr2majiq_dict.keys(): continue  # If the event is not in the list of events selected, skip it
-            try:
-                pcr_rest_stim_delta[pcr_fields[0]].append((float(pcr_fields[1]) - float(pcr_fields[2]))/100)
-            except IndexError:
-                print "%s value not found, assigned 0..." % pcr_fields[0]
-                pcr_rest_stim_delta[pcr_fields[0]] = [0]
-            except ValueError, e:
-                print e.message
-                print "Event PSI could not be converted into float, wrong parsing??"
-                pcr_rest_stim_delta[pcr_fields[0]] = [0, 0]
+                    # Find all junctions from that LSV that are included
+                    for j, lsv_way in enumerate(mpickle[0][i]):
+                        lsv_name = lsv_info[1] + "#" + str(j)
+                        if lsv_name not in pcr_rest_stim_delta.keys(): continue # If the event is not in the list of events selected, skip
+                        majiq_delta_dict[lsv_name].append([mpickle[0][i][j], mfile])  # add bins from delta psis
+            # barchart_expected(expected_psis, args.plotpath, mfile)
+            print "Number of events found in %s: %d" % (mfile, len(majiq_delta_dict.keys()))
+        common_names_set = set(pcr_rest_stim_delta.keys()).intersection(set(majiq_delta_dict.keys()))
 
-    print "Number of events found in RT-PCR file: %d" % len(pcr_rest_stim_delta)
+        rt_pcr = []
+        majiq = []
+        miso = []
+        delta_delta_psi = []
+        final_names = []
 
-    # Process MAJIQ files for resting RNA-Seq data
-    majiq_delta_dict = defaultdict(list)
-    majiq_delta_files = scripts.utils.list_files_or_dir(args.majiq_deltas, "deltamatrix.pickle")
 
-    for mfile in majiq_delta_files:
-        # expected_delta_psi = []
-        with open(mfile) as mfile_open:
-            mpickle = pickle.load(mfile_open)
-            for i, lsv_info in enumerate(mpickle[1]):
-                if len(mpickle[0][i])>2:
+        with open("toJordi.txt", "w") as toJordi:
+            flipped_thres = 0.6
+            flipped_lsv_dict = defaultdict(str)  # List of strings with flipped LSVs info
+            for name in common_names_set:
+                print "Found: %s" % name
+
+                # For Majiq, compute mean over Expected PSIs
+                majiq_delta = avg_expected_delta_psi(majiq_delta_dict[name])
+                min_delta = 10
+                rtpcr_delta = pcr_rest_stim_delta[name][0]
+                for rtpcr_delta_entry in pcr_rest_stim_delta[name]:
+                    if abs(rtpcr_delta_entry - majiq_delta) < min_delta:
+                        rtpcr_delta = rtpcr_delta_entry
+                # check if event has expected PSIs suspicious of being flipped
+                if abs(majiq_delta - rtpcr_delta) > .5:
+                    try:
+                        print "%s has an abs. expected difference in delta psi of %.2f. Coverage: %d " % (name, abs(majiq_delta - rtpcr_delta), get_min_coverage(coverage_list, name))
+                    except UnboundLocalError, e:
+                        print "%s has an abs. expected difference in delta psi of %.2f" % (name, abs(majiq_delta - rtpcr_delta))
+                if abs(majiq_delta - rtpcr_delta) > flipped_thres:
+                    flipped_lsv_dict[name] = "%s\t%f\t%f\t%d\n" % (name, rtpcr_delta, majiq_delta, int(gene_names_counts[name]<2))
                     continue
-                # expected_delta_psi.append(delta_expected_psi(mpickle[0][i][0]))
-                if lsv_info[1] not in names_junc_majiq.keys(): continue # If the event is not in the list of events selected, skip it
 
-                # Find all junctions from that LSV that are included
-                for j, lsv_way in enumerate(mpickle[0][i]):
-                    if j in names_junc_majiq[lsv_info[1]]:
-                        majiq_delta_dict[lsv_info[1]+"#"+str(j)].append([mpickle[0][i][j], mfile])  # add bins from delta psis
-        # barchart_expected(expected_psis, args.plotpath, mfile)
-        print "Number of events found in %s: %d" % (mfile, len(majiq_delta_dict.keys()))
+                rt_pcr.append(rtpcr_delta)
+                majiq.append(majiq_delta)
+                delta_delta_psi.append(mean_prob_out_exp_psi(majiq_delta_dict[name], rtpcr_delta))
+                final_names.append(name)
+
+                if args.miso_deltas:
+                    miso.append(np.mean(miso_delta_dict[name]))
+
+                try:
+                    coverage.append(get_min_coverage(coverage_list, name, args.clean_reads))
+                    if coverage[-1] > 15 and delta_delta_psi[-1]>.2:
+                        toJordi.write("Suspicious guy: %s. Coverage=%d; Prob(Delta(PSI))>0.2=%.2f; Expected(Delta(PSI))=%.2f: RT-PCR=%.2f\n" % (name, coverage[-1], delta_delta_psi[-1], majiq[-1], rt_pcr[-1]))
+                except NameError, e:
+                    pass
+
+    else:
+        with open(args.names_map_file) as names_map:
+            for name_map in names_map:
+                # MAJIQ
+                mapped_name = ast.literal_eval(name_map)
+                [majiq_name, junc_num] = mapped_name[1].split('#')
+                names_junc_majiq[majiq_name].append(int(junc_num))
+
+                # RT-PCR
+                if ':' in mapped_name[0]:
+                    names_pcr2majiq_dict[mapped_name[0].split(':')[1]] = mapped_name[1]
+                    names_majiq2pcr_dict[mapped_name[1]] = mapped_name[0].split(':')[1]
+                    gene_names_counts[mapped_name[0].split(':')[1]] += 1
+                else:
+                    names_pcr2majiq_dict[mapped_name[0]] = mapped_name[1]
+                    names_majiq2pcr_dict[mapped_name[1]] = mapped_name[0]
+                    gene_names_counts[mapped_name[0]] += 1
+
+        print "Number of events names for RT-PCR in names-map-file: %d" % len(names_pcr2majiq_dict.keys())
+        print "Number of events names for MAJIQ in names-map-file: %d" % len(names_junc_majiq.keys())
+
+        # Parse RT-PCR results
+        pcr_rest_stim_delta = defaultdict(list)
+        with open(args.pcr, 'r') as pcr_file:
+            for i, pcr_line in enumerate(pcr_file):
+                if i<1: continue  # headers
+                pcr_fields = pcr_line.rstrip().split()
+
+                if pcr_fields[0] not in names_pcr2majiq_dict.keys(): continue  # If the event is not in the list of events selected, skip it
+                try:
+                    pcr_rest_stim_delta[pcr_fields[0]].append((float(pcr_fields[1]) - float(pcr_fields[2]))/100)
+                except IndexError:
+                    print "%s value not found, assigned 0..." % pcr_fields[0]
+                    pcr_rest_stim_delta[pcr_fields[0]] = [0]
+                except ValueError, e:
+                    print e.message
+                    print "Event PSI could not be converted into float, wrong parsing??"
+                    pcr_rest_stim_delta[pcr_fields[0]] = [0, 0]
+
+        print "Number of events found in RT-PCR file: %d" % len(pcr_rest_stim_delta)
+
+        # Process MAJIQ files for resting RNA-Seq data
+        majiq_delta_dict = defaultdict(list)
+        majiq_delta_files = scripts.utils.list_files_or_dir(args.majiq_deltas, "model2.pickle")
+
+        for mfile in majiq_delta_files:
+            # expected_delta_psi = []
+            with open(mfile) as mfile_open:
+                mpickle = pickle.load(mfile_open)
+                for i, lsv_info in enumerate(mpickle[1]):
+                    if len(mpickle[0][i])>2:
+                        continue
+                    # expected_delta_psi.append(delta_expected_psi(mpickle[0][i][0]))
+                    if lsv_info[1] not in names_junc_majiq.keys(): continue # If the event is not in the list of events selected, skip it
+
+                    # Find all junctions from that LSV that are included
+                    for j, lsv_way in enumerate(mpickle[0][i]):
+                        if j in names_junc_majiq[lsv_info[1]]:
+                            majiq_delta_dict[lsv_info[1]+"#"+str(j)].append([mpickle[0][i][j], mfile])  # add bins from delta psis
+            # barchart_expected(expected_psis, args.plotpath, mfile)
+            print "Number of events found in %s: %d" % (mfile, len(majiq_delta_dict.keys()))
 
 
-    ## Intersect names from RT-PCR and MAJIQ
-    common_names_set = set([names_pcr2majiq_dict[k] for k in pcr_rest_stim_delta.keys()]).intersection(set(majiq_delta_dict.keys()))
-    print "Number of common names after intersection with MAJIQ: %d" % len(common_names_set)
+        ## Intersect names from RT-PCR and MAJIQ
+        common_names_set = set([names_pcr2majiq_dict[k] for k in pcr_rest_stim_delta.keys()]).intersection(set(majiq_delta_dict.keys()))
+        print "Number of common names after intersection with MAJIQ: %d" % len(common_names_set)
 
     if args.miso_deltas:
         common_names_set = common_names_set.intersection(set(miso_delta_dict.keys()))
         print "Number of common names after intersection with MISO: %d" % len(common_names_set)
 
 
-    rt_pcr = []
-    majiq = []
-    miso = []
-    delta_delta_psi = []
-    final_names = []
+        rt_pcr = []
+        majiq = []
+        miso = []
+        delta_delta_psi = []
+        final_names = []
 
-    with open("toJordi.txt", "w") as toJordi:
-        flipped_thres = 1.0
-        flipped_lsv_dict = defaultdict(str)  # List of strings with flipped LSVs info
-        for common_name in common_names_set:
-            for name_majiq, name_pcr in names_majiq2pcr_dict.iteritems():
-                if names_majiq2pcr_dict[common_name] == name_pcr:
+        with open("toJordi.txt", "w") as toJordi:
+            flipped_thres = 1.0
+            flipped_lsv_dict = defaultdict(str)  # List of strings with flipped LSVs info
+            for common_name in common_names_set:
+                for name_majiq, name_pcr in names_majiq2pcr_dict.iteritems():
+                    if names_majiq2pcr_dict[common_name] == name_pcr:
 
-                    name = name_majiq
-                    if not len(majiq_delta_dict[name]):
-                        print "%s - %s: Not found in majiq_dict" % (name_majiq, name_pcr)
-                        continue
-                    print "Found: %s - %s" % (name, names_majiq2pcr_dict[name])
+                        name = name_majiq
+                        if not len(majiq_delta_dict[name]):
+                            print "%s - %s: Not found in majiq_dict" % (name_majiq, name_pcr)
+                            continue
+                        print "Found: %s - %s" % (name, names_majiq2pcr_dict[name])
 
-                    # For Majiq, compute mean over Expected PSIs
-                    majiq_delta = avg_expected_delta_psi(majiq_delta_dict[name])
-                    min_delta = 10
-                    rtpcr_delta = pcr_rest_stim_delta[names_majiq2pcr_dict[name]][0]
-                    for rtpcr_delta_entry in pcr_rest_stim_delta[names_majiq2pcr_dict[name]]:
-                        if abs(rtpcr_delta_entry - majiq_delta) < min_delta:
-                            rtpcr_delta = rtpcr_delta_entry
-                    # check if event has expected PSIs suspicious of being flipped
-                    if abs(majiq_delta - rtpcr_delta) > .5:
+                        # For Majiq, compute mean over Expected PSIs
+                        majiq_delta = avg_expected_delta_psi(majiq_delta_dict[name])
+                        min_delta = 10
+                        rtpcr_delta = pcr_rest_stim_delta[names_majiq2pcr_dict[name]][0]
+                        for rtpcr_delta_entry in pcr_rest_stim_delta[names_majiq2pcr_dict[name]]:
+                            if abs(rtpcr_delta_entry - majiq_delta) < min_delta:
+                                rtpcr_delta = rtpcr_delta_entry
+                        # check if event has expected PSIs suspicious of being flipped
+                        if abs(majiq_delta - rtpcr_delta) > .5:
+                            try:
+                                print "%s has an abs. expected difference in delta psi of %.2f. Coverage: %d " % (name, abs(majiq_delta - rtpcr_delta), get_min_coverage(coverage_list, name))
+                            except UnboundLocalError, e:
+                                print "%s has an abs. expected difference in delta psi of %.2f" % (name, abs(majiq_delta - rtpcr_delta))
+                        if abs(majiq_delta - rtpcr_delta) > flipped_thres:
+                            flipped_lsv_dict[name] = "%s\t%s\t%f\t%f\t%d\t%d\n" % (names_majiq2pcr_dict[name], name, rtpcr_delta, majiq_delta, int(gene_names_counts[names_majiq2pcr_dict[name]]<2), int(len(names_junc_majiq[str(name).split('#')[0]])<2) )
+                            continue
+
+                        rt_pcr.append(rtpcr_delta)
+                        majiq.append(majiq_delta)
+                        delta_delta_psi.append(mean_prob_out_exp_psi(majiq_delta_dict[name], rtpcr_delta))
+                        final_names.append(name)
+
+                        if args.miso_deltas:
+                            miso.append(np.mean(miso_delta_dict[name]))
+
                         try:
-                            print "%s has an abs. expected difference in delta psi of %.2f. Coverage: %d " % (name, abs(majiq_delta - rtpcr_delta), get_min_coverage(coverage_list, name))
-                        except UnboundLocalError, e:
-                            print "%s has an abs. expected difference in delta psi of %.2f" % (name, abs(majiq_delta - rtpcr_delta))
-                    if abs(majiq_delta - rtpcr_delta) > flipped_thres:
-                        flipped_lsv_dict[name] = "%s\t%s\t%f\t%f\t%d\t%d\n" % (names_majiq2pcr_dict[name], name, rtpcr_delta, majiq_delta, int(gene_names_counts[names_majiq2pcr_dict[name]]<2), int(len(names_junc_majiq[str(name).split('#')[0]])<2) )
-                        continue
-
-                    rt_pcr.append(rtpcr_delta)
-                    majiq.append(majiq_delta)
-                    delta_delta_psi.append(mean_prob_out_exp_psi(majiq_delta_dict[name], rtpcr_delta))
-                    final_names.append(name)
-
-                    if args.miso_deltas:
-                        miso.append(np.mean(miso_delta_dict[name]))
-
-                    try:
-                        coverage.append(get_min_coverage(coverage_list, name))
-                        if coverage[-1] > 15 and delta_delta_psi[-1]>.2:
-                            toJordi.write("Suspicious guy: %s. Coverage=%d; Prob(Delta(PSI))>0.2=%.2f; Expected(Delta(PSI))=%.2f: RT-PCR=%.2f\n" % (name, coverage[-1], delta_delta_psi[-1], majiq[-1], rt_pcr[-1]))
-                    except NameError, e:
-                        pass
+                            coverage.append(get_min_coverage(coverage_list, name))
+                            if coverage[-1] > 15 and delta_delta_psi[-1]>.2:
+                                toJordi.write("Suspicious guy: %s. Coverage=%d; Prob(Delta(PSI))>0.2=%.2f; Expected(Delta(PSI))=%.2f: RT-PCR=%.2f\n" % (name, coverage[-1], delta_delta_psi[-1], majiq[-1], rt_pcr[-1]))
+                        except NameError, e:
+                            pass
 
     if args.miso_deltas:
         plot_rtpcr_majiq_miso(rt_pcr, majiq, miso, args.plotpath)
     if args.majiq_builder_files:
         # plot_rtpcr_majiq(rt_pcr, majiq, coverage, args.plotpath)
-        plot_rtpcr_majiq_var(np.array(rt_pcr), np.array(majiq), np.array(coverage), np.array(delta_delta_psi), args.plotpath, final_names)
-        # plot_rtpcr_majiq_reads_deltas(rt_pcr, majiq, coverage, delta_delta_psi, args.plotpath)
+        # plot_rtpcr_majiq_var(np.array(rt_pcr), np.array(majiq), np.array(coverage), np.array(delta_delta_psi), args.plotpath, final_names)
+        plot_rtpcr_majiq_reads_deltas(rt_pcr, majiq, coverage, delta_delta_psi, args.plotpath)
 
     print "%d elements flipped" % len(flipped_lsv_dict.keys())
     # Save presumably flipped events

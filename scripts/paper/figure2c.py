@@ -107,8 +107,8 @@ def main():
         coverages.append(load_clean_reads(majiq_f))
     common_cov = cov_combined(coverages)
 
-    BINNAMES = ['0-15','15-20','20-40','40-100','100-xx']
-    ranges = [15,20,40,100,90000]
+    BINNAMES = ['0-15', '15-20', '20-40', '40-100', '100-xx']
+    ranges = [15, 20, 40, 100, 90000]
 
     read_bins = [[],[],[],[],[]]
 

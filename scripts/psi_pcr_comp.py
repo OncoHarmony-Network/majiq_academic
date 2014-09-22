@@ -1,4 +1,3 @@
-# from __future__ import division
 from collections import defaultdict
 import pickle
 import numpy as np
@@ -8,6 +7,7 @@ import ast
 import os
 import matplotlib.pyplot as pyplot
 import scripts.utils
+from pdb import set_trace as st
 
 __author__ = 'abarrera'
 
@@ -30,61 +30,103 @@ def _save_or_show(plotpath, name):
         pyplot.show()
 
 
-def plot_rtpcr_majiq_boxplot(rt_pcr_majiq, rt_pcr_miso, majiq, miso, plotpath):
+def scatterplot_rtpcr_majiq(rt_pcr_majiq, rt_pcr_miso, majiq, miso, plotpath):
     #figure out how many groups of events exist
 
-    fig, axx = pyplot.subplots(2, 2, sharex=True, sharey=True, figsize=[12, 12], dpi=300)
-    fig.suptitle("PSI comparison: RT-PCR Vs (MAJIQ N=%d & MISO N=%d) " % (len(rt_pcr_majiq[0]), len(rt_pcr_miso[0])))
+    # majiq_rest_yerr = [var_expected_psi(dis) for dis in rt_pcr_majiq[0]]
 
-    diagonal = np.linspace(0, 1, num=len(rt_pcr_majiq[0]))
-    print majiq[0], rt_pcr_majiq[0], miso[0]
-    fit = np.polyfit(majiq[0], rt_pcr_majiq[0], 1)
+    fig, axx = pyplot.subplots(2, 3, sharex=True, sharey=True, figsize=[12, 8], dpi=300)
+    fig.suptitle("PSI comparison: RT-PCR Vs MAJIQ; RT-PCR Vs MISO")
+
+    rt_pcr_majiq_all = [a for b in rt_pcr_majiq for a in b]
+    rt_pcr_miso_all = [a for b in rt_pcr_miso for a in b]
+    majiq_all = [a for b in majiq for a in b]
+    miso_all = [a for b in miso for a in b]
+
+
+    diagonal = np.linspace(0, 1, num=len(rt_pcr_majiq_all))
+    # print majiq[0], rt_pcr_majiq[0], miso[0]
+    fit = np.polyfit(majiq_all, rt_pcr_majiq_all, 1)
     fit_fn = np.poly1d(fit) # fit_fn is now a function which takes in x and returns an estimate for y
 
-    axx[0][0].plot(majiq[0], fit_fn(majiq[0]), '--k')
+    axx[0][0].plot(majiq_all, fit_fn(majiq_all), '--k')
     axx[0][0].plot(diagonal, diagonal, '--', color="#cccccc")
-    axx[0][0].plot(majiq[0], rt_pcr_majiq[0], '.', color='r', label='MAJIQ')
+    axx[0][0].plot(majiq[0], rt_pcr_majiq[0], '.', color='r', label='Resting')
+    axx[0][0].plot(majiq[1], rt_pcr_majiq[1], '.', color='b', label='Stimulating')
 
     axx[0][0].set_xlabel('MAJIQ')
     axx[0][0].set_ylabel('RT-PCR')
-    axx[0][0].set_title('Resting')
+    axx[0][0].set_title('Resting + Stimulating (N=%d)' % len(majiq_all))
     axx[0][0].set_ylim([0,1])
+    # axx[0][0].legend(loc=4)
+
+    diagonal = np.linspace(0, 1, num=len(rt_pcr_miso_all))
+    fit = np.polyfit(miso_all, rt_pcr_miso_all, 1)
+    fit_fn = np.poly1d(fit) # fit_fn is now a function which takes in x and returns an estimate for y
+
+    axx[1][0].plot(miso_all, fit_fn(miso_all), '--k')
+    axx[1][0].plot(diagonal, diagonal, '--', color="#cccccc")
+    axx[1][0].plot(miso[0], rt_pcr_miso[0], '.', color='r', label='Resting')
+    axx[1][0].plot(miso[1], rt_pcr_miso[1], '.', color='b', label='Stimulating')
+
+    axx[1][0].set_xlabel('MISO')
+    axx[1][0].set_ylabel('RT-PCR')
+    axx[1][0].set_title('Resting + Stimulating (N=%d)' % len(miso_all))
+    axx[1][0].set_ylim([0,1])
+    # axx[0][0].legend(loc=4)
+
+
+    diagonal = np.linspace(0, 1, num=len(rt_pcr_majiq[0]))
+    fit = np.polyfit(majiq[0], rt_pcr_majiq[0], 1)
+    fit_fn = np.poly1d(fit) # fit_fn is now a function which takes in x and returns an estimate for y
+
+    axx[0][1].plot(majiq[0], fit_fn(majiq[0]), '--k')
+    axx[0][1].plot(diagonal, diagonal, '--', color="#cccccc")
+    axx[0][1].plot(majiq[0], rt_pcr_majiq[0], '.', color='r', label='Resting')
+
+    axx[0][1].set_xlabel('MAJIQ')
+    axx[0][1].set_ylabel('RT-PCR')
+    axx[0][1].set_title('Resting (N=%d)' % len(majiq[0]))
+    axx[0][1].set_ylim([0,1])
     # axx[0][0].legend(loc=4)
 
     fit = np.polyfit(majiq[1], rt_pcr_majiq[1], 1)
     fit_fn = np.poly1d(fit)
-    axx[0][1].plot(diagonal, diagonal, '--', color="#cccccc")
-    axx[0][1].plot(majiq[1], rt_pcr_majiq[1], '.', color='r', label='MAJIQ')
-    axx[0][1].plot(majiq[1], fit_fn(majiq[1]), '--k')
+    axx[0][2].plot(diagonal, diagonal, '--', color="#cccccc")
+    axx[0][2].plot(majiq[1], rt_pcr_majiq[1], '.', color='b', label='Stimulating')
+    axx[0][2].plot(majiq[1], fit_fn(majiq[1]), '--k')
 
-    axx[0][1].set_xlabel('MAJIQ')
-    axx[0][1].set_title('Stimuli')
-    axx[0][1].set_ylim([0,1])
+    axx[0][2].set_xlabel('MAJIQ')
+    axx[0][2].set_ylabel('RT-PCR')
+    axx[0][2].set_title('Stimulating (N=%d)' % len(majiq[1]))
+    axx[0][2].set_ylim([0,1])
     # axx[0][1].legend(loc=4)
 
     fit = np.polyfit(miso[0], rt_pcr_miso[0], 1)
     fit_fn = np.poly1d(fit) # fit_fn is now a function which takes in x and returns an estimate for y
 
-    axx[1][0].plot(miso[0], fit_fn(miso[0]), '--k')
-    axx[1][0].plot(diagonal, diagonal, '--', color="#cccccc")
-    axx[1][0].plot(miso[0], rt_pcr_miso[0], '.', color='b', label='MISO')
+    axx[1][1].plot(miso[0], fit_fn(miso[0]), '--k')
+    axx[1][1].plot(diagonal, diagonal, '--', color="#cccccc")
+    axx[1][1].plot(miso[0], rt_pcr_miso[0], '.', color='r', label='Resting')
 
-    axx[1][0].set_xlabel('MISO')
-    axx[1][0].set_ylabel('RT-PCR')
-    axx[1][0].set_title('Resting')
-    axx[1][0].set_ylim([0,1])
+    axx[1][1].set_xlabel('MISO')
+    axx[1][1].set_ylabel('RT-PCR')
+    axx[1][1].set_title('Resting (N=%d)' % len(miso[0]))
+    axx[1][1].set_ylim([0,1])
     # axx[1][0].legend(loc=4)
 
     fit = np.polyfit(miso[1], rt_pcr_miso[1], 1)
     fit_fn = np.poly1d(fit)
-    axx[1][1].plot(diagonal, diagonal, '--', color="#cccccc")
-    axx[1][1].plot(miso[1], rt_pcr_miso[1], '.', color='b')
-    axx[1][1].plot(miso[1], fit_fn(miso[1]), '--k')
+    axx[1][2].plot(diagonal, diagonal, '--', color="#cccccc")
+    axx[1][2].plot(miso[1], rt_pcr_miso[1], '.', color='b', label='Stimulating')
+    axx[1][2].plot(miso[1], fit_fn(miso[1]), '--k')
 
-    axx[1][1].set_xlabel('MISO')
-    axx[1][1].set_title('Stimuli')
-    axx[1][1].set_ylim([0,1])
+    axx[1][2].set_xlabel('MISO')
+    axx[1][2].set_ylabel('RT-PCR')
+    axx[1][2].set_title('Stimulating (N=%d)' % len(miso[1]))
+    axx[1][2].set_ylim([0,1])
     # axx[1][1].legend(loc=4)
+    st()
     _save_or_show(plotpath, "psi_comp_rtpcr_majiq_miso")
 
 
@@ -103,6 +145,17 @@ def expected_psi(bins):
 
 
 def avg_expected_psi(bins_list):
+    return np.mean([expected_psi(bins) for bins in bins_list])
+
+
+def get_variance(bins, mean):
+    """Compute the variance = E[X^2] - (E[X])^2"""
+    bins = np.array(bins)
+    step_bins = 1 / bins.size
+    projection_prod = bins * np.arange(step_bins / 2, 1, step_bins)**2
+    return np.sum(projection_prod) - mean**2
+
+def var_expected_psi(bins_list):
     return np.mean([expected_psi(bins) for bins in bins_list])
 
 
@@ -247,7 +300,7 @@ def main():
     majiq = [[], []]
     miso = [[], []]
 
-    flipped_thres = .8
+    flipped_thres = 1
     flipped_majiq_dict = defaultdict(str)  # List of strings with flipped LSVs info
     flipped_miso_dict = defaultdict(str)  # List of strings with flipped LSVs info
     for common_name in common_names_set:
@@ -258,6 +311,8 @@ def main():
                 # For Majiq, compute mean over Expected PSIs
                 majiq_rest_stat = avg_expected_psi(majiq_rest_dict[name])
                 majiq_stim_stat = avg_expected_psi(majiq_stim_dict[name])
+                majiq_rest_dist = majiq_rest_dict[name]
+                majiq_stim_dist = majiq_stim_dict[name]
 
                 # For MISO, compute mean
                 miso_rest_stat = np.mean(miso_rest_dict[name])
@@ -311,9 +366,14 @@ def main():
                 else:
                     majiq[0].append(majiq_rest_stat)
                     majiq[1].append(majiq_stim_stat)
+                    # majiq[0].append(majiq_rest_dist)
+                    # majiq[1].append(majiq_stim_dist)
 
                 if abs(miso_rest_stat - rt_pcr_miso[0][-1]) > flipped_thres or abs(miso_stim_stat - rt_pcr_miso[1][-1]) > flipped_thres:
                     flipped_miso_dict[name] = "%s\t%s\t%f\t%f\t%f\t%f\t%d\t%d\n" % (names_majiq2pcr_dict[name], name, rt_pcr_miso[0][-1], miso_rest_stat, rt_pcr_miso[1][-1], miso_stim_stat, int(gene_names_counts[names_majiq2pcr_dict[name]]<2), int(len(names_junc_majiq[str(name).split('#')[0]])<2) )
+                    del rt_pcr_miso[0][-1]
+                    del rt_pcr_miso[1][-1]
+                elif np.isnan(miso_rest_stat) or np.isnan(miso_stim_stat):
                     del rt_pcr_miso[0][-1]
                     del rt_pcr_miso[1][-1]
                 else:
@@ -341,7 +401,7 @@ def main():
 
     # print repr(rt_pcr), repr(majiq)
 
-    plot_rtpcr_majiq_boxplot(rt_pcr_majiq, rt_pcr_miso, majiq, miso, args.plotpath)
+    scatterplot_rtpcr_majiq(rt_pcr_majiq, rt_pcr_miso, majiq, miso, args.plotpath)
 
     # Save presumably flipped events in majiq
     # flipped_lsv_names = [str(name_str).split("#")[0] for name_str in flipped_majiq_dict.keys()]
