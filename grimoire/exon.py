@@ -622,7 +622,7 @@ def detect_exons(gene, junction_list, read_rna):
             junction_list.remove((coord, jtype, jj))
             del jj
             continue
-        if jj.donor is None and jj.acceptor is None:
+        if jj.get_donor() is None and jj.get_acceptor() is None:
 #            print "JUNCTIONS MISSING EXONS",jj.donor, jj.acceptor, jj.readN.sum(), jj.start, jj.end
             junction_list.remove((coord, jtype, jj))
             del jj

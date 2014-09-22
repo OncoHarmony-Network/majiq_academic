@@ -299,20 +299,20 @@ class LSV_IR(object):
 
 class MajiqLsv(object):
 
-    def __init__ (self, LSV, exp_idx):
+    def __init__(self, LSV, exp_idx):
 
         self.coords = LSV.coords
         self.id = LSV.id
         self.type = LSV.ext_type
-        self.junction_list = scipy.sparse.lil_matrix((LSV.junctions.shape[0],(mglobals.readLen-16)+1),dtype=np.int)
+        self.junction_list = scipy.sparse.lil_matrix((LSV.junctions.shape[0],(mglobals.readLen-16)+1), dtype=np.int)
         self.junction_id = []
 
-        self.visual = self.get_visual_lsv( LSV, exp_idx )
+        self.visual = self.get_visual_lsv(LSV, exp_idx)
 
-        self.gc_factor = scipy.sparse.lil_matrix( (LSV.junctions.shape[0],(mglobals.readLen-16)+1), dtype=np.dtype('float') )
+        self.gc_factor = scipy.sparse.lil_matrix((LSV.junctions.shape[0], (mglobals.readLen-16)+1), dtype=np.dtype('float'))
 
         for idx,junc in enumerate(LSV.junctions):
-            self.junction_list[idx,:] = junc.coverage[exp_idx,:]
+            self.junction_list[idx,:] = junc.coverage[exp_idx, :]
             self.junction_id.append(junc.get_id())
             for jidx in range(mglobals.readLen-16+1):
                 dummy = junc.get_gc_content()[jidx]

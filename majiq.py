@@ -44,7 +44,7 @@ def __parallel_lsv_quant(samfiles_list, chrom, pcr_validation=False):
 
     try:
         print "START child,", current_process().name
-        tlogger = utils.get_logger("%s/majiq.log" % mglobals.outDir, silent=args.silent, debug=args.debug)
+        tlogger = utils.get_logger("%s/%s.majiq.log" % (mglobals.outDir, chrom), silent=args.silent, debug=args.debug)
         majiq_builder(samfiles_list, chrom, pcr_validation, tlogger)
         print "END child, ", current_process().name
     except Exception as e:
