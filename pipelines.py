@@ -189,6 +189,7 @@ def __parallel_calcpsi_lsv( conf , lsv_junc, fitfunc, name, chunk, tempdir):
         print "%s"%sys.exc_traceback.tb_lineno, e
         sys.stdout.flush()
 
+
 class CalcPsi(BasicPipeline):
 
     def run(self, lsv=False):
@@ -198,7 +199,6 @@ class CalcPsi(BasicPipeline):
         else:
             ret = self.calcpsi_lsv(path)
         return ret
-
 
     def calcpsi_newmodel(self):
         """
@@ -222,20 +222,20 @@ class CalcPsi(BasicPipeline):
             filtered_lsv[ii] = self.mark_stacks_lsv( lsv_junc, fitfunc[ii])
         matched_lsv, matched_info = majiq_filter.quantifiable_in_group( filtered_lsv, self.minnonzero, self.minreads, self.logger , 0.10 )
 
-        conf = { 'minnonzero':self.minnonzero,
-                 'minreads': self.minreads,
-                 'm':self.m,
-                 'k':self.k,
-                 'discardzeros':self.discardzeros,
-                 'trimborder':self.trimborder,
-                 'debug':self.debug,
-                 'alpha':self.alpha,
-                 'n':self.n, 
-                 'nbins':40,
-                 'nz':self.nz}
+        conf = {'minnonzero': self.minnonzero,
+                'minreads': self.minreads,
+                'm': self.m,
+                'k': self.k,
+                'discardzeros': self.discardzeros,
+                'trimborder': self.trimborder,
+                'debug': self.debug,
+                'alpha': self.alpha,
+                'n': self.n,
+                'nbins': 40,
+                'nz': self.nz}
 
         if self.nthreads == 1:
-            posterior_matrix, names = pipe.calcpsi( matched_lsv, matched_info, num_exp, conf, fitfunc, self.logger)
+            posterior_matrix, names = pipe.calcpsi(matched_lsv, matched_info, num_exp, conf, fitfunc, self.logger)
         else:
             pool = Pool(processes=self.nthreads)
             csize = len(matched_lsv) / int(self.nthreads)
@@ -283,31 +283,31 @@ class CalcPsi(BasicPipeline):
         self.logger.info("")
         self.logger.info("Loading %s..."%path)
         lsv_junc, const = majiq_io.load_data_lsv(path, self.logger) 
-        self.logger.debug("SHAPES for lsv %s,  constitutive %s"%(len(lsv_junc[0]), const[0].shape))
+        self.logger.debug("SHAPES for lsv %s,  constitutive %s" % (len(lsv_junc[0]), const[0].shape))
         self.logger.info("Loaded.")
 
-        all_junctions = self.gc_content_norm_lsv( lsv_junc, const )
+        all_junctions = self.gc_content_norm_lsv( lsv_junc, const)
 
         fitfunc = self.fitfunc(const[0])
-        filter_lsv = self.mark_stacks_lsv( lsv_junc, fitfunc)
+        filter_lsv = self.mark_stacks_lsv(lsv_junc, fitfunc)
 
-        conf = { 'minnonzero':self.minnonzero,
+        conf = { 'minnonzero': self.minnonzero,
                  'minreads': self.minreads,
-                 'm':self.m,
-                 'k':self.k,
-                 'discardzeros':self.discardzeros,
-                 'trimborder':self.trimborder,
-                 'debug':self.debug,
-                 'alpha':self.alpha,
-                 'n':self.n, 
-                 'Nz':self.nz}
+                 'm': self.m,
+                 'k': self.k,
+                 'discardzeros': self.discardzeros,
+                 'trimborder': self.trimborder,
+                 'debug': self.debug,
+                 'alpha': self.alpha,
+                 'n': self.n,
+                 'Nz': self.nz}
 
-        if self.nthreads == 1: 
-            parallel_calcpsi( conf, filter_lsv, fitfunc, name, 0, '%s/tmp'%os.path.dirname(self.output))
-            tempfile = open("%s/tmp/%s_th0.psi.pickle"%(self.output, name))
-            ptempt = pickle.load( tempfile )
+        if self.nthreads == 1:
+            parallel_calcpsi(conf, filter_lsv, fitfunc, name, 0, '%s/tmp' % os.path.dirname(self.output))
+            tempfile = open("%s/tmp/%s_th0.psi.pickle" % (self.output, name))
+            ptempt = pickle.load(tempfile)
             psi = ptempt[0] 
-            info =  ptempt[1] 
+            info = ptempt[1]
         else:
             try:
                 pool = Pool(processes=self.nthreads)
@@ -315,11 +315,12 @@ class CalcPsi(BasicPipeline):
                 self.logger.info("CREATING THREADS %s"%self.nthreads)
                 jobs = []
     
-                for nt in xrange(self.nthreads):
-                    lb = nt * csize
-                    ub = min( (nt+1) * csize, len(filter_lsv[0]) )
+                for nthrd in xrange(self.nthreads):
+                    lb = nthrd * csize
+                    ub = min((nthrd+1) * csize, len(filter_lsv[0]))
                     lsv_list = [filter_lsv[0][lb:ub],filter_lsv[1][lb:ub]]
-                    jobs.append(pool.apply_async( parallel_calcpsi, [conf, lsv_list, fitfunc, name, nt, '%s/tmp'%os.path.dirname(self.output)] ))
+                    jobs.append(pool.apply_async( parallel_calcpsi, [conf, lsv_list, fitfunc, name, nthrd,
+                                                                     '%s/tmp' % os.path.dirname(self.output)]))
                 pool.close()
                 pool.join()
             except Exception as e:
@@ -328,17 +329,17 @@ class CalcPsi(BasicPipeline):
             psi = []
             info = []
             self.logger.info("GATHER pickles")
-            for nt in xrange(self.nthreads):
-                tempfile = open("%s/tmp/%s_th%s.psi.pickle"%(os.path.dirname(self.output), name, nt))
+            for nthrd in xrange(self.nthreads):
+                tempfile = open("%s/tmp/%s_th%s.psi.pickle"%(os.path.dirname(self.output), name, nthrd))
                 ptempt = pickle.load( tempfile )
                 psi.extend( ptempt[0] )
                 info.extend( ptempt[1] )
 
         self.logger.info("Saving PSI...")
         if write_pickle:
-            output = open("%s%s_psi.pickle"%(self.output, name), 'w')
+            output = open("%s%s_psi.pickle" % (self.output, name), 'w')
             pickle.dump((psi, info), output)
-            self.logger.info("PSI calculation for %s ended succesfully! Result can be found at %s"%(name, output.name))
+            self.logger.info("PSI calculation for %s ended succesfully! Result can be found at %s" % (name, output.name))
 
         if self.debug > 0:
             return psi, info[:self.debug]
@@ -356,32 +357,32 @@ def deltapair(args):
 
 
 
-def deltapsi_calc( matched_list, matched_info, fitfunc, conf, chunk, prior_matrix, logr ):
-    logr.info("[Th %s]: Bootstrapping for all samples..."%chunk)
-    lsv_samples = [[],[]]
+def deltapsi_calc(matched_list, matched_info, fitfunc, conf, chunk, prior_matrix, logr):
+    logr.info("[Th %s]: Bootstrapping for all samples..." % chunk)
+    lsv_samples = [[], []]
     for idx_exp, experiment in enumerate(matched_list):
         for idx, ii in enumerate(experiment):
-            m_lsv, var_lsv, s_lsv = majiq_sample.sample_from_junctions(  junction_list = ii,
-                                                            m = conf['m'],
-                                                            k = conf['k'],
-                                                            discardzeros= conf['discardzeros'],
-                                                            trimborder  = conf['trimborder'],
-                                                            fitted_func = fitfunc[idx_exp],
-                                                            debug       = conf['debug'],
-                                                            Nz          = conf['Nz'])
+            m_lsv, var_lsv, s_lsv = majiq_sample.sample_from_junctions(junction_list=ii,
+                                                                       m=conf['m'],
+                                                                       k=conf['k'],
+                                                                       discardzeros=conf['discardzeros'],
+                                                                       trimborder=conf['trimborder'],
+                                                                       fitted_func=fitfunc[idx_exp],
+                                                                       debug=conf['debug'],
+                                                                       Nz=conf['Nz'])
             lsv_samples[idx_exp].append( s_lsv )
 
-    logr.info("[Th %s]: Calculating P(Data | PSI_i, PSI_j)..."%chunk)
+    logr.info("[Th %s]: Calculating P(Data | PSI_i, PSI_j)..." % chunk)
     #P(Data | PSI_i, PSI_j) = P(vector_i | PSI_i) * P(vector_j | PSI_j)
-    numbins= 20
+    numbins=20
     data_given_psi = []
     try:
         for lsv_idx, info in enumerate(matched_info):
             if lsv_idx % 50 == 0:
-                print "%s...."%lsv_idx,
+                print "%s...." % lsv_idx,
                 sys.stdout.flush()
-            data_given_psi1 = majiq_psi.reads_given_psi_lsv( lsv_samples[0][lsv_idx], conf['psi_space'] )
-            data_given_psi2 = majiq_psi.reads_given_psi_lsv( lsv_samples[1][lsv_idx], conf['psi_space'] )
+            data_given_psi1 = majiq_psi.reads_given_psi_lsv(lsv_samples[0][lsv_idx], conf['psi_space'])
+            data_given_psi2 = majiq_psi.reads_given_psi_lsv(lsv_samples[1][lsv_idx], conf['psi_space'])
             data_psi = []
             for psi, data1 in enumerate(data_given_psi1) :
             #TODO Tensor product is calculated with scipy.stats.kron. Probably faster, have to make sure I am using it correctly.
@@ -389,10 +390,10 @@ def deltapsi_calc( matched_list, matched_info, fitfunc, conf, chunk, prior_matri
 
                 data_psi.append(data_given_psi1[psi].reshape(-1, numbins) * data_given_psi2[psi].reshape(numbins, -1))
                 if psi == 0: 
-                    majiq_psi.plot_matrix(  data_psi[-1],
-                                            "P(Data | PSI 1, PSI 2) Event %s.%s (Psi1: %s Psi2: %s)"%(lsv_idx,psi, sum(data_given_psi1[psi]), sum(data_given_psi2[psi])), 
-                                            "datagpsi_%s.%s"%(info[1], psi),
-                                            conf['plotpath'] )
+                    majiq_psi.plot_matrix(data_psi[-1],
+                                          "P(Data | PSI 1, PSI 2) Event %s.%s (Psi1: %s Psi2: %s)" % (lsv_idx, psi, sum(data_given_psi1[psi]), sum(data_given_psi2[psi])),
+                                          "datagpsi_%s.%s" % (info[1], psi),
+                                          conf['plotpath'])
 
             data_given_psi.append(data_psi)
         print 

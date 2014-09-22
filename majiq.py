@@ -35,7 +35,7 @@ def majiq_builder(samfiles_list, chrom, pcr_validation=False, logging=None):
         utils.get_validated_pcr_lsv(lsv, temp_dir)
 
     majiq_lsv.extract_gff(lsv, temp_dir)
-    #utils.generate_visualization_output(gene_list)
+    utils.generate_visualization_output(gene_list)
     logging.info("[%s] Preparing output" % chrom)
     utils.prepare_lsv_table(lsv, const, file_name)
 
@@ -73,7 +73,10 @@ def _generate_parser():
                                                                                     'personalize partially the output '
                                                                                     'file.')
     parser.add_argument('-g', '--genome', dest="genome", help='Genome version an species"')
-    parser.add_argument('-pcr', dest='pcr_filename', action="store", help='PCR bed file as gold_standard')
+    parser.add_argument('--pcr', dest='pcr_filename', action="store", help='PCR bed file as gold_standard')
+    parser.add_argument('--gff_output', dest='gff_output', action="store", help='Filename where a gff with the lsv '
+                                                                                'events will be generated')
+
     parser.add_argument('-t', '--ncpus', dest="ncpus", type=int, default='4', help='Number of CPUs to use')
     parser.add_argument('-o', '--output', dest='output', action="store", help='casete exon list file')
     parser.add_argument('--silent', action='store_true', default=False, help='Silence the logger.')
@@ -111,7 +114,6 @@ def main(params):
     # if params.pcr_filename is not None:
     #     rnaseq_io.read_bed_pcr(params.pcr_filename, all_genes)
 
-
     sam_list = []
     for exp_idx, exp in enumerate(mglobals.exp_list):
         samfile = "%s/%s.sorted.bam" % (mglobals.sam_dir, exp)
@@ -139,28 +141,36 @@ def main(params):
 
     # utils.gc_factor_calculation(temp, 10)
     # utils.plot_gc_content()
-    logger.info("Gather outputs")
-    #GATHER
-    utils.merge_and_create_majiq_file(chr_list, 'tojuan.majiq')
 
-    fp = open('%s/lsv_miso.gtf' % mglobals.outDir, 'w+')
-    fp2 = open('%s/pcr_match.tab' % mglobals.outDir, 'w+')
-    for chrom in chr_list:
-        temp_dir = "%s/tmp/%s" % (mglobals.outDir, chrom)
-        yfile = '%s/temp_gff.pkl' % temp_dir
-        if not os.path.exists(yfile):
-            continue
-        gtf_list = pickle.load(open(yfile, 'rb'))
-        for gtf in gtf_list:
-            fp.write("%s\n" % gtf)
-        yfile = '%s/pcr.pkl' % temp_dir
-        if not os.path.exists(yfile):
-            continue
-        pcr_l = pickle.load(open(yfile, 'rb'))
-        for pcr in pcr_l:
-            fp2.write("%s\n" % pcr)
-    fp2.close()
-    fp.close()
+
+    #GATHER
+    logger.info("Gather outputs")
+    utils.merge_and_create_majiq_file(chr_list, params.prefix)
+
+    if not params.gff_output is None:
+        logger.info("Gather PCR results")
+        fp = open('%s/%s' % (mglobals.outDir, params.gff_output), 'w+')
+        for chrom in chr_list:
+            temp_dir = "%s/tmp/%s" % (mglobals.outDir, chrom)
+            yfile = '%s/temp_gff.pkl' % temp_dir
+            if not os.path.exists(yfile):
+                continue
+            gff_list = pickle.load(open(yfile, 'rb'))
+            for gff in gff_list:
+                fp.write("%s\n" % gff)
+        fp.close()
+
+    if not params.pcr_filename is None:
+        logger.info("Gather lsv and generate gff")
+        fp = open('%s/pcr_match.tab' % mglobals.outDir, 'w+')
+        for chrom in chr_list:
+            yfile = '%s/pcr.pkl' % temp_dir
+            if not os.path.exists(yfile):
+                continue
+            pcr_l = pickle.load(open(yfile, 'rb'))
+            for pcr in pcr_l:
+                fp.write("%s\n" % pcr)
+        fp.close()
 
     mglobals.print_numbers()
 
