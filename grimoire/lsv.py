@@ -228,7 +228,7 @@ def extract_gff(list_lsv, outDir):
             jlist = lsv.junctions
             lsv_coord = lsv.get_coordinates()
 
-            gne = jlist[0].gene
+            gne = jlist[0].get_gene()
             chrom = gne.get_chromosome()
             strand = gne.get_strand()
             gene = '%s\tscript\tgene\t'%chrom
