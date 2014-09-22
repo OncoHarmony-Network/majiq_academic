@@ -4,6 +4,7 @@ import os
 import ConfigParser
 
 global gene_tlb
+global gc_factor
 
 def ConfigSectionMap(Config, section):
     dict1 = {}
@@ -90,8 +91,8 @@ def set_gc_factors(bins, factor, means):
     gc_factor = [None]*num_experiments
     for idx, exp in enumerate(exp_list):
 #        gc_factor[idx] = interpolate.interp1d( bins[idx], factor[idx],bounds_error=False )
-        a = np.append(factor[idx],factor[idx][-1])
-        gc_factor[idx] = interpolate.interp1d( means[idx], factor[idx], bounds_error=False) 
+        a = np.append(factor[idx], factor[idx][-1])
+        gc_factor[idx] = interpolate.interp1d(means[idx], factor[idx], bounds_error=False)
 #        gc_factor[idx] = interpolate.interp1d( bins[idx], a , bounds_error=False) 
         
     gc_bins_val = factor
