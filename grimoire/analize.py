@@ -146,14 +146,14 @@ def lsv_detection(gene_list, chr, logging=None):
     return lsv_list, const_set
 
 
-def lsv_matrix_detection( mat, exon_to_ss, b_list, vip_set=[]):
-    '''
+def lsv_matrix_detection(mat, exon_to_ss, b_list, vip_set=[]):
+    """
        Rules for const are:
         1. All the junction from A should go to C1 or C2
         2. All the junction from C1 should go to A
         3. All the junction to C2 should come from A
         4. Number of reads from C1-A should be equivalent to number of reads from A-C2
-    '''
+    """
     lsv_list = [[], []]
 
     #change bucle for iterate by exons
@@ -162,7 +162,7 @@ def lsv_matrix_detection( mat, exon_to_ss, b_list, vip_set=[]):
         pre_lsv = exon_to_ss[ii-1]
         post_lsv = exon_to_ss[ii+1]
         #Single Source detection
-        SS = mat[lsv[1][0]:lsv[1][-1]+1, :]
+        ss = mat[lsv[1][0]:lsv[1][-1]+1, :]
         ss_valid = True
         cand = range(ii+1, len(exon_to_ss))
         for ex_idx, ex in enumerate(cand):
@@ -175,11 +175,11 @@ def lsv_matrix_detection( mat, exon_to_ss, b_list, vip_set=[]):
                 ss_valid = False
                 break
 
-        if ss_valid and np.count_nonzero(SS) > 1:
+        if ss_valid and np.count_nonzero(ss) > 1:
             lsv_list[0].append(ii)
 
         #Single Targe detection
-        ST = mat[:,lsv[0][0]:lsv[0][-1]+1]
+        st = mat[:, lsv[0][0]:lsv[0][-1]+1]
         st_valid = True
         cand = range(0, ii)
         for ex_idx, ex in enumerate(cand):
@@ -192,7 +192,7 @@ def lsv_matrix_detection( mat, exon_to_ss, b_list, vip_set=[]):
                 st_valid = False
                 break
 
-        if st_valid and np.count_nonzero(ST) > 1:
+        if st_valid and np.count_nonzero(st) > 1:
             lsv_list[1].append(ii)
 
     return lsv_list

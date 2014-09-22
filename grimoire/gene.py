@@ -78,6 +78,15 @@ class Gene:
     def get_transcript(self, trans_id):
         return self.transcript_tlb[trans_id]
 
+    def get_exon_in_coord(self, coord):
+        res = None
+        for ex in self.exons:
+            cc = ex.get_coordinates()
+            if cc[0] <= coord <= cc[1]:
+                res = ex
+                break
+        return res
+
     def get_exon_by_id(self, ex_id):
         return self.exons[ex_id-1]
 
