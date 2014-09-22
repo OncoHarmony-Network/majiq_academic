@@ -6,6 +6,7 @@ import ConfigParser
 global gene_tlb
 global gc_factor
 
+
 def ConfigSectionMap(Config, section):
     dict1 = {}
     options = Config.options(section)
@@ -26,7 +27,7 @@ def keep_info(SEevents, a3, a5, both, SE):
         A3SS[idx] += a3[idx]
         A5SS[idx] += a5[idx]
 
-    for idx,ii in enumerate(SEevents):
+    for idx, ii in enumerate(SEevents):
         SEev[idx] += ii
 
     bothSS += both
@@ -34,11 +35,11 @@ def keep_info(SEevents, a3, a5, both, SE):
 
 
 def print_numbers():
-    print "A3SS",A3SS
-    print "A5SS",A5SS
-    print "SE events",SEev
-    print "Total SE",totalSE
-    print "BOTH",bothSS
+    print "A3SS", A3SS
+    print "A5SS", A5SS
+    print "SE events", SEev
+    print "Total SE", totalSE
+    print "BOTH", bothSS
 
 
 def global_conf_ini(filename):

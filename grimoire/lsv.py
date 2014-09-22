@@ -1,6 +1,6 @@
 import numpy as np
 import grimoire.mglobals as mglobals
-import scipy
+import scipy.sparse
 import pickle
 from voila.splice_graphics.exonGraphic import ExonGraphic
 from voila.splice_graphics.geneGraphic import GeneGraphic 
@@ -307,7 +307,8 @@ class MajiqLsv(object):
         self.coords = lsv_obj.coords
         self.id = lsv_obj.id
         self.type = lsv_obj.ext_type
-        self.junction_list = scipy.sparse.lil_matrix((lsv_obj.junctions.shape[0],(mglobals.readLen-16)+1),                                                     dtype=np.int)
+        self.junction_list = scipy.sparse.lil_matrix((lsv_obj.junctions.shape[0], (mglobals.readLen-16)+1),
+                                                     dtype=np.int)
         self.junction_id = []
         self.visual = self.get_visual_lsv(lsv_obj, exp_idx)
         self.gc_factor = scipy.sparse.lil_matrix((lsv_obj.junctions.shape[0], (mglobals.readLen-16)+1),
@@ -327,9 +328,11 @@ class MajiqLsv(object):
                 if dummy == 0:
                     gc_f = 0
                 else:
-                    gc_f = mglobals.gc_factor[exp_idx](dummy)
-                #TODO: fix gc_factor
-                # self.gc_factor[idx, jidx] = gc_f
+                    #TODO: fix gc_factor
+                    #gc_f = mglobals.gc_factor[exp_idx](dummy)
+                    gc_f = 0
+
+                self.gc_factor[idx, jidx] = gc_f
 
     def get_visual_lsv(self, LSV, exp_idx):
           
