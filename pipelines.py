@@ -2,34 +2,26 @@ import os
 from collections import defaultdict
 import abc
 import pickle
-from multiprocessing import Pool, Manager, current_process
+from multiprocessing import Pool, current_process
 
 from pylab import *
 from numpy.ma import masked_less
-from scipy.stats import norm
-from scipy.stats import scoreatpercentile
 from grimoire.utils.utils import create_if_not_exists, get_logger
-
-from analysis.polyfitnb import fit_nb 
-from analysis.sample import sample_from_junctions, mean_junction
-from analysis.psi import calc_psi, mean_psi, simple_psi, DirichletCalc, reads_given_psi, BINS_CENTER, lsv_psi
-from analysis.adjustdelta import adjustdelta
+from analysis.polyfitnb import fit_nb
 from analysis.weight import local_weight_eta_nu, global_weight_ro
-from analysis.matrix import rank_deltas_lsv, collapse_matrix, rank_empirical_delta_lsv
+from analysis.matrix import rank_deltas_lsv, rank_empirical_delta_lsv
 import analysis.filter as majiq_filter
 import analysis.io as majiq_io
 import analysis.psi as  majiq_psi
 import analysis.sample as majiq_sample
-#from analysis.filter import norm_junctions, discardlow, discardhigh, discardminreads, discardmaxreads, discardminreads_and, mark_stacks
+
 import pipe as pipe
 ################################
 # Data loading and Boilerplate #
 ################################
 
 
-
-
-def get_clean_raw_reads( matched_info, matched_lsv, outdir, names, num_exp ):
+def get_clean_raw_reads(matched_info, matched_lsv, outdir, names, num_exp):
 
     res = []
     for eidx in xrange(num_exp):
@@ -37,17 +29,14 @@ def get_clean_raw_reads( matched_info, matched_lsv, outdir, names, num_exp ):
             num = matched_lsv[ldx][eidx].sum()
             res.append([lsv[1],num])
 
-        with open('%s/clean_reads.%s%d.pkl'%(outdir, names,eidx),'wb') as fp:
+        with open('%s/clean_reads.%s%d.pkl' % (outdir, names, eidx), 'wb') as fp:
             pickle.dump(res, fp)
 
 
-
-
 def _pipeline_run(pipeline, lsv=False, logger=None):
-    "Exception catching for all the pipelines"
+    """ Exception catching for all the pipelines """
     try:
         return pipeline.run(lsv)
-
     except KeyboardInterrupt:
         if pipeline.logger: pipeline.logger.info("MAJIQ manually interrupted. Avada kedavra...")
 
@@ -55,7 +44,7 @@ def _pipeline_run(pipeline, lsv=False, logger=None):
 def _save_or_show(plotpath, plotname=None):
     """Generic function that either shows in a popup or saves the figure, depending if the plotpath flag"""
     if plotpath:
-        savefig("%s%s.png"%(plotpath, plotname), bbox_inches='tight') 
+        savefig("%s%s.png" % (plotpath, plotname), bbox_inches='tight')
         clf()
     else:
         show()
@@ -63,6 +52,7 @@ def _save_or_show(plotpath, plotname=None):
 
 def preprocess(args):
     raise NotImplemented
+
 
 class BasicPipeline:
     def __init__(self, args):
@@ -77,7 +67,7 @@ class BasicPipeline:
         if not logger_path:
             logger_path = self.output
 
-        self.logger = get_logger("%smajiq.log"%logger_path, silent=self.silent, debug=self.debug)
+        self.logger = get_logger("%smajiq.log" % logger_path, silent=self.silent, debug=self.debug)
         self.lsv = args.lsv
         self.nthreads = args.nthreads
         self.nz = args.nz
@@ -178,7 +168,7 @@ def __parallel_calcpsi_lsv( conf , lsv_junc, fitfunc, name, chunk, tempdir):
         lsv_sample = []
         for ii in lsv_junc[0]:
 
-            m_lsv, var_lsv, s_lsv = sample_from_junctions(  ii,
+            m_lsv, var_lsv, s_lsv = majiq_sample.sample_from_junctions(  ii,
                                                             conf['m'],
                                                             conf['k'],
                                                             discardzeros= conf['discardzeros'],
@@ -189,7 +179,7 @@ def __parallel_calcpsi_lsv( conf , lsv_junc, fitfunc, name, chunk, tempdir):
             lsv_sample.append( s_lsv )
 
         thread_logger.info("[Th %s]: Calculating PSI for %s ..."%(chunk, name))
-        psi = lsv_psi(lsv_sample, conf['alpha'], conf['n'], conf['debug'])
+        psi = majiq_psi.lsv_psi(lsv_sample, conf['alpha'], conf['n'], conf['debug'])
 
         thread_logger.info("[Th %s]: Saving PSI..."%chunk)
         output = open("%s/%s_th%s.psi.pickle"%(tempdir, name, chunk), 'w')
@@ -371,7 +361,7 @@ def deltapsi_calc( matched_list, matched_info, fitfunc, conf, chunk, prior_matri
     lsv_samples = [[],[]]
     for idx_exp, experiment in enumerate(matched_list):
         for idx, ii in enumerate(experiment):
-            m_lsv, var_lsv, s_lsv = sample_from_junctions(  junction_list = ii,
+            m_lsv, var_lsv, s_lsv = majiq_sample.sample_from_junctions(  junction_list = ii,
                                                             m = conf['m'],
                                                             k = conf['k'],
                                                             discardzeros= conf['discardzeros'],
@@ -882,7 +872,7 @@ class DeltaGroup(DeltaPair, CalcPsi):
         for grp_idx, group in enumerate(matched_lsv):
             for lidx, lsv_all in enumerate(group):
                 for eidx, lsv in enumerate(lsv_all):
-                    m_lsv, var_lsv, s_lsv = sample_from_junctions(  junction_list = lsv,
+                    m_lsv, var_lsv, s_lsv = majiq_sample.sample_from_junctions(  junction_list = lsv,
                                                                     m = self.m,
                                                                     k = self.k,
                                                                     discardzeros= self.discardzeros,
