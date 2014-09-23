@@ -300,25 +300,51 @@ def get_validated_pcr_lsv(candidates, out_dir):
     op.close()
 
 
-def gc_factor_calculation(exon_list, nb):
+def prepare_gc_content(gene_list, temp_dir):
+    gc_pairs = []
+    for chrom, strand_list in gene_list.items():
+        for strand, glist in strand_list.items():
+            for gn in glist:
+                for ex in gn.get_exon_list():
+                    gc_val = ex.get_gc_content()
+                    st, end = ex.get_coordinates()
+                    if gc_val is None or end-st < 30:
+                        continue
+                    for exp_n in xrange(mglobals.num_experiments):
+                        cov = ex.get_coverage(exp_n)
+                        if cov < 1:
+                            continue
+                        gc_pairs[exp_n].append((gc_val, cov))
+
+    file_pi = open('%s/gccontent.temppkl' % temp_dir, 'w+')
+    pickle.dump(gc_pairs, file_pi)
+    file_pi.close()
+
+
+def gc_factor_calculation(chr_list, nb):
 
     local_bins = np.zeros(shape=(mglobals.num_experiments, nb+1), dtype=np.dtype('float'))
     local_meanbins = np.zeros(shape=(mglobals.num_experiments, nb),   dtype=np.dtype('float'))
     local_factor = np.zeros(shape=(mglobals.num_experiments, nb),   dtype=np.dtype('float'))
 
+    gc_pairs = []
+
+    # read local files
+    for chrom in chr_list:
+        temp_dir = "%s/tmp/%s" % (mglobals.outDir, chrom)
+        yfile = '%s/gccontent.temppkl' % temp_dir
+        if not os.path.exists(yfile):
+            continue
+        gc_c = pickle.load(open(yfile, 'rb'))
+        for exp_n in xrange(mglobals.num_experiments):
+            gc_pairs[exp_n].extend(gc_c[exp_n])
+
     #print mglobals.tissue_repl
     for tissue, list_idx in mglobals.tissue_repl.items():
         for exp_n in list_idx:
-            #print "EXP", exp_n
             count = []
             gc = []
-            for idx, ex in enumerate(exon_list):
-                gc_val = ex.get_gc_content()
-                st, end = ex.get_coordinates()
-                cov = ex.get_coverage(exp_n)
-
-                if gc_val is None or end-st < 30 or cov < 1:
-                    continue
+            for gc_val, cov in gc_pairs:
                 count.append(cov)
                 gc.append(gc_val)
             if len(gc) == 0:

@@ -442,7 +442,7 @@ def _prepare_and_dump(genes, logging=None):
         logging.debug("Number of Genes", n_genes)
 
 
-def read_gff(filename, logging=None):
+def read_gff(filename, pcr_filename, logging=None):
 
     all_genes = {}
     gene_id_dict = {}
@@ -518,4 +518,7 @@ def read_gff(filename, logging=None):
         trcpt.sort_in_list()
     #end for
     _prepare_and_dump(all_genes, logging)
-    return all_genes
+    if pcr_filename is not None:
+        read_bed_pcr(pcr_filename, all_genes)
+
+    return all_genes.keys()

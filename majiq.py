@@ -18,7 +18,7 @@ except Exception:
     import pickle
 
 
-def majiq_builder(samfiles_list, chrom, pcr_validation=False, logging=None):
+def majiq_builder(samfiles_list, chrom, pcr_validation=None, gff_output=None, logging=None):
 
     logging.info("Building for chromosome %s" % chrom)
     temp_dir = "%s/tmp/%s" % (mglobals.outDir, chrom)
@@ -30,13 +30,16 @@ def majiq_builder(samfiles_list, chrom, pcr_validation=False, logging=None):
     rnaseq_io.read_sam_or_bam(samfiles_list, gene_list, mglobals.readLen, chrom, logging=logging)
     logging.info("[%s] Detecting LSV" % chrom)
     lsv, const = analize.lsv_detection(gene_list, chrom, logging=logging)
-    file_name = '%s.obj' % chrom
+
+    utils.prepare_gc_content(gene_list, temp_dir)
+
     if pcr_validation:
         utils.get_validated_pcr_lsv(lsv, temp_dir)
-
-    majiq_lsv.extract_gff(lsv, temp_dir)
-    utils.generate_visualization_output(gene_list)
+    if gff_output:
+        majiq_lsv.extract_gff(lsv, temp_dir)
+    utils.generate_visualization_output(gene_list, temp_dir)
     logging.info("[%s] Preparing output" % chrom)
+    file_name = '%s.obj' % chrom
     utils.prepare_lsv_table(lsv, const, file_name)
 
 
@@ -102,7 +105,7 @@ def main(params):
     logger.info("")
     logger.info("Command: %s" % params)
 
-    chr_list = rnaseq_io.read_gff(params.transcripts, logging=logger)
+    chr_list = rnaseq_io.read_gff(params.transcripts, params.pcr_filename, logging=logger)
 
     #chr_list = all_genes.keys()
     # temp = []
@@ -110,9 +113,7 @@ def main(params):
     #     for genes_l in gl.values():
     #         for gg in genes_l:
     #             temp += gg.get_exon_list()
-
-    # if params.pcr_filename is not None:
-    #     rnaseq_io.read_bed_pcr(params.pcr_filename, all_genes)
+    #
 
     sam_list = []
     for exp_idx, exp in enumerate(mglobals.exp_list):
@@ -139,8 +140,8 @@ def main(params):
         pool.close()
         pool.join()
 
-    # utils.gc_factor_calculation(temp, 10)
-    # utils.plot_gc_content()
+    utils.gc_factor_calculation(chr_list, 10)
+    utils.plot_gc_content()
 
 
     #GATHER
@@ -164,6 +165,7 @@ def main(params):
         logger.info("Gather lsv and generate gff")
         fp = open('%s/pcr_match.tab' % mglobals.outDir, 'w+')
         for chrom in chr_list:
+            temp_dir = "%s/tmp/%s" % (mglobals.outDir, chrom)
             yfile = '%s/pcr.pkl' % temp_dir
             if not os.path.exists(yfile):
                 continue

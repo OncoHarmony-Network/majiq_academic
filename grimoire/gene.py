@@ -69,6 +69,9 @@ class Gene:
     def get_rpkm(self):
         return self.RPKM
 
+    def get_exon_list(self):
+        return self.exons
+
     def get_chromosome(self):
         return self.chromosome
 
