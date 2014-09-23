@@ -14,7 +14,7 @@ def ConfigSectionMap(Config, section):
         try:
             dict1[option] = Config.get(section, option)
             if dict1[option] == -1:
-                DebugPrint("skip: %s" % option)
+                print("skip: %s" % option)
         except:
             print("exception on %s!" % option)
             dict1[option] = None
@@ -44,7 +44,8 @@ def print_numbers():
 
 def global_conf_ini(filename):
 
-    global num_experiments, exp_list, readLen, tissue_repl, sam_dir, num_mapped_reads, genome, outDir, temp_oDir
+    global num_experiments, exp_list, readLen, tissue_repl, sam_dir, num_mapped_reads, genome, \
+        genome_path, outDir, temp_oDir
     global A3SS, A5SS, SEev, bothSS, totalSE
     global MINREADS, MINPOS
 
@@ -63,6 +64,7 @@ def global_conf_ini(filename):
     sam_dir = general['samdir']
     outDir = general['output']
     genome = general['genome']
+    genome_path = general['genome_path']
 
     if not os.path.exists(outDir):
         os.makedirs(outDir)

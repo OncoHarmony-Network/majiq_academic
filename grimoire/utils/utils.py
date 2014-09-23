@@ -133,9 +133,7 @@ def merge_and_create_majiq_file(chr_list, pref_file):
 
 def set_exons_gc_content(chrom, exon_list):
 
-#    fastadir_path = "%s/Genomes/goldenPath/%s/"%(os.environ["ASP_DATA_ROOT"],mglobals.genome)
-    seqdir = '/Volumes/data-1/WASP_DATA'
-    fastadir_path = "%s/Genomes/goldenPath/%s/" % (seqdir, mglobals.genome)
+    fastadir_path = "%s/%s/" % (mglobals.genome_path, mglobals.genome)
 
     #print "Loading chromosome... %s"%chrom
     chrom_path = fastadir_path + chrom + ".fa"

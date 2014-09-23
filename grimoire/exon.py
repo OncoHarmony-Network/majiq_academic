@@ -157,7 +157,7 @@ class Exon:
     def get_gc_content(self):
         return self.gc_content
 
-    def update_coverage( self, exp_idx, num ):
+    def update_coverage(self, exp_idx, num):
         self.coverage[exp_idx] += num
 
     def set_gc_content(self, sequence):
