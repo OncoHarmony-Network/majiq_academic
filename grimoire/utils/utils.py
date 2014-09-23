@@ -343,7 +343,7 @@ def gc_factor_calculation(chr_list, nb):
         for exp_n in list_idx:
             count = []
             gc = []
-            for gc_val, cov in gc_pairs:
+            for gc_val, cov in gc_pairs[exp_n]:
                 count.append(cov)
                 gc.append(gc_val)
             if len(gc) == 0:
