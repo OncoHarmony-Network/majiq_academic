@@ -101,7 +101,7 @@ def main(params):
 
     mglobals.gene_tlb = {}
 
-    logger = utils.get_logger("%s/majiq.log" % mglobals.outDir, silent=args.silent, debug=args.debug)
+    logger = utils.get_logger("%s/majiq.log" % mglobals.outDir, silent=params.silent, debug=params.debug)
     logger.info("")
     logger.info("Command: %s" % params)
 
