@@ -8,7 +8,6 @@ import sys
 import os
 from multiprocessing import Pool, Manager, current_process
 import analysis.sample as majiq_sample 
-#from analysis.sample import sample_from_junctions, mean_junction
 import pickle
 import warnings
 

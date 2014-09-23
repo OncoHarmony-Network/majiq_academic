@@ -179,7 +179,7 @@ def generate_visualization_output(allgenes, temp_dir):
                     junc_list = []
                     junc_l = []
                     for jj in gg.get_all_junctions():
-                        if jj.get_coordinates()[0] is None or jj.donor is None or jj.acceptor is None:
+                        if jj.get_coordinates()[0] is None or jj.get_donor() is None or jj.get_acceptor() is None:
                             continue
                         if jj.is_annotated() and jj.readN[exp_idx].sum() == 0:
                             jtype = 2
