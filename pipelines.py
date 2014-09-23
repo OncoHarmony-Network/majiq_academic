@@ -8,7 +8,7 @@ import analysis.filter as majiq_filter
 import analysis.io as majiq_io
 import analysis.psi as majiq_psi
 import os
-import builder
+import builder as majiq_builder
 import analysis.sample as majiq_sample
 
 import pipe as pipe
@@ -38,7 +38,7 @@ def _pipeline_run(pipeline, lsv=False):
 
 
 def builder(args):
-    builder.main(args)
+    majiq_builder.main(args)
 
 
 class BasicPipeline:
