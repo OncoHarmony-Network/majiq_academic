@@ -271,7 +271,6 @@ class Gene:
                 for junc in txex.get_5prime_junc():
                     ss.add((junc.get_ss_5p(), '5prime', junc))
 
-        print sorted(ss)
         return sorted(ss)
 
     def collapse_exons(self):

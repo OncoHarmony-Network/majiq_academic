@@ -304,7 +304,8 @@ def get_validated_pcr_lsv(candidates, out_dir):
 
 
 def prepare_gc_content(gene_list, temp_dir):
-    gc_pairs = [[] for xx in xrange(mglobals.num_experiments)]
+    gc_pairs = {'GC': [[] for xx in xrange(mglobals.num_experiments)],
+                'COV': [[] for xx in xrange(mglobals.num_experiments)]}
     for strand, glist in gene_list.items():
         for gn in glist:
             for ex in gn.get_exon_list():
@@ -316,8 +317,8 @@ def prepare_gc_content(gene_list, temp_dir):
                     cov = ex.get_coverage(exp_n)
                     if cov < 1:
                         continue
-                    gc_pairs[exp_n]['GC'].append(gc_val)
-                    gc_pairs[exp_n]['COV'].append(cov)
+                    gc_pairs['GC'][exp_n].append(gc_val)
+                    gc_pairs['COV'][exp_n].append(cov)
 
     file_pi = open('%s/gccontent.temppkl' % temp_dir, 'w+')
     pickle.dump(gc_pairs, file_pi)
@@ -330,7 +331,8 @@ def gc_factor_calculation(chr_list, nb):
     local_meanbins = np.zeros(shape=(mglobals.num_experiments, nb),   dtype=np.dtype('float'))
     local_factor = np.zeros(shape=(mglobals.num_experiments, nb),   dtype=np.dtype('float'))
 
-    gc_pairs = [[] for xx in xrange(mglobals.num_experiments)]
+    gc_pairs = {'GC': [[] for xx in xrange(mglobals.num_experiments)],
+                'COV': [[] for xx in xrange(mglobals.num_experiments)]}
 
     # read local files
     for chrom in chr_list:
@@ -340,14 +342,14 @@ def gc_factor_calculation(chr_list, nb):
             continue
         gc_c = pickle.load(open(yfile, 'rb'))
         for exp_n in xrange(mglobals.num_experiments):
-            gc_pairs[exp_n]['GC'].extend(gc_c[exp_n]['GC'])
-            gc_pairs[exp_n]['COV'].extend(gc_c[exp_n]['COV'])
+            gc_pairs['GC'][exp_n].extend(gc_c['GC'][exp_n])
+            gc_pairs['COV'][exp_n].extend(gc_c['COV'][exp_n])
 
     #print mglobals.tissue_repl
     for tissue, list_idx in mglobals.tissue_repl.items():
         for exp_n in list_idx:
-            count = gc_pairs[exp_n]['COV']
-            gc = gc_pairs[exp_n]['GC']
+            count = gc_pairs['COV'][exp_n]
+            gc = gc_pairs['GC'][exp_n]
 
             if len(gc) == 0:
                 continue

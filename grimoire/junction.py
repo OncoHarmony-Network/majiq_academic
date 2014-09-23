@@ -159,5 +159,5 @@ class MajiqJunc:
             if dummy == 0:
                 gc_f = 0
             else:
-                gc_f = mglobals.gc_factor[exp_idx]( dummy )
+                gc_f = mglobals.gc_factor[exp_idx](dummy)
             self.gc_factor[0, jj] = gc_f

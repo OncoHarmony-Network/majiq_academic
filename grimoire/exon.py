@@ -26,7 +26,7 @@ class Exon:
         self.ss_5p_list = []
         self.id = None
         self.strand = strand
-        self.gc_content = None
+        self.gc_content = 0
         self.coverage = np.zeros(shape=mglobals.num_experiments)
         self.score = None
         self.pcr_name = None
@@ -215,8 +215,6 @@ class Exon:
         return bed_str
 
     def ss_variant_counts(self, minreads=5):
-        local_3p = 0
-        local_5p = 0
 
         temp_set = set()
         for ss3p in self.ss_3p_list:
@@ -555,12 +553,6 @@ def detect_exons(gene, junction_list, read_rna):
     opened_exon = []
     last_5prime = None
     first_3prime = None
-
-#    for jj in  gene.get_annotated_junctions():
-#        if not (jj.get_ss_5p(),'5prime',jj) in junction_list:
-#            junction_list.append((jj.get_ss_5p(),'5prime',jj))
-#        if not (jj.get_ss_3p(),'3prime',jj) in junction_list:
-#            junction_list.append((jj.get_ss_3p(),'3prime',jj))
 
     junction_list.extend(gene.get_all_ss())
 

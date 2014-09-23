@@ -443,7 +443,13 @@ def _prepare_and_dump(genes, logging=None):
 
 
 def read_gff(filename, pcr_filename, logging=None):
+    """
 
+    :param filename: GFF input filename
+    :param pcr_filename: BED file name with the PCR validations
+    :param logging: logger object
+    :return: :raise RuntimeError:
+    """
     all_genes = {}
     gene_id_dict = {}
     trcpt_id_dict = {}

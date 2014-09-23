@@ -1,4 +1,4 @@
-import analysis.psi as  majiq_psi
+import analysis.psi as majiq_psi
 import scipy.misc
 import random
 import numpy as np
@@ -12,33 +12,33 @@ import pickle
 import warnings
 
 
-def parallel_lsv_child_calculation( func, args, info, tempdir, name, chunk ):
+def parallel_lsv_child_calculation(func, args, info, tempdir, name, chunk):
 
     try:
         if not os.path.isdir(tempdir):
                 os.mkdir(tempdir)
-        thread_logger = get_logger("%s/majiq.w%s.log"%(tempdir,chunk), silent=False)
-        thread_logger.info( "[Th %s]: START child,%s"%(chunk,current_process().name))
-        thread_logger.info('[Th %s]: Filtering ...'%(chunk))
+        thread_logger = get_logger("%s/majiq.w%s.log" % (tempdir, chunk), silent=False)
+        thread_logger.info("[Th %s]: START child,%s" % (chunk, current_process().name))
+        thread_logger.info('[Th %s]: Filtering ...' % chunk)
 
         args.append(thread_logger)
 #        post_matrix, new_info = model2( *args )
-        post_matrix, new_info = func( *args )
+        post_matrix, new_info = func(*args)
 
-        print "%s/%s_th%s.deltapsi.pickle"%(tempdir, name, chunk)
+        print "%s/%s_th%s.deltapsi.pickle" % (tempdir, name, chunk)
         sys.stdout.flush()
-        thread_logger.info("[Th %s]: Saving DeltaPSI..."%chunk)
-        output = open("%s/%s_th%s.%s.pickle"%(tempdir, name, chunk,func.__name__), 'w')
-        pickle.dump( [post_matrix, new_info], output)
+        thread_logger.info("[Th %s]: Saving DeltaPSI..." % chunk)
+        output = open("%s/%s_th%s.%s.pickle" % (tempdir, name, chunk, func.__name__), 'w')
+        pickle.dump([post_matrix, new_info], output)
 
     except Exception as e:
-        print "%s"%sys.exc_traceback.tb_lineno, e
+        print "%s" % sys.exc_traceback.tb_lineno, e
         sys.stdout.flush()
 
     return
 
-def combine_for_priormatrix(group1, group2, matched_info, num_exp):
 
+def combine_for_priormatrix(group1, group2, matched_info, num_exp):
 
     res_group1 = []
     res_group2 = []
@@ -56,8 +56,8 @@ def combine_for_priormatrix(group1, group2, matched_info, num_exp):
     return grp1, grp2
 
 
-def prob_data_sample_given_psi( sample, all_sample, psi_space ):
-    bin_test = [binom_test(sample, all_sample, p = x) for x in psi_space]
+def prob_data_sample_given_psi(sample, all_sample, psi_space):
+    bin_test = [binom_test(sample, all_sample, p=x) for x in psi_space]
     bin_test = np.array(bin_test) + 1e-10
     return bin_test
 
@@ -72,16 +72,16 @@ def calcpsi(matched_lsv, info, num_exp, conf, fitfunc, logger):
         logger.info("Bootstrapping for all samples...")
         for lidx, lsv_all in enumerate(matched_lsv):
             for eidx, lsv in enumerate(lsv_all):
-                m_lsv, var_lsv, s_lsv = majiq_sample.sample_from_junctions(  junction_list = lsv,
-                                                                             m = conf['m'],
-                                                                             k = conf['k'],
-                                                                             discardzeros= conf['discardzeros'],
-                                                                             trimborder  = conf['trimborder'],
-                                                                             fitted_func = fitfunc[eidx],
-                                                                             debug       = conf['debug'],
-                                                                             Nz          = conf['nz'])
+                m_lsv, var_lsv, s_lsv = majiq_sample.sample_from_junctions(junction_list=lsv,
+                                                                           m=conf['m'],
+                                                                           k=conf['k'],
+                                                                           discardzeros=conf['discardzeros'],
+                                                                           trimborder=conf['trimborder'],
+                                                                           fitted_func=fitfunc[eidx],
+                                                                           debug=conf['debug'],
+                                                                           Nz=conf['nz'])
 
-                lsv_samples[lidx,eidx] = s_lsv
+                lsv_samples[lidx, eidx] = s_lsv
 
         nbins = conf['nbins']
         logger.info("Calculating psis...")
@@ -89,27 +89,27 @@ def calcpsi(matched_lsv, info, num_exp, conf, fitfunc, logger):
         post_psi = []
         new_info = []
         for lidx, lsv_info in enumerate(info):
-            num_ways = float(len(lsv_samples[lidx,0]))
-            if lidx % 50 == 0 : 
-                print "Event %d ..."%(lidx),
+            num_ways = float(len(lsv_samples[lidx, 0]))
+            if lidx % 50 == 0:
+                print "Event %d ..." % lidx,
                 sys.stdout.flush()
 
             alpha = 1.0/num_ways
             beta = (num_ways-1.0) / num_ways
-            prior = majiq_psi.dirichlet_pdf(np.array([psi_space, 1-psi_space]).T, np.array([alpha,beta]))
+            prior = majiq_psi.dirichlet_pdf(np.array([psi_space, 1-psi_space]).T, np.array([alpha, beta]))
 
             post_psi.append([])
             new_info.append(lsv_info)
-            for p_idx in xrange( int(num_ways) ):
-                posterior = np.zeros(shape=(nbins), dtype = np.float)
-                psi = np.zeros(shape=(nbins), dtype = np.float)
+            for p_idx in xrange(int(num_ways)):
+                posterior = np.zeros(shape=nbins, dtype=np.float)
+                psi = np.zeros(shape=nbins, dtype=np.float)
                 for m in xrange(conf['m']):
                     # log(p(D_T1(m) | psi_T1)) = SUM_t1 T ( log ( P( D_t1 (m) | psi _T1)))
                     data_given_psi = np.zeros( shape=(num_exp, nbins), dtype = np.float)
                     for exp_idx in xrange(num_exp):
                         junc = lsv_samples[lidx,exp_idx][p_idx][m]
                         all_psi = np.array([xx[m] for xx in lsv_samples[lidx,exp_idx]])
-                        data_given_psi[exp_idx] = np.log(prob_data_sample_given_psi (junc, all_psi.sum(), psi_space))
+                        data_given_psi[exp_idx] = np.log(prob_data_sample_given_psi(junc, all_psi.sum(), psi_space))
                     psi += data_given_psi.sum(axis=0) + np.log(prior)
                     # normalizing
                     posterior += np.exp(psi - scipy.misc.logsumexp(psi))
@@ -120,7 +120,7 @@ def calcpsi(matched_lsv, info, num_exp, conf, fitfunc, logger):
     except Exception as e:
         post_psi = []
         new_info = []
-        print "%s"%sys.exc_traceback.tb_lineno, e
+        print "%s" % sys.exc_traceback.tb_lineno, e
         sys.stdout.flush()
         import ipdb
         ipdb.set_trace()
