@@ -35,11 +35,11 @@ def load_data_lsv(path, logger=None):
 
     clist = random.sample(data[2], min(5000, len(data[2])))
     const_list = np.zeros(shape=(len(clist), num_pos), dtype=np.dtype('int'))
-    const_gc   = np.zeros(shape=(len(clist), num_pos), dtype=np.dtype('float'))
-    for cidx,const in enumerate(clist):
+    const_gc = np.zeros(shape=(len(clist), num_pos), dtype=np.dtype('float'))
+    for cidx, const in enumerate(clist):
         const_info.append(const.id)
-        const_list[cidx,:] = const.coverage.toarray()
-        const_gc [cidx,:]  = const.gc_factor.toarray()
+        const_list[cidx, :] = const.coverage.toarray()
+        const_gc[cidx, :] = const.gc_factor.toarray()
 #        const_list.append(const.coverage.toarray())
 
     return (lsv_cov_list, lsv_info, lsv_gc), (const_list, const_info, const_gc)

@@ -27,18 +27,16 @@ def main():
     common.add_argument('--minreads', default=10, type=int, help='Minimum number of reads combining all positions in an event to be considered. [Default: %(default)s]') 
     common.add_argument('--minnonzero', default=3, type=int, help='Minimum number of start positions with at least 1 read for an event to be considered.')
 
-
-
     buildparser = new_subparser()
+    buildparser.add_argument('transcripts', action="store", help='read file in SAM format')
     buildparser.add_argument('-conf', default=None, help='Provide study configuration file with all '
                                                          'the execution information')
     buildparser.add_argument('-p', '--prefix', dest="prefix", type=str, default='', help='Output prefix string to '
-                                                                                    'personalize partially the output '
-                                                                                    'file.')
+                                                                                         'personalize partially the '
+                                                                                         'output file.')
     buildparser.add_argument('--pcr', dest='pcr_filename', action="store", help='PCR bed file as gold_standard')
-    buildparser.add_argument('--gff_output', dest='gff_output', action="store", help='Filename where a gff with the lsv '
-                                                                                'events will be generated')
-
+    buildparser.add_argument('--gff_output', dest='gff_output', action="store", help='Filename where a gff with the '
+                                                                                     'lsv events will be generated')
 
     #flags shared by calcpsi and deltapair
     psianddelta = new_subparser()
