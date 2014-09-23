@@ -80,7 +80,7 @@ def _generate_parser():
     parser.add_argument('--gff_output', dest='gff_output', action="store", help='Filename where a gff with the lsv '
                                                                                 'events will be generated')
 
-    parser.add_argument('-t', '--ncpus', dest="ncpus", type=int, default='4', help='Number of CPUs to use')
+    parser.add_argument('-t', '--nthreads', dest="nthreads", type=int, default='4', help='Number of CPUs to use')
     parser.add_argument('-o', '--output', dest='output', action="store", help='casete exon list file')
     parser.add_argument('--silent', action='store_true', default=False, help='Silence the logger.')
     parser.add_argument('--debug', type=int, default=0, help="Activate this flag for debugging purposes, activates "
@@ -126,23 +126,22 @@ def main(params):
     if len(sam_list) == 0:
         return
 
-    if int(params.ncpus) > 1:
-        pool = Pool(processes=params.ncpus)
+    if int(params.nthreads) > 1:
+        pool = Pool(processes=params.nthreads)
     logger.info("Scatter in Chromosomes")
     for chrom in chr_list:
-        if int(params.ncpus) == 1:
+        if int(params.nthreads) == 1:
             majiq_builder(sam_list, chrom, pcr_validation=params.pcr_filename, logging=logger)
         else:
             pool.apply_async(__parallel_lsv_quant, [sam_list, chrom, params.pcr_filename])
 
-    if int(params.ncpus) > 1:
+    if int(params.nthreads) > 1:
         logger.info("... waiting childs")
         pool.close()
         pool.join()
 
     utils.gc_factor_calculation(chr_list, 10)
     utils.plot_gc_content()
-
 
     #GATHER
     logger.info("Gather outputs")

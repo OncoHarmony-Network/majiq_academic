@@ -301,7 +301,7 @@ def get_validated_pcr_lsv(candidates, out_dir):
 
 
 def prepare_gc_content(gene_list, temp_dir):
-    gc_pairs = []
+    gc_pairs = [[] for xx in xrange(mglobals.num_experiments)]
     for strand, glist in gene_list.items():
         for gn in glist:
             for ex in gn.get_exon_list():
@@ -326,7 +326,7 @@ def gc_factor_calculation(chr_list, nb):
     local_meanbins = np.zeros(shape=(mglobals.num_experiments, nb),   dtype=np.dtype('float'))
     local_factor = np.zeros(shape=(mglobals.num_experiments, nb),   dtype=np.dtype('float'))
 
-    gc_pairs = []
+    gc_pairs = [[] for xx in xrange(mglobals.num_experiments)]
 
     # read local files
     for chrom in chr_list:

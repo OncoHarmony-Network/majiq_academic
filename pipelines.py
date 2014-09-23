@@ -1,4 +1,3 @@
-
 import abc
 import pickle
 from multiprocessing import Pool, current_process
@@ -9,16 +8,16 @@ import analysis.filter as majiq_filter
 import analysis.io as majiq_io
 import analysis.psi as majiq_psi
 import os
+import builder
 import analysis.sample as majiq_sample
 
 import pipe as pipe
-################################
+# ###############################
 # Data loading and Boilerplate #
 ################################
 
 
 def get_clean_raw_reads(matched_info, matched_lsv, outdir, names, num_exp):
-
     res = []
     for eidx in xrange(num_exp):
         for ldx, lsv in enumerate(matched_info):
@@ -38,8 +37,8 @@ def _pipeline_run(pipeline, lsv=False):
             pipeline.logger.info("MAJIQ manually interrupted. Avada kedavra...")
 
 
-def preprocess(args):
-    raise NotImplemented
+def builder(args):
+    builder.main(args)
 
 
 class BasicPipeline:
@@ -55,7 +54,6 @@ class BasicPipeline:
             logger_path = self.output
 
         self.logger = get_logger("%smajiq.log" % logger_path, silent=self.silent, debug=self.debug)
-        self.lsv = args.lsv
         self.nthreads = args.nthreads
         self.nz = args.nz
         self.psi_paths = []
@@ -74,7 +72,7 @@ class BasicPipeline:
         self.logger.info("GC content normalization...")
         if self.gcnorm:
             for lidx, lsv in enumerate(lsv_list[0]):
-                lsv = lsv * lsv_list[2][lidx]
+                lsv_list[0][lidx] = lsv * lsv_list[2][lidx]
             const_list[0] = const_list[0] * const_list[2]
         return lsv_list, const_list
 
@@ -105,7 +103,6 @@ def calcpsi(args):
 
 
 class CalcPsi(BasicPipeline):
-
     def run(self, lsv=False):
         self.calcpsi()
 
@@ -120,16 +117,17 @@ class CalcPsi(BasicPipeline):
 
         num_exp = len(self.files)
 
-        filtered_lsv = [None]*num_exp
-        fitfunc = [None]*num_exp
+        filtered_lsv = [None] * num_exp
+        fitfunc = [None] * num_exp
         for ii, fname in enumerate(self.files):
             lsv_junc, const = majiq_io.load_data_lsv(fname, self.logger)
 
             #fitting the function
-#            lsv_junc = self.gc_content_norm( lsv_junc, const )
+            lsv_junc = self.gc_content_norm(lsv_junc, const)
             fitfunc[ii] = self.fitfunc(const[0])
             filtered_lsv[ii] = self.mark_stacks(lsv_junc, fitfunc[ii])
-        matched_lsv, matched_info = majiq_filter.quantifiable_in_group(filtered_lsv, self.minnonzero, self.minreads, self.logger , 0.10 )
+        matched_lsv, matched_info = majiq_filter.quantifiable_in_group(filtered_lsv, self.minnonzero, self.minreads,
+                                                                       self.logger, 0.10)
 
         conf = {'minnonzero': self.minnonzero,
                 'minreads': self.minreads,
@@ -149,16 +147,14 @@ class CalcPsi(BasicPipeline):
             pool = Pool(processes=self.nthreads)
             csize = len(matched_lsv) / int(self.nthreads)
             self.logger.info("CREATING THREADS %s with <= %s lsv" % (self.nthreads, csize))
-            jobs = []
 
             for nt in xrange(self.nthreads):
                 lb = nt * csize
-                ub = min((nt+1) * csize, len(matched_lsv))
+                ub = min((nt + 1) * csize, len(matched_lsv))
                 if nt == self.nthreads - 1:
                     ub = len(matched_lsv)
                 lsv_list = matched_lsv[lb:ub]
                 lsv_info = matched_info[lb:ub]
-                print nt, ub, lb
                 pool.apply_async(pipe.parallel_lsv_child_calculation, [pipe.calcpsi,
                                                                        [lsv_list, lsv_info, num_exp, conf, fitfunc],
                                                                        lsv_info,
@@ -184,17 +180,14 @@ class CalcPsi(BasicPipeline):
         self.logger.info("Alakazam! Done.")
 
 
-
 ################################
 #          Delta PSI           #
 ################################
-
 def deltapair(args):
     _pipeline_run(DeltaPair(args), args.lsv)
 
 
 class DeltaPair(BasicPipeline):
-
     def run(self):
         self.delta_groups()
 
@@ -209,8 +202,8 @@ class DeltaPair(BasicPipeline):
         num_exp = [len(self.files1), len(self.files2)]
         if not os.path.exists(tempfile):
 
-            filtered_lsv1 = [None]*num_exp[0]
-            fitfunc = [[None]*num_exp[0], [None]*num_exp[1]]
+            filtered_lsv1 = [None] * num_exp[0]
+            fitfunc = [[None] * num_exp[0], [None] * num_exp[1]]
             for ii, fname in enumerate(self.files1):
                 lsv_junc, const = majiq_io.load_data_lsv(fname, self.logger)
 
@@ -220,7 +213,7 @@ class DeltaPair(BasicPipeline):
             filtered_lsv1 = majiq_filter.quantifiable_in_group(filtered_lsv1, self.minnonzero, self.minreads,
                                                                self.logger, 0.10)
 
-            filtered_lsv2 = [None]*num_exp[1]
+            filtered_lsv2 = [None] * num_exp[1]
             for ii, fname in enumerate(self.files2):
                 lsv_junc, const = majiq_io.load_data_lsv(fname, self.logger)
 
@@ -231,7 +224,6 @@ class DeltaPair(BasicPipeline):
                                                                self.logger, 0.10)
 
             matched_lsv, matched_info = majiq_filter.lsv_intersection(filtered_lsv1, filtered_lsv2)
-
 
             group1, group2 = pipe.combine_for_priormatrix(matched_lsv[0], matched_lsv[1], matched_info, num_exp)
             psi_space, prior_matrix = majiq_psi.gen_prior_matrix(self, group1, group2, self.output)
@@ -272,13 +264,14 @@ class DeltaPair(BasicPipeline):
 
             for nthrd in xrange(self.nthreads):
                 lb = nthrd * csize
-                ub = min((nthrd+1) * csize, len(matched_lsv[0]))
+                ub = min((nthrd + 1) * csize, len(matched_lsv[0]))
                 if nthrd == self.nthreads - 1:
                     ub = len(matched_lsv[0])
                 lsv_list = [matched_lsv[0][lb:ub], matched_lsv[1][lb:ub]]
                 lsv_info = matched_info[lb:ub]
                 pool.apply_async(pipe.parallel_lsv_child_calculation, [pipe.model2,
-                                                                       [lsv_list, lsv_info, num_exp, conf, prior_matrix, fitfunc, psi_space],
+                                                                       [lsv_list, lsv_info, num_exp, conf, prior_matrix,
+                                                                        fitfunc, psi_space],
                                                                        matched_info,
                                                                        '%s/tmp' % os.path.dirname(self.output),
                                                                        '%s_%s' % (self.names[0], self.names[1]),
