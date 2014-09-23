@@ -117,10 +117,12 @@ class CalcPsi(BasicPipeline):
 
         num_exp = len(self.files)
 
+        meta_info = [0] * num_exp
+
         filtered_lsv = [None] * num_exp
         fitfunc = [None] * num_exp
         for ii, fname in enumerate(self.files):
-            lsv_junc, const = majiq_io.load_data_lsv(fname, self.logger)
+            meta_info[ii], lsv_junc, const = majiq_io.load_data_lsv(fname, self.logger)
 
             #fitting the function
             lsv_junc = self.gc_content_norm(lsv_junc, const)
@@ -174,7 +176,7 @@ class CalcPsi(BasicPipeline):
                 names.extend(ptempt[1])
 
         pickle_path = "%s/%s_psigroup.pickle" % (self.output, self.name)
-        pickle.dump([posterior_matrix, names], open(pickle_path, 'w'))
+        pickle.dump([posterior_matrix, names, meta_info], open(pickle_path, 'w'))
         self.logger.info("PSI calculation for %s ended succesfully! Result can be found at %s" % (self.name,
                                                                                                   self.output))
         self.logger.info("Alakazam! Done.")
@@ -200,12 +202,13 @@ class DeltaPair(BasicPipeline):
         exec_id = '%s_%s' % (self.names[0], self.names[1])
         tempfile = '%s/%s_temp_mid_exec.pickle' % (self.output, exec_id)
         num_exp = [len(self.files1), len(self.files2)]
+        meta_info = [[0] * num_exp[0], [0] * num_exp[1]]
         if not os.path.exists(tempfile):
 
             filtered_lsv1 = [None] * num_exp[0]
             fitfunc = [[None] * num_exp[0], [None] * num_exp[1]]
             for ii, fname in enumerate(self.files1):
-                lsv_junc, const = majiq_io.load_data_lsv(fname, self.logger)
+                meta_info[0][ii], lsv_junc, const = majiq_io.load_data_lsv(fname, self.logger)
 
                 #fitting the function
                 fitfunc[0][ii] = self.fitfunc(const[0])
@@ -215,7 +218,7 @@ class DeltaPair(BasicPipeline):
 
             filtered_lsv2 = [None] * num_exp[1]
             for ii, fname in enumerate(self.files2):
-                lsv_junc, const = majiq_io.load_data_lsv(fname, self.logger)
+                meta_info[1][ii], lsv_junc, const = majiq_io.load_data_lsv(fname, self.logger)
 
                 #fitting the function
                 fitfunc[1][ii] = self.fitfunc(const[0])

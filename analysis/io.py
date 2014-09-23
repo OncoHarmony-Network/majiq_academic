@@ -26,12 +26,9 @@ def load_data_lsv(path, logger=None):
 #        for ii, lsvcov in enumerate(lsv.junction_list.toarray()):
 #            cov[ii,:] = lsvcov
         cov = lsv.junction_list.toarray()
-        lsv_cov_list.append( cov )
+        lsv_cov_list.append(cov)
         gc = lsv.gc_factor.toarray()
         lsv_gc.append(gc)
-
-#    print "LSV COV",lsv_cov_list
-
 
     clist = random.sample(data[2], min(5000, len(data[2])))
     const_list = np.zeros(shape=(len(clist), num_pos), dtype=np.dtype('int'))
@@ -42,5 +39,4 @@ def load_data_lsv(path, logger=None):
         const_gc[cidx, :] = const.gc_factor.toarray()
 #        const_list.append(const.coverage.toarray())
 
-    return (lsv_cov_list, lsv_info, lsv_gc), (const_list, const_info, const_gc)
-
+    return data[0], (lsv_cov_list, lsv_info, lsv_gc), (const_list, const_info, const_gc)

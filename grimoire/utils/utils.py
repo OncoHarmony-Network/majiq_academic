@@ -3,7 +3,8 @@ matplotlib.use('Agg')
 import os
 import logging
 import numpy as np
-import pickle,sys
+import pickle
+import sys
 from itertools import izip
 from scipy.stats.mstats import mquantiles
 from matplotlib import pyplot
@@ -78,6 +79,10 @@ def prepare_lsv_table(lsv_list, non_as, temp_file):
 
 
 def merge_and_create_majiq_file(chr_list, pref_file):
+
+    if pref_file != '':
+        pref_file = '%s.' % pref_file
+
     for name, ind_list in mglobals.tissue_repl.items():
         for idx, exp_idx in enumerate(ind_list):
 
@@ -106,9 +111,6 @@ def merge_and_create_majiq_file(chr_list, pref_file):
             nat = np.concatenate(nonas_table)
             for jnc in nat:
                 jnc.set_gc_factor(exp_idx)
-
-            if pref_file == '':
-                pref_file = '%s.' % pref_file
 
             file_pi = open('%s/%s%s.majiq' % (mglobals.outDir, pref_file, mglobals.exp_list[exp_idx]), 'w+')
             pickle.dump((info, at, nat), file_pi)
@@ -314,7 +316,8 @@ def prepare_gc_content(gene_list, temp_dir):
                     cov = ex.get_coverage(exp_n)
                     if cov < 1:
                         continue
-                    gc_pairs[exp_n].append((gc_val, cov))
+                    gc_pairs[exp_n]['GC'].append(gc_val)
+                    gc_pairs[exp_n]['COV'].append(cov)
 
     file_pi = open('%s/gccontent.temppkl' % temp_dir, 'w+')
     pickle.dump(gc_pairs, file_pi)
@@ -337,16 +340,15 @@ def gc_factor_calculation(chr_list, nb):
             continue
         gc_c = pickle.load(open(yfile, 'rb'))
         for exp_n in xrange(mglobals.num_experiments):
-            gc_pairs[exp_n].extend(gc_c[exp_n])
+            gc_pairs[exp_n]['GC'].extend(gc_c[exp_n]['GC'])
+            gc_pairs[exp_n]['COV'].extend(gc_c[exp_n]['COV'])
 
     #print mglobals.tissue_repl
     for tissue, list_idx in mglobals.tissue_repl.items():
         for exp_n in list_idx:
-            count = []
-            gc = []
-            for gc_val, cov in gc_pairs[exp_n]:
-                count.append(cov)
-                gc.append(gc_val)
+            count = gc_pairs[exp_n]['COV']
+            gc = gc_pairs[exp_n]['GC']
+
             if len(gc) == 0:
                 continue
 
