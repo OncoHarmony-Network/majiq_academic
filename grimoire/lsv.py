@@ -328,9 +328,8 @@ class MajiqLsv(object):
                 if dummy == 0:
                     gc_f = 0
                 else:
-                    #TODO: fix gc_factor
-                    #gc_f = mglobals.gc_factor[exp_idx](dummy)
-                    gc_f = 0
+                    gc_f = mglobals.gc_factor[exp_idx](dummy)
+
 
                 self.gc_factor[idx, jidx] = gc_f
 
