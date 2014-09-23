@@ -302,19 +302,18 @@ def get_validated_pcr_lsv(candidates, out_dir):
 
 def prepare_gc_content(gene_list, temp_dir):
     gc_pairs = []
-    for chrom, strand_list in gene_list.items():
-        for strand, glist in strand_list.items():
-            for gn in glist:
-                for ex in gn.get_exon_list():
-                    gc_val = ex.get_gc_content()
-                    st, end = ex.get_coordinates()
-                    if gc_val is None or end-st < 30:
+    for strand, glist in gene_list.items():
+        for gn in glist:
+            for ex in gn.get_exon_list():
+                gc_val = ex.get_gc_content()
+                st, end = ex.get_coordinates()
+                if gc_val is None or end-st < 30:
+                    continue
+                for exp_n in xrange(mglobals.num_experiments):
+                    cov = ex.get_coverage(exp_n)
+                    if cov < 1:
                         continue
-                    for exp_n in xrange(mglobals.num_experiments):
-                        cov = ex.get_coverage(exp_n)
-                        if cov < 1:
-                            continue
-                        gc_pairs[exp_n].append((gc_val, cov))
+                    gc_pairs[exp_n].append((gc_val, cov))
 
     file_pi = open('%s/gccontent.temppkl' % temp_dir, 'w+')
     pickle.dump(gc_pairs, file_pi)
