@@ -83,8 +83,8 @@ def merge_and_create_majiq_file(chr_list, pref_file):
 
             info = dict()
             info['experiment'] = mglobals.exp_list[exp_idx]
-            # info['GC_bins'] = mglobals.gc_bins[exp_idx]
-            # info['GC_bins_val'] = mglobals.gc_bins_val[exp_idx]
+            info['GC_bins'] = mglobals.gc_bins[exp_idx]
+            info['GC_bins_val'] = mglobals.gc_bins_val[exp_idx]
             info['genome'] = mglobals.genome
             info['num_reads'] = mglobals.num_mapped_reads[exp_idx]
 
@@ -118,6 +118,7 @@ def merge_and_create_majiq_file(chr_list, pref_file):
             for chrom in chr_list:
                 temp_dir = "%s/tmp/%s" % (mglobals.outDir, chrom)
                 temp_filename = '%s/%s.splicegraph' % (temp_dir, mglobals.exp_list[exp_idx])
+                print temp_filename
                 if not os.path.exists(temp_filename):
                     continue
                 temp_file = open(temp_filename, 'rb')
