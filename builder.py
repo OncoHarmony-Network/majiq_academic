@@ -23,6 +23,7 @@ def majiq_builder(samfiles_list, chrom, pcr_validation=None, gff_output=None, lo
     if not logging is None:
         logging.info("Building for chromosome %s" % chrom)
 
+    temp_dir = "%s/tmp/%s" % (mglobals.outDir, chrom)
     temp_file = open('%s/annot_genes.pkl' % temp_dir, 'rb')
     gene_list = pickle.load(temp_file)
 
@@ -46,12 +47,12 @@ def majiq_builder(samfiles_list, chrom, pcr_validation=None, gff_output=None, lo
     utils.prepare_lsv_table(lsv, const, file_name)
 
 
-def __parallel_lsv_quant(samfiles_list, chrom, pcr_validation=False, silent=False, debug=0):
+def __parallel_lsv_quant(samfiles_list, chrom, pcr_validation=False, gff_output=None, silent=False, debug=0):
 
     try:
         print "START child,", current_process().name
         tlogger = utils.get_logger("%s/%s.majiq.log" % (mglobals.outDir, chrom), silent=silent, debug=debug)
-        majiq_builder(samfiles_list, chrom, pcr_validation, tlogger)
+        majiq_builder(samfiles_list, chrom, pcr_validation, gff_output, tlogger)
         print "END child, ", current_process().name
     except Exception as e:
         print "Line %s:" % sys.exc_traceback.tb_lineno, e
