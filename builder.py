@@ -20,15 +20,17 @@ except Exception:
 
 def majiq_builder(samfiles_list, chrom, pcr_validation=None, gff_output=None, logging=None):
 
-    logging.info("Building for chromosome %s" % chrom)
-    temp_dir = "%s/tmp/%s" % (mglobals.outDir, chrom)
+    if not logging is None:
+        logging.info("Building for chromosome %s" % chrom)
+
     temp_file = open('%s/annot_genes.pkl' % temp_dir, 'rb')
     gene_list = pickle.load(temp_file)
 
-    utils.create_if_not_exists(temp_dir)
-    logging.info("[%s] Reading BAM files" % chrom)
+    if not logging is None:
+        logging.info("[%s] Reading BAM files" % chrom)
     rnaseq_io.read_sam_or_bam(samfiles_list, gene_list, mglobals.readLen, chrom, logging=logging)
-    logging.info("[%s] Detecting LSV" % chrom)
+    if not logging is None:
+        logging.info("[%s] Detecting LSV" % chrom)
     lsv, const = analize.lsv_detection(gene_list, chrom, logging=logging)
 
     utils.prepare_gc_content(gene_list, temp_dir)
@@ -38,16 +40,17 @@ def majiq_builder(samfiles_list, chrom, pcr_validation=None, gff_output=None, lo
     if gff_output:
         majiq_lsv.extract_gff(lsv, temp_dir)
     utils.generate_visualization_output(gene_list, temp_dir)
-    logging.info("[%s] Preparing output" % chrom)
-    file_name = '%s.obj' % chrom
+    if not logging is None:
+        logging.info("[%s] Preparing output" % chrom)
+    file1_name = '%s.obj' % chrom
     utils.prepare_lsv_table(lsv, const, file_name)
 
 
-def __parallel_lsv_quant(samfiles_list, chrom, pcr_validation=False):
+def __parallel_lsv_quant(samfiles_list, chrom, pcr_validation=False, silent=False, debug=0):
 
     try:
         print "START child,", current_process().name
-        tlogger = utils.get_logger("%s/%s.majiq.log" % (mglobals.outDir, chrom), silent=args.silent, debug=args.debug)
+        tlogger = utils.get_logger("%s/%s.majiq.log" % (mglobals.outDir, chrom), silent=silent, debug=debug)
         majiq_builder(samfiles_list, chrom, pcr_validation, tlogger)
         print "END child, ", current_process().name
     except Exception as e:
@@ -130,6 +133,8 @@ def main(params):
         pool = Pool(processes=params.nthreads)
     logger.info("Scatter in Chromosomes")
     for chrom in chr_list:
+        temp_dir = "%s/tmp/%s" % (mglobals.outDir, chrom)
+        utils.create_if_not_exists(temp_dir)
         if int(params.nthreads) == 1:
             majiq_builder(sam_list, chrom, pcr_validation=params.pcr_filename, logging=logger)
         else:
