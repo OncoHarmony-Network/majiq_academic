@@ -180,7 +180,7 @@ def main(params):
         fp.close()
 
     mglobals.print_numbers()
-
+    logger.info("End of execution")
 
 if __name__ == "__main__":
     args = _generate_parser()
