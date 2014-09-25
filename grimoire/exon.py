@@ -619,6 +619,6 @@ def detect_exons(gene, junction_list, read_rna):
             junction_list.remove((coord, jtype, jj))
             del jj
 
-    print "FOUND new %d exons" % new_exons
+    #print "FOUND new %d exons" % new_exons
     return 
 

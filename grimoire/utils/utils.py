@@ -78,13 +78,31 @@ def prepare_lsv_table(lsv_list, non_as, temp_file):
             file_pi.close()
 
 
+#TODO:Improve performance for the GATHER
 def merge_and_create_majiq_file(chr_list, pref_file):
 
     if pref_file != '':
         pref_file = '%s.' % pref_file
 
+    all_visual = [list() for xx in xrange(mglobals.num_experiments)]
+    for chrom in chr_list:
+        temp_dir = "%s/tmp/%s" % (mglobals.outDir, chrom)
+        temp_filename = '%s/%s.splicegraph' % (temp_dir, mglobals.exp_list[exp_idx])
+        if not os.path.exists(temp_filename):
+            continue
+        temp_file = open(temp_filename, 'rb')
+        visual_gene_list = pickle.load(temp_file)
+
+        for name, ind_list in mglobals.tissue_repl.items():
+            for idx, exp_idx in enumerate(ind_list):
+                all_visual[exp_idx].extend(visual_gene_list[mglobals.exp_list[exp_idx]])
+
     for name, ind_list in mglobals.tissue_repl.items():
         for idx, exp_idx in enumerate(ind_list):
+
+            file_pi = open('%s/%s%s.splicegraph' % (mglobals.outDir, pref_file, mglobals.exp_list[exp_idx]), 'w+')
+            pickle.dump(all_visual[exp_idx], file_pi)
+            file_pi.close()
 
             info = dict()
             info['experiment'] = mglobals.exp_list[exp_idx]
@@ -114,20 +132,6 @@ def merge_and_create_majiq_file(chr_list, pref_file):
 
             file_pi = open('%s/%s%s.majiq' % (mglobals.outDir, pref_file, mglobals.exp_list[exp_idx]), 'w+')
             pickle.dump((info, at, nat), file_pi)
-            file_pi.close()
-
-            all_visual = list()
-            for chrom in chr_list:
-                temp_dir = "%s/tmp/%s" % (mglobals.outDir, chrom)
-                temp_filename = '%s/%s.splicegraph' % (temp_dir, mglobals.exp_list[exp_idx])
-                print temp_filename
-                if not os.path.exists(temp_filename):
-                    continue
-                temp_file = open(temp_filename, 'rb')
-                visual_gene_list = pickle.load(temp_file)
-                all_visual.extend(visual_gene_list)
-            file_pi = open('%s/%s%s.splicegraph' % (mglobals.outDir, pref_file, mglobals.exp_list[exp_idx]), 'w+')
-            pickle.dump(all_visual, file_pi)
             file_pi.close()
 
 
@@ -171,10 +175,10 @@ def set_exons_gc_content(chrom, exon_list):
 
 
 def generate_visualization_output(allgenes, temp_dir):
-
+    gene_list = {}
     for name, ind_list in mglobals.tissue_repl.items():
         for idx, exp_idx in enumerate(ind_list):
-            gene_list = []
+            gene_list[mglobals.exp_list[exp_idx]] = []
             for genes_l in allgenes.values():
                 for gg in genes_l:
                     junc_list = []
@@ -226,11 +230,12 @@ def generate_visualization_output(allgenes, temp_dir):
                                 extra_coords.append([ex.db_coord[1]+1, ex.end])
                         eg = ExonGraphic(a3, a5, cc, visual_type, intron_retention=ex.ir, coords_extra=extra_coords)
                         exon_list.append(eg)
-                    gene_list.append(GeneGraphic(gg.get_id(), gg.get_strand(), exon_list, junc_list, gg.get_chromosome()))
+                    gene_list[mglobals.exp_list[exp_idx]].append(GeneGraphic(gg.get_id(), gg.get_strand(), exon_list,
+                                                                             junc_list, gg.get_chromosome()))
 
-            file_pi = open('%s/%s.splicegraph' % (temp_dir, mglobals.exp_list[exp_idx]), 'w+')
-            pickle.dump(gene_list, file_pi)
-            file_pi.close()
+    file_pi = open('%s/splicegraph,temppkl' % temp_dir, 'w+')
+    pickle.dump(gene_list, file_pi)
+    file_pi.close()
 
 
 def prepare_junctions_gc(junc, exp_idx):
@@ -309,7 +314,7 @@ def prepare_gc_content(gene_list, temp_dir):
             for ex in gn.get_exon_list():
                 gc_val = ex.get_gc_content()
                 st, end = ex.get_coordinates()
-                if gc_val is None or end-st < 30:
+                if gc_val == 0 or end-st < 30:
                     continue
                 for exp_n in xrange(mglobals.num_experiments):
                     cov = ex.get_coverage(exp_n)

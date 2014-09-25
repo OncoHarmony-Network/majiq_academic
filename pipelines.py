@@ -99,11 +99,11 @@ class BasicPipeline:
 ################################
 
 def calcpsi(args):
-    return _pipeline_run(CalcPsi(args), args.lsv)
+    return _pipeline_run(CalcPsi(args))
 
 
 class CalcPsi(BasicPipeline):
-    def run(self, lsv=False):
+    def run(self):
         self.calcpsi()
 
     def calcpsi(self):
