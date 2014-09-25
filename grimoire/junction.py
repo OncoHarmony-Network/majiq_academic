@@ -26,11 +26,9 @@ class Junction:
         else:
             self.acceptor_id = acceptor.get_id()
         self.gene_name = gene.get_id()
-        self.txN = 1
         self.annotated = annotated
-        self.readN = np.zeros(shape=(mglobals.num_experiments), dtype=np.int)
         self.coverage = scipy.sparse.lil_matrix((mglobals.num_experiments, (mglobals.readLen-16)+1), dtype=np.int)
-        self.gc_content = np.zeros(shape=((mglobals.readLen-16)+1), dtype=np.float)
+        self.gc_content = scipy.sparse.lil_matrix(((mglobals.readLen-16)+1), dtype=np.float)
         self.id = "%s:%s-%s" % (self.gene_name, start, end)
 
     def __hash__(self):
@@ -46,9 +44,6 @@ class Junction:
     def get_ss_3p(self):
         return self.end
 
-    def get_count(self):
-        return self.txN
-
     def get_gene(self):
         return mglobals.gene_tlb[self.gene_name]
 
@@ -58,6 +53,9 @@ class Junction:
     def get_donor(self):
         if self.donor_id == -1:
             ex = None
+        elif self.donor_id is None:
+            ex = self.get_gene().get_exon_in_coord(self.start)
+            self.donor_id = ex.get_id()
         else:
             ex = self.get_gene().get_exon_by_id(self.donor_id)
         return ex
@@ -65,6 +63,9 @@ class Junction:
     def get_acceptor(self):
         if self.acceptor_id == -1:
             ex = None
+        elif self.acceptor_id is None:
+            ex = self.get_gene().get_exon_in_coord(self.end)
+            self.acceptor_id = ex.get_id()
         else:
             ex = self.get_gene().get_exon_by_id(self.acceptor_id)
         return ex
@@ -72,8 +73,8 @@ class Junction:
     def get_gc_content(self):
         return self.gc_content
 
-    def get_readN(self, idx):
-        return self.readN[idx]
+    def get_read_num(self, idx):
+        return self.coverage[idx, :].sum()
 
     def is_annotated(self):
         return self.annotated
@@ -81,7 +82,7 @@ class Junction:
     #MODIFIERs
 
     def add_gc_content_positions(self, pos, gc):
-        self.gc_content[pos] = gc
+        self.gc_content = gc
 #        self.gc_factor[exp_idx,:] = gc_factor
 
     def add_donor(self, donor):
@@ -99,16 +100,12 @@ class Junction:
     def update_junction_read(self, exp_idx, read_n, start, gc, unique):
 #        print "J3",self, getrefcount(self)
 
-        self.readN[exp_idx] += read_n
         left_ind = mglobals.readLen - (self.start - start) - 8 + 1
         if unique:
             self.coverage[exp_idx, left_ind] += read_n
         else:
             self.coverage[exp_idx, left_ind] = -1
         self.gc_content[left_ind] = gc
-
-    def add_read_number(self, exp_idx, read_n):
-        self.readN[exp_idx] += read_n
 
 
 class MajiqJunc:
@@ -153,5 +150,5 @@ class MajiqJunc:
             if dummy == 0:
                 gc_f = 0
             else:
-                gc_f = mglobals.gc_factor[exp_idx]( dummy )
+                gc_f = mglobals.gc_factor[exp_idx](dummy)
             self.gc_factor[0, jj] = gc_f

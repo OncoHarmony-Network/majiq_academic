@@ -1,33 +1,28 @@
 import matplotlib
 matplotlib.use('Agg')
 import os
-import sys
-import random
 import logging
-import scipy.io
 import numpy as np
-import pickle,sys
+import pickle
+import sys
 from itertools import izip
 from scipy.stats.mstats import mquantiles
-from scipy import interpolate
 import scipy.sparse
-import scipy.io
 from matplotlib import pyplot
 import grimoire.mglobals as mglobals
 from grimoire.junction import MajiqJunc
-from grimoire.lsv import print_lsv_extype
-from voila.splice_graphics.exonGraphic import ExonGraphic 
+from voila.splice_graphics.exonGraphic import ExonGraphic
 from voila.splice_graphics.geneGraphic import GeneGraphic 
 from voila.splice_graphics.junctionGraphic import JunctionGraphic 
 
 
 def create_if_not_exists(my_dir, logger=False):
-    "Create a directory path if it does not exist"
+    """Create a directory path if it does not exist"""
     try:
         if logger:
             logger.info("\nCreating directory %s..." % my_dir)
         os.makedirs(my_dir)
-    except OSError, e:
+    except OSError:
         if logger:
             logger.info("\nDirectory %s already exists..." % my_dir)
 
@@ -61,18 +56,18 @@ def get_logger(logger_name, silent=False, debug=False):
 
 def __gc_factor_ind(val, exp_idx):
     res = 0
-    for ii,jj in enumerate(mglobals.gc_bins[exp_idx]):
+    for ii, jj in enumerate(mglobals.gc_bins[exp_idx]):
         if val < jj:
             res = ii
     return res
 
 
-def prepare_LSV_table(lsv_list, non_as, temp_file):
+def prepare_lsv_table(lsv_list, non_as, temp_dir):
 
+    out_temp = list()
     for name, ind_list in mglobals.tissue_repl.items():
         for idx, exp_idx in enumerate(ind_list):
 
-            jun = set(lsv_list[exp_idx])
             majiq_table_as = np.zeros(shape=(len(lsv_list[exp_idx])), dtype=np.dtype('object'))
             majiq_table_nonas = np.zeros(shape=(len(non_as[exp_idx])), dtype=np.dtype('object'))
 
@@ -80,67 +75,78 @@ def prepare_LSV_table(lsv_list, non_as, temp_file):
                 majiq_table_as[iix] = lsv.to_majiqLSV(exp_idx)
             for jix, jn in enumerate(non_as[exp_idx]):
                 majiq_table_nonas[jix] = MajiqJunc(jn, exp_idx)
-            file_pi = open("%s/temp_%s.%s" % (mglobals.temp_oDir[exp_idx], mglobals.exp_list[exp_idx], temp_file), 'w+')
-            pickle.dump((majiq_table_as, majiq_table_nonas), file_pi)
-            file_pi.close()
+
+            out_temp.append((majiq_table_as,majiq_table_nonas))
+    file_pi = open("%s/majiq.pkl" % temp_dir, 'w+')
+    pickle.dump(out_temp, file_pi)
+    file_pi.close()
 
 
 def merge_and_create_majiq_file(chr_list, pref_file):
+
+    """
+
+    :param chr_list:
+    :param pref_file:
+    """
+    if pref_file != '':
+        pref_file = '%s.' % pref_file
+
+    all_visual = [list() for xx in xrange(mglobals.num_experiments)]
+    as_table = [list() for xx in xrange(mglobals.num_experiments)]
+    nonas_table = [list() for xx in xrange(mglobals.num_experiments)]
+
+    for chrom in chr_list:
+        temp_dir = "%s/tmp/%s" % (mglobals.outDir, chrom)
+        temp_filename = '%s/splicegraph.pkl' % temp_dir
+        if not os.path.exists(temp_filename):
+            continue
+        temp_file = open(temp_filename, 'rb')
+        visual_gene_list = pickle.load(temp_file)
+
+        filename = "%s/majiq.pkl" % temp_dir
+        if not os.path.exists(filename):
+            continue
+        file_pi2 = open(filename, 'rb')
+        temp_table = pickle.load(file_pi2)
+
+        for name, ind_list in mglobals.tissue_repl.items():
+            for idx, exp_idx in enumerate(ind_list):
+                all_visual[exp_idx].extend(visual_gene_list[mglobals.exp_list[exp_idx]])
+                as_table[exp_idx].append(temp_table[exp_idx][0])
+                nonas_table[exp_idx].append(temp_table[exp_idx][1])
+
     for name, ind_list in mglobals.tissue_repl.items():
         for idx, exp_idx in enumerate(ind_list):
 
+            file_pi = open('%s/%s%s.splicegraph' % (mglobals.outDir, pref_file, mglobals.exp_list[exp_idx]), 'w+')
+            pickle.dump(all_visual[exp_idx], file_pi)
+            file_pi.close()
+
             info = dict()
             info['experiment'] = mglobals.exp_list[exp_idx]
-            # info['GC_bins'] = mglobals.gc_bins[exp_idx]
-            # info['GC_bins_val'] = mglobals.gc_bins_val[exp_idx]
+            info['GC_bins'] = mglobals.gc_bins[exp_idx]
+            info['GC_bins_val'] = mglobals.gc_bins_val[exp_idx]
             info['genome'] = mglobals.genome
             info['num_reads'] = mglobals.num_mapped_reads[exp_idx]
 
-            as_table = []
-            nonas_table = []
-            for chrom in chr_list:
-                filename = '%s/temp_%s.%s.obj' % (mglobals.temp_oDir[exp_idx], mglobals.exp_list[exp_idx], chrom)
-                if not os.path.exists(filename):
-                    continue
-                file_pi2 = open(filename, 'rb')
-                as_t, non_as = pickle.load(file_pi2)
-                as_table.append(as_t)
-                nonas_table.append(non_as)
             if len(as_table) == 0:
                 continue
-            AT = np.concatenate(as_table)
-            for lsv in AT:
+            at = np.concatenate(as_table[exp_idx])
+            for lsv in at:
                 lsv.set_gc_factor(exp_idx)
-            NAT = np.concatenate(nonas_table)
-            for jnc in NAT:
+            nat = np.concatenate(nonas_table[exp_idx])
+            for jnc in nat:
                 jnc.set_gc_factor(exp_idx)
 
-            if pref_file == '':
-                pref_file = '%s.' % pref_file
-
             file_pi = open('%s/%s%s.majiq' % (mglobals.outDir, pref_file, mglobals.exp_list[exp_idx]), 'w+')
-            pickle.dump((info, AT, NAT), file_pi)
-            file_pi.close()
-
-            all_visual = list()
-            for chrom in chr_list:
-                temp_dir = "%s/tmp/%s" % (mglobals.outDir, chrom)
-                temp_filename = '%s/%s.splicegraph' % (temp_dir, mglobals.exp_list[exp_idx])
-                if not os.path.exists(temp_filename):
-                    continue
-                temp_file = open(temp_filename, 'rb')
-                visual_gene_list = pickle.load(temp_file)
-                all_visual.extend(visual_gene_list)
-            file_pi = open('%s/%s%s.splicegraph' % (mglobals.outDir, pref_file, mglobals.exp_list[exp_idx]), 'w+')
-            pickle.dump(all_visual, file_pi)
+            pickle.dump((info, at, nat), file_pi)
             file_pi.close()
 
 
 def set_exons_gc_content(chrom, exon_list):
 
-#    fastadir_path = "%s/Genomes/goldenPath/%s/"%(os.environ["ASP_DATA_ROOT"],mglobals.genome)
-    seqdir = '/Volumes/data-1/WASP_DATA'
-    fastadir_path = "%s/Genomes/goldenPath/%s/" % (seqdir, mglobals.genome)
+    fastadir_path = "%s/%s/" % (mglobals.genome_path, mglobals.genome)
 
     #print "Loading chromosome... %s"%chrom
     chrom_path = fastadir_path + chrom + ".fa"
@@ -154,7 +160,7 @@ def set_exons_gc_content(chrom, exon_list):
     loaded_chrom = ''.join(loaded_chrom)
 
     for exon in exon_list:
-        strt,end = exon.get_coordinates()
+        strt, end = exon.get_coordinates()
         sequence = loaded_chrom[strt:end]
         #reverse the sequence if the strand is reverse
         sequence = sequence.lower()
@@ -178,16 +184,16 @@ def set_exons_gc_content(chrom, exon_list):
 
 
 def generate_visualization_output(allgenes, temp_dir):
-
+    gene_list = {}
     for name, ind_list in mglobals.tissue_repl.items():
         for idx, exp_idx in enumerate(ind_list):
-            gene_list = []
+            gene_list[mglobals.exp_list[exp_idx]] = []
             for genes_l in allgenes.values():
                 for gg in genes_l:
                     junc_list = []
                     junc_l = []
                     for jj in gg.get_all_junctions():
-                        if jj.get_coordinates()[0] is None or jj.donor is None or jj.acceptor is None:
+                        if jj.get_coordinates()[0] is None or jj.get_donor() is None or jj.get_acceptor() is None:
                             continue
                         if jj.is_annotated() and jj.readN[exp_idx].sum() == 0:
                             jtype = 2
@@ -233,25 +239,26 @@ def generate_visualization_output(allgenes, temp_dir):
                                 extra_coords.append([ex.db_coord[1]+1, ex.end])
                         eg = ExonGraphic(a3, a5, cc, visual_type, intron_retention=ex.ir, coords_extra=extra_coords)
                         exon_list.append(eg)
-                    gene_list.append(GeneGraphic(gg.get_id(), gg.get_strand(), exon_list, junc_list, gg.get_chromosome()))
+                    gene_list[mglobals.exp_list[exp_idx]].append(GeneGraphic(gg.get_id(), gg.get_strand(), exon_list,
+                                                                             junc_list, gg.get_chromosome()))
 
-            file_pi = open('%s/%s.splicegraph' % (temp_dir, mglobals.exp_list[exp_idx]), 'w+')
-            pickle.dump(gene_list, file_pi)
-            file_pi.close()
+    file_pi = open('%s/splicegraph.pkl' % temp_dir, 'w+')
+    pickle.dump(gene_list, file_pi)
+    file_pi.close()
 
 
 def prepare_junctions_gc(junc, exp_idx):
 
-    gc = np.zeros(shape=(mglobals.readLen - 16+1))
+    gc = scipy.sparse.lil_matrix(shape=(mglobals.readLen - 16+1))
     gci = np.zeros(shape=(mglobals.readLen - 16+1))
     for jj in range(mglobals.readLen - 16+1):
         if not junc is None and junc.get_gc_content()[exp_idx, jj] != 0:
             #gci[jj] = __gc_factor_ind(junc.get_gc_content()[exp_idx,jj],exp_idx)
             pass
-            #gc[jj] = mglobals.gc_factor[exp_idx](junc.get_gc_content()[exp_idx,jj])
+            gc[jj] = mglobals.gc_factor[exp_idx](junc.get_gc_content()[exp_idx, jj])
 
     if not junc is None:
-        junc.add_gc_content_positions(gci, gc)
+        junc.add_gc_content_positions(gc)
     return
 
 
@@ -295,9 +302,9 @@ def get_validated_pcr_lsv(candidates, out_dir):
         score = lsv.get_pcr_score()
         for jidx, jj in enumerate(lsv.junctions):
             if lsv.is_Ssource:
-                excoord = jj.acceptor.get_coordinates()
+                excoord = jj.get_acceptor().get_coordinates()
             else:
-                excoord = jj.donor.get_coordinates()
+                excoord = jj.get_donor().get_coordinates()
             if excoord[1] > alt_coord[0] and excoord[0] < alt_coord[1]:
                 name = "%s#%s" % (lsv.id, jidx)
                 pcr_lsv = [lsv.exon.get_pcr_name(), name, score]
@@ -308,47 +315,63 @@ def get_validated_pcr_lsv(candidates, out_dir):
     op.close()
 
 
-def gc_factor_calculation(exon_list, nb):
+def prepare_gc_content(gene_list, temp_dir):
+    gc_pairs = {'GC': [[] for xx in xrange(mglobals.num_experiments)],
+                'COV': [[] for xx in xrange(mglobals.num_experiments)]}
+    for strand, glist in gene_list.items():
+        for gn in glist:
+            for ex in gn.get_exon_list():
+                gc_val = ex.get_gc_content()
+                st, end = ex.get_coordinates()
+                if gc_val == 0 or end-st < 30:
+                    continue
+                for exp_n in xrange(mglobals.num_experiments):
+                    cov = ex.get_coverage(exp_n)
+                    if cov < 1:
+                        continue
+                    gc_pairs['GC'][exp_n].append(gc_val)
+                    gc_pairs['COV'][exp_n].append(cov)
+
+    file_pi = open('%s/gccontent.temppkl' % temp_dir, 'w+')
+    pickle.dump(gc_pairs, file_pi)
+    file_pi.close()
+
+
+def gc_factor_calculation(chr_list, nb):
 
     local_bins = np.zeros(shape=(mglobals.num_experiments, nb+1), dtype=np.dtype('float'))
     local_meanbins = np.zeros(shape=(mglobals.num_experiments, nb),   dtype=np.dtype('float'))
     local_factor = np.zeros(shape=(mglobals.num_experiments, nb),   dtype=np.dtype('float'))
 
-    dummy_counter = 0
+    gc_pairs = {'GC': [[] for xx in xrange(mglobals.num_experiments)],
+                'COV': [[] for xx in xrange(mglobals.num_experiments)]}
+
+    # read local files
+    for chrom in chr_list:
+        temp_dir = "%s/tmp/%s" % (mglobals.outDir, chrom)
+        yfile = '%s/gccontent.temppkl' % temp_dir
+        if not os.path.exists(yfile):
+            continue
+        gc_c = pickle.load(open(yfile, 'rb'))
+        for exp_n in xrange(mglobals.num_experiments):
+            gc_pairs['GC'][exp_n].extend(gc_c['GC'][exp_n])
+            gc_pairs['COV'][exp_n].extend(gc_c['COV'][exp_n])
 
     #print mglobals.tissue_repl
     for tissue, list_idx in mglobals.tissue_repl.items():
         for exp_n in list_idx:
-            #print "EXP", exp_n
-            count = []
-            gc = []
-            for idx, ex in enumerate(exon_list):
-                gc_val = ex.get_gc_content()
-                st, end = ex.get_coordinates()
-                cov = ex.get_coverage(exp_n)
+            count = gc_pairs['COV'][exp_n]
+            gc = gc_pairs['GC'][exp_n]
 
-                # TEST AND CHECK
-#                if gc_val is None or cov == 0:
-#                    print ex.strand, st, end
-
-#                print "GC_VA:",gc_val 
-#                print "COV",cov
-
-                if gc_val is None or end-st < 30 or cov < 1:
-                    continue
-                count.append(cov)
-                gc.append(gc_val)
             if len(gc) == 0:
                 continue
-            # print "cont", len(count)
-            # print count
-            # print gc
+
             count, gc = izip(*sorted(izip(count, gc), key=lambda x: x[1]))
 
             num_regions = len(count)
-            nperbin =  num_regions / nb
+            nperbin = num_regions / nb
 
-            quant_median =[0.0]*8
+            quant_median = [0.0]*8
             mean_bins = [0]*nb
             bins = [0]*nb
 
@@ -358,12 +381,10 @@ def gc_factor_calculation(exon_list, nb):
                     ub = num_regions
                 else:
                     ub = (ii+1) * nperbin
-#                print "LB",lb , ub
 
                 a = np.asarray(count[lb:ub])
                 t = np.asarray(gc[lb:ub])
-#                print "a",a
-#                print "t",t
+
                 try:
                     local_bins[exp_n, ii] = t.min()
                 except ValueError:
@@ -375,17 +396,17 @@ def gc_factor_calculation(exon_list, nb):
                 mean_bins[ii] = np.mean(t)
                 bins[ii] = mquantiles(a, prob=np.arange(0.1, 0.9, 0.1))
                 print "quantiles", bins[ii]
-            #print bins
+
             for qnt in range(8):
                 qnt_bns = np.ndarray(len(bins))
-                for idx,bb in enumerate(bins):
+                for idx, bb in enumerate(bins):
                     qnt_bns[idx] = bb[qnt]
                 print "BINS", qnt_bns
                 #quant_median[qnt]=np.median(qnt_bns)
                 quant_median[qnt] = np.mean(qnt_bns)
 
             #print quant_median
-            gc_factor = np.zeros(nb,dtype=np.dtype('float'))
+            gc_factor = np.zeros(nb, dtype=np.dtype('float'))
             for ii in range(nb):
                 offst = np.zeros(len(quant_median), dtype=np.dtype('float'))
                 for idx, xx in enumerate(quant_median):
@@ -409,7 +430,7 @@ def plot_gc_content():
 #            print mglobals.gc_means[exp_n]
             mn = mglobals.gc_means[exp_n].min()
             mx = mglobals.gc_means[exp_n].max()
-            xx = np.arange(mn, mx , 0.001)
+            xx = np.arange(mn, mx, 0.001)
             yy = mglobals.gc_factor[exp_n](xx)
             print "XX", xx
             print "Yy", yy
@@ -419,7 +440,7 @@ def plot_gc_content():
             pyplot.grid()
             pyplot.legend(loc='upper left')
 #        pyplot.show()
-        pyplot.savefig('%s/gcontent_%s.png' % (mglobals.outDir,tissue))
+        pyplot.savefig('%s/gcontent_%s.png' % (mglobals.outDir, tissue))
         idx += 1
 
 
@@ -428,15 +449,20 @@ def to_gtf(wfile, seq_name, source, gene, mRNA, start_trans, end_trans, strand, 
     # Iterate over each exon
     exonOrCDS_list = []
     for i, exon in enumerate(exon_l):
-        exonOrCDS_list.append("\t".join([seq_name, source, "%s", exon[0], exon[1], SSCORE, strand, str(frame_l[i]), "gene_id \"%s\"; transcript_id \"%s\";\n"%(gene, mRNA)]))
+        exonOrCDS_list.append("\t".join([seq_name, source, "%s", exon[0], exon[1], SSCORE, strand,
+                                         str(frame_l[i]), "gene_id \"%s\"; transcript_id \"%s\";\n" % (gene, mRNA)]))
 
     if strand == '+':
-        first_codon = "\t".join([seq_name, source, "start_codon", start_trans, str(int(start_trans) + 2), SSCORE, strand, ".", "gene_id \"%s\"; transcript_id \"%s\";\n"%(gene, mRNA)])
-        last_codon = "\t".join([seq_name, source, "stop_codon", str(int(end_trans) + 1), str(int(end_trans) + 3), SSCORE, strand, ".", "gene_id \"%s\"; transcript_id \"%s\";\n"%(gene, mRNA)])
+        first_codon = "\t".join([seq_name, source, "start_codon", start_trans, str(int(start_trans) + 2), SSCORE,
+                                 strand, ".", "gene_id \"%s\"; transcript_id \"%s\";\n" % (gene, mRNA)])
+        last_codon = "\t".join([seq_name, source, "stop_codon", str(int(end_trans) + 1), str(int(end_trans) + 3),
+                                SSCORE, strand, ".", "gene_id \"%s\"; transcript_id \"%s\";\n" % (gene, mRNA)])
 
     else:
-        last_codon = "\t".join([seq_name, source, "start_codon", str(int(end_trans) - 2), end_trans, SSCORE, strand, ".", "gene_id \"%s\"; transcript_id \"%s\";\n"%(gene, mRNA)])
-        first_codon = "\t".join([seq_name, source, "stop_codon", str(int(start_trans) - 3), str(int(start_trans) - 1), SSCORE, strand, ".", "gene_id \"%s\"; transcript_id \"%s\";\n"%(gene, mRNA)])
+        last_codon = "\t".join([seq_name, source, "start_codon", str(int(end_trans) - 2), end_trans, SSCORE,
+                                strand, ".", "gene_id \"%s\"; transcript_id \"%s\";\n" % (gene, mRNA)])
+        first_codon = "\t".join([seq_name, source, "stop_codon", str(int(start_trans) - 3), str(int(start_trans) - 1),
+                                 SSCORE, strand, ".", "gene_id \"%s\"; transcript_id \"%s\";\n" % (gene, mRNA)])
 
     wfile.write(first_codon)
     for eCDS in exonOrCDS_list:

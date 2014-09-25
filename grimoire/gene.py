@@ -42,8 +42,6 @@ class Gene:
         self.exons = []
         self.start = start
         self.end = end
-        self.otherNames = [gene_id]
-        self.exonNum = 0
         self.readNum = np.zeros(shape=mglobals.num_experiments, dtype=np.int)
         self.temp_txex_list = []
         self.ir_list = []
@@ -59,15 +57,14 @@ class Gene:
     def get_strand(self):
         return self.strand
 
-#     def get_RNAread_list(self):
-# #        print "GET RNAlist",len(self.RNAread_list[0])
-#         return self.RNAread_list
-
     def get_read_count(self):
         return self.readNum
 
     def get_rpkm(self):
         return self.RPKM
+
+    def get_exon_list(self):
+        return self.exons
 
     def get_chromosome(self):
         return self.chromosome
@@ -77,6 +74,15 @@ class Gene:
 
     def get_transcript(self, trans_id):
         return self.transcript_tlb[trans_id]
+
+    def get_exon_in_coord(self, coord):
+        res = None
+        for ex in self.exons:
+            cc = ex.get_coordinates()
+            if cc[0] <= coord <= cc[1]:
+                res = ex
+                break
+        return res
 
     def get_exon_by_id(self, ex_id):
         return self.exons[ex_id-1]
@@ -113,11 +119,6 @@ class Gene:
         self.readNum[exp_idx] += read_num
         return
 
-    def add_read(self, read, exp_idx):
-        self.readNum[exp_idx] += read.get_read_count()
-#        (self.RNAread_list[exp_idx]).append(read)
-        return
-
     def add_exon(self, exon):
         self.exons.append(exon)
         return
@@ -136,8 +137,7 @@ class Gene:
             if self.chromosome == ll.chromosome and self.strand == ll.strand \
                     and self.start < ll.end and self.end > ll.start:
                 res = ll
-                if not name in ll.otherNames:
-                    ll.otherNames.append(name)
+
                 ll.start = min(ll.start, self.start)
                 ll.end = max(ll.end, self.end)
                 break
@@ -242,11 +242,7 @@ class Gene:
         self.exons.sort()
         for idx, exs in enumerate(self.exons):
             exs.id = idx+1
-        self.exonNum = len(self.exons)
         return
-
-    def get_exon_list(self):
-        return self.exons
 
     def get_all_ss(self, anot_only=False):
 
@@ -259,14 +255,11 @@ class Gene:
                 for junc in txex.get_5prime_junc():
                     ss.add((junc.get_ss_5p(), '5prime', junc))
 
-        print sorted(ss)
         return sorted(ss)
 
     def collapse_exons(self):
 
         self.temp_txex_list.sort()
-#        print "GEN",self.temp_txex_list
-#        print_list_exons(self.temp_txex_list)
         list_ex = collapse_list_exons(self.temp_txex_list, self)
         self.exons.extend(list_ex)
         self.prepare_exons()
@@ -312,22 +305,6 @@ class Gene:
             if bl:
                 self.temp_txex_list.append(res)
         return res
-
-    # mark for delete
-    def get_transcript_mat(self, as_vs_const):
-
-        if (len(self.transcript_list) == 1 and as_vs_const == 'AS') or len(self.exons) < 3:
-            return None
-
-        mat = np.ndarray(shape=(len(self.transcript_list), len(self.exons)), dtype='bool')
-        for idx_t, tpt in enumerate(self.transcript_list):
-            for g_ex in self.exons:
-                if set(tpt.exon_list).intersection(set(g_ex.exonTx_list)):
-                    mat[idx_t, g_ex.id-1] = 1
-                else:
-                    mat[idx_t, g_ex.id-1] = 0
-
-        return mat
 
     def get_rnaseq_mat(self, rand10k, lsv=False):
 
@@ -385,7 +362,7 @@ class Gene:
             jmat[x, y] = junc
 
             for exp_idx in range(mglobals.num_experiments):
-                if junc.get_readN(exp_idx) >= 10:
+                if junc.get_read_num(exp_idx) >= 10:
                     rand10k[exp_idx].add(junc)
 
         if not lsv:
@@ -403,8 +380,8 @@ class Transcript(object):
         self.junction_list = []
         self.txstart = txstart
         self.txend = txend
-        self.cdsStart = None
-        self.cdsStop = None
+        # self.cdsStart = None
+        # self.cdsStop = None
 
     def add_exon(self, exon):
         self.exon_list.append(exon)

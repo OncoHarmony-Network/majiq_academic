@@ -55,20 +55,7 @@ def __total_ss_minreads(junc_mat, minreads=5):
     return len(js)
 
 
-def __get_enabled_junction(con, exp_list):
-    for jrow in con:
-        for jj in jrow:
-            #print jj
-            if jj is None or jj.get_readN(exp_list) == 0:
-                continue
-            break
-        else: 
-            continue
-        break
-    return jj
-
-
-def lsv_detection(gene_list, chr, logging=None):
+def lsv_detection(gene_list, chrom, logging=None):
 
     num_ss_var = [[0]*20, [0]*20, 0]
 
@@ -100,16 +87,14 @@ def lsv_detection(gene_list, chr, logging=None):
             #num_ss_var [1]+= var_ss[1]
 
 #            print "---------------- %s --------------"%gn.get_id()
-            utils.print_junc_matrices(mat, tlb=tlb, fp=True)
+            #utils.print_junc_matrices(mat, tlb=tlb, fp=True)
             SS, ST = lsv_matrix_detection(mat, tlb, (False, False, False), vip)
             for lsv_index, lsv_lst in enumerate((SS, ST)):
                 lsv_type = (SSOURCE, STARGET)[lsv_index]
                 sstype = ['5prime', '3prime'][lsv_index]
 #                print lsv_lst
                 for idx in lsv_lst:
-                    coord = exon_list[idx].get_coordinates
                     jlist = exon_list[idx].get_junctions(sstype)
-
                     jlist = [x for x in jlist if x is not None]
                     if len(jlist) == 0:
                         continue
@@ -120,16 +105,16 @@ def lsv_detection(gene_list, chr, logging=None):
 
                     for name, ind_list in mglobals.tissue_repl.items():
                         counter = 0
-                        eData = 0
+                        e_data = 0
                         for jj in jlist:
                             for exp_idx in ind_list:
                                 if __reliable_in_data(jj, exp_idx):
                                     counter += 1
                             if counter < 0.1*len(ind_list):
                                 continue
-                            eData += 1
+                            e_data += 1
                             jun[name].add(jj)
-                        if eData == 0:
+                        if e_data == 0:
                             continue
                         for exp_idx in ind_list:
                             for lsvinlist in lsv_list[exp_idx]:
@@ -146,14 +131,14 @@ def lsv_detection(gene_list, chr, logging=None):
     return lsv_list, const_set
 
 
-def lsv_matrix_detection( mat, exon_to_ss, b_list, vip_set=[]):
-    '''
+def lsv_matrix_detection(mat, exon_to_ss, b_list, vip_set=[]):
+    """
        Rules for const are:
         1. All the junction from A should go to C1 or C2
         2. All the junction from C1 should go to A
         3. All the junction to C2 should come from A
         4. Number of reads from C1-A should be equivalent to number of reads from A-C2
-    '''
+    """
     lsv_list = [[], []]
 
     #change bucle for iterate by exons
@@ -162,7 +147,7 @@ def lsv_matrix_detection( mat, exon_to_ss, b_list, vip_set=[]):
         pre_lsv = exon_to_ss[ii-1]
         post_lsv = exon_to_ss[ii+1]
         #Single Source detection
-        SS = mat[lsv[1][0]:lsv[1][-1]+1, :]
+        ss = mat[lsv[1][0]:lsv[1][-1]+1, :]
         ss_valid = True
         cand = range(ii+1, len(exon_to_ss))
         for ex_idx, ex in enumerate(cand):
@@ -175,11 +160,11 @@ def lsv_matrix_detection( mat, exon_to_ss, b_list, vip_set=[]):
                 ss_valid = False
                 break
 
-        if ss_valid and np.count_nonzero(SS) > 1:
+        if ss_valid and np.count_nonzero(ss) > 1:
             lsv_list[0].append(ii)
 
         #Single Targe detection
-        ST = mat[:,lsv[0][0]:lsv[0][-1]+1]
+        st = mat[:, lsv[0][0]:lsv[0][-1]+1]
         st_valid = True
         cand = range(0, ii)
         for ex_idx, ex in enumerate(cand):
@@ -192,7 +177,7 @@ def lsv_matrix_detection( mat, exon_to_ss, b_list, vip_set=[]):
                 st_valid = False
                 break
 
-        if st_valid and np.count_nonzero(ST) > 1:
+        if st_valid and np.count_nonzero(st) > 1:
             lsv_list[1].append(ii)
 
     return lsv_list

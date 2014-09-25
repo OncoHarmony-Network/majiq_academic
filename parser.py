@@ -1,12 +1,13 @@
 import argparse
 
-from pipelines import preprocess, calcpsi, deltapair, deltagroup
+from pipelines import builder, calcpsi, deltapair
 
 VERSION = "alpha"
 
 
 def new_subparser():
     return argparse.ArgumentParser(add_help=False)
+
 
 def main():
     "Main MAJIQ parser with all flags and subcommands"
@@ -16,19 +17,27 @@ def main():
 
     #common flags (first ones are required)
     common = new_subparser()
-    common.add_argument('--lsv', default=False, action='store_true', help='Execute pipeline for lsv')
     common.add_argument('--nthreads', default=4, type=int, help='Number of threads')
     common.add_argument('--tmp', default="/tmp/", help='Path to save the temporary files. [Default: %(default)s]')
     common.add_argument('--output', required=True, help='Path to save the pickle output to.')
     common.add_argument('--logger', default=None, help='Path for the logger. Default is output directory')
     common.add_argument('--silent', action='store_true', default=False, help='Silence the logger.')
-    common.add_argument('--newmodel', action='store_true', default=False, help='execute new model.')
     common.add_argument('--plotpath', default=None, help='Path to save the plot to, if not provided will show on a matplotlib popup window')
     common.add_argument('--debug', type=int, default=0, help="Activate this flag for debugging purposes, activates logger and jumps some processing steps.")
     common.add_argument('--minreads', default=10, type=int, help='Minimum number of reads combining all positions in an event to be considered. [Default: %(default)s]') 
     common.add_argument('--minnonzero', default=3, type=int, help='Minimum number of start positions with at least 1 read for an event to be considered.')
-    common.add_argument('--tracklist', nargs='+', help='A list of identifiers to track in detail, for debugging purposes')
- 
+
+    buildparser = new_subparser()
+    buildparser.add_argument('transcripts', action="store", help='read file in SAM format')
+    buildparser.add_argument('-conf', default=None, help='Provide study configuration file with all '
+                                                         'the execution information')
+    buildparser.add_argument('-p', '--prefix', dest="prefix", type=str, default='', help='Output prefix string to '
+                                                                                         'personalize partially the '
+                                                                                         'output file.')
+    buildparser.add_argument('--pcr', dest='pcr_filename', action="store", help='PCR bed file as gold_standard')
+    buildparser.add_argument('--gff_output', dest='gff_output', action="store", help='Filename where a gff with the '
+                                                                                     'lsv events will be generated')
+
     #flags shared by calcpsi and deltapair
     psianddelta = new_subparser()
     psianddelta.add_argument('--trim', default=0, type=int, help='Trim the borders of the junctions because of poor mappability')
@@ -88,14 +97,12 @@ def main():
 
 
     subparsers = parser.add_subparsers(help='')
-    parser_preprocess = subparsers.add_parser('preprocess', help='Preprocess SAM/BAM files as preparation for the rest of the tools (calcpsi, deltapair, deltagroup)', parents=[common])
-    parser_preprocess.set_defaults(func=preprocess)
-    parser_calcpsi = subparsers.add_parser('calcpsi', help="Calculate PSI values for N experiments, given a folder of preprocessed events by 'majiq preprocess' or SAM/BAM files (This last not implemented yet)", parents=[common, psi, psianddelta])
+    parser_preprocess = subparsers.add_parser('build', help='Preprocess SAM/BAM files as preparation for the rest of the tools (psi, deltapsi)', parents=[common, buildparser])
+    parser_preprocess.set_defaults(func=builder)
+    parser_calcpsi = subparsers.add_parser('psi', help="Calculate PSI values for N experiments, given a folder of preprocessed events by 'majiq preprocess' or SAM/BAM files", parents=[common, psi, psianddelta])
     parser_calcpsi.set_defaults(func=calcpsi)
-    parser_deltapair = subparsers.add_parser('deltapair', help='Calculate Delta PSI values given a pair of experiments (1 VS 1 conditions without replicas)', parents=[common, delta, psianddelta, pairandgroup])
-    parser_deltapair.set_defaults(func=deltapair)
-    parser_deltagroup = subparsers.add_parser('deltagroup', help='Calculate Delta PSI values given a pair of experiments (1 VS 1 conditions *with* replicas)', parents=[common, group, psianddelta, pairandgroup])
-    parser_deltagroup.set_defaults(func=deltagroup)
+    parser_deltagroup = subparsers.add_parser('deltapair', help='Calculate Delta PSI values given a pair of experiments (1 VS 1 conditions *with* replicas)', parents=[common, group, psianddelta, pairandgroup])
+    parser_deltagroup.set_defaults(func=deltapair)
     args = parser.parse_args()
     args.func(args)
 

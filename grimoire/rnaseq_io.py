@@ -193,6 +193,11 @@ def read_sam_or_bam(filenames, gene_list, readlen, chrom, logging=None):
                 skip_gene += 1
             else:
                 non_skip += 1
+
+    for ss in samfile:
+        ss.close()
+    gc.collect()
+
     logging.debug("INVALID JUNC", counter[0])
     logging.debug("READ WRONG GENE", counter[1])
     logging.debug("READ IN GENE",    counter[2])
@@ -442,8 +447,14 @@ def _prepare_and_dump(genes, logging=None):
         logging.debug("Number of Genes", n_genes)
 
 
-def read_gff(filename, logging=None):
+def read_gff(filename, pcr_filename, logging=None):
+    """
 
+    :param filename: GFF input filename
+    :param pcr_filename: BED file name with the PCR validations
+    :param logging: logger object
+    :return: :raise RuntimeError:
+    """
     all_genes = {}
     gene_id_dict = {}
     trcpt_id_dict = {}
@@ -518,4 +529,7 @@ def read_gff(filename, logging=None):
         trcpt.sort_in_list()
     #end for
     _prepare_and_dump(all_genes, logging)
-    return all_genes
+    if pcr_filename is not None:
+        read_bed_pcr(pcr_filename, all_genes)
+
+    return all_genes.keys()

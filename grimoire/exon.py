@@ -26,7 +26,7 @@ class Exon:
         self.ss_5p_list = []
         self.id = None
         self.strand = strand
-        self.gc_content = None
+        self.gc_content = 0
         self.coverage = np.zeros(shape=mglobals.num_experiments)
         self.score = None
         self.pcr_name = None
@@ -157,7 +157,7 @@ class Exon:
     def get_gc_content(self):
         return self.gc_content
 
-    def update_coverage( self, exp_idx, num ):
+    def update_coverage(self, exp_idx, num):
         self.coverage[exp_idx] += num
 
     def set_gc_content(self, sequence):
@@ -215,8 +215,6 @@ class Exon:
         return bed_str
 
     def ss_variant_counts(self, minreads=5):
-        local_3p = 0
-        local_5p = 0
 
         temp_set = set()
         for ss3p in self.ss_3p_list:
@@ -259,7 +257,6 @@ class ExonRead(object):
     def __init__(self, start, end, exon, pre_junc, post_junc, rna_seq=None):
         self.start = start
         self.end = end
-#        self.exon = exon
         self.RNASeq = rna_seq
         self.p3_junc = [pre_junc]
         self.p5_junc = [post_junc]
@@ -288,12 +285,10 @@ class ExonTx(object):
     def __init__(self, start, end, trnscpt, exon):
         self.start = start
         self.end = end
-        #self.transcript = [trnscpt]
         self.transcript_name = [trnscpt.get_id()]
         self.gene_name = trnscpt.get_gene().get_id()
         self.p3_junc = []
         self.p5_junc = []
-#        self.exon = exon
         self.ir = False
 
     def get_coordinates(self):
@@ -556,12 +551,6 @@ def detect_exons(gene, junction_list, read_rna):
     last_5prime = None
     first_3prime = None
 
-#    for jj in  gene.get_annotated_junctions():
-#        if not (jj.get_ss_5p(),'5prime',jj) in junction_list:
-#            junction_list.append((jj.get_ss_5p(),'5prime',jj))
-#        if not (jj.get_ss_3p(),'3prime',jj) in junction_list:
-#            junction_list.append((jj.get_ss_3p(),'3prime',jj))
-
     junction_list.extend(gene.get_all_ss())
 
     junction_list.sort()
@@ -627,6 +616,6 @@ def detect_exons(gene, junction_list, read_rna):
             junction_list.remove((coord, jtype, jj))
             del jj
 
-    print "FOUND new %d exons" % new_exons
+    #print "FOUND new %d exons" % new_exons
     return 
 

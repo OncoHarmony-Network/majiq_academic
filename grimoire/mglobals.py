@@ -4,6 +4,8 @@ import os
 import ConfigParser
 
 global gene_tlb
+global gc_factor
+
 
 def ConfigSectionMap(Config, section):
     dict1 = {}
@@ -12,7 +14,7 @@ def ConfigSectionMap(Config, section):
         try:
             dict1[option] = Config.get(section, option)
             if dict1[option] == -1:
-                DebugPrint("skip: %s" % option)
+                print("skip: %s" % option)
         except:
             print("exception on %s!" % option)
             dict1[option] = None
@@ -25,7 +27,7 @@ def keep_info(SEevents, a3, a5, both, SE):
         A3SS[idx] += a3[idx]
         A5SS[idx] += a5[idx]
 
-    for idx,ii in enumerate(SEevents):
+    for idx, ii in enumerate(SEevents):
         SEev[idx] += ii
 
     bothSS += both
@@ -33,16 +35,17 @@ def keep_info(SEevents, a3, a5, both, SE):
 
 
 def print_numbers():
-    print "A3SS",A3SS
-    print "A5SS",A5SS
-    print "SE events",SEev
-    print "Total SE",totalSE
-    print "BOTH",bothSS
+    print "A3SS", A3SS
+    print "A5SS", A5SS
+    print "SE events", SEev
+    print "Total SE", totalSE
+    print "BOTH", bothSS
 
 
 def global_conf_ini(filename):
 
-    global num_experiments, exp_list, readLen, tissue_repl, sam_dir, num_mapped_reads, genome, outDir, temp_oDir
+    global num_experiments, exp_list, readLen, tissue_repl, sam_dir, num_mapped_reads, genome, \
+        genome_path, outDir, temp_oDir
     global A3SS, A5SS, SEev, bothSS, totalSE
     global MINREADS, MINPOS
 
@@ -61,6 +64,7 @@ def global_conf_ini(filename):
     sam_dir = general['samdir']
     outDir = general['output']
     genome = general['genome']
+    genome_path = general['genome_path']
 
     if not os.path.exists(outDir):
         os.makedirs(outDir)
@@ -90,8 +94,8 @@ def set_gc_factors(bins, factor, means):
     gc_factor = [None]*num_experiments
     for idx, exp in enumerate(exp_list):
 #        gc_factor[idx] = interpolate.interp1d( bins[idx], factor[idx],bounds_error=False )
-        a = np.append(factor[idx],factor[idx][-1])
-        gc_factor[idx] = interpolate.interp1d( means[idx], factor[idx], bounds_error=False) 
+        a = np.append(factor[idx], factor[idx][-1])
+        gc_factor[idx] = interpolate.interp1d(means[idx], factor[idx], bounds_error=False)
 #        gc_factor[idx] = interpolate.interp1d( bins[idx], a , bounds_error=False) 
         
     gc_bins_val = factor

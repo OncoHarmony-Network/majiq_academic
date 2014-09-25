@@ -1,6 +1,6 @@
 import numpy as np
 import grimoire.mglobals as mglobals
-import scipy
+import scipy.sparse
 import pickle
 from voila.splice_graphics.exonGraphic import ExonGraphic
 from voila.splice_graphics.geneGraphic import GeneGraphic 
@@ -29,27 +29,24 @@ class LSV(object):
             raise ValueError
 
         if len(junction_list) > len(self.ext_type.split('|')) - 1:
-            print " ERROR_LSV :: with inconsistent junction-type %s, %s" % (len(junction_list), len(self.ext_type.split('|')))
+            print " ERROR_LSV :: with inconsistent junction-type %s, %s" % (len(junction_list),
+                                                                            len(self.ext_type.split('|')))
 
-        for kk,vv in self.tlb_junc.items():
+        for kk, vv in self.tlb_junc.items():
             count = np.sum(junction_list[vv].coverage[0].toarray())
             if kk.find('e0') != -1 and count != 0:
                 raise ValueError
 
-        self.junctions = []
+        juncs = []
         order = self.ext_type.split('|')[1:]
-        for idx,jj in enumerate(order):
+        for idx, jj in enumerate(order):
             if jj[-2:] == 'e0': continue
-            self.junctions.append(junction_list[self.tlb_junc[jj]])
+            juncs.append(junction_list[self.tlb_junc[jj]])
 
-        self.junctions = np.array(self.junctions)
+        self.junctions = np.array(juncs)
 
-#        if self.check_type(self.ext_type) == -1:
-        #    pdb.set_trace()
-#            pass
-
-    def check_type(self, type):
-        tab = type.split('|')[1:]
+    def check_type(self, lsv_type):
+        tab = lsv_type.split('|')[1:]
         exss = []
         targ = {}
         for tt in tab:
@@ -65,14 +62,14 @@ class LSV(object):
         exss.sort()
         for iidx, ii in enumerate(exss[1:]):
             if ii != exss[iidx]+1 and ii != exss[iidx]:
-                    print "ERROR 1", type
+                    print "ERROR 1", lsv_type
                     return -1
 
         for kk, vlist in targ.items():
             vlist.sort()
             for vidx, vv in enumerate(vlist[1:]):
                 if vv != vlist[vidx]+1 and vv != vlist[vidx]:
-                    print "ERROR 2", type
+                    print "ERROR 2", lsv_type
                     return -1
 
         return 0
@@ -218,8 +215,7 @@ def extract_SE_events( list_lsv_per_gene ):
         #ret_list.append( (C1.)
 
 
-def extract_gff(list_lsv, outDir):
-
+def extract_gff(list_lsv, out_dir):
 
     gtf = set()
     for lsv_l in list_lsv:
@@ -228,26 +224,29 @@ def extract_gff(list_lsv, outDir):
             jlist = lsv.junctions
             lsv_coord = lsv.get_coordinates()
 
-            gne = jlist[0].gene
+            gne = jlist[0].get_gene()
             chrom = gne.get_chromosome()
             strand = gne.get_strand()
-            gene = '%s\tscript\tgene\t'%chrom
-            if lsv.type==SSOURCE:
-                if jlist[-1].get_acceptor() is None: continue
-                gene += '%d\t%d\t'%(lsv_coord[0],jlist[-1].get_acceptor().get_coordinates()[1])
+            gene = '%s\tscript\tgene\t' % chrom
+            if lsv.type == SSOURCE:
+                if jlist[-1].get_acceptor() is None:
+                    continue
+                gene += '%d\t%d\t' % (lsv_coord[0], jlist[-1].get_acceptor().get_coordinates()[1])
             else:
-                if jlist[0].get_donor() is None: continue
-                gene += '%d\t%d\t'%(jlist[0].get_donor().get_coordinates()[0], lsv_coord[1])
+                if jlist[0].get_donor() is None:
+                    continue
+                gene += '%d\t%d\t' % (jlist[0].get_donor().get_coordinates()[0], lsv_coord[1])
 
             gene += '.\t%s\t.\tName=%s;Parent=%s;ID=%s' % (strand, lsv.id, lsv.id, lsv.id)
             trans.append(gene)  
             for jidx, junc in enumerate(jlist):
                 mrna = '%s\tscript\tmRNA\t' % chrom
-                mrna_id = '%s.%d'%(lsv.id,jidx)
+                mrna_id = '%s.%d' % (lsv.id, jidx)
                 ex1 = '%s\tscript\texon\t' % chrom
                 ex2 = '%s\tscript\texon\t' % chrom
                 if lsv.type == SSOURCE:
-                    if junc.get_acceptor() is None: break
+                    if junc.get_acceptor() is None:
+                        break
                     excoord = junc.get_acceptor().get_coordinates()
                     variant = junc.get_coordinates()
                     mrna += '%d\t%d\t' % (lsv_coord[0], excoord[1])
@@ -262,7 +261,7 @@ def extract_gff(list_lsv, outDir):
                     ex1 += '%d\t%d\t' % (variant[1], lsv_coord[1])
                     ex2 += '%d\t%d\t' % (excoord[0], variant[0])
                 mrna += '.\t%s\t.\tName=%s;Parent=%s;ID=%s' % (strand, mrna_id, lsv.id, mrna_id)
-                ex1 += '.\t%s\t.\tName=%s.lsv;Parent=%s;ID=%s.lsv' %(strand, mrna_id, mrna_id, mrna_id)
+                ex1 += '.\t%s\t.\tName=%s.lsv;Parent=%s;ID=%s.lsv' % (strand, mrna_id, mrna_id, mrna_id)
                 ex2 += '.\t%s\t.\tName=%s.ex;Parent=%s;ID=%s.ex' % (strand, mrna_id, mrna_id, mrna_id)
                 trans.append(mrna)  
                 trans.append(ex1)
@@ -272,7 +271,7 @@ def extract_gff(list_lsv, outDir):
                 gtf.add(lsv_gtf)
 
     gtf = sorted(gtf)
-    fp = open('%s/temp_gff.pkl' % outDir, 'wb+')
+    fp = open('%s/temp_gff.pkl' % out_dir, 'wb+')
     pickle.dump(gtf, fp)
     fp.close()
 
@@ -287,9 +286,10 @@ def print_lsv_extype(list_lsv, filename):
         fp.write("%s\n" % lsv.type)
     fp.close()
 
+
 class LSV_IR(object):
 
-    def __init__ (self, start, end, exon_list, gene):
+    def __init__(self, start, end, exon_list, gene):
         self.start = start
         self.end = end
         self.exonlist = exon_list
@@ -299,34 +299,36 @@ class LSV_IR(object):
 
 class MajiqLsv(object):
 
-    def __init__(self, LSV, exp_idx):
+    def __init__(self, lsv_obj, exp_idx):
 
-        self.coords = LSV.coords
-        self.id = LSV.id
-        self.type = LSV.ext_type
-        self.junction_list = scipy.sparse.lil_matrix((LSV.junctions.shape[0],(mglobals.readLen-16)+1), dtype=np.int)
+        self.coords = lsv_obj.coords
+        self.id = lsv_obj.id
+        self.type = lsv_obj.ext_type
+        self.junction_list = scipy.sparse.lil_matrix((lsv_obj.junctions.shape[0], (mglobals.readLen-16)+1),
+                                                     dtype=np.int)
         self.junction_id = []
+        self.visual = self.get_visual_lsv(lsv_obj, exp_idx)
+        self.gc_factor = scipy.sparse.lil_matrix((lsv_obj.junctions.shape[0], (mglobals.readLen-16)+1),
+                                                 dtype=np.dtype('float'))
 
-        self.visual = self.get_visual_lsv(LSV, exp_idx)
-
-        self.gc_factor = scipy.sparse.lil_matrix((LSV.junctions.shape[0], (mglobals.readLen-16)+1), dtype=np.dtype('float'))
-
-        for idx,junc in enumerate(LSV.junctions):
-            self.junction_list[idx,:] = junc.coverage[exp_idx, :]
+        for idx, junc in enumerate(lsv_obj.junctions):
+            self.junction_list[idx, :] = junc.coverage[exp_idx, :]
             self.junction_id.append(junc.get_id())
             for jidx in range(mglobals.readLen-16+1):
                 dummy = junc.get_gc_content()[jidx]
-                self.gc_factor[idx,jidx] = dummy
+                self.gc_factor[idx, jidx] = dummy
 
-    def set_gc_factor( self , exp_idx):
+    def set_gc_factor(self, exp_idx):
         for idx in xrange(self.gc_factor.shape[0]):
             for jidx in xrange(self.gc_factor.shape[1]):
-                dummy = self.gc_factor[idx,jidx]
-                if dummy == 0 :
+                dummy = self.gc_factor[idx, jidx]
+                if dummy == 0:
                     gc_f = 0
                 else:
                     gc_f = mglobals.gc_factor[exp_idx](dummy)
-                self.gc_factor[idx,jidx] = gc_f
+
+
+                self.gc_factor[idx, jidx] = gc_f
 
     def get_visual_lsv(self, LSV, exp_idx):
           
@@ -373,20 +375,20 @@ class MajiqLsv(object):
                         continue
                     a5.append(jidx)
             if ex.annotated and ex.coverage[exp_idx].sum() == 0.0:
-                type = 2
+                ex_type = 2
             elif ex.annotated and ex.coverage[exp_idx].sum() > 0.0:
-                type = 0
+                ex_type = 0
             elif not ex.annotated and ex.coverage[exp_idx].sum() > 0.0:
-                type = 1
+                ex_type = 1
             else:
-                type = 1
+                ex_type = 1
             extra_coords = []
             if ex.annotated:
                 if ex.start < ex.db_coord[0]:
                     extra_coords.append([ex.start, ex.db_coord[0]-1])
                 if ex.end > ex.db_coord[1]:
                     extra_coords.append([ex.db_coord[1]+1, ex.end])
-            eg = ExonGraphic(a3, a5, cc, type, intron_retention=ex.ir, coords_extra=extra_coords)
+            eg = ExonGraphic(a3, a5, cc, ex_type, intron_retention=ex.ir, coords_extra=extra_coords)
             exon_list.append(eg)
         splice_lsv = GeneGraphic(LSV.id, LSV.get_strand(), exon_list, junc_list, LSV.get_chromosome())
 
