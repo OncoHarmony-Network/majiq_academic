@@ -82,7 +82,7 @@ class Junction:
     #MODIFIERs
 
     def add_gc_content_positions(self, pos, gc):
-        self.gc_content[pos] = gc
+        self.gc_content = gc
 #        self.gc_factor[exp_idx,:] = gc_factor
 
     def add_donor(self, donor):
