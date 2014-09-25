@@ -327,7 +327,6 @@ class MajiqLsv(object):
                 else:
                     gc_f = mglobals.gc_factor[exp_idx](dummy)
 
-
                 self.gc_factor[idx, jidx] = gc_f
 
     def get_visual_lsv(self, LSV, exp_idx):
@@ -346,17 +345,17 @@ class MajiqLsv(object):
 
             if jj.get_coordinates()[0] is None or jdonor is None or jacceptor is None:
                 continue
-            if jj.is_annotated() and jj.readN[exp_idx].sum() == 0:
+            if jj.is_annotated() and jj.get_read_num(exp_idx) == 0:
                 jtype = 2
-            elif jj.is_annotated() and jj.readN[exp_idx].sum() > 0:
+            elif jj.is_annotated() and jj.get_read_num(exp_idx) > 0:
                 jtype = 0
-            elif not jj.is_annotated() and jj.readN[exp_idx].sum() > mglobals.MINREADS: 
+            elif not jj.is_annotated() and jj.get_read_num(exp_idx) > mglobals.MINREADS:
                 jtype = 1
             else:
                 jtype = 1
                 continue
             junc_l.append(jj.get_coordinates())
-            junc_list.append(JunctionGraphic(jj.get_coordinates(), jtype, jj.readN[exp_idx].sum()))
+            junc_list.append(JunctionGraphic(jj.get_coordinates(), jtype, jj.get_read_num(exp_idx)))
         junc_l = np.asarray(junc_l)
         lsv_exon_list.sort()
         exon_list = []

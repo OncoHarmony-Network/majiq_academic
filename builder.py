@@ -18,7 +18,7 @@ except Exception:
     import pickle
 
 
-def majiq_builder(samfiles_list, chrom, pcr_validation=None, gff_output=None, logging=None):
+def majiq_builder(samfiles_list, chrom, pcr_validation=None, gff_output=None, create_tlb=False, logging=None):
 
     if not logging is None:
         logging.info("Building for chromosome %s" % chrom)
@@ -26,6 +26,11 @@ def majiq_builder(samfiles_list, chrom, pcr_validation=None, gff_output=None, lo
     temp_dir = "%s/tmp/%s" % (mglobals.outDir, chrom)
     temp_file = open('%s/annot_genes.pkl' % temp_dir, 'rb')
     gene_list = pickle.load(temp_file)
+
+    if create_tlb:
+        if not logging is None:
+            logging.info("[%s] Recreatin Gene TLB" % chrom)
+        utils.recreate_gene_tlb(gene_list)
 
     if not logging is None:
         logging.info("[%s] Reading BAM files" % chrom)
@@ -52,7 +57,7 @@ def __parallel_lsv_quant(samfiles_list, chrom, pcr_validation=False, gff_output=
     try:
         print "START child,", current_process().name
         tlogger = utils.get_logger("%s/%s.majiq.log" % (mglobals.outDir, chrom), silent=silent, debug=debug)
-        majiq_builder(samfiles_list, chrom, pcr_validation, gff_output, tlogger)
+        majiq_builder(samfiles_list, chrom, pcr_validation, gff_output, create_tlb=True, logging=tlogger)
         print "END child, ", current_process().name
     except Exception as e:
         print "Line %s:" % sys.exc_traceback.tb_lineno, e
@@ -111,14 +116,6 @@ def main(params):
 
     chr_list = rnaseq_io.read_gff(params.transcripts, params.pcr_filename, logging=logger)
 
-    #chr_list = all_genes.keys()
-    # temp = []
-    # for gl in all_genes.values():
-    #     for genes_l in gl.values():
-    #         for gg in genes_l:
-    #             temp += gg.get_exon_list()
-    #
-
     sam_list = []
     for exp_idx, exp in enumerate(mglobals.exp_list):
         samfile = "%s/%s.sorted.bam" % (mglobals.sam_dir, exp)
@@ -130,18 +127,19 @@ def main(params):
     if len(sam_list) == 0:
         return
 
-    if int(params.nthreads) > 1:
+    if params.nthreads > 1:
         pool = Pool(processes=params.nthreads)
     logger.info("Scatter in Chromosomes")
     for chrom in chr_list:
         temp_dir = "%s/tmp/%s" % (mglobals.outDir, chrom)
         utils.create_if_not_exists(temp_dir)
-        if int(params.nthreads) == 1:
+        if params.nthreads == 1:
             majiq_builder(sam_list, chrom, pcr_validation=params.pcr_filename, logging=logger)
         else:
+            utils.clear_gene_tlb()
             pool.apply_async(__parallel_lsv_quant, [sam_list, chrom, params.pcr_filename])
 
-    if int(params.nthreads) > 1:
+    if params.nthreads > 1:
         logger.info("... waiting childs")
         pool.close()
         pool.join()

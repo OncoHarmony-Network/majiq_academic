@@ -192,36 +192,55 @@ def generate_visualization_output(allgenes, temp_dir):
                 for gg in genes_l:
                     junc_list = []
                     junc_l = []
+                    alt_empty_ends = []
+                    alt_empty_starts = []
                     for jj in gg.get_all_junctions():
-                        if jj.get_coordinates()[0] is None or jj.get_donor() is None or jj.get_acceptor() is None:
+
+                        cc = jj.get_coordinates()
+                        if jj.get_donor() is None:
+                            alt_empty_ends.append(cc[0])
                             continue
-                        if jj.is_annotated() and jj.readN[exp_idx].sum() == 0:
+                        if jj.get_acceptor() is None:
+                            alt_empty_starts.append(cc[1])
+                            continue
+
+                        if jj.is_annotated() and jj.get_read_num(exp_idx) == 0:
                             jtype = 2
-                        elif jj.is_annotated() and jj.readN[exp_idx].sum() > 0:
+                        elif jj.is_annotated() and jj.get_read_num(exp_idx) > 0:
                             jtype = 0
-                        elif not jj.is_annotated() and jj.readN[exp_idx].sum() > mglobals.MINREADS:
+                        elif not jj.is_annotated() and jj.get_read_num(exp_idx) > mglobals.MINREADS:
                             jtype = 1
                         else:
                             jtype = 1
                             continue
                         junc_l.append(jj.get_coordinates())
-                        junc_list.append(JunctionGraphic(jj.get_coordinates(), jtype, jj.readN[exp_idx].sum()))
+                        junc_list.append(JunctionGraphic(cc, jtype, jj.get_read_num(exp_idx)))
                     junc_l = np.asarray(junc_l)
                     exon_list = []
                     for ex in gg.get_exon_list():
                         cc = ex.get_coordinates()
                         a3 = []
+                        alt_start = []
                         for ss3 in set(ex.ss_3p_list):
                             for jidx, jjl in enumerate(junc_l):
-                                if ss3 != jjl[1]:
-                                    continue
-                                a3.append(jidx)
+                                if ss3 == jjl[1]:
+                                    a3.append(jidx)
+                                    break
+                                elif ss3 in alt_empty_starts:
+                                    alt_start.append(ss3)
+                                    break
+
                         a5 = []
+                        alt_ends = []
                         for ss5 in set(ex.ss_5p_list):
                             for jidx, jjl in enumerate(junc_l):
-                                if ss5 != jjl[0]:
-                                    continue
-                                a5.append(jidx)
+                                if ss5 == jjl[0]:
+                                    a5.append(jidx)
+                                    break
+                                elif ss5 in alt_empty_starts:
+                                    alt_ends.append(ss5)
+                                    break
+
                         if ex.annotated and ex.coverage[exp_idx].sum() == 0.0:
                             visual_type = 2
                         elif ex.annotated and ex.coverage[exp_idx].sum() > 0.0:
@@ -237,7 +256,8 @@ def generate_visualization_output(allgenes, temp_dir):
                                 extra_coords.append([ex.start, ex.db_coord[0]-1])
                             if ex.end > ex.db_coord[1]:
                                 extra_coords.append([ex.db_coord[1]+1, ex.end])
-                        eg = ExonGraphic(a3, a5, cc, visual_type, intron_retention=ex.ir, coords_extra=extra_coords)
+                        eg = ExonGraphic(a3, a5, cc, lsv_type=visual_type, intron_retention=ex.ir,
+                                         coords_extra=extra_coords, alt_starts=alt_start, alt_ends=alt_ends)
                         exon_list.append(eg)
                     gene_list[mglobals.exp_list[exp_idx]].append(GeneGraphic(gg.get_id(), gg.get_strand(), exon_list,
                                                                              junc_list, gg.get_chromosome()))
@@ -442,6 +462,17 @@ def plot_gc_content():
 #        pyplot.show()
         pyplot.savefig('%s/gcontent_%s.png' % (mglobals.outDir, tissue))
         idx += 1
+
+
+def recreate_gene_tlb(gene_list):
+
+    for strand, glist in gene_list.items():
+        for gn in glist:
+            mglobals.gene_tlb[gn.get_id()] = gn
+
+
+def clear_gene_tlb():
+    mglobals.gene_tlb.clear()
 
 
 def to_gtf(wfile, seq_name, source, gene, mRNA, start_trans, end_trans, strand, exon_l, frame_l):

@@ -9,7 +9,6 @@ import os
 from multiprocessing import Pool, Manager, current_process
 import analysis.sample as majiq_sample 
 import pickle
-import warnings
 
 
 def parallel_lsv_child_calculation(func, args, info, tempdir, name, chunk):

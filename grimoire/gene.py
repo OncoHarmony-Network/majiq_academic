@@ -352,8 +352,9 @@ class Gene:
             x = ss5_l.index(st)
             y = ss3_l.index(end)
 
-            if junc.readN.sum() > 0:
-                count_mat = junc.readN.sum()
+            read_num = junc.get_coverage().sum()
+            if read_num > 0:
+                count_mat = read_num
             elif junc.is_annotated() and lsv:
                 count_mat = -1
             else:
