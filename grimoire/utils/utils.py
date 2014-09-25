@@ -81,13 +81,20 @@ def prepare_lsv_table(lsv_list, non_as, temp_dir):
     file_pi.close()
 
 
-#TODO:Improve performance for the GATHER
 def merge_and_create_majiq_file(chr_list, pref_file):
 
+    """
+
+    :param chr_list:
+    :param pref_file:
+    """
     if pref_file != '':
         pref_file = '%s.' % pref_file
 
     all_visual = [list() for xx in xrange(mglobals.num_experiments)]
+    as_table = [list() for xx in xrange(mglobals.num_experiments)]
+    nonas_table = [list() for xx in xrange(mglobals.num_experiments)]
+
     for chrom in chr_list:
         temp_dir = "%s/tmp/%s" % (mglobals.outDir, chrom)
         temp_filename = '%s/%s.splicegraph' % (temp_dir, mglobals.exp_list[exp_idx])
@@ -96,9 +103,17 @@ def merge_and_create_majiq_file(chr_list, pref_file):
         temp_file = open(temp_filename, 'rb')
         visual_gene_list = pickle.load(temp_file)
 
+        filename = "%s/majiq.pkl" % temp_dir
+        if not os.path.exists(filename):
+            continue
+        file_pi2 = open(filename, 'rb')
+        temp_table = pickle.load(file_pi2)
+
         for name, ind_list in mglobals.tissue_repl.items():
             for idx, exp_idx in enumerate(ind_list):
                 all_visual[exp_idx].extend(visual_gene_list[mglobals.exp_list[exp_idx]])
+                as_table[exp_idx].append(temp_table[exp_idx][0])
+                nonas_table[exp_idx].append(temp_table[exp_idx][1])
 
     for name, ind_list in mglobals.tissue_repl.items():
         for idx, exp_idx in enumerate(ind_list):
@@ -114,22 +129,12 @@ def merge_and_create_majiq_file(chr_list, pref_file):
             info['genome'] = mglobals.genome
             info['num_reads'] = mglobals.num_mapped_reads[exp_idx]
 
-            as_table = []
-            nonas_table = []
-            for chrom in chr_list:
-                filename = '%s/temp_%s.%s.obj' % (mglobals.temp_oDir[exp_idx], mglobals.exp_list[exp_idx], chrom)
-                if not os.path.exists(filename):
-                    continue
-                file_pi2 = open(filename, 'rb')
-                as_t, non_as = pickle.load(file_pi2)
-                as_table.append(as_t)
-                nonas_table.append(non_as)
             if len(as_table) == 0:
                 continue
-            at = np.concatenate(as_table)
+            at = np.concatenate(as_table[exp_idx])
             for lsv in at:
                 lsv.set_gc_factor(exp_idx)
-            nat = np.concatenate(nonas_table)
+            nat = np.concatenate(nonas_table[exp_idx])
             for jnc in nat:
                 jnc.set_gc_factor(exp_idx)
 

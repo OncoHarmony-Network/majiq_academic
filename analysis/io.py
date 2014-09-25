@@ -11,9 +11,7 @@ def load_data_lsv(path, logger=None):
     lsv_cov_list = []
     lsv_gc = []
     lsv_info = []
-    const_list = []
     const_info = []
-    const_gc = []
     num_pos = data[1][0].junction_list.shape[1]
 
     for lsv in data[1]:
@@ -22,9 +20,6 @@ def load_data_lsv(path, logger=None):
         except AttributeError, e:
             lsv_info.append([lsv.coords, lsv.id, lsv.type, 0])
 
-#        cov = np.zeros(shape=(len(lsv.junction_list.shape)), dtype=np.dtype('int'))
-#        for ii, lsvcov in enumerate(lsv.junction_list.toarray()):
-#            cov[ii,:] = lsvcov
         cov = lsv.junction_list.toarray()
         lsv_cov_list.append(cov)
         gc = lsv.gc_factor.toarray()
