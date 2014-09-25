@@ -28,7 +28,7 @@ class Junction:
         self.gene_name = gene.get_id()
         self.annotated = annotated
         self.coverage = scipy.sparse.lil_matrix((mglobals.num_experiments, (mglobals.readLen-16)+1), dtype=np.int)
-        self.gc_content = np.zeros(shape=((mglobals.readLen-16)+1), dtype=np.float)
+        self.gc_content = scipy.sparse.lil_matrix(((mglobals.readLen-16)+1), dtype=np.float)
         self.id = "%s:%s-%s" % (self.gene_name, start, end)
 
     def __hash__(self):

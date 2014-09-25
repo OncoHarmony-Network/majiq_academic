@@ -45,9 +45,8 @@ class LSV(object):
 
         self.junctions = np.array(juncs)
 
-
-    def check_type(self, type):
-        tab = type.split('|')[1:]
+    def check_type(self, lsv_type):
+        tab = lsv_type.split('|')[1:]
         exss = []
         targ = {}
         for tt in tab:
@@ -63,14 +62,14 @@ class LSV(object):
         exss.sort()
         for iidx, ii in enumerate(exss[1:]):
             if ii != exss[iidx]+1 and ii != exss[iidx]:
-                    print "ERROR 1", type
+                    print "ERROR 1", lsv_type
                     return -1
 
         for kk, vlist in targ.items():
             vlist.sort()
             for vidx, vv in enumerate(vlist[1:]):
                 if vv != vlist[vidx]+1 and vv != vlist[vidx]:
-                    print "ERROR 2", type
+                    print "ERROR 2", lsv_type
                     return -1
 
         return 0
