@@ -225,7 +225,7 @@ class Exon:
                 for jj in exread.p3_junc:
                     if jj is None:
                         continue
-                    sum_reads += jj.readN.sum()
+                    sum_reads += jj.coverage.sum()
                 if sum_reads >= minreads:
                     temp_set.add(ss3p)
         local_3p = len(temp_set)
@@ -239,7 +239,7 @@ class Exon:
                 for jj in exread.p3_junc:
                     if jj is None:
                         continue
-                    sum_reads += jj.readN.sum()
+                    sum_reads += jj.coverage.sum()
                 if sum_reads >= minreads:
                     temp_set.add(ss5p)
         local_5p = len(temp_set)
@@ -612,7 +612,6 @@ def detect_exons(gene, junction_list, read_rna):
             del jj
             continue
         if jj.get_donor() is None and jj.get_acceptor() is None:
-#            print "JUNCTIONS MISSING EXONS",jj.donor, jj.acceptor, jj.readN.sum(), jj.start, jj.end
             junction_list.remove((coord, jtype, jj))
             del jj
 

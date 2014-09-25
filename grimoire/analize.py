@@ -8,12 +8,11 @@ def __junction_filter_check(junc):
 
     ''' Check total_read >= 10 '''
     junc_filter = False
-#    if junc.readN[exp_idx] < 10 : return False 
     count = 0
     dummy = junc.coverage.toarray()
     for exp_idx in range(mglobals.num_experiments):
         cov_cnt = 0
-        if junc.readN[exp_idx] >= 10:
+        if junc.get_read_num(exp_idx) >= 10:
             for val in dummy[exp_idx]:
                 if val > 0:
                     cov_cnt += 1
@@ -35,7 +34,7 @@ def __reliable_in_data(junc, exp_idx):
     min_npos_x_exp = mglobals.MINPOS
     in_data_filter = False
     cover = junc.coverage.toarray()[exp_idx]
-    if junc.readN[exp_idx] > min_read_x_exp and np.count_nonzero(cover) >= min_npos_x_exp:
+    if junc.get_read_num(exp_idx) > min_read_x_exp and np.count_nonzero(cover) >= min_npos_x_exp:
         in_data_filter = True
     return in_data_filter
 
@@ -49,7 +48,7 @@ def __total_ss_minreads(junc_mat, minreads=5):
         for jj in jlst:
             if jj is None:
                 continue
-            if jj.readN.sum() > minreads:
+            if jj.coverage.sum() > minreads:
                 js.add(jj)
 
     return len(js)

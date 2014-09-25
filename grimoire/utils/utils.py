@@ -195,17 +195,17 @@ def generate_visualization_output(allgenes, temp_dir):
                     for jj in gg.get_all_junctions():
                         if jj.get_coordinates()[0] is None or jj.get_donor() is None or jj.get_acceptor() is None:
                             continue
-                        if jj.is_annotated() and jj.readN[exp_idx].sum() == 0:
+                        if jj.is_annotated() and jj.get_read_num(exp_idx) == 0:
                             jtype = 2
-                        elif jj.is_annotated() and jj.readN[exp_idx].sum() > 0:
+                        elif jj.is_annotated() and jj.get_read_num(exp_idx) > 0:
                             jtype = 0
-                        elif not jj.is_annotated() and jj.readN[exp_idx].sum() > mglobals.MINREADS:
+                        elif not jj.is_annotated() and jj.get_read_num(exp_idx) > mglobals.MINREADS:
                             jtype = 1
                         else:
                             jtype = 1
                             continue
                         junc_l.append(jj.get_coordinates())
-                        junc_list.append(JunctionGraphic(jj.get_coordinates(), jtype, jj.readN[exp_idx].sum()))
+                        junc_list.append(JunctionGraphic(jj.get_coordinates(), jtype, jj.get_read_num(exp_idx)))
                     junc_l = np.asarray(junc_l)
                     exon_list = []
                     for ex in gg.get_exon_list():
