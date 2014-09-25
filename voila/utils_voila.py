@@ -9,9 +9,9 @@ import sys
 from analysis.matrix import collapse_matrix
 
 from lsv import Lsv
-from splice_graphics.exonGraphic import ExonGraphic
-from splice_graphics.junctionGraphic import JunctionGraphic
-from splice_graphics.geneGraphic import GeneGraphic
+from voila.splice_graphics.exonGraphic import ExonGraphic
+from voila.splice_graphics.junctionGraphic import JunctionGraphic
+from voila.splice_graphics.geneGraphic import GeneGraphic
 
 import shutil
 import errno
@@ -34,7 +34,6 @@ try:
 except ImportError:
     print "[Error] Numpy not installed. Please, check python dependencies."
     sys.exit(1)
-
 
 
 class PickleEncoder(json.JSONEncoder):
@@ -71,8 +70,6 @@ class LsvGraphicEncoder(json.JSONEncoder):
             return obj.to_JSON(PickleEncoder)
 
         return json.JSONEncoder.default(self, obj)
-
-
 
 
 def find_excl_incl_percentages(bins, threshold):
@@ -171,7 +168,7 @@ def find_quartiles(bins):
     return quartiles_values
 
 
-def get_mean_step(bins):
+def get_mean_step(bins): # TODO: rename
     bins = numpy.array(bins)
     step = 1 / bins.size
     projection_prod = bins * np.arange(step / 2, 1, step)
@@ -185,6 +182,20 @@ def get_variance(bins, mean):
     step_bins = 1 / bins.size
     projection_prod = bins * np.arange(step_bins / 2, 1, step_bins)**2
     return np.sum(projection_prod) - mean**2
+
+
+def get_prob_delta_psi_greater_v(bins, expected, V=.2):
+    """Calculate probability of delta psi outside the acceptable area"""
+    step = 2.0 / bins.size
+    left = 0
+    right = bins.size*2 - 1
+    for i, w in enumerate(np.arange(-1+step/2, 1, step)):
+        if not left and w > (expected - abs(expected*V)):
+            left = i-1
+        if right == bins.size*2 and w > (expected + abs(expected*V)):
+            right = i
+    # print np.sum(bins[:left]), np.sum(bins[right:])
+    return (np.sum(bins[:left]) + np.sum(bins[right:]))
 
 
 def create_array_bins(bins, confidence):
@@ -216,6 +227,7 @@ def generate_lsv(i, lsvs_bins, confidence, **post_metadata):
     conf_interval_list = []
     quartile_list = []
     variance_list = []
+    coords = None
     for lsv_bins in lsvs_bins:
         m, c, q, v = create_array_bins(lsv_bins, confidence)
         means_psi_list.append(m)
@@ -302,47 +314,6 @@ def generate_event(i, events_bins, confidence, **post_metadata):
     }
 
 
-def get_single_exp_data(majiq_bins_file=None, metadata_pre=None, metadata_post=None, confidence=.95):
-    """
-    Create a dictionary to summarize the information from majiq output file.
-    """
-    if metadata_post['names']:
-        try:
-            event_names = pkl.load(open(metadata_post['names'], 'rb'))
-        except pkl.PickleError:
-            print "[Error] :: Pickle could not load the file. Please, check that the file %s is in Pickle format." % metadata_post
-            sys.exit(1)
-        except IOError:
-            print "[Error] :: %s doesn't exists." % metadata_post
-            sys.exit(1)
-    else:
-        event_names = None
-
-    try:
-        bins_matrix = pkl.load(open(majiq_bins_file, 'rb'))
-    except pkl.PickleError:
-        print "[Error] :: Pickle could not load the file. Please, check that the file %s is in Pickle format." % majiq_bins_file
-        sys.exit(1)
-    except IOError:
-        print "[Error] :: %s doesn't exists." % majiq_bins_file
-        sys.exit(1)
-    event_list = get_event_list_from_bins(bins_matrix, confidence, names=event_names)
-
-    # Load metadata
-    meta_pre = None
-    if metadata_pre:
-        try:
-            meta_pre = pkl.load(open(metadata_pre, 'rb'))
-        except pkl.PickleError:
-            print "[Error] :: Pickle could not load the file. Please, check that the file %s is in Pickle format." % metadata_pre
-            sys.exit(1)
-        except IOError:
-            print "[Error] :: %s doesn't exists." % metadata_pre
-            sys.exit(1)
-
-    return {'event_list': event_list, 'metadata_pre': meta_pre}
-
-
 def get_event_list_from_bins(bins_matrix, confidence=.95, **kwargs):
     """Process bins representing a sampling from Majiq PSI distributions."""
     event_counter = 0
@@ -353,66 +324,6 @@ def get_event_list_from_bins(bins_matrix, confidence=.95, **kwargs):
         event_counter += 1
 
     return event_list
-
-def get_delta_exp_data(majiq_out_file, metadata_post=None, confidence=.95, threshold=.2):
-    """
-    Create a dictionary to summarize the delta information.
-    """
-    # Collapse matrix in diagonal
-    try:
-        matrix_paired = np.array(pkl.load(open(majiq_out_file, 'rb')))
-    except pkl.PickleError, e:
-        print "[Error] :: Loading the file %s: %s." % (majiq_out_file, e.message)
-        sys.exit(1)
-
-    if metadata_post['names']:
-        try:
-            event_names = pkl.load(open(metadata_post['names'], 'rb'))
-        except pkl.PickleError:
-            print "[Error] :: Pickle could not load the file. Please, check that the file %s is in Pickle format." % metadata_post
-            sys.exit(1)
-        except IOError:
-            print "[Error] :: %s doesn't exists." % metadata_post['names']
-            sys.exit(1)
-
-        keys_plots = None
-        if metadata_post['keys_plots']:
-            try:
-                keys_plots = pkl.load(open(metadata_post['keys_plots'], 'rb'))
-            except pkl.PickleError:
-                print "[Error] :: Pickle could not load the file. Please, check that the file %s is in Pickle format." % metadata_post
-                sys.exit(1)
-            except IOError:
-                print "[Error] :: %s doesn't exists." % metadata_post['keys_plots']
-                sys.exit(1)
-
-    else:
-        event_names = None
-        keys_plots = None
-
-
-    bins_list = []
-    events_list = []
-
-    for event in matrix_paired:
-        bins_list.append(collapse_matrix(np.array(event)))
-
-    # Add information exclusive from Delta Psi files: experiments info, percentages of incl. excl., etc.
-    for event in get_event_list_from_bins(bins_list, confidence, names=event_names, keys_plots=keys_plots):
-        event.set_excl_incl(find_excl_incl_percentages(event.get_bins(), threshold))
-        event.mean_psi = event.mean_psi * 2 - 1
-        events_list.append(event)
-
-    # events_list = sample_event_list(events_list)
-    # events_indexes = []
-    # for event in events_list:
-    #     events_indexes.append(int(event.number)-1)
-
-    # TODO: Extract experiments info from Majiq output file
-    experiments_info = [{'name': 'experiment1', 'link': '#', 'color': '#e41a1c'},
-                        {'name': 'experiment2', 'link': '#', 'color': '#377e80'}]
-
-    return {'event_list': events_list, 'experiments_info': experiments_info}
 
 
 def get_lsv_single_exp_data(majiq_bins_file, confidence, gene_name_list=None, lsv_types=None):  #, bed_file=None
@@ -438,18 +349,6 @@ def get_lsv_single_exp_data(majiq_bins_file, confidence, gene_name_list=None, ls
 
     genes_dict = defaultdict(list)
 
-    # bed_dict = defaultdict(str)
-    # if bed_file:
-    #     try:
-    #         #'/Users/abarrera/workspace/majiq/data/builder_output/ensambl.mm10.sorted.bed.tailored'
-    #         with open(bed_file) as bedfile:
-    #             for line in bedfile:
-    #                 fields = line.rstrip().split()
-    #                 bed_dict[fields[3]] = fields[0]
-    #     except Exception, e:
-    #         print e.message
-    #         pass
-
     nofilter_genes = not gene_name_list and not lsv_types
     if gene_name_list is None:
         gene_name_list = []
@@ -472,7 +371,7 @@ def get_lsv_single_exp_data(majiq_bins_file, confidence, gene_name_list=None, ls
                 print "[WARNING] :: %s produced an error:\n%s (Skipped)" % (bins_array_list, e)
                 continue
 
-            genes_dict[str(lsv_meta[1]).split(':')[0]].append([lsv_list[-1], [lsv_meta[0], lsv_meta[1], lsv_meta[2]]])  #, lsv_meta[3]
+            genes_dict[str(lsv_meta[1]).split(':')[0]].append([lsv_list[-1], lsv_meta])
 
     return {'event_list':   lsv_list,
             'metadata':     metadata,
@@ -542,11 +441,10 @@ def get_lsv_delta_exp_data(majiq_out_file, confidence=.95, threshold=.2, show_al
                 import sys
                 sys.exit(1)
 
-
     print "Number of genes added: %d" % len(genes_dict.keys())
     # TODO: Extract experiments info from Majiq output file
-    experiments_info = [{'name': 'experiment1', 'link': '#', 'color': '#e41a1c'},
-                        {'name': 'experiment2', 'link': '#', 'color': '#377e80'}]
+    experiments_info = [{'name': 'exp1', 'link': '#', 'color': '#e41a1c'},
+                        {'name': 'exp2', 'link': '#', 'color': '#377e80'}]
 
     return {'genes_dict': genes_dict, 'experiments_info': experiments_info}
 

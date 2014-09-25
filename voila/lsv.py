@@ -10,17 +10,18 @@ class Lsv(object):
 
         self.id = input_data['id']
         self.name = input_data['name']
-        self.type = input_data['type']
+        self.type = input_data['type'] # TODO: COnsider changing type to LSV type
         # self.bins = input_data['bins_list']
         self.bins = numpy.array(input_data['bins_list']).tolist()
 
         self.coords = input_data['coords']
         self.matrix_link = input_data['matrix_link']
         self.variances = input_data['variance_list']
-        self.extension = None
         self.means = input_data['mean_psi']
         self.conf_interval = input_data['conf_interval']
         self.quartiles = input_data['quartiles']
+        self.excl_incl = None
+        self.extension = None
 
         # For LSV filtering
         self.set_categories()
@@ -64,18 +65,28 @@ class Lsv(object):
     def get_extension(self):
         return self.extension
 
-    def set_extension(self, geneG, lsv_type):
-        def _find_lsv(coords, exon_list):
-            for e in exon_list:
-                if e.coords == coords:
-                    return e
+    # def set_extension(self, geneG, lsv_type):
+    #     def _find_lsv(coords, exon_list):
+    #         for e in exon_list:
+    #             if e.coords == coords:
+    #                 return e
+    #
+    #     lsv_exon = _find_lsv(self.coords, geneG.get_exons())
+    #
+    #     if lsv_type.startswith('s'):
+    #         self.extension = [self.coords[0], geneG.get_junctions()[lsv_exon.get_a5_list()[-1]].get_coords()[1] + 100]
+    #     else:
+    #         self.extension = [geneG.get_junctions()[lsv_exon.get_a3_list()[0]].get_coords()[0] - 100, self.coords[1]]
 
-        lsv_exon = _find_lsv(self.coords, geneG.get_exons())
+    def set_extension(self, geneG, lsv_type):
 
         if lsv_type.startswith('s'):
-            self.extension = [self.coords[0], geneG.get_junctions()[lsv_exon.get_a5_list()[-1]].get_coords()[1] + 100]
+            self.extension = [self.coords[0], geneG.get_exons()[-1].get_coords()[1]]
+        elif lsv_type.startswith('t'):
+            self.extension = [geneG.get_exons()[0].get_coords()[0], self.coords[1]]
         else:
-            self.extension = [geneG.get_junctions()[lsv_exon.get_a3_list()[0]].get_coords()[0] - 100, self.coords[1]]
+            print "ERRORR! LSV type not recognized: %s" % lsv_type
+
 
     def set_categories(self):
         self.categories = defaultdict()

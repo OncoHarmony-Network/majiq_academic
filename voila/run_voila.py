@@ -170,7 +170,7 @@ def parse_gene_graphics(gene_exps_flist, gene_name_list):
                     genes_graphic[gene_obj.get_name()].append(json.dumps(gene_obj, cls=utils_voila.LsvGraphicEncoder).replace("\"", "'"))
                     genes_graphic[gene_obj.get_name()].append(gene_obj.get_strand())
                     genes_graphic[gene_obj.get_name()].append(gene_obj.get_coords())
-                    genes_graphic[gene_obj.get_name()].append("1") #genes_graphic[gene_obj.get_name()].append(gene_obj.get_chrom())
+                    genes_graphic[gene_obj.get_name()].append(gene_obj.get_chrom())
 
             if not len(genes_graphic.keys()):
                 raise Exception("[ERROR] :: No gene matching the splice graph file %s." % splice_graph_f)
@@ -270,7 +270,7 @@ def create_summary(args):
                 genes_graphic[gene_obj.get_name()].append(json.dumps(gene_obj, cls=utils_voila.LsvGraphicEncoder).replace("\"", "'"))
                 genes_graphic[gene_obj.get_name()].append(gene_obj.get_strand())
                 genes_graphic[gene_obj.get_name()].append(gene_obj.get_coords())
-                # genes_graphic[gene_obj.get_name()].append(gene_obj.get_chrom())
+                genes_graphic[gene_obj.get_name()].append(gene_obj.get_chrom())
                 # majiq_output['gene_json'] = json.dumps(gene_obj, cls=utils_voila.LsvGraphicEncoder).replace("\"", "'")
                 # majiq_output['gene'] = gene_obj
 
@@ -333,7 +333,7 @@ def create_summary(args):
         meta_postprocess['collapsed'] = args.collapsed
 
     _render_template(output_dir, output_html, majiq_output, type_summary, threshold, meta_postprocess)
-    create_tab_output(output_dir, output_html, majiq_output, type_summary, threshold, meta_postprocess)
+    # create_tab_output(output_dir, output_html, majiq_output, type_summary, threshold, meta_postprocess)
 
     print "Summaries created in:\n%s" % output_dir
     return
