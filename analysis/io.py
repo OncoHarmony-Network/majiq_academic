@@ -2,8 +2,6 @@ import pickle
 import numpy as np
 import random
 
-DELTA_RATIO = 0.2 #TODO to parameters
-
 
 def load_data_lsv(path, logger=None):
     """Load data from the preprocess step. Could change to a DDBB someday"""
@@ -32,6 +30,5 @@ def load_data_lsv(path, logger=None):
         const_info.append(const.id)
         const_list[cidx, :] = const.coverage.toarray()
         const_gc[cidx, :] = const.gc_factor.toarray()
-#        const_list.append(const.coverage.toarray())
 
     return data[0], (lsv_cov_list, lsv_info, lsv_gc), (const_list, const_info, const_gc)

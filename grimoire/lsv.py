@@ -37,17 +37,14 @@ class LSV(object):
             if kk.find('e0') != -1 and count != 0:
                 raise ValueError
 
-        self.junctions = []
+        juncs = []
         order = self.ext_type.split('|')[1:]
         for idx, jj in enumerate(order):
             if jj[-2:] == 'e0': continue
-            self.junctions.append(junction_list[self.tlb_junc[jj]])
+            juncs.append(junction_list[self.tlb_junc[jj]])
 
-        self.junctions = np.array(self.junctions)
+        self.junctions = np.array(juncs)
 
-#        if self.check_type(self.ext_type) == -1:
-        #    pdb.set_trace()
-#            pass
 
     def check_type(self, type):
         tab = type.split('|')[1:]

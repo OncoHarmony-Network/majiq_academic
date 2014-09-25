@@ -55,19 +55,6 @@ def __total_ss_minreads(junc_mat, minreads=5):
     return len(js)
 
 
-def __get_enabled_junction(con, exp_list):
-    for jrow in con:
-        for jj in jrow:
-            #print jj
-            if jj is None or jj.get_readN(exp_list) == 0:
-                continue
-            break
-        else: 
-            continue
-        break
-    return jj
-
-
 def lsv_detection(gene_list, chrom, logging=None):
 
     num_ss_var = [[0]*20, [0]*20, 0]

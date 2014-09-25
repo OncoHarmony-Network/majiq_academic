@@ -193,6 +193,11 @@ def read_sam_or_bam(filenames, gene_list, readlen, chrom, logging=None):
                 skip_gene += 1
             else:
                 non_skip += 1
+
+    for ss in samfile:
+        ss.close()
+    gc.collect()
+
     logging.debug("INVALID JUNC", counter[0])
     logging.debug("READ WRONG GENE", counter[1])
     logging.debug("READ IN GENE",    counter[2])

@@ -26,9 +26,7 @@ class Junction:
         else:
             self.acceptor_id = acceptor.get_id()
         self.gene_name = gene.get_id()
-        self.txN = 1
         self.annotated = annotated
-        self.readN = np.zeros(shape=(mglobals.num_experiments), dtype=np.int)
         self.coverage = scipy.sparse.lil_matrix((mglobals.num_experiments, (mglobals.readLen-16)+1), dtype=np.int)
         self.gc_content = np.zeros(shape=((mglobals.readLen-16)+1), dtype=np.float)
         self.id = "%s:%s-%s" % (self.gene_name, start, end)
@@ -45,9 +43,6 @@ class Junction:
 
     def get_ss_3p(self):
         return self.end
-
-    def get_count(self):
-        return self.txN
 
     def get_gene(self):
         return mglobals.gene_tlb[self.gene_name]
@@ -78,8 +73,8 @@ class Junction:
     def get_gc_content(self):
         return self.gc_content
 
-    def get_readN(self, idx):
-        return self.readN[idx]
+    def get_read_num(self, idx):
+        return self.coverage[idx, :].sum()
 
     def is_annotated(self):
         return self.annotated
@@ -105,16 +100,12 @@ class Junction:
     def update_junction_read(self, exp_idx, read_n, start, gc, unique):
 #        print "J3",self, getrefcount(self)
 
-        self.readN[exp_idx] += read_n
         left_ind = mglobals.readLen - (self.start - start) - 8 + 1
         if unique:
             self.coverage[exp_idx, left_ind] += read_n
         else:
             self.coverage[exp_idx, left_ind] = -1
         self.gc_content[left_ind] = gc
-
-    def add_read_number(self, exp_idx, read_n):
-        self.readN[exp_idx] += read_n
 
 
 class MajiqJunc:

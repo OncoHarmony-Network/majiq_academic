@@ -97,7 +97,7 @@ def merge_and_create_majiq_file(chr_list, pref_file):
 
     for chrom in chr_list:
         temp_dir = "%s/tmp/%s" % (mglobals.outDir, chrom)
-        temp_filename = '%s/%s.splicegraph' % (temp_dir, mglobals.exp_list[exp_idx])
+        temp_filename = '%s/splicegraph.pkl' % temp_dir
         if not os.path.exists(temp_filename):
             continue
         temp_file = open(temp_filename, 'rb')
@@ -241,7 +241,7 @@ def generate_visualization_output(allgenes, temp_dir):
                     gene_list[mglobals.exp_list[exp_idx]].append(GeneGraphic(gg.get_id(), gg.get_strand(), exon_list,
                                                                              junc_list, gg.get_chromosome()))
 
-    file_pi = open('%s/splicegraph,temppkl' % temp_dir, 'w+')
+    file_pi = open('%s/splicegraph.pkl' % temp_dir, 'w+')
     pickle.dump(gene_list, file_pi)
     file_pi.close()
 
