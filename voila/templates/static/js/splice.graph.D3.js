@@ -404,6 +404,53 @@ function spliceGraphD3() {
 
             };
 
+            var renderIntronRetention = function(exons, scaleX) {
+                var intronsRet = svgCanvas.selectAll("rect.intronret")
+                    .data(exons.filter(function(v){ return v.value.intron_retention;}));  // Only exons with intron retention
+                intronsRet.enter().append("rect");
+                intronsRet.classed("intronret", true)
+                    .classed('missing', function(d){
+                        return (d.value.type_exon == 2 ? true : false)
+                    })
+                    .transition()
+                    .duration(1000)
+                    .ease("linear")
+                    .attr("x", function(d){
+                        return scaleX(d.value.coords[1]);
+                    })
+                    .attr("y", Math.round(height*JUNC_AREA + height*(1-JUNC_AREA)/5))
+                    .attr("width", function(d){
+                        return Math.round(scaleX(exons[d.key+1].value.coords[0]) - scaleX(d.value.coords[1]));
+                    })
+                    .attr("height", Math.round((EXON_H)*2/5));
+            };
+
+            var renderCoordsExtra = function(exons, scaleX) {
+                var coords_extra = [];
+                exons.forEach(function(e){
+                    if (e.value.coords_extra.length>0) {
+                        e.value.coords_extra.forEach(function (ce) {
+                            coords_extra.push(ce);
+                        });
+                    }
+                });
+                var partialNewExons = svgCanvas.selectAll("rect.newpartialexon")
+                    .data(coords_extra);  // Only exons with coords extra
+                partialNewExons.enter().append("rect");
+                partialNewExons.classed("newpartialexon", true)
+                    .transition()
+                    .duration(1000)
+                    .ease("linear")
+                    .attr("x", function(d){
+                        return scaleX(d[0]);
+                    })
+                    .attr("y", Math.round(height*JUNC_AREA))
+                    .attr("width", function(d){
+                        return Math.round(scaleX(d[1]) - scaleX(d[0]));
+                    })
+                    .attr("height", Math.round(EXON_H));
+            };
+
             var updateScale = function(datap) {
                 return d3.scale.linear()
                     .domain([mostLeftCoord(datap), mostRightCoord(datap)])
@@ -422,10 +469,11 @@ function spliceGraphD3() {
             var exons = renderExons(exonsp, exonKey, scaleX);
             addDispersion(exons, junctionsp);
             renderNumExons(exonsp, scaleX);
+            renderIntronRetention(exonsp, scaleX);
+            renderCoordsExtra(exonsp, scaleX);
 
             /** Render junctions and read numbers */
             var junctions = renderJunctions(junctionsp, scaleX);
-//            addClassJuncs(junctions);
             renderNumReads(junctionsp, scaleX);
             spliceSites(junctionsp, scaleX);
 
@@ -466,7 +514,6 @@ function spliceGraphD3() {
                 d3.select(this).classed("hovered", true);
 
                 //Update the tooltip position and value
-//                var mouseCoords = d3.mouse(this);
                 d3.select(this.parentNode.parentNode).select(".tooltipD3")
 //                    .style("left", mouseCoords[0]+ "px")
 //                    .style("top", mouseCoords[1]+ "px")

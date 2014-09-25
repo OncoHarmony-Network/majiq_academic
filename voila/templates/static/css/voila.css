@@ -167,6 +167,8 @@ background-color: #8dbdd8;
 
 .excl-incl-rect{
     cursor: -webkit-zoom-in;
+    display: block;
+    margin: auto;
 }
 
 .floatingCanvas {

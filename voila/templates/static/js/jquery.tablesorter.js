@@ -1025,7 +1025,7 @@
     ts.addWidget({
         id: "renderCanvas",
         format: function (table) {
-            addExpandedViewFunction();
+//            addExpandedViewFunction();
 
             /**
              * Single LSV visualization
@@ -1063,6 +1063,7 @@
                 }
             });
 
+
             var gene_objs = [],
                 gene_obj_list = [];
             $('.spliceDiv').each( function(){
@@ -1089,17 +1090,29 @@
                     .datum([exons_mapped, junctions_obj])
                     .call(chart);
 
-                d3.select(this).select('.toogleScale').on('click', function(){
+                gene_objs.push(gene_obj_cpy);
+                if ($(this).hasClass('exp1')) {
+                    gene_obj_list.push(genes_obj);
+                }
 
+
+                d3.select(this).select('.toogleScale').on('click', function(){
+                    var index_gene = parseInt(this.parentNode.id.split("_")[1]);
+                    if ($(this.parentNode).hasClass('exp1') || $(this.parentNode).hasClass('exp2')){
+                        index_gene *= 2;
+                        if ($(this.parentNode).hasClass('exp2')){
+                            index_gene++;
+                        }
+                    }
                     if (d3.select(this).classed('scaled')) {
                         d3.select(this.parentNode)
 //                            .datum([orig_objs.exons, orig_objs.junc])
-                            .datum([gene_objs[parseInt(this.parentNode.id.split("_")[1])].orig.exons, gene_objs[parseInt(this.parentNode.id.split("_")[1])].orig.junc])
+                            .datum([gene_objs[index_gene].orig.exons, gene_objs[index_gene].orig.junc])
                             .call(chart);
                         d3.select(this).classed('scaled', false);
                     } else {
                         d3.select(this.parentNode)
-                            .datum(gene_objs[parseInt(this.parentNode.id.split("_")[1])].mapped)
+                            .datum(gene_objs[index_gene].mapped)
 //                            .datum([exons_mapped, junctions_obj])
                             .call(chart);
                         d3.select(this).classed('scaled', true);
@@ -1107,8 +1120,40 @@
 
                 });
 
-                gene_obj_list.push(genes_obj);
-                gene_objs.push(gene_obj_cpy);
+
+                /**
+                 * Splice Graph selector
+                 * */
+                var sgSelectors = $(this).find('.spliceGraphSelector');
+                if (sgSelectors.length) {
+                    sgSelectors.change(function () {
+                        var index_gene = 2*parseInt(this.parentNode.parentNode.id.split("_")[1]);
+                        if ($(this.parentElement.parentElement).hasClass('exp2')){
+                            index_gene++;
+                        }
+
+                        var genes_obj =  JSON.parse(JSON.parse(this.value.replace(/\\'/g, "\"").replace(/'/g, "")));
+
+                        var exons_obj = genes_obj.exons;
+                        var junctions_obj = genes_obj.junctions;
+
+                        var orig_objs = {'exons': add_keys(clone(exons_obj)), 'junc': clone(junctions_obj)};
+
+                        var exons_mapped = map_exon_list(exons_obj, junctions_obj); //exons_obj; //
+                        exons_mapped = add_keys(exons_mapped);
+
+                        gene_objs[index_gene] = {'orig': orig_objs, 'mapped': [exons_mapped, junctions_obj]};
+
+                        d3.select(this.parentNode.parentNode)
+                            .datum(gene_objs[index_gene].mapped)
+                            .call(chart);
+                        $(this.parentNode.parentNode).children('.toogleScale').addClass('scaled');
+//                        d3.select(this.parentNode.parentNode.childNodes.toogleScale).classed('scaled', true);
+
+
+                    });
+                }
+
 //                gene_obj_list.push(splicegraph().renderSpliceGraph(this));
 //                splicegraph().renderSpliceGraphZoomedPopUp(this);
 

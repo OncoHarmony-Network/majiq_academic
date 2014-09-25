@@ -1,4 +1,4 @@
-.exon {
+.exon, .intronret {
     fill: grey;
     fill-opacity: .3;
     stroke: black;
@@ -47,7 +47,7 @@
     stroke:green;
 }
 
-.ssite3.missing, .ssite5.missing, .junction.missing{
+.ssite3.missing, .ssite5.missing, .junction.missing, .intronret.missing{
     stroke:grey;
     stroke-width:1;
     stroke-dasharray: 5,2;
@@ -117,4 +117,15 @@
     cursor: pointer;
     float: right;
     position: absolute;
+}
+
+.newpartialexon{
+    fill: green;
+    fill-opacity: .3;
+    stroke: green;
+    stroke-lineca: round;
+    stroke-linejoin: round;
+    stroke-dasharray: 5,2;
+    alpha: 9;
+    pointer-events: none;
 }

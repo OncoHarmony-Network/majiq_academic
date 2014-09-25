@@ -10,12 +10,12 @@ try:
     import cPickle as pkl
 except:
     import pickle as pkl
+from pdb import set_trace
 
 __author__ = 'abarrera'
 
 EXEC_DIR = os.path.dirname(os.path.realpath(__file__)) + "/"
-VOILA_ANALYSIS_TYPES = ['single', 'delta', 'lsv_single', 'lsv_delta', 'lsv_thumbnails', 'lsv_gene']
-VERSION = 'alpha'
+VERSION = 'beta'
 
 def table_marks_set(size):
     # TODO: Customizable by script options
@@ -103,16 +103,50 @@ def _render_template(output_dir, output_html, majiq_output, type_summary, thresh
             voila_output.close()
             count_pages += 1
 
-    elif type_summary == 'lsv_delta':
-        if 'genes_dict' not in majiq_output:
-            voila_output = open(output_dir+output_html, 'w')
-            voila_output.write(sum_template.render( lsvList=majiq_output['event_list'],
-                                                    tableMarks=table_marks_set(len(majiq_output['event_list'])),
-                                                    metadata=majiq_output['metadata'],
+    elif type_summary == 'lsv_delta_gene':
+        # Max. 10 genes per page, create as many HTMLs as needed
+
+        MAX_GENES = 10
+        count_pages = 0
+
+        # set_trace()
+        gene_keys = sorted(majiq_output['genes_dict'].keys())
+        while count_pages*MAX_GENES < len(gene_keys):
+            prev_page = None
+            next_page = None
+
+            subset_keys = gene_keys[count_pages*MAX_GENES: MAX_GENES*(count_pages+1)]
+            genes_dict = cc.OrderedDict((k, majiq_output['genes_dict'][k]) for k in subset_keys)
+
+            if (count_pages+1)*MAX_GENES < len(majiq_output['genes_dict']):
+                print (count_pages+1)*MAX_GENES, len(majiq_output['genes_dict'])
+                next_page = str(count_pages+1) + "_" + output_html
+            if not count_pages == 0:
+                prev_page = str(count_pages - 1) + "_" + output_html
+
+            name_page = str(count_pages) + "_" + output_html
+            voila_output = open(output_dir+name_page, 'w')
+            voila_output.write(sum_template.render( tableMarks=[table_marks_set(len(gene_set)) for gene_set in genes_dict],
+                                                    # metadata=majiq_output['metadata'],
+                                                    genes_dict=genes_dict,
+                                                    genes_exps_list=majiq_output['genes_exp'],
                                                     expList=majiq_output['experiments_info'],
-                                                    threshold=threshold
+                                                    prevPage = prev_page,
+                                                    nextPage= next_page,
+                                                    namePage= name_page
             ))
             voila_output.close()
+            count_pages += 1
+
+    elif type_summary == 'lsv_delta':
+        voila_output = open(output_dir+output_html, 'w')
+        voila_output.write(sum_template.render( lsvList=majiq_output['event_list'],
+                                                tableMarks=table_marks_set(len(majiq_output['event_list'])),
+                                                metadata=majiq_output['metadata'],
+                                                expList=majiq_output['experiments_info'],
+                                                threshold=threshold
+        ))
+        voila_output.close()
 
     else:
         print "summary type not recognized %s." % type_summary
@@ -121,6 +155,77 @@ def _render_template(output_dir, output_html, majiq_output, type_summary, thresh
 
     # Copy static files to the output directory
     utils_voila.copyanything(EXEC_DIR+"templates/static", output_dir+"static")
+
+
+def parse_gene_graphics(gene_exps_flist, gene_name_list):
+    genes_exp1_exp2 = []
+    for gene_flist in gene_exps_flist:
+        genes_exp = defaultdict()
+        for splice_graph_f in gene_flist:
+            genes_file = pkl.load(open(splice_graph_f, 'r'))
+            genes_graphic = defaultdict(list)
+            genes_file.sort()
+            for gene_obj in genes_file:
+                if gene_obj.get_name() in gene_name_list:
+                    genes_graphic[gene_obj.get_name()].append(json.dumps(gene_obj, cls=utils_voila.LsvGraphicEncoder).replace("\"", "'"))
+                    genes_graphic[gene_obj.get_name()].append(gene_obj.get_strand())
+                    genes_graphic[gene_obj.get_name()].append(gene_obj.get_coords())
+                    genes_graphic[gene_obj.get_name()].append("1") #genes_graphic[gene_obj.get_name()].append(gene_obj.get_chrom())
+
+            if not len(genes_graphic.keys()):
+                raise Exception("[ERROR] :: No gene matching the splice graph file %s." % splice_graph_f)
+            genes_exp[os.path.basename(splice_graph_f)] = genes_graphic
+        genes_exp1_exp2.append(genes_exp)
+
+    return genes_exp1_exp2
+
+
+def create_tab_output(output_dir, output_html, majiq_output, type_summary, threshold, meta_postprocess):
+    delimiter = '\t'
+    ofile_str = output_dir + output_html.rsplit('.html', 1)[0] + '.csv'
+    tlb_categx = {'A5SS': 'prime5', 'A3SS': 'prime3', 'Num. Junctions': 'njuncs', 'Num. Exons': 'nexons'}
+    with open(ofile_str, 'w') as ofile:
+        headers = ['Gene name', 'LSV ID', 'E(Delta(PSI)) per LSV way', 'P(Delta(PSI)>%s) per LSV way' % .1, 'LSV Type', 'A5SS', 'A3SS', 'ES', 'Num. Junctions', 'Num. Exons', 'chr', 'strand', 'Junctions coords', 'Exons coords', 'Exons Alternative Start', 'Exons Aletrnative End']
+        ofile.write(delimiter.join(headers))
+        for gene in majiq_output['genes_dict']:
+            lline = []
+            for llsv in majiq_output['genes_dict'][gene]:
+                lline.extend([gene, llsv[0].get_id()])
+                lexpected = []
+                lconfidence = []
+                for i, bins in enumerate(llsv[0].get_bins()):
+                    if 'delta' in type_summary:
+                        lexpected.append(sum(llsv[0].get_excl_incl()[i]))
+                        lconfidence.append(utils_voila.get_prob_delta_psi_greater_v(bins, lexpected, 0.1))
+                    else:
+                        lexpected.append(llsv[0].get_means_psi()[i])
+                        lconfidence.append(llsv[0].get_variances()[i])
+
+                lline.append('; '.join(lexpected))
+                lline.append('; '.join(lconfidence))
+
+                lline.append(llsv[0].get_type())
+                lline.append(llsv[0].get_categories()[tlb_categx['A5SS']])
+                lline.append(llsv[0].get_categories()[tlb_categx['A3SS']])
+                lline.append(llsv[0].get_categories()[tlb_categx['ES']])
+                lline.append(llsv[0].get_categories()[tlb_categx['Num. Junctions']])
+                lline.append(llsv[0].get_categories()[tlb_categx['Num. Exons']])
+
+                lline.append(llsv[1].get_chrom())
+                lline.append(llsv[1].get_strand())
+
+                lline.append('; '.join(['-'.join(str(c) for c in junc.get_coords()) for junc in llsv[1].get_junctions()]))
+                lline.append('; '.join(['-'.join(str(c) for c in exon.get_coords()) for exon in llsv[1].get_exons()]))
+
+                try:
+                    lline.append('; '.join([' '.join([str(c) for c in exon.get_alt_starts()]) for exon in llsv[1].get_exons()]))
+                    lline.append('; '.join([' '.join([str(c) for c in exon.get_alt_ends()]) for exon in llsv[1].get_exons()]))
+
+                except Exception:
+                    pass
+
+            ofile.write(delimiter.join(lline))
+    print "Delimited output file successfully created in:\n%s" % ofile_str
 
 
 def create_summary(args):
@@ -138,23 +243,8 @@ def create_summary(args):
     majiq_output = None
     meta_postprocess = {}
 
-    # if type_summary == 'single':
-    #     majiq_output = utils_voila.get_single_exp_data(majiq_bins_file, meta_preprocess, meta_postprocess, confidence)
-    # elif type_summary == 'delta':
-    #     majiq_output = utils_voila.get_delta_exp_data(majiq_bins_file, meta_postprocess, confidence, threshold)
-    # el
     if type_summary == 'lsv_single':
         majiq_output = utils_voila.get_lsv_single_exp_data(majiq_bins_file, args.confidence)
-    if type_summary == 'lsv_thumbnails':
-        try:
-            majiq_output = []
-            with open(majiq_bins_file, 'r') as types_file:
-                for line in types_file:
-                    majiq_output.append(line.rstrip())
-        except IOError, e:
-            print e.message
-            sys.exit(1)
-        meta_postprocess['collapsed'] = args.collapsed
 
     if type_summary == 'lsv_single_gene':
 
@@ -191,7 +281,7 @@ def create_summary(args):
 
                     # Calculate extension of LSV
                     lsv_data[0].set_coords(lsv_data[1][0])
-                    lsv_data[0].set_extension(gene_obj, lsv_data[1][2])
+                    lsv_data[0].set_extension(lsv_data[1][4], lsv_data[1][2])
 
         if not len(genes_graphic.keys()): raise Exception("[ERROR] :: No gene matching the visual information file.")
         majiq_output['genes_json'] = genes_graphic
@@ -201,48 +291,51 @@ def create_summary(args):
         #     print e.message
         #     raise e
 
-
     if type_summary == 'lsv_delta':
         threshold = args.threshold
-        if 'gene_names' in args:
-            if 'genes_file' not in args :
-                print "[ERROR] :: parameter genes-file-info needed for filtering results by gene name."
-                sys.exit(1)
-            genes_file = pkl.load(open(args.genes_file, 'r'))
 
-            import fileinput
-            gene_name_list = []
+        majiq_output = utils_voila.get_lsv_delta_exp_data(majiq_bins_file, args.confidence, args.threshold, args.show_all)
+        majiq_output['event_list'] = []
+        majiq_output['metadata'] = []
+        for elem_list in majiq_output['genes_dict'].values():
+            for elem in elem_list:
+                majiq_output['event_list'].append(elem[0])
+                majiq_output['metadata'].append(elem[1])
+        del majiq_output['genes_dict']
+
+    if type_summary == 'lsv_delta_gene':  # For a Delta PSI gene summary, there might be more than one splicegraph per experiment
+        threshold = args.threshold
+
+        import fileinput
+        gene_name_list = []
+
+        if args.gene_names:
             for gene_name in fileinput.input(args.gene_names):
                 gene_name_list.append(gene_name.rstrip())
 
-            majiq_output = utils_voila.get_lsv_delta_exp_data(majiq_bins_file, args.confidence, args.threshold, args.show_all)
+        majiq_output = utils_voila.get_lsv_delta_exp_data(majiq_bins_file, args.confidence, args.threshold, args.show_all, gene_name_list=gene_name_list)
 
-            # Get gene info
-            try:
-                genes_graphic = defaultdict(list)
-                for gene_obj in genes_file:
-                    if gene_obj.get_name() in gene_name_list:
-                        genes_graphic[gene_obj.get_name()].append(json.dumps(gene_obj, cls=utils_voila.LsvGraphicEncoder).replace("\"", "'"))
-                        genes_graphic[gene_obj.get_name()].append(gene_obj.get_strand())
+        if not gene_name_list:
+            gene_name_list = majiq_output['genes_dict'].keys()
 
-                if not len(genes_graphic.keys()): raise Exception("[ERROR] :: No gene matching the splice graph information file.")
-                majiq_output['genes_json'] = genes_graphic
+        # Get gene info
+        majiq_output['genes_exp'] = parse_gene_graphics([args.genesf_exp1, args.genesf_exp2], gene_name_list)
 
-            except Exception, e:
-                print e.message
-                sys.exit(1)
-        else:
-            majiq_output = utils_voila.get_lsv_delta_exp_data(majiq_bins_file, args.confidence, args.threshold)
-            majiq_output['event_list'] = []
-            majiq_output['metadata'] = []
-            for elem_list in majiq_output['genes_dict'].values():
-                for elem in elem_list:
-                    majiq_output['event_list'].append(elem[0])
-                    majiq_output['metadata'].append(elem[1])
-            del majiq_output['genes_dict']
+    if type_summary == 'lsv_thumbnails':
+        try:
+            majiq_output = []
+            with open(majiq_bins_file, 'r') as types_file:
+                for line in types_file:
+                    majiq_output.append(line.rstrip())
+        except IOError, e:
+            print e.message
+            sys.exit(1)
+        meta_postprocess['collapsed'] = args.collapsed
 
     _render_template(output_dir, output_html, majiq_output, type_summary, threshold, meta_postprocess)
-    print "Summary created in:\n%s" % output_dir
+    create_tab_output(output_dir, output_html, majiq_output, type_summary, threshold, meta_postprocess)
+
+    print "Summaries created in:\n%s" % output_dir
     return
 
 
@@ -277,25 +370,30 @@ def main():
 
     # Single LSV by Gene(s) of interest
     parser_single_gene = argparse.ArgumentParser(add_help=False)
-    parser_single_gene.add_argument('--genes-file-info', required=True, dest='genes_file', metavar='visual_LSE.majiq', type=str, help='Pickle file with gene coords info.')
+    parser_single_gene.add_argument('--genes-file-info', required=True, dest='genes_file', metavar='Hippocampus1.splicegraph', type=str, help='Splice graph information file.')
     parser_single_gene.add_argument('--gene-names', type=str, dest='gene_names', help='Gene names to filter the results.')
     parser_single_gene.add_argument('--bed-file', type=str, dest='bed_file', help='Bed file with coordinates and genes mapping.')
     parser_single_gene.add_argument('--lsv-types', nargs='*', default=[], type=str, dest='lsv_types', help='LSV type to filter the results. (If no gene list is provided, this option will display only genes containing LSVs of the specified type).')
     subparsers.add_parser('lsv-single-gene', help='Single LSV analysis by gene(s) of interest.', parents=[common_parser, parser_single_gene])
 
+    # Delta LSV by Gene(s) of interest
+    parser_delta_gene = argparse.ArgumentParser(add_help=False)
+    parser_delta_gene.add_argument('--genes-exp1', required=True, nargs='+', dest='genesf_exp1', metavar='Hippocampus1.splicegraph', type=str, help='Splice graph information file(s) of experiment 1.')
+    parser_delta_gene.add_argument('--genes-exp2', required=True, nargs='+', dest='genesf_exp2', metavar='Liver1.splicegraph', type=str, help='Splice graph information file(s) of experiment 2.')
+    parser_delta_gene.add_argument('--gene-names', type=str, dest='gene_names', help='Gene names to filter the results.')
+    parser_delta_gene.add_argument('--bed-file', type=str, dest='bed_file', help='Bed file with coordinates and genes mapping.')
+    parser_delta_gene.add_argument('--lsv-types', nargs='*', default=[], type=str, dest='lsv_types', help='LSV type to filter the results. (If no gene list is provided, this option will display only genes containing LSVs of the specified type).')
+    subparsers.add_parser('lsv-delta-gene', help='Delta LSV analysis by gene(s) of interest.', parents=[common_parser, parser_delta, parser_delta_gene])
+
     # Thumbnails generation option (dev) TODO: Delete
-    parser_thumbs = argparse.ArgumentParser(add_help=False)
-    parser_thumbs.add_argument('--collapsed', type=bool, default=False, help='Collapsed LSVs thumbnails in the HTML summary.')
-    subparsers.add_parser('lsv-thumbnails', help='Generate LSV thumbnails [DEBUGING!].', parents=[common_parser, parser_thumbs])  # TODO: GET RID OF THESE OR GIVE IT A BETTER SHAPE!!!
+    # parser_thumbs = argparse.ArgumentParser(add_help=False)
+    # parser_thumbs.add_argument('--collapsed', type=bool, default=False, help='Collapsed LSVs thumbnails in the HTML summary.')
+    # subparsers.add_parser('lsv-thumbnails', help='Generate LSV thumbnails [DEBUGING!].', parents=[common_parser, parser_thumbs])  # TODO: GET RID OF THESE OR GIVE IT A BETTER SHAPE!!!
 
 
     args = parser.parse_args()
-    print args
+    print repr(args)
 
-    # try:
-    #     subprocess.call('http-server')
-    # except OSError, e:
-    #     print "Starting up http-server failed, which is the default option in VOILA to properly display its HTML summaries. Please install *node.js* (http://nodejs.org) and *http-server* (`sudo npm install http-server -g`) unless you have another webserver. You will still have the results in the output directory"
     create_summary(args)
 
 

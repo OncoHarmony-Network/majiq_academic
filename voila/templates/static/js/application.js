@@ -114,6 +114,8 @@ $( document ).ready(function(){
 
     });
 
+
+
     /** Tooltip for barchart */
     var tooltips = $('.tooltip');
     if (tooltips.length){
@@ -163,6 +165,9 @@ $( document ).ready(function(){
             }
         });
     }
+
+
+
 });
 
 var initLargeCanvasSettings = function (num_bins, canvas) {
@@ -899,6 +904,76 @@ function drawDeltaLSVCompactSVG(htmlElementId, lsv) {
         .attr("width", width)
         .attr("height", height);
 
+    var markerWidth = 6,
+        markerHeight = 6,
+        cRadius = 30, // play with the cRadius value
+        refX = cRadius + (markerWidth * 2),
+        refY = -Math.sqrt(cRadius);
+
+    // Define arrow markers, right
+    svgContainer.append("defs")
+        .append("marker")
+        .attr("id", "arrowhead-right")
+        .attr("viewBox", "0 -5 5 10")
+        .attr("refX", 5)
+        .attr("refY", 0)
+        .attr("markerWidth", 4)
+        .attr("markerHeight", 3)
+        .attr("orient", "auto")
+        .append("path")
+        .attr("d", "M0,-5L10,0L0,5");
+
+    // Define arrow markers, left
+    svgContainer.append("defs")
+        .append("marker")
+        .attr("id", "arrowhead-left")
+        .attr("viewBox", "-5 -5 5 10")
+        .attr("refX", -5)
+        .attr("refY", 0)
+        .attr("markerWidth", 4)
+        .attr("markerHeight", 3)
+        .attr("orient", "auto")
+        .append("path")
+        .attr("d", "M0,-5L-10,0L0,5");
+
+
+    svgContainer.append("line")
+        .attr("x1", margin.left)
+        .attr("y1", Math.round((height - margin.bottom)/2))
+        .attr("x2", width - margin.right - margin.left)
+        .attr("y2", Math.round((height - margin.bottom)/2))
+        .style('stroke', 'black')
+        .style('stroke-width', border_frame)
+//        .attr("stroke-opacity", .5)
+        .style('fill', 'none')
+        .attr("marker-end", "url(#arrowhead-right)")
+        .attr("marker-start", "url(#arrowhead-left)");
+
+
+    // Draw x-axis ticks
+    svgContainer.append("text")
+        .attr("x", width / 2)
+        .attr("y", height )
+        .attr("text-anchor", "middle")
+        .attr("font-size", "8px")
+        .attr("fill", "black")
+        .text("0");
+//    svgContainer.append("text")
+//        .attr("x", 0)
+//        .attr("y", height)
+//        .attr("text-anchor", "start")
+//        .attr("font-size", "10px")
+//        .attr("fill", "black")
+//        .text("-1");
+//    svgContainer.append("text")
+//        .attr("x", width)
+//        .attr("y", height)
+//        .attr("text-anchor", "end")
+//        .attr("font-size", "10px")
+//        .attr("fill", "black")
+//        .text("+1");
+
+
     // Draw excl-incl bars
     var last_excl_pos = width / 2,
         last_incl_pos = width / 2;
@@ -935,7 +1010,7 @@ function drawDeltaLSVCompactSVG(htmlElementId, lsv) {
                 .attr("text-anchor", "middle")
                 .attr("font-size", "9px")
                 .attr("fill", getColor(ii, BREWER_PALETTE, 1))
-                .text("-" + Math.round((width / 2 - margin.left) * lsv.excl_incl[ii][0]));
+                .text(Math.round((width / 2 - margin.left) * lsv.excl_incl[ii][0]));
 
         }
 
@@ -947,10 +1022,21 @@ function drawDeltaLSVCompactSVG(htmlElementId, lsv) {
                 .attr("text-anchor", "middle")
                 .attr("font-size", "9px")
                 .attr("fill", getColor(ii, BREWER_PALETTE, 1))
-                .text("+" + Math.round((width / 2 - margin.right) * lsv.excl_incl[ii][1]));
+                .text(Math.round((width / 2 - margin.right) * lsv.excl_incl[ii][1]));
         }
 
     }
+
+    // Draw separator
+    svgContainer.append("line")
+        .attr("x1", width / 2)
+        .attr("y1", 0)
+        .attr("x2", width / 2)
+        .attr("y2", height- margin.bottom + 2)
+        .attr("stroke-width", 2)
+        .attr("stroke-opacity", .8)
+        .attr("stroke", "black");
+
 
     // Draw canvas frame
 //    svgContainer.append("rect")
@@ -962,83 +1048,7 @@ function drawDeltaLSVCompactSVG(htmlElementId, lsv) {
 //        .style('stroke-width', border_frame)
 //        .attr("stroke-opacity", .5)
 //        .style('fill', 'none');
-    var markerWidth = 6,
-        markerHeight = 6,
-        cRadius = 30, // play with the cRadius value
-        refX = cRadius + (markerWidth * 2),
-        refY = -Math.sqrt(cRadius);
 
-    // Per-type markers, as they don't inherit styles.
-    svgContainer.append("defs")
-        .append("marker")
-        .attr("id", "arrowhead-right")
-        .attr("viewBox", "0 -5 5 10")
-        .attr("refX", 5)
-        .attr("refY", 0)
-        .attr("markerWidth", 4)
-        .attr("markerHeight", 3)
-        .attr("orient", "auto")
-        .append("path")
-        .attr("d", "M0,-5L10,0L0,5");
-
-    svgContainer.append("defs")
-        .append("marker")
-        .attr("id", "arrowhead-left")
-        .attr("viewBox", "-5 -5 5 10")
-        .attr("refX", -5)
-        .attr("refY", 0)
-        .attr("markerWidth", 4)
-        .attr("markerHeight", 3)
-        .attr("orient", "auto")
-        .append("path")
-        .attr("d", "M0,-5L-10,0L0,5");
-
-
-    svgContainer.append("line")
-        .attr("x1", margin.left)
-        .attr("y1", height - margin.bottom)
-        .attr("x2", width - margin.right - margin.left)
-        .attr("y2", height - margin.bottom)
-        .style('stroke', 'black')
-        .style('stroke-width', border_frame)
-//        .attr("stroke-opacity", .5)
-        .style('fill', 'none')
-        .attr("marker-end", "url(#arrowhead-right)")
-        .attr("marker-start", "url(#arrowhead-left)");
-
-
-    // Draw x-axis ticks
-//    svgContainer.append("text")
-//        .attr("x", width / 2)
-//        .attr("y", height)
-//        .attr("text-anchor", "middle")
-//        .attr("font-size", "10px")
-//        .attr("fill", "black")
-//        .text("0");
-//    svgContainer.append("text")
-//        .attr("x", 0)
-//        .attr("y", height)
-//        .attr("text-anchor", "start")
-//        .attr("font-size", "10px")
-//        .attr("fill", "black")
-//        .text("-1");
-//    svgContainer.append("text")
-//        .attr("x", width)
-//        .attr("y", height)
-//        .attr("text-anchor", "end")
-//        .attr("font-size", "10px")
-//        .attr("fill", "black")
-//        .text("+1");
-
-    // Draw separator
-    svgContainer.append("line")
-        .attr("x1", width / 2)
-        .attr("y1", 0)
-        .attr("x2", width / 2)
-        .attr("y2", height - margin.bottom)
-        .attr("stroke-width", 2)
-        .attr("stroke-opacity", .8)
-        .attr("stroke", "black");
 
     return svgContainer;
 
