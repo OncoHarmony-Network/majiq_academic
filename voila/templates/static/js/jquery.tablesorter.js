@@ -1064,9 +1064,9 @@
             });
 
 
-            var gene_objs = [],
-                gene_obj_list = [];
-            $('.spliceDiv').each( function(){
+//            var gene_objs = [],
+//                gene_obj_list = [];
+            $(table.parentElement).children('.spliceDiv').each( function(){
                 /**
                  * D3 - SpliceGraph
                  * */
@@ -1091,7 +1091,7 @@
                     .call(chart);
 
                 gene_objs.push(gene_obj_cpy);
-                if ($(this).hasClass('exp1')) {
+                if (!$(this).hasClass('exp2')) {
                     gene_obj_list.push(genes_obj);
                 }
 
@@ -1160,7 +1160,7 @@
             });
 
             $('.lsvLegend', table).each( function(){
-                splicegraph().renderLsvSpliceGraph(this, gene_obj_list[this.id]);
+                splicegraph().renderLsvSpliceGraph(this, gene_obj_list[this.id]); //
             });
 
 

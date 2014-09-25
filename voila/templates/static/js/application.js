@@ -23,6 +23,9 @@ CanvasRenderingContext2D.prototype.dashedLine = function (x1, y1, x2, y2, dashLe
 $( document ).ready(function(){
 
     // add sortable functionality to the table
+    window.gene_objs = [];
+    window.gene_obj_list = [];
+
     $('.tablesorter').each(function() {
         $(this).tablesorter({sortList: [
             [0, 0]
