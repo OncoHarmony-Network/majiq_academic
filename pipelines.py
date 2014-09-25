@@ -125,7 +125,7 @@ class CalcPsi(BasicPipeline):
             meta_info[ii], lsv_junc, const = majiq_io.load_data_lsv(fname, self.logger)
 
             #fitting the function
-            lsv_junc = self.gc_content_norm(lsv_junc, const)
+            lsv_junc, const = self.gc_content_norm(lsv_junc, const)
             fitfunc[ii] = self.fitfunc(const[0])
             filtered_lsv[ii] = self.mark_stacks(lsv_junc, fitfunc[ii])
         matched_lsv, matched_info = majiq_filter.quantifiable_in_group(filtered_lsv, self.minnonzero, self.minreads,

@@ -43,8 +43,8 @@ def majiq_builder(samfiles_list, chrom, pcr_validation=None, gff_output=None, lo
     utils.generate_visualization_output(gene_list, temp_dir)
     if not logging is None:
         logging.info("[%s] Preparing output" % chrom)
-    file_name = '%s.obj' % chrom
-    utils.prepare_lsv_table(lsv, const, file_name)
+
+    utils.prepare_lsv_table(lsv, const, temp_dir)
 
 
 def __parallel_lsv_quant(samfiles_list, chrom, pcr_validation=False, gff_output=None, silent=False, debug=0):
