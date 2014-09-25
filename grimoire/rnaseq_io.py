@@ -532,4 +532,6 @@ def read_gff(filename, pcr_filename, logging=None):
     if pcr_filename is not None:
         read_bed_pcr(pcr_filename, all_genes)
 
-    return all_genes.keys()
+    chr_list = all_genes.keys()
+    del all_genes
+    return chr_list

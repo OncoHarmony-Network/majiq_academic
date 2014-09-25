@@ -89,7 +89,7 @@ def quantifiable_in_group(list_of_experiments, minnonzero, min_reads, logger, pe
 #            pdb.set_trace()
             lsv.append(exp[0][local_indx])
         filtered.append(lsv)
-        filtered_info.append( id )
+        filtered_info.append(id)
 
     return filtered, filtered_info
 
