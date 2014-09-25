@@ -137,8 +137,7 @@ class Gene:
             if self.chromosome == ll.chromosome and self.strand == ll.strand \
                     and self.start < ll.end and self.end > ll.start:
                 res = ll
-                if not name in ll.otherNames:
-                    ll.otherNames.append(name)
+
                 ll.start = min(ll.start, self.start)
                 ll.end = max(ll.end, self.end)
                 break
