@@ -28,10 +28,10 @@ def get_clean_raw_reads(matched_info, matched_lsv, outdir, names, num_exp):
             pickle.dump(res, fp)
 
 
-def _pipeline_run(pipeline, lsv=False):
+def _pipeline_run(pipeline):
     """ Exception catching for all the pipelines """
     try:
-        return pipeline.run(lsv)
+        return pipeline.run()
     except KeyboardInterrupt:
         if pipeline.logger:
             pipeline.logger.info("MAJIQ manually interrupted. Avada kedavra...")
@@ -186,7 +186,7 @@ class CalcPsi(BasicPipeline):
 #          Delta PSI           #
 ################################
 def deltapair(args):
-    _pipeline_run(DeltaPair(args), args.lsv)
+    _pipeline_run(DeltaPair(args))
 
 
 class DeltaPair(BasicPipeline):
