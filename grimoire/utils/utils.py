@@ -55,14 +55,15 @@ def get_logger(logger_name, silent=False, debug=False):
 
 def __gc_factor_ind(val, exp_idx):
     res = 0
-    for ii,jj in enumerate(mglobals.gc_bins[exp_idx]):
+    for ii, jj in enumerate(mglobals.gc_bins[exp_idx]):
         if val < jj:
             res = ii
     return res
 
 
-def prepare_lsv_table(lsv_list, non_as, temp_file):
+def prepare_lsv_table(lsv_list, non_as, temp_dir):
 
+    out_temp = list()
     for name, ind_list in mglobals.tissue_repl.items():
         for idx, exp_idx in enumerate(ind_list):
 
@@ -73,9 +74,11 @@ def prepare_lsv_table(lsv_list, non_as, temp_file):
                 majiq_table_as[iix] = lsv.to_majiqLSV(exp_idx)
             for jix, jn in enumerate(non_as[exp_idx]):
                 majiq_table_nonas[jix] = MajiqJunc(jn, exp_idx)
-            file_pi = open("%s/temp_%s.%s" % (mglobals.temp_oDir[exp_idx], mglobals.exp_list[exp_idx], temp_file), 'w+')
-            pickle.dump((majiq_table_as, majiq_table_nonas), file_pi)
-            file_pi.close()
+
+            out_temp.append((majiq_table_as,majiq_table_nonas))
+    file_pi = open("%s/majiq.pkl" % temp_dir, 'w+')
+    pickle.dump(out_temp, file_pi)
+    file_pi.close()
 
 
 #TODO:Improve performance for the GATHER
