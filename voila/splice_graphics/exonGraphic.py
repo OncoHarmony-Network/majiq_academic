@@ -31,7 +31,6 @@ class ExonGraphic(object):
         self.alt_starts = alt_starts
         self.alt_ends = alt_ends
 
-
     def get_a3_list(self):
         return self.a3
 

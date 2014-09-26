@@ -269,12 +269,12 @@ def generate_visualization_output(allgenes, temp_dir):
 
 def prepare_junctions_gc(junc, exp_idx):
 
-    gc = scipy.sparse.lil_matrix(shape=(mglobals.readLen - 16+1))
+    gc = scipy.sparse.lil_matrix((mglobals.readLen - 16+1),dtype=np.float)
     gci = np.zeros(shape=(mglobals.readLen - 16+1))
     for jj in range(mglobals.readLen - 16+1):
         if not junc is None and junc.get_gc_content()[exp_idx, jj] != 0:
             #gci[jj] = __gc_factor_ind(junc.get_gc_content()[exp_idx,jj],exp_idx)
-            pass
+
             gc[jj] = mglobals.gc_factor[exp_idx](junc.get_gc_content()[exp_idx, jj])
 
     if not junc is None:

@@ -28,7 +28,7 @@ class Junction:
         self.gene_name = gene.get_id()
         self.annotated = annotated
         self.coverage = scipy.sparse.lil_matrix((mglobals.num_experiments, (mglobals.readLen-16)+1), dtype=np.int)
-        self.gc_content = scipy.sparse.lil_matrix(((mglobals.readLen-16)+1), dtype=np.float)
+        self.gc_content = scipy.sparse.lil_matrix((1, (mglobals.readLen-16)+1), dtype=np.float)
         self.id = "%s:%s-%s" % (self.gene_name, start, end)
 
     def __hash__(self):
@@ -105,7 +105,7 @@ class Junction:
             self.coverage[exp_idx, left_ind] += read_n
         else:
             self.coverage[exp_idx, left_ind] = -1
-        self.gc_content[left_ind] = gc
+        self.gc_content[0, left_ind] = gc
 
 
 class MajiqJunc:
@@ -113,7 +113,7 @@ class MajiqJunc:
     def __init__(self, jnc, exp_idx):
         self.exons = {}
         if jnc is None:
-            self.gc_index = scipy.sparse.lil_matrix((1,(mglobals.readLen-16)+1), dtype=np.int)
+            self.gc_index = scipy.sparse.lil_matrix((1, (mglobals.readLen-16)+1), dtype=np.int)
             self.name = None
             self.id = "None"
 
