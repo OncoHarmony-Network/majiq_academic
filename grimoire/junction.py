@@ -38,6 +38,9 @@ class Junction:
     def get_id(self):
         return self.id
 
+    def get_coverage(self):
+        return self.coverage
+
     def get_ss_5p(self):
         return self.start
 
