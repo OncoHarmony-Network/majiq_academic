@@ -256,8 +256,8 @@ def generate_visualization_output(allgenes, temp_dir):
                                 extra_coords.append([ex.start, ex.db_coord[0]-1])
                             if ex.end > ex.db_coord[1]:
                                 extra_coords.append([ex.db_coord[1]+1, ex.end])
-                        eg = ExonGraphic(a3, a5, cc, lsv_type=visual_type, intron_retention=ex.ir,
-                                         coords_extra=extra_coords, alt_starts=alt_start, alt_ends=alt_ends)
+                        eg = ExonGraphic(a3, a5, cc, type_exon=visual_type, coords_extra=extra_coords,
+                                         intron_retention=ex.ir, alt_starts=alt_start, alt_ends=alt_ends)
                         exon_list.append(eg)
                     gene_list[mglobals.exp_list[exp_idx]].append(GeneGraphic(gg.get_id(), gg.get_strand(), exon_list,
                                                                              junc_list, gg.get_chromosome()))
