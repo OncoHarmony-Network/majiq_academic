@@ -315,7 +315,7 @@ class MajiqLsv(object):
             self.junction_list[idx, :] = junc.coverage[exp_idx, :]
             self.junction_id.append(junc.get_id())
             for jidx in range(mglobals.readLen-16+1):
-                dummy = junc.get_gc_content()[jidx]
+                dummy = junc.get_gc_content()[0, jidx]
                 self.gc_factor[idx, jidx] = dummy
 
     def set_gc_factor(self, exp_idx):

@@ -144,7 +144,7 @@ class MajiqJunc:
             self.coverage = jnc.coverage[exp_idx, :]
             self.gc_factor = scipy.sparse.lil_matrix((1, (mglobals.readLen-16)+1), dtype=np.float)
             for jj in range(mglobals.readLen-16+1):
-                dummy = jnc.gc_content[jj]
+                dummy = jnc.gc_content[0, jj]
                 self.gc_factor[0, jj] = dummy
 
     def set_gc_factor(self, exp_idx):
