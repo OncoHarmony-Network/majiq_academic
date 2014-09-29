@@ -471,8 +471,8 @@ def _prepare_and_dump(genes, logging=None):
         # ipdb.set_trace()
         # objgraph.show_most_common_types(limit=20)
 
-        with open('%s/annot_genes.pkl' % temp_dir, 'w+b') as ofp:
-            pickle.dump(genes[chrom], ofp)
+        fname = '%s/annot_genes.pkl' % temp_dir
+        dump_bin_file(genes[chrom], fname)
 
     if not logging is None:
         logging.debug("Number of Genes", n_genes)
@@ -505,12 +505,7 @@ def read_gff(filename, pcr_filename, logging=None):
             if gene_name in mglobals.gene_tlb and gn != mglobals.gene_tlb[gene_name]:
                 raise RuntimeError('Two Different Genes with the same name %s' % gene_name)
             mglobals.gene_tlb[gene_name] = gn
-            gene = gn.is_gene_in_list(all_genes[chrom][strand], gene_name)
-            if not gene is None:
-                del gn
-                gn = gene
-            else:
-                all_genes[chrom][strand].append(gn)
+            all_genes[chrom][strand].append(gn)
             gene_id_dict[record.attributes['ID']] = gn
 
         elif record.type == 'mRNA' or record.type == 'transcript':
@@ -535,16 +530,7 @@ def read_gff(filename, pcr_filename, logging=None):
                 gn = parent_tx.get_gene()
                 txex = gn.new_annotated_exon(start, end, parent_tx)
                 parent_tx.add_exon(txex)
-                pre_end, pre_txex = last_end[parent_tx_id]
 
-                junc = gn.exist_junction(pre_end, start)
-                if junc is None:
-                    junc = Junction(pre_end, start, None, None, gn, annotated=True)
-                parent_tx.add_junction(junc)
-                txex.add_3prime_junc(junc)
-                if not pre_end is None:
-                    pre_txex.add_5prime_junc(junc)
-                last_end[parent_tx_id] = (end, txex)
             except KeyError:
                 if not logging is None:
                     logging.Error("Error, incorrect gff. exon %s doesn't have valid mRNA %s" % (record.attributes['ID'],
@@ -552,12 +538,20 @@ def read_gff(filename, pcr_filename, logging=None):
         #end elif
     #end for
     for kk, trcpt in trcpt_id_dict.items():
-        pre_end, pre_txex = last_end[kk]
-        if not pre_end is None:
-            junc = Junction(pre_end, None, None, None, trcpt.get_gene(), annotated=True)
-            trcpt.add_junction(junc)
-            pre_txex.add_5prime_junc(junc)
-        trcpt.sort_in_list()
+        exon_list = sorted(trcpt.get_exon_list())
+        gn = trcpt.get_gene()
+        pre_end = None
+        pre_txex = None
+        for ex in exon_list:
+            start, end = ex.get_coordinates()
+            junc = gn.new_annotated_junctions(pre_end, start, trcpt, ex)
+            if not pre_txex is None:
+                pre_txex.add_5prime_junc(junc)
+            pre_end = end
+            pre_txex = ex
+
+        gn.new_annotated_junctions(pre_end, None, trcpt, pre_txex)
+
     #end for
     _prepare_and_dump(all_genes, logging)
     if pcr_filename is not None:

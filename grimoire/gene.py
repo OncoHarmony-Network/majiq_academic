@@ -4,6 +4,7 @@ import numpy as np
 import mglobals
 from grimoire.exon import ExonTx, collapse_list_exons
 from grimoire.lsv import LSV
+from grimoire.junction import Junction
 
 
 # class GeneTLB(Singleton):
@@ -306,6 +307,14 @@ class Gene:
                 self.temp_txex_list.append(res)
         return res
 
+    def new_annotated_junctions(self, start, end, trcpt, anot_exon):
+        junc = self.exist_junction(start, end)
+        if junc is None:
+            junc = Junction(start, end, None, None, self, annotated=True)
+        trcpt.add_junction(junc)
+        anot_exon.add_3prime_junc(junc)
+        return junc
+
     def get_rnaseq_mat(self, rand10k, lsv=False):
 
         ss3_l = []
@@ -384,12 +393,12 @@ class Transcript(object):
         # self.cdsStart = None
         # self.cdsStop = None
 
-    def add_exon(self, exon):
-        self.exon_list.append(exon)
-        return
 
     def get_gene(self):
         return mglobals.gene_tlb[self.gene_name]
+
+    def get_exon_list(self):
+        return self.exon_list
 
     def get_id(self):
         return self.id
@@ -409,6 +418,10 @@ class Transcript(object):
                 res = jj
                 break
         return res
+
+    def add_exon(self, exon):
+        self.exon_list.append(exon)
+        return
 
     def add_junction(self, junc):
         if junc not in self.junction_list:
