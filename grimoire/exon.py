@@ -523,7 +523,7 @@ def __half_exon(ss_type, junc, read_rna):
 
 
 def new_exon_definition(start, end, read_rna, s3prime_junc, s5prime_junc, gene):
-
+    print start, end, read_rna
     if end - start < 5:
         return 0
 #    print "NEW DEFINITION::",start, end
@@ -558,7 +558,7 @@ def detect_exons(gene, junction_list, read_rna):
 #    print "DETECT EXONS::",gene.get_id()
     for (coord, jtype, jj) in junction_list:
 #        print "---NEW-------------------------------------------------------------"
-        print coord, jtype, jj, jj.coverage.sum(), jj.annotated, jj.is_annotated()
+        print coord, jtype, jj, jj.coverage.sum(), jj.is_annotated()
         if jj.coverage.sum() < mglobals.MINREADS and not jj.is_annotated():
             continue
 #        print coord, jtype, jj, jj.coverage.sum(), jj.annotated
