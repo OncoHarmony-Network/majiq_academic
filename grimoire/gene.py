@@ -312,7 +312,6 @@ class Gene:
         if junc is None:
             junc = Junction(start, end, None, None, self, annotated=True)
         trcpt.add_junction(junc)
-        anot_exon.add_3prime_junc(junc)
         return junc
 
     def get_rnaseq_mat(self, rand10k, lsv=False):

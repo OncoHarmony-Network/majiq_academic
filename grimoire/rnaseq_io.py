@@ -545,12 +545,14 @@ def read_gff(filename, pcr_filename, logging=None):
         for ex in exon_list:
             start, end = ex.get_coordinates()
             junc = gn.new_annotated_junctions(pre_end, start, trcpt, ex)
+            ex.add_3prime_junc(junc)
             if not pre_txex is None:
                 pre_txex.add_5prime_junc(junc)
             pre_end = end
             pre_txex = ex
 
-        gn.new_annotated_junctions(pre_end, None, trcpt, pre_txex)
+        junc = gn.new_annotated_junctions(pre_end, None, trcpt, pre_txex)
+        pre_txex.add_5prime_junc(junc)
 
     #end for
     _prepare_and_dump(all_genes, logging)
