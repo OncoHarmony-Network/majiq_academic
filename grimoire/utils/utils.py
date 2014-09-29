@@ -142,9 +142,6 @@ def merge_and_create_majiq_file(chr_list, pref_file):
             majiq_io.dump_bin_file((info, at, nat), fname)
 
 
-
-
-
 def generate_visualization_output(allgenes, temp_dir):
     gene_list = {}
     for name, ind_list in mglobals.tissue_repl.items():
@@ -184,24 +181,22 @@ def generate_visualization_output(allgenes, temp_dir):
                         a3 = []
                         alt_start = []
                         for ss3 in set(ex.ss_3p_list):
+                            if ss3 in alt_empty_starts:
+                                alt_start.append(ss3)
+                                continue
                             for jidx, jjl in enumerate(junc_l):
                                 if ss3 == jjl[1]:
                                     a3.append(jidx)
-                                    break
-                                elif ss3 in alt_empty_starts:
-                                    alt_start.append(ss3)
-                                    break
 
                         a5 = []
                         alt_ends = []
                         for ss5 in set(ex.ss_5p_list):
+                            if ss5 in alt_empty_starts:
+                                alt_ends.append(ss5)
+                                continue
                             for jidx, jjl in enumerate(junc_l):
                                 if ss5 == jjl[0]:
                                     a5.append(jidx)
-                                    break
-                                elif ss5 in alt_empty_starts:
-                                    alt_ends.append(ss5)
-                                    break
 
                         if ex.annotated and ex.coverage[exp_idx].sum() == 0.0:
                             visual_type = 2
