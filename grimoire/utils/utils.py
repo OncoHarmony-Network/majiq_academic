@@ -99,16 +99,10 @@ def merge_and_create_majiq_file(chr_list, pref_file):
     for chrom in chr_list:
         temp_dir = "%s/tmp/%s" % (mglobals.outDir, chrom)
         temp_filename = '%s/splicegraph.pkl' % temp_dir
-        if not os.path.exists(temp_filename):
-            continue
-        temp_file = open(temp_filename, 'rb')
-        visual_gene_list = majiq_io.load_bin_file(temp_file)
+        visual_gene_list = majiq_io.load_bin_file(temp_filename)
 
         filename = "%s/majiq.pkl" % temp_dir
-        if not os.path.exists(filename):
-            continue
-        file_pi2 = open(filename, 'rb')
-        temp_table = majiq_io.load_bin_file(file_pi2)
+        temp_table = majiq_io.load_bin_file(filename)
 
         for name, ind_list in mglobals.tissue_repl.items():
             for idx, exp_idx in enumerate(ind_list):
