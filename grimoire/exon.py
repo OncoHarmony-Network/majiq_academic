@@ -4,7 +4,7 @@ import numpy as np
 import mglobals
 from grimoire.lsv import LSV_IR
 from grimoire.junction import Junction
-
+import os
 
 class Exon:
 
@@ -618,3 +618,41 @@ def detect_exons(gene, junction_list, read_rna):
     #print "FOUND new %d exons" % new_exons
     return 
 
+
+def set_exons_gc_content(chrom, exon_list):
+
+    fastadir_path = "%s/%s/" % (mglobals.genome_path, mglobals.genome)
+
+    #print "Loading chromosome... %s"%chrom
+    chrom_path = fastadir_path + chrom + ".fa"
+    if not os.path.exists(chrom_path):
+        return
+    chrom_file = open(chrom_path)
+    loaded_chrom = []
+    for chrom_line in chrom_file:
+        if not chrom_line.startswith(">"):
+            loaded_chrom.append(chrom_line.strip("\n"))
+    loaded_chrom = ''.join(loaded_chrom)
+
+    for exon in exon_list:
+        strt, end = exon.get_coordinates()
+        sequence = loaded_chrom[strt:end]
+        #reverse the sequence if the strand is reverse
+        sequence = sequence.lower()
+        if exon.get_strand() == "-":
+            new_seq = []
+            for char in sequence[::-1]:
+                if char == 'g':
+                    new_seq.append('c')
+                elif char == 'c':
+                    new_seq.append('g')
+                elif char == 'a':
+                    new_seq.append('t')
+                elif char == 't':
+                    new_seq.append('a')
+                else:
+                    new_seq.append(char)
+            sequence = ''.join(new_seq)
+        if len(sequence) == 0:
+            print "KKKKseq", exon.get_coordinates(), sequence
+        exon.set_gc_content(sequence)

@@ -1,6 +1,7 @@
 from gene import Gene, Transcript
 from exon import detect_exons
-from junction import Junction
+from grimoire.junction import Junction
+import grimoire.exon as majiq_exons
 import grimoire.utils.utils as utils
 import pysam
 import gc
@@ -316,7 +317,7 @@ def read_transcript_ucsc(filename):
                 temp_ex.extend(gene.get_exon_list())
 #                print "NUM IR:", len(gene.ir_list)
         print "Calculating gc_content.........",
-        utils.set_exons_gc_content(chrom, temp_ex)
+        majiq_exons.set_exons_gc_content(chrom, temp_ex)
         print "Done."
 
     print "NUM_GENES", n_genes
