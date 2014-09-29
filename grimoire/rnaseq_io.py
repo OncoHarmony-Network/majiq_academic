@@ -2,7 +2,6 @@ from gene import Gene, Transcript
 from exon import detect_exons
 from grimoire.junction import Junction
 import grimoire.exon as majiq_exons
-import grimoire.utils.utils as utils
 import pysam
 import gc
 import os
@@ -11,6 +10,17 @@ from collections import namedtuple
 import gzip
 import urllib
 import cPickle as pickle
+
+
+def create_if_not_exists(my_dir, logger=False):
+    """Create a directory path if it does not exist"""
+    try:
+        if logger:
+            logger.info("\nCreating directory %s..." % my_dir)
+        os.makedirs(my_dir)
+    except OSError:
+        if logger:
+            logger.info("\nDirectory %s already exists..." % my_dir)
 
 
 def load_bin_file(filename, logger=None):
@@ -454,10 +464,10 @@ def _prepare_and_dump(genes, logging=None):
                 temp_ex.extend(gene.get_exon_list())
         if not logging is None:
             logging.info("Calculating gc_content chromosome %s........." % chrom)
-        utils.set_exons_gc_content(chrom, temp_ex)
+        majiq_exons.set_exons_gc_content(chrom, temp_ex)
         gc.collect()
         temp_dir = "%s/tmp/%s" % (mglobals.outDir, chrom)
-        utils.create_if_not_exists(temp_dir)
+        create_if_not_exists(temp_dir)
         # ipdb.set_trace()
         # objgraph.show_most_common_types(limit=20)
 
