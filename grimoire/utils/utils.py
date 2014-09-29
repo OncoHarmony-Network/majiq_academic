@@ -3,7 +3,7 @@ matplotlib.use('Agg')
 import os
 import logging
 import numpy as np
-import pickle
+
 import sys
 from itertools import izip
 from scipy.stats.mstats import mquantiles
@@ -11,6 +11,7 @@ import scipy.sparse
 from matplotlib import pyplot
 import grimoire.mglobals as mglobals
 from grimoire.junction import MajiqJunc
+import grimoire.rnaseq_io as majiq_io
 from voila.splice_graphics.exonGraphic import ExonGraphic
 from voila.splice_graphics.geneGraphic import GeneGraphic 
 from voila.splice_graphics.junctionGraphic import JunctionGraphic 
@@ -76,10 +77,9 @@ def prepare_lsv_table(lsv_list, non_as, temp_dir):
             for jix, jn in enumerate(non_as[exp_idx]):
                 majiq_table_nonas[jix] = MajiqJunc(jn, exp_idx)
 
-            out_temp.append((majiq_table_as,majiq_table_nonas))
-    file_pi = open("%s/majiq.pkl" % temp_dir, 'w+')
-    pickle.dump(out_temp, file_pi)
-    file_pi.close()
+            out_temp.append((majiq_table_as, majiq_table_nonas))
+    fname = "%s/majiq.pkl" % temp_dir
+    majiq_io.dump_bin_file(out_temp, fname)
 
 
 def merge_and_create_majiq_file(chr_list, pref_file):
@@ -102,13 +102,13 @@ def merge_and_create_majiq_file(chr_list, pref_file):
         if not os.path.exists(temp_filename):
             continue
         temp_file = open(temp_filename, 'rb')
-        visual_gene_list = pickle.load(temp_file)
+        visual_gene_list = majiq_io.load_bin_file(temp_file)
 
         filename = "%s/majiq.pkl" % temp_dir
         if not os.path.exists(filename):
             continue
         file_pi2 = open(filename, 'rb')
-        temp_table = pickle.load(file_pi2)
+        temp_table = majiq_io.load_bin_file(file_pi2)
 
         for name, ind_list in mglobals.tissue_repl.items():
             for idx, exp_idx in enumerate(ind_list):
@@ -119,9 +119,8 @@ def merge_and_create_majiq_file(chr_list, pref_file):
     for name, ind_list in mglobals.tissue_repl.items():
         for idx, exp_idx in enumerate(ind_list):
 
-            file_pi = open('%s/%s%s.splicegraph' % (mglobals.outDir, pref_file, mglobals.exp_list[exp_idx]), 'w+')
-            pickle.dump(all_visual[exp_idx], file_pi)
-            file_pi.close()
+            fname = '%s/%s%s.splicegraph' % (mglobals.outDir, pref_file, mglobals.exp_list[exp_idx])
+            majiq_io.dump_bin_file(all_visual[exp_idx], fname)
 
             info = dict()
             info['experiment'] = mglobals.exp_list[exp_idx]
@@ -139,9 +138,8 @@ def merge_and_create_majiq_file(chr_list, pref_file):
             for jnc in nat:
                 jnc.set_gc_factor(exp_idx)
 
-            file_pi = open('%s/%s%s.majiq' % (mglobals.outDir, pref_file, mglobals.exp_list[exp_idx]), 'w+')
-            pickle.dump((info, at, nat), file_pi)
-            file_pi.close()
+            fname = '%s/%s%s.majiq' % (mglobals.outDir, pref_file, mglobals.exp_list[exp_idx])
+            majiq_io.dump_bin_file((info, at, nat), fname)
 
 
 def set_exons_gc_content(chrom, exon_list):
@@ -262,9 +260,8 @@ def generate_visualization_output(allgenes, temp_dir):
                     gene_list[mglobals.exp_list[exp_idx]].append(GeneGraphic(gg.get_id(), gg.get_strand(), exon_list,
                                                                              junc_list, gg.get_chromosome()))
 
-    file_pi = open('%s/splicegraph.pkl' % temp_dir, 'w+')
-    pickle.dump(gene_list, file_pi)
-    file_pi.close()
+    filename = '%s/splicegraph.pkl' % temp_dir
+    majiq_io.dump_bin_file(gene_list, filename)
 
 
 def prepare_junctions_gc(junc, exp_idx):
@@ -330,9 +327,8 @@ def get_validated_pcr_lsv(candidates, out_dir):
                 pcr_lsv = [lsv.exon.get_pcr_name(), name, score]
                 pcr_list.append(pcr_lsv)
                 print "PCR", ' '.join(pcr_lsv)
-    op = open('%s/pcr.pkl' % out_dir, 'w+')
-    pickle.dump(pcr_list, op)
-    op.close()
+    fname = '%s/pcr.pkl' % out_dir
+    majiq_io.dump_bin_file(pcr_list, fname)
 
 
 def prepare_gc_content(gene_list, temp_dir):
@@ -352,9 +348,8 @@ def prepare_gc_content(gene_list, temp_dir):
                     gc_pairs['GC'][exp_n].append(gc_val)
                     gc_pairs['COV'][exp_n].append(cov)
 
-    file_pi = open('%s/gccontent.temppkl' % temp_dir, 'w+')
-    pickle.dump(gc_pairs, file_pi)
-    file_pi.close()
+    fname = '%s/gccontent.temppkl' % temp_dir
+    majiq_io.dump_bin_file(gc_pairs, fname)
 
 
 def gc_factor_calculation(chr_list, nb):
@@ -370,9 +365,8 @@ def gc_factor_calculation(chr_list, nb):
     for chrom in chr_list:
         temp_dir = "%s/tmp/%s" % (mglobals.outDir, chrom)
         yfile = '%s/gccontent.temppkl' % temp_dir
-        if not os.path.exists(yfile):
-            continue
-        gc_c = pickle.load(open(yfile, 'rb'))
+
+        gc_c = majiq_io.load_bin_file(yfile)
         for exp_n in xrange(mglobals.num_experiments):
             gc_pairs['GC'][exp_n].extend(gc_c['GC'][exp_n])
             gc_pairs['COV'][exp_n].extend(gc_c['COV'][exp_n])

@@ -4,11 +4,31 @@ from junction import Junction
 import grimoire.utils.utils as utils
 import pysam
 import gc
-import pickle
+import os
 import mglobals
 from collections import namedtuple
 import gzip
 import urllib
+import cPickle as pickle
+
+
+def load_bin_file(filename, logger=None):
+
+    if not os.path.exists(filename):
+        if logger:
+            logger.error('Path %s for loading does not exist' % filename)
+        return
+
+    fop = open(filename, 'rb')
+    data = pickle.load(fop)
+    fop.close()
+    return data
+
+
+def dump_bin_file(data, filename):
+    with open(filename, 'w+b') as ofp:
+        pickle.dump(data, ofp)
+
 
 
 def __cross_junctions(read):

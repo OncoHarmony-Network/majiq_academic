@@ -7,7 +7,7 @@ import os
 import sys
 from multiprocessing import Pool, current_process
 import grimoire.analize as analize
-import grimoire.rnaseq_io as rnaseq_io
+import grimoire.rnaseq_io as majiq_io
 import grimoire.utils.utils as utils
 import grimoire.mglobals as mglobals
 import grimoire.lsv as majiq_lsv
@@ -34,7 +34,7 @@ def majiq_builder(samfiles_list, chrom, pcr_validation=None, gff_output=None, cr
 
     if not logging is None:
         logging.info("[%s] Reading BAM files" % chrom)
-    rnaseq_io.read_sam_or_bam(samfiles_list, gene_list, mglobals.readLen, chrom, logging=logging)
+    majiq_io.read_sam_or_bam(samfiles_list, gene_list, mglobals.readLen, chrom, logging=logging)
     if not logging is None:
         logging.info("[%s] Detecting LSV" % chrom)
     lsv, const = analize.lsv_detection(gene_list, chrom, logging=logging)
@@ -114,7 +114,7 @@ def main(params):
     logger.info("")
     logger.info("Command: %s" % params)
 
-    chr_list = rnaseq_io.read_gff(params.transcripts, params.pcr_filename, logging=logger)
+    chr_list = majiq_io.read_gff(params.transcripts, params.pcr_filename, logging=logger)
 
     sam_list = []
     for exp_idx, exp in enumerate(mglobals.exp_list):
@@ -123,7 +123,7 @@ def main(params):
             logger.info("Skipping %s.... not found" % samfile)
             continue
         sam_list.append(samfile)
-        rnaseq_io.count_mapped_reads(samfile, exp_idx)
+        majiq_io.count_mapped_reads(samfile, exp_idx)
     if len(sam_list) == 0:
         return
 
@@ -157,9 +157,7 @@ def main(params):
         for chrom in chr_list:
             temp_dir = "%s/tmp/%s" % (mglobals.outDir, chrom)
             yfile = '%s/temp_gff.pkl' % temp_dir
-            if not os.path.exists(yfile):
-                continue
-            gff_list = pickle.load(open(yfile, 'rb'))
+            gff_list = majiq_io.load_bin_file(yfile)
             for gff in gff_list:
                 fp.write("%s\n" % gff)
         fp.close()
@@ -170,9 +168,7 @@ def main(params):
         for chrom in chr_list:
             temp_dir = "%s/tmp/%s" % (mglobals.outDir, chrom)
             yfile = '%s/pcr.pkl' % temp_dir
-            if not os.path.exists(yfile):
-                continue
-            pcr_l = pickle.load(open(yfile, 'rb'))
+            pcr_l = majiq_io.load_bin_file(yfile)
             for pcr in pcr_l:
                 fp.write("%s\n" % pcr)
         fp.close()
