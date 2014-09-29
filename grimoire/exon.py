@@ -558,7 +558,7 @@ def detect_exons(gene, junction_list, read_rna):
 #    print "DETECT EXONS::",gene.get_id()
     for (coord, jtype, jj) in junction_list:
 #        print "---NEW-------------------------------------------------------------"
-#        print coord, jtype, jj, jj.coverage.sum(), jj.annotated, jj.is_annotated()
+        print coord, jtype, jj, jj.coverage.sum(), jj.annotated, jj.is_annotated()
         if jj.coverage.sum() < mglobals.MINREADS and not jj.is_annotated():
             continue
 #        print coord, jtype, jj, jj.coverage.sum(), jj.annotated
