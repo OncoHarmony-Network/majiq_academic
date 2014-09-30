@@ -15,7 +15,7 @@ import grimoire.rnaseq_io as majiq_io
 from voila.splice_graphics.exonGraphic import ExonGraphic
 from voila.splice_graphics.geneGraphic import GeneGraphic 
 from voila.splice_graphics.junctionGraphic import JunctionGraphic 
-
+import random
 
 def create_if_not_exists(my_dir, logger=False):
     """Create a directory path if it does not exist"""
@@ -129,7 +129,9 @@ def merge_and_create_majiq_file(chr_list, pref_file):
             for lsv in at:
                 lsv.set_gc_factor(exp_idx)
             nat = np.concatenate(nonas_table[exp_idx])
-            for jnc in nat:
+
+            clist = random.sample(nat, min(5000, len(nat)))
+            for jnc in clist:
                 jnc.set_gc_factor(exp_idx)
 
             fname = '%s/%s%s.majiq' % (mglobals.outDir, pref_file, mglobals.exp_list[exp_idx])
