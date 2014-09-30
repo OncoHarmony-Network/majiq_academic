@@ -113,6 +113,8 @@ def merge_and_create_majiq_file(chr_list, pref_file):
     for name, ind_list in mglobals.tissue_repl.items():
         for idx, exp_idx in enumerate(ind_list):
 
+            if len(as_table[exp_idx]) == 0:
+                continue
             fname = '%s/%s%s.splicegraph' % (mglobals.outDir, pref_file, mglobals.exp_list[exp_idx])
             majiq_io.dump_bin_file(all_visual[exp_idx], fname)
 
@@ -123,8 +125,6 @@ def merge_and_create_majiq_file(chr_list, pref_file):
             info['genome'] = mglobals.genome
             info['num_reads'] = mglobals.num_mapped_reads[exp_idx]
 
-            if len(as_table) == 0:
-                continue
             at = np.concatenate(as_table[exp_idx])
             for lsv in at:
                 lsv.set_gc_factor(exp_idx)

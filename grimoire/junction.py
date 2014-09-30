@@ -148,10 +148,9 @@ class MajiqJunc:
                 self.gc_factor[0, jj] = dummy
 
     def set_gc_factor(self, exp_idx):
-        for jj in xrange(self.gc_factor.shape[0]):
-            dummy = self.gc_factor[0, jj]
-            if dummy == 0:
-                gc_f = 0
-            else:
-                gc_f = mglobals.gc_factor[exp_idx](dummy)
-            self.gc_factor[0, jj] = gc_f
+        nnz = self.gc_factor.nonzero()
+        for idx in xrange(nnz[0].shape[0]):
+            i = nnz[0][idx]
+            j = nnz[1][idx]
+            dummy = self.gc_factor[i, j]
+            self.gc_factor[i, j] = mglobals.gc_factor[exp_idx](dummy)
