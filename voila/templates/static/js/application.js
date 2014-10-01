@@ -33,92 +33,6 @@ $( document ).ready(function(){
         $(this).tablesorterPager({widthFixed: true, widgets: ['zebra', 'renderCanvas'], container: $(this).parent().children(".pager")});
     });
 
-    // Check if the html has psiPlots and largePsiPlots (render legend if so)
-    if ($(document).find('.psiPlot').length){
-        // Define canvas settings and store them as a document attribute (global)
-        var psiPlot_list = $(document).find('.psiPlot');
-        var largePsiPlot_list = $(document).find('.largePsiPlot');
-
-        var binsSingle = JSON.parse(psiPlot_list[0].getAttribute('bins'));
-        var canvasSingle = largePsiPlot_list[0];
-
-        window.settingsCanvasSingle = initLargeCanvasSettings(binsSingle.length, canvasSingle);
-    }
-
-    if ($(document).find('.extendedDeltaPsi').length){
-        // Define canvas settings and store them as a document attribute (global)
-        var extendedDeltas = $(document).find('.extendedDeltaPsi');
-        var binsDelta = JSON.parse(extendedDeltas[0].getAttribute('data-bins'));
-        var canvasDelta = extendedDeltas[0];
-
-        window.settingsCanvasDelta = initLargeCanvasSettings(binsDelta.length, canvasDelta);
-    }
-
-    function renderLegendCanvas() {
-        var canvas = $('.legendCanvas')[0];
-        if (canvas.getContext){
-            $(canvas).css({"margin-top": "-6px", "margin-bottom": "-6px"});
-            var ctx = canvas.getContext("2d");
-            ctx.textAlign = "center";
-            // TODO: remove hardcoded values
-            ctx.fillText("0", 27, 20);
-            ctx.fillText("1", 417, 20);
-            ctx.fillText("0.5", 222, 20);
-            ctx.beginPath();
-            ctx.dashedLine(27, 10, 27, 0, 1);
-            ctx.dashedLine(417, 10, 417, 0, 1);
-            ctx.dashedLine(222, 10, 222, 0, 1);
-            ctx.stroke();
-        }
-    }
-
-    if ($('.legendCanvas').length)
-        renderLegendCanvas();
-
-    // Render all canvas
-    //NOTE! Canvas with bins are rendered in the customized widgets section of jquery.tablesorter.js
-
-    /**
-     * Delta PSI rendering
-     * */
-    var deltaTables = $('.deltaTable');
-    if (deltaTables.length){
-        deltaTables.css({"width": "auto"});
-    }
-
-
-    /**
-     * Adding GC Content plot
-     */
-    $('.gcContent').on("click", function(e){
-        e.preventDefault();
-        my_window = window.open("", "GC Content", "status=1,width=1024,height=800");
-        my_window.document.write('<h1>GC content</h1>');
-        my_window.document.write('<img src="' + $(this)[0].getAttribute('data-gc-src') + '" alt="GC Content" border="0">');
-    });
-
-
-    // Single LSVs - TODO: Move from here to jquery.tablesorter.js
-    $('.lsvLegendThumb').each( function(){
-        var collapsed = this.getAttribute('data-collapsed');
-        if (collapsed){
-            splicegraph().renderLsvLegend(this);
-        } else {
-            splicegraph().renderLsvSpliceGraph(this);
-        }
-        var can = this;
-        function dlCanvas() {
-            var dt = can.toDataURL('image/png');
-            this.href = dt;
-        }
-        var dl_canvas_link = $(this).parent().children(".lsv_type")[0];
-        dl_canvas_link.addEventListener('click', dlCanvas, false);
-
-
-    });
-
-
-
     /** Tooltip for barchart */
     var tooltips = $('.tooltip');
     if (tooltips.length){
@@ -169,8 +83,6 @@ $( document ).ready(function(){
         });
     }
 
-
-
 });
 
 var initLargeCanvasSettings = function (num_bins, canvas) {
@@ -194,100 +106,6 @@ var initLargeCanvasSettings = function (num_bins, canvas) {
     }();
 
 };
-
-function addExpandedViewFunction(){
-    // detailed view buttons behaviour
-    $('.detailedPsiLink').on("click", function(e){
-        e.preventDefault();
-        var iconExpand = $(this).get(0);
-
-        iconExpand.setAttribute('isExpanded', (parseInt(iconExpand.getAttribute('isExpanded')) + 1) % 2) ;
-        var expandIcon;
-        if (iconExpand.getAttribute('isExpanded') == false){
-            expandIcon = "../templates/static/img/arrow_down.png";
-            hideResetZoomLink($(this));
-        } else {
-            expandIcon = "../templates/static/img/arrow_up.png";
-        }
-
-        // change icon
-        iconExpand.setAttribute('src', expandIcon);
-        var idDetailed = parseInt(this.id.match(/(\d+)$/)[0], 10);
-        var targetPlot = $('#psiExtendedPlot'+idDetailed);
-        targetPlot.toggle("show").focus();
-    });
-
-    $('.expandDelta').on("click", function(e){
-        e.preventDefault();
-        var iconExpand = $(this).get(0);
-
-        iconExpand.setAttribute('data-is-expanded', (parseInt(iconExpand.dataset.isExpanded) + 1) % 2) ;
-        var expandIcon;
-        if (iconExpand.getAttribute('data-is-expanded') == false){
-            expandIcon = "../templates/static/img/arrow_down.png";
-            hideResetZoomLink($(this));
-        } else {
-            expandIcon = "../templates/static/img/arrow_up.png";
-        }
-
-        // change icon
-        iconExpand.setAttribute('src', expandIcon);
-        var idDetailed = parseInt(this.id.match(/(\d+)$/)[0], 10);
-        $('#deltaPsi'+idDetailed).toggle("show");
-        var targetElement = $('#extendedDeltaPsi'+idDetailed);
-        targetElement.toggle("show", function(){
-            $(this).get(0).focus();
-        });
-
-
-    });
-
-    // detailed view buttons behaviour
-    $('.zoomMatrix').on("click", function(e){
-        e.preventDefault();
-        var iconExpand = $(this).get(0);
-
-        iconExpand.setAttribute('data-is-expanded', (parseInt(iconExpand.getAttribute('data-is-expanded')) + 1) % 2) ;
-        var expandIcon;
-        if (iconExpand.getAttribute('data-is-expanded') == false){
-            expandIcon = "static/img/zoom_in.png";
-        } else {
-            expandIcon = "static/img/zoom_out.png";
-        }
-
-        // change icon
-        iconExpand.setAttribute('src', expandIcon);
-        var idDetailed = parseInt(this.id.match(/(\d+)$/)[0], 10);
-        $('#matrixPlot'+idDetailed).toggle("show").focus();
-    });
-
-    $('.expandLsv').on("click", function(e){
-        e.preventDefault();
-        var iconExpand = $(this).get(0);
-
-        iconExpand.setAttribute('data-is-expanded', (parseInt(iconExpand.dataset.isExpanded) + 1) % 2) ;
-        var expandIcon;
-        if (iconExpand.getAttribute('data-is-expanded') == false){
-            expandIcon = "static/img/arrow_down.png";
-        } else {
-            expandIcon = "static/img/arrow_up.png";
-        }
-
-        // change icon
-        iconExpand.setAttribute('src', expandIcon);
-        var lsv_selected = $(this).siblings('.lsvSingleExtendedBoxplot').get(0);
-
-        $(lsv_selected).toggle("show");
-        drawLSEBoxplots(lsv_selected);
-        var targetElement = $(this).siblings('.lsvSingleCompactPercentiles').get(0);
-        $(targetElement).toggle("show", function(){
-            $(this).get(0).focus();
-        });
-
-
-    });
-
-}
 
 
 function drawLine(contextO, startx, starty, endx, endy) {
@@ -521,54 +339,6 @@ function showResetZoomLink(canvas){
 function hideResetZoomLink(canvas){
     $(canvas).parent().children('.resetZoom').addClass('hidden');
 }
-
-function drawBoxplotHeatmap(canvas) {
-    if (canvas.getContext) {  // check for support
-        var ctx = canvas.getContext("2d");
-
-        // Clear canvas
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-        //create a gradient object from the canvas context
-        var gradient = createGradientSinglePlots(ctx, canvas);
-
-
-        // TODO: Refactor this code: replace canvas.attributes
-        var sizeBins = JSON.parse(canvas.attributes.bins.nodeValue).length;
-        var mean_x = parseInt(canvas.attributes.mean_psi.nodeValue * canvas.width);
-
-        // TODO: Recfactor this code
-        var quartiles = JSON.parse(canvas.attributes.quartiles.nodeValue);
-        var quartile_10 = parseInt(quartiles[0]/sizeBins * canvas.width);
-        var quartile_25 = parseInt(quartiles[1]/sizeBins * canvas.width);
-        var quartile_50 = parseInt(quartiles[2]/sizeBins * canvas.width);
-        var quartile_75 = parseInt(quartiles[3]/sizeBins * canvas.width);
-        var quartile_90 = parseInt(quartiles[4]/sizeBins * canvas.width);
-
-
-        var previous_style = ctx.fillStyle;
-        // Use the gradient to draw
-        ctx.fillStyle = gradient;
-        drawRectangle(ctx, quartile_25, 5, quartile_75 - quartile_25, canvas.height-10, 1); // Box
-        ctx.fillStyle = previous_style;
-
-//        drawRectangle(ctx, 0, 0, canvas.width, canvas.height, 0); // Canvas box
-        drawLine(ctx, quartile_50, 5, quartile_50, canvas.height - 5) ;     // Median
-        drawLine(ctx, quartile_10, canvas.height/2, quartile_25-1, canvas.height/2 );// Range left
-        drawLine(ctx, quartile_75+1, canvas.height/2, quartile_90, canvas.height/2 ); // Range right
-
-        ctx.strokeStyle = "#FF0000"; //Not working...
-        ctx.lineWidth = 2;
-        ctx.beginPath();
-//            ctx.dashedLine(mean_x, 0, mean_x, canvas.height , 1); // Mean
-        drawLine(ctx, mean_x, 0, mean_x, canvas.height); // Mean
-        ctx.stroke();
-        ctx.lineWidth = 1;
-        ctx.strokeStyle = "#000000";
-
-    }
-}
-
 // Get Color from Brewer Palette
 BREWER_PALETTE = [
     [228,26,28],
@@ -598,144 +368,6 @@ function getColor(colorNumber, palette, hue){
 //        return rgbToHex(palette[colorNumber][0], palette[colorNumber][1], palette[colorNumber][2]);
 }
 
-function drawLSVGroups(canvas){
-
-    function createGradientLSVGroups(coords, count) {
-        //create a gradient object from the canvas context
-        var gradient = ctx.createLinearGradient(coords.x1, coords.y1, coords.x2, coords.y2);
-
-        // Add the colors with fixed stops.
-        gradient.addColorStop(0,"white");
-//        gradient.addColorStop(0,getColor(count));  // This suppress the color gradient
-        gradient.addColorStop(1,getColor(count, BREWER_PALETTE, 1));
-
-        return gradient;
-    }
-
-    if (canvas.getContext) {  // check for support
-        var ctx = canvas.getContext("2d");
-
-        // Clear canvas
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
-//        var groups_str = '{"Brain1": {"quartiles": [0.0085869884077270017, 0.0185507490528867, 0.039331969099260386, 0.070499931202467433, 0.10776128732936643], "mean": 0.7040854774660984}, "Liver1": {"quartiles": [0.0167127755328524, 0.027718954397289025, 0.045679859838293688, 0.068044715851760751, 0.093933591236696534], "mean": 0.051347056627349189}, "CNS1": {"quartiles": [0.0050204656945765352, 0.0094307862661881618, 0.016861982876914608, 0.02711108795391242, 0.039047249315262544], "mean": 0.019890393118988429}, "Liver2": {"quartiles": [0.033018523374089559, 0.052006124437603635, 0.08022851891171659, 0.11349486090515559, 0.15063461121609234], "mean": 0.087625252655997701}, "Brain2": {"quartiles": [0.16696786454087925, 0.23725294831529714, 0.31983500541741855, 0.42557043358099123, 0.52059433186890247], "mean": 0.33619105810705663}}';
-        var groups_str = '{"Brain1": {"PSI1": {"quartiles": [0.58558305885339956, 0.64927950284874325, 0.7123383481909511, 0.76410640951310627, 0.81020384655356392], "mean": 0.7040854774660984}, "PSI2": {"quartiles": [0.1399576942378119, 0.18648402982087461, 0.23816476004292436, 0.29543137579707301, 0.36034427584126916], "mean": 0.2456880468921798}, "PSI3": {"quartiles": [0.0085869884077270017, 0.0185507490528867, 0.039331969099260386, 0.070499931202467433, 0.10776128732936643], "mean": 0.05022647564172205}}, "Liver1": {"PSI1": {"quartiles": [0.017312674221672222, 0.027306003129876962, 0.04387031495479439, 0.066852711784719368, 0.09095349084757412], "mean": 0.050121886445342538}, "PSI2": {"quartiles": [0.84268654065686244, 0.87360616269822611, 0.90371812976703758, 0.92839330731234337, 0.94836009037537949], "mean": 0.89853105692730806}, "PSI3": {"quartiles": [0.0167127755328524, 0.027718954397289025, 0.045679859838293688, 0.068044715851760751, 0.093933591236696534], "mean": 0.051347056627349189}}, "CNS1": {"PSI1": {"quartiles": [0.72634413748218041, 0.75492912648127097, 0.78489698300156308, 0.81318882833940087, 0.83444882266707976], "mean": 0.78196816665515079}, "PSI2": {"quartiles": [0.14808838181253248, 0.16819905374556013, 0.19378444116212087, 0.22541219253649442, 0.25354826411316617], "mean": 0.19814144022586128}, "PSI3": {"quartiles": [0.0050204656945765352, 0.0094307862661881618, 0.016861982876914608, 0.02711108795391242, 0.039047249315262544], "mean": 0.019890393118988429}}, "Liver2": {"PSI1": {"quartiles": [0.035286197919954999, 0.05253611937149797, 0.081574971529918078, 0.11692023224409571, 0.15648746333728336], "mean": 0.089254143288114138}, "PSI2": {"quartiles": [0.73424632923438948, 0.78441260247880984, 0.83017998625195932, 0.87020836193544171, 0.90181310236123868], "mean": 0.82312060405588838}, "PSI3": {"quartiles": [0.033018523374089559, 0.052006124437603635, 0.08022851891171659, 0.11349486090515559, 0.15063461121609234], "mean": 0.087625252655997701}}, "Brain2": {"PSI1": {"quartiles": [0.10474716073787305, 0.15545030362768197, 0.2268214264629328, 0.31877883386939282, 0.40346178787707565], "mean": 0.24247623462756193}, "PSI2": {"quartiles": [0.2307375733025599, 0.31663796698787738, 0.41937502332727283, 0.52272833287239551, 0.61401689633784939], "mean": 0.42133270726538152}, "PSI3": {"quartiles": [0.16696786454087925, 0.23725294831529714, 0.31983500541741855, 0.42557043358099123, 0.52059433186890247], "mean": 0.33619105810705663}}}'
-
-//        var groups = JSON.parse(canvas.getAttribute('data-groups'));  // Not used at this stage
-        var groups = JSON.parse(groups_str.replace(/"""/g, "'"));
-
-
-        // Calculate origins_coords
-        var header_height = canvas.height*.1;
-        var num_groups = Object.keys(groups).length;
-        for (var kk=0;kk<num_groups; kk++){
-            var num_psis = Object.keys(groups[kk]).length;
-            break;
-        }
-        var sub_canvas_w = canvas.width / num_groups;
-        var sub_canvas_h = canvas.height-header_height;
-        var sub_canvas_margins = [sub_canvas_w *.1, sub_canvas_w *.05, header_height+sub_canvas_h*.05, sub_canvas_h *.1];
-        var sub_canvas_pixels = [sub_canvas_w-sub_canvas_margins[0] -sub_canvas_margins[1], canvas.height-sub_canvas_margins[3]-sub_canvas_margins[2]];
-
-        // Draw sub-boxes separators and headers
-        drawLine(ctx, 0, header_height, canvas.width, header_height);
-        ctx.textAlign = "center";
-        ctx.font = "10pt Arial";
-
-        var i=0;
-        for (var key in groups){
-            drawLine(ctx, sub_canvas_w*i, 0, sub_canvas_w*i, canvas.height);
-            i++;
-            ctx.fillText(key,sub_canvas_w*(i-1/2), header_height/2+5);
-        }
-
-        var origins_coords = [];
-        for (var count_groups=0; count_groups<num_groups; count_groups++){
-            origins_coords[count_groups]=[sub_canvas_margins[0] + count_groups*sub_canvas_w, canvas.height-sub_canvas_margins[3]];
-        }
-
-        // Body of the plotting function
-        var ii=0;
-
-
-        for (var group_key in groups){
-            // X-axis
-            drawLine(ctx, origins_coords[ii][0]-5, origins_coords[ii][1], origins_coords[ii][0]+sub_canvas_w-(sub_canvas_margins[0] + sub_canvas_margins[1])+1, origins_coords[ii][1]);
-            // Y-axis
-            drawLine(ctx, origins_coords[ii][0], origins_coords[ii][1]+5, origins_coords[ii][0], sub_canvas_margins[2]);
-            var prev_style = ctx.fillStyle;
-            var prev_font = ctx.font;
-            ctx.fillStyle = "#000000";
-            ctx.font = "8pt Arial";
-            ctx.fillText("0", origins_coords[ii][0]-6, origins_coords[ii][1]+10);
-            ctx.fillText("1", origins_coords[ii][0]-6, origins_coords[ii][1]-sub_canvas_pixels[1]+5);
-//            ctx.fillStyle = prev_style;
-            ctx.font = prev_font;
-
-            // Separators
-            var offset = 0;
-            var count = 0;
-            for (var psi_name in groups[group_key]){
-                var coords_gradient = {
-                    'x1': origins_coords[ii][0]+offset, 'y1': origins_coords[ii][1],
-                    'x2': origins_coords[ii][0]+offset+sub_canvas_pixels[0]/num_psis, 'y2': origins_coords[ii][1]-sub_canvas_pixels[1]};
-                ctx.fillStyle = createGradientLSVGroups(coords_gradient, count);
-
-                count++;
-                var group = groups[group_key][psi_name];
-
-                // 25 and 75 percentile box
-                drawRectangle(ctx, origins_coords[ii][0]+offset,
-                    Math.round(origins_coords[ii][1]-group.quartiles[1]*sub_canvas_pixels[1]),
-                    sub_canvas_pixels[0]/num_psis,
-                    -Math.round((group.quartiles[3]-group.quartiles[1])*sub_canvas_pixels[1]), true
-                );
-                ctx.strokeRect(origins_coords[ii][0]+offset,
-                    Math.round(origins_coords[ii][1]-group.quartiles[1]*sub_canvas_pixels[1]),
-                    sub_canvas_pixels[0]/num_psis,
-                    -Math.round((group.quartiles[3]-group.quartiles[1])*sub_canvas_pixels[1]), true
-                );
-                // 10 and 75 tales
-                drawLine(ctx,
-                    Math.round(origins_coords[ii][0]+offset+sub_canvas_pixels[0]/num_psis/2),
-                    Math.round(origins_coords[ii][1]-group.quartiles[0]*sub_canvas_pixels[1]),
-                    Math.round(origins_coords[ii][0]+offset+sub_canvas_pixels[0]/num_psis/2),
-                    Math.round(origins_coords[ii][1]-group.quartiles[1]*sub_canvas_pixels[1])
-                );
-                drawLine(ctx,
-                    Math.round(origins_coords[ii][0]+offset+sub_canvas_pixels[0]/num_psis/2),
-                    Math.round(origins_coords[ii][1]-group.quartiles[3]*sub_canvas_pixels[1]),
-                    Math.round(origins_coords[ii][0]+offset+sub_canvas_pixels[0]/num_psis/2),
-                    Math.round(origins_coords[ii][1]-group.quartiles[4]*sub_canvas_pixels[1])
-                );
-
-                // Median (50 percentile)
-                drawLine(ctx, origins_coords[ii][0]+offset, Math.round(origins_coords[ii][1]-group.quartiles[2]*sub_canvas_pixels[1]),
-                    origins_coords[ii][0]+offset+sub_canvas_pixels[0]/num_psis,
-                    Math.round(origins_coords[ii][1]-group.quartiles[2]*sub_canvas_pixels[1]));
-
-                // Mean
-                ctx.lineWidth = 2;
-                ctx.strokeStyle = rgbToHex(197,27,138);
-                drawLine(ctx, origins_coords[ii][0]+offset, Math.round(origins_coords[ii][1]-group.mean*sub_canvas_pixels[1]), origins_coords[ii][0]+offset+sub_canvas_pixels[0]/num_psis, Math.round(origins_coords[ii][1]-group.mean*sub_canvas_pixels[1]));
-                ctx.strokeStyle = "#000000";
-                ctx.lineWidth = 1;
-
-                offset += sub_canvas_pixels[0]/num_psis;
-                if (count < num_psis){
-                    ctx.lineWidth = .5;
-                    drawDashedLine(ctx, origins_coords[ii][0]+offset, sub_canvas_margins[2]-sub_canvas_margins[2] *.1, origins_coords[ii][0]+offset, canvas.height-sub_canvas_margins[3] *.2, 1);
-                }
-                ctx.lineWidth = 1;
-                ctx.fillStyle = '#000000';
-                ctx.font = '8pt Arial';
-                ctx.fillText(psi_name, origins_coords[ii][0]+offset-sub_canvas_pixels[0]/num_psis/2, canvas.height-sub_canvas_margins[3] *.5);
-
-            }
-
-            ii++;
-        }
-    }
-}
 
 function drawLSVCompactStackBars(canvas, fillMode){
 
@@ -803,7 +435,7 @@ function drawLSVCompactStackBars(canvas, fillMode){
         } else if (fillMode === 4){
             // Fill from left to right
             // Using 1 - the 25 to 75 percentile to fill the area
-            area[0] = Math.round((1 - (group.quartiles[lsv_count][4] - group.quartiles[lsv_count][0])) * (x2 - x1));
+            area[0] = Math.round( (x2 - x1)); //(1 - (group.quartiles[lsv_count][4] - group.quartiles[lsv_count][0])) *
             area[1] = y2 - y1;
             ctx.strokeStyle = ctx.fillStyle;
             drawRectangle(ctx, x1, y1, area[0], area[1], true);
@@ -814,14 +446,11 @@ function drawLSVCompactStackBars(canvas, fillMode){
         var ctx = canvas.getContext("2d");
         // Clear canvas
         ctx.clearRect(0, 0, canvas.width, canvas.height);
-//        var groups_str = '{"Brain1": {"quartiles": [0.0085869884077270017, 0.0185507490528867, 0.039331969099260386, 0.070499931202467433, 0.10776128732936643], "mean": 0.7040854774660984}, "Liver1": {"quartiles": [0.0167127755328524, 0.027718954397289025, 0.045679859838293688, 0.068044715851760751, 0.093933591236696534], "mean": 0.051347056627349189}, "CNS1": {"quartiles": [0.0050204656945765352, 0.0094307862661881618, 0.016861982876914608, 0.02711108795391242, 0.039047249315262544], "mean": 0.019890393118988429}, "Liver2": {"quartiles": [0.033018523374089559, 0.052006124437603635, 0.08022851891171659, 0.11349486090515559, 0.15063461121609234], "mean": 0.087625252655997701}, "Brain2": {"quartiles": [0.16696786454087925, 0.23725294831529714, 0.31983500541741855, 0.42557043358099123, 0.52059433186890247], "mean": 0.33619105810705663}}';
-//        var groups_str = '{"Brain1": {"PSI1": {"quartiles": [0.58558305885339956, 0.64927950284874325, 0.7123383481909511, 0.76410640951310627, 0.81020384655356392], "mean": 0.7040854774660984}, "PSI2": {"quartiles": [0.1399576942378119, 0.18648402982087461, 0.23816476004292436, 0.29543137579707301, 0.36034427584126916], "mean": 0.2456880468921798}, "PSI3": {"quartiles": [0.0085869884077270017, 0.0185507490528867, 0.039331969099260386, 0.070499931202467433, 0.10776128732936643], "mean": 0.05022647564172205}}, "Liver1": {"PSI1": {"quartiles": [0.017312674221672222, 0.027306003129876962, 0.04387031495479439, 0.066852711784719368, 0.09095349084757412], "mean": 0.050121886445342538}, "PSI2": {"quartiles": [0.84268654065686244, 0.87360616269822611, 0.90371812976703758, 0.92839330731234337, 0.94836009037537949], "mean": 0.89853105692730806}, "PSI3": {"quartiles": [0.0167127755328524, 0.027718954397289025, 0.045679859838293688, 0.068044715851760751, 0.093933591236696534], "mean": 0.051347056627349189}}, "CNS1": {"PSI1": {"quartiles": [0.72634413748218041, 0.75492912648127097, 0.78489698300156308, 0.81318882833940087, 0.83444882266707976], "mean": 0.78196816665515079}, "PSI2": {"quartiles": [0.14808838181253248, 0.16819905374556013, 0.19378444116212087, 0.22541219253649442, 0.25354826411316617], "mean": 0.19814144022586128}, "PSI3": {"quartiles": [0.0050204656945765352, 0.0094307862661881618, 0.016861982876914608, 0.02711108795391242, 0.039047249315262544], "mean": 0.019890393118988429}}, "Liver2": {"PSI1": {"quartiles": [0.035286197919954999, 0.05253611937149797, 0.081574971529918078, 0.11692023224409571, 0.15648746333728336], "mean": 0.089254143288114138}, "PSI2": {"quartiles": [0.73424632923438948, 0.78441260247880984, 0.83017998625195932, 0.87020836193544171, 0.90181310236123868], "mean": 0.82312060405588838}, "PSI3": {"quartiles": [0.033018523374089559, 0.052006124437603635, 0.08022851891171659, 0.11349486090515559, 0.15063461121609234], "mean": 0.087625252655997701}}, "Brain2": {"PSI1": {"quartiles": [0.10474716073787305, 0.15545030362768197, 0.2268214264629328, 0.31877883386939282, 0.40346178787707565], "mean": 0.24247623462756193}, "PSI2": {"quartiles": [0.2307375733025599, 0.31663796698787738, 0.41937502332727283, 0.52272833287239551, 0.61401689633784939], "mean": 0.42133270726538152}, "PSI3": {"quartiles": [0.16696786454087925, 0.23725294831529714, 0.31983500541741855, 0.42557043358099123, 0.52059433186890247], "mean": 0.33619105810705663}}}'
 
         var groups_str = canvas.getAttribute("data-lsv");
 //        var groups_str = '{"Brain1": {"PSI1": {"var": 0.0074555154779834577, "quartiles": [0.58558305885339956, 0.64927950284874325, 0.7123383481909511, 0.76410640951310627, 0.81020384655356392], "mean": 0.7040854774660984}, "PSI2": {"var": 0.0068315643838000482, "quartiles": [0.1399576942378119, 0.18648402982087461, 0.23816476004292436, 0.29543137579707301, 0.36034427584126916], "mean": 0.2456880468921798}, "PSI3": {"var": 0.0016758508559471695, "quartiles": [0.0085869884077270017, 0.0185507490528867, 0.039331969099260386, 0.070499931202467433, 0.10776128732936643], "mean": 0.05022647564172205}}, "Liver1": {"PSI1": {"var": 0.0008928339892878025, "quartiles": [0.017312674221672222, 0.027306003129876962, 0.04387031495479439, 0.066852711784719368, 0.09095349084757412], "mean": 0.050121886445342538}, "PSI2": {"var": 0.0017652980221384569, "quartiles": [0.84268654065686244, 0.87360616269822611, 0.90371812976703758, 0.92839330731234337, 0.94836009037537949], "mean": 0.89853105692730806}, "PSI3": {"var": 0.00099690656783313412, "quartiles": [0.0167127755328524, 0.027718954397289025, 0.045679859838293688, 0.068044715851760751, 0.093933591236696534], "mean": 0.051347056627349189}}, "CNS1": {"PSI1": {"var": 0.001790118326605698, "quartiles": [0.72634413748218041, 0.75492912648127097, 0.78489698300156308, 0.81318882833940087, 0.83444882266707976], "mean": 0.78196816665515079}, "PSI2": {"var": 0.0017024220254318967, "quartiles": [0.14808838181253248, 0.16819905374556013, 0.19378444116212087, 0.22541219253649442, 0.25354826411316617], "mean": 0.19814144022586128}, "PSI3": {"var": 0.00019317205946046349, "quartiles": [0.0050204656945765352, 0.0094307862661881618, 0.016861982876914608, 0.02711108795391242, 0.039047249315262544], "mean": 0.019890393118988429}}, "Liver2": {"PSI1": {"var": 0.0023980329456464657, "quartiles": [0.035286197919954999, 0.05253611937149797, 0.081574971529918078, 0.11692023224409571, 0.15648746333728336], "mean": 0.089254143288114138}, "PSI2": {"var": 0.0043719250933379064, "quartiles": [0.73424632923438948, 0.78441260247880984, 0.83017998625195932, 0.87020836193544171, 0.90181310236123868], "mean": 0.82312060405588838}, "PSI3": {"var": 0.0023261733084575485, "quartiles": [0.033018523374089559, 0.052006124437603635, 0.08022851891171659, 0.11349486090515559, 0.15063461121609234], "mean": 0.087625252655997701}}, "Brain2": {"PSI1": {"var": 0.013894101212886185, "quartiles": [0.10474716073787305, 0.15545030362768197, 0.2268214264629328, 0.31877883386939282, 0.40346178787707565], "mean": 0.24247623462756193}, "PSI2": {"var": 0.020538079779782795, "quartiles": [0.2307375733025599, 0.31663796698787738, 0.41937502332727283, 0.52272833287239551, 0.61401689633784939], "mean": 0.42133270726538152}, "PSI3": {"var": 0.018431257833960251, "quartiles": [0.16696786454087925, 0.23725294831529714, 0.31983500541741855, 0.42557043358099123, 0.52059433186890247], "mean": 0.33619105810705663}}}'
 
         var groups = JSON.parse(groups_str.replace(/\\\"/g, "\'").replace(/\"/g,"").replace(/'/g, "\""));
-//        "[{"bins": [[0.08094728896690942, 0.05535597311102183, 0.04829619922500768, 0.04446645580902593, 0.041721634801770185, 0.039453108348147456, 0.037437526254519314, 0.03558157768952228, 0.03384394113230546, 0.03220600926408134, 0.030658918210746445, 0.029197284429548734, 0.027816385809332732, 0.02651128461279872, 0.02527693196889278, 0.024108598311683816, 0.023002249012738767, 0.021954715867445938, 0.020963668171994174, 0.02002745738858422, 0.019144917971123068, 0.018315183228509967, 0.017537544028374458, 0.01681135483161965, 0.016135981597485458, 0.015510788363935867, 0.014935169318826096, 0.014408646215852305, 0.01393106451248005, 0.013502937175451535, 0.01312601059571582, 0.01280418133602641, 0.012545018321427463, 0.012362448642123864, 0.012281944003008824, 0.012351762318631469, 0.012671178471174774, 0.013477627771113658, 0.015525474200760477, 0.023793558710303378], [0.023793558710303135, 0.015525474200760453, 0.013477627771113655, 0.012671178471174774, 0.012351762318631474, 0.012281944003008822, 0.012362448642123864, 0.012545018321427464, 0.012804181336026415, 0.01312601059571582, 0.013502937175451535, 0.01393106451248005, 0.014408646215852305, 0.014935169318826096, 0.015510788363935865, 0.016135981597485458, 0.01681135483161965, 0.017537544028374458, 0.018315183228509974, 0.01914491797112307, 0.02002745738858422, 0.020963668171994174, 0.021954715867445976, 0.023002249012738767, 0.024108598311683816, 0.025276931968892743, 0.026511284612798725, 0.027816385809332732, 0.02919728442954874, 0.030658918210746452, 0.03220600926408134, 0.0338439411323057, 0.035581577689522303, 0.0374375262545194, 0.03945310834814751, 0.04172163480177015, 0.044466455809025945, 0.04829619922500767, 0.055355973111021854, 0.08094728896690963]], "conf_interval": [[0, 38], [1, 39]], "coords": "chr8:1000058-10000.12117003358", "id": "chr8:1000058-1000358", "matrix_link": "#", "means": [0.36253612941783353, 0.6374638705821889], "name": "PS1", "quartiles": [[1, 4, 11, 22, 33], [6, 17, 28, 35, 38]], "type": "Exon skipping"}]"
 
         // Calculate origins_coords
         var header_height = 0; // canvas.height*.1;
@@ -834,7 +463,6 @@ function drawLSVCompactStackBars(canvas, fillMode){
         var sub_canvas_pixels = [sub_canvas_w-sub_canvas_margins[0] -sub_canvas_margins[1], canvas.height-sub_canvas_margins[3]-sub_canvas_margins[2]];
 
         // Draw sub-boxes separators and headers
-//        drawLine(ctx, 0, sub_canvas_h-sub_canvas_margins[3], canvas.width, sub_canvas_h-sub_canvas_margins[3]);
         ctx.textAlign = "center";
         ctx.font = "8pt Arial";
 
@@ -884,14 +512,10 @@ function drawLSVCompactStackBars(canvas, fillMode){
                 );
             }
         }
-
-
-
     }
 }
 
 function drawDeltaLSVCompactSVG(htmlElementId, lsv) {
-    /* TODO: Create SVG component; Draw canvas rectangle; Draw for each of the excl-incl pairs, the bars.*/
     var width = 200,
         height = 20;
     var margin = {top: 1, bottom: 8, left: 2, right: 2};
@@ -961,21 +585,6 @@ function drawDeltaLSVCompactSVG(htmlElementId, lsv) {
         .attr("font-size", "8px")
         .attr("fill", "black")
         .text("0");
-//    svgContainer.append("text")
-//        .attr("x", 0)
-//        .attr("y", height)
-//        .attr("text-anchor", "start")
-//        .attr("font-size", "10px")
-//        .attr("fill", "black")
-//        .text("-1");
-//    svgContainer.append("text")
-//        .attr("x", width)
-//        .attr("y", height)
-//        .attr("text-anchor", "end")
-//        .attr("font-size", "10px")
-//        .attr("fill", "black")
-//        .text("+1");
-
 
     // Draw excl-incl bars
     var last_excl_pos = width / 2,
@@ -993,16 +602,6 @@ function drawDeltaLSVCompactSVG(htmlElementId, lsv) {
             .attr("width", Math.round((width / 2 - margin.right) * lsv.excl_incl[ii][1]))
             .attr("height", height - margin.bottom - margin.top)
             .style('fill', getColor(ii, BREWER_PALETTE, 1));
-
-        //TODO: delete console.log anywhere!
-//        if (last_excl_pos != width / 2 && (Math.round(width / 2 - margin.left) * lsv.excl_incl[ii][0]) >= 1) {
-//            console.log("This guys has more than 2 ways with exclusion >= 1: " + htmlElementId);
-//            console.log(last_excl_pos + ", " + (width / 2 - margin.left) * lsv.excl_incl[ii][0])
-//        }
-//        if (last_incl_pos != width / 2 && Math.round((width / 2 - margin.right) * lsv.excl_incl[ii][1]) >= 1) {
-//            console.log("This guys has more than 2 ways with inclusion >= 1: " + htmlElementId);
-//            console.log(last_incl_pos + ", " + (width / 2 - margin.right) * lsv.excl_incl[ii][1])
-//        }
 
         // Draw percentages text
         if (Math.round((width / 2 - margin.left) * lsv.excl_incl[ii][0]) >= 1){
@@ -1027,7 +626,6 @@ function drawDeltaLSVCompactSVG(htmlElementId, lsv) {
                 .attr("fill", getColor(ii, BREWER_PALETTE, 1))
                 .text(Math.round((width / 2 - margin.right) * lsv.excl_incl[ii][1]));
         }
-
     }
 
     // Draw separator
@@ -1039,19 +637,6 @@ function drawDeltaLSVCompactSVG(htmlElementId, lsv) {
         .attr("stroke-width", 2)
         .attr("stroke-opacity", .8)
         .attr("stroke", "black");
-
-
-    // Draw canvas frame
-//    svgContainer.append("rect")
-//        .attr("x", margin.left)
-//        .attr("y", margin.top)
-//        .attr("width", width - margin.right - margin.left)
-//        .attr("height", height - margin.bottom - margin.top)
-//        .style('stroke', 'black')
-//        .style('stroke-width', border_frame)
-//        .attr("stroke-opacity", .5)
-//        .style('fill', 'none');
-
 
     return svgContainer;
 

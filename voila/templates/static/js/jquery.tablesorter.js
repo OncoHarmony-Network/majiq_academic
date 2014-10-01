@@ -1025,37 +1025,6 @@
     ts.addWidget({
         id: "renderCanvas",
         format: function (table) {
-//            addExpandedViewFunction();
-
-            /**
-             * Single LSV visualization
-             */
-
-            $('.psiPlot', table).each( function(){
-                drawBoxplotHeatmap($(this)[0]);
-
-                // For each compact view of the psiPlot, we want to add to the associated detailed view link
-                var closestTd =$(this).closest("td");
-                var largeCanvas = closestTd.children(".largePsiPlot")[0];
-                closestTd.children(".detailedPsiLink").on('click',
-                    {canvas: largeCanvas}, function(event) {
-                        if (this.getAttribute('isExpanded') == true){
-                            largeCanvas.setAttribute('bins', $(this).closest("td").children(".psiPlot")[0].getAttribute('bins'));
-                            drawInitialBarplotCanvas(event.data.canvas);
-                        }
-                    }
-                );
-            });
-
-            $('.largePsiPlot', table).on('mousewheel', function(event) {
-                event.preventDefault();
-                if (event.deltaY > 0){
-                    drawBarchartWithCanvasId($(this)[0].id, 1);
-                } else if(event.deltaY < 0){
-                    drawBarchartWithCanvasId($(this)[0].id, -1);
-                }
-            });
-
 
             $('.floatingLegend').each(function () {
                 if ($(this)[0].getContext) {
@@ -1063,9 +1032,6 @@
                 }
             });
 
-
-//            var gene_objs = [],
-//                gene_obj_list = [];
             $(table.parentElement).children('.spliceDiv').each( function(){
                 /**
                  * D3 - SpliceGraph
@@ -1106,14 +1072,12 @@
                     }
                     if (d3.select(this).classed('scaled')) {
                         d3.select(this.parentNode)
-//                            .datum([orig_objs.exons, orig_objs.junc])
                             .datum([gene_objs[index_gene].orig.exons, gene_objs[index_gene].orig.junc])
                             .call(chart);
                         d3.select(this).classed('scaled', false);
                     } else {
                         d3.select(this.parentNode)
                             .datum(gene_objs[index_gene].mapped)
-//                            .datum([exons_mapped, junctions_obj])
                             .call(chart);
                         d3.select(this).classed('scaled', true);
                     }
@@ -1148,14 +1112,9 @@
                             .datum(gene_objs[index_gene].mapped)
                             .call(chart);
                         $(this.parentNode.parentNode).children('.toogleScale').addClass('scaled');
-//                        d3.select(this.parentNode.parentNode.childNodes.toogleScale).classed('scaled', true);
-
 
                     });
                 }
-
-//                gene_obj_list.push(splicegraph().renderSpliceGraph(this));
-//                splicegraph().renderSpliceGraphZoomedPopUp(this);
 
             });
 
@@ -1163,6 +1122,10 @@
                 splicegraph().renderLsvSpliceGraph(this, gene_obj_list[this.id]); //
             });
 
+
+            /**
+             * Single LSV visualization
+             */
 
             $('.lsvSingleCompactPercentiles', table).each(function(){
                 drawLSVCompactStackBars($(this)[0], 1);
@@ -1179,7 +1142,6 @@
 
                     var lsv_data = JSON.parse($(this)[0].getAttribute("data-lsv").replace(/\\\"/g, "\'").replace(/\"/g,"").replace(/'/g, "\""));  // NOTE: lsv_data is an array to support groups
                     var sampled_bins = translate_lsv_bins(lsv_data[0].bins, 10000);
-//                    var sampled_bins = translate_delta_lsv_bins(lsv_data[0].bins, 1000);
 
                     var svg = renderViolin($(this).parent()[0].id, sampled_bins, table.id, {'delta': 0});
                     $(svg).on("click", function(e){
@@ -1194,6 +1156,10 @@
 
             });
 
+
+            /**
+             * Delta PSI LSV visualization
+             */
 
             $('.lsvDeltaCompact', table).each(function(){
                 var lsv = JSON.parse($(this)[0].getAttribute("data-lsv").replace(/\\\"/g, "\'").replace(/\"/g,"").replace(/'/g, "\""));
