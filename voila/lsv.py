@@ -1,7 +1,6 @@
 from collections import defaultdict
 import json
 import numpy
-from splice_graphics.geneGraphic import GeneGraphic
 
 
 class Lsv(object):
@@ -26,11 +25,17 @@ class Lsv(object):
         # For LSV filtering
         self.set_categories()
 
+    def set_id(self, id):
+        self.id = id
+
     def get_id(self):
         return self.id
 
     def get_name(self):
         return self.name
+
+    def set_type(self, t):
+        self.type = t
 
     def get_type(self):
         return self.type
@@ -85,7 +90,7 @@ class Lsv(object):
         elif lsv_type.startswith('t'):
             self.extension = [geneG.get_exons()[0].get_coords()[0], self.coords[1]]
         else:
-            print "ERRORR! LSV type not recognized: %s" % lsv_type
+            print "[ERROR] :: LSV type not recognized: %s" % lsv_type
 
 
     def set_categories(self):
@@ -93,23 +98,24 @@ class Lsv(object):
         j = self.type.split('|')
         ssites = set(int(s[0]) for s in j[1:])
         exons = defaultdict(list)
+
         for s in j[1:]:
             exs = s[1:].split('.')
             try:
-                exons[exs[0]].append(int(exs[1]))
+                ssite = int(exs[1])
+                exons[exs[0]].append(ssite)
             except IndexError:
                 pass
         self.categories['ES'] = len(exons.keys()) > 1
         self.categories['prime5'] = len(ssites) > 1
         self.categories['prime3'] = max([len(exons[e]) for e in exons]) > 1
-        self.categories['njuncs'] = len(j[1:])
+        self.categories['njuncs'] = numpy.sum(['e0' not in junc for junc in j[1:]])
         self.categories['nexons'] = len(exons.keys()) + 1
         self.categories['source'] = j[0] == 's'
         self.categories['target'] = j[0] == 't'
 
         if j[0] == 't':
             self.categories['prime5'], self.categories['prime3'] = self.categories['prime3'], self.categories['prime5']
-
 
     def get_categories(self):
         return self.categories
