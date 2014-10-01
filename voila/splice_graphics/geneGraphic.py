@@ -19,7 +19,6 @@ class GeneGraphic(object):
                                       and (self.start > other.end
                                            or (self.end > other.start and self.start < other.end
                                                and self.strand == '-' and other.strand == '+'))))
-    #
     # __eq__ = lambda self, other: (self.strand == other.strand
     #                               and self.exons[0].coords[0] < other.exons[-1].coords[1] and self.exons[-1].coords[1] > other.exons[0].coords[0])
     # __ne__ = lambda self, other: (self.strand != other.strand
@@ -56,9 +55,9 @@ class GeneGraphic(object):
         return self.chrom
 
     def get_coords(self):
-        return [self.start, self.end]
+        # return [self.start, self.end]
         # if self.strand == '+':
-        # return [self.exons[0].coords[0], self.exons[-1].coords[1]]
+        return [self.exons[0].coords[0], self.exons[-1].coords[1]]
         # if self.strand == '-':
         #     return [self.exons[-1].coords[1], self.exons[0].coords[0]]
 
