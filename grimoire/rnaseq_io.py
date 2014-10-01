@@ -38,7 +38,7 @@ def load_bin_file(filename, logger=None):
 
 def dump_bin_file(data, filename):
     with open(filename, 'w+b') as ofp:
-        pickle.dump(data, ofp)
+        pickle.dump(data, ofp, protocol=2)
 
 
 

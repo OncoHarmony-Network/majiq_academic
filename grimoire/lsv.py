@@ -319,28 +319,25 @@ class MajiqLsv(object):
                 self.gc_factor[idx, jidx] = dummy
 
     def set_gc_factor(self, exp_idx):
-        for idx in xrange(self.gc_factor.shape[0]):
-            for jidx in xrange(self.gc_factor.shape[1]):
-                dummy = self.gc_factor[idx, jidx]
-                if dummy == 0:
-                    gc_f = 0
-                else:
-                    gc_f = mglobals.gc_factor[exp_idx](dummy)
+        nnz = self.gc_factor.nonzero()
+        for idx in xrange(nnz[0].shape[0]):
+            i = nnz[0][idx]
+            j = nnz[1][idx]
+            dummy = self.gc_factor[i, j]
+            self.gc_factor[i, j] = mglobals.gc_factor[exp_idx](dummy)
 
-                self.gc_factor[idx, jidx] = gc_f
-
-    def get_visual_lsv(self, LSV, exp_idx):
+    def get_visual_lsv(self, lsv, exp_idx):
           
         junc_list = []
         junc_l = []
-        lsv_exon_list = [LSV.exon]
+        lsv_exon_list = [lsv.exon]
 
-        for jj in LSV.junctions:
+        for jj in lsv.junctions:
             jdonor = jj.get_donor()
             jacceptor = jj.get_acceptor()
-            if jacceptor != LSV.exon:
+            if jacceptor != lsv.exon:
                 lsv_exon_list.append(jacceptor)
-            if jdonor != LSV.exon:
+            if jdonor != lsv.exon:
                 lsv_exon_list.append(jdonor)
 
             if jj.get_coordinates()[0] is None or jdonor is None or jacceptor is None:
@@ -389,7 +386,7 @@ class MajiqLsv(object):
                     extra_coords.append([ex.db_coord[1]+1, ex.end])
             eg = ExonGraphic(a3, a5, cc, ex_type, intron_retention=ex.ir, coords_extra=extra_coords)
             exon_list.append(eg)
-        splice_lsv = GeneGraphic(LSV.id, LSV.get_strand(), exon_list, junc_list, LSV.get_chromosome())
+        splice_lsv = GeneGraphic(lsv.id, lsv.get_strand(), exon_list, junc_list, lsv.get_chromosome())
 
         return splice_lsv
 
