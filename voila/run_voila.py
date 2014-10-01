@@ -4,14 +4,13 @@ import json
 import os
 import textwrap
 import collections as cc
-import run_voila.module_locator
-from run_voila.utils import utils_voila
-
-
+import voila.module_locator as module_locator
+import voila.utils.utils_voila as utils_voila
 try:
     import cPickle as pkl
 except ImportError:
     import pickle as pkl
+from pdb import set_trace
 
 EXEC_DIR = module_locator.module_path() + "/"
 VERSION = '0.1.0'
@@ -47,7 +46,7 @@ def render_summary(output_dir, output_html, majiq_output, type_summary, threshol
     def to_json(value):
         return escape(json.dumps(value, cls=utils_voila.PickleEncoder))
 
-    env = Environment(extensions=["jinja2.ext.do"], loader=FileSystemLoader(EXEC_DIR + "templates/"))
+    env = Environment(extensions=["jinja2.ext.do"], loader=FileSystemLoader(os.path.join(EXEC_DIR, "templates/")))
     env.filters.update({'to_json': to_json, 'debug': debug})
     sum_template = env.get_template(type_summary + "_summary_template.html")
 
@@ -146,9 +145,9 @@ def render_summary(output_dir, output_html, majiq_output, type_summary, threshol
     else:
         logger.error("summary type not recognized %s." % type_summary, exc_info=1)
 
-    # Copy static files to the output directory
     logger.info("Copying static files from Voila sources to %sstatic/ ..." % output_dir)
     utils_voila.copyanything(EXEC_DIR+"templates/static", output_dir+"static")
+
     logger.info("HTML5 Summary successfully created in %s." % output_dir)
 
 
@@ -215,17 +214,17 @@ def render_tab_output(output_dir, output_html, majiq_output, type_summary, thres
                 lline.append(repr(llsv[0].get_categories()[tlb_categx['ES']]))
                 lline.append(repr(llsv[0].get_categories()[tlb_categx['Num. Junctions']]))
                 lline.append(repr(llsv[0].get_categories()[tlb_categx['Num. Exons']]))
+
+                lline.append(llsv[1][4].get_chrom())
+                lline.append(llsv[1][4].get_strand())
+
+                lline.append('; '.join(['-'.join(str(c) for c in junc.get_coords()) for junc in llsv[1][4].get_junctions()]))
+                lline.append('; '.join(['-'.join(str(c) for c in exon.get_coords()) for exon in llsv[1][4].get_exons()]))
+
                 try:
-                    lline.append(llsv[1][4].get_chrom())
-                    lline.append(llsv[1][4].get_strand())
-
-                    lline.append('; '.join(['-'.join(str(c) for c in junc.get_coords()) for junc in llsv[1][4].get_junctions()]))
-                    lline.append('; '.join(['-'.join(str(c) for c in exon.get_coords()) for exon in llsv[1][4].get_exons()]))
-
                     lline.append('; '.join([' '.join([str(c) for c in exon.get_alt_starts()]) for exon in llsv[1][4].get_exons()]))
                     lline.append('; '.join([' '.join([str(c) for c in exon.get_alt_ends()]) for exon in llsv[1][4].get_exons()]))
-
-                except Exception:
+                except TypeError:
                     pass
 
                 ofile.write(delimiter.join(lline))
@@ -249,7 +248,7 @@ def create_summary(args):
         args.logger = output_dir
     utils_voila.create_if_not_exists(args.logger)
 
-    logger = utils_voila.get_logger("%smajiq.log" % args.logger, silent=args.silent)
+    logger = utils_voila.get_logger("%svoila.log" % args.logger, silent=args.silent)
     logger.info("Processing %s summary." % type_summary)
     logger.info("Execution line: %s" % repr(args))
 
