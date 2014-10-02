@@ -16,6 +16,8 @@ from voila.splice_graphics.exonGraphic import ExonGraphic
 from voila.splice_graphics.geneGraphic import GeneGraphic 
 from voila.splice_graphics.junctionGraphic import JunctionGraphic 
 import random
+from contextlib import contextmanager as ctx
+
 
 def create_if_not_exists(my_dir, logger=False):
     """Create a directory path if it does not exist"""
@@ -106,17 +108,17 @@ def merge_and_create_majiq_file(chr_list, pref_file):
 
         for name, ind_list in mglobals.tissue_repl.items():
             for idx, exp_idx in enumerate(ind_list):
-                all_visual[exp_idx].extend(visual_gene_list[mglobals.exp_list[exp_idx]])
+                all_visual[exp_idx].append(visual_gene_list[mglobals.exp_list[exp_idx]])
                 as_table[exp_idx].append(temp_table[exp_idx][0])
                 nonas_table[exp_idx].append(temp_table[exp_idx][1])
 
     for name, ind_list in mglobals.tissue_repl.items():
         for idx, exp_idx in enumerate(ind_list):
-
             if len(as_table[exp_idx]) == 0:
                 continue
+            all_lsv = np.concatenate(all_visual[exp_idx])
             fname = '%s/%s%s.splicegraph' % (mglobals.outDir, pref_file, mglobals.exp_list[exp_idx])
-            majiq_io.dump_bin_file(all_visual[exp_idx], fname)
+            majiq_io.dump_bin_file(all_lsv, fname)
 
             info = dict()
             info['experiment'] = mglobals.exp_list[exp_idx]
@@ -135,7 +137,7 @@ def merge_and_create_majiq_file(chr_list, pref_file):
                 jnc.set_gc_factor(exp_idx)
 
             fname = '%s/%s%s.majiq' % (mglobals.outDir, pref_file, mglobals.exp_list[exp_idx])
-            majiq_io.dump_bin_file((info, at, nat), fname)
+            majiq_io.dump_bin_file((info, at, clist), fname)
 
 
 def generate_visualization_output(allgenes, temp_dir):
@@ -194,11 +196,19 @@ def generate_visualization_output(allgenes, temp_dir):
                                 if ss5 == jjl[0]:
                                     a5.append(jidx)
 
-                        if ex.annotated and ex.coverage[exp_idx].sum() == 0.0:
+                        ex_reads = ex.coverage[exp_idx].sum()
+                        junc3 = ex.get_junctions('3prime')
+                        for j3 in junc3:
+                            ex_reads += j3.get_read_num(exp_idx)
+
+                        for j5 in junc5:
+                            ex_reads += j5.get_read_num(exp_idx)
+
+                        if ex.annotated and ex_reads == 0.0:
                             visual_type = 2
-                        elif ex.annotated and ex.coverage[exp_idx].sum() > 0.0:
+                        elif ex.annotated and ex_reads > 0.0:
                             visual_type = 0
-                        elif not ex.annotated and ex.coverage[exp_idx].sum() > 0.0:
+                        elif not ex.annotated and ex_reads > 0.0:
                             visual_type = 1
                         else:
                             visual_type = 1
@@ -358,7 +368,7 @@ def gc_factor_calculation(chr_list, nb):
                     local_bins[exp_n, ii] = t.min()
                 except ValueError:
                     local_bins[exp_n, ii] = 0
-                if ii == nb -1:
+                if ii == nb - 1:
                     local_bins[exp_n, ii+1] = np.max(t)
 
                 #mean_bins[ii] = np.median(t)
@@ -424,28 +434,28 @@ def clear_gene_tlb():
     mglobals.gene_tlb.clear()
 
 
-def to_gtf(wfile, seq_name, source, gene, mRNA, start_trans, end_trans, strand, exon_l, frame_l):
-    SSCORE = "0"
+def to_gtf(wfile, seq_name, source, gene, mrna, start_trans, end_trans, strand, exon_l, frame_l):
+    sscore = "0"
     # Iterate over each exon
-    exonOrCDS_list = []
+    exonorcds_list = []
     for i, exon in enumerate(exon_l):
-        exonOrCDS_list.append("\t".join([seq_name, source, "%s", exon[0], exon[1], SSCORE, strand,
-                                         str(frame_l[i]), "gene_id \"%s\"; transcript_id \"%s\";\n" % (gene, mRNA)]))
+        exonorcds_list.append("\t".join([seq_name, source, "%s", exon[0], exon[1], sscore, strand,
+                                         str(frame_l[i]), "gene_id \"%s\"; transcript_id \"%s\";\n" % (gene, mrna)]))
 
     if strand == '+':
-        first_codon = "\t".join([seq_name, source, "start_codon", start_trans, str(int(start_trans) + 2), SSCORE,
-                                 strand, ".", "gene_id \"%s\"; transcript_id \"%s\";\n" % (gene, mRNA)])
+        first_codon = "\t".join([seq_name, source, "start_codon", start_trans, str(int(start_trans) + 2), sscore,
+                                 strand, ".", "gene_id \"%s\"; transcript_id \"%s\";\n" % (gene, mrna)])
         last_codon = "\t".join([seq_name, source, "stop_codon", str(int(end_trans) + 1), str(int(end_trans) + 3),
-                                SSCORE, strand, ".", "gene_id \"%s\"; transcript_id \"%s\";\n" % (gene, mRNA)])
+                                sscore, strand, ".", "gene_id \"%s\"; transcript_id \"%s\";\n" % (gene, mrna)])
 
     else:
-        last_codon = "\t".join([seq_name, source, "start_codon", str(int(end_trans) - 2), end_trans, SSCORE,
-                                strand, ".", "gene_id \"%s\"; transcript_id \"%s\";\n" % (gene, mRNA)])
+        last_codon = "\t".join([seq_name, source, "start_codon", str(int(end_trans) - 2), end_trans, sscore,
+                                strand, ".", "gene_id \"%s\"; transcript_id \"%s\";\n" % (gene, mrna)])
         first_codon = "\t".join([seq_name, source, "stop_codon", str(int(start_trans) - 3), str(int(start_trans) - 1),
-                                 SSCORE, strand, ".", "gene_id \"%s\"; transcript_id \"%s\";\n" % (gene, mRNA)])
+                                 sscore, strand, ".", "gene_id \"%s\"; transcript_id \"%s\";\n" % (gene, mrna)])
 
     wfile.write(first_codon)
-    for eCDS in exonOrCDS_list:
+    for eCDS in exonorcds_list:
         wfile.write(eCDS % "CDS")
         wfile.write(eCDS % "exon")
     wfile.write(last_codon)
@@ -454,19 +464,19 @@ def to_gtf(wfile, seq_name, source, gene, mRNA, start_trans, end_trans, strand, 
 def gff2gtf(gff_f, out_f=None):
     """Parse a GFF file created by MAJIQ and create a GTF"""
 
-    mRNA = None
+    mrna = None
     with file_or_stdout(out_f) as wfile:
         with open(gff_f) as gff:
             for gff_l in gff:
                 gff_fields = gff_l.strip().split()
                 if gff_fields[2] == 'mRNA':
-                    if mRNA:
-                        to_gtf(wfile, seq_name, source, gene, mRNA, start_trans, end_trans, strand, exon_l, frame_l)
+                    if mrna:
+                        to_gtf(wfile, seq_name, source, gene, mrna, start_trans, end_trans, strand, exon_l, frame_l)
                     exon_l = []
                     frame_l = []
                     ids = gff_fields[8].split(';Parent=')
                     gene = ids[1].split(';')[0]
-                    mRNA = ids[0][5:]
+                    mrna = ids[0][5:]
                     seq_name = gff_fields[0]
                     source = gff_fields[1]
                     start_trans = gff_fields[3]
@@ -478,9 +488,11 @@ def gff2gtf(gff_f, out_f=None):
                     exon_l.append([gff_fields[3], gff_fields[4]])
                     frame_l.append((3 - (len_frame % 3)) % 3)
                     len_frame = int(gff_fields[4]) - int(gff_fields[3])
-        to_gtf(wfile, seq_name, source, gene, mRNA, start_trans, end_trans, strand, exon_l, frame_l)
+        to_gtf(wfile, seq_name, source, gene, mrna, start_trans, end_trans, strand, exon_l, frame_l)
 
-from contextlib import contextmanager as ctx
+
+
+
 @ctx
 def file_or_stdout(file_name):
     if file_name is None:

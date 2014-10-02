@@ -208,7 +208,7 @@ class DeltaPair(BasicPipeline):
             filtered_lsv1 = [None] * num_exp[0]
             fitfunc = [[None] * num_exp[0], [None] * num_exp[1]]
             for ii, fname in enumerate(self.files1):
-                meta_info[0][ii], lsv_junc, const = majiq_io.load_data_lsv(fname, self.logger)
+                meta_info[0][ii], lsv_junc, const = majiq_io.load_data_lsv(fname, self.names, self.logger)
 
                 #fitting the function
                 fitfunc[0][ii] = self.fitfunc(const[0])

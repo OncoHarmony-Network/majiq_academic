@@ -3,7 +3,7 @@ import numpy as np
 import random
 
 
-def load_data_lsv(path, logger=None):
+def load_data_lsv(path, group_name, logger=None):
     """Load data from the preprocess step. Could change to a DDBB someday"""
     data = pickle.load(open(path))
     lsv_cov_list = []
@@ -12,6 +12,8 @@ def load_data_lsv(path, logger=None):
     const_info = []
     num_pos = data[1][0].junction_list.shape[1]
 
+    meta_info = data[0]
+    meta_info['group'] = group_name
     for lsv in data[1]:
         try:
             lsv_info.append([lsv.coords, lsv.id, lsv.type, 0, lsv.visual])
@@ -31,4 +33,4 @@ def load_data_lsv(path, logger=None):
         const_list[cidx, :] = const.coverage.toarray()
         const_gc[cidx, :] = const.gc_factor.toarray()
 
-    return data[0], (lsv_cov_list, lsv_info, lsv_gc), (const_list, const_info, const_gc)
+    return meta_info, (lsv_cov_list, lsv_info, lsv_gc), (const_list, const_info, const_gc)
