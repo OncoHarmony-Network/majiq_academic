@@ -201,6 +201,7 @@ def generate_visualization_output(allgenes, temp_dir):
                         for j3 in junc3:
                             ex_reads += j3.get_read_num(exp_idx)
 
+                        junc5 = ex.get_junctions('5prime')
                         for j5 in junc5:
                             ex_reads += j5.get_read_num(exp_idx)
 
