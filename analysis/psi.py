@@ -278,7 +278,7 @@ def calc_dirichlet(alpha, n, samples_events, debug=False, psiparam=False):
     return psi_matrix
 
 
-def gen_prior_matrix( pip, lsv_exp1, lsv_exp2, output , numbins=20 ):
+def gen_prior_matrix(pip, lsv_exp1, lsv_exp2, output, numbins=20, defaultprior=False ):
 
 
     import pdb
@@ -295,8 +295,12 @@ def gen_prior_matrix( pip, lsv_exp1, lsv_exp2, output , numbins=20 ):
         for j in psi_space:
             jefferies[-1].append(dircalc.pdf([i, 1-i, j, 1-j], [pip.alpha, pip.alpha, pip.alpha, pip.alpha]))
 
+    if defaultprior:
+        prior_matrix = pickle.load('~/defaultprior.pickle')
+        return psi_space, prior_matrix
+
     #jefferies = array([dircalc.pdf([x, 1-x], [0.5, 0.5]) for x in psi_space])
-    jefferies = array(jefferies)
+    jefferies = np.array(jefferies)
     jefferies /= sum(jefferies)
     plot_matrix(jefferies, "Jefferies Matrix", "jefferies_matrix", pip.plotpath)
     #Using the empirical data to get the prior matrix
@@ -304,10 +308,6 @@ def gen_prior_matrix( pip, lsv_exp1, lsv_exp2, output , numbins=20 ):
 
     filtered_lsv1 = majiq_filter.lsv_quantifiable(lsv_exp1, minnonzero=10, min_reads=20, logger=pip.logger)
     filtered_lsv2 = majiq_filter.lsv_quantifiable(lsv_exp2, minnonzero=10, min_reads=20, logger=pip.logger)
-
-
-#    print "FILTER1",filtered_lsv1[1]
-#    print "FILTER2",filtered_lsv2[1]
 
     ids1 = set([xx[1] for xx in filtered_lsv1[1]])
     ids2 = set([xx[1] for xx in filtered_lsv2[1]])

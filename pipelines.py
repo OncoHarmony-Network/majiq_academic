@@ -215,6 +215,7 @@ class DeltaPair(BasicPipeline):
                 filtered_lsv1[ii] = self.mark_stacks(lsv_junc, fitfunc[0][ii])
             filtered_lsv1 = majiq_filter.quantifiable_in_group(filtered_lsv1, self.minnonzero, self.minreads,
                                                                self.logger, 0.10)
+            self.logger.info("Group1: %s quantifiable in group" % str(len(filtered_lsv1[0])))
 
             filtered_lsv2 = [None] * num_exp[1]
             for ii, fname in enumerate(self.files2):
@@ -226,8 +227,10 @@ class DeltaPair(BasicPipeline):
             filtered_lsv2 = majiq_filter.quantifiable_in_group(filtered_lsv2, self.minnonzero, self.minreads,
                                                                self.logger, 0.10)
 
+            self.logger.info("Group2: %s quantifiable in group" % str(len(filtered_lsv2[0])))
             matched_lsv, matched_info = majiq_filter.lsv_intersection(filtered_lsv1, filtered_lsv2)
-
+            self.logger.info("After intersection:  %d/(%d, %d)" % (len(matched_info), len(filtered_lsv1[0]),
+                                                                   len(filtered_lsv2[0])))
             group1, group2 = pipe.combine_for_priormatrix(matched_lsv[0], matched_lsv[1], matched_info, num_exp)
             psi_space, prior_matrix = majiq_psi.gen_prior_matrix(self, group1, group2, self.output)
 
@@ -293,7 +296,7 @@ class DeltaPair(BasicPipeline):
                 names.extend(ptempt[1])
 
         pickle_path = "%s%s_%s.%s.pickle" % (self.output, self.names[0], self.names[1], pipe.model2.__name__)
-        pickle.dump([posterior_matrix, names], open(pickle_path, 'w'))
+        pickle.dump([posterior_matrix, names, meta_info], open(pickle_path, 'w'))
         self.logger.info("DeltaPSI calculation for %s_%s ended succesfully! Result can be found at %s" % (self.names[0],
                                                                                                           self.names[1],
                                                                                                           self.output))
