@@ -296,7 +296,7 @@ def gen_prior_matrix(pip, lsv_exp1, lsv_exp2, output, numbins=20, defaultprior=F
             jefferies[-1].append(dircalc.pdf([i, 1-i, j, 1-j], [pip.alpha, pip.alpha, pip.alpha, pip.alpha]))
 
     if defaultprior:
-        prior_matrix = pickle.load('~/defaultprior.pickle')
+        prior_matrix = pickle.load(open('~/defaultprior.pickle','r'))
         return psi_space, prior_matrix
 
     #jefferies = array([dircalc.pdf([x, 1-x], [0.5, 0.5]) for x in psi_space])
