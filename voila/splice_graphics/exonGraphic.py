@@ -6,7 +6,7 @@ __author__ = 'abarrera'
 
 class ExonGraphic(object):
 
-    def __init__(self, a3, a5, coords, type_exon, coords_extra=[], intron_retention=None, lsv_type=0, alt_starts=None, alt_ends=None):
+    def __init__(self, a3, a5, coords, type_exon, coords_extra=[], intron_retention=None, lsv_type=0, alt_starts=[], alt_ends=[]):
         """
         ExonGraphic constructor
 

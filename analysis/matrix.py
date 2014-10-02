@@ -1,8 +1,7 @@
 """
 Functions to handle the matrices operations over the delta PSI 
 """
-from pylab import *
-
+import numpy as np
 
 def print_matrix(matrix):
     "Print MAJIQ delta PSI matrix in screen"
@@ -11,7 +10,6 @@ def print_matrix(matrix):
             print "%.4f"%matrix[i][j],
         print
 
-    print ret
     print
 
 
@@ -22,14 +20,14 @@ def collapse_matrix(matrix):
 
     matrix_corner = matrix.shape[0]+1
     for i in xrange(-matrix_corner, matrix_corner):
-        collapse.append(diagonal(matrix, offset=i).sum())   
+        collapse.append(np.diagonal(matrix, offset=i).sum())
 
-    return array(collapse)
+    return np.array(collapse)
 
     
 def _find_delta_border(V, numbins):
     "Finds the border index to which a V corresponds in its delta_space given the number of bins the matrix will have"
-    delta_space = list(linspace(-1, 1, num=numbins+1))
+    delta_space = list(np.linspace(-1, 1, num=numbins+1))
     delta_space.pop(0) #first border to the left is -1, and we are not interested in it
     #get the index position that corresponds to the V threshold
     for i, value in enumerate(delta_space):
@@ -65,7 +63,7 @@ def matrix_prob_e(matrix):
     """
     absolute = True
     ret = 0.
-    for v in arange(0, 1, 0.1):
+    for v in np.arange(0, 1, 0.1):
         ret += matrix_area(matrix, V=v, absolute=absolute)*v
 
     return ret
@@ -73,7 +71,7 @@ def matrix_prob_e(matrix):
 def matrix_e(matrix):
     "Calculates the expected value of delta PSI E()"
     collapse = collapse_matrix(matrix) #one dimensional discrete distribution of psi
-    delta_space = list(linspace(-1, 1, num=len(collapse))) #the values that correspond to the different delta psi [-1, 1] 
+    delta_space = list(np.linspace(-1, 1, num=len(collapse))) #the values that correspond to the different delta psi [-1, 1]
     e = 0
     for i, value in enumerate(collapse):
         e += value*delta_space[i]
@@ -127,13 +125,3 @@ def rank_empirical_delta_lsv( list_events, info):
 
     rank.sort(key=lambda x: -x[1])
     return rank
-
-
-
-
-
-
-
-
-
-    
