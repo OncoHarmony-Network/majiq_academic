@@ -307,7 +307,7 @@ class Gene:
                 self.temp_txex_list.append(res)
         return res
 
-    def new_annotated_junctions(self, start, end, trcpt, anot_exon):
+    def new_annotated_junctions(self, start, end, trcpt):
         junc = self.exist_junction(start, end)
         if junc is None:
             junc = Junction(start, end, None, None, self, annotated=True)
@@ -391,7 +391,6 @@ class Transcript(object):
         self.txend = txend
         # self.cdsStart = None
         # self.cdsStop = None
-
 
     def get_gene(self):
         return mglobals.gene_tlb[self.gene_name]

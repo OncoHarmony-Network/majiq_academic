@@ -538,20 +538,21 @@ def read_gff(filename, pcr_filename, logging=None):
         #end elif
     #end for
     for kk, trcpt in trcpt_id_dict.items():
-        exon_list = sorted(trcpt.get_exon_list())
+
+        exon_list = trcpt.get_exon_list()
         gn = trcpt.get_gene()
         pre_end = None
         pre_txex = None
         for ex in exon_list:
             start, end = ex.get_coordinates()
-            junc = gn.new_annotated_junctions(pre_end, start, trcpt, ex)
+            junc = gn.new_annotated_junctions(pre_end, start, trcpt)
             ex.add_3prime_junc(junc)
             if not pre_txex is None:
                 pre_txex.add_5prime_junc(junc)
             pre_end = end
             pre_txex = ex
 
-        junc = gn.new_annotated_junctions(pre_end, None, trcpt, pre_txex)
+        junc = gn.new_annotated_junctions(pre_end, None, trcpt)
         pre_txex.add_5prime_junc(junc)
 
     #end for

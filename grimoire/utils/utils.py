@@ -3,7 +3,6 @@ matplotlib.use('Agg')
 import os
 import logging
 import numpy as np
-
 import sys
 from itertools import izip
 from scipy.stats.mstats import mquantiles
@@ -17,7 +16,7 @@ from voila.splice_graphics.geneGraphic import GeneGraphic
 from voila.splice_graphics.junctionGraphic import JunctionGraphic 
 import random
 from contextlib import contextmanager as ctx
-
+import ipdb
 
 def create_if_not_exists(my_dir, logger=False):
     """Create a directory path if it does not exist"""
@@ -149,6 +148,7 @@ def generate_visualization_output(allgenes, temp_dir):
             gene_list[mglobals.exp_list[exp_idx]] = []
             for genes_l in allgenes.values():
                 for gg in genes_l:
+                    ipdb.set_trace()
                     junc_list = []
                     junc_l = []
                     alt_empty_ends = []
@@ -198,14 +198,7 @@ def generate_visualization_output(allgenes, temp_dir):
                                 if ss5 == jjl[0]:
                                     a5.append(jidx)
 
-                        ex_reads = ex.coverage[exp_idx].sum()
-                        junc3 = ex.get_junctions('3prime')
-                        for j3 in junc3:
-                            ex_reads += j3.get_read_num(exp_idx)
-
-                        junc5 = ex.get_junctions('5prime')
-                        for j5 in junc5:
-                            ex_reads += j5.get_read_num(exp_idx)
+                        ex_reads = ex.get_total_read_num(exp_idx)
 
                         if ex.annotated and ex_reads == 0.0:
                             visual_type = 2

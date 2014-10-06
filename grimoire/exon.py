@@ -157,6 +157,17 @@ class Exon:
     def get_gc_content(self):
         return self.gc_content
 
+    def get_total_read_num(self, exp_idx):
+        ex_reads = ex.coverage[exp_idx].sum()
+        junc3 = self.get_junctions('3prime')
+        for j3 in junc3:
+            ex_reads += j3.get_read_num(exp_idx)
+
+        junc5 = ex.get_junctions('5prime')
+        for j5 in junc5:
+            ex_reads += j5.get_read_num(exp_idx)
+        return ex_reads
+
     def update_coverage(self, exp_idx, num):
         self.coverage[exp_idx] += num
 
