@@ -187,9 +187,13 @@ class Exon:
             for ex in exon_list:
                 if jtype == '3prime':
                     for junc in ex.p3_junc:
+                        if junc is None:
+                            continue
                         jlist.add(junc)
                 else:
                     for junc in ex.p5_junc:
+                        if junc is None:
+                            continue
                         jlist.add(junc)
         return jlist
 

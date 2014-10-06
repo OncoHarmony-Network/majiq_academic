@@ -1,31 +1,6 @@
 import numpy as np
-from utils import utils
 from lsv import SSOURCE, STARGET
 import mglobals
-
-
-def __junction_filter_check(junc):
-
-    ''' Check total_read >= 10 '''
-    junc_filter = False
-    count = 0
-    dummy = junc.coverage.toarray()
-    for exp_idx in range(mglobals.num_experiments):
-        cov_cnt = 0
-        if junc.get_read_num(exp_idx) >= 10:
-            for val in dummy[exp_idx]:
-                if val > 0:
-                    cov_cnt += 1
-            if cov_cnt < 3:
-                continue
-            count += 1
-        else:
-            continue
-        if count > (0.1 * mglobals.num_experiments):
-            junc_filter = True
-            break
-#    print "JUNC:", count
-    return junc_filter
 
 
 def __reliable_in_data(junc, exp_idx):
@@ -37,21 +12,6 @@ def __reliable_in_data(junc, exp_idx):
     if junc.get_read_num(exp_idx) > min_read_x_exp and np.count_nonzero(cover) >= min_npos_x_exp:
         in_data_filter = True
     return in_data_filter
-
-
-def __total_ss_minreads(junc_mat, minreads=5):
-#    print " MIN READS on "
-#    print junc_mat
-
-    js = set()
-    for jlst in junc_mat:
-        for jj in jlst:
-            if jj is None:
-                continue
-            if jj.coverage.sum() > minreads:
-                js.add(jj)
-
-    return len(js)
 
 
 def lsv_detection(gene_list, chrom, logging=None):
