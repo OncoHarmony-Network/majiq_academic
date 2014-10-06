@@ -114,16 +114,14 @@ def calcpsi(matched_lsv, info, num_exp, conf, fitfunc, logger):
                     posterior += np.exp(psi - scipy.misc.logsumexp(psi))
 
                 post_psi[-1].append(posterior / conf['m'])
-                if num_ways == 2: break
+                if num_ways == 2:
+                    break
 
     except Exception as e:
         post_psi = []
         new_info = []
         print "%s" % sys.exc_traceback.tb_lineno, e
         sys.stdout.flush()
-        import ipdb
-        ipdb.set_trace()
-    
 
     return post_psi, new_info
 

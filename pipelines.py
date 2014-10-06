@@ -122,7 +122,7 @@ class CalcPsi(BasicPipeline):
         filtered_lsv = [None] * num_exp
         fitfunc = [None] * num_exp
         for ii, fname in enumerate(self.files):
-            meta_info[ii], lsv_junc, const = majiq_io.load_data_lsv(fname, self.logger)
+            meta_info[ii], lsv_junc, const = majiq_io.load_data_lsv(fname, self.name, self.logger)
 
             #fitting the function
             lsv_junc, const = self.gc_content_norm(lsv_junc, const)
@@ -208,7 +208,7 @@ class DeltaPair(BasicPipeline):
             filtered_lsv1 = [None] * num_exp[0]
             fitfunc = [[None] * num_exp[0], [None] * num_exp[1]]
             for ii, fname in enumerate(self.files1):
-                meta_info[0][ii], lsv_junc, const = majiq_io.load_data_lsv(fname, self.names, self.logger)
+                meta_info[0][ii], lsv_junc, const = majiq_io.load_data_lsv(fname, self.names[0], self.logger)
 
                 #fitting the function
                 fitfunc[0][ii] = self.fitfunc(const[0])
@@ -219,7 +219,7 @@ class DeltaPair(BasicPipeline):
 
             filtered_lsv2 = [None] * num_exp[1]
             for ii, fname in enumerate(self.files2):
-                meta_info[1][ii], lsv_junc, const = majiq_io.load_data_lsv(fname, self.logger)
+                meta_info[1][ii], lsv_junc, const = majiq_io.load_data_lsv(fname, self.names[1], self.logger)
 
                 #fitting the function
                 fitfunc[1][ii] = self.fitfunc(const[0])

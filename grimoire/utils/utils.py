@@ -16,7 +16,6 @@ from voila.splice_graphics.geneGraphic import GeneGraphic
 from voila.splice_graphics.junctionGraphic import JunctionGraphic 
 import random
 from contextlib import contextmanager as ctx
-import ipdb
 
 
 def create_if_not_exists(my_dir, logger=False):
@@ -149,7 +148,6 @@ def generate_visualization_output(allgenes, temp_dir):
             gene_list[mglobals.exp_list[exp_idx]] = []
             for genes_l in allgenes.values():
                 for gg in genes_l:
-                    ipdb.set_trace()
                     junc_list = []
                     junc_l = []
                     alt_empty_ends = []
