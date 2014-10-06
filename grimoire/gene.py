@@ -404,6 +404,10 @@ class Transcript(object):
     def get_junction_list(self):
         return self.junction_list
 
+    def prepare_exon_list(self):
+        self.exon_list.sort()
+        return self.exon_list
+
     def in_junction_list(self, start, end):
         res = None 
 #        if self.gene.strand == '-':

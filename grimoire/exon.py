@@ -158,12 +158,12 @@ class Exon:
         return self.gc_content
 
     def get_total_read_num(self, exp_idx):
-        ex_reads = ex.coverage[exp_idx].sum()
+        ex_reads = self.coverage[exp_idx].sum()
         junc3 = self.get_junctions('3prime')
         for j3 in junc3:
             ex_reads += j3.get_read_num(exp_idx)
 
-        junc5 = ex.get_junctions('5prime')
+        junc5 = self.get_junctions('5prime')
         for j5 in junc5:
             ex_reads += j5.get_read_num(exp_idx)
         return ex_reads
@@ -376,12 +376,12 @@ class ExonTx(object):
 
     def junction_consistency(self):
 
-        #print "EXONTX:", self.start, self.end
+        print "JUNC consistency, EXONTX:", self.start, self.end
 
         j5_list = []
         for j5 in self.p5_junc:
             jcoord = j5.get_coordinates()
-            #print 'P5',j5.get_gene().get_id(), j5.get_coordinates(), self.start, self.end
+            print 'P5', j5.get_gene().get_id(), j5.get_coordinates(), self.start, self.end
             if self.start <= jcoord[1] <= self.end:
                 #j5.add_donor(self)
                 j5_list.append(j5)
@@ -389,7 +389,7 @@ class ExonTx(object):
         j3_list = []
         for j3 in self.p3_junc:
             jcoord = j3.get_coordinates()
-            #print 'P3::',j3.get_gene().get_id(), j3.get_coordinates(), self.start, self.end
+            print 'P3::', j3.get_gene().get_id(), j3.get_coordinates(), self.start, self.end
             if self.start <= jcoord[1] <= self.end:
                 #j3.add_acceptor(self)
                 j3_list.append(j3)
