@@ -376,12 +376,9 @@ class ExonTx(object):
 
     def junction_consistency(self):
 
-        print "JUNC consistency, EXONTX:", self.start, self.end
-
         j5_list = []
         for j5 in self.p5_junc:
             jcoord = j5.get_coordinates()
-            print 'P5', j5.get_gene().get_id(), j5.get_coordinates(), self.start, self.end
             if self.start <= jcoord[1] <= self.end:
                 #j5.add_donor(self)
                 j5_list.append(j5)
@@ -389,7 +386,6 @@ class ExonTx(object):
         j3_list = []
         for j3 in self.p3_junc:
             jcoord = j3.get_coordinates()
-            print 'P3::', j3.get_gene().get_id(), j3.get_coordinates(), self.start, self.end
             if self.start <= jcoord[1] <= self.end:
                 #j3.add_acceptor(self)
                 j3_list.append(j3)

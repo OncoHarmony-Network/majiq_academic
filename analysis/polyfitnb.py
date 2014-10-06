@@ -1,6 +1,6 @@
 import sys
 import os
-import pickle
+import cPickle as pickle
 import matplotlib.pyplot as plt
 from numpy.ma import masked_less
 import numpy as np

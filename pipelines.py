@@ -9,8 +9,6 @@ import analysis.io as majiq_io
 import analysis.psi as majiq_psi
 import os
 import builder as majiq_builder
-import analysis.sample as majiq_sample
-
 import pipe as pipe
 # ###############################
 # Data loading and Boilerplate #
@@ -83,7 +81,7 @@ class BasicPipeline:
             return np.poly1d([1, 0])
         else:
             self.logger.info("Fitting NB function with constitutive events...")
-            return fit_nb(const_junctions, "%s_nbfit" % self.output, self.plotpath, nbdisp=self.nbdisp,
+            return fit_nb(const_junctions, "%s/nbfit" % self.output, self.plotpath, nbdisp=self.nbdisp,
                           logger=self.logger, discardb=True, bval=True)
 
     def mark_stacks(self, lsv_list, fitfunc):

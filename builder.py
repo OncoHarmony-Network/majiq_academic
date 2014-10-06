@@ -5,6 +5,7 @@
 import argparse
 import os
 import sys
+import traceback
 from multiprocessing import Pool, current_process
 import grimoire.analize as analize
 import grimoire.rnaseq_io as majiq_io
@@ -60,7 +61,7 @@ def __parallel_lsv_quant(samfiles_list, chrom, pcr_validation=False, gff_output=
         majiq_builder(samfiles_list, chrom, pcr_validation, gff_output, create_tlb=True, logging=tlogger)
         print "END child, ", current_process().name
     except Exception as e:
-        print "Line %s:" % sys.exc_traceback.tb_lineno, e
+        traceback.print_exc()
         sys.stdout.flush()
         raise()
 
