@@ -119,7 +119,7 @@ def main(params):
 
     sam_list = []
     for exp_idx, exp in enumerate(mglobals.exp_list):
-        samfile = "%s/%s.mm10.sorted.bam" % (mglobals.sam_dir, exp)
+        samfile = "%s/%s.bam" % (mglobals.sam_dir, exp)
         if not os.path.exists(samfile):
             logger.info("Skipping %s.... not found" % samfile)
             continue
