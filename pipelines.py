@@ -1,6 +1,6 @@
 import abc
 import pickle
-from multiprocessing import Pool, current_process
+from multiprocessing import Pool
 from grimoire.utils.utils import create_if_not_exists, get_logger
 from analysis.polyfitnb import fit_nb
 import numpy as np
@@ -230,7 +230,7 @@ class DeltaPair(BasicPipeline):
             self.logger.info("After intersection:  %d/(%d, %d)" % (len(matched_info), len(filtered_lsv1[0]),
                                                                    len(filtered_lsv2[0])))
             group1, group2 = pipe.combine_for_priormatrix(matched_lsv[0], matched_lsv[1], matched_info, num_exp)
-            psi_space, prior_matrix = majiq_psi.gen_prior_matrix(self, group1, group2, self.output)
+            psi_space, prior_matrix = majiq_psi.gen_prior_matrix(self, group1, group2, self.output, self.default_prior)
 
             #TEMP 
             tout = open(tempfile, 'w+')
