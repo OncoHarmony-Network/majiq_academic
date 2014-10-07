@@ -18,7 +18,8 @@ Calculate and manipulate PSI and Delta PSI values
 """
 BSIZE = 0.025 #TODO To parameters
 BINS = np.arange(0, 1, BSIZE) # The bins for PSI values. With a BSIZE of 0.025, we have 40 BINS
-BINS_CENTER = np.arange(0+BSIZE/2, 1, BSIZE) #The center of the previous BINS. This is used to calculate the mean value of each bin.
+BINS_CENTER = np.arange(0+BSIZE/2, 1, BSIZE)
+#The center of the previous BINS. This is used to calculate the mean value of each bin.
 
 
 def plot_matrix(matrix, my_title, plotname, plotpath):
@@ -33,10 +34,11 @@ def plot_matrix(matrix, my_title, plotname, plotpath):
 
     _save_or_show(plotpath, plotname=plotname)
 
+
 def _save_or_show(plotpath, plotname=None):
     """Generic function that either shows in a popup or saves the figure, depending if the plotpath flag"""
     if plotpath:
-        plt.savefig("%s%s.png"%(plotpath, plotname), bbox_inches='tight')
+        plt.savefig("%s%s.png" % (plotpath, plotname), bbox_inches='tight')
         plt.clf()
     else:
         plt.show()
@@ -53,6 +55,7 @@ def median_psi(junctions, discardzeros=True):
         medians.append(np.median(junction))
 
     return np.array(medians)
+
 
 def empirical_delta_psi( lsv_list1, lsv_list2, logger=None):
     """Simple PSI calculation without involving a dirichlet prior, coming from reads from junctions"""
@@ -73,11 +76,7 @@ def empirical_delta_psi( lsv_list1, lsv_list2, logger=None):
             val = float(rate) / float(np.sum(lsv_list2[idx]))
             if np.isnan(val):
                 val = 0.5
-            try:
-                psi2[ii] = val
-            except:
-                pdb.set_trace()
-                
+            psi2[ii] = val
 
         sys.stdout.flush()
         delta_psi.append( psi1 - psi2 )
@@ -88,7 +87,8 @@ def empirical_delta_psi( lsv_list1, lsv_list2, logger=None):
 def simple_psi(inc, exc):
     """Simple PSI calculation without involving a dirichlet prior, coming from reads from junctions"""
     psi = inc/(exc+inc)
-    psi[np.isnan(psi)] = 0.5 #if NaN, is because exc+inc = 0. If we know nothing, then we don't know if its 0 (exclusion) or 1 (inclusion)
+    psi[np.isnan(psi)] = 0.5
+    #if NaN, is because exc+inc = 0. If we know nothing, then we don't know if its 0 (exclusion) or 1 (inclusion)
     return psi 
 
 
@@ -344,7 +344,6 @@ def gen_prior_matrix(pip, lsv_exp1, lsv_exp2, output, numbins=20, defaultprior=F
                 best_set_mean2[1].append(filtered_lsv2[1][idx])
                 break
 
-
     pip.logger.info("'Best set' is %s events (out of %s)"%(len(best_set_mean1[0]), len(lsv_exp1[0])))
     best_delta_psi = empirical_delta_psi(best_set_mean1[0], best_set_mean2[0])
 
@@ -365,26 +364,34 @@ def gen_prior_matrix(pip, lsv_exp1, lsv_exp2, output, numbins=20, defaultprior=F
         best_delta_psi = np.array(njun_prior[nj])
 
         pip.logger.info("Parametrizing 'best set'...%s",  nj)
-        mixture_pdf = majiq_delta.adjustdelta_lsv( best_delta_psi, output, plotpath=pip.plotpath, title=" ".join(pip.names), numiter=pip.iter, breakiter=pip.breakiter, njunc=nj, logger=pip.logger)
+        mixture_pdf = majiq_delta.adjustdelta_lsv(best_delta_psi, output, plotpath=pip.plotpath,
+                                                  title=" ".join(pip.names), numiter=pip.iter, breakiter=pip.breakiter,
+                                                  njunc=nj, logger=pip.logger)
 #        pickle.dump(mixture_pdf, open("%s%s_%s_bestset_junc_%s.pickle"%(output, pip.names[0], pip.names[1], nj), 'w'))
         prior_matrix = []
         for i in xrange(numbins):
             prior_matrix.extend(mixture_pdf[numbins-i:(numbins*2)-i])
 
         prior_matrix = np.array(prior_matrix).reshape(numbins, -1)
+        if np.isnan(prior_matrix).any():
+            raise ValueError(" The input data does not have enought statistic power in order to calculate the prior."
+                             " Check if the input is correct or use the --default_prior option in order to use a"
+                             " precomputed prior")
         #some info for later analysis
 #        pickle.dump(event_names, open("%s%s_%s_eventnames.pickle"%(output, self.names[0], self.names[1]), 'w')) 
         if not pip.jefferiesprior:
-            plot_matrix(prior_matrix, "Prior Matrix (before Jefferies), junctions %s"%nj, "prior_matrix_no_jefferies_junc_%s"%nj, pip.plotpath)
+            plot_matrix(prior_matrix, "Prior Matrix (before Jefferies), junctions %s" % nj,
+                        "prior_matrix_no_jefferies_junc_%s" % nj, pip.plotpath)
 
         #Calculate prior matrix
-        pip.logger.info("Adding a Jefferies prior to prior (alpha=%s), jun %s..."%(pip.alpha, nj))
+        pip.logger.info("Adding a Jefferies prior to prior (alpha=%s), jun %s..." % (pip.alpha, nj))
         prior_matrix *= jefferies
         prior_matrix /= sum(prior_matrix) #renormalize so it sums 1
 
-        plot_matrix(prior_matrix, "Prior Matrix nj%s"%nj, "prior_matrix_jun_%s"%nj, pip.plotpath)
-        pip.logger.info("Saving prior matrix for %s..."%(pip.names))
-        pickle.dump(prior_matrix, open("%s%s_%s_priormatrix_jun_%s.pickle"%(output, pip.names[0], pip.names[1],nj), 'w'))
+        plot_matrix(prior_matrix, "Prior Matrix nj%s" % nj, "prior_matrix_jun_%s" % nj, pip.plotpath)
+        pip.logger.info("Saving prior matrix for %s..." % pip.names)
+        pickle.dump(prior_matrix, open("%s%s_%s_priormatrix_jun_%s.pickle" % (output, pip.names[0], pip.names[1], nj),
+                                       'w'))
 
     return psi_space, prior_matrix
 
@@ -399,22 +406,24 @@ def __extract_cassette(delta_psi, info, psi1, psi2):
         if linfo[2][1:] == cas:
             listd.append(delta_psi[idx][0])
 
-    fp = open('./toyoseph.pickle','wb')
+    fp = open('./toyoseph.pickle', 'wb')
     pickle.dump(listd,fp)
     fp.close()
 
-    out = open('./psi_delta0.tab','w+')
+    out = open('./psi_delta0.tab', 'w+')
     for idx, linfo in enumerate(info):
         if linfo[2][1:] == cas:
 #        if len(linfo[2].split('|')) == 3 and linfo[2].find('e0')==-1:
             lsv = delta_psi[idx]
-            if lsv[0] < 0.0125 and lsv[0] >= -0.0125:
+            if 0.0125 > lsv[0] >= -0.0125:
 #                print psi1, idx, np.sum(psi1[idx][0]), np.sum(psi1[0][idx])
-                val1 = float(np.sum(psi1[0][idx][0])) /  float(np.sum(psi1[0][idx]))
-                if np.isnan(val1): val1 = 0.5
-                val2 = float(np.sum(psi2[0][idx][0])) /  float(np.sum(psi2[0][idx]))
-                if np.isnan(val2): val2 = 0.5
-                out.write("%d\t%d\n"%(val1,val2))
+                val1 = float(np.sum(psi1[0][idx][0])) / float(np.sum(psi1[0][idx]))
+                if np.isnan(val1):
+                    val1 = 0.5
+                val2 = float(np.sum(psi2[0][idx][0])) / float(np.sum(psi2[0][idx]))
+                if np.isnan(val2):
+                    val2 = 0.5
+                out.write("%d\t%d\n" % (val1, val2))
 
     out.close()
 
