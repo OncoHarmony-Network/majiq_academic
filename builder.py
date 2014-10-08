@@ -116,7 +116,7 @@ def main(params):
     logger.info("")
     logger.info("Command: %s" % params)
 
-    if not params.only_gather:
+    if True:
         chr_list = majiq_io.read_gff(params.transcripts, params.pcr_filename, logging=logger)
 
         sam_list = []
