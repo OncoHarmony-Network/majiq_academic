@@ -14,7 +14,7 @@ from voila.splice_graphics.geneGraphic import GeneGraphic
 from voila.splice_graphics.junctionGraphic import JunctionGraphic 
 import random
 from contextlib import contextmanager as ctx
-
+import gc
 
 def create_if_not_exists(my_dir, logger=False):
     """Create a directory path if it does not exist"""
@@ -94,7 +94,7 @@ def merge_and_create_majiq_file(chr_list, pref_file):
     all_visual = [list() for xx in xrange(mglobals.num_experiments)]
     as_table = [list() for xx in xrange(mglobals.num_experiments)]
     nonas_table = [list() for xx in xrange(mglobals.num_experiments)]
-
+    gc.disable()
     for chrom in chr_list:
         print "READ chrom %s" % chrom ,
         temp_dir = "%s/tmp/%s" % (mglobals.outDir, chrom)
@@ -139,6 +139,7 @@ def merge_and_create_majiq_file(chr_list, pref_file):
 
             fname = '%s/%s%s.majiq' % (mglobals.outDir, pref_file, mglobals.exp_list[exp_idx])
             majiq_io.dump_bin_file((info, at, clist), fname)
+    gc.enable()
 
 
 def generate_visualization_output(allgenes, temp_dir):
