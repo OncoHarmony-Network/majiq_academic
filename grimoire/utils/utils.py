@@ -112,6 +112,7 @@ def merge_and_create_majiq_file(chr_list, pref_file):
                 as_table[exp_idx].append(temp_table[exp_idx][0])
                 nonas_table[exp_idx].append(temp_table[exp_idx][1])
 
+    print "DUMPING"
     for name, ind_list in mglobals.tissue_repl.items():
         for idx, exp_idx in enumerate(ind_list):
             if len(as_table[exp_idx]) == 0:
