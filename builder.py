@@ -95,7 +95,7 @@ def _generate_parser():
     parser.add_argument('--silent', action='store_true', default=False, help='Silence the logger.')
     parser.add_argument('--debug', type=int, default=0, help="Activate this flag for debugging purposes, activates "
                                                              "logger and jumps some processing steps.")
-    parser.add_argument('--only_gather', action='store_true', default=False, help=argparse.SUPPRESS)
+    parser.add_argument('--only_gather', action='store_true', default=False)
     return parser.parse_args()
 
 #########
