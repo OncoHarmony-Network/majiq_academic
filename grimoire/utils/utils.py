@@ -68,8 +68,8 @@ def prepare_lsv_table(lsv_list, non_as, temp_dir):
     for name, ind_list in mglobals.tissue_repl.items():
         for idx, exp_idx in enumerate(ind_list):
 
-            majiq_table_as = np.zeros(shape=(len(lsv_list[exp_idx])), dtype=np.dtype('object'))
-            majiq_table_nonas = np.zeros(shape=(len(non_as[exp_idx])), dtype=np.dtype('object'))
+            majiq_table_as = [0] * len(lsv_list[exp_idx])
+            majiq_table_nonas = [0] * len(non_as[exp_idx])
 
             for iix, lsv in enumerate(lsv_list[exp_idx]):
                 majiq_table_as[iix] = lsv.to_majiqLSV(exp_idx)
