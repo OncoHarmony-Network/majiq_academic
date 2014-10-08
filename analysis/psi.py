@@ -264,7 +264,8 @@ def calc_dirichlet(alpha, n, samples_events, debug=False, psiparam=False):
                 print "event %s..." % i,
                 sys.stdout.flush()
 
-            if debug > 0 and i == debug: break
+            if 0 < debug == i:
+                break
 
             if len(event_samples.shape) == 1:
             #only one sample (this is only used if bootstrapping of reads is deactivated)

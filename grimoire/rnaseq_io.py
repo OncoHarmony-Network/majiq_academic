@@ -31,15 +31,20 @@ def load_bin_file(filename, logger=None):
         return
 
     fop = open(filename, 'rb')
-    data = pickle.load(fop)
+
+    fast_pickler = pickle.Pickler(fop, protocol=2)
+    fast_pickler.fast = 1
+    data = fast_pickler.load()
     fop.close()
     return data
 
 
 def dump_bin_file(data, filename):
-    with open(filename, 'w+b') as ofp:
-        pickle.dump(data, ofp, protocol=2)
 
+    with open(filename, 'wb') as ofp:
+        fast_pickler = pickle.Pickler(ofp, protocol=2)
+        fast_pickler.fast = 1
+        fast_pickler.dump(data)
 
 
 def __cross_junctions(read):
