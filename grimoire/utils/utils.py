@@ -96,14 +96,17 @@ def merge_and_create_majiq_file(chr_list, pref_file):
     nonas_table = [list() for xx in xrange(mglobals.num_experiments)]
     gc.disable()
     for chrom in chr_list:
-        print "READ chrom %s" % chrom ,
+        print "READ chrom %s" % chrom,
+        sys.stdout.flush()
         temp_dir = "%s/tmp/%s" % (mglobals.outDir, chrom)
         temp_filename = '%s/splicegraph.pkl' % temp_dir
         visual_gene_list = majiq_io.load_bin_file(temp_filename)
         print "done1",
+        sys.stdout.flush()
         filename = "%s/majiq.pkl" % temp_dir
         temp_table = majiq_io.load_bin_file(filename)
         print "done2"
+        sys.stdout.flush()
         for name, ind_list in mglobals.tissue_repl.items():
             for idx, exp_idx in enumerate(ind_list):
                 # print mglobals.exp_list[exp_idx]
@@ -113,6 +116,7 @@ def merge_and_create_majiq_file(chr_list, pref_file):
                 nonas_table[exp_idx].append(temp_table[exp_idx][1])
 
     print "DUMPING"
+    sys.stdout.flush()
     for name, ind_list in mglobals.tissue_repl.items():
         for idx, exp_idx in enumerate(ind_list):
             if len(as_table[exp_idx]) == 0:
