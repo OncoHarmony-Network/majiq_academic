@@ -95,7 +95,7 @@ def _generate_parser():
     parser.add_argument('--silent', action='store_true', default=False, help='Silence the logger.')
     parser.add_argument('--debug', type=int, default=0, help="Activate this flag for debugging purposes, activates "
                                                              "logger and jumps some processing steps.")
-    parser.add_argument('--only_gather', type=int, default=0, help=argparse.SUPPRESS)
+    parser.add_argument('--only_gather', action='store_true', default=False, help=argparse.SUPPRESS)
     return parser.parse_args()
 
 #########
@@ -116,7 +116,7 @@ def main(params):
     logger.info("")
     logger.info("Command: %s" % params)
 
-    if not args.only_gather:
+    if not params.only_gather:
         chr_list = majiq_io.read_gff(params.transcripts, params.pcr_filename, logging=logger)
 
         sam_list = []
