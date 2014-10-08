@@ -58,17 +58,6 @@ class Exon:
     def get_annotated_exon(self):
         return self.exonTx_list
 
-    def get_exon_definition(self, transcript):
-        res = None
-        for ii in self.exonTx_list:
-            #print transcript, ii.transcript
-            if transcript in ii.transcript:
-                res = ii
-                break
-        if res is None:
-            print "error"
-        return res
-
     def get_rna_ss(self):
         ss3 = set()
         ss5 = set()
@@ -310,7 +299,7 @@ class ExonTx(object):
         return self.start, self.end
 
     def add_transcript(self, trans):
-        self.transcript.append(trans)
+        self.transcript_name.append(trans.get_id())
 
     def add_5prime_junc(self, p5_junc):
         if p5_junc not in self.p5_junc:
