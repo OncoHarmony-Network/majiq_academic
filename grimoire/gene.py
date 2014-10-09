@@ -124,14 +124,6 @@ class Gene:
         self.exons.append(exon)
         return
 
-    def in_transcript_list(self, tcrpt_name):
-        res = False
-        for ff in self.transcript_list:
-            if ff.get_id() == tcrpt_name:
-                res = True
-                break
-        return res
-
     def is_gene_in_list(self, list_of_genes, name):
         res = None
         for ll in list_of_genes:
