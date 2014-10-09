@@ -120,6 +120,8 @@ class LSV(object):
                     ex_set.add(jacceptor.get_id())
             else:
                 lsv_exon = jacceptor
+                if jacceptor is None:
+                    continue
                 if lsv_exon.get_id() != ex_id:
                     skip = True
                     break
@@ -177,7 +179,7 @@ class LSV(object):
         return MajiqLsv(self, exp_idx)
 
 
-def extract_SE_events( list_lsv_per_gene ):
+def extract_SE_events(list_lsv_per_gene):
 
     sslist = list_lsv_per_gene[0]
     stlist = list_lsv_per_gene[1]

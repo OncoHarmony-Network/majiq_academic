@@ -103,17 +103,15 @@ class Exon:
                 found = True
                 break
         if not found:
-            ssf = False
             for idx1, i1 in enumerate(self.ss_3p_list):
                 if i1 != start:
                     continue
                 if self.ss_5p_list[idx1] == end:
-                    ssf = True
                     break
             else:
                 self.ss_3p_list.append(start)
                 self.ss_5p_list.append(end)
-            res = ExonRead(start, end, self, s3p_junc, s5p_junc, read_seq)
+            res = ExonRead(start, end, s3p_junc, s5p_junc, read_seq)
             self.exonRead_list.append(res)
         return res
 
@@ -136,7 +134,7 @@ class Exon:
 #            else:
 #                self.ss_5p_list.append(start)
 #                self.ss_3p_list.append(end)
-            res = ExonTx(start, end, trncpt, self)
+            res = ExonTx(start, end, trncpt)
             self.exonTx_list.append(res)
         return res
 
@@ -258,7 +256,7 @@ class Exon:
 
 class ExonRead(object):
     
-    def __init__(self, start, end, exon, pre_junc, post_junc, rna_seq=None):
+    def __init__(self, start, end, pre_junc, post_junc, rna_seq=None):
         self.start = start
         self.end = end
         self.RNASeq = rna_seq
@@ -286,7 +284,7 @@ class ExonTx(object):
     __gt__ = lambda self, other: self.start > other.start or (self.start == other.start and self.end > other.end)
     __ge__ = lambda self, other: self.start >= other.start or (self.start == other.start and self.end >= other.end)
 
-    def __init__(self, start, end, trnscpt, exon):
+    def __init__(self, start, end, trnscpt):
         self.start = start
         self.end = end
         self.transcript_name = [trnscpt.get_id()]
@@ -355,14 +353,6 @@ class ExonTx(object):
 #                junc.add_acceptor(txex1)
             txex2.p5_junc.append(junc)
             txex1.p3_junc.append(junc)
-
-#        for trn in self.get_transcript():
-#            if exb:
-#                trn.add_junction(junc)
-            # if exb1:
-            #     txex1.add_transcript(trn)
-            # if exb2:
-            #     txex2.add_transcript(trn)
 
         del self
         return res

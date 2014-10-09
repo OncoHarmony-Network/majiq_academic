@@ -286,7 +286,7 @@ class Gene:
                 res = txex
                 break
         else:
-            res = ExonTx(start, end, transcript, None)
+            res = ExonTx(start, end, transcript)
             if bl:
                 self.temp_txex_list.append(res)
         return res

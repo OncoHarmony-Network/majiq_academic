@@ -14,7 +14,7 @@ from voila.splice_graphics.geneGraphic import GeneGraphic
 from voila.splice_graphics.junctionGraphic import JunctionGraphic 
 import random
 from contextlib import contextmanager as ctx
-import gc
+
 
 def create_if_not_exists(my_dir, logger=False):
     """Create a directory path if it does not exist"""
@@ -226,7 +226,7 @@ def generate_visualization_output(allgenes, temp_dir):
 
 def prepare_junctions_gc(junc, exp_idx):
 
-    gc = scipy.sparse.lil_matrix((mglobals.readLen - 16+1),dtype=np.float)
+    gc = scipy.sparse.lil_matrix((mglobals.readLen - 16+1), dtype=np.float)
     gci = np.zeros(shape=(mglobals.readLen - 16+1))
     for jj in range(mglobals.readLen - 16+1):
         if not junc is None and junc.get_gc_content()[exp_idx, jj] != 0:
@@ -250,9 +250,9 @@ def print_junc_matrices(mat, tlb=None, fp=None):
     if not tlb is None:
         out.write("Nan\t")
         for ex, (p1, p2) in tlb.items():
-            for nid, n in enumerate(p1):
+            for n in p1:
                 out.write("%d\t" % (ex+1))
-            for nid, n in enumerate(p2):
+            for n in p2:
 #                header[nid] = "%d:%d\t"%(ex,nid)
                 header[n] = "%d" % (ex+1)
     out.write("\n")
@@ -484,8 +484,6 @@ def gff2gtf(gff_f, out_f=None):
                     frame_l.append((3 - (len_frame % 3)) % 3)
                     len_frame = int(gff_fields[4]) - int(gff_fields[3])
         to_gtf(wfile, seq_name, source, gene, mrna, start_trans, end_trans, strand, exon_l, frame_l)
-
-
 
 
 @ctx
