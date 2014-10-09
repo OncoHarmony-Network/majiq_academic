@@ -356,9 +356,9 @@ class ExonTx(object):
             txex2.p5_junc.append(junc)
             txex1.p3_junc.append(junc)
 
-        for trn in self.get_transcript():
-            if exb:
-                trn.add_junction(junc)
+#        for trn in self.get_transcript():
+#            if exb:
+#                trn.add_junction(junc)
             # if exb1:
             #     txex1.add_transcript(trn)
             # if exb2:
