@@ -404,8 +404,8 @@ class Transcript(object):
     def get_junction_list(self):
         res = set()
         for ex in self.exon_list:
-            res.add(set(ex.get_5prime_junc()))
-            res.add(set(ex.get_3prime_junc()))
+            res.update(set(ex.get_5prime_junc()))
+            res.update(set(ex.get_3prime_junc()))
 
         res.sort()
         return res

@@ -32,8 +32,8 @@ def load_bin_file(filename, logger=None):
 
     fop = open(filename, 'rb')
 
-    fast_pickler = pickle.Pickler(fop, protocol=2)
-    fast_pickler.fast = 1
+    fast_pickler = pickle.Unpickler(fop)
+#    fast_pickler.fast = 1
     data = fast_pickler.load()
     fop.close()
     return data
@@ -43,7 +43,7 @@ def dump_bin_file(data, filename):
 
     with open(filename, 'wb') as ofp:
         fast_pickler = pickle.Pickler(ofp, protocol=2)
-        fast_pickler.fast = 1
+#        fast_pickler.fast = 1
         fast_pickler.dump(data)
 
 
