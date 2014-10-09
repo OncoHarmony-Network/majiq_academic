@@ -7,18 +7,6 @@ from grimoire.lsv import LSV
 from grimoire.junction import Junction
 
 
-# class GeneTLB(Singleton):
-#     trans = {}
-#
-#     def get_gene(self, gid):
-#         return self.trans[gid]
-#
-#     def add_gene(self, gid, gene):
-#         if gid in gene and gene != self.trans[gid]:
-#             raise
-#         self.trans[gid] = gene
-
-
 class Gene:
     __eq__ = lambda self, other: (self.chromosome == other.chromosome and self.strand == other.strand
                                   and self.start < other.end and self.end > other.start)
@@ -244,9 +232,13 @@ class Gene:
             tx_list = ex.get_annotated_exon()
             for txex in tx_list:
                 for junc in txex.get_3prime_junc():
-                    ss.add((junc.get_ss_3p(), '3prime', junc))
+                    coord = junc.get_ss_3p()
+                    if not coord is None:
+                        ss.add((coord, '3prime', junc))
                 for junc in txex.get_5prime_junc():
-                    ss.add((junc.get_ss_5p(), '5prime', junc))
+                    coord = junc.get_ss_5p()
+                    if not coord is None:
+                        ss.add((coord, '5prime', junc))
 
         return sorted(ss)
 
@@ -399,8 +391,7 @@ class Transcript(object):
             res.update(set(ex.get_5prime_junc()))
             res.update(set(ex.get_3prime_junc()))
 
-        res.sort()
-        return res
+        return sorted(res)
 
     def prepare_exon_list(self):
         self.exon_list.sort()
