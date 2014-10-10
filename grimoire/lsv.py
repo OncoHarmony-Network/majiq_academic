@@ -154,7 +154,7 @@ class LSV(object):
                     s3 = sorted(list(set(jacceptor.ss_3p_list)))
                     ex1 = ex_list.index(jacceptor.get_id())+1
                     ex = '%s.%s' % (ex1, s3.index(junc.end)+1)
-                jtype="|%se%s" % (spsite.index(junc.start)+1, ex)
+                jtype = "|%se%s" % (spsite.index(junc.start)+1, ex)
             else:
                 if jdonor is None:
                     exs5 = ''

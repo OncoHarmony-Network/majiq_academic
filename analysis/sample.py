@@ -62,7 +62,8 @@ def remove_masked(junction):
     "For performance: Less values to sample from, faster execution time"
     ret = []
     for value in junction:
-        if value > -EPSILON: #zero and bigger than zero
+        if value > -EPSILON:
+        #zero and bigger than zero
             ret.append(value)
 
     return np.array(ret)
@@ -72,9 +73,11 @@ def mean_junction(junctions, discardzeros=True):
     """Simple mean of junctions without bootstrapping, but discarding zeroes and flagged stuff"""
     ret = []
     for junc in junctions:
-        junc = junc[junc > -EPSILON]  #mask the -1 (or lower) positions regardless of the discardzero treatment
+        junc = junc[junc > -EPSILON]
+        #mask the -1 (or lower) positions regardless of the discardzero treatment
         if discardzeros:
-            junc = junc[junc!=0] #a junc array without the zeroes
+            junc = junc[junc!=0]
+             #a junc array without the zeroes
 
         if len(junc) == 0:
             ret.append(0) 
@@ -104,21 +107,26 @@ def sample_from_junctions(junction_list, m, k, dispersion=0.1, discardzeros=5, t
             sys.stdout.flush()
 
         if trimborder: 
-            junction = _trimborders(junction, trimborder) #trim the zeroes from the borders regardless of the discardzeros flag
+            junction = _trimborders(junction, trimborder)
+            #trim the zeroes from the borders regardless of the discardzeros flag
 
-        junction = junction[junction > -EPSILON]  #mask the -1 (or lower) positions regardless of the discardzero treatment
+        junction = junction[junction > -EPSILON]
+        #mask the -1 (or lower) positions regardless of the discardzero treatment
         
         if discardzeros > 0:
-            junction = junction[junction != 0] #a junction array without the zeroes
+            junction = junction[junction != 0]
+            #a junction array without the zeroes
             sys.stdout.flush()
             if junction.shape[0] < discardzeros:
                 z = np.zeros(shape=(discardzeros-junction.shape[0]), dtype=int)
-                junction = np.concatenate((junction,z)) #a junction array without the zeroes
+                junction = np.concatenate((junction, z))
+                #a junction array without the zeroes
 
         if np.count_nonzero(junction) == 0:
             sampled_means.append(0)
             sampled_var.append(0)
-            all_samples.append([0]*m) #k*m zeroes
+            all_samples.append([0]*m)
+            #k*m zeroes
         else:
 
             if Nz == EMPIRICAL_NZ:
@@ -136,10 +144,10 @@ def sample_from_junctions(junction_list, m, k, dispersion=0.1, discardzeros=5, t
 
                 sampled_mean = np.mean(junction_samples)
                 #recalculating
-                r_nb, p_nb = polyfitnb.func2nb( a, b, sampled_mean, dispersion )
-                nb50 = np.negative_binomial(r_nb, p_nb, k)
+                r_nb, p_nb = polyfitnb.func2nb(a, b, sampled_mean, dispersion)
+                nb50 = np.random.negative_binomial(r_nb, p_nb, k)
                 smpl = np.mean(nb50)
-                samples.append( smpl )
+                samples.append(smpl)
             #calculate the mean and the variance 
 
             sampled_means.append(np.mean(samples))
@@ -173,12 +181,10 @@ def plot_pearsoncorr(var1, var2, my_title, my_xlabel, my_ylabel, plotpath=None, 
     fit_func = np.poly1d([a, b])
     plt.plot(var1, fit_func(var1), '-r')
     #percentage_under = sum(var1 < var2)/float(len(var1)) 
-    plt.text(abs(max_value)*0.1, max_value-abs(max_value)*0.2, r'$R^2$: %.2f (p-value: %.2E)' % (r_squared, pvalue),
+    plt.text(abs(max_value) * 0.1, max_value-abs(max_value)*0.2, r'$R^2$: %.2f (p-value: %.2E)' % (r_squared, pvalue),
              fontsize=18, bbox={'facecolor': 'yellow', 'alpha': 0.3, 'pad': 10})
     plt.title(my_title)
     print r"%s R^2: %.2f (p-value: %.2E)" % (my_title, r_squared, pvalue)
     plt.plot(var1, var2, '.')
     if plotpath:
         _save_or_show(plotpath, my_title)
-
-
