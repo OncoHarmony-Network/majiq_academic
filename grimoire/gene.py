@@ -401,8 +401,8 @@ class Transcript(object):
         res = None 
         for ex in self.exon_list:
             for jj in ex.get_5prime_junc():
-                start, end = jj.get_coordinates()
-                if jj.start == start and jj.end == end:
+                jjstart, jjend = jj.get_coordinates()
+                if jjstart == start and jjend == end:
                     res = jj
                     break
             else:

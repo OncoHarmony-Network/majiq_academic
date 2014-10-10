@@ -17,7 +17,8 @@ import os
 Calculate and manipulate PSI and Delta PSI values
 """
 BSIZE = 0.025 #TODO To parameters
-BINS = np.arange(0, 1, BSIZE) # The bins for PSI values. With a BSIZE of 0.025, we have 40 BINS
+BINS = np.arange(0, 1, BSIZE)
+# The bins for PSI values. With a BSIZE of 0.025, we have 40 BINS
 BINS_CENTER = np.arange(0+BSIZE/2, 1, BSIZE)
 #The center of the previous BINS. This is used to calculate the mean value of each bin.
 
@@ -95,11 +96,11 @@ def simple_psi(inc, exc):
 def reads_given_psi_lsv(lsv, psi_space):
     #P(vector_i | PSI_i)
     "We do a simple binomial test to evaluate how probable is the data given a PSI range"
-    psi = np.zeros(shape=(lsv.shape[0],psi_space.shape[0]), dtype=np.float)
+    psi = np.zeros(shape=(lsv.shape[0], psi_space.shape[0]), dtype=np.float)
     for idx, junc in enumerate(lsv):
-        total_psi = np.zeros(shape=(100,psi_space.shape[0]),dtype=np.float)
+        total_psi = np.zeros(shape=(100, psi_space.shape[0]), dtype=np.float)
         for pidx, smpl in enumerate(junc):
-            bin_test = [binom_test(smpl, lsv[:,pidx].sum(), p = x) for x in psi_space]
+            bin_test = [binom_test(smpl, lsv[:, pidx].sum(), p=x) for x in psi_space]
             bin_test = np.array(bin_test) + 1e-10
             total_psi[pidx] = (bin_test/bin_test.sum())
         total_psi = np.mean(total_psi, axis=0)
@@ -138,7 +139,8 @@ class DirichletCalc:
         else: 
             #formula taken from stackoverflow "How to calculate dirichlet PDF", author based it on
             #  Wikipedia's PDF definition
-            ret = gamma(sum(alpha)) / reduce(np.operator.mul, [gamma(a) for a in alpha]) * reduce(np.operator.mul, [x[i]**(alpha[i]-1.0) for i in xrange(len(alpha))])
+            ret = gamma(sum(alpha)) / reduce(np.operator.mul, [gamma(a) for a in alpha]) \
+                * reduce(np.operator.mul, [x[i] ** (alpha[i]-1.0) for i in xrange(len(alpha))])
             self.cache[key] = ret
             return ret
 
@@ -159,9 +161,6 @@ def recalibrate_delta(deltapsi):
     np.arange(-98.75, 100, 2.5)
 
 
-
-
-
 def lsv_psi(samples_events, alpha, n, debug):
     """
     Given a set of matching inclusion and exclusion samples, calculate psi, save it in disk, and
@@ -175,7 +174,7 @@ def lsv_psi(samples_events, alpha, n, debug):
         if i % 50 == 0:
             print "event %s..." % i,
             sys.stdout.flush()
-        if debug > 0 and i == debug: break
+        if 0 < debug == i: break
         psi = np.zeros(shape=(lsv.shape[0],BINS.shape[0]), dtype=np.float)
         #if debug: print "Paired samples to dirichlet..."
         #sampling PSI by pairing the samples of the previous step sequentially

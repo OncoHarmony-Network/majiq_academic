@@ -32,10 +32,10 @@ class LSV(object):
             print " ERROR_LSV :: with inconsistent junction-type %s, %s" % (len(junction_list),
                                                                             len(self.ext_type.split('|')))
 
-        for kk, vv in self.tlb_junc.items():
-            count = np.sum(junction_list[vv].coverage[0].toarray())
-            if kk.find('e0') != -1 and count != 0:
-                raise ValueError
+        # for kk, vv in self.tlb_junc.items():
+        #     count = np.sum(junction_list[vv].coverage[0].toarray())
+        #     if kk.find('e0') != -1 and count != 0:
+        #         raise ValueError
 
         juncs = []
         order = self.ext_type.split('|')[1:]

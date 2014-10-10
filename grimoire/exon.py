@@ -431,7 +431,7 @@ class ExonTx(object):
                 ex.ss_3p_list.append(txex.start)
                 ex.ss_5p_list.append(txex.end)
                 ex.exonTx_list.append(txex)
-                txex.exon = ex
+                #txex.exon = ex
                 for p3_junc in txex.p3_junc:
                     p3_junc.add_acceptor(ex)
                 for p5_junc in txex.p5_junc:
