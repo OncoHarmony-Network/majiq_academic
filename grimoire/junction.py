@@ -58,7 +58,8 @@ class Junction:
             ex = None
         elif self.donor_id is None:
             ex = self.get_gene().get_exon_in_coord(self.start)
-            self.donor_id = ex.get_id()
+            if not ex is None:
+                self.donor_id = ex.get_id()
         else:
             ex = self.get_gene().get_exon_by_id(self.donor_id)
         return ex
@@ -68,7 +69,8 @@ class Junction:
             ex = None
         elif self.acceptor_id is None:
             ex = self.get_gene().get_exon_in_coord(self.end)
-            self.acceptor_id = ex.get_id()
+            if not ex is None:
+                self.acceptor_id = ex.get_id()
         else:
             ex = self.get_gene().get_exon_by_id(self.acceptor_id)
         return ex

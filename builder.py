@@ -95,6 +95,7 @@ def _generate_parser():
     parser.add_argument('--silent', action='store_true', default=False, help='Silence the logger.')
     parser.add_argument('--debug', type=int, default=0, help="Activate this flag for debugging purposes, activates "
                                                              "logger and jumps some processing steps.")
+    parser.add_argument('--only_gather', action='store_true', default=False)
     return parser.parse_args()
 
 #########
@@ -115,39 +116,42 @@ def main(params):
     logger.info("")
     logger.info("Command: %s" % params)
 
-    chr_list = majiq_io.read_gff(params.transcripts, params.pcr_filename, logging=logger)
+    if True:
+        chr_list = majiq_io.read_gff(params.transcripts, params.pcr_filename, logging=logger)
 
-    sam_list = []
-    for exp_idx, exp in enumerate(mglobals.exp_list):
-        samfile = "%s/%s.bam" % (mglobals.sam_dir, exp)
-        if not os.path.exists(samfile):
-            logger.info("Skipping %s.... not found" % samfile)
-            continue
-        sam_list.append(samfile)
-        majiq_io.count_mapped_reads(samfile, exp_idx)
-    if len(sam_list) == 0:
-        return
+        sam_list = []
+        for exp_idx, exp in enumerate(mglobals.exp_list):
+            samfile = "%s/%s.bam" % (mglobals.sam_dir, exp)
+            if not os.path.exists(samfile):
+                logger.info("Skipping %s.... not found" % samfile)
+                continue
+            sam_list.append(samfile)
+            majiq_io.count_mapped_reads(samfile, exp_idx)
+        if len(sam_list) == 0:
+            return
 
-    if params.nthreads > 1:
-        pool = Pool(processes=params.nthreads)
-    logger.info("Scatter in Chromosomes")
-    for chrom in chr_list:
-        temp_dir = "%s/tmp/%s" % (mglobals.outDir, chrom)
-        utils.create_if_not_exists(temp_dir)
-        if params.nthreads == 1:
-            majiq_builder(sam_list, chrom, pcr_validation=params.pcr_filename, logging=logger)
-        else:
-            utils.clear_gene_tlb()
-            pool.apply_async(__parallel_lsv_quant, [sam_list, chrom, params.pcr_filename])
+        if params.nthreads > 1:
+            pool = Pool(processes=params.nthreads)
+        logger.info("Scatter in Chromosomes")
+        for chrom in chr_list:
+            temp_dir = "%s/tmp/%s" % (mglobals.outDir, chrom)
+            utils.create_if_not_exists(temp_dir)
+            if params.nthreads == 1:
+                majiq_builder(sam_list, chrom, pcr_validation=params.pcr_filename, logging=logger)
+            else:
+                utils.clear_gene_tlb()
+                pool.apply_async(__parallel_lsv_quant, [sam_list, chrom, params.pcr_filename])
 
-    if params.nthreads > 1:
-        logger.info("... waiting childs")
-        pool.close()
-        pool.join()
+        if params.nthreads > 1:
+            logger.info("... waiting childs")
+            pool.close()
+            pool.join()
 
-    utils.gc_factor_calculation(chr_list, 10)
-    utils.plot_gc_content()
+        utils.gc_factor_calculation(chr_list, 10)
+        utils.plot_gc_content()
 
+    else:
+        chr_list = os.listdir('%s/tmp' % mglobals.output)
     #GATHER
     logger.info("Gather outputs")
     utils.merge_and_create_majiq_file(chr_list, params.prefix)

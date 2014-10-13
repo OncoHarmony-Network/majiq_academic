@@ -32,10 +32,10 @@ class LSV(object):
             print " ERROR_LSV :: with inconsistent junction-type %s, %s" % (len(junction_list),
                                                                             len(self.ext_type.split('|')))
 
-        for kk, vv in self.tlb_junc.items():
-            count = np.sum(junction_list[vv].coverage[0].toarray())
-            if kk.find('e0') != -1 and count != 0:
-                raise ValueError
+        # for kk, vv in self.tlb_junc.items():
+        #     count = np.sum(junction_list[vv].coverage[0].toarray())
+        #     if kk.find('e0') != -1 and count != 0:
+        #         raise ValueError
 
         juncs = []
         order = self.ext_type.split('|')[1:]
@@ -100,6 +100,7 @@ class LSV(object):
 
     def set_type(self, jlist, tlb_junc):
         ex_id = self.exon.get_id()
+        strand = self.get_strand()
         if self.type == SSOURCE:
             spsite = sorted(set(self.exon.ss_5p_list))
         else:
@@ -119,6 +120,8 @@ class LSV(object):
                     ex_set.add(jacceptor.get_id())
             else:
                 lsv_exon = jacceptor
+                if jacceptor is None:
+                    continue
                 if lsv_exon.get_id() != ex_id:
                     skip = True
                     break
@@ -127,9 +130,14 @@ class LSV(object):
                     ex_set.add(jdonor.get_id())
         if skip:
             return 'intron'
-        ex_list = sorted(list(ex_set))
+
+        if strand == '+':
+            rev = False
+        else:
+            rev = True
+        ex_list = sorted(list(ex_set), reverse=rev)
     
-        if (self.type == SSOURCE and self.get_strand() == '+') or (self.type == STARGET and self.get_strand() == '-'):
+        if (self.type == SSOURCE and strand == '+') or (self.type == STARGET and strand == '-'):
             ext_type = "s" 
         else:
             ext_type = "t"
@@ -146,7 +154,7 @@ class LSV(object):
                     s3 = sorted(list(set(jacceptor.ss_3p_list)))
                     ex1 = ex_list.index(jacceptor.get_id())+1
                     ex = '%s.%s' % (ex1, s3.index(junc.end)+1)
-                jtype="|%se%s" % (spsite.index(junc.start)+1, ex)
+                jtype = "|%se%s" % (spsite.index(junc.start)+1, ex)
             else:
                 if jdonor is None:
                     exs5 = ''
@@ -171,7 +179,7 @@ class LSV(object):
         return MajiqLsv(self, exp_idx)
 
 
-def extract_SE_events( list_lsv_per_gene ):
+def extract_SE_events(list_lsv_per_gene):
 
     sslist = list_lsv_per_gene[0]
     stlist = list_lsv_per_gene[1]

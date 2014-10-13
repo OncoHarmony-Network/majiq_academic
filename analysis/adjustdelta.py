@@ -1,6 +1,3 @@
-from matplotlib import use
-
-use('Agg')
 import pickle
 import numpy as np
 import numpy.ma as ma
@@ -101,16 +98,16 @@ def label_beta(a, b, pi):
 
 def plot_all(a_center, b_center, pi_center, label_center, a_change, b_change, pi_change, label_change, figure_title,
              deltadata):
-    ax = subplot(2, 2, 1)
+    ax = plt.subplot(2, 2, 1)
     plot_densities(deltadata, ax)
-    subplot(2, 2, 2)
+    plt.subplot(2, 2, 2)
     plot_mixture(a_center, b_center, pi_center, label_center)
     plot_mixture(a_change, b_change, pi_change, label_change)
-    subplot(2, 2, 3)
+    plt.subplot(2, 2, 3)
     plot_combpdf([[a_center, b_center, pi_center], [a_change, b_change, pi_change]])
-    subplot(2, 2, 4)
+    plt.subplot(2, 2, 4)
     plot_pi(pi_center, pi_change)
-    suptitle(figure_title, fontsize=24)
+    plt.suptitle(figure_title, fontsize=24)
 
 
 def plot_densities(deltadata, ax=None, my_title="Empirical Data"):
@@ -162,7 +159,7 @@ def calc_mixture_pdf(beta_dists):
 
         mixture_pdf.append(local_sum)
 
-    return x_pos, array(mixture_pdf)
+    return x_pos, np.array(mixture_pdf)
 
 
 def plot_combpdf(beta_dists, fig):
@@ -202,14 +199,14 @@ def plot_pi(p_mixture, fig):
 
 def _save_or_show(plotpath, name):
     if plotpath:
-        savefig("%s_%s.png" % (plotpath, name), width=200, height=400, dpi=100)
-        clf()
+        plt.savefig("%s_%s.png" % (plotpath, name), width=200, height=400, dpi=100)
+        plt.clf()
     else:
-        show()
+        plt.show()
 
 
 def EM(a_change, b_change, a_center, b_center, pi_change, pi_center, deltadata, num_iter, plotpath, logger=False):
-    fig = figure(figsize=[15, 10])
+    fig = plt.figure(figsize=[15, 10])
     prev_likelihood = likelihood(a_change, b_change, a_center, b_center, pi_change, pi_center, deltadata)
     if logger: logger.info("INIT: Center %s Change %s Likelihood: %.5f" % (
         label_beta(a_center, b_center, pi_center), label_beta(a_change, b_change, pi_change), prev_likelihood))
@@ -313,7 +310,7 @@ def adjustdelta_lsv(deltapsi, output, plotpath=None, title=None, numiter=10, bre
 
     for ppv in deltapsi:
         for idx, ii in enumerate(xpos[:-1]):
-            if ppv >= ii and ppv < xpos[idx + 1]:
+            if ii <= ppv < xpos[idx + 1]:
                 D[idx, 1] += 1
                 break
 
@@ -357,8 +354,8 @@ def adjustdelta_lsv(deltapsi, output, plotpath=None, title=None, numiter=10, bre
 
 
 def plot_all_lsv(deltadata, beta_params, pmix, labels, figure_title):
-    f, sp = subplots(2, 2)
-    subplots_adjust(hspace=.4)
+    f, sp = plt.subplots(2, 2)
+    plt.subplots_adjust(hspace=.4)
     #    print deltadata
     plot_densities(deltadata, sp[0, 0])
     cmb = []
@@ -369,7 +366,7 @@ def plot_all_lsv(deltadata, beta_params, pmix, labels, figure_title):
 
     plot_combpdf(cmb, sp[1, 0])
     plot_pi(pmix, sp[1, 1])
-    suptitle(figure_title, fontsize=24)
+    plt.suptitle(figure_title, fontsize=24)
 
 
 def loglikelihood(D, beta_mix, logp_mix, logger=False):
@@ -426,21 +423,19 @@ def EMBetaMixture(D, p0_mix, beta0_mix, num_iter, min_ratio=1e-5, logger=False, 
         p_KgD[zrow, K - 1] = 0
         #        pdb.set_trace()
 
-        avgxPerK = np.sum(p_KgD * ( D[:, 0] * ones_1k.T ).T * (D[:, 1] * ones_1k.T).T, axis=0) / np.sum(
-            p_KgD * ( D[:, 1] * ones_1k.T ).T, axis=0)
-        avgx2PerK = np.sum(p_KgD * np.square((D[:, 0] * ones_1k.T ).T) * (D[:, 1] * ones_1k.T).T, axis=0) / np.sum(
-            p_KgD * ( D[:, 1] * ones_1k.T ).T, axis=0)
+        avgxPerK = np.sum(p_KgD * (D[:, 0] * ones_1k.T).T * (D[:, 1] * ones_1k.T).T, axis=0) / np.sum(p_KgD * (D[:, 1] * ones_1k.T).T, axis=0)
+        avgx2PerK = np.sum(p_KgD * np.square((D[:, 0] * ones_1k.T).T) * (D[:, 1] * ones_1k.T).T, axis=0) / np.sum(p_KgD * (D[:, 1] * ones_1k.T).T, axis=0)
         varxPerK = avgx2PerK - (np.square(avgxPerK))
 
         new_beta_mix = np.zeros(shape=beta0_mix.shape, dtype=np.float)
-        new_beta_mix[:, 0] = avgxPerK * ( ((avgxPerK * (1 - avgxPerK)) / varxPerK) - 1 )
-        new_beta_mix[:, 1] = ( 1 - avgxPerK ) * ( ((avgxPerK * (1 - avgxPerK)) / varxPerK) - 1 )
+        new_beta_mix[:, 0] = avgxPerK * (((avgxPerK * (1 - avgxPerK)) / varxPerK) - 1)
+        new_beta_mix[:, 1] = (1 - avgxPerK) * (((avgxPerK * (1 - avgxPerK)) / varxPerK) - 1)
 
         new_pmix = np.sum(p_KgD * (D[:, 1] * ones_1k.T).T, axis=0)
         new_pmix = new_pmix / np.sum(new_pmix, axis=0)
 
         LLold = LL
-        logp_D, logp_Dsum, LL, zrow = loglikelihood(D, new_beta_mix, log(new_pmix))
+        logp_D, logp_Dsum, LL, zrow = loglikelihood(D, new_beta_mix, np.log(new_pmix))
         if logger: logger.info("[NJ:%s] EM Iteration %d:\t LL: %.3f\n" % (nj, mm, LL))
         plot_all_lsv(D0, beta_mix, pmix, labels, 'iteration %s' % str(mm + 1))
         _save_or_show(plotpath, "iter_%05d.jun_%s" % (mm + 1, nj))
@@ -451,10 +446,11 @@ def EMBetaMixture(D, p0_mix, beta0_mix, num_iter, min_ratio=1e-5, logger=False, 
 
         pmix = new_pmix
         beta_mix = new_beta_mix
-        logp_mix = log(pmix)
+        logp_mix = np.log(pmix)
 
         if np.exp(LL - LLold) < (1.0 + min_ratio):
-            if logger: logger.info("Ratio = %.3f < 1+R(%.3f) - Aborting ... \n" % (LL - LLold, min_ratio))
+            if logger:
+                logger.info("Ratio = %.3f < 1+R(%.3f) - Aborting ... \n" % (LL - LLold, min_ratio))
             break
 
     return beta_mix, np.array(pmix)

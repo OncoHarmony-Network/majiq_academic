@@ -7,18 +7,6 @@ from grimoire.lsv import LSV
 from grimoire.junction import Junction
 
 
-# class GeneTLB(Singleton):
-#     trans = {}
-#
-#     def get_gene(self, gid):
-#         return self.trans[gid]
-#
-#     def add_gene(self, gid, gene):
-#         if gid in gene and gene != self.trans[gid]:
-#             raise
-#         self.trans[gid] = gene
-
-
 class Gene:
     __eq__ = lambda self, other: (self.chromosome == other.chromosome and self.strand == other.strand
                                   and self.start < other.end and self.end > other.start)
@@ -123,14 +111,6 @@ class Gene:
     def add_exon(self, exon):
         self.exons.append(exon)
         return
-
-    def in_transcript_list(self, tcrpt_name):
-        res = False
-        for ff in self.transcript_list:
-            if ff.get_id() == tcrpt_name:
-                res = True
-                break
-        return res
 
     def is_gene_in_list(self, list_of_genes, name):
         res = None
@@ -252,9 +232,13 @@ class Gene:
             tx_list = ex.get_annotated_exon()
             for txex in tx_list:
                 for junc in txex.get_3prime_junc():
-                    ss.add((junc.get_ss_3p(), '3prime', junc))
+                    coord = junc.get_ss_3p()
+                    if not coord is None:
+                        ss.add((coord, '3prime', junc))
                 for junc in txex.get_5prime_junc():
-                    ss.add((junc.get_ss_5p(), '5prime', junc))
+                    coord = junc.get_ss_5p()
+                    if not coord is None:
+                        ss.add((coord, '5prime', junc))
 
         return sorted(ss)
 
@@ -302,7 +286,7 @@ class Gene:
                 res = txex
                 break
         else:
-            res = ExonTx(start, end, transcript, None)
+            res = ExonTx(start, end, transcript)
             if bl:
                 self.temp_txex_list.append(res)
         return res
@@ -311,7 +295,7 @@ class Gene:
         junc = self.exist_junction(start, end)
         if junc is None:
             junc = Junction(start, end, None, None, self, annotated=True)
-        trcpt.add_junction(junc)
+#        trcpt.add_junction(junc)
         return junc
 
     def get_rnaseq_mat(self, rand10k, lsv=False):
@@ -386,7 +370,7 @@ class Transcript(object):
         self.id = name
         self.gene_name = gene.get_id()
         self.exon_list = []
-        self.junction_list = []
+        #self.junction_list = []
         self.txstart = txstart
         self.txend = txend
         # self.cdsStart = None
@@ -402,7 +386,12 @@ class Transcript(object):
         return self.id
 
     def get_junction_list(self):
-        return self.junction_list
+        res = set()
+        for ex in self.exon_list:
+            res.update(set(ex.get_5prime_junc()))
+            res.update(set(ex.get_3prime_junc()))
+
+        return sorted(res)
 
     def prepare_exon_list(self):
         self.exon_list.sort()
@@ -410,24 +399,24 @@ class Transcript(object):
 
     def in_junction_list(self, start, end):
         res = None 
-#        if self.gene.strand == '-':
-#            tmp = start
-#            start = end
-#            end = tmp
-        for jj in self.junction_list:
-            if jj.start == start and jj.end == end:
-#                jj.txN += 1
-                res = jj
-                break
+        for ex in self.exon_list:
+            for jj in ex.get_5prime_junc():
+                jjstart, jjend = jj.get_coordinates()
+                if jjstart == start and jjend == end:
+                    res = jj
+                    break
+            else:
+                continue
+            break
         return res
 
     def add_exon(self, exon):
         self.exon_list.append(exon)
         return
 
-    def add_junction(self, junc):
-        if junc not in self.junction_list:
-            self.junction_list.append(junc)
+    # def add_junction(self, junc):
+    #     if junc not in self.junction_list:
+    #         self.junction_list.append(junc)
 
     def sort_in_list(self):
         # strand = self.get_gene().get_strand()
@@ -435,6 +424,5 @@ class Transcript(object):
         #     isneg = False
         # else:
         #     isneg = True
-        self.junction_list.sort()
 #        self.exon_list.sort(reverse=isneg)
         self.exon_list.sort()

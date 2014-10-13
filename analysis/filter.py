@@ -19,7 +19,8 @@ def filter_message(when, value, logger, junc):
 
 def lsv_mark_stacks(lsv_list, fitfunc, pvalue_limit, dispersion, logger=None):
     a, b = fitfunc.c
-    minstack = sys.maxint #the minimum value marked as stack
+    minstack = sys.maxint
+     #the minimum value marked as stack
     numstacks = 0
     for lidx, junctions in enumerate(lsv_list[0]):
         for i, junction in enumerate(junctions):
@@ -86,7 +87,6 @@ def quantifiable_in_group(list_of_experiments, minnonzero, min_reads, logger, pe
         id = list_of_experiments[0][1][tlb[ii][0]]
         for idx, exp in enumerate(list_of_experiments):
             local_indx = tlb[ii][idx]
-#            pdb.set_trace()
             lsv.append(exp[0][local_indx])
         filtered.append(lsv)
         filtered_info.append(id)
@@ -142,7 +142,6 @@ def lsv_intersection(lsv_list1, lsv_list2):
         for idx, nm in enumerate(lsv_list2[1]):
             if nm[1] == ii:
                 lsv_match[1].append(lsv_list2[0][idx])
-#                match_info.append(lsv_list2[1][idx])
                 break
 
     return lsv_match, match_info

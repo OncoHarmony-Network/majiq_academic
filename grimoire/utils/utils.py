@@ -1,5 +1,3 @@
-import matplotlib
-matplotlib.use('Agg')
 import os
 import logging
 import numpy as np
@@ -70,8 +68,8 @@ def prepare_lsv_table(lsv_list, non_as, temp_dir):
     for name, ind_list in mglobals.tissue_repl.items():
         for idx, exp_idx in enumerate(ind_list):
 
-            majiq_table_as = np.zeros(shape=(len(lsv_list[exp_idx])), dtype=np.dtype('object'))
-            majiq_table_nonas = np.zeros(shape=(len(non_as[exp_idx])), dtype=np.dtype('object'))
+            majiq_table_as = [0] * len(lsv_list[exp_idx])
+            majiq_table_nonas = [0] * len(non_as[exp_idx])
 
             for iix, lsv in enumerate(lsv_list[exp_idx]):
                 majiq_table_as[iix] = lsv.to_majiqLSV(exp_idx)
@@ -82,7 +80,7 @@ def prepare_lsv_table(lsv_list, non_as, temp_dir):
     fname = "%s/majiq.pkl" % temp_dir
     majiq_io.dump_bin_file(out_temp, fname)
 
-
+#@profile
 def merge_and_create_majiq_file(chr_list, pref_file):
 
     """
@@ -96,23 +94,25 @@ def merge_and_create_majiq_file(chr_list, pref_file):
     all_visual = [list() for xx in xrange(mglobals.num_experiments)]
     as_table = [list() for xx in xrange(mglobals.num_experiments)]
     nonas_table = [list() for xx in xrange(mglobals.num_experiments)]
-
     for chrom in chr_list:
+        print "READ chrom %s" % chrom,
+        sys.stdout.flush()
         temp_dir = "%s/tmp/%s" % (mglobals.outDir, chrom)
         temp_filename = '%s/splicegraph.pkl' % temp_dir
         visual_gene_list = majiq_io.load_bin_file(temp_filename)
-
+        sys.stdout.flush()
         filename = "%s/majiq.pkl" % temp_dir
         temp_table = majiq_io.load_bin_file(filename)
-
+        sys.stdout.flush()
         for name, ind_list in mglobals.tissue_repl.items():
             for idx, exp_idx in enumerate(ind_list):
-                print mglobals.exp_list[exp_idx]
-                print visual_gene_list[mglobals.exp_list[exp_idx]]
+                # print mglobals.exp_list[exp_idx]
+                # print visual_gene_list[mglobals.exp_list[exp_idx]]
                 all_visual[exp_idx].append(visual_gene_list[mglobals.exp_list[exp_idx]])
                 as_table[exp_idx].append(temp_table[exp_idx][0])
                 nonas_table[exp_idx].append(temp_table[exp_idx][1])
 
+    sys.stdout.flush()
     for name, ind_list in mglobals.tissue_repl.items():
         for idx, exp_idx in enumerate(ind_list):
             if len(as_table[exp_idx]) == 0:
@@ -226,7 +226,7 @@ def generate_visualization_output(allgenes, temp_dir):
 
 def prepare_junctions_gc(junc, exp_idx):
 
-    gc = scipy.sparse.lil_matrix((mglobals.readLen - 16+1),dtype=np.float)
+    gc = scipy.sparse.lil_matrix((mglobals.readLen - 16+1), dtype=np.float)
     gci = np.zeros(shape=(mglobals.readLen - 16+1))
     for jj in range(mglobals.readLen - 16+1):
         if not junc is None and junc.get_gc_content()[exp_idx, jj] != 0:
@@ -250,9 +250,9 @@ def print_junc_matrices(mat, tlb=None, fp=None):
     if not tlb is None:
         out.write("Nan\t")
         for ex, (p1, p2) in tlb.items():
-            for nid, n in enumerate(p1):
+            for n in p1:
                 out.write("%d\t" % (ex+1))
-            for nid, n in enumerate(p2):
+            for n in p2:
 #                header[nid] = "%d:%d\t"%(ex,nid)
                 header[n] = "%d" % (ex+1)
     out.write("\n")
@@ -484,8 +484,6 @@ def gff2gtf(gff_f, out_f=None):
                     frame_l.append((3 - (len_frame % 3)) % 3)
                     len_frame = int(gff_fields[4]) - int(gff_fields[3])
         to_gtf(wfile, seq_name, source, gene, mrna, start_trans, end_trans, strand, exon_l, frame_l)
-
-
 
 
 @ctx
