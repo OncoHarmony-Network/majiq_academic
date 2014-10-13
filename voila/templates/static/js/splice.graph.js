@@ -658,7 +658,7 @@ window.splicegraph = function (){
                     }
                 }
                 // If negative strand, complement the exon ordinal
-                if (gene.strand = '-'){
+                if (gene.strand === '-'){
                     exon_lsv_number = gene.exons.length - exon_lsv_number + 1;
                 }
 
