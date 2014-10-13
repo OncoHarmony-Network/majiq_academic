@@ -362,7 +362,7 @@ class ExonTx(object):
         j5_list = []
         for j5 in self.p5_junc:
             jcoord = j5.get_coordinates()
-            if self.start <= jcoord[1] <= self.end:
+            if self.start <= jcoord[0] <= self.end:
                 #j5.add_donor(self)
                 j5_list.append(j5)
                 
