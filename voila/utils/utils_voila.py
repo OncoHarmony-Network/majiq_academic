@@ -279,7 +279,7 @@ def get_lsv_single_exp_data(majiq_bins_file, confidence, gene_name_list=None, ls
         logger.error("Pickle could not load the file. Please, check that the file %s is in Pickle format." % majiq_bins_file, exc_info=1)
 
     except IOError:
-        logger.error("%s doesn't exists." % + majiq_bins_file, exc_info=1)
+        logger.error("%s doesn't exists." % majiq_bins_file, exc_info=1)
         sys.exit(1)
 
     lsv_counter = 0
