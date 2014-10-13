@@ -1,4 +1,5 @@
 from __future__ import division
+from pdb import set_trace
 import fnmatch
 import logging
 import os
@@ -267,48 +268,6 @@ def generate_lsv(i, lsvs_bins, confidence, **post_metadata):
     }
 
 
-def generate_event(i, events_bins, confidence, **post_metadata):
-    """Collect all event information from data files"""
-    prefix_matrix_plot = "../templates/static/matrix_plots/"
-
-    # type_set = ('Exon skipping', '5-prime', '3-prime')
-    random_num = np.random.random()  # Random number between 0 and 1
-    bins_info = create_array_bins(events_bins, confidence)
-    events_bins.tolist()
-
-    if 'names' in post_metadata and post_metadata['names']:
-        id = post_metadata['names'][i]
-        try:
-            coords = str(id).split(":")[1]
-        except IndexError:
-            # Name in unknown format, skip coordinates parsing ...
-            pass
-
-        matrix_link = "#"
-        if 'keys_plots' in post_metadata:
-            # Correct key names for plots
-            for key_plot, name_plot in post_metadata['keys_plots'].items():
-                if str(id).startswith(str(key_plot).split("_")[0]):
-                    matrix_link = prefix_matrix_plot + "mas" + name_plot + ".png"
-    else:
-        id = "chr" + str(random_num)[-1] + ":" + "10000" + str(random_num)[-2:] + "-" + "1000" + str(random_num)[-3:]
-        coords = "chr" + str(random_num)[-1] + ":" + "10000" + str(random_num)[-2:] + "-" + "1000" + str(random_num)
-        matrix_link = "#"
-
-    return {
-        'number': i,
-        'id': id,
-        # TODO: information missing
-        'type': 'Exon skipping',  # TODO: information missing
-        'bins': events_bins.tolist(),  # bins array
-        'mean_psi': bins_info[0],
-        'conf_interval': bins_info[1],
-        'quartiles': bins_info[2],
-        'coords': coords,
-        'matrix_link': matrix_link,
-    }
-
-
 def get_lsv_single_exp_data(majiq_bins_file, confidence, gene_name_list=None, lsv_types=None, logger=None):
     """
     Create a dictionary to summarize the information from majiq output file.
@@ -323,10 +282,6 @@ def get_lsv_single_exp_data(majiq_bins_file, confidence, gene_name_list=None, ls
         logger.error("%s doesn't exists." % + majiq_bins_file, exc_info=1)
         sys.exit(1)
 
-    # Load metadata
-    metadata_pre = majiq_data[1]
-    # metadata = []
-
     lsv_counter = 0
     lsv_list = []
 
@@ -336,7 +291,7 @@ def get_lsv_single_exp_data(majiq_bins_file, confidence, gene_name_list=None, ls
     if gene_name_list is None:
         gene_name_list = []
 
-    for i, lsv_meta in enumerate(metadata_pre):
+    for i, lsv_meta in enumerate(majiq_data[1]):
         if nofilter_genes or str(lsv_meta[1]).split(':')[0] in gene_name_list or lsv_meta[2] in lsv_types:
             # print lsv_meta[0], lsv_meta[1], lsv_meta[2]
 
@@ -361,7 +316,7 @@ def get_lsv_single_exp_data(majiq_bins_file, confidence, gene_name_list=None, ls
             genes_dict[str(lsv_meta[1]).split(':')[0]].append([lsv_list[-1], lsv_meta])
 
     return {'event_list':   lsv_list,
-            'metadata':     metadata_pre,
+            'metadata':     majiq_data[1],
             'genes_dict':   genes_dict,
             'meta_exps':    majiq_data[2]}
 
@@ -407,6 +362,12 @@ def get_lsv_delta_exp_data(majiq_out_file, confidence=.95, threshold=.2, show_al
     except pkl.PickleError, e:
         logger.error("Loading the file %s: %s." % (majiq_out_file, e.message), exc_info=1)
 
+    meta_info = None
+    try:
+        meta_info = lsv_matrix_list_info_list[2]
+    except IndexError:
+        pass
+
     genes_dict = defaultdict(list)
 
     lsv_list = lsv_matrix_list_info_list[0]
@@ -429,11 +390,9 @@ def get_lsv_delta_exp_data(majiq_out_file, confidence=.95, threshold=.2, show_al
                 logger.warning("%s produced an error:\n%s. Skipped." % (lsv_info[i], e))
 
     logger.info("Number of genes added: %d" % len(genes_dict.keys()))
-    # TODO: Extract experiments info from Majiq output file
-    experiments_info = [{'name': 'exp1', 'link': '#', 'color': '#e41a1c'},
-                        {'name': 'exp2', 'link': '#', 'color': '#377e80'}]
 
-    return {'genes_dict': genes_dict, 'experiments_info': experiments_info}
+    return {'genes_dict': genes_dict,
+            'meta_exps':  meta_info}
 
 
 def copyanything(src, dst):

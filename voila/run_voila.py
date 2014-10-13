@@ -54,15 +54,10 @@ def render_summary(output_dir, output_html, majiq_output, type_summary, threshol
         voila_output = open(output_dir+output_html, 'w')
         voila_output.write(sum_template.render(lsvList=majiq_output['event_list'],
                                                tableMarks=table_marks_set(len(majiq_output['event_list'])),
-                                               metadata=majiq_output['metadata']
+                                               metadata=majiq_output['metadata'],
+                                               lexps=majiq_output['meta_exps']
                                                ))
         voila_output.close()
-    elif type_summary == 'lsv_thumbnails':
-        voila_output = open(output_dir+output_html, 'w')
-        voila_output.write(sum_template.render(lsvList=majiq_output,
-                                               collapsed=post_process_info['collapsed']))
-        voila_output.close()
-
     elif type_summary == 'lsv_single_gene':
         # Max. 10 genes per page, create as many HTMLs as needed
 
@@ -71,13 +66,13 @@ def render_summary(output_dir, output_html, majiq_output, type_summary, threshol
         gene_keys = sorted(majiq_output['genes_dict'].keys())
 
         logger.info("Number of genes detected in Voila: %d." % len(gene_keys))
-        while count_pages*MAX_GENES < len(majiq_output['genes_json']):
+        while count_pages*MAX_GENES < len(gene_keys):
             prev_page = None
             next_page = None
 
             subset_keys = gene_keys[count_pages*MAX_GENES: MAX_GENES*(count_pages+1)]
             genes_dict = cc.OrderedDict((k, majiq_output['genes_dict'][k]) for k in subset_keys)
-            genes_json_dict = cc.OrderedDict((k, majiq_output['genes_json'][k]) for k in subset_keys)
+            # genes_json_dict = cc.OrderedDict((k, majiq_output['genes_json'][k]) for k in subset_keys)
             if (count_pages+1)*MAX_GENES < len(majiq_output['genes_dict']):
                 logger.info("Processing %d out of %d genes ..." % ((count_pages+1)*MAX_GENES, len(majiq_output['genes_dict'])))
                 next_page = str(count_pages+1) + "_" + output_html
@@ -87,12 +82,13 @@ def render_summary(output_dir, output_html, majiq_output, type_summary, threshol
             name_page = str(count_pages) + "_" + output_html
             voila_output = open(output_dir+name_page, 'w')
             voila_output.write(sum_template.render(tableMarks=[table_marks_set(len(gene_set)) for gene_set in genes_dict],
-                                                   genes_json=genes_json_dict,
+                                                   # genes_json=genes_json_dict,
                                                    genes_dict=genes_dict,
                                                    prevPage = prev_page,
                                                    nextPage= next_page,
                                                    namePage= name_page,
-                                                   lexps=majiq_output['meta_exps']
+                                                   lexps=majiq_output['meta_exps'],
+                                                   genes_exps_list=majiq_output['genes_exp']
             ))
             voila_output.close()
             count_pages += 1
@@ -124,10 +120,12 @@ def render_summary(output_dir, output_html, majiq_output, type_summary, threshol
                                                     # metadata=majiq_output['metadata'],
                                                     genes_dict=genes_dict,
                                                     genes_exps_list=majiq_output['genes_exp'],
-                                                    expList=majiq_output['experiments_info'],
                                                     prevPage = prev_page,
                                                     nextPage= next_page,
-                                                    namePage= name_page
+                                                    namePage= name_page,
+                                                    threshold=threshold,
+                                                    # expList=majiq_output['experiments_info'],
+                                                    lexps=majiq_output['meta_exps']
             ))
             voila_output.close()
             count_pages += 1
@@ -137,8 +135,9 @@ def render_summary(output_dir, output_html, majiq_output, type_summary, threshol
         voila_output.write(sum_template.render( lsvList=majiq_output['event_list'],
                                                 tableMarks=table_marks_set(len(majiq_output['event_list'])),
                                                 metadata=majiq_output['metadata'],
-                                                expList=majiq_output['experiments_info'],
-                                                threshold=threshold
+                                                # expList=majiq_output['experiments_info'],
+                                                threshold=threshold,
+                                                lexps=majiq_output['meta_exps']
         ))
         voila_output.close()
 
@@ -157,6 +156,7 @@ def parse_gene_graphics(gene_exps_flist, gene_name_list, logger=None):
     for gene_flist in gene_exps_flist:
         genes_exp = defaultdict()
         for splice_graph_f in utils_voila.list_files_or_dir(gene_flist):
+            logger.info("Loading %s." % splice_graph_f)
             genes_file = pkl.load(open(splice_graph_f, 'r'))
             genes_graphic = defaultdict(list)
             genes_file.sort()
@@ -178,12 +178,13 @@ def parse_gene_graphics(gene_exps_flist, gene_name_list, logger=None):
 def render_tab_output(output_dir, output_html, majiq_output, type_summary, threshold, meta_postprocess, logger=None):
 
     delimiter = '\t'
-    ofile_str = output_dir + output_html.rsplit('.html', 1)[0] + '.csv'
+    extension = 'csv'
+    ofile_str = "%s%s.%s" % (output_dir, output_html.rsplit('.html', 1)[0], extension)
     tlb_categx = {'A5SS': 'prime5', 'A3SS': 'prime3', 'Num. Junctions': 'njuncs', 'Num. Exons': 'nexons', 'ES': 'ES'}
 
     logger.info("Creating Tab-delimited output file in %s..." % ofile_str)
     with open(ofile_str, 'w+') as ofile:
-        headers = ['Gene name', 'LSV ID', 'E(PSI) per LSV junction', 'Var(E(PSI)) per LSV junction', 'LSV Type', 'A5SS', 'A3SS', 'ES', 'Num. Junctions', 'Num. Exons', 'chr', 'strand', 'Junctions coords', 'Exons coords', 'Exons Alternative Start', 'Exons Aletrnative End']
+        headers = ['Gene name', 'LSV ID', 'E(PSI) per LSV junction', 'Var(E(PSI)) per LSV junction', 'LSV Type', 'A5SS', 'A3SS', 'ES', 'Num. Junctions', 'Num. Exons', 'chr', 'strand', 'Junctions coords', 'Exons coords', 'Exons Alternative Start', 'Exons Alternative End']
         if 'delta' in type_summary:
             headers[2] = 'E(Delta(PSI)) per LSV junction'
             headers[3] = 'P(Delta(PSI)>%s) per LSV junction' % .1
@@ -266,7 +267,7 @@ def create_summary(args):
 
         lsv_types = args.lsv_types
 
-        genes_file = pkl.load(open(args.genes_file, 'r'))
+        # genes_files = pkl.load(open(args.genes_files, 'r'))
 
         import fileinput
         gene_name_list = []
@@ -279,36 +280,37 @@ def create_summary(args):
 
         # Get gene info
         # try:
-        genes_graphic = defaultdict(list)
-        for gene_obj in genes_file:
-            if gene_obj.get_name() in majiq_output['genes_dict']:
-                genes_graphic[gene_obj.get_name()].append(json.dumps(gene_obj, cls=utils_voila.LsvGraphicEncoder).replace("\"", "'"))
-                genes_graphic[gene_obj.get_name()].append(gene_obj.get_strand())
-                genes_graphic[gene_obj.get_name()].append(gene_obj.get_coords())
-                genes_graphic[gene_obj.get_name()].append(gene_obj.get_chrom())
-                # majiq_output['gene_json'] = json.dumps(gene_obj, cls=utils_voila.LsvGraphicEncoder).replace("\"", "'")
-                # majiq_output['gene'] = gene_obj
+        # genes_graphic = defaultdict(list)
+        # for gene_obj in genes_files:
+        #     if gene_obj.get_name() in majiq_output['genes_dict']:
+        #         genes_graphic[gene_obj.get_name()].append(json.dumps(gene_obj, cls=utils_voila.LsvGraphicEncoder).replace("\"", "'"))
+        #         genes_graphic[gene_obj.get_name()].append(gene_obj.get_strand())
+        #         genes_graphic[gene_obj.get_name()].append(gene_obj.get_coords())
+        #         genes_graphic[gene_obj.get_name()].append(gene_obj.get_chrom())
+        #         # majiq_output['gene_json'] = json.dumps(gene_obj, cls=utils_voila.LsvGraphicEncoder).replace("\"", "'")
+        #         # majiq_output['gene'] = gene_obj
+        #
+        #
+        #         for lsv_data in majiq_output['genes_dict'][gene_obj.get_name()]:
+        #             # Find which is the ending coordinate of the LSV
+        #             lsv_data[1].append(gene_obj.get_exons()[-1].get_coords()[1])
+        #
+        #             # Calculate extension of LSV
+        #             lsv_data[0].set_coords(lsv_data[1][0])
+        #             lsv_data[0].set_extension(lsv_data[1][4], lsv_data[1][2])
+        #
+        # if not len(genes_graphic.keys()): raise Exception("[ERROR] :: No gene matching the visual information file.")
+        # gene_k = majiq_output['genes_dict'].keys()
+        # for g in gene_k:
+        #     if g not in genes_graphic.keys():
+        #         del majiq_output['genes_dict'][g]
+        # majiq_output['genes_json'] = genes_graphic
+        if not gene_name_list:
+            gene_name_list = majiq_output['genes_dict'].keys()
 
+        # Get gene info
+        majiq_output['genes_exp'] = parse_gene_graphics([args.genes_files], gene_name_list, logger=logger)
 
-                for lsv_data in majiq_output['genes_dict'][gene_obj.get_name()]:
-                    # Find which is the ending coordinate of the LSV
-                    lsv_data[1].append(gene_obj.get_exons()[-1].get_coords()[1])
-
-                    # Calculate extension of LSV
-                    lsv_data[0].set_coords(lsv_data[1][0])
-                    lsv_data[0].set_extension(lsv_data[1][4], lsv_data[1][2])
-
-        if not len(genes_graphic.keys()): raise Exception("[ERROR] :: No gene matching the visual information file.")
-        gene_k = majiq_output['genes_dict'].keys()
-        for g in gene_k:
-            if g not in genes_graphic.keys():
-                del majiq_output['genes_dict'][g]
-        majiq_output['genes_json'] = genes_graphic
-        # majiq_output['genes'] = genes_graphic[1]
-
-        # except Exception, e:
-        #     print e.message
-        #     raise e
 
     if type_summary == 'lsv_delta':
         threshold = args.threshold
@@ -320,7 +322,7 @@ def create_summary(args):
             for elem in elem_list:
                 majiq_output['event_list'].append(elem[0])
                 majiq_output['metadata'].append(elem[1])
-        del majiq_output['genes_dict']
+        # del majiq_output['genes_dict']
 
     if type_summary == 'lsv_delta_gene':
         threshold = args.threshold
@@ -395,7 +397,7 @@ def main():
 
     # Single LSV by Gene(s) of interest
     parser_single_gene = argparse.ArgumentParser(add_help=False)
-    parser_single_gene.add_argument('--genes-file-info', required=True, dest='genes_file', metavar='Hippocampus1.splicegraph', type=str, help='Splice graph information file.')
+    parser_single_gene.add_argument('--genes-files', nargs='+', required=True, dest='genes_files', metavar='Hippocampus1.splicegraph [Hippocampus2.splicegraph ...]', type=str, help='Splice graph information file(s) or directory with *.splicegraph file(s).')
     parser_single_gene.add_argument('--gene-names', type=str, dest='gene_names', help='Gene names to filter the results.')
     parser_single_gene.add_argument('--lsv-types', nargs='*', default=[], type=str, dest='lsv_types', help='LSV type to filter the results. (If no gene list is provided, this option will display only genes containing LSVs of the specified type).')
     subparsers.add_parser('lsv-single-gene', help='Single LSV analysis by gene(s) of interest.', parents=[common_parser, parser_single_gene])

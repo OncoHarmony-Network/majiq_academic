@@ -182,13 +182,14 @@ background-color: #8dbdd8;
     width: 500px;
     float: right;
 }
+
 /*#fffea1*/
 
 .spliceGraph {
     cursor: -webkit-zoom-in;
 }
 
-.extendedDeltaPsi{
+.extendedDeltaPsi, .extendedPsi{
     cursor: -webkit-zoom-out;
 }
 
@@ -202,7 +203,7 @@ background-color: #8dbdd8;
 .prime3hidden, .prime5hidden, .EShidden, .targethidden, .sourcehidden, .njuncsfromhidden, .njuncstohidden, .nexonsfromhidden, .nexonstohidden{
     display: none;
 }
-header {
+header, footer {
     background-color:#006afc;
     color:white;
     text-align:center;
@@ -223,11 +224,7 @@ section {
     /*padding:10px;*/
 }
 footer {
-    background-color:black;
-    color:white;
     clear:both;
-    text-align:center;
-    padding:5px;
 }
 
 .filters {

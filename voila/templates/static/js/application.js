@@ -841,11 +841,10 @@ function drawDeltaBox(canvas) {
 }
 
 function drawDeltaBarChart(context, binsArray, settingsCanvasDelta, zoomLevel, pThreshold) {
+    // pThreshold is gonna be used to differentiate between single and delta PSI
 
     // Draw the x and y axes
     context.lineWidth = "1.0";
-
-
 
     var chartHeight = settingsCanvasDelta.area_pixels[1];
     chartHeight += zoomLevel;
@@ -879,7 +878,7 @@ function drawDeltaBarChart(context, binsArray, settingsCanvasDelta, zoomLevel, p
         }
 
 
-        // End Vertical bars
+    // End Vertical bars
     }
 
         // Add the column title to the x-axis
@@ -887,13 +886,6 @@ function drawDeltaBarChart(context, binsArray, settingsCanvasDelta, zoomLevel, p
     context.fillStyle = "black";
     context.strokeStyle = "black";
 
-
-    // Y-axis
-    drawLine(context,
-            settingsCanvasDelta.coords_origin[0] + (settingsCanvasDelta.area_pixels[0])/2,
-            settingsCanvasDelta.coords_origin[1]+5, //Mark axis
-            settingsCanvasDelta.coords_origin[0] + (settingsCanvasDelta.area_pixels[0])/2,
-            settingsCanvasDelta.coords_origin[1] - settingsCanvasDelta.area_pixels[1]);
     // X-axis
     drawLine(context,
         settingsCanvasDelta.coords_origin[0], //Mark axis
@@ -901,15 +893,28 @@ function drawDeltaBarChart(context, binsArray, settingsCanvasDelta, zoomLevel, p
             settingsCanvasDelta.coords_origin[0] + settingsCanvasDelta.area_pixels[0],
         settingsCanvasDelta.coords_origin[1]);
 
-    name = name * 100;
-    context.fillText("-1", settingsCanvasDelta.coords_origin[0], settingsCanvasDelta.coords_origin[1] + 15);
+    // Y-axis
+    var yaxis_x = settingsCanvasDelta.coords_origin[0],
+        marks = [0, 0.5, 1];
+    if (pThreshold) {
+        yaxis_x += (settingsCanvasDelta.area_pixels[0]) / 2;
+        marks = [-1, 0, 1];
+    }
+
+    drawLine(context,
+            yaxis_x,
+            settingsCanvasDelta.coords_origin[1] + 5, //Mark axis
+            yaxis_x,
+            settingsCanvasDelta.coords_origin[1] - settingsCanvasDelta.area_pixels[1]);
+    name *= 100;
+    context.fillText(marks[0], settingsCanvasDelta.coords_origin[0], settingsCanvasDelta.coords_origin[1] + 15);
     drawLine(context, settingsCanvasDelta.coords_origin[0],
         settingsCanvasDelta.coords_origin[1],
         settingsCanvasDelta.coords_origin[0],
             settingsCanvasDelta.coords_origin[1] + 2 // size of the delimiter=4
     );
 
-    context.fillText("0", settingsCanvasDelta.coords_origin[0] + (settingsCanvasDelta.area_pixels[0]) / 2, settingsCanvasDelta.coords_origin[1] + 15);
+    context.fillText(marks[1], settingsCanvasDelta.coords_origin[0] + (settingsCanvasDelta.area_pixels[0]) / 2, settingsCanvasDelta.coords_origin[1] + 15);
     drawLine(context, settingsCanvasDelta.coords_origin[0] + (settingsCanvasDelta.area_pixels[0]) / 2,
         settingsCanvasDelta.coords_origin[1],
             settingsCanvasDelta.coords_origin[0] + (settingsCanvasDelta.area_pixels[0]) / 2,
@@ -917,7 +922,7 @@ function drawDeltaBarChart(context, binsArray, settingsCanvasDelta, zoomLevel, p
     );
 
     context.textAlign = "right";
-    context.fillText("1", settingsCanvasDelta.coords_origin[0] + settingsCanvasDelta.area_pixels[0], settingsCanvasDelta.coords_origin[1] + 15);
+    context.fillText(marks[2], settingsCanvasDelta.coords_origin[0] + settingsCanvasDelta.area_pixels[0], settingsCanvasDelta.coords_origin[1] + 15);
     drawLine(context, settingsCanvasDelta.coords_origin[0] + settingsCanvasDelta.area_pixels[0],
         settingsCanvasDelta.coords_origin[1], // +1 to don't overlap
             settingsCanvasDelta.coords_origin[0] + settingsCanvasDelta.area_pixels[0],
@@ -925,32 +930,35 @@ function drawDeltaBarChart(context, binsArray, settingsCanvasDelta, zoomLevel, p
     );
 
     // Vertical bars for percentages of inclusion/exclusion (by Default, in -20 and +20)
-    context.textAlign = "center";
-    context.dashedLine(
-            settingsCanvasDelta.coords_origin[0] + settingsCanvasDelta.area_pixels[0] / 2 - parseInt(settingsCanvasDelta.area_pixels[0] / 2 * pThreshold),
-            settingsCanvasDelta.coords_origin[1] + 5, //Mark axis
-            settingsCanvasDelta.coords_origin[0] + settingsCanvasDelta.area_pixels[0] / 2 - parseInt(settingsCanvasDelta.area_pixels[0] / 2 * pThreshold),
-            settingsCanvasDelta.coords_origin[1] - settingsCanvasDelta.area_pixels[1]
-    );
-    context.stroke();
-    context.fillText("-" + pThreshold + " ",
-            settingsCanvasDelta.coords_origin[0] + settingsCanvasDelta.area_pixels[0] / 2 - parseInt(settingsCanvasDelta.area_pixels[0] / 2 * pThreshold),
-            settingsCanvasDelta.coords_origin[1] + 15 //Mark axis
-    );
+    if (pThreshold) {
+        context.textAlign = "center";
+        context.dashedLine(
+                settingsCanvasDelta.coords_origin[0] + settingsCanvasDelta.area_pixels[0] / 2 - parseInt(settingsCanvasDelta.area_pixels[0] / 2 * pThreshold),
+                settingsCanvasDelta.coords_origin[1] + 5, //Mark axis
+                settingsCanvasDelta.coords_origin[0] + settingsCanvasDelta.area_pixels[0] / 2 - parseInt(settingsCanvasDelta.area_pixels[0] / 2 * pThreshold),
+                settingsCanvasDelta.coords_origin[1] - settingsCanvasDelta.area_pixels[1]
+        );
+        context.stroke();
+        context.fillText("-" + pThreshold + " ",
+                settingsCanvasDelta.coords_origin[0] + settingsCanvasDelta.area_pixels[0] / 2 - parseInt(settingsCanvasDelta.area_pixels[0] / 2 * pThreshold),
+                settingsCanvasDelta.coords_origin[1] + 15 //Mark axis
+        );
 
-    context.dashedLine(
-            settingsCanvasDelta.coords_origin[0] + settingsCanvasDelta.area_pixels[0] / 2 + parseInt(settingsCanvasDelta.area_pixels[0] / 2 * pThreshold),
-            settingsCanvasDelta.coords_origin[1] + 5, //Mark axis
-            settingsCanvasDelta.coords_origin[0] + settingsCanvasDelta.area_pixels[0] / 2 + parseInt(settingsCanvasDelta.area_pixels[0] / 2 * pThreshold),
-            settingsCanvasDelta.coords_origin[1] - settingsCanvasDelta.area_pixels[1]
-    );
-    context.stroke();
-    context.fillText(pThreshold,
-            settingsCanvasDelta.coords_origin[0] + settingsCanvasDelta.area_pixels[0] / 2 + parseInt(settingsCanvasDelta.area_pixels[0] / 2 * pThreshold),
-            settingsCanvasDelta.coords_origin[1] + 15 //Mark axis
-    );
+        context.dashedLine(
+                settingsCanvasDelta.coords_origin[0] + settingsCanvasDelta.area_pixels[0] / 2 + parseInt(settingsCanvasDelta.area_pixels[0] / 2 * pThreshold),
+                settingsCanvasDelta.coords_origin[1] + 5, //Mark axis
+                settingsCanvasDelta.coords_origin[0] + settingsCanvasDelta.area_pixels[0] / 2 + parseInt(settingsCanvasDelta.area_pixels[0] / 2 * pThreshold),
+                settingsCanvasDelta.coords_origin[1] - settingsCanvasDelta.area_pixels[1]
+        );
+        context.stroke();
+        context.fillText(pThreshold,
+                settingsCanvasDelta.coords_origin[0] + settingsCanvasDelta.area_pixels[0] / 2 + parseInt(settingsCanvasDelta.area_pixels[0] / 2 * pThreshold),
+                settingsCanvasDelta.coords_origin[1] + 15 //Mark axis
+        );
+
+    }
     // Add some data markers to the y-axis
-    var convertedMarkDataIncrementsIn = settingsCanvasDelta.area_pixels[1]/settingsCanvasDelta.labels_steps[1]; // chartHeight/settingsCanvasDelta.labels_steps[1];
+    var convertedMarkDataIncrementsIn = settingsCanvasDelta.area_pixels[1] / settingsCanvasDelta.labels_steps[1]; // chartHeight/settingsCanvasDelta.labels_steps[1];
 
     context.textAlign = "right";
     context.fillStyle = "black";
@@ -958,7 +966,7 @@ function drawDeltaBarChart(context, binsArray, settingsCanvasDelta, zoomLevel, p
     var offset = 0;
     while (offset <= settingsCanvasDelta.area_pixels[1]) {
         context.fillText(markerValue.toFixed(1), settingsCanvasDelta.coords_origin[0] - 2, settingsCanvasDelta.coords_origin[1] - offset, 50);
-        markerValue += (100/settingsCanvasDelta.labels_steps[1])*(settingsCanvasDelta.area_pixels[1]/chartHeight);
+        markerValue += (100 / settingsCanvasDelta.labels_steps[1]) * (settingsCanvasDelta.area_pixels[1] / chartHeight);
         offset += convertedMarkDataIncrementsIn;
     }
 

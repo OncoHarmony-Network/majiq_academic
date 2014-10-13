@@ -7,152 +7,176 @@
 {% endblock %}
 
 {% block js %}
-    <script src="static/js/jquery-1.10.2.js" type="text/javascript"></script>
+    <script src="static/js/jquery-1.11.1.min.js" type="text/javascript"></script>
     <script src="static/js/splice.graph.js" type="text/javascript" language="javascript" ></script>
     <script src="static/js/splice.graph.D3.js" type="text/javascript" language="javascript" ></script>
-    <script type="text/javascript" language="javascript" src="http://d3js.org/d3.v3.min.js" ></script>
+    <script src="static/js/d3.v3.min.js" type="text/javascript" language="javascript" ></script>
     <script src="static/js/jquery.tablesorter.js" type="text/javascript"></script>
     <script src="static/js/jquery.tablesorter.pager.js" type="text/javascript"></script>
     <script src="static/js/application.js" type="text/javascript"></script>
-
+    <script type="text/javascript" src="static/js/jquery.tooltipster.min.js"></script>
 
 {% endblock %}
 
 {% block content %}
 
-    <header>
-        <h3>{% if prevPage %}
-            <a href="{{ prevPage }}" class="prevPage">&#x276e; Previous</a>
-            {% endif %}
-            {% if namePage %}Result page: {{ namePage }}{% endif %}
-            {% if nextPage %}
-            <a href="{{ nextPage }}" class="nextPage">Next &#x276f;</a>
-            {% endif %}
-        </h3>
+<header>
+    <h3>{% if prevPage %}
+        <a href="{{ prevPage }}" class="prevPage">&#x276e; Previous</a>
+        {% endif %}
+        {% if namePage %}Result page: {{ namePage }}{% endif %}
+        {% if nextPage %}
+        <a href="{{ nextPage }}" class="nextPage">Next &#x276f;</a>
+        {% endif %}
+    </h3>
 
-    </header>
-    <section>
-        <fieldset class="section-border events-summary">
-            <legend>LSV summary</legend>
-            <div class="floatingCanvas">
-                <canvas class="floatingLegend" width="500px" height="40px">
-                    This browser or document mode doesn't support canvas
-                </canvas>
-            </div>
+</header>
+<section>
+    <fieldset class="section-border events-summary">
+        <legend>LSV summary</legend>
+        <div class="floatingCanvas">
+            <canvas class="floatingLegend" width="500px" height="40px">
+                This browser or document mode doesn't support canvas
+            </canvas>
+        </div>
 
 
-            <!--<p>Coordinates 0-based and closed interval</p>-->
-            <!--<h2>LSV summary</h2>-->
+        <!--<p>Coordinates 0-based and closed interval</p>-->
+        <!--<h2>LSV summary</h2>-->
 
-            {% for gene_name, gene_value in genes_dict.iteritems() %}
-                {% set gene_index = loop.index -1 %}
-                {# gene_value[0][0]|debug #}
-                <h2>Gene name: {{ gene_name }}; {{ gene_value[0][1][4].get_chrom() }}:{{ gene_value[0][1][4].get_strand() }}:{{ genes_json[gene_name][2][0] }}-{{ genes_json[gene_name][2][1] }};
-                    {# <!-- TODO: Replace hardcoded organism and species with metadata --> #}
-                    <a href="http://genome.ucsc.edu/cgi-bin/hgTracks?db={{ lexps[0].genome }}&position={{ gene_value[0][1][4].get_chrom() }}:{{ genes_json[gene_name][2][0] }}-{{ genes_json[gene_name][2][1] }}" target="_blank">
-                        <img src="static/img/icons/ucsc2.png" title="{{ gene_value[0][1][4].get_chrom() }}:{{ genes_json[gene_name][2][0] }}-{{ genes_json[gene_name][2][1] }}"/>
-                    </a>
-                    <!--<a href="http://www.ensembl.org/Mus_musculus/transview?transcript={{ gene_name }}" target="_blank"><img src="static/img/icons/ensembl.jpg" title="http://www.ensembl.org/Mus_musculus/transview?transcript={{ gene_name }}"/></a>-->
+        {% for gene_name, gene_value in genes_dict.iteritems() %}
+            {% set gene_index = loop.index -1 %}
+            {# gene_value[0][0]|debug #}
+            <h2>Gene name: {{ gene_name }}; {{ genes_exps_list[0][genes_exps_list[0].keys()[0]][gene_name][3] }}:{{ genes_exps_list[0][genes_exps_list[0].keys()[0]][gene_name][1] }}:{{ genes_exps_list[0][genes_exps_list[0].keys()[0]][gene_name][2][0] }}-{{ genes_exps_list[0][genes_exps_list[0].keys()[0]][gene_name][2][1] }};
+                {% if lexps %}
+                    <a href="http://genome.ucsc.edu/cgi-bin/hgTracks?db={{ lexps[0].genome }}&position={{ genes_exps_list[0][genes_exps_list[0].keys()[0]][gene_name][3] }}:{{ genes_exps_list[0][genes_exps_list[0].keys()[0]][gene_name][2][0] }}-{{ genes_exps_list[0][genes_exps_list[0].keys()[0]][gene_name][2][1] }}" target="_blank"><img src="static/img/icons/ucsc2.png" title="{{ genes_exps_list[0][genes_exps_list[0].keys()[0]][gene_name][3] }}:{{ genes_exps_list[0][genes_exps_list[0].keys()[0]][gene_name][2][0] }}-{{ genes_exps_list[0][genes_exps_list[0].keys()[0]][gene_name][2][1] }}"/></a>
+                {% endif %}
+            </h2>
 
-                </h2> {# {{ gene_value[0][0].strand }} #}
-                <!--<canvas class="spliceGraph" width="1000px" height="200px" data-exon-list="{{ genes_json[gene_name][0] }}">-->
-                    <!--This browser or document mode doesn't support canvas-->
-                <!--</canvas>-->
-                <div>
-                    <div class="spliceDiv" id="spliceDivExp1_{{ gene_index }}" data-exon-list="{{ genes_json[gene_name][0] }}">
-                        <img class="toogleScale scaled" src="static/img/icons/solve-icon.png" title="Change between scaled view and a view where introns are trimmed" />
-                        <div class="hidden tooltipD3">
-                            <p><strong>Coordinates:</strong></p><p class="coordsLabel"></p>
-                        </div>
+        {#
+            <h2>Gene name: {{ gene_name }}; {{ gene_value[0][1][4].get_chrom() }}:{{ gene_value[0][1][4].get_strand() }}:{{ genes_json[gene_name][2][0] }}-{{ genes_json[gene_name][2][1] }};
+                <a href="http://genome.ucsc.edu/cgi-bin/hgTracks?db={{ lexps[0].genome }}&position={{ gene_value[0][1][4].get_chrom() }}:{{ genes_json[gene_name][2][0] }}-{{ genes_json[gene_name][2][1] }}" target="_blank">
+                    <img src="static/img/icons/ucsc2.png" title="{{ gene_value[0][1][4].get_chrom() }}:{{ genes_json[gene_name][2][0] }}-{{ genes_json[gene_name][2][1] }}"/>
+                </a>
+                <!--<a href="http://www.ensembl.org/Mus_musculus/transview?transcript={{ gene_name }}" target="_blank"><img src="static/img/icons/ensembl.jpg" title="http://www.ensembl.org/Mus_musculus/transview?transcript={{ gene_name }}"/></a>-->
+
+            </h2>
+        #}
+            <div>
+                <div class="spliceDiv" id="spliceDivExp1_{{ gene_index }}" data-exon-list="{{ genes_exps_list[0][genes_exps_list[0].keys()[0]][gene_name][0] }}"> {#data-exon-list="{{ genes_json[gene_name][0] }}"#}
+                    <div>
+                        <select class="spliceGraphSelector" autocomplete="off">
+                            {% for nsample in genes_exps_list[0] -%}
+                            {% if loop.first %}
+                            <option selected="selected" value="{{ genes_exps_list[0][nsample][gene_name][0] |to_json}}">{{ nsample }}</option>
+                            {% else %}
+                            <option value="{{ genes_exps_list[0][nsample][gene_name][0] |to_json }}">{{ nsample }}</option>
+                            {% endif %}
+                            {%- endfor %}
+                        </select>
                     </div>
 
-                    <table id="event_table{{ loop.index }}" class="tablesorter">
-                        <thead>
-                        <tr>
-                            <th class="short-header">LSV ID</th>
-                            <th class="short-header">Type</th>
-                            <th class="short-header"></th>
-                            <th class="short-header">UCSC link</th>
-                        </tr>
-                        </thead>
-                        <tfoot>
-                        <tr>
-                            <th>LSV ID</th>
-                            <th>Type</th>
-                            <th></th>
-                            <th>UCSC link</th>
-                        </tr>
-                        </tfoot>
-                        <tbody>
-                        {% for gene in gene_value %}
-                        <tr class="{{ gene[0].categories2css() }} lsvrow" data-njuncs="{{ gene[0].njuncs() }}" data-nexons="{{ gene[0].nexons() }}">
-                            <td>{{ gene[1][1] }}</td>
-                            <td>
-                                <p style="top:0;" class="">{{ gene[1][2] }}</p>
-                                <canvas class="lsvLegend" id="{{ gene_index }}" width="200px" height="80px" data-lsv-string="{{ gene[1][2] }}" data-coord-exon="{{ gene[1][0] }}">
-                                    This browser or document mode doesn't support canvas
-                                </canvas>
-                            </td>
-                            <td id="data_td{{ gene_index }}{{ loop.index }}">
-                                <!--<img class="expandLsv" src="static/img/arrow_down.png" data-is-expanded=0/>-->
-                                <canvas class="lsvSingleCompactPercentiles" id="lsvSingleCompact{{ loop.index }}" width="50px" height="50px" data-lsv="[{{ gene[0]|to_json }}]" style="border: solid; border-width: 2pt; border-color: darkgrey;" >
-                                    This browser or document mode doesn't support canvas
-                                </canvas>
-                            </td>
-                            <td>
-                                <a href="http://genome.ucsc.edu/cgi-bin/hgTracks?org=mouse&db=mm10&position={{ gene_value[0][1][4].get_chrom() }}:{{ gene[0].extension[0] }}-{{ gene[0].extension[1] }}" target="_blank">
-                                    <img src="static/img/icons/ucsc2.png" title="http://genome.ucsc.edu/cgi-bin/hgTracks?db={{ lexps[0].genome }}&position={{ gene_value[0][1][4].get_chrom() }}:{{ gene[0].extension[0] }}-{{ gene[0].extension[1] }}"/>
-                                </a>
-                                <!--<a href="http://genome.ucsc.edu/cgi-bin/hgTracks?org=mouse&db=mm10&position={{ gene[1][3] }}:{{ gene[1][0][0] }}-{{ gene[1][4] }}" target="_blank">{{ gene[1][3] }}:{{ gene[1][0][0] }}-{{ gene[1][4] }}</a>-->
-                            </td>
-
-                        </tr>
-                        {%- endfor %}
-                        </tbody>
-                    </table>
-                    <div class="pager" id="pager{{ loop.index }}">
-                        <form>
-                            <img src="static/img/icons/first.png" class="first"/>
-                            <img src="static/img/icons/prev.png" class="prev"/>
-                            <input type="text" class="pagedisplay"/>
-                            <img src="static/img/icons/next.png" class="next"/>
-                            <img src="static/img/icons/last.png" class="last"/>
-                            <select class="pagesize" autocomplete="off">
-
-                                {% for mark in tableMarks[gene_index] -%}
-                                    {% if loop.first %}
-                                        <option selected="selected"  value="{{ mark }}">{{ mark }}</option>
-                                    {% else %}
-                                        <option value="{{ mark }}">{{ mark }}</option>
-                                    {% endif %}
-                                {%- endfor %}
-                                <option value="{{ gene_value|length }}">All</option>
-                            </select>
-                        </form>
+                    <img class="toogleScale scaled" src="static/img/icons/solve-icon.png" title="Change between scaled view and a view where introns are trimmed" />
+                    <div class="hidden tooltipD3">
+                        <p><strong>Coordinates:</strong></p><p class="coordsLabel"></p>
                     </div>
                 </div>
-            {% endfor %}
 
-        </fieldset>
-    </section>
-    <aside class="filters">
-        <fieldset class="section-border">
-            <legend>LSV filters</legend>
-            <form id="lsv-filters" class="bootstrap-frm">
-                <label><input type="checkbox" name="prime5" value="1" checked>5-prime</label><br>
-                <label><input type="checkbox" name="prime3" value="1" checked>3-prime</label><br>
-                <label><input type="checkbox" name="ES" value="1" checked>Exon skipping</label><br>
-                <label><input type="checkbox" name="source" value="1" checked>Single Source</label><br>
-                <label><input type="checkbox" name="target" value="1" checked>Single Target</label><br>
-                <span>Number of junctions:</span><br>
-                <label><span>from:</span><input type="text" name="njuncsfrom" value="" size="4"></label>
-                <label><span>to:</span><input type="text" name="njuncsto" size="4"></label><br>
-                <span>Number of exons:</span><br>
-                <label><span>from:</span><input type="text" name="nexonsfrom" value="" size="4"></label>
-                <label><span>to:</span><input type="text" name="nexonsto" size="4"><br></label>
-            </form>
-        </fieldset>
-    </aside>
+                <table id="event_table{{ loop.index }}" class="tablesorter">
+                    <thead>
+                    <tr>
+                        <th class="short-header">LSV ID</th>
+                        <th class="short-header">LSV Type</th>
+                        <th class="short-header">&Psi; per Junction</th>
+                        <th class="short-header">UCSC link</th>
+                    </tr>
+                    </thead>
+                    <tfoot>
+                    <tr>
+                        <th>LSV ID</th>
+                        <th>LSV Type</th>
+                        <th>&Psi; per Junction</th>
+                        <th>UCSC link</th>
+                    </tr>
+                    </tfoot>
+                    <tbody>
+                    {% for gene in gene_value %}
+                    <tr class="{{ gene[0].categories2css() }} lsvrow" data-njuncs="{{ gene[0].njuncs() }}" data-nexons="{{ gene[0].nexons() }}">
+                        <td>{{ gene[1][1] }}</td>
+                        <td>
+                            <p style="top:0;" class="hidden">{{ gene[1][2] }}</p>
+                            <canvas class="lsvLegend" id="{{ gene_index }}" width="200px" height="80px" data-lsv-string="{{ gene[1][2] }}" data-coord-exon="{{ gene[1][0] }}"  title="{{ gene[1][2] }}">
+                                This browser or document mode doesn't support canvas
+                            </canvas>
+                        </td>
+                        <td id="data_td{{ gene_index }}{{ loop.index }}">
+                            <!--<img class="expandLsv" src="static/img/arrow_down.png" data-is-expanded=0/>-->
+                            <canvas class="lsvSingleCompactPercentiles" id="lsvSingleCompact{{ loop.index }}" width="50px" height="50px" data-lsv="[{{ gene[0]|to_json }}]" style="border: solid; border-width: 2pt; border-color: darkgrey;" >
+                                This browser or document mode doesn't support canvas
+                            </canvas>
+                        </td>
+                        <td>
+                            <a href="http://genome.ucsc.edu/cgi-bin/hgTracks?org=mouse&db={{ lexps[0].genome }}&position={{ gene_value[0][1][4].get_chrom() }}:{{ gene[0].extension[0] }}-{{ gene[0].extension[1] }}" target="_blank">
+                                <img src="static/img/icons/ucsc2.png" title="http://genome.ucsc.edu/cgi-bin/hgTracks?db={{ lexps[0].genome }}&position={{ gene_value[0][1][4].get_chrom() }}:{{ gene[0].extension[0] }}-{{ gene[0].extension[1] }}"/>
+                            </a>
+                        </td>
 
+                    </tr>
+                    {%- endfor %}
+                    </tbody>
+                </table>
+                <div class="pager" id="pager{{ loop.index }}">
+                    <form>
+                        <img src="static/img/icons/first.png" class="first"/>
+                        <img src="static/img/icons/prev.png" class="prev"/>
+                        <input type="text" class="pagedisplay"/>
+                        <img src="static/img/icons/next.png" class="next"/>
+                        <img src="static/img/icons/last.png" class="last"/>
+                        <select class="pagesize" autocomplete="off">
+
+                            {% for mark in tableMarks[gene_index] -%}
+                                {% if loop.first %}
+                                    <option selected="selected"  value="{{ mark }}">{{ mark }}</option>
+                                {% else %}
+                                    <option value="{{ mark }}">{{ mark }}</option>
+                                {% endif %}
+                            {%- endfor %}
+                            <option value="{{ gene_value|length }}">All</option>
+                        </select>
+                    </form>
+                </div>
+            </div>
+        {% endfor %}
+
+    </fieldset>
+</section>
+<aside class="filters">
+    <fieldset class="section-border">
+        <legend>LSV filters</legend>
+        <form id="lsv-filters" class="bootstrap-frm">
+            <label><input type="checkbox" name="prime5" value="1" checked>5-prime</label><br>
+            <label><input type="checkbox" name="prime3" value="1" checked>3-prime</label><br>
+            <label><input type="checkbox" name="ES" value="1" checked>Exon skipping</label><br>
+            <label><input type="checkbox" name="source" value="1" checked>Single Source</label><br>
+            <label><input type="checkbox" name="target" value="1" checked>Single Target</label><br>
+            <span>Number of junctions:</span><br>
+            <label><span>from:</span><input type="text" name="njuncsfrom" value="" size="4"></label>
+            <label><span>to:</span><input type="text" name="njuncsto" size="4"></label><br>
+            <span>Number of exons:</span><br>
+            <label><span>from:</span><input type="text" name="nexonsfrom" value="" size="4"></label>
+            <label><span>to:</span><input type="text" name="nexonsto" size="4"><br></label>
+        </form>
+    </fieldset>
+</aside>
+<footer>
+    <h3>{% if prevPage %}
+        <a href="{{ prevPage }}" class="prevPage">&#x276e; Previous</a>
+        {% endif %}
+        {% if namePage %}Result page: {{ namePage }}{% endif %}
+        {% if nextPage %}
+        <a href="{{ nextPage }}" class="nextPage">Next &#x276f;</a>
+        {% endif %}
+    </h3>
+</footer>
 {% endblock %}
 

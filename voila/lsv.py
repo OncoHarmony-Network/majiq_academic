@@ -9,7 +9,7 @@ class Lsv(object):
 
         self.id = input_data['id']
         self.name = input_data['name']
-        self.type = input_data['type'] # TODO: COnsider changing type to LSV type
+        self.type = input_data['type'] # TODO: Consider changing type to LSV type
         # self.bins = input_data['bins_list']
         self.bins = numpy.array(input_data['bins_list']).tolist()
 

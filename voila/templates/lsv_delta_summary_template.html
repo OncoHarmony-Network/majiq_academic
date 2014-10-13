@@ -6,10 +6,10 @@
 {% endblock %}
 
 {% block js %}
-<script src="static/js/jquery-1.10.2.js" type="text/javascript"></script>
+<script src="static/js/jquery-1.11.1.min.js" type="text/javascript"></script>
 
 <script src="static/js/splice.graph.js" type="text/javascript" language="javascript" ></script>
-<script type="text/javascript" language="javascript" src="http://d3js.org/d3.v3.min.js" ></script>
+<script src="static/js/d3.v3.min.js" type="text/javascript" language="javascript" ></script>
 <script src="static/js/jquery.tablesorter.js" type="text/javascript"></script>
 <script src="static/js/jquery.tablesorter.pager.js" type="text/javascript"></script>
 <script src="static/js/jquery.mousewheel.js" type="text/javascript"></script>
@@ -27,11 +27,9 @@
         <tr>
             <th class="extra-short-header">#</th>
             <th class="short-header">LSV ID</th>
-            <th class="short-header">Type</th>
+            <th class="short-header">LSV Type</th>
             <th class="short-header">
-                <!--<p style="color: #377e80; margin: 0; text-align: left; float: left; width: 50%;" >&#8592; More in {{ expList[1].name }}</p>-->
-                <p style="color: black; margin: auto; display:block; text-align:center; font-weight: bold" >&#8592; More in {{ expList[1].name }} | More in {{ expList[0].name }} &#8594;</p>
-                <!--<p style="color: #e41a1c; margin: 0; text-align: right; float: right; width: 40%; padding-right: 17px;" >More in {{ expList[0].name }} &#8594;</p>-->
+                <p style="color: black; margin: auto; display:block; text-align:center; font-weight: bold" >&#8592; More in {{ lexps[1][0].group }} | More in {{ lexps[0][0].group }} &#8594;</p>
             </th>
             <th class="medium-header">Coordinates</th>
         </tr>
@@ -40,8 +38,10 @@
         <tr>
             <th>#</th>
             <th>LSV ID</th>
-            <th>Type</th>
-            <th></th>
+            <th>LSV Type</th>
+            <th>
+                <p style="color: black; margin: auto; display:block; text-align:center; font-weight: bold" >&#8592; More in {{ lexps[1][0].group }} | More in {{ lexps[0][0].group }} &#8594;</p>
+            </th>
             <th>Coordinates</th>
         </tr>
         </tfoot>
@@ -52,7 +52,7 @@
             <td>{{ metadata[loop.index-1][1] }}</td>
             <td>
                 <p class="hidden" style="top:0;">{{ metadata[loop.index-1][2] }}</p>
-                <canvas class="lsvLegend" width="200px" height="60px" data-lsv-string="{{ metadata[loop.index-1][2] }}">
+                <canvas class="lsvLegend" width="200px" height="60px" data-lsv-string="{{ metadata[loop.index-1][2] }}"  title="{{ metadata[loop.index-1][2] }}">
                     This browser or document mode doesn't support canvas
                 </canvas>
             </td>
@@ -66,20 +66,6 @@
                     {%- endfor %}
                     {{ max_diff[-1] }}
                 </p>
-
-                <!--<canvas id="deltaPsi{{ lsv.number }}" class="deltaCondensed" width="200px" height="20px"-->
-                        <!--data-excl-incl="{{ lsv.excl_incl }}">-->
-                    <!--This browser or document mode doesn't support canvas-->
-                <!--</canvas>-->
-
-                <!--<canvas class="lsvDeltaCompact" id="lsvSingleCompact{{ loop.index }}" width="100px" height="100px" style="border: solid; border-width: 2pt; border-color: darkgrey;" data-lsv="[{{ lsv|to_json }}]">-->
-                    <!--This browser or document mode doesn't support canvas-->
-                <!--</canvas>-->
-                <!--<canvas class="lsvDeltaBoxplot hidden" width="500px" height="500px"  data-lsv="{{ lsv|to_json }}">-->
-                    <!--This browser or document mode doesn't support canvas-->
-                <!--</canvas>-->
-                <!--<div class="lsvViolinPlot" id="svgViolin{{ loop.index }}" data-lsv="[{{ lsv|to_json }}]" width=300 height=200></div>-->
-
             </td>
             <td>{{ metadata[loop.index-1][0] }}</td>
 

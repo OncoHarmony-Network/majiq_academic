@@ -1047,13 +1047,13 @@
                 var exons_mapped = map_exon_list(exons_obj, junctions_obj); //exons_obj; //
                 exons_mapped = add_keys(exons_mapped);
 
-                var gene_obj_cpy = {'orig': orig_objs, 'mapped': [exons_mapped, junctions_obj]};
+                var gene_obj_cpy = {'orig': orig_objs, 'mapped': [exons_mapped, junctions_obj], 'strand': genes_obj.strand};
 
                 /** Render initial splice graph */
                 var chart = spliceGraphD3().orig_objs(orig_objs);
 
                 var spliceg = d3.select("#" + this.id)
-                    .datum([exons_mapped, junctions_obj])
+                    .datum([exons_mapped, junctions_obj, genes_obj.strand])
                     .call(chart);
 
                 gene_objs.push(gene_obj_cpy);
@@ -1072,12 +1072,12 @@
                     }
                     if (d3.select(this).classed('scaled')) {
                         d3.select(this.parentNode)
-                            .datum([gene_objs[index_gene].orig.exons, gene_objs[index_gene].orig.junc])
+                            .datum([gene_objs[index_gene].orig.exons, gene_objs[index_gene].orig.junc, gene_objs[index_gene].strand])
                             .call(chart);
                         d3.select(this).classed('scaled', false);
                     } else {
                         d3.select(this.parentNode)
-                            .datum(gene_objs[index_gene].mapped)
+                            .datum([gene_objs[index_gene].mapped[0], gene_objs[index_gene].mapped[1], gene_objs[index_gene].strand])
                             .call(chart);
                         d3.select(this).classed('scaled', true);
                     }
@@ -1106,10 +1106,10 @@
                         var exons_mapped = map_exon_list(exons_obj, junctions_obj); //exons_obj; //
                         exons_mapped = add_keys(exons_mapped);
 
-                        gene_objs[index_gene] = {'orig': orig_objs, 'mapped': [exons_mapped, junctions_obj]};
+                        gene_objs[index_gene] = {'orig': orig_objs, 'mapped': [exons_mapped, junctions_obj], 'strand': genes_obj.strand};
 
                         d3.select(this.parentNode.parentNode)
-                            .datum(gene_objs[index_gene].mapped)
+                            .datum([gene_objs[index_gene].mapped[0], gene_objs[index_gene].mapped[1], gene_objs[index_gene].strand])
                             .call(chart);
                         $(this.parentNode.parentNode).children('.toogleScale').addClass('scaled');
 
@@ -1140,18 +1140,66 @@
                         return;
                     }
 
-                    var lsv_data = JSON.parse($(this)[0].getAttribute("data-lsv").replace(/\\\"/g, "\'").replace(/\"/g,"").replace(/'/g, "\""));  // NOTE: lsv_data is an array to support groups
-                    var sampled_bins = translate_lsv_bins(lsv_data[0].bins, 10000);
+                    var lsv_list = JSON.parse($(this)[0].getAttribute("data-lsv").replace(/\\\"/g, "\'").replace(/\"/g,"").replace(/'/g, "\""));  // NOTE: lsv_data is an array to support groups
 
-                    var svg = renderViolin($(this).parent()[0].id, sampled_bins, table.id, {'delta': 0});
-                    $(svg).on("click", function(e){
-                        e.preventDefault();
-                        $(this).toggle("show");
-                        var lsvCompact = $(this).parent().children('.lsvSingleCompactPercentiles');
-                        if (lsvCompact.length) {
-                            $(lsvCompact[0]).toggle();
+                    if (lsv_list[0].bins.length > 2) {
+                        var sampled_bins = translate_lsv_bins(lsv_list[0].bins, 10000);
+
+                        var svg = renderViolin($(this).parent()[0].id, sampled_bins, table.id, {'delta': 0});
+                        $(svg).on("click", function (e) {
+                            e.preventDefault();
+                            $(this).toggle("show");
+                            var lsvCompact = $(this).parent().children('.lsvSingleCompactPercentiles');
+                            if (lsvCompact.length) {
+                                $(lsvCompact[0]).toggle();
+                            }
+                        });
+                    } else {
+                        var parentTd = $(this).parent()[0];
+                        var canvasChildren = $(parentTd).children('.extendedPsi');
+                        var canvasBarchart,
+                            canvasSettings;
+                        if (canvasChildren.length){
+                            canvasBarchart = canvasChildren[0];
+                            canvasSettings = initLargeCanvasSettings(lsv_list[0].bins[0].length, canvasBarchart);
+                            $(canvasBarchart).toggle();
+                        } else{
+                            canvasBarchart = $('<canvas/>',{'id': "barchart_" + $(this).closest('td')[0].id, 'class':'extendedPsi tooltip', 'Title': 'Mousewheel up/down to zoom in/out'})[0];
+                            canvasBarchart.width = 419;
+                            canvasBarchart.height = 200;
+                            canvasBarchart.setAttribute('data-lsv', JSON.stringify(lsv_list[0]));
+
+                            canvasSettings = initLargeCanvasSettings(lsv_list[0].bins[0].length, canvasBarchart);
+                            $(parentTd).append(canvasBarchart);
+                            initExpandedDeltaCanvas(canvasBarchart, canvasSettings);
+
+                            $(canvasBarchart).on("click", function (e) {
+                                e.preventDefault();
+                                $(this).toggle("show");
+                                var lsvCompact = $(this).parent().children(".lsvSingleCompactPercentiles");
+                                if (lsvCompact.length) {
+                                    $(lsvCompact[0]).toggle();
+                                }
+                            });
+
+                            $(canvasBarchart).on('mousewheel', function(event) {
+                                event.preventDefault();
+                                var deltaY = event.deltaY;
+                                if (!deltaY){
+                                    deltaY = -event.originalEvent.deltaY;
+                                }
+                                if (deltaY > 0){
+                                    drawExpDeltaWithCanvasId($(this)[0].id, 1, canvasSettings);
+                                } else if(deltaY < 0){
+                                    drawExpDeltaWithCanvasId($(this)[0].id, -1, canvasSettings);
+                                }
+                            });
+
+                            $('.tooltip').tooltipster({
+                                theme: 'tooltipster-shadow'
+                            });
                         }
-                    });
+                    }
                 });
 
             });
@@ -1242,8 +1290,6 @@
                                 theme: 'tooltipster-shadow'
                             });
                         }
-
-
                     }
                 });
             });
