@@ -308,6 +308,7 @@ def get_lsv_single_exp_data(majiq_bins_file, confidence, gene_name_list=None, ls
                 lsv_list[-1].set_coords(lsv_meta[0])
                 lsv_list[-1].set_id(lsv_meta[1])
                 lsv_list[-1].set_type(lsv_meta[2])
+                lsv_list[-1].sort_bins(lsv_meta[4].strand)
 
             except ValueError, e:
                 logger.warning("%s produced an error:\n%s. Skipped." % (bins_array_list, e))

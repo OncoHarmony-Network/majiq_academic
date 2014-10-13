@@ -23,7 +23,8 @@ class Lsv(object):
         self.extension = None
 
         # For LSV filtering
-        self.set_categories()
+        self.init_categories()
+        self.psi_junction = 0
 
     def set_id(self, id):
         self.id = id
@@ -93,7 +94,7 @@ class Lsv(object):
             print "[ERROR] :: LSV type not recognized: %s" % lsv_type
 
 
-    def set_categories(self):
+    def init_categories(self):
         self.categories = defaultdict()
         j = self.type.split('|')
         ssites = set(int(s[0]) for s in j[1:])
@@ -117,6 +118,7 @@ class Lsv(object):
         if j[0] == 't':
             self.categories['prime5'], self.categories['prime3'] = self.categories['prime3'], self.categories['prime5']
 
+
     def get_categories(self):
         return self.categories
 
@@ -133,8 +135,11 @@ class Lsv(object):
                 css_cats.append(c)
         return ' '.join(css_cats)
 
-    def is_three_prime(self):
-        pass
+    def sort_bins(self, strand):
+        if len(self.bins) > 2: return  #Only for 2-way LSVs
+        if strand == '+' and self.type.startswith('t') or strand == '-' and self.type.startswith('s'):
+            self.bins[0], self.bins[1] = self.bins[1], self.bins[0]
+            self.psi_junction = 1
 
     def to_JSON(self, encoder=json.JSONEncoder):
         return json.dumps(self, default=lambda o: o.__dict__, sort_keys=True, cls=encoder)
