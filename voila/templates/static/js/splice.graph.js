@@ -657,6 +657,10 @@ window.splicegraph = function (){
                         }
                     }
                 }
+                // If negative strand, complement the exon ordinal
+                if (gene.strand = '-'){
+                    exon_lsv_number = gene.exons.length - exon_lsv_number + 1;
+                }
 
                 var lsv_data = canvas.getAttribute('data-lsv-string');
                 var lsvs = lsv_data.split('|');
