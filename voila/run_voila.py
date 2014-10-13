@@ -4,6 +4,7 @@ import json
 import os
 import textwrap
 import collections as cc
+import sys
 import voila.module_locator as module_locator
 import voila.utils.utils_voila as utils_voila
 try:
@@ -150,6 +151,14 @@ def render_summary(output_dir, output_html, majiq_output, type_summary, threshol
     logger.info("HTML5 Summary successfully created in %s." % output_dir)
 
 
+class ParseError(Exception):
+    def __init__(self, msg, logger=None):
+        self.msg = msg
+        self.logger = logger
+
+    def __repr__(self):
+        return self.msg
+
 def parse_gene_graphics(gene_exps_flist, gene_name_list, logger=None):
     genes_exp1_exp2 = []
     logger.info("Parsing splice graph information files ...")
@@ -157,18 +166,23 @@ def parse_gene_graphics(gene_exps_flist, gene_name_list, logger=None):
         genes_exp = defaultdict()
         for splice_graph_f in utils_voila.list_files_or_dir(gene_flist):
             logger.info("Loading %s." % splice_graph_f)
-            genes_file = pkl.load(open(splice_graph_f, 'r'))
+            genesG = pkl.load(open(splice_graph_f, 'r'))
             genes_graphic = defaultdict(list)
-            genes_file.sort()
-            for gene_obj in genes_file:
+            genesG.sort()
+            for gene_obj in genesG:
                 if gene_obj.get_name() in gene_name_list:
                     genes_graphic[gene_obj.get_name()].append(json.dumps(gene_obj, cls=utils_voila.LsvGraphicEncoder).replace("\"", "'"))
                     genes_graphic[gene_obj.get_name()].append(gene_obj.get_strand())
                     genes_graphic[gene_obj.get_name()].append(gene_obj.get_coords())
                     genes_graphic[gene_obj.get_name()].append(gene_obj.get_chrom())
 
-            if not len(genes_graphic.keys()):
-                logger.error("[ERROR] :: No gene matching the splice graph file %s." % splice_graph_f, exc_info=1)
+            ggenes_set = set(genes_graphic.keys())
+            if not len(ggenes_set):
+                ParseError("No gene matching the splice graph file %s." % splice_graph_f, logger=logger)
+
+            if len(gene_name_list) != len(ggenes_set):
+                raise ParseError("Different number of genes in splicegraph (%d) and majiq (%d) files." % (len(ggenes_set), len(gene_name_list)), logger=logger)
+
             genes_exp[os.path.basename(splice_graph_f)] = genes_graphic
         genes_exp1_exp2.append(genes_exp)
     logger.info("Splice graph information files correctly loaded.")
@@ -250,8 +264,8 @@ def create_summary(args):
     utils_voila.create_if_not_exists(args.logger)
 
     logger = utils_voila.get_logger("%svoila.log" % args.logger, silent=args.silent)
-    logger.info("Processing %s summary." % type_summary)
     logger.info("Execution line: %s" % repr(args))
+    logger.info("Processing %s summary." % type_summary)
 
     # meta_preprocess = args.meta_preprocess
     threshold       = None
@@ -310,7 +324,6 @@ def create_summary(args):
 
         # Get gene info
         majiq_output['genes_exp'] = parse_gene_graphics([args.genes_files], gene_name_list, logger=logger)
-
 
     if type_summary == 'lsv_delta':
         threshold = args.threshold
@@ -416,8 +429,14 @@ def main():
     # subparsers.add_parser('lsv-thumbnails', help='Generate LSV thumbnails [DEBUGING!].', parents=[common_parser, parser_thumbs])  # TODO: GET RID OF THESE OR GIVE IT A BETTER SHAPE!!!
 
     args = parser.parse_args()
-    create_summary(args)
-
+    try:
+        create_summary(args)
+    except ParseError, e:
+        if e.logger:
+            e.logger.error(repr(e), exc_info=1)
+        else:
+            sys.stdout.write(repr(e))
+        sys.exit(1)
 
 if __name__ == '__main__':
     main()
