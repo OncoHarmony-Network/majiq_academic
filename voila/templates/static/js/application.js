@@ -1295,7 +1295,7 @@ function translate_lsv_bins(lsv_bins, num_samples) {
             for (var bins_i=0; bins_i<num_copies; bins_i++){
                 tmp_bins.push((1/bins_size)/2 + ((ii-1) / bins_size));
             }
-            console.log((1/bins_size)/2 + ((ii-1) / bins_size));
+//            console.log((1/bins_size)/2 + ((ii-1) / bins_size));
         }
         adjusted_bins.push(tmp_bins);
     }

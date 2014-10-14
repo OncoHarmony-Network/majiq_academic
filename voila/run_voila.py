@@ -164,7 +164,7 @@ def parse_gene_graphics(gene_exps_flist, gene_name_list, logger=None):
     logger.info("Parsing splice graph information files ...")
     for gene_flist in gene_exps_flist:
         genes_exp = defaultdict()
-        for splice_graph_f in utils_voila.list_files_or_dir(gene_flist):
+        for splice_graph_f in utils_voila.list_files_or_dir(gene_flist, suffix='splicegraph'):
             logger.info("Loading %s." % splice_graph_f)
             genesG = pkl.load(open(splice_graph_f, 'r'))
             genes_graphic = defaultdict(list)
@@ -292,33 +292,6 @@ def create_summary(args):
             gene_name_list = []
         majiq_output = utils_voila.get_lsv_single_exp_data(majiq_bins_file, args.confidence, gene_name_list=gene_name_list, lsv_types=lsv_types, logger=logger)
 
-        # Get gene info
-        # try:
-        # genes_graphic = defaultdict(list)
-        # for gene_obj in genes_files:
-        #     if gene_obj.get_name() in majiq_output['genes_dict']:
-        #         genes_graphic[gene_obj.get_name()].append(json.dumps(gene_obj, cls=utils_voila.LsvGraphicEncoder).replace("\"", "'"))
-        #         genes_graphic[gene_obj.get_name()].append(gene_obj.get_strand())
-        #         genes_graphic[gene_obj.get_name()].append(gene_obj.get_coords())
-        #         genes_graphic[gene_obj.get_name()].append(gene_obj.get_chrom())
-        #         # majiq_output['gene_json'] = json.dumps(gene_obj, cls=utils_voila.LsvGraphicEncoder).replace("\"", "'")
-        #         # majiq_output['gene'] = gene_obj
-        #
-        #
-        #         for lsv_data in majiq_output['genes_dict'][gene_obj.get_name()]:
-        #             # Find which is the ending coordinate of the LSV
-        #             lsv_data[1].append(gene_obj.get_exons()[-1].get_coords()[1])
-        #
-        #             # Calculate extension of LSV
-        #             lsv_data[0].set_coords(lsv_data[1][0])
-        #             lsv_data[0].set_extension(lsv_data[1][4], lsv_data[1][2])
-        #
-        # if not len(genes_graphic.keys()): raise Exception("[ERROR] :: No gene matching the visual information file.")
-        # gene_k = majiq_output['genes_dict'].keys()
-        # for g in gene_k:
-        #     if g not in genes_graphic.keys():
-        #         del majiq_output['genes_dict'][g]
-        # majiq_output['genes_json'] = genes_graphic
         if not gene_name_list:
             gene_name_list = majiq_output['genes_dict'].keys()
 
