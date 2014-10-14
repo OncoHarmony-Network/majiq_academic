@@ -9,7 +9,6 @@ from voila.splice_graphics.junctionGraphic import JunctionGraphic
 SSOURCE = 'source'
 STARGET = 'target'
 
-
 class LSV(object):
 
     def __init__(self, exon, lsv_id, junctions, lsv_type):
@@ -18,7 +17,8 @@ class LSV(object):
         self.coords = exon.get_coordinates()
         self.id = lsv_id
         junction_list = [x for x in junctions if x is not None]
-        if len(junction_list) < 2 or exon.ir:
+        #if len(junction_list) < 2 or exon.ir:
+        if len(junction_list) < 2:
             raise ValueError
         self.type = lsv_type
         self.exon = exon
@@ -26,11 +26,8 @@ class LSV(object):
         self.tlb_junc = {}
         self.ext_type = self.set_type(junction_list, self.tlb_junc)
         if self.ext_type == 'intron':
+            print "KKKKKKKKV %s" % exon.get_gene()
             raise ValueError
-
-        if len(junction_list) > len(self.ext_type.split('|')) - 1:
-            print " ERROR_LSV :: with inconsistent junction-type %s, %s" % (len(junction_list),
-                                                                            len(self.ext_type.split('|')))
 
         # for kk, vv in self.tlb_junc.items():
         #     count = np.sum(junction_list[vv].coverage[0].toarray())

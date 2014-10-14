@@ -71,10 +71,11 @@ def get_ecdf(pvalues):
 def plot_mappability_zeros(junctions, plotpath, numzeros, plotname):
     """
     Plot the percentage of zero positions in the junction sites against the total sum of the positions in the junction. 
-    This should be proportional. Dots in the right mean that there are some zero positions in the junctions with high coverage, meaning that 
-    there is probably some mappability bias. 
+    This should be proportional. Dots in the right mean that there are some zero positions in the junctions with high
+    coverage, meaning that there is probably some mappability bias.
     """
-    junction_sum = junctions.sum(axis=1) #Cumulative positional value per junction
+    junction_sum = junctions.sum(axis=1)
+    #Cumulative positional value per junction
     plt.plot(junction_sum, numzeros/float(junctions.shape[1]), '*')
     _save_or_show(plotpath, plotname)
 
