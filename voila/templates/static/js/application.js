@@ -840,7 +840,7 @@ function drawDeltaBox(canvas) {
     }
 }
 
-function drawDeltaBarChart(context, binsArray, settingsCanvasDelta, zoomLevel, pThreshold) {
+function drawDeltaBarChart(context, binsArray, settingsCanvasDelta, zoomLevel, pThreshold, psi_junc) {
     // pThreshold is gonna be used to differentiate between single and delta PSI
 
     // Draw the x and y axes
@@ -850,14 +850,14 @@ function drawDeltaBarChart(context, binsArray, settingsCanvasDelta, zoomLevel, p
     chartHeight += zoomLevel;
     var maxValue = 0;
 
-    for (var binsCount=0; binsCount<binsArray.length; binsCount++) {
+    for (var binsCount=0; binsCount<1; binsCount++) { //binsArray.length
         var bins = binsArray[binsCount];
         //Preserve the gradient color style
-        var gradientColorStyle = createGradientDeltaPlots(context, settingsCanvasDelta.coords_origin[0],
-                settingsCanvasDelta.coords_origin[0] + settingsCanvasDelta.area_pixels[0], binsCount, binsCount, pThreshold);
+//        var gradientColorStyle = createGradientDeltaPlots(context, settingsCanvasDelta.coords_origin[0],
+//                settingsCanvasDelta.coords_origin[0] + settingsCanvasDelta.area_pixels[0], binsCount, binsCount, pThreshold);
 
-        context.fillStyle = getColor(binsCount, BREWER_PALETTE,.5); //gradientColorStyle;
-        context.strokeStyle = getColor(binsCount, BREWER_PALETTE,1);
+        context.fillStyle = getColor(psi_junc, BREWER_PALETTE,.5); //gradientColorStyle;
+        context.strokeStyle = getColor(psi_junc, BREWER_PALETTE,1);
 
         // Offset from origin to write the labels in x-axis
         //    var xLabelsCoordX = Math.min(15, settingsCanvasDelta.margin_y[1]);
@@ -877,11 +877,9 @@ function drawDeltaBarChart(context, binsArray, settingsCanvasDelta, zoomLevel, p
 
         }
 
+    } // End Vertical bars
 
-    // End Vertical bars
-    }
-
-        // Add the column title to the x-axis
+    // Add the column title to the x-axis
     context.textAlign = "center";
     context.fillStyle = "black";
     context.strokeStyle = "black";
@@ -999,7 +997,8 @@ function renderExpandedDeltaCanvas(canvas, zoomInc, canvasSettings){
         // Create gradient for coloured barchart
 //        ctx.fillStyle = createGradientSinglePlots(ctx, canvas);
 
-        var bins = JSON.parse(canvas.getAttribute('data-lsv')).bins;
+        var lsv = JSON.parse(canvas.getAttribute('data-lsv'));
+//        var bins = lsv.bins;
 
         // Compute the zoom
         var zoom = parseInt(canvas.getAttribute('data-zoom'));
@@ -1013,7 +1012,7 @@ function renderExpandedDeltaCanvas(canvas, zoomInc, canvasSettings){
         canvas.setAttribute('data-zoom', zoom.toString());
 
         var pThreshold = canvas.getAttribute('data-threshold');
-        drawDeltaBarChart(ctx, bins, canvasSettings, zoom, pThreshold); // Canvas settings shared by all (in window)
+        drawDeltaBarChart(ctx, lsv.bins, canvasSettings, zoom, pThreshold, lsv.psi_junction); // Canvas settings shared by all (in window)
     }
 
 }
