@@ -9,7 +9,6 @@ from voila.splice_graphics.junctionGraphic import JunctionGraphic
 SSOURCE = 'source'
 STARGET = 'target'
 
-
 class LSV(object):
 
     def __init__(self, exon, lsv_id, junctions, lsv_type):
@@ -18,11 +17,8 @@ class LSV(object):
         self.coords = exon.get_coordinates()
         self.id = lsv_id
         junction_list = [x for x in junctions if x is not None]
-        if len(junction_list) < 2 or exon.ir:
-            if exon.ir:
-                print "KKKKKKKK IR %s" % exon.get_gene()
-            else:
-                print "KKKKKKKK len %s" % exon.get_gene()
+        #if len(junction_list) < 2 or exon.ir:
+        if len(junction_list) < 2:
             raise ValueError
         self.type = lsv_type
         self.exon = exon
