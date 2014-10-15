@@ -611,7 +611,7 @@ def detect_exons(gene, junction_list, read_rna):
 
 def set_exons_gc_content(chrom, exon_list):
 
-    fastadir_path = "%s/%s/" % (mglobals.genome_path, mglobals.genome)
+    fastadir_path = "%s/" % (mglobals.genome_path)
 
     #print "Loading chromosome... %s"%chrom
     chrom_path = fastadir_path + chrom + ".fa"

@@ -29,10 +29,9 @@ class LSV(object):
             print "KKKKKKKKV %s" % exon.get_gene()
             raise ValueError
 
-        # for kk, vv in self.tlb_junc.items():
-        #     count = np.sum(junction_list[vv].coverage[0].toarray())
-        #     if kk.find('e0') != -1 and count != 0:
-        #         raise ValueError
+        self.visual = list()
+        for exp_idx in xrange(mglobals.num_experiments):
+            self.visual.append(self.get_visual_lsv(junction_list, exp_idx))
 
         juncs = []
         order = self.ext_type.split('|')[1:]
@@ -41,6 +40,7 @@ class LSV(object):
             juncs.append(junction_list[self.tlb_junc[jj]])
 
         self.junctions = np.array(juncs)
+
 
     def check_type(self, lsv_type):
         tab = lsv_type.split('|')[1:]
@@ -94,6 +94,9 @@ class LSV(object):
 
     def get_chromosome(self):
         return self.exon.get_gene().get_chromosome()
+
+    def get_visual(self, exp_idx):
+        return self.visual[exp_idx]
 
     def set_type(self, jlist, tlb_junc):
         ex_id = self.exon.get_id()
@@ -168,28 +171,111 @@ class LSV(object):
 
         return ext_type
 
+    def get_visual_lsv(self, junction_list, exp_idx):
+
+        junc_list = []
+        junc_l = []
+        lsv_exon_list = [self.exon]
+        alt_empty_ends = []
+        alt_empty_starts = []
+
+        for jj in junction_list:
+            jdonor = jj.get_donor()
+            jacceptor = jj.get_acceptor()
+            cc = jj.get_coordinates()
+            if jdonor is None:
+                alt_empty_ends.append(cc[1])
+                continue
+            if jacceptor is None:
+                alt_empty_starts.append(cc[0])
+                continue
+
+            if jacceptor != self.exon:
+                lsv_exon_list.append(jacceptor)
+            if jdonor != self.exon:
+                lsv_exon_list.append(jdonor)
+
+            if jj.is_annotated() and jj.get_read_num(exp_idx) == 0:
+                jtype = 2
+            elif jj.is_annotated() and jj.get_read_num(exp_idx) > 0:
+                jtype = 0
+            elif not jj.is_annotated() and jj.get_read_num(exp_idx) > mglobals.MINREADS:
+                jtype = 1
+            else:
+                jtype = 1
+                continue
+            junc_l.append(jj.get_coordinates())
+            junc_list.append(JunctionGraphic(jj.get_coordinates(), jtype, jj.get_read_num(exp_idx)))
+        junc_l = np.asarray(junc_l)
+        lsv_exon_list.sort()
+        exon_list = []
+        for ex in lsv_exon_list:
+            cc = ex.get_coordinates()
+            a3 = []
+            alt_start = []
+            for ss3 in set(ex.ss_3p_list):
+                if ss3 in alt_empty_starts:
+                    alt_start.append(ss3)
+                    #continue
+                for jidx, jjl in enumerate(junc_l):
+                    if ss3 == jjl[1]:
+                        a3.append(jidx)
+
+            a5 = []
+            alt_ends = []
+            for ss5 in set(ex.ss_5p_list):
+                if ss5 in alt_empty_starts:
+                    alt_ends.append(ss5)
+                    #continue
+                for jidx, jjl in enumerate(junc_l):
+                    if ss5 == jjl[0]:
+                        a5.append(jidx)
+
+            ex_reads = ex.get_total_read_num(exp_idx)
+
+            if ex.annotated and ex_reads == 0.0:
+                visual_type = 2
+            elif ex.annotated and ex_reads > 0.0:
+                visual_type = 0
+            elif not ex.annotated and ex_reads > 0.0:
+                visual_type = 1
+            else:
+                visual_type = 1
+    #                        continue
+            extra_coords = []
+            if ex.annotated:
+                if ex.start < ex.db_coord[0]:
+                    extra_coords.append([ex.start, ex.db_coord[0]-1])
+                if ex.end > ex.db_coord[1]:
+                    extra_coords.append([ex.db_coord[1]+1, ex.end])
+            eg = ExonGraphic(a3, a5, cc, type_exon=visual_type, coords_extra=extra_coords,
+                             intron_retention=ex.ir, alt_starts=alt_start, alt_ends=alt_ends)
+            exon_list.append(eg)
+
+        splice_lsv = GeneGraphic(self.id, self.get_strand(), exon_list, junc_list, self.get_chromosome())
+
+        return splice_lsv
+
     def is_equivalent(self, variant):
-        if self.type == variant.type : return False
+        if self.type == variant.type:
+            return False
         return np.array_equal(self.junctions, variant.junctions)
 
     def to_majiqLSV(self, exp_idx):
         return MajiqLsv(self, exp_idx)
 
 
-def extract_SE_events(list_lsv_per_gene):
+def extract_se_events(list_lsv_per_gene):
 
     sslist = list_lsv_per_gene[0]
     stlist = list_lsv_per_gene[1]
     
     for ss in sslist:
         slist = ss.junction_list
-        if len(slist) != 2: continue
+        if len(slist) != 2:
+            continue
         if slist[0].acceptor == slist[1].acceptor:
             continue
-        
-        sindx = None
-        tindx = None
-        C2 = None
 
         for st in stlist:
             tlist = st.junction_list
@@ -312,7 +398,7 @@ class MajiqLsv(object):
         self.junction_list = scipy.sparse.lil_matrix((lsv_obj.junctions.shape[0], (mglobals.readLen-16)+1),
                                                      dtype=np.int)
         self.junction_id = []
-        self.visual = self.get_visual_lsv(lsv_obj, exp_idx)
+        self.visual = lsv_obj.get_visual(exp_idx)
         self.gc_factor = scipy.sparse.lil_matrix((lsv_obj.junctions.shape[0], (mglobals.readLen-16)+1),
                                                  dtype=np.dtype('float'))
 
@@ -331,68 +417,5 @@ class MajiqLsv(object):
             dummy = self.gc_factor[i, j]
             self.gc_factor[i, j] = mglobals.gc_factor[exp_idx](dummy)
 
-    def get_visual_lsv(self, lsv, exp_idx):
-          
-        junc_list = []
-        junc_l = []
-        lsv_exon_list = [lsv.exon]
-
-        for jj in lsv.junctions:
-            jdonor = jj.get_donor()
-            jacceptor = jj.get_acceptor()
-            if jacceptor != lsv.exon:
-                lsv_exon_list.append(jacceptor)
-            if jdonor != lsv.exon:
-                lsv_exon_list.append(jdonor)
-
-            if jj.get_coordinates()[0] is None or jdonor is None or jacceptor is None:
-                continue
-            if jj.is_annotated() and jj.get_read_num(exp_idx) == 0:
-                jtype = 2
-            elif jj.is_annotated() and jj.get_read_num(exp_idx) > 0:
-                jtype = 0
-            elif not jj.is_annotated() and jj.get_read_num(exp_idx) > mglobals.MINREADS:
-                jtype = 1
-            else:
-                jtype = 1
-                continue
-            junc_l.append(jj.get_coordinates())
-            junc_list.append(JunctionGraphic(jj.get_coordinates(), jtype, jj.get_read_num(exp_idx)))
-        junc_l = np.asarray(junc_l)
-        lsv_exon_list.sort()
-        exon_list = []
-        for ex in lsv_exon_list:
-            cc = ex.get_coordinates()
-            a3 = []
-            for ss3 in set(ex.ss_3p_list):
-                for jidx, jjl in enumerate(junc_l):
-                    if ss3 != jjl[1]:
-                        continue
-                    a3.append(jidx)
-            a5 = []
-            for ss5 in set(ex.ss_5p_list):
-                for jidx, jjl in enumerate(junc_l):
-                    if ss5 != jjl[0]:
-                        continue
-                    a5.append(jidx)
-            if ex.annotated and ex.coverage[exp_idx].sum() == 0.0:
-                ex_type = 2
-            elif ex.annotated and ex.coverage[exp_idx].sum() > 0.0:
-                ex_type = 0
-            elif not ex.annotated and ex.coverage[exp_idx].sum() > 0.0:
-                ex_type = 1
-            else:
-                ex_type = 1
-            extra_coords = []
-            if ex.annotated:
-                if ex.start < ex.db_coord[0]:
-                    extra_coords.append([ex.start, ex.db_coord[0]-1])
-                if ex.end > ex.db_coord[1]:
-                    extra_coords.append([ex.db_coord[1]+1, ex.end])
-            eg = ExonGraphic(a3, a5, cc, ex_type, intron_retention=ex.ir, coords_extra=extra_coords)
-            exon_list.append(eg)
-        splice_lsv = GeneGraphic(lsv.id, lsv.get_strand(), exon_list, junc_list, lsv.get_chromosome())
-
-        return splice_lsv
 
 

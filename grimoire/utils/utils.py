@@ -156,10 +156,10 @@ def generate_visualization_output(allgenes, temp_dir):
 
                         cc = jj.get_coordinates()
                         if jj.get_donor() is None:
-                            alt_empty_ends.append(cc[0])
+                            alt_empty_ends.append(cc[1])
                             continue
                         if jj.get_acceptor() is None:
-                            alt_empty_starts.append(cc[1])
+                            alt_empty_starts.append(cc[0])
                             continue
 
                         if jj.is_annotated() and jj.get_read_num(exp_idx) == 0:
@@ -182,7 +182,7 @@ def generate_visualization_output(allgenes, temp_dir):
                         for ss3 in set(ex.ss_3p_list):
                             if ss3 in alt_empty_starts:
                                 alt_start.append(ss3)
-                                continue
+                                #continue
                             for jidx, jjl in enumerate(junc_l):
                                 if ss3 == jjl[1]:
                                     a3.append(jidx)
@@ -192,7 +192,7 @@ def generate_visualization_output(allgenes, temp_dir):
                         for ss5 in set(ex.ss_5p_list):
                             if ss5 in alt_empty_starts:
                                 alt_ends.append(ss5)
-                                continue
+                                #continue
                             for jidx, jjl in enumerate(junc_l):
                                 if ss5 == jjl[0]:
                                     a5.append(jidx)
@@ -369,13 +369,13 @@ def gc_factor_calculation(chr_list, nb):
                 #mean_bins[ii] = np.median(t)
                 mean_bins[ii] = np.mean(t)
                 bins[ii] = mquantiles(a, prob=np.arange(0.1, 0.9, 0.1))
-                print "quantiles", bins[ii]
+                #print "quantiles", bins[ii]
 
             for qnt in range(8):
                 qnt_bns = np.ndarray(len(bins))
                 for idx, bb in enumerate(bins):
                     qnt_bns[idx] = bb[qnt]
-                print "BINS", qnt_bns
+                #print "BINS", qnt_bns
                 #quant_median[qnt]=np.median(qnt_bns)
                 quant_median[qnt] = np.mean(qnt_bns)
 
@@ -406,8 +406,8 @@ def plot_gc_content():
             mx = mglobals.gc_means[exp_n].max()
             xx = np.arange(mn, mx, 0.001)
             yy = mglobals.gc_factor[exp_n](xx)
-            print "XX", xx
-            print "Yy", yy
+            print "XX ",exp_n, xx
+            print "Yy", exp_n, yy
             pyplot.plot(xx, yy, label=mglobals.exp_list[exp_n])
             pyplot.axis((0.3, 0.7, 0.5, 1.5))
             pyplot.title("Gc factor")
