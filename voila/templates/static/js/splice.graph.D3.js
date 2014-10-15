@@ -443,8 +443,8 @@ function spliceGraphD3() {
                         });
                     }
                 });
-                var partialNewExons = svgCanvas.selectAll("rect.newpartialexon").remove()
-                    .data(coords_extra);  // Only exons with coords extra
+
+                var partialNewExons = svgCanvas.selectAll("rect.newpartialexon").data(coords_extra);  // Only exons with coords extra
                 partialNewExons.enter().append("rect");
                 partialNewExons.classed("newpartialexon", true)
                     .transition()
@@ -458,6 +458,7 @@ function spliceGraphD3() {
                         return Math.round(scaleX(d[1]) - scaleX(d[0]));
                     })
                     .attr("height", Math.round(EXON_H));
+                partialNewExons.exit().remove();
             };
 
             var updateScale = function(datap) {
