@@ -11,6 +11,7 @@ import matplotlib.pyplot as plt
 import analysis.filter as majiq_filter
 import analysis.adjustdelta as majiq_delta
 import analysis.sample as majiq_sample
+import operator
 import os
 
 """
@@ -80,7 +81,7 @@ def empirical_delta_psi( lsv_list1, lsv_list2, logger=None):
             psi2[ii] = val
 
         sys.stdout.flush()
-        delta_psi.append( psi1 - psi2 )
+        delta_psi.append(psi1 - psi2)
  #   if logger: logger.info("Calculating delta PSI for 'best set'...")
     return delta_psi 
 
@@ -139,8 +140,8 @@ class DirichletCalc:
         else: 
             #formula taken from stackoverflow "How to calculate dirichlet PDF", author based it on
             #  Wikipedia's PDF definition
-            ret = gamma(sum(alpha)) / reduce(np.operator.mul, [gamma(a) for a in alpha]) \
-                * reduce(np.operator.mul, [x[i] ** (alpha[i]-1.0) for i in xrange(len(alpha))])
+            ret = gamma(sum(alpha)) / reduce(operator.mul, [gamma(a) for a in alpha]) \
+                * reduce(operator.mul, [x[i] ** (alpha[i]-1.0) for i in xrange(len(alpha))])
             self.cache[key] = ret
             return ret
 
