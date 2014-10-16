@@ -1063,25 +1063,45 @@
 
 
                 d3.select(this).select('.toogleScale').on('click', function(){
-                    var index_gene = parseInt(this.parentNode.id.split("_")[1]);
-                    if ($(this.parentNode).hasClass('exp1') || $(this.parentNode).hasClass('exp2')){
+                    var index_gene = parseInt(this.parentNode.parentNode.id.split("_")[1]);
+                    if ($(this.parentNode.parentNode).hasClass('exp1') || $(this.parentNode.parentNode).hasClass('exp2')){
                         index_gene *= 2;
-                        if ($(this.parentNode).hasClass('exp2')){
+                        if ($(this.parentNode.parentNode).hasClass('exp2')){
                             index_gene++;
                         }
                     }
                     if (d3.select(this).classed('scaled')) {
-                        d3.select(this.parentNode)
+                        d3.select(this.parentNode.parentNode)
                             .datum([gene_objs[index_gene].orig.exons, gene_objs[index_gene].orig.junc, gene_objs[index_gene].strand])
                             .call(chart);
                         d3.select(this).classed('scaled', false);
                     } else {
-                        d3.select(this.parentNode)
+                        d3.select(this.parentNode.parentNode)
                             .datum([gene_objs[index_gene].mapped[0], gene_objs[index_gene].mapped[1], gene_objs[index_gene].strand])
                             .call(chart);
                         d3.select(this).classed('scaled', true);
                     }
 
+                });
+
+                d3.select(this).select('.zoomInSplice').on('click', function() {
+                    chart.width(chart.width() + 600);
+                    chart.height(chart.height() + 100);
+                    spliceg.call(chart);
+                    $('.filters').css({'left': parseInt($('.filters').css('left').split('px')[0]) + 600 + 'px'});
+                });
+
+                d3.select(this).select('.zoomOutSplice').on('click', function() {
+                    chart.width(chart.width() - 600);
+                    chart.height(chart.height() - 100);
+                    spliceg.call(chart);
+                    $('.filters').css({'left': Math.max(1080, parseInt($('.filters').css('left').split('px')[0]) - 600) + 'px'});
+                });
+
+                d3.select(this).select('.zoomResetSplice').on('click', function() {
+                    chart.width(1000);
+                    chart.height(120);
+                    spliceg.call(chart);
                 });
 
 

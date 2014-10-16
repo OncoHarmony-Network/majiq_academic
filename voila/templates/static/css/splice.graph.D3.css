@@ -35,7 +35,7 @@
 }
 
 .ssite3, .ssite5{
-    stroke-opacity: 0.2;
+    stroke-opacity: 0.7;
     stroke-dasharray: 2,2;
     alpha:1;
 }
@@ -115,8 +115,8 @@
 
 .toogleScale{
     cursor: pointer;
-    float: right;
-    position: absolute;
+    /*float: right;*/
+    /*position: absolute;*/
 }
 
 .newpartialexon{
