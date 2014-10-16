@@ -87,10 +87,13 @@ def quantifiable_in_group(list_of_experiments, minnonzero, min_reads, logger, pe
         idlsv = list_of_experiments[0][1][tlb[ii][0]]
 
         for idx, exp in enumerate(list_of_experiments):
-            if len(exp[0][tlb[ii][idx]]) != len(exp[0][tlb[ii][0]]):
+            try:
+                if len(exp[0][tlb[ii][idx]]) != len(exp[0][tlb[ii][0]]):
+                    import ipdb
+                    ipdb.set_trace()
+            except:
                 import ipdb
                 ipdb.set_trace()
-
             local_indx = tlb[ii][idx]
             lsv.append(exp[0][local_indx])
         filtered.append(lsv)
