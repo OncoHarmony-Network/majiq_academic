@@ -60,7 +60,7 @@ def quantifiable_in_group(list_of_experiments, minnonzero, min_reads, logger, pe
     
     filt_exp = {}
     for idx, exp in enumerate(list_of_experiments):
-        temp = lsv_quantifiable( exp, minnonzero, min_reads, logger)
+        temp = lsv_quantifiable(exp, minnonzero, min_reads, logger)
         for ldx, lsv in enumerate(temp[1]):
             if not lsv[1] in filt_exp:
                 filt_exp[lsv[1]] = 0
@@ -84,12 +84,17 @@ def quantifiable_in_group(list_of_experiments, minnonzero, min_reads, logger, pe
         if pres < filtr:
             continue
         lsv = []
-        id = list_of_experiments[0][1][tlb[ii][0]]
+        idlsv = list_of_experiments[0][1][tlb[ii][0]]
+
         for idx, exp in enumerate(list_of_experiments):
+            if len(exp[0][local_indx]) != exp[0][tlb[ii][0]]:
+                import ipdb
+                ipdb.set_trace()
+
             local_indx = tlb[ii][idx]
             lsv.append(exp[0][local_indx])
         filtered.append(lsv)
-        filtered_info.append(id)
+        filtered_info.append(idlsv)
 
     return filtered, filtered_info
 
