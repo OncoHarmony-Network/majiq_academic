@@ -108,7 +108,6 @@ function map_exon_list(exons, junctions) {
         'a5': exons[0].a5
     };
     exon_tmp.coords_extra = coords_extra;
-//        exons_mapped.push({'coords': map(function(x) { return add(x, -acc_offset);}, resize_exon(exons_obj[0].coords, reshape_exons)), 'type': exons_obj[0].type_exon});
 
     exons_mapped_tmp[0] = exon_tmp;
     var last_end = exon_tmp.coords[1];
@@ -212,11 +211,12 @@ function spliceGraphD3() {
 
 
     var width = 1000, // default width
-        height = 120; // default height
-    var padding = [10, 5, 5, 5];
-    var JUNC_AREA=0.85,
-        EXON_H = Math.round(height * (1-JUNC_AREA) - padding[2]),
-        EXON_MIN_W= 2;
+        height = 120, // default height
+        padding = [10, 5, 5, 5],
+        JUNC_AREA=0.85;
+    var EXON_H = Math.round(height * (1-JUNC_AREA) - padding[2]),
+        EXON_MIN_W= 2,
+        EXON_MAX_W=200;
     var orig_objs;
 
     function my(selection) {
@@ -230,9 +230,12 @@ function spliceGraphD3() {
 
             svgCanvas.attr("width", width).attr("height", height);
 
-            svgCanvas.append('clipPath')
-                .attr("id", "cut-off-junctions")
-                .append("rect")
+            var clipP = svgCanvas.selectAll('#cut-off-junctions').data([1]);
+            clipP.enter().append('svg:clipPath');
+            clipP.attr("id", "cut-off-junctions");
+            var rectClip = clipP.selectAll("rect").data([1]);
+            rectClip.enter().append("rect");
+            rectClip
                 .attr("x", 0)
                 .attr("y", 0)
                 .attr("width", width)
@@ -558,13 +561,14 @@ function spliceGraphD3() {
 
     my.width = function(value) {
         if (!arguments.length) return width;
-        width = value;
+        width = Math.max(value, 1000);
         return my;
     };
 
     my.height = function(value) {
         if (!arguments.length) return height;
-        height = value;
+        height = Math.max(Math.min(value, 600), 120);
+        EXON_H = Math.round(height * (1-JUNC_AREA) - padding[2]);
         return my;
     };
 
@@ -582,11 +586,11 @@ function spliceGraphD3() {
 /**
 * D3 - SpliceGraph - ONLY ACTIVE WHILE DEBUGGING!!
 * */
-//
+
 //var genes_obj = JSON.parse('{\'exons\': [{\'a3\': [], \'a5\': [0, 1], \'coords\': [135502453, 135502674], \'coords_extra\': [], \'intron_retention\': false, \'lsv_type\': 0, \'type_exon\': 0}, {\'a3\': [0, 1], \'a5\': [2, 3], \'coords\': [135502940, 135507158], \'coords_extra\': [[135502940, 135507014]], \'intron_retention\': false, \'lsv_type\': 0, \'type_exon\': 0}, {\'a3\': [2], \'a5\': [4], \'coords\': [135508972, 135509043], \'coords_extra\': [], \'intron_retention\': false, \'lsv_type\': 0, \'type_exon\': 0}, {\'a3\': [3, 4], \'a5\': [5, 6], \'coords\': [135510929, 135511021], \'coords_extra\': [], \'intron_retention\': false, \'lsv_type\': 0, \'type_exon\': 0}, {\'a3\': [5], \'a5\': [7], \'coords\': [135511265, 135511485], \'coords_extra\': [], \'intron_retention\': false, \'lsv_type\': 0, \'type_exon\': 0}, {\'a3\': [6, 7], \'a5\': [8], \'coords\': [135513462, 135513696], \'coords_extra\': [], \'intron_retention\': false, \'lsv_type\': 0, \'type_exon\': 0}, {\'a3\': [8], \'a5\': [9, 10], \'coords\': [135514976, 135515056], \'coords_extra\': [], \'intron_retention\': false, \'lsv_type\': 0, \'type_exon\': 0}, {\'a3\': [9], \'a5\': [11, 12, 13, 14, 15], \'coords\': [135515494, 135515824], \'coords_extra\': [], \'intron_retention\': false, \'lsv_type\': 0, \'type_exon\': 0}, {\'a3\': [11, 13], \'a5\': [16], \'coords\': [135516098, 135516219], \'coords_extra\': [], \'intron_retention\': false, \'lsv_type\': 0, \'type_exon\': 0}, {\'a3\': [10, 12, 14, 16], \'a5\': [21, 22, 23, 20, 17, 18, 19], \'coords\': [135516886, 135517140], \'coords_extra\': [], \'intron_retention\': false, \'lsv_type\': 0, \'type_exon\': 0}, {\'a3\': [17, 21], \'a5\': [24], \'coords\': [135517864, 135518046], \'coords_extra\': [], \'intron_retention\': true, \'lsv_type\': 0, \'type_exon\': 0}, {\'a3\': [18, 20, 22, 24], \'a5\': [25], \'coords\': [135518099, 135518461], \'coords_extra\': [], \'intron_retention\': false, \'lsv_type\': 0, \'type_exon\': 0}, {\'a3\': [15, 19, 23, 25], \'a5\': [26, 27], \'coords\': [135520046, 135520188], \'coords_extra\': [], \'intron_retention\': false, \'lsv_type\': 0, \'type_exon\': 0}, {\'a3\': [26], \'a5\': [28], \'coords\': [135520664, 135520719], \'coords_extra\': [], \'intron_retention\': false, \'lsv_type\': 0, \'type_exon\': 0}, {\'a3\': [27, 28], \'a5\': [29], \'coords\': [135521223, 135521337], \'coords_extra\': [], \'intron_retention\': false, \'lsv_type\': 0, \'type_exon\': 0}, {\'a3\': [29], \'a5\': [30, 31, 33, 32], \'coords\': [135521428, 135521812], \'coords_extra\': [], \'intron_retention\': false, \'lsv_type\': 0, \'type_exon\': 0}, {\'a3\': [30, 32, 33], \'a5\': [34, 35], \'coords\': [135522777, 135522887], \'coords_extra\': [], \'intron_retention\': false, \'lsv_type\': 0, \'type_exon\': 0}, {\'a3\': [34], \'a5\': [36, 37], \'coords\': [135523552, 135523807], \'coords_extra\': [], \'intron_retention\': false, \'lsv_type\': 0, \'type_exon\': 0}, {\'a3\': [36], \'a5\': [38], \'coords\': [135524086, 135524087], \'coords_extra\': [], \'intron_retention\': false, \'lsv_type\': 0, \'type_exon\': 2}, {\'a3\': [31, 35, 37, 38], \'a5\': [39, 40], \'coords\': [135524355, 135524462], \'coords_extra\': [], \'intron_retention\': true, \'lsv_type\': 0, \'type_exon\': 0}, {\'a3\': [39], \'a5\': [], \'coords\': [135524854, 135525088], \'coords_extra\': [], \'intron_retention\': false, \'lsv_type\': 0, \'type_exon\': 0}, {\'a3\': [40], \'a5\': [], \'coords\': [135539002, 135540311], \'coords_extra\': [], \'intron_retention\': false, \'lsv_type\': 0, \'type_exon\': 0}], \'junctions\': [{\'coords\': [135502674, 135502940], \'num_reads\': 3, \'type_junction\': 1}, {\'coords\': [135502674, 135507041], \'num_reads\': 534, \'type_junction\': 0}, {\'coords\': [135507158, 135508972], \'num_reads\': 487, \'type_junction\': 0}, {\'coords\': [135507158, 135510929], \'num_reads\': 249, \'type_junction\': 0}, {\'coords\': [135509043, 135510929], \'num_reads\': 1055, \'type_junction\': 0}, {\'coords\': [135511021, 135511265], \'num_reads\': 904, \'type_junction\': 0}, {\'coords\': [135511021, 135513462], \'num_reads\': 30, \'type_junction\': 0}, {\'coords\': [135511485, 135513462], \'num_reads\': 393, \'type_junction\': 0}, {\'coords\': [135513696, 135514976], \'num_reads\': 692, \'type_junction\': 0}, {\'coords\': [135515056, 135515494], \'num_reads\': 501, \'type_junction\': 0}, {\'coords\': [135515056, 135516886], \'num_reads\': 22, \'type_junction\': 0}, {\'coords\': [135515589, 135516098], \'num_reads\': 0, \'type_junction\': 2}, {\'coords\': [135515589, 135516886], \'num_reads\': 34, \'type_junction\': 0}, {\'coords\': [135515598, 135516098], \'num_reads\': 4, \'type_junction\': 0}, {\'coords\': [135515598, 135516886], \'num_reads\': 600, \'type_junction\': 0}, {\'coords\': [135515598, 135520046], \'num_reads\': 0, \'type_junction\': 2}, {\'coords\': [135516219, 135516886], \'num_reads\': 4, \'type_junction\': 0}, {\'coords\': [135517055, 135517864], \'num_reads\': 0, \'type_junction\': 2}, {\'coords\': [135517055, 135518099], \'num_reads\': 1, \'type_junction\': 0}, {\'coords\': [135517055, 135520046], \'num_reads\': 3, \'type_junction\': 0}, {\'coords\': [135517092, 135518099], \'num_reads\': 0, \'type_junction\': 2}, {\'coords\': [135517140, 135517864], \'num_reads\': 0, \'type_junction\': 2}, {\'coords\': [135517140, 135518099], \'num_reads\': 2, \'type_junction\': 0}, {\'coords\': [135517140, 135520046], \'num_reads\': 207, \'type_junction\': 0}, {\'coords\': [135518046, 135518099], \'num_reads\': 0, \'type_junction\': 2}, {\'coords\': [135518461, 135520046], \'num_reads\': 1, \'type_junction\': 0}, {\'coords\': [135520188, 135520664], \'num_reads\': 14, \'type_junction\': 0}, {\'coords\': [135520188, 135521223], \'num_reads\': 429, \'type_junction\': 0}, {\'coords\': [135520719, 135521223], \'num_reads\': 14, \'type_junction\': 0}, {\'coords\': [135521337, 135521428], \'num_reads\': 380, \'type_junction\': 0}, {\'coords\': [135521553, 135522777], \'num_reads\': 365, \'type_junction\': 0}, {\'coords\': [135521553, 135524355], \'num_reads\': 1, \'type_junction\': 0}, {\'coords\': [135521695, 135522777], \'num_reads\': 5, \'type_junction\': 0}, {\'coords\': [135521812, 135522777], \'num_reads\': 0, \'type_junction\': 2}, {\'coords\': [135522887, 135523552], \'num_reads\': 4, \'type_junction\': 0}, {\'coords\': [135522887, 135524355], \'num_reads\': 743, \'type_junction\': 0}, {\'coords\': [135523807, 135524086], \'num_reads\': 0, \'type_junction\': 2}, {\'coords\': [135523807, 135524355], \'num_reads\': 1, \'type_junction\': 0}, {\'coords\': [135524087, 135524355], \'num_reads\': 0, \'type_junction\': 2}, {\'coords\': [135524462, 135524854], \'num_reads\': 2, \'type_junction\': 0}, {\'coords\': [135524462, 135539002], \'num_reads\': 535, \'type_junction\': 0}], \'name\': \'ENST00000339290\', \'strand\': \'+\'}'.replace(/\'/g, "\"").replace(/'/g, ""));
 //var exons_obj = genes_obj.exons;
 //var junctions_obj = genes_obj.junctions;
-//var strand = "-";
+//var strand = "+";
 //
 //var orig_objs = {'exons': add_keys(clone(exons_obj)), 'junc': clone(junctions_obj)};
 //
@@ -600,9 +604,26 @@ function spliceGraphD3() {
 //    .datum([exons_mapped, junctions_obj, strand])
 //    .call(chart);
 //
+//d3.select('.zoomInSplice').on('click', function() {
+//    chart.width(chart.width() + 600);
+//    chart.height(chart.height() + 100);
+//    spliceg.call(chart);
+//});
+//
+//d3.select('.zoomOutSplice').on('click', function() {
+//    chart.width(chart.width() - 600);
+//    chart.height(chart.height() - 100);
+//    spliceg.call(chart);
+//});
+//
+//d3.select('.zoomResetSplice').on('click', function() {
+//    chart.width(1000);
+//    chart.height(120);
+//    spliceg.call(chart);
+//});
 //
 //d3.select('.toogleScale').on('click', function(){
-//
+////    chart.width(chart.width() + 500);
 //    if (d3.select(this).classed('scaled')) {
 //        spliceg.datum([orig_objs.exons, orig_objs.junc, strand])
 //            .call(chart);
@@ -612,6 +633,5 @@ function spliceGraphD3() {
 //            .call(chart);
 //        d3.select(this).classed('scaled', true);
 //    }
-//
 //});
 
