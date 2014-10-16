@@ -67,15 +67,19 @@ def quantifiable_in_group(list_of_experiments, minnonzero, min_reads, logger, pe
             filt_exp[lsv[1]] += 1
 
     tlb = {}
-    filtered = []
-    filtered_info = []
-
+    info_tlb = {}
+    info_tlb2 = {}
     for idx, exp in enumerate(list_of_experiments):
         for idx_lsv, lsv in enumerate(exp[1]):
             if not lsv[1] in tlb:
-                tlb[lsv[1]] = [-1]*nexp
+                tlb[lsv[1]] = [None]*nexp
+                nways = len(exp[0][idx_lsv])
+                info_tlb[lsv[1]] = lsv
+                info_tlb2[lsv[1]] = np.zeros(shape=exp[0][idx_lsv].shape)
             tlb[lsv[1]][idx] = idx_lsv
 
+    filtered = []
+    filtered_info = []
     info = tlb.keys()
     for ii in info:
         if not ii in filt_exp:
@@ -84,16 +88,17 @@ def quantifiable_in_group(list_of_experiments, minnonzero, min_reads, logger, pe
         if pres < filtr:
             continue
         lsv = []
-        idlsv = list_of_experiments[0][1][tlb[ii][0]]
-        genl = len(list_of_experiments[0][0][tlb[ii][0]])
+        idlsv = info_tlb[ii]
+
         for idx, exp in enumerate(list_of_experiments):
 
-            if len(exp[0][tlb[ii][idx]]) != genl:
-                import ipdb
-                ipdb.set_trace()
-
             local_indx = tlb[ii][idx]
-            lsv.append(exp[0][local_indx])
+            if local_indx != -1:
+                val = exp[0][local_indx]
+            else:
+                val = info_tlb2[ii]
+
+            lsv.append(val)
         filtered.append(lsv)
         filtered_info.append(idlsv)
 
