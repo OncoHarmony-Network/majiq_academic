@@ -93,7 +93,7 @@ def quantifiable_in_group(list_of_experiments, minnonzero, min_reads, logger, pe
         for idx, exp in enumerate(list_of_experiments):
 
             local_indx = tlb[ii][idx]
-            if local_indx != -1:
+            if local_indx is None:
                 val = exp[0][local_indx]
             else:
                 val = info_tlb2[ii]
