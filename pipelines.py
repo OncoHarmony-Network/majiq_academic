@@ -293,7 +293,7 @@ class DeltaPair(BasicPipeline):
                 posterior_matrix.extend(ptempt[0])
                 names.extend(ptempt[1])
 
-        pickle_path = "%s%s_%s.%s.pickle" % (self.output, self.names[0], self.names[1], pipe.model2.__name__)
+        pickle_path = "%s/%s_%s.%s.pickle" % (self.output, self.names[0], self.names[1], pipe.model2.__name__)
         pickle.dump([posterior_matrix, names, meta_info], open(pickle_path, 'w'))
         self.logger.info("DeltaPSI calculation for %s_%s ended succesfully! Result can be found at %s" % (self.names[0],
                                                                                                           self.names[1],

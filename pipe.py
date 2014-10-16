@@ -148,7 +148,6 @@ def model2(matched_lsv, info, num_exp, conf, prior_matrix,  fitfunc, psi_space, 
                 else:
                     lsv_samples2[lidx, eidx] = s_lsv
 
-
     nbins = len(psi_space)
     logger.info("Calculating deltas...")
 
@@ -169,7 +168,11 @@ def model2(matched_lsv, info, num_exp, conf, prior_matrix,  fitfunc, psi_space, 
                 # log(p(D_T1(m) | psi_T1)) = SUM_t1 T ( log ( P( D_t1 (m) | psi _T1)))
                 data_given_psi1 = np.zeros(shape=(num_exp[0], nbins), dtype = np.float)
                 for exp_idx in xrange(num_exp[0]):
-                    psi1 = lsv_samples1[lidx, exp_idx][p_idx][m]
+                    try:
+                        psi1 = lsv_samples1[lidx, exp_idx][p_idx][m]
+                    except:
+                        import ipdb
+                        ipdb.set_trace()
                     all_psi = np.array([xx[m] for xx in lsv_samples1[lidx,exp_idx]])
                     data_given_psi1[exp_idx] = np.log(prob_data_sample_given_psi(psi1, all_psi.sum(), psi_space))
                 V1 = data_given_psi1.sum(axis=0)
