@@ -198,7 +198,7 @@ def lsv_psi(samples_events, alpha, n, debug):
             total_psi = np.median(total_psi, axis=0)
             psi[idx] = total_psi/total_psi.sum()
 
-        psi_scores.append( psi )
+        psi_scores.append(psi)
 
     return psi_scores
 
@@ -215,7 +215,8 @@ def calc_psi(inc_samples, exc_samples, name, alpha, n, debug, psiparam):
     if psiparam:
         return psi_scores
     else:
-        return psi_scores[:, 0] #psi_scores[:,1] is PSE
+        return psi_scores[:, 0]
+        #psi_scores[:,1] is PSE
 
 
 def mean_psi(psi_events):
@@ -358,7 +359,8 @@ def gen_prior_matrix(pip, lsv_exp1, lsv_exp2, output, numbins=20, defaultprior=F
 
     njun_prior = [[]]
     for lsv in best_delta_psi:
-        if lsv.shape[0] != 2 : continue
+        if lsv.shape[0] != 2:
+            continue
         njun_prior[0].append(lsv[0])
 
     for nj in range(len(njun_prior)):
@@ -387,7 +389,8 @@ def gen_prior_matrix(pip, lsv_exp1, lsv_exp2, output, numbins=20, defaultprior=F
         #Calculate prior matrix
         pip.logger.info("Adding a Jefferies prior to prior (alpha=%s), jun %s..." % (pip.alpha, nj))
         prior_matrix *= jefferies
-        prior_matrix /= sum(prior_matrix) #renormalize so it sums 1
+        prior_matrix /= sum(prior_matrix)
+         #renormalize so it sums 1
 
         plot_matrix(prior_matrix, "Prior Matrix nj%s" % nj, "prior_matrix_jun_%s" % nj, pip.plotpath)
         pip.logger.info("Saving prior matrix for %s..." % pip.names)
@@ -471,7 +474,6 @@ def main():
     psi_scores = calc_dirichlet(args.alpha, args.n, samples)  
     pickle.dump(psi_scores, open("%s%s_vs_%s_psivalues.pickle"%(args.output, args.name1, args.name2), 'w'))
     print "Done."
-
 
 
 if __name__ == '__main__':
