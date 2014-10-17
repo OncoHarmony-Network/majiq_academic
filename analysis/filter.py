@@ -23,6 +23,13 @@ def lsv_mark_stacks(lsv_list, fitfunc, pvalue_limit, dispersion, logger=None):
      #the minimum value marked as stack
     numstacks = 0
     for lidx, junctions in enumerate(lsv_list[0]):
+
+
+        if lsv_list[1][1] == 'ENSMUSG00000000215:142679347-142679580:target':
+            import ipdb
+            ipdb.set_trace()
+
+
         for i, junction in enumerate(junctions):
             for j, value in enumerate(junction):
                 if value > 0:
