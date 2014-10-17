@@ -39,7 +39,7 @@ def lsv_mark_stacks(lsv_list, fitfunc_r, pvalue_limit, dispersion, logger=None):
                     #FINISH TODO
                     mean_rest = np.mean(copy_junc)
                     # r, p = func2nb(a, b, mean_rest, dispersion)
-                    p = majiqfit.calc_nbin_p(fitfunc_r, mean_rest)
+                    p = majiqfit.calc_nbin_p(1/fitfunc_r, mean_rest)
                     my_nb = nbinom(1/fitfunc_r, 1-p)
                     pval = 1-my_nb.cdf(value)
                     if pval < pvalue_limit:
