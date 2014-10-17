@@ -62,6 +62,8 @@ def _save_or_show(plotpath, plotname=None):
 
 def get_ecdf(pvalues):
     hist, bin_edges = np.histogram(pvalues, range=[0, 1], bins=len(pvalues)/10, density=True)
+    import ipdb
+    ipdb.set_trace()
     return np.cumsum(hist)/len(bin_edges)
 
 
