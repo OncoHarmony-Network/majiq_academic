@@ -193,7 +193,7 @@ def fit_nb(junctions, outpath, plotpath, nbdisp=0.1, logger=None):
         if i+1 != len(precision_values):
         #go "up" in the scale so we dont miss better solution
             one_over_r += precision-precision_values[i+1]
-            pvalues = get_pvalues(junctions, one_over_r, b, nbdisp)
+            pvalues = calc_pvalues(junctions, one_over_r)
             ecdf = get_ecdf(pvalues)
             score = score_ecdf(ecdf)
 
