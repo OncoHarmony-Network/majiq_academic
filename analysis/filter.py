@@ -112,7 +112,8 @@ def quantifiable_in_group(list_of_experiments, minnonzero, min_reads, logger, pe
     return filtered, filtered_info
 
 
-def lsv_quantifiable(list_lsv_tuple, minnonzero, min_reads, logger=False, fon=[True, True], lsv_type='majiq'):
+def lsv_quantifiable(list_lsv_tuple, minnonzero, min_reads, logger=False, fon=[True, True],
+                     lsv_type='majiq', const=False):
 
     filter_message("Before quantifiable_filter", minnonzero, logger, np.array(list_lsv_tuple))
     filtered = []
@@ -124,7 +125,8 @@ def lsv_quantifiable(list_lsv_tuple, minnonzero, min_reads, logger=False, fon=[T
                 if ((not fon[1] or np.count_nonzero(lsv[idx]) >= minnonzero) and
                         (not fon[0] or lsv[idx].sum() >= min_reads)):
                     filtered.append(lsv)
-                    filtered_info.append(list_lsv_tuple[1][lsvdx])
+                    if not const:
+                        filtered_info.append(list_lsv_tuple[1][lsvdx])
                     break
 
     elif lsv_type == 'miso':
@@ -136,7 +138,8 @@ def lsv_quantifiable(list_lsv_tuple, minnonzero, min_reads, logger=False, fon=[T
                 if ((not fon[1] or np.count_nonzero(lsv[idx]) >= minnonzero) and
                         (not fon[0] or total_count >= thresh_reads)):
                     filtered.append(lsv)
-                    filtered_info.append(list_lsv_tuple[1][lsvdx])
+                    if not const:
+                        filtered_info.append(list_lsv_tuple[1][lsvdx])
                     break
     #    filter_message("After quantifiable_filter", minnonzero, logger, array(filtered))
     return filtered, filtered_info

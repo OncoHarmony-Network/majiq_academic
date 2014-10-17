@@ -5,6 +5,7 @@ import matplotlib.pyplot as plt
 from numpy.ma import masked_less
 import numpy as np
 from scipy.stats import nbinom
+import analysis.filter as mfilter
 import random
 
 
@@ -172,6 +173,7 @@ def fit_nb(junctions, outpath, plotpath, nbdisp=0.1, logger=None):
     #TODO: FILTER FOR QUANTIFIABLE
     import ipdb
     ipdb.set_trace()
+    junctions = mfilter.lsv_quantifiable([junctions,None], 5, 10, logger=logger, lsv_type='majiq', const=True)[0]
     junctions = masked_less(junctions, 1)
     mean_junc = junctions.mean(axis=1)
     std_junc = junctions.std(axis=1)
