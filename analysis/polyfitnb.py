@@ -170,7 +170,8 @@ def fit_nb(junctions, outpath, plotpath, nbdisp=0.1, logger=None):
         logger.info("NBFit: Plots will be drawn in %s..." % plotpath)
 
     #TODO: FILTER FOR QUANTIFIABLE
-
+    import ipdb
+    ipdb.set_trace()
     mean_junc = junctions.mean(axis=1)
     std_junc = junctions.std(axis=1)
     #linear regression, retrieve the a and the b plus
