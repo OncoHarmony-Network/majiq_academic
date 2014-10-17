@@ -84,8 +84,7 @@ class BasicPipeline:
             return np.poly1d([1, 0])
         else:
             self.logger.info("Fitting NB function with constitutive events...")
-            return fit_nb(const_junctions, "%s/nbfit" % self.output, self.plotpath, nbdisp=self.nbdisp,
-                          logger=self.logger, discardb=True, bval=True)
+            return fit_nb(const_junctions, "%s/nbfit" % self.output, self.plotpath)
 
     def mark_stacks(self, lsv_list, fitfunc):
         if self.markstacks >= 0:
