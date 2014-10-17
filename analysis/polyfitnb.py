@@ -107,7 +107,7 @@ def calc_pvalues(junctions, one_over_r):
         pval = 1-my_nb.cdf(jpos)
         pvalues.append(pval)
 
-    return pval
+    return pvalues
 
 
 
