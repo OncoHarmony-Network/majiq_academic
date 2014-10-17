@@ -176,12 +176,12 @@ def fit_nb(junctions, outpath, plotpath, nbdisp=0.1, logger=None):
     #linear regression, retrieve the a and the b plus
     one_over_r0, b = np.polyfit(mean_junc, std_junc, 1)
 
-
-
     pvalues = calc_pvalues(junctions, one_over_r0)
     ecdf = get_ecdf(pvalues)
     plot_fitting(ecdf, plotpath, title="NON-Corrected ECDF b_%s" % b)
     #plot_negbinomial_fit(mean_junc, std_junc, fit_function, plotpath, "Before correction")
+    score = score_ecdf(ecdf)
+
     precision_values = [0.1, 0.01]
 
     one_over_r = one_over_r0
