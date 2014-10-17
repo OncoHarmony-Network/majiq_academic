@@ -128,15 +128,21 @@ def get_pvalues(junctions, a, b, dispersion):
     return pvalues
 
 
-def adjust_fit(starting_a, junctions, precision, previous_score, logger=None):
+def adjust_fit(starting_a, junctions, precision, previous_score, plotpath, logger=None):
     previous_a = -1
     if logger:
         logger.info("Starting from %s with precision %s" % (starting_a, precision))
+    idx = 0
     for corrected_a in np.arange(starting_a, 0, -precision):
-    #since we are reducing the "a" from the fit and the problem is too much variability, we expect optimization to be getting the "a" below
+
+        #since we are reducing the "a" from the fit and the problem is too much variability, we
+        # expect optimization to be getting the "a" below
+
         pvalues = calc_pvalues(junctions, corrected_a)
         ecdf = get_ecdf(pvalues)
         score = score_ecdf(ecdf)
+        plot_fitting(ecdf, plotpath, title="[step %d] 1\_r %s" % (idx, corrected_a))
+        idx += 1
         if logger:
             logger.info("New Score %.5f" % score)
         if previous_score < score:
@@ -154,7 +160,8 @@ def adjust_fit(starting_a, junctions, precision, previous_score, logger=None):
 
     if logger:
         logger.warning("WARNING: Something is wrong, please contact Biociphers!")
-    return corrected_a, score, ecdf, pvalues #this return should not be hit
+    return corrected_a, score, ecdf, pvalues
+    #this return should not be hit
 
 
 def plot_fitting(ecdf, plotpath, title):
@@ -189,7 +196,7 @@ def fit_nb(junctions, outpath, plotpath, nbdisp=0.1, logger=None):
 
     pvalues = calc_pvalues(junctions, one_over_r0)
     ecdf = get_ecdf(pvalues)
-    plot_fitting(ecdf, plotpath, title="NON-Corrected ECDF 1/r %s" % one_over_r0)
+    plot_fitting(ecdf, plotpath, title="NON-Corrected ECDF 1\_r %s" % one_over_r0)
     #plot_negbinomial_fit(mean_junc, std_junc, fit_function, plotpath, "Before correction")
     score = score_ecdf(ecdf)
 
@@ -208,7 +215,7 @@ def fit_nb(junctions, outpath, plotpath, nbdisp=0.1, logger=None):
             ecdf = get_ecdf(pvalues)
             score = score_ecdf(ecdf)
 
-    plot_fitting(ecdf, plotpath, title="Corrected ECDF 1/r %s" % one_over_r)
+    plot_fitting(ecdf, plotpath, title="Corrected ECDF 1\_r %s" % one_over_r)
 
     if logger:
         logger.debug("Calculating the nb_r and nb_p with the new fitted function")
