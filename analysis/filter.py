@@ -2,7 +2,7 @@
 Functions to filter junction pairs by number of positions covered or number of reads
 """
 import sys
-from polyfitnb import func2nb
+import analysis.polyfitnb as majiqfit
 from scipy.stats import nbinom
 from numpy.ma import masked_less
 import numpy as np
@@ -17,18 +17,16 @@ def filter_message(when, value, logger, junc):
             logger.info(message)
 
 
-def lsv_mark_stacks(lsv_list, fitfunc, pvalue_limit, dispersion, logger=None):
-    a, b = fitfunc.c
+def lsv_mark_stacks(lsv_list, fitfunc_r, pvalue_limit, dispersion, logger=None):
+
     minstack = sys.maxint
      #the minimum value marked as stack
     numstacks = 0
     for lidx, junctions in enumerate(lsv_list[0]):
 
-
         if lsv_list[1][lidx][1] == 'ENSMUSG00000000215:142679347-142679580:target':
             import ipdb
             ipdb.set_trace()
-
 
         for i, junction in enumerate(junctions):
             for j, value in enumerate(junction):
@@ -41,7 +39,8 @@ def lsv_mark_stacks(lsv_list, fitfunc, pvalue_limit, dispersion, logger=None):
                     #FINISH TODO
                     mean_rest = np.mean(copy_junc)
                     # r, p = func2nb(a, b, mean_rest, dispersion)
-                    my_nb = nbinom(r, 1-p)
+                    p = majiqfit.calc_nbin_p(fitfunc_r, mean_rest)
+                    my_nb = nbinom(fitfunc_r, 1-p)
                     pval = 1-my_nb.cdf(value)
                     if pval < pvalue_limit:
                         lsv_list[0][lidx][i, j] = -2 

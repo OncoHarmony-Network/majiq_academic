@@ -93,6 +93,11 @@ def plot_negbinomial_fit(mean_junc, std_junc, fit_function, plotpath, plotname):
     _save_or_show(plotpath, plotname)
 
 
+def calc_nbin_p(r, mu):
+    p = r / (r + mu)
+    return p
+
+
 def calc_pvalues(junctions, one_over_r):
 
     pvalues = []
@@ -103,7 +108,7 @@ def calc_pvalues(junctions, one_over_r):
         jpos = random.choice(junc)
         mu = (junc.sum() - jpos)/len(junc)
         r = 1 / one_over_r
-        p = r / (r + mu)
+        p = calc_nbin_p(r, mu)
         my_nb = nbinom(r, 1-p)
         pval = 1-my_nb.cdf(jpos)
         pvalues.append(pval)
