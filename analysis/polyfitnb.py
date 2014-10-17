@@ -137,7 +137,7 @@ def get_pvalues(junctions, a, b, dispersion):
     return pvalues
 
 
-def adjust_fit(starting_a, junctions, precision, previous_score, plotpath, indices=indices, logger=None):
+def adjust_fit(starting_a, junctions, precision, previous_score, plotpath, indices=None, logger=None):
     previous_a = -1
     if logger:
         logger.info("Starting from %s with precision %s" % (starting_a, precision))
