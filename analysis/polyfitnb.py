@@ -205,7 +205,7 @@ def fit_nb(junctions, outpath, plotpath, nbdisp=0.1, logger=None):
     one_over_r = one_over_r0
 
     for i, precision in enumerate(precision_values):
-        one_over_r, score, ecdf, pvalues = adjust_fit(one_over_r, junctions, precision, score, logger=logger)
+        one_over_r, score, ecdf, pvalues = adjust_fit(one_over_r, junctions, precision, score, plotpath, logger=logger)
         if logger:
             logger.info("Corrected to %.5f with precision %s. Current score is %.5f" % (one_over_r, precision, score))
         if i+1 != len(precision_values):
