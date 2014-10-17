@@ -104,7 +104,6 @@ def calc_pvalues(junctions, one_over_r, indices_list=None):
     for i, junc in enumerate(junctions):
 
         # get mu and jpos
-        junc = junc[junc.nonzero()]
         if indices_list is None:
             jpos = random.choice(junc)
         else:
