@@ -204,7 +204,7 @@ def fit_nb(junctions, outpath, plotpath, nbdisp=0.1, logger=None):
     indices = np.zeros(shape=len(junctions), dtype=np.int)
     for i, jj in enumerate(junctions):
         jji = jj.nonzero()
-        indices[i] = random.choice(jji[0])
+        indices[i] = np.random.choice(jji[0])
 
 
 
