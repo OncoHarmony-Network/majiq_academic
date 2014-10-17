@@ -13,15 +13,11 @@ def func2nb(a, b, x, dispersion):
     """
     Given a and b from the linear fit, calculate the nb parameters for x and return its r and p parameters.
     """
-#    if (a*x**2 > (x+dispersion*x**2) or b == 1 :
     if (a*x**2 + b*x > x) or b == 1:
-#        r = x**2 / ((a*x+b)**2 - x)
         r = x / (a*x + b-1)
     else:
         r = 1/dispersion
-
-    p =  (r / (r+x))
-#    p = 1 - (r / (r+x))
+    p = (r / (r+x))
     return r, p
 
 
@@ -41,8 +37,8 @@ def nb_from_func(poly_func, max_line=1, dispersion=0.1):
     points = np.linspace(0.01, max_line, num=800)
     for x in points:
         r_val, p_val = func2nb(a, b, x, dispersion)
-        r.append( r_val )
-        p.append( p_val )
+        r.append(r_val)
+        p.append(p_val)
 #        p.append(r_val / (r_val+x))
 
     return r, p, points
@@ -116,11 +112,13 @@ def adjust_fit(starting_a, b, junctions, precision, previous_score, dispersion, 
     previous_a = -1
     if logger:
         logger.info("Starting from %s with precision %s"%(starting_a, precision))
-    for corrected_a in np.arange(starting_a, 0, -precision): #since we are reducing the "a" from the fit and the problem is too much variability, we expect optimization to be getting the "a" below
+    for corrected_a in np.arange(starting_a, 0, -precision):
+    #since we are reducing the "a" from the fit and the problem is too much variability, we expect optimization to be getting the "a" below
         pvalues = get_pvalues(junctions, corrected_a, b, dispersion)
         ecdf = get_ecdf(pvalues)
         score = score_ecdf(ecdf)
-        if previous_score < score: #the best fit are previous_a and previous_score
+        if previous_score < score:
+         #the best fit are previous_a and previous_score
             if previous_a == -1:
                 return corrected_a, score, ecdf, pvalues
             else:
@@ -154,6 +152,9 @@ def fit_nb(junctions, outpath, plotpath, gcnorm=True, trim=True, minnonzero=5, p
             b = 1
         else:
             b = 0
+
+    import ipdb
+    ipdb.set_trace()
     pvalues = get_pvalues(junctions, a, b, nbdisp)
     ecdf = get_ecdf(pvalues)
     plt.xlabel("P-value")
