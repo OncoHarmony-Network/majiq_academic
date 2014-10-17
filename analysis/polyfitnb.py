@@ -92,6 +92,22 @@ def plot_negbinomial_fit(mean_junc, std_junc, fit_function, plotpath, plotname):
     _save_or_show(plotpath, plotname)
 
 
+def calc_pvalues(junctions, one_over_r):
+
+    pvalues = []
+    for i, junc in enumerate(junctions):
+
+        # get mu and jpos
+        r = 1 / one_over_r
+        p = r / (r + mu)
+        my_nb = nbinom(r, 1-p)
+        pval = 1-my_nb.cdf(jpos)
+        pvalues.append(pval)
+
+    return pval
+
+
+
 def get_pvalues(junctions, a, b, dispersion):
     pvalues = []
     for i, junction in enumerate(junctions):
@@ -111,12 +127,14 @@ def get_pvalues(junctions, a, b, dispersion):
 def adjust_fit(starting_a, b, junctions, precision, previous_score, dispersion, final=False, logger=None):
     previous_a = -1
     if logger:
-        logger.info("Starting from %s with precision %s"%(starting_a, precision))
+        logger.info("Starting from %s with precision %s" % (starting_a, precision))
     for corrected_a in np.arange(starting_a, 0, -precision):
     #since we are reducing the "a" from the fit and the problem is too much variability, we expect optimization to be getting the "a" below
-        pvalues = get_pvalues(junctions, corrected_a, b, dispersion)
+        pvalues = calc_pvalues(junctions, corrected_a)
         ecdf = get_ecdf(pvalues)
         score = score_ecdf(ecdf)
+        if logger:
+            logger.info("New Score" % score)
         if previous_score < score:
          #the best fit are previous_a and previous_score
             if previous_a == -1:
@@ -135,7 +153,55 @@ def adjust_fit(starting_a, b, junctions, precision, previous_score, dispersion, 
     return corrected_a, score, ecdf, pvalues #this return should not be hit
 
 
-def fit_nb(junctions, outpath, plotpath, gcnorm=True, trim=True, minnonzero=5, plotmapzeros=False, discardb=False,
+def plot_fitting(ecdf, plotpath, title):
+    if plotpath:
+        plt.xlabel("P-value")
+        plt.ylabel("non_corrected ECDF")
+        plt.plot(np.linspace(0, 1, num=len(ecdf)), ecdf)
+        plt.plot([0, 1], 'k')
+        _save_or_show(plotpath, title)
+
+
+def fit_nb(junctions, outpath, plotpath, nbdisp=0.1, logger=None):
+    if logger and plotpath:
+        logger.info("NBFit: Plots will be drawn in %s..." % plotpath)
+
+    #TODO: FILTER FOR QUANTIFIABLE
+
+    mean_junc = junctions.mean(axis=1)
+    std_junc = junctions.std(axis=1)
+    #linear regression, retrieve the a and the b plus
+    one_over_r0, b = np.polyfit(mean_junc, std_junc, 1)
+
+
+
+    pvalues = calc_pvalues(junctions, a, b, nbdisp)
+    ecdf = get_ecdf(pvalues)
+    plot_fitting(ecdf, plotpath, title="NON-Corrected ECDF b_%s" % b)
+    #plot_negbinomial_fit(mean_junc, std_junc, fit_function, plotpath, "Before correction")
+    precision_values = [0.1, 0.01]
+
+    one_over_r = one_over_r0
+
+    for i, precision in enumerate(precision_values):
+        one_over_r, score, ecdf, pvalues = adjust_fit(one_over_r, b, junctions, precision, score, nbdisp, logger)
+        if logger:
+            logger.info("Corrected to %.5f with precision %s. Current score is %.5f" % (one_over_r, precision, score))
+        if i+1 != len(precision_values):
+        #go "up" in the scale so we dont miss better solution
+            one_over_r += precision-precision_values[i+1]
+            pvalues = get_pvalues(junctions, one_over_r, b, nbdisp)
+            ecdf = get_ecdf(pvalues)
+            score = score_ecdf(ecdf)
+
+    plot_fitting(ecdf, plotpath, title="Corrected ECDF b_%s" % b)
+
+    if logger:
+        logger.debug("Calculating the nb_r and nb_p with the new fitted function")
+
+    return one_over_r
+
+def old_fit_nb(junctions, outpath, plotpath, gcnorm=True, trim=True, minnonzero=5, plotmapzeros=False, discardb=False,
            nbdisp=0.1, logger=None, bval=False):
     if logger:
         logger.info("NBFit: Plots will be drawn in %s..." % plotpath)
@@ -155,6 +221,7 @@ def fit_nb(junctions, outpath, plotpath, gcnorm=True, trim=True, minnonzero=5, p
 
     import ipdb
     ipdb.set_trace()
+
     pvalues = get_pvalues(junctions, a, b, nbdisp)
     ecdf = get_ecdf(pvalues)
     plt.xlabel("P-value")
