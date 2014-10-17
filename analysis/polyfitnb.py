@@ -5,7 +5,7 @@ import matplotlib.pyplot as plt
 from numpy.ma import masked_less
 import numpy as np
 from scipy.stats import nbinom
-
+import random
 
 
 #TODO: every function that translates a, b to r, p should use this function if needed for single values, or the one below for a whole ndarray
@@ -98,6 +98,9 @@ def calc_pvalues(junctions, one_over_r):
     for i, junc in enumerate(junctions):
 
         # get mu and jpos
+
+        jpos = random.choice(junc)
+        mu = (junc.sum() - jpos)/len(junc)
         r = 1 / one_over_r
         p = r / (r + mu)
         my_nb = nbinom(r, 1-p)
@@ -175,7 +178,7 @@ def fit_nb(junctions, outpath, plotpath, nbdisp=0.1, logger=None):
 
 
 
-    pvalues = calc_pvalues(junctions, a, b, nbdisp)
+    pvalues = calc_pvalues(junctions, one_over_r0)
     ecdf = get_ecdf(pvalues)
     plot_fitting(ecdf, plotpath, title="NON-Corrected ECDF b_%s" % b)
     #plot_negbinomial_fit(mean_junc, std_junc, fit_function, plotpath, "Before correction")
@@ -200,6 +203,7 @@ def fit_nb(junctions, outpath, plotpath, nbdisp=0.1, logger=None):
         logger.debug("Calculating the nb_r and nb_p with the new fitted function")
 
     return one_over_r
+
 
 def old_fit_nb(junctions, outpath, plotpath, gcnorm=True, trim=True, minnonzero=5, plotmapzeros=False, discardb=False,
            nbdisp=0.1, logger=None, bval=False):
