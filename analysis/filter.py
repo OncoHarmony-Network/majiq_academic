@@ -40,7 +40,7 @@ def lsv_mark_stacks(lsv_list, fitfunc, pvalue_limit, dispersion, logger=None):
                     copy_junc = copy_junc[copy_junc > 0]
                     #FINISH TODO
                     mean_rest = np.mean(copy_junc)
-                    r, p = func2nb(a, b, mean_rest, dispersion)
+                    # r, p = func2nb(a, b, mean_rest, dispersion)
                     my_nb = nbinom(r, 1-p)
                     pval = 1-my_nb.cdf(value)
                     if pval < pvalue_limit:
