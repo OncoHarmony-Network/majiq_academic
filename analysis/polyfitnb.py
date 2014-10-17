@@ -109,9 +109,9 @@ def calc_pvalues(junctions, one_over_r, indices_list=None):
             jpos = random.choice(junc)
         else:
             jpos = junc[indices_list[i]]
-        import pdb
-        pdb.set_trace()
-        mu = (junc.sum() - jpos)/(len(junc)-1)
+
+        ljunc = len(junc.nonzero()[0])
+        mu = (junc.sum() - jpos)/(ljunc-1)
         r = 1 / one_over_r
         p = calc_nbin_p(r, mu)
         my_nb = nbinom(r, p)
