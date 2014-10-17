@@ -20,6 +20,9 @@ def get_clean_raw_reads(matched_info, matched_lsv, outdir, names, num_exp):
     for eidx in xrange(num_exp):
         for ldx, lsv in enumerate(matched_info):
             num = matched_lsv[ldx][eidx].sum()
+            if num < 0:
+                import ipdb
+                ipdb.set_trace()
             res.append([lsv[1], num])
 
         with open('%s/clean_reads.%s%d.pkl' % (outdir, names, eidx), 'wb') as fp:
