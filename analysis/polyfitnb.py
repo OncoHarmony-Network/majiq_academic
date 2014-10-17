@@ -99,7 +99,7 @@ def calc_pvalues(junctions, one_over_r):
     for i, junc in enumerate(junctions):
 
         # get mu and jpos
-
+        junc = junc[junc.nonzero()]
         jpos = random.choice(junc)
         mu = (junc.sum() - jpos)/len(junc)
         r = 1 / one_over_r
