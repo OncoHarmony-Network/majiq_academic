@@ -62,8 +62,6 @@ def _save_or_show(plotpath, plotname=None):
 
 def get_ecdf(pvalues):
     hist, bin_edges = np.histogram(pvalues, range=[0, 1], bins=len(pvalues)/10, density=True)
-    import ipdb
-    ipdb.set_trace()
     return np.cumsum(hist)/len(bin_edges)
 
 
@@ -100,14 +98,17 @@ def calc_nbin_p(r, mu):
     return p
 
 
-def calc_pvalues(junctions, one_over_r):
+def calc_pvalues(junctions, one_over_r, indices_list=None):
 
     pvalues = []
     for i, junc in enumerate(junctions):
 
         # get mu and jpos
         junc = junc[junc.nonzero()]
-        jpos = random.choice(junc)
+        if indices_list is None:
+            jpos = random.choice(junc)
+        else:
+            jpos = junc[indices_list[i]]
         mu = (junc.sum() - jpos)/len(junc)
         r = 1 / one_over_r
         p = calc_nbin_p(r, mu)
@@ -136,7 +137,7 @@ def get_pvalues(junctions, a, b, dispersion):
     return pvalues
 
 
-def adjust_fit(starting_a, junctions, precision, previous_score, plotpath, logger=None):
+def adjust_fit(starting_a, junctions, precision, previous_score, plotpath, indices=indices, logger=None):
     previous_a = -1
     if logger:
         logger.info("Starting from %s with precision %s" % (starting_a, precision))
@@ -146,7 +147,7 @@ def adjust_fit(starting_a, junctions, precision, previous_score, plotpath, logge
         #since we are reducing the "a" from the fit and the problem is too much variability, we
         # expect optimization to be getting the "a" below
 
-        pvalues = calc_pvalues(junctions, corrected_a)
+        pvalues = calc_pvalues(junctions, corrected_a, indices)
         ecdf = get_ecdf(pvalues)
         score = score_ecdf(ecdf)
         plot_fitting(ecdf, plotpath, title="%s.[step %d] 1\_r %s" % (precision, idx, corrected_a))
@@ -199,10 +200,18 @@ def fit_nb(junctions, outpath, plotpath, nbdisp=0.1, logger=None):
     junctions = masked_less(junctions, 1)
     mean_junc = junctions.mean(axis=1)
     std_junc = junctions.std(axis=1)
+
+    indices = np.zeros(shape=len(junctions), dtype=np.int)
+    for i, jj in enumerate(junctions):
+        jji = jj.nonzero()
+        indices[i] = random.choice(jji)
+
+
+
     #linear regression, retrieve the a and the b plus
     one_over_r0, b = np.polyfit(mean_junc, std_junc, 1)
 
-    pvalues = calc_pvalues(junctions, one_over_r0)
+    pvalues = calc_pvalues(junctions, one_over_r0, indices)
     ecdf = get_ecdf(pvalues)
     plot_fitting(ecdf, plotpath, title="NON-Corrected ECDF 1\_r %s" % one_over_r0)
     #plot_negbinomial_fit(mean_junc, std_junc, fit_function, plotpath, "Before correction")
@@ -213,13 +222,13 @@ def fit_nb(junctions, outpath, plotpath, nbdisp=0.1, logger=None):
     one_over_r = one_over_r0
 
     for i, precision in enumerate(precision_values):
-        one_over_r, score, ecdf, pvalues = adjust_fit(one_over_r, junctions, precision, score, plotpath, logger=logger)
+        one_over_r, score, ecdf, pvalues = adjust_fit(one_over_r, junctions, precision, score, plotpath, indices=indices, logger=logger)
         if logger:
             logger.info("Corrected to %.5f with precision %s. Current score is %.5f" % (one_over_r, precision, score))
         if i+1 != len(precision_values):
         #go "up" in the scale so we dont miss better solution
             one_over_r += precision-precision_values[i+1]
-            pvalues = calc_pvalues(junctions, one_over_r)
+            pvalues = calc_pvalues(junctions, one_over_r, indices)
             ecdf = get_ecdf(pvalues)
             score = score_ecdf(ecdf)
 
