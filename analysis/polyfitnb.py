@@ -127,7 +127,7 @@ def get_pvalues(junctions, a, b, dispersion):
     return pvalues
 
 
-def adjust_fit(starting_a, b, junctions, precision, previous_score, dispersion, final=False, logger=None):
+def adjust_fit(starting_a, junctions, precision, previous_score, logger=None):
     previous_a = -1
     if logger:
         logger.info("Starting from %s with precision %s" % (starting_a, precision))
@@ -187,7 +187,7 @@ def fit_nb(junctions, outpath, plotpath, nbdisp=0.1, logger=None):
     one_over_r = one_over_r0
 
     for i, precision in enumerate(precision_values):
-        one_over_r, score, ecdf, pvalues = adjust_fit(one_over_r, b, junctions, precision, score, nbdisp, logger)
+        one_over_r, score, ecdf, pvalues = adjust_fit(one_over_r, junctions, precision, score, logger=logger)
         if logger:
             logger.info("Corrected to %.5f with precision %s. Current score is %.5f" % (one_over_r, precision, score))
         if i+1 != len(precision_values):
