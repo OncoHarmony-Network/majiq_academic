@@ -137,7 +137,7 @@ def adjust_fit(starting_a, junctions, precision, previous_score, logger=None):
         ecdf = get_ecdf(pvalues)
         score = score_ecdf(ecdf)
         if logger:
-            logger.info("New Score" % score)
+            logger.info("New Score %.5f" % score)
         if previous_score < score:
          #the best fit are previous_a and previous_score
             if previous_a == -1:
