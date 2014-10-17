@@ -109,7 +109,7 @@ def calc_pvalues(junctions, one_over_r, indices_list=None):
             jpos = random.choice(junc)
         else:
             jpos = junc[indices_list[i]]
-        mu = (junc.sum() - jpos)/len(junc)
+        mu = (junc.sum() - jpos)/(len(junc)-1)
         r = 1 / one_over_r
         p = calc_nbin_p(r, mu)
         my_nb = nbinom(r, p)
@@ -199,7 +199,7 @@ def fit_nb(junctions, outpath, plotpath, nbdisp=0.1, logger=None):
     indices = np.zeros(shape=len(junctions), dtype=np.int)
     for i, jj in enumerate(junctions):
         jji = jj.nonzero()
-        indices[i] = np.random.choice(jji[0],2)
+        indices[i] = np.random.choice(jji[0], 2)
 
     #linear regression, retrieve the a and the b plus
     one_over_r0, b = np.polyfit(mean_junc, std_junc, 1)
