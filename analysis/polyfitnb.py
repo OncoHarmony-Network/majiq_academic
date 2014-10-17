@@ -186,16 +186,11 @@ def fit_nb(junctions, outpath, plotpath, nbdisp=0.1, logger=None):
     if logger and plotpath:
         logger.info("NBFit: Plots will be drawn in %s..." % plotpath)
 
-    #TODO: FILTER FOR QUANTIFIABLE
-    import ipdb
-    ipdb.set_trace()
-
     filtered = []
     for jdx, jun in enumerate(junctions):
         if np.count_nonzero(jun) >= 5 and jun.sum() >= 10:
             filtered.append(jun)
 
-    ipdb.set_trace()
     junctions = np.array(filtered)
     junctions = masked_less(junctions, 1)
     mean_junc = junctions.mean(axis=1)
@@ -204,9 +199,7 @@ def fit_nb(junctions, outpath, plotpath, nbdisp=0.1, logger=None):
     indices = np.zeros(shape=len(junctions), dtype=np.int)
     for i, jj in enumerate(junctions):
         jji = jj.nonzero()
-        indices[i] = np.random.choice(jji[0])
-
-
+        indices[i] = np.random.choice(jji[0],2)
 
     #linear regression, retrieve the a and the b plus
     one_over_r0, b = np.polyfit(mean_junc, std_junc, 1)
