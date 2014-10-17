@@ -118,7 +118,7 @@ def get_pvalues(junctions, a, b, dispersion):
         if junction.any():
             junction_value = junction.mean()
             r, p = func2nb(a, b, junction_value, dispersion)
-            my_nb = nbinom(r, 1-p)
+            my_nb = nbinom(r, p)
             pval = 1-my_nb.cdf(junction_value)
         else:
             pval = 1 #if no reads, p-value is 1 
@@ -189,7 +189,7 @@ def fit_nb(junctions, outpath, plotpath, nbdisp=0.1, logger=None):
 
     pvalues = calc_pvalues(junctions, one_over_r0)
     ecdf = get_ecdf(pvalues)
-    plot_fitting(ecdf, plotpath, title="NON-Corrected ECDF b_%s" % b)
+    plot_fitting(ecdf, plotpath, title="NON-Corrected ECDF 1/r %s" % one_over_r0)
     #plot_negbinomial_fit(mean_junc, std_junc, fit_function, plotpath, "Before correction")
     score = score_ecdf(ecdf)
 
@@ -208,7 +208,7 @@ def fit_nb(junctions, outpath, plotpath, nbdisp=0.1, logger=None):
             ecdf = get_ecdf(pvalues)
             score = score_ecdf(ecdf)
 
-    plot_fitting(ecdf, plotpath, title="Corrected ECDF b_%s" % b)
+    plot_fitting(ecdf, plotpath, title="Corrected ECDF 1/r %s" % one_over_r)
 
     if logger:
         logger.debug("Calculating the nb_r and nb_p with the new fitted function")
