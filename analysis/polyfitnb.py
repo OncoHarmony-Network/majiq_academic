@@ -109,7 +109,7 @@ def calc_pvalues(junctions, one_over_r):
         mu = (junc.sum() - jpos)/len(junc)
         r = 1 / one_over_r
         p = calc_nbin_p(r, mu)
-        my_nb = nbinom(r, 1-p)
+        my_nb = nbinom(r, p)
         pval = 1-my_nb.cdf(jpos)
         pvalues.append(pval)
 
@@ -126,7 +126,8 @@ def get_pvalues(junctions, a, b, dispersion):
             my_nb = nbinom(r, p)
             pval = 1-my_nb.cdf(junction_value)
         else:
-            pval = 1 #if no reads, p-value is 1 
+            pval = 1
+            #if no reads, p-value is 1
 
         pvalues.append(pval) 
          
