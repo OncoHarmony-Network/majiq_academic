@@ -61,6 +61,7 @@ def _save_or_show(plotpath, plotname=None):
 
 
 def get_ecdf(pvalues):
+    print sorted(pvalues)
     hist, bin_edges = np.histogram(pvalues, range=[0, 1], bins=len(pvalues)/10, density=True)
     return np.cumsum(hist)/len(bin_edges)
 
@@ -167,7 +168,7 @@ def adjust_fit(starting_a, junctions, precision, previous_score, plotpath, indic
         previous_score = score
         previous_ecdf = ecdf
         previous_pvalues = pvalues
-        pvalues = []    
+        #pvalues = []
 
     if logger:
         logger.warning("WARNING: Something is wrong, please contact Biociphers!")
