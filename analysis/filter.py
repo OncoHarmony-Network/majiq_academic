@@ -37,8 +37,7 @@ def lsv_mark_stacks(lsv_list, fitfunc_r, pvalue_limit, dispersion, logger=None):
 
                     #FINISH TODO
                     mean_rest = np.mean(copy_junc)
-                    # r, p = func2nb(a, b, mean_rest, dispersion)
-                    pval = majiqfit.get_negbinom_pval(fitfunc_r, mean_rest)
+                    pval = majiqfit.get_negbinom_pval(fitfunc_r, mean_rest, value)
                     if pval < pvalue_limit:
                         lsv_list[0][lidx][i, j] = -2 
                         minstack = min(minstack, value)

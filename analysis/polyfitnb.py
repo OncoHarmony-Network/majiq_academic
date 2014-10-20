@@ -63,6 +63,9 @@ def __calc_nbin_p(r, mu):
     return p
 
 
+def sample_over_nb(one_over_r, mean, num_samples):
+    return nbinom.rvs(one_over_r, mean, size=num_samples)
+
 def get_ztnbin_pval(one_over_r, mu, x):
     r = 1 / one_over_r
     p = __calc_nbin_p(r, mu)

@@ -3,7 +3,7 @@ from random import choice
 import numpy as np
 from scipy.stats import pearsonr
 import matplotlib.pyplot as plt
-import analysis.polyfitnb as polyfitnb
+import analysis.polyfitnb as majiq_fit
 
 """
 Sampling from junctions using a Negative Binomial model.
@@ -91,10 +91,9 @@ EMPIRICAL_NZ = 0
 BINOMIAL_NZ = -1
 
 
-def sample_from_junctions(junction_list, m, k, dispersion=0.1, discardzeros=5, trimborder=True, fitted_func=None,
+def sample_from_junctions(junction_list, m, k, dispersion=0.1, discardzeros=5, trimborder=True, fitted_one_over_r=None,
                           debug=False, tracklist=None, Nz=0, names=None, naive=False):
     "Given the filtered reads, bootstrap samples from every junction"
-    a, b = fitted_func.c
     sampled_means = []
     sampled_var = []
     all_samples = []
@@ -144,8 +143,8 @@ def sample_from_junctions(junction_list, m, k, dispersion=0.1, discardzeros=5, t
 
                 sampled_mean = np.mean(junction_samples)
                 #recalculating
-                r_nb, p_nb = polyfitnb.func2nb(a, b, sampled_mean, dispersion)
-                nb50 = np.random.negative_binomial(r_nb, p_nb, k)
+                nb50 = majiq_fit.sample_over_nb(one_over_r=fitted_one_over_r, mean=sampled_mean, num_samples=k)
+
                 smpl = np.mean(nb50)
                 samples.append(smpl)
             #calculate the mean and the variance 
