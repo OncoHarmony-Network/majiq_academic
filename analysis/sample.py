@@ -143,7 +143,7 @@ def sample_from_junctions(junction_list, m, k, dispersion=0.1, discardzeros=5, t
 
                 sampled_mean = np.mean(junction_samples)
                 #recalculating
-                nb50 = majiq_fit.sample_over_nb(one_over_r=fitted_one_over_r, mean=sampled_mean, num_samples=k)
+                nb50 = majiq_fit.sample_over_nb(one_over_r=fitted_one_over_r, mu=sampled_mean, num_samples=k)
 
                 smpl = np.mean(nb50)
                 samples.append(smpl)
