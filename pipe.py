@@ -76,7 +76,7 @@ def calcpsi(matched_lsv, info, num_exp, conf, fitfunc, logger):
                                                                            k=conf['k'],
                                                                            discardzeros=conf['discardzeros'],
                                                                            trimborder=conf['trimborder'],
-                                                                           fitted_func=fitfunc[eidx],
+                                                                           fitted_one_over_r=fitfunc[eidx],
                                                                            debug=conf['debug'],
                                                                            Nz=conf['nz'])
 
@@ -140,7 +140,7 @@ def model2(matched_lsv, info, num_exp, conf, prior_matrix,  fitfunc, psi_space, 
                                                                            k=conf['k'],
                                                                            discardzeros=conf['discardzeros'],
                                                                            trimborder=conf['trimborder'],
-                                                                           fitted_func=fitfunc[grp_idx][eidx],
+                                                                           fitted_one_over_r=fitfunc[grp_idx][eidx],
                                                                            debug=conf['debug'],
                                                                            Nz=conf['nz'])
                 if grp_idx == 0:
