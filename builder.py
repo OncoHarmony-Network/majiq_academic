@@ -106,9 +106,9 @@ def _generate_parser():
 def main(params):
 
     if os.path.exists(params.conf):
-        mglobals.global_conf_ini(params.conf)
+        mglobals.global_conf_ini(params.conf, params.output)
     else:
-        mglobals.global_init(params.readlen, params.dir, params.paths)
+        mglobals.global_init(params.readlen, params.dir, params.paths, params.output)
 
     mglobals.gene_tlb = {}
 

@@ -42,7 +42,7 @@ def print_numbers():
     print "BOTH", bothSS
 
 
-def global_conf_ini(filename):
+def global_conf_ini(filename, output):
 
     global num_experiments, exp_list, readLen, tissue_repl, sam_dir, num_mapped_reads, genome, \
         genome_path, outDir, temp_oDir
@@ -64,6 +64,7 @@ def global_conf_ini(filename):
     sam_dir = general['samdir']
     genome = general['genome']
     genome_path = general['genome_path']
+    outDir = output
 
     if not os.path.exists(outDir):
         os.makedirs(outDir)
