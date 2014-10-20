@@ -114,8 +114,8 @@ def main():
                                    "[Default: %(default)s]")
 
     delta = new_subparser()
-    delta.add_argument('--1', dest="files1", nargs='+')
-    delta.add_argument('--2', dest="files2", nargs='+')
+    delta.add_argument('-grp1', dest="files1", nargs='+')
+    delta.add_argument('-grp2', dest="files2", nargs='+')
     delta.add_argument('--default_prior', action='store_true', default=False,
                        help="Use a default prior instead of computing it using the empirical data")
     delta.add_argument('--changinglimit')

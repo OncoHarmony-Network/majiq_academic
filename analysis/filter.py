@@ -24,11 +24,9 @@ def lsv_mark_stacks(lsv_list, fitfunc_r, pvalue_limit, dispersion, logger=None):
     numstacks = 0
     for lidx, junctions in enumerate(lsv_list[0]):
 
-        if lsv_list[1][lidx][1] == 'ENSMUSG00000000215:142679347-142679580:target':
-            import ipdb
-            ipdb.set_trace()
-
         for i, junction in enumerate(junctions):
+            if np.count_nonzero(junction) == 0:
+                continue
             for j, value in enumerate(junction):
                 if value > 0:
                     #TODO Use masker, and marking stacks will probably be faster.
@@ -36,12 +34,11 @@ def lsv_mark_stacks(lsv_list, fitfunc_r, pvalue_limit, dispersion, logger=None):
                     copy_junc.pop(j)
                     copy_junc = np.array(copy_junc)
                     copy_junc = copy_junc[copy_junc > 0]
+
                     #FINISH TODO
                     mean_rest = np.mean(copy_junc)
                     # r, p = func2nb(a, b, mean_rest, dispersion)
-                    p = majiqfit.calc_nbin_p(1/fitfunc_r, mean_rest)
-                    my_nb = nbinom(1/fitfunc_r, p)
-                    pval = 1-my_nb.cdf(value)
+                    pval = majiqfit.get_negbinom_pval(fitfunc_r, mean_rest)
                     if pval < pvalue_limit:
                         lsv_list[0][lidx][i, j] = -2 
                         minstack = min(minstack, value)

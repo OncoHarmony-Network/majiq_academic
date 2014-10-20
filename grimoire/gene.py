@@ -7,6 +7,7 @@ from grimoire.lsv import LSV
 from grimoire.junction import Junction
 from grimoire.analize import reliable_in_data
 
+
 class Gene:
     __eq__ = lambda self, other: (self.chromosome == other.chromosome and self.strand == other.strand
                                   and self.start < other.end and self.end > other.start)
