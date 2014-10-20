@@ -62,7 +62,6 @@ def global_conf_ini(filename):
     MINPOS = 2
     readLen = int(general['readlen'])
     sam_dir = general['samdir']
-    outDir = general['output']
     genome = general['genome']
     genome_path = general['genome_path']
 

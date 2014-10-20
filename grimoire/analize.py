@@ -3,7 +3,7 @@ from lsv import SSOURCE, STARGET
 import mglobals
 
 
-def __reliable_in_data(junc, exp_idx):
+def reliable_in_data(junc, exp_idx):
     
     min_read_x_exp = mglobals.MINREADS
     min_npos_x_exp = mglobals.MINPOS
@@ -67,7 +67,7 @@ def lsv_detection(gene_list, chrom, logging=None):
                         e_data = 0
                         for jj in jlist:
                             for exp_idx in ind_list:
-                                if __reliable_in_data(jj, exp_idx):
+                                if reliable_in_data(jj, exp_idx):
                                     counter += 1
                             if counter < 0.1*len(ind_list):
                                 continue

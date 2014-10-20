@@ -5,7 +5,7 @@ import mglobals
 from grimoire.exon import ExonTx, collapse_list_exons
 from grimoire.lsv import LSV
 from grimoire.junction import Junction
-
+from grimoire.analize import reliable_in_data
 
 class Gene:
     __eq__ = lambda self, other: (self.chromosome == other.chromosome and self.strand == other.strand
@@ -355,7 +355,7 @@ class Gene:
             jmat[x, y] = junc
 
             for exp_idx in range(mglobals.num_experiments):
-                if junc.get_read_num(exp_idx) >= 10:
+                if reliable_in_data(junc, exp_idx):
                     rand10k[exp_idx].add(junc)
 
         if not lsv:
