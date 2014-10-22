@@ -3,6 +3,7 @@ import scipy.misc
 import random
 import numpy as np
 from scipy.stats import pearsonr, binom_test
+from scipy.stats import binom, beta
 from grimoire.utils.utils import create_if_not_exists, get_logger
 import sys
 import os
@@ -55,9 +56,21 @@ def combine_for_priormatrix(group1, group2, matched_info, num_exp):
     return grp1, grp2
 
 
-def prob_data_sample_given_psi(sample, all_sample, psi_space):
+def prob_data_sample_given_psi(sample, all_sample, psi_space, bsize, nbins):
 
-    bin_test = [binom_test(sample, all_sample, p=x) for x in psi_space]
+    if all_sample <= 4000:
+        #bin_test = [binom_test(sample, all_sample, p=x) for x in psi_space]
+        bin_test = [binom.pmf(sample, all_sample, p=x) for x in psi_space]
+    else:
+        psi_border = np.arange(0, 1.01, bsize)
+        notsample = all_sample - sample
+        bincdf = [beta.cdf(xx, sample + 0.5, notsample + 0.5) for xx in psi_border]
+
+        bin_test = []
+        for x in xrange(nbins):
+            val = bincdf[x] - bincdf[x+1]
+            bin_test.append(val)
+
     bin_test = np.array(bin_test) + 1e-10
     return bin_test
 
