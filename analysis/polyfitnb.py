@@ -65,7 +65,7 @@ def __calc_nbin_p(r, mu):
 
 def sample_over_nb(one_over_r, mu, num_samples):
     r = 1 / one_over_r
-    p = __calc_nbin_p(mu, r)
+    p = __calc_nbin_p(r, mu)
     return nbinom.rvs(r, p, size=num_samples)
 
 
@@ -150,12 +150,12 @@ def plot_fitting(ecdf, plotpath, title):
         _save_or_show(plotpath, title)
 
 
-def fit_nb(junctions, outpath, plotpath, nbdisp=0.1, logger=None):
+def fit_nb(junctionl, outpath, plotpath, nbdisp=0.1, logger=None):
     if logger and plotpath:
         logger.info("NBFit: Plots will be drawn in %s..." % plotpath)
 
     filtered = []
-    for jdx, jun in enumerate(junctions):
+    for jdx, jun in enumerate(junctionl):
         if np.count_nonzero(jun) >= 5 and jun.sum() >= 10:
             filtered.append(jun)
 

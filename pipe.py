@@ -56,6 +56,7 @@ def combine_for_priormatrix(group1, group2, matched_info, num_exp):
 
 
 def prob_data_sample_given_psi(sample, all_sample, psi_space):
+
     bin_test = [binom_test(sample, all_sample, p=x) for x in psi_space]
     bin_test = np.array(bin_test) + 1e-10
     return bin_test
@@ -65,8 +66,9 @@ def calcpsi(matched_lsv, info, num_exp, conf, fitfunc, logger):
 
     try:
 
-        BSIZE = 1.0/float(conf['nbins'])
-        psi_space = np.arange(0+BSIZE/2, 1, BSIZE) #The center of the previous BINS. This is used to calculate the mean value of each bin.
+        bsize = 1.0/float(conf['nbins'])
+        psi_space = np.arange(0 + bsize/2, 1, bsize)
+        #The center of the previous BINS. This is used to calculate the mean value of each bin.
         lsv_samples = np.zeros(shape=(len(info), num_exp), dtype=np.dtype('object'))
         logger.info("Bootstrapping for all samples...")
         for lidx, lsv_all in enumerate(matched_lsv):
@@ -104,10 +106,10 @@ def calcpsi(matched_lsv, info, num_exp, conf, fitfunc, logger):
                 psi = np.zeros(shape=nbins, dtype=np.float)
                 for m in xrange(conf['m']):
                     # log(p(D_T1(m) | psi_T1)) = SUM_t1 T ( log ( P( D_t1 (m) | psi _T1)))
-                    data_given_psi = np.zeros( shape=(num_exp, nbins), dtype = np.float)
+                    data_given_psi = np.zeros(shape=(num_exp, nbins), dtype = np.float)
                     for exp_idx in xrange(num_exp):
-                        junc = lsv_samples[lidx,exp_idx][p_idx][m]
-                        all_psi = np.array([xx[m] for xx in lsv_samples[lidx,exp_idx]])
+                        junc = lsv_samples[lidx, exp_idx][p_idx][m]
+                        all_psi = np.array([xx[m] for xx in lsv_samples[lidx, exp_idx]])
                         data_given_psi[exp_idx] = np.log(prob_data_sample_given_psi(junc, all_psi.sum(), psi_space))
                     psi += data_given_psi.sum(axis=0) + np.log(prior)
                     # normalizing
@@ -163,17 +165,14 @@ def model2(matched_lsv, info, num_exp, conf, prior_matrix,  fitfunc, psi_space, 
         post_matrix.append([])
         new_info.append(lsv_info)
         for p_idx in xrange(num_ways):
+
             posterior = np.zeros(shape=(nbins, nbins), dtype = np.float)
             for m in xrange(conf['m']):
                 # log(p(D_T1(m) | psi_T1)) = SUM_t1 T ( log ( P( D_t1 (m) | psi _T1)))
                 data_given_psi1 = np.zeros(shape=(num_exp[0], nbins), dtype = np.float)
                 for exp_idx in xrange(num_exp[0]):
-                    try:
-                        psi1 = lsv_samples1[lidx, exp_idx][p_idx][m]
-                    except:
-                        import ipdb
-                        ipdb.set_trace()
-                    all_psi = np.array([xx[m] for xx in lsv_samples1[lidx,exp_idx]])
+                    psi1 = lsv_samples1[lidx, exp_idx][p_idx][m]
+                    all_psi = np.array([xx[m] for xx in lsv_samples1[lidx, exp_idx]])
                     data_given_psi1[exp_idx] = np.log(prob_data_sample_given_psi(psi1, all_psi.sum(), psi_space))
                 V1 = data_given_psi1.sum(axis=0)
                 V1 = V1.reshape(nbins, -1)
