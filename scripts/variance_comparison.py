@@ -261,6 +261,7 @@ def lsv_mark_stacks(lsv_list, fitfunc_r, pvalue_limit, dispersion, logger=None):
      #the minimum value marked as stack
     numstacks = 0
     filtered = [False]*len(lsv_list[0])
+    stack_junc_idxs = defaultdict(int)
     for lidx, junctions in enumerate(lsv_list[0]):
 
         for i, junction in enumerate(junctions):
@@ -282,10 +283,12 @@ def lsv_mark_stacks(lsv_list, fitfunc_r, pvalue_limit, dispersion, logger=None):
                         minstack = min(minstack, value)
                         numstacks += 1
                         filtered[lidx] = True
+                        stack_junc_idxs[lsv_list[1][lidx][1]] = i
+
         masked_less(lsv_list[0][lidx], 0)
     filtered = np.array(filtered)
     print "LSVs marked with stacks: %d" % np.count_nonzero(filtered)
-    return [lsv_list[0][filtered], lsv_list[1][filtered]]
+    return [lsv_list[0][filtered], lsv_list[1][filtered]], stack_junc_idxs
 
 
 def mark_stacks(junctions, fitted_1_r, pvalue_limit, dispersion, logger=False):
@@ -460,7 +463,6 @@ def main():
     #     score_method2 = calc_score_tmp(mean_method2_rep1, var_method2_rep1, mean_method2_rep2, var_method2_rep2)
     #                                   self.logger, 0.10)
 
-
     replica_quan1, info_quan1 = filter.quantifiable_in_group([replica1], args.minnonzero, args.minreads, None)
     replica_quan2, info_quan2 = filter.quantifiable_in_group([replica2], args.minnonzero, args.minreads, None)
     lreps_quan, linfos_quan = filter.lsv_intersection([replica_quan1, info_quan1], [replica_quan2, info_quan2])
@@ -473,8 +475,8 @@ def main():
     for pval_stack in pvals_stacks:
         print "Computing Majiq comparison for stack removal, p-value=%.10f" %pval_stack
 
-        stacks_filtered_rep1 = lsv_mark_stacks(np.array(replica1), fit_func1, pval_stack, .1, logger=None)
-        stacks_filtered_rep2 = lsv_mark_stacks(np.array(replica2), fit_func2, pval_stack, .1, logger=None)
+        stacks_filtered_rep1, junc_filt_rep1 = lsv_mark_stacks(np.array(replica1), fit_func1, pval_stack, .1, logger=None)
+        stacks_filtered_rep2, junc_filt_rep2 = lsv_mark_stacks(np.array(replica2), fit_func2, pval_stack, .1, logger=None)
 
         filtered_lsv1, info_filt1 = filter.quantifiable_in_group([stacks_filtered_rep1], args.minnonzero, args.minreads, None)
         filtered_lsv2, info_filt2 = filter.quantifiable_in_group([stacks_filtered_rep2], args.minnonzero, args.minreads, None)
@@ -484,12 +486,18 @@ def main():
         lreps, linfos = majiq_intersec([lreps_filtered, linfos_filtered], [lreps_quan, linfos_quan])
 
         # compare_methods(args.m, args.k, rep1_filtered, rep2_filtered, rep1_name, rep2_name, fit_func1, fit_func2, methods, method_stacks_name, 'Majiq', args.plotpath, scores_cached)  NOT USED!!
-        mean_method1_rep1, var_method1_rep1, samples_not_used = junction_sample.sample_from_junctions([e for j in lreps[0][0] for e in j], args.m, args.k, fit_func=fit_func1, poisson=False, **methods['Majiq_no_stacks'])
-        mean_method1_rep2, var_method1_rep2, samples_not_used = junction_sample.sample_from_junctions([e for j in lreps[0][1] for e in j], args.m, args.k, fit_func=fit_func2, poisson=False, **methods['Majiq_no_stacks'])
+
+        mean_method1_rep1, var_method1_rep1, samples_not_used = junction_sample.sample_from_junctions(only_juncs_stacked(lreps[0][0], linfos, junc_filt_rep1, junc_filt_rep2), args.m, args.k, fit_func=fit_func1, poisson=False, **methods['Majiq_no_stacks'])
+        mean_method1_rep2, var_method1_rep2, samples_not_used = junction_sample.sample_from_junctions(only_juncs_stacked(lreps[0][1], linfos, junc_filt_rep1, junc_filt_rep2), args.m, args.k, fit_func=fit_func2, poisson=False, **methods['Majiq_no_stacks'])
+        # mean_method1_rep1, var_method1_rep1, samples_not_used = junction_sample.sample_from_junctions([e for j in lreps[0][0] for e in j], args.m, args.k, fit_func=fit_func1, poisson=False, **methods['Majiq_no_stacks'])
+        # mean_method1_rep2, var_method1_rep2, samples_not_used = junction_sample.sample_from_junctions([e for j in lreps[0][1] for e in j], args.m, args.k, fit_func=fit_func2, poisson=False, **methods['Majiq_no_stacks'])
         score_method1 = calc_score_tmp(mean_method1_rep1, var_method1_rep1, mean_method1_rep2, var_method1_rep2)
 
-        mean_method2_rep1, var_method2_rep1, samples_not_used = junction_sample.sample_from_junctions([e for j in lreps[1][0] for e in j], args.m, args.k, fit_func=fit_func1, poisson=False, **methods['Majiq'])
-        mean_method2_rep2, var_method2_rep2, samples_not_used = junction_sample.sample_from_junctions([e for j in lreps[1][1] for e in j], args.m, args.k, fit_func=fit_func2, poisson=False, **methods['Majiq'])
+        mean_method2_rep1, var_method2_rep1, samples_not_used = junction_sample.sample_from_junctions(only_juncs_stacked(lreps[1][0], linfos, junc_filt_rep1, junc_filt_rep2), args.m, args.k, fit_func=fit_func1, poisson=False, **methods['Majiq_no_stacks'])
+        mean_method2_rep2, var_method2_rep2, samples_not_used = junction_sample.sample_from_junctions(only_juncs_stacked(lreps[1][1], linfos, junc_filt_rep1, junc_filt_rep2), args.m, args.k, fit_func=fit_func2, poisson=False, **methods['Majiq_no_stacks'])
+
+        # mean_method2_rep1, var_method2_rep1, samples_not_used = junction_sample.sample_from_junctions([e for j in lreps[1][0] for e in j], args.m, args.k, fit_func=fit_func1, poisson=False, **methods['Majiq'])
+        # mean_method2_rep2, var_method2_rep2, samples_not_used = junction_sample.sample_from_junctions([e for j in lreps[1][1] for e in j], args.m, args.k, fit_func=fit_func2, poisson=False, **methods['Majiq'])
         score_method2 = calc_score_tmp(mean_method2_rep1, var_method2_rep1, mean_method2_rep2, var_method2_rep2)
 
         stacks_data[pval_stack]['Majiq_no_stacks'] = score_method1
@@ -497,6 +505,14 @@ def main():
 
     plot_stacks_method1Vsmethod2(stacks_data, 'Majiq_no_stacks',  'Majiq', rep1_name, rep2_name, args.plotpath)
 
+
+def only_juncs_stacked(lreps, linfos, junc_filt_rep1, junc_filt_rep2):
+    juns = []
+    for ii, jun in enumerate(lreps):
+        for jj, e in enumerate(jun):
+            if junc_filt_rep1[linfos[ii][1]] == jj or junc_filt_rep2[linfos[ii][1]] == jj:
+                juns.append(e)
+    return juns
 
 def majiq_intersec(lsv_list1, lsv_list2):
 

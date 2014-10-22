@@ -283,9 +283,11 @@ def load_data_lsv(path, group_name, logger=None):
     lsv_cov_list = []
     lsv_info = []
     const_info = []
-    num_pos = data[1][0].junction_list.shape[1]
+    # num_pos = data[1][0].junction_list.shape[1]
+    num_pos = data[0][0].junction_list.shape[1]
 
-    for lsv in data[1]:
+    # for lsv in data[1]:
+    for lsv in data[0]:
         try:
             lsv_info.append([lsv.coords, lsv.id, lsv.type, 0, lsv.visual])
         except AttributeError, e:
@@ -295,7 +297,8 @@ def load_data_lsv(path, group_name, logger=None):
         lsv_cov_list.append(cov)
 
     import random
-    clist = random.sample(data[2], min(5000, len(data[2])))
+    # clist = random.sample(data[2], min(5000, len(data[2])))
+    clist = random.sample(data[1], min(5000, len(data[1])))
     const_list = np.zeros(shape=(len(clist), num_pos), dtype=np.dtype('int'))
 
     for cidx, const in enumerate(clist):
