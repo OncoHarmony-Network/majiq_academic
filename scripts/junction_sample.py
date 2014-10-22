@@ -322,7 +322,7 @@ def load_junctions(filename1, filename2, args, fromlsv=False):
     fit_func1 = polyfitnb.fit_nb(const1[0], "%s_nbfit" % args.output, args.plotpath, nbdisp=args.dispersion, logger=None)
     fit_func2 = polyfitnb.fit_nb(const2[0], "%s_nbfit" % args.output, args.plotpath, nbdisp=args.dispersion, logger=None)
 
-    return lsv_junc1, lsv_junc2, fit_func1, fit_func2, [], []
+    return lsv_junc1, lsv_junc2, fit_func1, fit_func2, [], [], const1, const2
 
 
 def split_junction_pool ( replica1, replica2 ):
