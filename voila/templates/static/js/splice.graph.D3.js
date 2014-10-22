@@ -259,6 +259,35 @@ function spliceGraphD3() {
 
             };
 
+            var renderNumReads = function(junctions, scaleX) {
+                var maxJunc = longestJunc(junctions, scaleX);
+                var labels = svgCanvas.selectAll("text.readcounts")
+                    .data(junctions);
+                labels.enter().append("text");
+                labels.classed("readcounts", true)
+                    .transition()
+                    .duration(100)
+                    .ease("linear")
+                    .text(function (d) {
+                        if (d.num_reads) {
+                            return d.num_reads;
+                        }
+                        return '';
+                    })
+                    .attr("x", function (d) {
+                        if (strand == '-')
+                            return Math.round((2*width - scaleX(d.coords[0]) - scaleX(d.coords[1])) / 2);
+                        return Math.round((scaleX(d.coords[1]) + scaleX(d.coords[0])) / 2);
+                    })
+                    .attr("y", function (d) {
+                        return Math.round(height * JUNC_AREA - 2 -
+                                (scaleX(d.coords[1]) - scaleX(d.coords[0])) / maxJunc * JUNC_AREA * (height - padding[0] - padding[2])
+                                + ((scaleX(d.coords[1]) - scaleX(d.coords[0])) / maxJunc * JUNC_AREA * (height - padding[0] - padding[2]) / d.dispersion) * (d.dispersion - 1 ? 1 : 0)
+                        );
+                    });
+
+            };
+
             var renderJunctions = function(data, scaleX){
                 var juncs = svgCanvas.selectAll('ellipse').data(data);
                 var maxJunc = longestJunc(data, scaleX);
@@ -267,7 +296,7 @@ function spliceGraphD3() {
                 juncs.attr("class", "junction")
                     .attr("clip-path", "url(#" + "cut-off-junctions)")
                     .transition()
-                    .duration(1000)
+                    .duration(100)
                     .ease("linear")
 
                     .attr("ry", function(d){
@@ -294,42 +323,13 @@ function spliceGraphD3() {
                 return juncs;
             };
 
-            var renderNumReads = function(junctions, scaleX) {
-                var maxJunc = longestJunc(junctions, scaleX);
-                var labels = svgCanvas.selectAll("text.readcounts")
-                    .data(junctions);
-                labels.enter().append("text");
-                labels.classed("readcounts", true)
-                    .transition()
-                    .duration(1000)
-                    .ease("linear")
-                    .text(function (d) {
-                        if (d.num_reads) {
-                            return d.num_reads;
-                        }
-                        return '';
-                    })
-                    .attr("x", function (d) {
-                        if (strand == '-')
-                            return Math.round((2*width - scaleX(d.coords[0]) - scaleX(d.coords[1])) / 2);
-                        return Math.round((scaleX(d.coords[1]) + scaleX(d.coords[0])) / 2);
-                    })
-                    .attr("y", function (d) {
-                        return Math.round(height * JUNC_AREA - 2 -
-                                (scaleX(d.coords[1]) - scaleX(d.coords[0])) / maxJunc * JUNC_AREA * (height - padding[0] - padding[2])
-                                + ((scaleX(d.coords[1]) - scaleX(d.coords[0])) / maxJunc * JUNC_AREA * (height - padding[0] - padding[2]) / d.dispersion) * (d.dispersion - 1 ? 1 : 0)
-                        );
-                    });
-
-            };
-
             var spliceSites = function(junctions, scaleX) {
                 var ssites3 = svgCanvas.selectAll("line.ssite3")
                     .data(junctions);
                 ssites3.enter().append("line");
                 ssites3.classed("ssite3", true)
                     .transition()
-                    .duration(1000)
+                    .duration(100)
                     .ease("linear")
                     .attr("x1", function (d) {
                         return Math.round(scaleX(d.coords[0]));
@@ -352,7 +352,7 @@ function spliceGraphD3() {
                 ssites5.enter().append("line");
                 ssites5.classed("ssite5", true)
                     .transition()
-                    .duration(1000)
+                    .duration(100)
                     .ease("linear")
                     .attr("x1", function (d) {
                         return Math.round(scaleX(d.coords[1]));
@@ -379,7 +379,7 @@ function spliceGraphD3() {
                 exons.enter().append("rect");
                 exons.attr("class", "exon")
                     .transition()
-                    .duration(1000)
+                    .duration(100)
                     .ease("linear")
                     .attr("x", function(d){
                         return scaleX(d.value.coords[0]);
@@ -399,7 +399,7 @@ function spliceGraphD3() {
                 labels.enter().append("text");
                 labels.classed("numexon", true)
                     .transition()
-                    .duration(1000)
+                    .duration(100)
                     .ease("linear")
                     .text(function (d, i) {
                         if (strand == '-')
@@ -425,7 +425,7 @@ function spliceGraphD3() {
                         return d.value.type_exon == 2;
                     })
                     .transition()
-                    .duration(1000)
+                    .duration(100)
                     .ease("linear")
                     .attr("x", function(d){
                         return scaleX(d.value.coords[1]);
@@ -451,7 +451,7 @@ function spliceGraphD3() {
                 partialNewExons.enter().append("rect");
                 partialNewExons.classed("newpartialexon", true)
                     .transition()
-                    .duration(1000)
+                    .duration(100)
                     .ease("linear")
                     .attr("x", function(d){
                         return scaleX(d[0]);

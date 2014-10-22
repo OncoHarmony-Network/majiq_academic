@@ -20,4 +20,4 @@ setup(name='Majiq',
       executables= [Executable(script='majiq')]
      )
 
-# python setup_voila.py build_exe
+# python setup_majiq.py build_exe
