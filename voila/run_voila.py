@@ -1,17 +1,17 @@
-#!/usr/bin/python
+import sys
+print sys.version
+
 from collections import defaultdict
 import json
 import os
 import textwrap
 import collections as cc
-import sys
 import voila.module_locator as module_locator
 import voila.utils.utils_voila as utils_voila
 try:
     import cPickle as pkl
 except ImportError:
     import pickle as pkl
-from pdb import set_trace
 
 EXEC_DIR = module_locator.module_path() + "/"
 VERSION = '0.1.0'
@@ -67,6 +67,7 @@ def render_summary(output_dir, output_html, majiq_output, type_summary, threshol
         gene_keys = sorted(majiq_output['genes_dict'].keys())
 
         logger.info("Number of genes detected in Voila: %d." % len(gene_keys))
+        logger.info("Number of LSVs detected in Voila: %d." % sum([len(majiq_output['genes_dict'][g]) for g in majiq_output['genes_dict']]))
         while count_pages*MAX_GENES < len(gene_keys):
             prev_page = None
             next_page = None
@@ -102,6 +103,7 @@ def render_summary(output_dir, output_html, majiq_output, type_summary, threshol
 
         gene_keys = sorted(majiq_output['genes_dict'].keys())
         logger.info("Number of genes detected in Voila: %d." % len(gene_keys))
+        logger.info("Number of LSVs detected in Voila: %d." % sum([len(majiq_output['genes_dict'][g]) for g in majiq_output['genes_dict']]))
         while count_pages*MAX_GENES < len(gene_keys):
             prev_page = None
             next_page = None

@@ -515,7 +515,7 @@ function drawLSVCompactStackBars(canvas, fillMode){
     }
 }
 
-function drawDeltaLSVCompactSVG(htmlElementId, lsv) {
+function drawDeltaLSVCompactSVG(htmlElementId, lsv, threshold) {
     var width = 200,
         height = 20;
     var margin = {top: 1, bottom: 8, left: 2, right: 2};
@@ -590,6 +590,8 @@ function drawDeltaLSVCompactSVG(htmlElementId, lsv) {
     var last_excl_pos = width / 2,
         last_incl_pos = width / 2;
     for (var ii = 0; ii < lsv.excl_incl.length; ii++) {
+        if (lsv.excl_incl[ii][0] < threshold && lsv.excl_incl[ii][1] < threshold)
+            continue;
         svgContainer.append("rect")
             .attr("x", last_excl_pos - Math.round((width / 2 - margin.left) * lsv.excl_incl[ii][0]))
             .attr("y", margin.top)
@@ -1309,10 +1311,11 @@ function translate_delta_lsv_bins(lsv_bins, num_samples) {
     for (var lsv_way=0; lsv_way<lsv_bins.length; lsv_way++){
         var tmp_bins = [];
         var bins_size = lsv_bins[lsv_way].length;
-        for (var ii=1; ii< bins_size + 1; ii++) {
-            var num_copies = Math.round(num_samples * lsv_bins[lsv_way][ii - 1]);
+        var start_offset = -1 + 1 / bins_size;
+        for (var ii=0; ii< bins_size; ii++) {
+            var num_copies = Math.round(num_samples * lsv_bins[lsv_way][ii]);
             for (var bins_i=0; bins_i<num_copies; bins_i++){
-                tmp_bins.push(-.975 + ii * 2 / bins_size);
+                tmp_bins.push(start_offset + ii * 2 / bins_size);
             }
         }
         adjusted_bins.push(tmp_bins);

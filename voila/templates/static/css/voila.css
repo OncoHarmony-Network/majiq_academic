@@ -248,3 +248,8 @@ footer {
     right: 0;
     padding-right: 30px;
 }
+
+.spliceDiv{
+    width: 1000px;
+    overflow: scroll;
+}

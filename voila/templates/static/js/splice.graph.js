@@ -656,10 +656,11 @@ window.splicegraph = function (){
                             break;
                         }
                     }
-                }
-                // If negative strand, complement the exon ordinal
-                if (gene.strand === '-'){
-                    exon_lsv_number = gene.exons.length - exon_lsv_number + 1;
+                    // If negative strand, complement the exon ordinal
+                    if (gene.strand === '-'){
+                        exon_lsv_number = gene.exons.length - exon_lsv_number + 1;
+                    }
+
                 }
 
                 var lsv_data = canvas.getAttribute('data-lsv-string');
@@ -819,7 +820,7 @@ window.splicegraph = function (){
                 // Render floating box
                 var box_length = area[0] * 0.05,
                     box_coords = [
-                        (sourceOrTarget === 's' ? Math.round(margins[0] + exon_width * 1 - box_length / 2) : Math.round(-exon_width + margins[0] + exon_width * ((num_exons * 2 - 1) - 1) - box_length / 2)),
+                        (sourceOrTarget === 's' ? Math.round(margins[0] + exon_width - box_length / 2) : Math.round(-exon_width + margins[0] + exon_width * ((num_exons * 2 - 1) - 1) - box_length / 2)),
                              2.2 * percentage_exon * canvas.height
                     ];
 

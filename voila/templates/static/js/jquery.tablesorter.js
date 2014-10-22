@@ -1088,20 +1088,21 @@
                     chart.width(chart.width() + 600);
                     chart.height(chart.height() + 100);
                     spliceg.call(chart);
-                    $('.filters').css({'left': parseInt($('.filters').css('left').split('px')[0]) + 600 + 'px'});
+//                    $('.filters').css({'left': parseInt($('.filters').css('left').split('px')[0]) + 600 + 'px'});
                 });
 
                 d3.select(this).select('.zoomOutSplice').on('click', function() {
                     chart.width(chart.width() - 600);
                     chart.height(chart.height() - 100);
                     spliceg.call(chart);
-                    $('.filters').css({'left': Math.max(1080, parseInt($('.filters').css('left').split('px')[0]) - 600) + 'px'});
+//                    $('.filters').css({'left': Math.max(1080, parseInt($('.filters').css('left').split('px')[0]) - 600) + 'px'});
                 });
 
                 d3.select(this).select('.zoomResetSplice').on('click', function() {
                     chart.width(1000);
                     chart.height(120);
                     spliceg.call(chart);
+
                 });
 
 
@@ -1239,7 +1240,7 @@
                 if (svg_children.length) {
                     svgExclInclRect = svg_children[0];
                 } else {
-                    svgExclInclRect = drawDeltaLSVCompactSVG(this.id, lsv)[0];
+                    svgExclInclRect = drawDeltaLSVCompactSVG(this.id, lsv, threshold)[0];
                 }
 
                 $(svgExclInclRect).on("click", function (e) {
