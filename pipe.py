@@ -68,7 +68,7 @@ def prob_data_sample_given_psi(sample, all_sample, psi_space, nbins):
 
         bin_test = []
         for x in xrange(nbins):
-            val = bincdf[x] - bincdf[x+1]
+            val = bincdf[x+1] - bincdf[x]
             bin_test.append(val)
 
     bin_test = np.array(bin_test) + 1e-10
