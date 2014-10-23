@@ -72,7 +72,8 @@ def prob_data_sample_given_psi(sample, all_sample, psi_space, nbins):
             bin_test.append(val)
 
     bin_test = np.array(bin_test) + 1e-10
-    return bin_test
+
+    return bin_test / bin_test.sum()
 
 
 def calcpsi(matched_lsv, info, num_exp, conf, fitfunc, logger):
