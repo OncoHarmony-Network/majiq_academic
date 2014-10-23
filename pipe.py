@@ -56,8 +56,8 @@ def combine_for_priormatrix(group1, group2, matched_info, num_exp):
     return grp1, grp2
 
 
-def prob_data_sample_given_psi(sample, all_sample, psi_space, bsize, nbins):
-
+def prob_data_sample_given_psi(sample, all_sample, psi_space, nbins):
+    bsize = bsize = 1.0/float(nbins)
     if all_sample <= 4000:
         #bin_test = [binom_test(sample, all_sample, p=x) for x in psi_space]
         bin_test = [binom.pmf(sample, all_sample, p=x) for x in psi_space]
@@ -123,7 +123,8 @@ def calcpsi(matched_lsv, info, num_exp, conf, fitfunc, logger):
                     for exp_idx in xrange(num_exp):
                         junc = lsv_samples[lidx, exp_idx][p_idx][m]
                         all_psi = np.array([xx[m] for xx in lsv_samples[lidx, exp_idx]])
-                        data_given_psi[exp_idx] = np.log(prob_data_sample_given_psi(junc, all_psi.sum(), psi_space))
+                        data_given_psi[exp_idx] = np.log(prob_data_sample_given_psi(junc, all_psi.sum(),
+                                                                                    psi_space, conf['nbins']))
                     psi += data_given_psi.sum(axis=0) + np.log(prior)
                     # normalizing
                     posterior += np.exp(psi - scipy.misc.logsumexp(psi))
@@ -186,7 +187,8 @@ def model2(matched_lsv, info, num_exp, conf, prior_matrix,  fitfunc, psi_space, 
                 for exp_idx in xrange(num_exp[0]):
                     psi1 = lsv_samples1[lidx, exp_idx][p_idx][m]
                     all_psi = np.array([xx[m] for xx in lsv_samples1[lidx, exp_idx]])
-                    data_given_psi1[exp_idx] = np.log(prob_data_sample_given_psi(psi1, all_psi.sum(), psi_space))
+                    data_given_psi1[exp_idx] = np.log(prob_data_sample_given_psi(psi1, all_psi.sum(),
+                                                                                 psi_space, conf['nbins']))
                 V1 = data_given_psi1.sum(axis=0)
                 V1 = V1.reshape(nbins, -1)
 
@@ -194,7 +196,8 @@ def model2(matched_lsv, info, num_exp, conf, prior_matrix,  fitfunc, psi_space, 
                 for exp_idx in xrange(num_exp[1]):
                     psi2 = lsv_samples2[lidx, exp_idx][p_idx][m]
                     all_psi = np.array([xx[m] for xx in lsv_samples2[lidx, exp_idx]])
-                    data_given_psi2[exp_idx] = np.log(prob_data_sample_given_psi(psi2, all_psi.sum(), psi_space))
+                    data_given_psi2[exp_idx] = np.log(prob_data_sample_given_psi(psi2, all_psi.sum(),
+                                                                                 psi_space, conf['nbins']))
                 V2 = data_given_psi2.sum(axis=0)
                 V2 = V2.reshape(-1, nbins)
 
