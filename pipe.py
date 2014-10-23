@@ -57,14 +57,14 @@ def combine_for_priormatrix(group1, group2, matched_info, num_exp):
 
 
 def prob_data_sample_given_psi(sample, all_sample, psi_space, nbins):
-    bsize = bsize = 1.0/float(nbins)
+    bsize = 1.0/float(nbins)
     if all_sample <= 4000:
         #bin_test = [binom_test(sample, all_sample, p=x) for x in psi_space]
         bin_test = [binom.pmf(sample, all_sample, p=x) for x in psi_space]
     else:
         psi_border = np.arange(0, 1.01, bsize)
         notsample = all_sample - sample
-        bincdf = [beta.cdf(xx, sample + 0.5, notsample + 0.5) for xx in psi_border]
+        bincdf = [beta.cdf(xx, sample + 1, notsample + 1) for xx in psi_border]
 
         bin_test = []
         for x in xrange(nbins):
@@ -109,8 +109,8 @@ def calcpsi(matched_lsv, info, num_exp, conf, fitfunc, logger):
                 sys.stdout.flush()
 
             alpha = 1.0/num_ways
-            beta = (num_ways-1.0) / num_ways
-            prior = majiq_psi.dirichlet_pdf(np.array([psi_space, 1-psi_space]).T, np.array([alpha, beta]))
+            beta_val = (num_ways-1.0) / num_ways
+            prior = majiq_psi.dirichlet_pdf(np.array([psi_space, 1-psi_space]).T, np.array([alpha, beta_val]))
 
             post_psi.append([])
             new_info.append(lsv_info)

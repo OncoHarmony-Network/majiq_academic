@@ -5,6 +5,7 @@ import pickle
 import os
 from pylab import *
 
+
 def _save_or_show(plotpath, name):
     if plotpath:
         if os.path.isdir(plotpath):
