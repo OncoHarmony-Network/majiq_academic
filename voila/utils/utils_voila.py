@@ -313,6 +313,7 @@ def get_lsv_single_exp_data(majiq_bins_file, confidence, gene_name_list=None, ls
                 lsv_list[-1].set_coords(lsv_meta[0])
                 lsv_list[-1].set_id(lsv_meta[1])
                 lsv_list[-1].set_type(lsv_meta[2])
+                lsv_list[-1].set_extension(lsv_meta[4])
                 lsv_list[-1].sort_bins(lsv_meta[4].strand)
 
             except ValueError, e:
@@ -398,6 +399,11 @@ def get_lsv_delta_exp_data(majiq_out_file, confidence=.95, threshold=.2, show_al
                         excl_incl.append([0, means[-1]])
                 lsv_o.means = means
                 lsv_o.excl_incl = excl_incl
+                lsv_o.set_coords(lsv_info[i][0])
+                lsv_o.set_id(lsv_info[i][1])
+                lsv_o.set_type(lsv_info[i][2])
+                lsv_o.set_extension(lsv_info[i][4])
+
 
                 # lsv_list.append(lsv)
                 genes_dict[gene_name].append([lsv_o, lsv_info[i]])

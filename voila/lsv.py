@@ -84,7 +84,10 @@ class Lsv(object):
     #     else:
     #         self.extension = [geneG.get_junctions()[lsv_exon.get_a3_list()[0]].get_coords()[0] - 100, self.coords[1]]
 
-    def set_extension(self, geneG, lsv_type):
+    def set_extension(self, geneG, lsv_type=None):
+
+        if not lsv_type:
+            lsv_type = self.type
 
         if lsv_type.startswith('s'):
             self.extension = [self.coords[0], geneG.get_exons()[-1].get_coords()[1]]
