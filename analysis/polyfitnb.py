@@ -159,6 +159,9 @@ def adjust_fit(starting_a, junctions, precision, previous_score, plotpath, indic
             else:
                 return previous_a, previous_score, previous_ecdf, previous_pvalues
 
+        elif corrected_a == 0:
+            return corrected_a, score, ecdf, pvalues
+
         previous_a = corrected_a
         previous_score = score
         previous_ecdf = ecdf
@@ -192,12 +195,9 @@ def fit_nb(junctionl, outpath, plotpath, nbdisp=0.1, logger=None):
         logger.info("NBFit: Plots will be drawn in %s..." % plotpath)
 
     filtered = []
-    kk = 0
+
     for jdx, jun in enumerate(junctionl):
         if np.count_nonzero(jun) >= 5 and jun.sum() >= 10:
-            if kk == 90:
-                pass
-            kk += 1
 
             filtered.append(jun)
 
