@@ -64,9 +64,13 @@ def __calc_nbin_p(r, mu):
 
 
 def sample_over_nb(one_over_r, mu, num_samples):
-    r = 1 / one_over_r
-    p = __calc_nbin_p(r, mu)
-    return nbinom.rvs(r, p, size=num_samples)
+    if one_over_r > 0:
+        r = 1 / one_over_r
+        p = __calc_nbin_p(r, mu)
+        sampl = nbinom.rvs(r, p, size=num_samples)
+    else:
+        sampl = poisson.rvs(mu, size=num_samples)
+    return sampl
 
 
 def get_ztnbin_pval(one_over_r, mu, x):
@@ -78,9 +82,12 @@ def get_ztnbin_pval(one_over_r, mu, x):
 
 
 def get_negbinom_pval(one_over_r, mu, x):
-    r = 1 / one_over_r
-    p = __calc_nbin_p(r, mu)
-    nbcdf = nbinom.cdf(x, r, p) #+ nbinom.pmf(x, r, p)
+    if one_over_r > 0:
+        r = 1 / one_over_r
+        p = __calc_nbin_p(r, mu)
+        nbcdf = nbinom.cdf(x, r, p) #+ nbinom.pmf(x, r, p)
+    else:
+        nbcdf = poisson.cdf(x, mu)
     return 1 - nbcdf
 
 
@@ -180,7 +187,6 @@ def plot_fitting(ecdf, plotpath, extra=[], title='', title_extra=[], plotname=No
         _save_or_show(plotpath, fname)
 
 
-
 def fit_nb(junctionl, outpath, plotpath, nbdisp=0.1, logger=None):
     if logger and plotpath:
         logger.info("NBFit: Plots will be drawn in %s..." % plotpath)
@@ -235,7 +241,7 @@ def fit_nb(junctionl, outpath, plotpath, nbdisp=0.1, logger=None):
     poisson_score = score_ecdf(poisson_ecdf)
 
     plot_fitting(ecdf, plotpath, extra=[poisson_ecdf], title="Corrected ECDF 1\_r %s" % one_over_r,
-                 title_extra=['Poisson '], plotname='Corrected')
+                 title_extra=['Poisson %s' % poisson_score], plotname='Corrected')
 
     if logger:
         logger.debug("Calculating the nb_r and nb_p with the new fitted function")
