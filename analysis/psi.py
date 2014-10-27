@@ -394,7 +394,7 @@ def gen_prior_matrix(pip, lsv_exp1, lsv_exp2, output, numbins=20, defaultprior=F
 
         plot_matrix(prior_matrix, "Prior Matrix nj%s" % nj, "prior_matrix_jun_%s" % nj, pip.plotpath)
         pip.logger.info("Saving prior matrix for %s..." % pip.names)
-        pickle.dump(prior_matrix, open("%s%s_%s_priormatrix_jun_%s.pickle" % (output, pip.names[0], pip.names[1], nj),
+        pickle.dump(prior_matrix, open("%s/%s_%s_priormatrix_jun_%s.pickle" % (output, pip.names[0], pip.names[1], nj),
                                        'w'))
 
     return psi_space, prior_matrix
