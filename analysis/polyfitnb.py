@@ -4,7 +4,7 @@ import cPickle as pickle
 import matplotlib.pyplot as plt
 from numpy.ma import masked_less
 import numpy as np
-from scipy.stats import nbinom
+from scipy.stats import nbinom, poisson
 
 import random
 
@@ -105,7 +105,26 @@ def calc_pvalues(junctions, one_over_r, indices_list=None):
     return pvalues
 
 
-def adjust_fit(starting_a, junctions, precision, previous_score, plotpath, indices=None, logger=None):
+def calc_pvalues_poisson(junctions, one_over_r, indices_list=None):
+
+    pvalues = []
+    for i, junc in enumerate(junctions):
+
+        # get mu and jpos
+        if indices_list is None:
+            junc = junc[junc.nonzero()]
+            jpos = random.choice(junc)
+        else:
+            jpos = junc[indices_list[i]]
+
+        ljunc = len(junc.nonzero()[0])
+        mu = float(junc.sum() - jpos)/float(ljunc-1)
+        pval = 1 - poisson.cdf(jpos, mu)
+        pvalues.append(pval)
+    return pvalues
+
+
+def adjust_fit(starting_a, junctions, precision, previous_score, plotpath, indices=None, logger=None, poisson=False):
     previous_a = -1
     if logger:
         logger.info("Starting from %s with precision %s" % (starting_a, precision))
