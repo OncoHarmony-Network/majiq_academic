@@ -23,10 +23,12 @@ def _numzeros(junctions):
 
 
 def calc_score_tmp(mean_sample1, var_sample1, mean_sample2, var_sample2):
-    indxVar = np.logical_and(var_sample1, var_sample2)
-    indxMean = np.logical_and(mean_sample1, mean_sample2)
-    return {'mean': abs(mean_sample1[indxMean]-mean_sample2[indxMean])/((mean_sample1[indxMean]+mean_sample2[indxMean])*0.5),
-            'variance': abs(var_sample1[indxVar]-var_sample2[indxVar])/((var_sample1[indxVar]+var_sample2[indxVar])*0.5)}
+    return {'mean': abs(mean_sample1-mean_sample2)/((mean_sample1+mean_sample2)*0.5),
+            'variance': abs(var_sample1-var_sample2)/((var_sample1+var_sample2)*0.5)}
+    # indxVar = np.logical_and(var_sample1, var_sample2)
+    # indxMean = np.logical_and(mean_sample1, mean_sample2)
+    # return {'mean': abs(mean_sample1[indxMean]-mean_sample2[indxMean])/((mean_sample1[indxMean]+mean_sample2[indxMean])*0.5),
+    #         'variance': abs(var_sample1[indxVar]-var_sample2[indxVar])/((var_sample1[indxVar]+var_sample2[indxVar])*0.5)}
 
 def calc_score(mean_sample1, var_sample1, mean_sample2, var_sample2):
     return calc_score_tmp(mean_sample1, var_sample1, mean_sample2, var_sample2)
@@ -388,9 +390,9 @@ def plot_stacks_method1Vsmethod2(stacks_data, score1_name, score2_name, replica1
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('par1', help='Path for parameters of replica1')
-    parser.add_argument('par2', help='Path for parameters of replica2')  
+    parser.add_argument('par2', help='Path for parameters of replica2')
     parser.add_argument('--k', default=50, type=int, help='Number of positions to sample per iteration')
-    parser.add_argument('--m', default=100, type=int, help='Number of samples')     
+    parser.add_argument('--m', default=100, type=int, help='Number of samples')
     parser.add_argument('--junctype', default='rand10k', help='The type of junction to analyze. (Inc, Exc or rand10k for now)')
     parser.add_argument('--plotpath', default=None, help='Path to save the plot to, if not provided will show on a matplotlib popup window')
     parser.add_argument('--output', default=None, help="Path to save the results to.")
@@ -409,7 +411,12 @@ def main():
     replica_quan1, info_quan1 = filter.quantifiable_in_group([replica1], args.minnonzero, args.minreads, None)
     replica_quan2, info_quan2 = filter.quantifiable_in_group([replica2], args.minnonzero, args.minreads, None)
     lreps_quan, linfos_quan = filter.lsv_intersection([replica_quan1, info_quan1], [replica_quan2, info_quan2])
+    junc1 = np.array([kk for jj in [e for j in lreps_quan[0] for e in j] for kk in jj])
+    junc2 = np.array([kk for jj in [e for j in lreps_quan[1] for e in j] for kk in jj])
 
+    fil_junc1 = [kk.sum()>args.minreads and np.count_nonzero(kk) >= args.minnonzero for kk in junc1]
+    fil_junc2 = [kk.sum()>args.minreads and np.count_nonzero(kk) >= args.minnonzero for kk in junc2]
+    fil_juncs = np.logical_and(fil_junc1, fil_junc2)
 
     methods = {
         'Poisson':                  {'discardzeros': 0, 'trimborder': False,   'nb': False},
@@ -427,19 +434,19 @@ def main():
 
     scores_cached = {}
 
-    compare_methods(args.m, args.k, np.array([kk for jj in [e for j in lreps_quan[0] for e in j] for kk in jj] ), np.array([kk for jj in [e for j in lreps_quan[1] for e in j] for kk in jj] ), rep1_name, rep2_name, fit_func1, fit_func2, methods, 'Majiq_padding_10','Majiq', args.plotpath, scores_cached)
-    compare_methods(args.m, args.k, np.array([kk for jj in [e for j in lreps_quan[0] for e in j] for kk in jj] ), np.array([kk for jj in [e for j in lreps_quan[1] for e in j] for kk in jj] ), rep1_name, rep2_name, fit_func1, fit_func2, methods, 'Majiq_padding_10','Majiq_with_zeros', args.plotpath, scores_cached)
-    compare_methods(args.m, args.k, np.array([kk for jj in [e for j in lreps_quan[0] for e in j] for kk in jj] ), np.array([kk for jj in [e for j in lreps_quan[1] for e in j] for kk in jj] ), rep1_name, rep2_name, fit_func1, fit_func2, methods, 'Poisson',         'Majiq', args.plotpath, scores_cached, coverage=True )
-    compare_methods(args.m, args.k, np.array([kk for jj in [e for j in lreps_quan[0] for e in j] for kk in jj] ), np.array([kk for jj in [e for j in lreps_quan[1] for e in j] for kk in jj] ), rep1_name, rep2_name, fit_func1, fit_func2, methods, 'Poisson',         'Majiq_padding_10', args.plotpath, scores_cached )
-
-    compare_methods(args.m, args.k, np.array([kk for jj in [e for j in lreps_quan[0] for e in j] for kk in jj] ), np.array([kk for jj in [e for j in lreps_quan[1] for e in j] for kk in jj] ), rep1_name, rep2_name, fit_func1, fit_func2, methods, 'Naive_Boots',         'Majiq', args.plotpath, scores_cached)
-    compare_methods(args.m, args.k, np.array([kk for jj in [e for j in lreps_quan[0] for e in j] for kk in jj] ), np.array([kk for jj in [e for j in lreps_quan[1] for e in j] for kk in jj] ), rep1_name, rep2_name, fit_func1, fit_func2, methods, 'Naive_Boots_no_zeros','Majiq', args.plotpath, scores_cached)
-    compare_methods(args.m, args.k, np.array([kk for jj in [e for j in lreps_quan[0] for e in j] for kk in jj] ), np.array([kk for jj in [e for j in lreps_quan[1] for e in j] for kk in jj] ), rep1_name, rep2_name, fit_func1, fit_func2, methods, 'Majiq_with_zeros',    'Majiq', args.plotpath, scores_cached)
-
-    compare_methods(args.m, args.k, np.array([kk for jj in [e for j in lreps_quan[0] for e in j] for kk in jj] ), np.array([kk for jj in [e for j in lreps_quan[1] for e in j] for kk in jj] ), rep1_name, rep2_name, fit_func1, fit_func2, methods, 'Naive_Boots',     'Neg_Binomial', args.plotpath, scores_cached)
-    compare_methods(args.m, args.k, np.array([kk for jj in [e for j in lreps_quan[0] for e in j] for kk in jj] ), np.array([kk for jj in [e for j in lreps_quan[1] for e in j] for kk in jj] ), rep1_name, rep2_name, fit_func1, fit_func2, methods, 'Naive_Boots',     'Naive_Boots_trim_borders', args.plotpath, scores_cached)
-
-    compare_methods(args.m, args.k, np.array([kk for jj in [e for j in lreps_quan[0] for e in j] for kk in jj] ), np.array([kk for jj in [e for j in lreps_quan[1] for e in j] for kk in jj] ), rep1_name, rep2_name, fit_func1, fit_func2, methods, 'Majiq_gc_norm',      'Majiq', args.plotpath, scores_cached, rep1_gc=rep1_gc, rep2_gc=rep2_gc)
+    # compare_methods(args.m, args.k, np.array([kk for jj in [e for j in lreps_quan[0] for e in j] for kk in jj] ), np.array([kk for jj in [e for j in lreps_quan[1] for e in j] for kk in jj] ), rep1_name, rep2_name, fit_func1, fit_func2, methods, 'Majiq_padding_10','Majiq', args.plotpath, scores_cached)
+    # compare_methods(args.m, args.k, np.array([kk for jj in [e for j in lreps_quan[0] for e in j] for kk in jj] ), np.array([kk for jj in [e for j in lreps_quan[1] for e in j] for kk in jj] ), rep1_name, rep2_name, fit_func1, fit_func2, methods, 'Majiq_padding_10','Majiq_with_zeros', args.plotpath, scores_cached)
+    compare_methods(args.m, args.k, junc1[fil_juncs], junc2[fil_juncs], rep1_name, rep2_name, fit_func1, fit_func2, methods, 'Poisson',         'Majiq', args.plotpath, scores_cached)
+    # compare_methods(args.m, args.k, np.array([kk for jj in [e for j in lreps_quan[0] for e in j] for kk in jj] ), np.array([kk for jj in [e for j in lreps_quan[1] for e in j] for kk in jj] ), rep1_name, rep2_name, fit_func1, fit_func2, methods, 'Poisson',         'Majiq_padding_10', args.plotpath, scores_cached )
+    #
+    # compare_methods(args.m, args.k, np.array([kk for jj in [e for j in lreps_quan[0] for e in j] for kk in jj] ), np.array([kk for jj in [e for j in lreps_quan[1] for e in j] for kk in jj] ), rep1_name, rep2_name, fit_func1, fit_func2, methods, 'Naive_Boots',         'Majiq', args.plotpath, scores_cached)
+    # compare_methods(args.m, args.k, np.array([kk for jj in [e for j in lreps_quan[0] for e in j] for kk in jj] ), np.array([kk for jj in [e for j in lreps_quan[1] for e in j] for kk in jj] ), rep1_name, rep2_name, fit_func1, fit_func2, methods, 'Naive_Boots_no_zeros','Majiq', args.plotpath, scores_cached)
+    # compare_methods(args.m, args.k, np.array([kk for jj in [e for j in lreps_quan[0] for e in j] for kk in jj] ), np.array([kk for jj in [e for j in lreps_quan[1] for e in j] for kk in jj] ), rep1_name, rep2_name, fit_func1, fit_func2, methods, 'Majiq_with_zeros',    'Majiq', args.plotpath, scores_cached)
+    #
+    # compare_methods(args.m, args.k, np.array([kk for jj in [e for j in lreps_quan[0] for e in j] for kk in jj] ), np.array([kk for jj in [e for j in lreps_quan[1] for e in j] for kk in jj] ), rep1_name, rep2_name, fit_func1, fit_func2, methods, 'Naive_Boots',     'Neg_Binomial', args.plotpath, scores_cached)
+    # compare_methods(args.m, args.k, np.array([kk for jj in [e for j in lreps_quan[0] for e in j] for kk in jj] ), np.array([kk for jj in [e for j in lreps_quan[1] for e in j] for kk in jj] ), rep1_name, rep2_name, fit_func1, fit_func2, methods, 'Naive_Boots',     'Naive_Boots_trim_borders', args.plotpath, scores_cached)
+    #
+    # compare_methods(args.m, args.k, np.array([kk for jj in [e for j in lreps_quan[0] for e in j] for kk in jj] ), np.array([kk for jj in [e for j in lreps_quan[1] for e in j] for kk in jj] ), rep1_name, rep2_name, fit_func1, fit_func2, methods, 'Majiq_gc_norm',      'Majiq', args.plotpath, scores_cached, rep1_gc=rep1_gc, rep2_gc=rep2_gc)
 
 
 def only_juncs_stacked(lreps, linfos, junc_filt_rep1, junc_filt_rep2):
