@@ -141,7 +141,7 @@ def adjust_fit(starting_a, junctions, precision, previous_score, plotpath, indic
         ecdf = get_ecdf(pvalues)
         score = score_ecdf(ecdf)
         plot_fitting(ecdf, plotpath, title="%s.[step %d] 1\_r %s" % (precision, idx, corrected_a),
-                     plotname='%s.step%s' % precision, idx)
+                     plotname='%s.step%s' % (precision, idx))
         idx += 1
         if logger:
             logger.info("New Score %.5f" % score)
