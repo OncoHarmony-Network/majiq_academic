@@ -80,6 +80,7 @@ def prepare_lsv_table(lsv_list, non_as, temp_dir):
     fname = "%s/majiq.pkl" % temp_dir
     majiq_io.dump_bin_file(out_temp, fname)
 
+
 #@profile
 def merge_and_create_majiq_file(chr_list, pref_file):
 

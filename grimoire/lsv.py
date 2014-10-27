@@ -151,7 +151,7 @@ class LSV(object):
                     exs3 = ''
                     ex = '0'
                 else:
-                    s3 = sorted(list(set(jacceptor.ss_3p_list)))
+                    s3 = sorted(list(set(jacceptor.ss_3p_list)), reverse=rev)
                     ex1 = ex_list.index(jacceptor.get_id())+1
                     ex = '%s.%s' % (ex1, s3.index(junc.end)+1)
                 jtype = "|%se%s" % (spsite.index(junc.start)+1, ex)
@@ -160,7 +160,7 @@ class LSV(object):
                     exs5 = ''
                     ex = '0'
                 else:
-                    s5 = sorted(list(set(jdonor.ss_5p_list)))
+                    s5 = sorted(list(set(jdonor.ss_5p_list)), reverse=rev)
                     ex1 = ex_list.index(jdonor.get_id())+1
                     ex = '%s.%s' % (ex1, s5.index(junc.start)+1)
                 jtype = "|%se%s" % (spsite.index(junc.end)+1, ex)
