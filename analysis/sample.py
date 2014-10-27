@@ -150,7 +150,7 @@ def sample_from_junctions(junction_list, m, k, dispersion=0.1, discardzeros=5, t
             #calculate the mean and the variance 
 
             lsv_mean = np.mean(samples)
-            var_nb = lsv_mean + fitted_one_over_r*(lsv_mean**2)
+            var_nb = lsv_mean + fitted_one_over_r * (lsv_mean**2)
             sampled_means.append(lsv_mean)
             sampled_var.append(var_nb)
 

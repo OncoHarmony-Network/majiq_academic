@@ -298,7 +298,6 @@ def calc_dirichlet(alpha, n, samples_events, debug=False, psiparam=False):
 def gen_prior_matrix(pip, lsv_exp1, lsv_exp2, output, numbins=20, defaultprior=False):
 
 
-    import pdb
     #Start prior matrix
     pip.logger.info("Calculating prior matrix...")
 
@@ -317,10 +316,10 @@ def gen_prior_matrix(pip, lsv_exp1, lsv_exp2, output, numbins=20, defaultprior=F
         prior_matrix = pickle.load(open('%s/defaultprior.pickle' % direc, 'r'))
         return psi_space, prior_matrix
 
-    #jefferies = array([dircalc.pdf([x, 1-x], [0.5, 0.5]) for x in psi_space])
-    jefferies = np.array(jefferies)
-    jefferies /= sum(jefferies)
-    plot_matrix(jefferies, "Jefferies Matrix", "jefferies_matrix", pip.plotpath)
+    # #jefferies = array([dircalc.pdf([x, 1-x], [0.5, 0.5]) for x in psi_space])
+    # jefferies = np.array(jefferies)
+    # jefferies /= sum(jefferies)
+    # plot_matrix(jefferies, "Jefferies Matrix", "jefferies_matrix", pip.plotpath)
     #Using the empirical data to get the prior matrix
     pip.logger.info('Filtering to obtain "best set"...')
 
@@ -348,14 +347,6 @@ def gen_prior_matrix(pip, lsv_exp1, lsv_exp2, output, numbins=20, defaultprior=F
 
     pip.logger.info("'Best set' is %s events (out of %s)"%(len(best_set_mean1[0]), len(lsv_exp1[0])))
     best_delta_psi = empirical_delta_psi(best_set_mean1[0], best_set_mean2[0])
-
-#    njun_prior = []
-#    for lsv in best_delta_psi:
-#        for jidx in range(lsv.shape[0]):
-#            if jidx > 2 :continue
-#            if len(njun_prior) <= jidx:
-#                njun_prior.append([])
-#            njun_prior[jidx].append(lsv[jidx])
 
     njun_prior = [[]]
     for lsv in best_delta_psi:
