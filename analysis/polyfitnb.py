@@ -183,7 +183,7 @@ def fit_nb(junctionl, outpath, plotpath, nbdisp=0.1, logger=None):
     #plot_negbinomial_fit(mean_junc, std_junc, fit_function, plotpath, "Before correction")
     score = score_ecdf(ecdf)
 
-    precision_values = [0.1, 0.01, 0.001, 0.0001]
+    precision_values = [0.1, 0.01, 0.001]
 
     one_over_r = one_over_r0
 
