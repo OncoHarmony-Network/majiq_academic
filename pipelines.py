@@ -54,7 +54,7 @@ class BasicPipeline:
         if not logger_path:
             logger_path = self.output
 
-        self.logger = get_logger("%smajiq.log" % logger_path, silent=self.silent, debug=self.debug)
+        self.logger = get_logger("%s/majiq.log" % logger_path, silent=self.silent, debug=self.debug)
         self.nthreads = args.nthreads
         self.nz = args.nz
         self.psi_paths = []

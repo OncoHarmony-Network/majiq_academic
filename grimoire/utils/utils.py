@@ -33,7 +33,7 @@ def get_logger(logger_name, silent=False, debug=False):
     more information intended for debugging purposes.
     """
     logging_format = "%(asctime)s (PID:%(process)s) - %(levelname)s - %(message)s"
-    logging.basicConfig(filename="%s/" % logger_name, format=logging_format)
+    logging.basicConfig(filename="%s" % logger_name, format=logging_format)
     logger = logging.getLogger(logger_name)
     if debug:
         logger.setLevel(logging.DEBUG)
