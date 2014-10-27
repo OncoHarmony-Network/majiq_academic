@@ -170,9 +170,9 @@ def model2(matched_lsv, info, num_exp, conf, prior_matrix,  fitfunc, psi_space, 
     #pickle.dump([lsv_samples1, info], open('./lsv_binomproblem.pkl', 'w+b'))
 
     for lidx, lsv_info in enumerate(info):
-        # if lsv_info[1] == 'ENSMUSG00000000568:99967219-99967387:source':
-        #     import ipdb
-        #     ipdb.set_trace()
+        if lsv_info[1] == 'ENSMUSG00000000827:181501905-181502554:source':
+            import ipdb
+            ipdb.set_trace()
         num_ways = len(lsv_samples1[lidx][0])
         if lidx % 50 == 0:
             print "Event %d ..." % lidx,
