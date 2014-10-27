@@ -3,6 +3,7 @@ import scipy.misc
 import random
 import numpy as np
 from scipy.stats import pearsonr, binom_test
+from scipy.stats import binom, beta
 from grimoire.utils.utils import create_if_not_exists, get_logger
 import sys
 import os
@@ -55,18 +56,33 @@ def combine_for_priormatrix(group1, group2, matched_info, num_exp):
     return grp1, grp2
 
 
-def prob_data_sample_given_psi(sample, all_sample, psi_space):
-    bin_test = [binom_test(sample, all_sample, p=x) for x in psi_space]
-    bin_test = np.array(bin_test) + 1e-10
-    return bin_test
+def prob_data_sample_given_psi(sample, all_sample, psi_space, nbins):
+    bsize = 1.0/float(nbins)
+    if all_sample <= 4000:
+        #bin_test = [binom_test(sample, all_sample, p=x) for x in psi_space]
+        bin_test = [binom.pmf(sample, all_sample, p=x) for x in psi_space]
+    else:
+        psi_border = np.arange(0, 1.01, bsize)
+        notsample = all_sample - sample
+        bincdf = [beta.cdf(xx, sample + 1, notsample + 1) for xx in psi_border]
+
+        bin_test = []
+        for x in xrange(nbins):
+            val = bincdf[x+1] - bincdf[x]
+            bin_test.append(val)
+
+    bin_test = np.array(bin_test) + 1e-300
+
+    return bin_test 
 
 
 def calcpsi(matched_lsv, info, num_exp, conf, fitfunc, logger):
 
     try:
 
-        BSIZE = 1.0/float(conf['nbins'])
-        psi_space = np.arange(0+BSIZE/2, 1, BSIZE) #The center of the previous BINS. This is used to calculate the mean value of each bin.
+        bsize = 1.0/float(conf['nbins'])
+        psi_space = np.arange(0 + bsize/2, 1, bsize)
+        #The center of the previous BINS. This is used to calculate the mean value of each bin.
         lsv_samples = np.zeros(shape=(len(info), num_exp), dtype=np.dtype('object'))
         logger.info("Bootstrapping for all samples...")
         for lidx, lsv_all in enumerate(matched_lsv):
@@ -94,8 +110,8 @@ def calcpsi(matched_lsv, info, num_exp, conf, fitfunc, logger):
             sys.stdout.flush()
 
             alpha = 1.0/num_ways
-            beta = (num_ways-1.0) / num_ways
-            prior = majiq_psi.dirichlet_pdf(np.array([psi_space, 1-psi_space]).T, np.array([alpha, beta]))
+            beta_val = (num_ways-1.0) / num_ways
+            prior = majiq_psi.dirichlet_pdf(np.array([psi_space, 1-psi_space]).T, np.array([alpha, beta_val]))
 
             post_psi.append([])
             new_info.append(lsv_info)
@@ -108,13 +124,12 @@ def calcpsi(matched_lsv, info, num_exp, conf, fitfunc, logger):
                     print "\tM", m
                     sys.stdout.flush()
                     # log(p(D_T1(m) | psi_T1)) = SUM_t1 T ( log ( P( D_t1 (m) | psi _T1)))
-                    data_given_psi = np.zeros( shape=(num_exp, nbins), dtype = np.float)
+                    data_given_psi = np.zeros(shape=(num_exp, nbins), dtype = np.float)
                     for exp_idx in xrange(num_exp):
-                        print "\tEXPERIMENT", m
-                        sys.stdout.flush()
-                        junc = lsv_samples[lidx,exp_idx][p_idx][m]
-                        all_psi = np.array([xx[m] for xx in lsv_samples[lidx,exp_idx]])
-                        data_given_psi[exp_idx] = np.log(prob_data_sample_given_psi(junc, all_psi.sum(), psi_space))
+                        junc = lsv_samples[lidx, exp_idx][p_idx][m]
+                        all_psi = np.array([xx[m] for xx in lsv_samples[lidx, exp_idx]])
+                        data_given_psi[exp_idx] = np.log(prob_data_sample_given_psi(junc, all_psi.sum(),
+                                                                                    psi_space, conf['nbins']))
                     psi += data_given_psi.sum(axis=0) + np.log(prior)
                     # normalizing
                     posterior += np.exp(psi - scipy.misc.logsumexp(psi))
@@ -173,28 +188,24 @@ def model2(matched_lsv, info, num_exp, conf, prior_matrix,  fitfunc, psi_space, 
         post_matrix.append([])
         new_info.append(lsv_info)
         for p_idx in xrange(num_ways):
-            print "\tJUNC", p_idx
-            sys.stdout.flush()
             posterior = np.zeros(shape=(nbins, nbins), dtype = np.float)
             for m in xrange(conf['m']):
-                print "\tSAMPLE", m
-                sys.stdout.flush()
                 # log(p(D_T1(m) | psi_T1)) = SUM_t1 T ( log ( P( D_t1 (m) | psi _T1)))
                 data_given_psi1 = np.zeros(shape=(num_exp[0], nbins), dtype = np.float)
                 for exp_idx in xrange(num_exp[0]):
-                    print "\tGRP1 EXP", exp_idx
                     psi1 = lsv_samples1[lidx, exp_idx][p_idx][m]
-                    all_psi = np.array([xx[m] for xx in lsv_samples1[lidx,exp_idx]])
-                    data_given_psi1[exp_idx] = np.log(prob_data_sample_given_psi(psi1, all_psi.sum(), psi_space))
+                    all_psi = np.array([xx[m] for xx in lsv_samples1[lidx, exp_idx]])
+                    data_given_psi1[exp_idx] = np.log(prob_data_sample_given_psi(psi1, all_psi.sum(),
+                                                                                 psi_space, len(psi_space)))
                 V1 = data_given_psi1.sum(axis=0)
                 V1 = V1.reshape(nbins, -1)
 
                 data_given_psi2 = np.zeros(shape=(num_exp[1], nbins), dtype = np.float)
                 for exp_idx in xrange(num_exp[1]):
-                    print "\tGRP2 EXP", exp_idx
                     psi2 = lsv_samples2[lidx, exp_idx][p_idx][m]
                     all_psi = np.array([xx[m] for xx in lsv_samples2[lidx, exp_idx]])
-                    data_given_psi2[exp_idx] = np.log(prob_data_sample_given_psi(psi2, all_psi.sum(), psi_space))
+                    data_given_psi2[exp_idx] = np.log(prob_data_sample_given_psi(psi2, all_psi.sum(),
+                                                                                 psi_space, len(psi_space)))
                 V2 = data_given_psi2.sum(axis=0)
                 V2 = V2.reshape(-1, nbins)
 

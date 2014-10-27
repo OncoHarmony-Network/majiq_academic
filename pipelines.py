@@ -73,8 +73,8 @@ class BasicPipeline:
         self.logger.info("GC content normalization...")
         if self.gcnorm:
             for lidx, lsv in enumerate(lsv_list[0]):
-                lsv_list[0][lidx] = lsv * lsv_list[2][lidx]
-            const_list[0] = const_list[0] * const_list[2]
+                lsv_list[0][lidx] = np.multiply(lsv, lsv_list[2][lidx])
+            const_list[0] = np.multiply(const_list[0], const_list[2])
         return lsv_list, const_list
 
     def fitfunc(self, const_junctions):
@@ -212,6 +212,7 @@ class DeltaPair(BasicPipeline):
                 meta_info[0][ii], lsv_junc, const = majiq_io.load_data_lsv(fname, self.names[0], self.logger)
 
                 #fitting the function
+                lsv_junc, const = self.gc_content_norm(lsv_junc, const)
                 fitfunc[0][ii] = self.fitfunc(const[0])
                 filtered_lsv1[ii] = self.mark_stacks(lsv_junc, fitfunc[0][ii])
             filtered_lsv1 = majiq_filter.quantifiable_in_group(filtered_lsv1, self.minnonzero, self.minreads,
@@ -223,6 +224,7 @@ class DeltaPair(BasicPipeline):
                 meta_info[1][ii], lsv_junc, const = majiq_io.load_data_lsv(fname, self.names[1], self.logger)
 
                 #fitting the function
+                lsv_junc, const = self.gc_content_norm(lsv_junc, const)
                 fitfunc[1][ii] = self.fitfunc(const[0])
                 filtered_lsv2[ii] = self.mark_stacks(lsv_junc, fitfunc[1][ii])
             filtered_lsv2 = majiq_filter.quantifiable_in_group(filtered_lsv2, self.minnonzero, self.minreads,

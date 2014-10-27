@@ -33,4 +33,4 @@ def load_data_lsv(path, group_name, logger=None):
         const_list[cidx, :] = const.coverage.toarray()
         const_gc[cidx, :] = const.gc_factor.toarray()
 
-    return meta_info, (lsv_cov_list, lsv_info, lsv_gc), (const_list, const_info, const_gc)
+    return meta_info, [lsv_cov_list, lsv_info, lsv_gc], [const_list, const_info, const_gc]

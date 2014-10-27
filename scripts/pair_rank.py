@@ -5,10 +5,10 @@ Rank MAJIQ, MISO or MATS events to test delta PSI reproducibility
 
 """
 import matplotlib as mplot
-import analysis.psi
 
 mplot.use('Agg')
 import scripts.utils
+import analysis.psi
 # import prettyplotlib as ppl
 
 
@@ -20,6 +20,7 @@ from pylab import *
 from pdb import set_trace as st
 
 RANK_TYPES = ['all', 'intersected', 'only_exp1', 'exp1_and_exp2']
+
 
 def print_matrix(matrix):
     "Print MAJIQ delta PSI matrix in screen"
@@ -136,16 +137,16 @@ def rank_majiq(bins_list, names, V=0.2, absolute=True, dofilter=True, E=False, r
 
     #jefferies = array([dircalc.pdf([x, 1-x], [0.5, 0.5]) for x in psi_space])
 
-    jefferies = array(jefferies)
-    jefferies /= np.sum(jefferies)
-    diff_priors = log(prior) + log(jefferies)
+    # jefferies = array(jefferies)
+    # jefferies /= np.sum(jefferies)
+    # diff_priors = np.log(prior) + np.log(jefferies)
     for i, lsv_bins in enumerate(bins_list):
         # if names[i][2] not in lsv_types_dict.keys():
         #     continue
-        if not complex_lsvs and len(lsv_bins)>2:
+        if not complex_lsvs and len(lsv_bins) > 2:
             continue
         if ranknochange:
-            dmatrix = exp(log(lsv_bins[0]) - diff_priors)
+            dmatrix = np.exp(np.log(lsv_bins[0])) # - diff_priors)
             dmatrix /= sum(dmatrix)
 
         else:
@@ -157,7 +158,8 @@ def rank_majiq(bins_list, names, V=0.2, absolute=True, dofilter=True, E=False, r
             rank.append([names[i], v_prob])
         else:
             area = matrix_area(dmatrix, V, absolute)
-            if ranknochange: #P(Delta PSI < V) = 1 - P(Delta PSI > V)
+            if ranknochange:
+            #P(Delta PSI < V) = 1 - P(Delta PSI > V)
                 area = 1.0 - area
 
             if area > MINTHRESHOLD or not dofilter:
@@ -174,9 +176,11 @@ def rank_majiq(bins_list, names, V=0.2, absolute=True, dofilter=True, E=False, r
 def rank_miso(path, dofilter=True, ranknochange=False, complex_lsvs=False):
     rank = scripts.utils.miso_delta_reader(path, dofilter=dofilter, complex_lsvs=complex_lsvs)
     if ranknochange: 
-        rank.sort(key=lambda x: (abs(x[1]), x[2])) #sort first by smallest delta PSI, then by bayes factor
+        rank.sort(key=lambda x: (abs(x[1]), x[2]))
+        #sort first by smallest delta PSI, then by bayes factor
     else:
-        rank.sort(key=lambda x: (abs(x[1]), x[2]), reverse=True) #sort first by biggest delta PSI, then by inverse bayes factor
+        rank.sort(key=lambda x: (abs(x[1]), x[2]), reverse=True)
+        #sort first by biggest delta PSI, then by inverse bayes factor
     return rank
 
 

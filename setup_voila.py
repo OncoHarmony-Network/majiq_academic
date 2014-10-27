@@ -2,11 +2,11 @@
 
 from cx_Freeze import setup, Executable
 
-packages =['jinja2']
+packages =['jinja2', 'numpy']
 include_files = [('voila/templates', 'templates')]
-excludes = ['matplotlib', 'scipy']
+excludes = ['matplotlib']
 setup(name='Voila',
-      version='0.1.0',
+      version='0.8.0',
       description='Visualization of Local Splice Variants',
       author='Alejandro Barrera',
       author_email='abarrera@biociphers.org',
@@ -16,7 +16,9 @@ setup(name='Voila',
                        'include_files': include_files,
                        'excludes': excludes
                       },
-                  'iconfile': '/Users/abarrera/majiq/voila/templates/static/img/icons/biociphers.ico'
+                  # 'iconfile': ['/Users/abarrera/majiq/voila/templates/static/img/icons/biociphers.ico']
                 },
-      executables= [Executable('voila/run_voila.py')]
+      executables= [Executable(script='voila/run_voila.py', targetName='voila')]
      )
+
+# python setup_voila.py build_exe

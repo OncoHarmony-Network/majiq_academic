@@ -84,7 +84,10 @@ class Lsv(object):
     #     else:
     #         self.extension = [geneG.get_junctions()[lsv_exon.get_a3_list()[0]].get_coords()[0] - 100, self.coords[1]]
 
-    def set_extension(self, geneG, lsv_type):
+    def set_extension(self, geneG, lsv_type=None):
+
+        if not lsv_type:
+            lsv_type = self.type
 
         if lsv_type.startswith('s'):
             self.extension = [self.coords[0], geneG.get_exons()[-1].get_coords()[1]]
@@ -137,7 +140,7 @@ class Lsv(object):
 
     def sort_bins(self, strand):
         if len(self.bins) > 2: return  #Only for 2-way LSVs
-        if strand == '+' and self.type.startswith('t') or strand == '-' and self.type.startswith('s'):
+        if strand == '+' and self.type.startswith('t') or strand == '-' and self.type.startswith('t'):
             self.bins[0], self.bins[1] = self.bins[1], self.bins[0]
             self.psi_junction = 1
 

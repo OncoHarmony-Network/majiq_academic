@@ -61,5 +61,8 @@ class ExonGraphic(object):
     def get_alt_ends(self):
         return self.alt_ends
 
+    # def get_size(self):
+    #     return self.
+
     def to_JSON(self, encoder=json.JSONEncoder):
         return json.dumps(self, default=lambda o: o.__dict__, sort_keys=True, cls=encoder)
