@@ -129,7 +129,10 @@ def adjust_fit(starting_a, junctions, precision, previous_score, plotpath, indic
     if logger:
         logger.info("Starting from %s with precision %s" % (starting_a, precision))
     idx = 0
-    for corrected_a in np.arange(starting_a, 0, -precision):
+
+    steps = np.arange(starting_a, 0, -precision)
+    steps = np.append(steps, 0)
+    for corrected_a in steps:
 
         #since we are reducing the "a" from the fit and the problem is too much variability, we
         # expect optimization to be getting the "a" below
@@ -137,7 +140,8 @@ def adjust_fit(starting_a, junctions, precision, previous_score, plotpath, indic
         pvalues = calc_pvalues(junctions, corrected_a, indices)
         ecdf = get_ecdf(pvalues)
         score = score_ecdf(ecdf)
-        plot_fitting(ecdf, plotpath, title="%s.[step %d] 1\_r %s" % (precision, idx, corrected_a))
+        plot_fitting(ecdf, plotpath, title="%s.[step %d] 1\_r %s" % (precision, idx, corrected_a),
+                     plotname='%s.step%s' % precision, idx)
         idx += 1
         if logger:
             logger.info("New Score %.5f" % score)
@@ -160,7 +164,7 @@ def adjust_fit(starting_a, junctions, precision, previous_score, plotpath, indic
     #this return should not be hit
 
 
-def plot_fitting(ecdf, plotpath, extra=[], title='', title_extra=[]):
+def plot_fitting(ecdf, plotpath, extra=[], title='', title_extra=[], plotname=None):
     if plotpath:
         plt.xlabel("P-value")
         plt.ylabel("non_corrected ECDF")
@@ -169,7 +173,12 @@ def plot_fitting(ecdf, plotpath, extra=[], title='', title_extra=[]):
             plt.plot(np.linspace(0, 1, num=len(extraval)), extraval, label=title_extra[ex_idx])
         plt.plot([0, 1], 'k')
         plt.legend(loc='upper left')
-        _save_or_show(plotpath, title)
+        if plotname is None:
+            fname = title
+        else:
+            fname = plotname
+        _save_or_show(plotpath, fname)
+
 
 
 def fit_nb(junctionl, outpath, plotpath, nbdisp=0.1, logger=None):
@@ -222,10 +231,11 @@ def fit_nb(junctionl, outpath, plotpath, nbdisp=0.1, logger=None):
             score = score_ecdf(ecdf)
 
     poisson_pvals = calc_pvalues_poisson(junctions, indices)
-    poisson_ecdf = get_ecdf(pvalues)
+    poisson_ecdf = get_ecdf(poisson_pvals)
+    poisson_score = score_ecdf(poisson_ecdf)
 
-
-    plot_fitting(ecdf, plotpath, extra=[poisson_ecdf], title="Corrected ECDF 1\_r %s" % one_over_r)
+    plot_fitting(ecdf, plotpath, extra=[poisson_ecdf], title="Corrected ECDF 1\_r %s" % one_over_r,
+                 title_extra=['Poisson '], plotname='Corrected')
 
     if logger:
         logger.debug("Calculating the nb_r and nb_p with the new fitted function")
