@@ -93,7 +93,7 @@ BINOMIAL_NZ = -1
 
 def sample_from_junctions(junction_list, m, k, dispersion=0.1, discardzeros=5, trimborder=True, fitted_one_over_r=None,
                           debug=False, tracklist=None, Nz=0, names=None, naive=False):
-    "Given the filtered reads, bootstrap samples from every junction"
+    """Given the filtered reads, bootstrap samples from every junction"""
     sampled_means = []
     sampled_var = []
     all_samples = []

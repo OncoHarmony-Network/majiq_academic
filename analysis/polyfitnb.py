@@ -155,12 +155,17 @@ def fit_nb(junctionl, outpath, plotpath, nbdisp=0.1, logger=None):
         logger.info("NBFit: Plots will be drawn in %s..." % plotpath)
 
     filtered = []
+    kk = 0
     for jdx, jun in enumerate(junctionl):
         if np.count_nonzero(jun) >= 5 and jun.sum() >= 10:
+            if kk == 90:
+                pass
+            kk += 1
+
             filtered.append(jun)
 
     junctions = np.array(filtered)
-    junctions = masked_less(junctions, 1)
+    junctions = masked_less(junctions, 0.1)
     mean_junc = junctions.mean(axis=1)
     std_junc = junctions.std(axis=1)
 

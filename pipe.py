@@ -56,20 +56,18 @@ def combine_for_priormatrix(group1, group2, matched_info, num_exp):
     return grp1, grp2
 
 
-def prob_data_sample_given_psi(sample, all_sample, psi_space, nbins):
-    bsize = 1.0/float(nbins)
-    if all_sample <= 4000:
-        #bin_test = [binom_test(sample, all_sample, p=x) for x in psi_space]
-        bin_test = [binom.pmf(sample, all_sample, p=x) for x in psi_space]
-    else:
-        psi_border = np.arange(0, 1.01, bsize)
-        notsample = all_sample - sample
-        bincdf = [beta.cdf(xx, sample + 1, notsample + 1) for xx in psi_border]
+def prob_data_sample_given_psi(sample, all_sample, nbins, alpha_prior, beta_prior):
 
-        bin_test = []
-        for x in xrange(nbins):
-            val = bincdf[x+1] - bincdf[x]
-            bin_test.append(val)
+
+    bsize = 1.0/float(nbins)
+    psi_border = np.arange(0, 1.01, bsize)
+    notsample = all_sample - sample
+    bincdf = [beta.cdf(xx, sample + alpha_prior, notsample + beta_prior) for xx in psi_border]
+
+    bin_test = []
+    for x in xrange(nbins):
+        val = bincdf[x+1] - bincdf[x]
+        bin_test.append(val)
 
     bin_test = np.array(bin_test) + 1e-300
 
@@ -105,34 +103,27 @@ def calcpsi(matched_lsv, info, num_exp, conf, fitfunc, logger):
         new_info = []
         for lidx, lsv_info in enumerate(info):
             num_ways = float(len(lsv_samples[lidx, 0]))
-#            if lidx % 50 == 0:
-            print "Event %d ..." % lidx
-            sys.stdout.flush()
+            if lidx % 50 == 0:
+                print "Event %d ..." % lidx
+                sys.stdout.flush()
 
-            alpha = 1.0/num_ways
-            beta_val = (num_ways-1.0) / num_ways
-            prior = majiq_psi.dirichlet_pdf(np.array([psi_space, 1-psi_space]).T, np.array([alpha, beta_val]))
+            alpha_prior = 1.0/num_ways
+            beta_prior = (num_ways-1.0) / num_ways
 
             post_psi.append([])
             new_info.append(lsv_info)
             for p_idx in xrange(int(num_ways)):
-                print "\tJUNC", p_idx
-                sys.stdout.flush()
                 posterior = np.zeros(shape=nbins, dtype=np.float)
-                psi = np.zeros(shape=nbins, dtype=np.float)
                 for m in xrange(conf['m']):
-                    print "\tM", m
-                    sys.stdout.flush()
                     # log(p(D_T1(m) | psi_T1)) = SUM_t1 T ( log ( P( D_t1 (m) | psi _T1)))
-                    data_given_psi = np.zeros(shape=(num_exp, nbins), dtype = np.float)
-                    for exp_idx in xrange(num_exp):
-                        junc = lsv_samples[lidx, exp_idx][p_idx][m]
-                        all_psi = np.array([xx[m] for xx in lsv_samples[lidx, exp_idx]])
-                        data_given_psi[exp_idx] = np.log(prob_data_sample_given_psi(junc, all_psi.sum(),
-                                                                                    psi_space, conf['nbins']))
-                    psi += data_given_psi.sum(axis=0) + np.log(prior)
+
+                    junc = lsv_samples[lidx, :][p_idx][m].sum()
+                    all_sample = lsv_samples[lidx, :][p_idx].sum()
+                    data_given_psi = np.log(prob_data_sample_given_psi(junc, all_sample, nbins,
+                                                                       alpha_prior, beta_prior))
+
                     # normalizing
-                    posterior += np.exp(psi - scipy.misc.logsumexp(psi))
+                    posterior += np.exp(data_given_psi - scipy.misc.logsumexp(data_given_psi))
 
                 post_psi[-1].append(posterior / conf['m'])
                 if num_ways == 2:
@@ -176,9 +167,8 @@ def model2(matched_lsv, info, num_exp, conf, prior_matrix,  fitfunc, psi_space, 
     new_info = []
     ones_n = np.ones(shape=(1, nbins), dtype = np.float)
 
-    pickle.dump([lsv_samples1,info],open('./lsv_binomproblem.pkl','w+b'))
+    #pickle.dump([lsv_samples1, info], open('./lsv_binomproblem.pkl', 'w+b'))
 
-    
     for lidx, lsv_info in enumerate(info):
         num_ways = len(lsv_samples1[lidx][0])
         if lidx % 50 == 0:
@@ -188,26 +178,26 @@ def model2(matched_lsv, info, num_exp, conf, prior_matrix,  fitfunc, psi_space, 
         post_matrix.append([])
         new_info.append(lsv_info)
         for p_idx in xrange(num_ways):
+
+            alpha_prior = 1.0/num_ways
+            beta_prior = (num_ways-1.0) / num_ways
+
             posterior = np.zeros(shape=(nbins, nbins), dtype = np.float)
             for m in xrange(conf['m']):
                 # log(p(D_T1(m) | psi_T1)) = SUM_t1 T ( log ( P( D_t1 (m) | psi _T1)))
-                data_given_psi1 = np.zeros(shape=(num_exp[0], nbins), dtype = np.float)
-                for exp_idx in xrange(num_exp[0]):
-                    psi1 = lsv_samples1[lidx, exp_idx][p_idx][m]
-                    all_psi = np.array([xx[m] for xx in lsv_samples1[lidx, exp_idx]])
-                    data_given_psi1[exp_idx] = np.log(prob_data_sample_given_psi(psi1, all_psi.sum(),
-                                                                                 psi_space, len(psi_space)))
-                V1 = data_given_psi1.sum(axis=0)
-                V1 = V1.reshape(nbins, -1)
+                junc = lsv_samples1[lidx, :][p_idx][m].sum()
+                all_sample = lsv_samples1[lidx, :][p_idx].sum()
+                data_given_psi1 = np.log(prob_data_sample_given_psi(junc, all_sample, nbins,
+                                                                    alpha_prior, beta_prior))
 
-                data_given_psi2 = np.zeros(shape=(num_exp[1], nbins), dtype = np.float)
-                for exp_idx in xrange(num_exp[1]):
-                    psi2 = lsv_samples2[lidx, exp_idx][p_idx][m]
-                    all_psi = np.array([xx[m] for xx in lsv_samples2[lidx, exp_idx]])
-                    data_given_psi2[exp_idx] = np.log(prob_data_sample_given_psi(psi2, all_psi.sum(),
-                                                                                 psi_space, len(psi_space)))
-                V2 = data_given_psi2.sum(axis=0)
-                V2 = V2.reshape(-1, nbins)
+                V1 = data_given_psi1.reshape(nbins, -1)
+
+                junc = lsv_samples2[lidx, :][p_idx][m].sum()
+                all_sample = lsv_samples2[lidx, :][p_idx].sum()
+                data_given_psi2 = np.log(prob_data_sample_given_psi(junc, all_sample, nbins,
+                                                                    alpha_prior, beta_prior))
+
+                V2 = data_given_psi2.reshape(-1, nbins)
 
                 A = (V1 * ones_n + V2 * ones_n.T) + np.log(prior_matrix)
                 posterior += np.exp(A - scipy.misc.logsumexp(A))

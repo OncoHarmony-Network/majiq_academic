@@ -388,7 +388,7 @@ def gen_prior_matrix(pip, lsv_exp1, lsv_exp2, output, numbins=20, defaultprior=F
 
         #Calculate prior matrix
         pip.logger.info("Adding a Jefferies prior to prior (alpha=%s), jun %s..." % (pip.alpha, nj))
-        prior_matrix *= jefferies
+       #prior_matrix *= jefferies
         prior_matrix /= sum(prior_matrix)
          #renormalize so it sums 1
 
