@@ -9,6 +9,7 @@ import analysis.io as majiq_io
 import analysis.psi as majiq_psi
 import os
 import builder as majiq_builder
+from numpy.ma import masked_less
 import pipe as pipe
 # ###############################
 # Data loading and Boilerplate #
@@ -19,10 +20,9 @@ def get_clean_raw_reads(matched_info, matched_lsv, outdir, names, num_exp):
     res = []
     for eidx in xrange(num_exp):
         for ldx, lsv in enumerate(matched_info):
-            num = matched_lsv[ldx][eidx].sum()
-            if num < 0:
-                import ipdb
-                ipdb.set_trace()
+            jlist = masked_less(matched_lsv[ldx][eidx], 0)
+
+            num = jlist.sum()
             res.append([lsv[1], num])
 
         with open('%s/clean_reads.%s%d.pkl' % (outdir, names, eidx), 'wb') as fp:

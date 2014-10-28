@@ -148,9 +148,6 @@ def main(params):
     if len(sam_list) == 0:
         return
 
-    import ipdb, objgraph
-    ipdb.set_trace()
-    objgraph.show_most_common_types(limit=20)
 
     logger.info("Scatter in Chromosomes")
     for chrom in chr_list:
