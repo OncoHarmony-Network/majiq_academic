@@ -6,7 +6,7 @@ import argparse
 import os
 import sys
 import traceback
-from multiprocessing import Pool, current_process
+from multiprocessing import Pool, current_process, Process
 import grimoire.analize as analize
 import grimoire.rnaseq_io as majiq_io
 import grimoire.utils.utils as utils
@@ -128,12 +128,10 @@ def main(params):
     logger.info("")
     logger.info("Command: %s" % params)
 
-    pool = Pool(processes=params.nthreads)
-
-    pool.apply_async(__parallel_gff3, [params.transcripts, params.pcr_filename, params.pcr_filename])
+    p = Process(target=__parallel_gff3, args=(params.transcripts, params.pcr_filename, params.pcr_filename))
     logger.info("... waiting gff3 parsing")
-    pool.close()
-    pool.join()
+    p.start()
+    p.join()
     chr_list = majiq_io.load_bin_file("%s/tmp/chromlist.pkl" % mglobals.outDir)
 
     logger.info("Get samfiles")
@@ -149,6 +147,8 @@ def main(params):
         return
 
 
+    if params.nthreads > 1:
+        pool = Pool(processes=params.nthreads)
     logger.info("Scatter in Chromosomes")
     for chrom in chr_list:
         temp_dir = "%s/tmp/%s" % (mglobals.outDir, chrom)
