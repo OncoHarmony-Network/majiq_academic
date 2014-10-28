@@ -265,7 +265,7 @@ class DeltaPair(BasicPipeline):
 
         if self.nthreads == 1:
             posterior_matrix, names = pipe.deltapsi(matched_lsv, matched_info, num_exp, conf, prior_matrix, fitfunc,
-                                                  psi_space, self.logger)
+                                                    psi_space, self.logger)
         else:
 
             pool = Pool(processes=self.nthreads)
@@ -294,12 +294,12 @@ class DeltaPair(BasicPipeline):
             self.logger.info("GATHER pickles")
             for nthrd in xrange(self.nthreads):
                 tempfile = open("%s/tmp/%s_%s_th%s.%s.pickle" % (os.path.dirname(self.output), self.names[0],
-                                                                 self.names[1], nthrd, pipe.model2.__name__))
+                                                                 self.names[1], nthrd, pipe.deltapsi.__name__))
                 ptempt = pickle.load(tempfile)
                 posterior_matrix.extend(ptempt[0])
                 names.extend(ptempt[1])
 
-        pickle_path = "%s/%s_%s.%s.pickle" % (self.output, self.names[0], self.names[1], pipe.model2.__name__)
+        pickle_path = "%s/%s_%s.%s.pickle" % (self.output, self.names[0], self.names[1], pipe.deltapsi.__name__)
         pickle.dump([posterior_matrix, names, meta_info], open(pickle_path, 'w'))
         self.logger.info("DeltaPSI calculation for %s_%s ended succesfully! Result can be found at %s" % (self.names[0],
                                                                                                           self.names[1],
