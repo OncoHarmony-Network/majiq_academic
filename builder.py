@@ -119,6 +119,7 @@ def main(params):
     if True:
         chr_list = majiq_io.read_gff(params.transcripts, params.pcr_filename, logging=logger)
 
+        logger.info("Get samfiles")
         sam_list = []
         for exp_idx, exp in enumerate(mglobals.exp_list):
             samfile = "%s/%s.bam" % (mglobals.sam_dir, exp)
