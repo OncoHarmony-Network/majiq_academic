@@ -58,7 +58,6 @@ def combine_for_priormatrix(group1, group2, matched_info, num_exp):
 
 def prob_data_sample_given_psi(sample, all_sample, nbins, alpha_prior, beta_prior):
 
-
     bsize = 1.0/float(nbins)
     psi_border = np.arange(0, 1.01, bsize)
     notsample = all_sample - sample
@@ -78,8 +77,6 @@ def calcpsi(matched_lsv, info, num_exp, conf, fitfunc, logger):
 
     try:
 
-        bsize = 1.0/float(conf['nbins'])
-        psi_space = np.arange(0 + bsize/2, 1, bsize)
         #The center of the previous BINS. This is used to calculate the mean value of each bin.
         lsv_samples = np.zeros(shape=(len(info), num_exp), dtype=np.dtype('object'))
         logger.info("Bootstrapping for all samples...")
@@ -109,17 +106,18 @@ def calcpsi(matched_lsv, info, num_exp, conf, fitfunc, logger):
 
             alpha_prior = 1.0/num_ways
             beta_prior = (num_ways-1.0) / num_ways
-
+            psi = lsv_samples[lidx, :]
             post_psi.append([])
             new_info.append(lsv_info)
             for p_idx in xrange(int(num_ways)):
                 posterior = np.zeros(shape=nbins, dtype=np.float)
                 for m in xrange(conf['m']):
                     # log(p(D_T1(m) | psi_T1)) = SUM_t1 T ( log ( P( D_t1 (m) | psi _T1)))
-
-                    junc = lsv_samples[lidx, :][p_idx][m].sum()
-                    all_sample = lsv_samples[lidx, :][p_idx].sum()
-                    data_given_psi = np.log(prob_data_sample_given_psi(junc, all_sample, nbins,
+                    junc = [psi[xx][p_idx][m] for xx in xrange(num_exp)]
+                    junc = np.array(junc)
+                    all_sample = [psi[xx][yy][m].sum() for xx in xrange(num_exp) for yy in xrange(num_ways)]
+                    all_sample = np.array(all_sample)
+                    data_given_psi = np.log(prob_data_sample_given_psi(junc.sum(), all_sample.sum(), nbins,
                                                                        alpha_prior, beta_prior))
 
                     # normalizing
@@ -138,7 +136,7 @@ def calcpsi(matched_lsv, info, num_exp, conf, fitfunc, logger):
     return post_psi, new_info
 
 
-def model2(matched_lsv, info, num_exp, conf, prior_matrix,  fitfunc, psi_space, logger):
+def deltapsi(matched_lsv, info, num_exp, conf, prior_matrix,  fitfunc, psi_space, logger):
 
     lsv_samples1 = np.zeros(shape=(len(info), num_exp[0]), dtype=np.dtype('object'))
     lsv_samples2 = np.zeros(shape=(len(info), num_exp[1]), dtype=np.dtype('object'))
@@ -170,9 +168,6 @@ def model2(matched_lsv, info, num_exp, conf, prior_matrix,  fitfunc, psi_space, 
     #pickle.dump([lsv_samples1, info], open('./lsv_binomproblem.pkl', 'w+b'))
 
     for lidx, lsv_info in enumerate(info):
-        # if lsv_info[1] == 'ENSMUSG00000000827:181501905-181502554:source':
-        #     import ipdb
-        #     ipdb.set_trace()
         num_ways = len(lsv_samples1[lidx][0])
         if lidx % 50 == 0:
             print "Event %d ..." % lidx,

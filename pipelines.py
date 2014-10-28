@@ -264,7 +264,7 @@ class DeltaPair(BasicPipeline):
         get_clean_raw_reads(matched_info, matched_lsv[1], self.output, self.names[1], num_exp[1])
 
         if self.nthreads == 1:
-            posterior_matrix, names = pipe.model2(matched_lsv, matched_info, num_exp, conf, prior_matrix, fitfunc,
+            posterior_matrix, names = pipe.deltapsi(matched_lsv, matched_info, num_exp, conf, prior_matrix, fitfunc,
                                                   psi_space, self.logger)
         else:
 
@@ -279,7 +279,7 @@ class DeltaPair(BasicPipeline):
                     ub = len(matched_lsv[0])
                 lsv_list = [matched_lsv[0][lb:ub], matched_lsv[1][lb:ub]]
                 lsv_info = matched_info[lb:ub]
-                pool.apply_async(pipe.parallel_lsv_child_calculation, [pipe.model2,
+                pool.apply_async(pipe.parallel_lsv_child_calculation, [pipe.deltapsi,
                                                                        [lsv_list, lsv_info, num_exp, conf, prior_matrix,
                                                                         fitfunc, psi_space],
                                                                        matched_info,
