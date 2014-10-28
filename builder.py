@@ -127,7 +127,7 @@ def main(params):
                 logger.info("Skipping %s.... not found" % samfile)
                 continue
             sam_list.append(samfile)
-            majiq_io.count_mapped_reads(samfile, exp_idx)
+            #majiq_io.count_mapped_reads(samfile, exp_idx)
         if len(sam_list) == 0:
             return
 
