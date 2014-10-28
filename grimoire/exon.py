@@ -611,7 +611,7 @@ def detect_exons(gene, junction_list, read_rna):
 
 def set_exons_gc_content(chrom, exon_list):
 
-    fastadir_path = "%s/" % (mglobals.genome_path)
+    fastadir_path = "%s/" % mglobals.genome_path
 
     #print "Loading chromosome... %s"%chrom
     chrom_path = fastadir_path + chrom + ".fa"
@@ -623,9 +623,11 @@ def set_exons_gc_content(chrom, exon_list):
         if not chrom_line.startswith(">"):
             loaded_chrom.append(chrom_line.strip("\n"))
     loaded_chrom = ''.join(loaded_chrom)
-
+    chrom_file.close()
     for exon in exon_list:
         strt, end = exon.get_coordinates()
+        if end - strt < 5:
+            continue
         sequence = loaded_chrom[strt:end]
         #reverse the sequence if the strand is reverse
         sequence = sequence.lower()
@@ -643,6 +645,5 @@ def set_exons_gc_content(chrom, exon_list):
                 else:
                     new_seq.append(char)
             sequence = ''.join(new_seq)
-        if len(sequence) == 0:
-            print "KKKKseq", exon.get_coordinates(), sequence
         exon.set_gc_content(sequence)
+    del loaded_chrom
