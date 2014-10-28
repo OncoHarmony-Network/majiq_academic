@@ -66,6 +66,20 @@ def __parallel_lsv_quant(samfiles_list, chrom, pcr_validation=False, gff_output=
         raise()
 
 
+def __parallel_gff3(transcripts, pcr_filename, output, silent=False, debug=0):
+
+    try:
+        print "START child,", current_process().name
+        tlogger = utils.get_logger("%s/db.majiq.log" % mglobals.outDir, silent=silent, debug=debug)
+        majiq_io.read_gff(transcripts, pcr_filename, logging=tlogger)
+        print "END child, ", current_process().name
+    except Exception as e:
+        traceback.print_exc()
+        sys.stdout.flush()
+        raise()
+
+
+
 def _new_subparser():
     return argparse.ArgumentParser(add_help=False)
 
@@ -114,49 +128,48 @@ def main(params):
     logger.info("")
     logger.info("Command: %s" % params)
 
-    if True:
-        chr_list = majiq_io.read_gff(params.transcripts, params.pcr_filename, logging=logger)
+    pool = Pool(processes=params.nthreads)
 
-        logger.info("Get samfiles")
-        sam_list = []
-        for exp_idx, exp in enumerate(mglobals.exp_list):
-            samfile = "%s/%s.bam" % (mglobals.sam_dir, exp)
-            if not os.path.exists(samfile):
-                logger.info("Skipping %s.... not found" % samfile)
-                continue
-            sam_list.append(samfile)
-            #majiq_io.count_mapped_reads(samfile, exp_idx)
-        if len(sam_list) == 0:
-            return
+    pool.apply_async(__parallel_gff3, [params.transcripts, params.pcr_filename, params.pcr_filename])
+    logger.info("... waiting gff3 parsing")
+    pool.close()
+    pool.join()
+    chr_list = majiq_io.load_bin_file("%s/tmp/chromlist.pkl" % mglobals.outDir)
 
-        if params.nthreads > 1:
-            utils.clear_gene_tlb()
-            pool = Pool(processes=params.nthreads)
+    logger.info("Get samfiles")
+    sam_list = []
+    for exp_idx, exp in enumerate(mglobals.exp_list):
+        samfile = "%s/%s.bam" % (mglobals.sam_dir, exp)
+        if not os.path.exists(samfile):
+            logger.info("Skipping %s.... not found" % samfile)
+            continue
+        sam_list.append(samfile)
+        #majiq_io.count_mapped_reads(samfile, exp_idx)
+    if len(sam_list) == 0:
+        return
 
-        import ipdb, objgraph
-        ipdb.set_trace()
-        objgraph.show_most_common_types(limit=20)
+    import ipdb, objgraph
+    ipdb.set_trace()
+    objgraph.show_most_common_types(limit=20)
 
-        logger.info("Scatter in Chromosomes")
-        for chrom in chr_list:
-            temp_dir = "%s/tmp/%s" % (mglobals.outDir, chrom)
-            utils.create_if_not_exists(temp_dir)
-            if params.nthreads == 1:
-                majiq_builder(sam_list, chrom, pcr_validation=params.pcr_filename, logging=logger)
-            else:
+    logger.info("Scatter in Chromosomes")
+    for chrom in chr_list:
+        temp_dir = "%s/tmp/%s" % (mglobals.outDir, chrom)
+        utils.create_if_not_exists(temp_dir)
+        if params.nthreads == 1:
+            majiq_builder(sam_list, chrom, pcr_validation=params.pcr_filename, logging=logger)
+        else:
 
-                pool.apply_async(__parallel_lsv_quant, [sam_list, chrom, params.pcr_filename])
+            pool.apply_async(__parallel_lsv_quant, [sam_list, chrom, params.pcr_filename])
 
-        if params.nthreads > 1:
-            logger.info("... waiting childs")
-            pool.close()
-            pool.join()
+    if params.nthreads > 1:
+        logger.info("... waiting childs")
+        pool.close()
+        pool.join()
 
-        utils.gc_factor_calculation(chr_list, 10)
-        utils.plot_gc_content()
+    utils.gc_factor_calculation(chr_list, 10)
+    utils.plot_gc_content()
 
-    else:
-        chr_list = os.listdir('%s/tmp' % mglobals.output)
     #GATHER
     logger.info("Gather outputs")
     utils.merge_and_create_majiq_file(chr_list, params.prefix)

@@ -487,8 +487,11 @@ def _prepare_and_dump(genes, logging=None):
         fname = '%s/annot_genes.pkl' % temp_dir
         dump_bin_file(genes[chrom], fname)
 
+    tmp_chrom = "%s/tmp/chromlist.pkl" % mglobals.outDir
+    dump_bin_file(genes.keys(), tmp_chrom)
     if not logging is None:
         logging.debug("Number of Genes", n_genes)
+
 
 
 def read_gff(filename, pcr_filename, logging=None):
