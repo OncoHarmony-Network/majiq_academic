@@ -14,6 +14,7 @@ from voila.splice_graphics.geneGraphic import GeneGraphic
 from voila.splice_graphics.junctionGraphic import JunctionGraphic 
 import random
 from contextlib import contextmanager as ctx
+import gc
 
 
 def create_if_not_exists(my_dir, logger=False):
@@ -428,6 +429,7 @@ def recreate_gene_tlb(gene_list):
 
 def clear_gene_tlb():
     mglobals.gene_tlb.clear()
+    gc.collect()
 
 
 def to_gtf(wfile, seq_name, source, gene, mrna, start_trans, end_trans, strand, exon_l, frame_l):
