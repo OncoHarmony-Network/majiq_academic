@@ -475,7 +475,8 @@ def _prepare_and_dump(genes, logging=None):
         create_if_not_exists(temp_dir)
         # ipdb.set_trace()
         # objgraph.show_most_common_types(limit=20)
-
+        if not logging is None:
+            logging.info("Creating temporal annotation %s" % chrom)
         fname = '%s/annot_genes.pkl' % temp_dir
         dump_bin_file(genes[chrom], fname)
 
