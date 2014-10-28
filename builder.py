@@ -72,14 +72,12 @@ def _new_subparser():
 
 def _generate_parser():
     dir_or_paths = _new_subparser()
-    mutexc = dir_or_paths.add_mutually_exclusive_group(required=True)
-    mutexc.add_argument('-dir', action="store", help='Provide a directory with all the files')
-    mutexc.add_argument('-paths', default=None, nargs='+', help='Provide the list of files to analyze')
-    mutexc.add_argument('-conf', default=None, help='Provide study configuration file with all '
-                                                    'the execution information')
 
     parser = argparse.ArgumentParser(parents=[dir_or_paths])
     parser.add_argument('transcripts', action="store", help='read file in SAM format')
+    parser.add_argument('-conf', default=None, required=True, help='Provide study configuration file with all '
+                                                                   'the execution information')
+
     parser.add_argument('-l', '--readlen', dest="readlen", type=int, default='76', help='Length of reads in the '
                                                                                         'samfile"')
     parser.add_argument('-p', '--prefix', dest="prefix", type=str, default='', help='Output prefix string to '
@@ -91,7 +89,7 @@ def _generate_parser():
                                                                                 'events will be generated')
 
     parser.add_argument('-t', '--nthreads', dest="nthreads", type=int, default='4', help='Number of CPUs to use')
-    parser.add_argument('-o', '--output', dest='output', action="store", help='casete exon list file')
+    parser.add_argument('-o', '--output', dest='output', action="store", required=True, help='casete exon list file')
     parser.add_argument('--silent', action='store_true', default=False, help='Silence the logger.')
     parser.add_argument('--debug', type=int, default=0, help="Activate this flag for debugging purposes, activates "
                                                              "logger and jumps some processing steps.")
@@ -132,7 +130,13 @@ def main(params):
             return
 
         if params.nthreads > 1:
+            utils.clear_gene_tlb()
             pool = Pool(processes=params.nthreads)
+
+        import ipdb, objgraph
+        ipdb.set_trace()
+        objgraph.show_most_common_types(limit=20)
+
         logger.info("Scatter in Chromosomes")
         for chrom in chr_list:
             temp_dir = "%s/tmp/%s" % (mglobals.outDir, chrom)
@@ -140,7 +144,7 @@ def main(params):
             if params.nthreads == 1:
                 majiq_builder(sam_list, chrom, pcr_validation=params.pcr_filename, logging=logger)
             else:
-                utils.clear_gene_tlb()
+
                 pool.apply_async(__parallel_lsv_quant, [sam_list, chrom, params.pcr_filename])
 
         if params.nthreads > 1:

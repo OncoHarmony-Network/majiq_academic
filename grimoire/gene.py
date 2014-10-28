@@ -24,8 +24,9 @@ class Gene:
                                            or (self.end > other.start and self.start < other.end
                                                and self.strand == '-' and other.strand == '+'))))
 
-    def __init__(self, gene_id, chrom, strand, start, end):
+    def __init__(self, gene_id, gene_name, chrom, strand, start, end):
         self.id = gene_id
+        self.name = gene_name
         self.chromosome = chrom
         self.strand = strand
         self.transcript_tlb = {}
@@ -43,6 +44,9 @@ class Gene:
 
     def get_id(self):
         return self.id
+
+    def get_name(self):
+        return self.name
 
     def get_strand(self):
         return self.strand
@@ -369,7 +373,7 @@ class Transcript(object):
 
     def __init__(self, name, gene, txstart, txend):
         self.id = name
-        self.gene_name = gene.get_id()
+        self.gene_id = gene.get_id()
         self.exon_list = []
         #self.junction_list = []
         self.txstart = txstart
@@ -378,7 +382,8 @@ class Transcript(object):
         # self.cdsStop = None
 
     def get_gene(self):
-        return mglobals.gene_tlb[self.gene_name]
+
+        return mglobals.gene_tlb[self.gene_id]
 
     def get_exon_list(self):
         return self.exon_list

@@ -420,7 +420,14 @@ def __parse_gff_attributes(attribute_string):
     ret = {}
     for attribute in attribute_string.split(";"):
         key, value = attribute.split("=")
-        ret[urllib.unquote(key)] = urllib.unquote(value)
+        key = urllib.unquote(key)
+        if key in ret:
+            key = 'extra_%s' % key
+            if not key in ret:
+                ret[key] = []
+            ret[key].append(urllib.unquote(value))
+        else:
+            ret[key] = urllib.unquote(value)
     return ret
 
 
@@ -504,13 +511,14 @@ def read_gff(filename, pcr_filename, logging=None):
 
         if record.type == 'gene':
             gene_name = record.attributes['Name']
+            gene_id = record.attributes['ID']
             if not chrom in all_genes:
                 all_genes[chrom] = {'+': [], '-': []}
-            gn = Gene(gene_name, chrom, strand, start, end)
+            gn = Gene(gene_id, gene_name, chrom, strand, start, end)
 
-            if gene_name in mglobals.gene_tlb and gn != mglobals.gene_tlb[gene_name]:
+            if gene_id in mglobals.gene_tlb and gn != mglobals.gene_tlb[gene_id]:
                 raise RuntimeError('Two Different Genes with the same name %s' % gene_name)
-            mglobals.gene_tlb[gene_name] = gn
+            mglobals.gene_tlb[gene_id] = gn
             all_genes[chrom][strand].append(gn)
             gene_id_dict[record.attributes['ID']] = gn
 
@@ -539,8 +547,8 @@ def read_gff(filename, pcr_filename, logging=None):
 
             except KeyError:
                 if not logging is None:
-                    logging.Error("Error, incorrect gff. exon %s doesn't have valid mRNA %s" % (record.attributes['ID'],
-                                                                                                parent_tx_id))
+                    logging.info("Error, incorrect gff. exon %s doesn't have valid mRNA %s" % (record.attributes['ID'],
+                                                                                               parent_tx_id))
         #end elif
     #end for
     for kk, trcpt in trcpt_id_dict.items():
