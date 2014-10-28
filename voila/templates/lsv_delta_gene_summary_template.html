@@ -100,7 +100,7 @@
                         <th class="short-header">LSV ID</th>
                         <th class="short-header">LSV Type</th>
                         <th class="short-header">
-                            {#<p style="color: black; margin: auto; display:block; text-align:center; font-weight: bold" >&#8592; More in {{ lexps[1][0].group }} | More in {{ lexps[0][0].group }} &#8594;</p>#}
+                            <p style="color: black; margin: auto; display:block; text-align:center; font-weight: bold" >&#8592; More in {{ lexps[0][0].group }} | More in {{ lexps[1][0].group }} &#8594;</p>
                         </th>
                         <th class="short-header">UCSC link</th>
                     </tr>
@@ -110,7 +110,7 @@
                         <th>LSV ID</th>
                         <th>LSV Type</th>
                         <th>
-                            {#<p style="color: black; margin: auto; display:block; text-align:center; font-weight: bold" >&#8592; More in {{ lexps[1][0].group }} | More in {{ lexps[0][0].group }} &#8594;</p>#}
+                            <p style="color: black; margin: auto; display:block; text-align:center; font-weight: bold" >&#8592; More in {{ lexps[0][0].group }} | More in {{ lexps[1][0].group }} &#8594;</p>
                         </th>
                         <th>UCSC link</th>
                     </tr>
@@ -138,8 +138,9 @@
                             </p>
                         </td>
                         <td>
-                            {#<a href="http://genome.ucsc.edu/cgi-bin/hgTracks?db={{ lexps[0][0].genome }}&position={{ gene_value[0][1][3] }}:{{ gene[0].extension[0] }}-{{ gene[0].extension[1] }}" target="_blank"><img src="static/img/icons/ucsc2.png" title="http://genome.ucsc.edu/cgi-bin/hgTracks?org=mouse&db={{ lexps[0].genome }}&position={{ gene_value[0][1][3] }}:{{ gene[0].extension[0] }}-{{ gene[0].extension[1] }}"/></a>#}
-                            <a href="http://genome.ucsc.edu/cgi-bin/hgTracks?db=mm10&position={{ gene_value[0][1][3] }}:{{ gene[0].extension[0] }}-{{ gene[0].extension[1] }}" target="_blank"><img src="static/img/icons/ucsc2.png" title="http://genome.ucsc.edu/cgi-bin/hgTracks?org=mouse&db=mm10&position={{ gene_value[0][1][3] }}:{{ gene[0].extension[0] }}-{{ gene[0].extension[1] }}"/></a>
+                            <a href="http://genome.ucsc.edu/cgi-bin/hgTracks?db={{ lexps[0][0].genome }}&position={{ gene_value[0][1][3] }}:{{ gene[0].extension[0] }}-{{ gene[0].extension[1] }}" target="_blank"><img src="static/img/icons/ucsc2.png" title="http://genome.ucsc.edu/cgi-bin/hgTracks?org=mouse&db={{ lexps[0].genome }}&position={{ gene_value[0][1][3] }}:{{ gene[0].extension[0] }}-{{ gene[0].extension[1] }}"/></a>
+                            <!--<a href="http://genome.ucsc.edu/cgi-bin/hgTracks?db=mm10&position={{ gene_value[0][1][3] }}:{{ gene[0].extension[0] }}-{{ gene[0].extension[1] }}" target="_blank"><img src="static/img/icons/ucsc2.png" title="http://genome.ucsc.edu/cgi-bin/hgTracks?org=mouse&db=mm10&position={{ gene_value[0][1][3] }}:{{ gene[0].extension[0] }}-{{ gene[0].extension[1] }}"/></a>-->
+                            {{ gene[0].get_bed12() }}
                         </td>
 
                     </tr>
