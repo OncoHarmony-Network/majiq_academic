@@ -88,8 +88,7 @@ def calcpsi(matched_lsv, info, num_exp, conf, fitfunc, logger):
                                                                            discardzeros=conf['discardzeros'],
                                                                            trimborder=conf['trimborder'],
                                                                            fitted_one_over_r=fitfunc[eidx],
-                                                                           debug=conf['debug'],
-                                                                           Nz=conf['nz'])
+                                                                           debug=conf['debug'])
 
                 lsv_samples[lidx, eidx] = s_lsv
 
@@ -151,8 +150,7 @@ def deltapsi(matched_lsv, info, num_exp, conf, prior_matrix,  fitfunc, psi_space
                                                                            discardzeros=conf['discardzeros'],
                                                                            trimborder=conf['trimborder'],
                                                                            fitted_one_over_r=fitfunc[grp_idx][eidx],
-                                                                           debug=conf['debug'],
-                                                                           Nz=conf['nz'])
+                                                                           debug=conf['debug'])
                 if grp_idx == 0:
                     lsv_samples1[lidx, eidx] = s_lsv
                 else:

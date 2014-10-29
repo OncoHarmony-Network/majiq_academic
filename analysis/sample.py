@@ -86,13 +86,8 @@ def mean_junction(junctions, discardzeros=True):
 
     return np.array(ret)
 
-global EMPIRICAL_NZ, BINOMIAL_NZ 
-EMPIRICAL_NZ = 0
-BINOMIAL_NZ = -1
-
-
-def sample_from_junctions(junction_list, m, k, dispersion=0.1, discardzeros=5, trimborder=True, fitted_one_over_r=None,
-                          debug=False, tracklist=None, Nz=0, names=None, naive=False):
+def sample_from_junctions(junction_list, m, k, discardzeros=5, trimborder=True, fitted_one_over_r=None,
+                          debug=False):
     """Given the filtered reads, bootstrap samples from every junction"""
     sampled_means = []
     sampled_var = []
@@ -128,13 +123,7 @@ def sample_from_junctions(junction_list, m, k, dispersion=0.1, discardzeros=5, t
             #k*m zeroes
         else:
 
-            if Nz == EMPIRICAL_NZ:
-                npos_mult = np.count_nonzero(junction)
-            elif Nz == BINOMIAL_NZ:
-                npos_mult = np.binomial(k, float(np.count_nonzero(junction))/float(k), k*m)
-            else:
-                npos_mult = Nz
-
+            npos_mult = np.count_nonzero(junction)
             samples = []
             for iternumber in xrange(m):
                 junction_samples = []
@@ -142,6 +131,10 @@ def sample_from_junctions(junction_list, m, k, dispersion=0.1, discardzeros=5, t
                     junction_samples.append(choice(junction))
 
                 sampled_mean = np.mean(junction_samples)
+                if sampled_mean == 0.0:
+                    samples.append([0]*m)
+                    break
+
                 #recalculating
                 nb50 = majiq_fit.sample_over_nb(one_over_r=fitted_one_over_r, mu=sampled_mean, num_samples=k)
 
