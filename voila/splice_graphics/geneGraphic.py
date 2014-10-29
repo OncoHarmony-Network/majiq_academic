@@ -69,23 +69,25 @@ class GeneGraphic(object):
 
     def to_JSON(self, encoder=json.JSONEncoder):
         return json.dumps(self, default=lambda o: o.__dict__, sort_keys=True, cls=encoder)
-    #
-    # def to_bed12(self):
-    #     #  "%(a)s, %(a)s" % {'a':'test'}
-    #     bed_fields = {
-    #         'chrom': self.chrom,
-    #         'chromStart': self.start,
-    #         'chromEnd': self.end,
-    #         'name': None,
-    #         'score': 0,
-    #         'strand': self.strand,
-    #         'thickStart': self.start,
-    #         'thickEnd': self.end,
-    #         'itemRgb': None,
-    #         'blockCount': len(self.exons),
-    #         'blockSizes'
-    #     }
-    #     pass
+
+    def to_bed12(self):
+        #  "%(a)s, %(a)s" % {'a':'test'}
+        #fields = ['chrom', 'chromStart', 'chromEnd', 'name', 'score', 'strand', 'thickStart', 'thickEnd', 'itemRgb', 'blockCount', 'blockSizes', 'blockStarts']
+        bed_fields = [
+            self.chrom,
+            self.start,
+            self.end,
+            'lsv',
+            0,
+            self.strand,
+            self.start,
+            self.end,
+            0,
+            len(self.exons),
+            ','.join([str(abs(e.get_coords()[0] - e.get_coords()[1])) for e in self.exons]), #[::int(self.strand + '1')]
+            ','.join([str(abs(e.get_coords()[0] - self.start)) for e in self.exons]),
+        ]
+        return "\t".join([str(b) for b in bed_fields])
         # chrom - The name of the chromosome (e.g. chr3, chrY, chr2_random) or scaffold (e.g. scaffold10671).
         # chromStart - The starting position of the feature in the chromosome or scaffold. The first base in a chromosome is numbered 0.
         # chromEnd - The ending position of the feature in the chromosome or scaffold. The chromEnd base is not included in the display of the feature. For example, the first 100 bases of a chromosome are defined as chromStart=0, chromEnd=100, and span the bases numbered 0-99.

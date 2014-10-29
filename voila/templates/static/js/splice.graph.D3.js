@@ -230,9 +230,10 @@ function spliceGraphD3() {
 
             svgCanvas.attr("width", width).attr("height", height);
 
-            var clipP = svgCanvas.selectAll('#cut-off-junctions').data([1]);
+            var clipP = svgCanvas.selectAll('.cut-off-junctions').data([1]);
             clipP.enter().append('svg:clipPath');
-            clipP.attr("id", "cut-off-junctions");
+            clipP.classed("cut-off-junctions", true);
+            clipP.attr("id", "cut-off-junctions-"+this.id);
             var rectClip = clipP.selectAll("rect").data([1]);
             rectClip.enter().append("rect");
             rectClip
@@ -288,13 +289,13 @@ function spliceGraphD3() {
 
             };
 
-            var renderJunctions = function(data, scaleX){
+            var renderJunctions = function(data, scaleX, docId){
                 var juncs = svgCanvas.selectAll('ellipse').data(data);
                 var maxJunc = longestJunc(data, scaleX);
                 juncs.enter().append("ellipse");
 
                 juncs.attr("class", "junction")
-                    .attr("clip-path", "url(#" + "cut-off-junctions)")
+                    .attr("clip-path", "url(#" + "cut-off-junctions-" + docId + ")")
                     .transition()
                     .duration(100)
                     .ease("linear")
@@ -487,7 +488,7 @@ function spliceGraphD3() {
             renderCoordsExtra(exonsp, scaleX);
 
             /** Render junctions and read numbers */
-            var junctions = renderJunctions(junctionsp, scaleX);
+            var junctions = renderJunctions(junctionsp, scaleX, this.id);
             renderNumReads(junctionsp, scaleX);
             spliceSites(junctionsp, scaleX);
 

@@ -403,7 +403,7 @@ def get_lsv_delta_exp_data(majiq_out_file, confidence=.95, threshold=.2, show_al
                 lsv_o.set_id(lsv_info[i][1])
                 lsv_o.set_type(lsv_info[i][2])
                 lsv_o.set_extension(lsv_info[i][4])
-
+                lsv_o.set_bed12(lsv_info[i][4].to_bed12())
 
                 # lsv_list.append(lsv)
                 genes_dict[gene_name].append([lsv_o, lsv_info[i]])

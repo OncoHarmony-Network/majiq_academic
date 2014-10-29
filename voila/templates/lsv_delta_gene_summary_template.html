@@ -46,8 +46,10 @@
             {# gene_value[0][0]|debug #}
             <h2>Gene name: {{ gene_name }}; {{ genes_exps_list[0][genes_exps_list[0].keys()[0]][gene_name][3] }}:{{ genes_exps_list[0][genes_exps_list[0].keys()[0]][gene_name][1] }}:{{ genes_exps_list[0][genes_exps_list[0].keys()[0]][gene_name][2][0] }}-{{ genes_exps_list[0][genes_exps_list[0].keys()[0]][gene_name][2][1] }};
                 {% if lexps %}
-                    <a href="http://genome.ucsc.edu/cgi-bin/hgTracks?db={{ lexps[0][0].genome }}&position={{ genes_exps_list[0][genes_exps_list[0].keys()[0]][gene_name][3] }}:{{ genes_exps_list[0][genes_exps_list[0].keys()[0]][gene_name][2][0] }}-{{ genes_exps_list[0][genes_exps_list[0].keys()[0]][gene_name][2][1] }}" target="_blank"><img src="static/img/icons/ucsc2.png" title="{{ genes_exps_list[0][genes_exps_list[0].keys()[0]][gene_name][3] }}:{{ genes_exps_list[0][genes_exps_list[0].keys()[0]][gene_name][2][0] }}-{{ genes_exps_list[0][genes_exps_list[0].keys()[0]][gene_name][2][1] }}"/></a>
+                    <!--<a href="http://genome.ucsc.edu/cgi-bin/hgTracks?db={{ lexps[0][0].genome }}&position={{ genes_exps_list[0][genes_exps_list[0].keys()[0]][gene_name][3] }}:{{ genes_exps_list[0][genes_exps_list[0].keys()[0]][gene_name][2][0] }}-{{ genes_exps_list[0][genes_exps_list[0].keys()[0]][gene_name][2][1] }}" target="_blank"><img src="static/img/icons/ucsc2.png" title="{{ genes_exps_list[0][genes_exps_list[0].keys()[0]][gene_name][3] }}:{{ genes_exps_list[0][genes_exps_list[0].keys()[0]][gene_name][2][0] }}-{{ genes_exps_list[0][genes_exps_list[0].keys()[0]][gene_name][2][1] }}"/></a>-->
+
                 {% endif %}
+                <a href="http://genome.ucsc.edu/cgi-bin/hgTracks?db=mm10&position={{ genes_exps_list[0][genes_exps_list[0].keys()[0]][gene_name][3] }}:{{ genes_exps_list[0][genes_exps_list[0].keys()[0]][gene_name][2][0] }}-{{ genes_exps_list[0][genes_exps_list[0].keys()[0]][gene_name][2][1] }}" target="_blank"><img src="static/img/icons/ucsc2.png" title="{{ genes_exps_list[0][genes_exps_list[0].keys()[0]][gene_name][3] }}:{{ genes_exps_list[0][genes_exps_list[0].keys()[0]][gene_name][2][0] }}-{{ genes_exps_list[0][genes_exps_list[0].keys()[0]][gene_name][2][1] }}"/></a>
             </h2>
             <div>
                 <div class="spliceDiv exp1" id="spliceDivExp1_{{ gene_index }}" data-exon-list="{{ genes_exps_list[0][genes_exps_list[0].keys()[0]][gene_name][0] }}"> {# By default, show the first experiment splice graph #}
@@ -100,7 +102,8 @@
                         <th class="short-header">LSV ID</th>
                         <th class="short-header">LSV Type</th>
                         <th class="short-header">
-                            {#<p style="color: black; margin: auto; display:block; text-align:center; font-weight: bold" >&#8592; More in {{ lexps[1][0].group }} | More in {{ lexps[0][0].group }} &#8594;</p>#}
+                            <!--<p style="color: black; margin: auto; display:block; text-align:center; font-weight: bold" >&#8592; More in {{ lexps[0][0].group }} | More in {{ lexps[1][0].group }} &#8594;</p>-->
+                            <p style="color: black; margin: auto; display:block; text-align:center; font-weight: bold" >&#8592; More in OldBeta | More in OldNonBeta &#8594;</p>
                         </th>
                         <th class="short-header">UCSC link</th>
                     </tr>
@@ -110,7 +113,8 @@
                         <th>LSV ID</th>
                         <th>LSV Type</th>
                         <th>
-                            {#<p style="color: black; margin: auto; display:block; text-align:center; font-weight: bold" >&#8592; More in {{ lexps[1][0].group }} | More in {{ lexps[0][0].group }} &#8594;</p>#}
+                            <!--<p style="color: black; margin: auto; display:block; text-align:center; font-weight: bold" >&#8592; More in {{ lexps[0][0].group }} | More in {{ lexps[1][0].group }} &#8594;</p>-->
+                            <p style="color: black; margin: auto; display:block; text-align:center; font-weight: bold" >&#8592; More in OldBeta | More in OldNonBeta &#8594;</p>
                         </th>
                         <th>UCSC link</th>
                     </tr>
@@ -138,8 +142,9 @@
                             </p>
                         </td>
                         <td>
-                            {#<a href="http://genome.ucsc.edu/cgi-bin/hgTracks?db={{ lexps[0][0].genome }}&position={{ gene_value[0][1][3] }}:{{ gene[0].extension[0] }}-{{ gene[0].extension[1] }}" target="_blank"><img src="static/img/icons/ucsc2.png" title="http://genome.ucsc.edu/cgi-bin/hgTracks?org=mouse&db={{ lexps[0].genome }}&position={{ gene_value[0][1][3] }}:{{ gene[0].extension[0] }}-{{ gene[0].extension[1] }}"/></a>#}
+                            <!--<a href="http://genome.ucsc.edu/cgi-bin/hgTracks?db={{ lexps[0][0].genome }}&position={{ gene_value[0][1][3] }}:{{ gene[0].extension[0] }}-{{ gene[0].extension[1] }}" target="_blank"><img src="static/img/icons/ucsc2.png" title="http://genome.ucsc.edu/cgi-bin/hgTracks?org=mouse&db={{ lexps[0].genome }}&position={{ gene_value[0][1][3] }}:{{ gene[0].extension[0] }}-{{ gene[0].extension[1] }}"/></a>-->
                             <a href="http://genome.ucsc.edu/cgi-bin/hgTracks?db=mm10&position={{ gene_value[0][1][3] }}:{{ gene[0].extension[0] }}-{{ gene[0].extension[1] }}" target="_blank"><img src="static/img/icons/ucsc2.png" title="http://genome.ucsc.edu/cgi-bin/hgTracks?org=mouse&db=mm10&position={{ gene_value[0][1][3] }}:{{ gene[0].extension[0] }}-{{ gene[0].extension[1] }}"/></a>
+
                         </td>
 
                     </tr>

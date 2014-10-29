@@ -250,6 +250,24 @@ def render_tab_output(output_dir, output_html, majiq_output, type_summary, thres
     logger.info("Delimited output file successfully created in: %s" % ofile_str)
 
 
+def create_bed12_txt(output_dir, majiq_output, logger):
+    logger.info("Saving LSVs in bed12 format files ...")
+    if 'genes_dict' not in majiq_output or len(majiq_output['genes_dict'])<1:
+        logger.warning("No gene information provided. Genes files are needed to calculate the bed12 files.")
+        return
+
+    fields = ['chrom', 'chromStart', 'chromEnd', 'name', 'score', 'strand', 'thickStart', 'thickEnd', 'itemRgb', 'blockCount', 'blockSizes', 'blockStarts']
+    header = "\t".join(fields)
+
+    odir = output_dir+"lsvs_bed12"
+    utils_voila.create_if_not_exists(odir)
+    for gkey, gvalue in majiq_output['genes_dict'].iteritems():
+        for lsv in gvalue:
+            with open("%s/%s" % (odir, lsv[0].get_id()), 'w') as ofile:
+                ofile.write(header+"\n")
+                ofile.write(lsv[0].get_bed12()+"\n")
+
+
 def create_summary(args):
     """This method generates an html summary from a majiq output file"""
 
@@ -342,6 +360,7 @@ def create_summary(args):
         meta_postprocess['collapsed'] = args.collapsed
 
     render_summary(output_dir, output_html, majiq_output, type_summary, threshold, meta_postprocess, logger=logger)
+    # create_bed12_txt(output_dir, majiq_output, logger=logger)
     render_tab_output(output_dir, output_html, majiq_output, type_summary, threshold, meta_postprocess, logger=logger)
 
     logger.info("Voila! Summaries created in: %s" % output_dir)
