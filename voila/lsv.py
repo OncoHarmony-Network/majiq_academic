@@ -153,47 +153,40 @@ class Lsv(object):
     def get_bed12(self):
         return self.bed12_str
 
-    # def to_gff3(self, geneG):
-    #
-    #     # fields = ['seqid', 'source', 'type', 'start', 'end', 'score', 'strand', 'phase', 'attributes']
-    #
-    #     gtf = set()
-    #     trans = []
-    #     lsv_coord = self.coords
-    #
-    #     chrom = geneG.chrom
-    #     strand = geneG.strand
-    #     gene_str = '\t'.join([chrom, 'majiq' 'gene', str(self.start), str(self.end), '.', strand, '.', 'Name=%s;Parent=%s;ID=%s' % (self.id, self.id, self.id)])
-    #
-    #     trans.append(gene_str)
-    #     for jidx, junc in enumerate(geneG.junctions):
-    #         mrna = '%s\tmajiq\tmRNA\t' % chrom
-    #         mrna_id = '%s.%d' % (self.id, jidx)
-    #         ex1 = '%s\tmajiq\texon\t' % chrom
-    #         ex2 = '%s\tmajiq\texon\t' % chrom
-    #
-    #         excoord = junc.get_donor().get_coordinates()
-    #         variant = junc.get_coordinates()
-    #
-    #         mrna += '%d\t%d\t' % (excoord[0], lsv_coord[1])
-    #         ex1 += '%d\t%d\t' % (variant[1], lsv_coord[1])
-    #         ex2 += '%d\t%d\t' % (excoord[0], variant[0])
-    #         mrna += '.\t%s\t.\tName=%s;Parent=%s;ID=%s' % (strand, mrna_id, lsv.id, mrna_id)
-    #         ex1 += '.\t%s\t.\tName=%s.lsv;Parent=%s;ID=%s.lsv' % (strand, mrna_id, mrna_id, mrna_id)
-    #         ex2 += '.\t%s\t.\tName=%s.ex;Parent=%s;ID=%s.ex' % (strand, mrna_id, mrna_id, mrna_id)
-    #         trans.append(mrna)
-    #         trans.append(ex1)
-    #         trans.append(ex2)
-    #     else:
-    #         lsv_gtf = '\n'.join(trans)
-    #         gtf.add(lsv_gtf)
-    #
-    #     gtf = sorted(gtf)
-    #     fp = open('%s/temp_gff.pkl' % out_dir, 'wb+')
-    #     pickle.dump(gtf, fp)
-    #     fp.close()
-    #
-    #     return gtf
+    def to_gff3(self, geneG):
+
+        # fields = ['seqid', 'source', 'type', 'start', 'end', 'score', 'strand', 'phase', 'attributes']
+
+        trans = []
+        lsv_coord = self.coords
+
+        chrom = geneG.chrom
+        strand = geneG.strand
+        gene_str = '\t'.join([chrom, 'majiq' 'gene', str(geneG.get_start()), str(geneG.get_end()), '.', strand, '0',
+                              'Name=%s;Parent=%s;ID=%s' % (self.id, self.id, self.id)])
+
+        trans.append(gene_str)
+        for exid, exon in enumerate(geneG.get_exons()):
+            mrna = '%s\tmajiq\tmRNA\t' % chrom
+            mrna_id = '%s.%d' % (self.id, exid)
+            ex1 = '%s\tmajiq\texon\t' % chrom
+            ex2 = '%s\tmajiq\texon\t' % chrom
+
+            variant = exon.get_coordinates()
+
+            mrna += '%d\t%d\t' % (exon.coords[0], lsv_coord[1])
+            ex1 += '%d\t%d\t' % (variant[1], lsv_coord[1])
+            ex2 += '%d\t%d\t' % (excoord[0], variant[0])
+            mrna += '.\t%s\t.\tName=%s;Parent=%s;ID=%s' % (strand, mrna_id, lsv.id, mrna_id)
+            ex1 += '.\t%s\t.\tName=%s.lsv;Parent=%s;ID=%s.lsv' % (strand, mrna_id, mrna_id, mrna_id)
+            ex2 += '.\t%s\t.\tName=%s.ex;Parent=%s;ID=%s.ex' % (strand, mrna_id, mrna_id, mrna_id)
+            trans.append(mrna)
+            trans.append(ex1)
+            trans.append(ex2)
+        else:
+            lsv_gtf = '\n'.join(trans)
+
+        return lsv_gtf
 
 
 
