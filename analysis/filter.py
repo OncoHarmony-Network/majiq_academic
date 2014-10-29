@@ -34,9 +34,10 @@ def lsv_mark_stacks(lsv_list, fitfunc_r, pvalue_limit, dispersion, logger=None):
                     copy_junc.pop(j)
                     copy_junc = np.array(copy_junc)
                     copy_junc = copy_junc[copy_junc > 0]
+                    nzpos = np.count_nonzero(copy_junc)
 
                     #FINISH TODO
-                    mean_rest = np.mean(copy_junc)
+                    mean_rest = np.mean(copy_junc) * nzpos
                     pval = majiqfit.get_negbinom_pval(fitfunc_r, mean_rest, value)
                     if pval < pvalue_limit:
                         lsv_list[0][lidx][i, j] = -2 
