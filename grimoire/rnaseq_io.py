@@ -223,12 +223,6 @@ def read_sam_or_bam(filenames, gene_list, readlen, chrom, logging=None):
             if len(junctions) > 0:
                 detect_exons(gne, junctions, None)
             gne.prepare_exons()
-            #re = gne.calculate_rpkm(exp_index, mglobals.num_mapped_reads[exp_index])
-            # if re == 0:
-            #     #print "SIN READS??? :",gene.id
-            #     skip_gene += 1
-            # else:
-            #     non_skip += 1
 
     for ss in samfile:
         ss.close()

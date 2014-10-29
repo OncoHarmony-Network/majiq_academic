@@ -146,7 +146,6 @@ def main(params):
     if len(sam_list) == 0:
         return
 
-
     if params.nthreads > 1:
         pool = Pool(processes=params.nthreads)
     logger.info("Scatter in Chromosomes")

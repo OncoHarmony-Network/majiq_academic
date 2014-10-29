@@ -240,12 +240,12 @@ class DeltaPair(BasicPipeline):
 
             #TEMP 
             tout = open(tempfile, 'w+')
-            pickle.dump([matched_info, matched_lsv, psi_space, prior_matrix, fitfunc], tout)
+            pickle.dump([meta_info, matched_info, matched_lsv, psi_space, prior_matrix, fitfunc], tout)
             tout.close()
             #END TEMP
 
         else:
-            matched_info, matched_lsv, psi_space, prior_matrix, fitfunc = pickle.load(open(tempfile))
+            meta_info, matched_info, matched_lsv, psi_space, prior_matrix, fitfunc = pickle.load(open(tempfile))
 
         conf = {'minnonzero': self.minnonzero,
                 'minreads': self.minreads,
