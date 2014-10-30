@@ -9,6 +9,7 @@ from voila.splice_graphics.junctionGraphic import JunctionGraphic
 SSOURCE = 'source'
 STARGET = 'target'
 
+
 class LSV(object):
 
     def __init__(self, exon, lsv_id, junctions, lsv_type):

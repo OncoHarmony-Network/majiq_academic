@@ -171,7 +171,7 @@ def main(params):
     utils.merge_and_create_majiq_file(chr_list, params.prefix)
 
     if not params.gff_output is None:
-        logger.info("Gather PCR results")
+        logger.info("Gather lsv and generate gff")
         fp = open('%s/%s' % (mglobals.outDir, params.gff_output), 'w+')
         for chrom in chr_list:
             temp_dir = "%s/tmp/%s" % (mglobals.outDir, chrom)
@@ -182,7 +182,7 @@ def main(params):
         fp.close()
 
     if not params.pcr_filename is None:
-        logger.info("Gather lsv and generate gff")
+        logger.info("Gather pcr results")
         fp = open('%s/pcr_match.tab' % mglobals.outDir, 'w+')
         for chrom in chr_list:
             temp_dir = "%s/tmp/%s" % (mglobals.outDir, chrom)
