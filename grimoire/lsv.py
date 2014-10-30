@@ -1,10 +1,10 @@
 import numpy as np
 import grimoire.mglobals as mglobals
 import scipy.sparse
-import pickle
 from voila.splice_graphics.exonGraphic import ExonGraphic
 from voila.splice_graphics.geneGraphic import GeneGraphic 
 from voila.splice_graphics.junctionGraphic import JunctionGraphic 
+import grimoire.rnaseq_io as majiq_io
 
 SSOURCE = 'source'
 STARGET = 'target'
@@ -363,9 +363,8 @@ def extract_gff(list_lsv, out_dir):
                 gtf.add(lsv_gtf)
 
     gtf = sorted(gtf)
-    fp = open('%s/temp_gff.pkl' % out_dir, 'wb+')
-    pickle.dump(gtf, fp)
-    fp.close()
+    fname = '%s/temp_gff.pkl' % out_dir
+    majiq_io.dump_bin_file(gtf, fname)
 
     return gtf
 
