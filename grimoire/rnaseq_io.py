@@ -139,6 +139,7 @@ def read_sam_or_bam(filenames, gene_list, readlen, chrom, logging=None):
                 try:
                     read_iter = samfile[exp_index].fetch(chrom, strt, end)
                 except ValueError:
+                    logging.info('There are no reads in %s:%d-%d' % (chrom, strt, end))
                     continue
                 for read in read_iter:
                     strand_read = '+' if not is_neg_strand(read) else '-'
