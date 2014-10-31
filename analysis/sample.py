@@ -132,7 +132,7 @@ def sample_from_junctions(junction_list, m, k, discardzeros=5, trimborder=True, 
 
                 sampled_mean = np.mean(junction_samples)
                 if sampled_mean == 0.0:
-                    samples.append([0]*m)
+                    samples.append(0)
                     break
 
                 #recalculating
