@@ -19,7 +19,7 @@ except Exception:
     import pickle
 
 
-def majiq_builder(samfiles_list, chrom, pcr_validation=None, gff_output=None, create_tlb=False, logging=None):
+def majiq_builder(samfiles_list, chrom, pcr_validation=None, gff_output=None, create_tlb=True, logging=None):
 
     if not logging is None:
         logging.info("Building for chromosome %s" % chrom)
@@ -128,7 +128,7 @@ def main(params):
     logger.info("")
     logger.info("Command: %s" % params)
 
-    p = Process(target=__parallel_gff3, args=(params.transcripts, params.pcr_filename, params.pcr_filename))
+    p = Process(target=__parallel_gff3, args=(params.transcripts, params.pcr_filename, params.output))
     logger.info("... waiting gff3 parsing")
     p.start()
     p.join()
@@ -153,10 +153,11 @@ def main(params):
         temp_dir = "%s/tmp/%s" % (mglobals.outDir, chrom)
         utils.create_if_not_exists(temp_dir)
         if params.nthreads == 1:
-            majiq_builder(sam_list, chrom, pcr_validation=params.pcr_filename, logging=logger)
+            majiq_builder(sam_list, chrom, pcr_validation=params.pcr_filename, gff_output=params.gff_output,
+                          logging=logger)
         else:
 
-            pool.apply_async(__parallel_lsv_quant, [sam_list, chrom, params.pcr_filename])
+            pool.apply_async(__parallel_lsv_quant, [sam_list, chrom, params.pcr_filename, params.gff_output])
 
     if params.nthreads > 1:
         logger.info("... waiting childs")
@@ -171,7 +172,7 @@ def main(params):
     utils.merge_and_create_majiq_file(chr_list, params.prefix)
 
     if not params.gff_output is None:
-        logger.info("Gather PCR results")
+        logger.info("Gather lsv and generate gff")
         fp = open('%s/%s' % (mglobals.outDir, params.gff_output), 'w+')
         for chrom in chr_list:
             temp_dir = "%s/tmp/%s" % (mglobals.outDir, chrom)
@@ -182,7 +183,7 @@ def main(params):
         fp.close()
 
     if not params.pcr_filename is None:
-        logger.info("Gather lsv and generate gff")
+        logger.info("Gather pcr results")
         fp = open('%s/pcr_match.tab' % mglobals.outDir, 'w+')
         for chrom in chr_list:
             temp_dir = "%s/tmp/%s" % (mglobals.outDir, chrom)

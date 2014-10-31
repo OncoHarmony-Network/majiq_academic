@@ -312,7 +312,7 @@ def gen_prior_matrix(pip, lsv_exp1, lsv_exp2, output, numbins=20, defaultprior=F
             jefferies[-1].append(dircalc.pdf([i, 1-i, j, 1-j], [pip.alpha, pip.alpha, pip.alpha, pip.alpha]))
 
     if defaultprior:
-        direc = "%s/data" % os.path.dirname(os.path.realpath(__file__))
+        direc = "%s/../data" % os.path.dirname(os.path.realpath(__file__))
         prior_matrix = pickle.load(open('%s/defaultprior.pickle' % direc, 'r'))
         return psi_space, prior_matrix
 

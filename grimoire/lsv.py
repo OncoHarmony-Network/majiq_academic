@@ -1,13 +1,14 @@
 import numpy as np
 import grimoire.mglobals as mglobals
 import scipy.sparse
-import pickle
+import cPickle as pickle
 from voila.splice_graphics.exonGraphic import ExonGraphic
 from voila.splice_graphics.geneGraphic import GeneGraphic 
 from voila.splice_graphics.junctionGraphic import JunctionGraphic 
 
 SSOURCE = 'source'
 STARGET = 'target'
+
 
 class LSV(object):
 
@@ -362,9 +363,10 @@ def extract_gff(list_lsv, out_dir):
                 gtf.add(lsv_gtf)
 
     gtf = sorted(gtf)
-    fp = open('%s/temp_gff.pkl' % out_dir, 'wb+')
-    pickle.dump(gtf, fp)
-    fp.close()
+    fname = '%s/temp_gff.pkl' % out_dir
+    with open(fname, 'w+b') as ofp:
+        fast_pickler = pickle.Pickler(ofp, protocol=2)
+        fast_pickler.dump(gtf)
 
     return gtf
 
