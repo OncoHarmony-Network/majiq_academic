@@ -158,8 +158,7 @@ def rank_majiq(bins_list, names, V=0.2, absolute=True, dofilter=True, E=False, r
     for idx, v in enumerate(rank):
         if v[1]<0.95:
             print "FDR=%d" % idx
-            import sys
-            sys.exit(1)
+            break
     return rank
 
 
@@ -244,16 +243,12 @@ def create_restrict_plot(ratios_list):
 
 def plot_fdr(output, method_name, fdr):
 
-    diagonaly = np.linspace(0, 1, len(fdr))
-    diagonalx = np.linspace(0, len(fdr), len(fdr))
-
     fig = figure(figsize=[10, 10]) # In inches
     #figure out how many groups of events exist
 
     font = {'size': 16} #here also 'weight' and 'family'
     matplotlib.rc('font', **font)
 
-    plot(diagonalx, diagonaly, '--', color="#cccccc")
     plot(fdr, label='FDR %s' % method_name)
     legend(loc=2)
     scripts.utils._save_or_show(output, "fdr.%s" % method_name)
@@ -281,7 +276,8 @@ def main():
     parser.add_argument('--complex-lsvs', dest="complex_lsvs", default=False, action="store_true", help="Include complex LSVs")
     args = parser.parse_args()
 
-    ranks = defaultdict(list)
+    ranks = []
+    import os
 
     if args.majiq_files:
         count_pairs = 0
@@ -289,127 +285,9 @@ def main():
             majiq_data = pickle.load(open(file, 'r'))
             count_pairs += 1
             majiq_file1_names = majiq_data[1]
-            ranks['majiq_' + str(count_pairs)].append(rank_majiq(majiq_data[0], majiq_data[1], args.V, args.absolute, args.filter, args.E, args.ranknochange, args.complex_lsvs))
+            ranks.append(rank_majiq(majiq_data[0], majiq_data[1], args.V, args.absolute, args.filter, args.E, args.ranknochange, args.complex_lsvs))
 
-        names_majiq_exp1 = [m[1] for m in majiq_file1_names]
-
-    if args.miso_files:
-        for file in args.miso_files:
-            miso_rank = rank_miso(file, args.filter, args.ranknochange, args.complex_lsvs)
-            if args.type_rank == 'only_exp1':
-                # Use only MAJIQ selected events for experiment 1
-                names_miso = [miso_info[0] for miso_info in miso_rank]
-
-                exp1_index = np.array([name in names_majiq_exp1 for name in names_miso])
-                ranks['miso'].append(array(miso_rank)[exp1_index])
-            else:
-                ranks['miso'].append(array(miso_rank))
-
-    if args.mats_files:
-        for file in args.mats_files:
-
-            mats_rank = rank_mats(file, args.filter, args.ranknochange)
-            if args.type_rank == 'only_exp1':
-                # Use only MAJIQ selected events for experiment 1
-                names_mats = [mats_info[0] for mats_info in mats_rank]
-                exp1_index = np.array([name in names_majiq_exp1 for name in names_mats])
-                ranks['mats'].append(array(mats_rank)[exp1_index])
-            else:
-                ranks['mats'].append(array(mats_rank))
-
-    only_exp1_ranks = []
-    for method_name, ranks_pair in ranks.items():
-        print "Ranking %s...." % method_name
-        rank1, rank2 = ranks_pair
-        print "Num events", len(rank1), len(rank2)
-        print "Calculating the ratios..."
-        #calculate the ratios
-        ratios = []
-        events = []
-
-        max_events = min(args.max, min(len(rank1), len(rank2)))
-
-        fdr = []
-        if args.proximity or args.fullrank:
-            #Using proximity or full rank window
-            if args.proximity: print "Using proximity window of %s..."%args.proximity
-            else: print "Using full rank2 for all events %s..."%args.max
-            found = 0
-            fdr = [0] #zero to avoid using "first" flag for first element
-            v_values = []
-            for i in xrange(max_events):
-                if args.proximity:
-                    min_chunk = max(0, i-args.proximity/2)
-                    max_chunk = min_chunk+args.proximity
-
-                elif args.fullrank: #check in the whole set instead of subsets
-                    min_chunk = 0
-                    max_chunk = max_events
-
-                if i % 20 == 0:
-                    print "Event rank1 n=%s. Window rank2: %s-%s"%(i, min_chunk, max_chunk)
-
-                #check if event1 is inside the window of rank2
-                found += _is_in_chunk(rank1[i], list(rank2[min_chunk:max_chunk]))
-                if args.fdr:
-                    v_values.append(rank1[i][1])
-                    fdr.append(fdr[-1]+v_values[-1])
-
-                ratios.append(float(found))
-                events.append([rank1[i], _is_in_chunk(rank1[i], list(rank2[min_chunk:max_chunk]))])
-
-            fdr.pop(0) #remove now useless first item
-            #normalize ratios
-            ratios = array(ratios)
-            ratios /= ratios.shape[0]
-            if args.fdr: #normalize fdr if we are calculating it
-                fdr = array(fdr)
-                fdr /= fdr.shape[0]
-
-        else: #"equalrank" chunks of same n size in both ranks
-            import sys
-            for i in xrange(max_events):
-                chunk1 = list(rank1[0:i+1])
-                chunk2 = list(rank2[0:i+1])
-                #check if event1 is into chunk2
-                found = 0
-                for event1 in chunk1:
-                    found += _is_in_chunk(event1, chunk2)
-                    if i == max_events-1:
-                        events.append([event1, _is_in_chunk(event1, chunk2)])
-                ratios.append(float(found) / args.max)
-                if i % 20 == 0:
-                    print "%s..."%i,
-                    sys.stdout.flush()
-
-            ratios = array(ratios)
-
-
-        print "RESULT:", ratios[0:10], "...", ratios[-10:], "length", ratios.shape
-        print "Saving in %s" % args.output
-
-        if not os.path.exists(args.output):
-            os.makedirs(args.output)
-
-        pickle.dump(ratios, open(args.output+"/ratios.%s.%s.pickle" % (str(args.type_rank).replace('-','_'), method_name), 'w'))
-
-        print "Saving events... in %s " % args.output
-        pickle.dump(events, open(args.output+"/events.%s.%s.pickle" % (str(args.type_rank).replace('-','_'), method_name), 'w'))
-
-        if args.fdr:
-            #print "FDR:", fdr[0:10], "...", fdr[-10:], "length", fdr.shape
-            pickle.dump(fdr, open("%s/fdr.%s.%s.pickle" % (args.output, method_name, str(args.type_rank).replace('-','_')), 'w'))
-            pickle.dump(v_values, open("%s/fdr.%s.%s_v.pickle" % (args.output, method_name, str(args.type_rank).replace('-','_')), 'w'))
-            plot_fdr(args.output, method_name, fdr)
-
-        if "majiq" in method_name:
-            only_exp1_ranks.append(ratios)
-
-    # Debugginggg
-    if args.create_restrict_plot:
-        create_restrict_plot(ranks)
-
-    print "Done!"
+        plot_fdr(args.output, os.path.split(file)[1].split('.')[0], [r[1] for r in ranks[-1][:500]])
 
 if __name__ == '__main__':
     main()
