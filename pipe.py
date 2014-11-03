@@ -23,13 +23,13 @@ def parallel_lsv_child_calculation(func, args, info, tempdir, name, chunk):
 
         args.append(thread_logger)
 #        post_matrix, new_info = model2( *args )
-        post_matrix, new_info = func(*args)
+        results = func(*args)
 
         print "%s/%s_th%s.deltapsi.pickle" % (tempdir, name, chunk)
         sys.stdout.flush()
         thread_logger.info("[Th %s]: Saving DeltaPSI..." % chunk)
         output = open("%s/%s_th%s.%s.pickle" % (tempdir, name, chunk, func.__name__), 'w')
-        pickle.dump([post_matrix, new_info], output)
+        pickle.dump(results, output)
 
     except Exception as e:
         print "%s" % sys.exc_traceback.tb_lineno, e
