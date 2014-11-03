@@ -175,6 +175,8 @@ def deltapsi(matched_lsv, info, num_exp, conf, prior_matrix,  fitfunc, psi_space
         post_matrix.append([])
         new_info.append(lsv_info)
 
+        posterior_psi1.append([])
+        posterior_psi2.append([])
         psi1 = lsv_samples1[lidx, :]
         psi2 = lsv_samples2[lidx, :]
 
@@ -188,11 +190,7 @@ def deltapsi(matched_lsv, info, num_exp, conf, prior_matrix,  fitfunc, psi_space
             post_psi2 = np.zeros(shape=nbins, dtype=np.float)
             for m in xrange(conf['m']):
                 # log(p(D_T1(m) | psi_T1)) = SUM_t1 T ( log ( P( D_t1 (m) | psi _T1)))
-                try:
-                    junc = [psi1[xx][p_idx][m] for xx in xrange(num_exp[0])]
-                except:
-                    import ipdb
-                    ipdb.set_trace()
+                junc = [psi1[xx][p_idx][m] for xx in xrange(num_exp[0])]
                 junc = np.array(junc)
                 all_sample = [psi1[xx][yy][m].sum() for xx in xrange(num_exp[0]) for yy in xrange(num_ways)]
                 all_sample = np.array(all_sample)
@@ -201,7 +199,6 @@ def deltapsi(matched_lsv, info, num_exp, conf, prior_matrix,  fitfunc, psi_space
 
                 psi_v1 = data_given_psi1.reshape(nbins, -1)
                 post_psi1 += np.exp(data_given_psi1 - scipy.misc.logsumexp(data_given_psi1))
-
 
                 junc = [psi2[xx][p_idx][m] for xx in xrange(num_exp[1])]
                 junc = np.array(junc)
