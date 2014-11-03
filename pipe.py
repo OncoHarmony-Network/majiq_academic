@@ -192,8 +192,11 @@ def deltapsi(matched_lsv, info, num_exp, conf, prior_matrix,  fitfunc, psi_space
                                                                     alpha_prior, beta_prior))
 
                 V1 = data_given_psi1.reshape(nbins, -1)
-
-                junc = [psi2[xx][p_idx][m] for xx in xrange(num_exp[1])]
+                try:
+                    junc = [psi2[xx][p_idx][m] for xx in xrange(num_exp[1])]
+                except:
+                    import ipdb
+                    ipdb.set_trace()
                 junc = np.array(junc)
                 all_sample = [psi2[xx][yy][m].sum() for xx in xrange(num_exp[1]) for yy in xrange(num_ways)]
                 all_sample = np.array(all_sample)
