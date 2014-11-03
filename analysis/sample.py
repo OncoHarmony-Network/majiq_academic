@@ -132,8 +132,8 @@ def sample_from_junctions(junction_list, m, k, discardzeros=5, trimborder=True, 
 
                 sampled_mean = np.mean(junction_samples)
                 if sampled_mean == 0.0:
-                    samples.append(0)
-                    break
+                    samples.append(0.0)
+                    continue
 
                 #recalculating
                 nb50 = majiq_fit.sample_over_nb(one_over_r=fitted_one_over_r, mu=sampled_mean, num_samples=k)
