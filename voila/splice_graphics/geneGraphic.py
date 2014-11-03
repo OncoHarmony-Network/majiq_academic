@@ -20,7 +20,7 @@ class GeneGraphic(object):
                                            or (self.end > other.start and self.start < other.end
                                                and self.strand == '-' and other.strand == '+'))))
 
-    def __init__(self, name, strand, exons, junctions, chrom=None, id=None):
+    def __init__(self, id, name=None, strand=None, exons=(), junctions=(), chrom=None):
         self.id = id
         self.name = name
         self.strand = strand
