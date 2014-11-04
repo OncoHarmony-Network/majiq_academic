@@ -253,7 +253,8 @@ class LSV(object):
                              intron_retention=ex.ir, alt_starts=alt_start, alt_ends=alt_ends)
             exon_list.append(eg)
 
-        splice_lsv = GeneGraphic(self.id, self.get_strand(), exon_list, junc_list, self.get_chromosome())
+        splice_lsv = GeneGraphic(id=self.id, name="", strand=self.get_strand(), exons=exon_list,
+                                 junctions=junc_list, chrom=self.get_chromosome())
 
         return splice_lsv
 
