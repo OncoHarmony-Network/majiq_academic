@@ -172,7 +172,7 @@ def generate_visualization_output(allgenes, temp_dir):
                             jtype = 1
                         else:
                             jtype = 1
-                            continue
+                            #continue
                         junc_l.append(jj.get_coordinates())
                         junc_list.append(JunctionGraphic(cc, jtype, jj.get_read_num(exp_idx)))
                     junc_l = np.asarray(junc_l)
@@ -219,8 +219,9 @@ def generate_visualization_output(allgenes, temp_dir):
                         eg = ExonGraphic(a3, a5, cc, type_exon=visual_type, coords_extra=extra_coords,
                                          intron_retention=ex.ir, alt_starts=alt_start, alt_ends=alt_ends)
                         exon_list.append(eg)
-                    gene_list[mglobals.exp_list[exp_idx]].append(GeneGraphic(gg.get_id(), gg.get_strand(), exon_list,
-                                                                             junc_list, gg.get_chromosome()))
+                    ggraph = GeneGraphic(id=gg.get_id(), name=gg.get_name(), strand=gg.get_strand(), exons=exon_list,
+                                         junctions=junc_list, chrom=gg.get_chromosome())
+                    gene_list[mglobals.exp_list[exp_idx]].append(ggraph)
 
     filename = '%s/splicegraph.pkl' % temp_dir
     majiq_io.dump_bin_file(gene_list, filename)

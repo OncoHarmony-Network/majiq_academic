@@ -23,13 +23,13 @@ def parallel_lsv_child_calculation(func, args, info, tempdir, name, chunk):
 
         args.append(thread_logger)
 #        post_matrix, new_info = model2( *args )
-        post_matrix, new_info = func(*args)
+        results = func(*args)
 
         print "%s/%s_th%s.deltapsi.pickle" % (tempdir, name, chunk)
         sys.stdout.flush()
         thread_logger.info("[Th %s]: Saving DeltaPSI..." % chunk)
         output = open("%s/%s_th%s.%s.pickle" % (tempdir, name, chunk, func.__name__), 'w')
-        pickle.dump([post_matrix, new_info], output)
+        pickle.dump(results, output)
 
     except Exception as e:
         print "%s" % sys.exc_traceback.tb_lineno, e
@@ -98,13 +98,13 @@ def calcpsi(matched_lsv, info, num_exp, conf, fitfunc, logger):
         post_psi = []
         new_info = []
         for lidx, lsv_info in enumerate(info):
-            num_ways = float(len(lsv_samples[lidx, 0]))
+            num_ways = len(lsv_samples[lidx, 0])
             if lidx % 50 == 0:
                 print "Event %d ..." % lidx
                 sys.stdout.flush()
 
             alpha_prior = 1.0/num_ways
-            beta_prior = (num_ways-1.0) / num_ways
+            beta_prior = float(num_ways-1.0) / num_ways
             psi = lsv_samples[lidx, :]
             post_psi.append([])
             new_info.append(lsv_info)
@@ -164,7 +164,8 @@ def deltapsi(matched_lsv, info, num_exp, conf, prior_matrix,  fitfunc, psi_space
     ones_n = np.ones(shape=(1, nbins), dtype = np.float)
 
     #pickle.dump([lsv_samples1, info], open('./lsv_binomproblem.pkl', 'w+b'))
-
+    posterior_psi1 = []
+    posterior_psi2 = []
     for lidx, lsv_info in enumerate(info):
         num_ways = len(lsv_samples1[lidx][0])
         if lidx % 50 == 0:
@@ -174,14 +175,19 @@ def deltapsi(matched_lsv, info, num_exp, conf, prior_matrix,  fitfunc, psi_space
         post_matrix.append([])
         new_info.append(lsv_info)
 
+        posterior_psi1.append([])
+        posterior_psi2.append([])
         psi1 = lsv_samples1[lidx, :]
         psi2 = lsv_samples2[lidx, :]
+
         for p_idx in xrange(num_ways):
 
             alpha_prior = 1.0/num_ways
-            beta_prior = (num_ways-1.0) / num_ways
+            beta_prior = float(num_ways-1.0) / num_ways
 
-            posterior = np.zeros(shape=(nbins, nbins), dtype = np.float)
+            posterior = np.zeros(shape=(nbins, nbins), dtype=np.float)
+            post_psi1 = np.zeros(shape=nbins, dtype=np.float)
+            post_psi2 = np.zeros(shape=nbins, dtype=np.float)
             for m in xrange(conf['m']):
                 # log(p(D_T1(m) | psi_T1)) = SUM_t1 T ( log ( P( D_t1 (m) | psi _T1)))
                 junc = [psi1[xx][p_idx][m] for xx in xrange(num_exp[0])]
@@ -191,24 +197,25 @@ def deltapsi(matched_lsv, info, num_exp, conf, prior_matrix,  fitfunc, psi_space
                 data_given_psi1 = np.log(prob_data_sample_given_psi(junc.sum(), all_sample.sum(), nbins,
                                                                     alpha_prior, beta_prior))
 
-                V1 = data_given_psi1.reshape(nbins, -1)
-                try:
-                    junc = [psi2[xx][p_idx][m] for xx in xrange(num_exp[1])]
-                except:
-                    import ipdb
-                    ipdb.set_trace()
+                psi_v1 = data_given_psi1.reshape(nbins, -1)
+                post_psi1 += np.exp(data_given_psi1 - scipy.misc.logsumexp(data_given_psi1))
+
+                junc = [psi2[xx][p_idx][m] for xx in xrange(num_exp[1])]
                 junc = np.array(junc)
                 all_sample = [psi2[xx][yy][m].sum() for xx in xrange(num_exp[1]) for yy in xrange(num_ways)]
                 all_sample = np.array(all_sample)
                 data_given_psi2 = np.log(prob_data_sample_given_psi(junc.sum(), all_sample.sum(), nbins,
                                                                     alpha_prior, beta_prior))
+                post_psi2 += np.exp(data_given_psi2 - scipy.misc.logsumexp(data_given_psi2))
+                psi_v2 = data_given_psi2.reshape(-1, nbins)
 
-                V2 = data_given_psi2.reshape(-1, nbins)
-
-                A = (V1 * ones_n + V2 * ones_n.T) + np.log(prior_matrix)
+                A = (psi_v1 * ones_n + psi_v2 * ones_n.T) + np.log(prior_matrix)
                 posterior += np.exp(A - scipy.misc.logsumexp(A))
+
             post_matrix[-1].append(posterior / conf['m'])
+            posterior_psi1[-1].append(post_psi1 / conf['m'])
+            posterior_psi2[-1].append(post_psi2 / conf['m'])
             if num_ways == 2:
                 break
 
-    return post_matrix, new_info
+    return post_matrix, new_info, posterior_psi1, posterior_psi2

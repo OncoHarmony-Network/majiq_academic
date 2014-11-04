@@ -2,8 +2,8 @@
 
 from cx_Freeze import setup, Executable
 
-packages = ['scipy', 'pysam', 'numpy', 'matplotlib']
-include_files = []
+packages = ['scipy', 'pysam', 'numpy', 'matplotlib', 'scipy.special._ufuncs']
+include_files = ['data/defaultprior.pickle']
 excludes = []
 setup(name='Majiq',
       version='0.8.0',
