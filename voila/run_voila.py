@@ -1,6 +1,4 @@
 import sys
-print sys.version
-
 from collections import defaultdict
 import json
 import os
@@ -75,8 +73,8 @@ def render_summary(output_dir, output_html, majiq_output, type_summary, threshol
             subset_keys = gene_keys[count_pages*MAX_GENES: MAX_GENES*(count_pages+1)]
             genes_dict = cc.OrderedDict((k, majiq_output['genes_dict'][k]) for k in subset_keys)
             # genes_json_dict = cc.OrderedDict((k, majiq_output['genes_json'][k]) for k in subset_keys)
+            logger.info("Processing %d out of %d genes ..." % ((count_pages+1)*MAX_GENES, len(majiq_output['genes_dict'])))
             if (count_pages+1)*MAX_GENES < len(majiq_output['genes_dict']):
-                logger.info("Processing %d out of %d genes ..." % ((count_pages+1)*MAX_GENES, len(majiq_output['genes_dict'])))
                 next_page = str(count_pages+1) + "_" + output_html
             if not count_pages == 0:
                 prev_page = str(count_pages - 1) + "_" + output_html
@@ -127,7 +125,6 @@ def render_summary(output_dir, output_html, majiq_output, type_summary, threshol
                                                     nextPage= next_page,
                                                     namePage= name_page,
                                                     threshold=threshold,
-                                                    # expList=majiq_output['experiments_info'],
                                                     lexps=majiq_output['meta_exps']
             ))
             voila_output.close()
@@ -138,7 +135,6 @@ def render_summary(output_dir, output_html, majiq_output, type_summary, threshol
         voila_output.write(sum_template.render( lsvList=majiq_output['event_list'],
                                                 tableMarks=table_marks_set(len(majiq_output['event_list'])),
                                                 metadata=majiq_output['metadata'],
-                                                # expList=majiq_output['experiments_info'],
                                                 threshold=threshold,
                                                 lexps=majiq_output['meta_exps']
         ))
@@ -161,22 +157,47 @@ class ParseError(Exception):
     def __repr__(self):
         return self.msg
 
-def parse_gene_graphics(gene_exps_flist, gene_name_list, logger=None):
+
+def combine_gg(gg_comb_dict, gg_new):
+    gg = gg_comb_dict[gg_new.get_id()]
+    if gg is None:
+        gg_comb_dict[gg_new.get_id()] = gg_new
+        return
+
+    for i, eg in enumerate(gg.get_exons()):
+        eg.type_exon = min(eg.type_exon, gg_new.get_exons()[i].type_exon)
+
+    for j, jg in enumerate(gg.get_junctions()):
+        jg.type_junction = min(jg.type_junction, gg_new.get_junctions()[j].type_junction)
+        jg.num_reads += gg_new.get_junctions()[j].num_reads
+
+
+def parse_gene_graphics(gene_exps_flist, gene_name_list, groups=['group1' , 'group2'], logger=None):
     genes_exp1_exp2 = []
     logger.info("Parsing splice graph information files ...")
-    for gene_flist in gene_exps_flist:
+    for grp_i, gene_flist in enumerate(gene_exps_flist):
         genes_exp = defaultdict()
-        for splice_graph_f in utils_voila.list_files_or_dir(gene_flist, suffix='splicegraph'):
+        splice_files = utils_voila.list_files_or_dir(gene_flist, suffix='splicegraph')
+
+        # Combined SpliceGraph data structures
+        gg_combined = defaultdict(lambda: None)
+        gg_combined_name = "ALL_%s" % groups[grp_i]
+
+        for splice_graph_f in splice_files:
             logger.info("Loading %s." % splice_graph_f)
             genesG = pkl.load(open(splice_graph_f, 'r'))
             genes_graphic = defaultdict(list)
             genesG.sort()
             for gene_obj in genesG:
-                if gene_obj.get_name() in gene_name_list:
-                    genes_graphic[gene_obj.get_name()].append(json.dumps(gene_obj, cls=utils_voila.LsvGraphicEncoder).replace("\"", "'"))
-                    genes_graphic[gene_obj.get_name()].append(gene_obj.get_strand())
-                    genes_graphic[gene_obj.get_name()].append(gene_obj.get_coords())
-                    genes_graphic[gene_obj.get_name()].append(gene_obj.get_chrom())
+                if gene_obj.get_id() in gene_name_list:
+                    genes_graphic[gene_obj.get_id()].append(json.dumps(gene_obj, cls=utils_voila.LsvGraphicEncoder).replace("\"", "'"))
+                    genes_graphic[gene_obj.get_id()].append(gene_obj.get_strand())
+                    genes_graphic[gene_obj.get_id()].append(gene_obj.get_coords())
+                    genes_graphic[gene_obj.get_id()].append(gene_obj.get_chrom())
+                    genes_graphic[gene_obj.get_id()].append(gene_obj.get_name())
+
+                    # Combine genes from different Splice Graphs
+                    combine_gg(gg_combined, gene_obj)
 
             ggenes_set = set(genes_graphic.keys())
             if not len(ggenes_set):
@@ -186,12 +207,25 @@ def parse_gene_graphics(gene_exps_flist, gene_name_list, logger=None):
                 raise ParseError("Different number of genes in splicegraph (%d) and majiq (%d) files." % (len(ggenes_set), len(gene_name_list)), logger=logger)
 
             genes_exp[os.path.basename(splice_graph_f)] = genes_graphic
-        genes_exp1_exp2.append(genes_exp)
+
+        # Add combined SpliceGraph (when more than one sample)
+        if len(genes_exp.keys())>1:
+            for gkey, gg_comb in gg_combined.iteritems():
+                gg_combined[gkey] = [
+                    json.dumps(gg_comb, cls=utils_voila.LsvGraphicEncoder).replace("\"", "'"),
+                    gg_comb.get_strand(),
+                    gg_comb.get_coords(),
+                    gg_comb.get_chrom(),
+                    gg_comb.get_name()
+                ]
+            genes_exp[gg_combined_name] = gg_combined
+        genes_exp1_exp2.append(cc.OrderedDict(sorted(genes_exp.items(), key=lambda t: t[0])))
+
     logger.info("Splice graph information files correctly loaded.")
     return genes_exp1_exp2
 
 
-def render_tab_output(output_dir, output_html, majiq_output, type_summary, threshold, meta_postprocess, logger=None):
+def render_tab_output(output_dir, output_html, majiq_output, type_summary, logger=None):
 
     delimiter = '\t'
     extension = 'csv'
@@ -250,23 +284,22 @@ def render_tab_output(output_dir, output_html, majiq_output, type_summary, thres
     logger.info("Delimited output file successfully created in: %s" % ofile_str)
 
 
-def create_bed12_txt(output_dir, majiq_output, logger):
-    logger.info("Saving LSVs in bed12 format files ...")
+def create_gff3_txt_files(output_dir, majiq_output, logger):
+    logger.info("Saving LSVs files in gff3 format ...")
     if 'genes_dict' not in majiq_output or len(majiq_output['genes_dict'])<1:
         logger.warning("No gene information provided. Genes files are needed to calculate the bed12 files.")
         return
 
-    fields = ['chrom', 'chromStart', 'chromEnd', 'name', 'score', 'strand', 'thickStart', 'thickEnd', 'itemRgb', 'blockCount', 'blockSizes', 'blockStarts']
-    header = "\t".join(fields)
+    header = "##gff-version 3"
 
-    odir = output_dir+"lsvs_bed12"
+    odir = output_dir+"/static/doc/gff3"
     utils_voila.create_if_not_exists(odir)
     for gkey, gvalue in majiq_output['genes_dict'].iteritems():
         for lsv in gvalue:
-            with open("%s/%s" % (odir, lsv[0].get_id()), 'w') as ofile:
+            with open("%s/%s.txt" % (odir, lsv[0].get_id()), 'w') as ofile:
                 ofile.write(header+"\n")
-                ofile.write(lsv[0].get_bed12()+"\n")
-
+                ofile.write(lsv[0].get_gff3()+"\n")
+    logger.info("Files saved in %s" % odir)
 
 def create_summary(args):
     """This method generates an html summary from a majiq output file"""
@@ -316,7 +349,9 @@ def create_summary(args):
             gene_name_list = majiq_output['genes_dict'].keys()
 
         # Get gene info
-        majiq_output['genes_exp'] = parse_gene_graphics([args.genes_files], gene_name_list, logger=logger)
+        majiq_output['genes_exp'] = parse_gene_graphics([args.genes_files], gene_name_list,
+                                                        groups=[majiq_output['meta_exps'][0][0]['group'],
+                                                                majiq_output['meta_exps'][1][0]['group']], logger=logger)
 
     if type_summary == 'lsv_delta':
         threshold = args.threshold
@@ -346,7 +381,9 @@ def create_summary(args):
             gene_name_list = majiq_output['genes_dict'].keys()
 
         # Get gene info
-        majiq_output['genes_exp'] = parse_gene_graphics([args.genesf_exp1, args.genesf_exp2], gene_name_list, logger=logger)
+        majiq_output['genes_exp'] = parse_gene_graphics([args.genesf_exp1, args.genesf_exp2], gene_name_list,
+                                                        groups=[majiq_output['meta_exps'][0][0]['group'],
+                                                                majiq_output['meta_exps'][1][0]['group']], logger=logger)
 
     if type_summary == 'lsv_thumbnails':
         try:
@@ -360,8 +397,8 @@ def create_summary(args):
         meta_postprocess['collapsed'] = args.collapsed
 
     render_summary(output_dir, output_html, majiq_output, type_summary, threshold, meta_postprocess, logger=logger)
-    # create_bed12_txt(output_dir, majiq_output, logger=logger)
-    render_tab_output(output_dir, output_html, majiq_output, type_summary, threshold, meta_postprocess, logger=logger)
+    create_gff3_txt_files(output_dir, majiq_output, logger=logger)
+    render_tab_output(output_dir, output_html, majiq_output, type_summary, logger=logger)
 
     logger.info("Voila! Summaries created in: %s" % output_dir)
     return
