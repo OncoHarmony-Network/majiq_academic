@@ -496,3 +496,32 @@ def file_or_stdout(file_name):
     else:
         with open(file_name, 'w') as out_file:
             yield out_file
+
+
+def gather_files(outDir, settings_ini, prefix='', gff_out=None, pcr_out=None):
+    mglobals.global_conf_ini(settings_ini, outDir)
+    #GATHER
+    print "Gather outputs"
+    chr_list = majiq_io.load_bin_file("%s/tmp/chromlist.pkl" % outDir)
+    gc_factor_calculation(chr_list, 10)
+    merge_and_create_majiq_file(chr_list, prefix)
+    if not gff_out is None:
+        print "Gather PCR results"
+        fp = open('%s/%s' % (outDir, gff_out), 'w+')
+        for chrom in chr_list:
+            temp_dir = "%s/tmp/%s" % (outDir, chrom)
+            yfile = '%s/temp_gff.pkl' % temp_dir
+            gff_list = majiq_io.load_bin_file(yfile)
+            for gff in gff_list:
+                fp.write("%s\n" % gff)
+        fp.close()
+    if not pcr_out is None:
+        print "Gather lsv and generate gff"
+        fp = open('%s/pcr_match.tab' % outDir, 'w+')
+        for chrom in chr_list:
+            temp_dir = "%s/tmp/%s" % (outDir, chrom)
+            yfile = '%s/pcr.pkl' % temp_dir
+            pcr_l = majiq_io.load_bin_file(yfile)
+            for pcr in pcr_l:
+                fp.write("%s\n" % pcr)
+        fp.close()
