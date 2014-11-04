@@ -172,7 +172,7 @@ def generate_visualization_output(allgenes, temp_dir):
                             jtype = 1
                         else:
                             jtype = 1
-                            continue
+                            #continue
                         junc_l.append(jj.get_coordinates())
                         junc_list.append(JunctionGraphic(cc, jtype, jj.get_read_num(exp_idx)))
                     junc_l = np.asarray(junc_l)
