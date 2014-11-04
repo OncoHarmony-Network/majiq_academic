@@ -2,7 +2,7 @@
 
 from cx_Freeze import setup, Executable
 
-packages = ['scipy', 'pysam', 'numpy', 'matplotlib']
+packages = ['scipy', 'pysam', 'numpy', 'matplotlib','scipy.special._ufuncs']
 include_files = []
 excludes = []
 setup(name='Majiq',
