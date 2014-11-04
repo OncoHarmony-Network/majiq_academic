@@ -67,7 +67,12 @@
                     {{ max_diff[-1] }}
                 </p>
             </td>
-            <td>{{ metadata[loop.index-1][0] }}</td>
+            <td>
+                <a href="http://genome.ucsc.edu/cgi-bin/hgTracks?db={{ lexps[0][0].genome }}&position={{ lsv.chrom }}:{{ lsv.extension[0] }}-{{ lsv.extension[1] }}" target="_blank">
+                    <img src="static/img/icons/ucsc2.png" title="http://genome.ucsc.edu/cgi-bin/hgTracks?db={{ lexps[0][0].genome }}&position={{ lsv.chrom }}:{{ lsv.extension[0] }}-{{ lsv.extension[1] }}"/>
+                </a>
+                <a href="static/doc/gff3/{{ lsv.id }}.txt" target="_blank">GFF3</a>
+            </td>
 
         </tr>
         {%- endfor %}
