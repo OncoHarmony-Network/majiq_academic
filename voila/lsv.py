@@ -1,42 +1,179 @@
 from collections import defaultdict
 import json
-import numpy
+import numpy as np
 
+def padding(accumulated, converted_confidence, bins, position, direction):
+    """
+    When there is only one way to look for the coverage.
+
+    @param accumulated:
+    @param converted_confidence:
+    @param bins:
+    @param position:
+    @param direction:
+    @return: position of the bin where the confidence is reached
+    """
+    bins_len = bins.size
+    while accumulated < converted_confidence:
+        accumulated += bins.item(position)
+        position += direction
+        if position < 0:
+            return 0
+        if position >= bins_len:
+            return bins_len - 1
+    return position
+
+
+def find_confidence_interval(bins, meanX, confidence=0.95):
+    """
+    This method returns a confidence interval around the mean
+    @param bins:
+    @param mean:
+    """
+
+    pos_mean = max(int(meanX) - 1, 0)
+    accumulated = bins.item(pos_mean)
+    if accumulated >= confidence:  # TODO: what if the mean has more than the conf. interval required?
+        return [pos_mean, pos_mean + 1]
+
+    left = pos_mean - 1
+    right = pos_mean + 1
+
+    while True:
+        if left < 0:  # No more variance to catch on the left
+            return [0, padding(accumulated, confidence, bins, right, 1)]
+
+        if right >= bins.size:  # No more variance to catch on the right
+            return [padding(accumulated, confidence, bins, left, -1), bins.size - 1]
+
+        # Choose the side with bigger variance
+        if bins.item(left) > bins.item(right):
+            accumulated += bins.item(left)
+            offset = (-1, 0)
+        else:
+            accumulated += bins.item(right)
+            offset = (0, 1)
+
+        if accumulated >= confidence:
+            return [left, right]
+
+        left, right = left + offset[0], right + offset[1]
+
+
+def find_quartiles(bins):
+    """
+    Iterate the bins finding how the PSI values are distributed.
+    @param bins:
+    @return:
+    """
+    accumulated = 0
+    bin_index = 0
+    quartiles_set = (.10, .25, .50, .75, .90)
+    quartiles_values = []
+    quartiles_index = 0
+    while quartiles_index < len(quartiles_set) and accumulated < 1:
+        accumulated += bins[bin_index]
+        while quartiles_index < len(quartiles_set) and accumulated >= quartiles_set[quartiles_index]:
+            quartiles_values.append(bin_index)
+            quartiles_index += 1
+        bin_index += 1
+
+    return quartiles_values
+
+
+def get_mean_step(bins): # TODO: rename
+    bins = np.array(bins)
+    step = 1.0 / bins.size
+    projection_prod = bins * np.arange(step / 2, 1, step)
+    return step, np.sum(projection_prod)
+
+
+def get_variance(bins, mean):
+    """Compute the variance = E[X^2] - (E[X])^2"""
+    bins = np.array(bins)
+    step_bins = 1.0 / bins.size
+    projection_prod = bins * np.arange(step_bins / 2, 1, step_bins)**2
+    return np.sum(projection_prod) - mean**2
+
+
+def create_array_bins(bins, confidence):
+    """
+    Recaps bins info from data previously generated and stored in a Pickle file
+    @param event_id: to access the bins associated with the event
+    @param num_bins: ONLY in DEBUG (it should be retrieved from file)
+    @return: a tuple with:
+     *.- the mean,
+     *.- the coordinates of the confidence interval [coord1, coord2].
+
+    """
+    bins = np.array(bins)
+    step, mean = get_mean_step(bins)
+    conf_interval = find_confidence_interval(bins, mean / step, confidence)
+    quartiles_set = find_quartiles(bins)
+    variance = get_variance(bins, mean)
+    return mean, conf_interval, quartiles_set, variance
 
 class Lsv(object):
 
-    def __init__(self, input_data=None):
+    def __init__(self, lsvs_bins, lsv_meta, confidence=.2):
 
-        self.id = input_data['id']
-        self.name = input_data['name']
-        self.type = input_data['type'] # TODO: Consider changing type to LSV type
-        # self.bins = input_data['bins_list']
-        self.bins = numpy.array(input_data['bins_list']).tolist()
+        means_psi_list = []
+        conf_interval_list = []
+        quartile_list = []
+        variance_list = []
 
-        self.coords = input_data['coords']
-        self.matrix_link = input_data['matrix_link']
-        self.variances = input_data['variance_list']
-        self.means = input_data['mean_psi']
-        self.conf_interval = input_data['conf_interval']
-        self.quartiles = input_data['quartiles']
+        for lsv_bins in lsvs_bins:
+            m, c, q, v = create_array_bins(lsv_bins, confidence)
+            means_psi_list.append(m)
+            conf_interval_list.append(c)
+            quartile_list.append(q)
+            variance_list.append(v)
+
+        self.id = lsv_meta[1]
+        self.coords = lsv_meta[0]
+        self.type = lsv_meta[2]
+
+        # Gene info
+        self.chorm = (lsv_meta[4].chrom)
+        self.strand = (lsv_meta[4].strand)
+
+        # Bins info
+        self.bins = np.array(lsvs_bins).tolist()
+        self.variances = variance_list
+        self.means = means_psi_list
+        self.conf_interval = conf_interval_list
+        self.quartiles = quartile_list
         self.excl_incl = None
-        self.extension = None
+
+        # Contextual info
+        self.set_extension(lsv_meta[4])
+        self.set_gff3(lsv_meta[4])
 
         # For LSV filtering
         self.init_categories()
         self.psi_junction = 0
 
-        # Additional attr
-        self.bed12_str = None
 
-    def set_id(self, id):
-        self.id = id
+    def get_chrom(self):
+        return self.chrom
+
+    def get_strand(self):
+        return self.strand
+
+    def set_chrom(self, c):
+        self.chrom = c
+
+    def set_genome(self, g):
+        self.genome = g
+
+    def set_strand(self, s):
+        self.strand = s
+
+    def set_id(self, idp):
+        self.id = idp
 
     def get_id(self):
         return self.id
-
-    def get_name(self):
-        return self.name
 
     def set_type(self, t):
         self.type = t
@@ -58,9 +195,6 @@ class Lsv(object):
 
     def get_coords(self):
         return self.coords
-
-    def get_matrix_link(self):
-        return self.matrix_link
 
     def get_variances(self):
         return self.variances
@@ -116,7 +250,7 @@ class Lsv(object):
         self.categories['ES'] = len(exons.keys()) > 1
         self.categories['prime5'] = len(ssites) > 1
         self.categories['prime3'] = max([len(exons[e]) for e in exons]) > 1
-        self.categories['njuncs'] = numpy.sum(['e0' not in junc for junc in j[1:]])
+        self.categories['njuncs'] = np.sum(['e0' not in junc for junc in j[1:]])
         self.categories['nexons'] = len(exons.keys()) + 1
         self.categories['source'] = j[0] == 's'
         self.categories['target'] = j[0] == 't'
@@ -153,43 +287,80 @@ class Lsv(object):
     def get_bed12(self):
         return self.bed12_str
 
-    def to_gff3(self, geneG):
+    def get_gff3(self):
+        return self.gff3_str
+
+    def set_gff3(self, geneG):
+
+        def find_exon_a5(lexonG, jidx):
+            for eG in lexonG:
+                if jidx in eG.get_a5_list():
+                    return eG
+            print "[WARNING] :: Orphan junction %s in lsv %s." % (repr(geneG.get_junctions()[jidx]), self.id)
+
+        def find_exon_a3(lexonG, jidx):
+            for eG in lexonG:
+                if jidx in eG.get_a3_list():
+                    return eG
+            print "[WARNING] :: Orphan junction %s in lsv %s." % (repr(geneG.get_junctions()[jidx]), self.id)
 
         # fields = ['seqid', 'source', 'type', 'start', 'end', 'score', 'strand', 'phase', 'attributes']
-
         trans = []
-        lsv_coord = self.coords
+        lexons = geneG.get_exons()
 
         chrom = geneG.chrom
         strand = geneG.strand
-        gene_str = '\t'.join([chrom, 'majiq' 'gene', str(geneG.get_start()), str(geneG.get_end()), '.', strand, '0',
-                              'Name=%s;Parent=%s;ID=%s' % (self.id, self.id, self.id)])
+        gStart = lexons[0].coords[0]
+        gEnd = lexons[-1].coords[1]
+        first = 0
+        last = 1
+        if strand == '-':
+            gStart = lexons[-1].coords[1]
+            gEnd = lexons[0].coords[0]
+            first, last = last, first
+
+        gene_str = '\t'.join([chrom, 'majiq', 'gene', str(gStart), str(gEnd), '.', strand, '0',
+                              'Name=%s;ID=%s' % (self.id, self.id)])
 
         trans.append(gene_str)
-        for exid, exon in enumerate(geneG.get_exons()):
+        for jid, junc in enumerate(geneG.get_junctions()):
             mrna = '%s\tmajiq\tmRNA\t' % chrom
-            mrna_id = '%s.%d' % (self.id, exid)
+            mrna_id = '%s.%d' % (self.id, jid)
             ex1 = '%s\tmajiq\texon\t' % chrom
             ex2 = '%s\tmajiq\texon\t' % chrom
 
-            variant = exon.get_coordinates()
+            ex1G = find_exon_a5(lexons, jid)
+            ex2G = find_exon_a3(lexons, jid)
 
-            mrna += '%d\t%d\t' % (exon.coords[0], lsv_coord[1])
-            ex1 += '%d\t%d\t' % (variant[1], lsv_coord[1])
-            ex2 += '%d\t%d\t' % (excoord[0], variant[0])
-            mrna += '.\t%s\t.\tName=%s;Parent=%s;ID=%s' % (strand, mrna_id, lsv.id, mrna_id)
-            ex1 += '.\t%s\t.\tName=%s.lsv;Parent=%s;ID=%s.lsv' % (strand, mrna_id, mrna_id, mrna_id)
-            ex2 += '.\t%s\t.\tName=%s.ex;Parent=%s;ID=%s.ex' % (strand, mrna_id, mrna_id, mrna_id)
+            if strand == '-':
+                ex1G, ex2G = ex2G, ex1G
+
+            mrna += '%d\t%d\t' % (ex1G.get_coords()[first], ex2G.get_coords()[last])
+
+            if self.type.startswith('t'):
+                ex1G, ex2G = ex2G, ex1G
+                ex1 += '%d\t%d\t' % (junc.get_coords()[last], ex1G.get_coords()[last])
+                ex2 += '%d\t%d\t' % (ex2G.get_coords()[first], junc.get_coords()[first])
+            else:
+                ex1 += '%d\t%d\t' % (ex1G.get_coords()[first], junc.get_coords()[first])
+                ex2 += '%d\t%d\t' % (junc.get_coords()[last], ex2G.get_coords()[last])
+            mrna += '.\t%s\t0\tName=%s;Parent=%s;ID=%s' % (strand, mrna_id, self.id, mrna_id)
+            ex1 += '.\t%s\t0\tName=%s.lsv;Parent=%s;ID=%s.lsv' % (strand, mrna_id, mrna_id, mrna_id)
+            ex2 += '.\t%s\t0\tName=%s.ex;Parent=%s;ID=%s.ex' % (strand, mrna_id, mrna_id, mrna_id)
             trans.append(mrna)
+
             trans.append(ex1)
             trans.append(ex2)
         else:
+            if strand == '-':
+                for ii, t in enumerate(trans):
+                    t_fields = t.split()
+                    t_fields[3],  t_fields[4] = t_fields[4], t_fields[3]
+                    trans[ii] = '\t'.join(t_fields)
+
             lsv_gtf = '\n'.join(trans)
 
-        return lsv_gtf
-
-
-
+        self.gff3_str = lsv_gtf
 
     def to_JSON(self, encoder=json.JSONEncoder):
         return json.dumps(self, default=lambda o: o.__dict__, sort_keys=True, cls=encoder)
