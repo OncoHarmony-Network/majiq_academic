@@ -98,13 +98,13 @@ def calcpsi(matched_lsv, info, num_exp, conf, fitfunc, logger):
         post_psi = []
         new_info = []
         for lidx, lsv_info in enumerate(info):
-            num_ways = float(len(lsv_samples[lidx, 0]))
+            num_ways = len(lsv_samples[lidx, 0])
             if lidx % 50 == 0:
                 print "Event %d ..." % lidx
                 sys.stdout.flush()
 
             alpha_prior = 1.0/num_ways
-            beta_prior = (num_ways-1.0) / num_ways
+            beta_prior = float(num_ways-1.0) / num_ways
             psi = lsv_samples[lidx, :]
             post_psi.append([])
             new_info.append(lsv_info)
@@ -183,7 +183,7 @@ def deltapsi(matched_lsv, info, num_exp, conf, prior_matrix,  fitfunc, psi_space
         for p_idx in xrange(num_ways):
 
             alpha_prior = 1.0/num_ways
-            beta_prior = (num_ways-1.0) / num_ways
+            beta_prior = float(num_ways-1.0) / num_ways
 
             posterior = np.zeros(shape=(nbins, nbins), dtype=np.float)
             post_psi1 = np.zeros(shape=nbins, dtype=np.float)
