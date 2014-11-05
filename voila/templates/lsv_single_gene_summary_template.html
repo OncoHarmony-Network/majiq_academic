@@ -47,21 +47,17 @@
         {% for gene_name, gene_value in genes_dict.iteritems() %}
             {% set gene_index = loop.index -1 %}
             {# gene_value[0][0]|debug #}
-            <h2>Gene name: {{ gene_name }}; {{ genes_exps_list[0][genes_exps_list[0].keys()[0]][gene_name][3] }}:{{ genes_exps_list[0][genes_exps_list[0].keys()[0]][gene_name][1] }}:{{ genes_exps_list[0][genes_exps_list[0].keys()[0]][gene_name][2][0] }}-{{ genes_exps_list[0][genes_exps_list[0].keys()[0]][gene_name][2][1] }};
+            <h2>Gene name: {{ genes_exps_list[0][genes_exps_list[0].keys()[0]][gene_name][4] }}; {{ genes_exps_list[0][genes_exps_list[0].keys()[0]][gene_name][3] }}:{{ genes_exps_list[0][genes_exps_list[0].keys()[0]][gene_name][1] }}:{{ genes_exps_list[0][genes_exps_list[0].keys()[0]][gene_name][2][0] }}-{{ genes_exps_list[0][genes_exps_list[0].keys()[0]][gene_name][2][1] }};
                 {% if lexps %}
                     <a href="http://genome.ucsc.edu/cgi-bin/hgTracks?db={{ lexps[0].genome }}&position={{ genes_exps_list[0][genes_exps_list[0].keys()[0]][gene_name][3] }}:{{ genes_exps_list[0][genes_exps_list[0].keys()[0]][gene_name][2][0] }}-{{ genes_exps_list[0][genes_exps_list[0].keys()[0]][gene_name][2][1] }}" target="_blank"><img src="static/img/icons/ucsc2.png" title="{{ genes_exps_list[0][genes_exps_list[0].keys()[0]][gene_name][3] }}:{{ genes_exps_list[0][genes_exps_list[0].keys()[0]][gene_name][2][0] }}-{{ genes_exps_list[0][genes_exps_list[0].keys()[0]][gene_name][2][1] }}"/></a>
                 {% endif %}
             </h2>
 
-        {#
-            <h2>Gene name: {{ gene_name }}; {{ gene_value[0][1][4].get_chrom() }}:{{ gene_value[0][1][4].get_strand() }}:{{ genes_json[gene_name][2][0] }}-{{ genes_json[gene_name][2][1] }};
-                <a href="http://genome.ucsc.edu/cgi-bin/hgTracks?db={{ lexps[0].genome }}&position={{ gene_value[0][1][4].get_chrom() }}:{{ genes_json[gene_name][2][0] }}-{{ genes_json[gene_name][2][1] }}" target="_blank">
-                    <img src="static/img/icons/ucsc2.png" title="{{ gene_value[0][1][4].get_chrom() }}:{{ genes_json[gene_name][2][0] }}-{{ genes_json[gene_name][2][1] }}"/>
-                </a>
-                <!--<a href="http://www.ensembl.org/Mus_musculus/transview?transcript={{ gene_name }}" target="_blank"><img src="static/img/icons/ensembl.jpg" title="http://www.ensembl.org/Mus_musculus/transview?transcript={{ gene_name }}"/></a>-->
+            <h3>
+                Gene ID: {{ gene_name }};
+            </h3>
 
-            </h2>
-        #}
+
             <div>
                 <div class="spliceDiv" id="spliceDivExp1_{{ gene_index }}" data-exon-list="{{ genes_exps_list[0][genes_exps_list[0].keys()[0]][gene_name][0] }}"> {#data-exon-list="{{ genes_json[gene_name][0] }}"#}
                     <div>
