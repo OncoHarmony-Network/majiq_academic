@@ -73,7 +73,7 @@ def render_summary(output_dir, output_html, majiq_output, type_summary, threshol
             subset_keys = gene_keys[count_pages*MAX_GENES: MAX_GENES*(count_pages+1)]
             genes_dict = cc.OrderedDict((k, majiq_output['genes_dict'][k]) for k in subset_keys)
             # genes_json_dict = cc.OrderedDict((k, majiq_output['genes_json'][k]) for k in subset_keys)
-            logger.info("Processing %d out of %d genes ..." % ((count_pages+1)*MAX_GENES, len(majiq_output['genes_dict'])))
+            logger.info("Processing %d out of %d genes ..." % (min((count_pages+1)*MAX_GENES, len(gene_keys)), len(majiq_output['genes_dict'])))
             if (count_pages+1)*MAX_GENES < len(majiq_output['genes_dict']):
                 next_page = str(count_pages+1) + "_" + output_html
             if not count_pages == 0:
@@ -109,8 +109,8 @@ def render_summary(output_dir, output_html, majiq_output, type_summary, threshol
             subset_keys = gene_keys[count_pages*MAX_GENES: MAX_GENES*(count_pages+1)]
             genes_dict = cc.OrderedDict((k, majiq_output['genes_dict'][k]) for k in subset_keys)
 
+            logger.info("Processing %d out of %d genes ..." % (min((count_pages+1)*MAX_GENES, len(gene_keys)), len(majiq_output['genes_dict'])))
             if (count_pages+1)*MAX_GENES < len(majiq_output['genes_dict']):
-                logger.info("Processing %d out of %d genes ..." % ((count_pages+1)*MAX_GENES, len(majiq_output['genes_dict'])))
                 next_page = str(count_pages+1) + "_" + output_html
             if not count_pages == 0:
                 prev_page = str(count_pages - 1) + "_" + output_html
@@ -172,7 +172,7 @@ def combine_gg(gg_comb_dict, gg_new):
         jg.num_reads += gg_new.get_junctions()[j].num_reads
 
 
-def parse_gene_graphics(gene_exps_flist, gene_name_list, groups=['group1' , 'group2'], logger=None):
+def parse_gene_graphics(gene_exps_flist, gene_name_list, groups=('group1', 'group2'), logger=None):
     genes_exp1_exp2 = []
     logger.info("Parsing splice graph information files ...")
     for grp_i, gene_flist in enumerate(gene_exps_flist):
@@ -287,7 +287,7 @@ def render_tab_output(output_dir, output_html, majiq_output, type_summary, logge
 def create_gff3_txt_files(output_dir, majiq_output, logger):
     logger.info("Saving LSVs files in gff3 format ...")
     if 'genes_dict' not in majiq_output or len(majiq_output['genes_dict'])<1:
-        logger.warning("No gene information provided. Genes files are needed to calculate the bed12 files.")
+        logger.warning("No gene information provided. Genes files are needed to calculate the gff3 files.")
         return
 
     header = "##gff-version 3"
@@ -334,8 +334,6 @@ def create_summary(args):
 
         lsv_types = args.lsv_types
 
-        # genes_files = pkl.load(open(args.genes_files, 'r'))
-
         import fileinput
         gene_name_list = []
         if args.gene_names:
@@ -350,8 +348,8 @@ def create_summary(args):
 
         # Get gene info
         majiq_output['genes_exp'] = parse_gene_graphics([args.genes_files], gene_name_list,
-                                                        groups=[majiq_output['meta_exps'][0][0]['group'],
-                                                                majiq_output['meta_exps'][1][0]['group']], logger=logger)
+                                                        groups=[majiq_output['meta_exps'][0]['group'], None],
+                                                        logger=logger)
 
     if type_summary == 'lsv_delta':
         threshold = args.threshold
