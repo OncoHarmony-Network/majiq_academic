@@ -22,8 +22,8 @@ def get_clean_raw_reads(matched_info, matched_lsv, outdir, names, num_exp):
         for ldx, lsv in enumerate(matched_info):
             jlist = masked_less(matched_lsv[ldx][eidx], 0)
 
-            num = jlist.sum(axis=0)
-            res.append([lsv[1], num])
+            num = jlist.sum(axis=1)
+            res.append([lsv[1], num.data])
 
     with open('%s/clean_reads.%s.pkl' % (outdir, names), 'wb') as fp:
         pickle.dump(res, fp)
