@@ -42,7 +42,6 @@ class LSV(object):
 
         self.junctions = np.array(juncs)
 
-
     def check_type(self, lsv_type):
         tab = lsv_type.split('|')[1:]
         exss = []
@@ -204,7 +203,7 @@ class LSV(object):
                 jtype = 1
             else:
                 jtype = 1
-                continue
+ #               continue
             junc_l.append(jj.get_coordinates())
             junc_list.append(JunctionGraphic(jj.get_coordinates(), jtype, jj.get_read_num(exp_idx)))
         junc_l = np.asarray(junc_l)

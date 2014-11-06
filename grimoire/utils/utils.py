@@ -65,8 +65,9 @@ def __gc_factor_ind(val, exp_idx):
 
 def prepare_lsv_table(lsv_list, non_as, temp_dir):
 
-    out_temp = list()
+    out_temp = dict()
     for name, ind_list in mglobals.tissue_repl.items():
+        out_temp[name] = []
         for idx, exp_idx in enumerate(ind_list):
 
             majiq_table_as = [0] * len(lsv_list[exp_idx])
@@ -77,7 +78,7 @@ def prepare_lsv_table(lsv_list, non_as, temp_dir):
             for jix, jn in enumerate(non_as[exp_idx]):
                 majiq_table_nonas[jix] = MajiqJunc(jn, exp_idx)
 
-            out_temp.append((majiq_table_as, majiq_table_nonas))
+            out_temp[name].append((majiq_table_as, majiq_table_nonas))
     fname = "%s/majiq.pkl" % temp_dir
     majiq_io.dump_bin_file(out_temp, fname)
 
@@ -111,8 +112,8 @@ def merge_and_create_majiq_file(chr_list, pref_file):
                 # print mglobals.exp_list[exp_idx]
                 # print visual_gene_list[mglobals.exp_list[exp_idx]]
                 all_visual[exp_idx].append(visual_gene_list[mglobals.exp_list[exp_idx]])
-                as_table[exp_idx].append(temp_table[exp_idx][0])
-                nonas_table[exp_idx].append(temp_table[exp_idx][1])
+                as_table[exp_idx].append(temp_table[name][exp_idx][0])
+                nonas_table[exp_idx].append(temp_table[name][exp_idx][1])
 
     sys.stdout.flush()
     for name, ind_list in mglobals.tissue_repl.items():

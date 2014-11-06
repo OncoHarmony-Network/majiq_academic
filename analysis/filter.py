@@ -56,11 +56,11 @@ def lsv_mark_stacks(lsv_list, fitfunc_r, pvalue_limit, dispersion, logger=None):
 def quantifiable_in_group(list_of_experiments, minnonzero, min_reads, logger, per_exp=0.10):
 
     nexp = len(list_of_experiments)
-    filtr = per_exp*float(nexp)
-    filtr = 2
-    if nexp <= 2:
-        filtr = 1
-    
+
+    filtr = nexp/2
+    if filtr % 2 != 0:
+        filtr += 1
+
     filt_exp = {}
     for idx, exp in enumerate(list_of_experiments):
         temp = lsv_quantifiable(exp, minnonzero, min_reads, logger)
