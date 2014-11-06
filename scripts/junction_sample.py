@@ -6,6 +6,7 @@ from scipy.stats import pearsonr
 import analysis.sample
 import analysis.polyfitnb as polyfitnb
 import os
+import cPickle as pickle
 
 DEBUG = True
 TESTBREAK = 1500
