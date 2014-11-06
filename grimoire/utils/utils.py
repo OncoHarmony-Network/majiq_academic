@@ -112,8 +112,8 @@ def merge_and_create_majiq_file(chr_list, pref_file):
                 # print mglobals.exp_list[exp_idx]
                 # print visual_gene_list[mglobals.exp_list[exp_idx]]
                 all_visual[exp_idx].append(visual_gene_list[mglobals.exp_list[exp_idx]])
-                as_table[exp_idx].append(temp_table[name][exp_idx][0])
-                nonas_table[exp_idx].append(temp_table[name][exp_idx][1])
+                as_table[exp_idx].append(temp_table[name][idx][0])
+                nonas_table[exp_idx].append(temp_table[name][idx][1])
 
     sys.stdout.flush()
     for name, ind_list in mglobals.tissue_repl.items():
