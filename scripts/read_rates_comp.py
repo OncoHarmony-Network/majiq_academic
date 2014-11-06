@@ -1,17 +1,12 @@
-from collections import defaultdict
-from pdb import set_trace
 from matplotlib import use
+use('Agg', warn=False)
+from collections import defaultdict
 from numpy.ma import masked_less
 from scripts.utils import _save_or_show
-
-use('Agg', warn=False)
-
 from scipy.stats import pearsonr
 import argparse
 from pylab import *
-import analysis.filter
 import junction_sample
-from scipy.stats import nbinom
 import os.path
 from analysis import filter
 from analysis import polyfitnb
@@ -59,8 +54,8 @@ def plot_method1Vsmethod2(scores1, scores2, score1_name, score2_name, replica1_n
 
         xlim(0, max_value)
         ylim(0, max_value)
-        axarr[name_i].plot([0, max_value], [0, max_value])
         axarr[name_i].plot(score1, score2, '.')
+        axarr[name_i].plot([0, max_value], [0, max_value])
 
         pear, pvalue = pearsonr(score1, score2)
         r_squared = pear**2
@@ -104,8 +99,8 @@ def plot_method1Vsmethod2_by_coverage(scores1_list, scores2_list, score1_name, s
 
             xlim(0, max_value)
             ylim(0, max_value)
-            axarr[name_i][score_idx].plot([0, max_value], [0, max_value])
             axarr[name_i][score_idx].plot(score1, score2, '.')
+            axarr[name_i][score_idx].plot([0, max_value], [0, max_value])
 
             pear, pvalue = pearsonr(score1, score2)
             r_squared = pear**2
@@ -419,7 +414,7 @@ def main():
     fil_juncs = np.logical_and(fil_junc1, fil_junc2)
 
     methods = {
-        'Poisson':                  {'discardzeros': 0, 'trimborder': False,   'nb': False},
+        'Poisson':                  {'discardzeros': 5, 'trimborder': 5,   'nb': False},
         'Naive_Boots':              {'discardzeros': 0, 'trimborder': False,   'nb': False},
         'Naive_Boots_trim_borders': {'discardzeros': 1, 'trimborder': 5,    'nb': False},
         'Naive_Boots_no_zeros':     {'discardzeros': 1, 'trimborder': False,   'nb': False},
@@ -436,7 +431,8 @@ def main():
 
     # compare_methods(args.m, args.k, np.array([kk for jj in [e for j in lreps_quan[0] for e in j] for kk in jj] ), np.array([kk for jj in [e for j in lreps_quan[1] for e in j] for kk in jj] ), rep1_name, rep2_name, fit_func1, fit_func2, methods, 'Majiq_padding_10','Majiq', args.plotpath, scores_cached)
     # compare_methods(args.m, args.k, np.array([kk for jj in [e for j in lreps_quan[0] for e in j] for kk in jj] ), np.array([kk for jj in [e for j in lreps_quan[1] for e in j] for kk in jj] ), rep1_name, rep2_name, fit_func1, fit_func2, methods, 'Majiq_padding_10','Majiq_with_zeros', args.plotpath, scores_cached)
-    compare_methods(args.m, args.k, junc1[fil_juncs], junc2[fil_juncs], rep1_name, rep2_name, fit_func1, fit_func2, methods, 'Poisson',         'Majiq', args.plotpath, scores_cached)
+    compare_methods(args.m, args.k, junc1[fil_juncs], junc2[fil_juncs], rep1_name, rep2_name, fit_func1, fit_func2, methods, 'Poisson',         'Majiq', args.plotpath, scores_cached, coverage=False)
+    compare_methods(args.m, args.k, junc1[fil_juncs], junc2[fil_juncs], rep1_name, rep2_name, fit_func1, fit_func2, methods, 'Poisson',         'Majiq', args.plotpath, scores_cached, coverage=True)
     # compare_methods(args.m, args.k, np.array([kk for jj in [e for j in lreps_quan[0] for e in j] for kk in jj] ), np.array([kk for jj in [e for j in lreps_quan[1] for e in j] for kk in jj] ), rep1_name, rep2_name, fit_func1, fit_func2, methods, 'Poisson',         'Majiq_padding_10', args.plotpath, scores_cached )
     #
     # compare_methods(args.m, args.k, np.array([kk for jj in [e for j in lreps_quan[0] for e in j] for kk in jj] ), np.array([kk for jj in [e for j in lreps_quan[1] for e in j] for kk in jj] ), rep1_name, rep2_name, fit_func1, fit_func2, methods, 'Naive_Boots',         'Majiq', args.plotpath, scores_cached)

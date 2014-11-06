@@ -1,33 +1,10 @@
-"""
-We want to estimate the variability in sample1 and compare it, per junction with the empirical variability of sample2. The methods we want to compare are:
-
-- Poisson (straw man) mean = variance
-- Toronto bootstrapping
-- Our improved bootstrapping using the fitted function and the NB
-
-We want to plot the variance of method A vs method B in a scatter plot.
-
-Same scatterplot for the winning method and the different normalizations.
-
-"""
-from pdb import set_trace
 from matplotlib import use
-import analysis.filter as filter
-
 use('Agg', warn=False)
-
-import pickle
-import argparse
-
 from pylab import *
 import numpy as np
-from matplotlib import rcParams
 from scipy.stats import pearsonr
-
 import analysis.sample
 import analysis.polyfitnb as polyfitnb
-import analysis.io as majiqio
-
 import os
 
 DEBUG = True
@@ -94,10 +71,10 @@ def _trimborders(junction):
     return array(new_junction)
 
 
-def sample_from_junctions(junctions, m, k, discardzeros=False, nb=False, trimborder=False, parameters=None, dispersion=0.1, fit_func=None, poisson=False):
+def sample_from_junctions(junctions, m, k, discardzeros=False, nb=False, trimborder=False, fit_func=None, poisson=False):
 
     if nb:
-        return analysis.sample.sample_from_junctions(junctions, m, k, discardzeros=discardzeros, dispersion=dispersion, trimborder=trimborder, fitted_one_over_r=fit_func)
+        return analysis.sample.sample_from_junctions(junctions, m, k, discardzeros=discardzeros, trimborder=trimborder, fitted_one_over_r=fit_func)
 
     # if parameters:
     #     print "Loading parameters from %s..." % parameters
@@ -115,16 +92,17 @@ def sample_from_junctions(junctions, m, k, discardzeros=False, nb=False, trimbor
         junction = junction[junction > -EPSILON]  #discard the -1 (or lower) positions regardless of the dzero treatment
 
         if trimborder:
-            junction = analysis.sample._trimborders(junction, 5) #trim the zeroes from the borders regardless of the discardzeros flag
+            junction = analysis.sample._trimborders(junction, trimborder) #trim the zeroes from the borders regardless of the discardzeros flag
         if discardzeros:
             junction = junction[junction!=0] #a junction array without the zeroes
 
-        if (poisson):
+        if poisson:
             mean_poisson = np.mean(junction, axis=0)
             sampled_means.append(mean_poisson)
             sampled_var.append(mean_poisson)
             all_samples.append(junction)
         else:
+            import random
             if len(junction) == 0:
                 sampled_means.append(0)
                 sampled_var.append(0)
@@ -283,11 +261,11 @@ def load_data_lsv(path, group_name, logger=None):
     lsv_cov_list = []
     lsv_info = []
     const_info = []
-    # num_pos = data[1][0].junction_list.shape[1]
-    num_pos = data[0][0].junction_list.shape[1]
+    num_pos = data[1][0].junction_list.shape[1]
+    # num_pos = data[0][0].junction_list.shape[1]
 
-    # for lsv in data[1]:
-    for lsv in data[0]:
+    for lsv in data[1]:
+    #for lsv in data[0]:
         try:
             lsv_info.append([lsv.coords, lsv.id, lsv.type, 0, lsv.visual])
         except AttributeError, e:
@@ -297,8 +275,8 @@ def load_data_lsv(path, group_name, logger=None):
         lsv_cov_list.append(cov)
 
     import random
-    # clist = random.sample(data[2], min(5000, len(data[2])))
-    clist = random.sample(data[1], min(5000, len(data[1])))
+    clist = random.sample(data[2], min(5000, len(data[2])))
+    # clist = random.sample(data[1], min(5000, len(data[1])))
     const_list = np.zeros(shape=(len(clist), num_pos), dtype=np.dtype('int'))
 
     for cidx, const in enumerate(clist):

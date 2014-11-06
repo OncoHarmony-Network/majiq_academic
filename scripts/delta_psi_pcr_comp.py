@@ -1,18 +1,13 @@
-# from __future__ import division
 from collections import defaultdict
 import pickle
 import ast
 import os
-
+import argparse
 import numpy as np
 import matplotlib.pyplot as ppl
 import numpy.ma as ma
-
-import argparse
 import scripts.utils
 from scripts.utils import coverage_from_file
-from pdb import set_trace as st
-
 
 __author__ = 'abarrera'
 
@@ -171,9 +166,9 @@ def plot_rtpcr_majiq_reads_deltas(rt_pcr, majiq, coverage, delta_delta_psi, plot
     diagonal = np.linspace(-1, 1, num=len(rt_pcr))
 
     # All
-    axx[0][0].scatter(np.array(majiq)[low_cov_mask], np.array(rt_pcr)[low_cov_mask], c=get_brewer_color(0), alpha=.5, s=np.maximum(1000*np.array(delta_delta_psi)[low_cov_mask], np.repeat([10], np.array(delta_delta_psi)[low_cov_mask].shape[0] )))
-    axx[0][0].scatter(np.array(majiq)[med_cov_mask], np.array(rt_pcr)[med_cov_mask], c=get_brewer_color(1), alpha=.5, s=np.maximum(1000*np.array(delta_delta_psi)[med_cov_mask], np.repeat([10], np.array(delta_delta_psi)[med_cov_mask].shape[0] )))
-    axx[0][0].scatter(np.array(majiq)[high_cov_mask], np.array(rt_pcr)[high_cov_mask], c=get_brewer_color(2), alpha=.5, s=np.maximum(1000*np.array(delta_delta_psi)[high_cov_mask], np.repeat([10], np.array(delta_delta_psi)[high_cov_mask].shape[0] )))
+    axx[0][0].scatter(np.array(majiq)[low_cov_mask], np.array(rt_pcr)[low_cov_mask], c=get_brewer_color(0), alpha=.5 )
+    axx[0][0].scatter(np.array(majiq)[med_cov_mask], np.array(rt_pcr)[med_cov_mask], c=get_brewer_color(1), alpha=.5)
+    axx[0][0].scatter(np.array(majiq)[high_cov_mask], np.array(rt_pcr)[high_cov_mask], c=get_brewer_color(2), alpha=.5)
     axx[0][0].set_ylim([-1, 1])
     axx[0][0].set_xlim([-1, 1])
     axx[0][0].set_xlabel('MAJIQ')
@@ -198,7 +193,7 @@ def plot_rtpcr_majiq_reads_deltas(rt_pcr, majiq, coverage, delta_delta_psi, plot
         else:
             x=1
             y=n-1
-        axx[x][y].scatter(np.array(majiq)[masks[n]], np.array(rt_pcr)[masks[n]], c=get_brewer_color(n), alpha=.5, s=np.maximum(1000*np.array(delta_delta_psi)[masks[n]], np.repeat([10], np.count_nonzero(masks[n]))))
+        axx[x][y].scatter(np.array(majiq)[masks[n]], np.array(rt_pcr)[masks[n]], c=get_brewer_color(n), alpha=.5)
         axx[x][y].set_ylim([-1, 1])
         axx[x][y].set_xlim([-1, 1])
         axx[x][y].set_xlabel('MAJIQ')
@@ -210,7 +205,7 @@ def plot_rtpcr_majiq_reads_deltas(rt_pcr, majiq, coverage, delta_delta_psi, plot
         axx[x][y].plot(diagonal, diagonal, '--', color="#cccccc")
 
     print majiq, rt_pcr
-    scripts.utils._save_or_show(plotpath, "delta_psi_comparison_rtpcr_majiq_size_variance")
+    scripts.utils._save_or_show(plotpath, "delta_psi_comparison_rtpcr_majiq")
 
 
 def plot_rtpcr_majiq_miso(rt_pcr, majiq, miso, plotpath):
@@ -430,9 +425,9 @@ def load_rtpcr_results(pcr_file):
         if i<1: continue  # headers
         pcr_fields = pcr_line.rstrip().split()
         if "target" in pcr_fields[0]:
-            lsv_name = "%s#%s" % (pcr_fields[0], "1")
+            lsv_name = "%s" % (pcr_fields[0])
         else:
-            lsv_name = "%s#%s" % (pcr_fields[0], "0")
+            lsv_name = "%s" % (pcr_fields[0])
         pcr_rest_stim_delta[lsv_name].append((float(pcr_fields[1]) - float(pcr_fields[2]))/100)
 
     return pcr_rest_stim_delta
@@ -608,7 +603,8 @@ def main():
         print "Number of common names after intersection with MAJIQ: %d" % len(common_names_set)
 
     if args.miso_deltas:
-        common_names_set = common_names_set.intersection(set(miso_delta_dict.keys()))
+
+        common_names_set = common_names_set.intersection(set([k for k in miso_delta_dict.keys() if len(miso_delta_dict[k]) > 0]))
         print "Number of common names after intersection with MISO: %d" % len(common_names_set)
 
 
@@ -622,46 +618,51 @@ def main():
             flipped_thres = 1.0
             flipped_lsv_dict = defaultdict(str)  # List of strings with flipped LSVs info
             for common_name in common_names_set:
-                for name_majiq, name_pcr in names_majiq2pcr_dict.iteritems():
-                    if names_majiq2pcr_dict[common_name] == name_pcr:
+                # for name_majiq, name_pcr in names_majiq2pcr_dict.iteritems():
+                #     if names_majiq2pcr_dict[common_name] == name_pcr:
+                # name = name_majiq
 
-                        name = name_majiq
-                        if not len(majiq_delta_dict[name]):
-                            print "%s - %s: Not found in majiq_dict" % (name_majiq, name_pcr)
-                            continue
-                        print "Found: %s - %s" % (name, names_majiq2pcr_dict[name])
+                name = common_name
+                if not len(majiq_delta_dict[name]):
+                    print "%s - %s: Not found in majiq_dict" % (common_name, common_name)
+                    continue
+                # print "Found: %s - %s" % (name, names_majiq2pcr_dict[name])
 
-                        # For Majiq, compute mean over Expected PSIs
-                        majiq_delta = avg_expected_delta_psi(majiq_delta_dict[name])
-                        min_delta = 10
-                        rtpcr_delta = pcr_rest_stim_delta[names_majiq2pcr_dict[name]][0]
-                        for rtpcr_delta_entry in pcr_rest_stim_delta[names_majiq2pcr_dict[name]]:
-                            if abs(rtpcr_delta_entry - majiq_delta) < min_delta:
-                                rtpcr_delta = rtpcr_delta_entry
-                        # check if event has expected PSIs suspicious of being flipped
-                        if abs(majiq_delta - rtpcr_delta) > .5:
-                            try:
-                                print "%s has an abs. expected difference in delta psi of %.2f. Coverage: %d " % (name, abs(majiq_delta - rtpcr_delta), get_min_coverage(coverage_list, name))
-                            except UnboundLocalError, e:
-                                print "%s has an abs. expected difference in delta psi of %.2f" % (name, abs(majiq_delta - rtpcr_delta))
-                        if abs(majiq_delta - rtpcr_delta) > flipped_thres:
-                            flipped_lsv_dict[name] = "%s\t%s\t%f\t%f\t%d\t%d\n" % (names_majiq2pcr_dict[name], name, rtpcr_delta, majiq_delta, int(gene_names_counts[names_majiq2pcr_dict[name]]<2), int(len(names_junc_majiq[str(name).split('#')[0]])<2) )
-                            continue
+                # For Majiq, compute mean over Expected PSIs
+                majiq_delta = avg_expected_delta_psi(majiq_delta_dict[name])
+                min_delta = 10
+                # rtpcr_delta = pcr_rest_stim_delta[names_majiq2pcr_dict[name]][0]
+                rtpcr_delta = pcr_rest_stim_delta[name][0]
+                # for rtpcr_delta_entry in pcr_rest_stim_delta[names_majiq2pcr_dict[name]]:
+                for rtpcr_delta_entry in pcr_rest_stim_delta[name]:
+                    if abs(rtpcr_delta_entry - majiq_delta) < min_delta:
+                        rtpcr_delta = rtpcr_delta_entry
+                # check if event has expected PSIs suspicious of being flipped
+                if abs(majiq_delta - rtpcr_delta) > .5:
+                    try:
+                        print "%s has an abs. expected difference in delta psi of %.2f. Coverage: %d " % (name, abs(majiq_delta - rtpcr_delta), get_min_coverage(coverage_list, name))
+                    except UnboundLocalError, e:
+                        print "%s has an abs. expected difference in delta psi of %.2f" % (name, abs(majiq_delta - rtpcr_delta))
+                if abs(majiq_delta - rtpcr_delta) > flipped_thres:
+                    flipped_lsv_dict[name] = "%s\t%s\t%f\t%f\t%d\t%d\n" % (name, name, rtpcr_delta, majiq_delta, int(gene_names_counts[names_majiq2pcr_dict[name]]<2), int(len(names_junc_majiq[str(name).split('#')[0]])<2) )
+                    continue
 
-                        rt_pcr.append(rtpcr_delta)
-                        majiq.append(majiq_delta)
-                        delta_delta_psi.append(mean_prob_out_exp_psi(majiq_delta_dict[name], rtpcr_delta))
-                        final_names.append(name)
+                rt_pcr.append(rtpcr_delta)
+                majiq.append(majiq_delta)
+                delta_delta_psi.append(mean_prob_out_exp_psi(majiq_delta_dict[name], rtpcr_delta))
+                final_names.append(name)
 
-                        if args.miso_deltas:
-                            miso.append(np.mean(miso_delta_dict[name]))
+                if args.miso_deltas:
+                    if (np.count_nonzero(np.isnan(np.mean(miso_delta_dict[name])))):
+                        print miso_delta_dict[name]
+                    miso.append(np.mean(miso_delta_dict[name]))
 
-                        try:
-                            coverage.append(get_min_coverage(coverage_list, name))
-                            if coverage[-1] > 15 and delta_delta_psi[-1]>.2:
-                                toJordi.write("Suspicious guy: %s. Coverage=%d; Prob(Delta(PSI))>0.2=%.2f; Expected(Delta(PSI))=%.2f: RT-PCR=%.2f\n" % (name, coverage[-1], delta_delta_psi[-1], majiq[-1], rt_pcr[-1]))
-                        except NameError, e:
-                            pass
+                try:
+                    coverage.append(get_min_coverage(coverage_list, name))
+                    if coverage[-1] > 15 and delta_delta_psi[-1]>.2:
+                        toJordi.write("Suspicious guy: %s. Coverage=%d; Prob(Delta(PSI))>0.2=%.2f; Expected(Delta(PSI))=%.2f: RT-PCR=%.2f\n" % (name, coverage[-1], delta_delta_psi[-1], majiq[-1], rt_pcr[-1]))
+                except (NameError, KeyError), e:
+                    pass
 
     if args.miso_deltas:
         plot_rtpcr_majiq_miso(rt_pcr, majiq, miso, args.plotpath)
