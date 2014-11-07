@@ -1,9 +1,9 @@
 # Parser
 ANALYSIS_PSI = 'psi'
-ANALYSIS_PSI_GENE = 'psi_gene'
+ANALYSIS_PSI_GENE = 'psi-gene'
 ANALYSIS_DELTAPSI = 'deltapsi'
-ANALYSIS_DELTAPSI_GENE = 'deltapsi_gene'
-LSV_THUMBNAILS = 'lsv_thumbnails'
+ANALYSIS_DELTAPSI_GENE = 'deltapsi-gene'
+LSV_THUMBNAILS = 'lsv-thumbnails'
 
 # LSV Graphics
 JUNCTION_TYPE_DB_RNASEQ = 0
