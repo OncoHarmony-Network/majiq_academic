@@ -6,6 +6,7 @@ import textwrap
 import collections as cc
 import voila.module_locator as module_locator
 import voila.utils.utils_voila as utils_voila
+import constants
 try:
     import cPickle as pkl
 except ImportError:
@@ -327,10 +328,10 @@ def create_summary(args):
     majiq_output = None
     meta_postprocess = {}
 
-    if type_summary == 'lsv_single':
+    if type_summary == constants.ANALYSIS_PSI:
         majiq_output = utils_voila.get_lsv_single_exp_data(majiq_bins_file, args.confidence)
 
-    if type_summary == 'lsv_single_gene':
+    if type_summary == constants.ANALYSIS_PSI_GENE:
 
         lsv_types = args.lsv_types
 
@@ -351,7 +352,7 @@ def create_summary(args):
                                                         groups=[majiq_output['meta_exps'][0]['group'], None],
                                                         logger=logger)
 
-    if type_summary == 'lsv_delta':
+    if type_summary == constants.ANALYSIS_DELTAPSI:
         threshold = args.threshold
 
         majiq_output = utils_voila.get_lsv_delta_exp_data(majiq_bins_file, args.confidence, args.threshold, args.show_all, logger=logger)
@@ -363,7 +364,7 @@ def create_summary(args):
                 majiq_output['metadata'].append(elem[1])
         # del majiq_output['genes_dict']
 
-    if type_summary == 'lsv_delta_gene':
+    if type_summary == constants.ANALYSIS_DELTAPSI_GENE:
         threshold = args.threshold
 
         import fileinput
@@ -383,7 +384,7 @@ def create_summary(args):
                                                         groups=[majiq_output['meta_exps'][0][0]['group'],
                                                                 majiq_output['meta_exps'][1][0]['group']], logger=logger)
 
-    if type_summary == 'lsv_thumbnails':
+    if type_summary == constants.LSV_THUMBNAILS:
         try:
             majiq_output = []
             with open(majiq_bins_file, 'r') as types_file:
@@ -429,20 +430,20 @@ def main():
     # Single LSV
     parser_single = argparse.ArgumentParser(add_help=False)
     parser_single.add_argument('--key-plots', metavar='keysplots.pickle', dest='keys_plots', type=str, help='Heatmap plots.')
-    subparsers.add_parser('lsv-single', help='Single LSV analysis.', parents=[common_parser, parser_single])
+    subparsers.add_parser(constants.ANALYSIS_PSI, help='Single LSV analysis.', parents=[common_parser, parser_single])
 
     # Delta LSV
     parser_delta = argparse.ArgumentParser(add_help=False)
     parser_delta.add_argument('--threshold', type=float, default=0.2, help='Filter out LSVs with no junction predicted to change over a certain value (in percentage).')  # Probability threshold used to sum the accumulative probability of inclusion/exclusion.
     parser_delta.add_argument('--show-all', dest='show_all', action='store_true', default=False, help='Show all LSVs including those with no junction with significant change predicted')
-    subparsers.add_parser('lsv-delta', help='Delta LSV analysis.', parents=[common_parser, parser_delta])
+    subparsers.add_parser(constants.ANALYSIS_DELTAPSI, help='Delta LSV analysis.', parents=[common_parser, parser_delta])
 
     # Single LSV by Gene(s) of interest
     parser_single_gene = argparse.ArgumentParser(add_help=False)
     parser_single_gene.add_argument('--genes-files', nargs='+', required=True, dest='genes_files', metavar='Hippocampus1.splicegraph [Hippocampus2.splicegraph ...]', type=str, help='Splice graph information file(s) or directory with *.splicegraph file(s).')
     parser_single_gene.add_argument('--gene-names', type=str, dest='gene_names', help='Gene names to filter the results.')
     parser_single_gene.add_argument('--lsv-types', nargs='*', default=[], type=str, dest='lsv_types', help='LSV type to filter the results. (If no gene list is provided, this option will display only genes containing LSVs of the specified type).')
-    subparsers.add_parser('lsv-single-gene', help='Single LSV analysis by gene(s) of interest.', parents=[common_parser, parser_single_gene])
+    subparsers.add_parser(constants.ANALYSIS_PSI_GENE, help='Single LSV analysis by gene(s) of interest.', parents=[common_parser, parser_single_gene])
 
     # Delta LSV by Gene(s) of interest
     parser_delta_gene = argparse.ArgumentParser(add_help=False)
@@ -450,12 +451,12 @@ def main():
     parser_delta_gene.add_argument('--genes-exp2', required=True, nargs='+', dest='genesf_exp2', metavar='Liver1.splicegraph', type=str, help='Experiment 2 splice graph information file(s) or directory.')
     parser_delta_gene.add_argument('--gene-names', type=str, dest='gene_names', help='Gene names to filter the results.')
     parser_delta_gene.add_argument('--lsv-types', nargs='*', default=[], type=str, dest='lsv_types', help='LSV type to filter the results. (If no gene list is provided, this option will display only genes containing LSVs of the specified type).')
-    subparsers.add_parser('lsv-delta-gene', help='Delta LSV analysis by gene(s) of interest.', parents=[common_parser, parser_delta, parser_delta_gene])
+    subparsers.add_parser(constants.ANALYSIS_DELTAPSI_GENE, help='Delta LSV analysis by gene(s) of interest.', parents=[common_parser, parser_delta, parser_delta_gene])
 
     # Thumbnails generation option (dev) TODO: Delete
     # parser_thumbs = argparse.ArgumentParser(add_help=False)
     # parser_thumbs.add_argument('--collapsed', type=bool, default=False, help='Collapsed LSVs thumbnails in the HTML summary.')
-    # subparsers.add_parser('lsv-thumbnails', help='Generate LSV thumbnails [DEBUGING!].', parents=[common_parser, parser_thumbs])  # TODO: GET RID OF THESE OR GIVE IT A BETTER SHAPE!!!
+    # subparsers.add_parser(constanst.LSV_THUMBNAILS, help='Generate LSV thumbnails [DEBUGING!].', parents=[common_parser, parser_thumbs])  # TODO: GET RID OF THESE OR GIVE IT A BETTER SHAPE!!!
 
     args = parser.parse_args()
     try:
