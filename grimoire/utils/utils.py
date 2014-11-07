@@ -244,7 +244,7 @@ def prepare_junctions_gc(junc, exp_idx):
 
 
 def print_junc_matrices(mat, tlb=None, fp=None):
-    if fp is None:
+    if not fp is None:
         out = open('./junc_matrix.tab', 'a+')
     else:
         out = sys.stdout

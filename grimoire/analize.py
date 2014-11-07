@@ -110,12 +110,12 @@ def lsv_matrix_detection(mat, exon_to_ss, b_list, vip_set=[]):
         ss_valid = True
         cand = range(ii+1, len(exon_to_ss))
         for ex_idx, ex in enumerate(cand):
-            pt = exon_to_ss[ex_idx]
+            pt = exon_to_ss[ex]
             junc_cand = mat[lsv[1][0]:lsv[1][-1]+1, pt[0][0]:pt[0][-1]+1]
             if np.count_nonzero(junc_cand) < 1:
                 continue
             to_trgt = mat[: pre_lsv[1][0]+1, pt[0][0]:pt[0][-1]+1]
-            if np.count_nonzero(to_trgt) > 0 and not ex_idx in vip_set:
+            if np.count_nonzero(to_trgt) > 0 and not ex in vip_set:
                 ss_valid = False
                 break
 
@@ -127,12 +127,12 @@ def lsv_matrix_detection(mat, exon_to_ss, b_list, vip_set=[]):
         st_valid = True
         cand = range(0, ii)
         for ex_idx, ex in enumerate(cand):
-            pt = exon_to_ss[ex_idx]
+            pt = exon_to_ss[ex]
             junc_cand = mat[pt[1][0]:pt[1][-1]+1, lsv[0][0]:lsv[0][-1]+1]
             if np.count_nonzero(junc_cand) < 1:
                 continue
             from_src = mat[pt[1][0]:pt[1][-1]+1, post_lsv[0][0]:]
-            if np.count_nonzero(from_src) > 0 and not ex_idx in vip_set:
+            if np.count_nonzero(from_src) > 0 and not ex in vip_set:
                 st_valid = False
                 break
 
