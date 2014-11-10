@@ -126,7 +126,8 @@ def get_lsv_single_exp_data(majiq_bins_file, confidence, gene_name_list=None, ls
         gene_name_list = []
 
     for i, lsv_meta in enumerate(majiq_data[1]):
-        if nofilter_genes or str(lsv_meta[1]).split(':')[0] in gene_name_list or lsv_meta[2] in lsv_types:
+        # Determine whether include the LSV or not, based on selected filters
+        if nofilter_genes or str(lsv_meta[1]).split(':')[0] in gene_name_list or lsv_meta[4].name.upper() in gene_name_list or lsv_meta[2] in lsv_types:
             # print lsv_meta[0], lsv_meta[1], lsv_meta[2]
 
             bins_array_list = majiq_data[0][i]
@@ -209,8 +210,9 @@ def get_lsv_delta_exp_data(majiq_out_file, confidence=.95, threshold=.2, show_al
 
     for i, lsv in enumerate(lsv_list):
         include_lsv = show_all
-        gene_name = str(lsv_info[i][1]).split(':')[0]
-        if not gene_name_list or gene_name in gene_name_list:
+        gene_name_id = str(lsv_info[i][1]).split(':')[0]
+        gene_name = lsv_info[i][4].name.upper()
+        if not gene_name_list or gene_name_id in gene_name_list or gene_name in gene_name_list:
             collapsed_bins, excl_inc_perc_list, include_lsv = extract_bins_info(lsv, threshold, include_lsv)
             if not include_lsv: continue
             try:
@@ -234,7 +236,7 @@ def get_lsv_delta_exp_data(majiq_out_file, confidence=.95, threshold=.2, show_al
                 if len(lsv_psi2_list[i])<2:
                     lsv_psi2_list[i].append(lsv_psi2_list[i][-1][::-1])
 
-                genes_dict[gene_name].append([lsv_o, lsv_info[i],
+                genes_dict[gene_name_id].append([lsv_o, lsv_info[i],
                                               Lsv(lsv_psi1_list[i], lsv_info[i], confidence),
                                               Lsv(lsv_psi2_list[i], lsv_info[i], confidence)
                                               ])

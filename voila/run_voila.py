@@ -178,7 +178,11 @@ def parse_gene_graphics(gene_exps_flist, gene_name_list, groups=('group1', 'grou
     logger.info("Parsing splice graph information files ...")
     for grp_i, gene_flist in enumerate(gene_exps_flist):
         genes_exp = defaultdict()
-        splice_files = utils_voila.list_files_or_dir(gene_flist, suffix='splicegraph')
+        splice_files = utils_voila.list_files_or_dir(gene_flist, suffix=constants.SUFFIX_SPLICEGRAPH)
+
+        # Check that the folders have splicegraphs
+        if not len(splice_files):
+            raise ParseError("No file with extension .%s found in %s." % (constants.SUFFIX_SPLICEGRAPH, gene_flist), logger=logger)
 
         # Combined SpliceGraph data structures
         gg_combined = defaultdict(lambda: None)
@@ -190,7 +194,7 @@ def parse_gene_graphics(gene_exps_flist, gene_name_list, groups=('group1', 'grou
             genes_graphic = defaultdict(list)
             genesG.sort()
             for gene_obj in genesG:
-                if gene_obj.get_id() in gene_name_list:
+                if gene_obj.get_id() in gene_name_list or gene_obj.get_name().upper() in gene_name_list:
                     genes_graphic[gene_obj.get_id()].append(json.dumps(gene_obj, cls=utils_voila.LsvGraphicEncoder).replace("\"", "'"))
                     genes_graphic[gene_obj.get_id()].append(gene_obj.get_strand())
                     genes_graphic[gene_obj.get_id()].append(gene_obj.get_coords())
@@ -202,7 +206,7 @@ def parse_gene_graphics(gene_exps_flist, gene_name_list, groups=('group1', 'grou
 
             ggenes_set = set(genes_graphic.keys())
             if not len(ggenes_set):
-                ParseError("No gene matching the splice graph file %s." % splice_graph_f, logger=logger)
+                raise ParseError("No gene matching the splice graph file %s." % splice_graph_f, logger=logger)
 
             if len(gene_name_list) != len(ggenes_set):
                 raise ParseError("Different number of genes in splicegraph (%d) and majiq (%d) files." % (len(ggenes_set), len(gene_name_list)), logger=logger)
@@ -339,7 +343,7 @@ def create_summary(args):
         gene_name_list = []
         if args.gene_names:
             for gene_name in fileinput.input(args.gene_names):
-                gene_name_list.append(gene_name.rstrip().split(":")[0])
+                gene_name_list.append(gene_name.rstrip().upper())
         else:
             gene_name_list = []
         majiq_output = utils_voila.get_lsv_single_exp_data(majiq_bins_file, args.confidence, gene_name_list=gene_name_list, lsv_types=lsv_types, logger=logger)
@@ -372,7 +376,7 @@ def create_summary(args):
 
         if args.gene_names:
             for gene_name in fileinput.input(args.gene_names):
-                gene_name_list.append(gene_name.rstrip())
+                gene_name_list.append(gene_name.rstrip().upper())
 
         majiq_output = utils_voila.get_lsv_delta_exp_data(majiq_bins_file, args.confidence, args.threshold, args.show_all, gene_name_list=gene_name_list, logger=logger)
 
@@ -463,7 +467,7 @@ def main():
         create_summary(args)
     except ParseError, e:
         if e.logger:
-            e.logger.error(repr(e), exc_info=1)
+            e.logger.error(repr(e), exc_info=constants.DEBUG)
         else:
             sys.stdout.write(repr(e))
         sys.exit(1)
