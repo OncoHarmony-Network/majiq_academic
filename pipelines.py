@@ -138,8 +138,7 @@ class CalcPsi(BasicPipeline):
                 'discardzeros': self.discardzeros,
                 'trimborder': self.trimborder,
                 'debug': self.debug,
-                'nbins': 40,
-                'nz': self.nz}
+                'nbins': 40}
 
         if self.nthreads == 1:
             posterior_matrix, names = pipe.calcpsi(matched_lsv, matched_info, num_exp, conf, fitfunc, self.logger)
@@ -252,7 +251,6 @@ class DeltaPair(BasicPipeline):
                 'trimborder': self.trimborder,
                 'debug': self.debug,
                 'plotpath': self.plotpath,
-                'nz': self.nz,
                 'names': self.names}
 
         get_clean_raw_reads(matched_info, matched_lsv[0], self.output, self.names[0], num_exp[0])
