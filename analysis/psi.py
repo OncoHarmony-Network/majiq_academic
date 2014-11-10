@@ -303,13 +303,14 @@ def gen_prior_matrix(pip, lsv_exp1, lsv_exp2, output, numbins=20, defaultprior=F
 
     pip.logger.info("Calculate jefferies matrix...")
     dircalc = DirichletCalc()
-    #Adjust prior matrix with Jefferies prior        
+    #Adjust prior matrix with Jefferies prior
+    alpha = 0.5
     jefferies = []
     psi_space = np.linspace(0, 1-pip.binsize, num=numbins) + pip.binsize/2
     for i in psi_space:
         jefferies.append([])
         for j in psi_space:
-            jefferies[-1].append(dircalc.pdf([i, 1-i, j, 1-j], [pip.alpha, pip.alpha, pip.alpha, pip.alpha]))
+            jefferies[-1].append(dircalc.pdf([i, 1-i, j, 1-j], [alpha, alpha, alpha, alpha]))
 
     if defaultprior:
         direc = "%s/../data" % os.path.dirname(os.path.realpath(__file__))
