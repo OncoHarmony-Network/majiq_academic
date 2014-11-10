@@ -10,8 +10,10 @@ JUNCTION_TYPE_DB_RNASEQ = 0
 JUNCTION_TYPE_RNASEQ = 1
 JUNCTION_TYPE_DB = 2
 
-# File extensions
+# File extensions, delimiters, etc.
 SUFFIX_SPLICEGRAPH = 'splicegraph'
+DELIMITER = '\t'
+EXTENSION = 'csv'
 
 # Debugging
 DEBUG = 1
