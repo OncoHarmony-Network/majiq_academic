@@ -9,3 +9,9 @@ LSV_THUMBNAILS = 'lsv-thumbnails'
 JUNCTION_TYPE_DB_RNASEQ = 0
 JUNCTION_TYPE_RNASEQ = 1
 JUNCTION_TYPE_DB = 2
+
+# File extensions
+SUFFIX_SPLICEGRAPH = 'splicegraph'
+
+# Debugging
+DEBUG = 1
