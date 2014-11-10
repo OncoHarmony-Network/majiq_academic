@@ -232,9 +232,7 @@ def parse_gene_graphics(gene_exps_flist, gene_name_list, groups=('group1', 'grou
 
 def render_tab_output(output_dir, output_html, majiq_output, type_summary, logger=None):
 
-    delimiter = '\t'
-    extension = 'csv'
-    ofile_str = "%s%s.%s" % (output_dir, output_html.rsplit('.html', 1)[0], extension)
+    ofile_str = "%s%s.%s" % (output_dir, output_html.rsplit('.html', 1)[0], constants.EXTENSION)
     tlb_categx = {'A5SS': 'prime5', 'A3SS': 'prime3', 'Num. Junctions': 'njuncs', 'Num. Exons': 'nexons', 'ES': 'ES'}
 
     logger.info("Creating Tab-delimited output file in %s..." % ofile_str)
@@ -244,7 +242,7 @@ def render_tab_output(output_dir, output_html, majiq_output, type_summary, logge
             headers[2] = 'E(Delta(PSI)) per LSV junction'
             headers[3] = 'P(Delta(PSI)>%s) per LSV junction' % .1
 
-        ofile.write(delimiter.join(headers))
+        ofile.write(constants.DELIMITER.join(headers))
         ofile.write('\n')
 
         for gene in majiq_output['genes_dict']:
@@ -283,7 +281,7 @@ def render_tab_output(output_dir, output_html, majiq_output, type_summary, logge
                 except TypeError:
                     pass
 
-                ofile.write(delimiter.join(lline))
+                ofile.write(constants.DELIMITER.join(lline))
                 ofile.write('\n')
 
     logger.info("Delimited output file successfully created in: %s" % ofile_str)
