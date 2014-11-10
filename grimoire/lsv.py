@@ -258,9 +258,12 @@ class LSV(object):
         return splice_lsv
 
     def is_equivalent(self, variant):
+
+        jlist1 = sorted(self.junctions)
+        jlist2 = sorted(variant.junctions)
         if self.type == variant.type:
             return False
-        return np.array_equal(self.junctions, variant.junctions)
+        return np.array_equal(jlist1, jlist2)
 
     def to_majiqLSV(self, exp_idx):
         return MajiqLsv(self, exp_idx)
