@@ -42,10 +42,10 @@ def print_numbers():
     print "BOTH", bothSS
 
 
-def global_conf_ini(filename, output):
+def global_conf_ini(filename, params):
 
     global num_experiments, exp_list, readLen, tissue_repl, sam_dir, num_mapped_reads, genome, \
-        genome_path, outDir, temp_oDir
+        genome_path, outDir, temp_oDir, gene_tlb
     global A3SS, A5SS, SEev, bothSS, totalSE
     global MINREADS, MINPOS
 
@@ -58,13 +58,13 @@ def global_conf_ini(filename, output):
     temp_oDir = []
     count = 0
     
-    MINREADS = 2
-    MINPOS = 2
+    MINREADS = params.minreads
+    MINPOS = params.minpos
     readLen = int(general['readlen'])
     sam_dir = general['samdir']
     genome = general['genome']
     genome_path = general['genome_path']
-    outDir = output
+    outDir = params.output
 
     if not os.path.exists(outDir):
         os.makedirs(outDir)
@@ -81,6 +81,7 @@ def global_conf_ini(filename, output):
 
     num_experiments = len(exp_list)
     num_mapped_reads = [0] * num_experiments
+    gene_tlb = {}
 
     A3SS = [0]*20
     A5SS = [0]*20

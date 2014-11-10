@@ -79,7 +79,6 @@ def __parallel_gff3(transcripts, pcr_filename, output, silent=False, debug=0):
         raise()
 
 
-
 def _new_subparser():
     return argparse.ArgumentParser(add_help=False)
 
@@ -117,12 +116,7 @@ def _generate_parser():
 
 def main(params):
 
-    if os.path.exists(params.conf):
-        mglobals.global_conf_ini(params.conf, params.output)
-    else:
-        mglobals.global_init(params.readlen, params.dir, params.paths, params.output)
-
-    mglobals.gene_tlb = {}
+    mglobals.global_conf_ini(params.conf, params)
 
     logger = utils.get_logger("%s/majiq.log" % mglobals.outDir, silent=params.silent, debug=params.debug)
     logger.info("")

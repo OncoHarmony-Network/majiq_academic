@@ -101,10 +101,13 @@ class LSV(object):
     def set_type(self, jlist, tlb_junc):
         ex_id = self.exon.get_id()
         strand = self.get_strand()
+        rev = (strand == '-')
+
+
         if self.type == SSOURCE:
-            spsite = sorted(set(self.exon.ss_5p_list))
+            spsite = sorted(set(self.exon.ss_5p_list), reverse=rev)
         else:
-            spsite = sorted(set(self.exon.ss_3p_list))
+            spsite = sorted(set(self.exon.ss_3p_list), reverse=rev)
         ex_set = set()
         skip = False
         for junc in jlist:
@@ -131,10 +134,7 @@ class LSV(object):
         if skip:
             return 'intron'
 
-        if strand == '+':
-            rev = False
-        else:
-            rev = True
+
         ex_list = sorted(list(ex_set), reverse=rev)
     
         if (self.type == SSOURCE and strand == '+') or (self.type == STARGET and strand == '-'):

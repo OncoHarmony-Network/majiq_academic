@@ -132,7 +132,7 @@ class CalcPsi(BasicPipeline):
         matched_lsv, matched_info = majiq_filter.quantifiable_in_group(filtered_lsv, self.minnonzero, self.minreads,
                                                                        self.logger, 0.10)
 
-        conf = {'minnonzero': self.minnonzero,
+        conf = {'minnonzero': self.minpos,
                 'minreads': self.minreads,
                 'm': self.m,
                 'k': self.k,
@@ -247,7 +247,7 @@ class DeltaPair(BasicPipeline):
         else:
             meta_info, matched_info, matched_lsv, psi_space, prior_matrix, fitfunc = pickle.load(open(tempfile))
 
-        conf = {'minnonzero': self.minnonzero,
+        conf = {'minnonzero': self.minpos,
                 'minreads': self.minreads,
                 'm': self.m,
                 'k': self.k,

@@ -10,7 +10,9 @@ def new_subparser():
 
 
 def main():
-    "Main MAJIQ parser with all flags and subcommands"
+    """
+    Main MAJIQ parser with all flags and subcommands
+    """
     #REMINDER parser.add_parser(..... parents='[bla, ble]')
     parser = argparse.ArgumentParser(description="MAJIQ is a suite of tools for the analysis of Alternative "
                                                  "Splicing Events and Alternative Splicing Quantification.")
@@ -28,11 +30,7 @@ def main():
     common.add_argument('--debug', type=int, default=0,
                         help="Activate this flag for debugging purposes, activates logger and jumps some "
                              "processing steps.")
-    common.add_argument('--minreads', default=10, type=int,
-                        help='Minimum number of reads combining all positions in an event to be considered. '
-                             '[Default: %(default)s]')
-    common.add_argument('--minnonzero', default=3, type=int, help='Minimum number of start positions with at least 1 '
-                                                                  'read for an event to be considered.')
+
 
 
     buildparser = new_subparser()
@@ -45,6 +43,13 @@ def main():
     buildparser.add_argument('--pcr', dest='pcr_filename', action="store", help='PCR bed file as gold_standard')
     buildparser.add_argument('--gff_output', dest='gff_output', action="store", help='Filename where a gff with the '
                                                                                      'lsv events will be generated')
+    buildparser.add_argument('--minreads', default=2, type=int,
+                             help='Minimum number of reads threshold combining all positions in a LSV to consider that'
+                                  'the LSV "exist in the data". '
+                             '[Default: %(default)s]')
+    buildparser.add_argument('--minpos', default=2, type=int, help='Minimum number of start positions with at least 1 '
+                                                                   'read in a LSV to consider that the LSV "exist in '
+                                                                   'the data"')
 
     #flags shared by calcpsi and deltapair
     psianddelta = new_subparser()
@@ -54,11 +59,16 @@ def main():
                              help='Number of positions to sample per iteration. [Default: %(default)s]')
     psianddelta.add_argument('--m', default=100, type=int,
                              help='Number of bootstrapping samples. [Default: %(default)s]')
+    psianddelta.add_argument('--minreads', default=10, type=int,
+                             help='Minimum number of reads combining all positions in an event to be considered. '
+                             '[Default: %(default)s]')
+    psianddelta.add_argument('--minpos', default=3, type=int, help='Minimum number of start positions with at least 1 '
+                                                                   'read for an event to be considered.')
+
     psianddelta.add_argument('--trimborder', default=5, type=int,
                              help='Trim the borders when sampling (keeping the ones with reads). '
                                   '[Default: %(default)s]')
-    psianddelta.add_argument('--alpha', default=0.5, type=float,
-                             help='Alpha hyperparameter for the dirichlet distribution. [Default: %(default)s]')
+
     psianddelta.add_argument('--markstacks', default=0.0000001, type=float,
                              help='Mark stack positions. Expects a p-value. Use a negative value in order to '
                                   'disable it. [Default: %(default)s]')
@@ -71,14 +81,7 @@ def main():
                                   'to start from x=0, y=0')
     psianddelta.add_argument('--discardzeros', default=5, type=int, dest="discardzeros",
                              help='Discarding zeroes, up to a minimum of N positions per junction. [Default: 5]')
-    psianddelta.add_argument('--n', default=1, type=int,
-                             help='Number of PSI samples per sample paired. [Default: %(default)s]')
-    psianddelta.add_argument('--psiparam', default=False, action='store_true',
-                             help='Instead of sampling, use a parametric form for the PSI calculation. '
-                                  '[Default: %(default)s]')
-    psianddelta.add_argument('--nz', default=0, type=int,
-                             help='Method for number of non-zero position estimation.[0 - empirical, -1 - Binomial, '
-                                  '>0 - Fized Value ]. Default: %(default)s]')
+
 
     #deltapair and deltagroup flags
     pairandgroup = new_subparser() 
