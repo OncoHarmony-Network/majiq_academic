@@ -253,7 +253,7 @@ class DeltaPair(BasicPipeline):
                 'discardzeros': self.discardzeros,
                 'trimborder': self.trimborder,
                 'debug': self.debug,
-                'alpha': self.alpha,
+                'alpha': 0.5,
                 'n': self.n,
                 'plotpath': self.plotpath,
                 'nz': self.nz,
