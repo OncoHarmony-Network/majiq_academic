@@ -128,7 +128,7 @@ class CalcPsi(BasicPipeline):
             fitfunc[ii] = self.fitfunc(const[0])
 
             filtered_lsv[ii] = self.mark_stacks(lsv_junc, fitfunc[ii])
-        matched_lsv, matched_info = majiq_filter.quantifiable_in_group(filtered_lsv, self.minnonzero, self.minreads,
+        matched_lsv, matched_info = majiq_filter.quantifiable_in_group(filtered_lsv, self.minpos, self.minreads,
                                                                        self.logger, 0.10)
 
         conf = {'minnonzero': self.minpos,
@@ -214,7 +214,7 @@ class DeltaPair(BasicPipeline):
                 lsv_junc, const = self.gc_content_norm(lsv_junc, const)
                 fitfunc[0][ii] = self.fitfunc(const[0])
                 filtered_lsv1[ii] = self.mark_stacks(lsv_junc, fitfunc[0][ii])
-            filtered_lsv1 = majiq_filter.quantifiable_in_group(filtered_lsv1, self.minnonzero, self.minreads,
+            filtered_lsv1 = majiq_filter.quantifiable_in_group(filtered_lsv1, self.minpos, self.minreads,
                                                                self.logger, 0.10)
             self.logger.info("Group1: %s quantifiable in group" % str(len(filtered_lsv1[0])))
 
@@ -226,7 +226,7 @@ class DeltaPair(BasicPipeline):
                 lsv_junc, const = self.gc_content_norm(lsv_junc, const)
                 fitfunc[1][ii] = self.fitfunc(const[0])
                 filtered_lsv2[ii] = self.mark_stacks(lsv_junc, fitfunc[1][ii])
-            filtered_lsv2 = majiq_filter.quantifiable_in_group(filtered_lsv2, self.minnonzero, self.minreads,
+            filtered_lsv2 = majiq_filter.quantifiable_in_group(filtered_lsv2, self.minpos, self.minreads,
                                                                self.logger, 0.10)
 
             self.logger.info("Group2: %s quantifiable in group" % str(len(filtered_lsv2[0])))
