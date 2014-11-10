@@ -523,7 +523,8 @@ function drawDeltaLSVCompactSVG(htmlElementId, lsv, threshold) {
     var x = d3.scale.linear()
         .range([margin.left, margin.right])
         .domain(domain);
-    var border_frame = 2;
+    var border_frame = 2,
+        MIN_DELTAPSI=.05;
 
     var svgContainer = d3.select("#" + htmlElementId)
         .append("svg")
@@ -590,8 +591,6 @@ function drawDeltaLSVCompactSVG(htmlElementId, lsv, threshold) {
     var last_excl_pos = width / 2,
         last_incl_pos = width / 2;
     for (var ii = 0; ii < lsv.excl_incl.length; ii++) {
-        if (lsv.excl_incl[ii][0] < threshold && lsv.excl_incl[ii][1] < threshold)
-            continue;
         svgContainer.append("rect")
             .attr("x", last_excl_pos - Math.round((width / 2 - margin.left) * lsv.excl_incl[ii][0]))
             .attr("y", margin.top)
@@ -604,6 +603,9 @@ function drawDeltaLSVCompactSVG(htmlElementId, lsv, threshold) {
             .attr("width", Math.round((width / 2 - margin.right) * lsv.excl_incl[ii][1]))
             .attr("height", height - margin.bottom - margin.top)
             .style('fill', getColor(ii, BREWER_PALETTE, 1));
+
+        if (lsv.excl_incl[ii][0] < MIN_DELTAPSI && lsv.excl_incl[ii][1] < MIN_DELTAPSI)
+            continue;
 
         // Draw percentages text
         if (Math.round((width / 2 - margin.left) * lsv.excl_incl[ii][0]) >= 1){

@@ -48,9 +48,9 @@ def render_summary(output_dir, output_html, majiq_output, type_summary, threshol
 
     env = Environment(extensions=["jinja2.ext.do"], loader=FileSystemLoader(os.path.join(EXEC_DIR, "templates/")))
     env.filters.update({'to_json': to_json, 'debug': debug})
-    sum_template = env.get_template(type_summary + "_summary_template.html")
+    sum_template = env.get_template(type_summary.replace("-", "_") + "_summary_template.html")
 
-    if type_summary == 'lsv_single':
+    if type_summary == constants.ANALYSIS_PSI:
         voila_output = open(output_dir+output_html, 'w')
         voila_output.write(sum_template.render(lsvList=majiq_output['event_list'],
                                                tableMarks=table_marks_set(len(majiq_output['event_list'])),
@@ -58,7 +58,7 @@ def render_summary(output_dir, output_html, majiq_output, type_summary, threshol
                                                lexps=majiq_output['meta_exps']
                                                ))
         voila_output.close()
-    elif type_summary == 'lsv_single_gene':
+    elif type_summary == constants.ANALYSIS_PSI_GENE:
         # Max. 10 genes per page, create as many HTMLs as needed
 
         MAX_GENES = 10
@@ -94,7 +94,7 @@ def render_summary(output_dir, output_html, majiq_output, type_summary, threshol
             voila_output.close()
             count_pages += 1
 
-    elif type_summary == 'lsv_delta_gene':
+    elif type_summary == constants.ANALYSIS_DELTAPSI_GENE:
         # Max. 10 genes per page, create as many HTMLs as needed
 
         MAX_GENES = 10
@@ -131,7 +131,7 @@ def render_summary(output_dir, output_html, majiq_output, type_summary, threshol
             voila_output.close()
             count_pages += 1
 
-    elif type_summary == 'lsv_delta':
+    elif type_summary == constants.ANALYSIS_DELTAPSI:
         voila_output = open(output_dir+output_html, 'w')
         voila_output.write(sum_template.render( lsvList=majiq_output['event_list'],
                                                 tableMarks=table_marks_set(len(majiq_output['event_list'])),
@@ -305,7 +305,7 @@ def create_gff3_txt_files(output_dir, majiq_output, logger):
 def create_summary(args):
     """This method generates an html summary from a majiq output file"""
 
-    type_summary    = args.type_analysis.replace('-', '_')  # Notation preference
+    type_summary    = args.type_analysis
     majiq_bins_file = args.majiq_bins
     output_dir      = args.output_dir
 
@@ -324,7 +324,7 @@ def create_summary(args):
     # meta_preprocess = args.meta_preprocess
     threshold       = None
 
-    output_html = os.path.splitext(os.path.split(majiq_bins_file)[1])[0] + "_" + type_summary + '.html'
+    output_html = os.path.splitext(os.path.split(majiq_bins_file)[1])[0] + "_" + type_summary.replace("-", "_") + '.html'
     majiq_output = None
     meta_postprocess = {}
 
