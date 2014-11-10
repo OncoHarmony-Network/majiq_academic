@@ -58,7 +58,7 @@ def quantifiable_in_group(list_of_experiments, minnonzero, min_reads, logger, pe
     nexp = len(list_of_experiments)
 
     filtr = nexp/2
-    if filtr % 2 != 0:
+    if nexp % 2 != 0:
         filtr += 1
 
     filt_exp = {}
