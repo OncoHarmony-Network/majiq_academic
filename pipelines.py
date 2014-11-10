@@ -138,8 +138,6 @@ class CalcPsi(BasicPipeline):
                 'discardzeros': self.discardzeros,
                 'trimborder': self.trimborder,
                 'debug': self.debug,
-                'alpha': self.alpha,
-                'n': self.n,
                 'nbins': 40,
                 'nz': self.nz}
 
@@ -253,8 +251,6 @@ class DeltaPair(BasicPipeline):
                 'discardzeros': self.discardzeros,
                 'trimborder': self.trimborder,
                 'debug': self.debug,
-                'alpha': 0.5,
-                'n': self.n,
                 'plotpath': self.plotpath,
                 'nz': self.nz,
                 'names': self.names}
