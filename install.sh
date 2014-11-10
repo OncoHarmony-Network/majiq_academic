@@ -1,5 +1,7 @@
 #!/bin/bash
 
+
+
 chmod u+w $1/*dylib
 
 #install_name_tool -change "/usr/local/lib/gcc/x86_64-apple-darwin12.5.0/4.9.1/libgfortran.3.dylib" "\$1/libgfortran.3.dylib" $1/_ufuncs.so 

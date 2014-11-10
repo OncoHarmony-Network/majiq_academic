@@ -56,7 +56,6 @@ class BasicPipeline:
 
         self.logger = get_logger("%s/majiq.log" % logger_path, silent=self.silent, debug=self.debug)
         self.nthreads = args.nthreads
-        self.nz = args.nz
         self.psi_paths = []
         try:
             self.replica_len = [len(self.files1), len(self.files2)]
