@@ -293,13 +293,17 @@ def create_gff3_txt_files(output_dir, majiq_output, logger):
 
     header = "##gff-version 3"
 
-    odir = output_dir+"/static/doc/gff3"
+    odir = output_dir+"/static/doc/lsvs"
     utils_voila.create_if_not_exists(odir)
     for gkey, gvalue in majiq_output['genes_dict'].iteritems():
         for lsv in gvalue:
-            with open("%s/%s.txt" % (odir, lsv[0].get_id()), 'w') as ofile:
+            lsv_file_basename = "%s/%s" % (odir, lsv[0].get_id())
+            gff_file = "%s.gff3" % (lsv_file_basename)
+            with open(gff_file, 'w') as ofile:
                 ofile.write(header+"\n")
                 ofile.write(lsv[0].get_gff3()+"\n")
+            utils_voila.gff2gtf(gff_file, "%s.gtf" % lsv_file_basename)
+
     logger.info("Files saved in %s" % odir)
 
 def create_summary(args):
