@@ -222,15 +222,7 @@ class Lsv(object):
     #         self.extension = [geneG.get_junctions()[lsv_exon.get_a3_list()[0]].get_coords()[0] - 100, self.coords[1]]
 
     def compute_extension(self, geneG, lsv_type=None):
-
-        if not lsv_type:
-            lsv_type = self.type
-        if geneG.strand == '+':
-            return [geneG.get_exons()[0].get_coords()[0], geneG.get_exons()[-1].get_coords()[1]]
-        elif geneG.strand == '-':
-            return [geneG.get_exons()[-1].get_coords()[0], geneG.get_exons()[0].get_coords()[0]]
-        else:
-            print "[ERROR] :: LSV type not recognized: %s" % lsv_type
+        return [geneG.get_exons()[0].get_coords()[0], geneG.get_exons()[-1].get_coords()[1]]
 
 
     def init_categories(self):
