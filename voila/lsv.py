@@ -225,17 +225,12 @@ class Lsv(object):
 
         if not lsv_type:
             lsv_type = self.type
-        return [self.coords[0], geneG.get_exons()[-1].get_coords()[1]]
-        # if lsv_type.startswith('s') and geneG.strand == '+':
-        #     return [self.coords[0], geneG.get_exons()[-1].get_coords()[1]]
-        # elif lsv_type.startswith('t') and geneG.strand == '+':
-        #     return [geneG.get_exons()[0].get_coords()[0], self.coords[1]]
-        # elif lsv_type.startswith('t') and geneG.strand == '-':
-        #     return [self.coords[0], geneG.get_exons()[0].get_coords()[1]]
-        # elif lsv_type.startswith('s') and geneG.strand == '-':
-        #     return [self.coords[0], geneG.get_exons()[0].get_coords()[1]]
-        # else:
-        #     print "[ERROR] :: LSV type not recognized: %s" % lsv_type
+        if geneG.strand == '+':
+            return [geneG.get_exons()[0].get_coords()[0], geneG.get_exons()[-1].get_coords()[1]]
+        elif geneG.strand == '-':
+            return [geneG.get_exons()[-1].get_coords()[0], geneG.get_exons()[0].get_coords()[0]]
+        else:
+            print "[ERROR] :: LSV type not recognized: %s" % lsv_type
 
 
     def init_categories(self):
