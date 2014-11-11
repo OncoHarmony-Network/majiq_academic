@@ -6,6 +6,11 @@ h2 {
     color: #006afc;
     clear: both;
     padding-top: 10px;
+    margin-bottom: 2px;
+}
+
+h3 {
+    margin-top: 2px;
 }
 
 fieldset legend {
@@ -252,4 +257,8 @@ footer {
 .spliceDiv{
     width: 1000px;
     overflow: scroll;
+}
+
+.spliceGraphTools{
+    position: absolute;
 }

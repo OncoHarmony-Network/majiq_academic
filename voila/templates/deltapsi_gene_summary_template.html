@@ -51,7 +51,7 @@
             </h3>
             <div>
                 <div class="spliceDiv exp1" id="spliceDivExp1_{{ gene_index }}" data-exon-list="{{ genes_exps_list[0][genes_exps_list[0].keys()[0]][gene_name][0] }}"> {# By default, show the first experiment splice graph #}
-                    <div>
+                    <div class="spliceGraphTools">
                         <select class="spliceGraphSelector" autocomplete="off">
                             {% for nsample in genes_exps_list[0] -%}
                             {% if loop.first %}
@@ -73,7 +73,7 @@
                 </div>
 
                 <div class="spliceDiv exp2" id="spliceDivExp2_{{ gene_index }}" data-exon-list="{{ genes_exps_list[1][genes_exps_list[1].keys()[0]][gene_name][0] }}"> {# By default, show the first experiment splice graph #}
-                    <div>
+                    <div class="spliceGraphTools">
                         <select class="spliceGraphSelector" autocomplete="off">
                             {% for nsample in genes_exps_list[1] -%}
                             {% if loop.first %}
@@ -164,11 +164,14 @@
                         </td>
 
                         <td>
-                            <a href="http://genome.ucsc.edu/cgi-bin/hgTracks?db={{ lexps[0][0].genome }}&position={{ genes_exps_list[0][genes_exps_list[0].keys()[0]][gene_name][3] }}:{{ gene[0].extension[0] }}-{{ gene[0].extension[1] }}" target="_blank">
-                                <img src="static/img/icons/ucsc2.png" title="http://genome.ucsc.edu/cgi-bin/hgTracks?org=mouse&db={{ lexps[0].genome }}&position={{ genes_exps_list[0][genes_exps_list[0].keys()[0]][gene_name][3] }}:{{ gene[0].extension[0] }}-{{ gene[0].extension[1] }}"/>
-                            </a>
-                            <!--<a href="http://genome.ucsc.edu/cgi-bin/hgTracks?db=mm10&position={{ genes_exps_list[0][genes_exps_list[0].keys()[0]][gene_name][3] }}:{{ gene[0].extension[0] }}-{{ gene[0].extension[1] }}" target="_blank"><img src="static/img/icons/ucsc2.png" title="http://genome.ucsc.edu/cgi-bin/hgTracks?org=mouse&db=mm10&position={{ genes_exps_list[0][genes_exps_list[0].keys()[0]][gene_name][3] }}:{{ gene[0].extension[0] }}-{{ gene[0].extension[1] }}"/></a>-->
-                            <a href="static/doc/gff3/{{ gene[0].id }}.txt" target="_blank">GFF3</a>
+                            <p>
+                                <a href="http://genome.ucsc.edu/cgi-bin/hgTracks?db={{ lexps[0][0].genome }}&position={{ genes_exps_list[0][genes_exps_list[0].keys()[0]][gene_name][3] }}:{{ gene[0].extension[0] }}-{{ gene[0].extension[1] }}" target="_blank">
+                                    <img src="static/img/icons/ucsc2.png" title="http://genome.ucsc.edu/cgi-bin/hgTracks?db={{ lexps[0][0].genome }}&position={{ genes_exps_list[0][genes_exps_list[0].keys()[0]][gene_name][3] }}:{{ gene[0].extension[0] }}-{{ gene[0].extension[1] }}"/>
+                                </a>
+                            </p>
+                            <p>
+                                <a href="static/doc/gff3/{{ gene[0].id }}.txt" target="_blank"><img src="static/img/icons/gff3.png" title="Go to GFF3 LSV definition"/></a>
+                            </p>
                         </td>
 
                     </tr>

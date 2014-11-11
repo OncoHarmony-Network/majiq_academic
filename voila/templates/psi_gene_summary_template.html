@@ -60,7 +60,7 @@
 
             <div>
                 <div class="spliceDiv" id="spliceDivExp1_{{ gene_index }}" data-exon-list="{{ genes_exps_list[0][genes_exps_list[0].keys()[0]][gene_name][0] }}"> {#data-exon-list="{{ genes_json[gene_name][0] }}"#}
-                    <div>
+                    <div class="spliceGraphTools">
                         <select class="spliceGraphSelector" autocomplete="off">
                             {% for nsample in genes_exps_list[0] -%}
                             {% if loop.first %}
@@ -117,9 +117,14 @@
                             </canvas>
                         </td>
                         <td>
-                            <a href="http://genome.ucsc.edu/cgi-bin/hgTracks?org=mouse&db={{ lexps[0].genome }}&position={{ gene_value[0][1][4].get_chrom() }}:{{ gene[0].extension[0] }}-{{ gene[0].extension[1] }}" target="_blank">
-                                <img src="static/img/icons/ucsc2.png" title="http://genome.ucsc.edu/cgi-bin/hgTracks?db={{ lexps[0].genome }}&position={{ gene_value[0][1][4].get_chrom() }}:{{ gene[0].extension[0] }}-{{ gene[0].extension[1] }}"/>
-                            </a>
+                            <p>
+                                <a href="http://genome.ucsc.edu/cgi-bin/hgTracks?org=mouse&db={{ lexps[0].genome }}&position={{ gene_value[0][1][4].get_chrom() }}:{{ gene[0].extension[0] }}-{{ gene[0].extension[1] }}" target="_blank">
+                                    <img src="static/img/icons/ucsc2.png" title="http://genome.ucsc.edu/cgi-bin/hgTracks?db={{ lexps[0].genome }}&position={{ gene_value[0][1][4].get_chrom() }}:{{ gene[0].extension[0] }}-{{ gene[0].extension[1] }}"/>
+                                </a>
+                            </p>
+                            <p>
+                                <a href="static/doc/gff3/{{ gene[0].id }}.txt" target="_blank"><img src="static/img/icons/gff3.png" title="Go to GFF3 LSV definition"/></a>
+                            </p>
                         </td>
 
                     </tr>

@@ -146,7 +146,7 @@ class Lsv(object):
         self.excl_incl = None
 
         # Contextual info
-        self.set_extension(lsv_meta[4])
+        self.extension = self.compute_extension(lsv_meta[4])
         self.set_gff3(lsv_meta[4])
 
         # For LSV filtering
@@ -221,17 +221,8 @@ class Lsv(object):
     #     else:
     #         self.extension = [geneG.get_junctions()[lsv_exon.get_a3_list()[0]].get_coords()[0] - 100, self.coords[1]]
 
-    def set_extension(self, geneG, lsv_type=None):
-
-        if not lsv_type:
-            lsv_type = self.type
-
-        if lsv_type.startswith('s'):
-            self.extension = [self.coords[0], geneG.get_exons()[-1].get_coords()[1]]
-        elif lsv_type.startswith('t'):
-            self.extension = [geneG.get_exons()[0].get_coords()[0], self.coords[1]]
-        else:
-            print "[ERROR] :: LSV type not recognized: %s" % lsv_type
+    def compute_extension(self, geneG, lsv_type=None):
+        return [geneG.get_exons()[0].get_coords()[0], geneG.get_exons()[-1].get_coords()[1]]
 
 
     def init_categories(self):

@@ -73,7 +73,6 @@ def render_summary(output_dir, output_html, majiq_output, type_summary, threshol
 
             subset_keys = gene_keys[count_pages*MAX_GENES: MAX_GENES*(count_pages+1)]
             genes_dict = cc.OrderedDict((k, majiq_output['genes_dict'][k]) for k in subset_keys)
-            # genes_json_dict = cc.OrderedDict((k, majiq_output['genes_json'][k]) for k in subset_keys)
             logger.info("Processing %d out of %d genes ..." % (min((count_pages+1)*MAX_GENES, len(gene_keys)), len(majiq_output['genes_dict'])))
             if (count_pages+1)*MAX_GENES < len(majiq_output['genes_dict']):
                 next_page = str(count_pages+1) + "_" + output_html
@@ -119,7 +118,6 @@ def render_summary(output_dir, output_html, majiq_output, type_summary, threshol
             name_page = str(count_pages) + "_" + output_html
             voila_output = open(output_dir+name_page, 'w')
             voila_output.write(sum_template.render( tableMarks=[table_marks_set(len(gene_set)) for gene_set in genes_dict],
-                                                    # metadata=majiq_output['metadata'],
                                                     genes_dict=genes_dict,
                                                     genes_exps_list=majiq_output['genes_exp'],
                                                     prevPage = prev_page,
@@ -206,7 +204,7 @@ def parse_gene_graphics(gene_exps_flist, gene_name_list, groups=('group1', 'grou
 
             ggenes_set = set(genes_graphic.keys())
             if not len(ggenes_set):
-                raise ParseError("No gene matching the splice graph file %s." % splice_graph_f, logger=logger)
+                logger.warning("No gene matching the splice graph file %s." % splice_graph_f)
 
             if len(gene_name_list) != len(ggenes_set):
                 raise ParseError("Different number of genes in splicegraph (%d) and majiq (%d) files." % (len(ggenes_set), len(gene_name_list)), logger=logger)
@@ -349,6 +347,11 @@ def create_summary(args):
         if not gene_name_list:
             gene_name_list = majiq_output['genes_dict'].keys()
 
+        if not gene_name_list:
+            logger.warning("Number of LSVs detected in Voila: 0.")
+            logger.info("End of Voila execution.")
+            return
+
         # Get gene info
         majiq_output['genes_exp'] = parse_gene_graphics([args.genes_files], gene_name_list,
                                                         groups=[majiq_output['meta_exps'][0]['group'], None],
@@ -380,6 +383,11 @@ def create_summary(args):
 
         if not gene_name_list:
             gene_name_list = majiq_output['genes_dict'].keys()
+
+        if not gene_name_list:
+            logger.warning("Number of LSVs detected in Voila with E(Delta(PSI)) > %.2f: None." % threshold)
+            logger.warning("End of Voila execution.")
+            return
 
         # Get gene info
         majiq_output['genes_exp'] = parse_gene_graphics([args.genesf_exp1, args.genesf_exp2], gene_name_list,
@@ -468,7 +476,7 @@ def main():
             e.logger.error(repr(e), exc_info=constants.DEBUG)
         else:
             sys.stdout.write(repr(e))
-        sys.exit(1)
+    sys.exit(1)
 
 if __name__ == '__main__':
     main()

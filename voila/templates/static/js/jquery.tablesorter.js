@@ -1100,7 +1100,7 @@
 
                 d3.select(this).select('.zoomResetSplice').on('click', function() {
                     chart.width(1000);
-                    chart.height(120);
+                    chart.height(140);
                     spliceg.call(chart);
 
                 });
