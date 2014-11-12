@@ -64,7 +64,10 @@ def global_conf_ini(filename, params):
     sam_dir = general['samdir']
     genome = general['genome']
     genome_path = general['genome_path']
-    strand_specific = (general['type']=='strand-specific')
+    if 'type' in general:
+        strand_specific = (general['type'] == 'strand-specific')
+    else:
+        strand_specific = False
     outDir = params.output
     if not os.path.exists(outDir):
         os.makedirs(outDir)
