@@ -45,7 +45,7 @@ def print_numbers():
 def global_conf_ini(filename, params):
 
     global num_experiments, exp_list, readLen, tissue_repl, sam_dir, num_mapped_reads, genome, \
-        genome_path, outDir, temp_oDir, gene_tlb
+        genome_path, outDir, temp_oDir, gene_tlb, strand_specific
     global A3SS, A5SS, SEev, bothSS, totalSE
     global MINREADS, MINPOS
 
@@ -64,8 +64,8 @@ def global_conf_ini(filename, params):
     sam_dir = general['samdir']
     genome = general['genome']
     genome_path = general['genome_path']
+    strand_specific = (general['type']=='strand-specific')
     outDir = params.output
-
     if not os.path.exists(outDir):
         os.makedirs(outDir)
     for exp_idx, lstnames in exp.items():
@@ -82,6 +82,7 @@ def global_conf_ini(filename, params):
     num_experiments = len(exp_list)
     num_mapped_reads = [0] * num_experiments
     gene_tlb = {}
+
 
     A3SS = [0]*20
     A5SS = [0]*20

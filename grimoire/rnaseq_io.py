@@ -111,10 +111,15 @@ def count_mapped_reads(filename, exp_idx):
 
 
 def is_neg_strand(read):
+
+
     res = False
     if read.flag & 0x10 == 0x10:
 #        print "FLAG",read.flag
         res = True
+    
+    if mglobals.strand_specific:
+        res = not res
 
     return res 
 
