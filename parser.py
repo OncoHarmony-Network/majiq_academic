@@ -41,8 +41,8 @@ def main():
                                                                                          'personalize partially the '
                                                                                          'output file.')
     buildparser.add_argument('--pcr', dest='pcr_filename', action="store", help='PCR bed file as gold_standard')
-    buildparser.add_argument('--gff_output', dest='gff_output', action="store", help='Filename where a gff with the '
-                                                                                     'lsv events will be generated')
+    buildparser.add_argument('--gff_output', dest='gff_output', default="lsvs.gff", action="store",
+                             help='Filename where a gff with the lsv events will be generated')
     buildparser.add_argument('--minreads', default=2, type=int,
                              help='Minimum number of reads threshold combining all positions in a LSV to consider that'
                                   'the LSV "exist in the data". '
