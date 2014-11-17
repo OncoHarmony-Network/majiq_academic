@@ -307,6 +307,8 @@ class DeltaPair(BasicPipeline):
             for ii in np.arange(num_exp[0]):
                 for jj in np.arange(num_exp[1]):
                     names = ["%s_%d" % (self.names[0], ii), "%s_%d" % (self.names[1], jj)]
+                    self.logger.info("Pairwise deltapsi: %s vs %s" % (names[0], names[1]))
+                    conf['names'] = names
                     fitting_f = [fitfunc[0][ii], fitfunc[1][jj]]
                     self.pairwise_deltapsi(matched_lsv, matched_info, meta_info, [1, 1], conf, prior_matrix, fitting_f,
                                            psi_space, names)
