@@ -297,26 +297,23 @@ def calc_dirichlet(alpha, n, samples_events, debug=False, psiparam=False):
 
 def gen_prior_matrix(pip, lsv_exp1, lsv_exp2, output, numbins=20, defaultprior=False):
 
-
     #Start prior matrix
     pip.logger.info("Calculating prior matrix...")
-
-    pip.logger.info("Calculate jefferies matrix...")
-    dircalc = DirichletCalc()
-    #Adjust prior matrix with Jefferies prior
-    alpha = 0.5
-    jefferies = []
     psi_space = np.linspace(0, 1-pip.binsize, num=numbins) + pip.binsize/2
-    for i in psi_space:
-        jefferies.append([])
-        for j in psi_space:
-            jefferies[-1].append(dircalc.pdf([i, 1-i, j, 1-j], [alpha, alpha, alpha, alpha]))
-
     if defaultprior:
         direc = "%s/../data" % os.path.dirname(os.path.realpath(__file__))
         prior_matrix = pickle.load(open('%s/defaultprior.pickle' % direc, 'r'))
         return psi_space, prior_matrix
 
+    # pip.logger.info("Calculate jefferies matrix...")
+    # dircalc = DirichletCalc()
+    # #Adjust prior matrix with Jefferies prior
+    # alpha = 0.5
+    # jefferies = []
+    # for i in psi_space:
+    #     jefferies.append([])
+    #     for j in psi_space:
+    #         jefferies[-1].append(dircalc.pdf([i, 1-i, j, 1-j], [alpha, alpha, alpha, alpha]))
     # #jefferies = array([dircalc.pdf([x, 1-x], [0.5, 0.5]) for x in psi_space])
     # jefferies = np.array(jefferies)
     # jefferies /= sum(jefferies)
@@ -374,13 +371,10 @@ def gen_prior_matrix(pip, lsv_exp1, lsv_exp2, output, numbins=20, defaultprior=F
                              " precomputed prior")
         #some info for later analysis
 #        pickle.dump(event_names, open("%s%s_%s_eventnames.pickle"%(output, self.names[0], self.names[1]), 'w')) 
-        if not pip.jefferiesprior:
-            plot_matrix(prior_matrix, "Prior Matrix (before Jefferies), junctions %s" % nj,
-                        "prior_matrix_no_jefferies_junc_%s" % nj, pip.plotpath)
 
         #Calculate prior matrix
-        #pip.logger.info("Adding a Jefferies prior to prior (alpha=%s), jun %s..." % (pip.alpha, nj))
-       #prior_matrix *= jefferies
+        # pip.logger.info("Adding a Jefferies prior to prior (alpha=%s), jun %s..." % (pip.alpha, nj))
+        # prior_matrix *= jefferies
         prior_matrix /= sum(prior_matrix)
          #renormalize so it sums 1
 

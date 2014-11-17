@@ -302,7 +302,6 @@ class DeltaPair(BasicPipeline):
                                                                                                           self.names[1],
                                                                                                           self.output))
 
-        pairwise = True
         if self.pairwise:
             num_lsv = len(matched_info)
             for ii in np.arange(num_exp[0]):
