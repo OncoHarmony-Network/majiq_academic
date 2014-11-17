@@ -6,10 +6,12 @@ Rank MAJIQ, MISO or MATS events to test delta PSI reproducibility
 """
 import matplotlib as mplot
 mplot.use('Agg')
+try:
+    import cPickle as pkl
+except ImportError:
+    import Pickle as pkl
 
 import scripts.utils
-
-
 import argparse
 from pylab import *
 
@@ -236,7 +238,7 @@ def main():
     if args.majiq_files:
         count_pairs = 0
         for file_nr, file in enumerate(args.majiq_files):
-            majiq_data = pickle.load(open(file, 'r'))
+            majiq_data = pkl.load(open(file, 'r'))
             count_pairs += 1
             rank, num_conf_events = rank_majiq(majiq_data[0], majiq_data[1], args.V, args.absolute, args.filter, args.E, args.ranknochange, args.complex_lsvs)
             ranks.append(rank_majiq(majiq_data[0], majiq_data[1], args.V, args.absolute, args.filter, args.E, args.ranknochange, args.complex_lsvs))
