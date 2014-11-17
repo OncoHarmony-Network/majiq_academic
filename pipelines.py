@@ -315,7 +315,7 @@ class DeltaPair(BasicPipeline):
 
 
                     lsv_vals1 = [[matched_lsv[0][xx][ii]] for xx in range(num_lsv)]
-                    lsv_vals2 = [[matched_lsv[1][xx][ii]] for xx in range(num_lsv)]
+                    lsv_vals2 = [[matched_lsv[1][xx][jj]] for xx in range(num_lsv)]
 
                     lsv_vals = [lsv_vals1, lsv_vals2]
                     self.pairwise_deltapsi(lsv_vals, matched_info, meta_info, [1, 1], conf, prior_matrix, fitting_f,
