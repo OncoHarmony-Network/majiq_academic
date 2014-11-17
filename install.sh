@@ -1,6 +1,6 @@
 #!/bin/bash
 
-if [ "$#" -ne 2 ]
+if [ "$#" -ne 1 ]
 then
   echo " This scripts adapts the compiled libraries to your computer. It has one parameter, "
   echo " the absolute path where the libraries and binaries will be located "
