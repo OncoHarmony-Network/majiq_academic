@@ -241,7 +241,7 @@ def main():
             majiq_data = pkl.load(open(file, 'r'))
             count_pairs += 1
             rank, num_conf_events = rank_majiq(majiq_data[0], majiq_data[1], args.V, args.absolute, args.filter, args.E, args.ranknochange, args.complex_lsvs)
-            ranks.append(rank_majiq(majiq_data[0], majiq_data[1], args.V, args.absolute, args.filter, args.E, args.ranknochange, args.complex_lsvs))
+            ranks.append(rank)
 
             plot_fdr(args.output, os.path.split(file)[1].split('.')[0], [r[1] for r in ranks[-1][:500]], num_conf_events)
 
