@@ -17,7 +17,7 @@ def filter_message(when, value, logger, junc):
             logger.info(message)
 
 
-def lsv_mark_stacks(lsv_list, fitfunc_r, pvalue_limit, dispersion, logger=None):
+def lsv_mark_stacks(lsv_list, fitfunc_r, pvalue_limit, logger=None):
 
     minstack = sys.maxint
      #the minimum value marked as stack

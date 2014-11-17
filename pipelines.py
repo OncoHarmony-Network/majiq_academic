@@ -88,7 +88,7 @@ class BasicPipeline:
     def mark_stacks(self, lsv_list, fitfunc):
         if self.markstacks >= 0:
             self.logger.info("Marking and masking stacks for...")
-            lsv_list = majiq_filter.lsv_mark_stacks(lsv_list, fitfunc, self.markstacks, self.nbdisp, self.logger)
+            lsv_list = majiq_filter.lsv_mark_stacks(lsv_list, fitfunc, self.markstacks, self.logger)
 
         return lsv_list
 
