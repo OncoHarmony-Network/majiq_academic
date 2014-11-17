@@ -360,7 +360,7 @@ def create_if_not_exists(my_dir, logger=False):
 
 
 def collapse_matrix(matrix):
-    "Collapse the diagonals probabilities in 1-D and return them"
+    """Collapse the diagonals probabilities in 1-D and return them"""
     collapse = []
     #FOR TEST matrix = array([[0, 1, 2, 3, 4, 500], [0, 1, 2, 3, 4, 5], [0, 1, 2, 3, 4, 5], [100, 1, 2, 3, 4, 5], ])
 

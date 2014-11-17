@@ -228,17 +228,49 @@ def parse_gene_graphics(gene_exps_flist, gene_name_list, groups=('group1', 'grou
     return genes_exp1_exp2
 
 
-def render_tab_output(output_dir, output_html, majiq_output, type_summary, logger=None):
+def load_dpairs(pairwise_dir, majiq_output, logger):
+    meta_exps = majiq_output['meta_exps']
+    lmajiq_pairs = [[None for i in range(len(meta_exps[1])) ] for j in range(len(meta_exps[0]))]
+
+    lsv_names = majiq_output['genes_dict'].keys()
+
+    group1_name = meta_exps[0][0]['group']
+    group2_name = meta_exps[1][0]['group']
+
+    for idx1 in range(len(meta_exps[0])):
+        for idx2 in range(len(meta_exps[1])):
+            pairwise_file = "%s/%s_%d_%s_%d.deltapsi.pickle" % (pairwise_dir, group1_name, idx1+1, group2_name, idx2+1)
+            try:
+                lmajiq_pairs[idx1][idx2] = utils_voila.get_lsv_delta_exp_data(pairwise_file,
+                                                                          gene_name_list=lsv_names,
+                                                                          logger=logger)
+            except IOError:
+                pass
+    return lmajiq_pairs, group1_name, group2_name
+
+
+def render_tab_output(output_dir, output_html, majiq_output, type_summary, logger=None, pairwise_dir=False):
 
     ofile_str = "%s%s.%s" % (output_dir, output_html.rsplit('.html', 1)[0], constants.EXTENSION)
     tlb_categx = {'A5SS': 'prime5', 'A3SS': 'prime3', 'Num. Junctions': 'njuncs', 'Num. Exons': 'nexons', 'ES': 'ES'}
 
     logger.info("Creating Tab-delimited output file in %s..." % ofile_str)
+
+    if pairwise_dir:
+        # In deltapsi, add columns with pairwise comparisons between group members
+        logger.info("Load pairwise comparison files in %s..." % pairwise_dir)
+        lmajiq_pairs, group1_name, group2_name = load_dpairs(pairwise_dir, majiq_output, logger=logger)
+
     with open(ofile_str, 'w+') as ofile:
-        headers = ['Gene name', 'LSV ID', 'E(PSI) per LSV junction', 'Var(E(PSI)) per LSV junction', 'LSV Type', 'A5SS', 'A3SS', 'ES', 'Num. Junctions', 'Num. Exons', 'chr', 'strand', 'Junctions coords', 'Exons coords', 'Exons Alternative Start', 'Exons Alternative End']
+        headers = ['Gene ID', 'LSV ID', 'E(PSI) per LSV junction', 'Var(E(PSI)) per LSV junction', 'LSV Type', 'A5SS', 'A3SS', 'ES', 'Num. Junctions', 'Num. Exons', 'chr', 'strand', 'Junctions coords', 'Exons coords', 'Exons Alternative Start', 'Exons Alternative End']
         if 'delta' in type_summary:
             headers[2] = 'E(Delta(PSI)) per LSV junction'
             headers[3] = 'P(Delta(PSI)>%s) per LSV junction' % .1
+
+            if pairwise_dir:
+                for idx1 in range(len(lmajiq_pairs)):
+                    for idx2 in range(len(lmajiq_pairs[0])):
+                        headers.append("%s%d_%s%d" % (group1_name, idx1, group2_name, idx2))
 
         ofile.write(constants.DELIMITER.join(headers))
         ofile.write('\n')
@@ -279,6 +311,22 @@ def render_tab_output(output_dir, output_html, majiq_output, type_summary, logge
                 except TypeError:
                     pass
 
+                if pairwise_dir:
+                    llpairwise = []
+                    for idx1 in range(len(lmajiq_pairs)):
+                        for idx2 in range(len(lmajiq_pairs[0])):
+                            for iway in range(len(llsv[0].get_bins())):
+                                lpairwise = []
+                                if gene in lmajiq_pairs[idx1][idx2]['genes_dict']:
+                                    for llsv_tmp in lmajiq_pairs[idx1][idx2]['genes_dict'][gene]:
+                                        if llsv_tmp[0].get_id() == llsv[0].get_id():
+                                            lsv_pair = llsv_tmp[0]
+                                            break
+                                    lpairwise.append(str(sum(lsv_pair.get_excl_incl()[iway])))
+                                else:
+                                    lpairwise.append('N/A')
+                                llpairwise.append(' '.join(lpairwise))
+                    lline.append('; '.join(llpairwise))
                 ofile.write(constants.DELIMITER.join(lline))
                 ofile.write('\n')
 
@@ -306,6 +354,7 @@ def create_gff3_txt_files(output_dir, majiq_output, logger):
 
     logger.info("Files saved in %s" % odir)
 
+
 def create_summary(args):
     """This method generates an html summary from a majiq output file"""
 
@@ -327,6 +376,7 @@ def create_summary(args):
 
     # meta_preprocess = args.meta_preprocess
     threshold       = None
+    pairwise        = None
 
     output_html = os.path.splitext(os.path.split(majiq_bins_file)[1])[0] + "_" + type_summary.replace("-", "_") + '.html'
     majiq_output = None
@@ -362,7 +412,8 @@ def create_summary(args):
                                                         logger=logger)
 
     if type_summary == constants.ANALYSIS_DELTAPSI:
-        threshold = args.threshold
+        threshold   = args.threshold
+        pairwise    = args.pairwise
 
         majiq_output = utils_voila.get_lsv_delta_exp_data(majiq_bins_file, args.confidence, args.threshold, args.show_all, logger=logger)
         majiq_output['event_list'] = []
@@ -374,11 +425,11 @@ def create_summary(args):
         # del majiq_output['genes_dict']
 
     if type_summary == constants.ANALYSIS_DELTAPSI_GENE:
-        threshold = args.threshold
-
-        import fileinput
+        threshold   = args.threshold
+        pairwise    = args.pairwise
         gene_name_list = []
 
+        import fileinput
         if args.gene_names:
             for gene_name in fileinput.input(args.gene_names):
                 gene_name_list.append(gene_name.rstrip().upper())
@@ -411,7 +462,7 @@ def create_summary(args):
 
     render_summary(output_dir, output_html, majiq_output, type_summary, threshold, meta_postprocess, logger=logger)
     create_gff3_txt_files(output_dir, majiq_output, logger=logger)
-    render_tab_output(output_dir, output_html, majiq_output, type_summary, logger=logger)
+    render_tab_output(output_dir, output_html, majiq_output, type_summary, logger=logger, pairwise_dir=pairwise)
 
     logger.info("Voila! Summaries created in: %s" % output_dir)
     return
@@ -432,7 +483,6 @@ def main():
     common_parser = argparse.ArgumentParser(add_help=False)
     common_parser.add_argument('-b', '--bins', metavar='majiq_output.pickle', dest='majiq_bins', type=str, required=True, help='Pickle file with the bins produced by Majiq.')
     common_parser.add_argument('-o', '--output', metavar='output_dir', dest='output_dir', type=str, required=True, help='Output directory where the files will be placed.')
-    common_parser.add_argument('--event-names', metavar='event_names.majiq', dest='event_names', type=str, help='Event names.')
     common_parser.add_argument('-c', '--confidence', metavar=0.95, dest='confidence', type=float, default=0.95, help='Percentage of confidence required (by default, 0.95).')
     common_parser.add_argument('--logger', default=None, help='Path for the logger. Default is output directory')
     common_parser.add_argument('--silent', action='store_true', default=False, help='Silence the logger.')
@@ -450,6 +500,7 @@ def main():
     parser_delta = argparse.ArgumentParser(add_help=False)
     parser_delta.add_argument('--threshold', type=float, default=0.2, help='Filter out LSVs with no junction predicted to change over a certain value (in percentage).')  # Probability threshold used to sum the accumulative probability of inclusion/exclusion.
     parser_delta.add_argument('--show-all', dest='show_all', action='store_true', default=False, help='Show all LSVs including those with no junction with significant change predicted')
+    parser_delta.add_argument('--pairwise-dir', type=str, dest='pairwise', help='Directory with the pairwise comparisons.')
     subparsers.add_parser(constants.ANALYSIS_DELTAPSI, help='Delta LSV analysis.', parents=[common_parser, parser_delta])
 
     # Single LSV by Gene(s) of interest

@@ -113,9 +113,10 @@ def create_array_bins(bins, confidence):
     variance = get_variance(bins, mean)
     return mean, conf_interval, quartiles_set, variance
 
+
 class Lsv(object):
 
-    def __init__(self, lsvs_bins, lsv_meta, confidence=.2):
+    def __init__(self, lsvs_bins, lsv_meta, confidence=.95):
 
         means_psi_list = []
         conf_interval_list = []
@@ -248,7 +249,6 @@ class Lsv(object):
 
         if j[0] == 't':
             self.categories['prime5'], self.categories['prime3'] = self.categories['prime3'], self.categories['prime5']
-
 
     def get_categories(self):
         return self.categories
