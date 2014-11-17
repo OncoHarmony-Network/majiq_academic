@@ -318,7 +318,7 @@ class DeltaPair(BasicPipeline):
         self.logger.info("Alakazam! Done.")
 
     def pairwise_deltapsi(self, matched_lsv, matched_info, meta_info, num_exp, conf, prior_matrix, fitfunc,
-                          psi_space, names):
+                          psi_space, grpnames):
         if self.nthreads == 1:
             posterior_matrix, names, psi_list1, psi_list2 = pipe.deltapsi(matched_lsv, matched_info, num_exp, conf,
                                                                           prior_matrix, fitfunc, psi_space, self.logger)
@@ -340,7 +340,7 @@ class DeltaPair(BasicPipeline):
                                                                         fitfunc, psi_space],
                                                                        matched_info,
                                                                        '%s/tmp' % os.path.dirname(self.output),
-                                                                       '%s_%s' % (names[0], names[1]),
+                                                                       '%s_%s' % (grpnames[0], grpnames[1]),
                                                                        nthrd])
             pool.close()
             pool.join()
@@ -351,16 +351,16 @@ class DeltaPair(BasicPipeline):
             psi_list2 = []
             self.logger.info("GATHER pickles")
             for nthrd in xrange(self.nthreads):
-                tempfile = open("%s/tmp/%s_%s_th%s.%s.pickle" % (os.path.dirname(self.output), names[0],
-                                                                 names[1], nthrd, pipe.deltapsi.__name__))
+                tempfile = open("%s/tmp/%s_%s_th%s.%s.pickle" % (os.path.dirname(self.output), grpnames[0],
+                                                                 grpnames[1], nthrd, pipe.deltapsi.__name__))
                 ptempt = pickle.load(tempfile)
                 posterior_matrix.extend(ptempt[0])
                 names.extend(ptempt[1])
                 psi_list1.extend(ptempt[2])
                 psi_list2.extend(ptempt[3])
 
-        pickle_path = "%s/%s_%s.%s.pickle" % (self.output, names[0], names[1], pipe.deltapsi.__name__)
+        pickle_path = "%s/%s_%s.%s.pickle" % (self.output, grpnames[0], grpnames[1], pipe.deltapsi.__name__)
         pickle.dump([posterior_matrix, names, meta_info, psi_list1, psi_list2], open(pickle_path, 'w'))
-        self.logger.info("DeltaPSI calculation for %s_%s ended succesfully! Result can be found at %s" % (names[0],
-                                                                                                          names[1],
+        self.logger.info("DeltaPSI calculation for %s_%s ended succesfully! Result can be found at %s" % (grpnames[0],
+                                                                                                          grpnames[1],
                                                                                                           self.output))
