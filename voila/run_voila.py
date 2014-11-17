@@ -323,7 +323,9 @@ def render_tab_output(output_dir, output_html, majiq_output, type_summary, logge
                                             lsv_pair = llsv_tmp[0]
                                             break
                                     else:
-                                        print "ERROOOOOOR!! NO LO HA ENCONTRAAAO"
+                                        print "ERROOOOOOR!! %s not found! " % llsv[0].get_id()
+                                        lpairwise.append('N/A')
+                                        continue
                                     lpairwise.append(str(sum(lsv_pair.get_excl_incl()[iway])))
                                 else:
                                     lpairwise.append('N/A')
