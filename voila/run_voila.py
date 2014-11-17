@@ -270,7 +270,7 @@ def render_tab_output(output_dir, output_html, majiq_output, type_summary, logge
             if pairwise_dir:
                 for idx1 in range(len(lmajiq_pairs)):
                     for idx2 in range(len(lmajiq_pairs[0])):
-                        headers.append("%s%d_%s%d" % (group1_name, idx1, group2_name, idx2))
+                        headers.append("%s%d_%s%d" % (group1_name, idx1+1, group2_name, idx2+1))
 
         ofile.write(constants.DELIMITER.join(headers))
         ofile.write('\n')
@@ -322,6 +322,8 @@ def render_tab_output(output_dir, output_html, majiq_output, type_summary, logge
                                         if llsv_tmp[0].get_id() == llsv[0].get_id():
                                             lsv_pair = llsv_tmp[0]
                                             break
+                                    else:
+                                        print "ERROOOOOOR!! NO LO HA ENCONTRAAAO"
                                     lpairwise.append(str(sum(lsv_pair.get_excl_incl()[iway])))
                                 else:
                                     lpairwise.append('N/A')
