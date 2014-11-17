@@ -304,6 +304,7 @@ class DeltaPair(BasicPipeline):
 
         pairwise = True
         if pairwise:
+            num_lsv = len(matched_info)
             for ii in np.arange(num_exp[0]):
                 for jj in np.arange(num_exp[1]):
                     names = ["%s_%d" % (self.names[0], ii+1), "%s_%d" % (self.names[1], jj+1)]
@@ -311,7 +312,12 @@ class DeltaPair(BasicPipeline):
                     conf['names'] = names
                     fitting_f = [fitfunc[0][ii], fitfunc[1][jj]]
 
-                    lsv_vals = [[matched_lsv[0][ii]], [matched_lsv[1][jj]]]
+
+
+                    lsv_vals1 = [matched_lsv[0][xx][ii] for xx in range(num_lsv)]
+                    lsv_vals2 = [matched_lsv[1][xx][ii] for xx in range(num_lsv)]
+
+                    lsv_vals = [lsv_vals1, lsv_vals2]
                     self.pairwise_deltapsi(lsv_vals, matched_info, meta_info, [1, 1], conf, prior_matrix, fitting_f,
                                            psi_space, names)
 
@@ -323,6 +329,7 @@ class DeltaPair(BasicPipeline):
             posterior_matrix, names, psi_list1, psi_list2 = pipe.deltapsi(matched_lsv, matched_info, num_exp, conf,
                                                                           prior_matrix, fitfunc, psi_space, self.logger)
         else:
+
 
             pool = Pool(processes=self.nthreads)
             csize = len(matched_lsv[0]) / int(self.nthreads)
@@ -339,7 +346,7 @@ class DeltaPair(BasicPipeline):
                                                                        [lsv_list, lsv_info, num_exp, conf, prior_matrix,
                                                                         fitfunc, psi_space],
                                                                        matched_info,
-                                                                       '%s/tmp' % os.path.dirname(self.output),
+                                                                       '%s/tmp' % self.output,
                                                                        '%s_%s' % (grpnames[0], grpnames[1]),
                                                                        nthrd])
             pool.close()
@@ -351,7 +358,7 @@ class DeltaPair(BasicPipeline):
             psi_list2 = []
             self.logger.info("GATHER pickles")
             for nthrd in xrange(self.nthreads):
-                tempfile = open("%s/tmp/%s_%s_th%s.%s.pickle" % (os.path.dirname(self.output), grpnames[0],
+                tempfile = open("%s/tmp/%s_%s_th%s.%s.pickle" % (self.output, grpnames[0],
                                                                  grpnames[1], nthrd, pipe.deltapsi.__name__))
                 ptempt = pickle.load(tempfile)
                 posterior_matrix.extend(ptempt[0])

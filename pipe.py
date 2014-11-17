@@ -16,7 +16,7 @@ def parallel_lsv_child_calculation(func, args, info, tempdir, name, chunk):
 
     try:
         if not os.path.isdir(tempdir):
-                os.mkdir(tempdir)
+            os.mkdir(tempdir)
         thread_logger = get_logger("%s/majiq.w%s.log" % (tempdir, chunk), silent=False)
         thread_logger.info("[Th %s]: START child,%s" % (chunk, current_process().name))
         thread_logger.info('[Th %s]: Filtering ...' % chunk)
