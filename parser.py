@@ -84,22 +84,22 @@ def main():
                        help="Use a default prior instead of computing it using the empirical data")
     delta.add_argument('--pairwise', default='False', action='store_true', help='')
     delta.add_argument('--names', nargs='+', required=True,
-                        help="The names that identify each of the experiments. [Default: %(default)s]")
+                       help="The names that identify each of the experiments. [Default: %(default)s]")
     delta.add_argument('--binsize', default=0.025, type=int,
-                        help='The bins for PSI values. With a --binsize of 0.025 (default), we have 40 bins')
+                       help='The bins for PSI values. With a --binsize of 0.025 (default), we have 40 bins')
     delta.add_argument('--priorminreads', default=20, type=int,
-                        help="Minimum number of reads combining all positions in a junction to be considered "
-                             "(for the 'best set' calculation). [Default: %(default)s]")
+                       help="Minimum number of reads combining all positions in a junction to be considered "
+                            "(for the 'best set' calculation). [Default: %(default)s]")
     delta.add_argument('--priorminnonzero', default=10, type=int,
-                        help='Minimum number of positions for the best set.')
+                       help='Minimum number of positions for the best set.')
     delta.add_argument('--iter', default=10, type=int,
-                        help='Max number of iterations of the EM')
+                       help='Max number of iterations of the EM')
     delta.add_argument('--breakiter', default=0.01, type=float,
-                        help='If the log likelihood increases less that this flag, do not do another EM step')
+                       help='If the log likelihood increases less that this flag, do not do another EM step')
     delta.add_argument('--prioruniform', default=3, type=float,
-                        help="Uniform distribution to give a bit more of a chance to values out of the normal "
-                             "distribution. that the synthetic prior matrix has. Only works with --synthprior. "
-                             "[Default: %(default)s]")
+                       help="Uniform distribution to give a bit more of a chance to values out of the normal "
+                            "distribution. that the synthetic prior matrix has. Only works with --synthprior. "
+                            "[Default: %(default)s]")
 
     # delta.add_argument('--fixweights1', nargs='*', type=float,
     #                    help='Manually fix the weights for the replicas [Default: Automatic weight calculation]')

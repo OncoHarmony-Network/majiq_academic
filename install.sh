@@ -1,6 +1,12 @@
 #!/bin/bash
 
-
+if [ "$#" -ne 2 ]
+then
+  echo " This scripts adapts the compiled libraries to your computer. It has one parameter, "
+  echo " the absolute path where the libraries and binaries will be located "
+  echo "Usage: ./install.sh <path to binaries destinations> "
+  exit 1
+fi
 
 chmod u+w $1/*dylib
 
