@@ -2,7 +2,7 @@ import argparse
 
 from pipelines import builder, calcpsi, deltapair
 
-VERSION = "alpha"
+VERSION = "beta"
 
 
 def new_subparser():
@@ -53,8 +53,6 @@ def main():
 
     #flags shared by calcpsi and deltapair
     psianddelta = new_subparser()
-    psianddelta.add_argument('--trim', default=0, type=int,
-                             help='Trim the borders of the junctions because of poor mappability')
     psianddelta.add_argument('--k', default=50, type=int,
                              help='Number of positions to sample per iteration. [Default: %(default)s]')
     psianddelta.add_argument('--m', default=100, type=int,
@@ -64,16 +62,12 @@ def main():
                              '[Default: %(default)s]')
     psianddelta.add_argument('--minpos', default=3, type=int, help='Minimum number of start positions with at least 1 '
                                                                    'read for an event to be considered.')
-
     psianddelta.add_argument('--trimborder', default=5, type=int,
                              help='Trim the borders when sampling (keeping the ones with reads). '
                                   '[Default: %(default)s]')
-
     psianddelta.add_argument('--markstacks', default=0.0000001, type=float,
                              help='Mark stack positions. Expects a p-value. Use a negative value in order to '
                                   'disable it. [Default: %(default)s]')
-    psianddelta.add_argument('--nbdisp', default=0.1, type=float,
-                             help='Dispersion for the fallback Negative Binomial function. Default: %(default)s]')
     psianddelta.add_argument('--nogc', dest="gcnorm", action='store_false', default=True,
                              help='psianddelta GC content normalization [Default: GC content normalization activated]')
     psianddelta.add_argument('--nodiscardb', dest="discardb", action='store_false',  default=True,
@@ -82,59 +76,37 @@ def main():
     psianddelta.add_argument('--discardzeros', default=5, type=int, dest="discardzeros",
                              help='Discarding zeroes, up to a minimum of N positions per junction. [Default: 5]')
 
-
     #deltapair and deltagroup flags
-    pairandgroup = new_subparser() 
-    pairandgroup.add_argument('--names', nargs='+', required=True,
-                              help="The names that identify each of the experiments. [Default: %(default)s]")
-    pairandgroup.add_argument('--binsize', default=0.025, type=int,
-                              help='The bins for PSI values. With a --binsize of 0.025 (default), we have 40 bins')
-    pairandgroup.add_argument('--priorminreads', default=20, type=int,
-                              help='Minimum number of reads combining all positions in a junction to be considered '
-                                   '(for the "best set" calculation). [Default: %(default)s]')
-    pairandgroup.add_argument('--priorminandreads', default=1, type=int,
-                              help='Minimum number of reads combining all positions in a junction to be considered '
-                                   '(for the "best set" calculation). [Default: %(default)s]')
-    pairandgroup.add_argument('--priorminnonzero', default=10, type=int,
-                              help='Minimum number of positions for the best set.')
-    pairandgroup.add_argument('--iter', default=10, type=int,
-                              help='Max number of iterations of the EM')
-    pairandgroup.add_argument('--breakiter', default=0.01, type=float,
-                              help='If the log likelihood increases less that this flag, do not do another EM step')
-    pairandgroup.add_argument('--V', default=0.1, type=float,
-                              help='Value of DeltaPSI used for initialization of the EM model [Default: %(default)s]')
-    pairandgroup.add_argument('--synthprior', action='store_true', default=False,
-                              help=' Generate the prior for DELTA PSI using our assumptions instead of the empirical '
-                                   'data [Default: %(default)s]')
-    pairandgroup.add_argument('--jefferiesprior', action='store_true', default=False,
-                              help='Use only the jefferies prior, without including the  [Default: %(default)s]')
-    pairandgroup.add_argument('--priorstd', default=0.15, type=float,
-                              help="Standard deviation from the 0.5 PSI mean that the synthetic prior matrix has. "
-                                   "Only works with --synthprior. [Default: %(default)s]")
-    pairandgroup.add_argument('--prioruniform', default=3, type=float,
-                              help="Uniform distribution to give a bit more of a chance to values out of the normal "
-                                   "distribution. that the synthetic prior matrix has. Only works with --synthprior. "
-                                   "[Default: %(default)s]")
-
     delta = new_subparser()
     delta.add_argument('-grp1', dest="files1", nargs='+', required=True)
     delta.add_argument('-grp2', dest="files2", nargs='+', required=True)
     delta.add_argument('--default_prior', action='store_true', default=False,
                        help="Use a default prior instead of computing it using the empirical data")
-    delta.add_argument('--changinglimit')
-    delta.add_argument('--changsetpercentile', type=float, default=90.,
-                       help="Percentile of events that go into the 'best changing events' set")
-    delta.add_argument('--fixweights1', nargs='*', type=float,
-                       help='Manually fix the weights for the replicas [Default: Automatic weight calculation]')
-    delta.add_argument('--fixweights2', nargs='*', type=float,
-                       help='Manually fix the weights for the replicas [Default: Automatic weight calculation]')
-    delta.add_argument('--weightsL1', action='store_true', default=False, help='Use L1 instead of DKL in the weights '
-                                                                               'algorithm')
-    delta.add_argument('--replicaweights', action='store_true', default=False,
-                       help='Weight the experiments according to the events that change the most within replicas')
-    delta.add_argument('--numbestchanging', default=200, type=int,
-                       help="Number of events included in the best changing set (default %(default)s, should be "
-                            "automatically calculated using FDR)")
+    delta.add_argument('--pairwise', default='False', action='store_true', help='')
+    delta.add_argument('--names', nargs='+', required=True,
+                        help="The names that identify each of the experiments. [Default: %(default)s]")
+    delta.add_argument('--binsize', default=0.025, type=int,
+                        help='The bins for PSI values. With a --binsize of 0.025 (default), we have 40 bins')
+    delta.add_argument('--priorminreads', default=20, type=int,
+                        help="Minimum number of reads combining all positions in a junction to be considered "
+                             "(for the 'best set' calculation). [Default: %(default)s]")
+    delta.add_argument('--priorminnonzero', default=10, type=int,
+                        help='Minimum number of positions for the best set.')
+    delta.add_argument('--iter', default=10, type=int,
+                        help='Max number of iterations of the EM')
+    delta.add_argument('--breakiter', default=0.01, type=float,
+                        help='If the log likelihood increases less that this flag, do not do another EM step')
+    delta.add_argument('--prioruniform', default=3, type=float,
+                        help="Uniform distribution to give a bit more of a chance to values out of the normal "
+                             "distribution. that the synthetic prior matrix has. Only works with --synthprior. "
+                             "[Default: %(default)s]")
+
+    # delta.add_argument('--fixweights1', nargs='*', type=float,
+    #                    help='Manually fix the weights for the replicas [Default: Automatic weight calculation]')
+    # delta.add_argument('--fixweights2', nargs='*', type=float,
+    #                    help='Manually fix the weights for the replicas [Default: Automatic weight calculation]')
+    # delta.add_argument('--weightsL1', action='store_true', default=False, help='Use L1 instead of DKL in the weights '
+    #                                                                            'algorithm')
 
     #calcpsi flags
     psi = new_subparser()
@@ -143,18 +115,20 @@ def main():
     psi.add_argument('--name', required=True, help="The names that identify each of the experiments. "
                                                    "[Default: %(default)s]")
 
-
     subparsers = parser.add_subparsers(help='')
+
     parser_preprocess = subparsers.add_parser('build', help='Preprocess SAM/BAM files as preparation for the rest of '
                                                             'the tools (psi, deltapsi)', parents=[common, buildparser])
     parser_preprocess.set_defaults(func=builder)
+
     parser_calcpsi = subparsers.add_parser('psi', help="Calculate PSI values for N experiments, given a folder of "
                                                        "preprocessed events by 'majiq preprocess' or SAM/BAM files",
                                            parents=[common, psi, psianddelta])
     parser_calcpsi.set_defaults(func=calcpsi)
+
     parser_deltagroup = subparsers.add_parser('deltapsi', help='Calculate Delta PSI values given a pair of experiments '
                                                                '(1 VS 1 conditions *with* replicas)',
-                                              parents=[common, delta, psianddelta, pairandgroup])
+                                              parents=[common, delta, psianddelta])
     parser_deltagroup.set_defaults(func=deltapair)
     args = parser.parse_args()
     args.func(args)
