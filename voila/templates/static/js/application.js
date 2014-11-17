@@ -1073,7 +1073,6 @@ function renderViolin(htmlElementId, results, tableId, params){
 
     function addViolin(svg, results, height, width, domain, imposeMax, count, id_svg, id_table){
 
-
         var data = d3.layout.histogram()
             .bins(params.num_bins)
             .range(domain)
@@ -1092,7 +1091,7 @@ function renderViolin(htmlElementId, results, tableId, params){
             .interpolate(interpolation)
             .x(function(d) {
                 if(interpolation=="step-before")
-                    return x(d.x+d.dx/2)
+                    return x(d.x+d.dx/2);
                 return x(d.x);
             })
             .y0(width/2)
@@ -1170,11 +1169,10 @@ function renderViolin(htmlElementId, results, tableId, params){
         var left=0.5-boxPlotWidth/2;
         var right=0.5+boxPlotWidth/2;
 
-        var probs=[0.1,0.25,0.5,0.75,0.9];
+        var probs=[0.05,0.25,0.5,0.75,0.95];
         for(var i=0; i<probs.length; i++){
             probs[i]=y(d3.quantile(results, probs[i]));
         }
-
 
         svg.append("rect")
             .attr("class", "boxplot fill")
@@ -1212,12 +1210,12 @@ function renderViolin(htmlElementId, results, tableId, params){
                 .attr("y2", probs[iS[i][1]]);
         }
 
-        svg.append("rect")
-            .attr("class", "boxplot")
-            .attr("x", x(left))
-            .attr("width", x(right)-x(left))
-            .attr("y", probs[3])
-            .attr("height", -probs[3]+probs[1]);
+//        svg.append("rect")
+//            .attr("class", "boxplot")
+//            .attr("x", x(left))
+//            .attr("width", x(right)-x(left))
+//            .attr("y", probs[3])
+//            .attr("height", -probs[3]+probs[1]);
 
 
     }
