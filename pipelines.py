@@ -301,4 +301,62 @@ class DeltaPair(BasicPipeline):
         self.logger.info("DeltaPSI calculation for %s_%s ended succesfully! Result can be found at %s" % (self.names[0],
                                                                                                           self.names[1],
                                                                                                           self.output))
+
+        pairwise = True
+        if pairwise:
+            for ii in np.arange(num_exp[0]):
+                for jj in np.arange(num_exp[1]):
+                    names = ["%s_%d" % (self.names[0], ii), "%s_%d" % (self.names[1], jj)]
+                    fitting_f = [fitfunc[0][ii], fitfunc[1][jj]]
+                    self.pairwise_deltapsi(matched_lsv, matched_info, meta_info, [1, 1], conf, prior_matrix, fitting_f,
+                                           psi_space, names)
+
         self.logger.info("Alakazam! Done.")
+
+    def pairwise_deltapsi(self, matched_lsv, matched_info, meta_info, num_exp, conf, prior_matrix, fitfunc,
+                          psi_space, names):
+        if self.nthreads == 1:
+            posterior_matrix, names, psi_list1, psi_list2 = pipe.deltapsi(matched_lsv, matched_info, num_exp, conf,
+                                                                          prior_matrix, fitfunc, psi_space, self.logger)
+        else:
+
+            pool = Pool(processes=self.nthreads)
+            csize = len(matched_lsv[0]) / int(self.nthreads)
+            self.logger.info("CREATING THREADS %s with <= %s lsv" % (self.nthreads, csize))
+
+            for nthrd in xrange(self.nthreads):
+                lb = nthrd * csize
+                ub = min((nthrd + 1) * csize, len(matched_lsv[0]))
+                if nthrd == self.nthreads - 1:
+                    ub = len(matched_lsv[0])
+                lsv_list = [matched_lsv[0][lb:ub], matched_lsv[1][lb:ub]]
+                lsv_info = matched_info[lb:ub]
+                pool.apply_async(pipe.parallel_lsv_child_calculation, [pipe.deltapsi,
+                                                                       [lsv_list, lsv_info, num_exp, conf, prior_matrix,
+                                                                        fitfunc, psi_space],
+                                                                       matched_info,
+                                                                       '%s/tmp' % os.path.dirname(self.output),
+                                                                       '%s_%s' % (names[0], names[1]),
+                                                                       nthrd])
+            pool.close()
+            pool.join()
+
+            posterior_matrix = []
+            names = []
+            psi_list1 = []
+            psi_list2 = []
+            self.logger.info("GATHER pickles")
+            for nthrd in xrange(self.nthreads):
+                tempfile = open("%s/tmp/%s_%s_th%s.%s.pickle" % (os.path.dirname(self.output), names[0],
+                                                                 names[1], nthrd, pipe.deltapsi.__name__))
+                ptempt = pickle.load(tempfile)
+                posterior_matrix.extend(ptempt[0])
+                names.extend(ptempt[1])
+                psi_list1.extend(ptempt[2])
+                psi_list2.extend(ptempt[3])
+
+        pickle_path = "%s/%s_%s.%s.pickle" % (self.output, names[0], names[1], pipe.deltapsi.__name__)
+        pickle.dump([posterior_matrix, names, meta_info, psi_list1, psi_list2], open(pickle_path, 'w'))
+        self.logger.info("DeltaPSI calculation for %s_%s ended succesfully! Result can be found at %s" % (names[0],
+                                                                                                          names[1],
+                                                                                                          self.output))
