@@ -1075,7 +1075,7 @@ function renderViolin(htmlElementId, results, tableId, params){
 
 
         var data = d3.layout.histogram()
-            .bins(42)
+            .bins(params.num_bins)
             .range(domain)
         (results);
 

@@ -1166,7 +1166,7 @@
                     if (lsv_list[0].bins.length > 2) {
                         var sampled_bins = translate_lsv_bins(lsv_list[0].bins, 10000);
 
-                        var svg = renderViolin($(this).parent()[0].id, sampled_bins, table.id, {'delta': 0});
+                        var svg = renderViolin($(this).parent()[0].id, sampled_bins, table.id, {'delta': 0, 'num_bins': lsv_list[0].bins[0].length});
                         $(svg).on("click", function (e) {
                             e.preventDefault();
                             $(this).toggle("show");
@@ -1259,7 +1259,7 @@
                             $(svgViolin).toggle();
                         } else {
                             var sampled_bins = translate_delta_lsv_bins(lsv.bins, 1000);
-                            svgViolin = renderViolin($(this).parent()[0].id, sampled_bins, table.id, {'delta': 1})[0];
+                            svgViolin = renderViolin($(this).parent()[0].id, sampled_bins, table.id, {'delta': 1, 'num_bins': lsv.bins[0].length})[0];
                         }
                         $(svgViolin).on("click", function (e) {
                             e.preventDefault();
