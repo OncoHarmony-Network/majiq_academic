@@ -82,7 +82,7 @@ def main():
     delta.add_argument('-grp2', dest="files2", nargs='+', required=True)
     delta.add_argument('--default_prior', action='store_true', default=False,
                        help="Use a default prior instead of computing it using the empirical data")
-    delta.add_argument('--pairwise', default='False', action='store_true', help='')
+    delta.add_argument('--pairwise', default=False, action='store_true', help='')
     delta.add_argument('--names', nargs='+', required=True,
                        help="The names that identify each of the experiments. [Default: %(default)s]")
     delta.add_argument('--binsize', default=0.025, type=int,
