@@ -310,7 +310,7 @@ class DeltaPair(BasicPipeline):
                     names = ["%s_%d" % (self.names[0], ii+1), "%s_%d" % (self.names[1], jj+1)]
                     self.logger.info("Pairwise deltapsi: %s vs %s" % (names[0], names[1]))
                     conf['names'] = names
-                    fitting_f = [fitfunc[0][ii], fitfunc[1][jj]]
+                    fitting_f = [[fitfunc[0][ii]], [fitfunc[1][jj]]]
 
 
 
