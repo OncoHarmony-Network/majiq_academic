@@ -455,7 +455,7 @@ def main():
     # Single LSV by Gene(s) of interest
     parser_single_gene = argparse.ArgumentParser(add_help=False)
     parser_single_gene.add_argument('--genes-files', nargs='+', required=True, dest='genes_files', metavar='Hippocampus1.splicegraph [Hippocampus2.splicegraph ...]', type=str, help='Splice graph information file(s) or directory with *.splicegraph file(s).')
-    parser_single_gene.add_argument('--gene-names', type=str, dest='gene_names', help='Gene names to filter the results.')
+    parser_single_gene.add_argument('--gene-names-file', type=str, dest='gene_names', help='File with gene names to filter the results (one gene per line). Use - to type in the gene names.')
     parser_single_gene.add_argument('--lsv-types', nargs='*', default=[], type=str, dest='lsv_types', help='LSV type to filter the results. (If no gene list is provided, this option will display only genes containing LSVs of the specified type).')
     subparsers.add_parser(constants.ANALYSIS_PSI_GENE, help='Single LSV analysis by gene(s) of interest.', parents=[common_parser, parser_single_gene])
 
@@ -463,7 +463,7 @@ def main():
     parser_delta_gene = argparse.ArgumentParser(add_help=False)
     parser_delta_gene.add_argument('--genes-exp1', required=True, nargs='+', dest='genesf_exp1', metavar='Hippocampus1.splicegraph', type=str, help='Experiment 1 splice graph information file(s) or directory.')
     parser_delta_gene.add_argument('--genes-exp2', required=True, nargs='+', dest='genesf_exp2', metavar='Liver1.splicegraph', type=str, help='Experiment 2 splice graph information file(s) or directory.')
-    parser_delta_gene.add_argument('--gene-names', type=str, dest='gene_names', help='Gene names to filter the results.')
+    parser_delta_gene.add_argument('--gene-names-file', type=str, dest='gene_names', help='File with gene names to filter the results (one gene per line). Use - to type in the gene names.')
     parser_delta_gene.add_argument('--lsv-types', nargs='*', default=[], type=str, dest='lsv_types', help='LSV type to filter the results. (If no gene list is provided, this option will display only genes containing LSVs of the specified type).')
     subparsers.add_parser(constants.ANALYSIS_DELTAPSI_GENE, help='Delta LSV analysis by gene(s) of interest.', parents=[common_parser, parser_delta, parser_delta_gene])
 
