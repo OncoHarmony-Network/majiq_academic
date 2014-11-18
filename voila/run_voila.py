@@ -242,7 +242,8 @@ def load_dpairs(pairwise_dir, majiq_output, logger):
             pairwise_file = "%s/%s_%d_%s_%d.deltapsi.pickle" % (pairwise_dir, group1_name, idx1+1, group2_name, idx2+1)
             try:
                 lmajiq_pairs[idx1][idx2] = utils_voila.get_lsv_delta_exp_data(pairwise_file,
-                                                                          gene_name_list=lsv_names,
+                                                                          show_all=True,
+									  gene_name_list=lsv_names,
                                                                           logger=logger)
             except IOError:
                 pass
