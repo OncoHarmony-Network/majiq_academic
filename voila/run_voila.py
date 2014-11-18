@@ -324,8 +324,8 @@ def render_tab_output(output_dir, output_html, majiq_output, type_summary, logge
                                             break
                                     else:
                                         logger.warning("LSV %s present in deltagroup but missing in %s." %
-                                                       (llsv[0].get_id()), "%s_%d_%s_%d" % (group1_name, idx1+1,
-                                                                                            group2_name, idx2+1))
+                                                       (llsv[0].get_id(), "%s_%d_%s_%d" % (group1_name, idx1+1,
+                                                                                            group2_name, idx2+1)))
                                         lpairwise.append('N/A')
                                         continue
                                     lpairwise.append(str(sum(lsv_pair.get_excl_incl()[iway])))
