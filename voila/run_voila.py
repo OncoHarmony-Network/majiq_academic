@@ -272,6 +272,14 @@ def render_tab_output(output_dir, output_html, majiq_output, type_summary, logge
                     for idx2 in range(len(lmajiq_pairs[0])):
                         headers.append("%s_%d_%s_%d" % (group1_name, idx1+1, group2_name, idx2+1))
 
+                exp_names_map = ['#Group names and file names mapping']
+                for iexp in range(len(lmajiq_pairs)):
+                    exp_names_map.append("#%s_%d=%s" % (group1_name, iexp+1, lmajiq_pairs[0][0]['meta_exp'][0][iexp]['experiment']))
+                for iexp in range(len(lmajiq_pairs[0])):
+                    exp_names_map.append("#%s_%d=%s" % (group2_name, iexp+1, lmajiq_pairs[0][0]['meta_exp'][1][iexp]['experiment']))
+                ofile.write(constants.DELIMITER.join(exp_names_map))
+                ofile.write('\n')
+
         ofile.write(constants.DELIMITER.join(headers))
         ofile.write('\n')
 
