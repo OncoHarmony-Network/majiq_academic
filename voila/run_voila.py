@@ -315,23 +315,23 @@ def render_tab_output(output_dir, output_html, majiq_output, type_summary, logge
                     llpairwise = []
                     for idx1 in range(len(lmajiq_pairs)):
                         for idx2 in range(len(lmajiq_pairs[0])):
-                            for iway in range(len(llsv[0].get_bins())):
-                                lpairwise = []
-                                if gene in lmajiq_pairs[idx1][idx2]['genes_dict']:
-                                    for llsv_tmp in lmajiq_pairs[idx1][idx2]['genes_dict'][gene]:
-                                        if llsv_tmp[0].get_id() == llsv[0].get_id():
-                                            lsv_pair = llsv_tmp[0]
-                                            break
-                                    else:
-                                        logger.warning("LSV %s present in deltagroup but missing in %s." %
-                                                       (llsv[0].get_id(), "%s_%d_%s_%d" % (group1_name, idx1+1,
-                                                                                            group2_name, idx2+1)))
-                                        lpairwise.append('N/A')
-                                        continue
-                                    lpairwise.append(str(sum(lsv_pair.get_excl_incl()[iway])))
+                            lpairwise = []
+                            if gene in lmajiq_pairs[idx1][idx2]['genes_dict']:
+                                for llsv_tmp in lmajiq_pairs[idx1][idx2]['genes_dict'][gene]:
+                                    if llsv_tmp[0].get_id() == llsv[0].get_id():
+                                        lsv_pair = llsv_tmp[0]
+                                        break
                                 else:
+                                    logger.warning("LSV %s present in deltagroup but missing in %s." %
+                                                   (llsv[0].get_id(), "%s_%d_%s_%d" % (group1_name, idx1+1,
+                                                                                        group2_name, idx2+1)))
                                     lpairwise.append('N/A')
-                                llpairwise.append(' '.join(lpairwise))
+                                    continue
+                                for iway in range(len(llsv[0].get_bins())):
+                                    lpairwise.append(str(sum(lsv_pair.get_excl_incl()[iway])))
+                            else:
+                                lpairwise.append('N/A')
+                            llpairwise.append(' '.join(lpairwise))
                     lline.append('; '.join(llpairwise))
                 ofile.write(constants.DELIMITER.join(lline))
                 ofile.write('\n')
