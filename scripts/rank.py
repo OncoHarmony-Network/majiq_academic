@@ -108,9 +108,11 @@ def expected_dpsi(matrix):
 
 
 def rank_majiq(bins_list, names, V=0.2, absolute=True, dofilter=True, E=False, ranknochange=False, complex_lsvs=False, prior=None):
-    MINTHRESHOLD = 0. # minimum threshold in order to consider a prob. significant enough to be included in the ranking
+    MINTHRESHOLD = 0.95
+    if E:
+        MINTHRESHOLD = 0.20
     rank = []
-
+    
     for i, lsv_bins in enumerate(bins_list):
         # if names[i][2] not in lsv_types_dict.keys():
         #     continue
@@ -131,8 +133,6 @@ def rank_majiq(bins_list, names, V=0.2, absolute=True, dofilter=True, E=False, r
             if ranknochange:
                 #P(Delta PSI < V) = 1 - P(Delta PSI > V)
                 area = 1.0 - area
-
-            if area > MINTHRESHOLD or not dofilter:
                 rank.append([names[i], area])
     if ranknochange:
         rank.sort(key=lambda x: x[1])
@@ -141,7 +141,7 @@ def rank_majiq(bins_list, names, V=0.2, absolute=True, dofilter=True, E=False, r
 
     num_conf_events = len(rank)
     for idx, v in enumerate(rank):
-        if v[1]<0.95:
+        if v[1]<MINTHRESHOLD:
             print "FDR=%d" % idx
             num_conf_events = idx
             break
