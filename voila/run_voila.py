@@ -242,9 +242,9 @@ def load_dpairs(pairwise_dir, majiq_output, logger):
             pairwise_file = "%s/%s_%d_%s_%d.deltapsi.pickle" % (pairwise_dir, group1_name, idx1+1, group2_name, idx2+1)
             try:
                 lmajiq_pairs[idx1][idx2] = utils_voila.get_lsv_delta_exp_data(pairwise_file,
-                                                                          show_all=True,
-									  gene_name_list=lsv_names,
-                                                                          logger=logger)
+                                                                              show_all=True,
+                                                                              gene_name_list=lsv_names,
+                                                                              logger=logger)
             except IOError:
                 pass
     return lmajiq_pairs, group1_name, group2_name
@@ -275,9 +275,9 @@ def render_tab_output(output_dir, output_html, majiq_output, type_summary, logge
 
                 exp_names_map = ['#Group names and file names mapping']
                 for iexp in range(len(lmajiq_pairs)):
-                    exp_names_map.append("#%s_%d=%s" % (group1_name, iexp+1, lmajiq_pairs[0][0]['meta_exp'][0][iexp]['experiment']))
+                    exp_names_map.append("#%s_%d=%s" % (group1_name, iexp+1, lmajiq_pairs[0][0]['meta_exps'][0][iexp]['experiment']))
                 for iexp in range(len(lmajiq_pairs[0])):
-                    exp_names_map.append("#%s_%d=%s" % (group2_name, iexp+1, lmajiq_pairs[0][0]['meta_exp'][1][iexp]['experiment']))
+                    exp_names_map.append("#%s_%d=%s" % (group2_name, iexp+1, lmajiq_pairs[0][0]['meta_exps'][1][iexp]['experiment']))
                 ofile.write(constants.DELIMITER.join(exp_names_map))
                 ofile.write('\n')
 
