@@ -46,7 +46,7 @@
             <h2>Gene name: {{ genes_exps_list[0][genes_exps_list[0].keys()[0]][gene_name][4] }}; {{ genes_exps_list[0][genes_exps_list[0].keys()[0]][gene_name][3] }}:{{ genes_exps_list[0][genes_exps_list[0].keys()[0]][gene_name][1] }}:{{ genes_exps_list[0][genes_exps_list[0].keys()[0]][gene_name][2][0] }}-{{ genes_exps_list[0][genes_exps_list[0].keys()[0]][gene_name][2][1] }};
                 <a href="http://genome.ucsc.edu/cgi-bin/hgTracks?db={{ lexps[0][0].genome }}&position={{ genes_exps_list[0][genes_exps_list[0].keys()[0]][gene_name][3] }}:{{ genes_exps_list[0][genes_exps_list[0].keys()[0]][gene_name][2][0] }}-{{ genes_exps_list[0][genes_exps_list[0].keys()[0]][gene_name][2][1] }}" target="_blank"><img src="static/img/icons/ucsc2.png" title="{{ genes_exps_list[0][genes_exps_list[0].keys()[0]][gene_name][3] }}:{{ genes_exps_list[0][genes_exps_list[0].keys()[0]][gene_name][2][0] }}-{{ genes_exps_list[0][genes_exps_list[0].keys()[0]][gene_name][2][1] }}"/></a>
             </h2>
-            <h3>
+            <h3 class="gene_id">
                 Gene ID: {{ gene_name }};
             </h3>
             <div>

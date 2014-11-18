@@ -278,7 +278,7 @@ def render_tab_output(output_dir, output_html, majiq_output, type_summary, logge
                     exp_names_map.append("#%s_%d=%s" % (group1_name, iexp+1, lmajiq_pairs[0][0]['meta_exps'][0][iexp]['experiment']))
                 for iexp in range(len(lmajiq_pairs[0])):
                     exp_names_map.append("#%s_%d=%s" % (group2_name, iexp+1, lmajiq_pairs[0][0]['meta_exps'][1][iexp]['experiment']))
-                ofile.write(constants.DELIMITER.join(exp_names_map))
+                ofile.write('\n'.join(exp_names_map))
                 ofile.write('\n')
 
         ofile.write(constants.DELIMITER.join(headers))

@@ -9,10 +9,6 @@ h2 {
     margin-bottom: 2px;
 }
 
-h3 {
-    margin-top: 2px;
-}
-
 fieldset legend {
     font-weight:bold;
     color: #006afc;
@@ -261,4 +257,8 @@ footer {
 
 .spliceGraphTools{
     position: absolute;
+}
+
+.gene_id {
+    margin-top: 2px;
 }
