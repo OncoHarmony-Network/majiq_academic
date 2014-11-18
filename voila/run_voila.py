@@ -270,7 +270,7 @@ def render_tab_output(output_dir, output_html, majiq_output, type_summary, logge
             if pairwise_dir:
                 for idx1 in range(len(lmajiq_pairs)):
                     for idx2 in range(len(lmajiq_pairs[0])):
-                        headers.append("%s%d_%s%d" % (group1_name, idx1+1, group2_name, idx2+1))
+                        headers.append("%s_%d_%s_%d" % (group1_name, idx1+1, group2_name, idx2+1))
 
         ofile.write(constants.DELIMITER.join(headers))
         ofile.write('\n')
@@ -323,7 +323,9 @@ def render_tab_output(output_dir, output_html, majiq_output, type_summary, logge
                                             lsv_pair = llsv_tmp[0]
                                             break
                                     else:
-                                        print "ERROOOOOOR!! %s not found! " % llsv[0].get_id()
+                                        logger.warning("LSV %s present in deltagroup but missing in %s." %
+                                                       (llsv[0].get_id()), "%s_%d_%s_%d" % (group1_name, idx1+1,
+                                                                                            group2_name, idx2+1))
                                         lpairwise.append('N/A')
                                         continue
                                     lpairwise.append(str(sum(lsv_pair.get_excl_incl()[iway])))
