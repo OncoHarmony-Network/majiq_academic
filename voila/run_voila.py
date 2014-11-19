@@ -263,7 +263,7 @@ def render_tab_output(output_dir, output_html, majiq_output, type_summary, logge
         lmajiq_pairs, group1_name, group2_name = load_dpairs(pairwise_dir, majiq_output, logger=logger)
 
     with open(ofile_str, 'w+') as ofile:
-        headers = ['Gene ID', 'LSV ID', 'E(PSI) per LSV junction', 'Var(E(PSI)) per LSV junction', 'LSV Type', 'A5SS', 'A3SS', 'ES', 'Num. Junctions', 'Num. Exons', 'chr', 'strand', 'Junctions coords', 'Exons coords', 'Exons Alternative Start', 'Exons Alternative End']
+        headers = ['#Gene ID', 'LSV ID', 'E(PSI) per LSV junction', 'Var(E(PSI)) per LSV junction', 'LSV Type', 'A5SS', 'A3SS', 'ES', 'Num. Junctions', 'Num. Exons', 'chr', 'strand', 'Junctions coords', 'Exons coords', 'Exons Alternative Start', 'Exons Alternative End']
         if 'delta' in type_summary:
             headers[2] = 'E(Delta(PSI)) per LSV junction'
             headers[3] = 'P(Delta(PSI)>%s) per LSV junction' % .1
