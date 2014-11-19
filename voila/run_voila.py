@@ -259,7 +259,7 @@ def render_tab_output(output_dir, output_html, majiq_output, type_summary, logge
 
     if pairwise_dir:
         # In deltapsi, add columns with pairwise comparisons between group members
-        logger.info("Load pairwise comparison files in %s..." % pairwise_dir)
+        logger.info("Load pairwise comparison files from %s..." % pairwise_dir)
         lmajiq_pairs, group1_name, group2_name = load_dpairs(pairwise_dir, majiq_output, logger=logger)
 
     with open(ofile_str, 'w+') as ofile:
@@ -280,7 +280,9 @@ def render_tab_output(output_dir, output_html, majiq_output, type_summary, logge
                     exp_names_map.append("#%s_%d=%s" % (group2_name, iexp+1, lmajiq_pairs[0][0]['meta_exps'][1][iexp]['experiment']))
                 ofile.write('\n'.join(exp_names_map))
                 ofile.write('\n')
+                ofile.write('#\n')
 
+        ofile.write("#Tab-delimited file\n#\n")
         ofile.write(constants.DELIMITER.join(headers))
         ofile.write('\n')
 
@@ -340,8 +342,8 @@ def render_tab_output(output_dir, output_html, majiq_output, type_summary, logge
                                     lpairwise.append(str(sum(lsv_pair.get_excl_incl()[iway])))
                             else:
                                 lpairwise.append('N/A')
-                            llpairwise.append(' '.join(lpairwise))
-                    lline.append('; '.join(llpairwise))
+                            llpairwise.append('; '.join(lpairwise))
+                    lline.extend(llpairwise)
                 ofile.write(constants.DELIMITER.join(lline))
                 ofile.write('\n')
 

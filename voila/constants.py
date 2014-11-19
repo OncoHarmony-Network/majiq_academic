@@ -13,7 +13,7 @@ JUNCTION_TYPE_DB = 2
 # File extensions, delimiters, etc.
 SUFFIX_SPLICEGRAPH = 'splicegraph'
 DELIMITER = '\t'
-EXTENSION = 'csv'
+EXTENSION = 'txt'
 
 # Debugging
 DEBUG = 1
