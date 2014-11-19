@@ -133,7 +133,7 @@ def rank_majiq(bins_list, names, V=0.2, absolute=True, dofilter=True, E=False, r
             if ranknochange:
                 #P(Delta PSI < V) = 1 - P(Delta PSI > V)
                 area = 1.0 - area
-                rank.append([names[i], area])
+            rank.append([names[i], area])
     if ranknochange:
         rank.sort(key=lambda x: x[1])
     else:
