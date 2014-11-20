@@ -264,10 +264,10 @@ def render_tab_output(output_dir, output_html, majiq_output, type_summary, logge
         lmajiq_pairs, group1_name, group2_name = load_dpairs(pairwise_dir, majiq_output, logger=logger)
 
     with open(ofile_str, 'w+') as ofile:
-        headers = ['#Gene ID', 'LSV ID', 'E(PSI) per LSV junction', 'Var(E(PSI)) per LSV junction', 'LSV Type', 'A5SS', 'A3SS', 'ES', 'Num. Junctions', 'Num. Exons', 'chr', 'strand', 'Junctions coords', 'Exons coords', 'Exons Alternative Start', 'Exons Alternative End']
+        headers = ['#Gene Name', 'Gene ID', 'LSV ID', 'E(PSI) per LSV junction', 'Var(E(PSI)) per LSV junction', 'LSV Type', 'A5SS', 'A3SS', 'ES', 'Num. Junctions', 'Num. Exons', 'chr', 'strand', 'Junctions coords', 'Exons coords', 'Exons Alternative Start', 'Exons Alternative End']
         if 'delta' in type_summary:
-            headers[2] = 'E(Delta(PSI)) per LSV junction'
-            headers[3] = 'P(Delta(PSI)>%s) per LSV junction' % .1
+            headers[3] = 'E(Delta(PSI)) per LSV junction'
+            headers[4] = 'P(Delta(PSI)>%s) per LSV junction' % .1
 
             if pairwise_dir:
                 for idx1 in range(len(lmajiq_pairs)):
@@ -290,7 +290,7 @@ def render_tab_output(output_dir, output_html, majiq_output, type_summary, logge
         for gene in majiq_output['genes_dict']:
             for llsv in majiq_output['genes_dict'][gene]:
                 lline = []
-                lline.extend([gene, llsv[0].get_id()])
+                lline.extend([llsv[1][4].get_name(), gene, llsv[0].get_id()])
                 lexpected = []
                 lconfidence = []
                 for i, bins in enumerate(llsv[0].get_bins()):

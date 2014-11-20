@@ -96,8 +96,8 @@ def main():
     """Distribution of reproduced LSVs by coverage"""
     parser = argparse.ArgumentParser(description="")
     parser.add_argument('events', type=str, help='Events files from reproducibility ranking.')
-    parser.add_argument('--builder-files', dest='builder_f', nargs='+', help='MAJIQ builder files used to compute lsv coverage.')
-    parser.add_argument('--output', help='Output file path')
+    parser.add_argument('--builder-files', required=True, dest='builder_f', nargs='+', help='MAJIQ builder files used to compute lsv coverage.')
+    parser.add_argument('--output', required=True, help='Output file path')
     args = parser.parse_args()
 
     lsvs = pkl.load(open(args.events))
