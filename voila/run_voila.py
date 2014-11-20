@@ -207,7 +207,8 @@ def parse_gene_graphics(gene_exps_flist, gene_name_list, groups=('group1', 'grou
                 logger.warning("No gene matching the splice graph file %s." % splice_graph_f)
 
             if len(gene_name_list) != len(ggenes_set):
-                raise ParseError("Different number of genes in splicegraph (%d) and majiq (%d) files." % (len(ggenes_set), len(gene_name_list)), logger=logger)
+                # raise ParseError("Different number of genes in splicegraph (%d) and majiq (%d) files." % (len(ggenes_set), len(gene_name_list)), logger=logger)
+                logger.warning("Different number of genes in splicegraph (%d) and majiq (%d) files." % (len(ggenes_set), len(gene_name_list)))
 
             genes_exp[os.path.basename(splice_graph_f)] = genes_graphic
 
