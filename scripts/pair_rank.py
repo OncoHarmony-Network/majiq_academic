@@ -112,7 +112,9 @@ def expected_dpsi(matrix):
 
 
 def rank_majiq(bins_list, names, V=0.2, absolute=True, dofilter=True, E=False, ranknochange=False, complex_lsvs=False, prior=None):
-    MINTHRESHOLD = 0. # minimum threshold in order to consider a prob. significant enough to be included in the ranking
+    MINTHRESHOLD = 0.95
+    if E:
+        MINTHRESHOLD = 0.20
     rank = []
     # lsv_types_dict = {
     #     's|1e1.1|1e2.1':'SE',
@@ -147,12 +149,19 @@ def rank_majiq(bins_list, names, V=0.2, absolute=True, dofilter=True, E=False, r
             #P(Delta PSI < V) = 1 - P(Delta PSI > V)
                 area = 1.0 - area
 
-            if area > MINTHRESHOLD or not dofilter:
-                rank.append([names[i], area])
+            # if area > MINTHRESHOLD or not dofilter:
+            rank.append([names[i], area])
     if ranknochange:
         rank.sort(key=lambda x: x[1])
     else:
         rank.sort(key=lambda x: x[1], reverse=True)
+
+    # Take only confident elements
+    for idx, v in enumerate(rank):
+        if v[1]<MINTHRESHOLD:
+            print "FDR=%d" % idx
+            return rank[:idx+1]
+
     # rank.sort(key=lambda x: x[1], reverse=True)
     # print '\n'.join([str(t[1]) for t in rank])
     return rank
@@ -301,7 +310,7 @@ def main():
     ranks = defaultdict(list)
 
     if args.majiq_files:
-        if args.type_rank == 'exp1_and_exp2':
+        if args.type_rank == 'exp1_and_exp2':  # CURRENTLY NOT USED!!! 20141119
             # Union over events that made it into Exp1 or Exp2, then use this set for the rankings over Exp1 and Exp2 no filtered
             # 4 files expected: exp1_filtered, exp1_nofiltered, exp2_filtered, exp2_nofiltered
             if len(args.majiq_files) != 4:
@@ -335,20 +344,20 @@ def main():
             count_pairs = 0
             for file_nr, file in enumerate(args.majiq_files):
                 majiq_data = pickle.load(open(file, 'r'))
-                prior = pickle.load(open(str(file).replace('deltamatrix', 'priormatrix_jun_0')))
+                # prior = pickle.load(open(str(file).replace('deltamatrix', 'priormatrix_jun_0')))
                 if file_nr % 2 == 0:
                     count_pairs += 1
                     majiq_file1_names = majiq_data[1]
-                    ranks['majiq_' + str(count_pairs)].append(rank_majiq(majiq_data[0], majiq_data[1], args.V, args.absolute, args.filter, args.E, args.ranknochange, args.complex_lsvs,  prior=prior))
+                    ranks['majiq_' + str(count_pairs)].append(rank_majiq(majiq_data[0], majiq_data[1], args.V, args.absolute, args.filter, args.E, args.ranknochange, args.complex_lsvs))
                     continue
 
                 if args.type_rank != 'all':
                     if args.type_rank == 'only_exp1':
                         # Select events from experiment 1
                         exp1_index = np.array([name in majiq_file1_names for name in majiq_data[1][:len(majiq_data[0])]])
-                        ranks['majiq_' + str(count_pairs)].append(rank_majiq(np.array(majiq_data[0])[exp1_index], np.array(majiq_data[1])[exp1_index].tolist(), args.V, args.absolute, args.filter, args.E, args.ranknochange, args.complex_lsvs, prior=prior))
+                        ranks['majiq_' + str(count_pairs)].append(rank_majiq(np.array(majiq_data[0])[exp1_index], np.array(majiq_data[1])[exp1_index].tolist(), args.V, args.absolute, args.filter, args.E, args.ranknochange, args.complex_lsvs))
                 else:
-                    ranks['majiq'].append(rank_majiq(majiq_data[0], majiq_data[1], args.V, args.absolute, args.filter, args.E, args.ranknochange, args.complex_lsvs, prior=prior))
+                    ranks['majiq'].append(rank_majiq(majiq_data[0], majiq_data[1], args.V, args.absolute, args.filter, args.E, args.ranknochange, args.complex_lsvs))
             names_majiq_exp1 = [m[1] for m in majiq_file1_names]
 
     if args.miso_files:
