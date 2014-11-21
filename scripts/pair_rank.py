@@ -111,7 +111,7 @@ def expected_dpsi(matrix):
     return ret
 
 
-def rank_majiq(bins_list, names, V=0.2, absolute=True, dofilter=True, E=False, ranknochange=False, complex_lsvs=False, prior=None):
+def rank_majiq(bins_list, names, V=0.2, absolute=True, dofilter=True, E=False, ranknochange=False, complex_lsvs=False, prior=None, shrink=True):
     MINTHRESHOLD = 0.95
     if E:
         MINTHRESHOLD = 0.20
@@ -157,10 +157,11 @@ def rank_majiq(bins_list, names, V=0.2, absolute=True, dofilter=True, E=False, r
         rank.sort(key=lambda x: x[1], reverse=True)
 
     # Take only confident elements
-    for idx, v in enumerate(rank):
-        if v[1]<MINTHRESHOLD:
-            print "FDR=%d" % idx
-            return rank[:idx+1]
+    if shrink:
+        for idx, v in enumerate(rank):
+            if v[1]<MINTHRESHOLD:
+                print "FDR=%d" % idx
+                return rank[:idx+1]
 
     # rank.sort(key=lambda x: x[1], reverse=True)
     # print '\n'.join([str(t[1]) for t in rank])
@@ -348,14 +349,14 @@ def main():
                 if file_nr % 2 == 0:
                     count_pairs += 1
                     majiq_file1_names = majiq_data[1]
-                    ranks['majiq_' + str(count_pairs)].append(rank_majiq(majiq_data[0], majiq_data[1], args.V, args.absolute, args.filter, args.E, args.ranknochange, args.complex_lsvs))
+                    ranks['majiq_' + str(count_pairs)].append(rank_majiq(majiq_data[0], majiq_data[1], args.V, args.absolute, args.filter, args.E, args.ranknochange, args.complex_lsvs, shrink=True))
                     continue
 
                 if args.type_rank != 'all':
                     if args.type_rank == 'only_exp1':
                         # Select events from experiment 1
                         exp1_index = np.array([name in majiq_file1_names for name in majiq_data[1][:len(majiq_data[0])]])
-                        ranks['majiq_' + str(count_pairs)].append(rank_majiq(np.array(majiq_data[0])[exp1_index], np.array(majiq_data[1])[exp1_index].tolist(), args.V, args.absolute, args.filter, args.E, args.ranknochange, args.complex_lsvs))
+                        ranks['majiq_' + str(count_pairs)].append(rank_majiq(np.array(majiq_data[0])[exp1_index], np.array(majiq_data[1])[exp1_index].tolist(), args.V, args.absolute, args.filter, args.E, args.ranknochange, args.complex_lsvs, shrink=False))
                 else:
                     ranks['majiq'].append(rank_majiq(majiq_data[0], majiq_data[1], args.V, args.absolute, args.filter, args.E, args.ranknochange, args.complex_lsvs))
             names_majiq_exp1 = [m[1] for m in majiq_file1_names]
