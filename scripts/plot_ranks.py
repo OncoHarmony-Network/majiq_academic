@@ -84,7 +84,9 @@ def main():
                 lsizes.append(numevents)
 
     title("%s" % (title) , fontsize=16)
-    legend(loc=2)
+
+    if not args.grouppairs:
+        legend(loc=2)
     _save_or_show(plotpath=args.plotpath, name=args.plotname)
 
 
