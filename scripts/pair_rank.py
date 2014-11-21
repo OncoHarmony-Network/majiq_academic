@@ -467,7 +467,7 @@ def main():
                     found += _is_in_chunk(event1, chunk2)
                     if i == max_events-1:
                         events.append([event1, _is_in_chunk(event1, chunk2)])
-                ratios.append(float(found) / args.max_events)
+                ratios.append(float(found) / max_events)
                 if i % 20 == 0:
                     print "%s..."%i,
                     sys.stdout.flush()
