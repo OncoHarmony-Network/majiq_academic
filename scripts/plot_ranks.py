@@ -42,7 +42,7 @@ def main():
     matplotlib.rc('font', **font)
 
     first = True
-    title = args.title
+    title_str = args.title
     lsizes = []
     #plot the lines of all ratios (pairs of ranks)
     for i, ratio_path in enumerate(args.ratios):
@@ -79,11 +79,11 @@ def main():
 
         if args.grouppairs:
             if i == len(args.ratios)-1:
-                title += "\nGroup N=%d; Pairs Avg. N=%.2f" % (len(args.ratios), np.mean(lsizes))
+                title_str += "\nGroup N=%d; Pairs Avg. N=%.2f" % (len(args.ratios), np.mean(lsizes))
             else:
                 lsizes.append(numevents)
 
-    title("%s" % (title) , fontsize=16)
+    title(title_str, fontsize=16)
 
     if not args.grouppairs:
         legend(loc=2)
