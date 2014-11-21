@@ -32,6 +32,7 @@ def main():
     parser.add_argument('--fdr', nargs='+', type=int, help="Determine which plots are FDR lines (1) and which are not (0), and paint them as a dotted line [Example: --fdr 0 1 0 0 1]")
     parser.add_argument('--colors', nargs='*',  help="Steps of best events to take")
     parser.add_argument('--plotname', default='rankcomp', help='Plot name')
+    parser.add_argument('--grouppairs', action='store_true', default='False', help='Flag for group vs pairs comparison')
     args = parser.parse_args()
 
     fig = figure(figsize=[10, 10]) # In inches
@@ -41,6 +42,8 @@ def main():
     matplotlib.rc('font', **font)
 
     first = True
+    title = args.title
+    lsizes = []
     #plot the lines of all ratios (pairs of ranks)
     for i, ratio_path in enumerate(args.ratios):
 
@@ -74,7 +77,13 @@ def main():
         else: 
             plot(x_space, ratio, linetype, label=my_label, linewidth=2)
 
-    title("%s" % (args.title) , fontsize=16)
+        if args.grouppairs:
+            if i == len(args.ratios)-1:
+                title += "\nGroup N=%d; Pairs Avg. N=%.2f" % (len(args.ratios), np.mean(lsizes))
+            else:
+                lsizes.append(numevents)
+
+    title("%s" % (title) , fontsize=16)
     legend(loc=2)
     _save_or_show(plotpath=args.plotpath, name=args.plotname)
 
