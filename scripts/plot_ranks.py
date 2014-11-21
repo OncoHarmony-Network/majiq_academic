@@ -65,6 +65,13 @@ def main():
             if args.fdr[i]: 
                 linetype = '--'
 
+        if args.grouppairs:
+            if i == len(args.ratios)-1:
+                title_str += "\nGroup N=%d; Pairs Avg. N=%.2f" % (numevents, np.mean(lsizes))
+            else:
+                lsizes.append(numevents)
+                linetype = '.'
+
         #label is file path if not specified
         if args.labels:
             my_label = "%s (N=%d)" % (args.labels[i], numevents)
@@ -77,11 +84,8 @@ def main():
         else: 
             plot(x_space, ratio, linetype, label=my_label, linewidth=2)
 
-        if args.grouppairs:
-            if i == len(args.ratios)-1:
-                title_str += "\nGroup N=%d; Pairs Avg. N=%.2f" % (numevents, np.mean(lsizes))
-            else:
-                lsizes.append(numevents)
+        text(1.05, ratio[-1], '%.2f%%' % (ratio[-1]*100), fontsize=16)
+
 
     title(title_str, fontsize=16)
 
