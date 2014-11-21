@@ -79,7 +79,7 @@ def main():
 
         if args.grouppairs:
             if i == len(args.ratios)-1:
-                title_str += "\nGroup N=%d; Pairs Avg. N=%.2f" % (len(args.ratios), np.mean(lsizes))
+                title_str += "\nGroup N=%d; Pairs Avg. N=%.2f" % (numevents, np.mean(lsizes))
             else:
                 lsizes.append(numevents)
 
