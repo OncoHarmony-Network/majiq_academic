@@ -79,7 +79,11 @@ class Junction:
         return self.gc_content
 
     def get_read_num(self, idx):
-        return self.coverage[idx, :].sum()
+        if idx == -1:
+            res = self.coverage.sum()
+        else:
+            res = self.coverage[idx, :].sum()
+        return res
 
     def is_annotated(self):
         return self.annotated

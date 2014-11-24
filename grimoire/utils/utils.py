@@ -13,7 +13,8 @@ from grimoire.junction import MajiqJunc
 import grimoire.rnaseq_io as majiq_io
 from voila.splice_graphics.exonGraphic import ExonGraphic
 from voila.splice_graphics.geneGraphic import GeneGraphic 
-from voila.splice_graphics.junctionGraphic import JunctionGraphic 
+from voila.splice_graphics.junctionGraphic import JunctionGraphic
+from voila import constants as viola_const
 import random
 from contextlib import contextmanager as ctx
 import gc
@@ -166,18 +167,22 @@ def generate_visualization_output(allgenes, temp_dir):
                         if jj.get_acceptor() is None:
                             alt_empty_starts.append(cc[0])
                             continue
-
-                        if jj.is_annotated() and jj.get_read_num(exp_idx) == 0:
-                            jtype = 2
-                        elif jj.is_annotated() and jj.get_read_num(exp_idx) > 0:
-                            jtype = 0
-                        elif not jj.is_annotated() and jj.get_read_num(exp_idx) > mglobals.MINREADS:
-                            jtype = 1
+                        num_reads = jj.get_read_num(exp_idx)
+                        if jj.is_annotated() and num_reads == 0:
+                            if (jj.get_read_num(-1) - num_reads) > 0:
+                                jtype = viola_const.JUNCTION_TYPE_DB_OTHER_RNASEQ
+                            else:
+                                jtype = viola_const.JUNCTION_TYPE_DB
+                        elif jj.is_annotated() and num_reads > 0:
+                            jtype = viola_const.JUNCTION_TYPE_DB_RNASEQ
+                        elif not jj.is_annotated() and num_reads > mglobals.MINREADS:
+                            jtype = viola_const.JUNCTION_TYPE_RNASEQ
                         else:
-                            jtype = 1
+                            jtype = viola_const.JUNCTION_TYPE_RNASEQ
                             #continue
                         junc_l.append(jj.get_coordinates())
-                        junc_list.append(JunctionGraphic(cc, jtype, jj.get_read_num(exp_idx)))
+                        junc_list.append(JunctionGraphic(cc, jtype, num_reads))
+
                     junc_l = np.asarray(junc_l)
                     exon_list = []
                     for ex in gg.get_exon_list():

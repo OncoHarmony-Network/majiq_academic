@@ -329,7 +329,6 @@ class DeltaPair(BasicPipeline):
                                                                           prior_matrix, fitfunc, psi_space, self.logger)
         else:
 
-
             pool = Pool(processes=self.nthreads)
             csize = len(matched_lsv[0]) / int(self.nthreads)
             self.logger.info("CREATING THREADS %s with <= %s lsv" % (self.nthreads, csize))
