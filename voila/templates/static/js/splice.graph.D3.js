@@ -501,16 +501,18 @@ function spliceGraphD3() {
                 var yPosition = height + 120;
 
                 //Update the tooltip position and value
-                d3.select(this.parentNode.parentNode).select(".tooltipD3")
+                var tooltipD3 = d3.select(this.parentNode.parentNode).select(".tooltipD3");
 //                    .style("left", xPosition + "px")
 //                    .style("top", yPosition + "px")
-                    .select(".coordsLabel")
+                tooltipD3.select(".coordsLabel")
                     .text(function(){
                         return orig_objs.exons[d.key].value.coords[0] + "-" + orig_objs.exons[d.key].value.coords[1];
                     });
-
-                //Show the tooltip
-                d3.select(this.parentNode.parentNode).select(".tooltipD3").classed("hidden", false);
+                tooltipD3.select(".lengthLabel")
+                    .text(function(){
+                        return Math.abs(orig_objs.exons[d.key].value.coords[0] - orig_objs.exons[d.key].value.coords[1]);
+                    });
+                tooltipD3.classed("hidden", false);
 
             })
                 .on('mouseout', function(d){
@@ -529,17 +531,18 @@ function spliceGraphD3() {
                 d3.select(this).classed("hovered", true);
 
                 //Update the tooltip position and value
-                d3.select(this.parentNode.parentNode).select(".tooltipD3")
+                var tooltipD3 = d3.select(this.parentNode.parentNode).select(".tooltipD3");
 //                    .style("left", mouseCoords[0]+ "px")
 //                    .style("top", mouseCoords[1]+ "px")
-                    .classed("hidden", false)
+                tooltipD3.classed("hidden", false)
                     .select(".coordsLabel")
                     .text(function(){
                         return orig_objs.junc[i].coords[0] + "-" + orig_objs.junc[i].coords[1];
                     });
-                //Show the tooltip
-//                d3.select(".tooltipD3").classed("hidden", false);
-
+                tooltipD3.select(".lengthLabel")
+                    .text(function(){
+                        return Math.abs(orig_objs.junc[i].coords[0] - orig_objs.junc[i].coords[1]);
+                    });
             })
             .on('mouseout', function(){
                 d3.selectAll('.junction').classed('blurred', false);
