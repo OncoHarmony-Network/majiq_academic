@@ -320,6 +320,7 @@ function spliceGraphD3() {
                 juncs.classed("found", function(d){ return d.type_junction == 0; });
                 juncs.classed("novel", function(d){ return d.type_junction == 1; });
                 juncs.classed("missing", function(d){ return d.type_junction == 2; });
+                juncs.classed("foundInOthers", function(d){ return d.type_junction == 3; });
 
                 return juncs;
             };
