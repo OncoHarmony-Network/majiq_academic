@@ -59,7 +59,7 @@
 
 
             <div>
-                <div class="spliceDiv exp1" id="spliceDivExp1_{{ gene_index }}" data-exon-list="{{ genes_exps_list[0][genes_exps_list[0].keys()[0]][gene_name][0] }}"> {#data-exon-list="{{ genes_json[gene_name][0] }}"#}
+                <div class="spliceDiv" id="spliceDivExp1_{{ gene_index }}" data-exon-list="{{ genes_exps_list[0][genes_exps_list[0].keys()[0]][gene_name][0] }}"> {#data-exon-list="{{ genes_json[gene_name][0] }}"#}
                     <div class="spliceGraphTools">
                         <select class="spliceGraphSelector" autocomplete="off">
                             {% for nsample in genes_exps_list[0] -%}
