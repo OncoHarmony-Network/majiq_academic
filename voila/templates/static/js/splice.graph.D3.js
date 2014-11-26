@@ -321,6 +321,7 @@ function spliceGraphD3() {
                 juncs.classed("novel", function(d){ return d.type_junction == 1; });
                 juncs.classed("missing", function(d){ return d.type_junction == 2; });
                 juncs.classed("foundInOthers", function(d){ return d.type_junction == 3; });
+                juncs.classed("novelInOthers", function(d){ return d.type_junction == 1 && d.num_reads<1; });
 
                 return juncs;
             };

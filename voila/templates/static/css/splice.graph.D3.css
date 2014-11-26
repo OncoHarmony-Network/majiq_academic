@@ -59,6 +59,11 @@
       stroke-dasharray: 5,2;
   }
 
+.junction.novelInOthers{
+    stroke:green;
+    stroke-width:1;
+    stroke-dasharray: 5,2;
+}
 
 .ssite3.highlighted, .ssite5.highlighted, .exon.hovered, .junction.hovered{
     fill: orange;
