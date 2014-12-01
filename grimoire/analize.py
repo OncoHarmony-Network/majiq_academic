@@ -66,6 +66,7 @@ def lsv_detection(gene_list, chrom, logging=None):
                         continue
 
                     for name, ind_list in mglobals.tissue_repl.items():
+                        dummy[name] = [[], []]
                         counter = 0
                         e_data = 0
                         for jj in jlist:
@@ -79,7 +80,7 @@ def lsv_detection(gene_list, chrom, logging=None):
                         if e_data == 0:
                             continue
 
-                        dummy[name] = [[], []]
+
                         dummy[name][lsv_index].append(lsv_in)
                         # for exp_idx in ind_list:
                         #     for lsvinlist in lsv_list[exp_idx]:
