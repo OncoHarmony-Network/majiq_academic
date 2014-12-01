@@ -48,10 +48,13 @@ def lsv_detection(gene_list, chrom, logging=None):
 #            print "---------------- %s --------------"%gn.get_id()
             #utils.print_junc_matrices(mat, tlb=tlb, fp=True)
             SS, ST = lsv_matrix_detection(mat, tlb, (False, False, False), vip)
+            dummy = {}
+
             for lsv_index, lsv_lst in enumerate((SS, ST)):
                 lsv_type = (SSOURCE, STARGET)[lsv_index]
                 sstype = ['5prime', '3prime'][lsv_index]
 #                print lsv_lst
+
                 for idx in lsv_lst:
                     jlist = exon_list[idx].get_junctions(sstype)
                     jlist = [x for x in jlist if x is not None]
@@ -75,19 +78,39 @@ def lsv_detection(gene_list, chrom, logging=None):
                             jun[name].add(jj)
                         if e_data == 0:
                             continue
+
+                        dummy[name] = [[], []]
+                        dummy[name][lsv_index].append(lsv_in)
+                        # for exp_idx in ind_list:
+                        #     for lsvinlist in lsv_list[exp_idx]:
+                        #         if lsv_in.is_equivalent(lsvinlist):
+                        #             break
+                        #     else:
+                        #         if lsv_in.get_junctions_list().shape[0] >= 2:
+                        #             lsv_list[exp_idx].append(lsv_in)
+
+            for name, ind_list in mglobals.tissue_repl.items():
+                for ss in dummy[name][0]:
+                    for st in dummy[name][1]:
+                        if not ss.contained(st):
+                            continue
                         for exp_idx in ind_list:
-                            for lsvinlist in lsv_list[exp_idx]:
-                                if lsv_in.is_equivalent(lsvinlist):
-                                    break
-                            else:
-                                if lsv_in.get_junctions_list().shape[0] >= 2:
-                                    lsv_list[exp_idx].append(lsv_in)
+                            lsv_list[exp_idx].append(ss)
+
+                for st in dummy[name][1]:
+                    for ss in dummy[name][0]:
+                        if not st.contained(ss):
+                            continue
+                        for exp_idx in ind_list:
+                            lsv_list[exp_idx].append(st)
 
     for name, ind_list in mglobals.tissue_repl.items():
         for exp_idx in ind_list:
             const_set[exp_idx].difference(jun[name])
 
     return lsv_list, const_set
+
+
 
 
 def lsv_matrix_detection(mat, exon_to_ss, b_list, vip_set=[]):
@@ -106,18 +129,19 @@ def lsv_matrix_detection(mat, exon_to_ss, b_list, vip_set=[]):
         #Single Source detection
         ss = mat[lsv[1][0]:lsv[1][-1]+1, :]
         ss_valid = True
-        cand = range(ii+1, len(exon_to_ss))
-        if ii > 0:
-            pre_lsv = exon_to_ss[ii-1]
-            for ex_idx, ex in enumerate(cand):
-                pt = exon_to_ss[ex]
-                junc_cand = mat[lsv[1][0]:lsv[1][-1]+1, pt[0][0]:pt[0][-1]+1]
-                if np.count_nonzero(junc_cand) < 1:
-                    continue
-                to_trgt = mat[: pre_lsv[1][0]+1, pt[0][0]:pt[0][-1]+1]
-                if np.count_nonzero(to_trgt) > 0 and not ex in vip_set:
-                    ss_valid = False
-                    break
+
+        # cand = range(ii+1, len(exon_to_ss))
+        # if ii > 0:
+        #     pre_lsv = exon_to_ss[ii-1]
+        #     for ex_idx, ex in enumerate(cand):
+        #         pt = exon_to_ss[ex]
+        #         junc_cand = mat[lsv[1][0]:lsv[1][-1]+1, pt[0][0]:pt[0][-1]+1]
+        #         if np.count_nonzero(junc_cand) < 1:
+        #             continue
+        #         to_trgt = mat[: pre_lsv[1][0]+1, pt[0][0]:pt[0][-1]+1]
+        #         if np.count_nonzero(to_trgt) > 0 and not ex in vip_set:
+        #             ss_valid = False
+        #             break
 
         if ss_valid and np.count_nonzero(ss) > 1:
             lsv_list[0].append(ii)
@@ -127,19 +151,19 @@ def lsv_matrix_detection(mat, exon_to_ss, b_list, vip_set=[]):
         #Single Targe detection
         st = mat[:, lsv[0][0]:lsv[0][-1]+1]
         st_valid = True
-        cand = range(0, ii)
 
-        if ii+1 < len(exon_to_ss):
-            post_lsv = exon_to_ss[ii+1]
-            for ex_idx, ex in enumerate(cand):
-                pt = exon_to_ss[ex]
-                junc_cand = mat[pt[1][0]:pt[1][-1]+1, lsv[0][0]:lsv[0][-1]+1]
-                if np.count_nonzero(junc_cand) < 1:
-                    continue
-                from_src = mat[pt[1][0]:pt[1][-1]+1, post_lsv[0][0]:]
-                if np.count_nonzero(from_src) > 0 and not ex in vip_set:
-                    st_valid = False
-                    break
+        # cand = range(0, ii)
+        # if ii+1 < len(exon_to_ss):
+        #     post_lsv = exon_to_ss[ii+1]
+        #     for ex_idx, ex in enumerate(cand):
+        #         pt = exon_to_ss[ex]
+        #         junc_cand = mat[pt[1][0]:pt[1][-1]+1, lsv[0][0]:lsv[0][-1]+1]
+        #         if np.count_nonzero(junc_cand) < 1:
+        #             continue
+        #         from_src = mat[pt[1][0]:pt[1][-1]+1, post_lsv[0][0]:]
+        #         if np.count_nonzero(from_src) > 0 and not ex in vip_set:
+        #             st_valid = False
+        #             break
 
         if st_valid and np.count_nonzero(st) > 1:
             lsv_list[1].append(ii)

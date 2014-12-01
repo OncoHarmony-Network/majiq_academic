@@ -265,6 +265,20 @@ class LSV(object):
             return False
         return np.array_equal(jlist1, jlist2)
 
+    def contained(self, variant):
+        res = True
+        jlist1 = sorted(self.junctions)
+        jlist2 = sorted(variant.junctions)
+        if self.type == variant.type:
+            return False
+
+        for jj1 in jlist1:
+            if not jj1 in jlist2:
+                res = False
+                break
+
+        return res
+
     def to_majiqLSV(self, exp_idx):
         return MajiqLsv(self, exp_idx)
 
