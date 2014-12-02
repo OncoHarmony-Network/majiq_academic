@@ -7,6 +7,7 @@ import collections as cc
 import voila.module_locator as module_locator
 import voila.utils.utils_voila as utils_voila
 import constants
+import numpy as np
 try:
     import cPickle as pkl
 except ImportError:
@@ -264,7 +265,7 @@ def render_tab_output(output_dir, output_html, majiq_output, type_summary, logge
         lmajiq_pairs, group1_name, group2_name = load_dpairs(pairwise_dir, majiq_output, logger=logger)
 
     with open(ofile_str, 'w+') as ofile:
-        headers = ['#Gene Name', 'Gene ID', 'LSV ID', 'E(PSI) per LSV junction', 'Var(E(PSI)) per LSV junction', 'LSV Type', 'A5SS', 'A3SS', 'ES', 'Num. Junctions', 'Num. Exons', 'chr', 'strand', 'Junctions coords', 'Exons coords', 'Exons Alternative Start', 'Exons Alternative End']
+        headers = ['#Gene Name', 'Gene ID', 'LSV ID', 'E(PSI) per LSV junction', 'Var(E(PSI)) per LSV junction', 'LSV Type', 'A5SS', 'A3SS', 'ES', 'Num. Junctions', 'Num. Exons', 'De Novo Junctions?', 'chr', 'strand', 'Junctions coords', 'Exons coords', 'Exons Alternative Start', 'Exons Alternative End']
         if 'delta' in type_summary:
             headers[3] = 'E(Delta(PSI)) per LSV junction'
             headers[4] = 'P(Delta(PSI)>%s) per LSV junction' % .1
@@ -310,6 +311,8 @@ def render_tab_output(output_dir, output_html, majiq_output, type_summary, logge
                 lline.append(repr(llsv[0].get_categories()[tlb_categx['ES']]))
                 lline.append(repr(llsv[0].get_categories()[tlb_categx['Num. Junctions']]))
                 lline.append(repr(llsv[0].get_categories()[tlb_categx['Num. Exons']]))
+
+                lline.append(str(int(np.any([junc.get_type() == 1 for junc in llsv[1][4].get_junctions()]))))
 
                 lline.append(llsv[1][4].get_chrom())
                 lline.append(llsv[1][4].get_strand())
@@ -511,7 +514,7 @@ def main():
 
     # Single LSV
     parser_single = argparse.ArgumentParser(add_help=False)
-    parser_single.add_argument('--key-plots', metavar='keysplots.pickle', dest='keys_plots', type=str, help='Heatmap plots.')
+    parser_single.add_argument('--lsv-types', nargs='*', default=[], type=str, dest='lsv_types', help='LSV type to filter the results. (If no gene list is provided, this option will display only genes containing LSVs of the specified type).')
     subparsers.add_parser(constants.ANALYSIS_PSI, help='Single LSV analysis.', parents=[common_parser, parser_single])
 
     # Delta LSV
@@ -523,15 +526,15 @@ def main():
 
     # Single LSV by Gene(s) of interest
     parser_single_gene = argparse.ArgumentParser(add_help=False)
-    parser_single_gene.add_argument('--genes-files', nargs='+', required=True, dest='genes_files', metavar='Hippocampus1.splicegraph [Hippocampus2.splicegraph ...]', type=str, help='Splice graph information file(s) or directory with *.splicegraph file(s).')
+    parser_single_gene.add_argument('--genes-exp1', nargs='+', required=True, dest='genes_files', metavar='Hippocampus1.splicegraph [Hippocampus2.splicegraph ...]', type=str, help='Splice graph information file(s) or directory with *.splicegraph file(s).')
     parser_single_gene.add_argument('--gene-names-file', type=str, dest='gene_names', help='File with gene names to filter the results (one gene per line). Use - to type in the gene names.')
-    parser_single_gene.add_argument('--lsv-types', nargs='*', default=[], type=str, dest='lsv_types', help='LSV type to filter the results. (If no gene list is provided, this option will display only genes containing LSVs of the specified type).')
-    subparsers.add_parser(constants.ANALYSIS_PSI_GENE, help='Single LSV analysis by gene(s) of interest.', parents=[common_parser, parser_single_gene])
+    # parser_single_gene.add_argument('--lsv-types', nargs='*', default=[], type=str, dest='lsv_types', help='LSV type to filter the results. (If no gene list is provided, this option will display only genes containing LSVs of the specified type).')
+    subparsers.add_parser(constants.ANALYSIS_PSI_GENE, help='Single LSV analysis by gene(s) of interest.', parents=[common_parser, parser_single, parser_single_gene])
 
     # Delta LSV by Gene(s) of interest
     parser_delta_gene = argparse.ArgumentParser(add_help=False)
-    parser_delta_gene.add_argument('--genes-exp1', required=True, nargs='+', dest='genesf_exp1', metavar='Hippocampus1.splicegraph', type=str, help='Experiment 1 splice graph information file(s) or directory.')
-    parser_delta_gene.add_argument('--genes-exp2', required=True, nargs='+', dest='genesf_exp2', metavar='Liver1.splicegraph', type=str, help='Experiment 2 splice graph information file(s) or directory.')
+    parser_delta_gene.add_argument('--genes-exp1', required=True, nargs='+', dest='genesf_exp1', metavar='Hippocampus1.splicegraph [Hippocampus2.splicegraph ...]', type=str, help='Experiment 1 splice graph information file(s) or directory.')
+    parser_delta_gene.add_argument('--genes-exp2', required=True, nargs='+', dest='genesf_exp2', metavar='Liver1.splicegraph [Liver2.splicegraph ...]', type=str, help='Experiment 2 splice graph information file(s) or directory.')
     parser_delta_gene.add_argument('--gene-names-file', type=str, dest='gene_names', help='File with gene names to filter the results (one gene per line). Use - to type in the gene names.')
     parser_delta_gene.add_argument('--lsv-types', nargs='*', default=[], type=str, dest='lsv_types', help='LSV type to filter the results. (If no gene list is provided, this option will display only genes containing LSVs of the specified type).')
     subparsers.add_parser(constants.ANALYSIS_DELTAPSI_GENE, help='Delta LSV analysis by gene(s) of interest.', parents=[common_parser, parser_delta, parser_delta_gene])
