@@ -142,6 +142,7 @@ def main(params):
 
     if params.nthreads > 1:
         pool = Pool(processes=params.nthreads)
+        childs = []
     logger.info("Scatter in Chromosomes")
     for chrom in chr_list:
         temp_dir = "%s/tmp/%s" % (mglobals.outDir, chrom)
@@ -151,11 +152,14 @@ def main(params):
                           logging=logger)
         else:
 
-            pool.apply_async(__parallel_lsv_quant, [sam_list, chrom, params.pcr_filename, params.gff_output])
+            ch = pool.apply_async(__parallel_lsv_quant, [sam_list, chrom, params.pcr_filename, params.gff_output])
+            childs.append(ch)
 
     if params.nthreads > 1:
         logger.info("... waiting childs")
         pool.close()
+        for ch in childs:
+            ch.get()
         pool.join()
 
     utils.gc_factor_calculation(chr_list, 10)

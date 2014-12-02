@@ -94,14 +94,14 @@ def lsv_detection(gene_list, chrom, logging=None):
             for name, ind_list in mglobals.tissue_repl.items():
                 for ss in dummy[name][0]:
                     for st in dummy[name][1]:
-                        if not ss.contained(st):
+                        if ss.contained(st):
                             continue
                         for exp_idx in ind_list:
                             lsv_list[exp_idx].append(ss)
 
                 for st in dummy[name][1]:
                     for ss in dummy[name][0]:
-                        if not st.contained(ss):
+                        if st.contained(ss):
                             continue
                         for exp_idx in ind_list:
                             lsv_list[exp_idx].append(st)
@@ -111,8 +111,6 @@ def lsv_detection(gene_list, chrom, logging=None):
             const_set[exp_idx].difference(jun[name])
 
     return lsv_list, const_set
-
-
 
 
 def lsv_matrix_detection(mat, exon_to_ss, b_list, vip_set=[]):
