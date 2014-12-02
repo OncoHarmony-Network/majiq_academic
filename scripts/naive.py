@@ -31,7 +31,7 @@ def psi_calc(lsv_junc, params):
                     junction_samples.append(choice(junction))
                 samples[i] = np.sum(junction_samples)
 
-            psi[lsv_idx, iternumber] = samples[0] / np.sum(samples)
+            psi[lsv_idx, iternumber] = float(samples[0]) / np.sum(samples)
     return psi
 
 
@@ -51,10 +51,10 @@ def calcpsi_func(params):
     lsv_junc = majiq_filter.lsv_quantifiable(lsv_junc, 1, params.minreads, None, fon)
 
     psi = psi_calc(lsv_junc[0], params)
-    ret_psi = np.zeros(shape=len(psi), dtype=np.float)
+    ret_psi = np.zeros(shape=(len(psi), nbins), dtype=np.float)
     for lsv_idx, lsv in enumerate(psi):
         hi, wgt, nb, b = scipy.stats.histogram(lsv, numbins=nbins)
-        ret_psi[lsv_idx] = hi
+        ret_psi[lsv_idx] = hi / hi.sum()
 
     res_dump([lsv_junc[1], ret_psi], p_id='%s.psi' % params.name, path=params.output)
 
@@ -92,6 +92,7 @@ def deltapsi_func(params):
         for itern in xrange(params.nboots):
             dpsi[itern] = psi2[lsv_idx, itern] - psi1[lsv_idx, itern]
         delta[lsv_idx], wgt, nb, b = scipy.stats.histogram(dpsi, numbins=nbins)
+        delta[lsv_idx] /= delta[lsv_idx].sum()
 
     res_dump([matched_info, delta], p_id='%s.delta' % params.name, path=params.output)
 
