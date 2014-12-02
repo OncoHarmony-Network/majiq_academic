@@ -49,6 +49,8 @@ def lsv_detection(gene_list, chrom, logging=None):
             #utils.print_junc_matrices(mat, tlb=tlb, fp=True)
             SS, ST = lsv_matrix_detection(mat, tlb, (False, False, False), vip)
             dummy = {}
+            for name, ind_list in mglobals.tissue_repl.items():
+                dummy[name] = [[], []]
 
             for lsv_index, lsv_lst in enumerate((SS, ST)):
                 lsv_type = (SSOURCE, STARGET)[lsv_index]
@@ -66,7 +68,6 @@ def lsv_detection(gene_list, chrom, logging=None):
                         continue
 
                     for name, ind_list in mglobals.tissue_repl.items():
-                        dummy[name] = [[], []]
                         counter = 0
                         e_data = 0
                         for jj in jlist:

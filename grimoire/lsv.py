@@ -271,11 +271,16 @@ class LSV(object):
         jlist2 = sorted(variant.junctions)
         if self.type == variant.type:
             return False
-
-        for jj1 in jlist1:
-            if not jj1 in jlist2:
+        if np.array_equal(jlist1, jlist2):
+            if (self.exon.get_strand() == '+' and self.lsv_type == SSOURCE) or (self.exon.get_strand() == '-' and self.lsv_type == STARGET):
                 res = False
-                break
+            else:
+                res = True
+        else:
+            for jj1 in jlist1:
+                if not jj1 in jlist2:
+                    res = False
+                    break
 
         return res
 
