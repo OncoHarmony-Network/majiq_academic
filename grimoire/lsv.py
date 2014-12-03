@@ -103,7 +103,6 @@ class LSV(object):
         strand = self.get_strand()
         rev = (strand == '-')
 
-
         if self.type == SSOURCE:
             spsite = sorted(set(self.exon.ss_5p_list), reverse=rev)
         else:

@@ -81,7 +81,6 @@ def lsv_detection(gene_list, chrom, logging=None):
                         if e_data == 0:
                             continue
 
-
                         dummy[name][lsv_index].append(lsv_in)
                         # for exp_idx in ind_list:
                         #     for lsvinlist in lsv_list[exp_idx]:
@@ -95,14 +94,16 @@ def lsv_detection(gene_list, chrom, logging=None):
                 for ss in dummy[name][0]:
                     for st in dummy[name][1]:
                         if ss.contained(st):
-                            continue
+                            break
+                    else:
                         for exp_idx in ind_list:
                             lsv_list[exp_idx].append(ss)
 
                 for st in dummy[name][1]:
                     for ss in dummy[name][0]:
                         if st.contained(ss):
-                            continue
+                            break
+                    else:
                         for exp_idx in ind_list:
                             lsv_list[exp_idx].append(st)
 

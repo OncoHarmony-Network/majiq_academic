@@ -90,7 +90,6 @@ def prepare_lsv_table(lsv_list, non_as, temp_dir):
 def merge_and_create_majiq_file(chr_list, pref_file):
 
     """
-
     :param chr_list:
     :param pref_file:
     """
@@ -289,7 +288,7 @@ def get_validated_pcr_lsv(candidates, out_dir):
         alt_coord = lsv.exon.get_pcr_candidate()
         score = lsv.get_pcr_score()
         for jidx, jj in enumerate(lsv.junctions):
-            if lsv.is_Ssource:
+            if lsv.is_Ssource():
                 excoord = jj.get_acceptor().get_coordinates()
             else:
                 excoord = jj.get_donor().get_coordinates()
@@ -417,8 +416,8 @@ def plot_gc_content():
             mx = mglobals.gc_means[exp_n].max()
             xx = np.arange(mn, mx, 0.001)
             yy = mglobals.gc_factor[exp_n](xx)
-            print "XX ",exp_n, xx
-            print "Yy", exp_n, yy
+            # print "XX ",exp_n, xx
+            # print "Yy", exp_n, yy
             pyplot.plot(xx, yy, label=mglobals.exp_list[exp_n])
             pyplot.axis((0.3, 0.7, 0.5, 1.5))
             pyplot.title("Gc factor")
