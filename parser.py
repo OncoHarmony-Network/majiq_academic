@@ -50,6 +50,7 @@ def main():
     buildparser.add_argument('--minpos', default=2, type=int, help='Minimum number of start positions with at least 1 '
                                                                    'read in a LSV to consider that the LSV "exist in '
                                                                    'the data"')
+    buildparser.add_argument('--only_gather', action='store_true', dest='onlygather', default=False)
 
     #flags shared by calcpsi and deltapair
     psianddelta = new_subparser()
