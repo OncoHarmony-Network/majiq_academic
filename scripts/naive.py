@@ -65,10 +65,10 @@ def deltapsi_func(params):
 
     print "Delta psi"
     print "Loading %s..." % params.file1,
-    lsv_junc1, const = majiq_io.load_data_lsv(params.file1, None)
+    info1, lsv_junc1, const = majiq_io.load_data_lsv(params.file1, None)
     print "Done."
     print "Loading %s..." % params.file2,
-    lsv_junc2, const = majiq_io.load_data_lsv(params.file2, None)
+    info2, lsv_junc2, const = majiq_io.load_data_lsv(params.file2, None)
     print "Done."
 
     ''' 
@@ -108,7 +108,7 @@ if __name__ == '__main__':
                                                                                          'junction')
     common.add_argument('-r', '--min-reads', default=20, dest='minreads', type=int, help='Minimal number of reads per '
                                                                                          'junction')
-    common.add_argument('-i', '--name', default=20, dest='name', type=str, help='Id of the execution')
+    common.add_argument('-i', '--name', required=True, dest='name', type=str, help='Id of the execution')
 
     calcpsi = argparse.ArgumentParser(add_help=False)
     calcpsi.add_argument('file')
