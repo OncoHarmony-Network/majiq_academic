@@ -69,9 +69,11 @@ def _find_delta_border(V, numbins):
     #if nothing hit, V = 1
     return numbins
 
-def matrix_area(matrix, V=0.2, absolute=True):
+def matrix_area(matrix, V=0.2, absolute=True, collapsed_mat=False):
     """Returns the probability of an event to be above a certain threshold. The absolute flag describes if the value is absolute"""
-    collapse = collapse_matrix(matrix)
+    collapse = matrix
+    if not collapsed_mat:
+        collapse = collapse_matrix(matrix)
     #get the delta psi histogram borders based on the size of 'collapse'
     border = _find_delta_border(V, collapse.shape[0])
     #grab the values inside the area of interest
@@ -160,11 +162,44 @@ def rank_majiq(bins_list, names, V=0.2, absolute=True, dofilter=True, E=False, r
     if shrink:
         for idx, v in enumerate(rank):
             if v[1]<MINTHRESHOLD:
-                print "FDR=%d" % idx
+                print "FDR=%d" % (idx+1)
                 return rank[:idx+1]
 
     # rank.sort(key=lambda x: x[1], reverse=True)
     # print '\n'.join([str(t[1]) for t in rank])
+    return rank
+
+
+def rank_naive(bins_list, names, V=0.2, absolute=True, E=False, ranknochange=False, complex_lsvs=False):
+    """Similar to MAJIQ files with the difference that the matrix is already collapsed"""
+    rank = []
+
+    for i, lsv_bins in enumerate(bins_list):
+        dmatrix = np.array(lsv_bins)
+        if E:
+            MINTHRESHOLD=.2
+            v_prob = 0.
+            for ii, v in enumerate(linspace(-1, 1, num=dmatrix.shape[0])):
+                v_prob += dmatrix[ii]*abs(v)
+            rank.append([names[i][1], v_prob])
+        else:
+            MINTHRESHOLD=.95
+            area = matrix_area(dmatrix, V, absolute, collapsed_mat=True)
+            if ranknochange:
+                #P(Delta PSI < V) = 1 - P(Delta PSI > V)
+                area = 1.0 - area
+            rank.append([names[i][1], area])
+
+    if ranknochange:
+        rank.sort(key=lambda x: x[1])
+    else:
+        rank.sort(key=lambda x: x[1], reverse=True)
+
+    for idx, v in enumerate(rank):
+        if v[1]<MINTHRESHOLD:
+            print "FDR=%d" % (idx+1)
+            return rank[:idx+1]
+
     return rank
 
 
@@ -224,6 +259,10 @@ def event_names_set_majiq(rank):
     return set([ranked_pair[0][1] for ranked_pair in rank])
 
 
+def event_names_set(rank):
+    return set([ranked_pair[0][1] for ranked_pair in rank])
+
+
 def skim_rank(rank, common_names, method):
     # print "Before filter: %d" % len(rank)
     if method == 'majiq':
@@ -256,13 +295,11 @@ def create_restrict_plot(ratios_list):
 # ~/workspace/majiq/data/deltapsi/genomewise/results_nofilter/Hippo2_Liver2_deltamatrix.pickle
 # --output output/repro/pair_rank_all/nooutlier/exp1_union_exp2 --nofilter --type-rank exp1_and_exp2 --max 300 $conf_ranks
 
-# python ~/Projects/majiq/scripts/pair_rank.py --majiq-files
-# ~/workspace/majiq/data/deltapsi/genomewise/Hippo1_Liver1_deltamatrix.pickle
-# ~/workspace/majiq/data/deltapsi/genomewise/results_nofilter/Hippo2_Liver2_deltamatrix.pickle
-# --miso-files
-# data/genomewise/miso/comparison_Hip1Liv1/Hip1_vs_Liv1/bayes-factors/Hip1_vs_Liv1.miso_bf
-# data/genomewise/miso/comparison_Hip2Liv2/Hip2_vs_Liv2/bayes-factors/Hip2_vs_Liv2.miso_bf
-# --output output/repro/pair_rank_all/nooutlier/only_exp1 --nofilter --type-rank only_exp1 --max 140  $conf_ranks
+# python ~/Projects/majiq/scripts/pair_rank.py
+# --majiq-files /data/MGP/majiq/dpsi/Hippo_Liver/pos5reads10/Hippo1_Liver1.deltapsi.pickle /data/MGP/majiq/dpsi/Hippo_Liver/pos2reads2/Hippo5_Liver5.deltapsi.pickle
+# --miso-files miso/Hip1Liv1/Hip1_vs_Liv1/bayes-factors/Hip1_vs_Liv1.miso_bf miso/Hip5Liv5/Hip5_vs_Liv5/bayes-factors/Hip5_vs_Liv5.miso_bf
+# --mats-files mats/Hip1_Liv1/MATS_output/all.txt mats/Hip5_Liv5/MATS_output/all.txt
+# --output repro/pair_rank/H1L1H5L5/full.E/ --fullrank --E --type-rank only_exp1 --max 154
 
 
 def plot_fdr(output, method_name, fdr):
@@ -285,10 +322,11 @@ def plot_fdr(output, method_name, fdr):
 
 def main():
     parser = argparse.ArgumentParser(description="")
-    parser.add_argument('--majiq-files', dest='majiq_files', nargs='*', help='MAJIQ files with paired events to analyze')
+    parser.add_argument('--majiq-files', dest='majiq_files', nargs='+', help='MAJIQ files with paired events to analyze')
     parser.add_argument('--miso-files', dest='miso_files', nargs=2, help='MISO files with paired events to analyze')
     parser.add_argument('--mats-files', dest='mats_files', nargs=2,help='MATS files with paired events to analyze')
-    parser.add_argument('--output', required=True, help='Output file path')
+    parser.add_argument('--naive-files', dest='naive_files', nargs=2,help='Naive Bootstrapping files with paired events to analyze')
+    parser.add_argument('-o', '--output', required=True, help='Output file path')
     parser.add_argument('--max',  default=1000, type = int, help="Max number of events to analyze")
     parser.add_argument('--V', default=0.2, type = float, help="Steps of best events to take")
     parser.add_argument('--E', default=False, action="store_true", help="For MAJIQ, calculate sum_v P(deltaPSI > V)")
@@ -385,6 +423,21 @@ def main():
             else:
                 ranks['mats'].append(array(mats_rank))
 
+    if args.naive_files:
+        names_naive_exp1 = None
+        for file in args.naive_files:
+            naive_data = pickle.load(open(file, 'r'))
+            naive_rank = rank_naive(naive_data[1], naive_data[0], args.V, args.absolute, args.E, args.ranknochange,)
+            if args.type_rank == 'only_exp1':
+                # Use only MAJIQ selected events for experiment 1
+                names_naive = [naive_info[0] for naive_info in naive_rank]
+                if not names_naive_exp1:
+                    names_naive_exp1 = names_naive
+                exp1_index = np.array([name in names_majiq_exp1 for name in names_naive])
+                ranks['naive'].append(array(naive_rank)[exp1_index])
+            else:
+                ranks['naive'].append(array(naive_rank))
+
     if args.intersect_events:
         print "Computing intersection of events..."
         common_names = event_names_set_majiq(ranks['majiq'][0]).intersection(event_names_set_majiq(ranks['majiq'][1]))
@@ -401,6 +454,12 @@ def main():
             common_names = common_names.intersection(miso_set)
             print "After intersected with MISO: %d LSVs" % len(common_names)
 
+        if args.naive_files:
+            naive_set = event_names_set(ranks['naive'][0]).intersection(event_names_set(ranks['naive'][1]))
+            print "Naive Bootstrapping intersected with itself %d " % len(naive_set)
+            common_names = common_names.intersection(naive_set)
+            print "After intersected with Naive Bootstrapping: %d LSVs" % len(common_names)
+
 
     only_exp1_ranks = []
     for method_name, ranks_pair in ranks.items():
@@ -409,7 +468,7 @@ def main():
             print "Skimming rankings, discarding events (LSVs) not common for %s..." % method_name
             for ii, rank in enumerate(ranks_pair):
                 ranks_pair[ii] = skim_rank(rank, common_names, method_name)
-            print "Final lengths: %d, %d"  % (len(ranks_pair[0]), len(ranks_pair[1]))
+            print "Final lengths: %d, %d" % (len(ranks_pair[0]), len(ranks_pair[1]))
 
         rank1, rank2 = ranks_pair
         print "Num events", len(rank1), len(rank2)
