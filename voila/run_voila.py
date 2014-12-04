@@ -504,8 +504,8 @@ def create_summary(args):
         meta_postprocess['collapsed'] = args.collapsed
 
     render_summary(output_dir, output_html, majiq_output, type_summary, threshold, meta_postprocess, logger=logger)
-    # create_gff3_txt_files(output_dir, majiq_output, logger=logger)
-    # render_tab_output(output_dir, output_html, majiq_output, type_summary, logger=logger, pairwise_dir=pairwise)
+    create_gff3_txt_files(output_dir, majiq_output, logger=logger)
+    render_tab_output(output_dir, output_html, majiq_output, type_summary, logger=logger, pairwise_dir=pairwise)
 
     logger.info("Voila! Summaries created in: %s" % output_dir)
     return
