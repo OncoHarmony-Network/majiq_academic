@@ -106,8 +106,10 @@ def _generate_parser():
     parser.add_argument('--silent', action='store_true', default=False, help='Silence the logger.')
     parser.add_argument('--debug', type=int, default=0, help="Activate this flag for debugging purposes, activates "
                                                              "logger and jumps some processing steps.")
-    parser.add_argument('--only_gather', action='store_true', default=False)
+    parser.add_argument('--only_gather', action='store_true', dest='onlygather', default=False)
+
     return parser.parse_args()
+
 
 #########
 # MAIN  #
@@ -140,27 +142,28 @@ def main(params):
     if len(sam_list) == 0:
         return
 
-    if params.nthreads > 1:
-        pool = Pool(processes=params.nthreads)
-        childs = []
-    logger.info("Scatter in Chromosomes")
-    for chrom in chr_list:
-        temp_dir = "%s/tmp/%s" % (mglobals.outDir, chrom)
-        utils.create_if_not_exists(temp_dir)
-        if params.nthreads == 1:
-            majiq_builder(sam_list, chrom, pcr_validation=params.pcr_filename, gff_output=params.gff_output,
-                          logging=logger)
-        else:
+    if not params.onlygather:
+        if params.nthreads > 1:
+            pool = Pool(processes=params.nthreads)
+            childs = []
+        logger.info("Scatter in Chromosomes")
+        for chrom in chr_list:
+            temp_dir = "%s/tmp/%s" % (mglobals.outDir, chrom)
+            utils.create_if_not_exists(temp_dir)
+            if params.nthreads == 1:
+                majiq_builder(sam_list, chrom, pcr_validation=params.pcr_filename, gff_output=params.gff_output,
+                              logging=logger)
+            else:
 
-            ch = pool.apply_async(__parallel_lsv_quant, [sam_list, chrom, params.pcr_filename, params.gff_output])
-            childs.append(ch)
+                ch = pool.apply_async(__parallel_lsv_quant, [sam_list, chrom, params.pcr_filename, params.gff_output])
+                childs.append(ch)
 
-    if params.nthreads > 1:
-        logger.info("... waiting childs")
-        pool.close()
-        for ch in childs:
-            ch.get()
-        pool.join()
+        if params.nthreads > 1:
+            logger.info("... waiting childs")
+            pool.close()
+            for ch in childs:
+                ch.get()
+            pool.join()
 
     utils.gc_factor_calculation(chr_list, 10)
     utils.plot_gc_content()
