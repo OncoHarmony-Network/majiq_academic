@@ -103,7 +103,6 @@ class LSV(object):
         strand = self.get_strand()
         rev = (strand == '-')
 
-
         if self.type == SSOURCE:
             spsite = sorted(set(self.exon.ss_5p_list), reverse=rev)
         else:
@@ -272,8 +271,8 @@ class LSV(object):
         if self.type == variant.type:
             return False
         if np.array_equal(jlist1, jlist2):
-            if (self.exon.get_strand() == '+' and self.type == SSOURCE) or \
-                    (self.exon.get_strand() == '-' and self.type == STARGET):
+            if (self.get_strand() == '+' and self.type == SSOURCE) or \
+                    (self.get_strand() == '-' and self.type == STARGET):
                 res = False
             else:
                 res = True
