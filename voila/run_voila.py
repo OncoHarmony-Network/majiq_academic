@@ -140,6 +140,11 @@ def render_summary(output_dir, output_html, majiq_output, type_summary, threshol
         ))
         voila_output.close()
 
+    elif type_summary == constants.LSV_THUMBNAILS:
+        voila_output = open(output_dir+output_html, 'w')
+        voila_output.write(sum_template.render(lsvList=majiq_output,
+                                               collapsed=int(post_process_info['collapsed'])))
+
     else:
         logger.error("summary type not recognized %s." % type_summary, exc_info=1)
 
@@ -265,7 +270,25 @@ def render_tab_output(output_dir, output_html, majiq_output, type_summary, logge
         lmajiq_pairs, group1_name, group2_name = load_dpairs(pairwise_dir, majiq_output, logger=logger)
 
     with open(ofile_str, 'w+') as ofile:
-        headers = ['#Gene Name', 'Gene ID', 'LSV ID', 'E(PSI) per LSV junction', 'Var(E(PSI)) per LSV junction', 'LSV Type', 'A5SS', 'A3SS', 'ES', 'Num. Junctions', 'Num. Exons', 'De Novo Junctions?', 'chr', 'strand', 'Junctions coords', 'Exons coords', 'Exons Alternative Start', 'Exons Alternative End']
+        headers = ['#Gene Name',
+                   'Gene ID',
+                   'LSV ID',
+                   'E(PSI) per LSV junction',
+                   'Var(E(PSI)) per LSV junction',
+                   'LSV Type',
+                   'A5SS',
+                   'A3SS',
+                   'ES',
+                   'Num. Junctions',
+                   'Num. Exons',
+                   'De Novo Junctions?',
+                   'chr',
+                   'strand',
+                   'Junctions coords',
+                   'Exons coords',
+                   'Exons Alternative Start',
+                   'Exons Alternative End']
+
         if 'delta' in type_summary:
             headers[3] = 'E(Delta(PSI)) per LSV junction'
             headers[4] = 'P(Delta(PSI)>%s) per LSV junction' % .1
@@ -311,7 +334,6 @@ def render_tab_output(output_dir, output_html, majiq_output, type_summary, logge
                 lline.append(repr(llsv[0].get_categories()[tlb_categx['ES']]))
                 lline.append(repr(llsv[0].get_categories()[tlb_categx['Num. Junctions']]))
                 lline.append(repr(llsv[0].get_categories()[tlb_categx['Num. Exons']]))
-
                 lline.append(str(int(np.any([junc.get_type() == 1 for junc in llsv[1][4].get_junctions()]))))
 
                 lline.append(llsv[1][4].get_chrom())
@@ -482,8 +504,8 @@ def create_summary(args):
         meta_postprocess['collapsed'] = args.collapsed
 
     render_summary(output_dir, output_html, majiq_output, type_summary, threshold, meta_postprocess, logger=logger)
-    create_gff3_txt_files(output_dir, majiq_output, logger=logger)
-    render_tab_output(output_dir, output_html, majiq_output, type_summary, logger=logger, pairwise_dir=pairwise)
+    # create_gff3_txt_files(output_dir, majiq_output, logger=logger)
+    # render_tab_output(output_dir, output_html, majiq_output, type_summary, logger=logger, pairwise_dir=pairwise)
 
     logger.info("Voila! Summaries created in: %s" % output_dir)
     return
@@ -540,9 +562,9 @@ def main():
     subparsers.add_parser(constants.ANALYSIS_DELTAPSI_GENE, help='Delta LSV analysis by gene(s) of interest.', parents=[common_parser, parser_delta, parser_delta_gene])
 
     # Thumbnails generation option (dev) TODO: Delete
-    # parser_thumbs = argparse.ArgumentParser(add_help=False)
-    # parser_thumbs.add_argument('--collapsed', type=bool, default=False, help='Collapsed LSVs thumbnails in the HTML summary.')
-    # subparsers.add_parser(constanst.LSV_THUMBNAILS, help='Generate LSV thumbnails [DEBUGING!].', parents=[common_parser, parser_thumbs])  # TODO: GET RID OF THESE OR GIVE IT A BETTER SHAPE!!!
+    parser_thumbs = argparse.ArgumentParser(add_help=False)
+    parser_thumbs.add_argument('--collapsed', action='store_true', default=False, help='Collapsed LSVs thumbnails in the HTML summary.')
+    subparsers.add_parser(constants.LSV_THUMBNAILS, help='Generate LSV thumbnails [DEBUGING!].', parents=[common_parser, parser_thumbs])  # TODO: GET RID OF THESE OR GIVE IT A BETTER SHAPE!!!
 
     args = parser.parse_args()
     try:

@@ -109,7 +109,7 @@ if __name__ == '__main__':
                                                                                          'junction')
     common.add_argument('-r', '--min-reads', default=20, dest='minreads', type=int, help='Minimal number of reads per '
                                                                                          'junction')
-    common.add_argument('-i', '--name', default=20, dest='name', type=str, help='Id of the execution')
+    common.add_argument('-i', '--name', required=True, dest='name', type=str, help='Id of the execution')
 
     common.add_argument('-o', '--output', default='./output', dest='output', type=str, help='Output dir name')
 
