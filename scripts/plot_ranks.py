@@ -70,7 +70,7 @@ def main():
                 title_str += "\nGroup N=%d; Pairs Avg. N=%.2f" % (numevents, np.mean(lsizes))
 
                 # Add value to plot
-                text(1, ratio[-1], '%.2f%%' % (ratio[-1]*100), fontsize=16)
+                text(1.01, ratio[-1], '%.2f%%' % (ratio[-1]*100), fontsize=16)
             else:
                 lsizes.append(numevents)
                 linetype = '.'
@@ -86,9 +86,6 @@ def main():
             plot(x_space, ratio, linetype, label=my_label, linewidth=2, color=args.colors[i])          
         else: 
             plot(x_space, ratio, linetype, label=my_label, linewidth=2)
-
-
-
 
     title(title_str, fontsize=16)
 

@@ -308,9 +308,6 @@ def plot_delta_expected_method1Vsmethod2(psi_list_data_set, replica_names, plotp
 
 
 
-
-
-
 def intersect_sets(majiq1, majiq2):
     """Find common names and return their psi values in 2 lists"""
     names1 = [m[1] for m in majiq1[1]]

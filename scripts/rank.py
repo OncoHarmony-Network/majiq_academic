@@ -127,9 +127,11 @@ def rank_majiq(bins_list, names, V=0.2, absolute=True, dofilter=True, E=False, r
         if E:
             # v_prob = v_sum(dmatrix)
             v_prob = expected_dpsi(dmatrix)
+            if np.isnan(v_prob): continue
             rank.append([names[i], v_prob])
         else:
             area = matrix_area(dmatrix, V, absolute)
+            if np.isnan(area): continue
             if ranknochange:
                 #P(Delta PSI < V) = 1 - P(Delta PSI > V)
                 area = 1.0 - area
@@ -240,7 +242,7 @@ def main():
         for file_nr, file in enumerate(args.majiq_files):
             majiq_data = pkl.load(open(file, 'r'))
             count_pairs += 1
-            rank, num_conf_events = rank_majiq(majiq_data[0], majiq_data[1], args.V, args.absolute, args.filter, args.E, args.ranknochange, args.complex_lsvs)
+            rank, num_conf_events = rank_majiq(majiq_data[0], majiq_data[1], V=args.V, absolute=args.absolute, dofilter=args.filter, E=args.E, ranknochange=args.ranknochange, complex_lsvs=args.complex_lsvs)
             ranks.append(rank)
 
             plot_fdr(args.output, os.path.split(file)[1].split('.')[0], [r[1] for r in ranks[-1][:500]], num_conf_events)

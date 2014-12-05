@@ -325,8 +325,8 @@ def render_tab_output(output_dir, output_html, majiq_output, type_summary, logge
                         lexpected.append(repr(llsv[0].get_means()[i]))
                         lconfidence.append(repr(llsv[0].get_variances()[i]))
 
-                lline.append('; '.join(lexpected))
-                lline.append('; '.join(lconfidence))
+                lline.append(';'.join(lexpected))
+                lline.append(';'.join(lconfidence))
 
                 lline.append(llsv[0].get_type())
                 lline.append(repr(llsv[0].get_categories()[tlb_categx['A5SS']]))
@@ -339,12 +339,12 @@ def render_tab_output(output_dir, output_html, majiq_output, type_summary, logge
                 lline.append(llsv[1][4].get_chrom())
                 lline.append(llsv[1][4].get_strand())
 
-                lline.append('; '.join(['-'.join(str(c) for c in junc.get_coords()) for junc in llsv[1][4].get_junctions()]))
-                lline.append('; '.join(['-'.join(str(c) for c in exon.get_coords()) for exon in llsv[1][4].get_exons()]))
+                lline.append(';'.join(['-'.join(str(c) for c in junc.get_coords()) for junc in llsv[1][4].get_junctions()]))
+                lline.append(';'.join(['-'.join(str(c) for c in exon.get_coords()) for exon in llsv[1][4].get_exons()]))
 
                 try:
-                    lline.append('; '.join([' '.join([str(c) for c in exon.get_alt_starts()]) for exon in llsv[1][4].get_exons()]))
-                    lline.append('; '.join([' '.join([str(c) for c in exon.get_alt_ends()]) for exon in llsv[1][4].get_exons()]))
+                    lline.append(';'.join(['|'.join([str(c) for c in exon.get_alt_starts()]) for exon in llsv[1][4].get_exons()]))
+                    lline.append(';'.join(['|'.join([str(c) for c in exon.get_alt_ends()]) for exon in llsv[1][4].get_exons()]))
                 except TypeError:
                     pass
 
@@ -368,7 +368,7 @@ def render_tab_output(output_dir, output_html, majiq_output, type_summary, logge
                                     lpairwise.append(str(sum(lsv_pair.get_excl_incl()[iway])))
                             else:
                                 lpairwise.append('N/A')
-                            llpairwise.append('; '.join(lpairwise))
+                            llpairwise.append(';'.join(lpairwise))
                     lline.extend(llpairwise)
                 ofile.write(constants.DELIMITER.join(lline))
                 ofile.write('\n')

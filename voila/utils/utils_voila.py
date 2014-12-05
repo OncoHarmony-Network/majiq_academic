@@ -84,9 +84,7 @@ def find_excl_incl_percentages(bins, threshold):
 
 
 def expected_dpsi(bins):
-    bins = np.array(bins)
-    np.arange(-1+1./len(bins), 1.,2./len(bins))
-    return sum(bins * np.arange(-1+1./len(bins), 1.,2./len(bins)))
+    return sum(np.array(bins) * np.arange(-1+1./len(bins), 1.,2./len(bins)))
 
 
 def get_prob_delta_psi_greater_v(bins, expected, V=.2):

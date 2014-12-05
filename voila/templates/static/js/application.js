@@ -43,9 +43,8 @@ $( document ).ready(function(){
         }
         var can = this;
         function dlCanvas() {
-            var dt = can.toDataURL('image/png');
-            this.href = dt;
-        };
+            this.href = can.toDataURL('image/png');
+        }
         var dl_canvas_link = $(this).parent().children(".lsv_type")[0];
         dl_canvas_link.addEventListener('click', dlCanvas, false);
 

@@ -144,9 +144,11 @@ def rank_majiq(bins_list, names, V=0.2, absolute=True, dofilter=True, E=False, r
         if E:
             # v_prob = v_sum(dmatrix)
             v_prob = expected_dpsi(dmatrix)
+            if np.isnan(v_prob): continue
             rank.append([names[i], v_prob])
         else:
             area = matrix_area(dmatrix, V, absolute)
+            if np.isnan(area): continue
             if ranknochange:
             #P(Delta PSI < V) = 1 - P(Delta PSI > V)
                 area = 1.0 - area
@@ -181,10 +183,12 @@ def rank_naive(bins_list, names, V=0.2, absolute=True, E=False, ranknochange=Fal
             v_prob = 0.
             for ii, v in enumerate(linspace(-1, 1, num=dmatrix.shape[0])):
                 v_prob += dmatrix[ii]*abs(v)
+            if np.isnan(v_prob): continue
             rank.append([names[i][1], v_prob])
         else:
             MINTHRESHOLD=.95
             area = matrix_area(dmatrix, V, absolute, collapsed_mat=True)
+            if np.isnan(area): continue
             if ranknochange:
                 #P(Delta PSI < V) = 1 - P(Delta PSI > V)
                 area = 1.0 - area
@@ -198,7 +202,8 @@ def rank_naive(bins_list, names, V=0.2, absolute=True, E=False, ranknochange=Fal
     for idx, v in enumerate(rank):
         if v[1]<MINTHRESHOLD:
             print "FDR=%d" % (idx+1)
-            return rank[:idx+1]
+            continue
+            # return rank[:idx+1]
 
     return rank
 
