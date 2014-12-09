@@ -19,7 +19,8 @@ except Exception:
     import pickle
 
 
-def majiq_builder(samfiles_list, chrom, pcr_validation=None, gff_output=None, create_tlb=True, logging=None):
+def majiq_builder(samfiles_list, chrom, pcr_validation=None, gff_output=None, create_tlb=True, only_rna=False,
+                  nondenovo=False, logging=None):
 
     if not logging is None:
         logging.info("Building for chromosome %s" % chrom)
@@ -35,10 +36,11 @@ def majiq_builder(samfiles_list, chrom, pcr_validation=None, gff_output=None, cr
 
     if not logging is None:
         logging.info("[%s] Reading BAM files" % chrom)
-    majiq_io.read_sam_or_bam(samfiles_list, gene_list, mglobals.readLen, chrom, logging=logging)
+    majiq_io.read_sam_or_bam(samfiles_list, gene_list, mglobals.readLen, chrom,
+                             nondenovo=nondenovo, logging=logging)
     if not logging is None:
         logging.info("[%s] Detecting LSV" % chrom)
-    lsv, const = analize.lsv_detection(gene_list, chrom, logging=logging)
+    lsv, const = analize.lsv_detection(gene_list, chrom, only_real_data=only_rna, logging=logging)
 
     utils.prepare_gc_content(gene_list, temp_dir)
 
@@ -148,10 +150,14 @@ def main(params):
         utils.create_if_not_exists(temp_dir)
         if params.nthreads == 1:
             majiq_builder(sam_list, chrom, pcr_validation=params.pcr_filename, gff_output=params.gff_output,
-                          logging=logger)
+                          only_rna=params.only_rna, nondenovo=params.non_denovo, logging=logger)
         else:
 
-            pool.apply_async(__parallel_lsv_quant, [sam_list, chrom, params.pcr_filename, params.gff_output])
+            pool.apply_async(__parallel_lsv_quant, [sam_list, chrom,
+                                                    params.pcr_filename,
+                                                    params.gff_output,
+                                                    params.only_rna,
+                                                    params.denovo])
 
     if params.nthreads > 1:
         logger.info("... waiting childs")

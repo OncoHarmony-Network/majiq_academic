@@ -124,7 +124,43 @@ def is_neg_strand(read):
     return res 
 
 
-def read_sam_or_bam(filenames, gene_list, readlen, chrom, logging=None):
+def rnaseq_intron_retention(filenames, gene_list, readlen, chrom, logging=None):
+
+    samfile = [pysam.Samfile(xx, "rb") for xx in filenames]
+
+    for strand in ('+', '-'):
+        for gne in gene_list[strand]:
+            intron_list = gne.get_all_introns()
+            for exp_index in range(len(filenames)):
+                for intron in intron_list:
+                    strt, end = intron.get_coordinates()
+                    try:
+                        read_iter = samfile[exp_index].fetch(chrom, strt, end)
+                    except ValueError:
+                        logging.info('There are no reads in %s:%d-%d' % (chrom, strt, end))
+                        continue
+                    for read in read_iter:
+                        strand_read = '+' if not is_neg_strand(read) else '-'
+                        unique = __is_unique(read)
+                        if strand_read != strand or not unique:
+                            continue
+
+                        nreads = __get_num_reads(read)
+                        gne.add_read_count(nreads, exp_index)
+                        r_start = read.pos
+
+#TODO: RECHECK
+                        if r_start > strt or r_start < (end - readlen):
+                            continue
+
+                        #intron_ju
+
+                        nc = read.seq.count('C') + read.seq.count('c')
+                        ng = read.seq.count('g') + read.seq.count('G')
+                        gc_content = float(nc + ng) / float(len(read.seq))
+
+
+def read_sam_or_bam(filenames, gene_list, readlen, chrom, nondenovo=False, logging=None):
 
     counter = [0] * 6
     samfile = [pysam.Samfile(xx, "rb") for xx in filenames]

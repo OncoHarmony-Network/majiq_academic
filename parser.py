@@ -50,6 +50,21 @@ def main():
     buildparser.add_argument('--minpos', default=2, type=int, help='Minimum number of start positions with at least 1 '
                                                                    'read in a LSV to consider that the LSV "exist in '
                                                                    'the data"')
+    buildparser.add_argument('--only_rna', default=False, type=bool, action='store_true', help='Use only rna detected '
+                                                                                               'junction in order to '
+                                                                                               'detect LSV. If an exon '
+                                                                                               'has only one junction '
+                                                                                               'with coverage, it is '
+                                                                                               'not going to be '
+                                                                                               'detected as an LSV')
+    buildparser.add_argument('--non_denovo', default=False, type=bool, action='store_true', help='Avoid denovo '
+                                                                                                 'detection of '
+                                                                                                 'junction, splicesites'
+                                                                                                 ' and exons. This will'
+                                                                                                 ' speedup the '
+                                                                                                 'execution but reduce '
+                                                                                                 'the number of LSVs '
+                                                                                                 'detected')
 
     #flags shared by calcpsi and deltapair
     psianddelta = new_subparser()

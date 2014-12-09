@@ -68,11 +68,9 @@ def __gc_factor_ind(val, exp_idx):
 
 def prepare_lsv_table(lsv_list, non_as, temp_dir):
 
-    out_temp = dict()
+    #out_temp = dict()
     for name, ind_list in mglobals.tissue_repl.items():
-        out_temp[name] = []
         for idx, exp_idx in enumerate(ind_list):
-
             majiq_table_as = [0] * len(lsv_list[exp_idx])
             majiq_table_nonas = [0] * len(non_as[exp_idx])
 
@@ -81,13 +79,13 @@ def prepare_lsv_table(lsv_list, non_as, temp_dir):
             for jix, jn in enumerate(non_as[exp_idx]):
                 majiq_table_nonas[jix] = MajiqJunc(jn, exp_idx)
 
-            out_temp[name].append((majiq_table_as, majiq_table_nonas))
-    fname = "%s/majiq.pkl" % temp_dir
-    majiq_io.dump_bin_file(out_temp, fname)
+            out_temp = (majiq_table_as, majiq_table_nonas)
+            fname = "%s/%s.majiq.pkl" % (mglobals.exp_list[exp_idx], temp_dir)
+            majiq_io.dump_bin_file(out_temp, fname)
 
 
 #@profile
-def merge_and_create_majiq_file(chr_list, pref_file):
+def merge_and_create_majiq_file_old(chr_list, pref_file):
 
     """
 
@@ -147,13 +145,68 @@ def merge_and_create_majiq_file(chr_list, pref_file):
             majiq_io.dump_bin_file((info, at, clist), fname)
 
 
-def generate_visualization_output(allgenes, temp_dir):
-    gene_list = {}
+def merge_and_create_majiq_file(chr_list, pref_file):
+
+    """
+
+    :param chr_list:
+    :param pref_file:
+    """
+    if pref_file != '':
+        pref_file = '%s.' % pref_file
+
+    sys.stdout.flush()
     for name, ind_list in mglobals.tissue_repl.items():
         for idx, exp_idx in enumerate(ind_list):
-            gene_list[mglobals.exp_list[exp_idx]] = []
+            all_visual = []
+            as_table = []
+            nonas_table = []
+            for chrom in chr_list:
+                temp_dir = "%s/tmp/%s" % (mglobals.outDir, chrom)
+                temp_filename = '%s/%s.splicegraph.pkl' % (mglobals.exp_list[exp_idx], temp_dir)
+                visual_gene_list = majiq_io.load_bin_file(temp_filename)
+
+                filename = "%s/%s.majiq.pkl" % (mglobals.exp_list[exp_idx], temp_dir)
+                temp_table = majiq_io.load_bin_file(filename)
+
+                all_visual.append(visual_gene_list)
+                as_table.append(temp_table[0])
+                nonas_table.append(temp_table[1])
+
+            if len(as_table[exp_idx]) == 0:
+                continue
+
+            fname = '%s/%s%s.splicegraph' % (mglobals.outDir, pref_file, mglobals.exp_list[exp_idx])
+            majiq_io.dump_bin_file(all_visual, fname)
+
+            info = dict()
+            info['experiment'] = mglobals.exp_list[exp_idx]
+            info['GC_bins'] = mglobals.gc_bins[exp_idx]
+            info['GC_bins_val'] = mglobals.gc_bins_val[exp_idx]
+            info['genome'] = mglobals.genome
+            info['num_reads'] = mglobals.num_mapped_reads[exp_idx]
+
+            at = np.concatenate(as_table[exp_idx])
+            for lsv in at:
+                lsv.set_gc_factor(exp_idx)
+            nat = np.concatenate(nonas_table[exp_idx])
+
+            clist = random.sample(nat, min(5000, len(nat)))
+            for jnc in clist:
+                jnc.set_gc_factor(exp_idx)
+
+            fname = '%s/%s%s.majiq' % (mglobals.outDir, pref_file, mglobals.exp_list[exp_idx])
+            majiq_io.dump_bin_file((info, at, clist), fname)
+
+
+def generate_visualization_output(allgenes, temp_dir):
+    # gene_list = {}
+    for name, ind_list in mglobals.tissue_repl.items():
+        for idx, exp_idx in enumerate(ind_list):
+            # gene_list[mglobals.exp_list[exp_idx]] = []
             for genes_l in allgenes.values():
                 for gg in genes_l:
+                    gene_list = []
                     junc_list = []
                     junc_l = []
                     alt_empty_ends = []
@@ -229,10 +282,11 @@ def generate_visualization_output(allgenes, temp_dir):
                         exon_list.append(eg)
                     ggraph = GeneGraphic(id=gg.get_id(), name=gg.get_name(), strand=gg.get_strand(), exons=exon_list,
                                          junctions=junc_list, chrom=gg.get_chromosome())
-                    gene_list[mglobals.exp_list[exp_idx]].append(ggraph)
+                    #gene_list[mglobals.exp_list[exp_idx]].append(ggraph)
+                    gene_list.append(ggraph)
 
-    filename = '%s/splicegraph.pkl' % temp_dir
-    majiq_io.dump_bin_file(gene_list, filename)
+            filename = '%s/%s.splicegraph.pkl' % (mglobals.exp_list[exp_idx], temp_dir)
+            majiq_io.dump_bin_file(gene_list, filename)
 
 
 def prepare_junctions_gc(junc, exp_idx):
