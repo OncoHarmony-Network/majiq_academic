@@ -14,7 +14,7 @@ def reliable_in_data(junc, exp_idx):
     return in_data_filter
 
 
-def lsv_detection(gene_list, chrom, logging=None):
+def lsv_detection(gene_list, chrom, only_real_data=False, logging=None):
 
     num_ss_var = [[0]*20, [0]*20, 0]
 
@@ -31,7 +31,7 @@ def lsv_detection(gene_list, chrom, logging=None):
             count = gn.get_read_count().sum()
             if count == 0:
                 continue
-            mat, exon_list, tlb, var_ss = gn.get_rnaseq_mat(const_set, lsv=True)
+            mat, exon_list, tlb, var_ss = gn.get_rnaseq_mat(const_set, use_annot=not only_real_data)
             vip = []
             for idx, ex in enumerate(exon_list):
                 sc = ex.get_pcr_score()
