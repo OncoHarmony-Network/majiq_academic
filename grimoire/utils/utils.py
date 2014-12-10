@@ -161,7 +161,7 @@ def merge_and_create_majiq_file(chr_list, pref_file):
             nonas_table = []
             for chrom in chr_list:
                 temp_dir = "%s/tmp/%s" % (mglobals.outDir, chrom)
-                temp_filename = '%s/%s.splicegraph.pkl' % (mglobals.exp_list[exp_idx], temp_dir)
+                temp_filename = '%s/%s.splicegraph.pkl' % (temp_dir, mglobals.exp_list[exp_idx])
                 visual_gene_list = majiq_io.load_bin_file(temp_filename)
                 all_visual.append(visual_gene_list)
             fname = '%s/%s%s.splicegraph' % (mglobals.outDir, pref_file, mglobals.exp_list[exp_idx])
@@ -170,7 +170,7 @@ def merge_and_create_majiq_file(chr_list, pref_file):
 
             for chrom in chr_list:
                 temp_dir = "%s/tmp/%s" % (mglobals.outDir, chrom)
-                filename = "%s/%s.majiq.pkl" % (mglobals.exp_list[exp_idx], temp_dir)
+                filename = "%s/%s.majiq.pkl" % (temp_dir, mglobals.exp_list[exp_idx])
                 temp_table = majiq_io.load_bin_file(filename)
                 as_table.append(temp_table[0])
                 nonas_table.append(temp_table[1])
