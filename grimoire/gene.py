@@ -303,7 +303,7 @@ class Gene:
 #        trcpt.add_junction(junc)
         return junc
 
-    def get_rnaseq_mat(self, rand10k, lsv=False):
+    def get_rnaseq_mat(self, rand10k, use_annot=True):
 
         ss3_l = []
         ss5_l = []
@@ -352,7 +352,7 @@ class Gene:
             read_num = junc.get_coverage().sum()
             if read_num > 0:
                 count_mat = read_num
-            elif junc.is_annotated() and lsv:
+            elif junc.is_annotated() and use_annot:
                 count_mat = -1
             else:
                 count_mat = 0
@@ -363,10 +363,13 @@ class Gene:
                 if reliable_in_data(junc, exp_idx):
                     rand10k[exp_idx].add(junc)
 
-        if not lsv:
-            return mat, jmat, tlb, [ss_3p_vars, ss_5p_vars, ss_both_var]
-        else:
-            return mat, exon_list, tlb, [ss_3p_vars, ss_5p_vars, ss_both_var]
+
+        return mat, jmat, tlb, [ss_3p_vars, ss_5p_vars, ss_both_var]
+
+
+
+
+
 
 
 class Transcript(object):

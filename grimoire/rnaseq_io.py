@@ -42,20 +42,23 @@ def load_bin_file(filename, logger=None):
 def dump_bin_file(data, filename):
 
     with open(filename, 'wb') as ofp:
-        fast_pickler = pickle.Pickler(ofp, protocol=2)
-#        fast_pickler.fast = 1
-        fast_pickler.dump(data)
+       fast_pickler = pickle.Pickler(ofp, protocol=2)
+       #fast_pickler.fast = 1
+       fast_pickler.dump(data)
+#         pickle.dump(data, protocol=2)
 
 
 def __cross_junctions(read):
-    '''
+
+    """
       This part will parse the jI from STAR
       # Column 17: jI:B:I,Start1,End1,Start2,End2,... Start and End of introns for all junctions (1- based)
       # jI:B:I,-1 means that the read doesn't cross any junction
-    '''
+    """
+
     jlist = []
     cross = False
-    try: 
+    try:
         list_junc = read.opt('jI')
         if len(list_junc) > 1 and list_junc[0] != -1:
             for idx in range(0, len(list_junc), 2):
@@ -80,7 +83,7 @@ def __cross_junctions(read):
                 jlist.append((read.pos+off, read.pos+off+num+1))
                 off += num
 #    if len(jlist) !=0 : print "NOSTAR:", jlist, read.cigar
-        
+
     return cross, jlist
 
 
@@ -90,7 +93,7 @@ def __is_unique(read):
         if read.opt('NH') > 1:
             unique = False
     except KeyError:
-        if read.flag & 0x100 == 1: 
+        if read.flag & 0x100 == 1:
             unique = False
     return unique
 
@@ -117,14 +120,51 @@ def is_neg_strand(read):
     if read.flag & 0x10 == 0x10:
 #        print "FLAG",read.flag
         res = True
-    
+
     if mglobals.strand_specific:
         res = not res
 
-    return res 
+    return res
 
 
-def read_sam_or_bam(filenames, gene_list, readlen, chrom, logging=None):
+def rnaseq_intron_retention(filenames, gene_list, readlen, chrom, logging=None):
+
+    samfile = [pysam.Samfile(xx, "rb") for xx in filenames]
+
+    for strand in ('+', '-'):
+        for gne in gene_list[strand]:
+            intron_list = gne.get_all_introns()
+            for exp_index in range(len(filenames)):
+                for intron in intron_list:
+                    strt, end = intron.get_coordinates()
+                    try:
+                        read_iter = samfile[exp_index].fetch(chrom, strt, end)
+                    except ValueError:
+                        logging.info('There are no reads in %s:%d-%d' % (chrom, strt, end))
+                        continue
+                    for read in read_iter:
+                        strand_read = '+' if not is_neg_strand(read) else '-'
+                        unique = __is_unique(read)
+                        if strand_read != strand or not unique:
+                            continue
+
+                        nreads = __get_num_reads(read)
+                        gne.add_read_count(nreads, exp_index)
+                        r_start = read.pos
+
+#TODO: RECHECK
+                        if r_start > strt or r_start < (end - readlen):
+                            continue
+
+                        #intron_ju
+
+                        nc = read.seq.count('C') + read.seq.count('c')
+                        ng = read.seq.count('g') + read.seq.count('G')
+                        gc_content = float(nc + ng) / float(len(read.seq))
+
+
+
+def read_sam_or_bam(filenames, gene_list, readlen, chrom, nondenovo=False, logging=None):
 
     counter = [0] * 6
     samfile = [pysam.Samfile(xx, "rb") for xx in filenames]

@@ -19,7 +19,8 @@ except Exception:
     import pickle
 
 
-def majiq_builder(samfiles_list, chrom, pcr_validation=None, gff_output=None, create_tlb=True, logging=None):
+def majiq_builder(samfiles_list, chrom, pcr_validation=None, gff_output=None, create_tlb=True, only_rna=False,
+                  nondenovo=False, logging=None):
 
     if not logging is None:
         logging.info("Building for chromosome %s" % chrom)
@@ -35,10 +36,11 @@ def majiq_builder(samfiles_list, chrom, pcr_validation=None, gff_output=None, cr
 
     if not logging is None:
         logging.info("[%s] Reading BAM files" % chrom)
-    majiq_io.read_sam_or_bam(samfiles_list, gene_list, mglobals.readLen, chrom, logging=logging)
+    majiq_io.read_sam_or_bam(samfiles_list, gene_list, mglobals.readLen, chrom,
+                             nondenovo=nondenovo, logging=logging)
     if not logging is None:
         logging.info("[%s] Detecting LSV" % chrom)
-    lsv, const = analize.lsv_detection(gene_list, chrom, logging=logging)
+    lsv, const = analize.lsv_detection(gene_list, chrom, only_real_data=only_rna, logging=logging)
 
     utils.prepare_gc_content(gene_list, temp_dir)
 
@@ -142,28 +144,27 @@ def main(params):
     if len(sam_list) == 0:
         return
 
-    if not params.onlygather:
-        if params.nthreads > 1:
-            pool = Pool(processes=params.nthreads)
-            childs = []
-        logger.info("Scatter in Chromosomes")
-        for chrom in chr_list:
-            temp_dir = "%s/tmp/%s" % (mglobals.outDir, chrom)
-            utils.create_if_not_exists(temp_dir)
-            if params.nthreads == 1:
-                majiq_builder(sam_list, chrom, pcr_validation=params.pcr_filename, gff_output=params.gff_output,
-                              logging=logger)
-            else:
+    if params.nthreads > 1:
+        pool = Pool(processes=params.nthreads)
+    logger.info("Scatter in Chromosomes")
+    for chrom in chr_list:
+        temp_dir = "%s/tmp/%s" % (mglobals.outDir, chrom)
+        utils.create_if_not_exists(temp_dir)
+        if params.nthreads == 1:
+            majiq_builder(sam_list, chrom, pcr_validation=params.pcr_filename, gff_output=params.gff_output,
+                          only_rna=params.only_rna, nondenovo=params.non_denovo, logging=logger)
+        else:
 
-                ch = pool.apply_async(__parallel_lsv_quant, [sam_list, chrom, params.pcr_filename, params.gff_output])
-                childs.append(ch)
+            pool.apply_async(__parallel_lsv_quant, [sam_list, chrom,
+                                                    params.pcr_filename,
+                                                    params.gff_output,
+                                                    params.only_rna,
+                                                    params.non_denovo])
 
-        if params.nthreads > 1:
-            logger.info("... waiting childs")
-            pool.close()
-            for ch in childs:
-                ch.get()
-            pool.join()
+    if params.nthreads > 1:
+        logger.info("... waiting childs")
+        pool.close()
+        pool.join()
 
     utils.gc_factor_calculation(chr_list, 10)
     utils.plot_gc_content()
