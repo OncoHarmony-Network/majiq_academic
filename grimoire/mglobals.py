@@ -77,9 +77,6 @@ def global_conf_ini(filename, params):
         for exp in elist:
             exp_list.append(exp)
             tissue_repl[exp_idx].append(count)
-            temp_oDir.append("%s/%s" % (outDir, exp))
-            if not os.path.exists(temp_oDir[count]):
-                os.makedirs(temp_oDir[count])
             count += 1
 
     num_experiments = len(exp_list)

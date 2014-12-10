@@ -31,7 +31,7 @@ def psi_calc(lsv_junc, params):
                     junction_samples.append(choice(junction))
                 samples[i] = np.sum(junction_samples)
 
-            psi[lsv_idx, iternumber] = samples[0] / np.sum(samples)
+            psi[lsv_idx, iternumber] = float(samples[0]) / np.sum(samples)
     return psi
 
 
@@ -39,7 +39,7 @@ def calcpsi_func(params):
 
     print "Calcpsi"
     print "Loading %s..." % params.file
-    lsv_junc, const = majiq_io.load_data_lsv(params.file, None)
+    info1, lsv_junc, const = majiq_io.load_data_lsv(params.file, None)
     print "Loaded."
 
     ''' 
@@ -51,10 +51,10 @@ def calcpsi_func(params):
     lsv_junc = majiq_filter.lsv_quantifiable(lsv_junc, 1, params.minreads, None, fon)
 
     psi = psi_calc(lsv_junc[0], params)
-    ret_psi = np.zeros(shape=len(psi), dtype=np.float)
+    ret_psi = np.zeros(shape=(len(psi), nbins), dtype=np.float)
     for lsv_idx, lsv in enumerate(psi):
         hi, wgt, nb, b = scipy.stats.histogram(lsv, numbins=nbins)
-        ret_psi[lsv_idx] = hi
+        ret_psi[lsv_idx] = hi / hi.sum()
 
     res_dump([lsv_junc[1], ret_psi], p_id='%s.psi' % params.name, path=params.output)
 
@@ -65,10 +65,10 @@ def deltapsi_func(params):
 
     print "Delta psi"
     print "Loading %s..." % params.file1,
-    lsv_junc1, const = majiq_io.load_data_lsv(params.file1, None)
+    info1, lsv_junc1, const = majiq_io.load_data_lsv(params.file1, None)
     print "Done."
     print "Loading %s..." % params.file2,
-    lsv_junc2, const = majiq_io.load_data_lsv(params.file2, None)
+    info2, lsv_junc2, const = majiq_io.load_data_lsv(params.file2, None)
     print "Done."
 
     ''' 
@@ -86,12 +86,13 @@ def deltapsi_func(params):
     psi1 = psi_calc(matched_lsv[0], params)
     psi2 = psi_calc(matched_lsv[1], params)
 
-    delta = np.zeros(shape=(len(matched_info)), dtype=np.float)
+    delta = np.zeros(shape=(len(matched_info), nbins), dtype=np.float)
     for lsv_idx, info in enumerate(matched_info):
         dpsi = np.zeros(shape=params.nboots, dtype=np.float)
         for itern in xrange(params.nboots):
             dpsi[itern] = psi2[lsv_idx, itern] - psi1[lsv_idx, itern]
         delta[lsv_idx], wgt, nb, b = scipy.stats.histogram(dpsi, numbins=nbins)
+        delta[lsv_idx] /= delta[lsv_idx].sum()
 
     res_dump([matched_info, delta], p_id='%s.delta' % params.name, path=params.output)
 
@@ -108,7 +109,9 @@ if __name__ == '__main__':
                                                                                          'junction')
     common.add_argument('-r', '--min-reads', default=20, dest='minreads', type=int, help='Minimal number of reads per '
                                                                                          'junction')
-    common.add_argument('-i', '--name', default=20, dest='name', type=str, help='Id of the execution')
+    common.add_argument('-i', '--name', required=True, dest='name', type=str, help='Id of the execution')
+
+    common.add_argument('-o', '--output', default='./output', dest='output', type=str, help='Output dir name')
 
     calcpsi = argparse.ArgumentParser(add_help=False)
     calcpsi.add_argument('file')

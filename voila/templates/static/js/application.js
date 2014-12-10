@@ -33,6 +33,25 @@ $( document ).ready(function(){
         $(this).tablesorterPager({widthFixed: true, widgets: ['zebra', 'renderCanvas'], container: $(this).parent().children(".pager")});
     });
 
+    // Single LSVs - TODO: Move from here to jquery.tablesorter.js
+    $('.lsvLegendThumb').each( function(){
+        var collapsed = this.getAttribute('data-collapsed');
+        if (collapsed != 0){
+            splicegraph().renderLsvLegend(this);
+        } else {
+            splicegraph().renderLsvSpliceGraph(this);
+        }
+        var can = this;
+        function dlCanvas() {
+            var dt = can.toDataURL('image/png');
+            this.href = dt;
+        };
+        var dl_canvas_link = $(this).parent().children(".lsv_type")[0];
+        dl_canvas_link.addEventListener('click', dlCanvas, false);
+
+
+    });
+
     /** Tooltip for barchart */
     var tooltips = $('.tooltip');
     if (tooltips.length){

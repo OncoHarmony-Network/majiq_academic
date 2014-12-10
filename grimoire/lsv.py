@@ -103,7 +103,6 @@ class LSV(object):
         strand = self.get_strand()
         rev = (strand == '-')
 
-
         if self.type == SSOURCE:
             spsite = sorted(set(self.exon.ss_5p_list), reverse=rev)
         else:
@@ -264,6 +263,26 @@ class LSV(object):
         if self.type == variant.type:
             return False
         return np.array_equal(jlist1, jlist2)
+
+    def contained(self, variant):
+        res = True
+        jlist1 = sorted(self.junctions)
+        jlist2 = sorted(variant.junctions)
+        if self.type == variant.type:
+            return False
+        if np.array_equal(jlist1, jlist2):
+            if (self.get_strand() == '+' and self.type == SSOURCE) or \
+                    (self.get_strand() == '-' and self.type == STARGET):
+                res = False
+            else:
+                res = True
+        else:
+            for jj1 in jlist1:
+                if not jj1 in jlist2:
+                    res = False
+                    break
+
+        return res
 
     def to_majiqLSV(self, exp_idx):
         return MajiqLsv(self, exp_idx)
