@@ -363,13 +363,7 @@ class Gene:
                 if reliable_in_data(junc, exp_idx):
                     rand10k[exp_idx].add(junc)
 
-
         return mat, exon_list, tlb, [ss_3p_vars, ss_5p_vars, ss_both_var]
-
-
-
-
-
 
 
 class Transcript(object):

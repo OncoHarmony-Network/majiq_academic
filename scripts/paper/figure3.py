@@ -11,7 +11,6 @@ import matplotlib.image as mpimg
 import cPickle as pickle
 from os import listdir
 from os.path import isfile, join
-from IPython.core.debugger import Tracer
 
 
 fidx = 0
@@ -23,13 +22,12 @@ BREWER_PALETTE = [(228, 26, 28),
                   (152, 78, 163),
                   (255, 127, 0)]
 
+
 def autolabel(rects, ax, msg, size, b=False):
     # attach some text labels
     for ridx, rect in enumerate(rects):
-        height = rect.get_height()
         width = rect.get_width()
         x = rect.get_x()
-        props = dict(facecolor='wheat', alpha=0.5)
 
         if b:
             x += width/2.
@@ -38,7 +36,7 @@ def autolabel(rects, ax, msg, size, b=False):
 
         for midx, mm in enumerate(msg[ridx]):
             ax.text(x, 20000 + midx*200 - ridx * 1000, '%s' % mm,
-                    ha='left', va='bottom', fontsize=size)#, bbox = props)
+                    ha='left', va='bottom', fontsize=size)
 
 
 def autolabel_horz(rects, ax, offs=8, msg='', size=8):
@@ -74,152 +72,107 @@ def print_message(bars, extrabars=None):
     return msg
 
 
-def plot_exons(vals, typs, extra_title="", subplt=None):
+def plot_fdrheatmap(vals, grps):
+
     global fidx
-    bars = [0] * 20
-    if subplt is None:
-        fig = pyplot.figure(fidx)
-        plt = pyplot
-    else:
-        fig = subplt
-        plt = subplt
 
-    for idx, tt in enumerate(typs):
-        juncs = [xx for xx in tt.split('|')[1:] if not xx.endswith('0')]
-        exnum = []
-        for jj in juncs:
-            exnum.append(int(jj.split('e')[1].split('.')[0]))
-        nums = max(exnum)
-        bars[nums] += vals[idx]
-
-    dummy = [idx for idx, xx in enumerate(bars) if xx > 0]
-    lim = max(dummy)
-    bars = np.array(bars, dtype=float)
-    nbars = bars / bars.sum()
-    bar_o = plt.bar(np.arange(2, lim+1), bars[2:lim+1])
-    msg = print_message(bars[2:lim+1])
-    autolabel(bar_o, plt, msg, size=8)
-
-    if subplt is None:
-        pyplot.ylabel(' #lsv')
-        pyplot.xlabel(' #exons')
-        pyplot.title('Number lsv per #exons')
-        pyplot.show()
-        fidx += 1
-    else:
-        plt.set_ylabel(' #lsv')
-        plt.set_xlabel(' #exons')
-        plt.set_title('Number lsv per #exons')
+    fig, ax = pyplot.subplots(1, 1)
+    pyplot.pcolor(vals, cmap='bwr')
+    ax.set_xticklabels(grps)
+    ax.set_yticklabels(grps)
+    tks = ax.get_xticks()
+    ax.set_xticks(tks+1)
+    tks = ax.get_yticks()
+    ax.set_yticks(tks+0.5)
+    pyplot.show()
+    fidx += 1
 
 
-def plot_splicesites(vals, typs, extra_title="", subplt=None):
+def plot_countings(vals, typs, counts=[0,p]):
+
     global fidx
-    if subplt is None:
-        fig = pyplot.figure(fidx)
-        plt = pyplot
-    else:
-        fig = subplt
-        plt = subplt
 
-    bars_S = [0] * 20
-    bars_T = [0] * 20
-    for idx, tt in enumerate(typs):
-        if tt[0] == 's':
-            bars = bars_S
-        else:
-            bars = bars_T
-        juncs = [xx for xx in tt.split('|')[1:] if not xx.endswith('0')]
-        exnum = []
-        for jj in juncs:
-            exnum.append(int(jj.split('e')[0]))
-        nums = max(exnum)
-        bars[nums] += vals[idx]
+    offs = [0, 0.8, 1.60, 2.40]
 
-    dummys = [idx for idx, xx in enumerate(bars_S) if xx > 0]
-    dummyt = [idx for idx, xx in enumerate(bars_T) if xx > 0]
+    pyplot.figure(fidx)
+    junc_bars = [0] * 20
+    ex_bars = [0] * 20
+    bars_s = [0] * 20
+    bars_t = [0] * 20
 
-
-
-    lim = max(max(dummys), max(dummyt))
-    bars_S = np.array(bars_S, dtype=float)
-    bar_oS = plt.bar(np.arange(1, 2*lim + 1, 2)-0.6, bars_S[1:lim+1], label="5' splicesites in Source LSV",
-                     edgecolor="none", color=(1.0, 0.5, 0.0), width=0.8)
-
-    bars_T = np.array(bars_T, dtype=float)
-    bar_oT = plt.bar(np.arange(1, 2*lim + 1, 2)+0.2, bars_T[1:lim+1], label="3' splicesites in Target LSV",
-                     edgecolor="none", color=(0.92, 0.0, 0.55), width=0.8)
-
-    msg = print_message(bars_S[1:lim+1], extrabars=bars_T[1:lim+1])
-    autolabel(bar_oS, plt, msg, size=8)
-    #
-    # msg = print_message(bars_T[1:lim+1])
-    # autolabel(bar_oT, plt, msg, size=6, b=True)
-
-
-    plt.set_xticklabels(np.arange(1,lim+1))
-    ylab = '#lsv'
-    xlab = '#splicesites'
-    tit = 'Number lsv per #splicesites'
-
-    if subplt is None:
-        pyplot.ylabel(ylab)
-        pyplot.xlabel(xlab)
-        pyplot.title(tit)
-        pyplot.show()
-        fidx += 1
-    else:
-        plt.set_ylabel(ylab)
-        plt.set_xlabel(xlab)
-        plt.set_title(tit)
-
-
-def plot_juncs(vals, typs, extra_title="", subplt=None):
-    global fidx
-    bars = [0] * 20
-    if subplt is None:
-        fig = pyplot.figure(fidx)
-    else:
-        fig = subplt
-        plt = subplt
     for idx, tt in enumerate(typs):
         juncs = [xx for xx in tt.split('|')[1:] if not xx.endswith('0')]
         nums = len(juncs)
-        bars[nums] += vals[idx]
+        junc_bars[nums] += vals[idx]
 
-    dummy = [idx for idx, xx in enumerate(bars) if xx > 0]
-    lim = max(dummy)
-    bars = np.array(bars, dtype=float)
-    nbars = bars / bars.sum()
-    bar_o = plt.bar(np.arange(2, lim+1), bars[2:lim+1])
-    msg = print_message(bars[2:lim+1])
-    autolabel(bar_o, plt, msg, size=8)
+        exnum = []
+        ssnum = []
+        for jj in juncs:
+            exnum.append(int(jj.split('e')[1].split('.')[0]))
+            ssnum.append(int(jj.split('e')[0]))
 
-    if subplt is None:
-        pyplot.ylabel(' #lsv')
-        pyplot.xlabel(' #junctions')
-        pyplot.title('Number lsv per #junctions')
-        pyplot.show()
-        fidx += 1
-    else:
-        plt.set_ylabel(' #lsv')
-        plt.set_xlabel(' #junctions')
-        plt.set_title('Number lsv per #junctions')
+        nums_ex = max(exnum)
+        ex_bars[nums_ex] += vals[idx]
+
+        if tt[0] == 's':
+            bars = bars_s
+        else:
+            bars = bars_t
+
+        nums_ss = max(ssnum)
+        bars[nums_ss] += vals[idx]
+
+    dummy_ex = [idx for idx, xx in enumerate(junc_bars) if xx > 0]
+    dummy_junc = [idx for idx, xx in enumerate(ex_bars) if xx > 0]
+    dummys = [idx for idx, xx in enumerate(bars_s) if xx > 0]
+    dummyt = [idx for idx, xx in enumerate(bars_t) if xx > 0]
+
+    lim_total = max([max(dummys), max(dummyt), max(dummy_junc), max(dummy_ex)])
+    x = np.arange(1, 4*lim_total + 1, 4)
+
+    lim = max(dummy_junc)
+    junc_bars = np.array(junc_bars, dtype=float)
+    nbars = junc_bars / junc_bars.sum()
+    col = [xx/float(255) for xx in BREWER_PALETTE[0]]
+    pyplot.bar(x[:lim] + offs[0], nbars[1:lim+1], edgecolor="none", label="#LSV per #juncs",
+               width=0.8, color=col, alpha=0.5)
+
+    lim = max(dummy_ex)
+    ex_bars = np.array(ex_bars, dtype=float)
+    nbars = ex_bars / ex_bars.sum()
+    col = [xx/float(255) for xx in BREWER_PALETTE[1]]
+    pyplot.bar(x[:lim] + offs[1], nbars[1:lim+1], edgecolor="none", label="#LSV per #exons", width=0.8,
+               color=col, alpha=0.5)
+
+    lim = max(max(dummys), max(dummyt))
+    bars_s = np.array(bars_s, dtype=float)
+    nbars_s = bars_s/bars_s.sum()
+    bars_t = np.array(bars_t, dtype=float)
+    nbars_t = bars_t/bars_t.sum()
+    pyplot.bar(x[:lim] + offs[2], nbars_s[1:lim+1], label="5' splicesites in Source LSV", edgecolor="none",
+               color=(1.0, 0.5, 0.0), width=0.8, alpha=0.5)
+    pyplot.bar(x[:lim] + offs[3], nbars_t[1:lim+1], label="3' splicesites in Target LSV", edgecolor="none",
+               color=(0.92, 0.0, 0.55), width=0.8, alpha=0.5)
+
+    pyplot.ylabel(' # datapoints')
+    pyplot.xlabel(' # elements')
+    pyplot.title('Total Number of datapoints %s ( %d different LSVs)' % (counts[0], counts[1]))
+    pyplot.legend(loc='best')
+    pyplot.show()
+    fidx += 1
 
 
-def plot_lsv_types_hist(vals, typs, img_path=None, lim_val=None, extra_title="", figur=None):
+def plot_lsv_types_hist(vals, typs, img_path=None, lim_val=None, extra_title=""):
+
     global fidx
-    if figur is None:
-        fig = pyplot.figure(fidx)
-        plt = pyplot
-    else:
-        fig = figur
-        plt = figur
-    
+
+    fig = pyplot.figure(fidx)
+
     if not img_path is None:
         offs = 6
         gs = gridspec.GridSpec(1, 2, width_ratios=[1, 10])
         gs.update(left=0.01, right=0.99, hspace=0.00, wspace=0.0001)
-        gs0 = gridspec.GridSpecFromSubplotSpec(len(vals), 1, subplot_spec=gs[0],wspace=0.0, hspace=0.05)
+        gs0 = gridspec.GridSpecFromSubplotSpec(len(vals), 1, subplot_spec=gs[0], wspace=0.0, hspace=0.05)
         thumb = []
         for ii, yy in enumerate(gs0):
             thumb.append(fig.add_subplot(yy))
@@ -270,30 +223,22 @@ def plot_lsv_types_hist(vals, typs, img_path=None, lim_val=None, extra_title="",
             pl.annotate('%s events' % (lims[lidx]), xy=(lims[lidx]+3200, ll * offs))
             
     pyplot.title(extra_title)
-    if figur is None:
-
-        pyplot.xlim((0, 8000))
-        pyplot.show()
-        fidx += 1
-    else:
-        pyplot.set_xlim((0, 8000))
+    pyplot.xlim((0, 8000))
+    pyplot.show()
+    fidx += 1
 
 
 def plot_dominant_exons(dom_dict, name=''):
     global fidx
 
     fig, ax = pyplot.subplots(1)
-
     pos = [-1, -0.5, 0, 0.5]
-    colors = ['g', 'b', 'r', 'm']
 
     labels = ['2', '3', '4', '5']
     labels = [xx+' %s' % name for xx in labels]
     totalbins = 0
-    post_labx = []
-    for didx, vals in enumerate(dom_dict[1:]):
-        #vals = dd.values()
 
+    for didx, vals in enumerate(dom_dict[1:]):
         nbins = len(set(vals))
         if nbins == 0:
             continue
@@ -322,14 +267,14 @@ def plot_dominant_exons(dom_dict, name=''):
     fidx += 1
 
 
-def get_types(direc, list_exp, groups):
+def get_types(direc, list_exp, grps):
     d_types = dict()
     g_types = dict()
-    for grp in groups:
-        g_types[grp] = {}
+    for gp in grps:
+        g_types[gp] = {}
     for ll in list_exp:
         grp_ll = ""
-        for grp in groups:
+        for grp in grps:
             if ll.startswith(grp):
                 grp_ll = grp
                 break
@@ -343,13 +288,13 @@ def get_types(direc, list_exp, groups):
     return d_types, g_types
 
 
-def all_plots_wrapper(types, pergroup=None):
+def all_plots_wrapper(types):
 
     global fidx
     histo = sorted(types.iteritems(), key=lambda (k, v): (v, k))
     num_ev = np.sum([xx[1] for xx in histo])
     s_keys = [xx[0] for xx in histo if xx[1] > 100]
-    s_vals = [types[kk] for kk in s_keys]
+    s_vals = [types[xx] for xx in s_keys]
 
     # lim_val = [0]*len(lims)
     # for lidx, l in enumerate(lims):
@@ -366,26 +311,12 @@ def all_plots_wrapper(types, pergroup=None):
     
     impath = './thumbs/'
     extra_title = " %s events" % num_ev
-    
     plot_lsv_types_hist(s_vals, s_keys, img_path=impath, lim_val=None, extra_title=extra_title)
-    # if not pergroup is None:
-    #     graf, splt = pyplot.subplots(1, len(pergroup), sharey=True)
-    #     for tidx, (ks, ttps) in enumerate(pergroup.items()):
-    #         s_vals = [ttps[kk] for kk in s_keys]
-    #         plot_lsv_types_hist(s_vals, s_keys, img_path=None, lim_val=None, extra_title=extra_title, figur=splt[tidx])
-    #     fidx += 1
-    #     pyplot.show()
-                
-    s_keys = [xx[0] for xx in histo]
-    s_vals = [types[kk] for kk in s_keys]
 
-    graf, splt = pyplot.subplots(1, 3, sharey=True)
-    plot_exons(s_vals, s_keys, extra_title=extra_title, subplt=splt[0])
-    plot_juncs(s_vals, s_keys, extra_title=extra_title, subplt=splt[1])
-    plot_splicesites(s_vals, s_keys, extra_title=extra_title, subplt=splt[2])
-    graf.suptitle(extra_title)
-    pyplot.show()
-    fidx += 1
+    s_keys = [xx[0] for xx in histo]
+    s_vals = [types[xx] for xx in s_keys]
+
+    plot_countings(s_vals, s_keys, [num_ev,0])
 
 
 def psi_dominant(filename_list):
@@ -528,47 +459,38 @@ if __name__ == '__main__':
     dire = '/Users/Jordi/notebooks/figure3'
     onlyfiles = [f for f in listdir(dire) if isfile(join(dire, f)) and f.endswith('majiq')]
     groups = ['Heart', 'Hippocampus', 'Liver', 'Lung', 'Spleen', 'Thymus']
-    # onlyfiles = ['Heart1.mm10.sorted.majiq', 'Hippocampus1.mm10.sorted.majiq']
-    # groups = ['Heart', 'Hippocampus']
-    # list_types, group_types = get_types(dire, onlyfiles, groups)
-    #
-    # stypes = {}
-    # gtypes = dict()
-    # for grp in groups:
-    #     gtypes[grp] = {}
-    #
-    # for grp in groups:
-    #     for kk, tt in group_types[grp].items():
-    #         if not tt in gtypes[grp]:
-    #             gtypes[grp][tt] = 0
-    #         gtypes[grp][tt] += 1
-    #
-    # for kk, tt in list_types.items():
-    #     if not tt in stypes:
-    #         stypes[tt] = 0
-    #     stypes[tt] += 1
+    onlyfiles = ['Heart1.mm10.sorted.majiq', 'Hippocampus1.mm10.sorted.majiq']
+    groups = ['Heart', 'Hippocampus']
+    list_types, group_types = get_types(dire, onlyfiles, groups)
 
-    #all_plots_wrapper(stypes, gtypes)
+    stypes = {}
+    gtypes = dict()
+    for grp in groups:
+        gtypes[grp] = {}
+
+    for grp in groups:
+        for kk, tyt in group_types[grp].items():
+            if not tyt in gtypes[grp]:
+                gtypes[grp][tyt] = 0
+            gtypes[grp][tyt] += 1
+
+    for kk, tyt in list_types.items():
+        if not tyt in stypes:
+            stypes[tyt] = 0
+        stypes[tyt] += 1
+
+    all_plots_wrapper(stypes)
 
     #read psi values
-    # groups_vals = []
-    # filename_list = ['./psi/'+grp+'_psigroup_psi_gene.txt' for grp in groups]
-    # # values = psi_dominant(filename_list)
-    # # plot_dominant_exons(values, 'exons')
-    # values = ss_dominant(filename_list)
-    # plot_dominant_exons(values[0], ' 5\'splice sites')
-    # plot_dominant_exons(values[1], ' 3\'splice sites')
+    groups_vals = []
+    filename_list = ['./psi/'+grp+'_psigroup_psi_gene.txt' for grp in groups]
+    values = psi_dominant(filename_list)
+    plot_dominant_exons(values, 'exons')
+    values = ss_dominant(filename_list)
+    plot_dominant_exons(values[0], ' 5\'splice sites')
+    plot_dominant_exons(values[1], ' 3\'splice sites')
 
     #heatmap
     fdr_filename = 'allfdr.txt'
     values = fdr_parse(fdr_filename, groups)
-    fig, ax = pyplot.subplots(1, 1)
-
-    pyplot.pcolor(values, cmap='bwr')
-    ax.set_xticklabels(groups)
-    ax.set_yticklabels(groups)
-    tks = ax.get_xticks()
-    ax.set_xticks(tks+1)
-    tks = ax.get_yticks()
-    ax.set_yticks(tks+0.5)
-    pyplot.show()
+    plot_fdrheatmap(values, groups)
