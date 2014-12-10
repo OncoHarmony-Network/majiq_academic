@@ -155,7 +155,6 @@ def merge_and_create_majiq_file(chr_list, pref_file):
     if pref_file != '':
         pref_file = '%s.' % pref_file
 
-    sys.stdout.flush()
     for name, ind_list in mglobals.tissue_repl.items():
         for idx, exp_idx in enumerate(ind_list):
             all_visual = []
@@ -165,19 +164,20 @@ def merge_and_create_majiq_file(chr_list, pref_file):
                 temp_dir = "%s/tmp/%s" % (mglobals.outDir, chrom)
                 temp_filename = '%s/%s.splicegraph.pkl' % (mglobals.exp_list[exp_idx], temp_dir)
                 visual_gene_list = majiq_io.load_bin_file(temp_filename)
+                all_visual.append(visual_gene_list)
+            fname = '%s/%s%s.splicegraph' % (mglobals.outDir, pref_file, mglobals.exp_list[exp_idx])
+            majiq_io.dump_bin_file(all_visual, fname)
+            del all_visual
 
+            for chrom in chr_list:
+                temp_dir = "%s/tmp/%s" % (mglobals.outDir, chrom)
                 filename = "%s/%s.majiq.pkl" % (mglobals.exp_list[exp_idx], temp_dir)
                 temp_table = majiq_io.load_bin_file(filename)
-
-                all_visual.append(visual_gene_list)
                 as_table.append(temp_table[0])
                 nonas_table.append(temp_table[1])
 
             if len(as_table[exp_idx]) == 0:
                 continue
-
-            fname = '%s/%s%s.splicegraph' % (mglobals.outDir, pref_file, mglobals.exp_list[exp_idx])
-            majiq_io.dump_bin_file(all_visual, fname)
 
             info = dict()
             info['experiment'] = mglobals.exp_list[exp_idx]
@@ -186,10 +186,10 @@ def merge_and_create_majiq_file(chr_list, pref_file):
             info['genome'] = mglobals.genome
             info['num_reads'] = mglobals.num_mapped_reads[exp_idx]
 
-            at = np.concatenate(as_table[exp_idx])
+            at = np.concatenate(as_table)
             for lsv in at:
                 lsv.set_gc_factor(exp_idx)
-            nat = np.concatenate(nonas_table[exp_idx])
+            nat = np.concatenate(nonas_table)
 
             clist = random.sample(nat, min(5000, len(nat)))
             for jnc in clist:

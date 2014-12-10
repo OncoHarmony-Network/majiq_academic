@@ -151,13 +151,18 @@ def lsv_intersection(lsv_list1, lsv_list2):
     matched_names = ids1.intersection(ids2)
 
     for ii in matched_names:
+        typ_check = ''
         for idx, nm in enumerate(lsv_list1[1]):
             if nm[1] == ii:
+                typ_check = nm[2]
                 lsv_match[0].append(lsv_list1[0][idx])
                 match_info.append(nm)
                 break
         for idx, nm in enumerate(lsv_list2[1]):
+
             if nm[1] == ii:
+                if typ_check != nm[2]:
+                    continue
                 lsv_match[1].append(lsv_list2[0][idx])
                 break
 
