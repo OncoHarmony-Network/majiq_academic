@@ -142,11 +142,11 @@ def plot_splicesites(vals, typs, extra_title="", subplt=None):
 
     lim = max(max(dummys), max(dummyt))
     bars_S = np.array(bars_S, dtype=float)
-    bar_oS = plt.bar(np.arange(1, 2*(lim)+1, 2)-0.6, bars_S[1:lim+1], label="5' splicesites in Source LSV",
+    bar_oS = plt.bar(np.arange(1, 2*lim + 1, 2)-0.6, bars_S[1:lim+1], label="5' splicesites in Source LSV",
                      edgecolor="none", color=(1.0, 0.5, 0.0), width=0.8)
 
     bars_T = np.array(bars_T, dtype=float)
-    bar_oT = plt.bar(np.arange(1, 2*(lim)+1, 2)+0.2, bars_T[1:lim+1], label="3' splicesites in Target LSV",
+    bar_oT = plt.bar(np.arange(1, 2*lim + 1, 2)+0.2, bars_T[1:lim+1], label="3' splicesites in Target LSV",
                      edgecolor="none", color=(0.92, 0.0, 0.55), width=0.8)
 
     msg = print_message(bars_S[1:lim+1], extrabars=bars_T[1:lim+1])

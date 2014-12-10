@@ -159,7 +159,7 @@ def main(params):
                                                     params.pcr_filename,
                                                     params.gff_output,
                                                     params.only_rna,
-                                                    params.denovo])
+                                                    params.non_denovo])
 
     if params.nthreads > 1:
         logger.info("... waiting childs")
