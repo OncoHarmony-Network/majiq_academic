@@ -202,7 +202,7 @@ def rank_naive(bins_list, names, V=0.2, absolute=True, E=False, ranknochange=Fal
     for idx, v in enumerate(rank):
         if v[1]<MINTHRESHOLD:
             print "FDR=%d" % (idx+1)
-            continue
+            break
             # return rank[:idx+1]
 
     return rank
@@ -438,7 +438,7 @@ def main():
                 names_naive = [naive_info[0] for naive_info in naive_rank]
                 if not names_naive_exp1:
                     names_naive_exp1 = names_naive
-                exp1_index = np.array([name in names_majiq_exp1 for name in names_naive])
+                exp1_index = np.array([name in names_naive_exp1 and name in names_majiq_exp1 for name in names_naive])
                 ranks['naive'].append(array(naive_rank)[exp1_index])
             else:
                 ranks['naive'].append(array(naive_rank))
@@ -482,7 +482,11 @@ def main():
         ratios = []
         events = []
 
-        max_events = min(args.max, min(len(rank1), len(rank2)))
+        if 'majiq' in ranks.keys():
+            max_events = len(ranks['majiq'][0])
+        else:
+            max_events = min(args.max, min(len(rank1), len(rank2)))
+
 
         fdr = []
         if args.proximity or args.fullrank:
