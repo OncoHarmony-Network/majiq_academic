@@ -44,7 +44,7 @@ def dump_bin_file(data, filename):
     with open(filename, 'wb') as ofp:
        fast_pickler = pickle.Pickler(ofp, protocol=2)
        #fast_pickler.fast = 1
-       fast_pickler.dump(data, protocol=2)
+       fast_pickler.dump(data)
 #         pickle.dump(data, protocol=2)
 
 
