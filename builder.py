@@ -144,7 +144,6 @@ def main(params):
     if len(sam_list) == 0:
         return
 
-<<<<<<< HEAD
     if params.nthreads > 1:
         pool = Pool(processes=params.nthreads)
     logger.info("Scatter in Chromosomes")
@@ -166,30 +165,6 @@ def main(params):
         logger.info("... waiting childs")
         pool.close()
         pool.join()
-=======
-    if not params.onlygather:
-        if params.nthreads > 1:
-            pool = Pool(processes=params.nthreads)
-            childs = []
-        logger.info("Scatter in Chromosomes")
-        for chrom in chr_list:
-            temp_dir = "%s/tmp/%s" % (mglobals.outDir, chrom)
-            utils.create_if_not_exists(temp_dir)
-            if params.nthreads == 1:
-                majiq_builder(sam_list, chrom, pcr_validation=params.pcr_filename, gff_output=params.gff_output,
-                              logging=logger)
-            else:
-
-                ch = pool.apply_async(__parallel_lsv_quant, [sam_list, chrom, params.pcr_filename, params.gff_output])
-                childs.append(ch)
-
-        if params.nthreads > 1:
-            logger.info("... waiting childs")
-            pool.close()
-            for ch in childs:
-                ch.get()
-            pool.join()
->>>>>>> master
 
     utils.gc_factor_calculation(chr_list, 10)
     utils.plot_gc_content()
