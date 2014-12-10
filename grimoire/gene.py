@@ -338,8 +338,8 @@ class Gene:
             exidx += 1
 
         mat = np.zeros(shape=(len(ss5_l), len(ss3_l)), dtype='int')
-        jmat = np.empty(shape=(len(ss5_l), len(ss3_l)), dtype='object')
-        jmat.fill(None)
+        # jmat = np.empty(shape=(len(ss5_l), len(ss3_l)), dtype='object')
+        # jmat.fill(None)
 
         junc_list = self.get_all_junctions()
         for junc in junc_list:
@@ -357,14 +357,14 @@ class Gene:
             else:
                 count_mat = 0
             mat[x, y] = count_mat
-            jmat[x, y] = junc
+            # jmat[x, y] = junc
 
             for exp_idx in range(mglobals.num_experiments):
                 if reliable_in_data(junc, exp_idx):
                     rand10k[exp_idx].add(junc)
 
 
-        return mat, jmat, tlb, [ss_3p_vars, ss_5p_vars, ss_both_var]
+        return mat, exon_list, tlb, [ss_3p_vars, ss_5p_vars, ss_both_var]
 
 
 
