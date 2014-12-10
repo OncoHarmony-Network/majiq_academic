@@ -80,7 +80,7 @@ def prepare_lsv_table(lsv_list, non_as, temp_dir):
                 majiq_table_nonas[jix] = MajiqJunc(jn, exp_idx)
 
             out_temp = (majiq_table_as, majiq_table_nonas)
-            fname = "%s/%s.majiq.pkl" % (mglobals.exp_list[exp_idx], temp_dir)
+            fname = "%s/%s.majiq.pkl" % (temp_dir, mglobals.exp_list[exp_idx])
             majiq_io.dump_bin_file(out_temp, fname)
 
 
@@ -284,7 +284,7 @@ def generate_visualization_output(allgenes, temp_dir):
                     #gene_list[mglobals.exp_list[exp_idx]].append(ggraph)
                     gene_list.append(ggraph)
 
-            filename = '%s/%s.splicegraph.pkl' % (mglobals.exp_list[exp_idx], temp_dir)
+            filename = '%s/%s.splicegraph.pkl' % (temp_dir, mglobals.exp_list[exp_idx])
             majiq_io.dump_bin_file(gene_list, filename)
 
 
