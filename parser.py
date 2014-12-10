@@ -51,14 +51,14 @@ def main():
                                                                    'read in a LSV to consider that the LSV "exist in '
                                                                    'the data"')
 
-    buildparser.add_argument('--only_rna', default=False, type=bool, action='store_true', help='Use only rna detected '
+    buildparser.add_argument('--only_rna', default=False, action='store_true', help='Use only rna detected '
                                                                                                'junction in order to '
                                                                                                'detect LSV. If an exon '
                                                                                                'has only one junction '
                                                                                                'with coverage, it is '
                                                                                                'not going to be '
                                                                                                'detected as an LSV')
-    buildparser.add_argument('--non_denovo', default=False, type=bool, action='store_true', help='Avoid denovo '
+    buildparser.add_argument('--non_denovo', default=False, action='store_true', help='Avoid denovo '
                                                                                                  'detection of '
                                                                                                  'junction, splicesites'
                                                                                                  ' and exons. This will'
@@ -66,7 +66,6 @@ def main():
                                                                                                  'execution but reduce '
                                                                                                  'the number of LSVs '
                                                                                                  'detected')
-
     buildparser.add_argument('--only_gather', action='store_true', dest='onlygather', default=False)
 
 
