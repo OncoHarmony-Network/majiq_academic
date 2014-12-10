@@ -152,7 +152,7 @@ class LSV(object):
                 else:
                     s3 = sorted(list(set(jacceptor.ss_3p_list)), reverse=rev)
                     ex1 = ex_list.index(jacceptor.get_id())+1
-                    ex = '%s.%s' % (ex1, s3.index(junc.end)+1)
+                    ex = '%s.%so%s' % (ex1, s3.index(junc.end)+1,len(s3))
                 jtype = "|%se%s" % (spsite.index(junc.start)+1, ex)
             else:
                 if jdonor is None:
@@ -161,7 +161,7 @@ class LSV(object):
                 else:
                     s5 = sorted(list(set(jdonor.ss_5p_list)), reverse=rev)
                     ex1 = ex_list.index(jdonor.get_id())+1
-                    ex = '%s.%s' % (ex1, s5.index(junc.start)+1)
+                    ex = '%s.%so%s' % (ex1, s5.index(junc.start)+1, len(s5))
                 jtype = "|%se%s" % (spsite.index(junc.end)+1, ex)
             type_set.add(jtype)
             tlb_junc[jtype[1:]] = jidx
