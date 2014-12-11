@@ -320,7 +320,7 @@ def render_tab_output(output_dir, output_html, majiq_output, type_summary, logge
                 lconfidence = []
                 for i, bins in enumerate(llsv[0].get_bins()):
                     if 'delta' in type_summary:
-                        lexpected.append(str([-ei[0] + ei[1] for ei in llsv[0].get_excl_incl()[i]]))
+                        lexpected.append(str(sum(-llsv[0].get_excl_incl()[i][0] + llsv[0].get_excl_incl()[i][1])))
                         lconfidence.append(str(utils_voila.get_prob_delta_psi_greater_v(bins, float(lexpected[-1]), 0.1)))
                     else:
                         lexpected.append(repr(llsv[0].get_means()[i]))
