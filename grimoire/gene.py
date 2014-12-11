@@ -264,7 +264,7 @@ class Gene:
             
         assert len(s_exons) == len(self.exons), "Exist duplicates in exons in Gene %s" % self.id
 
-    def new_lsv_definition(self, exon, jlist, lsv_type):
+    def new_lsv_definition(self, exon, jlist, lsv_type, logger=None):
 
         coords = exon.get_coordinates()
         ret = None
@@ -278,7 +278,8 @@ class Gene:
                 ret = LSV(exon, lsv_id, jlist, lsv_type)
                 self.lsv_list.append(ret)
             except ValueError:
-                print "Attempt to create LSV with wrong type or not enought junction coverage"
+                if logger:
+                    logger.info("Attempt to create LSV with wrong type or not enought junction coverage")
 
         return ret
 

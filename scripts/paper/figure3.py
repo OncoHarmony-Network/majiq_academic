@@ -76,19 +76,59 @@ def plot_fdrheatmap(vals, grps):
 
     global fidx
 
-    fig, ax = pyplot.subplots(1, 1)
-    pyplot.pcolor(vals, cmap='bwr')
-    ax.set_xticklabels(grps)
-    ax.set_yticklabels(grps)
+    from scipy.cluster.hierarchy import linkage
+    from scipy.cluster.hierarchy import dendrogram
+    row_clusters = linkage(vals, method='complete')
+    row_dendr = dendrogram(row_clusters)
+
+
+    fig = pyplot.figure()
+    ax = fig.add_subplot(111)
+
+
+    df_rowclust = np.zeros(shape=vals.shape, dtype=np.int)
+
+    for xid,xx in enumerate(row_dendr['leaves']):
+        for yid, yy in enumerate(row_dendr['leaves']):
+            df_rowclust[xid, yid] = vals[xx, yy]
+
+
+    cax = ax.matshow(df_rowclust, interpolation='nearest', cmap='PuBu')
+    fig.colorbar(cax)
+    df_grps = [grps[xx] for xx in row_dendr['leaves']]
+    ax.set_xlim(-0.5, 4.25)
+    ax.set_ylim(-0.5, 4.25)
     tks = ax.get_xticks()
     ax.set_xticks(tks+1)
+    ax.set_xticklabels(df_grps)
     tks = ax.get_yticks()
-    ax.set_yticks(tks+0.5)
+    ax.set_yticks(tks+1)
+    ax.set_yticklabels(df_grps)
+
+
     pyplot.show()
+
+
+    # plot
+
+
+
+
+
+
+
+
+    # ax.set_xticklabels(grps)
+    # ax.set_yticklabels(grps)
+    # tks = ax.get_xticks()
+    # ax.set_xticks(tks+1)
+    # tks = ax.get_yticks()
+    # ax.set_yticks(tks+0.5)
+    # pyplot.show()
     fidx += 1
 
 
-def plot_countings(vals, typs, counts=[0,p]):
+def plot_countings(vals, typs, counts=[0, 0]):
 
     global fidx
 
@@ -154,9 +194,9 @@ def plot_countings(vals, typs, counts=[0,p]):
     pyplot.bar(x[:lim] + offs[3], nbars_t[1:lim+1], label="3' splicesites in Target LSV", edgecolor="none",
                color=(0.92, 0.0, 0.55), width=0.8, alpha=0.5)
 
-    pyplot.ylabel(' # datapoints')
+    pyplot.ylabel(' # LSVs')
     pyplot.xlabel(' # elements')
-    pyplot.title('Total Number of datapoints %s ( %d different LSVs)' % (counts[0], counts[1]))
+    pyplot.title('Total Number of LSVs %s' % (counts[0], counts[1]))
     pyplot.legend(loc='best')
     pyplot.show()
     fidx += 1
@@ -288,7 +328,7 @@ def get_types(direc, list_exp, grps):
     return d_types, g_types
 
 
-def all_plots_wrapper(types):
+def all_plots_wrapper(types, nlsv=0):
 
     global fidx
     histo = sorted(types.iteritems(), key=lambda (k, v): (v, k))
@@ -316,7 +356,7 @@ def all_plots_wrapper(types):
     s_keys = [xx[0] for xx in histo]
     s_vals = [types[xx] for xx in s_keys]
 
-    plot_countings(s_vals, s_keys, [num_ev,0])
+    plot_countings(s_vals, s_keys, [num_ev, nlsv])
 
 
 def psi_dominant(filename_list):
@@ -440,7 +480,7 @@ def fdr_parse(fname, group_list):
     lines = fp.readlines()
     fp.close()
 
-    res = np.zeros(shape=(len(groups), len(groups)*2), dtype=int)
+    res = np.zeros(shape=(len(groups), len(groups)), dtype=int)
 
     for ll in lines:
         tab = ll.strip().split()
@@ -448,8 +488,10 @@ def fdr_parse(fname, group_list):
         pair = tab[0].split('_')
         ii = group_list.index(pair[0])
         jj = group_list.index(pair[1])
-        res[ii, jj*2] = fdr
-        res[ii, jj*2 + 1] = -1 * int(fdr)
+        res[ii, jj] = fdr
+        # res[ii, jj*2 + 1] = -1 * int(fdr)
+        res[jj, ii] = fdr
+        # res[jj, ii*2 + 1] = -1 * int(fdr)
 
     return res
 
@@ -459,36 +501,38 @@ if __name__ == '__main__':
     dire = '/Users/Jordi/notebooks/figure3'
     onlyfiles = [f for f in listdir(dire) if isfile(join(dire, f)) and f.endswith('majiq')]
     groups = ['Heart', 'Hippocampus', 'Liver', 'Lung', 'Spleen', 'Thymus']
-    onlyfiles = ['Heart1.mm10.sorted.majiq', 'Hippocampus1.mm10.sorted.majiq']
-    groups = ['Heart', 'Hippocampus']
-    list_types, group_types = get_types(dire, onlyfiles, groups)
-
-    stypes = {}
-    gtypes = dict()
-    for grp in groups:
-        gtypes[grp] = {}
-
-    for grp in groups:
-        for kk, tyt in group_types[grp].items():
-            if not tyt in gtypes[grp]:
-                gtypes[grp][tyt] = 0
-            gtypes[grp][tyt] += 1
-
-    for kk, tyt in list_types.items():
-        if not tyt in stypes:
-            stypes[tyt] = 0
-        stypes[tyt] += 1
-
-    all_plots_wrapper(stypes)
-
-    #read psi values
-    groups_vals = []
-    filename_list = ['./psi/'+grp+'_psigroup_psi_gene.txt' for grp in groups]
-    values = psi_dominant(filename_list)
-    plot_dominant_exons(values, 'exons')
-    values = ss_dominant(filename_list)
-    plot_dominant_exons(values[0], ' 5\'splice sites')
-    plot_dominant_exons(values[1], ' 3\'splice sites')
+    # onlyfiles = ['Heart1.mm10.sorted.majiq', 'Hippocampus1.mm10.sorted.majiq']
+    # groups = ['Heart', 'Hippocampus']
+    # list_types, group_types = get_types(dire, onlyfiles, groups)
+    #
+    # count_lsv = len(set(list_types.keys()))
+    #
+    # stypes = {}
+    # gtypes = dict()
+    # for grp in groups:
+    #     gtypes[grp] = {}
+    #
+    # for grp in groups:
+    #     for kk, tyt in group_types[grp].items():
+    #         if not tyt in gtypes[grp]:
+    #             gtypes[grp][tyt] = 0
+    #         gtypes[grp][tyt] += 1
+    #
+    # for kk, tyt in list_types.items():
+    #     if not tyt in stypes:
+    #         stypes[tyt] = 0
+    #     stypes[tyt] += 1
+    #
+    # all_plots_wrapper(stypes, count_lsv)
+    #
+    # #read psi values
+    # groups_vals = []
+    # filename_list = ['./psi/'+grp+'_psigroup_psi_gene.txt' for grp in groups]
+    # values = psi_dominant(filename_list)
+    # plot_dominant_exons(values, 'exons')
+    # values = ss_dominant(filename_list)
+    # plot_dominant_exons(values[0], ' 5\'splice sites')
+    # plot_dominant_exons(values[1], ' 3\'splice sites')
 
     #heatmap
     fdr_filename = 'allfdr.txt'

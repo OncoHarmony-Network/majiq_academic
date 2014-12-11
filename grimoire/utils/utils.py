@@ -203,9 +203,9 @@ def generate_visualization_output(allgenes, temp_dir):
     for name, ind_list in mglobals.tissue_repl.items():
         for idx, exp_idx in enumerate(ind_list):
             # gene_list[mglobals.exp_list[exp_idx]] = []
+            gene_list = []
             for genes_l in allgenes.values():
                 for gg in genes_l:
-                    gene_list = []
                     junc_list = []
                     junc_l = []
                     alt_empty_ends = []
