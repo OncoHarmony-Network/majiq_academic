@@ -721,7 +721,9 @@ window.splicegraph = function (){
                 var previous_ctx = [ctx.lineWidth, ctx.strokeStyle];
                 for (n_ways = 1; n_ways<lsvs.length; n_ways++){
                     lsvs_fields = lsvs[n_ways].split('e');
-                    var ss = parseInt(lsvs_fields[0]);
+                    var ss = parseInt(lsvs_fields[0]),
+                        target_e = lsvs_fields[1].split('.')[0],
+                        target_ss = parseInt(lsvs_fields[1].split('.')[1]);
 //                    var coords_x_start_e    = coords[0] + direction * ((exon_width/2) / num_ss ) * (ss-1);
                     var coords_x_start_e    = coords[0] + ((exon_width/2) / num_ss ) * (ss-1);
 //                    var target_exon = (direction > 0 ? exons_obj[lsvs_fields[1][0]] : exons_obj[num_exons -1 - lsvs_fields[1][0]]);
@@ -737,9 +739,9 @@ window.splicegraph = function (){
 
                     var offset_ss = 0;
                     if (direction > 0) {
-                        offset_ss = (parseInt(lsvs_fields[1].split('.')[1]) - 1) * percentage_exon/2 * exon_width ;
+                        offset_ss = (target_ss - 1) * percentage_exon/2 * exon_width ;
                     } else {
-                        offset_ss = ( ss_reg[lsvs_fields[1].split('.')[0]] - parseInt(lsvs_fields[1].split('.')[1])) * percentage_exon / 2 * exon_width;
+                        offset_ss = ( ss_reg[target_e] - target_ss) * percentage_exon / 2 * exon_width;
                     }
 
                     coords_x_target_e += direction*offset_ss;
@@ -759,16 +761,15 @@ window.splicegraph = function (){
 
                     }
 
+                    // render special marker for exon alternative start/end
                     if (lsvs_fields[1].indexOf('.') === -1) {
-                        // render special marker
                         ctx.strokeStyle = "rgba(0, 0, 0, 0.6)";
                         drawLine(ctx, Math.round(coords_x_start_e), Math.round(coords[1]), Math.round(coords_x_start_e), Math.round(coords[1] + exon_height));
                         drawArrow(ctx, Math.round(coords_x_start_e + direction * Math.max(10, percentage_exon/2 * exon_width)), Math.round(coords[1] + exon_height/2), Math.round(coords_x_start_e + direction * 2), Math.round(coords[1] + exon_height/2), Math.max(5, Math.round((percentage_exon/2 * exon_width)/2)));
 
                     }
 
-
-                    if (parseInt(lsvs_fields[1].split('.')[1]) != 1 && direction > 0 || parseInt(lsvs_fields[1].split('.')[1]) != ss_reg[lsvs_fields[1].split('.')[0]] && direction < 0  ) {
+                    if (target_ss != 1 && direction > 0 || target_ss != ss_reg[target_e] && direction < 0  ) {
                         drawDashedLine(ctx, Math.round(coords_x_target_e), Math.round(coords[1]), Math.round(coords_x_target_e), Math.round(coords[1] + exon_height), 2);
                     }
 

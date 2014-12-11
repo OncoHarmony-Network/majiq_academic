@@ -227,6 +227,7 @@ class Lsv(object):
 
 
     def init_categories(self):
+        # New type example: s|1e1.3o4|1e2.1o1
         self.categories = defaultdict()
         j = self.type.split('|')
         ssites = set(int(s[0]) for s in j[1:])
@@ -235,7 +236,7 @@ class Lsv(object):
         for s in j[1:]:
             exs = s[1:].split('.')
             try:
-                ssite = int(exs[1])
+                ssite = int(exs[1].split('o')[0])
                 exons[exs[0]].append(ssite)
             except IndexError:
                 pass

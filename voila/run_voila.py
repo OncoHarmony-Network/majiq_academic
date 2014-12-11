@@ -197,7 +197,8 @@ def parse_gene_graphics(gene_exps_flist, gene_name_list, groups=('group1', 'grou
             genesG = pkl.load(open(splice_graph_f, 'r'))
             genes_graphic = defaultdict(list)
             genesG.sort()
-            for gene_obj in genesG:
+            for gene_obj_foo in genesG:
+                gene_obj = gene_obj_foo[0] # TODO: temporary solution, will crash when Jordi fix the builder
                 if gene_obj.get_id() in gene_name_list or gene_obj.get_name().upper() in gene_name_list:
                     genes_graphic[gene_obj.get_id()].append(json.dumps(gene_obj, cls=utils_voila.LsvGraphicEncoder).replace("\"", "'"))
                     genes_graphic[gene_obj.get_id()].append(gene_obj.get_strand())
@@ -319,7 +320,7 @@ def render_tab_output(output_dir, output_html, majiq_output, type_summary, logge
                 lconfidence = []
                 for i, bins in enumerate(llsv[0].get_bins()):
                     if 'delta' in type_summary:
-                        lexpected.append(str(sum(llsv[0].get_excl_incl()[i])))
+                        lexpected.append(str(-llsv[0].get_excl_incl()[i][0] + llsv[0].get_excl_incl()[i][1]))
                         lconfidence.append(str(utils_voila.get_prob_delta_psi_greater_v(bins, float(lexpected[-1]), 0.1)))
                     else:
                         lexpected.append(repr(llsv[0].get_means()[i]))
