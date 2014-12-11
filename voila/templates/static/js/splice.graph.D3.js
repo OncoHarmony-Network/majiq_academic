@@ -512,7 +512,7 @@ function spliceGraphD3() {
                     });
                 tooltipD3.select(".lengthLabel")
                     .text(function(){
-                        return Math.abs(orig_objs.exons[d.key].value.coords[0] - orig_objs.exons[d.key].value.coords[1]);
+                        return Math.abs(orig_objs.exons[d.key].value.coords[0] - orig_objs.exons[d.key].value.coords[1]) + 1;
                     });
                 tooltipD3.classed("hidden", false);
 
