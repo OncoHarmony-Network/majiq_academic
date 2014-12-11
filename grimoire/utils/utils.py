@@ -206,7 +206,6 @@ def generate_visualization_output(allgenes, temp_dir):
             gene_list = []
             for genes_l in allgenes.values():
                 for gg in genes_l:
-                    gene_list = []
                     junc_list = []
                     junc_l = []
                     alt_empty_ends = []
