@@ -27,7 +27,7 @@ class LSV(object):
         self.tlb_junc = {}
         self.ext_type = self.set_type(junction_list, self.tlb_junc)
         if self.ext_type == 'intron':
-            print "KKKKKKKKV %s" % exon.get_gene()
+            #print "KKKKKKKKV %s" % exon.get_gene()
             raise ValueError
 
         self.visual = list()
