@@ -126,45 +126,47 @@ def main(params):
     logger.info("")
     logger.info("Command: %s" % params)
 
-    p = Process(target=__parallel_gff3, args=(params.transcripts, params.pcr_filename, params.output))
-    logger.info("... waiting gff3 parsing")
-    p.start()
-    p.join()
+    if not params.onlygather:
+        p = Process(target=__parallel_gff3, args=(params.transcripts, params.pcr_filename, params.output))
+        logger.info("... waiting gff3 parsing")
+        p.start()
+        p.join()
     chr_list = majiq_io.load_bin_file("%s/tmp/chromlist.pkl" % mglobals.outDir)
 
-    logger.info("Get samfiles")
-    sam_list = []
-    for exp_idx, exp in enumerate(mglobals.exp_list):
-        samfile = "%s/%s.bam" % (mglobals.sam_dir, exp)
-        if not os.path.exists(samfile):
-            logger.info("Skipping %s.... not found" % samfile)
-            continue
-        sam_list.append(samfile)
+    if not params.onlygather:
+        logger.info("Get samfiles")
+        sam_list = []
+        for exp_idx, exp in enumerate(mglobals.exp_list):
+            samfile = "%s/%s.bam" % (mglobals.sam_dir, exp)
+            if not os.path.exists(samfile):
+                logger.info("Skipping %s.... not found" % samfile)
+                continue
+            sam_list.append(samfile)
         #majiq_io.count_mapped_reads(samfile, exp_idx)
-    if len(sam_list) == 0:
-        return
+        if len(sam_list) == 0:
+            return
 
-    if params.nthreads > 1:
-        pool = Pool(processes=params.nthreads)
-    logger.info("Scatter in Chromosomes")
-    for chrom in chr_list:
-        temp_dir = "%s/tmp/%s" % (mglobals.outDir, chrom)
-        utils.create_if_not_exists(temp_dir)
-        if params.nthreads == 1:
-            majiq_builder(sam_list, chrom, pcr_validation=params.pcr_filename, gff_output=params.gff_output,
+        if params.nthreads > 1:
+            pool = Pool(processes=params.nthreads)
+        logger.info("Scatter in Chromosomes")
+        for chrom in chr_list:
+            temp_dir = "%s/tmp/%s" % (mglobals.outDir, chrom)
+            utils.create_if_not_exists(temp_dir)
+            if params.nthreads == 1:
+                majiq_builder(sam_list, chrom, pcr_validation=params.pcr_filename, gff_output=params.gff_output,
                           only_rna=params.only_rna, nondenovo=params.non_denovo, logging=logger)
-        else:
+            else:
 
-            pool.apply_async(__parallel_lsv_quant, [sam_list, chrom,
+                pool.apply_async(__parallel_lsv_quant, [sam_list, chrom,
                                                     params.pcr_filename,
                                                     params.gff_output,
                                                     params.only_rna,
                                                     params.non_denovo])
 
-    if params.nthreads > 1:
-        logger.info("... waiting childs")
-        pool.close()
-        pool.join()
+        if params.nthreads > 1:
+            logger.info("... waiting childs")
+            pool.close()
+            pool.join()
 
     utils.gc_factor_calculation(chr_list, 10)
     utils.plot_gc_content()

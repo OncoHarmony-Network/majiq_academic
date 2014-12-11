@@ -175,7 +175,7 @@ def merge_and_create_majiq_file(chr_list, pref_file):
                 as_table.append(temp_table[0])
                 nonas_table.append(temp_table[1])
 
-            if len(as_table[exp_idx]) == 0:
+            if len(as_table) == 0:
                 continue
 
             info = dict()
