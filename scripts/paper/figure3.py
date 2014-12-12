@@ -72,7 +72,7 @@ def print_message(bars, extrabars=None):
     return msg
 
 
-def plot_fdrheatmap(vals, grps):
+def plot_fdrheatmap(vals, vals2, grps):
 
     global fidx
 
@@ -82,19 +82,34 @@ def plot_fdrheatmap(vals, grps):
     row_dendr = dendrogram(row_clusters)
 
 
-    fig = pyplot.figure()
+    fig = pyplot.figure(fidx)
     ax = fig.add_subplot(111)
 
-
     df_rowclust = np.zeros(shape=vals.shape, dtype=np.int)
+    df_rowclust2 = np.zeros(shape=vals.shape, dtype=np.int)
 
-    for xid,xx in enumerate(row_dendr['leaves']):
+    for xid, xx in enumerate(row_dendr['leaves']):
         for yid, yy in enumerate(row_dendr['leaves']):
             df_rowclust[xid, yid] = vals[xx, yy]
+            df_rowclust[yid, xid] = -1 * vals2[xx, yy] - 100
+
+    cax = ax.matshow(df_rowclust, interpolation='nearest', cmap='PiYG')
+
+    for y in range(df_rowclust.shape[0]):
+        for x in range(y + 1, df_rowclust.shape[1]):
+            if x == y:
+                continue
+            pyplot.text(x, y, '%d' % df_rowclust[x, y],
+                        horizontalalignment='center',
+                        verticalalignment='center',
+                        )
+            pyplot.text(y, x, '%d' % (-1*df_rowclust[y, x]),
+                        horizontalalignment='center',
+                        verticalalignment='center',
+                        )
 
 
-    cax = ax.matshow(df_rowclust, interpolation='nearest', cmap='PuBu')
-    fig.colorbar(cax)
+
     df_grps = [grps[xx] for xx in row_dendr['leaves']]
     ax.set_xlim(-0.5, 4.25)
     ax.set_ylim(-0.5, 4.25)
@@ -104,9 +119,38 @@ def plot_fdrheatmap(vals, grps):
     tks = ax.get_yticks()
     ax.set_yticks(tks+1)
     ax.set_yticklabels(df_grps)
-
-
+    ax.set_title('Changing events')
+    #
+    fig.colorbar(cax)
     pyplot.show()
+    fidx += 1
+    #
+    #
+    # fig = pyplot.figure(fidx)
+    # ax = fig.add_subplot(111)
+    #
+    # for y in range(vals2.shape[0]):
+    #     for x in range(vals2.shape[1]):
+    #         if x == y:
+    #             continue
+    #         pyplot.text(x, y, '%d' % df_rowclust2[y, x],
+    #                     horizontalalignment='center',
+    #                     verticalalignment='center',
+    #                     )
+    #
+    # cax = ax.matshow(df_rowclust2, interpolation='nearest', cmap='Greens')
+    # fig.colorbar(cax)
+    # ax.set_xlim(-0.5, 4.25)
+    # ax.set_ylim(-0.5, 4.25)
+    # tks = ax.get_xticks()
+    # ax.set_xticks(tks+1)
+    # ax.set_xticklabels(df_grps)
+    # tks = ax.get_yticks()
+    # ax.set_yticks(tks+1)
+    # ax.set_yticklabels(df_grps)
+    # ax.set_title('Complex changing events')
+    #
+    # pyplot.show()
 
 
     # plot
@@ -418,10 +462,10 @@ def psi_dominant(filename_list):
     return res
 
 
-def ss_dominant(filename_list):
+def ss_dominant(file_list):
     res = [[[], [], [], []], [[], [], [], []]]
 
-    for filename in filename_list:
+    for filename in file_list:
         fp = open(filename)
         lines = fp.readlines()
         fp.close()
@@ -475,26 +519,36 @@ def ss_dominant(filename_list):
     return res
 
 
-def fdr_parse(fname, group_list):
-    fp = open(fname)
-    lines = fp.readlines()
-    fp.close()
+def fdr_parse(file_list, group_list):
 
-    res = np.zeros(shape=(len(groups), len(groups)), dtype=int)
+    changing = np.zeros(shape=(len(group_list), len(group_list)), dtype=np.int)
+    complx = np.zeros(shape=(len(group_list), len(group_list)), dtype=np.int)
+    for filename in file_list:
+        fp = open(filename)
+        lines = fp.readlines()
+        fp.close()
 
-    for ll in lines:
-        tab = ll.strip().split()
-        fdr = tab[1]
-        pair = tab[0].split('_')
-        ii = group_list.index(pair[0])
-        jj = group_list.index(pair[1])
-        res[ii, jj] = fdr
-        # res[ii, jj*2 + 1] = -1 * int(fdr)
-        res[jj, ii] = fdr
-        # res[jj, ii*2 + 1] = -1 * int(fdr)
+        pair = filename.split('.')[0].split('_')
+        x = group_list.index(pair[0])
+        y = group_list.index(pair[1])
 
-    return res
+        for ll in lines:
+            if ll[0] == '#':
+                continue
+            tab = ll.strip().split('\t')
 
+            ntyp = tab[4][0].split('|')[1:]
+            psi_list = [float(xx) for xx in tab[2].split(';')]
+
+            for pp in psi_list:
+                if pp > 0.2:
+                    changing[x, y] += 1
+                    changing[y, x] += 1
+                    if ntyp > 2:
+                        complx[x, y] += 1
+                        complx[y, x] += 1
+
+    return changing, complx
 
 if __name__ == '__main__':
 
@@ -535,6 +589,7 @@ if __name__ == '__main__':
     # plot_dominant_exons(values[1], ' 3\'splice sites')
 
     #heatmap
-    fdr_filename = 'allfdr.txt'
-    values = fdr_parse(fdr_filename, groups)
-    plot_fdrheatmap(values, groups)
+    groups = ['Adr', 'Aor', 'BFat', 'Bstm', 'Cer', 'Hrt', 'Hyp', 'Kid', 'Liv', 'Lun', 'Mus', 'WFat']
+    filename_list = ['./dpsi/'+grp+'_psigroup_psi_gene.txt' for grp in groups]
+    chg_lsv, complx_lsv = fdr_parse(filename_list, groups)
+    plot_fdrheatmap(chg_lsv, complx_lsv, groups)
