@@ -427,7 +427,7 @@ def create_summary(args):
     meta_postprocess = {}
 
     if type_summary == constants.ANALYSIS_PSI:
-        majiq_output = utils_voila.get_lsv_single_exp_data(majiq_bins_file, args.confidence)
+        majiq_output = utils_voila.get_lsv_single_exp_data(majiq_bins_file, args.confidence, logger=logger)
 
     if type_summary == constants.ANALYSIS_PSI_GENE:
 
