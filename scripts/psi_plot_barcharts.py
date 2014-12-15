@@ -9,6 +9,7 @@ from scripts.psi_scores import calculate_ead_simple, _save_or_show
 import argparse
 from pylab import *
 from itertools import izip
+import colorbrewer as cb
 from grimoire import lsv
 import os
 
@@ -307,13 +308,112 @@ def plot_delta_expected_method1Vsmethod2(psi_list_data_set, replica_names, plotp
     _save_or_show(plotpath, plotname.replace('\n', ' - '))
 
 
+def hex_to_rgb(value):
+    value = value.lstrip('#')
+    lv = len(value)
+    return tuple(int(value[i:i + lv // 3], 16) for i in range(0, lv, lv // 3))
+
+
+def rgb_to_hex(rgb):
+    return '#%02x%02x%02x' % rgb
+
+
+def plot_delta_expected_majiq_others(psi_dict_lists, replica_names, plotpath=None):
+
+    colors_dict = {
+        'miso': 'blue'
+    }
+    colors_list=['blue', 'red', 'green', 'purple', 'orange', 'yellow']
+    replica_names_joint = '; '.join(["%s%s" % (name1, name2) for name1, name2 in grouped(replica_names, 2)])
+    plotname="MAJIQ_Vs_Others_delta_expected_psi. \nReplicates %s" % (replica_names_joint)
+
+
+    fig = plt.figure(figsize=[10, 10]) # In inches
+    #figure out how many groups of events exist
+    max_difference=0
+    for met_key, met_diff_list in psi_dict_lists.iteritems():
+        for jj, methods_diff in enumerate(met_diff_list):
+            palette=cb.Blues[7][::-1]
+
+            # methods_diff=np.mean(met_diff_list)
+            methods_diff.sort()
+            win_elems=methods_diff[np.where(methods_diff>0)]
+            uu, ii = np.unique(win_elems, return_inverse=True)
+
+            win_cdf=[0]
+            for w_freq in np.bincount(ii):
+                win_cdf.append(win_cdf[-1]+((1.*w_freq)/len(win_elems)))
+            win_cdf_final = np.dot(win_cdf[1:],len(win_elems)/len(methods_diff)) # np.dot(win_cdf[1:],len(win_elems))
+
+            # lose_elems=methods_diff[np.where(methods_diff<0)][::-1]
+            lose_elems=-methods_diff[np.where(methods_diff<0)]
+            uul, iil = np.unique(lose_elems, return_inverse=True)
+
+            _cdf=[0]
+            for w_freq in np.bincount(iil):
+                _cdf.append(_cdf[-1]+((1.*w_freq)/len(lose_elems)))
+            lose_cdf = np.dot(_cdf[1:],len(lose_elems)/len(methods_diff))  # np.dot(_cdf[1:][::-1],-len(lose_elems))
+
+            # MAJIQ wins
+            plt.plot(np.append(np.append(0, uu), 1),
+                     np.append(np.append(0, win_cdf_final), win_cdf_final[-1]),
+                     label="MAJIQ wins - %s%s"%(replica_names[2*jj], replica_names[2*jj+1]),
+                     color=rgb_to_hex(cb.Blues[3][-1]), lw=2)
+            plt.fill_between(np.append(np.append(0, uu), 1),
+                             np.append(np.append(0, win_cdf_final), win_cdf_final[-1]),
+                             np.repeat(0, len(uu)+2), facecolor=rgb_to_hex(cb.Blues[3][-1]), alpha=0.4,
+                             linewidth=0.0)
+            # MAJIQ losses
+            plt.plot(np.append(0, uul),
+                     np.append(0, lose_cdf),
+                     label="%s wins - %s%s"%(met_key.upper(), replica_names[2*jj], replica_names[2*jj+1]),
+                     color=rgb_to_hex(cb.Reds[3][-1]), lw=2)
+            plt.fill_between(np.append(0, uul),
+                             np.append(0, lose_cdf),
+                             np.repeat(0, len(uul)+2), facecolor=rgb_to_hex(cb.Reds[3][-1]), alpha=0.4,
+                             linewidth=0.0)
+
+
+            # plt.plot(np.append(np.append(-1, np.append(uul,uu)),1),
+            #          np.append(np.append(lose_cdf[0], np.append(lose_cdf, win_cdf_final)), win_cdf_final[-1]),
+            #          label="MAJIQ Vs %s - %s%s"%(met_key, replica_names[2*jj], replica_names[2*jj+1]),
+            #          color=rgb_to_hex(palette[jj]), lw=2)
+            # plt.fill_between(np.append(np.append(-1, np.append(uul,uu)),1),
+            #                  np.append(np.append(lose_cdf[0], np.append(lose_cdf, win_cdf_final)), win_cdf_final[-1]),
+            #                  np.repeat(0, len(uul)+len(uu)+2), facecolor=rgb_to_hex(palette[jj]), alpha=0.4,
+            #                  linewidth=0.0)
+
+
+            font = {'size': 16} #here also 'weight' and 'family'
+            matplotlib.rc('font', **font)
+
+
+            max_difference = max(max_difference, max(len(win_elems), len(lose_elems)))
+
+    plt.xlabel("Delta Delta PSI", fontsize=20)
+    plt.ylabel("Number of LSVs", fontsize=20)
+    # plt.xlim(-1, 1)
+    # plt.ylim(-(max_difference+1000), max_difference+1000) # TODO: revise
+    #
+    # plt.plot([-1,1], [0,0], color='black', lw=1, alpha=.5)
+    # plt.plot([0,0], [-(max_difference+1000), max_difference+1000], color='black', lw=1, alpha=.5)
+
+    plt.xlim(0, 1)
+    plt.ylim(0, 1)
+
+    plt.title(plotname, fontsize=16)
+    plt.legend(loc=2, fontsize=8)
+    plt.tight_layout()
+    _save_or_show(plotpath, plotname.replace('\n', ' - '))
+
+
 
 def intersect_sets(majiq1, majiq2):
     """Find common names and return their psi values in 2 lists"""
     names1 = [m[1] for m in majiq1[1]]
     names2 = [m[1] for m in majiq2[1]]
     common_names = set(names1).intersection(set(names2))
-    return np.array(majiq1[0])[np.array([name in common_names for name in names1])], np.array(majiq2[0])[np.array([name in common_names for name in names2])]
+    return np.array(majiq1[0])[np.array([name in common_names for name in names1])], np.array(majiq2[0])[np.array([name in common_names for name in names2])], np.array(majiq1[1])[np.array([name in common_names for name in names1])], np.array(majiq2[1])[np.array([name in common_names for name in names2])]
 
 
 def main():
@@ -337,6 +437,7 @@ def main():
     majiq_num_events_list = []
     majiq_low_med_high_diff_list = []
     majiq_coverage_list = []
+    better_worse_dict = defaultdict(list)
 
     if args.cached_cov:
         majiq_coverage_list = pickle.load(open(args.cached_cov, 'r'))
@@ -363,21 +464,21 @@ def main():
 
     for ii, majiq_file in enumerate(majiq_files):
         if ii % 2:
-            majiq2 = pickle.load(open(majiq_file))
             majiq1 = pickle.load(open(majiq_files[ii-1]))
+            majiq2 = pickle.load(open(majiq_file))
             print "Events in MAJIQ: rep1=%d; rep2=%d" % (len(majiq1[1]), len(majiq2[1]))
-            psi_met1_rep1, psi_met1_rep2 = intersect_sets(majiq1, majiq2)
+            psi_met1_rep1, psi_met1_rep2, majiq1_names, majiq2_names = intersect_sets(majiq1, majiq2)
             # psi_met1_rep2 = psivalues[0]
             psi_names_met1 = defaultdict()
 
             print "Events after intersection in MAJIQ: rep1=%d; rep2=%d" % (len(psi_met1_rep1), len(psi_met1_rep2))
             # Discard LSVs with only one PSI
             for i, psis_lsv_met1 in enumerate(psi_met1_rep1):
-                # if len(psis_lsv_met1) < 2 or len(psi_met1_rep2[i]) < 2:
-                #     continue  # TODO: check that skipping is not necessary. LSVs with only 1 PSI are wrong..
-                if majiq2[1][i][2] not in LSV_TYPES_DICT.keys():
+                if len(psis_lsv_met1) > 1 or len(psi_met1_rep2[i]) > 1:
                     continue
-                psi_names_met1[majiq2[1][i][1]] = i
+                # if majiq2[1][i][2] not in LSV_TYPES_DICT.keys():
+                #     continue
+                psi_names_met1[majiq2_names[i][1]] = i
 
             # Method1 (MAJIQ) psi scores
             psi_list1_met1 = []
@@ -385,6 +486,7 @@ def main():
 
             psi_lists_met2 = []
 
+            majiq_vs = 'miso'
             miso_all = []
             for miso_file_index in [ii-1, ii]:
                 miso_file = miso_files[miso_file_index]
@@ -414,6 +516,8 @@ def main():
                         del psi_names_met1[psi_name]
                         continue
                     try:
+                        if len(miso_psis_dict[psi_name].split(",")) > 1:
+                            print "[WARNING] %s LSV is multiway, shouldn't be here..." % psi_name
                         miso_psis_values = [float(miso_psi) for miso_psi in miso_psis_dict[psi_name].split(",")]
                     except KeyError, e:
                         print "LSV %s is in MAJIQ but not in MISO!" % e
@@ -457,19 +561,21 @@ def main():
 
             # lo_me_hi_mat, num_events, lo_med_high_diff, suspicous_guys = get_low_med_high_cov_psi(psi_list1_met1, psi_list2_met1, psi_lists_met2[0], psi_lists_met2[1], np.array(coverage_list))
             # lo_me_hi_mat, num_events, lo_med_high_diff = get_low_med_high_cov(psi_list1_met1, psi_list2_met1, psi_lists_met2[0], psi_lists_met2[1], np.array(coverage_list))
-            lo_me_hi_mat, num_events, lo_med_high_diff = get_low_med_high_psis(psi_list1_met1, psi_list2_met1, psi_lists_met2[0], psi_lists_met2[1])
+            # lo_me_hi_mat, num_events, lo_med_high_diff = get_low_med_high_psis(psi_list1_met1, psi_list2_met1, psi_lists_met2[0], psi_lists_met2[1])
             # pickle.dump(np.array(psi_names_met1.keys())[suspicous_guys], open('suspicious.pkl', 'w'))
             # for sus_guy in np.array(psi_names_met1.keys())[suspicous_guys]:
             #     print str(sus_guy).split(':')[0]
 
-            majiq_better_worse_list.append(lo_me_hi_mat)
+            better_worse_dict[majiq_vs].append(-calculate_ead_simple(psi_list1_met1, psi_list2_met1) +  calculate_ead_simple(psi_lists_met2[0], psi_lists_met2[1]))
+            # majiq_better_worse_list.append(lo_me_hi_mat)
     #         majiq_num_events_list.append(num_events)
     #         majiq_low_med_high_diff_list.append(lo_med_high_diff)
     #
     # if not args.cached_cov:
     #     pickle.dump(majiq_coverage_list, open('coverage_tmp.pickle', 'w'))
 
-    plot_delta_expected_method1Vsmethod2(majiq_better_worse_list, args.rep_names, args.plotpath)
+    plot_delta_expected_majiq_others(better_worse_dict, args.rep_names, args.plotpath)
+    # plot_delta_expected_method1Vsmethod2(majiq_better_worse_list, args.rep_names, args.plotpath)
     # plot_delta_bars_percentages(np.array(majiq_better_worse_list), majiq_num_events_list, np.array(majiq_low_med_high_diff_list), args.rep_names, args.plotpath, is_coverage=True)
     # plot_delta_bars_perc_all_in_grid(np.array(majiq_better_worse_list), majiq_num_events_list, np.array(majiq_low_med_high_diff_list), args.replica_names, plotpath=args.plotpath, alpha=args.alpha)
 
