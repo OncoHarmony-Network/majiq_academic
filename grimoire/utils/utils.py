@@ -165,8 +165,10 @@ def merge_and_create_majiq_file(chr_list, pref_file):
                 visual_gene_list = majiq_io.load_bin_file(temp_filename)
                 all_visual.append(visual_gene_list)
             fname = '%s/%s%s.splicegraph' % (mglobals.outDir, pref_file, mglobals.exp_list[exp_idx])
-            majiq_io.dump_bin_file(all_visual, fname)
+            visual = np.concatenate(all_visual)
+            majiq_io.dump_bin_file(visual, fname)
             del all_visual
+            del visual
 
             for chrom in chr_list:
                 temp_dir = "%s/tmp/%s" % (mglobals.outDir, chrom)
