@@ -197,8 +197,7 @@ def parse_gene_graphics(gene_exps_flist, gene_name_list, groups=('group1', 'grou
             genesG = pkl.load(open(splice_graph_f, 'r'))
             genes_graphic = defaultdict(list)
             genesG.sort()
-            for gene_obj_foo in genesG:
-                gene_obj = gene_obj_foo[0] # TODO: temporary solution, will crash when Jordi fix the builder
+            for gene_obj in genesG:
                 if gene_obj.get_id() in gene_name_list or gene_obj.get_name().upper() in gene_name_list:
                     genes_graphic[gene_obj.get_id()].append(json.dumps(gene_obj, cls=utils_voila.LsvGraphicEncoder).replace("\"", "'"))
                     genes_graphic[gene_obj.get_id()].append(gene_obj.get_strand())
