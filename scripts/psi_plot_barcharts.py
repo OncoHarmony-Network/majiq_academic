@@ -331,6 +331,13 @@ def plot_delta_expected_majiq_others(psi_dict_lists, replica_names, plotpath=Non
     fig = plt.figure(figsize=[10, 10]) # In inches
     #figure out how many groups of events exist
     max_difference=0
+
+    win_cdf_all = []
+    win_psi_all = []
+    lose_cdf_all = []
+    lose_psi_all = []
+    nbins=5000
+
     for met_key, met_diff_list in psi_dict_lists.iteritems():
         for jj, methods_diff in enumerate(met_diff_list):
             palette=cb.Blues[7][::-1]
@@ -345,6 +352,14 @@ def plot_delta_expected_majiq_others(psi_dict_lists, replica_names, plotpath=Non
                 win_cdf.append(win_cdf[-1]+((1.*w_freq)/len(win_elems)))
             win_cdf_final = np.dot(win_cdf[1:],len(win_elems)/len(methods_diff)) # np.dot(win_cdf[1:],len(win_elems))
 
+            aux=[]
+            aux_psi=[]
+            for aa in xrange(0,nbins,1):
+                aux.append(win_cdf_final[int((aa/(nbins*1.0))*len(win_cdf_final))])
+                aux_psi.append(uu[int((aa/(nbins*1.0))*len(uu))])
+            win_cdf_all.append(aux)
+            win_psi_all.append(aux_psi)
+
             # lose_elems=methods_diff[np.where(methods_diff<0)][::-1]
             lose_elems=-methods_diff[np.where(methods_diff<0)]
             uul, iil = np.unique(lose_elems, return_inverse=True)
@@ -354,41 +369,42 @@ def plot_delta_expected_majiq_others(psi_dict_lists, replica_names, plotpath=Non
                 _cdf.append(_cdf[-1]+((1.*w_freq)/len(lose_elems)))
             lose_cdf = np.dot(_cdf[1:],len(lose_elems)/len(methods_diff))  # np.dot(_cdf[1:][::-1],-len(lose_elems))
 
-            # MAJIQ wins
-            plt.plot(np.append(np.append(0, uu), 1),
-                     np.append(np.append(0, win_cdf_final), win_cdf_final[-1]),
-                     label="MAJIQ wins - %s%s"%(replica_names[2*jj], replica_names[2*jj+1]),
-                     color=rgb_to_hex(cb.Blues[3][-1]), lw=2)
-            plt.fill_between(np.append(np.append(0, uu), 1),
-                             np.append(np.append(0, win_cdf_final), win_cdf_final[-1]),
-                             np.repeat(0, len(uu)+2), facecolor=rgb_to_hex(cb.Blues[3][-1]), alpha=0.4,
-                             linewidth=0.0)
-            # MAJIQ losses
-            plt.plot(np.append(0, uul),
-                     np.append(0, lose_cdf),
-                     label="%s wins - %s%s"%(met_key.upper(), replica_names[2*jj], replica_names[2*jj+1]),
-                     color=rgb_to_hex(cb.Reds[3][-1]), lw=2)
-            plt.fill_between(np.append(0, uul),
-                             np.append(0, lose_cdf),
-                             np.repeat(0, len(uul)+2), facecolor=rgb_to_hex(cb.Reds[3][-1]), alpha=0.4,
-                             linewidth=0.0)
-
-
-            # plt.plot(np.append(np.append(-1, np.append(uul,uu)),1),
-            #          np.append(np.append(lose_cdf[0], np.append(lose_cdf, win_cdf_final)), win_cdf_final[-1]),
-            #          label="MAJIQ Vs %s - %s%s"%(met_key, replica_names[2*jj], replica_names[2*jj+1]),
-            #          color=rgb_to_hex(palette[jj]), lw=2)
-            # plt.fill_between(np.append(np.append(-1, np.append(uul,uu)),1),
-            #                  np.append(np.append(lose_cdf[0], np.append(lose_cdf, win_cdf_final)), win_cdf_final[-1]),
-            #                  np.repeat(0, len(uul)+len(uu)+2), facecolor=rgb_to_hex(palette[jj]), alpha=0.4,
-            #                  linewidth=0.0)
-
+            aux=[]
+            aux_psi=[]
+            for aa in xrange(0,nbins,1):
+                aux.append(lose_cdf[int((aa/(nbins*1.0))*len(lose_cdf))])
+                aux_psi.append(uul[int((aa/(nbins*1.0))*len(uul))])
+            lose_cdf_all.append(aux)
+            lose_psi_all.append(aux_psi)
 
             font = {'size': 16} #here also 'weight' and 'family'
             matplotlib.rc('font', **font)
 
-
             max_difference = max(max_difference, max(len(win_elems), len(lose_elems)))
+
+    # MAJIQ wins
+    plt.plot(np.append(np.mean(win_psi_all, axis=0), 1),
+             np.append(np.mean(win_cdf_all, axis=0), np.mean(win_cdf_all, axis=0)[-1]),
+             label="MAJIQ wins - Mean (%.2f) & STD (%.2f)" % (np.mean(win_cdf_all, axis=0)[-1], np.std(win_cdf_all, axis=0)[-1]),
+             color=rgb_to_hex(cb.Blues[3][-1]), lw=2)
+    plt.fill_between(np.append(np.mean(win_psi_all, axis=0), 1),
+                     np.append(np.mean(win_cdf_all, axis=0)+np.std(win_cdf_all, axis=0), np.mean(win_cdf_all, axis=0)[-1]+np.std(win_cdf_all, axis=0)[-1]),
+                     np.append(np.mean(win_cdf_all, axis=0)-np.std(win_cdf_all, axis=0), np.mean(win_cdf_all, axis=0)[-1]-np.std(win_cdf_all, axis=0)[-1]),
+                     facecolor=rgb_to_hex(cb.Blues[3][-1]),
+                     alpha=0.4,
+                     linewidth=0.0)
+
+    # MISO wins
+    plt.plot(np.append(np.mean(lose_psi_all, axis=0), 1),
+             np.append(np.mean(lose_cdf_all, axis=0), np.mean(lose_cdf_all, axis=0)[-1]),
+             label="MISO wins - Mean (%.2f) & STD (%.2f)" % (np.mean(lose_cdf_all, axis=0)[-1], np.std(lose_cdf_all, axis=0)[-1]),
+             color=rgb_to_hex(cb.Reds[3][-1]), lw=2)
+    plt.fill_between(np.append(np.mean(lose_psi_all, axis=0), 1),
+                     np.append(np.mean(lose_cdf_all, axis=0)+np.std(lose_cdf_all, axis=0), np.mean(lose_cdf_all, axis=0)[-1]+np.std(lose_cdf_all, axis=0)[-1]),
+                     np.append(np.mean(lose_cdf_all, axis=0)-np.std(lose_cdf_all, axis=0), np.mean(lose_cdf_all, axis=0)[-1]-np.std(lose_cdf_all, axis=0)[-1]),
+                    facecolor=rgb_to_hex(cb.Reds[3][-1]),
+                    alpha=0.4,
+                    linewidth=0.0)
 
     plt.xlabel("Delta Delta PSI", fontsize=20)
     plt.ylabel("Number of LSVs", fontsize=20)
@@ -402,7 +418,7 @@ def plot_delta_expected_majiq_others(psi_dict_lists, replica_names, plotpath=Non
     plt.ylim(0, 1)
 
     plt.title(plotname, fontsize=16)
-    plt.legend(loc=2, fontsize=8)
+    plt.legend(loc=2, fontsize=12)
     plt.tight_layout()
     _save_or_show(plotpath, plotname.replace('\n', ' - '))
 
