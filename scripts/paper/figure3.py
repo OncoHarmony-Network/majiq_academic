@@ -11,7 +11,7 @@ import matplotlib.image as mpimg
 import cPickle as pickle
 from os import listdir
 from os.path import isfile, join
-
+import colorbrewer as cb
 
 fidx = 0
 lims = [500, 1000]
@@ -21,6 +21,13 @@ BREWER_PALETTE = [(228, 26, 28),
                   (77, 175, 74),
                   (152, 78, 163),
                   (255, 127, 0)]
+
+
+def rgb_to_hex(rgb):
+    print rgb
+    color = [int(xx) for xx in rgb[4:-1].split(',')]
+    return '#%02x%02x%02x' % (color[0], color[1], color[2])
+
 
 
 def autolabel(rects, ax, msg, size, b=False):
@@ -53,7 +60,7 @@ def autolabel_horz(rects, ax, offs=8, msg='', size=8):
             ax.text(x, y, mm, ha='center', va='bottom', fontsize=size)
 
 
-def print_message(bars, extrabars=None):
+def print_message(bars, extrabars=None, filename=None):
     msg = []
     nbars = bars / bars.sum()
     if not extrabars is None:
@@ -69,6 +76,12 @@ def print_message(bars, extrabars=None):
             p1 += "| %.2e" % np.sum(nextrabars[:bix+1])
             p2 += "| %.2e" % np.sum(nextrabars[bix:])
         msg.append((total, norm, p1, p2))
+
+    if not filename is None:
+        with open(filename, 'w+') as fp:
+            for mm in msg:
+                sms = " ".join(mm)
+                fp.write("%s\n" % sms)
     return msg
 
 
@@ -86,71 +99,101 @@ def plot_fdrheatmap(vals, vals2, grps):
     ax = fig.add_subplot(111)
 
     df_rowclust = np.zeros(shape=vals.shape, dtype=np.int)
-    df_rowclust2 = np.zeros(shape=vals.shape, dtype=np.int)
+    df_rowclust2 = np.zeros(shape=vals.shape, dtype=np.float)
 
-    for xid, xx in enumerate(row_dendr['leaves']):
-        for yid, yy in enumerate(row_dendr['leaves']):
+    outfp1 = open('./news/fig3f1.vals', 'w+')
+    outfp2 = open('./news/fig3f2.vals', 'w+')
+
+    header = "Tiss\t"
+
+    group_order = row_dendr['leaves']
+    group_order = [10, 5, 9, 11, 0, 1, 2, 8, 7, 3, 6, 4]
+
+
+
+
+    for hh in group_order:
+        header += "\t%s" % grps[hh]
+
+    outfp1.write("%s\n" % header)
+    outfp2.write("%s\n" % header)
+    for xid, xx in enumerate(reversed(group_order)):
+        outfp1.write('\t%s' % grps[xx])
+        outfp2.write('\t%s' % grps[xx])
+        for yid, yy in enumerate(group_order):
+            if xx == yy:
+                t = 0.0
+            else:
+                t = float(vals2[xx, yy])/vals[xx, yy]
             df_rowclust[xid, yid] = vals[xx, yy]
-            df_rowclust[yid, xid] = -1 * vals2[xx, yy] - 100
+            df_rowclust2[xid, yid] = t
+            outfp1.write('\t%s' % df_rowclust[xid, yid])
+            outfp2.write('\t%.3f' % df_rowclust2[xid, yid])
+        outfp1.write('\n')
+        outfp2.write('\n')
 
-    cax = ax.matshow(df_rowclust, interpolation='nearest', cmap='PiYG')
+    outfp1.close()
+    outfp2.close()
 
-    for y in range(df_rowclust.shape[0]):
-        for x in range(y + 1, df_rowclust.shape[1]):
-            if x == y:
+    cax = ax.matshow(df_rowclust, interpolation='nearest', cmap='Purples')
+
+    for x in range(df_rowclust.shape[0]):
+        for y in range(df_rowclust.shape[1]):
+            if x == vals.shape[0]-y - 1:
                 continue
-            pyplot.text(x, y, '%d' % df_rowclust[x, y],
-                        horizontalalignment='center',
-                        verticalalignment='center',
-                        )
-            pyplot.text(y, x, '%d' % (-1*df_rowclust[y, x]),
+            pyplot.text(y, x, '%d' % df_rowclust[x, y],
                         horizontalalignment='center',
                         verticalalignment='center',
                         )
 
 
 
-    df_grps = [grps[xx] for xx in row_dendr['leaves']]
-    ax.set_xlim(-0.5, 4.25)
-    ax.set_ylim(-0.5, 4.25)
+
+
+    rev_df_grps = [grps[xx] for xx in group_order]
+    df_grps = [grps[xx] for xx in reversed(group_order)]
+    ax.set_xlim(-0.5, 12)
+    ax.set_ylim(-0.5, 12)
     tks = ax.get_xticks()
-    ax.set_xticks(tks+1)
-    ax.set_xticklabels(df_grps)
+
+
+    ticks = np.arange(0, 12)
+    ax.set_xticks(ticks)
+    ax.set_xticklabels(rev_df_grps)
     tks = ax.get_yticks()
-    ax.set_yticks(tks+1)
+    ax.set_yticks(ticks)
     ax.set_yticklabels(df_grps)
     ax.set_title('Changing events')
     #
     fig.colorbar(cax)
     pyplot.show()
     fidx += 1
-    #
-    #
-    # fig = pyplot.figure(fidx)
-    # ax = fig.add_subplot(111)
-    #
-    # for y in range(vals2.shape[0]):
-    #     for x in range(vals2.shape[1]):
-    #         if x == y:
-    #             continue
-    #         pyplot.text(x, y, '%d' % df_rowclust2[y, x],
-    #                     horizontalalignment='center',
-    #                     verticalalignment='center',
-    #                     )
-    #
-    # cax = ax.matshow(df_rowclust2, interpolation='nearest', cmap='Greens')
-    # fig.colorbar(cax)
-    # ax.set_xlim(-0.5, 4.25)
-    # ax.set_ylim(-0.5, 4.25)
-    # tks = ax.get_xticks()
-    # ax.set_xticks(tks+1)
-    # ax.set_xticklabels(df_grps)
-    # tks = ax.get_yticks()
-    # ax.set_yticks(tks+1)
-    # ax.set_yticklabels(df_grps)
-    # ax.set_title('Complex changing events')
-    #
-    # pyplot.show()
+
+
+    fig = pyplot.figure(fidx)
+    ax = fig.add_subplot(111)
+
+    for x in range(vals2.shape[0]):
+        for y in range(vals2.shape[1]):
+            if x == vals2.shape[0] - y - 1:
+                continue
+            pyplot.text(y, x, '%.2f' % df_rowclust2[x, y],
+                        horizontalalignment='center',
+                        verticalalignment='center',
+                        )
+
+    cax = ax.matshow(df_rowclust2, interpolation='nearest', cmap='Greens')
+    fig.colorbar(cax)
+    ax.set_xlim(-0.5, 12)
+    ax.set_ylim(-0.5, 12)
+    ax.set_xticks(ticks)
+    ax.set_xticklabels(rev_df_grps)
+    tks = ax.get_yticks()
+    ax.set_yticks(ticks)
+    ax.set_yticklabels(df_grps)
+    ax.set_title('Complex changing events')
+
+    pyplot.show()
 
 
     # plot
@@ -172,7 +215,7 @@ def plot_fdrheatmap(vals, vals2, grps):
     fidx += 1
 
 
-def plot_countings(vals, typs, counts=[0, 0]):
+def plot_countings(vals, typs, counts):
 
     global fidx
 
@@ -214,12 +257,14 @@ def plot_countings(vals, typs, counts=[0, 0]):
     lim_total = max([max(dummys), max(dummyt), max(dummy_junc), max(dummy_ex)])
     x = np.arange(1, 4*lim_total + 1, 4)
 
+
     lim = max(dummy_junc)
     junc_bars = np.array(junc_bars, dtype=float)
     nbars = junc_bars / junc_bars.sum()
     col = [xx/float(255) for xx in BREWER_PALETTE[0]]
     pyplot.bar(x[:lim] + offs[0], nbars[1:lim+1], edgecolor="none", label="#LSV per #juncs",
                width=0.8, color=col, alpha=0.5)
+    msg = print_message(junc_bars, filename='./news/fig3b.junctions.vals')
 
     lim = max(dummy_ex)
     ex_bars = np.array(ex_bars, dtype=float)
@@ -227,6 +272,9 @@ def plot_countings(vals, typs, counts=[0, 0]):
     col = [xx/float(255) for xx in BREWER_PALETTE[1]]
     pyplot.bar(x[:lim] + offs[1], nbars[1:lim+1], edgecolor="none", label="#LSV per #exons", width=0.8,
                color=col, alpha=0.5)
+
+    msg = print_message(ex_bars, filename='./news/fig3b.exons.vals')
+
 
     lim = max(max(dummys), max(dummyt))
     bars_s = np.array(bars_s, dtype=float)
@@ -238,9 +286,12 @@ def plot_countings(vals, typs, counts=[0, 0]):
     pyplot.bar(x[:lim] + offs[3], nbars_t[1:lim+1], label="3' splicesites in Target LSV", edgecolor="none",
                color=(0.92, 0.0, 0.55), width=0.8, alpha=0.5)
 
+    msg = print_message(bars_s, filename='./news/fig3b.ss5prime.vals')
+    msg = print_message(bars_t, filename='./news/fig3b.ss3prime.vals')
+
     pyplot.ylabel(' # LSVs')
     pyplot.xlabel(' # elements')
-    pyplot.title('Total Number of LSVs %s' % (counts[0], counts[1]))
+    pyplot.title('Total Number of LSVs %s' % counts)
     pyplot.legend(loc='best')
     pyplot.show()
     fidx += 1
@@ -271,11 +322,15 @@ def plot_lsv_types_hist(vals, typs, img_path=None, lim_val=None, extra_title="")
 
         lsv_typ = np.array(range(len(vals2)))
               
-        bars_o = pl.barh(lsv_typ, vals2, height=4, edgecolor="none")
+        bars_o = pl.barh(lsv_typ, vals2, height=4, edgecolor="none", alpha=0.5)
         
         pl.set_ylim((0, len(vals2)))
         pl.set_yticks([])
-        msg = print_message(np.array(vals2, dtype=np.float))
+
+        msg = print_message(np.array(vals2, dtype=np.float), filename='./news/fig3a.vals')
+
+
+
         autolabel_horz(bars_o, pl, offs, msg)
         for xidx, xx in enumerate(reversed(typs)):
             bar_idx = (len(typs)-xidx-1) * (offs+1)
@@ -307,12 +362,12 @@ def plot_lsv_types_hist(vals, typs, img_path=None, lim_val=None, extra_title="")
             pl.annotate('%s events' % (lims[lidx]), xy=(lims[lidx]+3200, ll * offs))
             
     pyplot.title(extra_title)
-    pyplot.xlim((0, 8000))
+    #pyplot.xlim((0, 8000))
     pyplot.show()
     fidx += 1
 
 
-def plot_dominant_exons(dom_dict, name=''):
+def plot_dominant_exons(dom_dict, name='', color=cb.Blues[9]):
     global fidx
 
     fig, ax = pyplot.subplots(1)
@@ -333,7 +388,7 @@ def plot_dominant_exons(dom_dict, name=''):
             labels[didx] += '+'
         lab = labels[didx] + "(%d lsv)" % bins.sum()
         col = [xx/float(255) for xx in BREWER_PALETTE[didx]]
-        pyplot.bar(x, bins/float(bins.sum()), width=0.5, label=lab, color=col, edgecolor="none")
+        pyplot.bar(x, bins/float(bins.sum()), width=0.5, label=lab, color=rgb_to_hex(color[-1*(didx*2+1)]), edgecolor="none")
 #        pyplot.bar(x, bins, width=0.5, label=labels[didx], color=colors[didx])
 
     xminorlocations = np.arange(0, totalbins, 3) * 3
@@ -351,6 +406,41 @@ def plot_dominant_exons(dom_dict, name=''):
     fidx += 1
 
 
+def collapse(type_str):
+
+    tab = type_str.split('|')
+    res = tab[0]
+
+    dd = {}
+
+    for jj in tab[1:]:
+        dest = jj.split('e')
+        tab2 = dest[1].split('.')
+        if dest[1] == '0':
+            continue
+        if not tab2[0] in dd:
+            dd[tab2[0]] = []
+
+        dd[tab2[0]].append(tab2[1].split('o')[0])
+
+    translate = {}
+    for kk, vv in dd.items():
+        unique_vv = list(set(vv))
+        unique_vv.sort()
+
+        for vidx, v in enumerate(unique_vv):
+            translate["%s.%s" % (kk, v)] = "%s.%d" % (kk, vidx+1)
+
+    for jj in tab[1:]:
+        dest = jj.split('e')
+        if dest[1] == '0':
+            res += "|%s" % jj
+            continue
+        res += '|%se%s' % (dest[0], translate[dest[1].split('o')[0]])
+
+    return res
+
+
 def get_types(direc, list_exp, grps):
     d_types = dict()
     g_types = dict()
@@ -366,8 +456,8 @@ def get_types(direc, list_exp, grps):
         kk = []
         for lsv in pp[1]:
             kk.append(lsv.id)
-            d_types[lsv.id] = lsv.type
-            g_types[grp_ll][lsv.id] = lsv.type
+            d_types[lsv.id] = collapse(lsv.type)
+            g_types[grp_ll][lsv.id] = collapse(lsv.type)
 
     return d_types, g_types
 
@@ -395,12 +485,12 @@ def all_plots_wrapper(types, nlsv=0):
     
     impath = './thumbs/'
     extra_title = " %s events" % num_ev
-    plot_lsv_types_hist(s_vals, s_keys, img_path=impath, lim_val=None, extra_title=extra_title)
+    # plot_lsv_types_hist(s_vals, s_keys, img_path=impath, lim_val=None, extra_title=extra_title)
 
     s_keys = [xx[0] for xx in histo]
     s_vals = [types[xx] for xx in s_keys]
 
-    plot_countings(s_vals, s_keys, [num_ev, nlsv])
+    plot_countings(s_vals, s_keys, num_ev)
 
 
 def psi_dominant(filename_list):
@@ -519,12 +609,12 @@ def ss_dominant(file_list):
     return res
 
 
-def fdr_parse(file_list, group_list):
+def fdr_parse(direc, file_list, group_list):
 
     changing = np.zeros(shape=(len(group_list), len(group_list)), dtype=np.int)
     complx = np.zeros(shape=(len(group_list), len(group_list)), dtype=np.int)
     for filename in file_list:
-        fp = open(filename)
+        fp = open("%s/%s" % (direc, filename))
         lines = fp.readlines()
         fp.close()
 
@@ -537,7 +627,12 @@ def fdr_parse(file_list, group_list):
                 continue
             tab = ll.strip().split('\t')
 
-            ntyp = tab[4][0].split('|')[1:]
+            typ = tab[4].split('|')[1:]
+            ntyp = 0
+            for tt in typ:
+                if tt.endswith('e0'):
+                    continue
+                ntyp += 1
             psi_list = [float(xx) for xx in tab[2].split(';')]
 
             for pp in psi_list:
@@ -547,49 +642,47 @@ def fdr_parse(file_list, group_list):
                     if ntyp > 2:
                         complx[x, y] += 1
                         complx[y, x] += 1
+                    break
 
     return changing, complx
 
 if __name__ == '__main__':
 
-    dire = '/Users/Jordi/notebooks/figure3'
+    dire = '/Users/Jordi/working/LSV_types/majiqs'
     onlyfiles = [f for f in listdir(dire) if isfile(join(dire, f)) and f.endswith('majiq')]
-    groups = ['Heart', 'Hippocampus', 'Liver', 'Lung', 'Spleen', 'Thymus']
-    # onlyfiles = ['Heart1.mm10.sorted.majiq', 'Hippocampus1.mm10.sorted.majiq']
+    groups = ['Adr', 'Aor', 'BFat', 'Bstm', 'Cer', 'Hrt', 'Hyp', 'Kid', 'Liv', 'Lun', 'Mus', 'WFat']
+    # onlyfiles = ['Adr_CT22.mm10.sorted.majiq', 'Aor_CT22.mm10.sorted.majiq']
     # groups = ['Heart', 'Hippocampus']
+
+    # print "Parse files"
     # list_types, group_types = get_types(dire, onlyfiles, groups)
-    #
     # count_lsv = len(set(list_types.keys()))
     #
     # stypes = {}
-    # gtypes = dict()
-    # for grp in groups:
-    #     gtypes[grp] = {}
-    #
-    # for grp in groups:
-    #     for kk, tyt in group_types[grp].items():
-    #         if not tyt in gtypes[grp]:
-    #             gtypes[grp][tyt] = 0
-    #         gtypes[grp][tyt] += 1
-    #
     # for kk, tyt in list_types.items():
     #     if not tyt in stypes:
     #         stypes[tyt] = 0
     #     stypes[tyt] += 1
     #
+    # print "Plot 3.a 3.b"
     # all_plots_wrapper(stypes, count_lsv)
     #
     # #read psi values
     # groups_vals = []
-    # filename_list = ['./psi/'+grp+'_psigroup_psi_gene.txt' for grp in groups]
+    # filename_list = ['./psi/'+grp+'_psigroup_psi.txt' for grp in groups]
+    # print "Plot Dominant exons"
     # values = psi_dominant(filename_list)
-    # plot_dominant_exons(values, 'exons')
+    # plot_dominant_exons(values, 'exons', color=cb.Blues[9])
     # values = ss_dominant(filename_list)
-    # plot_dominant_exons(values[0], ' 5\'splice sites')
-    # plot_dominant_exons(values[1], ' 3\'splice sites')
+    # print "Plot Dominant splicesites"
+    # plot_dominant_exons(values[0], ' 5\'splice sites', color=cb.Oranges[9])
+    # plot_dominant_exons(values[1], ' 3\'splice sites', color=cb.PuRd[9])
 
     #heatmap
-    groups = ['Adr', 'Aor', 'BFat', 'Bstm', 'Cer', 'Hrt', 'Hyp', 'Kid', 'Liv', 'Lun', 'Mus', 'WFat']
-    filename_list = ['./dpsi/'+grp+'_psigroup_psi_gene.txt' for grp in groups]
-    chg_lsv, complx_lsv = fdr_parse(filename_list, groups)
+    print "Plot dpsi changing events heatmap"
+    dire = '/Users/Jordi/working/LSV_types/dpsi'
+    filename_list = [f for f in listdir(dire) if isfile(join(dire, f)) and f.endswith('txt')]
+    chg_lsv, complx_lsv = fdr_parse(dire, filename_list, groups)
     plot_fdrheatmap(chg_lsv, complx_lsv, groups)
+
+
