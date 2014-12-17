@@ -164,8 +164,9 @@ def rank_majiq(bins_list, names, V=0.2, absolute=True, dofilter=True, E=False, r
     if shrink:
         for idx, v in enumerate(rank):
             if v[1]<MINTHRESHOLD:
-                print "FDR=%d" % (idx+1)
-                return rank[:idx+1]
+                print "MAJIQ FDR=%d" % (idx+1)
+                break
+                # return rank[:idx+1]
 
     # rank.sort(key=lambda x: x[1], reverse=True)
     # print '\n'.join([str(t[1]) for t in rank])
@@ -201,7 +202,7 @@ def rank_naive(bins_list, names, V=0.2, absolute=True, E=False, ranknochange=Fal
 
     for idx, v in enumerate(rank):
         if v[1]<MINTHRESHOLD:
-            print "FDR=%d" % (idx+1)
+            print "Naive Bootstrapping FDR=%d" % (idx+1)
             break
             # return rank[:idx+1]
 
@@ -230,12 +231,12 @@ def rank_mats(path, dofilter=True, ranknochange=False):
         sline = line.split()
         if sline[0] != "ID":
             geneID = sline[1]
-            pvalue = float(sline[-4])
-            #fdr = float(sline[-3])
+            # pvalue = float(sline[-4])
+            fdr = float(sline[-3])
             delta_psi =  float(sline[-1])
             # if pvalue < 0.05 or not dofilter:
             #     rank.append([geneID, delta_psi, pvalue])
-            rank.append([geneID.replace('"', ''), delta_psi, pvalue])
+            rank.append([geneID.replace('"', ''), delta_psi, fdr])
 
     if ranknochange:
         rank.sort(key=lambda x: (abs(x[1]), x[2])) #biggest delta PSI first, small p-value
@@ -432,7 +433,7 @@ def main():
         names_naive_exp1 = None
         for file in args.naive_files:
             naive_data = pickle.load(open(file, 'r'))
-            naive_rank = rank_naive(naive_data[1], naive_data[0], args.V, args.absolute, args.E, args.ranknochange,)
+            naive_rank = rank_naive(naive_data[1], naive_data[0], args.V, args.absolute, args.E, args.ranknochange)
             if args.type_rank == 'only_exp1':
                 # Use only MAJIQ selected events for experiment 1
                 names_naive = [naive_info[0] for naive_info in naive_rank]

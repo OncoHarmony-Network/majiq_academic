@@ -225,7 +225,7 @@ def get_lsv_delta_exp_data(majiq_out_file, confidence=.95, threshold=.2, show_al
                     else:
                         excl_incl.append([0, means[-1]])
                 lsv_o.means = means
-                lsv_o.excl_incl = excl_incl
+                lsv_o.set_excl_incl(excl_incl)
                 # lsv_o.sort_bins(lsv_info[i][4].strand)
 
                 # lsv_list.append(lsv)
@@ -302,14 +302,14 @@ def collapse_lsv(lsv_type):
     return res
 
 
-def list_files_or_dir(file_or_dir_list, suffix='*', containing='*'):
+def list_files_or_dir(file_or_dir_list, prefix='*', suffix='*', containing='*'):
 
     if type(file_or_dir_list) != list: return [file_or_dir_list]
     files = []
     for file_or_dir in file_or_dir_list:
         if os.path.isdir(file_or_dir):
             for root, dirnames, filenames in os.walk(file_or_dir):
-                for filename in fnmatch.filter(filenames, '*%s*%s' % (containing, suffix)):
+                for filename in fnmatch.filter(filenames, '%s*%s*%s' % (prefix, containing, suffix)):
                     files.append(os.path.join(root, filename))
             # for file in os.listdir(file_or_dir):
             #     if not suffix or file.endswith(suffix):
