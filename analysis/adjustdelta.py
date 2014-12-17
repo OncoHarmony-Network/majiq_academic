@@ -342,9 +342,9 @@ def adjustdelta_lsv(deltapsi, output, plotpath=None, title=None, numiter=10, bre
 
 
 
-    temp = open('./temp.pickle', 'wb')
-    pickle.dump((D, p_mixture, beta_params), temp)
-    temp.close()
+    # temp = open('./temp.pickle', 'wb')
+    # pickle.dump((D, p_mixture, beta_params), temp)
+    # temp.close()
 
     beta_params, pmix = EMBetaMixture(D, p_mixture, beta_params, 0, logger=logger, plotpath=plotpath, nj=njunc,
                                       labels=labels)
