@@ -634,8 +634,8 @@ window.splicegraph = function (){
 
         function renderLsvSpliceGraph(canvas, gene) {
             if (canvas.getContext) {
-                // Render LSV representation from a string text representing the REAL LSV i.e.: s|1e1.3|2e1.2|3e1.2|4e1.1
-                //                                                             Another example: s|1e0|2e0|3e1.1|4e1.1
+                // Render LSV representation from a string text representing the REAL LSV i.e.: s|1e1.3o3|2e1.2o3|3e1.2o3|4e1.1o3
+                //                                                             Another example: s|1e0|2e0|3e1.1o1|4e1.1o1
                 var ctx = canvas.getContext("2d");
 
                 // Clear previous draw
@@ -650,6 +650,7 @@ window.splicegraph = function (){
                 if (exon_lsv_coords) {
                     exon_lsv_coords = exon_lsv_coords.replace('(', '').replace(')', '').replace(' ', '').split(',');
 
+                    // Find LSV exon number in the splice graph
                     for (var exon_i = 0; exon_i < gene.exons.length; exon_i++) {
                         if (gene.exons[exon_i].coords[0] == exon_lsv_coords[0] && gene.exons[exon_i].coords[1] == exon_lsv_coords[1]) {
                             exon_lsv_number = exon_i + 1;
@@ -678,10 +679,13 @@ window.splicegraph = function (){
                     if (lsvs_fields[1] == 0)
                         continue;
                     var exonNum_ss = lsvs_fields[1].split('.');
-                    if (ss_reg[exonNum_ss[0]])
-                        ss_reg[exonNum_ss[0]] = Math.max(ss_reg[exonNum_ss[0]], parseInt(exonNum_ss[1]));
-                    else
-                        ss_reg[exonNum_ss[0]] = parseInt(exonNum_ss[1]);
+
+                    ss_reg[exonNum_ss[0]] = parseInt(exonNum_ss[1].split('o')[1]);
+
+//                    if (ss_reg[exonNum_ss[0]])
+//                        ss_reg[exonNum_ss[0]] = Math.max(ss_reg[exonNum_ss[0]], parseInt(exonNum_ss[1]));
+//                    else
+//                        ss_reg[exonNum_ss[0]] = parseInt(exonNum_ss[1]);
                 }
                 num_exons++;  // source or target exon is implicit
 
@@ -718,17 +722,23 @@ window.splicegraph = function (){
                 }
                 coords[1] = canvas.height - exon_height - margins[3];
 
+                // For rendering all splice sites even if they don't have a junction jumping in or out of them,
+                // keep a registry of the exons whose ssites have been already rendered
+                var rendered_exons={};
                 var previous_ctx = [ctx.lineWidth, ctx.strokeStyle];
                 for (n_ways = 1; n_ways<lsvs.length; n_ways++){
                     lsvs_fields = lsvs[n_ways].split('e');
                     var ss = parseInt(lsvs_fields[0]),
                         target_e = lsvs_fields[1].split('.')[0],
-                        target_ss = parseInt(lsvs_fields[1].split('.')[1]);
-//                    var coords_x_start_e    = coords[0] + direction * ((exon_width/2) / num_ss ) * (ss-1);
-                    var coords_x_start_e    = coords[0] + ((exon_width/2) / num_ss ) * (ss-1);
-//                    var target_exon = (direction > 0 ? exons_obj[lsvs_fields[1][0]] : exons_obj[num_exons -1 - lsvs_fields[1][0]]);
+                        target_ss = parseInt(lsvs_fields[1].split('.')[1]),
+                        target_num_ss = null;
+                    if (lsvs_fields[1].indexOf('o')>0){
+                        target_num_ss = parseInt(lsvs_fields[1].split('.')[1].split('o')[1]);
+                    }
 
+                    var coords_x_start_e    = coords[0] + ((exon_width/2) / num_ss ) * (ss-1);
                     var coords_x_target_e = null;
+
                     if (lsvs_fields[1] == 0){
                         coords_x_target_e = coords_x_start_e;
                         count_starts_ends++;
@@ -743,23 +753,53 @@ window.splicegraph = function (){
                     } else {
                         offset_ss = ( ss_reg[target_e] - target_ss) * percentage_exon / 2 * exon_width;
                     }
+                    var coords_x_target_ref= coords_x_target_e;
+                    coords_x_target_e += direction * offset_ss;
 
-                    coords_x_target_e += direction*offset_ss;
+                    // Now, we mark all possible splice sites, either if they have junctions jumping in/or out of them or not
+                    // splice sites dashed lines in LSV exon
+                    if (direction>0 && ss != num_ss || direction<0 && ss!=1) {
+
+                        if (!rendered_exons[lsvs_fields[1][0]]){  // Render ssites only if they haven't been rendered
+                            ctx.strokeStyle = "rgba(0, 0, 0, 0.6)";
+                            var offset_ss_aux=null,
+                                coords_x_target_ss=null;
+                            for (var ii=1; ii<target_num_ss; ii++){
+                                coords_x_target_ss=coords_x_target_ref;
+                                if (direction > 0) {
+                                    offset_ss_aux = ii * percentage_exon/2 * exon_width ;
+                                } else {
+                                    offset_ss_aux = ( ss_reg[target_e] - ii) * percentage_exon / 2 * exon_width;
+                                }
+
+                                if (offset_ss_aux) {
+                                    coords_x_target_ss += direction * offset_ss_aux;
+                                    drawDashedLine(ctx, Math.round(coords_x_target_ss), Math.round(coords[1]), Math.round(coords_x_target_ss), Math.round(coords[1] + exon_height), 2);
+                                }
+                            }
+
+                            rendered_exons[lsvs_fields[1][0]] = 1;
+                        }
+                    }
 
                     var mid_x = (coords_x_start_e + coords_x_target_e) /2;
                     ctx.lineWidth =2;
                     ctx.strokeStyle = getColor(Math.max(0, n_ways-1 - count_starts_ends), BREWER_PALETTE, 0.9);
 
-                    // junctions lines
-                    drawLine(ctx, Math.round(coords_x_start_e), Math.round(coords[1]), Math.round(mid_x), Math.round(margins[3]*8*ss));
-                    drawLine(ctx, Math.round(mid_x), Math.round(margins[3]*8*ss), Math.round(coords_x_target_e), Math.round(coords[1]));
-
                     // splice sites dashed lines
                     if (direction>0 && ss != num_ss || direction<0 && ss!=1) {
                         // Check if is a special exon (started or finisher)
                         drawDashedLine(ctx, Math.round(coords_x_start_e), Math.round(coords[1]), Math.round(coords_x_start_e), Math.round(coords[1] + exon_height), 2);
-
                     }
+
+                    // splice sites dashed lines in target exon
+                    if (target_ss != 1 && direction > 0 || target_ss != ss_reg[target_e] && direction < 0  ) {
+                        drawDashedLine(ctx, Math.round(coords_x_target_e), Math.round(coords[1]), Math.round(coords_x_target_e), Math.round(coords[1] + exon_height), 2);
+                    }
+
+                    // junctions lines
+                    drawLine(ctx, Math.round(coords_x_start_e), Math.round(coords[1]), Math.round(mid_x), Math.round(margins[3]*8*ss));
+                    drawLine(ctx, Math.round(mid_x), Math.round(margins[3]*8*ss), Math.round(coords_x_target_e), Math.round(coords[1]));
 
                     // render special marker for exon alternative start/end
                     if (lsvs_fields[1].indexOf('.') === -1) {
@@ -769,11 +809,9 @@ window.splicegraph = function (){
 
                     }
 
-                    if (target_ss != 1 && direction > 0 || target_ss != ss_reg[target_e] && direction < 0  ) {
-                        drawDashedLine(ctx, Math.round(coords_x_target_e), Math.round(coords[1]), Math.round(coords_x_target_e), Math.round(coords[1] + exon_height), 2);
-                    }
 
                 }
+
 
                 ctx.lineWidth=previous_ctx[0];
                 ctx.strokeStyle=previous_ctx[1];
