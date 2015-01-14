@@ -135,8 +135,7 @@ def rnaseq_intron_retention(filenames, gene_list, readlen, chrom, logging=None):
         for gne in gene_list[strand]:
             intron_list = gne.get_all_introns()
             for exp_index in range(len(filenames)):
-                for intron in intron_list:
-                    exon1, exon2 = intron.get_coordinates()
+                for exon1, exon2 in intron_list:
                     ex1_start, ex1_end = exon1.get_coordinates()
                     ex2_start, ex2_end = exon2.get_coordinates()
                     v_junc1 = [ex1_end, ex1_end+1]
