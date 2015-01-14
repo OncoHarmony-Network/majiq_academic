@@ -304,6 +304,12 @@ class Gene:
 #        trcpt.add_junction(junc)
         return junc
 
+    def get_all_introns(self):
+        lintrons = []
+        for ex_idx, ex in enumerate(self.exons[1:]):
+            lintrons.append((self.exons[ex_idx-1], ex))
+        return lintrons
+
     def get_rnaseq_mat(self, rand10k, use_annot=True):
 
         ss3_l = []
