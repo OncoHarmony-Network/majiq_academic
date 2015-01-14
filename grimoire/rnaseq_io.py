@@ -142,7 +142,7 @@ def rnaseq_intron_retention(filenames, gene_list, readlen, chrom, logging=None):
                     v_junc2 = [ex2_start-1, ex2_start]
                     n_newjunc = 0
 
-                    offset = readlen - 16
+                    offset = readlen - 8
                     try:
                         read_iter = samfile[exp_index].fetch(chrom, ex1_end - offset, ex1_end + 1)
                     except ValueError:
@@ -152,8 +152,10 @@ def rnaseq_intron_retention(filenames, gene_list, readlen, chrom, logging=None):
                     junc1 = Junction(v_junc1[0], v_junc1[1], exon1, None, gne, readN=0)
                     for read in read_iter:
                         is_cross, junc_list = __cross_junctions(read)
-                        if is_cross:
+                        r_start = read.pos
+                        if is_cross or r_start < (ex1_end - offset):
                             continue
+
                         strand_read = '+' if not is_neg_strand(read) else '-'
                         unique = __is_unique(read)
                         if strand_read != strand or not unique:
@@ -161,7 +163,7 @@ def rnaseq_intron_retention(filenames, gene_list, readlen, chrom, logging=None):
 
                         nreads = __get_num_reads(read)
                         gne.add_read_count(nreads, exp_index)
-                        r_start = read.pos
+
 
                         #intron_ju
                         nc = read.seq.count('C') + read.seq.count('c')
@@ -177,10 +179,11 @@ def rnaseq_intron_retention(filenames, gene_list, readlen, chrom, logging=None):
                         continue
 
                     n_newjunc += 1
-                    junc2 = Junction(v_junc1[0], v_junc1[1], None, exon2, gne, readN=0)
+                    junc2 = Junction(v_junc2[0], v_junc2[1], None, exon2, gne, readN=0)
                     for read in read_iter:
                         is_cross, junc_list = __cross_junctions(read)
-                        if is_cross:
+                        r_start = read.pos
+                        if is_cross or r_start < (ex2_start - offset - 1):
                             continue
                         strand_read = '+' if not is_neg_strand(read) else '-'
                         unique = __is_unique(read)
@@ -200,8 +203,6 @@ def rnaseq_intron_retention(filenames, gene_list, readlen, chrom, logging=None):
                     if n_newjunc == 2:
                         majiq_exons.new_exon_definition(v_junc1[1], v_junc2[0], None, junc1, junc2, gne, isintron=True)
                         logging.info("NEW INTRON RETENTION EVENT %s, %d-%d" % (gne.get_name(), v_junc1[0], v_junc2[1]))
-
-
 
 
 def read_sam_or_bam(filenames, gene_list, readlen, chrom, nondenovo=False, logging=None):
