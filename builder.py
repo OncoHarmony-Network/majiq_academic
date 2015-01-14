@@ -157,14 +157,14 @@ def main(params):
             utils.create_if_not_exists(temp_dir)
             if params.nthreads == 1:
                 majiq_builder(sam_list, chrom, pcr_validation=params.pcr_filename, gff_output=params.gff_output,
-                          only_rna=params.only_rna, nondenovo=params.non_denovo, logging=logger)
+                              only_rna=params.only_rna, nondenovo=params.non_denovo, logging=logger)
             else:
 
                 pool.apply_async(__parallel_lsv_quant, [sam_list, chrom,
-                                                    params.pcr_filename,
-                                                    params.gff_output,
-                                                    params.only_rna,
-                                                    params.non_denovo])
+                                                        params.pcr_filename,
+                                                        params.gff_output,
+                                                        params.only_rna,
+                                                        params.non_denovo])
 
         if params.nthreads > 1:
             logger.info("... waiting childs")

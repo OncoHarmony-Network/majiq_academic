@@ -142,15 +142,18 @@ def rnaseq_intron_retention(filenames, gene_list, readlen, chrom, logging=None):
                     v_junc2 = [ex2_start-1, ex2_start]
                     n_newjunc = 0
 
-                    offset = readlen - 8
+                    offset = readlen - 16
                     try:
-                        read_iter = samfile[exp_index].fetch(chrom, ex1_end - offset, ex1_end + offset + 1)
+                        read_iter = samfile[exp_index].fetch(chrom, ex1_end - offset, ex1_end + 1)
                     except ValueError:
                         #logging.info('There are no reads in %s:%d-%d' % (chrom, ex1_end, ex1_end+1))
                         continue
                     n_newjunc += 1
                     junc1 = Junction(v_junc1[0], v_junc1[1], exon1, None, gne, readN=0)
                     for read in read_iter:
+                        is_cross, junc_list = __cross_junctions(read)
+                        if is_cross:
+                            continue
                         strand_read = '+' if not is_neg_strand(read) else '-'
                         unique = __is_unique(read)
                         if strand_read != strand or not unique:
@@ -167,9 +170,8 @@ def rnaseq_intron_retention(filenames, gene_list, readlen, chrom, logging=None):
 
                         junc1.update_junction_read(exp_index, nreads, r_start, gc_content, unique)
 
-
                     try:
-                        read_iter = samfile[exp_index].fetch(chrom, ex2_start - offset - 1, ex2_start + offset)
+                        read_iter = samfile[exp_index].fetch(chrom, ex2_start - offset - 1, ex2_start)
                     except ValueError:
                         #logging.info('There are no reads in %s:%d-%d' % (chrom, ex1_end, ex1_end+1))
                         continue
@@ -177,6 +179,9 @@ def rnaseq_intron_retention(filenames, gene_list, readlen, chrom, logging=None):
                     n_newjunc += 1
                     junc2 = Junction(v_junc1[0], v_junc1[1], None, exon2, gne, readN=0)
                     for read in read_iter:
+                        is_cross, junc_list = __cross_junctions(read)
+                        if is_cross:
+                            continue
                         strand_read = '+' if not is_neg_strand(read) else '-'
                         unique = __is_unique(read)
                         if strand_read != strand or not unique:
