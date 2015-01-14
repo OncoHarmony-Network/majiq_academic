@@ -129,7 +129,7 @@ def main(params):
     logger.info("")
     logger.info("Command: %s" % params)
 
-    if not params.onlygather:vv
+    if not params.onlygather:
         p = Process(target=__parallel_gff3, args=(params.transcripts, params.pcr_filename, params.output))
         logger.info("... waiting gff3 parsing")
         p.start()
