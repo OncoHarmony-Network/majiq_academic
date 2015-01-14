@@ -130,18 +130,27 @@ def is_neg_strand(read):
 def rnaseq_intron_retention(filenames, gene_list, readlen, chrom, logging=None):
 
     samfile = [pysam.Samfile(xx, "rb") for xx in filenames]
-
+    intron_ret_list = []
     for strand in ('+', '-'):
         for gne in gene_list[strand]:
             intron_list = gne.get_all_introns()
             for exp_index in range(len(filenames)):
                 for intron in intron_list:
-                    strt, end = intron.get_coordinates()
+                    exon1, exon2 = intron.get_coordinates()
+                    ex1_start, ex1_end = exon1.get_coordinates()
+                    ex2_start, ex2_end = exon2.get_coordinates()
+                    v_junc1 = [ex1_end, ex1_end+1]
+                    v_junc2 = [ex2_start-1, ex2_start]
+                    n_newjunc = 0
+
+                    offset = readlen - 8
                     try:
-                        read_iter = samfile[exp_index].fetch(chrom, strt, end)
+                        read_iter = samfile[exp_index].fetch(chrom, ex1_end - offset, ex1_end + offset + 1)
                     except ValueError:
-                        logging.info('There are no reads in %s:%d-%d' % (chrom, strt, end))
+                        #logging.info('There are no reads in %s:%d-%d' % (chrom, ex1_end, ex1_end+1))
                         continue
+                    n_newjunc += 1
+                    junc1 = Junction(v_junc1[0], v_junc1[1], exon1, None, gne, readN=0)
                     for read in read_iter:
                         strand_read = '+' if not is_neg_strand(read) else '-'
                         unique = __is_unique(read)
@@ -152,15 +161,42 @@ def rnaseq_intron_retention(filenames, gene_list, readlen, chrom, logging=None):
                         gne.add_read_count(nreads, exp_index)
                         r_start = read.pos
 
-#TODO: RECHECK
-                        if r_start > strt or r_start < (end - readlen):
-                            continue
-
                         #intron_ju
-
                         nc = read.seq.count('C') + read.seq.count('c')
                         ng = read.seq.count('g') + read.seq.count('G')
                         gc_content = float(nc + ng) / float(len(read.seq))
+
+                        junc1.update_junction_read(exp_index, nreads, r_start, gc_content, unique)
+
+
+                    try:
+                        read_iter = samfile[exp_index].fetch(chrom, ex2_start - offset - 1, ex2_start + offset)
+                    except ValueError:
+                        #logging.info('There are no reads in %s:%d-%d' % (chrom, ex1_end, ex1_end+1))
+                        continue
+
+                    n_newjunc += 1
+                    junc2 = Junction(v_junc1[0], v_junc1[1], None, exon2, gne, readN=0)
+                    for read in read_iter:
+                        strand_read = '+' if not is_neg_strand(read) else '-'
+                        unique = __is_unique(read)
+                        if strand_read != strand or not unique:
+                            continue
+
+                        nreads = __get_num_reads(read)
+                        gne.add_read_count(nreads, exp_index)
+                        r_start = read.pos
+
+                        #intron_ju
+                        nc = read.seq.count('C') + read.seq.count('c')
+                        ng = read.seq.count('g') + read.seq.count('G')
+                        gc_content = float(nc + ng) / float(len(read.seq))
+                        junc2.update_junction_read(exp_index, nreads, r_start, gc_content, unique)
+
+                    if n_newjunc == 2:
+                        majiq_exons.new_exon_definition(v_junc1[1], v_junc2[0], None, junc1, junc2, gne, isintron=True)
+                        logging.info("NEW INTRON RETENTION EVENT %s, %d-%d" % (gne.get_name(), v_junc1[0], v_junc2[1]))
+
 
 
 

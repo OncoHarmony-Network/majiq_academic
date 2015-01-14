@@ -15,7 +15,7 @@ class Exon:
     __gt__ = lambda self, other: self.start >= other.end 
     __ge__ = lambda self, other: self.start >= other.end or (self.start < other.end and self.end > other.start)
 
-    def __init__(self, start, end, gene, strand, annot=False):
+    def __init__(self, start, end, gene, strand, annot=False, isintron=False):
 
         self.start = start
         self.end = end
@@ -34,6 +34,7 @@ class Exon:
         self.ir = False
         self.db_coord = (start, end)
         self.annotated = annot
+        self.is_intron = isintron
 
     def __hash__(self):
         return hash(self.id) ^ hash(self.gene_name)
@@ -512,7 +513,7 @@ def __half_exon(ss_type, junc, read_rna):
     return 0
 
 
-def new_exon_definition(start, end, read_rna, s3prime_junc, s5prime_junc, gene):
+def new_exon_definition(start, end, read_rna, s3prime_junc, s5prime_junc, gene, isintron=False):
 
     if end - start < 5:
         return 0
@@ -522,7 +523,7 @@ def new_exon_definition(start, end, read_rna, s3prime_junc, s5prime_junc, gene):
     new_exons = 0
     if ex is None:
         new_exons = 1
-        ex = Exon(start, end, gene, gene.get_strand())
+        ex = Exon(start, end, gene, gene.get_strand(), isintron)
         gene.add_exon(ex)
 #    else:
 #        print "EXON FOUND", ex, ex.get_coordinates(), ex.annotated
