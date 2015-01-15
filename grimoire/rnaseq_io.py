@@ -154,7 +154,7 @@ def rnaseq_intron_retention(filenames, gene_list, readlen, chrom, logging=None):
                     new_junc = True
                     offset = readlen - 8
                     try:
-                        read_iter = samfile[exp_index].fetch(chrom, ex1_end - offset, ex1_end - 8)
+                        read_iter = samfile[exp_index].fetch(chrom, ex1_end + 1 + 8, ex1_end + 1 + offset)
                     except ValueError:
                         #logging.info('There are no reads in %s:%d-%d' % (chrom, ex1_end, ex1_end+1))
                         continue
@@ -169,7 +169,7 @@ def rnaseq_intron_retention(filenames, gene_list, readlen, chrom, logging=None):
                     for read in read_iter:
                         is_cross, junc_list = __cross_junctions(read)
                         r_start = read.pos
-                        if is_cross or r_start < (ex1_end - offset):
+                        if is_cross or r_start > ex1_end:
                             continue
 
                         strand_read = '+' if not is_neg_strand(read) else '-'
