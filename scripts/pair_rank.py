@@ -118,20 +118,9 @@ def rank_majiq(bins_list, names, V=0.2, absolute=True, dofilter=True, E=False, r
     if E:
         MINTHRESHOLD = 0.20
     rank = []
-    # lsv_types_dict = {
-    #     's|1e1.1|1e2.1':'SE',
-    #     't|1e1.1|1e2.1':'SE',
-    #     # 's|1e1.1|1e1.2':'A3SS',
-    #     # 't|1e1.1|2e1.1':'A3SS',
-    #     # 't|1e1.1|1e1.2':'A5SS',
-    #     # 's|1e1.1|2e1.1':'A5SS'
-    # }
-    olderr = np.seterr(divide='ignore')
 
     print len(names), len(bins_list)
     for i, lsv_bins in enumerate(bins_list):
-        # if names[i][2] not in lsv_types_dict.keys():
-        #     continue
         if not complex_lsvs and len(lsv_bins) > 2:
             continue
         if ranknochange:
@@ -232,7 +221,7 @@ def rank_mats(path, dofilter=True, ranknochange=False):
         if sline[0] != "ID":
             geneID = sline[1]
             # pvalue = float(sline[-4])
-            fdr = float(sline[-3])
+            fdr = float(sline[-4])
             delta_psi =  float(sline[-1])
             # if pvalue < 0.05 or not dofilter:
             #     rank.append([geneID, delta_psi, pvalue])
@@ -347,6 +336,7 @@ def main():
     parser.add_argument('--type-rank', dest='type_rank', default='all', choices=RANK_TYPES, help='Configure which events are chosen for the ranking.')
     parser.add_argument('--create_restrict_plot', dest='create_restrict_plot', default=False, action='store_true', help="Create plot for only_ex1 ranks in different restrictive conditions. Only works with --type-rank only_exp1")
     parser.add_argument('--complex-lsvs', dest="complex_lsvs", default=False, action="store_true", help="Include complex LSVs")
+    parser.add_argument('--noshrink', dest='shrink', default=True, action='store_false', help="Shrink ranks with the FDR number.")
     args = parser.parse_args()
 
     print args
@@ -393,14 +383,14 @@ def main():
                 if file_nr % 2 == 0:
                     count_pairs += 1
                     majiq_file1_names = majiq_data[1]
-                    ranks['majiq_' + str(count_pairs)].append(rank_majiq(majiq_data[0], majiq_data[1], args.V, args.absolute, args.filter, args.E, args.ranknochange, args.complex_lsvs, shrink=True))
+                    ranks['majiq_' + str(count_pairs)].append(rank_majiq(majiq_data[0], majiq_data[1], args.V, args.absolute, args.filter, args.E, args.ranknochange, args.complex_lsvs, shrink=args.shrink))
                     continue
 
                 if args.type_rank != 'all':
                     if args.type_rank == 'only_exp1':
                         # Select events from experiment 1
                         exp1_index = np.array([name in majiq_file1_names for name in majiq_data[1][:len(majiq_data[0])]])
-                        ranks['majiq_' + str(count_pairs)].append(rank_majiq(np.array(majiq_data[0])[exp1_index], np.array(majiq_data[1])[exp1_index].tolist(), args.V, args.absolute, args.filter, args.E, args.ranknochange, args.complex_lsvs, shrink=False))
+                        ranks['majiq_' + str(count_pairs)].append(rank_majiq(np.array(majiq_data[0])[exp1_index], np.array(majiq_data[1])[exp1_index].tolist(), args.V, args.absolute, args.filter, args.E, args.ranknochange, args.complex_lsvs, shrink=args.shrink))
                 else:
                     ranks['majiq'].append(rank_majiq(majiq_data[0], majiq_data[1], args.V, args.absolute, args.filter, args.E, args.ranknochange, args.complex_lsvs))
             names_majiq_exp1 = [m[1] for m in majiq_file1_names]
