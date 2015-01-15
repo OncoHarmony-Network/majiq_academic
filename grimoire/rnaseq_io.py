@@ -127,6 +127,16 @@ def is_neg_strand(read):
     return res
 
 
+def get_junc_from_list(coords, list_elem):
+    res = None
+    for xx in list_elem:
+        newcoord = xx.get_coordinates()
+        if newcoord[0] == coords[0] and newcoord[1] == coords[1]:
+            res = xx
+            break
+    return res
+
+
 def rnaseq_intron_retention(filenames, gene_list, readlen, chrom, logging=None):
 
     samfile = [pysam.Samfile(xx, "rb") for xx in filenames]
@@ -134,22 +144,28 @@ def rnaseq_intron_retention(filenames, gene_list, readlen, chrom, logging=None):
     for strand in ('+', '-'):
         for gne in gene_list[strand]:
             intron_list = gne.get_all_introns()
+            virtua_juncs = []
             for exp_index in range(len(filenames)):
                 for exon1, exon2 in intron_list:
                     ex1_start, ex1_end = exon1.get_coordinates()
                     ex2_start, ex2_end = exon2.get_coordinates()
                     v_junc1 = [ex1_end, ex1_end+1]
                     v_junc2 = [ex2_start-1, ex2_start]
-                    n_newjunc = 0
-
+                    new_junc = True
                     offset = readlen - 8
                     try:
                         read_iter = samfile[exp_index].fetch(chrom, ex1_end - offset, ex1_end - 8)
                     except ValueError:
                         #logging.info('There are no reads in %s:%d-%d' % (chrom, ex1_end, ex1_end+1))
                         continue
-                    n_newjunc += 1
-                    junc1 = Junction(v_junc1[0], v_junc1[1], exon1, None, gne, readN=0)
+
+                    junc1 = get_junc_from_list(v_junc1, virtua_juncs)
+                    if junc1 is None:
+                        junc1 = Junction(v_junc1[0], v_junc1[1], exon1, None, gne, readN=0)
+                        virtua_juncs.append(junc1)
+                    else:
+                        new_junc &= False
+
                     for read in read_iter:
                         is_cross, junc_list = __cross_junctions(read)
                         r_start = read.pos
@@ -178,8 +194,13 @@ def rnaseq_intron_retention(filenames, gene_list, readlen, chrom, logging=None):
                         #logging.info('There are no reads in %s:%d-%d' % (chrom, ex1_end, ex1_end+1))
                         continue
 
-                    n_newjunc += 1
-                    junc2 = Junction(v_junc2[0], v_junc2[1], None, exon2, gne, readN=0)
+                    junc2 = get_junc_from_list(v_junc2, virtua_juncs)
+                    if junc2 is None:
+                        junc2 = Junction(v_junc2[0], v_junc2[1], None, exon2, gne, readN=0)
+                        virtua_juncs.append(junc2)
+                    else:
+                        new_junc &= False
+
                     for read in read_iter:
                         is_cross, junc_list = __cross_junctions(read)
                         r_start = read.pos
@@ -200,7 +221,7 @@ def rnaseq_intron_retention(filenames, gene_list, readlen, chrom, logging=None):
                         gc_content = float(nc + ng) / float(len(read.seq))
                         junc2.update_junction_read(exp_index, nreads, r_start, gc_content, unique)
 
-                    if n_newjunc == 2:
+                    if new_junc:
                         majiq_exons.new_exon_definition(v_junc1[1], v_junc2[0], None, junc1, junc2, gne, isintron=True)
                         logging.info("NEW INTRON RETENTION EVENT %s, %d-%d" % (gne.get_name(), v_junc1[0], v_junc2[1]))
 
