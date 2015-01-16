@@ -169,7 +169,7 @@ def rnaseq_intron_retention(filenames, gene_list, readlen, chrom, logging=None):
                     for read in read_iter:
                         is_cross, junc_list = __cross_junctions(read)
                         r_start = read.pos
-                        if is_cross or r_start > ex1_end - 8:
+                        if is_cross or r_start >= ex1_end - 8:
                             continue
 
                         strand_read = '+' if not is_neg_strand(read) else '-'
