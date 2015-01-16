@@ -195,6 +195,8 @@ def rnaseq_intron_retention(filenames, gene_list, readlen, chrom, logging=None):
                         #logging.info('There are no reads in %s:%d-%d' % (chrom, ex1_end, ex1_end+1))
                         continue
 
+                    if covered == 0:
+                        continue
                     covered += 1
                     junc2 = get_junc_from_list(v_junc2, virtua_juncs)
                     if junc2 is None:
