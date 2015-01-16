@@ -152,13 +152,14 @@ def rnaseq_intron_retention(filenames, gene_list, readlen, chrom, logging=None):
                     v_junc1 = [ex1_end, ex1_end+1]
                     v_junc2 = [ex2_start-1, ex2_start]
                     new_junc = True
+                    covered = 0
                     offset = readlen - 8
                     try:
                         read_iter = samfile[exp_index].fetch(chrom, ex1_end + 1 + 8, ex1_end + 1 + offset)
                     except ValueError:
                         #logging.info('There are no reads in %s:%d-%d' % (chrom, ex1_end, ex1_end+1))
                         continue
-
+                    covered += 1
                     junc1 = get_junc_from_list(v_junc1, virtua_juncs)
                     if junc1 is None:
                         junc1 = Junction(v_junc1[0], v_junc1[1], exon1, None, gne, readN=0)
@@ -194,6 +195,7 @@ def rnaseq_intron_retention(filenames, gene_list, readlen, chrom, logging=None):
                         #logging.info('There are no reads in %s:%d-%d' % (chrom, ex1_end, ex1_end+1))
                         continue
 
+                    covered += 1
                     junc2 = get_junc_from_list(v_junc2, virtua_juncs)
                     if junc2 is None:
                         junc2 = Junction(v_junc2[0], v_junc2[1], None, exon2, gne, readN=0)
@@ -221,7 +223,7 @@ def rnaseq_intron_retention(filenames, gene_list, readlen, chrom, logging=None):
                         gc_content = float(nc + ng) / float(len(read.seq))
                         junc2.update_junction_read(exp_index, nreads, r_start, gc_content, unique)
 
-                    if new_junc:
+                    if new_junc and covered == 2:
                         majiq_exons.new_exon_definition(v_junc1[1], v_junc2[0], None, junc1, junc2, gne, isintron=True)
                         logging.info("NEW INTRON RETENTION EVENT %s, %d-%d" % (gne.get_name(), v_junc1[0], v_junc2[1]))
 
