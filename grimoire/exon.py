@@ -489,7 +489,7 @@ def __half_exon(ss_type, junc, read_rna):
 
     for ex in gene.get_exon_list():
         (ex_start, ex_end) = ex.get_coordinates()
-    if ex_start <= coord <= ex_end:
+        if ex_start <= coord <= ex_end:
             if ss_type == '3prime':
                 start = coord
                 end = ex_end
