@@ -239,9 +239,10 @@ def rnaseq_intron_retention(filenames, gene_list, readlen, chrom, logging=None):
                                                         None, junc1, junc2, gne,
                                                         isintron=True)
 
-                        logging.info("NEW INTRON RETENTION EVENT %s, %d-%d" % (gne.get_name(),
-                                                                               intron_start,
-                                                                               intron_end))
+                        logging.info("NEW INTRON RETENTION[%s]EVENT %s, %d-%d" % (exp_index,
+                                                                                  gne.get_name(),
+                                                                                  intron_start,
+                                                                                  intron_end))
 
 
 def read_sam_or_bam(filenames, gene_list, readlen, chrom, nondenovo=False, logging=None):
