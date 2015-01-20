@@ -176,7 +176,7 @@ def rnaseq_intron_retention(filenames, gene_list, readlen, chrom, logging=None):
                         r_start = read.pos
                         nreads = __get_num_reads(read)
 
-                        if r_start < ex1_end + 1:
+                        if r_start < ex1_end - 8:
                             if junc1 is None:
                                 junc1 = Junction(ex1_end, intron_start, exon1, None, gne, readN=0)
 
