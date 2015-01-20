@@ -38,8 +38,11 @@ class Junction:
     def get_id(self):
         return self.id
 
-    def get_coverage(self):
-        return self.coverage
+    def get_coverage(self, experiment=None):
+        if experiment is None:
+            return self.coverage
+        else:
+            return self.coverage[experiment, :]
 
     def get_ss_5p(self):
         return self.start
