@@ -141,7 +141,7 @@ def rnaseq_intron_retention(filenames, gene_list, readlen, chrom, logging=None):
 
     MIN_INTRON = 5
     samfile = [pysam.Samfile(xx, "rb") for xx in filenames]
-    intron_ret_list = []
+
     for strand in ('+', '-'):
         for gne in gene_list[strand]:
             intron_list = gne.get_all_introns()
@@ -233,16 +233,15 @@ def rnaseq_intron_retention(filenames, gene_list, readlen, chrom, logging=None):
                     junc2 = virtua_out_juncs[jj_idx]
                     intron_start = junc1.get_coordinates()[1]
                     intron_end = junc2.get_coordinates()[0]
-
                     if junc1.get_coverage().sum() >= MIN_INTRON and junc2.get_coverage().sum() >= MIN_INTRON:
-                        majiq_exons.new_exon_definition(intron_start, intron_end,
-                                                        None, junc1, junc2, gne,
-                                                        isintron=True)
 
-                        logging.info("NEW INTRON RETENTION[%s]EVENT %s, %d-%d" % (exp_index,
-                                                                                  gne.get_name(),
-                                                                                  intron_start,
-                                                                                  intron_end))
+                        exnum = majiq_exons.new_exon_definition(intron_start, intron_end,
+                                                                None, junc1, junc2, gne,
+                                                                isintron=True)
+                        if exnum == 1:
+                            logging.info("NEW INTRON RETENTION EVENT %s, %d-%d" % (gne.get_name(),
+                                                                                   intron_start,
+                                                                                   intron_end))
 
 
 def read_sam_or_bam(filenames, gene_list, readlen, chrom, nondenovo=False, logging=None):
