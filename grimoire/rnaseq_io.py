@@ -209,7 +209,7 @@ def rnaseq_intron_retention(filenames, gene_list, readlen, chrom, logging=None):
                     intron_parts /= chunk_len
                     intron_body_covered = True
                     for ii in intron_parts:
-                        if ii < 0.5:
+                        if ii < 0.05:
                             intron_body_covered = False
 
                     if cov1 >= mglobals.MINREADS and cov2 >= mglobals.MINREADS and intron_body_covered:
