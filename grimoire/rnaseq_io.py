@@ -153,9 +153,10 @@ def rnaseq_intron_retention(filenames, gene_list, readlen, chrom, logging=None):
                 intron_end = ex2_start - 1
 
                 offset = readlen - 8
-                intron_parts = np.zeros(shape=10, dtype=np.int)
                 intron_len = intron_end - intron_start - 16
                 chunk_len = intron_len / 10
+
+                intron_parts = np.zeros(shape=10, dtype=np.int)
                 junc1 = None
                 junc2 = None
 
@@ -208,7 +209,7 @@ def rnaseq_intron_retention(filenames, gene_list, readlen, chrom, logging=None):
                     intron_parts /= chunk_len
                     intron_body_covered = True
                     for ii in intron_parts:
-                        if ii < mglobals.MINREADS:
+                        if ii < 0.5:
                             intron_body_covered = False
 
                     if cov1 >= mglobals.MINREADS and cov2 >= mglobals.MINREADS and intron_body_covered:
