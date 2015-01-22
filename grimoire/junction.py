@@ -30,6 +30,7 @@ class Junction:
         self.coverage = scipy.sparse.lil_matrix((mglobals.num_experiments, (mglobals.readLen-16)+1), dtype=np.int)
         self.gc_content = scipy.sparse.lil_matrix((1, (mglobals.readLen-16)+1), dtype=np.float)
         self.id = "%s:%s-%s" % (self.gene_name, start, end)
+        self.transcript_id_list = []
 
     def __hash__(self):
         return hash(self.start) ^ hash(self.end) ^ hash(self.gene_name)

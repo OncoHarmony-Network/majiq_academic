@@ -208,7 +208,6 @@ def rnaseq_intron_retention(filenames, gene_list, readlen, chrom, logging=None):
 
                     intron_parts /= chunk_len
                     intron_body_covered = True
-                    print intron_parts
                     for ii in intron_parts:
                         if ii < 0.01:
                             intron_body_covered = False
