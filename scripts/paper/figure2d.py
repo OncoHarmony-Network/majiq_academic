@@ -1,7 +1,7 @@
 __author__ = 'abarrera'
 import matplotlib as mpl
 mpl.use('Agg')
-from scripts.utils import _save_or_show
+from scripts.utils import save_or_show
 
 from collections import defaultdict
 import argparse
@@ -89,7 +89,7 @@ def plot_bins(read_bins, names, plotpath):
     plt.legend(loc=2)
 
     plt.tight_layout()
-    _save_or_show(plotpath, plotname.lower().replace('\n', ' - ').replace(' ', '_').replace('(', '').replace(')', '').replace('=', ''))
+    save_or_show(plotpath, plotname.lower().replace('\n', ' - ').replace(' ', '_').replace('(', '').replace(')', '').replace('=', ''))
 
 
 def main():

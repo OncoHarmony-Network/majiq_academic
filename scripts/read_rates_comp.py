@@ -2,7 +2,7 @@ from matplotlib import use
 use('Agg', warn=False)
 from collections import defaultdict
 from numpy.ma import masked_less
-from scripts.utils import _save_or_show
+from scripts.utils import save_or_show
 from scipy.stats import pearsonr
 import argparse
 from pylab import *
@@ -68,7 +68,7 @@ def plot_method1Vsmethod2(scores1, scores2, score1_name, score2_name, replica1_n
 
     suptitle("%s vs %s\n%s and %s"%(score1_name, score2_name, replica1_name, replica2_name))
 
-    _save_or_show(plotpath, plotname)
+    save_or_show(plotpath, plotname)
 
 
 def plot_method1Vsmethod2_by_coverage(scores1_list, scores2_list, score1_name, score2_name, replica1_name, replica2_name, plotpath=None):
@@ -113,7 +113,7 @@ def plot_method1Vsmethod2_by_coverage(scores1_list, scores2_list, score1_name, s
 
     suptitle("%s vs %s\n%s and %s"%(score1_name, score2_name, replica1_name, replica2_name))
 
-    _save_or_show(plotpath, plotname)
+    save_or_show(plotpath, plotname)
 
 
 def plot_sigmaVsMu_met1_met2(mean_var_by_replicate, scores1, scores2, score1_name, score2_name, plotpath=None):
@@ -178,7 +178,7 @@ def plot_sigmaVsMu_met1_met2(mean_var_by_replicate, scores1, scores2, score1_nam
             axs[idx].set_ylim(0, 500)
 
         axs[idx].grid(True)
-    _save_or_show(plotpath, plotname)
+    save_or_show(plotpath, plotname)
 
 
 def compare_methods(m, k, replica1, replica2, rep1_name, rep2_name, fit_func1, fit_func2, methods, method1_name, method2_name, plotpath, scores_cached, coverage=False, rep1_gc=None, rep2_gc=None):
@@ -378,7 +378,7 @@ def plot_stacks_method1Vsmethod2(stacks_data, score1_name, score2_name, replica1
 
         suptitle(plotname)
 
-        _save_or_show(plotpath, plotname)
+        save_or_show(plotpath, plotname)
 
 
 

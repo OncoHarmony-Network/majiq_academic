@@ -16,7 +16,7 @@ def get_mean_step(bins):
     return numpy.sum(projection_prod)
 
 
-def _save_or_show(plotpath=None, name=None):
+def save_or_show(plotpath=None, name=None, exten='png'):
     if plotpath:
         if os.path.isdir(plotpath):
             plot_base_path, plot_name = plotpath, name
@@ -26,8 +26,8 @@ def _save_or_show(plotpath=None, name=None):
                 os.makedirs(plot_base_path)
             if not plot_name:
                 plot_name = name
-        pyplot.savefig("%s/%s.png"%(plot_base_path, plot_name), width=300, height=300, dpi=100)
-        print "Saved in:\n%s/%s" % (plot_base_path, plot_name)
+        pyplot.savefig("%s/%s.%s"%(plot_base_path, plot_name, exten), width=300, height=300, dpi=100)
+        print "Saved in:\n%s/%s.%s" % (plot_base_path, plot_name, exten)
 
         pyplot.clf()
     else:
@@ -72,6 +72,8 @@ def miso_delta_reader(path, dofilter=False, complex_lsvs=False, result_dict=None
                 if result_dict is not None:
                     for i, dpsi in enumerate(delta_psi):
                         result_dict["%s#%d" % (event_name, i)].append(float(dpsi))
+                    if len(delta_psi) == 1:
+                        result_dict["%s#1" % event_name].append(-float(delta_psi[0]))
                 else:
                     ret.append([event_name, float(delta_psi[0]), float(bayes_factor)])
     return ret
