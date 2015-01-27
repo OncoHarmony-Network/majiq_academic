@@ -149,7 +149,7 @@ def plot_rtpcr_majiq_var(rt_pcr, majiq, coverage, delta_delta_psi, plotpath, nam
 
 
     print majiq, rt_pcr
-    scripts.utils._save_or_show(plotpath, "delta_psi_comparison_with_FN") #
+    scripts.utils.save_or_show(plotpath, "delta_psi_comparison_with_FN") #
 
 
 def plot_rtpcr_majiq_reads_deltas(rt_pcr, majiq, coverage, delta_delta_psi, plotpath):
@@ -205,7 +205,7 @@ def plot_rtpcr_majiq_reads_deltas(rt_pcr, majiq, coverage, delta_delta_psi, plot
         axx[x][y].plot(diagonal, diagonal, '--', color="#cccccc")
 
     print majiq, rt_pcr
-    scripts.utils._save_or_show(plotpath, "delta_psi_comparison_rtpcr_majiq")
+    scripts.utils.save_or_show(plotpath, "delta_psi_comparison_rtpcr_majiq")
 
 
 def plot_rtpcr_majiq_miso(rt_pcr, majiq, miso, plotpath):
@@ -236,7 +236,7 @@ def plot_rtpcr_majiq_miso(rt_pcr, majiq, miso, plotpath):
     ax2.plot(diagonal, diagonal, '--', color="#cccccc")
 
     print majiq, miso, rt_pcr
-    scripts.utils._save_or_show(plotpath, "delta_psi_comparison_rtpcr_majiq_miso")
+    scripts.utils.save_or_show(plotpath, "delta_psi_comparison_rtpcr_majiq_miso")
 
 
 def plot_rtpcr_majiq(rt_pcr, majiq, coverage, plotpath):
@@ -294,14 +294,14 @@ def plot_rtpcr_majiq(rt_pcr, majiq, coverage, plotpath):
         axx[x][y].plot(diagonal, diagonal, '--', color="#cccccc")
 
     print majiq, rt_pcr
-    scripts.utils._save_or_show(plotpath, "delta_psi_comparison_rtpcr_majiq")
+    scripts.utils.save_or_show(plotpath, "delta_psi_comparison_rtpcr_majiq")
 
 
 def barchart_expected(expected_psis, plotpath, mfile):
     ppl.figure()
     ppl.hist(expected_psis, bins=40)
     name = os.path.basename(mfile)
-    scripts.utils._save_or_show(plotpath, name +'_expected_dist')
+    scripts.utils.save_or_show(plotpath, name +'_expected_dist')
 
 
 def collapse_matrix(matrix):

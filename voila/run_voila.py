@@ -148,7 +148,7 @@ def render_summary(output_dir, output_html, majiq_output, type_summary, threshol
     else:
         logger.error("summary type not recognized %s." % type_summary, exc_info=1)
 
-    logger.info("Copying static files from Voila sources to %sstatic/ ..." % output_dir)
+    logger.info("Copying static files from Voila sources to %s static/ ..." % output_dir)
     utils_voila.copyanything(EXEC_DIR+"templates/static", output_dir+"static")
 
     logger.info("HTML5 Summary successfully created in %s." % output_dir)
@@ -257,7 +257,7 @@ def load_dpairs(pairwise_dir, majiq_output, logger):
     return lmajiq_pairs, group1_name, group2_name
 
 
-def render_tab_output(output_dir, output_html, majiq_output, type_summary, logger=None, pairwise_dir=False):
+def render_tab_output(output_dir, output_html, majiq_output, type_summary, logger=None, pairwise_dir=False, threshold=0.1):
 
     ofile_str = "%s%s.%s" % (output_dir, output_html.rsplit('.html', 1)[0], constants.EXTENSION)
     tlb_categx = {'A5SS': 'prime5', 'A3SS': 'prime3', 'Num. Junctions': 'njuncs', 'Num. Exons': 'nexons', 'ES': 'ES'}
@@ -291,7 +291,7 @@ def render_tab_output(output_dir, output_html, majiq_output, type_summary, logge
 
         if 'delta' in type_summary:
             headers[3] = 'E(Delta(PSI)) per LSV junction'
-            headers[4] = 'P(Delta(PSI)>%s) per LSV junction' % .1
+            headers[4] = 'P(Delta(PSI)>%.2f) per LSV junction' % threshold
 
             if pairwise_dir:
                 for idx1 in range(len(lmajiq_pairs)):
@@ -505,7 +505,7 @@ def create_summary(args):
 
     render_summary(output_dir, output_html, majiq_output, type_summary, threshold, meta_postprocess, logger=logger)
     create_gff3_txt_files(output_dir, majiq_output, logger=logger)
-    render_tab_output(output_dir, output_html, majiq_output, type_summary, logger=logger, pairwise_dir=pairwise)
+    render_tab_output(output_dir, output_html, majiq_output, type_summary, logger=logger, pairwise_dir=pairwise, threshold=threshold)
 
     logger.info("Voila! Summaries created in: %s" % output_dir)
     return

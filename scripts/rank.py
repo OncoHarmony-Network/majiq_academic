@@ -209,7 +209,7 @@ def plot_fdr(output, method_name, rank, num_conf_events):
     plot(rank, label='FDR %s' % method_name)
     plot((num_conf_events, num_conf_events), (0,1), 'k-')
     legend(loc=2)
-    scripts.utils._save_or_show(output, "fdr.%s" % method_name)
+    scripts.utils.save_or_show(output, "fdr.%s" % method_name)
 
 
 

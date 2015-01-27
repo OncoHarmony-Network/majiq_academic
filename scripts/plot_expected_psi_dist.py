@@ -9,7 +9,7 @@ def barchart_expected(expected_psis, plotpath, mfile):
      f = pyplot.figure()
      pyplot.hist(expected_psis, bins=40)
      name = os.path.basename(mfile)
-     utils._save_or_show(plotpath, name +'_expected_dist')
+     utils.save_or_show(plotpath, name +'_expected_dist')
 
 
 def plot_from_file(mfile, plotpath):

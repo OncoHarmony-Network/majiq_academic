@@ -314,7 +314,7 @@ def plot_fdr(output, method_name, fdr):
     plot(diagonalx, diagonaly, '--', color="#cccccc")
     plot(fdr, label='FDR %s' % method_name)
     legend(loc=2)
-    scripts.utils._save_or_show(output, "fdr.%s" % method_name)
+    scripts.utils.save_or_show(output, "fdr.%s" % method_name)
 
 
 

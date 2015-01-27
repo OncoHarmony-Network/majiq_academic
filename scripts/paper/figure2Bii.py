@@ -1,7 +1,7 @@
 __author__ = 'abarrera'
 import matplotlib as mpl
 mpl.use('Agg')
-from scripts.utils import _save_or_show
+from scripts.utils import save_or_show
 
 from collections import defaultdict
 import argparse
@@ -51,18 +51,25 @@ def cov_combined(coverages):
     common_dict = defaultdict(list)
     for cov_dict in coverages:
         for k, v in cov_dict.iteritems():
-            common_dict[k].append(float(v))
+            common_dict[k].append(float(sum(v)))
     for k in common_dict:
         common_dict[k] = np.min(np.array(common_dict[k]))
     # print repr(common_dict)
     return common_dict
 
 
-def plot_bins(read_bins, names, plotpath):
+def plot_bins(read_bins, names, rtpcr, plotpath, V=0.1):
+
+    def autolabel(rects, rtpcrs):
+        for ii, rect in enumerate(rects):
+            height = rect.get_height()
+            plt.text(rect.get_x()+rect.get_width()/2., 0.9*height, '%d/%d'% (np.count_nonzero(np.array(rtpcrs[ii])>V), len(rtpcrs[ii])),
+                    ha='center', va='bottom', color='white', size='large')
 
     repro_lsvs = [(sum(r)*1.0/max(1.0, len(r))*100) for r in read_bins]
 
-    plotname="Reproducibility divided by coverage (N=%d)" % (np.sum([len(i) for i in read_bins]))
+    plotname="Reproducibility divided by coverage (N=%d)." % (np.sum([len(i) for i in read_bins]))
+    plotname+="\n%.0f%% of LSVs validated (V=%.1f)" % (100*(1.*sum([np.count_nonzero(np.array(pcr_cov)>V) for pcr_cov in rtpcr])/sum([len(pcr_cov) for pcr_cov in rtpcr])), V)
     n_groups = len(names)
 
     fig, ax = plt.subplots()
@@ -73,11 +80,12 @@ def plot_bins(read_bins, names, plotpath):
 
     opacity = 0.5
 
-    plt.bar(index, repro_lsvs, bar_width,
+    rects1 = plt.bar(index, repro_lsvs, bar_width,
              alpha=opacity,
              color='b',
              label='MAJIQ lsvs')
 
+    autolabel(rects1, rtpcr)
 
     plt.xlabel('# Positions with reads')
     plt.ylabel('% Reproduced')
@@ -89,7 +97,18 @@ def plot_bins(read_bins, names, plotpath):
     plt.legend(loc=2)
 
     plt.tight_layout()
-    _save_or_show(plotpath, plotname.lower().replace('\n', ' - ').replace(' ', '_').replace('(', '').replace(')', '').replace('=', ''))
+    save_or_show(plotpath,
+                  plotname.lower().replace('\n', ' - ').replace(' ', '_').replace('(', '').replace(')', '').replace('=', ''),
+                  exten='png')
+
+
+def get_rtpcr_std(lcer, lliv):
+    deltas=[]
+    for c in lcer:
+        for l in lliv:
+            deltas.append(c-l)
+    print np.std(deltas)
+    return np.std(deltas)
 
 
 def main():
@@ -97,7 +116,9 @@ def main():
     parser = argparse.ArgumentParser(description="")
     parser.add_argument('events', type=str, help='Events files from reproducibility ranking.')
     parser.add_argument('--builder-files', required=True, dest='builder_f', nargs='+', help='MAJIQ builder files used to compute lsv coverage.')
+    parser.add_argument('--rtpcr-files', dest='rtpcr_f', help='RT-PCR results for MAJIQ')
     parser.add_argument('--output', required=True, help='Output file path')
+    parser.add_argument('--V', default=.1, type=float, action='store', help='Output file path')
     args = parser.parse_args()
 
     lsvs = pkl.load(open(args.events))
@@ -108,21 +129,41 @@ def main():
     common_cov = cov_combined(coverages)
 
     BINNAMES = ['0-15', '15-20', '20-40', '40-100', '100-xx']
-    ranges = [15, 20, 40, 100, 90000]
+    ranges = [15, 20, 40, 100, 900000]
 
     read_bins = [[],[],[],[],[]]
+    rtpcr_bins = [[],[],[],[],[]]
+
+    rtpcr = defaultdict()
+    if args.rtpcr_f:
+        with open(args.rtpcr_f) as rtpcr_f:
+            for l in rtpcr_f:
+                if l.startswith("#"): continue
+                fields = l.split()
+                try:
+                    rtpcr[fields[1].split("#")[0]]=[
+                        float(fields[2])-float(fields[3]),
+                        float(fields[4])-float(fields[5]),
+                        get_rtpcr_std([float(ss) for ss in fields[-6:-4]], [float(dd) for dd in fields[-3:-1]])
+                    ]
+                except ValueError:
+                    print "[WARNING] :: Couldn't parse %s" % (fields[1])
 
     for lsv in lsvs:
         for i, ran in enumerate(ranges):
-            if lsv[0][0][1] in common_cov.keys():
-                if common_cov[lsv[0][0][1]] < ran:
+            lsv_id = lsv[0][0][1]
+            if lsv_id in common_cov.keys():
+                if common_cov[lsv_id] < ran:
                     read_bins[i].append(lsv[1]) # event[0][0][1]
+                    if args.rtpcr_f and lsv_id in rtpcr:
+                        rtpcr_bins[i].append(abs(rtpcr[lsv_id][0])+rtpcr[lsv_id][2])
                     break
 
     for j, r in enumerate(read_bins):
         print "#Reads %s; from %d events, percentage reproduced %.2f%%" % (BINNAMES[j], len(r), (sum(r)*1.0/max(1.0, len(r))*100))
 
-    plot_bins(read_bins, BINNAMES, args.output)
+    BINNAMES = ["%s \n(n=%d)" % (a, b) for a,b in zip(BINNAMES, [len(aa) for aa in read_bins])]
+    plot_bins(read_bins, BINNAMES, rtpcr_bins, args.output, args.V)
 
 
 if __name__ == '__main__':

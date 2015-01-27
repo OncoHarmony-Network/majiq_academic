@@ -10,6 +10,7 @@ from collections import namedtuple
 import gzip
 import urllib
 import cPickle as pickle
+import numpy as np
 
 
 def create_if_not_exists(my_dir, logger=False):
@@ -42,9 +43,9 @@ def load_bin_file(filename, logger=None):
 def dump_bin_file(data, filename):
 
     with open(filename, 'wb') as ofp:
-       fast_pickler = pickle.Pickler(ofp, protocol=2)
-       #fast_pickler.fast = 1
-       fast_pickler.dump(data)
+        fast_pickler = pickle.Pickler(ofp, protocol=2)
+        #fast_pickler.fast = 1
+        fast_pickler.dump(data)
 #         pickle.dump(data, protocol=2)
 
 
@@ -127,33 +128,137 @@ def is_neg_strand(read):
     return res
 
 
+def get_junc_from_list(coords, list_elem):
+    res = None
+    for xx in list_elem:
+        newcoord = xx.get_coordinates()
+        if newcoord[0] == coords[0] and newcoord[1] == coords[1]:
+            res = xx
+            break
+    return res
+
+
 def rnaseq_intron_retention(filenames, gene_list, readlen, chrom, logging=None):
 
+    MIN_INTRON = 5
     samfile = [pysam.Samfile(xx, "rb") for xx in filenames]
-    intron_ret_list = []
+
     for strand in ('+', '-'):
         for gne in gene_list[strand]:
             intron_list = gne.get_all_introns()
+            for exon1, exon2 in intron_list:
+                ex1_end = exon1.get_coordinates()[1]
+                ex2_start = exon2.get_coordinates()[0]
+                intron_start = ex1_end + 1
+                intron_end = ex2_start - 1
+
+                offset = readlen - 8
+                intron_len = intron_end - intron_start - 16
+                chunk_len = intron_len / 10
+
+                intron_parts = np.zeros(shape=10, dtype=np.float)
+                junc1 = None
+                junc2 = None
+
+                for exp_index in range(len(filenames)):
+
+                    try:
+                        read_iter = samfile[exp_index].fetch(chrom, intron_start + 8, intron_end - 8)
+                    except ValueError:
+                        #logging.info('There are no reads in %s:%d-%d' % (chrom, ex1_end, ex1_end+1))
+                        continue
+                    for read in read_iter:
+                        is_cross, junc_list = __cross_junctions(read)
+                        strand_read = '+' if not is_neg_strand(read) else '-'
+                        unique = __is_unique(read)
+                        if is_cross or strand_read != strand or not unique:
+                            continue
+
+                        r_start = read.pos
+                        nreads = __get_num_reads(read)
+
+                        if r_start < ex1_end - 8:
+                            if junc1 is None:
+                                junc1 = Junction(ex1_end, intron_start, exon1, None, gne, readN=0)
+
+                            nc = read.seq.count('C') + read.seq.count('c')
+                            ng = read.seq.count('g') + read.seq.count('G')
+                            gc_content = float(nc + ng) / float(len(read.seq))
+                            junc1.update_junction_read(exp_index, nreads, r_start, gc_content, unique)
+
+                        elif (ex2_start - offset - 1) < r_start < ex2_start:
+                            if junc2 is None:
+                                junc2 = Junction(intron_end, ex2_start, exon2, None, gne, readN=0)
+
+                            nc = read.seq.count('C') + read.seq.count('c')
+                            ng = read.seq.count('g') + read.seq.count('G')
+                            gc_content = float(nc + ng) / float(len(read.seq))
+                            junc2.update_junction_read(exp_index, nreads, r_start, gc_content, unique)
+                        else:
+                            # section 3
+                            rel_start = (r_start - (ex1_end + 1)) / chunk_len
+                            indx = -1 if rel_start > 10 else rel_start
+                            intron_parts[indx] += nreads
+
+                    if junc1 is None or junc2 is None:
+                        continue
+
+                    cov1 = junc1.get_coverage(exp_index).sum()
+                    cov2 = junc2.get_coverage(exp_index).sum()
+
+                    intron_parts /= chunk_len
+                    intron_body_covered = True
+                    for ii in intron_parts:
+                        if ii < 0.01:
+                            intron_body_covered = False
+
+                    if cov1 >= mglobals.MINREADS and cov2 >= mglobals.MINREADS and intron_body_covered:
+                        exnum = majiq_exons.new_exon_definition(intron_start, intron_end,
+                                                                None, junc1, junc2, gne,
+                                                                isintron=True)
+                        if exnum == 1:
+                            logging.info("NEW INTRON RETENTION EVENT %s, %d-%d" % (gne.get_name(),
+                                                                                   intron_start,
+                                                                                   intron_end))
+
+
+
+def rnaseq_intron_retentionOLD(filenames, gene_list, readlen, chrom, logging=None):
+
+    MIN_INTRON = 5
+    samfile = [pysam.Samfile(xx, "rb") for xx in filenames]
+
+    for strand in ('+', '-'):
+        for gne in gene_list[strand]:
+            intron_list = gne.get_all_introns()
+            virtua_in_juncs = []
+            virtua_out_juncs = []
             for exp_index in range(len(filenames)):
                 for exon1, exon2 in intron_list:
                     ex1_start, ex1_end = exon1.get_coordinates()
                     ex2_start, ex2_end = exon2.get_coordinates()
                     v_junc1 = [ex1_end, ex1_end+1]
                     v_junc2 = [ex2_start-1, ex2_start]
-                    n_newjunc = 0
-
+                    new_junc = True
+                    covered = 0
                     offset = readlen - 8
                     try:
-                        read_iter = samfile[exp_index].fetch(chrom, ex1_end - offset, ex1_end - 8)
+                        read_iter = samfile[exp_index].fetch(chrom, ex1_end + 1 + 8, ex1_end + 1 + offset)
                     except ValueError:
                         #logging.info('There are no reads in %s:%d-%d' % (chrom, ex1_end, ex1_end+1))
                         continue
-                    n_newjunc += 1
-                    junc1 = Junction(v_junc1[0], v_junc1[1], exon1, None, gne, readN=0)
+                    covered += 1
+                    junc1 = get_junc_from_list(v_junc1, virtua_in_juncs)
+                    if junc1 is None:
+                        junc1 = Junction(v_junc1[0], v_junc1[1], exon1, None, gne, readN=0)
+
+                    else:
+                        new_junc &= False
+
                     for read in read_iter:
                         is_cross, junc_list = __cross_junctions(read)
                         r_start = read.pos
-                        if is_cross or r_start < (ex1_end - offset):
+                        if is_cross or r_start >= ex1_end - 8:
                             continue
 
                         strand_read = '+' if not is_neg_strand(read) else '-'
@@ -178,8 +283,14 @@ def rnaseq_intron_retention(filenames, gene_list, readlen, chrom, logging=None):
                         #logging.info('There are no reads in %s:%d-%d' % (chrom, ex1_end, ex1_end+1))
                         continue
 
-                    n_newjunc += 1
-                    junc2 = Junction(v_junc2[0], v_junc2[1], None, exon2, gne, readN=0)
+                    covered += 1
+                    junc2 = get_junc_from_list(v_junc2, virtua_out_juncs)
+                    if junc2 is None:
+                        junc2 = Junction(v_junc2[0], v_junc2[1], None, exon2, gne, readN=0)
+
+                    else:
+                        new_junc &= False
+
                     for read in read_iter:
                         is_cross, junc_list = __cross_junctions(read)
                         r_start = read.pos
@@ -200,9 +311,23 @@ def rnaseq_intron_retention(filenames, gene_list, readlen, chrom, logging=None):
                         gc_content = float(nc + ng) / float(len(read.seq))
                         junc2.update_junction_read(exp_index, nreads, r_start, gc_content, unique)
 
-                    if n_newjunc == 2:
-                        majiq_exons.new_exon_definition(v_junc1[1], v_junc2[0], None, junc1, junc2, gne, isintron=True)
-                        logging.info("NEW INTRON RETENTION EVENT %s, %d-%d" % (gne.get_name(), v_junc1[0], v_junc2[1]))
+                    if new_junc and covered == 2:
+                        virtua_in_juncs.append(junc1)
+                        virtua_out_juncs.append(junc2)
+
+                for jj_idx, junc1 in enumerate(virtua_in_juncs):
+                    junc2 = virtua_out_juncs[jj_idx]
+                    intron_start = junc1.get_coordinates()[1]
+                    intron_end = junc2.get_coordinates()[0]
+                    if junc1.get_coverage().sum() >= MIN_INTRON and junc2.get_coverage().sum() >= MIN_INTRON:
+
+                        exnum = majiq_exons.new_exon_definition(intron_start, intron_end,
+                                                                None, junc1, junc2, gne,
+                                                                isintron=True)
+                        if exnum == 1:
+                            logging.info("NEW INTRON RETENTION EVENT %s, %d-%d" % (gne.get_name(),
+                                                                                   intron_start,
+                                                                                   intron_end))
 
 
 def read_sam_or_bam(filenames, gene_list, readlen, chrom, nondenovo=False, logging=None):

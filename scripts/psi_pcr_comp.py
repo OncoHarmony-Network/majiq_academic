@@ -10,24 +10,6 @@ import colorbrewer as cb
 __author__ = 'abarrera'
 
 
-def _save_or_show(plotpath, name):
-    if plotpath:
-        if os.path.isdir(plotpath):
-            plot_base_path, plot_name = plotpath, name
-        else:
-            plot_base_path, plot_name = os.path.split(plotpath)
-            if not os.path.exists(plot_base_path):
-                os.makedirs(plot_base_path)
-            if not plot_name:
-                plot_name = name
-        pyplot.savefig("%s/%s.png"%(plot_base_path, plot_name), width=300, height=300, dpi=100)
-        print "Saved in:\n%s/%s" % (plot_base_path, plot_name)
-
-        pyplot.clf()
-    else:
-        pyplot.show()
-
-
 def scatterplot_rtpcr_majiq(rt_pcr_majiq, rt_pcr_miso, majiq, miso, plotpath, pcr_majiq_extra=None, pcr_miso_extra=None, majiq_extra=None, miso_extra=None):
     #figure out how many groups of events exist
 
@@ -188,14 +170,14 @@ def scatterplot_rtpcr_majiq(rt_pcr_majiq, rt_pcr_miso, majiq, miso, plotpath, pc
     axx[1][4].set_title('Liver (N=%d)' % len(miso_extra[1]))
     axx[1][4].set_ylim([0,1])
 
-    _save_or_show(plotpath, "psi_comp_rtpcr_majiq_miso")
+    scripts.utils.save_or_show(plotpath, "psi_comp_rtpcr_majiq_miso", exten='pdf')
 
 
 def barchart_expected(expected_psis, plotpath, mfile):
     pyplot.figure()
     pyplot.hist(expected_psis, bins=40)
     name = os.path.basename(mfile)
-    _save_or_show(plotpath, name +'_expected_dist')
+    scripts.utils.save_or_show(plotpath, name +'_expected_dist')
 
 
 def expected_psi(bins):
@@ -297,6 +279,36 @@ def parse_miso_results(files_miso, names_junc_majiq):
     print "Number of events found in MISO %s: %d" % ("; ".join([mf for mf in files_miso]), len(miso_dict.keys()))
     return miso_dict
 
+def plot_dpsi_rtpcr_majiq_miso(rt_pcr_majiq, rt_pcr_miso, majiq, miso, plotpath):
+
+    fig, (ax1, ax2) = pyplot.subplots(1, 2, sharey=True, figsize=[12, 6], dpi=300)
+    pyplot.suptitle("Delta PSI comparison: RT-PCR Vs (MAJIQ N=%d; MISO N=%d)" % (len(majiq), len(miso)))
+    diagonal = np.linspace(-1, 1, num=len(rt_pcr_majiq))
+
+    # All
+    ax1.scatter(majiq, rt_pcr_majiq, c=cb.Blues[3][-1], alpha=.5, s=50, label='MAJIQ')
+    ax2.scatter(miso, rt_pcr_miso, c=cb.Reds[3][-1], alpha=.5, s=50, label='MISO')
+    ax1.set_ylim([-1, 1])
+    ax2.set_ylim([-1, 1])
+    ax1.set_xlim([-1, 1])
+    ax2.set_xlim([-1, 1])
+    ax1.set_ylabel('RT-PCR')
+    ax1.set_xlabel('MAJIQ')
+    ax2.set_xlabel('MISO')
+    fit = np.polyfit(majiq, rt_pcr_majiq, 1)
+    fit_fn = np.poly1d(fit) # fit_fn is now a function which takes in x and returns an estimate for y
+    ax1.plot(majiq, fit_fn(majiq), '--k')
+    fit = np.polyfit(miso, rt_pcr_miso, 1)
+    fit_fn = np.poly1d(fit) # fit_fn is now a function which takes in x and returns an estimate for y
+    ax2.plot(miso, fit_fn(miso), '--k')
+
+    ax2.plot(majiq, fit_fn(majiq), '--k')
+    ax1.plot(diagonal, diagonal, '--', color="#cccccc")
+    ax2.plot(diagonal, diagonal, '--', color="#cccccc")
+
+    print majiq, rt_pcr_majiq, miso, rt_pcr_miso
+    scripts.utils.save_or_show(plotpath, "dpsi_rtpcr_majiq_miso", exten='pdf')
+
 
 def main():
     parser = argparse.ArgumentParser(description="Compare PSIs computed with MAJIQ against the RT-PCR results.")
@@ -327,7 +339,7 @@ def main():
             for pcr_elem in pcr_extra:
                 if pcr_elem.startswith("#"): continue
                 pcr_elems=pcr_elem.rstrip().split()
-                rtpcr_extra[pcr_elems[0]]=[float(pcr_elems[2])/100, float(pcr_elems[1])/100, np.nan, np.nan, [], []]
+                rtpcr_extra[pcr_elems[0]]=[float(pcr_elems[2])/100, float(pcr_elems[1])/100, np.nan, np.nan, [], [], float(pcr_elems[4])/100, float(pcr_elems[3])/100]
 
         ensembl_tlb = defaultdict(list)
         if args.tlb_extra_pkl:
@@ -354,7 +366,7 @@ def main():
                 juncs=junc.rstrip().split()
                 djunc_extra[juncs[0]]=juncs[1:]
 
-        # 3. Read voila Tab-delimited output file
+        # 3. Read special junctions file (LSV ID; junctions)
         djuncs = {}
         for fvoila in args.voila_extra:
             with open(fvoila) as voilaf:
@@ -364,6 +376,7 @@ def main():
                     djuncs[vfields[0]] = vfields[1].split(";")  # Store LSV ID; junction coordinates list
 
         # 4. Read Majiq results for the elements in PCR
+        dnew_juncs = {}
         for cn, mfile in enumerate(args.majiq_extra):
             with open(mfile) as mfile_open:
                 mpickle = pickle.load(mfile_open)
@@ -378,9 +391,11 @@ def main():
                                             if djunc_extra[lsv_aux.split("#")[0]][lway_aux] == jcoords:
                                                 try:
                                                     rtpcr_extra[lsv_aux][2+cn] = expected_psi(mpickle[0][i][ji])
+                                                    dnew_juncs[lsv_info[1]]=ji
                                                     print "Complex LSV %s" % lsv_aux
                                                 except IndexError:
                                                     rtpcr_extra[lsv_aux][2+cn] = 1-expected_psi(mpickle[0][i][0])
+                                                    dnew_juncs[lsv_info[1]]=1
                                                     print "Binary LSV %s" % lsv_aux
                                                 continue
 
@@ -394,9 +409,10 @@ def main():
                         lsv_name = miso_fields[0]
                         miso_psis = miso_fields[1]
                         # Find all junctions from that LSV that are included
-                        for i, miso_psi in enumerate(miso_psis.split(',')):
+                        for i, miso_psi in enumerate(miso_psis.split(',')):  # Because MISO only report 1st junction in binary LSVs
                             if lsv_name+"#"+str(i) in rtpcr_extra.keys():
                                 rtpcr_extra[lsv_name+"#"+str(i)][4+cn].append(float(miso_psi))
+                                continue
                             if lsv_name+"#"+str(1) in rtpcr_extra.keys():
                                 if len(miso_psis.split(',')) > 1:
                                     rtpcr_extra[lsv_name+"#"+str(1)][4+cn].append(float(miso_psi))
@@ -412,12 +428,14 @@ def main():
         lmiso_extra=[[], []]
 
         with open('psi_hogenesch.txt', 'w') as psi_txt:
-            headers=['#', 'ID (transcript)', 'ID (gene)', 'RT-PCR Cerebellum', 'RT-PCR Liver', 'Majiq Cerebellum', 'Majiq Liver', 'Miso Cerebellum', 'Miso Liver']
+            headers=['#', 'ID (transcript)', 'ID (gene)', 'RT-PCR Cerebellum', 'RT-PCR Liver', 'Majiq Cerebellum', 'Majiq Liver', 'Miso Cerebellum', 'Miso Liver', 'RT-PCR Cerebellum Avg. STD', 'RT-PCR Liver Avg. STD']
             psi_txt.write('\t'.join(headers))
             psi_txt.write('\n')
             for ilsv, vals in rtpcr_extra.iteritems():
                 line = [ilsv]
-                line.append("%s:%s" % ([ensg for ensg, enst in ensembl_tlb.items() if ilsv.split(":")[0] in enst][0], ":".join(ilsv.split(":")[1:])))
+                trans_lsv= [ensg for ensg, enst in ensembl_tlb.items() if ilsv.split(":")[0] in enst][0]
+                lsv_id_gene="%s:%s" % (trans_lsv, ":".join(ilsv.split(":")[1:]))
+                line.append("%s#%d" % (lsv_id_gene[:-2], dnew_juncs[lsv_id_gene[:-2]]))
                 line.extend([repr(vv) for vv in vals])
                 psi_txt.write("\t".join(line))
                 psi_txt.write('\n')

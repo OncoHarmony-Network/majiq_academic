@@ -30,6 +30,7 @@ class Junction:
         self.coverage = scipy.sparse.lil_matrix((mglobals.num_experiments, (mglobals.readLen-16)+1), dtype=np.int)
         self.gc_content = scipy.sparse.lil_matrix((1, (mglobals.readLen-16)+1), dtype=np.float)
         self.id = "%s:%s-%s" % (self.gene_name, start, end)
+        self.transcript_id_list = []
 
     def __hash__(self):
         return hash(self.start) ^ hash(self.end) ^ hash(self.gene_name)
@@ -38,8 +39,11 @@ class Junction:
     def get_id(self):
         return self.id
 
-    def get_coverage(self):
-        return self.coverage
+    def get_coverage(self, experiment=None):
+        if experiment is None:
+            return self.coverage
+        else:
+            return self.coverage[experiment, :]
 
     def get_ss_5p(self):
         return self.start
