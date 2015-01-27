@@ -43,7 +43,7 @@ def collapse_matrix(matrix):
         import pdb
         pdb.set_trace()
     for i in xrange(-matrix_corner, matrix_corner):
-        collapse.append(diagonal(matrix, offset=i).sum())   
+        collapse.append(diagonal(matrix, offset=i).sum())
 
     return array(collapse)
 
@@ -57,7 +57,7 @@ def mean_matrix(matrix):
     plot(collapse)
     show()
     #UNFINISHED
-    
+
 def _find_delta_border(V, numbins):
     "Finds the border index to which a V corresponds in its delta_space given the number of bins the matrix will have"
     delta_space = list(linspace(-1, 1, num=numbins+1))
@@ -65,7 +65,7 @@ def _find_delta_border(V, numbins):
     #get the index position that corresponds to the V threshold
     for i, value in enumerate(delta_space):
         if value > V:
-            return i  
+            return i
     #if nothing hit, V = 1
     return numbins
 
@@ -78,7 +78,7 @@ def matrix_area(matrix, V=0.2, absolute=True, collapsed_mat=False):
     border = _find_delta_border(V, collapse.shape[0])
     #grab the values inside the area of interest
     area = []
-    if V < 0: 
+    if V < 0:
         area.append(collapse[0:border+1])
         if absolute: #if absolute V, pick the other side of the array
             area.append(collapse[-border-1:])
@@ -138,16 +138,18 @@ def rank_majiq(bins_list, names, V=0.2, absolute=True, dofilter=True, E=False, r
         else:
             area = matrix_area(dmatrix, V, absolute)
             if np.isnan(area): continue
-            if ranknochange:
+            if ranknochange:  # By default, for non-changing events V=0.05
             #P(Delta PSI < V) = 1 - P(Delta PSI > V)
-                area = 1.0 - area
+                area = 1.0 - matrix_area(dmatrix, 0.05, absolute)
 
             # if area > MINTHRESHOLD or not dofilter:
             rank.append([names[i], area])
-    if ranknochange:
-        rank.sort(key=lambda x: x[1])
-    else:
-        rank.sort(key=lambda x: x[1], reverse=True)
+    #if ranknochange:
+    #    rank.sort(key=lambda x: x[1])
+    #else:
+    #    rank.sort(key=lambda x: x[1], reverse=True)
+
+    rank.sort(key=lambda x: x[1], reverse=True)
 
     # Take only confident elements
     if shrink:
@@ -184,13 +186,14 @@ def rank_naive(bins_list, names, V=0.2, absolute=True, E=False, ranknochange=Fal
                 area = 1.0 - area
             rank.append([names[i][1], area])
 
-    if ranknochange:
-        rank.sort(key=lambda x: x[1])
-    else:
-        rank.sort(key=lambda x: x[1], reverse=True)
+    #if ranknochange:
+    #    rank.sort(key=lambda x: x[1])
+    #else:
+    #    rank.sort(key=lambda x: x[1], reverse=True)
+    rank.sort(key=lambda x: x[1], reverse=True)
 
     for idx, v in enumerate(rank):
-        if v[1]<MINTHRESHOLD:
+        if  v[1]<MINTHRESHOLD:
             print "Naive Bootstrapping FDR=%d" % (idx+1)
             break
             # return rank[:idx+1]
@@ -200,7 +203,7 @@ def rank_naive(bins_list, names, V=0.2, absolute=True, E=False, ranknochange=Fal
 
 def rank_miso(path, dofilter=True, ranknochange=False, complex_lsvs=False):
     rank = scripts.utils.miso_delta_reader(path, dofilter=dofilter, complex_lsvs=complex_lsvs)
-    if ranknochange: 
+    if ranknochange:
         rank.sort(key=lambda x: (abs(x[1]), x[2]))
         #sort first by smallest delta PSI, then by bayes factor
     else:
@@ -236,7 +239,7 @@ def rank_mats(path, dofilter=True, ranknochange=False):
 
 
 def _is_in_chunk(event1, chunk):
-    for event2 in chunk: 
+    for event2 in chunk:
         if event1[0] == event2[0]: #event[0] is the name of the event
             return 1
     return 0
@@ -343,6 +346,7 @@ def main():
 
     print "Calculating ranks..."
     ranks = defaultdict(list)
+    n1 = defaultdict(list)
 
     if args.majiq_files:
         if args.type_rank == 'exp1_and_exp2':  # CURRENTLY NOT USED!!! 20141119
@@ -391,6 +395,7 @@ def main():
                         # Select events from experiment 1
                         exp1_index = np.array([name in majiq_file1_names for name in majiq_data[1][:len(majiq_data[0])]])
                         ranks['majiq_' + str(count_pairs)].append(rank_majiq(np.array(majiq_data[0])[exp1_index], np.array(majiq_data[1])[exp1_index].tolist(), args.V, args.absolute, args.filter, args.E, args.ranknochange, args.complex_lsvs, shrink=args.shrink))
+                        n1['majiq_' + str(count_pairs)]=[np.count_nonzero(exp1_index),len(np.array(majiq_data[1])[exp1_index])]
                 else:
                     ranks['majiq'].append(rank_majiq(majiq_data[0], majiq_data[1], args.V, args.absolute, args.filter, args.E, args.ranknochange, args.complex_lsvs))
             names_majiq_exp1 = [m[1] for m in majiq_file1_names]
@@ -404,6 +409,7 @@ def main():
 
                 exp1_index = np.array([name in names_majiq_exp1 for name in names_miso])
                 ranks['miso'].append(array(miso_rank)[exp1_index])
+                n1['miso'].append(np.count_nonzero(exp1_index))
             else:
                 ranks['miso'].append(array(miso_rank))
 
@@ -416,6 +422,7 @@ def main():
                 names_mats = [mats_info[0] for mats_info in mats_rank]
                 exp1_index = np.array([name in names_majiq_exp1 for name in names_mats])
                 ranks['mats'].append(array(mats_rank)[exp1_index])
+                n1['mats'].append(np.count_nonzero(exp1_index))
             else:
                 ranks['mats'].append(array(mats_rank))
 
@@ -431,6 +438,7 @@ def main():
                     names_naive_exp1 = names_naive
                 exp1_index = np.array([name in names_naive_exp1 and name in names_majiq_exp1 for name in names_naive])
                 ranks['naive'].append(array(naive_rank)[exp1_index])
+                n1['naive'].append(np.count_nonzero(exp1_index))
             else:
                 ranks['naive'].append(array(naive_rank))
 
@@ -545,6 +553,10 @@ def main():
 
         print "Saving events... in %s " % args.output
         pickle.dump(events, open(args.output+"/events.%s.%s.pickle" % (str(args.type_rank).replace('-','_'), method_name), 'w'))
+
+        print "Saving N1 size... in %s " % args.output
+        pickle.dump(n1[method_name], open(args.output+"/n1.%s.%s.pickle" % (str(args.type_rank).replace('-','_'), method_name), 'w'))
+
 
         if args.fdr:
             #print "FDR:", fdr[0:10], "...", fdr[-10:], "length", fdr.shape
