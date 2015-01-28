@@ -114,7 +114,7 @@ class Junction:
             self.acceptor_id = acceptor.get_id()
 
     def add_transcript(self, trnscrpt):
-        self.transcript_id_list.append(trnscrpt.get_it())
+        self.transcript_id_list.append(trnscrpt.get_id())
 
     def update_junction_read(self, exp_idx, read_n, start, gc, unique):
 #        print "J3",self, getrefcount(self)
