@@ -5,14 +5,13 @@ import os
 import sys
 from collections import defaultdict
 import json
-from voila.lsv import Lsv
-
-from voila.splice_graphics.exonGraphic import ExonGraphic
-from voila.splice_graphics.junctionGraphic import JunctionGraphic
-from voila.splice_graphics.geneGraphic import GeneGraphic
-
 import shutil
 import errno
+from voila.io_voila import load_voila_input
+
+from voila.lsv import Lsv
+from voila.splice_graphics import ExonGraphic, JunctionGraphic, GeneGraphic, LsvGraphic
+from voila.vlsv import extract_bins_info, VoilaLsv
 
 
 try:
@@ -64,23 +63,11 @@ class LsvGraphicEncoder(json.JSONEncoder):
             return obj.to_JSON(PickleEncoder)
         if isinstance(obj, GeneGraphic):
             return obj.to_JSON(PickleEncoder)
+        if isinstance(obj, LsvGraphic):
+            return obj.to_JSON(PickleEncoder)
 
         return json.JSONEncoder.default(self, obj)
 
-
-def find_excl_incl_percentages(bins, threshold):
-    """
-    Calculate the percentage of inclusion/exclusion given the differential bins set
-
-    @param bins: array of bins where the sum of all elements is equal to 1
-    @param threshold: the absolute value of the minimum differential delta PSI (e.g. 0.2)
-    @return array of exclusion and inclusion percentages.
-    """
-    edges = np.linspace(-1, 1, num=len(bins))
-    edges_bins = edges * bins
-    bins_per_threshold = int(len(bins) * (threshold / 2))
-    return [-sum(edges_bins[:int(len(bins) / 2) - bins_per_threshold]),
-            sum(edges_bins[int(len(bins) / 2) + bins_per_threshold:])]
 
 
 def expected_dpsi(bins):
@@ -151,97 +138,58 @@ def get_lsv_single_exp_data(majiq_bins_file, confidence, gene_name_list=None, ls
             'meta_exps':    majiq_data[2]}
 
 
-def extract_bins_info(lsv, threshold, include_lsv):
-    expected_psis_bins = []
-    excl_inc_perc_list = []
-    collapsed_matrices = []
 
-    for junc_matrix in lsv:
-        collapsed_matrices.append(collapse_matrix(np.array(junc_matrix)))
-
-    if len(collapsed_matrices)<2:
-        collapsed_matrices.append(collapsed_matrices[-1][::-1])
-
-    for bins in collapsed_matrices:
-        expected_psis_bins.append(list(bins))
-        excl_inc_tuple = find_excl_incl_percentages(bins, threshold)
-        excl_inc_perc_list.append(excl_inc_tuple)
-
-        # If the delta is significant (over the threshold) or 'show-all' option, include LSV
-        include_lsv = include_lsv or np.any(np.array(excl_inc_tuple)[np.array(excl_inc_tuple)>threshold])
-    return expected_psis_bins, excl_inc_perc_list, include_lsv
-
-
-def get_lsv_delta_exp_data(majiq_out_file, confidence=.95, threshold=.2, show_all=False, gene_name_list=None, logger=None):
+def get_lsv_delta_exp_data(voila_input_file, confidence=.95, threshold=.2, show_all=False, gene_name_list=None, logger=None):
     """
     Load lsv delta psi pickle file. It contains a list with 2 elements:
         [0] List with LSV bins matrices
         [1] List with info per LSV
 
-    :param majiq_out_file:
+    :param voila_input_file:
     :param metadata_post:
     :param confidence:
     :param threshold:
     :param logger:
     @return: dictionary
     """
-    # Collapse matrix in diagonal
-    majiq_data = None
-    try:
-        majiq_data = np.array(pkl.load(open(majiq_out_file, 'rb')))
-    except pkl.PickleError, e:
-        logger.error("Loading the file %s: %s." % (majiq_out_file, e.message), exc_info=1)
 
-    meta_info = None
-    try:
-        meta_info = majiq_data[2]
-    except IndexError:
-        pass
+    voila_input = load_voila_input(voila_input_file, logger=logger)
+    meta_info = voila_input.metainfo
 
     genes_dict = defaultdict(list)
+    lsv_list = voila_input.lsvs
 
-    lsv_list = majiq_data[0]
-    lsv_info = majiq_data[1]
-
-    lsv_psi1_list = majiq_data[3]
-    lsv_psi2_list = majiq_data[4]
-
-    for i, lsv in enumerate(lsv_list):
+    for i, vlsv in enumerate(lsv_list):
         include_lsv = show_all
-        gene_name_id = str(lsv_info[i][1]).split(':')[0]
-        gene_name = lsv_info[i][4].name.upper()
+        gene_name_id = str(vlsv.lsv_graphic.id).split(':')[0]
+        gene_name = vlsv.lsv_graphic.name.upper()
+
         if not gene_name_list or gene_name_id in gene_name_list or gene_name in gene_name_list:
-            collapsed_bins, excl_inc_perc_list, include_lsv = extract_bins_info(lsv, threshold, include_lsv)
+            collapsed_bins, excl_inc_perc_list, include_lsv = extract_bins_info(vlsv.bins, threshold, include_lsv)
             if not include_lsv: continue
-            try:
-                lsv_o = Lsv(collapsed_bins, lsv_info[i], confidence)
-                lsv_o.set_excl_incl(excl_inc_perc_list)
-                means = []
-                excl_incl = []
-                for b in lsv_o.get_bins():
-                    means.append(expected_dpsi(b))
-                    if means[-1] <=0:
-                        excl_incl.append([-means[-1], 0])
-                    else:
-                        excl_incl.append([0, means[-1]])
-                lsv_o.means = means
-                lsv_o.set_excl_incl(excl_incl)
-                # lsv_o.sort_bins(lsv_info[i][4].strand)
+            vlsv.set_bins_info(collapsed_bins, confidence)
 
-                # lsv_list.append(lsv)
-                if len(lsv_psi1_list[i])<2:
-                    lsv_psi1_list[i].append(lsv_psi1_list[i][-1][::-1])
-                if len(lsv_psi2_list[i])<2:
-                    lsv_psi2_list[i].append(lsv_psi2_list[i][-1][::-1])
+            means = []
+            excl_incl = []
+            for b in vlsv.get_bins():
+                means.append(expected_dpsi(b))
+                if means[-1] <= 0:
+                    excl_incl.append([-means[-1], 0])
+                else:
+                    excl_incl.append([0, means[-1]])
+            vlsv.set_means(means)
+            vlsv.set_excl_incl(excl_incl)
+            # lsv_o.sort_bins(lsv_info[i][4].strand)
 
-                genes_dict[gene_name_id].append([lsv_o, lsv_info[i],
-                                              Lsv(lsv_psi1_list[i], lsv_info[i], confidence),
-                                              Lsv(lsv_psi2_list[i], lsv_info[i], confidence)
-                                              ])
+            # lsv_list.append(lsv)
+            if len(vlsv.psi1)<2:
+                vlsv.psi1.append(vlsv.psi1[-1][::-1])
+            if len(vlsv.psi2)<2:
+                vlsv.psi2.append(vlsv.psi2[-1][::-1])
 
-            except ValueError, e:
-                print e.message
-                logger.warning("%s produced an error:\n%s. Skipped." % (lsv_info[i], e))
+            genes_dict[gene_name_id].append({'lsv': vlsv,
+                                             'psi1': VoilaLsv(vlsv.psi1, lsv_graphic=None),
+                                             'psi2': VoilaLsv(vlsv.psi2, lsv_graphic=None)})
 
     # logger.info("Number of genes added: %d" % len(genes_dict.keys()))
 

@@ -464,7 +464,7 @@ def create_summary(args):
         for elem_list in majiq_output['genes_dict'].values():
             for elem in elem_list:
                 majiq_output['event_list'].append(elem[0])
-                majiq_output['metadata'].append(elem[1])
+                majiq_output['metadata'].append(elem[1])  #TODO: Fix this with the new change
         # del majiq_output['genes_dict']
 
     if type_summary == constants.ANALYSIS_DELTAPSI_GENE:
