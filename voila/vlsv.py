@@ -168,7 +168,7 @@ def extract_bins_info(lsv, threshold, include_lsv):
 
 class VoilaLsv(object):
     """LSV information unit managed by Voila"""
-    def __init__(self, bins_list, lsv_graphic, psi1=None, psi2=None, confidence=.95):
+    def __init__(self, bins_list, lsv_graphic, psi1=None, psi2=None):
         self.bins = bins_list
         self.lsv_graphic = lsv_graphic
         self.psi1 = psi1
@@ -189,7 +189,7 @@ class VoilaLsv(object):
         self.init_categories()
         self.psi_junction = 0
 
-    def set_bins_info(self, bins, confidence):
+    def set_bins_info(self, bins, confidence=0.95):
         self.bins = bins
         for lsv_bins in self.bins:
             m, c, q, v = create_array_bins(lsv_bins, confidence)

@@ -188,8 +188,8 @@ def get_lsv_delta_exp_data(voila_input_file, confidence=.95, threshold=.2, show_
                 vlsv.psi2.append(vlsv.psi2[-1][::-1])
 
             genes_dict[gene_name_id].append({'lsv': vlsv,
-                                             'psi1': VoilaLsv(vlsv.psi1, lsv_graphic=None),
-                                             'psi2': VoilaLsv(vlsv.psi2, lsv_graphic=None)})
+                                             'psi1': VoilaLsv(vlsv.psi1, lsv_graphic=None).set_bins_info(vlsv.psi1),
+                                             'psi2': VoilaLsv(vlsv.psi2, lsv_graphic=None).set_bins_info(vlsv.psi2)})
 
     # logger.info("Number of genes added: %d" % len(genes_dict.keys()))
 

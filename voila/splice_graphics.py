@@ -18,7 +18,7 @@ class GeneGraphic(object):
                                            or (self.end > other.start and self.start < other.end
                                                and self.strand == '-' and other.strand == '+'))))
 
-    def __init__(self, id=-1, name=None, strand=None, exons=(), junctions=(), chrom=None, **kwds):
+    def __init__(self, id=-1, name=None, strand=None, exons=list(), junctions=list(), chrom=None, **kwds):
         self.id = id
         self.name = name
         self.strand = strand
@@ -85,7 +85,7 @@ class GeneGraphic(object):
 
 class ExonGraphic(object):
 
-    def __init__(self, a3, a5, coords, type_exon, coords_extra=[], intron_retention=None, lsv_type=0, alt_starts=[], alt_ends=[]):
+    def __init__(self, a3, a5, coords, type_exon, coords_extra=list(), intron_retention=None, lsv_type=0, alt_starts=list(), alt_ends=list()):
         """
         ExonGraphic constructor
 
@@ -148,7 +148,7 @@ class ExonGraphic(object):
 
 
 class JunctionGraphic(object):
-    def __init__(self, coords, type_junction, nreads, clean_nreads=0, transcripts=()):
+    def __init__(self, coords, type_junction, nreads, clean_nreads=0, transcripts=list()):
         self.coords = list(coords)
         self.type_junction = type_junction
         self.num_reads = nreads

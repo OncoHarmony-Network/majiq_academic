@@ -297,7 +297,8 @@ class DeltaPair(BasicPipeline):
                 psi_list2.extend(ptempt[3])
 
         pickle_path = "%s/%s_%s.%s.pickle" % (self.output, self.names[0], self.names[1], pipe.deltapsi.__name__)
-        pickle.dump([posterior_matrix, names, meta_info, psi_list1, psi_list2], open(pickle_path, 'w'))
+        # pickle.dump([posterior_matrix, names, meta_info, psi_list1, psi_list2], open(pickle_path, 'w'))
+        majiq_io.dump_lsvs_voila(pickle_path, posterior_matrix, names, meta_info, psi_list1, psi_list2)
         self.logger.info("DeltaPSI calculation for %s_%s ended succesfully! Result can be found at %s" % (self.names[0],
                                                                                                           self.names[1],
                                                                                                           self.output))

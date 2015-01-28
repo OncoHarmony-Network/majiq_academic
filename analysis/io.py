@@ -1,6 +1,8 @@
 import pickle
 import numpy as np
 import random
+from voila.io_voila import VoilaInput
+from voila.vlsv import VoilaLsv
 
 
 def load_data_lsv(path, group_name, logger=None):
@@ -34,3 +36,13 @@ def load_data_lsv(path, group_name, logger=None):
         const_gc[cidx, :] = const.gc_factor.toarray()
 
     return meta_info, [lsv_cov_list, lsv_info, lsv_gc], [const_list, const_info, const_gc]
+
+
+def dump_lsvs_voila(pickle_path, posterior_matrix, names, meta_info, psi_list1=None, psi_list2=None):
+    """Create VoilaLSVs objects readable by voila."""
+    vlsvs=[]
+    for ii, bins in enumerate(posterior_matrix):
+        lsv_graphic = names[1][-1]
+        vlsvs.append(VoilaLsv(bins, lsv_graphic=lsv_graphic, psi1=psi_list1, psi2=psi_list2))
+
+    pickle.dump(VoilaInput(vlsvs, meta_info), open(pickle_path, 'w'))
