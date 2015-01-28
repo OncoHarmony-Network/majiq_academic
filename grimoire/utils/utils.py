@@ -11,9 +11,9 @@ from matplotlib import pyplot
 import grimoire.mglobals as mglobals
 from grimoire.junction import MajiqJunc
 import grimoire.rnaseq_io as majiq_io
-from voila.splice_graphics.exonGraphic import ExonGraphic
-from voila.splice_graphics.geneGraphic import GeneGraphic 
-from voila.splice_graphics.junctionGraphic import JunctionGraphic
+from voila.splice_graphics import ExonGraphic
+from voila.splice_graphics import GeneGraphic
+from voila.splice_graphics import JunctionGraphic
 from voila import constants as viola_const
 import random
 from contextlib import contextmanager as ctx

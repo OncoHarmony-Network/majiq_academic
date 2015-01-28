@@ -2,9 +2,9 @@ import numpy as np
 import grimoire.mglobals as mglobals
 import scipy.sparse
 import cPickle as pickle
-from voila.splice_graphics.exonGraphic import ExonGraphic
-from voila.splice_graphics.geneGraphic import GeneGraphic 
-from voila.splice_graphics.junctionGraphic import JunctionGraphic 
+from voila.splice_graphics import ExonGraphic
+from voila.splice_graphics import GeneGraphic
+from voila.splice_graphics import JunctionGraphic
 
 SSOURCE = 'source'
 STARGET = 'target'
