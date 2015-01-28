@@ -89,6 +89,9 @@ class Junction:
             res = self.coverage[idx, :].sum()
         return res
 
+    def get_transcript_list(self):
+        return self.transcript_id_list
+
     def is_annotated(self):
         return self.annotated
 
@@ -109,6 +112,9 @@ class Junction:
             self.acceptor_id = -1
         else:
             self.acceptor_id = acceptor.get_id()
+
+    def add_transcript(self, trnscrpt):
+        self.transcript_id_list.append(trnscrpt.get_it())
 
     def update_junction_read(self, exp_idx, read_n, start, gc, unique):
 #        print "J3",self, getrefcount(self)

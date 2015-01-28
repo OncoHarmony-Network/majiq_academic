@@ -235,7 +235,7 @@ def generate_visualization_output(allgenes, temp_dir):
                             jtype = viola_const.JUNCTION_TYPE_RNASEQ
                             #continue
                         junc_l.append(jj.get_coordinates())
-                        junc_list.append(JunctionGraphic(cc, jtype, num_reads))
+                        junc_list.append(JunctionGraphic(cc, jtype, num_reads, transcripts=jj.get_transcript_list()))
 
                     junc_l = np.asarray(junc_l)
                     exon_list = []

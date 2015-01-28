@@ -204,7 +204,8 @@ class LSV(object):
                 jtype = 1
  #               continue
             junc_l.append(jj.get_coordinates())
-            junc_list.append(JunctionGraphic(jj.get_coordinates(), jtype, jj.get_read_num(exp_idx)))
+            junc_list.append(JunctionGraphic(jj.get_coordinates(), jtype, jj.get_read_num(exp_idx),
+                                             transcripts=jj.get_transcript_list()))
         junc_l = np.asarray(junc_l)
         lsv_exon_list.sort()
         exon_list = []
@@ -419,12 +420,14 @@ class MajiqLsv(object):
         self.coords = lsv_obj.coords
         self.id = lsv_obj.id
         self.type = lsv_obj.ext_type
+        self.iretention = lsv_obj.intron_retention
         self.junction_list = scipy.sparse.lil_matrix((lsv_obj.junctions.shape[0], (mglobals.readLen-16)+1),
                                                      dtype=np.int)
         self.junction_id = []
         self.visual = lsv_obj.get_visual(exp_idx)
         self.gc_factor = scipy.sparse.lil_matrix((lsv_obj.junctions.shape[0], (mglobals.readLen-16)+1),
                                                  dtype=np.dtype('float'))
+
 
         for idx, junc in enumerate(lsv_obj.junctions):
             self.junction_list[idx, :] = junc.coverage[exp_idx, :]

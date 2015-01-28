@@ -301,7 +301,8 @@ class Gene:
         junc = self.exist_junction(start, end)
         if junc is None:
             junc = Junction(start, end, None, None, self, annotated=True)
-#        trcpt.add_junction(junc)
+        junc.add_transcript(trcpt)
+
         return junc
 
     def get_all_introns(self):

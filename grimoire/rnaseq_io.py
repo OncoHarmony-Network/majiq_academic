@@ -760,7 +760,7 @@ def read_gff(filename, pcr_filename, logging=None):
                                                                                                parent_tx_id))
         #end elif
     #end for
-    for kk, trcpt in trcpt_id_dict.items():
+    for tid, trcpt in trcpt_id_dict.items():
 
         exon_list = trcpt.prepare_exon_list()
         gn = trcpt.get_gene()
