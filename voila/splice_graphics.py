@@ -18,7 +18,7 @@ class GeneGraphic(object):
                                            or (self.end > other.start and self.start < other.end
                                                and self.strand == '-' and other.strand == '+'))))
 
-    def __init__(self, id=-1, name=None, strand=None, exons=list(), junctions=list(), chrom=None, **kwds):
+    def __init__(self, id, name=None, strand=None, exons=list(), junctions=list(), chrom=None, **kwds):
         self.id = id
         self.name = name
         self.strand = strand
@@ -27,7 +27,7 @@ class GeneGraphic(object):
         self.chrom = chrom
         self.start = exons[0].coords[0]
         self.end = exons[-1].coords[1]
-        super(self).__init__(**kwds)
+        super(GeneGraphic, self).__init__(**kwds)
 
     def get_id(self):
         return self.id
@@ -184,7 +184,7 @@ class LsvGraphic(GeneGraphic):
     def __init__(self, type_lsv, coords, **kwds):
         self.type = type_lsv
         self.coords = coords
-        super(GeneGraphic, self).__init__(**kwds)
+        super(LsvGraphic, self).__init__(**kwds)
 
     def get_type(self):
         return self.type

@@ -2,7 +2,7 @@ import numpy as np
 import grimoire.mglobals as mglobals
 import scipy.sparse
 import cPickle as pickle
-from voila.splice_graphics import ExonGraphic
+from voila.splice_graphics import ExonGraphic, LsvGraphic
 from voila.splice_graphics import GeneGraphic
 from voila.splice_graphics import JunctionGraphic
 
@@ -252,8 +252,8 @@ class LSV(object):
                              intron_retention=ex.ir, alt_starts=alt_start, alt_ends=alt_ends)
             exon_list.append(eg)
 
-        splice_lsv = GeneGraphic(id=self.id, name=self.exon.get_gene().get_name(), strand=self.get_strand(), exons=exon_list,
-                                 junctions=junc_list, chrom=self.get_chromosome())
+        splice_lsv = LsvGraphic(type_lsv=self.type, coords=self.coords, id=self.id, name=self.exon.get_gene().get_name(),
+                                strand=self.get_strand(), exons=exon_list, junctions=junc_list, chrom=self.get_chromosome())
 
         return splice_lsv
 
