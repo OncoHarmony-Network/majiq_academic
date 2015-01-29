@@ -43,6 +43,6 @@ def dump_lsvs_voila(pickle_path, posterior_matrix, names, meta_info, psi_list1=N
     vlsvs=[]
     for ii, bins in enumerate(posterior_matrix):
         lsv_graphic = names[1][-1]
-        vlsvs.append(VoilaLsv(bins, lsv_graphic=lsv_graphic, psi1=psi_list1, psi2=psi_list2))
+        vlsvs.append(VoilaLsv(bins, lsv_graphic=lsv_graphic, psi1=psi_list1[ii], psi2=psi_list2[ii]))
 
     pickle.dump(VoilaInput(vlsvs, meta_info), open(pickle_path, 'w'))
