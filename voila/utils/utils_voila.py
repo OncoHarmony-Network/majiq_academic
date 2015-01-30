@@ -33,7 +33,7 @@ except ImportError:
 
 class PickleEncoder(json.JSONEncoder):
     def default(self, obj):
-        if isinstance(obj, set):
+	if isinstance(obj, set):
             return list(obj)
         if isinstance(obj, np.ndarray):
             return list(obj)
@@ -41,8 +41,8 @@ class PickleEncoder(json.JSONEncoder):
             return list(obj)
         if isinstance(obj, np.int64):
             return int(obj)
-        if isinstance(obj, Lsv):
-            return obj.to_JSON(PickleEncoder)
+        if isinstance(obj, VoilaLsv):
+            return obj.to_JSON(encoder=PickleEncoder)
 
         return json.JSONEncoder.default(self, obj)
 

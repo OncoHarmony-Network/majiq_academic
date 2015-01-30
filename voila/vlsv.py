@@ -171,8 +171,8 @@ class VoilaLsv(object):
     def __init__(self, bins_list, lsv_graphic, psi1=None, psi2=None):
         self.bins = bins_list
         self.lsv_graphic = lsv_graphic
-        self.psi1 = psi1
-        self.psi2 = psi2
+        self.psi1 = np.array(psi1).tolist()
+        self.psi2 = np.array(psi2).tolist()
 
         self.means = []
         self.conf_interval = []
@@ -183,10 +183,10 @@ class VoilaLsv(object):
         self.excl_incl = None
 
         # Contextual info
-        self.set_gff3(lsv_graphic)
-
-        # For LSV filtering
-        self.init_categories()
+	if lsv_graphic:
+            self.set_gff3(lsv_graphic)
+	    # For LSV filtering
+            self.init_categories()
         self.psi_junction = 0
 
     def set_bins_info(self, bins, confidence=0.95):
@@ -197,6 +197,7 @@ class VoilaLsv(object):
             self.conf_interval.append(c)
             self.quartiles.append(q)
             self.variances.append(v)
+	return
 
     def is_delta_psi(self):
         return not (self.psi2 is None)
