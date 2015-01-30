@@ -183,9 +183,9 @@ class VoilaLsv(object):
         self.excl_incl = None
 
         # Contextual info
-	if lsv_graphic:
+        if lsv_graphic:
             self.set_gff3(lsv_graphic)
-	    # For LSV filtering
+            # For LSV filtering
             self.init_categories()
         self.psi_junction = 0
 
@@ -197,7 +197,6 @@ class VoilaLsv(object):
             self.conf_interval.append(c)
             self.quartiles.append(q)
             self.variances.append(v)
-	return
 
     def is_delta_psi(self):
         return not (self.psi2 is None)
