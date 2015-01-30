@@ -312,39 +312,40 @@ def render_tab_output(output_dir, output_html, majiq_output, type_summary, logge
         ofile.write('\n')
 
         for gene in majiq_output['genes_dict']:
-            for llsv in majiq_output['genes_dict'][gene]:
+            for llsv_dict in majiq_output['genes_dict'][gene]:
+                llsv = llsv_dict['lsv']
                 lline = []
-                lline.extend([llsv[1][4].get_name(), gene, llsv[0].get_id()])
+                lline.extend([llsv.lsv_graphic.get_name(), gene, llsv.get_id()])
                 lexpected = []
                 lconfidence = []
-                for i, bins in enumerate(llsv[0].get_bins()):
+                for i, bins in enumerate(llsv.get_bins()):
                     if 'delta' in type_summary:
-                        lexpected.append(str(-llsv[0].get_excl_incl()[i][0] + llsv[0].get_excl_incl()[i][1]))
+                        lexpected.append(str(-llsv.get_excl_incl()[i][0] + llsv.get_excl_incl()[i][1]))
                         lconfidence.append(str(utils_voila.get_prob_delta_psi_greater_v(bins, float(lexpected[-1]), 0.1)))
                     else:
-                        lexpected.append(repr(llsv[0].get_means()[i]))
-                        lconfidence.append(repr(llsv[0].get_variances()[i]))
+                        lexpected.append(repr(llsv.get_means()[i]))
+                        lconfidence.append(repr(llsv.get_variances()[i]))
 
                 lline.append(';'.join(lexpected))
                 lline.append(';'.join(lconfidence))
 
-                lline.append(llsv[0].get_type())
-                lline.append(repr(llsv[0].get_categories()[tlb_categx['A5SS']]))
-                lline.append(repr(llsv[0].get_categories()[tlb_categx['A3SS']]))
-                lline.append(repr(llsv[0].get_categories()[tlb_categx['ES']]))
-                lline.append(repr(llsv[0].get_categories()[tlb_categx['Num. Junctions']]))
-                lline.append(repr(llsv[0].get_categories()[tlb_categx['Num. Exons']]))
-                lline.append(str(int(np.any([junc.get_type() == 1 for junc in llsv[1][4].get_junctions()]))))
+                lline.append(llsv.get_type())
+                lline.append(repr(llsv.get_categories()[tlb_categx['A5SS']]))
+                lline.append(repr(llsv.get_categories()[tlb_categx['A3SS']]))
+                lline.append(repr(llsv.get_categories()[tlb_categx['ES']]))
+                lline.append(repr(llsv.get_categories()[tlb_categx['Num. Junctions']]))
+                lline.append(repr(llsv.get_categories()[tlb_categx['Num. Exons']]))
+                lline.append(str(int(np.any([junc.get_type() == 1 for junc in llsv.lsv_graphic.get_junctions()]))))
 
-                lline.append(llsv[1][4].get_chrom())
-                lline.append(llsv[1][4].get_strand())
+                lline.append(llsv.lsv_graphic.get_chrom())
+                lline.append(llsv.lsv_graphic.get_strand())
 
-                lline.append(';'.join(['-'.join(str(c) for c in junc.get_coords()) for junc in llsv[1][4].get_junctions()]))
-                lline.append(';'.join(['-'.join(str(c) for c in exon.get_coords()) for exon in llsv[1][4].get_exons()]))
+                lline.append(';'.join(['-'.join(str(c) for c in junc.get_coords()) for junc in llsv.lsv_graphic.get_junctions()]))
+                lline.append(';'.join(['-'.join(str(c) for c in exon.get_coords()) for exon in llsv.lsv_graphic.get_exons()]))
 
                 try:
-                    lline.append(';'.join(['|'.join([str(c) for c in exon.get_alt_starts()]) for exon in llsv[1][4].get_exons()]))
-                    lline.append(';'.join(['|'.join([str(c) for c in exon.get_alt_ends()]) for exon in llsv[1][4].get_exons()]))
+                    lline.append(';'.join(['|'.join([str(c) for c in exon.get_alt_starts()]) for exon in llsv.lsv_graphic.get_exons()]))
+                    lline.append(';'.join(['|'.join([str(c) for c in exon.get_alt_ends()]) for exon in llsv.lsv_graphic.get_exons()]))
                 except TypeError:
                     pass
 
@@ -355,16 +356,16 @@ def render_tab_output(output_dir, output_html, majiq_output, type_summary, logge
                             lpairwise = []
                             if gene in lmajiq_pairs[idx1][idx2]['genes_dict']:
                                 for llsv_tmp in lmajiq_pairs[idx1][idx2]['genes_dict'][gene]:
-                                    if llsv_tmp[0].get_id() == llsv[0].get_id():
+                                    if llsv_tmp[0].get_id() == llsv.get_id():
                                         lsv_pair = llsv_tmp[0]
                                         break
                                 else:
                                     logger.warning("LSV %s present in deltagroup but missing in %s." %
-                                                   (llsv[0].get_id(), "%s_%d_%s_%d" % (group1_name, idx1+1,
+                                                   (llsv.get_id(), "%s_%d_%s_%d" % (group1_name, idx1+1,
                                                                                         group2_name, idx2+1)))
                                     lpairwise.append('N/A')
                                     continue
-                                for iway in range(len(llsv[0].get_bins())):
+                                for iway in range(len(llsv.get_bins())):
                                     lpairwise.append(str(sum(lsv_pair.get_excl_incl()[iway])))
                             else:
                                 lpairwise.append('N/A')
@@ -387,12 +388,13 @@ def create_gff3_txt_files(output_dir, majiq_output, logger):
     odir = output_dir+"/static/doc/lsvs"
     utils_voila.create_if_not_exists(odir)
     for gkey, gvalue in majiq_output['genes_dict'].iteritems():
-        for lsv in gvalue:
-            lsv_file_basename = "%s/%s" % (odir, lsv[0].get_id())
+        for lsv_dict in gvalue:
+            lsv = lsv_dict['lsv']
+            lsv_file_basename = "%s/%s" % (odir, lsv.get_id())
             gff_file = "%s.gff3" % (lsv_file_basename)
             with open(gff_file, 'w') as ofile:
                 ofile.write(header+"\n")
-                ofile.write(lsv[0].get_gff3()+"\n")
+                ofile.write(lsv.get_gff3()+"\n")
             utils_voila.gff2gtf(gff_file, "%s.gtf" % lsv_file_basename)
 
     logger.info("Files saved in %s" % odir)
@@ -464,7 +466,7 @@ def create_summary(args):
         for elem_list in majiq_output['genes_dict'].values():
             for elem in elem_list:
                 majiq_output['event_list'].append(elem[0])
-                majiq_output['metadata'].append(elem[1])  #TODO: Fix this with the new change
+                majiq_output['metadata'].append(elem[1])  #TODO: Fix this wi
         # del majiq_output['genes_dict']
 
     if type_summary == constants.ANALYSIS_DELTAPSI_GENE:

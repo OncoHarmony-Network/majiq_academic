@@ -128,11 +128,11 @@
                     <tbody>
                     {% for gene in gene_value %}
                     <tr class="{{ gene['lsv'].categories2css() }} lsvrow" data-njuncs="{{ gene['lsv'].njuncs() }}" data-nexons="{{ gene['lsv'].nexons() }}">
-                        <td>{{ gene['lsv'].id }}</td>
+                        <td>{{ gene['lsv'].get_id() }}</td>
                         <td>
 
-                            <p style="top:0;" class="hidden">{{ gene['lsv'].type }}</p>
-                            <canvas class="lsvLegend" id="{{ gene_index }}" width="200px" height="80px" data-lsv-string="{{ gene['lsv'].type }}" data-coord-exon="{{ gene['lsv'].coords }}"  title="{{ gene['lsv'].type }}">
+                            <p style="top:0;" class="hidden">{{ gene['lsv'].get_type() }}</p>
+                            <canvas class="lsvLegend" id="{{ gene_index }}" width="200px" height="80px" data-lsv-string="{{ gene['lsv'].get_type() }}" data-coord-exon="{{ gene['lsv'].get_coords() }}"  title="{{ gene['lsv'].get_type() }}">
                                 This browser or document mode doesn't support canvas
                             </canvas>
                         </td>
@@ -172,8 +172,8 @@
                                 </a>
                             </p>
                             <p>
-                                <!--<a href="static/doc/lsvs/{{ gene['lsv'].id }}.gff3" target="_blank"><img src="static/img/icons/gff3.png" title="Go to GFF3 LSV definition"/></a>-->
-                                <a href="static/doc/lsvs/{{ gene['lsv'].id }}.gtf" target="_blank"><img src="static/img/icons/gtf.png" title="Go to GTF LSV definition"/></a>
+                                <!--<a href="static/doc/lsvs/{{ gene['lsv'].get_id() }}.gff3" target="_blank"><img src="static/img/icons/gff3.png" title="Go to GFF3 LSV definition"/></a>-->
+                                <a href="static/doc/lsvs/{{ gene['lsv'].get_id() }}.gtf" target="_blank"><img src="static/img/icons/gtf.png" title="Go to GTF LSV definition"/></a>
                             </p>
                         </td>
 

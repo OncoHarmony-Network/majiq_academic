@@ -197,6 +197,7 @@ class VoilaLsv(object):
             self.conf_interval.append(c)
             self.quartiles.append(q)
             self.variances.append(v)
+        return self
 
     def is_delta_psi(self):
         return not (self.psi2 is None)
