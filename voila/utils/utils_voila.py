@@ -88,21 +88,12 @@ def get_prob_delta_psi_greater_v(bins, expected, V=.2):
     return (np.sum(bins[:left]) + np.sum(bins[right:]))
 
 
-def get_lsv_single_exp_data(majiq_bins_file, confidence, gene_name_list=None, lsv_types=None, logger=None):
+def get_lsv_single_exp_data(voila_input_file, gene_name_list=None, lsv_types=None, logger=None):
     """
     Create a dictionary to summarize the information from majiq output file.
     """
-    majiq_data = None
-    try:
-        majiq_data = pkl.load(open(majiq_bins_file, 'rb'))
-    except pkl.PickleError:
-        logger.error("Pickle could not load the file. Please, check that the file %s is in Pickle format." % majiq_bins_file, exc_info=1)
-
-    except IOError:
-        logger.error("%s doesn't exists." % majiq_bins_file, exc_info=1)
-        sys.exit(1)
-
-    lsv_list = []
+    voila_input = load_voila_input(voila_input_file, logger=logger)
+    lsv_list = voila_input.lsvs
 
     genes_dict = defaultdict(list)
 
@@ -110,32 +101,22 @@ def get_lsv_single_exp_data(majiq_bins_file, confidence, gene_name_list=None, ls
     if gene_name_list is None:
         gene_name_list = []
 
-    for i, lsv_meta in enumerate(majiq_data[1]):
+    for i, vlsv in enumerate(lsv_list):
         # Determine whether include the LSV or not, based on selected filters
-        if nofilter_genes or str(lsv_meta[1]).split(':')[0] in gene_name_list or lsv_meta[4].name.upper() in gene_name_list or lsv_meta[2] in lsv_types:
-            # print lsv_meta[0], lsv_meta[1], lsv_meta[2]
-
-            bins_array_list = majiq_data[0][i]
-
+        if np.any(np.isnan(vlsv.get_bins())):
+            logger.warning("LSV %s bins contain NaNs" % vlsv.get_id())
+            continue
+        gene_name_id = vlsv.get_id().split(':')[0]
+        gene_name = vlsv.lsv_graphic.name.upper()
+        if nofilter_genes or gene_name_id in gene_name_list or gene_name in gene_name_list or vlsv.get_type() in lsv_types:
             # In 1-way LSVs, create the additional bins set for commodity
-            if len(bins_array_list) == 1:
-                bins_array_list.append(bins_array_list[-1][::-1])
+            if len(vlsv.get_bins()) == 1:
+                vlsv.bins.append(vlsv.get_bins()[-1][::-1])
+            vlsv.set_bins_info(vlsv.get_bins())
+            genes_dict[gene_name_id].append(vlsv)
 
-            try:
-                # metadata.append([lsv_meta[0], lsv_meta[1], lsv_meta[2]]) #collapse_lsv(lsv_meta[2])])
-                lsv_list.append(Lsv(bins_array_list, lsv_meta, confidence))
-                # lsv_list[-1].sort_bins(lsv_meta[4].strand)
-
-            except ValueError, e:
-                logger.warning("%s produced an error:\n%s. Skipped." % (bins_array_list, e))
-                continue
-
-            genes_dict[str(lsv_meta[1]).split(':')[0]].append([lsv_list[-1], lsv_meta])
-
-    return {'event_list':   lsv_list,
-            'metadata':     majiq_data[1],
-            'genes_dict':   genes_dict,
-            'meta_exps':    majiq_data[2]}
+    return {'genes_dict':   genes_dict,
+            'meta_exps':    voila_input.metainfo}
 
 
 

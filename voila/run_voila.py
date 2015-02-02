@@ -53,9 +53,8 @@ def render_summary(output_dir, output_html, majiq_output, type_summary, threshol
 
     if type_summary == constants.ANALYSIS_PSI:
         voila_output = open(output_dir+output_html, 'w')
-        voila_output.write(sum_template.render(lsvList=majiq_output['event_list'],
-                                               tableMarks=table_marks_set(len(majiq_output['event_list'])),
-                                               metadata=majiq_output['metadata'],
+        voila_output.write(sum_template.render(lsvList=majiq_output['lsv_list'],
+                                               tableMarks=table_marks_set(len(majiq_output['lsv_list'])),
                                                lexps=majiq_output['meta_exps']
                                                ))
         voila_output.close()
@@ -83,11 +82,10 @@ def render_summary(output_dir, output_html, majiq_output, type_summary, threshol
             name_page = str(count_pages) + "_" + output_html
             voila_output = open(output_dir+name_page, 'w')
             voila_output.write(sum_template.render(tableMarks=[table_marks_set(len(gene_set)) for gene_set in genes_dict],
-                                                   # genes_json=genes_json_dict,
                                                    genes_dict=genes_dict,
-                                                   prevPage = prev_page,
-                                                   nextPage= next_page,
-                                                   namePage= name_page,
+                                                   prevPage=prev_page,
+                                                   nextPage=next_page,
+                                                   namePage=name_page,
                                                    lexps=majiq_output['meta_exps'],
                                                    genes_exps_list=majiq_output['genes_exp']
             ))
@@ -132,9 +130,8 @@ def render_summary(output_dir, output_html, majiq_output, type_summary, threshol
 
     elif type_summary == constants.ANALYSIS_DELTAPSI:
         voila_output = open(output_dir+output_html, 'w')
-        voila_output.write(sum_template.render( lsvList=majiq_output['event_list'],
-                                                tableMarks=table_marks_set(len(majiq_output['event_list'])),
-                                                metadata=majiq_output['metadata'],
+        voila_output.write(sum_template.render( lsvList=majiq_output['lsv_list'],
+                                                tableMarks=table_marks_set(len(majiq_output['lsv_list'])),
                                                 threshold=threshold,
                                                 lexps=majiq_output['meta_exps']
         ))
@@ -148,7 +145,7 @@ def render_summary(output_dir, output_html, majiq_output, type_summary, threshol
     else:
         logger.error("summary type not recognized %s." % type_summary, exc_info=1)
 
-    logger.info("Copying static files from Voila sources to %s static/ ..." % output_dir)
+    logger.info("Copying static files from Voila sources to %s static." % output_dir)
     utils_voila.copyanything(EXEC_DIR+"templates/static", output_dir+"static")
 
     logger.info("HTML5 Summary successfully created in %s." % output_dir)
@@ -214,7 +211,8 @@ def parse_gene_graphics(gene_exps_flist, gene_name_list, groups=('group1', 'grou
 
             if len(gene_name_list) != len(ggenes_set):
                 # raise ParseError("Different number of genes in splicegraph (%d) and majiq (%d) files." % (len(ggenes_set), len(gene_name_list)), logger=logger)
-                logger.warning("Different number of genes in splicegraph (%d) and majiq (%d) files." % (len(ggenes_set), len(gene_name_list)))
+                logger.warning("Different number of genes in splicegraph (%d) and majiq (%d) files! Hint: Are you sure "
+                               "you are using bins and splicegraph files from the same execution?" % (len(ggenes_set), len(gene_name_list)))
 
             genes_exp[os.path.basename(splice_graph_f)] = genes_graphic
 
@@ -313,7 +311,9 @@ def render_tab_output(output_dir, output_html, majiq_output, type_summary, logge
 
         for gene in majiq_output['genes_dict']:
             for llsv_dict in majiq_output['genes_dict'][gene]:
-                llsv = llsv_dict['lsv']
+                llsv = llsv_dict
+                if type(llsv_dict) == dict:
+                    llsv = llsv_dict['lsv']
                 lline = []
                 lline.extend([llsv.lsv_graphic.get_name(), gene, llsv.get_id()])
                 lexpected = []
@@ -389,7 +389,9 @@ def create_gff3_txt_files(output_dir, majiq_output, logger):
     utils_voila.create_if_not_exists(odir)
     for gkey, gvalue in majiq_output['genes_dict'].iteritems():
         for lsv_dict in gvalue:
-            lsv = lsv_dict['lsv']
+            lsv = lsv_dict
+            if type(lsv_dict) == dict:
+                lsv = lsv_dict['lsv']
             lsv_file_basename = "%s/%s" % (odir, lsv.get_id())
             gff_file = "%s.gff3" % (lsv_file_basename)
             with open(gff_file, 'w') as ofile:
@@ -404,7 +406,7 @@ def create_summary(args):
     """This method generates an html summary from a majiq output file"""
 
     type_summary    = args.type_analysis
-    majiq_bins_file = args.majiq_bins
+    voila_file      = args.majiq_bins
     output_dir      = args.output_dir
 
     if not output_dir.endswith('/'):
@@ -419,16 +421,16 @@ def create_summary(args):
     logger.info("Execution line: %s" % repr(args))
     logger.info("Processing %s summary." % type_summary)
 
-    # meta_preprocess = args.meta_preprocess
-    threshold       = None
-    pairwise        = None
+    threshold   = None
+    pairwise    = None
 
-    output_html = os.path.splitext(os.path.split(majiq_bins_file)[1])[0] + "_" + type_summary.replace("-", "_") + '.html'
+    output_html = os.path.splitext(os.path.split(voila_file)[1])[0] + "_" + type_summary.replace("-", "_") + '.html'
     majiq_output = None
     meta_postprocess = {}
 
     if type_summary == constants.ANALYSIS_PSI:
-        majiq_output = utils_voila.get_lsv_single_exp_data(majiq_bins_file, args.confidence, logger=logger)
+        majiq_output = utils_voila.get_lsv_single_exp_data(voila_file, logger=logger)
+        majiq_output['lsv_list'] = [ll for g in majiq_output['genes_dict'].viewvalues() for ll in g]
 
     if type_summary == constants.ANALYSIS_PSI_GENE:
 
@@ -441,7 +443,7 @@ def create_summary(args):
                 gene_name_list.append(gene_name.rstrip().upper())
         else:
             gene_name_list = []
-        majiq_output = utils_voila.get_lsv_single_exp_data(majiq_bins_file, args.confidence, gene_name_list=gene_name_list, lsv_types=lsv_types, logger=logger)
+        majiq_output = utils_voila.get_lsv_single_exp_data(voila_file, gene_name_list=gene_name_list, lsv_types=lsv_types, logger=logger)
 
         if not gene_name_list:
             gene_name_list = majiq_output['genes_dict'].keys()
@@ -459,15 +461,8 @@ def create_summary(args):
     if type_summary == constants.ANALYSIS_DELTAPSI:
         threshold   = args.threshold
         pairwise    = args.pairwise
-
-        majiq_output = utils_voila.get_lsv_delta_exp_data(majiq_bins_file, args.confidence, args.threshold, args.show_all, logger=logger)
-        majiq_output['event_list'] = []
-        majiq_output['metadata'] = []
-        for elem_list in majiq_output['genes_dict'].values():
-            for elem in elem_list:
-                majiq_output['event_list'].append(elem[0])
-                majiq_output['metadata'].append(elem[1])  #TODO: Fix this wi
-        # del majiq_output['genes_dict']
+        majiq_output = utils_voila.get_lsv_delta_exp_data(voila_file, args.confidence, args.threshold, args.show_all, logger=logger)
+        majiq_output['lsv_list'] = [ll['lsv'] for g in majiq_output['genes_dict'].viewvalues() for ll in g]
 
     if type_summary == constants.ANALYSIS_DELTAPSI_GENE:
         threshold   = args.threshold
@@ -479,7 +474,7 @@ def create_summary(args):
             for gene_name in fileinput.input(args.gene_names):
                 gene_name_list.append(gene_name.rstrip().upper())
 
-        majiq_output = utils_voila.get_lsv_delta_exp_data(majiq_bins_file, args.confidence, args.threshold, args.show_all, gene_name_list=gene_name_list, logger=logger)
+        majiq_output = utils_voila.get_lsv_delta_exp_data(voila_file, args.confidence, args.threshold, args.show_all, gene_name_list=gene_name_list, logger=logger)
 
         if not gene_name_list:
             gene_name_list = majiq_output['genes_dict'].keys()
@@ -497,7 +492,7 @@ def create_summary(args):
     if type_summary == constants.LSV_THUMBNAILS:
         try:
             majiq_output = []
-            with open(majiq_bins_file, 'r') as types_file:
+            with open(voila_file, 'r') as types_file:
                 for line in types_file:
                     majiq_output.append(line.rstrip())
         except IOError, e:

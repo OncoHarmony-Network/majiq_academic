@@ -100,15 +100,7 @@ def get_variance(bins, mean):
 
 
 def create_array_bins(bins, confidence):
-    """
-    Recaps bins info from data previously generated and stored in a Pickle file
-    @param event_id: to access the bins associated with the event
-    @param num_bins: ONLY in DEBUG (it should be retrieved from file)
-    @return: a tuple with:
-     *.- the mean,
-     *.- the coordinates of the confidence interval [coord1, coord2].
-
-    """
+    """Compute mean, confidence intervals, quartiles and variance for a given list of bins"""
     bins = np.array(bins)
     step = 1.0 / bins.size
     mean = get_expected(bins)
@@ -385,4 +377,5 @@ class VoilaLsv(object):
         self.gff3_str = lsv_gtf
 
     def to_JSON(self, encoder=json.JSONEncoder):
+        self.bins = np.array(self.bins).tolist()
         return json.dumps(self, default=lambda o: o.__dict__, sort_keys=True, cls=encoder)

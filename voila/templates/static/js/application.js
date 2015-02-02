@@ -438,7 +438,8 @@ function drawLSVCompactStackBars(canvas, fillMode){
 //            console.log(group.variances[lsv_count]);
 //            console.log(d3.variance(translate_lsv_bins(group.bins[lsv_count],1000));
 
-            area[0] = (1 - group.variances[lsv_count]) * (x2 - x1);
+            //area[0] = (1 - group.variances[lsv_count]) * (x2 - x1);
+            area[0] = x2 - x1;
             area[1] = y2 - y1;
             ctx.strokeStyle = ctx.fillStyle;
             drawRectangle(ctx, Math.round(x1+(x2-x1-area[0])/2), Math.round(y1), Math.floor(area[0]), Math.floor(area[1]), true);
