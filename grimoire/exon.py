@@ -34,7 +34,7 @@ class Exon:
         self.ir = False
         self.db_coord = (start, end)
         self.annotated = annot
-        self.is_intron = isintron
+        self.intron = isintron
 
     def __hash__(self):
         return hash(self.id) ^ hash(self.gene_name)
