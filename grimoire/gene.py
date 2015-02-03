@@ -226,8 +226,13 @@ class Gene:
     def prepare_exons(self):
 #        self.exons.sort(reverse = isneg)
         self.exons.sort()
-        for idx, exs in enumerate(self.exons):
+        idx = 0
+        for exs in self.exons:
+            if exs.is_intron():
+                exs.id = 0
             exs.id = idx+1
+
+
         return
 
     def get_all_ss(self, anot_only=False):
@@ -328,8 +333,8 @@ class Gene:
         exon_list = []
         ex_list = self.get_exon_list()
         for ex in ex_list:
-            if ex.id is None:
-                continue
+#            if ex.id is None:
+#                continue
             l3 = len(set(ex.ss_3p_list))
             l5 = len(set(ex.ss_5p_list))
             if l3 == 0 or l5 == 0:
