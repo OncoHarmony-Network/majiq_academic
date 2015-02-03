@@ -279,7 +279,11 @@ class Gene:
                 self.lsv_list.append(ret)
             except ValueError:
                 if logger:
-                    logger.info("Attempt to create LSV with wrong type or not enought junction coverage")
+                    logger.info("Attempt to create LSV with wrong type or not enought junction coverage %s" %exon.get_id())
+
+        for jj in jlist:
+            if jj.is_virtual():
+                logger.info("WE FOUND INTRON RETENTION in exon %s" % exon.get_id())
 
         return ret
 

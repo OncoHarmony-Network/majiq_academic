@@ -68,6 +68,12 @@ class Junction:
             ex = self.get_gene().get_exon_by_id(self.donor_id)
         return ex
 
+    def is_virtual(self):
+        if self.get_acceptor().is_intron() or self.get_acceptor().is_intron():
+            return True
+        else:
+            return False
+
     def get_acceptor(self):
         if self.acceptor_id == -1:
             ex = None

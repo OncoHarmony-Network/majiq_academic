@@ -78,6 +78,9 @@ class Exon:
         self.score = score
         self.pcr_candidate = candidate
 
+    def is_intron(self):
+        return self.is_intron
+
     def get_pcr_score(self):
         return self.score
 
