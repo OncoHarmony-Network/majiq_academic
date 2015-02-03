@@ -221,7 +221,7 @@ def rnaseq_intron_retention(filenames, gene_list, readlen, chrom, logging=None):
                                                                                    intron_start,
                                                                                    intron_end))
 
-            sdafsdfasdfasd
+
 
 
 
