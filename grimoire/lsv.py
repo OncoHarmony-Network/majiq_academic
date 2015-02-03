@@ -42,6 +42,8 @@ class LSV(object):
             juncs.append(junction_list[self.tlb_junc[jj]])
 
         self.junctions = np.array(juncs)
+        if self.intron_retention:
+            print "INTRON RETENTION FOR THE WIN"
 
     def check_type(self, lsv_type):
         tab = lsv_type.split('|')[1:]
