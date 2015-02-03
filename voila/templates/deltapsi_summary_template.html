@@ -49,17 +49,17 @@
         {% for lsv in lsvList  -%}
         <tr>
             <td>{{ loop.index }}</td>
-            <td>{{ metadata[loop.index-1][1] }}</td>
+            <td>{{ lsv.get_id() }}</td>
             <td>
-                <p class="hidden" style="top:0;">{{ metadata[loop.index-1][2] }}</p>
-                <canvas class="lsvLegend" width="200px" height="60px" data-lsv-string="{{ metadata[loop.index-1][2] }}"  title="{{ metadata[loop.index-1][2] }}">
+                <p class="hidden" style="top:0;">{{ lsv.get_type() }}</p>
+                <canvas class="lsvLegend" width="200px" height="60px" data-lsv-string="{{ lsv.get_type() }}"  title="{{ lsv.get_type() }}">
                     This browser or document mode doesn't support canvas
                 </canvas>
             </td>
             <td id="data_td{{ loop.index }}" class="lsvDeltaCompact" data-lsv="{{ lsv|to_json }}" data-threshold="{{ threshold }}">
                 <p class="hidden">
                     {% set max_diff = [0.0] %}
-                    {% for excl_incl in lsv.excl_incl %}
+                    {% for excl_incl in lsv.get_excl_incl() %}
                         {% if ((excl_incl[0]|abs + excl_incl[1]) > max_diff[-1]) %}
                             {% do max_diff.append(excl_incl[0]|abs + excl_incl[1]) %}
                         {% endif%}
@@ -68,10 +68,14 @@
                 </p>
             </td>
             <td>
-                <a href="http://genome.ucsc.edu/cgi-bin/hgTracks?db={{ lexps[0][0].genome }}&position={{ lsv.chrom }}:{{ lsv.extension[0] }}-{{ lsv.extension[1] }}" target="_blank">
-                    <img src="static/img/icons/ucsc2.png" title="http://genome.ucsc.edu/cgi-bin/hgTracks?db={{ lexps[0][0].genome }}&position={{ lsv.chrom }}:{{ lsv.extension[0] }}-{{ lsv.extension[1] }}"/>
-                </a>
-                <a href="static/doc/gff3/{{ lsv.id }}.txt" target="_blank">GFF3</a>
+                <p>
+                    <a href="http://genome.ucsc.edu/cgi-bin/hgTracks?db={{ lexps[0][0].genome }}&position={{ lsv.get_chrom() }}:{{ lsv.get_extension()[0] }}-{{ lsv.get_extension()[1] }}" target="_blank">
+                        <img src="static/img/icons/ucsc2.png" title="http://genome.ucsc.edu/cgi-bin/hgTracks?db={{ lexps[0][0].genome }}&position={{ lsv.get_chrom() }}:{{ lsv.get_extension()[0] }}-{{ lsv.get_extension()[1] }}"/>
+                    </a>
+                </p>
+                <p>
+                    <a href="static/doc/lsvs/{{ lsv.get_id() }}.gtf" target="_blank"><img src="static/img/icons/gtf.png" title="Go to GTF LSV definition"/></a>
+                </p>
             </td>
 
         </tr>

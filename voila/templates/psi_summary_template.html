@@ -45,25 +45,36 @@
             {% for lsv in lsvList  -%}
             <tr>
                 <td>{{ loop.index }}</td>
-                <td>{{ metadata[loop.index-1][1] }}</td>
+                <td>{{ lsv.get_id() }}</td>
                 <td>
-                    <p class="hidden" style="top:0;">{{ metadata[loop.index-1][2] }}</p>
-                    <canvas class="lsvLegend" width="200px" height="80px" data-lsv-string="{{ metadata[loop.index-1][2] }}" title="{{ metadata[loop.index-1][2] }}">
+                    <p class="hidden" style="top:0;">{{ lsv.get_type() }}</p>
+                    <canvas class="lsvLegend" width="200px" height="80px" data-lsv-string="{{ lsv.get_type() }}" title="{{ lsv.get_type() }}">
                         This browser or document mode doesn't support canvas
                     </canvas>
                 </td>
                 <td id="data_td{{ loop.index }}">
+                    <span class="hidden">
+                    {% set max_diff = 0 %}
+                    {% for mean_b in lsv.get_means() %}
+                        {% if mean_b > max_diff %}
+                            {% set max_diff = mean_b %}
+                        {% endif%}
+                    {%- endfor %}
+                    {{ max_diff }}
+                    </span>
                     <canvas class="lsvSingleCompactPercentiles" id="lsvSingleCompact{{ loop.index }}" width="50px" height="50px" style="border: solid; border-width: 2pt; border-color: darkgrey;" data-lsv="[{{ lsv|to_json }}]">
                         This browser or document mode doesn't support canvas
                     </canvas>
-                    <!--<canvas class="lsvSingleExtendedBoxplot hidden" width="500px" height="200px"  data-lsv="{{ lsv|to_json }}">-->
-                        <!--This browser or document mode doesn't support canvas-->
-                    <!--</canvas>-->
                 </td>
                 <td>
-                    <a href="http://genome.ucsc.edu/cgi-bin/hgTracks?db={{ lexps[0].genome }}&position={{ metadata[loop.index-1][4].get_chrom() }}:{{ metadata[loop.index-1][4].get_start() }}-{{ metadata[loop.index-1][4].get_end() }}" target="_blank">
-                        <img src="static/img/icons/ucsc2.png" title="See LSV in UCSC"/>
-                    </a>
+                    <p>
+                        <a href="http://genome.ucsc.edu/cgi-bin/hgTracks?db={{ lexps[0].genome }}&position={{ lsv.get_chrom() }}:{{ lsv.get_extension()[0] }}-{{ lsv.get_extension()[1] }}" target="_blank">
+                            <img src="static/img/icons/ucsc2.png" title="See LSV in UCSC"/>
+                        </a>
+                    </p>
+                    <p>
+                        <a href="static/doc/lsvs/{{ lsv.get_id() }}.gtf" target="_blank"><img src="static/img/icons/gtf.png" title="Go to GFT LSV definition"/></a>
+                    </p>
                 </td>
 
             </tr>
