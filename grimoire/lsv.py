@@ -23,7 +23,7 @@ class LSV(object):
         self.type = lsv_type
         self.exon = exon
 
-        self.intron_retention = exon.is_intron
+        self.intron_retention = exon.is_intron()
 
         self.tlb_junc = {}
         self.ext_type = self.set_type(junction_list, self.tlb_junc)
