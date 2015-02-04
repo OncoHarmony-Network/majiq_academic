@@ -288,7 +288,7 @@ class Gene:
 
         for jj in jlist:
             if jj.is_virtual():
-                logger.info("WE FOUND INTRON RETENTION in exon %s" % exon.get_id())
+                logger.info("WE FOUND INTRON RETENTION in exon %s" % exon.get_coordinates())
 
         return ret
 

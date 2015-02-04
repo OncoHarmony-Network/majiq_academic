@@ -385,6 +385,8 @@ def read_sam_or_bam(filenames, gene_list, readlen, chrom, nondenovo=False, loggi
                     ng = read.seq.count('g') + read.seq.count('G') 
                     gc_content = float(nc + ng) / float(len(read.seq))
                     for (junc_start, junc_end) in junc_list:
+                        if junc_start == 20744648 and junc_end == 20747819:
+                            pass
                         if junc_start - r_start > readlen:
                             r_start = junc_start - (readlen - 16) - 1
                         elif junc_start - r_start >= readlen - 8 or junc_start - r_start <= 8:
@@ -415,12 +417,13 @@ def read_sam_or_bam(filenames, gene_list, readlen, chrom, nondenovo=False, loggi
                         if not found:
                             ''' update junction and add to list'''
                             junc = None
-                            for (coord, t, junc) in junctions:
-                                if junc.start == junc_start and junc.end == junc_end:
-                                    junc.update_junction_read(exp_index, nreads, r_start, gc_content, unique)
-                                    if not (junc_start, '5prime', junc) in junctions:
-                                        junctions.append((junc_start, '5prime', junc))
-                                        junctions.append((junc_end, '3prime', junc))
+                            for (coord, t, jnc) in junctions:
+                                if jnc.start == junc_start and jnc.end == junc_end:
+                                    jnc.update_junction_read(exp_index, nreads, r_start, gc_content, unique)
+                                    if not (junc_start, '5prime', jnc) in junctions:
+                                        junctions.append((junc_start, '5prime', jnc))
+                                        junctions.append((junc_end, '3prime', jnc))
+                                    junc = jnc
                                     break
                                 #end if (j.start) == ...
                             #end for (coord,t,j) ...
