@@ -69,7 +69,17 @@ class Junction:
         return ex
 
     def is_virtual(self):
-        if self.get_acceptor().is_intron() or self.get_acceptor().is_intron():
+        if self.get_acceptor() is None:
+            acc_intron = False
+        else:
+            acc_intron = self.get_acceptor().is_intron()
+
+        if self.get_donor() is None:
+            don_intron = False
+        else:
+            don_intron = self.get_donor().is_intron()
+
+        if acc_intron or don_intron:
             return True
         else:
             return False
