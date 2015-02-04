@@ -81,7 +81,7 @@ class LSV(object):
         return self.junctions
 
     def is_Ssource(self):
-        return bool(self.type ==  SSOURCE)
+        return bool(self.type == SSOURCE)
 
     def is_Starget(self):
         return bool(self.type == STARGET)
@@ -153,7 +153,7 @@ class LSV(object):
                     exs3 = ''
                     ex = '0'
                 else:
-                    self.intron_retention = self.intron_retention or jacceptor.is_intron
+                    self.intron_retention = self.intron_retention or jacceptor.is_intron()
                     s3 = sorted(list(set(jacceptor.ss_3p_list)), reverse=rev)
                     ex1 = ex_list.index(jacceptor.get_id())+1
                     ex = '%s.%so%s' % (ex1, s3.index(junc.end)+1,len(s3))
@@ -163,7 +163,7 @@ class LSV(object):
                     exs5 = ''
                     ex = '0'
                 else:
-                    self.intron_retention = self.intron_retention or jdonor.is_intron
+                    self.intron_retention = self.intron_retention or jdonor.is_intron()
                     s5 = sorted(list(set(jdonor.ss_5p_list)), reverse=rev)
                     ex1 = ex_list.index(jdonor.get_id())+1
                     ex = '%s.%so%s' % (ex1, s5.index(junc.start)+1, len(s5))
