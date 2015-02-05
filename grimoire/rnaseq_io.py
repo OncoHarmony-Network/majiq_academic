@@ -385,8 +385,6 @@ def read_sam_or_bam(filenames, gene_list, readlen, chrom, nondenovo=False, loggi
                     ng = read.seq.count('g') + read.seq.count('G') 
                     gc_content = float(nc + ng) / float(len(read.seq))
                     for (junc_start, junc_end) in junc_list:
-                        if junc_start == 20744648 and junc_end == 20747819:
-                            pass
                         if junc_start - r_start > readlen:
                             r_start = junc_start - (readlen - 16) - 1
                         elif junc_start - r_start >= readlen - 8 or junc_start - r_start <= 8:

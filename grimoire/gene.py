@@ -231,6 +231,7 @@ class Gene:
             if exs.is_intron():
                 exs.id = 0
             exs.id = idx+1
+            idx += 1
 
 
         return
