@@ -79,7 +79,15 @@ class Gene:
         return res
 
     def get_exon_by_id(self, ex_id):
-        return self.exons[ex_id-1]
+        # return self.exons[ex_id-1]
+        for ex in self.exons:
+            if ex.get_id() == ex_id:
+                res = ex
+                break
+        else:
+            res = None
+
+        return res
 
     # def get_transcript_AS_candidates(self):
     #     return self.transAScandidates
@@ -227,15 +235,13 @@ class Gene:
 #        self.exons.sort(reverse = isneg)
         self.exons.sort()
         idx = 0
-        for exs in self.exons:
-            if exs.is_intron():
-                exs.id = 0
-            else:
-                exs.id = idx+1
-                idx += 1
+        # for exs in self.exons:
+        #     if exs.is_intron():
+        #         exs.id = 0
+        #     else:
+        #         exs.id = idx+1
+        #         idx += 1
 
-
-        return
 
     def get_all_ss(self, anot_only=False):
 

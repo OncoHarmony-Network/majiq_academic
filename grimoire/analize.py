@@ -46,7 +46,7 @@ def lsv_detection(gene_list, chrom, only_real_data=False, logging=None):
             #num_ss_var [1]+= var_ss[1]
 
 #            print "---------------- %s --------------"%gn.get_id()
-            #utils.print_junc_matrices(mat, tlb=tlb, fp=True)
+#             utils.print_junc_matrices(mat, tlb=tlb, fp=True)
             SS, ST = lsv_matrix_detection(mat, tlb, (False, False, False), vip)
             dummy = {}
             for name, ind_list in mglobals.tissue_repl.items():
