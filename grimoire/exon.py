@@ -95,18 +95,17 @@ class Exon:
         #assert start < end , " INCORRECT exon definition %s - %s "%(start, end)
         if start >= end:
             return None
-        if start < self.start:
-            self.start = start
-        if end > self.end:
-            self.end = end
-        found = False
+        start = min(self.start, start)
+        end = max(self.end, end)
+
         for ii in self.exonRead_list:
             if start == ii.start and end == ii.end:
                 res = ii
+                res.add_5prime_junc(s5p_junc)
+                res.add_3prime_junc(s3p_junc)
                 #self.exonRead_list.append(res)
-                found = True
                 break
-        if not found:
+        else:
             for idx1, i1 in enumerate(self.ss_3p_list):
                 if i1 != start:
                     continue
@@ -120,18 +119,13 @@ class Exon:
         return res
 
     def add_new_definition(self, start, end, trncpt):
-        if start < self.start:
-            self.start = start
-        if end > self.end:
-            self.end = end
-        found = False
+        start = min(self.start, start)
+        end = max(self.end, end)
         for ii in self.exonTx_list:
             if start == ii.start and end == ii.end:
                 res = ii
-                # ii.add_transcript(trncpt)
-                found = True
                 break
-        if not found:
+        else:
 #            if self.strand == '+':
             self.ss_3p_list.append(start)
             self.ss_5p_list.append(end)
@@ -272,6 +266,14 @@ class ExonRead(object):
 
     def get_5p_junc(self):
         return self.p5_junc
+
+    def add_5prime_junc(self, junc):
+        if junc is not None and not junc in self.p5_junc:
+            self.p5_junc.append(junc)
+
+    def add_3prime_junc(self, junc):
+        if junc is not None and not junc in self.p3_junc:
+            self.p3_junc.append(junc)
 
     def bed_format(self):
         chrom = self.exon.get_gene().get_chromosome()

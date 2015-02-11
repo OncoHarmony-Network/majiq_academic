@@ -35,6 +35,9 @@ class Junction:
     def __hash__(self):
         return hash(self.start) ^ hash(self.end) ^ hash(self.gene_name)
 
+    # def __del__(self):
+    #     junc_list = self.get_gene().get_junction_list()
+
     # GETTERs
     def get_id(self):
         return self.id
