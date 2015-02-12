@@ -95,14 +95,15 @@ class Exon:
         #assert start < end , " INCORRECT exon definition %s - %s "%(start, end)
         if start >= end:
             return None
-        start = min(self.start, start)
-        end = max(self.end, end)
+        self.start = min(self.start, start)
+        self.end = max(self.end, end)
 
         for ii in self.exonRead_list:
             if start == ii.start and end == ii.end:
                 res = ii
                 res.add_5prime_junc(s5p_junc)
                 res.add_3prime_junc(s3p_junc)
+
                 #self.exonRead_list.append(res)
                 break
         else:
@@ -119,8 +120,8 @@ class Exon:
         return res
 
     def add_new_definition(self, start, end, trncpt):
-        start = min(self.start, start)
-        end = max(self.end, end)
+        self.start = min(self.start, start)
+        self.end = max(self.end, end)
         for ii in self.exonTx_list:
             if start == ii.start and end == ii.end:
                 res = ii
