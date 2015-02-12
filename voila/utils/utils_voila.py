@@ -69,7 +69,6 @@ class LsvGraphicEncoder(json.JSONEncoder):
         return json.JSONEncoder.default(self, obj)
 
 
-
 def expected_dpsi(bins):
     return sum(np.array(bins) * np.arange(-1+1./len(bins), 1.,2./len(bins)))
 
@@ -85,7 +84,7 @@ def get_prob_delta_psi_greater_v(bins, expected, V=.2):
             left = i-1
         if right == bins.size*2 and w > (expected + abs(expected*V)):
             right = i
-    return (np.sum(bins[:left]) + np.sum(bins[right:]))
+    return np.sum(bins[:left] + np.sum(bins[right:]))
 
 
 def get_lsv_single_exp_data(voila_input_file, gene_name_list=None, lsv_types=None, logger=None):
@@ -119,7 +118,6 @@ def get_lsv_single_exp_data(voila_input_file, gene_name_list=None, lsv_types=Non
             'meta_exps':    voila_input.metainfo}
 
 
-
 def get_lsv_delta_exp_data(voila_input_file, confidence=.95, threshold=.2, show_all=False, gene_name_list=None, logger=None):
     """
     Load lsv delta psi pickle file. It contains a list with 2 elements:
@@ -141,6 +139,9 @@ def get_lsv_delta_exp_data(voila_input_file, confidence=.95, threshold=.2, show_
     lsv_list = voila_input.lsvs
 
     for i, vlsv in enumerate(lsv_list):
+        if np.any(np.isnan(vlsv.get_bins())):
+            logger.warning("LSV %s bins contain NaNs" % vlsv.get_id())
+            continue
         include_lsv = show_all
         gene_name_id = str(vlsv.lsv_graphic.id).split(':')[0]
         gene_name = vlsv.lsv_graphic.name.upper()
