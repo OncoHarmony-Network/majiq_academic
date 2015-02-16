@@ -25,8 +25,8 @@ class GeneGraphic(object):
         self.exons = exons
         self.junctions = junctions
         self.chrom = chrom
-        self.start = exons[0].coords[0]
-        self.end = exons[-1].coords[1]
+        self.start = exons[0].get_coords()[0]
+        self.end = exons[-1].get_coords()[1]
         super(GeneGraphic, self).__init__(**kwds)
 
     def get_id(self):
@@ -56,7 +56,7 @@ class GeneGraphic(object):
     def get_coords(self):
         # return [self.start, self.end]
         # if self.strand == '+':
-        return [self.exons[0].coords[0], self.exons[-1].coords[1]]
+        return [self.exons[0].get_coords()[0], self.exons[-1].get_coords()[1]]
         # if self.strand == '-':
         #     return [self.exons[-1].coords[1], self.exons[0].coords[0]]
 
@@ -117,7 +117,14 @@ class ExonGraphic(object):
         return self.a5
 
     def get_coords(self):
-        return self.coords
+        # Mask unkonwn start or ends
+        def mask_unknown(coords):
+            if coords[0] is None:
+                coords[0] = -1
+            if coords[1] is None:
+                coords[1] = -1
+            return coords
+        return mask_unknown(list(self.coords))
 
     def get_type(self):
         return self.type_exon
