@@ -552,17 +552,19 @@ def new_exon_definition(start, end, read_rna, s3prime_junc, s5prime_junc, gene, 
         if start != EMPTY_COORD and start < (coords[0] - mglobals.get_max_denovo_difference()):
             new_exons += 1
             ex = Exon(start, EMPTY_COORD, gene, gene.get_strand(), isintron)
+            cc = ex.get_coordinates()
             s3prime_junc.add_acceptor(ex)
             gene.add_exon(ex)
-            ex.add_new_read(start, EMPTY_COORD, read_rna, s3prime_junc, EMPTY_COORD)
+            ex.add_new_read(cc[0], cc[1], read_rna, s3prime_junc, None)
             half = True
 
         if end != EMPTY_COORD and end > (coords[1] + mglobals.get_max_denovo_difference()):
             new_exons += 1
             ex = Exon(EMPTY_COORD, end, gene, gene.get_strand(), isintron)
+            cc = ex.get_coordinates()
             s5prime_junc.add_donor(ex)
             gene.add_exon(ex)
-            ex.add_new_read(EMPTY_COORD, end, read_rna, EMPTY_COORD, s5prime_junc)
+            ex.add_new_read(cc[0], cc[1], read_rna, None, s5prime_junc)
             half = True
 
     if not half:
