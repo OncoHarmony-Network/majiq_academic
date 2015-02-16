@@ -4,10 +4,10 @@ import numpy as np
 import mglobals
 from grimoire.lsv import LSV_IR
 from grimoire.junction import Junction
+from voila import constants as viola_const
 import os
 
 class Exon:
-
     __eq__ = lambda self, other: self.start < other.end and self.end > other.start
     __ne__ = lambda self, other: self.start >= other.end or self.end <= other.start
     __lt__ = lambda self, other: self.end <= other.start 
@@ -55,6 +55,9 @@ class Exon:
 
     def get_gene(self):
         return mglobals.gene_tlb[self.gene_name]
+
+    def is_annotated(self):
+        return self.annotated
 
     def get_annotated_exon(self):
         return self.exonTx_list
@@ -523,19 +526,37 @@ def new_exon_definition(start, end, read_rna, s3prime_junc, s5prime_junc, gene, 
 
     if end - start < 5:
         return 0
-#    print "NEW DEFINITION::",start, end
 
     ex = gene.exist_exon(start, end)
     new_exons = 0
+    half = False
+
     if ex is None:
         new_exons = 1
         ex = Exon(start, end, gene, gene.get_strand(), isintron)
         gene.add_exon(ex)
-#    else:
-#        print "EXON FOUND", ex, ex.get_coordinates(), ex.annotated
-    ex.add_new_read(start, end, read_rna, s3prime_junc, s5prime_junc)
-    s3prime_junc.add_acceptor(ex)
-    s5prime_junc.add_donor(ex)
+    else:
+        coords = ex.get_coordinates()
+        if start is not None and start < (coords[0] - mglobals.get_max_denovo_difference()):
+            new_exons += 1
+            ex = Exon(start, None, gene, gene.get_strand(), isintron)
+            s3prime_junc.add_acceptor(ex)
+            gene.add_exon(ex)
+            ex.add_new_read(start, None, read_rna, s3prime_junc, None)
+            half = True
+
+        if end is not None and end > (coords[1] + mglobals.get_max_denovo_difference()):
+            new_exons += 1
+            ex = Exon(None, end, gene, gene.get_strand(), isintron)
+            s5prime_junc.add_donor(ex)
+            gene.add_exon(ex)
+            ex.add_new_read(None, end, read_rna, None, s5prime_junc)
+            half = True
+
+    if not half:
+        ex.add_new_read(start, end, read_rna, s3prime_junc, s5prime_junc)
+        s3prime_junc.add_acceptor(ex)
+        s5prime_junc.add_donor(ex)
 
     return new_exons
 
@@ -549,21 +570,14 @@ def detect_exons(gene, junction_list, read_rna):
     first_3prime = None
 
     junction_list.extend(gene.get_all_ss())
-
     junction_list.sort()
-#    print "JUNC EXTENDED", junction_list
-#    print "DETECT EXONS::",gene.get_id()
     for (coord, jtype, jj) in junction_list:
-#        print "---NEW-------------------------------------------------------------"
-#        print coord, jtype, jj, jj.coverage.sum(), jj.is_annotated()
-        if jj.coverage.sum() < mglobals.MINREADS and not jj.is_annotated():
+
+        if jj.is_reliable() and not jj.is_annotated():
             continue
-#        print coord, jtype, jj, jj.coverage.sum(), jj.annotated
-#        print "LIST",opened_exon
-#        print "LASTS",first_3prime, last_5prime
+
         jj_gene = jj.get_gene()
         if jtype == '5prime':
-#            print "CHECK 1",coord,jj.get_ss_5p()
             if opened > 0:
                 start = opened_exon[-1].get_ss_3p()
                 end = coord
@@ -593,7 +607,6 @@ def detect_exons(gene, junction_list, read_rna):
                     opened_exon = []
                     first_3prime = jj
             else:
-#                print "CHECK 2.2",coord,jj.get_ss_3p()
                 last_5prime = None
                 first_3prime = jj
             #end else ...
@@ -604,7 +617,7 @@ def detect_exons(gene, junction_list, read_rna):
         new_exons += __half_exon('3prime', ss, read_rna)
 
     for (coord, jtype, jj) in junction_list:
-        if jj.coverage.sum() < mglobals.MINREADS and not jj.is_annotated():
+        if jj.is_reliable() and not jj.is_annotated():
             junction_list.remove((coord, jtype, jj))
             del jj
             continue

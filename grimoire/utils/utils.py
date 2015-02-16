@@ -14,7 +14,7 @@ import grimoire.rnaseq_io as majiq_io
 from voila.splice_graphics import ExonGraphic
 from voila.splice_graphics import GeneGraphic
 from voila.splice_graphics import JunctionGraphic
-from voila import constants as viola_const
+from voila import constants as voila_const
 import random
 from contextlib import contextmanager as ctx
 import gc
@@ -224,15 +224,15 @@ def generate_visualization_output(allgenes, temp_dir):
                         num_reads = jj.get_read_num(exp_idx)
                         if jj.is_annotated() and num_reads == 0:
                             if (jj.get_read_num(-1) - num_reads) > 0:
-                                jtype = viola_const.JUNCTION_TYPE_DB_OTHER_RNASEQ
+                                jtype = voila_const.JUNCTION_TYPE_DB_OTHER_RNASEQ
                             else:
-                                jtype = viola_const.JUNCTION_TYPE_DB
+                                jtype = voila_const.JUNCTION_TYPE_DB
                         elif jj.is_annotated() and num_reads > 0:
-                            jtype = viola_const.JUNCTION_TYPE_DB_RNASEQ
+                            jtype = voila_const.JUNCTION_TYPE_DB_RNASEQ
                         elif not jj.is_annotated() and num_reads > mglobals.MINREADS:
-                            jtype = viola_const.JUNCTION_TYPE_RNASEQ
+                            jtype = voila_const.JUNCTION_TYPE_RNASEQ
                         else:
-                            jtype = viola_const.JUNCTION_TYPE_RNASEQ
+                            jtype = voila_const.JUNCTION_TYPE_RNASEQ
                             #continue
                         junc_l.append(jj.get_coordinates())
                         junc_list.append(JunctionGraphic(cc, jtype, num_reads, transcripts=jj.get_transcript_list()))
@@ -262,15 +262,18 @@ def generate_visualization_output(allgenes, temp_dir):
                                     a5.append(jidx)
 
                         ex_reads = ex.get_total_read_num(exp_idx)
-
-                        if ex.annotated and ex_reads == 0.0:
-                            visual_type = 2
+                        if cc[0] is None:
+                            visual_type = voila_const.EXON_TYPE_MISSING_START
+                        elif cc[1] is None:
+                            visual_type = voila_const.EXON_TYPE_MISSING_END
+                        elif ex.annotated and ex_reads == 0.0:
+                            visual_type = voila_const.EXON_TYPE_DB
                         elif ex.annotated and ex_reads > 0.0:
-                            visual_type = 0
+                            visual_type = voila_const.EXON_TYPE_DB_RNASEQ
                         elif not ex.annotated and ex_reads > 0.0:
-                            visual_type = 1
+                            visual_type = voila_const.EXON_TYPE_RNASEQ
                         else:
-                            visual_type = 1
+                            visual_type = voila_const.EXON_TYPE_RNASEQ
     #                        continue
                         extra_coords = []
                         if ex.annotated:

@@ -51,6 +51,7 @@ def global_conf_ini(filename, params):
 
     config = ConfigParser.ConfigParser()
     config.read(filename)
+    #TODO: check if filename exists
     exp = ConfigSectionMap(config, "experiments")
     general = ConfigSectionMap(config, "info")
     exp_list = []
@@ -89,6 +90,10 @@ def global_conf_ini(filename, params):
     bothSS = 0
     SEev = [0]*5
     totalSE = 0
+
+
+def get_max_denovo_difference():
+    return 1000
 
 
 def set_gc_factors(bins, factor, means):

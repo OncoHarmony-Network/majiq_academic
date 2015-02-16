@@ -376,9 +376,7 @@ def read_sam_or_bam(filenames, gene_list, readlen, chrom, nondenovo=False, loggi
                             ex_list[ex_idx].update_coverage(exp_index, nreads)
                             temp_ex.append(ex_list[ex_idx])
                             break
-                    #else:
-                    #    break
-    
+
                     if not is_cross:
                         continue
                     nc = read.seq.count('C') + read.seq.count('c') 
@@ -389,7 +387,7 @@ def read_sam_or_bam(filenames, gene_list, readlen, chrom, nondenovo=False, loggi
                             r_start = junc_start - (readlen - 16) - 1
                         elif junc_start - r_start >= readlen - 8 or junc_start - r_start <= 8:
                             continue
-                        found = False
+
                         if junc_end - junc_start < 10:
                             counter[0] += 1
                             continue
@@ -407,12 +405,12 @@ def read_sam_or_bam(filenames, gene_list, readlen, chrom, nondenovo=False, loggi
                                 if not (junc_start, '5prime', jj) in junctions:
                                     junctions.append((junc_start, '5prime', jj))
                                     junctions.append((junc_end, '3prime', jj))
-                                found = True
                                 break
                             #end elif junc_start == ...
                         #end for jj in j_list
-
-                        if not found:
+                        else:
+                            if nondenovo:
+                                continue
                             ''' update junction and add to list'''
                             junc = None
                             for (coord, t, jnc) in junctions:

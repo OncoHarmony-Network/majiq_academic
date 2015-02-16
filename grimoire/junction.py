@@ -114,6 +114,16 @@ class Junction:
     def is_annotated(self):
         return self.annotated
 
+    def is_reliable(self):
+        cov = self.coverage().toarray()
+        res = False
+        for tissue, list_idx in mglobals.tissue_repl.items():
+            mu = np.mean(cov[list_idx].sum(axis=1))
+            if mu > mglobals.MIN_READS:
+                res = True
+                break
+        return res
+
     #MODIFIERs
 
     def add_gc_content_positions(self, pos, gc):
