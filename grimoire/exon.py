@@ -24,6 +24,10 @@ class Exon:
         self.exonRead_list = []
         self.ss_3p_list = []
         self.ss_5p_list = []
+        if start == EMPTY_COORD:
+            start = end - 10
+        if end == EMPTY_COORD:
+            end = start + 10
         self.id = "%s:%d-%d" % (self.gene_name, start, end)
         self.strand = strand
         self.gc_content = 0
@@ -528,6 +532,7 @@ def __half_exon(ss_type, junc, read_rna):
             break
     return 0
 
+EMPTY_COORD = -1
 
 def new_exon_definition(start, end, read_rna, s3prime_junc, s5prime_junc, gene, isintron=False):
 
@@ -544,20 +549,20 @@ def new_exon_definition(start, end, read_rna, s3prime_junc, s5prime_junc, gene, 
         gene.add_exon(ex)
     else:
         coords = ex.get_coordinates()
-        if start is not None and start < (coords[0] - mglobals.get_max_denovo_difference()):
+        if start != EMPTY_COORD and start < (coords[0] - mglobals.get_max_denovo_difference()):
             new_exons += 1
-            ex = Exon(start, None, gene, gene.get_strand(), isintron)
+            ex = Exon(start, EMPTY_COORD, gene, gene.get_strand(), isintron)
             s3prime_junc.add_acceptor(ex)
             gene.add_exon(ex)
-            ex.add_new_read(start, None, read_rna, s3prime_junc, None)
+            ex.add_new_read(start, EMPTY_COORD, read_rna, s3prime_junc, EMPTY_COORD)
             half = True
 
-        if end is not None and end > (coords[1] + mglobals.get_max_denovo_difference()):
+        if end != EMPTY_COORD and end > (coords[1] + mglobals.get_max_denovo_difference()):
             new_exons += 1
-            ex = Exon(None, end, gene, gene.get_strand(), isintron)
+            ex = Exon(EMPTY_COORD, end, gene, gene.get_strand(), isintron)
             s5prime_junc.add_donor(ex)
             gene.add_exon(ex)
-            ex.add_new_read(None, end, read_rna, None, s5prime_junc)
+            ex.add_new_read(EMPTY_COORD, end, read_rna, EMPTY_COORD, s5prime_junc)
             half = True
 
     if not half:
