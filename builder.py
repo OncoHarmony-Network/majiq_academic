@@ -57,6 +57,10 @@ def majiq_builder(samfiles_list, chrom, pcr_validation=None, gff_output=None, cr
 
     utils.prepare_lsv_table(lsv, const, temp_dir)
 
+    #ANALYZE_DENOVO
+    utils.analyze_denovo_junctions(gene_list, "%s/denovo.pkl" % temp_dir)
+    utils.histogram_for_exon_analysis(gene_list, "%s/ex_lengths.pkl" % temp_dir)
+
 
 def __parallel_lsv_quant(samfiles_list, chrom, pcr_validation=False, gff_output=None, silent=False, debug=0):
 

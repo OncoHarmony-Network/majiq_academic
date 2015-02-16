@@ -499,6 +499,9 @@ def clear_gene_tlb():
     gc.collect()
 
 
+
+
+
 def to_gtf(wfile, seq_name, source, gene, mrna, start_trans, end_trans, strand, exon_l, frame_l):
     sscore = "0"
     # Iterate over each exon
@@ -592,3 +595,40 @@ def gather_files(outDir, settings_ini, prefix='', gff_out=None, pcr_out=None):
             for pcr in pcr_l:
                 fp.write("%s\n" % pcr)
         fp.close()
+
+
+#ANALYSIS FUNCTIONS
+
+def analyze_denovo_junctions(genes, output):
+
+    denovo_list = []
+    for strand, gglist in genes.items():
+        for gg in gglist:
+            jlist = gg.get_all_junctions()
+            for jj in jlist:
+                if jj.is_annotated():
+                    continue
+                denovo_list.append(jlist)
+
+    majiq_io.dump_bin_file(denovo_list, output)
+
+
+def histogram_for_exon_analysis(genes, output):
+
+    denovo_list = []
+    annotated_list = []
+    for strand, gglist in genes.items():
+        for gg in gglist:
+            ex_list = gg.get_exon_list()
+            for ex in ex_list:
+                lngth = ex.get_length()
+                if ex.is_annotated():
+                    annotated_list.append(lngth)
+                else:
+                    denovo_list.append(lngth)
+
+    majiq_io.dump_bin_file([annotated_list, denovo_list], output)
+
+
+
+

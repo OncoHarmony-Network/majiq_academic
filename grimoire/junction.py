@@ -160,6 +160,7 @@ class MajiqJunc:
 
     def __init__(self, jnc, exp_idx):
         self.exons = {}
+        self.annot = jnc.is_annotated()
         if jnc is None:
             self.gc_index = scipy.sparse.lil_matrix((1, (mglobals.readLen-16)+1), dtype=np.int)
             self.name = None
