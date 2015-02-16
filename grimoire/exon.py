@@ -73,6 +73,13 @@ class Exon:
         ss5_l = sorted(list(ss5))
         return ss3_l, ss5_l
 
+    def get_length(self):
+        if self.end is None or self.start is None:
+            ln = 0
+        else:
+            ln = self.end - self.start
+        return ln
+
     def set_ir(self, ir):
         self.ir |= ir
 
