@@ -551,20 +551,20 @@ def new_exon_definition(start, end, read_rna, s3prime_junc, s5prime_junc, gene, 
         coords = ex.get_coordinates()
         if start != EMPTY_COORD and start < (coords[0] - mglobals.get_max_denovo_difference()):
             new_exons += 1
-            ex = Exon(start, EMPTY_COORD, gene, gene.get_strand(), isintron)
-            cc = ex.get_coordinates()
-            s3prime_junc.add_acceptor(ex)
-            gene.add_exon(ex)
-            ex.add_new_read(cc[0], cc[1], read_rna, s3prime_junc, None)
+            ex1 = Exon(start, EMPTY_COORD, gene, gene.get_strand(), isintron)
+            cc = ex1.get_coordinates()
+            s3prime_junc.add_acceptor(ex1)
+            gene.add_exon(ex1)
+            ex1.add_new_read(cc[0], cc[1], read_rna, s3prime_junc, None)
             half = True
 
         if end != EMPTY_COORD and end > (coords[1] + mglobals.get_max_denovo_difference()):
             new_exons += 1
-            ex = Exon(EMPTY_COORD, end, gene, gene.get_strand(), isintron)
-            cc = ex.get_coordinates()
-            s5prime_junc.add_donor(ex)
-            gene.add_exon(ex)
-            ex.add_new_read(cc[0], cc[1], read_rna, None, s5prime_junc)
+            ex2 = Exon(EMPTY_COORD, end, gene, gene.get_strand(), isintron)
+            cc = ex2.get_coordinates()
+            s5prime_junc.add_donor(ex2)
+            gene.add_exon(ex2)
+            ex2.add_new_read(cc[0], cc[1], read_rna, None, s5prime_junc)
             half = True
 
     if not half:
