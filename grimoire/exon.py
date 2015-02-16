@@ -17,6 +17,11 @@ class Exon:
 
     def __init__(self, start, end, gene, strand, annot=False, isintron=False):
 
+        if start == EMPTY_COORD:
+            start = end - 10
+        if end == EMPTY_COORD:
+            end = start + 10
+
         self.start = start
         self.end = end
         self.gene_name = gene.get_id()
@@ -72,6 +77,13 @@ class Exon:
         ss3_l = sorted(list(ss3))
         ss5_l = sorted(list(ss5))
         return ss3_l, ss5_l
+
+    def get_length(self):
+        if self.end is None or self.start is None:
+            ln = 0
+        else:
+            ln = self.end - self.start
+        return ln
 
     def set_ir(self, ir):
         self.ir |= ir
@@ -521,6 +533,7 @@ def __half_exon(ss_type, junc, read_rna):
             break
     return 0
 
+EMPTY_COORD = -1
 
 def new_exon_definition(start, end, read_rna, s3prime_junc, s5prime_junc, gene, isintron=False):
 
@@ -537,20 +550,25 @@ def new_exon_definition(start, end, read_rna, s3prime_junc, s5prime_junc, gene, 
         gene.add_exon(ex)
     else:
         coords = ex.get_coordinates()
-        if start is not None and start < (coords[0] - mglobals.get_max_denovo_difference()):
-            new_exons += 1
-            ex = Exon(start, None, gene, gene.get_strand(), isintron)
-            s3prime_junc.add_acceptor(ex)
-            gene.add_exon(ex)
-            ex.add_new_read(start, None, read_rna, s3prime_junc, None)
+        if start != EMPTY_COORD and start < (coords[0] - mglobals.get_max_denovo_difference()):
+            if gene.exist_exon(start, start+10) is None:
+                new_exons += 1
+
+                ex1 = Exon(start, EMPTY_COORD, gene, gene.get_strand(), isintron)
+                cc = ex1.get_coordinates()
+                s3prime_junc.add_acceptor(ex1)
+                gene.add_exon(ex1)
+                ex1.add_new_read(cc[0], cc[1], read_rna, s3prime_junc, None)
             half = True
 
-        if end is not None and end > (coords[1] + mglobals.get_max_denovo_difference()):
-            new_exons += 1
-            ex = Exon(None, end, gene, gene.get_strand(), isintron)
-            s5prime_junc.add_donor(ex)
-            gene.add_exon(ex)
-            ex.add_new_read(None, end, read_rna, None, s5prime_junc)
+        if end != EMPTY_COORD and end > (coords[1] + mglobals.get_max_denovo_difference()):
+            if gene.exist_exon(start, start+10) is None:
+                new_exons += 1
+                ex2 = Exon(EMPTY_COORD, end, gene, gene.get_strand(), isintron)
+                cc = ex2.get_coordinates()
+                s5prime_junc.add_donor(ex2)
+                gene.add_exon(ex2)
+                ex2.add_new_read(cc[0], cc[1], read_rna, None, s5prime_junc)
             half = True
 
     if not half:

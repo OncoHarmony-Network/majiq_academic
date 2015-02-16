@@ -115,11 +115,11 @@ class Junction:
         return self.annotated
 
     def is_reliable(self):
-        cov = self.coverage().toarray()
+        cov = self.get_coverage().toarray()
         res = False
         for tissue, list_idx in mglobals.tissue_repl.items():
             mu = np.mean(cov[list_idx].sum(axis=1))
-            if mu > mglobals.MIN_READS:
+            if mu > mglobals.MINREADS:
                 res = True
                 break
         return res
