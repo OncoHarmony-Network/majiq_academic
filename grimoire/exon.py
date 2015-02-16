@@ -17,6 +17,11 @@ class Exon:
 
     def __init__(self, start, end, gene, strand, annot=False, isintron=False):
 
+        if start == EMPTY_COORD:
+            start = end - 10
+        if end == EMPTY_COORD:
+            end = start + 10
+
         self.start = start
         self.end = end
         self.gene_name = gene.get_id()
@@ -24,10 +29,6 @@ class Exon:
         self.exonRead_list = []
         self.ss_3p_list = []
         self.ss_5p_list = []
-        if start == EMPTY_COORD:
-            start = end - 10
-        if end == EMPTY_COORD:
-            end = start + 10
         self.id = "%s:%d-%d" % (self.gene_name, start, end)
         self.strand = strand
         self.gc_content = 0
