@@ -151,11 +151,7 @@ def main(params):
     logger.info("")
     logger.info("Command: %s" % params)
 
-
-    p = Process(target=__parallel_gff3, args=(params.transcripts))
-    logger.info("... waiting gff3 parsing")
-    p.start()
-    p.join()
+    majiq_io.read_gff(params.transcripts, None, logging=logger)
     chr_list = majiq_io.load_bin_file("%s/tmp/chromlist.pkl" % mglobals.outDir)
 
     for chrom in chr_list:
