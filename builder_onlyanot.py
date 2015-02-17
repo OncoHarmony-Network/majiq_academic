@@ -99,12 +99,12 @@ def lsv_detection(gene_list, chrom, only_real_data=False, logging=None):
 
     return lsv_list, const_set
 
-def __parallel_gff3(transcripts, pcr_filename, output, silent=False, debug=0):
+def __parallel_gff3(transcripts, silent=False, debug=0):
 
     try:
         print "START child,", current_process().name
         tlogger = utils.get_logger("%s/db.majiq.log" % mglobals.outDir, silent=silent, debug=debug)
-        majiq_io.read_gff(transcripts, pcr_filename, logging=tlogger)
+        majiq_io.read_gff(transcripts, None, logging=tlogger)
         print "END child, ", current_process().name
     except Exception as e:
         traceback.print_exc()
@@ -147,12 +147,12 @@ def main(params):
 
     mglobals.global_conf_ini(params.conf, params)
 
-    logger = utils.get_logger("%s/majiq.log" % mglobals.outDir, silent=params.silent, debug=params.debug)
+    logger = utils.get_logger("%s/majiq.log" % mglobals.outDir)
     logger.info("")
     logger.info("Command: %s" % params)
 
     if not params.onlygather:
-        p = Process(target=__parallel_gff3, args=(params.transcripts, params.pcr_filename, params.output))
+        p = Process(target=__parallel_gff3, args=(params.transcripts))
         logger.info("... waiting gff3 parsing")
         p.start()
         p.join()
