@@ -99,11 +99,11 @@ def lsv_detection(gene_list, chrom, only_real_data=False, logging=None):
 
     return lsv_list, const_set
 
-def __parallel_gff3(transcripts, silent=False, debug=0):
+def __parallel_gff3(transcripts):
 
     try:
         print "START child,", current_process().name
-        tlogger = utils.get_logger("%s/db.majiq.log" % mglobals.outDir, silent=silent, debug=debug)
+        tlogger = utils.get_logger("%s/db.majiq.log" % mglobals.outDir, silent=False, debug=0)
         majiq_io.read_gff(transcripts, None, logging=tlogger)
         print "END child, ", current_process().name
     except Exception as e:
