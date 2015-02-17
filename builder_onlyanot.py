@@ -127,6 +127,13 @@ def _generate_parser():
     parser.add_argument('transcripts', action="store", help='read file in SAM format')
     parser.add_argument('-conf', default=None, help='Provide study configuration file with all '
                                                     'the execution information')
+    parser.add_argument('--minreads', default=2, type=int,
+                             help='Minimum number of reads threshold combining all positions in a LSV to consider that'
+                                  'the LSV "exist in the data". '
+                             '[Default: %(default)s]')
+    parser.add_argument('--minpos', default=2, type=int, help='Minimum number of start positions with at least 1 '
+                                                                   'read in a LSV to consider that the LSV "exist in '
+                                                                   'the data"')
 
     return parser.parse_args()
 
