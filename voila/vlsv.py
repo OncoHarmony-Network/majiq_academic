@@ -158,9 +158,14 @@ def extract_bins_info(lsv, threshold, include_lsv):
     return expected_psis_bins, excl_inc_perc_list, include_lsv
 
 
+class OrphanJunctionException(Exception):
+    def __init__(self, m):
+        self.message = m
+
+
 class VoilaLsv(object):
     """LSV information unit managed by Voila"""
-    def __init__(self, bins_list, lsv_graphic, psi1=None, psi2=None):
+    def __init__(self, bins_list, lsv_graphic, psi1=None, psi2=None, logger=None):
         self.bins = bins_list
         self.lsv_graphic = lsv_graphic
         self.psi1 = np.array(psi1).tolist()
@@ -176,7 +181,13 @@ class VoilaLsv(object):
 
         # Contextual info
         if lsv_graphic:
-            self.set_gff3(lsv_graphic)
+            try:
+                self.set_gff3(lsv_graphic)
+            except OrphanJunctionException, e:
+                if logger:
+                    logger.warning(e.message)
+                else:
+                    print "[WARNING] :: %s" % e.message
             # For LSV filtering
             self.init_categories()
         self.psi_junction = 0
@@ -310,15 +321,16 @@ class VoilaLsv(object):
             for eG in lexonG:
                 if jidx in eG.get_a5_list():
                     return eG
-            print "[WARNING] :: Orphan junction %s in lsv %s." % (repr(geneG.get_junctions()[jidx]), self.get_id())
+            raise OrphanJunctionException("Orphan junction %s in lsv %s." % (repr(geneG.get_junctions()[jidx].get_coords()), self.get_id()))
 
         def find_exon_a3(lexonG, jidx):
             for eG in lexonG:
                 if jidx in eG.get_a3_list():
                     return eG
-            print "[WARNING] :: Orphan junction %s in lsv %s." % (repr(geneG.get_junctions()[jidx]), self.get_id())
+            raise OrphanJunctionException("Orphan junction %s in lsv %s." % (repr(geneG.get_junctions()[jidx].get_coords()), self.get_id()))
 
         # fields = ['seqid', 'source', 'type', 'start', 'end', 'score', 'strand', 'phase', 'attributes']
+        self.gff3_str = ''
         trans = []
         lexons = geneG.get_exons()
 
