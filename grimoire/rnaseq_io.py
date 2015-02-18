@@ -392,6 +392,8 @@ def read_sam_or_bam(filenames, gene_list, readlen, chrom, nondenovo=False, loggi
                             counter[0] += 1
                             continue
 
+                        found = False
+
                         for jj in j_list:
                             (j_st, j_ed) = jj.get_coordinates()
                             if j_st > junc_start or (j_st == junc_start and j_ed > junc_end):
@@ -400,6 +402,7 @@ def read_sam_or_bam(filenames, gene_list, readlen, chrom, nondenovo=False, loggi
                                 continue
                             elif junc_start == j_st and junc_end == j_ed:
                                 ''' update junction and add to list'''
+                                found = True
                                 counter[3] += 1
                                 jj.update_junction_read(exp_index, nreads, r_start, gc_content, unique)
                                 if not (junc_start, '5prime', jj) in junctions:
@@ -408,9 +411,11 @@ def read_sam_or_bam(filenames, gene_list, readlen, chrom, nondenovo=False, loggi
                                 break
                             #end elif junc_start == ...
                         #end for jj in j_list
-                        else:
+
+                        if not found:
                             if nondenovo:
                                 continue
+
                             ''' update junction and add to list'''
                             junc = None
                             for (coord, t, jnc) in junctions:
@@ -452,98 +457,6 @@ def read_sam_or_bam(filenames, gene_list, readlen, chrom, nondenovo=False, loggi
     logging.debug("Skipped genes without exons", skip_gene)
     logging.debug(" Non skipped", non_skip)
     return 
-
-
-def read_transcript_ucsc(filename):
-    print "Reading transcript ucsc format"
-    buffer_size = int(10E6)
-    file_p = open(filename, 'r')
-    text = file_p.readlines(buffer_size)
-    all_genes = {}
-    while text != []:
-        print "New Buffer"
-        for t in text:
-            t = t.strip()
-            if t.startswith('#') or t == '':
-                continue
-            tab = t.split('\t')
-            chrom = tab[0]
-
-            #BED format file is 0 based, so the first base of the chromosome is 0.
-            # That means that the first real base of an exon is start+1'''
-            start = int(tab[1])+1
-            end = int(tab[2])
-            strand = tab[5]
-            gene_id = tab[3]
-            transcript_id = tab[3]
-            off_start = tab[11].split(',')
-            off_len = tab[10].split(',')
-            nblocks = int(tab[9])
-
-            ex_start = [0]*nblocks
-            ex_end = [0]*nblocks
-            for ii in range(nblocks):
-                ex_start[ii] = int(off_start[ii])+start
-                ex_end[ii] = ex_start[ii] + int(off_len[ii])-1
-
-            if not chrom in all_genes:
-                all_genes[chrom] = {'+': [], '-': []}
-            gn = Gene(gene_id, chrom, strand, start, end)
-            gene = gn.is_gene_in_list(all_genes[chrom][strand], gene_id)
-            if not gene is None:
-                del gn
-                gn = gene
-            else:
-                all_genes[chrom][strand].append(gn)
-
-            trcpt = Transcript(transcript_id, gn, start, end)
-            gn.add_transcript(trcpt)
-            pre_end = None
-            pre_txex = None
-            for ii in xrange(nblocks):
-                start = ex_start[ii]
-                end = ex_end[ii]
-
-                txex = gn.new_annotated_exon(start, end, trcpt)
-                trcpt.add_exon(txex)
-                junc = gn.exist_junction(pre_end, start)
-                if junc is None:
-                    junc = Junction(pre_end, start, None, None, gn, annotated=True)
-                trcpt.add_junction(junc)
-                txex.add_3prime_junc(junc)
-                if not pre_end is None:
-                    pre_txex.add_5prime_junc(junc)
-                pre_end = end
-                pre_txex = txex
-            #END for ii in range(nblocks)
-            if not pre_end is None: 
-                junc = Junction(pre_end, None, None, None, gn, annotated=True)
-                trcpt.add_junction(junc)
-                pre_txex.add_5prime_junc(junc)
-            trcpt.sort_in_list()
-        #end for t in text
-        gc.collect()
-        text = file_p.readlines(buffer_size)
-    #END WHILE
-    file_p.close()
-
-    n_genes = 0
-    for chrom in all_genes.keys():
-        temp_ex = []
-        for strand, gg in all_genes[chrom].items():
-            n_genes += len(gg)
-            all_genes[chrom][strand] = sorted(gg)
-            for gene in all_genes[chrom][strand]:
-#                print "COLLAPSING GENE", gene.get_id()
-                gene.collapse_exons()
-                temp_ex.extend(gene.get_exon_list())
-#                print "NUM IR:", len(gene.ir_list)
-        print "Calculating gc_content.........",
-        majiq_exons.set_exons_gc_content(chrom, temp_ex)
-        print "Done."
-
-    print "NUM_GENES", n_genes
-    return all_genes
 
 
 def read_bed_pcr(filename, list_genes):
@@ -698,7 +611,6 @@ def _prepare_and_dump(genes, logging=None):
     dump_bin_file(genes.keys(), tmp_chrom)
     if not logging is None:
         logging.debug("Number of Genes", n_genes)
-
 
 
 def read_gff(filename, pcr_filename, logging=None):

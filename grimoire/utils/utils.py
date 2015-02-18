@@ -608,7 +608,7 @@ def analyze_denovo_junctions(genes, output):
             for jj in jlist:
                 if jj.is_annotated():
                     continue
-                denovo_list.append(jlist)
+                denovo_list.append(jj)
 
     majiq_io.dump_bin_file(denovo_list, output)
 

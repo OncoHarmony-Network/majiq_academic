@@ -9,6 +9,7 @@ import grimoire.analize as analize
 import grimoire.rnaseq_io as majiq_io
 import grimoire.utils.utils as utils
 import grimoire.mglobals as mglobals
+import numpy as np
 import grimoire.lsv as majiq_lsv
 
 try:
@@ -110,6 +111,57 @@ def __parallel_gff3(transcripts):
         traceback.print_exc()
         sys.stdout.flush()
         raise()
+
+
+def merge_and_create_majiq_file(chr_list, pref_file):
+
+    """
+
+    :param chr_list:
+    :param pref_file:
+    """
+    if pref_file != '':
+        pref_file = '%s.' % pref_file
+    import random
+    for name, ind_list in mglobals.tissue_repl.items():
+        for idx, exp_idx in enumerate(ind_list):
+            all_visual = []
+            as_table = []
+            nonas_table = []
+            for chrom in chr_list:
+                temp_dir = "%s/tmp/%s" % (mglobals.outDir, chrom)
+                temp_filename = '%s/%s.splicegraph.pkl' % (temp_dir, mglobals.exp_list[exp_idx])
+                visual_gene_list = majiq_io.load_bin_file(temp_filename)
+                all_visual.append(visual_gene_list)
+            fname = '%s/%s%s.splicegraph' % (mglobals.outDir, pref_file, mglobals.exp_list[exp_idx])
+            visual = np.concatenate(all_visual)
+            majiq_io.dump_bin_file(visual, fname)
+            del all_visual
+            del visual
+
+            for chrom in chr_list:
+                temp_dir = "%s/tmp/%s" % (mglobals.outDir, chrom)
+                filename = "%s/%s.majiq.pkl" % (temp_dir, mglobals.exp_list[exp_idx])
+                temp_table = majiq_io.load_bin_file(filename)
+                as_table.append(temp_table[0])
+                nonas_table.append(temp_table[1])
+
+            if len(as_table) == 0:
+                continue
+
+            info = dict()
+            info['experiment'] = mglobals.exp_list[exp_idx]
+
+            info['genome'] = mglobals.genome
+            info['num_reads'] = mglobals.num_mapped_reads[exp_idx]
+            at = np.concatenate(as_table)
+            nat = np.concatenate(nonas_table)
+
+            clist = random.sample(nat, min(5000, len(nat)))
+
+            fname = '%s/%s%s.majiq' % (mglobals.outDir, pref_file, mglobals.exp_list[exp_idx])
+            majiq_io.dump_bin_file((info, at, clist), fname)
+
 
 
 def _new_subparser():
