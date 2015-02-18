@@ -648,24 +648,24 @@ def fdr_parse(direc, file_list, group_list):
 
 if __name__ == '__main__':
 
-    dire = '/Users/Jordi/working/LSV_types/majiqs'
+    dire = sys.argv[1]
     onlyfiles = [f for f in listdir(dire) if isfile(join(dire, f)) and f.endswith('majiq')]
-    groups = ['Adr', 'Aor', 'BFat', 'Bstm', 'Cer', 'Hrt', 'Hyp', 'Kid', 'Liv', 'Lun', 'Mus', 'WFat']
-    # onlyfiles = ['Adr_CT22.mm10.sorted.majiq', 'Aor_CT22.mm10.sorted.majiq']
-    # groups = ['Heart', 'Hippocampus']
+    #groups = ['Adr', 'Aor', 'BFat', 'Bstm', 'Cer', 'Hrt', 'Hyp', 'Kid', 'Liv', 'Lun', 'Mus', 'WFat']
+    #onlyfiles = ['Adr_CT22.mm10.sorted.majiq', 'Aor_CT22.mm10.sorted.majiq']
+    groups = ['output.Heart']
 
-    # print "Parse files"
-    # list_types, group_types = get_types(dire, onlyfiles, groups)
-    # count_lsv = len(set(list_types.keys()))
-    #
-    # stypes = {}
-    # for kk, tyt in list_types.items():
-    #     if not tyt in stypes:
-    #         stypes[tyt] = 0
-    #     stypes[tyt] += 1
-    #
-    # print "Plot 3.a 3.b"
-    # all_plots_wrapper(stypes, count_lsv)
+    print "Parse files"
+    list_types, group_types = get_types(dire, onlyfiles, groups)
+    count_lsv = len(set(list_types.keys()))
+
+    stypes = {}
+    for kk, tyt in list_types.items():
+        if not tyt in stypes:
+            stypes[tyt] = 0
+        stypes[tyt] += 1
+
+    print "Plot 3.a 3.b"
+    all_plots_wrapper(stypes, count_lsv)
     #
     # #read psi values
     # groups_vals = []
@@ -679,10 +679,10 @@ if __name__ == '__main__':
     # plot_dominant_exons(values[1], ' 3\'splice sites', color=cb.PuRd[9])
 
     #heatmap
-    print "Plot dpsi changing events heatmap"
-    dire = '/Users/Jordi/working/LSV_types/dpsi'
-    filename_list = [f for f in listdir(dire) if isfile(join(dire, f)) and f.endswith('txt')]
-    chg_lsv, complx_lsv = fdr_parse(dire, filename_list, groups)
-    plot_fdrheatmap(chg_lsv, complx_lsv, groups)
+    # print "Plot dpsi changing events heatmap"
+    # dire = '/Users/Jordi/working/LSV_types/dpsi'
+    # filename_list = [f for f in listdir(dire) if isfile(join(dire, f)) and f.endswith('txt')]
+    # chg_lsv, complx_lsv = fdr_parse(dire, filename_list, groups)
+    # plot_fdrheatmap(chg_lsv, complx_lsv, groups)
 
 

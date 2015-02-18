@@ -17,8 +17,8 @@ class LSV(object):
         self.coords = exon.get_coordinates()
         self.id = lsv_id
         junction_list = [x for x in junctions if x is not None]
-        #if len(junction_list) < 2 or exon.ir:
-        if len(junction_list) < 2:
+        if len(junction_list) < 2 or exon.ir:
+        #if len(junction_list) < 2:
             raise ValueError
         self.type = lsv_type
         self.exon = exon
