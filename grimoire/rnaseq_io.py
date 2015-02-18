@@ -743,7 +743,7 @@ def read_gff(filename, pcr_filename, logging=None):
                 last_end[record.attributes['ID']] = (None, None)
             except KeyError:
                 if not logging is None:
-                    logging.Error("Error, incorrect gff. mRNA %s doesn't have valid gene %s"
+                    logging.info("Error, incorrect gff. mRNA %s doesn't have valid gene %s"
                                   % (transcript_name, parent))
                 raise
 

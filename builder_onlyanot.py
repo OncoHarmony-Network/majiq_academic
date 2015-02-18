@@ -186,7 +186,7 @@ def main(params):
 
     #GATHER
     logger.info("Gather outputs")
-    utils.merge_and_create_majiq_file(chr_list, params.prefix)
+    utils.merge_and_create_majiq_file(chr_list, './output')
 
     mglobals.print_numbers()
     logger.info("End of execution")
