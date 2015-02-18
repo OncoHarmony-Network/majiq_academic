@@ -592,7 +592,7 @@ def detect_exons(gene, junction_list, read_rna):
     junction_list.sort()
     for (coord, jtype, jj) in junction_list:
 
-        if jj.is_reliable() and not jj.is_annotated():
+        if not jj.is_reliable() and not jj.is_annotated():
             continue
 
         jj_gene = jj.get_gene()
@@ -636,7 +636,7 @@ def detect_exons(gene, junction_list, read_rna):
         new_exons += __half_exon('3prime', ss, read_rna)
 
     for (coord, jtype, jj) in junction_list:
-        if jj.is_reliable() and not jj.is_annotated():
+        if not jj.is_reliable() and not jj.is_annotated():
             junction_list.remove((coord, jtype, jj))
             del jj
             continue
