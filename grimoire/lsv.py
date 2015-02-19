@@ -16,7 +16,9 @@ class LSV(object):
             raise RuntimeError('Incorrect LSV type %s' % lsv_type)
         self.coords = exon.get_coordinates()
         self.id = lsv_id
-        junction_list = [x for x in junctions if x is not None]
+        junction_list = [x for x in junctions if x is not None
+                         and x.get_donor() is not None
+                         and x.get_acceptor is not None]
         if len(junction_list) < 2 or exon.ir:
         #if len(junction_list) < 2:
             raise ValueError
