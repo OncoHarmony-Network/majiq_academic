@@ -32,9 +32,6 @@ def lsv_detection(gene_list, chrom, only_real_data=False, logging=None):
         for gn in glist:
 
             gn.check_exons()
-            count = gn.get_read_count().sum()
-            if count == 0:
-                continue
             mat, exon_list, tlb, var_ss = gn.get_rnaseq_mat(const_set, use_annot=not only_real_data)
             vip = []
             for idx, ex in enumerate(exon_list):
@@ -51,7 +48,7 @@ def lsv_detection(gene_list, chrom, only_real_data=False, logging=None):
 
 #            print "---------------- %s --------------"%gn.get_id()
 #             utils.print_junc_matrices(mat, tlb=tlb, fp=True)
-            SS, ST = analize.lsv_matrix_detection(mat, tlb, (False, False, False), vip)
+            SS, ST = lsv_matrix_detection(mat, tlb, (False, False, False), vip)
             dummy = {}
             for name, ind_list in mglobals.tissue_repl.items():
                 dummy[name] = [[], []]
@@ -99,6 +96,40 @@ def lsv_detection(gene_list, chrom, only_real_data=False, logging=None):
             const_set[exp_idx].difference(jun[name])
 
     return lsv_list, const_set
+
+def lsv_matrix_detection(mat, exon_to_ss, b_list, vip_set=[]):
+    """
+       Rules for const are:
+        1. All the junction from A should go to C1 or C2
+        2. All the junction from C1 should go to A
+        3. All the junction to C2 should come from A
+        4. Number of reads from C1-A should be equivalent to number of reads from A-C2
+    """
+    lsv_list = [[], []]
+
+    #change bucle for iterate by exons
+    for ii in range(0, len(exon_to_ss) - 1):
+        lsv = exon_to_ss[ii]
+        #Single Source detection
+        ss = mat[lsv[1][0]:lsv[1][-1]+1, :]
+        ss_valid = True
+
+        if ss_valid and np.count_nonzero(ss) != 0:
+            lsv_list[0].append(ii)
+
+    for ii in range(1, len(exon_to_ss)):
+        lsv = exon_to_ss[ii]
+        #Single Targe detection
+        st = mat[:, lsv[0][0]:lsv[0][-1]+1]
+        st_valid = True
+
+        if st_valid and np.count_nonzero(st) != 0:
+            lsv_list[1].append(ii)
+
+    return lsv_list
+
+
+
 
 def __parallel_gff3(transcripts):
 
@@ -222,7 +253,7 @@ def main(params):
 
         if not logger is None:
             logger.info("[%s] Detecting LSV" % chrom)
-        lsv, const = analize.lsv_detection(gene_list, chrom, logging=logger)
+        lsv, const = lsv_detection(gene_list, chrom, logging=logger)
 
         utils.prepare_gc_content(gene_list, temp_dir)
 

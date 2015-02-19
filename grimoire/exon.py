@@ -563,7 +563,7 @@ def new_exon_definition(start, end, read_rna, s3prime_junc, s5prime_junc, gene, 
             half = True
 
         if end != EMPTY_COORD and end > (coords[1] + mglobals.get_max_denovo_difference()):
-            if gene.exist_exon(start, start+10) is None:
+            if gene.exist_exon(end - 10, end) is None:
                 new_exons += 1
                 ex2 = Exon(EMPTY_COORD, end, gene, gene.get_strand(), isintron)
                 cc = ex2.get_coordinates()
