@@ -30,14 +30,17 @@ class Exon:
         self.ss_3p_list = []
         self.ss_5p_list = []
         self.id = "%s:%d-%d" % (self.gene_name, start, end)
-        self.strand = strand
+        #self.strand = strand
         self.gc_content = 0
         self.coverage = np.zeros(shape=mglobals.num_experiments)
         self.score = None
         self.pcr_name = None
         self.pcr_candidate = None
-        self.ir = False
         self.db_coord = (start, end)
+
+
+        self.flag =
+        self.ir = False
         self.annotated = annot
         self.intron = isintron
 
@@ -47,8 +50,8 @@ class Exon:
     def get_id(self):
         return self.id
 
-    def get_strand(self):
-        return self.strand
+    # def get_strand(self):
+    #     return self.strand
 
     def get_coordinates(self):
         """

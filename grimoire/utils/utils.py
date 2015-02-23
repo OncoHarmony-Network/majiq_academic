@@ -614,7 +614,7 @@ def analyze_denovo_junctions(genes, output):
                         else:
                             denovo_list[exp_n].append(jj)
 
-    majiq_io.dump_bin_file([mglobals.tissue_rpl, annot_list, denovo_list], output)
+    majiq_io.dump_bin_file([mglobals.tissue_repl, annot_list, denovo_list], output)
 
 
 def histogram_for_exon_analysis(genes, output):
