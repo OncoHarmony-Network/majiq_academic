@@ -601,16 +601,20 @@ def gather_files(outDir, settings_ini, prefix='', gff_out=None, pcr_out=None):
 
 def analyze_denovo_junctions(genes, output):
 
-    denovo_list = []
+    denovo_list = [[] for xx in mglobals.num_experiments]
+    annot_list = [[] for xx in mglobals.num_experiments]
     for strand, gglist in genes.items():
         for gg in gglist:
             jlist = gg.get_all_junctions()
             for jj in jlist:
-                if jj.is_annotated():
-                    continue
-                denovo_list.append(jj)
+                for tissue, list_idx in mglobals.tissue_repl.items():
+                    for exp_n in list_idx:
+                        if jj.is_annotated():
+                            annot_list[exp_n].append(jj)
+                        else:
+                            denovo_list[exp_n].append(jj)
 
-    majiq_io.dump_bin_file(denovo_list, output)
+    majiq_io.dump_bin_file([mglobals.tissue_rpl, annot_list, denovo_list], output)
 
 
 def histogram_for_exon_analysis(genes, output):

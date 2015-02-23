@@ -56,7 +56,7 @@ def autolabel_horz(rects, ax, offs=8, msg='', size=8):
             x = rect.get_x()+width + 150
             y = idx+ypos[midx % 2]
             if midx >= 2:
-                x += 200
+                x += 600
             ax.text(x, y, mm, ha='center', va='bottom', fontsize=size)
 
 
@@ -470,6 +470,13 @@ def all_plots_wrapper(types, nlsv=0):
     s_keys = [xx[0] for xx in histo if xx[1] > 100]
     s_vals = [types[xx] for xx in s_keys]
 
+    total = 0
+    complex = 0
+    for xx in s_keys:
+        if len(xx.split('|')[1:]) > 2:
+            complex += types[xx]
+        total += types[xx]
+
     # lim_val = [0]*len(lims)
     # for lidx, l in enumerate(lims):
     #     for vidx, v in enumerate(s_vals):
@@ -485,7 +492,11 @@ def all_plots_wrapper(types, nlsv=0):
     
     impath = './thumbs/'
     extra_title = " %s events" % num_ev
+    percent = float(complex) / total
+    print "Complex %d/%d (%.3f)" % (complex, total, percent)
     plot_lsv_types_hist(s_vals, s_keys, img_path=impath, lim_val=None, extra_title=extra_title)
+    #plot_lsv_types_hist(s_vals, s_keys, img_path=None, lim_val=None, extra_title=extra_title)
+
 
     s_keys = [xx[0] for xx in histo]
     s_vals = [types[xx] for xx in s_keys]
