@@ -266,23 +266,23 @@ def generate_visualization_output(allgenes, temp_dir):
                             visual_type = voila_const.EXON_TYPE_MISSING_START
                         elif ex.is_miss_end():
                             visual_type = voila_const.EXON_TYPE_MISSING_END
-                        elif ex.annotated and ex_reads == 0.0:
+                        elif ex.is_annotated() and ex_reads == 0.0:
                             visual_type = voila_const.EXON_TYPE_DB
-                        elif ex.annotated and ex_reads > 0.0:
+                        elif ex.is_annotated() and ex_reads > 0.0:
                             visual_type = voila_const.EXON_TYPE_DB_RNASEQ
-                        elif not ex.annotated and ex_reads > 0.0:
+                        elif not ex.is_annotated() and ex_reads > 0.0:
                             visual_type = voila_const.EXON_TYPE_RNASEQ
                         else:
                             visual_type = voila_const.EXON_TYPE_RNASEQ
     #                        continue
                         extra_coords = []
-                        if ex.annotated:
+                        if ex.is_annotated():
                             if ex.start < ex.db_coord[0]:
                                 extra_coords.append([ex.start, ex.db_coord[0]-1])
                             if ex.end > ex.db_coord[1]:
                                 extra_coords.append([ex.db_coord[1]+1, ex.end])
                         eg = ExonGraphic(a3, a5, cc, type_exon=visual_type, coords_extra=extra_coords,
-                                         intron_retention=ex.ir, alt_starts=alt_start, alt_ends=alt_ends)
+                                         intron_retention=ex.get_ir(), alt_starts=alt_start, alt_ends=alt_ends)
                         exon_list.append(eg)
                     ggraph = GeneGraphic(id=gg.get_id(), name=gg.get_name(), strand=gg.get_strand(), exons=exon_list,
                                          junctions=junc_list, chrom=gg.get_chromosome())

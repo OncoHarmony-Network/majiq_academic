@@ -86,6 +86,10 @@ class Exon:
     def is_miss_end(self):
         return self.flag & MISS_END == MISS_END
 
+    def get_ir(self):
+
+        return self.is_intron()
+
     def get_annotated_exon(self):
         return self.exonTx_list
 
@@ -108,7 +112,7 @@ class Exon:
         return ln
 
     def set_ir(self, ir):
-        self.ir |= ir
+        self.flag |= 0b0011 if ir else 0b0000
 
     def set_pcr_score(self, pcr_name, score, candidate):
         self.pcr_name = pcr_name

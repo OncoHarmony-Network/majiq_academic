@@ -240,23 +240,23 @@ class LSV(object):
 
             ex_reads = ex.get_total_read_num(exp_idx)
 
-            if ex.annotated and ex_reads == 0.0:
+            if ex.is_annotated() and ex_reads == 0.0:
                 visual_type = 2
-            elif ex.annotated and ex_reads > 0.0:
+            elif ex.is_annotated() and ex_reads > 0.0:
                 visual_type = 0
-            elif not ex.annotated and ex_reads > 0.0:
+            elif not ex.is_annotated() and ex_reads > 0.0:
                 visual_type = 1
             else:
                 visual_type = 1
     #                        continue
             extra_coords = []
-            if ex.annotated:
+            if ex.is_annotated():
                 if ex.start < ex.db_coord[0]:
                     extra_coords.append([ex.start, ex.db_coord[0]-1])
                 if ex.end > ex.db_coord[1]:
                     extra_coords.append([ex.db_coord[1]+1, ex.end])
             eg = ExonGraphic(a3, a5, cc, type_exon=visual_type, coords_extra=extra_coords,
-                             intron_retention=ex.ir, alt_starts=alt_start, alt_ends=alt_ends)
+                             intron_retention=ex.get_ir(), alt_starts=alt_start, alt_ends=alt_ends)
             exon_list.append(eg)
 
         splice_lsv = LsvGraphic(type_lsv=self.ext_type, coords=self.coords, id=self.id, name=self.exon.get_gene().get_name(),
