@@ -485,12 +485,12 @@ def all_plots_wrapper(types, nlsv=0):
     
     impath = './thumbs/'
     extra_title = " %s events" % num_ev
-    # plot_lsv_types_hist(s_vals, s_keys, img_path=impath, lim_val=None, extra_title=extra_title)
+    plot_lsv_types_hist(s_vals, s_keys, img_path=impath, lim_val=None, extra_title=extra_title)
 
     s_keys = [xx[0] for xx in histo]
     s_vals = [types[xx] for xx in s_keys]
 
-    plot_countings(s_vals, s_keys, num_ev)
+    #plot_countings(s_vals, s_keys, num_ev)
 
 
 def psi_dominant(filename_list):
@@ -652,7 +652,7 @@ if __name__ == '__main__':
     onlyfiles = [f for f in listdir(dire) if isfile(join(dire, f)) and f.endswith('majiq')]
     #groups = ['Adr', 'Aor', 'BFat', 'Bstm', 'Cer', 'Hrt', 'Hyp', 'Kid', 'Liv', 'Lun', 'Mus', 'WFat']
     #onlyfiles = ['Adr_CT22.mm10.sorted.majiq', 'Aor_CT22.mm10.sorted.majiq']
-    groups = ['output.Heart']
+    groups = ['output.refseq']
 
     print "Parse files"
     list_types, group_types = get_types(dire, onlyfiles, groups)

@@ -97,6 +97,7 @@ def lsv_detection(gene_list, chrom, only_real_data=False, logging=None):
 
     return lsv_list, const_set
 
+
 def lsv_matrix_detection(mat, exon_to_ss, b_list, vip_set=[]):
     """
        Rules for const are:
@@ -114,7 +115,7 @@ def lsv_matrix_detection(mat, exon_to_ss, b_list, vip_set=[]):
         ss = mat[lsv[1][0]:lsv[1][-1]+1, :]
         ss_valid = True
 
-        if ss_valid and np.count_nonzero(ss) != 0:
+        if ss_valid and np.count_nonzero(ss) > 1:
             lsv_list[0].append(ii)
 
     for ii in range(1, len(exon_to_ss)):
@@ -123,7 +124,7 @@ def lsv_matrix_detection(mat, exon_to_ss, b_list, vip_set=[]):
         st = mat[:, lsv[0][0]:lsv[0][-1]+1]
         st_valid = True
 
-        if st_valid and np.count_nonzero(st) != 0:
+        if st_valid and np.count_nonzero(st) > 1:
             lsv_list[1].append(ii)
 
     return lsv_list
