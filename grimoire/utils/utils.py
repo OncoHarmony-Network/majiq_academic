@@ -262,9 +262,9 @@ def generate_visualization_output(allgenes, temp_dir):
                                     a5.append(jidx)
 
                         ex_reads = ex.get_total_read_num(exp_idx)
-                        if cc[0] is None:
+                        if ex.is_miss_start():
                             visual_type = voila_const.EXON_TYPE_MISSING_START
-                        elif cc[1] is None:
+                        elif ex.is_miss_end():
                             visual_type = voila_const.EXON_TYPE_MISSING_END
                         elif ex.annotated and ex_reads == 0.0:
                             visual_type = voila_const.EXON_TYPE_DB

@@ -9,7 +9,6 @@ import os
 
 
 #FLAGS
-
 ANNOTATED = 0b0001
 INTRON = 0b0010
 MISS_START = 0b0100
@@ -80,6 +79,12 @@ class Exon:
 
     def is_intron(self):
         return self.flag & INTRON == INTRON
+
+    def is_miss_start(self):
+        return self.flag & MISS_START == MISS_START
+
+    def is_miss_end(self):
+        return self.flag & MISS_END == MISS_END
 
     def get_annotated_exon(self):
         return self.exonTx_list
