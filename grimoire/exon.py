@@ -39,7 +39,7 @@ class Exon:
         self.db_coord = (start, end)
 
 
-        self.flag =
+        #self.flag =
         self.ir = False
         self.annotated = annot
         self.intron = isintron
