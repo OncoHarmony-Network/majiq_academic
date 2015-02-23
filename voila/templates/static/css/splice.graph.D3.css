@@ -24,6 +24,21 @@
     fill:none;
 }
 
+.halfexon{
+    stroke:green;
+    stroke-opacity: .5;
+    stroke-width: 2;
+    fill: green;
+    fill-opacity: .3;
+    stroke-linejoin: round;
+}
+
+.halfexon.hovered{
+    fill: purple;
+    stroke: purple;
+    stroke-width:2;
+    stroke-opacity: 1;
+}
 
 .ssite3, .ssite5, .junction{
     fill:black;
