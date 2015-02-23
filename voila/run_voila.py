@@ -195,7 +195,7 @@ def parse_gene_graphics(gene_exps_flist, gene_name_list, groups=('group1', 'grou
             genes_graphic = defaultdict(list)
             genesG.sort()
             for gene_obj in genesG:
-                if gene_obj.get_id() in gene_name_list or gene_obj.get_name().upper() in gene_name_list:
+                if gene_obj.get_id() in gene_name_list or gene_obj.get_name().upper() in gene_name_list:  #TODO: CHANGEE!!!! PASS JUST THE VLSV!!!
                     genes_graphic[gene_obj.get_id()].append(json.dumps(gene_obj, cls=utils_voila.LsvGraphicEncoder).replace("\"", "'"))
                     genes_graphic[gene_obj.get_id()].append(gene_obj.get_strand())
                     genes_graphic[gene_obj.get_id()].append(gene_obj.get_coords())
@@ -499,6 +499,8 @@ def create_summary(args):
             logger.error(e.message, exc_info=1)
 
         meta_postprocess['collapsed'] = args.collapsed
+        render_summary(output_dir, output_html, majiq_output, type_summary, threshold, meta_postprocess, logger=logger)
+        return
 
     render_summary(output_dir, output_html, majiq_output, type_summary, threshold, meta_postprocess, logger=logger)
     create_gff3_txt_files(output_dir, majiq_output, logger=logger)

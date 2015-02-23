@@ -680,12 +680,15 @@ window.splicegraph = function (){
                         continue;
                     var exonNum_ss = lsvs_fields[1].split('.');
 
-                    ss_reg[exonNum_ss[0]] = parseInt(exonNum_ss[1].split('o')[1]);
+                    if (exonNum_ss[1].indexOf('o')>0) {
+                        ss_reg[exonNum_ss[0]] = parseInt(exonNum_ss[1].split('o')[1]);
 
-//                    if (ss_reg[exonNum_ss[0]])
-//                        ss_reg[exonNum_ss[0]] = Math.max(ss_reg[exonNum_ss[0]], parseInt(exonNum_ss[1]));
-//                    else
-//                        ss_reg[exonNum_ss[0]] = parseInt(exonNum_ss[1]);
+                    } else {
+                        if (ss_reg[exonNum_ss[0]])
+                            ss_reg[exonNum_ss[0]] = Math.max(ss_reg[exonNum_ss[0]], parseInt(exonNum_ss[1]));
+                        else
+                            ss_reg[exonNum_ss[0]] = parseInt(exonNum_ss[1]);
+                    }
                 }
                 num_exons++;  // source or target exon is implicit
 
