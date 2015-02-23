@@ -7,6 +7,14 @@ from grimoire.junction import Junction
 from voila import constants as viola_const
 import os
 
+
+#FLAGS
+
+ANNOTATED = 0b0001
+INTRON = 0b0010
+MISS_START = 0b0100
+MISS_END = 0b1000
+
 class Exon:
     __eq__ = lambda self, other: self.start < other.end and self.end > other.start
     __ne__ = lambda self, other: self.start >= other.end or self.end <= other.start
@@ -17,10 +25,13 @@ class Exon:
 
     def __init__(self, start, end, gene, strand, annot=False, isintron=False):
 
+        self.flag = 0b0000
         if start == EMPTY_COORD:
             start = end - 10
+            self.flag |= 0b0100
         if end == EMPTY_COORD:
             end = start + 10
+            self.flag |= 0b1000
 
         self.start = start
         self.end = end
@@ -38,11 +49,8 @@ class Exon:
         self.pcr_candidate = None
         self.db_coord = (start, end)
 
-
-        #self.flag =
-        self.ir = False
-        self.annotated = annot
-        self.intron = isintron
+        self.flag |= 0b0001 if annot else 0b0000
+        self.flag |= 0b0010 if isintron else 0b0000
 
     def __hash__(self):
         return hash(self.id) ^ hash(self.gene_name)
@@ -64,8 +72,14 @@ class Exon:
     def get_gene(self):
         return mglobals.gene_tlb[self.gene_name]
 
+    def get_strand(self):
+        return self.get_gene().get_strand()
+
     def is_annotated(self):
-        return self.annotated
+        return self.flag & ANNOTATED == ANNOTATED
+
+    def is_intron(self):
+        return self.flag & INTRON
 
     def get_annotated_exon(self):
         return self.exonTx_list
