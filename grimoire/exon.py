@@ -79,7 +79,7 @@ class Exon:
         return self.flag & ANNOTATED == ANNOTATED
 
     def is_intron(self):
-        return self.flag & INTRON
+        return self.flag & INTRON == INTRON
 
     def get_annotated_exon(self):
         return self.exonTx_list
