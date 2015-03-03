@@ -216,10 +216,27 @@ def rnaseq_intron_retention(filenames, gene_list, readlen, chrom, logging=None):
                         exnum = majiq_exons.new_exon_definition(intron_start, intron_end,
                                                                 None, junc1, junc2, gne,
                                                                 isintron=True)
+
+                        junc1.add_donor(exon1)
+                        for ex in exon1.exonRead_list:
+                            st, end = ex.get_coordinates()
+                            if end == junc1.get_coordinates()[0]:
+                                ex.add_5prime_junc(junc1)
+                                break
+
+                        junc2.add_donor(exon2)
+                        for ex in exon2.exonRead_list:
+                            st, end = ex.get_coordinates()
+                            if st == junc2.get_coordinates()[1]:
+                                ex.add_3prime_junc(junc2)
+                                break
+
                         if exnum == 1:
                             logging.info("NEW INTRON RETENTION EVENT %s, %d-%d" % (gne.get_name(),
                                                                                    intron_start,
                                                                                    intron_end))
+            gne.prepare_exons()
+    return
 
 
 

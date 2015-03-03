@@ -467,7 +467,8 @@ def all_plots_wrapper(types, nlsv=0):
     global fidx
     histo = sorted(types.iteritems(), key=lambda (k, v): (v, k))
     num_ev = np.sum([xx[1] for xx in histo])
-    s_keys = [xx[0] for xx in histo if xx[1] > 100]
+    #s_keys = [xx[0] for xx in histo if xx[1] > 100]
+    s_keys = [xx[0] for xx in histo if xx[1] > 10]
     s_vals = [types[xx] for xx in s_keys]
 
     total = 0
@@ -663,7 +664,8 @@ if __name__ == '__main__':
     onlyfiles = [f for f in listdir(dire) if isfile(join(dire, f)) and f.endswith('majiq')]
     #groups = ['Adr', 'Aor', 'BFat', 'Bstm', 'Cer', 'Hrt', 'Hyp', 'Kid', 'Liv', 'Lun', 'Mus', 'WFat']
     #onlyfiles = ['Adr_CT22.mm10.sorted.majiq', 'Aor_CT22.mm10.sorted.majiq']
-    groups = ['output.refseq']
+
+    groups = sys.argv[3:]
 
     print "Parse files"
     list_types, group_types = get_types(dire, onlyfiles, groups)
