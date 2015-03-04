@@ -137,12 +137,12 @@ def collapse_matrix(matrix):
     return np.array(collapse)
 
 
-def extract_bins_info(lsv, threshold, include_lsv):
+def extract_bins_info(lsv_bins, threshold, include_lsv):
     expected_psis_bins = []
     excl_inc_perc_list = []
     collapsed_matrices = []
 
-    for junc_matrix in lsv:
+    for junc_matrix in lsv_bins:
         collapsed_matrices.append(collapse_matrix(np.array(junc_matrix)))
 
     if len(collapsed_matrices)<2:

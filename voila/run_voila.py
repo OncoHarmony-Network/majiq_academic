@@ -397,7 +397,10 @@ def create_gff3_txt_files(output_dir, majiq_output, logger):
             with open(gff_file, 'w') as ofile:
                 ofile.write(header+"\n")
                 ofile.write(lsv.get_gff3()+"\n")
-            utils_voila.gff2gtf(gff_file, "%s.gtf" % lsv_file_basename)
+            try:
+                utils_voila.gff2gtf(gff_file, "%s.gtf" % lsv_file_basename)
+            except UnboundLocalError, e:
+                logger.warning("problem generating GTF file for %s" % lsv.get_id())
 
     logger.info("Files saved in %s" % odir)
 
@@ -503,8 +506,8 @@ def create_summary(args):
         return
 
     render_summary(output_dir, output_html, majiq_output, type_summary, threshold, meta_postprocess, logger=logger)
-    create_gff3_txt_files(output_dir, majiq_output, logger=logger)
     render_tab_output(output_dir, output_html, majiq_output, type_summary, logger=logger, pairwise_dir=pairwise, threshold=threshold)
+    create_gff3_txt_files(output_dir, majiq_output, logger=logger)
 
     logger.info("Voila! Summaries created in: %s" % output_dir)
     return

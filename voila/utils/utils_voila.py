@@ -70,7 +70,7 @@ class LsvGraphicEncoder(json.JSONEncoder):
 
 
 def expected_dpsi(bins):
-    return sum(np.array(bins) * np.arange(-1+1./len(bins), 1.,2./len(bins)))
+    return sum(np.array(bins) * np.arange(-1+1./len(bins), 1., 2./len(bins)))
 
 
 def get_prob_delta_psi_greater_v(bins, expected, V=.2):
