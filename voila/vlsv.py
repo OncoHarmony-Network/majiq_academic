@@ -260,13 +260,18 @@ class VoilaLsv(object):
         return [self.lsv_graphic.get_exons()[0].get_coords()[0], self.lsv_graphic.get_exons()[-1].get_coords()[1]]
 
     def init_categories(self):
-        # New type example: s|1e1.3o4|1e2.1o1
+        # New type example: s|1e1.3o4|i|1e2.1o1
         self.categories = defaultdict()
-        j = self.get_type().split('|')
-        ssites = set(int(s[0]) for s in j[1:])
+        juns = self.get_type().split('|')
+        ir = 'i' in juns
+        try:
+            juns.remove('i')
+        except ValueError:
+            pass  # No sign of intron retention
+        ssites = set(int(s[0]) for s in juns[1:])
         exons = defaultdict(list)
 
-        for s in j[1:]:
+        for s in juns[1:]:
             exs = s[1:].split('.')
             try:
                 ssite = int(exs[1].split('o')[0])
@@ -276,12 +281,12 @@ class VoilaLsv(object):
         self.categories['ES'] = len(exons.keys()) > 1
         self.categories['prime5'] = len(ssites) > 1
         self.categories['prime3'] = max([len(exons[e]) for e in exons]) > 1
-        self.categories['njuncs'] = np.sum(['e0' not in junc for junc in j[1:]])
+        self.categories['njuncs'] = np.sum(['e0' not in junc for junc in juns[1:]])
         self.categories['nexons'] = len(exons.keys()) + 1
-        self.categories['source'] = j[0] == 's'
-        self.categories['target'] = j[0] == 't'
-
-        if j[0] == 't':
+        self.categories['source'] = juns[0] == 's'
+        self.categories['target'] = juns[0] == 't'
+        self.categories['ir'] = ir
+        if juns[0] == 't':
             self.categories['prime5'], self.categories['prime3'] = self.categories['prime3'], self.categories['prime5']
 
     def get_categories(self):
