@@ -14,6 +14,7 @@ INTRON = 0b0010
 MISS_START = 0b0100
 MISS_END = 0b1000
 
+
 class Exon:
     __eq__ = lambda self, other: self.start < other.end and self.end > other.start
     __ne__ = lambda self, other: self.start >= other.end or self.end <= other.start
@@ -221,30 +222,30 @@ class Exon:
                         jlist.add(junc)
         return jlist
 
-    def print_triplet_coord(self, fp):
-        gene = mglobals.gene_tlb[self.gene_name]
-        chrom = gene.chromosome
-        strand = gene.get_strand()
-        start_a = self.start
-        end_a = self.end
-
-        if strand == '-':
-            id_a = gene.exonNum - (self.id - 1)
-            vid_c1 = self.id
-            vid_c2 = self.id - 2
-        else:
-            id_a = self.id
-            vid_c1 = self.id - 2
-            vid_c2 = self.id
-
-        start_c1, end_c1 = gene.exons[vid_c1].get_coordinates()
-        start_c2, end_c2 = gene.exons[vid_c2].get_coordinates()
-
-        name = "%s.%s" % (gene.id, id_a)
-        
-        fp.write("%s\t%d\t%d\t%s_C1\t0\t%s\n" % (chrom, start_c1, end_c1, name, strand))
-        fp.write("%s\t%d\t%d\t%s_A\t0\t%s\n" % (chrom, start_a, end_a, name, strand))
-        fp.write("%s\t%d\t%d\t%s_C2\t0\t%s\n" % (chrom, start_c2, end_c2, name, strand))
+    # def print_triplet_coord(self, fp):
+    #     gene = mglobals.gene_tlb[self.gene_name]
+    #     chrom = gene.chromosome
+    #     strand = gene.get_strand()
+    #     start_a = self.start
+    #     end_a = self.end
+    #
+    #     if strand == '-':
+    #         id_a = gene.exonNum - (self.id - 1)
+    #         vid_c1 = self.id
+    #         vid_c2 = self.id - 2
+    #     else:
+    #         id_a = self.id
+    #         vid_c1 = self.id - 2
+    #         vid_c2 = self.id
+    #
+    #     start_c1, end_c1 = gene.exons[vid_c1].get_coordinates()
+    #     start_c2, end_c2 = gene.exons[vid_c2].get_coordinates()
+    #
+    #     name = "%s.%s" % (gene.id, id_a)
+    #
+    #     fp.write("%s\t%d\t%d\t%s_C1\t0\t%s\n" % (chrom, start_c1, end_c1, name, strand))
+    #     fp.write("%s\t%d\t%d\t%s_A\t0\t%s\n" % (chrom, start_a, end_a, name, strand))
+    #     fp.write("%s\t%d\t%d\t%s_C2\t0\t%s\n" % (chrom, start_c2, end_c2, name, strand))
 
     def bed_format(self):
         bed_str = ""
@@ -570,14 +571,13 @@ def new_exon_definition(start, end, read_rna, s3prime_junc, s5prime_junc, gene, 
 
     if ex is None:
         new_exons = 1
-        ex = Exon(start, end, gene, gene.get_strand(), isintron)
+        ex = Exon(start, end, gene, gene.get_strand(), isintron=isintron)
         gene.add_exon(ex)
     else:
         coords = ex.get_coordinates()
         if start != EMPTY_COORD and start < (coords[0] - mglobals.get_max_denovo_difference()):
             if gene.exist_exon(start, start+10) is None:
                 new_exons += 1
-
                 ex1 = Exon(start, EMPTY_COORD, gene, gene.get_strand(), isintron)
                 cc = ex1.get_coordinates()
                 s3prime_junc.add_acceptor(ex1)
@@ -599,6 +599,7 @@ def new_exon_definition(start, end, read_rna, s3prime_junc, s5prime_junc, gene, 
         ex.add_new_read(start, end, read_rna, s3prime_junc, s5prime_junc)
         s3prime_junc.add_acceptor(ex)
         s5prime_junc.add_donor(ex)
+
 
     return new_exons
 
