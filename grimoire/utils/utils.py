@@ -234,8 +234,16 @@ def generate_visualization_output(allgenes, temp_dir):
                         else:
                             jtype = voila_const.JUNCTION_TYPE_RNASEQ
                             #continue
+
+                        ir_type = None
+                        if jj.get_donor().is_intron():
+                            ir_type = voila_const.IR_TYPE_START
+                        elif jj.get_acceptor().is_intron():
+                            ir_type = voila_const.IR_TYPE_END
+
                         junc_l.append(jj.get_coordinates())
-                        junc_list.append(JunctionGraphic(cc, jtype, num_reads, transcripts=jj.get_transcript_list()))
+                        junc_list.append(JunctionGraphic(cc, jtype, num_reads, transcripts=jj.get_transcript_list(),
+                                                         ir=ir_type))
 
                     junc_l = np.asarray(junc_l)
                     exon_list = []

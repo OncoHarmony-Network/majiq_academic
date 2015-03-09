@@ -38,8 +38,6 @@ class LSV(object):
         self.type = lsv_type
         self.exon = exon
 
-
-
         self.tlb_junc = {}
         self.ext_type = self.set_type(junction_list, self.tlb_junc)
         if self.ext_type == 'intron':

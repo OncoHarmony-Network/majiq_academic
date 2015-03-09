@@ -234,14 +234,6 @@ class Gene:
     def prepare_exons(self):
 #        self.exons.sort(reverse = isneg)
         self.exons.sort()
-        idx = 0
-        # for exs in self.exons:
-        #     if exs.is_intron():
-        #         exs.id = 0
-        #     else:
-        #         exs.id = idx+1
-        #         idx += 1
-
 
     def get_all_ss(self, anot_only=False):
 
@@ -292,7 +284,8 @@ class Gene:
                 self.lsv_list.append(ret)
             except ValueError:
                 if logger:
-                    logger.info("Attempt to create LSV with wrong type or not enought junction coverage %s" %exon.get_id())
+                    logger.info("Attempt to create LSV with wrong type or not enought junction coverage %s" %
+                                exon.get_id())
 
         # for jj in jlist:
         #     if jj.is_virtual() and logger:
@@ -303,13 +296,13 @@ class Gene:
     def remove_temp_attributes(self):
         del self.temp_txex_list
 
-    def new_annotated_exon(self, start, end, transcript, bl=True):
+    def new_annotated_exon(self, start, end, transcript, bl=True, intron=False):
         for txex in self.temp_txex_list:
             if txex.start == start and txex.end == end:
                 res = txex
                 break
         else:
-            res = ExonTx(start, end, transcript)
+            res = ExonTx(start, end, transcript, intron=intron)
             if bl:
                 self.temp_txex_list.append(res)
         return res
