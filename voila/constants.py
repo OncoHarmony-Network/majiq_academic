@@ -18,6 +18,9 @@ EXON_TYPE_DB_OTHER_RNASEQ = 3
 EXON_TYPE_MISSING_START = 4
 EXON_TYPE_MISSING_END = 5
 
+IR_TYPE_START = 1
+IR_TYPE_END = 2
+
 # File extensions, delimiters, etc.
 SUFFIX_SPLICEGRAPH = 'splicegraph'
 DELIMITER = '\t'
