@@ -330,14 +330,14 @@ class ExonTx(object):
     __gt__ = lambda self, other: self.start > other.start or (self.start == other.start and self.end > other.end)
     __ge__ = lambda self, other: self.start >= other.start or (self.start == other.start and self.end >= other.end)
 
-    def __init__(self, start, end, trnscpt):
+    def __init__(self, start, end, trnscpt, intron=False):
         self.start = start
         self.end = end
         self.transcript_name = [trnscpt.get_id()]
         self.gene_name = trnscpt.get_gene().get_id()
         self.p3_junc = []
         self.p5_junc = []
-        self.ir = False
+        self.ir = intron
 
     def get_coordinates(self):
         return self.start, self.end
@@ -391,6 +391,27 @@ class ExonTx(object):
 
         exb = exb1 & exb2
 
+        #creating intron exon
+        intron = gn.new_annotated_exon(intron_coords[0], intron_coords[1], self.get_transcript()[0],
+                                       bl=False, intron=True)
+        res.append(intron)
+        junc1 = gn.exist_junction(txex2.end, intron_coords[0])
+        if junc1 is None:
+            junc1 = Junction(txex2.end, intron_coords[0], None, None, gn, annotated=True)
+#           junc1.add_donor(txex2)
+#           junc1.add_acceptor(intron)
+        txex2.p5_junc.append(junc1)
+        intron.p3_junc.append(junc1)
+
+        junc2 = gn.exist_junction(intron_coords, txex1.start)
+        if junc2 is None:
+            junc2 = Junction(intron_coords, txex1.start, None, None, gn, annotated=True)
+#           junc.add_donor(intron)
+#           junc.add_acceptor(txex1)
+        intron.p5_junc.append(junc2)
+        txex1.p3_junc.append(junc2)
+
+#Last Friday my package arrived, but one of the shoes includes 2 left shoes, instead of left and right.
         if exb:
             junc = gn.exist_junction(txex2.end, txex1.start)
             if junc is None:
@@ -454,11 +475,11 @@ class ExonTx(object):
             for idx, txex in enumerate(list_exontx):
                 for intr in introns:
                     if not txex.overlaps(intr[0], intr[1]):
-                        if intr[0] > txex.end or (intr[0] <= txex.end < intr[1]):
-                            txex.ir = True
+                        # if intr[0] > txex.end or (intr[0] <= txex.end < intr[1]):
+                        #     txex.ir = True
                         continue
                     ''' intron retention'''
-                    LSV_IR(txex.start, txex.end, [], gne)
+                    #LSV_IR(txex.start, txex.end, [], gne)
                     dummy = txex.split_exon(intr, gne)
                     list_exontx.remove(txex)
                     for dm in dummy:
