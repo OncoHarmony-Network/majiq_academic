@@ -211,9 +211,9 @@ function spliceGraphD3() {
 
 
     var width = 1000, // default width
-        height = 140, // default height
+        height = 180, // default height
         padding = [60, 5, 5, 5],
-        JUNC_AREA=0.85;
+        JUNC_AREA=0.8;
     var EXON_H = Math.round(height * (1-JUNC_AREA) - padding[2]),
         EXON_MIN_W= 2,
         EXON_MAX_W=200;
@@ -268,7 +268,7 @@ function spliceGraphD3() {
             var renderNumReads = function(junctions, scaleX) {
                 var maxJunc = longestJunc(junctions, scaleX);
                 var labels = svgCanvas.selectAll("text.readcounts")
-                    .data(junctions);
+                    .data(junctions.filter(function(v){ return v.ir < 1;}));
                 labels.enter().append("text");
                 labels.classed("readcounts", true)
                     .transition()
@@ -286,16 +286,14 @@ function spliceGraphD3() {
                         return Math.round((scaleX(d.coords[1]) + scaleX(d.coords[0])) / 2);
                     })
                     .attr("y", function (d) {
-                        return Math.round(height * JUNC_AREA - 2 -
-                                (scaleX(d.coords[1]) - scaleX(d.coords[0])) / maxJunc * JUNC_AREA * (height - padding[0] - padding[2])
-                                + ((scaleX(d.coords[1]) - scaleX(d.coords[0])) / maxJunc * JUNC_AREA * (height - padding[0] - padding[2]) / d.dispersion) * (d.dispersion - 1 ? 1 : 0)
-                        );
+                        var posY = (scaleX(d.coords[1]) - scaleX(d.coords[0])) / maxJunc * JUNC_AREA * (height - padding[0] - padding[2]);
+                        return Math.round(height * JUNC_AREA - 2 - posY + (posY / d.dispersion) * (d.dispersion - 1 ? 1 : 0));
                     });
 
             };
 
             var renderJunctions = function(data, scaleX, docId){
-                var juncs = svgCanvas.selectAll('ellipse').data(data);
+                var juncs = svgCanvas.selectAll('ellipse').data(data.filter(function(v){ return v.ir<1; }));  // Skip intron retention junctions
                 var maxJunc = longestJunc(data, scaleX);
                 juncs.enter().append("ellipse");
 
@@ -329,6 +327,52 @@ function spliceGraphD3() {
                 juncs.classed("novelInOthers", function(d){ return d.type_junction == 1 && d.num_reads<1; });
 
                 return juncs;
+            };
+
+            var renderIntRetReads = function(data, scaleX) {
+                var labels = svgCanvas.selectAll("text.irreads")
+                    .data(data.filter(function(v){ return v.ir > 0;}));
+                labels.enter().append("text");
+                labels.classed("irreads", true)
+                    .attr("text-anchor", function(d){return (d.ir === 1 ? "end": "start" );})
+                    .transition()
+                    .duration(100)
+                    .ease("linear")
+                    .text(function (d) {
+                        return d.num_reads;
+                    })
+                    .attr("x", function (d, i) {
+                        var pos= Math.round(scaleX(d.coords[(d.ir == 1 ? 1 : 0)]) + (d.ir == 1 ? 2 : -2));
+                        if (strand == '-')
+                            return Math.round(width - pos);
+                        else
+                            return pos;
+                    })
+                    .attr("y", Math.round(height*JUNC_AREA + EXON_H /5));
+
+
+                var irlines = svgCanvas.selectAll("line.irlines")
+                    .data(data.filter(function(v){ return v.ir > 0;}));
+                irlines.enter().append("line");
+                irlines.classed("irlines", true)
+                    .transition()
+                    .duration(100)
+                    .ease("linear")
+                    .attr("x1", function (d) {
+                        return  Math.round(scaleX(d.coords[(d.ir == 1 ? 1 : 0)]));
+                    })
+                    .attr("y1", function () {
+                        return Math.round(height*JUNC_AREA + EXON_H/5 + 2);
+                    })
+                    .attr("x2", function (d) {
+                        return Math.round(scaleX(d.coords[(d.ir == 1 ? 1 : 0)]) + ((d.ir == 1)? 14 : -14));
+                    })
+                    .attr("y2", function () {
+                        return Math.round(height*JUNC_AREA + EXON_H/5 + 2);
+                    });
+                irlines.classed("found", function(d){ return d.type_junction == 0; });
+                irlines.classed("novel", function(d){ return d.type_junction == 1; });
+
             };
 
             var spliceSites = function(junctions, scaleX) {
@@ -382,7 +426,7 @@ function spliceGraphD3() {
 
             var renderExons = function(datap, keyf, scaleX){
                 // Represent exons as rectangles - filter out half exons
-                var exons = svgCanvas.selectAll("rect.exon").data(datap.filter(function(v){ return v.value.type_exon <3;}), keyf);
+                var exons = svgCanvas.selectAll("rect.exon").data(datap.filter(function(v){ return v.value.type_exon <3 && !v.value.intron_retention;}), keyf);
 
                 exons.enter().append("rect");
                 exons.attr("class", "exon")
@@ -439,7 +483,7 @@ function spliceGraphD3() {
 
             var renderNumExons = function(exons, scaleX) {
                 var labels = svgCanvas.selectAll("text.numexon")
-                    .data(exons);
+                    .data(exons.filter(function(v){ return v.value.type_exon <3 && !v.value.intron_retention;}));
                 labels.enter().append("text");
                 labels.classed("numexon", true)
                     .transition()
@@ -468,17 +512,20 @@ function spliceGraphD3() {
                     .classed('missing', function(d){
                         return d.value.type_exon == 2;
                     })
+                    .classed('novel', function(d){
+                        return d.value.type_exon == 1;
+                    })
                     .transition()
                     .duration(100)
                     .ease("linear")
                     .attr("x", function(d){
-                        return scaleX(d.value.coords[1]);
+                        return scaleX(d.value.coords[0]);
                     })
-                    .attr("y", Math.round(height*JUNC_AREA + height*(1-JUNC_AREA)/5))
+                    .attr("y", Math.round(height*JUNC_AREA + EXON_H*2/5))
                     .attr("width", function(d){
-                        return Math.round(scaleX(exons[d.key+1].value.coords[0]) - scaleX(d.value.coords[1]));
+                        return Math.round(scaleX(d.value.coords[1]) - scaleX(d.value.coords[0]));
                     })
-                    .attr("height", Math.round((EXON_H)*2/5));
+                    .attr("height", Math.round(EXON_H*2/5));
             };
 
             var renderCoordsExtra = function(exons, scaleX) {
@@ -515,6 +562,25 @@ function spliceGraphD3() {
 
             };
 
+
+            var highlight = function(this_ref, i, highlighted){
+                d3.select(this_ref.parentNode).selectAll('.junction').classed("blurred", true);
+                d3.select(this_ref.parentNode).selectAll('.readcounts').classed("blurred", true);
+                d3.select(d3.select(this_ref.parentNode).selectAll('.ssite3')[0][i]).classed("highlighted", true);
+                d3.select(d3.select(this_ref.parentNode).selectAll('.ssite5')[0][i]).classed("highlighted", true);
+                d3.select(d3.select(this_ref.parentNode).selectAll(highlighted)[0][i]).classed("blurred", false).classed("highlighted", true);
+                d3.select(this_ref).classed("blurred", false);
+                d3.select(this_ref).classed("hovered", true);
+            };
+
+            var blurry = function(this_ref){
+                d3.selectAll('.junction').classed('blurred', false);
+                d3.selectAll('.readcounts').classed("blurred", false).classed("highlighted", false);
+                d3.selectAll('.ssite3').classed("highlighted", false);
+                d3.selectAll('.ssite5').classed("highlighted", false);
+                d3.select(this_ref).classed("hovered", false);
+            };
+
             // generate chart here, using `w` and `h`
             var exonsp = d[0],
                 junctionsp=d[1],
@@ -536,6 +602,7 @@ function spliceGraphD3() {
             /** Render junctions and read numbers */
             var junctions = renderJunctions(junctionsp, scaleX, this.id);
             renderNumReads(junctionsp, scaleX);
+            var irLines = renderIntRetReads(junctionsp, scaleX);
             spliceSites(junctionsp, scaleX);
 
             /** Add interactivity for exons ... */
@@ -597,6 +664,7 @@ function spliceGraphD3() {
 
             /** ..and junctions! */
             junctions.on('mouseover', function(d, i){
+                //highlight(this, i, '.readcounts');
                 d3.select(this.parentNode).selectAll('.junction').classed("blurred", true);
                 d3.select(this.parentNode).selectAll('.readcounts').classed("blurred", true);
                 d3.select(d3.select(this.parentNode).selectAll('.ssite3')[0][i]).classed("highlighted", true);
@@ -620,6 +688,7 @@ function spliceGraphD3() {
                     });
             })
             .on('mouseout', function(){
+                //blurry(this);
                 d3.selectAll('.junction').classed('blurred', false);
                 d3.selectAll('.readcounts').classed("blurred", false).classed("highlighted", false);
                 d3.selectAll('.ssite3').classed("highlighted", false);

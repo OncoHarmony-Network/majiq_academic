@@ -634,8 +634,7 @@ window.splicegraph = function (){
 
         function renderLsvSpliceGraph(canvas, gene) {
             if (canvas.getContext) {
-                // Render LSV representation from a string text representing the REAL LSV i.e.: s|1e1.3o3|2e1.2o3|3e1.2o3|4e1.1o3
-                //                                                             Another example: s|1e0|2e0|3e1.1o1|4e1.1o1
+                // Render LSV representation from a string text representing the LSV i.e.: s|1e1.3o3|2e1.2o3|3e1.2o3|i|4e1.1o3  NEW: Intron Retention (i field)
                 var ctx = canvas.getContext("2d");
 
                 // Clear previous draw
@@ -666,11 +665,19 @@ window.splicegraph = function (){
 
                 var lsv_data = canvas.getAttribute('data-lsv-string');
                 var lsvs = lsv_data.split('|');
+                var ir_marker = 'i';
+
+                var intron_ret = false;
+                if (lsvs.indexOf(ir_marker) > -1){
+                    intron_ret = true;
+                    lsvs.splice(lsvs.indexOf(ir_marker), 1);  // Modifies the array in place
+                }
 
                 // Num exons_obj
                 var num_exons = 0;
                 var num_ss = 0;
                 var ss_reg = {};
+
                 for (var n_ways = 1; n_ways<lsvs.length; n_ways++){
                     var lsvs_fields = lsvs[n_ways].split('e');
                     num_exons = Math.max(num_exons, parseInt(lsvs_fields[1][0]));
