@@ -85,7 +85,7 @@ def print_message(bars, extrabars=None, filename=None):
     return msg
 
 
-def plot_fdrheatmap(vals, vals2, grps):
+def plot_fdrheatmap(vals, vals2, grps, output=None):
 
     global fidx
 
@@ -193,7 +193,10 @@ def plot_fdrheatmap(vals, vals2, grps):
     ax.set_yticklabels(df_grps)
     ax.set_title('Complex changing events')
 
-    pyplot.show()
+    if output is None:
+        pyplot.show()
+    else:
+        pyplot.savefig(output+'.pdf')
 
 
     # plot
@@ -215,7 +218,7 @@ def plot_fdrheatmap(vals, vals2, grps):
     fidx += 1
 
 
-def plot_countings(vals, typs, counts):
+def plot_countings(vals, typs, counts, output=None):
 
     global fidx
 
@@ -293,11 +296,14 @@ def plot_countings(vals, typs, counts):
     pyplot.xlabel(' # elements')
     pyplot.title('Total Number of LSVs %s' % counts)
     pyplot.legend(loc='best')
-    pyplot.show()
+    if output is None:
+        pyplot.show()
+    else:
+        pyplot.savefig(output+'.pdf')
     fidx += 1
 
 
-def plot_lsv_types_hist(vals, typs, img_path=None, lim_val=None, extra_title=""):
+def plot_lsv_types_hist(vals, typs, img_path=None, lim_val=None, extra_title="", output=None):
 
     global fidx
 
@@ -363,11 +369,14 @@ def plot_lsv_types_hist(vals, typs, img_path=None, lim_val=None, extra_title="")
             
     pyplot.title(extra_title)
     #pyplot.xlim((0, 8000))
-    pyplot.show()
+    if output is None:
+        pyplot.show()
+    else:
+        pyplot.savefig(output+'.pdf')
     fidx += 1
 
 
-def plot_dominant_exons(dom_dict, name='', color=cb.Blues[9]):
+def plot_dominant_exons(dom_dict, name='', color=cb.Blues[9], output=None):
     global fidx
 
     fig, ax = pyplot.subplots(1)
@@ -402,7 +411,10 @@ def plot_dominant_exons(dom_dict, name='', color=cb.Blues[9]):
     pyplot.legend(loc='best')
     # labs = ["exon %d" % xx for xx in np.arange(0, totalbins+1)]
     # ax.set_xticklabels(labs)
-    pyplot.show()
+    if output is None:
+        pyplot.show()
+    else:
+        pyplot.savefig(output+'.pdf')
     fidx += 1
 
 
@@ -462,12 +474,13 @@ def get_types(direc, list_exp, grps):
     return d_types, g_types
 
 
-def all_plots_wrapper(types, nlsv=0):
+def all_plots_wrapper(types, nlsv=0, output=None):
 
     global fidx
     histo = sorted(types.iteritems(), key=lambda (k, v): (v, k))
     num_ev = np.sum([xx[1] for xx in histo])
-    s_keys = [xx[0] for xx in histo if xx[1] > 100]
+    #s_keys = [xx[0] for xx in histo if xx[1] > 100]
+    s_keys = [xx[0] for xx in histo if xx[1] > 10]
     s_vals = [types[xx] for xx in s_keys]
 
     total = 0
@@ -494,7 +507,8 @@ def all_plots_wrapper(types, nlsv=0):
     extra_title = " %s events" % num_ev
     percent = float(complex) / total
     print "Complex %d/%d (%.3f)" % (complex, total, percent)
-    plot_lsv_types_hist(s_vals, s_keys, img_path=impath, lim_val=None, extra_title=extra_title)
+
+    plot_lsv_types_hist(s_vals, s_keys, img_path=impath, lim_val=None, extra_title=extra_title, output=output)
     #plot_lsv_types_hist(s_vals, s_keys, img_path=None, lim_val=None, extra_title=extra_title)
 
 
@@ -663,9 +677,12 @@ if __name__ == '__main__':
     onlyfiles = [f for f in listdir(dire) if isfile(join(dire, f)) and f.endswith('majiq')]
     #groups = ['Adr', 'Aor', 'BFat', 'Bstm', 'Cer', 'Hrt', 'Hyp', 'Kid', 'Liv', 'Lun', 'Mus', 'WFat']
     #onlyfiles = ['Adr_CT22.mm10.sorted.majiq', 'Aor_CT22.mm10.sorted.majiq']
-    groups = ['output.refseq']
+
+    output = sys.argv[2]
+    groups = sys.argv[3:]
 
     print "Parse files"
+
     list_types, group_types = get_types(dire, onlyfiles, groups)
     count_lsv = len(set(list_types.keys()))
 
@@ -676,7 +693,7 @@ if __name__ == '__main__':
         stypes[tyt] += 1
 
     print "Plot 3.a 3.b"
-    all_plots_wrapper(stypes, count_lsv)
+    all_plots_wrapper(stypes, count_lsv, output=output)
     #
     # #read psi values
     # groups_vals = []

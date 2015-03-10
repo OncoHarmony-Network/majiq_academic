@@ -211,9 +211,9 @@ function spliceGraphD3() {
 
 
     var width = 1000, // default width
-        height = 140, // default height
+        height = 180, // default height
         padding = [60, 5, 5, 5],
-        JUNC_AREA=0.85;
+        JUNC_AREA=0.8;
     var EXON_H = Math.round(height * (1-JUNC_AREA) - padding[2]),
         EXON_MIN_W= 2,
         EXON_MAX_W=200;
@@ -268,7 +268,7 @@ function spliceGraphD3() {
             var renderNumReads = function(junctions, scaleX) {
                 var maxJunc = longestJunc(junctions, scaleX);
                 var labels = svgCanvas.selectAll("text.readcounts")
-                    .data(junctions);
+                    .data(junctions.filter(function(v){ return v.ir < 1;}));
                 labels.enter().append("text");
                 labels.classed("readcounts", true)
                     .transition()
@@ -286,16 +286,14 @@ function spliceGraphD3() {
                         return Math.round((scaleX(d.coords[1]) + scaleX(d.coords[0])) / 2);
                     })
                     .attr("y", function (d) {
-                        return Math.round(height * JUNC_AREA - 2 -
-                                (scaleX(d.coords[1]) - scaleX(d.coords[0])) / maxJunc * JUNC_AREA * (height - padding[0] - padding[2])
-                                + ((scaleX(d.coords[1]) - scaleX(d.coords[0])) / maxJunc * JUNC_AREA * (height - padding[0] - padding[2]) / d.dispersion) * (d.dispersion - 1 ? 1 : 0)
-                        );
+                        var posY = (scaleX(d.coords[1]) - scaleX(d.coords[0])) / maxJunc * JUNC_AREA * (height - padding[0] - padding[2]);
+                        return Math.round(height * JUNC_AREA - 2 - posY + (posY / d.dispersion) * (d.dispersion - 1 ? 1 : 0));
                     });
 
             };
 
             var renderJunctions = function(data, scaleX, docId){
-                var juncs = svgCanvas.selectAll('ellipse').data(data);
+                var juncs = svgCanvas.selectAll('ellipse').data(data.filter(function(v){ return v.ir<1; }));  // Skip intron retention junctions
                 var maxJunc = longestJunc(data, scaleX);
                 juncs.enter().append("ellipse");
 
@@ -329,6 +327,52 @@ function spliceGraphD3() {
                 juncs.classed("novelInOthers", function(d){ return d.type_junction == 1 && d.num_reads<1; });
 
                 return juncs;
+            };
+
+            var renderIntRetReads = function(data, scaleX) {
+                var labels = svgCanvas.selectAll("text.irreads")
+                    .data(data.filter(function(v){ return v.ir > 0;}));
+                labels.enter().append("text");
+                labels.classed("irreads", true)
+                    .attr("text-anchor", function(d){return (d.ir === 1 ? "end": "start" );})
+                    .transition()
+                    .duration(100)
+                    .ease("linear")
+                    .text(function (d) {
+                        return d.num_reads;
+                    })
+                    .attr("x", function (d, i) {
+                        var pos= Math.round(scaleX(d.coords[(d.ir == 1 ? 1 : 0)]) + (d.ir == 1 ? 2 : -2));
+                        if (strand == '-')
+                            return Math.round(width - pos);
+                        else
+                            return pos;
+                    })
+                    .attr("y", Math.round(height*JUNC_AREA + EXON_H /5));
+
+
+                var irlines = svgCanvas.selectAll("line.irlines")
+                    .data(data.filter(function(v){ return v.ir > 0;}));
+                irlines.enter().append("line");
+                irlines.classed("irlines", true)
+                    .transition()
+                    .duration(100)
+                    .ease("linear")
+                    .attr("x1", function (d) {
+                        return  Math.round(scaleX(d.coords[(d.ir == 1 ? 1 : 0)]));
+                    })
+                    .attr("y1", function () {
+                        return Math.round(height*JUNC_AREA + EXON_H/5 + 2);
+                    })
+                    .attr("x2", function (d) {
+                        return Math.round(scaleX(d.coords[(d.ir == 1 ? 1 : 0)]) + ((d.ir == 1)? 14 : -14));
+                    })
+                    .attr("y2", function () {
+                        return Math.round(height*JUNC_AREA + EXON_H/5 + 2);
+                    });
+                irlines.classed("found", function(d){ return d.type_junction == 0; });
+                irlines.classed("novel", function(d){ return d.type_junction == 1; });
+
             };
 
             var spliceSites = function(junctions, scaleX) {
@@ -382,7 +426,7 @@ function spliceGraphD3() {
 
             var renderExons = function(datap, keyf, scaleX){
                 // Represent exons as rectangles - filter out half exons
-                var exons = svgCanvas.selectAll("rect.exon").data(datap.filter(function(v){ return v.value.type_exon <3;}), keyf);
+                var exons = svgCanvas.selectAll("rect.exon").data(datap.filter(function(v){ return v.value.type_exon <3 && !v.value.intron_retention;}), keyf);
 
                 exons.enter().append("rect");
                 exons.attr("class", "exon")
@@ -422,14 +466,10 @@ function spliceGraphD3() {
                         if (d.value.type_exon == 4) //missing end
                             index_missing = 1;
                         var halfExonsPoints = [
-                            {
-                                'x': scaleX(d.value.coords[index_missing]),
-                                'y': height * JUNC_AREA
-                            }, {'x': scaleX(d.value.coords[(index_missing + 1) % 2]), 'y': height * JUNC_AREA},
-                            {
-                                'x': scaleX(d.value.coords[(index_missing + 1) % 2]),
-                                'y': height * JUNC_AREA + EXON_H
-                            }, {'x': scaleX(d.value.coords[index_missing]), 'y': height * JUNC_AREA + EXON_H}
+                            {'x': scaleX(d.value.coords[index_missing]), 'y': height * JUNC_AREA},
+                            {'x': scaleX(d.value.coords[(index_missing + 1) % 2]), 'y': height * JUNC_AREA},
+                            {'x': scaleX(d.value.coords[(index_missing + 1) % 2]), 'y': height * JUNC_AREA + EXON_H },
+                            {'x': scaleX(d.value.coords[index_missing]), 'y': height * JUNC_AREA + EXON_H}
                         ];
                         return lineFunction(halfExonsPoints);
                     });
@@ -442,8 +482,9 @@ function spliceGraphD3() {
             };
 
             var renderNumExons = function(exons, scaleX) {
+                var exons_only = exons.filter(function(v){ return v.value.type_exon <3 && !v.value.intron_retention;});
                 var labels = svgCanvas.selectAll("text.numexon")
-                    .data(exons);
+                    .data(exons_only);
                 labels.enter().append("text");
                 labels.classed("numexon", true)
                     .transition()
@@ -451,7 +492,7 @@ function spliceGraphD3() {
                     .ease("linear")
                     .text(function (d, i) {
                         if (strand == '-')
-                            return (exons.length - (i)).toString();
+                            return (exons_only.length - (i)).toString();
                         return (i + 1).toString();
                     })
                     .attr("x", function (d, i) {
@@ -472,17 +513,20 @@ function spliceGraphD3() {
                     .classed('missing', function(d){
                         return d.value.type_exon == 2;
                     })
+                    .classed('novel', function(d){
+                        return d.value.type_exon == 1;
+                    })
                     .transition()
                     .duration(100)
                     .ease("linear")
                     .attr("x", function(d){
-                        return scaleX(d.value.coords[1]);
+                        return scaleX(d.value.coords[0]);
                     })
-                    .attr("y", Math.round(height*JUNC_AREA + height*(1-JUNC_AREA)/5))
+                    .attr("y", Math.round(height*JUNC_AREA + EXON_H*2/5))
                     .attr("width", function(d){
-                        return Math.round(scaleX(exons[d.key+1].value.coords[0]) - scaleX(d.value.coords[1]));
+                        return Math.round(scaleX(d.value.coords[1]) - scaleX(d.value.coords[0]));
                     })
-                    .attr("height", Math.round((EXON_H)*2/5));
+                    .attr("height", Math.round(EXON_H*2/5));
             };
 
             var renderCoordsExtra = function(exons, scaleX) {
@@ -519,6 +563,25 @@ function spliceGraphD3() {
 
             };
 
+
+            var highlight = function(this_ref, i, highlighted){
+                d3.select(this_ref.parentNode).selectAll('.junction').classed("blurred", true);
+                d3.select(this_ref.parentNode).selectAll('.readcounts').classed("blurred", true);
+                d3.select(d3.select(this_ref.parentNode).selectAll('.ssite3')[0][i]).classed("highlighted", true);
+                d3.select(d3.select(this_ref.parentNode).selectAll('.ssite5')[0][i]).classed("highlighted", true);
+                d3.select(d3.select(this_ref.parentNode).selectAll(highlighted)[0][i]).classed("blurred", false).classed("highlighted", true);
+                d3.select(this_ref).classed("blurred", false);
+                d3.select(this_ref).classed("hovered", true);
+            };
+
+            var blurry = function(this_ref){
+                d3.selectAll('.junction').classed('blurred', false);
+                d3.selectAll('.readcounts').classed("blurred", false).classed("highlighted", false);
+                d3.selectAll('.ssite3').classed("highlighted", false);
+                d3.selectAll('.ssite5').classed("highlighted", false);
+                d3.select(this_ref).classed("hovered", false);
+            };
+
             // generate chart here, using `w` and `h`
             var exonsp = d[0],
                 junctionsp=d[1],
@@ -540,6 +603,7 @@ function spliceGraphD3() {
             /** Render junctions and read numbers */
             var junctions = renderJunctions(junctionsp, scaleX, this.id);
             renderNumReads(junctionsp, scaleX);
+            var irLines = renderIntRetReads(junctionsp, scaleX);
             spliceSites(junctionsp, scaleX);
 
             /** Add interactivity for exons ... */
@@ -601,6 +665,7 @@ function spliceGraphD3() {
 
             /** ..and junctions! */
             junctions.on('mouseover', function(d, i){
+                //highlight(this, i, '.readcounts');
                 d3.select(this.parentNode).selectAll('.junction').classed("blurred", true);
                 d3.select(this.parentNode).selectAll('.readcounts').classed("blurred", true);
                 d3.select(d3.select(this.parentNode).selectAll('.ssite3')[0][i]).classed("highlighted", true);
@@ -624,6 +689,7 @@ function spliceGraphD3() {
                     });
             })
             .on('mouseout', function(){
+                //blurry(this);
                 d3.selectAll('.junction').classed('blurred', false);
                 d3.selectAll('.readcounts').classed("blurred", false).classed("highlighted", false);
                 d3.selectAll('.ssite3').classed("highlighted", false);
@@ -670,6 +736,7 @@ function spliceGraphD3() {
 * D3 - SpliceGraph - ONLY ACTIVE WHILE DEBUGGING!!
 * */
 
+//var genes_obj = JSON.parse('{\'exons\': [{\'a3\': [], \'a5\': [0, 1], \'coords\': [135502453, 135502674], \'coords_extra\': [], \'intron_retention\': false, \'lsv_type\': 0, \'type_exon\': 0}, {\'a3\': [0, 1], \'a5\': [2, 3], \'coords\': [135502940, 135507158], \'coords_extra\': [[135502940, 135507014]], \'intron_retention\': false, \'lsv_type\': 0, \'type_exon\': 0}, {\'a3\': [2], \'a5\': [4], \'coords\': [135508972, 135509043], \'coords_extra\': [], \'intron_retention\': false, \'lsv_type\': 0, \'type_exon\': 0}, {\'a3\': [3, 4], \'a5\': [5, 6], \'coords\': [135510929, 135511021], \'coords_extra\': [], \'intron_retention\': false, \'lsv_type\': 0, \'type_exon\': 0}, {\'a3\': [5], \'a5\': [7], \'coords\': [135511265, 135511485], \'coords_extra\': [], \'intron_retention\': false, \'lsv_type\': 0, \'type_exon\': 0}, {\'a3\': [6, 7], \'a5\': [8], \'coords\': [135513462, 135513696], \'coords_extra\': [], \'intron_retention\': false, \'lsv_type\': 0, \'type_exon\': 0}, {\'a3\': [8], \'a5\': [9, 10], \'coords\': [135514976, 135515056], \'coords_extra\': [], \'intron_retention\': false, \'lsv_type\': 0, \'type_exon\': 0}, {\'a3\': [9], \'a5\': [11, 12, 13, 14, 15], \'coords\': [135515494, 135515824], \'coords_extra\': [], \'intron_retention\': false, \'lsv_type\': 0, \'type_exon\': 0}, {\'a3\': [11, 13], \'a5\': [16], \'coords\': [135516098, 135516219], \'coords_extra\': [], \'intron_retention\': false, \'lsv_type\': 0, \'type_exon\': 0}, {\'a3\': [10, 12, 14, 16], \'a5\': [21, 22, 23, 20, 17, 18, 19], \'coords\': [135516886, 135517140], \'coords_extra\': [], \'intron_retention\': false, \'lsv_type\': 0, \'type_exon\': 0}, {\'a3\': [17, 21], \'a5\': [24], \'coords\': [135517864, 135518046], \'coords_extra\': [], \'intron_retention\': true, \'lsv_type\': 0, \'type_exon\': 0}, {\'a3\': [18, 20, 22, 24], \'a5\': [25], \'coords\': [135518099, 135518461], \'coords_extra\': [], \'intron_retention\': false, \'lsv_type\': 0, \'type_exon\': 0}, {\'a3\': [15, 19, 23, 25], \'a5\': [26, 27], \'coords\': [135520046, 135520188], \'coords_extra\': [], \'intron_retention\': false, \'lsv_type\': 0, \'type_exon\': 0}, {\'a3\': [26], \'a5\': [28], \'coords\': [135520664, 135520719], \'coords_extra\': [], \'intron_retention\': false, \'lsv_type\': 0, \'type_exon\': 0}, {\'a3\': [27, 28], \'a5\': [29], \'coords\': [135521223, 135521337], \'coords_extra\': [], \'intron_retention\': false, \'lsv_type\': 0, \'type_exon\': 0}, {\'a3\': [29], \'a5\': [30, 31, 33, 32], \'coords\': [135521428, 135521812], \'coords_extra\': [], \'intron_retention\': false, \'lsv_type\': 0, \'type_exon\': 0}, {\'a3\': [30, 32, 33], \'a5\': [34, 35], \'coords\': [135522777, 135522887], \'coords_extra\': [], \'intron_retention\': false, \'lsv_type\': 0, \'type_exon\': 0}, {\'a3\': [34], \'a5\': [36, 37], \'coords\': [135523552, 135523807], \'coords_extra\': [], \'intron_retention\': false, \'lsv_type\': 0, \'type_exon\': 0}, {\'a3\': [36], \'a5\': [38], \'coords\': [135524086, 135524087], \'coords_extra\': [], \'intron_retention\': false, \'lsv_type\': 0, \'type_exon\': 2}, {\'a3\': [31, 35, 37, 38], \'a5\': [39, 40], \'coords\': [135524355, 135524462], \'coords_extra\': [], \'intron_retention\': true, \'lsv_type\': 0, \'type_exon\': 0}, {\'a3\': [39], \'a5\': [], \'coords\': [135524854, 135525088], \'coords_extra\': [], \'intron_retention\': false, \'lsv_type\': 0, \'type_exon\': 0}, {\'a3\': [40], \'a5\': [], \'coords\': [135539002, 135540311], \'coords_extra\': [], \'intron_retention\': false, \'lsv_type\': 0, \'type_exon\': 0}], \'junctions\': [{\'coords\': [135502674, 135502940], \'num_reads\': 3, \'type_junction\': 1}, {\'coords\': [135502674, 135507041], \'num_reads\': 534, \'type_junction\': 0}, {\'coords\': [135507158, 135508972], \'num_reads\': 487, \'type_junction\': 0}, {\'coords\': [135507158, 135510929], \'num_reads\': 249, \'type_junction\': 0}, {\'coords\': [135509043, 135510929], \'num_reads\': 1055, \'type_junction\': 0}, {\'coords\': [135511021, 135511265], \'num_reads\': 904, \'type_junction\': 0}, {\'coords\': [135511021, 135513462], \'num_reads\': 30, \'type_junction\': 0}, {\'coords\': [135511485, 135513462], \'num_reads\': 393, \'type_junction\': 0}, {\'coords\': [135513696, 135514976], \'num_reads\': 692, \'type_junction\': 0}, {\'coords\': [135515056, 135515494], \'num_reads\': 501, \'type_junction\': 0}, {\'coords\': [135515056, 135516886], \'num_reads\': 22, \'type_junction\': 0}, {\'coords\': [135515589, 135516098], \'num_reads\': 0, \'type_junction\': 2}, {\'coords\': [135515589, 135516886], \'num_reads\': 34, \'type_junction\': 0}, {\'coords\': [135515598, 135516098], \'num_reads\': 4, \'type_junction\': 0}, {\'coords\': [135515598, 135516886], \'num_reads\': 600, \'type_junction\': 0}, {\'coords\': [135515598, 135520046], \'num_reads\': 0, \'type_junction\': 2}, {\'coords\': [135516219, 135516886], \'num_reads\': 4, \'type_junction\': 0}, {\'coords\': [135517055, 135517864], \'num_reads\': 0, \'type_junction\': 2}, {\'coords\': [135517055, 135518099], \'num_reads\': 1, \'type_junction\': 0}, {\'coords\': [135517055, 135520046], \'num_reads\': 3, \'type_junction\': 0}, {\'coords\': [135517092, 135518099], \'num_reads\': 0, \'type_junction\': 2}, {\'coords\': [135517140, 135517864], \'num_reads\': 0, \'type_junction\': 2}, {\'coords\': [135517140, 135518099], \'num_reads\': 2, \'type_junction\': 0}, {\'coords\': [135517140, 135520046], \'num_reads\': 207, \'type_junction\': 0}, {\'coords\': [135518046, 135518099], \'num_reads\': 0, \'type_junction\': 2}, {\'coords\': [135518461, 135520046], \'num_reads\': 1, \'type_junction\': 0}, {\'coords\': [135520188, 135520664], \'num_reads\': 14, \'type_junction\': 0}, {\'coords\': [135520188, 135521223], \'num_reads\': 429, \'type_junction\': 0}, {\'coords\': [135520719, 135521223], \'num_reads\': 14, \'type_junction\': 0}, {\'coords\': [135521337, 135521428], \'num_reads\': 380, \'type_junction\': 0}, {\'coords\': [135521553, 135522777], \'num_reads\': 365, \'type_junction\': 0}, {\'coords\': [135521553, 135524355], \'num_reads\': 1, \'type_junction\': 0}, {\'coords\': [135521695, 135522777], \'num_reads\': 5, \'type_junction\': 0}, {\'coords\': [135521812, 135522777], \'num_reads\': 0, \'type_junction\': 2}, {\'coords\': [135522887, 135523552], \'num_reads\': 4, \'type_junction\': 0}, {\'coords\': [135522887, 135524355], \'num_reads\': 743, \'type_junction\': 0}, {\'coords\': [135523807, 135524086], \'num_reads\': 0, \'type_junction\': 2}, {\'coords\': [135523807, 135524355], \'num_reads\': 1, \'type_junction\': 0}, {\'coords\': [135524087, 135524355], \'num_reads\': 0, \'type_junction\': 2}, {\'coords\': [135524462, 135524854], \'num_reads\': 2, \'type_junction\': 0}, {\'coords\': [135524462, 135539002], \'num_reads\': 535, \'type_junction\': 0}], \'name\': \'ENST00000339290\', \'strand\': \'+\'}'.replace(/\'/g, "\"").replace(/'/g, ""));
 //var genes_obj = JSON.parse('{\'chrom\': \'chr14\', \'end\': 20794088, \'exons\': [{\'a3\': [], \'a5\': [0], \'alt_ends\': [], \'alt_starts\': [], \'coords\': [20734875, 20736852], \'coords_extra\': [], \'intron_retention\': false, \'lsv_type\': 0, \'type_exon\': 3}, {\'a3\': [0], \'a5\': [1, 2], \'alt_ends\': [], \'alt_starts\': [], \'coords\': [20737259, 20737503], \'coords_extra\': [], \'intron_retention\': false, \'lsv_type\': 0, \'type_exon\': 2}, {\'a3\': [2, 1], \'a5\': [3], \'alt_ends\': [], \'alt_starts\': [], \'coords\': [20738841, 20738943], \'coords_extra\': [[20738841, 20738848]], \'intron_retention\': false, \'lsv_type\': 0, \'type_exon\': 0}, {\'a3\': [3], \'a5\': [4, 5], \'alt_ends\': [], \'alt_starts\': [], \'coords\': [20739327, 20739402], \'coords_extra\': [], \'intron_retention\': false, \'lsv_type\': 0, \'type_exon\': 0}, {\'a3\': [4], \'a5\': [], \'alt_ends\': [], \'alt_starts\': [], \'coords\': [20741378, 20741388], \'coords_extra\': [], \'intron_retention\': false, \'lsv_type\': 0, \'type_exon\': 4}, {\'a3\': [5], \'a5\': [6], \'alt_ends\': [], \'alt_starts\': [], \'coords\': [20742705, 20742753], \'coords_extra\': [], \'intron_retention\': false, \'lsv_type\': 0, \'type_exon\': 0}, {\'a3\': [6], \'a5\': [7, 8], \'alt_ends\': [], \'alt_starts\': [], \'coords\': [20744604, 20744648], \'coords_extra\': [], \'intron_retention\': false, \'lsv_type\': 0, \'type_exon\': 0}, {\'a3\': [7], \'a5\': [9, 10], \'alt_ends\': [], \'alt_starts\': [], \'coords\': [20745792, 20745860], \'coords_extra\': [], \'intron_retention\': false, \'lsv_type\': 0, \'type_exon\': 0}, {\'a3\': [9], \'a5\': [11], \'alt_ends\': [], \'alt_starts\': [], \'coords\': [20747819, 20747851], \'coords_extra\': [], \'intron_retention\': false, \'lsv_type\': 0, \'type_exon\': 0}, {\'a3\': [8, 10, 11], \'a5\': [12, 13], \'alt_ends\': [], \'alt_starts\': [], \'coords\': [20755659, 20755702], \'coords_extra\': [], \'intron_retention\': false, \'lsv_type\': 0, \'type_exon\': 0}, {\'a3\': [12], \'a5\': [14], \'alt_ends\': [], \'alt_starts\': [], \'coords\': [20757666, 20757728], \'coords_extra\': [], \'intron_retention\': false, \'lsv_type\': 0, \'type_exon\': 1}, {\'a3\': [13, 14], \'a5\': [15], \'alt_ends\': [], \'alt_starts\': [], \'coords\': [20760144, 20760186], \'coords_extra\': [], \'intron_retention\': false, \'lsv_type\': 0, \'type_exon\': 0}, {\'a3\': [15], \'a5\': [16], \'alt_ends\': [], \'alt_starts\': [], \'coords\': [20760397, 20760480], \'coords_extra\': [], \'intron_retention\': false, \'lsv_type\': 0, \'type_exon\': 0}, {\'a3\': [16], \'a5\': [17], \'alt_ends\': [], \'alt_starts\': [], \'coords\': [20764146, 20764268], \'coords_extra\': [], \'intron_retention\': false, \'lsv_type\': 0, \'type_exon\': 0}, {\'a3\': [17], \'a5\': [18], \'alt_ends\': [], \'alt_starts\': [], \'coords\': [20764861, 20764955], \'coords_extra\': [], \'intron_retention\': false, \'lsv_type\': 0, \'type_exon\': 0}, {\'a3\': [18], \'a5\': [19], \'alt_ends\': [], \'alt_starts\': [], \'coords\': [20765396, 20765479], \'coords_extra\': [], \'intron_retention\': false, \'lsv_type\': 0, \'type_exon\': 0}, {\'a3\': [19], \'a5\': [20], \'alt_ends\': [], \'alt_starts\': [], \'coords\': [20765912, 20766014], \'coords_extra\': [], \'intron_retention\': false, \'lsv_type\': 0, \'type_exon\': 0}, {\'a3\': [20], \'a5\': [21], \'alt_ends\': [], \'alt_starts\': [], \'coords\': [20766153, 20766225], \'coords_extra\': [], \'intron_retention\': false, \'lsv_type\': 0, \'type_exon\': 0}, {\'a3\': [21], \'a5\': [22, 23], \'alt_ends\': [], \'alt_starts\': [], \'coords\': [20770064, 20770129], \'coords_extra\': [], \'intron_retention\': false, \'lsv_type\': 0, \'type_exon\': 0}, {\'a3\': [22], \'a5\': [24], \'alt_ends\': [], \'alt_starts\': [], \'coords\': [20771007, 20771061], \'coords_extra\': [], \'intron_retention\': false, \'lsv_type\': 0, \'type_exon\': 0}, {\'a3\': [23, 24], \'a5\': [25], \'alt_ends\': [], \'alt_starts\': [], \'coords\': [20779204, 20779263], \'coords_extra\': [], \'intron_retention\': false, \'lsv_type\': 0, \'type_exon\': 0}, {\'a3\': [25], \'a5\': [26], \'alt_ends\': [], \'alt_starts\': [], \'coords\': [20792519, 20792613], \'coords_extra\': [], \'intron_retention\': false, \'lsv_type\': 0, \'type_exon\': 0}, {\'a3\': [26], \'a5\': [], \'alt_ends\': [20794088], \'alt_starts\': [], \'coords\': [20793901, 20794088], \'coords_extra\': [], \'intron_retention\': false, \'lsv_type\': 0, \'type_exon\': 0}], \'id\': \'ENSMUSG00000021820\', \'junctions\': [{\'coords\': [20736852, 20737259], \'num_clean_reads\': 0, \'num_reads\': 7, \'transcripts\': [\'ENSMUST00000100837\', \'ENSMUST00000071816\', \'ENSMUST00000080440\'], \'type_junction\': 0}, {\'coords\': [20737503, 20738841], \'num_clean_reads\': 0, \'num_reads\': 6, \'transcripts\': [], \'type_junction\': 1}, {\'coords\': [20737503, 20738849], \'num_clean_reads\': 0, \'num_reads\': 86, \'transcripts\': [\'ENSMUST00000100837\', \'ENSMUST00000071816\', \'ENSMUST00000080440\'], \'type_junction\': 0}, {\'coords\': [20738943, 20739327], \'num_clean_reads\': 0, \'num_reads\': 28, \'transcripts\': [\'ENSMUST00000100837\', \'ENSMUST00000071816\', \'ENSMUST00000080440\'], \'type_junction\': 0}, {\'coords\': [20739402, 20741378], \'num_clean_reads\': 0, \'num_reads\': 6, \'transcripts\': [], \'type_junction\': 1}, {\'coords\': [20739402, 20742705], \'num_clean_reads\': 0, \'num_reads\': 0, \'transcripts\': [\'ENSMUST00000100837\', \'ENSMUST00000071816\', \'ENSMUST00000080440\'], \'type_junction\': 2}, {\'coords\': [20742753, 20744604], \'num_clean_reads\': 0, \'num_reads\': 23, \'transcripts\': [\'ENSMUST00000100837\', \'ENSMUST00000071816\', \'ENSMUST00000080440\'], \'type_junction\': 0}, {\'coords\': [20744648, 20745792], \'num_clean_reads\': 0, \'num_reads\': 4, \'transcripts\': [\'ENSMUST00000071816\', \'ENSMUST00000080440\'], \'type_junction\': 0}, {\'coords\': [20744648, 20755659], \'num_clean_reads\': 0, \'num_reads\': 1, \'transcripts\': [\'ENSMUST00000100837\'], \'type_junction\': 0}, {\'coords\': [20745860, 20747819], \'num_clean_reads\': 0, \'num_reads\': 26, \'transcripts\': [\'ENSMUST00000071816\'], \'type_junction\': 0}, {\'coords\': [20745860, 20755659], \'num_clean_reads\': 0, \'num_reads\': 46, \'transcripts\': [\'ENSMUST00000080440\'], \'type_junction\': 0}, {\'coords\': [20747851, 20755659], \'num_clean_reads\': 0, \'num_reads\': 25, \'transcripts\': [\'ENSMUST00000071816\'], \'type_junction\': 0}, {\'coords\': [20755702, 20757666], \'num_clean_reads\': 0, \'num_reads\': 22, \'transcripts\': [], \'type_junction\': 1}, {\'coords\': [20755702, 20760144], \'num_clean_reads\': 0, \'num_reads\': 25, \'transcripts\': [\'ENSMUST00000100837\', \'ENSMUST00000071816\', \'ENSMUST00000080440\'], \'type_junction\': 0}, {\'coords\': [20757728, 20760144], \'num_clean_reads\': 0, \'num_reads\': 10, \'transcripts\': [], \'type_junction\': 1}, {\'coords\': [20760186, 20760397], \'num_clean_reads\': 0, \'num_reads\': 58, \'transcripts\': [\'ENSMUST00000100837\', \'ENSMUST00000071816\', \'ENSMUST00000080440\'], \'type_junction\': 0}, {\'coords\': [20760480, 20764146], \'num_clean_reads\': 0, \'num_reads\': 31, \'transcripts\': [\'ENSMUST00000100837\', \'ENSMUST00000071816\', \'ENSMUST00000080440\'], \'type_junction\': 0}, {\'coords\': [20764268, 20764861], \'num_clean_reads\': 0, \'num_reads\': 61, \'transcripts\': [\'ENSMUST00000100837\', \'ENSMUST00000071816\', \'ENSMUST00000080440\'], \'type_junction\': 0}, {\'coords\': [20764955, 20765396], \'num_clean_reads\': 0, \'num_reads\': 45, \'transcripts\': [\'ENSMUST00000100837\', \'ENSMUST00000071816\', \'ENSMUST00000080440\'], \'type_junction\': 0}, {\'coords\': [20765479, 20765912], \'num_clean_reads\': 0, \'num_reads\': 30, \'transcripts\': [\'ENSMUST00000100837\', \'ENSMUST00000071816\', \'ENSMUST00000080440\'], \'type_junction\': 0}, {\'coords\': [20766014, 20766153], \'num_clean_reads\': 0, \'num_reads\': 41, \'transcripts\': [\'ENSMUST00000100837\', \'ENSMUST00000071816\', \'ENSMUST00000080440\'], \'type_junction\': 0}, {\'coords\': [20766225, 20770064], \'num_clean_reads\': 0, \'num_reads\': 50, \'transcripts\': [\'ENSMUST00000100837\', \'ENSMUST00000071816\', \'ENSMUST00000080440\'], \'type_junction\': 0}, {\'coords\': [20770129, 20771007], \'num_clean_reads\': 0, \'num_reads\': 67, \'transcripts\': [\'ENSMUST00000100837\', \'ENSMUST00000071816\', \'ENSMUST00000080440\'], \'type_junction\': 0}, {\'coords\': [20770129, 20779204], \'num_clean_reads\': 0, \'num_reads\': 3, \'transcripts\': [], \'type_junction\': 1}, {\'coords\': [20771061, 20779204], \'num_clean_reads\': 0, \'num_reads\': 39, \'transcripts\': [\'ENSMUST00000100837\', \'ENSMUST00000071816\', \'ENSMUST00000080440\'], \'type_junction\': 0}, {\'coords\': [20779263, 20792519], \'num_clean_reads\': 0, \'num_reads\': 18, \'transcripts\': [\'ENSMUST00000100837\', \'ENSMUST00000071816\', \'ENSMUST00000080440\'], \'type_junction\': 0}, {\'coords\': [20792613, 20793901], \'num_clean_reads\': 0, \'num_reads\': 0, \'transcripts\': [\'ENSMUST00000100837\', \'ENSMUST00000071816\', \'ENSMUST00000080440\'], \'type_junction\': 3}], \'name\': \'Camk2g\', \'start\': 20734875, \'strand\': \'-\'}'.replace(/\'/g, "\"").replace(/'/g, ""));
 //var exons_obj = genes_obj.exons;
 //var junctions_obj = genes_obj.junctions;

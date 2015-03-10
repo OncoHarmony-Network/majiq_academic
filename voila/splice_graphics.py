@@ -155,12 +155,13 @@ class ExonGraphic(object):
 
 
 class JunctionGraphic(object):
-    def __init__(self, coords, type_junction, nreads, clean_nreads=0, transcripts=list()):
+    def __init__(self, coords, type_junction, nreads, clean_nreads=0, transcripts=list(), ir=None):
         self.coords = list(coords)
         self.type_junction = type_junction
         self.num_reads = nreads
         self.num_clean_reads = clean_nreads
         self.transcripts = transcripts
+        self.ir = ir
 
     def get_coords(self):
         return self.coords
@@ -182,6 +183,9 @@ class JunctionGraphic(object):
 
     def set_transcripts(self, t):
         self.transcripts = t
+
+    def get_ir(self):
+        return self.ir
 
     def to_JSON(self, encoder=json.JSONEncoder):
         return json.dumps(self, default=lambda o: o.__dict__, sort_keys=True, cls=encoder)

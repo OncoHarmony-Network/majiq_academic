@@ -18,14 +18,25 @@ class LSV(object):
         self.id = lsv_id
         junction_list = [x for x in junctions if x is not None
                          and x.get_donor() is not None
-                         and x.get_acceptor is not None]
+                         and x.get_acceptor() is not None]
         #if len(junction_list) < 2 or exon.ir:
+        self.intron_retention = False
+        print lsv_id
+        for jj in junction_list:
+            x1 = jj.get_acceptor()
+            x2 = jj.get_donor()
+            print "\t ", jj.get_id()
+            if x1.is_intron() or x2.is_intron():
+                print "LSV with intron"
+                self.intron_retention = True
+                break
+
+
+
         if len(junction_list) < 2:
             raise ValueError
         self.type = lsv_type
         self.exon = exon
-
-        self.intron_retention = exon.is_intron()
 
         self.tlb_junc = {}
         self.ext_type = self.set_type(junction_list, self.tlb_junc)
@@ -151,25 +162,30 @@ class LSV(object):
             jdonor = junc.get_donor()
             jacceptor = junc.get_acceptor()
             if self.type == SSOURCE:
+
                 if jacceptor is None:
                     exs3 = ''
                     ex = '0'
+                    jtype = "|%se%s" % (spsite.index(junc.start)+1, ex)
+                elif jacceptor.is_intron():
+                    jtype = "|i"
                 else:
-                    self.intron_retention = self.intron_retention or jacceptor.is_intron()
                     s3 = sorted(list(set(jacceptor.ss_3p_list)), reverse=rev)
                     ex1 = ex_list.index(jacceptor.get_id())+1
                     ex = '%s.%so%s' % (ex1, s3.index(junc.end)+1,len(s3))
-                jtype = "|%se%s" % (spsite.index(junc.start)+1, ex)
+                    jtype = "|%se%s" % (spsite.index(junc.start)+1, ex)
             else:
                 if jdonor is None:
                     exs5 = ''
                     ex = '0'
+                    jtype = "|%se%s" % (spsite.index(junc.end)+1, ex)
+                elif jdonor.is_intron():
+                    jtype = "|i"
                 else:
-                    self.intron_retention = self.intron_retention or jdonor.is_intron()
                     s5 = sorted(list(set(jdonor.ss_5p_list)), reverse=rev)
                     ex1 = ex_list.index(jdonor.get_id())+1
                     ex = '%s.%so%s' % (ex1, s5.index(junc.start)+1, len(s5))
-                jtype = "|%se%s" % (spsite.index(junc.end)+1, ex)
+                    jtype = "|%se%s" % (spsite.index(junc.end)+1, ex)
             type_set.add(jtype)
             tlb_junc[jtype[1:]] = jidx
         for tt in sorted(list(type_set)):
