@@ -482,8 +482,9 @@ function spliceGraphD3() {
             };
 
             var renderNumExons = function(exons, scaleX) {
+                var exons_only = exons.filter(function(v){ return v.value.type_exon <3 && !v.value.intron_retention;});
                 var labels = svgCanvas.selectAll("text.numexon")
-                    .data(exons.filter(function(v){ return v.value.type_exon <3 && !v.value.intron_retention;}));
+                    .data(exons_only);
                 labels.enter().append("text");
                 labels.classed("numexon", true)
                     .transition()
@@ -491,7 +492,7 @@ function spliceGraphD3() {
                     .ease("linear")
                     .text(function (d, i) {
                         if (strand == '-')
-                            return (exons.length - (i)).toString();
+                            return (exons_only.length - (i)).toString();
                         return (i + 1).toString();
                     })
                     .attr("x", function (d, i) {

@@ -162,14 +162,30 @@ window.splicegraph = function (){
 
         }
 
+        function render_intron_retained(canvas, intron, pixel_factor, margin, percen_exon, junc_count){
+            var intron_height = Math.round(percen_exon * 2/4 * canvas.height);
+
+            var ctx = canvas.getContext("2d");
+            ctx.strokeStyle = getColor(junc_count, BREWER_PALETTE, 1);
+            ctx.fillStyle = getColor(junc_count, BREWER_PALETTE, .8);
+
+            ctx.fillRect(
+                margin[0] + Math.round((intron.coords[0]) * pixel_factor),
+                canvas.height * (1 - percen_exon * 1/4) - margin[3],
+                Math.round((intron.coords[1] - intron.coords[0]) * pixel_factor),
+                -intron_height
+            );
+
+        }
+
         function render_exon(canvas, exon, pixel_factor, margin, percen_exon, counter_exon) {
 
             var exon_height = percen_exon * canvas.height; // canvas.height-2*margin[2];
 
             var ctx = canvas.getContext("2d");
             if (exon.type === 1) {
-                ctx.strokeStyle = getColor(2, BREWER_PALETTE, .8);
-                ctx.fillStyle = getColor(2, BREWER_PALETTE, .2);
+                ctx.strokeStyle = "rgba(255, 165, 0, 1)"; //getColor(2, BREWER_PALETTE, .8);
+                ctx.fillStyle = "rgba(255, 165, 0, 0.2)"; //getColor(2, BREWER_PALETTE, .2);
             } else {
                 ctx.strokeStyle = "rgba(0, 0, 0, 0.8)";
                 ctx.fillStyle = "rgba(0, 0, 0, 0.2)";
@@ -646,19 +662,22 @@ window.splicegraph = function (){
 
                 var exon_lsv_number = '';
                 var exon_lsv_coords = canvas.getAttribute('data-coord-exon');
+
+                var exons_gene = gene.exons.filter(function(v){ return v.type_exon <3 && !v.intron_retention;});
+
                 if (exon_lsv_coords) {
                     exon_lsv_coords = exon_lsv_coords.replace('(', '').replace(')', '').replace(' ', '').split(',');
 
                     // Find LSV exon number in the splice graph
-                    for (var exon_i = 0; exon_i < gene.exons.length; exon_i++) {
-                        if (gene.exons[exon_i].coords[0] == exon_lsv_coords[0] && gene.exons[exon_i].coords[1] == exon_lsv_coords[1]) {
+                    for (var exon_i = 0; exon_i < exons_gene.length; exon_i++) {
+                        if (exons_gene[exon_i].coords[0] == exon_lsv_coords[0] && exons_gene[exon_i].coords[1] == exon_lsv_coords[1]) {
                             exon_lsv_number = exon_i + 1;
                             break;
                         }
                     }
                     // If negative strand, complement the exon ordinal
                     if (gene.strand === '-'){
-                        exon_lsv_number = gene.exons.length - exon_lsv_number + 1;
+                        exon_lsv_number = exons_gene.length - exon_lsv_number + 1;
                     }
 
                 }
@@ -667,9 +686,8 @@ window.splicegraph = function (){
                 var lsvs = lsv_data.split('|');
                 var ir_marker = 'i';
 
-                var intron_ret = false;
-                if (lsvs.indexOf(ir_marker) > -1){
-                    intron_ret = true;
+                var intron_ret_i = lsvs.indexOf(ir_marker);
+                if (intron_ret_i > -1){
                     lsvs.splice(lsvs.indexOf(ir_marker), 1);  // Modifies the array in place
                 }
 
@@ -718,6 +736,17 @@ window.splicegraph = function (){
                     number_exon = (number_exon == 0 || number_exon == num_exons ? exon_lsv_number : '');
                     render_exon(canvas, exon, pixel_factor, margins, percentage_exon, number_exon );
                     start += exon_width + percentage_intron*area[0];
+                }
+
+                // Render IR
+                if (intron_ret_i > -1){
+                    var intron = {
+                        'coords': (direction > 0
+                            ? [margins[0] + exon_width, margins[0] + exon_width + percentage_intron*area[0]]
+                            : [margins[0] + (num_exons-1)*exon_width + (num_exons-2)*percentage_intron*area[0],
+                               margins[0] + (num_exons-1)*exon_width + (num_exons-1)*percentage_intron*area[0]])
+                    };
+                    render_intron_retained(canvas, intron, pixel_factor, margins, percentage_exon, intron_ret_i-1);
                 }
 
                 // Render junctions
