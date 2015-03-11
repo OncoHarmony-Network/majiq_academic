@@ -527,6 +527,7 @@ function spliceGraphD3() {
                         return Math.round(scaleX(d.value.coords[1]) - scaleX(d.value.coords[0]));
                     })
                     .attr("height", Math.round(EXON_H*2/5));
+                return intronsRet;
             };
 
             var renderCoordsExtra = function(exons, scaleX) {
@@ -594,7 +595,7 @@ function spliceGraphD3() {
             var exons = renderExons(exonsp, exonKey, scaleX);
             addDispersion(exonsp, junctionsp);
             renderNumExons(exonsp, scaleX);
-            renderIntronRetention(exonsp, scaleX);
+            var introns_ret = renderIntronRetention(exonsp, scaleX);
             renderCoordsExtra(exonsp, scaleX);
 
             /** Render half exons */
@@ -633,6 +634,29 @@ function spliceGraphD3() {
                 d3.select(this).classed("hovered", false);
                 d3.select(this.parentNode.parentNode).select(".tooltipD3").classed("hidden", true);
             });
+
+            /** Add interactivity for intron retained ... */
+            introns_ret.on('mouseover', function(d){  // Highlight exons when hovered
+                d3.select(this).classed("hovered", true);
+
+                //Update the tooltip position and value
+                var tooltipD3 = d3.select(this.parentNode.parentNode).select(".tooltipD3");
+                tooltipD3.select(".coordsLabel")
+                    .text(function(){
+                        return orig_objs.exons[d.key].value.coords[0] + "-" + orig_objs.exons[d.key].value.coords[1];
+                    });
+                tooltipD3.select(".lengthLabel")
+                    .text(function(){
+                        return Math.abs(orig_objs.exons[d.key].value.coords[0] - orig_objs.exons[d.key].value.coords[1]) + 1;
+                    });
+                tooltipD3.classed("hidden", false);
+
+            })
+                .on('mouseout', function(d){
+                    d3.select(this).classed("hovered", false);
+                    d3.select(this.parentNode.parentNode).select(".tooltipD3").classed("hidden", true);
+                });
+
 
             /** Add interactivity for half exons ... */
             halfExons.on('mouseover', function(d){  // Highlight exons when hovered
@@ -674,7 +698,7 @@ function spliceGraphD3() {
                 d3.select(this).classed("blurred", false);
                 d3.select(this).classed("hovered", true);
 
-                //Update the tooltip position and value
+                    //Update the tooltip position and value
                 var tooltipD3 = d3.select(this.parentNode.parentNode).select(".tooltipD3");
 //                    .style("left", mouseCoords[0]+ "px")
 //                    .style("top", mouseCoords[1]+ "px")
