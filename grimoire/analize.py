@@ -16,7 +16,7 @@ def reliable_in_data(junc, exp_idx):
 
 def lsv_detection(gene_list, chrom, only_real_data=False, logging=None):
 
-    num_ss_var = [[0]*20, [0]*20, 0]
+    num_ss_var = [[0] * 20, [0] * 20, 0]
 
     const_set = [set() for xx in range(mglobals.num_experiments)]
     lsv_list = [[] for xx in range(mglobals.num_experiments)]

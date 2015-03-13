@@ -237,9 +237,9 @@ def generate_visualization_output(allgenes, temp_dir):
 
                         ir_type = None
                         if jj.get_donor().is_intron():
-                            ir_type = voila_const.IR_TYPE_START
-                        elif jj.get_acceptor().is_intron():
                             ir_type = voila_const.IR_TYPE_END
+                        elif jj.get_acceptor().is_intron():
+                            ir_type = voila_const.IR_TYPE_START
 
                         junc_l.append(jj.get_coordinates())
                         junc_list.append(JunctionGraphic(cc, jtype, num_reads, transcripts=jj.get_transcript_list(),

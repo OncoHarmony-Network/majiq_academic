@@ -140,7 +140,7 @@ def get_junc_from_list(coords, list_elem):
 
 def rnaseq_intron_retention(filenames, gene_list, readlen, chrom, logging=None):
 
-    MIN_INTRON = 5
+    MIN_INTRON = 1.5
     samfile = [pysam.Samfile(xx, "rb") for xx in filenames]
 
     for strand in ('+', '-'):
@@ -209,7 +209,7 @@ def rnaseq_intron_retention(filenames, gene_list, readlen, chrom, logging=None):
                     intron_parts /= chunk_len
                     intron_body_covered = True
                     for ii in intron_parts:
-                        if ii < 0.01:
+                        if ii < MIN_INTRON:
                             intron_body_covered = False
 
                     if cov1 >= mglobals.MINREADS and cov2 >= mglobals.MINREADS and intron_body_covered:
@@ -224,7 +224,7 @@ def rnaseq_intron_retention(filenames, gene_list, readlen, chrom, logging=None):
                                 ex.add_5prime_junc(junc1)
                                 break
 
-                        junc2.add_donor(exon2)
+                        junc2.add_acceptor(exon2)
                         for ex in exon2.exonRead_list:
                             st, end = ex.get_coordinates()
                             if st == junc2.get_coordinates()[1]:
