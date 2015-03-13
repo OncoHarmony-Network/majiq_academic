@@ -390,29 +390,29 @@ class ExonTx(object):
             txex2.junction_consistency()
 
         exb = exb1 & exb2
+        if exb:
+            #creating intron exon
+            intron = gn.new_annotated_exon(intron_coords[0], intron_coords[1], self.get_transcript()[0],
+                                           bl=False, intron=True)
+            res.append(intron)
+            junc1 = gn.exist_junction(txex2.end, intron_coords[0])
+            if junc1 is None:
+                junc1 = Junction(txex2.end, intron_coords[0], None, None, gn, annotated=True)
+    #           junc1.add_donor(txex2)
+    #           junc1.add_acceptor(intron)
+            txex2.p5_junc.append(junc1)
+            intron.p3_junc.append(junc1)
 
-        #creating intron exon
-        intron = gn.new_annotated_exon(intron_coords[0], intron_coords[1], self.get_transcript()[0],
-                                       bl=False, intron=True)
-        res.append(intron)
-        junc1 = gn.exist_junction(txex2.end, intron_coords[0])
-        if junc1 is None:
-            junc1 = Junction(txex2.end, intron_coords[0], None, None, gn, annotated=True)
-#           junc1.add_donor(txex2)
-#           junc1.add_acceptor(intron)
-        txex2.p5_junc.append(junc1)
-        intron.p3_junc.append(junc1)
-
-        junc2 = gn.exist_junction(intron_coords, txex1.start)
-        if junc2 is None:
-            junc2 = Junction(intron_coords, txex1.start, None, None, gn, annotated=True)
-#           junc.add_donor(intron)
-#           junc.add_acceptor(txex1)
-        intron.p5_junc.append(junc2)
-        txex1.p3_junc.append(junc2)
+            junc2 = gn.exist_junction(intron_coords, txex1.start)
+            if junc2 is None:
+                junc2 = Junction(intron_coords, txex1.start, None, None, gn, annotated=True)
+    #           junc.add_donor(intron)
+    #           junc.add_acceptor(txex1)
+            intron.p5_junc.append(junc2)
+            txex1.p3_junc.append(junc2)
 
 #Last Friday my package arrived, but one of the shoes includes 2 left shoes, instead of left and right.
-        if exb:
+
             junc = gn.exist_junction(txex2.end, txex1.start)
             if junc is None:
                 junc = Junction(txex2.end, txex1.start, None, None, gn, annotated=True)
