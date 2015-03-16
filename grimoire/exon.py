@@ -302,7 +302,7 @@ class ExonRead(object):
         if not pre_junc is None:
             self.p3_junc.append(pre_junc)
         self.p5_junc = []
-        if not pre_junc is None:
+        if not post_junc is None:
             self.p5_junc.append(post_junc)
 
     def get_coordinates(self):
@@ -312,6 +312,7 @@ class ExonRead(object):
         return self.p5_junc
 
     def add_5prime_junc(self, junc):
+
         if not junc is None and not junc in self.p5_junc:
             self.p5_junc.append(junc)
 
