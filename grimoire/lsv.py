@@ -26,7 +26,7 @@ class LSV(object):
         self.type = lsv_type
         self.exon = exon
 
-        print lsv_id
+        #print lsv_id
         for jj in junction_list:
             x1 = jj.get_acceptor()
             x2 = jj.get_donor()
