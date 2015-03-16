@@ -298,8 +298,12 @@ class ExonRead(object):
         self.start = start
         self.end = end
         self.RNASeq = rna_seq
-        self.p3_junc = [pre_junc]
-        self.p5_junc = [post_junc]
+        self.p3_junc = []
+        if not pre_junc is None:
+            self.p3_junc.append(pre_junc)
+        self.p5_junc = []
+        if not pre_junc is None:
+            self.p5_junc.append(post_junc)
 
     def get_coordinates(self):
         return self.start, self.end
@@ -308,24 +312,12 @@ class ExonRead(object):
         return self.p5_junc
 
     def add_5prime_junc(self, junc):
-        try:
-            if not junc is None and not junc in self.p5_junc:
-                self.p5_junc.append(junc)
-        except:
-            import ipdb
-            ipdb.set_trace()
-        kk = 0
-        pass
+        if not junc is None and not junc in self.p5_junc:
+            self.p5_junc.append(junc)
 
     def add_3prime_junc(self, junc):
-        try:
-            if not junc is None and not junc in self.p3_junc:
-                self.p3_junc.append(junc)
-        except:
-            import ipdb
-            ipdb.set_trace()
-        kk = 0
-        pass
+        if not junc is None and not junc in self.p3_junc:
+            self.p3_junc.append(junc)
 
     def bed_format(self):
         chrom = self.exon.get_gene().get_chromosome()
@@ -422,8 +414,6 @@ class ExonTx(object):
     # #           junc.add_acceptor(txex1)
     #         intron.p5_junc.append(junc2)
     #         txex1.p3_junc.append(junc2)
-
-#Last Friday my package arrived, but one of the shoes includes 2 left shoes, instead of left and right.
 
             junc = gn.exist_junction(txex2.end, txex1.start)
             if junc is None:
