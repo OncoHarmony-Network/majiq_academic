@@ -308,12 +308,24 @@ class ExonRead(object):
         return self.p5_junc
 
     def add_5prime_junc(self, junc):
-        if not junc is None and not junc in self.p5_junc:
-            self.p5_junc.append(junc)
+        try:
+            if not junc is None and not junc in self.p5_junc:
+                self.p5_junc.append(junc)
+        except:
+            import ipdb
+            ipdb.set_trace()
+        kk = 0
+        pass
 
     def add_3prime_junc(self, junc):
-        if not junc is None and not junc in self.p3_junc:
-            self.p3_junc.append(junc)
+        try:
+            if not junc is None and not junc in self.p3_junc:
+                self.p3_junc.append(junc)
+        except:
+            import ipdb
+            ipdb.set_trace()
+        kk = 0
+        pass
 
     def bed_format(self):
         chrom = self.exon.get_gene().get_chromosome()

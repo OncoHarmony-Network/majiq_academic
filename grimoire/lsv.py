@@ -30,7 +30,7 @@ class LSV(object):
         for jj in junction_list:
             x1 = jj.get_acceptor()
             x2 = jj.get_donor()
-            print "\t ", jj.get_id()
+            #print "\t ", jj.get_id()
             if x1.is_intron() or x2.is_intron():
                 print "LSV with intron"
                 self.intron_retention = True
