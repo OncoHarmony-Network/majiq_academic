@@ -308,11 +308,11 @@ class ExonRead(object):
         return self.p5_junc
 
     def add_5prime_junc(self, junc):
-        if junc is not None and not junc in self.p5_junc:
+        if not junc is None and not junc in self.p5_junc:
             self.p5_junc.append(junc)
 
     def add_3prime_junc(self, junc):
-        if junc is not None and not junc in self.p3_junc:
+        if not junc is None and not junc in self.p3_junc:
             self.p3_junc.append(junc)
 
     def bed_format(self):
