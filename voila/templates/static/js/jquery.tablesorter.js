@@ -1042,7 +1042,7 @@
                 var exons_obj = genes_obj.exons;
                 var junctions_obj = genes_obj.junctions;
 
-                var orig_objs = {'exons': add_keys(clone(exons_obj)), 'junc': clone(junctions_obj.filter(function(j){return j.ir<1;}))};
+                var orig_objs = {'exons': add_keys(clone(exons_obj)), 'junc': clone(junctions_obj)};
 
                 var exons_mapped = map_exon_list(exons_obj, junctions_obj); //exons_obj; //
                 exons_mapped = add_keys(exons_mapped);
@@ -1100,7 +1100,7 @@
 
                 d3.select(this).select('.zoomResetSplice').on('click', function() {
                     chart.width(1000);
-                    chart.height(180);
+                    chart.height(200);
                     spliceg.call(chart);
 
                 });
@@ -1122,7 +1122,7 @@
                         var exons_obj = genes_obj.exons;
                         var junctions_obj = genes_obj.junctions;
 
-                        var orig_objs = {'exons': add_keys(clone(exons_obj)), 'junc': clone(junctions_obj.filter(function(j){return j.ir<1;}))};
+                        var orig_objs = {'exons': add_keys(clone(exons_obj)), 'junc': clone(junctions_obj)};
 
                         var exons_mapped = map_exon_list(exons_obj, junctions_obj); //exons_obj; //
                         exons_mapped = add_keys(exons_mapped);
