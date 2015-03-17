@@ -337,12 +337,13 @@ def read_sam_or_bam(filenames, gene_list, readlen, chrom, nondenovo=False, loggi
                             #end for (coord,t,j) ...
                             if junc is None:
                                 '''mark a new junction '''
-                                gne.check_antisense_junctions(junc_start, junc_end)
-                                counter[4] += 1
-                                junc = Junction(junc_start, junc_end, None, None, gne, readN=nreads)
-                                junc.update_junction_read(exp_index, nreads, r_start, gc_content, unique)
-                                junctions.append((junc_start, '5prime', junc))
-                                junctions.append((junc_end, '3prime', junc))
+                                bb = gne.check_antisense_junctions(junc_start, junc_end)
+                                if not bb:
+                                    counter[4] += 1
+                                    junc = Junction(junc_start, junc_end, None, None, gne, readN=nreads)
+                                    junc.update_junction_read(exp_index, nreads, r_start, gc_content, unique)
+                                    junctions.append((junc_start, '5prime', junc))
+                                    junctions.append((junc_end, '3prime', junc))
                         #end if not found ...
                     #end for junc ...
     #            print "JJJunctions", junctions
