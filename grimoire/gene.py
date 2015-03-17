@@ -134,7 +134,7 @@ class Gene:
             coords = gg.get_coordinates()
             if self.start < coords[1] and self.end> coords[0]:
                 self.antis_gene = gg.get_id()
-                gg.set_antisense_gene(self, self.id)
+                gg.set_antisense_gene(self.id)
                 break
 
     def set_antisense_gene(self, gn_id):
