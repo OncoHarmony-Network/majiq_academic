@@ -337,6 +337,7 @@ def read_sam_or_bam(filenames, gene_list, readlen, chrom, nondenovo=False, loggi
                             #end for (coord,t,j) ...
                             if junc is None:
                                 '''mark a new junction '''
+                                gne.check_antisense_junctions(junc_start, junc_end)
                                 counter[4] += 1
                                 junc = Junction(junc_start, junc_end, None, None, gne, readN=nreads)
                                 junc.update_junction_read(exp_index, nreads, r_start, gc_content, unique)
@@ -543,7 +544,9 @@ def read_gff(filename, pcr_filename, logging=None):
             gene_id = record.attributes['ID']
             if not chrom in all_genes:
                 all_genes[chrom] = {'+': [], '-': []}
+
             gn = Gene(gene_id, gene_name, chrom, strand, start, end)
+            gn.exist_antisense_gene(all_genes[chrom])
 
             if gene_id in mglobals.gene_tlb and gn != mglobals.gene_tlb[gene_id]:
                 raise RuntimeError('Two Different Genes with the same name %s' % gene_name)

@@ -32,7 +32,7 @@ class LSV(object):
             x2 = jj.get_donor()
             #print "\t ", jj.get_id()
             if x1.is_intron() or x2.is_intron():
-                print "LSV with intron"
+                #print "LSV with intron"
                 self.intron_retention = True
                 break
 
