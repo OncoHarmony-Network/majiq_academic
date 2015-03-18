@@ -298,8 +298,12 @@ class ExonRead(object):
         self.start = start
         self.end = end
         self.RNASeq = rna_seq
-        self.p3_junc = [pre_junc]
-        self.p5_junc = [post_junc]
+        self.p3_junc = []
+        if not pre_junc is None:
+            self.p3_junc.append(pre_junc)
+        self.p5_junc = []
+        if not post_junc is None:
+            self.p5_junc.append(post_junc)
 
     def get_coordinates(self):
         return self.start, self.end
@@ -308,11 +312,12 @@ class ExonRead(object):
         return self.p5_junc
 
     def add_5prime_junc(self, junc):
-        if junc is not None and not junc in self.p5_junc:
+
+        if not junc is None and not junc in self.p5_junc:
             self.p5_junc.append(junc)
 
     def add_3prime_junc(self, junc):
-        if junc is not None and not junc in self.p3_junc:
+        if not junc is None and not junc in self.p3_junc:
             self.p3_junc.append(junc)
 
     def bed_format(self):
@@ -390,29 +395,27 @@ class ExonTx(object):
             txex2.junction_consistency()
 
         exb = exb1 & exb2
-
-        #creating intron exon
-        intron = gn.new_annotated_exon(intron_coords[0], intron_coords[1], self.get_transcript()[0],
-                                       bl=False, intron=True)
-        res.append(intron)
-        junc1 = gn.exist_junction(txex2.end, intron_coords[0])
-        if junc1 is None:
-            junc1 = Junction(txex2.end, intron_coords[0], None, None, gn, annotated=True)
-#           junc1.add_donor(txex2)
-#           junc1.add_acceptor(intron)
-        txex2.p5_junc.append(junc1)
-        intron.p3_junc.append(junc1)
-
-        junc2 = gn.exist_junction(intron_coords, txex1.start)
-        if junc2 is None:
-            junc2 = Junction(intron_coords, txex1.start, None, None, gn, annotated=True)
-#           junc.add_donor(intron)
-#           junc.add_acceptor(txex1)
-        intron.p5_junc.append(junc2)
-        txex1.p3_junc.append(junc2)
-
-#Last Friday my package arrived, but one of the shoes includes 2 left shoes, instead of left and right.
         if exb:
+    #         #creating intron exon
+    #         intron = gn.new_annotated_exon(intron_coords[0], intron_coords[1], self.get_transcript()[0],
+    #                                        bl=False, intron=True)
+    #         res.append(intron)
+    #         junc1 = gn.exist_junction(txex2.end, intron_coords[0])
+    #         if junc1 is None:
+    #             junc1 = Junction(txex2.end, intron_coords[0], None, None, gn, annotated=True)
+    # #           junc1.add_donor(txex2)
+    # #           junc1.add_acceptor(intron)
+    #         txex2.p5_junc.append(junc1)
+    #         intron.p3_junc.append(junc1)
+    #
+    #         junc2 = gn.exist_junction(intron_coords, txex1.start)
+    #         if junc2 is None:
+    #             junc2 = Junction(intron_coords, txex1.start, None, None, gn, annotated=True)
+    # #           junc.add_donor(intron)
+    # #           junc.add_acceptor(txex1)
+    #         intron.p5_junc.append(junc2)
+    #         txex1.p3_junc.append(junc2)
+
             junc = gn.exist_junction(txex2.end, txex1.start)
             if junc is None:
                 junc = Junction(txex2.end, txex1.start, None, None, gn, annotated=True)

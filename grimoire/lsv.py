@@ -3,11 +3,10 @@ import grimoire.mglobals as mglobals
 import scipy.sparse
 import cPickle as pickle
 from voila.splice_graphics import ExonGraphic, LsvGraphic, JunctionGraphic
-
+from voila import constants as voila_const
 
 SSOURCE = 'source'
 STARGET = 'target'
-
 
 class LSV(object):
 
@@ -21,22 +20,21 @@ class LSV(object):
                          and x.get_acceptor() is not None]
         #if len(junction_list) < 2 or exon.ir:
         self.intron_retention = False
-        print lsv_id
-        for jj in junction_list:
-            x1 = jj.get_acceptor()
-            x2 = jj.get_donor()
-            print "\t ", jj.get_id()
-            if x1.is_intron() or x2.is_intron():
-                print "LSV with intron"
-                self.intron_retention = True
-                break
-
-
 
         if len(junction_list) < 2:
             raise ValueError
         self.type = lsv_type
         self.exon = exon
+
+        #print lsv_id
+        for jj in junction_list:
+            x1 = jj.get_acceptor()
+            x2 = jj.get_donor()
+            #print "\t ", jj.get_id()
+            if x1.is_intron() or x2.is_intron():
+                #print "LSV with intron"
+                self.intron_retention = True
+                break
 
         self.tlb_junc = {}
         self.ext_type = self.set_type(junction_list, self.tlb_junc)
@@ -53,10 +51,7 @@ class LSV(object):
         for idx, jj in enumerate(order):
             if jj[-2:] == 'e0': continue
             juncs.append(junction_list[self.tlb_junc[jj]])
-
         self.junctions = np.array(juncs)
-        if self.intron_retention:
-            print "INTRON RETENTION FOR THE WIN"
 
     def check_type(self, lsv_type):
         tab = lsv_type.split('|')[1:]
@@ -149,7 +144,6 @@ class LSV(object):
         if skip:
             return 'intron'
 
-
         ex_list = sorted(list(ex_set), reverse=rev)
     
         if (self.type == SSOURCE and strand == '+') or (self.type == STARGET and strand == '-'):
@@ -226,9 +220,16 @@ class LSV(object):
             else:
                 jtype = 1
  #               continue
+
+            ir_type = None
+            if jj.get_donor().is_intron():
+                ir_type = voila_const.IR_TYPE_START
+            elif jj.get_acceptor().is_intron():
+                ir_type = voila_const.IR_TYPE_END
+
             junc_l.append(jj.get_coordinates())
             junc_list.append(JunctionGraphic(jj.get_coordinates(), jtype, jj.get_read_num(exp_idx),
-                                             transcripts=jj.get_transcript_list()))
+                                             transcripts=jj.get_transcript_list(), ir=ir_type))
         junc_l = np.asarray(junc_l)
         lsv_exon_list.sort()
         exon_list = []

@@ -38,6 +38,7 @@ class Gene:
         self.ir_list = []
         self.lsv_list = []
         self.RPKM = np.zeros(shape=mglobals.num_experiments, dtype=np.float)
+        self.antis_gene = None
 
     def __hash__(self):
         return hash((self.id, self.chromosome, self.strand, self.start, self.end))
@@ -124,6 +125,35 @@ class Gene:
     def add_exon(self, exon):
         self.exons.append(exon)
         return
+
+    def exist_antisense_gene(self, list_of_genes):
+        strnd = '-'
+        if self.strand == '-':
+            strnd = '+'
+        for gg in list_of_genes[strnd]:
+            coords = gg.get_coordinates()
+            if self.start < coords[1] and self.end> coords[0]:
+                self.antis_gene = gg.get_id()
+                gg.set_antisense_gene(self.id)
+                break
+
+    def set_antisense_gene(self, gn_id):
+        self.antis_gene = gn_id
+
+    def check_antisense_junctions(self, jstart, jend):
+        res = False
+        if not self.antis_gene is None:
+            gg = mglobals.gene_tlb[self.antis_gene]
+            j_list = gg.get_all_junctions()
+            for jj in j_list:
+                if not jj.is_annotated():
+                    continue
+                (j_st, j_ed) = jj.get_coordinates()
+                if j_st > jstart or (j_st == jstart and j_ed > jend):
+                    break
+                elif jstart == j_st and jend == j_ed:
+                    res = True
+        return res
 
     def is_gene_in_list(self, list_of_genes, name):
         res = None

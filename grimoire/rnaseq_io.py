@@ -140,7 +140,7 @@ def get_junc_from_list(coords, list_elem):
 
 def rnaseq_intron_retention(filenames, gene_list, readlen, chrom, logging=None):
 
-    MIN_INTRON = 5
+    MIN_INTRON = 1.5
     samfile = [pysam.Samfile(xx, "rb") for xx in filenames]
 
     for strand in ('+', '-'):
@@ -209,7 +209,7 @@ def rnaseq_intron_retention(filenames, gene_list, readlen, chrom, logging=None):
                     intron_parts /= chunk_len
                     intron_body_covered = True
                     for ii in intron_parts:
-                        if ii < 0.01:
+                        if ii < MIN_INTRON:
                             intron_body_covered = False
 
                     if cov1 >= mglobals.MINREADS and cov2 >= mglobals.MINREADS and intron_body_covered:
@@ -224,7 +224,7 @@ def rnaseq_intron_retention(filenames, gene_list, readlen, chrom, logging=None):
                                 ex.add_5prime_junc(junc1)
                                 break
 
-                        junc2.add_donor(exon2)
+                        junc2.add_acceptor(exon2)
                         for ex in exon2.exonRead_list:
                             st, end = ex.get_coordinates()
                             if st == junc2.get_coordinates()[1]:
@@ -337,11 +337,13 @@ def read_sam_or_bam(filenames, gene_list, readlen, chrom, nondenovo=False, loggi
                             #end for (coord,t,j) ...
                             if junc is None:
                                 '''mark a new junction '''
-                                counter[4] += 1
-                                junc = Junction(junc_start, junc_end, None, None, gne, readN=nreads)
-                                junc.update_junction_read(exp_index, nreads, r_start, gc_content, unique)
-                                junctions.append((junc_start, '5prime', junc))
-                                junctions.append((junc_end, '3prime', junc))
+                                bb = gne.check_antisense_junctions(junc_start, junc_end)
+                                if not bb:
+                                    counter[4] += 1
+                                    junc = Junction(junc_start, junc_end, None, None, gne, readN=nreads)
+                                    junc.update_junction_read(exp_index, nreads, r_start, gc_content, unique)
+                                    junctions.append((junc_start, '5prime', junc))
+                                    junctions.append((junc_end, '3prime', junc))
                         #end if not found ...
                     #end for junc ...
     #            print "JJJunctions", junctions
@@ -543,7 +545,9 @@ def read_gff(filename, pcr_filename, logging=None):
             gene_id = record.attributes['ID']
             if not chrom in all_genes:
                 all_genes[chrom] = {'+': [], '-': []}
+
             gn = Gene(gene_id, gene_name, chrom, strand, start, end)
+            gn.exist_antisense_gene(all_genes[chrom])
 
             if gene_id in mglobals.gene_tlb and gn != mglobals.gene_tlb[gene_id]:
                 raise RuntimeError('Two Different Genes with the same name %s' % gene_name)
