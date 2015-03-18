@@ -4,7 +4,6 @@ import scipy.sparse
 import cPickle as pickle
 from voila.splice_graphics import ExonGraphic, LsvGraphic, JunctionGraphic
 from voila import constants as voila_const
-
 SSOURCE = 'source'
 STARGET = 'target'
 

@@ -377,63 +377,48 @@ def read_bed_pcr(filename, list_genes):
     gene_list = {}
     lnum = 0
     while lnum < len(readlines):
-        more = True
-        event = {}
-        while more:
-            rl = readlines[lnum]
-            tab = rl.strip().split()
-            t = tab[3].split('_')
-            event['name'] = '_'.join(t[:-1])
-            reg = t[-1]
-            if reg == 'C2':
-                more = False
-            event['chrom'] = tab[0]
-            event['strand'] = tab[5]
-            event[reg] = [int(tab[1]), int(tab[2])]
-            score = tab[4].split('|')[0]
-            if score == '?':
-                score = 0
-            score = float(score)
-            if reg in ['A', 'A2']:
-                alt_exon = event[reg]
-            lnum += 1
 
-        chrom = event['chrom']
+        event = {}
+        rl = readlines[lnum]
+        if rl.startswith('#'):
+            continue
+        tab = rl.strip().split()
+        event['name'] = tab[3]
+        event['chrom'] = tab[0]
+        event['strand'] = tab[5]
+
+        score = tab[4]
+        lnum += 1
+
         strand = event['strand']
 
-        if chrom != pre_chrom:
+        if event['chrom'] != pre_chrom:
             try:
-                gene_list = list_genes[chrom]
+                gene_list = list_genes[event['chrom']]
             except KeyError:
                 continue
 
-            pre_chrom = chrom
+            pre_chrom = event['chrom']
             idx = {'+': 0, '-': 0}
         name = event['name']
 
-        if strand == '-':
-            region_list = ('C2', 'C1')
-        else:
-            region_list = ('C1', 'C2')
+        exon_start = int(tab[1])
+        exon_end = int(tab[2])
 
-        for reg in region_list:
-            exon_start = event[reg][0]
-            exon_end = event[reg][1]
-
-            while idx[strand] < len(gene_list[strand]):
-                gn = gene_list[strand][idx[strand]]
-                (g_start, g_end) = gn.get_coordinates()
-                if exon_end < g_start:
-                    break
-                elif exon_start > g_end:
-                    idx[strand] += 1
-                    continue
-                ex = gn.exist_exon(exon_start, exon_end)
-                if ex is None:
-                    break
-                ex.set_pcr_score(name, score, alt_exon)
-
+        while idx[strand] < len(gene_list[strand]):
+            gn = gene_list[strand][idx[strand]]
+            (g_start, g_end) = gn.get_coordinates()
+            if exon_end < g_start:
                 break
+            elif exon_start > g_end:
+                idx[strand] += 1
+                continue
+            ex = gn.exist_exon(exon_start, exon_end)
+            if ex is None:
+                break
+            ex.set_pcr_score(name, score, alt_exon)
+
+            break
 
 
 gffInfoFields = ["seqid", "source", "type", "start", "end", "score", "strand", "phase", "attributes"]

@@ -116,6 +116,7 @@ class Exon:
         self.flag |= 0b0011 if ir else 0b0000
 
     def set_pcr_score(self, pcr_name, score, candidate):
+
         self.pcr_name = pcr_name
         self.score = score
         self.pcr_candidate = candidate
