@@ -51,6 +51,7 @@
             </h3>
             <div>
                 <div class="spliceDiv exp1" id="spliceDivExp1_{{ gene_index }}" data-exon-list="{{ genes_exps_list[0][genes_exps_list[0].keys()[0]][gene_name][0] }}"> {# By default, show the first experiment splice graph #}
+                    <span class="tooltipD3"><strong>Coordinates: </strong><span class="coordsLabel">-</span>;<strong> Length: </strong><span class="lengthLabel">-;</span></span>
                     <div class="spliceGraphTools">
                         <select class="spliceGraphSelector" autocomplete="off">
                             {% for nsample in genes_exps_list[0] -%}
@@ -61,19 +62,18 @@
                             {% endif %}
                             {%- endfor %}
                         </select>
-                        <img class="toogleScale scaled" src="static/img/icons/solve-icon.png" title="Change between scaled view and a view where introns are trimmed" />
+                        <img class="toogleScale scaled" src="static/img/icons/solve-icon16.png" title="Change between scaled view and a view where introns are trimmed" />
                         <img class="zoomInSplice" src="static/img/zoom_in.png" title="Zoom in" alt="" />
                         <img class="zoomOutSplice" src="static/img/zoom_out.png" title="Zoom out" alt="" />
                         <img class="zoomResetSplice" src="static/img/undo.png" title="Zoom reset" alt="" />
+
                     </div>
 
-                    <div class="hidden tooltipD3">
-                        <p><strong>Coordinates: </strong><p class="coordsLabel"></p></p>
-                        <p><strong>Length: </strong><span class="lengthLabel"></span></p>
-                    </div>
+
                 </div>
 
                 <div class="spliceDiv exp2" id="spliceDivExp2_{{ gene_index }}" data-exon-list="{{ genes_exps_list[1][genes_exps_list[1].keys()[0]][gene_name][0] }}"> {# By default, show the first experiment splice graph #}
+                    <span class="tooltipD3"><strong>Coordinates: </strong><span class="coordsLabel">-</span>;<strong> Length: </strong><span class="lengthLabel">-;</span></span>
                     <div class="spliceGraphTools">
                         <select class="spliceGraphSelector" autocomplete="off">
                             {% for nsample in genes_exps_list[1] -%}
@@ -84,16 +84,13 @@
                             {% endif %}
                             {%- endfor %}
                         </select>
-                        <img class="toogleScale scaled" src="static/img/icons/solve-icon.png" title="Change between scaled view and a view where introns are trimmed" />
+                        <img class="toogleScale scaled" src="static/img/icons/solve-icon16.png" title="Change between scaled view and a view where introns are trimmed" />
                         <img class="zoomInSplice" src="static/img/zoom_in.png" title="Zoom in" alt="" />
                         <img class="zoomOutSplice" src="static/img/zoom_out.png" title="Zoom out" alt="" />
                         <img class="zoomResetSplice" src="static/img/undo.png" title="Zoom reset" alt="" />
+
                     </div>
 
-                    <div class="hidden tooltipD3">
-                        <p><strong>Coordinates: </strong><p class="coordsLabel"></p></p>
-                        <p><strong>Length: </strong><span class="lengthLabel"></span></p>
-                    </div>
                 </div>
 
                 <table id="event_table{{ loop.index }}" class="tablesorter">

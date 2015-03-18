@@ -211,7 +211,7 @@ function spliceGraphD3() {
 
 
     var width = 1000, // default width
-        height = 180, // default height
+        height = 200, // default height
         padding = [60, 5, 5, 5],
         JUNC_AREA=0.8;
     var EXON_H = Math.round(height * (1-JUNC_AREA) - padding[2]),
@@ -334,7 +334,7 @@ function spliceGraphD3() {
                     .data(data.filter(function(v){ return v.ir > 0;}));
                 labels.enter().append("text");
                 labels.classed("irreads", true)
-                    .attr("text-anchor", function(d){return (d.ir === 1 ? "end": "start" );})
+                    .attr("text-anchor", function(d){return ((d.ir === 1 && strand == '-' || d.ir === 2 && strand == '+' )? "end": "start" );})
                     .transition()
                     .duration(100)
                     .ease("linear")
@@ -627,12 +627,10 @@ function spliceGraphD3() {
                     .text(function(){
                         return Math.abs(orig_objs.exons[d.key].value.coords[0] - orig_objs.exons[d.key].value.coords[1]) + 1;
                     });
-                tooltipD3.classed("hidden", false);
 
             })
             .on('mouseout', function(d){
                 d3.select(this).classed("hovered", false);
-                d3.select(this.parentNode.parentNode).select(".tooltipD3").classed("hidden", true);
             });
 
             /** Add interactivity for intron retained ... */
@@ -649,13 +647,10 @@ function spliceGraphD3() {
                     .text(function(){
                         return Math.abs(orig_objs.exons[d.key].value.coords[0] - orig_objs.exons[d.key].value.coords[1]) + 1;
                     });
-                tooltipD3.classed("hidden", false);
-
             })
-                .on('mouseout', function(d){
-                    d3.select(this).classed("hovered", false);
-                    d3.select(this.parentNode.parentNode).select(".tooltipD3").classed("hidden", true);
-                });
+            .on('mouseout', function(d){
+                d3.select(this).classed("hovered", false);
+            });
 
 
             /** Add interactivity for half exons ... */
@@ -678,12 +673,10 @@ function spliceGraphD3() {
                     .text(function(){
                         return "UNKNOWN";
                     });
-                tooltipD3.classed("hidden", false);
 
             })
                 .on('mouseout', function(d){
                     d3.select(this).classed("hovered", false);
-                    d3.select(this.parentNode.parentNode).select(".tooltipD3").classed("hidden", true);
                 });
 
 
@@ -702,7 +695,7 @@ function spliceGraphD3() {
                 var tooltipD3 = d3.select(this.parentNode.parentNode).select(".tooltipD3");
 //                    .style("left", mouseCoords[0]+ "px")
 //                    .style("top", mouseCoords[1]+ "px")
-                tooltipD3.classed("hidden", false)
+                tooltipD3
                     .select(".coordsLabel")
                     .text(function(){
                         return orig_objs.junc[i].coords[0] + "-" + orig_objs.junc[i].coords[1];
@@ -719,9 +712,6 @@ function spliceGraphD3() {
                 d3.selectAll('.ssite3').classed("highlighted", false);
                 d3.selectAll('.ssite5').classed("highlighted", false);
                 d3.select(this).classed("hovered", false);
-
-                //Show the tooltip
-                d3.select(this.parentNode.parentNode).select(".tooltipD3").classed("hidden", true);
             });
 
 //            d3.selectAll(this.childNodes[0].childNodes).attr("transform", "translate(" + width + ",0) scale(-1 , 1)");

@@ -113,14 +113,15 @@ def expected_dpsi(matrix):
     return ret
 
 
-def rank_majiq(bins_list, names, V=0.2, absolute=True, dofilter=True, E=False, ranknochange=False, complex_lsvs=False, prior=None, shrink=True):
+def rank_majiq(vlsv_list, V=0.2, absolute=True, dofilter=True, E=False, ranknochange=False, complex_lsvs=False, prior=None, shrink=True):
     MINTHRESHOLD = 0.95
     if E:
         MINTHRESHOLD = 0.20
     rank = []
 
-    print len(names), len(bins_list)
-    for i, lsv_bins in enumerate(bins_list):
+    print len(vlsv_list)
+    for i, vlsv in enumerate(vlsv_list):
+        lsv_bins = vlsv.get_bins()
         if not complex_lsvs and len(lsv_bins) > 2:
             continue
         if ranknochange:
@@ -134,7 +135,7 @@ def rank_majiq(bins_list, names, V=0.2, absolute=True, dofilter=True, E=False, r
             # v_prob = v_sum(dmatrix)
             v_prob = expected_dpsi(dmatrix)
             if np.isnan(v_prob): continue
-            rank.append([names[i], v_prob])
+            rank.append([vlsv.get_id(), v_prob])
         else:
             area = matrix_area(dmatrix, V, absolute)
             if np.isnan(area): continue
@@ -386,16 +387,16 @@ def main():
                 # prior = pickle.load(open(str(file).replace('deltamatrix', 'priormatrix_jun_0')))
                 if file_nr % 2 == 0:
                     count_pairs += 1
-                    majiq_file1_names = majiq_data[1]
-                    ranks['majiq_' + str(count_pairs)].append(rank_majiq(majiq_data[0], majiq_data[1], args.V, args.absolute, args.filter, args.E, args.ranknochange, args.complex_lsvs, shrink=args.shrink))
+                    majiq_file1_names = [vlsv.get_id() for vlsv in majiq_data.get_lsvs()]
+                    ranks['majiq_' + str(count_pairs)].append(rank_majiq(majiq_data.get_lsvs(), args.V, args.absolute, args.filter, args.E, args.ranknochange, args.complex_lsvs, shrink=args.shrink))
                     continue
 
                 if args.type_rank != 'all':
                     if args.type_rank == 'only_exp1':
                         # Select events from experiment 1
-                        exp1_index = np.array([name in majiq_file1_names for name in majiq_data[1][:len(majiq_data[0])]])
-                        ranks['majiq_' + str(count_pairs)].append(rank_majiq(np.array(majiq_data[0])[exp1_index], np.array(majiq_data[1])[exp1_index].tolist(), args.V, args.absolute, args.filter, args.E, args.ranknochange, args.complex_lsvs, shrink=args.shrink))
-                        n1['majiq_' + str(count_pairs)]=[np.count_nonzero(exp1_index),len(np.array(majiq_data[1])[exp1_index])]
+                        exp1_index = np.array([v_lsv.get_id() in majiq_file1_names for v_lsv in majiq_data.get_lsvs()])
+                        ranks['majiq_' + str(count_pairs)].append(rank_majiq(np.array(majiq_data.get_lsvs())[exp1_index].tolist(), args.V, args.absolute, args.filter, args.E, args.ranknochange, args.complex_lsvs, shrink=args.shrink))
+                        n1['majiq_' + str(count_pairs)]=[np.count_nonzero(exp1_index), np.count_nonzero(exp1_index)]
                 else:
                     ranks['majiq'].append(rank_majiq(majiq_data[0], majiq_data[1], args.V, args.absolute, args.filter, args.E, args.ranknochange, args.complex_lsvs))
             names_majiq_exp1 = [m[1] for m in majiq_file1_names]
