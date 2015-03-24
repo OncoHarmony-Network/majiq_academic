@@ -47,7 +47,7 @@ def global_conf_ini(filename, params):
     global num_experiments, exp_list, readLen, tissue_repl, sam_dir, num_mapped_reads, genome, \
         genome_path, outDir, temp_oDir, gene_tlb, strand_specific
     global A3SS, A5SS, SEev, bothSS, totalSE
-    global MINREADS, MINPOS
+    global MINREADS, MINPOS, MIN_INTRON
 
     config = ConfigParser.ConfigParser()
     config.read(filename)
@@ -61,6 +61,7 @@ def global_conf_ini(filename, params):
     
     MINREADS = params.minreads
     MINPOS = params.minpos
+    MIN_INTRON = params.min_intronic_cov
     readLen = int(general['readlen'])
     sam_dir = general['samdir']
     genome = general['genome']

@@ -12,6 +12,7 @@ import cPickle as pickle
 from os import listdir
 from os.path import isfile, join
 import colorbrewer as cb
+import os
 
 fidx = 0
 lims = [500, 1000]
@@ -85,7 +86,7 @@ def print_message(bars, extrabars=None, filename=None):
     return msg
 
 
-def plot_fdrheatmap(vals, vals2, grps, output=None):
+def plot_fdrheatmap(vals, vals2, grps, output='.'):
 
     global fidx
 
@@ -101,8 +102,9 @@ def plot_fdrheatmap(vals, vals2, grps, output=None):
     df_rowclust = np.zeros(shape=vals.shape, dtype=np.int)
     df_rowclust2 = np.zeros(shape=vals.shape, dtype=np.float)
 
-    outfp1 = open('./news/fig3f1.vals', 'w+')
-    outfp2 = open('./news/fig3f2.vals', 'w+')
+
+    outfp1 = open('%s/news/fig3f1.vals' % output, 'w+')
+    outfp2 = open('%s/news/fig3f2.vals' % output, 'w+')
 
     header = "Tiss\t"
 
@@ -193,20 +195,13 @@ def plot_fdrheatmap(vals, vals2, grps, output=None):
     ax.set_yticklabels(df_grps)
     ax.set_title('Complex changing events')
 
-    if output is None:
+    if output == '.':
         pyplot.show()
     else:
-        pyplot.savefig(output+'.pdf')
+        pyplot.savefig(output+'/hog.pdf')
 
 
     # plot
-
-
-
-
-
-
-
 
     # ax.set_xticklabels(grps)
     # ax.set_yticklabels(grps)
@@ -218,7 +213,7 @@ def plot_fdrheatmap(vals, vals2, grps, output=None):
     fidx += 1
 
 
-def plot_countings(vals, typs, counts, output=None):
+def plot_countings(vals, typs, counts, output='.'):
 
     global fidx
 
@@ -231,6 +226,8 @@ def plot_countings(vals, typs, counts, output=None):
     bars_t = [0] * 20
 
     for idx, tt in enumerate(typs):
+        if 'i' in tt:
+            continue
         juncs = [xx for xx in tt.split('|')[1:] if not xx.endswith('0')]
         nums = len(juncs)
         junc_bars[nums] += vals[idx]
@@ -238,6 +235,7 @@ def plot_countings(vals, typs, counts, output=None):
         exnum = []
         ssnum = []
         for jj in juncs:
+
             exnum.append(int(jj.split('e')[1].split('.')[0]))
             ssnum.append(int(jj.split('e')[0]))
 
@@ -267,7 +265,7 @@ def plot_countings(vals, typs, counts, output=None):
     col = [xx/float(255) for xx in BREWER_PALETTE[0]]
     pyplot.bar(x[:lim] + offs[0], nbars[1:lim+1], edgecolor="none", label="#LSV per #juncs",
                width=0.8, color=col, alpha=0.5)
-    msg = print_message(junc_bars, filename='./news/fig3b.junctions.vals')
+    msg = print_message(junc_bars, filename='%s/news/fig3b.junctions.vals' % output)
 
     lim = max(dummy_ex)
     ex_bars = np.array(ex_bars, dtype=float)
@@ -276,7 +274,7 @@ def plot_countings(vals, typs, counts, output=None):
     pyplot.bar(x[:lim] + offs[1], nbars[1:lim+1], edgecolor="none", label="#LSV per #exons", width=0.8,
                color=col, alpha=0.5)
 
-    msg = print_message(ex_bars, filename='./news/fig3b.exons.vals')
+    msg = print_message(ex_bars, filename='%s/news/fig3b.exons.vals' % output)
 
 
     lim = max(max(dummys), max(dummyt))
@@ -289,21 +287,21 @@ def plot_countings(vals, typs, counts, output=None):
     pyplot.bar(x[:lim] + offs[3], nbars_t[1:lim+1], label="3' splicesites in Target LSV", edgecolor="none",
                color=(0.92, 0.0, 0.55), width=0.8, alpha=0.5)
 
-    msg = print_message(bars_s, filename='./news/fig3b.ss5prime.vals')
-    msg = print_message(bars_t, filename='./news/fig3b.ss3prime.vals')
+    msg = print_message(bars_s, filename='%s/news/fig3b.ss5prime.vals' % output)
+    msg = print_message(bars_t, filename='%s/news/fig3b.ss3prime.vals' % output)
 
     pyplot.ylabel(' # LSVs')
     pyplot.xlabel(' # elements')
     pyplot.title('Total Number of LSVs %s' % counts)
     pyplot.legend(loc='best')
-    if output is None:
+    if output == '.':
         pyplot.show()
     else:
         pyplot.savefig(output+'.pdf')
     fidx += 1
 
 
-def plot_lsv_types_hist(vals, typs, img_path=None, lim_val=None, extra_title="", output=None):
+def plot_lsv_types_hist(vals, typs, img_path=None, lim_val=None, extra_title="", output='.'):
 
     global fidx
 
@@ -333,7 +331,7 @@ def plot_lsv_types_hist(vals, typs, img_path=None, lim_val=None, extra_title="",
         pl.set_ylim((0, len(vals2)))
         pl.set_yticks([])
 
-        msg = print_message(np.array(vals2, dtype=np.float), filename='./news/fig3a.vals')
+        msg = print_message(np.array(vals2, dtype=np.float), filename='%s/news/fig3a.vals' % output)
 
 
 
@@ -369,7 +367,7 @@ def plot_lsv_types_hist(vals, typs, img_path=None, lim_val=None, extra_title="",
             
     pyplot.title(extra_title)
     #pyplot.xlim((0, 8000))
-    if output is None:
+    if output == '.':
         pyplot.show()
     else:
         pyplot.savefig(output+'.pdf')
@@ -411,7 +409,7 @@ def plot_dominant_exons(dom_dict, name='', color=cb.Blues[9], output=None):
     pyplot.legend(loc='best')
     # labs = ["exon %d" % xx for xx in np.arange(0, totalbins+1)]
     # ax.set_xticklabels(labs)
-    if output is None:
+    if output == '.':
         pyplot.show()
     else:
         pyplot.savefig(output+'.pdf')
@@ -426,6 +424,9 @@ def collapse(type_str):
     dd = {}
 
     for jj in tab[1:]:
+        if jj == 'i':
+            #dd[dest] = 0
+            continue
         dest = jj.split('e')
         tab2 = dest[1].split('.')
         if dest[1] == '0':
@@ -435,7 +436,8 @@ def collapse(type_str):
 
         dd[tab2[0]].append(tab2[1].split('o')[0])
 
-    translate = {}
+    translate = dict()
+    translate['i'] = 'i'
     for kk, vv in dd.items():
         unique_vv = list(set(vv))
         unique_vv.sort()
@@ -445,10 +447,13 @@ def collapse(type_str):
 
     for jj in tab[1:]:
         dest = jj.split('e')
-        if dest[1] == '0':
+        if dest[0] != 'i' and dest[1] == '0':
             res += "|%s" % jj
             continue
-        res += '|%se%s' % (dest[0], translate[dest[1].split('o')[0]])
+        if dest[0] == 'i':
+            res += '|i'
+        else:
+            res += '|%se%s' % (dest[0], translate[dest[1].split('o')[0]])
 
     return res
 
@@ -474,13 +479,13 @@ def get_types(direc, list_exp, grps):
     return d_types, g_types
 
 
-def all_plots_wrapper(types, nlsv=0, output=None):
+def all_plots_wrapper(types, nlsv=0, output='.'):
 
     global fidx
     histo = sorted(types.iteritems(), key=lambda (k, v): (v, k))
     num_ev = np.sum([xx[1] for xx in histo])
     #s_keys = [xx[0] for xx in histo if xx[1] > 100]
-    s_keys = [xx[0] for xx in histo if xx[1] > 10]
+    s_keys = [xx[0] for xx in histo if xx[1] > 100]
     s_vals = [types[xx] for xx in s_keys]
 
     total = 0
@@ -503,19 +508,19 @@ def all_plots_wrapper(types, nlsv=0, output=None):
         out.write('%s\n' % tt)
     out.close()
     
-    impath = './thumbs/'
+    impath = '%s/thumbs/' % output
     extra_title = " %s events" % num_ev
     percent = float(complex) / total
     print "Complex %d/%d (%.3f)" % (complex, total, percent)
 
-    plot_lsv_types_hist(s_vals, s_keys, img_path=impath, lim_val=None, extra_title=extra_title, output=output)
+    plot_lsv_types_hist(s_vals, s_keys, img_path=impath, lim_val=None, extra_title=extra_title)
     #plot_lsv_types_hist(s_vals, s_keys, img_path=None, lim_val=None, extra_title=extra_title)
 
 
     s_keys = [xx[0] for xx in histo]
     s_vals = [types[xx] for xx in s_keys]
 
-    #plot_countings(s_vals, s_keys, num_ev)
+    plot_countings(s_vals, s_keys, num_ev)
 
 
 def psi_dominant(filename_list):
@@ -675,13 +680,17 @@ if __name__ == '__main__':
 
     dire = sys.argv[1]
     onlyfiles = [f for f in listdir(dire) if isfile(join(dire, f)) and f.endswith('majiq')]
-    #groups = ['Adr', 'Aor', 'BFat', 'Bstm', 'Cer', 'Hrt', 'Hyp', 'Kid', 'Liv', 'Lun', 'Mus', 'WFat']
+    groups = ['Adr', 'Aor', 'BFat', 'Bstm', 'Cer', 'Hrt', 'Hyp', 'Kid', 'Liv', 'Lun', 'Mus', 'WFat']
     #onlyfiles = ['Adr_CT22.mm10.sorted.majiq', 'Aor_CT22.mm10.sorted.majiq']
 
     output = sys.argv[2]
-    groups = sys.argv[3:]
+    #groups = sys.argv[3:]
 
     print "Parse files"
+
+    if not os.path.exists(output):
+        os.makedirs(output)
+        os.makedirs('%s/news' % output)
 
     list_types, group_types = get_types(dire, onlyfiles, groups)
     count_lsv = len(set(list_types.keys()))
@@ -693,6 +702,8 @@ if __name__ == '__main__':
         stypes[tyt] += 1
 
     print "Plot 3.a 3.b"
+
+
     all_plots_wrapper(stypes, count_lsv, output=output)
     #
     # #read psi values
