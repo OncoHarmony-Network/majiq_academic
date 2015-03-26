@@ -233,6 +233,8 @@ def rnaseq_intron_retention(filenames, gene_list, readlen, chrom, permissive=Tru
                             num_positions = np.count_nonzero(bmap[index_list[ii][0]:index_list[ii][1]])
                             if ii == 0:
                                 val = 0
+                            elif num_positions == 0:
+                                continue
                             else:
                                 val = float(ii)/num_positions
                             if val >= mglobals.MIN_INTRON:
@@ -242,6 +244,8 @@ def rnaseq_intron_retention(filenames, gene_list, readlen, chrom, permissive=Tru
                             num_positions = np.count_nonzero(bmap[index_list[ii][0]:index_list[ii][1]])
                             if ii == 0:
                                 val = 0
+                            elif num_positions == 0:
+                                continue
                             else:
                                 val = float(ii)/num_positions
                             if val < mglobals.MIN_INTRON:
