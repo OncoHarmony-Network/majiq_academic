@@ -138,7 +138,7 @@ def get_junc_from_list(coords, list_elem):
     return res
 
 
-def rnaseq_intron_retention(filenames, gene_list, readlen, chrom, logging=None):
+def rnaseq_intron_retention(filenames, gene_list, readlen, chrom, permissive=True, logging=None):
 
     samfile = [pysam.Samfile(xx, "rb") for xx in filenames]
 
@@ -152,8 +152,20 @@ def rnaseq_intron_retention(filenames, gene_list, readlen, chrom, logging=None):
                 intron_end = ex2_start - 1
 
                 offset = readlen - 8
-                intron_len = intron_end - intron_start - 16
+                intron_len = intron_end - intron_start - 2*(readlen-8)
+
+                # we want to take just the middle part not the reads that are crossing the junctions
+                # since 8 is the overlapping number of nucleotites we accept, the inner part is the
+                # real intron size - (readlen-8)/*start part*/ - (readlen-8)/*end part*/
+
                 chunk_len = intron_len / 10
+
+                bmap = np.ones(shape=intron_len, dtype=bool)
+                index_list = []
+                for ii in range(10):
+                    start = ii*chunk_len
+                    end = min(intron_len, (ii - 1)*chunk_len)
+                    index_list.append((start, end))
 
                 intron_parts = np.zeros(shape=10, dtype=np.float)
                 junc1 = None
@@ -170,33 +182,39 @@ def rnaseq_intron_retention(filenames, gene_list, readlen, chrom, logging=None):
                         is_cross, junc_list = __cross_junctions(read)
                         strand_read = '+' if not is_neg_strand(read) else '-'
                         unique = __is_unique(read)
+                        r_start = read.pos
+                        nreads = __get_num_reads(read)
+
+                        if not unique:
+                            intron_idx = r_start - (ex1_end + 1) - (readlen-8)
+                            if not (0 <= intron_idx <= intron_len):
+                                continue
+                            bmap[intron_idx] = False
+
+
                         if is_cross or strand_read != strand or not unique:
                             continue
 
-                        r_start = read.pos
-                        nreads = __get_num_reads(read)
+                        nc = read.seq.count('C') + read.seq.count('c')
+                        ng = read.seq.count('g') + read.seq.count('G')
+                        gc_content = float(nc + ng) / float(len(read.seq))
 
                         if r_start < ex1_end - 8:
                             if junc1 is None:
                                 junc1 = Junction(ex1_end, intron_start, exon1, None, gne, readN=0)
-
-                            nc = read.seq.count('C') + read.seq.count('c')
-                            ng = read.seq.count('g') + read.seq.count('G')
-                            gc_content = float(nc + ng) / float(len(read.seq))
                             junc1.update_junction_read(exp_index, nreads, r_start, gc_content, unique)
 
                         elif (ex2_start - offset - 1) < r_start < ex2_start:
                             if junc2 is None:
                                 junc2 = Junction(intron_end, ex2_start, exon2, None, gne, readN=0)
-
-                            nc = read.seq.count('C') + read.seq.count('c')
-                            ng = read.seq.count('g') + read.seq.count('G')
-                            gc_content = float(nc + ng) / float(len(read.seq))
                             junc2.update_junction_read(exp_index, nreads, r_start, gc_content, unique)
                         else:
                             # section 3
-                            rel_start = (r_start - (ex1_end + 1)) / chunk_len
+                            intron_idx = r_start - (ex1_end + 1) - (readlen-8)
+                            rel_start = intron_idx / chunk_len
                             indx = -1 if rel_start > 10 else rel_start
+                            if not bmap[intron_idx]:
+                                bmap[intron_idx] = True
                             intron_parts[indx] += nreads
 
                     if junc1 is None or junc2 is None:
@@ -205,11 +223,20 @@ def rnaseq_intron_retention(filenames, gene_list, readlen, chrom, logging=None):
                     cov1 = junc1.get_coverage(exp_index).sum()
                     cov2 = junc2.get_coverage(exp_index).sum()
 
-                    intron_parts /= chunk_len
-                    intron_body_covered = True
-                    for ii in intron_parts:
-                        if ii < mglobals.MIN_INTRON:
-                            intron_body_covered = False
+                    #intron_parts /= chunk_len
+
+                    intron_body_covered = False if permissive else True
+
+                    if permissive:
+                        for ii in intron_parts[4:7]:
+                            num_positions = np.count_nonzero(bmap[index_list[0]:index_list[1]])
+                            val = float(ii)/num_positions
+                            if val >= mglobals.MIN_INTRON:
+                                intron_body_covered = True
+                    else:
+                        for ii in intron_parts:
+                            if ii < mglobals.MIN_INTRON:
+                                intron_body_covered = False
 
                     if cov1 >= mglobals.MINREADS and cov2 >= mglobals.MINREADS and intron_body_covered:
                         exnum = majiq_exons.new_exon_definition(intron_start, intron_end,

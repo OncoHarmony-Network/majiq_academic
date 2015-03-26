@@ -230,6 +230,8 @@ def plot_countings(vals, typs, counts, output='.'):
             continue
         juncs = [xx for xx in tt.split('|')[1:] if not xx.endswith('0')]
         nums = len(juncs)
+        if nums >= 20:
+            nums = 19
         junc_bars[nums] += vals[idx]
 
         exnum = []
@@ -240,6 +242,8 @@ def plot_countings(vals, typs, counts, output='.'):
             ssnum.append(int(jj.split('e')[0]))
 
         nums_ex = max(exnum)
+        if nums_ex >= 20:
+            nums_ex = 19
         ex_bars[nums_ex] += vals[idx]
 
         if tt[0] == 's':
@@ -681,7 +685,7 @@ if __name__ == '__main__':
     dire = sys.argv[1]
     onlyfiles = [f for f in listdir(dire) if isfile(join(dire, f)) and f.endswith('majiq')]
     groups = ['Adr', 'Aor', 'BFat', 'Bstm', 'Cer', 'Hrt', 'Hyp', 'Kid', 'Liv', 'Lun', 'Mus', 'WFat']
-    #onlyfiles = ['Adr_CT22.mm10.sorted.majiq', 'Aor_CT22.mm10.sorted.majiq']
+    # onlyfiles = ['Adr_CT22.mm10.sorted.majiq', 'Aor_CT22.mm10.sorted.majiq']
 
     output = sys.argv[2]
     #groups = sys.argv[3:]
