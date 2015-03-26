@@ -210,7 +210,7 @@ def rnaseq_intron_retention(filenames, gene_list, readlen, chrom, permissive=Tru
                             junc2.update_junction_read(exp_index, nreads, r_start, gc_content, unique)
                         else:
                             # section 3
-                            intron_idx = r_start - (ex1_end + 1) - (readlen-8)
+                            intron_idx = r_start - (ex1_end + 1) + 8
                             rel_start = intron_idx / chunk_len
                             indx = -1 if rel_start > 10 else rel_start
                             if not bmap[intron_idx]:
