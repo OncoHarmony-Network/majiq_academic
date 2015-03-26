@@ -153,6 +153,8 @@ def rnaseq_intron_retention(filenames, gene_list, readlen, chrom, permissive=Tru
 
                 offset = readlen - 8
                 intron_len = intron_end - intron_start
+                if intron_len <= 0 :
+                    continue
 
 
                 # we want to take just the middle part not the reads that are crossing the junctions
