@@ -45,7 +45,7 @@ def print_numbers():
 def global_conf_ini(filename, params):
 
     global num_experiments, exp_list, readLen, tissue_repl, sam_dir, num_mapped_reads, genome, \
-        genome_path, outDir, temp_oDir, gene_tlb, strand_specific
+        genome_path, outDir, temp_oDir, gene_tlb, strand_specific, permissive_ir
     global A3SS, A5SS, SEev, bothSS, totalSE
     global MINREADS, MINPOS, MIN_INTRON
 
@@ -58,7 +58,8 @@ def global_conf_ini(filename, params):
     tissue_repl = {}
     temp_oDir = []
     count = 0
-    
+
+    permissive_ir = params.permissive
     MINREADS = params.minreads
     MINPOS = params.minpos
     MIN_INTRON = params.min_intronic_cov

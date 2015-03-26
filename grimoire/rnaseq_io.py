@@ -152,7 +152,7 @@ def rnaseq_intron_retention(filenames, gene_list, readlen, chrom, permissive=Tru
                 intron_end = ex2_start - 1
 
                 offset = readlen - 8
-                intron_len = intron_end - intron_start - 2*(readlen-8)
+                intron_len = intron_end - intron_start - 16
 
                 # we want to take just the middle part not the reads that are crossing the junctions
                 # since 8 is the overlapping number of nucleotites we accept, the inner part is the
@@ -164,7 +164,7 @@ def rnaseq_intron_retention(filenames, gene_list, readlen, chrom, permissive=Tru
                 index_list = []
                 for ii in range(10):
                     start = ii*chunk_len
-                    end = min(intron_len, (ii - 1)*chunk_len)
+                    end = min(intron_len, (ii + 1)*chunk_len)
                     index_list.append((start, end))
 
                 intron_parts = np.zeros(shape=10, dtype=np.float)
@@ -228,14 +228,16 @@ def rnaseq_intron_retention(filenames, gene_list, readlen, chrom, permissive=Tru
                     intron_body_covered = False if permissive else True
 
                     if permissive:
-                        for ii in intron_parts[4:7]:
-                            num_positions = np.count_nonzero(bmap[index_list[0]:index_list[1]])
+                        for ii in range(4, 7):
+                            num_positions = np.count_nonzero(bmap[index_list[ii][0]:index_list[ii][1]])
                             val = float(ii)/num_positions
                             if val >= mglobals.MIN_INTRON:
                                 intron_body_covered = True
                     else:
                         for ii in intron_parts:
-                            if ii < mglobals.MIN_INTRON:
+                            num_positions = np.count_nonzero(bmap[index_list[ii][0]:index_list[ii][1]])
+                            val = float(ii)/num_positions
+                            if val < mglobals.MIN_INTRON:
                                 intron_body_covered = False
 
                     if cov1 >= mglobals.MINREADS and cov2 >= mglobals.MINREADS and intron_body_covered:

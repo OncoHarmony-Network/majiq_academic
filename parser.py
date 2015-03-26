@@ -65,6 +65,7 @@ def main():
                                                                                       ' but reduce the number of LSVs '
                                                                                       'detected')
     buildparser.add_argument('--only_gather', action='store_true', dest='onlygather', default=False)
+    buildparser.add_argument('--permissive_ir', action='store_true', dest='permissive', default=False)
 
 
     #flags shared by calcpsi and deltapair

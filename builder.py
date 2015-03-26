@@ -40,7 +40,8 @@ def majiq_builder(samfiles_list, chrom, pcr_validation=None, gff_output=None, cr
                              nondenovo=nondenovo, logging=logging)
     if not logging is None:
         logging.info("[%s] Detecting intron retention events" % chrom)
-    majiq_io.rnaseq_intron_retention(samfiles_list, gene_list, mglobals.readLen, chrom, logging=logging)
+    majiq_io.rnaseq_intron_retention(samfiles_list, gene_list, mglobals.readLen, chrom,
+                                     permissive=permissive_ir, logging=logging)
     if not logging is None:
         logging.info("[%s] Detecting LSV" % chrom)
     lsv, const = analize.lsv_detection(gene_list, chrom, only_real_data=only_rna, logging=logging)
