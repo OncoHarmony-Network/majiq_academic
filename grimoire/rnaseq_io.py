@@ -152,7 +152,8 @@ def rnaseq_intron_retention(filenames, gene_list, readlen, chrom, permissive=Tru
                 intron_end = ex2_start - 1
 
                 offset = readlen - 8
-                intron_len = intron_end - intron_start - 16
+                intron_len = intron_end - intron_start
+
 
                 # we want to take just the middle part not the reads that are crossing the junctions
                 # since 8 is the overlapping number of nucleotites we accept, the inner part is the
@@ -186,7 +187,7 @@ def rnaseq_intron_retention(filenames, gene_list, readlen, chrom, permissive=Tru
                         nreads = __get_num_reads(read)
 
                         if not unique:
-                            intron_idx = r_start - (ex1_end + 1) - (readlen-8)
+                            intron_idx = r_start - (ex1_end + 1)
                             if not (0 <= intron_idx <= intron_len):
                                 continue
                             bmap[intron_idx] = False
@@ -210,7 +211,7 @@ def rnaseq_intron_retention(filenames, gene_list, readlen, chrom, permissive=Tru
                             junc2.update_junction_read(exp_index, nreads, r_start, gc_content, unique)
                         else:
                             # section 3
-                            intron_idx = r_start - (ex1_end + 1) + 8
+                            intron_idx = r_start - (ex1_end + 1)
                             rel_start = intron_idx / chunk_len
                             indx = -1 if rel_start > 10 else rel_start
                             if not bmap[intron_idx]:
