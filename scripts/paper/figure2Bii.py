@@ -53,7 +53,7 @@ def cov_combined(coverages):
         for k, v in cov_dict.iteritems():
             common_dict[k].append(float(sum(v)))
     for k in common_dict:
-        common_dict[k] = np.min(np.array(common_dict[k]))
+        common_dict[k] = np.mean(np.array(common_dict[k]))
     # print repr(common_dict)
     return common_dict
 
@@ -91,7 +91,7 @@ def plot_bins(read_bins, names, rtpcr, plotpath, V=0.1):
     plt.ylabel('% Reproduced')
     plt.ylim([0,100])
     plt.title(plotname)
-    plt.grid()
+    # plt.grid()
     # plt.title('Delta in expected PSI between %s.' % (replica_names_joint))
     plt.xticks(index + bar_width/2.0, names)
     plt.legend(loc=2)
@@ -107,7 +107,6 @@ def get_rtpcr_std(lcer, lliv):
     for c in lcer:
         for l in lliv:
             deltas.append(c-l)
-    print np.std(deltas)
     return np.std(deltas)
 
 
@@ -141,9 +140,10 @@ def main():
                 if l.startswith("#"): continue
                 fields = l.split()
                 try:
-                    rtpcr[fields[1].split("#")[0]]=[
-                        float(fields[2])-float(fields[3]),
-                        float(fields[4])-float(fields[5]),
+                    rtpcr[fields[0].split("#")[0]]=[
+                        float(fields[3])-float(fields[4]),
+                        # float(fields[5])-float(fields[6]),
+                        fields[1],
                         get_rtpcr_std([float(ss) for ss in fields[-6:-4]], [float(dd) for dd in fields[-3:-1]])
                     ]
                 except ValueError:
@@ -151,12 +151,13 @@ def main():
 
     for lsv in lsvs:
         for i, ran in enumerate(ranges):
-            lsv_id = lsv[0][0][1]
+            lsv_id = lsv[0][0]
             if lsv_id in common_cov.keys():
                 if common_cov[lsv_id] < ran:
                     read_bins[i].append(lsv[1]) # event[0][0][1]
                     if args.rtpcr_f and lsv_id in rtpcr:
                         rtpcr_bins[i].append(abs(rtpcr[lsv_id][0])+rtpcr[lsv_id][2])
+                        print "%s\t%d\t%s" % (lsv_id, common_cov[lsv_id], rtpcr[lsv_id][1])
                     break
 
     for j, r in enumerate(read_bins):
