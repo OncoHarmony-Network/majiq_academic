@@ -663,8 +663,11 @@ window.splicegraph = function (){
                 var exon_lsv_number = '';
                 var exon_lsv_coords = canvas.getAttribute('data-coord-exon');
 
-                var exons_gene = gene.exons.filter(function(v){ return v.type_exon <3 && !v.intron_retention;});
-
+                if (gene) {
+                    var exons_gene = gene.exons.filter(function (v) {
+                        return v.type_exon < 3 && !v.intron_retention;
+                    });
+                }
                 if (exon_lsv_coords) {
                     exon_lsv_coords = exon_lsv_coords.replace('(', '').replace(')', '').replace(' ', '').split(',');
 
