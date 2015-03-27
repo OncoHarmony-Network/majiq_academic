@@ -144,7 +144,7 @@ def rank_majiq(vlsv_list, V=0.2, absolute=True, dofilter=True, E=False, ranknoch
                 area = 1.0 - matrix_area(dmatrix, 0.05, absolute)
 
             # if area > MINTHRESHOLD or not dofilter:
-            rank.append([names[i], area])
+            rank.append([vlsv.get_id(), area])
     #if ranknochange:
     #    rank.sort(key=lambda x: x[1])
     #else:
