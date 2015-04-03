@@ -242,6 +242,7 @@ def rnaseq_intron_retention(filenames, gene_list, readlen, chrom, permissive=Tru
                                 val = float(nii)/num_positions
                             if val >= mglobals.MIN_INTRON:
                                 intron_body_covered = True
+                                break
                     else:
                         for ii in range(10):
                         #for ii in intron_parts:
@@ -256,6 +257,7 @@ def rnaseq_intron_retention(filenames, gene_list, readlen, chrom, permissive=Tru
                                 val = float(nii)/num_positions
                             if val < mglobals.MIN_INTRON:
                                 intron_body_covered = False
+                                break
 
                     if cov1 >= mglobals.MINREADS and cov2 >= mglobals.MINREADS and intron_body_covered:
                         exnum = majiq_exons.new_exon_definition(intron_start, intron_end,

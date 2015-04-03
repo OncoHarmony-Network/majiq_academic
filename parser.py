@@ -47,7 +47,7 @@ def main():
                              help='Minimum number of reads threshold combining all positions in a LSV to consider that'
                                   'the LSV "exist in the data". '
                              '[Default: %(default)s]')
-    buildparser.add_argument('--min_intronic_cov', default=1, type=float,
+    buildparser.add_argument('--min_intronic_cov', default=0.1, type=float,
                              help='Minimum number of reads on average in intronic sites, only for intron retention.'
                                   'Default: %(default)s]')
     buildparser.add_argument('--minpos', default=2, type=int, help='Minimum number of start positions with at least 1 '
