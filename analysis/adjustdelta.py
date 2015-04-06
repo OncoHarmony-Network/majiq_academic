@@ -441,7 +441,8 @@ def EMBetaMixture(D, p0_mix, beta0_mix, num_iter, min_ratio=1e-5, logger=False, 
         _save_or_show(plotpath, "iter_%05d.jun_%s" % (mm + 1, nj))
 
         if LL < LLold:
-            if logger: logger.info("Log_Likelihood DECREASE new %d old %d - Aborting ....\n" % (LL, LLold))
+            if logger:
+                logger.info("Log_Likelihood DECREASE new %d old %d - Aborting ....\n" % (LL, LLold))
             break
 
         pmix = new_pmix
