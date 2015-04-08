@@ -42,7 +42,7 @@ def print_numbers():
     print "BOTH", bothSS
 
 
-def global_conf_ini(filename, params):
+def global_conf_ini(filename, params, only_db=False):
 
     global num_experiments, exp_list, readLen, tissue_repl, sam_dir, num_mapped_reads, genome, \
         genome_path, outDir, temp_oDir, gene_tlb, strand_specific, permissive_ir
@@ -59,10 +59,14 @@ def global_conf_ini(filename, params):
     temp_oDir = []
     count = 0
 
-    permissive_ir = params.permissive
+
     MINREADS = params.minreads
     MINPOS = params.minpos
-    MIN_INTRON = params.min_intronic_cov
+
+    if not only_db:
+        permissive_ir = params.permissive
+        MIN_INTRON = params.min_intronic_cov
+
     readLen = int(general['readlen'])
     sam_dir = general['samdir']
     genome = general['genome']

@@ -229,7 +229,7 @@ def _generate_parser():
 
 def main(params):
 
-    mglobals.global_conf_ini(params.conf, params)
+    mglobals.global_conf_ini(params.conf, params, only_db=True)
 
     logger = utils.get_logger("%s/majiq.log" % mglobals.outDir)
     logger.info("")
