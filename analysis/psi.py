@@ -350,14 +350,13 @@ def gen_prior_matrix(pip, lsv_exp1, lsv_exp2, output, numbins=20, defaultprior=F
     pip.logger.info("'Best set IR' is %s events (out of %s)" % (len(best_set_mean_ir1[0]), len(lsv_exp1[0])))
     best_dpsi_ir = empirical_delta_psi(best_set_mean_ir1[0], best_set_mean_ir2[0])
 
-
     num_priors = 1
 
     prior_matrix = [[], []]
 
-
     for prior_idx, best_delta_psi in enumerate((best_dpsi, best_dpsi_ir)):
         njun_prior = [[]]
+
         for lsv in best_delta_psi:
             if lsv.shape[0] != 2:
                 continue
@@ -377,11 +376,16 @@ def gen_prior_matrix(pip, lsv_exp1, lsv_exp2, output, numbins=20, defaultprior=F
 
             prior_matrix[prior_idx] = np.array(prior_matrix[prior_idx]).reshape(numbins, -1)
             if np.isnan(prior_matrix[prior_idx]).any():
-                raise ValueError(" The input data does not have enought statistic power in order to calculate the prior."
-                                 " Check if the input is correct or use the --default_prior option in order to use a"
-                                 " precomputed prior")
-
-            prior_matrix[prior_idx] /= sum(prior_matrix[prior_idx])
+                if prior_idx == 1:
+                    pip.logger.info("Not enought statistic power to calculate the intron retention specific prior, "
+                                    "in that case we will use the global prior")
+                    prior_matrix[prior_idx] = prior_matrix[0]
+                else:
+                    raise ValueError(" The input data does not have enought statistic power in order to calculate "
+                                     "the prior. Check if the input is correct or use the --default_prior option in "
+                                     " order to use a precomputed prior")
+            else:
+                prior_matrix[prior_idx] /= sum(prior_matrix[prior_idx])
              #renormalize so it sums 1
 
         plot_matrix(prior_matrix[prior_idx], "Prior Matrix nj%s, version %s" % (nj, prior_idx),

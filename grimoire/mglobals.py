@@ -97,6 +97,7 @@ def global_conf_ini(filename, params, only_db=False):
     SEev = [0]*5
     totalSE = 0
 
+
 def global_default():
 
     global num_experiments, exp_list, readLen, tissue_repl, sam_dir, num_mapped_reads, genome, \

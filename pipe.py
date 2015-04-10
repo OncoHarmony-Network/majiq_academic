@@ -228,7 +228,7 @@ def deltapsi(matched_lsv, info, num_exp, conf, prior_matrix,  fitfunc, psi_space
                 all_sample = [psi2[xx][yy][m].sum() for xx in xrange(num_exp[1]) for yy in xrange(num_ways)]
                 all_sample = np.array(all_sample)
                 data_given_psi2 = np.log(prob_data_sample_given_psi(junc.sum(), all_sample.sum(), nbins,
-                                                                    alpha_prior, beta_prior))
+                                                                    alpha_prior[p_idx], beta_prior[p_idx]))
                 post_psi2 += np.exp(data_given_psi2 - scipy.misc.logsumexp(data_given_psi2))
                 psi_v2 = data_given_psi2.reshape(-1, nbins)
 
