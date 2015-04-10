@@ -45,11 +45,17 @@ def render_summary(output_dir, output_html, majiq_output, type_summary, threshol
     from jinja2 import Environment, FileSystemLoader, escape
 
     def to_json(value):
-        return escape(json.dumps(value, cls=utils_voila.PickleEncoder))
+        return escape(json.dumps(value, cls=utils_voila.LsvGraphicEncoder))
+
+    def to_json_especial(value):
+        return escape(json.dumps(value, cls=utils_voila.LsvGraphicEncoder).replace('\"', '\''))
+
 
     env = Environment(extensions=["jinja2.ext.do"], loader=FileSystemLoader(os.path.join(EXEC_DIR, "templates/")))
-    env.filters.update({'to_json': to_json, 'debug': debug})
+    env.filters.update({'to_json': to_json,'to_json_especial': to_json_especial, 'debug': debug})
     sum_template = env.get_template(type_summary.replace("-", "_") + "_summary_template.html")
+    # Max. 10 genes per page, create as many HTMLs as needed
+    MAX_GENES = 10
 
     if type_summary == constants.ANALYSIS_PSI:
         voila_output = open(output_dir+output_html, 'w')
@@ -59,9 +65,6 @@ def render_summary(output_dir, output_html, majiq_output, type_summary, threshol
                                                ))
         voila_output.close()
     elif type_summary == constants.ANALYSIS_PSI_GENE:
-        # Max. 10 genes per page, create as many HTMLs as needed
-
-        MAX_GENES = 10
         count_pages = 0
         gene_keys = sorted(majiq_output['genes_dict'].keys())
 
@@ -93,9 +96,6 @@ def render_summary(output_dir, output_html, majiq_output, type_summary, threshol
             count_pages += 1
 
     elif type_summary == constants.ANALYSIS_DELTAPSI_GENE:
-        # Max. 10 genes per page, create as many HTMLs as needed
-
-        MAX_GENES = 10
         count_pages = 0
 
         gene_keys = sorted(majiq_output['genes_dict'].keys())
@@ -141,6 +141,31 @@ def render_summary(output_dir, output_html, majiq_output, type_summary, threshol
         voila_output = open(output_dir+output_html, 'w')
         voila_output.write(sum_template.render(lsvList=majiq_output,
                                                collapsed=int(post_process_info['collapsed'])))
+
+    elif type_summary == constants.SPLICE_GRAPHS:
+        count_pages = 0
+        genes = majiq_output['genes']
+
+        logger.info("Number of genes detected in Voila: %d." % len(genes))
+        while count_pages*MAX_GENES < len(genes):
+            prev_page = None
+            next_page = None
+
+            logger.info("Processing %d out of %d genes ..." % (min((count_pages+1)*MAX_GENES, len(genes)), len(genes)))
+            if (count_pages+1)*MAX_GENES < len(genes):
+                next_page = str(count_pages+1) + "_" + output_html
+            if not count_pages == 0:
+                prev_page = str(count_pages - 1) + "_" + output_html
+
+            name_page = str(count_pages) + "_" + output_html
+            voila_output = open(output_dir+name_page, 'w')
+            voila_output.write(sum_template.render(genes=genes[count_pages*MAX_GENES:(count_pages+1)*MAX_GENES],
+                                                   prevPage=prev_page,
+                                                   nextPage=next_page,
+                                                   namePage=name_page
+            ))
+            voila_output.close()
+            count_pages += 1
 
     else:
         logger.error("summary type not recognized %s." % type_summary, exc_info=1)
@@ -505,6 +530,13 @@ def create_summary(args):
         render_summary(output_dir, output_html, majiq_output, type_summary, threshold, meta_postprocess, logger=logger)
         return
 
+    if type_summary == constants.SPLICE_GRAPHS:
+        logger.info("Loading %s." % voila_file)
+        genesG = pkl.load(open(voila_file, 'r'))[:args.max]
+        majiq_output = {'genes': sorted(genesG, key=lambda t: t.id)}
+        render_summary(output_dir, output_html, majiq_output, type_summary, logger=logger)
+        return
+
     render_summary(output_dir, output_html, majiq_output, type_summary, threshold, meta_postprocess, logger=logger)
     render_tab_output(output_dir, output_html, majiq_output, type_summary, logger=logger, pairwise_dir=pairwise, threshold=threshold)
     create_gff3_txt_files(output_dir, majiq_output, logger=logger)
@@ -566,7 +598,12 @@ def main():
     # Thumbnails generation option (dev) TODO: Delete
     parser_thumbs = argparse.ArgumentParser(add_help=False)
     parser_thumbs.add_argument('--collapsed', action='store_true', default=False, help='Collapsed LSVs thumbnails in the HTML summary.')
-    subparsers.add_parser(constants.LSV_THUMBNAILS, help='Generate LSV thumbnails [DEBUGING!].', parents=[common_parser, parser_thumbs])  # TODO: GET RID OF THESE OR GIVE IT A BETTER SHAPE!!!
+    subparsers.add_parser(constants.LSV_THUMBNAILS, help='Generate LSV thumbnails [DEBUGING!].', parents=[common_parser, parser_thumbs])
+
+    # Splice graphs generation option (dev) TODO: Delete
+    parser_splice_graphs = argparse.ArgumentParser(add_help=False)
+    parser_splice_graphs.add_argument('--max', type=int, default=20, help='Maximum number of splice graphs to show (*.splicegraph files may be quite large).')  # Probability threshold used to sum the accumulative probability of inclusion/exclusion.
+    subparsers.add_parser(constants.SPLICE_GRAPHS, help='Generate only splice graphs [DEBUGING!].', parents=[common_parser, parser_splice_graphs])
 
     args = parser.parse_args()
     try:
