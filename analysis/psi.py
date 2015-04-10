@@ -304,7 +304,8 @@ def gen_prior_matrix(pip, lsv_exp1, lsv_exp2, output, numbins=20, defaultprior=F
     psi_space = np.linspace(0, 1-pip.binsize, num=numbins) + pip.binsize/2
     if defaultprior:
         direc = "%s/../data" % os.path.dirname(os.path.realpath(__file__))
-        prior_matrix = pickle.load(open('%s/defaultprior.pickle' % direc, 'r'))
+        def_mat = pickle.load(open('%s/defaultprior.pickle' % direc, 'r'))
+        prior_matrix = [def_mat, def_mat]
         return psi_space, prior_matrix
 
     pip.logger.info('Filtering to obtain "best set"...')
@@ -346,6 +347,7 @@ def gen_prior_matrix(pip, lsv_exp1, lsv_exp2, output, numbins=20, defaultprior=F
 
     pip.logger.info("'Best set' is %s events (out of %s)" % (len(best_set_mean1[0]), len(lsv_exp1[0])))
     best_dpsi = empirical_delta_psi(best_set_mean1[0], best_set_mean2[0])
+    pip.logger.info("'Best set IR' is %s events (out of %s)" % (len(best_set_mean_ir1[0]), len(lsv_exp1[0])))
     best_dpsi_ir = empirical_delta_psi(best_set_mean_ir1[0], best_set_mean_ir2[0])
 
     prior_matrix = [[], []]
@@ -359,7 +361,7 @@ def gen_prior_matrix(pip, lsv_exp1, lsv_exp2, output, numbins=20, defaultprior=F
         for nj in range(len(njun_prior)):
             best_delta_psi = np.array(njun_prior[nj])
 
-            pip.logger.info("Parametrizing 'best set'...%s",  nj)
+            pip.logger.info("Parametrizing 'best set'...%s",  prior_idx)
             mixture_pdf = majiq_delta.adjustdelta_lsv(best_delta_psi, output, plotpath=pip.plotpath,
                                                       title=" ".join(pip.names), numiter=pip.iter,
                                                       breakiter=pip.breakiter, njunc=nj, logger=pip.logger)
@@ -397,7 +399,7 @@ def __extract_cassette(delta_psi, info, psi1, psi2):
             listd.append(delta_psi[idx][0])
 
     fp = open('./toyoseph.pickle', 'wb')
-    pickle.dump(listd,fp)
+    pickle.dump(listd, fp)
     fp.close()
 
     out = open('./psi_delta0.tab', 'w+')
