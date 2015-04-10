@@ -88,9 +88,7 @@ def get_prob_delta_psi_greater_v(bins, expected, V=.2):
 
 
 def get_lsv_single_exp_data(voila_input_file, gene_name_list=None, lsv_types=None, logger=None):
-    """
-    Create a dictionary to summarize the information from majiq output file.
-    """
+    """Create a dictionary to summarize the information from majiq output file."""
     voila_input = load_voila_input(voila_input_file, logger=logger)
     lsv_list = voila_input.lsvs
 
@@ -119,15 +117,13 @@ def get_lsv_single_exp_data(voila_input_file, gene_name_list=None, lsv_types=Non
 
 
 def get_lsv_delta_exp_data(voila_input_file, confidence=.95, threshold=.2, show_all=False, gene_name_list=None, logger=None):
-    """
-    Load lsv delta psi pickle file. It contains a list with 2 elements:
-        [0] List with LSV bins matrices
-        [1] List with info per LSV
+    """Load lsv delta psi pickle file.
 
-    :param voila_input_file:
-    :param metadata_post:
-    :param confidence:
-    :param threshold:
+    :param voila_input_file: pickle with a list of VoilaLsvs
+    :param confidence: currently not used
+    :param threshold: used to report changing LSVs where at least one junction has an |E(Delta(PSI))| > threshold.
+    :param show_all: option to show all LSVs regarding their expected delta psis values.
+    :param gene_name_list: report only genes appearing in this list.
     :param logger:
     @return: dictionary
     """
