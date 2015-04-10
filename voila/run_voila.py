@@ -45,7 +45,7 @@ def render_summary(output_dir, output_html, majiq_output, type_summary, threshol
     from jinja2 import Environment, FileSystemLoader, escape
 
     def to_json(value):
-        return escape(json.dumps(value, cls=utils_voila.LsvGraphicEncoder))
+        return escape(json.dumps(value, cls=utils_voila.PickleEncoder))
 
     def to_json_especial(value):
         return escape(json.dumps(value, cls=utils_voila.LsvGraphicEncoder).replace('\"', '\''))
