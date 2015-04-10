@@ -350,7 +350,12 @@ def gen_prior_matrix(pip, lsv_exp1, lsv_exp2, output, numbins=20, defaultprior=F
     pip.logger.info("'Best set IR' is %s events (out of %s)" % (len(best_set_mean_ir1[0]), len(lsv_exp1[0])))
     best_dpsi_ir = empirical_delta_psi(best_set_mean_ir1[0], best_set_mean_ir2[0])
 
+
+    num_priors = 1
+
     prior_matrix = [[], []]
+
+
     for prior_idx, best_delta_psi in enumerate((best_dpsi, best_dpsi_ir)):
         njun_prior = [[]]
         for lsv in best_delta_psi:

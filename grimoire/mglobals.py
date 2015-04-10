@@ -97,6 +97,21 @@ def global_conf_ini(filename, params, only_db=False):
     SEev = [0]*5
     totalSE = 0
 
+def global_default():
+
+    global num_experiments, exp_list, readLen, tissue_repl, sam_dir, num_mapped_reads, genome, \
+        genome_path, outDir, temp_oDir, gene_tlb, strand_specific, permissive_ir
+    global A3SS, A5SS, SEev, bothSS, totalSE
+    global MINREADS, MINPOS, MIN_INTRON
+
+    num_experiments = 1
+    readLen = 30
+    MINREADS = 1
+    MINPOS = 1
+    genome = 'mm10'
+
+    gene_tlb = {}
+
 
 def get_max_denovo_difference():
     return 1000
