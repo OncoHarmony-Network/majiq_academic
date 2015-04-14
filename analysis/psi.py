@@ -297,14 +297,18 @@ def calc_dirichlet(alpha, n, samples_events, debug=False, psiparam=False):
     return psi_matrix
 
 
+def __load_default_prior():
+    direc = "%s/../data" % os.path.dirname(os.path.realpath(__file__))
+    def_mat = pickle.load(open('%s/defaultprior.pickle' % direc, 'r'))
+    return def_mat
+
 def gen_prior_matrix(pip, lsv_exp1, lsv_exp2, output, numbins=20, defaultprior=False):
 
     #Start prior matrix
     pip.logger.info("Calculating prior matrix...")
     psi_space = np.linspace(0, 1-pip.binsize, num=numbins) + pip.binsize/2
     if defaultprior:
-        direc = "%s/../data" % os.path.dirname(os.path.realpath(__file__))
-        def_mat = pickle.load(open('%s/defaultprior.pickle' % direc, 'r'))
+        def_mat = __load_default_prior()
         prior_matrix = [def_mat, def_mat]
         return psi_space, prior_matrix
 
@@ -350,6 +354,8 @@ def gen_prior_matrix(pip, lsv_exp1, lsv_exp2, output, numbins=20, defaultprior=F
     pip.logger.info("'Best set IR' is %s events (out of %s)" % (len(best_set_mean_ir1[0]), len(lsv_exp1[0])))
     best_dpsi_ir = empirical_delta_psi(best_set_mean_ir1[0], best_set_mean_ir2[0])
 
+
+
     num_priors = 1
 
     prior_matrix = [[], []]
@@ -363,7 +369,13 @@ def gen_prior_matrix(pip, lsv_exp1, lsv_exp2, output, numbins=20, defaultprior=F
             njun_prior[0].append(lsv[0])
 
         for nj in range(len(njun_prior)):
+
             best_delta_psi = np.array(njun_prior[nj])
+            if len(best_delta_psi) == 0:
+                if prior_idx == 0:
+                    prior_matrix[prior_idx] = __load_default_prior()
+                else:
+                    prior_matrix[prior_idx] = prior_matrix[0]
 
             pip.logger.info("Parametrizing 'best set'...%s",  prior_idx)
             mixture_pdf = majiq_delta.adjustdelta_lsv(best_delta_psi, output, plotpath=pip.plotpath,
