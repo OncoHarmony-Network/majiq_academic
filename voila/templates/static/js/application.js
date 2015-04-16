@@ -54,7 +54,7 @@ $( document ).ready(function(){
     /** Tooltip for barchart */
     var tooltips = $('.tooltip');
     if (tooltips.length){
-        $('.tooltip').tooltipster({
+        tooltips.tooltipster({
             theme: 'tooltipster-light'
         });
     }

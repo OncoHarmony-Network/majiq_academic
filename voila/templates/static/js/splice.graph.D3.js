@@ -679,6 +679,7 @@ function spliceGraphD3() {
                     d3.select(this).classed("hovered", false);
                 });
 
+            var juncs_orig_filtered = orig_objs.junc.filter(function(v){ return v.ir<1; });
 
             /** ..and junctions! */
             junctions.on('mouseover', function(d, i){
@@ -695,14 +696,15 @@ function spliceGraphD3() {
                 var tooltipD3 = d3.select(this.parentNode.parentNode).select(".tooltipD3");
 //                    .style("left", mouseCoords[0]+ "px")
 //                    .style("top", mouseCoords[1]+ "px")
+
                 tooltipD3
                     .select(".coordsLabel")
                     .text(function(){
-                        return orig_objs.junc[i].coords[0] + "-" + orig_objs.junc[i].coords[1];
+                        return juncs_orig_filtered[i].coords[0] + "-" + juncs_orig_filtered[i].coords[1];
                     });
                 tooltipD3.select(".lengthLabel")
                     .text(function(){
-                        return Math.abs(orig_objs.junc[i].coords[0] - orig_objs.junc[i].coords[1]);
+                        return Math.abs(juncs_orig_filtered[i].coords[0] - juncs_orig_filtered[i].coords[1]);
                     });
             })
             .on('mouseout', function(){
