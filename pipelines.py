@@ -1,6 +1,6 @@
 import abc
 import pickle
-from multiprocessing import Pool
+from multiprocessing import Pool, current_process, Process
 from grimoire.utils.utils import create_if_not_exists, get_logger
 from analysis.polyfitnb import fit_nb
 import numpy as np
@@ -50,17 +50,18 @@ class BasicPipeline:
         create_if_not_exists(self.output)
         if self.plotpath:
             create_if_not_exists(self.plotpath)
-        logger_path = self.logger
-        if not logger_path:
-            logger_path = self.output
+        self.logger_path = self.logger
+        if not self.logger_path:
+            self.logger_path = self.output
 
-        self.logger = get_logger("%s/majiq.log" % logger_path, silent=self.silent, debug=self.debug)
+
         self.nthreads = args.nthreads
         self.psi_paths = []
         try:
             self.replica_len = [len(self.files1), len(self.files2)]
         except AttributeError:
             pass
+
 
     @abc.abstractmethod
     def run(self, lsv):
@@ -180,6 +181,10 @@ class CalcPsi(BasicPipeline):
         self.logger.info("Alakazam! Done.")
 
 
+
+
+
+
 ################################
 #          Delta PSI           #
 ################################
@@ -191,58 +196,86 @@ class DeltaPair(BasicPipeline):
     def run(self):
         self.delta_groups()
 
-    def delta_groups(self):
-        self.logger.info("")
-        self.logger.info("Running deltagroups new model ...")
-        self.logger.info("GROUP 1: %s" % self.files1)
-        self.logger.info("GROUP 2: %s" % self.files2)
+    def __prepare_lsvs(self, conf, nchunks, logger=None):
 
+        if logger is None:
+             logger = get_logger("%s/majiq.log" % self.output, silent=False)
+        self.logger = logger
         exec_id = '%s_%s' % (self.names[0], self.names[1])
         tempfile = '%s/%s_temp_mid_exec.pickle' % (self.output, exec_id)
         num_exp = [len(self.files1), len(self.files2)]
+
+        filtered_lsv1 = [None] * num_exp[0]
+        fitfunc = [[None] * num_exp[0], [None] * num_exp[1]]
         meta_info = [[0] * num_exp[0], [0] * num_exp[1]]
-        if not os.path.exists(tempfile):
 
-            filtered_lsv1 = [None] * num_exp[0]
-            fitfunc = [[None] * num_exp[0], [None] * num_exp[1]]
-            for ii, fname in enumerate(self.files1):
-                meta_info[0][ii], lsv_junc, const = majiq_io.load_data_lsv(fname, self.names[0], self.logger)
+        for ii, fname in enumerate(self.files1):
+            meta_info[0][ii], lsv_junc, const = majiq_io.load_data_lsv(fname, self.names[0], logger)
 
-                #fitting the function
-                lsv_junc, const = self.gc_content_norm(lsv_junc, const)
-                fitfunc[0][ii] = self.fitfunc(const[0])
-                filtered_lsv1[ii] = self.mark_stacks(lsv_junc, fitfunc[0][ii])
-            filtered_lsv1 = majiq_filter.quantifiable_in_group(filtered_lsv1, self.minpos, self.minreads,
-                                                               self.logger, 0.10)
-            self.logger.info("Group1: %s quantifiable in group" % str(len(filtered_lsv1[0])))
+            #fitting the function
+            lsv_junc, const = self.gc_content_norm(lsv_junc, const)
+            fitfunc[0][ii] = self.fitfunc(const[0])
+            filtered_lsv1[ii] = self.mark_stacks(lsv_junc, fitfunc[0][ii])
+        filtered_lsv1 = majiq_filter.quantifiable_in_group(filtered_lsv1, self.minpos, self.minreads,
+                                                           logger, 0.10)
+        logger.info("Group1: %s quantifiable in group" % str(len(filtered_lsv1[0])))
 
-            filtered_lsv2 = [None] * num_exp[1]
-            for ii, fname in enumerate(self.files2):
-                meta_info[1][ii], lsv_junc, const = majiq_io.load_data_lsv(fname, self.names[1], self.logger)
+        filtered_lsv2 = [None] * num_exp[1]
+        for ii, fname in enumerate(self.files2):
+            meta_info[1][ii], lsv_junc, const = majiq_io.load_data_lsv(fname, self.names[1], logger)
 
-                #fitting the function
-                lsv_junc, const = self.gc_content_norm(lsv_junc, const)
-                fitfunc[1][ii] = self.fitfunc(const[0])
-                filtered_lsv2[ii] = self.mark_stacks(lsv_junc, fitfunc[1][ii])
-            filtered_lsv2 = majiq_filter.quantifiable_in_group(filtered_lsv2, self.minpos, self.minreads,
-                                                               self.logger, 0.10)
+            #fitting the function
+            lsv_junc, const = self.gc_content_norm(lsv_junc, const)
+            fitfunc[1][ii] = self.fitfunc(const[0])
+            filtered_lsv2[ii] = self.mark_stacks(lsv_junc, fitfunc[1][ii])
+        filtered_lsv2 = majiq_filter.quantifiable_in_group(filtered_lsv2, self.minpos, self.minreads,
+                                                           logger, 0.10)
 
-            self.logger.info("Group2: %s quantifiable in group" % str(len(filtered_lsv2[0])))
-            matched_lsv, matched_info = majiq_filter.lsv_intersection(filtered_lsv1, filtered_lsv2)
-            self.logger.info("After intersection:  %d/(%d, %d)" % (len(matched_info), len(filtered_lsv1[0]),
-                                                                   len(filtered_lsv2[0])))
-            group1, group2 = pipe.combine_for_priormatrix(matched_lsv[0], matched_lsv[1], matched_info, num_exp)
-            psi_space, prior_matrix = majiq_psi.gen_prior_matrix(self, group1, group2, self.output, numbins=20,
-                                                                 defaultprior=self.default_prior)
+        logger.info("Group2: %s quantifiable in group" % str(len(filtered_lsv2[0])))
+        matched_lsv, matched_info = majiq_filter.lsv_intersection(filtered_lsv1, filtered_lsv2)
+        logger.info("After intersection:  %d/(%d, %d)" % (len(matched_info), len(filtered_lsv1[0]),
+                                                          len(filtered_lsv2[0])))
+        group1, group2 = pipe.combine_for_priormatrix(matched_lsv[0], matched_lsv[1], matched_info, num_exp)
+        psi_space, prior_matrix = majiq_psi.gen_prior_matrix(self, group1, group2, self.output, numbins=20,
+                                                             defaultprior=self.default_prior)
+        logger.info("Saving prior matrix for %s..." % self.names)
+        tout = open("%s/%s_priormatrix.pickle" % (self.output, exec_id), 'w+')
+        pickle.dump(prior_matrix, tout)
+        tout.close()
 
-            #TEMP 
-            tout = open(tempfile, 'w+')
-            pickle.dump([meta_info, matched_info, matched_lsv, psi_space, prior_matrix, fitfunc], tout)
+        get_clean_raw_reads(matched_info, matched_lsv[0], self.output, self.names[0], num_exp[0])
+        get_clean_raw_reads(matched_info, matched_lsv[1], self.output, self.names[1], num_exp[1])
+
+        csize = len(matched_lsv[0]) / nchunks
+
+        logger.info("Creating %s chunks with <= %s lsv" % (nchunks, csize))
+        for nthrd in xrange(nchunks):
+            lb = nthrd * csize
+            ub = min((nthrd + 1) * csize, len(matched_lsv[0]))
+            if nthrd == nchunks - 1:
+                ub = len(matched_lsv[0])
+            lsv_list = [matched_lsv[0][lb:ub], matched_lsv[1][lb:ub]]
+            lsv_info = matched_info[lb:ub]
+
+            outfdir = '%s/tmp/chunks/' % self.output
+            if not os.path.exists(outfdir):
+                os.makedirs(outfdir)
+            out_file = '%s/chunk_%d.pickle' % (outfdir, nthrd)
+            tout = open(out_file, 'w+')
+            pickle.dump([lsv_list, lsv_info, num_exp, conf, fitfunc, psi_space], tout)
             tout.close()
-            #END TEMP
 
-        else:
-            meta_info, matched_info, matched_lsv, psi_space, prior_matrix, fitfunc = pickle.load(open(tempfile))
+    def delta_groups(self):
+        logger = get_logger("%s/majiq.log" % self.logger_path, silent=self.silent, debug=self.debug)
+        logger.info("")
+        logger.info("Running deltagroups new model ...")
+        logger.info("GROUP 1: %s" % self.files1)
+        logger.info("GROUP 2: %s" % self.files2)
+
+        exec_id = '%s_%s' % (self.names[0], self.names[1])
+
+        num_exp = [len(self.files1), len(self.files2)]
+        nchunks = int(self.nthreads)
 
         conf = {'minnonzero': self.minpos,
                 'minreads': self.minreads,
@@ -254,62 +287,62 @@ class DeltaPair(BasicPipeline):
                 'plotpath': self.plotpath,
                 'names': self.names}
 
-        get_clean_raw_reads(matched_info, matched_lsv[0], self.output, self.names[0], num_exp[0])
-        get_clean_raw_reads(matched_info, matched_lsv[1], self.output, self.names[1], num_exp[1])
+        p = Process(target=self.__prepare_lsvs, args=(conf, nchunks))
+        p.start()
+        p.join()
 
-        if self.nthreads == 1:
-            posterior_matrix, names, psi_list1, psi_list2 = pipe.deltapsi(matched_lsv, matched_info, num_exp, conf,
-                                                                          prior_matrix, fitfunc, psi_space, self.logger)
-        else:
 
-            pool = Pool(processes=self.nthreads)
-            csize = len(matched_lsv[0]) / int(self.nthreads)
-            self.logger.info("CREATING THREADS %s with <= %s lsv" % (self.nthreads, csize))
+        self.__prepare_lsvs(conf, nchunks, logger=logger)
 
-            for nthrd in xrange(self.nthreads):
-                lb = nthrd * csize
-                ub = min((nthrd + 1) * csize, len(matched_lsv[0]))
-                if nthrd == self.nthreads - 1:
-                    ub = len(matched_lsv[0])
-                lsv_list = [matched_lsv[0][lb:ub], matched_lsv[1][lb:ub]]
-                lsv_info = matched_info[lb:ub]
+        pool = Pool(processes=self.nthreads)
+        for nthrd in xrange(nchunks):
+            chunk_fname = '%s/tmp/chunks/chunk_%d.pickle' % (self.output, nthrd)
+            delta_prior_path = "%s/%s_priormatrix.pickle" % (self.output, exec_id)
+            if self.nthreads == 1:
+                pipe.parallel_lsv_child_calculation(pipe.deltapsi,
+                                                    [chunk_fname, delta_prior_path],
+                                                    '%s/tmp' % os.path.dirname(self.output),
+                                                    '%s_%s' % (self.names[0], self.names[1]),
+                                                    nthrd)
+
+            else:
                 pool.apply_async(pipe.parallel_lsv_child_calculation, [pipe.deltapsi,
-                                                                       [lsv_list, lsv_info, num_exp, conf, prior_matrix,
-                                                                        fitfunc, psi_space],
-                                                                       matched_info,
+                                                                       [chunk_fname, delta_prior_path],
                                                                        '%s/tmp' % os.path.dirname(self.output),
                                                                        '%s_%s' % (self.names[0], self.names[1]),
                                                                        nthrd])
+
+        if self.nthreads > 1:
             pool.close()
             pool.join()
 
-            posterior_matrix = []
-            names = []
-            psi_list1 = []
-            psi_list2 = []
-            self.logger.info("GATHER pickles")
-            for nthrd in xrange(self.nthreads):
-                tempfile = open("%s/tmp/%s_%s_th%s.%s.pickle" % (os.path.dirname(self.output), self.names[0],
-                                                                 self.names[1], nthrd, pipe.deltapsi.__name__))
-                ptempt = pickle.load(tempfile)
-                posterior_matrix.extend(ptempt[0])
-                names.extend(ptempt[1])
-                psi_list1.extend(ptempt[2])
-                psi_list2.extend(ptempt[3])
+        posterior_matrix = []
+        names = []
+        psi_list1 = []
+        psi_list2 = []
+        logger.info("GATHER pickles")
+        for nthrd in xrange(self.nthreads):
+            tempfile = open("%s/tmp/%s_%s_th%s.%s.pickle" % (os.path.dirname(self.output), self.names[0],
+                                                             self.names[1], nthrd, pipe.deltapsi.__name__))
+            ptempt = pickle.load(tempfile)
+            posterior_matrix.extend(ptempt[0])
+            names.extend(ptempt[1])
+            psi_list1.extend(ptempt[2])
+            psi_list2.extend(ptempt[3])
 
         pickle_path = "%s/%s_%s.%s.pickle" % (self.output, self.names[0], self.names[1], pipe.deltapsi.__name__)
         # pickle.dump([posterior_matrix, names, meta_info, psi_list1, psi_list2], open(pickle_path, 'w'))
         majiq_io.dump_lsvs_voila(pickle_path, posterior_matrix, names, meta_info, psi_list1, psi_list2)
-        self.logger.info("DeltaPSI calculation for %s_%s ended succesfully! Result can be found at %s" % (self.names[0],
-                                                                                                          self.names[1],
-                                                                                                          self.output))
+        logger.info("DeltaPSI calculation for %s_%s ended succesfully! Result can be found at %s" % (self.names[0],
+                                                                                                     self.names[1],
+                                                                                                     self.output))
 
         if self.pairwise:
             num_lsv = len(matched_info)
             for ii in np.arange(num_exp[0]):
                 for jj in np.arange(num_exp[1]):
                     names = ["%s_%d" % (self.names[0], ii+1), "%s_%d" % (self.names[1], jj+1)]
-                    self.logger.info("Pairwise deltapsi: %s vs %s" % (names[0], names[1]))
+                    logger.info("Pairwise deltapsi: %s vs %s" % (names[0], names[1]))
                     conf['names'] = names
                     fitting_f = [[fitfunc[0][ii]], [fitfunc[1][jj]]]
 
@@ -322,7 +355,7 @@ class DeltaPair(BasicPipeline):
                     self.pairwise_deltapsi(lsv_vals, matched_info, meta_info, [1, 1], conf, prior_matrix, fitting_f,
                                            psi_space, names)
 
-        self.logger.info("Alakazam! Done.")
+        logger.info("Alakazam! Done.")
 
     def pairwise_deltapsi(self, matched_lsv, matched_info, meta_info, num_exp, conf, prior_matrix, fitfunc,
                           psi_space, grpnames):

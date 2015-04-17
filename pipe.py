@@ -12,9 +12,9 @@ import analysis.sample as majiq_sample
 import pickle
 
 
-def parallel_lsv_child_calculation(func, args, info, tempdir, name, chunk):
+def parallel_lsv_child_calculation(func, args, tempdir, name, chunk):
 
-    try:
+    #try:
         if not os.path.isdir(tempdir):
             os.mkdir(tempdir)
         thread_logger = get_logger("%s/majiq.w%s.log" % (tempdir, chunk), silent=False)
@@ -30,12 +30,12 @@ def parallel_lsv_child_calculation(func, args, info, tempdir, name, chunk):
         thread_logger.info("[Th %s]: Saving DeltaPSI..." % chunk)
         output = open("%s/%s_th%s.%s.pickle" % (tempdir, name, chunk, func.__name__), 'w')
         pickle.dump(results, output)
+    #
+    # except Exception as e:
+    #     print "%s" % sys.exc_traceback.tb_lineno, e
+    #     sys.stdout.flush()
 
-    except Exception as e:
-        print "%s" % sys.exc_traceback.tb_lineno, e
-        sys.stdout.flush()
-
-    return
+        return
 
 
 def combine_for_priormatrix(group1, group2, matched_info, num_exp):
@@ -91,10 +91,20 @@ def __get_prior_params(lsvinfo, num_ways):
 
     return alpha_prior, beta_prior
 
+def __load_execution_chunk(filename, delta=None):
+
+    l_vals = pickle.load(open(filename))
+    if not delta is None:
+        prior = pickle.load(open(delta))
+        l_vals.append(prior)
+
+    return l_vals
+
+
 
 def calcpsi(matched_lsv, info, num_exp, conf, fitfunc, logger):
 
-    try:
+    #try:
 
         #The center of the previous BINS. This is used to calculate the mean value of each bin.
         lsv_samples = np.zeros(shape=(len(info), num_exp), dtype=np.dtype('object'))
@@ -146,16 +156,20 @@ def calcpsi(matched_lsv, info, num_exp, conf, fitfunc, logger):
                 if num_ways == 2:
                     break
 
-    except Exception as e:
-        post_psi = []
-        new_info = []
-        print "%s" % sys.exc_traceback.tb_lineno, e
-        sys.stdout.flush()
+    # except Exception as e:
+    #     post_psi = []
+    #     new_info = []
+    #     print "%s" % sys.exc_traceback.tb_lineno, e
+    #     sys.stdout.flush()
 
-    return post_psi, new_info
+        return post_psi, new_info
 
 
-def deltapsi(matched_lsv, info, num_exp, conf, prior_matrix,  fitfunc, psi_space, logger):
+#def deltapsi(matched_lsv, info, num_exp, conf, prior_matrix,  fitfunc, psi_space, logger):
+def deltapsi(fname, delta_prior_path, logger):
+
+    matched_lsv, info, num_exp, conf, fitfunc, psi_space, prior_matrix = __load_execution_chunk(fname,
+                                                                                                delta=delta_prior_path)
 
     lsv_samples1 = np.zeros(shape=(len(info), num_exp[0]), dtype=np.dtype('object'))
     lsv_samples2 = np.zeros(shape=(len(info), num_exp[1]), dtype=np.dtype('object'))

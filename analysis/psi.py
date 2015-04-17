@@ -302,6 +302,7 @@ def __load_default_prior():
     def_mat = pickle.load(open('%s/defaultprior.pickle' % direc, 'r'))
     return def_mat
 
+
 def gen_prior_matrix(pip, lsv_exp1, lsv_exp2, output, numbins=20, defaultprior=False):
 
     #Start prior matrix
@@ -354,10 +355,6 @@ def gen_prior_matrix(pip, lsv_exp1, lsv_exp2, output, numbins=20, defaultprior=F
     pip.logger.info("'Best set IR' is %s events (out of %s)" % (len(best_set_mean_ir1[0]), len(lsv_exp1[0])))
     best_dpsi_ir = empirical_delta_psi(best_set_mean_ir1[0], best_set_mean_ir2[0])
 
-
-
-    num_priors = 1
-
     prior_matrix = [[], []]
 
     for prior_idx, best_delta_psi in enumerate((best_dpsi, best_dpsi_ir)):
@@ -376,17 +373,18 @@ def gen_prior_matrix(pip, lsv_exp1, lsv_exp2, output, numbins=20, defaultprior=F
                     prior_matrix[prior_idx] = __load_default_prior()
                 else:
                     prior_matrix[prior_idx] = prior_matrix[0]
+                continue
 
             pip.logger.info("Parametrizing 'best set'...%s",  prior_idx)
             mixture_pdf = majiq_delta.adjustdelta_lsv(best_delta_psi, output, plotpath=pip.plotpath,
                                                       title=" ".join(pip.names), numiter=pip.iter,
                                                       breakiter=pip.breakiter, njunc=nj, logger=pip.logger)
             #pickle.dump(mixture_pdf, open("%s%s_%s_bestset_junc_%s.pickle"%(output, pip.names[0], pip.names[1], nj), 'w'))
-
+            pmat = []
             for i in xrange(numbins):
-                prior_matrix[prior_idx].extend(mixture_pdf[numbins-i:(numbins*2)-i])
+                pmat.extend(mixture_pdf[numbins-i:(numbins*2)-i])
 
-            prior_matrix[prior_idx] = np.array(prior_matrix[prior_idx]).reshape(numbins, -1)
+            prior_matrix[prior_idx] = np.array(pmat).reshape(numbins, -1)
             if np.isnan(prior_matrix[prior_idx]).any():
                 if prior_idx == 1:
                     pip.logger.info("Not enought statistic power to calculate the intron retention specific prior, "
@@ -400,11 +398,11 @@ def gen_prior_matrix(pip, lsv_exp1, lsv_exp2, output, numbins=20, defaultprior=F
                 prior_matrix[prior_idx] /= sum(prior_matrix[prior_idx])
              #renormalize so it sums 1
 
-        plot_matrix(prior_matrix[prior_idx], "Prior Matrix nj%s, version %s" % (nj, prior_idx),
+        plot_matrix(prior_matrix[prior_idx], "Prior Matrix , version %s" % prior_idx,
                     "prior_matrix_jun_%s" % nj, pip.plotpath)
-    pip.logger.info("Saving prior matrix for %s..." % pip.names)
-    pickle.dump(prior_matrix, open("%s/%s_%s_priormatrix_jun_%s.pickle" % (output, pip.names[0], pip.names[1], nj),
-                                   'w'))
+    # pip.logger.info("Saving prior matrix for %s..." % pip.names)
+    # pickle.dump(prior_matrix, open("%s/%s_%s_priormatrix_jun_%s.pickle" % (output, pip.names[0], pip.names[1], nj),
+    #                                'w'))
 
     return psi_space, prior_matrix
 
