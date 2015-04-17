@@ -280,7 +280,7 @@ def load_dpairs(pairwise_dir, majiq_output, logger):
     return lmajiq_pairs, group1_name, group2_name
 
 
-def render_tab_output(output_dir, output_html, majiq_output, type_summary, logger=None, pairwise_dir=False, threshold=0.1):
+def render_tab_output(output_dir, output_html, majiq_output, type_summary, logger=None, pairwise_dir=False, threshold=0.2):
 
     ofile_str = "%s%s.%s" % (output_dir, output_html.rsplit('.html', 1)[0], constants.EXTENSION)
     tlb_categx = {'A5SS': 'prime5', 'A3SS': 'prime3', 'Num. Junctions': 'njuncs', 'Num. Exons': 'nexons', 'ES': 'ES'}
@@ -346,7 +346,7 @@ def render_tab_output(output_dir, output_html, majiq_output, type_summary, logge
                 for i, bins in enumerate(llsv.get_bins()):
                     if 'delta' in type_summary:
                         lexpected.append(str(-llsv.get_excl_incl()[i][0] + llsv.get_excl_incl()[i][1]))
-                        lconfidence.append(str(utils_voila.get_prob_delta_psi_greater_v(bins, float(lexpected[-1]), 0.1)))
+                        lconfidence.append(str(utils_voila.get_prob_delta_psi_greater_v(bins, float(lexpected[-1]), threshold)))
                     else:
                         lexpected.append(repr(llsv.get_means()[i]))
                         lconfidence.append(repr(llsv.get_variances()[i]))
