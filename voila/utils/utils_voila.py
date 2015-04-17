@@ -151,7 +151,7 @@ def get_lsv_delta_exp_data(voila_input_file, confidence=.95, threshold=.2, show_
             excl_incl = []
             for b in vlsv.get_bins():
                 means.append(expected_dpsi(b))
-                if means[-1] <= 0:
+                if means[-1] < 0:
                     excl_incl.append([-means[-1], 0])
                 else:
                     excl_incl.append([0, means[-1]])

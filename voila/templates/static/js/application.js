@@ -54,7 +54,7 @@ $( document ).ready(function(){
     /** Tooltip for barchart */
     var tooltips = $('.tooltip');
     if (tooltips.length){
-        $('.tooltip').tooltipster({
+        tooltips.tooltipster({
             theme: 'tooltipster-light'
         });
     }
@@ -1102,7 +1102,7 @@ function renderViolin(htmlElementId, results, tableId, params){
             .domain([0, Math.max(imposeMax, d3.max(data, function(d) { return d.y; }))]);
 
         var x = d3.scale.linear()
-            .range([height-margin.bottom, margin.top]) //-margin.left, margin.right])
+            .range([height-margin.bottom, 1]) //-margin.left, margin.right])
             .domain(domain)
             .nice();
 
