@@ -244,7 +244,7 @@ def calc_dirichlet(alpha, n, samples_events, debug=False, psiparam=False):
                 print "event %s..."%i,
                 sys.stdout.flush()
 
-            if debug > 0 and i == debug:
+            if 0 < debug == i:
                 break
             #if debug: print "Paired samples to dirichlet..."
             #sampling PSI by pairing the samples of the previous step sequentially

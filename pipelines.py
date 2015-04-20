@@ -11,6 +11,7 @@ import os
 import builder as majiq_builder
 from numpy.ma import masked_less
 import pipe as pipe
+import gc
 # ###############################
 # Data loading and Boilerplate #
 ################################
@@ -181,7 +182,83 @@ class CalcPsi(BasicPipeline):
         self.logger.info("Alakazam! Done.")
 
 
+def __prepare_lsvs(dpsi_obj, conf, nchunks, logger=None):
 
+    if logger is None:
+        logger = get_logger("%s/majiq.log" % dpsi_obj.output, silent=False)
+    dpsi_obj.logger = logger
+    exec_id = '%s_%s' % (dpsi_obj.names[0], dpsi_obj.names[1])
+    #tempfile = '%s/%s_temp_mid_exec.pickle' % (dpsi_obj.output, exec_id)
+    num_exp = [len(dpsi_obj.files1), len(dpsi_obj.files2)]
+
+    filtered_lsv1 = [None] * num_exp[0]
+    fitfunc = [[None] * num_exp[0], [None] * num_exp[1]]
+    meta_info = [[0] * num_exp[0], [0] * num_exp[1]]
+
+    for ii, fname in enumerate(dpsi_obj.files1):
+        meta_info[0][ii], lsv_junc, const = majiq_io.load_data_lsv(fname, dpsi_obj.names[0], logger)
+
+        #fitting the function
+        lsv_junc, const = dpsi_obj.gc_content_norm(lsv_junc, const)
+        fitfunc[0][ii] = dpsi_obj.fitfunc(const[0])
+        filtered_lsv1[ii] = dpsi_obj.mark_stacks(lsv_junc, fitfunc[0][ii])
+    filtered_lsv1 = majiq_filter.quantifiable_in_group(filtered_lsv1, dpsi_obj.minpos, dpsi_obj.minreads,
+                                                       logger, 0.10)
+    logger.info("Group1: %s quantifiable in group" % str(len(filtered_lsv1[0])))
+
+    filtered_lsv2 = [None] * num_exp[1]
+    for ii, fname in enumerate(dpsi_obj.files2):
+        meta_info[1][ii], lsv_junc, const = majiq_io.load_data_lsv(fname, dpsi_obj.names[1], logger)
+
+        #fitting the function
+        lsv_junc, const = dpsi_obj.gc_content_norm(lsv_junc, const)
+        fitfunc[1][ii] = dpsi_obj.fitfunc(const[0])
+        filtered_lsv2[ii] = dpsi_obj.mark_stacks(lsv_junc, fitfunc[1][ii])
+    filtered_lsv2 = majiq_filter.quantifiable_in_group(filtered_lsv2, dpsi_obj.minpos, dpsi_obj.minreads,
+                                                       logger, 0.10)
+    logger.info("Group2: %s quantifiable in group" % str(len(filtered_lsv2[0])))
+
+    matched_lsv, matched_info = majiq_filter.lsv_intersection(filtered_lsv1, filtered_lsv2)
+    logger.info("After intersection:  %d/(%d, %d)" % (len(matched_info), len(filtered_lsv1[0]),
+                                                      len(filtered_lsv2[0])))
+
+    group1, group2 = pipe.combine_for_priormatrix(matched_lsv[0], matched_lsv[1], matched_info, num_exp)
+    psi_space, prior_matrix = majiq_psi.gen_prior_matrix(dpsi_obj, group1, group2, dpsi_obj.output, numbins=20,
+                                                         defaultprior=dpsi_obj.default_prior)
+
+    logger.info("Saving prior matrix for %s..." % dpsi_obj.names)
+    tout = open("%s/%s_priormatrix.pickle" % (dpsi_obj.output, exec_id), 'w+')
+    pickle.dump(prior_matrix, tout)
+    tout.close()
+
+    logger.info("Saving meta info for %s..." % dpsi_obj.names)
+    tout = open("%s/tmp/%s_metainfo.pickle" % (dpsi_obj.output, exec_id), 'w+')
+    pickle.dump(meta_info, tout)
+    tout.close()
+
+    get_clean_raw_reads(matched_info, matched_lsv[0], dpsi_obj.output, dpsi_obj.names[0], num_exp[0])
+    get_clean_raw_reads(matched_info, matched_lsv[1], dpsi_obj.output, dpsi_obj.names[1], num_exp[1])
+
+    csize = len(matched_lsv[0]) / nchunks
+
+    logger.info("Creating %s chunks with <= %s lsv" % (nchunks, csize))
+    for nthrd in xrange(nchunks):
+        lb = nthrd * csize
+        ub = min((nthrd + 1) * csize, len(matched_lsv[0]))
+        if nthrd == nchunks - 1:
+            ub = len(matched_lsv[0])
+        lsv_list = [matched_lsv[0][lb:ub], matched_lsv[1][lb:ub]]
+        lsv_info = matched_info[lb:ub]
+
+        outfdir = '%s/tmp/chunks/' % dpsi_obj.output
+        if not os.path.exists(outfdir):
+            os.makedirs(outfdir)
+        out_file = '%s/chunk_%d.pickle' % (outfdir, nthrd)
+        tout = open(out_file, 'w+')
+        pickle.dump([lsv_list, lsv_info, num_exp, conf, fitfunc, psi_space], tout)
+        tout.close()
+
+     gc.collect()
 
 
 
@@ -196,74 +273,7 @@ class DeltaPair(BasicPipeline):
     def run(self):
         self.delta_groups()
 
-    def __prepare_lsvs(self, conf, nchunks, logger=None):
 
-        if logger is None:
-             logger = get_logger("%s/majiq.log" % self.output, silent=False)
-        self.logger = logger
-        exec_id = '%s_%s' % (self.names[0], self.names[1])
-        tempfile = '%s/%s_temp_mid_exec.pickle' % (self.output, exec_id)
-        num_exp = [len(self.files1), len(self.files2)]
-
-        filtered_lsv1 = [None] * num_exp[0]
-        fitfunc = [[None] * num_exp[0], [None] * num_exp[1]]
-        meta_info = [[0] * num_exp[0], [0] * num_exp[1]]
-
-        for ii, fname in enumerate(self.files1):
-            meta_info[0][ii], lsv_junc, const = majiq_io.load_data_lsv(fname, self.names[0], logger)
-
-            #fitting the function
-            lsv_junc, const = self.gc_content_norm(lsv_junc, const)
-            fitfunc[0][ii] = self.fitfunc(const[0])
-            filtered_lsv1[ii] = self.mark_stacks(lsv_junc, fitfunc[0][ii])
-        filtered_lsv1 = majiq_filter.quantifiable_in_group(filtered_lsv1, self.minpos, self.minreads,
-                                                           logger, 0.10)
-        logger.info("Group1: %s quantifiable in group" % str(len(filtered_lsv1[0])))
-
-        filtered_lsv2 = [None] * num_exp[1]
-        for ii, fname in enumerate(self.files2):
-            meta_info[1][ii], lsv_junc, const = majiq_io.load_data_lsv(fname, self.names[1], logger)
-
-            #fitting the function
-            lsv_junc, const = self.gc_content_norm(lsv_junc, const)
-            fitfunc[1][ii] = self.fitfunc(const[0])
-            filtered_lsv2[ii] = self.mark_stacks(lsv_junc, fitfunc[1][ii])
-        filtered_lsv2 = majiq_filter.quantifiable_in_group(filtered_lsv2, self.minpos, self.minreads,
-                                                           logger, 0.10)
-
-        logger.info("Group2: %s quantifiable in group" % str(len(filtered_lsv2[0])))
-        matched_lsv, matched_info = majiq_filter.lsv_intersection(filtered_lsv1, filtered_lsv2)
-        logger.info("After intersection:  %d/(%d, %d)" % (len(matched_info), len(filtered_lsv1[0]),
-                                                          len(filtered_lsv2[0])))
-        group1, group2 = pipe.combine_for_priormatrix(matched_lsv[0], matched_lsv[1], matched_info, num_exp)
-        psi_space, prior_matrix = majiq_psi.gen_prior_matrix(self, group1, group2, self.output, numbins=20,
-                                                             defaultprior=self.default_prior)
-        logger.info("Saving prior matrix for %s..." % self.names)
-        tout = open("%s/%s_priormatrix.pickle" % (self.output, exec_id), 'w+')
-        pickle.dump(prior_matrix, tout)
-        tout.close()
-
-        get_clean_raw_reads(matched_info, matched_lsv[0], self.output, self.names[0], num_exp[0])
-        get_clean_raw_reads(matched_info, matched_lsv[1], self.output, self.names[1], num_exp[1])
-
-        csize = len(matched_lsv[0]) / nchunks
-
-        logger.info("Creating %s chunks with <= %s lsv" % (nchunks, csize))
-        for nthrd in xrange(nchunks):
-            lb = nthrd * csize
-            ub = min((nthrd + 1) * csize, len(matched_lsv[0]))
-            if nthrd == nchunks - 1:
-                ub = len(matched_lsv[0])
-            lsv_list = [matched_lsv[0][lb:ub], matched_lsv[1][lb:ub]]
-            lsv_info = matched_info[lb:ub]
-
-            outfdir = '%s/tmp/chunks/' % self.output
-            if not os.path.exists(outfdir):
-                os.makedirs(outfdir)
-            out_file = '%s/chunk_%d.pickle' % (outfdir, nthrd)
-            tout = open(out_file, 'w+')
-            pickle.dump([lsv_list, lsv_info, num_exp, conf, fitfunc, psi_space], tout)
-            tout.close()
 
     def delta_groups(self):
         logger = get_logger("%s/majiq.log" % self.logger_path, silent=self.silent, debug=self.debug)
@@ -330,6 +340,11 @@ class DeltaPair(BasicPipeline):
             psi_list1.extend(ptempt[2])
             psi_list2.extend(ptempt[3])
 
+        logger.info("Getting meta info for %s..." % self.names)
+        tin = open("%s/tmp/%s_metainfo.pickle" % (self.output, exec_id), 'w+')
+        meta_info = pickle.load(tin)
+        tin.close()
+
         pickle_path = "%s/%s_%s.%s.pickle" % (self.output, self.names[0], self.names[1], pipe.deltapsi.__name__)
         # pickle.dump([posterior_matrix, names, meta_info, psi_list1, psi_list2], open(pickle_path, 'w'))
         majiq_io.dump_lsvs_voila(pickle_path, posterior_matrix, names, meta_info, psi_list1, psi_list2)
@@ -337,23 +352,23 @@ class DeltaPair(BasicPipeline):
                                                                                                      self.names[1],
                                                                                                      self.output))
 
-        if self.pairwise:
-            num_lsv = len(matched_info)
-            for ii in np.arange(num_exp[0]):
-                for jj in np.arange(num_exp[1]):
-                    names = ["%s_%d" % (self.names[0], ii+1), "%s_%d" % (self.names[1], jj+1)]
-                    logger.info("Pairwise deltapsi: %s vs %s" % (names[0], names[1]))
-                    conf['names'] = names
-                    fitting_f = [[fitfunc[0][ii]], [fitfunc[1][jj]]]
-
-
-
-                    lsv_vals1 = [[matched_lsv[0][xx][ii]] for xx in range(num_lsv)]
-                    lsv_vals2 = [[matched_lsv[1][xx][jj]] for xx in range(num_lsv)]
-
-                    lsv_vals = [lsv_vals1, lsv_vals2]
-                    self.pairwise_deltapsi(lsv_vals, matched_info, meta_info, [1, 1], conf, prior_matrix, fitting_f,
-                                           psi_space, names)
+        # if self.pairwise:
+        #     num_lsv = len(matched_info)
+        #     for ii in np.arange(num_exp[0]):
+        #         for jj in np.arange(num_exp[1]):
+        #             names = ["%s_%d" % (self.names[0], ii+1), "%s_%d" % (self.names[1], jj+1)]
+        #             logger.info("Pairwise deltapsi: %s vs %s" % (names[0], names[1]))
+        #             conf['names'] = names
+        #             fitting_f = [[fitfunc[0][ii]], [fitfunc[1][jj]]]
+        #
+        #
+        #
+        #             lsv_vals1 = [[matched_lsv[0][xx][ii]] for xx in range(num_lsv)]
+        #             lsv_vals2 = [[matched_lsv[1][xx][jj]] for xx in range(num_lsv)]
+        #
+        #             lsv_vals = [lsv_vals1, lsv_vals2]
+        #             self.pairwise_deltapsi(lsv_vals, matched_info, meta_info, [1, 1], conf, prior_matrix, fitting_f,
+        #                                    psi_space, names)
 
         logger.info("Alakazam! Done.")
 
