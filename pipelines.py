@@ -297,7 +297,7 @@ class DeltaPair(BasicPipeline):
                 'plotpath': self.plotpath,
                 'names': self.names}
 
-        p = Process(target=self.__prepare_lsvs, args=(conf, nchunks))
+        p = Process(target=__prepare_lsvs, args=(self, conf, nchunks))
         p.start()
         p.join()
 
