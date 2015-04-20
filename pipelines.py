@@ -258,7 +258,7 @@ def __prepare_lsvs(dpsi_obj, conf, nchunks, logger=None):
         pickle.dump([lsv_list, lsv_info, num_exp, conf, fitfunc, psi_space], tout)
         tout.close()
 
-     gc.collect()
+    gc.collect()
 
 
 
@@ -302,7 +302,7 @@ class DeltaPair(BasicPipeline):
         p.join()
 
 
-        self.__prepare_lsvs(conf, nchunks, logger=logger)
+        #self.__prepare_lsvs(conf, nchunks, logger=logger)
 
         pool = Pool(processes=self.nthreads)
         for nthrd in xrange(nchunks):
@@ -341,7 +341,7 @@ class DeltaPair(BasicPipeline):
             psi_list2.extend(ptempt[3])
 
         logger.info("Getting meta info for %s..." % self.names)
-        tin = open("%s/tmp/%s_metainfo.pickle" % (self.output, exec_id), 'w+')
+        tin = open("%s/tmp/%s_metainfo.pickle" % (self.output, exec_id))
         meta_info = pickle.load(tin)
         tin.close()
 
