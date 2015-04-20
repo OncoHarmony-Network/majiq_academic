@@ -226,6 +226,11 @@ def prepare_lsvs(dpsi_obj, conf, nchunks, logger=None):
     psi_space, prior_matrix = majiq_psi.gen_prior_matrix(dpsi_obj, group1, group2, dpsi_obj.output, numbins=20,
                                                          defaultprior=dpsi_obj.default_prior)
 
+
+    outfdir = '%s/tmp/chunks/' % dpsi_obj.output
+    if not os.path.exists(outfdir):
+        os.makedirs(outfdir)
+
     logger.info("Saving prior matrix for %s..." % dpsi_obj.names)
     tout = open("%s/%s_priormatrix.pickle" % (dpsi_obj.output, exec_id), 'w+')
     pickle.dump(prior_matrix, tout)
@@ -250,9 +255,7 @@ def prepare_lsvs(dpsi_obj, conf, nchunks, logger=None):
         lsv_list = [matched_lsv[0][lb:ub], matched_lsv[1][lb:ub]]
         lsv_info = matched_info[lb:ub]
 
-        outfdir = '%s/tmp/chunks/' % dpsi_obj.output
-        if not os.path.exists(outfdir):
-            os.makedirs(outfdir)
+
         out_file = '%s/chunk_%d.pickle' % (outfdir, nthrd)
         tout = open(out_file, 'w+')
         pickle.dump([lsv_list, lsv_info, num_exp, conf, fitfunc, psi_space], tout)
