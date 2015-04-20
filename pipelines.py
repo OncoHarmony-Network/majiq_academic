@@ -182,7 +182,7 @@ class CalcPsi(BasicPipeline):
         self.logger.info("Alakazam! Done.")
 
 
-def __prepare_lsvs(dpsi_obj, conf, nchunks, logger=None):
+def prepare_lsvs(dpsi_obj, conf, nchunks, logger=None):
 
     if logger is None:
         logger = get_logger("%s/majiq.log" % dpsi_obj.output, silent=False)
@@ -297,7 +297,7 @@ class DeltaPair(BasicPipeline):
                 'plotpath': self.plotpath,
                 'names': self.names}
 
-        p = Process(target=__prepare_lsvs, args=(self, conf, nchunks))
+        p = Process(target=prepare_lsvs, args=(self, conf, nchunks))
         p.start()
         p.join()
 
