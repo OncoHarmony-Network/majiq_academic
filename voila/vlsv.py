@@ -84,7 +84,11 @@ def find_quartiles(bins):
     return quartiles_values
 
 
-def get_expected(bins):
+def get_expected_dpsi(bins):
+    return sum(np.array(bins) * np.arange(-1+1./len(bins), 1., 2./len(bins)))
+
+
+def get_expected_psi(bins):
     bins = np.array(bins)
     step = 1.0 / bins.size
     projection_prod = bins * np.arange(step / 2, 1, step)
@@ -103,7 +107,7 @@ def create_array_bins(bins, confidence):
     """Compute mean, confidence intervals, quartiles and variance for a given list of bins"""
     bins = np.array(bins)
     step = 1.0 / bins.size
-    mean = get_expected(bins)
+    mean = get_expected_psi(bins)
     conf_interval = find_confidence_interval(bins, mean / step, confidence)
     quartiles_set = find_quartiles(bins)
     variance = get_variance(bins, mean)
