@@ -7,6 +7,7 @@ from voila import constants as voila_const
 SSOURCE = 'source'
 STARGET = 'target'
 
+
 class LSV(object):
 
     def __init__(self, exon, lsv_id, junctions, lsv_type):
@@ -14,18 +15,23 @@ class LSV(object):
             raise RuntimeError('Incorrect LSV type %s' % lsv_type)
         self.coords = exon.get_coordinates()
         self.id = lsv_id
-        junction_list = [x for x in junctions if x is not None
-                         and x.get_donor() is not None
-                         and x.get_acceptor() is not None]
-        #if len(junction_list) < 2 or exon.ir:
-        self.intron_retention = False
 
-        if len(junction_list) < 2:
+        for x in junctions:
+            if x is None:
+                pass
+        junction_list = [x for x in junctions if x is not None]
+                         #and x.get_donor() is not None
+                         #and x.get_acceptor() is not None]
+        n_viable_juncs = len([x for x in junction_list if x.get_donor() is not None
+                              and x.get_acceptor() is not None])
+
+        if n_viable_juncs < 2:
             raise ValueError
         self.type = lsv_type
         self.exon = exon
 
         #print lsv_id
+        self.intron_retention = False
         for jj in junction_list:
             x1 = jj.get_acceptor()
             x2 = jj.get_donor()
@@ -41,16 +47,16 @@ class LSV(object):
             #print "KKKKKKKKV %s" % exon.get_gene()
             raise ValueError
 
-        self.visual = list()
-        for exp_idx in xrange(mglobals.num_experiments):
-            self.visual.append(self.get_visual_lsv(junction_list, exp_idx))
-
         juncs = []
         order = self.ext_type.split('|')[1:]
         for idx, jj in enumerate(order):
             if jj[-2:] == 'e0': continue
             juncs.append(junction_list[self.tlb_junc[jj]])
         self.junctions = np.array(juncs)
+
+        self.visual = list()
+        for exp_idx in xrange(mglobals.num_experiments):
+            self.visual.append(self.get_visual_lsv(self.junctions, exp_idx))
 
     def check_type(self, lsv_type):
         tab = lsv_type.split('|')[1:]
@@ -129,7 +135,8 @@ class LSV(object):
                     break
 
                 if not jacceptor is None:
-                    ex_set.add(jacceptor.get_id())
+                    if not jacceptor.is_intron():
+                        ex_set.add(jacceptor.get_id())
             else:
                 lsv_exon = jacceptor
                 if jacceptor is None:
@@ -137,9 +144,10 @@ class LSV(object):
                 if lsv_exon.get_id() != ex_id:
                     skip = True
                     break
-
                 if not jdonor is None:
-                    ex_set.add(jdonor.get_id())
+                    if not jdonor.is_intron():
+                        ex_set.add(jdonor.get_id())
+
         if skip:
             return 'intron'
 
@@ -155,7 +163,6 @@ class LSV(object):
             jdonor = junc.get_donor()
             jacceptor = junc.get_acceptor()
             if self.type == SSOURCE:
-
                 if jacceptor is None:
                     exs3 = ''
                     ex = '0'
@@ -165,7 +172,7 @@ class LSV(object):
                 else:
                     s3 = sorted(list(set(jacceptor.ss_3p_list)), reverse=rev)
                     ex1 = ex_list.index(jacceptor.get_id())+1
-                    ex = '%s.%so%s' % (ex1, s3.index(junc.end)+1,len(s3))
+                    ex = '%s.%so%s' % (ex1, s3.index(junc.end)+1, len(s3))
                     jtype = "|%se%s" % (spsite.index(junc.start)+1, ex)
             else:
                 if jdonor is None:
