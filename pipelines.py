@@ -112,6 +112,7 @@ class CalcPsi(BasicPipeline):
         if logger is None:
             logger = get_logger("%s/majiq.log" % self.output, silent=False)
 
+        self.logger = logger
 
         num_exp = len(self.files)
         meta_info = [0] * num_exp
