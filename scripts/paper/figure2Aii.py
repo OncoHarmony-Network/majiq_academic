@@ -43,8 +43,8 @@ def scatterplot_rtpcr_majiq(rt_pcr_majiq, rt_pcr_miso, majiq, miso, plotpath, pc
     axx[0][0].plot(diagonal, diagonal, '--', color="#cccccc")
     axx[0][0].plot(majiq[0], rt_pcr_majiq[0], '.', color='r', label='Resting')
     axx[0][0].plot(majiq[1], rt_pcr_majiq[1], '.', color='b', label='Stimulating')
-    axx[0][0].plot(majiq_extra[0], pcr_majiq_extra[0], marker='o', color='#%02x%02x%02x' % cb.Dark2[4][2], label='Cerebellum')
-    axx[0][0].plot(majiq_extra[1], pcr_majiq_extra[1], marker='o', color='#%02x%02x%02x' % cb.Dark2[4][3], label='Liver')
+    axx[0][0].plot(majiq_extra[0], pcr_majiq_extra[0], 'd', color='#%02x%02x%02x' % cb.Dark2[4][2], label='Cerebellum')
+    axx[0][0].plot(majiq_extra[1], pcr_majiq_extra[1], 'd', color='#%02x%02x%02x' % cb.Dark2[4][3], label='Liver')
 
 
     axx[0][0].set_xlabel('MAJIQ')
@@ -63,8 +63,8 @@ def scatterplot_rtpcr_majiq(rt_pcr_majiq, rt_pcr_miso, majiq, miso, plotpath, pc
     axx[1][0].plot(diagonal, diagonal, '--', color="#cccccc")
     axx[1][0].plot(miso[0], rt_pcr_miso[0], '.', color='r', label='Resting')
     axx[1][0].plot(miso[1], rt_pcr_miso[1], '.', color='b', label='Stimulating')
-    axx[1][0].plot(miso_extra[0], pcr_miso_extra[0], marker='o', color='#%02x%02x%02x' % cb.Dark2[4][2], label='Cerebellum')
-    axx[1][0].plot(miso_extra[1], pcr_miso_extra[1], marker='o', color='#%02x%02x%02x' % cb.Dark2[4][3], label='Liver')
+    axx[1][0].plot(miso_extra[0], pcr_miso_extra[0], 'd', color='#%02x%02x%02x' % cb.Dark2[4][2], label='Cerebellum')
+    axx[1][0].plot(miso_extra[1], pcr_miso_extra[1], 'd', color='#%02x%02x%02x' % cb.Dark2[4][3], label='Liver')
 
 
     axx[1][0].set_xlabel('MISO')
@@ -103,7 +103,7 @@ def scatterplot_rtpcr_majiq(rt_pcr_majiq, rt_pcr_miso, majiq, miso, plotpath, pc
     fit = np.polyfit(majiq_extra[0], pcr_majiq_extra[0], 1)
     fit_fn = np.poly1d(fit)
     axx[0][3].plot(diagonal, diagonal, '--', color="#cccccc")
-    axx[0][3].plot(majiq_extra[0], pcr_majiq_extra[0], marker='o', color='#%02x%02x%02x' % cb.Dark2[4][2], label='Cerebellum')
+    axx[0][3].plot(majiq_extra[0], pcr_majiq_extra[0], 'd', color='#%02x%02x%02x' % cb.Dark2[4][2], label='Cerebellum')
     axx[0][3].plot(majiq_extra[0], fit_fn(majiq_extra[0]), '--k')
 
     axx[0][3].set_xlabel('MAJIQ')
@@ -115,7 +115,7 @@ def scatterplot_rtpcr_majiq(rt_pcr_majiq, rt_pcr_miso, majiq, miso, plotpath, pc
     fit = np.polyfit(majiq_extra[1], pcr_majiq_extra[1], 1)
     fit_fn = np.poly1d(fit)
     axx[0][4].plot(diagonal, diagonal, '--', color="#cccccc")
-    axx[0][4].plot(majiq_extra[1], pcr_majiq_extra[1], marker='o', color='#%02x%02x%02x' % cb.Dark2[4][3], label='Liver')
+    axx[0][4].plot(majiq_extra[1], pcr_majiq_extra[1], 'd', color='#%02x%02x%02x' % cb.Dark2[4][3], label='Liver')
     axx[0][4].plot(majiq_extra[1], fit_fn(majiq_extra[1]), '--k')
 
     axx[0][4].set_xlabel('MAJIQ')
@@ -152,7 +152,7 @@ def scatterplot_rtpcr_majiq(rt_pcr_majiq, rt_pcr_miso, majiq, miso, plotpath, pc
     fit = np.polyfit(miso_extra[0], pcr_miso_extra[0], 1)
     fit_fn = np.poly1d(fit)
     axx[1][3].plot(diagonal, diagonal, '--', color="#cccccc")
-    axx[1][3].plot(miso_extra[0], pcr_miso_extra[0], marker='o', color='#%02x%02x%02x' % cb.Dark2[4][2], label='Cerebellum')
+    axx[1][3].plot(miso_extra[0], pcr_miso_extra[0], 'd', color='#%02x%02x%02x' % cb.Dark2[4][2], label='Cerebellum')
     axx[1][3].plot(miso_extra[0], fit_fn(miso_extra[0]), '--k')
 
     axx[1][3].set_xlabel('MISO')
@@ -164,7 +164,7 @@ def scatterplot_rtpcr_majiq(rt_pcr_majiq, rt_pcr_miso, majiq, miso, plotpath, pc
     fit = np.polyfit(miso_extra[1], pcr_miso_extra[1], 1)
     fit_fn = np.poly1d(fit)
     axx[1][4].plot(diagonal, diagonal, '--', color="#cccccc")
-    axx[1][4].plot(miso_extra[1], pcr_miso_extra[1], marker='o', color='#%02x%02x%02x' % cb.Dark2[4][3], label='Liver')
+    axx[1][4].plot(miso_extra[1], pcr_miso_extra[1], 'd', color='#%02x%02x%02x' % cb.Dark2[4][3], label='Liver')
     axx[1][4].plot(miso_extra[1], fit_fn(miso_extra[1]), '--k')
 
     axx[1][4].set_xlabel('MISO')
@@ -341,7 +341,7 @@ def main():
             for pcr_elem in pcr_extra:
                 if pcr_elem.startswith("#"): continue
                 pcr_elems=pcr_elem.rstrip().split()
-                rtpcr_extra[pcr_elems[0]]=[float(pcr_elems[4])/100, float(pcr_elems[3])/100, np.nan, np.nan, [], [], float(pcr_elems[6])/100, float(pcr_elems[5])/100]
+                rtpcr_extra[pcr_elems[0]]=[float(pcr_elems[4])/100, float(pcr_elems[3])/100, np.nan, np.nan, [], [], float(pcr_elems[6])/100, float(pcr_elems[5])/100, pcr_elems[-4]]
 
         # ensembl_tlb = defaultdict(list)
         # if args.tlb_extra_pkl:
@@ -386,30 +386,22 @@ def main():
                 for j, lsv in enumerate(mpickle.get_lsvs()):
                     # if lsv.get_id().split(":")[0] in ensembl_tlb.keys():
                     #     for trans in set(ensembl_tlb[lsv.get_id().split(":")[0]]):
-                    for lway_aux in range(2):
-                        flipped_flag = False
-                        # lsv_aux = trans+":"+":".join(lsv.get_id().split(":")[1:]) + "#%d"%lway_aux
-                        lsv_aux = lsv.get_id() + "#%d"%lway_aux
-                        if lsv_aux in rtpcr_extra.keys():
-                            if lsv.get_strand() == '-':
-                                flipped_lsvs.append(lsv.get_id())
-                                flipped_flag = True
-                        # for ji, jcoords in enumerate(djuncs[lsv.get_id()]):
-                            # if djunc_extra[lsv_aux.split("#")[0]][lway_aux] == jcoords:
-                            try:
-                                if len(lsv.get_bins())>1:
-                                    print "Complex LSV; %s" % lsv_aux
-                                else:
-                                    print "Binary LSV; %s" % lsv_aux
-                                # rtpcr_extra[lsv_aux][2+cn] = expected_psi(lsv.get_bins()[ji])
-                                rtpcr_extra[lsv_aux][2+cn] = expected_psi(lsv.get_bins()[lway_aux])
-                                # dnew_juncs[lsv.get_id()] = ji
-                            except IndexError:
-                                rtpcr_extra[lsv_aux][2+cn] = 1-expected_psi(lsv.get_bins()[0])
-                                # dnew_juncs[lsv.get_id()] = 1
-
-                            if flipped_flag:
-                                rtpcr_extra[lsv_aux][2+cn] = 1 - rtpcr_extra[lsv_aux][2+cn]
+                    if lsv.get_id() in rtpcr_extra.keys():
+                        for lway_aux, lway_junc in enumerate(lsv.lsv_graphic.get_junctions()):
+                            if set(lway_junc.get_coords()) == set([int(aa) for aa in rtpcr_extra[lsv.get_id()][-1].split('-')]):
+                                print "Junction selected: %d" % lway_aux
+                                lsv_aux = lsv.get_id() + "#%d"%lway_aux
+                                try:
+                                    if len(lsv.get_bins())>1:
+                                        print "Complex LSV; %s" % lsv_aux
+                                    else:
+                                        print "Binary LSV; %s" % lsv_aux
+                                    # rtpcr_extra[lsv_aux][2+cn] = expected_psi(lsv.get_bins()[ji])
+                                    rtpcr_extra[lsv.get_id()][2+cn] = expected_psi(lsv.get_bins()[lway_aux])
+                                    # dnew_juncs[lsv.get_id()] = ji
+                                except IndexError:
+                                    rtpcr_extra[lsv.get_id()][2+cn] = 1-expected_psi(lsv.get_bins()[0])
+                                    # dnew_juncs[lsv.get_id()] = 1
 
         # 5. Read MISO results for the elements in PCR
         for cn, miso_dir in enumerate(args.miso_extra):
@@ -420,21 +412,17 @@ def main():
                         miso_fields = line.rstrip().split()
                         lsv_name = miso_fields[0]
                         miso_psis = miso_fields[1]
-                        # Find all junctions from that LSV that are included
-                        for i, miso_psi in enumerate(miso_psis.split(',')):  # Because MISO only report 1st junction in binary LSVs
-                            if lsv_name+"#"+str(i) in rtpcr_extra.keys():
-                                rtpcr_extra[lsv_name+"#"+str(i)][4+cn].append(float(miso_psi))
-                                if lsv_name in flipped_lsvs:
-                                    rtpcr_extra[lsv_name+"#"+str(i)][4+cn][-1] = 1 - rtpcr_extra[lsv_name+"#"+str(i)][4+cn][-1]
-                                #continue
-                            if lsv_name+"#"+str(1) in rtpcr_extra.keys():
-                                if len(miso_psis.split(',')) > 1:
-                                    rtpcr_extra[lsv_name+"#"+str(1)][4+cn].append(float(miso_psi))
-                                else:
-                                    rtpcr_extra[lsv_name+"#"+str(1)][4+cn].append(1-float(miso_psi))
-                                if lsv_name in flipped_lsvs:
-                                    rtpcr_extra[lsv_name+"#1"][4+cn][-1] = 1 - rtpcr_extra[lsv_name+"#1"][4+cn][-1]
-
+                        miso_starts = miso_fields[-2].split(',')
+                        miso_ends = miso_fields[-1].split(',')
+                        if lsv_name in rtpcr_extra.keys():
+                            # Find all junctions from that LSV that are included
+                            for i, miso_start in enumerate(miso_starts):  # Because MISO only report 1st junction in binary LSVs
+                                if [miso_start, miso_ends[i]] == rtpcr_extra[lsv_name][-1].split('-'):
+                                    if lsv_name in rtpcr_extra.keys():
+                                        try:
+                                            rtpcr_extra[lsv_name][4+cn].append(float(miso_psis[i]))
+                                        except IndexError:
+                                            rtpcr_extra[lsv_name][4+cn].append(1-float(miso_psis[0]))
 
 
         # 6. Generate vectors/lists, saving our predictions in a txt file

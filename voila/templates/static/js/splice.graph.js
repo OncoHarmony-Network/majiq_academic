@@ -723,6 +723,7 @@ window.splicegraph = function (){
                 var sourceOrTarget = lsvs[0];
                 var area = [canvas.width - margins[0] - margins[1], canvas.height - margins[2] - margins[3]];
 
+                percentage_intron = Math.min(percentage_intron,.4/(num_exons-1));
                 var exon_width = (area[0] - (num_exons - 1) * area[0]*percentage_intron - margins[0] - margins[1])/ num_exons ;
                 var start = margins[0];
                 var direction = sourceOrTarget === 's' ? 1 : -1;
@@ -789,14 +790,16 @@ window.splicegraph = function (){
                         coords_x_target_e = target_exon.coords[ direction > 0 ? 0 : 1 ];
                     }
 
+                    var offset_ss_step = (exon_width*2/3) / ss_reg[target_e];
                     var offset_ss = 0;
                     if (direction > 0) {
-                        offset_ss = (target_ss - 1) * percentage_exon/2 * exon_width ;
+                        offset_ss = (target_ss - 1) * offset_ss_step ;
                     } else {
-                        offset_ss = ( ss_reg[target_e] - target_ss) * percentage_exon / 2 * exon_width;
+                        offset_ss = (ss_reg[target_e] - target_ss) * offset_ss_step;
                     }
                     var coords_x_target_ref= coords_x_target_e;
                     coords_x_target_e += direction * offset_ss;
+
 
                     // Now, we mark all possible splice sites, either if they have junctions jumping in/or out of them or not
                     // splice sites dashed lines in LSV exon
@@ -809,9 +812,9 @@ window.splicegraph = function (){
                             for (var ii=1; ii<target_num_ss; ii++){
                                 coords_x_target_ss=coords_x_target_ref;
                                 if (direction > 0) {
-                                    offset_ss_aux = ii * percentage_exon/2 * exon_width ;
+                                    offset_ss_aux = ii * offset_ss_step ;
                                 } else {
-                                    offset_ss_aux = ( ss_reg[target_e] - ii) * percentage_exon / 2 * exon_width;
+                                    offset_ss_aux = ( ss_reg[target_e] - ii) * offset_ss_step;
                                 }
 
                                 if (offset_ss_aux) {
@@ -830,7 +833,7 @@ window.splicegraph = function (){
 
                     // splice sites dashed lines
                     if (direction>0 && ss != num_ss || direction<0 && ss!=1) {
-                        // Check if is a special exon (started or finisher)
+                        // Check if is a special exon (starter or finisher)
                         drawDashedLine(ctx, Math.round(coords_x_start_e), Math.round(coords[1]), Math.round(coords_x_start_e), Math.round(coords[1] + exon_height), 2);
                     }
 
@@ -839,18 +842,18 @@ window.splicegraph = function (){
                         drawDashedLine(ctx, Math.round(coords_x_target_e), Math.round(coords[1]), Math.round(coords_x_target_e), Math.round(coords[1] + exon_height), 2);
                     }
 
+                    var junc_h_pos = Math.round(margins[3]*8*ss); // Math.round((1 - (Math.abs(coords_x_start_e - coords_x_target_e)/canvas.width)) * (canvas.height*(1-percentage_exon)));
                     // junctions lines
-                    drawLine(ctx, Math.round(coords_x_start_e), Math.round(coords[1]), Math.round(mid_x), Math.round(margins[3]*8*ss));
-                    drawLine(ctx, Math.round(mid_x), Math.round(margins[3]*8*ss), Math.round(coords_x_target_e), Math.round(coords[1]));
+                    drawLine(ctx, Math.round(coords_x_start_e), Math.round(coords[1]), Math.round(mid_x), junc_h_pos);
+                    drawLine(ctx, Math.round(mid_x), junc_h_pos, Math.round(coords_x_target_e), Math.round(coords[1]));
 
                     // render special marker for exon alternative start/end
                     if (lsvs_fields[1].indexOf('.') === -1) {
                         ctx.strokeStyle = "rgba(0, 0, 0, 0.6)";
                         drawLine(ctx, Math.round(coords_x_start_e), Math.round(coords[1]), Math.round(coords_x_start_e), Math.round(coords[1] + exon_height));
-                        drawArrow(ctx, Math.round(coords_x_start_e + direction * Math.max(10, percentage_exon/2 * exon_width)), Math.round(coords[1] + exon_height/2), Math.round(coords_x_start_e + direction * 2), Math.round(coords[1] + exon_height/2), Math.max(5, Math.round((percentage_exon/2 * exon_width)/2)));
+                        drawArrow(ctx, Math.round(coords_x_start_e + direction * Math.max(10, offset_ss_step)), Math.round(coords[1] + exon_height/2), Math.round(coords_x_start_e + direction * 2), Math.round(coords[1] + exon_height/2), Math.max(5, Math.round((offset_ss_step)/2)));
 
                     }
-
 
                 }
 

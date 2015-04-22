@@ -466,10 +466,10 @@ function spliceGraphD3() {
                         if (d.value.type_exon == 4) //missing end
                             index_missing = 1;
                         var halfExonsPoints = [
-                            {'x': scaleX(d.value.coords[index_missing]), 'y': height * JUNC_AREA},
                             {'x': scaleX(d.value.coords[(index_missing + 1) % 2]), 'y': height * JUNC_AREA},
-                            {'x': scaleX(d.value.coords[(index_missing + 1) % 2]), 'y': height * JUNC_AREA + EXON_H },
-                            {'x': scaleX(d.value.coords[index_missing]), 'y': height * JUNC_AREA + EXON_H}
+                            {'x': scaleX(d.value.coords[index_missing]), 'y': height * JUNC_AREA},
+                            {'x': scaleX(d.value.coords[index_missing]), 'y': height * JUNC_AREA + EXON_H},
+                            {'x': scaleX(d.value.coords[(index_missing + 1) % 2]), 'y': height * JUNC_AREA + EXON_H }
                         ];
                         return lineFunction(halfExonsPoints);
                     });

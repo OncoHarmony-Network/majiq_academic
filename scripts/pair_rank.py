@@ -34,9 +34,8 @@ def print_matrix(matrix):
 
 
 def collapse_matrix(matrix):
-    "Collapse the diagonals probabilities in 1-D and return them"
+    """Collapse the diagonals probabilities in 1-D and return them"""
     collapse = []
-    #FOR TEST matrix = array([[0, 1, 2, 3, 4, 500], [0, 1, 2, 3, 4, 5], [0, 1, 2, 3, 4, 5], [100, 1, 2, 3, 4, 5], ])
     try:
         matrix_corner = matrix.shape[0]+1
     except:
@@ -47,8 +46,9 @@ def collapse_matrix(matrix):
 
     return array(collapse)
 
+
 def mean_matrix(matrix):
-    "Get the best point mean"
+    """Get the best point mean"""
     #collapse in 1 dimension
     collapse = collapse_matrix(matrix)
     delta_values = linspace(-1, 1, num=len(collapse))
@@ -57,6 +57,7 @@ def mean_matrix(matrix):
     plot(collapse)
     show()
     #UNFINISHED
+
 
 def _find_delta_border(V, numbins):
     "Finds the border index to which a V corresponds in its delta_space given the number of bins the matrix will have"
@@ -68,6 +69,7 @@ def _find_delta_border(V, numbins):
             return i
     #if nothing hit, V = 1
     return numbins
+
 
 def matrix_area(matrix, V=0.2, absolute=True, collapsed_mat=False):
     """Returns the probability of an event to be above a certain threshold. The absolute flag describes if the value is absolute"""
@@ -89,6 +91,7 @@ def matrix_area(matrix, V=0.2, absolute=True, collapsed_mat=False):
 
     return sum(area)
 
+
 def v_sum(matrix):
     """
     Calculate sum_v v*P(Delta PSI > V)
@@ -99,6 +102,7 @@ def v_sum(matrix):
         ret += matrix_area(matrix, V=v, absolute=absolute)*v
 
     return ret
+
 
 def expected_dpsi(matrix):
     """
