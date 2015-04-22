@@ -123,6 +123,8 @@ class CalcPsi(BasicPipeline):
         matched_lsv, matched_info = majiq_filter.quantifiable_in_group(filtered_lsv, self.minpos, self.minreads,
                                                                        logger, 0.10)
 
+
+
         get_clean_raw_reads(matched_info, matched_lsv, self.output, self.name, num_exp[1])
 
         csize = len(matched_lsv) / nchunks
@@ -153,8 +155,6 @@ class CalcPsi(BasicPipeline):
 
         gc.collect()
 
-
-def prepare_lsvs(dpsi_obj, conf, nchunks, logger=None):
 
     def calcpsi(self):
         """
@@ -215,7 +215,7 @@ def prepare_lsvs(dpsi_obj, conf, nchunks, logger=None):
             names.extend(ptempt[1])
 
         logger.info("Getting meta info for %s..." % self.names)
-        tin = open("%s/tmp/%s_metainfo.pickle" % (self.output, self.name))
+        tin = open("%s/tmp/%s_metainfo.pickle" % (self.output, sel))
         meta_info = pickle.load(tin)
         tin.close()
 
