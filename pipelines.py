@@ -185,7 +185,7 @@ class CalcPsi(BasicPipeline):
 
         nchunks = self.nthreads
 
-        p = Process(target=self.pre_psi, args=(nchunks))
+        p = Process(target=self.pre_psi, args=[nchunks])
         p.start()
         p.join()
 
