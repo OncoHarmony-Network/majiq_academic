@@ -131,7 +131,7 @@ class CalcPsi(BasicPipeline):
 
 
 
-        get_clean_raw_reads(matched_info, matched_lsv, self.output, self.name, num_exp[1])
+        get_clean_raw_reads(matched_info, matched_lsv, self.output, self.name, num_exp)
 
         csize = len(matched_lsv) / nchunks
         outfdir = '%s/tmp/chunks/' % self.output
