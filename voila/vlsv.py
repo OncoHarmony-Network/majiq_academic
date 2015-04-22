@@ -208,7 +208,10 @@ class VoilaLsv(object):
 
     def is_delta_psi(self):
         return not (self.psi2 is None)
-    
+
+    def get_lsv_graphic(self):
+        return self.lsv_graphic
+
     def get_chrom(self):
         return self.lsv_graphic.chrom
 

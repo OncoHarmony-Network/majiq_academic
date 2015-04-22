@@ -100,12 +100,10 @@ def __load_execution_chunk(filename, delta=None):
 
     return l_vals
 
-
-
-def calcpsi(matched_lsv, info, num_exp, conf, fitfunc, logger):
-
+#def calcpsi(matched_lsv, info, num_exp, conf, fitfunc, logger):
+def calcpsi(fname, conf, logger):
     #try:
-
+        matched_lsv, info, num_exp, fitfunc = __load_execution_chunk(fname)
         #The center of the previous BINS. This is used to calculate the mean value of each bin.
         lsv_samples = np.zeros(shape=(len(info), num_exp), dtype=np.dtype('object'))
         logger.info("Bootstrapping for all samples...")

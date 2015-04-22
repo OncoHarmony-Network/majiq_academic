@@ -40,7 +40,7 @@ def load_data_lsv(path, group_name, logger=None):
 
 def dump_lsvs_voila(pickle_path, posterior_matrix, lsvs_info, meta_info, psi_list1=None, psi_list2=None):
     """Create VoilaLSVs objects readable by voila."""
-    vlsvs=[]
+    vlsvs = []
     psi1, psi2 = None, None
     for ii, bins in enumerate(posterior_matrix):
         lsv_graphic = lsvs_info[ii][-1]
