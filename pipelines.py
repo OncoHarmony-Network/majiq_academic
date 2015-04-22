@@ -108,6 +108,11 @@ class CalcPsi(BasicPipeline):
         self.calcpsi()
 
     def pre_psi(self, nchunks, logger=None):
+
+        if logger is None:
+            logger = get_logger("%s/majiq.log" % self.output, silent=False)
+
+
         num_exp = len(self.files)
         meta_info = [0] * num_exp
         filtered_lsv = [None] * num_exp
@@ -180,7 +185,7 @@ class CalcPsi(BasicPipeline):
 
         nchunks = self.nthreads
 
-        p = Process(target=prepare_lsvs, args=(self, nchunks))
+        p = Process(target=self.pre_psi, args=(nchunks))
         p.start()
         p.join()
 
