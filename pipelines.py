@@ -139,7 +139,7 @@ class CalcPsi(BasicPipeline):
             os.makedirs(outfdir)
 
 
-        logger.info("Saving meta info for %s..." % self.names)
+        logger.info("Saving meta info for %s..." % self.name)
         tout = open("%s/tmp/%s_metainfo.pickle" % (self.output, self.name), 'w+')
         pickle.dump(meta_info, tout)
         tout.close()
@@ -215,7 +215,7 @@ class CalcPsi(BasicPipeline):
         names = []
         logger.info("GATHER pickles")
         for nt in xrange(self.nthreads):
-            tempfile = open("%s/tmp/%s_th%s.calcpsi.pickle" % (os.path.dirname(self.output), self.name, nt))
+            tempfile = open("%s/tmp/%s_th%s.calcpsi.pickle" % (self.output, self.name, nt))
             ptempt = pickle.load(tempfile)
             posterior_matrix.extend(ptempt[0])
             names.extend(ptempt[1])
