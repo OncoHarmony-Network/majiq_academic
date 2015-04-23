@@ -220,7 +220,7 @@ class CalcPsi(BasicPipeline):
             posterior_matrix.extend(ptempt[0])
             names.extend(ptempt[1])
 
-        logger.info("Getting meta info for %s..." % self.names)
+        logger.info("Getting meta info for %s..." % self.name)
         tin = open("%s/tmp/%s_metainfo.pickle" % (self.output, self.name))
         meta_info = pickle.load(tin)
         tin.close()
@@ -229,8 +229,7 @@ class CalcPsi(BasicPipeline):
         pickle_path = "%s/%s_psigroup.pickle" % (self.output, self.name)
         majiq_io.dump_lsvs_voila(pickle_path, posterior_matrix, names, meta_info)
         # pickle.dump([posterior_matrix, names, meta_info], open(pickle_path, 'w'))
-        logger.info("PSI calculation for %s ended succesfully! Result can be found at %s" % (self.name,
-                                                                                                  self.output))
+        logger.info("PSI calculation for %s ended succesfully! Result can be found at %s" % (self.name, self.output))
         logger.info("Alakazam! Done.")
 
 
