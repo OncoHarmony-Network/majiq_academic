@@ -263,14 +263,25 @@ def main(params):
             logger.info("[%s] Preparing output" % chrom)
 
         utils.prepare_lsv_table(lsv, const, temp_dir)
-
+        majiq_lsv.extract_gff(lsv, temp_dir)
         #ANALYZE_DENOVO
         utils.analyze_denovo_junctions(gene_list, "%s/denovo.pkl" % temp_dir)
         utils.histogram_for_exon_analysis(gene_list, "%s/ex_lengths.pkl" % temp_dir)
 
     #GATHER
     logger.info("Gather outputs")
-    merge_and_create_majiq_file(chr_list, './output')
+    merge_and_create_majiq_file(chr_list, mglobals.outDir)
+
+    logger.info("Gather lsv and generate gff")
+    fp = open('%s/%s' % (mglobals.outDir, params.gff_output), 'w+')
+    for chrom in chr_list:
+        temp_dir = "%s/tmp/%s" % (mglobals.outDir, chrom)
+        yfile = '%s/temp_gff.pkl' % temp_dir
+        gff_list = majiq_io.load_bin_file(yfile)
+        for gff in gff_list:
+            fp.write("%s\n" % gff)
+    fp.close()
+
 
     mglobals.print_numbers()
     logger.info("End of execution")
