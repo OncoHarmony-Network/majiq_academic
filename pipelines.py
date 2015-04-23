@@ -221,7 +221,7 @@ class CalcPsi(BasicPipeline):
             names.extend(ptempt[1])
 
         logger.info("Getting meta info for %s..." % self.names)
-        tin = open("%s/tmp/%s_metainfo.pickle" % (self.output, sel))
+        tin = open("%s/tmp/%s_metainfo.pickle" % (self.output, self.name))
         meta_info = pickle.load(tin)
         tin.close()
 
