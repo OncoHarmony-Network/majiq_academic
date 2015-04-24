@@ -426,6 +426,7 @@ def create_gff3_txt_files(output_dir, majiq_output, logger):
                 utils_voila.gff2gtf(gff_file, "%s.gtf" % lsv_file_basename)
             except UnboundLocalError, e:
                 logger.warning("problem generating GTF file for %s" % lsv.get_id())
+                logger.error(e.message)
 
     logger.info("Files saved in %s" % odir)
 
