@@ -1,11 +1,11 @@
 #!/usr/bin/python
 import numpy as np
 
-import mglobals
 from grimoire.exon import ExonTx, collapse_list_exons
 from grimoire.lsv import LSV
 from grimoire.junction import Junction
-from grimoire.analize import reliable_in_data
+from src import mglobals
+from src.analize import reliable_in_data
 
 
 class Gene:
@@ -37,7 +37,7 @@ class Gene:
         self.temp_txex_list = []
         self.ir_list = []
         self.lsv_list = []
-        self.RPKM = np.zeros(shape=mglobals.num_experiments, dtype=np.float)
+        # self.RPKM = np.zeros(shape=mglobals.num_experiments, dtype=np.float)
         self.antis_gene = None
 
     def __hash__(self):
@@ -55,8 +55,8 @@ class Gene:
     def get_read_count(self):
         return self.readNum
 
-    def get_rpkm(self):
-        return self.RPKM
+    # def get_rpkm(self):
+    # return self.RPKM
 
     def get_exon_list(self):
         return self.exons
@@ -167,33 +167,34 @@ class Gene:
                 break
         return res
 
-    def calculate_rpkm(self, experiment_index, total_reads):
-        """
-         .. function: calculate_RPKM( self, experiment_index, total_Reads )
+        # def calculate_rpkm(self, experiment_index, total_reads):
 
-            This function calculates the RPKM as follows
-            rpk = #Reads in Gene / # of kilobases of the gene exons (some may don't have any read)
-            rpkm = rpk / (#total reads/1000000)
-
-            :param experiment_index: Index of the experiment from the origrinal experiment list
-            :param total_reads: Total Number of reads of the gene.
-            :rtype: RPKM value for this gene
-        """
-        if len(self.exons) == 0:
-            return 0
-        total_kb = float(0)
-        for ex in self.exons:
-            start, end = ex.get_coordinates()
-            #            print "EXON ::",ex.id,end, start
-            total_kb += float(end-start)
-
-#        print self.readNum, experiment_index
-        rpk = float(self.readNum[experiment_index]) / float(total_kb/1000)
-        mreads = float(total_reads)/float(1000000)
-        rpkm = float(rpk)/mreads
-        #print "Strand",self.strand,"::",total_kb, self.readNum, rpk, mreads, rpkm
-        self.RPKM[experiment_index] = rpkm
-        return rpkm
+    # """
+    #          .. function: calculate_RPKM( self, experiment_index, total_Reads )
+    #
+    #             This function calculates the RPKM as follows
+    #             rpk = #Reads in Gene / # of kilobases of the gene exons (some may don't have any read)
+    #             rpkm = rpk / (#total reads/1000000)
+    #
+    #             :param experiment_index: Index of the experiment from the origrinal experiment list
+    #             :param total_reads: Total Number of reads of the gene.
+    #             :rtype: RPKM value for this gene
+    #         """
+    #         if len(self.exons) == 0:
+    #             return 0
+    #         total_kb = float(0)
+    #         for ex in self.exons:
+    #             start, end = ex.get_coordinates()
+    #             #            print "EXON ::",ex.id,end, start
+    #             total_kb += float(end-start)
+    #
+    # #        print self.readNum, experiment_index
+    #         rpk = float(self.readNum[experiment_index]) / float(total_kb/1000)
+    #         mreads = float(total_reads)/float(1000000)
+    #         rpkm = float(rpk)/mreads
+    #         #print "Strand",self.strand,"::",total_kb, self.readNum, rpk, mreads, rpkm
+    #         self.RPKM[experiment_index] = rpkm
+    #         return rpkm
 
     def exist_exon(self, start, end):
         """

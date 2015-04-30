@@ -7,11 +7,13 @@ import os
 import sys
 import traceback
 from multiprocessing import Pool, current_process, Process
+
 import grimoire.analize as analize
-import grimoire.rnaseq_io as majiq_io
-import grimoire.utils.utils as utils
-import grimoire.mglobals as mglobals
+import src.io as majiq_io
+import src.utils.utils as utils
+import src.mglobals as mglobals
 import grimoire.lsv as majiq_lsv
+
 
 try:
     import cPickle as pickle

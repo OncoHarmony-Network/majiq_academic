@@ -2,10 +2,11 @@
 Functions to filter junction pairs by number of positions covered or number of reads
 """
 import sys
-import analysis.polyfitnb as majiqfit
-from scipy.stats import nbinom
+
 from numpy.ma import masked_less
 import numpy as np
+
+import src.polyfitnb as majiqfit
 
 
 def filter_message(when, value, logger, junc):
@@ -13,14 +14,13 @@ def filter_message(when, value, logger, junc):
     if logger:
         if type(logger) == bool:
             print message
-        else: 
+        else:
             logger.info(message)
 
 
 def lsv_mark_stacks(lsv_list, fitfunc_r, pvalue_limit, logger=None):
-
     minstack = sys.maxint
-     #the minimum value marked as stack
+    # the minimum value marked as stack
     numstacks = 0
     for lidx, junctions in enumerate(lsv_list[0]):
 
@@ -29,7 +29,7 @@ def lsv_mark_stacks(lsv_list, fitfunc_r, pvalue_limit, logger=None):
                 continue
             for j, value in enumerate(junction):
                 if value > 0:
-                    #TODO Use masker, and marking stacks will probably be faster.
+                    # TODO Use masker, and marking stacks will probably be faster.
                     copy_junc = list(junction)
                     copy_junc.pop(j)
                     copy_junc = np.array(copy_junc)
@@ -40,24 +40,23 @@ def lsv_mark_stacks(lsv_list, fitfunc_r, pvalue_limit, logger=None):
                     mean_rest = np.mean(copy_junc) * nzpos
                     pval = majiqfit.get_negbinom_pval(fitfunc_r, mean_rest, value)
                     if pval < pvalue_limit:
-                        lsv_list[0][lidx][i, j] = -2 
+                        lsv_list[0][lidx][i, j] = -2
                         minstack = min(minstack, value)
                         numstacks += 1
         masked_less(lsv_list[0][lidx], 0)
 
     if logger:
         logger.info("Out of %s values, %s marked as stacks with a p-value threshold of %s (%.3f%%)"
-                    % (junctions.size, numstacks, pvalue_limit, (float(numstacks)/junctions.size)*100))
+                    % (junctions.size, numstacks, pvalue_limit, (float(numstacks) / junctions.size) * 100))
 
-#TODO: (Jordi) I don't think this return is necessary.
+    # TODO: (Jordi) I don't think this return is necessary.
     return lsv_list
 
 
 def quantifiable_in_group(list_of_experiments, minnonzero, min_reads, logger, per_exp=0.10):
-
     nexp = len(list_of_experiments)
 
-    filtr = nexp/2
+    filtr = nexp / 2
     if nexp % 2 != 0:
         filtr += 1
 
@@ -75,7 +74,7 @@ def quantifiable_in_group(list_of_experiments, minnonzero, min_reads, logger, pe
     for idx, exp in enumerate(list_of_experiments):
         for idx_lsv, lsv in enumerate(exp[1]):
             if not lsv[1] in tlb:
-                tlb[lsv[1]] = [None]*nexp
+                tlb[lsv[1]] = [None] * nexp
                 nways = len(exp[0][idx_lsv])
                 info_tlb[lsv[1]] = lsv
                 info_tlb2[lsv[1]] = np.zeros(shape=exp[0][idx_lsv].shape)
@@ -110,7 +109,6 @@ def quantifiable_in_group(list_of_experiments, minnonzero, min_reads, logger, pe
 
 def lsv_quantifiable(list_lsv_tuple, minnonzero, min_reads, logger=False, fon=[True, True],
                      lsv_type='majiq', const=False):
-
     filter_message("Before quantifiable_filter", minnonzero, logger, np.array(list_lsv_tuple))
     filtered = []
     filtered_info = []
@@ -129,7 +127,7 @@ def lsv_quantifiable(list_lsv_tuple, minnonzero, min_reads, logger=False, fon=[T
 
         for lsvdx, lsv in enumerate(list_lsv_tuple[0]):
             total_count = lsv.sum()
-            thresh_reads = min_reads + (lsv.shape[0] - 2)*k
+            thresh_reads = min_reads + (lsv.shape[0] - 2) * k
             for idx in range(lsv.shape[0]):
                 if ((not fon[1] or np.count_nonzero(lsv[idx]) >= minnonzero) and
                         (not fon[0] or total_count >= thresh_reads)):
@@ -137,12 +135,11 @@ def lsv_quantifiable(list_lsv_tuple, minnonzero, min_reads, logger=False, fon=[T
                     if not const:
                         filtered_info.append(list_lsv_tuple[1][lsvdx])
                     break
-    #    filter_message("After quantifiable_filter", minnonzero, logger, array(filtered))
+    # filter_message("After quantifiable_filter", minnonzero, logger, array(filtered))
     return filtered, filtered_info
 
 
 def lsv_intersection(lsv_list1, lsv_list2):
-
     lsv_match = [[], []]
     match_info = []
 

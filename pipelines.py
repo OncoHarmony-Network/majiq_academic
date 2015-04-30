@@ -1,17 +1,21 @@
 import abc
 import pickle
-from multiprocessing import Pool, current_process, Process
-from grimoire.utils.utils import create_if_not_exists, get_logger
-from analysis.polyfitnb import fit_nb
-import numpy as np
-import analysis.filter as majiq_filter
-import analysis.io as majiq_io
-import analysis.psi as majiq_psi
+from multiprocessing import Pool, Process
 import os
-import builder as majiq_builder
-from numpy.ma import masked_less
-import pipe as pipe
 import gc
+
+import numpy as np
+from numpy.ma import masked_less
+
+from src.utils.utils import create_if_not_exists, get_logger
+from src.polyfitnb import fit_nb
+import src.filter as majiq_filter
+import src.io as majiq_io
+import src.psi as majiq_psi
+import builder as majiq_builder
+import pipe as pipe
+
+
 # ###############################
 # Data loading and Boilerplate #
 ################################

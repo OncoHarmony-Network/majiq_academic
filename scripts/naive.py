@@ -1,19 +1,19 @@
 #!/usr/bin/env python
 
 from matplotlib import use
+
 use('Agg')
 
 import numpy as np
 import argparse
-import analysis.filter as majiq_filter
-import analysis.io as majiq_io
+import src.filter as majiq_filter
+import src.io as majiq_io
 import scipy.stats
 import pickle
 from random import choice
 
 
 def res_dump(data, p_id, path):
-
     output = open("%s/%s.naive.pkl" % (path, p_id), 'w')
     pickle.dump(data, output)
 
@@ -26,7 +26,7 @@ def psi_calc(lsv_junc, params):
             samples = np.zeros(shape=(len(lsv)), dtype=np.float)
             for i, junction in enumerate(lsv):
                 junction_samples = []
-#                ipdb.set_trace()
+                # ipdb.set_trace()
                 for numsamples in xrange(params.npos):
                     junction_samples.append(choice(junction))
                 samples[i] = np.sum(junction_samples)
@@ -36,7 +36,6 @@ def psi_calc(lsv_junc, params):
 
 
 def calcpsi_func(params):
-
     print "Calcpsi"
     print "Loading %s..." % params.file
     info1, lsv_junc, const = majiq_io.load_data_lsv(params.file, None)
@@ -58,11 +57,10 @@ def calcpsi_func(params):
 
     res_dump([lsv_junc[1], ret_psi], p_id='%s.psi' % params.name, path=params.output)
 
-    return 
+    return
 
 
 def deltapsi_func(params):
-
     print "Delta psi"
     print "Loading %s..." % params.file1,
     info1, lsv_junc1, const = majiq_io.load_data_lsv(params.file1, None)
@@ -96,10 +94,10 @@ def deltapsi_func(params):
 
     res_dump([matched_info, delta], p_id='%s.delta' % params.name, path=params.output)
 
-    return 
+    return
+
 
 if __name__ == '__main__':
-
     parser = argparse.ArgumentParser(description="Script to emulate Naive bootstraping for MAJIQ paper comparition")
     common = argparse.ArgumentParser(add_help=False)
     common.add_argument('-n', '--num-iterations', default=20000, dest='nboots', type=int, help='Number of iteration of'

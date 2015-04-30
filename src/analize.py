@@ -4,7 +4,6 @@ import mglobals
 
 
 def reliable_in_data(junc, exp_idx):
-    
     min_read_x_exp = mglobals.MINREADS
     min_npos_x_exp = mglobals.MINPOS
     in_data_filter = False
@@ -15,7 +14,6 @@ def reliable_in_data(junc, exp_idx):
 
 
 def lsv_detection(gene_list, chrom, only_real_data=False, logging=None):
-
     num_ss_var = [[0] * 20, [0] * 20, 0]
 
     const_set = [set() for xx in range(mglobals.num_experiments)]
@@ -43,10 +41,10 @@ def lsv_detection(gene_list, chrom, only_real_data=False, logging=None):
                 for ssnum in range(20):
                     num_ss_var[ss][ssnum] += var_ss[ss][ssnum]
             num_ss_var[2] += var_ss[2]
-            #num_ss_var [1]+= var_ss[1]
+            # num_ss_var [1]+= var_ss[1]
 
-#            print "---------------- %s --------------"%gn.get_id()
-#             utils.print_junc_matrices(mat, tlb=tlb, fp=True)
+            # print "---------------- %s --------------"%gn.get_id()
+            #             utils.print_junc_matrices(mat, tlb=tlb, fp=True)
             SS, ST = lsv_matrix_detection(mat, tlb, (False, False, False), vip)
             dummy = {}
             for name, ind_list in mglobals.tissue_repl.items():
@@ -55,7 +53,7 @@ def lsv_detection(gene_list, chrom, only_real_data=False, logging=None):
             for lsv_index, lsv_lst in enumerate((SS, ST)):
                 lsv_type = (SSOURCE, STARGET)[lsv_index]
                 sstype = ['5prime', '3prime'][lsv_index]
-#                print lsv_lst
+                #                print lsv_lst
 
                 for idx in lsv_lst:
                     jlist = exon_list[idx].get_junctions(sstype)
@@ -74,7 +72,7 @@ def lsv_detection(gene_list, chrom, only_real_data=False, logging=None):
                             for exp_idx in ind_list:
                                 if reliable_in_data(jj, exp_idx):
                                     counter += 1
-                            if counter < 0.1*len(ind_list):
+                            if counter < 0.1 * len(ind_list):
                                 continue
                             e_data += 1
                             jun[name].add(jj)
@@ -124,11 +122,11 @@ def lsv_matrix_detection(mat, exon_to_ss, b_list, vip_set=[]):
     """
     lsv_list = [[], []]
 
-    #change bucle for iterate by exons
+    # change bucle for iterate by exons
     for ii in range(0, len(exon_to_ss) - 1):
         lsv = exon_to_ss[ii]
-        #Single Source detection
-        ss = mat[lsv[1][0]:lsv[1][-1]+1, :]
+        # Single Source detection
+        ss = mat[lsv[1][0]:lsv[1][-1] + 1, :]
         ss_valid = True
 
         # cand = range(ii+1, len(exon_to_ss))
@@ -149,8 +147,8 @@ def lsv_matrix_detection(mat, exon_to_ss, b_list, vip_set=[]):
 
     for ii in range(1, len(exon_to_ss)):
         lsv = exon_to_ss[ii]
-        #Single Targe detection
-        st = mat[:, lsv[0][0]:lsv[0][-1]+1]
+        # Single Targe detection
+        st = mat[:, lsv[0][0]:lsv[0][-1] + 1]
         st_valid = True
 
         # cand = range(0, ii)

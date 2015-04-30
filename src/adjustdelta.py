@@ -44,11 +44,11 @@ def estimate_parameters(a_change, b_change, a_center, b_center, pi_change, pi_ce
     mu_change_acum = 0
     mu_center_acum = 0
     respons = []
-    #calculate responsability functions, means and N (total responsability) 
+    # calculate responsability functions, means and N (total responsability)
     for value in deltadata:
         change_prob = beta.pdf(x=value, a=a_change, b=b_change)
         center_prob = beta.pdf(x=value, a=a_center, b=b_center)
-        #        change_prob = pi_change*beta.pdf(x=value, a=a_change, b=b_change)
+        # change_prob = pi_change*beta.pdf(x=value, a=a_change, b=b_change)
         #        center_prob = pi_center*beta.pdf(x=value, a=a_center, b=b_center)
 
         #total probability
@@ -70,7 +70,7 @@ def estimate_parameters(a_change, b_change, a_center, b_center, pi_change, pi_ce
     mu_change = mu_change_acum / N_change
     mu_center = mu_center_acum / N_center
 
-    #calculate variance
+    # calculate variance
     acum_var_change = 0
     acum_var_center = 0
     for i, value in enumerate(deltadata):
@@ -120,8 +120,8 @@ def plot_densities(deltadata, ax=None, my_title="Empirical Data"):
 
 
 # if len(deltadata[deltadata > 1]):
-#        print "DELTADATA BAD", deltadata[deltadata > 1]
-#        sys.exit(1)
+# print "DELTADATA BAD", deltadata[deltadata > 1]
+# sys.exit(1)
 
 #    values, bins = histogram(deltadata, bins = 100, range=(-1, 1))
 
@@ -423,8 +423,10 @@ def EMBetaMixture(D, p0_mix, beta0_mix, num_iter, min_ratio=1e-5, logger=False, 
         p_KgD[zrow, K - 1] = 0
         #        pdb.set_trace()
 
-        avgxPerK = np.sum(p_KgD * (D[:, 0] * ones_1k.T).T * (D[:, 1] * ones_1k.T).T, axis=0) / np.sum(p_KgD * (D[:, 1] * ones_1k.T).T, axis=0)
-        avgx2PerK = np.sum(p_KgD * np.square((D[:, 0] * ones_1k.T).T) * (D[:, 1] * ones_1k.T).T, axis=0) / np.sum(p_KgD * (D[:, 1] * ones_1k.T).T, axis=0)
+        avgxPerK = np.sum(p_KgD * (D[:, 0] * ones_1k.T).T * (D[:, 1] * ones_1k.T).T, axis=0) / np.sum(
+            p_KgD * (D[:, 1] * ones_1k.T).T, axis=0)
+        avgx2PerK = np.sum(p_KgD * np.square((D[:, 0] * ones_1k.T).T) * (D[:, 1] * ones_1k.T).T, axis=0) / np.sum(
+            p_KgD * (D[:, 1] * ones_1k.T).T, axis=0)
         varxPerK = avgx2PerK - (np.square(avgxPerK))
 
         new_beta_mix = np.zeros(shape=beta0_mix.shape, dtype=np.float)

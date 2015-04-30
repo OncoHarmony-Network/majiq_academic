@@ -1,10 +1,10 @@
 import numpy as np
 import scipy.sparse
-import mglobals
+
+from src import mglobals
 
 
 class Junction:
-
     __eq__ = lambda self, other: self.start == other.start and self.end == other.end
     __ne__ = lambda self, other: self.start != other.start or self.end != other.end
     __lt__ = lambda self, other: self.start < other.start or (self.start == other.start and self.end < other.end)
@@ -14,7 +14,7 @@ class Junction:
 
     def __init__(self, start, end, donor, acceptor, gene, readN=0, annotated=False):
         ''' The start and end in junctions are the last exon in '''
-        
+
         self.start = start
         self.end = end
         if donor is None:
@@ -27,8 +27,8 @@ class Junction:
             self.acceptor_id = acceptor.get_id()
         self.gene_name = gene.get_id()
         self.annotated = annotated
-        self.coverage = scipy.sparse.lil_matrix((mglobals.num_experiments, (mglobals.readLen-16)+1), dtype=np.int)
-        self.gc_content = scipy.sparse.lil_matrix((1, (mglobals.readLen-16)+1), dtype=np.float)
+        self.coverage = scipy.sparse.lil_matrix((mglobals.num_experiments, (mglobals.readLen - 16) + 1), dtype=np.int)
+        self.gc_content = scipy.sparse.lil_matrix((1, (mglobals.readLen - 16) + 1), dtype=np.float)
         self.id = "%s:%s-%s" % (self.gene_name, start, end)
         self.transcript_id_list = []
 
@@ -36,7 +36,7 @@ class Junction:
         return hash(self.start) ^ hash(self.end) ^ hash(self.gene_name)
 
     # def __del__(self):
-    #     junc_list = self.get_gene().get_junction_list()
+    # junc_list = self.get_gene().get_junction_list()
 
     # GETTERs
     def get_id(self):
@@ -124,11 +124,12 @@ class Junction:
                 break
         return res
 
-    #MODIFIERs
+    # MODIFIERs
 
     def add_gc_content_positions(self, pos, gc):
         self.gc_content = gc
-#        self.gc_factor[exp_idx,:] = gc_factor
+
+    #        self.gc_factor[exp_idx,:] = gc_factor
 
     def add_donor(self, donor):
         if donor is None:
@@ -146,7 +147,7 @@ class Junction:
         self.transcript_id_list.append(trnscrpt.get_id())
 
     def update_junction_read(self, exp_idx, read_n, start, gc, unique):
-#        print "J3",self, getrefcount(self)
+        #        print "J3",self, getrefcount(self)
 
         left_ind = mglobals.readLen - (self.start - start) - 8 + 1
         if unique:
@@ -157,12 +158,11 @@ class Junction:
 
 
 class MajiqJunc:
-
     def __init__(self, jnc, exp_idx):
         self.exons = {}
         self.annot = jnc.is_annotated()
         if jnc is None:
-            self.gc_index = scipy.sparse.lil_matrix((1, (mglobals.readLen-16)+1), dtype=np.int)
+            self.gc_index = scipy.sparse.lil_matrix((1, (mglobals.readLen - 16) + 1), dtype=np.int)
             self.name = None
             self.id = "None"
 
@@ -170,7 +170,7 @@ class MajiqJunc:
             self.exons['coord1'] = [0, 0]
             self.exons['coord2'] = [0, 0]
             self.exons['strand'] = None
-            self.coverage = scipy.sparse.lil_matrix((1, (mglobals.readLen-16)+1), dtype=np.int)
+            self.coverage = scipy.sparse.lil_matrix((1, (mglobals.readLen - 16) + 1), dtype=np.int)
         else:
             self.name = "%s:%s-%s" % (jnc.get_gene().get_id(), jnc.get_ss_5p(), jnc.get_ss_3p())
             self.id = "%s:%s-%s" % (jnc.get_gene().get_chromosome(), jnc.get_ss_5p(), jnc.get_ss_3p())
@@ -188,8 +188,8 @@ class MajiqJunc:
                 self.exons['coord2'] = jnc.get_acceptor().get_coordinates()
 
             self.coverage = jnc.coverage[exp_idx, :]
-            self.gc_factor = scipy.sparse.lil_matrix((1, (mglobals.readLen-16)+1), dtype=np.float)
-            for jj in range(mglobals.readLen-16+1):
+            self.gc_factor = scipy.sparse.lil_matrix((1, (mglobals.readLen - 16) + 1), dtype=np.float)
+            for jj in range(mglobals.readLen - 16 + 1):
                 dummy = jnc.gc_content[0, jj]
                 self.gc_factor[0, jj] = dummy
 

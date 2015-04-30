@@ -8,16 +8,12 @@ import matplotlib as mplot
 
 mplot.use('Agg')
 import scripts.utils
-import analysis.psi
 # import prettyplotlib as ppl
 
 
 from collections import defaultdict
 import argparse
-import pickle
-import os
 from pylab import *
-from pdb import set_trace as st
 
 RANK_TYPES = ['all', 'intersected', 'only_exp1', 'exp1_and_exp2']
 
@@ -26,7 +22,7 @@ def print_matrix(matrix):
     "Print MAJIQ delta PSI matrix in screen"
     for i in range(matrix.shape[0]):
         for j in range(matrix.shape[1]):
-            print "%.4f"%matrix[i][j],
+            print "%.4f" % matrix[i][j],
         print
 
     print
@@ -36,58 +32,63 @@ def print_matrix(matrix):
 def collapse_matrix(matrix):
     "Collapse the diagonals probabilities in 1-D and return them"
     collapse = []
-    #FOR TEST matrix = array([[0, 1, 2, 3, 4, 500], [0, 1, 2, 3, 4, 5], [0, 1, 2, 3, 4, 5], [100, 1, 2, 3, 4, 5], ])
+    # FOR TEST matrix = array([[0, 1, 2, 3, 4, 500], [0, 1, 2, 3, 4, 5], [0, 1, 2, 3, 4, 5], [100, 1, 2, 3, 4, 5], ])
     try:
-        matrix_corner = matrix.shape[0]+1
+        matrix_corner = matrix.shape[0] + 1
     except:
         import pdb
+
         pdb.set_trace()
     for i in xrange(-matrix_corner, matrix_corner):
         collapse.append(diagonal(matrix, offset=i).sum())
 
     return array(collapse)
 
+
 def mean_matrix(matrix):
     "Get the best point mean"
-    #collapse in 1 dimension
+    # collapse in 1 dimension
     collapse = collapse_matrix(matrix)
     delta_values = linspace(-1, 1, num=len(collapse))
-    print delta_values+collapse
+    print delta_values + collapse
     print collapse
     plot(collapse)
     show()
-    #UNFINISHED
+    # UNFINISHED
+
 
 def _find_delta_border(V, numbins):
     "Finds the border index to which a V corresponds in its delta_space given the number of bins the matrix will have"
-    delta_space = list(linspace(-1, 1, num=numbins+1))
-    delta_space.pop(0) #first border to the left is -1, and we are not interested in it
-    #get the index position that corresponds to the V threshold
+    delta_space = list(linspace(-1, 1, num=numbins + 1))
+    delta_space.pop(0)  # first border to the left is -1, and we are not interested in it
+    # get the index position that corresponds to the V threshold
     for i, value in enumerate(delta_space):
         if value > V:
             return i
-    #if nothing hit, V = 1
+    # if nothing hit, V = 1
     return numbins
+
 
 def matrix_area(matrix, V=0.2, absolute=True, collapsed_mat=False):
     """Returns the probability of an event to be above a certain threshold. The absolute flag describes if the value is absolute"""
     collapse = matrix
     if not collapsed_mat:
         collapse = collapse_matrix(matrix)
-    #get the delta psi histogram borders based on the size of 'collapse'
+    # get the delta psi histogram borders based on the size of 'collapse'
     border = _find_delta_border(V, collapse.shape[0])
-    #grab the values inside the area of interest
+    # grab the values inside the area of interest
     area = []
     if V < 0:
-        area.append(collapse[0:border+1])
-        if absolute: #if absolute V, pick the other side of the array
-            area.append(collapse[-border-1:])
+        area.append(collapse[0:border + 1])
+        if absolute:  #if absolute V, pick the other side of the array
+            area.append(collapse[-border - 1:])
     else:
         area.append(collapse[border:])
-        if absolute: #if absolute V, pick the other side of the array
-            area.append(collapse[0:len(collapse)-border])
+        if absolute:  #if absolute V, pick the other side of the array
+            area.append(collapse[0:len(collapse) - border])
 
     return sum(area)
+
 
 def v_sum(matrix):
     """
@@ -96,9 +97,10 @@ def v_sum(matrix):
     absolute = True
     ret = 0.
     for v in arange(0, 1, 0.1):
-        ret += matrix_area(matrix, V=v, absolute=absolute)*v
+        ret += matrix_area(matrix, V=v, absolute=absolute) * v
 
     return ret
+
 
 def expected_dpsi(matrix):
     """
@@ -108,12 +110,13 @@ def expected_dpsi(matrix):
     ret = 0.
     collapsed = collapse_matrix(matrix)
     for i, v in enumerate(linspace(-1, 1, num=collapsed.shape[0])):
-        ret += collapsed[i]*abs(v)
+        ret += collapsed[i] * abs(v)
 
     return ret
 
 
-def rank_majiq(vlsv_list, V=0.2, absolute=True, dofilter=True, E=False, ranknochange=False, complex_lsvs=False, prior=None, shrink=True):
+def rank_majiq(vlsv_list, V=0.2, absolute=True, dofilter=True, E=False, ranknochange=False, complex_lsvs=False,
+               prior=None, shrink=True):
     MINTHRESHOLD = 0.95
     if E:
         MINTHRESHOLD = 0.20
@@ -140,13 +143,13 @@ def rank_majiq(vlsv_list, V=0.2, absolute=True, dofilter=True, E=False, ranknoch
             area = matrix_area(dmatrix, V, absolute)
             if np.isnan(area): continue
             if ranknochange:  # By default, for non-changing events V=0.05
-            #P(Delta PSI < V) = 1 - P(Delta PSI > V)
+                # P(Delta PSI < V) = 1 - P(Delta PSI > V)
                 area = 1.0 - matrix_area(dmatrix, 0.05, absolute)
 
             # if area > MINTHRESHOLD or not dofilter:
             rank.append([vlsv.get_id(), area])
-    #if ranknochange:
-    #    rank.sort(key=lambda x: x[1])
+    # if ranknochange:
+    # rank.sort(key=lambda x: x[1])
     #else:
     #    rank.sort(key=lambda x: x[1], reverse=True)
 
@@ -155,8 +158,8 @@ def rank_majiq(vlsv_list, V=0.2, absolute=True, dofilter=True, E=False, ranknoch
     # Take only confident elements
     if shrink:
         for idx, v in enumerate(rank):
-            if v[1]<MINTHRESHOLD:
-                print "MAJIQ FDR=%d" % (idx+1)
+            if v[1] < MINTHRESHOLD:
+                print "MAJIQ FDR=%d" % (idx + 1)
                 break
                 # return rank[:idx+1]
 
@@ -172,30 +175,30 @@ def rank_naive(bins_list, names, V=0.2, absolute=True, E=False, ranknochange=Fal
     for i, lsv_bins in enumerate(bins_list):
         dmatrix = np.array(lsv_bins)
         if E:
-            MINTHRESHOLD=.2
+            MINTHRESHOLD = .2
             v_prob = 0.
             for ii, v in enumerate(linspace(-1, 1, num=dmatrix.shape[0])):
-                v_prob += dmatrix[ii]*abs(v)
+                v_prob += dmatrix[ii] * abs(v)
             if np.isnan(v_prob): continue
             rank.append([names[i][1], v_prob])
         else:
-            MINTHRESHOLD=.95
+            MINTHRESHOLD = .95
             area = matrix_area(dmatrix, V, absolute, collapsed_mat=True)
             if np.isnan(area): continue
             if ranknochange:
-                #P(Delta PSI < V) = 1 - P(Delta PSI > V)
+                # P(Delta PSI < V) = 1 - P(Delta PSI > V)
                 area = 1.0 - area
             rank.append([names[i][1], area])
 
-    #if ranknochange:
-    #    rank.sort(key=lambda x: x[1])
+    # if ranknochange:
+    # rank.sort(key=lambda x: x[1])
     #else:
     #    rank.sort(key=lambda x: x[1], reverse=True)
     rank.sort(key=lambda x: x[1], reverse=True)
 
     for idx, v in enumerate(rank):
-        if  v[1]<MINTHRESHOLD:
-            print "Naive Bootstrapping FDR=%d" % (idx+1)
+        if v[1] < MINTHRESHOLD:
+            print "Naive Bootstrapping FDR=%d" % (idx + 1)
             break
             # return rank[:idx+1]
 
@@ -206,10 +209,10 @@ def rank_miso(path, dofilter=True, ranknochange=False, complex_lsvs=False):
     rank = scripts.utils.miso_delta_reader(path, dofilter=dofilter, complex_lsvs=complex_lsvs)
     if ranknochange:
         rank.sort(key=lambda x: (abs(x[1]), x[2]))
-        #sort first by smallest delta PSI, then by bayes factor
+        # sort first by smallest delta PSI, then by bayes factor
     else:
         rank.sort(key=lambda x: (abs(x[1]), x[2]), reverse=True)
-        #sort first by biggest delta PSI, then by inverse bayes factor
+        # sort first by biggest delta PSI, then by inverse bayes factor
     return rank
 
 
@@ -226,22 +229,22 @@ def rank_mats(path, dofilter=True, ranknochange=False):
             geneID = sline[1]
             # pvalue = float(sline[-4])
             fdr = float(sline[-4])
-            delta_psi =  float(sline[-1])
+            delta_psi = float(sline[-1])
             # if pvalue < 0.05 or not dofilter:
-            #     rank.append([geneID, delta_psi, pvalue])
+            # rank.append([geneID, delta_psi, pvalue])
             rank.append([geneID.replace('"', ''), delta_psi, fdr])
 
     if ranknochange:
-        rank.sort(key=lambda x: (abs(x[1]), x[2])) #biggest delta PSI first, small p-value
+        rank.sort(key=lambda x: (abs(x[1]), x[2]))  # biggest delta PSI first, small p-value
     else:
-        rank.sort(key=lambda x: (-abs(x[1]), x[2])) #biggest delta PSI first, small p-value
+        rank.sort(key=lambda x: (-abs(x[1]), x[2]))  # biggest delta PSI first, small p-value
 
     return rank
 
 
 def _is_in_chunk(event1, chunk):
     for event2 in chunk:
-        if event1[0] == event2[0]: #event[0] is the name of the event
+        if event1[0] == event2[0]:  # event[0] is the name of the event
             return 1
     return 0
 
@@ -286,7 +289,6 @@ def create_restrict_plot(ratios_list):
         print "Method: %s. Area Under Curve (Trapezoid)\t: %.3f " % (method_name, area_trap)
 
 
-
 # python ~/Projects/majiq/scripts/pair_rank.py --majiq-files
 # ~/workspace/majiq/data/deltapsi/genomewise/Hippo1_Liver1_deltamatrix.pickle
 # ~/workspace/majiq/data/deltapsi/genomewise/results_nofilter/Hippo1_Liver1_deltamatrix.pickle
@@ -302,14 +304,13 @@ def create_restrict_plot(ratios_list):
 
 
 def plot_fdr(output, method_name, fdr):
-
     diagonaly = np.linspace(0, 1, len(fdr))
     diagonalx = np.linspace(0, len(fdr), len(fdr))
 
-    fig = figure(figsize=[10, 10]) # In inches
-    #figure out how many groups of events exist
+    fig = figure(figsize=[10, 10])  # In inches
+    # figure out how many groups of events exist
 
-    font = {'size': 16} #here also 'weight' and 'family'
+    font = {'size': 16}  # here also 'weight' and 'family'
     matplotlib.rc('font', **font)
 
     plot(diagonalx, diagonaly, '--', color="#cccccc")
@@ -318,29 +319,41 @@ def plot_fdr(output, method_name, fdr):
     scripts.utils.save_or_show(output, "fdr.%s" % method_name)
 
 
-
 def main():
     parser = argparse.ArgumentParser(description="")
-    parser.add_argument('--majiq-files', dest='majiq_files', nargs='+', help='MAJIQ files with paired events to analyze')
+    parser.add_argument('--majiq-files', dest='majiq_files', nargs='+',
+                        help='MAJIQ files with paired events to analyze')
     parser.add_argument('--miso-files', dest='miso_files', nargs=2, help='MISO files with paired events to analyze')
-    parser.add_argument('--mats-files', dest='mats_files', nargs=2,help='MATS files with paired events to analyze')
-    parser.add_argument('--naive-files', dest='naive_files', nargs=2,help='Naive Bootstrapping files with paired events to analyze')
+    parser.add_argument('--mats-files', dest='mats_files', nargs=2, help='MATS files with paired events to analyze')
+    parser.add_argument('--naive-files', dest='naive_files', nargs=2,
+                        help='Naive Bootstrapping files with paired events to analyze')
     parser.add_argument('-o', '--output', required=True, help='Output file path')
-    parser.add_argument('--max',  default=1000, type = int, help="Max number of events to analyze")
-    parser.add_argument('--V', default=0.2, type = float, help="Steps of best events to take")
+    parser.add_argument('--max', default=1000, type=int, help="Max number of events to analyze")
+    parser.add_argument('--V', default=0.2, type=float, help="Steps of best events to take")
     parser.add_argument('--E', default=False, action="store_true", help="For MAJIQ, calculate sum_v P(deltaPSI > V)")
-    parser.add_argument('--proximity', default=0, type = int, help="How close the 2 events have to be in the ranking in order to ")
+    parser.add_argument('--proximity', default=0, type=int,
+                        help="How close the 2 events have to be in the ranking in order to ")
     parser.add_argument('--evnames', default=None, nargs="*", help="Event names for both pairs in MAJIQ")
-    parser.add_argument('--noabsolute', dest="absolute", default=True, action="store_false", help="Determine if V is absolute")
-    parser.add_argument('--nofilter', dest="filter", default=True, action="store_false", help="Skip filtering by BF, p-value, etc")
-    parser.add_argument('--fullrank', default=False, action='store_true', help="Benchmark searching for events in full ranking on rank2")
-    parser.add_argument('--fdr', action="store_true", default=None, help="In addition to the rank, calculate the False Discovery Rate. Only works with --fullrank")
-    parser.add_argument('--ranknochange', default=False, action='store_true', help="Calculate P(deltaPSI < V) instead of P(deltaPSI > V) to rank first the ones with low delta PSI")
-    parser.add_argument('--intersect-events', dest='intersect_events', default=False, action='store_true', help="Intersect the events among all the pairs")
-    parser.add_argument('--type-rank', dest='type_rank', default='all', choices=RANK_TYPES, help='Configure which events are chosen for the ranking.')
-    parser.add_argument('--create_restrict_plot', dest='create_restrict_plot', default=False, action='store_true', help="Create plot for only_ex1 ranks in different restrictive conditions. Only works with --type-rank only_exp1")
-    parser.add_argument('--complex-lsvs', dest="complex_lsvs", default=False, action="store_true", help="Include complex LSVs")
-    parser.add_argument('--noshrink', dest='shrink', default=True, action='store_false', help="Shrink ranks with the FDR number.")
+    parser.add_argument('--noabsolute', dest="absolute", default=True, action="store_false",
+                        help="Determine if V is absolute")
+    parser.add_argument('--nofilter', dest="filter", default=True, action="store_false",
+                        help="Skip filtering by BF, p-value, etc")
+    parser.add_argument('--fullrank', default=False, action='store_true',
+                        help="Benchmark searching for events in full ranking on rank2")
+    parser.add_argument('--fdr', action="store_true", default=None,
+                        help="In addition to the rank, calculate the False Discovery Rate. Only works with --fullrank")
+    parser.add_argument('--ranknochange', default=False, action='store_true',
+                        help="Calculate P(deltaPSI < V) instead of P(deltaPSI > V) to rank first the ones with low delta PSI")
+    parser.add_argument('--intersect-events', dest='intersect_events', default=False, action='store_true',
+                        help="Intersect the events among all the pairs")
+    parser.add_argument('--type-rank', dest='type_rank', default='all', choices=RANK_TYPES,
+                        help='Configure which events are chosen for the ranking.')
+    parser.add_argument('--create_restrict_plot', dest='create_restrict_plot', default=False, action='store_true',
+                        help="Create plot for only_ex1 ranks in different restrictive conditions. Only works with --type-rank only_exp1")
+    parser.add_argument('--complex-lsvs', dest="complex_lsvs", default=False, action="store_true",
+                        help="Include complex LSVs")
+    parser.add_argument('--noshrink', dest='shrink', default=True, action='store_false',
+                        help="Shrink ranks with the FDR number.")
     args = parser.parse_args()
 
     print args
@@ -354,8 +367,10 @@ def main():
             # Union over events that made it into Exp1 or Exp2, then use this set for the rankings over Exp1 and Exp2 no filtered
             # 4 files expected: exp1_filtered, exp1_nofiltered, exp2_filtered, exp2_nofiltered
             if len(args.majiq_files) != 4:
-                print "[ERROR] :: 4 files expected (exp1_filtered, exp1_nofiltered, exp2_filtered, exp2_nofiltered), only %d given. " % len(args.majiq_files)
+                print "[ERROR] :: 4 files expected (exp1_filtered, exp1_nofiltered, exp2_filtered, exp2_nofiltered), only %d given. " % len(
+                    args.majiq_files)
                 import sys
+
                 sys.exit(1)
 
             # Calculated the union:
@@ -369,7 +384,8 @@ def main():
             print "%s: %d" % (args.majiq_files[2], len(majiq_exp2_filt[1]))
             print "%s: %d" % (args.majiq_files[3], len(majiq_exp2_nofilt[1]))
 
-            event_union_set = set([ranked_pair[1] for ranked_pair in majiq_exp1_filt[1]]).union(set([ranked_pair[1] for ranked_pair in majiq_exp2_filt[1]]))
+            event_union_set = set([ranked_pair[1] for ranked_pair in majiq_exp1_filt[1]]).union(
+                set([ranked_pair[1] for ranked_pair in majiq_exp2_filt[1]]))
 
             names_exp1_nofilt = [info[1] for info in majiq_exp1_nofilt[1]]
             names_exp2_nofilt = [info[1] for info in majiq_exp2_nofilt[1]]
@@ -377,8 +393,12 @@ def main():
             exp1_index = np.array([name in names_exp1_nofilt for name in event_union_set])
             exp2_index = np.array([name in names_exp2_nofilt for name in event_union_set])
 
-            ranks['majiq'].append(rank_majiq(np.array(majiq_exp1_nofilt[0])[exp1_index].tolist(), np.array(majiq_exp1_nofilt[1])[exp1_index].tolist(), args.V, args.absolute, args.filter, args.E, args.ranknochange, args.complex_lsvs))
-            ranks['majiq'].append(rank_majiq(np.array(majiq_exp2_nofilt[0])[exp2_index].tolist(), np.array(majiq_exp2_nofilt[1])[exp2_index].tolist(), args.V, args.absolute, args.filter, args.E, args.ranknochange, args.complex_lsvs))
+            ranks['majiq'].append(rank_majiq(np.array(majiq_exp1_nofilt[0])[exp1_index].tolist(),
+                                             np.array(majiq_exp1_nofilt[1])[exp1_index].tolist(), args.V, args.absolute,
+                                             args.filter, args.E, args.ranknochange, args.complex_lsvs))
+            ranks['majiq'].append(rank_majiq(np.array(majiq_exp2_nofilt[0])[exp2_index].tolist(),
+                                             np.array(majiq_exp2_nofilt[1])[exp2_index].tolist(), args.V, args.absolute,
+                                             args.filter, args.E, args.ranknochange, args.complex_lsvs))
 
         else:
             count_pairs = 0
@@ -388,17 +408,23 @@ def main():
                 if file_nr % 2 == 0:
                     count_pairs += 1
                     majiq_file1_names = [vlsv.get_id() for vlsv in majiq_data.get_lsvs()]
-                    ranks['majiq_' + str(count_pairs)].append(rank_majiq(majiq_data.get_lsvs(), args.V, args.absolute, args.filter, args.E, args.ranknochange, args.complex_lsvs, shrink=args.shrink))
+                    ranks['majiq_' + str(count_pairs)].append(
+                        rank_majiq(majiq_data.get_lsvs(), args.V, args.absolute, args.filter, args.E, args.ranknochange,
+                                   args.complex_lsvs, shrink=args.shrink))
                     continue
 
                 if args.type_rank != 'all':
                     if args.type_rank == 'only_exp1':
                         # Select events from experiment 1
                         exp1_index = np.array([v_lsv.get_id() in majiq_file1_names for v_lsv in majiq_data.get_lsvs()])
-                        ranks['majiq_' + str(count_pairs)].append(rank_majiq(np.array(majiq_data.get_lsvs())[exp1_index].tolist(), args.V, args.absolute, args.filter, args.E, args.ranknochange, args.complex_lsvs, shrink=args.shrink))
-                        n1['majiq_' + str(count_pairs)]=[np.count_nonzero(exp1_index), np.count_nonzero(exp1_index)]
+                        ranks['majiq_' + str(count_pairs)].append(
+                            rank_majiq(np.array(majiq_data.get_lsvs())[exp1_index].tolist(), args.V, args.absolute,
+                                       args.filter, args.E, args.ranknochange, args.complex_lsvs, shrink=args.shrink))
+                        n1['majiq_' + str(count_pairs)] = [np.count_nonzero(exp1_index), np.count_nonzero(exp1_index)]
                 else:
-                    ranks['majiq'].append(rank_majiq(majiq_data[0], majiq_data[1], args.V, args.absolute, args.filter, args.E, args.ranknochange, args.complex_lsvs))
+                    ranks['majiq'].append(
+                        rank_majiq(majiq_data[0], majiq_data[1], args.V, args.absolute, args.filter, args.E,
+                                   args.ranknochange, args.complex_lsvs))
             names_majiq_exp1 = [m[1] for m in majiq_file1_names]
 
     if args.miso_files:
@@ -465,7 +491,6 @@ def main():
             common_names = common_names.intersection(naive_set)
             print "After intersected with Naive Bootstrapping: %d LSVs" % len(common_names)
 
-
     only_exp1_ranks = []
     for method_name, ranks_pair in ranks.items():
         print "Ranking %s...." % method_name
@@ -478,7 +503,7 @@ def main():
         rank1, rank2 = ranks_pair
         print "Num events", len(rank1), len(rank2)
         print "Calculating the ratios..."
-        #calculate the ratios
+        # calculate the ratios
         ratios = []
         events = []
 
@@ -487,62 +512,63 @@ def main():
         else:
             max_events = min(args.max, min(len(rank1), len(rank2)))
 
-
         fdr = []
         if args.proximity or args.fullrank:
-            #Using proximity or full rank window
-            if args.proximity: print "Using proximity window of %s..."%args.proximity
-            else: print "Using full rank2 for all events %s..."%args.max
+            # Using proximity or full rank window
+            if args.proximity:
+                print "Using proximity window of %s..." % args.proximity
+            else:
+                print "Using full rank2 for all events %s..." % args.max
             found = 0
-            fdr = [0] #zero to avoid using "first" flag for first element
+            fdr = [0]  #zero to avoid using "first" flag for first element
             v_values = []
             for i in xrange(max_events):
                 if args.proximity:
-                    min_chunk = max(0, i-args.proximity/2)
-                    max_chunk = min_chunk+args.proximity
+                    min_chunk = max(0, i - args.proximity / 2)
+                    max_chunk = min_chunk + args.proximity
 
-                elif args.fullrank: #check in the whole set instead of subsets
+                elif args.fullrank:  #check in the whole set instead of subsets
                     min_chunk = 0
                     max_chunk = max_events
 
                 if i % 20 == 0:
-                    print "Event rank1 n=%s. Window rank2: %s-%s"%(i, min_chunk, max_chunk)
+                    print "Event rank1 n=%s. Window rank2: %s-%s" % (i, min_chunk, max_chunk)
 
                 #check if event1 is inside the window of rank2
                 found += _is_in_chunk(rank1[i], list(rank2[min_chunk:max_chunk]))
                 if args.fdr:
                     v_values.append(rank1[i][1])
-                    fdr.append(fdr[-1]+v_values[-1])
+                    fdr.append(fdr[-1] + v_values[-1])
 
                 ratios.append(float(found))
                 events.append([rank1[i], _is_in_chunk(rank1[i], list(rank2[min_chunk:max_chunk]))])
 
-            fdr.pop(0) #remove now useless first item
+            fdr.pop(0)  #remove now useless first item
             #normalize ratios
             ratios = array(ratios)
             ratios /= ratios.shape[0]
-            if args.fdr: #normalize fdr if we are calculating it
+            if args.fdr:  #normalize fdr if we are calculating it
                 fdr = array(fdr)
                 fdr /= fdr.shape[0]
 
-        else: #"equalrank" chunks of same n size in both ranks
+        else:  # "equalrank" chunks of same n size in both ranks
             import sys
+
             for i in xrange(max_events):
-                chunk1 = list(rank1[0:i+1])
-                chunk2 = list(rank2[0:i+1])
+                chunk1 = list(rank1[0:i + 1])
+                chunk2 = list(rank2[0:i + 1])
                 #check if event1 is into chunk2
                 found = 0
                 for event1 in chunk1:
                     found += _is_in_chunk(event1, chunk2)
-                    if i == max_events-1:
+                    if i == max_events - 1:
                         events.append([event1, _is_in_chunk(event1, chunk2)])
                 ratios.append(float(found) / max_events)
                 if i % 20 == 0:
-                    print "%s..."%i,
+                    print "%s..." % i,
                     sys.stdout.flush()
 
             ratios = array(ratios)
-
 
         print "RESULT:", ratios[0:10], "...", ratios[-10:], "length", ratios.shape
         print "Saving in %s" % args.output
@@ -550,19 +576,26 @@ def main():
         if not os.path.exists(args.output):
             os.makedirs(args.output)
 
-        pickle.dump(ratios, open(args.output+"/ratios.%s.%s.pickle" % (str(args.type_rank).replace('-','_'), method_name), 'w'))
+        pickle.dump(ratios,
+                    open(args.output + "/ratios.%s.%s.pickle" % (str(args.type_rank).replace('-', '_'), method_name),
+                         'w'))
 
         print "Saving events... in %s " % args.output
-        pickle.dump(events, open(args.output+"/events.%s.%s.pickle" % (str(args.type_rank).replace('-','_'), method_name), 'w'))
+        pickle.dump(events,
+                    open(args.output + "/events.%s.%s.pickle" % (str(args.type_rank).replace('-', '_'), method_name),
+                         'w'))
 
         print "Saving N1 size... in %s " % args.output
-        pickle.dump(n1[method_name], open(args.output+"/n1.%s.%s.pickle" % (str(args.type_rank).replace('-','_'), method_name), 'w'))
-
+        pickle.dump(n1[method_name],
+                    open(args.output + "/n1.%s.%s.pickle" % (str(args.type_rank).replace('-', '_'), method_name), 'w'))
 
         if args.fdr:
-            #print "FDR:", fdr[0:10], "...", fdr[-10:], "length", fdr.shape
-            pickle.dump(fdr, open("%s/fdr.%s.%s.pickle" % (args.output, method_name, str(args.type_rank).replace('-','_')), 'w'))
-            pickle.dump(v_values, open("%s/fdr.%s.%s_v.pickle" % (args.output, method_name, str(args.type_rank).replace('-','_')), 'w'))
+            # print "FDR:", fdr[0:10], "...", fdr[-10:], "length", fdr.shape
+            pickle.dump(fdr,
+                        open("%s/fdr.%s.%s.pickle" % (args.output, method_name, str(args.type_rank).replace('-', '_')),
+                             'w'))
+            pickle.dump(v_values, open(
+                "%s/fdr.%s.%s_v.pickle" % (args.output, method_name, str(args.type_rank).replace('-', '_')), 'w'))
             plot_fdr(args.output, method_name, fdr)
 
         if "majiq" in method_name:
@@ -573,6 +606,7 @@ def main():
         create_restrict_plot(ranks)
 
     print "Done!"
+
 
 if __name__ == '__main__':
     main()

@@ -18,17 +18,17 @@ def _save_or_show(plotpath, plotname=None):
         if not os.path.exists(plotpath):
             os.makedirs(plotpath)
         plt.savefig("%s/%s.png" % (plotpath, plotname.replace(" ", "_")), bbox_inches='tight')
-        #WNo spaces allowed, underscores!
+        # WNo spaces allowed, underscores!
         plt.clf()
     else:
         plt.show()
 
 
 def get_ecdf(pvalues):
-    #print sorted(pvalues)
-    nbins = max(min(10, len(pvalues)), len(pvalues)/10)
+    # print sorted(pvalues)
+    nbins = max(min(10, len(pvalues)), len(pvalues) / 10)
     hist, bin_edges = np.histogram(pvalues, range=[0, 1], bins=nbins, density=True)
-    return np.cumsum(hist)/len(bin_edges)
+    return np.cumsum(hist) / len(bin_edges)
 
 
 def plot_mappability_zeros(junctions, plotpath, numzeros, plotname):
@@ -38,23 +38,23 @@ def plot_mappability_zeros(junctions, plotpath, numzeros, plotname):
     coverage, meaning that there is probably some mappability bias.
     """
     junction_sum = junctions.sum(axis=1)
-    #Cumulative positional value per junction
-    plt.plot(junction_sum, numzeros/float(junctions.shape[1]), '*')
+    # Cumulative positional value per junction
+    plt.plot(junction_sum, numzeros / float(junctions.shape[1]), '*')
     _save_or_show(plotpath, plotname)
 
 
 def score_ecdf(ecdf):
     "Give a score to a ecdf calculating the deviation from the 45 degree line"
-    return sum(abs(np.linspace(0, 1, num=len(ecdf))-ecdf))
+    return sum(abs(np.linspace(0, 1, num=len(ecdf)) - ecdf))
 
 
 def plot_negbinomial_fit(mean_junc, std_junc, fit_function, plotpath, plotname):
-    #plot the fit of the line 
+    # plot the fit of the line
     plt.xlabel("Mean")
     plt.ylabel("Std")
-    plt.xlim(0, max(mean_junc)*1.1) #adjust the x axis of the plot
-    plt.ylim(0, max(std_junc)*1.1) #adjust the y axis of the plot
-    plt.plot(mean_junc, std_junc, '*') #the mean and std for e very junction that passes the filter
+    plt.xlim(0, max(mean_junc) * 1.1)  # adjust the x axis of the plot
+    plt.ylim(0, max(std_junc) * 1.1)  # adjust the y axis of the plot
+    plt.plot(mean_junc, std_junc, '*')  # the mean and std for e very junction that passes the filter
     plt.plot(mean_junc, fit_function(mean_junc), '-r')
     _save_or_show(plotpath, plotname)
 
@@ -77,8 +77,8 @@ def sample_over_nb(one_over_r, mu, num_samples):
 def get_ztnbin_pval(one_over_r, mu, x):
     r = 1 / one_over_r
     p = __calc_nbin_p(r, mu)
-    nbcdf = nbinom.cdf(x, r, p) #+ nbinom.pmf(x, r, p)
-    ztnb_cdf = (nbcdf - nbinom.pmf(0, r, p))/(1 - nbinom.pmf(0, r, p))
+    nbcdf = nbinom.cdf(x, r, p)  # + nbinom.pmf(x, r, p)
+    ztnb_cdf = (nbcdf - nbinom.pmf(0, r, p)) / (1 - nbinom.pmf(0, r, p))
     return 1 - ztnb_cdf
 
 
@@ -86,14 +86,13 @@ def get_negbinom_pval(one_over_r, mu, x):
     if one_over_r > 0:
         r = 1 / one_over_r
         p = __calc_nbin_p(r, mu)
-        nbcdf = nbinom.cdf(x, r, p) #+ nbinom.pmf(x, r, p)
+        nbcdf = nbinom.cdf(x, r, p)  # + nbinom.pmf(x, r, p)
     else:
         nbcdf = poisson.cdf(x, mu)
     return 1 - nbcdf
 
 
 def calc_pvalues(junctions, one_over_r, indices_list=None):
-
     pvalues = []
     for i, junc in enumerate(junctions):
 
@@ -105,16 +104,15 @@ def calc_pvalues(junctions, one_over_r, indices_list=None):
             jpos = junc[indices_list[i]]
 
         ljunc = len(junc.nonzero()[0])
-        mu = float(junc.sum() - jpos)/float(ljunc-1)
+        mu = float(junc.sum() - jpos) / float(ljunc - 1)
         pval = get_negbinom_pval(one_over_r, mu, jpos)
-#        pval = get_ztnbin_pval(one_over_r, mu, jpos)
+        # pval = get_ztnbin_pval(one_over_r, mu, jpos)
         pvalues.append(pval)
 
     return pvalues
 
 
 def calc_pvalues_poisson(junctions, one_over_r, indices_list=None):
-
     pvalues = []
     for i, junc in enumerate(junctions):
 
@@ -126,7 +124,7 @@ def calc_pvalues_poisson(junctions, one_over_r, indices_list=None):
             jpos = junc[indices_list[i]]
 
         ljunc = len(junc.nonzero()[0])
-        mu = float(junc.sum() - jpos)/float(ljunc-1)
+        mu = float(junc.sum() - jpos) / float(ljunc - 1)
         pval = 1 - poisson.cdf(jpos, mu)
         pvalues.append(pval)
     return pvalues
@@ -142,7 +140,7 @@ def adjust_fit(starting_a, junctions, precision, previous_score, plotpath, indic
     steps = np.append(steps, 0)
     for corrected_a in steps:
 
-        #since we are reducing the "a" from the fit and the problem is too much variability, we
+        # since we are reducing the "a" from the fit and the problem is too much variability, we
         # expect optimization to be getting the "a" below
 
         pvalues = calc_pvalues(junctions, corrected_a, indices)
@@ -154,7 +152,7 @@ def adjust_fit(starting_a, junctions, precision, previous_score, plotpath, indic
         if logger:
             logger.info("New Score %.5f" % score)
         if previous_score < score:
-         #the best fit are previous_a and previous_score
+            # the best fit are previous_a and previous_score
             if previous_a == -1:
                 return corrected_a, score, ecdf, pvalues
             else:
@@ -167,12 +165,12 @@ def adjust_fit(starting_a, junctions, precision, previous_score, plotpath, indic
         previous_score = score
         previous_ecdf = ecdf
         previous_pvalues = pvalues
-        #pvalues = []
+        # pvalues = []
 
     if logger:
         logger.warning("WARNING: Something is wrong, please contact Biociphers!")
     return corrected_a, score, ecdf, pvalues
-    #this return should not be hit
+    # this return should not be hit
 
 
 def plot_fitting(ecdf, plotpath, extra=[], title='', title_extra=[], plotname=None):
@@ -199,7 +197,6 @@ def fit_nb(junctionl, outpath, plotpath, nbdisp=0.1, logger=None):
 
     for jdx, jun in enumerate(junctionl):
         if np.count_nonzero(jun) >= 5 and jun.sum() >= 10:
-
             filtered.append(jun)
 
     junctions = np.array(filtered)
@@ -212,13 +209,13 @@ def fit_nb(junctionl, outpath, plotpath, nbdisp=0.1, logger=None):
         jji = jj.nonzero()
         indices[i] = np.random.choice(jji[0])
 
-    #linear regression, retrieve the a and the b plus
+    # linear regression, retrieve the a and the b plus
     one_over_r0, b = np.polyfit(mean_junc, std_junc, 1)
 
     pvalues = calc_pvalues(junctions, one_over_r0, indices)
     ecdf = get_ecdf(pvalues)
     plot_fitting(ecdf, plotpath, title="NON-Corrected ECDF 1\_r %s" % one_over_r0)
-    #plot_negbinomial_fit(mean_junc, std_junc, fit_function, plotpath, "Before correction")
+    # plot_negbinomial_fit(mean_junc, std_junc, fit_function, plotpath, "Before correction")
     score = score_ecdf(ecdf)
 
     precision_values = [0.1, 0.01, 0.001]
@@ -230,9 +227,9 @@ def fit_nb(junctionl, outpath, plotpath, nbdisp=0.1, logger=None):
                                                       indices=indices, logger=logger)
         if logger:
             logger.info("Corrected to %.5f with precision %s. Current score is %.5f" % (one_over_r, precision, score))
-        if i+1 != len(precision_values):
-        #go "up" in the scale so we dont miss better solution
-            one_over_r += precision-precision_values[i+1]
+        if i + 1 != len(precision_values):
+            #go "up" in the scale so we dont miss better solution
+            one_over_r += precision - precision_values[i + 1]
             pvalues = calc_pvalues(junctions, one_over_r, indices)
             ecdf = get_ecdf(pvalues)
             score = score_ecdf(ecdf)

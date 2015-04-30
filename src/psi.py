@@ -1,27 +1,31 @@
 import argparse
 from collections import defaultdict
+
 from scipy.special import gamma, gammaln
-#deprecation WARNING comes from this import!!!
+
+
+
+# deprecation WARNING comes from this import!!!
 from scipy.stats import binom_test
 from numpy.random import dirichlet
 import numpy as np
 import sys
 import cPickle as pickle
 import matplotlib.pyplot as plt
-import analysis.filter as majiq_filter
-import analysis.adjustdelta as majiq_delta
-import analysis.sample as majiq_sample
+import src.filter as majiq_filter
+import src.adjustdelta as majiq_delta
+import src.sample as majiq_sample
 import operator
 import os
 
 """
 Calculate and manipulate PSI and Delta PSI values
 """
-BSIZE = 0.025 #TODO To parameters
+BSIZE = 0.025  # TODO To parameters
 BINS = np.arange(0, 1, BSIZE)
 # The bins for PSI values. With a BSIZE of 0.025, we have 40 BINS
-BINS_CENTER = np.arange(0+BSIZE/2, 1, BSIZE)
-#The center of the previous BINS. This is used to calculate the mean value of each bin.
+BINS_CENTER = np.arange(0 + BSIZE / 2, 1, BSIZE)
+# The center of the previous BINS. This is used to calculate the mean value of each bin.
 
 
 def plot_matrix(matrix, my_title, plotname, plotpath):
@@ -62,7 +66,7 @@ def median_psi(junctions, discardzeros=True):
 def empirical_delta_psi(lsv_list1, lsv_list2, logger=None):
     """Simple PSI calculation without involving a dirichlet prior, coming from reads from junctions"""
 
-#    if  not logger: logger.info("Calculating PSI for 'best set'...")
+    #    if  not logger: logger.info("Calculating PSI for 'best set'...")
 
     delta_psi = []
     delta_psi_ir = []
@@ -84,16 +88,16 @@ def empirical_delta_psi(lsv_list1, lsv_list2, logger=None):
         sys.stdout.flush()
 
         delta_psi.append(psi1 - psi2)
- #   if logger: logger.info("Calculating delta PSI for 'best set'...")
-    return delta_psi 
+        #   if logger: logger.info("Calculating delta PSI for 'best set'...")
+    return delta_psi
 
 
 def simple_psi(inc, exc):
     """Simple PSI calculation without involving a dirichlet prior, coming from reads from junctions"""
-    psi = inc/(exc+inc)
+    psi = inc / (exc + inc)
     psi[np.isnan(psi)] = 0.5
     #if NaN, is because exc+inc = 0. If we know nothing, then we don't know if its 0 (exclusion) or 1 (inclusion)
-    return psi 
+    return psi
 
 
 def reads_given_psi_lsv(lsv, psi_space):
@@ -105,9 +109,9 @@ def reads_given_psi_lsv(lsv, psi_space):
         for pidx, smpl in enumerate(junc):
             bin_test = [binom_test(smpl, lsv[:, pidx].sum(), p=x) for x in psi_space]
             bin_test = np.array(bin_test) + 1e-10
-            total_psi[pidx] = (bin_test/bin_test.sum())
+            total_psi[pidx] = (bin_test / bin_test.sum())
         total_psi = np.mean(total_psi, axis=0)
-        psi[idx] = total_psi/total_psi.sum()
+        psi[idx] = total_psi / total_psi.sum()
 
     return psi
 
@@ -121,10 +125,10 @@ def reads_given_psi(inc_samples, exc_samples, psi_space):
     for i in xrange(inc.shape[0]):
         event = []
         for psi_val in psi_space:
-            event.append(binom_test(inc[i], exc[i]+inc[i], p=psi_val))
+            event.append(binom_test(inc[i], exc[i] + inc[i], p=psi_val))
 
         ret.append(np.array(event) / sum(event))
-    
+
     return np.array(ret).reshape(-1, len(psi_space))
 
 
@@ -137,13 +141,13 @@ class DirichletCalc:
         k.extend(alpha)
         key = " ".join(map(str, k))
         if self.cache[key]:
-        #try to figure out if we already calculated this pdf
-            return self.cache[key] 
-        else: 
+            #try to figure out if we already calculated this pdf
+            return self.cache[key]
+        else:
             #formula taken from stackoverflow "How to calculate dirichlet PDF", author based it on
             #  Wikipedia's PDF definition
             ret = gamma(sum(alpha)) / reduce(operator.mul, [gamma(a) for a in alpha]) \
-                * reduce(operator.mul, [x[i] ** (alpha[i]-1.0) for i in xrange(len(alpha))])
+                  * reduce(operator.mul, [x[i] ** (alpha[i] - 1.0) for i in xrange(len(alpha))])
             self.cache[key] = ret
             return ret
 
@@ -152,7 +156,7 @@ def dirichlet_pdf(x, alpha):
     """Returns a Dirichlet PDF function"""
     alphap = alpha - 1
     c = np.exp(gammaln(alpha.sum()) - gammaln(alpha).sum())
-    dir_res = c * (x**alphap).prod(axis=1)
+    dir_res = c * (x ** alphap).prod(axis=1)
     dir_res = np.array(dir_res)
     psi = dir_res / float(dir_res.sum())
 
@@ -171,14 +175,14 @@ def lsv_psi(samples_events, alpha, n, debug):
     """
 
     psi_scores = []
-    dircalc = DirichletCalc() 
+    dircalc = DirichletCalc()
     for i, lsv in enumerate(samples_events):
 
         if i % 50 == 0:
             print "event %s..." % i,
             sys.stdout.flush()
         if 0 < debug == i: break
-        psi = np.zeros(shape=(lsv.shape[0],BINS.shape[0]), dtype=np.float)
+        psi = np.zeros(shape=(lsv.shape[0], BINS.shape[0]), dtype=np.float)
         #if debug: print "Paired samples to dirichlet..."
         #sampling PSI by pairing the samples of the previous step sequentially
         for idx, junc in enumerate(lsv):
@@ -186,19 +190,19 @@ def lsv_psi(samples_events, alpha, n, debug):
             acum_samples = np.zeros(shape=(BINS.shape[0]))
             aggr = np.zeros(shape=(junc.shape[0]))
             for xidx, xx in enumerate(lsv):
-                if idx == xidx : continue
-                aggr += xx+alpha
+                if idx == xidx: continue
+                aggr += xx + alpha
 
             samples = np.ndarray(shape=(2, junc.shape[0]))
             samples[0, :] = junc + alpha
             samples[1, :] = aggr
 
-            total_psi = np.zeros(shape=(n, BINS.shape[0]),dtype=np.float)
+            total_psi = np.zeros(shape=(n, BINS.shape[0]), dtype=np.float)
             for pidx, paired_samples in enumerate(samples.T):
-                total_psi[pidx] = dirichlet_pdf(np.array([BINS_CENTER, 1-BINS_CENTER]).T, paired_samples)
+                total_psi[pidx] = dirichlet_pdf(np.array([BINS_CENTER, 1 - BINS_CENTER]).T, paired_samples)
 
             total_psi = np.median(total_psi, axis=0)
-            psi[idx] = total_psi/total_psi.sum()
+            psi[idx] = total_psi / total_psi.sum()
 
         psi_scores.append(psi)
 
@@ -210,7 +214,7 @@ def calc_psi(inc_samples, exc_samples, name, alpha, n, debug, psiparam):
     Given a set of matching inclusion and exclusion samples, calculate
     psi, save it in disk, and return the psi-per-juntion matrix
     """
-    
+
     print inc_samples.shape
     samples = np.vstack([inc_samples, exc_samples]).reshape(2, inc_samples.shape[0], inc_samples.shape[1])
     psi_scores = calc_dirichlet(alpha, n, samples, debug=debug, psiparam=psiparam)
@@ -227,7 +231,7 @@ def mean_psi(psi_events):
     for psi_dist in psi_events:
         #print "PSI_DIST", psi_dist
         #print "sum(PSI_DIST)", sum(psi_dist)
-        ret.append(sum(psi_dist*BINS_CENTER))
+        ret.append(sum(psi_dist * BINS_CENTER))
 
     return np.array(ret)
 
@@ -235,13 +239,13 @@ def mean_psi(psi_events):
 def calc_dirichlet(alpha, n, samples_events, debug=False, psiparam=False):
     "Expects 3 dimensional matrix in samples_events"
     psi_matrix = []
-    dircalc = DirichletCalc() 
+    dircalc = DirichletCalc()
     if psiparam:
         for i, event_samples in enumerate(np.rollaxis(samples_events, 1)):
-        #The second dimension of the matrix corresponds to the paired samples per event (3rd dimension) for different
-        # experiments (1st dimension)
+            #The second dimension of the matrix corresponds to the paired samples per event (3rd dimension) for different
+            # experiments (1st dimension)
             if i % 5 == 0:
-                print "event %s..."%i,
+                print "event %s..." % i,
                 sys.stdout.flush()
 
             if 0 < debug == i:
@@ -249,19 +253,19 @@ def calc_dirichlet(alpha, n, samples_events, debug=False, psiparam=False):
             #if debug: print "Paired samples to dirichlet..."
             #sampling PSI by pairing the samples of the previous step sequentially
             total_acum = 0.
-            acum_samples = np.array([0]*BINS)
+            acum_samples = np.array([0] * BINS)
             for h, paired_samples in enumerate(event_samples.T):
-                dir_pdf = [dircalc.pdf([x, 1-x], alpha+paired_samples) for x in BINS_CENTER]
+                dir_pdf = [dircalc.pdf([x, 1 - x], alpha + paired_samples) for x in BINS_CENTER]
                 acum_samples += dir_pdf
-                total_acum += sum(dir_pdf) 
+                total_acum += sum(dir_pdf)
 
-            #if debug: print "Dividing by total acum..."
-            psi_matrix.append(acum_samples/total_acum)
+                #if debug: print "Dividing by total acum..."
+            psi_matrix.append(acum_samples / total_acum)
             #print "Junction %s PSI distribution: %s sum_N: %s"%(i, psi_matrix[-1], sum(psi_matrix[-1]))
     else:
         for i, event_samples in enumerate(np.rollaxis(samples_events, 1)):
-        #we iterate through the second dimension of the matrix, which corresponds to the paired samples per event
-        # for different experiments
+            #we iterate through the second dimension of the matrix, which corresponds to the paired samples per event
+            # for different experiments
             #This is sampling the PSI. Instead of doing this, we want to fit a parametric form.
             if i % 50 == 0:
                 print "event %s..." % i,
@@ -271,13 +275,13 @@ def calc_dirichlet(alpha, n, samples_events, debug=False, psiparam=False):
                 break
 
             if len(event_samples.shape) == 1:
-            #only one sample (this is only used if bootstrapping of reads is deactivated)
-                event_psi_samples = dirichlet(event_samples+alpha, n)
+                #only one sample (this is only used if bootstrapping of reads is deactivated)
+                event_psi_samples = dirichlet(event_samples + alpha, n)
             else:
                 event_psi_samples = []
                 #sampling PSI by pairing the samples of the previous step sequentially (to gain execution time)
                 for paired_samples in event_samples.T:
-                    event_psi_samples.extend(dirichlet(paired_samples+alpha, n))
+                    event_psi_samples.extend(dirichlet(paired_samples + alpha, n))
 
             #discretization step. Get the psi samples and transform them into a histogram-like distribution
             event_psi_discrete = []
@@ -287,7 +291,7 @@ def calc_dirichlet(alpha, n, samples_events, debug=False, psiparam=False):
                 #extend because:  If `bins` is a sequence,it defines the bin edges, including the rightmost edge,
                 # allowing for non-uniform bin widths (form histogram docs)
                 counts, limits = np.histogram(psi_dist, bins=my_bins)
-                event_psi_discrete.append(counts/float(sum(counts)))
+                event_psi_discrete.append(counts / float(sum(counts)))
 
             #print event_psi_discrete[-1], len(event_psi_discrete), len(event_psi_discrete[-1])
             psi_matrix.append(event_psi_discrete)
@@ -304,10 +308,9 @@ def __load_default_prior():
 
 
 def gen_prior_matrix(pip, lsv_exp1, lsv_exp2, output, numbins=20, defaultprior=False):
-
     #Start prior matrix
     pip.logger.info("Calculating prior matrix...")
-    psi_space = np.linspace(0, 1-pip.binsize, num=numbins) + pip.binsize/2
+    psi_space = np.linspace(0, 1 - pip.binsize, num=numbins) + pip.binsize / 2
     if defaultprior:
         def_mat = __load_default_prior()
         prior_matrix = [def_mat, def_mat]
@@ -375,14 +378,14 @@ def gen_prior_matrix(pip, lsv_exp1, lsv_exp2, output, numbins=20, defaultprior=F
                     prior_matrix[prior_idx] = prior_matrix[0]
                 continue
 
-            pip.logger.info("Parametrizing 'best set'...%s",  prior_idx)
+            pip.logger.info("Parametrizing 'best set'...%s", prior_idx)
             mixture_pdf = majiq_delta.adjustdelta_lsv(best_delta_psi, output, plotpath=pip.plotpath,
                                                       title=" ".join(pip.names), numiter=pip.iter,
                                                       breakiter=pip.breakiter, njunc=nj, logger=pip.logger)
             #pickle.dump(mixture_pdf, open("%s%s_%s_bestset_junc_%s.pickle"%(output, pip.names[0], pip.names[1], nj), 'w'))
             pmat = []
             for i in xrange(numbins):
-                pmat.extend(mixture_pdf[numbins-i:(numbins*2)-i])
+                pmat.extend(mixture_pdf[numbins - i:(numbins * 2) - i])
 
             prior_matrix[prior_idx] = np.array(pmat).reshape(numbins, -1)
             if np.isnan(prior_matrix[prior_idx]).any():
@@ -396,7 +399,7 @@ def gen_prior_matrix(pip, lsv_exp1, lsv_exp2, output, numbins=20, defaultprior=F
                                      " order to use a precomputed prior")
             else:
                 prior_matrix[prior_idx] /= sum(prior_matrix[prior_idx])
-             #renormalize so it sums 1
+                #renormalize so it sums 1
 
         plot_matrix(prior_matrix[prior_idx], "Prior Matrix , version %s" % prior_idx,
                     "prior_matrix_jun_%s" % nj, pip.plotpath)
@@ -409,11 +412,11 @@ def gen_prior_matrix(pip, lsv_exp1, lsv_exp2, output, numbins=20, defaultprior=F
 
 def __extract_cassette(delta_psi, info, psi1, psi2):
     cas = "|1e1.1|1e2.1"
-#    print "EXTRACT"
+    #    print "EXTRACT"
     listd = []
     for idx, linfo in enumerate(info):
-#        print "linfo",linfo[2]
-#        if len(linfo[2].split('|')) == 3 and linfo[2].find('e0')==-1:
+        #        print "linfo",linfo[2]
+        #        if len(linfo[2].split('|')) == 3 and linfo[2].find('e0')==-1:
         if linfo[2][1:] == cas:
             listd.append(delta_psi[idx][0])
 
@@ -424,10 +427,10 @@ def __extract_cassette(delta_psi, info, psi1, psi2):
     out = open('./psi_delta0.tab', 'w+')
     for idx, linfo in enumerate(info):
         if linfo[2][1:] == cas:
-#        if len(linfo[2].split('|')) == 3 and linfo[2].find('e0')==-1:
+            #        if len(linfo[2].split('|')) == 3 and linfo[2].find('e0')==-1:
             lsv = delta_psi[idx]
             if 0.0125 > lsv[0] >= -0.0125:
-#                print psi1, idx, np.sum(psi1[idx][0]), np.sum(psi1[0][idx])
+                #                print psi1, idx, np.sum(psi1[idx][0]), np.sum(psi1[0][idx])
                 val1 = float(np.sum(psi1[0][idx][0])) / float(np.sum(psi1[0][idx]))
                 if np.isnan(val1):
                     val1 = 0.5
@@ -462,10 +465,10 @@ def main():
 
     TODO: Many functions from this script will be extracted for general usage in the pipeline. 
     """
-    parser = argparse.ArgumentParser() 
+    parser = argparse.ArgumentParser()
     parser.add_argument('samples', nargs='+', help='Path for samples of conditions 1 to N')
-    parser.add_argument('--n', default=1, type=int, help='Number of PSI samples per sample paired') 
-    parser.add_argument('--alpha', default=0.5, type=float, help='Alpha hyperparameter for the dirichlet distribution') 
+    parser.add_argument('--n', default=1, type=int, help='Number of PSI samples per sample paired')
+    parser.add_argument('--alpha', default=0.5, type=float, help='Alpha hyperparameter for the dirichlet distribution')
     parser.add_argument('--output', required=True, help="Path to save the results to.")
     parser.add_argument('--name1', default='Inc')
     parser.add_argument('--name2', default='Exc')
@@ -477,9 +480,9 @@ def main():
         samples.append(pickle.load(open(sample)))
 
     samples = np.vstack(samples)
-    print "Calculating PSI for %s and %s..."%(args.name1, args.name2)
-    psi_scores = calc_dirichlet(args.alpha, args.n, samples)  
-    pickle.dump(psi_scores, open("%s%s_vs_%s_psivalues.pickle"%(args.output, args.name1, args.name2), 'w'))
+    print "Calculating PSI for %s and %s..." % (args.name1, args.name2)
+    psi_scores = calc_dirichlet(args.alpha, args.n, samples)
+    pickle.dump(psi_scores, open("%s%s_vs_%s_psivalues.pickle" % (args.output, args.name1, args.name2), 'w'))
     print "Done."
 
 

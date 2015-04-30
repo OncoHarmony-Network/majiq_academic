@@ -1,16 +1,18 @@
-from gene import Gene, Transcript
-from exon import detect_exons
-from grimoire.junction import Junction
-import grimoire.exon as majiq_exons
+import pickle
+import numpy as np
+import random
 import pysam
 import gc
 import os
-import mglobals
 from collections import namedtuple
 import gzip
 import urllib
-import cPickle as pickle
-import numpy as np
+import mglobals
+from voila.io_voila import VoilaInput
+from voila.vlsv import VoilaLsv
+from grimoire.gene import Gene, Transcript
+import grimoire.exon as majiq_exons
+from grimoire.junction import Junction
 
 
 def create_if_not_exists(my_dir, logger=False):
@@ -25,7 +27,6 @@ def create_if_not_exists(my_dir, logger=False):
 
 
 def load_bin_file(filename, logger=None):
-
     if not os.path.exists(filename):
         if logger:
             logger.error('Path %s for loading does not exist' % filename)
@@ -34,23 +35,23 @@ def load_bin_file(filename, logger=None):
     fop = open(filename, 'rb')
 
     fast_pickler = pickle.Unpickler(fop)
-#    fast_pickler.fast = 1
+    # fast_pickler.fast = 1
     data = fast_pickler.load()
     fop.close()
     return data
 
 
 def dump_bin_file(data, filename):
-
     with open(filename, 'wb') as ofp:
         fast_pickler = pickle.Pickler(ofp, protocol=2)
-        #fast_pickler.fast = 1
+        # fast_pickler.fast = 1
         fast_pickler.dump(data)
-#         pickle.dump(data, protocol=2)
+
+
+# pickle.dump(data, protocol=2)
 
 
 def __cross_junctions(read):
-
     """
       This part will parse the jI from STAR
       # Column 17: jI:B:I,Start1,End1,Start2,End2,... Start and End of introns for all junctions (1- based)
@@ -63,15 +64,15 @@ def __cross_junctions(read):
         list_junc = read.opt('jI')
         if len(list_junc) > 1 and list_junc[0] != -1:
             for idx in range(0, len(list_junc), 2):
-                junc_start = int(list_junc[idx])-1
-                junc_end = int(list_junc[idx+1])+1
+                junc_start = int(list_junc[idx]) - 1
+                junc_end = int(list_junc[idx + 1]) + 1
                 jlist.append((junc_start, junc_end))
-            #end for idx ...
+            # end for idx ...
             cross = True
-        #end else ...
+            # end else ...
     except KeyError:
-#    if len(jlist) != 0: print "STAR ::",jlist
-#    print"THIS IS NOT a WELL defined STAR output"
+        # if len(jlist) != 0: print "STAR ::",jlist
+        # print"THIS IS NOT a WELL defined STAR output"
         off = 0
         for op, num in read.cigar:
             if op in [0, 5, 6, 7, 8]:
@@ -81,9 +82,9 @@ def __cross_junctions(read):
             elif op == 2:
                 off += num
             elif op == 3:
-                jlist.append((read.pos+off, read.pos+off+num+1))
+                jlist.append((read.pos + off, read.pos + off + num + 1))
                 off += num
-#    if len(jlist) !=0 : print "NOSTAR:", jlist, read.cigar
+                #    if len(jlist) !=0 : print "NOSTAR:", jlist, read.cigar
 
     return cross, jlist
 
@@ -104,7 +105,7 @@ def __get_num_reads(read):
         nreads = int(read.opt('HI'))
     except KeyError:
         nreads = 1
-#    return 1
+    # return 1
     return nreads
 
 
@@ -115,11 +116,9 @@ def count_mapped_reads(filename, exp_idx):
 
 
 def is_neg_strand(read):
-
-
     res = False
     if read.flag & 0x10 == 0x10:
-#        print "FLAG",read.flag
+        # print "FLAG",read.flag
         res = True
 
     if mglobals.strand_specific:
@@ -139,7 +138,6 @@ def get_junc_from_list(coords, list_elem):
 
 
 def rnaseq_intron_retention(filenames, gene_list, readlen, chrom, permissive=True, logging=None):
-
     samfile = [pysam.Samfile(xx, "rb") for xx in filenames]
 
     for strand in ('+', '-'):
@@ -153,9 +151,8 @@ def rnaseq_intron_retention(filenames, gene_list, readlen, chrom, permissive=Tru
 
                 offset = readlen - 8
                 intron_len = intron_end - intron_start
-                if intron_len <= 0 :
+                if intron_len <= 0:
                     continue
-
 
                 # we want to take just the middle part not the reads that are crossing the junctions
                 # since 8 is the overlapping number of nucleotites we accept, the inner part is the
@@ -166,8 +163,8 @@ def rnaseq_intron_retention(filenames, gene_list, readlen, chrom, permissive=Tru
                 bmap = np.ones(shape=intron_len, dtype=bool)
                 index_list = []
                 for ii in range(10):
-                    start = ii*chunk_len
-                    end = min(intron_len, (ii + 1)*chunk_len)
+                    start = ii * chunk_len
+                    end = min(intron_len, (ii + 1) * chunk_len)
                     index_list.append((start, end))
 
                 intron_parts = np.zeros(shape=10, dtype=np.float)
@@ -179,7 +176,7 @@ def rnaseq_intron_retention(filenames, gene_list, readlen, chrom, permissive=Tru
                     try:
                         read_iter = samfile[exp_index].fetch(chrom, intron_start + 8, intron_end - 8)
                     except ValueError:
-                        #logging.info('There are no reads in %s:%d-%d' % (chrom, ex1_end, ex1_end+1))
+                        # logging.info('There are no reads in %s:%d-%d' % (chrom, ex1_end, ex1_end+1))
                         continue
                     for read in read_iter:
                         is_cross, junc_list = __cross_junctions(read)
@@ -193,7 +190,6 @@ def rnaseq_intron_retention(filenames, gene_list, readlen, chrom, permissive=Tru
                             if not (0 <= intron_idx <= intron_len):
                                 continue
                             bmap[intron_idx] = False
-
 
                         if is_cross or strand_read != strand or not unique:
                             continue
@@ -226,7 +222,7 @@ def rnaseq_intron_retention(filenames, gene_list, readlen, chrom, permissive=Tru
                     cov1 = junc1.get_coverage(exp_index).sum()
                     cov2 = junc2.get_coverage(exp_index).sum()
 
-                    #intron_parts /= chunk_len
+                    # intron_parts /= chunk_len
 
                     intron_body_covered = False if permissive else True
 
@@ -239,13 +235,13 @@ def rnaseq_intron_retention(filenames, gene_list, readlen, chrom, permissive=Tru
                             elif num_positions == 0:
                                 continue
                             else:
-                                val = float(nii)/num_positions
+                                val = float(nii) / num_positions
                             if val >= mglobals.MIN_INTRON:
                                 intron_body_covered = True
                                 break
                     else:
                         for ii in range(10):
-                        #for ii in intron_parts:
+                            # for ii in intron_parts:
                             #num_positions = np.count_nonzero(bmap[index_list[ii][0]:index_list[ii][1]])
                             num_positions = np.count_nonzero(bmap[index_list[ii][0]:index_list[ii][1]])
                             nii = intron_parts[ii]
@@ -254,7 +250,7 @@ def rnaseq_intron_retention(filenames, gene_list, readlen, chrom, permissive=Tru
                             elif num_positions == 0:
                                 continue
                             else:
-                                val = float(nii)/num_positions
+                                val = float(nii) / num_positions
                             if val < mglobals.MIN_INTRON:
                                 intron_body_covered = False
                                 break
@@ -287,7 +283,6 @@ def rnaseq_intron_retention(filenames, gene_list, readlen, chrom, permissive=Tru
 
 
 def read_sam_or_bam(filenames, gene_list, readlen, chrom, nondenovo=False, logging=None):
-
     counter = [0] * 6
     samfile = [pysam.Samfile(xx, "rb") for xx in filenames]
     temp_ex = []
@@ -333,8 +328,8 @@ def read_sam_or_bam(filenames, gene_list, readlen, chrom, nondenovo=False, loggi
 
                     if not is_cross:
                         continue
-                    nc = read.seq.count('C') + read.seq.count('c') 
-                    ng = read.seq.count('g') + read.seq.count('G') 
+                    nc = read.seq.count('C') + read.seq.count('c')
+                    ng = read.seq.count('g') + read.seq.count('G')
                     gc_content = float(nc + ng) / float(len(read.seq))
                     for (junc_start, junc_end) in junc_list:
                         if junc_start - r_start > readlen:
@@ -363,8 +358,8 @@ def read_sam_or_bam(filenames, gene_list, readlen, chrom, nondenovo=False, loggi
                                     junctions.append((junc_start, '5prime', jj))
                                     junctions.append((junc_end, '3prime', jj))
                                 break
-                            #end elif junc_start == ...
-                        #end for jj in j_list
+                                # end elif junc_start == ...
+                        # end for jj in j_list
 
                         if not found:
                             if nondenovo:
@@ -380,8 +375,8 @@ def read_sam_or_bam(filenames, gene_list, readlen, chrom, nondenovo=False, loggi
                                         junctions.append((junc_end, '3prime', jnc))
                                     junc = jnc
                                     break
-                                #end if (j.start) == ...
-                            #end for (coord,t,j) ...
+                                    # end if (j.start) == ...
+                            # end for (coord,t,j) ...
                             if junc is None:
                                 '''mark a new junction '''
                                 bb = gne.check_antisense_junctions(junc_start, junc_end)
@@ -391,11 +386,11 @@ def read_sam_or_bam(filenames, gene_list, readlen, chrom, nondenovo=False, loggi
                                     junc.update_junction_read(exp_index, nreads, r_start, gc_content, unique)
                                     junctions.append((junc_start, '5prime', junc))
                                     junctions.append((junc_end, '3prime', junc))
-                        #end if not found ...
-                    #end for junc ...
-    #            print "JJJunctions", junctions
+                                    #end if not found ...
+                                    #end for junc ...
+                                    #            print "JJJunctions", junctions
             if len(junctions) > 0:
-                detect_exons(gne, junctions, None)
+                majiq_exons.detect_exons(gne, junctions, None)
             gne.prepare_exons()
 
     for ss in samfile:
@@ -404,19 +399,18 @@ def read_sam_or_bam(filenames, gene_list, readlen, chrom, nondenovo=False, loggi
 
     logging.debug("INVALID JUNC", counter[0])
     logging.debug("READ WRONG GENE", counter[1])
-    logging.debug("READ IN GENE",    counter[2])
+    logging.debug("READ IN GENE", counter[2])
     logging.debug("READ FOUND JUNC", counter[3])
-    logging.debug("READ NEW JUNC",   counter[4])
-    logging.debug("READ ALL JUNC",   counter[5])
+    logging.debug("READ NEW JUNC", counter[4])
+    logging.debug("READ ALL JUNC", counter[5])
     logging.debug("Non Unique", non_unique_num)
-            
+
     logging.debug("Skipped genes without exons", skip_gene)
     logging.debug(" Non skipped", non_skip)
-    return 
+    return
 
 
 def read_bed_pcr(filename, list_genes):
-    
     input_f = open(filename, 'r')
     readlines = input_f.readlines()
     alt_exon = []
@@ -499,14 +493,14 @@ def __parse_gff3(filename):
 
     Supports transparent gzip decompression.
     """
-    #Parse with transparent decompression
+    # Parse with transparent decompression
     open_func = gzip.open if filename.endswith(".gz") else open
     with open_func(filename) as infile:
         for line in infile:
             if line.startswith("#"):
                 continue
             parts = line.strip().split("\t")
-            #If this fails, the file format is not standard-compatible
+            # If this fails, the file format is not standard-compatible
             assert len(parts) == len(gffInfoFields)
             #Normalize data
             normalized_info = {
@@ -525,7 +519,7 @@ def __parse_gff3(filename):
             yield GFFRecord(**normalized_info)
 
 
-def _prepare_and_dump(genes, logging=None):
+def _prepare_and_dump_old(genes, logging=None):
     n_genes = 0
     for chrom in genes.keys():
         temp_ex = []
@@ -543,6 +537,43 @@ def _prepare_and_dump(genes, logging=None):
         create_if_not_exists(temp_dir)
         # ipdb.set_trace()
         # objgraph.show_most_common_types(limit=20)
+        if not logging is None:
+            logging.info("Creating temporal annotation %s" % chrom)
+        fname = '%s/annot_genes.pkl' % temp_dir
+        dump_bin_file(genes[chrom], fname)
+
+    tmp_chrom = "%s/tmp/chromlist.pkl" % mglobals.outDir
+    dump_bin_file(genes.keys(), tmp_chrom)
+    if not logging is None:
+        logging.debug("Number of Genes", n_genes)
+
+
+def _prepare_and_dump(genes, nchunks, logging=None):
+    n_genes = 0
+
+    list_genes = sorted(mglobals.gene_tlb.values())
+
+    for gg in list_genes:
+
+    for chrom in genes.keys():
+        temp_ex = []
+        for strand, gg in genes[chrom].items():
+            n_genes += len(gg)
+            genes[chrom][strand] = sorted(gg)
+            for gene in genes[chrom][strand]:
+                gene.collapse_exons()
+                temp_ex.extend(gene.get_exon_list())
+        if not logging is None:
+            logging.info("Calculating gc_content chromosome %s........." % chrom)
+        majiq_exons.set_exons_gc_content(chrom, temp_ex)
+        gc.collect()
+        temp_dir = "%s/tmp/%s" % (mglobals.outDir, chrom)
+        create_if_not_exists(temp_dir)
+        # ipdb.set_trace()
+        # objgraph.show_most_common_types(limit=20)
+
+
+
         if not logging is None:
             logging.info("Creating temporal annotation %s" % chrom)
         fname = '%s/annot_genes.pkl' % temp_dir
@@ -599,7 +630,7 @@ def read_gff(filename, pcr_filename, logging=None):
             except KeyError:
                 if not logging is None:
                     logging.info("Error, incorrect gff. mRNA %s doesn't have valid gene %s"
-                                  % (transcript_name, parent))
+                                 % (transcript_name, parent))
                 raise
 
         elif record.type == 'exon':
@@ -614,8 +645,8 @@ def read_gff(filename, pcr_filename, logging=None):
                 if not logging is None:
                     logging.info("Error, incorrect gff. exon %s doesn't have valid mRNA %s" % (record.attributes['ID'],
                                                                                                parent_tx_id))
-        #end elif
-    #end for
+                    # end elif
+    # end for
     for tid, trcpt in trcpt_id_dict.items():
 
         exon_list = trcpt.prepare_exon_list()
@@ -634,7 +665,7 @@ def read_gff(filename, pcr_filename, logging=None):
         junc = gn.new_annotated_junctions(pre_end, None, trcpt)
         pre_txex.add_5prime_junc(junc)
 
-    #end for
+    # end for
     _prepare_and_dump(all_genes, logging)
     if pcr_filename is not None:
         read_bed_pcr(pcr_filename, all_genes)
@@ -642,3 +673,50 @@ def read_gff(filename, pcr_filename, logging=None):
     chr_list = all_genes.keys()
     del all_genes
     return chr_list
+
+
+# Quantifier i/o
+def load_data_lsv(path, group_name, logger=None):
+    """Load data from the preprocess step. Could change to a DDBB someday"""
+    data = pickle.load(open(path))
+    lsv_cov_list = []
+    lsv_gc = []
+    lsv_info = []
+    const_info = []
+    num_pos = data[1][0].junction_list.shape[1]
+
+    meta_info = data[0]
+    meta_info['group'] = group_name
+    for lsv in data[1]:
+        try:
+            lsv_info.append([lsv.coords, lsv.id, lsv.type, 0, lsv.visual])
+        except AttributeError, e:
+            lsv_info.append([lsv.coords, lsv.id, lsv.type, 0])
+
+        cov = lsv.junction_list.toarray()
+        lsv_cov_list.append(cov)
+        gc = lsv.gc_factor.toarray()
+        lsv_gc.append(gc)
+
+    clist = random.sample(data[2], min(5000, len(data[2])))
+    const_list = np.zeros(shape=(len(clist), num_pos), dtype=np.dtype('int'))
+    const_gc = np.zeros(shape=(len(clist), num_pos), dtype=np.dtype('float'))
+    for cidx, const in enumerate(clist):
+        const_info.append(const.id)
+        const_list[cidx, :] = const.coverage.toarray()
+        const_gc[cidx, :] = const.gc_factor.toarray()
+
+    return meta_info, [lsv_cov_list, lsv_info, lsv_gc], [const_list, const_info, const_gc]
+
+
+def dump_lsvs_voila(pickle_path, posterior_matrix, lsvs_info, meta_info, psi_list1=None, psi_list2=None):
+    """Create VoilaLSVs objects readable by voila."""
+    vlsvs = []
+    psi1, psi2 = None, None
+    for ii, bins in enumerate(posterior_matrix):
+        lsv_graphic = lsvs_info[ii][-1]
+        if psi_list1:
+            psi1, psi2 = psi_list1[ii], psi_list2[ii]
+        vlsvs.append(VoilaLsv(bins, lsv_graphic=lsv_graphic, psi1=psi1, psi2=psi2))
+
+    pickle.dump(VoilaInput(vlsvs, meta_info), open(pickle_path, 'w'))

@@ -1,23 +1,26 @@
 import sys
 from random import choice
+
 import numpy as np
 from scipy.stats import pearsonr
 import matplotlib.pyplot as plt
-import analysis.polyfitnb as majiq_fit
+
+import src.polyfitnb as majiq_fit
+
 
 """
 Sampling from junctions using a Negative Binomial model.
 """
 LIM = 100
-EPSILON = 1./sys.maxint
-PSEUDO = 0.0000000001 # EPSILON is too small for some calculations
+EPSILON = 1. / sys.maxint
+PSEUDO = 0.0000000001  # EPSILON is too small for some calculations
 
 
 def _save_or_show(plotpath, plotname=None):
     """Generic function that either shows in a popup or saves the figure, depending if the plotpath flag"""
     if plotpath:
-        plt.savefig("%s%s.png"%(plotpath, plotname.replace(" ", "_")), bbox_inches='tight', width=1000, height=2000,
-                    dpi=300) #WNo spaces allowed, underscores!
+        plt.savefig("%s%s.png" % (plotpath, plotname.replace(" ", "_")), bbox_inches='tight', width=1000, height=2000,
+                    dpi=300)  # WNo spaces allowed, underscores!
         plt.clf()
     else:
         plt.show()
@@ -28,7 +31,7 @@ def calc_nonzeromeanvar(junctions):
     nonzerovar = []
     for junction in junctions:
         nonzerojunction = junction[junction <= 0]
-        #discard also -1 and -2, just in case
+        # discard also -1 and -2, just in case
         if len(nonzerojunction) > 0:
             nonzeromean.append(np.mean(nonzerojunction))
             nonzerovar.append(np.var(nonzerojunction))
@@ -41,17 +44,17 @@ def calc_nonzeromeanvar(junctions):
 
 def _trimborders(junction, border):
     "Discard the borders of the junctions unless they have reads"
-    #TODO use a masker strategy instead of generating a new array (warning: Assigning values in a numpy
+    # TODO use a masker strategy instead of generating a new array (warning: Assigning values in a numpy
     # array creates a new one, so it is more inneficient than this)
-    #discard left side
+    # discard left side
     new_junction = []
     for i in range(0, border):
         if junction[i] > 0:
             new_junction.append(junction[i])
 
-    new_junction.extend(junction[border:-border]) #add the middle positions, disregard masked positions
+    new_junction.extend(junction[border:-border])  #add the middle positions, disregard masked positions
     #discard right side
-    for i in range(len(junction)-1, len(junction)-border-1, -1):
+    for i in range(len(junction) - 1, len(junction) - border - 1, -1):
         if junction[i] > 0:
             new_junction.append(junction[i])
 
@@ -63,7 +66,7 @@ def remove_masked(junction):
     ret = []
     for value in junction:
         if value > -EPSILON:
-        #zero and bigger than zero
+            # zero and bigger than zero
             ret.append(value)
 
     return np.array(ret)
@@ -74,17 +77,18 @@ def mean_junction(junctions, discardzeros=True):
     ret = []
     for junc in junctions:
         junc = junc[junc > -EPSILON]
-        #mask the -1 (or lower) positions regardless of the discardzero treatment
+        # mask the -1 (or lower) positions regardless of the discardzero treatment
         if discardzeros:
-            junc = junc[junc!=0]
-             #a junc array without the zeroes
+            junc = junc[junc != 0]
+            # a junc array without the zeroes
 
         if len(junc) == 0:
-            ret.append(0) 
+            ret.append(0)
         else:
             ret.append(junc.mean())
 
     return np.array(ret)
+
 
 def sample_from_junctions(junction_list, m, k, discardzeros=5, trimborder=True, fitted_one_over_r=None,
                           debug=False):
@@ -92,7 +96,7 @@ def sample_from_junctions(junction_list, m, k, discardzeros=5, trimborder=True, 
     sampled_means = []
     sampled_var = []
     all_samples = []
-    
+
     for i, junction in enumerate(junction_list):
         if 0 < debug == i:
             break
@@ -100,27 +104,27 @@ def sample_from_junctions(junction_list, m, k, discardzeros=5, trimborder=True, 
             print "junction %s..." % i,
             sys.stdout.flush()
 
-        if trimborder: 
+        if trimborder:
             junction = _trimborders(junction, trimborder)
-            #trim the zeroes from the borders regardless of the discardzeros flag
+            # trim the zeroes from the borders regardless of the discardzeros flag
 
         junction = junction[junction > -EPSILON]
-        #mask the -1 (or lower) positions regardless of the discardzero treatment
-        
+        # mask the -1 (or lower) positions regardless of the discardzero treatment
+
         if discardzeros > 0:
             junction = junction[junction != 0]
-            #a junction array without the zeroes
+            # a junction array without the zeroes
             sys.stdout.flush()
             if junction.shape[0] < discardzeros:
-                z = np.zeros(shape=(discardzeros-junction.shape[0]), dtype=int)
+                z = np.zeros(shape=(discardzeros - junction.shape[0]), dtype=int)
                 junction = np.concatenate((junction, z))
                 #a junction array without the zeroes
 
         if np.count_nonzero(junction) == 0:
             sampled_means.append(0)
             sampled_var.append(0)
-            all_samples.append([0]*m)
-            #k*m zeroes
+            all_samples.append([0] * m)
+            # k*m zeroes
         else:
 
             npos_mult = np.count_nonzero(junction)
@@ -135,28 +139,27 @@ def sample_from_junctions(junction_list, m, k, discardzeros=5, trimborder=True, 
                     samples.append(0.0)
                     continue
 
-                #recalculating
+                # recalculating
                 nb50 = majiq_fit.sample_over_nb(one_over_r=fitted_one_over_r, mu=sampled_mean, num_samples=k)
 
                 smpl = np.mean(nb50)
                 samples.append(smpl)
-            #calculate the mean and the variance 
+            # calculate the mean and the variance
 
             lsv_mean = np.mean(samples)
-            var_nb = lsv_mean + fitted_one_over_r * (lsv_mean**2)
+            var_nb = lsv_mean + fitted_one_over_r * (lsv_mean ** 2)
             sampled_means.append(lsv_mean)
             sampled_var.append(var_nb)
 
-#            samples = [ npos_mult* (x+1) for x in samples]
-            samples = npos_mult * (np.array(samples)+1)
-#            print i, Nz, samples
+            #            samples = [ npos_mult* (x+1) for x in samples]
+            samples = npos_mult * (np.array(samples) + 1)
+            #            print i, Nz, samples
             all_samples.append(samples)
 
     return np.array(sampled_means), np.array(sampled_var), np.array(all_samples)
 
 
 def plot_pearsoncorr(var1, var2, my_title, my_xlabel, my_ylabel, plotpath=None, max_value=None):
-
     var1 = np.array(var1)
     var2 = np.array(var2)
     plt.xlabel(my_xlabel)
@@ -167,15 +170,16 @@ def plot_pearsoncorr(var1, var2, my_title, my_xlabel, my_ylabel, plotpath=None, 
 
     plt.xlim(0, max_value)
     plt.ylim(0, max_value)
-    
-    #plot([0, max_value], [0, max_value])
+
+    # plot([0, max_value], [0, max_value])
     pear, pvalue = pearsonr(var1, var2)
-    r_squared = pear**2
+    r_squared = pear ** 2
     a, b = np.polyfit(var1, var2, 1)
     fit_func = np.poly1d([a, b])
     plt.plot(var1, fit_func(var1), '-r')
-    #percentage_under = sum(var1 < var2)/float(len(var1)) 
-    plt.text(abs(max_value) * 0.1, max_value-abs(max_value)*0.2, r'$R^2$: %.2f (p-value: %.2E)' % (r_squared, pvalue),
+    # percentage_under = sum(var1 < var2)/float(len(var1))
+    plt.text(abs(max_value) * 0.1, max_value - abs(max_value) * 0.2,
+             r'$R^2$: %.2f (p-value: %.2E)' % (r_squared, pvalue),
              fontsize=18, bbox={'facecolor': 'yellow', 'alpha': 0.3, 'pad': 10})
     plt.title(my_title)
     print r"%s R^2: %.2f (p-value: %.2E)" % (my_title, r_squared, pvalue)

@@ -43,7 +43,6 @@ def print_numbers():
 
 
 def global_conf_ini(filename, params, only_db=False):
-
     global num_experiments, exp_list, readLen, tissue_repl, sam_dir, num_mapped_reads, genome, \
         genome_path, outDir, temp_oDir, gene_tlb, strand_specific, permissive_ir
     global A3SS, A5SS, SEev, bothSS, totalSE
@@ -51,14 +50,13 @@ def global_conf_ini(filename, params, only_db=False):
 
     config = ConfigParser.ConfigParser()
     config.read(filename)
-    #TODO: check if filename exists
+    # TODO: check if filename exists
     exp = ConfigSectionMap(config, "experiments")
     general = ConfigSectionMap(config, "info")
     exp_list = []
     tissue_repl = {}
     temp_oDir = []
     count = 0
-
 
     MINREADS = params.minreads
     MINPOS = params.minpos
@@ -90,16 +88,14 @@ def global_conf_ini(filename, params, only_db=False):
     num_mapped_reads = [0] * num_experiments
     gene_tlb = {}
 
-
-    A3SS = [0]*20
-    A5SS = [0]*20
+    A3SS = [0] * 20
+    A5SS = [0] * 20
     bothSS = 0
-    SEev = [0]*5
+    SEev = [0] * 5
     totalSE = 0
 
 
 def global_default():
-
     global num_experiments, exp_list, readLen, tissue_repl, sam_dir, num_mapped_reads, genome, \
         genome_path, outDir, temp_oDir, gene_tlb, strand_specific, permissive_ir
     global A3SS, A5SS, SEev, bothSS, totalSE
@@ -120,24 +116,23 @@ def get_max_denovo_difference():
 
 def set_gc_factors(bins, factor, means):
     global gc_factor, gc_bins_val, gc_bins, gc_means
-    gc_factor = [None]*num_experiments
+    gc_factor = [None] * num_experiments
     for idx, exp in enumerate(exp_list):
-#        gc_factor[idx] = interpolate.interp1d( bins[idx], factor[idx],bounds_error=False )
+        # gc_factor[idx] = interpolate.interp1d( bins[idx], factor[idx],bounds_error=False )
         a = np.append(factor[idx], factor[idx][-1])
         gc_factor[idx] = interpolate.interp1d(means[idx], factor[idx], bounds_error=False, fill_value=1)
-#        gc_factor[idx] = interpolate.interp1d( bins[idx], a , bounds_error=False) 
-        
+    # gc_factor[idx] = interpolate.interp1d( bins[idx], a , bounds_error=False)
+
     gc_bins_val = factor
     gc_bins = bins
     gc_means = means
 
 
 def global_init(read_l, my_dir=None, paths=None):
-
     global num_experiments, exp_list, readLen, gc_factor, gc_bins, gc_bins_val, tissue_repl
 
     exp_list = []
-    if paths: 
+    if paths:
         exp_list = paths
     else:
         for path in os.listdir(my_dir):
@@ -149,5 +144,5 @@ def global_init(read_l, my_dir=None, paths=None):
 
     num_experiments = len(exp_list)
     readLen = read_l
-    gc_factor = [None]*num_experiments
-    gc_bins_val = [None]*num_experiments
+    gc_factor = [None] * num_experiments
+    gc_bins_val = [None] * num_experiments

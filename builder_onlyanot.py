@@ -1,16 +1,17 @@
 #!/usr/bin/python
 
 import argparse
-import os
 import sys
 import traceback
-from multiprocessing import Pool, current_process, Process
-import grimoire.analize as analize
-import grimoire.rnaseq_io as majiq_io
-import grimoire.utils.utils as utils
-import grimoire.mglobals as mglobals
+from multiprocessing import current_process
+
 import numpy as np
-import grimoire.lsv as majiq_lsv
+
+import grimoire.analize as analize
+import src.io as majiq_io
+import src.utils.utils as utils
+import src.mglobals as mglobals
+
 
 try:
     import cPickle as pickle
