@@ -230,6 +230,9 @@ class VoilaLsv(object):
     def get_id(self):
         return self.lsv_graphic.id
 
+    def get_gene_name(self):
+        return self.lsv_graphic.name
+
     def set_type(self, t):
         self.lsv_graphic.type = t
 

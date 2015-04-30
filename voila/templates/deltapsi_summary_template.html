@@ -37,6 +37,7 @@
         <tfoot>
         <tr>
             <th>#</th>
+            <th>Gene</th>
             <th>LSV ID</th>
             <th>LSV Type</th>
             <th>
@@ -49,6 +50,7 @@
         {% for lsv in lsvList  -%}
         <tr>
             <td>{{ loop.index }}</td>
+            <td>{{ lsv.get_gene_name() }}</td>
             <td>{{ lsv.get_id() }}</td>
             <td>
                 <p class="hidden" style="top:0;">{{ lsv.get_type() }}</p>
