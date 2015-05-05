@@ -65,7 +65,7 @@ def miso_delta_reader(path, dofilter=False, complex_lsvs=False, result_dict=None
                 print line
                 raise
             delta_psi = sline[7].split(",")
-            bayes_factor = sline[8]
+            bayes_factor = sline[8].split(",")
             event_name = sline[0]
 
             if complex_lsvs or len(transcripts) == 2:  # only interested in 2 transcripts events for now
@@ -75,7 +75,13 @@ def miso_delta_reader(path, dofilter=False, complex_lsvs=False, result_dict=None
                     if len(delta_psi) == 1:
                         result_dict["%s#1" % event_name].append(-float(delta_psi[0]))
                 else:
-                    ret.append([event_name, float(delta_psi[0]), float(bayes_factor)])
+                    max_dpsi = 0
+                    max_junc = 0
+                    for i, dpsi in enumerate(delta_psi):
+                        if abs(float(delta_psi[i])) > max_dpsi:
+                            max_dpsi = abs(float(delta_psi[i]))
+                            max_junc = i
+                    ret.append([event_name, float(delta_psi[max_junc]), float(bayes_factor[max_junc])])
     return ret
 
 

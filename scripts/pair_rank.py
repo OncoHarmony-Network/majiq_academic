@@ -60,7 +60,7 @@ def mean_matrix(matrix):
 
 
 def _find_delta_border(V, numbins):
-    "Finds the border index to which a V corresponds in its delta_space given the number of bins the matrix will have"
+    """Finds the border index to which a V corresponds in its delta_space given the number of bins the matrix will have"""
     delta_space = list(linspace(-1, 1, num=numbins+1))
     delta_space.pop(0) #first border to the left is -1, and we are not interested in it
     #get the index position that corresponds to the V threshold
@@ -117,56 +117,51 @@ def expected_dpsi(matrix):
     return ret
 
 
-def rank_majiq(vlsv_list, V=0.2, absolute=True, dofilter=True, E=False, ranknochange=False, complex_lsvs=False, prior=None, shrink=True):
+def rank_majiq(vlsv_list, V=0.2, absolute=True, dofilter=True, E=False, ranknochange=False, complex_lsvs=False, prior=None, shrink=True, junc_selection=None):
     MINTHRESHOLD = 0.95
     if E:
         MINTHRESHOLD = 0.20
     rank = []
 
-    print len(vlsv_list)
+    print "Num of LSVs in majiq: %d" % len(vlsv_list)
     for i, vlsv in enumerate(vlsv_list):
         lsv_bins = vlsv.get_bins()
-        if not complex_lsvs and len(lsv_bins) > 2:
-            continue
+        junc_n = 0
+        if 'i' in vlsv.get_type(): countIR+=1
+        if len(lsv_bins) > 2 :
+            if junc_selection:
+                bins_selected = lsv_bins[junc_selection[vlsv.get_id()]]
+                junc_n = junc_selection[vlsv.get_id()]
+            else:
+                most_change = 0
+                for jj, junc_bins in enumerate(lsv_bins):
+                    if abs(expected_dpsi(np.array(junc_bins))) > most_change:
+                        bins_selected = junc_bins
+                        junc_n = jj
+        else:
+            bins_selected = lsv_bins[0]
+
         if ranknochange:
-            dmatrix = np.exp(np.log(lsv_bins[0]))
+            dmatrix = np.exp(np.log(bins_selected))
             dmatrix /= sum(dmatrix)
-
         else:
-            dmatrix = np.array(lsv_bins[0])
+            dmatrix = np.array(bins_selected)
 
-        if E:
-            # v_prob = v_sum(dmatrix)
-            v_prob = expected_dpsi(dmatrix)
-            if np.isnan(v_prob): continue
-            rank.append([vlsv.get_id(), v_prob])
-        else:
-            area = matrix_area(dmatrix, V, absolute)
-            if np.isnan(area): continue
-            if ranknochange:  # By default, for non-changing events V=0.05
-            #P(Delta PSI < V) = 1 - P(Delta PSI > V)
-                area = 1.0 - matrix_area(dmatrix, 0.05, absolute)
+        v_expected = expected_dpsi(dmatrix)
+        area = 1.0 - matrix_area(dmatrix, V, absolute)  #P(Delta PSI < V) = 1 - P(Delta PSI > V)
+        rank.append(["%s#%d" % (vlsv.get_id(), junc_n), v_expected, area])
 
-            # if area > MINTHRESHOLD or not dofilter:
-            rank.append([vlsv.get_id(), area])
-    #if ranknochange:
-    #    rank.sort(key=lambda x: x[1])
-    #else:
-    #    rank.sort(key=lambda x: x[1], reverse=True)
+    expected_mask = np.array([abs(r[1])>=V for r in rank])
+    fdr_mask = np.array([r[2]<=0.05 for r in rank])
+    # rank = np.array(rank)[np.logical_and(expected_mask, fdr_mask)].tolist()
 
-    rank.sort(key=lambda x: x[1], reverse=True)
+    print "#FDR < 0.05: %d" % np.count_nonzero(fdr_mask)
+    print "#E(Delta(PSI))>%.2f: %d" % (V, np.count_nonzero(expected_mask))
+    print "#E(Delta(PSI))>%.2f and FDR<0.05: %d" % (V, np.count_nonzero(np.logical_and(expected_mask, fdr_mask)))
 
-    # Take only confident elements
-    if shrink:
-        for idx, v in enumerate(rank):
-            if v[1]<MINTHRESHOLD:
-                print "MAJIQ FDR=%d" % (idx+1)
-                break
-                # return rank[:idx+1]
+    rank.sort(key=lambda x: (x[1], x[2]), reverse=True)
 
-    # rank.sort(key=lambda x: x[1], reverse=True)
-    # print '\n'.join([str(t[1]) for t in rank])
-    return rank
+    return np.array(rank)
 
 
 def rank_naive(bins_list, names, V=0.2, absolute=True, E=False, ranknochange=False, complex_lsvs=False):
@@ -239,6 +234,52 @@ def rank_mats(path, dofilter=True, ranknochange=False):
         rank.sort(key=lambda x: (abs(x[1]), x[2])) #biggest delta PSI first, small p-value
     else:
         rank.sort(key=lambda x: (-abs(x[1]), x[2])) #biggest delta PSI first, small p-value
+
+    return rank
+
+
+def rank_mats_original(mats_file, dofilter=True, ranknochange=False):
+    """Rank Splicing Events detected as differentially expressed by MATS. Compute the FDR for downstream analysis
+
+    :param mats_file:
+    :param dofilter:
+    :param ranknochange:
+    :return: list of events. Events are represented as a list where the 1st pos is the ID and the 2nd the deltapsi.
+             NOTE: Since MATS generates IDs that are not unique among runs, we create it as the concatenation of all
+             exonic coordinates (3 exons, except special case of MXE with 4).
+    """
+
+    # ID	GeneID	geneSymbol	chr	strand	longExonStart_0base	longExonEnd	shortES	shortEE	flankingES	flankingEE	ID	IC_SAMPLE_1	SC_SAMPLE_1	IC_SAMPLE_2	SC_SAMPLE_2	IncFormLen	SkipFormLen	PValue	FDR	IncLevel1	IncLevel2	IncLevelDifference
+    # 1292	"ENSMUSG00000032366"	"Tpm1"	9	-	67022592	67024565	67022592	67023441	67031028	67031098	1292	1484,2687,1928	7,12,10	17,11,18	24,23,39	1171	61	0.0	0.0	0.917,0.921,0.909	0.036,0.024,0.023	0.888
+    # 194	"ENSMUSG00000025199"	"Chuk"	19	-	44078888	44079266	44078888	44078985	44081945	44081995	194	59,87,60	3,8,2	34,51,61	57,70,38	310	43	0.0	0.0	0.732,0.601,0.806	0.076,0.092,0.182	0.596
+
+    first_exon_field = 5
+    last_exon_field = 11
+    rank = []
+    for line in open(mats_file):
+        sline = line.split()
+        if sline[0] == "ID":
+            if sline[5] == "riExonStart_0base": last_exon_field=13
+            else: is_mxi = last_exon_field=11
+        else:
+            geneID = "".join(sline[first_exon_field-2:last_exon_field])
+            pvalue = float(sline[-5])
+            fdr = float(sline[-4])
+            delta_psi =  float(sline[-1])
+            rank.append([geneID, delta_psi, pvalue, fdr])
+
+    expected_mask = np.array([abs(r[1])>=0.2 for r in rank])
+    fdr_mask = np.array([r[3]<=0.3 for r in rank])
+    rank = np.array(rank)[np.logical_and(expected_mask, fdr_mask)].tolist()
+
+    print "#FDR < 0.05: %d" % np.count_nonzero(fdr_mask)
+    print "#E(Delta(PSI))>0.20: %d" % np.count_nonzero(expected_mask)
+    print "#E(Delta(PSI))>0.20 and FDR<0.05: %d" % np.count_nonzero(np.logical_and(expected_mask, fdr_mask))
+
+    if ranknochange:
+        rank.sort(key=lambda x: (abs(float(x[1])), float(x[2]))) #biggest delta PSI first, small p-value
+    else:
+        rank.sort(key=lambda x: (-abs(float(x[1])), float(x[2]))) #biggest delta PSI first, small p-value
 
     return rank
 
@@ -341,7 +382,7 @@ def main():
     parser.add_argument('--fdr', action="store_true", default=None, help="In addition to the rank, calculate the False Discovery Rate. Only works with --fullrank")
     parser.add_argument('--ranknochange', default=False, action='store_true', help="Calculate P(deltaPSI < V) instead of P(deltaPSI > V) to rank first the ones with low delta PSI")
     parser.add_argument('--intersect-events', dest='intersect_events', default=False, action='store_true', help="Intersect the events among all the pairs")
-    parser.add_argument('--type-rank', dest='type_rank', default='all', choices=RANK_TYPES, help='Configure which events are chosen for the ranking.')
+    parser.add_argument('--type-rank', dest='type_rank', default=RANK_TYPES[2], choices=RANK_TYPES, help='Configure which events are chosen for the ranking.')
     parser.add_argument('--create_restrict_plot', dest='create_restrict_plot', default=False, action='store_true', help="Create plot for only_ex1 ranks in different restrictive conditions. Only works with --type-rank only_exp1")
     parser.add_argument('--complex-lsvs', dest="complex_lsvs", default=False, action="store_true", help="Include complex LSVs")
     parser.add_argument('--noshrink', dest='shrink', default=True, action='store_false', help="Shrink ranks with the FDR number.")
@@ -353,83 +394,50 @@ def main():
     ranks = defaultdict(list)
     n1 = defaultdict(list)
 
-    if args.majiq_files:
-        if args.type_rank == 'exp1_and_exp2':  # CURRENTLY NOT USED!!! 20141119
-            # Union over events that made it into Exp1 or Exp2, then use this set for the rankings over Exp1 and Exp2 no filtered
-            # 4 files expected: exp1_filtered, exp1_nofiltered, exp2_filtered, exp2_nofiltered
-            if len(args.majiq_files) != 4:
-                print "[ERROR] :: 4 files expected (exp1_filtered, exp1_nofiltered, exp2_filtered, exp2_nofiltered), only %d given. " % len(args.majiq_files)
-                import sys
-                sys.exit(1)
-
-            # Calculated the union:
-            majiq_exp1_filt = pickle.load(open(args.majiq_files[0], 'r'))
-            majiq_exp1_nofilt = pickle.load(open(args.majiq_files[1], 'r'))
-            majiq_exp2_filt = pickle.load(open(args.majiq_files[2], 'r'))
-            majiq_exp2_nofilt = pickle.load(open(args.majiq_files[3], 'r'))
-
-            print "%s: %d" % (args.majiq_files[0], len(majiq_exp1_filt[1]))
-            print "%s: %d" % (args.majiq_files[1], len(majiq_exp1_nofilt[1]))
-            print "%s: %d" % (args.majiq_files[2], len(majiq_exp2_filt[1]))
-            print "%s: %d" % (args.majiq_files[3], len(majiq_exp2_nofilt[1]))
-
-            event_union_set = set([ranked_pair[1] for ranked_pair in majiq_exp1_filt[1]]).union(set([ranked_pair[1] for ranked_pair in majiq_exp2_filt[1]]))
-
-            names_exp1_nofilt = [info[1] for info in majiq_exp1_nofilt[1]]
-            names_exp2_nofilt = [info[1] for info in majiq_exp2_nofilt[1]]
-
-            exp1_index = np.array([name in names_exp1_nofilt for name in event_union_set])
-            exp2_index = np.array([name in names_exp2_nofilt for name in event_union_set])
-
-            ranks['majiq'].append(rank_majiq(np.array(majiq_exp1_nofilt[0])[exp1_index].tolist(), np.array(majiq_exp1_nofilt[1])[exp1_index].tolist(), args.V, args.absolute, args.filter, args.E, args.ranknochange, args.complex_lsvs))
-            ranks['majiq'].append(rank_majiq(np.array(majiq_exp2_nofilt[0])[exp2_index].tolist(), np.array(majiq_exp2_nofilt[1])[exp2_index].tolist(), args.V, args.absolute, args.filter, args.E, args.ranknochange, args.complex_lsvs))
-
-        else:
-            count_pairs = 0
-            for file_nr, file in enumerate(args.majiq_files):
-                majiq_data = pickle.load(open(file, 'r'))
-                # prior = pickle.load(open(str(file).replace('deltamatrix', 'priormatrix_jun_0')))
-                if file_nr % 2 == 0:
-                    count_pairs += 1
-                    majiq_file1_names = [vlsv.get_id() for vlsv in majiq_data.get_lsvs()]
-                    ranks['majiq_' + str(count_pairs)].append(rank_majiq(majiq_data.get_lsvs(), args.V, args.absolute, args.filter, args.E, args.ranknochange, args.complex_lsvs, shrink=args.shrink))
-                    continue
-
-                if args.type_rank != 'all':
-                    if args.type_rank == 'only_exp1':
-                        # Select events from experiment 1
-                        exp1_index = np.array([v_lsv.get_id() in majiq_file1_names for v_lsv in majiq_data.get_lsvs()])
-                        ranks['majiq_' + str(count_pairs)].append(rank_majiq(np.array(majiq_data.get_lsvs())[exp1_index].tolist(), args.V, args.absolute, args.filter, args.E, args.ranknochange, args.complex_lsvs, shrink=args.shrink))
-                        n1['majiq_' + str(count_pairs)]=[np.count_nonzero(exp1_index), np.count_nonzero(exp1_index)]
-                else:
-                    ranks['majiq'].append(rank_majiq(majiq_data[0], majiq_data[1], args.V, args.absolute, args.filter, args.E, args.ranknochange, args.complex_lsvs))
-            names_majiq_exp1 = [m[1] for m in majiq_file1_names]
-
-    if args.miso_files:
-        for file in args.miso_files:
-            miso_rank = rank_miso(file, args.filter, args.ranknochange, args.complex_lsvs)
-            if args.type_rank == 'only_exp1':
-                # Use only MAJIQ selected events for experiment 1
-                names_miso = [miso_info[0] for miso_info in miso_rank]
-
-                exp1_index = np.array([name in names_majiq_exp1 for name in names_miso])
-                ranks['miso'].append(array(miso_rank)[exp1_index])
-                n1['miso'].append(np.count_nonzero(exp1_index))
-            else:
-                ranks['miso'].append(array(miso_rank))
-
     if args.mats_files:
         for file in args.mats_files:
-
-            mats_rank = rank_mats(file, args.filter, args.ranknochange)
-            if args.type_rank == 'only_exp1':
-                # Use only MAJIQ selected events for experiment 1
+            mats_rank = rank_mats_original(file, args.filter, args.ranknochange)
+            if len(ranks['mats']) > 0:
+                names_mats_exp1 = [mats_info[0] for mats_info in ranks['mats'][0]]
                 names_mats = [mats_info[0] for mats_info in mats_rank]
-                exp1_index = np.array([name in names_majiq_exp1 for name in names_mats])
-                ranks['mats'].append(array(mats_rank)[exp1_index])
+                exp1_index = np.array([name in names_mats_exp1 for name in names_mats])
+                ranks['mats'].append(np.array(mats_rank)[exp1_index])
                 n1['mats'].append(np.count_nonzero(exp1_index))
             else:
                 ranks['mats'].append(array(mats_rank))
+
+    if args.majiq_files:
+        count_pairs = 0
+        for file_nr, file in enumerate(args.majiq_files):
+            majiq_data = pickle.load(open(file, 'r'))
+            # prior = pickle.load(open(str(file).replace('deltamatrix', 'priormatrix_jun_0')))
+            if file_nr % 2 == 0:
+                count_pairs += 1
+                majiq_file1_names = [vlsv.get_id() for vlsv in majiq_data.get_lsvs()]
+                ranks['majiq_' + str(count_pairs)].append(rank_majiq(majiq_data.get_lsvs(), args.V, args.absolute, args.filter, args.E, args.ranknochange, args.complex_lsvs, shrink=args.shrink))
+                continue
+
+            if args.type_rank == 'only_exp1':
+                # Select events from experiment 1
+                exp1_index = np.array([v_lsv.get_id() in majiq_file1_names for v_lsv in majiq_data.get_lsvs()])
+                junc_dict = dict([(rr[0].split('#')[0], int(rr[0].split('#')[1])) for rr in ranks['majiq_' + str(count_pairs)][-1]])
+                ranks['majiq_' + str(count_pairs)].append(rank_majiq(np.array(majiq_data.get_lsvs())[exp1_index].tolist(), args.V, args.absolute, args.filter, args.E, args.ranknochange, args.complex_lsvs, shrink=args.shrink, junc_selection=junc_dict))
+                n1['majiq_' + str(count_pairs)]=[np.count_nonzero(exp1_index), np.count_nonzero(exp1_index)]
+        names_majiq_exp1 = [m[1] for m in majiq_file1_names]
+
+    if args.miso_files:
+        for file_nr, file in enumerate(args.miso_files):
+            miso_rank = rank_miso(file, args.filter, args.ranknochange, args.complex_lsvs)
+            if args.type_rank == 'only_exp1':
+                if file_nr % 2:
+                    names_miso = [miso_info[0] for miso_info in miso_rank]
+                    names_miso_exp1 = [miso_info[0] for miso_info in ranks['miso'][0]]
+                    exp1_index = np.array([name in names_miso_exp1 for name in names_miso])
+                    ranks['miso'].append(array(miso_rank)[exp1_index])
+                    n1['miso'].append(np.count_nonzero(exp1_index))
+                else:
+                    ranks['miso'].append(array(miso_rank))
+
 
     if args.naive_files:
         names_naive_exp1 = None
@@ -447,38 +455,9 @@ def main():
             else:
                 ranks['naive'].append(array(naive_rank))
 
-    if args.intersect_events:
-        print "Computing intersection of events..."
-        common_names = event_names_set_majiq(ranks['majiq'][0]).intersection(event_names_set_majiq(ranks['majiq'][1]))
-
-        print "Initial set (from MAJIQ): %d LSVs" % len(common_names)
-        if args.mats_files:
-            mats_set = event_names_set_mats(ranks['mats'][0]).intersection(event_names_set_mats(ranks['mats'][1]))
-            common_names = common_names.intersection(mats_set)
-            print "After intersected with MATS: %d LSVs" % len(common_names)
-
-        if args.miso_files:
-            miso_set = event_names_set_miso(ranks['miso'][0]).intersection(event_names_set_miso(ranks['miso'][1]))
-            print "MISO intersected with itself %d " % len(miso_set)
-            common_names = common_names.intersection(miso_set)
-            print "After intersected with MISO: %d LSVs" % len(common_names)
-
-        if args.naive_files:
-            naive_set = event_names_set(ranks['naive'][0]).intersection(event_names_set(ranks['naive'][1]))
-            print "Naive Bootstrapping intersected with itself %d " % len(naive_set)
-            common_names = common_names.intersection(naive_set)
-            print "After intersected with Naive Bootstrapping: %d LSVs" % len(common_names)
-
-
     only_exp1_ranks = []
     for method_name, ranks_pair in ranks.items():
         print "Ranking %s...." % method_name
-        if args.intersect_events:
-            print "Skimming rankings, discarding events (LSVs) not common for %s..." % method_name
-            for ii, rank in enumerate(ranks_pair):
-                ranks_pair[ii] = skim_rank(rank, common_names, method_name)
-            print "Final lengths: %d, %d" % (len(ranks_pair[0]), len(ranks_pair[1]))
-
         rank1, rank2 = ranks_pair
         print "Num events", len(rank1), len(rank2)
         print "Calculating the ratios..."
@@ -486,17 +465,14 @@ def main():
         ratios = []
         events = []
 
-        if 'majiq' in ranks.keys():
-            max_events = len(ranks['majiq'][0])
-        else:
-            max_events = min(args.max, min(len(rank1), len(rank2)))
+        max_events = min(args.max, len(rank1))
 
 
         fdr = []
         if args.proximity or args.fullrank:
             #Using proximity or full rank window
             if args.proximity: print "Using proximity window of %s..."%args.proximity
-            else: print "Using full rank2 for all events %s..."%args.max
+            else: print "Using full rank2 for all events %s..."% max_events
             found = 0
             fdr = [0] #zero to avoid using "first" flag for first element
             v_values = []
