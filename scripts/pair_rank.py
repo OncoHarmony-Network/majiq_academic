@@ -117,7 +117,7 @@ def expected_dpsi(matrix):
     return ret
 
 
-def rank_majiq(vlsv_list, V=0.2, absolute=True, dofilter=True, E=False, ranknochange=False, complex_lsvs=False, prior=None, shrink=True, junc_selection=None):
+def rank_majiq(vlsv_list, V=0.2, absolute=True, dofilter=True, E=False, ranknochange=False, complex_lsvs=False, prior=None, shrink=True, junc_selection=None, majiq_n=None):
     MINTHRESHOLD = 0.95
     if E:
         MINTHRESHOLD = 0.20
@@ -127,7 +127,6 @@ def rank_majiq(vlsv_list, V=0.2, absolute=True, dofilter=True, E=False, ranknoch
     for i, vlsv in enumerate(vlsv_list):
         lsv_bins = vlsv.get_bins()
         junc_n = 0
-        if 'i' in vlsv.get_type(): countIR+=1
         if len(lsv_bins) > 2 :
             if junc_selection:
                 bins_selected = lsv_bins[junc_selection[vlsv.get_id()]]
@@ -153,11 +152,14 @@ def rank_majiq(vlsv_list, V=0.2, absolute=True, dofilter=True, E=False, ranknoch
 
     expected_mask = np.array([abs(r[1])>=V for r in rank])
     fdr_mask = np.array([r[2]<=0.05 for r in rank])
+    expected_fdr_mask = np.logical_and(expected_mask, fdr_mask)
+    if majiq_n:
+        majiq_n = np.count_nonzero(expected_fdr_mask)
     # rank = np.array(rank)[np.logical_and(expected_mask, fdr_mask)].tolist()
 
     print "#FDR < 0.05: %d" % np.count_nonzero(fdr_mask)
     print "#E(Delta(PSI))>%.2f: %d" % (V, np.count_nonzero(expected_mask))
-    print "#E(Delta(PSI))>%.2f and FDR<0.05: %d" % (V, np.count_nonzero(np.logical_and(expected_mask, fdr_mask)))
+    print "#E(Delta(PSI))>%.2f and FDR<0.05: %d" % (V, np.count_nonzero(expected_fdr_mask))
 
     rank.sort(key=lambda x: (x[1], x[2]), reverse=True)
 
@@ -238,7 +240,7 @@ def rank_mats(path, dofilter=True, ranknochange=False):
     return rank
 
 
-def rank_mats_original(mats_file, dofilter=True, ranknochange=False):
+def rank_mats_original(mats_file, dofilter=True, ranknochange=False, majiq_n=None):
     """Rank Splicing Events detected as differentially expressed by MATS. Compute the FDR for downstream analysis
 
     :param mats_file:
@@ -269,7 +271,11 @@ def rank_mats_original(mats_file, dofilter=True, ranknochange=False):
             rank.append([geneID, delta_psi, pvalue, fdr])
 
     expected_mask = np.array([abs(r[1])>=0.2 for r in rank])
-    fdr_mask = np.array([r[3]<=0.3 for r in rank])
+    fdr_cutoff = 0.05
+    if majiq_n:
+        while np.count_nonzero(np.logical_and(expected_mask, np.array([r[3] <= fdr_cutoff for r in rank]))) < majiq_n:
+            fdr_cutoff += 0.05
+    fdr_mask = np.array([r[3]<=fdr_cutoff for r in rank])
     rank = np.array(rank)[np.logical_and(expected_mask, fdr_mask)].tolist()
 
     print "#FDR < 0.05: %d" % np.count_nonzero(fdr_mask)
@@ -394,18 +400,7 @@ def main():
     ranks = defaultdict(list)
     n1 = defaultdict(list)
 
-    if args.mats_files:
-        for file in args.mats_files:
-            mats_rank = rank_mats_original(file, args.filter, args.ranknochange)
-            if len(ranks['mats']) > 0:
-                names_mats_exp1 = [mats_info[0] for mats_info in ranks['mats'][0]]
-                names_mats = [mats_info[0] for mats_info in mats_rank]
-                exp1_index = np.array([name in names_mats_exp1 for name in names_mats])
-                ranks['mats'].append(np.array(mats_rank)[exp1_index])
-                n1['mats'].append(np.count_nonzero(exp1_index))
-            else:
-                ranks['mats'].append(array(mats_rank))
-
+    majiq_N = None
     if args.majiq_files:
         count_pairs = 0
         for file_nr, file in enumerate(args.majiq_files):
@@ -414,7 +409,7 @@ def main():
             if file_nr % 2 == 0:
                 count_pairs += 1
                 majiq_file1_names = [vlsv.get_id() for vlsv in majiq_data.get_lsvs()]
-                ranks['majiq_' + str(count_pairs)].append(rank_majiq(majiq_data.get_lsvs(), args.V, args.absolute, args.filter, args.E, args.ranknochange, args.complex_lsvs, shrink=args.shrink))
+                ranks['majiq_' + str(count_pairs)].append(rank_majiq(majiq_data.get_lsvs(), args.V, args.absolute, args.filter, args.E, args.ranknochange, args.complex_lsvs, shrink=args.shrink, majiq_n=majiq_N))
                 continue
 
             if args.type_rank == 'only_exp1':
@@ -424,6 +419,18 @@ def main():
                 ranks['majiq_' + str(count_pairs)].append(rank_majiq(np.array(majiq_data.get_lsvs())[exp1_index].tolist(), args.V, args.absolute, args.filter, args.E, args.ranknochange, args.complex_lsvs, shrink=args.shrink, junc_selection=junc_dict))
                 n1['majiq_' + str(count_pairs)]=[np.count_nonzero(exp1_index), np.count_nonzero(exp1_index)]
         names_majiq_exp1 = [m[1] for m in majiq_file1_names]
+
+    if args.mats_files:
+        for file in args.mats_files:
+            mats_rank = rank_mats_original(file, args.filter, args.ranknochange, majiq_n=majiq_N)
+            if len(ranks['mats']) > 0:
+                names_mats_exp1 = [mats_info[0] for mats_info in ranks['mats'][0]]
+                names_mats = [mats_info[0] for mats_info in mats_rank]
+                exp1_index = np.array([name in names_mats_exp1 for name in names_mats])
+                ranks['mats'].append(np.array(mats_rank)[exp1_index])
+                n1['mats'].append(np.count_nonzero(exp1_index))
+            else:
+                ranks['mats'].append(array(mats_rank))
 
     if args.miso_files:
         for file_nr, file in enumerate(args.miso_files):
