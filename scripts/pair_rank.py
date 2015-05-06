@@ -153,8 +153,8 @@ def rank_majiq(vlsv_list, V=0.2, absolute=True, dofilter=True, E=False, ranknoch
     expected_mask = np.array([abs(r[1])>=V for r in rank])
     fdr_mask = np.array([r[2]<=0.05 for r in rank])
     expected_fdr_mask = np.logical_and(expected_mask, fdr_mask)
-    if majiq_n:
-        majiq_n = np.count_nonzero(expected_fdr_mask)
+    if majiq_n[0]:
+        majiq_n[0] = np.count_nonzero(expected_fdr_mask)
     # rank = np.array(rank)[np.logical_and(expected_mask, fdr_mask)].tolist()
 
     print "#FDR < 0.05: %d" % np.count_nonzero(fdr_mask)
@@ -272,8 +272,8 @@ def rank_mats_original(mats_file, dofilter=True, ranknochange=False, majiq_n=Non
 
     expected_mask = np.array([abs(r[1])>=0.2 for r in rank])
     fdr_cutoff = 0.05
-    if majiq_n:
-        while np.count_nonzero(np.logical_and(expected_mask, np.array([r[3] <= fdr_cutoff for r in rank]))) < majiq_n:
+    if majiq_n[0]:
+        while np.count_nonzero(np.logical_and(expected_mask, np.array([r[3] <= fdr_cutoff for r in rank]))) < majiq_n[0]:
             fdr_cutoff += 0.05
     fdr_mask = np.array([r[3]<=fdr_cutoff for r in rank])
     rank = np.array(rank)[np.logical_and(expected_mask, fdr_mask)].tolist()
@@ -400,7 +400,7 @@ def main():
     ranks = defaultdict(list)
     n1 = defaultdict(list)
 
-    majiq_N = None
+    majiq_N = [None]
     if args.majiq_files:
         count_pairs = 0
         for file_nr, file in enumerate(args.majiq_files):
@@ -409,7 +409,7 @@ def main():
             if file_nr % 2 == 0:
                 count_pairs += 1
                 majiq_file1_names = [vlsv.get_id() for vlsv in majiq_data.get_lsvs()]
-                ranks['majiq_' + str(count_pairs)].append(rank_majiq(majiq_data.get_lsvs(), args.V, args.absolute, args.filter, args.E, args.ranknochange, args.complex_lsvs, shrink=args.shrink, majiq_n=majiq_N))
+                majiq_N = ranks['majiq_' + str(count_pairs)].append(rank_majiq(majiq_data.get_lsvs(), args.V, args.absolute, args.filter, args.E, args.ranknochange, args.complex_lsvs, shrink=args.shrink, majiq_n=majiq_N))
                 continue
 
             if args.type_rank == 'only_exp1':
@@ -473,7 +473,8 @@ def main():
         events = []
 
         max_events = min(args.max, len(rank1))
-
+        if majiq_N[0]:
+            max_events = min(max_events, majiq_N[0])
 
         fdr = []
         if args.proximity or args.fullrank:
