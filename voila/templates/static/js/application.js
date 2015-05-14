@@ -68,7 +68,6 @@ $( document ).ready(function(){
             $(this).data('oldValue', $(this).val());
         });
         lsvFilters.on("change", ":input", function () {
-            console.log($(this)[0].name + ": " +$(this).val());  // TODO: delete after debug!
             var eventFired = $(this)[0];
             if (eventFired.name in {'ES':null, 'prime3':null, 'prime5':null, 'source':null, 'target':null }){
                 $('.'+eventFired.name).each(function(){
@@ -77,7 +76,7 @@ $( document ).ready(function(){
             }
             else{
                 var nval = parseInt(eventFired.value);
-                if (nval){
+                if (nval > -1){
                     $('.lsvrow').each(function(){
                         if (eventFired.name.indexOf('from') > -1) {
                         if (parseInt($(this)[0].getAttribute("data-" + eventFired.name.split('from')[0])) < nval) {

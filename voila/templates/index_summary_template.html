@@ -1,0 +1,135 @@
+{% extends "base_template.html" %}
+{% block title %}MAJIQ LSV &Delta;&Psi; Summary{% endblock %}
+{% block css %}
+{# Evaluate if we should divide different css in files #}
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="stylesheet" type="text/css" href="static/css/bootstrap-responsive.min.css">
+<link rel="stylesheet" type="text/css" href="static/css/bootstrap-frm.css" />
+{% endblock %}
+
+{% block js %}
+<script src="static/js/jquery-1.11.1.min.js" type="text/javascript"></script>
+
+<script src="static/js/splice.graph.js" type="text/javascript" language="javascript" ></script>
+<script src="static/js/d3.v3.min.js" type="text/javascript" language="javascript" ></script>
+<script src="static/js/jquery.tablesorter.js" type="text/javascript"></script>
+<script src="static/js/jquery.tablesorter.pager.js" type="text/javascript"></script>
+<script src="static/js/jquery.mousewheel.js" type="text/javascript"></script>
+<script src="static/js/application.js" type="text/javascript"></script>
+<script type="text/javascript" src="static/js/jquery.tooltipster.min.js"></script>
+
+
+{% endblock %}
+
+{% block header %}
+    LSV &Delta;&Psi; Summary: {{ lexps[0][0].group }} Vs {{ lexps[1][0].group }}
+{% endblock %}
+
+{% block content %}
+<section>
+    <div class="events-summary">
+        <table id="event_table" class="tablesorter">
+            <thead>
+            <tr>
+                <th class="extra-short-header">#</th>
+                <th class="short-header">Gene</th>
+                <th class="short-header">LSV ID</th>
+                <th class="short-header">LSV Type</th>
+                <th class="short-header">
+                    <p style="color: black; margin: auto; display:block; text-align:center; font-weight: bold" >&#8592; More in {{ lexps[0][0].group }} | More in {{ lexps[1][0].group }} &#8594;</p>
+                </th>
+                <th class="medium-header">Coordinates Links</th>
+            </tr>
+            </thead>
+            <tfoot>
+            <tr>
+                <th>#</th>
+                <th>Gene</th>
+                <th>LSV ID</th>
+                <th>LSV Type</th>
+                <th>
+                    <p style="color: black; margin: auto; display:block; text-align:center; font-weight: bold" >&#8592; More in {{ lexps[0][0].group }} | More in {{ lexps[1][0].group }} &#8594;</p>
+                </th>
+                <th>Coordinates Links</th>
+            </tr>
+            </tfoot>
+            <tbody>
+            {% for lsv in lsvList  -%}
+            <tr class="{{ lsv.categories2css() }} lsvrow">
+                <td>{{ loop.index }}</td>
+                <td><a href="{{links_dict[lsv.get_gene_name()]}}#{{lsv.get_gene_name()}}" target="_blank">{{ lsv.get_gene_name() }}</a></td>
+                <td><a href="{{links_dict[lsv.get_gene_name()]}}#{{lsv.get_gene_name()}}" target="_blank">{{ lsv.get_id() }}</a></td>
+                <td>
+                    <p class="hidden" style="top:0;">{{ lsv.get_type() }}</p>
+                    <canvas class="lsvLegend" width="200px" height="60px" data-lsv-string="{{ lsv.get_type() }}"  title="{{ lsv.get_type() }}">
+                        This browser or document mode doesn't support canvas
+                    </canvas>
+                </td>
+                <td id="data_td{{ loop.index }}" class="lsvDeltaCompact" data-lsv="{{ lsv|to_json }}" data-threshold="{{ threshold }}">
+                    <p class="hidden">
+                        {% set max_diff = [0.0] %}
+                        {% for excl_incl in lsv.get_excl_incl() %}
+                            {% if ((excl_incl[0]|abs + excl_incl[1]) > max_diff[-1]) %}
+                                {% do max_diff.append(excl_incl[0]|abs + excl_incl[1]) %}
+                            {% endif%}
+                        {%- endfor %}
+                        {{ max_diff[-1] }}
+                    </p>
+                </td>
+                <td>
+                    <p>
+                        <a href="http://genome.ucsc.edu/cgi-bin/hgTracks?db={{ lexps[0][0].genome }}&position={{ lsv.get_chrom() }}:{{ lsv.get_extension()[0] }}-{{ lsv.get_extension()[1] }}" target="_blank">
+                            <img src="static/img/icons/ucsc2.png" title="http://genome.ucsc.edu/cgi-bin/hgTracks?db={{ lexps[0][0].genome }}&position={{ lsv.get_chrom() }}:{{ lsv.get_extension()[0] }}-{{ lsv.get_extension()[1] }}"/>
+                        </a>
+                    </p>
+                    <p>
+                        <a href="static/doc/lsvs/{{ lsv.get_id() }}.gtf" target="_blank"><img src="static/img/icons/gtf.png" title="Go to GTF LSV definition"/></a>
+                    </p>
+                </td>
+
+            </tr>
+            {%- endfor %}
+            </tbody>
+        </table>
+
+        <div class="pager">
+            <form>
+                <img src="static/img/icons/first.png" class="first"/>
+                <img src="static/img/icons/prev.png" class="prev"/>
+                <input type="text" class="pagedisplay"/>
+                <img src="static/img/icons/next.png" class="next"/>
+                <img src="static/img/icons/last.png" class="last"/>
+                <select class="pagesize" autocomplete="off">
+                    {% for mark in tableMarks -%}
+                    {% if loop.first %}
+                    <option selected="selected"  value="{{ mark }}">{{ mark }}</option>
+                    {% else %}
+                    <option value="{{ mark }}">{{ mark }}</option>
+                    {% endif %}
+                    {%- endfor %}
+                    <option value="{{ lsvList|length }}">All</option>
+                </select>
+            </form>
+        </div>
+    </div>
+</section>
+<aside class="filters">
+    <fieldset class="section-border">
+        <legend>LSV filters</legend>
+        <form id="lsv-filters" class="bootstrap-frm">
+            <label><input type="checkbox" name="prime5" value="1" checked>5-prime</label><br>
+            <label><input type="checkbox" name="prime3" value="1" checked>3-prime</label><br>
+            <label><input type="checkbox" name="ES" value="1" checked>Exon skipping</label><br>
+            <label><input type="checkbox" name="source" value="1" checked>Single Source</label><br>
+            <label><input type="checkbox" name="target" value="1" checked>Single Target</label><br>
+            <span>Number of junctions:</span><br>
+            <label><span>from:</span><input type="text" name="njuncsfrom" value="" size="4"></label>
+            <label><span>to:</span><input type="text" name="njuncsto" size="4"></label><br>
+            <span>Number of exons:</span><br>
+            <label><span>from:</span><input type="text" name="nexonsfrom" value="" size="4"></label>
+            <label><span>to:</span><input type="text" name="nexonsto" size="4"><br></label>
+        </form>
+    </fieldset>
+</aside>
+{% endblock %}
+

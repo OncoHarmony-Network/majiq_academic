@@ -27,7 +27,7 @@ table
 }
 
 .short-header{
-    width:20px;
+    width:40px;
 }
 
 .medium-header{
@@ -67,17 +67,17 @@ table
 
 /* tablesorter CSS */
 table.tablesorter {
-        font-family:arial;
+        font-family:Helvetica, Arial;
         background-color: #CDCDCD;
         margin:10px 0pt 15px;
-        font-size: 8pt;
+        font-size: 9pt;
         min-width: 900px;
         text-align: left;
 }
 table.tablesorter thead tr th, table.tablesorter tfoot tr th {
         background-color: #E6EEEE;
         border: 1px solid #FFF;
-        font-size: 8pt;
+        font-size: 9pt;
         padding: 4px;
 }
 table.tablesorter thead tr .header {
@@ -204,12 +204,22 @@ background-color: #8dbdd8;
 .prime3hidden, .prime5hidden, .EShidden, .targethidden, .sourcehidden, .njuncsfromhidden, .njuncstohidden, .nexonsfromhidden, .nexonstohidden{
     display: none;
 }
+
+header {
+    border-bottom: 3px solid #006afc;
+    font-size: 1em;
+}
+
+footer {
+    border-top: 1px solid #006afc;
+    font-size: 8pt;
+}
+
 header, footer {
-    background-color:#006afc;
-    color:white;
+    /*background-color:#006afc;*/
+    color: #0053A0;
     text-align:center;
     padding:5px;
-    font-size: 1em;
 }
 nav {
     line-height:30px;
@@ -222,6 +232,8 @@ nav {
 section {
     width:auto;
     float:left;
+    position: relative;
+    left: 200px;
     /*padding:10px;*/
 }
 footer {
@@ -230,14 +242,15 @@ footer {
 
 .filters {
     background: white;
-    position: fixed;
-    left: 1080px;
+    position: absolute;
+    left: 5px;
 }
 
 
 .prevPage, .nextPage {
     position: absolute;
-    color: #ffffff;
+    color: #006afc;
+    bottom: 30px;
 }
 
 .prevPage {
@@ -265,4 +278,12 @@ footer {
 
 .exp2{
     padding-top: 25px;
+}
+
+.logoBiociphers{
+    height: 35px;
+    position: absolute;
+    left: 0;
+    padding-left: 20px;
+    padding-top: 12px;
 }

@@ -27,5 +27,11 @@ SUFFIX_SPLICEGRAPH = 'splicegraph'
 DELIMITER = '\t'
 EXTENSION = 'txt'
 
+# URL composite (OS dependent, right now for MacOS)
+URL_COMPOSITE = "file://%s#%s"
+
+# subfolder for full (splicegraph summaries)
+DELTAPSI_SUBFOLDERS = 'summaries'
+
 # Debugging
 DEBUG = 1
