@@ -1,17 +1,21 @@
 body {
     font-family: Helvetica, Arial;
+    color: #005DB5;
 }
 
 h2 {
-    color: #006afc;
     clear: both;
     padding-top: 10px;
     margin-bottom: 2px;
 }
 
+h3 {
+    color: #E35A00;
+}
+
 fieldset legend {
     font-weight:bold;
-    color: #006afc;
+    color: #005DB5;
     font-size: 1.5em;
 }
 
@@ -87,13 +91,12 @@ table.tablesorter thead tr .header {
         cursor: pointer;
 }
 table.tablesorter tbody td {
-        color: #3D3D3D;
         padding: 4px;
         background-color: #FFF;
         /*vertical-align: top;*/
 }
 table.tablesorter tbody tr.odd td {
-        background-color:#F0F0F6;
+        /*background-color:#F0F0F6;*/
 }
 table.tablesorter thead tr .headerSortUp {
         background-image: url(../img/asc.gif);
@@ -102,7 +105,7 @@ table.tablesorter thead tr .headerSortDown {
         background-image: url(../img/desc.gif);
 }
 table.tablesorter thead tr .headerSortDown, table.tablesorter thead tr .headerSortUp {
-background-color: #8dbdd8;
+    background-color: #8dbdd8;
 }
 
 /* End of tablesorter CSS*/
@@ -196,7 +199,7 @@ background-color: #8dbdd8;
 
 .section-border{
     padding: 25px;
-    border: 3px solid #006afc;
+    border: 3px solid #20A0DF;
     margin: 10px;
     border-radius: 7px;
 }
@@ -206,17 +209,17 @@ background-color: #8dbdd8;
 }
 
 header {
-    border-bottom: 3px solid #006afc;
+    border-bottom: 3px solid #20A0DF;
     font-size: 1em;
 }
 
 footer {
-    border-top: 1px solid #006afc;
+    border-top: 2px solid #20A0DF;
     font-size: 8pt;
 }
 
 header, footer {
-    /*background-color:#006afc;*/
+    /*background-color:#005DB5;*/
     color: #0053A0;
     text-align:center;
     padding:5px;
@@ -249,7 +252,7 @@ footer {
 
 .prevPage, .nextPage {
     position: absolute;
-    color: #006afc;
+    color: #005DB5;
     bottom: 30px;
 }
 
@@ -286,4 +289,24 @@ footer {
     left: 0;
     padding-left: 20px;
     padding-top: 12px;
+}
+
+.headerText{
+    display: block;
+    font-size: 1.17em;
+    -webkit-margin-before: 1em;
+    -webkit-margin-after: 1em;
+    -webkit-margin-start: 0px;
+    -webkit-margin-end: 0px;
+    font-weight: bold;
+}
+
+.deltaHeader{
+    margin: auto;
+    display:block;
+    text-align:center;
+}
+
+.gtfLink{
+    font-size: 1.5em;
 }

@@ -192,7 +192,7 @@ def render_summary(output_dir, output_html, majiq_output, type_summary, threshol
     else:
         logger.error("summary type not recognized %s." % type_summary, exc_info=1)
 
-    logger.info("Copying static files from Voila sources to %s static." % output_dir)
+    logger.info("Copying static files from Voila sources ...")
     utils_voila.copyanything(EXEC_DIR+"templates/static", output_dir+"static")
     utils_voila.copyanything(EXEC_DIR+"templates/static", "%s%s/static" % (output_dir, constants.DELTAPSI_SUBFOLDERS))
 
@@ -619,7 +619,7 @@ def main():
     # parser_single_gene.add_argument('--lsv-types', nargs='*', default=[], type=str, dest='lsv_types', help='LSV type to filter the results. (If no gene list is provided, this option will display only genes containing LSVs of the specified type).')
     subparsers.add_parser(constants.ANALYSIS_PSI_GENE, help='Single LSV analysis by gene(s) of interest.', parents=[common_parser, parser_single, parser_single_gene])
 
-    # Delta LSV by Gene(s) of interest
+    # Delta LSV
     parser_delta = argparse.ArgumentParser(add_help=False)
     parser_delta.add_argument('--threshold', type=float, default=0.2, help='Filter out LSVs with no junction predicted to change over a certain value (in percentage).')  # Probability threshold used to sum the accumulative probability of inclusion/exclusion.
     parser_delta.add_argument('--show-all', dest='show_all', action='store_true', default=False, help='Show all LSVs including those with no junction with significant change predicted')

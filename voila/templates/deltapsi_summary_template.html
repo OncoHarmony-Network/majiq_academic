@@ -37,7 +37,7 @@
         {% for gene_name, gene_value in genes_dict.iteritems() %}
             {% set gene_index = loop.index -1 %}
             <h2>Gene name: <a name="{{ genes_exps_list[0][genes_exps_list[0].keys()[0]][gene_name][4] }}">{{ genes_exps_list[0][genes_exps_list[0].keys()[0]][gene_name][4] }}</a>; {{ genes_exps_list[0][genes_exps_list[0].keys()[0]][gene_name][3] }}:{{ genes_exps_list[0][genes_exps_list[0].keys()[0]][gene_name][1] }}:{{ genes_exps_list[0][genes_exps_list[0].keys()[0]][gene_name][2][0] }}-{{ genes_exps_list[0][genes_exps_list[0].keys()[0]][gene_name][2][1] }};
-                <a href="http://genome.ucsc.edu/cgi-bin/hgTracks?db={{ lexps[0][0].genome }}&position={{ genes_exps_list[0][genes_exps_list[0].keys()[0]][gene_name][3] }}:{{ genes_exps_list[0][genes_exps_list[0].keys()[0]][gene_name][2][0] }}-{{ genes_exps_list[0][genes_exps_list[0].keys()[0]][gene_name][2][1] }}" target="_blank"><img src="static/img/icons/ucsc2.png" title="{{ genes_exps_list[0][genes_exps_list[0].keys()[0]][gene_name][3] }}:{{ genes_exps_list[0][genes_exps_list[0].keys()[0]][gene_name][2][0] }}-{{ genes_exps_list[0][genes_exps_list[0].keys()[0]][gene_name][2][1] }}"/></a>
+                <a href="http://genome.ucsc.edu/cgi-bin/hgTracks?db={{ lexps[0][0].genome }}&position={{ genes_exps_list[0][genes_exps_list[0].keys()[0]][gene_name][3] }}:{{ genes_exps_list[0][genes_exps_list[0].keys()[0]][gene_name][2][0] }}-{{ genes_exps_list[0][genes_exps_list[0].keys()[0]][gene_name][2][1] }}" target="_blank"><img src="static/img/icons/ucsc3.png" title="{{ genes_exps_list[0][genes_exps_list[0].keys()[0]][gene_name][3] }}:{{ genes_exps_list[0][genes_exps_list[0].keys()[0]][gene_name][2][0] }}-{{ genes_exps_list[0][genes_exps_list[0].keys()[0]][gene_name][2][1] }}"/></a>
             </h2>
             <h3 class="gene_id">
                 Gene ID: {{ gene_name }};
@@ -92,7 +92,7 @@
                         <th class="short-header">LSV Type</th>
                         <th class="short-header">PSI {{ lexps[0][0].group }}</th>
                         <th class="short-header">
-                            <p style="color: black; margin: auto; display:block; text-align:center; font-weight: bold" >&#8592; More in {{ lexps[0][0].group }} | More in {{ lexps[1][0].group }} &#8594;</p>
+                            <p class="deltaHeader">&#8592; More in {{ lexps[0][0].group }} | More in {{ lexps[1][0].group }} &#8594;</p>
                             <!--<p style="color: black; margin: auto; display:block; text-align:center; font-weight: bold" >&#8592; More in OldBeta | More in YoungBeta &#8594;</p>-->
                         </th>
 
@@ -106,7 +106,7 @@
                         <th>LSV Type</th>
                         <th>PSI {{ lexps[0][0].group }}</th>
                         <th>
-                            <p style="color: black; margin: auto; display:block; text-align:center; font-weight: bold" >&#8592; More in {{ lexps[0][0].group }} | More in {{ lexps[1][0].group }} &#8594;</p>
+                            <p class="deltaHeader">&#8592; More in {{ lexps[0][0].group }} | More in {{ lexps[1][0].group }} &#8594;</p>
                             <!--<p style="color: black; margin: auto; display:block; text-align:center; font-weight: bold" >&#8592; More in OldBeta | More in YoungBeta &#8594;</p>-->
                         </th>
 
@@ -156,7 +156,7 @@
                         <td>
                             <p>
                                 <a href="http://genome.ucsc.edu/cgi-bin/hgTracks?db={{ lexps[0][0].genome }}&position={{ genes_exps_list[0][genes_exps_list[0].keys()[0]][gene_name][3] }}:{{ gene['lsv'].get_extension()[0] }}-{{ gene['lsv'].get_extension()[1] }}" target="_blank">
-                                    <img src="static/img/icons/ucsc2.png" title="http://genome.ucsc.edu/cgi-bin/hgTracks?db={{ lexps[0][0].genome }}&position={{ genes_exps_list[0][genes_exps_list[0].keys()[0]][gene_name][3] }}:{{ gene['lsv'].get_extension()[0] }}-{{ gene['lsv'].get_extension()[1] }}"/>
+                                    <img src="static/img/icons/ucsc3.png" title="View in UCSC Genome Browser"/>
                                 </a>
                             </p>
                             <p>

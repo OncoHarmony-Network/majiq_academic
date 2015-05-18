@@ -271,6 +271,7 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('--majiq', dest='majiq_dir', type=str, help='Path for MAJIQ psi pickles to evaluate')
     parser.add_argument('--miso', dest='miso_dir', type=str,  help='Path for MISO psi pickles to evaluate')
+    parser.add_argument('--mats', dest='mats_dir', type=str,  help='Path for MISO psi pickles to evaluate')
     parser.add_argument('--names', dest='rep_names', nargs='+', required=True, help='Replicate names used to identify each pair [NOTE: the order in which the names are provided defines the pairs]')
     parser.add_argument('--nb', dest='nb_dir', type=str,  help='Path for Naive Bootstrapping psi pickles to evaluate')
     parser.add_argument('--plotpath', default=None, help='Path to save the plot to, if not provided will show on a matplotlib popup window')
