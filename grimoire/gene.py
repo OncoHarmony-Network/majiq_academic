@@ -131,14 +131,22 @@ class Gene:
         if self.strand == '-':
             strnd = '+'
         for gg in list_of_genes[strnd]:
-            coords = gg.get_coordinates()
-            if self.start < coords[1] and self.end> coords[0]:
+            if self.overlaps(gg):
+                # coords = gg.get_coordinates()
+                # if self.start < coords[1] and self.end > coords[0]:
                 self.antis_gene = gg.get_id()
                 gg.set_antisense_gene(self.id)
                 break
 
     def set_antisense_gene(self, gn_id):
         self.antis_gene = gn_id
+
+    def overlaps(self, gne):
+        if self.start < gne.end and self.end > gne.start:
+            res = True
+        else:
+            res = False
+        return res
 
     def check_antisense_junctions(self, jstart, jend):
         res = False

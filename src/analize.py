@@ -1,5 +1,5 @@
 import numpy as np
-from lsv import SSOURCE, STARGET
+from grimoire.lsv import SSOURCE, STARGET
 import mglobals
 
 
@@ -22,88 +22,87 @@ def lsv_detection(gene_list, chrom, only_real_data=False, logging=None):
     for xx in mglobals.tissue_repl.keys():
         jun[xx] = set()
 
-    for strand, glist in gene_list.items():
-        for gn in glist:
+    for gn in gene_list:
 
-            gn.check_exons()
-            count = gn.get_read_count().sum()
-            if count == 0:
+        gn.check_exons()
+        count = gn.get_read_count().sum()
+        if count == 0:
+            continue
+        mat, exon_list, tlb, var_ss = gn.get_rnaseq_mat(const_set, use_annot=not only_real_data)
+        vip = []
+        for idx, ex in enumerate(exon_list):
+            sc = ex.get_pcr_score()
+            if sc is None:
                 continue
-            mat, exon_list, tlb, var_ss = gn.get_rnaseq_mat(const_set, use_annot=not only_real_data)
-            vip = []
-            for idx, ex in enumerate(exon_list):
-                sc = ex.get_pcr_score()
-                if sc is None:
+            vip.append(idx)
+
+        for ss in range(2):
+            for ssnum in range(20):
+                num_ss_var[ss][ssnum] += var_ss[ss][ssnum]
+        num_ss_var[2] += var_ss[2]
+        # num_ss_var [1]+= var_ss[1]
+
+        # print "---------------- %s --------------"%gn.get_id()
+        # utils.print_junc_matrices(mat, tlb=tlb, fp=True)
+        SS, ST = lsv_matrix_detection(mat, tlb, (False, False, False), vip)
+        dummy = {}
+        for name, ind_list in mglobals.tissue_repl.items():
+            dummy[name] = [[], []]
+
+        for lsv_index, lsv_lst in enumerate((SS, ST)):
+            lsv_type = (SSOURCE, STARGET)[lsv_index]
+            sstype = ['5prime', '3prime'][lsv_index]
+            # print lsv_lst
+
+            for idx in lsv_lst:
+                jlist = exon_list[idx].get_junctions(sstype)
+                jlist = [x for x in jlist if x is not None]
+                if len(jlist) == 0:
                     continue
-                vip.append(idx)
 
-            for ss in range(2):
-                for ssnum in range(20):
-                    num_ss_var[ss][ssnum] += var_ss[ss][ssnum]
-            num_ss_var[2] += var_ss[2]
-            # num_ss_var [1]+= var_ss[1]
+                lsv_in = gn.new_lsv_definition(exon_list[idx], jlist, lsv_type)
+                if lsv_in is None:
+                    continue
 
-            # print "---------------- %s --------------"%gn.get_id()
-            #             utils.print_junc_matrices(mat, tlb=tlb, fp=True)
-            SS, ST = lsv_matrix_detection(mat, tlb, (False, False, False), vip)
-            dummy = {}
-            for name, ind_list in mglobals.tissue_repl.items():
-                dummy[name] = [[], []]
-
-            for lsv_index, lsv_lst in enumerate((SS, ST)):
-                lsv_type = (SSOURCE, STARGET)[lsv_index]
-                sstype = ['5prime', '3prime'][lsv_index]
-                #                print lsv_lst
-
-                for idx in lsv_lst:
-                    jlist = exon_list[idx].get_junctions(sstype)
-                    jlist = [x for x in jlist if x is not None]
-                    if len(jlist) == 0:
-                        continue
-
-                    lsv_in = gn.new_lsv_definition(exon_list[idx], jlist, lsv_type)
-                    if lsv_in is None:
-                        continue
-
-                    for name, ind_list in mglobals.tissue_repl.items():
-                        counter = 0
-                        e_data = 0
-                        for jj in jlist:
-                            for exp_idx in ind_list:
-                                if reliable_in_data(jj, exp_idx):
-                                    counter += 1
-                            if counter < 0.1 * len(ind_list):
-                                continue
-                            e_data += 1
-                            jun[name].add(jj)
-                        if e_data == 0:
+                for name, ind_list in mglobals.tissue_repl.items():
+                    counter = 0
+                    e_data = 0
+                    for jj in jlist:
+                        for exp_idx in ind_list:
+                            if reliable_in_data(jj, exp_idx):
+                                counter += 1
+                        if counter < 0.1 * len(ind_list):
                             continue
+                        e_data += 1
+                        jun[name].add(jj)
+                    if e_data == 0:
+                        continue
 
-                        dummy[name][lsv_index].append(lsv_in)
-                        # for exp_idx in ind_list:
-                        #     for lsvinlist in lsv_list[exp_idx]:
-                        #         if lsv_in.is_equivalent(lsvinlist):
-                        #             break
-                        #     else:
-                        #         if lsv_in.get_junctions_list().shape[0] >= 2:
-                        #             lsv_list[exp_idx].append(lsv_in)
+                    dummy[name][lsv_index].append(lsv_in)
+                    # for exp_idx in ind_list:
+                    # for lsvinlist in lsv_list[exp_idx]:
+                    #         if lsv_in.is_equivalent(lsvinlist):
+                    #             break
+                    #     else:
+                    #         if lsv_in.get_junctions_list().shape[0] >= 2:
+                    #             lsv_list[exp_idx].append(lsv_in)
 
-            for name, ind_list in mglobals.tissue_repl.items():
-                for ss in dummy[name][0]:
-                    for st in dummy[name][1]:
-                        if ss.contained(st):
-                            break
-                    else:
-                        for exp_idx in ind_list:
-                            lsv_list[exp_idx].append(ss)
-
+        for name, ind_list in mglobals.tissue_repl.items():
+            for ss in dummy[name][0]:
                 for st in dummy[name][1]:
-                    for ss in dummy[name][0]:
-                        if st.contained(ss):
-                            break
-                    else:
-                        for exp_idx in ind_list:
-                            lsv_list[exp_idx].append(st)
+                    if ss.contained(st):
+                        break
+                else:
+                    for exp_idx in ind_list:
+                        lsv_list[exp_idx].append(ss)
+
+            for st in dummy[name][1]:
+                for ss in dummy[name][0]:
+                    if st.contained(ss):
+                        break
+                else:
+                    for exp_idx in ind_list:
+                        lsv_list[exp_idx].append(st)
 
     for name, ind_list in mglobals.tissue_repl.items():
         for exp_idx in ind_list:

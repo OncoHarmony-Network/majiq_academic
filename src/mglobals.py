@@ -47,6 +47,9 @@ def global_conf_ini(filename, params, only_db=False):
         genome_path, outDir, temp_oDir, gene_tlb, strand_specific, permissive_ir
     global A3SS, A5SS, SEev, bothSS, totalSE
     global MINREADS, MINPOS, MIN_INTRON
+    global num_final_chunks
+
+    num_final_chunks = params.nthreads
 
     config = ConfigParser.ConfigParser()
     config.read(filename)
@@ -113,6 +116,10 @@ def global_default():
 def get_max_denovo_difference():
     return 1000
 
+
+def add_chunk():
+    global num_final_chunks
+    num_final_chunks += 1
 
 def set_gc_factors(bins, factor, means):
     global gc_factor, gc_bins_val, gc_bins, gc_means

@@ -38,6 +38,8 @@ class LSV(object):
             x1 = jj.get_acceptor()
             x2 = jj.get_donor()
             #print "\t ", jj.get_id()
+            if x1 is None or x2 is None:
+                continue
             if x1.is_intron() or x2.is_intron():
                 #print "LSV with intron"
                 self.intron_retention = True
@@ -435,13 +437,13 @@ def print_lsv_extype(list_lsv, filename):
     fp.close()
 
 
-class LSV_IR(object):
-    def __init__(self, start, end, exon_list, gene):
-        self.start = start
-        self.end = end
-        self.exonlist = exon_list
-        self.gene = gene
-        gene.add_intron_retention(self)
+# class LSV_IR(object):
+# def __init__(self, start, end, exon_list, gene):
+#         self.start = start
+#         self.end = end
+#         self.exonlist = exon_list
+#         self.gene = gene
+#         gene.add_intron_retention(self)
 
 
 class MajiqLsv(object):
