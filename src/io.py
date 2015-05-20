@@ -577,7 +577,7 @@ def _prepare_and_dump(logging=None):
     lsv_list = [list_genes[0]]
     list_genes[0].collapse_exons()
     chrom = list_genes[0].get_chromosome()
-    temp_ex[chrom] = [list_genes[0].get_exon_list()]
+    temp_ex[chrom] = list_genes[0].get_exon_list()
 
     for gidx, gn in enumerate(list_genes[1:]):
         gn.collapse_exons()
