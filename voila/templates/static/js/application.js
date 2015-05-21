@@ -381,6 +381,7 @@ BREWER_PALETTE = [
 
 
 function getColor(colorNumber, palette, hue){
+    colorNumber = colorNumber % 16;
     return "rgba("+palette[colorNumber].toString()+", "+hue+")";
 //        return rgbToHex(palette[colorNumber][0], palette[colorNumber][1], palette[colorNumber][2]);
 }

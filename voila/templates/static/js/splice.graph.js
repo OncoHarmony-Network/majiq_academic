@@ -136,6 +136,7 @@ window.splicegraph = function (){
         ];
 
         function getColor(colorNumber, palette, hue) {
+            colorNumber = colorNumber % 16;
             return "rgba(" + palette[colorNumber].toString() + ", " + hue + ")";
         }
 
