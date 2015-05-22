@@ -23,7 +23,6 @@ def lsv_detection(gene_list, chrom, only_real_data=False, logging=None):
         jun[xx] = set()
 
     for gn in gene_list:
-
         gn.check_exons()
         count = gn.get_read_count().sum()
         if count == 0:
@@ -81,7 +80,7 @@ def lsv_detection(gene_list, chrom, only_real_data=False, logging=None):
                     dummy[name][lsv_index].append(lsv_in)
                     # for exp_idx in ind_list:
                     # for lsvinlist in lsv_list[exp_idx]:
-                    #         if lsv_in.is_equivalent(lsvinlist):
+                    # if lsv_in.is_equivalent(lsvinlist):
                     #             break
                     #     else:
                     #         if lsv_in.get_junctions_list().shape[0] >= 2:
@@ -130,7 +129,7 @@ def lsv_matrix_detection(mat, exon_to_ss, b_list, vip_set=[]):
 
         # cand = range(ii+1, len(exon_to_ss))
         # if ii > 0:
-        #     pre_lsv = exon_to_ss[ii-1]
+        # pre_lsv = exon_to_ss[ii-1]
         #     for ex_idx, ex in enumerate(cand):
         #         pt = exon_to_ss[ex]
         #         junc_cand = mat[lsv[1][0]:lsv[1][-1]+1, pt[0][0]:pt[0][-1]+1]
@@ -152,7 +151,7 @@ def lsv_matrix_detection(mat, exon_to_ss, b_list, vip_set=[]):
 
         # cand = range(0, ii)
         # if ii+1 < len(exon_to_ss):
-        #     post_lsv = exon_to_ss[ii+1]
+        # post_lsv = exon_to_ss[ii+1]
         #     for ex_idx, ex in enumerate(cand):
         #         pt = exon_to_ss[ex]
         #         junc_cand = mat[pt[1][0]:pt[1][-1]+1, lsv[0][0]:lsv[0][-1]+1]

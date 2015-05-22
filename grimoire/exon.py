@@ -404,7 +404,7 @@ class ExonTx(object):
             #         if junc1 is None:
             #             junc1 = Junction(txex2.end, intron_coords[0], None, None, gn, annotated=True)
             # #           junc1.add_donor(txex2)
-            # #           junc1.add_acceptor(intron)
+            # #           junc1.add_acceptor(intron)`
             #         txex2.p5_junc.append(junc1)
             #         intron.p3_junc.append(junc1)
             #

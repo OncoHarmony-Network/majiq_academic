@@ -572,34 +572,41 @@ def _prepare_and_dump(logging=None):
     chunk_size = len(list_genes) / mglobals.num_final_chunks
     temp_ex = {}
     nthrd = 0
-    csize = chunk_size - 1
+    csize = chunk_size
+    lsv_list = []
 
-    lsv_list = [list_genes[0]]
-    list_genes[0].collapse_exons()
-    chrom = list_genes[0].get_chromosome()
-    temp_ex[chrom] = list_genes[0].get_exon_list()
+    dumped_genes = []
 
-    for gidx, gn in enumerate(list_genes[1:]):
-        gn.collapse_exons()
-
-        if csize > 0 or lsv_list[-1].overlaps(gn):
-            chrom = gn.get_chromosome()
-            if not chrom in temp_ex:
-                temp_ex[chrom] = []
-            temp_ex[chrom].extend(gn.get_exon_list())
-            lsv_list.append(gn)
-            csize -= 1
+    for gidx, gn in enumerate(list_genes):
+        if gn.get_id() in dumped_genes:
             continue
+        gn.collapse_exons()
+        csize -= 1
 
-        __annot_dump(nthrd, temp_ex, lsv_list, logging)
-
-        csize = chunk_size - 1
-        nthrd += 1
-        lsv_list = [gn]
-        temp_ex = {}
+        chrom = gn.get_chromosome()
         if not chrom in temp_ex:
             temp_ex[chrom] = []
         temp_ex[chrom].extend(gn.get_exon_list())
+        lsv_list.append(gn)
+        dumped_genes.append(gn.get_id())
+        over_genes = gn.get_overlapped_genes()
+        if not over_genes is None:
+            for extra_gn in over_genes:
+                temp_ex[chrom].extend(extra_gn.get_exon_list())
+                lsv_list.append(extra_gn)
+                dumped_genes.append(extra_gn.get_id())
+                csize -= 1
+
+        if csize <= 0:
+            __annot_dump(nthrd, temp_ex, lsv_list, logging)
+
+            lsv_list = []
+            csize = chunk_size - 1
+            nthrd += 1
+            temp_ex = {}
+            if not chrom in temp_ex:
+                temp_ex[chrom] = []
+            temp_ex[chrom].extend(gn.get_exon_list())
 
     if len(lsv_list) > 0:
         __annot_dump(nthrd, temp_ex, lsv_list, logging)

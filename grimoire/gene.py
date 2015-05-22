@@ -10,7 +10,8 @@ from src.analize import reliable_in_data
 
 class Gene:
     __eq__ = lambda self, other: (self.chromosome == other.chromosome and self.strand == other.strand
-                                  and self.start < other.end and self.end > other.start)
+                                  and self.start < other.end and self.end > other.start
+                                  and self.strand == other.strand)
     __ne__ = lambda self, other: (self.chromosome != other.chromosome or self.strand != other.strand
                                   or self.start >= other.end or self.end <= other.start)
     __lt__ = lambda self, other: (self.chromosome < other.chromosome
