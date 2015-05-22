@@ -592,6 +592,7 @@ def _prepare_and_dump(logging=None):
         over_genes = gn.get_overlapped_genes()
         if not over_genes is None:
             for extra_gn_id in over_genes:
+                over_genes.collapse_exons()
                 extra_gn = mglobals.gene_tlb[extra_gn_id]
                 temp_ex[chrom].extend(extra_gn.get_exon_list())
                 lsv_list.append(extra_gn)

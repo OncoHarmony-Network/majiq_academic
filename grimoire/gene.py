@@ -131,16 +131,16 @@ class Gene:
         return
 
     def exist_antisense_gene(self, list_of_genes):
-        strnd = '-'
-        if self.strand == '-':
-            strnd = '+'
-        for gg in list_of_genes[strnd]:
-            if self.overlaps(gg):
-                # coords = gg.get_coordinates()
-                # if self.start < coords[1] and self.end > coords[0]:
-                self.set_antisense_gene(gg.get_id())
-                gg.set_antisense_gene(self.id)
-                break
+        # strnd = '-'
+        # if self.strand == '-':
+        #     strnd = '+'
+        for strnd in ('+', '-'):
+            for gg in list_of_genes[strnd]:
+                if self.overlaps(gg):
+                    # coords = gg.get_coordinates()
+                    # if self.start < coords[1] and self.end > coords[0]:
+                    self.set_antisense_gene(gg.get_id())
+                    gg.set_antisense_gene(self.id)
 
     def set_antisense_gene(self, gn_id):
         self.antis_gene.append(gn_id)
