@@ -709,7 +709,8 @@ def set_exons_gc_content(chrom, exon_list):
             loaded_chrom.append(chrom_line.strip("\n"))
     loaded_chrom = ''.join(loaded_chrom)
     chrom_file.close()
-    for exon in exon_list[chrom]:
+    print exon_list
+    for exon in exon_list:
         strt, end = exon.get_coordinates()
         if end - strt < 5:
             continue
