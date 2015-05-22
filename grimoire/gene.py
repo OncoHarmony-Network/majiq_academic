@@ -136,6 +136,8 @@ class Gene:
         #     strnd = '+'
         for strnd in ('+', '-'):
             for gg in list_of_genes[strnd]:
+                if gg.get_id() == self.id:
+                    continue
                 if self.overlaps(gg):
                     # coords = gg.get_coordinates()
                     # if self.start < coords[1] and self.end > coords[0]:
