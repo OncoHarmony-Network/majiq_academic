@@ -563,9 +563,8 @@ def __annot_dump(nthrd, temp_ex, lsv_list, logging=None):
     dump_bin_file(lsv_list, fname)
 
 
-def __get_overlaped(gn, temp_ex):
+def __get_overlaped(gn, temp_ex, dumped_genes):
     lsv_list = []
-    dumped_genes = []
     num_gns = 0
     over_genes = gn.get_overlapped_genes()
     if not over_genes is None:
@@ -579,7 +578,7 @@ def __get_overlaped(gn, temp_ex):
             dumped_genes.append(extra_gn_id)
             num_gns += 1
             __get_overlaped(extra_gn, temp_ex)
-    return lsv_list, dumped_genes, num_gns
+    return lsv_list, num_gns
 
 
 def _prepare_and_dump(logging=None):
@@ -608,10 +607,9 @@ def _prepare_and_dump(logging=None):
         temp_ex[chrom].extend(gn.get_exon_list())
         lsv_list.append(gn)
         dumped_genes.append(gn.get_id())
-        a, b, c = __get_overlaped(gn, temp_ex[chrom])
-        csize -= c
+        a, b = __get_overlaped(gn, temp_ex[chrom], dumped_genes)
+        csize -= b
         lsv_list.extend(a)
-        dumped_genes.extend(b)
 
         if csize <= 0:
             __annot_dump(nthrd, temp_ex, lsv_list, logging)
