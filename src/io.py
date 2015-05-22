@@ -577,7 +577,7 @@ def __get_overlaped(gn, temp_ex, dumped_genes):
             lsv_list.append(extra_gn)
             dumped_genes.append(extra_gn_id)
             num_gns += 1
-            __get_overlaped(extra_gn, temp_ex)
+            __get_overlaped(extra_gn, temp_ex, dumped_genes)
     return lsv_list, num_gns
 
 
