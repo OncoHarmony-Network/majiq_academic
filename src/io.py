@@ -576,8 +576,10 @@ def __get_overlaped(gn, temp_ex, dumped_genes):
             temp_ex.extend(extra_gn.get_exon_list())
             lsv_list.append(extra_gn)
             dumped_genes.append(extra_gn_id)
-            num_gns += 1
-            __get_overlaped(extra_gn, temp_ex, dumped_genes)
+            a, b = __get_overlaped(extra_gn, temp_ex, dumped_genes)
+            lsv_list.extend(a)
+            num_gns += (b + 1)
+
     return lsv_list, num_gns
 
 
