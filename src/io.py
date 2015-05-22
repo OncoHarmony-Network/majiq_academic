@@ -563,6 +563,25 @@ def __annot_dump(nthrd, temp_ex, lsv_list, logging=None):
     dump_bin_file(lsv_list, fname)
 
 
+def __get_overlaped(gn, temp_ex):
+    lsv_list = []
+    dumped_genes = []
+    num_gns = 0
+    over_genes = gn.get_overlapped_genes()
+    if not over_genes is None:
+        for extra_gn_id in over_genes:
+            if extra_gn_id in dumped_genes:
+                continue
+            extra_gn = mglobals.gene_tlb[extra_gn_id]
+            extra_gn.collapse_exons()
+            temp_ex.extend(extra_gn.get_exon_list())
+            lsv_list.append(extra_gn)
+            dumped_genes.append(extra_gn_id)
+            num_gns += 1
+            __get_overlaped(extra_gn, temp_ex)
+    return lsv_list, dumped_genes, num_gns
+
+
 def _prepare_and_dump(logging=None):
 
     list_genes = sorted(mglobals.gene_tlb.values())
@@ -589,17 +608,10 @@ def _prepare_and_dump(logging=None):
         temp_ex[chrom].extend(gn.get_exon_list())
         lsv_list.append(gn)
         dumped_genes.append(gn.get_id())
-        over_genes = gn.get_overlapped_genes()
-        if not over_genes is None:
-            for extra_gn_id in over_genes:
-                if extra_gn_id in dumped_genes:
-                    continue
-                extra_gn = mglobals.gene_tlb[extra_gn_id]
-                extra_gn.collapse_exons()
-                temp_ex[chrom].extend(extra_gn.get_exon_list())
-                lsv_list.append(extra_gn)
-                dumped_genes.append(extra_gn_id)
-                csize -= 1
+        a, b, c = __get_overlaped(gn, temp_ex[chrom])
+        csize -= c
+        lsv_list.extend(a)
+        dumped_genes.extend(b)
 
         if csize <= 0:
             __annot_dump(nthrd, temp_ex, lsv_list, logging)
