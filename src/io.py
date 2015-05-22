@@ -591,10 +591,11 @@ def _prepare_and_dump(logging=None):
         dumped_genes.append(gn.get_id())
         over_genes = gn.get_overlapped_genes()
         if not over_genes is None:
-            for extra_gn in over_genes:
+            for extra_gn_id in over_genes:
+                extra_gn = mglobals.gene_tlb[extra_gn_id]
                 temp_ex[chrom].extend(extra_gn.get_exon_list())
                 lsv_list.append(extra_gn)
-                dumped_genes.append(extra_gn.get_id())
+                dumped_genes.append(extra_gn_id)
                 csize -= 1
 
         if csize <= 0:

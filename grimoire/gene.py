@@ -39,7 +39,7 @@ class Gene:
         self.ir_list = []
         self.lsv_list = []
         # self.RPKM = np.zeros(shape=mglobals.num_experiments, dtype=np.float)
-        self.antis_gene = None
+        self.antis_gene = []
 
     def __hash__(self):
         return hash((self.id, self.chromosome, self.strand, self.start, self.end))
@@ -91,6 +91,9 @@ class Gene:
 
         return res
 
+    def get_overlapped_genes(self):
+        return self.antis_gene
+
     # def get_transcript_AS_candidates(self):
     #     return self.transAScandidates
 
@@ -135,12 +138,12 @@ class Gene:
             if self.overlaps(gg):
                 # coords = gg.get_coordinates()
                 # if self.start < coords[1] and self.end > coords[0]:
-                self.antis_gene = gg.get_id()
+                self.set_antisense_gene(gg.get_id())
                 gg.set_antisense_gene(self.id)
                 break
 
     def set_antisense_gene(self, gn_id):
-        self.antis_gene = gn_id
+        self.antis_gene.append(gn_id)
 
     def overlaps(self, gne):
         if self.start < gne.end and self.end > gne.start:
@@ -151,8 +154,9 @@ class Gene:
 
     def check_antisense_junctions(self, jstart, jend):
         res = False
-        if not self.antis_gene is None:
-            gg = mglobals.gene_tlb[self.antis_gene]
+        for anti_g in self.antis_gene:
+            # if not self.antis_gene is None:
+            gg = mglobals.gene_tlb[anti_g]
             j_list = gg.get_all_junctions()
             for jj in j_list:
                 if not jj.is_annotated():
@@ -162,6 +166,10 @@ class Gene:
                     break
                 elif jstart == j_st and jend == j_ed:
                     res = True
+                    break
+            else:
+                continue
+            break
         return res
 
     def is_gene_in_list(self, list_of_genes, name):
