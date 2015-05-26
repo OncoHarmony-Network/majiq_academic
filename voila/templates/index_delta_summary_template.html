@@ -1,0 +1,88 @@
+{% extends "index_summary_template.html" %}
+
+{% block header %}
+    LSV &Delta;&Psi; Summary: {{ lexps[0][0].group }} Vs {{ lexps[1][0].group }}
+{% endblock %}
+
+
+{% block tableContent %}
+<thead>
+<tr>
+    <th class="extra-short-header">#</th>
+    <th class="short-header">Gene</th>
+    <th class="short-header">LSV ID</th>
+    <th class="short-header">LSV Type</th>
+    <th class="short-header">
+        <p class="deltaHeader">&#8592; More in {{ lexps[0][0].group }} | More in {{ lexps[1][0].group }} &#8594;</p>
+    </th>
+    <th class="medium-header">Coordinates Links</th>
+</tr>
+</thead>
+<tfoot>
+<tr>
+    <th>#</th>
+    <th>Gene</th>
+    <th>LSV ID</th>
+    <th>LSV Type</th>
+    <th>
+        <p class="deltaHeader">&#8592; More in {{ lexps[0][0].group }} | More in {{ lexps[1][0].group }} &#8594;</p>
+    </th>
+    <th>Coordinates Links</th>
+</tr>
+</tfoot>
+<tbody>
+    {% for lsv in lsvList  -%}
+    <tr class="{{ lsv.categories2css() }} lsvrow" data-njuncs="{{ lsv.njuncs() }}" data-nexons="{{ lsv.nexons() }}">
+        <td>{{ loop.index }}</td>
+        <td><a href="{{links_dict[lsv.get_gene_name()]}}#{{lsv.get_gene_name()}}" target="_blank">{{ lsv.get_gene_name() }}</a></td>
+        <td><a href="{{links_dict[lsv.get_gene_name()]}}#{{lsv.get_gene_name()}}" target="_blank">{{ lsv.get_id() }}</a></td>
+        {% if lsvList|length > maxLsvs -%}
+            <td class="medium-header text-wrapped">
+                {{ lsv.get_type() }}
+            </td>
+            <td id="data_td{{ loop.index }}" class="medium-header text-wrapped">
+                <p class="hidden">
+                    {% set max_diff = [0.0] %}
+                    {% for excl_incl in lsv.get_excl_incl() %}
+                        {% if ((excl_incl[0]|abs + excl_incl[1]) > max_diff[-1]) %}
+                            {% do max_diff.append(excl_incl[0]|abs + excl_incl[1]) %}
+                        {% endif%}
+                    {%- endfor %}
+                    {{ max_diff[-1]|round(4) }}
+                </p>
+                <span class="short-header text-wrapped">{% for mm in lsv.get_means() %}{{ mm|round(3)}}; {% endfor -%}</span>
+            </td>
+        {% else %}
+            <td>
+                <p class="hidden" style="top:0;">{{ lsv.get_type() }}</p>
+                <canvas class="lsvLegend" width="200px" height="60px" data-lsv-string="{{ lsv.get_type() }}"  title="{{ lsv.get_type() }}">
+                    This browser or document mode doesn't support canvas
+                </canvas>
+            </td>
+            <td id="data_td{{ loop.index }}" class="lsvDeltaCompact" data-lsv="{{ lsv|to_json }}" data-threshold="{{ threshold }}">
+                <p class="hidden">
+                    {% set max_diff = [0.0] %}
+                    {% for excl_incl in lsv.get_excl_incl() %}
+                        {% if ((excl_incl[0]|abs + excl_incl[1]) > max_diff[-1]) %}
+                            {% do max_diff.append(excl_incl[0]|abs + excl_incl[1]) %}
+                        {% endif%}
+                    {%- endfor %}
+                    {{ max_diff[-1] }}
+                </p>
+            </td>
+        {% endif -%}
+        <td>
+            <p>
+                <a href="http://genome.ucsc.edu/cgi-bin/hgTracks?db={{ lexps[0][0].genome }}&position={{ lsv.get_chrom() }}:{{ lsv.get_extension()[0] }}-{{ lsv.get_extension()[1] }}" target="_blank">
+                    <img src="static/img/icons/ucsc3.png" title="View in UCSC Genome Browser"/>
+                </a>
+            </p>
+        </td>
+
+    </tr>
+    {%- endfor %}
+</tbody>
+
+{% endblock %}
+
+
