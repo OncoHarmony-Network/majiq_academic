@@ -158,8 +158,8 @@
                                 <a href="http://genome.ucsc.edu/cgi-bin/hgTracks?db={{ lexps[0][0].genome }}&position={{ genes_exps_list[0][genes_exps_list[0].keys()[0]][gene_name][3] }}:{{ gene['lsv'].get_extension()[0] }}-{{ gene['lsv'].get_extension()[1] }}" target="_blank">
                                     <img src="static/img/icons/ucsc3.png" title="View in UCSC Genome Browser"/>
                                 </a>
-                            </p>
-                            <p>
+                            <!--</p>-->
+                            <!--<p>-->
                                 <!--<a href="static/doc/lsvs/{{ gene['lsv'].get_id() }}.gff3" target="_blank"><img src="static/img/icons/gff3.png" title="Go to GFF3 LSV definition"/></a>-->
                                 <a href="static/doc/lsvs/{{ gene['lsv'].get_id() }}.gtf" target="_blank"><img src="static/img/icons/gtf.png" title="Go to GTF LSV definition"/></a>
                             </p>
@@ -167,7 +167,7 @@
 
                     </tr>
                     {%- endfor %}
-                    </tbody>
+                    </tbody>qs
                 </table>
 
                 <div class="pager" id="pager{{ loop.index }}">

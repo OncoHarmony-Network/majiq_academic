@@ -31,11 +31,11 @@ table
 }
 
 .short-header{
-    width:40px;
+    max-width:40px;
 }
 
 .medium-header{
-    width:120px;
+    max-width:120px;
 }
 
 .mean-header{
@@ -53,6 +53,7 @@ table
 
 .resetZoom{
     float: right;
+    cursor: pointer;
 }
 
 .psiPlot{
@@ -75,7 +76,7 @@ table.tablesorter {
         background-color: #CDCDCD;
         margin:10px 0pt 15px;
         font-size: 9pt;
-        min-width: 900px;
+        min-width: 1000px;
         text-align: left;
 }
 table.tablesorter thead tr th, table.tablesorter tfoot tr th {
@@ -309,4 +310,8 @@ footer {
 
 .gtfLink{
     font-size: 1.5em;
+}
+
+.text-wrapped{
+    word-wrap: break-word;
 }

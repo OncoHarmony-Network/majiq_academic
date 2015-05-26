@@ -1163,7 +1163,7 @@
 
                     var lsv_list = JSON.parse($(this)[0].getAttribute("data-lsv").replace(/\\\"/g, "\'").replace(/\"/g,"").replace(/'/g, "\""));  // NOTE: lsv_data is an array to support groups
 
-                    if (lsv_list[0].bins.length > 2) {
+                    if (1){ //(lsv_list[0].bins.length > 2) {
                         var sampled_bins = translate_lsv_bins(lsv_list[0].bins, 1000);
 
                         var svg = renderViolin($(this).parent()[0].id, sampled_bins, table.id, {'delta': 0, 'num_bins': lsv_list[0].bins[0].length});
@@ -1249,7 +1249,7 @@
 
 
                     // For now: if LSV has 2 ways, show zoomable barchart, otherwise violin boxplots
-                    if (lsv.bins.length > 2){
+                    if (1){ //(lsv.bins.length > 2){
                         var svgViolin;
 
                         var svg_children = $(this).parent().children("violin-boxplot");

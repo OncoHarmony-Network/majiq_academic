@@ -389,11 +389,6 @@ function getColor(colorNumber, palette, hue){
 
 function drawLSVCompactStackBars(canvas, fillMode){
 
-    function getColor(colorNumber, palette, hue){
-        return "rgba("+palette[colorNumber].toString()+", "+hue+")";
-//        return rgbToHex(palette[colorNumber][0], palette[colorNumber][1], palette[colorNumber][2]);
-    }
-
     function createGradientLSVGroupsCompact(coords, group, count, fillMode, hue) {
         //create a gradient object from the canvas context
 

@@ -129,7 +129,6 @@ def get_lsv_delta_exp_data(voila_input_file, confidence=.95, threshold=.2, show_
     """
 
     voila_input = load_voila_input(voila_input_file, logger=logger)
-    meta_info = voila_input.metainfo
 
     genes_dict = defaultdict(list)
     lsv_list = voila_input.lsvs
@@ -172,7 +171,7 @@ def get_lsv_delta_exp_data(voila_input_file, confidence=.95, threshold=.2, show_
     # logger.info("Number of genes added: %d" % len(genes_dict.keys()))
 
     return {'genes_dict': genes_dict,
-            'meta_exps':  meta_info}
+            'meta_exps':  voila_input.metainfo}
 
 
 def copyanything(src, dst):
