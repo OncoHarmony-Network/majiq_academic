@@ -156,7 +156,7 @@ def main(params):
             return
 
         if params.nthreads > 1:
-            pool = Pool(processes=params.nthreads)
+            pool = Pool(processes=params.nthreads, maxtasksperchild=1)
         #logger.info("Scatter in Chromosomes")
         # for chrom in chr_list:
 
