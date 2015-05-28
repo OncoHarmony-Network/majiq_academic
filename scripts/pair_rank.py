@@ -127,6 +127,7 @@ def rank_majiq(vlsv_list, V=0.2, absolute=True, dofilter=True, E=False, ranknoch
     for i, vlsv in enumerate(vlsv_list):
         lsv_bins = vlsv.get_bins()
         junc_n = 0
+        if 'i' in vlsv.get_type(): continue
         if len(lsv_bins) > 2 :
             if junc_selection:
                 bins_selected = lsv_bins[junc_selection[vlsv.get_id()]]
@@ -153,7 +154,8 @@ def rank_majiq(vlsv_list, V=0.2, absolute=True, dofilter=True, E=False, ranknoch
     expected_mask = np.array([abs(r[1])>=V for r in rank])
     fdr_mask = np.array([r[2]<=0.05 for r in rank])
     expected_fdr_mask = np.logical_and(expected_mask, fdr_mask)
-    if majiq_n[0]:
+    #rank = np.array(rank)[expected_fdr_mask].tolist()
+    if majiq_n:
         majiq_n[0] = np.count_nonzero(expected_fdr_mask)
     # rank = np.array(rank)[np.logical_and(expected_mask, fdr_mask)].tolist()
 
@@ -170,36 +172,29 @@ def rank_naive(bins_list, names, V=0.2, absolute=True, E=False, ranknochange=Fal
     """Similar to MAJIQ files with the difference that the matrix is already collapsed"""
     rank = []
 
+    print "Num of LSVs in naive_bootstrapping: %d" % len(bins_list)
     for i, lsv_bins in enumerate(bins_list):
-        dmatrix = np.array(lsv_bins)
-        if E:
-            MINTHRESHOLD=.2
-            v_prob = 0.
-            for ii, v in enumerate(linspace(-1, 1, num=dmatrix.shape[0])):
-                v_prob += dmatrix[ii]*abs(v)
-            if np.isnan(v_prob): continue
-            rank.append([names[i][1], v_prob])
-        else:
-            MINTHRESHOLD=.95
-            area = matrix_area(dmatrix, V, absolute, collapsed_mat=True)
-            if np.isnan(area): continue
-            if ranknochange:
-                #P(Delta PSI < V) = 1 - P(Delta PSI > V)
-                area = 1.0 - area
-            rank.append([names[i][1], area])
+        junc_n = -1
+        most_change = 0
+        dmatrix = lsv_bins
 
-    #if ranknochange:
-    #    rank.sort(key=lambda x: x[1])
-    #else:
-    #    rank.sort(key=lambda x: x[1], reverse=True)
-    rank.sort(key=lambda x: x[1], reverse=True)
+        # Expected dpsi
+        v_prob = 0.
+        for ii, v in enumerate(linspace(-1, 1, num=dmatrix.shape[0])):
+            v_prob += dmatrix[ii]*abs(v)
 
-    for idx, v in enumerate(rank):
-        if  v[1]<MINTHRESHOLD:
-            print "Naive Bootstrapping FDR=%d" % (idx+1)
-            break
-            # return rank[:idx+1]
+        area = 1. - matrix_area(dmatrix, V, absolute, collapsed_mat=True)
+        rank.append([names[i][1], v_prob, area])
 
+    expected_mask = np.array([abs(r[1])>=V for r in rank])
+    fdr_mask = np.array([r[2]<=0.05 for r in rank])
+    expected_fdr_mask = np.logical_and(expected_mask, fdr_mask)
+
+    print "#FDR < 0.05: %d" % np.count_nonzero(fdr_mask)
+    print "#E(Delta(PSI))>%.2f: %d" % (V, np.count_nonzero(expected_mask))
+    print "#E(Delta(PSI))>%.2f and FDR<0.05: %d" % (V, np.count_nonzero(expected_fdr_mask))
+
+    rank.sort(key=lambda x: (x[1], x[2]), reverse=True)
     return rank
 
 
@@ -275,10 +270,14 @@ def rank_mats_original(mats_file, dofilter=True, ranknochange=False, majiq_n=Non
     if majiq_n[0]:
         while np.count_nonzero(np.logical_and(expected_mask, np.array([r[3] <= fdr_cutoff for r in rank]))) < majiq_n[0]:
             fdr_cutoff += 0.05
+    else:
+        majiq_n[0] = np.count_nonzero(np.array([r[3]<=0.05 for r in rank]))
     fdr_mask = np.array([r[3]<=fdr_cutoff for r in rank])
-    rank = np.array(rank)[np.logical_and(expected_mask, fdr_mask)].tolist()
 
-    print "#FDR < 0.05: %d" % np.count_nonzero(fdr_mask)
+    print "MATS:"
+    print "#FDR < 0.05: %d" % np.count_nonzero(np.array([r[3]<=0.05 for r in rank]))
+    rank = np.array(rank)[np.logical_and(expected_mask, fdr_mask)].tolist()
+    print "#FDR < %.2f: %d" % (fdr_cutoff, np.count_nonzero(fdr_mask))
     print "#E(Delta(PSI))>0.20: %d" % np.count_nonzero(expected_mask)
     print "#E(Delta(PSI))>0.20 and FDR<0.05: %d" % np.count_nonzero(np.logical_and(expected_mask, fdr_mask))
 
@@ -392,6 +391,7 @@ def main():
     parser.add_argument('--create_restrict_plot', dest='create_restrict_plot', default=False, action='store_true', help="Create plot for only_ex1 ranks in different restrictive conditions. Only works with --type-rank only_exp1")
     parser.add_argument('--complex-lsvs', dest="complex_lsvs", default=False, action="store_true", help="Include complex LSVs")
     parser.add_argument('--noshrink', dest='shrink', default=True, action='store_false', help="Shrink ranks with the FDR number.")
+    parser.add_argument('--mats_n',  default=False, action='store_true', help="Use MATS number of confident changing events (N of FDR<0.05, |E(Delta(PSI))|>.2)")
     args = parser.parse_args()
 
     print args
@@ -408,8 +408,9 @@ def main():
             # prior = pickle.load(open(str(file).replace('deltamatrix', 'priormatrix_jun_0')))
             if file_nr % 2 == 0:
                 count_pairs += 1
-                majiq_file1_names = [vlsv.get_id() for vlsv in majiq_data.get_lsvs()]
-                majiq_N = ranks['majiq_' + str(count_pairs)].append(rank_majiq(majiq_data.get_lsvs(), args.V, args.absolute, args.filter, args.E, args.ranknochange, args.complex_lsvs, shrink=args.shrink, majiq_n=majiq_N))
+                #majiq_file1_names = [vlsv.get_id() for vlsv in majiq_data.get_lsvs()]
+                ranks['majiq_' + str(count_pairs)].append(rank_majiq(majiq_data.get_lsvs(), args.V, args.absolute, args.filter, args.E, args.ranknochange, args.complex_lsvs, shrink=args.shrink, majiq_n=majiq_N))
+                majiq_file1_names = [a[0].split('#')[0] for a in ranks['majiq_1'][0]]
                 continue
 
             if args.type_rank == 'only_exp1':
@@ -421,6 +422,8 @@ def main():
         names_majiq_exp1 = [m[1] for m in majiq_file1_names]
 
     if args.mats_files:
+        if args.mats_n:
+            majiq_N = [None]
         for file in args.mats_files:
             mats_rank = rank_mats_original(file, args.filter, args.ranknochange, majiq_n=majiq_N)
             if len(ranks['mats']) > 0:
@@ -456,7 +459,7 @@ def main():
                 names_naive = [naive_info[0] for naive_info in naive_rank]
                 if not names_naive_exp1:
                     names_naive_exp1 = names_naive
-                exp1_index = np.array([name in names_naive_exp1 and name in names_majiq_exp1 for name in names_naive])
+                exp1_index = np.array([name in names_naive_exp1 for name in names_naive])
                 ranks['naive'].append(array(naive_rank)[exp1_index])
                 n1['naive'].append(np.count_nonzero(exp1_index))
             else:

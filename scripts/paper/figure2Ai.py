@@ -3,7 +3,6 @@ from matplotlib import use
 use('Agg')
 from scripts import utils as utils_scripts
 from collections import defaultdict
-import pickle
 import analysis
 from scripts.psi_scores import calculate_ead_simple, _save_or_show
 import argparse
@@ -12,6 +11,8 @@ from itertools import izip
 import colorbrewer as cb
 from grimoire import lsv
 import os
+from scripts import utils as sutils
+import cPickle as pickle
 
 LSV_TYPES_DICT = {
     's|1e1.1|1e2.1':'SE',
@@ -140,7 +141,7 @@ def rgb_to_hex(rgb):
     return '#%02x%02x%02x' % rgb
 
 
-def plot_delta_expected_majiq_others(psi_dict_lists, replica_names, plotpath=None):
+def plot_delta_expected_majiq_others(psi_dict_lists, replica_names, plotpath=None, extension='pdf'):
 
     colors_dict = {
         'miso': 'blue'
@@ -233,14 +234,14 @@ def plot_delta_expected_majiq_others(psi_dict_lists, replica_names, plotpath=Non
                              np.append(np.mean(win_cdf_all, axis=0)-np.std(win_cdf_all, axis=0), np.mean(win_cdf_all, axis=0)[-1]-np.std(win_cdf_all, axis=0)[-1]),
                              facecolor=rgb_to_hex(cb.Blues[3][-1]),
                              alpha=0.4,
-                             linewidth=0.0)
+                             linewidth=1.0, interpolate=True)
 
             plt.fill_between(np.append(np.mean(lose_psi_all, axis=0), 1),
                              np.append(np.mean(lose_cdf_all, axis=0)+np.std(lose_cdf_all, axis=0), np.mean(lose_cdf_all, axis=0)[-1]+np.std(lose_cdf_all, axis=0)[-1]),
                              np.append(np.mean(lose_cdf_all, axis=0)-np.std(lose_cdf_all, axis=0), np.mean(lose_cdf_all, axis=0)[-1]-np.std(lose_cdf_all, axis=0)[-1]),
                             facecolor=rgb_to_hex(cb.Reds[3][-1]),
                             alpha=0.4,
-                            linewidth=0.0)
+                            linewidth=1.0, interpolate=True)
 
     plt.xlabel("Delta Delta PSI", fontsize=11)
     plt.ylabel("Number of LSVs", fontsize=11)
@@ -250,16 +251,19 @@ def plot_delta_expected_majiq_others(psi_dict_lists, replica_names, plotpath=Non
     plt.title(plotname, fontsize=13)
     plt.legend(loc=2, fontsize=11)
     plt.tight_layout()
-    _save_or_show(plotpath, plotname.replace('\n', ' - '))
+    sutils.save_or_show(plotpath, plotname.replace('\n', ' - '), exten=extension)
 
 
 
 def intersect_sets(majiq1, majiq2):
     """Find common names and return their psi values in 2 lists"""
-    names1 = [m[1] for m in majiq1[1]]
-    names2 = [m[1] for m in majiq2[1]]
+    names1 = [m.get_id() for m in majiq1]
+    names2 = [m.get_id() for m in majiq2]
     common_names = set(names1).intersection(set(names2))
-    return np.array(majiq1[0])[np.array([name in common_names for name in names1])], np.array(majiq2[0])[np.array([name in common_names for name in names2])], np.array(majiq1[1])[np.array([name in common_names for name in names1])], np.array(majiq2[1])[np.array([name in common_names for name in names2])]
+    return  np.array([mm.get_bins() for mm in majiq1])[np.array([name in common_names for name in names1])], \
+            np.array([mm.get_bins() for mm in majiq2])[np.array([name in common_names for name in names2])], \
+            np.array(names1)[np.array([name in common_names for name in names1])], \
+            np.array(names2)[np.array([name in common_names for name in names2])]
 
 
 def main():
@@ -267,6 +271,8 @@ def main():
     PSI reproducibility plot.
     The order of each way within a LSV should be the same in MAJIQ and MISO.
     """
+    EXTENSION_TYPES = ['png', 'pdf']
+
     # python ~/Projects/majiq/scripts/paper/figureAi.py --majiq majiq/ --miso miso/ --names Hip1 Hip2 Hip1 Hip4 Hip5 Hip6 Liv1 Liv2 Liv1 Liv4 Liv4 Liv5 --plotpath ./output/
     parser = argparse.ArgumentParser()
     parser.add_argument('--majiq', dest='majiq_dir', type=str, help='Path for MAJIQ psi pickles to evaluate')
@@ -275,6 +281,7 @@ def main():
     parser.add_argument('--names', dest='rep_names', nargs='+', required=True, help='Replicate names used to identify each pair [NOTE: the order in which the names are provided defines the pairs]')
     parser.add_argument('--nb', dest='nb_dir', type=str,  help='Path for Naive Bootstrapping psi pickles to evaluate')
     parser.add_argument('--plotpath', default=None, help='Path to save the plot to, if not provided will show on a matplotlib popup window')
+    parser.add_argument('--extension', default=EXTENSION_TYPES[1], choices=EXTENSION_TYPES, help='Extension of the created figure (%s).' % ', '.join(EXTENSION_TYPES))
     args = parser.parse_args()
 
     better_worse_dict = defaultdict(list)
@@ -289,15 +296,15 @@ def main():
         if ii % 2:
             majiq1 = pickle.load(open(majiq_files[ii-1]))
             majiq2 = pickle.load(open(majiq_file))
-            print "Events in MAJIQ: rep1=%d; rep2=%d" % (len(majiq1[1]), len(majiq2[1]))
-            psi_met1_rep1, psi_met1_rep2, majiq1_names, majiq2_names = intersect_sets(majiq1, majiq2)
+            print "Events in MAJIQ: rep1=%d; rep2=%d" % (len(majiq1.lsvs), len(majiq2.lsvs))
+            psi_met1_rep1, psi_met1_rep2, majiq1_names, majiq2_names = intersect_sets(majiq1.lsvs, majiq2.lsvs)
             psi_names_met1 = defaultdict()
             print "Events after intersection in MAJIQ: rep1=%d; rep2=%d" % (len(psi_met1_rep1), len(psi_met1_rep2))
             # Discard LSVs with only one PSI
             for i, psis_lsv_met1 in enumerate(psi_met1_rep1):
                 if len(psis_lsv_met1) > 1 or len(psi_met1_rep2[i]) > 1:
                     continue
-                psi_names_met1[majiq2_names[i][1]] = i
+                psi_names_met1[majiq2_names[i]] = i
 
             # Method1 (MAJIQ) psi scores
             psi_list1_met1 = []
@@ -352,7 +359,7 @@ def main():
                 psi_list2_met1.append(sum(psi_met1_rep2[psi_names_met1[psi_name]][0]*analysis.psi.BINS_CENTER))
             better_worse_dict[majiq_vs].append(-calculate_ead_simple(psi_list1_met1, psi_list2_met1) +  calculate_ead_simple(psi_lists_met2[0], psi_lists_met2[1]))
 
-    plot_delta_expected_majiq_others(better_worse_dict, args.rep_names, args.plotpath)
+    plot_delta_expected_majiq_others(better_worse_dict, args.rep_names, args.plotpath, extension=args.extension)
 
 
 if __name__ == '__main__':
