@@ -37,6 +37,7 @@ class Gene:
         self.readNum = np.zeros(shape=mglobals.num_experiments, dtype=np.int)
         self.temp_txex_list = []
         self.ir_list = []
+        self.ir_definition = []
         self.lsv_list = []
         # self.RPKM = np.zeros(shape=mglobals.num_experiments, dtype=np.float)
         self.antis_gene = []
@@ -94,6 +95,9 @@ class Gene:
     def get_overlapped_genes(self):
         return self.antis_gene
 
+    def get_ir_definition(self):
+        return self.ir_definition
+
     # def get_transcript_AS_candidates(self):
     #     return self.transAScandidates
 
@@ -129,6 +133,9 @@ class Gene:
     def add_exon(self, exon):
         self.exons.append(exon)
         return
+
+    def add_ir_definition(self, start, end):
+        self.ir_definition.append((start, end))
 
     def exist_antisense_gene(self, list_of_genes):
         # strnd = '-'
@@ -169,9 +176,8 @@ class Gene:
                 elif jstart == j_st and jend == j_ed:
                     res = True
                     break
-            else:
-                continue
-            break
+            if res:
+                break
         return res
 
     def is_gene_in_list(self, list_of_genes, name):

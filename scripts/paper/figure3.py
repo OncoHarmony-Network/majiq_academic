@@ -696,30 +696,30 @@ if __name__ == '__main__':
         os.makedirs(output)
         os.makedirs('%s/news' % output)
 
-    list_types, group_types = get_types(dire, onlyfiles, groups)
-    count_lsv = len(set(list_types.keys()))
-
-    stypes = {}
-    for kk, tyt in list_types.items():
-        if not tyt in stypes:
-            stypes[tyt] = 0
-        stypes[tyt] += 1
-
-    print "Plot 3.a 3.b"
-
-
-    all_plots_wrapper(stypes, count_lsv, output=output)
+    # list_types, group_types = get_types(dire, onlyfiles, groups)
+    # count_lsv = len(set(list_types.keys()))
     #
-    # #read psi values
-    # groups_vals = []
-    # filename_list = ['./psi/'+grp+'_psigroup_psi.txt' for grp in groups]
-    # print "Plot Dominant exons"
-    # values = psi_dominant(filename_list)
-    # plot_dominant_exons(values, 'exons', color=cb.Blues[9])
-    # values = ss_dominant(filename_list)
-    # print "Plot Dominant splicesites"
-    # plot_dominant_exons(values[0], ' 5\'splice sites', color=cb.Oranges[9])
-    # plot_dominant_exons(values[1], ' 3\'splice sites', color=cb.PuRd[9])
+    # stypes = {}
+    # for kk, tyt in list_types.items():
+    # if not tyt in stypes:
+    #         stypes[tyt] = 0
+    #     stypes[tyt] += 1
+    #
+    # print "Plot 3.a 3.b"
+    #
+    #
+    # all_plots_wrapper(stypes, count_lsv, output=output)
+    #
+    #read psi values
+    groups_vals = []
+    filename_list = ['./psi/' + grp + '_psigroup_psi.txt' for grp in groups]
+    print "Plot Dominant exons"
+    values = psi_dominant(filename_list)
+    plot_dominant_exons(values, 'exons', color=cb.Blues[9])
+    values = ss_dominant(filename_list)
+    print "Plot Dominant splicesites"
+    plot_dominant_exons(values[0], ' 5\'splice sites', color=cb.Oranges[9])
+    plot_dominant_exons(values[1], ' 3\'splice sites', color=cb.PuRd[9])
 
     #heatmap
     # print "Plot dpsi changing events heatmap"

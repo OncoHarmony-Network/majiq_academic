@@ -482,6 +482,7 @@ class ExonTx(object):
                         # txex.ir = True
                         continue
                     ''' intron retention'''
+                    gne.add_ir_definition(intr[0], intr[1])
                     # LSV_IR(txex.start, txex.end, [], gne)
                     dummy = txex.split_exon(intr, gne)
                     list_exontx.remove(txex)
@@ -596,7 +597,12 @@ def new_exon_definition(start, end, read_rna, s3prime_junc, s5prime_junc, gene, 
 
     if ex is None:
         new_exons = 1
-        ex = Exon(start, end, gene, gene.get_strand(), isintron=isintron)
+        in_db = False
+        for xx in gene.get_ir_definition():
+            if start <= xx[1] and end >= xx[0]:
+                in_db = True
+                break
+        ex = Exon(start, end, gene, gene.get_strand(), annot=in_db, isintron=isintron)
         gene.add_exon(ex)
     else:
         coords = ex.get_coordinates()

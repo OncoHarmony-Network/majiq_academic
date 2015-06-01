@@ -84,7 +84,7 @@ def __cross_junctions(read):
             elif op == 3:
                 jlist.append((read.pos + off, read.pos + off + num + 1))
                 off += num
-                #    if len(jlist) !=0 : print "NOSTAR:", jlist, read.cigar
+                # if len(jlist) !=0 : print "NOSTAR:", jlist, read.cigar
 
     return cross, jlist
 
@@ -390,7 +390,7 @@ def read_sam_or_bam(filenames, gene_list, readlen, chnk, nondenovo=False, loggin
                                 junctions.append((junc_start, '5prime', junc))
                                 junctions.append((junc_end, '3prime', junc))
                                 # end if not found ...
-                                #end for junc ...
+                                # end for junc ...
                                 #            print "JJJunctions", junctions
         if len(junctions) > 0:
             majiq_exons.detect_exons(gne, junctions, None)
@@ -505,7 +505,7 @@ def __parse_gff3(filename):
             parts = line.strip().split("\t")
             # If this fails, the file format is not standard-compatible
             assert len(parts) == len(gffInfoFields)
-            #Normalize data
+            # Normalize data
             normalized_info = {
                 "seqid": None if parts[0] == "." else urllib.unquote(parts[0]),
                 "source": None if parts[1] == "." else urllib.unquote(parts[0]),
@@ -584,7 +584,6 @@ def __get_overlaped(gn, temp_ex, dumped_genes):
 
 
 def _prepare_and_dump(logging=None):
-
     list_genes = sorted(mglobals.gene_tlb.values())
     if not logging is None:
         logging.debug("Number of Genes", len(list_genes))
@@ -630,7 +629,6 @@ def _prepare_and_dump(logging=None):
 
 def read_gff(filename, pcr_filename, nthreads, logging=None):
     """
-
     :param filename: GFF input filename
     :param pcr_filename: BED file name with the PCR validations
     :param logging: logger object
