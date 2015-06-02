@@ -116,6 +116,7 @@ class CalcPsi(BasicPipeline):
         Given a file path with the junctions, return psi distributions. 
         write_pickle indicates if a .pickle should be saved in disk
         """
+        self.logger = get_logger("%s/majiq.log" % self.logger_path, silent=self.silent, debug=self.debug)
         self.logger.info("")
         self.logger.info("Running PSI groups...")
         self.logger.info("GROUP : %s" % self.files)
