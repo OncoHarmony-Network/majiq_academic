@@ -49,7 +49,7 @@ def global_conf_ini(filename, params, only_db=False):
     global MINREADS, MINPOS, MIN_INTRON
     global num_final_chunks
 
-    num_final_chunks = params.nthreads * 5
+    num_final_chunks = params.nthreads * 5 if params.nthreads > 1 else 1
 
     config = ConfigParser.ConfigParser()
     config.read(filename)
