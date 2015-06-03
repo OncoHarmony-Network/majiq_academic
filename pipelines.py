@@ -184,12 +184,15 @@ class CalcPsi(BasicPipeline):
                 'nbins': 40}
 
         nchunks = self.nthreads
+        if self.nthreads > 1:
+            p = Process(target=self.pre_psi, args=[nchunks])
+            p.start()
+            p.join()
 
-        p = Process(target=self.pre_psi, args=[nchunks])
-        p.start()
-        p.join()
+            pool = Pool(processes=self.nthreads)
+        else:
+            self.pre_psi(nchunks)
 
-        pool = Pool(processes=self.nthreads)
         for nthrd in xrange(nchunks):
             chunk_fname = '%s/tmp/chunks/chunk_%d.pickle' % (self.output, nthrd)
             if self.nthreads == 1:
