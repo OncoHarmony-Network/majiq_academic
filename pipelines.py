@@ -150,7 +150,7 @@ class CalcPsi(BasicPipeline):
             lb = nthrd * csize
             ub = min((nthrd + 1) * csize, len(matched_lsv))
             if nthrd == nchunks - 1:
-                ub = len(matched_lsv[0])
+                ub = len(matched_lsv)
             lsv_list = matched_lsv[lb:ub]
             lsv_info = matched_info[lb:ub]
 
