@@ -273,7 +273,7 @@ def main(params):
     merge_and_create_majiq_file(chr_list, mglobals.outDir)
 
     logger.info("Gather lsv and generate gff")
-    fp = open('%s/%s' % (mglobals.outDir, params.gff_output), 'w+')
+    fp = open('%s/%s' % (mglobals.outDir, 'lsvs.gff3'), 'w+')
     for chrom in chr_list:
         temp_dir = "%s/tmp/%s" % (mglobals.outDir, chrom)
         yfile = '%s/temp_gff.pkl' % temp_dir
