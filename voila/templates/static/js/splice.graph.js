@@ -136,6 +136,7 @@ window.splicegraph = function (){
         ];
 
         function getColor(colorNumber, palette, hue) {
+            colorNumber = colorNumber % 16;
             return "rgba(" + palette[colorNumber].toString() + ", " + hue + ")";
         }
 
@@ -704,8 +705,7 @@ window.splicegraph = function (){
                     num_exons = Math.max(num_exons, parseInt(lsvs_fields[1][0]));
                     num_ss = Math.max(num_ss, parseInt(lsvs_fields[0]));
 
-                    if (lsvs_fields[1] == 0)
-                        continue;
+                    if (lsvs_fields[1] == 0) continue;
                     var exonNum_ss = lsvs_fields[1].split('.');
 
                     if (exonNum_ss[1].indexOf('o')>0) {
@@ -851,7 +851,7 @@ window.splicegraph = function (){
                     if (lsvs_fields[1].indexOf('.') === -1) {
                         ctx.strokeStyle = "rgba(0, 0, 0, 0.6)";
                         drawLine(ctx, Math.round(coords_x_start_e), Math.round(coords[1]), Math.round(coords_x_start_e), Math.round(coords[1] + exon_height));
-                        drawArrow(ctx, Math.round(coords_x_start_e + direction * Math.max(10, offset_ss_step)), Math.round(coords[1] + exon_height/2), Math.round(coords_x_start_e + direction * 2), Math.round(coords[1] + exon_height/2), Math.max(5, Math.round((offset_ss_step)/2)));
+                        drawArrow(ctx, Math.round(coords_x_start_e + direction * Math.max(10, percentage_exon/2 * exon_width)), Math.round(coords[1] + exon_height/2), Math.round(coords_x_start_e + direction * 2), Math.round(coords[1] + exon_height/2), Math.max(5, Math.round((percentage_exon/2 * exon_width)/2)));
 
                     }
 

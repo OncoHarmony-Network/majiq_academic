@@ -38,7 +38,7 @@ def add_method(method_name, method_num, targetdir, group_folder):
         ratio = np.array(pkl.load(open(ratio_path)))
         numevents = ratio.shape[0]
         if group_folder in rep_names[i]:
-            alpha_plt=.9
+            #alpha_plt=.9
             #plot the diagonal if we are in the first step
             diagonal = np.linspace(0, 1, num=numevents+1)
             plt.plot(diagonal, diagonal, '--', color="#cccccc")
@@ -60,7 +60,7 @@ def add_method(method_name, method_num, targetdir, group_folder):
     nbins_n1=np.array(bins_n1)
 
     plt.plot(np.arange(0+1./(2*bins_area), 1, 1./bins_area), np.mean(ndbins, axis=0), label="%s Pairs mean & STD - %.0f%%" % (method_name.upper(), math.ceil(np.mean(ndbins, axis=0)[-1]*100)), color=rgb_to_hex(cb.Paired[10][2*method_num + 1]), lw=2)
-    plt.plot(np.arange(0, 1, 1./nbins_n1.shape[1]), np.mean(nbins_n1, axis=0), '--', label="%s Pairs Null Model & STD - %.0f%%" % (method_name.upper(), math.ceil(np.mean(nbins_n1, axis=0)[-1]*100)), color=rgb_to_hex(cb.Paired[10][2*method_num + 1]), lw=2)
+   # plt.plot(np.arange(0, 1, 1./nbins_n1.shape[1]), np.mean(nbins_n1, axis=0), '--', label="%s Pairs Null Model & STD - %.0f%%" % (method_name.upper(), math.ceil(np.mean(nbins_n1, axis=0)[-1]*100)), color=rgb_to_hex(cb.Paired[10][2*method_num + 1]), lw=2)
 
     plt.fill_between(np.arange(0+1./(2*bins_area),1,1./bins_area),
         np.mean(ndbins, axis=0)-np.std(ndbins, axis=0),

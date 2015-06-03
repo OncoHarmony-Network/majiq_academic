@@ -19,8 +19,19 @@
 
     </head>
     <body>
-        {# TODO: Add structured layout #}
+        <header>
+            <a href="http://www.biociphers.org" target="_blank"><img class="logoBiociphers"  src="static/img/icons/biociphers2.png"/></a>
+            <span class="headerText">
+                {% block header%}
+                {% endblock %}
+            </span>
+        </header>
         {% block content %}
         {% endblock %}
+        <footer>
+                &copy; BIOCIPHERS &middot; Department of Genetics Perelman School of Medicine Department of Computer and Information Science School of Engineering University of Pennsylvania
+                <a href="http://www.upenn.edu" target="_blank"><img src="static/img/icons/penn.jpg" /></a>
+        </footer>
     </body>
+
 </html>

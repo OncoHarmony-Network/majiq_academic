@@ -1,17 +1,21 @@
 body {
     font-family: Helvetica, Arial;
+    color: #005DB5;
 }
 
 h2 {
-    color: #006afc;
     clear: both;
     padding-top: 10px;
     margin-bottom: 2px;
 }
 
+h3 {
+    color: #E35A00;
+}
+
 fieldset legend {
     font-weight:bold;
-    color: #006afc;
+    color: #005DB5;
     font-size: 1.5em;
 }
 
@@ -27,11 +31,11 @@ table
 }
 
 .short-header{
-    width:20px;
+    max-width:40px;
 }
 
 .medium-header{
-    width:120px;
+    max-width:120px;
 }
 
 .mean-header{
@@ -49,6 +53,7 @@ table
 
 .resetZoom{
     float: right;
+    cursor: pointer;
 }
 
 .psiPlot{
@@ -67,17 +72,17 @@ table
 
 /* tablesorter CSS */
 table.tablesorter {
-        font-family:arial;
+        font-family:Helvetica, Arial;
         background-color: #CDCDCD;
         margin:10px 0pt 15px;
-        font-size: 8pt;
-        min-width: 900px;
+        font-size: 9pt;
+        min-width: 1000px;
         text-align: left;
 }
 table.tablesorter thead tr th, table.tablesorter tfoot tr th {
         background-color: #E6EEEE;
         border: 1px solid #FFF;
-        font-size: 8pt;
+        font-size: 9pt;
         padding: 4px;
 }
 table.tablesorter thead tr .header {
@@ -87,13 +92,12 @@ table.tablesorter thead tr .header {
         cursor: pointer;
 }
 table.tablesorter tbody td {
-        color: #3D3D3D;
         padding: 4px;
         background-color: #FFF;
         /*vertical-align: top;*/
 }
 table.tablesorter tbody tr.odd td {
-        background-color:#F0F0F6;
+        /*background-color:#F0F0F6;*/
 }
 table.tablesorter thead tr .headerSortUp {
         background-image: url(../img/asc.gif);
@@ -102,7 +106,7 @@ table.tablesorter thead tr .headerSortDown {
         background-image: url(../img/desc.gif);
 }
 table.tablesorter thead tr .headerSortDown, table.tablesorter thead tr .headerSortUp {
-background-color: #8dbdd8;
+    background-color: #8dbdd8;
 }
 
 /* End of tablesorter CSS*/
@@ -196,7 +200,7 @@ background-color: #8dbdd8;
 
 .section-border{
     padding: 25px;
-    border: 3px solid #006afc;
+    border: 3px solid #20A0DF;
     margin: 10px;
     border-radius: 7px;
 }
@@ -204,12 +208,22 @@ background-color: #8dbdd8;
 .prime3hidden, .prime5hidden, .EShidden, .targethidden, .sourcehidden, .njuncsfromhidden, .njuncstohidden, .nexonsfromhidden, .nexonstohidden{
     display: none;
 }
+
+header {
+    border-bottom: 3px solid #20A0DF;
+    font-size: 1em;
+}
+
+footer {
+    border-top: 2px solid #20A0DF;
+    font-size: 8pt;
+}
+
 header, footer {
-    background-color:#006afc;
-    color:white;
+    /*background-color:#005DB5;*/
+    color: #0053A0;
     text-align:center;
     padding:5px;
-    font-size: 1em;
 }
 nav {
     line-height:30px;
@@ -222,6 +236,8 @@ nav {
 section {
     width:auto;
     float:left;
+    position: relative;
+    left: 200px;
     /*padding:10px;*/
 }
 footer {
@@ -230,14 +246,15 @@ footer {
 
 .filters {
     background: white;
-    position: fixed;
-    left: 1080px;
+    position: absolute;
+    left: 5px;
 }
 
 
 .prevPage, .nextPage {
     position: absolute;
-    color: #ffffff;
+    color: #005DB5;
+    bottom: 30px;
 }
 
 .prevPage {
@@ -265,4 +282,36 @@ footer {
 
 .exp2{
     padding-top: 25px;
+}
+
+.logoBiociphers{
+    height: 35px;
+    position: absolute;
+    left: 0;
+    padding-left: 20px;
+    padding-top: 12px;
+}
+
+.headerText{
+    display: block;
+    font-size: 1.17em;
+    -webkit-margin-before: 1em;
+    -webkit-margin-after: 1em;
+    -webkit-margin-start: 0px;
+    -webkit-margin-end: 0px;
+    font-weight: bold;
+}
+
+.deltaHeader{
+    margin: auto;
+    display:block;
+    text-align:center;
+}
+
+.gtfLink{
+    font-size: 1.5em;
+}
+
+.text-wrapped{
+    word-wrap: break-word;
 }

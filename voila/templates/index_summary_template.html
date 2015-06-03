@@ -1,0 +1,71 @@
+{% extends "base_template.html" %}
+{% block title %}MAJIQ LSV &Delta;&Psi; Summary{% endblock %}
+{% block css %}
+{# Evaluate if we should divide different css in files #}
+<link rel="stylesheet" type="text/css" href="static/css/bootstrap-frm.css" />
+{% endblock %}
+
+{% block js %}
+<script src="static/js/jquery-1.11.1.min.js" type="text/javascript"></script>
+
+<script src="static/js/splice.graph.js" type="text/javascript" language="javascript" ></script>
+<script src="static/js/d3.v3.min.js" type="text/javascript" language="javascript" ></script>
+<script src="static/js/jquery.tablesorter.js" type="text/javascript"></script>
+<script src="static/js/jquery.tablesorter.pager.js" type="text/javascript"></script>
+<script src="static/js/jquery.mousewheel.js" type="text/javascript"></script>
+<script src="static/js/application.js" type="text/javascript"></script>
+<script type="text/javascript" src="static/js/jquery.tooltipster.min.js"></script>
+
+
+{% endblock %}
+
+{% block content %}
+<section>
+    <div class="events-summary">
+        <table id="event_table" class="tablesorter">
+            {% block tableContent%}
+            {% endblock %}
+
+        </table>
+
+        <div class="pager">
+            <form>
+                <img src="static/img/icons/first.png" class="first"/>
+                <img src="static/img/icons/prev.png" class="prev"/>
+                <input type="text" class="pagedisplay"/>
+                <img src="static/img/icons/next.png" class="next"/>
+                <img src="static/img/icons/last.png" class="last"/>
+                <select class="pagesize" autocomplete="off">
+                    {% for mark in tableMarks -%}
+                    {% if loop.first %}
+                    <option selected="selected"  value="{{ mark }}">{{ mark }}</option>
+                    {% else %}
+                    <option value="{{ mark }}">{{ mark }}</option>
+                    {% endif %}
+                    {%- endfor %}
+                    <option value="{{ lsvList|length }}">All</option>
+                </select>
+            </form>
+        </div>
+    </div>
+</section>
+<aside class="filters">
+    <fieldset class="section-border">
+        <legend>LSV filters</legend>
+        <form id="lsv-filters" class="bootstrap-frm">
+            <label><input type="checkbox" name="prime5" value="1" checked>5-prime</label><br>
+            <label><input type="checkbox" name="prime3" value="1" checked>3-prime</label><br>
+            <label><input type="checkbox" name="ES" value="1" checked>Exon skipping</label><br>
+            <label><input type="checkbox" name="source" value="1" checked>Single Source</label><br>
+            <label><input type="checkbox" name="target" value="1" checked>Single Target</label><br>
+            <span>Number of junctions:</span><br>
+            <label><span>from:</span><input type="text" name="njuncsfrom" value="" size="4"></label>
+            <label><span>to:</span><input type="text" name="njuncsto" size="4"></label><br>
+            <span>Number of exons:</span><br>
+            <label><span>from:</span><input type="text" name="nexonsfrom" value="" size="4"></label>
+            <label><span>to:</span><input type="text" name="nexonsto" size="4"><br></label>
+        </form>
+    </fieldset>
+</aside>
+{% endblock %}
+

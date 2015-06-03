@@ -53,37 +53,44 @@ def render_summary(output_dir, output_html, majiq_output, type_summary, threshol
 
     env = Environment(extensions=["jinja2.ext.do"], loader=FileSystemLoader(os.path.join(EXEC_DIR, "templates/")))
     env.filters.update({'to_json': to_json,'to_json_especial': to_json_especial, 'debug': debug})
-    sum_template = env.get_template(type_summary.replace("-", "_") + "_summary_template.html")
-    # Max. 10 genes per page, create as many HTMLs as needed
-    MAX_GENES = 10
+    template_file_name = type_summary.replace("-", "_") + "_summary_template.html"
+    sum_template = env.get_template(template_file_name)
 
+    # if type_summary == constants.ANALYSIS_PSI:
+    #     voila_output = open(output_dir+output_html, 'w')
+    #     voila_output.write(sum_template.render(lsvList=majiq_output['lsv_list'],
+    #                                            tableMarks=table_marks_set(len(majiq_output['lsv_list'])),
+    #                                            lexps=majiq_output['meta_exps']
+    #                                            ))
+    #     voila_output.close()
     if type_summary == constants.ANALYSIS_PSI:
-        voila_output = open(output_dir+output_html, 'w')
-        voila_output.write(sum_template.render(lsvList=majiq_output['lsv_list'],
-                                               tableMarks=table_marks_set(len(majiq_output['lsv_list'])),
-                                               lexps=majiq_output['meta_exps']
-                                               ))
-        voila_output.close()
-    elif type_summary == constants.ANALYSIS_PSI_GENE:
         count_pages = 0
         gene_keys = sorted(majiq_output['genes_dict'].keys())
 
         logger.info("Number of genes detected in Voila: %d." % len(gene_keys))
         logger.info("Number of LSVs detected in Voila: %d." % sum([len(majiq_output['genes_dict'][g]) for g in majiq_output['genes_dict']]))
-        while count_pages*MAX_GENES < len(gene_keys):
+        logger.info("Creating HTML5 with splice graphs summaries ...")
+        links_dict = {}
+
+        # Subfolder for summary pages
+        summaries_subfolder = "%s/%s" % (output_dir, constants.SUMMARIES_SUBFOLDER)
+        utils_voila.create_if_not_exists(summaries_subfolder)
+
+        while count_pages*constants.MAX_GENES < len(gene_keys):
             prev_page = None
             next_page = None
 
-            subset_keys = gene_keys[count_pages*MAX_GENES: MAX_GENES*(count_pages+1)]
+            subset_keys = gene_keys[count_pages*constants.MAX_GENES: constants.MAX_GENES*(count_pages+1)]
             genes_dict = cc.OrderedDict((k, majiq_output['genes_dict'][k]) for k in subset_keys)
-            logger.info("Processing %d out of %d genes ..." % (min((count_pages+1)*MAX_GENES, len(gene_keys)), len(majiq_output['genes_dict'])))
-            if (count_pages+1)*MAX_GENES < len(majiq_output['genes_dict']):
+            logger.info("Processing %d out of %d genes ..." % (min((count_pages+1)*constants.MAX_GENES, len(gene_keys)), len(majiq_output['genes_dict'])))
+            if (count_pages+1)*constants.MAX_GENES < len(majiq_output['genes_dict']):
                 next_page = str(count_pages+1) + "_" + output_html
             if not count_pages == 0:
                 prev_page = str(count_pages - 1) + "_" + output_html
 
             name_page = str(count_pages) + "_" + output_html
-            voila_output = open(output_dir+name_page, 'w')
+            full_path = "%s/%s" % (summaries_subfolder, name_page)
+            voila_output = open(full_path, 'w')
             voila_output.write(sum_template.render(tableMarks=[table_marks_set(len(gene_set)) for gene_set in genes_dict],
                                                    genes_dict=genes_dict,
                                                    prevPage=prev_page,
@@ -93,29 +100,53 @@ def render_summary(output_dir, output_html, majiq_output, type_summary, threshol
                                                    genes_exps_list=majiq_output['genes_exp']
             ))
             voila_output.close()
+            for g_key, glsv_list in genes_dict.iteritems():
+                links_dict[glsv_list[0].get_gene_name()] = "%s/%s" % (constants.SUMMARIES_SUBFOLDER, name_page)
             count_pages += 1
+        majiq_output['voila_links'] = links_dict
 
-    elif type_summary == constants.ANALYSIS_DELTAPSI_GENE:
+        # Generate index
+        logger.info("Creating HTML5 index summary ...")
+        sum_template = env.get_template("index_single_summary_template.html")
+        voila_output = open(output_dir+"index.html", 'w')
+        voila_output.write(sum_template.render( lsvList=majiq_output['lsv_list'],
+                                                tableMarks=table_marks_set(len(majiq_output['lsv_list'])),
+                                                lexps=majiq_output['meta_exps'],
+                                                links_dict=links_dict,
+                                                maxLsvs=constants.MAX_LSVS_PSI_INDEX
+        ))
+        voila_output.close()
+
+
+    elif type_summary == constants.ANALYSIS_DELTAPSI:
         count_pages = 0
 
         gene_keys = sorted(majiq_output['genes_dict'].keys())
         logger.info("Number of genes detected in Voila: %d." % len(gene_keys))
         logger.info("Number of LSVs detected in Voila: %d." % sum([len(majiq_output['genes_dict'][g]) for g in majiq_output['genes_dict']]))
-        while count_pages*MAX_GENES < len(gene_keys):
+        logger.info("Creating HTML5 with splice graphs summaries ...")
+        links_dict = {}
+
+        # Subfolder for summary pages
+        summaries_subfolder = "%s/%s" % (output_dir, constants.SUMMARIES_SUBFOLDER)
+        utils_voila.create_if_not_exists(summaries_subfolder)
+
+        while count_pages*constants.MAX_GENES < len(gene_keys):
             prev_page = None
             next_page = None
 
-            subset_keys = gene_keys[count_pages*MAX_GENES: MAX_GENES*(count_pages+1)]
+            subset_keys = gene_keys[count_pages*constants.MAX_GENES: constants.MAX_GENES*(count_pages+1)]
             genes_dict = cc.OrderedDict((k, majiq_output['genes_dict'][k]) for k in subset_keys)
 
-            logger.info("Processing %d out of %d genes ..." % (min((count_pages+1)*MAX_GENES, len(gene_keys)), len(majiq_output['genes_dict'])))
-            if (count_pages+1)*MAX_GENES < len(majiq_output['genes_dict']):
+            logger.info("Processing %d out of %d genes ..." % (min((count_pages+1)*constants.MAX_GENES, len(gene_keys)), len(majiq_output['genes_dict'])))
+            if (count_pages+1)*constants.MAX_GENES < len(majiq_output['genes_dict']):
                 next_page = str(count_pages+1) + "_" + output_html
             if not count_pages == 0:
                 prev_page = str(count_pages - 1) + "_" + output_html
 
             name_page = str(count_pages) + "_" + output_html
-            voila_output = open(output_dir+name_page, 'w')
+            full_path = "%s/%s" % (summaries_subfolder, name_page)
+            voila_output = open(full_path, 'w')
             voila_output.write(sum_template.render( tableMarks=[table_marks_set(len(gene_set)) for gene_set in genes_dict],
                                                     genes_dict=genes_dict,
                                                     genes_exps_list=majiq_output['genes_exp'],
@@ -126,16 +157,32 @@ def render_summary(output_dir, output_html, majiq_output, type_summary, threshol
                                                     lexps=majiq_output['meta_exps']
             ))
             voila_output.close()
+            for g_key, glsv_list in genes_dict.iteritems():
+                links_dict[glsv_list[0]['lsv'].get_gene_name()] = "%s/%s" % (constants.SUMMARIES_SUBFOLDER, name_page)
             count_pages += 1
+        majiq_output['voila_links'] = links_dict
 
-    elif type_summary == constants.ANALYSIS_DELTAPSI:
-        voila_output = open(output_dir+output_html, 'w')
+        # Generate index
+        logger.info("Creating HTML5 index summary ...")
+        sum_template = env.get_template("index_delta_summary_template.html")
+        voila_output = open(output_dir+"index.html", 'w')
         voila_output.write(sum_template.render( lsvList=majiq_output['lsv_list'],
                                                 tableMarks=table_marks_set(len(majiq_output['lsv_list'])),
                                                 threshold=threshold,
-                                                lexps=majiq_output['meta_exps']
+                                                lexps=majiq_output['meta_exps'],
+                                                links_dict=links_dict,
+                                                maxLsvs=constants.MAX_LSVS_DELTAPSI_INDEX
         ))
         voila_output.close()
+
+    # elif type_summary == constants.ANALYSIS_DELTAPSI:
+    #     voila_output = open(output_dir+output_html, 'w')
+    #     voila_output.write(sum_template.render( lsvList=majiq_output['lsv_list'],
+    #                                             tableMarks=table_marks_set(len(majiq_output['lsv_list'])),
+    #                                             threshold=threshold,
+    #                                             lexps=majiq_output['meta_exps']
+    #     ))
+    #     voila_output.close()
 
     elif type_summary == constants.LSV_THUMBNAILS:
         voila_output = open(output_dir+output_html, 'w')
@@ -147,19 +194,19 @@ def render_summary(output_dir, output_html, majiq_output, type_summary, threshol
         genes = majiq_output['genes']
 
         logger.info("Number of genes detected in Voila: %d." % len(genes))
-        while count_pages*MAX_GENES < len(genes):
+        while count_pages*constants.MAX_GENES < len(genes):
             prev_page = None
             next_page = None
 
-            logger.info("Processing %d out of %d genes ..." % (min((count_pages+1)*MAX_GENES, len(genes)), len(genes)))
-            if (count_pages+1)*MAX_GENES < len(genes):
+            logger.info("Processing %d out of %d genes ..." % (min((count_pages+1)*constants.MAX_GENES, len(genes)), len(genes)))
+            if (count_pages+1)*constants.MAX_GENES < len(genes):
                 next_page = str(count_pages+1) + "_" + output_html
             if not count_pages == 0:
                 prev_page = str(count_pages - 1) + "_" + output_html
 
             name_page = str(count_pages) + "_" + output_html
             voila_output = open(output_dir+name_page, 'w')
-            voila_output.write(sum_template.render(genes=genes[count_pages*MAX_GENES:(count_pages+1)*MAX_GENES],
+            voila_output.write(sum_template.render(genes=genes[count_pages*constants.MAX_GENES:(count_pages+1)*constants.MAX_GENES],
                                                    prevPage=prev_page,
                                                    nextPage=next_page,
                                                    namePage=name_page
@@ -170,8 +217,9 @@ def render_summary(output_dir, output_html, majiq_output, type_summary, threshol
     else:
         logger.error("summary type not recognized %s." % type_summary, exc_info=1)
 
-    logger.info("Copying static files from Voila sources to %s static." % output_dir)
+    logger.info("Copying static files from Voila sources ...")
     utils_voila.copyanything(EXEC_DIR+"templates/static", output_dir+"static")
+    utils_voila.copyanything(EXEC_DIR+"templates/static", "%s%s/static" % (output_dir, constants.SUMMARIES_SUBFOLDER))
 
     logger.info("HTML5 Summary successfully created in %s." % output_dir)
 
@@ -311,6 +359,8 @@ def render_tab_output(output_dir, output_html, majiq_output, type_summary, logge
                    'Exons coords',
                    'Exons Alternative Start',
                    'Exons Alternative End']
+        if 'voila_links' in majiq_output.keys():
+            headers.append('Voila link')
 
         if 'delta' in type_summary:
             headers[3] = 'E(Delta(PSI)) per LSV junction'
@@ -396,6 +446,11 @@ def render_tab_output(output_dir, output_html, majiq_output, type_summary, logge
                                 lpairwise.append('N/A')
                             llpairwise.append(';'.join(lpairwise))
                     lline.extend(llpairwise)
+                if 'voila_links' in majiq_output.keys():
+                    summary_path = majiq_output['voila_links'][llsv.get_gene_name()]
+                    if not os.path.isabs(summary_path):
+                        summary_path = "%s/%s/%s" % (os.getcwd(), output_dir, summary_path)
+                    lline.append(constants.URL_COMPOSITE % (summary_path, llsv.get_gene_name()))
                 ofile.write(constants.DELIMITER.join(lline))
                 ofile.write('\n')
 
@@ -426,6 +481,7 @@ def create_gff3_txt_files(output_dir, majiq_output, logger):
                 utils_voila.gff2gtf(gff_file, "%s.gtf" % lsv_file_basename)
             except UnboundLocalError, e:
                 logger.warning("problem generating GTF file for %s" % lsv.get_id())
+                logger.error(e.message)
 
     logger.info("Files saved in %s" % odir)
 
@@ -456,11 +512,11 @@ def create_summary(args):
     majiq_output = None
     meta_postprocess = {}
 
-    if type_summary == constants.ANALYSIS_PSI:
-        majiq_output = utils_voila.get_lsv_single_exp_data(voila_file, logger=logger)
-        majiq_output['lsv_list'] = [ll for g in majiq_output['genes_dict'].viewvalues() for ll in g]
+    # if type_summary == constants.ANALYSIS_PSI:
+    #     majiq_output = utils_voila.get_lsv_single_exp_data(voila_file, logger=logger)
+    #     majiq_output['lsv_list'] = [ll for g in majiq_output['genes_dict'].viewvalues() for ll in g]
 
-    if type_summary == constants.ANALYSIS_PSI_GENE:
+    if type_summary == constants.ANALYSIS_PSI:
 
         lsv_types = args.lsv_types
 
@@ -485,14 +541,14 @@ def create_summary(args):
         majiq_output['genes_exp'] = parse_gene_graphics([args.genes_files], gene_name_list,
                                                         groups=[majiq_output['meta_exps'][0]['group'], None],
                                                         logger=logger)
+        majiq_output['lsv_list'] = [ll for g in majiq_output['genes_dict'].viewvalues() for ll in g]
+    # if type_summary == constants.ANALYSIS_DELTAPSI:
+    #     threshold   = args.threshold
+    #     pairwise    = args.pairwise
+    #     majiq_output = utils_voila.get_lsv_delta_exp_data(voila_file, args.confidence, args.threshold, args.show_all, logger=logger)
+    #     majiq_output['lsv_list'] = [ll['lsv'] for g in majiq_output['genes_dict'].viewvalues() for ll in g]
 
     if type_summary == constants.ANALYSIS_DELTAPSI:
-        threshold   = args.threshold
-        pairwise    = args.pairwise
-        majiq_output = utils_voila.get_lsv_delta_exp_data(voila_file, args.confidence, args.threshold, args.show_all, logger=logger)
-        majiq_output['lsv_list'] = [ll['lsv'] for g in majiq_output['genes_dict'].viewvalues() for ll in g]
-
-    if type_summary == constants.ANALYSIS_DELTAPSI_GENE:
         threshold   = args.threshold
         pairwise    = args.pairwise
         gene_name_list = []
@@ -516,6 +572,7 @@ def create_summary(args):
         majiq_output['genes_exp'] = parse_gene_graphics([args.genesf_exp1, args.genesf_exp2], gene_name_list,
                                                         groups=[majiq_output['meta_exps'][0][0]['group'],
                                                                 majiq_output['meta_exps'][1][0]['group']], logger=logger)
+        majiq_output['lsv_list'] = [ll['lsv'] for g in majiq_output['genes_dict'].viewvalues() for ll in g]
 
     if type_summary == constants.LSV_THUMBNAILS:
         try:
@@ -558,7 +615,7 @@ def main():
 
     # Common script options
     common_parser = argparse.ArgumentParser(add_help=False)
-    common_parser.add_argument('-b', '--bins', metavar='majiq_output.pickle', dest='majiq_bins', type=str, required=True, help='Pickle file with the bins produced by Majiq.')
+    common_parser.add_argument('majiq_bins', metavar='majiq_output.pickle', type=str, help='Pickle file with the bins produced by Majiq.')
     common_parser.add_argument('-o', '--output', metavar='output_dir', dest='output_dir', type=str, required=True, help='Output directory where the files will be placed.')
     common_parser.add_argument('-c', '--confidence', metavar=0.95, dest='confidence', type=float, default=0.95, help='Percentage of confidence required (by default, 0.95).')
     common_parser.add_argument('--logger', default=None, help='Path for the logger. Default is output directory')
@@ -569,31 +626,34 @@ def main():
     subparsers.required = True
 
     # Single LSV
+    # parser_single = argparse.ArgumentParser(add_help=False)
+    # parser_single.add_argument('--lsv-types', nargs='*', default=[], type=str, dest='lsv_types', help='LSV type to filter the results. (If no gene list is provided, this option will display only genes containing LSVs of the specified type).')
+    # subparsers.add_parser(constants.ANALYSIS_PSI, help='Single LSV analysis.', parents=[common_parser, parser_single])
+
+    # Delta LSV
+    # parser_delta = argparse.ArgumentParser(add_help=False)
+    # parser_delta.add_argument('--threshold', type=float, default=0.2, help='Filter out LSVs with no junction predicted to change over a certain value (in percentage).')  # Probability threshold used to sum the accumulative probability of inclusion/exclusion.
+    # parser_delta.add_argument('--show-all', dest='show_all', action='store_true', default=False, help='Show all LSVs including those with no junction with significant change predicted')
+    # parser_delta.add_argument('--pairwise-dir', type=str, dest='pairwise', help='Directory with the pairwise comparisons.')
+    # subparsers.add_parser(constants.ANALYSIS_DELTAPSI, help='Delta LSV analysis.', parents=[common_parser, parser_delta])
+
+    # Single LSV by Gene(s) of interest
     parser_single = argparse.ArgumentParser(add_help=False)
+    parser_single.add_argument('--genes-exp1', nargs='+', required=True, dest='genes_files', metavar='Hippocampus1.splicegraph [Hippocampus2.splicegraph ...]', type=str, help='Splice graph information file(s) or directory with *.splicegraph file(s).')
     parser_single.add_argument('--lsv-types', nargs='*', default=[], type=str, dest='lsv_types', help='LSV type to filter the results. (If no gene list is provided, this option will display only genes containing LSVs of the specified type).')
-    subparsers.add_parser(constants.ANALYSIS_PSI, help='Single LSV analysis.', parents=[common_parser, parser_single])
+    parser_single.add_argument('--gene-names-file', type=str, dest='gene_names', help='File with gene names to filter the results (one gene per line). Use - to type in the gene names.')
+    subparsers.add_parser(constants.ANALYSIS_PSI, help='Single LSV analysis by gene(s) of interest.', parents=[common_parser, parser_single])
 
     # Delta LSV
     parser_delta = argparse.ArgumentParser(add_help=False)
     parser_delta.add_argument('--threshold', type=float, default=0.2, help='Filter out LSVs with no junction predicted to change over a certain value (in percentage).')  # Probability threshold used to sum the accumulative probability of inclusion/exclusion.
     parser_delta.add_argument('--show-all', dest='show_all', action='store_true', default=False, help='Show all LSVs including those with no junction with significant change predicted')
     parser_delta.add_argument('--pairwise-dir', type=str, dest='pairwise', help='Directory with the pairwise comparisons.')
-    subparsers.add_parser(constants.ANALYSIS_DELTAPSI, help='Delta LSV analysis.', parents=[common_parser, parser_delta])
-
-    # Single LSV by Gene(s) of interest
-    parser_single_gene = argparse.ArgumentParser(add_help=False)
-    parser_single_gene.add_argument('--genes-exp1', nargs='+', required=True, dest='genes_files', metavar='Hippocampus1.splicegraph [Hippocampus2.splicegraph ...]', type=str, help='Splice graph information file(s) or directory with *.splicegraph file(s).')
-    parser_single_gene.add_argument('--gene-names-file', type=str, dest='gene_names', help='File with gene names to filter the results (one gene per line). Use - to type in the gene names.')
-    # parser_single_gene.add_argument('--lsv-types', nargs='*', default=[], type=str, dest='lsv_types', help='LSV type to filter the results. (If no gene list is provided, this option will display only genes containing LSVs of the specified type).')
-    subparsers.add_parser(constants.ANALYSIS_PSI_GENE, help='Single LSV analysis by gene(s) of interest.', parents=[common_parser, parser_single, parser_single_gene])
-
-    # Delta LSV by Gene(s) of interest
-    parser_delta_gene = argparse.ArgumentParser(add_help=False)
-    parser_delta_gene.add_argument('--genes-exp1', required=True, nargs='+', dest='genesf_exp1', metavar='Hippocampus1.splicegraph [Hippocampus2.splicegraph ...]', type=str, help='Experiment 1 splice graph information file(s) or directory.')
-    parser_delta_gene.add_argument('--genes-exp2', required=True, nargs='+', dest='genesf_exp2', metavar='Liver1.splicegraph [Liver2.splicegraph ...]', type=str, help='Experiment 2 splice graph information file(s) or directory.')
-    parser_delta_gene.add_argument('--gene-names-file', type=str, dest='gene_names', help='File with gene names to filter the results (one gene per line). Use - to type in the gene names.')
-    parser_delta_gene.add_argument('--lsv-types', nargs='*', default=[], type=str, dest='lsv_types', help='LSV type to filter the results. (If no gene list is provided, this option will display only genes containing LSVs of the specified type).')
-    subparsers.add_parser(constants.ANALYSIS_DELTAPSI_GENE, help='Delta LSV analysis by gene(s) of interest.', parents=[common_parser, parser_delta, parser_delta_gene])
+    parser_delta.add_argument('--genes-exp1', required=True, nargs='+', dest='genesf_exp1', metavar='Hippocampus1.splicegraph [Hippocampus2.splicegraph ...]', type=str, help='Experiment 1 splice graph information file(s) or directory.')
+    parser_delta.add_argument('--genes-exp2', required=True, nargs='+', dest='genesf_exp2', metavar='Liver1.splicegraph [Liver2.splicegraph ...]', type=str, help='Experiment 2 splice graph information file(s) or directory.')
+    parser_delta.add_argument('--gene-names-file', type=str, dest='gene_names', help='File with gene names to filter the results (one gene per line). Use - to type in the gene names.')
+    parser_delta.add_argument('--lsv-types', nargs='+', default=[], type=str, dest='lsv_types', help='LSV type(s) used to filter the results. (If no gene list is provided, this option will display only genes containing LSVs of the specified type).')
+    subparsers.add_parser(constants.ANALYSIS_DELTAPSI, help='Delta LSV analysis by gene(s) of interest.', parents=[common_parser, parser_delta])
 
     # Thumbnails generation option (dev) TODO: Delete
     parser_thumbs = argparse.ArgumentParser(add_help=False)

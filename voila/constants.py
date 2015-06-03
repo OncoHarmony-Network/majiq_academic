@@ -22,10 +22,19 @@ EXON_TYPE_MISSING_END = 5
 IR_TYPE_START = 1
 IR_TYPE_END = 2
 
-# File extensions, delimiters, etc.
+# Summary constants.
 SUFFIX_SPLICEGRAPH = 'splicegraph'
 DELIMITER = '\t'
 EXTENSION = 'txt'
+MAX_GENES = 10  # Max. 10 genes per page, create as many HTMLs as needed
+MAX_LSVS_DELTAPSI_INDEX = 1000 # Max. LSVs allowed to create full index.html
+MAX_LSVS_PSI_INDEX = 15000
+
+# URL composite (OS dependent, right now for MacOS)
+URL_COMPOSITE = "file://%s#%s"
+
+# subfolder for full (splicegraph summaries)
+SUMMARIES_SUBFOLDER = 'summaries'
 
 # Debugging
 DEBUG = 1
