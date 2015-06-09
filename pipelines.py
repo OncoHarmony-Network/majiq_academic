@@ -1,17 +1,21 @@
 import abc
 import pickle
-from multiprocessing import Pool, current_process, Process
-from grimoire.utils.utils import create_if_not_exists, get_logger
-from analysis.polyfitnb import fit_nb
-import numpy as np
-import analysis.filter as majiq_filter
-import analysis.io as majiq_io
-import analysis.psi as majiq_psi
+from multiprocessing import Pool, Process
 import os
-import builder as majiq_builder
-from numpy.ma import masked_less
-import pipe as pipe
 import gc
+
+import numpy as np
+from numpy.ma import masked_less
+
+from src.utils.utils import create_if_not_exists, get_logger
+from src.polyfitnb import fit_nb
+import src.filter as majiq_filter
+import src.io as majiq_io
+import src.psi as majiq_psi
+import builder as majiq_builder
+import pipe as pipe
+
+
 # ###############################
 # Data loading and Boilerplate #
 ################################
@@ -129,8 +133,6 @@ class CalcPsi(BasicPipeline):
         matched_lsv, matched_info = majiq_filter.quantifiable_in_group(filtered_lsv, self.minpos, self.minreads,
                                                                        logger, 0.10)
 
-
-
         get_clean_raw_reads(matched_info, matched_lsv, self.output, self.name, num_exp)
 
         csize = len(matched_lsv) / nchunks
@@ -138,12 +140,10 @@ class CalcPsi(BasicPipeline):
         if not os.path.exists(outfdir):
             os.makedirs(outfdir)
 
-
         logger.info("Saving meta info for %s..." % self.name)
         tout = open("%s/tmp/%s_metainfo.pickle" % (self.output, self.name), 'w+')
         pickle.dump(meta_info, tout)
         tout.close()
-
 
         logger.info("Creating %s chunks with <= %s lsv" % (nchunks, csize))
         for nthrd in xrange(nchunks):
@@ -161,10 +161,9 @@ class CalcPsi(BasicPipeline):
 
         gc.collect()
 
-
     def calcpsi(self):
         """
-        Given a file path with the junctions, return psi distributions. 
+        Given a file path with the junctions, return psi distributions.
         write_pickle indicates if a .pickle should be saved in disk
         """
 
@@ -185,12 +184,15 @@ class CalcPsi(BasicPipeline):
                 'nbins': 40}
 
         nchunks = self.nthreads
+        if self.nthreads > 1:
+            p = Process(target=self.pre_psi, args=[nchunks])
+            p.start()
+            p.join()
 
-        p = Process(target=self.pre_psi, args=[nchunks])
-        p.start()
-        p.join()
+            pool = Pool(processes=self.nthreads)
+        else:
+            self.pre_psi(nchunks)
 
-        pool = Pool(processes=self.nthreads)
         for nthrd in xrange(nchunks):
             chunk_fname = '%s/tmp/chunks/chunk_%d.pickle' % (self.output, nthrd)
             if self.nthreads == 1:
@@ -231,7 +233,6 @@ class CalcPsi(BasicPipeline):
         # pickle.dump([posterior_matrix, names, meta_info], open(pickle_path, 'w'))
         logger.info("PSI calculation for %s ended succesfully! Result can be found at %s" % (self.name, self.output))
         logger.info("Alakazam! Done.")
-
 
 def prepare_lsvs(dpsi_obj, conf, nchunks, logger=None):
 

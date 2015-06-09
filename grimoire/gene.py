@@ -1,16 +1,17 @@
 #!/usr/bin/python
 import numpy as np
 
-import mglobals
 from grimoire.exon import ExonTx, collapse_list_exons
 from grimoire.lsv import LSV
 from grimoire.junction import Junction
-from grimoire.analize import reliable_in_data
+from src import mglobals
+from src.analize import reliable_in_data
 
 
 class Gene:
     __eq__ = lambda self, other: (self.chromosome == other.chromosome and self.strand == other.strand
-                                  and self.start < other.end and self.end > other.start)
+                                  and self.start < other.end and self.end > other.start
+                                  and self.strand == other.strand)
     __ne__ = lambda self, other: (self.chromosome != other.chromosome or self.strand != other.strand
                                   or self.start >= other.end or self.end <= other.start)
     __lt__ = lambda self, other: (self.chromosome < other.chromosome
@@ -36,9 +37,10 @@ class Gene:
         self.readNum = np.zeros(shape=mglobals.num_experiments, dtype=np.int)
         self.temp_txex_list = []
         self.ir_list = []
+        self.ir_definition = []
         self.lsv_list = []
-        self.RPKM = np.zeros(shape=mglobals.num_experiments, dtype=np.float)
-        self.antis_gene = None
+        # self.RPKM = np.zeros(shape=mglobals.num_experiments, dtype=np.float)
+        self.antis_gene = []
 
     def __hash__(self):
         return hash((self.id, self.chromosome, self.strand, self.start, self.end))
@@ -55,8 +57,8 @@ class Gene:
     def get_read_count(self):
         return self.readNum
 
-    def get_rpkm(self):
-        return self.RPKM
+    # def get_rpkm(self):
+    # return self.RPKM
 
     def get_exon_list(self):
         return self.exons
@@ -89,6 +91,12 @@ class Gene:
             res = None
 
         return res
+
+    def get_overlapped_genes(self):
+        return self.antis_gene
+
+    def get_ir_definition(self):
+        return self.ir_definition
 
     # def get_transcript_AS_candidates(self):
     #     return self.transAScandidates
@@ -126,24 +134,38 @@ class Gene:
         self.exons.append(exon)
         return
 
+    def add_ir_definition(self, start, end):
+        self.ir_definition.append((start, end))
+
     def exist_antisense_gene(self, list_of_genes):
-        strnd = '-'
-        if self.strand == '-':
-            strnd = '+'
-        for gg in list_of_genes[strnd]:
-            coords = gg.get_coordinates()
-            if self.start < coords[1] and self.end> coords[0]:
-                self.antis_gene = gg.get_id()
-                gg.set_antisense_gene(self.id)
-                break
+        # strnd = '-'
+        # if self.strand == '-':
+        #     strnd = '+'
+        for strnd in ('+', '-'):
+            for gg in list_of_genes[strnd]:
+                if gg.get_id() == self.id:
+                    continue
+                if self.overlaps(gg):
+                    # coords = gg.get_coordinates()
+                    # if self.start < coords[1] and self.end > coords[0]:
+                    self.set_antisense_gene(gg.get_id())
+                    gg.set_antisense_gene(self.id)
 
     def set_antisense_gene(self, gn_id):
-        self.antis_gene = gn_id
+        self.antis_gene.append(gn_id)
+
+    def overlaps(self, gne):
+        if self.start < gne.end and self.end > gne.start:
+            res = True
+        else:
+            res = False
+        return res
 
     def check_antisense_junctions(self, jstart, jend):
         res = False
-        if not self.antis_gene is None:
-            gg = mglobals.gene_tlb[self.antis_gene]
+        for anti_g in self.antis_gene:
+            # if not self.antis_gene is None:
+            gg = mglobals.gene_tlb[anti_g]
             j_list = gg.get_all_junctions()
             for jj in j_list:
                 if not jj.is_annotated():
@@ -153,6 +175,9 @@ class Gene:
                     break
                 elif jstart == j_st and jend == j_ed:
                     res = True
+                    break
+            if res:
+                break
         return res
 
     def is_gene_in_list(self, list_of_genes, name):
@@ -167,33 +192,34 @@ class Gene:
                 break
         return res
 
-    def calculate_rpkm(self, experiment_index, total_reads):
-        """
-         .. function: calculate_RPKM( self, experiment_index, total_Reads )
+        # def calculate_rpkm(self, experiment_index, total_reads):
 
-            This function calculates the RPKM as follows
-            rpk = #Reads in Gene / # of kilobases of the gene exons (some may don't have any read)
-            rpkm = rpk / (#total reads/1000000)
-
-            :param experiment_index: Index of the experiment from the origrinal experiment list
-            :param total_reads: Total Number of reads of the gene.
-            :rtype: RPKM value for this gene
-        """
-        if len(self.exons) == 0:
-            return 0
-        total_kb = float(0)
-        for ex in self.exons:
-            start, end = ex.get_coordinates()
-            #            print "EXON ::",ex.id,end, start
-            total_kb += float(end-start)
-
-#        print self.readNum, experiment_index
-        rpk = float(self.readNum[experiment_index]) / float(total_kb/1000)
-        mreads = float(total_reads)/float(1000000)
-        rpkm = float(rpk)/mreads
-        #print "Strand",self.strand,"::",total_kb, self.readNum, rpk, mreads, rpkm
-        self.RPKM[experiment_index] = rpkm
-        return rpkm
+    # """
+    #          .. function: calculate_RPKM( self, experiment_index, total_Reads )
+    #
+    #             This function calculates the RPKM as follows
+    #             rpk = #Reads in Gene / # of kilobases of the gene exons (some may don't have any read)
+    #             rpkm = rpk / (#total reads/1000000)
+    #
+    #             :param experiment_index: Index of the experiment from the origrinal experiment list
+    #             :param total_reads: Total Number of reads of the gene.
+    #             :rtype: RPKM value for this gene
+    #         """
+    #         if len(self.exons) == 0:
+    #             return 0
+    #         total_kb = float(0)
+    #         for ex in self.exons:
+    #             start, end = ex.get_coordinates()
+    #             #            print "EXON ::",ex.id,end, start
+    #             total_kb += float(end-start)
+    #
+    # #        print self.readNum, experiment_index
+    #         rpk = float(self.readNum[experiment_index]) / float(total_kb/1000)
+    #         mreads = float(total_reads)/float(1000000)
+    #         rpkm = float(rpk)/mreads
+    #         #print "Strand",self.strand,"::",total_kb, self.readNum, rpk, mreads, rpkm
+    #         self.RPKM[experiment_index] = rpkm
+    #         return rpkm
 
     def exist_exon(self, start, end):
         """
