@@ -195,10 +195,10 @@ def plot_fdrheatmap(vals, vals2, grps, output='.'):
     ax.set_yticklabels(df_grps)
     ax.set_title('Complex changing events')
 
-    if output == '.':
-        pyplot.show()
-    else:
-        pyplot.savefig(output+'/hog.pdf')
+    # if output == '.':
+    pyplot.show()
+    # else:
+    #     pyplot.savefig(output+'/hog.pdf')
 
 
     # plot
@@ -478,6 +478,8 @@ def get_types(direc, list_exp, grps):
         pp = pickle.load(open("%s/%s" % (direc, ll)))
         kk = []
         for lsv in pp[1]:
+            if 'i' in lsv.type:
+                continue
             kk.append(lsv.id)
             d_types[lsv.id] = collapse(lsv.type)
             g_types[grp_ll][lsv.id] = collapse(lsv.type)
@@ -673,7 +675,7 @@ def fdr_parse(direc, file_list, group_list):
                     continue
                 ntyp += 1
             psi_list = [float(xx) for xx in tab[3].split(';')]
-            if not 'i' in tab[5]:
+            if 'i' in tab[5]:
                 continue
 
             for pp in psi_list[-1:]:
@@ -715,21 +717,21 @@ if __name__ == '__main__':
 
     #
     #read psi values
-    groups_vals = []
-    filename_list = ['./voila/psi/%s_psigroup_psi.txt' % grp for grp in groups]
-    print "Plot Dominant exons"
-    #values = psi_dominant(filename_list)
-    #plot_dominant_exons(values, 'exons', color=cb.Blues[9])
-    values = ss_dominant(filename_list)
-    print "Plot Dominant splicesites"
-    plot_dominant_exons(values[0], ' 5\'splice sites', color=cb.Oranges[9])
-    plot_dominant_exons(values[1], ' 3\'splice sites', color=cb.PuRd[9])
+    # groups_vals = []
+    # filename_list = ['./psi_0.5/%s_psigroup_psi.txt' % grp for grp in groups]
+    # print "Plot Dominant exons"
+    # values = psi_dominant(filename_list)
+    # plot_dominant_exons(values, 'exons', color=cb.Blues[9])
+    # values = ss_dominant(filename_list)
+    # print "Plot Dominant splicesites"
+    # plot_dominant_exons(values[0], ' 5\'splice sites', color=cb.Oranges[9])
+    # plot_dominant_exons(values[1], ' 3\'splice sites', color=cb.PuRd[9])
 
     #heatmap
-    # print "Plot dpsi changing events heatmap"
-    # dire = '/Users/Jordi/working/majiq_IR/dpsi'
-    # filename_list = [f for f in listdir(dire) if isfile(join(dire, f)) and f.endswith('txt')]
-    # chg_lsv, complx_lsv = fdr_parse(dire, filename_list, groups)
-    # plot_fdrheatmap(chg_lsv, complx_lsv, groups)
+    print "Plot dpsi changing events heatmap"
+    dire = './dpsi_0.5'
+    filename_list = [f for f in listdir(dire) if isfile(join(dire, f)) and f.endswith('txt')]
+    chg_lsv, complx_lsv = fdr_parse(dire, filename_list, groups)
+    plot_fdrheatmap(chg_lsv, complx_lsv, groups, output)
 
 

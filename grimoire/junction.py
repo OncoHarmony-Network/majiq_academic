@@ -119,7 +119,7 @@ class Junction:
         res = False
         for tissue, list_idx in mglobals.tissue_repl.items():
             mu = np.mean(cov[list_idx].sum(axis=1))
-            if mu > mglobals.MINREADS:
+            if mu > mglobals.min_denovo:
                 res = True
                 break
         return res

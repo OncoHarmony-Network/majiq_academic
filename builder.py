@@ -24,7 +24,8 @@ def majiq_builder(samfiles_list, chnk, pcr_validation=None, gff_output=None, cre
                   nondenovo=False, logging=None):
 
     if not logging is None:
-        logging.info("Building for chromosome %s" % chnk)
+        logging.info("Building for chromosome"
+                     " %s" % chnk)
 
     temp_dir = "%s/tmp/chunk_%s" % (mglobals.outDir, chnk)
     temp_file = open('%s/annot_genes.pkl' % temp_dir, 'rb')
