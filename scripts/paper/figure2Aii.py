@@ -8,16 +8,17 @@ import os
 import matplotlib.pyplot as pyplot
 import scripts.utils
 import colorbrewer as cb
+from matplotlib import rcParams
+rcParams.update({'font.size': 10})
+
 
 __author__ = 'abarrera'
 
 
-def scatterplot_rtpcr_majiq(rt_pcr_majiq, rt_pcr_miso, majiq, miso, plotpath, pcr_majiq_extra=None, pcr_miso_extra=None, majiq_extra=None, miso_extra=None):
+def scatterplot_rtpcr_majiq_miso(rt_pcr_majiq, rt_pcr_miso, majiq, miso, plotpath, pcr_majiq_extra=None, pcr_miso_extra=None, majiq_extra=None, miso_extra=None):
     #figure out how many groups of events exist
 
     # majiq_rest_yerr = [var_expected_psi(dis) for dis in rt_pcr_majiq[0]]
-    import matplotlib
-    matplotlib.rcParams.update({'font.size': 10})
 
     fig, axx = pyplot.subplots(2, 5, sharex=True, sharey=True, figsize=[15, 6], dpi=300)
     fig.suptitle("PSI comparison: RT-PCR Vs MAJIQ; RT-PCR Vs MISO")
@@ -173,6 +174,41 @@ def scatterplot_rtpcr_majiq(rt_pcr_majiq, rt_pcr_miso, majiq, miso, plotpath, pc
     axx[1][4].set_ylim([0,1])
 
     scripts.utils.save_or_show(plotpath, "psi_comp_rtpcr_majiq_miso", exten='pdf')
+
+
+def scatterplot_rtpcr_simple(rt_pcr, method_epsis, plotpath, pcr_majiq_extra=None, majiq_extra=None, plotname='psi_rtpcr'):
+    #figure out how many groups of events exist
+
+    # majiq_rest_yerr = [var_expected_psi(dis) for dis in rt_pcr_majiq[0]]
+
+    fig = pyplot.figure(figsize=[8, 6], dpi=300)
+    fig.suptitle("PSI comparison: RT-PCR Vs MAJIQ; RT-PCR Vs MISO")
+
+    rt_pcr_set1_all = [a for b in rt_pcr for a in b]
+    majiq_set1_all = [a for b in method_epsis for a in b]
+
+    rt_pcr_set2_all = [a for b in pcr_majiq_extra for a in b]
+    majiq_set2_all = [a for b in majiq_extra for a in b]
+
+
+    diagonal = np.linspace(0, 1, num=len(rt_pcr_set1_all))
+    # print majiq[0], rt_pcr_majiq[0], miso[0]
+    # fit = np.polyfit(majiq_all, rt_pcr_majiq_all, 1)
+    fit = np.polyfit(np.append(majiq_set1_all, majiq_set2_all), np.append(rt_pcr_set1_all, np.array(rt_pcr_set2_all)), 1)
+    fit_fn = np.poly1d(fit) # fit_fn is now a function which takes in x and returns an estimate for y
+
+    pyplot.plot(np.append(majiq_set1_all, majiq_set2_all), fit_fn(np.append(majiq_set1_all, majiq_set2_all)), '--k')
+    pyplot.plot(diagonal, diagonal, '--', color="#cccccc")
+    pyplot.plot(method_epsis[0], rt_pcr[0], '.', color='#%02x%02x%02x' % cb.Reds[3][-1], label='Resting')
+    pyplot.plot(method_epsis[1], rt_pcr[1], '.', color='#%02x%02x%02x' % cb.Blues[3][-1], label='Stimulating')
+    pyplot.plot(majiq_extra[0], pcr_majiq_extra[0], 'd', color='#%02x%02x%02x' % cb.Blues[3][-1], label='Cerebellum')
+    pyplot.plot(majiq_extra[1], pcr_majiq_extra[1], 'd', color='#%02x%02x%02x' % cb.Reds[3][-1], label='Liver')
+
+    pyplot.xlabel('MAJIQ')
+    pyplot.ylabel('RT-PCR')
+    pyplot.title('All (N=%d)' % (len(majiq_set1_all) + len(majiq_set2_all)))
+    pyplot.ylim([0, 1])
+    scripts.utils.save_or_show(plotpath, plotname, exten='pdf')
 
 
 def barchart_expected(expected_psis, plotpath, mfile):
@@ -341,7 +377,7 @@ def main():
             for pcr_elem in pcr_extra:
                 if pcr_elem.startswith("#"): continue
                 pcr_elems=pcr_elem.rstrip().split()
-                rtpcr_extra[pcr_elems[0]]=[float(pcr_elems[4])/100, float(pcr_elems[3])/100, np.nan, np.nan, [], [], float(pcr_elems[6])/100, float(pcr_elems[5])/100, pcr_elems[-4]]
+                rtpcr_extra[pcr_elems[0].split("#")[0]]=[float(pcr_elems[4])/100, float(pcr_elems[3])/100, np.nan, np.nan, [], [], float(pcr_elems[6])/100, float(pcr_elems[5])/100, pcr_elems[-4]]
 
         # ensembl_tlb = defaultdict(list)
         # if args.tlb_extra_pkl:
@@ -380,17 +416,21 @@ def main():
         # 4. Read Majiq results for the elements in PCR
         # dnew_juncs = {}
         flipped_lsvs = []
+        djunc_selected = {}
         for cn, mfile in enumerate(args.majiq_extra):
+            majiq_found = []
             with open(mfile) as mfile_open:
                 mpickle = pickle.load(mfile_open)
                 for j, lsv in enumerate(mpickle.get_lsvs()):
                     # if lsv.get_id().split(":")[0] in ensembl_tlb.keys():
                     #     for trans in set(ensembl_tlb[lsv.get_id().split(":")[0]]):
                     if lsv.get_id() in rtpcr_extra.keys():
+                        majiq_found.append(lsv.get_id())
                         for lway_aux, lway_junc in enumerate(lsv.lsv_graphic.get_junctions()):
                             if set(lway_junc.get_coords()) == set([int(aa) for aa in rtpcr_extra[lsv.get_id()][-1].split('-')]):
                                 print "Junction selected: %d" % lway_aux
                                 lsv_aux = lsv.get_id() + "#%d"%lway_aux
+                                djunc_selected[lsv.get_id()] = lway_aux
                                 try:
                                     if len(lsv.get_bins())>1:
                                         print "Complex LSV; %s" % lsv_aux
@@ -402,6 +442,8 @@ def main():
                                 except IndexError:
                                     rtpcr_extra[lsv.get_id()][2+cn] = 1-expected_psi(lsv.get_bins()[0])
                                     # dnew_juncs[lsv.get_id()] = 1
+            print "Missing LSVs in %s:" % mfile
+            print '\n'.join([kk for kk in rtpcr_extra.keys() if kk not in majiq_found])
 
         # 5. Read MISO results for the elements in PCR
         for cn, miso_dir in enumerate(args.miso_extra):
@@ -411,19 +453,17 @@ def main():
                     for line in mfile_open:
                         miso_fields = line.rstrip().split()
                         lsv_name = miso_fields[0]
-                        miso_psis = miso_fields[1]
+                        miso_psis = miso_fields[1].split(',')
                         miso_starts = miso_fields[-2].split(',')
                         miso_ends = miso_fields[-1].split(',')
                         if lsv_name in rtpcr_extra.keys():
                             # Find all junctions from that LSV that are included
-                            for i, miso_start in enumerate(miso_starts):  # Because MISO only report 1st junction in binary LSVs
-                                if [miso_start, miso_ends[i]] == rtpcr_extra[lsv_name][-1].split('-'):
-                                    if lsv_name in rtpcr_extra.keys():
-                                        try:
-                                            rtpcr_extra[lsv_name][4+cn].append(float(miso_psis[i]))
-                                        except IndexError:
-                                            rtpcr_extra[lsv_name][4+cn].append(1-float(miso_psis[0]))
-
+                            try:
+                                rtpcr_extra[lsv_name][4+cn].append(float(miso_psis[djunc_selected[lsv_name]]))
+                            except IndexError:
+                                rtpcr_extra[lsv_name][4+cn].append(1-float(miso_psis[0]))
+                            except KeyError:
+                                print "[WARNING] :: %s in MISO, but not in MAJIQ, skipped given the impossibility of determining which junction it is." % lsv_name
 
         # 6. Generate vectors/lists, saving our predictions in a txt file
         lrtpcr_majiq_extra=[[], []]
@@ -514,7 +554,7 @@ def main():
     majiq = [[], []]
     miso = [[], []]
 
-    flipped_thres = .8
+    flipped_thres = 1
     flipped_majiq_dict = defaultdict(str)  # List of strings with flipped LSVs info
     flipped_miso_dict = defaultdict(str)  # List of strings with flipped LSVs info
     for common_name in common_names_set:
@@ -615,37 +655,9 @@ def main():
 
     # print repr(rt_pcr), repr(majiq)
 
+    scatterplot_rtpcr_majiq_miso(rt_pcr_majiq, rt_pcr_miso, majiq, miso, args.plotpath, pcr_majiq_extra=lrtpcr_majiq_extra, pcr_miso_extra=lrtpcr_miso_extra, majiq_extra=lmajiq_extra, miso_extra=lmiso_extra)
+    scatterplot_rtpcr_simple(rt_pcr_majiq, majiq, args.plotpath, pcr_majiq_extra=lrtpcr_majiq_extra,majiq_extra=lmajiq_extra)
 
-
-    scatterplot_rtpcr_majiq(rt_pcr_majiq, rt_pcr_miso, majiq, miso, args.plotpath, pcr_majiq_extra=lrtpcr_majiq_extra, pcr_miso_extra=lrtpcr_miso_extra, majiq_extra=lmajiq_extra, miso_extra=lmiso_extra)
-
-    # # Save presumably flipped events in majiq
-    # # flipped_lsv_names = [str(name_str).split("#")[0] for name_str in flipped_majiq_dict.keys()]
-    # with open('flipped_majiq_thres_%.2f.txt' % flipped_thres, 'w') as flipped_file:
-    #     flipped_file.write("name_rtpcr\tname_majiq\trtpcr_rest%f\tmajiq_rest\trtpcr_stim\tmajiq_stim\tunique_rtpcr_name?\tlsv_1_way?\ttarget_junction_coord\n")
-    #     # with open(args.majiq_builder_file) as majiq_builder_file:
-    #     #     majiq_builder = pickle.load(majiq_builder_file)
-    #     #     for lsv in majiq_builder[1]:
-    #     #         if lsv.id in flipped_lsv_names:
-    #     #             for flip_key in flipped_majiq_dict:
-    #     #                 if lsv.id in flip_key:
-    #     #                     flipped_majiq_dict[flip_key] = flipped_majiq_dict[flip_key] + "\t%s\n" % str(lsv.junction_id[int(str(flip_key).split('#')[1])])
-    #     for flipped_lsv in flipped_majiq_dict:
-    #         flipped_file.write(flipped_majiq_dict[flipped_lsv])
-
-    # # Save presumably flipped events in miso
-    # # flipped_lsv_names = [str(name_str).split("#")[0] for name_str in flipped_miso_dict.keys()]
-    # with open('flipped_miso_thres_%.2f.txt' % flipped_thres, 'w') as flipped_file:
-    #     flipped_file.write("name_rtpcr\tname_majiq\trtpcr_rest%f\tmajiq_rest\trtpcr_stim\tmajiq_stim\tunique_rtpcr_name?\tlsv_1_way?\ttarget_junction_coord\n")
-    #     # with open(args.majiq_builder_file) as majiq_builder_file:
-    #     #     majiq_builder = pickle.load(majiq_builder_file)
-    #     #     for lsv in majiq_builder[1]:
-    #     #         if lsv.id in flipped_lsv_names:
-    #     #             for flip_key in flipped_majiq_dict:
-    #     #                 if lsv.id in flip_key:
-    #     #                     flipped_majiq_dict[flip_key] = flipped_majiq_dict[flip_key] + "\t%s\n" % str(lsv.junction_id[int(str(flip_key).split('#')[1])])
-    #     for flipped_lsv in flipped_miso_dict:
-    #         flipped_file.write(flipped_miso_dict[flipped_lsv])
 
 
 if __name__ == '__main__':
