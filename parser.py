@@ -78,7 +78,8 @@ def main():
                              help='Minimum number of reads combining all positions in an event to be considered. '
                              '[Default: %(default)s]')
     psianddelta.add_argument('--minpos', default=3, type=int, help='Minimum number of start positions with at least 1 '
-                                                                   'read for an event to be considered.')
+                                                                   'read for an event to be considered.'
+                                                                   '[Default: %(default)s]')
     psianddelta.add_argument('--trimborder', default=5, type=int,
                              help='Trim the borders when sampling (keeping the ones with reads). '
                                   '[Default: %(default)s]')

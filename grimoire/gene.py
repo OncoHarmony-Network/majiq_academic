@@ -322,8 +322,14 @@ class Gene:
 
         for ex in self.exons:
             s_exons.add(ex.get_coordinates())
-            
-        assert len(s_exons) == len(self.exons), "Exist duplicates in exons in Gene %s" % self.id
+
+
+        #assert len(s_exons) == len(self.exons), "Exist duplicates in exons in Gene %s, " % self.id
+        if len(s_exons) != len(self.exons):
+            for xx in self.exons:
+                print xx, xx.get_coordinates()
+
+            raise RuntimeError
 
     def new_lsv_definition(self, exon, jlist, lsv_type, logger=None):
 

@@ -521,14 +521,14 @@ def all_plots_wrapper(types, nlsv=0, output='.'):
     percent = float(complex) / total
     print "Complex %d/%d (%.3f)" % (complex, total, percent)
 
-    plot_lsv_types_hist(s_vals, s_keys, img_path=impath, lim_val=None, extra_title=extra_title)
+    plot_lsv_types_hist(s_vals, s_keys, img_path=impath, lim_val=None, extra_title=extra_title, output=output)
     #plot_lsv_types_hist(s_vals, s_keys, img_path=None, lim_val=None, extra_title=extra_title)
 
 
     s_keys = [xx[0] for xx in histo]
     s_vals = [types[xx] for xx in s_keys]
 
-    plot_countings(s_vals, s_keys, num_ev)
+    plot_countings(s_vals, s_keys, num_ev, output=output)
 
 
 def psi_dominant(filename_list):
@@ -653,6 +653,19 @@ def fdr_parse(direc, file_list, group_list):
 
     changing = np.zeros(shape=(len(group_list), len(group_list)), dtype=np.int)
     complx = np.zeros(shape=(len(group_list), len(group_list)), dtype=np.int)
+
+    total_dict = set()
+    total_dict_complx = set()
+
+    per_tiss = {}
+    per_tiss_complx = {}
+
+    for xx in group_list:
+        per_tiss[xx] = set()
+        per_tiss_complx[xx] = set()
+
+
+
     for filename in file_list:
         fp = open("%s/%s" % (direc, filename))
         lines = fp.readlines()
@@ -661,6 +674,8 @@ def fdr_parse(direc, file_list, group_list):
         pair = filename.split('.')[0].split('_')
         x = group_list.index(pair[0])
         y = group_list.index(pair[1])
+
+
 
         for ll in lines:
             if ll[0] == '#':
@@ -682,10 +697,30 @@ def fdr_parse(direc, file_list, group_list):
                 if abs(pp) > 0.2:
                     changing[x, y] += 1
                     changing[y, x] += 1
+                    total_dict.add(tab[2])
+                    per_tiss[pair[0]].add(tab[2])
+                    per_tiss[pair[1]].add(tab[2])
                     if ntyp > 2:
+                        total_dict_complx.add(tab[2])
+                        per_tiss_complx[pair[0]].add(tab[2])
+                        per_tiss_complx[pair[1]].add(tab[2])
                         complx[x, y] += 1
                         complx[y, x] += 1
                     break
+
+    print "TOTAL %s" % len(total_dict)
+    print "COMPLX %s" % len(total_dict_complx)
+
+    fract = float(len(total_dict_complx))/len(total_dict)
+
+    print "FRACTION", fract
+
+    print "TOTAL PER TISSUE"
+    for kk,vv in per_tiss.items():
+        print kk, len(vv)
+
+    for kk,vv in per_tiss_complx.items():
+        print kk, len(vv)
 
     return changing, complx
 
@@ -703,7 +738,7 @@ if __name__ == '__main__':
     if not os.path.exists(output):
         os.makedirs(output)
         os.makedirs('%s/news' % output)
-
+    #
     # list_types, group_types = get_types(dire, onlyfiles, groups)
     # count_lsv = len(set(list_types.keys()))
     # stypes = {}

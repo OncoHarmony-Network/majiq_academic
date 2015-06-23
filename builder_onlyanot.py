@@ -200,16 +200,16 @@ def merge_and_create_majiq_file(chr_list, pref_file):
 def prepare_intronic_exons(gene_list):
 
     for gn in gene_list:
+        ex_list = gn.get_exon_list()
         for st, end in gn.get_ir_definition():
 
-            ex_list = gn.get_exon_list()
             exon1 = None
             exon2 = None
             for ex in ex_list:
                 coords = ex.get_coordinates()
-                if coords[1] == st -1 :
+                if coords[1] == st - 1:
                     exon1 = ex
-                elif coords[0] == end +1 :
+                elif coords[0] == end + 1:
                     exon2 = ex
 
             if exon1 is None or exon2 is None:
@@ -217,7 +217,22 @@ def prepare_intronic_exons(gene_list):
 
             junc1 = majiq_junction.Junction(st-1, st, exon1, None, gn, readN=0)
             junc2 = majiq_junction.Junction(end, end+1, exon2, None, gn, readN=0)
-            exnum = majiq_exons.new_exon_definition(st, end, None, junc1, junc2, gn, isintron=True)
+
+            ex = majiq_exons.Exon(st, end, gn, gn.get_strand(), annot=True, isintron=True)
+            gn.add_exon(ex)
+
+            trcpt = exon1.exonTx_list[0].get_transcript()
+
+            txex = majiq_exons.ExonTx(st, end, trcpt[0], intron=True)
+            txex.add_3prime_junc(junc1)
+            txex.add_3prime_junc(junc2)
+
+            ex.ss_3p_list.append(txex.start)
+            ex.ss_5p_list.append(txex.end)
+            ex.exonTx_list.append(txex)
+                # txex.exon = ex
+            junc1.add_acceptor(ex)
+            junc2.add_donor(ex)
 
             junc1.add_donor(exon1)
             for ex in exon1.exonRead_list:
@@ -232,7 +247,7 @@ def prepare_intronic_exons(gene_list):
                 if st == junc2.get_coordinates()[1]:
                     ex.add_3prime_junc(junc2)
                     break
-
+            break
         gn.prepare_exons()
 
 
