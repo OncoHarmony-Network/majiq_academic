@@ -151,8 +151,6 @@ def merge_and_create_majiq_file(chr_list, pref_file):
     :param chr_list:
     :param pref_file:
     """
-    if pref_file != '':
-        pref_file = '%s.' % pref_file
     import random
     for name, ind_list in mglobals.tissue_repl.items():
         for idx, exp_idx in enumerate(ind_list):
@@ -164,7 +162,7 @@ def merge_and_create_majiq_file(chr_list, pref_file):
                 temp_filename = '%s/%s.splicegraph.pkl' % (temp_dir, mglobals.exp_list[exp_idx])
                 visual_gene_list = majiq_io.load_bin_file(temp_filename)
                 all_visual.append(visual_gene_list)
-            fname = '%s/%s%s.splicegraph' % (mglobals.outDir, pref_file, mglobals.exp_list[exp_idx])
+            fname = '%s/%s.splicegraph' % (mglobals.outDir, mglobals.exp_list[exp_idx])
             visual = np.concatenate(all_visual)
             majiq_io.dump_bin_file(visual, fname)
             del all_visual
@@ -193,7 +191,7 @@ def merge_and_create_majiq_file(chr_list, pref_file):
             for jnc in clist:
                 jnc.set_gc_factor(exp_idx)
 
-            fname = '%s/%s%s.majiq' % (mglobals.outDir, pref_file, mglobals.exp_list[exp_idx])
+            fname = '%s/%s.majiq' % (mglobals.outDir, mglobals.exp_list[exp_idx])
             majiq_io.dump_bin_file((info, at, clist), fname)
 
 
