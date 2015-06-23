@@ -5,7 +5,7 @@ from scripts.utils import save_or_show
 
 from collections import defaultdict
 import argparse
-import pickle as pkl
+import cPickle as pkl
 import numpy as np
 import os
 from matplotlib import pyplot as plt
@@ -58,8 +58,9 @@ def cov_combined(coverages):
     return common_dict
 
 
-def plot_bins(read_bins, names, rtpcr, plotpath, V=0.1):
+def plot_bins(read_bins, names, rtpcr, plotpath, V=0.1, extension='png'):
 
+    V *= 100
     def autolabel(rects, rtpcrs):
         for ii, rect in enumerate(rects):
             height = rect.get_height()
@@ -69,7 +70,7 @@ def plot_bins(read_bins, names, rtpcr, plotpath, V=0.1):
     repro_lsvs = [(sum(r)*1.0/max(1.0, len(r))*100) for r in read_bins]
 
     plotname="Reproducibility divided by coverage (N=%d)." % (np.sum([len(i) for i in read_bins]))
-    plotname+="\n%.0f%% of LSVs validated (V=%.1f)" % (100*(1.*sum([np.count_nonzero(np.array(pcr_cov)>V) for pcr_cov in rtpcr])/sum([len(pcr_cov) for pcr_cov in rtpcr])), V)
+    plotname+="\n%.0f%% of LSVs validated (V=%.1f)" % (100*(1.*sum([np.count_nonzero(np.array(pcr_cov)>V) for pcr_cov in rtpcr])/sum([len(pcr_cov) for pcr_cov in rtpcr])), V/100)
     n_groups = len(names)
 
     fig, ax = plt.subplots()
@@ -89,17 +90,17 @@ def plot_bins(read_bins, names, rtpcr, plotpath, V=0.1):
 
     plt.xlabel('# Positions with reads')
     plt.ylabel('% Reproduced')
-    plt.ylim([0,100])
+    plt.ylim([0, 100])
     plt.title(plotname)
     # plt.grid()
     # plt.title('Delta in expected PSI between %s.' % (replica_names_joint))
     plt.xticks(index + bar_width/2.0, names)
-    plt.legend(loc=2)
+    # plt.legend(loc=2)
 
     plt.tight_layout()
     save_or_show(plotpath,
                   plotname.lower().replace('\n', ' - ').replace(' ', '_').replace('(', '').replace(')', '').replace('=', ''),
-                  exten='png')
+                  exten=extension)
 
 
 def get_rtpcr_std(lcer, lliv):
@@ -111,6 +112,9 @@ def get_rtpcr_std(lcer, lliv):
 
 
 def main():
+
+    EXTENSION_TYPES = ['png', 'pdf']
+
     """Distribution of reproduced LSVs by coverage"""
     parser = argparse.ArgumentParser(description="")
     parser.add_argument('events', type=str, help='Events files from reproducibility ranking.')
@@ -118,6 +122,7 @@ def main():
     parser.add_argument('--rtpcr-files', dest='rtpcr_f', help='RT-PCR results for MAJIQ')
     parser.add_argument('--output', required=True, help='Output file path')
     parser.add_argument('--V', default=.1, type=float, action='store', help='Output file path')
+    parser.add_argument('--extension', default=EXTENSION_TYPES[1], choices=EXTENSION_TYPES, help='Extension of the created figure (%s).' % ', '.join(EXTENSION_TYPES))
     args = parser.parse_args()
 
     lsvs = pkl.load(open(args.events))
@@ -148,23 +153,23 @@ def main():
                     ]
                 except ValueError:
                     print "[WARNING] :: Couldn't parse %s" % (fields[1])
+    print "Intersection of LSVs between MAJIQ and RT-PCR %d" % len(set([ll[0][0].split("#")[0] for ll in lsvs]).intersection(rtpcr))
 
     for lsv in lsvs:
         for i, ran in enumerate(ranges):
-            lsv_id = lsv[0][0]
+            lsv_id = lsv[0][0].split("#")[0]
             if lsv_id in common_cov.keys():
                 if common_cov[lsv_id] < ran:
                     read_bins[i].append(lsv[1]) # event[0][0][1]
                     if args.rtpcr_f and lsv_id in rtpcr:
-                        rtpcr_bins[i].append(abs(rtpcr[lsv_id][0])+rtpcr[lsv_id][2])
+                        rtpcr_bins[i].append(abs(rtpcr[lsv_id][0])) #+rtpcr[lsv_id][2]
                         print "%s\t%d\t%s" % (lsv_id, common_cov[lsv_id], rtpcr[lsv_id][1])
                     break
-
     for j, r in enumerate(read_bins):
         print "#Reads %s; from %d events, percentage reproduced %.2f%%" % (BINNAMES[j], len(r), (sum(r)*1.0/max(1.0, len(r))*100))
 
     BINNAMES = ["%s \n(n=%d)" % (a, b) for a,b in zip(BINNAMES, [len(aa) for aa in read_bins])]
-    plot_bins(read_bins, BINNAMES, rtpcr_bins, args.output, args.V)
+    plot_bins(read_bins, BINNAMES, rtpcr_bins, args.output, args.V, extension=args.extension)
 
 
 if __name__ == '__main__':
