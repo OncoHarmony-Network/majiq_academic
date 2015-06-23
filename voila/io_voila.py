@@ -24,7 +24,7 @@ class VoilaInput(object):
             yield sample_info
 
 
-def dump_voila_input(voila_input, target, logger=None, protocol=0):
+def dump_voila_input(voila_input, target, logger=None, protocol=-1):
     import os
     base_path, name = os.path.split(target)
     if not os.path.exists(base_path):
