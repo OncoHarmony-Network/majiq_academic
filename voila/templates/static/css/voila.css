@@ -76,7 +76,7 @@ table.tablesorter {
         background-color: #CDCDCD;
         margin:10px 0pt 15px;
         font-size: 9pt;
-        min-width: 1000px;
+        width: 1000px;
         text-align: left;
 }
 table.tablesorter thead tr th, table.tablesorter tfoot tr th {
