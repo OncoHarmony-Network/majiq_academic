@@ -558,7 +558,7 @@ def __annot_dump(nthrd, temp_ex, lsv_list, logging=None):
     temp_dir = "%s/tmp/chunk_%s" % (mglobals.outDir, nthrd)
     create_if_not_exists(temp_dir)
     if not logging is None:
-        logging.info("Creating temporal annotation chunk %s" % nthrd)
+        logging.info("Creating temporal annotation chunk %s (%d genes)" % (nthrd, len(lsv_list)))
     fname = '%s/annot_genes.pkl' % temp_dir
     dump_bin_file(lsv_list, fname)
 

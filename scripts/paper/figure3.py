@@ -29,6 +29,13 @@ def rgb_to_hex(rgb):
     color = [int(xx) for xx in rgb[4:-1].split(',')]
     return '#%02x%02x%02x' % (color[0], color[1], color[2])
 
+def use_intron(lsvtype):
+    res = 'i' in lsvtype
+    if ir_plots:
+        res = not res
+
+    return res
+
 
 
 def autolabel(rects, ax, msg, size, b=False):
@@ -226,7 +233,7 @@ def plot_countings(vals, typs, counts, output='.'):
     bars_t = [0] * 20
 
     for idx, tt in enumerate(typs):
-        if 'i' in tt:
+        if use_intron(tt):
             continue
         juncs = [xx for xx in tt.split('|')[1:] if not xx.endswith('0')]
         nums = len(juncs)
@@ -478,7 +485,7 @@ def get_types(direc, list_exp, grps):
         pp = pickle.load(open("%s/%s" % (direc, ll)))
         kk = []
         for lsv in pp[1]:
-            if 'i' in lsv.type:
+            if use_intron(lsv.type):
                 continue
             kk.append(lsv.id)
             d_types[lsv.id] = collapse(lsv.type)
@@ -546,7 +553,7 @@ def psi_dominant(filename_list):
             lsv_ex_id = tab[2].split(':')[1]
             strand = tab[13]
             typ = tab[5][0]
-            if 'i' in typ:
+            if use_intron(typ):
                 continue
             psi_list = [float(xx) for xx in tab[3].split(';')]
             exon_list = [xx for xx in tab[15].split(';')]
@@ -649,7 +656,7 @@ def ss_dominant(file_list):
     return res
 
 
-def fdr_parse(direc, file_list, group_list):
+def fdr_parse(direc, file_list, group_list, intronic_junc=False):
 
     changing = np.zeros(shape=(len(group_list), len(group_list)), dtype=np.int)
     complx = np.zeros(shape=(len(group_list), len(group_list)), dtype=np.int)
@@ -664,8 +671,6 @@ def fdr_parse(direc, file_list, group_list):
         per_tiss[xx] = set()
         per_tiss_complx[xx] = set()
 
-
-
     for filename in file_list:
         fp = open("%s/%s" % (direc, filename))
         lines = fp.readlines()
@@ -674,8 +679,6 @@ def fdr_parse(direc, file_list, group_list):
         pair = filename.split('.')[0].split('_')
         x = group_list.index(pair[0])
         y = group_list.index(pair[1])
-
-
 
         for ll in lines:
             if ll[0] == '#':
@@ -690,7 +693,7 @@ def fdr_parse(direc, file_list, group_list):
                     continue
                 ntyp += 1
             psi_list = [float(xx) for xx in tab[3].split(';')]
-            if 'i' in tab[5]:
+            if use_intron(tab[5]):
                 continue
 
             for pp in psi_list[-1:]:
@@ -724,12 +727,17 @@ def fdr_parse(direc, file_list, group_list):
 
     return changing, complx
 
+
+
 if __name__ == '__main__':
 
     dire = sys.argv[1]
     onlyfiles = [f for f in listdir(dire) if isfile(join(dire, f)) and f.endswith('majiq')]
     groups = ['Adr', 'Aor', 'BFat', 'Bstm', 'Cer', 'Hrt', 'Hyp', 'Kid', 'Liv', 'Lun', 'Mus', 'WFat']
     # onlyfiles = ['Adr_CT22.mm10.sorted.majiq', 'Aor_CT22.mm10.sorted.majiq']
+
+    global ir_plots
+    ir_plots = True
 
     output = sys.argv[2]
     #groups = sys.argv[3:]
