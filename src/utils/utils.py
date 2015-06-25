@@ -102,8 +102,9 @@ def merge_and_create_majiq_file(pref_file):
             for chnk in range(mglobals.num_final_chunks):
                 temp_dir = "%s/tmp/chunk_%s" % (mglobals.outDir, chnk)
                 temp_filename = '%s/%s.splicegraph.pkl' % (temp_dir, mglobals.exp_list[exp_idx])
-                visual_gene_list = majiq_io.load_bin_file(temp_filename)
-                all_visual.append(visual_gene_list)
+                if os.path.exists(temp_filename):
+                    visual_gene_list = majiq_io.load_bin_file(temp_filename)
+                    all_visual.append(visual_gene_list)
             fname = '%s/%s%s.splicegraph' % (mglobals.outDir, pref_file, mglobals.exp_list[exp_idx])
             visual = np.concatenate(all_visual)
             majiq_io.dump_bin_file(visual, fname)
@@ -113,9 +114,10 @@ def merge_and_create_majiq_file(pref_file):
             for chnk in range(mglobals.num_final_chunks):
                 temp_dir = "%s/tmp/chunk_%s" % (mglobals.outDir, chnk)
                 filename = "%s/%s.majiq.pkl" % (temp_dir, mglobals.exp_list[exp_idx])
-                temp_table = majiq_io.load_bin_file(filename)
-                as_table.append(temp_table[0])
-                nonas_table.append(temp_table[1])
+                if os.path.exists(filename):
+                    temp_table = majiq_io.load_bin_file(filename)
+                    as_table.append(temp_table[0])
+                    nonas_table.append(temp_table[1])
 
             if len(as_table) == 0:
                 continue

@@ -28,7 +28,10 @@ def majiq_builder(samfiles_list, chnk, pcr_validation=None, gff_output=None, cre
                      " %s" % chnk)
 
     temp_dir = "%s/tmp/chunk_%s" % (mglobals.outDir, chnk)
-    temp_file = open('%s/annot_genes.pkl' % temp_dir, 'rb')
+    annot_file = '%s/annot_genes.pkl' % temp_dir
+    if not os.path.exists(annot_file):
+        return
+    temp_file = open(annot_file, 'rb')
     gene_list = pickle.load(temp_file)
 
     if create_tlb:
