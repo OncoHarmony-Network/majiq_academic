@@ -15,6 +15,15 @@ rcParams.update({'font.size': 10})
 __author__ = 'abarrera'
 
 
+def get_color(tissue):
+    colors_dict = {'rest': '#%02x%02x%02x' % cb.Paired[10][-1],
+               'stim': '#%02x%02x%02x' % cb.Paired[10][-2],
+               'cer': '#%02x%02x%02x' % cb.Paired[10][-3],
+               'liv': '#%02x%02x%02x' % cb.Paired[10][-4]
+               }
+    return colors_dict[tissue]
+
+
 def scatterplot_rtpcr_majiq_miso(rt_pcr_majiq, rt_pcr_miso, majiq, miso, plotpath, pcr_majiq_extra=None, pcr_miso_extra=None, majiq_extra=None, miso_extra=None):
     #figure out how many groups of events exist
 
@@ -35,17 +44,21 @@ def scatterplot_rtpcr_majiq_miso(rt_pcr_majiq, rt_pcr_miso, majiq, miso, plotpat
 
 
     diagonal = np.linspace(0, 1, num=len(rt_pcr_majiq_all))
-    # print majiq[0], rt_pcr_majiq[0], miso[0]
-    # fit = np.polyfit(majiq_all, rt_pcr_majiq_all, 1)
     fit = np.polyfit(np.append(majiq_all, majiq_extra_all), np.append(rt_pcr_majiq_all, np.array(pcr_majiq_extra_all)), 1)
     fit_fn = np.poly1d(fit) # fit_fn is now a function which takes in x and returns an estimate for y
 
+    from scipy.stats.stats import pearsonr
+
+    pearson_majiq = pearsonr(np.append(majiq_all, majiq_extra_all), np.append(rt_pcr_majiq_all, pcr_majiq_extra_all))[0]
+    print 'MAJIQ R=%.2f%%' % pearson_majiq
+
+    axx[0][0].text(.2, .9, 'R=%.2f%%' % (pearson_majiq), fontsize=16)
     axx[0][0].plot(np.append(majiq_all, majiq_extra_all), fit_fn(np.append(majiq_all, majiq_extra_all)), '--k')
     axx[0][0].plot(diagonal, diagonal, '--', color="#cccccc")
-    axx[0][0].plot(majiq[0], rt_pcr_majiq[0], '.', color='r', label='Resting')
-    axx[0][0].plot(majiq[1], rt_pcr_majiq[1], '.', color='b', label='Stimulating')
-    axx[0][0].plot(majiq_extra[0], pcr_majiq_extra[0], 'd', color='#%02x%02x%02x' % cb.Dark2[4][2], label='Cerebellum')
-    axx[0][0].plot(majiq_extra[1], pcr_majiq_extra[1], 'd', color='#%02x%02x%02x' % cb.Dark2[4][3], label='Liver')
+    axx[0][0].plot(majiq[0], rt_pcr_majiq[0], '.', color=get_color('rest'), label='Resting')
+    axx[0][0].plot(majiq[1], rt_pcr_majiq[1], '.', color=get_color('stim'), label='Stimulating')
+    axx[0][0].plot(majiq_extra[0], pcr_majiq_extra[0], 'd', color=get_color('cer'), label='Cerebellum')
+    axx[0][0].plot(majiq_extra[1], pcr_majiq_extra[1], 'd', color=get_color('liv'), label='Liver')
 
 
     axx[0][0].set_xlabel('MAJIQ')
@@ -55,17 +68,19 @@ def scatterplot_rtpcr_majiq_miso(rt_pcr_majiq, rt_pcr_miso, majiq, miso, plotpat
     # axx[0][0].legend(loc=2, fontsize=8)
 
     diagonal = np.linspace(0, 1, num=len(rt_pcr_miso_all))
-    # fit = np.polyfit(miso_all, rt_pcr_miso_all, 1)
     fit = np.polyfit(np.append(miso_all, miso_extra_all), np.append(rt_pcr_miso_all, np.array(pcr_miso_extra_all)), 1)
-    # fit = np.polyfit(np.append(miso_all, np.array(miso_extra)[-np.isnan(miso_extra)]), np.append(rt_pcr_miso_all, np.array(pcr_extra)[-np.isnan(miso_extra)]), 1)
     fit_fn = np.poly1d(fit) # fit_fn is now a function which takes in x and returns an estimate for y
 
+    pearson_miso = pearsonr(np.append(miso_all, miso_extra_all), np.append(rt_pcr_miso_all, pcr_miso_extra_all))[0]
+    print 'MISO R=%.2f%%' % pearson_miso
+
+    axx[1][0].text(.2, .9, 'R=%.2f%%' % (pearson_miso), fontsize=16)
     axx[1][0].plot(np.append(miso_all, miso_extra_all), fit_fn(np.append(miso_all, miso_extra_all)), '--k')
     axx[1][0].plot(diagonal, diagonal, '--', color="#cccccc")
-    axx[1][0].plot(miso[0], rt_pcr_miso[0], '.', color='r', label='Resting')
-    axx[1][0].plot(miso[1], rt_pcr_miso[1], '.', color='b', label='Stimulating')
-    axx[1][0].plot(miso_extra[0], pcr_miso_extra[0], 'd', color='#%02x%02x%02x' % cb.Dark2[4][2], label='Cerebellum')
-    axx[1][0].plot(miso_extra[1], pcr_miso_extra[1], 'd', color='#%02x%02x%02x' % cb.Dark2[4][3], label='Liver')
+    axx[1][0].plot(miso[0], rt_pcr_miso[0], '.', color=get_color('rest'), label='Resting')
+    axx[1][0].plot(miso[1], rt_pcr_miso[1], '.', color=get_color('stim'), label='Stimulating')
+    axx[1][0].plot(miso_extra[0], pcr_miso_extra[0], 'd', color=get_color('cer'), label='Cerebellum')
+    axx[1][0].plot(miso_extra[1], pcr_miso_extra[1], 'd', color=get_color('liv'), label='Liver')
 
 
     axx[1][0].set_xlabel('MISO')
@@ -81,7 +96,7 @@ def scatterplot_rtpcr_majiq_miso(rt_pcr_majiq, rt_pcr_miso, majiq, miso, plotpat
 
     axx[0][1].plot(majiq[0], fit_fn(majiq[0]), '--k')
     axx[0][1].plot(diagonal, diagonal, '--', color="#cccccc")
-    axx[0][1].plot(majiq[0], rt_pcr_majiq[0], '.', color='r', label='Resting')
+    axx[0][1].plot(majiq[0], rt_pcr_majiq[0], '.', color=get_color('rest'), label='Resting')
 
     axx[0][1].set_xlabel('MAJIQ')
     axx[0][1].set_ylabel('RT-PCR')
@@ -91,9 +106,10 @@ def scatterplot_rtpcr_majiq_miso(rt_pcr_majiq, rt_pcr_miso, majiq, miso, plotpat
 
     fit = np.polyfit(majiq[1], rt_pcr_majiq[1], 1)
     fit_fn = np.poly1d(fit)
-    axx[0][2].plot(diagonal, diagonal, '--', color="#cccccc")
-    axx[0][2].plot(majiq[1], rt_pcr_majiq[1], '.', color='b', label='Stimulating')
     axx[0][2].plot(majiq[1], fit_fn(majiq[1]), '--k')
+    axx[0][2].plot(diagonal, diagonal, '--', color="#cccccc")
+    axx[0][2].plot(majiq[1], rt_pcr_majiq[1], '.', color=get_color('stim'), label='Stimulating')
+
 
     axx[0][2].set_xlabel('MAJIQ')
     axx[0][2].set_ylabel('RT-PCR')
@@ -103,9 +119,10 @@ def scatterplot_rtpcr_majiq_miso(rt_pcr_majiq, rt_pcr_miso, majiq, miso, plotpat
 
     fit = np.polyfit(majiq_extra[0], pcr_majiq_extra[0], 1)
     fit_fn = np.poly1d(fit)
-    axx[0][3].plot(diagonal, diagonal, '--', color="#cccccc")
-    axx[0][3].plot(majiq_extra[0], pcr_majiq_extra[0], 'd', color='#%02x%02x%02x' % cb.Dark2[4][2], label='Cerebellum')
     axx[0][3].plot(majiq_extra[0], fit_fn(majiq_extra[0]), '--k')
+    axx[0][3].plot(diagonal, diagonal, '--', color="#cccccc")
+    axx[0][3].plot(majiq_extra[0], pcr_majiq_extra[0], 'd', color=get_color('cer'), label='Cerebellum')
+
 
     axx[0][3].set_xlabel('MAJIQ')
     axx[0][3].set_ylabel('RT-PCR')
@@ -115,9 +132,10 @@ def scatterplot_rtpcr_majiq_miso(rt_pcr_majiq, rt_pcr_miso, majiq, miso, plotpat
 
     fit = np.polyfit(majiq_extra[1], pcr_majiq_extra[1], 1)
     fit_fn = np.poly1d(fit)
-    axx[0][4].plot(diagonal, diagonal, '--', color="#cccccc")
-    axx[0][4].plot(majiq_extra[1], pcr_majiq_extra[1], 'd', color='#%02x%02x%02x' % cb.Dark2[4][3], label='Liver')
     axx[0][4].plot(majiq_extra[1], fit_fn(majiq_extra[1]), '--k')
+    axx[0][4].plot(diagonal, diagonal, '--', color="#cccccc")
+    axx[0][4].plot(majiq_extra[1], pcr_majiq_extra[1], 'd', color=get_color('liv'), label='Liver')
+
 
     axx[0][4].set_xlabel('MAJIQ')
     axx[0][4].set_ylabel('RT-PCR')
@@ -130,7 +148,7 @@ def scatterplot_rtpcr_majiq_miso(rt_pcr_majiq, rt_pcr_miso, majiq, miso, plotpat
 
     axx[1][1].plot(miso[0], fit_fn(miso[0]), '--k')
     axx[1][1].plot(diagonal, diagonal, '--', color="#cccccc")
-    axx[1][1].plot(miso[0], rt_pcr_miso[0], '.', color='r', label='Resting')
+    axx[1][1].plot(miso[0], rt_pcr_miso[0], '.', color=get_color('rest'), label='Resting')
 
     axx[1][1].set_xlabel('MISO')
     axx[1][1].set_ylabel('RT-PCR')
@@ -141,7 +159,7 @@ def scatterplot_rtpcr_majiq_miso(rt_pcr_majiq, rt_pcr_miso, majiq, miso, plotpat
     fit = np.polyfit(miso[1], rt_pcr_miso[1], 1)
     fit_fn = np.poly1d(fit)
     axx[1][2].plot(diagonal, diagonal, '--', color="#cccccc")
-    axx[1][2].plot(miso[1], rt_pcr_miso[1], '.', color='b', label='Stimulating')
+    axx[1][2].plot(miso[1], rt_pcr_miso[1], '.', color=get_color('stim'), label='Stimulating')
     axx[1][2].plot(miso[1], fit_fn(miso[1]), '--k')
 
     axx[1][2].set_xlabel('MISO')
@@ -153,7 +171,7 @@ def scatterplot_rtpcr_majiq_miso(rt_pcr_majiq, rt_pcr_miso, majiq, miso, plotpat
     fit = np.polyfit(miso_extra[0], pcr_miso_extra[0], 1)
     fit_fn = np.poly1d(fit)
     axx[1][3].plot(diagonal, diagonal, '--', color="#cccccc")
-    axx[1][3].plot(miso_extra[0], pcr_miso_extra[0], 'd', color='#%02x%02x%02x' % cb.Dark2[4][2], label='Cerebellum')
+    axx[1][3].plot(miso_extra[0], pcr_miso_extra[0], 'd', color=get_color('cer'), label='Cerebellum')
     axx[1][3].plot(miso_extra[0], fit_fn(miso_extra[0]), '--k')
 
     axx[1][3].set_xlabel('MISO')
@@ -165,7 +183,7 @@ def scatterplot_rtpcr_majiq_miso(rt_pcr_majiq, rt_pcr_miso, majiq, miso, plotpat
     fit = np.polyfit(miso_extra[1], pcr_miso_extra[1], 1)
     fit_fn = np.poly1d(fit)
     axx[1][4].plot(diagonal, diagonal, '--', color="#cccccc")
-    axx[1][4].plot(miso_extra[1], pcr_miso_extra[1], 'd', color='#%02x%02x%02x' % cb.Dark2[4][3], label='Liver')
+    axx[1][4].plot(miso_extra[1], pcr_miso_extra[1], 'd', color=get_color('liv'), label='Liver')
     axx[1][4].plot(miso_extra[1], fit_fn(miso_extra[1]), '--k')
 
     axx[1][4].set_xlabel('MISO')
@@ -176,37 +194,35 @@ def scatterplot_rtpcr_majiq_miso(rt_pcr_majiq, rt_pcr_miso, majiq, miso, plotpat
     scripts.utils.save_or_show(plotpath, "psi_comp_rtpcr_majiq_miso", exten='pdf')
 
 
-def scatterplot_rtpcr_simple(rt_pcr, method_epsis, plotpath, pcr_majiq_extra=None, majiq_extra=None, plotname='psi_rtpcr'):
+def scatterplot_rtpcr_simple(rt_pcr, method_epsis, plotpath, pcr_majiq_extra=None, majiq_extra=None, plotname='psi_rtpcr', met_name='MAJIQ'):
     #figure out how many groups of events exist
 
     # majiq_rest_yerr = [var_expected_psi(dis) for dis in rt_pcr_majiq[0]]
 
-    fig = pyplot.figure(figsize=[8, 6], dpi=300)
-    fig.suptitle("PSI comparison: RT-PCR Vs MAJIQ; RT-PCR Vs MISO")
+    fig = pyplot.figure(figsize=[6, 6], dpi=300)
+    fig.suptitle("RT-PCR PSI comparison")
 
     rt_pcr_set1_all = [a for b in rt_pcr for a in b]
-    majiq_set1_all = [a for b in method_epsis for a in b]
+    method_set1_all = [a for b in method_epsis for a in b]
 
     rt_pcr_set2_all = [a for b in pcr_majiq_extra for a in b]
-    majiq_set2_all = [a for b in majiq_extra for a in b]
+    method_set2_all = [a for b in majiq_extra for a in b]
 
 
     diagonal = np.linspace(0, 1, num=len(rt_pcr_set1_all))
-    # print majiq[0], rt_pcr_majiq[0], miso[0]
-    # fit = np.polyfit(majiq_all, rt_pcr_majiq_all, 1)
-    fit = np.polyfit(np.append(majiq_set1_all, majiq_set2_all), np.append(rt_pcr_set1_all, np.array(rt_pcr_set2_all)), 1)
+    fit = np.polyfit(np.append(method_set1_all, method_set2_all), np.append(rt_pcr_set1_all, np.array(rt_pcr_set2_all)), 1)
     fit_fn = np.poly1d(fit) # fit_fn is now a function which takes in x and returns an estimate for y
 
-    pyplot.plot(np.append(majiq_set1_all, majiq_set2_all), fit_fn(np.append(majiq_set1_all, majiq_set2_all)), '--k')
+    pyplot.plot(np.append(method_set1_all, method_set2_all), fit_fn(np.append(method_set1_all, method_set2_all)), '--k')
     pyplot.plot(diagonal, diagonal, '--', color="#cccccc")
-    pyplot.plot(method_epsis[0], rt_pcr[0], '.', color='#%02x%02x%02x' % cb.Reds[3][-1], label='Resting')
-    pyplot.plot(method_epsis[1], rt_pcr[1], '.', color='#%02x%02x%02x' % cb.Blues[3][-1], label='Stimulating')
-    pyplot.plot(majiq_extra[0], pcr_majiq_extra[0], 'd', color='#%02x%02x%02x' % cb.Blues[3][-1], label='Cerebellum')
-    pyplot.plot(majiq_extra[1], pcr_majiq_extra[1], 'd', color='#%02x%02x%02x' % cb.Reds[3][-1], label='Liver')
+    pyplot.plot(method_epsis[0], rt_pcr[0], '.', color=get_color('rest'), label='Resting')
+    pyplot.plot(method_epsis[1], rt_pcr[1], '.', color=get_color('stim'), label='Stimulating')
+    pyplot.plot(majiq_extra[0], pcr_majiq_extra[0], 'd', color=get_color('cer'), label='Cerebellum')
+    pyplot.plot(majiq_extra[1], pcr_majiq_extra[1], 'd', color=get_color('liv'), label='Liver')
 
-    pyplot.xlabel('MAJIQ')
+    pyplot.xlabel(met_name)
     pyplot.ylabel('RT-PCR')
-    pyplot.title('All (N=%d)' % (len(majiq_set1_all) + len(majiq_set2_all)))
+    pyplot.title('All (N=%d)' % (len(method_set1_all) + len(method_set2_all)))
     pyplot.ylim([0, 1])
     scripts.utils.save_or_show(plotpath, plotname, exten='pdf')
 
@@ -254,10 +270,11 @@ def parse_rtpcr_results(pcr_file, names_pcr2majiq_dict):
     pcr_rest_stim = defaultdict(list)
     with open(pcr_file, 'r') as pcr_file:
         for i, pcr_line in enumerate(pcr_file):
-            if i<1: continue  # headers
-            pcr_fields = pcr_line.rstrip().split()
-
-            if pcr_fields[0] not in names_pcr2majiq_dict.keys(): continue  # If the event is not in the list of events selected, skip it
+            if i<1 or pcr_line.startswith('#'): continue  # headers
+            pcr_fields = pcr_line.rstrip().split('\t')
+            # print pcr_fields
+            if pcr_fields[0] not in names_pcr2majiq_dict.keys():
+                continue  # If the event is not in the list of events selected, skip it
             try:
                 pcr_rest_stim[pcr_fields[0]].append([float(pcr_fields[1])/100, float(pcr_fields[2])/100])
             except IndexError:
@@ -273,22 +290,22 @@ def parse_rtpcr_results(pcr_file, names_pcr2majiq_dict):
 
 def parse_majiq_results(files_majiq, names_junc_majiq):
     majiq_dict = defaultdict(list)
-    files_majiq = scripts.utils.list_files_or_dir(files_majiq, containing='majiq')
     for mfile in files_majiq:
-        expected_psis = []
         with open(mfile) as mfile_open:
             mpickle = pickle.load(mfile_open)
-            for i, lsv_info in enumerate(mpickle[1]):
-                if lsv_info[1] not in names_junc_majiq.keys():
+            for i, lsv in enumerate(mpickle.lsvs):
+                if lsv.get_id() not in names_junc_majiq.keys():
                     continue # If the event is not in the list of events selected, skip it
-                if len(mpickle[0][i])<3:
-                    expected_psis.append(expected_psi(mpickle[0][i][0]))
 
+                jcoords_lsv = [jvisual.coords for jvisual in lsv.lsv_graphic.get_junctions()]
                 # Find all junctions from that LSV that are included
-                for j, lsv_way in enumerate(mpickle[0][i]):
-                    if j in names_junc_majiq[lsv_info[1]]:
-                        majiq_dict[lsv_info[1]+"#"+str(j)].append(mpickle[0][i][j])
-        # barchart_expected(expected_psis, args.plotpath, mfile)
+                for jj, jcoords in enumerate(names_junc_majiq[lsv.get_id()]):
+                    j = jcoords_lsv.index(jcoords[:2])
+                    try:
+                        majiq_dict[lsv.get_id()+"#"+str(jcoords[2])].append(lsv.get_bins()[j])
+                    except IndexError:
+                        majiq_dict[lsv.get_id()+"#"+str(jcoords[2])].append(lsv.get_bins()[0][::-1])
+
     print "Number of events found in MAJIQ %s: %d" % ("; ".join([mf for mf in files_majiq]), len(majiq_dict.keys()))
     return majiq_dict
 
@@ -353,22 +370,24 @@ def main():
     parser.add_argument("pcr", help="Tab-delimted file with the RT-PCR scores")
     parser.add_argument("--majiq-rest", required=True, dest='majiq_rest', nargs='+', help='MAJIQ PSI predictions for resting RNA-Seq data.')
     parser.add_argument("--majiq-stim", required=True, dest='majiq_stim', nargs='+', help='MAJIQ PSI predictions for stimulated RNA-Seq data.')
-    parser.add_argument("--miso-rest", required=True, dest='miso_rest', nargs='*', help='MISO PSI predictions for resting RNA-Seq data.')
-    parser.add_argument("--miso-stim", required=True, dest='miso_stim', nargs='*', help='MISO PSI predictions for stimulated RNA-Seq data.')
+    parser.add_argument("--miso-rest", dest='miso_rest', nargs='*', help='MISO PSI predictions for resting RNA-Seq data.')
+    parser.add_argument("--miso-stim", dest='miso_stim', nargs='*', help='MISO PSI predictions for stimulated RNA-Seq data.')
     parser.add_argument("--names-map-file", required=True, dest='names_map_file', help='File containing the mapping for events names used in MAJIQ and RT-PCR files.')
 
     parser.add_argument("--majiq-extra", dest='majiq_extra', nargs='+', help='MAJIQ PSI predictions for extra conditions.')
     parser.add_argument("--miso-extra", dest='miso_extra', nargs='+', help='MISO PSI predictions for extra conditions.')
     parser.add_argument("--pcr-extra", dest='pcr_extra', help='RT-PCR validations for extra conditions.')
-    # parser.add_argument("--tlb-extra", dest='tlb_extra', help='TLB for ENSEMBL gene and transcript names.')
-    # parser.add_argument("--tlb-extra-pkl", dest='tlb_extra_pkl', help='TLB for ENSEMBL gene and transcript names.')
-    # parser.add_argument("--juncs-extra", dest='junc_extra', help='Junction coordinates txt file.')
-    # parser.add_argument("--voila-extra", dest='voila_extra', nargs=2, help='Junction coordinates txt file.')
 
 
     # parser.add_argument("--builder-file", required=True, dest='majiq_builder_file', help='File containing MAJIQ builder output file.')
     parser.add_argument('--plotpath', default='output')
     args = parser.parse_args()
+
+    # 6. Generate vectors/lists, saving our predictions in a txt file
+    lrtpcr_majiq_extra=[[], []]
+    lrtpcr_miso_extra=[[], []]
+    lmajiq_extra = [[], []]
+    lmiso_extra=[[], []]
 
     if args.majiq_extra:
         # 1. Read PCR results
@@ -379,43 +398,8 @@ def main():
                 pcr_elems=pcr_elem.rstrip().split()
                 rtpcr_extra[pcr_elems[0].split("#")[0]]=[float(pcr_elems[4])/100, float(pcr_elems[3])/100, np.nan, np.nan, [], [], float(pcr_elems[6])/100, float(pcr_elems[5])/100, pcr_elems[-4]]
 
-        # ensembl_tlb = defaultdict(list)
-        # if args.tlb_extra_pkl:
-        #     ensembl_tlb = pickle.load(open(args.tlb_extra_pkl))
-        # else:
-        #     with open(args.tlb_extra) as tlb_f:
-        #         rtpcr_keys = [rk.split(":")[0] for rk in rtpcr_extra.keys()]
-        #         for tlb_line in tlb_f:
-        #             fields=tlb_line.split()
-        #             if len(fields)<2: continue
-        #             transcript=fields[1].strip(";").strip("\"")
-        #             gene=fields[0].strip(";").strip("\"")
-        #             if transcript in rtpcr_keys:
-        #                 ensembl_tlb[gene].append(transcript)
-        #     pickle.dump(ensembl_tlb, open("ensembl.tlb.pickle", "w"))
-        # # for k, v in ensembl_tlb.iteritems():
-        #     print "%s: %s" % (k,repr(v))
 
-        # # 2. Read junctions coordinates file
-        # djunc_extra = defaultdict(list)
-        # with open(args.junc_extra) as junc_extra:
-        #     for junc in junc_extra:
-        #         if junc.startswith("#"): continue
-        #         juncs=junc.rstrip().split()
-        #         djunc_extra[juncs[0]]=juncs[1:]
-        #
-        # # 3. Read special junctions file (LSV ID; junctions)
-        # djuncs = {}
-        # for fvoila in args.voila_extra:
-        #     with open(fvoila) as voilaf:
-        #         for voilal in voilaf:
-        #             if voilal.startswith("#"): continue
-        #             vfields=voilal.rstrip().split()
-        #             djuncs[vfields[0]] = vfields[1].split(";")  # Store LSV ID; junction coordinates list
-
-        # 4. Read Majiq results for the elements in PCR
-        # dnew_juncs = {}
-        flipped_lsvs = []
+        # Read Majiq results for the elements in PCR
         djunc_selected = {}
         for cn, mfile in enumerate(args.majiq_extra):
             majiq_found = []
@@ -436,16 +420,13 @@ def main():
                                         print "Complex LSV; %s" % lsv_aux
                                     else:
                                         print "Binary LSV; %s" % lsv_aux
-                                    # rtpcr_extra[lsv_aux][2+cn] = expected_psi(lsv.get_bins()[ji])
                                     rtpcr_extra[lsv.get_id()][2+cn] = expected_psi(lsv.get_bins()[lway_aux])
-                                    # dnew_juncs[lsv.get_id()] = ji
                                 except IndexError:
                                     rtpcr_extra[lsv.get_id()][2+cn] = 1-expected_psi(lsv.get_bins()[0])
-                                    # dnew_juncs[lsv.get_id()] = 1
             print "Missing LSVs in %s:" % mfile
             print '\n'.join([kk for kk in rtpcr_extra.keys() if kk not in majiq_found])
 
-        # 5. Read MISO results for the elements in PCR
+        # Read MISO results for the elements in PCR
         for cn, miso_dir in enumerate(args.miso_extra):
             files_miso = scripts.utils.list_files_or_dir([miso_dir], containing='miso')
             for mfile in files_miso:
@@ -465,22 +446,12 @@ def main():
                             except KeyError:
                                 print "[WARNING] :: %s in MISO, but not in MAJIQ, skipped given the impossibility of determining which junction it is." % lsv_name
 
-        # 6. Generate vectors/lists, saving our predictions in a txt file
-        lrtpcr_majiq_extra=[[], []]
-        lrtpcr_miso_extra=[[], []]
-        lmajiq_extra = [[], []]
-        lmiso_extra=[[], []]
-
         with open('psi_hogenesch.txt', 'w') as psi_txt:
             headers=['#', 'ID (transcript)', 'ID (gene)', 'RT-PCR Cerebellum', 'RT-PCR Liver', 'Majiq Cerebellum', 'Majiq Liver', 'Miso Cerebellum', 'Miso Liver', 'RT-PCR Cerebellum Avg. STD', 'RT-PCR Liver Avg. STD']
             psi_txt.write('\t'.join(headers))
             psi_txt.write('\n')
             for ilsv, vals in rtpcr_extra.iteritems():
                 line = [ilsv]
-                # trans_lsv= [ensg for ensg, enst in ensembl_tlb.items() if ilsv.split(":")[0] in enst][0]
-                # trans_lsv= ilsv.split(":")[0]
-                # lsv_id_gene="%s:%s" % (trans_lsv, ":".join(ilsv.split(":")[1:]))
-                # line.append("%s#%d" % (lsv_id_gene[:-2], dnew_juncs[lsv_id_gene[:-2]]))
                 line.append(ilsv)
                 line.extend([repr(vv) for vv in vals])
                 psi_txt.write("\t".join(line))
@@ -506,24 +477,18 @@ def main():
     names_pcr2majiq_dict = {}  # key RT-PCR, value MAJIQ
     names_majiq2pcr_dict = {}
     names_junc_majiq = defaultdict(list)
-    gene_names_counts = defaultdict(lambda : 0)
-    import ast
+    gene_names_counts = defaultdict(lambda: 0)
     with open(args.names_map_file) as names_map:
         for name_map in names_map:
             # MAJIQ
-            mapped_name = ast.literal_eval(name_map)
-            [majiq_name, junc_num] = mapped_name[1].split('#')
-            names_junc_majiq[majiq_name].append(int(junc_num))
+            mapped_name = name_map.rstrip().split()
+            majiq_name, junc_idx_old = mapped_name[1].split('#')
+            names_junc_majiq[majiq_name].append([int(jcoord) for jcoord in  mapped_name[-1].split('-')] + [int(junc_idx_old)])
 
             # RT-PCR
-            if ':' in mapped_name[0]:
-                names_pcr2majiq_dict[mapped_name[0].split(':')[1]] = mapped_name[1]
-                names_majiq2pcr_dict[mapped_name[1]] = mapped_name[0].split(':')[1]
-                gene_names_counts[mapped_name[0].split(':')[1]] += 1
-            else:
-                names_pcr2majiq_dict[mapped_name[0]] = mapped_name[1]
-                names_majiq2pcr_dict[mapped_name[1]] = mapped_name[0]
-                gene_names_counts[mapped_name[0]] += 1
+            names_pcr2majiq_dict[mapped_name[0]] = mapped_name[1]
+            names_majiq2pcr_dict[mapped_name[1]] = mapped_name[0]
+            gene_names_counts[mapped_name[0]] += 1
 
     print "Number of events in names-map-file RT-PCR: %d" % len(names_pcr2majiq_dict.keys())
     print "Number of events in names-map-file MAJIQ: %d" % len(names_junc_majiq.keys())
@@ -565,8 +530,6 @@ def main():
                 # For Majiq, compute mean over Expected PSIs
                 majiq_rest_stat = avg_expected_psi(majiq_rest_dict[name])
                 majiq_stim_stat = avg_expected_psi(majiq_stim_dict[name])
-                majiq_rest_dist = majiq_rest_dict[name]
-                majiq_stim_dist = majiq_stim_dict[name]
 
                 # For MISO, compute mean
                 miso_rest_stat = np.mean(miso_rest_dict[name])
@@ -589,12 +552,8 @@ def main():
                         rtpcr_stim = rtpcr_psi_value[1]
                         min_stim = abs(rtpcr_stim - majiq_stim_stat)
 
-                # rt_pcr[0].append(pcr_rest_stim[names_majiq2pcr_dict[name]][0])
-                # rt_pcr[1].append(pcr_rest_stim[names_majiq2pcr_dict[name]][1])
                 rt_pcr_majiq[0].append(rtpcr_rest)
                 rt_pcr_majiq[1].append(rtpcr_stim)
-                # print "[Resting]:\t%f" % (pcr_rest_stim[names_majiq2pcr_dict[name]][0])
-                # print "[Stimuli]:\t%f" % (pcr_rest_stim[names_majiq2pcr_dict[name]][1])
 
                 rtpcr_rest = pcr_rest_stim[names_majiq2pcr_dict[name]][0][0]
                 rtpcr_stim = pcr_rest_stim[names_majiq2pcr_dict[name]][0][1]
@@ -620,8 +579,6 @@ def main():
                 else:
                     majiq[0].append(majiq_rest_stat)
                     majiq[1].append(majiq_stim_stat)
-                    # majiq[0].append(majiq_rest_dist)
-                    # majiq[1].append(majiq_stim_dist)
 
                 if abs(miso_rest_stat - rt_pcr_miso[0][-1]) > flipped_thres or abs(miso_stim_stat - rt_pcr_miso[1][-1]) > flipped_thres:
                     flipped_miso_dict[name] = "%s\t%s\t%f\t%f\t%f\t%f\t%d\t%d\n" % (names_majiq2pcr_dict[name], name, rt_pcr_miso[0][-1], miso_rest_stat, rt_pcr_miso[1][-1], miso_stim_stat, int(gene_names_counts[names_majiq2pcr_dict[name]]<2), int(len(names_junc_majiq[str(name).split('#')[0]])<2) )
@@ -640,25 +597,15 @@ def main():
 
                 print "---- MAJIQ ----"
                 print "[Resting]: Mean of expected:\t%f" % (float(majiq_rest_stat ))
-                # print "[Resting]: Expected delta psi statistic: %f" % (float(expected_delta_psi(majiq_rest_dict[name], pcr_rest_stim[names_majiq2pcr_dict[name]][0])))
                 print "[Stimuli]: Mean of expected:\t%f" % (float(majiq_stim_stat))
-                # print "[Stimuli]: Expected delta psi statistic: %f" % (float(expected_delta_psi(majiq_stim_dict[name], pcr_rest_stim[names_majiq2pcr_dict[name]][1])))
 
                 print "---- MISO -----"
                 print "[Resting]: Mean of psi:\t%f" % (float(miso_rest_stat))
                 print "[Stimuli]: Mean of psi:\t%f" % (float(miso_stim_stat))
 
-
-                # print "[Resting]: Mean of %s:\t%f" % (majiq_rest_dict[name], float(majiq_rest_stat))
-                # print "[Stimuli]: Mean of %s:\t%f" % (majiq_stim_dict[name], float(majiq_stim_stat))
-
-
-    # print repr(rt_pcr), repr(majiq)
-
     scatterplot_rtpcr_majiq_miso(rt_pcr_majiq, rt_pcr_miso, majiq, miso, args.plotpath, pcr_majiq_extra=lrtpcr_majiq_extra, pcr_miso_extra=lrtpcr_miso_extra, majiq_extra=lmajiq_extra, miso_extra=lmiso_extra)
-    scatterplot_rtpcr_simple(rt_pcr_majiq, majiq, args.plotpath, pcr_majiq_extra=lrtpcr_majiq_extra,majiq_extra=lmajiq_extra)
-
-
+    scatterplot_rtpcr_simple(rt_pcr_majiq, majiq, args.plotpath, pcr_majiq_extra=lrtpcr_majiq_extra,majiq_extra=lmajiq_extra, plotname='psi_majiq_only', met_name='MAJIQ')
+    scatterplot_rtpcr_simple(rt_pcr_miso, miso, args.plotpath, pcr_majiq_extra=lrtpcr_miso_extra,majiq_extra=lmiso_extra, plotname='psi_miso_only', met_name='MISO')
 
 if __name__ == '__main__':
     main()
