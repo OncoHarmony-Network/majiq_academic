@@ -34,7 +34,7 @@ def lsv_detection(gene_list, only_real_data=False, logging=None):
     for gn in gene_list:
 
         gn.check_exons()
-        mat, exon_list, tlb, var_ss = gn.get_rnaseq_mat(const_set, use_annot=not only_real_data)
+        mat, exon_list, tlb, var_ss = gn.get_rnaseq_mat(const_set, use_annot=True)
         vip = []
         for idx, ex in enumerate(exon_list):
             sc = ex.get_pcr_score()
@@ -214,7 +214,7 @@ def prepare_intronic_exons(gene_list):
                 continue
 
             junc1 = majiq_junction.Junction(st-1, st, exon1, None, gn, readN=0)
-            junc2 = majiq_junction.Junction(end, end+1, exon2, None, gn, readN=0)
+            junc2 = majiq_junction.Junction(end, end+1, None, exon2, gn, readN=0)
 
             ex = majiq_exons.Exon(st, end, gn, gn.get_strand(), annot=True, isintron=True)
             gn.add_exon(ex)
@@ -223,7 +223,7 @@ def prepare_intronic_exons(gene_list):
 
             txex = majiq_exons.ExonTx(st, end, trcpt[0], intron=True)
             txex.add_3prime_junc(junc1)
-            txex.add_3prime_junc(junc2)
+            txex.add_5prime_junc(junc2)
 
             ex.ss_3p_list.append(txex.start)
             ex.ss_5p_list.append(txex.end)
@@ -233,14 +233,14 @@ def prepare_intronic_exons(gene_list):
             junc2.add_donor(ex)
 
             junc1.add_donor(exon1)
-            for ex in exon1.exonRead_list:
+            for ex in exon1.exonTx_list:
                 st, end = ex.get_coordinates()
                 if end == junc1.get_coordinates()[0]:
                     ex.add_5prime_junc(junc1)
                     break
 
             junc2.add_acceptor(exon2)
-            for ex in exon2.exonRead_list:
+            for ex in exon2.exonTx_list:
                 st, end = ex.get_coordinates()
                 if st == junc2.get_coordinates()[1]:
                     ex.add_3prime_junc(junc2)
