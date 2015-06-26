@@ -29,13 +29,13 @@ def rgb_to_hex(rgb):
     color = [int(xx) for xx in rgb[4:-1].split(',')]
     return '#%02x%02x%02x' % (color[0], color[1], color[2])
 
+
 def use_intron(lsvtype):
     res = 'i' in lsvtype
     if ir_plots:
         res = not res
 
     return res
-
 
 
 def autolabel(rects, ax, msg, size, b=False):
@@ -684,7 +684,8 @@ def fdr_parse(direc, file_list, group_list, intronic_junc=False):
             if ll[0] == '#':
                 continue
             tab = ll.strip().split('\t')
-
+            if use_intron(tab[5]):
+                continue
             typ = tab[5].split('|')[1:]
 
             ntyp = 0
@@ -693,10 +694,13 @@ def fdr_parse(direc, file_list, group_list, intronic_junc=False):
                     continue
                 ntyp += 1
             psi_list = [float(xx) for xx in tab[3].split(';')]
-            if use_intron(tab[5]):
-                continue
 
-            for pp in psi_list[-1:]:
+            if intronic_junc:
+                psi_list_check = psi_list[-1:]
+            else:
+                psi_list_check = psi_list[:-1]
+
+            for pp in psi_list_check:
                 if abs(pp) > 0.2:
                     changing[x, y] += 1
                     changing[y, x] += 1
@@ -719,10 +723,10 @@ def fdr_parse(direc, file_list, group_list, intronic_junc=False):
     print "FRACTION", fract
 
     print "TOTAL PER TISSUE"
-    for kk,vv in per_tiss.items():
+    for kk, vv in per_tiss.items():
         print kk, len(vv)
 
-    for kk,vv in per_tiss_complx.items():
+    for kk, vv in per_tiss_complx.items():
         print kk, len(vv)
 
     return changing, complx
@@ -774,7 +778,7 @@ if __name__ == '__main__':
     print "Plot dpsi changing events heatmap"
     dire = './dpsi_0.5'
     filename_list = [f for f in listdir(dire) if isfile(join(dire, f)) and f.endswith('txt')]
-    chg_lsv, complx_lsv = fdr_parse(dire, filename_list, groups)
+    chg_lsv, complx_lsv = fdr_parse(dire, filename_list, groups, intronic_junc=True)
     plot_fdrheatmap(chg_lsv, complx_lsv, groups, output)
 
 

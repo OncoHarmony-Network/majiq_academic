@@ -124,12 +124,11 @@ class CalcPsi(BasicPipeline):
         fitfunc = [None] * num_exp
         for ii, fname in enumerate(self.files):
             meta_info[ii], lsv_junc, const = majiq_io.load_data_lsv(fname, self.name, logger)
-
             #fitting the function
             lsv_junc, const = self.gc_content_norm(lsv_junc, const)
             fitfunc[ii] = self.fitfunc(const[0])
-
             filtered_lsv[ii] = self.mark_stacks(lsv_junc, fitfunc[ii])
+
         matched_lsv, matched_info = majiq_filter.quantifiable_in_group(filtered_lsv, self.minpos, self.minreads,
                                                                        logger, 0.10)
 

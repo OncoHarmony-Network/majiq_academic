@@ -343,7 +343,8 @@ def gc_factor_calculation(nb):
     for chnk in range(mglobals.num_final_chunks):
         temp_dir = "%s/tmp/chunk_%s" % (mglobals.outDir, chnk)
         yfile = '%s/gccontent.temppkl' % temp_dir
-
+        if not os.path.exists(yfile):
+            continue
         gc_c = majiq_io.load_bin_file(yfile)
         for exp_n in xrange(mglobals.num_experiments):
             gc_pairs['GC'][exp_n].extend(gc_c['GC'][exp_n])
