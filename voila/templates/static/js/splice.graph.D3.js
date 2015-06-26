@@ -211,7 +211,7 @@ function spliceGraphD3() {
 
 
     var width = 1000, // default width
-        height = 200, // default height
+        height = 160, // default height
         padding = [60, 5, 5, 5],
         JUNC_AREA=0.8;
     var EXON_H = Math.round(height * (1-JUNC_AREA) - padding[2]),
