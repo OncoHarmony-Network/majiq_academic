@@ -698,9 +698,13 @@ def fdr_parse(direc, file_list, group_list, intronic_junc=False):
             if intronic_junc:
                 psi_list_check = psi_list[-1:]
             else:
-                psi_list_check = psi_list[:-1]
+                if abs(psi_list[-1]) < 0.2:
+                    psi_list_check = psi_list[:-1]
+                else:
+                    continue
 
             for pp in psi_list_check:
+
                 if abs(pp) > 0.2:
                     changing[x, y] += 1
                     changing[y, x] += 1

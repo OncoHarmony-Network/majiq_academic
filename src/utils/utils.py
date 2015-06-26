@@ -527,6 +527,8 @@ def gather_files(out_dir, prefix='', gff_out=None, pcr_out=None, logger=None):
         for chnk in range(mglobals.num_final_chunks):
             temp_dir = "%s/tmp/chunk_%s" % (mglobals.outDir, chnk)
             yfile = '%s/temp_gff.pkl' % temp_dir
+            if not os.path.exists(yfile):
+                continue
             gff_list = majiq_io.load_bin_file(yfile)
             for gff in gff_list:
                 fp.write("%s\n" % gff)
@@ -538,6 +540,8 @@ def gather_files(out_dir, prefix='', gff_out=None, pcr_out=None, logger=None):
         for chnk in range(mglobals.num_final_chunks):
             temp_dir = "%s/tmp/chunk_%s" % (mglobals.outDir, chnk)
             yfile = '%s/pcr.pkl' % temp_dir
+            if not os.path.exists(yfile):
+                continue
             pcr_l = majiq_io.load_bin_file(yfile)
             for pcr in pcr_l:
                 fp.write("%s\n" % pcr)
