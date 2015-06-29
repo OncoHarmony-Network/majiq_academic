@@ -33,7 +33,7 @@
             {% set gene_index = loop.index -1 %}
             <h2>Gene name: {{gene.id}}; {{gene.chrom}}:{{gene.strand}}:{{gene.start}}-{{gene.end}};</h2>
             <h3 class="gene_id">
-                Gene ID: {{ gene_name }};
+                Gene ID: {{ gene.name }};
             </h3>
 
             <div>
