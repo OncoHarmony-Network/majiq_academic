@@ -8,7 +8,7 @@ from itertools import izip
 from scipy.stats.mstats import mquantiles
 import scipy.sparse
 from matplotlib import pyplot
-import src.mglobals as mglobals
+import src.config as mglobals
 from grimoire.junction import MajiqJunc
 import src.io as majiq_io
 from voila.splice_graphics import ExonGraphic

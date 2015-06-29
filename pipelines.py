@@ -277,7 +277,6 @@ def prepare_lsvs(dpsi_obj, conf, nchunks, logger=None):
     psi_space, prior_matrix = majiq_psi.gen_prior_matrix(dpsi_obj, group1, group2, dpsi_obj.output, numbins=20,
                                                          defaultprior=dpsi_obj.default_prior)
 
-
     outfdir = '%s/tmp/chunks/' % dpsi_obj.output
     if not os.path.exists(outfdir):
         os.makedirs(outfdir)

@@ -7,7 +7,7 @@ import os
 from collections import namedtuple
 import gzip
 import urllib
-import mglobals
+import config
 from voila.io_voila import VoilaInput
 from voila.vlsv import VoilaLsv
 from grimoire.gene import Gene, Transcript
@@ -112,7 +112,7 @@ def __get_num_reads(read):
 def count_mapped_reads(filename, exp_idx):
     stats = pysam.flagstat(filename)
     mapped_reads = int(stats[2].split()[0])
-    mglobals.num_mapped_reads[exp_idx] = mapped_reads
+    config.num_mapped_reads[exp_idx] = mapped_reads
 
 
 def is_neg_strand(read):
@@ -121,7 +121,7 @@ def is_neg_strand(read):
         # print "FLAG",read.flag
         res = True
 
-    if mglobals.strand_specific:
+    if config.strand_specific:
         res = not res
 
     return res
@@ -238,7 +238,7 @@ def rnaseq_intron_retention(filenames, gene_list, readlen, chnk, permissive=True
                             continue
                         else:
                             val = float(nii) / num_positions
-                        if val >= mglobals.MIN_INTRON:
+                        if val >= config.MIN_INTRON:
                             intron_body_covered = True
                             break
                 else:
@@ -253,11 +253,11 @@ def rnaseq_intron_retention(filenames, gene_list, readlen, chnk, permissive=True
                             continue
                         else:
                             val = float(nii) / num_positions
-                        if val < mglobals.MIN_INTRON:
+                        if val < config.MIN_INTRON:
                             intron_body_covered = False
                             break
 
-                if cov1 >= mglobals.MINREADS and cov2 >= mglobals.MINREADS and intron_body_covered:
+                if cov1 >= config.MINREADS and cov2 >= config.MINREADS and intron_body_covered:
                     exnum = majiq_exons.new_exon_definition(intron_start, intron_end,
                                                             None, junc1, junc2, gne,
                                                             isintron=True)
@@ -536,7 +536,7 @@ def _prepare_and_dump_old(genes, logging=None):
             logging.info("Calculating gc_content chromosome %s........." % chrom)
         majiq_exons.set_exons_gc_content(chrom, temp_ex)
         gc.collect()
-        temp_dir = "%s/tmp/%s" % (mglobals.outDir, chrom)
+        temp_dir = "%s/tmp/%s" % (config.outDir, chrom)
         create_if_not_exists(temp_dir)
         # ipdb.set_trace()
         # objgraph.show_most_common_types(limit=20)
@@ -545,7 +545,7 @@ def _prepare_and_dump_old(genes, logging=None):
         fname = '%s/annot_genes.pkl' % temp_dir
         dump_bin_file(genes[chrom], fname)
 
-    tmp_chrom = "%s/tmp/chromlist.pkl" % mglobals.outDir
+    tmp_chrom = "%s/tmp/chromlist.pkl" % config.outDir
     dump_bin_file(genes.keys(), tmp_chrom)
     if not logging is None:
         logging.debug("Number of Genes", n_genes)
@@ -555,7 +555,7 @@ def __annot_dump(nthrd, temp_ex, lsv_list, logging=None):
     for chrom, ex_list in temp_ex.items():
         majiq_exons.set_exons_gc_content(chrom, ex_list)
     gc.collect()
-    temp_dir = "%s/tmp/chunk_%s" % (mglobals.outDir, nthrd)
+    temp_dir = "%s/tmp/chunk_%s" % (config.outDir, nthrd)
     create_if_not_exists(temp_dir)
     if not logging is None:
         logging.info("Creating temporal annotation chunk %s (%d genes)" % (nthrd, len(lsv_list)))
@@ -571,7 +571,7 @@ def __get_overlaped(gn, temp_ex, dumped_genes):
         for extra_gn_id in over_genes:
             if extra_gn_id in dumped_genes:
                 continue
-            extra_gn = mglobals.gene_tlb[extra_gn_id]
+            extra_gn = config.gene_tlb[extra_gn_id]
             extra_gn.collapse_exons()
             temp_ex.extend(extra_gn.get_exon_list())
             lsv_list.append(extra_gn)
@@ -584,11 +584,11 @@ def __get_overlaped(gn, temp_ex, dumped_genes):
 
 
 def _prepare_and_dump(logging=None):
-    list_genes = sorted(mglobals.gene_tlb.values())
+    list_genes = sorted(config.gene_tlb.values())
     if not logging is None:
         logging.debug("Number of Genes", len(list_genes))
 
-    chunk_size = len(list_genes) / mglobals.num_final_chunks
+    chunk_size = len(list_genes) / config.num_final_chunks
     temp_ex = {}
     nthrd = 0
     csize = chunk_size
@@ -654,9 +654,9 @@ def read_gff(filename, pcr_filename, nthreads, logging=None):
             gn = Gene(gene_id, gene_name, chrom, strand, start, end)
             gn.exist_antisense_gene(all_genes[chrom])
 
-            if gene_id in mglobals.gene_tlb and gn != mglobals.gene_tlb[gene_id]:
+            if gene_id in config.gene_tlb and gn != config.gene_tlb[gene_id]:
                 raise RuntimeError('Two Different Genes with the same name %s' % gene_name)
-            mglobals.gene_tlb[gene_id] = gn
+            config.gene_tlb[gene_id] = gn
             all_genes[chrom][strand].append(gn)
             gene_id_dict[record.attributes['ID']] = gn
 

@@ -4,7 +4,7 @@ import numpy as np
 from grimoire.exon import ExonTx, collapse_list_exons
 from grimoire.lsv import LSV
 from grimoire.junction import Junction
-from src import mglobals
+from src import config
 from src.analize import reliable_in_data
 
 
@@ -34,7 +34,7 @@ class Gene:
         self.exons = []
         self.start = start
         self.end = end
-        self.readNum = np.zeros(shape=mglobals.num_experiments, dtype=np.int)
+        self.readNum = np.zeros(shape=config.num_experiments, dtype=np.int)
         self.temp_txex_list = []
         self.ir_list = []
         self.ir_definition = []
@@ -165,7 +165,7 @@ class Gene:
         res = False
         for anti_g in self.antis_gene:
             # if not self.antis_gene is None:
-            gg = mglobals.gene_tlb[anti_g]
+            gg = config.gene_tlb[anti_g]
             j_list = gg.get_all_junctions()
             for jj in j_list:
                 if not jj.is_annotated():
@@ -440,7 +440,7 @@ class Gene:
             mat[x, y] = count_mat
             # jmat[x, y] = junc
 
-            for exp_idx in range(mglobals.num_experiments):
+            for exp_idx in range(config.num_experiments):
                 if reliable_in_data(junc, exp_idx):
                     rand10k[exp_idx].add(junc)
 
@@ -461,7 +461,7 @@ class Transcript(object):
 
     def get_gene(self):
 
-        return mglobals.gene_tlb[self.gene_id]
+        return config.gene_tlb[self.gene_id]
 
     def get_exon_list(self):
         return self.exon_list

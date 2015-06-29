@@ -5,7 +5,7 @@ import os
 import numpy as np
 
 from grimoire.junction import Junction
-from src import mglobals
+from src import config
 
 
 
@@ -44,7 +44,7 @@ class Exon:
         self.id = "%s:%d-%d" % (self.gene_name, start, end)
         # self.strand = strand
         self.gc_content = 0
-        self.coverage = np.zeros(shape=mglobals.num_experiments)
+        self.coverage = np.zeros(shape=config.num_experiments)
         self.score = None
         self.pcr_name = None
         self.pcr_candidate = None
@@ -71,7 +71,7 @@ class Exon:
         return self.start, self.end
 
     def get_gene(self):
-        return mglobals.gene_tlb[self.gene_name]
+        return config.gene_tlb[self.gene_name]
 
     def get_strand(self):
         return self.get_gene().get_strand()
@@ -361,7 +361,7 @@ class ExonTx(object):
     def get_transcript(self):
         res = []
         for tx_name in self.transcript_name:
-            res.append(mglobals.gene_tlb[self.gene_name].get_transcript(tx_name))
+            res.append(config.gene_tlb[self.gene_name].get_transcript(tx_name))
         return res
 
     def get_5prime_junc(self):
@@ -606,7 +606,7 @@ def new_exon_definition(start, end, read_rna, s3prime_junc, s5prime_junc, gene, 
         gene.add_exon(ex)
     else:
         coords = ex.get_coordinates()
-        if start != EMPTY_COORD and start < (coords[0] - mglobals.get_max_denovo_difference()):
+        if start != EMPTY_COORD and start < (coords[0] - config.get_max_denovo_difference()):
             if gene.exist_exon(start, start + 10) is None:
                 new_exons += 1
                 ex1 = Exon(start, EMPTY_COORD, gene, gene.get_strand(), isintron)
@@ -616,7 +616,7 @@ def new_exon_definition(start, end, read_rna, s3prime_junc, s5prime_junc, gene, 
                 ex1.add_new_read(cc[0], cc[1], read_rna, s3prime_junc, None)
             half = True
 
-        if end != EMPTY_COORD and end > (coords[1] + mglobals.get_max_denovo_difference()):
+        if end != EMPTY_COORD and end > (coords[1] + config.get_max_denovo_difference()):
             if gene.exist_exon(end - 10, end) is None:
                 new_exons += 1
                 ex2 = Exon(EMPTY_COORD, end, gene, gene.get_strand(), isintron)
@@ -702,7 +702,7 @@ def detect_exons(gene, junction_list, read_rna):
 
 
 def set_exons_gc_content(chrom, exon_list):
-    fastadir_path = "%s/" % mglobals.genome_path
+    fastadir_path = "%s/" % config.genome_path
 
     # print "Loading chromosome... %s"%chrom
     chrom_path = fastadir_path + chrom + ".fa"

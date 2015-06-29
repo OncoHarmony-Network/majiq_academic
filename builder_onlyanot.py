@@ -13,7 +13,7 @@ import grimoire.junction as majiq_junction
 import grimoire.exon as majiq_exons
 import src.io as majiq_io
 import src.utils.utils as utils
-import src.mglobals as mglobals
+import src.config as mglobals
 
 try:
     import cPickle as pickle

@@ -1,11 +1,11 @@
 import numpy as np
 from grimoire.lsv import SSOURCE, STARGET
-import mglobals
+import config
 
 
 def reliable_in_data(junc, exp_idx):
-    min_read_x_exp = mglobals.MINREADS
-    min_npos_x_exp = mglobals.MINPOS
+    min_read_x_exp = config.MINREADS
+    min_npos_x_exp = config.MINPOS
     in_data_filter = False
     cover = junc.coverage.toarray()[exp_idx]
     if junc.get_read_num(exp_idx) >= min_read_x_exp and np.count_nonzero(cover) >= min_npos_x_exp:
@@ -16,10 +16,10 @@ def reliable_in_data(junc, exp_idx):
 def lsv_detection(gene_list, chrom, only_real_data=False, logging=None):
     num_ss_var = [[0] * 20, [0] * 20, 0]
 
-    const_set = [set() for xx in range(mglobals.num_experiments)]
-    lsv_list = [[] for xx in range(mglobals.num_experiments)]
+    const_set = [set() for xx in range(config.num_experiments)]
+    lsv_list = [[] for xx in range(config.num_experiments)]
     jun = {}
-    for xx in mglobals.tissue_repl.keys():
+    for xx in config.tissue_repl.keys():
         jun[xx] = set()
 
     for gn in gene_list:
@@ -45,7 +45,7 @@ def lsv_detection(gene_list, chrom, only_real_data=False, logging=None):
         # utils.print_junc_matrices(mat, tlb=tlb, fp=True)
         SS, ST = lsv_matrix_detection(mat, tlb, (False, False, False), vip)
         dummy = {}
-        for name, ind_list in mglobals.tissue_repl.items():
+        for name, ind_list in config.tissue_repl.items():
             dummy[name] = [[], []]
 
         for lsv_index, lsv_lst in enumerate((SS, ST)):
@@ -63,7 +63,7 @@ def lsv_detection(gene_list, chrom, only_real_data=False, logging=None):
                 if lsv_in is None:
                     continue
 
-                for name, ind_list in mglobals.tissue_repl.items():
+                for name, ind_list in config.tissue_repl.items():
                     counter = 0
                     e_data = 0
                     for jj in jlist:
@@ -86,7 +86,7 @@ def lsv_detection(gene_list, chrom, only_real_data=False, logging=None):
                     #         if lsv_in.get_junctions_list().shape[0] >= 2:
                     #             lsv_list[exp_idx].append(lsv_in)
 
-        for name, ind_list in mglobals.tissue_repl.items():
+        for name, ind_list in config.tissue_repl.items():
             for ss in dummy[name][0]:
                 for st in dummy[name][1]:
                     if ss.contained(st):
@@ -103,7 +103,7 @@ def lsv_detection(gene_list, chrom, only_real_data=False, logging=None):
                     for exp_idx in ind_list:
                         lsv_list[exp_idx].append(st)
 
-    for name, ind_list in mglobals.tissue_repl.items():
+    for name, ind_list in config.tissue_repl.items():
         for exp_idx in ind_list:
             const_set[exp_idx].difference(jun[name])
 

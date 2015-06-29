@@ -35,8 +35,8 @@ def main():
 
     buildparser = new_subparser()
     buildparser.add_argument('transcripts', action="store", help='read file in SAM format')
-    buildparser.add_argument('-conf', default=None, help='Provide study configuration file with all '
-                                                         'the execution information')
+    buildparser.add_argument('-conf', default=None, required=True, help='Provide study configuration file with all '
+                                                                        'the execution information')
     buildparser.add_argument('-p', '--prefix', dest="prefix", type=str, default='', help='Output prefix string to '
                                                                                          'personalize partially the '
                                                                                          'output file.')
