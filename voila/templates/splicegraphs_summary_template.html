@@ -18,6 +18,10 @@
 
 {% endblock %}
 
+{% block header %}
+    {% if namePage %}Result page: {{ namePage }}{% endif %}
+{% endblock %}
+
 {% block content %}
 
 <section>
@@ -31,9 +35,9 @@
 
         {% for gene in genes %}
             {% set gene_index = loop.index -1 %}
-            <h2>Gene name: {{gene.id}}; {{gene.chrom}}:{{gene.strand}}:{{gene.start}}-{{gene.end}};</h2>
+            <h2>Gene name: {{gene.name}}; {{gene.chrom}}:{{gene.strand}}:{{gene.start}}-{{gene.end}};</h2>
             <h3 class="gene_id">
-                Gene ID: {{ gene.name }};
+                Gene ID: {{ gene.id}};
             </h3>
 
             <div>
@@ -78,6 +82,17 @@
             <label><span>to:</span><input type="text" name="nexonsto" size="4"><br></label>
         </form>
     </fieldset>
+    {% if prevPage or nextPage %}
+        <fieldset class="section-border">
+            <legend>Summaries</legend>
+            {% if prevPage %}
+            <a href="{{ prevPage }}" class="prevPage">&#x276e; Previous</a>
+            {% endif %}
+            {% if nextPage %}
+            <a href="{{ nextPage }}" class="nextPage">Next &#x276f;</a>
+            {% endif %}
+        </fieldset>
+    {% endif %}
 </aside>
 
 {% endblock %}
