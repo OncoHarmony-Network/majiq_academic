@@ -121,6 +121,30 @@ def calcpsi(fname, conf, logger):
 
     post_psi = []
     new_info = []
+
+
+
+    #TODO: DELETE THIS ONLY TEMP
+    print "IF YOU READ THIS, your code needs to be changed, ask Jordi"
+
+    num_exp = len(matched_lsv[0])
+    print num_exp
+    dir = './to_scott'
+    if not os.path.isdir(dir):
+        os.mkdir(dir)
+    for ii in range(num_exp):
+        res = []
+        for lidx, lsv_info in enumerate(info):
+            res.append(lsv_samples[lidx, ii])
+
+
+        outfp = open('./%s/%s.%d.pickle' % (dir, conf['name'], ii))
+        pickle.dumps([res, info], outfp)
+        outfp.close()
+    exit()
+
+
+
     for lidx, lsv_info in enumerate(info):
         num_ways = len(lsv_samples[lidx, 0])
         if lidx % 50 == 0:

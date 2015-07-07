@@ -107,6 +107,7 @@ class ExonGraphic(object):
         self.coords = coords
         self.type_exon = type_exon
         self.coords_extra = coords_extra
+
         self.intron_retention = intron_retention
         self.lsv_type = lsv_type
 
@@ -118,7 +119,6 @@ class ExonGraphic(object):
 
     def get_a5_list(self):
         return self.a5
-
     def get_coords(self):
         # Mask unkonwn start or ends
         def mask_unknown(coords):

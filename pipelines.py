@@ -180,7 +180,8 @@ class CalcPsi(BasicPipeline):
                 'discardzeros': self.discardzeros,
                 'trimborder': self.trimborder,
                 'debug': self.debug,
-                'nbins': 40}
+                'nbins': 40,
+                'name': self.name}
 
         nchunks = self.nthreads
         if self.nthreads > 1:
