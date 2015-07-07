@@ -138,8 +138,8 @@ def calcpsi(fname, conf, logger):
             res.append(lsv_samples[lidx, ii])
 
 
-        outfp = open('./%s/%s.%d.pickle' % (dir, conf['name'], ii))
-        pickle.dumps([res, info], outfp)
+        outfp = open('%s/%s.%d.pickle' % (dir, conf['name'], ii), 'w+b')
+        pickle.dump([res, info], outfp)
         outfp.close()
     exit()
 
