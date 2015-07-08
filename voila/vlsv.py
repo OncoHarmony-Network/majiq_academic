@@ -134,8 +134,8 @@ def collapse_matrix(matrix):
     collapse = []
     #FOR TEST matrix = array([[0, 1, 2, 3, 4, 500], [0, 1, 2, 3, 4, 5], [0, 1, 2, 3, 4, 5], [100, 1, 2, 3, 4, 5], ])
 
-    matrix_corner = matrix.shape[0]+1
-    for i in xrange(-matrix_corner, matrix_corner):
+    matrix_corner = matrix.shape[0]
+    for i in xrange(-matrix_corner+1, matrix_corner):
         collapse.append(np.diagonal(matrix, offset=i).sum())
 
     return np.array(collapse)
