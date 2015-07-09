@@ -1097,7 +1097,7 @@ function renderViolin(htmlElementId, results, tableId, params){
             .domain([0, Math.max(imposeMax, d3.max(data, function(d) { return d.y; }))]);
 
         var x = d3.scale.linear()
-            .range([height-margin.bottom, 1]) //-margin.left, margin.right])
+            .range([height-margin.bottom, margin.top-3]) //-margin.left, margin.right])
             .domain(domain)
             .nice();
 
@@ -1257,7 +1257,7 @@ function renderViolin(htmlElementId, results, tableId, params){
         domain=[-1,1];
     }
 
-    var resolution=42;
+    var resolution=params.num_bins;
     var interpolation='basis'; // 'step-before'; 'basis'
 
     var y = d3.scale.linear()
