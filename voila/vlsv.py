@@ -132,8 +132,6 @@ def find_excl_incl_percentages(bins, threshold):
 def collapse_matrix(matrix):
     """Collapse the diagonals probabilities in 1-D and return them"""
     collapse = []
-    #FOR TEST matrix = array([[0, 1, 2, 3, 4, 500], [0, 1, 2, 3, 4, 5], [0, 1, 2, 3, 4, 5], [100, 1, 2, 3, 4, 5], ])
-
     matrix_corner = matrix.shape[0]
     for i in xrange(-matrix_corner+1, matrix_corner):
         collapse.append(np.diagonal(matrix, offset=i).sum())

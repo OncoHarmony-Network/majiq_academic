@@ -282,18 +282,6 @@ def create_if_not_exists(my_dir, logger=False):
             logger.info("\nDirectory %s already exists..." % my_dir)
 
 
-def collapse_matrix(matrix):
-    """Collapse the diagonals probabilities in 1-D and return them"""
-    collapse = []
-    #FOR TEST matrix = array([[0, 1, 2, 3, 4, 500], [0, 1, 2, 3, 4, 5], [0, 1, 2, 3, 4, 5], [100, 1, 2, 3, 4, 5], ])
-
-    matrix_corner = matrix.shape[0]+1
-    for i in xrange(-matrix_corner, matrix_corner):
-        collapse.append(np.diagonal(matrix, offset=i).sum())
-
-    return np.array(collapse)
-
-
 def gff2gtf(gff_f, out_f=None):
     """Parse a GFF file created by MAJIQ and create a GTF"""
 
