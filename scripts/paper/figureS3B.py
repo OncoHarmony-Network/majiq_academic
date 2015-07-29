@@ -60,6 +60,10 @@ def cov_combined(coverages):
 
 def plot_bins(read_bins, names, rtpcr, plotpath, V=0.1, extension='png'):
 
+    # Adding overall repro. bar
+    names = ["All \n(n=%d)" % len([jj for ff in read_bins for jj in ff])] + names
+    rtpcr = [[jj for ii in rtpcr for jj in ii]] + rtpcr
+
     V *= 100
     def autolabel(rects, rtpcrs):
         for ii, rect in enumerate(rects):
@@ -81,7 +85,7 @@ def plot_bins(read_bins, names, rtpcr, plotpath, V=0.1, extension='png'):
 
     opacity = 0.5
 
-    rects1 = plt.bar(index, repro_lsvs, bar_width,
+    rects1 = plt.bar(index, [np.mean(repro_lsvs)] + repro_lsvs, bar_width,
              alpha=opacity,
              color='b',
              label='MAJIQ lsvs')
@@ -132,7 +136,7 @@ def main():
         coverages.append(load_clean_reads(majiq_f))
     common_cov = cov_combined(coverages)
 
-    BINNAMES = ['0-15', '15-20', '20-40', '40-100', '100-xx']
+    BINNAMES = ['0-15', '15-20', '20-40', '40-100', '>100']
     ranges = [15, 20, 40, 100, 900000]
 
     read_bins = [[],[],[],[],[]]
