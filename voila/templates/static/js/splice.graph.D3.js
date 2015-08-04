@@ -100,7 +100,7 @@ function map_exon_list(exons, junctions) {
     exon_tmp = {
         'coords': map(function (x) {
             return add(x, -acc_offset);
-        }, resize_exon(exons[0].coords, exons[0].intron_retention)),
+        }, resize_exon(exons[0].coords, reshape_exons)), //}, resize_exon(exons[0].coords, exons[0].intron_retention)),
         'type_exon': exons[0].type_exon,
         'intron_retention': exons[0].intron_retention,
         'lsv_type': exons[0].lsv_type,
@@ -134,7 +134,7 @@ function map_exon_list(exons, junctions) {
         exon_tmp = {
             'coords': map(function (x) {
                 return add(x, -acc_offset);
-            }, resize_exon(exons[i].coords, exons[i].intron_retention)),
+            }, resize_exon(exons[i].coords, reshape_exons)), //}, resize_exon(exons[i].coords, exons[i].intron_retention)),
             'type_exon': exons[i].type_exon,
             'intron_retention': exons[i].intron_retention,
             'lsv_type': exons[i].lsv_type,
