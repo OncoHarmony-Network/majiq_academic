@@ -417,12 +417,13 @@ class ExonTx(object):
             #         txex1.p3_junc.append(junc2)
 
             junc = gn.exist_junction(txex2.end, txex1.start)
-            if junc is None:
-                junc = Junction(txex2.end, txex1.start, None, None, gn, annotated=True)
+            #if junc is None:
+                #junc = Junction(txex2.end, txex1.start, None, None, gn, annotated=True)
             #                junc.add_donor(txex2)
             #                junc.add_acceptor(txex1)
-            txex2.p5_junc.append(junc)
-            txex1.p3_junc.append(junc)
+            if not junc is None:
+                txex2.p5_junc.append(junc)
+                txex1.p3_junc.append(junc)
 
         del self
         return res

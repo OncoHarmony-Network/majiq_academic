@@ -139,7 +139,7 @@ def get_junc_from_list(coords, list_elem):
 
 def rnaseq_intron_retention(filenames, gene_list, readlen, chnk, permissive=True, logging=None):
     samfile = [pysam.Samfile(xx, "rb") for xx in filenames]
-
+    nchunks = 10
     for gne in gene_list:
         intron_list = gne.get_all_introns()
         strand = gne.get_strand()
@@ -154,21 +154,26 @@ def rnaseq_intron_retention(filenames, gene_list, readlen, chnk, permissive=True
             intron_len = intron_end - intron_start
             if intron_len <= 0:
                 continue
+            if intron_len <= 1000:
+                nchunks = 1
+
+
+
 
             # we want to take just the middle part not the reads that are crossing the junctions
             # since 8 is the overlapping number of nucleotites we accept, the inner part is the
             # real intron size - (readlen-8)/*start part*/ - (readlen-8)/*end part*/
 
-            chunk_len = intron_len / 10
+            chunk_len = intron_len / nchunks
 
             bmap = np.ones(shape=intron_len, dtype=bool)
             index_list = []
-            for ii in range(10):
+            for ii in range(nchunks):
                 start = ii * chunk_len
                 end = min(intron_len, (ii + 1) * chunk_len)
                 index_list.append((start, end))
 
-            intron_parts = np.zeros(shape=10, dtype=np.float)
+            intron_parts = np.zeros(shape=nchunks, dtype=np.float)
             junc1 = None
             junc2 = None
 
@@ -192,12 +197,19 @@ def rnaseq_intron_retention(filenames, gene_list, readlen, chnk, permissive=True
                             continue
                         bmap[intron_idx] = False
 
-                    if is_cross or strand_read != strand or not unique:
+                    if strand_read != strand or not unique:
                         continue
+                    if is_cross:
+                        jvals = [xx for xx, yy in junc_list if not (yy < intron_start or xx > intron_end)]
+                        if len(jvals) > 0:
+                            continue
 
                     nc = read.seq.count('C') + read.seq.count('c')
                     ng = read.seq.count('g') + read.seq.count('G')
                     gc_content = float(nc + ng) / float(len(read.seq))
+
+                    if intron_start - r_start > readlen:
+                        r_start = intron_start - (readlen - 16) - 1
 
                     if r_start < ex1_end - 8:
                         if junc1 is None:
@@ -213,7 +225,7 @@ def rnaseq_intron_retention(filenames, gene_list, readlen, chnk, permissive=True
                         # section 3
                         intron_idx = r_start - (ex1_end + 1)
                         rel_start = intron_idx / chunk_len
-                        indx = -1 if rel_start > 10 else rel_start
+                        indx = -1 if rel_start > nchunks else rel_start
                         if not bmap[intron_idx]:
                             bmap[intron_idx] = True
                         intron_parts[indx] += nreads
@@ -226,23 +238,10 @@ def rnaseq_intron_retention(filenames, gene_list, readlen, chnk, permissive=True
 
                 # intron_parts /= chunk_len
 
-                intron_body_covered = False if permissive else True
+                intron_body_covered = True
 
-                if permissive:
-                    for ii in range(4, 7):
-                        num_positions = np.count_nonzero(bmap[index_list[ii][0]:index_list[ii][1]])
-                        nii = intron_parts[ii]
-                        if nii == 0:
-                            val = 0
-                        elif num_positions == 0:
-                            continue
-                        else:
-                            val = float(nii) / num_positions
-                        if val >= config.MIN_INTRON:
-                            intron_body_covered = True
-                            break
-                else:
-                    for ii in range(10):
+                if intron_len > readlen:
+                    for ii in range(nchunks):
                         # for ii in intron_parts:
                         # num_positions = np.count_nonzero(bmap[index_list[ii][0]:index_list[ii][1]])
                         num_positions = np.count_nonzero(bmap[index_list[ii][0]:index_list[ii][1]])
