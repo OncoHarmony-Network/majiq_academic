@@ -338,3 +338,8 @@ def to_gtf(wfile, seq_name, source, gene, mrna, start_trans, end_trans, strand, 
         wfile.write(eCDS % "CDS")
         wfile.write(eCDS % "exon")
     wfile.write(last_codon)
+
+
+def debug(text):
+    print text
+    return ''
