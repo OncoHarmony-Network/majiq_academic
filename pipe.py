@@ -25,7 +25,6 @@ def parallel_lsv_child_calculation(func, args, tempdir, name, chunk):
     # post_matrix, new_info = model2( *args )
     results = func(*args)
 
-    print "%s/%s_th%s.deltapsi.pickle" % (tempdir, name, chunk)
     sys.stdout.flush()
     thread_logger.info("[Th %s]: Saving DeltaPSI..." % chunk)
     output = open("%s/%s_th%s.%s.pickle" % (tempdir, name, chunk, func.__name__), 'w')
@@ -122,7 +121,6 @@ def calcpsi(fname, conf, logger):
     post_psi = []
     new_info = []
 
-
     #
     # #TODO: DELETE THIS ONLY TEMP
     # print "IF YOU READ THIS, your code needs to be changed, ask Jordi"
@@ -142,7 +140,6 @@ def calcpsi(fname, conf, logger):
     #     pickle.dump([res, info], outfp)
     #     outfp.close()
     # exit()
-
 
 
     for lidx, lsv_info in enumerate(info):
