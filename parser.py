@@ -2,7 +2,7 @@ import argparse
 
 from pipelines import builder, calcpsi, deltapair
 
-VERSION = "beta"
+VERSION = '0.8.1'
 
 
 def new_subparser():

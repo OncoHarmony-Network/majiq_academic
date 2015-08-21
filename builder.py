@@ -1,7 +1,5 @@
 #!/usr/bin/python
 
-#standard python libraries
-
 import argparse
 import os
 import sys
@@ -185,33 +183,6 @@ def main(params):
 
     #GATHER
     utils.gather_files(mglobals.outDir, params.prefix, params.gff_output, params.pcr_filename, logger)
-
-    # utils.merge_and_create_majiq_file(params.prefix)
-    #
-    # utils.gc_factor_calculation(10)
-    # utils.plot_gc_content()
-    #
-    # if not params.gff_output is None:
-    # logger.info("Gather lsv and generate gff")
-    #     fp = open('%s/%s' % (mglobals.outDir, params.gff_output), 'w+')
-    #     for chnk in range(mglobals.num_final_chunks):
-    #         temp_dir = "%s/tmp/chunk_%s" % (mglobals.outDir, chnk)
-    #         yfile = '%s/temp_gff.pkl' % temp_dir
-    #         gff_list = majiq_io.load_bin_file(yfile)
-    #         for gff in gff_list:
-    #             fp.write("%s\n" % gff)
-    #     fp.close()
-    #
-    # if not params.pcr_filename is None:
-    #     logger.info("Gather pcr results")
-    #     fp = open('%s/pcr_match.tab' % mglobals.outDir, 'w+')
-    #     for chnk in range(mglobals.num_final_chunks):
-    #         temp_dir = "%s/tmp/chunk_%s" % (mglobals.outDir, chnk)
-    #         yfile = '%s/pcr.pkl' % temp_dir
-    #         pcr_l = majiq_io.load_bin_file(yfile)
-    #         for pcr in pcr_l:
-    #             fp.write("%s\n" % pcr)
-    #     fp.close()
 
     mglobals.print_numbers()
     logger.info("End of execution")
