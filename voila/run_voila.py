@@ -16,7 +16,14 @@ except ImportError:
 EXEC_DIR = module_locator.module_path() + "/"
 VERSION = '0.1.0'
 
+
 def table_marks_set(size):
+    """
+    Calculate the number of elements to show in LSV tables.
+
+    :param size: total number of LSVs.
+    :return: set of total number of elements to show.
+    """
     # TODO: Customizable by script options
     ideal_set = (10, 20, 50, 100)
     index = 0
@@ -28,18 +35,17 @@ def table_marks_set(size):
     return ideal_set[0:index]
 
 
-def debug(text):
-    print text
-    return ''
+def render_summary(output_dir, output_html, majiq_output, type_summary, threshold=None, extra_args=None, logger=None):
+    """Render a HTML summary using the Jinja2 template system in the output directory specified.
 
-
-def render_summary(output_dir, output_html, majiq_output, type_summary, threshold=None, post_process_info=None, logger=None):
-    """
-    Rendering the summary template to create the HTML file.
-
-    @param output_dir: directory where the HTML will be created
-    @param majiq_output: event list from MAJIQ output used as input in Voila
-    @param type_summary: defines summary template used
+    :param output_dir: output directory for the summaries.
+    :param output_html: name for the output html files.
+    :param majiq_output: parsed data from majiq.
+    :param type_summary: type of analysis performed.
+    :param threshold: minimum change considered as significant (in deltapsi analysis).
+    :param extra_args: additional arguments needed for certain summaries.
+    :param logger: logger instance.
+    :return: nothing.
     """
     logger.info("Creating the interactive HTML5 summary in %s ..." % output_dir)
     from jinja2 import Environment, FileSystemLoader, escape
@@ -52,17 +58,10 @@ def render_summary(output_dir, output_html, majiq_output, type_summary, threshol
 
 
     env = Environment(extensions=["jinja2.ext.do"], loader=FileSystemLoader(os.path.join(EXEC_DIR, "templates/")))
-    env.filters.update({'to_json': to_json,'to_json_especial': to_json_especial, 'debug': debug})
+    env.filters.update({'to_json': to_json,'to_json_especial': to_json_especial, 'debug': utils_voila.debug})
     template_file_name = type_summary.replace("-", "_") + "_summary_template.html"
     sum_template = env.get_template(template_file_name)
 
-    # if type_summary == constants.ANALYSIS_PSI:
-    #     voila_output = open(output_dir+output_html, 'w')
-    #     voila_output.write(sum_template.render(lsvList=majiq_output['lsv_list'],
-    #                                            tableMarks=table_marks_set(len(majiq_output['lsv_list'])),
-    #                                            lexps=majiq_output['meta_exps']
-    #                                            ))
-    #     voila_output.close()
     if type_summary == constants.ANALYSIS_PSI:
         count_pages = 0
         gene_keys = sorted(majiq_output['genes_dict'].keys())
@@ -175,19 +174,10 @@ def render_summary(output_dir, output_html, majiq_output, type_summary, threshol
         ))
         voila_output.close()
 
-    # elif type_summary == constants.ANALYSIS_DELTAPSI:
-    #     voila_output = open(output_dir+output_html, 'w')
-    #     voila_output.write(sum_template.render( lsvList=majiq_output['lsv_list'],
-    #                                             tableMarks=table_marks_set(len(majiq_output['lsv_list'])),
-    #                                             threshold=threshold,
-    #                                             lexps=majiq_output['meta_exps']
-    #     ))
-    #     voila_output.close()
-
     elif type_summary == constants.LSV_THUMBNAILS:
         voila_output = open(output_dir+output_html, 'w')
         voila_output.write(sum_template.render(lsvList=majiq_output,
-                                               collapsed=int(post_process_info['collapsed'])))
+                                               collapsed=int(extra_args['collapsed'])))
 
     elif type_summary == constants.SPLICE_GRAPHS:
         count_pages = 0
@@ -224,15 +214,6 @@ def render_summary(output_dir, output_html, majiq_output, type_summary, threshol
     logger.info("HTML5 Summary successfully created in %s." % output_dir)
 
 
-class ParseError(Exception):
-    def __init__(self, msg, logger=None):
-        self.msg = msg
-        self.logger = logger
-
-    def __repr__(self):
-        return self.msg
-
-
 def combine_gg(gg_comb_dict, gg_new):
     gg = gg_comb_dict[gg_new.get_id()]
     if gg is None:
@@ -247,20 +228,29 @@ def combine_gg(gg_comb_dict, gg_new):
         jg.num_reads += gg_new.get_junctions()[j].num_reads
 
 
-def parse_gene_graphics(gene_exps_flist, gene_name_list, groups=('group1', 'group2'), logger=None):
+def parse_gene_graphics(splicegraph_flist, gene_name_list, condition_names=('group1', 'group2'), logger=None):
+    """
+    Load and combine splice graph files.
+
+    :param splicegraph_flist: list of splice graph files or directory containing splice graphs.
+    :param gene_name_list: list of genes of interest.
+    :param condition_names: ids for condition 1 [and condition 2, in deltapsi].
+    :param logger: logger instance.
+    :return: list of genes graphic per condition.
+    """
     genes_exp1_exp2 = []
     logger.info("Parsing splice graph information files ...")
-    for grp_i, gene_flist in enumerate(gene_exps_flist):
+    for grp_i, gene_flist in enumerate(splicegraph_flist):
         genes_exp = defaultdict()
         splice_files = utils_voila.list_files_or_dir(gene_flist, suffix=constants.SUFFIX_SPLICEGRAPH)
 
         # Check that the folders have splicegraphs
         if not len(splice_files):
-            raise ParseError("No file with extension .%s found in %s." % (constants.SUFFIX_SPLICEGRAPH, gene_flist), logger=logger)
+            logger.error("No file with extension .%s found in %s." % (constants.SUFFIX_SPLICEGRAPH, gene_flist))
 
         # Combined SpliceGraph data structures
         gg_combined = defaultdict(lambda: None)
-        gg_combined_name = "ALL_%s" % groups[grp_i]
+        gg_combined_name = "ALL_%s" % condition_names[grp_i]
 
         for splice_graph_f in splice_files:
             logger.info("Loading %s." % splice_graph_f)
@@ -268,7 +258,7 @@ def parse_gene_graphics(gene_exps_flist, gene_name_list, groups=('group1', 'grou
             genes_graphic = defaultdict(list)
             genesG.sort()
             for gene_obj in genesG:
-                if gene_obj.get_id() in gene_name_list or gene_obj.get_name().upper() in gene_name_list:  #TODO: CHANGEE!!!! PASS JUST THE VLSV!!!
+                if gene_obj.get_id() in gene_name_list or gene_obj.get_name().upper() in gene_name_list:
                     genes_graphic[gene_obj.get_id()].append(json.dumps(gene_obj, cls=utils_voila.LsvGraphicEncoder).replace("\"", "'"))
                     genes_graphic[gene_obj.get_id()].append(gene_obj.get_strand())
                     genes_graphic[gene_obj.get_id()].append(gene_obj.get_coords())
@@ -283,7 +273,6 @@ def parse_gene_graphics(gene_exps_flist, gene_name_list, groups=('group1', 'grou
                 logger.warning("No gene matching the splice graph file %s." % splice_graph_f)
 
             if len(gene_name_list) != len(ggenes_set):
-                # raise ParseError("Different number of genes in splicegraph (%d) and majiq (%d) files." % (len(ggenes_set), len(gene_name_list)), logger=logger)
                 logger.warning("Different number of genes in splicegraph (%d) and majiq (%d) files! Hint: Are you sure "
                                "you are using bins and splicegraph files from the same execution?" % (len(ggenes_set), len(gene_name_list)))
 
@@ -307,6 +296,16 @@ def parse_gene_graphics(gene_exps_flist, gene_name_list, groups=('group1', 'grou
 
 
 def load_dpairs(pairwise_dir, majiq_output, logger):
+    """
+    Load pairwise files from MAJIQ analysis.
+
+    :param str pairwise_dir: directory containing pairwise comparisons produced by MAJIQ.
+    :param majiq_output: parsed data from majiq.
+    :param logger: logger instance.
+    :return: list of deltapsi lsvs
+    :return: name of condition 1
+    :return: name of condition 2
+    """
     meta_exps = majiq_output['meta_exps']
     lmajiq_pairs = [[None for i in range(len(meta_exps[1])) ] for j in range(len(meta_exps[0]))]
 
@@ -329,7 +328,18 @@ def load_dpairs(pairwise_dir, majiq_output, logger):
 
 
 def render_tab_output(output_dir, output_html, majiq_output, type_summary, logger=None, pairwise_dir=False, threshold=0.2):
+    """
+    Create tab-delimited output file summarizing all the LSVs detected and quantified with MAJIQ.
 
+    :param output_dir: output directory for the file.
+    :param output_html: name for the output html file used to create a *.txt version.
+    :param majiq_output: parsed data from majiq.
+    :param type_summary: type of analysis performed.
+    :param logger: logger instance.
+    :param pairwise_dir: whether pairwise comparisons are included or not.
+    :param threshold: minimum change considered as significant (in deltapsi analysis).
+    :return: nothing.
+    """
     ofile_str = "%s%s.%s" % (output_dir, output_html.rsplit('.html', 1)[0], constants.EXTENSION)
     tlb_categx = {'A5SS': 'prime5', 'A3SS': 'prime3', 'Num. Junctions': 'njuncs', 'Num. Exons': 'nexons', 'ES': 'ES'}
 
@@ -458,6 +468,14 @@ def render_tab_output(output_dir, output_html, majiq_output, type_summary, logge
 
 
 def create_gff3_txt_files(output_dir, majiq_output, logger):
+    """
+    Create GFF3 files for each LSV.
+
+    :param output_dir: output directory for the file.
+    :param majiq_output: parsed data from majiq.
+    :param logger: logger instance.
+    :return: nothing.
+    """
     logger.info("Saving LSVs files in gff3 format ...")
     if 'genes_dict' not in majiq_output or len(majiq_output['genes_dict'])<1:
         logger.warning("No gene information provided. Genes files are needed to calculate the gff3 files.")
@@ -487,7 +505,7 @@ def create_gff3_txt_files(output_dir, majiq_output, logger):
 
 
 def create_summary(args):
-    """This method generates an html summary from a majiq output file"""
+    """This method generates an html summary from a majiq output file and the rest of the arguments."""
 
     type_summary    = args.type_analysis
     voila_file      = args.majiq_bins
@@ -512,10 +530,6 @@ def create_summary(args):
     majiq_output = None
     meta_postprocess = {}
 
-    # if type_summary == constants.ANALYSIS_PSI:
-    #     majiq_output = utils_voila.get_lsv_single_exp_data(voila_file, logger=logger)
-    #     majiq_output['lsv_list'] = [ll for g in majiq_output['genes_dict'].viewvalues() for ll in g]
-
     if type_summary == constants.ANALYSIS_PSI:
 
         lsv_types = args.lsv_types
@@ -539,14 +553,9 @@ def create_summary(args):
 
         # Get gene info
         majiq_output['genes_exp'] = parse_gene_graphics([args.genes_files], gene_name_list,
-                                                        groups=[majiq_output['meta_exps'][0]['group'], None],
+                                                        condition_names=[majiq_output['meta_exps'][0]['group'], None],
                                                         logger=logger)
         majiq_output['lsv_list'] = [ll for g in majiq_output['genes_dict'].viewvalues() for ll in g]
-    # if type_summary == constants.ANALYSIS_DELTAPSI:
-    #     threshold   = args.threshold
-    #     pairwise    = args.pairwise
-    #     majiq_output = utils_voila.get_lsv_delta_exp_data(voila_file, args.confidence, args.threshold, args.show_all, logger=logger)
-    #     majiq_output['lsv_list'] = [ll['lsv'] for g in majiq_output['genes_dict'].viewvalues() for ll in g]
 
     if type_summary == constants.ANALYSIS_DELTAPSI:
         threshold   = args.threshold
@@ -570,7 +579,7 @@ def create_summary(args):
 
         # Get gene info
         majiq_output['genes_exp'] = parse_gene_graphics([args.genesf_exp1, args.genesf_exp2], gene_name_list,
-                                                        groups=[majiq_output['meta_exps'][0][0]['group'],
+                                                        condition_names=[majiq_output['meta_exps'][0][0]['group'],
                                                                 majiq_output['meta_exps'][1][0]['group']], logger=logger)
         majiq_output['lsv_list'] = [ll['lsv'] for g in majiq_output['genes_dict'].viewvalues() for ll in g]
 
@@ -625,18 +634,6 @@ def main():
     subparsers = parser.add_subparsers(dest='type_analysis')
     subparsers.required = True
 
-    # Single LSV
-    # parser_single = argparse.ArgumentParser(add_help=False)
-    # parser_single.add_argument('--lsv-types', nargs='*', default=[], type=str, dest='lsv_types', help='LSV type to filter the results. (If no gene list is provided, this option will display only genes containing LSVs of the specified type).')
-    # subparsers.add_parser(constants.ANALYSIS_PSI, help='Single LSV analysis.', parents=[common_parser, parser_single])
-
-    # Delta LSV
-    # parser_delta = argparse.ArgumentParser(add_help=False)
-    # parser_delta.add_argument('--threshold', type=float, default=0.2, help='Filter out LSVs with no junction predicted to change over a certain value (in percentage).')  # Probability threshold used to sum the accumulative probability of inclusion/exclusion.
-    # parser_delta.add_argument('--show-all', dest='show_all', action='store_true', default=False, help='Show all LSVs including those with no junction with significant change predicted')
-    # parser_delta.add_argument('--pairwise-dir', type=str, dest='pairwise', help='Directory with the pairwise comparisons.')
-    # subparsers.add_parser(constants.ANALYSIS_DELTAPSI, help='Delta LSV analysis.', parents=[common_parser, parser_delta])
-
     # Single LSV by Gene(s) of interest
     parser_single = argparse.ArgumentParser(add_help=False)
     parser_single.add_argument('--genes-exp1', nargs='+', required=True, dest='genes_files', metavar='Hippocampus1.splicegraph [Hippocampus2.splicegraph ...]', type=str, help='Splice graph information file(s) or directory with *.splicegraph file(s).')
@@ -662,17 +659,11 @@ def main():
 
     # Splice graphs generation option (dev) TODO: Delete
     parser_splice_graphs = argparse.ArgumentParser(add_help=False)
-    parser_splice_graphs.add_argument('--max', type=int, default=20, help='Maximum number of splice graphs to show (*.splicegraph files may be quite large).')  # Probability threshold used to sum the accumulative probability of inclusion/exclusion.
+    parser_splice_graphs.add_argument('--max', type=int, default=20, help='Maximum number of splice graphs to show (*.splicegraph files may be quite large).')
     subparsers.add_parser(constants.SPLICE_GRAPHS, help='Generate only splice graphs [DEBUGING!].', parents=[common_parser, parser_splice_graphs])
 
     args = parser.parse_args()
-    try:
-        create_summary(args)
-    except ParseError, e:
-        if e.logger:
-            e.logger.error(repr(e), exc_info=constants.DEBUG)
-        else:
-            sys.stdout.write(repr(e))
+    create_summary(args)
     sys.exit(1)
 
 if __name__ == '__main__':
