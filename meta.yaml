@@ -3,8 +3,9 @@ package:
     version: 0.8.YeoLab
 
 source:
-    git_tag: master
-    git_url: https://jordi_vaquero@bitbucket.org/biociphers/majiq.git
+    #git_tag: master
+    #git_url: https://jordi_vaquero@bitbucket.org/biociphers/majiq.git
+    path:/home/jordi/working/majiq
 
 #always_include_files:
 #      - data/defaultprior.pickle
