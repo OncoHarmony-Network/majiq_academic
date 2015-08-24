@@ -23,7 +23,7 @@ requirements:
 
 build:
     entry_points:
-        - majiq = majiq.parser:main
+        - majiq = parser:main
         - voila = voila.run_voila:main
 
 about:
