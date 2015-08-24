@@ -18,10 +18,7 @@ requirements:
         - matplotlib
         - pysam
         - setuptools
-
-
-
-     run:
+    run:
         - python
 
 build:
