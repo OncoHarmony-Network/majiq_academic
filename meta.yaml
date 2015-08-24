@@ -22,8 +22,10 @@ requirements:
         - python
 
 build:
-    build:
-        preserve_egg_dir: True
+    preserve_egg_dir: True
+
+    always_include_files:
+        - data/defaultprior.pickle
 
     entry_points:
         - majiq = parser:main
