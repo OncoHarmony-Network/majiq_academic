@@ -1,0 +1,28 @@
+package:
+    name: majiq
+    version: 0.8.YeoLab
+
+source:
+    git_tag: master
+    git_url: https://jordi_vaquero@bitbucket.org/biociphers/majiq.git
+
+#always_include_files:
+#      - data/defaultprior.pickle
+
+requirements:
+    build:
+        - python
+        - jinja2
+        - numpy
+        - scipy
+        - matplotlib
+        - pysam
+        - setuptools
+
+    run:
+        - python
+
+about:
+    home: http://www.biociphers.org
+    license: GPL3
+    summary: "MAJIQ"
