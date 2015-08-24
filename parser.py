@@ -2,7 +2,7 @@ import argparse
 
 from pipelines import builder, calcpsi, deltapair
 
-VERSION = '0.8.1'
+VERSION = '0.8.0.yeolab'
 
 
 def new_subparser():

@@ -6,7 +6,7 @@ import textwrap
 import collections as cc
 import voila.module_locator as module_locator
 import voila.utils.utils_voila as utils_voila
-import constants
+import voila.constants as constants
 import numpy as np
 try:
     import cPickle as pkl
@@ -14,7 +14,7 @@ except ImportError:
     import pickle as pkl
 
 EXEC_DIR = module_locator.module_path() + "/"
-VERSION = '0.1.0'
+VERSION = '0.8.0.yeolab'
 
 
 def table_marks_set(size):
