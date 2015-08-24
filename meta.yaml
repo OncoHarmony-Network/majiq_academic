@@ -22,6 +22,9 @@ requirements:
         - python
 
 build:
+    build:
+        preserve_egg_dir: True
+
     entry_points:
         - majiq = parser:main
         - voila = voila.run_voila:main
