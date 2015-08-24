@@ -18,11 +18,16 @@ requirements:
         - matplotlib
         - pysam
         - setuptools
-        entry_points:
-            - majiq = majiq.parser:main
-            - voila = voila.run_voila:main
-    run:
+
+
+
+     run:
         - python
+
+build:
+    entry_points:
+        - majiq = majiq.parser:main
+        - voila = voila.run_voila:main
 
 about:
     home: http://www.biociphers.org
