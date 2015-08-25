@@ -1,2 +1,3 @@
 recursive-include voila/templates *
 recursive-include majiq/data *
+recursive-include docs *
