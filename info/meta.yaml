@@ -29,7 +29,7 @@ build:
     preserve_egg_dir: True
 
     entry_points:
-        - majiq = majiq_parser:main
+        - majiq = majiq.run_majiq:main
         - voila = voila.run_voila:main
 
 about:
