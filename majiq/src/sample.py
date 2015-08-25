@@ -5,7 +5,7 @@ import numpy as np
 from scipy.stats import pearsonr
 import matplotlib.pyplot as plt
 
-import majiq.src.polyfitnb  as majiq_fit
+import majiq.src.polyfitnb as majiq_fit
 
 
 """
