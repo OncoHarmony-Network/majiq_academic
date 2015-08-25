@@ -309,7 +309,10 @@ def calc_dirichlet(alpha, n, samples_events, debug=False, psiparam=False):
 
 
 def __load_default_prior():
-    direc = "%s/../data" % os.path.dirname(os.path.realpath(__file__))
+
+    encoding = sys.getfilesystemencoding()
+    direc = os.path.dirname(unicode(__file__, encoding))
+    #direc = "%s/../data" % os.path.dirname(os.path.realpath(__file__))
     def_mat = pickle.load(open('%s/defaultprior.pickle' % direc, 'r'))
     return def_mat
 
