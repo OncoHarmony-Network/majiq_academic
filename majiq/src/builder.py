@@ -6,12 +6,11 @@ import sys
 import traceback
 from multiprocessing import Pool, current_process, Process
 
-import src.analize as analize
-import src.io as majiq_io
+import majiq.src.analize as analize
+import majiq.src.io as majiq_io
 import majiq.src.utils.utils as utils
-import src.config as mglobals
+import majiq.src.config as mglobals
 import majiq.grimoire.lsv as majiq_lsv
-
 
 try:
     import cPickle as pickle

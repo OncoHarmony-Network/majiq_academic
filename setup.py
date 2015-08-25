@@ -10,7 +10,7 @@ setup(
     url='https://biociphers.org',
     keywords=['rna', 'splicing', 'psi', 'splicegraph'],
     include_package_data=True,
-    install_requires=['numpy', 'scipy', 'matplotlib'],
+    install_requires=['numpy', 'scipy', 'matplotlib', 'multiprocessing'],
     entry_points={'console_scripts': ['majiq = majiq.parser:main', 'voila = majiq.voila.run_voila:main']},
     zip_safe=False,
     classifiers=[

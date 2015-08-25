@@ -4,16 +4,15 @@ import argparse
 import sys
 import traceback
 from multiprocessing import current_process
-
 import numpy as np
 
-import src.analize as analize
-import grimoire.lsv as majiq_lsv
-import grimoire.junction as majiq_junction
+import majiq.grimoire.lsv as majiq_lsv
+import majiq.grimoire.junction as majiq_junction
 import majiq.grimoire.exon as majiq_exons
-import src.io as majiq_io
+import majiq.src.analize as analize
+import majiq.src.io as majiq_io
 import majiq.src.utils.utils as utils
-import src.config as mglobals
+import majiq.src.config as mglobals
 
 
 try:
