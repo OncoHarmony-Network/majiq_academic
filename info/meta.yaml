@@ -7,9 +7,6 @@ source:
     #git_url: https://jordi_vaquero@bitbucket.org/biociphers/majiq.git
     path: /home/jordi/working/majiq
 
-#always_include_files:
-#      - data/defaultprior.pickle
-
 requirements:
     build:
         - python
@@ -30,9 +27,6 @@ requirements:
 
 build:
     preserve_egg_dir: True
-
-    #always_include_files:
-    #    - data/defaultprior.pickle
 
     entry_points:
         - majiq = majiq_parser:main
