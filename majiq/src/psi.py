@@ -313,7 +313,7 @@ def __load_default_prior():
     encoding = sys.getfilesystemencoding()
     direc = os.path.dirname(unicode(__file__, encoding))
     #direc = "%s/../data" % os.path.dirname(os.path.realpath(__file__))
-    def_mat = pickle.load(open('%s/defaultprior.pickle' % direc, 'r'))
+    def_mat = pickle.load(open('%s/../data/defaultprior.pickle' % direc, 'r'))
     return def_mat
 
 
