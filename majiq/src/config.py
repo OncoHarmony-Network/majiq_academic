@@ -1,7 +1,9 @@
-from scipy import interpolate
-import numpy as np
 import os
 import ConfigParser
+
+from scipy import interpolate
+import numpy as np
+
 
 global gene_tlb
 global gc_factor

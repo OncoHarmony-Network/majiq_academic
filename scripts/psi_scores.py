@@ -8,8 +8,6 @@ from math import log
 from scipy.stats import pearsonr
 from pylab import *
 
-import src.psi
-
 
 """
 Calculate PSI values
@@ -83,7 +81,7 @@ def calculate_dkl(p, q):
 
 
 def calculate_l1_expected(p, q):
-    return sum(abs(p - q) * src.psi.BINS_CENTER)
+    return sum(abs(p - q) * scripts.src.psi.BINS_CENTER)
 
 
 def calculate_l1(p, q):
@@ -220,8 +218,8 @@ def main():
                 continue
             for j, psi_lsv in enumerate(psi_met2_rep1[psi_names_met2[psi_name]]):
                 # Try L1 distance
-                psi_list1_met2.append(sum(psi_lsv * src.psi.BINS_CENTER))
-                psi_list2_met2.append(sum(psi_met2_rep2[psi_names_met2[psi_name]][j] * src.psi.BINS_CENTER))
+                psi_list1_met2.append(sum(psi_lsv * scripts.src.psi.BINS_CENTER))
+                psi_list2_met2.append(sum(psi_met2_rep2[psi_names_met2[psi_name]][j] * scripts.src.psi.BINS_CENTER))
 
         psi_lists_met2.append(psi_list1_met2)
         psi_lists_met2.append(psi_list2_met2)
@@ -236,8 +234,8 @@ def main():
             psi_list1_met1.append(psi_lsv)
             psi_list2_met1.append(psi_met1_rep2[psi_names_met1[psi_name]][j])
             # list_l1_expected.append(calculate_l1_expected(psi_lsv, psi_values_lsv2[majiq_psi_names[psi_name]][j]))
-            print "%s - MAJIQ:\t%f - %f" % (psi_name, sum(psi_lsv * src.psi.BINS_CENTER),
-                                            sum(psi_met1_rep2[psi_names_met1[psi_name]][j] * src.psi.BINS_CENTER))
+            print "%s - MAJIQ:\t%f - %f" % (psi_name, sum(psi_lsv * scripts.src.psi.BINS_CENTER),
+                                            sum(psi_met1_rep2[psi_names_met1[psi_name]][j] * scripts.src.psi.BINS_CENTER))
             # print "%s - MISO:\t%s - %s" % (psi_name, str(debug_names_miso_list[psi_name][0][j]), str(debug_names_miso_list[psi_name][1][j]))
             # print "MAJIQ L1 distance:\t%f" % (calculate_l1_expected(psi_lsv, psi_values_lsv2[majiq_psi_names[psi_name]][j]))
         print "-----"

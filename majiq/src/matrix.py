@@ -106,7 +106,6 @@ def rank_deltas_lsv(matrices, names, V=0.2, absolute=True, E=False, ranknochange
     rank = []
     for lidx, lsv in enumerate(matrices):
         v_prob = []
-        import pdb
         # pdb.set_trace()
         if len(lsv) > 2: continue
         for dmatrix in lsv:

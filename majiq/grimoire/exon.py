@@ -1,12 +1,9 @@
 #!/usr/bin/python
-
 import os
 
 import numpy as np
 
-from grimoire.junction import Junction
-from src import config
-
+from majiq.src import config
 
 
 # FLAGS

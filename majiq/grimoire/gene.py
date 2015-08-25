@@ -1,11 +1,11 @@
 #!/usr/bin/python
 import numpy as np
 
-from grimoire.exon import ExonTx, collapse_list_exons
-from grimoire.lsv import LSV
-from grimoire.junction import Junction
-from src import config
-from src.analize import reliable_in_data
+from majiq.grimoire.exon import ExonTx, collapse_list_exons
+from majiq.grimoire.lsv import LSV
+from majiq.grimoire.junction import Junction
+from majiq.src import config
+from majiq.src.analize import reliable_in_data
 
 
 class Gene:

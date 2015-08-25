@@ -1,6 +1,6 @@
 import argparse
 
-from pipelines import builder, calcpsi, deltapair
+from majiq.src.pipelines import builder, calcpsi, deltapair
 
 VERSION = '0.8.0.yeolab'
 
@@ -150,7 +150,6 @@ def main():
     parser_deltagroup.set_defaults(func=deltapair)
     args = parser.parse_args()
     args.func(args)
-
 
 
 if __name__ == '__main__':

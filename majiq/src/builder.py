@@ -8,9 +8,10 @@ from multiprocessing import Pool, current_process, Process
 
 import src.analize as analize
 import src.io as majiq_io
-import src.utils.utils as utils
+import majiq.src.utils.utils as utils
 import src.config as mglobals
-import grimoire.lsv as majiq_lsv
+import majiq.grimoire.lsv as majiq_lsv
+
 
 try:
     import cPickle as pickle

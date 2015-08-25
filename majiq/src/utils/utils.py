@@ -1,5 +1,6 @@
 from matplotlib import use
 use('Agg')
+
 import os
 import logging
 import numpy as np
@@ -8,9 +9,11 @@ from itertools import izip
 from scipy.stats.mstats import mquantiles
 import scipy.sparse
 from matplotlib import pyplot
-import src.config as mglobals
-from grimoire.junction import MajiqJunc
-import src.io as majiq_io
+
+import majiq.src.config as mglobals
+from majiq.grimoire.junction import MajiqJunc
+import majiq.src.io as majiq_io
+
 from voila.splice_graphics import ExonGraphic
 from voila.splice_graphics import GeneGraphic
 from voila.splice_graphics import JunctionGraphic

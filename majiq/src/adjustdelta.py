@@ -1,4 +1,3 @@
-import pickle
 import numpy as np
 import numpy.ma as ma
 import matplotlib.pyplot as plt
@@ -7,8 +6,6 @@ from scipy.stats import beta
 from scipy.misc import logsumexp
 
 PSEUDO = 0.0001
-
-import pdb
 
 
 def likelihood(a_change, b_change, a_center, b_center, pi_change, pi_center, deltadata):

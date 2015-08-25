@@ -7,13 +7,14 @@ import gc
 import numpy as np
 from numpy.ma import masked_less
 
-from src.utils.utils import create_if_not_exists, get_logger
-from src.polyfitnb import fit_nb
-import src.filter as majiq_filter
-import src.io as majiq_io
-import src.psi as majiq_psi
-import builder as majiq_builder
-import pipe as pipe
+from majiq.src import builder as majiq_builder
+
+from majiq.src.utils.utils import create_if_not_exists, get_logger
+from majiq.src.polyfitnb import fit_nb
+import majiq.src.filter as majiq_filter
+import majiq.src.io as majiq_io
+import majiq.src.psi as majiq_psi
+import majiq.src.pipe as pipe
 
 
 # ###############################

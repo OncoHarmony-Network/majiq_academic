@@ -1,16 +1,15 @@
 from __future__ import division
 from matplotlib import use
+
 use('Agg')
 from scripts import utils as utils_scripts
 from collections import defaultdict
 import analysis
-from scripts.psi_scores import calculate_ead_simple, _save_or_show
+from scripts.psi_scores import calculate_ead_simple
 import argparse
 from pylab import *
 from itertools import izip
 import colorbrewer as cb
-from grimoire import lsv
-import os
 from scripts import utils as sutils
 import cPickle as pickle
 

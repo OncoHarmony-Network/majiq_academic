@@ -1,12 +1,14 @@
 from matplotlib import use
 
+from majiq.src import pipelines
+
+
 use('Agg', warn=False)
 import argparse
 
 from pylab import *
 from numpy.random import dirichlet
-import pipelines
-import src.filter
+import majiq.src.filter
 
 
 """
@@ -131,7 +133,7 @@ def main():
     print "Number of files analyzed: %d\nshapes: (%d, %s)\t(%d, %s)" % (
         len(psi_scores), len(psi_scores[0]), str(psi_scores[0][0][0].shape), len(psi_scores[1]),
         str(psi_scores[1][0][0].shape))
-    lsv_match, match_info = src.filter.lsv_intersection(psi_scores[0], psi_scores[1])
+    lsv_match, match_info = majiq.src.filter.lsv_intersection(psi_scores[0], psi_scores[1])
 
     from os.path import basename
 

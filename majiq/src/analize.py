@@ -1,6 +1,7 @@
 import numpy as np
-from grimoire.lsv import SSOURCE, STARGET
-import config
+
+from majiq.grimoire.lsv import SSOURCE, STARGET
+from majiq.src import config
 
 
 def reliable_in_data(junc, exp_idx):

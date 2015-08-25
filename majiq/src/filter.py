@@ -6,7 +6,7 @@ import sys
 from numpy.ma import masked_less
 import numpy as np
 
-import src.polyfitnb as majiqfit
+import majiq.src.polyfitnb as majiqfit
 
 
 def filter_message(when, value, logger, junc):

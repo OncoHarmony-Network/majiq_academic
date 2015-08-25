@@ -2,7 +2,7 @@ from collections import defaultdict
 
 import numpy as np
 
-import src.psi as majiq_psi
+from majiq import src as majiq_psi
 
 
 def _l1(p, q):

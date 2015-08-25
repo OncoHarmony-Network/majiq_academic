@@ -1,18 +1,20 @@
 import pickle
-import numpy as np
 import random
-import pysam
 import gc
 import os
 from collections import namedtuple
 import gzip
 import urllib
-import config
+
+import numpy as np
+import pysam
+
+from majiq.src import config
 from voila.io_voila import VoilaInput
 from voila.vlsv import VoilaLsv
-from grimoire.gene import Gene, Transcript
-import grimoire.exon as majiq_exons
-from grimoire.junction import Junction
+from majiq.grimoire.gene import Gene, Transcript
+import majiq.grimoire.exon as majiq_exons
+from majiq.grimoire.junction import Junction
 
 
 def create_if_not_exists(my_dir, logger=False):

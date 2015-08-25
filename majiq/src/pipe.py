@@ -5,12 +5,11 @@ from multiprocessing import current_process
 import pickle
 
 import scipy.misc
-
 import numpy as np
 from scipy.stats import beta
 
-from src.utils.utils import get_logger
-import src.sample as majiq_sample
+from majiq.src.utils.utils import get_logger
+import majiq.src.sample as majiq_sample
 
 
 def parallel_lsv_child_calculation(func, args, tempdir, name, chunk):

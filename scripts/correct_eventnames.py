@@ -2,12 +2,9 @@
 Create the intersection between the MAJIQ, MISO and MATS events
 """
 import argparse
-import pickle
-from collections import defaultdict
-from pylab import *
-import grimoire
-from scipy.sparse import lil_matrix
 
+from pylab import *
+from scipy.sparse import lil_matrix
 
 
 def load_names(path, prev_dict):

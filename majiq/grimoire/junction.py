@@ -1,7 +1,7 @@
 import numpy as np
 import scipy.sparse
 
-from src import config
+from majiq.src import config
 
 
 class Junction:

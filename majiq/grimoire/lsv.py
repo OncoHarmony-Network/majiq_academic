@@ -3,9 +3,10 @@ import cPickle as pickle
 import numpy as np
 import scipy.sparse
 
-import src.config as mglobals
+import majiq.src as mglobals
 from voila.splice_graphics import ExonGraphic, LsvGraphic, JunctionGraphic
 from voila import constants as voila_const
+
 
 SSOURCE = 'source'
 STARGET = 'target'

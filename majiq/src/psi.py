@@ -5,6 +5,13 @@ from scipy.special import gamma, gammaln
 
 
 
+
+
+
+
+
+
+
 # deprecation WARNING comes from this import!!!
 from scipy.stats import binom_test
 from numpy.random import dirichlet
@@ -12,9 +19,9 @@ import numpy as np
 import sys
 import cPickle as pickle
 import matplotlib.pyplot as plt
-import src.filter as majiq_filter
-import src.adjustdelta as majiq_delta
-import src.sample as majiq_sample
+import majiq.src.filter as majiq_filter
+import majiq.src.adjustdelta as majiq_delta
+import majiq.src.sample as majiq_sample
 import operator
 import os
 

@@ -1,12 +1,10 @@
-import sys
 import os
-import cPickle as pickle
+import random
+
 import matplotlib.pyplot as plt
 from numpy.ma import masked_less
 import numpy as np
 from scipy.stats import nbinom, poisson
-
-import random
 
 
 def _save_or_show(plotpath, plotname=None):

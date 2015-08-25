@@ -1,17 +1,15 @@
 from __future__ import division
 from matplotlib import use
+
 use('Agg')
 from scripts import utils as utils_scripts
 from collections import defaultdict
-import pickle
 import analysis
 from scripts.psi_scores import calculate_ead_simple, _save_or_show
 import argparse
 from pylab import *
 from itertools import izip
 import colorbrewer as cb
-from grimoire import lsv
-import os
 
 LSV_TYPES_DICT = {
     's|1e1.1|1e2.1':'SE',
