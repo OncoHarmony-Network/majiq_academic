@@ -2,7 +2,7 @@ from setuptools import setup, find_packages
 
 setup(
     name="majiq",
-    packages=find_packages('majiq'),
+    packages=find_packages('./'),
     version="0.8.YeoLab",
     description="MAJIQ",
     author='BioCiphers Lab',
@@ -10,7 +10,7 @@ setup(
     url='https://biociphers.org',
     keywords=['rna', 'splicing', 'psi', 'splicegraph'],
     include_package_data=True,
-    entry_points={'console_scripts': ['majiq = majiq.parser:main', 'voila = majiq.voila.run_voila:main']},
+    entry_points={'console_scripts': ['majiq = majiq.majiq_parser:main', 'voila = majiq.voila.run_voila:main']},
     zip_safe=False,
     classifiers=[
         'Development Status :: 4 - Beta',
@@ -20,6 +20,6 @@ setup(
         'Operating System :: MacOS',
         'Operating System :: Microsoft :: Windows',
         'Operating System :: POSIX',
-        'Programming Language :: Python :: 2.7',
+        'Programming Language :: Python :: 2.7'
     ]
 )

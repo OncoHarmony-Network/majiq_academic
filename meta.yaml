@@ -5,7 +5,7 @@ package:
 source:
     #git_tag: master
     #git_url: https://jordi_vaquero@bitbucket.org/biociphers/majiq.git
-    path:/home/jordi/working/majiq
+    path: /home/jordi/working/majiq
 
 #always_include_files:
 #      - data/defaultprior.pickle
@@ -21,15 +21,21 @@ requirements:
         - setuptools
     run:
         - python
+        - jinja2
+        - numpy
+        - scipy
+        - matplotlib
+        - pysam
+        - setuptools
 
 build:
     preserve_egg_dir: True
 
-    always_include_files:
-        - data/defaultprior.pickle
+    #always_include_files:
+    #    - data/defaultprior.pickle
 
     entry_points:
-        - majiq = parser:main
+        - majiq = majiq_parser:main
         - voila = voila.run_voila:main
 
 about:
