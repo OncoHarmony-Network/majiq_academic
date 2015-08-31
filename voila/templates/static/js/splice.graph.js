@@ -693,6 +693,13 @@ window.splicegraph = function (){
                 var intron_ret_i = lsvs.indexOf(ir_marker);
                 if (intron_ret_i > -1){
                     lsvs.splice(lsvs.indexOf(ir_marker), 1);  // Modifies the array in place
+                    var num_alt_start_end = 0;
+                    for (var ff=1; ff<lsvs.length; ff++){
+                        if (lsvs[ff].indexOf('.') === -1) {
+                            num_alt_start_end++;
+                        }
+                    }
+                    intron_ret_i -= num_alt_start_end;
                 }
 
                 // Num exons_obj
