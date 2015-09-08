@@ -1,6 +1,6 @@
 {% extends "base_template.html" %}
-{% block title %}LSV &Delta;&Psi; Comparison table{% endblock %}
-{% block header %}LSV &Delta;&Psi; Comparison table{% endblock %}
+{% block title %}LSV &Delta;&Psi; Comparison table {{cond_pair[0]}} Vs {{cond_pair[1]}}{% endblock %}
+{% block header %}LSV &Delta;&Psi; Comparison table {{cond_pair[0]}} Vs {{cond_pair[1]}}{% endblock %}
 
 
 {% block js %}
@@ -43,7 +43,7 @@
             {% for samplen in sample_names -%}
                 <td>
                     {% if lsvs[lsv]['links'][loop.index0] %}
-                        <a href="{{ lsvs[lsv]['links'][loop.index0] }}" target="_blank">{{ lsvs[lsv]['expecs'][loop.index0] }}</a>
+                        <a href="{{ lsvs[lsv]['links'][loop.index0] }}" target="_blank">{{ lsvs[lsv]['expecs'][loop.index0]|round(3) }}</a>
                     {%- endif %}
                 </td>
             {%- endfor %}

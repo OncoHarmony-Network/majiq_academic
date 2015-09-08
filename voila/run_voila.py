@@ -209,7 +209,9 @@ def render_summary(output_dir, output_html, majiq_output, type_summary, threshol
         voila_output = open(output_dir+output_html, 'w')
         voila_output.write(sum_template.render(lsvs=majiq_output['lsvs'],
                                                sample_names=majiq_output['sample_names'],
-                                               tableMarks=table_marks_set(len(majiq_output['lsvs'].keys()))))
+                                               tableMarks=table_marks_set(len(majiq_output['lsvs'].keys())),
+                                               cond_pair=majiq_output['cond_pair']
+                           ))
 
     else:
         logger.error("summary type not recognized %s." % type_summary, exc_info=1)
@@ -455,7 +457,7 @@ def create_summary(args):
         output_html = "%s_%s_comp_table.html" % (cond_pair[0], cond_pair[1])
         lsvs_dict = io_voila.load_dpsi_tab(sample_files, sample_names, thres_change=thres_change)
         logger.info("LSVs added to the table: %d" % len(lsvs_dict.keys()))
-        render_summary(output_dir, output_html, {'lsvs': lsvs_dict, 'sample_names': sample_names}, type_summary, logger=logger)
+        render_summary(output_dir, output_html, {'lsvs': lsvs_dict, 'sample_names': sample_names, 'cond_pair': cond_pair}, type_summary, logger=logger)
         return
 
     render_summary(output_dir, output_html, majiq_output, type_summary, threshold, meta_postprocess, logger=logger)
