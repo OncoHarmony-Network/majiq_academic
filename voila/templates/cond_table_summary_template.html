@@ -44,8 +44,6 @@
                 <td>
                     {% if lsvs[lsv]['links'][loop.index0] %}
                         <a href="{{ lsvs[lsv]['links'][loop.index0] }}" target="_blank">{{ lsvs[lsv]['expecs'][loop.index0] }}</a>
-                    {% else %}
-                        {{ lsvs[lsv]['expecs'][loop.index0] }}
                     {%- endif %}
                 </td>
             {%- endfor %}
