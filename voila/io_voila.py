@@ -229,11 +229,6 @@ def write_tab_output(output_dir, output_html, majiq_output, type_summary, logger
 
 def load_dpsi_tab(tab_files_list, sample_names, thres_change=None):
     """Load LSV delta psi information from tab-delimited file."""
-    # #Tab-delimited file
-    # #
-    # #Gene Name      Gene ID LSV ID  E(Delta(PSI)) per LSV junction  P(Delta(PSI)>0.20) per LSV junction     LSV Type        A5SS    A3SS    ES      Num. Junctions  Num. Exons      De Novo Junctions?      chr     strand  Junctions coords        Exons coords    Exons Alternative Start Exons Alternative End   Voila link
-    # SOCS4   ENSG00000180008 ENSG00000180008:55493948-55494189:source        -6.31549134148e-06;-6.21425294136e-06;-0.0014750236202;1.11410403456e-05;0.00251893273428       6.19368325476e-06;6.17099789797e-06;0.0152398891153;8.65809173803e-06;0.0113650379196   s|1e1.1o4|1e1.2o4|1e1.3o4|1e1.4o4|1e2.1o1       False   True    True    5       3       1       chr14   +  55494189-55498522;55494189-55498559;55494189-55498581;55494189-55498607;55494189-55509670        55493948-55494189;55498522-55498712;55498522-55498712;55498522-55498712;55498522-55498712;55509670-55516206     ;;;;;   ;;;;;   file:///data/JennieLin/voila/1298.M1_M2//summaries/783_1298_M1_1298_M2.deltapsi_deltapsi.html#SOCS4
-    # DDX20   ENSG00000064703 ENSG00000064703:112299268-112299362:source      1.68483233714e-05;-1.68483233698e-05    7.62215489154e-06;4.49754345183e-06     s|1e1.1o1|1e2.2o2       False   False   True    2       3       0       chr1    +       112299362-112302022;112299362-112303096 112299268-112299362;112302022-112302190;112303019-112303210     ;;      ;;      file:///data/JennieLin/voila/1298.M1_M2//summaries/57_1298_M1_1298_M2.deltapsi_deltapsi.html#DDX20
     lsvs_dict = defaultdict(lambda: defaultdict(lambda: None))
     for idx, tab_file in enumerate(tab_files_list):
         with open(tab_file, 'r') as tabf:
@@ -245,7 +240,12 @@ def load_dpsi_tab(tab_files_list, sample_names, thres_change=None):
                 if lsvs_dict[fields[2]]['expecs'] is None:
                     lsvs_dict[fields[2]]['expecs'] = [None]*len(sample_names)
                     lsvs_dict[fields[2]]['links'] = [None]*len(sample_names)
-                lsvs_dict[fields[2]]['expecs'][idx] = expecs[np.argmax([abs(ee) for ee in expecs])]  #TODO: What happens when the most changing junction is not the same?!
+                    lsvs_dict[fields[2]]['njunc'] = [0]*len(sample_names)
+                    lsvs_dict[fields[2]]['nchangs'] = 0
+                idx_max = np.argmax([abs(ee) for ee in expecs])
+                lsvs_dict[fields[2]]['expecs'][idx] = expecs[idx_max]
+                lsvs_dict[fields[2]]['njunc'][idx] = idx_max
                 lsvs_dict[fields[2]]['links'][idx] = fields[-1].split('voila/')[1]
                 lsvs_dict[fields[2]]['gene'] = fields[0]
+                lsvs_dict[fields[2]]['nchangs'] += 1
     return lsvs_dict

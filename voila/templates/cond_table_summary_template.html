@@ -21,6 +21,7 @@
     <tr>
         <th class="short-header">Gene</th>
         <th class="short-header">LSV ID</th>
+        <th class="short-header">#Changing samples</th>
         {% for samplen in sample_names %}
             <th class="short-header">{{ samplen }}</th>
         {%- endfor %}
@@ -30,6 +31,7 @@
     <tr>
         <th class="short-header">Gene</th>
         <th class="short-header">LSV ID</th>
+        <th class="short-header">#Changing samples</th>
         {% for samplen in sample_names %}
             <th class="short-header">{{ samplen }}</th>
         {%- endfor %}
@@ -40,10 +42,11 @@
         <tr>
             <td>{{ lsvs[lsv]['gene'] }}</td>
             <td>{{ lsv }}</td>
+            <td>{{ lsvs[lsv]['nchangs'] }}</td>
             {% for samplen in sample_names -%}
-                <td>
+                <td class="njunc-bg-{{ lsvs[lsv]['njunc'][loop.index0] }}">
                     {% if lsvs[lsv]['links'][loop.index0] %}
-                        <a href="{{ lsvs[lsv]['links'][loop.index0] }}" target="_blank">{{ lsvs[lsv]['expecs'][loop.index0]|round(3) }}</a>
+                        <a href="{{ lsvs[lsv]['links'][loop.index0] }}" target="_blank" class="njunc-text">{{ lsvs[lsv]['expecs'][loop.index0]|round(3) }}</a>
                     {%- endif %}
                 </td>
             {%- endfor %}
