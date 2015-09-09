@@ -240,7 +240,7 @@ def load_dpsi_tab(tab_files_list, sample_names, thres_change=None):
                 if lsvs_dict[fields[2]]['expecs'] is None:
                     lsvs_dict[fields[2]]['expecs'] = [None]*len(sample_names)
                     lsvs_dict[fields[2]]['links'] = [None]*len(sample_names)
-                    lsvs_dict[fields[2]]['njunc'] = [0]*len(sample_names)
+                    lsvs_dict[fields[2]]['njunc'] = [None]*len(sample_names)
                     lsvs_dict[fields[2]]['nchangs'] = 0
                 idx_max = np.argmax([abs(ee) for ee in expecs])
                 lsvs_dict[fields[2]]['expecs'][idx] = expecs[idx_max]
