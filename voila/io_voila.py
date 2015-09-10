@@ -256,15 +256,19 @@ def load_dpsi_tab(tab_files_list, sample_names, thres_change=None):
             del lsvs_dict[lsv_idx]  # Remove LSVs not passing the changing threshold
             continue
 
-        # Update the number of changing
-        lsvs_dict[lsv_idx]['nchangs'] = np.sum([1 for ff in lsvs_dict[lsv_idx]['expecs'] if np.any(np.array([abs(fff) for fff in ff]) > thres_change)])
-
         idx_most_freq = np.argmax(np.bincount(np.array(lsvs_dict[lsv_idx]['njunc'])[(np.array(lsvs_dict[lsv_idx]['njunc']) > -1) & np.array([np.any(np.array([abs(fff) for fff in expec]) > thres_change) for expec in lsvs_dict[lsv_idx]['expecs']]) ]))
+        # Update the number of changing
+        # lsvs_dict[lsv_idx]['nchangs'] = np.sum([1 for ff in lsvs_dict[lsv_idx]['expecs'] if np.any(np.array([abs(fff) for fff in ff]) > thres_change)])
+
         lsvs_dict[lsv_idx]['expecs_marks'] = ~np.array(idx_most_freq == lsvs_dict[lsv_idx]['njunc'])  # Mark adjusted most changing junction
         for idx_exp, expec in enumerate(lsvs_dict[lsv_idx]['expecs']):
             if len(expec)>0:
                 lsvs_dict[lsv_idx]['expecs'][idx_exp] = expec[idx_most_freq]
             else:
                 lsvs_dict[lsv_idx]['expecs'][idx_exp] = -1
+        lsvs_dict[lsv_idx]['nchangs'] = np.count_nonzero([abs(ee) > thres_change for ee in lsvs_dict[lsv_idx]['expecs'] if ee > -1])
         lsvs_dict[lsv_idx]['njunc'] = idx_most_freq
+        exist_expecs = np.array(lsvs_dict[lsv_idx]['expecs'])[np.array(lsvs_dict[lsv_idx]['expecs']) > -1]
+        lsvs_dict[lsv_idx]['ndisagree'] = np.count_nonzero(exist_expecs>0) % exist_expecs.size
+
     return lsvs_dict

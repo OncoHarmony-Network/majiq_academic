@@ -21,7 +21,8 @@
     <tr>
         <th class="short-header">Gene</th>
         <th class="short-header">LSV ID</th>
-        <th class="short-header">#Changing samples</th>
+        <th class="medium-header">#Disagreeing</th>
+        <th class="medium-header">#Changing samples</th>
         {% for samplen in sample_names %}
             <th class="short-header">{{ samplen }}</th>
         {%- endfor %}
@@ -31,7 +32,8 @@
     <tr>
         <th class="short-header">Gene</th>
         <th class="short-header">LSV ID</th>
-        <th class="short-header">#Changing samples</th>
+        <th class="medium-header">#Disagreeing</th>
+        <th class="medium-header">#Changing samples</th>
         {% for samplen in sample_names %}
             <th class="short-header">{{ samplen }}</th>
         {%- endfor %}
@@ -42,6 +44,7 @@
         <tr>
             <td>{{ lsvs[lsv]['gene'] }}</td>
             <td>{{ lsv }}</td>
+            <td>{{ lsvs[lsv]['ndisagree'] }}</td>
             <td>{{ lsvs[lsv]['nchangs'] }}</td>
             {% for samplen in sample_names -%}
                 {% if lsvs[lsv]['expecs'][loop.index0] > -1 %}
