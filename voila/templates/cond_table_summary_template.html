@@ -1,6 +1,6 @@
 {% extends "base_template.html" %}
 {% block title %}LSV &Delta;&Psi; Comparison table {{cond_pair[0]}} Vs {{cond_pair[1]}}{% endblock %}
-{% block header %}LSV &Delta;&Psi; Comparison table {{cond_pair[0]}} Vs {{cond_pair[1]}}{% endblock %}
+{% block header %}LSV &Delta;&Psi; &gt; {{thres}} Comparison table {{cond_pair[0]}} Vs {{cond_pair[1]}}{% endblock %}
 
 
 {% block js %}
@@ -51,7 +51,8 @@
                         <td class="njunc-bg-{{ lsvs[lsv]['njunc'] }}">
                     {% endif %}
 
-                        <a href="{{ lsvs[lsv]['links'][loop.index0] }}" target="_blank" class="njunc-text">{{ lsvs[lsv]['expecs'][loop.index0]|round(3) }}{% if (lsvs[lsv]['expecs'][loop.index0] | abs ) < thres %}*{%- endif %}</a>
+                        <a href="{{ lsvs[lsv]['links'][loop.index0] }}" target="_blank" class="njunc-text">{{ lsvs[lsv]['expecs'][loop.index0]|round(3) }}</a>
+                        <span class="arrow-down">{% if (lsvs[lsv]['expecs'][loop.index0] | abs ) < thres %}&#8659;{%- endif %}</span>
                 {% else %}
                     <td>
                 {%- endif %}

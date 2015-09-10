@@ -342,3 +342,8 @@ table.tablesorter tbody td.njunc-bg-15{ background-color: #fdfdfd; }
     border-width: 2px;
     border-style: solid;
 }
+
+.arrow-down{
+    color: white;
+    font-size: 14px;
+}
