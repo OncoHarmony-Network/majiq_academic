@@ -44,11 +44,18 @@
             <td>{{ lsv }}</td>
             <td>{{ lsvs[lsv]['nchangs'] }}</td>
             {% for samplen in sample_names -%}
-                <td class="njunc-bg-{{ lsvs[lsv]['njunc'][loop.index0] }}">
-                    {% if lsvs[lsv]['links'][loop.index0] %}
-                        <a href="{{ lsvs[lsv]['links'][loop.index0] }}" target="_blank" class="njunc-text">{{ lsvs[lsv]['expecs'][loop.index0]|round(3) }}</a>
-                    {%- endif %}
-                </td>
+                {% if lsvs[lsv]['expecs'][loop.index0] > -1 %}
+                    {% if lsvs[lsv]['expecs_marks'][loop.index0] %}
+                        <td class="njunc-bg-{{ lsvs[lsv]['njunc'] }} junc-changed">
+                    {% else %}
+                        <td class="njunc-bg-{{ lsvs[lsv]['njunc'] }}">
+                    {% endif %}
+
+                        <a href="{{ lsvs[lsv]['links'][loop.index0] }}" target="_blank" class="njunc-text">{{ lsvs[lsv]['expecs'][loop.index0]|round(3) }}{% if (lsvs[lsv]['expecs'][loop.index0] | abs ) < thres %}*{%- endif %}</a>
+                {% else %}
+                    <td>
+                {%- endif %}
+                    </td>
             {%- endfor %}
         </tr>
         {%- endfor %}

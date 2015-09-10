@@ -230,22 +230,41 @@ def write_tab_output(output_dir, output_html, majiq_output, type_summary, logger
 def load_dpsi_tab(tab_files_list, sample_names, thres_change=None):
     """Load LSV delta psi information from tab-delimited file."""
     lsvs_dict = defaultdict(lambda: defaultdict(lambda: None))
+
+    # 2-step process:
+    #   1. create a data structure finding the most changing junction,
+    #   2. select the expected psi from the most changing junction more frequent in the set
     for idx, tab_file in enumerate(tab_files_list):
         with open(tab_file, 'r') as tabf:
             for line in tabf:
                 if line.startswith("#"): continue
                 fields = line.split()
                 expecs = [float(aa) for aa in fields[3].split(";")]
-                if np.max([abs(ee) for ee in expecs]) < thres_change: continue
                 if lsvs_dict[fields[2]]['expecs'] is None:
-                    lsvs_dict[fields[2]]['expecs'] = [None]*len(sample_names)
+                    lsvs_dict[fields[2]]['expecs'] = [[]]*len(sample_names)
+                    lsvs_dict[fields[2]]['expecs_marks'] = [None]*len(sample_names)
                     lsvs_dict[fields[2]]['links'] = [None]*len(sample_names)
-                    lsvs_dict[fields[2]]['njunc'] = [None]*len(sample_names)
-                    lsvs_dict[fields[2]]['nchangs'] = 0
+                    lsvs_dict[fields[2]]['njunc'] = [-1]*len(sample_names)
                 idx_max = np.argmax([abs(ee) for ee in expecs])
-                lsvs_dict[fields[2]]['expecs'][idx] = expecs[idx_max]
+                lsvs_dict[fields[2]]['expecs'][idx] = expecs
                 lsvs_dict[fields[2]]['njunc'][idx] = idx_max
                 lsvs_dict[fields[2]]['links'][idx] = fields[-1].split('voila/')[1]
                 lsvs_dict[fields[2]]['gene'] = fields[0]
-                lsvs_dict[fields[2]]['nchangs'] += 1
+
+    for lsv_idx in lsvs_dict.keys():
+        if np.max([abs(bb) for ff in lsvs_dict[lsv_idx]['expecs'] for bb in ff]) < thres_change:
+            del lsvs_dict[lsv_idx]  # Remove LSVs not passing the changing threshold
+            continue
+
+        # Update the number of changing
+        lsvs_dict[lsv_idx]['nchangs'] = np.sum([1 for ff in lsvs_dict[lsv_idx]['expecs'] if np.any(np.array([abs(fff) for fff in ff]) > thres_change)])
+
+        idx_most_freq = np.argmax(np.bincount(np.array(lsvs_dict[lsv_idx]['njunc'])[(np.array(lsvs_dict[lsv_idx]['njunc']) > -1) & np.array([np.any(np.array([abs(fff) for fff in expec]) > thres_change) for expec in lsvs_dict[lsv_idx]['expecs']]) ]))
+        lsvs_dict[lsv_idx]['expecs_marks'] = ~np.array(idx_most_freq == lsvs_dict[lsv_idx]['njunc'])  # Mark adjusted most changing junction
+        for idx_exp, expec in enumerate(lsvs_dict[lsv_idx]['expecs']):
+            if len(expec)>0:
+                lsvs_dict[lsv_idx]['expecs'][idx_exp] = expec[idx_most_freq]
+            else:
+                lsvs_dict[lsv_idx]['expecs'][idx_exp] = -1
+        lsvs_dict[lsv_idx]['njunc'] = idx_most_freq
     return lsvs_dict

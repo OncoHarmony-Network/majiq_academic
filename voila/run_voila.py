@@ -210,7 +210,8 @@ def render_summary(output_dir, output_html, majiq_output, type_summary, threshol
         voila_output.write(sum_template.render(lsvs=majiq_output['lsvs'],
                                                sample_names=majiq_output['sample_names'],
                                                tableMarks=table_marks_set(len(majiq_output['lsvs'].keys())),
-                                               cond_pair=majiq_output['cond_pair']
+                                               cond_pair=majiq_output['cond_pair'],
+                                               thres=majiq_output['thres']
                            ))
 
     else:
@@ -457,7 +458,7 @@ def create_summary(args):
         output_html = "%s_%s_comp_table.html" % (cond_pair[0], cond_pair[1])
         lsvs_dict = io_voila.load_dpsi_tab(sample_files, sample_names, thres_change=thres_change)
         logger.info("LSVs added to the table: %d" % len(lsvs_dict.keys()))
-        render_summary(output_dir, output_html, {'lsvs': lsvs_dict, 'sample_names': sample_names, 'cond_pair': cond_pair}, type_summary, logger=logger)
+        render_summary(output_dir, output_html, {'lsvs': lsvs_dict, 'sample_names': sample_names, 'cond_pair': cond_pair, 'thres': thres_change}, type_summary, logger=logger)
         return
 
     render_summary(output_dir, output_html, majiq_output, type_summary, threshold, meta_postprocess, logger=logger)
@@ -530,7 +531,7 @@ def main():
     parser_comptable.add_argument('-cond-pair', dest='cond_pair', required=True, nargs=2, metavar='M1 M2', help='Condition pair to compare.')
     parser_comptable.add_argument('-sample-files', dest='sample_files', required=True, nargs='+', metavar='M1_M2_sample1 [M1_M2_sample2 ...]', help='Samples Voila output files.')
     parser_comptable.add_argument('-sample-names', dest='sample_names', required=True, nargs='+', metavar='sample1 [sample2 ...]', help='Sample names.')
-    parser_comptable.add_argument('--thres-change', nargs=1, dest='thres_change', type=float, metavar='0.2', help='Threshold used to filter non-changing LSVs.')
+    parser_comptable.add_argument('--thres-change',  dest='thres_change', type=float, metavar='0.2', help='Threshold used to filter non-changing LSVs.')
     subparsers.add_parser(constants.COND_TABLE, help='Generate a HTML table with a list of LSVs changing between conditions in multiple samples [DEBUGING!].', parents=[base_parser, parser_comptable])
 
     args = parser.parse_args()

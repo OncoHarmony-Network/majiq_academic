@@ -336,3 +336,9 @@ table.tablesorter tbody td.njunc-bg-15{ background-color: #fdfdfd; }
 .njunc-text {
     color: white;
 }
+
+.junc-changed{
+    border-color: black;
+    border-width: 2px;
+    border-style: solid;
+}
