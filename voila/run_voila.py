@@ -455,7 +455,7 @@ def create_summary(args):
         sample_names = args.sample_names
         thres_change = args.thres_change
 
-        output_html = "%s_%s_comp_table.html" % (cond_pair[0], cond_pair[1])
+        output_html = "%s_%s_comp_table_%.2f.html" % (cond_pair[0], cond_pair[1], thres_change)
         lsvs_dict = io_voila.load_dpsi_tab(sample_files, sample_names, thres_change=thres_change)
         logger.info("LSVs added to the table: %d" % len(lsvs_dict.keys()))
         render_summary(output_dir, output_html, {'lsvs': lsvs_dict, 'sample_names': sample_names, 'cond_pair': cond_pair, 'thres': thres_change}, type_summary, logger=logger)
