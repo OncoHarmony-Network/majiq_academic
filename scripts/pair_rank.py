@@ -5,11 +5,12 @@ Rank MAJIQ, MISO or MATS events to test delta PSI reproducibility
 
 """
 import matplotlib as mplot
+
 mplot.use('Agg')
 import scripts.utils
 # import prettyplotlib as ppl
-import cPickle as pickle
-import os
+
+
 from collections import defaultdict
 import argparse
 from pylab import *
@@ -114,7 +115,7 @@ def expected_dpsi(matrix):
     return ret
 
 
-def rank_majiq(vlsv_list, V=0.2, absolute=True, dofilter=True, E=False, ranknochange=False, complex_lsvs=False, prior=None, shrink=True, junc_selection=None, majiq_n=None, fdr_cutoff=0.05):
+def rank_majiq(vlsv_list, V=0.2, absolute=True, dofilter=True, E=False, ranknochange=False, complex_lsvs=False, prior=None, shrink=True, junc_selection=None, majiq_n=None):
     MINTHRESHOLD = 0.95
     if E:
         MINTHRESHOLD = 0.20
@@ -150,16 +151,16 @@ def rank_majiq(vlsv_list, V=0.2, absolute=True, dofilter=True, E=False, ranknoch
         rank.append(["%s#%d" % (vlsv.get_id(), junc_n), v_expected, area])
 
     expected_mask = np.array([abs(r[1])>=V for r in rank])
-    fdr_mask = np.array([r[2]<=fdr_cutoff for r in rank])
-    expected_fdr_mask = expected_mask & fdr_mask
+    fdr_mask = np.array([r[2]<=0.05 for r in rank])
+    expected_fdr_mask = np.logical_and(expected_mask, fdr_mask)
     #rank = np.array(rank)[expected_fdr_mask].tolist()
     if majiq_n:
         majiq_n[0] = np.count_nonzero(expected_fdr_mask)
-    # rank = np.array(rank)[expected_mask & fdr_mask].tolist()
+    # rank = np.array(rank)[np.logical_and(expected_mask, fdr_mask)].tolist()
 
-    print "#FDR < %.2f: %d" % (fdr_cutoff, np.count_nonzero(fdr_mask))
+    print "#FDR < 0.05: %d" % np.count_nonzero(fdr_mask)
     print "#E(Delta(PSI))>%.2f: %d" % (V, np.count_nonzero(expected_mask))
-    print "#E(Delta(PSI))>%.2f and FDR<%.2f: %d" % (V, fdr_cutoff, np.count_nonzero(expected_fdr_mask))
+    print "#E(Delta(PSI))>%.2f and FDR<0.05: %d" % (V, np.count_nonzero(expected_fdr_mask))
 
     rank.sort(key=lambda x: (x[1], x[2]), reverse=True)
 
@@ -186,7 +187,7 @@ def rank_naive(bins_list, names, V=0.2, absolute=True, E=False, ranknochange=Fal
 
     expected_mask = np.array([abs(r[1])>=V for r in rank])
     fdr_mask = np.array([r[2]<=0.05 for r in rank])
-    expected_fdr_mask = expected_mask & fdr_mask
+    expected_fdr_mask = np.logical_and(expected_mask, fdr_mask)
 
     print "#FDR < 0.05: %d" % np.count_nonzero(fdr_mask)
     print "#E(Delta(PSI))>%.2f: %d" % (V, np.count_nonzero(expected_mask))
@@ -233,7 +234,7 @@ def rank_mats(path, dofilter=True, ranknochange=False):
     return rank
 
 
-def rank_mats_original(mats_file, dofilter=True, ranknochange=False, majiq_n=None, fdr_cutoff=0.05, V=0.2):
+def rank_mats_original(mats_file, dofilter=True, ranknochange=False, majiq_n=None):
     """Rank Splicing Events detected as differentially expressed by MATS. Compute the FDR for downstream analysis
 
     :param mats_file:
@@ -263,20 +264,21 @@ def rank_mats_original(mats_file, dofilter=True, ranknochange=False, majiq_n=Non
             delta_psi =  float(sline[-1])
             rank.append([geneID, delta_psi, pvalue, fdr])
 
-    expected_mask = np.array([abs(r[1])>=V for r in rank])
+    expected_mask = np.array([abs(r[1])>=0.2 for r in rank])
+    fdr_cutoff = 0.05
     if majiq_n[0]:
-        while np.count_nonzero(expected_mask & np.array([r[3] <= fdr_cutoff for r in rank])) < majiq_n[0]:
+        while np.count_nonzero(np.logical_and(expected_mask, np.array([r[3] <= fdr_cutoff for r in rank]))) < majiq_n[0]:
             fdr_cutoff += 0.05
     else:
-        majiq_n[0] = np.count_nonzero(np.array([r[3]<=fdr_cutoff for r in rank]))
+        majiq_n[0] = np.count_nonzero(np.array([r[3]<=0.05 for r in rank]))
     fdr_mask = np.array([r[3]<=fdr_cutoff for r in rank])
 
     print "MATS:"
-    #print "#FDR < 0.05: %d" % np.count_nonzero(np.array([r[3]<=0.05 for r in rank]))
-    rank = np.array(rank)[expected_mask & fdr_mask].tolist()
+    print "#FDR < 0.05: %d" % np.count_nonzero(np.array([r[3]<=0.05 for r in rank]))
+    rank = np.array(rank)[np.logical_and(expected_mask, fdr_mask)].tolist()
     print "#FDR < %.2f: %d" % (fdr_cutoff, np.count_nonzero(fdr_mask))
-    print "#E(Delta(PSI))>%.2f: %d" % (V, np.count_nonzero(expected_mask))
-    print "#E(Delta(PSI))>%.2f and FDR< %.2f: %d" % (V, fdr_cutoff, np.count_nonzero(expected_mask & fdr_mask))
+    print "#E(Delta(PSI))>0.20: %d" % np.count_nonzero(expected_mask)
+    print "#E(Delta(PSI))>0.20 and FDR<0.05: %d" % np.count_nonzero(np.logical_and(expected_mask, fdr_mask))
 
     if ranknochange:
         rank.sort(key=lambda x: (abs(float(x[1])), float(x[2]))) #biggest delta PSI first, small p-value
@@ -390,7 +392,6 @@ def main():
     parser.add_argument('--complex-lsvs', dest="complex_lsvs", default=False, action="store_true", help="Include complex LSVs")
     parser.add_argument('--noshrink', dest='shrink', default=True, action='store_false', help="Shrink ranks with the FDR number.")
     parser.add_argument('--mats_n',  default=False, action='store_true', help="Use MATS number of confident changing events (N of FDR<0.05, |E(Delta(PSI))|>.2)")
-    parser.add_argument('--mats_fdr',  default=0.05, type=float, help="rMATS FDR")
     args = parser.parse_args()
 
     print args
@@ -409,7 +410,7 @@ def main():
             if file_nr % 2 == 0:
                 count_pairs += 1
                 #majiq_file1_names = [vlsv.get_id() for vlsv in majiq_data.get_lsvs()]
-                ranks['majiq_' + str(count_pairs)].append(rank_majiq(majiq_data.get_lsvs(), args.V, args.absolute, args.filter, args.E, args.ranknochange, args.complex_lsvs, shrink=args.shrink, majiq_n=majiq_N, fdr_cutoff=args.mats_fdr))
+                ranks['majiq_' + str(count_pairs)].append(rank_majiq(majiq_data.get_lsvs(), args.V, args.absolute, args.filter, args.E, args.ranknochange, args.complex_lsvs, shrink=args.shrink, majiq_n=majiq_N))
                 majiq_file1_names = [a[0].split('#')[0] for a in ranks['majiq_1'][0]]
                 continue
 
@@ -417,7 +418,7 @@ def main():
                 # Select events from experiment 1
                 exp1_index = np.array([v_lsv.get_id() in majiq_file1_names for v_lsv in majiq_data.get_lsvs()])
                 junc_dict = dict([(rr[0].split('#')[0], int(rr[0].split('#')[1])) for rr in ranks['majiq_' + str(count_pairs)][-1]])
-                ranks['majiq_' + str(count_pairs)].append(rank_majiq(np.array(majiq_data.get_lsvs())[exp1_index].tolist(), args.V, args.absolute, args.filter, args.E, args.ranknochange, args.complex_lsvs, shrink=args.shrink, junc_selection=junc_dict, fdr_cutoff=args.mats_fdr))
+                ranks['majiq_' + str(count_pairs)].append(rank_majiq(np.array(majiq_data.get_lsvs())[exp1_index].tolist(), args.V, args.absolute, args.filter, args.E, args.ranknochange, args.complex_lsvs, shrink=args.shrink, junc_selection=junc_dict))
                 n1['majiq_' + str(count_pairs)]=[np.count_nonzero(exp1_index), np.count_nonzero(exp1_index)]
         names_majiq_exp1 = [m[1] for m in majiq_file1_names]
 
@@ -425,7 +426,7 @@ def main():
         if args.mats_n:
             majiq_N = [None]
         for file in args.mats_files:
-            mats_rank = rank_mats_original(file, args.filter, args.ranknochange, majiq_n=majiq_N, fdr_cutoff=args.mats_fdr, V=args.V)
+            mats_rank = rank_mats_original(file, args.filter, args.ranknochange, majiq_n=majiq_N)
             if len(ranks['mats']) > 0:
                 names_mats_exp1 = [mats_info[0] for mats_info in ranks['mats'][0]]
                 names_mats = [mats_info[0] for mats_info in mats_rank]
