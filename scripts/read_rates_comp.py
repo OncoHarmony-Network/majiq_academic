@@ -1,6 +1,7 @@
 from matplotlib import use
 
-from src import filter, polyfitnb
+from majiq.src import filter
+from src import polyfitnb
 
 
 use('Agg', warn=False)

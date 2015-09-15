@@ -76,8 +76,8 @@ def main():
     exc_reads2 = all_junctions['exc2'].mean(axis=1) + pseudo
     psi1 = inc_reads1 / (exc_reads1 + inc_reads1)
     psi2 = inc_reads2 / (exc_reads2 + inc_reads2)
-    for i in range(inc_reads1):
-        if inc_reads1 > exc_reads1
+#    for i in range(inc_reads1):
+#        if inc_reads1 > exc_reads1
 
 
 if __name__ == '__main__':

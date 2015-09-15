@@ -7,7 +7,6 @@ from collections import defaultdict
 import json
 import shutil
 import errno
-from voila.io_voila import load_voila_input
 
 from voila.lsv import Lsv
 from voila.splice_graphics import ExonGraphic, JunctionGraphic, GeneGraphic, LsvGraphic
@@ -87,11 +86,9 @@ def get_prob_delta_psi_greater_v(bins, expected, V=.2):
     return np.sum(bins[:left] + np.sum(bins[right:]))
 
 
-def get_lsv_single_exp_data(voila_input_file, gene_name_list=None, lsv_types=None, logger=None):
+def get_lsv_single_exp_data(voila_input, gene_name_list=None, lsv_types=None, logger=None):
     """Create a dictionary to summarize the information from majiq output file."""
-    voila_input = load_voila_input(voila_input_file, logger=logger)
     lsv_list = voila_input.lsvs
-
     genes_dict = defaultdict(list)
 
     nofilter_genes = not gene_name_list and not lsv_types
@@ -116,7 +113,7 @@ def get_lsv_single_exp_data(voila_input_file, gene_name_list=None, lsv_types=Non
             'meta_exps':    voila_input.metainfo}
 
 
-def get_lsv_delta_exp_data(voila_input_file, confidence=.95, threshold=.2, show_all=False, gene_name_list=None, logger=None):
+def get_lsv_delta_exp_data(voila_input, confidence=.95, threshold=.2, show_all=False, gene_name_list=None, logger=None):
     """Load lsv delta psi pickle file.
 
     :param voila_input_file: pickle with a list of VoilaLsvs
@@ -127,8 +124,6 @@ def get_lsv_delta_exp_data(voila_input_file, confidence=.95, threshold=.2, show_
     :param logger:
     @return: dictionary
     """
-
-    voila_input = load_voila_input(voila_input_file, logger=logger)
 
     genes_dict = defaultdict(list)
     lsv_list = voila_input.lsvs
@@ -282,18 +277,6 @@ def create_if_not_exists(my_dir, logger=False):
             logger.info("\nDirectory %s already exists..." % my_dir)
 
 
-def collapse_matrix(matrix):
-    """Collapse the diagonals probabilities in 1-D and return them"""
-    collapse = []
-    #FOR TEST matrix = array([[0, 1, 2, 3, 4, 500], [0, 1, 2, 3, 4, 5], [0, 1, 2, 3, 4, 5], [100, 1, 2, 3, 4, 5], ])
-
-    matrix_corner = matrix.shape[0]+1
-    for i in xrange(-matrix_corner, matrix_corner):
-        collapse.append(np.diagonal(matrix, offset=i).sum())
-
-    return np.array(collapse)
-
-
 def gff2gtf(gff_f, out_f=None):
     """Parse a GFF file created by MAJIQ and create a GTF"""
 
@@ -350,3 +333,8 @@ def to_gtf(wfile, seq_name, source, gene, mrna, start_trans, end_trans, strand, 
         wfile.write(eCDS % "CDS")
         wfile.write(eCDS % "exon")
     wfile.write(last_codon)
+
+
+def debug(text):
+    print text
+    return ''

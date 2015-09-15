@@ -5,11 +5,13 @@ use('Agg')
 from scripts import utils as utils_scripts
 from collections import defaultdict
 import analysis
-from scripts.psi_scores import calculate_ead_simple, _save_or_show
+from scripts.psi_scores import calculate_ead_simple
 import argparse
 from pylab import *
 from itertools import izip
 import colorbrewer as cb
+from scripts import utils as sutils
+import cPickle as pickle
 
 LSV_TYPES_DICT = {
     's|1e1.1|1e2.1':'SE',
@@ -128,184 +130,6 @@ def get_low_med_high_cov_psi(psi1_met1, psi2_met1, psi1_met2, psi2_met2, coverag
     return low_med_high_psis_set, len(psi1_met1), low_med_high_psi_diff, (COV_CONDS[1] & better_in_miso_mask)
 
 
-def plot_delta_bars_perc_all_in_grid(cov_psi_ndmatrix, majiq_num_events_list, majiq_diff_ndmatrix, replica_names, plotpath=None, alpha=0.5):
-
-    replica_names_joint = '; '.join(["%s%s" % (name1, name2) for name1, name2 in grouped(replica_names, 2)])
-    plotname="MAJIQ_Vs_MISO_delta_expected_psi_grid_alpha_%.1f. \nReplicates %s" % (float(alpha), replica_names_joint)
-
-    print cov_psi_ndmatrix
-    print np.reshape(np.repeat(np.array(majiq_num_events_list), cov_psi_ndmatrix.size/len(majiq_num_events_list)), cov_psi_ndmatrix.shape)
-    psi_ndmatrix_perc = cov_psi_ndmatrix/np.reshape(np.repeat(np.array(majiq_num_events_list), cov_psi_ndmatrix.size/len(majiq_num_events_list)), cov_psi_ndmatrix.shape)
-
-    means_psis_meth1 = np.apply_along_axis( np.mean, axis=2, arr=psi_ndmatrix_perc.T)[:, 0]
-    means_psis_meth2 = np.apply_along_axis( np.mean, axis=2, arr=psi_ndmatrix_perc.T)[:, 1]
-
-    stds_psis_meth1 = np.apply_along_axis( np.std, axis=2, arr=psi_ndmatrix_perc.T)[:, 0]
-    stds_psis_meth2 = np.apply_along_axis( np.std, axis=2, arr=psi_ndmatrix_perc.T)[:, 1]
-
-    n_groups = 4
-    fig, axxs = plt.subplots(n_groups, n_groups, sharex=True, sharey=True, figsize=[12, 12], dpi=300)
-
-    for ii in xrange(n_groups):
-        for jj in xrange(n_groups):
-            ax1 = axxs[ii][jj]
-
-            index = np.arange(1)
-            bar_width = 0.35
-            # bar_width = 0.8
-
-            opacity = 0.4
-            error_config = {'ecolor': '0.3'}
-            ax1.bar(index, np.array([means_psis_meth1[ii*n_groups+jj]-means_psis_meth2[ii*n_groups+jj]]), bar_width,
-                     alpha=opacity,
-                     color='b',
-                     yerr=stds_psis_meth1[ii*n_groups+jj]-stds_psis_meth2[ii*n_groups+jj],
-                     error_kw=error_config,
-                     label='MAJIQ')
-                     # label='Better in MAJIQ')
-            # ax1.set_xlabel('PSIs values')
-            # if is_coverage:
-            #     ax1.set_xlabel('Coverage')
-            if jj==0:
-                ax1.set_ylabel('% of improved Events (LSVs)')
-            ax1.set_ylim([-.1, .25])
-            ax2 = ax1.twinx()
-            ax2.bar(index + bar_width, np.mean(majiq_diff_ndmatrix, axis=0)[ii*n_groups+jj], bar_width,
-                     alpha=opacity,
-                     color='r',
-                     yerr=np.std(majiq_diff_ndmatrix, axis=0)[ii*n_groups+jj],
-                     error_kw=error_config,
-                     label='Better in MISO')
-
-            if jj == n_groups-1:
-                ax2.set_ylabel('-E(Delta(Delta(PSI)))')
-            else:
-                ax2.axes.get_yaxis().set_ticks([])
-            ax2.set_ylim([-.1, .25])
-            plt.xlabel('PSIs values')
-
-
-    # plt.ylabel('% of improved # Events (LSVs)')
-    # plt.title(plotname)
-    # plt.title('Delta in expected PSI between %s.' % (replica_names_joint))
-    # plt.xticks(index + bar_width, psi_ranges)
-    # plt.legend(loc=2)
-
-    plt.tight_layout()
-    _save_or_show(plotpath, plotname.replace('\n', ' - ') + '_percentages')
-
-
-def plot_delta_bars_percentages(psi_ndmatrix, majiq_num_events_list, majiq_diff_ndmatrix, replica_names, plotpath=None, is_coverage=False):
-
-    replica_names_joint = '; '.join(["%s%s" % (name1, name2) for name1, name2 in grouped(replica_names, 2)])
-    plotname="MAJIQ_Vs_MISO_delta_expected_psi. \nReplicates %s" % (replica_names_joint)
-
-    psi_ranges = ['low', 'med', 'high', 'all']
-    psi_ndmatrix_perc = psi_ndmatrix/np.reshape(np.repeat(np.array(majiq_num_events_list), psi_ndmatrix.size/len(majiq_num_events_list)), psi_ndmatrix.shape)
-
-    means_psis_meth1 = np.apply_along_axis( np.mean, axis=2, arr=psi_ndmatrix_perc.T)[:, 0]
-    means_psis_meth2 = np.apply_along_axis( np.mean, axis=2, arr=psi_ndmatrix_perc.T)[:, 1]
-
-    stds_psis_meth1 = np.apply_along_axis( np.std, axis=2, arr=psi_ndmatrix_perc.T)[:, 0]
-    stds_psis_meth2 = np.apply_along_axis( np.std, axis=2, arr=psi_ndmatrix_perc.T)[:, 1]
-
-
-    n_groups = 4
-
-
-    fig, ax1 = plt.subplots()
-
-    index = np.arange(n_groups)
-    bar_width = 0.35
-    # bar_width = 0.8
-
-    opacity = 0.4
-    error_config = {'ecolor': '0.3'}
-
-    ax1.bar(index, means_psis_meth1-means_psis_meth2, bar_width,
-             alpha=opacity,
-             color='b',
-             yerr=stds_psis_meth1-stds_psis_meth2,
-             error_kw=error_config,
-             label='MAJIQ')
-             # label='Better in MAJIQ')
-    ax1.set_xlabel('PSIs values')
-    if is_coverage:
-        ax1.set_xlabel('Coverage')
-    ax1.set_ylabel('% of improved Events (LSVs)')
-    ax1.set_ylim([-.1, .35])
-    ax2 = ax1.twinx()
-    ax2.bar(index + bar_width, np.mean(majiq_diff_ndmatrix, axis=0), bar_width,
-             alpha=opacity,
-             color='r',
-             yerr=np.std(majiq_diff_ndmatrix, axis=0),
-             error_kw=error_config,
-             label='Better in MISO')
-
-    ax2.set_ylabel('E(Delta(Delta(PSI)))')
-    ax2.set_ylim([-.1, .35])
-    # plt.xlabel('PSIs values')
-    # plt.ylabel('% of improved # Events (LSVs)')
-    plt.title(plotname)
-    # plt.title('Delta in expected PSI between %s.' % (replica_names_joint))
-    plt.xticks(index + bar_width, psi_ranges)
-    # plt.legend(loc=2)
-
-    plt.tight_layout()
-    _save_or_show(plotpath, plotname.replace('\n', ' - ') + '_percentages')
-
-
-
-def plot_delta_expected_method1Vsmethod2(psi_list_data_set, replica_names, plotpath=None):
-
-    replica_names_joint = '; '.join(["%s%s" % (name1, name2) for name1, name2 in grouped(replica_names, 2)])
-    plotname="MAJIQ_Vs_MISO_delta_expected_psi. \nReplicates %s" % (replica_names_joint)
-
-    psi_ranges = ['low', 'med', 'high', 'all']
-
-    means_psis_meth1 = np.apply_along_axis( np.mean, axis=2, arr=array(psi_list_data_set).T)[:,0] #psi_list_data_set[0][0]
-    means_psis_meth2 = np.apply_along_axis( np.mean, axis=2, arr=array(psi_list_data_set).T)[:,1] #psi_list_data_set[1][1]
-
-    stds_psis_meth1 = np.apply_along_axis( np.std, axis=2, arr=array(psi_list_data_set).T)[:,0]
-    stds_psis_meth2 = np.apply_along_axis( np.std, axis=2, arr=array(psi_list_data_set).T)[:,1]
-
-
-    n_groups = 4
-
-
-    fig, ax = plt.subplots()
-
-    index = np.arange(n_groups)
-    bar_width = 0.35
-
-    opacity = 0.4
-    error_config = {'ecolor': '0.3'}
-
-    plt.bar(index, means_psis_meth1, bar_width,
-             alpha=opacity,
-             color='b',
-             yerr=stds_psis_meth1,
-             error_kw=error_config,
-             label='Better in MAJIQ')
-
-    plt.bar(index + bar_width, means_psis_meth2, bar_width,
-             alpha=opacity,
-             color='r',
-             yerr=stds_psis_meth2,
-             error_kw=error_config,
-             label='Better in MISO')
-
-    plt.xlabel('PSIs values')
-    plt.ylabel('# Events (LSVs)')
-    plt.title(plotname)
-    # plt.title('Delta in expected PSI between %s.' % (replica_names_joint))
-    plt.xticks(index + bar_width, psi_ranges)
-    plt.legend(loc=2)
-
-    plt.tight_layout()
-    _save_or_show(plotpath, plotname.replace('\n', ' - '))
-
-
 def hex_to_rgb(value):
     value = value.lstrip('#')
     lv = len(value)
@@ -316,7 +140,7 @@ def rgb_to_hex(rgb):
     return '#%02x%02x%02x' % rgb
 
 
-def plot_delta_expected_majiq_others(psi_dict_lists, replica_names, plotpath=None):
+def plot_delta_expected_majiq_others(psi_dict_lists, replica_names, plotpath=None, extension='pdf'):
 
     colors_dict = {
         'miso': 'blue'
@@ -409,106 +233,77 @@ def plot_delta_expected_majiq_others(psi_dict_lists, replica_names, plotpath=Non
                              np.append(np.mean(win_cdf_all, axis=0)-np.std(win_cdf_all, axis=0), np.mean(win_cdf_all, axis=0)[-1]-np.std(win_cdf_all, axis=0)[-1]),
                              facecolor=rgb_to_hex(cb.Blues[3][-1]),
                              alpha=0.4,
-                             linewidth=0.0)
+                             linewidth=1.0, interpolate=True)
 
             plt.fill_between(np.append(np.mean(lose_psi_all, axis=0), 1),
                              np.append(np.mean(lose_cdf_all, axis=0)+np.std(lose_cdf_all, axis=0), np.mean(lose_cdf_all, axis=0)[-1]+np.std(lose_cdf_all, axis=0)[-1]),
                              np.append(np.mean(lose_cdf_all, axis=0)-np.std(lose_cdf_all, axis=0), np.mean(lose_cdf_all, axis=0)[-1]-np.std(lose_cdf_all, axis=0)[-1]),
                             facecolor=rgb_to_hex(cb.Reds[3][-1]),
                             alpha=0.4,
-                            linewidth=0.0)
+                            linewidth=1.0, interpolate=True)
 
     plt.xlabel("Delta Delta PSI", fontsize=11)
     plt.ylabel("Number of LSVs", fontsize=11)
-    # plt.xlim(-1, 1)
-    # plt.ylim(-(max_difference+1000), max_difference+1000) # TODO: revise
-    #
-    # plt.plot([-1,1], [0,0], color='black', lw=1, alpha=.5)
-    # plt.plot([0,0], [-(max_difference+1000), max_difference+1000], color='black', lw=1, alpha=.5)
-
     plt.xlim(0, .45)
     plt.ylim(0, 1)
 
     plt.title(plotname, fontsize=13)
     plt.legend(loc=2, fontsize=11)
     plt.tight_layout()
-    _save_or_show(plotpath, plotname.replace('\n', ' - '))
+    sutils.save_or_show(plotpath, plotname.replace('\n', ' - '), exten=extension)
 
 
 
 def intersect_sets(majiq1, majiq2):
     """Find common names and return their psi values in 2 lists"""
-    names1 = [m[1] for m in majiq1[1]]
-    names2 = [m[1] for m in majiq2[1]]
+    names1 = [m.get_id() for m in majiq1]
+    names2 = [m.get_id() for m in majiq2]
     common_names = set(names1).intersection(set(names2))
-    return np.array(majiq1[0])[np.array([name in common_names for name in names1])], np.array(majiq2[0])[np.array([name in common_names for name in names2])], np.array(majiq1[1])[np.array([name in common_names for name in names1])], np.array(majiq2[1])[np.array([name in common_names for name in names2])]
+    return  np.array([mm.get_bins() for mm in majiq1])[np.array([name in common_names for name in names1])], \
+            np.array([mm.get_bins() for mm in majiq2])[np.array([name in common_names for name in names2])], \
+            np.array(names1)[np.array([name in common_names for name in names1])], \
+            np.array(names2)[np.array([name in common_names for name in names2])]
 
 
 def main():
     """
-    Script for testing MAJIQ against other algorithms for PSIs across several replicates
-
-    - All LSVs 'ways' are equally considered. The order of each way within a LSV should be the same in MAJIQ and MISO.
+    PSI reproducibility plot.
+    The order of each way within a LSV should be the same in MAJIQ and MISO.
     """
+    EXTENSION_TYPES = ['png', 'pdf']
 
-    #python ~/Projects/majiq/scripts/psi_plot_barcharts.py --majiq majiq/ --miso miso/ --names Hip1 Hip2 Hip1 Hip4 Hip5 Hip6 Liv1 Liv2 Liv1 Liv4 Liv4 Liv5 --plotpath ./output/
+    # python ~/Projects/majiq/scripts/paper/figureAi.py --majiq majiq/ --miso miso/ --names Hip1 Hip2 Hip1 Hip4 Hip5 Hip6 Liv1 Liv2 Liv1 Liv4 Liv4 Liv5 --plotpath ./output/
     parser = argparse.ArgumentParser()
     parser.add_argument('--majiq', dest='majiq_dir', type=str, help='Path for MAJIQ psi pickles to evaluate')
     parser.add_argument('--miso', dest='miso_dir', type=str,  help='Path for MISO psi pickles to evaluate')
-    parser.add_argument('--nb', dest='nb_dir', required=False, type=str,  help='Path for Naive Bootstrapping psi pickles to evaluate')
-    parser.add_argument('--names', dest='rep_names', nargs='+', required=True, help='Replicate names used to identify each pair [NOTE that the order in which the names are provided defines the pairs]')
+    parser.add_argument('--mats', dest='mats_dir', type=str,  help='Path for MISO psi pickles to evaluate')
+    parser.add_argument('--names', dest='rep_names', nargs='+', required=True, help='Replicate names used to identify each pair [NOTE: the order in which the names are provided defines the pairs]')
+    parser.add_argument('--nb', dest='nb_dir', type=str,  help='Path for Naive Bootstrapping psi pickles to evaluate')
     parser.add_argument('--plotpath', default=None, help='Path to save the plot to, if not provided will show on a matplotlib popup window')
-    parser.add_argument('--builder-files-dir', dest='builder_files_dir')
-    parser.add_argument('--cached-cov', dest='cached_cov')
-    parser.add_argument('--alpha', default=0.5, help='Alpha used in MAJIQ (for naming purposes only).')
+    parser.add_argument('--extension', default=EXTENSION_TYPES[1], choices=EXTENSION_TYPES, help='Extension of the created figure (%s).' % ', '.join(EXTENSION_TYPES))
     args = parser.parse_args()
 
-    majiq_better_worse_list = []
-    majiq_num_events_list = []
-    majiq_low_med_high_diff_list = []
-    majiq_coverage_list = []
     better_worse_dict = defaultdict(list)
-
-    if args.cached_cov:
-        majiq_coverage_list = pickle.load(open(args.cached_cov, 'r'))
-
     majiq_files = []
     miso_files = []
-    foo_dict = {
-        'Hip1': 'Hippocampus1',
-        'Hip2': 'Hippocampus2',
-        'Liv1': 'Liver1',
-        'Liv3': 'Liver3',
-        'Hip4': 'Hippocampus4',
-        'Hip5': 'Hippocampus5',
-        'Liv4': 'Liver4',
-        'Liv5': 'Liver5',
-        'Spl1': 'Spleen1',
-        'Spl2': 'Spleen2',
 
-    }
     for rep_name in args.rep_names:
-        # majiq_files.extend(utils_scripts.list_files_or_dir([args.majiq_dir], suffix='majiq_psi.pickle', containing=foo_dict[rep_name])) #psigroup.pickle #'psigroup.pickle'
-        majiq_files.extend(utils_scripts.list_files_or_dir([args.majiq_dir], suffix='psigroup.pickle', containing=rep_name)) #psigroup.pickle #
+        majiq_files.extend(utils_scripts.list_files_or_dir([args.majiq_dir], suffix='psigroup.pickle', containing=rep_name))
         miso_files.extend(utils_scripts.list_files_or_dir([args.miso_dir], suffix='miso_summary', containing=rep_name))
 
     for ii, majiq_file in enumerate(majiq_files):
         if ii % 2:
             majiq1 = pickle.load(open(majiq_files[ii-1]))
             majiq2 = pickle.load(open(majiq_file))
-            print "Events in MAJIQ: rep1=%d; rep2=%d" % (len(majiq1[1]), len(majiq2[1]))
-            psi_met1_rep1, psi_met1_rep2, majiq1_names, majiq2_names = intersect_sets(majiq1, majiq2)
-            # psi_met1_rep2 = psivalues[0]
+            print "Events in MAJIQ: rep1=%d; rep2=%d" % (len(majiq1.lsvs), len(majiq2.lsvs))
+            psi_met1_rep1, psi_met1_rep2, majiq1_names, majiq2_names = intersect_sets(majiq1.lsvs, majiq2.lsvs)
             psi_names_met1 = defaultdict()
-
             print "Events after intersection in MAJIQ: rep1=%d; rep2=%d" % (len(psi_met1_rep1), len(psi_met1_rep2))
             # Discard LSVs with only one PSI
             for i, psis_lsv_met1 in enumerate(psi_met1_rep1):
                 if len(psis_lsv_met1) > 1 or len(psi_met1_rep2[i]) > 1:
                     continue
-                # if majiq2[1][i][2] not in LSV_TYPES_DICT.keys():
-                #     continue
-                psi_names_met1[majiq2_names[i][1]] = i
+                psi_names_met1[majiq2_names[i]] = i
 
             # Method1 (MAJIQ) psi scores
             psi_list1_met1 = []
@@ -553,43 +348,18 @@ def main():
                         print "LSV %s is in MAJIQ but not in MISO!" % e
                         del psi_names_met1[psi_name]
                         continue
-                        # if len(miso_psis_values) < 2:
-                        #     del majiq_psi_names[psi_name]
-                        #     continue
-
-                    # if len(miso_psis_values) == 1:
-                    #     miso_psis_values.append(1.0 - miso_psis_values[0])
                     miso_psis.extend(miso_psis_values)
 
                 psi_lists_met2.append(miso_psis)
 
             print "Events after intersection of MAJIQ and MISO: %d" % len(psi_names_met1.keys())
             for psi_name in sorted(psi_names_met1.keys()):
-                # for j, psi_lsv in enumerate(psi_met1_rep1[psi_names_met1[psi_name]]):
-                #     psi_list1_met1.append(sum(psi_lsv*analysis.psi.BINS_CENTER))
-                #     psi_list2_met1.append(sum(psi_met1_rep2[psi_names_met1[psi_name]][j]*analysis.psi.BINS_CENTER))
                 psi_list1_met1.append(sum(psi_met1_rep1[psi_names_met1[psi_name]][0]*analysis.psi.BINS_CENTER))
                 psi_list2_met1.append(sum(psi_met1_rep2[psi_names_met1[psi_name]][0]*analysis.psi.BINS_CENTER))
-
-            # lo_me_hi_mat, num_events, lo_med_high_diff, suspicous_guys = get_low_med_high_cov_psi(psi_list1_met1, psi_list2_met1, psi_lists_met2[0], psi_lists_met2[1], np.array(coverage_list))
-            # lo_me_hi_mat, num_events, lo_med_high_diff = get_low_med_high_cov(psi_list1_met1, psi_list2_met1, psi_lists_met2[0], psi_lists_met2[1], np.array(coverage_list))
-            # lo_me_hi_mat, num_events, lo_med_high_diff = get_low_med_high_psis(psi_list1_met1, psi_list2_met1, psi_lists_met2[0], psi_lists_met2[1])
-            # pickle.dump(np.array(psi_names_met1.keys())[suspicous_guys], open('suspicious.pkl', 'w'))
-            # for sus_guy in np.array(psi_names_met1.keys())[suspicous_guys]:
-            #     print str(sus_guy).split(':')[0]
-
             better_worse_dict[majiq_vs].append(-calculate_ead_simple(psi_list1_met1, psi_list2_met1) +  calculate_ead_simple(psi_lists_met2[0], psi_lists_met2[1]))
-            # majiq_better_worse_list.append(lo_me_hi_mat)
-    #         majiq_num_events_list.append(num_events)
-    #         majiq_low_med_high_diff_list.append(lo_med_high_diff)
-    #
-    # if not args.cached_cov:
-    #     pickle.dump(majiq_coverage_list, open('coverage_tmp.pickle', 'w'))
 
-    plot_delta_expected_majiq_others(better_worse_dict, args.rep_names, args.plotpath)
-    # plot_delta_expected_method1Vsmethod2(majiq_better_worse_list, args.rep_names, args.plotpath)
-    # plot_delta_bars_percentages(np.array(majiq_better_worse_list), majiq_num_events_list, np.array(majiq_low_med_high_diff_list), args.rep_names, args.plotpath, is_coverage=True)
-    # plot_delta_bars_perc_all_in_grid(np.array(majiq_better_worse_list), majiq_num_events_list, np.array(majiq_low_med_high_diff_list), args.replica_names, plotpath=args.plotpath, alpha=args.alpha)
+    plot_delta_expected_majiq_others(better_worse_dict, args.rep_names, args.plotpath, extension=args.extension)
+
 
 if __name__ == '__main__':
     main()

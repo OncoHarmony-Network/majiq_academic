@@ -2,7 +2,7 @@
     fill: grey;
     fill-opacity: .3;
     stroke: black;
-    stroke-lineca: round;
+/*    stroke-lineca: round;*/
     stroke-linejoin: round;
     alpha: 9;
 }
@@ -13,12 +13,12 @@
 
 }
 
-.exon.novel, .intronret{
+.exon.novel, .intronret.novel{
     stroke:green;
     fill: green;
 }
 
-.exon.missing{
+.exon.missing, .intronret.missing{
     stroke:black;
     stroke-dasharray: 5,2;
     fill:none;
@@ -58,11 +58,11 @@
     stroke:red;
 }
 
-.ssite3.novel, .ssite5.novel, .junction.novel, .intronret.novel, .irlines.novel{
+.ssite3.novel, .ssite5.novel, .junction.novel, .irlines.novel{
     stroke:green;
 }
 
-.ssite3.missing, .ssite5.missing, .junction.missing, .intronret.missing{
+.ssite3.missing, .ssite5.missing, .junction.missing{
     stroke:grey;
     stroke-width:1;
     stroke-dasharray: 5,2;

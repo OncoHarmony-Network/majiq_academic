@@ -1,5 +1,9 @@
 from matplotlib import use
+from voila.vlsv import collapse_matrix
+
 use('Agg')
+from matplotlib import rcParams
+rcParams.update({'font.size': 10})
 from collections import defaultdict
 import cPickle as pickle
 import numpy as np
@@ -8,14 +12,19 @@ import os
 import matplotlib.pyplot as pyplot
 import scripts.utils
 import colorbrewer as cb
-from matplotlib import rcParams
-rcParams.update({'font.size': 10})
+from scipy.stats import pearsonr
 
 
 __author__ = 'abarrera'
 
+def get_color(tissue):
+    colors_dict = {'rest_stim': '#%02x%02x%02x' % cb.Paired[10][-1],
+               'cer_liv': '#%02x%02x%02x' % cb.Paired[10][-3]
+               }
+    return colors_dict[tissue]
 
-def scatterplot_rtpcr_majiq_miso(rt_pcr, majiq, miso, cov, plotpath, pcr_majiq_extra=None, pcr_miso_extra=None, majiq_extra=None, miso_extra=None, cov_majiq_extra=None, cov_miso_extra=None):
+
+def scatterplot_rtpcr_majiq_miso(rt_pcr, majiq, miso, cov, plotpath, pcr_majiq_extra=None, pcr_miso_extra=None, majiq_extra=None, miso_extra=None):
     #figure out how many groups of events exist
 
     # majiq_rest_yerr = [var_expected_psi(dis) for dis in rt_pcr_majiq[0]]
@@ -36,10 +45,12 @@ def scatterplot_rtpcr_majiq_miso(rt_pcr, majiq, miso, cov, plotpath, pcr_majiq_e
 
     fit = np.polyfit(np.append(majiq, majiq_extra), np.append(rt_pcr, np.array(pcr_majiq_extra)), 1)
     fit_fn = np.poly1d(fit)  # fit_fn is now a function which takes in x and returns an estimate for y
-    axx[0][0].plot(np.append(majiq, majiq_extra), fit_fn(np.append(majiq, majiq_extra)), '--k')
 
-    axx[0][0].plot(majiq, rt_pcr, '.', color='r', label='Unstm Vs Stim')
-    axx[0][0].plot(majiq_extra, pcr_majiq_extra, 'd', color='#%02x%02x%02x' % cb.Dark2[4][2], label='Hogenesch Cer Vs Liv')
+    axx[0][0].plot(np.append(majiq, majiq_extra), fit_fn(np.append(majiq, majiq_extra)), '--k')
+    axx[0][0].plot(majiq, rt_pcr, '.', color=get_color('rest_stim'), label='Unstim Vs Stim')
+    axx[0][0].plot(majiq_extra, pcr_majiq_extra, 'd', color=get_color('cer_liv'), label='Hogenesch Cer Vs Liv')
+    pearson_r = pearsonr(np.append(majiq, majiq_extra), np.append(rt_pcr, pcr_majiq_extra))[0]
+    axx[0][0].text(-.9, .7, 'R=%.2f' % pearson_r, fontsize=14)
 
 
     axx[0][0].set_xlabel('MAJIQ')
@@ -55,8 +66,10 @@ def scatterplot_rtpcr_majiq_miso(rt_pcr, majiq, miso, cov, plotpath, pcr_majiq_e
 
     axx[1][0].plot(np.append(miso, miso_extra), fit_fn(np.append(miso, miso_extra)), '--k')
     axx[1][0].plot(diagonal, diagonal, '--', color="#cccccc")
-    axx[1][0].plot(miso, rt_pcr, '.', color='r', label='Unstm Vs Stim')
-    axx[1][0].plot(miso_extra, pcr_miso_extra, 'd', color='#%02x%02x%02x' % cb.Dark2[4][2], label='Hogenesch Cer Vs Liv')
+    axx[1][0].plot(miso, rt_pcr, '.', color=get_color('rest_stim'), label='Unstim Vs Stim')
+    axx[1][0].plot(miso_extra, pcr_miso_extra, 'd', color=get_color('cer_liv'), label='Hogenesch Cer Vs Liv')
+    pearson_r = pearsonr(np.append(miso, miso_extra), np.append(rt_pcr, pcr_miso_extra))[0]
+    axx[1][0].text(-.9, .7, 'R=%.2f' % pearson_r, fontsize=14)
 
 
     axx[1][0].set_xlabel('MISO')
@@ -73,11 +86,13 @@ def scatterplot_rtpcr_majiq_miso(rt_pcr, majiq, miso, cov, plotpath, pcr_majiq_e
 
     axx[0][1].plot(majiq, fit_fn(majiq), '--k')
     axx[0][1].plot(diagonal, diagonal, '--', color="#cccccc")
-    axx[0][1].plot(majiq, rt_pcr, '.', color='r', label='Unstm Vs Stim')
+    axx[0][1].plot(majiq, rt_pcr, '.', color=get_color('rest_stim'), label='Unstim Vs Stim')
+    pearson_r = pearsonr(majiq, rt_pcr)[0]
+    axx[0][1].text(-.9, .7, 'R=%.2f' % pearson_r, fontsize=14)
 
     axx[0][1].set_xlabel('MAJIQ')
     axx[0][1].set_ylabel('RT-PCR')
-    axx[0][1].set_title('Unstm Vs Stim (N=%d)' % len(majiq))
+    axx[0][1].set_title('Unstim Vs Stim (N=%d)' % len(majiq))
     axx[0][1].set_xlim([-1, 1])
     axx[0][1].set_ylim([-1, 1])
     # axx[0][0].legend(loc=4)
@@ -86,7 +101,9 @@ def scatterplot_rtpcr_majiq_miso(rt_pcr, majiq, miso, cov, plotpath, pcr_majiq_e
     fit_fn = np.poly1d(fit)
     axx[0][2].plot(majiq_extra, fit_fn(majiq_extra), '--k')
     axx[0][2].plot(diagonal, diagonal, '--', color="#cccccc")
-    axx[0][2].plot(majiq_extra, pcr_majiq_extra, 'd', color='#%02x%02x%02x' % cb.Dark2[4][2], label='Hogenesch Cer Vs Liv')
+    axx[0][2].plot(majiq_extra, pcr_majiq_extra, 'd', color=get_color('cer_liv'), label='Hogenesch Cer Vs Liv')
+    pearson_r = pearsonr(majiq_extra, pcr_majiq_extra)[0]
+    axx[0][2].text(-.9, .7, 'R=%.2f' % pearson_r, fontsize=14)
 
 
     axx[0][2].set_xlabel('MAJIQ')
@@ -101,21 +118,26 @@ def scatterplot_rtpcr_majiq_miso(rt_pcr, majiq, miso, cov, plotpath, pcr_majiq_e
 
     axx[1][1].plot(miso, fit_fn(miso), '--k')
     axx[1][1].plot(diagonal, diagonal, '--', color="#cccccc")
-    axx[1][1].plot(miso, rt_pcr, '.', color='r', label='Unstim Vs Stim')
+    axx[1][1].plot(miso, rt_pcr, '.', color=get_color('rest_stim'), label='Unstim Vs Stim')
+    pearson_r = pearsonr(miso, rt_pcr)[0]
+    axx[1][1].text(-.9, .7, 'R=%.2f' % pearson_r, fontsize=14)
 
     axx[1][1].set_xlabel('MISO')
     axx[1][1].set_ylabel('RT-PCR')
-    axx[1][1].set_title('Untim Vs Stim (N=%d)' % len(miso))
+    axx[1][1].set_title('Unstim Vs Stim (N=%d)' % len(miso))
     axx[1][1].set_xlim([-1, 1])
     axx[1][1].set_ylim([-1, 1])
     # axx[1][0].legend(loc=4)
 
 
-    axx[1][2].plot(diagonal, diagonal, '--', color="#cccccc")
-    axx[1][2].plot(miso_extra, pcr_miso_extra, 'd', color='#%02x%02x%02x' % cb.Dark2[4][2], label='Hogenesch Cer Vs Liv')
     fit = np.polyfit(miso_extra, pcr_miso_extra, 1)
     fit_fn = np.poly1d(fit)
     axx[1][2].plot(miso_extra, fit_fn(miso_extra), '--k')
+    axx[1][2].plot(diagonal, diagonal, '--', color="#cccccc")
+    axx[1][2].plot(miso_extra, pcr_miso_extra, 'd', color=get_color('cer_liv'), label='Hogenesch Cer Vs Liv')
+    pearson_r = pearsonr(miso_extra, pcr_miso_extra)[0]
+    axx[1][2].text(-.9, .7, 'R=%.2f' % pearson_r, fontsize=14)
+
 
 
     axx[1][2].set_xlabel('MISO')
@@ -170,6 +192,9 @@ def scatterplot_rtpcr_simple(rt_pcr, method_epsis, cov,  plotpath, rt_pcr_extra=
 
     pyplot.plot(np.concatenate((method_epsis, method_extra)), fit_fn(np.concatenate((method_epsis, method_extra))), '--k')
     pyplot.plot(diagonal, diagonal, '--', color="#cccccc")
+    pearson_r = pearsonr(np.append(method_epsis[rt_pcr_chg_mask], method_extra[rt_pcr_extra_chg_mask]), np.append(rt_pcr[rt_pcr_chg_mask], rt_pcr_extra[rt_pcr_extra_chg_mask]))[0]
+    pyplot.text(-.9, .8, 'R=%.2f%%' % pearson_r, fontsize=14)
+
     for cov_idx, cov_th in enumerate(cov_thres[1:]):
         cov_mask = (cov > cov_thres[cov_idx]) & (cov <= cov_th)
         cov_extra_mask = (cov_extra > cov_thres[cov_idx]) & (cov_extra <= cov_th)
@@ -192,16 +217,6 @@ def barchart_expected(expected_psis, plotpath, mfile):
     scripts.utils.save_or_show(plotpath, name +'_expected_dist')
 
 
-def collapse_matrix(matrix):
-    """Collapse the diagonals probabilities in 1-D and return them"""
-    collapse = []
-    #FOR TEST matrix = array([[0, 1, 2, 3, 4, 500], [0, 1, 2, 3, 4, 5], [0, 1, 2, 3, 4, 5], [100, 1, 2, 3, 4, 5], ])
-
-    matrix_corner = matrix.shape[0]+1
-    for i in xrange(-matrix_corner, matrix_corner):
-        collapse.append(np.diagonal(matrix, offset=i).sum())
-
-    return np.array(collapse)
 
 
 def get_expected_dpsi(bins):
@@ -554,9 +569,9 @@ def main():
 
     kr_cov, foo = load_coverage(kr_cov, [], args.clean_reads, dataset='kr')
 
-    # scatterplot_rtpcr_majiq_miso(np.array(kr_rt_pcr_dpsi), np.array(kr_majiq_dpsi), np.array(kr_miso_dpsi), np.array(kr_cov), args.plotpath,
-    #                              pcr_majiq_extra=np.array(lrtpcr_majiq_extra), pcr_miso_extra=np.array(lrtpcr_miso_extra), majiq_extra=np.array(lmajiq_extra),
-    #                              miso_extra=np.array(lmiso_extra), lcov_majiq_extra=lcov_majiq_extra, lcov_miso_extra=lcov_miso_extra)
+    scatterplot_rtpcr_majiq_miso(np.array(kr_rt_pcr_dpsi), np.array(kr_majiq_dpsi), np.array(kr_miso_dpsi), np.array(kr_cov), args.plotpath,
+                                 pcr_majiq_extra=np.array(lrtpcr_majiq_extra), pcr_miso_extra=np.array(lrtpcr_miso_extra), majiq_extra=np.array(lmajiq_extra),
+                                 miso_extra=np.array(lmiso_extra))
     scatterplot_rtpcr_simple(np.array(kr_rt_pcr_dpsi), np.array(kr_majiq_dpsi), np.array(kr_cov), args.plotpath, rt_pcr_extra=np.array(lrtpcr_majiq_extra),
                              method_extra=np.array(lmajiq_extra), cov_extra=np.array(lcov_majiq_extra), plotname='dpsi_majiq_only', met_name='MAJIQ')
     scatterplot_rtpcr_simple(np.array(kr_rt_pcr_dpsi), np.array(kr_miso_dpsi), np.array(kr_cov), args.plotpath, rt_pcr_extra=np.array(lrtpcr_miso_extra),

@@ -1,0 +1,38 @@
+package:
+    name: majiq
+    version: 0.8.YeoLab
+
+source:
+    #git_tag: master
+    #git_url: https://jordi_vaquero@bitbucket.org/biociphers/majiq.git
+    path: /home/jordi/working/majiq
+
+requirements:
+    build:
+        - python
+        - jinja2
+        - numpy
+        - scipy
+        - matplotlib
+        - pysam
+        - setuptools
+    run:
+        - python
+        - jinja2
+        - numpy
+        - scipy
+        - matplotlib
+        - pysam
+        - setuptools
+
+build:
+    preserve_egg_dir: True
+
+    entry_points:
+        - majiq = majiq.run_majiq:main
+        - voila = voila.run_voila:main
+
+about:
+    home: http://www.biociphers.org
+    license: GPL3
+    summary: "MAJIQ"

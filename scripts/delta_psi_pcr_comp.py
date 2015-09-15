@@ -8,6 +8,7 @@ import matplotlib.pyplot as ppl
 import numpy.ma as ma
 import scripts.utils
 from scripts.utils import coverage_from_file
+from voila.vlsv import collapse_matrix
 
 __author__ = 'abarrera'
 
@@ -302,15 +303,6 @@ def barchart_expected(expected_psis, plotpath, mfile):
     ppl.hist(expected_psis, bins=40)
     name = os.path.basename(mfile)
     scripts.utils.save_or_show(plotpath, name +'_expected_dist')
-
-
-def collapse_matrix(matrix):
-    "Collapse the diagonals probabilities in 1-D and return them"
-    collapsed = []
-    matrix_corner = matrix.shape[0]
-    for i in xrange(-matrix_corner, matrix_corner):
-        collapsed.append(np.diagonal(matrix, offset=i).sum())
-    return np.array(collapsed)
 
 
 def delta_expected_psi(bins, file_name):

@@ -4,7 +4,7 @@ from matplotlib import use
 from numpy.ma import masked_less
 
 from scripts.utils import save_or_show
-from src import polyfitnb
+from majiq.src import polyfitnb
 
 
 use('Agg', warn=False)

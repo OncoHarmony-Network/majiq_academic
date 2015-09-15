@@ -2,12 +2,14 @@
 
 from matplotlib import use
 
+from scripts import src as majiq_io
+
+
 use('Agg')
 
 import numpy as np
 import argparse
-import src.filter as majiq_filter
-import src.io as majiq_io
+import majiq.src.filter as majiq_filter
 import scipy.stats
 import pickle
 from random import choice

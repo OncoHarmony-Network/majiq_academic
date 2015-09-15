@@ -8,6 +8,7 @@ import os
 import matplotlib.pyplot as pyplot
 import scripts.utils
 import colorbrewer as cb
+from scipy.stats.stats import pearsonr
 from matplotlib import rcParams
 rcParams.update({'font.size': 10})
 
@@ -47,12 +48,11 @@ def scatterplot_rtpcr_majiq_miso(rt_pcr_majiq, rt_pcr_miso, majiq, miso, plotpat
     fit = np.polyfit(np.append(majiq_all, majiq_extra_all), np.append(rt_pcr_majiq_all, np.array(pcr_majiq_extra_all)), 1)
     fit_fn = np.poly1d(fit) # fit_fn is now a function which takes in x and returns an estimate for y
 
-    from scipy.stats.stats import pearsonr
 
     pearson_majiq = pearsonr(np.append(majiq_all, majiq_extra_all), np.append(rt_pcr_majiq_all, pcr_majiq_extra_all))[0]
-    print 'MAJIQ R=%.2f%%' % pearson_majiq
+    print 'MAJIQ R=%.2f' % pearson_majiq
 
-    axx[0][0].text(.2, .9, 'R=%.2f%%' % (pearson_majiq), fontsize=16)
+    axx[0][0].text(.1, .9, 'R=%.2f' % (pearson_majiq), fontsize=14)
     axx[0][0].plot(np.append(majiq_all, majiq_extra_all), fit_fn(np.append(majiq_all, majiq_extra_all)), '--k')
     axx[0][0].plot(diagonal, diagonal, '--', color="#cccccc")
     axx[0][0].plot(majiq[0], rt_pcr_majiq[0], '.', color=get_color('rest'), label='Resting')
@@ -72,9 +72,9 @@ def scatterplot_rtpcr_majiq_miso(rt_pcr_majiq, rt_pcr_miso, majiq, miso, plotpat
     fit_fn = np.poly1d(fit) # fit_fn is now a function which takes in x and returns an estimate for y
 
     pearson_miso = pearsonr(np.append(miso_all, miso_extra_all), np.append(rt_pcr_miso_all, pcr_miso_extra_all))[0]
-    print 'MISO R=%.2f%%' % pearson_miso
+    print 'MISO R=%.2f' % pearson_miso
 
-    axx[1][0].text(.2, .9, 'R=%.2f%%' % (pearson_miso), fontsize=16)
+    axx[1][0].text(.1, .9, 'R=%.2f' % (pearson_miso), fontsize=14)
     axx[1][0].plot(np.append(miso_all, miso_extra_all), fit_fn(np.append(miso_all, miso_extra_all)), '--k')
     axx[1][0].plot(diagonal, diagonal, '--', color="#cccccc")
     axx[1][0].plot(miso[0], rt_pcr_miso[0], '.', color=get_color('rest'), label='Resting')
@@ -94,18 +94,22 @@ def scatterplot_rtpcr_majiq_miso(rt_pcr_majiq, rt_pcr_miso, majiq, miso, plotpat
     fit = np.polyfit(majiq[0], rt_pcr_majiq[0], 1)
     fit_fn = np.poly1d(fit) # fit_fn is now a function which takes in x and returns an estimate for y
 
+    pearson_r = pearsonr(majiq[0], rt_pcr_majiq[0])[0]
+    axx[0][1].text(.1, .9, 'R=%.2f' % (pearson_r), fontsize=14)
     axx[0][1].plot(majiq[0], fit_fn(majiq[0]), '--k')
     axx[0][1].plot(diagonal, diagonal, '--', color="#cccccc")
     axx[0][1].plot(majiq[0], rt_pcr_majiq[0], '.', color=get_color('rest'), label='Resting')
 
     axx[0][1].set_xlabel('MAJIQ')
     axx[0][1].set_ylabel('RT-PCR')
-    axx[0][1].set_title('Resting (N=%d)' % len(majiq[0]))
+    axx[0][1].set_title('Unstim (N=%d)' % len(majiq[0]))
     axx[0][1].set_ylim([0,1])
     # axx[0][0].legend(loc=4)
 
     fit = np.polyfit(majiq[1], rt_pcr_majiq[1], 1)
     fit_fn = np.poly1d(fit)
+    pearson_r = pearsonr(majiq[1], rt_pcr_majiq[1])[0]
+    axx[0][2].text(.1, .9, 'R=%.2f' % (pearson_r), fontsize=14)
     axx[0][2].plot(majiq[1], fit_fn(majiq[1]), '--k')
     axx[0][2].plot(diagonal, diagonal, '--', color="#cccccc")
     axx[0][2].plot(majiq[1], rt_pcr_majiq[1], '.', color=get_color('stim'), label='Stimulating')
@@ -113,12 +117,14 @@ def scatterplot_rtpcr_majiq_miso(rt_pcr_majiq, rt_pcr_miso, majiq, miso, plotpat
 
     axx[0][2].set_xlabel('MAJIQ')
     axx[0][2].set_ylabel('RT-PCR')
-    axx[0][2].set_title('Stimulating (N=%d)' % len(majiq[1]))
+    axx[0][2].set_title('Stim (N=%d)' % len(majiq[1]))
     axx[0][2].set_ylim([0,1])
     # axx[0][1].legend(loc=4)
 
     fit = np.polyfit(majiq_extra[0], pcr_majiq_extra[0], 1)
     fit_fn = np.poly1d(fit)
+    pearson_r = pearsonr(majiq_extra[0], pcr_majiq_extra[0])[0]
+    axx[0][3].text(.1, .9, 'R=%.2f' % (pearson_r), fontsize=14)
     axx[0][3].plot(majiq_extra[0], fit_fn(majiq_extra[0]), '--k')
     axx[0][3].plot(diagonal, diagonal, '--', color="#cccccc")
     axx[0][3].plot(majiq_extra[0], pcr_majiq_extra[0], 'd', color=get_color('cer'), label='Cerebellum')
@@ -132,6 +138,8 @@ def scatterplot_rtpcr_majiq_miso(rt_pcr_majiq, rt_pcr_miso, majiq, miso, plotpat
 
     fit = np.polyfit(majiq_extra[1], pcr_majiq_extra[1], 1)
     fit_fn = np.poly1d(fit)
+    pearson_r = pearsonr(majiq_extra[1], pcr_majiq_extra[1])[0]
+    axx[0][4].text(.1, .9, 'R=%.2f' % (pearson_r), fontsize=14)
     axx[0][4].plot(majiq_extra[1], fit_fn(majiq_extra[1]), '--k')
     axx[0][4].plot(diagonal, diagonal, '--', color="#cccccc")
     axx[0][4].plot(majiq_extra[1], pcr_majiq_extra[1], 'd', color=get_color('liv'), label='Liver')
@@ -146,30 +154,36 @@ def scatterplot_rtpcr_majiq_miso(rt_pcr_majiq, rt_pcr_miso, majiq, miso, plotpat
     fit = np.polyfit(miso[0], rt_pcr_miso[0], 1)
     fit_fn = np.poly1d(fit) # fit_fn is now a function which takes in x and returns an estimate for y
 
+    pearson_r = pearsonr(miso[0], rt_pcr_miso[0])[0]
+    axx[1][1].text(.1, .9, 'R=%.2f' % (pearson_r), fontsize=14)
     axx[1][1].plot(miso[0], fit_fn(miso[0]), '--k')
     axx[1][1].plot(diagonal, diagonal, '--', color="#cccccc")
     axx[1][1].plot(miso[0], rt_pcr_miso[0], '.', color=get_color('rest'), label='Resting')
 
     axx[1][1].set_xlabel('MISO')
     axx[1][1].set_ylabel('RT-PCR')
-    axx[1][1].set_title('Resting (N=%d)' % len(miso[0]))
+    axx[1][1].set_title('Unstim (N=%d)' % len(miso[0]))
     axx[1][1].set_ylim([0,1])
     # axx[1][0].legend(loc=4)
 
     fit = np.polyfit(miso[1], rt_pcr_miso[1], 1)
     fit_fn = np.poly1d(fit)
+    pearson_r = pearsonr(miso[1], rt_pcr_miso[1])[0]
+    axx[1][2].text(.1, .9, 'R=%.2f' % (pearson_r), fontsize=14)
     axx[1][2].plot(diagonal, diagonal, '--', color="#cccccc")
     axx[1][2].plot(miso[1], rt_pcr_miso[1], '.', color=get_color('stim'), label='Stimulating')
     axx[1][2].plot(miso[1], fit_fn(miso[1]), '--k')
 
     axx[1][2].set_xlabel('MISO')
     axx[1][2].set_ylabel('RT-PCR')
-    axx[1][2].set_title('Stimulating (N=%d)' % len(miso[1]))
+    axx[1][2].set_title('Stim (N=%d)' % len(miso[1]))
     axx[1][2].set_ylim([0,1])
     # axx[1][1].legend(loc=4)
 
     fit = np.polyfit(miso_extra[0], pcr_miso_extra[0], 1)
     fit_fn = np.poly1d(fit)
+    pearson_r = pearsonr(miso_extra[0], pcr_miso_extra[0])[0]
+    axx[1][3].text(.1, .9, 'R=%.2f' % (pearson_r), fontsize=14)
     axx[1][3].plot(diagonal, diagonal, '--', color="#cccccc")
     axx[1][3].plot(miso_extra[0], pcr_miso_extra[0], 'd', color=get_color('cer'), label='Cerebellum')
     axx[1][3].plot(miso_extra[0], fit_fn(miso_extra[0]), '--k')
@@ -182,6 +196,8 @@ def scatterplot_rtpcr_majiq_miso(rt_pcr_majiq, rt_pcr_miso, majiq, miso, plotpat
 
     fit = np.polyfit(miso_extra[1], pcr_miso_extra[1], 1)
     fit_fn = np.poly1d(fit)
+    pearson_r = pearsonr(miso_extra[1], pcr_miso_extra[1])[0]
+    axx[1][4].text(.1, .9, 'R=%.2f' % (pearson_r), fontsize=14)
     axx[1][4].plot(diagonal, diagonal, '--', color="#cccccc")
     axx[1][4].plot(miso_extra[1], pcr_miso_extra[1], 'd', color=get_color('liv'), label='Liver')
     axx[1][4].plot(miso_extra[1], fit_fn(miso_extra[1]), '--k')

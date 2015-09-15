@@ -1,11 +1,13 @@
 from matplotlib import use
 
+from scripts import src as polyfitnb
+
+
 use('Agg', warn=False)
 from pylab import *
 import numpy as np
 from scipy.stats import pearsonr
-import src.sample
-import src.polyfitnb as polyfitnb
+import majiq.src.sample
 import os
 import cPickle as pickle
 
@@ -88,7 +90,7 @@ def _trimborders(junction):
 def sample_from_junctions(junctions, m, k, discardzeros=False, nb=False, trimborder=False, fit_func=None,
                           poisson=False):
     if nb:
-        return src.sample.sample_from_junctions(junctions, m, k, discardzeros=discardzeros, trimborder=trimborder,
+        return majiq.src.sample.sample_from_junctions(junctions, m, k, discardzeros=discardzeros, trimborder=trimborder,
                                                 fitted_one_over_r=fit_func)
 
     # if parameters:
@@ -107,7 +109,7 @@ def sample_from_junctions(junctions, m, k, discardzeros=False, nb=False, trimbor
         junction = junction[junction > -EPSILON]  #discard the -1 (or lower) positions regardless of the dzero treatment
 
         if trimborder:
-            junction = src.sample._trimborders(junction,
+            junction = majiq.src.sample._trimborders(junction,
                                                trimborder)  #trim the zeroes from the borders regardless of the discardzeros flag
         if discardzeros:
             junction = junction[junction != 0]  #a junction array without the zeroes

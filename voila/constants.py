@@ -5,6 +5,7 @@ ANALYSIS_DELTAPSI = 'deltapsi'
 ANALYSIS_DELTAPSI_GENE = 'deltapsi-gene'
 LSV_THUMBNAILS = 'lsv-thumbnails'
 SPLICE_GRAPHS = 'splicegraphs'
+COND_TABLE = 'cond-table'
 
 # LSV Graphics
 JUNCTION_TYPE_DB_RNASEQ = 0
