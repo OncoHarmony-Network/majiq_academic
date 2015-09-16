@@ -41,11 +41,6 @@ def plot_mappability_zeros(junctions, plotpath, numzeros, plotname):
     _save_or_show(plotpath, plotname)
 
 
-def score_ecdf(ecdf):
-    "Give a score to a ecdf calculating the deviation from the 45 degree line"
-    return sum(abs(np.linspace(0, 1, num=len(ecdf)) - ecdf))
-
-
 def plot_negbinomial_fit(mean_junc, std_junc, fit_function, plotpath, plotname):
     # plot the fit of the line
     plt.xlabel("Mean")
@@ -55,6 +50,13 @@ def plot_negbinomial_fit(mean_junc, std_junc, fit_function, plotpath, plotname):
     plt.plot(mean_junc, std_junc, '*')  # the mean and std for e very junction that passes the filter
     plt.plot(mean_junc, fit_function(mean_junc), '-r')
     _save_or_show(plotpath, plotname)
+
+
+def score_ecdf(ecdf):
+    """
+    Give a score to a ecdf calculating the deviation from the 45 degree line
+    """
+    return sum(abs(np.linspace(0, 1, num=len(ecdf)) - ecdf))
 
 
 def __calc_nbin_p(r, mu):
@@ -70,14 +72,6 @@ def sample_over_nb(one_over_r, mu, num_samples):
     else:
         sampl = poisson.rvs(mu, size=num_samples)
     return sampl
-
-
-def get_ztnbin_pval(one_over_r, mu, x):
-    r = 1 / one_over_r
-    p = __calc_nbin_p(r, mu)
-    nbcdf = nbinom.cdf(x, r, p)  # + nbinom.pmf(x, r, p)
-    ztnb_cdf = (nbcdf - nbinom.pmf(0, r, p)) / (1 - nbinom.pmf(0, r, p))
-    return 1 - ztnb_cdf
 
 
 def get_negbinom_pval(one_over_r, mu, x):
@@ -107,24 +101,6 @@ def calc_pvalues(junctions, one_over_r, indices_list=None):
         # pval = get_ztnbin_pval(one_over_r, mu, jpos)
         pvalues.append(pval)
 
-    return pvalues
-
-
-def calc_pvalues_poisson(junctions, one_over_r, indices_list=None):
-    pvalues = []
-    for i, junc in enumerate(junctions):
-
-        # get mu and jpos
-        if indices_list is None:
-            junc = junc[junc.nonzero()]
-            jpos = random.choice(junc)
-        else:
-            jpos = junc[indices_list[i]]
-
-        ljunc = len(junc.nonzero()[0])
-        mu = float(junc.sum() - jpos) / float(ljunc - 1)
-        pval = 1 - poisson.cdf(jpos, mu)
-        pvalues.append(pval)
     return pvalues
 
 
@@ -232,24 +208,14 @@ def fit_nb(junctionl, outpath, plotpath, nbdisp=0.1, logger=None):
             ecdf = get_ecdf(pvalues)
             score = score_ecdf(ecdf)
 
-    poisson_pvals = calc_pvalues_poisson(junctions, indices)
-    poisson_ecdf = get_ecdf(poisson_pvals)
-    poisson_score = score_ecdf(poisson_ecdf)
-
-    plot_fitting(ecdf, plotpath, extra=[poisson_ecdf], title="Corrected ECDF 1\_r %s" % one_over_r,
-                 title_extra=['Poisson %s' % poisson_score], plotname='Corrected')
+    # poisson_pvals = calc_pvalues_poisson(junctions, indices)
+    # poisson_ecdf = get_ecdf(poisson_pvals)
+    # poisson_score = score_ecdf(poisson_ecdf)
+    #
+    # plot_fitting(ecdf, plotpath, extra=[poisson_ecdf], title="Corrected ECDF 1\_r %s" % one_over_r,
+    #              title_extra=['Poisson %s' % poisson_score], plotname='Corrected')
 
     if logger:
         logger.debug("Calculating the nb_r and nb_p with the new fitted function")
 
     return one_over_r
-
-
-def test_neg_binom(mu, r, neg_p=False):
-    p = __calc_nbin_p(mu, r)
-    if neg_p:
-        p = 1 - p
-    sm = nbinom.rvs(r, p, size=2000)
-    mu2 = sm.mean()
-    print 'KK', mu, mu2
-    return mu, mu2

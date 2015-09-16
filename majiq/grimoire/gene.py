@@ -2,10 +2,11 @@
 import numpy as np
 
 from majiq.grimoire.exon import ExonTx, collapse_list_exons
-from majiq.grimoire.lsv import LSV
+from majiq.grimoire.lsv import LSV, InvalidLSV
 from majiq.grimoire.junction import Junction
 from majiq.src import config
 from majiq.src.analize import reliable_in_data
+
 
 
 class Gene:
@@ -166,6 +167,9 @@ class Gene:
         for anti_g in self.antis_gene:
             # if not self.antis_gene is None:
             gg = config.gene_tlb[anti_g]
+            cc = gg.get_coordinates()
+            if jend < cc[0] or jstart > cc[1]:
+                continue
             j_list = gg.get_all_junctions()
             for jj in j_list:
                 if not jj.is_annotated():
@@ -176,7 +180,15 @@ class Gene:
                 elif jstart == j_st and jend == j_ed:
                     res = True
                     break
-            if res:
+            if not res:
+                for ex in gg.get_exon_list():
+                    coords = ex.get_coordinates()
+                    # if jend > coords[0]:
+                    #     break
+                    if coords[0] <= jend <= coords[1] or coords[0] <= jstart <= coords[1]:
+                        res = True
+                        break
+            else:
                 break
         return res
 
@@ -344,10 +356,11 @@ class Gene:
             try:
                 ret = LSV(exon, lsv_id, jlist, lsv_type)
                 self.lsv_list.append(ret)
-            except ValueError:
+            except InvalidLSV:
                 if logger:
                     logger.info("Attempt to create LSV with wrong type or not enought junction coverage %s" %
                                 exon.get_id())
+                raise InvalidLSV
 
         # for jj in jlist:
         #     if jj.is_virtual() and logger:

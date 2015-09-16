@@ -12,10 +12,18 @@ SSOURCE = 'source'
 STARGET = 'target'
 
 
+class InvalidLSV(Exception):
+    def __init__(self, msg):
+        self.msg = msg
+
+    def __str__(self):
+        return repr(self.msg)
+
+
 class LSV(object):
     def __init__(self, exon, lsv_id, junctions, lsv_type):
         if lsv_type != SSOURCE and lsv_type != STARGET:
-            raise RuntimeError('Incorrect LSV type %s' % lsv_type)
+            raise InvalidLSV('Incorrect LSV type %s' % lsv_type)
         self.coords = exon.get_coordinates()
         self.id = lsv_id
 
@@ -29,7 +37,7 @@ class LSV(object):
                               and x.get_acceptor() is not None])
 
         if n_viable_juncs < 2:
-            raise ValueError
+            raise InvalidLSV('Not enought junctions')
         self.type = lsv_type
         self.exon = exon
 
@@ -50,7 +58,7 @@ class LSV(object):
         self.ext_type = self.set_type(junction_list, self.tlb_junc)
         if self.ext_type == 'intron':
             #print "KKKKKKKKV %s" % exon.get_gene()
-            raise ValueError
+            raise InvalidLSV('Auto junction found')
 
         juncs = []
         order = self.ext_type.split('|')[1:]

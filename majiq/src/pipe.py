@@ -1,12 +1,13 @@
-import random
 import sys
 import os
 from multiprocessing import current_process
 import pickle
 
 import scipy.misc
+
 import numpy as np
-from scipy.stats import beta
+
+from majiq.src.psi import prob_data_sample_given_psi, __get_prior_params
 
 from majiq.src.utils.utils import get_logger
 import majiq.src.sample as majiq_sample
@@ -34,57 +35,6 @@ def parallel_lsv_child_calculation(func, args, tempdir, name, chunk):
     #     sys.stdout.flush()
 
     return
-
-
-def combine_for_priormatrix(group1, group2, matched_info, num_exp):
-    res_group1 = []
-    res_group2 = []
-
-    for lidx, lsv in enumerate(matched_info):
-        idx = random.randrange(num_exp[0])
-        res_group1.append(group1[lidx][idx])
-
-        idx = random.randrange(num_exp[1])
-        res_group2.append(group2[lidx][idx])
-
-    grp1 = [res_group1, matched_info]
-    grp2 = [res_group2, matched_info]
-
-    return grp1, grp2
-
-
-def prob_data_sample_given_psi(sample, all_sample, nbins, alpha_prior, beta_prior):
-    bsize = 1.0 / float(nbins)
-    psi_border = np.arange(0, 1.01, bsize)
-    notsample = all_sample - sample
-    bincdf = [beta.cdf(xx, a=sample + alpha_prior, b=notsample + beta_prior) for xx in psi_border]
-
-    bin_test = []
-    for x in xrange(nbins):
-        val = bincdf[x + 1] - bincdf[x]
-        bin_test.append(val)
-
-    bin_test = np.array(bin_test) + 1e-300
-
-    return bin_test
-
-
-def __get_prior_params(lsvinfo, num_ways):
-    if 'i' in lsvinfo[2]:
-        alpha = 1.0 / (num_ways - 1)
-        alpha *= float(num_ways) / (num_ways + 1)
-        alpha_prior = np.array([alpha] * num_ways)
-
-        alpha_prior[-1] = 1.0 / (num_ways + 1)
-        beta_prior = 1 - alpha_prior
-    else:
-        alpha = 1.0 / num_ways
-        bta = float(num_ways - 1.0) / num_ways
-
-        alpha_prior = np.array([alpha] * num_ways)
-        beta_prior = np.array([bta] * num_ways)
-
-    return alpha_prior, beta_prior
 
 
 def __load_execution_chunk(filename, delta=None):
@@ -159,11 +109,9 @@ def calcpsi(fname, conf, logger):
                 # log(p(D_T1(m) | psi_T1)) = SUM_t1 T ( log ( P( D_t1 (m) | psi _T1)))
                 junc = [psi[xx][p_idx][m] for xx in xrange(num_exp)]
                 junc = np.array(junc)
-                all_sample = [psi[xx][yy][m].sum() for xx in xrange(num_exp) for yy in xrange(num_ways)]
-                all_sample = np.array(all_sample)
+                all_sample = np.array([psi[xx][yy][m].sum() for xx in xrange(num_exp) for yy in xrange(num_ways)])
                 data_given_psi = np.log(prob_data_sample_given_psi(junc.sum(), all_sample.sum(), nbins,
                                                                    alpha_prior[p_idx], beta_prior[p_idx]))
-
                 # normalizing
                 posterior += np.exp(data_given_psi - scipy.misc.logsumexp(data_given_psi))
 
@@ -171,11 +119,6 @@ def calcpsi(fname, conf, logger):
             if num_ways == 2:
                 break
 
-                # except Exception as e:
-                # post_psi = []
-                #     new_info = []
-                #     print "%s" % sys.exc_traceback.tb_lineno, e
-                #     sys.stdout.flush()
 
     return post_psi, new_info
 
