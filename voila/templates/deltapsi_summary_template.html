@@ -47,11 +47,11 @@
                     <div class="spliceGraphTools">
                         <select class="spliceGraphSelector" autocomplete="off">
                             {% for nsample in genes_exps_list[0] -%}
-                            {% if loop.first %}
-                            <option selected="selected" value="{{ genes_exps_list[0][nsample][gene_name][0] |to_json}}">{{ nsample }}</option>
-                            {% else %}
-                            <option value="{{ genes_exps_list[0][nsample][gene_name][0] |to_json }}">{{ nsample }}</option>
-                            {% endif %}
+                                {% if nsample | is_combined %}
+                                    <option selected="selected" value="{{ genes_exps_list[0][nsample][gene_name][0] |to_json}}">{{ nsample }}</option>
+                                {% else %}
+                                    <option value="{{ genes_exps_list[0][nsample][gene_name][0] |to_json }}">{{ nsample }}</option>
+                                {% endif %}
                             {%- endfor %}
                         </select>
                         <img class="toogleScale scaled" src="static/img/icons/solve-icon16.png" title="Change between scaled view and a view where introns are trimmed" />
@@ -68,11 +68,11 @@
                     <div class="spliceGraphTools">
                         <select class="spliceGraphSelector" autocomplete="off">
                             {% for nsample in genes_exps_list[1] -%}
-                            {% if loop.first %}
-                            <option selected="selected" value="{{ genes_exps_list[1][nsample][gene_name][0] |to_json }}">{{ nsample }}</option>
-                            {% else %}
-                            <option value="{{ genes_exps_list[1][nsample][gene_name][0] |to_json }}">{{ nsample }}</option>
-                            {% endif %}
+                                {% if nsample | is_combined %}
+                                    <option selected="selected" value="{{ genes_exps_list[1][nsample][gene_name][0] |to_json }}">{{ nsample }}</option>
+                                {% else %}
+                                    <option value="{{ genes_exps_list[1][nsample][gene_name][0] |to_json }}">{{ nsample }}</option>
+                                {% endif %}
                             {%- endfor %}
                         </select>
                         <img class="toogleScale scaled" src="static/img/icons/solve-icon16.png" title="Change between scaled view and a view where introns are trimmed" />

@@ -57,9 +57,12 @@ def render_summary(output_dir, output_html, majiq_output, type_summary, threshol
     def to_json_especial(value):
         return escape(json.dumps(value, cls=utils_voila.LsvGraphicEncoder).replace('\"', '\''))
 
+    def is_combined(spliceg_id):
+        return spliceg_id.startswith(constants.COMBINED_PREFIX)
+
 
     env = Environment(extensions=["jinja2.ext.do"], loader=FileSystemLoader(os.path.join(EXEC_DIR, "templates/")))
-    env.filters.update({'to_json': to_json,'to_json_especial': to_json_especial, 'debug': utils_voila.debug})
+    env.filters.update({'to_json': to_json,'to_json_especial': to_json_especial, 'debug': utils_voila.debug, 'is_combined': is_combined})
     template_file_name = type_summary.replace("-", "_") + "_summary_template.html"
     sum_template = env.get_template(template_file_name)
 
@@ -260,7 +263,7 @@ def parse_gene_graphics(splicegraph_flist, gene_name_list, condition_names=('gro
 
         # Combined SpliceGraph data structures
         gg_combined = defaultdict(lambda: None)
-        gg_combined_name = "ALL_%s" % condition_names[grp_i]
+        gg_combined_name = "%s%s" % (constants.COMBINED_PREFIX, condition_names[grp_i])
 
         for splice_graph_f in splice_files:
             logger.info("Loading %s." % splice_graph_f)
