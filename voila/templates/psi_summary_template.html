@@ -50,12 +50,12 @@
 
 
                 <div>
-                    <div class="spliceDiv" id="spliceDivExp1_{{ gene_index }}" data-exon-list="{{ genes_exps_list[0][genes_exps_list[0].keys()[0]][gene_name][0] }}"> {#data-exon-list="{{ genes_json[gene_name][0] }}"#}
+                    <div class="spliceDiv" id="spliceDivExp1_{{ gene_index }}" data-exon-list="{{ genes_exps_list[0][comb_spliceg_cond1][gene_name][0] }}">
                         <span class="tooltipD3"><strong>Coordinates: </strong><span class="coordsLabel">-</span>;<strong> Length: </strong><span class="lengthLabel">-;</span></span>
                         <div class="spliceGraphTools">
                             <select class="spliceGraphSelector" autocomplete="off">
                                 {% for nsample in genes_exps_list[0] -%}
-                                    {% if nsample | is_combined %}
+                                    {% if nsample == comb_spliceg_cond1 %}
                                         <option selected="selected" value="{{ genes_exps_list[0][nsample][gene_name][0] |to_json}}">{{ nsample }}</option>
                                     {% else %}
                                         <option value="{{ genes_exps_list[0][nsample][gene_name][0] |to_json }}">{{ nsample }}</option>

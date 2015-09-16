@@ -79,6 +79,12 @@ def render_summary(output_dir, output_html, majiq_output, type_summary, threshol
         summaries_subfolder = "%s/%s" % (output_dir, constants.SUMMARIES_SUBFOLDER)
         utils_voila.create_if_not_exists(summaries_subfolder)
 
+        try:
+            comb_spliceg_cond1 = [gg for gg in majiq_output['genes_exp'][0].keys() if gg.startswith(constants.COMBINED_PREFIX)][0]
+        except IndexError:
+            comb_spliceg_cond1 = majiq_output['genes_exp'][0].keys()[0]
+
+
         while count_pages*constants.MAX_GENES < len(gene_keys):
             prev_page = None
             next_page = None
@@ -100,7 +106,8 @@ def render_summary(output_dir, output_html, majiq_output, type_summary, threshol
                                                    nextPage=next_page,
                                                    namePage=name_page,
                                                    lexps=majiq_output['meta_exps'],
-                                                   genes_exps_list=majiq_output['genes_exp']
+                                                   genes_exps_list=majiq_output['genes_exp'],
+                                                   comb_spliceg_cond1=comb_spliceg_cond1
             ))
             voila_output.close()
             for g_key, glsv_list in genes_dict.iteritems():
@@ -134,6 +141,15 @@ def render_summary(output_dir, output_html, majiq_output, type_summary, threshol
         summaries_subfolder = "%s/%s" % (output_dir, constants.SUMMARIES_SUBFOLDER)
         utils_voila.create_if_not_exists(summaries_subfolder)
 
+        try:
+            comb_spliceg_cond1 = [gg for gg in majiq_output['genes_exp'][0].keys() if gg.startswith(constants.COMBINED_PREFIX)][0]
+        except IndexError:
+            comb_spliceg_cond1 = majiq_output['genes_exp'][0].keys()[0]
+        try:
+            comb_spliceg_cond2 = [gg for gg in majiq_output['genes_exp'][1].keys() if gg.startswith(constants.COMBINED_PREFIX)][0]
+        except IndexError:
+            comb_spliceg_cond2 = majiq_output['genes_exp'][1].keys()[0]
+
         while count_pages*constants.MAX_GENES < len(gene_keys):
             prev_page = None
             next_page = None
@@ -157,7 +173,9 @@ def render_summary(output_dir, output_html, majiq_output, type_summary, threshol
                                                     nextPage= next_page,
                                                     namePage= name_page,
                                                     threshold=threshold,
-                                                    lexps=majiq_output['meta_exps']
+                                                    lexps=majiq_output['meta_exps'],
+                                                    comb_spliceg_cond1=comb_spliceg_cond1,
+                                                    comb_spliceg_cond2=comb_spliceg_cond2
             ))
             voila_output.close()
             for g_key, glsv_list in genes_dict.iteritems():
