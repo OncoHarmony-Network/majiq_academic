@@ -1,19 +1,9 @@
 import argparse
 from collections import defaultdict
+import random
 
 from scipy.special import gamma, gammaln
-
-
-
-
-
-
-
-
-
-
-# deprecation WARNING comes from this import!!!
-from scipy.stats import binom_test
+from scipy.stats import binom_test, beta
 from numpy.random import dirichlet
 import numpy as np
 import sys
@@ -57,19 +47,6 @@ def _save_or_show(plotpath, plotname=None):
         plt.show()
 
 
-def median_psi(junctions, discardzeros=True):
-    "Calculates the median PSI for all events"
-    medians = []
-    for junction in junctions:
-        if discardzeros:
-            junction = junction[junction != 0]
-            #a junction array without the zeroes
-
-        medians.append(np.median(junction))
-
-    return np.array(medians)
-
-
 def empirical_delta_psi(lsv_list1, lsv_list2, logger=None):
     """Simple PSI calculation without involving a dirichlet prior, coming from reads from junctions"""
 
@@ -97,46 +74,6 @@ def empirical_delta_psi(lsv_list1, lsv_list2, logger=None):
         delta_psi.append(psi1 - psi2)
         #   if logger: logger.info("Calculating delta PSI for 'best set'...")
     return delta_psi
-
-
-def simple_psi(inc, exc):
-    """Simple PSI calculation without involving a dirichlet prior, coming from reads from junctions"""
-    psi = inc / (exc + inc)
-    psi[np.isnan(psi)] = 0.5
-    #if NaN, is because exc+inc = 0. If we know nothing, then we don't know if its 0 (exclusion) or 1 (inclusion)
-    return psi
-
-
-def reads_given_psi_lsv(lsv, psi_space):
-    #P(vector_i | PSI_i)
-    "We do a simple binomial test to evaluate how probable is the data given a PSI range"
-    psi = np.zeros(shape=(lsv.shape[0], psi_space.sh8ape[0]), dtype=np.float)
-    for idx, junc in enumerate(lsv):
-        total_psi = np.zeros(shape=(100, psi_space.shape[0]), dtype=np.float)
-        for pidx, smpl in enumerate(junc):
-            bin_test = [binom_test(smpl, lsv[:, pidx].sum(), p=x) for x in psi_space]
-            bin_test = np.array(bin_test) + 1e-10
-            total_psi[pidx] = (bin_test / bin_test.sum())
-        total_psi = np.mean(total_psi, axis=0)
-        psi[idx] = total_psi / total_psi.sum()
-
-    return psi
-
-
-def reads_given_psi(inc_samples, exc_samples, psi_space):
-    #P(vector_i | PSI_i)
-    "We do a simple binomial test to evaluate how probable is the data given a PSI range"
-    ret = []
-    inc = inc_samples.sum(axis=1)
-    exc = exc_samples.sum(axis=1)
-    for i in xrange(inc.shape[0]):
-        event = []
-        for psi_val in psi_space:
-            event.append(binom_test(inc[i], exc[i] + inc[i], p=psi_val))
-
-        ret.append(np.array(event) / sum(event))
-
-    return np.array(ret).reshape(-1, len(psi_space))
 
 
 class DirichletCalc:
@@ -170,11 +107,6 @@ def dirichlet_pdf(x, alpha):
     return psi
 
 
-def recalibrate_delta(deltapsi):
-    #TODO make deltaPSI follow the following binning system
-    np.arange(-98.75, 100, 2.5)
-
-
 def lsv_psi(samples_events, alpha, n, debug):
     """
     Given a set of matching inclusion and exclusion samples, calculate psi, save it in disk, and
@@ -182,28 +114,26 @@ def lsv_psi(samples_events, alpha, n, debug):
     """
 
     psi_scores = []
-    dircalc = DirichletCalc()
     for i, lsv in enumerate(samples_events):
 
         if i % 50 == 0:
             print "event %s..." % i,
             sys.stdout.flush()
-        if 0 < debug == i: break
+        if 0 < debug == i:
+            break
         psi = np.zeros(shape=(lsv.shape[0], BINS.shape[0]), dtype=np.float)
         #if debug: print "Paired samples to dirichlet..."
         #sampling PSI by pairing the samples of the previous step sequentially
         for idx, junc in enumerate(lsv):
-            total_acum = 0.
-            acum_samples = np.zeros(shape=(BINS.shape[0]))
             aggr = np.zeros(shape=(junc.shape[0]))
             for xidx, xx in enumerate(lsv):
-                if idx == xidx: continue
+                if idx == xidx:
+                    continue
                 aggr += xx + alpha
 
             samples = np.ndarray(shape=(2, junc.shape[0]))
             samples[0, :] = junc + alpha
             samples[1, :] = aggr
-
             total_psi = np.zeros(shape=(n, BINS.shape[0]), dtype=np.float)
             for pidx, paired_samples in enumerate(samples.T):
                 total_psi[pidx] = dirichlet_pdf(np.array([BINS_CENTER, 1 - BINS_CENTER]).T, paired_samples)
@@ -420,82 +350,47 @@ def gen_prior_matrix(pip, lsv_exp1, lsv_exp2, output, numbins=20, defaultprior=F
     return psi_space, prior_matrix
 
 
-def __extract_cassette(delta_psi, info, psi1, psi2):
-    cas = "|1e1.1|1e2.1"
-    #    print "EXTRACT"
-    listd = []
-    for idx, linfo in enumerate(info):
-        #        print "linfo",linfo[2]
-        #        if len(linfo[2].split('|')) == 3 and linfo[2].find('e0')==-1:
-        if linfo[2][1:] == cas:
-            listd.append(delta_psi[idx][0])
+def prob_data_sample_given_psi(sample, all_sample, nbins, alpha_prior, beta_prior):
+    bsize = 1.0 / float(nbins)
+    psi_border = np.arange(0, 1.01, bsize)
+    notsample = all_sample - sample
 
-    fp = open('./toyoseph.pickle', 'wb')
-    pickle.dump(listd, fp)
-    fp.close()
+    bincdf = beta.cdf(psi_border, a=sample + alpha_prior, b=notsample + beta_prior)
+    bin_test = bincdf[1:] - bincdf[:-1] + 1e-300
 
-    out = open('./psi_delta0.tab', 'w+')
-    for idx, linfo in enumerate(info):
-        if linfo[2][1:] == cas:
-            #        if len(linfo[2].split('|')) == 3 and linfo[2].find('e0')==-1:
-            lsv = delta_psi[idx]
-            if 0.0125 > lsv[0] >= -0.0125:
-                #                print psi1, idx, np.sum(psi1[idx][0]), np.sum(psi1[0][idx])
-                val1 = float(np.sum(psi1[0][idx][0])) / float(np.sum(psi1[0][idx]))
-                if np.isnan(val1):
-                    val1 = 0.5
-                val2 = float(np.sum(psi2[0][idx][0])) / float(np.sum(psi2[0][idx]))
-                if np.isnan(val2):
-                    val2 = 0.5
-                out.write("%d\t%d\n" % (val1, val2))
-
-    out.close()
+    return bin_test
 
 
-#deprecated
-def sample_psi(psi_scores):
-    """
-    Input is all junctions PSI distributions for 1 replica
-    """
-    samples = []
-    for pval, limits in psi_scores:
-        event_samples = []
-        sample_pos = np.multinomial(100, pval)
-        for p in sample_pos:
-            event_samples.append(limits[p])
+def combine_for_priormatrix(group1, group2, matched_info, num_exp):
+    res_group1 = []
+    res_group2 = []
 
-        samples.append(np.mean(event_samples))
+    for lidx, lsv in enumerate(matched_info):
+        idx = random.randrange(num_exp[0])
+        res_group1.append(group1[lidx][idx])
 
-    return np.array(samples)
+        idx = random.randrange(num_exp[1])
+        res_group2.append(group2[lidx][idx])
 
+    grp1 = [res_group1, matched_info]
+    grp2 = [res_group2, matched_info]
 
-def main():
-    """
-    Script for initial testing of the MAJIQ algorithms for sampling and initial PSI values generator. 
-
-    TODO: Many functions from this script will be extracted for general usage in the pipeline. 
-    """
-    parser = argparse.ArgumentParser()
-    parser.add_argument('samples', nargs='+', help='Path for samples of conditions 1 to N')
-    parser.add_argument('--n', default=1, type=int, help='Number of PSI samples per sample paired')
-    parser.add_argument('--alpha', default=0.5, type=float, help='Alpha hyperparameter for the dirichlet distribution')
-    parser.add_argument('--output', required=True, help="Path to save the results to.")
-    parser.add_argument('--name1', default='Inc')
-    parser.add_argument('--name2', default='Exc')
-    args = parser.parse_args()
-
-    print "Loading samples..."
-    samples = []
-    for sample in args.samples:
-        samples.append(pickle.load(open(sample)))
-
-    samples = np.vstack(samples)
-    print "Calculating PSI for %s and %s..." % (args.name1, args.name2)
-    psi_scores = calc_dirichlet(args.alpha, args.n, samples)
-    pickle.dump(psi_scores, open("%s%s_vs_%s_psivalues.pickle" % (args.output, args.name1, args.name2), 'w'))
-    print "Done."
+    return grp1, grp2
 
 
-if __name__ == '__main__':
-    main()
+def __get_prior_params(lsvinfo, num_ways):
+    if 'i' in lsvinfo[2]:
+        alpha = 1.0 / (num_ways - 1)
+        alpha *= float(num_ways) / (num_ways + 1)
+        alpha_prior = np.array([alpha] * num_ways)
 
+        alpha_prior[-1] = 1.0 / (num_ways + 1)
+        beta_prior = 1 - alpha_prior
+    else:
+        alpha = 1.0 / num_ways
+        bta = float(num_ways - 1.0) / num_ways
+
+        alpha_prior = np.array([alpha] * num_ways)
+        beta_prior = np.array([bta] * num_ways)
+
+    return alpha_prior, beta_prior

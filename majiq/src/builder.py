@@ -22,8 +22,7 @@ def majiq_builder(samfiles_list, chnk, pcr_validation=None, gff_output=None, cre
                   nondenovo=False, logging=None):
 
     if not logging is None:
-        logging.info("Building for chromosome"
-                     " %s" % chnk)
+        logging.info("Building chunk %s" % chnk)
 
     temp_dir = "%s/tmp/chunk_%s" % (mglobals.outDir, chnk)
     annot_file = '%s/annot_genes.pkl' % temp_dir
@@ -62,8 +61,8 @@ def majiq_builder(samfiles_list, chnk, pcr_validation=None, gff_output=None, cre
     utils.prepare_lsv_table(lsv, const, temp_dir)
 
     #ANALYZE_DENOVO
-    utils.analyze_denovo_junctions(gene_list, "%s/denovo.pkl" % temp_dir)
-    utils.histogram_for_exon_analysis(gene_list, "%s/ex_lengths.pkl" % temp_dir)
+    # utils.analyze_denovo_junctions(gene_list, "%s/denovo.pkl" % temp_dir)
+    # utils.histogram_for_exon_analysis(gene_list, "%s/ex_lengths.pkl" % temp_dir)
 
 
 def __parallel_lsv_quant(samfiles_list, chnk, pcr_validation=False, gff_output=None, silent=False, debug=0):
@@ -142,9 +141,7 @@ def main(params):
         logger.info("... waiting gff3 parsing")
         p.start()
         p.join()
-    # chr_list = majiq_io.load_bin_file("%s/tmp/chromlist.pkl" % mglobals.outDir)
 
-    if not params.onlygather:
         logger.info("Get samfiles")
         sam_list = []
         for exp_idx, exp in enumerate(mglobals.exp_list):

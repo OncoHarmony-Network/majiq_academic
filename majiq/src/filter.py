@@ -8,6 +8,14 @@ import numpy as np
 
 import majiq.src.polyfitnb as majiqfit
 
+def reliable_in_data(junc, exp_idx, minnonzero, min_reads):
+    min_read_x_exp = min_reads
+    min_npos_x_exp = minnonzero
+    in_data_filter = False
+    cover = junc.coverage.toarray()[exp_idx]
+    if junc.get_read_num(exp_idx) >= min_read_x_exp and np.count_nonzero(cover) >= min_npos_x_exp:
+        in_data_filter = True
+    return in_data_filter
 
 def filter_message(when, value, logger, junc):
     message = "%s (Filter=%s). %s" % (when, value, len(junc[0]))

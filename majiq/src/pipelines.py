@@ -8,6 +8,7 @@ import numpy as np
 from numpy.ma import masked_less
 
 from majiq.src import builder as majiq_builder
+from majiq.src.psi import combine_for_priormatrix
 
 from majiq.src.utils.utils import create_if_not_exists, get_logger
 from majiq.src.polyfitnb import fit_nb
@@ -235,6 +236,7 @@ class CalcPsi(BasicPipeline):
         logger.info("PSI calculation for %s ended succesfully! Result can be found at %s" % (self.name, self.output))
         logger.info("Alakazam! Done.")
 
+
 def prepare_lsvs(dpsi_obj, conf, nchunks, logger=None):
 
     if logger is None:
@@ -275,7 +277,7 @@ def prepare_lsvs(dpsi_obj, conf, nchunks, logger=None):
     logger.info("After intersection:  %d/(%d, %d)" % (len(matched_info), len(filtered_lsv1[0]),
                                                       len(filtered_lsv2[0])))
 
-    group1, group2 = pipe.combine_for_priormatrix(matched_lsv[0], matched_lsv[1], matched_info, num_exp)
+    group1, group2 = combine_for_priormatrix(matched_lsv[0], matched_lsv[1], matched_info, num_exp)
     psi_space, prior_matrix = majiq_psi.gen_prior_matrix(dpsi_obj, group1, group2, dpsi_obj.output, numbins=20,
                                                          defaultprior=dpsi_obj.default_prior)
 

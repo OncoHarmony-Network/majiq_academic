@@ -57,9 +57,12 @@ def render_summary(output_dir, output_html, majiq_output, type_summary, threshol
     def to_json_especial(value):
         return escape(json.dumps(value, cls=utils_voila.LsvGraphicEncoder).replace('\"', '\''))
 
+    def is_combined(spliceg_id):
+        return spliceg_id.startswith(constants.COMBINED_PREFIX)
+
 
     env = Environment(extensions=["jinja2.ext.do"], loader=FileSystemLoader(os.path.join(EXEC_DIR, "templates/")))
-    env.filters.update({'to_json': to_json,'to_json_especial': to_json_especial, 'debug': utils_voila.debug})
+    env.filters.update({'to_json': to_json,'to_json_especial': to_json_especial, 'debug': utils_voila.debug, 'is_combined': is_combined})
     template_file_name = type_summary.replace("-", "_") + "_summary_template.html"
     sum_template = env.get_template(template_file_name)
 
@@ -75,6 +78,12 @@ def render_summary(output_dir, output_html, majiq_output, type_summary, threshol
         # Subfolder for summary pages
         summaries_subfolder = "%s/%s" % (output_dir, constants.SUMMARIES_SUBFOLDER)
         utils_voila.create_if_not_exists(summaries_subfolder)
+
+        try:
+            comb_spliceg_cond1 = [gg for gg in majiq_output['genes_exp'][0].keys() if gg.startswith(constants.COMBINED_PREFIX)][0]
+        except IndexError:
+            comb_spliceg_cond1 = majiq_output['genes_exp'][0].keys()[0]
+
 
         while count_pages*constants.MAX_GENES < len(gene_keys):
             prev_page = None
@@ -97,7 +106,8 @@ def render_summary(output_dir, output_html, majiq_output, type_summary, threshol
                                                    nextPage=next_page,
                                                    namePage=name_page,
                                                    lexps=majiq_output['meta_exps'],
-                                                   genes_exps_list=majiq_output['genes_exp']
+                                                   genes_exps_list=majiq_output['genes_exp'],
+                                                   comb_spliceg_cond1=comb_spliceg_cond1
             ))
             voila_output.close()
             for g_key, glsv_list in genes_dict.iteritems():
@@ -131,6 +141,15 @@ def render_summary(output_dir, output_html, majiq_output, type_summary, threshol
         summaries_subfolder = "%s/%s" % (output_dir, constants.SUMMARIES_SUBFOLDER)
         utils_voila.create_if_not_exists(summaries_subfolder)
 
+        try:
+            comb_spliceg_cond1 = [gg for gg in majiq_output['genes_exp'][0].keys() if gg.startswith(constants.COMBINED_PREFIX)][0]
+        except IndexError:
+            comb_spliceg_cond1 = majiq_output['genes_exp'][0].keys()[0]
+        try:
+            comb_spliceg_cond2 = [gg for gg in majiq_output['genes_exp'][1].keys() if gg.startswith(constants.COMBINED_PREFIX)][0]
+        except IndexError:
+            comb_spliceg_cond2 = majiq_output['genes_exp'][1].keys()[0]
+
         while count_pages*constants.MAX_GENES < len(gene_keys):
             prev_page = None
             next_page = None
@@ -154,7 +173,9 @@ def render_summary(output_dir, output_html, majiq_output, type_summary, threshol
                                                     nextPage= next_page,
                                                     namePage= name_page,
                                                     threshold=threshold,
-                                                    lexps=majiq_output['meta_exps']
+                                                    lexps=majiq_output['meta_exps'],
+                                                    comb_spliceg_cond1=comb_spliceg_cond1,
+                                                    comb_spliceg_cond2=comb_spliceg_cond2
             ))
             voila_output.close()
             for g_key, glsv_list in genes_dict.iteritems():
@@ -260,7 +281,7 @@ def parse_gene_graphics(splicegraph_flist, gene_name_list, condition_names=('gro
 
         # Combined SpliceGraph data structures
         gg_combined = defaultdict(lambda: None)
-        gg_combined_name = "ALL_%s" % condition_names[grp_i]
+        gg_combined_name = "%s%s" % (constants.COMBINED_PREFIX, condition_names[grp_i])
 
         for splice_graph_f in splice_files:
             logger.info("Loading %s." % splice_graph_f)

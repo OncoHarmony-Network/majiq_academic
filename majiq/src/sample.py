@@ -26,22 +26,6 @@ def _save_or_show(plotpath, plotname=None):
         plt.show()
 
 
-def calc_nonzeromeanvar(junctions):
-    nonzeromean = []
-    nonzerovar = []
-    for junction in junctions:
-        nonzerojunction = junction[junction <= 0]
-        # discard also -1 and -2, just in case
-        if len(nonzerojunction) > 0:
-            nonzeromean.append(np.mean(nonzerojunction))
-            nonzerovar.append(np.var(nonzerojunction))
-        else:
-            nonzeromean.append(0)
-            nonzerovar.append(0)
-
-    return np.array(nonzeromean), np.array(nonzerovar)
-
-
 def _trimborders(junction, border):
     "Discard the borders of the junctions unless they have reads"
     # TODO use a masker strategy instead of generating a new array (warning: Assigning values in a numpy
@@ -59,17 +43,6 @@ def _trimborders(junction, border):
             new_junction.append(junction[i])
 
     return np.array(new_junction)
-
-
-def remove_masked(junction):
-    "For performance: Less values to sample from, faster execution time"
-    ret = []
-    for value in junction:
-        if value > -EPSILON:
-            # zero and bigger than zero
-            ret.append(value)
-
-    return np.array(ret)
 
 
 def mean_junction(junctions, discardzeros=True):

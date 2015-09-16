@@ -14,6 +14,49 @@ def reliable_in_data(junc, exp_idx):
     return in_data_filter
 
 
+def lsv_detection_new(gene_list, chrom, only_real_data=False, logging=None):
+
+    const_set = [set() for xx in range(config.num_experiments)]
+    lsv_list = [[] for xx in range(config.num_experiments)]
+
+    jun = {}
+    for gn in gene_list:
+        if gn.get_read_count().sum() == 0:
+            continue
+        dummy = {}
+        for name, ind_list in config.tissue_repl.items():
+            dummy[name] = [[], []]
+        for ex in gn.get_exon_list():
+            try:
+                ex.detect_lsv(gn, SSOURCE, dummy, jun)
+                ex.detect_lsv(gn, STARGET, dummy, jun)
+            except RuntimeError:
+                continue
+
+        for name, ind_list in config.tissue_repl.items():
+            for ss in dummy[name][0]:
+                for st in dummy[name][1]:
+                    if ss.contained(st):
+                        break
+                else:
+                    for exp_idx in ind_list:
+                        lsv_list[exp_idx].append(ss)
+
+            for st in dummy[name][1]:
+                for ss in dummy[name][0]:
+                    if st.contained(ss):
+                        break
+                else:
+                    for exp_idx in ind_list:
+                        lsv_list[exp_idx].append(st)
+
+    for name, ind_list in config.tissue_repl.items():
+        for exp_idx in ind_list:
+            const_set[exp_idx].difference(jun[name])
+
+    return lsv_list, const_set
+
+
 def lsv_detection(gene_list, chrom, only_real_data=False, logging=None):
     num_ss_var = [[0] * 20, [0] * 20, 0]
 
@@ -25,9 +68,7 @@ def lsv_detection(gene_list, chrom, only_real_data=False, logging=None):
 
     for gn in gene_list:
         gn.check_exons()
-        count = gn.get_read_count().sum()
-        if count == 0:
-            continue
+
         mat, exon_list, tlb, var_ss = gn.get_rnaseq_mat(const_set, use_annot=not only_real_data)
         vip = []
         for idx, ex in enumerate(exon_list):

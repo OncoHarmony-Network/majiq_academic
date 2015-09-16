@@ -282,6 +282,10 @@ def rnaseq_intron_retention(filenames, gene_list, readlen, chnk, permissive=True
                                                                                intron_start,
                                                                                intron_end))
         gne.prepare_exons()
+
+    for ss in samfile:
+        ss.close()
+    gc.collect()
     return
 
 

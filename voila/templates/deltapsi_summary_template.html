@@ -43,15 +43,15 @@
                 Gene ID: {{ gene_name }};
             </h3>
             <div>
-                <div class="spliceDiv exp1" id="spliceDivExp1_{{ gene_index }}" data-exon-list="{{ genes_exps_list[0][genes_exps_list[0].keys()[0]][gene_name][0] }}"> {# By default, show the first experiment splice graph #}
+                <div class="spliceDiv exp1" id="spliceDivExp1_{{ gene_index }}" data-exon-list="{{ genes_exps_list[0][comb_spliceg_cond1][gene_name][0] }}"> {# By default, show the first experiment splice graph #}
                     <div class="spliceGraphTools">
                         <select class="spliceGraphSelector" autocomplete="off">
                             {% for nsample in genes_exps_list[0] -%}
-                            {% if loop.first %}
-                            <option selected="selected" value="{{ genes_exps_list[0][nsample][gene_name][0] |to_json}}">{{ nsample }}</option>
-                            {% else %}
-                            <option value="{{ genes_exps_list[0][nsample][gene_name][0] |to_json }}">{{ nsample }}</option>
-                            {% endif %}
+                                {% if nsample == comb_spliceg_cond1 %}
+                                    <option selected="selected" value="{{ genes_exps_list[0][nsample][gene_name][0] |to_json}}">{{ nsample }}</option>
+                                {% else %}
+                                    <option value="{{ genes_exps_list[0][nsample][gene_name][0] |to_json }}">{{ nsample }}</option>
+                                {% endif %}
                             {%- endfor %}
                         </select>
                         <img class="toogleScale scaled" src="static/img/icons/solve-icon16.png" title="Change between scaled view and a view where introns are trimmed" />
@@ -64,15 +64,15 @@
 
                 </div>
 
-                <div class="spliceDiv exp2" id="spliceDivExp2_{{ gene_index }}" data-exon-list="{{ genes_exps_list[1][genes_exps_list[1].keys()[0]][gene_name][0] }}"> {# By default, show the first experiment splice graph #}
+                <div class="spliceDiv exp2" id="spliceDivExp2_{{ gene_index }}" data-exon-list="{{ genes_exps_list[1][comb_spliceg_cond2][gene_name][0] }}"> {# By default, show the first experiment splice graph #}
                     <div class="spliceGraphTools">
                         <select class="spliceGraphSelector" autocomplete="off">
                             {% for nsample in genes_exps_list[1] -%}
-                            {% if loop.first %}
-                            <option selected="selected" value="{{ genes_exps_list[1][nsample][gene_name][0] |to_json }}">{{ nsample }}</option>
-                            {% else %}
-                            <option value="{{ genes_exps_list[1][nsample][gene_name][0] |to_json }}">{{ nsample }}</option>
-                            {% endif %}
+                                {% if nsample == comb_spliceg_cond2 %}
+                                    <option selected="selected" value="{{ genes_exps_list[1][nsample][gene_name][0] |to_json }}">{{ nsample }}</option>
+                                {% else %}
+                                    <option value="{{ genes_exps_list[1][nsample][gene_name][0] |to_json }}">{{ nsample }}</option>
+                                {% endif %}
                             {%- endfor %}
                         </select>
                         <img class="toogleScale scaled" src="static/img/icons/solve-icon16.png" title="Change between scaled view and a view where introns are trimmed" />

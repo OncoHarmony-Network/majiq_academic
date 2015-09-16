@@ -1,6 +1,8 @@
 """
 Functions to handle the matrices operations over the delta PSI 
 """
+
+#TODO: This file is deprecated
 import numpy as np
 
 
@@ -81,24 +83,6 @@ def matrix_e(matrix):
         e += value * delta_space[i]
 
     return e
-
-
-def rank_deltas(matrices, names, V=0.2, absolute=True, E=False, ranknochange=False):
-    "Rank all deltas in an event by level of change. V sets a threshold for change, E overrides V and calculates an average of V values"
-    rank = []
-    for i, dmatrix in enumerate(matrices):
-        if E:
-            v_prob = matrix_prob_e(dmatrix)
-            rank.append([names[i], v_prob])
-        else:
-            area = matrix_area(dmatrix, V, absolute)
-            if ranknochange:  # P(Delta PSI < V) = 1 - P(Delta PSI > V)
-                area = 1 - area
-
-            rank.append([names[i], area])
-
-    rank.sort(key=lambda x: -x[1])
-    return rank
 
 
 def rank_deltas_lsv(matrices, names, V=0.2, absolute=True, E=False, ranknochange=False):
