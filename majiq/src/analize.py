@@ -1,6 +1,6 @@
 import numpy as np
 
-from majiq.grimoire.lsv import SSOURCE, STARGET
+from majiq.grimoire.lsv import SSOURCE, STARGET, InvalidLSV
 from majiq.src import config
 
 
@@ -14,7 +14,7 @@ def reliable_in_data(junc, exp_idx):
     return in_data_filter
 
 
-def lsv_detection_new(gene_list, chrom, only_real_data=False, logging=None):
+def lsv_detection(gene_list, chrom, only_real_data=False, logging=None):
 
     const_set = [set() for xx in range(config.num_experiments)]
     lsv_list = [[] for xx in range(config.num_experiments)]
@@ -29,9 +29,13 @@ def lsv_detection_new(gene_list, chrom, only_real_data=False, logging=None):
         for ex in gn.get_exon_list():
             try:
                 ex.detect_lsv(gn, SSOURCE, dummy, jun)
+            except InvalidLSV as e:
+                print e.msg
+
+            try:
                 ex.detect_lsv(gn, STARGET, dummy, jun)
-            except RuntimeError:
-                continue
+            except InvalidLSV as e:
+                print e.msg
 
         for name, ind_list in config.tissue_repl.items():
             for ss in dummy[name][0]:
@@ -57,7 +61,7 @@ def lsv_detection_new(gene_list, chrom, only_real_data=False, logging=None):
     return lsv_list, const_set
 
 
-def lsv_detection(gene_list, chrom, only_real_data=False, logging=None):
+def lsv_detection_old(gene_list, chrom, only_real_data=False, logging=None):
     num_ss_var = [[0] * 20, [0] * 20, 0]
 
     const_set = [set() for xx in range(config.num_experiments)]

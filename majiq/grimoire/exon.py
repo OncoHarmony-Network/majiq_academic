@@ -2,7 +2,7 @@
 import os
 
 import numpy as np
-from majiq.grimoire.lsv import SSOURCE, InvalidLSV
+from majiq.grimoire.lsv import SSOURCE, STARGET
 import majiq.src.filter as majiqfilter
 from majiq.src import config
 
@@ -293,26 +293,34 @@ class Exon:
 
     def detect_lsv(self, gn, lsv_type, dummy, jun):
         #jun = {}
-        sstype = '5prime' if lsv_type == SSOURCE else '3prime'
-        jlist = self.get_junctions(sstype)
+
+        sstype = {SSOURCE: ['5prime',0], STARGET: ['3prime', 1]}
+
+
+        jlist = self.get_junctions(sstype[lsv_type][0])
         jlist = [x for x in jlist if x is not None]
+        if jlist < 2:
+            return
         lsv_in = gn.new_lsv_definition(self, jlist, lsv_type)
-        if lsv_in is None:
-            raise InvalidLSV
+
         for name, ind_list in config.tissue_repl.items():
             counter = 0
             e_data = 0
             for jj in jlist:
                 for exp_idx in ind_list:
-                    if majiqfilter.reliable_in_data(jj, exp_idx):
+                    if majiqfilter.reliable_in_data(jj, exp_idx, config.MINREADS, config.MINPOS):
                         counter += 1
                 if counter < 0.1 * len(ind_list):
                     continue
                 e_data += 1
-                jun[name].add(jj)
+                try:
+                    jun[name].add(jj)
+                except KeyError:
+                    jun[name] = set()
+                    jun[name].add(jj)
             if e_data == 0:
                 continue
-            dummy[name].append(lsv_in)
+            dummy[name][sstype[lsv_type][1]].append(lsv_in)
         return
 
 

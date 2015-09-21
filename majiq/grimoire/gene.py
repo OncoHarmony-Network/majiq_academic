@@ -353,14 +353,14 @@ class Gene:
                 ret = lsv
                 break
         else:
-            try:
+            # try:
                 ret = LSV(exon, lsv_id, jlist, lsv_type)
                 self.lsv_list.append(ret)
-            except InvalidLSV as e:
-                if logger:
-                    logger.info("Attempt to create LSV with wrong type or not enought junction coverage %s" %
-                                exon.get_id())
-                raise InvalidLSV(e.msg)
+            # except InvalidLSV as e:
+            #     if logger:
+            #         logger.info("Attempt to create LSV with wrong type or not enought junction coverage %s" %
+            #                     exon.get_id())
+            #     raise InvalidLSV(e.msg)
 
         # for jj in jlist:
         #     if jj.is_virtual() and logger:
