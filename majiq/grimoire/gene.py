@@ -185,6 +185,9 @@ class Gene:
                     coords = ex.get_coordinates()
                     # if jend > coords[0]:
                     #     break
+                    coords = [coords[0] - config.get_max_denovo_difference(),
+                              coords[1] + config.get_max_denovo_difference()]
+
                     if coords[0] <= jend <= coords[1] or coords[0] <= jstart <= coords[1]:
                         res = True
                         break

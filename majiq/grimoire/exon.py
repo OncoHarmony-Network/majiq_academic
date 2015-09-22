@@ -627,14 +627,29 @@ def new_exon_definition(start, end, read_rna, s3prime_junc, s5prime_junc, gene, 
     half = False
 
     if ex is None:
-        new_exons = 1
-        in_db = False
-        for xx in gene.get_ir_definition():
-            if start <= xx[1] and end >= xx[0]:
-                in_db = True
-                break
-        ex = Exon(start, end, gene, gene.get_strand(), annot=in_db, isintron=isintron)
-        gene.add_exon(ex)
+        if end - start <= config.get_max_denovo_difference():
+            new_exons = 1
+            in_db = False
+            for xx in gene.get_ir_definition():
+                if start <= xx[1] and end >= xx[0]:
+                    in_db = True
+                    break
+            ex = Exon(start, end, gene, gene.get_strand(), annot=in_db, isintron=isintron)
+            gene.add_exon(ex)
+        else:
+            half = True
+            new_exons += 2
+
+            ex1 = Exon(start, EMPTY_COORD, gene, gene.get_strand(), isintron)
+            s3prime_junc.add_acceptor(ex1)
+            gene.add_exon(ex1)
+            ex1.add_new_read(start, -1, read_rna, s3prime_junc, None)
+
+            ex2 = Exon(EMPTY_COORD, end, gene, gene.get_strand(), isintron)
+            s5prime_junc.add_donor(ex2)
+            gene.add_exon(ex2)
+            ex2.add_new_read(-1, end, read_rna, None, s5prime_junc)
+
     else:
         coords = ex.get_coordinates()
         if start != EMPTY_COORD and start < (coords[0] - config.get_max_denovo_difference()):
