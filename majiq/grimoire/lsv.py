@@ -376,7 +376,7 @@ def extract_se_events(list_lsv_per_gene):
 
 def extract_gff(list_lsv, out_dir):
     gtf = set()
-    for lsv_l in list_lsv:
+    for name, lsv_l in list_lsv.items():
         for lsv in lsv_l:
             trans = []
             jlist = lsv.junctions
