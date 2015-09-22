@@ -74,6 +74,25 @@ def prepare_lsv_table(lsv_list, non_as, temp_dir):
     #out_temp = dict()
     for name, ind_list in mglobals.tissue_repl.items():
         for idx, exp_idx in enumerate(ind_list):
+            majiq_table_as = [0] * len(lsv_list[name])
+            majiq_table_nonas = [0] * len(non_as[name])
+
+            for iix, lsv in enumerate(lsv_list[name]):
+                majiq_table_as[iix] = lsv.to_majiqLSV(exp_idx)
+            for jix, jn in enumerate(non_as[name]):
+                majiq_table_nonas[jix] = MajiqJunc(jn, exp_idx)
+
+            out_temp = (majiq_table_as, majiq_table_nonas)
+            fname = "%s/%s.majiq.pkl" % (temp_dir, mglobals.exp_list[exp_idx])
+            majiq_io.dump_bin_file(out_temp, fname)
+
+
+
+def prepare_lsv_table_old(lsv_list, non_as, temp_dir):
+
+    #out_temp = dict()
+    for name, ind_list in mglobals.tissue_repl.items():
+        for idx, exp_idx in enumerate(ind_list):
             majiq_table_as = [0] * len(lsv_list[exp_idx])
             majiq_table_nonas = [0] * len(non_as[exp_idx])
 

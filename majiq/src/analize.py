@@ -16,11 +16,16 @@ def reliable_in_data(junc, exp_idx):
 
 def lsv_detection(gene_list, chrom, only_real_data=False, logging=None):
 
-    const_set = [set() for xx in range(config.num_experiments)]
-    lsv_list = [[] for xx in range(config.num_experiments)]
+    lsv_list = {}
+    const_set = {}
 
-    jun = {}
+    for name, ind_list in config.tissue_repl.items():
+        lsv_list[name] = []
+        const_set[name] = set()
+
     for gn in gene_list:
+        local_const = set(gn.get_all_junctions())
+        local_lsv_jun = {}
         if gn.get_read_count().sum() == 0:
             continue
         dummy = {}
@@ -28,40 +33,41 @@ def lsv_detection(gene_list, chrom, only_real_data=False, logging=None):
             dummy[name] = [[], []]
         for ex in gn.get_exon_list():
             try:
-                ex.detect_lsv(gn, SSOURCE, dummy, jun)
+                ex.detect_lsv(gn, SSOURCE, dummy, local_lsv_jun)
             except InvalidLSV as e:
-                print e.msg
+                #print e.msg
+                pass
 
             try:
-                ex.detect_lsv(gn, STARGET, dummy, jun)
+                ex.detect_lsv(gn, STARGET, dummy, local_lsv_jun)
             except InvalidLSV as e:
-                print e.msg
+                #print e.msg
+                pass
 
         for name, ind_list in config.tissue_repl.items():
+
+            local_const.difference(local_lsv_jun)
+            const_set[name].update(local_const)
+
             for ss in dummy[name][0]:
                 for st in dummy[name][1]:
                     if ss.contained(st):
                         break
                 else:
-                    for exp_idx in ind_list:
-                        lsv_list[exp_idx].append(ss)
+                    lsv_list[name].append(ss)
 
             for st in dummy[name][1]:
                 for ss in dummy[name][0]:
                     if st.contained(ss):
                         break
                 else:
-                    for exp_idx in ind_list:
-                        lsv_list[exp_idx].append(st)
-
-    for name, ind_list in config.tissue_repl.items():
-        for exp_idx in ind_list:
-            const_set[exp_idx].difference(jun[name])
+                    lsv_list[name].append(st)
 
     return lsv_list, const_set
 
 
 def lsv_detection_old(gene_list, chrom, only_real_data=False, logging=None):
+
     num_ss_var = [[0] * 20, [0] * 20, 0]
 
     const_set = [set() for xx in range(config.num_experiments)]
