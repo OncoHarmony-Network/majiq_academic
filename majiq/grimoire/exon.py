@@ -627,7 +627,7 @@ def new_exon_definition(start, end, read_rna, s3prime_junc, s5prime_junc, gene, 
     half = False
 
     if ex is None:
-        if end - start <= config.get_max_denovo_difference():
+        if isintron or end - start <= config.get_max_denovo_difference():
             new_exons = 1
             in_db = False
             for xx in gene.get_ir_definition():
@@ -640,12 +640,12 @@ def new_exon_definition(start, end, read_rna, s3prime_junc, s5prime_junc, gene, 
             half = True
             new_exons += 2
 
-            ex1 = Exon(start, EMPTY_COORD, gene, gene.get_strand(), isintron)
+            ex1 = Exon(start, EMPTY_COORD, gene, gene.get_strand(), annot=False, isintron=isintron)
             s3prime_junc.add_acceptor(ex1)
             gene.add_exon(ex1)
             ex1.add_new_read(start, -1, read_rna, s3prime_junc, None)
 
-            ex2 = Exon(EMPTY_COORD, end, gene, gene.get_strand(), isintron)
+            ex2 = Exon(EMPTY_COORD, end, gene, gene.get_strand(), annot=False, isintron=isintron)
             s5prime_junc.add_donor(ex2)
             gene.add_exon(ex2)
             ex2.add_new_read(-1, end, read_rna, None, s5prime_junc)
@@ -655,7 +655,7 @@ def new_exon_definition(start, end, read_rna, s3prime_junc, s5prime_junc, gene, 
         if start != EMPTY_COORD and start < (coords[0] - config.get_max_denovo_difference()):
             if gene.exist_exon(start, start + 10) is None:
                 new_exons += 1
-                ex1 = Exon(start, EMPTY_COORD, gene, gene.get_strand(), isintron)
+                ex1 = Exon(start, EMPTY_COORD, gene, gene.get_strand(), annot=False, isintron=isintron)
                 cc = ex1.get_coordinates()
                 s3prime_junc.add_acceptor(ex1)
                 gene.add_exon(ex1)
@@ -665,7 +665,7 @@ def new_exon_definition(start, end, read_rna, s3prime_junc, s5prime_junc, gene, 
         if end != EMPTY_COORD and end > (coords[1] + config.get_max_denovo_difference()):
             if gene.exist_exon(end - 10, end) is None:
                 new_exons += 1
-                ex2 = Exon(EMPTY_COORD, end, gene, gene.get_strand(), isintron)
+                ex2 = Exon(EMPTY_COORD, end, gene, gene.get_strand(), annot=False, isintron=isintron)
                 cc = ex2.get_coordinates()
                 s5prime_junc.add_donor(ex2)
                 gene.add_exon(ex2)
