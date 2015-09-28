@@ -1,6 +1,8 @@
+from matplotlib import use
+use('Agg')
+
 import os
 import random
-
 import matplotlib.pyplot as plt
 from numpy.ma import masked_less
 import numpy as np
