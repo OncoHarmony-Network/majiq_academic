@@ -487,7 +487,7 @@ def create_summary(args):
                 lsv_name_list.append(lsv_name.rstrip().upper())
 
         output_html = "%s_%s_comp_table_%.2f.html" % (cond_pair[0], cond_pair[1], thres_change)
-        lsvs_dict = io_voila.load_dpsi_tab(sample_files, sample_names, thres_change=thres_change, filter_genes=gene_name_list, filter_lsvs=lsv_name_list)
+        lsvs_dict = io_voila.load_dpsi_tab(sample_files, sample_names, thres_change=thres_change, filter_genes=gene_name_list, filter_lsvs=lsv_name_list, pairwise_dir=args.pair_dir)
         logger.info("LSVs added to the table: %d" % len(lsvs_dict.keys()))
         render_summary(output_dir, output_html, {'lsvs': lsvs_dict, 'sample_names': sample_names, 'cond_pair': cond_pair, 'thres': thres_change}, type_summary, logger=logger)
         return
@@ -565,6 +565,7 @@ def main():
     parser_comptable.add_argument('--thres-change',  dest='thres_change', type=float, metavar='0.2', help='Threshold used to filter non-changing LSVs.')
     parser_comptable.add_argument('--filter-genes', type=str, dest='gene_names', help='File with gene names to filter the results (one gene per line). Use - to type in the gene names.')
     parser_comptable.add_argument('--filter-lsvs', type=str, dest='lsv_names', help='File with lsv names to filter the results (one gene per line). Use - to type in the gene names.')
+    parser_comptable.add_argument('--pairwise-dir', type=str, dest='pair_dir', help='Root directory where the pairwise delta psi VOILA summaries were created.')
     subparsers.add_parser(constants.COND_TABLE, help='Generate a HTML table with a list of LSVs changing between conditions in multiple samples [DEBUGING!].', parents=[base_parser, parser_comptable])
 
     args = parser.parse_args()
