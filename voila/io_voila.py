@@ -228,7 +228,7 @@ def write_tab_output(output_dir, output_html, majiq_output, type_summary, logger
     logger.info("Delimited output file successfully created in: %s" % ofile_str)
 
 
-def load_dpsi_tab(tab_files_list, sample_names, thres_change=None):
+def load_dpsi_tab(tab_files_list, sample_names, thres_change=None, filter_genes=None, filter_lsvs=None):
     """Load LSV delta psi information from tab-delimited file."""
     lsvs_dict = defaultdict(lambda: defaultdict(lambda: None))
 
@@ -240,6 +240,13 @@ def load_dpsi_tab(tab_files_list, sample_names, thres_change=None):
             for line in tabf:
                 if line.startswith("#"): continue
                 fields = line.split()
+
+                if filter_genes:
+                    if fields[0] not in filter_genes and fields[1] not in filter_genes: continue
+
+                if filter_lsvs:
+                    if fields[2].upper() not in filter_lsvs: continue
+
                 expecs = [float(aa) for aa in fields[3].split(";")]
                 if lsvs_dict[fields[2]]['expecs'] is None:
                     lsvs_dict[fields[2]]['expecs'] = [[]]*len(sample_names)
