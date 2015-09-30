@@ -469,24 +469,20 @@ def main():
             for ilsv, vals in rtpcr_extra.iteritems():
                 line = [ilsv]
                 line.append(ilsv)
-                line.extend([repr(vv) for vv in vals])
+                line.extend([repr(vv) if type(vv) is not list else str(np.mean(vv)) for vv in vals])
                 psi_txt.write("\t".join(line))
                 psi_txt.write('\n')
                 if not np.isnan(vals[2]):
                     lrtpcr_majiq_extra[0].append(vals[0])
-                    # Majiq
                     lmajiq_extra[0].append(vals[2])
                 if not np.isnan(vals[3]):
                     lrtpcr_majiq_extra[1].append(vals[1])
-                    # Majiq
                     lmajiq_extra[1].append(vals[3])
                 if not np.isnan(np.mean(vals[4])):
                     lrtpcr_miso_extra[0].append(vals[0])
-                    # Majiq
                     lmiso_extra[0].append(np.mean(vals[4]))
                 if not np.isnan(np.mean(vals[5])):
                     lrtpcr_miso_extra[1].append(vals[1])
-                    # Majiq
                     lmiso_extra[1].append(np.mean(vals[5]))
 
     # Read name mapping file
@@ -538,86 +534,101 @@ def main():
     flipped_thres = 1
     flipped_majiq_dict = defaultdict(str)  # List of strings with flipped LSVs info
     flipped_miso_dict = defaultdict(str)  # List of strings with flipped LSVs info
-    for common_name in common_names_set:
-        for name_majiq, name_pcr in names_majiq2pcr_dict.iteritems():
-            if names_majiq2pcr_dict[common_name] == name_pcr:
-                name = name_majiq
+    with open('psi_kristens.txt', 'w') as psi_txt:
+        headers=['ID LSV', 'RT-PCR Cerebellum', 'RT-PCR Liver', 'Majiq Cerebellum', 'Majiq Liver', 'Miso Cerebellum', 'Miso Liver', 'RT-PCR Cerebellum Avg. STD', 'RT-PCR Liver Avg. STD']
+        psi_txt.write('\t'.join(headers))
+        psi_txt.write('\n')
 
-                # For Majiq, compute mean over Expected PSIs
-                majiq_rest_stat = avg_expected_psi(majiq_rest_dict[name])
-                majiq_stim_stat = avg_expected_psi(majiq_stim_dict[name])
+        for common_name in common_names_set:
+            for name_majiq, name_pcr in names_majiq2pcr_dict.iteritems():
+                if names_majiq2pcr_dict[common_name] == name_pcr:
+                    name = name_majiq
+                    psi_txt_line = [name]
 
-                # For MISO, compute mean
-                miso_rest_stat = np.mean(miso_rest_dict[name])
-                miso_stim_stat = np.mean(miso_stim_dict[name])
+                    # For Majiq, compute mean over Expected PSIs
+                    majiq_rest_stat = avg_expected_psi(majiq_rest_dict[name])
+                    majiq_stim_stat = avg_expected_psi(majiq_stim_dict[name])
 
-                
-                print "%s - %s" % (name, names_majiq2pcr_dict[name])
-                print "---- RT-PCR ----"
-
-                rtpcr_rest = pcr_rest_stim[names_majiq2pcr_dict[name]][0][0]
-                rtpcr_stim = pcr_rest_stim[names_majiq2pcr_dict[name]][0][1]
-                min_rest = abs(rtpcr_rest - majiq_rest_stat)
-                min_stim = abs(rtpcr_stim - majiq_stim_stat)
-                for rtpcr_psi_value in pcr_rest_stim[names_majiq2pcr_dict[name]]:
-                    if abs(rtpcr_psi_value[0] - majiq_rest_stat) < min_rest:
-                        rtpcr_rest = rtpcr_psi_value[0]
-                        min_rest = abs(rtpcr_rest - majiq_rest_stat)
-
-                    if abs(rtpcr_psi_value[1] - majiq_rest_stat) < min_stim:
-                        rtpcr_stim = rtpcr_psi_value[1]
-                        min_stim = abs(rtpcr_stim - majiq_stim_stat)
-
-                rt_pcr_majiq[0].append(rtpcr_rest)
-                rt_pcr_majiq[1].append(rtpcr_stim)
-
-                rtpcr_rest = pcr_rest_stim[names_majiq2pcr_dict[name]][0][0]
-                rtpcr_stim = pcr_rest_stim[names_majiq2pcr_dict[name]][0][1]
-                min_rest = abs(rtpcr_rest - miso_rest_stat)
-                min_stim = abs(rtpcr_stim - miso_stim_stat)
-                for rtpcr_psi_value in pcr_rest_stim[names_majiq2pcr_dict[name]]:
-                    if abs(rtpcr_psi_value[0] - miso_rest_stat) < min_rest:
-                        rtpcr_rest = rtpcr_psi_value[0]
-                        min_rest = abs(rtpcr_rest - miso_rest_stat)
-
-                    if abs(rtpcr_psi_value[1] - miso_rest_stat) < min_stim:
-                        rtpcr_stim = rtpcr_psi_value[1]
-                        min_stim = abs(rtpcr_stim - miso_stim_stat)
-
-                rt_pcr_miso[0].append(rtpcr_rest)
-                rt_pcr_miso[1].append(rtpcr_stim)
-
-                # check if event has expected PSIs suspicious of being flipped
-                if abs(majiq_rest_stat - rt_pcr_majiq[0][-1]) > flipped_thres or abs(majiq_stim_stat - rt_pcr_majiq[1][-1]) > flipped_thres:
-                    flipped_majiq_dict[name] = "%s\t%s\t%f\t%f\t%f\t%f\t%d\t%d\n" % (names_majiq2pcr_dict[name], name, rt_pcr_majiq[0][-1], majiq_rest_stat, rt_pcr_majiq[1][-1], majiq_stim_stat, int(gene_names_counts[names_majiq2pcr_dict[name]]<2), int(len(names_junc_majiq[str(name).split('#')[0]])<2) )
-                    del rt_pcr_majiq[0][-1]
-                    del rt_pcr_majiq[1][-1]
-                else:
-                    majiq[0].append(majiq_rest_stat)
-                    majiq[1].append(majiq_stim_stat)
-
-                if abs(miso_rest_stat - rt_pcr_miso[0][-1]) > flipped_thres or abs(miso_stim_stat - rt_pcr_miso[1][-1]) > flipped_thres:
-                    flipped_miso_dict[name] = "%s\t%s\t%f\t%f\t%f\t%f\t%d\t%d\n" % (names_majiq2pcr_dict[name], name, rt_pcr_miso[0][-1], miso_rest_stat, rt_pcr_miso[1][-1], miso_stim_stat, int(gene_names_counts[names_majiq2pcr_dict[name]]<2), int(len(names_junc_majiq[str(name).split('#')[0]])<2) )
-                    del rt_pcr_miso[0][-1]
-                    del rt_pcr_miso[1][-1]
-                elif np.isnan(miso_rest_stat) or np.isnan(miso_stim_stat):
-                    del rt_pcr_miso[0][-1]
-                    del rt_pcr_miso[1][-1]
-                else:
-                    miso[0].append(miso_rest_stat)
-                    miso[1].append(miso_stim_stat)
+                    # For MISO, compute mean
+                    miso_rest_stat = np.mean(miso_rest_dict[name])
+                    miso_stim_stat = np.mean(miso_stim_dict[name])
 
 
-                print "[Resting - MAJIQ]:\t%f" % rtpcr_rest
-                print "[Stimuli - MAJIQ]:\t%f" % rtpcr_stim
+                    print "%s - %s" % (name, names_majiq2pcr_dict[name])
+                    print "---- RT-PCR ----"
 
-                print "---- MAJIQ ----"
-                print "[Resting]: Mean of expected:\t%f" % (float(majiq_rest_stat ))
-                print "[Stimuli]: Mean of expected:\t%f" % (float(majiq_stim_stat))
+                    rtpcr_rest = pcr_rest_stim[names_majiq2pcr_dict[name]][0][0]
+                    rtpcr_stim = pcr_rest_stim[names_majiq2pcr_dict[name]][0][1]
+                    min_rest = abs(rtpcr_rest - majiq_rest_stat)
+                    min_stim = abs(rtpcr_stim - majiq_stim_stat)
+                    for rtpcr_psi_value in pcr_rest_stim[names_majiq2pcr_dict[name]]:
+                        if abs(rtpcr_psi_value[0] - majiq_rest_stat) < min_rest:
+                            rtpcr_rest = rtpcr_psi_value[0]
+                            min_rest = abs(rtpcr_rest - majiq_rest_stat)
 
-                print "---- MISO -----"
-                print "[Resting]: Mean of psi:\t%f" % (float(miso_rest_stat))
-                print "[Stimuli]: Mean of psi:\t%f" % (float(miso_stim_stat))
+                        if abs(rtpcr_psi_value[1] - majiq_rest_stat) < min_stim:
+                            rtpcr_stim = rtpcr_psi_value[1]
+                            min_stim = abs(rtpcr_stim - majiq_stim_stat)
+
+                    rt_pcr_majiq[0].append(rtpcr_rest)
+                    rt_pcr_majiq[1].append(rtpcr_stim)
+
+                    rtpcr_rest = pcr_rest_stim[names_majiq2pcr_dict[name]][0][0]
+                    rtpcr_stim = pcr_rest_stim[names_majiq2pcr_dict[name]][0][1]
+                    min_rest = abs(rtpcr_rest - miso_rest_stat)
+                    min_stim = abs(rtpcr_stim - miso_stim_stat)
+                    for rtpcr_psi_value in pcr_rest_stim[names_majiq2pcr_dict[name]]:
+                        if abs(rtpcr_psi_value[0] - miso_rest_stat) < min_rest:
+                            rtpcr_rest = rtpcr_psi_value[0]
+                            min_rest = abs(rtpcr_rest - miso_rest_stat)
+
+                        if abs(rtpcr_psi_value[1] - miso_rest_stat) < min_stim:
+                            rtpcr_stim = rtpcr_psi_value[1]
+                            min_stim = abs(rtpcr_stim - miso_stim_stat)
+
+                    rt_pcr_miso[0].append(rtpcr_rest)
+                    rt_pcr_miso[1].append(rtpcr_stim)
+
+                    # check if event has expected PSIs suspicious of being flipped
+                    if abs(majiq_rest_stat - rt_pcr_majiq[0][-1]) > flipped_thres or abs(majiq_stim_stat - rt_pcr_majiq[1][-1]) > flipped_thres:
+                        flipped_majiq_dict[name] = "%s\t%s\t%f\t%f\t%f\t%f\t%d\t%d\n" % (names_majiq2pcr_dict[name], name, rt_pcr_majiq[0][-1], majiq_rest_stat, rt_pcr_majiq[1][-1], majiq_stim_stat, int(gene_names_counts[names_majiq2pcr_dict[name]]<2), int(len(names_junc_majiq[str(name).split('#')[0]])<2) )
+                        del rt_pcr_majiq[0][-1]
+                        del rt_pcr_majiq[1][-1]
+                    else:
+                        majiq[0].append(majiq_rest_stat)
+                        majiq[1].append(majiq_stim_stat)
+
+                    if abs(miso_rest_stat - rt_pcr_miso[0][-1]) > flipped_thres or abs(miso_stim_stat - rt_pcr_miso[1][-1]) > flipped_thres:
+                        flipped_miso_dict[name] = "%s\t%s\t%f\t%f\t%f\t%f\t%d\t%d\n" % (names_majiq2pcr_dict[name], name, rt_pcr_miso[0][-1], miso_rest_stat, rt_pcr_miso[1][-1], miso_stim_stat, int(gene_names_counts[names_majiq2pcr_dict[name]]<2), int(len(names_junc_majiq[str(name).split('#')[0]])<2) )
+                        del rt_pcr_miso[0][-1]
+                        del rt_pcr_miso[1][-1]
+                    elif np.isnan(miso_rest_stat) or np.isnan(miso_stim_stat):
+                        del rt_pcr_miso[0][-1]
+                        del rt_pcr_miso[1][-1]
+                    else:
+                        miso[0].append(miso_rest_stat)
+                        miso[1].append(miso_stim_stat)
+
+
+                    print "[Resting - MAJIQ]:\t%f" % rtpcr_rest
+                    print "[Stimuli - MAJIQ]:\t%f" % rtpcr_stim
+
+                    print "---- MAJIQ ----"
+                    print "[Resting]: Mean of expected:\t%f" % (float(majiq_rest_stat))
+                    print "[Stimuli]: Mean of expected:\t%f" % (float(majiq_stim_stat))
+
+                    print "---- MISO -----"
+                    print "[Resting]: Mean of psi:\t%f" % (float(miso_rest_stat))
+                    print "[Stimuli]: Mean of psi:\t%f" % (float(miso_stim_stat))
+
+                    psi_txt_line.append(str(rtpcr_rest))
+                    psi_txt_line.append(str(rtpcr_stim))
+                    psi_txt_line.append(str(majiq_rest_stat))
+                    psi_txt_line.append(str(majiq_stim_stat))
+                    psi_txt_line.append(str(miso_rest_stat))
+                    psi_txt_line.append(str(miso_stim_stat))
+                    psi_txt.write("\t".join(psi_txt_line))
+                    psi_txt.write("\n")
 
     scatterplot_rtpcr_majiq_miso(rt_pcr_majiq, rt_pcr_miso, majiq, miso, args.plotpath, pcr_majiq_extra=lrtpcr_majiq_extra, pcr_miso_extra=lrtpcr_miso_extra, majiq_extra=lmajiq_extra, miso_extra=lmiso_extra)
     scatterplot_rtpcr_simple(rt_pcr_majiq, majiq, args.plotpath, pcr_majiq_extra=lrtpcr_majiq_extra,majiq_extra=lmajiq_extra, plotname='psi_majiq_only', met_name='MAJIQ')

@@ -17,6 +17,7 @@ from scipy.stats import pearsonr
 
 __author__ = 'abarrera'
 
+
 def get_color(tissue):
     colors_dict = {'rest_stim': '#%02x%02x%02x' % cb.Paired[10][-1],
                'cer_liv': '#%02x%02x%02x' % cb.Paired[10][-3]
@@ -265,7 +266,7 @@ def parse_rtpcr_results(pcr_file, names_pcr2majiq_dict):
             if pcr_fields[0] not in names_pcr2majiq_dict.keys():
                 continue  # If the event is not in the list of events selected, skip it
             try:
-                pcr_rest_stim[pcr_fields[0]].append((float(pcr_fields[1])- float(pcr_fields[2]))/100)
+                pcr_rest_stim[pcr_fields[0]].append((float(pcr_fields[1]) - float(pcr_fields[2]))/100)
             except IndexError:
                 print "%s value not found, assigned 0..." % pcr_fields[0]
                 pcr_rest_stim[pcr_fields[0]].append(0)
@@ -471,7 +472,7 @@ def main():
                             except KeyError:
                                 print "[WARNING] :: %s in MISO, but not in MAJIQ, skipped given the impossibility of determining which junction it is." % lsv_name
 
-        with open('psi_hogenesch.txt', 'w') as psi_txt:
+        with open('dpsi_hogenesch.txt', 'w') as psi_txt:
             headers=['LSV ID', 'RT-PCR', 'Majiq', 'Miso Cerebellum', 'Miso Liver', 'RT-PCR Cerebellum Avg. STD', 'RT-PCR Liver Avg. STD']
             psi_txt.write('\t'.join(headers))
             psi_txt.write('\n')
@@ -536,36 +537,49 @@ def main():
     kr_miso_dpsi = []
     kr_cov = []
 
-    for common_name in common_names_set:
-        for name_majiq, name_pcr in names_majiq2pcr_dict.iteritems():
-            if names_majiq2pcr_dict[common_name] == name_pcr:
-                name = name_majiq
+    with open('dpsi_kristens.txt', 'w') as psi_txt:
+        headers=['LSV ID', 'RT-PCR', 'Majiq', 'Miso Stim.', 'Miso Unstim.', 'RT-PCR Stim. Avg. STD', 'RT-PCR Liver Avg. STD']
+        psi_txt.write('\t'.join(headers))
+        psi_txt.write('\n')
 
-                # For Majiq, compute mean over Expected PSIs
-                majiq_rest_stim_stat = get_expected_dpsi(majiq_rest_stim_dict[name][0])
+        for common_name in common_names_set:
+            for name_majiq, name_pcr in names_majiq2pcr_dict.iteritems():
+                if names_majiq2pcr_dict[common_name] == name_pcr:
+                    name = name_majiq
+                    psi_txt_line = [name]
 
-                # For MISO, compute mean
-                miso_rest_stat = np.mean(miso_rest_dict[name])
-                miso_stim_stat = np.mean(miso_stim_dict[name])
+                    # For Majiq, compute mean over Expected PSIs
+                    majiq_rest_stim_stat = get_expected_dpsi(majiq_rest_stim_dict[name][0])
 
-                
-                print "%s - %s" % (name, names_majiq2pcr_dict[name])
-                print "---- RT-PCR ----"
-
-                kr_rt_pcr_dpsi.append(pcr_rest_stim[names_majiq2pcr_dict[name]][0])
-                kr_majiq_dpsi.append(majiq_rest_stim_stat)
-                kr_miso_dpsi.append(miso_rest_stat-miso_stim_stat)
-                kr_cov.append(name.split("#")[0])
+                    # For MISO, compute mean
+                    miso_rest_stat = np.mean(miso_rest_dict[name])
+                    miso_stim_stat = np.mean(miso_stim_dict[name])
 
 
-                print "---- RT-PCR ----"
-                print "[Resting Vs Stimulated - RTPCR]:\t%f" % kr_rt_pcr_dpsi[-1]
+                    print "%s - %s" % (name, names_majiq2pcr_dict[name])
+                    print "---- RT-PCR ----"
 
-                print "---- MAJIQ ----"
-                print "[Resting Vs Stimulated - MAJIQ]:\t%f" % (kr_majiq_dpsi[-1])
+                    kr_rt_pcr_dpsi.append(pcr_rest_stim[names_majiq2pcr_dict[name]][0])
+                    kr_majiq_dpsi.append(majiq_rest_stim_stat)
+                    kr_miso_dpsi.append(miso_rest_stat-miso_stim_stat)
+                    kr_cov.append(name.split("#")[0])
 
-                print "---- MISO -----"
-                print "[Resting Vs Stimulated - MISO]:\t%f" % (kr_miso_dpsi[-1])
+                    psi_txt_line.append(str(np.mean(kr_rt_pcr_dpsi[-1])))
+                    psi_txt_line.append(str(kr_majiq_dpsi[-1]))
+                    psi_txt_line.append(str(miso_rest_dict[name]))
+                    psi_txt_line.append(str(miso_stim_dict[name]))
+                    psi_txt_line.append(str(np.std(kr_rt_pcr_dpsi[-1])))
+                    psi_txt.write("\t".join(psi_txt_line))
+                    psi_txt.write('\n')
+
+                    print "---- RT-PCR ----"
+                    print "[Resting Vs Stimulated - RTPCR]:\t%f" % kr_rt_pcr_dpsi[-1]
+
+                    print "---- MAJIQ ----"
+                    print "[Resting Vs Stimulated - MAJIQ]:\t%f" % (kr_majiq_dpsi[-1])
+
+                    print "---- MISO -----"
+                    print "[Resting Vs Stimulated - MISO]:\t%f" % (kr_miso_dpsi[-1])
 
     kr_cov, foo = load_coverage(kr_cov, [], args.clean_reads, dataset='kr')
 
