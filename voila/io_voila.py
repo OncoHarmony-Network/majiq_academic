@@ -231,10 +231,10 @@ def write_tab_output(output_dir, output_html, majiq_output, type_summary, logger
 def load_dpsi_tab(tab_files_list, sample_names, thres_change=None, filter_genes=None, filter_lsvs=None, pairwise_dir=None):
     """Load LSV delta psi information from tab-delimited file."""
     lsvs_dict = defaultdict(lambda: defaultdict(lambda: None))
-    exec_dir = os.path.split(os.path.dirname(__file__))[1]
-    if pairwise_dir is not None:
-        exec_dir = os.path.split(pairwise_dir)[1]
+    if pairwise_dir is None:
+        pairwise_dir = os.getcwd()
 
+    root_path = None
     # 2-step process:
     #   1. create a data structure finding the most changing junction,
     #   2. select the expected psi from the most changing junction more frequent in the set
@@ -243,6 +243,17 @@ def load_dpsi_tab(tab_files_list, sample_names, thres_change=None, filter_genes=
             for line in tabf:
                 if line.startswith("#"): continue
                 fields = line.split()
+
+                if root_path is None:
+                    pr, linkk = os.path.split(fields[-1])
+                    linkk = linkk.split('#')[0]
+                    while not os.path.exists(pairwise_dir + '/' + linkk) and len(pr) > 0:
+                        pr, aux = os.path.split(pr)
+                        linkk = aux + '/' + linkk
+
+                    if len(pr) == 0:
+                        raise Exception('Couldn\'t determine links to delta psi summaries')
+                    root_path = pr
 
                 if filter_genes:
                     if fields[0] not in filter_genes and fields[1] not in filter_genes: continue
@@ -259,7 +270,7 @@ def load_dpsi_tab(tab_files_list, sample_names, thres_change=None, filter_genes=
                 idx_max = np.argmax([abs(ee) for ee in expecs])
                 lsvs_dict[fields[2]]['expecs'][idx] = expecs
                 lsvs_dict[fields[2]]['njunc'][idx] = idx_max
-                lsvs_dict[fields[2]]['links'][idx] = fields[-1].split(exec_dir + '/')[1]
+                lsvs_dict[fields[2]]['links'][idx] = pairwise_dir + '/' + fields[-1].split(root_path)[1]
                 lsvs_dict[fields[2]]['gene'] = fields[0]
 
     for lsv_idx in lsvs_dict.keys():
