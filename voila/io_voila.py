@@ -235,7 +235,7 @@ def load_dpsi_tab(tab_files_list, sample_names, thres_change=None, filter_genes=
         pairwise_dir = os.getcwd()
 
     root_path = None
-    path_prefix = '/'.join(['..']*len(outdir.strip('./').split('/')))
+    path_prefix = '/'.join(['..']*len(outdir.strip('./').split('/'))) + '/'
     if len(outdir.strip('./')) == 0:
         path_prefix = './'
     # 2-step process:
@@ -273,7 +273,7 @@ def load_dpsi_tab(tab_files_list, sample_names, thres_change=None, filter_genes=
                 idx_max = np.argmax([abs(ee) for ee in expecs])
                 lsvs_dict[fields[2]]['expecs'][idx] = expecs
                 lsvs_dict[fields[2]]['njunc'][idx] = idx_max
-                lsvs_dict[fields[2]]['links'][idx] = path_prefix + fields[-1].split(root_path)[1]
+                lsvs_dict[fields[2]]['links'][idx] = path_prefix + pairwise_dir + fields[-1].split(root_path)[1]
                 lsvs_dict[fields[2]]['gene'] = fields[0]
 
     for lsv_idx in lsvs_dict.keys():
