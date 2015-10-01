@@ -53,7 +53,6 @@
                     {% else %}
                         <td class="njunc-bg-{{ lsvs[lsv]['njunc'] }}">
                     {% endif %}
-                        {{ lsvs[lsv]['links'][loop.index0] | debug }}
                         <a href="{{ lsvs[lsv]['links'][loop.index0] }}" target="_blank" class="njunc-text">{{ lsvs[lsv]['expecs'][loop.index0]|round(3) }}</a>
                         <span class="arrow-down">{% if (lsvs[lsv]['expecs'][loop.index0] | abs ) < thres %}&#8659;{%- endif %}</span>
                 {% else %}
