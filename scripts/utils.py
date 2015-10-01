@@ -81,7 +81,7 @@ def miso_delta_reader(path, dofilter=False, complex_lsvs=False, result_dict=None
                         if abs(float(delta_psi[i])) > max_dpsi:
                             max_dpsi = abs(float(delta_psi[i]))
                             max_junc = i
-                    ret.append([event_name, float(delta_psi[max_junc]), float(bayes_factor[max_junc])])
+                    ret.append([event_name, float(delta_psi[max_junc]), float(bayes_factor[max_junc]), 1])
     return ret
 
 

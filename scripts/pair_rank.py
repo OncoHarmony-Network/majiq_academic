@@ -14,7 +14,12 @@ import scripts.utils
 
 from collections import defaultdict
 import argparse
+import os
 from pylab import *
+try:
+    import cPickle as pickle
+except:
+    import pickle
 
 RANK_TYPES = ['all', 'intersected', 'only_exp1', 'exp1_and_exp2']
 
@@ -110,7 +115,7 @@ def rank_majiq(vlsv_list, V=0.2, absolute=True, dofilter=True, E=False, ranknoch
 
         v_expected = expected_dpsi(dmatrix)
         area = 1.0 - matrix_area(dmatrix, V, absolute)  # P(Delta PSI < V) = 1 - P(Delta PSI > V)
-        rank.append(["%s#%d" % (vlsv.get_id(), junc_n), v_expected, area])
+        rank.append(["%s#%d" % (vlsv.get_id(), junc_n), v_expected, area, int(abs(v_expected)>=V and area<=0.05)])
 
     expected_mask = np.array([abs(r[1]) >= V for r in rank])
     fdr_mask = np.array([r[2] <= 0.05 for r in rank])
@@ -118,7 +123,7 @@ def rank_majiq(vlsv_list, V=0.2, absolute=True, dofilter=True, E=False, ranknoch
     # rank = np.array(rank)[expected_fdr_mask].tolist()
     if majiq_n:
         majiq_n[0] = np.count_nonzero(expected_fdr_mask)
-    # rank = np.array(rank)[np.logical_and(expected_mask, fdr_mask)].tolist()
+    # rank = np.array(rank)[np.logical_and(expected_mask, fdr_mask)].tolist() #TODO: Remove this!!
 
     print "#FDR < 0.05: %d" % np.count_nonzero(fdr_mask)
     print "#E(Delta(PSI))>%.2f: %d" % (V, np.count_nonzero(expected_mask))
@@ -146,7 +151,7 @@ def rank_naive(bins_list, names, V=0.2, absolute=True, E=False, ranknochange=Fal
             v_prob += dmatrix[ii] * abs(v)
 
         area = 1. - matrix_area(dmatrix, V, absolute, collapsed_mat=True)
-        rank.append([names[i][1], v_prob, area])
+        rank.append([names[i][1], v_prob, area, 1])
 
     expected_mask = np.array([abs(r[1]) >= V for r in rank])
     fdr_mask = np.array([r[2] <= 0.05 for r in rank])
@@ -215,6 +220,7 @@ def rank_mats_original(mats_file, dofilter=True, ranknochange=False, majiq_n=Non
     first_exon_field = 5
     last_exon_field = 11
     rank = []
+    mats_nn = 0
     for line in open(mats_file):
         sline = line.split()
         if sline[0] == "ID":
@@ -227,7 +233,9 @@ def rank_mats_original(mats_file, dofilter=True, ranknochange=False, majiq_n=Non
             pvalue = float(sline[-5])
             fdr = float(sline[-4])
             delta_psi = float(sline[-1])
-            rank.append([geneID, delta_psi, pvalue, fdr])
+            pass_thres =int(abs(delta_psi)>=0.2 and fdr<=0.05) 
+            mats_nn += pass_thres 
+            rank.append([geneID, delta_psi, pvalue, fdr, pass_thres])
 
     expected_mask = np.array([abs(r[1]) >= 0.2 for r in rank])
     fdr_cutoff = 0.05
@@ -241,7 +249,7 @@ def rank_mats_original(mats_file, dofilter=True, ranknochange=False, majiq_n=Non
 
     print "MATS:"
     print "#FDR < 0.05: %d" % np.count_nonzero(np.array([r[3] <= 0.05 for r in rank]))
-    rank = np.array(rank)[np.logical_and(expected_mask, fdr_mask)].tolist()
+    #rank = np.array(rank)[np.logical_and(expected_mask, fdr_mask)].tolist() # TODO: Remove this!!
     print "#FDR < %.2f: %d" % (fdr_cutoff, np.count_nonzero(fdr_mask))
     print "#E(Delta(PSI))>0.20: %d" % np.count_nonzero(expected_mask)
     print "#E(Delta(PSI))>0.20 and FDR<0.05: %d" % np.count_nonzero(np.logical_and(expected_mask, fdr_mask))
@@ -251,13 +259,17 @@ def rank_mats_original(mats_file, dofilter=True, ranknochange=False, majiq_n=Non
     else:
         rank.sort(key=lambda x: (-abs(float(x[1])), float(x[2])))  # biggest delta PSI first, small p-value
 
-    return rank
+    return mats_nn, rank
 
 
-def _is_in_chunk(event1, chunk):
+def _is_in_chunk(event1, chunk, report_rank2_expec=False):
     for event2 in chunk:
         if event1[0] == event2[0]:  # event[0] is the name of the event
+            if report_rank2_expec:
+                return [1, event2[1]]
             return 1
+    if report_rank2_expec:
+        return [0, '']
     return 0
 
 
@@ -369,6 +381,9 @@ def main():
                         help="Shrink ranks with the FDR number.")
     parser.add_argument('--mats_n', default=False, action='store_true',
                         help="Use MATS number of confident changing events (N of FDR<0.05, |E(Delta(PSI))|>.2)")
+    parser.add_argument('--events-only', dest='only_events', default=False, action='store_true',
+                        help="Create files with ONLY the events files")
+    args = parser.parse_args()
     args = parser.parse_args()
 
     print args
@@ -404,12 +419,16 @@ def main():
                                junc_selection=junc_dict))
                 n1['majiq_' + str(count_pairs)] = [np.count_nonzero(exp1_index), np.count_nonzero(exp1_index)]
         names_majiq_exp1 = [m[1] for m in majiq_file1_names]
+    
+    mats_n_orig = None
 
     if args.mats_files:
         if args.mats_n:
             majiq_N = [None]
         for file_str in args.mats_files:
-            mats_rank = rank_mats_original(file_str, args.filter, args.ranknochange, majiq_n=majiq_N)
+            mmats_n, mats_rank = rank_mats_original(file_str, args.filter, args.ranknochange, majiq_n=majiq_N)
+            if not mats_n_orig:
+                mats_n_orig = mmats_n
             if len(ranks['mats']) > 0:
                 names_mats_exp1 = [mats_info[0] for mats_info in ranks['mats'][0]]
                 names_mats = [mats_info[0] for mats_info in mats_rank]
@@ -459,7 +478,7 @@ def main():
         events = []
 
         max_events = min(args.max, len(rank1))
-        if majiq_N[0]:
+        if majiq_N[0] and not args.only_events:
             max_events = min(max_events, majiq_N[0])
 
         fdr = []
@@ -485,13 +504,14 @@ def main():
                     print "Event rank1 n=%s. Window rank2: %s-%s" % (i, min_chunk, max_chunk)
 
                 #check if event1 is inside the window of rank2
-                found += _is_in_chunk(rank1[i], list(rank2[min_chunk:max_chunk]))
+                is_hit, rank2_exp = _is_in_chunk(rank1[i], list(rank2[min_chunk:max_chunk]), report_rank2_expec=True)
+                found += is_hit
                 if args.fdr:
                     v_values.append(rank1[i][1])
                     fdr.append(fdr[-1] + v_values[-1])
 
                 ratios.append(float(found))
-                events.append([rank1[i], _is_in_chunk(rank1[i], list(rank2[min_chunk:max_chunk]))])
+                events.append([rank1[i], is_hit, rank2_exp, majiq_N[0] if 'mats' not in method_name else mats_n_orig])
 
             fdr.pop(0)  #remove now useless first item
             #normalize ratios
