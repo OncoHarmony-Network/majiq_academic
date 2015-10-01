@@ -228,13 +228,16 @@ def write_tab_output(output_dir, output_html, majiq_output, type_summary, logger
     logger.info("Delimited output file successfully created in: %s" % ofile_str)
 
 
-def load_dpsi_tab(tab_files_list, sample_names, thres_change=None, filter_genes=None, filter_lsvs=None, pairwise_dir=None):
+def load_dpsi_tab(tab_files_list, sample_names, thres_change=None, filter_genes=None, filter_lsvs=None, pairwise_dir=None, outdir=None):
     """Load LSV delta psi information from tab-delimited file."""
     lsvs_dict = defaultdict(lambda: defaultdict(lambda: None))
     if pairwise_dir is None:
         pairwise_dir = os.getcwd()
 
     root_path = None
+    path_prefix = '/'.join(['..']*len(outdir.strip('./').split('/'))) + '/'
+    if len(outdir.strip('./')) == 0:
+        path_prefix = './'
     # 2-step process:
     #   1. create a data structure finding the most changing junction,
     #   2. select the expected psi from the most changing junction more frequent in the set
@@ -270,7 +273,7 @@ def load_dpsi_tab(tab_files_list, sample_names, thres_change=None, filter_genes=
                 idx_max = np.argmax([abs(ee) for ee in expecs])
                 lsvs_dict[fields[2]]['expecs'][idx] = expecs
                 lsvs_dict[fields[2]]['njunc'][idx] = idx_max
-                lsvs_dict[fields[2]]['links'][idx] = pairwise_dir + '/' + fields[-1].split(root_path)[1]
+                lsvs_dict[fields[2]]['links'][idx] = path_prefix + fields[-1].split(root_path)[1]
                 lsvs_dict[fields[2]]['gene'] = fields[0]
 
     for lsv_idx in lsvs_dict.keys():

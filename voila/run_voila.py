@@ -487,7 +487,7 @@ def create_summary(args):
                 lsv_name_list.append(lsv_name.rstrip().upper())
 
         output_html = "%s_%s_comp_table_%.2f.html" % (cond_pair[0], cond_pair[1], thres_change)
-        lsvs_dict = io_voila.load_dpsi_tab(sample_files, sample_names, thres_change=thres_change, filter_genes=gene_name_list, filter_lsvs=lsv_name_list, pairwise_dir=args.pair_dir)
+        lsvs_dict = io_voila.load_dpsi_tab(sample_files, sample_names, thres_change=thres_change, filter_genes=gene_name_list, filter_lsvs=lsv_name_list, pairwise_dir=args.pair_dir, outdir=args.output_dir)
         logger.info("LSVs added to the table: %d" % len(lsvs_dict.keys()))
         render_summary(output_dir, output_html, {'lsvs': lsvs_dict, 'sample_names': sample_names, 'cond_pair': cond_pair, 'thres': thres_change}, type_summary, logger=logger)
         return
