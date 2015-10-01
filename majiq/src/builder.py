@@ -130,6 +130,8 @@ def _generate_parser():
 
 def main(params):
 
+    if not os.path.exists(params.conf):
+        raise RuntimeError("Config file %s does not exist" % params.conf)
     mglobals.global_conf_ini(params.conf, params)
 
     logger = utils.get_logger("%s/majiq.log" % mglobals.outDir, silent=params.silent, debug=params.debug)
@@ -147,8 +149,14 @@ def main(params):
         for exp_idx, exp in enumerate(mglobals.exp_list):
             samfile = "%s/%s.bam" % (mglobals.sam_dir, exp)
             if not os.path.exists(samfile):
-                logger.info("Skipping %s.... not found" % samfile)
-                continue
+                raise RuntimeError("Skipping %s.... not found" % samfile)
+                #logger.info("Skipping %s.... not found" % samfile)
+                #continue
+            baifile = samfile = "%s/%s.bam.bai" % (mglobals.sam_dir, exp)
+            if not os.path.exists(baifile):
+                raise RuntimeError("Skipping %s.... not found ( index file for bam file is required)" % baifile)
+                #logger.info("Skipping %s.... not found ( index file for bam file is required)" % baifile)
+                #continue
             sam_list.append(samfile)
         #majiq_io.count_mapped_reads(samfile, exp_idx)
         if len(sam_list) == 0:
