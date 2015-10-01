@@ -562,10 +562,10 @@ def main():
     parser_comptable.add_argument('-cond-pair', dest='cond_pair', required=True, nargs=2, metavar='M1 M2', help='Condition pair to compare.')
     parser_comptable.add_argument('-sample-files', dest='sample_files', required=True, nargs='+', metavar='M1_M2_sample1 [M1_M2_sample2 ...]', help='Samples Voila output files.')
     parser_comptable.add_argument('-sample-names', dest='sample_names', required=True, nargs='+', metavar='sample1 [sample2 ...]', help='Sample names.')
+    parser_comptable.add_argument('-pairwise-dir', dest='pair_dir', required=True, type=str, help='Root directory where the pairwise delta psi VOILA summaries were created.')
     parser_comptable.add_argument('--thres-change',  dest='thres_change', type=float, metavar='0.2', help='Threshold used to filter non-changing LSVs.')
     parser_comptable.add_argument('--filter-genes', type=str, dest='gene_names', help='File with gene names to filter the results (one gene per line). Use - to type in the gene names.')
     parser_comptable.add_argument('--filter-lsvs', type=str, dest='lsv_names', help='File with lsv names to filter the results (one gene per line). Use - to type in the gene names.')
-    parser_comptable.add_argument('--pairwise-dir', type=str, dest='pair_dir', help='Root directory where the pairwise delta psi VOILA summaries were created.')
     subparsers.add_parser(constants.COND_TABLE, help='Generate a HTML table with a list of LSVs changing between conditions in multiple samples [DEBUGING!].', parents=[base_parser, parser_comptable])
 
     args = parser.parse_args()
