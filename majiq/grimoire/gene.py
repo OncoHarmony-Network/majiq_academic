@@ -248,16 +248,13 @@ class Gene:
         """
 
         res = None
+
         for ee in self.exons:
-#            print "EX GEN:",ee.start, ee.end
-#            print "New EX:",start, end
-            if start < ee.end and end > ee.start:
+            ex_str, ex_end = ee.get_coordinates()
+            if start < ex_end and end > ex_str:
                 res = ee
                 break
-#                fnd +=1
-#            elif (end < ee.start):
-#                if fnd >1 : # overlapping more than one exon.... intron retention
-#                    res = None
+
         return res
 
     def exist_junction(self, start, end):

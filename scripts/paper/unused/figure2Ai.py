@@ -4,7 +4,7 @@ from matplotlib import use
 use('Agg')
 from scripts import utils as utils_scripts
 from collections import defaultdict
-import analysis
+from analysis import psi as apsi
 from scripts.psi_scores import calculate_ead_simple
 import argparse
 from pylab import *
@@ -354,9 +354,9 @@ def main():
 
             print "Events after intersection of MAJIQ and MISO: %d" % len(psi_names_met1.keys())
             for psi_name in sorted(psi_names_met1.keys()):
-                psi_list1_met1.append(sum(psi_met1_rep1[psi_names_met1[psi_name]][0]*analysis.psi.BINS_CENTER))
-                psi_list2_met1.append(sum(psi_met1_rep2[psi_names_met1[psi_name]][0]*analysis.psi.BINS_CENTER))
-            better_worse_dict[majiq_vs].append(-calculate_ead_simple(psi_list1_met1, psi_list2_met1) +  calculate_ead_simple(psi_lists_met2[0], psi_lists_met2[1]))
+                psi_list1_met1.append(sum(psi_met1_rep1[psi_names_met1[psi_name]][0]*apsi.BINS_CENTER))
+                psi_list2_met1.append(sum(psi_met1_rep2[psi_names_met1[psi_name]][0]*apsi.BINS_CENTER))
+            better_worse_dict[majiq_vs].append(-calculate_ead_simple(psi_list1_met1, psi_list2_met1) + calculate_ead_simple(psi_lists_met2[0], psi_lists_met2[1]))
 
     plot_delta_expected_majiq_others(better_worse_dict, args.rep_names, args.plotpath, extension=args.extension)
 

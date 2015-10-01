@@ -643,12 +643,14 @@ def new_exon_definition(start, end, read_rna, s3prime_junc, s5prime_junc, gene, 
             ex1 = Exon(start, EMPTY_COORD, gene, gene.get_strand(), annot=False, isintron=isintron)
             s3prime_junc.add_acceptor(ex1)
             gene.add_exon(ex1)
-            ex1.add_new_read(start, -1, read_rna, s3prime_junc, None)
+            cc = ex1.get_coordinates()
+            ex1.add_new_read(cc[0], cc[1], read_rna, s3prime_junc, None)
 
             ex2 = Exon(EMPTY_COORD, end, gene, gene.get_strand(), annot=False, isintron=isintron)
             s5prime_junc.add_donor(ex2)
             gene.add_exon(ex2)
-            ex2.add_new_read(-1, end, read_rna, None, s5prime_junc)
+            cc = ex2.get_coordinates()
+            ex2.add_new_read(cc[0], cc[1], read_rna, None, s5prime_junc)
 
     else:
         coords = ex.get_coordinates()
@@ -743,7 +745,6 @@ def detect_exons(gene, junction_list, read_rna):
             junction_list.remove((coord, jtype, jj))
             del jj
 
-    # print "FOUND new %d exons" % new_exons
     return
 
 
