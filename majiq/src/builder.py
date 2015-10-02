@@ -152,7 +152,7 @@ def main(params):
                 raise RuntimeError("Skipping %s.... not found" % samfile)
                 #logger.info("Skipping %s.... not found" % samfile)
                 #continue
-            baifile = samfile = "%s/%s.bam.bai" % (mglobals.sam_dir, exp)
+            baifile = "%s/%s.bam.bai" % (mglobals.sam_dir, exp)
             if not os.path.exists(baifile):
                 raise RuntimeError("Skipping %s.... not found ( index file for bam file is required)" % baifile)
                 #logger.info("Skipping %s.... not found ( index file for bam file is required)" % baifile)
