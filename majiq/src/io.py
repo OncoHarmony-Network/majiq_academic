@@ -86,6 +86,7 @@ def __cross_junctions(read):
             elif op == 3:
                 jlist.append((read.pos + off, read.pos + off + num + 1))
                 off += num
+                cross = True
                 # if len(jlist) !=0 : print "NOSTAR:", jlist, read.cigar
 
     return cross, jlist
@@ -158,9 +159,6 @@ def rnaseq_intron_retention(filenames, gene_list, readlen, chnk, permissive=True
                 continue
             if intron_len <= 1000:
                 nchunks = 1
-
-
-
 
             # we want to take just the middle part not the reads that are crossing the junctions
             # since 8 is the overlapping number of nucleotites we accept, the inner part is the
