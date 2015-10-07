@@ -466,17 +466,17 @@ class MajiqLsv(object):
         self.id = lsv_obj.id
         self.type = lsv_obj.ext_type
         self.iretention = lsv_obj.intron_retention
-        self.junction_list = scipy.sparse.lil_matrix((lsv_obj.junctions.shape[0], (mglobals.readLen - 16) + 1),
+        self.junction_list = scipy.sparse.lil_matrix((lsv_obj.junctions.shape[0], (max(mglobals.readLen) - 16) + 1),
                                                      dtype=np.int)
         self.junction_id = []
         self.visual = lsv_obj.get_visual(exp_idx)
-        self.gc_factor = scipy.sparse.lil_matrix((lsv_obj.junctions.shape[0], (mglobals.readLen - 16) + 1),
+        self.gc_factor = scipy.sparse.lil_matrix((lsv_obj.junctions.shape[0], (max(mglobals.readLen) - 16) + 1),
                                                  dtype=np.dtype('float'))
 
         for idx, junc in enumerate(lsv_obj.junctions):
             self.junction_list[idx, :] = junc.coverage[exp_idx, :]
             self.junction_id.append(junc.get_id())
-            for jidx in range(mglobals.readLen - 16 + 1):
+            for jidx in range(max(mglobals.readLen) - 16 + 1):
                 dummy = junc.get_gc_content()[0, jidx]
                 self.gc_factor[idx, jidx] = dummy
 

@@ -27,8 +27,8 @@ class Junction:
             self.acceptor_id = acceptor.get_id()
         self.gene_name = gene.get_id()
         self.annotated = annotated
-        self.coverage = scipy.sparse.lil_matrix((config.num_experiments, (config.readLen - 16) + 1), dtype=np.int)
-        self.gc_content = scipy.sparse.lil_matrix((1, (config.readLen - 16) + 1), dtype=np.float)
+        self.coverage = scipy.sparse.lil_matrix((config.num_experiments, (max(config.readLen) - 16) + 1), dtype=np.int)
+        self.gc_content = scipy.sparse.lil_matrix((1, (max(config.readLen) - 16) + 1), dtype=np.float)
         self.id = "%s:%s-%s" % (self.gene_name, start, end)
         self.transcript_id_list = []
 
@@ -149,7 +149,8 @@ class Junction:
     def update_junction_read(self, exp_idx, read_n, start, gc, unique):
         #        print "J3",self, getrefcount(self)
 
-        left_ind = config.readLen - (self.start - start) - 8 + 1
+
+        left_ind = max(config.readLen) - (self.start - start) - 8 + 1
         if unique:
             self.coverage[exp_idx, left_ind] += read_n
         else:
@@ -162,7 +163,7 @@ class MajiqJunc:
         self.exons = {}
         self.annot = jnc.is_annotated()
         if jnc is None:
-            self.gc_index = scipy.sparse.lil_matrix((1, (config.readLen - 16) + 1), dtype=np.int)
+            self.gc_index = scipy.sparse.lil_matrix((1, (max(config.readLen) - 16) + 1), dtype=np.int)
             self.name = None
             self.id = "None"
 
@@ -170,7 +171,7 @@ class MajiqJunc:
             self.exons['coord1'] = [0, 0]
             self.exons['coord2'] = [0, 0]
             self.exons['strand'] = None
-            self.coverage = scipy.sparse.lil_matrix((1, (config.readLen - 16) + 1), dtype=np.int)
+            self.coverage = scipy.sparse.lil_matrix((1, (max(config.readLen) - 16) + 1), dtype=np.int)
         else:
             self.name = "%s:%s-%s" % (jnc.get_gene().get_id(), jnc.get_ss_5p(), jnc.get_ss_3p())
             self.id = "%s:%s-%s" % (jnc.get_gene().get_chromosome(), jnc.get_ss_5p(), jnc.get_ss_3p())
@@ -188,8 +189,8 @@ class MajiqJunc:
                 self.exons['coord2'] = jnc.get_acceptor().get_coordinates()
 
             self.coverage = jnc.coverage[exp_idx, :]
-            self.gc_factor = scipy.sparse.lil_matrix((1, (config.readLen - 16) + 1), dtype=np.float)
-            for jj in range(config.readLen - 16 + 1):
+            self.gc_factor = scipy.sparse.lil_matrix((1, (max(config.readLen) - 16) + 1), dtype=np.float)
+            for jj in range(max(config.readLen) - 16 + 1):
                 dummy = jnc.gc_content[0, jj]
                 self.gc_factor[0, jj] = dummy
 
