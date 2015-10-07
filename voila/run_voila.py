@@ -462,8 +462,18 @@ def create_summary(args):
         return
 
     if type_summary == constants.SPLICE_GRAPHS:
+        gene_name_list = None
+        if args.gene_names:
+            gene_name_list = []
+            for gene_name in fileinput.input(args.gene_names):
+                gene_name_list.append(gene_name.rstrip().upper())
+
         logger.info("Loading %s." % voila_file)
-        genesG = pkl.load(open(voila_file, 'r'))[:args.max]
+        if gene_name_list:
+            genesG = pkl.load(open(voila_file, 'r'))
+            genesG = [gg for gg in genesG if gg.id in gene_name_list]
+        else:
+            genesG = pkl.load(open(voila_file, 'r'))[:args.max]
         majiq_output = {'genes': sorted(genesG, key=lambda t: t.id)}
         render_summary(output_dir, output_html, majiq_output, type_summary, logger=logger)
         return
@@ -555,6 +565,7 @@ def main():
     # Splice graphs generation option (dev) TODO: Delete??
     parser_splice_graphs = argparse.ArgumentParser(add_help=False)
     parser_splice_graphs.add_argument('--max', type=int, default=20, help='Maximum number of splice graphs to show (*.splicegraph files may be quite large).')
+    parser_splice_graphs.add_argument('--filter-genes', type=str, dest='gene_names', help='File with gene names to filter the results (one gene per line). Use - to type in the gene names.')
     subparsers.add_parser(constants.SPLICE_GRAPHS, help='Generate only splice graphs [DEBUGING!].', parents=[base_parser, common_parser, parser_splice_graphs])
 
     # In-group out-group analysis option (dev) TODO: Delete??
