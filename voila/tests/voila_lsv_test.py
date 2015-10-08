@@ -20,24 +20,24 @@ class TestVoilaLsv(object):
     def setup_class(cls):
         """This method is run once for each class before any tests are run"""
         sg = pkl.load(open(LSVGRAPHIC_FILENAME))
-        binsl = []
+        cls.dpsi_bins = []
         num_juncs = 3
         for ii in xrange(num_juncs):
-            binsl.append(np.random.rand(40))
-            binsl[-1] /= binsl[-1].sum()
+            cls.dpsi_bins.append(np.random.rand(20, 20))
+            cls.dpsi_bins[-1] /= cls.dpsi_bins[-1].sum()
 
-        cls.psi1 = []
+        cls.psi1_bins = []
         for ii in xrange(num_juncs):
-            cls.psi1.append(np.random.rand(20))
-            cls.psi1[-1] /= cls.psi1[-1].sum()
+            cls.psi1_bins.append(np.random.rand(20))
+            cls.psi1_bins[-1] /= cls.psi1_bins[-1].sum()
 
-        cls.psi2 = []
+        cls.psi2_bins = []
         for ii in xrange(num_juncs):
-            cls.psi2.append(np.random.rand(20))
-            cls.psi2[-1] /= cls.psi2[-1].sum()
+            cls.psi2_bins.append(np.random.rand(20))
+            cls.psi2_bins[-1] /= cls.psi2_bins[-1].sum()
 
         cls.sg = sg
-        cls.binsl = binsl
+
 
     # @classmethod
     # def teardown_class(cls):
@@ -50,12 +50,12 @@ class TestVoilaLsv(object):
         """This method is run once after _each_ test method is executed"""
 
     def test_init_psi(self):
-        a = VoilaLsv(TestVoilaLsv.binsl, self.sg)
+        a = VoilaLsv(TestVoilaLsv.psi1_bins, self.sg)
         assert_equal(a.is_delta_psi(), False)
         assert_not_equal(a.is_delta_psi(), True)
 
     def test_init_dpsi(self):
-        a = VoilaLsv(TestVoilaLsv.binsl, self.sg, psi1=TestVoilaLsv.psi1, psi2=TestVoilaLsv.psi2)
+        a = VoilaLsv(TestVoilaLsv.dpsi_bins, self.sg, psi1=TestVoilaLsv.psi1_bins, psi2=TestVoilaLsv.psi2_bins)
         assert_equal(a.is_delta_psi(), True)
         assert_not_equal(a.is_delta_psi(), False)
 
