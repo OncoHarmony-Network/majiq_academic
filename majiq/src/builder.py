@@ -38,11 +38,11 @@ def majiq_builder(samfiles_list, chnk, pcr_validation=None, gff_output=None, cre
 
     if not logging is None:
         logging.info("[%s] Reading BAM files" % chnk)
-    majiq_io.read_sam_or_bam(samfiles_list, gene_list, mglobals.readLen, chnk,
+    majiq_io.read_sam_or_bam(samfiles_list, gene_list, chnk,
                              nondenovo=nondenovo, logging=logging)
     if not logging is None:
         logging.info("[%s] Detecting intron retention events" % chnk)
-    majiq_io.rnaseq_intron_retention(samfiles_list, gene_list, mglobals.readLen, chnk,
+    majiq_io.rnaseq_intron_retention(samfiles_list, gene_list, chnk,
                                      permissive=mglobals.permissive_ir, logging=logging)
     if not logging is None:
         logging.info("[%s] Detecting LSV" % chnk)
@@ -89,38 +89,6 @@ def __parallel_gff3(transcripts, pcr_filename, nthreads, silent=False, debug=0):
         traceback.print_exc()
         sys.stdout.flush()
         raise()
-
-
-def _new_subparser():
-    return argparse.ArgumentParser(add_help=False)
-
-
-def _generate_parser():
-    dir_or_paths = _new_subparser()
-
-    parser = argparse.ArgumentParser(parents=[dir_or_paths])
-    parser.add_argument('transcripts', action="store", help='read file in SAM format')
-    parser.add_argument('-conf', default=None, required=True, help='Provide study configuration file with all '
-                                                                   'the execution information')
-
-    parser.add_argument('-l', '--readlen', dest="readlen", type=int, default='76', help='Length of reads in the '
-                                                                                        'samfile"')
-    parser.add_argument('-p', '--prefix', dest="prefix", type=str, default='', help='Output prefix string to '
-                                                                                    'personalize partially the output '
-                                                                                    'file.')
-    parser.add_argument('-g', '--genome', dest="genome", help='Genome version an species"')
-    parser.add_argument('--pcr', dest='pcr_filename', action="store", help='PCR bed file as gold_standard')
-    parser.add_argument('--gff_output', dest='gff_output', action="store", help='Filename where a gff with the lsv '
-                                                                                'events will be generated')
-
-    parser.add_argument('-t', '--nthreads', dest="nthreads", type=int, default='4', help='Number of CPUs to use')
-    parser.add_argument('-o', '--output', dest='output', action="store", required=True, help='casete exon list file')
-    parser.add_argument('--silent', action='store_true', default=False, help='Silence the logger.')
-    parser.add_argument('--debug', type=int, default=0, help="Activate this flag for debugging purposes, activates "
-                                                             "logger and jumps some processing steps.")
-    parser.add_argument('--only_gather', action='store_true', dest='onlygather', default=False)
-
-    return parser.parse_args()
 
 
 #########
@@ -191,7 +159,3 @@ def main(params):
 
     mglobals.print_numbers()
     logger.info("End of execution")
-
-if __name__ == "__main__":
-    args = _generate_parser()
-    main(args)

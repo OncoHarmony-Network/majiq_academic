@@ -60,9 +60,11 @@ def global_conf_ini(filename, params, only_db=False):
     config.read(filename)
     # TODO: check if filename exists
     exp = ConfigSectionMap(config, "experiments")
+    lengths_exp = ConfigSectionMap(config, "readlen")
     general = ConfigSectionMap(config, "info")
     exp_list = []
     tissue_repl = {}
+
     temp_oDir = []
     count = 0
 
@@ -73,7 +75,7 @@ def global_conf_ini(filename, params, only_db=False):
         permissive_ir = params.permissive
         MIN_INTRON = params.min_intronic_cov
 
-    readLen = int(general['readlen'])
+    #readLen = [int(xx) for xx in general['readlen'].split([','])
     sam_dir = general['samdir']
     genome = general['genome']
     genome_path = general['genome_path']
@@ -91,6 +93,13 @@ def global_conf_ini(filename, params, only_db=False):
             exp_list.append(exp)
             tissue_repl[exp_idx].append(count)
             count += 1
+
+    readLen = [0] * len(exp_list)
+    for grp, grp_lens in lengths_exp.items():
+        if not grp in tissue_repl:
+            raise RuntimeError('Wrong Config file')
+        for ii in tissue_repl[grp]:
+            readLen[ii] = int(grp_lens)
 
     num_experiments = len(exp_list)
     num_mapped_reads = [0] * num_experiments

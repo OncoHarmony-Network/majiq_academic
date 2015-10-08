@@ -353,10 +353,12 @@ class DeltaPair(BasicPipeline):
                 'debug': self.debug,
                 'plotpath': self.plotpath,
                 'names': self.names}
-
-        p = Process(target=prepare_lsvs, args=(self, conf, nchunks))
-        p.start()
-        p.join()
+        if self.nthreads > 1:
+            p = Process(target=prepare_lsvs, args=(self, conf, nchunks))
+            p.start()
+            p.join()
+        else:
+            prepare_lsvs(self, conf, nchunks)
 
         pool = Pool(processes=self.nthreads)
         for nthrd in xrange(nchunks):

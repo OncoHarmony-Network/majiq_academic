@@ -86,6 +86,7 @@ def __cross_junctions(read):
             elif op == 3:
                 jlist.append((read.pos + off, read.pos + off + num + 1))
                 off += num
+                cross = True
                 # if len(jlist) !=0 : print "NOSTAR:", jlist, read.cigar
 
     return cross, jlist
@@ -139,7 +140,7 @@ def get_junc_from_list(coords, list_elem):
     return res
 
 
-def rnaseq_intron_retention(filenames, gene_list, readlen, chnk, permissive=True, logging=None):
+def rnaseq_intron_retention(filenames, gene_list, chnk, permissive=True, logging=None):
     samfile = [pysam.Samfile(xx, "rb") for xx in filenames]
     nchunks = 10
     for gne in gene_list:
@@ -152,15 +153,12 @@ def rnaseq_intron_retention(filenames, gene_list, readlen, chnk, permissive=True
             intron_start = ex1_end + 1
             intron_end = ex2_start - 1
 
-            offset = readlen - 8
+
             intron_len = intron_end - intron_start
             if intron_len <= 0:
                 continue
             if intron_len <= 1000:
                 nchunks = 1
-
-
-
 
             # we want to take just the middle part not the reads that are crossing the junctions
             # since 8 is the overlapping number of nucleotites we accept, the inner part is the
@@ -180,7 +178,8 @@ def rnaseq_intron_retention(filenames, gene_list, readlen, chnk, permissive=True
             junc2 = None
 
             for exp_index in range(len(filenames)):
-
+                readlen = config.readLen[exp_index]
+                offset = readlen - 8
                 try:
                     read_iter = samfile[exp_index].fetch(chrom, intron_start + 8, intron_end - 8)
                 except ValueError:
@@ -289,7 +288,7 @@ def rnaseq_intron_retention(filenames, gene_list, readlen, chnk, permissive=True
     return
 
 
-def read_sam_or_bam(filenames, gene_list, readlen, chnk, nondenovo=False, logging=None):
+def read_sam_or_bam(filenames, gene_list, chnk, nondenovo=False, logging=None):
     counter = [0] * 6
     samfile = [pysam.Samfile(xx, "rb") for xx in filenames]
     temp_ex = []
@@ -306,6 +305,8 @@ def read_sam_or_bam(filenames, gene_list, readlen, chnk, nondenovo=False, loggin
         chrom = gne.get_chromosome()
 
         for exp_index in range(len(filenames)):
+
+            readlen = config.readLen[exp_index]
             try:
                 read_iter = samfile[exp_index].fetch(chrom, strt, end)
             except ValueError:
