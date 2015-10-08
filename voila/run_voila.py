@@ -356,7 +356,7 @@ def create_gff3_txt_files(output_dir, majiq_output, logger):
             gff_file = "%s.gff3" % (lsv_file_basename)
             with open(gff_file, 'w') as ofile:
                 ofile.write(header+"\n")
-                ofile.write(lsv.get_gff3()+"\n")
+                ofile.write(lsv.get_gff3(logger=logger)+"\n")
             try:
                 utils_voila.gff2gtf(gff_file, "%s.gtf" % lsv_file_basename)
             except UnboundLocalError, e:
@@ -406,7 +406,8 @@ def create_summary(args):
                 gene_name_list.append(gene_name.rstrip().upper())
 
         voila_input = io_voila.load_voila_input(voila_file, logger=logger)
-        majiq_output = utils_voila.get_lsv_single_exp_data(voila_input, gene_name_list=gene_name_list, lsv_types=lsv_types, logger=logger)
+        majiq_output = utils_voila.lsvs_to_gene_dict(voila_input, gene_name_list=gene_name_list, lsv_types=lsv_types,
+                                                     logger=logger)
 
         if not gene_name_list:
             gene_name_list = majiq_output['genes_dict'].keys()
@@ -432,7 +433,9 @@ def create_summary(args):
                 gene_name_list.append(gene_name.rstrip().upper())
 
         voila_input = io_voila.load_voila_input(voila_file, logger=logger)
-        majiq_output = utils_voila.get_lsv_delta_exp_data(voila_input, args.confidence, args.threshold, args.show_all, gene_name_list=gene_name_list, logger=logger)
+        majiq_output = utils_voila.lsvs_to_gene_dict(voila_input, gene_name_list=gene_name_list, logger=logger,
+                                                     threshold=args.threshold, show_all=args.show_all,
+                                                     lsv_types=args.lsv_types)
 
         if not gene_name_list:
             gene_name_list = majiq_output['genes_dict'].keys()
@@ -530,10 +533,9 @@ def main():
     # Common script options
     common_parser = argparse.ArgumentParser(add_help=False)
     common_parser.add_argument('majiq_bins', metavar='majiq_output.pickle', type=str, help='Pickle file with the bins produced by Majiq.')
-    # common_parser.add_argument('-o', '--output', metavar='output_dir', dest='output_dir', type=str, required=True, help='Output directory where the files will be placed.')
-    common_parser.add_argument('-c', '--confidence', metavar=0.95, dest='confidence', type=float, default=0.95, help='Percentage of confidence required (by default, 0.95).')
-    # common_parser.add_argument('--logger', default=None, help='Path for the logger. Default is output directory')
-    # common_parser.add_argument('--silent', action='store_true', default=False, help='Silence the logger.')
+    common_parser.add_argument('--lsv-types', nargs='*', default=[], type=str, dest='lsv_types', help='LSV type to filter the results. (If no gene list is provided, this option will display only genes containing LSVs of the specified type).')
+    common_parser.add_argument('--gene-names-file', type=str, dest='gene_names', help='File with gene names to filter the results (one gene per line). Use - to type in the gene names.')
+
 
     # Subparser module to agglutinate all subparsers
     subparsers = parser.add_subparsers(dest='type_analysis')
@@ -541,20 +543,16 @@ def main():
 
     # Single LSV by Gene(s) of interest
     parser_single = argparse.ArgumentParser(add_help=False)
-    parser_single.add_argument('--genes-exp1', nargs='+', required=True, dest='genes_files', metavar='Hippocampus1.splicegraph [Hippocampus2.splicegraph ...]', type=str, help='Splice graph information file(s) or directory with *.splicegraph file(s).')
-    parser_single.add_argument('--lsv-types', nargs='*', default=[], type=str, dest='lsv_types', help='LSV type to filter the results. (If no gene list is provided, this option will display only genes containing LSVs of the specified type).')
-    parser_single.add_argument('--gene-names-file', type=str, dest='gene_names', help='File with gene names to filter the results (one gene per line). Use - to type in the gene names.')
+    parser_single.add_argument('-splice-graphs1', nargs='+', required=True, dest='genes_files', metavar='Hippocampus1.splicegraph [Hippocampus2.splicegraph ...]', type=str, help='Splice graph information file(s) or directory with *.splicegraph file(s).')
     subparsers.add_parser(constants.ANALYSIS_PSI, help='Single LSV analysis by gene(s) of interest.', parents=[base_parser, common_parser, parser_single])
 
     # Delta LSV
     parser_delta = argparse.ArgumentParser(add_help=False)
+    parser_delta.add_argument('-splice-graphs1', required=True, nargs='+', dest='genesf_exp1', metavar='Hippocampus1.splicegraph [Hippocampus2.splicegraph ...]', type=str, help='Experiment 1 splice graph information file(s) or directory.')
+    parser_delta.add_argument('-splice-graphs2', required=True, nargs='+', dest='genesf_exp2', metavar='Liver1.splicegraph [Liver2.splicegraph ...]', type=str, help='Experiment 2 splice graph information file(s) or directory.')
     parser_delta.add_argument('--threshold', type=float, default=0.2, help='Filter out LSVs with no junction predicted to change over a certain value (in percentage).')  # Probability threshold used to sum the accumulative probability of inclusion/exclusion.
     parser_delta.add_argument('--show-all', dest='show_all', action='store_true', default=False, help='Show all LSVs including those with no junction with significant change predicted')
     parser_delta.add_argument('--pairwise-dir', type=str, dest='pairwise', help='Directory with the pairwise comparisons.')
-    parser_delta.add_argument('--genes-exp1', required=True, nargs='+', dest='genesf_exp1', metavar='Hippocampus1.splicegraph [Hippocampus2.splicegraph ...]', type=str, help='Experiment 1 splice graph information file(s) or directory.')
-    parser_delta.add_argument('--genes-exp2', required=True, nargs='+', dest='genesf_exp2', metavar='Liver1.splicegraph [Liver2.splicegraph ...]', type=str, help='Experiment 2 splice graph information file(s) or directory.')
-    parser_delta.add_argument('--gene-names-file', type=str, dest='gene_names', help='File with gene names to filter the results (one gene per line). Use - to type in the gene names.')
-    parser_delta.add_argument('--lsv-types', nargs='+', default=[], type=str, dest='lsv_types', help='LSV type(s) used to filter the results. (If no gene list is provided, this option will display only genes containing LSVs of the specified type).')
     subparsers.add_parser(constants.ANALYSIS_DELTAPSI, help='Delta LSV analysis by gene(s) of interest.', parents=[base_parser, common_parser, parser_delta])
 
     # Thumbnails generation option (dev) TODO: Delete??
