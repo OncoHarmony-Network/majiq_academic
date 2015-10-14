@@ -297,9 +297,11 @@ window.splicegraph = function (){
 
             // DB Only
             ctx.strokeStyle = "rgba(0, 0, 0, 0.8)";
-            ctx.fillStyle = "rgba(0, 0, 0, 0.01)";
-
-            drawDashedRectangle(ctx, Math.round(x), y + Math.round(area_figures[1]), Math.round(area_figures[0] / num_fig - SEP_FIG), Math.round(area_figures[1]), 4, true);
+            ctx.lineWidth = 2;
+            ctx.fillStyle = "rgba(255, 255, 255, .5)";
+            ctx.setLineDash([5, 5]);
+            drawRectangle(ctx, Math.round(x), y , Math.round(area_figures[0] / num_fig - SEP_FIG), Math.round(area_figures[1]), true);
+            ctx.setLineDash([]);
             ctx.fillStyle = "rgba(0, 0, 0, 1)";
             ctx.fillText("DB Only", Math.round(x + (area_figures[0] / num_fig - SEP_FIG) / 2), canvas.height - MARGINS[3]);
             x = x + area_figures[0] / num_fig + SEP_FIG;
@@ -307,7 +309,7 @@ window.splicegraph = function (){
             /**
              * Legend junctions
              * */
-                // DB & RNASeq
+            // DB & RNASeq
             ctx.strokeStyle = 'red';
             ctx.lineWidth = 1.2;
             ctx.beginPath();
@@ -340,7 +342,7 @@ window.splicegraph = function (){
             /**
              * Legend number of reads
              * */
-                // DB & RNASeq example chosen
+            // DB & RNASeq example chosen
             ctx.strokeStyle = 'red';
             ctx.lineWidth = 1.2;
             ctx.font = "8pt Arial";
