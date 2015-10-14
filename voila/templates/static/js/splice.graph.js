@@ -993,7 +993,7 @@ window.splicegraph = function (){
 //        });
 
         // add sortable functionality to the table
-        var exon_table = $('.exon_table')
+        var exon_table = $('.exon_table');
         if (exon_table.length) {
             exon_table.tablesorter();
         }
@@ -1060,25 +1060,25 @@ window.splicegraph = function (){
 //
 //        }
 
-        return {
-            renderLsvLegend: function(canvas){
-                return renderLsvLegend(canvas);
-            },
-            renderLsvSpliceGraph: function(canvas, gene){
-                return renderLsvSpliceGraph(canvas, gene);
-            },
-            renderSpliceGraph: function(canvas){
-                var MAX_INTRON = 300;   // Global
-                var MAX_EXON = 300;   // Global
-                return renderSpliceGraph(canvas);
-            },
-            renderSpliceGraphZoomedPopUp: function(canvas){
-                return renderSpliceGraphZoomedPopUp(canvas);
-            },
-            renderFloatingLegend: function(canvas){
-                return renderFloatingLegend(canvas);
-            }
+    return {
+        renderLsvLegend: function(canvas){
+            return renderLsvLegend(canvas);
+        },
+        renderLsvSpliceGraph: function(canvas, gene){
+            return renderLsvSpliceGraph(canvas, gene);
+        },
+        renderSpliceGraph: function(canvas){
+            var MAX_INTRON = 300;   // Global
+            var MAX_EXON = 300;   // Global
+            return renderSpliceGraph(canvas);
+        },
+        renderSpliceGraphZoomedPopUp: function(canvas){
+            return renderSpliceGraphZoomedPopUp(canvas);
+        },
+        renderFloatingLegend: function(canvas){
+            return renderFloatingLegend(canvas);
         }
+    }
 };
 //});
 
