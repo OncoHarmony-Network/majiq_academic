@@ -327,45 +327,6 @@ def parse_gene_graphics(splicegraph_flist, gene_name_list, condition_names=('gro
     return genes_exp1_exp2
 
 
-
-
-def create_gff3_txt_files(output_dir, majiq_output, logger):
-    """
-    Create GFF3 files for each LSV.
-
-    :param output_dir: output directory for the file.
-    :param majiq_output: parsed data from majiq.
-    :param logger: logger instance.
-    :return: nothing.
-    """
-    logger.info("Saving LSVs files in gff3 format ...")
-    if 'genes_dict' not in majiq_output or len(majiq_output['genes_dict'])<1:
-        logger.warning("No gene information provided. Genes files are needed to calculate the gff3 files.")
-        return
-
-    header = "##gff-version 3"
-
-    odir = output_dir+"/static/doc/lsvs"
-    utils_voila.create_if_not_exists(odir)
-    for gkey, gvalue in majiq_output['genes_dict'].iteritems():
-        for lsv_dict in gvalue:
-            lsv = lsv_dict
-            if type(lsv_dict) == dict:
-                lsv = lsv_dict['lsv']
-            lsv_file_basename = "%s/%s" % (odir, lsv.get_id())
-            gff_file = "%s.gff3" % (lsv_file_basename)
-            with open(gff_file, 'w') as ofile:
-                ofile.write(header+"\n")
-                ofile.write(lsv.get_gff3(logger=logger)+"\n")
-            try:
-                utils_voila.gff2gtf(gff_file, "%s.gtf" % lsv_file_basename)
-            except UnboundLocalError, e:
-                logger.warning("problem generating GTF file for %s" % lsv.get_id())
-                logger.error(e.message)
-
-    logger.info("Files saved in %s" % odir)
-
-
 def create_summary(args):
     """This method generates an html summary from a majiq output file and the rest of the arguments."""
 
@@ -387,11 +348,8 @@ def create_summary(args):
     threshold   = None
     pairwise    = None
 
-    try:
-        voila_file = args.majiq_bins
-        output_html = os.path.splitext(os.path.split(voila_file)[1])[0] + "_" + type_summary.replace("-", "_") + '.html'
-    except Exception:
-        pass
+    voila_file = args.majiq_bins
+    output_html = os.path.splitext(os.path.split(voila_file)[1])[0] + "_" + type_summary.replace("-", "_") + '.html'
 
     majiq_output = None
     meta_postprocess = {}
@@ -507,7 +465,7 @@ def create_summary(args):
 
     render_summary(output_dir, output_html, majiq_output, type_summary, threshold, meta_postprocess, logger=logger)
     io_voila.write_tab_output(output_dir, output_html, majiq_output, type_summary, logger=logger, pairwise_dir=pairwise, threshold=threshold)
-    create_gff3_txt_files(output_dir, majiq_output, logger=logger)
+    io_voila.create_gff3_txt_files(output_dir, majiq_output, logger=logger)
 
     logger.info("Voila! Summaries created in: %s" % output_dir)
     return

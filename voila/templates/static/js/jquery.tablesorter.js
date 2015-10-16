@@ -1026,12 +1026,6 @@
         id: "renderCanvas",
         format: function (table) {
 
-            $('.floatingLegend').each(function () {
-                if ($(this)[0].getContext) {
-                    splicegraph().renderFloatingLegend($(this)[0]);
-                }
-            });
-
             $(table.parentElement).children('.spliceDiv').each( function(){
                 /**
                  * D3 - SpliceGraph

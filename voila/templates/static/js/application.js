@@ -26,6 +26,12 @@ $( document ).ready(function(){
     window.gene_objs = [];
     window.gene_obj_list = [];
 
+    $('.floatingLegend').each(function () {
+        if ($(this)[0].getContext) {
+            splicegraph().renderFloatingLegend($(this)[0]);
+        }
+    });
+
     $('.tablesorter').each(function() {
         $(this).tablesorter({sortList: [
             [0, 0]
@@ -33,7 +39,6 @@ $( document ).ready(function(){
         $(this).tablesorterPager({widthFixed: true, widgets: ['zebra', 'renderCanvas'], container: $(this).parent().children(".pager")});
     });
 
-    // Single LSVs - TODO: Move from here to jquery.tablesorter.js
     $('.lsvLegendThumb').each( function(){
         var collapsed = this.getAttribute('data-collapsed');
         if (collapsed != 0){
@@ -203,21 +208,6 @@ function createGradientSinglePlots(ctx, canvas, margins){
     return gradient;
 }
 
-function createGradientDeltaPlots(ctx, gradientFrom, gradientTo, fromColor, toColor, pThreshold){
-    //create a gradient object from the canvas context
-    var gradient = ctx.createLinearGradient(gradientFrom, 0, gradientTo, 0);
-
-    // Add the colors with fixed stops.
-    gradient.addColorStop(0, getColor(fromColor, BREWER_PALETTE,.5));
-//    gradient.addColorStop(0.5-pThreshold/2,"white");
-//    gradient.addColorStop(0.5-pThreshold/2,"grey");
-////    gradient.addColorStop(0.5,"white");
-//    gradient.addColorStop(0.5+pThreshold/2,"grey");
-//    gradient.addColorStop(0.5+pThreshold/2,"white");
-    gradient.addColorStop(1, getColor(toColor, BREWER_PALETTE,.5));
-
-    return gradient;
-}
 
 function drawBarchartWithCanvasId(eventOrCanvasid, zoomInc, canvasSettings){
     // To cover the case when the reset button is clicked and when we just render the canvas passing a canvas id
@@ -230,7 +220,7 @@ function drawBarchartWithCanvasId(eventOrCanvasid, zoomInc, canvasSettings){
     } else {
         canvasId = eventOrCanvasid;
     }
-    canvas = $("#".concat(canvasId))[0];
+    var canvas = $("#".concat(canvasId))[0];
     renderLargeCanvas(canvas, zoomInc, canvasSettings);
 }
 
@@ -241,12 +231,6 @@ function attachResetZoomLink(canvas, drawFunction, canvasSettingsP) {
     $("#".concat(idResetImage)).on("click", {canvasId: canvas.id, zoomInc: 0, canvasSettings: canvasSettingsP}, drawFunction);
 }
 
-function drawInitialBarplotCanvas(canvas){
-    canvas.zoom = 0; // TODO: refactor, change local attributes with "element".setAttribute('att_name', 'att_value')
-
-    attachResetZoomLink(canvas, drawBarchartWithCanvasId);
-    renderLargeCanvas(canvas, 0);
-}
 
 function drawBarChart(context, bins, settingsCanvasSingle, zoomLevel) {
 
