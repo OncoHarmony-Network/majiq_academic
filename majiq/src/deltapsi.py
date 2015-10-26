@@ -162,7 +162,7 @@ class DeltaPair(BasicPipeline):
         logger.info("GATHER pickles")
         for nthrd in xrange(self.nthreads):
             tempfile = open("%s/tmp/%s_%s_th%s.%s.pickle" % (self.output, self.names[0],
-                                                             self.names[1], nthrd, pipe.deltapsi.__name__))
+                                                             self.names[1], nthrd, deltapsi_quantify.__name__))
             ptempt = pickle.load(tempfile)
             posterior_matrix.extend(ptempt[0])
             names.extend(ptempt[1])
@@ -174,7 +174,7 @@ class DeltaPair(BasicPipeline):
         meta_info = pickle.load(tin)
         tin.close()
 
-        pickle_path = "%s/%s_%s.%s.pickle" % (self.output, self.names[0], self.names[1], pipe.deltapsi.__name__)
+        pickle_path = "%s/%s_%s.%s.pickle" % (self.output, self.names[0], self.names[1], deltapsi_quantify.__name__)
         # pickle.dump([posterior_matrix, names, meta_info, psi_list1, psi_list2], open(pickle_path, 'w'))
         majiq_io.dump_lsvs_voila(pickle_path, posterior_matrix, names, meta_info, psi_list1, psi_list2)
         logger.info("DeltaPSI calculation for %s_%s ended succesfully! Result can be found at %s" % (self.names[0],
