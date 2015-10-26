@@ -1,6 +1,6 @@
 from matplotlib import use
 
-from majiq.src import pipelines
+from majiq.src import basic_pipeline
 
 
 use('Agg', warn=False)
@@ -128,7 +128,7 @@ def main():
         for file in args.files:
             psi_scores.append(pickle.load(open(file, 'r')))
     else:
-        psi_scores = pipelines.calcpsi(args)
+        psi_scores = basic_pipeline.calcpsi(args)
 
     print "Number of files analyzed: %d\nshapes: (%d, %s)\t(%d, %s)" % (
         len(psi_scores), len(psi_scores[0]), str(psi_scores[0][0][0].shape), len(psi_scores[1]),

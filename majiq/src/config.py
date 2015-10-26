@@ -1,27 +1,11 @@
 import os
 import ConfigParser
-
 from scipy import interpolate
 import numpy as np
-
+#from majiq.src.io import ConfigSectionMap
 
 global gene_tlb
 global gc_factor
-
-
-def ConfigSectionMap(Config, section):
-    dict1 = {}
-    options = Config.options(section)
-    for option in options:
-        try:
-            dict1[option] = Config.get(section, option)
-            if dict1[option] == -1:
-                print("skip: %s" % option)
-        except:
-            print("exception on %s!" % option)
-            dict1[option] = None
-    return dict1
-
 
 def keep_info(SEevents, a3, a5, both, SE):
     global SEev, A3SS, A5SS, bothSS, totalSE

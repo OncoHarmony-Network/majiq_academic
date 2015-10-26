@@ -61,7 +61,7 @@ def lsv_mark_stacks(lsv_list, fitfunc_r, pvalue_limit, logger=None):
     return lsv_list
 
 
-def quantifiable_in_group(list_of_experiments, minnonzero, min_reads, logger, per_exp=0.10):
+def quantifiable_in_group(list_of_experiments, minnonzero, min_reads, filter_vals=None, logger=None):
     nexp = len(list_of_experiments)
 
     filtr = nexp / 2
@@ -70,7 +70,7 @@ def quantifiable_in_group(list_of_experiments, minnonzero, min_reads, logger, pe
 
     filt_exp = {}
     for idx, exp in enumerate(list_of_experiments):
-        temp = lsv_quantifiable(exp, minnonzero, min_reads, logger)
+        temp = lsv_quantifiable(exp, minnonzero, min_reads, filter_vals, logger)
         for ldx, lsv in enumerate(temp[1]):
             if not lsv[1] in filt_exp:
                 filt_exp[lsv[1]] = 0
@@ -115,39 +115,32 @@ def quantifiable_in_group(list_of_experiments, minnonzero, min_reads, logger, pe
     return filtered, filtered_info
 
 
-def lsv_quantifiable(list_lsv_tuple, minnonzero, min_reads, logger=False, fon=[True, True],
-                     lsv_type='majiq', const=False):
+def lsv_quantifiable(list_lsv_tuple, minnonzero, min_reads, filter_vals=None, logger=False, fon=[True, True],
+                     const=False):
     filter_message("Before quantifiable_filter", minnonzero, logger, np.array(list_lsv_tuple))
     filtered = []
     filtered_info = []
     k = 2
-    if lsv_type == 'majiq':
+    if filter_vals is None:
         for lsvdx, lsv in enumerate(list_lsv_tuple[0]):
             for idx in range(lsv.shape[0]):
                 if ((not fon[1] or np.count_nonzero(lsv[idx]) >= minnonzero) and
                         (not fon[0] or lsv[idx].sum() >= min_reads)):
-                    filtered.append(lsv)
+                    filtered.append(list_lsv_tuple[0][lsvdx])
                     if not const:
                         filtered_info.append(list_lsv_tuple[1][lsvdx])
                     break
+    else:
+        for lsvdx, lsv in enumerate(filter_vals):
+            if lsv:
+                filtered.append(list_lsv_tuple[0][lsvdx])
+                filtered_info.append(list_lsv_tuple[1][lsvdx])
 
-    elif lsv_type == 'miso':
-
-        for lsvdx, lsv in enumerate(list_lsv_tuple[0]):
-            total_count = lsv.sum()
-            thresh_reads = min_reads + (lsv.shape[0] - 2) * k
-            for idx in range(lsv.shape[0]):
-                if ((not fon[1] or np.count_nonzero(lsv[idx]) >= minnonzero) and
-                        (not fon[0] or total_count >= thresh_reads)):
-                    filtered.append(lsv)
-                    if not const:
-                        filtered_info.append(list_lsv_tuple[1][lsvdx])
-                    break
     # filter_message("After quantifiable_filter", minnonzero, logger, array(filtered))
     return filtered, filtered_info
 
 
-def lsv_intersection(lsv_list1, lsv_list2):
+def lsv_intersection(lsv_list1, lsv_list2, bycol=False):
     lsv_match = [[], []]
     match_info = []
 

@@ -2,13 +2,9 @@ import sys
 import os
 from multiprocessing import current_process
 import pickle
-
 import scipy.misc
-
 import numpy as np
-
 from majiq.src.psi import prob_data_sample_given_psi, __get_prior_params
-
 from majiq.src.utils.utils import get_logger
 import majiq.src.sample as majiq_sample
 
@@ -124,92 +120,3 @@ def calcpsi(fname, conf, logger):
 
 
 # def deltapsi(matched_lsv, info, num_exp, conf, prior_matrix,  fitfunc, psi_space, logger):
-def deltapsi(fname, delta_prior_path, logger):
-    matched_lsv, info, num_exp, conf, fitfunc, psi_space, prior_matrix = __load_execution_chunk(fname,
-                                                                                                delta=delta_prior_path)
-
-    lsv_samples1 = np.zeros(shape=(len(info), num_exp[0]), dtype=np.dtype('object'))
-    lsv_samples2 = np.zeros(shape=(len(info), num_exp[1]), dtype=np.dtype('object'))
-
-    logger.info("Bootstrapping for all samples...")
-    for grp_idx, group in enumerate(matched_lsv):
-        for lidx, lsv_all in enumerate(group):
-            for eidx, lsv in enumerate(lsv_all):
-                m_lsv, var_lsv, s_lsv = majiq_sample.sample_from_junctions(junction_list=lsv,
-                                                                           m=conf['m'],
-                                                                           k=conf['k'],
-                                                                           discardzeros=conf['discardzeros'],
-                                                                           trimborder=conf['trimborder'],
-                                                                           fitted_one_over_r=fitfunc[grp_idx][eidx],
-                                                                           debug=conf['debug'])
-                if grp_idx == 0:
-                    lsv_samples1[lidx, eidx] = s_lsv
-                else:
-                    lsv_samples2[lidx, eidx] = s_lsv
-
-    nbins = len(psi_space)
-    logger.info("Calculating deltas...")
-
-    post_matrix = []
-    new_info = []
-    ones_n = np.ones(shape=(1, nbins), dtype=np.float)
-
-    # pickle.dump([lsv_samples1, info], open('./lsv_binomproblem.pkl', 'w+b'))
-    posterior_psi1 = []
-    posterior_psi2 = []
-
-    for lidx, lsv_info in enumerate(info):
-        num_ways = len(lsv_samples1[lidx][0])
-        if lidx % 50 == 0:
-            print "Event %d ..." % lidx,
-            sys.stdout.flush()
-
-        alpha_prior, beta_prior = __get_prior_params(lsv_info, num_ways)
-        if 'i' in lsv_info[2]:
-            prior_idx = 1
-        else:
-            prior_idx = 0
-        post_matrix.append([])
-        new_info.append(lsv_info)
-
-        posterior_psi1.append([])
-        posterior_psi2.append([])
-        psi1 = lsv_samples1[lidx, :]
-        psi2 = lsv_samples2[lidx, :]
-
-        for p_idx in xrange(num_ways):
-
-            posterior = np.zeros(shape=(nbins, nbins), dtype=np.float)
-            post_psi1 = np.zeros(shape=nbins, dtype=np.float)
-            post_psi2 = np.zeros(shape=nbins, dtype=np.float)
-            for m in xrange(conf['m']):
-                # log(p(D_T1(m) | psi_T1)) = SUM_t1 T ( log ( P( D_t1 (m) | psi _T1)))
-                junc = [psi1[xx][p_idx][m] for xx in xrange(num_exp[0])]
-                junc = np.array(junc)
-                all_sample = [psi1[xx][yy][m].sum() for xx in xrange(num_exp[0]) for yy in xrange(num_ways)]
-                all_sample = np.array(all_sample)
-                data_given_psi1 = np.log(prob_data_sample_given_psi(junc.sum(), all_sample.sum(), nbins,
-                                                                    alpha_prior[p_idx], beta_prior[p_idx]))
-
-                psi_v1 = data_given_psi1.reshape(nbins, -1)
-                post_psi1 += np.exp(data_given_psi1 - scipy.misc.logsumexp(data_given_psi1))
-
-                junc = [psi2[xx][p_idx][m] for xx in xrange(num_exp[1])]
-                junc = np.array(junc)
-                all_sample = [psi2[xx][yy][m].sum() for xx in xrange(num_exp[1]) for yy in xrange(num_ways)]
-                all_sample = np.array(all_sample)
-                data_given_psi2 = np.log(prob_data_sample_given_psi(junc.sum(), all_sample.sum(), nbins,
-                                                                    alpha_prior[p_idx], beta_prior[p_idx]))
-                post_psi2 += np.exp(data_given_psi2 - scipy.misc.logsumexp(data_given_psi2))
-                psi_v2 = data_given_psi2.reshape(-1, nbins)
-
-                A = (psi_v1 * ones_n + psi_v2 * ones_n.T) + np.log(prior_matrix[prior_idx])
-                posterior += np.exp(A - scipy.misc.logsumexp(A))
-
-            post_matrix[-1].append(posterior / conf['m'])
-            posterior_psi1[-1].append(post_psi1 / conf['m'])
-            posterior_psi2[-1].append(post_psi2 / conf['m'])
-            if num_ways == 2:
-                break
-
-    return post_matrix, new_info, posterior_psi1, posterior_psi2

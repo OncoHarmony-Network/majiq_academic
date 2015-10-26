@@ -1,6 +1,7 @@
 import argparse
 
-from majiq.src.pipelines import builder, calcpsi, deltapair
+from majiq.src.basic_pipeline import builder, calcpsi
+from majiq.src.deltapsi import deltapair, multi_dpsi
 
 VERSION = '0.8.0.yeolab'
 
@@ -119,6 +120,27 @@ def main():
                             "distribution. that the synthetic prior matrix has. Only works with --synthprior. "
                             "[Default: %(default)s]")
 
+
+    mdelta = new_subparser()
+    mdelta.add_argument('-pairs_file', dest="deltapairs", required=True)
+    mdelta.add_argument('--default_prior', action='store_true', default=False,
+                       help="Use a default prior instead of computing it using the empirical data")
+    mdelta.add_argument('--binsize', default=0.025, type=int,
+                       help='The bins for PSI values. With a --binsize of 0.025 (default), we have 40 bins')
+    mdelta.add_argument('--priorminreads', default=20, type=int,
+                       help="Minimum number of reads combining all positions in a junction to be considered "
+                            "(for the 'best set' calculation). [Default: %(default)s]")
+    mdelta.add_argument('--priorminnonzero', default=10, type=int,
+                       help='Minimum number of positions for the best set.')
+    mdelta.add_argument('--iter', default=10, type=int,
+                       help='Max number of iterations of the EM')
+    mdelta.add_argument('--breakiter', default=0.01, type=float,
+                       help='If the log likelihood increases less that this flag, do not do another EM step')
+    mdelta.add_argument('--prioruniform', default=3, type=float,
+                       help="Uniform distribution to give a bit more of a chance to values out of the normal "
+                            "distribution. that the synthetic prior matrix has. Only works with --synthprior. "
+                            "[Default: %(default)s]")
+
     # delta.add_argument('--fixweights1', nargs='*', type=float,
     #                    help='Manually fix the weights for the replicas [Default: Automatic weight calculation]')
     # delta.add_argument('--fixweights2', nargs='*', type=float,
@@ -148,6 +170,11 @@ def main():
                                                                '(1 VS 1 conditions *with* replicas)',
                                               parents=[common, delta, psianddelta])
     parser_deltagroup.set_defaults(func=deltapair)
+
+    parser_multidelta = subparsers.add_parser('multi_delta', help='Calculate Delta PSI values given a pair of experiments '
+                                                               '(1 VS 1 conditions *with* replicas)',
+                                              parents=[common, mdelta, psianddelta])
+    parser_multidelta.set_defaults(func=multi_dpsi)
     args = parser.parse_args()
     args.func(args)
 

@@ -2,14 +2,16 @@ import pickle
 import random
 import gc
 import os
+import sys
 from collections import namedtuple
 import gzip
 import urllib
 
 import numpy as np
 import pysam
+import ConfigParser
 
-from majiq.src import config
+import majiq.src.config as config
 from voila.io_voila import VoilaInput
 from voila.vlsv import VoilaLsv
 from majiq.grimoire.gene import Gene, Transcript
@@ -772,3 +774,44 @@ def dump_lsvs_voila(pickle_path, posterior_matrix, lsvs_info, meta_info, psi_lis
         vlsvs.append(VoilaLsv(bins, lsv_graphic=lsv_graphic, psi1=psi1, psi2=psi2))
 
     pickle.dump(VoilaInput(vlsvs, meta_info), open(pickle_path, 'w'))
+
+
+def read_multi_dpsi_conf(filename):
+    config = ConfigParser.ConfigParser()
+    config.read(filename)
+    # TODO: check if filename exists
+    list_of_deltas = ConfigSectionMap(config, "deltas")
+    list_of_groups = ConfigSectionMap(config, "groups")
+    info = ConfigSectionMap(config, "info")
+
+    groups = {}
+    files_dict = {}
+    for kk, vv in list_of_groups.items():
+        fls_lst = vv.split(',')
+        groups[kk.lower()] = []
+        for fls in fls_lst:
+            fl_name = os.path.split(fls)[1]
+            groups[kk].append(fl_name)
+            abs_fls = "%s/%s" % (info['path'], fl_name)
+            files_dict[fl_name] = abs_fls
+
+    deltas = []
+    for kk, vv in list_of_deltas.items():
+        deltas.append((kk.lower(), vv.lower()))
+
+    return groups, files_dict, deltas
+
+
+
+def ConfigSectionMap(Config, section):
+    dict1 = {}
+    options = Config.options(section)
+    for option in options:
+        try:
+            dict1[option] = Config.get(section, option)
+            if dict1[option] == -1:
+                print("skip: %s" % option)
+        except:
+            print("exception on %s!" % option)
+            dict1[option] = None
+    return dict1
