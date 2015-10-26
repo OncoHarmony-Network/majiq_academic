@@ -8,9 +8,8 @@ import json
 import shutil
 import errno
 
-from voila.lsv import Lsv
 from voila.splice_graphics import ExonGraphic, JunctionGraphic, GeneGraphic, LsvGraphic
-from voila.vlsv import extract_bins_info, VoilaLsv
+from voila.vlsv import VoilaLsv
 
 
 try:
@@ -86,87 +85,26 @@ def get_prob_delta_psi_greater_v(bins, expected, V=.2):
     return np.sum(bins[:left] + np.sum(bins[right:]))
 
 
-def get_lsv_single_exp_data(voila_input, gene_name_list=None, lsv_types=None, logger=None):
-    """Create a dictionary to summarize the information from majiq output file."""
-    lsv_list = voila_input.lsvs
+def lsvs_to_gene_dict(voila_input, gene_name_list=[], lsv_types=None, logger=None, threshold=.2, show_all=False):
     genes_dict = defaultdict(list)
-
     nofilter_genes = not gene_name_list and not lsv_types
-    if gene_name_list is None:
-        gene_name_list = []
 
-    for i, vlsv in enumerate(lsv_list):
-        # Determine whether include the LSV or not, based on selected filters
+    for i, vlsv in enumerate(voila_input.lsvs):
         if np.any(np.isnan(vlsv.get_bins())):
             logger.warning("LSV %s bins contain NaNs" % vlsv.get_id())
             continue
+        if vlsv.is_delta_psi and not show_all and not vlsv.is_lsv_changing(threshold): continue
+
         gene_name_id = vlsv.get_id().split(':')[0]
         gene_name = vlsv.lsv_graphic.name.upper()
         if nofilter_genes or gene_name_id in gene_name_list or gene_name in gene_name_list or vlsv.get_type() in lsv_types:
-            # In 1-way LSVs, create the additional bins set for commodity
-            if len(vlsv.get_bins()) == 1:
-                vlsv.bins.append(vlsv.get_bins()[-1][::-1])
-            vlsv.set_bins_info(vlsv.get_bins())
-            genes_dict[gene_name_id].append(vlsv)
-
+            if vlsv.is_delta_psi():
+                genes_dict[gene_name_id].append({'lsv': vlsv, 'psi1': VoilaLsv(vlsv.psi1, lsv_graphic=None),
+                                                 'psi2': VoilaLsv(vlsv.psi2, lsv_graphic=None)})
+            else:
+                genes_dict[gene_name_id].append(vlsv)
     return {'genes_dict':   genes_dict,
             'meta_exps':    voila_input.metainfo}
-
-
-def get_lsv_delta_exp_data(voila_input, confidence=.95, threshold=.2, show_all=False, gene_name_list=None, logger=None):
-    """Load lsv delta psi pickle file.
-
-    :param voila_input_file: pickle with a list of VoilaLsvs
-    :param confidence: currently not used
-    :param threshold: used to report changing LSVs where at least one junction has an |E(Delta(PSI))| > threshold.
-    :param show_all: option to show all LSVs regarding their expected delta psis values.
-    :param gene_name_list: report only genes appearing in this list.
-    :param logger:
-    @return: dictionary
-    """
-
-    genes_dict = defaultdict(list)
-    lsv_list = voila_input.lsvs
-
-    for i, vlsv in enumerate(lsv_list):
-        if np.any(np.isnan(vlsv.get_bins())):
-            logger.warning("LSV %s bins contain NaNs" % vlsv.get_id())
-            continue
-        include_lsv = show_all
-        gene_name_id = str(vlsv.lsv_graphic.id).split(':')[0]
-        gene_name = vlsv.lsv_graphic.name.upper()
-
-        if not gene_name_list or gene_name_id in gene_name_list or gene_name in gene_name_list:
-            collapsed_bins, excl_inc_perc_list, include_lsv = extract_bins_info(vlsv.bins, threshold, include_lsv)
-            if not include_lsv: continue
-            vlsv.set_bins_info(collapsed_bins, confidence)
-
-            means = []
-            excl_incl = []
-            for b in vlsv.get_bins():
-                means.append(expected_dpsi(b))
-                if means[-1] < 0:
-                    excl_incl.append([-means[-1], 0])
-                else:
-                    excl_incl.append([0, means[-1]])
-            vlsv.set_means(means)
-            vlsv.set_excl_incl(excl_incl)
-            # lsv_o.sort_bins(lsv_info[i][4].strand)
-
-            # lsv_list.append(lsv)
-            if len(vlsv.psi1)<2:
-                vlsv.psi1.append(vlsv.psi1[-1][::-1])
-            if len(vlsv.psi2)<2:
-                vlsv.psi2.append(vlsv.psi2[-1][::-1])
-
-            genes_dict[gene_name_id].append({'lsv': vlsv,
-                                             'psi1': VoilaLsv(vlsv.psi1, lsv_graphic=None).set_bins_info(vlsv.psi1),
-                                             'psi2': VoilaLsv(vlsv.psi2, lsv_graphic=None).set_bins_info(vlsv.psi2)})
-
-    # logger.info("Number of genes added: %d" % len(genes_dict.keys()))
-
-    return {'genes_dict': genes_dict,
-            'meta_exps':  voila_input.metainfo}
 
 
 def copyanything(src, dst):

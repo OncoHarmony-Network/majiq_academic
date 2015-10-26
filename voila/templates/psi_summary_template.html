@@ -51,7 +51,6 @@
 
                 <div>
                     <div class="spliceDiv" id="spliceDivExp1_{{ gene_index }}" data-exon-list="{{ genes_exps_list[0][comb_spliceg_cond1][gene_name][0] }}">
-                        <span class="tooltipD3"><strong>Coordinates: </strong><span class="coordsLabel">-</span>;<strong> Length: </strong><span class="lengthLabel">-;</span></span>
                         <div class="spliceGraphTools">
                             <select class="spliceGraphSelector" autocomplete="off">
                                 {% for nsample in genes_exps_list[0] -%}
@@ -66,6 +65,7 @@
                             <img class="zoomInSplice" src="static/img/zoom_in.png" title="Zoom in" alt="" />
                             <img class="zoomOutSplice" src="static/img/zoom_out.png" title="Zoom out" alt="" />
                             <img class="zoomResetSplice" src="static/img/undo.png" title="Zoom reset" alt="" />
+                            <div class="tooltipD3"><strong>Coordinates: </strong><span class="coordsLabel">-</span>;<strong> Length: </strong><span class="lengthLabel">-;</span></div>
 
                         </div>
                     </div>

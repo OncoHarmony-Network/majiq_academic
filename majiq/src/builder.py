@@ -126,6 +126,7 @@ def main(params):
                 #logger.info("Skipping %s.... not found ( index file for bam file is required)" % baifile)
                 #continue
             sam_list.append(samfile)
+            mglobals.exp_list[exp_idx] = os.path.split(exp)[1]
         #majiq_io.count_mapped_reads(samfile, exp_idx)
         if len(sam_list) == 0:
             return

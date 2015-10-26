@@ -3,7 +3,7 @@ import os
 import numpy as np
 from voila import constants
 from voila.utils import utils_voila
-import math
+import vlsv
 
 __author__ = 'abarrera'
 import cPickle as pkl
@@ -132,18 +132,21 @@ def write_tab_output(output_dir, output_html, majiq_output, type_summary, logger
             headers.append('Voila link')
 
         if 'delta' in type_summary:
-            headers[3] = 'E(Delta(PSI)) per LSV junction'
-            headers[4] = 'P(Delta(PSI)>%.2f) per LSV junction' % threshold
+            headers[3] = 'E(dPSI) per LSV junction'
+            headers[4] = 'P(|E(dPSI)|>=%.2f) per LSV junction' % threshold
+            psi_headers = ['%s E(PSI)' % majiq_output['meta_exps'][0][0]['group'],
+                           '%s E(PSI)' % majiq_output['meta_exps'][1][0]['group']]
+            headers = headers[:5] + psi_headers + headers[5:]
 
             if pairwise_dir:
-                for idx1 in range(len(lmajiq_pairs)):
-                    for idx2 in range(len(lmajiq_pairs[0])):
+                for idx1 in xrange(len(lmajiq_pairs)):
+                    for idx2 in xrange(len(lmajiq_pairs[0])):
                         headers.append("%s_%d_%s_%d" % (group1_name, idx1+1, group2_name, idx2+1))
 
                 exp_names_map = ['#Group names and file names mapping']
-                for iexp in range(len(lmajiq_pairs)):
+                for iexp in xrange(len(lmajiq_pairs)):
                     exp_names_map.append("#%s_%d=%s" % (group1_name, iexp+1, lmajiq_pairs[0][0]['meta_exps'][0][iexp]['experiment']))
-                for iexp in range(len(lmajiq_pairs[0])):
+                for iexp in xrange(len(lmajiq_pairs[0])):
                     exp_names_map.append("#%s_%d=%s" % (group2_name, iexp+1, lmajiq_pairs[0][0]['meta_exps'][1][iexp]['experiment']))
                 ofile.write('\n'.join(exp_names_map))
                 ofile.write('\n')
@@ -162,16 +165,23 @@ def write_tab_output(output_dir, output_html, majiq_output, type_summary, logger
                 lline.extend([llsv.lsv_graphic.get_name(), gene, llsv.get_id()])
                 lexpected = []
                 lconfidence = []
+                lexpecs_psi1 = []
+                lexpecs_psi2 = []
                 for i, bins in enumerate(llsv.get_bins()):
                     if 'delta' in type_summary:
                         lexpected.append(str(-llsv.get_excl_incl()[i][0] + llsv.get_excl_incl()[i][1]))
                         lconfidence.append(str(utils_voila.get_prob_delta_psi_greater_v(bins, float(lexpected[-1]), threshold)))
+                        lexpecs_psi1.append('%.3f' % vlsv.get_expected_psi(np.array(llsv.psi1[i])))
+                        lexpecs_psi2.append('%.3f' % vlsv.get_expected_psi(np.array(llsv.psi2[i])))
                     else:
                         lexpected.append(repr(llsv.get_means()[i]))
                         lconfidence.append(repr(llsv.get_variances()[i]))
 
                 lline.append(';'.join(lexpected))
                 lline.append(';'.join(lconfidence))
+                if 'delta' in type_summary:
+                    lline.append(';'.join(lexpecs_psi1))
+                    lline.append(';'.join(lexpecs_psi2))
 
                 lline.append(llsv.get_type())
                 lline.append(repr(llsv.get_categories()[tlb_categx['A5SS']]))
@@ -297,3 +307,40 @@ def load_dpsi_tab(tab_files_list, sample_names, thres_change=None, filter_genes=
         lsvs_dict[lsv_idx]['ndisagree'] = len(exist_expecs) - max((np.count_nonzero(exist_expecs > 0), np.count_nonzero(exist_expecs <= 0)))
 
     return lsvs_dict
+
+
+def create_gff3_txt_files(output_dir, majiq_output, logger):
+    """
+    Create GFF3 files for each LSV.
+
+    :param output_dir: output directory for the file.
+    :param majiq_output: parsed data from majiq.
+    :param logger: logger instance.
+    :return: nothing.
+    """
+    logger.info("Saving LSVs files in gff3 format ...")
+    if 'genes_dict' not in majiq_output or len(majiq_output['genes_dict'])<1:
+        logger.warning("No gene information provided. Genes files are needed to calculate the gff3 files.")
+        return
+
+    header = "##gff-version 3"
+
+    odir = output_dir+"/static/doc/lsvs"
+    utils_voila.create_if_not_exists(odir)
+    for gkey, gvalue in majiq_output['genes_dict'].iteritems():
+        for lsv_dict in gvalue:
+            lsv = lsv_dict
+            if type(lsv_dict) == dict:
+                lsv = lsv_dict['lsv']
+            lsv_file_basename = "%s/%s" % (odir, lsv.get_id())
+            gff_file = "%s.gff3" % (lsv_file_basename)
+            with open(gff_file, 'w') as ofile:
+                ofile.write(header+"\n")
+                ofile.write(lsv.get_gff3(logger=logger)+"\n")
+            try:
+                utils_voila.gff2gtf(gff_file, "%s.gtf" % lsv_file_basename)
+            except UnboundLocalError, e:
+                logger.warning("problem generating GTF file for %s" % lsv.get_id())
+                logger.error(e.message)
+
+    logger.info("Files saved in %s" % odir)

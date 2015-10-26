@@ -261,10 +261,10 @@ window.splicegraph = function (){
             // Clear previous draw
             ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-            var MARGINS = [4, 2, 2, 2];
+            var MARGINS = [10, 2, 2, 2];
             var SEP_FIG_TEXT = canvas.height * .05;
             var SEP_FIG = canvas.width * .02;
-            var num_fig = 7;
+            var num_fig = 8;
             var area_figures = [
                     canvas.width - MARGINS[0] - MARGINS[1] - (num_fig - 1) * SEP_FIG,
                     canvas.height * .7 - MARGINS[2] - SEP_FIG_TEXT
@@ -284,7 +284,7 @@ window.splicegraph = function (){
             ctx.fillStyle = "rgba(0, 0, 0, 0.2)";
             drawRectangle(ctx, x, y, Math.round(area_figures[0] / num_fig - SEP_FIG), Math.round(area_figures[1]), true);
             ctx.fillStyle = "rgba(0, 0, 0, 1)";
-            ctx.fillText("DB & RNASeq", x + Math.round((area_figures[0] / num_fig - SEP_FIG) / 2), canvas.height - MARGINS[3]);
+            ctx.fillText("DB & RNASeq", Math.round(x + (area_figures[0] / num_fig - SEP_FIG) / 2), canvas.height - MARGINS[3]);
             x = x + area_figures[0] / num_fig + SEP_FIG;
 
             // RNASeq Only
@@ -297,9 +297,11 @@ window.splicegraph = function (){
 
             // DB Only
             ctx.strokeStyle = "rgba(0, 0, 0, 0.8)";
-            ctx.fillStyle = "rgba(0, 0, 0, 0.01)";
-
-            drawDashedRectangle(ctx, Math.round(x), y + Math.round(area_figures[1]), Math.round(area_figures[0] / num_fig - SEP_FIG), Math.round(area_figures[1]), 4, true);
+            ctx.lineWidth = 2;
+            ctx.fillStyle = "rgba(255, 255, 255, .5)";
+            ctx.setLineDash([5, 5]);
+            drawRectangle(ctx, Math.round(x), y , Math.round(area_figures[0] / num_fig - SEP_FIG), Math.round(area_figures[1]), true);
+            ctx.setLineDash([]);
             ctx.fillStyle = "rgba(0, 0, 0, 1)";
             ctx.fillText("DB Only", Math.round(x + (area_figures[0] / num_fig - SEP_FIG) / 2), canvas.height - MARGINS[3]);
             x = x + area_figures[0] / num_fig + SEP_FIG;
@@ -307,27 +309,32 @@ window.splicegraph = function (){
             /**
              * Legend junctions
              * */
-                // DB & RNASeq
+            // DB & RNASeq
             ctx.strokeStyle = 'red';
             ctx.lineWidth = 1.2;
-            drawLine(ctx, Math.round(x), Math.round(y + area_figures[1]), Math.round(x + (area_figures[0] / num_fig - SEP_FIG) / 2), MARGINS[2]);
-            drawLine(ctx, Math.round(x + (area_figures[0] / num_fig - SEP_FIG) / 2), MARGINS[2], Math.round(x + (area_figures[0] / num_fig - SEP_FIG)), Math.round(y + area_figures[1]));
+            ctx.beginPath();
+            ctx.arc(Math.round(x + (area_figures[0] / num_fig - SEP_FIG) / 2), Math.round(y + area_figures[1]),(area_figures[0] / num_fig - SEP_FIG) / 2,-Math.PI,0);
+            ctx.stroke();
             ctx.fillStyle = "rgba(0, 0, 0, 1)";
             ctx.fillText("DB & RNASeq", x + Math.round((area_figures[0] / num_fig - SEP_FIG) / 2), canvas.height - MARGINS[3]);
             x = x + area_figures[0] / num_fig + SEP_FIG;
 
             // RNASeq Only
             ctx.strokeStyle = getColor(2, BREWER_PALETTE, .8);
-            drawLine(ctx, Math.round(x), Math.round(y + area_figures[1]), Math.round(x + (area_figures[0] / num_fig - SEP_FIG) / 2), MARGINS[2]);
-            drawLine(ctx, Math.round(x + (area_figures[0] / num_fig - SEP_FIG) / 2), MARGINS[2], Math.round(x + (area_figures[0] / num_fig - SEP_FIG)), Math.round(y + area_figures[1]));
+            ctx.beginPath();
+            ctx.arc(Math.round(x + (area_figures[0] / num_fig - SEP_FIG) / 2), Math.round(y + area_figures[1]),(area_figures[0] / num_fig - SEP_FIG) / 2,-Math.PI,0);
+            ctx.stroke();
             ctx.fillStyle = "rgba(0, 0, 0, 1)";
             ctx.fillText("RNASeq Only", Math.round(x + (area_figures[0] / num_fig - SEP_FIG) / 2), canvas.height - MARGINS[3]);
             x = x + area_figures[0] / num_fig + SEP_FIG;
 
             // DB Only
             ctx.strokeStyle = "rgba(0, 0, 0, 0.8)";
-            drawDashedLine(ctx, Math.round(x), Math.round(y + area_figures[1]), Math.round(x + (area_figures[0] / num_fig - SEP_FIG) / 2), MARGINS[2], 2);
-            drawDashedLine(ctx, Math.round(x + (area_figures[0] / num_fig - SEP_FIG) / 2), MARGINS[2], Math.round(x + (area_figures[0] / num_fig - SEP_FIG)), Math.round(y + area_figures[1]), 2);
+            ctx.setLineDash([5, 5]);
+            ctx.beginPath();
+            ctx.arc(Math.round(x + (area_figures[0] / num_fig - SEP_FIG) / 2), Math.round(y + area_figures[1]),(area_figures[0] / num_fig - SEP_FIG) / 2,-Math.PI,0);
+            ctx.stroke();
+            ctx.setLineDash([]);
             ctx.fillStyle = "rgba(0, 0, 0, 1)";
             ctx.fillText("DB Only", Math.round(x + (area_figures[0] / num_fig - SEP_FIG) / 2), canvas.height - MARGINS[3]);
             x = x + area_figures[0] / num_fig + SEP_FIG;
@@ -335,17 +342,31 @@ window.splicegraph = function (){
             /**
              * Legend number of reads
              * */
-                // DB & RNASeq example chosen
+            // DB & RNASeq example chosen
             ctx.strokeStyle = 'red';
             ctx.lineWidth = 1.2;
             ctx.font = "8pt Arial";
-            var font_height = 8;
-            drawLine(ctx, Math.round(x), Math.round(y + area_figures[1]), Math.round(x + (area_figures[0] / num_fig - SEP_FIG) / 2), MARGINS[2] + font_height);
-            drawLine(ctx, Math.round(x + (area_figures[0] / num_fig - SEP_FIG) / 2), MARGINS[2] + font_height, Math.round(x + (area_figures[0] / num_fig - SEP_FIG)), Math.round(y + area_figures[1]));
+            var font_height = 9;
+            ctx.beginPath();
+            ctx.arc(Math.round(x + (area_figures[0] / num_fig - SEP_FIG) / 2), Math.round(y + area_figures[1]),(area_figures[0] / num_fig - 2*SEP_FIG) / 2 ,-Math.PI,0);
+            ctx.stroke();
             renderNumReads(ctx, Math.round(x + (area_figures[0] / num_fig - SEP_FIG) / 2), MARGINS[2] + font_height, 32);
             ctx.fillStyle = "rgba(0, 0, 0, 1)";
             ctx.font = "7pt Arial";
             ctx.fillText("RNASeq reads", x + Math.round((area_figures[0] / num_fig - SEP_FIG) / 2), canvas.height - MARGINS[3]);
+            x = x + area_figures[0] / num_fig + SEP_FIG;
+
+            /**
+             * Legend Intron Retention
+             * */
+            ctx.strokeStyle = "rgba(0, 0, 0, 0.8)";
+            ctx.fillStyle = "rgba(0, 0, 0, 0.2)";
+            ctx.lineWidth = 1.2;
+            drawRectangle(ctx, x, y, Math.round((area_figures[0] / num_fig) /3 - SEP_FIG), Math.round(area_figures[1]), true);
+            drawRectangle(ctx, Math.round( x + (area_figures[0] / num_fig) *2 /3), y, Math.round((area_figures[0] / num_fig) /3 - SEP_FIG), Math.round(area_figures[1]), true);
+            drawRectangle(ctx, Math.round( x + (area_figures[0] / num_fig) /3 -SEP_FIG) , y + area_figures[1]/4, Math.round((area_figures[0] / num_fig  -SEP_FIG) *2/3), Math.round(area_figures[1]/2), true);
+            ctx.fillStyle = "rgba(0, 0, 0, 1)";
+            ctx.fillText("Intron Ret.", x + Math.round((area_figures[0] / num_fig - SEP_FIG) / 2), canvas.height - MARGINS[3]);
 
 
             ctx.lineWidth = 1;
@@ -357,7 +378,7 @@ window.splicegraph = function (){
             // render number as text
             if (parseInt(num_reads) === 0) return;
             ctx.fillStyle = "rgba(0, 0, 0, .8)";
-            ctx.font = "8pt Arial";
+            ctx.font = "9pt Arial";
             ctx.textAlign = "center";
             ctx.fillText(num_reads, x, y - 2);
         }
@@ -972,7 +993,7 @@ window.splicegraph = function (){
 //        });
 
         // add sortable functionality to the table
-        var exon_table = $('.exon_table')
+        var exon_table = $('.exon_table');
         if (exon_table.length) {
             exon_table.tablesorter();
         }
@@ -1039,25 +1060,25 @@ window.splicegraph = function (){
 //
 //        }
 
-        return {
-            renderLsvLegend: function(canvas){
-                return renderLsvLegend(canvas);
-            },
-            renderLsvSpliceGraph: function(canvas, gene){
-                return renderLsvSpliceGraph(canvas, gene);
-            },
-            renderSpliceGraph: function(canvas){
-                var MAX_INTRON = 300;   // Global
-                var MAX_EXON = 300;   // Global
-                return renderSpliceGraph(canvas);
-            },
-            renderSpliceGraphZoomedPopUp: function(canvas){
-                return renderSpliceGraphZoomedPopUp(canvas);
-            },
-            renderFloatingLegend: function(canvas){
-                return renderFloatingLegend(canvas);
-            }
+    return {
+        renderLsvLegend: function(canvas){
+            return renderLsvLegend(canvas);
+        },
+        renderLsvSpliceGraph: function(canvas, gene){
+            return renderLsvSpliceGraph(canvas, gene);
+        },
+        renderSpliceGraph: function(canvas){
+            var MAX_INTRON = 300;   // Global
+            var MAX_EXON = 300;   // Global
+            return renderSpliceGraph(canvas);
+        },
+        renderSpliceGraphZoomedPopUp: function(canvas){
+            return renderSpliceGraphZoomedPopUp(canvas);
+        },
+        renderFloatingLegend: function(canvas){
+            return renderFloatingLegend(canvas);
         }
+    }
 };
 //});
 

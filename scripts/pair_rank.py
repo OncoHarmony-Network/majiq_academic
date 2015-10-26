@@ -51,7 +51,7 @@ def matrix_area(matrix, V=0.2, absolute=True, collapsed_mat=False):
             area.append(collapse[-border - 1:])
     else:
         area.append(collapse[border:])
-        if absolute:  # if absolute V, pick the other side of the array
+        if absolute and border != 0:  # if absolute V, pick the other side of the array
             area.append(collapse[0:len(collapse) - border])
 
     return sum(area)
