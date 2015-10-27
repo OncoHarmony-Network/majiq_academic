@@ -9,7 +9,7 @@ source:
 
 requirements:
     build:
-        - python
+        - python >=2.7
         - jinja2
         - numpy
         - scipy
@@ -17,12 +17,12 @@ requirements:
         - pysam
         - setuptools
     run:
-        - python
+        - python >=2.7
         - jinja2
         - numpy
         - scipy
         - matplotlib
-        - pysam
+        - pysam >=0.8 
         - setuptools
 
 build:
