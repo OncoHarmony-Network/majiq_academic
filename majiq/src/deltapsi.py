@@ -139,14 +139,14 @@ class DeltaPair(BasicPipeline):
             delta_prior_path = "%s/%s_priormatrix.pickle" % (self.output, exec_id)
             if self.nthreads == 1:
                 pipe.parallel_lsv_child_calculation(deltapsi_quantify,
-                                                    [chunk_fname, delta_prior_path],
+                                                    [chunk_fname, delta_prior_path, True],
                                                     '%s/tmp' % self.output,
                                                     '%s_%s' % (self.names[0], self.names[1]),
                                                     nthrd)
 
             else:
                 pool.apply_async(pipe.parallel_lsv_child_calculation, [deltapsi_quantify,
-                                                                       [chunk_fname, delta_prior_path],
+                                                                       [chunk_fname, delta_prior_path, True],
                                                                        '%s/tmp' % self.output,
                                                                        '%s_%s' % (self.names[0], self.names[1]),
                                                                        nthrd])
