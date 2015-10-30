@@ -25,6 +25,38 @@ def collapse_matrix(matrix):
     return np.array(collapse)
 
 
+def _find_delta_border(V, numbins):
+    """Finds the border index to which a V corresponds in its delta_space given the number of bins the matrix will have"""
+    delta_space = list(np.linspace(-1, 1, num=numbins + 1))
+    delta_space.pop(0)  # first border to the left is -1, and we are not interested in it
+    # get the index position that corresponds to the V threshold
+    for i, value in enumerate(delta_space):
+        if value > V:
+            return i
+    # if nothing hit, V = 1
+    return numbins
+
+
+def matrix_area(matrix, V=0.2, absolute=True, collapsed_mat=False):
+    """Returns the probability of an event to be above a certain threshold. The absolute flag describes if the value is absolute"""
+    collapse = matrix
+    if not collapsed_mat:
+        collapse = collapse_matrix(matrix)
+    # get the delta psi histogram borders based on the size of 'collapse'
+    border = _find_delta_border(V, collapse.shape[0])
+    # grab the values inside the area of interest
+    area = []
+    if V < 0:
+        area.append(collapse[0:border + 1])
+        if absolute:  # if absolute V, pick the other side of the array
+            area.append(collapse[-border - 1:])
+    else:
+        area.append(collapse[border:])
+        if absolute and border != 0:  # if absolute V, pick the other side of the array
+            area.append(collapse[0:len(collapse) - border])
+    return sum(area)
+
+
 class OrphanJunctionException(Exception):
     def __init__(self, m):
         self.message = m
@@ -139,8 +171,6 @@ class VoilaLsv(object):
 
     def __init__(self, bins_list, lsv_graphic, psi1=None, psi2=None, logger=None):
         self.lsv_graphic = lsv_graphic
-        # self.psi1 = np.array(psi1).tolist() if psi1 else None
-        # self.psi2 = np.array(psi2).tolist() if psi2 else None
         self.psi1 = psi1
         self.psi2 = psi2
 
