@@ -171,7 +171,7 @@ def write_tab_output(output_dir, output_html, majiq_output, type_summary, logger
                     if 'delta' in type_summary:
                         lexpected.append(str(-llsv.get_excl_incl()[i][0] + llsv.get_excl_incl()[i][1]))
                         # lconfidence.append(str(utils_voila.get_prob_delta_psi_greater_v(bins, float(lexpected[-1]), threshold)))
-                        lconfidence.append(str(vlsv.matrix_area(np.array(bins), threshold, collapsed_mat=True)))
+                        lconfidence.append(str(vlsv.matrix_area(np.array(bins), threshold, collapsed_mat=True).sum()))
                         lexpecs_psi1.append('%.3f' % vlsv.get_expected_psi(np.array(llsv.psi1[i])))
                         lexpecs_psi2.append('%.3f' % vlsv.get_expected_psi(np.array(llsv.psi2[i])))
                     else:
