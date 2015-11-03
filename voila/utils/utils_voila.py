@@ -85,7 +85,7 @@ def get_prob_delta_psi_greater_v(bins, expected, V=.2):
     return np.sum(bins[:left] + np.sum(bins[right:]))
 
 
-def lsvs_to_gene_dict(voila_input, gene_name_list=[], lsv_types=None, logger=None, threshold=.2, show_all=False):
+def lsvs_to_gene_dict(voila_input, gene_name_list=[], lsv_types=None, lsv_names=[], logger=None, threshold=.2, show_all=False):
     genes_dict = defaultdict(list)
     nofilter_genes = not gene_name_list and not lsv_types
 
@@ -94,7 +94,7 @@ def lsvs_to_gene_dict(voila_input, gene_name_list=[], lsv_types=None, logger=Non
             logger.warning("LSV %s bins contain NaNs" % vlsv.get_id())
             continue
         if vlsv.is_delta_psi and not show_all and not vlsv.is_lsv_changing(threshold): continue
-
+        if len(lsv_names)>0 and vlsv.get_id() not in lsv_names: continue
         gene_name_id = vlsv.get_id().split(':')[0]
         gene_name = vlsv.lsv_graphic.name.upper()
         if nofilter_genes or gene_name_id in gene_name_list or gene_name in gene_name_list or vlsv.get_type() in lsv_types:
