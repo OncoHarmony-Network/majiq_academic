@@ -12,6 +12,7 @@ import majiq.src.io as majiq_io
 import majiq.src.psi as majiq_psi
 import majiq.src.pipe as pipe
 import majiq.src.sample as majiq_sample
+import majiq.src.normalize as majiq_norm
 
 
 def deltapair(args):
@@ -45,7 +46,7 @@ class DeltaPair(BasicPipeline):
             #fitting the function
             #lsv_junc, const = self.gc_content_norm(lsv_junc, const)
             fitfunc[0][ii] = self.fitfunc(const[0])
-            filtered_lsv1[ii] = self.mark_stacks(lsv_junc, fitfunc[0][ii])
+            filtered_lsv1[ii] = majiq_norm.mark_stacks(lsv_junc, fitfunc[0][ii])
         filtered_lsv1 = majiq_filter.quantifiable_in_group(filtered_lsv1, self.minpos, self.minreads,
                                                            logger=logger)
         logger.info("Group1: %s quantifiable in group" % str(len(filtered_lsv1[0])))
@@ -57,7 +58,7 @@ class DeltaPair(BasicPipeline):
             #fitting the function
             #lsv_junc, const = self.gc_content_norm(lsv_junc, const)
             fitfunc[1][ii] = self.fitfunc(const[0])
-            filtered_lsv2[ii] = self.mark_stacks(lsv_junc, fitfunc[1][ii])
+            filtered_lsv2[ii] = majiq_norm.mark_stacks(lsv_junc, fitfunc[1][ii])
         filtered_lsv2 = majiq_filter.quantifiable_in_group(filtered_lsv2, self.minpos, self.minreads,
                                                            logger=logger)
         logger.info("Group2: %s quantifiable in group" % str(len(filtered_lsv2[0])))

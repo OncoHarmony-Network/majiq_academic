@@ -12,6 +12,8 @@ from majiq.src.utils.utils import create_if_not_exists, get_logger
 import majiq.src.filter as majiq_filter
 import majiq.src.io as majiq_io
 import majiq.src.pipe as pipe
+import majiq.src.normalize as majiq_norm
+from majiq.src.polyfitnb import fit_nb
 
 # ###############################
 # Data loading and Boilerplate #
@@ -64,6 +66,15 @@ class BasicPipeline:
         except AttributeError:
             pass
 
+    def fitfunc(self, const_junctions):
+        """Calculate the Negative Binomial function to sample from using the Constitutive events"""
+        if self.debug:
+            self.logger.debug("Skipping fitfunc because --debug!")
+            return np.poly1d([1, 0])
+        else:
+            self.logger.info("Fitting NB function with constitutive events...")
+            return fit_nb(const_junctions, "%s/nbfit" % self.output, self.plotpath, logger=self.logger)
+
 
     @abc.abstractmethod
     def run(self, lsv):
@@ -101,7 +112,7 @@ class CalcPsi(BasicPipeline):
             #fitting the function
             #lsv_junc, const = self.gc_content_norm(lsv_junc, const)
             fitfunc[ii] = self.fitfunc(const[0])
-            filtered_lsv[ii] = self.mark_stacks(lsv_junc, fitfunc[ii])
+            filtered_lsv[ii] = majiq_norm.mark_stacks(lsv_junc, fitfunc[ii])
 
         matched_lsv, matched_info = majiq_filter.quantifiable_in_group(filtered_lsv, self.minpos, self.minreads,
                                                                        logger=logger)
