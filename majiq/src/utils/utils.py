@@ -372,6 +372,10 @@ def gather_files(out_dir, prefix='', gff_out=None, pcr_out=None, nthreads=1, log
             else:
                 merge_and_create_majiq_file(exp_idx, prefix)
 
+    if nthreads > 1:
+        pool.close()
+        pool.join()
+
     if not gff_out is None:
         logger.info("Gather lsv and generate gff")
         fp = open('%s/%s' % (out_dir, gff_out), 'w+')

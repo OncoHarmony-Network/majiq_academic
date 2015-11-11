@@ -158,9 +158,9 @@ class Junction:
         self.gc_content[0, left_ind] = gc
 
     def reset_coverage(self, exp_idx):
-        print "PRE", self.coverage.toarray()
+       # print "PRE", self.coverage.toarray()
         self.coverage[exp_idx, :] = 0
-        print "POST", self.coverage.toarray()
+       # print "POST", self.coverage.toarray()
 
 class MajiqJunction:
     def __init__(self, jnc, exp_idx):
