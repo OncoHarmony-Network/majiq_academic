@@ -43,7 +43,7 @@ class DeltaPair(BasicPipeline):
             meta_info[0][ii], lsv_junc, const = majiq_io.load_data_lsv(fname, self.names[0], logger)
 
             #fitting the function
-            lsv_junc, const = self.gc_content_norm(lsv_junc, const)
+            #lsv_junc, const = self.gc_content_norm(lsv_junc, const)
             fitfunc[0][ii] = self.fitfunc(const[0])
             filtered_lsv1[ii] = self.mark_stacks(lsv_junc, fitfunc[0][ii])
         filtered_lsv1 = majiq_filter.quantifiable_in_group(filtered_lsv1, self.minpos, self.minreads,
@@ -55,7 +55,7 @@ class DeltaPair(BasicPipeline):
             meta_info[1][ii], lsv_junc, const = majiq_io.load_data_lsv(fname, self.names[1], logger)
 
             #fitting the function
-            lsv_junc, const = self.gc_content_norm(lsv_junc, const)
+            #lsv_junc, const = self.gc_content_norm(lsv_junc, const)
             fitfunc[1][ii] = self.fitfunc(const[0])
             filtered_lsv2[ii] = self.mark_stacks(lsv_junc, fitfunc[1][ii])
         filtered_lsv2 = majiq_filter.quantifiable_in_group(filtered_lsv2, self.minpos, self.minreads,

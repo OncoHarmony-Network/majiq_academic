@@ -9,12 +9,9 @@ from numpy.ma import masked_less
 
 from majiq.src import builder as majiq_builder
 from majiq.src.utils.utils import create_if_not_exists, get_logger
-from majiq.src.polyfitnb import fit_nb
 import majiq.src.filter as majiq_filter
 import majiq.src.io as majiq_io
 import majiq.src.pipe as pipe
-
-
 
 # ###############################
 # Data loading and Boilerplate #
@@ -73,30 +70,7 @@ class BasicPipeline:
         """This is the entry point for all pipelines"""
         return
 
-    def gc_content_norm(self, lsv_list, const_list):
-        """Normalize the matrix using the gc content"""
-        self.logger.info("GC content normalization...")
-        if self.gcnorm:
-            for lidx, lsv in enumerate(lsv_list[0]):
-                lsv_list[0][lidx] = np.multiply(lsv, lsv_list[2][lidx])
-            const_list[0] = np.multiply(const_list[0], const_list[2])
-        return lsv_list, const_list
 
-    def fitfunc(self, const_junctions):
-        """Calculate the Negative Binomial function to sample from using the Constitutive events"""
-        if self.debug:
-            self.logger.debug("Skipping fitfunc because --debug!")
-            return np.poly1d([1, 0])
-        else:
-            self.logger.info("Fitting NB function with constitutive events...")
-            return fit_nb(const_junctions, "%s/nbfit" % self.output, self.plotpath, logger=self.logger)
-
-    def mark_stacks(self, lsv_list, fitfunc):
-        if self.markstacks >= 0:
-            self.logger.info("Marking and masking stacks for...")
-            lsv_list = majiq_filter.lsv_mark_stacks(lsv_list, fitfunc, self.markstacks, self.logger)
-
-        return lsv_list
 
 
 ################################
@@ -125,7 +99,7 @@ class CalcPsi(BasicPipeline):
         for ii, fname in enumerate(self.files):
             meta_info[ii], lsv_junc, const = majiq_io.load_data_lsv(fname, self.name, logger)
             #fitting the function
-            lsv_junc, const = self.gc_content_norm(lsv_junc, const)
+            #lsv_junc, const = self.gc_content_norm(lsv_junc, const)
             fitfunc[ii] = self.fitfunc(const[0])
             filtered_lsv[ii] = self.mark_stacks(lsv_junc, fitfunc[ii])
 

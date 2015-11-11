@@ -93,17 +93,6 @@ class Exon:
     def get_annotated_exon(self):
         return self.exonTx_list
 
-    def get_rna_ss(self):
-        ss3 = set()
-        ss5 = set()
-
-        for ii in self.exonRead_list:
-            ss3.add(ii.start)
-            ss5.add(ii.end)
-        ss3_l = sorted(list(ss3))
-        ss5_l = sorted(list(ss5))
-        return ss3_l, ss5_l
-
     def get_length(self):
         if self.end is None or self.start is None:
             ln = 0
@@ -156,24 +145,6 @@ class Exon:
                 self.ss_5p_list.append(end)
             res = ExonRead(start, end, s3p_junc, s5p_junc, read_seq)
             self.exonRead_list.append(res)
-        return res
-
-    def add_new_definition(self, start, end, trncpt):
-        self.start = min(self.start, start)
-        self.end = max(self.end, end)
-        for ii in self.exonTx_list:
-            if start == ii.start and end == ii.end:
-                res = ii
-                break
-        else:
-            #            if self.strand == '+':
-            self.ss_3p_list.append(start)
-            self.ss_5p_list.append(end)
-            #            else:
-            #                self.ss_5p_list.append(start)
-            #                self.ss_3p_list.append(end)
-            res = ExonTx(start, end, trncpt)
-            self.exonTx_list.append(res)
         return res
 
     def get_coverage(self, exp_idx):
@@ -426,31 +397,7 @@ class ExonTx(object):
 
         exb = exb1 & exb2
         if exb:
-            # #creating intron exon
-            #         intron = gn.new_annotated_exon(intron_coords[0], intron_coords[1], self.get_transcript()[0],
-            #                                        bl=False, intron=True)
-            #         res.append(intron)
-            #         junc1 = gn.exist_junction(txex2.end, intron_coords[0])
-            #         if junc1 is None:
-            #             junc1 = Junction(txex2.end, intron_coords[0], None, None, gn, annotated=True)
-            # #           junc1.add_donor(txex2)
-            # #           junc1.add_acceptor(intron)`
-            #         txex2.p5_junc.append(junc1)
-            #         intron.p3_junc.append(junc1)
-            #
-            #         junc2 = gn.exist_junction(intron_coords, txex1.start)
-            #         if junc2 is None:
-            #             junc2 = Junction(intron_coords, txex1.start, None, None, gn, annotated=True)
-            # #           junc.add_donor(intron)
-            # #           junc.add_acceptor(txex1)
-            #         intron.p5_junc.append(junc2)
-            #         txex1.p3_junc.append(junc2)
-
             junc = gn.exist_junction(txex2.end, txex1.start)
-            #if junc is None:
-                #junc = Junction(txex2.end, txex1.start, None, None, gn, annotated=True)
-            #                junc.add_donor(txex2)
-            #                junc.add_acceptor(txex1)
             if not junc is None:
                 txex2.p5_junc.append(junc)
                 txex1.p3_junc.append(junc)
@@ -549,10 +496,7 @@ def print_list_exons(list_ex, msg=""):
         print "\t\t", ex.get_coordinates(), ex
     print "%%%%%%%%%%%%%%%%%%%%%%"
 
-
 num_it = 0
-
-
 def collapse_list_exons(listexons, gne):
     global num_it
     num_it += 1

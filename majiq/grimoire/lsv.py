@@ -1,9 +1,10 @@
+__author__ = 'jordi@biociphers.org'
+
 import cPickle as pickle
 
 import numpy as np
 import scipy.sparse
-
-import majiq.src.config as mglobals
+import majiq.src.config as majiq_config
 from voila.splice_graphics import ExonGraphic, LsvGraphic, JunctionGraphic
 from voila import constants as voila_const
 
@@ -68,7 +69,7 @@ class LSV(object):
         self.junctions = np.array(juncs)
 
         self.visual = list()
-        for exp_idx in xrange(mglobals.num_experiments):
+        for exp_idx in xrange(majiq_config.num_experiments):
             self.visual.append(self.get_visual_lsv(self.junctions, exp_idx))
 
     def check_type(self, lsv_type):
@@ -238,7 +239,7 @@ class LSV(object):
                 jtype = 2
             elif jj.is_annotated() and jj.get_read_num(exp_idx) > 0:
                 jtype = 0
-            elif not jj.is_annotated() and jj.get_read_num(exp_idx) > mglobals.MINREADS:
+            elif not jj.is_annotated() and jj.get_read_num(exp_idx) > majiq_config.MINREADS:
                 jtype = 1
             else:
                 jtype = 1
@@ -300,7 +301,7 @@ class LSV(object):
             exon_list.append(eg)
 
         splice_lsv = LsvGraphic(type_lsv=self.ext_type, coords=self.coords, id=self.id,
-                                name=self.exon.get_gene().get_name(),
+                                name=self.exon.get_gene().get_id(),
                                 strand=self.get_strand(), exons=exon_list, junctions=junc_list,
                                 chrom=self.get_chromosome())
 
@@ -450,15 +451,6 @@ def print_lsv_extype(list_lsv, filename):
     fp.close()
 
 
-# class LSV_IR(object):
-# def __init__(self, start, end, exon_list, gene):
-#         self.start = start
-#         self.end = end
-#         self.exonlist = exon_list
-#         self.gene = gene
-#         gene.add_intron_retention(self)
-
-
 class MajiqLsv(object):
     def __init__(self, lsv_obj, exp_idx):
 
@@ -466,27 +458,35 @@ class MajiqLsv(object):
         self.id = lsv_obj.id
         self.type = lsv_obj.ext_type
         self.iretention = lsv_obj.intron_retention
-        self.junction_list = scipy.sparse.lil_matrix((lsv_obj.junctions.shape[0], (max(mglobals.readLen) - 16) + 1),
+        self.junction_list = scipy.sparse.lil_matrix((lsv_obj.junctions.shape[0], (majiq_config.readLen - 16) + 1),
                                                      dtype=np.int)
         self.junction_id = []
-        self.visual = lsv_obj.get_visual(exp_idx)
-        self.gc_factor = scipy.sparse.lil_matrix((lsv_obj.junctions.shape[0], (max(mglobals.readLen) - 16) + 1),
-                                                 dtype=np.dtype('float'))
+
+        if majiq_config.gcnorm:
+            self.gc_factor = scipy.sparse.lil_matrix((lsv_obj.junctions.shape[0], (majiq_config.readLen - 16) + 1),
+                                                    dtype=np.dtype('float'))
+        else:
+            self.gc_factor = None
 
         for idx, junc in enumerate(lsv_obj.junctions):
             self.junction_list[idx, :] = junc.coverage[exp_idx, :]
             self.junction_id.append(junc.get_id())
-            for jidx in range(max(mglobals.readLen) - 16 + 1):
-                dummy = junc.get_gc_content()[0, jidx]
-                self.gc_factor[idx, jidx] = dummy
+            if majiq_config.gcnorm:
+                for jidx in range((majiq_config.readLen - 16) + 1):
+                    dummy = junc.get_gc_content()[0, jidx]
+                    self.gc_factor[idx, jidx] = dummy
+
+        self.visual = lsv_obj.get_visual(exp_idx)
 
     def set_gc_factor(self, exp_idx):
-        nnz = self.gc_factor.nonzero()
-        for idx in xrange(nnz[0].shape[0]):
-            i = nnz[0][idx]
-            j = nnz[1][idx]
-            dummy = self.gc_factor[i, j]
-            self.gc_factor[i, j] = mglobals.gc_factor[exp_idx](dummy)
+        if majiq_config.gcnorm:
+            nnz = self.gc_factor.nonzero()
+            for idx in xrange(nnz[0].shape[0]):
+                i = nnz[0][idx]
+                j = nnz[1][idx]
+                dummy = self.gc_factor[i, j]
+                self.junction_list[i, j] *= majiq_config.gc_factor[exp_idx](dummy)
+        del self.gc_factor
 
 
 

@@ -5,9 +5,11 @@ import os
 import sys
 import traceback
 from multiprocessing import Pool, current_process, Process
+from majiq.grimoire.gene import recreate_gene_tlb
 
 import majiq.src.analize as analize
 import majiq.src.io as majiq_io
+from majiq.src.normalize import prepare_gc_content
 import majiq.src.utils.utils as utils
 import majiq.src.config as mglobals
 import majiq.grimoire.lsv as majiq_lsv
@@ -34,7 +36,7 @@ def majiq_builder(samfiles_list, chnk, pcr_validation=None, gff_output=None, cre
     if create_tlb:
         if not logging is None:
             logging.info("[%s] Recreatin Gene TLB" % chnk)
-        utils.recreate_gene_tlb(gene_list)
+        recreate_gene_tlb(gene_list)
 
     if not logging is None:
         logging.info("[%s] Reading BAM files" % chnk)
@@ -48,7 +50,7 @@ def majiq_builder(samfiles_list, chnk, pcr_validation=None, gff_output=None, cre
         logging.info("[%s] Detecting LSV" % chnk)
     lsv, const = analize.lsv_detection(gene_list, chnk, only_real_data=only_rna, logging=logging)
 
-    utils.prepare_gc_content(gene_list, temp_dir)
+    prepare_gc_content(gene_list, temp_dir)
 
     if pcr_validation:
         utils.get_validated_pcr_lsv(lsv, temp_dir)
@@ -156,7 +158,8 @@ def main(params):
             pool.join()
 
     #GATHER
-    utils.gather_files(mglobals.outDir, params.prefix, params.gff_output, params.pcr_filename, logger)
+    utils.gather_files(mglobals.outDir, '', params.gff_output, params.pcr_filename,
+                       nthreads=params.nthreads, logger=logger)
 
     mglobals.print_numbers()
     logger.info("End of execution")

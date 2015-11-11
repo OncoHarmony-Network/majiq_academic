@@ -5,12 +5,14 @@ import sys
 import traceback
 from multiprocessing import current_process
 import numpy as np
+from majiq.grimoire.gene import recreate_gene_tlb
 
 import majiq.grimoire.lsv as majiq_lsv
 import majiq.grimoire.junction as majiq_junction
 import majiq.grimoire.exon as majiq_exons
 import majiq.src.analize as analize
 import majiq.src.io as majiq_io
+from majiq.src.normalize import prepare_gc_content
 import majiq.src.utils.utils as utils
 import majiq.src.config as mglobals
 
@@ -303,13 +305,13 @@ def main(params):
         prepare_intronic_exons(gene_list)
         if not logger is None:
             logger.info("[%s] Recreatin Gene TLB" % chnk)
-        utils.recreate_gene_tlb(gene_list)
+        recreate_gene_tlb(gene_list)
 
         if not logger is None:
             logger.info("[%s] Detecting LSV" % chnk)
         lsv, const = lsv_detection(gene_list, chnk, logging=logger)
 
-        utils.prepare_gc_content(gene_list, temp_dir)
+        prepare_gc_content(gene_list, temp_dir)
 
         utils.generate_visualization_output(gene_list, temp_dir)
         if not logger is None:

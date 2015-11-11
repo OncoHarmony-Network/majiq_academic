@@ -1,7 +1,7 @@
 import numpy as np
 import scipy.sparse
 
-from majiq.src import config
+import majiq.src.config as majiq_config
 
 
 class Junction:
@@ -27,8 +27,9 @@ class Junction:
             self.acceptor_id = acceptor.get_id()
         self.gene_name = gene.get_id()
         self.annotated = annotated
-        self.coverage = scipy.sparse.lil_matrix((config.num_experiments, (max(config.readLen) - 16) + 1), dtype=np.int)
-        self.gc_content = scipy.sparse.lil_matrix((1, (max(config.readLen) - 16) + 1), dtype=np.float)
+        self.coverage = scipy.sparse.lil_matrix((majiq_config.num_experiments,  (majiq_config.readLen - 16) + 1),
+                                                dtype=np.int)
+        self.gc_content = scipy.sparse.lil_matrix((1, (majiq_config.readLen - 16) + 1), dtype=np.float)
         self.id = "%s:%s-%s" % (self.gene_name, start, end)
         self.transcript_id_list = []
 
@@ -55,7 +56,7 @@ class Junction:
         return self.end
 
     def get_gene(self):
-        return config.gene_tlb[self.gene_name]
+        return majiq_config.gene_tlb[self.gene_name]
 
     def get_coordinates(self):
         return self.start, self.end
@@ -117,9 +118,9 @@ class Junction:
     def is_reliable(self):
         cov = self.get_coverage().toarray()
         res = False
-        for tissue, list_idx in config.tissue_repl.items():
+        for tissue, list_idx in majiq_config.tissue_repl.items():
             mu = np.mean(cov[list_idx].sum(axis=1))
-            if mu > config.min_denovo:
+            if mu > majiq_config.min_denovo:
                 res = True
                 break
         return res
@@ -149,21 +150,24 @@ class Junction:
     def update_junction_read(self, exp_idx, read_n, start, gc, unique):
         #        print "J3",self, getrefcount(self)
 
-
-        left_ind = max(config.readLen) - (self.start - start) - 8 + 1
+        left_ind = majiq_config.readLen - (self.start - start) - 8 + 1
         if unique:
             self.coverage[exp_idx, left_ind] += read_n
         else:
             self.coverage[exp_idx, left_ind] = -1
         self.gc_content[0, left_ind] = gc
 
+    def reset_coverage(self, exp_idx):
+        print "PRE", self.coverage.toarray()
+        self.coverage[exp_idx, :] = 0
+        print "POST", self.coverage.toarray()
 
-class MajiqJunc:
+class MajiqJunction:
     def __init__(self, jnc, exp_idx):
         self.exons = {}
         self.annot = jnc.is_annotated()
         if jnc is None:
-            self.gc_index = scipy.sparse.lil_matrix((1, (max(config.readLen) - 16) + 1), dtype=np.int)
+            #self.gc_index = scipy.sparse.lil_matrix((1, (max(config.readLen) - 16) + 1), dtype=np.int)
             self.name = None
             self.id = "None"
 
@@ -171,7 +175,7 @@ class MajiqJunc:
             self.exons['coord1'] = [0, 0]
             self.exons['coord2'] = [0, 0]
             self.exons['strand'] = None
-            self.coverage = scipy.sparse.lil_matrix((1, (max(config.readLen) - 16) + 1), dtype=np.int)
+            self.coverage = scipy.sparse.lil_matrix((1, (majiq_config.readLen - 16) + 1), dtype=np.int)
         else:
             self.name = "%s:%s-%s" % (jnc.get_gene().get_id(), jnc.get_ss_5p(), jnc.get_ss_3p())
             self.id = "%s:%s-%s" % (jnc.get_gene().get_chromosome(), jnc.get_ss_5p(), jnc.get_ss_3p())
@@ -189,15 +193,20 @@ class MajiqJunc:
                 self.exons['coord2'] = jnc.get_acceptor().get_coordinates()
 
             self.coverage = jnc.coverage[exp_idx, :]
-            self.gc_factor = scipy.sparse.lil_matrix((1, (max(config.readLen) - 16) + 1), dtype=np.float)
-            for jj in range(max(config.readLen) - 16 + 1):
+            if majiq_config.gcnorm:
+                self.gc_factor = scipy.sparse.lil_matrix((1, (majiq_config.readLen - 16) + 1), dtype=np.float)
+            else:
+                self.gc_factor = None
+            for jj in range(majiq_config.readLen - 16 + 1):
                 dummy = jnc.gc_content[0, jj]
-                self.gc_factor[0, jj] = dummy
+                self.gc_factor[0, jj] *= dummy
 
     def set_gc_factor(self, exp_idx):
-        nnz = self.gc_factor.nonzero()
-        for idx in xrange(nnz[0].shape[0]):
-            i = nnz[0][idx]
-            j = nnz[1][idx]
-            dummy = self.gc_factor[i, j]
-            self.gc_factor[i, j] = config.gc_factor[exp_idx](dummy)
+        if majiq_config.gcnorm:
+            nnz = self.gc_factor.nonzero()
+            for idx in xrange(nnz[0].shape[0]):
+                i = nnz[0][idx]
+                j = nnz[1][idx]
+                dummy = self.gc_factor[i, j]
+                self.coverage[i, j] *= majiq_config.gc_factor[exp_idx](dummy)
+        del self.gc_factor
