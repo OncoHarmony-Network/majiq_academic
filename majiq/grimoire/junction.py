@@ -158,6 +158,7 @@ class Junction:
         self.gc_content[0, left_ind] = gc
 
     def reset_coverage(self, exp_idx):
+        print "RESET", exp_idx
        # print "PRE", self.coverage.toarray()
         self.coverage[exp_idx, :] = 0
        # print "POST", self.coverage.toarray()
