@@ -268,8 +268,7 @@ def rnaseq_intron_retention(filenames, gene_list, chnk, permissive=True, logging
 
                     if cov1 >= majiq_config.MINREADS and cov2 >= majiq_config.MINREADS and intron_body_covered:
                         n_exp += 1
-                    else:
-                        junc2.reset_coverage(exp_index)
+
 
                 if n_exp >= repl_thresh:
                     exnum = majiq_exons.new_exon_definition(intron_start, intron_end,
@@ -294,6 +293,10 @@ def rnaseq_intron_retention(filenames, gene_list, chnk, permissive=True, logging
                         logging.info("NEW INTRON RETENTION EVENT %s, %d-%d" % (gne.get_name(),
                                                                                intron_start,
                                                                                intron_end))
+                else:
+                    for exp_index in index_list:
+                        junc2.reset_coverage(exp_index)
+                        junc1.reset_coverage(exp_index)
         gne.prepare_exons()
 
     for ss in samfile:
