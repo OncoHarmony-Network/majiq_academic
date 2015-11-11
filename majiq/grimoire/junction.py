@@ -28,7 +28,7 @@ class Junction:
         self.gene_name = gene.get_id()
         self.annotated = annotated
         self.coverage = scipy.sparse.lil_matrix((majiq_config.num_experiments,  (majiq_config.readLen - 16) + 1),
-                                                dtype=np.int)
+                                                dtype=np.float)
         self.gc_content = scipy.sparse.lil_matrix((1, (majiq_config.readLen - 16) + 1), dtype=np.float)
         self.id = "%s:%s-%s" % (self.gene_name, start, end)
         self.transcript_id_list = []
@@ -172,7 +172,7 @@ class MajiqJunction:
             self.exons['coord1'] = [0, 0]
             self.exons['coord2'] = [0, 0]
             self.exons['strand'] = None
-            self.coverage = scipy.sparse.lil_matrix((1, (majiq_config.readLen - 16) + 1), dtype=np.int)
+            self.coverage = scipy.sparse.lil_matrix((1, (majiq_config.readLen - 16) + 1), dtype=np.float)
         else:
             self.name = "%s:%s-%s" % (jnc.get_gene().get_id(), jnc.get_ss_5p(), jnc.get_ss_3p())
             self.id = "%s:%s-%s" % (jnc.get_gene().get_chromosome(), jnc.get_ss_5p(), jnc.get_ss_3p())

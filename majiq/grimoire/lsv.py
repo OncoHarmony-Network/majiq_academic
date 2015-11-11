@@ -459,12 +459,12 @@ class MajiqLsv(object):
         self.type = lsv_obj.ext_type
         self.iretention = lsv_obj.intron_retention
         self.junction_list = scipy.sparse.lil_matrix((lsv_obj.junctions.shape[0], (majiq_config.readLen - 16) + 1),
-                                                     dtype=np.int)
+                                                     dtype=np.float)
         self.junction_id = []
 
         if majiq_config.gcnorm:
             self.gc_factor = scipy.sparse.lil_matrix((lsv_obj.junctions.shape[0], (majiq_config.readLen - 16) + 1),
-                                                    dtype=np.dtype('float'))
+                                                     dtype=np.dtype('float'))
         else:
             self.gc_factor = None
 

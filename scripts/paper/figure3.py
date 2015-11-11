@@ -745,7 +745,7 @@ if __name__ == '__main__':
     # onlyfiles = ['Adr_CT22.mm10.sorted.majiq', 'Aor_CT22.mm10.sorted.majiq']
 
     global ir_plots
-    ir_plots = True
+    ir_plots = False
 
     output = sys.argv[2]
     #groups = sys.argv[3:]
