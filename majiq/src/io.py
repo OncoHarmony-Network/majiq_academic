@@ -293,7 +293,7 @@ def rnaseq_intron_retention(filenames, gene_list, chnk, permissive=True, logging
                                                                                intron_start,
                                                                                intron_end))
                 else:
-                    for exp_index in index_list:
+                    for exp_index in ind_list:
                         if not junc2 is None:
                             junc2.reset_coverage(exp_index)
                         if not junc1 is None:
