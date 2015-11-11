@@ -363,7 +363,8 @@ def gather_files(out_dir, prefix='', gff_out=None, pcr_out=None, nthreads=1, log
         gc_factor_calculation(10)
 
     if nthreads > 1:
-        pool = Pool(processes=nthreads, maxtasksperchild=1)
+        nthr = min(nthreads, 4)
+        pool = Pool(processes=nthr, maxtasksperchild=1)
 
     for name, ind_list in majiq_config.tissue_repl.items():
         for idx, exp_idx in enumerate(ind_list):

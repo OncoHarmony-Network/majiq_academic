@@ -750,7 +750,7 @@ def load_data_lsv(path, group_name, logger=None):
     """Load data from the preprocess step. Could change to a DDBB someday"""
     data = pickle.load(open(path))
     lsv_cov_list = []
-    lsv_gc = []
+    #lsv_gc = []
     lsv_info = []
     const_info = []
     num_pos = data[1][0].junction_list.shape[1]
@@ -765,18 +765,18 @@ def load_data_lsv(path, group_name, logger=None):
 
         cov = lsv.junction_list.toarray()
         lsv_cov_list.append(cov)
-        gc = lsv.gc_factor.toarray()
-        lsv_gc.append(gc)
+        #gc = lsv.gc_factor.toarray()
+        #lsv_gc.append(gc)
 
     clist = random.sample(data[2], min(5000, len(data[2])))
     const_list = np.zeros(shape=(len(clist), num_pos), dtype=np.dtype('int'))
-    const_gc = np.zeros(shape=(len(clist), num_pos), dtype=np.dtype('float'))
+    #const_gc = np.zeros(shape=(len(clist), num_pos), dtype=np.dtype('float'))
     for cidx, const in enumerate(clist):
         const_info.append(const.id)
         const_list[cidx, :] = const.coverage.toarray()
-        const_gc[cidx, :] = const.gc_factor.toarray()
+        #const_gc[cidx, :] = const.gc_factor.toarray()
 
-    return meta_info, [lsv_cov_list, lsv_info, lsv_gc], [const_list, const_info, const_gc]
+    return meta_info, [lsv_cov_list, lsv_info], [const_list, const_info]
 
 
 def dump_lsvs_voila(pickle_path, posterior_matrix, lsvs_info, meta_info, psi_list1=None, psi_list2=None):
