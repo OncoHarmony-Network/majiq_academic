@@ -148,8 +148,6 @@ class Junction:
         self.transcript_id_list.append(trnscrpt.get_id())
 
     def update_junction_read(self, exp_idx, read_n, start, gc, unique):
-        #        print "J3",self, getrefcount(self)
-
         left_ind = majiq_config.readLen - (self.start - start) - 8 + 1
         if unique:
             self.coverage[exp_idx, left_ind] += read_n
@@ -158,10 +156,8 @@ class Junction:
         self.gc_content[0, left_ind] = gc
 
     def reset_coverage(self, exp_idx):
-        print "RESET", exp_idx
-       # print "PRE", self.coverage.toarray()
         self.coverage[exp_idx, :] = 0
-       # print "POST", self.coverage.toarray()
+
 
 class MajiqJunction:
     def __init__(self, jnc, exp_idx):

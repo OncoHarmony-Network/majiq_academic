@@ -143,7 +143,7 @@ def get_junc_from_list(coords, list_elem):
     return res
 
 
-def rnaseq_intron_retention(filenames, gene_list, chnk, permissive=True, logging=None):
+def rnaseq_intron_retention(filenames, gene_list, chnk, permissive=True, nondenovo=False, logging=None):
     samfile = [pysam.Samfile(xx, "rb") for xx in filenames]
     nchunks = 10
     for gne in gene_list:

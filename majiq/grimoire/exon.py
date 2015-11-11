@@ -562,7 +562,7 @@ def __half_exon(ss_type, junc, read_rna):
 EMPTY_COORD = -1
 
 
-def new_exon_definition(start, end, read_rna, s3prime_junc, s5prime_junc, gene, isintron=False):
+def new_exon_definition(start, end, read_rna, s3prime_junc, s5prime_junc, gene, nondenovo=False, isintron=False):
     if end - start < 5:
         return 0
 
@@ -578,6 +578,8 @@ def new_exon_definition(start, end, read_rna, s3prime_junc, s5prime_junc, gene, 
                 if start <= xx[1] and end >= xx[0]:
                     in_db = True
                     break
+            if not in_db and nondenovo:
+                return new_exons
             ex = Exon(start, end, gene, gene.get_strand(), annot=in_db, isintron=isintron)
             gene.add_exon(ex)
         else:
