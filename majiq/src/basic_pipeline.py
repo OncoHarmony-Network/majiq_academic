@@ -112,7 +112,7 @@ class CalcPsi(BasicPipeline):
             #fitting the function
             #lsv_junc, const = self.gc_content_norm(lsv_junc, const)
             fitfunc[ii] = self.fitfunc(const[0])
-            filtered_lsv[ii] = majiq_norm.mark_stacks(lsv_junc, fitfunc[ii])
+            filtered_lsv[ii] = majiq_norm.mark_stacks(lsv_junc, fitfunc[ii], self.markstacks, self.logger)
 
         matched_lsv, matched_info = majiq_filter.quantifiable_in_group(filtered_lsv, self.minpos, self.minreads,
                                                                        logger=logger)
