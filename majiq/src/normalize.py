@@ -47,6 +47,7 @@ def mark_stacks(lsv_list, fitfunc_r, pvalue_limit, logger=None):
     if logger:
         logger.info("Out of %s values, %s marked as stacks with a p-value threshold of %s (%.3f%%)"
                     % (junctions.size, numstacks, pvalue_limit, (float(numstacks) / junctions.size) * 100))
+    return lsv_list
 
 
 def __gc_factor_ind(val, exp_idx):
