@@ -579,7 +579,7 @@ def new_exon_definition(start, end, read_rna, s3prime_junc, s5prime_junc, gene, 
                     in_db = True
                     break
             if not in_db and nondenovo:
-                return new_exons
+                return -1
             ex = Exon(start, end, gene, gene.get_strand(), annot=in_db, isintron=isintron)
             gene.add_exon(ex)
         else:

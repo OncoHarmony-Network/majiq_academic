@@ -273,25 +273,32 @@ def rnaseq_intron_retention(filenames, gene_list, chnk, permissive=True, nondeno
                     exnum = majiq_exons.new_exon_definition(intron_start, intron_end,
                                                             None, junc1, junc2, gne, nondenovo=nondenovo,
                                                             isintron=True)
+                    if exnum == -1:
+                        for exp_index in ind_list:
+                            if not junc2 is None:
+                                junc2.reset_coverage(exp_index)
+                            if not junc1 is None:
+                                junc1.reset_coverage(exp_index)
+                    else:
 
-                    junc1.add_donor(exon1)
-                    for ex in exon1.exonRead_list:
-                        st, end = ex.get_coordinates()
-                        if end == junc1.get_coordinates()[0]:
-                            ex.add_5prime_junc(junc1)
-                            break
+                        junc1.add_donor(exon1)
+                        for ex in exon1.exonRead_list:
+                            st, end = ex.get_coordinates()
+                            if end == junc1.get_coordinates()[0]:
+                                ex.add_5prime_junc(junc1)
+                                break
 
-                    junc2.add_acceptor(exon2)
-                    for ex in exon2.exonRead_list:
-                        st, end = ex.get_coordinates()
-                        if st == junc2.get_coordinates()[1]:
-                            ex.add_3prime_junc(junc2)
-                            break
+                        junc2.add_acceptor(exon2)
+                        for ex in exon2.exonRead_list:
+                            st, end = ex.get_coordinates()
+                            if st == junc2.get_coordinates()[1]:
+                                ex.add_3prime_junc(junc2)
+                                break
 
-                    if exnum == 1:
-                        logging.info("NEW INTRON RETENTION EVENT %s, %d-%d" % (gne.get_name(),
-                                                                               intron_start,
-                                                                               intron_end))
+                        if exnum == 1:
+                            logging.info("NEW INTRON RETENTION EVENT %s, %d-%d" % (gne.get_name(),
+                                                                                   intron_start,
+                                                                                   intron_end))
                 else:
                     for exp_index in ind_list:
                         if not junc2 is None:
