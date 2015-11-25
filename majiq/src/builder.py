@@ -67,12 +67,12 @@ def majiq_builder(samfiles_list, chnk, pcr_validation=None, gff_output=None, cre
     # utils.histogram_for_exon_analysis(gene_list, "%s/ex_lengths.pkl" % temp_dir)
 
 
-def __parallel_lsv_quant(samfiles_list, chnk, pcr_validation=False, gff_output=None, silent=False, debug=0):
-
+def __parallel_lsv_quant(samfiles_list, chnk, pcr_validation=False, gff_output=None, only_rna=False,
+                         nondenovo=False, silent=False, debug=0):
     try:
         print "START child,", current_process().name
         tlogger = utils.get_logger("%s/%s.majiq.log" % (mglobals.outDir, chnk), silent=silent, debug=debug)
-        majiq_builder(samfiles_list, chnk, pcr_validation, gff_output, create_tlb=True, logging=tlogger)
+        majiq_builder(samfiles_list, chnk, pcr_validation, gff_output, only_rna, nondenovo, tlogger)
         print "END child, ", current_process().name
     except Exception as e:
         traceback.print_exc()
@@ -150,7 +150,9 @@ def main(params):
                                                         params.pcr_filename,
                                                         params.gff_output,
                                                         params.only_rna,
-                                                        params.non_denovo])
+                                                        params.non_denovo,
+                                                        params.silent,
+                                                        params.debug])
 
         if params.nthreads > 1:
             logger.info("... waiting childs")
