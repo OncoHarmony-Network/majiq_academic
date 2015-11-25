@@ -72,7 +72,9 @@ def __parallel_lsv_quant(samfiles_list, chnk, pcr_validation=False, gff_output=N
     try:
         print "START child,", current_process().name
         tlogger = utils.get_logger("%s/%s.majiq.log" % (mglobals.outDir, chnk), silent=silent, debug=debug)
-        majiq_builder(samfiles_list, chnk, pcr_validation, gff_output, only_rna, nondenovo, tlogger)
+        majiq_builder(samfiles_list, chnk, pcr_validation=pcr_validation,
+                      gff_output=gff_output, only_rna=only_rna, nondenovo=nondenovo,
+                      logging=tlogger)
         print "END child, ", current_process().name
     except Exception as e:
         traceback.print_exc()
