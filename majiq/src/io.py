@@ -271,7 +271,7 @@ def rnaseq_intron_retention(filenames, gene_list, chnk, permissive=True, nondeno
 
                 if n_exp >= repl_thresh:
                     exnum = majiq_exons.new_exon_definition(intron_start, intron_end,
-                                                            None, junc1, junc2, gne,
+                                                            None, junc1, junc2, gne, nondenovo=nondenovo,
                                                             isintron=True)
 
                     junc1.add_donor(exon1)
