@@ -10,12 +10,12 @@ from majiq.grimoire.gene import recreate_gene_tlb
 import majiq.grimoire.lsv as majiq_lsv
 import majiq.grimoire.junction as majiq_junction
 import majiq.grimoire.exon as majiq_exons
-import majiq.src.analize as analize
+# import majiq.src.analize as analize
 import majiq.src.io as majiq_io
 from majiq.src.normalize import prepare_gc_content
 import majiq.src.utils.utils as utils
-import majiq.src.config as mglobals
-
+import majiq.src.config as config
+from majiq.grimoire.lsv import SSOURCE, STARGET, InvalidLSV
 
 try:
     import cPickle as pickle
@@ -23,81 +23,53 @@ except Exception:
     import pickle
 
 
-def lsv_detection(gene_list, only_real_data=False, logging=None):
+def lsv_detection(gene_list):
+    lsv_list = {}
+    const_set = {}
 
-    num_ss_var = [[0]*20, [0]*20, 0]
-
-    const_set = [set() for xx in range(mglobals.num_experiments)]
-    lsv_list = [[] for xx in range(mglobals.num_experiments)]
-    jun = {}
-    for xx in mglobals.tissue_repl.keys():
-        jun[xx] = set()
+    for name, ind_list in config.tissue_repl.items():
+        lsv_list[name] = []
+        const_set[name] = set()
 
     for gn in gene_list:
-
-        gn.check_exons()
-        mat, exon_list, tlb, var_ss = gn.get_rnaseq_mat(const_set, use_annot=True)
-        vip = []
-        for idx, ex in enumerate(exon_list):
-            sc = ex.get_pcr_score()
-            if sc is None:
-                continue
-            vip.append(idx)
-
-        for ss in range(2):
-            for ssnum in range(20):
-                num_ss_var[ss][ssnum] += var_ss[ss][ssnum]
-        num_ss_var[2] += var_ss[2]
-        #num_ss_var [1]+= var_ss[1]
-
-#            print "---------------- %s --------------"%gn.get_id()
-#             utils.print_junc_matrices(mat, tlb=tlb, fp=True)
-        SS, ST = lsv_matrix_detection(mat, tlb, (False, False, False), vip)
+        local_const = set(gn.get_all_junctions())
+        local_lsv_jun = {}
+        if gn.get_read_count().sum() == 0:
+            continue
         dummy = {}
-        for name, ind_list in mglobals.tissue_repl.items():
+        for name, ind_list in config.tissue_repl.items():
             dummy[name] = [[], []]
+        for ex in gn.get_exon_list():
+            try:
+                ex.detect_lsv(gn, SSOURCE, dummy, local_lsv_jun)
+            except InvalidLSV as e:
+                #print e.msg
+                pass
 
-        for lsv_index, lsv_lst in enumerate((SS, ST)):
-            lsv_type = (analize.SSOURCE, analize.STARGET)[lsv_index]
-            sstype = ['5prime', '3prime'][lsv_index]
-#                print lsv_lst
+            try:
+                ex.detect_lsv(gn, STARGET, dummy, local_lsv_jun)
+            except InvalidLSV as e:
+                #print e.msg
+                pass
 
-            for idx in lsv_lst:
-                jlist = exon_list[idx].get_junctions(sstype)
-                jlist = [x for x in jlist if x is not None]
-                if len(jlist) == 0:
-                    continue
+        for name, ind_list in config.tissue_repl.items():
 
-                lsv_in = gn.new_lsv_definition(exon_list[idx], jlist, lsv_type)
-                if lsv_in is None:
-                    continue
+            local_const.difference(local_lsv_jun)
+            const_set[name].update(local_const)
 
-                for name, ind_list in mglobals.tissue_repl.items():
-                    for jj in jlist:
-                        jun[name].add(jj)
-
-                    dummy[name][lsv_index].append(lsv_in)
-
-        for name, ind_list in mglobals.tissue_repl.items():
             for ss in dummy[name][0]:
                 for st in dummy[name][1]:
                     if ss.contained(st):
                         break
                 else:
-                    for exp_idx in ind_list:
-                        lsv_list[exp_idx].append(ss)
+                    lsv_list[name].append(ss)
 
             for st in dummy[name][1]:
                 for ss in dummy[name][0]:
                     if st.contained(ss):
                         break
                 else:
-                    for exp_idx in ind_list:
-                        lsv_list[exp_idx].append(st)
-
-    for name, ind_list in mglobals.tissue_repl.items():
-        for exp_idx in ind_list:
-            const_set[exp_idx].difference(jun[name])
+                    lsv_list[name].append(st)
 
     return lsv_list, const_set
 
@@ -138,7 +110,7 @@ def __parallel_gff3(transcripts):
 
     try:
         print "START child,", current_process().name
-        tlogger = utils.get_logger("%s/db.majiq.log" % mglobals.outDir, silent=False, debug=0)
+        tlogger = utils.get_logger("%s/db.majiq.log" % config.outDir, silent=False, debug=0)
         majiq_io.read_gff(transcripts, None, logging=tlogger)
         print "END child, ", current_process().name
     except Exception as e:
@@ -154,25 +126,25 @@ def merge_and_create_majiq_file(chr_list, pref_file):
     :param pref_file:
     """
     import random
-    for name, ind_list in mglobals.tissue_repl.items():
+    for name, ind_list in config.tissue_repl.items():
         for idx, exp_idx in enumerate(ind_list):
             all_visual = []
             as_table = []
             nonas_table = []
-            for chnk in range(mglobals.num_final_chunks):
-                temp_dir = "%s/tmp/chunk_%s" % (mglobals.outDir, chnk)
-                temp_filename = '%s/%s.splicegraph.pkl' % (temp_dir, mglobals.exp_list[exp_idx])
+            for chnk in range(config.num_final_chunks):
+                temp_dir = "%s/tmp/chunk_%s" % (config.outDir, chnk)
+                temp_filename = '%s/%s.splicegraph.pkl' % (temp_dir, config.exp_list[exp_idx])
                 visual_gene_list = majiq_io.load_bin_file(temp_filename)
                 all_visual.append(visual_gene_list)
-            fname = '%s/%s.splicegraph' % (mglobals.outDir, mglobals.exp_list[exp_idx])
+            fname = '%s/%s.splicegraph' % (config.outDir, config.exp_list[exp_idx])
             visual = np.concatenate(all_visual)
             majiq_io.dump_bin_file(visual, fname)
             del all_visual
             del visual
 
-            for chnk in range(mglobals.num_final_chunks):
-                temp_dir = "%s/tmp/chunk_%s" % (mglobals.outDir, chnk)
-                filename = "%s/%s.majiq.pkl" % (temp_dir, mglobals.exp_list[exp_idx])
+            for chnk in range(config.num_final_chunks):
+                temp_dir = "%s/tmp/chunk_%s" % (config.outDir, chnk)
+                filename = "%s/%s.majiq.pkl" % (temp_dir, config.exp_list[exp_idx])
                 temp_table = majiq_io.load_bin_file(filename)
                 as_table.append(temp_table[0])
                 nonas_table.append(temp_table[1])
@@ -181,8 +153,8 @@ def merge_and_create_majiq_file(chr_list, pref_file):
                 continue
 
             info = dict()
-            info['experiment'] = mglobals.exp_list[exp_idx]
-            info['genome'] = mglobals.genome
+            info['experiment'] = config.exp_list[exp_idx]
+            info['genome'] = config.genome
 
             at = np.concatenate(as_table)
             for lsv in at:
@@ -193,7 +165,7 @@ def merge_and_create_majiq_file(chr_list, pref_file):
             for jnc in clist:
                 jnc.set_gc_factor(exp_idx)
 
-            fname = '%s/%s.majiq' % (mglobals.outDir, mglobals.exp_list[exp_idx])
+            fname = '%s/%s.majiq' % (config.outDir, config.exp_list[exp_idx])
             majiq_io.dump_bin_file((info, at, clist), fname)
 
 
@@ -251,7 +223,6 @@ def prepare_intronic_exons(gene_list):
         gn.prepare_exons()
 
 
-
 def _new_subparser():
     return argparse.ArgumentParser(add_help=False)
 
@@ -285,21 +256,21 @@ def _generate_parser():
 
 def main(params):
 
-    mglobals.global_conf_ini(params.conf, params, only_db=True)
+    config.global_conf_ini(params.conf, params, only_db=True)
 
-    logger = utils.get_logger("%s/majiq.log" % mglobals.outDir)
+    logger = utils.get_logger("%s/majiq.log" % config.outDir)
     logger.info("")
     logger.info("Command: %s" % params)
 
     majiq_io.read_gff(params.transcripts, None, 1, logging=logger)
-    chr_list = majiq_io.load_bin_file("%s/tmp/chromlist.pkl" % mglobals.outDir)
+    chr_list = majiq_io.load_bin_file("%s/tmp/chromlist.pkl" % config.outDir)
 
-    for chnk in range(mglobals.num_final_chunks):
+    for chnk in range(config.num_final_chunks):
 
         if not logger is None:
             logger.info("Building for chunk %s" % chnk)
 
-        temp_dir = "%s/tmp/chunk_%s" % (mglobals.outDir, chnk)
+        temp_dir = "%s/tmp/chunk_%s" % (config.outDir, chnk)
         temp_file = open('%s/annot_genes.pkl' % temp_dir, 'rb')
         gene_list = pickle.load(temp_file)
         prepare_intronic_exons(gene_list)
@@ -309,7 +280,7 @@ def main(params):
 
         if not logger is None:
             logger.info("[%s] Detecting LSV" % chnk)
-        lsv, const = lsv_detection(gene_list, chnk, logging=logger)
+        lsv, const = lsv_detection(gene_list)
 
         prepare_gc_content(gene_list, temp_dir)
 
@@ -325,19 +296,19 @@ def main(params):
 
     #GATHER
     logger.info("Gather outputs")
-    merge_and_create_majiq_file(chr_list, mglobals.outDir)
+    merge_and_create_majiq_file(chr_list, config.outDir)
 
     logger.info("Gather lsv and generate gff")
-    fp = open('%s/%s' % (mglobals.outDir, 'lsvs.gff3'), 'w+')
-    for chnk in range(mglobals.num_final_chunks):
-        temp_dir = "%s/tmp/chunk_%s" % (mglobals.outDir, chnk)
+    fp = open('%s/%s' % (config.outDir, 'lsvs.gff3'), 'w+')
+    for chnk in range(config.num_final_chunks):
+        temp_dir = "%s/tmp/chunk_%s" % (config.outDir, chnk)
         yfile = '%s/temp_gff.pkl' % temp_dir
         gff_list = majiq_io.load_bin_file(yfile)
         for gff in gff_list:
             fp.write("%s\n" % gff)
     fp.close()
 
-    mglobals.print_numbers()
+    config.print_numbers()
     logger.info("End of execution")
 
 if __name__ == "__main__":
