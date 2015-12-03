@@ -381,7 +381,8 @@ def plot_lsv_types_hist(vals, typs, img_path=None, lim_val=None, extra_title="",
     if output == '.':
         pyplot.show()
     else:
-        pyplot.savefig(output+'.pdf')
+        pyplot.show()
+        pyplot.savefig(output+'types.pdf')
     fidx += 1
 
 
@@ -421,11 +422,12 @@ def plot_dominant_exons(dom_dict, name='', color=cb.Blues[9], output='.'):
     # labs = ["exon %d" % xx for xx in np.arange(0, totalbins+1)]
     # ax.set_xticklabels(labs)
     if output == '.':
-        pyplot.savefig('%s.pdf' % name)
+        pyplot.savefig('%s.hist.pdf' % name)
         pyplot.show()
 
     else:
-        pyplot.savefig(output+'.pdf')
+        pyplot.show()
+        pyplot.savefig(output+'hist.pdf')
     fidx += 1
 
 
@@ -503,9 +505,11 @@ def all_plots_wrapper(types, nlsv=0, output='.'):
     s_keys = [xx[0] for xx in histo if xx[1] > 100]
     s_vals = [types[xx] for xx in s_keys]
 
+    all_types = [xx[0] for xx in histo]
+
     total = 0
     complex = 0
-    for xx in s_keys:
+    for xx in all_types:
         if len(xx.split('|')[1:]) > 2:
             complex += types[xx]
         total += types[xx]
@@ -528,6 +532,7 @@ def all_plots_wrapper(types, nlsv=0, output='.'):
     percent = float(complex) / total
     print "Complex %d/%d (%.3f)" % (complex, total, percent)
 
+    #output = '.'
     plot_lsv_types_hist(s_vals, s_keys, img_path=impath, lim_val=None, extra_title=extra_title, output=output)
     #plot_lsv_types_hist(s_vals, s_keys, img_path=None, lim_val=None, extra_title=extra_title)
 
@@ -540,6 +545,7 @@ def all_plots_wrapper(types, nlsv=0, output='.'):
 
 def psi_dominant(filename_list):
     res = [[], [], [], [], []]
+
     for filename in filename_list:
         fp = open(filename)
         lines = fp.readlines()
@@ -553,8 +559,10 @@ def psi_dominant(filename_list):
             lsv_ex_id = tab[2].split(':')[1]
             strand = tab[13]
             typ = tab[5][0]
-            if use_intron(typ):
+
+            if use_intron(tab[5]):
                 continue
+
             psi_list = [float(xx) for xx in tab[3].split(';')]
             exon_list = [xx for xx in tab[15].split(';')]
             num_exons = len(exon_list) - 1
@@ -615,6 +623,8 @@ def ss_dominant(file_list):
             lsv_ex_id = tab[2].split(':')[1]
             strand = tab[13]
             typ = tab[5][0]
+            if use_intron(tab[5]):
+                continue
             psi_list = [float(xx) for xx in tab[3].split(';')]
             junc_list = [xx for xx in tab[14].split(';')]
 
@@ -684,11 +694,12 @@ def fdr_parse(direc, file_list, group_list, intronic_junc=False):
             if ll[0] == '#':
                 continue
             tab = ll.strip().split('\t')
-            if use_intron(tab[5]):
+            if use_intron(tab[7]):
                 continue
-            typ = tab[5].split('|')[1:]
+            typ = tab[7].split('|')[1:]
 
             ntyp = 0
+            #print tab[7], typ
             for tt in typ:
                 if tt.endswith('e0'):
                     continue
@@ -698,13 +709,13 @@ def fdr_parse(direc, file_list, group_list, intronic_junc=False):
             if intronic_junc:
                 psi_list_check = psi_list[-1:]
             else:
-                if abs(psi_list[-1]) < 0.2:
-                    psi_list_check = psi_list[:-1]
-                else:
-                    continue
+                # if abs(psi_list[-1]) < 0.2:
+                #     psi_list_check = psi_list[:-1]
+                # else:
+                #     continue
+                psi_list_check = psi_list
 
             for pp in psi_list_check:
-
                 if abs(pp) > 0.2:
                     changing[x, y] += 1
                     changing[y, x] += 1
@@ -745,7 +756,7 @@ if __name__ == '__main__':
     # onlyfiles = ['Adr_CT22.mm10.sorted.majiq', 'Aor_CT22.mm10.sorted.majiq']
 
     global ir_plots
-    ir_plots = False
+    ir_plots = True
 
     output = sys.argv[2]
     #groups = sys.argv[3:]
@@ -755,34 +766,34 @@ if __name__ == '__main__':
         os.makedirs(output)
         os.makedirs('%s/news' % output)
 
-    list_types, group_types = get_types(dire, onlyfiles, groups)
-    count_lsv = len(set(list_types.keys()))
-    stypes = {}
-    for kk, tyt in list_types.items():
-        if not tyt in stypes:
-            stypes[tyt] = 0
-        stypes[tyt] += 1
-    print "Plot 3.a 3.b"
-    all_plots_wrapper(stypes, count_lsv, output=output)
+    # list_types, group_types = get_types(dire, onlyfiles, groups)
+    # count_lsv = len(set(list_types.keys()))
+    # stypes = {}
+    # for kk, tyt in list_types.items():
+    #     if not tyt in stypes:
+    #         stypes[tyt] = 0
+    #     stypes[tyt] += 1
+    # print "Plot 3.a 3.b"
+    # all_plots_wrapper(stypes, count_lsv, output=output)
 
 
     #
     #read psi values
-    # groups_vals = []
-    # filename_list = ['./psi_0.5/%s_psigroup_psi.txt' % grp for grp in groups]
-    # print "Plot Dominant exons"
-    # values = psi_dominant(filename_list)
-    # plot_dominant_exons(values, 'exons', color=cb.Blues[9])
-    # values = ss_dominant(filename_list)
-    # print "Plot Dominant splicesites"
-    # plot_dominant_exons(values[0], ' 5\'splice sites', color=cb.Oranges[9])
-    # plot_dominant_exons(values[1], ' 3\'splice sites', color=cb.PuRd[9])
+    groups_vals = []
+    filename_list = ['./psi/%s_psigroup_psi.txt' % grp for grp in groups]
+    print "Plot Dominant exons"
+    values = psi_dominant(filename_list)
+    plot_dominant_exons(values, 'exons', color=cb.Blues[9])
+    values = ss_dominant(filename_list)
+    print "Plot Dominant splicesites"
+    plot_dominant_exons(values[0], ' 5\'splice sites', color=cb.Oranges[9])
+    plot_dominant_exons(values[1], ' 3\'splice sites', color=cb.PuRd[9])
 
     #heatmap
     # print "Plot dpsi changing events heatmap"
-    # dire = './dpsi_0.5'
+    # dire = './dpsi'
     # filename_list = [f for f in listdir(dire) if isfile(join(dire, f)) and f.endswith('txt')]
-    # chg_lsv, complx_lsv = fdr_parse(dire, filename_list, groups, intronic_junc=True)
+    # chg_lsv, complx_lsv = fdr_parse(dire, filename_list, groups, intronic_junc=ir_plots)
     # plot_fdrheatmap(chg_lsv, complx_lsv, groups, output)
 
 

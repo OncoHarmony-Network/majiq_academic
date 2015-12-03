@@ -561,7 +561,6 @@ def __half_exon(ss_type, junc, read_rna):
 
 EMPTY_COORD = -1
 
-
 def new_exon_definition(start, end, read_rna, s3prime_junc, s5prime_junc, gene, nondenovo=False, isintron=False):
     if end - start < 5:
         return 0
