@@ -199,8 +199,12 @@ def scatterplot_rtpcr_simple(rt_pcr, method_epsis, cov,  plotpath, rt_pcr_extra=
     for cov_idx, cov_th in enumerate(cov_thres[1:]):
         cov_mask = (cov > cov_thres[cov_idx]) & (cov <= cov_th)
         cov_extra_mask = (cov_extra > cov_thres[cov_idx]) & (cov_extra <= cov_th)
-        pyplot.plot(method_epsis[cov_mask & rt_pcr_chg_mask], rt_pcr[cov_mask & rt_pcr_chg_mask], '.', color='#%02x%02x%02x' % cb.Paired[10][-1], label='Unst Vs Stim - Cov (%d, %d],N=%d' % (cov_thres[cov_idx], cov_th, np.count_nonzero(cov_mask & rt_pcr_chg_mask)))
-        pyplot.plot(method_extra[cov_extra_mask & rt_pcr_extra_chg_mask], rt_pcr_extra[cov_extra_mask & rt_pcr_extra_chg_mask], 'd', color='#%02x%02x%02x' % cb.Paired[10][-3], label='Cer Vs Liv - Cov (%d, %d],N=%d' % (cov_thres[cov_idx], cov_th, np.count_nonzero(cov_extra_mask & rt_pcr_extra_chg_mask)))
+        pyplot.plot(method_epsis[cov_mask & rt_pcr_chg_mask], rt_pcr[cov_mask & rt_pcr_chg_mask], '.',
+                    color='#%02x%02x%02x' % cb.Paired[10][-1],
+                    label='Unst Vs Stim - Cov (%d, %d],N=%d' % (cov_thres[cov_idx], cov_th, np.count_nonzero(cov_mask & rt_pcr_chg_mask)))
+        pyplot.plot(method_extra[cov_extra_mask & rt_pcr_extra_chg_mask], rt_pcr_extra[cov_extra_mask & rt_pcr_extra_chg_mask], 'd',
+                    color='#%02x%02x%02x' % cb.Paired[10][-3],
+                    label='Cer Vs Liv - Cov (%d, %d],N=%d' % (cov_thres[cov_idx], cov_th, np.count_nonzero(cov_extra_mask & rt_pcr_extra_chg_mask)))
 
     pyplot.xlabel(met_name)
     pyplot.ylabel('RT-PCR')

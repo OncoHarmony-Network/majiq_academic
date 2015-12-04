@@ -55,17 +55,17 @@ def scatterplot_rtpcr_majiq_miso(rt_pcr_majiq, rt_pcr_miso, majiq, miso, plotpat
     axx[0][0].text(.1, .9, 'R=%.2f' % (pearson_majiq), fontsize=14)
     axx[0][0].plot(np.append(majiq_all, majiq_extra_all), fit_fn(np.append(majiq_all, majiq_extra_all)), '--k')
     axx[0][0].plot(diagonal, diagonal, '--', color="#cccccc")
-    axx[0][0].plot(majiq[0], rt_pcr_majiq[0], '.', color=get_color('rest'), label='Resting')
-    axx[0][0].plot(majiq[1], rt_pcr_majiq[1], '.', color=get_color('stim'), label='Stimulating')
-    axx[0][0].plot(majiq_extra[0], pcr_majiq_extra[0], 'd', color=get_color('cer'), label='Cerebellum')
-    axx[0][0].plot(majiq_extra[1], pcr_majiq_extra[1], 'd', color=get_color('liv'), label='Liver')
+    axx[0][0].plot(majiq[0], rt_pcr_majiq[0], '.', color=get_color('rest'), label='Resting (N=%d)' % len(majiq[0]))
+    axx[0][0].plot(majiq[1], rt_pcr_majiq[1], '.', color=get_color('stim'), label='Stimulating (N=%d)' % len(majiq[1]))
+    axx[0][0].plot(majiq_extra[0], pcr_majiq_extra[0], 'd', color=get_color('cer'), label='Cerebellum (N=%d)' % len(majiq_extra[0]))
+    axx[0][0].plot(majiq_extra[1], pcr_majiq_extra[1], 'd', color=get_color('liv'), label='Liver (N=%d)' % len(majiq_extra[1]))
 
 
     axx[0][0].set_xlabel('MAJIQ')
     axx[0][0].set_ylabel('RT-PCR')
     axx[0][0].set_title('All (N=%d)' % (len(majiq_all) + len(majiq_extra_all)))
     axx[0][0].set_ylim([0,1])
-    # axx[0][0].legend(loc=2, fontsize=8)
+    axx[0][0].legend(loc=2, fontsize=8)
 
     diagonal = np.linspace(0, 1, num=len(rt_pcr_miso_all))
     fit = np.polyfit(np.append(miso_all, miso_extra_all), np.append(rt_pcr_miso_all, np.array(pcr_miso_extra_all)), 1)
