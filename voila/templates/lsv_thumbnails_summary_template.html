@@ -1,8 +1,6 @@
 {% extends "base_template.html" %}
-{% block title %}MAJIQ LSV &Psi; Summary{% endblock %}
+{% block title %}Voila LSV thumbnails{% endblock %}
 {% block css %}
-    {# Evaluate if we should divide different css in files #}
-
 {% endblock %}
 
 {% block js %}
@@ -18,9 +16,12 @@
 
 {% endblock %}
 
+{% block header %}
+        Voila LSV thumbnails
+{% endblock %}
+
 {% block content %}
     <div class="events-summary">
-        <h1>LSV &psi; Single experiment</h1>
         <table id="event_table" class="tablesorter">
             <tbody>
             {% for lsv_signature in lsvList  -%}

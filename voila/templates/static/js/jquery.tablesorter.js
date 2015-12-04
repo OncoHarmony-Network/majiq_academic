@@ -1111,7 +1111,13 @@
                             index_gene++;
                         }
 
-                        var genes_obj =  JSON.parse(JSON.parse(this.value.replace(/\\'/g, "\"").replace(/'/g, "")));
+                        var genes_obj;
+                        try{
+                            genes_obj = JSON.parse(JSON.parse(this.value.replace(/\\'/g, "\"").replace(/'/g, "")));
+                        } catch (syntaxError){
+                            genes_obj = JSON.parse(this.value.replace(/\\'/g, "\"").replace(/'/g, ""));
+                        }
+
 
                         var exons_obj = genes_obj.exons;
                         var junctions_obj = genes_obj.junctions;

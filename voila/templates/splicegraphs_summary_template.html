@@ -41,10 +41,16 @@
             </h3>
 
             <div>
-                <div class="spliceDiv" id="spliceDivExp1_{{ gene_index }}" data-exon-list="{{ gene | to_json_especial }}">
+                <div class="spliceDiv" id="spliceDivExp1_{{gene_index}}" data-exon-list="{{ gene_dicts[gene_dicts.keys()[0]][gene.get_id()] | to_json_especial }}">
                     <div class="spliceGraphTools">
                         <select class="spliceGraphSelector" autocomplete="off">
-                            <option selected="selected" value="{{ gene |to_json_especial}}">disabled</option>
+                            {% for nsample in gene_dicts.keys() -%}
+                                {% if nsample == first_sample %}
+                                    <option selected="selected" value="{{ gene_dicts[nsample][gene.get_id()] |to_json_especial}}">{{ nsample }}</option>
+                                {% else %}
+                                    <option value="{{ gene_dicts[nsample][gene.get_id()] |to_json_especial }}">{{ nsample }}</option>
+                                {% endif %}
+                            {%- endfor %}
                         </select>
                         <img class="toogleScale scaled" src="static/img/icons/solve-icon.png" title="Change between scaled view and a view where introns are trimmed" />
                         <img class="zoomInSplice" src="static/img/zoom_in.png" title="Zoom in" alt="" />

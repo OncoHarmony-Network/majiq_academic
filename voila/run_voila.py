@@ -1,3 +1,4 @@
+import copy
 import sys
 from collections import defaultdict
 import json
@@ -204,8 +205,7 @@ def render_summary(output_dir, output_html, majiq_output, type_summary, threshol
 
     elif type_summary == constants.SPLICE_GRAPHS:
         count_pages = 0
-        genes = majiq_output['genes']
-
+        genes = majiq_output['gene_dicts'][majiq_output['gene_dicts'].keys()[0]].values()
         logger.info("Number of genes detected in Voila: %d." % len(genes))
         while count_pages*constants.MAX_GENES < len(genes):
             prev_page = None
@@ -220,6 +220,8 @@ def render_summary(output_dir, output_html, majiq_output, type_summary, threshol
             name_page = str(count_pages) + "_" + output_html
             voila_output = open(output_dir+name_page, 'w')
             voila_output.write(sum_template.render(genes=genes[count_pages*constants.MAX_GENES:(count_pages+1)*constants.MAX_GENES],
+                                                   gene_dicts=majiq_output['gene_dicts'],
+                                                   first_sample=[sam for sam in majiq_output['gene_dicts'].keys() if 'ALL' in sam][0],
                                                    prevPage=prev_page,
                                                    nextPage=next_page,
                                                    namePage=name_page
@@ -247,9 +249,10 @@ def render_summary(output_dir, output_html, majiq_output, type_summary, threshol
 
 
 def combine_gg(gg_comb_dict, gg_new):
+    """Combine a set of gene graphs (new) with an already existing collection."""
     gg = gg_comb_dict[gg_new.get_id()]
     if gg is None:
-        gg_comb_dict[gg_new.get_id()] = gg_new
+        gg_comb_dict[gg_new.get_id()] = copy.deepcopy(gg_new)
         return
 
     for i, eg in enumerate(gg.get_exons()):
@@ -290,7 +293,7 @@ def parse_gene_graphics(splicegraph_flist, gene_name_list, condition_names=('gro
             genes_graphic = defaultdict(list)
             genesG.sort()
             for gene_obj in genesG:
-                if gene_obj.get_id() in gene_name_list or gene_obj.get_name().upper() in gene_name_list:
+                if gene_name_list is None or gene_obj.get_id() in gene_name_list or gene_obj.get_name().upper() in gene_name_list:
                     genes_graphic[gene_obj.get_id()].append(json.dumps(gene_obj, cls=utils_voila.LsvGraphicEncoder).replace("\"", "'"))
                     genes_graphic[gene_obj.get_id()].append(gene_obj.get_strand())
                     genes_graphic[gene_obj.get_id()].append(gene_obj.get_coords())
@@ -304,7 +307,7 @@ def parse_gene_graphics(splicegraph_flist, gene_name_list, condition_names=('gro
             if not len(ggenes_set):
                 logger.warning("No gene matching the splice graph file %s." % splice_graph_f)
 
-            if len(gene_name_list) != len(ggenes_set):
+            if gene_name_list is not None and len(gene_name_list) != len(ggenes_set):
                 logger.warning("Different number of genes in splicegraph (%d) and majiq (%d) files! Hint: Are you sure "
                                "you are using bins and splicegraph files from the same execution?" % (len(ggenes_set), len(gene_name_list)))
 
@@ -325,6 +328,63 @@ def parse_gene_graphics(splicegraph_flist, gene_name_list, condition_names=('gro
 
     logger.info("Splice graph information files correctly loaded.")
     return genes_exp1_exp2
+
+
+def parse_gene_graphics_obj(splicegraph_flist, gene_name_list, condition_names=('group1', 'group2'), logger=None):
+    """
+    Load and combine splice graph files. Returns GeneGraphic objects.
+
+    :param splicegraph_flist: list of splice graph files or directory containing splice graphs.
+    :param gene_name_list: list of genes of interest.
+    :param condition_names: ids for condition 1 [and condition 2, in deltapsi].
+    :param logger: logger instance.
+    :return: list of genes graphic per condition.
+    """
+    genes_exp1_exp2 = []
+    logger.info("Parsing splice graph information files ...")
+    for grp_i, gene_flist in enumerate(splicegraph_flist):
+        genes_exp = defaultdict()
+        splice_files = utils_voila.list_files_or_dir(gene_flist, suffix=constants.SUFFIX_SPLICEGRAPH)
+
+        # Check that the folders have splicegraphs
+        if not len(splice_files):
+            logger.error("No file with extension .%s found in %s." % (constants.SUFFIX_SPLICEGRAPH, gene_flist))
+            sys.exit(1)
+
+        # Combined SpliceGraph data structure
+        gg_combined = defaultdict(lambda: None)
+        gg_combined_name = "%s%s" % (constants.COMBINED_PREFIX, condition_names[grp_i])
+
+        for splice_graph_f in splice_files:
+            logger.info("Loading %s." % splice_graph_f)
+            genesG = pkl.load(open(splice_graph_f, 'r'))
+            genes_graphic = defaultdict()
+            genesG.sort()
+            for gene_obj in genesG:
+                if gene_name_list is None or gene_obj.get_id() in gene_name_list or gene_obj.get_name().upper() in gene_name_list:
+                    genes_graphic[gene_obj.get_id()] = gene_obj
+
+                    # Combine genes from different Splice Graphs
+                    combine_gg(gg_combined, gene_obj)
+
+            ggenes_set = set(genes_graphic.keys())
+            if not len(ggenes_set):
+                logger.warning("No gene matching the splice graph file %s." % splice_graph_f)
+
+            if gene_name_list is not None and len(gene_name_list) != len(ggenes_set):
+                logger.warning("Different number of genes in splicegraph (%d) and majiq (%d) files! Hint: Are you sure "
+                               "you are using bins and splicegraph files from the same execution?" % (len(ggenes_set), len(gene_name_list)))
+
+            genes_exp[os.path.basename(splice_graph_f)] = genes_graphic
+
+        # Add combined SpliceGraph (when more than one sample)
+        if len(genes_exp.keys())>1:
+            genes_exp[gg_combined_name] = gg_combined
+        genes_exp1_exp2.append(cc.OrderedDict(sorted(genes_exp.items(), key=lambda t: t[0])))
+
+    logger.info("Splice graph information files correctly loaded.")
+    return genes_exp1_exp2
+
 
 
 def create_summary(args):
@@ -435,12 +495,9 @@ def create_summary(args):
                 gene_name_list.append(gene_name.rstrip().upper())
 
         logger.info("Loading %s." % voila_file)
-        if gene_name_list:
-            genesG = pkl.load(open(voila_file, 'r'))
-            genesG = [gg for gg in genesG if gg.id in gene_name_list]
-        else:
-            genesG = pkl.load(open(voila_file, 'r'))[:args.max]
-        majiq_output = {'genes': sorted(genesG, key=lambda t: t.id)}
+        majiq_output = {'gene_dicts': parse_gene_graphics_obj([[voila_file]], gene_name_list,
+                                                     condition_names=['samples'],
+                                                     logger=logger)[0]}
         render_summary(output_dir, output_html, majiq_output, type_summary, logger=logger)
         return
 
