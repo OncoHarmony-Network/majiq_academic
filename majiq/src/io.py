@@ -115,22 +115,33 @@ def __get_num_reads(read):
     return nreads
 
 
+def _match_strand(read, gene_strand):
+    res = True
+    if majiq_config.strand_specific:
+        if (read.flag & 0x10 == 0x10 and gene_strand == '-') or (read.flag & 0x10 == 0x00 and gene_strand == '+'):
+            res = True
+        else:
+            res = False
+
+    return
+
+
 def count_mapped_reads(filename, exp_idx):
     stats = pysam.flagstat(filename)
     mapped_reads = int(stats[2].split()[0])
     majiq_config.num_mapped_reads[exp_idx] = mapped_reads
 
 
-def is_neg_strand(read):
-    res = False
-    if read.flag & 0x10 == 0x10:
-        # print "FLAG",read.flag
-        res = True
-
-    if majiq_config.strand_specific:
-        res = not res
-
-    return res
+# def is_neg_strand(read):
+#     res = False
+#     if read.flag & 0x10 == 0x10:
+#         # print "FLAG",read.flag
+#         res = True
+#
+#     if majiq_config.strand_specific:
+#         res = not res
+#
+#     return res
 
 
 def get_junc_from_list(coords, list_elem):
@@ -193,9 +204,12 @@ def rnaseq_intron_retention(filenames, gene_list, chnk, permissive=True, nondeno
                     except ValueError:
                         # logging.info('There are no reads in %s:%d-%d' % (chrom, ex1_end, ex1_end+1))
                         continue
+
                     for read in read_iter:
                         is_cross, junc_list = __cross_junctions(read)
-                        strand_read = '+' if not is_neg_strand(read) else '-'
+                        if not _match_strand(read, gene_strand=strand):
+                            continue
+
                         unique = __is_unique(read)
                         r_start = read.pos
                         nreads = __get_num_reads(read)
@@ -205,8 +219,6 @@ def rnaseq_intron_retention(filenames, gene_list, chnk, permissive=True, nondeno
                             if not (0 <= intron_idx <= intron_len):
                                 continue
                             bmap[intron_idx] = False
-
-                        if strand_read != strand or not unique:
                             continue
 
                         if is_cross:
@@ -340,9 +352,8 @@ def read_sam_or_bam(filenames, gene_list, chnk, nondenovo=False, logging=None):
                 logging.info('There are no reads in %s:%d-%d' % (chrom, strt, end))
                 continue
             for read in read_iter:
-                strand_read = '+' if not is_neg_strand(read) else '-'
 
-                if strand_read != strand:
+                if not _match_strand(read, gene_strand=strand):
                     continue
                 unique = __is_unique(read)
                 if not unique:
