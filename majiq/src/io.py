@@ -118,7 +118,7 @@ def __get_num_reads(read):
 def _match_strand(read, gene_strand):
     res = True
     if majiq_config.strand_specific:
-        if (read.flag & 0x10 == 0x10 and gene_strand == '-') or (read.flag & 0x10 == 0x00 and gene_strand == '+'):
+        if (read.flag & 0x10 == 0x10 and gene_strand == '+') or (read.flag & 0x10 == 0x00 and gene_strand == '-'):
             res = True
         else:
             res = False
