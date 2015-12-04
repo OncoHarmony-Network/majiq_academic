@@ -185,8 +185,6 @@ def rnaseq_intron_retention(filenames, gene_list, chnk, permissive=True, nondeno
                 repl_thresh = int(math.ceil(len(ind_list) * 0.5))
 
                 for idx, exp_index in enumerate(ind_list):
-
-            #for exp_index in range(len(filenames)):
                     try:
                         read_iter = samfile[exp_index].fetch(chrom, intron_start + 8, intron_end - 8)
                     except ValueError:
@@ -269,6 +267,7 @@ def rnaseq_intron_retention(filenames, gene_list, chnk, permissive=True, nondeno
                     if cov1 >= majiq_config.MINREADS and cov2 >= majiq_config.MINREADS and intron_body_covered:
                         n_exp += 1
 
+                print n_exp, repl_thresh
                 if n_exp >= repl_thresh:
                     exnum = majiq_exons.new_exon_definition(intron_start, intron_end,
                                                             None, junc1, junc2, gne, nondenovo=nondenovo,
