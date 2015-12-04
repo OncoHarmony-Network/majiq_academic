@@ -265,7 +265,7 @@ class Exon:
     def detect_lsv(self, gn, lsv_type, dummy, jun):
         #jun = {}
 
-        sstype = {SSOURCE: ['5prime',0], STARGET: ['3prime', 1]}
+        sstype = {SSOURCE: ['5prime', 0], STARGET: ['3prime', 1]}
 
 
         jlist = self.get_junctions(sstype[lsv_type][0])
@@ -275,13 +275,14 @@ class Exon:
         lsv_in = gn.new_lsv_definition(self, jlist, lsv_type)
 
         for name, ind_list in config.tissue_repl.items():
+            group_thresh = min((len(ind_list) * 0.5), 2)
             counter = 0
             e_data = 0
             for jj in jlist:
                 for exp_idx in ind_list:
-                    if majiqfilter.reliable_in_data(jj, exp_idx, config.MINREADS, config.MINPOS):
+                    if majiqfilter.reliable_in_data(jj, exp_idx, minnonzero=config.MINPOS, min_reads=config.MINREADS):
                         counter += 1
-                if counter < 0.1 * len(ind_list):
+                if counter < group_thresh:
                     continue
                 e_data += 1
                 try:

@@ -145,7 +145,7 @@ def get_junc_from_list(coords, list_elem):
 
 def rnaseq_intron_retention(filenames, gene_list, chnk, permissive=True, nondenovo=False, logging=None):
     samfile = [pysam.Samfile(xx, "rb") for xx in filenames]
-    nchunks = 10
+    num_bins = 10
     for gne in gene_list:
         intron_list = gne.get_all_introns()
         strand = gne.get_strand()
@@ -160,8 +160,11 @@ def rnaseq_intron_retention(filenames, gene_list, chnk, permissive=True, nondeno
             intron_len = intron_end - intron_start
             if intron_len <= 0:
                 continue
+
             if intron_len <= 1000:
                 nchunks = 1
+            else:
+                nchunks = num_bins
 
             # we want to take just the middle part not the reads that are crossing the junctions
             # since 8 is the overlapping number of nucleotites we accept, the inner part is the
@@ -205,6 +208,7 @@ def rnaseq_intron_retention(filenames, gene_list, chnk, permissive=True, nondeno
 
                         if strand_read != strand or not unique:
                             continue
+
                         if is_cross:
                             jvals = [xx for xx, yy in junc_list if not (yy < intron_start or xx > intron_end)]
                             if len(jvals) > 0:
@@ -264,10 +268,9 @@ def rnaseq_intron_retention(filenames, gene_list, chnk, permissive=True, nondeno
                                 intron_body_covered = False
                                 break
 
-                    if cov1 >= majiq_config.MINREADS and cov2 >= majiq_config.MINREADS and intron_body_covered:
+                    if cov1 >= majiq_config.min_denovo and cov2 >= majiq_config.min_denovo and intron_body_covered:
                         n_exp += 1
 
-                print n_exp, repl_thresh
                 if n_exp >= repl_thresh:
                     exnum = majiq_exons.new_exon_definition(intron_start, intron_end,
                                                             None, junc1, junc2, gne, nondenovo=nondenovo,

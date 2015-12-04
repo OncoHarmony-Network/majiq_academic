@@ -4,7 +4,7 @@ Functions to filter junction pairs by number of positions covered or number of r
 import numpy as np
 
 
-def reliable_in_data(junc, exp_idx, minnonzero, min_reads):
+def reliable_in_data(junc, exp_idx, minnonzero=2, min_reads=3):
     min_read_x_exp = min_reads
     min_npos_x_exp = minnonzero
     in_data_filter = False
