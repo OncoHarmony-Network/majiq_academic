@@ -129,7 +129,7 @@ def global_default():
 
 
 def get_max_denovo_difference():
-    return 1000
+    return 500
 
 
 def add_chunk():

@@ -122,8 +122,7 @@ def _match_strand(read, gene_strand):
             res = True
         else:
             res = False
-
-    return
+    return res
 
 
 def count_mapped_reads(filename, exp_idx):
