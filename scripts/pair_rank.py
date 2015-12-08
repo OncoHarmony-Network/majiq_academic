@@ -69,13 +69,15 @@ def v_sum(matrix):
     return ret
 
 
-def expected_dpsi(matrix):
+def expected_dpsi(matrix, collapsed_mat=False):
     """
     Calculate sum_dpsi=Prob(dpsi)*dpsi == sum_v = v*P(Delta PSI)
     """
     absolute = True
     ret = 0.
-    collapsed = collapse_matrix(matrix)
+    collapsed = matrix
+    if not collapsed_mat:
+    	collapsed = collapse_matrix(matrix)
     for i, v in enumerate(linspace(-1, 1, num=collapsed.shape[0])):
         ret += collapsed[i] * abs(v)
 
@@ -101,7 +103,7 @@ def rank_majiq(vlsv_list, V=0.2, absolute=True, dofilter=True, E=False, ranknoch
             else:
                 most_change = 0
                 for jj, junc_bins in enumerate(lsv_bins):
-                    if abs(expected_dpsi(np.array(junc_bins))) > most_change:
+                    if abs(expected_dpsi(np.array(junc_bins), collapsed_mat=True)) > most_change:
                         bins_selected = junc_bins
                         junc_n = jj
         else:
@@ -113,8 +115,8 @@ def rank_majiq(vlsv_list, V=0.2, absolute=True, dofilter=True, E=False, ranknoch
         else:
             dmatrix = np.array(bins_selected)
 
-        v_expected = expected_dpsi(dmatrix)
-        area = 1.0 - matrix_area(dmatrix, V, absolute)  # P(Delta PSI < V) = 1 - P(Delta PSI > V)
+        v_expected = expected_dpsi(dmatrix, collapsed_mat=True)
+        area = 1.0 - matrix_area(dmatrix, V, absolute, collapsed_mat=True)  # P(Delta PSI < V) = 1 - P(Delta PSI > V)
         rank.append(["%s#%d" % (vlsv.get_id(), junc_n), v_expected, area, int(abs(v_expected)>=V and area<=0.05)])
 
     expected_mask = np.array([abs(r[1]) >= V for r in rank])
