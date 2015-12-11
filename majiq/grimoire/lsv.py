@@ -54,12 +54,14 @@ class LSV(object):
                 #print "LSV with intron"
                 self.intron_retention = True
                 break
-
-        self.tlb_junc = {}
-        self.ext_type = self.set_type(junction_list, self.tlb_junc)
-        if self.ext_type == 'intron':
-            #print "KKKKKKKKV %s" % exon.get_gene()
-            raise InvalidLSV('Auto junction found')
+        try:
+            self.tlb_junc = {}
+            self.ext_type = self.set_type(junction_list, self.tlb_junc)
+            if self.ext_type == 'intron':
+                #print "KKKKKKKKV %s" % exon.get_gene()
+                raise InvalidLSV('Auto junction found')
+        except:
+            raise InvalidLSV('Problematic Type')
 
         juncs = []
         order = self.ext_type.split('|')[1:]
