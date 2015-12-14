@@ -289,8 +289,8 @@ def main(params):
         utils.prepare_lsv_table(lsv, const, temp_dir)
         majiq_lsv.extract_gff(lsv, temp_dir)
         #ANALYZE_DENOVO
-        utils.analyze_denovo_junctions(gene_list, "%s/denovo.pkl" % temp_dir)
-        utils.histogram_for_exon_analysis(gene_list, "%s/ex_lengths.pkl" % temp_dir)
+        # utils.analyze_denovo_junctions(gene_list, "%s/denovo.pkl" % temp_dir)
+        # utils.histogram_for_exon_analysis(gene_list, "%s/ex_lengths.pkl" % temp_dir)
 
     #GATHER
     logger.info("Gather outputs")
