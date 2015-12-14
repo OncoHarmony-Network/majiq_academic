@@ -7,6 +7,7 @@ import numpy as np
 global gene_tlb
 global gc_factor
 
+
 def ConfigSectionMap(Config, section):
     dict1 = {}
     options = Config.options(section)
@@ -44,7 +45,7 @@ def print_numbers():
 
 def global_conf_ini(filename, params, only_db=False):
     global num_experiments, exp_list, readLen, tissue_repl, sam_dir, num_mapped_reads, genome, \
-        genome_path, outDir, temp_oDir, gene_tlb, strand_specific, permissive_ir
+        genome_path, outDir, temp_oDir, gene_tlb, strand_specific, permissive_ir, gcnorm
     global A3SS, A5SS, SEev, bothSS, totalSE
     global MINREADS, MINPOS, MIN_INTRON
     global num_final_chunks, min_denovo
@@ -54,11 +55,12 @@ def global_conf_ini(filename, params, only_db=False):
     else:
         num_final_chunks = 1
     min_denovo = 2
+    gcnorm = True
     config = ConfigParser.ConfigParser()
     config.read(filename)
     # TODO: check if filename exists
     exp = ConfigSectionMap(config, "experiments")
-    lengths_exp = ConfigSectionMap(config, "readlen")
+#    lengths_exp = ConfigSectionMap(config, "readlen")
     general = ConfigSectionMap(config, "info")
     exp_list = []
     tissue_repl = {}
@@ -77,6 +79,7 @@ def global_conf_ini(filename, params, only_db=False):
     sam_dir = general['samdir']
     genome = general['genome']
     genome_path = general['genome_path']
+    readLen = int(general['readlen'])
     if 'type' in general:
         strand_specific = (general['type'] == 'strand-specific')
     else:
@@ -92,12 +95,12 @@ def global_conf_ini(filename, params, only_db=False):
             tissue_repl[exp_idx].append(count)
             count += 1
 
-    readLen = [0] * len(exp_list)
-    for grp, grp_lens in lengths_exp.items():
-        if not grp in tissue_repl:
-            raise RuntimeError('%s no found.  Wrong Config file' % grp)
-        for ii in tissue_repl[grp]:
-            readLen[ii] = int(grp_lens)
+    #readLen = [0] * len(exp_list)
+    # for grp, grp_lens in lengths_exp.items():
+    #     if not grp in tissue_repl:
+    #         raise RuntimeError('%s no found.  Wrong Config file' % grp)
+    #     for ii in tissue_repl[grp]:
+    #         readLen[ii] = int(grp_lens)
 
     num_experiments = len(exp_list)
     num_mapped_reads = [0] * num_experiments
@@ -112,7 +115,7 @@ def global_conf_ini(filename, params, only_db=False):
 
 def global_default():
     global num_experiments, exp_list, readLen, tissue_repl, sam_dir, num_mapped_reads, genome, \
-        genome_path, outDir, temp_oDir, gene_tlb, strand_specific, permissive_ir
+        genome_path, outDir, temp_oDir, gene_tlb, strand_specific, permissive_ir, gc_norm
     global A3SS, A5SS, SEev, bothSS, totalSE
     global MINREADS, MINPOS, MIN_INTRON
 
@@ -126,12 +129,13 @@ def global_default():
 
 
 def get_max_denovo_difference():
-    return 1000
+    return 500
 
 
 def add_chunk():
     global num_final_chunks
     num_final_chunks += 1
+
 
 def set_gc_factors(bins, factor, means):
     global gc_factor, gc_bins_val, gc_bins, gc_means

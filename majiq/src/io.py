@@ -6,12 +6,13 @@ import sys
 from collections import namedtuple
 import gzip
 import urllib
+import math
 
 import numpy as np
 import pysam
 import ConfigParser
 
-import majiq.src.config as config
+import majiq.src.config as majiq_config
 from voila.io_voila import VoilaInput
 from voila.vlsv import VoilaLsv
 from majiq.grimoire.gene import Gene, Transcript
@@ -114,22 +115,32 @@ def __get_num_reads(read):
     return nreads
 
 
+def _match_strand(read, gene_strand):
+    res = True
+    if majiq_config.strand_specific:
+        if (read.flag & 0x10 == 0x10 and gene_strand == '+') or (read.flag & 0x10 == 0x00 and gene_strand == '-'):
+            res = True
+        else:
+            res = False
+    return res
+
+
 def count_mapped_reads(filename, exp_idx):
     stats = pysam.flagstat(filename)
     mapped_reads = int(stats[2].split()[0])
-    config.num_mapped_reads[exp_idx] = mapped_reads
+    majiq_config.num_mapped_reads[exp_idx] = mapped_reads
 
 
-def is_neg_strand(read):
-    res = False
-    if read.flag & 0x10 == 0x10:
-        # print "FLAG",read.flag
-        res = True
-
-    if config.strand_specific:
-        res = not res
-
-    return res
+# def is_neg_strand(read):
+#     res = False
+#     if read.flag & 0x10 == 0x10:
+#         # print "FLAG",read.flag
+#         res = True
+#
+#     if majiq_config.strand_specific:
+#         res = not res
+#
+#     return res
 
 
 def get_junc_from_list(coords, list_elem):
@@ -142,9 +153,9 @@ def get_junc_from_list(coords, list_elem):
     return res
 
 
-def rnaseq_intron_retention(filenames, gene_list, chnk, permissive=True, logging=None):
+def rnaseq_intron_retention(filenames, gene_list, chnk, permissive=True, nondenovo=False, logging=None):
     samfile = [pysam.Samfile(xx, "rb") for xx in filenames]
-    nchunks = 10
+    num_bins = 10
     for gne in gene_list:
         intron_list = gne.get_all_introns()
         strand = gne.get_strand()
@@ -159,8 +170,11 @@ def rnaseq_intron_retention(filenames, gene_list, chnk, permissive=True, logging
             intron_len = intron_end - intron_start
             if intron_len <= 0:
                 continue
+
             if intron_len <= 1000:
                 nchunks = 1
+            else:
+                nchunks = num_bins
 
             # we want to take just the middle part not the reads that are crossing the junctions
             # since 8 is the overlapping number of nucleotites we accept, the inner part is the
@@ -179,109 +193,131 @@ def rnaseq_intron_retention(filenames, gene_list, chnk, permissive=True, logging
             junc1 = None
             junc2 = None
 
-            for exp_index in range(len(filenames)):
-                readlen = config.readLen[exp_index]
-                offset = readlen - 8
-                try:
-                    read_iter = samfile[exp_index].fetch(chrom, intron_start + 8, intron_end - 8)
-                except ValueError:
-                    # logging.info('There are no reads in %s:%d-%d' % (chrom, ex1_end, ex1_end+1))
-                    continue
-                for read in read_iter:
-                    is_cross, junc_list = __cross_junctions(read)
-                    strand_read = '+' if not is_neg_strand(read) else '-'
-                    unique = __is_unique(read)
-                    r_start = read.pos
-                    nreads = __get_num_reads(read)
+            for name, ind_list in majiq_config.tissue_repl.items():
+                n_exp = 0
+                repl_thresh = int(math.ceil(len(ind_list) * 0.5))
 
-                    if not unique:
-                        intron_idx = r_start - (ex1_end + 1)
-                        if not (0 <= intron_idx <= intron_len):
-                            continue
-                        bmap[intron_idx] = False
-
-                    if strand_read != strand or not unique:
+                for idx, exp_index in enumerate(ind_list):
+                    try:
+                        read_iter = samfile[exp_index].fetch(chrom, intron_start + 8, intron_end - 8)
+                    except ValueError:
+                        # logging.info('There are no reads in %s:%d-%d' % (chrom, ex1_end, ex1_end+1))
                         continue
-                    if is_cross:
-                        jvals = [xx for xx, yy in junc_list if not (yy < intron_start or xx > intron_end)]
-                        if len(jvals) > 0:
+
+                    for read in read_iter:
+                        is_cross, junc_list = __cross_junctions(read)
+                        if not _match_strand(read, gene_strand=strand):
                             continue
 
-                    nc = read.seq.count('C') + read.seq.count('c')
-                    ng = read.seq.count('g') + read.seq.count('G')
-                    gc_content = float(nc + ng) / float(len(read.seq))
+                        unique = __is_unique(read)
+                        r_start = read.pos
+                        nreads = __get_num_reads(read)
 
-                    if intron_start - r_start > readlen:
-                        r_start = intron_start - (readlen - 16) - 1
-
-                    if r_start < ex1_end - 8:
-                        if junc1 is None:
-                            junc1 = Junction(ex1_end, intron_start, exon1, None, gne, readN=0)
-                        junc1.update_junction_read(exp_index, nreads, r_start, gc_content, unique)
-
-                    elif (ex2_start - offset - 1) < r_start < ex2_start:
-                        if junc2 is None:
-                            junc2 = Junction(intron_end, ex2_start, exon2, None, gne, readN=0)
-                        junc2.update_junction_read(exp_index, nreads, r_start, gc_content, unique)
-
-                    else:
-                        # section 3
-                        intron_idx = r_start - (ex1_end + 1)
-                        rel_start = intron_idx / chunk_len
-                        indx = -1 if rel_start > nchunks else rel_start
-                        if not bmap[intron_idx]:
-                            bmap[intron_idx] = True
-                        intron_parts[indx] += nreads
-
-                if junc1 is None or junc2 is None:
-                    continue
-
-                cov1 = junc1.get_coverage(exp_index).sum()
-                cov2 = junc2.get_coverage(exp_index).sum()
-
-                # intron_parts /= chunk_len
-
-                intron_body_covered = True
-
-                if intron_len > readlen:
-                    for ii in range(nchunks):
-                        # for ii in intron_parts:
-                        # num_positions = np.count_nonzero(bmap[index_list[ii][0]:index_list[ii][1]])
-                        num_positions = np.count_nonzero(bmap[index_list[ii][0]:index_list[ii][1]])
-                        nii = intron_parts[ii]
-                        if nii == 0:
-                            val = 0
-                        elif num_positions == 0:
+                        if not unique:
+                            intron_idx = r_start - (ex1_end + 1)
+                            if not (0 <= intron_idx <= intron_len):
+                                continue
+                            bmap[intron_idx] = False
                             continue
+
+                        if is_cross:
+                            jvals = [xx for xx, yy in junc_list if not (yy < intron_start or xx > intron_end)]
+                            if len(jvals) > 0:
+                                continue
+
+                        nc = read.seq.count('C') + read.seq.count('c')
+                        ng = read.seq.count('g') + read.seq.count('G')
+                        gc_content = float(nc + ng) / float(len(read.seq))
+                        readlen = len(read.seq)
+                        offset = readlen - 8
+
+                        if intron_start - r_start > readlen:
+                            r_start = intron_start - (readlen - 16) - 1
+
+                        if r_start < ex1_end - 8:
+                            if junc1 is None:
+                                junc1 = Junction(ex1_end, intron_start, exon1, None, gne, readN=0)
+                            junc1.update_junction_read(exp_index, nreads, r_start, gc_content, unique)
+
+                        elif (ex2_start - offset - 1) < r_start < ex2_start:
+                            if junc2 is None:
+                                junc2 = Junction(intron_end, ex2_start, exon2, None, gne, readN=0)
+                            junc2.update_junction_read(exp_index, nreads, r_start, gc_content, unique)
+
                         else:
-                            val = float(nii) / num_positions
-                        if val < config.MIN_INTRON:
-                            intron_body_covered = False
-                            break
+                            # section 3
+                            intron_idx = r_start - (ex1_end + 1)
+                            rel_start = intron_idx / chunk_len
+                            indx = -1 if rel_start > nchunks else rel_start
+                            if not bmap[intron_idx]:
+                                bmap[intron_idx] = True
+                            intron_parts[indx] += nreads
 
-                if cov1 >= config.MINREADS and cov2 >= config.MINREADS and intron_body_covered:
+                    if junc1 is None or junc2 is None:
+                        continue
+
+                    cov1 = junc1.get_coverage(exp_index).sum()
+                    cov2 = junc2.get_coverage(exp_index).sum()
+
+                    # intron_parts /= chunk_len
+
+                    intron_body_covered = True
+
+                    if intron_len > readlen:
+                        for ii in range(nchunks):
+                            # for ii in intron_parts:
+                            # num_positions = np.count_nonzero(bmap[index_list[ii][0]:index_list[ii][1]])
+                            num_positions = np.count_nonzero(bmap[index_list[ii][0]:index_list[ii][1]])
+                            nii = intron_parts[ii]
+                            if nii == 0:
+                                val = 0
+                            elif num_positions == 0:
+                                continue
+                            else:
+                                val = float(nii) / num_positions
+                            if val < majiq_config.MIN_INTRON:
+                                intron_body_covered = False
+                                break
+
+                    if cov1 >= majiq_config.min_denovo and cov2 >= majiq_config.min_denovo and intron_body_covered:
+                        n_exp += 1
+
+                if n_exp >= repl_thresh:
                     exnum = majiq_exons.new_exon_definition(intron_start, intron_end,
-                                                            None, junc1, junc2, gne,
+                                                            None, junc1, junc2, gne, nondenovo=nondenovo,
                                                             isintron=True)
+                    if exnum == -1:
+                        for exp_index in ind_list:
+                            if not junc2 is None:
+                                junc2.reset_coverage(exp_index)
+                            if not junc1 is None:
+                                junc1.reset_coverage(exp_index)
+                    else:
 
-                    junc1.add_donor(exon1)
-                    for ex in exon1.exonRead_list:
-                        st, end = ex.get_coordinates()
-                        if end == junc1.get_coordinates()[0]:
-                            ex.add_5prime_junc(junc1)
-                            break
+                        junc1.add_donor(exon1)
+                        for ex in exon1.exonRead_list:
+                            st, end = ex.get_coordinates()
+                            if end == junc1.get_coordinates()[0]:
+                                ex.add_5prime_junc(junc1)
+                                break
 
-                    junc2.add_acceptor(exon2)
-                    for ex in exon2.exonRead_list:
-                        st, end = ex.get_coordinates()
-                        if st == junc2.get_coordinates()[1]:
-                            ex.add_3prime_junc(junc2)
-                            break
+                        junc2.add_acceptor(exon2)
+                        for ex in exon2.exonRead_list:
+                            st, end = ex.get_coordinates()
+                            if st == junc2.get_coordinates()[1]:
+                                ex.add_3prime_junc(junc2)
+                                break
 
-                    if exnum == 1:
-                        logging.info("NEW INTRON RETENTION EVENT %s, %d-%d" % (gne.get_name(),
-                                                                               intron_start,
-                                                                               intron_end))
+                        if exnum == 1:
+                            logging.info("NEW INTRON RETENTION EVENT %s, %d-%d" % (gne.get_name(),
+                                                                                   intron_start,
+                                                                                   intron_end))
+                else:
+                    for exp_index in ind_list:
+                        if not junc2 is None:
+                            junc2.reset_coverage(exp_index)
+                        if not junc1 is None:
+                            junc1.reset_coverage(exp_index)
         gne.prepare_exons()
 
     for ss in samfile:
@@ -308,16 +344,15 @@ def read_sam_or_bam(filenames, gene_list, chnk, nondenovo=False, logging=None):
 
         for exp_index in range(len(filenames)):
 
-            readlen = config.readLen[exp_index]
+            #readlen = config.readLen[exp_index]
             try:
                 read_iter = samfile[exp_index].fetch(chrom, strt, end)
             except ValueError:
                 logging.info('There are no reads in %s:%d-%d' % (chrom, strt, end))
                 continue
             for read in read_iter:
-                strand_read = '+' if not is_neg_strand(read) else '-'
 
-                if strand_read != strand:
+                if not _match_strand(read, gene_strand=strand):
                     continue
                 unique = __is_unique(read)
                 if not unique:
@@ -342,6 +377,7 @@ def read_sam_or_bam(filenames, gene_list, chnk, nondenovo=False, logging=None):
                 nc = read.seq.count('C') + read.seq.count('c')
                 ng = read.seq.count('g') + read.seq.count('G')
                 gc_content = float(nc + ng) / float(len(read.seq))
+                readlen = len(read.seq)
                 for (junc_start, junc_end) in junc_list:
                     if junc_start - r_start > readlen:
                         r_start = junc_start - (readlen - 16) - 1
@@ -544,7 +580,7 @@ def _prepare_and_dump_old(genes, logging=None):
             logging.info("Calculating gc_content chromosome %s........." % chrom)
         majiq_exons.set_exons_gc_content(chrom, temp_ex)
         gc.collect()
-        temp_dir = "%s/tmp/%s" % (config.outDir, chrom)
+        temp_dir = "%s/tmp/%s" % (majiq_config.outDir, chrom)
         create_if_not_exists(temp_dir)
         # ipdb.set_trace()
         # objgraph.show_most_common_types(limit=20)
@@ -553,7 +589,7 @@ def _prepare_and_dump_old(genes, logging=None):
         fname = '%s/annot_genes.pkl' % temp_dir
         dump_bin_file(genes[chrom], fname)
 
-    tmp_chrom = "%s/tmp/chromlist.pkl" % config.outDir
+    tmp_chrom = "%s/tmp/chromlist.pkl" % majiq_config.outDir
     dump_bin_file(genes.keys(), tmp_chrom)
     if not logging is None:
         logging.debug("Number of Genes", n_genes)
@@ -563,7 +599,7 @@ def __annot_dump(nthrd, temp_ex, lsv_list, logging=None):
     for chrom, ex_list in temp_ex.items():
         majiq_exons.set_exons_gc_content(chrom, ex_list)
     gc.collect()
-    temp_dir = "%s/tmp/chunk_%s" % (config.outDir, nthrd)
+    temp_dir = "%s/tmp/chunk_%s" % (majiq_config.outDir, nthrd)
     create_if_not_exists(temp_dir)
     if not logging is None:
         logging.info("Creating temporal annotation chunk %s (%d genes)" % (nthrd, len(lsv_list)))
@@ -579,7 +615,7 @@ def __get_overlaped(gn, temp_ex, dumped_genes):
         for extra_gn_id in over_genes:
             if extra_gn_id in dumped_genes:
                 continue
-            extra_gn = config.gene_tlb[extra_gn_id]
+            extra_gn = majiq_config.gene_tlb[extra_gn_id]
             extra_gn.collapse_exons()
             temp_ex.extend(extra_gn.get_exon_list())
             lsv_list.append(extra_gn)
@@ -592,11 +628,11 @@ def __get_overlaped(gn, temp_ex, dumped_genes):
 
 
 def _prepare_and_dump(logging=None):
-    list_genes = sorted(config.gene_tlb.values())
+    list_genes = sorted(majiq_config.gene_tlb.values())
     if not logging is None:
         logging.debug("Number of Genes", len(list_genes))
 
-    chunk_size = len(list_genes) / config.num_final_chunks
+    chunk_size = len(list_genes) / majiq_config.num_final_chunks
     temp_ex = {}
     nthrd = 0
     csize = chunk_size
@@ -662,9 +698,9 @@ def read_gff(filename, pcr_filename, nthreads, logging=None):
             gn = Gene(gene_id, gene_name, chrom, strand, start, end)
             gn.exist_antisense_gene(all_genes[chrom])
 
-            if gene_id in config.gene_tlb and gn != config.gene_tlb[gene_id]:
+            if gene_id in majiq_config.gene_tlb and gn != majiq_config.gene_tlb[gene_id]:
                 raise RuntimeError('Two Different Genes with the same name %s' % gene_name)
-            config.gene_tlb[gene_id] = gn
+            majiq_config.gene_tlb[gene_id] = gn
             all_genes[chrom][strand].append(gn)
             gene_id_dict[record.attributes['ID']] = gn
 
@@ -734,7 +770,7 @@ def load_data_lsv(path, group_name, logger=None):
     """Load data from the preprocess step. Could change to a DDBB someday"""
     data = pickle.load(open(path))
     lsv_cov_list = []
-    lsv_gc = []
+    #lsv_gc = []
     lsv_info = []
     const_info = []
     num_pos = data[1][0].junction_list.shape[1]
@@ -749,18 +785,18 @@ def load_data_lsv(path, group_name, logger=None):
 
         cov = lsv.junction_list.toarray()
         lsv_cov_list.append(cov)
-        gc = lsv.gc_factor.toarray()
-        lsv_gc.append(gc)
+        #gc = lsv.gc_factor.toarray()
+        #lsv_gc.append(gc)
 
     clist = random.sample(data[2], min(5000, len(data[2])))
     const_list = np.zeros(shape=(len(clist), num_pos), dtype=np.dtype('int'))
-    const_gc = np.zeros(shape=(len(clist), num_pos), dtype=np.dtype('float'))
+    #const_gc = np.zeros(shape=(len(clist), num_pos), dtype=np.dtype('float'))
     for cidx, const in enumerate(clist):
         const_info.append(const.id)
         const_list[cidx, :] = const.coverage.toarray()
-        const_gc[cidx, :] = const.gc_factor.toarray()
+        #const_gc[cidx, :] = const.gc_factor.toarray()
 
-    return meta_info, [lsv_cov_list, lsv_info, lsv_gc], [const_list, const_info, const_gc]
+    return meta_info, [lsv_cov_list, lsv_info], [const_list, const_info]
 
 
 def dump_lsvs_voila(pickle_path, posterior_matrix, lsvs_info, meta_info, psi_list1=None, psi_list2=None):

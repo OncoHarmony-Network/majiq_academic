@@ -5,9 +5,11 @@ import os
 import sys
 import traceback
 from multiprocessing import Pool, current_process, Process
+from majiq.grimoire.gene import recreate_gene_tlb
 
 import majiq.src.analize as analize
 import majiq.src.io as majiq_io
+from majiq.src.normalize import prepare_gc_content
 import majiq.src.utils.utils as utils
 import majiq.src.config as mglobals
 import majiq.grimoire.lsv as majiq_lsv
@@ -34,7 +36,7 @@ def majiq_builder(samfiles_list, chnk, pcr_validation=None, gff_output=None, cre
     if create_tlb:
         if not logging is None:
             logging.info("[%s] Recreatin Gene TLB" % chnk)
-        utils.recreate_gene_tlb(gene_list)
+        recreate_gene_tlb(gene_list)
 
     if not logging is None:
         logging.info("[%s] Reading BAM files" % chnk)
@@ -43,12 +45,12 @@ def majiq_builder(samfiles_list, chnk, pcr_validation=None, gff_output=None, cre
     if not logging is None:
         logging.info("[%s] Detecting intron retention events" % chnk)
     majiq_io.rnaseq_intron_retention(samfiles_list, gene_list, chnk,
-                                     permissive=mglobals.permissive_ir, logging=logging)
+                                     permissive=mglobals.permissive_ir, nondenovo=nondenovo, logging=logging)
     if not logging is None:
         logging.info("[%s] Detecting LSV" % chnk)
     lsv, const = analize.lsv_detection(gene_list, chnk, only_real_data=only_rna, logging=logging)
 
-    utils.prepare_gc_content(gene_list, temp_dir)
+    prepare_gc_content(gene_list, temp_dir)
 
     if pcr_validation:
         utils.get_validated_pcr_lsv(lsv, temp_dir)
@@ -65,12 +67,14 @@ def majiq_builder(samfiles_list, chnk, pcr_validation=None, gff_output=None, cre
     # utils.histogram_for_exon_analysis(gene_list, "%s/ex_lengths.pkl" % temp_dir)
 
 
-def __parallel_lsv_quant(samfiles_list, chnk, pcr_validation=False, gff_output=None, silent=False, debug=0):
-
+def __parallel_lsv_quant(samfiles_list, chnk, pcr_validation=False, gff_output=None, only_rna=False,
+                         nondenovo=False, silent=False, debug=0):
     try:
         print "START child,", current_process().name
         tlogger = utils.get_logger("%s/%s.majiq.log" % (mglobals.outDir, chnk), silent=silent, debug=debug)
-        majiq_builder(samfiles_list, chnk, pcr_validation, gff_output, create_tlb=True, logging=tlogger)
+        majiq_builder(samfiles_list, chnk, pcr_validation=pcr_validation,
+                      gff_output=gff_output, only_rna=only_rna, nondenovo=nondenovo,
+                      logging=tlogger)
         print "END child, ", current_process().name
     except Exception as e:
         traceback.print_exc()
@@ -148,7 +152,9 @@ def main(params):
                                                         params.pcr_filename,
                                                         params.gff_output,
                                                         params.only_rna,
-                                                        params.non_denovo])
+                                                        params.non_denovo,
+                                                        params.silent,
+                                                        params.debug])
 
         if params.nthreads > 1:
             logger.info("... waiting childs")
@@ -156,7 +162,8 @@ def main(params):
             pool.join()
 
     #GATHER
-    utils.gather_files(mglobals.outDir, params.prefix, params.gff_output, params.pcr_filename, logger)
+    utils.gather_files(mglobals.outDir, '', params.gff_output, params.pcr_filename,
+                       nthreads=params.nthreads, logger=logger)
 
     mglobals.print_numbers()
     logger.info("End of execution")

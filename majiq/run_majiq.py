@@ -32,15 +32,12 @@ def main():
                         help="Activate this flag for debugging purposes, activates logger and jumps some "
                              "processing steps.")
 
-
-
     buildparser = new_subparser()
     buildparser.add_argument('transcripts', action="store", help='read file in SAM format')
     buildparser.add_argument('-conf', default=None, required=True, help='Provide study configuration file with all '
                                                                         'the execution information')
-    buildparser.add_argument('-p', '--prefix', dest="prefix", type=str, default='', help='Output prefix string to '
-                                                                                         'personalize partially the '
-                                                                                         'output file.')
+    buildparser.add_argument('--nogc', dest="gcnorm", action='store_false', default=True,
+                             help='psianddelta GC content normalization [Default: GC content normalization activated]')
     buildparser.add_argument('--pcr', dest='pcr_filename', action="store", help='PCR bed file as gold_standard')
     buildparser.add_argument('--gff_output', dest='gff_output', default="lsvs.gff", action="store",
                              help='Filename where a gff with the lsv events will be generated')
@@ -87,8 +84,6 @@ def main():
     psianddelta.add_argument('--markstacks', default=0.0000001, type=float,
                              help='Mark stack positions. Expects a p-value. Use a negative value in order to '
                                   'disable it. [Default: %(default)s]')
-    psianddelta.add_argument('--nogc', dest="gcnorm", action='store_false', default=True,
-                             help='psianddelta GC content normalization [Default: GC content normalization activated]')
     psianddelta.add_argument('--nodiscardb', dest="discardb", action='store_false',  default=True,
                              help='Skip biscarding the b from the NB polynomial function, since we expect our fit '
                                   'to start from x=0, y=0')
@@ -119,7 +114,6 @@ def main():
                        help="Uniform distribution to give a bit more of a chance to values out of the normal "
                             "distribution. that the synthetic prior matrix has. Only works with --synthprior. "
                             "[Default: %(default)s]")
-
 
     mdelta = new_subparser()
     mdelta.add_argument('-pairs_file', dest="deltapairs", required=True)
