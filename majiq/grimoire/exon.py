@@ -262,7 +262,7 @@ class Exon:
 
         return local_3p, local_5p
 
-    def detect_lsv(self, gn, lsv_type, dummy, jun):
+    def detect_lsv(self, gn, lsv_type, dummy, jun, only_annot=False):
         #jun = {}
 
         sstype = {SSOURCE: ['5prime', 0], STARGET: ['3prime', 1]}
@@ -280,7 +280,9 @@ class Exon:
             e_data = 0
             for jj in jlist:
                 for exp_idx in ind_list:
-                    if majiqfilter.reliable_in_data(jj, exp_idx, minnonzero=config.MINPOS, min_reads=config.MINREADS):
+                    if only_annot or majiqfilter.reliable_in_data(jj, exp_idx,
+                                                    minnonzero=config.MINPOS,
+                                                    min_reads=config.MINREADS):
                         counter += 1
                 if counter < group_thresh:
                     continue

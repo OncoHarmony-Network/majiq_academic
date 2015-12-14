@@ -34,20 +34,18 @@ def lsv_detection(gene_list):
     for gn in gene_list:
         local_const = set(gn.get_all_junctions())
         local_lsv_jun = {}
-        if gn.get_read_count().sum() == 0:
-            continue
         dummy = {}
         for name, ind_list in config.tissue_repl.items():
             dummy[name] = [[], []]
         for ex in gn.get_exon_list():
             try:
-                ex.detect_lsv(gn, SSOURCE, dummy, local_lsv_jun)
+                ex.detect_lsv(gn, SSOURCE, dummy, local_lsv_jun, only_annot=True)
             except InvalidLSV as e:
                 #print e.msg
                 pass
 
             try:
-                ex.detect_lsv(gn, STARGET, dummy, local_lsv_jun)
+                ex.detect_lsv(gn, STARGET, dummy, local_lsv_jun, only_annot=True)
             except InvalidLSV as e:
                 #print e.msg
                 pass
@@ -291,8 +289,8 @@ def main(params):
         utils.prepare_lsv_table(lsv, const, temp_dir)
         majiq_lsv.extract_gff(lsv, temp_dir)
         #ANALYZE_DENOVO
-        utils.analyze_denovo_junctions(gene_list, "%s/denovo.pkl" % temp_dir)
-        utils.histogram_for_exon_analysis(gene_list, "%s/ex_lengths.pkl" % temp_dir)
+        # utils.analyze_denovo_junctions(gene_list, "%s/denovo.pkl" % temp_dir)
+        # utils.histogram_for_exon_analysis(gene_list, "%s/ex_lengths.pkl" % temp_dir)
 
     #GATHER
     logger.info("Gather outputs")
