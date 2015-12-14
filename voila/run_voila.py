@@ -390,10 +390,15 @@ def create_summary(args):
             for gene_name in fileinput.input(args.gene_names):
                 gene_name_list.append(gene_name.rstrip().upper())
 
+        lsv_names = []
+        if args.lsv_names:
+            for lsv_name in fileinput.input(args.lsv_names):
+                lsv_names.append(lsv_name.rstrip())
+
         voila_input = io_voila.load_voila_input(voila_file, logger=logger)
         majiq_output = utils_voila.lsvs_to_gene_dict(voila_input, gene_name_list=gene_name_list, logger=logger,
                                                      threshold=args.threshold, show_all=args.show_all,
-                                                     lsv_types=args.lsv_types)
+                                                     lsv_types=args.lsv_types, lsv_names=lsv_names)
 
         if not gene_name_list:
             gene_name_list = majiq_output['genes_dict'].keys()
@@ -493,7 +498,7 @@ def main():
     common_parser.add_argument('majiq_bins', metavar='majiq_output.pickle', type=str, help='Pickle file with the bins produced by Majiq.')
     common_parser.add_argument('--lsv-types', nargs='*', default=[], type=str, dest='lsv_types', help='LSV type to filter the results. (If no gene list is provided, this option will display only genes containing LSVs of the specified type).')
     common_parser.add_argument('--gene-names-file', type=str, dest='gene_names', help='File with gene names to filter the results (one gene per line). Use - to type in the gene names.')
-
+    common_parser.add_argument('--filter-lsvs', type=str, dest='lsv_names', help='File with lsv names to filter the results (one gene per line). Use - to type in the gene names.')
 
     # Subparser module to agglutinate all subparsers
     subparsers = parser.add_subparsers(dest='type_analysis')
