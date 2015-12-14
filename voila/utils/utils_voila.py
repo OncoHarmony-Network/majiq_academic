@@ -215,34 +215,37 @@ def create_if_not_exists(my_dir, logger=False):
             logger.info("\nDirectory %s already exists..." % my_dir)
 
 
-def gff2gtf(gff_f, out_f=None):
+def gff2gtf(gff_f, out_f):
     """Parse a GFF file created by MAJIQ and create a GTF"""
 
     mrna = None
     with open(out_f, 'w') as wfile:
-        with open(gff_f) as gff:
-            for gff_l in gff:
-                gff_fields = gff_l.strip().split()
-                if len(gff_fields)<3: continue
-                if gff_fields[2] == 'mRNA':
-                    if mrna:
-                        to_gtf(wfile, seq_name, source, gene, mrna, start_trans, end_trans, strand, exon_l, frame_l)
-                    exon_l = []
-                    frame_l = []
-                    ids = gff_fields[8].split(';Parent=')
-                    gene = ids[1].split(';')[0]
-                    mrna = ids[0][5:]
-                    seq_name = gff_fields[0]
-                    source = gff_fields[1]
-                    start_trans = gff_fields[3]
-                    end_trans = gff_fields[4]
-                    strand = gff_fields[6]
-                    len_frame = 0
+        if type(gff_f) == list:
+            gff = gff_f
+        else:
+            gff = open(gff_f)
+        for gff_l in gff:
+            gff_fields = gff_l.strip().split()
+            if len(gff_fields)<3: continue
+            if gff_fields[2] == 'mRNA':
+                if mrna:
+                    to_gtf(wfile, seq_name, source, gene, mrna, start_trans, end_trans, strand, exon_l, frame_l)
+                exon_l = []
+                frame_l = []
+                ids = gff_fields[8].split(';Parent=')
+                gene = ids[1].split(';')[0]
+                mrna = ids[0][5:]
+                seq_name = gff_fields[0]
+                source = gff_fields[1]
+                start_trans = gff_fields[3]
+                end_trans = gff_fields[4]
+                strand = gff_fields[6]
+                len_frame = 0
 
-                if gff_fields[2] == 'exon':
-                    exon_l.append([gff_fields[3], gff_fields[4]])
-                    frame_l.append((3 - (len_frame % 3)) % 3)
-                    len_frame = int(gff_fields[4]) - int(gff_fields[3])
+            if gff_fields[2] == 'exon':
+                exon_l.append([gff_fields[3], gff_fields[4]])
+                frame_l.append((3 - (len_frame % 3)) % 3)
+                len_frame = int(gff_fields[4]) - int(gff_fields[3])
         to_gtf(wfile, seq_name, source, gene, mrna, start_trans, end_trans, strand, exon_l, frame_l)
 
 
@@ -276,3 +279,9 @@ def to_gtf(wfile, seq_name, source, gene, mrna, start_trans, end_trans, strand, 
 def debug(text):
     print text
     return ''
+
+
+def secs2hms(secs):
+    m, s = divmod(secs, 60)
+    h, m = divmod(m, 60)
+    return "%d:%02d:%02d" % (h, m, s)

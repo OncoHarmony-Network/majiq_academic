@@ -1,6 +1,6 @@
 import copy
 import sys
-from collections import defaultdict
+from collections import defaultdict, namedtuple
 import json
 import os
 import textwrap
@@ -10,6 +10,7 @@ import voila.module_locator as module_locator
 import voila.utils.utils_voila as utils_voila
 import voila.constants as constants
 import fileinput
+import time
 
 try:
     import cPickle as pkl
@@ -385,9 +386,7 @@ def parse_gene_graphics_obj(splicegraph_flist, gene_name_list, condition_names=(
     logger.info("Splice graph information files correctly loaded.")
     return genes_exp1_exp2
 
-
-
-def create_summary(args):
+def parse_input(args):
     """This method generates an html summary from a majiq output file and the rest of the arguments."""
 
     type_summary    = args.type_analysis
@@ -525,12 +524,10 @@ def create_summary(args):
         render_summary(output_dir, output_html, {'lsvs': lsvs_dict, 'sample_names': sample_names, 'cond_pair': cond_pair, 'thres': thres_change}, type_summary, logger=logger)
         return
 
-    render_summary(output_dir, output_html, majiq_output, type_summary, threshold, meta_postprocess, logger=logger)
-    io_voila.write_tab_output(output_dir, output_html, majiq_output, type_summary, logger=logger, pairwise_dir=pairwise, threshold=threshold)
-    io_voila.create_gff3_txt_files(output_dir, majiq_output, logger=logger)
-
-    logger.info("Voila! Summaries created in: %s" % output_dir)
-    return
+    InputParsed = namedtuple('InputParsed' , 'output_dir output_html majiq_output type_summary threshold meta_postprocess pairwise_dir logger')
+    return InputParsed(output_dir=output_dir, output_html=output_html, majiq_output=majiq_output,
+                       type_summary=type_summary, threshold=threshold, meta_postprocess=meta_postprocess,
+                       pairwise_dir=pairwise, logger=logger)
 
 
 def main():
@@ -549,6 +546,9 @@ def main():
     base_parser.add_argument('-o', '--output', metavar='output_dir', dest='output_dir', type=str, required=True, help='Output directory where the files will be placed.')
     base_parser.add_argument('--logger', default=None, help='Path for the logger. Default is output directory')
     base_parser.add_argument('--silent', action='store_true', default=False, help='Silence the logger.')
+    base_parser.add_argument('--no-html', dest='html_out', action='store_false', default=True, help='Do not generate HTML output.')
+    base_parser.add_argument('--no-tsv', dest='tsv_out', action='store_false', default=True, help='Do not generate Tab-Separated Values output file.')
+    base_parser.add_argument('--no-gtf', dest='gtf_out', action='store_false', default=True, help='Do not generate LSVs GTF files.')
 
     # Common script options
     common_parser = argparse.ArgumentParser(add_help=False)
@@ -597,8 +597,31 @@ def main():
     parser_comptable.add_argument('--filter-lsvs', type=str, dest='lsv_names', help='File with lsv names to filter the results (one gene per line). Use - to type in the gene names.')
     subparsers.add_parser(constants.COND_TABLE, help='Generate a HTML table with a list of LSVs changing between conditions in multiple samples [DEBUGING!].', parents=[base_parser, parser_comptable])
 
+    # Time execution time
+    start_time =  time.time()
+
+    # Parse input
     args = parser.parse_args()
-    create_summary(args)
+    input_parsed = parse_input(args)
+
+    # Generate outputs
+    if args.html_out:
+        render_summary(input_parsed.output_dir, input_parsed.output_html, input_parsed.majiq_output,
+                       input_parsed.type_summary, input_parsed.threshold, input_parsed.meta_postprocess,
+                       logger=input_parsed.logger)
+    if args.tsv_out:
+        io_voila.write_tab_output(input_parsed.output_dir, input_parsed.output_html, input_parsed.majiq_output,
+                                  input_parsed.type_summary, logger=input_parsed.logger,
+                                  pairwise_dir=input_parsed.pairwise_dir, threshold=input_parsed.threshold)
+    if args.gtf_out:
+        io_voila.create_gff3_txt_files(input_parsed.output_dir, input_parsed.majiq_output, logger=input_parsed.logger)
+
+    input_parsed.logger.info("Voila! Summaries created in: %s" % input_parsed.output_dir)
+
+    # Add ellapsed time
+    end_time = time.time()
+    elapsed_str = utils_voila.secs2hms(end_time - start_time)
+    input_parsed.logger.info("Execution time: %s" % elapsed_str)
     sys.exit(1)
 
 if __name__ == '__main__':

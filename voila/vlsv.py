@@ -1,5 +1,5 @@
 __author__ = 'abarrera'
-from collections import defaultdict
+from collections import defaultdict, namedtuple
 import json
 import numpy as np
 
