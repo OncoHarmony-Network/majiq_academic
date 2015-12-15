@@ -12,7 +12,7 @@ import argparse
 import majiq.src.filter as majiq_filter
 import scipy.stats
 import pickle
-from random import choice
+import random
 
 
 def res_dump(data, p_id, path):
@@ -23,16 +23,8 @@ def res_dump(data, p_id, path):
 def psi_calc(lsv_junc, params):
     psi = np.zeros(shape=(len(lsv_junc), params.nboots), dtype=np.float)
     for lsv_idx, lsv in enumerate(lsv_junc):
-
         for iternumber in xrange(params.nboots):
-            samples = np.zeros(shape=(len(lsv)), dtype=np.float)
-            for i, junction in enumerate(lsv):
-                junction_samples = []
-                # ipdb.set_trace()
-                for numsamples in xrange(params.npos):
-                    junction_samples.append(choice(junction))
-                samples[i] = np.sum(junction_samples)
-
+            samples = [np.sum(random.sample(xx, params.npos)) for xx in lsv]
             psi[lsv_idx, iternumber] = float(samples[0]) / np.sum(samples)
     return psi
 
@@ -88,9 +80,10 @@ def deltapsi_func(params):
 
     delta = np.zeros(shape=(len(matched_info), nbins), dtype=np.float)
     for lsv_idx, info in enumerate(matched_info):
-        dpsi = np.zeros(shape=params.nboots, dtype=np.float)
-        for itern in xrange(params.nboots):
-            dpsi[itern] = psi2[lsv_idx, itern] - psi1[lsv_idx, itern]
+        #dpsi = np.zeros(shape=params.nboots, dtype=np.float)
+        #for itern in xrange(params.nboots):
+        #    dpsi[itern] = psi2[lsv_idx, itern] - psi1[lsv_idx, itern]
+        dpsi = psi2[lsv_idx, :] - psi1[lsv_idx, :]
         delta[lsv_idx], wgt, nb, b = scipy.stats.histogram(dpsi, numbins=nbins)
         delta[lsv_idx] /= delta[lsv_idx].sum()
 
