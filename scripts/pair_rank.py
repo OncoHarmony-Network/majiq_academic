@@ -73,11 +73,10 @@ def expected_dpsi(matrix, collapsed_mat=False):
     """
     Calculate sum_dpsi=Prob(dpsi)*dpsi == sum_v = v*P(Delta PSI)
     """
-    absolute = True
     ret = 0.
     collapsed = matrix
     if not collapsed_mat:
-    	collapsed = collapse_matrix(matrix)
+        collapsed = collapse_matrix(matrix)
     for i, v in enumerate(linspace(-1, 1, num=collapsed.shape[0])):
         ret += collapsed[i] * abs(v)
 
@@ -242,8 +241,7 @@ def rank_mats_original(mats_file, dofilter=True, ranknochange=False, majiq_n=Non
     expected_mask = np.array([abs(r[1]) >= 0.2 for r in rank])
     fdr_cutoff = 0.05
     if majiq_n[0]:
-        while np.count_nonzero(np.logical_and(expected_mask, np.array([r[3] <= fdr_cutoff for r in rank]))) < majiq_n[
-            0]:
+        while np.count_nonzero(np.logical_and(expected_mask, np.array([r[3] <= fdr_cutoff for r in rank]))) < majiq_n[0]:
             fdr_cutoff += 0.05
     else:
         majiq_n[0] = np.count_nonzero(np.array([r[3] <= 0.05 for r in rank]))
@@ -257,9 +255,9 @@ def rank_mats_original(mats_file, dofilter=True, ranknochange=False, majiq_n=Non
     print "#E(Delta(PSI))>0.20 and FDR<0.05: %d" % np.count_nonzero(np.logical_and(expected_mask, fdr_mask))
 
     if ranknochange:
-        rank.sort(key=lambda x: (abs(float(x[1])), float(x[2])))  # biggest delta PSI first, small p-value
+        rank.sort(key=lambda x: (abs(float(x[1])), float(x[3])))  # biggest delta PSI first, small p-value
     else:
-        rank.sort(key=lambda x: (-abs(float(x[1])), float(x[2])))  # biggest delta PSI first, small p-value
+        rank.sort(key=lambda x: (float(x[3]), -abs(float(x[1]))))  # biggest delta PSI first, small p-value
 
     return mats_nn, rank
 
@@ -273,10 +271,6 @@ def _is_in_chunk(event1, chunk, report_rank2_expec=False):
     if report_rank2_expec:
         return [0, '']
     return 0
-
-
-def event_names_set_mats(rank):
-    pass
 
 
 def event_names_set_miso(rank):
@@ -408,6 +402,8 @@ def main():
                     rank_majiq(majiq_data.get_lsvs(), args.V, args.absolute, args.filter, args.E, args.ranknochange,
                                args.complex_lsvs, shrink=args.shrink, majiq_n=majiq_N))
                 majiq_file1_names = [a[0].split('#')[0] for a in ranks['majiq_1'][0]]
+		print "MAJIQ 1st delta(psi) ALL pair %d" % len(majiq_data.get_lsvs())
+		print "MAJIQ 1st delta(psi) AFTER RANK pair %d" % len(majiq_file1_names)
                 continue
 
             if args.type_rank == 'only_exp1':
@@ -420,6 +416,7 @@ def main():
                                args.E, args.ranknochange, args.complex_lsvs, shrink=args.shrink,
                                junc_selection=junc_dict))
                 n1['majiq_' + str(count_pairs)] = [np.count_nonzero(exp1_index), np.count_nonzero(exp1_index)]
+		print "MAJIQ 2nd delta(psi) pair %d" % np.count_nonzero(exp1_index)
         names_majiq_exp1 = [m[1] for m in majiq_file1_names]
     
     mats_n_orig = None
@@ -437,7 +434,9 @@ def main():
                 exp1_index = np.array([name in names_mats_exp1 for name in names_mats])
                 ranks['mats'].append(np.array(mats_rank)[exp1_index])
                 n1['mats'].append(np.count_nonzero(exp1_index))
+		print "MATS 2nd delta(psi) pair: %d" % np.count_nonzero(exp1_index)
             else:
+		print "MATS 1st delta(psi) pair: %d" % len(mats_rank)
                 ranks['mats'].append(array(mats_rank))
 
     if args.miso_files:
