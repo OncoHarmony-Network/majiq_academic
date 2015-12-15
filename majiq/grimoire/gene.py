@@ -1,12 +1,12 @@
 #!/usr/bin/python
+import gc
 import numpy as np
 
 from majiq.grimoire.exon import ExonTx, collapse_list_exons
 from majiq.grimoire.lsv import LSV, InvalidLSV
 from majiq.grimoire.junction import Junction
-from majiq.src import config
+from majiq.src import config as majiq_config
 from majiq.src.analize import reliable_in_data
-
 
 
 class Gene:
@@ -35,7 +35,7 @@ class Gene:
         self.exons = []
         self.start = start
         self.end = end
-        self.readNum = np.zeros(shape=config.num_experiments, dtype=np.int)
+        self.readNum = np.zeros(shape=majiq_config.num_experiments, dtype=np.int)
         self.temp_txex_list = []
         self.ir_list = []
         self.ir_definition = []
@@ -99,21 +99,7 @@ class Gene:
     def get_ir_definition(self):
         return self.ir_definition
 
-    # def get_transcript_AS_candidates(self):
-    #     return self.transAScandidates
-
-    # def get_transcript_CONST_candidates(self):
-    #     return self.transCONSTcandidates
-
     ''' Set functions '''
-
-    # def add_transcript_AS_candidates(self,list_candidates):
-    #     self.transAScandidates += list_candidates
-    #     return
-    #
-    # def add_transcript_CONST_candidates(self,list_candidates):
-    #     self.transCONSTcandidates += list_candidates
-    #     return
 
     def add_transcript(self, tcrpt):
         if tcrpt.txstart < self.start:
@@ -124,8 +110,8 @@ class Gene:
         self.transcript_tlb[tcrpt.get_id()] = tcrpt
         return
 
-    def add_intron_retention(self, lsv_ir):
-        self.ir_list.append(lsv_ir)
+    # def add_intron_retention(self, lsv_ir):
+    #     self.ir_list.append(lsv_ir)
 
     def add_read_count(self, read_num, exp_idx):
         self.readNum[exp_idx] += read_num
@@ -166,7 +152,7 @@ class Gene:
         res = False
         for anti_g in self.antis_gene:
             # if not self.antis_gene is None:
-            gg = config.gene_tlb[anti_g]
+            gg = majiq_config.gene_tlb[anti_g]
             cc = gg.get_coordinates()
             if jend < cc[0] or jstart > cc[1]:
                 continue
@@ -185,8 +171,8 @@ class Gene:
                     coords = ex.get_coordinates()
                     # if jend > coords[0]:
                     #     break
-                    coords = [coords[0] - config.get_max_denovo_difference(),
-                              coords[1] + config.get_max_denovo_difference()]
+                    coords = [coords[0] - majiq_config.get_max_denovo_difference(),
+                              coords[1] + majiq_config.get_max_denovo_difference()]
 
                     if coords[0] <= jend <= coords[1] or coords[0] <= jstart <= coords[1]:
                         res = True
@@ -195,46 +181,18 @@ class Gene:
                 break
         return res
 
-    def is_gene_in_list(self, list_of_genes, name):
-        res = None
-        for ll in list_of_genes:
-            if self.chromosome == ll.chromosome and self.strand == ll.strand \
-                    and self.start < ll.end and self.end > ll.start:
-                res = ll
-
-                ll.start = min(ll.start, self.start)
-                ll.end = max(ll.end, self.end)
-                break
-        return res
-
-        # def calculate_rpkm(self, experiment_index, total_reads):
-
-    # """
-    #          .. function: calculate_RPKM( self, experiment_index, total_Reads )
+    # def is_gene_in_list(self, list_of_genes, name):
+    #     res = None
+    #     for ll in list_of_genes:
+    #         if self.chromosome == ll.chromosome and self.strand == ll.strand \
+    #                 and self.start < ll.end and self.end > ll.start:
     #
-    #             This function calculates the RPKM as follows
-    #             rpk = #Reads in Gene / # of kilobases of the gene exons (some may don't have any read)
-    #             rpkm = rpk / (#total reads/1000000)
+    #             res = ll
+    #             ll.start = min(ll.start, self.start)
+    #             ll.end = max(ll.end, self.end)
+    #             break
     #
-    #             :param experiment_index: Index of the experiment from the origrinal experiment list
-    #             :param total_reads: Total Number of reads of the gene.
-    #             :rtype: RPKM value for this gene
-    #         """
-    #         if len(self.exons) == 0:
-    #             return 0
-    #         total_kb = float(0)
-    #         for ex in self.exons:
-    #             start, end = ex.get_coordinates()
-    #             #            print "EXON ::",ex.id,end, start
-    #             total_kb += float(end-start)
-    #
-    # #        print self.readNum, experiment_index
-    #         rpk = float(self.readNum[experiment_index]) / float(total_kb/1000)
-    #         mreads = float(total_reads)/float(1000000)
-    #         rpkm = float(rpk)/mreads
-    #         #print "Strand",self.strand,"::",total_kb, self.readNum, rpk, mreads, rpkm
-    #         self.RPKM[experiment_index] = rpkm
-    #         return rpkm
+    #     return res
 
     def exist_exon(self, start, end):
         """
@@ -281,23 +239,23 @@ class Gene:
         s_junc = list(lst)
         return sorted([xx for xx in s_junc if not xx is None])
 
-    def get_annotated_junctions(self):
-        lst = set()
-        for tt in self.transcript_tlb.values():
-            for jj in tt.get_junction_list():
-                if not jj is None and not jj in lst:
-                    lst.add(jj)
-        s_junc = list(lst)
-        return sorted(s_junc)
+    # def sort_in_list(self):
+    #     lst = set()
+    #     for tt in self.transcript_tlb.values():
+    #         for jj in tt.get_junction_list():
+    #             if not jj is None and not jj in lst:
+    #                 lst.add(jj)
+    #     s_junc = list(lst)
+    #     return sorted(s_junc)
 
-    def get_all_rna_junctions(self):
-        lst = []
-        for ex in self.get_exon_list():
-            for ex_rna in ex.exonRead_list:
-                if len(ex_rna.p5_junc) > 0:
-                    lst.union(set(ex_rna.p5_junc))
-        lst.sort()
-        return lst
+    # def get_all_rna_junctions(self):
+    #     lst = []
+    #     for ex in self.get_exon_list():
+    #         for ex_rna in ex.exonRead_list:
+    #             if len(ex_rna.p5_junc) > 0:
+    #                 lst.union(set(ex_rna.p5_junc))
+    #     lst.sort()
+    #     return lst
 
     def prepare_exons(self):
 #        self.exons.sort(reverse = isneg)
@@ -453,7 +411,7 @@ class Gene:
             mat[x, y] = count_mat
             # jmat[x, y] = junc
 
-            for exp_idx in range(config.num_experiments):
+            for exp_idx in range(majiq_config.num_experiments):
                 if reliable_in_data(junc, exp_idx):
                     rand10k[exp_idx].add(junc)
 
@@ -474,7 +432,7 @@ class Transcript(object):
 
     def get_gene(self):
 
-        return config.gene_tlb[self.gene_id]
+        return majiq_config.gene_tlb[self.gene_id]
 
     def get_exon_list(self):
         return self.exon_list
@@ -515,11 +473,22 @@ class Transcript(object):
     #     if junc not in self.junction_list:
     #         self.junction_list.append(junc)
 
-    def sort_in_list(self):
-        # strand = self.get_gene().get_strand()
-        # if strand == '+':
-        #     isneg = False
-        # else:
-        #     isneg = True
-#        self.exon_list.sort(reverse=isneg)
-        self.exon_list.sort()
+#     def sort_in_list(self):
+#         # strand = self.get_gene().get_strand()
+#         # if strand == '+':
+#         #     isneg = False
+#         # else:
+#         #     isneg = True
+# #        self.exon_list.sort(reverse=isneg)
+#         self.exon_list.sort()
+
+
+def recreate_gene_tlb(gene_list):
+
+    for gn in gene_list:
+        majiq_config.gene_tlb[gn.get_id()] = gn
+
+
+def clear_gene_tlb():
+    majiq_config.gene_tlb.clear()
+    gc.collect()

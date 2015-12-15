@@ -310,7 +310,7 @@ def load_dpsi_tab(tab_files_list, sample_names, thres_change=None, filter_genes=
     return lsvs_dict
 
 
-def create_gff3_txt_files(output_dir, majiq_output, logger):
+def create_gff3_txt_files(output_dir, majiq_output, logger, out_gff3=False):
     """
     Create GFF3 files for each LSV.
 
@@ -334,14 +334,18 @@ def create_gff3_txt_files(output_dir, majiq_output, logger):
             if type(lsv_dict) == dict:
                 lsv = lsv_dict['lsv']
             lsv_file_basename = "%s/%s" % (odir, lsv.get_id())
-            gff_file = "%s.gff3" % (lsv_file_basename)
-            with open(gff_file, 'w') as ofile:
-                ofile.write(header+"\n")
-                ofile.write(lsv.get_gff3(logger=logger)+"\n")
+
             try:
-                utils_voila.gff2gtf(gff_file, "%s.gtf" % lsv_file_basename)
+                lsv_gff3_str = lsv.get_gff3(logger=logger)
+                utils_voila.gff2gtf(lsv_gff3_str.split('\n'), "%s.gtf" % lsv_file_basename)
+                if out_gff3:
+                    gff_file = "%s.gff3" % (lsv_file_basename)
+                    with open(gff_file, 'w') as ofile:
+                        ofile.write(header+"\n")
+                        ofile.write(lsv_gff3_str +"\n")
             except UnboundLocalError, e:
                 logger.warning("problem generating GTF file for %s" % lsv.get_id())
                 logger.error(e.message)
-
-    logger.info("Files saved in %s" % odir)
+    logger.info("GTF files for LSVs saved in %s" % odir)
+    if out_gff3:
+        logger.info("GFF3 files for LSVs saved in %s" % odir)

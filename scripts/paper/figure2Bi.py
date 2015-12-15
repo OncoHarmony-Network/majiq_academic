@@ -79,7 +79,7 @@ def main():
         'miso',
         'mats',
         'naive',
-	'nondenovo'
+        'nondenovo'
     ]
 
     parser = argparse.ArgumentParser(description="")

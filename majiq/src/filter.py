@@ -1,14 +1,10 @@
 """
 Functions to filter junction pairs by number of positions covered or number of reads
 """
-import sys
-
-from numpy.ma import masked_less
 import numpy as np
 
-import majiq.src.polyfitnb as majiqfit
 
-def reliable_in_data(junc, exp_idx, minnonzero, min_reads):
+def reliable_in_data(junc, exp_idx, minnonzero=2, min_reads=3):
     min_read_x_exp = min_reads
     min_npos_x_exp = minnonzero
     in_data_filter = False
@@ -17,6 +13,7 @@ def reliable_in_data(junc, exp_idx, minnonzero, min_reads):
         in_data_filter = True
     return in_data_filter
 
+
 def filter_message(when, value, logger, junc):
     message = "%s (Filter=%s). %s" % (when, value, len(junc[0]))
     if logger:
@@ -24,41 +21,6 @@ def filter_message(when, value, logger, junc):
             print message
         else:
             logger.info(message)
-
-
-def lsv_mark_stacks(lsv_list, fitfunc_r, pvalue_limit, logger=None):
-    minstack = sys.maxint
-    # the minimum value marked as stack
-    numstacks = 0
-    for lidx, junctions in enumerate(lsv_list[0]):
-
-        for i, junction in enumerate(junctions):
-            if np.count_nonzero(junction) == 0:
-                continue
-            for j, value in enumerate(junction):
-                if value > 0:
-                    # TODO Use masker, and marking stacks will probably be faster.
-                    copy_junc = list(junction)
-                    copy_junc.pop(j)
-                    copy_junc = np.array(copy_junc)
-                    copy_junc = copy_junc[copy_junc > 0]
-                    nzpos = np.count_nonzero(copy_junc)
-
-                    #FINISH TODO
-                    mean_rest = np.mean(copy_junc) * nzpos
-                    pval = majiqfit.get_negbinom_pval(fitfunc_r, mean_rest, value)
-                    if pval < pvalue_limit:
-                        lsv_list[0][lidx][i, j] = -2
-                        minstack = min(minstack, value)
-                        numstacks += 1
-        masked_less(lsv_list[0][lidx], 0)
-
-    if logger:
-        logger.info("Out of %s values, %s marked as stacks with a p-value threshold of %s (%.3f%%)"
-                    % (junctions.size, numstacks, pvalue_limit, (float(numstacks) / junctions.size) * 100))
-
-    # TODO: (Jordi) I don't think this return is necessary.
-    return lsv_list
 
 
 def quantifiable_in_group(list_of_experiments, minnonzero, min_reads, filter_vals=None, logger=None):

@@ -25,187 +25,79 @@ def get_color(tissue):
     return colors_dict[tissue]
 
 
-def scatterplot_rtpcr_majiq_miso(rt_pcr_majiq, rt_pcr_miso, majiq, miso, plotpath, pcr_majiq_extra=None, pcr_miso_extra=None, majiq_extra=None, miso_extra=None):
+def scatterplot_rtpcr_majiq_miso(rt_pcr_majiq, rt_pcr_miso, majiq, miso, plotpath,
+                                 pcr_majiq_extra=None, pcr_miso_extra=None,
+                                 majiq_extra=None, miso_extra=None):
     #figure out how many groups of events exist
 
-    # majiq_rest_yerr = [var_expected_psi(dis) for dis in rt_pcr_majiq[0]]
-
-    fig, axx = pyplot.subplots(2, 5, sharex=True, sharey=True, figsize=[15, 6], dpi=300)
+    nrows = 2
+    ncols = 5
+    fig, axx = pyplot.subplots(nrows, ncols, sharex=True, sharey=True, figsize=[15, 6], dpi=300)
     fig.suptitle("PSI comparison: RT-PCR Vs MAJIQ; RT-PCR Vs MISO")
 
-    rt_pcr_majiq_all = [a for b in rt_pcr_majiq for a in b]
-    rt_pcr_miso_all = [a for b in rt_pcr_miso for a in b]
-    majiq_all = [a for b in majiq for a in b]
-    miso_all = [a for b in miso for a in b]
+    datasets = [
+        [
+            {'data': [majiq, rt_pcr_majiq, majiq_extra, pcr_majiq_extra], 'label': 'All'},
+            {'data': [majiq[0], rt_pcr_majiq[0]], 'color': get_color('rest'), 'label': 'Resting', 'marker': '.'},
+            {'data': [majiq[1], rt_pcr_majiq[1]], 'color': get_color('stim'), 'label': 'Stimulating', 'marker': '.'},
+            {'data': [majiq_extra[0], pcr_majiq_extra[0]], 'color': get_color('cer'), 'label': 'Cerebellum', 'marker': 'd'},
+            {'data': [majiq_extra[1], pcr_majiq_extra[1]], 'color': get_color('liv'), 'label': 'Liver', 'marker': 'd'}
+        ],
+        [
+            {'data': [miso, rt_pcr_majiq, miso_extra, pcr_miso_extra], 'label': 'All'},
+            {'data': [miso[0], rt_pcr_miso[0]], 'color': get_color('rest'), 'label': 'Resting', 'marker': '.'},
+            {'data': [miso[1], rt_pcr_miso[1]], 'color': get_color('stim'), 'label': 'Stimulating', 'marker': '.'},
+            {'data': [miso_extra[0], pcr_miso_extra[0]], 'color': get_color('cer'), 'label': 'Cerebellum', 'marker': 'd'},
+            {'data': [miso_extra[1], pcr_miso_extra[1]], 'color': get_color('liv'), 'label': 'Liver', 'marker': 'd'}
+        ]
+    ]
+    xlabels = ['MAJIQ', 'MISO']
 
-    pcr_majiq_extra_all = [a for b in pcr_majiq_extra for a in b]
-    pcr_miso_extra_all = [a for b in pcr_miso_extra for a in b]
-    majiq_extra_all = [a for b in majiq_extra for a in b]
-    miso_extra_all = [a for b in miso_extra for a in b]
+    for nrow in xrange(nrows):
+        for ncol in xrange(ncols):
+            if ncol == 0:  # Special case, aggregated for all
 
+                met_all = [a for b in datasets[nrow][ncol]['data'][0] for a in b]
+                pcr_all = [a for b in datasets[nrow][ncol]['data'][1] for a in b]
 
-    diagonal = np.linspace(0, 1, num=len(rt_pcr_majiq_all))
-    fit = np.polyfit(np.append(majiq_all, majiq_extra_all), np.append(rt_pcr_majiq_all, np.array(pcr_majiq_extra_all)), 1)
-    fit_fn = np.poly1d(fit) # fit_fn is now a function which takes in x and returns an estimate for y
+                met_extra_all = [a for b in datasets[nrow][ncol]['data'][2] for a in b]
+                pcr_extra_all = [a for b in datasets[nrow][ncol]['data'][3] for a in b]
 
+                met_comb = np.append(met_all, met_extra_all)
+                pcr_comb = np.append(pcr_all, pcr_extra_all)
 
-    pearson_majiq = pearsonr(np.append(majiq_all, majiq_extra_all), np.append(rt_pcr_majiq_all, pcr_majiq_extra_all))[0]
-    print 'MAJIQ R=%.2f' % pearson_majiq
+                diagonal = np.linspace(0, 1, num=10)
+                fit = np.polyfit(met_comb, pcr_comb, 1)
+                fit_fn = np.poly1d(fit) # fit_fn is now a function which takes in x and returns an estimate for y
+                pearson_f = pearsonr(met_comb, pcr_comb)[0]
 
-    axx[0][0].text(.1, .9, 'R=%.2f' % (pearson_majiq), fontsize=14)
-    axx[0][0].plot(np.append(majiq_all, majiq_extra_all), fit_fn(np.append(majiq_all, majiq_extra_all)), '--k')
-    axx[0][0].plot(diagonal, diagonal, '--', color="#cccccc")
-    axx[0][0].plot(majiq[0], rt_pcr_majiq[0], '.', color=get_color('rest'), label='Resting (N=%d)' % len(majiq[0]))
-    axx[0][0].plot(majiq[1], rt_pcr_majiq[1], '.', color=get_color('stim'), label='Stimulating (N=%d)' % len(majiq[1]))
-    axx[0][0].plot(majiq_extra[0], pcr_majiq_extra[0], 'd', color=get_color('cer'), label='Cerebellum (N=%d)' % len(majiq_extra[0]))
-    axx[0][0].plot(majiq_extra[1], pcr_majiq_extra[1], 'd', color=get_color('liv'), label='Liver (N=%d)' % len(majiq_extra[1]))
+                axx[nrow][ncol].text(.1, .9, 'R=%.2f' % (pearson_f), fontsize=14)
+                axx[nrow][ncol].plot(met_comb, fit_fn(met_comb), '--k')
+                axx[nrow][ncol].plot(diagonal, diagonal, '--', color="#cccccc")
 
-
-    axx[0][0].set_xlabel('MAJIQ')
-    axx[0][0].set_ylabel('RT-PCR')
-    axx[0][0].set_title('All (N=%d)' % (len(majiq_all) + len(majiq_extra_all)))
-    axx[0][0].set_ylim([0,1])
-    axx[0][0].legend(loc=2, fontsize=8)
-
-    diagonal = np.linspace(0, 1, num=len(rt_pcr_miso_all))
-    fit = np.polyfit(np.append(miso_all, miso_extra_all), np.append(rt_pcr_miso_all, np.array(pcr_miso_extra_all)), 1)
-    fit_fn = np.poly1d(fit) # fit_fn is now a function which takes in x and returns an estimate for y
-
-    pearson_miso = pearsonr(np.append(miso_all, miso_extra_all), np.append(rt_pcr_miso_all, pcr_miso_extra_all))[0]
-    print 'MISO R=%.2f' % pearson_miso
-
-    axx[1][0].text(.1, .9, 'R=%.2f' % (pearson_miso), fontsize=14)
-    axx[1][0].plot(np.append(miso_all, miso_extra_all), fit_fn(np.append(miso_all, miso_extra_all)), '--k')
-    axx[1][0].plot(diagonal, diagonal, '--', color="#cccccc")
-    axx[1][0].plot(miso[0], rt_pcr_miso[0], '.', color=get_color('rest'), label='Resting')
-    axx[1][0].plot(miso[1], rt_pcr_miso[1], '.', color=get_color('stim'), label='Stimulating')
-    axx[1][0].plot(miso_extra[0], pcr_miso_extra[0], 'd', color=get_color('cer'), label='Cerebellum')
-    axx[1][0].plot(miso_extra[1], pcr_miso_extra[1], 'd', color=get_color('liv'), label='Liver')
-
-
-    axx[1][0].set_xlabel('MISO')
-    axx[1][0].set_ylabel('RT-PCR')
-    axx[1][0].set_title('All (N=%d)' % (len(miso_all) + len(miso_extra_all)))
-    axx[1][0].set_ylim([0,1])
-    # axx[1][0].legend(loc=2, fontsize=8)
-
-
-    diagonal = np.linspace(0, 1, num=len(rt_pcr_majiq[0]))
-    fit = np.polyfit(majiq[0], rt_pcr_majiq[0], 1)
-    fit_fn = np.poly1d(fit) # fit_fn is now a function which takes in x and returns an estimate for y
-
-    pearson_r = pearsonr(majiq[0], rt_pcr_majiq[0])[0]
-    axx[0][1].text(.1, .9, 'R=%.2f' % (pearson_r), fontsize=14)
-    axx[0][1].plot(majiq[0], fit_fn(majiq[0]), '--k')
-    axx[0][1].plot(diagonal, diagonal, '--', color="#cccccc")
-    axx[0][1].plot(majiq[0], rt_pcr_majiq[0], '.', color=get_color('rest'), label='Resting')
-
-    axx[0][1].set_xlabel('MAJIQ')
-    axx[0][1].set_ylabel('RT-PCR')
-    axx[0][1].set_title('Unstim (N=%d)' % len(majiq[0]))
-    axx[0][1].set_ylim([0,1])
-    # axx[0][0].legend(loc=4)
-
-    fit = np.polyfit(majiq[1], rt_pcr_majiq[1], 1)
-    fit_fn = np.poly1d(fit)
-    pearson_r = pearsonr(majiq[1], rt_pcr_majiq[1])[0]
-    axx[0][2].text(.1, .9, 'R=%.2f' % (pearson_r), fontsize=14)
-    axx[0][2].plot(majiq[1], fit_fn(majiq[1]), '--k')
-    axx[0][2].plot(diagonal, diagonal, '--', color="#cccccc")
-    axx[0][2].plot(majiq[1], rt_pcr_majiq[1], '.', color=get_color('stim'), label='Stimulating')
-
-
-    axx[0][2].set_xlabel('MAJIQ')
-    axx[0][2].set_ylabel('RT-PCR')
-    axx[0][2].set_title('Stim (N=%d)' % len(majiq[1]))
-    axx[0][2].set_ylim([0,1])
-    # axx[0][1].legend(loc=4)
-
-    fit = np.polyfit(majiq_extra[0], pcr_majiq_extra[0], 1)
-    fit_fn = np.poly1d(fit)
-    pearson_r = pearsonr(majiq_extra[0], pcr_majiq_extra[0])[0]
-    axx[0][3].text(.1, .9, 'R=%.2f' % (pearson_r), fontsize=14)
-    axx[0][3].plot(majiq_extra[0], fit_fn(majiq_extra[0]), '--k')
-    axx[0][3].plot(diagonal, diagonal, '--', color="#cccccc")
-    axx[0][3].plot(majiq_extra[0], pcr_majiq_extra[0], 'd', color=get_color('cer'), label='Cerebellum')
-
-
-    axx[0][3].set_xlabel('MAJIQ')
-    axx[0][3].set_ylabel('RT-PCR')
-    axx[0][3].set_title('Cerebellum (N=%d)' % len(majiq_extra[0]))
-    axx[0][3].set_ylim([0,1])
-    # axx[0][1].legend(loc=4)
-
-    fit = np.polyfit(majiq_extra[1], pcr_majiq_extra[1], 1)
-    fit_fn = np.poly1d(fit)
-    pearson_r = pearsonr(majiq_extra[1], pcr_majiq_extra[1])[0]
-    axx[0][4].text(.1, .9, 'R=%.2f' % (pearson_r), fontsize=14)
-    axx[0][4].plot(majiq_extra[1], fit_fn(majiq_extra[1]), '--k')
-    axx[0][4].plot(diagonal, diagonal, '--', color="#cccccc")
-    axx[0][4].plot(majiq_extra[1], pcr_majiq_extra[1], 'd', color=get_color('liv'), label='Liver')
-
-
-    axx[0][4].set_xlabel('MAJIQ')
-    axx[0][4].set_ylabel('RT-PCR')
-    axx[0][4].set_title('Liver (N=%d)' % len(majiq_extra[1]))
-    axx[0][4].set_ylim([0,1])
-    # axx[0][1].legend(loc=4)
-
-    fit = np.polyfit(miso[0], rt_pcr_miso[0], 1)
-    fit_fn = np.poly1d(fit) # fit_fn is now a function which takes in x and returns an estimate for y
-
-    pearson_r = pearsonr(miso[0], rt_pcr_miso[0])[0]
-    axx[1][1].text(.1, .9, 'R=%.2f' % (pearson_r), fontsize=14)
-    axx[1][1].plot(miso[0], fit_fn(miso[0]), '--k')
-    axx[1][1].plot(diagonal, diagonal, '--', color="#cccccc")
-    axx[1][1].plot(miso[0], rt_pcr_miso[0], '.', color=get_color('rest'), label='Resting')
-
-    axx[1][1].set_xlabel('MISO')
-    axx[1][1].set_ylabel('RT-PCR')
-    axx[1][1].set_title('Unstim (N=%d)' % len(miso[0]))
-    axx[1][1].set_ylim([0,1])
-    # axx[1][0].legend(loc=4)
-
-    fit = np.polyfit(miso[1], rt_pcr_miso[1], 1)
-    fit_fn = np.poly1d(fit)
-    pearson_r = pearsonr(miso[1], rt_pcr_miso[1])[0]
-    axx[1][2].text(.1, .9, 'R=%.2f' % (pearson_r), fontsize=14)
-    axx[1][2].plot(diagonal, diagonal, '--', color="#cccccc")
-    axx[1][2].plot(miso[1], rt_pcr_miso[1], '.', color=get_color('stim'), label='Stimulating')
-    axx[1][2].plot(miso[1], fit_fn(miso[1]), '--k')
-
-    axx[1][2].set_xlabel('MISO')
-    axx[1][2].set_ylabel('RT-PCR')
-    axx[1][2].set_title('Stim (N=%d)' % len(miso[1]))
-    axx[1][2].set_ylim([0,1])
-    # axx[1][1].legend(loc=4)
-
-    fit = np.polyfit(miso_extra[0], pcr_miso_extra[0], 1)
-    fit_fn = np.poly1d(fit)
-    pearson_r = pearsonr(miso_extra[0], pcr_miso_extra[0])[0]
-    axx[1][3].text(.1, .9, 'R=%.2f' % (pearson_r), fontsize=14)
-    axx[1][3].plot(diagonal, diagonal, '--', color="#cccccc")
-    axx[1][3].plot(miso_extra[0], pcr_miso_extra[0], 'd', color=get_color('cer'), label='Cerebellum')
-    axx[1][3].plot(miso_extra[0], fit_fn(miso_extra[0]), '--k')
-
-    axx[1][3].set_xlabel('MISO')
-    axx[1][3].set_ylabel('RT-PCR')
-    axx[1][3].set_title('Cerebellum (N=%d)' % len(miso_extra[0]))
-    axx[1][3].set_ylim([0,1])
-    # axx[0][1].legend(loc=4)
-
-    fit = np.polyfit(miso_extra[1], pcr_miso_extra[1], 1)
-    fit_fn = np.poly1d(fit)
-    pearson_r = pearsonr(miso_extra[1], pcr_miso_extra[1])[0]
-    axx[1][4].text(.1, .9, 'R=%.2f' % (pearson_r), fontsize=14)
-    axx[1][4].plot(diagonal, diagonal, '--', color="#cccccc")
-    axx[1][4].plot(miso_extra[1], pcr_miso_extra[1], 'd', color=get_color('liv'), label='Liver')
-    axx[1][4].plot(miso_extra[1], fit_fn(miso_extra[1]), '--k')
-
-    axx[1][4].set_xlabel('MISO')
-    axx[1][4].set_ylabel('RT-PCR')
-    axx[1][4].set_title('Liver (N=%d)' % len(miso_extra[1]))
-    axx[1][4].set_ylim([0,1])
+                for ii in xrange(1,5):
+                    axx[nrow][ncol].plot(datasets[nrow][ii]['data'][0],
+                                   datasets[nrow][ii]['data'][1],
+                                   datasets[nrow][ii]['marker'],
+                                   color=datasets[nrow][ii]['color'],
+                                   label=datasets[nrow][ii]['label'])
+            else:
+                diagonal = np.linspace(0, 1, num=10)
+                fit = np.polyfit(datasets[nrow][ncol]['data'][0], datasets[nrow][ncol]['data'][1], 1)
+                fit_fn = np.poly1d(fit) # fit_fn is now a function which takes in x and returns an estimate for y
+                pearson_f = pearsonr(datasets[nrow][ncol]['data'][0], datasets[nrow][ncol]['data'][1])[0]
+                axx[nrow][ncol].text(.1, .9, 'R=%.2f' % (pearson_f), fontsize=14)
+                axx[nrow][ncol].plot(datasets[nrow][ncol]['data'][0], fit_fn(datasets[nrow][ncol]['data'][0]), '--k')
+                axx[nrow][ncol].plot(diagonal, diagonal, '--', color="#cccccc")
+                axx[nrow][ncol].plot(datasets[nrow][ncol]['data'][0],
+                               datasets[nrow][ncol]['data'][1],
+                               datasets[nrow][ncol]['marker'],
+                               color=datasets[nrow][ncol]['color'],
+                               label=datasets[nrow][ncol]['label'])
+            axx[nrow][ncol].set_xlabel(xlabels[nrow])
+            axx[nrow][ncol].set_ylabel('RT-PCR')
+            axx[nrow][ncol].set_title('%s (N=%d)' % (datasets[nrow][ncol]['label'], len(met_comb)))
+            axx[nrow][ncol].set_ylim([0,1])
 
     scripts.utils.save_or_show(plotpath, "psi_comp_rtpcr_majiq_miso", exten='pdf')
 

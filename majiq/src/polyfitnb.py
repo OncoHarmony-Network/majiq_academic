@@ -1,57 +1,14 @@
-from matplotlib import use
-use('Agg')
-
-import os
 import random
-import matplotlib.pyplot as plt
 from numpy.ma import masked_less
 import numpy as np
 from scipy.stats import nbinom, poisson
-
-
-def _save_or_show(plotpath, plotname=None):
-    """Generic function that either shows in a popup or saves the figure, depending if a flag was given"""
-    if plotname:
-        plt.title(plotname)
-
-    if plotpath:
-        if not os.path.exists(plotpath):
-            os.makedirs(plotpath)
-        plt.savefig("%s/%s.png" % (plotpath, plotname.replace(" ", "_")), bbox_inches='tight')
-        # WNo spaces allowed, underscores!
-        plt.clf()
-    else:
-        plt.show()
-
+import plotting as mplot
 
 def get_ecdf(pvalues):
     # print sorted(pvalues)
     nbins = max(min(10, len(pvalues)), len(pvalues) / 10)
     hist, bin_edges = np.histogram(pvalues, range=[0, 1], bins=nbins, density=True)
     return np.cumsum(hist) / len(bin_edges)
-
-
-def plot_mappability_zeros(junctions, plotpath, numzeros, plotname):
-    """
-    Plot the percentage of zero positions in the junction sites against the total sum of the positions in the junction. 
-    This should be proportional. Dots in the right mean that there are some zero positions in the junctions with high
-    coverage, meaning that there is probably some mappability bias.
-    """
-    junction_sum = junctions.sum(axis=1)
-    # Cumulative positional value per junction
-    plt.plot(junction_sum, numzeros / float(junctions.shape[1]), '*')
-    _save_or_show(plotpath, plotname)
-
-
-def plot_negbinomial_fit(mean_junc, std_junc, fit_function, plotpath, plotname):
-    # plot the fit of the line
-    plt.xlabel("Mean")
-    plt.ylabel("Std")
-    plt.xlim(0, max(mean_junc) * 1.1)  # adjust the x axis of the plot
-    plt.ylim(0, max(std_junc) * 1.1)  # adjust the y axis of the plot
-    plt.plot(mean_junc, std_junc, '*')  # the mean and std for e very junction that passes the filter
-    plt.plot(mean_junc, fit_function(mean_junc), '-r')
-    _save_or_show(plotpath, plotname)
 
 
 def score_ecdf(ecdf):
@@ -122,7 +79,7 @@ def adjust_fit(starting_a, junctions, precision, previous_score, plotpath, indic
         pvalues = calc_pvalues(junctions, corrected_a, indices)
         ecdf = get_ecdf(pvalues)
         score = score_ecdf(ecdf)
-        plot_fitting(ecdf, plotpath, title="%s.[step %d] 1\_r %s" % (precision, idx, corrected_a),
+        mplot.plot_fitting(ecdf, plotpath, title="%s.[step %d] 1\_r %s" % (precision, idx, corrected_a),
                      plotname='%s.step%s' % (precision, idx))
         idx += 1
         if logger:
@@ -147,22 +104,6 @@ def adjust_fit(starting_a, junctions, precision, previous_score, plotpath, indic
         logger.warning("WARNING: Something is wrong, please contact Biociphers!")
     return corrected_a, score, ecdf, pvalues
     # this return should not be hit
-
-
-def plot_fitting(ecdf, plotpath, extra=[], title='', title_extra=[], plotname=None):
-    if plotpath:
-        plt.xlabel("P-value")
-        plt.ylabel("non_corrected ECDF")
-        plt.plot(np.linspace(0, 1, num=len(ecdf)), ecdf, label='Fitted NB')
-        for ex_idx, extraval in enumerate(extra):
-            plt.plot(np.linspace(0, 1, num=len(extraval)), extraval, label=title_extra[ex_idx])
-        plt.plot([0, 1], 'k')
-        plt.legend(loc='upper left')
-        if plotname is None:
-            fname = title
-        else:
-            fname = plotname
-        _save_or_show(plotpath, fname)
 
 
 def fit_nb(junctionl, outpath, plotpath, nbdisp=0.1, logger=None):
@@ -190,7 +131,7 @@ def fit_nb(junctionl, outpath, plotpath, nbdisp=0.1, logger=None):
 
     pvalues = calc_pvalues(junctions, one_over_r0, indices)
     ecdf = get_ecdf(pvalues)
-    plot_fitting(ecdf, plotpath, title="NON-Corrected ECDF 1\_r %s" % one_over_r0)
+    mplot.plot_fitting(ecdf, plotpath, title="NON-Corrected ECDF 1\_r %s" % one_over_r0)
     # plot_negbinomial_fit(mean_junc, std_junc, fit_function, plotpath, "Before correction")
     score = score_ecdf(ecdf)
 
@@ -209,13 +150,6 @@ def fit_nb(junctionl, outpath, plotpath, nbdisp=0.1, logger=None):
             pvalues = calc_pvalues(junctions, one_over_r, indices)
             ecdf = get_ecdf(pvalues)
             score = score_ecdf(ecdf)
-
-    # poisson_pvals = calc_pvalues_poisson(junctions, indices)
-    # poisson_ecdf = get_ecdf(poisson_pvals)
-    # poisson_score = score_ecdf(poisson_ecdf)
-    #
-    # plot_fitting(ecdf, plotpath, extra=[poisson_ecdf], title="Corrected ECDF 1\_r %s" % one_over_r,
-    #              title_extra=['Poisson %s' % poisson_score], plotname='Corrected')
 
     if logger:
         logger.debug("Calculating the nb_r and nb_p with the new fitted function")

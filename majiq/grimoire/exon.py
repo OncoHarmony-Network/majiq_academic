@@ -93,17 +93,6 @@ class Exon:
     def get_annotated_exon(self):
         return self.exonTx_list
 
-    def get_rna_ss(self):
-        ss3 = set()
-        ss5 = set()
-
-        for ii in self.exonRead_list:
-            ss3.add(ii.start)
-            ss5.add(ii.end)
-        ss3_l = sorted(list(ss3))
-        ss5_l = sorted(list(ss5))
-        return ss3_l, ss5_l
-
     def get_length(self):
         if self.end is None or self.start is None:
             ln = 0
@@ -156,24 +145,6 @@ class Exon:
                 self.ss_5p_list.append(end)
             res = ExonRead(start, end, s3p_junc, s5p_junc, read_seq)
             self.exonRead_list.append(res)
-        return res
-
-    def add_new_definition(self, start, end, trncpt):
-        self.start = min(self.start, start)
-        self.end = max(self.end, end)
-        for ii in self.exonTx_list:
-            if start == ii.start and end == ii.end:
-                res = ii
-                break
-        else:
-            #            if self.strand == '+':
-            self.ss_3p_list.append(start)
-            self.ss_5p_list.append(end)
-            #            else:
-            #                self.ss_5p_list.append(start)
-            #                self.ss_3p_list.append(end)
-            res = ExonTx(start, end, trncpt)
-            self.exonTx_list.append(res)
         return res
 
     def get_coverage(self, exp_idx):
@@ -291,10 +262,10 @@ class Exon:
 
         return local_3p, local_5p
 
-    def detect_lsv(self, gn, lsv_type, dummy, jun):
+    def detect_lsv(self, gn, lsv_type, dummy, jun, only_annot=False):
         #jun = {}
 
-        sstype = {SSOURCE: ['5prime',0], STARGET: ['3prime', 1]}
+        sstype = {SSOURCE: ['5prime', 0], STARGET: ['3prime', 1]}
 
 
         jlist = self.get_junctions(sstype[lsv_type][0])
@@ -304,13 +275,16 @@ class Exon:
         lsv_in = gn.new_lsv_definition(self, jlist, lsv_type)
 
         for name, ind_list in config.tissue_repl.items():
+            group_thresh = min((len(ind_list) * 0.5), 2)
             counter = 0
             e_data = 0
             for jj in jlist:
                 for exp_idx in ind_list:
-                    if majiqfilter.reliable_in_data(jj, exp_idx, config.MINREADS, config.MINPOS):
+                    if only_annot or majiqfilter.reliable_in_data(jj, exp_idx,
+                                                    minnonzero=config.MINPOS,
+                                                    min_reads=config.MINREADS):
                         counter += 1
-                if counter < 0.1 * len(ind_list):
+                if counter < group_thresh:
                     continue
                 e_data += 1
                 try:
@@ -426,31 +400,7 @@ class ExonTx(object):
 
         exb = exb1 & exb2
         if exb:
-            # #creating intron exon
-            #         intron = gn.new_annotated_exon(intron_coords[0], intron_coords[1], self.get_transcript()[0],
-            #                                        bl=False, intron=True)
-            #         res.append(intron)
-            #         junc1 = gn.exist_junction(txex2.end, intron_coords[0])
-            #         if junc1 is None:
-            #             junc1 = Junction(txex2.end, intron_coords[0], None, None, gn, annotated=True)
-            # #           junc1.add_donor(txex2)
-            # #           junc1.add_acceptor(intron)`
-            #         txex2.p5_junc.append(junc1)
-            #         intron.p3_junc.append(junc1)
-            #
-            #         junc2 = gn.exist_junction(intron_coords, txex1.start)
-            #         if junc2 is None:
-            #             junc2 = Junction(intron_coords, txex1.start, None, None, gn, annotated=True)
-            # #           junc.add_donor(intron)
-            # #           junc.add_acceptor(txex1)
-            #         intron.p5_junc.append(junc2)
-            #         txex1.p3_junc.append(junc2)
-
             junc = gn.exist_junction(txex2.end, txex1.start)
-            #if junc is None:
-                #junc = Junction(txex2.end, txex1.start, None, None, gn, annotated=True)
-            #                junc.add_donor(txex2)
-            #                junc.add_acceptor(txex1)
             if not junc is None:
                 txex2.p5_junc.append(junc)
                 txex1.p3_junc.append(junc)
@@ -549,10 +499,7 @@ def print_list_exons(list_ex, msg=""):
         print "\t\t", ex.get_coordinates(), ex
     print "%%%%%%%%%%%%%%%%%%%%%%"
 
-
 num_it = 0
-
-
 def collapse_list_exons(listexons, gne):
     global num_it
     num_it += 1
@@ -618,7 +565,7 @@ def __half_exon(ss_type, junc, read_rna):
 EMPTY_COORD = -1
 
 
-def new_exon_definition(start, end, read_rna, s3prime_junc, s5prime_junc, gene, isintron=False):
+def new_exon_definition(start, end, read_rna, s3prime_junc, s5prime_junc, gene, nondenovo=False, isintron=False):
     if end - start < 5:
         return 0
 
@@ -634,6 +581,8 @@ def new_exon_definition(start, end, read_rna, s3prime_junc, s5prime_junc, gene, 
                 if start <= xx[1] and end >= xx[0]:
                     in_db = True
                     break
+            if not in_db and nondenovo:
+                return -1
             ex = Exon(start, end, gene, gene.get_strand(), annot=in_db, isintron=isintron)
             gene.add_exon(ex)
         else:

@@ -1,26 +1,20 @@
-from matplotlib import use
-use('Agg')
-
 import os
 import logging
-import numpy as np
 import sys
-from itertools import izip
-from scipy.stats.mstats import mquantiles
-import scipy.sparse
-from matplotlib import pyplot
+from multiprocessing import Pool
+import random
+from contextlib import contextmanager as ctx
 
-import majiq.src.config as mglobals
-from majiq.grimoire.junction import MajiqJunc
+import numpy as np
+
+from majiq.src.normalize import gc_factor_calculation
+import majiq.src.config as majiq_config
+from majiq.grimoire.junction import MajiqJunction
 import majiq.src.io as majiq_io
-
 from voila.splice_graphics import ExonGraphic
 from voila.splice_graphics import GeneGraphic
 from voila.splice_graphics import JunctionGraphic
 from voila import constants as voila_const
-import random
-from contextlib import contextmanager as ctx
-import gc
 
 
 def create_if_not_exists(my_dir, logger=False):
@@ -60,113 +54,13 @@ def get_logger(logger_name, silent=False, debug=False):
     logger.addHandler(ch)
     return logger
 
-
-def __gc_factor_ind(val, exp_idx):
-    res = 0
-    for ii, jj in enumerate(mglobals.gc_bins[exp_idx]):
-        if val < jj:
-            res = ii
-    return res
-
-
-def prepare_lsv_table(lsv_list, non_as, temp_dir):
-
-    #out_temp = dict()
-    for name, ind_list in mglobals.tissue_repl.items():
-        for idx, exp_idx in enumerate(ind_list):
-            majiq_table_as = [0] * len(lsv_list[name])
-            majiq_table_nonas = [0] * len(non_as[name])
-
-            for iix, lsv in enumerate(lsv_list[name]):
-                majiq_table_as[iix] = lsv.to_majiqLSV(exp_idx)
-            for jix, jn in enumerate(non_as[name]):
-                majiq_table_nonas[jix] = MajiqJunc(jn, exp_idx)
-
-            out_temp = (majiq_table_as, majiq_table_nonas)
-            fname = "%s/%s.majiq.pkl" % (temp_dir, mglobals.exp_list[exp_idx])
-            majiq_io.dump_bin_file(out_temp, fname)
-
-
-
-def prepare_lsv_table_old(lsv_list, non_as, temp_dir):
-
-    #out_temp = dict()
-    for name, ind_list in mglobals.tissue_repl.items():
-        for idx, exp_idx in enumerate(ind_list):
-            majiq_table_as = [0] * len(lsv_list[exp_idx])
-            majiq_table_nonas = [0] * len(non_as[exp_idx])
-
-            for iix, lsv in enumerate(lsv_list[exp_idx]):
-                majiq_table_as[iix] = lsv.to_majiqLSV(exp_idx)
-            for jix, jn in enumerate(non_as[exp_idx]):
-                majiq_table_nonas[jix] = MajiqJunc(jn, exp_idx)
-
-            out_temp = (majiq_table_as, majiq_table_nonas)
-            fname = "%s/%s.majiq.pkl" % (temp_dir, mglobals.exp_list[exp_idx])
-            majiq_io.dump_bin_file(out_temp, fname)
-
-
-def merge_and_create_majiq_file(pref_file):
-
-    """
-
-    :param chr_list:
-    :param pref_file:
-    """
-    if pref_file != '':
-        pref_file = '%s.' % pref_file
-
-    for name, ind_list in mglobals.tissue_repl.items():
-        for idx, exp_idx in enumerate(ind_list):
-            all_visual = []
-            as_table = []
-            nonas_table = []
-            for chnk in range(mglobals.num_final_chunks):
-                temp_dir = "%s/tmp/chunk_%s" % (mglobals.outDir, chnk)
-                temp_filename = '%s/%s.splicegraph.pkl' % (temp_dir, mglobals.exp_list[exp_idx])
-                if os.path.exists(temp_filename):
-                    visual_gene_list = majiq_io.load_bin_file(temp_filename)
-                    all_visual.append(visual_gene_list)
-            fname = '%s/%s%s.splicegraph' % (mglobals.outDir, pref_file, mglobals.exp_list[exp_idx])
-            visual = np.concatenate(all_visual)
-            majiq_io.dump_bin_file(visual, fname)
-            del all_visual
-            del visual
-
-            for chnk in range(mglobals.num_final_chunks):
-                temp_dir = "%s/tmp/chunk_%s" % (mglobals.outDir, chnk)
-                filename = "%s/%s.majiq.pkl" % (temp_dir, mglobals.exp_list[exp_idx])
-                if os.path.exists(filename):
-                    temp_table = majiq_io.load_bin_file(filename)
-                    as_table.append(temp_table[0])
-                    nonas_table.append(temp_table[1])
-
-            if len(as_table) == 0:
-                continue
-
-            info = dict()
-            info['experiment'] = mglobals.exp_list[exp_idx]
-            info['GC_bins'] = mglobals.gc_bins[exp_idx]
-            info['GC_bins_val'] = mglobals.gc_bins_val[exp_idx]
-            info['genome'] = mglobals.genome
-            info['num_reads'] = mglobals.num_mapped_reads[exp_idx]
-
-            at = np.concatenate(as_table)
-            for lsv in at:
-                lsv.set_gc_factor(exp_idx)
-            nat = np.concatenate(nonas_table)
-
-            clist = random.sample(nat, min(5000, len(nat)))
-            for jnc in clist:
-                jnc.set_gc_factor(exp_idx)
-
-            fname = '%s/%s%s.majiq' % (mglobals.outDir, pref_file, mglobals.exp_list[exp_idx])
-            majiq_io.dump_bin_file((info, at, clist), fname)
-
+"""
+splicegraph generation functions
+"""
 
 def generate_visualization_output(allgenes, temp_dir):
     # gene_list = {}
-    for name, ind_list in mglobals.tissue_repl.items():
+    for name, ind_list in majiq_config.tissue_repl.items():
         for idx, exp_idx in enumerate(ind_list):
             # gene_list[mglobals.exp_list[exp_idx]] = []
             gene_list = []
@@ -192,7 +86,7 @@ def generate_visualization_output(allgenes, temp_dir):
                             jtype = voila_const.JUNCTION_TYPE_DB
                     elif jj.is_annotated() and num_reads > 0:
                         jtype = voila_const.JUNCTION_TYPE_DB_RNASEQ
-                    elif not jj.is_annotated() and num_reads > mglobals.MINREADS:
+                    elif not jj.is_annotated() and num_reads > majiq_config.MINREADS:
                         jtype = voila_const.JUNCTION_TYPE_RNASEQ
                     else:
                         jtype = voila_const.JUNCTION_TYPE_RNASEQ
@@ -260,23 +154,84 @@ def generate_visualization_output(allgenes, temp_dir):
                 # gene_list[mglobals.exp_list[exp_idx]].append(ggraph)
                 gene_list.append(ggraph)
 
-            filename = '%s/%s.splicegraph.pkl' % (temp_dir, mglobals.exp_list[exp_idx])
+            filename = '%s/%s.splicegraph.pkl' % (temp_dir, majiq_config.exp_list[exp_idx])
             majiq_io.dump_bin_file(gene_list, filename)
 
 
-def prepare_junctions_gc(junc, exp_idx):
+"""
+Majiq file generation
+"""
+def prepare_lsv_table(lsv_list, non_as, temp_dir):
 
-    gc = scipy.sparse.lil_matrix((mglobals.readLen - 16+1), dtype=np.float)
-    gci = np.zeros(shape=(mglobals.readLen - 16+1))
-    for jj in range(mglobals.readLen - 16+1):
-        if not junc is None and junc.get_gc_content()[exp_idx, jj] != 0:
-            #gci[jj] = __gc_factor_ind(junc.get_gc_content()[exp_idx,jj],exp_idx)
+    #out_temp = dict()
+    for name, ind_list in majiq_config.tissue_repl.items():
+        for idx, exp_idx in enumerate(ind_list):
+            majiq_table_as = [0] * len(lsv_list[name])
+            majiq_table_nonas = [0] * len(non_as[name])
 
-            gc[jj] = mglobals.gc_factor[exp_idx](junc.get_gc_content()[exp_idx, jj])
+            for iix, lsv in enumerate(lsv_list[name]):
+                majiq_table_as[iix] = lsv.to_majiqLSV(exp_idx)
+            for jix, jn in enumerate(non_as[name]):
+                majiq_table_nonas[jix] = MajiqJunction(jn, exp_idx)
 
-    if not junc is None:
-        junc.add_gc_content_positions(gc)
-    return
+            out_temp = (majiq_table_as, majiq_table_nonas)
+            fname = "%s/%s.majiq.pkl" % (temp_dir, majiq_config.exp_list[exp_idx])
+            majiq_io.dump_bin_file(out_temp, fname)
+
+
+def merge_and_create_majiq_file(exp_idx, pref_file):
+
+    """
+    :param exp_idx: Index of experiment in config file
+    :param pref_file: Prefix for the majiq name
+    """
+
+    experiment = majiq_config.exp_list[exp_idx]
+    all_visual = []
+    as_table = []
+    nonas_table = []
+    for chnk in range(majiq_config.num_final_chunks):
+        temp_dir = "%s/tmp/chunk_%s" % (majiq_config.outDir, chnk)
+        temp_filename = '%s/%s.splicegraph.pkl' % (temp_dir, experiment)
+        if os.path.exists(temp_filename):
+            visual_gene_list = majiq_io.load_bin_file(temp_filename)
+            all_visual.append(visual_gene_list)
+    fname = '%s/%s%s.splicegraph' % (majiq_config.outDir, pref_file, experiment)
+    visual = np.concatenate(all_visual)
+    majiq_io.dump_bin_file(visual, fname)
+    del all_visual
+    del visual
+
+    for chnk in range(majiq_config.num_final_chunks):
+        temp_dir = "%s/tmp/chunk_%s" % (majiq_config.outDir, chnk)
+        filename = "%s/%s.majiq.pkl" % (temp_dir, experiment)
+        if os.path.exists(filename):
+            temp_table = majiq_io.load_bin_file(filename)
+            as_table.append(temp_table[0])
+            nonas_table.append(temp_table[1])
+
+    if len(as_table) == 0:
+        return
+
+    info = dict()
+    info['experiment'] = experiment
+    # info['GC_bins'] = majiq_config.gc_bins[exp_idx]
+    # info['GC_bins_val'] = majiq_config.gc_bins_val[exp_idx]
+    info['genome'] = majiq_config.genome
+    info['num_reads'] = majiq_config.num_mapped_reads[exp_idx]
+
+    at = np.concatenate(as_table)
+    for lsv in at:
+        lsv.set_gc_factor(exp_idx)
+
+
+    nat = np.concatenate(nonas_table)
+    clist = random.sample(nat, min(5000, len(nat)))
+    for jnc in clist:
+        jnc.set_gc_factor(exp_idx)
+
+    fname = '%s/%s%s.majiq' % (majiq_config.outDir, pref_file, experiment)
+    majiq_io.dump_bin_file((info, at, clist), fname)
 
 
 def print_junc_matrices(mat, tlb=None, fp=None):
@@ -329,145 +284,6 @@ def get_validated_pcr_lsv(candidates, out_dir):
                 print "PCR", ' '.join(pcr_lsv)
     fname = '%s/pcr.pkl' % out_dir
     majiq_io.dump_bin_file(pcr_list, fname)
-
-
-def prepare_gc_content(gene_list, temp_dir):
-    gc_pairs = {'GC': [[] for xx in xrange(mglobals.num_experiments)],
-                'COV': [[] for xx in xrange(mglobals.num_experiments)]}
-
-    for gn in gene_list:
-        for ex in gn.get_exon_list():
-            gc_val = ex.get_gc_content()
-            st, end = ex.get_coordinates()
-            if gc_val == 0 or end - st < 30:
-                continue
-            for exp_n in xrange(mglobals.num_experiments):
-                cov = ex.get_coverage(exp_n)
-                if cov < 1:
-                    continue
-                gc_pairs['GC'][exp_n].append(gc_val)
-                gc_pairs['COV'][exp_n].append(cov)
-
-    fname = '%s/gccontent.temppkl' % temp_dir
-    majiq_io.dump_bin_file(gc_pairs, fname)
-
-
-def gc_factor_calculation(nb):
-
-    local_bins = np.zeros(shape=(mglobals.num_experiments, nb+1), dtype=np.dtype('float'))
-    local_meanbins = np.zeros(shape=(mglobals.num_experiments, nb),   dtype=np.dtype('float'))
-    local_factor = np.zeros(shape=(mglobals.num_experiments, nb),   dtype=np.dtype('float'))
-
-    gc_pairs = {'GC': [[] for xx in xrange(mglobals.num_experiments)],
-                'COV': [[] for xx in xrange(mglobals.num_experiments)]}
-
-    # read local files
-    for chnk in range(mglobals.num_final_chunks):
-        temp_dir = "%s/tmp/chunk_%s" % (mglobals.outDir, chnk)
-        yfile = '%s/gccontent.temppkl' % temp_dir
-        if not os.path.exists(yfile):
-            continue
-        gc_c = majiq_io.load_bin_file(yfile)
-        for exp_n in xrange(mglobals.num_experiments):
-            gc_pairs['GC'][exp_n].extend(gc_c['GC'][exp_n])
-            gc_pairs['COV'][exp_n].extend(gc_c['COV'][exp_n])
-
-    #print mglobals.tissue_repl
-    for tissue, list_idx in mglobals.tissue_repl.items():
-        for exp_n in list_idx:
-            count = gc_pairs['COV'][exp_n]
-            gc = gc_pairs['GC'][exp_n]
-
-            if len(gc) == 0:
-                continue
-
-            count, gc = izip(*sorted(izip(count, gc), key=lambda x: x[1]))
-
-            num_regions = len(count)
-            nperbin = num_regions / nb
-
-            quant_median = [0.0]*8
-            mean_bins = [0]*nb
-            bins = [0]*nb
-
-            for ii in range(nb):
-                lb = ii * nperbin
-                if ii == nb-1:
-                    ub = num_regions
-                else:
-                    ub = (ii+1) * nperbin
-
-                a = np.asarray(count[lb:ub])
-                t = np.asarray(gc[lb:ub])
-
-                try:
-                    local_bins[exp_n, ii] = t.min()
-                except ValueError:
-                    local_bins[exp_n, ii] = 0
-                if ii == nb - 1:
-                    local_bins[exp_n, ii+1] = np.max(t)
-
-                #mean_bins[ii] = np.median(t)
-                mean_bins[ii] = np.mean(t)
-                bins[ii] = mquantiles(a, prob=np.arange(0.1, 0.9, 0.1))
-                #print "quantiles", bins[ii]
-
-            for qnt in range(8):
-                qnt_bns = np.ndarray(len(bins))
-                for idx, bb in enumerate(bins):
-                    qnt_bns[idx] = bb[qnt]
-                #print "BINS", qnt_bns
-                #quant_median[qnt]=np.median(qnt_bns)
-                quant_median[qnt] = np.mean(qnt_bns)
-
-            #print quant_median
-            gc_factor = np.zeros(nb, dtype=np.dtype('float'))
-            for ii in range(nb):
-                offst = np.zeros(len(quant_median), dtype=np.dtype('float'))
-                for idx, xx in enumerate(quant_median):
-                    offst[idx] = float(bins[ii][idx]) / float(xx)
-                gc_factor[ii] = 1/np.mean(offst)
-
-            #print 'MMMMM', gc_factor
-            local_meanbins[exp_n] = mean_bins
-            local_factor[exp_n] = gc_factor
-
-    mglobals.set_gc_factors(local_bins, local_factor, local_meanbins)
-
-
-def plot_gc_content():
-
-    idx = 0
-    for tissue, list_idx in mglobals.tissue_repl.items():
-        pyplot.figure(idx)
-        for exp_n in list_idx:
-#            f = interpolate.interp1d(mglobals.gc_means[exp_n], mglobals.gc_bins_vaL[exp_n])
-#            print mglobals.gc_means[exp_n]
-            mn = mglobals.gc_means[exp_n].min()
-            mx = mglobals.gc_means[exp_n].max()
-            xx = np.arange(mn, mx, 0.001)
-            yy = mglobals.gc_factor[exp_n](xx)
-            # print "XX ",exp_n, xx
-            # print "Yy", exp_n, yy
-            pyplot.plot(xx, yy, label=mglobals.exp_list[exp_n])
-            pyplot.axis((0.3, 0.7, 0.5, 1.5))
-            pyplot.title("Gc factor")
-            pyplot.grid()
-            pyplot.legend(loc='upper left')
-#        pyplot.show()
-        pyplot.savefig('%s/gcontent_%s.png' % (mglobals.outDir, tissue))
-        idx += 1
-
-
-def recreate_gene_tlb(gene_list):
-
-    for gn in gene_list:
-        mglobals.gene_tlb[gn.get_id()] = gn
-
-
-def clear_gene_tlb():
-    mglobals.gene_tlb.clear()
-    gc.collect()
 
 
 def to_gtf(wfile, seq_name, source, gene, mrna, start_trans, end_trans, strand, exon_l, frame_l):
@@ -536,18 +352,36 @@ def file_or_stdout(file_name):
             yield out_file
 
 
-def gather_files(out_dir, prefix='', gff_out=None, pcr_out=None, logger=None):
+def gather_files(out_dir, prefix='', gff_out=None, pcr_out=None, nthreads=1, logger=None):
 
     #GATHER
     logger.info("Gather outputs")
-    gc_factor_calculation(10)
-    merge_and_create_majiq_file(prefix)
+    if prefix != '':
+        prefix = '%s.' % prefix
+
+    if majiq_config.gcnorm:
+        gc_factor_calculation(10)
+
+    if nthreads > 1:
+        nthr = min(nthreads, 4)
+        pool = Pool(processes=nthr, maxtasksperchild=1)
+
+    for name, ind_list in majiq_config.tissue_repl.items():
+        for idx, exp_idx in enumerate(ind_list):
+            if nthreads > 1:
+                pool.apply_async(merge_and_create_majiq_file, [exp_idx, prefix])
+            else:
+                merge_and_create_majiq_file(exp_idx, prefix)
+
+    if nthreads > 1:
+        pool.close()
+        pool.join()
 
     if not gff_out is None:
         logger.info("Gather lsv and generate gff")
         fp = open('%s/%s' % (out_dir, gff_out), 'w+')
-        for chnk in range(mglobals.num_final_chunks):
-            temp_dir = "%s/tmp/chunk_%s" % (mglobals.outDir, chnk)
+        for chnk in range(majiq_config.num_final_chunks):
+            temp_dir = "%s/tmp/chunk_%s" % (majiq_config.outDir, chnk)
             yfile = '%s/temp_gff.pkl' % temp_dir
             if not os.path.exists(yfile):
                 continue
@@ -558,9 +392,9 @@ def gather_files(out_dir, prefix='', gff_out=None, pcr_out=None, logger=None):
 
     if not pcr_out is None:
         logger.info("Gather pcr results")
-        fp = open('%s/pcr_match.tab' % mglobals.outDir, 'w+')
-        for chnk in range(mglobals.num_final_chunks):
-            temp_dir = "%s/tmp/chunk_%s" % (mglobals.outDir, chnk)
+        fp = open('%s/pcr_match.tab' % majiq_config.outDir, 'w+')
+        for chnk in range(majiq_config.num_final_chunks):
+            temp_dir = "%s/tmp/chunk_%s" % (majiq_config.outDir, chnk)
             yfile = '%s/pcr.pkl' % temp_dir
             if not os.path.exists(yfile):
                 continue
@@ -574,20 +408,20 @@ def gather_files(out_dir, prefix='', gff_out=None, pcr_out=None, logger=None):
 
 def analyze_denovo_junctions(genes, output):
 
-    denovo_list = [[] for xx in range(mglobals.num_experiments)]
-    annot_list = [[] for xx in range(mglobals.num_experiments)]
+    denovo_list = [[] for xx in range(majiq_config.num_experiments)]
+    annot_list = [[] for xx in range(majiq_config.num_experiments)]
 
     for gg in genes:
         jlist = gg.get_all_junctions()
         for jj in jlist:
-            for tissue, list_idx in mglobals.tissue_repl.items():
+            for tissue, list_idx in majiq_config.tissue_repl.items():
                 for exp_n in list_idx:
                     if jj.is_annotated():
                         annot_list[exp_n].append(jj)
                     else:
                         denovo_list[exp_n].append(jj)
 
-    majiq_io.dump_bin_file([mglobals.tissue_repl, annot_list, denovo_list], output)
+    majiq_io.dump_bin_file([majiq_config.tissue_repl, annot_list, denovo_list], output)
 
 
 def histogram_for_exon_analysis(genes, output):

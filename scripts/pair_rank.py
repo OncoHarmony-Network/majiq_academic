@@ -73,11 +73,10 @@ def expected_dpsi(matrix, collapsed_mat=False):
     """
     Calculate sum_dpsi=Prob(dpsi)*dpsi == sum_v = v*P(Delta PSI)
     """
-    absolute = True
     ret = 0.
     collapsed = matrix
     if not collapsed_mat:
-    	collapsed = collapse_matrix(matrix)
+        collapsed = collapse_matrix(matrix)
     for i, v in enumerate(linspace(-1, 1, num=collapsed.shape[0])):
         ret += collapsed[i] * abs(v)
 
@@ -242,8 +241,7 @@ def rank_mats_original(mats_file, dofilter=True, ranknochange=False, majiq_n=Non
     expected_mask = np.array([abs(r[1]) >= 0.2 for r in rank])
     fdr_cutoff = 0.05
     if majiq_n[0]:
-        while np.count_nonzero(np.logical_and(expected_mask, np.array([r[3] <= fdr_cutoff for r in rank]))) < majiq_n[
-            0]:
+        while np.count_nonzero(np.logical_and(expected_mask, np.array([r[3] <= fdr_cutoff for r in rank]))) < majiq_n[0]:
             fdr_cutoff += 0.05
     else:
         majiq_n[0] = np.count_nonzero(np.array([r[3] <= 0.05 for r in rank]))
@@ -273,10 +271,6 @@ def _is_in_chunk(event1, chunk, report_rank2_expec=False):
     if report_rank2_expec:
         return [0, '']
     return 0
-
-
-def event_names_set_mats(rank):
-    pass
 
 
 def event_names_set_miso(rank):
