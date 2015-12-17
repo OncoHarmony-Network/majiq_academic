@@ -197,7 +197,7 @@ class Multi_Deltapair(BasicPipeline):
         meta_info, lsv_junc, const = majiq_io.load_data_lsv(fname, name, logger)
 
         # fitting the function
-        lsv_junc, const = self.gc_content_norm(lsv_junc, const)
+        # lsv_junc, const = self.gc_content_norm(lsv_junc, const)
         fitfunc = self.fitfunc(const[0])
         filtered_lsv = self.mark_stacks(lsv_junc, fitfunc)
 

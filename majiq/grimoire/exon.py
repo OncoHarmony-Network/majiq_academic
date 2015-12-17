@@ -281,8 +281,8 @@ class Exon:
             for jj in jlist:
                 for exp_idx in ind_list:
                     if only_annot or majiqfilter.reliable_in_data(jj, exp_idx,
-                                                    minnonzero=config.MINPOS,
-                                                    min_reads=config.MINREADS):
+                                                                  minnonzero=config.MINPOS,
+                                                                  min_reads=config.MINREADS):
                         counter += 1
                 if counter < group_thresh:
                     continue

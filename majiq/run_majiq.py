@@ -3,7 +3,7 @@ import argparse
 from majiq.src.basic_pipeline import builder, calcpsi
 from majiq.src.deltapsi import deltapair, multi_dpsi
 
-VERSION = '0.8.0.yeolab'
+VERSION = '0.9'
 
 
 def new_subparser():

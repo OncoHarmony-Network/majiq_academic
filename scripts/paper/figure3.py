@@ -155,10 +155,6 @@ def plot_fdrheatmap(vals, vals2, grps, output='.'):
                         verticalalignment='center',
                         )
 
-
-
-
-
     rev_df_grps = [grps[xx] for xx in group_order]
     df_grps = [grps[xx] for xx in reversed(group_order)]
     ax.set_xlim(-0.5, 12)
@@ -766,15 +762,15 @@ if __name__ == '__main__':
         os.makedirs(output)
         os.makedirs('%s/news' % output)
 
-    list_types, group_types = get_types(dire, onlyfiles, groups)
-    count_lsv = len(set(list_types.keys()))
-    stypes = {}
-    for kk, tyt in list_types.items():
-        if not tyt in stypes:
-            stypes[tyt] = 0
-        stypes[tyt] += 1
-    print "Plot 3.a 3.b"
-    all_plots_wrapper(stypes, count_lsv, output=output)
+    # list_types, group_types = get_types(dire, onlyfiles, groups)
+    # count_lsv = len(set(list_types.keys()))
+    # stypes = {}
+    # for kk, tyt in list_types.items():
+    #     if not tyt in stypes:
+    #         stypes[tyt] = 0
+    #     stypes[tyt] += 1
+    # print "Plot 3.a 3.b"
+    # all_plots_wrapper(stypes, count_lsv, output=output)
 
 
     #
@@ -790,10 +786,10 @@ if __name__ == '__main__':
     # plot_dominant_exons(values[1], ' 3\'splice sites', color=cb.PuRd[9])
 
     #heatmap
-    # print "Plot dpsi changing events heatmap"
-    # dire = './dpsi'
-    # filename_list = [f for f in listdir(dire) if isfile(join(dire, f)) and f.endswith('txt')]
-    # chg_lsv, complx_lsv = fdr_parse(dire, filename_list, groups, intronic_junc=ir_plots)
-    # plot_fdrheatmap(chg_lsv, complx_lsv, groups, output)
+    print "Plot dpsi changing events heatmap"
+    dire = './dpsi_voila'
+    filename_list = [f for f in listdir(dire) if isfile(join(dire, f)) and f.endswith('txt')]
+    chg_lsv, complx_lsv = fdr_parse(dire, filename_list, groups, intronic_junc=ir_plots)
+    plot_fdrheatmap(chg_lsv, complx_lsv, groups, output)
 
 
