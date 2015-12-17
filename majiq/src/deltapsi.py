@@ -198,8 +198,8 @@ class Multi_Deltapair(BasicPipeline):
 
         # fitting the function
         # lsv_junc, const = self.gc_content_norm(lsv_junc, const)
-        fitfunc = self.fitfunc(const[0])
-        filtered_lsv = self.mark_stacks(lsv_junc, fitfunc)
+        fitfunc = self.fitfunc(const[0])FIX MULTI
+        filtered_lsv = majiq_norm.mark_stacks(lsv_junc, fitfunc, self.markstacks, self.logger)
 
         lsv_info = np.zeros(shape=(len(filtered_lsv[0])), dtype=np.dtype('object'))
         lsv_samples = np.zeros(shape=(len(filtered_lsv[0])), dtype=np.dtype('object'))
