@@ -251,7 +251,7 @@ class Multi_Deltapair(BasicPipeline):
                 'plotpath': self.plotpath}
 
         outfdir = '%s/tmp/samples/' % self.output
-        if os.path.exists(outfdir):
+        if not os.path.exists(outfdir):
             for name, fname in dict_files.items():
 
                 if self.nthreads > 1:
