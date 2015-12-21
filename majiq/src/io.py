@@ -262,6 +262,8 @@ def rnaseq_intron_retention(filenames, gene_list, chnk, permissive=True, nondeno
                     # intron_parts /= chunk_len
 
                     intron_body_covered = True
+                    comp_chunk = nchunks
+                    intron_covered = 0
 
                     if intron_len > readlen:
                         for ii in range(nchunks):

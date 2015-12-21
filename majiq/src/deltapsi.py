@@ -250,14 +250,16 @@ class Multi_Deltapair(BasicPipeline):
                 'debug': self.debug,
                 'plotpath': self.plotpath}
 
-        for name, fname in dict_files.items():
+        outfdir = '%s/tmp/samples/' % self.output
+        if os.path.exists(outfdir):
+            for name, fname in dict_files.items():
 
-            if self.nthreads > 1:
-                p = Process(target=self._auxiliar_multi, args=(fname, name, conf))
-                p.start()
-                p.join()
-            else:
-                self._auxiliar_multi(fname, name, conf)
+                if self.nthreads > 1:
+                    p = Process(target=self._auxiliar_multi, args=(fname, name, conf))
+                    p.start()
+                    p.join()
+                else:
+                    self._auxiliar_multi(fname, name, conf)
 
         pool = Pool(processes=self.nthreads)
         for group1, group2 in list_deltas:
@@ -265,6 +267,7 @@ class Multi_Deltapair(BasicPipeline):
 
             num_exp = [len(groups[group1]), len(groups[group2])]
             meta_info = [[0] * num_exp[0], [0] * num_exp[1]]
+
 
             matched_files = [None] * num_exp[0]
             for idx, ii in enumerate(groups[group1]):
@@ -287,6 +290,7 @@ class Multi_Deltapair(BasicPipeline):
                                                               len(filtered_lsv2[0])))
 
             self.names = [group1, group2]
+            self.logger = logger
             group1, group2 = combine_for_priormatrix(matched_lsv[0], matched_lsv[1], matched_info, num_exp)
             psi_space, prior_matrix = majiq_psi.gen_prior_matrix(self, group1, group2, self.output, numbins=20,
                                                                  defaultprior=self.default_prior)
