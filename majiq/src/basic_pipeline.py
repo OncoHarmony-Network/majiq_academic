@@ -1,3 +1,6 @@
+from matplotlib import use
+use('Agg')
+
 import abc
 import pickle
 from multiprocessing import Pool, Process

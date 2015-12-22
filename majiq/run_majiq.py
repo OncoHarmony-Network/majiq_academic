@@ -1,5 +1,7 @@
 import argparse
 
+from matplotlib import use
+use('Agg')
 from majiq.src.basic_pipeline import builder, calcpsi
 from majiq.src.deltapsi import deltapair, multi_dpsi
 
