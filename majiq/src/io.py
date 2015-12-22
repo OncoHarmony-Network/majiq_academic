@@ -836,7 +836,10 @@ def read_multi_dpsi_conf(filename):
     deltas = []
     print list_of_deltas
     for kk, vv in list_of_deltas.items():
-        deltas.append((kk.lower(), vv.lower()))
+        tab = vv.split(',')
+        if len(tab) != 2:
+            print "ERROR INCORRECT dpsiconf file"
+        deltas.append((tab[0].lower(), tab[1].lower()))
     return groups, files_dict, deltas
 
 
