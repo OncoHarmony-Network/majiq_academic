@@ -834,9 +834,9 @@ def read_multi_dpsi_conf(filename):
             files_dict[fl_name] = abs_fls
 
     deltas = []
+    print list_of_deltas
     for kk, vv in list_of_deltas.items():
         deltas.append((kk.lower(), vv.lower()))
-
     return groups, files_dict, deltas
 
 
