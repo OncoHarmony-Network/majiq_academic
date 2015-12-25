@@ -263,91 +263,123 @@ class Multi_Deltapair(BasicPipeline):
 
         pool = Pool(processes=self.nthreads)
 
+        onlygather = True
+
+
+
         for group1, group2 in list_deltas:
             dpsi_name = '%s_%s' % (group1, group2)
 
             num_exp = [len(groups[group1]), len(groups[group2])]
             meta_info = [[0] * num_exp[0], [0] * num_exp[1]]
 
+            if not onlygather :
 
-            matched_files = [None] * num_exp[0]
-            for idx, ii in enumerate(groups[group1]):
-                outfdir = '%s/tmp/samples/' % self.output
-                infile = '%s/%s.pickle' % (outfdir, ii)
-                meta_info[0][idx], matched_files[idx], filt_vals = pickle.load(open(infile))
-            filtered_lsv1 = majiq_filter.quantifiable_in_group(matched_files, self.minpos, self.minreads,
-                                                               filt_vals, logger)
+                matched_files = [None] * num_exp[0]
+                for idx, ii in enumerate(groups[group1]):
+                    outfdir = '%s/tmp/samples/' % self.output
+                    infile = '%s/%s.pickle' % (outfdir, ii)
+                    meta_info[0][idx], matched_files[idx], filt_vals = pickle.load(open(infile))
+                filtered_lsv1 = majiq_filter.quantifiable_in_group(matched_files, self.minpos, self.minreads,
+                                                                   filt_vals, logger)
 
-            matched_files = [None] * num_exp[1]
-            for idx, ii in enumerate(groups[group2]):
-                outfdir = '%s/tmp/samples/' % self.output
-                infile = '%s/%s.pickle' % (outfdir, ii)
-                meta_info[1][idx], matched_files[idx], filt_vals = pickle.load(open(infile))
-            filtered_lsv2 = majiq_filter.quantifiable_in_group(matched_files, self.minpos, self.minreads,
-                                                               filt_vals, logger)
+                matched_files = [None] * num_exp[1]
+                for idx, ii in enumerate(groups[group2]):
+                    outfdir = '%s/tmp/samples/' % self.output
+                    infile = '%s/%s.pickle' % (outfdir, ii)
+                    meta_info[1][idx], matched_files[idx], filt_vals = pickle.load(open(infile))
+                filtered_lsv2 = majiq_filter.quantifiable_in_group(matched_files, self.minpos, self.minreads,
+                                                                   filt_vals, logger)
 
-            matched_lsv, matched_info = majiq_filter.lsv_intersection(filtered_lsv1, filtered_lsv2, bycol=True)
-            logger.info("After intersection:  %d/(%d, %d)" % (len(matched_info), len(filtered_lsv1[0]),
-                                                              len(filtered_lsv2[0])))
+                matched_lsv, matched_info = majiq_filter.lsv_intersection(filtered_lsv1, filtered_lsv2, bycol=True)
+                logger.info("After intersection:  %d/(%d, %d)" % (len(matched_info), len(filtered_lsv1[0]),
+                                                                  len(filtered_lsv2[0])))
 
-            self.names = [group1, group2]
-            self.logger = logger
-            group1, group2 = combine_for_priormatrix(matched_lsv[0], matched_lsv[1], matched_info, num_exp)
-            psi_space, prior_matrix = majiq_psi.gen_prior_matrix(self, group1, group2, self.output, numbins=20,
-                                                                 defaultprior=self.default_prior)
+                self.names = [group1, group2]
+                self.logger = logger
+                group1, group2 = combine_for_priormatrix(matched_lsv[0], matched_lsv[1], matched_info, num_exp)
+                psi_space, prior_matrix = majiq_psi.gen_prior_matrix(self, group1, group2, self.output, numbins=20,
+                                                                     defaultprior=self.default_prior)
 
 
-            outfdir = '%s/tmp/%s/chunks/' % (self.output, dpsi_name)
-            if not os.path.exists(outfdir):
-                os.makedirs(outfdir)
+                outfdir = '%s/tmp/%s/chunks/' % (self.output, dpsi_name)
+                if not os.path.exists(outfdir):
+                    os.makedirs(outfdir)
 
-            logger.info("Saving prior matrix for %s..." % dpsi_name)
-            dpsi_prior_name = "%s/%s_priormatrix.pickle" % (self.output, dpsi_name)
-            tout = open(dpsi_prior_name, 'w+')
-            pickle.dump(prior_matrix, tout)
-            tout.close()
-
-            logger.info("Saving meta info for %s..." % dpsi_name)
-            tout = open("%s/tmp/%s_metainfo.pickle" % (self.output, dpsi_name), 'w+')
-            pickle.dump(meta_info, tout)
-            tout.close()
-
-            csize = len(matched_lsv[0]) / nchunks
-
-            logger.info("Creating %s chunks with <= %s lsv" % (nchunks, csize))
-            for nthrd in xrange(nchunks):
-                lb = nthrd * csize
-                ub = min((nthrd + 1) * csize, len(matched_lsv[0]))
-                if nthrd == nchunks - 1:
-                    ub = len(matched_lsv[0])
-                lsv_list = [matched_lsv[0][lb:ub], matched_lsv[1][lb:ub]]
-                lsv_info = matched_info[lb:ub]
-
-                out_file = '%s/chunk_%d.pickle' % (outfdir, nthrd)
-                tout = open(out_file, 'w+')
-                pickle.dump([lsv_list, lsv_info, num_exp, conf, None, psi_space], tout)
+                logger.info("Saving prior matrix for %s..." % dpsi_name)
+                dpsi_prior_name = "%s/%s_priormatrix.pickle" % (self.output, dpsi_name)
+                tout = open(dpsi_prior_name, 'w+')
+                pickle.dump(prior_matrix, tout)
                 tout.close()
 
-                if self.nthreads == 1:
-                    pipe.parallel_lsv_child_calculation(deltapsi_quantify,
-                                                        [out_file, dpsi_prior_name, False],
-                                                        outfdir,
-                                                        dpsi_name,
-                                                        nthrd)
+                logger.info("Saving meta info for %s..." % dpsi_name)
+                tout = open("%s/tmp/%s_metainfo.pickle" % (self.output, dpsi_name), 'w+')
+                pickle.dump(meta_info, tout)
+                tout.close()
 
-                else:
-                    pool.apply_async(pipe.parallel_lsv_child_calculation, [deltapsi_quantify,
-                                                                           [out_file, dpsi_prior_name, False],
-                                                                           outfdir,
-                                                                           dpsi_name,
-                                                                           nthrd])
+                csize = len(matched_lsv[0]) / nchunks
 
-        if self.nthreads > 1:
-            pool.close()
-            pool.join()
+                logger.info("Creating %s chunks with <= %s lsv" % (nchunks, csize))
+                for nthrd in xrange(nchunks):
+                    lb = nthrd * csize
+                    ub = min((nthrd + 1) * csize, len(matched_lsv[0]))
+                    if nthrd == nchunks - 1:
+                        ub = len(matched_lsv[0])
+                    lsv_list = [matched_lsv[0][lb:ub], matched_lsv[1][lb:ub]]
+                    lsv_info = matched_info[lb:ub]
 
-            gc.collect()
-        pass
+                    out_file = '%s/chunk_%d.pickle' % (outfdir, nthrd)
+                    tout = open(out_file, 'w+')
+                    pickle.dump([lsv_list, lsv_info, num_exp, conf, None, psi_space], tout)
+                    tout.close()
+
+                    if self.nthreads == 1:
+                        pipe.parallel_lsv_child_calculation(deltapsi_quantify,
+                                                            [out_file, dpsi_prior_name, False],
+                                                            outfdir,
+                                                            dpsi_name,
+                                                            nthrd)
+
+                    else:
+                        pool.apply_async(pipe.parallel_lsv_child_calculation, [deltapsi_quantify,
+                                                                               [out_file, dpsi_prior_name, False],
+                                                                               outfdir,
+                                                                               dpsi_name,
+                                                                               nthrd])
+
+                if self.nthreads > 1:
+                    pool.close()
+                    pool.join()
+
+                    gc.collect()
+
+            posterior_matrix = []
+            names = []
+            psi_list1 = []
+            psi_list2 = []
+            logger.info("GATHER pickles")
+            for nthrd in xrange(self.nthreads):
+                tempfile = open("%s/tmp/%s_%s_th%s.%s.pickle" % (self.output, self.names[0],
+                                                                 self.names[1], nthrd, deltapsi_quantify.__name__))
+                ptempt = pickle.load(tempfile)
+                posterior_matrix.extend(ptempt[0])
+                names.extend(ptempt[1])
+                psi_list1.extend(ptempt[2])
+                psi_list2.extend(ptempt[3])
+
+            logger.info("Getting meta info for %s..." % self.names)
+            tin = open("%s/tmp/%s_metainfo.pickle" % (self.output, dpsi_name))
+            meta_info = pickle.load(tin)
+            tin.close()
+
+            pickle_path = "%s/%s_%s.%s.pickle" % (self.output, self.names[0], self.names[1], deltapsi_quantify.__name__)
+            # pickle.dump([posterior_matrix, names, meta_info, psi_list1, psi_list2], open(pickle_path, 'w'))
+            majiq_io.dump_lsvs_voila(pickle_path, posterior_matrix, names, meta_info, psi_list1, psi_list2)
+            logger.info("DeltaPSI calculation for %s_%s ended succesfully! Result can be found at %s" % (self.names[0],
+                                                                                                         self.names[1],
+                                                                                                         self.output))
+
+        logger.info("Alakazam! Done.")
 
 
 def deltapsi_quantify(fname, delta_prior_path, boots_sample=True, logger=None):
