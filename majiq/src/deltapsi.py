@@ -359,7 +359,7 @@ class Multi_Deltapair(BasicPipeline):
             psi_list2 = []
             logger.info("GATHER pickles")
             for nthrd in xrange(self.nthreads):
-                tempfile = open("%s/tmp/%s_%s_th%s.%s.pickle" % (self.output, self.names[0],
+                tempfile = open("%s/tmp/%s/chunks/%s_%s_th%s.%s.pickle" % (self.output, dpsi_name, self.names[0],
                                                                  self.names[1], nthrd, deltapsi_quantify.__name__))
                 ptempt = pickle.load(tempfile)
                 posterior_matrix.extend(ptempt[0])
