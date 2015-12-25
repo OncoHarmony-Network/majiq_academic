@@ -272,8 +272,9 @@ class Multi_Deltapair(BasicPipeline):
 
             num_exp = [len(groups[group1]), len(groups[group2])]
             meta_info = [[0] * num_exp[0], [0] * num_exp[1]]
-
-            if not onlygather :
+            self.names = [group1, group2]
+            self.logger = logger
+            if not onlygather:
 
                 matched_files = [None] * num_exp[0]
                 for idx, ii in enumerate(groups[group1]):
@@ -295,8 +296,7 @@ class Multi_Deltapair(BasicPipeline):
                 logger.info("After intersection:  %d/(%d, %d)" % (len(matched_info), len(filtered_lsv1[0]),
                                                                   len(filtered_lsv2[0])))
 
-                self.names = [group1, group2]
-                self.logger = logger
+
                 group1, group2 = combine_for_priormatrix(matched_lsv[0], matched_lsv[1], matched_info, num_exp)
                 psi_space, prior_matrix = majiq_psi.gen_prior_matrix(self, group1, group2, self.output, numbins=20,
                                                                      defaultprior=self.default_prior)
