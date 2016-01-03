@@ -69,6 +69,13 @@ def v_sum(matrix):
     return ret
 
 
+def get_expected_psi(bins):
+    bins = np.array(bins)
+    step = 1.0 / bins.size
+    projection_prod = bins * np.arange(step / 2, 1, step)
+    return np.sum(projection_prod)
+
+
 def expected_dpsi(matrix, collapsed_mat=False):
     """
     Calculate sum_dpsi=Prob(dpsi)*dpsi == sum_v = v*P(Delta PSI)
@@ -94,7 +101,11 @@ def rank_majiq(vlsv_list, V=0.2, absolute=True, dofilter=True, E=False, ranknoch
     for i, vlsv in enumerate(vlsv_list):
         lsv_bins = vlsv.get_bins()
         junc_n = 0
-        if 'i' in vlsv.get_type(): continue
+        if 'i' in vlsv.get_type(): 
+            if max(get_expected_psi(vlsv.psi1[-1]), get_expected_psi(vlsv.psi2[-1])) > 0.1 or len(lsv_bins)<2:
+                continue
+            lsv_bins = lsv_bins[:-1]
+
         if len(lsv_bins) > 2:
             if junc_selection:
                 bins_selected = lsv_bins[junc_selection[vlsv.get_id()]]
@@ -163,7 +174,7 @@ def rank_naive(bins_list, names, V=0.2, absolute=True, E=False, ranknochange=Fal
     print "#E(Delta(PSI))>%.2f and FDR<0.05: %d" % (V, np.count_nonzero(expected_fdr_mask))
 
     rank.sort(key=lambda x: (x[1], x[2]), reverse=True)
-    return rank
+    return rank, np.count_nonzero(expected_fdr_mask)
 
 
 def rank_miso(path, dofilter=True, ranknochange=False, complex_lsvs=False):
@@ -203,7 +214,7 @@ def rank_mats(path, dofilter=True, ranknochange=False):
     return rank
 
 
-def rank_mats_original(mats_file, dofilter=True, ranknochange=False, majiq_n=None):
+def rank_mats_original(mats_file, dofilter=True, ranknochange=False, majiq_n=None, V=0.2):
     """Rank Splicing Events detected as differentially expressed by MATS. Compute the FDR for downstream analysis
 
     :param mats_file:
@@ -234,11 +245,11 @@ def rank_mats_original(mats_file, dofilter=True, ranknochange=False, majiq_n=Non
             pvalue = float(sline[-5])
             fdr = float(sline[-4])
             delta_psi = float(sline[-1])
-            pass_thres =int(abs(delta_psi)>=0.2 and fdr<=0.05) 
+            pass_thres =int(abs(delta_psi)>=V and fdr<=0.05) 
             mats_nn += pass_thres 
             rank.append([geneID, delta_psi, pvalue, fdr, pass_thres])
 
-    expected_mask = np.array([abs(r[1]) >= 0.2 for r in rank])
+    expected_mask = np.array([abs(r[1]) >= V for r in rank])
     fdr_cutoff = 0.05
     if majiq_n[0]:
         while np.count_nonzero(np.logical_and(expected_mask, np.array([r[3] <= fdr_cutoff for r in rank]))) < majiq_n[0]:
@@ -251,8 +262,8 @@ def rank_mats_original(mats_file, dofilter=True, ranknochange=False, majiq_n=Non
     print "#FDR < 0.05: %d" % np.count_nonzero(np.array([r[3] <= 0.05 for r in rank]))
     #rank = np.array(rank)[np.logical_and(expected_mask, fdr_mask)].tolist() # TODO: Remove this!!
     print "#FDR < %.2f: %d" % (fdr_cutoff, np.count_nonzero(fdr_mask))
-    print "#E(Delta(PSI))>0.20: %d" % np.count_nonzero(expected_mask)
-    print "#E(Delta(PSI))>0.20 and FDR<0.05: %d" % np.count_nonzero(np.logical_and(expected_mask, fdr_mask))
+    print "#E(Delta(PSI))>%.2f: %d" % (V, np.count_nonzero(expected_mask))
+    print "#E(Delta(PSI))>%.2f and FDR<0.05: %d" % (V, np.count_nonzero(np.logical_and(expected_mask, fdr_mask)))
 
     if ranknochange:
         rank.sort(key=lambda x: (abs(float(x[1])), float(x[3])))  # biggest delta PSI first, small p-value
@@ -424,8 +435,9 @@ def main():
     if args.mats_files:
         if args.mats_n:
             majiq_N = [None]
+        matsN_aux = [None]
         for file_str in args.mats_files:
-            mmats_n, mats_rank = rank_mats_original(file_str, args.filter, args.ranknochange, majiq_n=majiq_N)
+            mmats_n, mats_rank = rank_mats_original(file_str, args.filter, args.ranknochange, majiq_n=matsN_aux, V=args.V)#majiq_N)
             if not mats_n_orig:
                 mats_n_orig = mmats_n
             if len(ranks['mats']) > 0:
@@ -454,9 +466,12 @@ def main():
 
     if args.naive_files:
         names_naive_exp1 = None
+        naive_N = None
         for file_str in args.naive_files:
             naive_data = pickle.load(open(file_str, 'r'))
-            naive_rank = rank_naive(naive_data[1], naive_data[0], args.V, args.absolute, args.E, args.ranknochange)
+            naive_rank, naive_n_tmp = rank_naive(naive_data[1], naive_data[0], args.V, args.absolute, args.E, args.ranknochange)
+            if not naive_N:
+                naive_N = naive_n_tmp
             if args.type_rank == 'only_exp1':
                 # Use only MAJIQ selected events for experiment 1
                 names_naive = [naive_info[0] for naive_info in naive_rank]
@@ -481,7 +496,13 @@ def main():
         max_events = min(args.max, len(rank1))
         if majiq_N[0] and not args.only_events:
             max_events = min(max_events, majiq_N[0])
-
+        
+        if 'naive' in method_name:
+            max_events = min(max_events, naive_N)
+        
+        if 'mats' in method_name:
+            max_events = min(max_events, matsN_aux[0])
+        
         fdr = []
         if args.proximity or args.fullrank:
             # Using proximity or full rank window
