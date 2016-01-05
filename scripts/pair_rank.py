@@ -98,6 +98,7 @@ def rank_majiq(vlsv_list, V=0.2, absolute=True, dofilter=True, E=False, ranknoch
     rank = []
 
     print "Num of LSVs in majiq: %d" % len(vlsv_list)
+    covered_exons = []
     for i, vlsv in enumerate(vlsv_list):
         lsv_bins = vlsv.get_bins()
         junc_n = 0
@@ -106,6 +107,11 @@ def rank_majiq(vlsv_list, V=0.2, absolute=True, dofilter=True, E=False, ranknoch
                 continue
             lsv_bins = lsv_bins[:-1]
 
+        # Filtering out lsvs that have exons shared with an already added lsv
+        lsv_exon_coords = [int(coord) for coord in vlsv.get_id().split(':')[1].split('-')]
+        if np.any( [ee.get_coords() in covered_exons for ee in vlsv.lsv_graphic.get_exons() if list(ee.get_coords()) <> lsv_exon_coords ] ):
+            continue
+        covered_exons.extend([ee.get_coords() for ee in vlsv.lsv_graphic.get_exons() if list(ee.get_coords()) <> lsv_exon_coords ])
         if len(lsv_bins) > 2:
             if junc_selection:
                 bins_selected = lsv_bins[junc_selection[vlsv.get_id()]]
@@ -150,9 +156,15 @@ def rank_naive(bins_list, names, V=0.2, absolute=True, E=False, ranknochange=Fal
     """Similar to MAJIQ files with the difference that the matrix is already collapsed"""
     rank = []
 
+    covered_exons = []
     print "Num of LSVs in naive_bootstrapping: %d" % len(bins_list)
     for i, lsv_bins in enumerate(bins_list):
 
+        # Filtering out lsvs that have exons shared with an already added lsv
+        lsv_exon_coords = [int(coord) for coord in names[i][1].split(':')[1].split('-')]
+        if np.any( [ee.get_coords() in covered_exons for ee in names[i][4].get_exons() if list(ee.get_coords()) <> lsv_exon_coords ] ):
+            continue
+        covered_exons.extend( [ee.get_coords() for ee in names[i][4].get_exons() if list(ee.get_coords()) <> lsv_exon_coords ]) 
         junc_n = -1
         most_change = 0
         dmatrix = lsv_bins

@@ -51,7 +51,7 @@ def list_files_or_dir(file_or_dir_list, suffix='*', containing='*'):
     return files
 
 
-def miso_delta_reader(path, dofilter=False, complex_lsvs=False, result_dict=None):
+def miso_delta_reader(path, dofilter=False, complex_lsvs=False, result_dict=None, from_majiq=True):
     """Read delta psi calculations from MISO."""
     ret = []
     for line in open(path):
@@ -67,21 +67,27 @@ def miso_delta_reader(path, dofilter=False, complex_lsvs=False, result_dict=None
             delta_psi = sline[7].split(",")
             bayes_factor = sline[8].split(",")
             event_name = sline[0]
-
-            if complex_lsvs or len(transcripts) == 2:  # only interested in 2 transcripts events for now
-                if result_dict is not None:
-                    for i, dpsi in enumerate(delta_psi):
-                        result_dict["%s#%d" % (event_name, i)].append(float(dpsi))
-                    if len(delta_psi) == 1:
-                        result_dict["%s#1" % event_name].append(-float(delta_psi[0]))
+            
+            if not from_majiq:
+                if result_dict is not None: 
+                    result_dict.append(float(delta_psi[0]))
                 else:
-                    max_dpsi = 0
-                    max_junc = 0
-                    for i, dpsi in enumerate(delta_psi):
-                        if abs(float(delta_psi[i])) > max_dpsi:
-                            max_dpsi = abs(float(delta_psi[i]))
-                            max_junc = i
-                    ret.append([event_name, float(delta_psi[max_junc]), float(bayes_factor[max_junc]), 1])
+                    ret.append([event_name, float(delta_psi[0]), float(bayes_factor[0]), 1])
+            else: 
+                if complex_lsvs or len(transcripts) == 2:  # only interested in 2 transcripts events for now
+                    if result_dict is not None:
+                        for i, dpsi in enumerate(delta_psi):
+                            result_dict["%s#%d" % (event_name, i)].append(float(dpsi))
+                        if len(delta_psi) == 1:
+                            result_dict["%s#1" % event_name].append(-float(delta_psi[0]))
+                    else:
+                        max_dpsi = 0
+                        max_junc = 0
+                        for i, dpsi in enumerate(delta_psi):
+                            if abs(float(delta_psi[i])) > max_dpsi:
+                                max_dpsi = abs(float(delta_psi[i]))
+                                max_junc = i
+                        ret.append([event_name, float(delta_psi[max_junc]), float(bayes_factor[max_junc]), 1])
     return ret
 
 
