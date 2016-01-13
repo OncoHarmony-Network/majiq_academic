@@ -514,7 +514,10 @@ def main():
         
         if 'mats' in method_name:
             max_events = min(max_events, matsN_aux[0])
-        
+       
+        if 'miso' in method_name:
+            max_events = min(max_events, matsN_aux[0])
+
         fdr = []
         if args.proximity or args.fullrank:
             # Using proximity or full rank window
