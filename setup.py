@@ -3,7 +3,7 @@ from setuptools import setup, find_packages
 setup(
     name="majiq",
     packages=find_packages(),
-    version="0.8.YeoLab",
+    version="0.9.rc",
     description="MAJIQ",
     author='BioCiphers Lab',
     author_email='majiq@biociphers.org',
