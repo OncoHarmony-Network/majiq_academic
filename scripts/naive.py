@@ -2,7 +2,7 @@
 
 from matplotlib import use
 
-from scripts import src as majiq_io
+from majiq.src import io as majiq_io
 
 
 use('Agg')
@@ -13,6 +13,33 @@ import majiq.src.filter as majiq_filter
 import scipy.stats
 import pickle
 import random
+import logging
+
+def get_logger(logger_name, silent=False, debug=False):
+    """
+    Returns a logger instance. verbose = False will silence the logger, debug will give
+    more information intended for debugging purposes.
+    """
+    logging_format = "%(asctime)s (PID:%(process)s) - %(levelname)s - %(message)s"
+    logging.basicConfig(filename=logger_name, format=logging_format)
+    logger = logging.getLogger(logger_name)
+    if debug:
+        logger.setLevel(logging.DEBUG)
+    else:
+        logger.setLevel(logging.INFO)
+
+    ch = logging.StreamHandler()
+    if debug:
+        ch.setLevel(logging.DEBUG)
+    elif not silent:
+        ch.setLevel(logging.INFO)
+    else:
+        ch.setLevel(logging.WARNING)
+
+    formatter = logging.Formatter("%(asctime)s (PID:%(process)s) - %(levelname)s - %(message)s")
+    ch.setFormatter(formatter)
+    logger.addHandler(ch)
+    return logger
 
 
 def res_dump(data, p_id, path):
@@ -55,6 +82,8 @@ def calcpsi_func(params):
 
 
 def deltapsi_func(params):
+    
+    logger = get_logger('nb.log')
     print "Delta psi"
     print "Loading %s..." % params.file1,
     info1, lsv_junc1, const = majiq_io.load_data_lsv(params.file1, None)
@@ -70,8 +99,8 @@ def deltapsi_func(params):
 
     nbins = 40
     fon = [True, False]
-    lsv_junc1 = majiq_filter.lsv_quantifiable(lsv_junc1, 1, params.minreads, None, fon)
-    lsv_junc2 = majiq_filter.lsv_quantifiable(lsv_junc2, 1, params.minreads, None, fon)
+    lsv_junc1 = majiq_filter.lsv_quantifiable(lsv_junc1, 1, params.minreads, None, logger, fon)
+    lsv_junc2 = majiq_filter.lsv_quantifiable(lsv_junc2, 1, params.minreads, None, logger, fon)
 
     matched_lsv, matched_info = majiq_filter.lsv_intersection(lsv_junc1, lsv_junc2)
 

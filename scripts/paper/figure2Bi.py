@@ -42,7 +42,7 @@ def add_method(method_name, method_num, targetdir, group_folder):
             #plot the diagonal if we are in the first step
             diagonal = np.linspace(0, 1, num=numevents+1)
             plt.plot(diagonal, diagonal, '--', color="#cccccc")
-            plt.plot(np.linspace(0, 1, len(ratio)), ratio, '-', label="%s Groups - %.0f%%" % (method_name.upper(), math.ceil(ratio[-1]*100)) , linewidth=4, color=rgb_to_hex(cb.Paired[10][2*method_num + 1]), alpha=1)
+            plt.plot(np.linspace(0, 1, len(ratio)), ratio, '-', label="%s Groups - %.0f%% (N=%d)" % (method_name.upper(), math.ceil(ratio[-1]*100), numevents) , linewidth=4, color=rgb_to_hex(cb.Paired[10][2*method_num + 1]), alpha=1)
             continue
 
         n_list.append(len(ratio))
@@ -59,7 +59,7 @@ def add_method(method_name, method_num, targetdir, group_folder):
     ndbins=np.array(bins_all, ndmin=2)
     nbins_n1=np.array(bins_n1)
 
-    plt.plot(np.arange(0+1./(2*bins_area), 1, 1./bins_area), np.mean(ndbins, axis=0), label="%s Pairs mean & STD - %.0f%%" % (method_name.upper(), math.ceil(np.mean(ndbins, axis=0)[-1]*100)), color=rgb_to_hex(cb.Paired[10][2*method_num + 1]), lw=2)
+    plt.plot(np.arange(0+1./(2*bins_area), 1, 1./bins_area), np.mean(ndbins, axis=0), label="%s Pairs mean - %.0f%% (Avg. N=%.0f)" % (method_name.upper(), math.ceil(np.mean(ndbins, axis=0)[-1]*100), np.mean(n_list)), color=rgb_to_hex(cb.Paired[10][2*method_num + 1]), lw=2)
    # plt.plot(np.arange(0, 1, 1./nbins_n1.shape[1]), np.mean(nbins_n1, axis=0), '--', label="%s Pairs Null Model & STD - %.0f%%" % (method_name.upper(), math.ceil(np.mean(nbins_n1, axis=0)[-1]*100)), color=rgb_to_hex(cb.Paired[10][2*method_num + 1]), lw=2)
 
     plt.fill_between(np.arange(0+1./(2*bins_area),1,1./bins_area),
@@ -109,7 +109,8 @@ def main():
     plt.xlim(0, 1)
     plt.ylim(0, 1) #a ratio
 
-    plt.title("%s (N=%d)" % (args.plottitle, int(np.mean(avg_ns))), fontsize=16)
+    #plt.title("%s (N=%d)" % (args.plottitle, int(np.mean(avg_ns))), fontsize=16)
+    plt.title("%s" % (args.plottitle), fontsize=16)
     plt.legend(loc=2, fontsize=11)
     save_or_show(args.plotpath, args.plotname, exten=args.extension)
 

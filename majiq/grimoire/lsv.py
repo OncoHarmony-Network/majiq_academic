@@ -303,7 +303,7 @@ class LSV(object):
             exon_list.append(eg)
 
         splice_lsv = LsvGraphic(type_lsv=self.ext_type, coords=self.coords, id=self.id,
-                                name=self.exon.get_gene().get_id(),
+                                name=self.exon.get_gene().get_name(),
                                 strand=self.get_strand(), exons=exon_list, junctions=junc_list,
                                 chrom=self.get_chromosome())
 
