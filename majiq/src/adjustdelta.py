@@ -4,7 +4,7 @@ import matplotlib.pyplot as plt
 
 from scipy.stats import beta
 from scipy.misc import logsumexp
-
+import majiq.src.plotting as mplot
 PSEUDO = 0.0001
 
 
@@ -187,20 +187,6 @@ def plot_pi(p_mixture, fig):
     fig.set_xticks(np.arange(2) + 0.3, ["Center", "change"])
 
 
-#def plot_pi(pi_center, pi_change):
-#    title("Pi distributions")
-#    ylim(0, 1)
-#    ylabel("Weight")
-#    bar(arange(2), [pi_center, pi_change])
-#    xticks(arange(2)+0.3, ["Center", "change"], rotation=50)
-
-def _save_or_show(plotpath, name):
-    if plotpath:
-        plt.savefig("%s_%s.png" % (plotpath, name), width=200, height=400, dpi=100)
-        plt.clf()
-    else:
-        plt.show()
-
 
 def EM(a_change, b_change, a_center, b_center, pi_change, pi_center, deltadata, num_iter, plotpath, logger=False):
     fig = plt.figure(figsize=[15, 10])
@@ -210,7 +196,7 @@ def EM(a_change, b_change, a_center, b_center, pi_change, pi_center, deltadata, 
 
     plot_all(a_center, b_center, pi_center, "Center", a_change, b_change, pi_change, "change", "Initial Parameters",
              deltadata)
-    _save_or_show(plotpath, "init")
+    mplot.save_or_show(plotpath, "init")
     for iteration in xrange(num_iter):
         a_change, b_change, a_center, b_center, pi_change, pi_center = estimate_parameters(a_change, b_change, a_center,
                                                                                            b_center, pi_change,
@@ -221,7 +207,7 @@ def EM(a_change, b_change, a_center, b_center, pi_change, pi_center, deltadata, 
             current_likelihood))
         plot_all(a_center, b_center, pi_center, "Center", a_change, b_change, pi_change, "Change",
                  "iteration %s (likelihood: %.5f)" % (iteration, current_likelihood), deltadata)
-        _save_or_show(plotpath, "iter%05d" % iteration)
+        mplot.save_or_show(plotpath, "iter%05d" % iteration)
         prev_likelihood = current_likelihood
 
     return [[a_center, b_center, pi_center], [a_change, b_change, pi_change]]
@@ -407,7 +393,7 @@ def EMBetaMixture(D, p0_mix, beta0_mix, num_iter, min_ratio=1e-5, logger=False, 
 
     logp_D, logp_Dsum, LL, zrow = loglikelihood(D, beta_mix, logp_mix)
     plot_all_lsv(D0, beta_mix, pmix, labels, 'iteration 0')
-    _save_or_show(plotpath, "iter_0.jun_%s" % nj)
+    mplot.save_or_show(plotpath, "iter_0.jun_%s" % nj)
     if logger: logger.info("[NJ:%s] Initial Log_Likelihood %.3f \n" % (nj, LL))
     #    pdb.set_trace()
     ones_1k = np.ones(shape=(1, K), dtype=np.float)
@@ -437,7 +423,7 @@ def EMBetaMixture(D, p0_mix, beta0_mix, num_iter, min_ratio=1e-5, logger=False, 
         logp_D, logp_Dsum, LL, zrow = loglikelihood(D, new_beta_mix, np.log(new_pmix))
         if logger: logger.info("[NJ:%s] EM Iteration %d:\t LL: %.3f\n" % (nj, mm, LL))
         plot_all_lsv(D0, beta_mix, pmix, labels, 'iteration %s' % str(mm + 1))
-        _save_or_show(plotpath, "iter_%05d.jun_%s" % (mm + 1, nj))
+        mplot.save_or_show(plotpath, "iter_%05d.jun_%s" % (mm + 1, nj))
 
         if LL < LLold:
             if logger:

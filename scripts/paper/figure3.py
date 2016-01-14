@@ -705,14 +705,16 @@ def fdr_parse(direc, file_list, group_list, intronic_junc=False):
             if intronic_junc:
                 psi_list_check = psi_list[-1:]
             else:
-                # if abs(psi_list[-1]) < 0.2:
-                #     psi_list_check = psi_list[:-1]
-                # else:
-                #     continue
-                psi_list_check = psi_list
+                if ir_plots:
+                    if abs(psi_list[-1]) < 0.2:
+                        psi_list_check = psi_list[:-1]
+                    else:
+                        continue
+                else:
+                    psi_list_check = psi_list
 
             for pp in psi_list_check:
-                if abs(pp) > 0.2:
+                if abs(pp) >= 0.2:
                     changing[x, y] += 1
                     changing[y, x] += 1
                     total_dict.add(tab[2])
@@ -762,15 +764,15 @@ if __name__ == '__main__':
         os.makedirs(output)
         os.makedirs('%s/news' % output)
 
-    list_types, group_types = get_types(dire, onlyfiles, groups)
-    count_lsv = len(set(list_types.keys()))
-    stypes = {}
-    for kk, tyt in list_types.items():
-        if not tyt in stypes:
-            stypes[tyt] = 0
-        stypes[tyt] += 1
-    print "Plot 3.a 3.b"
-    all_plots_wrapper(stypes, count_lsv, output=output)
+    # list_types, group_types = get_types(dire, onlyfiles, groups)
+    # count_lsv = len(set(list_types.keys()))
+    # stypes = {}
+    # for kk, tyt in list_types.items():
+    #     if not tyt in stypes:
+    #         stypes[tyt] = 0
+    #     stypes[tyt] += 1
+    # print "Plot 3.a 3.b"
+    # all_plots_wrapper(stypes, count_lsv, output=output)
 
 
     #
@@ -793,3 +795,8 @@ if __name__ == '__main__':
     # plot_fdrheatmap(chg_lsv, complx_lsv, groups, output)
 
 
+    print "Plot intronic changing but not the intron"
+    dire = './dpsi_voila'
+    filename_list = [f for f in listdir(dire) if isfile(join(dire, f)) and f.endswith('txt')]
+    chg_lsv, complx_lsv = fdr_parse(dire, filename_list, groups, intronic_junc=False)
+    plot_fdrheatmap(chg_lsv, complx_lsv, groups, output)
