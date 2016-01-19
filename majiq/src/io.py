@@ -7,7 +7,6 @@ from collections import namedtuple
 import gzip
 import urllib
 import math
-
 import numpy as np
 import pysam
 import ConfigParser
@@ -754,8 +753,6 @@ def read_gff(filename, pcr_filename, nthreads, logging=None):
         pre_txex.add_5prime_junc(junc)
 
     # end for
-    import sys
-
     print sys.getsizeof(all_genes)
 
     _prepare_and_dump(logging)

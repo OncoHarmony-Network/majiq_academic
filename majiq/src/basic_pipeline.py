@@ -2,7 +2,6 @@ from matplotlib import use
 use('Agg')
 
 import abc
-import pickle
 from multiprocessing import Pool, Process
 import os
 import gc
@@ -32,8 +31,8 @@ def get_clean_raw_reads(matched_info, matched_lsv, outdir, names, num_exp):
             num = jlist.sum(axis=1)
             res.append([lsv[1], num.data])
 
-    with open('%s/clean_reads.%s.pkl' % (outdir, names), 'wb') as fp:
-        pickle.dump(res, fp)
+    #with open('%s/clean_reads.%s.pkl' % (outdir, names), 'wb') as fp:
+    majiq_io.dump_bin_file(res, '%s/clean_reads.%s.pkl' % (outdir, names))
 
 
 def _pipeline_run(pipeline):
@@ -128,9 +127,8 @@ class CalcPsi(BasicPipeline):
             os.makedirs(outfdir)
 
         logger.info("Saving meta info for %s..." % self.name)
-        tout = open("%s/tmp/%s_metainfo.pickle" % (self.output, self.name), 'w+')
-        pickle.dump(meta_info, tout)
-        tout.close()
+        majiq_io.dump_bin_file(meta_info, "%s/tmp/%s_metainfo.pickle" % (self.output, self.name))
+
 
         logger.info("Creating %s chunks with <= %s lsv" % (nchunks, csize))
         for nthrd in xrange(nchunks):
@@ -142,9 +140,7 @@ class CalcPsi(BasicPipeline):
             lsv_info = matched_info[lb:ub]
 
             out_file = '%s/chunk_%d.pickle' % (outfdir, nthrd)
-            tout = open(out_file, 'w+')
-            pickle.dump([lsv_list, lsv_info, num_exp, fitfunc], tout)
-            tout.close()
+            majiq_io.dump_bin_file([lsv_list, lsv_info, num_exp, fitfunc], out_file)
 
         gc.collect()
 
@@ -206,13 +202,13 @@ class CalcPsi(BasicPipeline):
         logger.info("GATHER pickles")
         for nt in xrange(self.nthreads):
             tempfile = open("%s/tmp/%s_th%s.calcpsi.pickle" % (self.output, self.name, nt))
-            ptempt = pickle.load(tempfile)
+            ptempt = majiq_io.load_bin_file(tempfile)
             posterior_matrix.extend(ptempt[0])
             names.extend(ptempt[1])
 
         logger.info("Getting meta info for %s..." % self.name)
         tin = open("%s/tmp/%s_metainfo.pickle" % (self.output, self.name))
-        meta_info = pickle.load(tin)
+        meta_info = majiq_io.load_bin_file(tin)
         tin.close()
 
 

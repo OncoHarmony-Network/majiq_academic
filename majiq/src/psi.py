@@ -1,4 +1,3 @@
-import argparse
 from collections import defaultdict
 import random
 
@@ -7,11 +6,11 @@ from scipy.stats import binom_test, beta
 from numpy.random import dirichlet
 import numpy as np
 import sys
-import cPickle as pickle
 import matplotlib.pyplot as plt
 import majiq.src.filter as majiq_filter
 import majiq.src.adjustdelta as majiq_delta
 import majiq.src.sample as majiq_sample
+import majiq.src.io as majiq_io
 import operator
 import os
 
@@ -242,8 +241,7 @@ def __load_default_prior():
 
     encoding = sys.getfilesystemencoding()
     direc = os.path.dirname(unicode(__file__, encoding))
-    #direc = "%s/../data" % os.path.dirname(os.path.realpath(__file__))
-    def_mat = pickle.load(open('%s/../data/defaultprior.pickle' % direc, 'r'))
+    def_mat = majiq_io.load_bin_file('%s/../data/defaultprior.pickle' % direc)
     return def_mat
 
 
@@ -322,7 +320,6 @@ def gen_prior_matrix(pip, lsv_exp1, lsv_exp2, output, numbins=20, defaultprior=F
             mixture_pdf = majiq_delta.adjustdelta_lsv(best_delta_psi, output, plotpath=pip.plotpath,
                                                       title=" ".join(pip.names), numiter=pip.iter,
                                                       breakiter=pip.breakiter, njunc=nj, logger=pip.logger)
-            #pickle.dump(mixture_pdf, open("%s%s_%s_bestset_junc_%s.pickle"%(output, pip.names[0], pip.names[1], nj), 'w'))
             pmat = []
             for i in xrange(numbins):
                 pmat.extend(mixture_pdf[numbins - i:(numbins * 2) - i])
@@ -343,9 +340,6 @@ def gen_prior_matrix(pip, lsv_exp1, lsv_exp2, output, numbins=20, defaultprior=F
 
         plot_matrix(prior_matrix[prior_idx], "Prior Matrix , version %s" % prior_idx,
                     "prior_matrix_jun_%s" % nj, pip.plotpath)
-    # pip.logger.info("Saving prior matrix for %s..." % pip.names)
-    # pickle.dump(prior_matrix, open("%s/%s_%s_priormatrix_jun_%s.pickle" % (output, pip.names[0], pip.names[1], nj),
-    #                                'w'))
 
     return psi_space, prior_matrix
 

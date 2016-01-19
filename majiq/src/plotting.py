@@ -64,6 +64,8 @@ def plot_fitting(ecdf, plotpath, extra=[], title='', title_extra=[], plotname=No
         save_or_show(plotpath, fname)
 
 
+
+
 def plot_gc_content():
 
     idx = 0
@@ -115,3 +117,6 @@ def plot_pearsoncorr(var1, var2, my_title, my_xlabel, my_ylabel, plotpath=None, 
     plt.plot(var1, var2, '.')
     if plotpath:
         save_or_show(plotpath, my_title)
+
+
+

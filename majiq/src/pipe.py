@@ -1,11 +1,12 @@
 import sys
 import os
 from multiprocessing import current_process
-import pickle
+
 import scipy.misc
 import numpy as np
 from majiq.src.psi import prob_data_sample_given_psi, __get_prior_params
 from majiq.src.utils.utils import get_logger
+import majiq.src.io as majiq_io
 import majiq.src.sample as majiq_sample
 
 
@@ -23,22 +24,14 @@ def parallel_lsv_child_calculation(func, args, tempdir, name, chunk):
 
     sys.stdout.flush()
     thread_logger.info("[Th %s]: Saving DeltaPSI..." % chunk)
-    output = open("%s/%s_th%s.%s.pickle" % (tempdir, name, chunk, func.__name__), 'w')
-    pickle.dump(results, output)
-    #
-    # except Exception as e:
-    #     print "%s" % sys.exc_traceback.tb_lineno, e
-    #     sys.stdout.flush()
-
-    return
+    majiq_io.dump_bin_file(results, "%s/%s_th%s.%s.pickle" % (tempdir, name, chunk, func.__name__))
 
 
 def __load_execution_chunk(filename, delta=None):
-    l_vals = pickle.load(open(filename))
+    l_vals = majiq_io.load_bin_file(filename)
     if not delta is None:
-        prior = pickle.load(open(delta))
+        prior = majiq_io.load_bin_file(delta)
         l_vals.append(prior)
-
     return l_vals
 
 
