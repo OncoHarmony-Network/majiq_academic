@@ -15,7 +15,7 @@ from voila.splice_graphics import ExonGraphic
 from voila.splice_graphics import GeneGraphic
 from voila.splice_graphics import JunctionGraphic
 from voila import constants as voila_const
-
+import h5py
 
 def create_if_not_exists(my_dir, logger=False):
     """Create a directory path if it does not exist"""
@@ -161,7 +161,25 @@ def generate_visualization_output(allgenes, temp_dir):
 """
 Majiq file generation
 """
+
 def prepare_lsv_table(lsv_list, non_as, temp_dir):
+
+    for name, ind_list in majiq_config.tissue_repl.items():
+        for idx, exp_idx in enumerate(ind_list):
+            fname = "%s/%s.majiq.hdf5" % (temp_dir, majiq_config.exp_list[exp_idx])
+            f = h5py.File(fname, 'w', compression='gzip', compression_opts=9)
+            as_table = f.create_group('LSVs')
+            for iix, lsv in enumerate(lsv_list[name]):
+                lsv.hdf5_lsv(as_table, exp_idx)
+
+            non_as_table = f.create_group('const')
+            for jix, jn in enumerate(non_as[name]):
+                jn.hdf5_junction(non_as_table, exp_idx)
+            f.close()
+
+
+
+def prepare_lsv_table_old(lsv_list, non_as, temp_dir):
 
     #out_temp = dict()
     for name, ind_list in majiq_config.tissue_repl.items():
@@ -439,6 +457,36 @@ def histogram_for_exon_analysis(genes, output):
                 denovo_list.append(lngth)
 
     majiq_io.dump_bin_file([annotated_list, denovo_list], output)
+
+
+import tables as tb
+from numpy import array
+from scipy import sparse
+
+def store_sparse_mat(m, name, store='store.h5'):
+    msg = "This code only works for csr matrices"
+    assert(m.__class__ == sparse.csr.csr_matrix), msg
+    with tb.openFile(store, 'a') as f:
+        for par in ('data', 'indices', 'indptr', 'shape'):
+            full_name = '%s_%s' % (name, par)
+            try:
+                n = getattr(f.root, full_name)
+                n._f_remove()
+            except AttributeError:
+                pass
+
+            arr = array(getattr(m, par))
+            atom = tb.Atom.from_dtype(arr.dtype)
+            ds = f.createCArray(f.root, full_name, atom, arr.shape)
+            ds[:] = arr
+
+def load_sparse_mat(name, store='store.h5'):
+    with tb.openFile(store) as f:
+        pars = []
+        for par in ('data', 'indices', 'indptr', 'shape'):
+            pars.append(getattr(f.root, '%s_%s' % (name, par)).read())
+    m = sparse.csr_matrix(tuple(pars[:3]), shape=pars[3])
+    return m
 
 
 

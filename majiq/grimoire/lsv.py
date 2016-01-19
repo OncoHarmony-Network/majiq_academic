@@ -1,16 +1,21 @@
 __author__ = 'jordi@biociphers.org'
 
-import cPickle as pickle
-
 import numpy as np
 import scipy.sparse
 import majiq.src.config as majiq_config
 from voila.splice_graphics import ExonGraphic, LsvGraphic, JunctionGraphic
 from voila import constants as voila_const
-
+import pickle
+import tables as tb
 
 SSOURCE = 'source'
 STARGET = 'target'
+
+def dump_bin_file(data, filename):
+    with open(filename, 'wb') as ofp:
+        fast_pickler = pickle.Pickler(ofp, protocol=2)
+        # fast_pickler.fast = 1
+        fast_pickler.dump(data)
 
 
 class InvalidLSV(Exception):
@@ -341,6 +346,68 @@ class LSV(object):
         return MajiqLsv(self, exp_idx)
 
 
+    def hdf5_lsv(self, hdf5grp, exp_idx):
+
+        h_lsv = hdf5grp.create_group(self.id)
+        h_lsv['coords'] = self.coords
+        h_lsv['id'] = self.id
+        h_lsv['type'] = self.ext_type
+        h_lsv['iretention'] = self.intron_retention
+        junction_list = scipy.sparse.lil_matrix((self.junctions.shape[0], (majiq_config.readLen - 16) + 1),
+                                                 dtype=np.float)
+        junction_id = []
+
+        if majiq_config.gcnorm:
+            gc_factor = scipy.sparse.lil_matrix((self.junctions.shape[0], (majiq_config.readLen - 16) + 1),
+                                                 dtype=np.dtype('float'))
+        else:
+            gc_factor = None
+
+        for idx, junc in enumerate(self.junctions):
+            junction_list[idx, :] = junc.coverage[exp_idx, :]
+            junction_id.append(junc.get_id())
+            if majiq_config.gcnorm:
+                for jidx in range((majiq_config.readLen - 16) + 1):
+                    dummy = junc.get_gc_content()[0, jidx]
+                    gc_factor[idx, jidx] = dummy
+
+        #h_lsv['visual'] = self.get_visual(exp_idx)
+
+
+        ###
+        for par in ('data', 'indices', 'indptr', 'shape'):
+            full_name = 'coverage_%s' % par
+
+            arr = np.array(getattr(junction_list.tocsr(), par))
+            atom = tb.Atom.from_dtype(arr.dtype)
+            # ds = f.createCArray(f.root, full_name, atom, arr.shape)
+            # ds[:] = arr
+            h_lsv.create_dataset(full_name, data=atom)
+        ###
+
+
+
+
+        #h_lsv.create_dataset('coverage', data=junction_list.tocsr())
+        h_lsv.create_dataset('junction_id', data=junction_id)
+        #h_lsv.create_dataset('gc_factor', data=gc_factor.to_csr())
+
+        return h_lsv
+
+
+def set_gc_factor(hdf5grp, exp_idx):
+    if majiq_config.gcnorm:
+        gc_factor = hdf5grp['gc_factor']
+        nnz = gc_factor.nonzero()
+        for idx in xrange(nnz[0].shape[0]):
+            i = nnz[0][idx]
+            j = nnz[1][idx]
+            dummy = gc_factor[i, j]
+            hdf5grp['coverage'][i, j] *= majiq_config.gc_factor[exp_idx](dummy)
+
+    del hdf5grp['gc_factor']
+
+
 def extract_se_events(list_lsv_per_gene):
     sslist = list_lsv_per_gene[0]
     stlist = list_lsv_per_gene[1]
@@ -438,8 +505,7 @@ def extract_gff(list_lsv, out_dir):
     gtf = sorted(gtf)
     fname = '%s/temp_gff.pkl' % out_dir
     with open(fname, 'w+b') as ofp:
-        fast_pickler = pickle.Pickler(ofp, protocol=2)
-        fast_pickler.dump(gtf)
+        dump_bin_file(gtf, fname)
 
     return gtf
 
@@ -489,6 +555,40 @@ class MajiqLsv(object):
                 dummy = self.gc_factor[i, j]
                 self.junction_list[i, j] *= majiq_config.gc_factor[exp_idx](dummy)
         del self.gc_factor
+
+
+
+class Hdf5Lsv(object):
+    def hdf5_lsv(self, lsv_obj, hdf5grp, exp_idx):
+        selfcreate_group(lsv.get_id())
+
+        hdf5grp['coords'] = lsv_obj.coords
+        hdf5grp['id'] = lsv_obj.id
+        hdf5grp['type'] = lsv_obj.ext_type
+        hdf5grp['iretention'] = lsv_obj.intron_retention
+        junction_list = scipy.sparse.lil_matrix((lsv_obj.junctions.shape[0], (majiq_config.readLen - 16) + 1),
+                                                 dtype=np.float)
+        junction_id = []
+
+        if majiq_config.gcnorm:
+            gc_factor = scipy.sparse.lil_matrix((lsv_obj.junctions.shape[0], (majiq_config.readLen - 16) + 1),
+                                                 dtype=np.dtype('float'))
+        else:
+            gc_factor = None
+
+        for idx, junc in enumerate(lsv_obj.junctions):
+            junction_list[idx, :] = junc.coverage[exp_idx, :]
+            junction_id.append(junc.get_id())
+            if majiq_config.gcnorm:
+                for jidx in range((majiq_config.readLen - 16) + 1):
+                    dummy = junc.get_gc_content()[0, jidx]
+                    gc_factor[idx, jidx] = dummy
+
+        hdf5grp['visual'] = lsv_obj.get_visual(exp_idx)
+        hdf5grp.create_dataset('coverage', data=junction_list)
+        hdf5grp.create_dataset('junction_id', data=junction_id)
+
+
 
 
 

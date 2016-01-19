@@ -159,6 +159,60 @@ class Junction:
         self.coverage[exp_idx, :] = 0
 
 
+    def hdf5_junction(self, hdf5grps, exp_idx):
+        h_jnc = hdf5grps.create_group(self.get_id())
+        self.annot = self.is_annotated()
+        if self is None:
+            #self.gc_index = scipy.sparse.lil_matrix((1, (max(config.readLen) - 16) + 1), dtype=np.int)
+            self.name = None
+            self.id = "None"
+
+            h_jnc['chrom'] = None
+            h_jnc['coord1'] = [0, 0]
+            h_jnc['coord2'] = [0, 0]
+            h_jnc['strand'] = None
+            h_jnc['coverage'] = scipy.sparse.lil_matrix((1, (majiq_config.readLen - 16) + 1), dtype=np.float)
+        else:
+            h_jnc['name'] = "%s:%s-%s" % (self.get_gene().get_id(), self.get_ss_5p(), self.get_ss_3p())
+            h_jnc['id'] = "%s:%s-%s" % (self.get_gene().get_chromosome(), self.get_ss_5p(), self.get_ss_3p())
+
+            h_jnc['chrom'] = self.get_gene().get_chromosome()
+            h_jnc['strand'] = self.get_gene().get_strand()
+            if self.get_donor() is None:
+                h_jnc['coord1'] = [0, 0]
+            else:
+                h_jnc['coord1'] = self.get_donor().get_coordinates()
+
+            if self.get_acceptor() is None:
+                h_jnc['coord2'] = [0, 0]
+            else:
+                h_jnc['coord2'] = self.get_acceptor().get_coordinates()
+
+            h_jnc.create_dataset('coverage', data=self.coverage[exp_idx, :].toarray())
+            if majiq_config.gcnorm:
+                gc_factor = scipy.sparse.lil_matrix((1, (majiq_config.readLen - 16) + 1), dtype=np.float)
+            else:
+                gc_factor = None
+            for jj in range(majiq_config.readLen - 16 + 1):
+                dummy = self.gc_content[0, jj]
+                gc_factor[0, jj] *= dummy
+            h_jnc.create_dataset('gc_factor', data=gc_factor.toarray())
+
+        return h_jnc
+
+
+def set_gc_factor(hdf5grp, exp_idx):
+    if majiq_config.gcnorm:
+        gc_factor = hdf5grp['gc_factor']
+        nnz = gc_factor.nonzero()
+        for idx in xrange(nnz[0].shape[0]):
+            i = nnz[0][idx]
+            j = nnz[1][idx]
+            dummy = gc_factor[i, j]
+            hdf5grp['coverage'][i, j] *= majiq_config.gc_factor[exp_idx](dummy)
+    del hdf5grp['gc_factor']
+
+
 class MajiqJunction:
     def __init__(self, jnc, exp_idx):
         self.exons = {}
@@ -207,3 +261,5 @@ class MajiqJunction:
                 dummy = self.gc_factor[i, j]
                 self.coverage[i, j] *= majiq_config.gc_factor[exp_idx](dummy)
         del self.gc_factor
+
+

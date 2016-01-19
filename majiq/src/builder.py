@@ -1,24 +1,15 @@
 #!/usr/bin/python
-
-import argparse
 import os
 import sys
 import traceback
 from multiprocessing import Pool, current_process, Process
-from majiq.grimoire.gene import recreate_gene_tlb
-
+import majiq.grimoire.gene as majiq_gene
 import majiq.src.analize as analize
 import majiq.src.io as majiq_io
 from majiq.src.normalize import prepare_gc_content
 import majiq.src.utils.utils as utils
 import majiq.src.config as mglobals
 import majiq.grimoire.lsv as majiq_lsv
-
-try:
-    import cPickle as pickle
-except Exception:
-    import pickle
-
 
 def majiq_builder(samfiles_list, chnk, pcr_validation=None, gff_output=None, create_tlb=True, only_rna=False,
                   nondenovo=False, logging=None):
@@ -30,13 +21,13 @@ def majiq_builder(samfiles_list, chnk, pcr_validation=None, gff_output=None, cre
     annot_file = '%s/annot_genes.pkl' % temp_dir
     if not os.path.exists(annot_file):
         return
-    temp_file = open(annot_file, 'rb')
-    gene_list = pickle.load(temp_file)
+    # temp_file = open(annot_file, 'rb')
+    gene_list = majiq_io.load_bin_file(annot_file)
 
     if create_tlb:
         if not logging is None:
             logging.info("[%s] Recreatin Gene TLB" % chnk)
-        recreate_gene_tlb(gene_list)
+        majiq_gene.recreate_gene_tlb(gene_list)
 
     if not logging is None:
         logging.info("[%s] Reading BAM files" % chnk)
@@ -44,8 +35,8 @@ def majiq_builder(samfiles_list, chnk, pcr_validation=None, gff_output=None, cre
                              nondenovo=nondenovo, logging=logging)
     if not logging is None:
         logging.info("[%s] Detecting intron retention events" % chnk)
-    majiq_io.rnaseq_intron_retention(samfiles_list, gene_list, chnk,
-                                     permissive=mglobals.permissive_ir, nondenovo=nondenovo, logging=logging)
+    majiq_io.rnaseq_intron_retention(samfiles_list, gene_list, chnk, permissive=mglobals.permissive_ir,
+                                     nondenovo=nondenovo, logging=logging)
     if not logging is None:
         logging.info("[%s] Detecting LSV" % chnk)
     lsv, const = analize.lsv_detection(gene_list, chnk, only_real_data=only_rna, logging=logging)
