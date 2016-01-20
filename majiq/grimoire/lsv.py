@@ -375,24 +375,20 @@ class LSV(object):
 
 
         ###
+        h_lsv.create_dataset('junction_id', data=junction_id)
+
         cov = h_lsv.create_group('coverage')
         for par in ('data', 'indices', 'indptr', 'shape'):
             full_name = 'coverage_%s' % par
-
             arr = np.array(getattr(junction_list.tocsr(), par))
-            # atom = tb.Atom.from_dtype(arr.dtype)
-            # ds = f.createCArray(f.root, full_name, atom, arr.shape)
-            # ds[:] = arr
             cov.create_dataset(full_name, data=arr)
+
+        gc = h_lsv.create_group('gc_factor')
+        for par in ('data', 'indices', 'indptr', 'shape'):
+            full_name = 'gc_factor_%s' % par
+            arr = np.array(getattr(gc_factor.tocsr(), par))
+            gc.create_dataset(full_name, data=arr)
         ###
-
-
-
-
-        #h_lsv.create_dataset('coverage', data=junction_list.tocsr())
-        h_lsv.create_dataset('junction_id', data=junction_id)
-        #h_lsv.create_dataset('gc_factor', data=gc_factor.to_csr())
-
         return h_lsv
 
 

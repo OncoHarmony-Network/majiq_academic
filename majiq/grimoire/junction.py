@@ -188,7 +188,7 @@ class Junction:
             else:
                 h_jnc['coord2'] = self.get_acceptor().get_coordinates()
 
-            h_jnc.create_dataset('coverage', data=self.coverage[exp_idx, :].toarray())
+
             if majiq_config.gcnorm:
                 gc_factor = scipy.sparse.lil_matrix((1, (majiq_config.readLen - 16) + 1), dtype=np.float)
             else:
@@ -196,7 +196,21 @@ class Junction:
             for jj in range(majiq_config.readLen - 16 + 1):
                 dummy = self.gc_content[0, jj]
                 gc_factor[0, jj] *= dummy
-            h_jnc.create_dataset('gc_factor', data=gc_factor.toarray())
+
+
+            cov = h_jnc.create_group('coverage')
+            for par in ('data', 'indices', 'indptr', 'shape'):
+                full_name = 'coverage_%s' % par
+                arr = np.array(getattr(self.coverage[exp_idx, :].tocsr(), par))
+                cov.create_dataset(full_name, data=arr)
+
+            gc = h_jnc.create_group('gc_factor')
+            for par in ('data', 'indices', 'indptr', 'shape'):
+                full_name = 'gc_factor_%s' % par
+                arr = np.array(getattr(gc_factor.tocsr(), par))
+                gc.create_dataset(full_name, data=arr)
+
+            #gc.create_dataset('gc_factor', data=gc_factor.toarray())
 
         return h_jnc
 
