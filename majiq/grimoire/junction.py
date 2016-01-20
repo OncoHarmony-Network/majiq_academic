@@ -200,13 +200,13 @@ class Junction:
 
             cov = h_jnc.create_group('coverage')
             for par in ('data', 'indices', 'indptr', 'shape'):
-                full_name = 'coverage_%s' % par
+                full_name = '%s' % par
                 arr = np.array(getattr(self.coverage[exp_idx, :].tocsr(), par))
                 cov.create_dataset(full_name, data=arr)
 
             gc = h_jnc.create_group('gc_factor')
             for par in ('data', 'indices', 'indptr', 'shape'):
-                full_name = 'gc_factor_%s' % par
+                full_name = '%s' % par
                 arr = np.array(getattr(gc_factor, par))
                 gc.create_dataset(full_name, data=arr)
 
@@ -217,14 +217,17 @@ class Junction:
 
 def set_gc_factor(hdf5grp, exp_idx):
     if majiq_config.gcnorm:
-        gc_factor = hdf5grp['gc_factor']
+        gc_factor = load_sparse_mat(hdf5grp['gc_factor'])
+        cov = load_sparse_mat(hdf5grp['coverage'])
+
         nnz = gc_factor.nonzero()
         for idx in xrange(nnz[0].shape[0]):
             i = nnz[0][idx]
             j = nnz[1][idx]
             dummy = gc_factor[i, j]
-            hdf5grp['coverage'][i, j] *= majiq_config.gc_factor[exp_idx](dummy)
+            cov[i, j] *= majiq_config.gc_factor[exp_idx](dummy)
     del hdf5grp['gc_factor']
+
 
 
 class MajiqJunction:
@@ -277,3 +280,9 @@ class MajiqJunction:
         del self.gc_factor
 
 
+def load_sparse_mat(h5grp):
+    pars = []
+    for par in ('data', 'indices', 'indptr', 'shape'):
+        pars.append(h5grp[par])
+    m = scipy.sparse.csr_matrix(tuple(pars[:3]), shape=pars[3])
+    return m
