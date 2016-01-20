@@ -375,14 +375,15 @@ class LSV(object):
 
 
         ###
+        cov = h_lsv.create_group('coverage')
         for par in ('data', 'indices', 'indptr', 'shape'):
             full_name = 'coverage_%s' % par
 
             arr = np.array(getattr(junction_list.tocsr(), par))
-            atom = tb.Atom.from_dtype(arr.dtype)
+            # atom = tb.Atom.from_dtype(arr.dtype)
             # ds = f.createCArray(f.root, full_name, atom, arr.shape)
             # ds[:] = arr
-            h_lsv.create_dataset(full_name, data=atom)
+            cov.create_dataset(full_name, data=arr)
         ###
 
 
