@@ -190,7 +190,7 @@ class Junction:
 
 
             if majiq_config.gcnorm:
-                gc_factor = scipy.sparse.lil_matrix((1, (majiq_config.readLen - 16) + 1), dtype=np.float)
+                gc_factor = scipy.sparse.csr_matrix((1, (majiq_config.readLen - 16) + 1), dtype=np.float)
             else:
                 gc_factor = None
             for jj in range(majiq_config.readLen - 16 + 1):
@@ -207,7 +207,7 @@ class Junction:
             gc = h_jnc.create_group('gc_factor')
             for par in ('data', 'indices', 'indptr', 'shape'):
                 full_name = 'gc_factor_%s' % par
-                arr = np.array(getattr(gc_factor.tocsr(), par))
+                arr = np.array(getattr(gc_factor, par))
                 gc.create_dataset(full_name, data=arr)
 
             #gc.create_dataset('gc_factor', data=gc_factor.toarray())
