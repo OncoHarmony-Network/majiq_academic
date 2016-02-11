@@ -406,9 +406,10 @@ def parse_input(args):
 
     threshold   = None
     pairwise    = None
-
-    voila_file = args.majiq_bins
-    output_html = os.path.splitext(os.path.split(voila_file)[1])[0] + "_" + type_summary.replace("-", "_") + '.html'
+    
+    if type_summary != constants.COND_TABLE:
+        voila_file = args.majiq_bins
+        output_html = os.path.splitext(os.path.split(voila_file)[1])[0] + "_" + type_summary.replace("-", "_") + '.html'
 
     majiq_output = None
     meta_postprocess = {}
@@ -517,7 +518,7 @@ def parse_input(args):
             lsv_name_list = []
             for lsv_name in fileinput.input(args.lsv_names):
                 lsv_name_list.append(lsv_name.rstrip().upper())
-
+        print thres_change
         output_html = "%s_%s_comp_table_%.2f.html" % (cond_pair[0], cond_pair[1], thres_change)
         lsvs_dict = io_voila.load_dpsi_tab(sample_files, sample_names, thres_change=thres_change, filter_genes=gene_name_list, filter_lsvs=lsv_name_list, pairwise_dir=args.pair_dir, outdir=args.output_dir)
         logger.info("LSVs added to the table: %d" % len(lsvs_dict.keys()))
