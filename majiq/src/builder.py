@@ -181,8 +181,9 @@ def main(params):
         if len(sam_list) == 0:
             return
         if params.nthreads > 1:
-            pool = mp.Pool(processes=params.nthreads, maxtasksperchild=1)
             q = mp.Queue()
+            pool = mp.Pool([q], processes=params.nthreads, maxtasksperchild=1)
+
 
         for chnk in range(majiq_config.num_final_chunks):
             temp_dir = "%s/tmp/chunk_%s" % (majiq_config.outDir, chnk)
