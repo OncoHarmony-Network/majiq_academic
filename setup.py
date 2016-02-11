@@ -9,6 +9,7 @@ setup(
     author_email='majiq@biociphers.org',
     url='https://biociphers.org',
     keywords=['rna', 'splicing', 'psi', 'splicegraph'],
+    license='LICENSE.txt',
     include_package_data=True,
     #install_requires=['numpy', 'scipy', 'matplotlib', 'multiprocessing'],
     entry_points={'console_scripts': ['majiq = majiq.run_majiq:main', 'voila = voila.run_voila:main']},

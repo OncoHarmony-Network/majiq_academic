@@ -62,24 +62,25 @@ def calcpsi(fname, conf, logger):
     new_info = []
 
     #
-    # #TODO: DELETE THIS ONLY TEMP
-    # print "IF YOU READ THIS, your code needs to be changed, ask Jordi"
-    #
-    # num_exp = len(matched_lsv[0])
-    # print num_exp
-    # dir = './to_scott'
-    # if not os.path.isdir(dir):
-    #     os.mkdir(dir)
-    # for ii in range(num_exp):
-    #     res = []
-    #     for lidx, lsv_info in enumerate(info):
-    #         res.append(lsv_samples[lidx, ii])
-    #
-    #
-    #     outfp = open('%s/%s.%d.pickle' % (dir, conf['name'], ii), 'w+bcott')
-    #     pickle.dump([res, info], outfp)
-    #     outfp.close()
-    # exit()
+    #TODO: DELETE THIS ONLY TEMP
+    print "IF YOU READ THIS, your code needs to be changed, ask Jordi", len(info), info
+    
+    num_exp = len(matched_lsv[0])
+    print num_exp
+    import pickle
+    dirn = './to_scott'
+    if not os.path.isdir(dirn):
+        os.mkdir(dirn)
+    for ii in range(num_exp):
+        res = []
+        for lidx, lsv_info in enumerate(info):
+            res.append(lsv_samples[lidx, ii])
+    
+    
+        outfp = open('%s/%s.%d.pickle' % (dirn, conf['name'], ii), 'w+')
+        pickle.dump([res, info], outfp)
+        outfp.close()
+    exit()
 
 
     for lidx, lsv_info in enumerate(info):
