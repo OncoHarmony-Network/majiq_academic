@@ -9,6 +9,7 @@ import sys
 import matplotlib.pyplot as plt
 import majiq.src.filter as majiq_filter
 import majiq.src.adjustdelta as majiq_delta
+import majiq.src.io_utils
 import majiq.src.sample as majiq_sample
 import majiq.src.io as majiq_io
 import operator
@@ -241,7 +242,7 @@ def __load_default_prior():
 
     encoding = sys.getfilesystemencoding()
     direc = os.path.dirname(unicode(__file__, encoding))
-    def_mat = majiq_io.load_bin_file('%s/../data/defaultprior.pickle' % direc)
+    def_mat = majiq.src.io_utils.load_bin_file('%s/../data/defaultprior.pickle' % direc)
     return def_mat
 
 
@@ -254,7 +255,7 @@ def gen_prior_matrix(pip, lsv_exp1, lsv_exp2, output, numbins=20, defaultprior=F
         prior_matrix = [def_mat, def_mat]
         return psi_space, prior_matrix
 
-    pip.logger.info('Filtering to obtain "best set"...')
+    pip.logger.debug('Filtering to obtain "best set"...')
 
     filtered_lsv1 = majiq_filter.lsv_quantifiable(lsv_exp1, minnonzero=10, min_reads=20, logger=pip.logger)
     filtered_lsv2 = majiq_filter.lsv_quantifiable(lsv_exp2, minnonzero=10, min_reads=20, logger=pip.logger)
@@ -291,9 +292,9 @@ def gen_prior_matrix(pip, lsv_exp1, lsv_exp2, output, numbins=20, defaultprior=F
                     best_set_mean2[1].append(filtered_lsv2[1][idx])
                 break
 
-    pip.logger.info("'Best set' is %s events (out of %s)" % (len(best_set_mean1[0]), len(lsv_exp1[0])))
+    pip.logger.debug("'Best set' is %s events (out of %s)" % (len(best_set_mean1[0]), len(lsv_exp1[0])))
     best_dpsi = empirical_delta_psi(best_set_mean1[0], best_set_mean2[0])
-    pip.logger.info("'Best set IR' is %s events (out of %s)" % (len(best_set_mean_ir1[0]), len(lsv_exp1[0])))
+    pip.logger.debug("'Best set IR' is %s events (out of %s)" % (len(best_set_mean_ir1[0]), len(lsv_exp1[0])))
     best_dpsi_ir = empirical_delta_psi(best_set_mean_ir1[0], best_set_mean_ir2[0])
 
     prior_matrix = [[], []]
@@ -316,7 +317,7 @@ def gen_prior_matrix(pip, lsv_exp1, lsv_exp2, output, numbins=20, defaultprior=F
                     prior_matrix[prior_idx] = prior_matrix[0]
                 continue
 
-            pip.logger.info("Parametrizing 'best set'...%s", prior_idx)
+            pip.logger.debug("Parametrizing 'best set'...%s", prior_idx)
             mixture_pdf = majiq_delta.adjustdelta_lsv(best_delta_psi, output, plotpath=pip.plotpath,
                                                       title=" ".join(pip.names), numiter=pip.iter,
                                                       breakiter=pip.breakiter, njunc=nj, logger=pip.logger)
@@ -327,7 +328,7 @@ def gen_prior_matrix(pip, lsv_exp1, lsv_exp2, output, numbins=20, defaultprior=F
             prior_matrix[prior_idx] = np.array(pmat).reshape(numbins, -1)
             if np.isnan(prior_matrix[prior_idx]).any():
                 if prior_idx == 1:
-                    pip.logger.info("Not enought statistic power to calculate the intron retention specific prior, "
+                    pip.logger.WARNING("Not enought statistic power to calculate the intron retention specific prior, "
                                     "in that case we will use the global prior")
                     prior_matrix[prior_idx] = prior_matrix[0]
                 else:

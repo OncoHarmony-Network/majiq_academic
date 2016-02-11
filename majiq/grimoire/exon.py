@@ -2,8 +2,6 @@
 import os
 
 import numpy as np
-from majiq.grimoire.lsv import SSOURCE, STARGET
-import majiq.src.filter as majiqfilter
 from majiq.src import config
 
 
@@ -40,7 +38,7 @@ class Exon:
         self.ss_3p_list = []
         self.ss_5p_list = []
         self.id = "%s:%d-%d" % (self.gene_name, start, end)
-        # self.strand = strand
+        # sedlf.strand = strand
         self.gc_content = 0
         self.coverage = np.zeros(shape=config.num_experiments)
         self.score = None
@@ -261,41 +259,6 @@ class Exon:
             local_5p = 19
 
         return local_3p, local_5p
-
-    def detect_lsv(self, gn, lsv_type, dummy, jun, only_annot=False):
-        #jun = {}
-
-        sstype = {SSOURCE: ['5prime', 0], STARGET: ['3prime', 1]}
-
-
-        jlist = self.get_junctions(sstype[lsv_type][0])
-        jlist = [x for x in jlist if x is not None]
-        if jlist < 2:
-            return
-        lsv_in = gn.new_lsv_definition(self, jlist, lsv_type)
-
-        for name, ind_list in config.tissue_repl.items():
-            group_thresh = min((len(ind_list) * 0.5), 2)
-            counter = 0
-            e_data = 0
-            for jj in jlist:
-                for exp_idx in ind_list:
-                    if only_annot or majiqfilter.reliable_in_data(jj, exp_idx,
-                                                                  minnonzero=config.MINPOS,
-                                                                  min_reads=config.MINREADS):
-                        counter += 1
-                if counter < group_thresh:
-                    continue
-                e_data += 1
-                try:
-                    jun[name].add(jj)
-                except KeyError:
-                    jun[name] = set()
-                    jun[name].add(jj)
-            if e_data == 0:
-                continue
-            dummy[name][sstype[lsv_type][1]].append(lsv_in)
-        return
 
 
 class ExonRead(object):

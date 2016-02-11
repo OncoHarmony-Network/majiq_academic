@@ -1,58 +1,22 @@
+import ConfigParser
+import gc
+import gzip
+import math
+import os
 import pickle
 import random
-import gc
-import os
 import sys
-from collections import namedtuple
-import gzip
 import urllib
-import math
+from collections import namedtuple
+
 import numpy as np
 import pysam
-import ConfigParser
 
-import majiq.src.config as majiq_config
-from voila.io_voila import VoilaInput
-from voila.vlsv import VoilaLsv
-from majiq.grimoire.gene import Gene, Transcript
 import majiq.grimoire.exon as majiq_exons
+import majiq.src.config as majiq_config
+from majiq.grimoire.gene import Gene, Transcript
 from majiq.grimoire.junction import Junction
-
-
-def create_if_not_exists(my_dir, logger=False):
-    """Create a directory path if it does not exist"""
-    try:
-        if logger:
-            logger.info("\nCreating directory %s..." % my_dir)
-        os.makedirs(my_dir)
-    except OSError:
-        if logger:
-            logger.info("\nDirectory %s already exists..." % my_dir)
-
-
-def load_bin_file(filename, logger=None):
-    if not os.path.exists(filename):
-        if logger:
-            logger.error('Path %s for loading does not exist' % filename)
-        return
-
-    fop = open(filename, 'rb')
-
-    fast_pickler = pickle.Unpickler(fop)
-    # fast_pickler.fast = 1
-    data = fast_pickler.load()
-    fop.close()
-    return data
-
-
-def dump_bin_file(data, filename):
-    with open(filename, 'wb') as ofp:
-        fast_pickler = pickle.Pickler(ofp, protocol=2)
-        # fast_pickler.fast = 1
-        fast_pickler.dump(data)
-
-
-# pickle.dump(data, protocol=2)
+import majiq.src.io_utils as io_utils
 
 
 def __cross_junctions(read):
@@ -310,7 +274,7 @@ def rnaseq_intron_retention(filenames, gene_list, chnk, permissive=True, nondeno
                                 break
 
                         if exnum == 1:
-                            logging.info("NEW INTRON RETENTION EVENT %s, %d-%d" % (gne.get_name(),
+                            logging.debug("NEW INTRON RETENTION EVENT %s, %d-%d" % (gne.get_name(),
                                                                                    intron_start,
                                                                                    intron_end))
                 else:
@@ -349,7 +313,7 @@ def read_sam_or_bam(filenames, gene_list, chnk, nondenovo=False, logging=None):
             try:
                 read_iter = samfile[exp_index].fetch(chrom, strt, end)
             except ValueError:
-                logging.info('There are no reads in %s:%d-%d' % (chrom, strt, end))
+                logging.debug('There are no reads in %s:%d-%d' % (chrom, strt, end))
                 continue
             for read in read_iter:
 
@@ -567,45 +531,17 @@ def __parse_gff3(filename):
             yield GFFRecord(**normalized_info)
 
 
-def _prepare_and_dump_old(genes, logging=None):
-    n_genes = 0
-    for chrom in genes.keys():
-        temp_ex = []
-        for strand, gg in genes[chrom].items():
-            n_genes += len(gg)
-            genes[chrom][strand] = sorted(gg)
-            for gene in genes[chrom][strand]:
-                gene.collapse_exons()
-                temp_ex.extend(gene.get_exon_list())
-        if not logging is None:
-            logging.info("Calculating gc_content chromosome %s........." % chrom)
-        majiq_exons.set_exons_gc_content(chrom, temp_ex)
-        gc.collect()
-        temp_dir = "%s/tmp/%s" % (majiq_config.outDir, chrom)
-        create_if_not_exists(temp_dir)
-        # ipdb.set_trace()
-        # objgraph.show_most_common_types(limit=20)
-        if not logging is None:
-            logging.info("Creating temporal annotation %s" % chrom)
-        fname = '%s/annot_genes.pkl' % temp_dir
-        dump_bin_file(genes[chrom], fname)
-
-    tmp_chrom = "%s/tmp/chromlist.pkl" % majiq_config.outDir
-    dump_bin_file(genes.keys(), tmp_chrom)
-    if not logging is None:
-        logging.debug("Number of Genes", n_genes)
-
 
 def __annot_dump(nthrd, temp_ex, lsv_list, logging=None):
     for chrom, ex_list in temp_ex.items():
         majiq_exons.set_exons_gc_content(chrom, ex_list)
     gc.collect()
     temp_dir = "%s/tmp/chunk_%s" % (majiq_config.outDir, nthrd)
-    create_if_not_exists(temp_dir)
+    io_utils.create_if_not_exists(temp_dir)
     if not logging is None:
-        logging.info("Creating temporal annotation chunk %s (%d genes)" % (nthrd, len(lsv_list)))
+        logging.debug("Creating temporal annotation chunk %s (%d genes)" % (nthrd, len(lsv_list)))
     fname = '%s/annot_genes.pkl' % temp_dir
-    dump_bin_file(lsv_list, fname)
+    io_utils.dump_bin_file(lsv_list, fname)
 
 
 def __get_overlaped(gn, temp_ex, dumped_genes):
@@ -730,8 +666,9 @@ def read_gff(filename, pcr_filename, nthreads, logging=None):
 
             except KeyError:
                 if not logging is None:
-                    logging.info("Error, incorrect gff. exon %s doesn't have valid mRNA %s" % (record.attributes['ID'],
-                                                                                               parent_tx_id))
+
+                    logging.WARNING("Error, incorrect gff. exon at line %s doesn't have valid mRNA %s" % (0,
+                                                                                                        parent_tx_id))
                     # end elif
     # end for
     for tid, trcpt in trcpt_id_dict.items():

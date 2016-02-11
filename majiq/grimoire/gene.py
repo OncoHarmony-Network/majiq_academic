@@ -3,10 +3,9 @@ import gc
 import numpy as np
 
 from majiq.grimoire.exon import ExonTx, collapse_list_exons
-from majiq.grimoire.lsv import LSV, InvalidLSV
+from majiq.grimoire.lsv import LSV
 from majiq.grimoire.junction import Junction
 from majiq.src import config as majiq_config
-from majiq.src.analize import reliable_in_data
 
 
 class Gene:
@@ -23,7 +22,7 @@ class Gene:
     __gt__ = lambda self, other: (self.chromosome > other.chromosome
                                   or (self.chromosome == other.chromosome
                                       and (self.start > other.end
-                                           or (self.end > other.start and self.start < other.end
+                                           or (self.end > other.start and self.start < other.END
                                                and self.strand == '-' and other.strand == '+'))))
 
     def __init__(self, gene_id, gene_name, chrom, strand, start, end):
@@ -40,7 +39,6 @@ class Gene:
         self.ir_list = []
         self.ir_definition = []
         self.lsv_list = []
-        # self.RPKM = np.zeros(shape=mglobals.num_experiments, dtype=np.float)
         self.antis_gene = []
 
     def __hash__(self):
@@ -239,29 +237,10 @@ class Gene:
         s_junc = list(lst)
         return sorted([xx for xx in s_junc if not xx is None])
 
-    # def sort_in_list(self):
-    #     lst = set()
-    #     for tt in self.transcript_tlb.values():
-    #         for jj in tt.get_junction_list():
-    #             if not jj is None and not jj in lst:
-    #                 lst.add(jj)
-    #     s_junc = list(lst)
-    #     return sorted(s_junc)
-
-    # def get_all_rna_junctions(self):
-    #     lst = []
-    #     for ex in self.get_exon_list():
-    #         for ex_rna in ex.exonRead_list:
-    #             if len(ex_rna.p5_junc) > 0:
-    #                 lst.union(set(ex_rna.p5_junc))
-    #     lst.sort()
-    #     return lst
-
     def prepare_exons(self):
-#        self.exons.sort(reverse = isneg)
         self.exons.sort()
 
-    def get_all_ss(self, anot_only=False):
+    def get_all_ss(self):
 
         ss = set()
         for ex in self.exons:
@@ -293,15 +272,13 @@ class Gene:
         for ex in self.exons:
             s_exons.add(ex.get_coordinates())
 
-
-        #assert len(s_exons) == len(self.exons), "Exist duplicates in exons in Gene %s, " % self.id
         if len(s_exons) != len(self.exons):
             for xx in self.exons:
                 print xx, xx.get_coordinates()
 
             raise RuntimeError
 
-    def new_lsv_definition(self, exon, jlist, lsv_type, logger=None):
+    def new_lsv_definition(self, exon, jlist, lsv_type):
 
         coords = exon.get_coordinates()
         ret = None
@@ -311,19 +288,8 @@ class Gene:
                 ret = lsv
                 break
         else:
-            # try:
-                ret = LSV(exon, lsv_id, jlist, lsv_type)
-                self.lsv_list.append(ret)
-            # except InvalidLSV as e:
-            #     if logger:
-            #         logger.info("Attempt to create LSV with wrong type or not enought junction coverage %s" %
-            #                     exon.get_id())
-            #     raise InvalidLSV(e.msg)
-
-        # for jj in jlist:
-        #     if jj.is_virtual() and logger:
-        #         logger.info("WE FOUND INTRON RETENTION in exon %s" % exon.get_coordinates())
-
+            ret = LSV(exon, lsv_id, jlist, lsv_type)
+            self.lsv_list.append(ret)
         return ret
 
     def remove_temp_attributes(self):
@@ -355,67 +321,67 @@ class Gene:
                 lintrons.append((ex, self.exons[ex_idx+1]))
         return lintrons
 
-    def get_rnaseq_mat(self, rand10k, use_annot=True):
-
-        ss3_l = []
-        ss5_l = []
-        tlb = {}
-        exidx = 0
-        ss_3p_vars = [0]*20
-        ss_5p_vars = [0]*20
-        ss_both_var = 0
-        exon_list = []
-        ex_list = self.get_exon_list()
-        for ex in ex_list:
-#            if ex.id is None:
-#                continue
-            l3 = len(set(ex.ss_3p_list))
-            l5 = len(set(ex.ss_5p_list))
-            if l3 == 0 or l5 == 0:
-                continue
-
-            local_3p, local_5p = ex.ss_variant_counts()
-            if local_3p > 1 and local_5p > 1:
-                ss_both_var += 1
-
-            ss_3p_vars[local_3p] += 1
-            ss_5p_vars[local_5p] += 1
-
-            st3 = len(ss3_l)
-            st5 = len(ss5_l)
-            ss3_l += sorted([ss3 for ss3 in set(ex.ss_3p_list)])
-            ss5_l += sorted([ss5 for ss5 in set(ex.ss_5p_list)])
-            tlb[exidx] = [range(st3, len(ss3_l)), range(st5, len(ss5_l))]
-            exon_list.append(ex)
-            exidx += 1
-
-        mat = np.zeros(shape=(len(ss5_l), len(ss3_l)), dtype='int')
-        # jmat = np.empty(shape=(len(ss5_l), len(ss3_l)), dtype='object')
-        # jmat.fill(None)
-
-        junc_list = self.get_all_junctions()
-        for junc in junc_list:
-            st, end = junc.get_coordinates()
-            if not st in ss5_l or not end in ss3_l:
-                continue
-            x = ss5_l.index(st)
-            y = ss3_l.index(end)
-
-            read_num = junc.get_coverage().sum()
-            if read_num > 0:
-                count_mat = read_num
-            elif junc.is_annotated() and use_annot:
-                count_mat = -1
-            else:
-                count_mat = 0
-            mat[x, y] = count_mat
-            # jmat[x, y] = junc
-
-            for exp_idx in range(majiq_config.num_experiments):
-                if reliable_in_data(junc, exp_idx):
-                    rand10k[exp_idx].add(junc)
-
-        return mat, exon_list, tlb, [ss_3p_vars, ss_5p_vars, ss_both_var]
+#     def get_rnaseq_mat(self, rand10k, use_annot=True):
+#
+#         ss3_l = []
+#         ss5_l = []
+#         tlb = {}
+#         exidx = 0
+#         ss_3p_vars = [0]*20
+#         ss_5p_vars = [0]*20
+#         ss_both_var = 0
+#         exon_list = []
+#         ex_list = self.get_exon_list()
+#         for ex in ex_list:
+# #            if ex.id is None:
+# #                continue
+#             l3 = len(set(ex.ss_3p_list))
+#             l5 = len(set(ex.ss_5p_list))
+#             if l3 == 0 or l5 == 0:
+#                 continue
+#
+#             local_3p, local_5p = ex.ss_variant_counts()
+#             if local_3p > 1 and local_5p > 1:
+#                 ss_both_var += 1
+#
+#             ss_3p_vars[local_3p] += 1
+#             ss_5p_vars[local_5p] += 1
+#
+#             st3 = len(ss3_l)
+#             st5 = len(ss5_l)
+#             ss3_l += sorted([ss3 for ss3 in set(ex.ss_3p_list)])
+#             ss5_l += sorted([ss5 for ss5 in set(ex.ss_5p_list)])
+#             tlb[exidx] = [range(st3, len(ss3_l)), range(st5, len(ss5_l))]
+#             exon_list.append(ex)
+#             exidx += 1
+#
+#         mat = np.zeros(shape=(len(ss5_l), len(ss3_l)), dtype='int')
+#         # jmat = np.empty(shape=(len(ss5_l), len(ss3_l)), dtype='object')
+#         # jmat.fill(None)
+#
+#         junc_list = self.get_all_junctions()
+#         for junc in junc_list:
+#             st, end = junc.get_coordinates()
+#             if not st in ss5_l or not end in ss3_l:
+#                 continue
+#             x = ss5_l.index(st)
+#             y = ss3_l.index(end)
+#
+#             read_num = junc.get_coverage().sum()
+#             if read_num > 0:
+#                 count_mat = read_num
+#             elif junc.is_annotated() and use_annot:
+#                 count_mat = -1
+#             else:
+#                 count_mat = 0
+#             mat[x, y] = count_mat
+#             # jmat[x, y] = junc
+#
+#             for exp_idx in range(majiq_config.num_experiments):
+#                 if reliable_in_data(junc, exp_idx):
+#                     rand10k[exp_idx].add(junc)
+#
+#         return mat, exon_list, tlb, [ss_3p_vars, ss_5p_vars, ss_both_var]
 
 
 class Transcript(object):
@@ -453,7 +419,7 @@ class Transcript(object):
         return self.exon_list
 
     def in_junction_list(self, start, end):
-        res = None 
+        res = None
         for ex in self.exon_list:
             for jj in ex.get_5prime_junc():
                 jjstart, jjend = jj.get_coordinates()

@@ -2,31 +2,34 @@
 import os
 import sys
 import traceback
-from multiprocessing import Pool, current_process, Process
+import multiprocessing as mp
+
 import majiq.grimoire.gene as majiq_gene
 import majiq.src.analize as analize
 import majiq.src.io as majiq_io
-from majiq.src.normalize import prepare_gc_content
+import majiq.src.io_utils
+import majiq.src.voila_wrapper
+from majiq.src.normalize import prepare_gc_content, gc_factor_calculation
 import majiq.src.utils.utils as utils
-import majiq.src.config as mglobals
+import majiq.src.config as majiq_config
 import majiq.grimoire.lsv as majiq_lsv
 
 def majiq_builder(samfiles_list, chnk, pcr_validation=None, gff_output=None, create_tlb=True, only_rna=False,
-                  nondenovo=False, logging=None):
+                  nondenovo=False, out_queue=None, logging=None):
 
     if not logging is None:
-        logging.info("Building chunk %s" % chnk)
+        logging.debug("Building chunk %s" % chnk)
 
-    temp_dir = "%s/tmp/chunk_%s" % (mglobals.outDir, chnk)
+    temp_dir = "%s/tmp/chunk_%s" % (majiq_config.outDir, chnk)
     annot_file = '%s/annot_genes.pkl' % temp_dir
     if not os.path.exists(annot_file):
         return
     # temp_file = open(annot_file, 'rb')
-    gene_list = majiq_io.load_bin_file(annot_file)
+    gene_list = majiq.src.io_utils.load_bin_file(annot_file)
 
     if create_tlb:
         if not logging is None:
-            logging.info("[%s] Recreatin Gene TLB" % chnk)
+            logging.debug("[%s] Recreatin Gene TLB" % chnk)
         majiq_gene.recreate_gene_tlb(gene_list)
 
     if not logging is None:
@@ -35,7 +38,7 @@ def majiq_builder(samfiles_list, chnk, pcr_validation=None, gff_output=None, cre
                              nondenovo=nondenovo, logging=logging)
     if not logging is None:
         logging.info("[%s] Detecting intron retention events" % chnk)
-    majiq_io.rnaseq_intron_retention(samfiles_list, gene_list, chnk, permissive=mglobals.permissive_ir,
+    majiq_io.rnaseq_intron_retention(samfiles_list, gene_list, chnk, permissive=majiq_config.permissive_ir,
                                      nondenovo=nondenovo, logging=logging)
     if not logging is None:
         logging.info("[%s] Detecting LSV" % chnk)
@@ -47,26 +50,78 @@ def majiq_builder(samfiles_list, chnk, pcr_validation=None, gff_output=None, cre
         utils.get_validated_pcr_lsv(lsv, temp_dir)
     if gff_output:
         majiq_lsv.extract_gff(lsv, temp_dir)
-    utils.generate_visualization_output(gene_list, temp_dir)
+    majiq.src.voila_wrapper.generate_visualization_output(gene_list, temp_dir)
     if not logging is None:
         logging.info("[%s] Preparing output" % chnk)
 
-    utils.prepare_lsv_table(lsv, const, temp_dir)
+    #utils.prepare_lsv_table(lsv, const, temp_dir)
+    utils.send_output(lsv, const, temp_dir, out_queue)
 
     #ANALYZE_DENOVO
     # utils.analyze_denovo_junctions(gene_list, "%s/denovo.pkl" % temp_dir)
     # utils.histogram_for_exon_analysis(gene_list, "%s/ex_lengths.pkl" % temp_dir)
 
+def gather_files(out_dir, prefix='', gff_out=None, pcr_out=None, nthreads=1, logger=None):
+
+    #GATHER
+    logger.info("Gather outputs")
+    if prefix != '':
+        prefix = '%s.' % prefix
+
+    if majiq_config.gcnorm:
+        gc_factor_calculation(10)
+
+    if nthreads > 1:
+        nthr = min(nthreads, 4)
+        pool = mp.Pool(processes=nthr, maxtasksperchild=1)
+
+    for name, ind_list in majiq_config.tissue_repl.items():
+        for idx, exp_idx in enumerate(ind_list):
+            if nthreads > 1:
+                pool.apply_async(utils.merge_and_create_majiq_file, [exp_idx, prefix])
+            else:
+                utils.merge_and_create_majiq_file(exp_idx, prefix)
+
+    if nthreads > 1:
+        pool.close()
+        pool.join()
+
+    if not gff_out is None:
+        logger.info("Gather lsv and generate gff")
+        fp = open('%s/%s' % (out_dir, gff_out), 'w+')
+        for chnk in range(majiq_config.num_final_chunks):
+            temp_dir = "%s/tmp/chunk_%s" % (majiq_config.outDir, chnk)
+            yfile = '%s/temp_gff.pkl' % temp_dir
+            if not os.path.exists(yfile):
+                continue
+            gff_list = majiq.src.io_utils.load_bin_file(yfile)
+            for gff in gff_list:
+                fp.write("%s\n" % gff)
+        fp.close()
+
+    if not pcr_out is None:
+        logger.info("Gather pcr results")
+        fp = open('%s/pcr_match.tab' % majiq_config.outDir, 'w+')
+        for chnk in range(majiq_config.num_final_chunks):
+            temp_dir = "%s/tmp/chunk_%s" % (majiq_config.outDir, chnk)
+            yfile = '%s/pcr.pkl' % temp_dir
+            if not os.path.exists(yfile):
+                continue
+            pcr_l = majiq.src.io_utils.load_bin_file(yfile)
+            for pcr in pcr_l:
+                fp.write("%s\n" % pcr)
+        fp.close()
+
 
 def __parallel_lsv_quant(samfiles_list, chnk, pcr_validation=False, gff_output=None, only_rna=False,
-                         nondenovo=False, silent=False, debug=0):
+                         nondenovo=False, silent=False, out_queue=None, debug=0):
     try:
-        print "START child,", current_process().name
-        tlogger = utils.get_logger("%s/%s.majiq.log" % (mglobals.outDir, chnk), silent=silent, debug=debug)
+        print "START child,", mp.current_process().name
+        tlogger = utils.get_logger("%s/%s.majiq.log" % (majiq_config.outDir, chnk), silent=silent, debug=debug)
         majiq_builder(samfiles_list, chnk, pcr_validation=pcr_validation,
-                      gff_output=gff_output, only_rna=only_rna, nondenovo=nondenovo,
+                      gff_output=gff_output, only_rna=only_rna, nondenovo=nondenovo, out_queue=out_queue,
                       logging=tlogger)
-        print "END child, ", current_process().name
+        print "END child, ", mp.current_process().name
     except Exception as e:
         traceback.print_exc()
         sys.stdout.flush()
@@ -76,10 +131,10 @@ def __parallel_lsv_quant(samfiles_list, chnk, pcr_validation=False, gff_output=N
 def __parallel_gff3(transcripts, pcr_filename, nthreads, silent=False, debug=0):
 
     try:
-        print "START child,", current_process().name
-        tlogger = utils.get_logger("%s/db.majiq.log" % mglobals.outDir, silent=silent, debug=debug)
+        print "START child,", mp.current_process().name
+        tlogger = utils.get_logger("%s/db.majiq.log" % majiq_config.outDir, silent=silent, debug=debug)
         majiq_io.read_gff(transcripts, pcr_filename, nthreads, logging=tlogger)
-        print "END child, ", current_process().name
+        print "END child, ", mp.current_process().name
     except Exception as e:
         traceback.print_exc()
         sys.stdout.flush()
@@ -93,46 +148,44 @@ def __parallel_gff3(transcripts, pcr_filename, nthreads, silent=False, debug=0):
 
 def main(params):
 
+    import yappi
+    yappi.start()
+
+
     if not os.path.exists(params.conf):
         raise RuntimeError("Config file %s does not exist" % params.conf)
-    mglobals.global_conf_ini(params.conf, params)
+    majiq_config.global_conf_ini(params.conf, params)
 
-    logger = utils.get_logger("%s/majiq.log" % mglobals.outDir, silent=params.silent, debug=params.debug)
+    logger = utils.get_logger("%s/majiq.log" % majiq_config.outDir, silent=params.silent, debug=params.debug)
     logger.info("")
     logger.info("Command: %s" % params)
 
     if not params.onlygather:
-        p = Process(target=__parallel_gff3, args=(params.transcripts, params.pcr_filename, params.nthreads))
-        logger.info("... waiting gff3 parsing")
+        p = mp.Process(target=__parallel_gff3, args=(params.transcripts, params.pcr_filename, params.nthreads))
+        logger.debug("... waiting gff3 parsing")
         p.start()
         p.join()
 
-        logger.info("Get samfiles")
+        logger.debug("Get samfiles")
         sam_list = []
-        for exp_idx, exp in enumerate(mglobals.exp_list):
-            samfile = "%s/%s.bam" % (mglobals.sam_dir, exp)
+        for exp_idx, exp in enumerate(majiq_config.exp_list):
+            samfile = "%s/%s.bam" % (majiq_config.sam_dir, exp)
             if not os.path.exists(samfile):
                 raise RuntimeError("Skipping %s.... not found" % samfile)
-                #logger.info("Skipping %s.... not found" % samfile)
-                #continue
-            baifile = "%s/%s.bam.bai" % (mglobals.sam_dir, exp)
+            baifile = "%s/%s.bam.bai" % (majiq_config.sam_dir, exp)
             if not os.path.exists(baifile):
                 raise RuntimeError("Skipping %s.... not found ( index file for bam file is required)" % baifile)
-                #logger.info("Skipping %s.... not found ( index file for bam file is required)" % baifile)
-                #continue
             sam_list.append(samfile)
-            mglobals.exp_list[exp_idx] = os.path.split(exp)[1]
-        #majiq_io.count_mapped_reads(samfile, exp_idx)
+            majiq_config.exp_list[exp_idx] = os.path.split(exp)[1]
+
         if len(sam_list) == 0:
             return
-
         if params.nthreads > 1:
-            pool = Pool(processes=params.nthreads, maxtasksperchild=1)
-        #logger.info("Scatter in Chromosomes")
-        # for chrom in chr_list:
+            pool = mp.Pool(processes=params.nthreads, maxtasksperchild=1)
+            q = mp.Queue()
 
-        for chnk in range(mglobals.num_final_chunks):
-            temp_dir = "%s/tmp/chunk_%s" % (mglobals.outDir, chnk)
+        for chnk in range(majiq_config.num_final_chunks):
+            temp_dir = "%s/tmp/chunk_%s" % (majiq_config.outDir, chnk)
             utils.create_if_not_exists(temp_dir)
             if params.nthreads == 1:
                 majiq_builder(sam_list, chnk, pcr_validation=params.pcr_filename, gff_output=params.gff_output,
@@ -145,16 +198,24 @@ def main(params):
                                                         params.only_rna,
                                                         params.non_denovo,
                                                         params.silent,
-                                                        params.debug])
+                                                        q, params.debug
+                                                        ])
 
         if params.nthreads > 1:
-            logger.info("... waiting childs")
+
+            #logger.debug("... waiting childs")
             pool.close()
-            pool.join()
+            val = q.get(block=True, timeout=10)
+            print val
+
+
+            #pool.join()
 
     #GATHER
-    utils.gather_files(mglobals.outDir, '', params.gff_output, params.pcr_filename,
+    gather_files(majiq_config.outDir, '', params.gff_output, params.pcr_filename,
                        nthreads=params.nthreads, logger=logger)
 
-    mglobals.print_numbers()
+    yappi.get_func_stats().print_all()
+
+    majiq_config.print_numbers()
     logger.info("End of execution")

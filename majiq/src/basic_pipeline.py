@@ -1,4 +1,7 @@
 from matplotlib import use
+
+import majiq.src.io_utils
+
 use('Agg')
 
 import abc
@@ -74,7 +77,7 @@ class BasicPipeline:
             self.logger.debug("Skipping fitfunc because --debug!")
             return np.poly1d([1, 0])
         else:
-            self.logger.info("Fitting NB function with constitutive events...")
+            self.logger.debug("Fitting NB function with constitutive events...")
             return fit_nb(const_junctions, "%s/nbfit" % self.output, self.plotpath, logger=self.logger)
 
 
@@ -126,7 +129,7 @@ class CalcPsi(BasicPipeline):
         if not os.path.exists(outfdir):
             os.makedirs(outfdir)
 
-        logger.info("Saving meta info for %s..." % self.name)
+        logger.debug("Saving meta info for %s..." % self.name)
         majiq_io.dump_bin_file(meta_info, "%s/tmp/%s_metainfo.pickle" % (self.output, self.name))
 
 
@@ -202,13 +205,13 @@ class CalcPsi(BasicPipeline):
         logger.info("GATHER pickles")
         for nt in xrange(self.nthreads):
             tempfile = open("%s/tmp/%s_th%s.calcpsi.pickle" % (self.output, self.name, nt))
-            ptempt = majiq_io.load_bin_file(tempfile)
+            ptempt = majiq.src.io_utils.load_bin_file(tempfile)
             posterior_matrix.extend(ptempt[0])
             names.extend(ptempt[1])
 
-        logger.info("Getting meta info for %s..." % self.name)
+        logger.debug("Getting meta info for %s..." % self.name)
         tin = open("%s/tmp/%s_metainfo.pickle" % (self.output, self.name))
-        meta_info = majiq_io.load_bin_file(tin)
+        meta_info = majiq.src.io_utils.load_bin_file(tin)
         tin.close()
 
 
