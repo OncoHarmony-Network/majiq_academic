@@ -116,7 +116,7 @@ def gather_files(out_dir, prefix='', gff_out=None, pcr_out=None, nthreads=1, log
 def __parallel_lsv_quant(samfiles_list, chnk, pcr_validation=False, gff_output=None, only_rna=False,
                          nondenovo=False, silent=False, out_queue=None, debug=0):
     try:
-        print "START child,", mp.current_process().name
+        print "START child,", mp.current_process().name, out_queue
         tlogger = utils.get_logger("%s/%s.majiq.log" % (majiq_config.outDir, chnk), silent=silent, debug=debug)
         majiq_builder(samfiles_list, chnk, pcr_validation=pcr_validation,
                       gff_output=gff_output, only_rna=only_rna, nondenovo=nondenovo, out_queue=out_queue,
