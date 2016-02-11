@@ -2,7 +2,7 @@ import numpy as np
 import scipy.sparse
 
 import majiq.src.config as majiq_config
-
+import majiq.src.io_utils as majiq_io_utils
 
 class Junction:
     __eq__ = lambda self, other: self.start == other.start and self.end == other.end
@@ -190,35 +190,38 @@ class Junction:
 
 
             if majiq_config.gcnorm:
-                gc_factor = scipy.sparse.csr_matrix((1, (majiq_config.readLen - 16) + 1), dtype=np.float)
+                h_jnc.create_dataset('gc_factor', data=self.gc_content.toarray(),
+                                     compression='gzip', compression_opts=9)
+                #gc_factor = self.gc_content[exp_idx,:]
             else:
                 gc_factor = None
-            for jj in range(majiq_config.readLen - 16 + 1):
-                dummy = self.gc_content[0, jj]
-                gc_factor[0, jj] *= dummy
 
 
-            cov = h_jnc.create_group('coverage')
-            for par in ('data', 'indices', 'indptr', 'shape'):
-                full_name = '%s' % par
-                arr = np.array(getattr(self.coverage[exp_idx, :].tocsr(), par))
-                cov.create_dataset(full_name, data=arr)
 
-            gc = h_jnc.create_group('gc_factor')
-            for par in ('data', 'indices', 'indptr', 'shape'):
-                full_name = '%s' % par
-                arr = np.array(getattr(gc_factor, par))
-                gc.create_dataset(full_name, data=arr)
+            # cov = h_jnc.create_group('coverage')
+            # for par in ('data', 'indices', 'indptr', 'shape'):
+            #     full_name = '%s' % par
+            #     arr = np.array(getattr(self.coverage[exp_idx, :].tocsr(), par))
+            #     cov.create_dataset(full_name, data=arr)
+            #
+            # gc = h_jnc.create_group('gc_factor')
+            # for par in ('data', 'indices', 'indptr', 'shape'):
+            #     full_name = '%s' % par
+            #     arr = np.array(getattr(gc_factor, par))
+            #     gc.create_dataset(full_name, data=arr)
 
-            #gc.create_dataset('gc_factor', data=gc_factor.toarray())
+            h_jnc.create_dataset('coverage', data=self.coverage[exp_idx, :].toarray(),
+                                 compression='gzip', compression_opts=9)
+
 
         return h_jnc
 
 
 def set_gc_factor(hdf5grp, exp_idx):
+    return
     if majiq_config.gcnorm:
-        gc_factor = load_sparse_mat(hdf5grp['gc_factor'])
-        cov = load_sparse_mat(hdf5grp['coverage'])
+        gc_factor = majiq_io_utils.load_sparse_mat(hdf5grp['gc_factor'])
+        cov = majiq_io_utils.load_sparse_mat(hdf5grp['coverage'])
 
         nnz = gc_factor.nonzero()
         for idx in xrange(nnz[0].shape[0]):
@@ -229,8 +232,7 @@ def set_gc_factor(hdf5grp, exp_idx):
     del hdf5grp['gc_factor']
 
 
-
-class MajiqJunction:
+class Queue_Junction:
     def __init__(self, jnc, exp_idx):
         self.exons = {}
         self.annot = jnc.is_annotated()
@@ -268,21 +270,3 @@ class MajiqJunction:
             for jj in range(majiq_config.readLen - 16 + 1):
                 dummy = jnc.gc_content[0, jj]
                 self.gc_factor[0, jj] *= dummy
-
-    def set_gc_factor(self, exp_idx):
-        if majiq_config.gcnorm:
-            nnz = self.gc_factor.nonzero()
-            for idx in xrange(nnz[0].shape[0]):
-                i = nnz[0][idx]
-                j = nnz[1][idx]
-                dummy = self.gc_factor[i, j]
-                self.coverage[i, j] *= majiq_config.gc_factor[exp_idx](dummy)
-        del self.gc_factor
-
-
-def load_sparse_mat(h5grp):
-    pars = []
-    for par in ('data', 'indices', 'indptr', 'shape'):
-        pars.append(h5grp[par])
-    m = scipy.sparse.csr_matrix(tuple(pars[:3]), shape=pars[3])
-    return m

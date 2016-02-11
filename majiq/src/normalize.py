@@ -1,3 +1,5 @@
+import majiq.src.io_utils
+
 __author__ = 'jordi@biociphers.org'
 
 from itertools import izip
@@ -10,14 +12,14 @@ from scipy.stats.mstats_basic import mquantiles
 
 from majiq.src import polyfitnb as majiqfit
 import majiq.src.config as majiq_config
-import majiq.src.io as majiq_io
+import majiq.src.io_utils as majiq_io_utils
 
 
 def mark_stacks(lsv_list, fitfunc_r, pvalue_limit, logger=None):
 
     if pvalue_limit < 0:
         return
-    logger.info("Marking and masking stacks")
+    logger.debug("Marking and masking stacks")
     minstack = sys.maxint
     # the minimum value marked as stack
     numstacks = 0
@@ -45,7 +47,7 @@ def mark_stacks(lsv_list, fitfunc_r, pvalue_limit, logger=None):
         masked_less(lsv_list[0][lidx], 0)
 
     if logger:
-        logger.info("Out of %s values, %s marked as stacks with a p-value threshold of %s (%.3f%%)"
+        logger.debug("Out of %s values, %s marked as stacks with a p-value threshold of %s (%.3f%%)"
                     % (junctions.size, numstacks, pvalue_limit, (float(numstacks) / junctions.size) * 100))
     return lsv_list
 
@@ -60,7 +62,7 @@ def __gc_factor_ind(val, exp_idx):
 
 def gc_content_norm(self, lsv_list, const_list):
     """Normalize the matrix using the gc content"""
-    self.logger.info("GC content normalization...")
+    self.logger.debug("GC content normalization...")
     if self.gcnorm:
         for lidx, lsv in enumerate(lsv_list[0]):
             lsv_list[0][lidx] = np.multiply(lsv, lsv_list[2][lidx])
@@ -83,7 +85,7 @@ def gc_factor_calculation(nb):
         yfile = '%s/gccontent.temppkl' % temp_dir
         if not os.path.exists(yfile):
             continue
-        gc_c = majiq_io.load_bin_file(yfile)
+        gc_c = majiq.src.io_utils.load_bin_file(yfile)
         for exp_n in xrange(majiq_config.num_experiments):
             gc_pairs['GC'][exp_n].extend(gc_c['GC'][exp_n])
             gc_pairs['COV'][exp_n].extend(gc_c['COV'][exp_n])
@@ -169,19 +171,4 @@ def prepare_gc_content(gene_list, temp_dir):
                 gc_pairs['COV'][exp_n].append(cov)
 
     fname = '%s/gccontent.temppkl' % temp_dir
-    majiq_io.dump_bin_file(gc_pairs, fname)
-
-
-def prepare_junctions_gc(junc, exp_idx):
-
-    gc = scipy.sparse.lil_matrix((majiq_config.readLen - 16+1), dtype=np.float)
-    gci = np.zeros(shape=(majiq_config.readLen - 16+1))
-    for jj in range(majiq_config.readLen - 16+1):
-        if not junc is None and junc.get_gc_content()[exp_idx, jj] != 0:
-            #gci[jj] = __gc_factor_ind(junc.get_gc_content()[exp_idx,jj],exp_idx)
-
-            gc[jj] = majiq_config.gc_factor[exp_idx](junc.get_gc_content()[exp_idx, jj])
-
-    if not junc is None:
-        junc.add_gc_content_positions(gc)
-    return
+    majiq_io_utils.dump_bin_file(gc_pairs, fname)

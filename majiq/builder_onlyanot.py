@@ -5,6 +5,9 @@ import sys
 import traceback
 from multiprocessing import current_process
 import numpy as np
+
+import majiq.src.io_utils
+import majiq.src.voila_wrapper
 from majiq.grimoire.gene import recreate_gene_tlb
 
 import majiq.grimoire.lsv as majiq_lsv
@@ -132,7 +135,7 @@ def merge_and_create_majiq_file(chr_list, pref_file):
             for chnk in range(config.num_final_chunks):
                 temp_dir = "%s/tmp/chunk_%s" % (config.outDir, chnk)
                 temp_filename = '%s/%s.splicegraph.pkl' % (temp_dir, config.exp_list[exp_idx])
-                visual_gene_list = majiq_io.load_bin_file(temp_filename)
+                visual_gene_list = majiq.src.io_utils.load_bin_file(temp_filename)
                 all_visual.append(visual_gene_list)
             fname = '%s/%s.splicegraph' % (config.outDir, config.exp_list[exp_idx])
             visual = np.concatenate(all_visual)
@@ -143,7 +146,7 @@ def merge_and_create_majiq_file(chr_list, pref_file):
             for chnk in range(config.num_final_chunks):
                 temp_dir = "%s/tmp/chunk_%s" % (config.outDir, chnk)
                 filename = "%s/%s.majiq.pkl" % (temp_dir, config.exp_list[exp_idx])
-                temp_table = majiq_io.load_bin_file(filename)
+                temp_table = majiq.src.io_utils.load_bin_file(filename)
                 as_table.append(temp_table[0])
                 nonas_table.append(temp_table[1])
 
@@ -261,7 +264,7 @@ def main(params):
     logger.info("Command: %s" % params)
 
     majiq_io.read_gff(params.transcripts, None, 1, logging=logger)
-    chr_list = majiq_io.load_bin_file("%s/tmp/chromlist.pkl" % config.outDir)
+    chr_list = majiq.src.io_utils.load_bin_file("%s/tmp/chromlist.pkl" % config.outDir)
 
     for chnk in range(config.num_final_chunks):
 
@@ -282,7 +285,7 @@ def main(params):
 
         prepare_gc_content(gene_list, temp_dir)
 
-        utils.generate_visualization_output(gene_list, temp_dir)
+        majiq.src.voila_wrapper.generate_visualization_output(gene_list, temp_dir)
         if not logger is None:
             logger.info("[%s] Preparing output" % chnk)
 
@@ -301,7 +304,7 @@ def main(params):
     for chnk in range(config.num_final_chunks):
         temp_dir = "%s/tmp/chunk_%s" % (config.outDir, chnk)
         yfile = '%s/temp_gff.pkl' % temp_dir
-        gff_list = majiq_io.load_bin_file(yfile)
+        gff_list = majiq.src.io_utils.load_bin_file(yfile)
         for gff in gff_list:
             fp.write("%s\n" % gff)
     fp.close()

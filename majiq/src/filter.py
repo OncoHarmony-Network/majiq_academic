@@ -20,7 +20,7 @@ def filter_message(when, value, logger, junc):
         if type(logger) == bool:
             print message
         else:
-            logger.info(message)
+            logger.debug(message)
 
 
 def quantifiable_in_group(list_of_experiments, minnonzero, min_reads, filter_vals=None, logger=None):

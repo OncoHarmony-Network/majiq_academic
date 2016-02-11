@@ -1,35 +1,26 @@
-import os
 import logging
-import sys
-from multiprocessing import Pool
+import os
 import random
-from contextlib import contextmanager as ctx
+import sys
 
+import h5py
 import numpy as np
 
-from majiq.src.normalize import gc_factor_calculation
-import majiq.src.config as majiq_config
-from majiq.grimoire.junction import MajiqJunction
 import majiq.grimoire.junction as majiq_junction
-import majiq.src.io as majiq_io
 import majiq.grimoire.lsv as majiq_lsv
+import majiq.src.config as majiq_config
+import majiq.src.io_utils as majiq_io_utils
 
-from voila.splice_graphics import ExonGraphic
-from voila.splice_graphics import GeneGraphic
-from voila.splice_graphics import JunctionGraphic
-from voila import constants as voila_const
-import h5py
-import scipy.sparse
 
 def create_if_not_exists(my_dir, logger=False):
     """Create a directory path if it does not exist"""
     try:
         if logger:
-            logger.info("\nCreating directory %s..." % my_dir)
+            logger.debug("\nCreating directory %s..." % my_dir)
         os.makedirs(my_dir)
     except OSError:
         if logger:
-            logger.info("\nDirectory %s already exists..." % my_dir)
+            logger.debug("\nDirectory %s already exists..." % my_dir)
 
 
 def get_logger(logger_name, silent=False, debug=False): 
@@ -59,112 +50,29 @@ def get_logger(logger_name, silent=False, debug=False):
     return logger
 
 """
-splicegraph generation functions
-"""
-
-def generate_visualization_output(allgenes, temp_dir):
-    # gene_list = {}
-    for name, ind_list in majiq_config.tissue_repl.items():
-        for idx, exp_idx in enumerate(ind_list):
-            # gene_list[mglobals.exp_list[exp_idx]] = []
-            gene_list = []
-            for gg in allgenes:
-                junc_list = []
-                junc_l = []
-                alt_empty_ends = []
-                alt_empty_starts = []
-                for jj in gg.get_all_junctions():
-
-                    cc = jj.get_coordinates()
-                    if jj.get_donor() is None:
-                        alt_empty_ends.append(cc[1])
-                        continue
-                    if jj.get_acceptor() is None:
-                        alt_empty_starts.append(cc[0])
-                        continue
-                    num_reads = jj.get_read_num(exp_idx)
-                    if jj.is_annotated() and num_reads == 0:
-                        if (jj.get_read_num(-1) - num_reads) > 0:
-                            jtype = voila_const.JUNCTION_TYPE_DB_OTHER_RNASEQ
-                        else:
-                            jtype = voila_const.JUNCTION_TYPE_DB
-                    elif jj.is_annotated() and num_reads > 0:
-                        jtype = voila_const.JUNCTION_TYPE_DB_RNASEQ
-                    elif not jj.is_annotated() and num_reads > majiq_config.MINREADS:
-                        jtype = voila_const.JUNCTION_TYPE_RNASEQ
-                    else:
-                        jtype = voila_const.JUNCTION_TYPE_RNASEQ
-                        # continue
-
-                    ir_type = None
-                    if jj.get_donor().is_intron():
-                        ir_type = voila_const.IR_TYPE_END
-                    elif jj.get_acceptor().is_intron():
-                        ir_type = voila_const.IR_TYPE_START
-
-                    junc_l.append(jj.get_coordinates())
-                    junc_list.append(JunctionGraphic(cc, jtype, num_reads, transcripts=jj.get_transcript_list(),
-                                                     ir=ir_type))
-
-                junc_l = np.asarray(junc_l)
-                exon_list = []
-                for ex in gg.get_exon_list():
-                    cc = ex.get_coordinates()
-                    a3 = []
-                    alt_start = []
-                    for ss3 in set(ex.ss_3p_list):
-                        if ss3 in alt_empty_starts:
-                            alt_start.append(ss3)
-                            # continue
-                        for jidx, jjl in enumerate(junc_l):
-                            if ss3 == jjl[1]:
-                                a3.append(jidx)
-
-                    a5 = []
-                    alt_ends = []
-                    for ss5 in set(ex.ss_5p_list):
-                        if ss5 in alt_empty_starts:
-                            alt_ends.append(ss5)
-                            # continue
-                        for jidx, jjl in enumerate(junc_l):
-                            if ss5 == jjl[0]:
-                                a5.append(jidx)
-
-                    ex_reads = ex.get_total_read_num(exp_idx)
-                    if ex.is_miss_start():
-                        visual_type = voila_const.EXON_TYPE_MISSING_START
-                    elif ex.is_miss_end():
-                        visual_type = voila_const.EXON_TYPE_MISSING_END
-                    elif ex.is_annotated() and ex_reads == 0.0:
-                        visual_type = voila_const.EXON_TYPE_DB
-                    elif ex.is_annotated() and ex_reads > 0.0:
-                        visual_type = voila_const.EXON_TYPE_DB_RNASEQ
-                    elif not ex.is_annotated() and ex_reads > 0.0:
-                        visual_type = voila_const.EXON_TYPE_RNASEQ
-                    else:
-                        visual_type = voila_const.EXON_TYPE_RNASEQ
-                    # continue
-                    extra_coords = []
-                    if ex.is_annotated():
-                        if ex.start < ex.db_coord[0]:
-                            extra_coords.append([ex.start, ex.db_coord[0] - 1])
-                        if ex.end > ex.db_coord[1]:
-                            extra_coords.append([ex.db_coord[1] + 1, ex.end])
-                    eg = ExonGraphic(a3, a5, cc, type_exon=visual_type, coords_extra=extra_coords,
-                                     intron_retention=ex.get_ir(), alt_starts=alt_start, alt_ends=alt_ends)
-                    exon_list.append(eg)
-                ggraph = GeneGraphic(id=gg.get_id(), name=gg.get_name(), strand=gg.get_strand(), exons=exon_list,
-                                     junctions=junc_list, chrom=gg.get_chromosome())
-                # gene_list[mglobals.exp_list[exp_idx]].append(ggraph)
-                gene_list.append(ggraph)
-
-            filename = '%s/%s.splicegraph.pkl' % (temp_dir, majiq_config.exp_list[exp_idx])
-            majiq_io.dump_bin_file(gene_list, filename)
-
-
-"""
 Majiq file generation
 """
+
+def send_output(lsv_list, non_as, temp_dir, out_queue):
+
+    #out_temp = dict()
+    for name, ind_list in majiq_config.tissue_repl.items():
+        for idx, exp_idx in enumerate(ind_list):
+            majiq_table_as = [0] * len(lsv_list[name])
+            majiq_table_nonas = [0] * len(non_as[name])
+
+            for iix, lsv in enumerate(lsv_list[name]):
+                #majiq_table_as[iix] = majiq_lsv.Queue_Lsv(lsv, exp_idx)
+                out_queue.put([0, majiq_lsv.Queue_Lsv(lsv, exp_idx)], block=True)
+            for jix, jn in enumerate(non_as[name]):
+                out_queue.put([1, majiq_junction.Queue_Junction(jn, exp_idx)], block=True)
+                #majiq_table_nonas[jix] = majiq_junction.Queue_Junction(jn, exp_idx)
+
+
+            # out_temp = (majiq_table_as, majiq_table_nonas)
+            # fname = "%s/%s.majiq.pkl" % (temp_dir, majiq_config.exp_list[exp_idx])
+            # majiq_io.dump_bin_file(out_temp, fname)
+
 
 def prepare_lsv_table(lsv_list, non_as, temp_dir):
 
@@ -182,25 +90,6 @@ def prepare_lsv_table(lsv_list, non_as, temp_dir):
             f.close()
 
 
-
-def prepare_lsv_table_old(lsv_list, non_as, temp_dir):
-
-    #out_temp = dict()
-    for name, ind_list in majiq_config.tissue_repl.items():
-        for idx, exp_idx in enumerate(ind_list):
-            majiq_table_as = [0] * len(lsv_list[name])
-            majiq_table_nonas = [0] * len(non_as[name])
-
-            for iix, lsv in enumerate(lsv_list[name]):
-                majiq_table_as[iix] = lsv.to_majiqLSV(exp_idx)
-            for jix, jn in enumerate(non_as[name]):
-                majiq_table_nonas[jix] = MajiqJunction(jn, exp_idx)
-
-            out_temp = (majiq_table_as, majiq_table_nonas)
-            fname = "%s/%s.majiq.pkl" % (temp_dir, majiq_config.exp_list[exp_idx])
-            majiq_io.dump_bin_file(out_temp, fname)
-
-
 def merge_and_create_majiq_file(exp_idx, pref_file):
 
     """
@@ -210,17 +99,15 @@ def merge_and_create_majiq_file(exp_idx, pref_file):
 
     experiment = majiq_config.exp_list[exp_idx]
     all_visual = []
-    as_table = []
-    nonas_table = []
     for chnk in range(majiq_config.num_final_chunks):
         temp_dir = "%s/tmp/chunk_%s" % (majiq_config.outDir, chnk)
         temp_filename = '%s/%s.splicegraph.pkl' % (temp_dir, experiment)
         if os.path.exists(temp_filename):
-            visual_gene_list = majiq_io.load_bin_file(temp_filename)
+            visual_gene_list = majiq_io_utils.load_bin_file(temp_filename)
             all_visual.append(visual_gene_list)
     fname = '%s/%s%s.splicegraph' % (majiq_config.outDir, pref_file, experiment)
     visual = np.concatenate(all_visual)
-    majiq_io.dump_bin_file(visual, fname)
+    majiq_io_utils.dump_bin_file(visual, fname)
     del all_visual
     del visual
 
@@ -238,81 +125,21 @@ def merge_and_create_majiq_file(exp_idx, pref_file):
         temp_dir = "%s/tmp/chunk_%s" % (majiq_config.outDir, chnk)
         filename = "%s/%s.majiq.hdf5" % (temp_dir, majiq_config.exp_list[exp_idx])
         if os.path.exists(filename):
-            temp_table = h5py.File(filename)
-            for kk in temp_table['LSVs'].keys():
-                h5py.h5o.copy(temp_table['LSVs'].id, kk, as_table.id, kk)
-                majiq_lsv.set_gc_factor(as_table[kk], exp_idx)
-            for kk in temp_table['const'].keys():
-                nat.append([kk, temp_table.filename])
-            temp_table.close()
-            # for kk in temp_table['const'].keys():
-            #     h5py.h5o.copy(temp_table['const'].id, kk, nonas_table.id, kk)
+            with h5py.File(filename) as temp_table:
+                for kk in temp_table['LSVs'].keys():
+                    h5py.h5o.copy(temp_table['LSVs'].id, kk, as_table.id, kk)
+                    majiq_lsv.set_gc_factor(as_table[kk], exp_idx)
+                for kk in temp_table['const'].keys():
+                    nat.append([kk, temp_table.filename])
 
 
-    # nat = np.concatenate(np.array(nat))
     clist = random.sample(nat, min(5000, len(nat)))
     for jnc in clist:
-        tt = h5py.File(jnc[1])
-        h5py.h5o.copy(tt['const'].id, jnc[0], nonas_table.id, jnc[0])
-        majiq_junction.set_gc_factor(nonas_table[jnc[0]], exp_idx)
-
-    # fname = '%s/%s%s.majiq' % (majiq_config.outDir, pref_file, experiment)
-    # majiq_io.dump_bin_file((info, at, clist), fname)
+        with h5py.File(jnc[1]) as tt:
+            h5py.h5o.copy(tt['const'].id, jnc[0], nonas_table.id, jnc[0])
+            majiq_junction.set_gc_factor(nonas_table[jnc[0]], exp_idx)
 
 
-# def merge_and_create_majiq_file_old(exp_idx, pref_file):
-#
-#     """
-#     :param exp_idx: Index of experiment in config file
-#     :param pref_file: Prefix for the majiq name
-#     """
-#
-#     experiment = majiq_config.exp_list[exp_idx]
-#     all_visual = []
-#     as_table = []
-#     nonas_table = []
-#     for chnk in range(majiq_config.num_final_chunks):
-#         temp_dir = "%s/tmp/chunk_%s" % (majiq_config.outDir, chnk)
-#         temp_filename = '%s/%s.splicegraph.pkl' % (temp_dir, experiment)
-#         if os.path.exists(temp_filename):
-#             visual_gene_list = majiq_io.load_bin_file(temp_filename)
-#             all_visual.append(visual_gene_list)
-#     fname = '%s/%s%s.splicegraph' % (majiq_config.outDir, pref_file, experiment)
-#     visual = np.concatenate(all_visual)
-#     majiq_io.dump_bin_file(visual, fname)
-#     del all_visual
-#     del visual
-#
-#     for chnk in range(majiq_config.num_final_chunks):
-#         temp_dir = "%s/tmp/chunk_%s" % (majiq_config.outDir, chnk)
-#         filename = "%s/%s.majiq.pkl" % (temp_dir, experiment)
-#         if os.path.exists(filename):
-#             temp_table = majiq_io.load_bin_file(filename)
-#             as_table.append(temp_table[0])
-#             nonas_table.append(temp_table[1])
-#
-#     if len(as_table) == 0:
-#         return
-#
-#     info = dict()
-#     info['experiment'] = experiment
-#     # info['GC_bins'] = majiq_config.gc_bins[exp_idx]
-#     # info['GC_bins_val'] = majiq_config.gc_bins_val[exp_idx]
-#     info['genome'] = majiq_config.genome
-#     info['num_reads'] = majiq_config.num_mapped_reads[exp_idx]
-#
-#     at = np.concatenate(as_table)
-#     for lsv in at:
-#         lsv.set_gc_factor(exp_idx)
-#
-#
-#     nat = np.concatenate(nonas_table)
-#     clist = random.sample(nat, min(5000, len(nat)))
-#     for jnc in clist:
-#         jnc.set_gc_factor(exp_idx)
-#
-#     fname = '%s/%s%s.majiq' % (majiq_config.outDir, pref_file, experiment)
-#     majiq_io.dump_bin_file((info, at, clist), fname)
 
 
 def print_junc_matrices(mat, tlb=None, fp=None):
@@ -329,7 +156,6 @@ def print_junc_matrices(mat, tlb=None, fp=None):
             for n in p1:
                 out.write("%d\t" % (ex+1))
             for n in p2:
-#                header[nid] = "%d:%d\t"%(ex,nid)
                 header[n] = "%d" % (ex+1)
     out.write("\n")
     for ii in np.arange(N):
@@ -364,125 +190,9 @@ def get_validated_pcr_lsv(candidates, out_dir):
                 pcr_list.append(pcr_lsv)
                 print "PCR", ' '.join(pcr_lsv)
     fname = '%s/pcr.pkl' % out_dir
-    majiq_io.dump_bin_file(pcr_list, fname)
+    majiq_io_utils.dump_bin_file(pcr_list, fname)
 
 
-def to_gtf(wfile, seq_name, source, gene, mrna, start_trans, end_trans, strand, exon_l, frame_l):
-    sscore = "0"
-    # Iterate over each exon
-    exonorcds_list = []
-    for i, exon in enumerate(exon_l):
-        exonorcds_list.append("\t".join([seq_name, source, "%s", exon[0], exon[1], sscore, strand,
-                                         str(frame_l[i]), "gene_id \"%s\"; transcript_id \"%s\";\n" % (gene, mrna)]))
-
-    if strand == '+':
-        first_codon = "\t".join([seq_name, source, "start_codon", start_trans, str(int(start_trans) + 2), sscore,
-                                 strand, ".", "gene_id \"%s\"; transcript_id \"%s\";\n" % (gene, mrna)])
-        last_codon = "\t".join([seq_name, source, "stop_codon", str(int(end_trans) + 1), str(int(end_trans) + 3),
-                                sscore, strand, ".", "gene_id \"%s\"; transcript_id \"%s\";\n" % (gene, mrna)])
-
-    else:
-        last_codon = "\t".join([seq_name, source, "start_codon", str(int(end_trans) - 2), end_trans, sscore,
-                                strand, ".", "gene_id \"%s\"; transcript_id \"%s\";\n" % (gene, mrna)])
-        first_codon = "\t".join([seq_name, source, "stop_codon", str(int(start_trans) - 3), str(int(start_trans) - 1),
-                                 sscore, strand, ".", "gene_id \"%s\"; transcript_id \"%s\";\n" % (gene, mrna)])
-
-    wfile.write(first_codon)
-    for eCDS in exonorcds_list:
-        wfile.write(eCDS % "CDS")
-        wfile.write(eCDS % "exon")
-    wfile.write(last_codon)
-
-
-def gff2gtf(gff_f, out_f=None):
-    """Parse a GFF file created by MAJIQ and create a GTF"""
-
-    mrna = None
-    with file_or_stdout(out_f) as wfile:
-        with open(gff_f) as gff:
-            for gff_l in gff:
-                gff_fields = gff_l.strip().split()
-                if gff_fields[2] == 'mRNA':
-                    if mrna:
-                        to_gtf(wfile, seq_name, source, gene, mrna, start_trans, end_trans, strand, exon_l, frame_l)
-                    exon_l = []
-                    frame_l = []
-                    ids = gff_fields[8].split(';Parent=')
-                    gene = ids[1].split(';')[0]
-                    mrna = ids[0][5:]
-                    seq_name = gff_fields[0]
-                    source = gff_fields[1]
-                    start_trans = gff_fields[3]
-                    end_trans = gff_fields[4]
-                    strand = gff_fields[6]
-                    len_frame = 0
-
-                if gff_fields[2] == 'exon':
-                    exon_l.append([gff_fields[3], gff_fields[4]])
-                    frame_l.append((3 - (len_frame % 3)) % 3)
-                    len_frame = int(gff_fields[4]) - int(gff_fields[3])
-        to_gtf(wfile, seq_name, source, gene, mrna, start_trans, end_trans, strand, exon_l, frame_l)
-
-
-@ctx
-def file_or_stdout(file_name):
-    if file_name is None:
-        yield sys.stdout
-    else:
-        with open(file_name, 'w') as out_file:
-            yield out_file
-
-
-def gather_files(out_dir, prefix='', gff_out=None, pcr_out=None, nthreads=1, logger=None):
-
-    #GATHER
-    logger.info("Gather outputs")
-    if prefix != '':
-        prefix = '%s.' % prefix
-
-    if majiq_config.gcnorm:
-        gc_factor_calculation(10)
-
-    if nthreads > 1:
-        nthr = min(nthreads, 4)
-        pool = Pool(processes=nthr, maxtasksperchild=1)
-
-    for name, ind_list in majiq_config.tissue_repl.items():
-        for idx, exp_idx in enumerate(ind_list):
-            if nthreads > 1:
-                pool.apply_async(merge_and_create_majiq_file, [exp_idx, prefix])
-            else:
-                merge_and_create_majiq_file(exp_idx, prefix)
-
-    if nthreads > 1:
-        pool.close()
-        pool.join()
-
-    if not gff_out is None:
-        logger.info("Gather lsv and generate gff")
-        fp = open('%s/%s' % (out_dir, gff_out), 'w+')
-        for chnk in range(majiq_config.num_final_chunks):
-            temp_dir = "%s/tmp/chunk_%s" % (majiq_config.outDir, chnk)
-            yfile = '%s/temp_gff.pkl' % temp_dir
-            if not os.path.exists(yfile):
-                continue
-            gff_list = majiq_io.load_bin_file(yfile)
-            for gff in gff_list:
-                fp.write("%s\n" % gff)
-        fp.close()
-
-    if not pcr_out is None:
-        logger.info("Gather pcr results")
-        fp = open('%s/pcr_match.tab' % majiq_config.outDir, 'w+')
-        for chnk in range(majiq_config.num_final_chunks):
-            temp_dir = "%s/tmp/chunk_%s" % (majiq_config.outDir, chnk)
-            yfile = '%s/pcr.pkl' % temp_dir
-            if not os.path.exists(yfile):
-                continue
-            pcr_l = majiq_io.load_bin_file(yfile)
-            for pcr in pcr_l:
-                fp.write("%s\n" % pcr)
-        fp.close()
 
 
 #ANALYSIS FUNCTIONS
@@ -502,14 +212,14 @@ def analyze_denovo_junctions(genes, output):
                     else:
                         denovo_list[exp_n].append(jj)
 
-    majiq_io.dump_bin_file([majiq_config.tissue_repl, annot_list, denovo_list], output)
+    majiq_io_utils.dump_bin_file([majiq_config.tissue_repl, annot_list, denovo_list], output)
 
 
 def histogram_for_exon_analysis(genes, output):
 
     denovo_list = []
     annotated_list = []
-    #for strand, gglist in genes.items():
+
     for gg in genes:
         ex_list = gg.get_exon_list()
         for ex in ex_list:
@@ -519,40 +229,4 @@ def histogram_for_exon_analysis(genes, output):
             else:
                 denovo_list.append(lngth)
 
-    majiq_io.dump_bin_file([annotated_list, denovo_list], output)
-
-
-
-
-
-# from numpy import array
-# from scipy import sparse
-#
-# def store_sparse_mat(m, name, store='store.h5'):
-#     msg = "This code only works for csr matrices"
-#     assert(m.__class__ == sparse.csr.csr_matrix), msg
-#     with tb.openFile(store, 'a') as f:
-#         for par in ('data', 'indices', 'indptr', 'shape'):
-#             full_name = '%s_%s' % (name, par)
-#             try:
-#                 n = getattr(f.root, full_name)
-#                 n._f_remove()
-#             except AttributeError:
-#                 pass
-#
-#             arr = array(getattr(m, par))
-#             atom = tb.Atom.from_dtype(arr.dtype)
-#             ds = f.createCArray(f.root, full_name, atom, arr.shape)
-#             ds[:] = arr
-#
-# def load_sparse_mat(name, store='store.h5'):
-#     with tb.openFile(store) as f:
-#         pars = []
-#         for par in ('data', 'indices', 'indptr', 'shape'):
-#             pars.append(getattr(f.root, '%s_%s' % (name, par)).read())
-#     m = sparse.csr_matrix(tuple(pars[:3]), shape=pars[3])
-#     return m
-
-
-
-
+    majiq_io_utils.dump_bin_file([annotated_list, denovo_list], output)

@@ -1,9 +1,11 @@
+from majiq.src.io_utils import store_sparse_mat, load_sparse_mat
+
 __author__ = 'jordi@biociphers.org'
 
 import numpy as np
 import scipy.sparse
 import majiq.src.config as majiq_config
-#import majiq.src.utils.utils as majiq_utils
+
 from voila.splice_graphics import ExonGraphic, LsvGraphic, JunctionGraphic
 from voila import constants as voila_const
 import pickle
@@ -343,8 +345,8 @@ class LSV(object):
 
         return res
 
-    def to_majiqLSV(self, exp_idx):
-        return MajiqLsv(self, exp_idx)
+    # def to_majiqLSV(self, exp_idx):
+    #     return MajiqLsv(self, exp_idx)
 
 
     def hdf5_lsv(self, hdf5grp, exp_idx):
@@ -364,13 +366,17 @@ class LSV(object):
         else:
             gc_factor = None
 
+
+
+        junction_id = [junc.get_id() for junc in self.junctions]
+
+
         for idx, junc in enumerate(self.junctions):
             junction_list[idx, :] = junc.coverage[exp_idx, :]
-            junction_id.append(junc.get_id())
             if majiq_config.gcnorm:
                 for jidx in range((majiq_config.readLen - 16) + 1):
-                    dummy = junc.get_gc_content()[0, jidx]
-                    gc_factor[idx, jidx] = dummy
+                    gc_factor[idx, jidx] = junc.get_gc_content()[0, jidx]
+
 
         #h_lsv['visual'] = self.get_visual(exp_idx)
 
@@ -378,35 +384,29 @@ class LSV(object):
         ###
         h_lsv.create_dataset('junction_id', data=junction_id)
 
-        cov = h_lsv.create_group('coverage')
-        for par in ('data', 'indices', 'indptr', 'shape'):
-            full_name = '%s' % par
-            arr = np.array(getattr(junction_list.tocsr(), par))
-            cov.create_dataset(full_name, data=arr)
-
-        gc = h_lsv.create_group('gc_factor')
-        for par in ('data', 'indices', 'indptr', 'shape'):
-            full_name = '%s' % par
-            arr = np.array(getattr(gc_factor.tocsr(), par))
-            gc.create_dataset(full_name, data=arr)
+        # store_sparse_mat(h_lsv, 'coverage', junction_list.tocsr())
+        # store_sparse_mat(h_lsv, 'gc_factor', gc_factor.tocsr())
+        h_lsv.create_dataset('gc_factor', data=gc_factor.toarray(),
+                             compression='gzip', compression_opts=9)
+        h_lsv.create_dataset('coverage', data=junction_list.toarray(),
+                             compression='gzip', compression_opts=9)
         ###
         return h_lsv
 
 
 def set_gc_factor(hdf5grp, exp_idx):
-    if majiq_config.gcnorm:
-        gc_factor = load_sparse_mat(hdf5grp['gc_factor'])
-        cov = load_sparse_mat(hdf5grp['coverage'])
-
-        nnz = gc_factor.nonzero()
-        for idx in xrange(nnz[0].shape[0]):
-            i = nnz[0][idx]
-            j = nnz[1][idx]
-            dummy = gc_factor[i, j]
-            cov[i, j] *= majiq_config.gc_factor[exp_idx](dummy)
-
-
-    del hdf5grp['gc_factor']
+    return
+    # if majiq_config.gcnorm:
+    #     gc_factor = load_sparse_mat(hdf5grp['gc_factor'])
+    #     cov = load_sparse_mat(hdf5grp['coverage'])
+    #
+    #     nnz = gc_factor.nonzero()
+    #     for idx in xrange(nnz[0].shape[0]):
+    #         i = nnz[0][idx]
+    #         j = nnz[1][idx]
+    #         dummy = gc_factor[i, j]
+    #         cov[i, j] *= majiq_config.gc_factor[exp_idx](dummy)
+    # del hdf5grp['gc_factor']
 
 
 def extract_se_events(list_lsv_per_gene):
@@ -520,7 +520,8 @@ def print_lsv_extype(list_lsv, filename):
     fp.close()
 
 
-class MajiqLsv(object):
+
+class Queue_Lsv(object):
     def __init__(self, lsv_obj, exp_idx):
 
         self.coords = lsv_obj.coords
@@ -546,23 +547,4 @@ class MajiqLsv(object):
                     self.gc_factor[idx, jidx] = dummy
 
         self.visual = lsv_obj.get_visual(exp_idx)
-
-    def set_gc_factor(self, exp_idx):
-        if majiq_config.gcnorm:
-            nnz = self.gc_factor.nonzero()
-            for idx in xrange(nnz[0].shape[0]):
-                i = nnz[0][idx]
-                j = nnz[1][idx]
-                dummy = self.gc_factor[i, j]
-                self.junction_list[i, j] *= majiq_config.gc_factor[exp_idx](dummy)
-        del self.gc_factor
-
-
-
-def load_sparse_mat(h5grp):
-    pars = []
-    for par in ('data', 'indices', 'indptr', 'shape'):
-        pars.append(h5grp[par])
-    m = scipy.sparse.csr_matrix(tuple(pars[:3]), shape=pars[3])
-    return m
 
