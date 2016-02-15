@@ -278,11 +278,12 @@ def rnaseq_intron_retention(filenames, gene_list, chnk, permissive=True, nondeno
                                                                                    intron_start,
                                                                                    intron_end))
                 else:
-                    for exp_index in ind_list:
-                        if not junc2 is None:
-                            junc2.reset_coverage(exp_index)
-                        if not junc1 is None:
-                            junc1.reset_coverage(exp_index)
+                    pass
+                    # for exp_index in ind_list:
+                    #     if not junc2 is None:
+                    #         junc2.reset_coverage(exp_index)
+                    #     if not junc1 is None:
+                    #         junc1.reset_coverage(exp_index)
         gne.prepare_exons()
 
     for ss in samfile:
