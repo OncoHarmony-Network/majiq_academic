@@ -255,7 +255,7 @@ class LSV(object):
                 jtype = 1
                 # continue
 
-            ir_type = None
+            ir_type = 0
             if jj.get_donor().is_intron():
                 ir_type = voila_const.IR_TYPE_START
             elif jj.get_acceptor().is_intron():
@@ -347,51 +347,6 @@ class LSV(object):
 
     # def to_majiqLSV(self, exp_idx):
     #     return MajiqLsv(self, exp_idx)
-
-
-    def hdf5_lsv(self, hdf5grp, exp_idx):
-
-        h_lsv = hdf5grp.create_group(self.id)
-        h_lsv['coords'] = self.coords
-        h_lsv['id'] = self.id
-        h_lsv['type'] = self.ext_type
-        h_lsv['iretention'] = self.intron_retention
-        junction_list = scipy.sparse.lil_matrix((self.junctions.shape[0], (majiq_config.readLen - 16) + 1),
-                                                 dtype=np.float)
-        junction_id = []
-
-        if majiq_config.gcnorm:
-            gc_factor = scipy.sparse.lil_matrix((self.junctions.shape[0], (majiq_config.readLen - 16) + 1),
-                                                 dtype=np.dtype('float'))
-        else:
-            gc_factor = None
-
-
-
-        junction_id = [junc.get_id() for junc in self.junctions]
-
-
-        for idx, junc in enumerate(self.junctions):
-            junction_list[idx, :] = junc.coverage[exp_idx, :]
-            if majiq_config.gcnorm:
-                for jidx in range((majiq_config.readLen - 16) + 1):
-                    gc_factor[idx, jidx] = junc.get_gc_content()[0, jidx]
-
-
-        #h_lsv['visual'] = self.get_visual(exp_idx)
-
-
-        ###
-        h_lsv.create_dataset('junction_id', data=junction_id)
-
-        # store_sparse_mat(h_lsv, 'coverage', junction_list.tocsr())
-        # store_sparse_mat(h_lsv, 'gc_factor', gc_factor.tocsr())
-        h_lsv.create_dataset('gc_factor', data=gc_factor.toarray(),
-                             compression='gzip', compression_opts=9)
-        h_lsv.create_dataset('coverage', data=junction_list.toarray(),
-                             compression='gzip', compression_opts=9)
-        ###
-        return h_lsv
 
 
 def set_gc_factor(hdf5grp, exp_idx):
@@ -528,7 +483,7 @@ class Queue_Lsv(object):
         self.id = lsv_obj.id
         self.type = lsv_obj.ext_type
         self.iretention = lsv_obj.intron_retention
-        self.junction_list = scipy.sparse.lil_matrix((lsv_obj.junctions.shape[0], (majiq_config.readLen - 16) + 1),
+        self.coverage = scipy.sparse.lil_matrix((lsv_obj.junctions.shape[0], (majiq_config.readLen - 16) + 1),
                                                      dtype=np.float)
         self.junction_id = []
 
@@ -539,7 +494,7 @@ class Queue_Lsv(object):
             self.gc_factor = None
 
         for idx, junc in enumerate(lsv_obj.junctions):
-            self.junction_list[idx, :] = junc.coverage[exp_idx, :]
+            self.coverage[idx, :] = junc.coverage[exp_idx, :]
             self.junction_id.append(junc.get_id())
             if majiq_config.gcnorm:
                 for jidx in range((majiq_config.readLen - 16) + 1):
@@ -548,3 +503,32 @@ class Queue_Lsv(object):
 
         self.visual = lsv_obj.get_visual(exp_idx)
 
+    def set_gc_factor(self, exp_idx):
+        if majiq_config.gcnorm:
+            nnz = self.gc_factor.nonzero()
+            for idx in xrange(nnz[0].shape[0]):
+                i = nnz[0][idx]
+                j = nnz[1][idx]
+                dummy = self.gc_factor[i, j]
+                self.coverage[i, j] *= majiq_config.gc_factor[exp_idx](dummy)
+        del self.gc_factor
+
+    def to_hdf5(self, hdf5grp, exp_idx):
+
+        h_lsv = hdf5grp.create_group(self.id)
+        h_lsv['coords'] = self.coords
+        h_lsv['id'] = self.id
+        h_lsv['type'] = self.type
+        h_lsv['iretention'] = self.iretention
+
+        if majiq_config.gcnorm:
+            #self.set_gc_factor(exp_idx)
+            pass
+
+        h_lsv['visual'] = self.visual.to_hdf5(h_lsv)
+
+        h_lsv.create_dataset('junction_id', data=self.junction_id)
+        h_lsv.create_dataset('coverage', data=self.coverage.toarray(),
+                             compression='gzip', compression_opts=9)
+
+        return h_lsv

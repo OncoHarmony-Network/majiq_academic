@@ -66,6 +66,26 @@ class GeneGraphic(object):
     def to_JSON(self, encoder=json.JSONEncoder):
         return json.dumps(self, default=lambda o: o.__dict__, sort_keys=True, cls=encoder)
 
+    def to_hdf5(self, hdf5grps):
+        h_gen = hdf5grps.create_group(self.id)
+
+        h_gen['id'] = self.id
+        h_gen['name'] = self.name
+        h_gen['strand'] = self.strand
+
+        h_exons = h_gen.create_group('exons')
+        [ex.to_hdf5(h_exons) for ex in self.exons]
+
+        h_junctions = h_gen.create_group('junctions')
+        [jun.to_hdf5(h_junctions) for jun in self.junctions]
+
+        h_gen['chrom'] = self.chrom
+        h_gen['start'] = self.start
+        h_gen['end'] = self.end
+
+
+        return h_gen
+
     def to_bed12(self):
         #  "%(a)s, %(a)s" % {'a':'test'}
         #fields = ['chrom', 'chromStart', 'chromEnd', 'name', 'score', 'strand', 'thickStart', 'thickEnd', 'itemRgb', 'blockCount', 'blockSizes', 'blockStarts']
@@ -156,9 +176,24 @@ class ExonGraphic(object):
     def to_JSON(self, encoder=json.JSONEncoder):
         return json.dumps(self, default=lambda o: o.__dict__, sort_keys=True, cls=encoder)
 
+    def to_hdf5(self, hdf5grps):
+        h_ex = hdf5grps.create_group("%s-%s" %(self.coords[0], self.coords[1]))
+
+        h_ex['a3'] = self.a3
+        h_ex['a5'] = self.a5
+        h_ex['type'] = self.type_exon
+        h_ex['coords'] = self.coords
+        h_ex['coords_extra'] = self.coords_extra
+        h_ex['ir'] = self.intron_retention
+        h_ex['lsv_type'] = self.lsv_type
+        h_ex['alt_starts'] = self.alt_starts
+        h_ex['alt_ends'] = self.alt_ends
+
+        return h_ex
+
 
 class JunctionGraphic(object):
-    def __init__(self, coords, type_junction, nreads, clean_nreads=0, transcripts=list(), ir=None):
+    def __init__(self, coords, type_junction, nreads, clean_nreads=0, transcripts=list(), ir=0):
         self.coords = list(coords)
         self.type_junction = type_junction
         self.num_reads = nreads
@@ -193,6 +228,16 @@ class JunctionGraphic(object):
     def to_JSON(self, encoder=json.JSONEncoder):
         return json.dumps(self, default=lambda o: o.__dict__, sort_keys=True, cls=encoder)
 
+    def to_hdf5(self, hdf5grps):
+        h_jnc = hdf5grps.create_group("%s-%s" %(self.coords[0], self.coords[1]))
+        h_jnc['ir'] = self.ir
+        h_jnc['transcripts'] = self.transcripts
+        h_jnc['clean_reads'] = self.num_clean_reads
+        h_jnc['num_reads'] = self.num_reads
+        h_jnc['type'] = self.type_junction
+        h_jnc['coords'] = self.coords
+        return h_jnc
+
 
 class LsvGraphic(GeneGraphic):
     def __init__(self, type_lsv, coords, **kwds):
@@ -202,3 +247,9 @@ class LsvGraphic(GeneGraphic):
 
     def get_type(self):
         return self.type
+
+    def to_hdf5(self, hdf5grps):
+        h_lsv = super(LsvGraphic, self).to_hdf5(hdf5grps)
+        h_lsv['type'] = self.type
+        h_lsv['coords'] = self.coords
+        return h_lsv

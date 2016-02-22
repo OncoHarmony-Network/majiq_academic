@@ -48,7 +48,7 @@ def global_conf_ini(filename, params, only_db=False):
         genome_path, outDir, temp_oDir, gene_tlb, strand_specific, permissive_ir, gcnorm
     global A3SS, A5SS, SEev, bothSS, totalSE
     global MINREADS, MINPOS, MIN_INTRON
-    global num_final_chunks, min_denovo
+    global num_final_chunks, min_denovo, nrandom_junctions
 
     if not only_db:
         num_final_chunks = params.nthreads * 5 if params.nthreads > 1 else 1
@@ -56,6 +56,7 @@ def global_conf_ini(filename, params, only_db=False):
         num_final_chunks = 1
     min_denovo = 2
     gcnorm = True
+    nrandom_junctions = 5000
     config = ConfigParser.ConfigParser()
     config.read(filename)
     # TODO: check if filename exists

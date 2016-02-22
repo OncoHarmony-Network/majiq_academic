@@ -6,7 +6,7 @@ from voila.splice_graphics import JunctionGraphic, ExonGraphic, GeneGraphic
 import majiq.src.io_utils as majiq_io_base
 
 
-def generate_visualization_output(allgenes, temp_dir):
+def generate_visualization_output(allgenes, temp_dir, out_queue):
     # gene_list = {}
     for name, ind_list in majiq_config.tissue_repl.items():
         for idx, exp_idx in enumerate(ind_list):
@@ -40,7 +40,7 @@ def generate_visualization_output(allgenes, temp_dir):
                         jtype = voila_const.JUNCTION_TYPE_RNASEQ
                         # continue
 
-                    ir_type = None
+                    ir_type = voila_const.NONE_IR_TYPE
                     if jj.get_donor().is_intron():
                         ir_type = voila_const.IR_TYPE_END
                     elif jj.get_acceptor().is_intron():
@@ -100,7 +100,9 @@ def generate_visualization_output(allgenes, temp_dir):
                 ggraph = GeneGraphic(id=gg.get_id(), name=gg.get_name(), strand=gg.get_strand(), exons=exon_list,
                                      junctions=junc_list, chrom=gg.get_chromosome())
                 # gene_list[mglobals.exp_list[exp_idx]].append(ggraph)
+                out_queue.put([2, ggraph, exp_idx], block=True)
                 gene_list.append(ggraph)
 
-            filename = '%s/%s.splicegraph.pkl' % (temp_dir, majiq_config.exp_list[exp_idx])
-            majiq_io_base.dump_bin_file(gene_list, filename)
+
+            # filename = '%s/%s.splicegraph.pkl' % (temp_dir, majiq_config.exp_list[exp_idx])
+            # majiq_io_base.dump_bin_file(gene_list, filename)

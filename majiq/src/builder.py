@@ -3,7 +3,8 @@ import os
 import sys
 import traceback
 import multiprocessing as mp
-
+from multiprocessing import Pool
+import Queue
 import majiq.grimoire.gene as majiq_gene
 import majiq.src.analize as analize
 import majiq.src.io as majiq_io
@@ -13,9 +14,14 @@ from majiq.src.normalize import prepare_gc_content, gc_factor_calculation
 import majiq.src.utils.utils as utils
 import majiq.src.config as majiq_config
 import majiq.grimoire.lsv as majiq_lsv
+import h5py
+
+def __builder_init(out_queue, lock_arr):
+    majiq_builder.queue = out_queue
+    majiq_builder.lock_arr = lock_arr
 
 def majiq_builder(samfiles_list, chnk, pcr_validation=None, gff_output=None, create_tlb=True, only_rna=False,
-                  nondenovo=False, out_queue=None, logging=None):
+                  nondenovo=False, logging=None):
 
     if not logging is None:
         logging.debug("Building chunk %s" % chnk)
@@ -23,7 +29,11 @@ def majiq_builder(samfiles_list, chnk, pcr_validation=None, gff_output=None, cre
     temp_dir = "%s/tmp/chunk_%s" % (majiq_config.outDir, chnk)
     annot_file = '%s/annot_genes.pkl' % temp_dir
     if not os.path.exists(annot_file):
+        majiq_builder.queue.put([3, chnk], block=True)
+        majiq_builder.lock_arr[chnk].acquire()
+        majiq_builder.lock_arr[chnk].release()
         return
+
     # temp_file = open(annot_file, 'rb')
     gene_list = majiq.src.io_utils.load_bin_file(annot_file)
 
@@ -50,12 +60,12 @@ def majiq_builder(samfiles_list, chnk, pcr_validation=None, gff_output=None, cre
         utils.get_validated_pcr_lsv(lsv, temp_dir)
     if gff_output:
         majiq_lsv.extract_gff(lsv, temp_dir)
-    majiq.src.voila_wrapper.generate_visualization_output(gene_list, temp_dir)
+    majiq.src.voila_wrapper.generate_visualization_output(gene_list, temp_dir, majiq_builder.queue)
     if not logging is None:
         logging.info("[%s] Preparing output" % chnk)
 
     #utils.prepare_lsv_table(lsv, const, temp_dir)
-    utils.send_output(lsv, const, temp_dir, out_queue)
+    utils.send_output(lsv, const, temp_dir, majiq_builder.queue, chnk, majiq_builder.lock_arr[chnk])
 
     #ANALYZE_DENOVO
     # utils.analyze_denovo_junctions(gene_list, "%s/denovo.pkl" % temp_dir)
@@ -73,7 +83,7 @@ def gather_files(out_dir, prefix='', gff_out=None, pcr_out=None, nthreads=1, log
 
     if nthreads > 1:
         nthr = min(nthreads, 4)
-        pool = mp.Pool(processes=nthr, maxtasksperchild=1)
+        pool = mp.Pool(processes=nthr)#, maxtasksperchild=1)
 
     for name, ind_list in majiq_config.tissue_repl.items():
         for idx, exp_idx in enumerate(ind_list):
@@ -114,13 +124,12 @@ def gather_files(out_dir, prefix='', gff_out=None, pcr_out=None, nthreads=1, log
 
 
 def __parallel_lsv_quant(samfiles_list, chnk, pcr_validation=False, gff_output=None, only_rna=False,
-                         nondenovo=False, silent=False, out_queue=None, debug=0):
+                         nondenovo=False, silent=False, debug=0):
     try:
-        print "START child,", mp.current_process().name, out_queue
+        print "START child,", mp.current_process().name
         tlogger = utils.get_logger("%s/%s.majiq.log" % (majiq_config.outDir, chnk), silent=silent, debug=debug)
         majiq_builder(samfiles_list, chnk, pcr_validation=pcr_validation,
-                      gff_output=gff_output, only_rna=only_rna, nondenovo=nondenovo, out_queue=out_queue,
-                      logging=tlogger)
+                      gff_output=gff_output, only_rna=only_rna, nondenovo=nondenovo, logging=tlogger)
         print "END child, ", mp.current_process().name
     except Exception as e:
         traceback.print_exc()
@@ -151,7 +160,6 @@ def main(params):
     import yappi
     yappi.start()
 
-
     if not os.path.exists(params.conf):
         raise RuntimeError("Config file %s does not exist" % params.conf)
     majiq_config.global_conf_ini(params.conf, params)
@@ -181,40 +189,98 @@ def main(params):
         if len(sam_list) == 0:
             return
         if params.nthreads > 1:
+            lock_array = [mp.Lock() for xx in range(majiq_config.num_final_chunks)]
             q = mp.Queue()
-            pool = mp.Pool([q], processes=params.nthreads, maxtasksperchild=1)
+            pool = Pool(processes=params.nthreads, initializer=__builder_init,
+                        initargs=[q, lock_array])#, maxtasksperchild=1)
 
-
+        #lock_array = [None] * majiq_config.num_final_chunks
         for chnk in range(majiq_config.num_final_chunks):
             temp_dir = "%s/tmp/chunk_%s" % (majiq_config.outDir, chnk)
             utils.create_if_not_exists(temp_dir)
             if params.nthreads == 1:
                 majiq_builder(sam_list, chnk, pcr_validation=params.pcr_filename, gff_output=params.gff_output,
                               only_rna=params.only_rna, nondenovo=params.non_denovo, logging=logger)
-            else:
 
+
+            else:
+                lock_array[chnk].acquire()
                 pool.apply_async(__parallel_lsv_quant, [sam_list, chnk,
                                                         params.pcr_filename,
                                                         params.gff_output,
                                                         params.only_rna,
                                                         params.non_denovo,
                                                         params.silent,
-                                                        q, params.debug
+                                                        params.debug
                                                         ])
 
-        if params.nthreads > 1:
+        count = 0
 
+        lsv_list = []
+        junc_list = []
+        splicegraph = []
+        file_list = []
+        junc_idx = [0] * majiq_config.num_experiments
+        for exp_idx, exp in enumerate(majiq_config.exp_list):
+            fname = "%s/%s.majiq.hdf5" % (majiq_config.outDir, majiq_config.exp_list[exp_idx])
+            f = h5py.File(fname, 'w', compression='gzip', compression_opts=9)
+            file_list.append(f)
+
+            fname_sg = "%s/%s.splicegraph.hdf5" % (majiq_config.outDir, majiq_config.exp_list[exp_idx])
+            f_splicegraph = h5py.File(fname_sg, 'w', compression='gzip', compression_opts=9)
+
+            as_table = f.create_group('LSVs')
+            lsv_list.append(as_table)
+            effective_readlen = (majiq_config.readLen - 16) + 1
+            non_as_table = f.create_dataset("const_junctions",
+                                            (majiq_config.nrandom_junctions, effective_readlen),
+                                            maxshape=(None, effective_readlen))
+            junc_list.append(non_as_table)
+
+            splicegraph.append(f_splicegraph)
+
+        if params.nthreads > 1:
             #logger.debug("... waiting childs")
             pool.close()
-            val = q.get(block=True, timeout=10)
-            print val
+            while True:
+                try:
+                    val = q.get(block=True, timeout=10)
+                    if val[0] == 0:
+                        val[1].to_hdf5(lsv_list[val[2]], val[2])
+                    elif val[0] == 1:
+                        non_as_table[junc_idx[val[2]], :] = val[1].toarray()
+                        junc_idx[val[2]] += 1
+                    #    val[1].to_hdf5(junc_list[val[2]], val[2])
+                    elif val[0] == 2:
+                        val[1].to_hdf5(splicegraph[val[2]])
+                        pass
+                    elif val[0] == 3:
+                        lock_array[val[1]].release()
+                        count += 1
+                except Queue.Empty:
+                    if count < majiq_config.num_final_chunks:
+                        continue
+
+                    print "NO More chunks"
+                    break
+                #print val
+            pool.join()
 
 
-            #pool.join()
+        for ff in file_list:
+            ff.close()
+
+        for ff in splicegraph:
+            ff.close()
+
+
+
+
+
 
     #GATHER
-    gather_files(majiq_config.outDir, '', params.gff_output, params.pcr_filename,
-                       nthreads=params.nthreads, logger=logger)
+#    gather_files(majiq_config.outDir, '', params.gff_output, params.pcr_filename,
+#                       nthreads=params.nthreads, logger=logger)
 
     yappi.get_func_stats().print_all()
 

@@ -158,81 +158,61 @@ class Junction:
     def reset_coverage(self, exp_idx):
         self.coverage[exp_idx, :] = 0
 
-
-    def hdf5_junction(self, hdf5grps, exp_idx):
-        h_jnc = hdf5grps.create_group(self.get_id())
-        self.annot = self.is_annotated()
-        if self is None:
-            #self.gc_index = scipy.sparse.lil_matrix((1, (max(config.readLen) - 16) + 1), dtype=np.int)
-            self.name = None
-            self.id = "None"
-
-            h_jnc['chrom'] = None
-            h_jnc['coord1'] = [0, 0]
-            h_jnc['coord2'] = [0, 0]
-            h_jnc['strand'] = None
-            h_jnc['coverage'] = scipy.sparse.lil_matrix((1, (majiq_config.readLen - 16) + 1), dtype=np.float)
-        else:
-            h_jnc['name'] = "%s:%s-%s" % (self.get_gene().get_id(), self.get_ss_5p(), self.get_ss_3p())
-            h_jnc['id'] = "%s:%s-%s" % (self.get_gene().get_chromosome(), self.get_ss_5p(), self.get_ss_3p())
-
-            h_jnc['chrom'] = self.get_gene().get_chromosome()
-            h_jnc['strand'] = self.get_gene().get_strand()
-            if self.get_donor() is None:
-                h_jnc['coord1'] = [0, 0]
-            else:
-                h_jnc['coord1'] = self.get_donor().get_coordinates()
-
-            if self.get_acceptor() is None:
-                h_jnc['coord2'] = [0, 0]
-            else:
-                h_jnc['coord2'] = self.get_acceptor().get_coordinates()
-
-
-            if majiq_config.gcnorm:
-                h_jnc.create_dataset('gc_factor', data=self.gc_content.toarray(),
-                                     compression='gzip', compression_opts=9)
-                #gc_factor = self.gc_content[exp_idx,:]
-            else:
-                gc_factor = None
-
-
-
-            # cov = h_jnc.create_group('coverage')
-            # for par in ('data', 'indices', 'indptr', 'shape'):
-            #     full_name = '%s' % par
-            #     arr = np.array(getattr(self.coverage[exp_idx, :].tocsr(), par))
-            #     cov.create_dataset(full_name, data=arr)
-            #
-            # gc = h_jnc.create_group('gc_factor')
-            # for par in ('data', 'indices', 'indptr', 'shape'):
-            #     full_name = '%s' % par
-            #     arr = np.array(getattr(gc_factor, par))
-            #     gc.create_dataset(full_name, data=arr)
-
-            h_jnc.create_dataset('coverage', data=self.coverage[exp_idx, :].toarray(),
-                                 compression='gzip', compression_opts=9)
-
-
-        return h_jnc
-
-
-def set_gc_factor(hdf5grp, exp_idx):
-    return
-    if majiq_config.gcnorm:
-        gc_factor = majiq_io_utils.load_sparse_mat(hdf5grp['gc_factor'])
-        cov = majiq_io_utils.load_sparse_mat(hdf5grp['coverage'])
-
-        nnz = gc_factor.nonzero()
-        for idx in xrange(nnz[0].shape[0]):
-            i = nnz[0][idx]
-            j = nnz[1][idx]
-            dummy = gc_factor[i, j]
-            cov[i, j] *= majiq_config.gc_factor[exp_idx](dummy)
-    del hdf5grp['gc_factor']
+# def set_gc_factor(hdf5grp, exp_idx):
+#     return
+#     if majiq_config.gcnorm:
+#         gc_factor = majiq_io_utils.load_sparse_mat(hdf5grp['gc_factor'])
+#         cov = majiq_io_utils.load_sparse_mat(hdf5grp['coverage'])
+#
+#         nnz = gc_factor.nonzero()
+#         for idx in xrange(nnz[0].shape[0]):
+#             i = nnz[0][idx]
+#             j = nnz[1][idx]
+#             dummy = gc_factor[i, j]
+#             cov[i, j] *= majiq_config.gc_factor[exp_idx](dummy)
+#     del hdf5grp['gc_factor']
 
 
 class Queue_Junction:
+    def __init__(self, jnc, exp_idx):
+        self.coverage = jnc.coverage[exp_idx, :]
+        if majiq_config.gcnorm:
+            self.gc_factor = scipy.sparse.lil_matrix((1, (majiq_config.readLen - 16) + 1), dtype=np.float)
+        else:
+             self.gc_factor = None
+        for jj in range(majiq_config.readLen - 16 + 1):
+            dummy = jnc.gc_content[0, jj]
+            self.gc_factor[0, jj] *= dummy
+
+    def set_gc_factor(self, exp_idx):
+        if majiq_config.gcnorm:
+            nnz = self.gc_factor.nonzero()
+            for idx in xrange(nnz[0].shape[0]):
+                i = nnz[0][idx]
+                j = nnz[1][idx]
+                dummy = self.gc_factor[i, j]
+                self.coverage[i, j] *= majiq_config.gc_factor[exp_idx](dummy)
+        del self.gc_factor
+
+    def to_hdf5(self, hdf5grps, exp_idx):
+        h_jnc = hdf5grps.create_group(self.id)
+        h_jnc['annotated'] = self.annot
+        h_jnc['name'] = self.name
+        h_jnc['id'] = self.id
+        h_jnc['chrom'] = self.exons['chrom']
+        h_jnc['strand'] = self.exons['strand']
+        h_jnc['coord1'] = self.exons['coord1']
+        h_jnc['coord2'] = self.exons['coord2']
+
+        if majiq_config.gcnorm:
+           # self.set_gc_factor(exp_idx)
+            pass
+        print exp_idx
+        h_jnc.create_dataset('coverage', data=self.coverage.toarray(),
+                             compression='gzip', compression_opts=9)
+        return h_jnc
+
+class Majiq_Junction:
     def __init__(self, jnc, exp_idx):
         self.exons = {}
         self.annot = jnc.is_annotated()
@@ -270,3 +250,31 @@ class Queue_Junction:
             for jj in range(majiq_config.readLen - 16 + 1):
                 dummy = jnc.gc_content[0, jj]
                 self.gc_factor[0, jj] *= dummy
+
+    def set_gc_factor(self, exp_idx):
+        if majiq_config.gcnorm:
+            nnz = self.gc_factor.nonzero()
+            for idx in xrange(nnz[0].shape[0]):
+                i = nnz[0][idx]
+                j = nnz[1][idx]
+                dummy = self.gc_factor[i, j]
+                self.coverage[i, j] *= majiq_config.gc_factor[exp_idx](dummy)
+        del self.gc_factor
+
+    def to_hdf5(self, hdf5grps, exp_idx):
+        h_jnc = hdf5grps.create_group(self.id)
+        h_jnc['annotated'] = self.annot
+        h_jnc['name'] = self.name
+        h_jnc['id'] = self.id
+        h_jnc['chrom'] = self.exons['chrom']
+        h_jnc['strand'] = self.exons['strand']
+        h_jnc['coord1'] = self.exons['coord1']
+        h_jnc['coord2'] = self.exons['coord2']
+
+        if majiq_config.gcnorm:
+           # self.set_gc_factor(exp_idx)
+            pass
+        print exp_idx
+        h_jnc.create_dataset('coverage', data=self.coverage.toarray(),
+                             compression='gzip', compression_opts=9)
+        return h_jnc

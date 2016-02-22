@@ -53,26 +53,28 @@ def get_logger(logger_name, silent=False, debug=False):
 Majiq file generation
 """
 
-def send_output(lsv_list, non_as, temp_dir, out_queue):
+def send_output(lsv_list, non_as, temp_dir, out_queue, chnk, mlock):
 
     #out_temp = dict()
     for name, ind_list in majiq_config.tissue_repl.items():
+
+        njuncs = len(non_as[name])
+        prb = min(1.0, float(majiq_config.nrandom_junctions)/njuncs)*100
+        kk = np.random.choice(100, njuncs)
+        indx = np.arange(njuncs)[kk <= prb]
+        r_junctions = np.array(list(non_as[name]))[indx]
+
         for idx, exp_idx in enumerate(ind_list):
-            majiq_table_as = [0] * len(lsv_list[name])
-            majiq_table_nonas = [0] * len(non_as[name])
-
             for iix, lsv in enumerate(lsv_list[name]):
-                #majiq_table_as[iix] = majiq_lsv.Queue_Lsv(lsv, exp_idx)
-                out_queue.put([0, majiq_lsv.Queue_Lsv(lsv, exp_idx)], block=True)
-            for jix, jn in enumerate(non_as[name]):
-                out_queue.put([1, majiq_junction.Queue_Junction(jn, exp_idx)], block=True)
-                #majiq_table_nonas[jix] = majiq_junction.Queue_Junction(jn, exp_idx)
+                out_queue.put([0, majiq_lsv.Queue_Lsv(lsv, exp_idx), exp_idx], block=True)
+            for jix, jn in enumerate(r_junctions):
+                out_queue.put([1, jn.get_coverage(exp_idx), exp_idx], block=True)
+                #out_queue.put([1, majiq_junction.Queue_Junction(jn, exp_idx), exp_idx], block=True)
 
-
-            # out_temp = (majiq_table_as, majiq_table_nonas)
-            # fname = "%s/%s.majiq.pkl" % (temp_dir, majiq_config.exp_list[exp_idx])
-            # majiq_io.dump_bin_file(out_temp, fname)
-
+    out_queue.put([3, chnk, 00], block=True)
+    mlock.acquire()
+    mlock.release()
+    #out_queue.close()
 
 def prepare_lsv_table(lsv_list, non_as, temp_dir):
 
