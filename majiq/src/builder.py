@@ -229,10 +229,10 @@ def main(params):
             fname_sg = "%s/%s.splicegraph.hdf5" % (majiq_config.outDir, majiq_config.exp_list[exp_idx])
             f_splicegraph = h5py.File(fname_sg, 'w', compression='gzip', compression_opts=9)
 
-            as_table = f.create_group('LSVs')
-            lsv_list.append(as_table)
+            #as_table = f.create_group('LSVs')
+            lsv_list.append(f)
             effective_readlen = (majiq_config.readLen - 16) + 1
-            non_as_table = f.create_dataset("const_junctions",
+            non_as_table = f.create_dataset("/const_junctions",
                                             (majiq_config.nrandom_junctions, effective_readlen),
                                             maxshape=(None, effective_readlen))
             junc_list.append(non_as_table)
@@ -246,9 +246,10 @@ def main(params):
                 try:
                     val = q.get(block=True, timeout=10)
                     if val[0] == 0:
-                        val[1].to_hdf5(lsv_list[val[2]], val[2])
+                        val[1].to_hdf5(lsv_list[val[2]])
                     elif val[0] == 1:
-                        non_as_table[junc_idx[val[2]], :] = val[1].toarray()
+
+                        junc_list[val[2]][junc_idx[val[2]], :] = val[1].toarray()
                         junc_idx[val[2]] += 1
                     #    val[1].to_hdf5(junc_list[val[2]], val[2])
                     elif val[0] == 2:
@@ -257,6 +258,7 @@ def main(params):
                     elif val[0] == 3:
                         lock_array[val[1]].release()
                         count += 1
+
                 except Queue.Empty:
                     if count < majiq_config.num_final_chunks:
                         continue
@@ -268,14 +270,12 @@ def main(params):
 
 
         for ff in file_list:
+
             ff.close()
 
         for ff in splicegraph:
+            ff.flush()
             ff.close()
-
-
-
-
 
 
     #GATHER
