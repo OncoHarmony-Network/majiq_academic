@@ -80,7 +80,7 @@ class GeneGraphic(object):
         h_gen.attrs['start'] = self.start
         h_gen.attrs['end'] = self.end
 
-        [ex.to_hdf5(h_gen) for ex in self.exons]
+        [ex.to_hdf5(h_gen, ex_count) for ex_count, ex in enumerate(self.exons)]
         [jun.to_hdf5(h_gen) for jun in self.junctions]
 
         return h_gen
@@ -175,9 +175,9 @@ class ExonGraphic(object):
     def to_JSON(self, encoder=json.JSONEncoder):
         return json.dumps(self, default=lambda o: o.__dict__, sort_keys=True, cls=encoder)
 
-    def to_hdf5(self, hdf5grps):
-        h_ex = hdf5grps.create_group("exons/%s-%s" %(self.coords[0], self.coords[1]))
+    def to_hdf5(self, hdf5grps, idcount):
 
+        h_ex = hdf5grps.create_group("exons/%s" % idcount)
         h_ex.attrs['a3'] = self.a3
         h_ex.attrs['a5'] = self.a5
         h_ex.attrs['type'] = self.type_exon
