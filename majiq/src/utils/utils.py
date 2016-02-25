@@ -5,7 +5,7 @@ import sys
 
 import h5py
 import numpy as np
-
+import multiprocessing as mp
 import majiq.grimoire.junction as majiq_junction
 import majiq.grimoire.lsv as majiq_lsv
 import majiq.src.config as majiq_config
@@ -23,30 +23,29 @@ def create_if_not_exists(my_dir, logger=False):
             logger.debug("\nDirectory %s already exists..." % my_dir)
 
 
-def get_logger(logger_name, silent=False, debug=False): 
+def get_logger(logger_name, silent=False, debug=False, child=False):
     """
     Returns a logger instance. verbose = False will silence the logger, debug will give 
     more information intended for debugging purposes.
     """
     logging_format = "%(asctime)s (PID:%(process)s) - %(levelname)s - %(message)s"
-    logging.basicConfig(filename="%s" % logger_name, format=logging_format)
     logger = logging.getLogger(logger_name)
+    formatter = logging.Formatter(logging_format)
+
+    fileHandler = logging.FileHandler(logger_name, mode='w')
+    fileHandler.setFormatter(formatter)
+
+    streamHandler = logging.StreamHandler()
+    streamHandler.setFormatter(formatter)
+
     if debug:
         logger.setLevel(logging.DEBUG)
     else:
         logger.setLevel(logging.INFO)
 
-    ch = logging.StreamHandler()
-    if debug: 
-        ch.setLevel(logging.DEBUG)
-    elif not silent:
-        ch.setLevel(logging.INFO)
-    else:
-        ch.setLevel(logging.WARNING)
+    logger.addHandler(fileHandler)
+    logger.addHandler(streamHandler)
 
-    formatter = logging.Formatter("%(asctime)s (PID:%(process)s) - %(levelname)s - %(message)s")
-    ch.setFormatter(formatter)
-    logger.addHandler(ch)
     return logger
 
 """
@@ -59,7 +58,8 @@ def send_output(lsv_list, non_as, temp_dir, out_queue, chnk, mlock):
     for name, ind_list in majiq_config.tissue_repl.items():
 
         njuncs = len(non_as[name])
-        prb = min(1.0, float(majiq_config.nrandom_junctions)/njuncs)*100
+        t_juncs = float(majiq_config.nrandom_junctions) / majiq_config.num_final_chunks
+        prb = min(1.0, float(t_juncs)/njuncs)*100
         kk = np.random.choice(100, njuncs)
         indx = np.arange(njuncs)[kk <= prb]
         r_junctions = np.array(list(non_as[name]))[indx]

@@ -126,8 +126,9 @@ def gather_files(out_dir, prefix='', gff_out=None, pcr_out=None, nthreads=1, log
 def __parallel_lsv_quant(samfiles_list, chnk, pcr_validation=False, gff_output=None, only_rna=False,
                          nondenovo=False, silent=False, debug=0):
     try:
-        print "START child,", mp.current_process().name
-        tlogger = utils.get_logger("%s/%s.majiq.log" % (majiq_config.outDir, chnk), silent=silent, debug=debug)
+        print "START child,", mp.current_process()._identity
+        tlogger = utils.get_logger("%s/%s.majiq.log" % (majiq_config.outDir, mp.current_process()._identity[0]),
+                                   silent=silent, debug=debug)
         majiq_builder(samfiles_list, chnk, pcr_validation=pcr_validation,
                       gff_output=gff_output, only_rna=only_rna, nondenovo=nondenovo, logging=tlogger)
         print "END child, ", mp.current_process().name
@@ -140,8 +141,9 @@ def __parallel_lsv_quant(samfiles_list, chnk, pcr_validation=False, gff_output=N
 def __parallel_gff3(transcripts, pcr_filename, nthreads, silent=False, debug=0):
 
     try:
-        print "START child,", mp.current_process().name
-        tlogger = utils.get_logger("%s/db.majiq.log" % majiq_config.outDir, silent=silent, debug=debug)
+        print "START child,", mp.current_process()._identity
+        tlogger = utils.get_logger("%s/db.majiq.log" % majiq_config.outDir,
+                                   silent=silent, debug=debug)
         majiq_io.read_gff(transcripts, pcr_filename, nthreads, logging=tlogger)
         print "END child, ", mp.current_process().name
     except Exception as e:
@@ -194,7 +196,6 @@ def main(params):
             pool = Pool(processes=params.nthreads, initializer=__builder_init,
                         initargs=[q, lock_array])#, maxtasksperchild=1)
 
-        #lock_array = [None] * majiq_config.num_final_chunks
         for chnk in range(majiq_config.num_final_chunks):
             temp_dir = "%s/tmp/chunk_%s" % (majiq_config.outDir, chnk)
             utils.create_if_not_exists(temp_dir)
@@ -248,7 +249,8 @@ def main(params):
                     if val[0] == 0:
                         val[1].to_hdf5(lsv_list[val[2]])
                     elif val[0] == 1:
-
+                        if junc_idx[val[2]] >= majiq_config.nrandom_junctions:
+                            continue
                         junc_list[val[2]][junc_idx[val[2]], :] = val[1].toarray()
                         junc_idx[val[2]] += 1
                     #    val[1].to_hdf5(junc_list[val[2]], val[2])
@@ -270,11 +272,9 @@ def main(params):
 
 
         for ff in file_list:
-
             ff.close()
 
         for ff in splicegraph:
-            ff.flush()
             ff.close()
 
 
