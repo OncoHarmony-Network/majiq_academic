@@ -404,20 +404,12 @@ def parse_input(args):
     logger.info("Execution line: %s" % repr(args))
     logger.info("Processing %s summary." % type_summary)
 
-<<<<<<< HEAD
-    threshold   = None
-    pairwise    = None
-
-    voila_file = args.majiq_bins
-    output_html = os.path.splitext(os.path.split(voila_file)[1])[0] + "_" + type_summary.replace("-", "_") + '.html'
-=======
     threshold = None
     pairwise = None
     
     if type_summary != constants.COND_TABLE:
         voila_file = args.majiq_bins
         output_html = os.path.splitext(os.path.split(voila_file)[1])[0] + "_" + type_summary.replace("-", "_") + '.html'
->>>>>>> d0cc0cf... test hdf5
 
     majiq_output = None
     meta_postprocess = {}
