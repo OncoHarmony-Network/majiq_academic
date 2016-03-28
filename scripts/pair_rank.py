@@ -109,7 +109,7 @@ def rank_majiq(vlsv_list, V=0.2, absolute=True, dofilter=True, E=False, ranknoch
 
         # Filtering out lsvs that have exons shared with an already added lsv
         lsv_exon_coords = [int(coord) for coord in vlsv.get_id().split(':')[1].split('-')]
-        if np.any( [ee.get_coords() in covered_exons for ee in vlsv.lsv_graphic.get_exons() if list(ee.get_coords()) <> lsv_exon_coords ] ):
+        if np.any([ee.get_coords() in covered_exons for ee in vlsv.lsv_graphic.get_exons() if list(ee.get_coords()) <> lsv_exon_coords ] ):
             continue
         covered_exons.extend([ee.get_coords() for ee in vlsv.lsv_graphic.get_exons() if list(ee.get_coords()) <> lsv_exon_coords ])
         if len(lsv_bins) > 2:
