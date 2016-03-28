@@ -54,7 +54,7 @@ def global_conf_ini(filename, params, only_db=False):
         num_final_chunks = params.nthreads * 5 if params.nthreads > 1 else 1
     else:
         num_final_chunks = 1
-    min_denovo = 2
+    min_denovo = params.min_denovo
     gcnorm = True
     nrandom_junctions = 5000
     config = ConfigParser.ConfigParser()
