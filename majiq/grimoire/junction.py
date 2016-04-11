@@ -148,7 +148,11 @@ class Junction:
         self.transcript_id_list.append(trnscrpt.get_id())
 
     def update_junction_read(self, exp_idx, read_n, start, gc, unique):
+        print self.gene_name, majiq_config.readLen, self.start, start
         left_ind = majiq_config.readLen - (self.start - start) - 8 + 1
+        print left_ind
+        import sys
+        sys.stdout.flush()
         if unique:
             self.coverage[exp_idx, left_ind] += read_n
         else:
