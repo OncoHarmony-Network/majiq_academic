@@ -288,14 +288,14 @@ def rnaseq_intron_retention(filenames, gene_list, chnk, permissive=True, nondeno
                     exnum = majiq_exons.new_exon_definition(intron_start, intron_end,
                                                             None, junc1, junc2, gne, nondenovo=nondenovo,
                                                             isintron=True)
-                    if exnum == -1:
-                        for exp_index in ind_list:
-                            if not junc2 is None:
-                                junc2.reset_coverage(exp_index)
-                            if not junc1 is None:
-                                junc1.reset_coverage(exp_index)
-                    else:
-
+                    #if exnum == -1:
+                    #    for exp_index in ind_list:
+                    #        if not junc2 is None:
+                    #            junc2.reset_coverage(exp_index)
+                    #        if not junc1 is None:
+                    #            junc1.reset_coverage(exp_index)
+                    #else:
+                    if exnum != -1:
                         junc1.add_donor(exon1)
                         for ex in exon1.exonRead_list:
                             st, end = ex.get_coordinates()
@@ -314,12 +314,12 @@ def rnaseq_intron_retention(filenames, gene_list, chnk, permissive=True, nondeno
                             logging.info("NEW INTRON RETENTION EVENT %s, %d-%d" % (gne.get_name(),
                                                                                    intron_start,
                                                                                    intron_end))
-                else:
-                    for exp_index in ind_list:
-                        if not junc2 is None:
-                            junc2.reset_coverage(exp_index)
-                        if not junc1 is None:
-                            junc1.reset_coverage(exp_index)
+                #else:
+                #    for exp_index in ind_list:
+                #        if not junc2 is None:
+                #            junc2.reset_coverage(exp_index)
+                #        if not junc1 is None:
+                #            junc1.reset_coverage(exp_index)
         gne.prepare_exons()
 
     for ss in samfile:

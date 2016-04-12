@@ -16,7 +16,7 @@ import majiq.src.io as majiq_io
 def mark_stacks(lsv_list, fitfunc_r, pvalue_limit, logger=None):
 
     if pvalue_limit < 0:
-        return
+        return lsv_list
     logger.info("Marking and masking stacks")
     minstack = sys.maxint
     # the minimum value marked as stack
