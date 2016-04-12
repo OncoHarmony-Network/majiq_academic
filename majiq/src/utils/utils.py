@@ -104,6 +104,8 @@ def generate_visualization_output(allgenes, temp_dir):
 
                 junc_l = np.asarray(junc_l)
                 exon_list = []
+                #print gg.get_id(),
+                #print gg.get_exon_list()
                 for ex in gg.get_exon_list():
                     cc = ex.get_coordinates()
                     a3 = []

@@ -28,7 +28,7 @@ class GeneGraphic(object):
         try:
             self.start = exons[0].get_coords()[0]
         except:
-            print "KK"
+            print "KK", exons
         self.end = exons[-1].get_coords()[1]
         super(GeneGraphic, self).__init__(**kwds)
 

@@ -61,7 +61,7 @@ def lsv_detection(gene_list, chrom, only_real_data=False, logging=None):
                     if st.contained(ss):
                         break
                 else:
-                    lsv_list[name].append(st)
+                    lsv_list[name].append(st) 
 
     return lsv_list, const_set
 
