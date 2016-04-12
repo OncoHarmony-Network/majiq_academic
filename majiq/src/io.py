@@ -382,7 +382,7 @@ def read_sam_or_bam(filenames, gene_list, chnk, nondenovo=False, logging=None):
                 readlen = len(read.seq)
                 for (junc_start, junc_end) in junc_list:
                     if junc_start - r_start > readlen:
-                        r_start = junc_start - (readlen - 16) - 1
+                        r_start = junc_start - (majiq_config.readLen - 16) - 1
                     elif junc_start - r_start >= readlen - 8 or junc_start - r_start <= 8:
                         continue
 
