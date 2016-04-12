@@ -641,13 +641,18 @@ def _prepare_and_dump(logging=None):
     lsv_list = []
 
     dumped_genes = []
-
+    total = len(list_genes)
     for gidx, gn in enumerate(list_genes):
         if gn.get_id() in dumped_genes:
             continue
         gn.collapse_exons()
-        csize -= 1
+        if len(gn.exons) == 0:
+            total -= 1
+            if total <=0:
+                raise RuntimeError('There are no valid genes in the genome')
+            continue
 
+        csize -= 1
         chrom = gn.get_chromosome()
         if not chrom in temp_ex:
             temp_ex[chrom] = []
@@ -667,11 +672,11 @@ def _prepare_and_dump(logging=None):
             temp_ex = {}
             if not chrom in temp_ex:
                 temp_ex[chrom] = []
-            temp_ex[chrom].extend(gn.get_exon_list())
+            temp_ex[chrom].extend(gn.get_exon_list()) 
 
     if len(lsv_list) > 0:
         __annot_dump(nthrd, temp_ex, lsv_list, logging)
-
+    
 
 def read_gff(filename, pcr_filename, nthreads, logging=None):
     """
@@ -706,7 +711,7 @@ def read_gff(filename, pcr_filename, nthreads, logging=None):
             all_genes[chrom][strand].append(gn)
             gene_id_dict[record.attributes['ID']] = gn
 
-        elif record.type == 'mRNA' or record.type == 'transcript':
+        elif record.type in ['mRNA','tRNA', 'transcript']:
             transcript_name = record.attributes['ID']
             parent = record.attributes['Parent']
             try:
@@ -751,17 +756,19 @@ def read_gff(filename, pcr_filename, nthreads, logging=None):
             pre_txex = ex
 
         junc = gn.new_annotated_junctions(pre_end, None, trcpt)
-        pre_txex.add_5prime_junc(junc)
-
+        pre_txex.add_5prime_junc(junc)  
     # end for
-    import sys
 
-    print sys.getsizeof(all_genes)
+    try:
+        _prepare_and_dump(logging)
+    except RuntimeError:
+        if not logging is None:
+            logging.info("There are no valid genes in the genome")
+        raise
 
-    _prepare_and_dump(logging)
     if pcr_filename is not None:
         read_bed_pcr(pcr_filename, all_genes)
-
+    
     chr_list = all_genes.keys()
     del all_genes
     return chr_list
