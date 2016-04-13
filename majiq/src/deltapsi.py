@@ -276,8 +276,6 @@ class Multi_Deltapair(BasicPipeline):
 
         onlygather = True
 
-
-
         for group1, group2 in list_deltas:
             dpsi_name = '%s_%s' % (group1, group2)
 
@@ -479,7 +477,7 @@ def deltapsi_quantify(fname, delta_prior_path, boots_sample=True, logger=None):
                                                                     alpha_prior[p_idx], beta_prior[p_idx]))
 
                 psi_v1 = data_given_psi1.reshape(nbins, -1)
-                post_psi1 += np.exp(data_given_psi1 - scipy.misc.logsumexp(data_given_psi1))
+                post_psi1 += (data_given_psi1 - scipy.misc.logsumexp(data_given_psi1))
 
                 junc = [psi2[xx][p_idx][m] for xx in xrange(num_exp[1])]
                 junc = np.array(junc)
@@ -487,7 +485,7 @@ def deltapsi_quantify(fname, delta_prior_path, boots_sample=True, logger=None):
                 all_sample = np.array(all_sample)
                 data_given_psi2 = np.log(majiq_psi.prob_data_sample_given_psi(junc.sum(), all_sample.sum(), nbins,
                                                                     alpha_prior[p_idx], beta_prior[p_idx]))
-                post_psi2 += np.exp(data_given_psi2 - scipy.misc.logsumexp(data_given_psi2))
+                post_psi2 += (data_given_psi2 - scipy.misc.logsumexp(data_given_psi2))
                 psi_v2 = data_given_psi2.reshape(-1, nbins)
 
                 A = (psi_v1 * ones_n + psi_v2 * ones_n.T) + np.log(prior_matrix[prior_idx])

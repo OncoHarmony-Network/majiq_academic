@@ -3,6 +3,7 @@ import numpy as np
 from majiq.grimoire.lsv import SSOURCE, STARGET, InvalidLSV
 import majiq.src.config as majiq_config
 import majiq.src.filter as majiq_filter
+import majiq.grimoire.lsv as majiq_lsv
 
 def reliable_in_data(junc, exp_idx):
     min_read_x_exp = majiq_config.MINREADS
@@ -14,7 +15,7 @@ def reliable_in_data(junc, exp_idx):
     return in_data_filter
 
 
-def lsv_detection(gene_list, chnk, only_real_data=False, logging=None):
+def lsv_detection(gene_list, chnk, only_real_data=False, out_queue=None, logging=None):
 
     lsv_list = {}
     const_set = {}
@@ -47,21 +48,42 @@ def lsv_detection(gene_list, chnk, only_real_data=False, logging=None):
             local_const.difference(local_lsv_jun)
             const_set[name].update(local_const)
 
+            njuncs = len(local_const)
+            t_juncs = float(majiq_config.nrandom_junctions) / (len(gene_list) * majiq_config.num_final_chunks)
+
+            prb = min(1.0, float(t_juncs) / njuncs) * 100
+            kk = np.random.choice(100, njuncs)
+            indx = np.arange(njuncs)[kk <= prb]
+            r_junctions = np.array(list(local_const))[indx]
+    #
+            #for idx, exp_idx in enumerate(ind_list):
+
+            for jix, jn in enumerate(r_junctions):
+                out_queue.put([1, jn.get_coverage(ind_list), name], block=True)
+
+
+
+
+
+
             for ss in dummy[name][0]:
                 for st in dummy[name][1]:
                     if ss.contained(st):
                         break
                 else:
-                    lsv_list[name].append(ss)
+                    out_queue.put([0, majiq_lsv.Queue_Lsv(ss, name), name], block=True)
+                    #lsv_list[name].append(ss)
 
             for st in dummy[name][1]:
                 for ss in dummy[name][0]:
                     if st.contained(ss):
                         break
                 else:
-                    lsv_list[name].append(st)
+                    out_queue.put([0, majiq_lsv.Queue_Lsv(st, name), name], block=True)
 
-    return lsv_list, const_set
+                    #lsv_list[name].append(st)
+
+    #return const_set
 
 
 def detect_lsv(exon, gn, lsv_type, dummy, jun, only_annot=False):

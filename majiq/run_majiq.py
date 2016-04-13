@@ -54,6 +54,10 @@ def main():
     buildparser.add_argument('--min_intronic_cov', default=1.5, type=float,
                              help='Minimum number of reads on average in intronic sites, only for intron retention.'
                                   'Default: %(default)s]')
+    buildparser.add_argument('--num_chunks', default=-1, type=float,
+                             help='Numbers of chunks the execution will be divided. That differs of nthread in the '
+                                  'concurrency. Chunks is the total chunks of the execution, nthreads set how many of '
+                                  'this chunks will be executed at the same time.')
     buildparser.add_argument('--minpos', default=2, type=int, help='Minimum number of start positions with at least 1 '
                                                                    'read in a LSV to consider that the LSV "exist in '
                                                                    'the data"')

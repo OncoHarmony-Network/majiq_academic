@@ -2,10 +2,8 @@ import logging
 import os
 import random
 import sys
-
 import h5py
 import numpy as np
-import multiprocessing as mp
 import majiq.grimoire.junction as majiq_junction
 import majiq.grimoire.lsv as majiq_lsv
 import majiq.src.config as majiq_config
@@ -48,36 +46,42 @@ def get_logger(logger_name, silent=False, debug=False, child=False):
 
     return logger
 
+
 """
 Majiq file generation
 """
 
+
 def send_output(lsv_list, non_as, temp_dir, out_queue, chnk, mlock):
 
-    #out_temp = dict()
-    for name, ind_list in majiq_config.tissue_repl.items():
+## per bam file
+    # for name, ind_list in majiq_config.tissue_repl.items():
+    #
+    #     njuncs = len(non_as[name])
+    #     t_juncs = float(majiq_config.nrandom_junctions) / majiq_config.num_final_chunks
+    #     prb = min(1.0, float(t_juncs) / njuncs) * 100
+    #     kk = np.random.choice(100, njuncs)
+    #     indx = np.arange(njuncs)[kk <= prb]
+    #     r_junctions = np.array(list(non_as[name]))[indx]
+    # #
+    #     for idx, exp_idx in enumerate(ind_list):
+    #
+    #         for jix, jn in enumerate(r_junctions):
+    #             out_queue.put([1, jn.get_coverage(exp_idx), exp_idx], block=True)
 
-        njuncs = len(non_as[name])
-        t_juncs = float(majiq_config.nrandom_junctions) / majiq_config.num_final_chunks
-        prb = min(1.0, float(t_juncs)/njuncs)*100
-        kk = np.random.choice(100, njuncs)
-        indx = np.arange(njuncs)[kk <= prb]
-        r_junctions = np.array(list(non_as[name]))[indx]
-
-        for idx, exp_idx in enumerate(ind_list):
-            for iix, lsv in enumerate(lsv_list[name]):
-                out_queue.put([0, majiq_lsv.Queue_Lsv(lsv, exp_idx), exp_idx], block=True)
-            for jix, jn in enumerate(r_junctions):
-                out_queue.put([1, jn.get_coverage(exp_idx), exp_idx], block=True)
-                #out_queue.put([1, majiq_junction.Queue_Junction(jn, exp_idx), exp_idx], block=True)
-
-    out_queue.put([3, chnk, 00], block=True)
+    out_queue.put([3, chnk, -1], block=True)
     mlock.acquire()
     mlock.release()
-    #out_queue.close()
+    # out_queue.close()
+
 
 def prepare_lsv_table(lsv_list, non_as, temp_dir):
+    """
 
+    :param lsv_list:
+    :param non_as:
+    :param temp_dir:
+    """
     for name, ind_list in majiq_config.tissue_repl.items():
         for idx, exp_idx in enumerate(ind_list):
             fname = "%s/%s.majiq.hdf5" % (temp_dir, majiq_config.exp_list[exp_idx])
@@ -93,7 +97,6 @@ def prepare_lsv_table(lsv_list, non_as, temp_dir):
 
 
 def merge_and_create_majiq_file(exp_idx, pref_file):
-
     """
     :param exp_idx: Index of experiment in config file
     :param pref_file: Prefix for the majiq name
@@ -134,7 +137,6 @@ def merge_and_create_majiq_file(exp_idx, pref_file):
                 for kk in temp_table['const'].keys():
                     nat.append([kk, temp_table.filename])
 
-
     clist = random.sample(nat, min(5000, len(nat)))
     for jnc in clist:
         with h5py.File(jnc[1]) as tt:
@@ -142,23 +144,27 @@ def merge_and_create_majiq_file(exp_idx, pref_file):
             majiq_junction.set_gc_factor(nonas_table[jnc[0]], exp_idx)
 
 
-
-
 def print_junc_matrices(mat, tlb=None, fp=None):
+    """
+
+    :param mat:
+    :param tlb:
+    :param fp:
+    """
     if not fp is None:
         out = open('./junc_matrix.tab', 'a+')
     else:
         out = sys.stdout
     out.write("\n=== BEGIN %s === \n\n" % id)
     N, M = mat.shape
-    header = [0]*N
+    header = [0] * N
     if not tlb is None:
         out.write("Nan\t")
         for ex, (p1, p2) in tlb.items():
             for n in p1:
-                out.write("%d\t" % (ex+1))
+                out.write("%d\t" % (ex + 1))
             for n in p2:
-                header[n] = "%d" % (ex+1)
+                header[n] = "%d" % (ex + 1)
     out.write("\n")
     for ii in np.arange(N):
         if not tlb is None:
@@ -173,7 +179,11 @@ def print_junc_matrices(mat, tlb=None, fp=None):
 
 
 def get_validated_pcr_lsv(candidates, out_dir):
+    """
 
+    :param candidates:
+    :param out_dir:
+    """
     pcr_list = []
     print "get_validated_pcr_lsv", len(candidates[0])
     for lsv in candidates[0]:
@@ -195,12 +205,9 @@ def get_validated_pcr_lsv(candidates, out_dir):
     majiq_io_utils.dump_bin_file(pcr_list, fname)
 
 
-
-
-#ANALYSIS FUNCTIONS
+# ANALYSIS FUNCTIONS
 
 def analyze_denovo_junctions(genes, output):
-
     denovo_list = [[] for xx in range(majiq_config.num_experiments)]
     annot_list = [[] for xx in range(majiq_config.num_experiments)]
 
@@ -218,7 +225,6 @@ def analyze_denovo_junctions(genes, output):
 
 
 def histogram_for_exon_analysis(genes, output):
-
     denovo_list = []
     annotated_list = []
 

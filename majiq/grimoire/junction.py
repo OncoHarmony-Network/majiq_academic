@@ -47,7 +47,7 @@ class Junction:
         if experiment is None:
             return self.coverage
         else:
-            return self.coverage[experiment, :]
+            return self.coverage[experiment]
 
     def get_ss_5p(self):
         return self.start

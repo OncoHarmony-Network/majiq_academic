@@ -33,7 +33,6 @@ def get_clean_raw_reads(matched_info, matched_lsv, outdir, names, num_exp):
 
             num = jlist.sum(axis=1)
             res.append([lsv[1], num.data])
-
     #with open('%s/clean_reads.%s.pkl' % (outdir, names), 'wb') as fp:
     majiq_io.dump_bin_file(res, '%s/clean_reads.%s.pkl' % (outdir, names))
 

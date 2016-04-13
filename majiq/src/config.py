@@ -55,7 +55,7 @@ def global_conf_ini(filename, params, only_db=False):
     else:
         num_final_chunks = 1
     min_denovo = params.min_denovo
-    gcnorm = True
+    gcnorm = params.gcnorm
     nrandom_junctions = 5000
     config = ConfigParser.ConfigParser()
     config.read(filename)

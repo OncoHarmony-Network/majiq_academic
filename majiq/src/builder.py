@@ -16,9 +16,11 @@ import majiq.src.config as majiq_config
 import majiq.grimoire.lsv as majiq_lsv
 import h5py
 
+
 def __builder_init(out_queue, lock_arr):
     majiq_builder.queue = out_queue
     majiq_builder.lock_arr = lock_arr
+
 
 def majiq_builder(samfiles_list, chnk, pcr_validation=None, gff_output=None, create_tlb=True, only_rna=False,
                   nondenovo=False, logging=None):
@@ -52,24 +54,22 @@ def majiq_builder(samfiles_list, chnk, pcr_validation=None, gff_output=None, cre
                                      nondenovo=nondenovo, logging=logging)
     if not logging is None:
         logging.info("[%s] Detecting LSV" % chnk)
-    lsv, const = analize.lsv_detection(gene_list, chnk, only_real_data=only_rna, logging=logging)
+    const = analize.lsv_detection(gene_list, chnk, only_real_data=only_rna, out_queue=majiq_builder.queue,
+                                  logging=logging)
+
 
     prepare_gc_content(gene_list, temp_dir)
 
-    if pcr_validation:
-        utils.get_validated_pcr_lsv(lsv, temp_dir)
-    if gff_output:
-        majiq_lsv.extract_gff(lsv, temp_dir)
+    # if pcr_validation:
+    #     utils.get_validated_pcr_lsv(lsv, temp_dir)
+    # if gff_output:
+    #     majiq_lsv.extract_gff(lsv, temp_dir)
     majiq.src.voila_wrapper.generate_visualization_output(gene_list, temp_dir, majiq_builder.queue)
     if not logging is None:
         logging.info("[%s] Preparing output" % chnk)
-
-    #utils.prepare_lsv_table(lsv, const, temp_dir)
+    lsv = None
     utils.send_output(lsv, const, temp_dir, majiq_builder.queue, chnk, majiq_builder.lock_arr[chnk])
 
-    #ANALYZE_DENOVO
-    # utils.analyze_denovo_junctions(gene_list, "%s/denovo.pkl" % temp_dir)
-    # utils.histogram_for_exon_analysis(gene_list, "%s/ex_lengths.pkl" % temp_dir)
 
 def gather_files(out_dir, prefix='', gff_out=None, pcr_out=None, nthreads=1, logger=None):
 
@@ -194,7 +194,7 @@ def main(params):
             lock_array = [mp.Lock() for xx in range(majiq_config.num_final_chunks)]
             q = mp.Queue()
             pool = Pool(processes=params.nthreads, initializer=__builder_init,
-                        initargs=[q, lock_array])#, maxtasksperchild=1)
+                        initargs=[q, lock_array], maxtasksperchild=1)
 
         for chnk in range(majiq_config.num_final_chunks):
             temp_dir = "%s/tmp/chunk_%s" % (majiq_config.outDir, chnk)
@@ -202,8 +202,6 @@ def main(params):
             if params.nthreads == 1:
                 majiq_builder(sam_list, chnk, pcr_validation=params.pcr_filename, gff_output=params.gff_output,
                               only_rna=params.only_rna, nondenovo=params.non_denovo, logging=logger)
-
-
             else:
                 lock_array[chnk].acquire()
                 pool.apply_async(__parallel_lsv_quant, [sam_list, chnk,
@@ -247,13 +245,15 @@ def main(params):
                 try:
                     val = q.get(block=True, timeout=10)
                     if val[0] == 0:
-                        val[1].to_hdf5(lsv_list[val[2]])
+                        for exp_idx in majiq_config.tissue_repl[val[2]]:
+                            val[1].to_hdf5(lsv_list[exp_idx])
                     elif val[0] == 1:
-                        if junc_idx[val[2]] >= majiq_config.nrandom_junctions:
-                            continue
-                        junc_list[val[2]][junc_idx[val[2]], :] = val[1].toarray()
-                        junc_idx[val[2]] += 1
-                    #    val[1].to_hdf5(junc_list[val[2]], val[2])
+                        for jdx, exp_idx in enumerate(majiq_config.tissue_repl[val[2]]):
+                            if junc_idx[exp_idx] >= majiq_config.nrandom_junctions:
+                                continue
+                            junc_list[exp_idx][junc_idx[exp_idx], :] = val[1][jdx, :].toarray()
+                            junc_idx[exp_idx] += 1
+
                     elif val[0] == 2:
                         val[1].to_hdf5(splicegraph[val[2]])
                         pass
@@ -264,12 +264,8 @@ def main(params):
                 except Queue.Empty:
                     if count < majiq_config.num_final_chunks:
                         continue
-
-                    print "NO More chunks"
                     break
-                #print val
             pool.join()
-
 
         for ff in file_list:
             ff.close()
