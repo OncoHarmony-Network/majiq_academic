@@ -54,8 +54,8 @@ def majiq_builder(samfiles_list, chnk, pcr_validation=None, gff_output=None, cre
                                      nondenovo=nondenovo, logging=logging)
     if not logging is None:
         logging.info("[%s] Detecting LSV" % chnk)
-    const = analize.lsv_detection(gene_list, chnk, only_real_data=only_rna, out_queue=majiq_builder.queue,
-                                  logging=logging)
+    analize.lsv_detection(gene_list, chnk, only_real_data=only_rna, out_queue=majiq_builder.queue,
+                          logging=logging)
 
 
     prepare_gc_content(gene_list, temp_dir)
@@ -68,6 +68,7 @@ def majiq_builder(samfiles_list, chnk, pcr_validation=None, gff_output=None, cre
     if not logging is None:
         logging.info("[%s] Preparing output" % chnk)
     lsv = None
+    const = None
     utils.send_output(lsv, const, temp_dir, majiq_builder.queue, chnk, majiq_builder.lock_arr[chnk])
 
 
@@ -204,14 +205,15 @@ def main(params):
                               only_rna=params.only_rna, nondenovo=params.non_denovo, logging=logger)
             else:
                 lock_array[chnk].acquire()
-                pool.apply_async(__parallel_lsv_quant, [sam_list, chnk,
-                                                        params.pcr_filename,
-                                                        params.gff_output,
-                                                        params.only_rna,
-                                                        params.non_denovo,
-                                                        params.silent,
-                                                        params.debug
-                                                        ])
+                #pool.apply_async(__parallel_lsv_quant, [sam_list, chnk,
+                pool.map_async(__parallel_lsv_quant, [sam_list, chnk,
+                                                      params.pcr_filename,
+                                                      params.gff_output,
+                                                      params.only_rna,
+                                                      params.non_denovo,
+                                                      params.silent,
+                                                      params.debug
+                                                      ])
 
         count = 0
 

@@ -61,11 +61,6 @@ def lsv_detection(gene_list, chnk, only_real_data=False, out_queue=None, logging
             for jix, jn in enumerate(r_junctions):
                 out_queue.put([1, jn.get_coverage(ind_list), name], block=True)
 
-
-
-
-
-
             for ss in dummy[name][0]:
                 for st in dummy[name][1]:
                     if ss.contained(st):

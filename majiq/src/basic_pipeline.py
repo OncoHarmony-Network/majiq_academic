@@ -53,6 +53,7 @@ def builder(args):
 class BasicPipeline:
     def __init__(self, args):
         """Basic configuration shared by all pipelines"""
+
         #trick to dump argparse arguments into self
         self.__dict__.update(args.__dict__)
         create_if_not_exists(self.output)
@@ -61,7 +62,6 @@ class BasicPipeline:
         self.logger_path = self.logger
         if not self.logger_path:
             self.logger_path = self.output
-
 
         self.nthreads = args.nthreads
         self.psi_paths = []
@@ -81,7 +81,7 @@ class BasicPipeline:
 
 
     @abc.abstractmethod
-    def run(self, lsv):
+    def run(self):
         """This is the entry point for all pipelines"""
         return
 
