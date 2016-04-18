@@ -694,11 +694,12 @@ def read_gff(filename, pcr_filename, nthreads, logging=None):
         strand = record.strand
         start = record.start
         end = record.end
-
         if record.type == 'gene':
-            gene_name = record.attributes['Name']
             gene_id = record.attributes['ID']
-
+            if 'Name' in record.attributes:
+                gene_name = record.attributes['Name']
+            else:
+                gene_name = gene_id
             if not chrom in all_genes:
                 all_genes[chrom] = {'+': [], '-': []}
 
@@ -724,7 +725,7 @@ def read_gff(filename, pcr_filename, nthreads, logging=None):
                 if not logging is None:
                     logging.info("Error, incorrect gff. mRNA %s doesn't have valid gene %s"
                                  % (transcript_name, parent))
-                raise
+                continue
 
         elif record.type == 'exon':
             parent_tx_id = record.attributes['Parent']
@@ -738,6 +739,7 @@ def read_gff(filename, pcr_filename, nthreads, logging=None):
                 if not logging is None:
                     logging.info("Error, incorrect gff. exon %s doesn't have valid mRNA %s" % (record.attributes['ID'],
                                                                                                parent_tx_id))
+                continue
                     # end elif
     # end for
     for tid, trcpt in trcpt_id_dict.items():
