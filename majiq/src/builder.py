@@ -160,8 +160,8 @@ def __parallel_gff3(transcripts, pcr_filename, nthreads, silent=False, debug=0):
 
 def main(params):
 
-    import yappi
-    yappi.start()
+#    import yappi
+#    yappi.start()
 
     if not os.path.exists(params.conf):
         raise RuntimeError("Config file %s does not exist" % params.conf)
@@ -205,8 +205,7 @@ def main(params):
                               only_rna=params.only_rna, nondenovo=params.non_denovo, logging=logger)
             else:
                 lock_array[chnk].acquire()
-                #pool.apply_async(__parallel_lsv_quant, [sam_list, chnk,
-                pool.map_async(__parallel_lsv_quant, [sam_list, chnk,
+                pool.apply_async(__parallel_lsv_quant, [sam_list, chnk,
                                                       params.pcr_filename,
                                                       params.gff_output,
                                                       params.only_rna,
@@ -280,7 +279,7 @@ def main(params):
 #    gather_files(majiq_config.outDir, '', params.gff_output, params.pcr_filename,
 #                       nthreads=params.nthreads, logger=logger)
 
-    yappi.get_func_stats().print_all()
+#    yappi.get_func_stats().print_all()
 
     majiq_config.print_numbers()
     logger.info("End of execution")
