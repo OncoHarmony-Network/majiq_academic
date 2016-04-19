@@ -523,7 +523,7 @@ def parse_input(args):
         lsvs_dict = io_voila.load_dpsi_tab(sample_files, sample_names, thres_change=thres_change, filter_genes=gene_name_list, filter_lsvs=lsv_name_list, pairwise_dir=args.pair_dir, outdir=args.output_dir)
         logger.info("LSVs added to the table: %d" % len(lsvs_dict.keys()))
         render_summary(output_dir, output_html, {'lsvs': lsvs_dict, 'sample_names': sample_names, 'cond_pair': cond_pair, 'thres': thres_change}, type_summary, logger=logger)
-        return
+    #    return
 
     InputParsed = namedtuple('InputParsed' , 'output_dir output_html majiq_output type_summary threshold meta_postprocess pairwise_dir logger')
     return InputParsed(output_dir=output_dir, output_html=output_html, majiq_output=majiq_output,
