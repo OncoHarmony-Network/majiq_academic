@@ -45,13 +45,13 @@ def print_numbers():
 
 def global_conf_ini(filename, params, only_db=False):
     global num_experiments, exp_list, readLen, tissue_repl, sam_dir, num_mapped_reads, genome, \
-        genome_path, outDir, temp_oDir, gene_tlb, strand_specific, permissive_ir, gcnorm
+        genome_path, outDir, temp_oDir, gene_tlb, strand_specific, permissive_ir, gcnorm, dbfile
     global A3SS, A5SS, SEev, bothSS, totalSE
     global MINREADS, MINPOS, MIN_INTRON
     global num_final_chunks, min_denovo, nrandom_junctions
 
     if not only_db:
-        num_final_chunks = params.nthreads * 5 if params.nthreads > 1 else 1
+        num_final_chunks = params.nthreads  if params.nthreads > 1 else 1
     else:
         num_final_chunks = 1
     min_denovo = params.min_denovo
@@ -81,6 +81,8 @@ def global_conf_ini(filename, params, only_db=False):
     genome = general['genome']
     genome_path = general['genome_path']
     readLen = int(general['readlen'])
+
+
     if 'type' in general:
         strand_specific = (general['type'] == 'strand-specific')
     else:
@@ -88,6 +90,9 @@ def global_conf_ini(filename, params, only_db=False):
     outDir = params.output
     if not os.path.exists(outDir):
         os.makedirs(outDir)
+
+    dbfile = "%s/tmp/db.hdf5" % outDir
+
     for exp_idx, lstnames in exp.items():
         tissue_repl[exp_idx] = []
         elist = lstnames.split(',')
@@ -96,22 +101,22 @@ def global_conf_ini(filename, params, only_db=False):
             tissue_repl[exp_idx].append(count)
             count += 1
 
-    #readLen = [0] * len(exp_list)
-    # for grp, grp_lens in lengths_exp.items():
-    #     if not grp in tissue_repl:
-    #         raise RuntimeError('%s no found.  Wrong Config file' % grp)
-    #     for ii in tissue_repl[grp]:
-    #         readLen[ii] = int(grp_lens)
-
     num_experiments = len(exp_list)
     num_mapped_reads = [0] * num_experiments
     gene_tlb = {}
 
-    A3SS = [0] * 20
-    A5SS = [0] * 20
-    bothSS = 0
-    SEev = [0] * 5
-    totalSE = 0
+    sam_list = []
+    for exp_idx, exp in enumerate(exp_list):
+        samfile = "%s/%s.bam" % (sam_dir, exp)
+        if not os.path.exists(samfile):
+            raise RuntimeError("Skipping %s.... not found" % samfile)
+        baifile = "%s/%s.bam.bai" % (sam_dir, exp)
+        if not os.path.exists(baifile):
+            raise RuntimeError("Skipping %s.... not found ( index file for bam file is required)" % baifile)
+        sam_list.append(samfile)
+        exp_list[exp_idx] = os.path.split(exp)[1]
+
+    return sam_list
 
 
 def global_default():

@@ -1,8 +1,4 @@
-from matplotlib import use
-
 import majiq.src.io_utils
-
-use('Agg')
 
 import abc
 from multiprocessing import Pool, Process
@@ -12,7 +8,7 @@ import gc
 import numpy as np
 from numpy.ma import masked_less
 
-from majiq.src import builder as majiq_builder
+# from majiq.src import builder as majiq_builder
 from majiq.src.utils.utils import create_if_not_exists, get_logger
 import majiq.src.filter as majiq_filter
 import majiq.src.io as majiq_io
@@ -45,7 +41,7 @@ def _pipeline_run(pipeline):
         if pipeline.logger:
             pipeline.logger.info("MAJIQ manually interrupted. Avada kedavra...")
 
-
+#
 def builder(args):
     majiq_builder.main(args)
 

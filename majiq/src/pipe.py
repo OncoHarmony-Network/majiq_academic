@@ -12,7 +12,7 @@ import majiq.src.io as majiq_io
 import majiq.src.sample as majiq_sample
 
 
-def parallel_lsv_child_calculation(func, args, tempdir, name, chunk):
+def parallel_lsv_child_calculation(func, args, tempdir, name, chunk, store=True):
     # try:
     if not os.path.isdir(tempdir):
         os.mkdir(tempdir)
@@ -25,8 +25,9 @@ def parallel_lsv_child_calculation(func, args, tempdir, name, chunk):
     results = func(*args)
 
     sys.stdout.flush()
-    thread_logger.info("[Th %s]: Saving DeltaPSI..." % chunk)
-    majiq_io.dump_bin_file(results, "%s/%s_th%s.%s.pickle" % (tempdir, name, chunk, func.__name__))
+    if store:
+        thread_logger.info("[Th %s]: Saving ...%s " % (chunk, func.__name__))
+        majiq_io.dump_bin_file(results, "%s/%s_th%s.%s.pickle" % (tempdir, name, chunk, func.__name__))
 
 
 def __load_execution_chunk(filename, delta=None):
