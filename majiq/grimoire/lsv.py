@@ -520,7 +520,26 @@ class Queue_Lsv(object):
                 self.coverage[i, j] *= majiq_config.gc_factor[exp_idx](dummy)
         del self.gc_factor
 
-    def to_hdf5(self, hdf5grp):
+    def to_hdf5(self, hdf5grp, lsv_idx, exp_idx):
+
+        njunc = len(self.junction_id)
+        hdf5grp['/lsv_junctions'][lsv_idx:lsv_idx+njunc, :] = self.coverage[:, exp_idx,:]
+        # h_lsv = hdf5grp.create_dataset("LSVs/%s" % self.id, data=self.coverage,
+        #                                compression='gzip', compression_opts=9)
+        h_lsv = hdf5grp.create_group("LSVs/%s" % self.id)
+        h_lsv.attrs['coords'] = self.coords
+        h_lsv.attrs['id'] = self.id
+        h_lsv.attrs['type'] = self.type
+
+
+        h_lsv.attrs['coverage'] = hdf5grp['/lsv_junctions'].regionref[lsv_idx:lsv_idx + njunc]
+        #h_lsv.attrs['visual'] = self.visual.to_hdf5(hdf5grp).ref
+
+        return lsv_idx + njunc
+
+
+
+    def to_hdf5_old(self, hdf5grp):
         h_lsv = hdf5grp.create_dataset("LSVs/%s" % self.id, data=self.coverage,
                                        compression='gzip', compression_opts=9)
         h_lsv.attrs['coords'] = self.coords
@@ -530,24 +549,3 @@ class Queue_Lsv(object):
         h_lsv.attrs['junction_id'] = self.junction_id
         #h_lsv.attrs['visual'] = self.visual.to_hdf5(hdf5grp).ref
 
-    def to_hdf5_old(self, hdf5grp, exp_idx):
-
-
-        h_lsv = hdf5grp.create_group(self.id)
-        h_lsv['coords'] = self.coords
-        h_lsv['id'] = self.id
-        h_lsv['type'] = self.type
-        h_lsv['iretention'] = self.iretention
-
-        if majiq_config.gcnorm:
-            #self.set_gc_factor(exp_idx)
-            pass
-
-        h_lsv['visual'] = self.visual.to_hdf5(h_lsv)
-
-        h_lsv.create_dataset('junction_id', data=self.junction_id,
-                             compression='gzip', compression_opts=9)
-        h_lsv.create_dataset('coverage', data=self.coverage.toarray(),
-                             compression='gzip', compression_opts=9)
-
-        return h_lsv

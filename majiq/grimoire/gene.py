@@ -241,7 +241,6 @@ class Gene:
         self.exons.sort()
 
     def get_all_ss(self):
-
         ss = set()
         for ex in self.exons:
             tx_list = ex.get_annotated_exon()
