@@ -523,7 +523,7 @@ class Queue_Lsv(object):
     def to_hdf5(self, hdf5grp, lsv_idx, exp_idx):
 
         njunc = len(self.junction_id)
-        hdf5grp['/lsv_junctions'][lsv_idx:lsv_idx+njunc, :] = self.coverage[:, exp_idx,:]
+        hdf5grp['/lsv_junctions'][lsv_idx:lsv_idx+njunc, :] = self.coverage[:, exp_idx, :]
         # h_lsv = hdf5grp.create_dataset("LSVs/%s" % self.id, data=self.coverage,
         #                                compression='gzip', compression_opts=9)
         h_lsv = hdf5grp.create_group("LSVs/%s" % self.id)
