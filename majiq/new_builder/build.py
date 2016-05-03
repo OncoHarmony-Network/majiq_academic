@@ -46,6 +46,7 @@ def majiq_builder(list_of_genes):
     tlogger.debug("[%s] Starting new chunk" % created._identity[1])
     chnk = created._identity[0]
     db_f = h5py.File(majiq_builder.dbfile)
+    tlogger.info(list_of_genes)
     if isinstance(list_of_genes, types.StringTypes):
         list_of_genes = [list_of_genes]
 
@@ -53,7 +54,7 @@ def majiq_builder(list_of_genes):
 
 
     counter = [0] * 6
-    for gne_id in list(list_of_genes):
+    for gne_id in list_of_genes:
         try:
             tlogger.info("[%s] Retrieving gene" % chnk)
             gene_obj = majiq.new_builder.gene.retrieve_gene(gne_id, db_f)
@@ -66,7 +67,6 @@ def majiq_builder(list_of_genes):
 
             if gene_obj.get_read_count().sum() == 0:
                 continue
-
 
             tlogger.info("[%s] Detecting intron retention events" % chnk)
             majiq_io.rnaseq_intron_retention(gene_obj, samfile, chnk,
@@ -197,7 +197,7 @@ class Builder(BasicPipeline):
             lock_array[pid] = mp.Lock()
             lock_array[pid].acquire()
 
-        pool.map_async(majiq_builder, list_of_genes)#, chunksize=lchnksize)
+        pool.map_async(majiq_builder, list_of_genes, chunksize=lchnksize)
         pool.close()
         self.queue_manager(lock_array, q)
         pool.join()
