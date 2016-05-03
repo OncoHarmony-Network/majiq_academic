@@ -44,7 +44,7 @@ def majiq_builder(list_of_genes):
                                      silent=majiq_builder.silent, debug=majiq_builder.debug)
 
     tlogger.debug("[%s] Starting new chunk" % created._identity[1])
-    chnk = created._identity[1]
+    chnk = created._identity[0]
     db_f = h5py.File(majiq_builder.dbfile)
     if isinstance(list_of_genes, types.StringTypes):
         list_of_genes = [list_of_genes]
