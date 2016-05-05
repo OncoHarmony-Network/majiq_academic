@@ -256,7 +256,7 @@ def rnaseq_intron_retention(gne, samfile_list, chnk, permissive=True, nondenovo=
 
 
 
-def read_sam_or_bam(gne, samfile_list, chnk, counter, nondenovo=False, info_msg, logging=None):
+def read_sam_or_bam(gne, samfile_list, chnk, counter, nondenovo=False, info_msg='0', logging=None):
 
     junctions = []
     strt, end = gne.get_coordinates()
