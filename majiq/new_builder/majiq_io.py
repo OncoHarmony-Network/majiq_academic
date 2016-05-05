@@ -256,7 +256,7 @@ def rnaseq_intron_retention(gne, samfile_list, chnk, permissive=True, nondenovo=
 
 
 
-def read_sam_or_bam(gne, samfile_list, chnk, counter, nondenovo=False, logging=None):
+def read_sam_or_bam(gne, samfile_list, chnk, counter, nondenovo=False, info_msg='0', logging=None):
 
     junctions = []
     strt, end = gne.get_coordinates()
@@ -264,14 +264,13 @@ def read_sam_or_bam(gne, samfile_list, chnk, counter, nondenovo=False, logging=N
     ex_list = gne.get_exon_list()
     strand = gne.get_strand()
     chrom = gne.get_chromosome()
-    print "READING BAMS"
     for exp_index, samfl in enumerate(samfile_list):
 
         #readlen = config.readLen[exp_index]
         try:
             read_iter = samfl.fetch(chrom, strt, end)
         except ValueError:
-            logging.debug('There are no reads in %s:%d-%d' % (chrom, strt, end))
+            logging.error('\t[%s]There are no reads in %s:%d-%d' % (info_msg, chrom, strt, end))
             continue
         for read in read_iter:
             r_start = read.pos
