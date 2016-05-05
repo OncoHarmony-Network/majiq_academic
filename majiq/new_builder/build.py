@@ -16,6 +16,11 @@ import traceback
 import h5py
 import types
 
+def chunks(l, n):
+    """Yield successive n-sized chunks from l."""
+    for i in range(0, len(l), n):
+        yield l[i:i+n]
+
 def build(args):
     _pipeline_run(Builder(args))
 
@@ -34,41 +39,38 @@ def builder_init(out_queue, lock_arr, sam_list, pcr_filename, gff_output, only_r
 
 
 def majiq_builder(list_of_genes):
-
+    tlogger = majiq_utils.get_logger("%s/%s.kk.majiq.log" % (majiq_config.outDir, mp.current_process()._identity[0]),
+                                     silent=majiq_builder.silent, debug=majiq_builder.debug)
+    tlogger.info(list_of_genes)
     created = mp.Process()
     current = mp.current_process()
+    chnk = created._identity[0]
     print 'running:', current.name, current._identity
     print 'created:', created.name, created._identity
 
-    tlogger = majiq_utils.get_logger("%s/%s.kk.majiq.log" % (majiq_config.outDir, mp.current_process()._identity[0]),
-                                     silent=majiq_builder.silent, debug=majiq_builder.debug)
+    tlogger.debug("[%s] Starting new chunk" % chnk)
 
-    tlogger.debug("[%s] Starting new chunk" % created._identity[1])
-    chnk = created._identity[0]
     db_f = h5py.File(majiq_builder.dbfile)
-    tlogger.info(list_of_genes)
     if isinstance(list_of_genes, types.StringTypes):
         list_of_genes = [list_of_genes]
-
-    tlogger.info(list_of_genes)
-
 
     counter = [0] * 6
     for gne_id in list_of_genes:
         try:
-            tlogger.info("[%s] Retrieving gene" % chnk)
+            loop_id = '%s - %s' % (chnk, gne_id)
+            tlogger.info("[%s] Retrieving gene" % loop_id)
             gene_obj = majiq.new_builder.gene.retrieve_gene(gne_id, db_f)
 
-            tlogger.info("[%s] Reading BAM files" % chnk)
+            tlogger.info("[%s] Reading BAM files" % loop_id)
             samfile = [pysam.Samfile(xx, "rb") for xx in majiq_builder.sam_list]
 
             majiq_io.read_sam_or_bam(gene_obj, samfile, chnk, counter,
-                                     nondenovo=majiq_builder.non_denovo, logging=tlogger)
+                                     nondenovo=majiq_builder.non_denovo, info_msg=loop_id, logging=tlogger)
 
             if gene_obj.get_read_count().sum() == 0:
                 continue
 
-            tlogger.info("[%s] Detecting intron retention events" % chnk)
+            tlogger.info("[%s] Detecting intron retention events" % loop_id)
             majiq_io.rnaseq_intron_retention(gene_obj, samfile, chnk,
                                              permissive=majiq_config.permissive_ir,
                                              nondenovo=majiq_builder.non_denovo, logging=tlogger)
@@ -76,7 +78,7 @@ def majiq_builder(list_of_genes):
             for ss in samfile:
                 ss.close()
 
-            tlogger.info("[%s] Detecting LSV" % chnk)
+            tlogger.info("[%s] Detecting LSV" % loop_id)
             lsv_detection(gene_obj, only_real_data=majiq_builder.only_rna, out_queue=majiq_builder.queue, logging=tlogger)
 
         except Exception as e:
@@ -85,14 +87,11 @@ def majiq_builder(list_of_genes):
         finally:
             del majiq_config.gene_tlb[gne_id]
 
-
-
     db_f.close()
     tlogger.info("[%s] Waiting to be freed" % chnk)
-    majiq_builder.queue.put([3, mp.current_process()._identity[0]], block=True)
+    majiq_builder.queue.put([3, chnk], block=True)
     majiq_builder.lock_arr[chnk].acquire()
     majiq_builder.lock_arr[chnk].release()
-    return
 
 
 class Builder(BasicPipeline):
@@ -186,18 +185,19 @@ class Builder(BasicPipeline):
         db_filename = "%s/tmp/db.hdf5" % majiq_config.outDir
 
         pool = mp.Pool(processes=self.nthreads, initializer=builder_init,
-                       initargs=[q, lock_array, sam_list, self.pcr_filename,self.gff_output,
+                       initargs=[q, lock_array, sam_list, self.pcr_filename, self.gff_output,
                                  self.only_rna, self.non_denovo, db_filename, self.silent, self.debug],
                        maxtasksperchild=1)
 
         lchnksize = max(len(list_of_genes)/self.nchunks, 1)
+        print lchnksize, self.nchunks, list_of_genes
 
         for proc in pool._pool:
             pid = proc._identity[0]
             lock_array[pid] = mp.Lock()
             lock_array[pid].acquire()
 
-        pool.map_async(majiq_builder, list_of_genes, chunksize=lchnksize)
+        pool.map_async(majiq_builder, chunks(list_of_genes, lchnksize))
         pool.close()
         self.queue_manager(lock_array, q)
         pool.join()
@@ -363,7 +363,10 @@ def main():
     #common flags (first ones are required)
     common = new_subparser()
     common.add_argument('--nthreads', default=4, type=int, help='Number of threads')
-    common.add_argument('--nchunks', default=4, type=int, help='Number of chunks')
+    common.add_argument('--nchunks', default=-1, type=int,
+                        help='Numbers of chunks the execution will be divided. That differs of nthread in the '
+                        'concurrency. Chunks is the total chunks of the execution, nthreads set how many of '
+                        'this chunks will be executed at the same time.')
     common.add_argument('--tmp', default="/tmp/", help='Path to save the temporary files. [Default: %(default)s]')
     common.add_argument('--output', required=True, help='Path to save the pickle output to.')
     common.add_argument('--logger', default=None, help='Path for the logger. Default is output directory')
@@ -394,10 +397,6 @@ def main():
     buildparser.add_argument('--min_intronic_cov', default=1.5, type=float,
                              help='Minimum number of reads on average in intronic sites, only for intron retention.'
                                   'Default: %(default)s]')
-    buildparser.add_argument('--num_chunks', default=-1, type=float,
-                             help='Numbers of chunks the execution will be divided. That differs of nthread in the '
-                                  'concurrency. Chunks is the total chunks of the execution, nthreads set how many of '
-                                  'this chunks will be executed at the same time.')
     buildparser.add_argument('--minpos', default=2, type=int, help='Minimum number of start positions with at least 1 '
                                                                    'read in a LSV to consider that the LSV "exist in '
                                                                    'the data"')

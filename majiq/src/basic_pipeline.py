@@ -61,6 +61,7 @@ class BasicPipeline:
 
         self.nthreads = args.nthreads
         self.psi_paths = []
+        self.nchunks = self.nthreads if args.nchunks == -1 else args.nchunks
         try:
             self.replica_len = [len(self.files1), len(self.files2)]
         except AttributeError:

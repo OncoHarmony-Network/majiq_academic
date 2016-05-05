@@ -29,7 +29,7 @@ def plot_matrix(matrix, my_title, plotname, plotpath):
     plt.clf()
     ax = plt.subplot(1, 1, 1)
     plt.title(my_title)
-    #plt.imshow(matrix)
+    plt.imshow(matrix)
     plt.xlabel(u"PSI i")
     plt.ylabel(u"PSI j")
     ax.set_xticklabels([0, 0, 0.25, 0.5, 0.75, 1])

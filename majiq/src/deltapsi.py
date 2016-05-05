@@ -489,6 +489,7 @@ def deltapsi_quantify(fname, delta_prior_path, boots_sample=True, logger=None):
                 psi_v2 = data_given_psi2.reshape(-1, nbins)
 
                 A = (psi_v1 * ones_n + psi_v2 * ones_n.T) + np.log(prior_matrix[prior_idx])
+
                 posterior += np.exp(A - scipy.misc.logsumexp(A))
 
             post_matrix[-1].append(posterior / conf['m'])
