@@ -1,19 +1,16 @@
 import gzip
 import urllib
 from collections import namedtuple
-
 import h5py
 import math
 import numpy as np
-
-
 import majiq.src.config as majiq_config
 from exon import detect_exons, new_exon_definition
 from gene import Gene, Transcript
 from junction import Junction
 
 
-## READING BAM FILES
+# READING BAM FILES
 def __cross_junctions(read):
     """
       This part will parse the jI from STAR
@@ -84,7 +81,6 @@ def _match_strand(read, gene_strand):
 
 
 def rnaseq_intron_retention(gne, samfile_list, chnk, permissive=True, nondenovo=False, logging=None):
-
 
     # filenames, gene_list, chnk, permissive=True, nondenovo=False, logging=None)
     num_bins = 10
@@ -255,7 +251,6 @@ def rnaseq_intron_retention(gne, samfile_list, chnk, permissive=True, nondenovo=
     gne.prepare_exons()
 
 
-
 def read_sam_or_bam(gne, samfile_list, chnk, counter, nondenovo=False, info_msg='0', logging=None):
 
     junctions = []
@@ -266,7 +261,6 @@ def read_sam_or_bam(gne, samfile_list, chnk, counter, nondenovo=False, info_msg=
     chrom = gne.get_chromosome()
     for exp_index, samfl in enumerate(samfile_list):
 
-        #readlen = config.readLen[exp_index]
         try:
             read_iter = samfl.fetch(chrom, strt, end)
         except ValueError:
@@ -362,17 +356,17 @@ def read_sam_or_bam(gne, samfile_list, chnk, counter, nondenovo=False, info_msg=
     logging.debug("READ ALL JUNC", counter[5])
 
 
-
-
-## ANNOTATION DB FUNCTIONS
+# ANNOTATION DB FUNCTIONS
 
 gffInfoFields = ["seqid", "source", "type", "start", "end", "score", "strand", "phase", "attributes"]
 GFFRecord = namedtuple("GFFRecord", gffInfoFields)
 
+
 def __parse_gff_attributes(attribute_string):
-    """Parse the GFF3 attribute column and return a dict
+    """
+    Parse the GFF3 attribute column and return a dict
     :param attribute_string:
-    """  #
+    """
     if attribute_string == ".":
         return {}
     ret = {}
@@ -381,13 +375,12 @@ def __parse_gff_attributes(attribute_string):
         key = urllib.unquote(key)
         if key in ret:
             key = 'extra_%s' % key
-            if not key in ret:
+            if key not in ret:
                 ret[key] = []
             ret[key].append(urllib.unquote(value))
         else:
             ret[key] = urllib.unquote(value)
     return ret
-
 
 
 def __parse_gff3(filename):
@@ -418,17 +411,15 @@ def __parse_gff3(filename):
                 "phase": None if parts[7] == "." else urllib.unquote(parts[7]),
                 "attributes": __parse_gff_attributes(parts[8])
             }
-            #Alternatively, you can emit the dictionary here, if you need mutabwility:
+            # Alternatively, you can emit the dictionary here, if you need mutabwility:
             #    yield normalized_info
             yield GFFRecord(**normalized_info)
 
 
-
-
-def read_gff(filename, pcr_filename, nthreads, list_of_genes, logging=None):
+def read_gff(filename, list_of_genes, logging=None):
     """
     :param filename: GFF input filename
-    :param pcr_filename: BED file name with the PCR validations
+    :param list_of_genes: List of genes that will be updated with all the gene_id detected on the gff file
     :param logging: logger object
     :return: :raise RuntimeError:
     """
@@ -446,7 +437,7 @@ def read_gff(filename, pcr_filename, nthreads, list_of_genes, logging=None):
             gene_name = record.attributes['Name']
             gene_id = record.attributes['ID']
 
-            if not chrom in all_genes:
+            if chrom not in all_genes:
                 all_genes[chrom] = {'+': [], '-': []}
 
             gn = Gene(gene_id, gene_name, chrom, strand, start, end)
@@ -469,7 +460,7 @@ def read_gff(filename, pcr_filename, nthreads, list_of_genes, logging=None):
                 trcpt_id_dict[record.attributes['ID']] = trcpt
                 last_end[record.attributes['ID']] = (None, None)
             except KeyError:
-                if not logging is None:
+                if logging is not None:
                     logging.info("Error, incorrect gff. mRNA %s doesn't have valid gene %s"
                                  % (transcript_name, parent))
                 raise
@@ -499,7 +490,7 @@ def read_gff(filename, pcr_filename, nthreads, list_of_genes, logging=None):
             start, end = ex.get_coordinates()
             junc = gn.new_annotated_junctions(pre_end, start, trcpt)
             ex.add_3prime_junc(junc)
-            if not pre_txex is None:
+            if pre_txex is not None:
                 pre_txex.add_5prime_junc(junc)
             pre_end = end
             pre_txex = ex
@@ -511,24 +502,16 @@ def read_gff(filename, pcr_filename, nthreads, list_of_genes, logging=None):
     del all_genes
 
 
-
-
-
-
 #######
-## HDF5 API
+# HDF5 API
 #######
 
 def _prepare_and_dump(filename, logging=None):
 
-    if not logging is None:
+    if logging is not None:
         logging.debug("Number of Genes in DB", len(majiq_config.gene_tlb))
     db_f = h5py.File(filename, 'w', compression='gzip', compression_opts=9)
     for gidx, gn in enumerate(majiq_config.gene_tlb.values()):
         gn.collapse_exons()
 
         gn.to_hdf5(db_f)
-
-
-
-
