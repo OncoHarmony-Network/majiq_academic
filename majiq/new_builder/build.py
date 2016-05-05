@@ -16,13 +16,19 @@ import traceback
 import h5py
 import types
 
+
 def chunks(l, n):
-    """Yield successive n-sized chunks from l."""
+    """Yield successive n-sized chunks from l.
+    :param l: list to be split
+    :param n: max length of chunks
+    """
     for i in range(0, len(l), n):
         yield l[i:i+n]
 
+
 def build(args):
     _pipeline_run(Builder(args))
+
 
 def builder_init(out_queue, lock_arr, sam_list, pcr_filename, gff_output, only_rna,
                    non_denovo, dbfile, silent, debug):
@@ -139,8 +145,8 @@ class Builder(BasicPipeline):
             try:
                 val = result_queue.get(block=True, timeout=10)
                 if val[0] == 0:
-                    for exp_idx in majiq_config.tissue_repl[val[2]]:
-                        lsv_idx[exp_idx] = val[1].to_hdf5(lsv_list[exp_idx], lsv_idx[exp_idx], exp_idx)
+                    for jdx, exp_idx in enumerate(majiq_config.tissue_repl[val[2]]):
+                        lsv_idx[exp_idx] = val[1].to_hdf5(lsv_list[exp_idx], lsv_idx[exp_idx], jdx)
 
                 elif val[0] == 1:
                     for jdx, exp_idx in enumerate(majiq_config.tissue_repl[val[2]]):
@@ -172,7 +178,7 @@ class Builder(BasicPipeline):
 
         list_of_genes = manager.list()
         p = mp.Process(target=majiq_multi.parallel_lsv_child_calculation,
-                       args=(majiq_io.read_gff, [self.transcripts, self.pcr_filename, self.nthreads, list_of_genes],
+                       args=(majiq_io.read_gff, [self.transcripts, list_of_genes],
                              '%s/tmp' % majiq_config.outDir, 'db', 0, False))
 
         logger.info("... waiting gff3 parsing")
