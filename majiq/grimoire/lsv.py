@@ -490,7 +490,7 @@ class Queue_Lsv(object):
         #                                              dtype=np.float)
 
         self.coverage = np.ndarray(shape=(lsv_obj.junctions.shape[0], len(exp_idxs), (majiq_config.readLen - 16) + 1),
-                                 dtype=np.float)
+                                   dtype=np.float)
 
         self.junction_id = []
 
@@ -523,7 +523,10 @@ class Queue_Lsv(object):
     def to_hdf5(self, hdf5grp, lsv_idx, exp_idx):
 
         njunc = len(self.junction_id)
-        print lsv_idx, njunc, self.coverage.shape, exp_idx
+        if lsv_idx + njunc > majiq_config.nrandom_junctions:
+            shp = hdf5grp['/lsv_junctions'].shape
+            shp[0] += majiq_config.nrandom_junctions
+            hdf5grp['/lsv_junctions'].resize(shp)
         hdf5grp['/lsv_junctions'][lsv_idx:lsv_idx+njunc, :] = self.coverage[:, exp_idx, :]
         # h_lsv = hdf5grp.create_dataset("LSVs/%s" % self.id, data=self.coverage,
         #                                compression='gzip', compression_opts=9)
