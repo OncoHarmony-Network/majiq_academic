@@ -525,8 +525,8 @@ class Queue_Lsv(object):
         njunc = len(self.junction_id)
         if lsv_idx + njunc > majiq_config.nrandom_junctions:
             shp = hdf5grp['/lsv_junctions'].shape
-            shp[0] += majiq_config.nrandom_junctions
-            hdf5grp['/lsv_junctions'].resize(shp)
+            shp_new = shp[0] + majiq_config.nrandom_junctions
+            hdf5grp['/lsv_junctions'].resize((shp_new, shp[1]))
         hdf5grp['/lsv_junctions'][lsv_idx:lsv_idx+njunc, :] = self.coverage[:, exp_idx, :]
         # h_lsv = hdf5grp.create_dataset("LSVs/%s" % self.id, data=self.coverage,
         #                                compression='gzip', compression_opts=9)
