@@ -500,17 +500,17 @@ def read_gff(filename, list_of_genes, logging=None):
 
 
 
-        for chrom in all_genes.keys():
-            exon_list = []
-            for strand in all_genes[chrom].keys():
-                for gn in all_genes[chrom][strand]:
-                    gn.collapse_exons()
-                    exon_list.extend(gn.get_exon_list())
-            if majiq_config.gcnorm:
-                try:
-                    set_exons_gc_content(chrom, exon_list)
-                except RuntimeWarning:
-                    continue
+    for chrom in all_genes.keys():
+        exon_list = []
+        for strand in all_genes[chrom].keys():
+            for gn in all_genes[chrom][strand]:
+                gn.collapse_exons()
+                exon_list.extend(gn.get_exon_list())
+        if majiq_config.gcnorm:
+            try:
+                set_exons_gc_content(chrom, exon_list)
+            except RuntimeWarning:
+                continue
 
     _prepare_and_dump(filename="%s/tmp/db.hdf5" % majiq_config.outDir, logging=logging)
     del all_genes
@@ -526,5 +526,4 @@ def _prepare_and_dump(filename, logging=None):
         logging.debug("Number of Genes in DB", len(majiq_config.gene_tlb))
     db_f = h5py.File(filename, 'w', compression='gzip', compression_opts=9)
     for gidx, gn in enumerate(majiq_config.gene_tlb.values()):
-
         gn.to_hdf5(db_f)
