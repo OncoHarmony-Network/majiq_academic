@@ -83,7 +83,7 @@ def lsv_detection(gn, only_real_data=False, out_queue=None, logging=None):
         r_junctions = np.array(list(local_const))[indx]
 
         for jix, jn in enumerate(r_junctions):
-            out_queue.put([1, jn.get_coverage(ind_list), name], block=True)
+            out_queue.put([1, jn.get_coverage(ind_list), jn.get_gc_content(), name], block=True)
 
         for ss in dummy[name][0]:
             for st in dummy[name][1]:

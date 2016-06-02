@@ -113,8 +113,9 @@ class Junction:
             ex = self.get_gene().get_exon_by_id(self.acceptor_id)
         return ex
 
-    def get_gc_content(self):
+    def get_gc_content(self, experiment=None):
         return self.gc_content
+
 
     def get_read_num(self, idx):
         if idx == -1:

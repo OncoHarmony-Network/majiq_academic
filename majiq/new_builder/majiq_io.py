@@ -5,7 +5,7 @@ import h5py
 import math
 import numpy as np
 import majiq.src.config as majiq_config
-from exon import detect_exons, new_exon_definition
+from exon import detect_exons, new_exon_definition, set_exons_gc_content
 from gene import Gene, Transcript
 from junction import Junction
 
@@ -498,6 +498,17 @@ def read_gff(filename, list_of_genes, logging=None):
         junc = gn.new_annotated_junctions(pre_end, None, trcpt)
         pre_txex.add_5prime_junc(junc)
 
+    if majiq_config.gcnorm:
+        for chrom in all_genes.keys():
+            exon_list = []
+            for strand in all_genes[chrom].keys():
+                for gn in all_genes[chrom][strand]:
+                    gn.collapse_exons()
+                    exon_list.extend(gn.get_exon_list())
+
+            set_exons_gc_content(chrom, exon_list)
+
+
     _prepare_and_dump(filename="%s/tmp/db.hdf5" % majiq_config.outDir, logging=logging)
     del all_genes
 
@@ -512,6 +523,5 @@ def _prepare_and_dump(filename, logging=None):
         logging.debug("Number of Genes in DB", len(majiq_config.gene_tlb))
     db_f = h5py.File(filename, 'w', compression='gzip', compression_opts=9)
     for gidx, gn in enumerate(majiq_config.gene_tlb.values()):
-        gn.collapse_exons()
 
         gn.to_hdf5(db_f)
