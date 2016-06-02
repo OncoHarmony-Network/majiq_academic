@@ -70,7 +70,71 @@ def gc_content_norm(self, lsv_list, const_list):
     return lsv_list, const_list
 
 
-def gc_factor_calculation(nb):
+def gc_factor_calculation(gc_pairs, nbins=10):
+
+    local_bins = np.zeros(shape=(majiq_config.num_experiments, nbins+1), dtype=np.dtype('float'))
+    local_meanbins = np.zeros(shape=(majiq_config.num_experiments, nbins),   dtype=np.dtype('float'))
+    local_factor = np.zeros(shape=(majiq_config.num_experiments, nbins),   dtype=np.dtype('float'))
+    #print mglobals.tissue_repl
+    for tissue, list_idx in majiq_config.tissue_repl.items():
+        for exp_n in list_idx:
+            count = gc_pairs['COV'][exp_n]
+            gc = gc_pairs['GC'][exp_n]
+
+            if len(gc) == 0:
+                continue
+
+            count, gc = izip(*sorted(izip(count, gc), key=lambda x: x[1]))
+
+            num_regions = len(count)
+            nperbin = num_regions / nbins
+
+            quant_median = [0.0]*8
+            mean_bins = [0]*nbins
+            bins = [0]*nbins
+
+            for ii in range(nbins):
+                lb = ii * nperbin
+                if ii == nbins-1:
+                    ub = num_regions
+                else:
+                    ub = (ii+1) * nperbin
+
+                a = np.asarray(count[lb:ub])
+                t = np.asarray(gc[lb:ub])
+
+                try:
+                    local_bins[exp_n, ii] = t.min()
+                except ValueError:
+                    local_bins[exp_n, ii] = 0
+                if ii == nbins - 1:
+                    local_bins[exp_n, ii+1] = np.max(t)
+
+                mean_bins[ii] = np.mean(t)
+                bins[ii] = mquantiles(a, prob=np.arange(0.1, 0.9, 0.1))
+
+            for qnt in range(8):
+                qnt_bns = np.ndarray(len(bins))
+                for idx, bb in enumerate(bins):
+                    qnt_bns[idx] = bb[qnt]
+                quant_median[qnt] = np.mean(qnt_bns)
+
+            gc_factor = np.zeros(nbins, dtype=np.dtype('float'))
+            for ii in range(nbins):
+                offst = np.zeros(len(quant_median), dtype=np.dtype('float'))
+                for idx, xx in enumerate(quant_median):
+                    offst[idx] = float(bins[ii][idx]) / float(xx)
+                gc_factor[ii] = 1/np.mean(offst)
+
+            local_meanbins[exp_n] = mean_bins
+            local_factor[exp_n] = gc_factor
+
+    majiq_config.set_gc_factors(local_bins, local_factor, local_meanbins)
+
+
+
+
+def gc_factor_calculation_old(nb):
 
     local_bins = np.zeros(shape=(majiq_config.num_experiments, nb+1), dtype=np.dtype('float'))
     local_meanbins = np.zeros(shape=(majiq_config.num_experiments, nb),   dtype=np.dtype('float'))
@@ -153,7 +217,27 @@ def gc_factor_calculation(nb):
     majiq_config.set_gc_factors(local_bins, local_factor, local_meanbins)
 
 
-def prepare_gc_content(gene_list, temp_dir):
+def prepare_gc_content(gn):
+    gc_pairs = {'GC': [[] for xx in xrange(majiq_config.num_experiments)],
+                'COV': [[] for xx in xrange(majiq_config.num_experiments)]}
+
+    for ex in gn.get_exon_list():
+        gc_val = ex.get_gc_content()
+        st, end = ex.get_coordinates()
+        if gc_val == 0 or end - st < 30:
+            continue
+        for exp_n in xrange(majiq_config.num_experiments):
+            cov = ex.get_coverage(exp_n)
+            if cov < 1:
+                continue
+            gc_pairs['GC'][exp_n].append(gc_val)
+            gc_pairs['COV'][exp_n].append(cov)
+
+    print gc_pairs
+    return gc_pairs
+
+
+def prepare_gc_content_old(gene_list, temp_dir):
     gc_pairs = {'GC': [[] for xx in xrange(majiq_config.num_experiments)],
                 'COV': [[] for xx in xrange(majiq_config.num_experiments)]}
 

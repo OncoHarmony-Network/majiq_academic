@@ -5,8 +5,11 @@ import majiq.new_builder.gene
 from majiq.src.basic_pipeline import BasicPipeline, _pipeline_run
 import majiq.src.config as majiq_config
 import majiq.src.utils.utils as majiq_utils
+from majiq.src.normalize import prepare_gc_content, gc_factor_calculation
+
 import multiproc as majiq_multi
 import majiq_io as majiq_io
+from constants import *
 from analize import lsv_detection
 import pysam
 from multiprocessing import Pool
@@ -15,6 +18,13 @@ import sys
 import traceback
 import h5py
 import types
+import numpy as np
+
+import resource
+
+
+def monitor(msg):
+    print "MONITOR", msg, resource.getrusage(resource.RUSAGE_SELF).ru_maxrss / 1000, 'MB'
 
 
 def chunks(l, n):
@@ -31,7 +41,7 @@ def build(args):
 
 
 def builder_init(out_queue, lock_arr, sam_list, pcr_filename, gff_output, only_rna,
-                   non_denovo, dbfile, silent, debug):
+                 non_denovo, dbfile, silent, debug):
     majiq_builder.queue = out_queue
     majiq_builder.lock_arr = lock_arr
     majiq_builder.sam_list = sam_list
@@ -51,10 +61,11 @@ def majiq_builder(list_of_genes):
     created = mp.Process()
     current = mp.current_process()
     chnk = created._identity[0]
-    print 'running:', current.name, current._identity
-    print 'created:', created.name, created._identity
+    # print 'running:', current.name, current._identity
+    # print 'created:', created.name, created._identity
 
     tlogger.debug("[%s] Starting new chunk" % chnk)
+    monitor('CHILD %s:: CREATION' % chnk)
 
     db_f = h5py.File(majiq_builder.dbfile)
     if isinstance(list_of_genes, types.StringTypes):
@@ -62,6 +73,7 @@ def majiq_builder(list_of_genes):
 
     counter = [0] * 6
     for gne_id in list_of_genes:
+        monitor('CHILD %s:: STARTLOOP' % chnk)
         try:
             loop_id = '%s - %s' % (chnk, gne_id)
             tlogger.info("[%s] Retrieving gene" % loop_id)
@@ -85,80 +97,114 @@ def majiq_builder(list_of_genes):
                 ss.close()
 
             tlogger.info("[%s] Detecting LSV" % loop_id)
-            lsv_detection(gene_obj, only_real_data=majiq_builder.only_rna, out_queue=majiq_builder.queue, logging=tlogger)
+            lsv_detection(gene_obj, only_real_data=majiq_builder.only_rna,
+                          out_queue=majiq_builder.queue, logging=tlogger)
 
+            gc_factors = prepare_gc_content(gene_obj)
+            majiq_builder.queue.put([3, gc_factors], block=True)
+
+            monitor('CHILD %s:: ENDLOOP' % chnk)
         except Exception as e:
             traceback.print_exc()
             sys.stdout.flush()
         finally:
             del majiq_config.gene_tlb[gne_id]
 
+
     db_f.close()
+    monitor('CHILD %s:: WAITING' % chnk)
     tlogger.info("[%s] Waiting to be freed" % chnk)
-    majiq_builder.queue.put([3, chnk], block=True)
+    majiq_builder.queue.put([-1, chnk], block=True)
     majiq_builder.lock_arr[chnk].acquire()
     majiq_builder.lock_arr[chnk].release()
 
 
 class Builder(BasicPipeline):
+
     def run(self):
         if not os.path.exists(self.conf):
             raise RuntimeError("Config file %s does not exist" % self.conf)
         sam_list = majiq_config.global_conf_ini(self.conf, self)
         self.builder(sam_list)
 
-
-    def queue_manager(self, lock_array, result_queue, first_id=0):
-
+    def queue_manager(self, lock_array, result_queue, first_id=0, logger=None):
         count = []
+
+        gc_content_files = [None] * majiq_config.num_experiments
         lsv_list = []
-        junc_list = []
         splicegraph = []
         file_list = []
+
         junc_idx = [0] * majiq_config.num_experiments
         lsv_idx = [0] * majiq_config.num_experiments
 
         for exp_idx, exp in enumerate(majiq_config.exp_list):
+            # Majiq file
             fname = "%s/%s.majiq.hdf5" % (majiq_config.outDir, majiq_config.exp_list[exp_idx])
             f = h5py.File(fname, 'w', compression='gzip', compression_opts=9)
             file_list.append(f)
 
+            effective_readlen = (majiq_config.readLen - 16) + 1
+            f.create_dataset(LSV_JUNCTIONS_DATASET_NAME,
+                             (majiq_config.nrandom_junctions, effective_readlen),
+                             maxshape=(None, effective_readlen))
+            f.create_dataset(CONST_JUNCTIONS_DATASET_NAME,
+                             (majiq_config.nrandom_junctions, effective_readlen),
+                             maxshape=(None, effective_readlen))
+
+            lsv_list.append(f)
+
+            # Splicegraph
             fname_sg = "%s/%s.splicegraph.hdf5" % (majiq_config.outDir, majiq_config.exp_list[exp_idx])
             f_splicegraph = h5py.File(fname_sg, 'w', compression='gzip', compression_opts=9)
-
-            #as_table = f.create_group('LSVs')
-            lsv_list.append(f)
-            effective_readlen = (majiq_config.readLen - 16) + 1
-            as_table = f.create_dataset("/lsv_junctions",
-                                        (majiq_config.nrandom_junctions, effective_readlen),
-                                        maxshape=(None, effective_readlen))
-            non_as_table = f.create_dataset("/const_junctions",
-                                            (majiq_config.nrandom_junctions, effective_readlen),
-                                            maxshape=(None, effective_readlen))
-
-            junc_list.append(non_as_table)
-
             splicegraph.append(f_splicegraph)
 
+            # gc content normalization values
+            if majiq_config.gcnorm:
+                fname_gc = "%s/tmp.%s.gc" % (majiq_config.outDir, majiq_config.exp_list[exp_idx])
+                gc_f = h5py.File(fname_gc, 'w', compression='gzip', compression_opts=9)
+                gc_f.create_dataset(LSV_GC_CONTENT,
+                                    (majiq_config.nrandom_junctions, effective_readlen),
+                                    maxshape=(None, effective_readlen))
+                gc_f.create_dataset(CONST_JUNCTIONS_GC_CONTENT,
+                                    (majiq_config.nrandom_junctions, effective_readlen),
+                                    maxshape=(None, effective_readlen))
+                gc_content_files[exp_idx] = gc_f
+
+        monitor('AFTER CHILD CREATION AND FILES PREP')
+
         nthr_count = 0
+
+        gc_pairs = {'GC': [[] for xx in xrange(majiq_config.num_experiments)],
+                    'COV': [[] for xx in xrange(majiq_config.num_experiments)]}
         while True:
             try:
                 val = result_queue.get(block=True, timeout=10)
                 if val[0] == 0:
                     for jdx, exp_idx in enumerate(majiq_config.tissue_repl[val[2]]):
-                        lsv_idx[exp_idx] = val[1].to_hdf5(lsv_list[exp_idx], lsv_idx[exp_idx], jdx)
+                        lsv_idx[exp_idx] = val[1].to_hdf5(hdf5grp=lsv_list[exp_idx],
+                                                          lsv_idx=lsv_idx[exp_idx],
+                                                          exp_idx=jdx,
+                                                          gc=gc_content_files[exp_idx][LSV_GC_CONTENT])
 
                 elif val[0] == 1:
-                    for jdx, exp_idx in enumerate(majiq_config.tissue_repl[val[2]]):
+                    for jdx, exp_idx in enumerate(majiq_config.tissue_repl[val[3]]):
+                        junc_group = lsv_list[exp_idx][CONST_JUNCTIONS_DATASET_NAME]
                         if junc_idx[exp_idx] >= majiq_config.nrandom_junctions:
                             continue
-                        junc_list[exp_idx][junc_idx[exp_idx], :] = val[1][jdx, :].toarray()
+                        junc_group[junc_idx[exp_idx], :] = val[1][jdx, :].toarray()
+                        gc_content_files[exp_idx][CONST_JUNCTIONS_GC_CONTENT][junc_idx[exp_idx], :] = val[2].toarray()
                         junc_idx[exp_idx] += 1
 
                 elif val[0] == 2:
                     val[1].to_hdf5(splicegraph[val[2]])
-                    pass
+
                 elif val[0] == 3:
+                    for exp_n in xrange(majiq_config.num_experiments):
+                        gc_pairs['GC'][exp_n].extend(val[1]['GC'][exp_n])
+                        gc_pairs['COV'][exp_n].extend(val[1]['COV'][exp_n])
+
+                elif val[0] == -1:
                     lock_array[val[1]].release()
                     nthr_count += 1
 
@@ -167,7 +213,33 @@ class Builder(BasicPipeline):
                     continue
                 break
 
-    def builder(self, sam_list=[]):
+        monitor('OUTPUT PRE GC')
+        #vect_mult = np.vectorize(np.multiply)
+
+        if majiq_config.gcnorm:
+            logger.info("Gc Content normalization")
+            gc_factor_calculation(gc_pairs, nbins=10)
+            # v_gcfactor_func = np.vectorize(_test_func)
+            for exp_n in xrange(majiq_config.num_experiments):
+                v_gcfactor_func = np.vectorize(majiq_config.gc_factor[exp_n])
+
+                vals = v_gcfactor_func(gc_content_files[exp_n][LSV_GC_CONTENT][()])
+                lsv_list[exp_idx][LSV_JUNCTIONS_DATASET_NAME][...] = np.multiply(lsv_list[exp_idx][LSV_JUNCTIONS_DATASET_NAME][()], vals)
+
+                vals = v_gcfactor_func(gc_content_files[exp_n][CONST_JUNCTIONS_GC_CONTENT][()])
+                lsv_list[exp_idx][CONST_JUNCTIONS_DATASET_NAME][...] = np.multiply(lsv_list[exp_idx][CONST_JUNCTIONS_DATASET_NAME][()], vals)
+
+        for exp_idx, exp in enumerate(majiq_config.exp_list):
+            lsv_list[exp_idx].close()
+
+        monitor('MASTER END')
+
+        logger.info("End of execution")
+
+    # def _test_func(lsv_list, exp_idx, vals, index):
+    #     lsv_list[exp_idx][LSV_JUNCTIONS_DATASET_NAME][index, :] = lsv_list[exp_idx][LSV_JUNCTIONS_DATASET_NAME][index, :] * vals
+
+    def builder(self, sam_list):
 
         logger = majiq_utils.get_logger("%s/majiq.log" % majiq_config.outDir, silent=False,
                                         debug=self.debug)
@@ -185,7 +257,8 @@ class Builder(BasicPipeline):
         p.start()
         p.join()
 
-        #lock_array = [mp.Lock() for xx in range(majiq_config.num_final_chunks)]
+        monitor('AFTER READ GFF')
+
         lock_array = {}
         q = mp.Queue()
         db_filename = "%s/tmp/db.hdf5" % majiq_config.outDir
@@ -196,7 +269,6 @@ class Builder(BasicPipeline):
                        maxtasksperchild=1)
 
         lchnksize = max(len(list_of_genes)/self.nchunks, 1)
-        print lchnksize, self.nchunks, list_of_genes
 
         for proc in pool._pool:
             pid = proc._identity[0]
@@ -205,154 +277,9 @@ class Builder(BasicPipeline):
 
         pool.map_async(majiq_builder, chunks(list_of_genes, lchnksize))
         pool.close()
-        self.queue_manager(lock_array, q)
+        self.queue_manager(lock_array, q, logger=logger)
         pool.join()
 
-
-
-
-
-    #
-
-    #
-    #     for chnk in range(majiq_config.num_final_chunks):
-    #         temp_dir = "%s/tmp/chunk_%s" % (majiq_config.outDir, chnk)
-    #         majiq_utils.create_if_not_exists(temp_dir)
-    #         if self.nthreads == 1:
-    #             majiq_builder(sam_list, chnk, pcr_validation=self.pcr_filename, gff_output=self.gff_output,
-    #                           only_rna=self.only_rna, nondenovo=self.non_denovo, logging=logger)
-    #         else:
-    #             lock_array[chnk].acquire()
-    #             pool.apply_async(majiq_multi.parallel_lsv_child_calculation, [majiq_builder, [sam_list, chnk,
-    #                                                                                           self.pcr_filename,
-    #                                                                                           self.gff_output,
-    #                                                                                           self.only_rna,
-    #                                                                                           self.non_denovo,
-    #                                                                                           self.silent,
-    #                                                                                           self.debug]
-    #                                                                                          ])
-    #
-    #     count = 0
-    #
-    #     lsv_list = []
-    #     junc_list = []
-    #     splicegraph = []
-    #     file_list = []
-    #     junc_idx = [0] * majiq_config.num_experiments
-    #     for exp_idx, exp in enumerate(majiq_config.exp_list):
-    #         fname = "%s/%s.majiq.hdf5" % (majiq_config.outDir, majiq_config.exp_list[exp_idx])
-    #         f = h5py.File(fname, 'w', compression='gzip', compression_opts=9)
-    #         file_list.append(f)
-    #
-    #         fname_sg = "%s/%s.splicegraph.hdf5" % (majiq_config.outDir, majiq_config.exp_list[exp_idx])
-    #         f_splicegraph = h5py.File(fname_sg, 'w', compression='gzip', compression_opts=9)
-    #
-    #         #as_table = f.create_group('LSVs')
-    #         lsv_list.append(f)
-    #         effective_readlen = (majiq_config.readLen - 16) + 1
-    #         non_as_table = f.create_dataset("/const_junctions",
-    #                                         (majiq_config.nrandom_junctions, effective_readlen),
-    #                                         maxshape=(None, effective_readlen))
-    #         junc_list.append(non_as_table)
-    #
-    #         splicegraph.append(f_splicegraph)
-    #
-    #     #logger.debug("... waiting childs")
-    #     pool.close()
-    #     while True:
-    #         try:
-    #             val = q.get(block=True, timeout=10)
-    #             if val[0] == 0:
-    #                 for exp_idx in majiq_config.tissue_repl[val[2]]:
-    #                     val[1].to_hdf5(lsv_list[exp_idx])
-    #             elif val[0] == 1:
-    #                 for jdx, exp_idx in enumerate(majiq_config.tissue_repl[val[2]]):
-    #                     if junc_idx[exp_idx] >= majiq_config.nrandom_junctions:
-    #                         continue
-    #                     junc_list[exp_idx][junc_idx[exp_idx], :] = val[1][jdx, :].toarray()
-    #                     junc_idx[exp_idx] += 1
-    #
-    #             elif val[0] == 2:
-    #                 val[1].to_hdf5(splicegraph[val[2]])
-    #                 pass
-    #             elif val[0] == 3:
-    #                 lock_array[val[1]].release()
-    #                 count += 1
-    #
-    #         except Queue.Empty:
-    #             if count < majiq_config.num_final_chunks:
-    #                 continue
-    #             break
-    #     pool.join()
-    #
-    #     for ff in file_list:
-    #         ff.close()
-    #
-    #     for ff in splicegraph:
-    #         ff.close()
-    #
-    #
-    #     #GATHER
-    # #    gather_files(majiq_config.outDir, '', params.gff_output, params.pcr_filename,
-    # #                       nthreads=params.nthreads, logger=logger)
-    #
-    #     yappi.get_func_stats().print_all()
-
-        #majiq_config.print_numbers()
-        logger.info("End of execution")
-
-
-
-# def majiq_builder(samfiles_list, chnk, pcr_validation=None, gff_output=None, create_tlb=True, only_rna=False,
-#                   nondenovo=False, logging=None):
-#
-#     if not logging is None:
-#         logging.debug("Building chunk %s" % chnk)
-#
-#     temp_dir = "%s/tmp/chunk_%s" % (majiq_config.outDir, chnk)
-#     annot_file = '%s/annot_genes.pkl' % temp_dir
-#     if not os.path.exists(annot_file):
-#         majiq_builder.queue.put([3, chnk], block=True)
-#         majiq_builder.lock_arr[chnk].acquire()
-#         majiq_builder.lock_arr[chnk].release()
-#         return
-#
-#     # temp_file = open(annot_file, 'rb')
-#     gene_list = majiq.src.io_utils.load_bin_file(annot_file)
-#
-#     if create_tlb:
-#         if not logging is None:
-#             logging.debug("[%s] Recreatin Gene TLB" % chnk)
-#         majiq_gene.recreate_gene_tlb(gene_list)
-#
-#     if not logging is None:
-#         logging.info("[%s] Reading BAM files" % chnk)
-#     majiq_io.read_sam_or_bam(samfiles_list, gene_list, chnk,
-#                              nondenovo=nondenovo, logging=logging)
-#     if not logging is None:
-#         logging.info("[%s] Detecting intron retention events" % chnk)
-#     majiq_io.rnaseq_intron_retention(samfiles_list, gene_list, chnk, permissive=majiq_config.permissive_ir,
-#                                      nondenovo=nondenovo, logging=logging)
-#     if not logging is None:
-#         logging.info("[%s] Detecting LSV" % chnk)
-#     const = analize.lsv_detection(gene_list, chnk, only_real_data=only_rna, out_queue=majiq_builder.queue,
-#                                   logging=logging)
-#
-#
-#     prepare_gc_content(gene_list, temp_dir)
-#
-#     # if pcr_validation:
-#     #     utils.get_validated_pcr_lsv(lsv, temp_dir)
-#     # if gff_output:
-#     #     majiq_lsv.extract_gff(lsv, temp_dir)
-#     majiq.src.voila_wrapper.generate_visualization_output(gene_list, temp_dir, majiq_builder.queue)
-#     if not logging is None:
-#         logging.info("[%s] Preparing output" % chnk)
-#     lsv = None
-#     utils.send_output(lsv, const, temp_dir, majiq_builder.queue, chnk, majiq_builder.lock_arr[chnk])
-
-
-### TODO REMOVE FROM HERE
 
 import argparse
 def new_subparser():

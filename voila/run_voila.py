@@ -222,7 +222,7 @@ def render_summary(output_dir, output_html, majiq_output, type_summary, threshol
             voila_output = open(output_dir+name_page, 'w')
             voila_output.write(sum_template.render(genes=genes[count_pages*constants.MAX_GENES:(count_pages+1)*constants.MAX_GENES],
                                                    gene_dicts=majiq_output['gene_dicts'],
-                                                   first_sample=[sam for sam in majiq_output['gene_dicts'].keys() if 'ALL' in sam][0],
+                                                   first_sample=[sam for sam in majiq_output['gene_dicts'].keys()][0],
                                                    prevPage=prev_page,
                                                    nextPage=next_page,
                                                    namePage=name_page

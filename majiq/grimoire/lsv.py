@@ -5,6 +5,7 @@ __author__ = 'jordi@biociphers.org'
 import numpy as np
 import scipy.sparse
 import majiq.src.config as majiq_config
+from majiq.new_builder.constants import *
 
 from voila.splice_graphics import ExonGraphic, LsvGraphic, JunctionGraphic
 from voila import constants as voila_const
@@ -81,6 +82,7 @@ class LSV(object):
         self.visual = list()
         for exp_idx in xrange(majiq_config.num_experiments):
             self.visual.append(self.get_visual_lsv(self.junctions, exp_idx))
+        self.visual = np.array(self.visual)
 
     def check_type(self, lsv_type):
         tab = lsv_type.split('|')[1:]
@@ -486,19 +488,16 @@ class Queue_Lsv(object):
         self.id = lsv_obj.id
         self.type = lsv_obj.ext_type
         self.iretention = lsv_obj.intron_retention
-        # self.coverage = scipy.sparse.lil_matrix((lsv_obj.junctions.shape[0], exp_idxs, (majiq_config.readLen - 16) + 1),
-        #                                              dtype=np.float)
-
         self.coverage = np.ndarray(shape=(lsv_obj.junctions.shape[0], len(exp_idxs), (majiq_config.readLen - 16) + 1),
                                    dtype=np.float)
 
         self.junction_id = []
 
-        #if majiq_config.gcnorm:
-        #    self.gc_factor = scipy.sparse.lil_matrix((lsv_obj.junctions.shape[0], exp_idxs, (majiq_config.readLen - 16) + 1),
-        #                                             dtype=np.dtype('float'))
-        #else:
-        #    self.gc_factor = None
+        if majiq_config.gcnorm:
+            self.gc_factor = np.ones(shape=(lsv_obj.junctions.shape[0], (majiq_config.readLen - 16) + 1),
+                                        dtype=np.float)
+        else:
+            self.gc_factor = None
 
         for idx, junc in enumerate(lsv_obj.junctions):
             self.coverage[idx] = junc.coverage[exp_idxs, :].toarray()
@@ -508,7 +507,7 @@ class Queue_Lsv(object):
                     dummy = junc.get_gc_content()[0, jidx]
                     self.gc_factor[idx, jidx] = dummy
 
-        #self.visual = lsv_obj.get_visual(exp_idxs)
+        self.visual = lsv_obj.get_visual(exp_idxs)
 
     def set_gc_factor(self, exp_idx):
         if majiq_config.gcnorm:
@@ -520,34 +519,26 @@ class Queue_Lsv(object):
                 self.coverage[i, j] *= majiq_config.gc_factor[exp_idx](dummy)
         del self.gc_factor
 
-    def to_hdf5(self, hdf5grp, lsv_idx, exp_idx):
+    def to_hdf5(self, hdf5grp, lsv_idx, exp_idx, gc=None):
 
         njunc = len(self.junction_id)
         if lsv_idx + njunc > majiq_config.nrandom_junctions:
-            shp = hdf5grp['/lsv_junctions'].shape
+            shp = hdf5grp[LSV_JUNCTIONS_DATASET_NAME].shape
             shp_new = shp[0] + majiq_config.nrandom_junctions
-            hdf5grp['/lsv_junctions'].resize((shp_new, shp[1]))
-        hdf5grp['/lsv_junctions'][lsv_idx:lsv_idx+njunc, :] = self.coverage[:, exp_idx, :]
-        # h_lsv = hdf5grp.create_dataset("LSVs/%s" % self.id, data=self.coverage,
-        #                                compression='gzip', compression_opts=9)
+            hdf5grp[LSV_JUNCTIONS_DATASET_NAME].resize((shp_new, shp[1]))
+
+        hdf5grp[LSV_JUNCTIONS_DATASET_NAME][lsv_idx:lsv_idx+njunc, :] = self.coverage[:, exp_idx, :]
+
+        if majiq_config.gcnorm:
+            gc[lsv_idx:lsv_idx+njunc, :] = self.gc_factor
+
         h_lsv = hdf5grp.create_group("LSVs/%s" % self.id)
         h_lsv.attrs['coords'] = self.coords
         h_lsv.attrs['id'] = self.id
         h_lsv.attrs['type'] = self.type
-        h_lsv.attrs['coverage'] = hdf5grp['/lsv_junctions'].regionref[lsv_idx:lsv_idx + njunc]
-        #h_lsv.attrs['visual'] = self.visual.to_hdf5(hdf5grp).ref
+        h_lsv.attrs['coverage'] = hdf5grp[LSV_JUNCTIONS_DATASET_NAME].regionref[lsv_idx:lsv_idx + njunc]
+        self.visual[exp_idx].to_hdf5(h_lsv)
 
         return lsv_idx + njunc
 
-
-
-    def to_hdf5_old(self, hdf5grp):
-        h_lsv = hdf5grp.create_dataset("LSVs/%s" % self.id, data=self.coverage,
-                                       compression='gzip', compression_opts=9)
-        h_lsv.attrs['coords'] = self.coords
-        h_lsv.attrs['id'] = self.id
-        h_lsv.attrs['type'] = self.type
-        h_lsv.attrs['iretention'] = self.iretention
-        h_lsv.attrs['junction_id'] = self.junction_id
-        #h_lsv.attrs['visual'] = self.visual.to_hdf5(hdf5grp).ref
 

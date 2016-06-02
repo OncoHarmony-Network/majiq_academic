@@ -359,6 +359,9 @@ def retrieve_gene(gene_id, dbfile, logger=None):
              ex.set_pcr_score(ex_grp.attrs['pcr_name'], ex_grp.attrs['score'], ex_grp.attrs['candidate'])
         except KeyError:
             pass
+        if majiq_config.gcnorm:
+            ex.set_gc_content_val(ex_grp.attrs['gc_content'])
+
         for ex_tx_id in ex_grp['tx']:
             ex_tx = ex_grp['tx/%s' % ex_tx_id]
             #TODO: Do we need trasncript? for now is None

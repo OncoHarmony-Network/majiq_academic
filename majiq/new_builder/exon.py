@@ -57,22 +57,13 @@ class Exon:
 
         h_ex.attrs['start'] = self.start
         h_ex.attrs['end'] = self.end
-        #h_ex.attrs['gene_name'] = self.gene_name
+        h_ex.attrs['gc_content'] = self.gc_content
 
-        #h_ex['exonTx_list'] = self.exonTx_list
         [tex.to_hdf5(h_ex) for tex in self.exonTx_list]
-        #
-        # self.ss_3p_list = []
-        # self.ss_5p_list = []
         if not self.score is None:
             h_ex.attrs['score'] = self.score
             h_ex.attrs['pcr_name'] = self.pcr_name
             h_ex.attrs['pcr_candidate'] = self.pcr_candidate
-        #h_ex.attrs['db_coord'] = self.db_coord
-
-
-
-
 
     def get_id(self):
         return self.id
@@ -186,6 +177,9 @@ class Exon:
 
     def update_coverage(self, exp_idx, num):
         self.coverage[exp_idx] += num
+
+    def set_gc_content_val(self, value):
+        self.gc_content = value
 
     def set_gc_content(self, sequence):
         #        if len(self.exonTx_list) != 0 and len(self.exonRead_list) != 0 :
@@ -702,6 +696,7 @@ def set_exons_gc_content(chrom, exon_list):
     # print "Loading chromosome... %s"%chrom
     chrom_path = fastadir_path + chrom + ".fa"
     if not os.path.exists(chrom_path):
+        raise RuntimeWarning('GC content not calculated, genome files not found')
         return
     chrom_file = open(chrom_path)
     loaded_chrom = []
