@@ -540,7 +540,8 @@ class Queue_Lsv(object):
             h_lsv.attrs['coverage'] = hdf5grp[LSV_JUNCTIONS_DATASET_NAME].regionref[lsv_idx:lsv_idx + njunc]
             self.visual[exp_idx].to_hdf5(h_lsv)
         except:
-            print self.id, self.junction_id, self.coverage.shape, self.gc_factor.shape
+            print "HDF5 ERROR", self.id, self.junction_id, self.coverage.shape, self.gc_factor.shape
+            raise
 
         return lsv_idx + njunc
 

@@ -233,7 +233,6 @@ def prepare_gc_content(gn):
             gc_pairs['GC'][exp_n].append(gc_val)
             gc_pairs['COV'][exp_n].append(cov)
 
-    print gc_pairs
     return gc_pairs
 
 
