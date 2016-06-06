@@ -527,6 +527,7 @@ class Queue_Lsv(object):
                 shp = hdf5grp[LSV_JUNCTIONS_DATASET_NAME].shape
                 shp_new = shp[0] + majiq_config.nrandom_junctions
                 hdf5grp[LSV_JUNCTIONS_DATASET_NAME].resize((shp_new, shp[1]))
+                gc.resize((shp_new, shp[1]))
 
             hdf5grp[LSV_JUNCTIONS_DATASET_NAME][lsv_idx:lsv_idx+njunc, :] = self.coverage[:, exp_idx, :]
 

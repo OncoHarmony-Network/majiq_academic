@@ -58,10 +58,7 @@ def majiq_builder(list_of_genes):
     tlogger = majiq_utils.get_logger("%s/%s.kk.majiq.log" % (majiq_config.outDir, mp.current_process()._identity[0]),
                                      silent=majiq_builder.silent, debug=majiq_builder.debug)
     created = mp.Process()
-    current = mp.current_process()
     chnk = created._identity[0]
-    # print 'running:', current.name, current._identity
-    # print 'created:', created.name, created._identity
 
     tlogger.debug("[%s] Starting new chunk" % chnk)
     monitor('CHILD %s:: CREATION' % chnk)
