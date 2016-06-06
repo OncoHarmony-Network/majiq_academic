@@ -57,7 +57,6 @@ def builder_init(out_queue, lock_arr, sam_list, pcr_filename, gff_output, only_r
 def majiq_builder(list_of_genes):
     tlogger = majiq_utils.get_logger("%s/%s.kk.majiq.log" % (majiq_config.outDir, mp.current_process()._identity[0]),
                                      silent=majiq_builder.silent, debug=majiq_builder.debug)
-    tlogger.info(list_of_genes)
     created = mp.Process()
     current = mp.current_process()
     chnk = created._identity[0]
