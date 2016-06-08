@@ -143,7 +143,6 @@ class Gene:
     def overlaps(self, gne):
         return self.start < gne.end and self.end > gne.start
 
-
     def new_annotated_exon(self, start, end, transcript, bl=True, intron=False):
         for txex in self.temp_txex_list:
             if txex.start == start and txex.end == end:
@@ -161,7 +160,7 @@ class Gene:
         res = None
         for txcpt in self.transcript_tlb.values():
             res = txcpt.in_junction_list(start, end)
-            if not res is None:
+            if res is not None:
                 break
         return res
 
@@ -194,11 +193,11 @@ class Gene:
             for txex in tx_list:
                 for junc in txex.get_3prime_junc():
                     coord = junc.get_ss_3p()
-                    if not coord is None:
+                    if coord is not None:
                         ss.add((coord, '3prime', junc))
                 for junc in txex.get_5prime_junc():
                     coord = junc.get_ss_5p()
-                    if not coord is None:
+                    if coord is not None:
                         ss.add((coord, '5prime', junc))
 
         return sorted(ss)
@@ -241,6 +240,7 @@ class Gene:
             retrieve_gene(anti_g, majiq_config.dbfile)
             # if not self.antis_gene is None:
             gg = majiq_config.gene_tlb[anti_g]
+
             cc = gg.get_coordinates()
             if jend < cc[0] or jstart > cc[1]:
                 continue
@@ -265,14 +265,16 @@ class Gene:
                     if coords[0] <= jend <= coords[1] or coords[0] <= jstart <= coords[1]:
                         res = True
                         break
+                del majiq_config.gene_tlb[anti_g]
             else:
+                del majiq_config.gene_tlb[anti_g]
                 break
+
         return res
 
     def new_lsv_definition(self, exon, jlist, lsv_type):
 
         coords = exon.get_coordinates()
-        ret = None
         lsv_id = "%s:%d-%d:%s" % (self.get_id(), coords[0], coords[1], lsv_type)
         for lsv in self.lsv_list:
             if lsv.id == lsv_id:
@@ -283,6 +285,7 @@ class Gene:
             self.lsv_list.append(ret)
         return ret
 
+
 class Transcript(object):
 
     def __init__(self, name, gene, txstart, txend):
@@ -291,7 +294,6 @@ class Transcript(object):
         self.exon_list = []
         self.txstart = txstart
         self.txend = txend
-
 
     def get_gene(self):
         return majiq_config.gene_tlb[self.gene_id]
@@ -332,9 +334,7 @@ class Transcript(object):
         return
 
 
-
 def recreate_gene_tlb(gene_list):
-
     for gn in gene_list:
         majiq_config.gene_tlb[gn.get_id()] = gn
 
@@ -356,7 +356,7 @@ def retrieve_gene(gene_id, dbfile, logger=None):
         ex = Exon(ex_grp.attrs['start'], ex_grp.attrs['end'], gn, gg.attrs['strand'], annot=True, isintron=False)
         gn.exons.append(ex)
         try:
-             ex.set_pcr_score(ex_grp.attrs['pcr_name'], ex_grp.attrs['score'], ex_grp.attrs['candidate'])
+            ex.set_pcr_score(ex_grp.attrs['pcr_name'], ex_grp.attrs['score'], ex_grp.attrs['candidate'])
         except KeyError:
             pass
         if majiq_config.gcnorm:
@@ -364,7 +364,7 @@ def retrieve_gene(gene_id, dbfile, logger=None):
 
         for ex_tx_id in ex_grp['tx']:
             ex_tx = ex_grp['tx/%s' % ex_tx_id]
-            #TODO: Do we need trasncript? for now is None
+#            TODO: Do we need trasncript? for now is None
 
             transcript_id = None
             ext = ExonTx(ex_tx.attrs['start'], ex_tx.attrs['end'], transcript_id, intron=False)

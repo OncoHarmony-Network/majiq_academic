@@ -32,42 +32,34 @@ class InvalidLSV(Exception):
 
 class LSV(object):
     def __init__(self, exon, lsv_id, junctions, lsv_type):
+
         if lsv_type != SSOURCE and lsv_type != STARGET:
             raise InvalidLSV('Incorrect LSV type %s' % lsv_type)
         self.coords = exon.get_coordinates()
         self.id = lsv_id
 
-        for x in junctions:
-            if x is None:
-                pass
         junction_list = [x for x in junctions if x is not None]
-        # and x.get_donor() is not None
-        # and x.get_acceptor() is not None]
-        n_viable_juncs = len([x for x in junction_list if x.get_donor() is not None
-                              and x.get_acceptor() is not None])
+        n_viable_juncs = len([x for x in junction_list if x.get_donor() is not None and x.get_acceptor() is not None])
 
         if n_viable_juncs < 2:
             raise InvalidLSV('Not enought junctions')
         self.type = lsv_type
         self.exon = exon
 
-        #print lsv_id
         self.intron_retention = False
         for jj in junction_list:
             x1 = jj.get_acceptor()
             x2 = jj.get_donor()
-            #print "\t ", jj.get_id()
+
             if x1 is None or x2 is None:
                 continue
             if x1.is_intron() or x2.is_intron():
-                #print "LSV with intron"
                 self.intron_retention = True
                 break
         try:
             self.tlb_junc = {}
             self.ext_type = self.set_type(junction_list, self.tlb_junc)
             if self.ext_type == 'intron':
-                #print "KKKKKKKKV %s" % exon.get_gene()
                 raise InvalidLSV('Auto junction found')
         except:
             raise InvalidLSV('Problematic Type')
@@ -83,35 +75,6 @@ class LSV(object):
         for exp_idx in xrange(majiq_config.num_experiments):
             self.visual.append(self.get_visual_lsv(self.junctions, exp_idx))
         self.visual = np.array(self.visual)
-
-    def check_type(self, lsv_type):
-        tab = lsv_type.split('|')[1:]
-        exss = []
-        targ = {}
-        for tt in tab:
-            dum = tt.split('e')
-            exss.append(int(dum[0]))
-            tr = dum[1].split('.')
-            if len(tr) == 1 and dum[1] == '0':
-                continue
-            if int(tr[0]) not in targ:
-                targ[int(tr[0])] = []
-            targ[int(tr[0])].append(int(tr[1]))
-
-        exss.sort()
-        for iidx, ii in enumerate(exss[1:]):
-            if ii != exss[iidx] + 1 and ii != exss[iidx]:
-                print "ERROR 1", lsv_type
-                return -1
-
-        for kk, vlist in targ.items():
-            vlist.sort()
-            for vidx, vv in enumerate(vlist[1:]):
-                if vv != vlist[vidx] + 1 and vv != vlist[vidx]:
-                    print "ERROR 2", lsv_type
-                    return -1
-
-        return 0
 
     def get_coordinates(self):
         return self.coords
@@ -201,7 +164,7 @@ class LSV(object):
                     try:
                         ex = '%s.%so%s' % (ex1, s3.index(junc.end) + 1, len(s3))
                     except Exception as e:
-                        print "ERRORRR", ex_id
+                        print "ERRORRR", ex_id, e
                         raise e
                     jtype = "|%se%s" % (spsite.index(junc.start) + 1, ex)
             else:
@@ -347,24 +310,6 @@ class LSV(object):
 
         return res
 
-    # def to_majiqLSV(self, exp_idx):
-    #     return MajiqLsv(self, exp_idx)
-
-
-def set_gc_factor(hdf5grp, exp_idx):
-    return
-    # if majiq_config.gcnorm:
-    #     gc_factor = load_sparse_mat(hdf5grp['gc_factor'])
-    #     cov = load_sparse_mat(hdf5grp['coverage'])
-    #
-    #     nnz = gc_factor.nonzero()
-    #     for idx in xrange(nnz[0].shape[0]):
-    #         i = nnz[0][idx]
-    #         j = nnz[1][idx]
-    #         dummy = gc_factor[i, j]
-    #         cov[i, j] *= majiq_config.gc_factor[exp_idx](dummy)
-    # del hdf5grp['gc_factor']
-
 
 def extract_se_events(list_lsv_per_gene):
     sslist = list_lsv_per_gene[0]
@@ -475,7 +420,6 @@ def print_lsv_extype(list_lsv, filename):
         lsv = list_lsv[idx]
         fp.write("%s\n" % lsv.type)
     fp.close()
-
 
 
 class Queue_Lsv(object):

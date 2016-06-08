@@ -191,7 +191,7 @@ def rnaseq_intron_retention(gne, samfile_list, chnk, permissive=True, nondenovo=
                 comp_chunk = nchunks
                 intron_covered = 0
 
-                if intron_len > readlen:
+                if intron_len > majiq_config.readLen:
                     for ii in range(nchunks):
                         # for ii in intron_parts:
                         # num_positions = np.count_nonzero(bmap[index_list[ii][0]:index_list[ii][1]])
@@ -239,8 +239,8 @@ def rnaseq_intron_retention(gne, samfile_list, chnk, permissive=True, nondenovo=
 
                     if exnum == 1:
                         logging.debug("NEW INTRON RETENTION EVENT %s, %d-%d" % (gne.get_name(),
-                                                                               intron_start,
-                                                                               intron_end))
+                                                                                intron_start,
+                                                                                intron_end))
             else:
                 pass
                 # for exp_index in ind_list:
@@ -251,7 +251,7 @@ def rnaseq_intron_retention(gne, samfile_list, chnk, permissive=True, nondenovo=
     gne.prepare_exons()
 
 
-def read_sam_or_bam(gne, samfile_list, chnk, counter, nondenovo=False, info_msg='0', logging=None):
+def read_sam_or_bam(gne, samfile_list, counter, nondenovo=False, info_msg='0', logging=None):
 
     junctions = []
     strt, end = gne.get_coordinates()

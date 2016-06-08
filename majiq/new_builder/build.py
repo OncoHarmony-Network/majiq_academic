@@ -5,7 +5,7 @@ import majiq.new_builder.gene
 from majiq.src.basic_pipeline import BasicPipeline, _pipeline_run
 import majiq.src.config as majiq_config
 import majiq.src.utils.utils as majiq_utils
-from majiq.src.normalize import prepare_gc_content, gc_factor_calculation
+import majiq.src.normalize as majiq_norm
 
 import multiproc as majiq_multi
 import majiq_io as majiq_io
@@ -78,7 +78,7 @@ def majiq_builder(list_of_genes):
             tlogger.info("[%s] Reading BAM files" % loop_id)
             samfile = [pysam.Samfile(xx, "rb") for xx in majiq_builder.sam_list]
 
-            majiq_io.read_sam_or_bam(gene_obj, samfile, chnk, counter,
+            majiq_io.read_sam_or_bam(gene_obj, samfile, counter,
                                      nondenovo=majiq_builder.non_denovo, info_msg=loop_id, logging=tlogger)
 
             if gene_obj.get_read_count().sum() == 0:
@@ -96,7 +96,7 @@ def majiq_builder(list_of_genes):
             lsv_detection(gene_obj, only_real_data=majiq_builder.only_rna,
                           out_queue=majiq_builder.queue, logging=tlogger)
 
-            gc_factors = prepare_gc_content(gene_obj)
+            gc_factors = majiq_norm.prepare_gc_content(gene_obj)
             majiq_builder.queue.put([3, gc_factors], block=True)
 
             monitor('CHILD %s:: ENDLOOP' % chnk)
@@ -105,7 +105,6 @@ def majiq_builder(list_of_genes):
             sys.stdout.flush()
         finally:
             del majiq_config.gene_tlb[gne_id]
-
 
     db_f.close()
     monitor('CHILD %s:: WAITING' % chnk)
@@ -168,7 +167,6 @@ class Builder(BasicPipeline):
                 gc_content_files[exp_idx] = gc_f
 
         monitor('AFTER CHILD CREATION AND FILES PREP')
-
         nthr_count = 0
 
         gc_pairs = {'GC': [[] for xx in xrange(majiq_config.num_experiments)],
@@ -209,27 +207,16 @@ class Builder(BasicPipeline):
                     continue
                 break
 
-        monitor('OUTPUT PRE GC')
-        #vect_mult = np.vectorize(np.multiply)
+
 
         if majiq_config.gcnorm:
-            logger.info("Gc Content normalization")
-            gc_factor_calculation(gc_pairs, nbins=10)
-            # v_gcfactor_func = np.vectorize(_test_func)
-            for exp_n in xrange(majiq_config.num_experiments):
-                v_gcfactor_func = np.vectorize(majiq_config.gc_factor[exp_n])
+            majiq_norm.gc_normalization(lsv_list, gc_content_files, gc_pairs, logger)
 
-                vals = v_gcfactor_func(gc_content_files[exp_n][LSV_GC_CONTENT][()])
-                lsv_list[exp_idx][LSV_JUNCTIONS_DATASET_NAME][...] = np.multiply(lsv_list[exp_idx][LSV_JUNCTIONS_DATASET_NAME][()], vals)
-
-                vals = v_gcfactor_func(gc_content_files[exp_n][CONST_JUNCTIONS_GC_CONTENT][()])
-                lsv_list[exp_idx][CONST_JUNCTIONS_DATASET_NAME][...] = np.multiply(lsv_list[exp_idx][CONST_JUNCTIONS_DATASET_NAME][()], vals)
-
+        #TODO: Re open
         for exp_idx, exp in enumerate(majiq_config.exp_list):
             lsv_list[exp_idx].close()
 
         monitor('MASTER END')
-
         logger.info("End of execution")
 
     # def _test_func(lsv_list, exp_idx, vals, index):

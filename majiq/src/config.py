@@ -2,7 +2,7 @@ import os
 import ConfigParser
 from scipy import interpolate
 import numpy as np
-#from majiq.src.io import ConfigSectionMap
+
 
 global gene_tlb
 global gc_factor
@@ -142,7 +142,7 @@ def add_chunk():
     global num_final_chunks
     num_final_chunks += 1
 
-
+##TODO: Deprecated
 def set_gc_factors(bins, factor, means):
     global gc_factor, gc_bins_val, gc_bins, gc_means
     gc_factor = [None] * num_experiments

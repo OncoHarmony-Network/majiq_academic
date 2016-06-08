@@ -201,7 +201,7 @@ def main(params):
         for chnk in range(majiq_config.num_final_chunks):
             temp_dir = "%s/tmp/chunk_%s" % (majiq_config.outDir, chnk)
             utils.create_if_not_exists(temp_dir)
-<<<<<<< HEAD
+
             if params.nthreads == 1:
                 majiq_builder(sam_list, chnk, pcr_validation=params.pcr_filename, gff_output=params.gff_output,
                               only_rna=params.only_rna, nondenovo=params.non_denovo, logging=logger)
@@ -215,36 +215,6 @@ def main(params):
                                                       params.silent,
                                                       params.debug
                                                       ])
-=======
-            lock_array[chnk].acquire()
-        #    if params.nthreads == 1:
-        #         majiq_builder(sam_list, chnk, pcr_validation=params.pcr_filename, gff_output=params.gff_output,
-        #                       only_rna=params.only_rna, nondenovo=params.non_denovo, logging=logger)
-            args_list.append([sam_list, chnk, params.pcr_filename, params.gff_output, params.only_rna,
-                              params.non_denovo, params.silent, params.debug])
-
-        kk = pool.map_async(__parallel_lsv_quant, args_list)
-        print kk
-
-
-
-        # for chnk in range(majiq_config.num_final_chunks):
-        #     temp_dir = "%s/tmp/chunk_%s" % (majiq_config.outDir, chnk)
-        #     utils.create_if_not_exists(temp_dir)
-        #     if params.nthreads == 1:
-        #         majiq_builder(sam_list, chnk, pcr_validation=params.pcr_filename, gff_output=params.gff_output,
-        #                       only_rna=params.only_rna, nondenovo=params.non_denovo, logging=logger)
-        #     else:
-        #         lock_array[chnk].acquire()
-        #         pool.apply_async(__parallel_lsv_quant, [sam_list, chnk,
-        #                                               params.pcr_filename,
-        #                                               params.gff_output,
-        #                                               params.only_rna,
-        #                                               params.non_denovo,
-        #                                               params.silent,
-        #                                               params.debug
-        #                                               ])
->>>>>>> 7a663a44c3970cfeac76aacdf75a9ac1d1e99941
 
         count = 0
 
