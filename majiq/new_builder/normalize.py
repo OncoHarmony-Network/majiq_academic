@@ -66,7 +66,7 @@ def gc_normalization(lsv_list, gc_content_files, gc_pairs, logger):
         v_gcfactor_func = np.vectorize(gc_factor)
         lsv_matrix = lsv_list[exp_n][LSV_JUNCTIONS_DATASET_NAME]
         const_matrix = lsv_list[exp_n][CONST_JUNCTIONS_DATASET_NAME]
-        for idx in xrange(lsv_list[exp_n][LSV_JUNCTIONS_DATASET_NAME].shape[0]):
+        for idx in xrange(lsv_matrix.shape[0]):
 
             vals = v_gcfactor_func(gc_content_files[exp_n][LSV_GC_CONTENT][idx, :])
             lsv_matrix[idx, :] = np.multiply(lsv_matrix[idx, :], vals)
@@ -129,8 +129,6 @@ def gc_factor_calculation(gc_pairs, nbins=10):
             local_factor[exp_n] = gc_factor
 
     return local_factor, local_meanbins
-
-
 
 
 def prepare_gc_content(gn):

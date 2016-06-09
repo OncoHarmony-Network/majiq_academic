@@ -471,12 +471,15 @@ class Queue_Lsv(object):
                 shp = hdf5grp[LSV_JUNCTIONS_DATASET_NAME].shape
                 shp_new = shp[0] + majiq_config.nrandom_junctions
                 hdf5grp[LSV_JUNCTIONS_DATASET_NAME].resize((shp_new, shp[1]))
-                gc.resize((shp_new, shp[1]))
+                if majiq_config.gcnorm:
+                    gc.resize((shp_new, shp[1]))
+
 
             hdf5grp[LSV_JUNCTIONS_DATASET_NAME][lsv_idx:lsv_idx+njunc, :] = self.coverage[:, exp_idx, :]
 
             if majiq_config.gcnorm:
                 gc[lsv_idx:lsv_idx+njunc, :] = self.gc_factor
+
 
             h_lsv = hdf5grp.create_group("LSVs/%s" % self.id)
             h_lsv.attrs['coords'] = self.coords
