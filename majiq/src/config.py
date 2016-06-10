@@ -55,7 +55,8 @@ def global_conf_ini(filename, params, only_db=False):
     else:
         num_final_chunks = 1
     min_denovo = params.min_denovo
-    gcnorm = True
+    gcnorm = params.gcnorm
+    
     config = ConfigParser.ConfigParser()
     config.read(filename)
     # TODO: check if filename exists
