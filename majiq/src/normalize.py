@@ -53,7 +53,21 @@ def mark_stacks(lsv_list, fitfunc_r, pvalue_limit, logger=None):
     return lsv_list
 
 
-def gc_normalization(lsv_list, gc_content_files, gc_pairs, logger):
+def gc_normalization(gc_pairs, logger):
+
+    logger.info("Gc Content normalization")
+    factor, meanbins = gc_factor_calculation(gc_pairs, nbins=10)
+    v_gcfactor_func = [None] * majiq_config.num_experiments
+
+    for exp_n in xrange(majiq_config.num_experiments):
+        a = np.append(factor[exp_n], factor[exp_n][-1])
+        gc_factor = interpolate.interp1d(meanbins[exp_n], factor[exp_n], bounds_error=False, fill_value=1)
+        v_gcfactor_func[exp_n] = np.vectorize(gc_factor)
+
+    return v_gcfactor_func
+
+
+def gc_normalization_old(lsv_list, gc_content_files, gc_pairs, logger):
 
     logger.info("Gc Content normalization")
     factor, meanbins = gc_factor_calculation(gc_pairs, nbins=10)
@@ -129,8 +143,6 @@ def gc_factor_calculation(gc_pairs, nbins=10):
             local_factor[exp_n] = gc_factor
 
     return local_factor, local_meanbins
-
-
 
 
 def prepare_gc_content(gn):

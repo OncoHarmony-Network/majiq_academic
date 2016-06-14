@@ -38,7 +38,7 @@ class Exon:
         self.ss_3p_list = []
         self.ss_5p_list = []
         self.id = "%s:%d-%d" % (self.gene_name, start, end)
-        # sedlf.strand = strand
+        # self.strand = strand
         self.gc_content = 0
         self.coverage = np.zeros(shape=config.num_experiments)
         self.score = None

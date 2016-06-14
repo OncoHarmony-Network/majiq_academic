@@ -463,7 +463,7 @@ class Queue_Lsv(object):
                 self.coverage[i, j] *= majiq_config.gc_factor[exp_idx](dummy)
         del self.gc_factor
 
-    def to_hdf5(self, hdf5grp, lsv_idx, exp_idx, gc=None):
+    def to_hdf5(self, hdf5grp, lsv_idx, exp_idx, gc_func=None):
 
         try:
             njunc = len(self.junction_id)
@@ -471,20 +471,17 @@ class Queue_Lsv(object):
                 shp = hdf5grp[LSV_JUNCTIONS_DATASET_NAME].shape
                 shp_new = shp[0] + majiq_config.nrandom_junctions
                 hdf5grp[LSV_JUNCTIONS_DATASET_NAME].resize((shp_new, shp[1]))
-                if majiq_config.gcnorm:
-                    gc.resize((shp_new, shp[1]))
-
-
-            hdf5grp[LSV_JUNCTIONS_DATASET_NAME][lsv_idx:lsv_idx+njunc, :] = self.coverage[:, exp_idx, :]
 
             if majiq_config.gcnorm:
-                gc[lsv_idx:lsv_idx+njunc, :] = self.gc_factor
-
+                vals = gc_func(self.gc_factor)
+                self.coverage[:, exp_idx, :] = np.multiply(self.coverage[:, exp_idx, :], vals)
+            hdf5grp[LSV_JUNCTIONS_DATASET_NAME][lsv_idx:lsv_idx+njunc, :] = self.coverage[:, exp_idx, :]
 
             h_lsv = hdf5grp.create_group("LSVs/%s" % self.id)
             h_lsv.attrs['coords'] = self.coords
             h_lsv.attrs['id'] = self.id
             h_lsv.attrs['type'] = self.type
+
             h_lsv.attrs['coverage'] = hdf5grp[LSV_JUNCTIONS_DATASET_NAME].regionref[lsv_idx:lsv_idx + njunc]
             self.visual[exp_idx].to_hdf5(h_lsv)
         except:

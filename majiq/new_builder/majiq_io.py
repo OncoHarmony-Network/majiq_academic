@@ -79,6 +79,30 @@ def _match_strand(read, gene_strand):
             res = False
     return res
 
+def _check_read(read):
+    return __is_unique(read) and _match_strand(read, gg_strand)
+
+
+def get_exon_gc_content(gc_pairs, sam_list, all_genes):
+    import pysam
+    global gg_strand
+    gc_pairs['GC'] = [[] for xx in xrange(majiq_config.num_experiments)]
+    gc_pairs['COV'] = [[] for xx in xrange(majiq_config.num_experiments)]
+    for exp_idx, ff in enumerate(sam_list):
+        samfile = pysam.AlignmentFile(ff, "rb")
+        for chrom, ll in all_genes.items():
+            for strand, ll2 in ll.items():
+                for gg in ll2:
+                    gg_strand = gg.strand
+                    for ex in gg.get_exon_list():
+                        gc_val = ex.get_gc_content()
+                        st, end = ex.get_coordinates()
+                        if gc_val == 0 or end - st < 30:
+                            continue
+                        nreads = samfile.count(reference=gg.get_chromosome(), start=st, end=end,
+                                               until_eof=False, read_callback=_check_read)
+                        gc_pairs['GC'][exp_idx].append(gc_val)
+                        gc_pairs['COV'][exp_idx].append(nreads)
 
 def rnaseq_intron_retention(gne, samfile_list, chnk, permissive=True, nondenovo=False, logging=None):
 
@@ -276,11 +300,11 @@ def read_sam_or_bam(gne, samfile_list, counter, nondenovo=False, info_msg='0', l
             gne.add_read_count(nreads, exp_index)
             is_cross, junc_list = __cross_junctions(read)
 
-            for ex_idx in range(len(ex_list)):
-                ex_start, ex_end = ex_list[ex_idx].get_coordinates()
-                if ex_start <= r_start <= ex_end:
-                    ex_list[ex_idx].update_coverage(exp_index, nreads)
-                    break
+            # for ex_idx in range(len(ex_list)):
+            #     ex_start, ex_end = ex_list[ex_idx].get_coordinates()
+            #     if ex_start <= r_start <= ex_end:
+            #         ex_list[ex_idx].update_coverage(exp_index, nreads)
+            #         break
 
             if not is_cross:
                 continue
@@ -416,7 +440,7 @@ def __parse_gff3(filename):
             yield GFFRecord(**normalized_info)
 
 
-def read_gff(filename, list_of_genes, logging=None):
+def read_gff(filename, list_of_genes, gc_pairs, sam_list, logging=None):
     """
     :param filename: GFF input filename
     :param list_of_genes: List of genes that will be updated with all the gene_id detected on the gff file
@@ -511,6 +535,9 @@ def read_gff(filename, list_of_genes, logging=None):
                 set_exons_gc_content(chrom, exon_list)
             except RuntimeWarning:
                 continue
+
+    if majiq_config.gcnorm:
+        get_exon_gc_content(gc_pairs, sam_list, all_genes)
 
     _prepare_and_dump(filename="%s/tmp/db.hdf5" % majiq_config.outDir, logging=logging)
     del all_genes

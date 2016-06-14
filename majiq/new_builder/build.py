@@ -96,8 +96,8 @@ def majiq_builder(list_of_genes):
             lsv_detection(gene_obj, only_real_data=majiq_builder.only_rna,
                           out_queue=majiq_builder.queue, logging=tlogger)
 
-            gc_factors = majiq_norm.prepare_gc_content(gene_obj)
-            majiq_builder.queue.put([3, gc_factors], block=True)
+            # gc_factors = majiq_norm.prepare_gc_content(gene_obj)
+            # majiq_builder.queue.put([3, gc_factors], block=True)
 
             monitor('CHILD %s:: ENDLOOP' % chnk)
         except Exception as e:
@@ -122,10 +122,10 @@ class Builder(BasicPipeline):
         sam_list = majiq_config.global_conf_ini(self.conf, self)
         self.builder(sam_list)
 
-    def queue_manager(self, lock_array, result_queue, first_id=0, logger=None):
+    def queue_manager(self, lock_array, result_queue, first_id=0, vfunc_gc=None, logger=None):
         count = []
 
-        gc_content_files = [None] * majiq_config.num_experiments
+       #gc_content_files = [None] * majiq_config.num_experiments
         lsv_list = []
         splicegraph = []
         file_list = []
@@ -155,16 +155,16 @@ class Builder(BasicPipeline):
             splicegraph.append(f_splicegraph)
 
             # gc content normalization values
-            if majiq_config.gcnorm:
-                fname_gc = "%s/tmp.%s.gc" % (majiq_config.outDir, majiq_config.exp_list[exp_idx])
-                gc_f = h5py.File(fname_gc, 'w', compression='gzip', compression_opts=9)
-                gc_f.create_dataset(LSV_GC_CONTENT,
-                                    (majiq_config.nrandom_junctions, effective_readlen),
-                                    maxshape=(None, effective_readlen))
-                gc_f.create_dataset(CONST_JUNCTIONS_GC_CONTENT,
-                                    (majiq_config.nrandom_junctions, effective_readlen),
-                                    maxshape=(None, effective_readlen))
-                gc_content_files[exp_idx] = gc_f
+            # if majiq_config.gcnorm:
+            #     fname_gc = "%s/tmp.%s.gc" % (majiq_config.outDir, majiq_config.exp_list[exp_idx])
+            #     gc_f = h5py.File(fname_gc, 'w', compression='gzip', compression_opts=9)
+            #     gc_f.create_dataset(LSV_GC_CONTENT,
+            #                         (majiq_config.nrandom_junctions, effective_readlen),
+            #                         maxshape=(None, effective_readlen))
+            #     gc_f.create_dataset(CONST_JUNCTIONS_GC_CONTENT,
+            #                         (majiq_config.nrandom_junctions, effective_readlen),
+            #                         maxshape=(None, effective_readlen))
+            #     gc_content_files[exp_idx] = gc_f
 
         monitor('AFTER CHILD CREATION AND FILES PREP')
         nthr_count = 0
@@ -179,7 +179,7 @@ class Builder(BasicPipeline):
                         lsv_idx[exp_idx] = val[1].to_hdf5(hdf5grp=lsv_list[exp_idx],
                                                           lsv_idx=lsv_idx[exp_idx],
                                                           exp_idx=jdx,
-                                                          gc=gc_content_files[exp_idx][LSV_GC_CONTENT])
+                                                          gc_func=vfunc_gc[exp_idx])
 
                 elif val[0] == 1:
                     for jdx, exp_idx in enumerate(majiq_config.tissue_repl[val[3]]):
@@ -187,16 +187,11 @@ class Builder(BasicPipeline):
                         if junc_idx[exp_idx] >= majiq_config.nrandom_junctions:
                             continue
                         junc_group[junc_idx[exp_idx], :] = val[1][jdx, :].toarray()
-                        gc_content_files[exp_idx][CONST_JUNCTIONS_GC_CONTENT][junc_idx[exp_idx], :] = val[2].toarray()
+
                         junc_idx[exp_idx] += 1
 
                 elif val[0] == 2:
                     val[1].to_hdf5(splicegraph[val[2]])
-
-                elif val[0] == 3:
-                    for exp_n in xrange(majiq_config.num_experiments):
-                        gc_pairs['GC'][exp_n].extend(val[1]['GC'][exp_n])
-                        gc_pairs['COV'][exp_n].extend(val[1]['COV'][exp_n])
 
                 elif val[0] == -1:
                     lock_array[val[1]].release()
@@ -207,10 +202,8 @@ class Builder(BasicPipeline):
                     continue
                 break
 
-
-
-        if majiq_config.gcnorm:
-            majiq_norm.gc_normalization(lsv_list, gc_content_files, gc_pairs, logger)
+        # if majiq_config.gcnorm:
+        #     majiq_norm.gc_normalization(lsv_list, gc_content_files, gc_pairs, logger)
 
         #TODO: Re open
         for exp_idx, exp in enumerate(majiq_config.exp_list):
@@ -219,8 +212,6 @@ class Builder(BasicPipeline):
         monitor('MASTER END')
         logger.info("End of execution")
 
-    # def _test_func(lsv_list, exp_idx, vals, index):
-    #     lsv_list[exp_idx][LSV_JUNCTIONS_DATASET_NAME][index, :] = lsv_list[exp_idx][LSV_JUNCTIONS_DATASET_NAME][index, :] * vals
 
     def builder(self, sam_list):
 
@@ -230,15 +221,19 @@ class Builder(BasicPipeline):
         logger.info("Command: %s" % self)
 
         manager = mp.Manager()
-
+        print sam_list
         list_of_genes = manager.list()
+        gc_pairs = manager.dict()
+
         p = mp.Process(target=majiq_multi.parallel_lsv_child_calculation,
-                       args=(majiq_io.read_gff, [self.transcripts, list_of_genes],
+                       args=(majiq_io.read_gff, [self.transcripts, list_of_genes, gc_pairs, sam_list],
                              '%s/tmp' % majiq_config.outDir, 'db', 0, False))
 
         logger.info("... waiting gff3 parsing")
         p.start()
         p.join()
+
+        vfunc_gc = majiq_norm.gc_normalization(gc_pairs, logger)
 
         monitor('AFTER READ GFF')
 
@@ -260,7 +255,7 @@ class Builder(BasicPipeline):
 
         pool.map_async(majiq_builder, chunks(list_of_genes, lchnksize))
         pool.close()
-        self.queue_manager(lock_array, q, logger=logger)
+        self.queue_manager(lock_array, q, vfunc_gc=vfunc_gc, logger=logger)
         pool.join()
 
 
