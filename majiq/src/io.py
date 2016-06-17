@@ -288,14 +288,14 @@ def rnaseq_intron_retention(filenames, gene_list, chnk, permissive=True, nondeno
                     exnum = majiq_exons.new_exon_definition(intron_start, intron_end,
                                                             None, junc1, junc2, gne, nondenovo=nondenovo,
                                                             isintron=True)
-                    if exnum == -1:
-                        for exp_index in ind_list:
-                            if not junc2 is None:
-                                junc2.reset_coverage(exp_index)
-                            if not junc1 is None:
-                                junc1.reset_coverage(exp_index)
-                    else:
-
+                    #if exnum == -1:
+                    #    for exp_index in ind_list:
+                    #        if not junc2 is None:
+                    #            junc2.reset_coverage(exp_index)
+                    #        if not junc1 is None:
+                    #            junc1.reset_coverage(exp_index)
+                    #else:
+                    if exnum != -1:
                         junc1.add_donor(exon1)
                         for ex in exon1.exonRead_list:
                             st, end = ex.get_coordinates()
@@ -314,12 +314,12 @@ def rnaseq_intron_retention(filenames, gene_list, chnk, permissive=True, nondeno
                             logging.info("NEW INTRON RETENTION EVENT %s, %d-%d" % (gne.get_name(),
                                                                                    intron_start,
                                                                                    intron_end))
-                else:
-                    for exp_index in ind_list:
-                        if not junc2 is None:
-                            junc2.reset_coverage(exp_index)
-                        if not junc1 is None:
-                            junc1.reset_coverage(exp_index)
+                #else:
+                #    for exp_index in ind_list:
+                #        if not junc2 is None:
+                #            junc2.reset_coverage(exp_index)
+                #        if not junc1 is None:
+                #            junc1.reset_coverage(exp_index)
         gne.prepare_exons()
 
     for ss in samfile:
@@ -382,7 +382,7 @@ def read_sam_or_bam(filenames, gene_list, chnk, nondenovo=False, logging=None):
                 readlen = len(read.seq)
                 for (junc_start, junc_end) in junc_list:
                     if junc_start - r_start > readlen:
-                        r_start = junc_start - (readlen - 16) - 1
+                        r_start = junc_start - (majiq_config.readLen - 16) - 1
                     elif junc_start - r_start >= readlen - 8 or junc_start - r_start <= 8:
                         continue
 
@@ -641,13 +641,18 @@ def _prepare_and_dump(logging=None):
     lsv_list = []
 
     dumped_genes = []
-
+    total = len(list_genes)
     for gidx, gn in enumerate(list_genes):
         if gn.get_id() in dumped_genes:
             continue
         gn.collapse_exons()
-        csize -= 1
+        if len(gn.exons) == 0:
+            total -= 1
+            if total <=0:
+                raise RuntimeError('There are no valid genes in the genome')
+            continue
 
+        csize -= 1
         chrom = gn.get_chromosome()
         if not chrom in temp_ex:
             temp_ex[chrom] = []
@@ -667,11 +672,11 @@ def _prepare_and_dump(logging=None):
             temp_ex = {}
             if not chrom in temp_ex:
                 temp_ex[chrom] = []
-            temp_ex[chrom].extend(gn.get_exon_list())
+            temp_ex[chrom].extend(gn.get_exon_list()) 
 
     if len(lsv_list) > 0:
         __annot_dump(nthrd, temp_ex, lsv_list, logging)
-
+    
 
 def read_gff(filename, pcr_filename, nthreads, logging=None):
     """
@@ -689,11 +694,12 @@ def read_gff(filename, pcr_filename, nthreads, logging=None):
         strand = record.strand
         start = record.start
         end = record.end
-
         if record.type == 'gene':
-            gene_name = record.attributes['Name']
             gene_id = record.attributes['ID']
-
+            if 'Name' in record.attributes:
+                gene_name = record.attributes['Name']
+            else:
+                gene_name = gene_id
             if not chrom in all_genes:
                 all_genes[chrom] = {'+': [], '-': []}
 
@@ -706,7 +712,7 @@ def read_gff(filename, pcr_filename, nthreads, logging=None):
             all_genes[chrom][strand].append(gn)
             gene_id_dict[record.attributes['ID']] = gn
 
-        elif record.type == 'mRNA' or record.type == 'transcript':
+        elif record.type in ['mRNA','tRNA', 'transcript']:
             transcript_name = record.attributes['ID']
             parent = record.attributes['Parent']
             try:
@@ -719,7 +725,7 @@ def read_gff(filename, pcr_filename, nthreads, logging=None):
                 if not logging is None:
                     logging.info("Error, incorrect gff. mRNA %s doesn't have valid gene %s"
                                  % (transcript_name, parent))
-                raise
+                continue
 
         elif record.type == 'exon':
             parent_tx_id = record.attributes['Parent']
@@ -733,6 +739,7 @@ def read_gff(filename, pcr_filename, nthreads, logging=None):
                 if not logging is None:
                     logging.info("Error, incorrect gff. exon %s doesn't have valid mRNA %s" % (record.attributes['ID'],
                                                                                                parent_tx_id))
+                continue
                     # end elif
     # end for
     for tid, trcpt in trcpt_id_dict.items():
@@ -751,17 +758,19 @@ def read_gff(filename, pcr_filename, nthreads, logging=None):
             pre_txex = ex
 
         junc = gn.new_annotated_junctions(pre_end, None, trcpt)
-        pre_txex.add_5prime_junc(junc)
-
+        pre_txex.add_5prime_junc(junc)  
     # end for
-    import sys
 
-    print sys.getsizeof(all_genes)
+    try:
+        _prepare_and_dump(logging)
+    except RuntimeError:
+        if not logging is None:
+            logging.info("There are no valid genes in the genome")
+        raise
 
-    _prepare_and_dump(logging)
     if pcr_filename is not None:
         read_bed_pcr(pcr_filename, all_genes)
-
+    
     chr_list = all_genes.keys()
     del all_genes
     return chr_list

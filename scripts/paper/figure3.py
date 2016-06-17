@@ -93,7 +93,7 @@ def print_message(bars, extrabars=None, filename=None):
     return msg
 
 
-def plot_fdrheatmap(vals, vals2, grps, output='.'):
+def plot_fdrheatmap(vals, vals2, grps, output='.', title=''):
 
     global fidx
 
@@ -116,7 +116,7 @@ def plot_fdrheatmap(vals, vals2, grps, output='.'):
     header = "Tiss\t"
 
     group_order = row_dendr['leaves']
-    group_order = [10, 5, 9, 11, 0, 1, 2, 8, 7, 3, 6, 4]
+    #group_order = [10, 5, 9, 11, 0, 1, 2, 8, 7, 3, 6, 4]
 
 
 
@@ -157,18 +157,18 @@ def plot_fdrheatmap(vals, vals2, grps, output='.'):
 
     rev_df_grps = [grps[xx] for xx in group_order]
     df_grps = [grps[xx] for xx in reversed(group_order)]
-    ax.set_xlim(-0.5, 12)
-    ax.set_ylim(-0.5, 12)
+    ax.set_xlim(-0.5, 15)
+    ax.set_ylim(-0.5, 15)
     tks = ax.get_xticks()
 
 
-    ticks = np.arange(0, 12)
+    ticks = np.arange(0, 15)
     ax.set_xticks(ticks)
     ax.set_xticklabels(rev_df_grps)
     tks = ax.get_yticks()
     ax.set_yticks(ticks)
     ax.set_yticklabels(df_grps)
-    ax.set_title('Changing events')
+    ax.set_title(title)
     #
     fig.colorbar(cax)
     pyplot.show()
@@ -189,8 +189,8 @@ def plot_fdrheatmap(vals, vals2, grps, output='.'):
 
     cax = ax.matshow(df_rowclust2, interpolation='nearest', cmap='Greens')
     fig.colorbar(cax)
-    ax.set_xlim(-0.5, 12)
-    ax.set_ylim(-0.5, 12)
+    ax.set_xlim(-0.5, 15)
+    ax.set_ylim(-0.5, 15)
     ax.set_xticks(ticks)
     ax.set_xticklabels(rev_df_grps)
     tks = ax.get_yticks()
@@ -682,7 +682,8 @@ def fdr_parse(direc, file_list, group_list, intronic_junc=False):
         lines = fp.readlines()
         fp.close()
 
-        pair = filename.split('.')[0].split('_')
+        pair_aux = filename.split('.')[0].split('_')
+        pair = ['%s_%s' %(pair_aux[0], pair_aux[1]), '%s_%s' %(pair_aux[2],pair_aux[3])]
         x = group_list.index(pair[0])
         y = group_list.index(pair[1])
 
@@ -749,8 +750,23 @@ def fdr_parse(direc, file_list, group_list, intronic_junc=False):
 if __name__ == '__main__':
 
     dire = sys.argv[1]
-    onlyfiles = [f for f in listdir(dire) if isfile(join(dire, f)) and f.endswith('majiq')]
-    groups = ['Adr', 'Aor', 'BFat', 'Bstm', 'Cer', 'Hrt', 'Hyp', 'Kid', 'Liv', 'Lun', 'Mus', 'WFat']
+    #onlyfiles = [f for f in listdir(dire) if isfile(join(dire, f)) and f.endswith('majiq')]
+    #groups = ['Adr', 'Aor', 'BFat', 'Bstm', 'Cer', 'Hrt', 'Hyp', 'Kid', 'Liv', 'Lun', 'Mus', 'WFat']
+    groups = ['BALB_cJ',
+                 'NOD_ShiLtJ',
+                 'PWK_PhJ',
+                 'LP_J',
+                 'AKR_J',
+                 'NZO_HILtJ',
+                 'WSB_EiJ',
+                 'CAST_EiJ',
+                 'CBA_J',
+                 'DBA_2J',
+                 'C3H_HeJ',
+                 'SPRET_EiJ',
+                 '129S1_SvImJ',
+                 'A_J',
+                 'C57BL_6NJ']
     # onlyfiles = ['Adr_CT22.mm10.sorted.majiq', 'Aor_CT22.mm10.sorted.majiq']
 
     global ir_plots
@@ -788,15 +804,20 @@ if __name__ == '__main__':
     # plot_dominant_exons(values[1], ' 3\'splice sites', color=cb.PuRd[9])
 
     #heatmap
-    # print "Plot dpsi changing events heatmap"
-    # dire = './dpsi_voila'
-    # filename_list = [f for f in listdir(dire) if isfile(join(dire, f)) and f.endswith('txt')]
-    # chg_lsv, complx_lsv = fdr_parse(dire, filename_list, groups, intronic_junc=ir_plots)
-    # plot_fdrheatmap(chg_lsv, complx_lsv, groups, output)
-
-
-    print "Plot intronic changing but not the intron"
-    dire = './dpsi_voila'
+    print "Plot dpsi changing events heatmap"
+    dire = './'
+    if ir_plots:
+        title = 'Changing IR events in the Intronic junctions'
+    else:
+        title = 'Changing exonic events'
     filename_list = [f for f in listdir(dire) if isfile(join(dire, f)) and f.endswith('txt')]
-    chg_lsv, complx_lsv = fdr_parse(dire, filename_list, groups, intronic_junc=False)
-    plot_fdrheatmap(chg_lsv, complx_lsv, groups, output)
+    chg_lsv, complx_lsv = fdr_parse(dire, filename_list, groups, intronic_junc=ir_plots)
+    plot_fdrheatmap(chg_lsv, complx_lsv, groups, output, title=title)
+
+    if ir_plots:
+        print "Plot intronic changing but not the intron"
+        dire = './'
+        title = 'Changing IR events but NOT Intronic junction'
+        filename_list = [f for f in listdir(dire) if isfile(join(dire, f)) and f.endswith('txt')]
+        chg_lsv, complx_lsv = fdr_parse(dire, filename_list, groups, intronic_junc=False)
+        plot_fdrheatmap(chg_lsv, complx_lsv, groups, output, title=title)

@@ -5,7 +5,7 @@ use('Agg')
 from majiq.src.basic_pipeline import builder, calcpsi
 from majiq.src.deltapsi import deltapair, multi_dpsi
 
-VERSION = '0.9'
+VERSION = '0.9.2'
 
 
 def new_subparser():
@@ -19,7 +19,7 @@ def main():
     #REMINDER parser.add_parser(..... parents='[bla, ble]')
     parser = argparse.ArgumentParser(description="MAJIQ is a suite of tools for the analysis of Alternative "
                                                  "Splicing Events and Alternative Splicing Quantification.")
-    parser.add_argument('-v', action='version new', version=VERSION)
+    parser.add_argument('-v', action='version', version='%s' % VERSION)
 
     #common flags (first ones are required)
     common = new_subparser()
@@ -45,6 +45,12 @@ def main():
                              help='Filename where a gff with the lsv events will be generated')
     buildparser.add_argument('--simplify', default=0, type=int,
                              help='Ratio for junction simplification. [Default: %(default)s]')
+
+    buildparser.add_argument('--min_denovo', default=2, type=int,
+                             help='Minimum number of reads threshold combining all positions in a LSV to consider that'
+                                  'denovo junction is real". '
+                             '[Default: %(default)s]')
+
     buildparser.add_argument('--minreads', default=3, type=int,
                              help='Minimum number of reads threshold combining all positions in a LSV to consider that'
                                   'the LSV "exist in the data". '

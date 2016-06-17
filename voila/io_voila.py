@@ -313,10 +313,10 @@ def load_dpsi_tab(tab_files_list, sample_names, thres_change=None, filter_genes=
 def create_gff3_txt_files(output_dir, majiq_output, logger, out_gff3=False):
     """
     Create GFF3 files for each LSV.
-
     :param output_dir: output directory for the file.
     :param majiq_output: parsed data from majiq.
     :param logger: logger instance.
+    :param out_gff3:
     :return: nothing.
     """
     logger.info("Saving LSVs files in gff3 format ...")

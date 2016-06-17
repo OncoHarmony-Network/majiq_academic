@@ -188,7 +188,7 @@ class VoilaLsv(object):
         for lsv_bins in self.bins:
             if self.is_delta_psi():
                 self.means.append(get_expected_dpsi(lsv_bins))
-                if self.means[-1]<0:
+                if self.means[-1] < 0:
                     self.excl_incl.append([-self.means[-1], 0])
                 else:
                     self.excl_incl.append([0, self.means[-1]])
@@ -302,5 +302,8 @@ class VoilaLsv(object):
         return json.dumps(self, default=lambda o: o.__dict__, sort_keys=True, cls=encoder)
 
     def is_lsv_changing(self, thres):
-        return np.any(np.array(self.get_means()) >= thres)
+        means = np.array(self.get_means())
+        #TODO: should we check that pos and neg are kind of matched?
+        return max(means[means > 0].sum(), means[means < 0].sum()) >= thres
+        #return np.any(np.array(self.get_means()) >= thres)
 

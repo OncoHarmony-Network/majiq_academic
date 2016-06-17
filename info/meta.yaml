@@ -1,6 +1,6 @@
 package:
     name: majiq
-    version: 0.8.YeoLab
+    version: 0.9.2
 
 source:
     #git_tag: master
