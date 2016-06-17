@@ -46,7 +46,7 @@ def print_numbers():
 def global_conf_ini(filename, params, only_db=False):
     global num_experiments, exp_list, readLen, tissue_repl, sam_dir, num_mapped_reads, genome, \
         genome_path, outDir, temp_oDir, gene_tlb, strand_specific, permissive_ir, gcnorm
-    global A3SS, A5SS, SEev, bothSS, totalSE
+    global A3SS, A5SS, SEev, bothSS, totalSE, simplify
     global MINREADS, MINPOS, MIN_INTRON
     global num_final_chunks, min_denovo
 
