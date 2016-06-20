@@ -37,7 +37,7 @@ class LSV(object):
         self.coverage = len([x for x in junction_list if x.get_donor() is not None
                              and x.get_acceptor() is not None])
 
-        if majiq_config.simplify > 0:
+        if majiq_config.simplify > 0 and self.coverage > 2:
             self.simplify(threshold=majiq_config.simplify)
 
         if self.coverage < 2:
@@ -46,7 +46,7 @@ class LSV(object):
         self.exon = exon
         self.intron_retention = False
 
-        for jj in junction_list:
+        for jj in self.coverage:
             x1 = jj.get_acceptor()
             x2 = jj.get_donor()
             if x1 is None or x2 is None:
@@ -56,7 +56,7 @@ class LSV(object):
                 break
         try:
             self.tlb_junc = {}
-            self.ext_type = self.set_type(junction_list, self.tlb_junc)
+            self.ext_type = self.set_type(self.coverage, self.tlb_junc)
             if self.ext_type == 'intron':
                 raise InvalidLSV('Auto junction found')
         except:
@@ -65,8 +65,9 @@ class LSV(object):
         juncs = []
         order = self.ext_type.split('|')[1:]
         for idx, jj in enumerate(order):
-            if jj[-2:] == 'e0': continue
-            juncs.append(junction_list[self.tlb_junc[jj]])
+            if jj[-2:] == 'e0':
+                continue
+            juncs.append(self.coverage[self.tlb_junc[jj]])
         self.coverage = np.array(juncs)
 
         self.visual = list()
@@ -321,7 +322,6 @@ class LSV(object):
 
 
     def is_equivalent(self, variant):
-
         jlist1 = sorted(self.coverage)
         jlist2 = sorted(variant.junctions)
         if self.type == variant.type:
