@@ -27,20 +27,24 @@ class Gene:
                                            or (self.end > other.start and self.start < other.END
                                                and self.strand == '-' and other.strand == '+'))))
 
-    def __init__(self, gene_id, gene_name, chrom, strand, start, end):
+    def __init__(self, gene_id, gene_name, chrom, strand, start, end, retrieve=False):
         self.id = gene_id
         self.name = gene_name
         self.chromosome = chrom
         self.strand = strand
-        self.transcript_tlb = {}
         self.exons = []
         self.start = start
         self.end = end
-        self.temp_txex_list = []
         self.ir_definition = []
         self.antis_gene = []
-        self.lsv_list = []
-        self.readNum = np.zeros(shape=majiq_config.num_experiments, dtype=np.int)
+
+        #self.readNum = np.zeros(shape=majiq_config.num_experiments, dtype=np.int)
+        self.total_read = 0
+        if not retrieve:
+            self.transcript_tlb = {}
+            self.temp_txex_list = []
+        else:
+            self.lsv_list = []
 
     def __hash__(self):
         return hash((self.id, self.chromosome, self.strand, self.start, self.end))
@@ -69,7 +73,7 @@ class Gene:
         return self.strand
 
     def get_read_count(self):
-        return self.readNum
+        return self.total_read
 
     def get_exon_list(self):
         return self.exons
@@ -121,7 +125,7 @@ class Gene:
         self.ir_definition.append((start, end))
 
     def add_read_count(self, read_num, exp_idx):
-        self.readNum[exp_idx] += read_num
+        self.total_read += read_num
 
     def exist_antisense_gene(self, list_of_genes):
         # strnd = '-'
@@ -347,13 +351,15 @@ def clear_gene_tlb():
 def retrieve_gene(gene_id, dbfile, logger=None):
     gg = dbfile[gene_id]
     gn = Gene(gene_id, gg.attrs['name'], gg.attrs['chromosome'], gg.attrs['strand'],
-              gg.attrs['start'], gg.attrs['end'])
+              gg.attrs['start'], gg.attrs['end'], retrieve=True)
 
     majiq_config.gene_tlb[gene_id] = gn
+    junction_list = {}
 
     for ex_grp_id in gg['exons']:
         ex_grp = gg['exons/%s' % ex_grp_id]
-        ex = Exon(ex_grp.attrs['start'], ex_grp.attrs['end'], gn, gg.attrs['strand'], annot=True, isintron=False)
+        ex = Exon(ex_grp.attrs['start'], ex_grp.attrs['end'], gn,
+                  annot=True, isintron=False, indata=ex_grp.attrs['in_data'], retrieve=True)
         gn.exons.append(ex)
         try:
             ex.set_pcr_score(ex_grp.attrs['pcr_name'], ex_grp.attrs['score'], ex_grp.attrs['candidate'])
@@ -372,16 +378,25 @@ def retrieve_gene(gene_id, dbfile, logger=None):
             ex.add_exon_tx(ext)
             for jj_grp_id in ex_tx["p3_junc"]:
                 jj_grp = ex_tx["p3_junc/%s" % jj_grp_id]
-                junc = Junction(jj_grp.attrs['start'], jj_grp.attrs['end'], None, None, gn, readN=0, annotated=True)
-                junc.donor_id = jj_grp.attrs['donor_id']
-                junc.acceptor_id = jj_grp.attrs['acceptor_id']
+                try:
+                    junc = junction_list[jj_grp.attrs['start'], jj_grp.attrs['end']]
+                except KeyError:
+                    junc = Junction(jj_grp.attrs['start'], jj_grp.attrs['end'], None, None,
+                                    gn, annotated=True, retrieve=True)
+                    junc.donor_id = jj_grp.attrs['donor_id']
+                    junc.acceptor_id = jj_grp.attrs['acceptor_id']
+
                 ext.add_3prime_junc(junc)
 
             for jj_grp_id in ex_tx["p5_junc"]:
                 jj_grp = ex_tx["p5_junc/%s" % jj_grp_id]
-                junc = Junction(jj_grp.attrs['start'], jj_grp.attrs['end'], None, None, gn, readN=0, annotated=True)
-                junc.donor_id = jj_grp.attrs['donor_id']
-                junc.acceptor_id = jj_grp.attrs['acceptor_id']
+                try:
+                    junc = junction_list[jj_grp.attrs['start'], jj_grp.attrs['end']]
+                except KeyError:
+                    junc = Junction(jj_grp.attrs['start'], jj_grp.attrs['end'], None, None,
+                                    gn, annotated=True, retrieve=True)
+                    junc.donor_id = jj_grp.attrs['donor_id']
+                    junc.acceptor_id = jj_grp.attrs['acceptor_id']
                 ext.add_5prime_junc(junc)
 
     return gn

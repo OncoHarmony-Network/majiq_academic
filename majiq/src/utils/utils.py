@@ -8,6 +8,11 @@ import majiq.grimoire.junction as majiq_junction
 import majiq.grimoire.lsv as majiq_lsv
 import majiq.src.config as majiq_config
 import majiq.src.io_utils as majiq_io_utils
+import resource
+
+
+def monitor(msg):
+    print "MONITOR", msg, resource.getrusage(resource.RUSAGE_SELF).ru_maxrss / 1000, 'MB'
 
 
 def create_if_not_exists(my_dir, logger=False):

@@ -5,6 +5,7 @@ import h5py
 import math
 import numpy as np
 import majiq.src.config as majiq_config
+import majiq.src.utils.utils as majiq_utils
 from exon import detect_exons, new_exon_definition, set_exons_gc_content
 from gene import Gene, Transcript
 from junction import Junction
@@ -82,7 +83,6 @@ def _match_strand(read, gene_strand):
 def _check_read(read):
     return __is_unique(read) and _match_strand(read, gg_strand)
 
-
 def get_exon_gc_content(gc_pairs, sam_list, all_genes):
     import pysam
     global gg_strand
@@ -101,6 +101,8 @@ def get_exon_gc_content(gc_pairs, sam_list, all_genes):
                             continue
                         nreads = samfile.count(reference=gg.get_chromosome(), start=st, end=end,
                                                until_eof=False, read_callback=_check_read)
+                        if nreads > 0:
+                            ex.set_in_data()
                         gc_pairs['GC'][exp_idx].append(gc_val)
                         gc_pairs['COV'][exp_idx].append(nreads)
 
@@ -186,12 +188,12 @@ def rnaseq_intron_retention(gne, samfile_list, chnk, permissive=True, nondenovo=
 
                     if r_start < ex1_end - 8:
                         if junc1 is None:
-                            junc1 = Junction(ex1_end, intron_start, exon1, None, gne, readN=0)
+                            junc1 = Junction(ex1_end, intron_start, exon1, None, gne, retrieve=True)
                         junc1.update_junction_read(exp_index, nreads, r_start, gc_content, unique)
 
                     elif (ex2_start - offset - 1) < r_start < ex2_start:
                         if junc2 is None:
-                            junc2 = Junction(intron_end, ex2_start, exon2, None, gne, readN=0)
+                            junc2 = Junction(intron_end, ex2_start, exon2, None, gne, retrieve=True)
                         junc2.update_junction_read(exp_index, nreads, r_start, gc_content, unique)
 
                     else:
@@ -361,7 +363,7 @@ def read_sam_or_bam(gne, samfile_list, counter, nondenovo=False, info_msg='0', l
                         bb = gne.check_antisense_junctions(junc_start, junc_end)
                         if not bb:
                             counter[4] += 1
-                            junc = Junction(junc_start, junc_end, None, None, gne, readN=nreads)
+                            junc = Junction(junc_start, junc_end, None, None, gne, retrieve=True)
                             junc.update_junction_read(exp_index, nreads, r_start, gc_content, unique)
                             junctions.append((junc_start, '5prime', junc))
                             junctions.append((junc_end, '3prime', junc))
@@ -447,6 +449,9 @@ def read_gff(filename, list_of_genes, gc_pairs, sam_list, logging=None):
     :param logging: logger object
     :return: :raise RuntimeError:
     """
+
+    majiq_utils.monitor('PRE_GFF')
+
     all_genes = {}
     gene_id_dict = {}
     trcpt_id_dict = {}
@@ -522,8 +527,6 @@ def read_gff(filename, list_of_genes, gc_pairs, sam_list, logging=None):
         junc = gn.new_annotated_junctions(pre_end, None, trcpt)
         pre_txex.add_5prime_junc(junc)
 
-
-
     for chrom in all_genes.keys():
         exon_list = []
         for strand in all_genes[chrom].keys():
@@ -540,6 +543,7 @@ def read_gff(filename, list_of_genes, gc_pairs, sam_list, logging=None):
         get_exon_gc_content(gc_pairs, sam_list, all_genes)
 
     _prepare_and_dump(filename="%s/tmp/db.hdf5" % majiq_config.outDir, logging=logging)
+    majiq_utils.monitor('POST_GFF')
     del all_genes
 
 

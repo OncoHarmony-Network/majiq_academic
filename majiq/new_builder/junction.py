@@ -4,6 +4,7 @@ import scipy.sparse
 import majiq.src.config as majiq_config
 import majiq.src.io_utils as majiq_io_utils
 
+
 class Junction:
     __eq__ = lambda self, other: self.start == other.start and self.end == other.end
     __ne__ = lambda self, other: self.start != other.start or self.end != other.end
@@ -12,9 +13,11 @@ class Junction:
     __gt__ = lambda self, other: self.start > other.start or (self.start == other.start and self.end > other.end)
     __ge__ = lambda self, other: self.start >= other.start or (self.start == other.start and self.end >= other.end)
 
-    def __init__(self, start, end, donor, acceptor, gene, readN=0, annotated=False):
+    def __init__(self, start, end, donor, acceptor, gene, annotated=False, retrieve=False):
         ''' The start and end in junctions are the last exon in '''
 
+        self.gene_name = gene.get_id()
+        self.id = "%s:%s-%s" % (self.gene_name, start, end)
         self.start = start
         self.end = end
         if donor is None:
@@ -25,19 +28,20 @@ class Junction:
             self.acceptor_id = -1
         else:
             self.acceptor_id = acceptor.get_id()
-        self.gene_name = gene.get_id()
         self.annotated = annotated
-        self.coverage = scipy.sparse.lil_matrix((majiq_config.num_experiments,  (majiq_config.readLen - 16) + 1),
-                                                dtype=np.float)
-        self.gc_content = scipy.sparse.lil_matrix((1, (majiq_config.readLen - 16) + 1), dtype=np.float)
-        self.id = "%s:%s-%s" % (self.gene_name, start, end)
+
+        if retrieve:
+            self.coverage = scipy.sparse.lil_matrix((majiq_config.num_experiments,  (majiq_config.readLen - 16) + 1),
+                                                    dtype=np.float)
+            self.gc_content = scipy.sparse.lil_matrix((1, (majiq_config.readLen - 16) + 1), dtype=np.float)
+
         self.transcript_id_list = []
 
     def __hash__(self):
         return hash(self.start) ^ hash(self.end) ^ hash(self.gene_name)
 
     def to_hdf5(self, hdf5grps):
-        h_jnc = hdf5grps.create_group("%s-%s" %(self.start, self.end))
+        h_jnc = hdf5grps.create_group("%s-%s" % (self.start, self.end))
         if self.start is None:
             h_jnc.attrs['start'] = -1
         else:

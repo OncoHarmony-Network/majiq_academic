@@ -20,12 +20,6 @@ import h5py
 import types
 import numpy as np
 
-import resource
-
-
-def monitor(msg):
-    print "MONITOR", msg, resource.getrusage(resource.RUSAGE_SELF).ru_maxrss / 1000, 'MB'
-
 
 def chunks(l, n):
     """Yield successive n-sized chunks from l.
@@ -61,7 +55,7 @@ def majiq_builder(list_of_genes):
     chnk = created._identity[0]
 
     tlogger.debug("[%s] Starting new chunk" % chnk)
-    monitor('CHILD %s:: CREATION' % chnk)
+    majiq_utils.monitor('CHILD %s:: CREATION' % chnk)
 
     db_f = h5py.File(majiq_builder.dbfile)
     if isinstance(list_of_genes, types.StringTypes):
@@ -69,7 +63,7 @@ def majiq_builder(list_of_genes):
 
     counter = [0] * 6
     for gne_id in list_of_genes:
-        monitor('CHILD %s:: STARTLOOP' % chnk)
+        majiq_utils.monitor('CHILD %s:: STARTLOOP' % chnk)
         try:
             loop_id = '%s - %s' % (chnk, gne_id)
             tlogger.info("[%s] Retrieving gene" % loop_id)
@@ -81,7 +75,7 @@ def majiq_builder(list_of_genes):
             majiq_io.read_sam_or_bam(gene_obj, samfile, counter,
                                      nondenovo=majiq_builder.non_denovo, info_msg=loop_id, logging=tlogger)
 
-            if gene_obj.get_read_count().sum() == 0:
+            if gene_obj.get_read_count() == 0:
                 continue
 
             tlogger.info("[%s] Detecting intron retention events" % loop_id)
@@ -99,7 +93,7 @@ def majiq_builder(list_of_genes):
             # gc_factors = majiq_norm.prepare_gc_content(gene_obj)
             # majiq_builder.queue.put([3, gc_factors], block=True)
 
-            monitor('CHILD %s:: ENDLOOP' % chnk)
+            majiq_utils.monitor('CHILD %s:: ENDLOOP' % chnk)
         except Exception as e:
             traceback.print_exc()
             sys.stdout.flush()
@@ -107,7 +101,7 @@ def majiq_builder(list_of_genes):
             del majiq_config.gene_tlb[gne_id]
 
     db_f.close()
-    monitor('CHILD %s:: WAITING' % chnk)
+    majiq_utils.monitor('CHILD %s:: WAITING' % chnk)
     tlogger.info("[%s] Waiting to be freed" % chnk)
     majiq_builder.queue.put([-1, chnk], block=True)
     majiq_builder.lock_arr[chnk].acquire()
@@ -166,7 +160,7 @@ class Builder(BasicPipeline):
             #                         maxshape=(None, effective_readlen))
             #     gc_content_files[exp_idx] = gc_f
 
-        monitor('AFTER CHILD CREATION AND FILES PREP')
+        majiq_utils.monitor('AFTER CHILD CREATION AND FILES PREP')
         nthr_count = 0
 
         gc_pairs = {'GC': [[] for xx in xrange(majiq_config.num_experiments)],
@@ -209,7 +203,7 @@ class Builder(BasicPipeline):
         for exp_idx, exp in enumerate(majiq_config.exp_list):
             lsv_list[exp_idx].close()
 
-        monitor('MASTER END')
+        majiq_utils.monitor('MASTER END')
         logger.info("End of execution")
 
 
@@ -235,7 +229,7 @@ class Builder(BasicPipeline):
 
         vfunc_gc = majiq_norm.gc_normalization(gc_pairs, logger)
 
-        monitor('AFTER READ GFF')
+        majiq_utils.monitor('AFTER READ GFF')
 
         lock_array = {}
         q = mp.Queue()
