@@ -215,7 +215,6 @@ class Builder(BasicPipeline):
         logger.info("Command: %s" % self)
 
         manager = mp.Manager()
-        print sam_list
         list_of_genes = manager.list()
         gc_pairs = manager.dict()
 
