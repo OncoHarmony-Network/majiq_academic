@@ -65,6 +65,7 @@ def majiq_builder(list_of_genes):
     samfile = [pysam.Samfile(xx, "rb") for xx in majiq_builder.sam_list]
     for gne_id in list_of_genes:
         majiq_utils.monitor('CHILD %s:: STARTLOOP' % chnk)
+
         try:
             loop_id = '%s - %s' % (chnk, gne_id)
             tlogger.info("[%s] Retrieving gene" % loop_id)
@@ -93,6 +94,7 @@ def majiq_builder(list_of_genes):
 
             majiq_utils.monitor('CHILD %s:: ENDLOOP' % chnk)
         except Exception as e:
+            majiq_utils.monitor('CHILD %s:: EXCEPT' % chnk)
             traceback.print_exc()
             sys.stdout.flush()
         finally:
