@@ -52,14 +52,16 @@ class Gene:
     def to_hdf5(self, hdf5grps):
         h_gen = hdf5grps.create_group("%s" % self.id)
 
-        h_gen.attrs['antis_gene'] = self.antis_gene
         h_gen.attrs['id'] = self.id
         h_gen.attrs['name'] = self.name
         h_gen.attrs['chromosome'] = self.chromosome
         h_gen.attrs['strand'] = self.strand
         h_gen.attrs['start'] = self.start
         h_gen.attrs['end'] = self.end
-        h_gen.attrs['ir_definition'] = self.ir_definition
+        if len(self.ir_definition) > 0:
+            h_gen.attrs['ir_definition'] = self.ir_definition
+        if len(self.antis_gene) > 0:
+            h_gen.attrs['antis_gene'] = self.antis_gene
 
         [ex.to_hdf5(h_gen) for ex_count, ex in enumerate(self.exons)]
 

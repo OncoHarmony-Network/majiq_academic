@@ -62,6 +62,7 @@ def majiq_builder(list_of_genes):
         list_of_genes = [list_of_genes]
 
     counter = [0] * 6
+    samfile = [pysam.Samfile(xx, "rb") for xx in majiq_builder.sam_list]
     for gne_id in list_of_genes:
         majiq_utils.monitor('CHILD %s:: STARTLOOP' % chnk)
         try:
@@ -70,8 +71,6 @@ def majiq_builder(list_of_genes):
             gene_obj = majiq.new_builder.gene.retrieve_gene(gne_id, db_f)
 
             tlogger.info("[%s] Reading BAM files" % loop_id)
-            samfile = [pysam.Samfile(xx, "rb") for xx in majiq_builder.sam_list]
-
             majiq_io.read_sam_or_bam(gene_obj, samfile, counter,
                                      nondenovo=majiq_builder.non_denovo, info_msg=loop_id, logging=tlogger)
 
@@ -83,8 +82,7 @@ def majiq_builder(list_of_genes):
                                              permissive=majiq_config.permissive_ir,
                                              nondenovo=majiq_builder.non_denovo, logging=tlogger)
 
-            for ss in samfile:
-                ss.close()
+
 
             tlogger.info("[%s] Detecting LSV" % loop_id)
             lsv_detection(gene_obj, only_real_data=majiq_builder.only_rna,
@@ -99,6 +97,9 @@ def majiq_builder(list_of_genes):
             sys.stdout.flush()
         finally:
             del majiq_config.gene_tlb[gne_id]
+
+    for ss in samfile:
+        ss.close()
 
     db_f.close()
     majiq_utils.monitor('CHILD %s:: WAITING' % chnk)
@@ -117,9 +118,6 @@ class Builder(BasicPipeline):
         self.builder(sam_list)
 
     def queue_manager(self, lock_array, result_queue, first_id=0, vfunc_gc=None, logger=None):
-        count = []
-
-       #gc_content_files = [None] * majiq_config.num_experiments
         lsv_list = []
         splicegraph = []
         file_list = []
@@ -140,7 +138,6 @@ class Builder(BasicPipeline):
             f.create_dataset(CONST_JUNCTIONS_DATASET_NAME,
                              (majiq_config.nrandom_junctions, effective_readlen),
                              maxshape=(None, effective_readlen))
-
             lsv_list.append(f)
 
             # Splicegraph
@@ -148,23 +145,9 @@ class Builder(BasicPipeline):
             f_splicegraph = h5py.File(fname_sg, 'w', compression='gzip', compression_opts=9)
             splicegraph.append(f_splicegraph)
 
-            # gc content normalization values
-            # if majiq_config.gcnorm:
-            #     fname_gc = "%s/tmp.%s.gc" % (majiq_config.outDir, majiq_config.exp_list[exp_idx])
-            #     gc_f = h5py.File(fname_gc, 'w', compression='gzip', compression_opts=9)
-            #     gc_f.create_dataset(LSV_GC_CONTENT,
-            #                         (majiq_config.nrandom_junctions, effective_readlen),
-            #                         maxshape=(None, effective_readlen))
-            #     gc_f.create_dataset(CONST_JUNCTIONS_GC_CONTENT,
-            #                         (majiq_config.nrandom_junctions, effective_readlen),
-            #                         maxshape=(None, effective_readlen))
-            #     gc_content_files[exp_idx] = gc_f
-
         majiq_utils.monitor('AFTER CHILD CREATION AND FILES PREP')
         nthr_count = 0
 
-        gc_pairs = {'GC': [[] for xx in xrange(majiq_config.num_experiments)],
-                    'COV': [[] for xx in xrange(majiq_config.num_experiments)]}
         while True:
             try:
                 val = result_queue.get(block=True, timeout=10)
