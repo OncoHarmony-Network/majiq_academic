@@ -9,6 +9,7 @@ import majiq.src.utils.utils as majiq_utils
 from exon import detect_exons, new_exon_definition, set_exons_gc_content
 from gene import Gene, Transcript
 from junction import Junction
+import pysam
 
 
 # READING BAM FILES
@@ -285,8 +286,8 @@ def read_sam_or_bam(gne, samfile_list, counter, nondenovo=False, info_msg='0', l
     ex_list = gne.get_exon_list()
     strand = gne.get_strand()
     chrom = gne.get_chromosome()
-    for exp_index, samfl in enumerate(samfile_list):
-
+    for exp_index, samfl_name in enumerate(samfile_list):
+        samfl = pysam.Samfile(samfl_name, "rb")
         try:
             read_iter = samfl.fetch(chrom, strt, end)
         except ValueError:
@@ -370,6 +371,8 @@ def read_sam_or_bam(gne, samfile_list, counter, nondenovo=False, info_msg='0', l
                             # end if not found ...
                             # end for junc ...
                             #            print "JJJunctions", junctions
+        samfl.close()
+
     if len(junctions) > 0:
         detect_exons(gne, junctions, None)
     gne.prepare_exons()

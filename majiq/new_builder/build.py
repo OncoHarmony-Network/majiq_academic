@@ -62,7 +62,7 @@ def majiq_builder(list_of_genes):
         list_of_genes = [list_of_genes]
 
     counter = [0] * 6
-    samfile = [pysam.Samfile(xx, "rb") for xx in majiq_builder.sam_list]
+    # samfile = [pysam.Samfile(xx, "rb") for xx in majiq_builder.sam_list]
     for gne_id in list_of_genes:
         majiq_utils.monitor('CHILD %s:: STARTLOOP' % chnk)
 
@@ -72,7 +72,7 @@ def majiq_builder(list_of_genes):
             gene_obj = majiq.new_builder.gene.retrieve_gene(gne_id, db_f)
 
             tlogger.info("[%s] Reading BAM files" % loop_id)
-            majiq_io.read_sam_or_bam(gene_obj, samfile, counter,
+            majiq_io.read_sam_or_bam(gene_obj, majiq_builder.sam_list, counter,
                                      nondenovo=majiq_builder.non_denovo, info_msg=loop_id, logging=tlogger)
 
             if gene_obj.get_read_count() == 0:
@@ -100,8 +100,8 @@ def majiq_builder(list_of_genes):
         finally:
             del majiq_config.gene_tlb[gne_id]
 
-    for ss in samfile:
-        ss.close()
+    # for ss in samfile:
+    #     ss.close()
 
     db_f.close()
     majiq_utils.monitor('CHILD %s:: WAITING' % chnk)

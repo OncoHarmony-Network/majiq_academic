@@ -14,6 +14,7 @@ def reliable_in_data(junc, exp_idx):
         in_data_filter = True
     return in_data_filter
 
+
 def detect_lsv(exon, gn, lsv_type, dummy, jun, only_annot=False):
 
     sstype = {SSOURCE: ['5prime', 0], STARGET: ['3prime', 1]}
@@ -30,8 +31,8 @@ def detect_lsv(exon, gn, lsv_type, dummy, jun, only_annot=False):
         for jj in jlist:
             for exp_idx in ind_list:
                 if only_annot or majiq_filter.reliable_in_data(jj, exp_idx,
-                                                              minnonzero=majiq_config.MINPOS,
-                                                              min_reads=majiq_config.MINREADS):
+                                                               minnonzero=majiq_config.MINPOS,
+                                                               min_reads=majiq_config.MINREADS):
                     counter += 1
             if counter < group_thresh:
                 continue
@@ -45,6 +46,7 @@ def detect_lsv(exon, gn, lsv_type, dummy, jun, only_annot=False):
             continue
         dummy[name][sstype[lsv_type][1]].append(lsv_in)
         return
+
 
 def lsv_detection(gn, only_real_data=False, out_queue=None, logging=None):
 
