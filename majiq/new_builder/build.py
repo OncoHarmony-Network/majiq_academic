@@ -79,7 +79,7 @@ def majiq_builder(list_of_genes):
                 continue
 
             tlogger.info("[%s] Detecting intron retention events" % loop_id)
-            majiq_io.rnaseq_intron_retention(gene_obj, samfile, chnk,
+            majiq_io.rnaseq_intron_retention(gene_obj, majiq_builder.sam_list, chnk,
                                              permissive=majiq_config.permissive_ir,
                                              nondenovo=majiq_builder.non_denovo, logging=tlogger)
 

@@ -81,11 +81,13 @@ def _match_strand(read, gene_strand):
             res = False
     return res
 
+
 def _check_read(read):
     return __is_unique(read) and _match_strand(read, gg_strand)
 
+
 def get_exon_gc_content(gc_pairs, sam_list, all_genes):
-    import pysam
+
     global gg_strand
     gc_pairs['GC'] = [[] for xx in xrange(majiq_config.num_experiments)]
     gc_pairs['COV'] = [[] for xx in xrange(majiq_config.num_experiments)]
@@ -106,6 +108,7 @@ def get_exon_gc_content(gc_pairs, sam_list, all_genes):
                             ex.set_in_data()
                         gc_pairs['GC'][exp_idx].append(gc_val)
                         gc_pairs['COV'][exp_idx].append(nreads)
+        samfile.close()
 
 def rnaseq_intron_retention(gne, samfile_list, chnk, permissive=True, nondenovo=False, logging=None):
 
@@ -151,8 +154,10 @@ def rnaseq_intron_retention(gne, samfile_list, chnk, permissive=True, nondenovo=
             repl_thresh = int(math.ceil(len(ind_list) * 0.5))
 
             for idx, exp_index in enumerate(ind_list):
+                samfl = pysam.Samfile(samfile_list[exp_index], "rb")
+
                 try:
-                    read_iter = samfile_list[exp_index].fetch(chrom, intron_start + 8, intron_end - 8)
+                    read_iter = samfl.fetch(chrom, intron_start + 8, intron_end - 8)
                 except ValueError:
                     # logging.info('There are no reads in %s:%d-%d' % (chrom, ex1_end, ex1_end+1))
                     continue
@@ -206,6 +211,7 @@ def rnaseq_intron_retention(gne, samfile_list, chnk, permissive=True, nondenovo=
                             bmap[intron_idx] = True
                         intron_parts[indx] += nreads
 
+                samfl.close()
                 if junc1 is None or junc2 is None:
                     continue
 
