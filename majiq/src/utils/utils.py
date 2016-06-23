@@ -15,6 +15,12 @@ from voila.splice_graphics import ExonGraphic
 from voila.splice_graphics import GeneGraphic
 from voila.splice_graphics import JunctionGraphic
 from voila import constants as voila_const
+import resource
+
+
+def monitor(msg):
+    print "MONITOR", msg, resource.getrusage(resource.RUSAGE_SELF).ru_maxrss / 1000, 'MB'
+    sys.stdout.flush()
 
 
 def create_if_not_exists(my_dir, logger=False):

@@ -10,7 +10,7 @@ from majiq.grimoire.gene import recreate_gene_tlb
 import majiq.src.analize as analize
 import majiq.src.io as majiq_io
 from majiq.src.normalize import prepare_gc_content
-import majiq.src.utils.utils as utils
+import majiq.src.utils.utils as majiq_utils
 import majiq.src.config as mglobals
 import majiq.grimoire.lsv as majiq_lsv
 
@@ -22,6 +22,8 @@ except Exception:
 
 def majiq_builder(samfiles_list, chnk, pcr_validation=None, gff_output=None, create_tlb=True, only_rna=False,
                   nondenovo=False, logging=None):
+
+    majiq_utils.monitor('CHUNK %s: INITIAL' % chnk)
 
     if not logging is None:
         logging.info("Building chunk %s" % chnk)
@@ -40,6 +42,7 @@ def majiq_builder(samfiles_list, chnk, pcr_validation=None, gff_output=None, cre
 
     if not logging is None:
         logging.info("[%s] Reading BAM files" % chnk)
+    majiq_utils.monitor('CHUNK %s: PRE SAM' % chnk)
     majiq_io.read_sam_or_bam(samfiles_list, gene_list, chnk,
                              nondenovo=nondenovo, logging=logging)
     if not logging is None:
@@ -48,19 +51,22 @@ def majiq_builder(samfiles_list, chnk, pcr_validation=None, gff_output=None, cre
                                      permissive=mglobals.permissive_ir, nondenovo=nondenovo, logging=logging)
     if not logging is None:
         logging.info("[%s] Detecting LSV" % chnk)
+    majiq_utils.monitor('CHUNK %s: PRE DETECTION' % chnk)
     lsv, const = analize.lsv_detection(gene_list, chnk, only_real_data=only_rna, logging=logging)
 
     prepare_gc_content(gene_list, temp_dir)
 
     if pcr_validation:
-        utils.get_validated_pcr_lsv(lsv, temp_dir)
+        majiq_utils.get_validated_pcr_lsv(lsv, temp_dir)
     if gff_output:
         majiq_lsv.extract_gff(lsv, temp_dir)
-    utils.generate_visualization_output(gene_list, temp_dir)
+    majiq_utils.generate_visualization_output(gene_list, temp_dir)
     if not logging is None:
         logging.info("[%s] Preparing output" % chnk)
 
-    utils.prepare_lsv_table(lsv, const, temp_dir)
+    majiq_utils.monitor('CHUNK %s: PRE TABLE' % chnk)
+    majiq_utils.prepare_lsv_table(lsv, const, temp_dir)
+    majiq_utils.monitor('CHUNK %s: END' % chnk)
 
     #ANALYZE_DENOVO
     # utils.analyze_denovo_junctions(gene_list, "%s/denovo.pkl" % temp_dir)
@@ -71,7 +77,7 @@ def __parallel_lsv_quant(samfiles_list, chnk, pcr_validation=False, gff_output=N
                          nondenovo=False, silent=False, debug=0):
     try:
         print "START child,", current_process().name
-        tlogger = utils.get_logger("%s/%s.majiq.log" % (mglobals.outDir, chnk), silent=silent, debug=debug)
+        tlogger = majiq_utils.get_logger("%s/%s.majiq.log" % (mglobals.outDir, chnk), silent=silent, debug=debug)
         majiq_builder(samfiles_list, chnk, pcr_validation=pcr_validation,
                       gff_output=gff_output, only_rna=only_rna, nondenovo=nondenovo,
                       logging=tlogger)
@@ -86,7 +92,7 @@ def __parallel_gff3(transcripts, pcr_filename, nthreads, silent=False, debug=0):
 
     try:
         print "START child,", current_process().name
-        tlogger = utils.get_logger("%s/db.majiq.log" % mglobals.outDir, silent=silent, debug=debug)
+        tlogger = majiq_utils.get_logger("%s/db.majiq.log" % mglobals.outDir, silent=silent, debug=debug)
         majiq_io.read_gff(transcripts, pcr_filename, nthreads, logging=tlogger)
         print "END child, ", current_process().name
     except Exception as e:
@@ -106,7 +112,7 @@ def main(params):
         raise RuntimeError("Config file %s does not exist" % params.conf)
     mglobals.global_conf_ini(params.conf, params)
 
-    logger = utils.get_logger("%s/majiq.log" % mglobals.outDir, silent=params.silent, debug=params.debug)
+    logger = majiq_utils.get_logger("%s/majiq.log" % mglobals.outDir, silent=params.silent, debug=params.debug)
     logger.info("")
     logger.info("Command: %s" % params)
 
@@ -139,10 +145,10 @@ def main(params):
             pool = Pool(processes=params.nthreads, maxtasksperchild=1)
         #logger.info("Scatter in Chromosomes")
         # for chrom in chr_list:
-
+        majiq_utils.monitor('MAIN: PRE RNA')
         for chnk in range(mglobals.num_final_chunks):
             temp_dir = "%s/tmp/chunk_%s" % (mglobals.outDir, chnk)
-            utils.create_if_not_exists(temp_dir)
+            majiq_utils.create_if_not_exists(temp_dir)
             if params.nthreads == 1:
                 majiq_builder(sam_list, chnk, pcr_validation=params.pcr_filename, gff_output=params.gff_output,
                               only_rna=params.only_rna, nondenovo=params.non_denovo, logging=logger)
@@ -156,14 +162,18 @@ def main(params):
                                                         params.silent,
                                                         params.debug])
 
+
         if params.nthreads > 1:
             logger.info("... waiting childs")
             pool.close()
             pool.join()
 
+    majiq_utils.monitor('MAIN: PRE GATHER')
     #GATHER
-    utils.gather_files(mglobals.outDir, '', params.gff_output, params.pcr_filename,
-                       nthreads=params.nthreads, logger=logger)
+    majiq_utils.gather_files(mglobals.outDir, '', params.gff_output, params.pcr_filename,
+                             nthreads=params.nthreads, logger=logger)
+
+    majiq_utils.monitor('MAIN: END')
 
     mglobals.print_numbers()
     logger.info("End of execution")
