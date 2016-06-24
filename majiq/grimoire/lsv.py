@@ -37,8 +37,8 @@ class LSV(object):
         self.coverage = len([x for x in junction_list if x.get_donor() is not None
                              and x.get_acceptor() is not None])
 
-        if majiq_config.simplify > 0 and self.coverage > 2:
-            self.simplify(threshold=majiq_config.simplify)
+        # if majiq_config.simplify > 0 and self.coverage > 2:
+        #     self.simplify(threshold=majiq_config.simplify)
 
         if self.coverage < 2:
             raise InvalidLSV('Not enought junctions')
