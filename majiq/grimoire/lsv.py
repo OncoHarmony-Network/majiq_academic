@@ -331,7 +331,7 @@ class LSV(object):
     def contained(self, variant):
         res = True
         jlist1 = sorted(self.coverage)
-        jlist2 = sorted(variant.junctions)
+        jlist2 = sorted(variant.coverage)
         if self.type == variant.type:
             return False
         if np.array_equal(jlist1, jlist2):
@@ -397,7 +397,7 @@ def extract_gff(list_lsv, out_dir):
     for name, lsv_l in list_lsv.items():
         for lsv in lsv_l:
             trans = []
-            jlist = lsv.junctions
+            jlist = lsv.coverage
             lsv_coord = lsv.get_coordinates()
 
             gne = jlist[0].get_gene()
@@ -471,17 +471,17 @@ class MajiqLsv(object):
         self.id = lsv_obj.id
         self.type = lsv_obj.ext_type
         self.iretention = lsv_obj.intron_retention
-        self.junction_list = scipy.sparse.lil_matrix((lsv_obj.junctions.shape[0], (majiq_config.readLen - 16) + 1),
+        self.junction_list = scipy.sparse.lil_matrix((lsv_obj.coverage.shape[0], (majiq_config.readLen - 16) + 1),
                                                      dtype=np.float)
         self.junction_id = []
 
         if majiq_config.gcnorm:
-            self.gc_factor = scipy.sparse.lil_matrix((lsv_obj.junctions.shape[0], (majiq_config.readLen - 16) + 1),
+            self.gc_factor = scipy.sparse.lil_matrix((lsv_obj.coverage.shape[0], (majiq_config.readLen - 16) + 1),
                                                      dtype=np.dtype('float'))
         else:
             self.gc_factor = None
 
-        for idx, junc in enumerate(lsv_obj.junctions):
+        for idx, junc in enumerate(lsv_obj.coverage):
             self.junction_list[idx, :] = junc.coverage[exp_idx, :]
             self.junction_id.append(junc.get_id())
             if majiq_config.gcnorm:
