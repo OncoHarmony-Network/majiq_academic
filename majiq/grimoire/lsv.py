@@ -34,8 +34,8 @@ class LSV(object):
         junction_list = [x for x in junctions if x is not None]
         # and x.get_donor() is not None
         # and x.get_acceptor() is not None]
-        self.coverage = len([x for x in junction_list if x.get_donor() is not None
-                             and x.get_acceptor() is not None])
+        self.coverage = [x for x in junction_list if x.get_donor() is not None
+                             and x.get_acceptor() is not None]
 
         # if majiq_config.simplify > 0 and self.coverage > 2:
         #     self.simplify(threshold=majiq_config.simplify)
