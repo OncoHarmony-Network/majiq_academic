@@ -399,7 +399,8 @@ def extract_gff(list_lsv, out_dir):
             trans = []
             jlist = lsv.coverage
             lsv_coord = lsv.get_coordinates()
-
+            if len(jlist) < 2:
+                continue
             gne = jlist[0].get_gene()
             chrom = gne.get_chromosome()
             strand = gne.get_strand()
