@@ -6,7 +6,7 @@ import matplotlib.pyplot as plt
 
 from scipy.stats import beta
 from scipy.misc import logsumexp
-import majiq.src.plotting as mplot
+import old_majiq.src.plotting as mplot
 PSEUDO = 0.0001
 
 

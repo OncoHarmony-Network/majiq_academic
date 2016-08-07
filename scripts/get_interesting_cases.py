@@ -1,5 +1,5 @@
 import sys
-grimoire_path = '/Volumes/jordi/working/majiq/'
+grimoire_path = '/Volumes/jordi/working/old_majiq/'
 if grimoire_path not in sys.path:
     sys.path.append(grimoire_path)
 
@@ -86,8 +86,8 @@ if __name__ == '__main__':
     reads2 = ['Cer_Liver/clean_reads.Liv_28_40_52.pkl']
 
     filename = 'Cer_Liver/Cer_28_40_52_Liv_28_40_52.deltapsi.pickle'
-    #file_list = [['/Volumes/Data/ucsc/test2/output_Hip1_Liv1/toJuan.Hippocampus1.majiq',
-                    # /Volumes/Data/ucsc/test2/output_Hip1_Liv1/toJuan.Heart1.majiq']]
+    #file_list = [['/Volumes/Data/ucsc/test2/output_Hip1_Liv1/toJuan.Hippocampus1.old_majiq',
+                    # /Volumes/Data/ucsc/test2/output_Hip1_Liv1/toJuan.Heart1.old_majiq']]
     label = ['Cer vs Liver1']
     fidx = 0
     N = 633
@@ -137,7 +137,7 @@ if __name__ == '__main__':
     for bb in BINNAMES:
         result[bb] = []
 
-    fall = 'Cer_Liver/Cer_CT28.mm10.sorted.majiq'
+    fall = 'Cer_Liver/Cer_CT28.mm10.sorted.old_majiq'
     alllsv = pickle.load(open(fall))
     outf = open('./event_set.tab', 'w+')
     header = '#event_id\t coverage_bin\t exon_coords\t type\t Junc1_coord\t junc2_coord\n'

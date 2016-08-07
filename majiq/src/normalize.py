@@ -1,19 +1,48 @@
-import majiq.src.io_utils
-
 __author__ = 'jordi@biociphers.org'
 
-from itertools import izip
-import os
 import sys
+from itertools import izip
+
 import numpy as np
 from numpy.ma import masked_less
-import scipy.sparse
+from scipy import interpolate
 from scipy.stats.mstats_basic import mquantiles
+
+import majiq.src.config as majiq_config
 from constants import *
 from majiq.src import polyfitnb as majiqfit
-import majiq.src.config as majiq_config
-from scipy import interpolate
-import majiq.src.io_utils as majiq_io_utils
+
+#
+# def mark_stacks(hdf5_fp, fitfunc_r, pvalue_limit, logger=None):
+#     if pvalue_limit < 0:
+#         return lsv_list
+#     logger.debug("PCR amplification stacks normalization")
+#     minstack = sys.maxint
+#     # the minimum value marked as stack
+#     numstacks = 0
+#
+#     for lidx, lsv in enumerate(hdf5_fp['LSVs']):
+#         junctions = np.array(hdf5_fp[LSV_JUNCTIONS_DATASET_NAME][lsv['coverage']])
+#         for i, junction in enumerate(junctions):
+#             if np.count_nonzero(junction) == 0:
+#                 continue
+#             for j, value in enumerate(junction):
+#                 if value > 0:
+#                     # TODO Use masker, and marking stacks will probably be faster.
+#                     copy_junc = list(junction)
+#                     copy_junc.pop(j)
+#                     copy_junc = np.array(copy_junc)
+#                     copy_junc = copy_junc[copy_junc > 0]
+#                     nzpos = np.count_nonzero(copy_junc)
+#
+#                     #FINISH TODO
+#                     mean_rest = np.mean(copy_junc) * nzpos
+#                     pval = majiqfit.get_negbinom_pval(fitfunc_r, mean_rest, value)
+#                     if pval < pvalue_limit:
+#                         lsv_list[0][lidx][i, j] = -2
+#                         minstack = min(minstack, value)
+#                         numstacks += 1
+#         masked_less(lsv_list[0][lidx], 0)
 
 
 def mark_stacks(lsv_list, fitfunc_r, pvalue_limit, logger=None):
@@ -47,27 +76,13 @@ def mark_stacks(lsv_list, fitfunc_r, pvalue_limit, logger=None):
                         numstacks += 1
         masked_less(lsv_list[0][lidx], 0)
 
-    if logger:
-        logger.debug("Out of %s values, %s marked as stacks with a p-value threshold of %s (%.3f%%)"
-                      % (junctions.size, numstacks, pvalue_limit, (float(numstacks) / junctions.size) * 100))
+    # if logger:
+    #     logger.debug("Out of %s values, %s marked as stacks with a p-value threshold of %s (%.3f%%)"
+    #                   % (len(lsv_list[0]), numstacks, pvalue_limit, (float(numstacks) / len(lsv_list[0])) * 100))
     return lsv_list
 
 
-def gc_normalization(gc_pairs, logger):
-
-    logger.info("Gc Content normalization")
-    factor, meanbins = gc_factor_calculation(gc_pairs, nbins=10)
-    v_gcfactor_func = [None] * majiq_config.num_experiments
-
-    for exp_n in xrange(majiq_config.num_experiments):
-        a = np.append(factor[exp_n], factor[exp_n][-1])
-        gc_factor = interpolate.interp1d(meanbins[exp_n], factor[exp_n], bounds_error=False, fill_value=1)
-        v_gcfactor_func[exp_n] = np.vectorize(gc_factor)
-
-    return v_gcfactor_func
-
-
-def gc_normalization_old(lsv_list, gc_content_files, gc_pairs, logger):
+def gc_normalization(lsv_list, gc_content_files, gc_pairs, logger):
 
     logger.info("Gc Content normalization")
     factor, meanbins = gc_factor_calculation(gc_pairs, nbins=10)
@@ -80,7 +95,7 @@ def gc_normalization_old(lsv_list, gc_content_files, gc_pairs, logger):
         v_gcfactor_func = np.vectorize(gc_factor)
         lsv_matrix = lsv_list[exp_n][LSV_JUNCTIONS_DATASET_NAME]
         const_matrix = lsv_list[exp_n][CONST_JUNCTIONS_DATASET_NAME]
-        for idx in xrange(lsv_list[exp_n][LSV_JUNCTIONS_DATASET_NAME].shape[0]):
+        for idx in xrange(lsv_matrix.shape[0]):
 
             vals = v_gcfactor_func(gc_content_files[exp_n][LSV_GC_CONTENT][idx, :])
             lsv_matrix[idx, :] = np.multiply(lsv_matrix[idx, :], vals)

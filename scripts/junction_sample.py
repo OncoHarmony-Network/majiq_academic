@@ -91,7 +91,7 @@ def sample_from_junctions(junctions, m, k, discardzeros=False, nb=False, trimbor
                           poisson=False):
     if nb:
         return majiq.src.sample.sample_from_junctions(junctions, m, k, discardzeros=discardzeros, trimborder=trimborder,
-                                                fitted_one_over_r=fit_func)
+                                                      fitted_one_over_r=fit_func)
 
     # if parameters:
     # print "Loading parameters from %s..." % parameters
@@ -110,7 +110,7 @@ def sample_from_junctions(junctions, m, k, discardzeros=False, nb=False, trimbor
 
         if trimborder:
             junction = majiq.src.sample._trimborders(junction,
-                                               trimborder)  #trim the zeroes from the borders regardless of the discardzeros flag
+                                                     trimborder)  #trim the zeroes from the borders regardless of the discardzeros flag
         if discardzeros:
             junction = junction[junction != 0]  #a junction array without the zeroes
 

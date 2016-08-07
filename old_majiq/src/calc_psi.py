@@ -1,10 +1,11 @@
-
 import os
-import majiq.src.utils.utils as majiq_utils
-from majiq.src.basic_pipeline import BasicPipeline, _pipeline_run
-import majiq_io as majiq_io
-import majiq.src.normalize as majiq_norm
+
 import majiq.src.filter as majiq_filter
+import majiq.src.io as majiq_io
+import majiq.src.utils as majiq_utils
+import old_majiq.src.normalize as majiq_norm
+from old_majiq.src.basic_pipeline import BasicPipeline, _pipeline_run
+
 
 ################################
 # PSI calculation pipeline     #
@@ -22,7 +23,7 @@ class CalcPsi(BasicPipeline):
     def pre_psi(self, nchunks, logger=None):
 
         if logger is None:
-            logger = majiq_utils.get_logger("%s/majiq.log" % self.output, silent=False)
+            logger = majiq_utils.get_logger("%s/old_majiq.log" % self.output, silent=False)
 
         self.logger = logger
 
@@ -69,7 +70,7 @@ class CalcPsi(BasicPipeline):
         write_pickle indicates if a .pickle should be saved in disk
         """
 
-        logger = majiq_utils.get_logger("%s/majiq.log" % self.logger_path, silent=self.silent, debug=self.debug)
+        logger = majiq_utils.get_logger("%s/old_majiq.log" % self.logger_path, silent=self.silent, debug=self.debug)
         logger.info("")
         logger.info("Running Psi ...")
         logger.info("GROUP: %s" % self.files)

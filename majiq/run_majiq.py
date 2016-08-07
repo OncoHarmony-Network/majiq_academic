@@ -1,9 +1,7 @@
 import argparse
-
-from matplotlib import use
-use('Agg')
-from majiq.src.basic_pipeline import builder, calcpsi
-from majiq.src.deltapsi import deltapair, multi_dpsi
+from majiq.src.build import build
+from majiq.src.calc_psi import calcpsi
+# from majiq.src.deltapsi import deltapair, multi_dpsi
 
 VERSION = '0.9'
 
@@ -163,22 +161,22 @@ def main():
 
     parser_preprocess = subparsers.add_parser('build', help='Preprocess SAM/BAM files as preparation for the rest of '
                                                             'the tools (psi, deltapsi)', parents=[common, buildparser])
-    parser_preprocess.set_defaults(func=builder)
+    parser_preprocess.set_defaults(func=build)
 
     parser_calcpsi = subparsers.add_parser('psi', help="Calculate PSI values for N experiments, given a folder of "
-                                                       "preprocessed events by 'majiq preprocess' or SAM/BAM files",
+                                                       "preprocessed events by 'old_majiq preprocess' or SAM/BAM files",
                                            parents=[common, psi, psianddelta])
     parser_calcpsi.set_defaults(func=calcpsi)
 
-    parser_deltagroup = subparsers.add_parser('deltapsi', help='Calculate Delta PSI values given a pair of experiments '
-                                                               '(1 VS 1 conditions *with* replicas)',
-                                              parents=[common, delta, psianddelta])
-    parser_deltagroup.set_defaults(func=deltapair)
-
-    parser_multidelta = subparsers.add_parser('multi_delta', help='Calculate Delta PSI values given a pair of experiments '
-                                                               '(1 VS 1 conditions *with* replicas)',
-                                              parents=[common, mdelta, psianddelta])
-    parser_multidelta.set_defaults(func=multi_dpsi)
+    # parser_deltagroup = subparsers.add_parser('deltapsi', help='Calculate Delta PSI values given a pair of experiments '
+    #                                                            '(1 VS 1 conditions *with* replicas)',
+    #                                           parents=[common, delta, psianddelta])
+    # parser_deltagroup.set_defaults(func=deltapair)
+    #
+    # parser_multidelta = subparsers.add_parser('multi_delta', help='Calculate Delta PSI values given a pair of experiments '
+    #                                                            '(1 VS 1 conditions *with* replicas)',
+    #                                           parents=[common, mdelta, psianddelta])
+    # parser_multidelta.set_defaults(func=multi_dpsi)
     args = parser.parse_args()
     args.func(args)
 

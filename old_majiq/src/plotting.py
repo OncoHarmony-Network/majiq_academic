@@ -1,10 +1,10 @@
-from matplotlib import use, pyplot
-from scipy.stats import pearsonr
-from majiq.src import config as mglobals, config
-
+from matplotlib import use
 use('Agg')
-import os
+
 from matplotlib import pyplot as plt
+from scipy.stats import pearsonr
+from majiq.src import config as mglobals
+import os
 import numpy as np
 
 __author__ = 'jordi'
@@ -70,7 +70,7 @@ def plot_gc_content():
 
     idx = 0
     for tissue, list_idx in mglobals.tissue_repl.items():
-        pyplot.figure(idx)
+        plt.figure(idx)
         for exp_n in list_idx:
 #            f = interpolate.interp1d(mglobals.gc_means[exp_n], mglobals.gc_bins_vaL[exp_n])
 #            print mglobals.gc_means[exp_n]
@@ -80,13 +80,13 @@ def plot_gc_content():
             yy = mglobals.gc_factor[exp_n](xx)
             # print "XX ",exp_n, xx
             # print "Yy", exp_n, yy
-            pyplot.plot(xx, yy, label=mglobals.exp_list[exp_n])
-            pyplot.axis((0.3, 0.7, 0.5, 1.5))
-            pyplot.title("Gc factor")
-            pyplot.grid()
-            pyplot.legend(loc='upper left')
+            plt.plot(xx, yy, label=mglobals.exp_list[exp_n])
+            plt.axis((0.3, 0.7, 0.5, 1.5))
+            plt.title("Gc factor")
+            plt.grid()
+            plt.legend(loc='upper left')
 #        pyplot.show()
-        pyplot.savefig('%s/gcontent_%s.png' % (mglobals.outDir, tissue))
+        plt.savefig('%s/gcontent_%s.png' % (mglobals.outDir, tissue))
         idx += 1
 
 

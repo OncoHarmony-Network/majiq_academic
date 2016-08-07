@@ -94,15 +94,15 @@ class VoilaLsv(object):
             gEnd = lexons[0].coords[0]
             first, last = last, first
 
-        gene_str = '\t'.join([chrom, 'majiq', 'gene', str(gStart), str(gEnd), '.', strand, '0',
+        gene_str = '\t'.join([chrom, 'old_majiq', 'gene', str(gStart), str(gEnd), '.', strand, '0',
                               'Name=%s;ID=%s' % (lsvId, lsvId)])
 
         trans.append(gene_str)
         for jid, junc in enumerate(vlsv.get_lsv_graphic().get_junctions()):
-            mrna = '%s\tmajiq\tmRNA\t' % chrom
+            mrna = '%s\told_majiq\tmRNA\t' % chrom
             mrna_id = '%s.%d' % (lsvId, jid)
-            ex1 = '%s\tmajiq\texon\t' % chrom
-            ex2 = '%s\tmajiq\texon\t' % chrom
+            ex1 = '%s\told_majiq\texon\t' % chrom
+            ex2 = '%s\told_majiq\texon\t' % chrom
 
             ex1G = find_exon_a5(lexons, jid)
             ex2G = find_exon_a3(lexons, jid)

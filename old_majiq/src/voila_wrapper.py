@@ -1,9 +1,8 @@
 import numpy as np
 
-from majiq.src import config as majiq_config, io
+from majiq.src import config as majiq_config
 from voila import constants as voila_const
 from voila.splice_graphics import JunctionGraphic, ExonGraphic, GeneGraphic
-import majiq.src.io_utils as majiq_io_base
 
 
 def generate_visualization_output(allgenes, temp_dir, out_queue):

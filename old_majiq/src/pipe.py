@@ -1,22 +1,22 @@
-import sys
 import os
+import sys
 from multiprocessing import current_process
 
-import scipy.misc
 import numpy as np
+import scipy.misc
 
-import majiq.src.io_utils
-from majiq.src.psi import prob_data_sample_given_psi, __get_prior_params
-from majiq.src.utils.utils import get_logger
-import majiq.src.io as majiq_io
 import majiq.src.sample as majiq_sample
+import old_majiq.src.io as majiq_io
+import old_majiq.src.io_utils
+from majiq.src.psi import prob_data_sample_given_psi, __get_prior_params
+from majiq.src.utils import get_logger
 
 
 def parallel_lsv_child_calculation(func, args, tempdir, name, chunk, store=True):
     # try:
     if not os.path.isdir(tempdir):
         os.mkdir(tempdir)
-    thread_logger = get_logger("%s/majiq.w%s.log" % (tempdir, chunk), silent=False)
+    thread_logger = get_logger("%s/old_majiq.w%s.log" % (tempdir, chunk), silent=False)
     thread_logger.info("[Th %s]: START child,%s" % (chunk, current_process().name))
     thread_logger.info('[Th %s]: Filtering ...' % chunk)
 
@@ -31,9 +31,9 @@ def parallel_lsv_child_calculation(func, args, tempdir, name, chunk, store=True)
 
 
 def __load_execution_chunk(filename, delta=None):
-    l_vals = majiq.src.io_utils.load_bin_file(filename)
+    l_vals = old_majiq.src.io_utils.load_bin_file(filename)
     if not delta is None:
-        prior = majiq.src.io_utils.load_bin_file(delta)
+        prior = old_majiq.src.io_utils.load_bin_file(delta)
         l_vals.append(prior)
     return l_vals
 

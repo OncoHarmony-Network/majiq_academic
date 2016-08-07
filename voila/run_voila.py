@@ -44,7 +44,7 @@ def render_summary(output_dir, output_html, majiq_output, type_summary, threshol
 
     :param output_dir: output directory for the summaries.
     :param output_html: name for the output html files.
-    :param majiq_output: parsed data from majiq.
+    :param majiq_output: parsed data from old_majiq.
     :param type_summary: type of analysis performed.
     :param threshold: minimum change considered as significant (in deltapsi analysis).
     :param extra_args: additional arguments needed for certain summaries.
@@ -309,7 +309,7 @@ def parse_gene_graphics(splicegraph_flist, gene_name_list, condition_names=('gro
                 logger.warning("No gene matching the splice graph file %s." % splice_graph_f)
 
             if gene_name_list is not None and len(gene_name_list) != len(ggenes_set):
-                logger.warning("Different number of genes in splicegraph (%d) and majiq (%d) files! Hint: Are you sure "
+                logger.warning("Different number of genes in splicegraph (%d) and old_majiq (%d) files! Hint: Are you sure "
                                "you are using bins and splicegraph files from the same execution?" % (len(ggenes_set), len(gene_name_list)))
 
             genes_exp[os.path.basename(splice_graph_f)] = genes_graphic
@@ -373,7 +373,7 @@ def parse_gene_graphics_obj(splicegraph_flist, gene_name_list, condition_names=(
                 logger.warning("No gene matching the splice graph file %s." % splice_graph_f)
 
             if gene_name_list is not None and len(gene_name_list) != len(ggenes_set):
-                logger.warning("Different number of genes in splicegraph (%d) and majiq (%d) files! Hint: Are you sure "
+                logger.warning("Different number of genes in splicegraph (%d) and old_majiq (%d) files! Hint: Are you sure "
                                "you are using bins and splicegraph files from the same execution?" % (len(ggenes_set), len(gene_name_list)))
 
             genes_exp[os.path.basename(splice_graph_f)] = genes_graphic
@@ -387,7 +387,7 @@ def parse_gene_graphics_obj(splicegraph_flist, gene_name_list, condition_names=(
     return genes_exp1_exp2
 
 def parse_input(args):
-    """This method generates an html summary from a majiq output file and the rest of the arguments."""
+    """This method generates an html summary from a old_majiq output file and the rest of the arguments."""
 
     type_summary    = args.type_analysis
     output_dir      = args.output_dir

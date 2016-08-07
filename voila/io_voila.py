@@ -58,7 +58,7 @@ def load_dpairs(pairwise_dir, majiq_output, logger):
     Load pairwise files from MAJIQ analysis.
 
     :param str pairwise_dir: directory containing pairwise comparisons produced by MAJIQ.
-    :param majiq_output: parsed data from majiq.
+    :param majiq_output: parsed data from old_majiq.
     :param logger: logger instance.
     :return: list of deltapsi lsvs
     :return: name of condition 1
@@ -91,7 +91,7 @@ def write_tab_output(output_dir, output_html, majiq_output, type_summary, logger
 
     :param output_dir: output directory for the file.
     :param output_html: name for the output html file used to create a *.txt version.
-    :param majiq_output: parsed data from majiq.
+    :param majiq_output: parsed data from old_majiq.
     :param type_summary: type of analysis performed.
     :param logger: logger instance.
     :param pairwise_dir: whether pairwise comparisons are included or not.
@@ -314,7 +314,7 @@ def create_gff3_txt_files(output_dir, majiq_output, logger, out_gff3=False):
     """
     Create GFF3 files for each LSV.
     :param output_dir: output directory for the file.
-    :param majiq_output: parsed data from majiq.
+    :param majiq_output: parsed data from old_majiq.
     :param logger: logger instance.
     :param out_gff3:
     :return: nothing.

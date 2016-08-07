@@ -1,16 +1,13 @@
-from majiq.src.io_utils import store_sparse_mat, load_sparse_mat
-
 __author__ = 'jordi@biociphers.org'
 
-import numpy as np
-import scipy.sparse
-import majiq.src.config as majiq_config
-from majiq.new_builder.constants import *
-
-from voila.splice_graphics import ExonGraphic, LsvGraphic, JunctionGraphic
-from voila import constants as voila_const
 import pickle
 
+import numpy as np
+
+import majiq.src.config as majiq_config
+from voila import constants as voila_const
+from voila.splice_graphics import ExonGraphic, LsvGraphic, JunctionGraphic
+from majiq.src.constants import *
 
 SSOURCE = 'source'
 STARGET = 'target'

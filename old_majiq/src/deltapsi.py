@@ -1,5 +1,5 @@
-import majiq.src.io_utils
-from majiq.src.basic_pipeline import BasicPipeline, _pipeline_run, get_clean_raw_reads
+import old_majiq.src.io_utils
+from old_majiq.src.basic_pipeline import BasicPipeline, _pipeline_run, get_clean_raw_reads
 #import pickle
 from multiprocessing import Pool, Process
 import os
@@ -8,13 +8,13 @@ import gc
 import numpy as np
 import scipy.misc
 from majiq.src.psi import combine_for_priormatrix
-from majiq.src.utils.utils import create_if_not_exists, get_logger
+from majiq.src.utils import get_logger
 import majiq.src.filter as majiq_filter
-import majiq.src.io as majiq_io
+import old_majiq.src.io as majiq_io
 import majiq.src.psi as majiq_psi
-import majiq.src.pipe as pipe
+import old_majiq.src.pipe as pipe
 import majiq.src.sample as majiq_sample
-import majiq.src.normalize as majiq_norm
+import old_majiq.src.normalize as majiq_norm
 
 
 def deltapair(args):
@@ -32,7 +32,7 @@ class DeltaPair(BasicPipeline):
     def prepare_lsvs(self, conf, nchunks, logger=None):
 
         if logger is None:
-            logger = get_logger("%s/majiq.log" % self.output, silent=False)
+            logger = get_logger("%s/old_majiq.log" % self.output, silent=False)
         self.logger = logger
         exec_id = '%s_%s' % (self.names[0], self.names[1])
         # tempfile = '%s/%s_temp_mid_exec.pickle' % (dpsi_obj.output, exec_id)
@@ -113,7 +113,7 @@ class DeltaPair(BasicPipeline):
         gc.collect()
 
     def delta_groups(self):
-        logger = get_logger("%s/majiq.log" % self.logger_path, silent=self.silent, debug=self.debug)
+        logger = get_logger("%s/old_majiq.log" % self.logger_path, silent=self.silent, debug=self.debug)
         logger.info("")
         logger.info("Running deltagroups new model ...")
         logger.info("GROUP 1: %s" % self.files1)
@@ -169,8 +169,8 @@ class DeltaPair(BasicPipeline):
         logger.info("GATHER pickles")
         for nthrd in xrange(self.nthreads):
 
-            ptempt = majiq.src.io_utils.load_bin_file("%s/tmp/%s_%s_th%s.%s.pickle" % (self.output, self.names[0], self.names[1],
-                                                                                       nthrd, deltapsi_quantify.__name__))
+            ptempt = old_majiq.src.io_utils.load_bin_file("%s/tmp/%s_%s_th%s.%s.pickle" % (self.output, self.names[0], self.names[1],
+                                                                                           nthrd, deltapsi_quantify.__name__))
             # tempfile = open("%s/tmp/%s_%s_th%s.%s.pickle" % (self.output, self.names[0],
             #                                                  self.names[1], nthrd, deltapsi_quantify.__name__))
             # ptempt = pickle.load(tempfile)
@@ -180,7 +180,7 @@ class DeltaPair(BasicPipeline):
             psi_list2.extend(ptempt[3])
 
         logger.debug("Getting meta info for %s..." % self.names)
-        meta_info = majiq.src.io_utils.load_bin_file("%s/tmp/%s_metainfo.pickle" % (self.output, exec_id))
+        meta_info = old_majiq.src.io_utils.load_bin_file("%s/tmp/%s_metainfo.pickle" % (self.output, exec_id))
         # tin = open("%s/tmp/%s_metainfo.pickle" % (self.output, exec_id))
         # meta_info = pickle.load(tin)
         # tin.close()
@@ -201,7 +201,7 @@ class Multi_Deltapair(BasicPipeline):
 
     def _auxiliar_multi(self, fname, name, conf, logger=None):
         if logger is None:
-            logger = get_logger("%s/majiq.log" % self.output, silent=False)
+            logger = get_logger("%s/old_majiq.log" % self.output, silent=False)
             self.logger = logger
 
         meta_info, lsv_junc, const = majiq_io.load_data_lsv(fname, name, logger)
@@ -241,12 +241,12 @@ class Multi_Deltapair(BasicPipeline):
 
     def multi_dpsi(self):
 
-        logger = get_logger("%s/majiq.log" % self.logger_path, silent=self.silent, debug=self.debug)
+        logger = get_logger("%s/old_majiq.log" % self.logger_path, silent=self.silent, debug=self.debug)
         logger.info("")
         logger.info("Running multi_deltas...")
         logger.info("Config file: %s" % self.deltapairs)
         groups, dict_files, list_deltas = majiq_io.read_multi_dpsi_conf(self.deltapairs)
-        print list_deltas
+
         # exec_id = '%s_%s' % (self.names[0], self.names[1])
 
         #num_exp = [len(self.files1), len(self.files2)]
@@ -255,7 +255,7 @@ class Multi_Deltapair(BasicPipeline):
         conf = {'minnonzero': self.minpos,
                 'minreads': self.minreads,
                 'm': self.m,
-                'k': self.k,
+                'k':0 self.k,
                 'discardzeros': self.discardzeros,
                 'trimborder': self.trimborder,
                 'debug': self.debug,
@@ -272,11 +272,10 @@ class Multi_Deltapair(BasicPipeline):
                 else:
                     self._auxiliar_multi(fname, name, conf)
 
-        pool = Pool(processes=self.nthreads)
-
-        onlygather = True
+        #onlygather = True
 
         for group1, group2 in list_deltas:
+            pool = Pool(processes=self.nthreads)
             dpsi_name = '%s_%s' % (group1, group2)
 
             num_exp = [len(groups[group1]), len(groups[group2])]
@@ -289,7 +288,7 @@ class Multi_Deltapair(BasicPipeline):
                 for idx, ii in enumerate(groups[group1]):
                     outfdir = '%s/tmp/samples/' % self.output
                     infile = '%s/%s.pickle' % (outfdir, ii)
-                    meta_info[0][idx], matched_files[idx], filt_vals = majiq.src.io_utils.load_bin_file(infile)
+                    meta_info[0][idx], matched_files[idx], filt_vals = old_majiq.src.io_utils.load_bin_file(infile)
                     #pickle.load(open(infile))
                 filtered_lsv1 = majiq_filter.quantifiable_in_group(matched_files, self.minpos, self.minreads,
                                                                    filt_vals, logger)
@@ -298,7 +297,7 @@ class Multi_Deltapair(BasicPipeline):
                 for idx, ii in enumerate(groups[group2]):
                     outfdir = '%s/tmp/samples/' % self.output
                     infile = '%s/%s.pickle' % (outfdir, ii)
-                    meta_info[1][idx], matched_files[idx], filt_vals = majiq.src.io_utils.load_bin_file(infile)
+                    meta_info[1][idx], matched_files[idx], filt_vals = old_majiq.src.io_utils.load_bin_file(infile)
                     #pickle.load(open(infile))
                 filtered_lsv2 = majiq_filter.quantifiable_in_group(matched_files, self.minpos, self.minreads,
                                                                    filt_vals, logger)
@@ -373,10 +372,10 @@ class Multi_Deltapair(BasicPipeline):
             psi_list2 = []
             logger.info("GATHER pickles")
             for nthrd in xrange(self.nthreads):
-                ptempt = majiq.src.io_utils.load_bin_file("%s/tmp/%s/chunks/%s_%s_th%s.%s.pickle" % (self.output, dpsi_name,
-                                                                                                     self.names[0], self.names[1],
-                                                                                                     nthrd,
-                                                                                                     deltapsi_quantify.__name__))
+                ptempt = old_majiq.src.io_utils.load_bin_file("%s/tmp/%s/chunks/%s_%s_th%s.%s.pickle" % (self.output, dpsi_name,
+                                                                                                         self.names[0], self.names[1],
+                                                                                                         nthrd,
+                                                                                                         deltapsi_quantify.__name__))
                 # tempfile = open("%s/tmp/%s/chunks/%s_%s_th%s.%s.pickle" % (self.output, dpsi_name, self.names[0],
                 #                                                  self.names[1], nthrd, deltapsi_quantify.__name__))
                 # ptempt = pickle.load(tempfile)
@@ -386,7 +385,7 @@ class Multi_Deltapair(BasicPipeline):
                 psi_list2.extend(ptempt[3])
 
             logger.debug("Getting meta info for %s..." % self.names)
-            meta_info = majiq.src.io_utils.load_bin_file("%s/tmp/%s_metainfo.pickle" % (self.output, dpsi_name))
+            meta_info = old_majiq.src.io_utils.load_bin_file("%s/tmp/%s_metainfo.pickle" % (self.output, dpsi_name))
 
             # tin = open("%s/tmp/%s_metainfo.pickle" % (self.output, dpsi_name))
             # pickle.load(tin)

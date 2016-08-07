@@ -1,20 +1,21 @@
 #!/usr/bin/python
+import Queue
+import multiprocessing as mp
 import os
 import sys
 import traceback
-import multiprocessing as mp
 from multiprocessing import Pool
-import Queue
-import majiq.grimoire.gene as majiq_gene
-import majiq.src.analize as analize
-import majiq.src.io as majiq_io
-import majiq.src.io_utils
-import majiq.src.voila_wrapper
-from majiq.src.normalize import prepare_gc_content, gc_factor_calculation
-import majiq.src.utils.utils as utils
-import majiq.src.config as majiq_config
-import majiq.grimoire.lsv as majiq_lsv
+
 import h5py
+
+import majiq.src.config as majiq_config
+import majiq.src.utils as utils
+import old_majiq.grimoire.gene as majiq_gene
+import old_majiq.src.analize as analize
+import old_majiq.src.io as majiq_io
+import old_majiq.src.io_utils
+import old_majiq.src.voila_wrapper
+from old_majiq.src.normalize import prepare_gc_content, gc_factor_calculation
 
 
 def __builder_init(out_queue, lock_arr):
@@ -37,7 +38,7 @@ def majiq_builder(samfiles_list, chnk, pcr_validation=None, gff_output=None, cre
         return
 
     # temp_file = open(annot_file, 'rb')
-    gene_list = majiq.src.io_utils.load_bin_file(annot_file)
+    gene_list = old_majiq.src.io_utils.load_bin_file(annot_file)
 
     if create_tlb:
         if not logging is None:
@@ -64,7 +65,7 @@ def majiq_builder(samfiles_list, chnk, pcr_validation=None, gff_output=None, cre
     #     utils.get_validated_pcr_lsv(lsv, temp_dir)
     # if gff_output:
     #     majiq_lsv.extract_gff(lsv, temp_dir)
-    majiq.src.voila_wrapper.generate_visualization_output(gene_list, temp_dir, majiq_builder.queue)
+    old_majiq.src.voila_wrapper.generate_visualization_output(gene_list, temp_dir, majiq_builder.queue)
     if not logging is None:
         logging.info("[%s] Preparing output" % chnk)
     lsv = None
@@ -105,7 +106,7 @@ def gather_files(out_dir, prefix='', gff_out=None, pcr_out=None, nthreads=1, log
             yfile = '%s/temp_gff.pkl' % temp_dir
             if not os.path.exists(yfile):
                 continue
-            gff_list = majiq.src.io_utils.load_bin_file(yfile)
+            gff_list = old_majiq.src.io_utils.load_bin_file(yfile)
             for gff in gff_list:
                 fp.write("%s\n" % gff)
         fp.close()
@@ -118,7 +119,7 @@ def gather_files(out_dir, prefix='', gff_out=None, pcr_out=None, nthreads=1, log
             yfile = '%s/pcr.pkl' % temp_dir
             if not os.path.exists(yfile):
                 continue
-            pcr_l = majiq.src.io_utils.load_bin_file(yfile)
+            pcr_l = old_majiq.src.io_utils.load_bin_file(yfile)
             for pcr in pcr_l:
                 fp.write("%s\n" % pcr)
         fp.close()
@@ -128,7 +129,7 @@ def __parallel_lsv_quant(samfiles_list, chnk, pcr_validation=False, gff_output=N
                          nondenovo=False, silent=False, debug=0):
     try:
         print "START child,", mp.current_process()._identity
-        tlogger = utils.get_logger("%s/%s.majiq.log" % (majiq_config.outDir, mp.current_process()._identity[0]),
+        tlogger = utils.get_logger("%s/%s.old_majiq.log" % (majiq_config.outDir, mp.current_process()._identity[0]),
                                    silent=silent, debug=debug)
         majiq_builder(samfiles_list, chnk, pcr_validation=pcr_validation,
                       gff_output=gff_output, only_rna=only_rna, nondenovo=nondenovo, logging=tlogger)
@@ -143,7 +144,7 @@ def __parallel_gff3(transcripts, pcr_filename, nthreads, silent=False, debug=0):
 
     try:
         print "START child,", mp.current_process()._identity
-        tlogger = utils.get_logger("%s/db.majiq.log" % majiq_config.outDir,
+        tlogger = utils.get_logger("%s/db.old_majiq.log" % majiq_config.outDir,
                                    silent=silent, debug=debug)
         majiq_io.read_gff(transcripts, pcr_filename, nthreads, logging=tlogger)
         print "END child, ", mp.current_process().name
@@ -167,7 +168,7 @@ def main(params):
         raise RuntimeError("Config file %s does not exist" % params.conf)
     majiq_config.global_conf_ini(params.conf, params)
 
-    logger = utils.get_logger("%s/majiq.log" % majiq_config.outDir, silent=params.silent, debug=params.debug)
+    logger = utils.get_logger("%s/old_majiq.log" % majiq_config.outDir, silent=params.silent, debug=params.debug)
     logger.info("")
     logger.info("Command: %s" % params)
 
@@ -224,7 +225,7 @@ def main(params):
         file_list = []
         junc_idx = [0] * majiq_config.num_experiments
         for exp_idx, exp in enumerate(majiq_config.exp_list):
-            fname = "%s/%s.majiq.hdf5" % (majiq_config.outDir, majiq_config.exp_list[exp_idx])
+            fname = "%s/%s.old_majiq.hdf5" % (majiq_config.outDir, majiq_config.exp_list[exp_idx])
             f = h5py.File(fname, 'w', compression='gzip', compression_opts=9)
             file_list.append(f)
 

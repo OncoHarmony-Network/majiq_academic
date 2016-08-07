@@ -1,14 +1,16 @@
 import logging
 import os
 import random
+import resource
 import sys
+
 import h5py
 import numpy as np
-import majiq.grimoire.junction as majiq_junction
+
 import majiq.grimoire.lsv as majiq_lsv
 import majiq.src.config as majiq_config
-import majiq.src.io_utils as majiq_io_utils
-import resource
+import old_majiq.grimoire.junction as majiq_junction
+import old_majiq.src.io_utils as majiq_io_utils
 
 
 def monitor(msg):
@@ -90,7 +92,7 @@ def prepare_lsv_table(lsv_list, non_as, temp_dir):
     """
     for name, ind_list in majiq_config.tissue_repl.items():
         for idx, exp_idx in enumerate(ind_list):
-            fname = "%s/%s.majiq.hdf5" % (temp_dir, majiq_config.exp_list[exp_idx])
+            fname = "%s/%s.old_majiq.hdf5" % (temp_dir, majiq_config.exp_list[exp_idx])
             f = h5py.File(fname, 'w', compression='gzip', compression_opts=9)
             as_table = f.create_group('LSVs')
             for iix, lsv in enumerate(lsv_list[name]):
@@ -105,7 +107,7 @@ def prepare_lsv_table(lsv_list, non_as, temp_dir):
 def merge_and_create_majiq_file(exp_idx, pref_file):
     """
     :param exp_idx: Index of experiment in config file
-    :param pref_file: Prefix for the majiq name
+    :param pref_file: Prefix for the old_majiq name
     """
 
     experiment = majiq_config.exp_list[exp_idx]
@@ -122,7 +124,7 @@ def merge_and_create_majiq_file(exp_idx, pref_file):
     del all_visual
     del visual
 
-    fname = '%s/%s%s.majiq' % (majiq_config.outDir, pref_file, experiment)
+    fname = '%s/%s%s.old_majiq' % (majiq_config.outDir, pref_file, experiment)
     of = h5py.File(fname, 'w', compression='gzip', compression_opts=9)
 
     of['experiment'] = experiment
@@ -134,7 +136,7 @@ def merge_and_create_majiq_file(exp_idx, pref_file):
     nat = []
     for chnk in range(majiq_config.num_final_chunks):
         temp_dir = "%s/tmp/chunk_%s" % (majiq_config.outDir, chnk)
-        filename = "%s/%s.majiq.hdf5" % (temp_dir, majiq_config.exp_list[exp_idx])
+        filename = "%s/%s.old_majiq.hdf5" % (temp_dir, majiq_config.exp_list[exp_idx])
         if os.path.exists(filename):
             with h5py.File(filename) as temp_table:
                 for kk in temp_table['LSVs'].keys():
@@ -244,3 +246,21 @@ def histogram_for_exon_analysis(genes, output):
                 denovo_list.append(lngth)
 
     majiq_io_utils.dump_bin_file([annotated_list, denovo_list], output)
+
+
+def chunks(l, n, extra=None):
+    """Yield successive n-sized chunks from l.
+    :param l: list to be split
+    :param n: max length of chunks
+    """
+    try:
+        idx = -1
+        for i in range(0, len(l), n):
+            idx += 1
+            if extra is not None:
+                yield [l[i:i+n], extra[idx]]
+            else:
+                yield l[i:i+n]
+    except:
+        print "ERROR: extra value has incorrect size"
+        raise

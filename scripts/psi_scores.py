@@ -112,7 +112,7 @@ def main():
     parser.add_argument('--plotpath', default=None,
                         help='Path to save the plot to, if not provided will show on a matplotlib popup window')
     parser.add_argument('--output')
-    parser.add_argument('--type', default='majiq-miso', choices=['majiq-miso', 'majiq-majiq'])
+    parser.add_argument('--type', default='old_majiq-miso', choices=['old_majiq-miso', 'old_majiq-old_majiq'])
     args = parser.parse_args()
 
     # For debugging, method1 is MAJIQ, method2 is MISO
@@ -152,7 +152,7 @@ def main():
     debug_names_miso_list = defaultdict(list)
 
     miso_all = []
-    if args.type == 'majiq-miso':
+    if args.type == 'old_majiq-miso':
         for miso_file in args.psivalues_met2:
             miso_psis_dict = defaultdict()
             with open(miso_file, 'r') as miso_res:
@@ -191,7 +191,7 @@ def main():
 
             psi_lists_met2.append(miso_psis)
 
-    elif args.type == 'majiq-majiq':
+    elif args.type == 'old_majiq-old_majiq':
         psi_names_met2 = defaultdict()
         psi_list1_met2 = []
         psi_list2_met2 = []

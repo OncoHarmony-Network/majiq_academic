@@ -2,7 +2,7 @@ import numpy as np
 import scipy.sparse
 
 import majiq.src.config as majiq_config
-import majiq.src.io_utils as majiq_io_utils
+
 
 class Junction:
     __eq__ = lambda self, other: self.start == other.start and self.end == other.end
@@ -12,9 +12,11 @@ class Junction:
     __gt__ = lambda self, other: self.start > other.start or (self.start == other.start and self.end > other.end)
     __ge__ = lambda self, other: self.start >= other.start or (self.start == other.start and self.end >= other.end)
 
-    def __init__(self, start, end, donor, acceptor, gene, readN=0, annotated=False):
+    def __init__(self, start, end, donor, acceptor, gene, annotated=False, retrieve=False):
         ''' The start and end in junctions are the last exon in '''
 
+        self.gene_name = gene.get_id()
+        self.id = "%s:%s-%s" % (self.gene_name, start, end)
         self.start = start
         self.end = end
         if donor is None:
@@ -25,19 +27,34 @@ class Junction:
             self.acceptor_id = -1
         else:
             self.acceptor_id = acceptor.get_id()
-        self.gene_name = gene.get_id()
         self.annotated = annotated
-        self.coverage = scipy.sparse.lil_matrix((majiq_config.num_experiments,  (majiq_config.readLen - 16) + 1),
-                                                dtype=np.float)
-        self.gc_content = scipy.sparse.lil_matrix((1, (majiq_config.readLen - 16) + 1), dtype=np.float)
-        self.id = "%s:%s-%s" % (self.gene_name, start, end)
+
+        if retrieve:
+            self.coverage = scipy.sparse.lil_matrix((majiq_config.num_experiments,  (majiq_config.readLen - 16) + 1),
+                                                    dtype=np.float)
+            self.gc_content = scipy.sparse.lil_matrix((1, (majiq_config.readLen - 16) + 1), dtype=np.float)
+
         self.transcript_id_list = []
 
     def __hash__(self):
         return hash(self.start) ^ hash(self.end) ^ hash(self.gene_name)
 
-    # def __del__(self):
-    # junc_list = self.get_gene().get_junction_list()
+    def to_hdf5(self, hdf5grps):
+        h_jnc = hdf5grps.create_group("%s-%s" % (self.start, self.end))
+        if self.start is None:
+            h_jnc.attrs['start'] = -1
+        else:
+            h_jnc.attrs['start'] = self.start
+
+        if self.end is None:
+            h_jnc.attrs['end'] = -1
+        else:
+            h_jnc.attrs['end'] = self.end
+        h_jnc.attrs['donor_id'] = self.donor_id
+        h_jnc.attrs['acceptor_id'] = self.acceptor_id
+        h_jnc.attrs['id'] = self.id
+        #h_jnc.attrs['transcript_id_list'] = self.transcript_id_list
+
 
     # GETTERs
     def get_id(self):
@@ -99,8 +116,9 @@ class Junction:
             ex = self.get_gene().get_exon_by_id(self.acceptor_id)
         return ex
 
-    def get_gc_content(self):
+    def get_gc_content(self, experiment=None):
         return self.gc_content
+
 
     def get_read_num(self, idx):
         if idx == -1:

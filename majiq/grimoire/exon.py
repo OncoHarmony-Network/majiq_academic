@@ -1,15 +1,15 @@
-#!/usr/bin/python
 import os
 
-import numpy as np
 from majiq.src import config
 
-
 # FLAGS
-ANNOTATED = 0b0001
-INTRON = 0b0010
-MISS_START = 0b0100
-MISS_END = 0b1000
+NEUTRAL = 0b00000
+
+ANNOTATED = 0b00001
+INTRON = 0b00010
+MISS_START = 0b00100
+MISS_END = 0b01000
+INDATA = 0b10000
 
 
 class Exon:
@@ -20,43 +20,59 @@ class Exon:
     __gt__ = lambda self, other: self.start >= other.end
     __ge__ = lambda self, other: self.start >= other.end or (self.start < other.end and self.end > other.start)
 
-    def __init__(self, start, end, gene, strand, annot=False, isintron=False):
+    def __init__(self, start, end, gene, annot=False, isintron=False, indata=False, retrieve=False):
 
-        self.flag = 0b0000
+        self.flag = NEUTRAL
         if start == EMPTY_COORD:
             start = end - 10
-            self.flag |= 0b0100
+            self.flag |= MISS_START
         if end == EMPTY_COORD:
             end = start + 10
-            self.flag |= 0b1000
+            self.flag |= MISS_END
 
+        self.gene_name = gene.get_id()
+        self.id = "%s:%d-%d" % (self.gene_name, start, end)
         self.start = start
         self.end = end
-        self.gene_name = gene.get_id()
+
         self.exonTx_list = []
         self.exonRead_list = []
         self.ss_3p_list = []
         self.ss_5p_list = []
-        self.id = "%s:%d-%d" % (self.gene_name, start, end)
-        # sedlf.strand = strand
+
         self.gc_content = 0
-        self.coverage = np.zeros(shape=config.num_experiments)
+
         self.score = None
         self.pcr_name = None
         self.pcr_candidate = None
         self.db_coord = (start, end)
 
-        self.flag |= 0b0001 if annot else 0b0000
-        self.flag |= 0b0010 if isintron else 0b0000
+        self.flag |= ANNOTATED if annot else NEUTRAL
+        self.flag |= INTRON if isintron else NEUTRAL
+        self.flag |= INDATA if indata else NEUTRAL
+
+        # if not retrieve:
+        #     self.coverage = np.zeros(shape=config.num_experiments)
 
     def __hash__(self):
         return hash(self.id) ^ hash(self.gene_name)
 
+    def to_hdf5(self, hdf5grps):
+        h_ex = hdf5grps.create_group("exons/%s" % self.id)
+
+        h_ex.attrs['start'] = self.start
+        h_ex.attrs['end'] = self.end
+        h_ex.attrs['gc_content'] = self.gc_content
+        h_ex.attrs['in_data'] = self.is_in_data()
+
+        [tex.to_hdf5(h_ex) for tex in self.exonTx_list]
+        if self.score is not None:
+            h_ex.attrs['score'] = self.score
+            h_ex.attrs['pcr_name'] = self.pcr_name
+            h_ex.attrs['pcr_candidate'] = self.pcr_candidate
+
     def get_id(self):
         return self.id
-
-    # def get_strand(self):
-    # return self.strand
 
     def get_coordinates(self):
         """
@@ -83,6 +99,9 @@ class Exon:
 
     def is_miss_end(self):
         return self.flag & MISS_END == MISS_END
+
+    def is_in_data(self):
+        return self.flag & INDATA == INDATA
 
     def get_ir(self):
 
@@ -115,6 +134,12 @@ class Exon:
 
     def get_pcr_name(self):
         return self.pcr_name
+
+    def set_in_data(self):
+        self.flag |= INDATA
+
+    def add_exon_tx(self, extx):
+        self.exonTx_list.append(extx)
 
     def add_new_read(self, start, end, read_seq, s3p_junc, s5p_junc):
 
@@ -152,7 +177,7 @@ class Exon:
         return self.gc_content
 
     def get_total_read_num(self, exp_idx):
-        ex_reads = self.coverage[exp_idx].sum()
+        ex_reads = 1 if self.is_in_data() else 0
         junc3 = self.get_junctions('3prime')
         for j3 in junc3:
             ex_reads += j3.get_read_num(exp_idx)
@@ -164,6 +189,9 @@ class Exon:
 
     def update_coverage(self, exp_idx, num):
         self.coverage[exp_idx] += num
+
+    def set_gc_content_val(self, value):
+        self.gc_content = value
 
     def set_gc_content(self, sequence):
         #        if len(self.exonTx_list) != 0 and len(self.exonRead_list) != 0 :
@@ -305,11 +333,23 @@ class ExonTx(object):
     def __init__(self, start, end, trnscpt, intron=False):
         self.start = start
         self.end = end
-        self.transcript_name = [trnscpt.get_id()]
-        self.gene_name = trnscpt.get_gene().get_id()
+        if trnscpt is None:
+            self.transcript_name = None
+        else:
+            self.transcript_name = [trnscpt.get_id()]
+            self.gene_name = trnscpt.get_gene().get_id()
         self.p3_junc = []
         self.p5_junc = []
-        self.ir = intron
+
+    def to_hdf5(self, hdf5grps):
+        h_ex = hdf5grps.create_group("tx/%s-%s" % (self.start, self.end))
+        h_ex.attrs['start'] = self.start
+        h_ex.attrs['end'] = self.end
+
+        p5_junc = h_ex.create_group("p5_junc")
+        p3_junc = h_ex.create_group("p3_junc")
+        [jun.to_hdf5(p5_junc) for jun in set(self.p5_junc)]
+        [jun.to_hdf5(p3_junc) for jun in set(self.p3_junc)]
 
     def get_coordinates(self):
         return self.start, self.end
@@ -439,10 +479,10 @@ class ExonTx(object):
             exlist.extend(collapse_list_exons(list_exontx, gne))
 
         else:
-            ex = Exon(min(all_3prime), max(all_5prime), gne, gne.get_strand(), annot=True)
+            ex = Exon(min(all_3prime), max(all_5prime), gne, annot=True)
 
             for txex in list_exontx:
-                ex.set_ir(txex.ir)
+                #ex.set_ir(txex.ir)
                 ex.ss_3p_list.append(txex.start)
                 ex.ss_5p_list.append(txex.end)
                 ex.exonTx_list.append(txex)
@@ -546,19 +586,19 @@ def new_exon_definition(start, end, read_rna, s3prime_junc, s5prime_junc, gene, 
                     break
             if not in_db and nondenovo:
                 return -1
-            ex = Exon(start, end, gene, gene.get_strand(), annot=in_db, isintron=isintron)
+            ex = Exon(start, end, gene, annot=in_db, isintron=isintron)
             gene.add_exon(ex)
         else:
             half = True
             new_exons += 2
 
-            ex1 = Exon(start, EMPTY_COORD, gene, gene.get_strand(), annot=False, isintron=isintron)
+            ex1 = Exon(start, EMPTY_COORD, gene, annot=False, isintron=isintron)
             s3prime_junc.add_acceptor(ex1)
             gene.add_exon(ex1)
             cc = ex1.get_coordinates()
             ex1.add_new_read(cc[0], cc[1], read_rna, s3prime_junc, None)
 
-            ex2 = Exon(EMPTY_COORD, end, gene, gene.get_strand(), annot=False, isintron=isintron)
+            ex2 = Exon(EMPTY_COORD, end, gene, annot=False, isintron=isintron)
             s5prime_junc.add_donor(ex2)
             gene.add_exon(ex2)
             cc = ex2.get_coordinates()
@@ -569,7 +609,7 @@ def new_exon_definition(start, end, read_rna, s3prime_junc, s5prime_junc, gene, 
         if start != EMPTY_COORD and start < (coords[0] - config.get_max_denovo_difference()):
             if gene.exist_exon(start, start + 10) is None:
                 new_exons += 1
-                ex1 = Exon(start, EMPTY_COORD, gene, gene.get_strand(), annot=False, isintron=isintron)
+                ex1 = Exon(start, EMPTY_COORD, gene, annot=False, isintron=isintron)
                 cc = ex1.get_coordinates()
                 s3prime_junc.add_acceptor(ex1)
                 gene.add_exon(ex1)
@@ -579,7 +619,7 @@ def new_exon_definition(start, end, read_rna, s3prime_junc, s5prime_junc, gene, 
         if end != EMPTY_COORD and end > (coords[1] + config.get_max_denovo_difference()):
             if gene.exist_exon(end - 10, end) is None:
                 new_exons += 1
-                ex2 = Exon(EMPTY_COORD, end, gene, gene.get_strand(), annot=False, isintron=isintron)
+                ex2 = Exon(EMPTY_COORD, end, gene, annot=False, isintron=isintron)
                 cc = ex2.get_coordinates()
                 s5prime_junc.add_donor(ex2)
                 gene.add_exon(ex2)
@@ -666,6 +706,7 @@ def set_exons_gc_content(chrom, exon_list):
     # print "Loading chromosome... %s"%chrom
     chrom_path = fastadir_path + chrom + ".fa"
     if not os.path.exists(chrom_path):
+        raise RuntimeWarning('GC content not calculated, genome files not found')
         return
     chrom_file = open(chrom_path)
     loaded_chrom = []

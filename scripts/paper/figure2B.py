@@ -276,13 +276,13 @@ def plot_dpsi_rtpcr_majiq_miso(rt_pcr_majiq, rt_pcr_miso, majiq, miso, plotpath)
 def main():
     parser = argparse.ArgumentParser(description="Compare PSIs computed with MAJIQ against the RT-PCR results.")
     parser.add_argument("pcr", help="Tab-delimted file with the RT-PCR scores")
-    parser.add_argument("--majiq-rest", required=True, dest='majiq_rest', nargs='+', help='MAJIQ PSI predictions for resting RNA-Seq data.')
-    parser.add_argument("--majiq-stim", required=True, dest='majiq_stim', nargs='+', help='MAJIQ PSI predictions for stimulated RNA-Seq data.')
+    parser.add_argument("--old_majiq-rest", required=True, dest='majiq_rest', nargs='+', help='MAJIQ PSI predictions for resting RNA-Seq data.')
+    parser.add_argument("--old_majiq-stim", required=True, dest='majiq_stim', nargs='+', help='MAJIQ PSI predictions for stimulated RNA-Seq data.')
     parser.add_argument("--miso-rest", dest='miso_rest', nargs='*', help='MISO PSI predictions for resting RNA-Seq data.')
     parser.add_argument("--miso-stim", dest='miso_stim', nargs='*', help='MISO PSI predictions for stimulated RNA-Seq data.')
     parser.add_argument("--names-map-file", required=True, dest='names_map_file', help='File containing the mapping for events names used in MAJIQ and RT-PCR files.')
 
-    parser.add_argument("--majiq-extra", dest='majiq_extra', nargs='+', help='MAJIQ PSI predictions for extra conditions.')
+    parser.add_argument("--old_majiq-extra", dest='majiq_extra', nargs='+', help='MAJIQ PSI predictions for extra conditions.')
     parser.add_argument("--miso-extra", dest='miso_extra', nargs='+', help='MISO PSI predictions for extra conditions.')
     parser.add_argument("--pcr-extra", dest='pcr_extra', help='RT-PCR validations for extra conditions.')
 

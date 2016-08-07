@@ -1,19 +1,19 @@
-from collections import defaultdict
-import random
-
-from scipy.special import gamma, gammaln
-from scipy.stats import binom_test, beta
-from numpy.random import dirichlet
-import numpy as np
-import sys
-import matplotlib.pyplot as plt
-import majiq.src.filter as majiq_filter
-import majiq.src.adjustdelta as majiq_delta
-import majiq.src.io_utils
-import majiq.src.sample as majiq_sample
-import majiq.src.io as majiq_io
 import operator
 import os
+import random
+import sys
+from collections import defaultdict
+
+import matplotlib.pyplot as plt
+import numpy as np
+from numpy.random import dirichlet
+from scipy.special import gamma, gammaln
+from scipy.stats import beta
+
+import majiq.src.filter as majiq_filter
+import majiq.src.sample as majiq_sample
+import old_majiq.src.adjustdelta as majiq_delta
+import old_majiq.src.io_utils
 
 """
 Calculate and manipulate PSI and Delta PSI values
@@ -242,7 +242,7 @@ def __load_default_prior():
 
     encoding = sys.getfilesystemencoding()
     direc = os.path.dirname(unicode(__file__, encoding))
-    def_mat = majiq.src.io_utils.load_bin_file('%s/../data/defaultprior.pickle' % direc)
+    def_mat = old_majiq.src.io_utils.load_bin_file('%s/../data/defaultprior.pickle' % direc)
     return def_mat
 
 
@@ -373,7 +373,7 @@ def combine_for_priormatrix(group1, group2, matched_info, num_exp):
     return grp1, grp2
 
 
-def __get_prior_params(lsvinfo, num_ways):
+def get_prior_params(lsvinfo, num_ways):
     if 'i' in lsvinfo[2]:
         alpha = 1.0 / (num_ways - 1)
         alpha *= float(num_ways) / (num_ways + 1)

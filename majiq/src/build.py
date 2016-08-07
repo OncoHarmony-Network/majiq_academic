@@ -1,37 +1,26 @@
-import os
-import multiprocessing as mp
-
-import majiq.new_builder.gene
-from majiq.src.basic_pipeline import BasicPipeline, _pipeline_run
-import majiq.src.config as majiq_config
-import majiq.src.utils.utils as majiq_utils
-import majiq.src.normalize as majiq_norm
-
-import multiproc as majiq_multi
-import majiq_io as majiq_io
-from constants import *
-from analize import lsv_detection
-import pysam
-from multiprocessing import Pool
 import Queue
+import multiprocessing as mp
+import os
 import sys
 import traceback
-import h5py
 import types
-import numpy as np
 
+import h5py
 
-def chunks(l, n):
-    """Yield successive n-sized chunks from l.
-    :param l: list to be split
-    :param n: max length of chunks
-    """
-    for i in range(0, len(l), n):
-        yield l[i:i+n]
+import io as majiq_io
+import majiq.grimoire.gene
+import majiq.src.config as majiq_config
+import majiq.src.utils as majiq_utils
+import multiproc as majiq_multi
+import old_majiq.src.normalize as majiq_norm
+from analize import lsv_detection
+from constants import *
+from majiq.src.utils import chunks
+from majiq.src.basic_pipeline import BasicPipeline, pipeline_run
 
 
 def build(args):
-    _pipeline_run(Builder(args))
+    pipeline_run(Builder(args))
 
 
 def builder_init(out_queue, lock_arr, sam_list, pcr_filename, gff_output, only_rna,
@@ -49,7 +38,7 @@ def builder_init(out_queue, lock_arr, sam_list, pcr_filename, gff_output, only_r
 
 
 def majiq_builder(list_of_genes):
-    tlogger = majiq_utils.get_logger("%s/%s.kk.majiq.log" % (majiq_config.outDir, mp.current_process()._identity[0]),
+    tlogger = majiq_utils.get_logger("%s/%s.kk.old_majiq.log" % (majiq_config.outDir, mp.current_process()._identity[0]),
                                      silent=majiq_builder.silent, debug=majiq_builder.debug)
     created = mp.Process()
     chnk = created._identity[0]
@@ -69,7 +58,7 @@ def majiq_builder(list_of_genes):
         try:
             loop_id = '%s - %s' % (chnk, gne_id)
             tlogger.info("[%s] Retrieving gene" % loop_id)
-            gene_obj = majiq.new_builder.gene.retrieve_gene(gne_id, db_f)
+            gene_obj = majiq.grimoire.gene.retrieve_gene(gne_id, db_f)
 
             tlogger.info("[%s] Reading BAM files" % loop_id)
             majiq_io.read_sam_or_bam(gene_obj, majiq_builder.sam_list, counter,
@@ -102,13 +91,16 @@ def majiq_builder(list_of_genes):
 
     # for ss in samfile:
     #     ss.close()
-
-    db_f.close()
-    majiq_utils.monitor('CHILD %s:: WAITING' % chnk)
-    tlogger.info("[%s] Waiting to be freed" % chnk)
-    majiq_builder.queue.put([-1, chnk], block=True)
-    majiq_builder.lock_arr[chnk].acquire()
-    majiq_builder.lock_arr[chnk].release()
+    try:
+        db_f.close()
+        majiq_utils.monitor('CHILD %s:: WAITING' % chnk)
+        tlogger.info("[%s] Waiting to be freed" % chnk)
+        majiq_builder.queue.put([-1, chnk], block=True)
+        majiq_builder.lock_arr[chnk].acquire()
+        majiq_builder.lock_arr[chnk].release()
+    except:
+        traceback.print_exc()
+        sys.stdout.flush()
 
 
 class Builder(BasicPipeline):
@@ -154,6 +146,7 @@ class Builder(BasicPipeline):
             try:
                 val = result_queue.get(block=True, timeout=10)
                 if val[0] == 0:
+                    print "LSV received"
                     for jdx, exp_idx in enumerate(majiq_config.tissue_repl[val[2]]):
                         lsv_idx[exp_idx] = val[1].to_hdf5(hdf5grp=lsv_list[exp_idx],
                                                           lsv_idx=lsv_idx[exp_idx],
@@ -184,7 +177,7 @@ class Builder(BasicPipeline):
         # if majiq_config.gcnorm:
         #     majiq_norm.gc_normalization(lsv_list, gc_content_files, gc_pairs, logger)
 
-        #TODO: Re open
+
         for exp_idx, exp in enumerate(majiq_config.exp_list):
             lsv_list[exp_idx].close()
 
@@ -194,7 +187,7 @@ class Builder(BasicPipeline):
 
     def builder(self, sam_list):
 
-        logger = majiq_utils.get_logger("%s/majiq.log" % majiq_config.outDir, silent=False,
+        logger = majiq_utils.get_logger("%s/old_majiq.log" % majiq_config.outDir, silent=False,
                                         debug=self.debug)
         logger.info("")
         logger.info("Command: %s" % self)
