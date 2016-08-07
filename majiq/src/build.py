@@ -91,16 +91,12 @@ def majiq_builder(list_of_genes):
 
     # for ss in samfile:
     #     ss.close()
-    try:
-        db_f.close()
-        majiq_utils.monitor('CHILD %s:: WAITING' % chnk)
-        tlogger.info("[%s] Waiting to be freed" % chnk)
-        majiq_builder.queue.put([-1, chnk], block=True)
-        majiq_builder.lock_arr[chnk].acquire()
-        majiq_builder.lock_arr[chnk].release()
-    except:
-        traceback.print_exc()
-        sys.stdout.flush()
+    db_f.close()
+    majiq_utils.monitor('CHILD %s:: WAITING' % chnk)
+    tlogger.info("[%s] Waiting to be freed" % chnk)
+    majiq_builder.queue.put([-1, chnk], block=True)
+    majiq_builder.lock_arr[chnk].acquire()
+    majiq_builder.lock_arr[chnk].release()
 
 
 class Builder(BasicPipeline):
