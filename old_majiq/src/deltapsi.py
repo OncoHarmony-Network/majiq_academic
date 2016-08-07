@@ -255,7 +255,7 @@ class Multi_Deltapair(BasicPipeline):
         conf = {'minnonzero': self.minpos,
                 'minreads': self.minreads,
                 'm': self.m,
-                'k':0 self.k,
+                'k': self.k,
                 'discardzeros': self.discardzeros,
                 'trimborder': self.trimborder,
                 'debug': self.debug,
@@ -272,7 +272,7 @@ class Multi_Deltapair(BasicPipeline):
                 else:
                     self._auxiliar_multi(fname, name, conf)
 
-        #onlygather = True
+        onlygather = False
 
         for group1, group2 in list_deltas:
             pool = Pool(processes=self.nthreads)
