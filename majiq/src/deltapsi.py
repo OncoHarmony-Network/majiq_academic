@@ -235,7 +235,7 @@ class Multi_Deltapair(BasicPipeline):
         logger.info("Running multi_deltas...")
         logger.info("Config file: %s" % self.deltapairs)
         groups, dict_files, list_deltas = majiq_io.read_multi_dpsi_conf(self.deltapairs)
-        print list_deltas
+        print "KKK", list_deltas
         # exec_id = '%s_%s' % (self.names[0], self.names[1])
 
         #num_exp = [len(self.files1), len(self.files2)]
@@ -261,15 +261,19 @@ class Multi_Deltapair(BasicPipeline):
                 else:
                     self._auxiliar_multi(fname, name, conf)
 
+<<<<<<< HEAD
 
         onlygather = False
 
+=======
+>>>>>>> 21824e91788a1c1c90c9056b8362bbd1670a22e0
 
+	onlygather=False
 
         for group1, group2 in list_deltas:
             pool = Pool(processes=self.nthreads)
             dpsi_name = '%s_%s' % (group1, group2)
-
+	    print "FOR LOOP", dpsi_name
             num_exp = [len(groups[group1]), len(groups[group2])]
             meta_info = [[0] * num_exp[0], [0] * num_exp[1]]
             self.names = [group1, group2]
