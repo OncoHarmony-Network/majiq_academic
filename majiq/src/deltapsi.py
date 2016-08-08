@@ -261,14 +261,7 @@ class Multi_Deltapair(BasicPipeline):
                 else:
                     self._auxiliar_multi(fname, name, conf)
 
-<<<<<<< HEAD
-
         onlygather = False
-
-=======
->>>>>>> 21824e91788a1c1c90c9056b8362bbd1670a22e0
-
-	onlygather=False
 
         for group1, group2 in list_deltas:
             pool = Pool(processes=self.nthreads)
