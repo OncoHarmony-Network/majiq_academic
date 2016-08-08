@@ -261,13 +261,13 @@ class Multi_Deltapair(BasicPipeline):
                 else:
                     self._auxiliar_multi(fname, name, conf)
 
-        pool = Pool(processes=self.nthreads)
 
-        onlygather = True
+        onlygather = False
 
 
 
         for group1, group2 in list_deltas:
+            pool = Pool(processes=self.nthreads)
             dpsi_name = '%s_%s' % (group1, group2)
 
             num_exp = [len(groups[group1]), len(groups[group2])]

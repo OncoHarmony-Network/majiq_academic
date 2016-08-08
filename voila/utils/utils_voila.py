@@ -90,6 +90,7 @@ def lsvs_to_gene_dict(voila_input, gene_name_list=[], lsv_types=None, lsv_names=
     nofilter_genes = not gene_name_list and not lsv_types
 
     for i, vlsv in enumerate(voila_input.lsvs):
+        print vlsv.get_id()
         if np.any(np.isnan(vlsv.get_bins())):
             logger.warning("LSV %s bins contain NaNs" % vlsv.get_id())
             continue

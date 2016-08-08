@@ -34,30 +34,31 @@ class LSV(object):
         junction_list = [x for x in junctions if x is not None]
         # and x.get_donor() is not None
         # and x.get_acceptor() is not None]
-        self.coverage = [x for x in junction_list if x.get_donor() is not None
-                             and x.get_acceptor() is not None]
+        n_viable_juncs = len([x for x in junction_list if x.get_donor() is not None
+                              and x.get_acceptor() is not None])
 
-        # if majiq_config.simplify > 0 and self.coverage > 2:
-        #     self.simplify(threshold=majiq_config.simplify)
-
-        if self.coverage < 2:
+        if n_viable_juncs < 2:
             raise InvalidLSV('Not enought junctions')
         self.type = lsv_type
         self.exon = exon
-        self.intron_retention = False
 
-        for jj in self.coverage:
+        #print lsv_id
+        self.intron_retention = False
+        for jj in junction_list:
             x1 = jj.get_acceptor()
             x2 = jj.get_donor()
+            #print "\t ", jj.get_id()
             if x1 is None or x2 is None:
                 continue
             if x1.is_intron() or x2.is_intron():
+                #print "LSV with intron"
                 self.intron_retention = True
                 break
         try:
             self.tlb_junc = {}
-            self.ext_type = self.set_type(self.coverage, self.tlb_junc)
+            self.ext_type = self.set_type(junction_list, self.tlb_junc)
             if self.ext_type == 'intron':
+                #print "KKKKKKKKV %s" % exon.get_gene()
                 raise InvalidLSV('Auto junction found')
         except:
             raise InvalidLSV('Problematic Type')
@@ -65,14 +66,13 @@ class LSV(object):
         juncs = []
         order = self.ext_type.split('|')[1:]
         for idx, jj in enumerate(order):
-            if jj[-2:] == 'e0':
-                continue
-            juncs.append(self.coverage[self.tlb_junc[jj]])
-        self.coverage = np.array(juncs)
+            if jj[-2:] == 'e0': continue
+            juncs.append(junction_list[self.tlb_junc[jj]])
+        self.junctions = np.array(juncs)
 
         self.visual = list()
         for exp_idx in xrange(majiq_config.num_experiments):
-            self.visual.append(self.get_visual_lsv(self.coverage, exp_idx))
+            self.visual.append(self.get_visual_lsv(self.junctions, exp_idx))
 
     def check_type(self, lsv_type):
         tab = lsv_type.split('|')[1:]
@@ -107,7 +107,7 @@ class LSV(object):
         return self.coords
 
     def get_junctions_list(self):
-        return self.coverage
+        return self.junctions
 
     def is_Ssource(self):
         return bool(self.type == SSOURCE)
@@ -309,20 +309,9 @@ class LSV(object):
 
         return splice_lsv
 
-    def simplify(self, threshold=0.001):
-        junctions = self.coverage.sum(axis=1)
-        max_cov = junctions.max()
-        indexes = []
-        for idx, ii in enumerate(junctions):
-            ratio = float(ii)/max
-            if ratio <= threshold:
-                indexes.append(ratio)
-
-        self.coverage = np.delete(self.coverage, indexes, axis=0)
-
-
     def is_equivalent(self, variant):
-        jlist1 = sorted(self.coverage)
+
+        jlist1 = sorted(self.junctions)
         jlist2 = sorted(variant.junctions)
         if self.type == variant.type:
             return False
@@ -330,8 +319,8 @@ class LSV(object):
 
     def contained(self, variant):
         res = True
-        jlist1 = sorted(self.coverage)
-        jlist2 = sorted(variant.coverage)
+        jlist1 = sorted(self.junctions)
+        jlist2 = sorted(variant.junctions)
         if self.type == variant.type:
             return False
         if np.array_equal(jlist1, jlist2):
@@ -397,10 +386,9 @@ def extract_gff(list_lsv, out_dir):
     for name, lsv_l in list_lsv.items():
         for lsv in lsv_l:
             trans = []
-            jlist = lsv.coverage
+            jlist = lsv.junctions
             lsv_coord = lsv.get_coordinates()
-            if len(jlist) < 2:
-                continue
+
             gne = jlist[0].get_gene()
             chrom = gne.get_chromosome()
             strand = gne.get_strand()
@@ -472,17 +460,17 @@ class MajiqLsv(object):
         self.id = lsv_obj.id
         self.type = lsv_obj.ext_type
         self.iretention = lsv_obj.intron_retention
-        self.junction_list = scipy.sparse.lil_matrix((lsv_obj.coverage.shape[0], (majiq_config.readLen - 16) + 1),
+        self.junction_list = scipy.sparse.lil_matrix((lsv_obj.junctions.shape[0], (majiq_config.readLen - 16) + 1),
                                                      dtype=np.float)
         self.junction_id = []
 
         if majiq_config.gcnorm:
-            self.gc_factor = scipy.sparse.lil_matrix((lsv_obj.coverage.shape[0], (majiq_config.readLen - 16) + 1),
+            self.gc_factor = scipy.sparse.lil_matrix((lsv_obj.junctions.shape[0], (majiq_config.readLen - 16) + 1),
                                                      dtype=np.dtype('float'))
         else:
             self.gc_factor = None
 
-        for idx, junc in enumerate(lsv_obj.coverage):
+        for idx, junc in enumerate(lsv_obj.junctions):
             self.junction_list[idx, :] = junc.coverage[exp_idx, :]
             self.junction_id.append(junc.get_id())
             if majiq_config.gcnorm:
