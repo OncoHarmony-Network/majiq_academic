@@ -9,7 +9,7 @@ from scipy import interpolate
 from scipy.stats.mstats_basic import mquantiles
 
 import majiq.src.config as majiq_config
-from constants import *
+from majiq.src.constants import *
 from majiq.src import polyfitnb as majiqfit
 
 #
