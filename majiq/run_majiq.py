@@ -3,7 +3,7 @@ from majiq.src.build import build
 from majiq.src.calc_psi import calcpsi
 # from majiq.src.deltapsi import deltapair, multi_dpsi
 
-VERSION = '0.9'
+VERSION = '1.0.0'
 
 
 def new_subparser():

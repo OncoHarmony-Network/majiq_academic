@@ -95,6 +95,27 @@ def _check_read(read):
     return __is_unique(read) and _match_strand(read, gg_strand)
 
 
+# def __gc_content_per_file(ff):
+#
+#         samfile = pysam.AlignmentFile(ff, "rb")
+#         for chrom, ll in all_genes.items():
+#             for strand, ll2 in ll.items():
+#                 for gg in ll2:
+#                     gg_strand = gg.strand
+#                     for ex in gg.get_exon_list():
+#                         gc_val = ex.get_gc_content()
+#                         st, end = ex.get_coordinates()
+#                         if gc_val == 0 or end - st < 30:
+#                             continue
+#                         nreads = samfile.count(reference=gg.get_chromosome(), start=st, end=end,
+#                                                until_eof=False, read_callback=_check_read)
+#                         if nreads > 0:
+#                             ex.set_in_data()
+#                         gc_pairs['GC'][exp_idx].append(gc_val)
+#                         gc_pairs['COV'][exp_idx].append(nreads)
+#         samfile.close()
+
+
 def get_exon_gc_content(gc_pairs, sam_list, all_genes):
 
     global gg_strand
