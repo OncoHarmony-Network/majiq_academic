@@ -1,5 +1,6 @@
 from setuptools import setup, find_packages
 
+#Values
 setup(
     name="majiq",
     packages=find_packages(),
@@ -11,7 +12,7 @@ setup(
     keywords=['rna', 'splicing', 'psi', 'splicegraph'],
     license='LICENSE.txt',
     include_package_data=True,
-    #install_requires=['numpy', 'scipy', 'matplotlib', 'multiprocessing'],
+    ##install_requires=['numpy', 'scipy', 'matplotlib', 'multiprocessing'],
     entry_points={'console_scripts': ['majiq = majiq.run_majiq:main', 'voila = voila.run_voila:main']},
     zip_safe=False,
     classifiers=[
