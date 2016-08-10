@@ -95,50 +95,39 @@ def _check_read(read):
     return __is_unique(read) and _match_strand(read, gg_strand)
 
 
-# def __gc_content_per_file(ff):
-#
-#         samfile = pysam.AlignmentFile(ff, "rb")
-#         for chrom, ll in all_genes.items():
-#             for strand, ll2 in ll.items():
-#                 for gg in ll2:
-#                     gg_strand = gg.strand
-#                     for ex in gg.get_exon_list():
-#                         gc_val = ex.get_gc_content()
-#                         st, end = ex.get_coordinates()
-#                         if gc_val == 0 or end - st < 30:
-#                             continue
-#                         nreads = samfile.count(reference=gg.get_chromosome(), start=st, end=end,
-#                                                until_eof=False, read_callback=_check_read)
-#                         if nreads > 0:
-#                             ex.set_in_data()
-#                         gc_pairs['GC'][exp_idx].append(gc_val)
-#                         gc_pairs['COV'][exp_idx].append(nreads)
-#         samfile.close()
+def __gc_content_per_file(args_vals, gc_pairs, all_genes):
+
+    ff, exp_idx = args_vals
+
+    samfile = pysam.AlignmentFile(ff, "rb")
+    for chrom, ll in all_genes.items():
+        for strand, ll2 in ll.items():
+            for gg in ll2:
+                gg_strand = gg.strand
+                for ex in gg.get_exon_list():
+                    gc_val = ex.get_gc_content()
+                    st, end = ex.get_coordinates()
+                    if gc_val == 0 or end - st < 30:
+                        continue
+                    nreads = samfile.count(reference=gg.get_chromosome(), start=st, end=end,
+                                           until_eof=False, read_callback=_check_read)
+                    if nreads > 0:
+                        ex.set_in_data()
+                    gc_pairs['GC'][exp_idx].append(gc_val)
+                    gc_pairs['COV'][exp_idx].append(nreads)
+    samfile.close()
 
 
 def get_exon_gc_content(gc_pairs, sam_list, all_genes):
+    import multiprocessing as mp
 
     global gg_strand
     gc_pairs['GC'] = [[] for xx in xrange(majiq_config.num_experiments)]
     gc_pairs['COV'] = [[] for xx in xrange(majiq_config.num_experiments)]
-    for exp_idx, ff in enumerate(sam_list):
-        samfile = pysam.AlignmentFile(ff, "rb")
-        for chrom, ll in all_genes.items():
-            for strand, ll2 in ll.items():
-                for gg in ll2:
-                    gg_strand = gg.strand
-                    for ex in gg.get_exon_list():
-                        gc_val = ex.get_gc_content()
-                        st, end = ex.get_coordinates()
-                        if gc_val == 0 or end - st < 30:
-                            continue
-                        nreads = samfile.count(reference=gg.get_chromosome(), start=st, end=end,
-                                               until_eof=False, read_callback=_check_read)
-                        if nreads > 0:
-                            ex.set_in_data()
-                        gc_pairs['GC'][exp_idx].append(gc_val)
-                        gc_pairs['COV'][exp_idx].append(nreads)
-        samfile.close()
+    pool = mp.Pool(processes=majiq_config.nthreads, maxtasksperchild=1)
+    for filename, ff in enumerate(sam_list):
+        pool.map_async(__gc_content_per_file, majiq_utils.chunks(sam_list, extra=range(len(sam_list))))
+
 
 
 def rnaseq_intron_retention(gne, samfile_list, chnk, permissive=True, nondenovo=False, logging=None):
@@ -357,7 +346,8 @@ def read_sam_or_bam(gne, samfile_list, counter, nondenovo=False, info_msg='0', l
                 if junc_start - r_start > readlen:
                     r_start_offset = junc_list[0][0] - r_start
                     r_start = junc_start - r_start_offset
-
+                    if junc_start - r_start >= readlen - MIN_BP_OVERLAP or junc_start - r_start <= MIN_BP_OVERLAP:
+                        continue
                 elif junc_start - r_start >= readlen - MIN_BP_OVERLAP or junc_start - r_start <= MIN_BP_OVERLAP:
                     continue
 

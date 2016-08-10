@@ -192,7 +192,7 @@ class Builder(BasicPipeline):
         if majiq_config.gcnorm:
             vfunc_gc = majiq_norm.gc_normalization(gc_pairs, logger)
         else:
-            vfunc_gc = None
+            vfunc_gc = [None] * majiq_config.num_experiments
 
         majiq_utils.monitor('AFTER READ GFF')
 

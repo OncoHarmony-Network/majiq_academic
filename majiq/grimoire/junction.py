@@ -175,7 +175,8 @@ class Junction:
                 self.coverage[exp_idx, left_ind] = -1
             self.gc_content[0, left_ind] = gc
         except:
-            print self.gene_name, exp_idx, left_ind,
+            print self.gene_name, start, exp_idx, left_ind
+            raise
 
     def reset_coverage(self, exp_idx):
         self.coverage[exp_idx, :] = 0
