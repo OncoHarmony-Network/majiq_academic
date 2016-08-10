@@ -122,7 +122,7 @@ def get_exon_gc_content(gc_pairs, sam_list, all_genes):
 def rnaseq_intron_retention(gne, samfile_list, chnk, permissive=True, nondenovo=False, logging=None):
 
     # filenames, gene_list, chnk, permissive=True, nondenovo=False, logging=None)
-    num_bins = 10
+    num_bins = NUM_INTRON_BINS
     intron_list = gne.get_all_introns()
     strand = gne.get_strand()
     chrom = gne.get_chromosome()
@@ -136,7 +136,7 @@ def rnaseq_intron_retention(gne, samfile_list, chnk, permissive=True, nondenovo=
         if intron_len <= 0:
             continue
 
-        if intron_len <= 1000:
+        if intron_len <= MIN_INTRON_LEN:
             nchunks = 1
         else:
             nchunks = num_bins
@@ -196,12 +196,12 @@ def rnaseq_intron_retention(gne, samfile_list, chnk, permissive=True, nondenovo=
                     ng = read.seq.count('g') + read.seq.count('G')
                     gc_content = float(nc + ng) / float(len(read.seq))
                     readlen = len(read.seq)
-                    offset = readlen - 8
+                    offset = readlen - MIN_BP_OVERLAP
 
                     if intron_start - r_start > readlen:
-                        r_start = intron_start - (readlen - 16) - 1
+                        r_start = intron_start - (readlen - MIN_BP_OVERLAP*2) - 1
 
-                    if r_start < ex1_end - 8:
+                    if r_start < ex1_end - MIN_BP_OVERLAP:
                         if junc1 is None:
                             junc1 = Junction(ex1_end, intron_start, exon1, None, gne, retrieve=True)
                         junc1.update_junction_read(exp_index, nreads, r_start, gc_content, unique)
@@ -333,11 +333,13 @@ def read_sam_or_bam(gne, samfile_list, counter, nondenovo=False, info_msg='0', l
             readlen = len(read.seq)
             for (junc_start, junc_end) in junc_list:
                 if junc_start - r_start > readlen:
-                    r_start = junc_start - (readlen - 16) - 1
-                elif junc_start - r_start >= readlen - 8 or junc_start - r_start <= 8:
+                    # r_start = junc_start - (readlen - MIN_BP_OVERLAP*2) - 1
+                    r_start = junc_list[0][0] - (readlen - MIN_BP_OVERLAP*2) - 1
+
+                elif junc_start - r_start >= readlen - MIN_BP_OVERLAP or junc_start - r_start <= MIN_BP_OVERLAP:
                     continue
 
-                if junc_end - junc_start < 10:
+                if junc_end - junc_start < MIN_JUNC_LENGTH:
                     counter[0] += 1
                     continue
 
@@ -605,10 +607,7 @@ def load_data_lsv(path, group_name, logger=None):
     try:
         for lsvid in data['LSVs'].keys():
             lsv = data['LSVs/%s' % lsvid]
-            try:
-                lsv_info.append([lsv.attrs['coords'], lsv.attrs['id'], lsv.attrs['type'], lsv['visuals']])
-            except AttributeError, e:
-                lsv_info.append([lsv.attrs['coords'], lsv.attrs['id'], lsv.attrs['type']])
+            lsv_info.append([lsv.attrs['id'], lsv.attrs['type'], lsv['visuals']])
 
             lsv_cov_list.append(data[LSV_JUNCTIONS_DATASET_NAME][lsv.attrs['coverage']])
 
@@ -617,6 +616,10 @@ def load_data_lsv(path, group_name, logger=None):
         raise
 
     return meta_info, [lsv_cov_list, lsv_info]
+
+
+def load_lsvgraphic_from_majiq(h5df_grp, lsv_id):
+    return h5df_grp['/%s/visuals' % lsv_id]
 
 
 def dump_lsvs_voila(pickle_path, posterior_matrix, lsvs_info, meta_info, psi_list1=None, psi_list2=None):

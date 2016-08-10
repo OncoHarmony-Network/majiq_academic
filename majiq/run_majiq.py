@@ -164,7 +164,7 @@ def main():
     parser_preprocess.set_defaults(func=build)
 
     parser_calcpsi = subparsers.add_parser('psi', help="Calculate PSI values for N experiments, given a folder of "
-                                                       "preprocessed events by 'old_majiq preprocess' or SAM/BAM files",
+                                                       "preprocessed events by 'majiq preprocess' or SAM/BAM files",
                                            parents=[common, psi, psianddelta])
     parser_calcpsi.set_defaults(func=calcpsi)
 

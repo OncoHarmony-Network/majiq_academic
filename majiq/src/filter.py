@@ -24,7 +24,8 @@ def filter_message(when, value, logger, junc):
             logger.debug(message)
 
 
-def quantifiable_in_group_to_hdf5(hdf5_p, list_of_experiments, minnonzero, min_reads, effective_readlen, filter_vals=None, logger=None):
+def quantifiable_in_group_to_hdf5(hdf5_p, list_of_experiments, minnonzero, min_reads, effective_readlen,
+                                  filter_vals=None, logger=None):
     logger.debug("Quantifible filter...")
     nexp = len(list_of_experiments)
 
@@ -37,20 +38,20 @@ def quantifiable_in_group_to_hdf5(hdf5_p, list_of_experiments, minnonzero, min_r
         temp = lsv_quantifiable(exp, minnonzero, min_reads, filter_vals, logger)
         for ldx, lsv in enumerate(temp[1]):
             if not lsv[1] in filt_exp:
-                filt_exp[lsv[1]] = 0
-            filt_exp[lsv[1]] += 1
+                filt_exp[lsv[0]] = 0
+            filt_exp[lsv[0]] += 1
 
     tlb = {}
     info_tlb = {}
     info_tlb2 = {}
     for idx, exp in enumerate(list_of_experiments):
         for idx_lsv, lsv in enumerate(exp[1]):
-            if not lsv[1] in tlb:
-                tlb[lsv[1]] = [None] * nexp
+            if not lsv[0] in tlb:
+                tlb[lsv[0]] = [None] * nexp
                 nways = len(exp[0][idx_lsv])
-                info_tlb[lsv[1]] = lsv
-                info_tlb2[lsv[1]] = np.zeros(shape=exp[0][idx_lsv].shape)
-            tlb[lsv[1]][idx] = idx_lsv
+                info_tlb[lsv[0]] = lsv
+                info_tlb2[lsv[0]] = np.zeros(shape=exp[0][idx_lsv].shape)
+            tlb[lsv[0]][idx] = idx_lsv
 
     # filtered = []
     # filtered_info = []
@@ -67,13 +68,14 @@ def quantifiable_in_group_to_hdf5(hdf5_p, list_of_experiments, minnonzero, min_r
         if ii not in filt_exp or filt_exp[ii] < filtr:
             continue
 
-        type_lsv = info_tlb[ii][2]
+        type_lsv = info_tlb[ii][1]
         list_lsv.append(ii)
         lsv_idx += 1
         h_lsv = hdf5_p.create_group(ii)
         h_lsv.attrs['id'] = ii
-        h_lsv.attrs['coords'] = info_tlb[ii][0]
         h_lsv.attrs['type'] = type_lsv
+#        h_lsv['visuals'] = info_tlb[ii][2]
+        info_tlb[ii][2].copy(info_tlb[ii][2], h_lsv, name='visuals')
         #h_lsv['visuals'] = info_tlb[ii][3]
         all_vals = []
         for idx, exp in enumerate(list_of_experiments):

@@ -2,7 +2,7 @@ import random
 from numpy.ma import masked_less
 import numpy as np
 from scipy.stats import nbinom, poisson
-import old_majiq.src.plotting as mplot
+import majiq.src.plotting as mplot
 
 def get_ecdf(pvalues):
     # print sorted(pvalues)

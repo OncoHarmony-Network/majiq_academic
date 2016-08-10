@@ -68,7 +68,7 @@ class GeneGraphic(object):
 
     def to_hdf5(self, hdf5grps, fromlsv=False):
         if fromlsv:
-            newid = "visuals/%s" % self.id
+            newid = "visuals"
         else:
             newid = self.id
         h_gen = hdf5grps.create_group(newid)

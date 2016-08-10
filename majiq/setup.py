@@ -1,18 +1,18 @@
 from setuptools import setup, find_packages
 
 setup(
-    name="old_majiq",
+    name="majiq",
     packages=find_packages(),
-    version="0.9.1-hdf5",
+    version="1.0.0",
     description="MAJIQ",
     author='BioCiphers Lab',
-    author_email='old_majiq@biociphers.org',
+    author_email='majiq@biociphers.org',
     url='https://biociphers.org',
     keywords=['rna', 'splicing', 'psi', 'splicegraph'],
     license='LICENSE.txt',
     include_package_data=True,
     #install_requires=['numpy', 'scipy', 'matplotlib', 'multiprocessing'],
-    entry_points={'console_scripts': ['old_majiq = old_majiq.run_majiq:main', 'voila = voila.run_voila:main']},
+    entry_points={'console_scripts': ['majiq = majiq.run_majiq:main', 'voila = voila.run_voila:main']},
     zip_safe=False,
     classifiers=[
         'Development Status :: 4 - Beta',

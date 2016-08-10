@@ -349,6 +349,7 @@ class Multi_Deltapair(BasicPipeline):
                     if self.nthreads == 1:
                         pipe.parallel_lsv_child_calculation(deltapsi_quantify,
                                                             [out_file, dpsi_prior_name, False],
+
                                                             outfdir,
                                                             dpsi_name,
                                                             nthrd)

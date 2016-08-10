@@ -525,7 +525,7 @@ def parse_input(args):
         render_summary(output_dir, output_html, {'lsvs': lsvs_dict, 'sample_names': sample_names, 'cond_pair': cond_pair, 'thres': thres_change}, type_summary, logger=logger)
     #    return
 
-    InputParsed = namedtuple('InputParsed' , 'output_dir output_html majiq_output type_summary threshold meta_postprocess pairwise_dir logger')
+    InputParsed = namedtuple('InputParsed', 'output_dir output_html majiq_output type_summary threshold meta_postprocess pairwise_dir logger')
     return InputParsed(output_dir=output_dir, output_html=output_html, majiq_output=majiq_output,
                        type_summary=type_summary, threshold=threshold, meta_postprocess=meta_postprocess,
                        pairwise_dir=pairwise, logger=logger)

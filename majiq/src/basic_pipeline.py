@@ -1,5 +1,5 @@
 from majiq.src.utils import create_if_not_exists
-import old_majiq.src.io as majiq_io
+import majiq.src.io as majiq_io
 from majiq.src.polyfitnb import fit_nb
 import abc
 import numpy as np
