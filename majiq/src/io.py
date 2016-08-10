@@ -140,6 +140,7 @@ def get_exon_gc_content(gc_pairs, sam_list, all_genes):
                         gc_pairs['COV'][exp_idx].append(nreads)
         samfile.close()
 
+
 def rnaseq_intron_retention(gne, samfile_list, chnk, permissive=True, nondenovo=False, logging=None):
 
     # filenames, gene_list, chnk, permissive=True, nondenovo=False, logging=None)

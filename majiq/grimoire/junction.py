@@ -167,12 +167,15 @@ class Junction:
         self.transcript_id_list.append(trnscrpt.get_id())
 
     def update_junction_read(self, exp_idx, read_n, start, gc, unique):
-        left_ind = majiq_config.readLen - (self.start - start) - MIN_BP_OVERLAP + 1
-        if unique:
-            self.coverage[exp_idx, left_ind] += read_n
-        else:
-            self.coverage[exp_idx, left_ind] = -1
-        self.gc_content[0, left_ind] = gc
+        try:
+            left_ind = majiq_config.readLen - (self.start - start) - MIN_BP_OVERLAP + 1
+            if unique:
+                self.coverage[exp_idx, left_ind] += read_n
+            else:
+                self.coverage[exp_idx, left_ind] = -1
+            self.gc_content[0, left_ind] = gc
+        except:
+            print self.gene_name, exp_idx, left_ind,
 
     def reset_coverage(self, exp_idx):
         self.coverage[exp_idx, :] = 0
