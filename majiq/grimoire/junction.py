@@ -2,6 +2,7 @@ import numpy as np
 import scipy.sparse
 
 import majiq.src.config as majiq_config
+from majiq.src.constants import *
 
 
 class Junction:
@@ -166,7 +167,7 @@ class Junction:
         self.transcript_id_list.append(trnscrpt.get_id())
 
     def update_junction_read(self, exp_idx, read_n, start, gc, unique):
-        left_ind = majiq_config.readLen - (self.start - start) - 8 + 1
+        left_ind = majiq_config.readLen - (self.start - start) - MIN_BP_OVERLAP + 1
         if unique:
             self.coverage[exp_idx, left_ind] += read_n
         else:

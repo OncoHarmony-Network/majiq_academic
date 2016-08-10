@@ -193,7 +193,7 @@ class DeltaPsi(BasicPipeline):
         lock_arr = [mp.Lock() for xx in range(self.nthreads)]
         q = mp.Queue()
         pool = mp.Pool(processes=self.nthreads, initializer=quantification_init,
-                       initargs=[q, lock_arr, self.output, self.silent, self.debug, self.nbins, self.m, self.k,
+                       initargs=[q, lock_arr, self.output, self.names, self.silent, self.debug, self.nbins, self.m, self.k,
                                  self.discardzeros, self.trimborder], maxtasksperchild=1)
         lchnksize = max(len(list_of_lsv)/self.nthreads, 1)
         [xx.acquire() for xx in lock_arr]

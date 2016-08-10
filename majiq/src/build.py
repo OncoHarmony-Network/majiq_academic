@@ -210,5 +210,5 @@ class Builder(BasicPipeline):
         pool.close()
         self.queue_manager(lock_array, q, vfunc_gc=vfunc_gc, logger=logger)
         pool.join()
-        self.logger.info("MAJIQ Builder is ended succesfully!")
-        self.logger.info("Alakazam! Done.")
+        logger.info("MAJIQ Builder is ended succesfully!")
+        logger.info("Alakazam! Done.")

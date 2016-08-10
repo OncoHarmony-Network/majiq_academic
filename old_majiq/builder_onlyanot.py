@@ -8,9 +8,9 @@ from multiprocessing import current_process
 import numpy as np
 
 import majiq.grimoire.lsv as majiq_lsv
+import majiq.src.io_utils
 import old_majiq.grimoire.exon as majiq_exons
 import old_majiq.grimoire.junction as majiq_junction
-import old_majiq.src.io_utils
 import old_majiq.src.voila_wrapper
 from old_majiq.grimoire.gene import recreate_gene_tlb
 
@@ -136,7 +136,7 @@ def merge_and_create_majiq_file(chr_list, pref_file):
             for chnk in range(config.num_final_chunks):
                 temp_dir = "%s/tmp/chunk_%s" % (config.outDir, chnk)
                 temp_filename = '%s/%s.splicegraph.pkl' % (temp_dir, config.exp_list[exp_idx])
-                visual_gene_list = old_majiq.src.io_utils.load_bin_file(temp_filename)
+                visual_gene_list = majiq.src.io_utils.load_bin_file(temp_filename)
                 all_visual.append(visual_gene_list)
             fname = '%s/%s.splicegraph' % (config.outDir, config.exp_list[exp_idx])
             visual = np.concatenate(all_visual)
@@ -147,7 +147,7 @@ def merge_and_create_majiq_file(chr_list, pref_file):
             for chnk in range(config.num_final_chunks):
                 temp_dir = "%s/tmp/chunk_%s" % (config.outDir, chnk)
                 filename = "%s/%s.old_majiq.pkl" % (temp_dir, config.exp_list[exp_idx])
-                temp_table = old_majiq.src.io_utils.load_bin_file(filename)
+                temp_table = majiq.src.io_utils.load_bin_file(filename)
                 as_table.append(temp_table[0])
                 nonas_table.append(temp_table[1])
 
@@ -265,7 +265,7 @@ def main(params):
     logger.info("Command: %s" % params)
 
     majiq_io.read_gff(params.transcripts, None, 1, logging=logger)
-    chr_list = old_majiq.src.io_utils.load_bin_file("%s/tmp/chromlist.pkl" % config.outDir)
+    chr_list = majiq.src.io_utils.load_bin_file("%s/tmp/chromlist.pkl" % config.outDir)
 
     for chnk in range(config.num_final_chunks):
 
@@ -305,7 +305,7 @@ def main(params):
     for chnk in range(config.num_final_chunks):
         temp_dir = "%s/tmp/chunk_%s" % (config.outDir, chnk)
         yfile = '%s/temp_gff.pkl' % temp_dir
-        gff_list = old_majiq.src.io_utils.load_bin_file(yfile)
+        gff_list = majiq.src.io_utils.load_bin_file(yfile)
         for gff in gff_list:
             fp.write("%s\n" % gff)
     fp.close()

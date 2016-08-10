@@ -45,11 +45,12 @@ class QueueMessage:
         return self.type
 
 
-def quantification_init(q, lock, output, silent, debug, nbins, m, k, discardzeros, trimborder):
+def quantification_init(q, lock, output, names, silent, debug, nbins, m, k, discardzeros, trimborder):
 
     quantification_init.lock = lock
     quantification_init.queue = q
     quantification_init.output = output
+    quantification_init.names = names
     quantification_init.silent = silent
     quantification_init.debug = debug
     quantification_init.nbins = nbins

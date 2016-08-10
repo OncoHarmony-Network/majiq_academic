@@ -333,8 +333,8 @@ def read_sam_or_bam(gne, samfile_list, counter, nondenovo=False, info_msg='0', l
             readlen = len(read.seq)
             for (junc_start, junc_end) in junc_list:
                 if junc_start - r_start > readlen:
-                    # r_start = junc_start - (readlen - MIN_BP_OVERLAP*2) - 1
-                    r_start = junc_list[0][0] - (readlen - MIN_BP_OVERLAP*2) - 1
+                    r_start_offset = junc_list[0][0] - r_start
+                    r_start = junc_start - r_start_offset
 
                 elif junc_start - r_start >= readlen - MIN_BP_OVERLAP or junc_start - r_start <= MIN_BP_OVERLAP:
                     continue
@@ -559,6 +559,7 @@ def read_gff(filename, list_of_genes, gc_pairs, sam_list, logging=None):
             except RuntimeWarning:
                 continue
 
+    majiq_utils.monitor('GC_CONTENT')
     if majiq_config.gcnorm:
         get_exon_gc_content(gc_pairs, sam_list, all_genes)
 
