@@ -15,7 +15,6 @@ from majiq.src.basic_pipeline import BasicPipeline, pipeline_run
 from majiq.src.constants import *
 from majiq.src.multiproc import QueueMessage, quantification_init, queue_manager
 from majiq.src.psi import prob_data_sample_given_psi, get_prior_params
-from majiq.src.utils import chunks
 
 
 ################################
