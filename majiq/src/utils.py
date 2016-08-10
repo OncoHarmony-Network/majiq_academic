@@ -262,5 +262,5 @@ def chunks(l, n, extra=None):
             else:
                 yield l[i:i+n]
     except:
-        print "ERROR: extra value has incorrect size"
+        print "ERROR: extra value has incorrect size %s", extra
         raise

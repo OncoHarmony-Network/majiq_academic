@@ -205,7 +205,7 @@ class Builder(BasicPipeline):
         lchnksize = max(len(list_of_genes)/self.nchunks, 1)
         [xx.acquire() for xx in lock_array]
 
-        pool.map_async(majiq_builder, majiq_utils.chunks(list_of_genes, lchnksize, extra=range(self.nthreads)))
+        pool.map_async(majiq_builder, majiq_utils.chunks(list_of_genes, lchnksize, extra=range(self.nchunks)))
         pool.close()
         self.queue_manager(lock_array, q, vfunc_gc=vfunc_gc, logger=logger)
         pool.join()
