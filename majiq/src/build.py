@@ -189,7 +189,10 @@ class Builder(BasicPipeline):
         p.start()
         p.join()
 
-        vfunc_gc = majiq_norm.gc_normalization(gc_pairs, logger)
+        if majiq_config.gcnorm:
+            vfunc_gc = majiq_norm.gc_normalization(gc_pairs, logger)
+        else:
+            vfunc_gc = None
 
         majiq_utils.monitor('AFTER READ GFF')
 
