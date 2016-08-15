@@ -149,14 +149,19 @@ class CalcPsi(BasicPipeline):
 
             print "KK", get_quantifier_norm_temp_files(self.output, self.name, replica_num)
             sys.stdout.flush()
-            effective_readlen = 61
+
             nlsvs = len(filtered_lsv[0])
+            effective_readlen = filtered_lsv[0][0].shape[1]
+            #effective_readlen = meta_info['effective_readlen']
+
+
             with h5py.File(get_quantifier_norm_temp_files(self.output, self.name, replica_num),
                            'w', compression='gzip', compression_opts=9) as f:
                 f.create_dataset(LSV_JUNCTIONS_DATASET_NAME,
                                  (nlsvs*2, effective_readlen),
                                  maxshape=(None, effective_readlen))
                 f.attrs['meta_info'] = meta_info['group']
+                #f.attrs['effective_readlen'] = effective_readlen
                 f.attrs['fitfunc'] = fitfunc
 
                 old_shape = nlsvs
@@ -186,7 +191,7 @@ class CalcPsi(BasicPipeline):
         except Exception as e:
             traceback.print_exc()
             sys.stdout.flush()
-            raise()
+            raise
 
 
     def calcpsi(self):
