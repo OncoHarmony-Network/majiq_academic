@@ -15,6 +15,7 @@ from majiq.src.basic_pipeline import BasicPipeline, pipeline_run
 from majiq.src.constants import *
 from majiq.src.multiproc import QueueMessage, quantification_init, queue_manager
 from majiq.src.psi import prob_data_sample_given_psi, get_prior_params
+import collections
 
 
 ################################
@@ -119,30 +120,12 @@ def psi_quantification(args_vals):
 ##
 
 
-def _unpickle_method(func_name, obj, cls):
-    for cls in cls.mro():
-        try:
-            func = cls.__dict__[func_name]
-        except KeyError:
-            pass
-        else:
-            break
-    return func.__get__(obj, cls)
-
-
-def _pickle_method(method):
-    func_name = method.im_func.__name__
-    obj = method.im_self
-    cls = method.im_class
-    return _unpickle_method, (func_name, obj, cls)
-
-import copy_reg
-import types
-
-copy_reg.pickle(types.MethodType, _pickle_method, _unpickle_method)
-
+conf = collections.namedtuple('conf', 'name output_dir silent debug markstacks')
 
 class CalcPsi(BasicPipeline):
+
+    def mro(self):
+        print 'KK'
 
     def run(self):
         self.calcpsi()
@@ -165,16 +148,15 @@ class CalcPsi(BasicPipeline):
 
         matched_lsv, matched_info = majiq_filter.quantifiable_in_group(filtered_lsv, self.minpos, self.minreads,
                                                                        logger=logger)
-
-    def parse_and_norm_majiq(self, fname, replica_num):
+    @staticmethod
+    def parse_and_norm_majiq(fname, replica_num, conf):
         try:
-            self.logger = majiq_utils.get_logger("%s/%s_%s.majiq.log" % (self.output, self.name, replica_num),
-                                                 silent=self.silent, debug=self.debug)
-            meta_info, lsv_junc = majiq_io.load_data_lsv(fname, self.name, self.logger)
-            fitfunc = self.fitfunc(majiq_io.get_const_junctions(fname, logging=self.logger))
-            filtered_lsv = majiq_norm.mark_stacks(lsv_junc, fitfunc, self.markstacks, self.logger)
+            logger = majiq_utils.get_logger("%s/%s_%s.majiq.log" % (conf.output_dir, conf.name, replica_num),
+                                                 silent=conf.silent, debug=conf.debug)
+            meta_info, lsv_junc = majiq_io.load_data_lsv(fname, conf.name, conf.logger)
+            fitfunc = self.fitfunc(majiq_io.get_const_junctions(fname, logging=logger))
+            filtered_lsv = majiq_norm.mark_stacks(lsv_junc, fitfunc, conf.markstacks, logger)
 
-            print "KK", get_quantifier_norm_temp_files(self.output, self.name, replica_num)
             sys.stdout.flush()
 
             nlsvs = len(filtered_lsv[0])
@@ -182,7 +164,7 @@ class CalcPsi(BasicPipeline):
             #effective_readlen = meta_info['effective_readlen']
 
 
-            with h5py.File(get_quantifier_norm_temp_files(self.output, self.name, replica_num),
+            with h5py.File(get_quantifier_norm_temp_files(conf.output, conf.name, replica_num),
                            'w', compression='gzip', compression_opts=9) as f:
                 f.create_dataset(LSV_JUNCTIONS_DATASET_NAME,
                                  (nlsvs*2, effective_readlen),
@@ -236,13 +218,18 @@ class CalcPsi(BasicPipeline):
         self.logger.info("GROUP: %s" % self.files)
         self.nbins = 40
 
+        logger = self.logger
+        self.logger = None
         pool = mp.Pool(processes=self.nthreads, maxtasksperchild=1)
 
         for fidx, fname in enumerate(self.files):
-            pool.apply_async(self.parse_and_norm_majiq, [fname, fidx])
+            pool.apply_async(self.parse_and_norm_majiq, [fname, fidx, conf(output_dir=self.output, name=self.name,
+                                                                           debug=self.debug, silent=self.silent,
+                                                                           markstacks=self.markstacks)])
             # self.parse_and_norm_majiq(fname, fidx)
         pool.close()
         pool.join()
+        self.logger = logger
 
         list_of_lsv = majiq_filter.merge_files_hdf5([get_quantifier_norm_temp_files(self.output, self.name, xx)
                                                      for xx in xrange(len(self.files))], self.minpos, self.minreads,
@@ -250,13 +237,11 @@ class CalcPsi(BasicPipeline):
 
         lock_arr = [mp.Lock() for xx in range(self.nthreads)]
         q = mp.Queue()
-        logger = self.logger
-        self.logger = None
         pool = mp.Pool(processes=self.nthreads if not self.only_boots else 1, initializer=quantification_init,
                        initargs=[q, lock_arr, self.output, self.name, self.silent, self.debug, self.nbins, self.m,
                                  self.k, self.discardzeros, self.trimborder, len(self.files), self.only_boots],
                        maxtasksperchild=1)
-        self.logger = logger
+
         lchnksize = max(len(list_of_lsv)/self.nthreads, 1) + 1
         [xx.acquire() for xx in lock_arr]
 
