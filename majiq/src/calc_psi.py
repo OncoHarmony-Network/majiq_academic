@@ -129,6 +129,7 @@ def _unpickle_method(func_name, obj, cls):
             break
     return func.__get__(obj, cls)
 
+
 def _pickle_method(method):
     func_name = method.im_func.__name__
     obj = method.im_self
@@ -167,6 +168,8 @@ class CalcPsi(BasicPipeline):
 
     def parse_and_norm_majiq(self, fname, replica_num):
         try:
+            self.logger = majiq_utils.get_logger("%s/%s_%s.majiq.log" % (self.output, self.name, replica_num),
+                                                 silent=self.silent, debug=self.debug)
             meta_info, lsv_junc = majiq_io.load_data_lsv(fname, self.name, self.logger)
             fitfunc = self.fitfunc(majiq_io.get_const_junctions(fname, logging=self.logger))
             filtered_lsv = majiq_norm.mark_stacks(lsv_junc, fitfunc, self.markstacks, self.logger)
@@ -247,10 +250,14 @@ class CalcPsi(BasicPipeline):
 
         lock_arr = [mp.Lock() for xx in range(self.nthreads)]
         q = mp.Queue()
+        logger = self.logger
+        self.logger = None
         pool = mp.Pool(processes=self.nthreads if not self.only_boots else 1, initializer=quantification_init,
-                       initargs=[q, lock_arr, self.output, self.name, self.silent, self.debug, self.nbins, self.m, self.k,
-                                 self.discardzeros, self.trimborder, len(self.files), self.only_boots], maxtasksperchild=1)
-        lchnksize = max(len(list_of_lsv)/self.nthreads, 1)+1
+                       initargs=[q, lock_arr, self.output, self.name, self.silent, self.debug, self.nbins, self.m,
+                                 self.k, self.discardzeros, self.trimborder, len(self.files), self.only_boots],
+                       maxtasksperchild=1)
+        self.logger = logger
+        lchnksize = max(len(list_of_lsv)/self.nthreads, 1) + 1
         [xx.acquire() for xx in lock_arr]
 
         if len(list_of_lsv) > 0:
