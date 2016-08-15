@@ -44,9 +44,9 @@ def psi_quantification(args_vals):
         for eidx in np.arange(num_exp):
             f_list.append(h5py.File(get_quantifier_norm_temp_files(quantification_init.output,
                                                                    quantification_init.names, eidx)))
-
-        res = [[] for xx in range(num_exp)]
-        info_res = [[] for xx in range(num_exp)]
+        if quantification_init.only_boots:
+            res = [[] for xx in range(num_exp)]
+            info_res = [[] for xx in range(num_exp)]
 
         for lidx, lsv_id in enumerate(list_of_lsv):
             if lidx % 50 == 0:
@@ -217,25 +217,15 @@ class CalcPsi(BasicPipeline):
         pool.close()
         pool.join()
 
-        # f = h5py.File(get_quantifier_temp_filename(self.output, self.name),
-        #               'w', compression='gzip', compression_opts=9)
-
         list_of_lsv = majiq_filter.merge_files_hdf5([get_quantifier_norm_temp_files(self.output, self.name, xx)
                                                      for xx in xrange(len(self.files))], self.minpos, self.minreads,
                                                     logger=self.logger)
-
-        # list_of_lsv = majiq_filter.quantifiable_in_group_to_hdf5(f, filtered_lsv, self.minpos, self.minreads,
-        #                                                          effective_readlen=61, logger=self.logger)
-
-        # f.attrs['num_exp'] = len(self.files)
-        # f.attrs['fitfunc'] = fitfunc
-        # f.close()
 
         lock_arr = [mp.Lock() for xx in range(self.nthreads)]
         q = mp.Queue()
         pool = mp.Pool(processes=self.nthreads, initializer=quantification_init,
                        initargs=[q, lock_arr, self.output, self.name, self.silent, self.debug, self.nbins, self.m, self.k,
-                                 self.discardzeros, self.trimborder, self.only_boots, len(self.files)], maxtasksperchild=1)
+                                 self.discardzeros, self.trimborder, len(self.files), self.only_boots], maxtasksperchild=1)
         lchnksize = max(len(list_of_lsv)/self.nthreads, 1)+1
         [xx.acquire() for xx in lock_arr]
 
