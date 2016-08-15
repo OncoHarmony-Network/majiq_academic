@@ -204,15 +204,15 @@ class CalcPsi(BasicPipeline):
         pool = mp.Pool(processes=self.nthreads, maxtasksperchild=1)
 
         for fidx, fname in enumerate(self.files):
-            # pool.apply_async(CalcPsi.parse_and_norm_majiq, [fname, fidx, conf(output_dir=self.output, name=self.name,
-            #                                                                debug=self.debug, silent=self.silent,
-            #                                                                markstacks=self.markstacks,
-            #                                                                fitfunc=self.fitfunc)])
-            #
-            CalcPsi.parse_and_norm_majiq(fname, fidx, conf(output_dir=self.output, name=self.name,
-                                                           debug=self.debug, silent=self.silent,
-                                                           markstacks=self.markstacks,
-                                                           fitfunc=self.fitfunc))
+            pool.apply_async(CalcPsi.parse_and_norm_majiq, [fname, fidx, conf(output_dir=self.output, name=self.name,
+                                                                           debug=self.debug, silent=self.silent,
+                                                                           markstacks=self.markstacks,
+                                                                           fitfunc=self.fitfunc)])
+
+            # CalcPsi.parse_and_norm_majiq(fname, fidx, conf(output_dir=self.output, name=self.name,
+            #                                                debug=self.debug, silent=self.silent,
+            #                                                markstacks=self.markstacks,
+            #                                                fitfunc=self.fitfunc))
         pool.close()
         pool.join()
         self.logger = logger
