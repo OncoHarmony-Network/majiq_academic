@@ -139,6 +139,7 @@ class Builder(BasicPipeline):
         while True:
             try:
                 val = result_queue.get(block=True, timeout=10)
+                #print "QUEUE SIZE", result_queue.rear+1
                 if val[0] == 0:
                     for jdx, exp_idx in enumerate(majiq_config.tissue_repl[val[2]]):
                         lsv_idx[exp_idx] = val[1].to_hdf5(hdf5grp=lsv_list[exp_idx],

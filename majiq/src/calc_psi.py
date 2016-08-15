@@ -212,8 +212,8 @@ class CalcPsi(BasicPipeline):
         pool = mp.Pool(processes=self.nthreads, maxtasksperchild=1)
 
         for fidx, fname in enumerate(self.files):
-            #pool.apply_async(self.parse_and_norm_majiq, [fname, fidx])
-            self.parse_and_norm_majiq(fname, fidx)
+            pool.apply_async(self.parse_and_norm_majiq, [fname, fidx])
+            # self.parse_and_norm_majiq(fname, fidx)
         pool.close()
         pool.join()
 
@@ -223,7 +223,7 @@ class CalcPsi(BasicPipeline):
 
         lock_arr = [mp.Lock() for xx in range(self.nthreads)]
         q = mp.Queue()
-        pool = mp.Pool(processes=self.nthreads, initializer=quantification_init,
+        pool = mp.Pool(processes=self.nthreads if not self.only_boots else 1, initializer=quantification_init,
                        initargs=[q, lock_arr, self.output, self.name, self.silent, self.debug, self.nbins, self.m, self.k,
                                  self.discardzeros, self.trimborder, len(self.files), self.only_boots], maxtasksperchild=1)
         lchnksize = max(len(list_of_lsv)/self.nthreads, 1)+1
