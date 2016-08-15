@@ -120,7 +120,7 @@ def psi_quantification(args_vals):
 ##
 
 
-conf = collections.namedtuple('conf', 'name output_dir silent debug markstacks')
+conf = collections.namedtuple('conf', 'name output_dir silent debug markstacks fitfunc')
 
 class CalcPsi(BasicPipeline):
 
@@ -130,47 +130,28 @@ class CalcPsi(BasicPipeline):
     def run(self):
         self.calcpsi()
 
-    def pre_psi(self, filename, logger=None):
-
-        if logger is None:
-            logger = majiq_utils.get_logger("%s/majiq.log" % self.output, silent=False)
-
-        self.logger = logger
-        num_exp = len(self.files)
-        meta_info = [0] * num_exp
-        filtered_lsv = [None] * num_exp
-        fitfunc = [None] * num_exp
-        for ii, fname in enumerate(self.files):
-            meta_info[ii], lsv_junc = majiq_io.load_data_lsv(fname, self.name, logger)
-            meta_info[ii], lsv_junc, const = majiq_io.get_const_junctions(fname, self.name, logger)
-            fitfunc[ii] = self.fitfunc(const[0])
-            filtered_lsv[ii] = majiq_norm.mark_stacks(lsv_junc, fitfunc[ii], self.markstacks, self.logger)
-
-        matched_lsv, matched_info = majiq_filter.quantifiable_in_group(filtered_lsv, self.minpos, self.minreads,
-                                                                       logger=logger)
     @staticmethod
-    def parse_and_norm_majiq(fname, replica_num, conf):
+    def parse_and_norm_majiq(fname, replica_num, config):
         try:
-            logger = majiq_utils.get_logger("%s/%s_%s.majiq.log" % (conf.output_dir, conf.name, replica_num),
-                                                 silent=conf.silent, debug=conf.debug)
-            meta_info, lsv_junc = majiq_io.load_data_lsv(fname, conf.name, conf.logger)
-            fitfunc = self.fitfunc(majiq_io.get_const_junctions(fname, logging=logger))
-            filtered_lsv = majiq_norm.mark_stacks(lsv_junc, fitfunc, conf.markstacks, logger)
+            logger = majiq_utils.get_logger("%s/%s_%s.majiq.log" % (config.output_dir, config.name, replica_num),
+                                            silent=config.silent, debug=config.debug)
+            meta_info, lsv_junc = majiq_io.load_data_lsv(fname, config.name, logger)
+            fitfunc = config.fitfunc(majiq_io.get_const_junctions(fname, logging=logger))
+            filtered_lsv = majiq_norm.mark_stacks(lsv_junc, fitfunc, config.markstacks, logger)
 
             sys.stdout.flush()
 
             nlsvs = len(filtered_lsv[0])
             effective_readlen = filtered_lsv[0][0].shape[1]
-            #effective_readlen = meta_info['effective_readlen']
+            # effective_readlen = meta_info['effective_readlen']
 
-
-            with h5py.File(get_quantifier_norm_temp_files(conf.output, conf.name, replica_num),
+            with h5py.File(get_quantifier_norm_temp_files(config.output_dir, config.name, replica_num),
                            'w', compression='gzip', compression_opts=9) as f:
                 f.create_dataset(LSV_JUNCTIONS_DATASET_NAME,
                                  (nlsvs*2, effective_readlen),
                                  maxshape=(None, effective_readlen))
                 f.attrs['meta_info'] = meta_info['group']
-                #f.attrs['effective_readlen'] = effective_readlen
+                # f.attrs['effective_readlen'] = effective_readlen
                 f.attrs['fitfunc'] = fitfunc
 
                 old_shape = nlsvs
@@ -223,10 +204,15 @@ class CalcPsi(BasicPipeline):
         pool = mp.Pool(processes=self.nthreads, maxtasksperchild=1)
 
         for fidx, fname in enumerate(self.files):
-            pool.apply_async(self.parse_and_norm_majiq, [fname, fidx, conf(output_dir=self.output, name=self.name,
-                                                                           debug=self.debug, silent=self.silent,
-                                                                           markstacks=self.markstacks)])
-            # self.parse_and_norm_majiq(fname, fidx)
+            # pool.apply_async(CalcPsi.parse_and_norm_majiq, [fname, fidx, conf(output_dir=self.output, name=self.name,
+            #                                                                debug=self.debug, silent=self.silent,
+            #                                                                markstacks=self.markstacks,
+            #                                                                fitfunc=self.fitfunc)])
+            #
+            CalcPsi.parse_and_norm_majiq(fname, fidx, conf(output_dir=self.output, name=self.name,
+                                                           debug=self.debug, silent=self.silent,
+                                                           markstacks=self.markstacks,
+                                                           fitfunc=self.fitfunc))
         pool.close()
         pool.join()
         self.logger = logger

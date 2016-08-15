@@ -55,10 +55,12 @@ class BasicPipeline:
     def fitfunc(self, const_junctions):
         """Calculate the Negative Binomial function to sample from using the Constitutive events"""
         if self.debug:
-            self.logger.debug("Skipping fitfunc because --debug!")
+            if self.logger is not None:
+                self.logger.debug("Skipping fitfunc because --debug!")
             return np.poly1d([1, 0])
         else:
-            self.logger.debug("Fitting NB function with constitutive events...")
+            if self.logger is not None:
+                self.logger.debug("Fitting NB function with constitutive events...")
             return fit_nb(const_junctions, "%s/nbfit" % self.output, self.plotpath, logger=self.logger)
 
 
