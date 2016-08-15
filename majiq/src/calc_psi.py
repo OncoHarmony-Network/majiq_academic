@@ -121,7 +121,7 @@ def psi_quantification(args_vals):
 ##
 
 
-conf = collections.namedtuple('conf', 'name output_dir silent debug markstacks fitfunc')
+conf = collections.namedtuple('conf', 'name output_dir silent debug markstacks')
 
 class CalcPsi(BasicPipeline):
 
