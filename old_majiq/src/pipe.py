@@ -8,7 +8,7 @@ import scipy.misc
 import majiq.src.io_utils
 import majiq.src.sample as majiq_sample
 import old_majiq.src.io as majiq_io
-from majiq.src.psi import prob_data_sample_given_psi, __get_prior_params
+from majiq.src.psi import prob_data_sample_given_psi, get_prior_params
 from majiq.src.utils import get_logger
 
 

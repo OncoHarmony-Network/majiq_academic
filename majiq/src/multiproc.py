@@ -45,7 +45,8 @@ class QueueMessage:
         return self.type
 
 
-def quantification_init(q, lock, output, names, silent, debug, nbins, m, k, discardzeros, trimborder):
+def quantification_init(q, lock, output, names, silent, debug, nbins, m, k,
+                        discardzeros, trimborder, num_exp, only_boots):
 
     quantification_init.lock = lock
     quantification_init.queue = q
@@ -58,6 +59,8 @@ def quantification_init(q, lock, output, names, silent, debug, nbins, m, k, disc
     quantification_init.k = k
     quantification_init.discardzeros = discardzeros
     quantification_init.trimborder = trimborder
+    quantification_init.num_exp = num_exp
+    quantification_init.only_boots = only_boots
 
 
 def queue_manager(input_h5dfp, output_h5dfp, lock_array, result_queue, num_chunks, meta_info=None, logger=None):

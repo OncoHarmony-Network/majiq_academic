@@ -4,7 +4,7 @@ import os
 import sys
 import traceback
 import types
-
+import gc
 import h5py
 
 import io as majiq_io
@@ -84,7 +84,9 @@ def majiq_builder(args_vals):
             raise
 
         finally:
+            del gene_obj
             del majiq_config.gene_tlb[gne_id]
+            gc.collect()
 
     db_f.close()
     majiq_utils.monitor('CHILD %s:: WAITING' % chnk)
@@ -169,7 +171,6 @@ class Builder(BasicPipeline):
 
         majiq_utils.monitor('MASTER END')
 
-
     def builder(self, sam_list):
 
         logger = majiq_utils.get_logger("%s/majiq.log" % majiq_config.outDir, silent=False,
@@ -190,7 +191,18 @@ class Builder(BasicPipeline):
         p.join()
 
         if majiq_config.gcnorm:
+
+
+            pool = mp.Pool(processes=self.nthreads, maxtasksperchild=1)
+            lchnksize = max(len(sam_list)/self.nchunks, 1)
+            lchnksize = lchnksize if len(sam_list) % self.nchunks == 0 else lchnksize + 1
+            values = list(zip(range(len(sam_list)), sam_list))
+            for vals in majiq_utils.chunks(values, lchnksize):
+                pool.apply_async(majiq_io.gc_content_per_file, [vals, gc_pairs, majiq_config.outDir])
+            pool.close()
+            pool.join()
             vfunc_gc = majiq_norm.gc_normalization(gc_pairs, logger)
+
         else:
             vfunc_gc = [None] * majiq_config.num_experiments
 

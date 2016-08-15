@@ -97,6 +97,7 @@ def main():
                                   'to start from x=0, y=0')
     psianddelta.add_argument('--discardzeros', default=5, type=int, dest="discardzeros",
                              help='Discarding zeroes, up to a minimum of N positions per junction. [Default: 5]')
+    psianddelta.add_argument('--only_bootstrap', action='store_true', dest='only_boots', default=False)
 
     #deltapair and deltagroup flags
     delta = new_subparser()

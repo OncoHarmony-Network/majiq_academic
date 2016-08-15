@@ -82,14 +82,14 @@ def mark_stacks(lsv_list, fitfunc_r, pvalue_limit, logger=None):
     return lsv_list
 
 
-def gc_normalization(gc_pairs, logger):
+def gc_normalization(factor, meanbins, logger):
 
     logger.info("Gc Content normalization")
     factor, meanbins = gc_factor_calculation(gc_pairs, nbins=10)
     v_gcfactor_func = [None] * majiq_config.num_experiments
 
     for exp_n in xrange(majiq_config.num_experiments):
-        a = np.append(factor[exp_n], factor[exp_n][-1])
+        # a = np.append(factor[exp_n], factor[exp_n][-1])
         gc_factor = interpolate.interp1d(meanbins[exp_n], factor[exp_n], bounds_error=False, fill_value=1)
         v_gcfactor_func[exp_n] = np.vectorize(gc_factor)
 
@@ -122,54 +122,49 @@ def gc_normalization_old(lsv_list, gc_content_files, gc_pairs, logger):
 
 def gc_factor_calculation(gc_pairs, nbins=10):
 
-    local_meanbins = np.zeros(shape=(majiq_config.num_experiments, nbins),   dtype=np.dtype('float'))
-    local_factor = np.zeros(shape=(majiq_config.num_experiments, nbins),   dtype=np.dtype('float'))
+    local_meanbins = np.zeros(shape=(nbins),   dtype=np.dtype('float'))
+    local_factor = np.zeros(shape=(nbins),   dtype=np.dtype('float'))
 
-    for tissue, list_idx in majiq_config.tissue_repl.items():
-        for exp_n in list_idx:
-            count = gc_pairs['COV'][exp_n]
-            gc = gc_pairs['GC'][exp_n]
+    count = gc_pairs['COV']
+    gc = gc_pairs['GC']
 
-            if len(gc) == 0:
-                continue
+    #if len(gc) == 0: continue
 
-            count, gc = izip(*sorted(izip(count, gc), key=lambda x: x[1]))
+    count, gc = izip(*sorted(izip(count, gc), key=lambda x: x[1]))
 
-            num_regions = len(count)
-            nperbin = num_regions / nbins
+    num_regions = len(count)
+    nperbin = num_regions / nbins
 
-            quant_median = [0.0]*8
-            mean_bins = [0]*nbins
-            bins = [0]*nbins
+    quant_median = [0.0]*8
+    bins = [0]*nbins
 
-            for ii in range(nbins):
-                lb = ii * nperbin
-                if ii == nbins-1:
-                    ub = num_regions
-                else:
-                    ub = (ii+1) * nperbin
+    for ii in range(nbins):
+        lb = ii * nperbin
+        if ii == nbins-1:
+            ub = num_regions
+        else:
+            ub = (ii+1) * nperbin
 
-                a = np.asarray(count[lb:ub])
-                t = np.asarray(gc[lb:ub])
+        a = np.asarray(count[lb:ub])
+        t = np.asarray(gc[lb:ub])
 
-                mean_bins[ii] = np.mean(t)
-                bins[ii] = mquantiles(a, prob=np.arange(0.1, 0.9, 0.1))
+        local_meanbins[ii] = np.mean(t)
+        bins[ii] = mquantiles(a, prob=np.arange(0.1, 0.9, 0.1))
 
-            for qnt in range(8):
-                qnt_bns = np.ndarray(len(bins))
-                for idx, bb in enumerate(bins):
-                    qnt_bns[idx] = bb[qnt]
-                quant_median[qnt] = np.mean(qnt_bns)
+    for qnt in range(8):
+        qnt_bns = np.ndarray(len(bins))
+        for idx, bb in enumerate(bins):
+            qnt_bns[idx] = bb[qnt]
+        quant_median[qnt] = np.mean(qnt_bns)
 
-            gc_factor = np.zeros(nbins, dtype=np.dtype('float'))
-            for ii in range(nbins):
-                offst = np.zeros(len(quant_median), dtype=np.dtype('float'))
-                for idx, xx in enumerate(quant_median):
-                    offst[idx] = float(bins[ii][idx]) / float(xx)
-                gc_factor[ii] = 1/np.mean(offst)
+    for ii in range(nbins):
+        offst = np.zeros(len(quant_median), dtype=np.dtype('float'))
+        for idx, xx in enumerate(quant_median):
+            offst[idx] = float(bins[ii][idx]) / float(xx)
+        local_factor[ii] = 1/np.mean(offst)
 
-            local_meanbins[exp_n] = mean_bins
-            local_factor[exp_n] = gc_factor
+    # local_meanbins[exp_n] = mean_bins
+    # local_factor[exp_n] = gc_factor
 
     return local_factor, local_meanbins
 

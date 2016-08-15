@@ -15,9 +15,13 @@ from majiq.grimoire.junction import Junction
 import majiq.src.config as majiq_config
 import majiq.src.utils as majiq_utils
 
+from majiq.src.normalize import gc_factor_calculation
 from voila.io_voila import VoilaInput
 from voila.vlsv import VoilaLsv
 import pickle
+
+import traceback
+import sys
 
 # READING BAM FILES
 
@@ -95,38 +99,49 @@ def _check_read(read):
     return __is_unique(read) and _match_strand(read, gg_strand)
 
 
-def __gc_content_per_file(args_vals, gc_pairs, all_genes):
+def gc_content_per_file(args_vals, gc_pairs, outdir):
+    global gg_strand
+    try:
+        gc_pairs = {'GC': [], 'COV': []}
+        db_f = h5py.File(get_build_temp_db_filename(outdir))
+        for exp_idx, ff in args_vals:
+            samfile = pysam.AlignmentFile(ff, "rb")
+            for gene_name in db_f.keys():
+                chromsome = db_f[gene_name].attrs['chromosome']
+                gg_strand = db_f[gene_name].attrs['strand']
 
-    ff, exp_idx = args_vals
+                for ex in db_f[gene_name]['exons']:
+                    gc_val = db_f[gene_name]['exons/%s' % ex].attrs['gc_content']
+                    st = db_f[gene_name]['exons/%s' % ex].attrs['start']
+                    end = db_f[gene_name]['exons/%s' % ex].attrs['end']
 
-    samfile = pysam.AlignmentFile(ff, "rb")
-    for chrom, ll in all_genes.items():
-        for strand, ll2 in ll.items():
-            for gg in ll2:
-                gg_strand = gg.strand
-                for ex in gg.get_exon_list():
-                    gc_val = ex.get_gc_content()
-                    st, end = ex.get_coordinates()
                     if gc_val == 0 or end - st < 30:
                         continue
-                    nreads = samfile.count(reference=gg.get_chromosome(), start=st, end=end,
+                    nreads = samfile.count(reference=chromsome, start=st, end=end,
                                            until_eof=False, read_callback=_check_read)
-                    if nreads > 0:
-                        ex.set_in_data()
-                    gc_pairs['GC'][exp_idx].append(gc_val)
-                    gc_pairs['COV'][exp_idx].append(nreads)
-    samfile.close()
+                    # if nreads > 0:
+                    #     ex.set_in_data()
+                    gc_pairs['GC'].append(gc_val)
+                    gc_pairs['COV'].append(nreads)
+            samfile.close()
+
+            factor, meanbins = gc_factor_calculation(gc_pairs, nbins=10)
 
 
-def get_exon_gc_content(gc_pairs, sam_list, all_genes):
-    import multiprocessing as mp
+    except:
+        traceback.print_exc()
+        sys.stdout.flush()
+        raise
 
-    global gg_strand
-    gc_pairs['GC'] = [[] for xx in xrange(majiq_config.num_experiments)]
-    gc_pairs['COV'] = [[] for xx in xrange(majiq_config.num_experiments)]
-    pool = mp.Pool(processes=majiq_config.nthreads, maxtasksperchild=1)
-    for filename, ff in enumerate(sam_list):
-        pool.map_async(__gc_content_per_file, majiq_utils.chunks(sam_list, extra=range(len(sam_list))))
+# def get_exon_gc_content(gc_pairs, sam_list, all_genes):
+#     import multiprocessing as mp
+#
+#     global gg_strand
+#     gc_pairs['GC'] = [[] for xx in xrange(majiq_config.num_experiments)]
+#     gc_pairs['COV'] = [[] for xx in xrange(majiq_config.num_experiments)]
+#     pool = mp.Pool(processes=majiq_config.nthreads, maxtasksperchild=1)
+#     for filename, ff in enumerate(sam_list):
+#         pool.map_async(__gc_content_per_file, majiq_utils.chunks(sam_list, extra=range(len(sam_list))))
 
 
 
@@ -571,9 +586,9 @@ def read_gff(filename, list_of_genes, gc_pairs, sam_list, logging=None):
             except RuntimeWarning:
                 continue
 
-    majiq_utils.monitor('GC_CONTENT')
-    if majiq_config.gcnorm:
-        get_exon_gc_content(gc_pairs, sam_list, all_genes)
+    # majiq_utils.monitor('GC_CONTENT')
+    # if majiq_config.gcnorm:
+    #     get_exon_gc_content(gc_pairs, sam_list, all_genes)
 
     _prepare_and_dump(filename="%s/tmp/db.hdf5" % majiq_config.outDir, logging=logging)
     majiq_utils.monitor('POST_GFF')
@@ -632,7 +647,7 @@ def load_data_lsv(path, group_name, logger=None):
 
 
 def load_lsvgraphic_from_majiq(h5df_grp, lsv_id):
-    return h5df_grp['/%s/visuals' % lsv_id]
+    return h5df_grp['/LSV/%s/visuals' % lsv_id]
 
 
 def dump_lsvs_voila(pickle_path, posterior_matrix, lsvs_info, meta_info, psi_list1=None, psi_list2=None):
