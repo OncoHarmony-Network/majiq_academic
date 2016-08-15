@@ -6,6 +6,7 @@ import h5py
 import numpy as np
 import scipy.misc
 
+from majiq.src.polyfitnb import fit_nb
 import majiq.src.filter as majiq_filter
 import majiq.src.io as majiq_io
 import majiq.src.normalize as majiq_norm
@@ -136,7 +137,8 @@ class CalcPsi(BasicPipeline):
             logger = majiq_utils.get_logger("%s/%s_%s.majiq.log" % (config.output_dir, config.name, replica_num),
                                             silent=config.silent, debug=config.debug)
             meta_info, lsv_junc = majiq_io.load_data_lsv(fname, config.name, logger)
-            fitfunc = config.fitfunc(majiq_io.get_const_junctions(fname, logging=logger))
+            fitfunc = fit_nb(majiq_io.get_const_junctions(fname, logging=logger), "%s/nbfit" % config.output_dir,
+                             None, logger=logger)
             filtered_lsv = majiq_norm.mark_stacks(lsv_junc, fitfunc, config.markstacks, logger)
 
             sys.stdout.flush()
@@ -206,8 +208,7 @@ class CalcPsi(BasicPipeline):
         for fidx, fname in enumerate(self.files):
             pool.apply_async(CalcPsi.parse_and_norm_majiq, [fname, fidx, conf(output_dir=self.output, name=self.name,
                                                                            debug=self.debug, silent=self.silent,
-                                                                           markstacks=self.markstacks,
-                                                                           fitfunc=self.fitfunc)])
+                                                                           markstacks=self.markstacks)])
 
             # CalcPsi.parse_and_norm_majiq(fname, fidx, conf(output_dir=self.output, name=self.name,
             #                                                debug=self.debug, silent=self.silent,
