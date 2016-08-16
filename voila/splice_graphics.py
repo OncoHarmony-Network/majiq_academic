@@ -138,6 +138,7 @@ class ExonGraphic(object):
 
     def get_a5_list(self):
         return self.a5
+
     def get_coords(self):
         # Mask unkonwn start or ends
         def mask_unknown(coords):

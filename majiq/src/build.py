@@ -139,7 +139,7 @@ class Builder(BasicPipeline):
         while True:
             try:
                 val = result_queue.get(block=True, timeout=10)
-                print "QUEUE SIZE", result_queue.qsize()
+                # print "QUEUE SIZE", result_queue.qsize()
                 if val[0] == 0:
                     for jdx, exp_idx in enumerate(majiq_config.tissue_repl[val[2]]):
                         lsv_idx[exp_idx] = val[1].to_hdf5(hdf5grp=lsv_list[exp_idx],
@@ -192,8 +192,6 @@ class Builder(BasicPipeline):
         p.join()
 
         if majiq_config.gcnorm:
-
-
             pool = mp.Pool(processes=self.nthreads, maxtasksperchild=1)
             lchnksize = max(len(sam_list)/self.nchunks, 1)
             lchnksize = lchnksize if len(sam_list) % self.nchunks == 0 else lchnksize + 1
