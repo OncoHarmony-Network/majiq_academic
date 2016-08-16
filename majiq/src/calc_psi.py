@@ -123,68 +123,63 @@ def psi_quantification(args_vals):
 
 conf = collections.namedtuple('conf', 'name output_dir silent debug markstacks')
 
-class CalcPsi(BasicPipeline):
+def parse_and_norm_majiq(fname, replica_num, config):
+    try:
+        logger = majiq_utils.get_logger("%s/%s_%s.majiq.log" % (config.output_dir, config.name, replica_num),
+                                        silent=config.silent, debug=config.debug)
+        meta_info, lsv_junc = majiq_io.load_data_lsv(fname, config.name, logger)
+        fitfunc = fit_nb(majiq_io.get_const_junctions(fname, logging=logger), "%s/nbfit" % config.output_dir,
+                         None, logger=logger)
+        filtered_lsv = majiq_norm.mark_stacks(lsv_junc, fitfunc, config.markstacks, logger)
 
-    def mro(self):
-        print 'KK'
+        sys.stdout.flush()
+
+        nlsvs = len(filtered_lsv[0])
+        effective_readlen = filtered_lsv[0][0].shape[1]
+        # effective_readlen = meta_info['effective_readlen']
+
+        with h5py.File(get_quantifier_norm_temp_files(config.output_dir, config.name, replica_num),
+                       'w', compression='gzip', compression_opts=9) as f:
+            f.create_dataset(LSV_JUNCTIONS_DATASET_NAME,
+                             (nlsvs*2, effective_readlen),
+                             maxshape=(None, effective_readlen))
+            f.attrs['meta_info'] = meta_info['group']
+            # f.attrs['effective_readlen'] = effective_readlen
+            f.attrs['fitfunc'] = fitfunc
+
+            old_shape = nlsvs
+            lsv_idx = 0
+
+            for lidx, lsv in enumerate(filtered_lsv[0]):
+                h_lsv = f.create_group('LSV/%s' % filtered_lsv[1][lidx][0])
+                h_lsv.attrs['id'] = filtered_lsv[1][lidx][0]
+                h_lsv.attrs['type'] = filtered_lsv[1][lidx][1]
+                filtered_lsv[1][lidx][2].copy(filtered_lsv[1][lidx][2], h_lsv, name='visuals')
+
+                all_vals = filtered_lsv[0][lidx]
+                njunc = filtered_lsv[0][lidx].shape[0]
+
+                if lsv_idx + njunc > old_shape:
+                    shp = f[LSV_JUNCTIONS_DATASET_NAME].shape
+                    shp_new = shp[0] + nlsvs
+                    old_shape = shp_new
+                    f[LSV_JUNCTIONS_DATASET_NAME].resize((shp_new, effective_readlen))
+
+                f[LSV_JUNCTIONS_DATASET_NAME][lsv_idx:lsv_idx+njunc] = np.reshape(np.array(all_vals),
+                                                                                  (njunc, effective_readlen))
+                h_lsv.attrs['coverage'] = f[LSV_JUNCTIONS_DATASET_NAME].regionref[lsv_idx:lsv_idx + njunc]
+                lsv_idx += njunc
+
+            f[LSV_JUNCTIONS_DATASET_NAME].resize((lsv_idx, effective_readlen))
+    except Exception as e:
+        traceback.print_exc()
+        sys.stdout.flush()
+        raise
+
+class CalcPsi(BasicPipeline):
 
     def run(self):
         self.calcpsi()
-
-    @staticmethod
-    def parse_and_norm_majiq(fname, replica_num, config):
-        try:
-            logger = majiq_utils.get_logger("%s/%s_%s.majiq.log" % (config.output_dir, config.name, replica_num),
-                                            silent=config.silent, debug=config.debug)
-            meta_info, lsv_junc = majiq_io.load_data_lsv(fname, config.name, logger)
-            fitfunc = fit_nb(majiq_io.get_const_junctions(fname, logging=logger), "%s/nbfit" % config.output_dir,
-                             None, logger=logger)
-            filtered_lsv = majiq_norm.mark_stacks(lsv_junc, fitfunc, config.markstacks, logger)
-
-            sys.stdout.flush()
-
-            nlsvs = len(filtered_lsv[0])
-            effective_readlen = filtered_lsv[0][0].shape[1]
-            # effective_readlen = meta_info['effective_readlen']
-
-            with h5py.File(get_quantifier_norm_temp_files(config.output_dir, config.name, replica_num),
-                           'w', compression='gzip', compression_opts=9) as f:
-                f.create_dataset(LSV_JUNCTIONS_DATASET_NAME,
-                                 (nlsvs*2, effective_readlen),
-                                 maxshape=(None, effective_readlen))
-                f.attrs['meta_info'] = meta_info['group']
-                # f.attrs['effective_readlen'] = effective_readlen
-                f.attrs['fitfunc'] = fitfunc
-
-                old_shape = nlsvs
-                lsv_idx = 0
-
-                for lidx, lsv in enumerate(filtered_lsv[0]):
-                    h_lsv = f.create_group('LSV/%s' % filtered_lsv[1][lidx][0])
-                    h_lsv.attrs['id'] = filtered_lsv[1][lidx][0]
-                    h_lsv.attrs['type'] = filtered_lsv[1][lidx][1]
-                    filtered_lsv[1][lidx][2].copy(filtered_lsv[1][lidx][2], h_lsv, name='visuals')
-
-                    all_vals = filtered_lsv[0][lidx]
-                    njunc = filtered_lsv[0][lidx].shape[0]
-
-                    if lsv_idx + njunc > old_shape:
-                        shp = f[LSV_JUNCTIONS_DATASET_NAME].shape
-                        shp_new = shp[0] + nlsvs
-                        old_shape = shp_new
-                        f[LSV_JUNCTIONS_DATASET_NAME].resize((shp_new, effective_readlen))
-
-                    f[LSV_JUNCTIONS_DATASET_NAME][lsv_idx:lsv_idx+njunc] = np.reshape(np.array(all_vals),
-                                                                                      (njunc, effective_readlen))
-                    h_lsv.attrs['coverage'] = f[LSV_JUNCTIONS_DATASET_NAME].regionref[lsv_idx:lsv_idx + njunc]
-                    lsv_idx += njunc
-
-                f[LSV_JUNCTIONS_DATASET_NAME].resize((lsv_idx, effective_readlen))
-        except Exception as e:
-            traceback.print_exc()
-            sys.stdout.flush()
-            raise
-
 
     def calcpsi(self):
         """
@@ -206,7 +201,7 @@ class CalcPsi(BasicPipeline):
         pool = mp.Pool(processes=self.nthreads, maxtasksperchild=1)
 
         for fidx, fname in enumerate(self.files):
-            pool.apply_async(CalcPsi.parse_and_norm_majiq, [fname, fidx, conf(output_dir=self.output, name=self.name,
+            pool.apply_async(parse_and_norm_majiq, [fname, fidx, conf(output_dir=self.output, name=self.name,
                                                                            debug=self.debug, silent=self.silent,
                                                                            markstacks=self.markstacks)])
 
@@ -224,23 +219,25 @@ class CalcPsi(BasicPipeline):
 
         lock_arr = [mp.Lock() for xx in range(self.nthreads)]
         q = mp.Queue()
-        pool = mp.Pool(processes=self.nthreads if not self.only_boots else 1, initializer=quantification_init,
+        processes = self.nthreads if not self.only_boots else 1
+
+        pool = mp.Pool(processes=processes, initializer=quantification_init,
                        initargs=[q, lock_arr, self.output, self.name, self.silent, self.debug, self.nbins, self.m,
                                  self.k, self.discardzeros, self.trimborder, len(self.files), self.only_boots],
                        maxtasksperchild=1)
 
-        lchnksize = max(len(list_of_lsv)/self.nthreads, 1) + 1
+        lchnksize = max(len(list_of_lsv)/processes, 1) + 1
         [xx.acquire() for xx in lock_arr]
 
         if len(list_of_lsv) > 0:
-            pool.map_async(psi_quantification, majiq_utils.chunks(list_of_lsv, lchnksize, extra=range(self.nthreads)))
+            pool.map_async(psi_quantification, majiq_utils.chunks(list_of_lsv, lchnksize, extra=range(processes)))
             pool.close()
 
             out_h5p = h5py.File(get_quantifier_voila_filename(self.output, self.name),
                                 'w', compression='gzip', compression_opts=9)
             in_h5p = h5py.File(get_quantifier_norm_temp_files(self.output, self.name, 0))
 
-            queue_manager(in_h5p, out_h5p, lock_arr, q, num_chunks=self.nthreads, logger=self.logger)
+            queue_manager(in_h5p, out_h5p, lock_arr, q, num_chunks=processes, logger=self.logger)
 
             in_h5p.close()
             out_h5p.close()
