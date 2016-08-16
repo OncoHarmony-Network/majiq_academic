@@ -319,7 +319,7 @@ def rnaseq_intron_retention(gne, samfile_list, chnk, permissive=True, nondenovo=
     gne.prepare_exons()
 
 
-def read_sam_or_bam(gne, samfile_list, counter, nondenovo=False, info_msg='0', logging=None):
+def read_sam_or_bam(gne, samfile_list, counter,  h5py_file, nondenovo=False, info_msg='0', logging=None):
 
     junctions = []
     strt, end = gne.get_coordinates()
@@ -405,7 +405,7 @@ def read_sam_or_bam(gne, samfile_list, counter, nondenovo=False, info_msg='0', l
 
                     if junc is None:
                         '''mark a new junction '''
-                        bb = gne.check_antisense_junctions(junc_start, junc_end)
+                        bb = gne.check_antisense_junctions_hdf5(junc_start, junc_end, h5py_file)
                         if not bb:
                             counter[4] += 1
                             junc = Junction(junc_start, junc_end, None, None, gne, retrieve=True)

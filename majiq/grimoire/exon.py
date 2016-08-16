@@ -219,31 +219,6 @@ class Exon:
                         jlist.add(junc)
         return jlist
 
-    # def print_triplet_coord(self, fp):
-    #     gene = mglobals.gene_tlb[self.gene_name]
-    #     chrom = gene.chromosome
-    #     strand = gene.get_strand()
-    #     start_a = self.start
-    #     end_a = self.end
-    #
-    #     if strand == '-':
-    #         id_a = gene.exonNum - (self.id - 1)
-    #         vid_c1 = self.id
-    #         vid_c2 = self.id - 2
-    #     else:
-    #         id_a = self.id
-    #         vid_c1 = self.id - 2
-    #         vid_c2 = self.id
-    #
-    #     start_c1, end_c1 = gene.exons[vid_c1].get_coordinates()
-    #     start_c2, end_c2 = gene.exons[vid_c2].get_coordinates()
-    #
-    #     name = "%s.%s" % (gene.id, id_a)
-    #
-    #     fp.write("%s\t%d\t%d\t%s_C1\t0\t%s\n" % (chrom, start_c1, end_c1, name, strand))
-    #     fp.write("%s\t%d\t%d\t%s_A\t0\t%s\n" % (chrom, start_a, end_a, name, strand))
-    #     fp.write("%s\t%d\t%d\t%s_C2\t0\t%s\n" % (chrom, start_c2, end_c2, name, strand))
-
     def bed_format(self):
         bed_str = ""
         for eRead in self.exonRead_list:

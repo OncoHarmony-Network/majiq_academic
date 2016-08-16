@@ -60,7 +60,7 @@ def majiq_builder(args_vals):
             gene_obj = majiq.grimoire.gene.retrieve_gene(gne_id, db_f)
 
             tlogger.info("[%s] Reading BAM files" % loop_id)
-            majiq_io.read_sam_or_bam(gene_obj, majiq_builder.sam_list, counter,
+            majiq_io.read_sam_or_bam(gene_obj, majiq_builder.sam_list, counter, h5py_file=db_f,
                                      nondenovo=majiq_builder.non_denovo, info_msg=loop_id, logging=tlogger)
 
             if gene_obj.get_read_count() == 0:
@@ -139,7 +139,7 @@ class Builder(BasicPipeline):
         while True:
             try:
                 val = result_queue.get(block=True, timeout=10)
-                #print "QUEUE SIZE", result_queue.rear+1
+                print "QUEUE SIZE", result_queue.qsize()
                 if val[0] == 0:
                     for jdx, exp_idx in enumerate(majiq_config.tissue_repl[val[2]]):
                         lsv_idx[exp_idx] = val[1].to_hdf5(hdf5grp=lsv_list[exp_idx],

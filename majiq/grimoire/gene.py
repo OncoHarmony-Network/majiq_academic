@@ -64,6 +64,27 @@ class Gene:
 
         [ex.to_hdf5(h_gen) for ex_count, ex in enumerate(self.exons)]
 
+    @staticmethod
+    def get_junctions_from_hdf5(hdf5_gene):
+        junc_res = []
+        for ex_hdf5 in hdf5_gene['exons']:
+            for extx_hdf5 in hdf5_gene['exons/%s' % ex_hdf5]:
+                for jj in hdf5_gene['exons/%s/%s/p5_junc' % (ex_hdf5, extx_hdf5)]:
+                    junc = hdf5_gene['exons/%s/%s/p5_junc/%s' % (ex_hdf5, extx_hdf5, jj)]
+                    junc_res.append((junc.attrs['start'], junc.attrs['end']))
+
+        return junc_res
+
+    @staticmethod
+    def get_exons_from_hdf5(hdf5_gene):
+        ex_res = []
+        for ex_hdf5 in hdf5_gene['exons']:
+            for extx_hdf5 in hdf5_gene['exons/%s' % ex_hdf5]:
+                exn = hdf5_gene['exons/%s' % ex_hdf5]
+                ex_res.append((exn.attrs['start'], exn.attrs['end']))
+
+        return ex_res
+
     def get_id(self):
         return self.id
 
@@ -239,41 +260,66 @@ class Gene:
 
         return res
 
-    def check_antisense_junctions(self, jstart, jend):
+    def check_antisense_junctions_hdf5(self, jstart, jend, h5_file):
         res = False
         for anti_g in self.antis_gene:
-            retrieve_gene(anti_g, majiq_config.dbfile)
-            # if not self.antis_gene is None:
-            gg = majiq_config.gene_tlb[anti_g]
-
-            cc = gg.get_coordinates()
-            if jend < cc[0] or jstart > cc[1]:
+            gg = h5_file[anti_g]
+            gg_start = gg.attrs['start']
+            gg_end = gg.attrs['end']
+            if jend < gg_start or jstart > gg_end:
                 continue
-            j_list = gg.get_all_junctions()
-            for jj in j_list:
-                if not jj.is_annotated():
-                    continue
-                (j_st, j_ed) = jj.get_coordinates()
+            j_list = Gene.get_junctions_from_hdf5(gg)
+            for j_st, j_ed in j_list:
                 if j_st > jstart or (j_st == jstart and j_ed > jend):
                     break
                 elif jstart == j_st and jend == j_ed:
                     res = True
                     break
             if not res:
-                for ex in gg.get_exon_list():
-                    coords = ex.get_coordinates()
-                    # if jend > coords[0]:
-                    #     break
-                    coords = [coords[0] - majiq_config.get_max_denovo_difference(),
-                              coords[1] + majiq_config.get_max_denovo_difference()]
+                for ex_start, ex_end in Gene.get_exons_from_hdf5(gg):
+
+                    coords = [ex_start - majiq_config.get_max_denovo_difference(),
+                              ex_end + majiq_config.get_max_denovo_difference()]
 
                     if coords[0] <= jend <= coords[1] or coords[0] <= jstart <= coords[1]:
                         res = True
                         break
-                del majiq_config.gene_tlb[anti_g]
             else:
-                del majiq_config.gene_tlb[anti_g]
                 break
+
+
+            # retrieve_gene(anti_g, majiq_config.dbfile)
+            # # if not self.antis_gene is None:
+            # gg = majiq_config.gene_tlb[anti_g]
+            #
+            # cc = gg.get_coordinates()
+            # if jend < cc[0] or jstart > cc[1]:
+            #     continue
+            # j_list = gg.get_all_junctions()
+            # for jj in j_list:
+            #     if not jj.is_annotated():
+            #         continue
+            #     (j_st, j_ed) = jj.get_coordinates()
+            #     if j_st > jstart or (j_st == jstart and j_ed > jend):
+            #         break
+            #     elif jstart == j_st and jend == j_ed:
+            #         res = True
+            #         break
+            # if not res:
+            #     for ex in gg.get_exon_list():
+            #         coords = ex.get_coordinates()
+            #         # if jend > coords[0]:
+            #         #     break
+            #         coords = [coords[0] - majiq_config.get_max_denovo_difference(),
+            #                   coords[1] + majiq_config.get_max_denovo_difference()]
+            #
+            #         if coords[0] <= jend <= coords[1] or coords[0] <= jstart <= coords[1]:
+            #             res = True
+            #             break
+            #     del majiq_config.gene_tlb[anti_g]
+            # else:
+            #     del majiq_config.gene_tlb[anti_g]
+            #     break
 
         return res
 
