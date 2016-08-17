@@ -71,7 +71,7 @@ def psi_quantification(args_vals):
 
             if quantification_init.only_boots:
                 for ii in range(num_exp):
-                    res[ii].append(np.array(lsv_samples))
+                    res[ii].append(np.array(lsv_samples[ii]))
                     info_res[ii].append((lsvobj.attrs['id'], lsvobj.attrs['type']))
                 continue
 
