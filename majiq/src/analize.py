@@ -25,7 +25,9 @@ def detect_lsv(exon, gn, lsv_type, dummy, jun, only_annot=False):
     lsv_in = gn.new_lsv_definition(exon, jlist, lsv_type)
 
     for name, ind_list in majiq_config.tissue_repl.items():
-        group_thresh = min((len(ind_list) * 0.5), 2)
+        group_thresh = majiq_config.min_exp
+        if group_thresh == -1:
+            group_thresh = min((len(ind_list) * 0.5), 2)
         counter = 0
         e_data = 0
         for jj in jlist:

@@ -24,11 +24,11 @@ def filter_message(when, value, logger, junc):
         else:
             logger.debug(message)
 
-def merge_files_hdf5(hdf5_file_list, minnonzero, min_reads, percent=None, logger=None):
+def merge_files_hdf5(hdf5_file_list, minnonzero, min_reads, percent=-1, logger=None):
 
     logger.debug("Quantifible filter...")
     lsv_dict = {}
-    if percent is None:
+    if percent == -1:
         percent = len(hdf5_file_list) / 2
         percent = percent + 1 if len(hdf5_file_list) % 2 != 0 else percent
 

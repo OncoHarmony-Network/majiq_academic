@@ -94,6 +94,7 @@ def majiq_builder(args_vals):
     majiq_builder.queue.put([-1, chnk], block=True)
     majiq_builder.lock_arr[chnk].acquire()
     majiq_builder.lock_arr[chnk].release()
+    tlogger.info("[%s] Child work done." % chnk)
 
 
 class Builder(BasicPipeline):
@@ -151,8 +152,7 @@ class Builder(BasicPipeline):
                     for jdx, exp_idx in enumerate(majiq_config.tissue_repl[val[3]]):
                         if junc_idx[exp_idx] >= majiq_config.nrandom_junctions:
                             continue
-                        junc_group = lsv_list[exp_idx][CONST_JUNCTIONS_DATASET_NAME]
-                        junc_group[junc_idx[exp_idx], :] = val[1][jdx, :].toarray()
+                        lsv_list[exp_idx][CONST_JUNCTIONS_DATASET_NAME][junc_idx[exp_idx], :] = val[1][jdx, :].toarray()
                         junc_idx[exp_idx] += 1
 
                 elif val[0] == 2:

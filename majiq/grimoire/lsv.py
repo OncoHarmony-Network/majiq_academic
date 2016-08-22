@@ -486,5 +486,3 @@ class Queue_Lsv(object):
             raise
 
         return lsv_idx + njunc
-
-
