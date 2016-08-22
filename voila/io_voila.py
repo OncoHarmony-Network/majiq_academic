@@ -97,8 +97,8 @@ def voila_input_from_hdf5(hdf5_filename, logger):
     def worker():
         with h5py.File(hdf5_filename, 'r', swmr=True) as h:
             while True:
-                item = queue.get()
-                manager_dict[item] = VoilaLsv((), None).from_hdf5(h['lsvs'][item])
+                index = queue.get()
+                manager_dict[index] = VoilaLsv((), None).from_hdf5(h['lsvs'][index])
                 queue.task_done()
 
     def producer():
@@ -142,6 +142,7 @@ def voila_input_from_hdf5(hdf5_filename, logger):
     queue.join()
 
     pool.close()
+    queue.close()
 
     voila_input = VoilaInput()
 

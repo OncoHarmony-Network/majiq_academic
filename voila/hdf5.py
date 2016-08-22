@@ -78,9 +78,9 @@ class HDF5(object):
             except KeyError:
                 pass
 
-        # H5py stores attributes as numpy objects where it can.  Numpy objects
-        # cause issues for the json conversion, therefore corner cases are handled below.
         for key in attrs_dict:
+            # H5py stores attributes as numpy objects where it can.  Numpy objects
+            # cause issues with the json conversion, therefore corner cases are handled below.
             value = attrs_dict[key]
             if type(value) is numpy.ndarray:
                 value = value.tolist()
