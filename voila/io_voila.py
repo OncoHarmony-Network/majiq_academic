@@ -1,17 +1,26 @@
-from collections import defaultdict
 import os
+from collections import defaultdict
+from multiprocessing import Manager, Process, Pool
+from multiprocessing.queues import JoinableQueue
+
+import h5py
 import numpy as np
-from voila import constants
-from voila.utils import utils_voila
+
 import vlsv
+from voila import constants
+from voila.hdf5 import HDF5, BinsDataSet, Psi1DataSet, Psi2DataSet
+from voila.utils import utils_voila
+from voila.vlsv import VoilaLsv
 
 __author__ = 'abarrera'
 import cPickle as pkl
 
 
-class VoilaInput(object):
+class VoilaInput(HDF5):
     """Standard input interface by experiment used by Voila"""
+
     def __init__(self, lsvs=(), metainfo=None):
+        super(VoilaInput, self).__init__()
         self.lsvs = lsvs
         self.metainfo = metainfo
 
@@ -29,6 +38,122 @@ class VoilaInput(object):
         """Sample information generator, one by one."""
         for sample_info in self.metainfo:
             yield sample_info
+
+    def to_hdf5(self, h):
+        # bins dataset
+        bins_length = sum([len(lsv.bins) for lsv in self.lsvs])
+        BinsDataSet(h, bins_length)
+
+        # psi1 dataset
+        psi1_length = sum([len(lsv.psi1) for lsv in self.lsvs])
+        Psi1DataSet(h, psi1_length)
+
+        # psi2 dataset
+        psi2_length = sum([len(lsv.psi2) for lsv in self.lsvs])
+        Psi2DataSet(h, psi2_length)
+
+        # metainfo
+        metainfo_grp = h.create_group('metainfo')
+        for array_index, array in enumerate(self.metainfo):
+            array_grp = metainfo_grp.create_group(str(array_index))
+            for dict_index, meta_dict in enumerate(array):
+                dict_grp = array_grp.create_group(str(dict_index))
+                for key in meta_dict:
+                    dict_grp.attrs[key] = meta_dict[key]
+
+        super(VoilaInput, self).to_hdf5(h)
+
+    def from_hdf5(self, h):
+        metainfo_grp = h['metainfo']
+
+        self.metainfo = [[None for _ in metainfo_grp[x]] for x in metainfo_grp]
+        for array_index in metainfo_grp:
+            for dict_index in metainfo_grp[array_index]:
+                mi_dict = {}
+                mi_attrs = metainfo_grp[array_index][dict_index].attrs
+                for key in mi_attrs:
+                    mi_dict[key] = mi_attrs[key]
+
+                self.metainfo[int(array_index)][int(dict_index)] = mi_dict
+
+        return super(VoilaInput, self).from_hdf5(h)
+
+    def exclude(self):
+        return ['metainfo']
+
+    def cls_list(self):
+        return {'lsvs': {'class': VoilaLsv, 'args': ((), None)}}
+
+
+def voila_input_from_hdf5(hdf5_filename, logger):
+    """
+    Create VoilaInput object from HDF5 file.  This will process each of the VoilaLsvs in their own thread useing the
+    Producer Consumer design pattern.
+    :param hdf5_filename: HDF5 filename string
+    :param logger: instance of logger
+    :return: VoilaInput object
+    """
+
+    def worker():
+        with h5py.File(hdf5_filename, 'r', swmr=True) as h:
+            while True:
+                item = queue.get()
+                manager_dict[item] = VoilaLsv((), None).from_hdf5(h['lsvs'][item])
+                queue.task_done()
+
+    def producer():
+        with h5py.File(hdf5_filename, 'r', swmr=True) as h:
+            for x in h['lsvs']:
+                queue.put(x)
+
+    def metainfo():
+        with h5py.File(hdf5_filename, 'r', swmr=True) as h:
+            metainfo_grp = h['metainfo']
+
+            mi_list = [[None for _ in metainfo_grp[x]] for x in metainfo_grp]
+            for array_index in metainfo_grp:
+                for dict_index in metainfo_grp[array_index]:
+                    mi_dict = {}
+                    mi_attrs = metainfo_grp[array_index][dict_index].attrs
+                    for key in mi_attrs:
+                        mi_dict[key] = mi_attrs[key]
+
+                    mi_list[int(array_index)][int(dict_index)] = mi_dict
+
+            manager_dict['metainfo'] = mi_list
+
+    logger.info('Loading {0}.'.format(hdf5_filename))
+
+    queue = JoinableQueue()
+    manager_dict = Manager().dict()
+
+    metainfo_proc = Process(target=metainfo)
+    metainfo_proc.daemon = True
+    metainfo_proc.start()
+
+    producer_proc = Process(target=producer)
+    producer_proc.daemon = True
+    producer_proc.start()
+
+    pool = Pool(None, worker)
+
+    metainfo_proc.join()
+    producer_proc.join()
+    queue.join()
+
+    pool.close()
+
+    voila_input = VoilaInput()
+
+    voila_input.metainfo = manager_dict['metainfo']
+    del manager_dict['metainfo']
+
+    lsvs = [None] * len(manager_dict)
+    for key in manager_dict.keys():
+        lsvs[int(key)] = manager_dict[key]
+    voila_input.lsvs = lsvs
+
+    return voila_input
 
 
 def dump_voila_input(voila_input, target, logger=None, protocol=-1):
@@ -65,7 +190,7 @@ def load_dpairs(pairwise_dir, majiq_output, logger):
     :return: name of condition 2
     """
     meta_exps = majiq_output['meta_exps']
-    lmajiq_pairs = [[None for i in range(len(meta_exps[1])) ] for j in range(len(meta_exps[0]))]
+    lmajiq_pairs = [[None for i in range(len(meta_exps[1]))] for j in range(len(meta_exps[0]))]
 
     lsv_names = majiq_output['genes_dict'].keys()
 
@@ -74,7 +199,8 @@ def load_dpairs(pairwise_dir, majiq_output, logger):
 
     for idx1 in range(len(meta_exps[0])):
         for idx2 in range(len(meta_exps[1])):
-            pairwise_file = "%s/%s_%d_%s_%d.deltapsi.pickle" % (pairwise_dir, group1_name, idx1+1, group2_name, idx2+1)
+            pairwise_file = "%s/%s_%d_%s_%d.deltapsi.pickle" % (
+                pairwise_dir, group1_name, idx1 + 1, group2_name, idx2 + 1)
             try:
                 lmajiq_pairs[idx1][idx2] = utils_voila.get_lsv_delta_exp_data(pairwise_file,
                                                                               show_all=True,
@@ -85,7 +211,8 @@ def load_dpairs(pairwise_dir, majiq_output, logger):
     return lmajiq_pairs, group1_name, group2_name
 
 
-def write_tab_output(output_dir, output_html, majiq_output, type_summary, logger=None, pairwise_dir=False, threshold=0.2):
+def write_tab_output(output_dir, output_html, majiq_output, type_summary, logger=None, pairwise_dir=False,
+                     threshold=0.2):
     """
     Create tab-delimited output file summarizing all the LSVs detected and quantified with MAJIQ.
 
@@ -141,13 +268,15 @@ def write_tab_output(output_dir, output_html, majiq_output, type_summary, logger
             if pairwise_dir:
                 for idx1 in xrange(len(lmajiq_pairs)):
                     for idx2 in xrange(len(lmajiq_pairs[0])):
-                        headers.append("%s_%d_%s_%d" % (group1_name, idx1+1, group2_name, idx2+1))
+                        headers.append("%s_%d_%s_%d" % (group1_name, idx1 + 1, group2_name, idx2 + 1))
 
                 exp_names_map = ['#Group names and file names mapping']
                 for iexp in xrange(len(lmajiq_pairs)):
-                    exp_names_map.append("#%s_%d=%s" % (group1_name, iexp+1, lmajiq_pairs[0][0]['meta_exps'][0][iexp]['experiment']))
+                    exp_names_map.append(
+                        "#%s_%d=%s" % (group1_name, iexp + 1, lmajiq_pairs[0][0]['meta_exps'][0][iexp]['experiment']))
                 for iexp in xrange(len(lmajiq_pairs[0])):
-                    exp_names_map.append("#%s_%d=%s" % (group2_name, iexp+1, lmajiq_pairs[0][0]['meta_exps'][1][iexp]['experiment']))
+                    exp_names_map.append(
+                        "#%s_%d=%s" % (group2_name, iexp + 1, lmajiq_pairs[0][0]['meta_exps'][1][iexp]['experiment']))
                 ofile.write('\n'.join(exp_names_map))
                 ofile.write('\n')
                 ofile.write('#\n')
@@ -195,16 +324,21 @@ def write_tab_output(output_dir, output_html, majiq_output, type_summary, logger
                 lline.append(llsv.lsv_graphic.get_chrom())
                 lline.append(llsv.lsv_graphic.get_strand())
 
-                lline.append(';'.join(['-'.join(str(c) for c in junc.get_coords()) for junc in llsv.lsv_graphic.get_junctions()]))
-                lline.append(';'.join(['-'.join(str(c) for c in exon.get_coords()) for exon in llsv.lsv_graphic.get_exons()]))
+                lline.append(';'.join(
+                    ['-'.join(str(c) for c in junc.get_coords()) for junc in llsv.lsv_graphic.get_junctions()]))
+                lline.append(
+                    ';'.join(['-'.join(str(c) for c in exon.get_coords()) for exon in llsv.lsv_graphic.get_exons()]))
 
                 try:
-                    lline.append(';'.join(['|'.join([str(c) for c in exon.get_alt_starts()]) for exon in llsv.lsv_graphic.get_exons()]))
-                    lline.append(';'.join(['|'.join([str(c) for c in exon.get_alt_ends()]) for exon in llsv.lsv_graphic.get_exons()]))
+                    lline.append(';'.join(
+                        ['|'.join([str(c) for c in exon.get_alt_starts()]) for exon in llsv.lsv_graphic.get_exons()]))
+                    lline.append(';'.join(
+                        ['|'.join([str(c) for c in exon.get_alt_ends()]) for exon in llsv.lsv_graphic.get_exons()]))
                 except TypeError:
                     pass
 
-                lline.append(';'.join([repr(exon.coords) for exon in llsv.lsv_graphic.get_exons() if exon.intron_retention]))
+                lline.append(
+                    ';'.join([repr(exon.coords) for exon in llsv.lsv_graphic.get_exons() if exon.intron_retention]))
 
                 if pairwise_dir:
                     llpairwise = []
@@ -218,8 +352,8 @@ def write_tab_output(output_dir, output_html, majiq_output, type_summary, logger
                                         break
                                 else:
                                     logger.warning("LSV %s present in deltagroup but missing in %s." %
-                                                   (llsv.get_id(), "%s_%d_%s_%d" % (group1_name, idx1+1,
-                                                                                        group2_name, idx2+1)))
+                                                   (llsv.get_id(), "%s_%d_%s_%d" % (group1_name, idx1 + 1,
+                                                                                    group2_name, idx2 + 1)))
                                     lpairwise.append('N/A')
                                     continue
                                 for iway in range(len(llsv.get_bins())):
@@ -239,14 +373,15 @@ def write_tab_output(output_dir, output_html, majiq_output, type_summary, logger
     logger.info("Delimited output file successfully created in: %s" % ofile_str)
 
 
-def load_dpsi_tab(tab_files_list, sample_names, thres_change=None, filter_genes=None, filter_lsvs=None, pairwise_dir=None, outdir=None):
+def load_dpsi_tab(tab_files_list, sample_names, thres_change=None, filter_genes=None, filter_lsvs=None,
+                  pairwise_dir=None, outdir=None):
     """Load LSV delta psi information from tab-delimited file."""
     lsvs_dict = defaultdict(lambda: defaultdict(lambda: None))
     if pairwise_dir is None:
         pairwise_dir = os.getcwd()
 
     root_path = None
-    path_prefix = '/'.join(['..']*len(outdir.strip('./').split('/'))) + '/'
+    path_prefix = '/'.join(['..'] * len(outdir.strip('./').split('/'))) + '/'
     if len(outdir.strip('./')) == 0:
         path_prefix = './'
     # 2-step process:
@@ -277,10 +412,10 @@ def load_dpsi_tab(tab_files_list, sample_names, thres_change=None, filter_genes=
 
                 expecs = [float(aa) for aa in fields[3].split(";")]
                 if lsvs_dict[fields[2]]['expecs'] is None:
-                    lsvs_dict[fields[2]]['expecs'] = [[]]*len(sample_names)
-                    lsvs_dict[fields[2]]['expecs_marks'] = [None]*len(sample_names)
-                    lsvs_dict[fields[2]]['links'] = [None]*len(sample_names)
-                    lsvs_dict[fields[2]]['njunc'] = [-1]*len(sample_names)
+                    lsvs_dict[fields[2]]['expecs'] = [[]] * len(sample_names)
+                    lsvs_dict[fields[2]]['expecs_marks'] = [None] * len(sample_names)
+                    lsvs_dict[fields[2]]['links'] = [None] * len(sample_names)
+                    lsvs_dict[fields[2]]['njunc'] = [-1] * len(sample_names)
                 idx_max = np.argmax([abs(ee) for ee in expecs])
                 lsvs_dict[fields[2]]['expecs'][idx] = expecs
                 lsvs_dict[fields[2]]['njunc'][idx] = idx_max
@@ -292,20 +427,27 @@ def load_dpsi_tab(tab_files_list, sample_names, thres_change=None, filter_genes=
             del lsvs_dict[lsv_idx]  # Remove LSVs not passing the changing threshold
             continue
 
-        idx_most_freq = np.argmax(np.bincount(np.array(lsvs_dict[lsv_idx]['njunc'])[(np.array(lsvs_dict[lsv_idx]['njunc']) > -1) & np.array([np.any(np.array([abs(fff) for fff in expec]) > thres_change) for expec in lsvs_dict[lsv_idx]['expecs']]) ]))
+        idx_most_freq = np.argmax(np.bincount(np.array(lsvs_dict[lsv_idx]['njunc'])[
+                                                  (np.array(lsvs_dict[lsv_idx]['njunc']) > -1) & np.array(
+                                                      [np.any(np.array([abs(fff) for fff in expec]) > thres_change) for
+                                                       expec in lsvs_dict[lsv_idx]['expecs']])]))
         # Update the number of changing
         # lsvs_dict[lsv_idx]['nchangs'] = np.sum([1 for ff in lsvs_dict[lsv_idx]['expecs'] if np.any(np.array([abs(fff) for fff in ff]) > thres_change)])
 
-        lsvs_dict[lsv_idx]['expecs_marks'] = ~np.array(idx_most_freq == lsvs_dict[lsv_idx]['njunc'])  # Mark adjusted most changing junction
+        lsvs_dict[lsv_idx]['expecs_marks'] = ~np.array(
+            idx_most_freq == lsvs_dict[lsv_idx]['njunc'])  # Mark adjusted most changing junction
         for idx_exp, expec in enumerate(lsvs_dict[lsv_idx]['expecs']):
-            if len(expec)>0:
+            if len(expec) > 0:
                 lsvs_dict[lsv_idx]['expecs'][idx_exp] = expec[idx_most_freq]
             else:
                 lsvs_dict[lsv_idx]['expecs'][idx_exp] = -1
-        lsvs_dict[lsv_idx]['nchangs'] = np.count_nonzero([abs(ee) > thres_change for ee in lsvs_dict[lsv_idx]['expecs'] if ee > -1])
+        lsvs_dict[lsv_idx]['nchangs'] = np.count_nonzero(
+            [abs(ee) > thres_change for ee in lsvs_dict[lsv_idx]['expecs'] if ee > -1])
         lsvs_dict[lsv_idx]['njunc'] = idx_most_freq
-        exist_expecs = np.array(lsvs_dict[lsv_idx]['expecs'])[(np.array(lsvs_dict[lsv_idx]['expecs']) > -1) & (np.array([abs(xx) for xx in lsvs_dict[lsv_idx]['expecs']]) > thres_change)]
-        lsvs_dict[lsv_idx]['ndisagree'] = len(exist_expecs) - max((np.count_nonzero(exist_expecs > 0), np.count_nonzero(exist_expecs <= 0)))
+        exist_expecs = np.array(lsvs_dict[lsv_idx]['expecs'])[(np.array(lsvs_dict[lsv_idx]['expecs']) > -1) & (
+            np.array([abs(xx) for xx in lsvs_dict[lsv_idx]['expecs']]) > thres_change)]
+        lsvs_dict[lsv_idx]['ndisagree'] = len(exist_expecs) - max(
+            (np.count_nonzero(exist_expecs > 0), np.count_nonzero(exist_expecs <= 0)))
 
     return lsvs_dict
 
@@ -320,13 +462,13 @@ def create_gff3_txt_files(output_dir, majiq_output, logger, out_gff3=False):
     :return: nothing.
     """
     logger.info("Saving LSVs files in gff3 format ...")
-    if 'genes_dict' not in majiq_output or len(majiq_output['genes_dict'])<1:
+    if 'genes_dict' not in majiq_output or len(majiq_output['genes_dict']) < 1:
         logger.warning("No gene information provided. Genes files are needed to calculate the gff3 files.")
         return
 
     header = "##gff-version 3"
 
-    odir = output_dir+"/static/doc/lsvs"
+    odir = output_dir + "/static/doc/lsvs"
     utils_voila.create_if_not_exists(odir)
     for gkey, gvalue in majiq_output['genes_dict'].iteritems():
         for lsv_dict in gvalue:
@@ -341,8 +483,8 @@ def create_gff3_txt_files(output_dir, majiq_output, logger, out_gff3=False):
                 if out_gff3:
                     gff_file = "%s.gff3" % (lsv_file_basename)
                     with open(gff_file, 'w') as ofile:
-                        ofile.write(header+"\n")
-                        ofile.write(lsv_gff3_str +"\n")
+                        ofile.write(header + "\n")
+                        ofile.write(lsv_gff3_str + "\n")
             except UnboundLocalError, e:
                 logger.warning("problem generating GTF file for %s" % lsv.get_id())
                 logger.error(e.message)
