@@ -3,7 +3,7 @@ from majiq.src.build import build
 from majiq.src.calc_psi import calcpsi
 # from majiq.src.deltapsi import deltapair, multi_dpsi
 
-VERSION = '0.9'
+VERSION = '1.0.0'
 
 
 def new_subparser():
@@ -72,6 +72,7 @@ def main():
                                                                                       'detected')
     buildparser.add_argument('--only_gather', action='store_true', dest='onlygather', default=False)
     buildparser.add_argument('--permissive_ir', action='store_true', dest='permissive', default=False)
+    buildparser.add_argument('--min_experiments', default=-1, type=float, dest='min_exp')
 
 
     #flags shared by calcpsi and deltapair
@@ -97,6 +98,7 @@ def main():
                                   'to start from x=0, y=0')
     psianddelta.add_argument('--discardzeros', default=5, type=int, dest="discardzeros",
                              help='Discarding zeroes, up to a minimum of N positions per junction. [Default: 5]')
+    psianddelta.add_argument('--only_bootstrap', action='store_true', dest='only_boots', default=False)
 
     #deltapair and deltagroup flags
     delta = new_subparser()
@@ -164,7 +166,7 @@ def main():
     parser_preprocess.set_defaults(func=build)
 
     parser_calcpsi = subparsers.add_parser('psi', help="Calculate PSI values for N experiments, given a folder of "
-                                                       "preprocessed events by 'old_majiq preprocess' or SAM/BAM files",
+                                                       "preprocessed events by 'majiq preprocess' or SAM/BAM files",
                                            parents=[common, psi, psianddelta])
     parser_calcpsi.set_defaults(func=calcpsi)
 

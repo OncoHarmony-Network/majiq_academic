@@ -48,10 +48,10 @@ def global_conf_ini(filename, params, only_db=False):
         genome_path, outDir, temp_oDir, gene_tlb, strand_specific, permissive_ir, gcnorm, dbfile
     global A3SS, A5SS, SEev, bothSS, totalSE
     global MINREADS, MINPOS, MIN_INTRON
-    global num_final_chunks, min_denovo, nrandom_junctions
+    global num_final_chunks, min_denovo, nrandom_junctions, min_exp
 
     if not only_db:
-        num_final_chunks = params.nthreads  if params.nthreads > 1 else 1
+        num_final_chunks = params.nthreads if params.nthreads > 1 else 1
     else:
         num_final_chunks = 1
     min_denovo = params.min_denovo
@@ -71,6 +71,7 @@ def global_conf_ini(filename, params, only_db=False):
 
     MINREADS = params.minreads
     MINPOS = params.minpos
+    min_exp = params.min_exp
 
     if not only_db:
         permissive_ir = params.permissive
@@ -81,7 +82,6 @@ def global_conf_ini(filename, params, only_db=False):
     genome = general['genome']
     genome_path = general['genome_path']
     readLen = int(general['readlen'])
-
 
     if 'type' in general:
         strand_specific = (general['type'] == 'strand-specific')

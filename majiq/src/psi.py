@@ -12,8 +12,8 @@ from scipy.stats import beta
 
 import majiq.src.filter as majiq_filter
 import majiq.src.sample as majiq_sample
-import old_majiq.src.adjustdelta as majiq_delta
-import old_majiq.src.io_utils
+import majiq.src.adjustdelta as majiq_delta
+import majiq.src.io_utils
 
 """
 Calculate and manipulate PSI and Delta PSI values
@@ -242,7 +242,7 @@ def __load_default_prior():
 
     encoding = sys.getfilesystemencoding()
     direc = os.path.dirname(unicode(__file__, encoding))
-    def_mat = old_majiq.src.io_utils.load_bin_file('%s/../data/defaultprior.pickle' % direc)
+    def_mat = majiq.src.io_utils.load_bin_file('%s/../data/defaultprior.pickle' % direc)
     return def_mat
 
 
@@ -339,8 +339,8 @@ def gen_prior_matrix(pip, lsv_exp1, lsv_exp2, output, numbins=20, defaultprior=F
                 prior_matrix[prior_idx] /= sum(prior_matrix[prior_idx])
                 #renormalize so it sums 1
 
-        plot_matrix(prior_matrix[prior_idx], "Prior Matrix , version %s" % prior_idx,
-                    "prior_matrix_jun_%s" % nj, pip.plotpath)
+            plot_matrix(prior_matrix[prior_idx], "Prior Matrix , version %s" % prior_idx,
+                        "prior_matrix_jun_%s" % nj, pip.plotpath)
 
     return psi_space, prior_matrix
 

@@ -1,14 +1,10 @@
-import json
 from collections import defaultdict
-
+import json
 import numpy as np
-
-from voila.hdf5 import HDF5, BinsDataSet, Psi1DataSet, Psi2DataSet
-from voila.splice_graphics import LsvGraphic
 
 
 def get_expected_dpsi(bins):
-    return sum(np.array(bins) * np.arange(-1 + 1. / len(bins), 1., 2. / len(bins)))
+    return sum(np.array(bins) * np.arange(-1+1./len(bins), 1., 2./len(bins)))
 
 
 def get_expected_psi(bins):
@@ -22,7 +18,7 @@ def collapse_matrix(matrix):
     """Collapse the diagonals probabilities in 1-D and return them"""
     collapse = []
     matrix_corner = matrix.shape[0]
-    for i in xrange(-matrix_corner + 1, matrix_corner):
+    for i in xrange(-matrix_corner+1, matrix_corner):
         collapse.append(np.diagonal(matrix, offset=i).sum())
 
     return np.array(collapse)
@@ -65,7 +61,7 @@ class OrphanJunctionException(Exception):
         self.message = m
 
 
-class VoilaLsv(HDF5):
+class VoilaLsv(object):
     """LSV information unit managed by Voila"""
 
     @classmethod
@@ -75,15 +71,13 @@ class VoilaLsv(HDF5):
             for eG in lexonG:
                 if jidx in eG.get_a5_list():
                     return eG
-            raise OrphanJunctionException("Orphan junction %s in lsv %s." % (
-                repr(vlsv.get_lsv_graphic().get_junctions()[jidx].get_coords()), lsvId))
+            raise OrphanJunctionException("Orphan junction %s in lsv %s." % (repr(vlsv.get_lsv_graphic().get_junctions()[jidx].get_coords()), lsvId))
 
         def find_exon_a3(lexonG, jidx):
             for eG in lexonG:
                 if jidx in eG.get_a3_list():
                     return eG
-            raise OrphanJunctionException("Orphan junction %s in lsv %s." % (
-                repr(vlsv.get_lsv_graphic().get_junctions()[jidx].get_coords()), lsvId))
+            raise OrphanJunctionException("Orphan junction %s in lsv %s." % (repr(vlsv.get_lsv_graphic().get_junctions()[jidx].get_coords()), lsvId))
 
         # fields = ['seqid', 'source', 'type', 'start', 'end', 'score', 'strand', 'phase', 'attributes']
         trans = []
@@ -136,7 +130,7 @@ class VoilaLsv(HDF5):
             if strand == '-':
                 for ii, t in enumerate(trans):
                     t_fields = t.split()
-                    t_fields[3], t_fields[4] = t_fields[4], t_fields[3]
+                    t_fields[3],  t_fields[4] = t_fields[4], t_fields[3]
                     trans[ii] = '\t'.join(t_fields)
 
             lsv_gtf = '\n'.join(trans)
@@ -175,7 +169,6 @@ class VoilaLsv(HDF5):
         return categories
 
     def __init__(self, bins_list, lsv_graphic, psi1=None, psi2=None, logger=None):
-        super(VoilaLsv, self).__init__()
         self.lsv_graphic = lsv_graphic
         self.psi1 = psi1
         self.psi2 = psi2
@@ -201,9 +194,9 @@ class VoilaLsv(HDF5):
                     self.excl_incl.append([0, self.means[-1]])
             else:
                 self.means.append(get_expected_psi(np.array(lsv_bins)))
-                step_bins = 1.0 / len(lsv_bins)
-                projection_prod = lsv_bins * np.arange(step_bins / 2, 1, step_bins) ** 2
-                self.variances.append(np.sum(projection_prod) - self.means[-1] ** 2)
+                step_bins = 1.0 / lsv_bins.size
+                projection_prod = lsv_bins * np.arange(step_bins / 2, 1, step_bins)**2
+                self.variances.append(np.sum(projection_prod) - self.means[-1]**2)
 
         # For LSV filtering
         if lsv_graphic:
@@ -211,7 +204,7 @@ class VoilaLsv(HDF5):
         self.psi_junction = 0
 
     def is_delta_psi(self):
-        return self.psi2 is not None
+        return not (self.psi2 is None)
 
     def get_lsv_graphic(self):
         return self.lsv_graphic
@@ -302,61 +295,15 @@ class VoilaLsv(HDF5):
                 print "[WARNING] :: %s" % e.message
 
     def to_JSON(self, encoder=json.JSONEncoder):
+        self.bins = np.array(self.bins).tolist()
+        if self.is_delta_psi():
+            self.psi1 = np.array(self.psi1).tolist()
+            self.psi2 = np.array(self.psi2).tolist()
         return json.dumps(self, default=lambda o: o.__dict__, sort_keys=True, cls=encoder)
 
     def is_lsv_changing(self, thres):
         means = np.array(self.get_means())
-        # TODO: should we check that pos and neg are kind of matched?
-        return max(means[means > 0].sum(), means[means < 0].sum()) >= thres
-        # return np.any(np.array(self.get_means()) >= thres)
+        #TODO: should we check that pos and neg are kind of matched?
+        return max(means[means > 0].sum(), abs(means[means < 0].sum())) >= thres
+        #return np.any(np.array(self.get_means()) >= thres)
 
-    def to_hdf5(self, h):
-        super(VoilaLsv, self).to_hdf5(h)
-
-        # lsv_graphic
-        lsv_graphic_grp = h.create_group('lsv_graphic')
-        self.lsv_graphic.to_hdf5(lsv_graphic_grp)
-
-        # categories
-        cat_grp = h.create_group('categories')
-        for key in self.categories:
-            cat_grp.attrs[key] = self.categories[key]
-
-        # bins dataset
-        BinsDataSet(h).encode_list(self.bins)
-
-        # psi1 dataset
-        Psi1DataSet(h).encode_list(self.psi1)
-
-        # psi2 dataset
-        Psi2DataSet(h).encode_list(self.psi2)
-
-    def exclude(self):
-        return ['lsv_graphic', 'categories', 'bins', 'psi1', 'psi2']
-
-    def from_hdf5(self, h):
-        # lsv_graphic
-        self.lsv_graphic = LsvGraphic(None, None, None).from_hdf5(h['lsv_graphic'])
-
-        # categories
-        self.categories = defaultdict()
-        cat_attrs = h['categories'].attrs
-        for key in cat_attrs:
-            value = cat_attrs[key]
-
-            # corner case where json can't interpret some numpy types
-            if type(value) is np.bool_:
-                value = value.item()
-
-            self.categories[key] = value
-
-        # bins dataset
-        self.bins = BinsDataSet(h).decode_list()
-
-        # psi1 dataset
-        self.psi1 = Psi1DataSet(h).decode_list()
-
-        # psi2 dataset
-        self.psi2 = Psi2DataSet(h).decode_list()
-
-        return super(VoilaLsv, self).from_hdf5(h)

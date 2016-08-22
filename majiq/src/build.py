@@ -4,7 +4,7 @@ import os
 import sys
 import traceback
 import types
-
+import gc
 import h5py
 
 import io as majiq_io
@@ -12,10 +12,9 @@ import majiq.grimoire.gene
 import majiq.src.config as majiq_config
 import majiq.src.utils as majiq_utils
 import multiproc as majiq_multi
-import old_majiq.src.normalize as majiq_norm
+import majiq.src.normalize as majiq_norm
 from analize import lsv_detection
 from constants import *
-from majiq.src.utils import chunks
 from majiq.src.basic_pipeline import BasicPipeline, pipeline_run
 
 
@@ -37,11 +36,11 @@ def builder_init(out_queue, lock_arr, sam_list, pcr_filename, gff_output, only_r
     majiq_builder.debug = debug
 
 
-def majiq_builder(list_of_genes):
-    tlogger = majiq_utils.get_logger("%s/%s.kk.old_majiq.log" % (majiq_config.outDir, mp.current_process()._identity[0]),
+def majiq_builder(args_vals):
+
+    list_of_genes, chnk = args_vals
+    tlogger = majiq_utils.get_logger("%s/%s.majiq.log" % (majiq_config.outDir, chnk),
                                      silent=majiq_builder.silent, debug=majiq_builder.debug)
-    created = mp.Process()
-    chnk = created._identity[0]
 
     tlogger.debug("[%s] Starting new chunk" % chnk)
     majiq_utils.monitor('CHILD %s:: CREATION' % chnk)
@@ -61,7 +60,7 @@ def majiq_builder(list_of_genes):
             gene_obj = majiq.grimoire.gene.retrieve_gene(gne_id, db_f)
 
             tlogger.info("[%s] Reading BAM files" % loop_id)
-            majiq_io.read_sam_or_bam(gene_obj, majiq_builder.sam_list, counter,
+            majiq_io.read_sam_or_bam(gene_obj, majiq_builder.sam_list, counter, h5py_file=db_f,
                                      nondenovo=majiq_builder.non_denovo, info_msg=loop_id, logging=tlogger)
 
             if gene_obj.get_read_count() == 0:
@@ -72,31 +71,30 @@ def majiq_builder(list_of_genes):
                                              permissive=majiq_config.permissive_ir,
                                              nondenovo=majiq_builder.non_denovo, logging=tlogger)
 
-
-
             tlogger.info("[%s] Detecting LSV" % loop_id)
             lsv_detection(gene_obj, only_real_data=majiq_builder.only_rna,
                           out_queue=majiq_builder.queue, logging=tlogger)
 
-            # gc_factors = majiq_norm.prepare_gc_content(gene_obj)
-            # majiq_builder.queue.put([3, gc_factors], block=True)
-
             majiq_utils.monitor('CHILD %s:: ENDLOOP' % chnk)
+
         except Exception as e:
             majiq_utils.monitor('CHILD %s:: EXCEPT' % chnk)
             traceback.print_exc()
             sys.stdout.flush()
-        finally:
-            del majiq_config.gene_tlb[gne_id]
+            raise
 
-    # for ss in samfile:
-    #     ss.close()
+        finally:
+            del gene_obj
+            del majiq_config.gene_tlb[gne_id]
+            gc.collect()
+
     db_f.close()
     majiq_utils.monitor('CHILD %s:: WAITING' % chnk)
     tlogger.info("[%s] Waiting to be freed" % chnk)
     majiq_builder.queue.put([-1, chnk], block=True)
     majiq_builder.lock_arr[chnk].acquire()
     majiq_builder.lock_arr[chnk].release()
+    tlogger.info("[%s] Child work done." % chnk)
 
 
 class Builder(BasicPipeline):
@@ -117,8 +115,8 @@ class Builder(BasicPipeline):
 
         for exp_idx, exp in enumerate(majiq_config.exp_list):
             # Majiq file
-            fname = "%s/%s.majiq.hdf5" % (majiq_config.outDir, majiq_config.exp_list[exp_idx])
-            f = h5py.File(fname, 'w', compression='gzip', compression_opts=9)
+            f = h5py.File(get_builder_majiq_filename(majiq_config.outDir, majiq_config.exp_list[exp_idx]),
+                          'w', compression='gzip', compression_opts=9)
             file_list.append(f)
 
             effective_readlen = (majiq_config.readLen - 16) + 1
@@ -131,8 +129,9 @@ class Builder(BasicPipeline):
             lsv_list.append(f)
 
             # Splicegraph
-            fname_sg = "%s/%s.splicegraph.hdf5" % (majiq_config.outDir, majiq_config.exp_list[exp_idx])
-            f_splicegraph = h5py.File(fname_sg, 'w', compression='gzip', compression_opts=9)
+            f_splicegraph = h5py.File(get_builder_splicegraph_filename(majiq_config.outDir,
+                                                                       majiq_config.exp_list[exp_idx]),
+                                      'w', compression='gzip', compression_opts=9)
             splicegraph.append(f_splicegraph)
 
         majiq_utils.monitor('AFTER CHILD CREATION AND FILES PREP')
@@ -141,8 +140,8 @@ class Builder(BasicPipeline):
         while True:
             try:
                 val = result_queue.get(block=True, timeout=10)
+                # print "QUEUE SIZE", result_queue.qsize()
                 if val[0] == 0:
-                    print "LSV received"
                     for jdx, exp_idx in enumerate(majiq_config.tissue_repl[val[2]]):
                         lsv_idx[exp_idx] = val[1].to_hdf5(hdf5grp=lsv_list[exp_idx],
                                                           lsv_idx=lsv_idx[exp_idx],
@@ -151,17 +150,15 @@ class Builder(BasicPipeline):
 
                 elif val[0] == 1:
                     for jdx, exp_idx in enumerate(majiq_config.tissue_repl[val[3]]):
-                        junc_group = lsv_list[exp_idx][CONST_JUNCTIONS_DATASET_NAME]
                         if junc_idx[exp_idx] >= majiq_config.nrandom_junctions:
                             continue
-                        junc_group[junc_idx[exp_idx], :] = val[1][jdx, :].toarray()
-
+                        lsv_list[exp_idx][CONST_JUNCTIONS_DATASET_NAME][junc_idx[exp_idx], :] = val[1][jdx, :].toarray()
                         junc_idx[exp_idx] += 1
 
                 elif val[0] == 2:
                     val[1].to_hdf5(splicegraph[val[2]])
 
-                elif val[0] == -1:
+                elif val[0] == QUEUE_MESSAGE_END_WORKER:
                     lock_array[val[1]].release()
                     nthr_count += 1
 
@@ -170,20 +167,14 @@ class Builder(BasicPipeline):
                     continue
                 break
 
-        # if majiq_config.gcnorm:
-        #     majiq_norm.gc_normalization(lsv_list, gc_content_files, gc_pairs, logger)
-
-
         for exp_idx, exp in enumerate(majiq_config.exp_list):
             lsv_list[exp_idx].close()
 
         majiq_utils.monitor('MASTER END')
-        logger.info("End of execution")
-
 
     def builder(self, sam_list):
 
-        logger = majiq_utils.get_logger("%s/old_majiq.log" % majiq_config.outDir, silent=False,
+        logger = majiq_utils.get_logger("%s/majiq.log" % majiq_config.outDir, silent=False,
                                         debug=self.debug)
         logger.info("")
         logger.info("Command: %s" % self)
@@ -200,112 +191,37 @@ class Builder(BasicPipeline):
         p.start()
         p.join()
 
-        vfunc_gc = majiq_norm.gc_normalization(gc_pairs, logger)
+        if majiq_config.gcnorm:
+            pool = mp.Pool(processes=self.nthreads, maxtasksperchild=1)
+            lchnksize = max(len(sam_list)/self.nchunks, 1)
+            lchnksize = lchnksize if len(sam_list) % self.nchunks == 0 else lchnksize + 1
+            values = list(zip(range(len(sam_list)), sam_list))
+            for vals in majiq_utils.chunks(values, lchnksize):
+                pool.apply_async(majiq_io.gc_content_per_file, [vals, gc_pairs, majiq_config.outDir])
+            pool.close()
+            pool.join()
+            vfunc_gc = majiq_norm.gc_normalization(gc_pairs, logger)
+
+        else:
+            vfunc_gc = [None] * majiq_config.num_experiments
 
         majiq_utils.monitor('AFTER READ GFF')
 
-        lock_array = {}
+        lock_array = [mp.Lock() for xx in range(self.nthreads)]
         q = mp.Queue()
-        db_filename = "%s/tmp/db.hdf5" % majiq_config.outDir
 
         pool = mp.Pool(processes=self.nthreads, initializer=builder_init,
                        initargs=[q, lock_array, sam_list, self.pcr_filename, self.gff_output,
-                                 self.only_rna, self.non_denovo, db_filename, self.silent, self.debug],
+                                 self.only_rna, self.non_denovo, get_build_temp_db_filename(majiq_config.outDir),
+                                 self.silent, self.debug],
                        maxtasksperchild=1)
 
-        lchnksize = max(len(list_of_genes)/self.nchunks, 1)
+        lchnksize = max(len(list_of_genes)/self.nchunks, 1) + 1
+        [xx.acquire() for xx in lock_array]
 
-        for proc in pool._pool:
-            pid = proc._identity[0]
-            lock_array[pid] = mp.Lock()
-            lock_array[pid].acquire()
-
-        pool.map_async(majiq_builder, chunks(list_of_genes, lchnksize))
+        pool.map_async(majiq_builder, majiq_utils.chunks(list_of_genes, lchnksize, extra=range(self.nchunks)))
         pool.close()
         self.queue_manager(lock_array, q, vfunc_gc=vfunc_gc, logger=logger)
         pool.join()
-
-
-import argparse
-def new_subparser():
-    return argparse.ArgumentParser(add_help=False)
-
-def main():
-    """
-    Main MAJIQ parser with all flags and subcommands
-    """
-    #REMINDER parser.add_parser(..... parents='[bla, ble]')
-    parser = argparse.ArgumentParser(description="MAJIQ is a suite of tools for the analysis of Alternative "
-                                                 "Splicing Events and Alternative Splicing Quantification.")
-
-    #common flags (first ones are required)
-    common = new_subparser()
-    common.add_argument('--nthreads', default=4, type=int, help='Number of threads')
-    common.add_argument('--nchunks', default=-1, type=int,
-                        help='Numbers of chunks the execution will be divided. That differs of nthread in the '
-                        'concurrency. Chunks is the total chunks of the execution, nthreads set how many of '
-                        'this chunks will be executed at the same time.')
-    common.add_argument('--tmp', default="/tmp/", help='Path to save the temporary files. [Default: %(default)s]')
-    common.add_argument('--output', required=True, help='Path to save the pickle output to.')
-    common.add_argument('--logger', default=None, help='Path for the logger. Default is output directory')
-    common.add_argument('--silent', action='store_true', default=False, help='Silence the logger.')
-    common.add_argument('--plotpath', default=None,
-                        help='Path to save the plot to, if not provided will show on a matplotlib popup window')
-    common.add_argument('--debug', type=int, default=0,
-                        help="Activate this flag for debugging purposes, activates logger and jumps some "
-                             "processing steps.")
-
-    buildparser = new_subparser()
-    buildparser.add_argument('transcripts', action="store", help='read file in SAM format')
-    buildparser.add_argument('-conf', default=None, required=True, help='Provide study configuration file with all '
-                                                                        'the execution information')
-    buildparser.add_argument('--nogc', dest="gcnorm", action='store_false', default=True,
-                             help='psianddelta GC content normalization [Default: GC content normalization activated]')
-    buildparser.add_argument('--pcr', dest='pcr_filename', action="store", help='PCR bed file as gold_standard')
-    buildparser.add_argument('--gff_output', dest='gff_output', default="lsvs.gff", action="store",
-                             help='Filename where a gff with the lsv events will be generated')
-    buildparser.add_argument('--min_denovo', default=2, type=int,
-                             help='Minimum number of reads threshold combining all positions in a LSV to consider that'
-                                  'denovo junction is real". '
-                             '[Default: %(default)s]')
-    buildparser.add_argument('--minreads', default=3, type=int,
-                             help='Minimum number of reads threshold combining all positions in a LSV to consider that'
-                                  'the LSV "exist in the data". '
-                             '[Default: %(default)s]')
-    buildparser.add_argument('--min_intronic_cov', default=1.5, type=float,
-                             help='Minimum number of reads on average in intronic sites, only for intron retention.'
-                                  'Default: %(default)s]')
-    buildparser.add_argument('--minpos', default=2, type=int, help='Minimum number of start positions with at least 1 '
-                                                                   'read in a LSV to consider that the LSV "exist in '
-                                                                   'the data"')
-
-    buildparser.add_argument('--only_rna', default=False, action='store_true', help='Use only rna detected junction in '
-                                                                                    'order to detect LSV. If an exon '
-                                                                                    'has only one junction with '
-                                                                                    'coverage, it is not going to be '
-                                                                                    'detected as an LSV')
-    buildparser.add_argument('--non_denovo', default=False, action='store_true', help='Avoid denovo detection of '
-                                                                                      'junction, splicesites and exons.'
-                                                                                      ' This will speedup the execution'
-                                                                                      ' but reduce the number of LSVs '
-                                                                                      'detected')
-    buildparser.add_argument('--only_gather', action='store_true', dest='onlygather', default=False)
-    buildparser.add_argument('--permissive_ir', action='store_true', dest='permissive', default=False)
-
-
-    #flags shared by calcpsi and deltapair
-
-    subparsers = parser.add_subparsers(help='')
-
-    parser_preprocess = subparsers.add_parser('build', help='Preprocess SAM/BAM files as preparation for the rest of '
-                                                            'the tools (psi, deltapsi)', parents=[common, buildparser])
-    parser_preprocess.set_defaults(func=build)
-
-    args = parser.parse_args()
-    args.func(args)
-
-
-if __name__ == '__main__':
-    main()
-
-
+        logger.info("MAJIQ Builder is ended succesfully!")
+        logger.info("Alakazam! Done.")

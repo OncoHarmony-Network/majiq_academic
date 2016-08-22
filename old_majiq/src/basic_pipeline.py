@@ -6,7 +6,7 @@ from multiprocessing import Pool, Process
 import numpy as np
 from numpy.ma import masked_less
 
-import old_majiq.src.io_utils
+import majiq.src.io_utils
 # from old_majiq.src import builder as majiq_builder
 from majiq.src.utils import create_if_not_exists, get_logger
 import majiq.src.filter as majiq_filter
@@ -200,13 +200,13 @@ class CalcPsi(BasicPipeline):
         logger.info("GATHER pickles")
         for nt in xrange(self.nthreads):
             tempfile = open("%s/tmp/%s_th%s.calcpsi.pickle" % (self.output, self.name, nt))
-            ptempt = old_majiq.src.io_utils.load_bin_file(tempfile)
+            ptempt = majiq.src.io_utils.load_bin_file(tempfile)
             posterior_matrix.extend(ptempt[0])
             names.extend(ptempt[1])
 
         logger.debug("Getting meta info for %s..." % self.name)
         tin = open("%s/tmp/%s_metainfo.pickle" % (self.output, self.name))
-        meta_info = old_majiq.src.io_utils.load_bin_file(tin)
+        meta_info = majiq.src.io_utils.load_bin_file(tin)
         tin.close()
 
 

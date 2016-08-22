@@ -15,9 +15,13 @@ from majiq.grimoire.junction import Junction
 import majiq.src.config as majiq_config
 import majiq.src.utils as majiq_utils
 
+from majiq.src.normalize import gc_factor_calculation
 from voila.io_voila import VoilaInput
 from voila.vlsv import VoilaLsv
 import pickle
+
+import traceback
+import sys
 
 # READING BAM FILES
 
@@ -95,34 +99,56 @@ def _check_read(read):
     return __is_unique(read) and _match_strand(read, gg_strand)
 
 
-def get_exon_gc_content(gc_pairs, sam_list, all_genes):
-
+def gc_content_per_file(args_vals, gc_pairs, outdir):
     global gg_strand
-    gc_pairs['GC'] = [[] for xx in xrange(majiq_config.num_experiments)]
-    gc_pairs['COV'] = [[] for xx in xrange(majiq_config.num_experiments)]
-    for exp_idx, ff in enumerate(sam_list):
-        samfile = pysam.AlignmentFile(ff, "rb")
-        for chrom, ll in all_genes.items():
-            for strand, ll2 in ll.items():
-                for gg in ll2:
-                    gg_strand = gg.strand
-                    for ex in gg.get_exon_list():
-                        gc_val = ex.get_gc_content()
-                        st, end = ex.get_coordinates()
-                        if gc_val == 0 or end - st < 30:
-                            continue
-                        nreads = samfile.count(reference=gg.get_chromosome(), start=st, end=end,
-                                               until_eof=False, read_callback=_check_read)
-                        if nreads > 0:
-                            ex.set_in_data()
-                        gc_pairs['GC'][exp_idx].append(gc_val)
-                        gc_pairs['COV'][exp_idx].append(nreads)
-        samfile.close()
+    try:
+        gc_pairs = {'GC': [], 'COV': []}
+        db_f = h5py.File(get_build_temp_db_filename(outdir))
+        for exp_idx, ff in args_vals:
+            samfile = pysam.AlignmentFile(ff, "rb")
+            for gene_name in db_f.keys():
+                chromsome = db_f[gene_name].attrs['chromosome']
+                gg_strand = db_f[gene_name].attrs['strand']
+
+                for ex in db_f[gene_name]['exons']:
+                    gc_val = db_f[gene_name]['exons/%s' % ex].attrs['gc_content']
+                    st = db_f[gene_name]['exons/%s' % ex].attrs['start']
+                    end = db_f[gene_name]['exons/%s' % ex].attrs['end']
+
+                    if gc_val == 0 or end - st < 30:
+                        continue
+                    nreads = samfile.count(reference=chromsome, start=st, end=end,
+                                           until_eof=False, read_callback=_check_read)
+                    # if nreads > 0:
+                    #     ex.set_in_data()
+                    gc_pairs['GC'].append(gc_val)
+                    gc_pairs['COV'].append(nreads)
+            samfile.close()
+
+            factor, meanbins = gc_factor_calculation(gc_pairs, nbins=10)
+
+
+    except:
+        traceback.print_exc()
+        sys.stdout.flush()
+        raise
+
+# def get_exon_gc_content(gc_pairs, sam_list, all_genes):
+#     import multiprocessing as mp
+#
+#     global gg_strand
+#     gc_pairs['GC'] = [[] for xx in xrange(majiq_config.num_experiments)]
+#     gc_pairs['COV'] = [[] for xx in xrange(majiq_config.num_experiments)]
+#     pool = mp.Pool(processes=majiq_config.nthreads, maxtasksperchild=1)
+#     for filename, ff in enumerate(sam_list):
+#         pool.map_async(__gc_content_per_file, majiq_utils.chunks(sam_list, extra=range(len(sam_list))))
+
+
 
 def rnaseq_intron_retention(gne, samfile_list, chnk, permissive=True, nondenovo=False, logging=None):
 
     # filenames, gene_list, chnk, permissive=True, nondenovo=False, logging=None)
-    num_bins = 10
+    num_bins = NUM_INTRON_BINS
     intron_list = gne.get_all_introns()
     strand = gne.get_strand()
     chrom = gne.get_chromosome()
@@ -136,7 +162,7 @@ def rnaseq_intron_retention(gne, samfile_list, chnk, permissive=True, nondenovo=
         if intron_len <= 0:
             continue
 
-        if intron_len <= 1000:
+        if intron_len <= MIN_INTRON_LEN:
             nchunks = 1
         else:
             nchunks = num_bins
@@ -196,12 +222,12 @@ def rnaseq_intron_retention(gne, samfile_list, chnk, permissive=True, nondenovo=
                     ng = read.seq.count('g') + read.seq.count('G')
                     gc_content = float(nc + ng) / float(len(read.seq))
                     readlen = len(read.seq)
-                    offset = readlen - 8
+                    offset = readlen - MIN_BP_OVERLAP
 
                     if intron_start - r_start > readlen:
-                        r_start = intron_start - (readlen - 16) - 1
+                        r_start = intron_start - (readlen - MIN_BP_OVERLAP*2) - 1
 
-                    if r_start < ex1_end - 8:
+                    if r_start < ex1_end - MIN_BP_OVERLAP:
                         if junc1 is None:
                             junc1 = Junction(ex1_end, intron_start, exon1, None, gne, retrieve=True)
                         junc1.update_junction_read(exp_index, nreads, r_start, gc_content, unique)
@@ -293,7 +319,7 @@ def rnaseq_intron_retention(gne, samfile_list, chnk, permissive=True, nondenovo=
     gne.prepare_exons()
 
 
-def read_sam_or_bam(gne, samfile_list, counter, nondenovo=False, info_msg='0', logging=None):
+def read_sam_or_bam(gne, samfile_list, counter,  h5py_file, nondenovo=False, info_msg='0', logging=None):
 
     junctions = []
     strt, end = gne.get_coordinates()
@@ -333,11 +359,14 @@ def read_sam_or_bam(gne, samfile_list, counter, nondenovo=False, info_msg='0', l
             readlen = len(read.seq)
             for (junc_start, junc_end) in junc_list:
                 if junc_start - r_start > readlen:
-                    r_start = junc_start - (readlen - 16) - 1
-                elif junc_start - r_start >= readlen - 8 or junc_start - r_start <= 8:
+                    r_start_offset = junc_list[0][0] - r_start
+                    r_start = junc_start - r_start_offset
+                    if junc_start - r_start >= readlen - MIN_BP_OVERLAP or junc_start - r_start <= MIN_BP_OVERLAP:
+                        continue
+                elif junc_start - r_start >= readlen - MIN_BP_OVERLAP or junc_start - r_start <= MIN_BP_OVERLAP:
                     continue
 
-                if junc_end - junc_start < 10:
+                if junc_end - junc_start < MIN_JUNC_LENGTH:
                     counter[0] += 1
                     continue
 
@@ -376,7 +405,7 @@ def read_sam_or_bam(gne, samfile_list, counter, nondenovo=False, info_msg='0', l
 
                     if junc is None:
                         '''mark a new junction '''
-                        bb = gne.check_antisense_junctions(junc_start, junc_end)
+                        bb = gne.check_antisense_junctions_hdf5(junc_start, junc_end, h5py_file)
                         if not bb:
                             counter[4] += 1
                             junc = Junction(junc_start, junc_end, None, None, gne, retrieve=True)
@@ -557,8 +586,9 @@ def read_gff(filename, list_of_genes, gc_pairs, sam_list, logging=None):
             except RuntimeWarning:
                 continue
 
-    if majiq_config.gcnorm:
-        get_exon_gc_content(gc_pairs, sam_list, all_genes)
+    # majiq_utils.monitor('GC_CONTENT')
+    # if majiq_config.gcnorm:
+    #     get_exon_gc_content(gc_pairs, sam_list, all_genes)
 
     _prepare_and_dump(filename="%s/tmp/db.hdf5" % majiq_config.outDir, logging=logging)
     majiq_utils.monitor('POST_GFF')
@@ -605,11 +635,7 @@ def load_data_lsv(path, group_name, logger=None):
     try:
         for lsvid in data['LSVs'].keys():
             lsv = data['LSVs/%s' % lsvid]
-            try:
-                lsv_info.append([lsv.attrs['coords'], lsv.attrs['id'], lsv.attrs['type'], lsv['visuals']])
-            except AttributeError, e:
-                lsv_info.append([lsv.attrs['coords'], lsv.attrs['id'], lsv.attrs['type']])
-
+            lsv_info.append([lsv.attrs['id'], lsv.attrs['type'], lsv['visuals']])
             lsv_cov_list.append(data[LSV_JUNCTIONS_DATASET_NAME][lsv.attrs['coverage']])
 
     except KeyError:
@@ -617,6 +643,10 @@ def load_data_lsv(path, group_name, logger=None):
         raise
 
     return meta_info, [lsv_cov_list, lsv_info]
+
+
+def load_lsvgraphic_from_majiq(h5df_grp, lsv_id):
+    return h5df_grp['/LSV/%s/visuals' % lsv_id]
 
 
 def dump_lsvs_voila(pickle_path, posterior_matrix, lsvs_info, meta_info, psi_list1=None, psi_list2=None):

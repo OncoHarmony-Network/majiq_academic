@@ -9,11 +9,11 @@ from multiprocessing import Pool
 import h5py
 
 import majiq.src.config as majiq_config
+import majiq.src.io_utils
 import majiq.src.utils as utils
 import old_majiq.grimoire.gene as majiq_gene
 import old_majiq.src.analize as analize
 import old_majiq.src.io as majiq_io
-import old_majiq.src.io_utils
 import old_majiq.src.voila_wrapper
 from old_majiq.src.normalize import prepare_gc_content, gc_factor_calculation
 
@@ -38,7 +38,7 @@ def majiq_builder(samfiles_list, chnk, pcr_validation=None, gff_output=None, cre
         return
 
     # temp_file = open(annot_file, 'rb')
-    gene_list = old_majiq.src.io_utils.load_bin_file(annot_file)
+    gene_list = majiq.src.io_utils.load_bin_file(annot_file)
 
     if create_tlb:
         if not logging is None:
@@ -106,7 +106,7 @@ def gather_files(out_dir, prefix='', gff_out=None, pcr_out=None, nthreads=1, log
             yfile = '%s/temp_gff.pkl' % temp_dir
             if not os.path.exists(yfile):
                 continue
-            gff_list = old_majiq.src.io_utils.load_bin_file(yfile)
+            gff_list = majiq.src.io_utils.load_bin_file(yfile)
             for gff in gff_list:
                 fp.write("%s\n" % gff)
         fp.close()
@@ -119,7 +119,7 @@ def gather_files(out_dir, prefix='', gff_out=None, pcr_out=None, nthreads=1, log
             yfile = '%s/pcr.pkl' % temp_dir
             if not os.path.exists(yfile):
                 continue
-            pcr_l = old_majiq.src.io_utils.load_bin_file(yfile)
+            pcr_l = majiq.src.io_utils.load_bin_file(yfile)
             for pcr in pcr_l:
                 fp.write("%s\n" % pcr)
         fp.close()

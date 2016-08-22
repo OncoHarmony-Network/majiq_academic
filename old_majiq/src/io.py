@@ -13,8 +13,8 @@ import numpy as np
 import pysam
 
 import majiq.src.config as majiq_config
+import majiq.src.io_utils as io_utils
 import old_majiq.grimoire.exon as majiq_exons
-import old_majiq.src.io_utils as io_utils
 from old_majiq.grimoire.gene import Gene, Transcript
 from old_majiq.grimoire.junction import Junction
 

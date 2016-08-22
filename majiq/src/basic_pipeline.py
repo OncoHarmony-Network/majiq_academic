@@ -1,10 +1,9 @@
-from majiq.src.utils import create_if_not_exists
-import old_majiq.src.io as majiq_io
+import majiq.src.io as majiq_io
 from majiq.src.polyfitnb import fit_nb
 import abc
 import numpy as np
 from numpy.ma import masked_less
-
+import majiq.src.utils as majiq_utils
 
 # ###############################
 # Data loading and Boilerplate #
@@ -38,9 +37,9 @@ class BasicPipeline:
 
         #trick to dump argparse arguments into self
         self.__dict__.update(args.__dict__)
-        create_if_not_exists(self.output)
+        majiq_utils.create_if_not_exists(self.output)
         if self.plotpath:
-            create_if_not_exists(self.plotpath)
+            majiq_utils.create_if_not_exists(self.plotpath)
         self.logger_path = self.logger
         if not self.logger_path:
             self.logger_path = self.output
@@ -56,10 +55,12 @@ class BasicPipeline:
     def fitfunc(self, const_junctions):
         """Calculate the Negative Binomial function to sample from using the Constitutive events"""
         if self.debug:
-            self.logger.debug("Skipping fitfunc because --debug!")
+            if self.logger is not None:
+                self.logger.debug("Skipping fitfunc because --debug!")
             return np.poly1d([1, 0])
         else:
-            self.logger.debug("Fitting NB function with constitutive events...")
+            if self.logger is not None:
+                self.logger.debug("Fitting NB function with constitutive events...")
             return fit_nb(const_junctions, "%s/nbfit" % self.output, self.plotpath, logger=self.logger)
 
 
