@@ -4,6 +4,8 @@ import majiq.grimoire.lsv as majiq_lsv
 import majiq.src.config as majiq_config
 import majiq.src.filter as majiq_filter
 from majiq.grimoire.lsv import SSOURCE, STARGET, InvalidLSV
+from majiq.src.constants import *
+from majiq.src.multiproc import QueueMessage
 
 def reliable_in_data(junc, exp_idx):
     min_read_x_exp = majiq_config.MINREADS
@@ -50,7 +52,7 @@ def detect_lsv(exon, gn, lsv_type, dummy, jun, only_annot=False):
         return
 
 
-def lsv_detection(gn, only_real_data=False, out_queue=None, logging=None):
+def lsv_detection(gn, gc_vfunc, chnk, only_real_data=False, out_queue=None, logging=None):
 
     const_set = {}
 
@@ -84,23 +86,37 @@ def lsv_detection(gn, only_real_data=False, out_queue=None, logging=None):
         prb = min(1.0, float(t_juncs) / njuncs) * 100
         kk = np.random.choice(100, njuncs)
         indx = np.arange(njuncs)[kk <= prb]
-        r_junctions = np.array(list(local_const))[indx]
+        sample_junc = list(local_const)[0].get_coverage(ind_list)
 
-        for jix, jn in enumerate(r_junctions):
-            out_queue.put([1, jn.get_coverage(ind_list), jn.get_gc_content(), name], block=True)
+        r_junctions = np.zeros(shape=(len(indx), sample_junc.shape[0], sample_junc.shape[1]))
+        #r_junctions_gc = np.zeros(shape=(len(indx), list(local_const)[0].shape[0], list(local_const)[0].shape[1]))
+
+        r_junctions_gc = []
+
+        for jidx, jn in enumerate(np.array(list(local_const))[indx]):
+            r_junctions[jidx, :, :] = jn.get_coverage(ind_list).toarray()
+            if majiq_config.gcnorm:
+                r_junctions_gc.append([gc_vfunc[exp_idx](jn.get_gc_content().toarray()) for exp_idx in ind_list])
+
+        r_junctions = np.multiply(r_junctions, np.array(r_junctions_gc))
+
+        qm = QueueMessage(QUEUE_MESSAGE_BUILD_CONST_JUNCTION, [r_junctions, name], chnk)
+        out_queue.put(qm, block=True)
 
         for ss in dummy[name][0]:
             for st in dummy[name][1]:
                 if ss.contained(st):
                     break
             else:
-                out_queue.put([0, majiq_lsv.Queue_Lsv(ss, name), name], block=True)
+                qm = QueueMessage(QUEUE_MESSAGE_BUILD_LSV, [majiq_lsv.Queue_Lsv(ss, name), name], chnk)
+                out_queue.put(qm, block=True)
 
         for st in dummy[name][1]:
             for ss in dummy[name][0]:
                 if st.contained(ss):
                     break
             else:
-                out_queue.put([0, majiq_lsv.Queue_Lsv(st, name), name], block=True)
+                qm = QueueMessage(QUEUE_MESSAGE_BUILD_LSV, [majiq_lsv.Queue_Lsv(st, name), name], chnk)
+                out_queue.put(qm, block=True)
 
 

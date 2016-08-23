@@ -22,13 +22,14 @@ def build(args):
     pipeline_run(Builder(args))
 
 
-def builder_init(out_queue, lock_arr, sam_list, pcr_filename, gff_output, only_rna,
+def builder_init(out_queue, lock_arr, sam_list, pcr_filename, gff_output, vfunc_gc, only_rna,
                  non_denovo, dbfile, silent, debug):
     majiq_builder.queue = out_queue
     majiq_builder.lock_arr = lock_arr
     majiq_builder.sam_list = sam_list
     majiq_builder.pcr_filename = pcr_filename
     majiq_builder.gff_output = gff_output
+    majiq_builder.vfunc_gc = vfunc_gc
     majiq_builder.only_rna = only_rna
     majiq_builder.non_denovo = non_denovo
     majiq_builder.dbfile = dbfile
@@ -72,7 +73,7 @@ def majiq_builder(args_vals):
                                              nondenovo=majiq_builder.non_denovo, logging=tlogger)
 
             tlogger.info("[%s] Detecting LSV" % loop_id)
-            lsv_detection(gene_obj, only_real_data=majiq_builder.only_rna,
+            lsv_detection(gene_obj,  majiq_builder.vfunc_gc, chnk, only_real_data=majiq_builder.only_rna,
                           out_queue=majiq_builder.queue, logging=tlogger)
 
             majiq_utils.monitor('CHILD %s:: ENDLOOP' % chnk)
@@ -181,10 +182,9 @@ class Builder(BasicPipeline):
 
         manager = mp.Manager()
         list_of_genes = manager.list()
-        gc_pairs = manager.dict()
 
         p = mp.Process(target=majiq_multi.parallel_lsv_child_calculation,
-                       args=(majiq_io.read_gff, [self.transcripts, list_of_genes, gc_pairs, sam_list],
+                       args=(majiq_io.read_gff, [self.transcripts, list_of_genes, sam_list],
                              '%s/tmp' % majiq_config.outDir, 'db', 0, False))
 
         logger.info("... waiting gff3 parsing")
@@ -196,11 +196,12 @@ class Builder(BasicPipeline):
             lchnksize = max(len(sam_list)/self.nchunks, 1)
             lchnksize = lchnksize if len(sam_list) % self.nchunks == 0 else lchnksize + 1
             values = list(zip(range(len(sam_list)), sam_list))
+            output_gc_vals = manager.dict()
             for vals in majiq_utils.chunks(values, lchnksize):
-                pool.apply_async(majiq_io.gc_content_per_file, [vals, gc_pairs, majiq_config.outDir])
+                pool.apply_async(majiq_io.gc_content_per_file, [vals, output_gc_vals, majiq_config.outDir])
             pool.close()
             pool.join()
-            vfunc_gc = majiq_norm.gc_normalization(gc_pairs, logger)
+            vfunc_gc = majiq_norm.gc_normalization(output_gc_vals, logger)
 
         else:
             vfunc_gc = [None] * majiq_config.num_experiments
@@ -211,7 +212,7 @@ class Builder(BasicPipeline):
         q = mp.Queue()
 
         pool = mp.Pool(processes=self.nthreads, initializer=builder_init,
-                       initargs=[q, lock_array, sam_list, self.pcr_filename, self.gff_output,
+                       initargs=[q, lock_array, sam_list, self.pcr_filename, self.gff_output, vfunc_gc,
                                  self.only_rna, self.non_denovo, get_build_temp_db_filename(majiq_config.outDir),
                                  self.silent, self.debug],
                        maxtasksperchild=1)

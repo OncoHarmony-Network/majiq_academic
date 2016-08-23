@@ -99,7 +99,7 @@ def _check_read(read):
     return __is_unique(read) and _match_strand(read, gg_strand)
 
 
-def gc_content_per_file(args_vals, gc_pairs, outdir):
+def gc_content_per_file(args_vals, output_gc_vals, outdir):
     global gg_strand
     try:
         gc_pairs = {'GC': [], 'COV': []}
@@ -126,6 +126,7 @@ def gc_content_per_file(args_vals, gc_pairs, outdir):
             samfile.close()
 
             factor, meanbins = gc_factor_calculation(gc_pairs, nbins=10)
+            output_gc_vals[exp_idx] = (factor, meanbins)
 
 
     except:
@@ -489,7 +490,7 @@ def __parse_gff3(filename):
             yield GFFRecord(**normalized_info)
 
 
-def read_gff(filename, list_of_genes, gc_pairs, sam_list, logging=None):
+def read_gff(filename, list_of_genes, sam_list, logging=None):
     """
     :param filename: GFF input filename
     :param list_of_genes: List of genes that will be updated with all the gene_id detected on the gff file

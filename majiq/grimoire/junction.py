@@ -33,7 +33,7 @@ class Junction:
         if retrieve:
             self.coverage = scipy.sparse.lil_matrix((majiq_config.num_experiments,  (majiq_config.readLen - 16) + 1),
                                                     dtype=np.float)
-            self.gc_content = scipy.sparse.lil_matrix((1, (majiq_config.readLen - 16) + 1), dtype=np.float)
+            self.gc_content = scipy.sparse.lil_matrix(((majiq_config.readLen - 16) + 1), dtype=np.float)
 
         self.transcript_id_list = []
 
@@ -173,9 +173,9 @@ class Junction:
                 self.coverage[exp_idx, left_ind] += read_n
             else:
                 self.coverage[exp_idx, left_ind] = -1
-            self.gc_content[0, left_ind] = gc
+            self.gc_content[left_ind] = gc
         except:
-            print self.gene_name, start, exp_idx, left_ind
+            print self.gene_name, start, exp_idx, left_ind, self.start, start
             raise
 
     def reset_coverage(self, exp_idx):
@@ -204,8 +204,8 @@ class Queue_Junction:
         else:
              self.gc_factor = None
         for jj in range(majiq_config.readLen - 16 + 1):
-            dummy = jnc.gc_content[0, jj]
-            self.gc_factor[0, jj] *= dummy
+            dummy = jnc.gc_content[jj]
+            self.gc_factor[jj] *= dummy
 
     def set_gc_factor(self, exp_idx):
         if majiq_config.gcnorm:
