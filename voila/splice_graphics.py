@@ -214,8 +214,8 @@ class JunctionGraphic(HDF5):
 
 
 class LsvGraphic(GeneGraphic):
-    def __init__(self, type_lsv, coords, id):
-        super(LsvGraphic, self).__init__(id)
+    def __init__(self, type_lsv, coords, id, name=None, strand=None, exons=list(), junctions=list(), chrom=None):
+        super(LsvGraphic, self).__init__(id, name, strand, exons, junctions, chrom)
         self.type = type_lsv
         self.coords = coords
 

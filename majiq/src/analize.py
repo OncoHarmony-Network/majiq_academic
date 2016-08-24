@@ -99,8 +99,8 @@ def lsv_detection(gn, gc_vfunc, chnk, only_real_data=False, out_queue=None, logg
                 gc_array = jn.get_gc_content().toarray()
                 gc_array = np.reshape(gc_array, (gc_array.shape[1],))
                 r_junctions_gc.append([gc_vfunc[exp_idx](gc_array) for exp_idx in ind_list])
-
-        r_junctions = np.multiply(r_junctions, np.array(r_junctions_gc))
+        if majiq_config.gcnorm:
+            r_junctions = np.multiply(r_junctions, np.array(r_junctions_gc))
 
         qm = QueueMessage(QUEUE_MESSAGE_BUILD_CONST_JUNCTION, [r_junctions, name], chnk)
         out_queue.put(qm, block=True)
