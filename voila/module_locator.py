@@ -1,6 +1,6 @@
 __author__ = 'abarrera'
-import sys
 import os
+import sys
 
 
 def we_are_frozen():
