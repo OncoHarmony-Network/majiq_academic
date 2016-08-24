@@ -11,7 +11,7 @@ import io as majiq_io
 import majiq.grimoire.gene
 import majiq.src.config as majiq_config
 import majiq.src.utils as majiq_utils
-import multiproc as majiq_multi
+import majiq.src.multiproc as majiq_multi
 import majiq.src.normalize as majiq_norm
 from analize import lsv_detection
 from constants import *
@@ -92,7 +92,8 @@ def majiq_builder(args_vals):
     db_f.close()
     majiq_utils.monitor('CHILD %s:: WAITING' % chnk)
     tlogger.info("[%s] Waiting to be freed" % chnk)
-    majiq_builder.queue.put([-1, chnk], block=True)
+    qm = majiq_multi.QueueMessage(QUEUE_MESSAGE_END_WORKER, None, chnk)
+    majiq_builder.queue.put(qm, block=True)
     majiq_builder.lock_arr[chnk].acquire()
     majiq_builder.lock_arr[chnk].release()
     tlogger.info("[%s] Child work done." % chnk)
@@ -142,25 +143,32 @@ class Builder(BasicPipeline):
             try:
                 val = result_queue.get(block=True, timeout=10)
                 # print "QUEUE SIZE", result_queue.qsize()
-                if val[0] == 0:
-                    for jdx, exp_idx in enumerate(majiq_config.tissue_repl[val[2]]):
-                        lsv_idx[exp_idx] = val[1].to_hdf5(hdf5grp=lsv_list[exp_idx],
+                if val.get_type() == QUEUE_MESSAGE_BUILD_LSV:
+                    for jdx, exp_idx in enumerate(majiq_config.tissue_repl[val.get_value()[1]]):
+                        lsvobj = val.get_value()[0]
+                        lsv_idx[exp_idx] = lsvobj.to_hdf5(hdf5grp=lsv_list[exp_idx],
                                                           lsv_idx=lsv_idx[exp_idx],
                                                           exp_idx=jdx,
                                                           gc_func=vfunc_gc[exp_idx])
 
-                elif val[0] == 1:
-                    for jdx, exp_idx in enumerate(majiq_config.tissue_repl[val[3]]):
+                elif val.get_type() == QUEUE_MESSAGE_BUILD_CONST_JUNCTION:
+                    juncs = val.get_value()[0]
+                    for jdx, exp_idx in enumerate(majiq_config.tissue_repl[val.get_value()[1]]):
                         if junc_idx[exp_idx] >= majiq_config.nrandom_junctions:
                             continue
-                        lsv_list[exp_idx][CONST_JUNCTIONS_DATASET_NAME][junc_idx[exp_idx], :] = val[1][jdx, :].toarray()
-                        junc_idx[exp_idx] += 1
+                        elif junc_idx[exp_idx] + juncs.shape[0] >=  majiq_config.nrandom_junctions:
+                            shp = lsv_list[exp_idx][CONST_JUNCTIONS_DATASET_NAME].shape
+                            shp_new = shp[0] + juncs.shape[0]
+                            lsv_list[exp_idx][CONST_JUNCTIONS_DATASET_NAME].resize((shp_new, shp[1]))
 
-                elif val[0] == 2:
+                        lsv_list[exp_idx][CONST_JUNCTIONS_DATASET_NAME][junc_idx[exp_idx]:junc_idx[exp_idx]+juncs.shape[0], :] = juncs[:, jdx, :]
+                        junc_idx[exp_idx] += juncs.shape[0]
+
+                elif val.get_type() == QUEUE_MESSAGE_SPLICEGRAPH:
                     val[1].to_hdf5(splicegraph[val[2]])
 
-                elif val[0] == QUEUE_MESSAGE_END_WORKER:
-                    lock_array[val[1]].release()
+                elif val.get_type() == QUEUE_MESSAGE_END_WORKER:
+                    lock_array[val.get_chunk()].release()
                     nthr_count += 1
 
             except Queue.Empty:

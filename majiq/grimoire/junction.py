@@ -33,7 +33,7 @@ class Junction:
         if retrieve:
             self.coverage = scipy.sparse.lil_matrix((majiq_config.num_experiments,  (majiq_config.readLen - 16) + 1),
                                                     dtype=np.float)
-            self.gc_content = scipy.sparse.lil_matrix(((majiq_config.readLen - 16) + 1), dtype=np.float)
+            self.gc_content = scipy.sparse.lil_matrix((1, (majiq_config.readLen - 16) + 1), dtype=np.float)
 
         self.transcript_id_list = []
 
@@ -145,11 +145,9 @@ class Junction:
         return res
 
     # MODIFIERs
-
     def add_gc_content_positions(self, pos, gc):
         self.gc_content = gc
-
-    #        self.gc_factor[exp_idx,:] = gc_factor
+    #   self.gc_factor[exp_idx,:] = gc_factor
 
     def add_donor(self, donor):
         if donor is None:
@@ -173,9 +171,9 @@ class Junction:
                 self.coverage[exp_idx, left_ind] += read_n
             else:
                 self.coverage[exp_idx, left_ind] = -1
-            self.gc_content[left_ind] = gc
+            self.gc_content[0, left_ind] = gc
         except:
-            print self.gene_name, start, exp_idx, left_ind, self.start, start
+            print self.gene_name, start, exp_idx, left_ind, self.gc_content.shape
             raise
 
     def reset_coverage(self, exp_idx):
