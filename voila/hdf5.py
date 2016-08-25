@@ -20,9 +20,29 @@ class HDF5(object):
         :return: None
         """
         for key in src:
-            src.copy(key, dst)
+            try:
+                src.copy(key, dst)
+            except ValueError:
+                del dst[key]
+                src.copy(key, dst)
+
         for key in src.attrs:
             dst.attrs[key] = src.attrs[key]
+
+    @staticmethod
+    def copy_lsv_graphic(lsv_src, lsv_dst):
+        """
+        Copy LsvGraphic data from one VoilaLsv object to another.
+        :param lsv_src: source VoilaLsv
+        :param lsv_dst: destination VoilaLsv
+        :return: None
+        """
+        lsv_graphic = 'lsv_graphic'
+        try:
+            dst = lsv_dst[lsv_graphic]
+        except KeyError:
+            dst = lsv_dst.create_group(lsv_graphic)
+        HDF5.copy_group(lsv_src[lsv_graphic], dst)
 
     def exclude(self):
         """
@@ -120,14 +140,14 @@ class DataSet(object):
         self.ds_name = ds_name
 
         try:
-            self.ds = h['/' + ds_name]
+            self.ds = h['/datasets/' + ds_name]
         except KeyError:
             try:
-                self.ds = h.create_dataset('/' + ds_name, shape, dtype=numpy.float64, chunks=(1, shape[1]))
+                self.ds = h.create_dataset('/datasets/' + ds_name, shape, dtype=numpy.float64, chunks=(1, shape[1]))
                 # store how many objects we've worked with in the HDF5 file
                 self.ds.attrs['index'] = 0
             except TypeError as e:
-                raise type(e)('Dataset "{0}" was not initialized.'.format(ds_name))
+                raise type(e)('dataset "{0}" was not initialized.'.format(ds_name))
 
     def encode_list(self, objs):
         """
