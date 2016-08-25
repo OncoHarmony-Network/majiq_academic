@@ -8,6 +8,22 @@ class HDF5(object):
         """
         pass
 
+    @staticmethod
+    def copy_group(src, dst):
+        """
+        Copy HDF5 group data to another HDF5 group.  This can be within the same file or across two files.  Sometimes
+        there are attributes on the source group, these are also copied to the destination group.  This will copy
+        references to the destination, but if the destination is in a different file, the referenced data will not be
+        copied to the new file.
+        :param src: source HDF5 group
+        :param dst: destination HDF5 group
+        :return: None
+        """
+        for key in src:
+            src.copy(key, dst)
+        for key in src.attrs:
+            dst.attrs[key] = src.attrs[key]
+
     def exclude(self):
         """
         Exclude class attributes from being processed.  This infers that these attributes will be processed by the
@@ -21,7 +37,7 @@ class HDF5(object):
         Identify class attributes that are a list of a specific class.  e.g [VoilaLsv(), VoilaLsv(), ... ].  The
         returned dictionary should contain the name of the attribute that points to the list of classes and how
         instantiate the classes in the from_hdf.  See VoilaInput for an example.
-        :return:
+        :return: Dictionary of classes
         """
         return {}
 
@@ -106,9 +122,12 @@ class DataSet(object):
         try:
             self.ds = h['/' + ds_name]
         except KeyError:
-            self.ds = h.create_dataset('/' + ds_name, shape, dtype=numpy.float64, chunks=(1, shape[1]))
-            # store how many objects we've worked with in the HDF5 file
-            self.ds.attrs['index'] = 0
+            try:
+                self.ds = h.create_dataset('/' + ds_name, shape, dtype=numpy.float64, chunks=(1, shape[1]))
+                # store how many objects we've worked with in the HDF5 file
+                self.ds.attrs['index'] = 0
+            except TypeError as e:
+                raise type(e)('Dataset "{0}" was not initialized.'.format(ds_name))
 
     def encode_list(self, objs):
         """
