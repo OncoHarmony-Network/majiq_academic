@@ -120,9 +120,7 @@ def psi_quantification(args_vals):
 
 ##
 
-
 conf = collections.namedtuple('conf', 'name output_dir silent debug markstacks')
-
 def parse_and_norm_majiq(fname, replica_num, config):
     try:
         logger = majiq_utils.get_logger("%s/%s_%s.majiq.log" % (config.output_dir, config.name, replica_num),
