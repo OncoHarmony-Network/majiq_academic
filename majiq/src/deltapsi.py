@@ -232,7 +232,7 @@ class Multi_Deltapair(BasicPipeline):
 
     def prepare_lsvs(self, conf, nchunks, group1, group2, logger=None):
 
-        num_exp = conf['num_exp']
+        num_exp = [len(groups[group1]), len(groups[group2])]
         matched_files = [None] * num_exp[0]
         groups = conf['groups']
         meta_info = [[0] * num_exp[0], [0] * num_exp[1]]
@@ -319,6 +319,7 @@ class Multi_Deltapair(BasicPipeline):
                 'trimborder': self.trimborder,
                 'debug': self.debug,
                 'plotpath': self.plotpath}
+
 
         outfdir = '%s/tmp/samples/' % self.output
 
