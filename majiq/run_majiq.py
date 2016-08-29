@@ -140,6 +140,8 @@ def main():
                        help='Max number of iterations of the EM')
     mdelta.add_argument('--breakiter', default=0.01, type=float,
                        help='If the log likelihood increases less that this flag, do not do another EM step')
+    mdelta.add_argument('--prebootstrap', default=False, action='store_true')
+    mdelta.add_argument('--onlygather', default=False, action='store_true')
     mdelta.add_argument('--prioruniform', default=3, type=float,
                        help="Uniform distribution to give a bit more of a chance to values out of the normal "
                             "distribution. that the synthetic prior matrix has. Only works with --synthprior. "

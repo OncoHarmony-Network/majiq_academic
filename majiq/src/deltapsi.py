@@ -186,6 +186,7 @@ class DeltaPair(BasicPipeline):
 
 
 class Multi_Deltapair(BasicPipeline):
+
     def run(self):
         self.multi_dpsi()
 
@@ -228,6 +229,75 @@ class Multi_Deltapair(BasicPipeline):
         pickle.dump([meta_info, (lsv_samples, lsv_info), filt_vals], tout)
         tout.close()
 
+
+    def prepare_lsvs(self, conf, nchunks, group1, group2, logger=None):
+
+        num_exp = conf['num_exp']
+        matched_files = [None] * num_exp[0]
+        groups = conf['groups']
+        meta_info = [[0] * num_exp[0], [0] * num_exp[1]]
+        dpsi_name = '%s_%s' % (group1, group2)
+
+        for idx, ii in enumerate(groups[group1]):
+            outfdir = '%s/tmp/samples/' % self.output
+            infile = '%s/%s.pickle' % (outfdir, ii)
+            meta_info[0][idx], matched_files[idx], filt_vals = pickle.load(open(infile))
+        filtered_lsv1 = majiq_filter.quantifiable_in_group(matched_files, self.minpos, self.minreads,
+                                                           filt_vals, logger)
+
+        matched_files = [None] * num_exp[1]
+        for idx, ii in enumerate(groups[group2]):
+            outfdir = '%s/tmp/samples/' % self.output
+            infile = '%s/%s.pickle' % (outfdir, ii)
+            meta_info[1][idx], matched_files[idx], filt_vals = pickle.load(open(infile))
+        filtered_lsv2 = majiq_filter.quantifiable_in_group(matched_files, self.minpos, self.minreads,
+                                                           filt_vals, logger)
+
+        matched_lsv, matched_info = majiq_filter.lsv_intersection(filtered_lsv1, filtered_lsv2, bycol=True)
+        logger.info("After intersection:  %d/(%d, %d)" % (len(matched_info), len(filtered_lsv1[0]),
+                                                          len(filtered_lsv2[0])))
+
+        group1, group2 = combine_for_priormatrix(matched_lsv[0], matched_lsv[1], matched_info, num_exp)
+        psi_space, prior_matrix = majiq_psi.gen_prior_matrix(self, group1, group2, self.output, numbins=20,
+                                                             defaultprior=self.default_prior)
+
+        outfdir = '%s/tmp/%s/chunks/' % (self.output, dpsi_name)
+        if not os.path.exists(outfdir):
+            os.makedirs(outfdir)
+
+        logger.info("Saving prior matrix for %s..." % dpsi_name)
+        dpsi_prior_name = "%s/%s_priormatrix.pickle" % (self.output, dpsi_name)
+        tout = open(dpsi_prior_name, 'w+')
+        pickle.dump(prior_matrix, tout)
+        tout.close()
+
+        logger.info("Saving meta info for %s..." % dpsi_name)
+        tout = open("%s/tmp/%s_metainfo.pickle" % (self.output, dpsi_name), 'w+')
+        pickle.dump(meta_info, tout)
+        tout.close()
+
+        csize = len(matched_lsv[0]) / nchunks
+
+        logger.info("Creating %s chunks with <= %s lsv" % (nchunks, csize))
+        for nthrd in xrange(nchunks):
+            lb = nthrd * csize
+            ub = min((nthrd + 1) * csize, len(matched_lsv[0]))
+            if nthrd == nchunks - 1:
+                ub = len(matched_lsv[0])
+            lsv_list = [matched_lsv[0][lb:ub], matched_lsv[1][lb:ub]]
+            lsv_info = matched_info[lb:ub]
+
+            out_file = '%s/chunk_%d.pickle' % (outfdir, nthrd)
+            tout = open(out_file, 'w+')
+            pickle.dump([lsv_list, lsv_info, num_exp, conf, psi_space], tout)
+            tout.close()
+
+        gc.collect()
+
+
+
+
+
     def multi_dpsi(self):
 
         logger = get_logger("%s/majiq.log" % self.logger_path, silent=self.silent, debug=self.debug)
@@ -251,7 +321,8 @@ class Multi_Deltapair(BasicPipeline):
                 'plotpath': self.plotpath}
 
         outfdir = '%s/tmp/samples/' % self.output
-        if not os.path.exists(outfdir):
+
+        if not os.path.exists(outfdir) or self.prebootstrap:
             for name, fname in dict_files.items():
 
                 if self.nthreads > 1:
@@ -261,75 +332,24 @@ class Multi_Deltapair(BasicPipeline):
                 else:
                     self._auxiliar_multi(fname, name, conf)
 
-        onlygather = False
-
         for group1, group2 in list_deltas:
             pool = Pool(processes=self.nthreads)
             dpsi_name = '%s_%s' % (group1, group2)
-	    print "FOR LOOP", dpsi_name
-            num_exp = [len(groups[group1]), len(groups[group2])]
-            meta_info = [[0] * num_exp[0], [0] * num_exp[1]]
+            print "FOR LOOP", dpsi_name
             self.names = [group1, group2]
             self.logger = logger
-            if not onlygather:
+            if not self.onlygather:
 
-                matched_files = [None] * num_exp[0]
-                for idx, ii in enumerate(groups[group1]):
-                    outfdir = '%s/tmp/samples/' % self.output
-                    infile = '%s/%s.pickle' % (outfdir, ii)
-                    meta_info[0][idx], matched_files[idx], filt_vals = pickle.load(open(infile))
-                filtered_lsv1 = majiq_filter.quantifiable_in_group(matched_files, self.minpos, self.minreads,
-                                                                   filt_vals, logger)
+                if self.nthreads > 1:
+                    p = Process(target=self.prepare_lsvs, args=(conf, nchunks, group1, group2))
+                    p.start()
+                    p.join()
+                else:
+                    self.prepare_lsvs(conf, nchunks, group1, group2)
 
-                matched_files = [None] * num_exp[1]
-                for idx, ii in enumerate(groups[group2]):
-                    outfdir = '%s/tmp/samples/' % self.output
-                    infile = '%s/%s.pickle' % (outfdir, ii)
-                    meta_info[1][idx], matched_files[idx], filt_vals = pickle.load(open(infile))
-                filtered_lsv2 = majiq_filter.quantifiable_in_group(matched_files, self.minpos, self.minreads,
-                                                                   filt_vals, logger)
-
-                matched_lsv, matched_info = majiq_filter.lsv_intersection(filtered_lsv1, filtered_lsv2, bycol=True)
-                logger.info("After intersection:  %d/(%d, %d)" % (len(matched_info), len(filtered_lsv1[0]),
-                                                                  len(filtered_lsv2[0])))
-
-
-                group1, group2 = combine_for_priormatrix(matched_lsv[0], matched_lsv[1], matched_info, num_exp)
-                psi_space, prior_matrix = majiq_psi.gen_prior_matrix(self, group1, group2, self.output, numbins=20,
-                                                                     defaultprior=self.default_prior)
-
-
-                outfdir = '%s/tmp/%s/chunks/' % (self.output, dpsi_name)
-                if not os.path.exists(outfdir):
-                    os.makedirs(outfdir)
-
-                logger.info("Saving prior matrix for %s..." % dpsi_name)
                 dpsi_prior_name = "%s/%s_priormatrix.pickle" % (self.output, dpsi_name)
-                tout = open(dpsi_prior_name, 'w+')
-                pickle.dump(prior_matrix, tout)
-                tout.close()
-
-                logger.info("Saving meta info for %s..." % dpsi_name)
-                tout = open("%s/tmp/%s_metainfo.pickle" % (self.output, dpsi_name), 'w+')
-                pickle.dump(meta_info, tout)
-                tout.close()
-
-                csize = len(matched_lsv[0]) / nchunks
-
-                logger.info("Creating %s chunks with <= %s lsv" % (nchunks, csize))
                 for nthrd in xrange(nchunks):
-                    lb = nthrd * csize
-                    ub = min((nthrd + 1) * csize, len(matched_lsv[0]))
-                    if nthrd == nchunks - 1:
-                        ub = len(matched_lsv[0])
-                    lsv_list = [matched_lsv[0][lb:ub], matched_lsv[1][lb:ub]]
-                    lsv_info = matched_info[lb:ub]
-
                     out_file = '%s/chunk_%d.pickle' % (outfdir, nthrd)
-                    tout = open(out_file, 'w+')
-                    pickle.dump([lsv_list, lsv_info, num_exp, conf, None, psi_space], tout)
-                    tout.close()
-
                     if self.nthreads == 1:
                         pipe.parallel_lsv_child_calculation(deltapsi_quantify,
                                                             [out_file, dpsi_prior_name, False],
