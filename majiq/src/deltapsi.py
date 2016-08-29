@@ -232,9 +232,10 @@ class Multi_Deltapair(BasicPipeline):
 
     def prepare_lsvs(self, conf, nchunks, group1, group2, logger=None):
 
+        groups = conf['groups']
         num_exp = [len(groups[group1]), len(groups[group2])]
         matched_files = [None] * num_exp[0]
-        groups = conf['groups']
+
         meta_info = [[0] * num_exp[0], [0] * num_exp[1]]
         dpsi_name = '%s_%s' % (group1, group2)
 
