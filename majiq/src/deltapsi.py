@@ -319,8 +319,8 @@ class Multi_Deltapair(BasicPipeline):
                 'discardzeros': self.discardzeros,
                 'trimborder': self.trimborder,
                 'debug': self.debug,
-                'plotpath': self.plotpath}
-
+                'plotpath': self.plotpath,
+                'groups': groups}
 
         outfdir = '%s/tmp/samples/' % self.output
 
