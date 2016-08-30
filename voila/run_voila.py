@@ -22,6 +22,12 @@ EXEC_DIR = module_locator.module_path() + "/"
 VERSION = '0.8.0.yeolab'
 
 
+class VoilaException(Exception):
+    def __init__(self, message, logger):
+        logger.error(message)
+        super(VoilaException, self).__init__(message)
+
+
 def table_marks_set(size):
     """
     Calculate the number of elements to show in LSV tables.
@@ -133,7 +139,6 @@ def render_summary(output_dir, output_html, majiq_output, type_summary, threshol
                                                maxLsvs=constants.MAX_LSVS_PSI_INDEX
                                                ))
         voila_output.close()
-
 
     elif type_summary == constants.ANALYSIS_DELTAPSI:
         count_pages = 0
@@ -446,9 +451,7 @@ def parse_input(args):
             gene_name_list = majiq_output['genes_dict'].keys()
 
         if not gene_name_list:
-            logger.warning("Number of LSVs detected in Voila: 0.")
-            logger.info("End of Voila execution.")
-            return
+            raise VoilaException("There are no LSVs detected in Voila.", logger)
 
         # Get gene info
         majiq_output['genes_exp'] = parse_gene_graphics([args.genes_files], gene_name_list,
@@ -479,9 +482,8 @@ def parse_input(args):
             gene_name_list = majiq_output['genes_dict'].keys()
 
         if not gene_name_list:
-            logger.warning("Number of LSVs detected in Voila with E(Delta(PSI)) > %.2f: None." % threshold)
-            logger.warning("End of Voila execution.")
-            return
+            raise VoilaException('There are no LSVs detected in Voila with E(Delta(PSI)) > {0:.2f}.'.format(threshold),
+                                 logger)
 
         # Get gene info
         majiq_output['genes_exp'] = parse_gene_graphics([args.genesf_exp1, args.genesf_exp2], gene_name_list,
