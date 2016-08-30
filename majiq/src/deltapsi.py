@@ -232,12 +232,16 @@ class Multi_Deltapair(BasicPipeline):
 
     def prepare_lsvs(self, conf, nchunks, group1, group2, logger=None):
 
+
+
         groups = conf['groups']
         num_exp = [len(groups[group1]), len(groups[group2])]
         matched_files = [None] * num_exp[0]
 
         meta_info = [[0] * num_exp[0], [0] * num_exp[1]]
         dpsi_name = '%s_%s' % (group1, group2)
+        if logger is None:
+            logger = get_logger("%s/prepare_lsvs.%s.log" % (self.output, dpsi_name), silent=False)
 
         for idx, ii in enumerate(groups[group1]):
             outfdir = '%s/tmp/samples/' % self.output
@@ -295,10 +299,6 @@ class Multi_Deltapair(BasicPipeline):
 
         gc.collect()
 
-
-
-
-
     def multi_dpsi(self):
 
         logger = get_logger("%s/majiq.log" % self.logger_path, silent=self.silent, debug=self.debug)
@@ -347,7 +347,7 @@ class Multi_Deltapair(BasicPipeline):
                     p.start()
                     p.join()
                 else:
-                    self.prepare_lsvs(conf, nchunks, group1, group2)
+                    self.prepare_lsvs(conf, nchunks, group1, group2, logger)
 
                 dpsi_prior_name = "%s/%s_priormatrix.pickle" % (self.output, dpsi_name)
                 for nthrd in xrange(nchunks):
