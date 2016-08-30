@@ -37,7 +37,7 @@ class BasicPipeline:
 
         #trick to dump argparse arguments into self
         self.__dict__.update(args.__dict__)
-        majiq_utils.create_if_not_exists(self.output)
+        #majiq_utils.create_if_not_exists(self.output)
         if self.plotpath:
             majiq_utils.create_if_not_exists(self.plotpath)
         self.logger_path = self.logger
