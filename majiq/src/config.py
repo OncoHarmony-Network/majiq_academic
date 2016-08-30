@@ -106,17 +106,20 @@ def global_conf_ini(filename, params, only_db=False):
     gene_tlb = {}
 
     sam_list = []
+    samfile_name_list = []
     for exp_idx, exp in enumerate(exp_list):
         samfile = "%s/%s.bam" % (sam_dir, exp)
+
         if not os.path.exists(samfile):
             raise RuntimeError("Skipping %s.... not found" % samfile)
         baifile = "%s/%s.bam.bai" % (sam_dir, exp)
         if not os.path.exists(baifile):
             raise RuntimeError("Skipping %s.... not found ( index file for bam file is required)" % baifile)
         sam_list.append(samfile)
+        samfile_name_list.append(exp)
         exp_list[exp_idx] = os.path.split(exp)[1]
 
-    return sam_list
+    return samfile_name_list
 
 
 def global_default():

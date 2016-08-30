@@ -420,8 +420,8 @@ def print_lsv_extype(list_lsv, filename):
 
 
 class Queue_Lsv(object):
-    def __init__(self, lsv_obj, name):
 
+    def __init__(self, lsv_obj, name):
 
         exp_idxs = majiq_config.tissue_repl[name]
         self.coords = lsv_obj.coords
@@ -436,12 +436,12 @@ class Queue_Lsv(object):
 
         if majiq_config.gcnorm:
             self.gc_factor = np.ones(shape=(lsv_obj.junctions.shape[0], (majiq_config.readLen - 16) + 1),
-                                        dtype=np.float)
+                                     dtype=np.float)
         else:
             self.gc_factor = None
 
         for idx, junc in enumerate(lsv_obj.junctions):
-            self.coverage[idx] = junc.coverage[exp_idxs, :].toarray()
+            self.coverage[idx] = junc.coverage[exp_idxs, :]
             self.junction_id.append(junc.get_id())
             if majiq_config.gcnorm:
                 for jidx in range((majiq_config.readLen - 16) + 1):
@@ -482,7 +482,7 @@ class Queue_Lsv(object):
             h_lsv.attrs['coverage'] = hdf5grp[LSV_JUNCTIONS_DATASET_NAME].regionref[lsv_idx:lsv_idx + njunc]
             self.visual[exp_idx].to_hdf5(h_lsv)
         except:
-            print "HDF5 ERROR", self.id, self.junction_id, self.coverage.shape, self.gc_factor.shape
+            print "HDF5 ERROR", self.id, self.junction_id, self.coverage.shape
             raise
 
         return lsv_idx + njunc

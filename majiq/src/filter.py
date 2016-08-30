@@ -10,7 +10,7 @@ def reliable_in_data(junc, exp_idx, minnonzero=2, min_reads=3):
     min_read_x_exp = min_reads
     min_npos_x_exp = minnonzero
     in_data_filter = False
-    cover = junc.coverage.toarray()[exp_idx]
+    cover = junc.coverage[exp_idx]
     if junc.get_read_num(exp_idx) >= min_read_x_exp and np.count_nonzero(cover) >= min_npos_x_exp:
         in_data_filter = True
     return in_data_filter
