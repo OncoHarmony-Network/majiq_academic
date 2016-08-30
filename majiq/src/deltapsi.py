@@ -351,7 +351,7 @@ class Multi_Deltapair(BasicPipeline):
 
                 dpsi_prior_name = "%s/%s_priormatrix.pickle" % (self.output, dpsi_name)
                 for nthrd in xrange(nchunks):
-                    out_file = '%s/chunk_%d.pickle' % (outfdir, nthrd)
+                    out_file = '%s/tmp/%s/chunks/chunk_%d.pickle' % (outfdir, dpsi_name, nthrd)
                     if self.nthreads == 1:
                         pipe.parallel_lsv_child_calculation(deltapsi_quantify,
                                                             [out_file, dpsi_prior_name, False],
