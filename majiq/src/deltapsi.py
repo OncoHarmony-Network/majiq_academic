@@ -294,7 +294,7 @@ class Multi_Deltapair(BasicPipeline):
 
             out_file = '%s/chunk_%d.pickle' % (outfdir, nthrd)
             tout = open(out_file, 'w+')
-            pickle.dump([lsv_list, lsv_info, num_exp, conf, psi_space], tout)
+            pickle.dump([lsv_list, lsv_info, num_exp, conf, None, psi_space], tout)
             tout.close()
 
         gc.collect()
@@ -380,7 +380,7 @@ class Multi_Deltapair(BasicPipeline):
             for nthrd in xrange(self.nthreads):
 
                 tempfile = open("%s/tmp/%s/chunks/%s_%s_th%s.%s.pickle" % (self.output, dpsi_name, self.names[0],
-                                                                 self.names[1], nthrd, deltapsi_quantify.__name__))
+                                                                           self.names[1], nthrd, deltapsi_quantify.__name__))
                 ptempt = pickle.load(tempfile)
                 posterior_matrix.extend(ptempt[0])
                 names.extend(ptempt[1])
