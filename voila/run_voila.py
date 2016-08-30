@@ -668,7 +668,7 @@ def main():
         io_voila.write_tab_output(input_parsed)
 
     if args.gtf_out:
-        io_voila.create_gff3_txt_files(input_parsed.output_dir, input_parsed.majiq_output, logger=input_parsed.logger)
+        io_voila.create_gff3_txt_files(input_parsed)
 
     input_parsed.logger.info("Voila! Summaries created in: %s" % input_parsed.output_dir)
 

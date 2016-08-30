@@ -120,7 +120,7 @@ def cond_table_tab_output(input_parsed):
     input_parsed.logger.info(tsv_file)
 
     with open(tsv_file, 'w') as csvfile:
-        fieldnames = ['Gene', 'LSV ID', '#Disagreeing', '#Changing samples'] + sample_names
+        fieldnames = ['Gene', 'LSV ID', '#Disagreeing', '#Changing samples', 'Junction'] + sample_names
         writer = csv.DictWriter(csvfile, fieldnames=fieldnames, delimiter='\t')
 
         writer.writeheader()
@@ -130,7 +130,8 @@ def cond_table_tab_output(input_parsed):
                 'Gene': lsvs[lsv]['gene'],
                 'LSV ID': lsv,
                 '#Disagreeing': lsvs[lsv]['ndisagree'],
-                '#Changing samples': lsvs[lsv]['nchangs']
+                '#Changing samples': lsvs[lsv]['nchangs'],
+                'Junction': lsvs[lsv]['njunc']
             }
 
             for index, sample_name in enumerate(sample_names):
@@ -315,7 +316,9 @@ def load_dpsi_tab(tab_files_list, sample_names, thres_change=None, filter_genes=
     for idx, tab_file in enumerate(tab_files_list):
         with open(tab_file, 'r') as tabf:
             for line in tabf:
-                if line.startswith("#"): continue
+                if line.startswith("#"):
+                    continue
+
                 fields = line.split()
 
                 if root_path is None:
@@ -336,12 +339,15 @@ def load_dpsi_tab(tab_files_list, sample_names, thres_change=None, filter_genes=
                     if fields[2].upper() not in filter_lsvs: continue
 
                 expecs = [float(aa) for aa in fields[3].split(";")]
+
                 if lsvs_dict[fields[2]]['expecs'] is None:
                     lsvs_dict[fields[2]]['expecs'] = [[]] * len(sample_names)
                     lsvs_dict[fields[2]]['expecs_marks'] = [None] * len(sample_names)
                     lsvs_dict[fields[2]]['links'] = [None] * len(sample_names)
                     lsvs_dict[fields[2]]['njunc'] = [-1] * len(sample_names)
+
                 idx_max = np.argmax([abs(ee) for ee in expecs])
+
                 lsvs_dict[fields[2]]['expecs'][idx] = expecs
                 lsvs_dict[fields[2]]['njunc'][idx] = idx_max
                 lsvs_dict[fields[2]]['links'][idx] = path_prefix + pairwise_dir + fields[-1].split(root_path)[1]
@@ -377,7 +383,7 @@ def load_dpsi_tab(tab_files_list, sample_names, thres_change=None, filter_genes=
     return lsvs_dict
 
 
-def create_gff3_txt_files(output_dir, majiq_output, logger, out_gff3=False):
+def create_gff3_txt_files(input_parsed, out_gff3=False):
     """
     Create GFF3 files for each LSV.
     :param output_dir: output directory for the file.
@@ -386,6 +392,14 @@ def create_gff3_txt_files(output_dir, majiq_output, logger, out_gff3=False):
     :param out_gff3:
     :return: nothing.
     """
+    logger = input_parsed.logger
+    majiq_output = input_parsed.majiq_output
+    output_dir = input_parsed.output_dir
+
+    if input_parsed.type_summary == constants.COND_TABLE:
+        logger.info('Skipping generating gff3 format.')
+        return
+
     logger.info("Saving LSVs files in gff3 format ...")
     if 'genes_dict' not in majiq_output or len(majiq_output['genes_dict']) < 1:
         logger.warning("No gene information provided. Genes files are needed to calculate the gff3 files.")
