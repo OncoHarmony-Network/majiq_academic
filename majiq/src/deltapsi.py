@@ -351,7 +351,7 @@ class Multi_Deltapair(BasicPipeline):
 
                 dpsi_prior_name = "%s/%s_priormatrix.pickle" % (self.output, dpsi_name)
                 for nthrd in xrange(nchunks):
-                    out_file = '%s/tmp/%s/chunks/chunk_%d.pickle' % (outfdir, dpsi_name, nthrd)
+                    out_file = '%s/tmp/%s/chunks/chunk_%d.pickle' % (self.output, dpsi_name, nthrd)
                     if self.nthreads == 1:
                         pipe.parallel_lsv_child_calculation(deltapsi_quantify,
                                                             [out_file, dpsi_prior_name, False],
@@ -378,6 +378,7 @@ class Multi_Deltapair(BasicPipeline):
             psi_list2 = []
             logger.info("GATHER pickles")
             for nthrd in xrange(self.nthreads):
+                imp/samples//tmp/hyp_adr/chunks/chunk_0.pickle
                 tempfile = open("%s/tmp/%s/chunks/%s_%s_th%s.%s.pickle" % (self.output, dpsi_name, self.names[0],
                                                                  self.names[1], nthrd, deltapsi_quantify.__name__))
                 ptempt = pickle.load(tempfile)
