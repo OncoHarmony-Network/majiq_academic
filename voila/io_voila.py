@@ -147,7 +147,7 @@ def tab_output(input_parsed):
     output_html = input_parsed.output_html
     logger = input_parsed.logger
     pairwise_dir = input_parsed.pairwise_dir
-    majiq_output = input_parsed.majig_ouput
+    majiq_output = input_parsed.majiq_output
     threshold = input_parsed.threshold
     type_summary = input_parsed.type_summary
 
