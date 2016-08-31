@@ -55,7 +55,10 @@ def calc_pvalues(junctions, one_over_r, indices_list=None):
             jpos = junc[indices_list[i]]
 
         ljunc = len(junc.nonzero()[0])
-        mu = float(junc.sum() - jpos) / float(ljunc - 1)
+        try:
+            mu = float(junc.sum() - jpos) / float(ljunc - 1)
+        except:
+            continue
         pval = get_negbinom_pval(one_over_r, mu, jpos)
         # pval = get_ztnbin_pval(one_over_r, mu, jpos)
         pvalues.append(pval)
@@ -113,7 +116,7 @@ def fit_nb(junctionl, outpath, plotpath, nbdisp=0.1, logger=None):
     filtered = []
 
     for jdx, jun in enumerate(junctionl):
-        if np.count_nonzero(jun) >= 5 and jun.sum() >= 10:
+        if np.count_nonzero(jun) >= 1 and jun.sum() >= 1:
             filtered.append(jun)
 
     junctions = np.array(filtered)
