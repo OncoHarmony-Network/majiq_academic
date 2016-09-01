@@ -257,7 +257,10 @@ class Builder(BasicPipeline):
         for exp_idx, sam_file in enumerate(sam_list):
             rnaf = h5py.File(get_builder_temp_majiq_filename(majiq_config.outDir, sam_file))
             rna_files.append(rnaf)
-            vfunc_gc.append(gc_normalization(rnaf.attrs['gc_values']))
+            if majiq_config.gcnorm:
+                vfunc_gc.append(gc_normalization(rnaf.attrs['gc_values']))
+            else:
+                vfunc_gc.append(None)
 
             f = h5py.File(get_builder_majiq_filename(majiq_config.outDir, sam_file),
                           'w', compression='gzip', compression_opts=9)
