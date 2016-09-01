@@ -303,95 +303,96 @@ def read_sam_or_bam(gne, samfl, counter,  h5py_file, nondenovo=False, info_msg='
 
     try:
         read_iter = samfl.fetch(chrom, strt, end, multiple_iterators=True)
+
+        for read in read_iter:
+            r_start = read.pos
+            unique = __is_unique(read)
+            if not _match_strand(read, gene_strand=strand) or r_start < strt or not unique:
+                continue
+
+            nreads = __get_num_reads(read)
+            gne.add_read_count(nreads)
+            is_cross, junc_list = __cross_junctions(read)
+
+            if majiq_config.gcnorm:
+                for ex_idx in range(len(ex_list)):
+                    ex_start, ex_end = ex_list[ex_idx].get_coordinates()
+                    if ex_start <= r_start <= ex_end:
+                        ex_list[ex_idx].update_coverage(nreads)
+                        break
+
+            if not is_cross:
+                continue
+
+            nc = read.seq.count('C') + read.seq.count('c')
+            ng = read.seq.count('g') + read.seq.count('G')
+            gc_content = float(nc + ng) / float(len(read.seq))
+            readlen = len(read.seq)
+            for (junc_start, junc_end) in junc_list:
+                if junc_start - r_start > readlen:
+                    r_start_offset = junc_list[0][0] - r_start
+                    r_start = junc_start - r_start_offset
+                    if junc_start - r_start >= readlen - MIN_BP_OVERLAP or junc_start - r_start <= MIN_BP_OVERLAP:
+                        continue
+                elif junc_start - r_start >= readlen - MIN_BP_OVERLAP or junc_start - r_start <= MIN_BP_OVERLAP:
+                    continue
+
+                if junc_end - junc_start < MIN_JUNC_LENGTH:
+                    counter[0] += 1
+                    continue
+
+                found = False
+                for jj in j_list:
+                    (j_st, j_ed) = jj.get_coordinates()
+                    if j_st > junc_start or (j_st == junc_start and j_ed > junc_end):
+                        break
+                    elif j_st < junc_start or (j_st == junc_start and j_ed < junc_end):
+                        continue
+                    elif junc_start == j_st and junc_end == j_ed:
+                        ''' update junction and add to list'''
+                        found = True
+                        counter[3] += 1
+                        jj.update_junction_read(nreads, r_start, gc_content, unique)
+                        if not (junc_start, '5prime', jj) in junctions:
+                            junctions.append((junc_start, '5prime', jj))
+                            junctions.append((junc_end, '3prime', jj))
+                        break
+                        # end elif junc_start == ...
+                # end for jj in j_list
+
+                if not found and not nondenovo:
+                    ''' update junction and add to list'''
+                    junc = None
+                    for (coord, t, jnc) in junctions:
+                        if jnc.start == junc_start and jnc.end == junc_end:
+                            jnc.update_junction_read(nreads, r_start, gc_content, unique)
+                            if not (junc_start, '5prime', jnc) in junctions:
+                                junctions.append((junc_start, '5prime', jnc))
+                                junctions.append((junc_end, '3prime', jnc))
+                            junc = jnc
+                            break
+                            # end if (j.start) == ...
+                    # end for (coord,t,j) ...
+
+                    if junc is None:
+                        '''mark a new junction '''
+                        bb = gne.check_antisense_junctions_hdf5(junc_start, junc_end, h5py_file)
+                        if not bb:
+                            counter[4] += 1
+                            junc = Junction(junc_start, junc_end, None, None, gne, retrieve=True)
+                            junc.update_junction_read(nreads, r_start, gc_content, unique)
+                            junctions.append((junc_start, '5prime', junc))
+                            junctions.append((junc_end, '3prime', junc))
+                            # end if not found ...
+                            # end for junc ...
+                            #            print "JJJunctions", junctions
+
+        if len(junctions) > 0:
+            detect_exons(gne, junctions, None)
     except ValueError:
         logging.error('\t[%s]There are no reads in %s:%d-%d' % (info_msg, chrom, strt, end))
-
-    for read in read_iter:
-        r_start = read.pos
-        unique = __is_unique(read)
-        if not _match_strand(read, gene_strand=strand) or r_start < strt or not unique:
-            continue
-
-        nreads = __get_num_reads(read)
-        gne.add_read_count(nreads)
-        is_cross, junc_list = __cross_junctions(read)
-
-        if majiq_config.gcnorm:
-            for ex_idx in range(len(ex_list)):
-                ex_start, ex_end = ex_list[ex_idx].get_coordinates()
-                if ex_start <= r_start <= ex_end:
-                    ex_list[ex_idx].update_coverage(nreads)
-                    break
-
-        if not is_cross:
-            continue
-
-        nc = read.seq.count('C') + read.seq.count('c')
-        ng = read.seq.count('g') + read.seq.count('G')
-        gc_content = float(nc + ng) / float(len(read.seq))
-        readlen = len(read.seq)
-        for (junc_start, junc_end) in junc_list:
-            if junc_start - r_start > readlen:
-                r_start_offset = junc_list[0][0] - r_start
-                r_start = junc_start - r_start_offset
-                if junc_start - r_start >= readlen - MIN_BP_OVERLAP or junc_start - r_start <= MIN_BP_OVERLAP:
-                    continue
-            elif junc_start - r_start >= readlen - MIN_BP_OVERLAP or junc_start - r_start <= MIN_BP_OVERLAP:
-                continue
-
-            if junc_end - junc_start < MIN_JUNC_LENGTH:
-                counter[0] += 1
-                continue
-
-            found = False
-            for jj in j_list:
-                (j_st, j_ed) = jj.get_coordinates()
-                if j_st > junc_start or (j_st == junc_start and j_ed > junc_end):
-                    break
-                elif j_st < junc_start or (j_st == junc_start and j_ed < junc_end):
-                    continue
-                elif junc_start == j_st and junc_end == j_ed:
-                    ''' update junction and add to list'''
-                    found = True
-                    counter[3] += 1
-                    jj.update_junction_read(nreads, r_start, gc_content, unique)
-                    if not (junc_start, '5prime', jj) in junctions:
-                        junctions.append((junc_start, '5prime', jj))
-                        junctions.append((junc_end, '3prime', jj))
-                    break
-                    # end elif junc_start == ...
-            # end for jj in j_list
-
-            if not found and not nondenovo:
-                ''' update junction and add to list'''
-                junc = None
-                for (coord, t, jnc) in junctions:
-                    if jnc.start == junc_start and jnc.end == junc_end:
-                        jnc.update_junction_read(nreads, r_start, gc_content, unique)
-                        if not (junc_start, '5prime', jnc) in junctions:
-                            junctions.append((junc_start, '5prime', jnc))
-                            junctions.append((junc_end, '3prime', jnc))
-                        junc = jnc
-                        break
-                        # end if (j.start) == ...
-                # end for (coord,t,j) ...
-
-                if junc is None:
-                    '''mark a new junction '''
-                    bb = gne.check_antisense_junctions_hdf5(junc_start, junc_end, h5py_file)
-                    if not bb:
-                        counter[4] += 1
-                        junc = Junction(junc_start, junc_end, None, None, gne, retrieve=True)
-                        junc.update_junction_read(nreads, r_start, gc_content, unique)
-                        junctions.append((junc_start, '5prime', junc))
-                        junctions.append((junc_end, '3prime', junc))
-                        # end if not found ...
-                        # end for junc ...
-                        #            print "JJJunctions", junctions
-
-    if len(junctions) > 0:
-        detect_exons(gne, junctions, None)
-    gne.prepare_exons()
+    finally:
+        gne.prepare_exons()
 
     # logging.debug("INVALID JUNC", counter[0])
     # logging.debug("READ WRONG GENE", counter[1])
