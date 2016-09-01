@@ -2,30 +2,30 @@
     fill: grey;
     fill-opacity: .3;
     stroke: black;
-/*    stroke-lineca: round;*/
+    /*    stroke-lineca: round;*/
     stroke-linejoin: round;
     alpha: 9;
 }
 
-.exon.found{
+.exon.found {
     fill: grey;
     stroke: black;
 
 }
 
-.exon.novel, .intronret.novel{
-    stroke:green;
+.exon.novel, .intronret.novel {
+    stroke: green;
     fill: green;
 }
 
-.exon.missing, .intronret.missing{
-    stroke:black;
-    stroke-dasharray: 5,2;
-    fill:none;
+.exon.missing, .intronret.missing {
+    stroke: black;
+    stroke-dasharray: 5, 2;
+    fill: none;
 }
 
-.halfexon{
-    stroke:green;
+.halfexon {
+    stroke: green;
     stroke-opacity: .5;
     stroke-width: 2;
     fill: green;
@@ -33,93 +33,95 @@
     stroke-linejoin: round;
 }
 
-.halfexon.hovered{
+.halfexon.hovered {
     fill: purple;
     stroke: purple;
-    stroke-width:2;
+    stroke-width: 2;
     stroke-opacity: 1;
 }
 
-.ssite3, .ssite5, .junction{
-    fill:black;
-    fill-opacity:0;
-    stroke:red;
-    stroke-width:1.5;
+.ssite3, .ssite5, .junction {
+    fill: black;
+    fill-opacity: 0;
+    stroke: red;
+    stroke-width: 1.5;
     pointer-events: visibleStroke;
 
 }
 
-.ssite3, .ssite5{
+.ssite3, .ssite5 {
     stroke-opacity: 0.7;
-    stroke-dasharray: 2,2;
-    alpha:1;
-}
-.ssite3.found, .ssite5.found, .junction.found, .intronret.found, .irlines.found{
-    stroke:red;
+    stroke-dasharray: 2, 2;
+    alpha: 1;
 }
 
-.ssite3.novel, .ssite5.novel, .junction.novel, .irlines.novel{
-    stroke:green;
+.ssite3.found, .ssite5.found, .junction.found, .intronret.found, .irlines.found {
+    stroke: red;
 }
 
-.ssite3.missing, .ssite5.missing, .junction.missing{
-    stroke:grey;
-    stroke-width:1;
-    stroke-dasharray: 5,2;
+.ssite3.novel, .ssite5.novel, .junction.novel, .irlines.novel {
+    stroke: green;
 }
 
-.junction.foundInOthers{
-      stroke:red;
-      stroke-width:1;
-      stroke-dasharray: 5,2;
-  }
-
-.junction.novelInOthers{
-    stroke:green;
-    stroke-width:1;
-    stroke-dasharray: 5,2;
+.ssite3.missing, .ssite5.missing, .junction.missing {
+    stroke: grey;
+    stroke-width: 1;
+    stroke-dasharray: 5, 2;
 }
 
-.ssite3.highlighted, .ssite5.highlighted, .exon.hovered, .junction.hovered, .intronret.hovered{
+.junction.foundInOthers {
+    stroke: red;
+    stroke-width: 1;
+    stroke-dasharray: 5, 2;
+}
+
+.junction.novelInOthers {
+    stroke: green;
+    stroke-width: 1;
+    stroke-dasharray: 5, 2;
+}
+
+.ssite3.highlighted, .ssite5.highlighted, .exon.hovered, .junction.hovered, .intronret.hovered {
     fill: orange;
     stroke: orange;
-    stroke-width:2;
+    stroke-width: 2;
     stroke-opacity: 1;
 }
 
-.numexon, .readcounts{
+.numexon, .readcounts {
     text-anchor: middle;
     font-family: sans-serif;
     font-size: 11px;
     pointer-events: none;
 }
 
-.irreads{
+.irreads {
     font-family: sans-serif;
     font-size: 11px;
     pointer-events: none;
 }
 
 .irlines {
-    stroke-width:2;
+    stroke-width: 2;
 }
 
-.numexon{
+.numexon {
     font-size: 13px;
     font-weight: bold;
-    z-index:1;
+    z-index: 1;
 }
 
-.blurred{
+.blurred, .sgfilter {
     stroke-opacity: 0.1;
 }
 
-.ssite3.blurred, .ssite5.blurred, .readcounts.blurred{
+.ssite3.blurred, .ssite5.blurred, .readcounts.blurred, .readcounts.sgfilter, .irreads.sgfilter {
     fill-opacity: 0.1;
 }
 
-.readcounts.highlighted{
+.readcounts.highlighted {
     font-size: 15px;
+    fill-opacity: 1;
 }
 
 .tooltipD3 {
@@ -149,19 +151,19 @@
     line-height: 20px;
 }
 
-.toogleScale{
+.toogleScale {
     cursor: pointer;
     /*float: right;*/
     /*position: absolute;*/
 }
 
-.newpartialexon{
+.newpartialexon {
     fill: green;
     fill-opacity: .3;
     stroke: green;
     stroke-lineca: round;
     stroke-linejoin: round;
-    stroke-dasharray: 5,2;
+    stroke-dasharray: 5, 2;
     alpha: 9;
     pointer-events: none;
 }

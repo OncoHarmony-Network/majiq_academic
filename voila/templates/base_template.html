@@ -1,37 +1,43 @@
 <!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
 <html>
-    <head>
-        <link rel="icon"
-              type="image/png"
-              href="static/img/icons/biociphers.ico">
-        <title>{% block title %}{% endblock %}</title>
-        <link type="text/css" rel="stylesheet" href="static/css/voila.css" />
-        <link rel="stylesheet" type="text/css" href="static/css/tooltipster.css" />
-        <link rel="stylesheet" type="text/css" href="static/css/themes/tooltipster-light.css" />
-        <link rel="stylesheet" type="text/css" href="static/css/themes/tooltipster-shadow.css" />
-        <link rel="stylesheet" type="text/css" href="static/css/themes/tooltipster-noir.css" />
+<head>
+    <link rel="icon"
+          type="image/png"
+          href="static/img/icons/biociphers.ico">
+    <title>{% block title %}{% endblock %}</title>
+    <link type="text/css" rel="stylesheet" href="static/css/voila.css"/>
+    <link rel="stylesheet" type="text/css" href="static/css/tooltipster.css"/>
+    <link rel="stylesheet" type="text/css" href="static/css/themes/tooltipster-light.css"/>
+    <link rel="stylesheet" type="text/css" href="static/css/themes/tooltipster-shadow.css"/>
+    <link rel="stylesheet" type="text/css" href="static/css/themes/tooltipster-noir.css"/>
 
-        {% block css %}
-        {% endblock %}
+    {% block css %}
+    {% endblock %}
+    <script src="static/js/jquery-1.11.1.min.js" type="text/javascript"></script>
+    <script src="static/js/d3.v3.min.js" type="text/javascript" language="javascript"></script>
+    {% block js %}
+    {% endblock %}
 
-        {% block js %}
-        {% endblock %}
-
-    </head>
-    <body>
-        <header>
-            <a href="http://www.biociphers.org" target="_blank"><img class="logoBiociphers"  src="static/img/icons/biociphers_logo.png"/></a>
-            <span class="headerText">
+</head>
+<body>
+<header>
+    <a href="http://www.biociphers.org" target="_blank"><img class="logoBiociphers"
+                                                             src="static/img/icons/biociphers_logo.png"/></a>
+    <span class="headerText">
                 {% block header%}
                 {% endblock %}
             </span>
-        </header>
-        {% block content %}
-        {% endblock %}
-        <footer>
-                &copy; BIOCIPHERS &middot; Department of Genetics Perelman School of Medicine Department of Computer and Information Science School of Engineering University of Pennsylvania
-                <a href="http://www.upenn.edu" target="_blank"><img src="static/img/icons/penn.jpg" /></a>
-        </footer>
-    </body>
+</header>
+{% block content %}
+{% endblock %}
+
+{% block sidebar %}
+{% endblock %}
+<footer>
+    &copy; BIOCIPHERS &middot; Department of Genetics Perelman School of Medicine Department of Computer and Information
+    Science School of Engineering University of Pennsylvania
+    <a href="http://www.upenn.edu" target="_blank"><img src="static/img/icons/penn.jpg"/></a>
+</footer>
+</body>
 
 </html>

@@ -1,0 +1,36 @@
+{% extends "base_template.html" %}
+{% block sidebar %}
+<aside class="filters">
+    <fieldset class="section-border">
+        <legend>LSV filters</legend>
+        <form id="lsv-filters" class="bootstrap-frm">
+            <label><input type="checkbox" name="prime5" value="1" checked>5-prime</label><br>
+            <label><input type="checkbox" name="prime3" value="1" checked>3-prime</label><br>
+            <label><input type="checkbox" name="ES" value="1" checked>Exon skipping</label><br>
+            <label><input type="checkbox" name="source" value="1" checked>Single Source</label><br>
+            <label><input type="checkbox" name="target" value="1" checked>Single Target</label><br>
+            <span>Number of junctions:</span><br>
+            <label><span>from:</span><input type="text" name="njuncsfrom" value="" size="4"></label>
+            <label><span>to:</span><input type="text" name="njuncsto" size="4"></label><br>
+            <span>Number of exons:</span><br>
+            <label><span>from:</span><input type="text" name="nexonsfrom" value="" size="4"></label>
+            <label><span>to:</span><input type="text" name="nexonsto" size="4"><br></label>
+        </form>
+    </fieldset>
+
+    {% block sg %}
+    {% endblock %}
+
+    {% if prevPage or nextPage %}
+    <fieldset class="section-border">
+        <legend>Summaries</legend>
+        {% if prevPage %}
+        <a href="{{ prevPage }}" class="prevPage">&#x276e; Previous</a>
+        {% endif %}
+        {% if nextPage %}
+        <a href="{{ nextPage }}" class="nextPage">Next &#x276f;</a>
+        {% endif %}
+    </fieldset>
+    {% endif %}
+</aside>
+{% endblock %}
