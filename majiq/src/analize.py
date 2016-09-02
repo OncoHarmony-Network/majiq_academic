@@ -84,10 +84,10 @@ def lsv_detection(gn, gc_vfunc, lsv_list, lsv_idx, only_real_data=False, out_que
                     break
             else:
                 # qm = QueueMessage(QUEUE_MESSAGE_BUILD_LSV, [majiq_lsv.Queue_Lsv(ss, name), name], chnk)
-                for exp_idx in ind_list:
+                for dx, exp_idx in enumerate(ind_list):
                     lsv_idx[exp_idx] = majiq_lsv.Queue_Lsv(ss, name).to_hdf5(hdf5grp=lsv_list[exp_idx],
                                                                              lsv_idx=lsv_idx[exp_idx],
-                                                                             exp_idx=exp_idx,
+                                                                             exp_idx=dx,
                                                                              gc_func=gc_vfunc[exp_idx])
                 # out_queue.put(qm, block=True)
 
@@ -96,10 +96,10 @@ def lsv_detection(gn, gc_vfunc, lsv_list, lsv_idx, only_real_data=False, out_que
                 if st.contained(ss):
                     break
             else:
-                for exp_idx in ind_list:
+                for dx, exp_idx in enumerate(ind_list):
                     lsv_idx[exp_idx] = majiq_lsv.Queue_Lsv(st, name).to_hdf5(hdf5grp=lsv_list[exp_idx],
                                                                              lsv_idx=lsv_idx[exp_idx],
-                                                                             exp_idx=exp_idx,
+                                                                             exp_idx=dx,
                                                                              gc_func=gc_vfunc[exp_idx])
 
                 # qm = QueueMessage(QUEUE_MESSAGE_BUILD_LSV, [majiq_lsv.Queue_Lsv(st, name), name], chnk)
