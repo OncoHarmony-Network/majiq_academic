@@ -102,7 +102,8 @@ def psi_quantification(args_vals):
         if quantification_init.only_boots:
             import pickle
             for ii in range(num_exp):
-                outfp = open('%s/%s.%d.boots.pickle' % (quantification_init.output, quantification_init.names, ii), 'w+')
+                outfp = open('%s/%s.%d.boots_%s.pickle' % (quantification_init.output,
+                                                           quantification_init.names, ii, chnk), 'w+')
                 pickle.dump([res[ii], info_res[ii]], outfp)
                 outfp.close()
 
