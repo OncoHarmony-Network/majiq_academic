@@ -209,35 +209,35 @@ class Builder(BasicPipeline):
         logger.info("")
         logger.info("Command: %s" % self)
 
+
+        manager = mp.Manager()
+        list_of_genes = manager.list()
+
+        p = mp.Process(target=majiq_multi.parallel_lsv_child_calculation,
+                       args=(majiq_io.read_gff, [self.transcripts, list_of_genes, sam_list],
+                             '%s/tmp' % majiq_config.outDir, 'db', 0, False))
+
+        logger.info("... waiting gff3 parsing")
+        p.start()
+        p.join()
+        majiq_utils.monitor('AFTER READ GFF')
+
+        # if majiq_config.gcnorm:
+        #     pool = mp.Pool(processes=self.nthreads, maxtasksperchild=1)
+        #     lchnksize = max(len(sam_list)/self.nchunks, 1)
+        #     lchnksize = lchnksize if len(sam_list) % self.nchunks == 0 else lchnksize + 1
+        #     values = list(zip(range(len(sam_list)), sam_list))
+        #     output_gc_vals = manager.dict()
+        #     for vals in majiq_utils.chunks(values, lchnksize):
+        #         pool.apply_async(majiq_io.gc_content_per_file, [vals, output_gc_vals, majiq_config.outDir])
+        #     pool.close()
+        #     pool.join()
+        #     vfunc_gc = majiq_norm.gc_normalization(output_gc_vals, logger)
+        #
+        # else:
+        #     vfunc_gc = [None] * majiq_config.num_experiments
+
         if self.prebam:
-            manager = mp.Manager()
-            list_of_genes = manager.list()
-
-            p = mp.Process(target=majiq_multi.parallel_lsv_child_calculation,
-                           args=(majiq_io.read_gff, [self.transcripts, list_of_genes, sam_list],
-                                 '%s/tmp' % majiq_config.outDir, 'db', 0, False))
-
-            logger.info("... waiting gff3 parsing")
-            p.start()
-            p.join()
-            majiq_utils.monitor('AFTER READ GFF')
-
-            # if majiq_config.gcnorm:
-            #     pool = mp.Pool(processes=self.nthreads, maxtasksperchild=1)
-            #     lchnksize = max(len(sam_list)/self.nchunks, 1)
-            #     lchnksize = lchnksize if len(sam_list) % self.nchunks == 0 else lchnksize + 1
-            #     values = list(zip(range(len(sam_list)), sam_list))
-            #     output_gc_vals = manager.dict()
-            #     for vals in majiq_utils.chunks(values, lchnksize):
-            #         pool.apply_async(majiq_io.gc_content_per_file, [vals, output_gc_vals, majiq_config.outDir])
-            #     pool.close()
-            #     pool.join()
-            #     vfunc_gc = majiq_norm.gc_normalization(output_gc_vals, logger)
-            #
-            # else:
-            #     vfunc_gc = [None] * majiq_config.num_experiments
-
-
             pool = mp.Pool(processes=self.nthreads, initializer=builder_init,
                            initargs=[sam_list, self.pcr_filename, self.gff_output, self.only_rna, self.non_denovo,
                                      get_build_temp_db_filename(majiq_config.outDir), list_of_genes,
