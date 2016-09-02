@@ -73,6 +73,7 @@ def main():
     buildparser.add_argument('--only_gather', action='store_true', dest='onlygather', default=False)
     buildparser.add_argument('--permissive_ir', action='store_true', dest='permissive', default=False)
     buildparser.add_argument('--min_experiments', default=-1, type=float, dest='min_exp')
+    buildparser.add_argument('--prebam', default=True,  action='store_false')
 
 
     #flags shared by calcpsi and deltapair
