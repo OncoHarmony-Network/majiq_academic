@@ -1,6 +1,7 @@
 import os
 
 from majiq.src import config
+import numpy as np
 
 # FLAGS
 NEUTRAL = 0b00000
@@ -51,8 +52,8 @@ class Exon:
         self.flag |= INTRON if isintron else NEUTRAL
         self.flag |= INDATA if indata else NEUTRAL
 
-        # if not retrieve:
-        #     self.coverage = np.zeros(shape=config.num_experiments)
+        if retrieve:
+            self.coverage = 0
 
     def __hash__(self):
         return hash(self.id) ^ hash(self.gene_name)
@@ -171,7 +172,7 @@ class Exon:
         return res
 
     def get_coverage(self, exp_idx=0):
-        return self.coverage[exp_idx]
+        return self.coverage
 
     def get_gc_content(self):
         return self.gc_content

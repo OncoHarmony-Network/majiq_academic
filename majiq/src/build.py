@@ -66,12 +66,14 @@ def parsing_files(args_vals):
             samfl = majiq_io.open_rnaseq("%s/%s.bam" % (majiq_config.sam_dir, sam_file))
             gc_pairs = {'GC': [], 'COV': []}
             jnc_idx = 0
-            for gne_id in builder_init.list_of_genes:
+
+            for gne_idx, gne_id in enumerate(builder_init.list_of_genes):
+                tlogger.info("[%s] Progress %s/%s" % (loop_id, gne_idx, len(builder_init.list_of_genes)))
                 out_f.create_group('%s/junctions' % gne_id)
-                tlogger.info("[%s] Retrieving gene" % loop_id)
+                tlogger.debug("[%s] Retrieving gene" % gne_id)
                 gene_obj = majiq.grimoire.gene.retrieve_gene(gne_id, db_f)
 
-                tlogger.info("[%s] Reading BAM files" % loop_id)
+                tlogger.debug("[%s] Reading BAM files" % gne_id)
                 majiq_io.read_sam_or_bam(gene_obj, samfl, counter, h5py_file=db_f,
                                          nondenovo=builder_init.non_denovo, info_msg=loop_id, logging=tlogger)
 
@@ -83,7 +85,7 @@ def parsing_files(args_vals):
                         gc_pairs['GC'].append(ex.get_gc_content())
                         gc_pairs['COV'].append(ex.get_coverage())
 
-                tlogger.info("[%s] Detecting intron retention events" % loop_id)
+                tlogger.debug("[%s] Detecting intron retention events" % loop_id)
                 majiq_io.rnaseq_intron_retention(gene_obj, samfl, chnk,
                                                  permissive=majiq_config.permissive_ir,
                                                  nondenovo=builder_init.non_denovo, logging=tlogger)
@@ -302,6 +304,8 @@ class Builder(BasicPipeline):
 
             logger.info("[%s] Detecting LSV" % loop_id)
             lsv_detection(gene_obj, vfunc_gc, out_files, out_files_idx, only_real_data=self.only_rna, logging=logger)
+            del gene_obj
+            del majiq_config.gene_tlb[gne_id]
 
         ''' Closing HDF5 files'''
         db_f.close()
