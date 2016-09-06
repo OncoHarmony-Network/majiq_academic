@@ -2,6 +2,7 @@ import os
 import ConfigParser
 from scipy import interpolate
 import numpy as np
+from blessings import Terminal
 
 
 global gene_tlb
@@ -48,7 +49,7 @@ def global_conf_ini(filename, params, only_db=False):
         genome_path, outDir, temp_oDir, gene_tlb, strand_specific, permissive_ir, gcnorm, dbfile
     global A3SS, A5SS, SEev, bothSS, totalSE
     global MINREADS, MINPOS, MIN_INTRON
-    global num_final_chunks, min_denovo, nrandom_junctions, min_exp
+    global num_final_chunks, min_denovo, nrandom_junctions, min_exp, term
 
     if not only_db:
         num_final_chunks = params.nthreads if params.nthreads > 1 else 1
@@ -118,6 +119,8 @@ def global_conf_ini(filename, params, only_db=False):
         sam_list.append(samfile)
         samfile_name_list.append(exp)
         exp_list[exp_idx] = os.path.split(exp)[1]
+
+    term = Terminal()
 
     return samfile_name_list
 

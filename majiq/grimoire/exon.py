@@ -1,7 +1,7 @@
 import os
 
 from majiq.src import config
-import numpy as np
+
 
 # FLAGS
 NEUTRAL = 0b00000
