@@ -268,7 +268,7 @@ function spliceGraphD3() {
 
             };
 
-            var renderNumReads = function (junctions, scaleX) {
+            var renderNumReads = function (junctions, scaleX, displayCorrectedReads) {
                 var maxJunc = longestJunc(junctions, scaleX);
                 var labels = svgCanvas.selectAll("text.readcounts")
                     .data(junctions.filter(function (v) {
@@ -281,6 +281,8 @@ function spliceGraphD3() {
                     .ease("linear")
                     .text(function (d) {
                         if (d.num_reads) {
+                            if (displayCorrectedReads)
+                                return d.num_clean_reads;
                             return d.num_reads;
                         }
                         return '';
@@ -293,7 +295,8 @@ function spliceGraphD3() {
                     .attr("y", function (d) {
                         var posY = (scaleX(d.coords[1]) - scaleX(d.coords[0])) / maxJunc * JUNC_AREA * (height - padding[0] - padding[2]);
                         return Math.round(height * JUNC_AREA - 2 - posY + (posY / d.dispersion) * (d.dispersion - 1 ? 1 : 0));
-                    });
+                    })
+                    .style("fill", displayCorrectedReads ? "red" : "black")
 
             };
 
@@ -638,6 +641,9 @@ function spliceGraphD3() {
                 d3.select(this_ref).classed("hovered", false);
             };
 
+            // are we displaying normalized reads?
+            var displayCorrectedReads = d3.select(this).select('.toggleReadCounts').classed('corrected');
+
             // generate chart here, using `w` and `h`
             var exonsp = d[0],
                 junctionsp = d[1],
@@ -658,7 +664,7 @@ function spliceGraphD3() {
 
             /** Render junctions and read numbers */
             var junctions = renderJunctions(junctionsp, scaleX, this.id);
-            renderNumReads(junctionsp, scaleX);
+            renderNumReads(junctionsp, scaleX, displayCorrectedReads);
             var irLines = renderIntRetReads(junctionsp, scaleX);
             spliceSites(junctionsp, scaleX);
 
@@ -751,8 +757,6 @@ function spliceGraphD3() {
 
                 //Update the tooltip position and value
                 var tooltipD3 = d3.select(this.parentNode.parentNode).select(".tooltipD3");
-//                    .style("left", mouseCoords[0]+ "px")
-//                    .style("top", mouseCoords[1]+ "px")
 
                 tooltipD3
                     .select(".coordsLabel")
@@ -772,14 +776,11 @@ function spliceGraphD3() {
                     d3.selectAll('.ssite5').classed("highlighted", false);
                     d3.select(this).classed("hovered", false);
                 });
-
-//            d3.selectAll(this.childNodes[0].childNodes).attr("transform", "translate(" + width + ",0) scale(-1 , 1)");
-//            d3.select(this.childNodes[0]).selectAll("text").attr("transform", "translate(" + 10 + ",0)");
             if (strand == '-')
                 d3.select(this).selectAll(":not(text)").attr("transform", "translate(" + width + ",0) scale(-1 , 1)");
         });
 
-        updateSGFilter()
+        $('#sg-filters').submit();
 
     }
 

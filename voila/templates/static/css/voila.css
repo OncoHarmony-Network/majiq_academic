@@ -1,5 +1,5 @@
 body {
-    font-family: Helvetica, Arial;
+    font-family: 'Arial', sans-serif;
     color: #005DB5;
 }
 
@@ -14,138 +14,147 @@ h3 {
 }
 
 fieldset legend {
-    font-weight:bold;
+    font-weight: bold;
     color: #005DB5;
     font-size: 1.5em;
 }
 
-table
-{
+table {
     border-style: none none none none;
 }
 
-.hidden { display: none; }
-
-.extra-short-header{
-    width:5px;
+.hidden {
+    display: none;
 }
 
-.short-header{
-    max-width:40px;
+.extra-short-header {
+    width: 5px;
 }
 
-.medium-header{
-    max-width:120px;
+.short-header {
+    max-width: 40px;
 }
 
-.mean-header{
-    width:60px;
+.medium-header {
+    max-width: 120px;
 }
 
-.large-header{
-    width:420px;
+.mean-header {
+    width: 60px;
 }
 
-.detailedPsiLink{
+.large-header {
+    width: 420px;
+}
+
+.detailedPsiLink {
     float: left;
     padding-right: 12px;
 }
 
-.resetZoom{
+.resetZoom {
     float: right;
     cursor: pointer;
 }
 
-.psiPlot{
+.psiPlot {
     width: 390px;
     height: 20px;
 }
 
-.expandDelta{
+.expandDelta {
     vertical-align: top;
     float: left;
 }
 
 /*.largePsiPlot{*/
-    /*width: 419px;*/
- /*}*/
+/*width: 419px;*/
+/*}*/
 
 /* tablesorter CSS */
 table.tablesorter {
-        font-family:Helvetica, Arial;
-        background-color: #CDCDCD;
-        margin:10px 0pt 15px;
-        font-size: 9pt;
-        width: 1000px;
-        text-align: left;
+    font-family: 'Arial', sans-serif;
+    background-color: #CDCDCD;
+    margin: 10px 0 15px;
+    font-size: 9pt;
+    width: 1000px;
+    text-align: left;
 }
+
 table.tablesorter thead tr th, table.tablesorter tfoot tr th {
-        background-color: #E6EEEE;
-        border: 1px solid #FFF;
-        font-size: 9pt;
-        padding: 4px;
+    background-color: #E6EEEE;
+    border: 1px solid #FFF;
+    font-size: 9pt;
+    padding: 4px;
 }
+
 table.tablesorter thead tr .header {
-        background-image: url(../img/bg.gif);
-        background-repeat: no-repeat;
-        background-position: center right;
-        cursor: pointer;
+    background: url(../img/bg.gif) no-repeat center right;
+    cursor: pointer;
 }
+
 table.tablesorter tbody td {
-        padding: 4px;
-        background-color: #FFF;
-        /*vertical-align: top;*/
+    padding: 4px;
+    background-color: #FFF;
+    /*vertical-align: top;*/
 }
+
 table.tablesorter tbody tr.odd td {
-        /*background-color:#F0F0F6;*/
+    /*background-color:#F0F0F6;*/
 }
+
 table.tablesorter thead tr .headerSortUp {
-        background-image: url(../img/asc.gif);
+    background-image: url(../img/asc.gif);
 }
+
 table.tablesorter thead tr .headerSortDown {
-        background-image: url(../img/desc.gif);
+    background-image: url(../img/desc.gif);
 }
+
 table.tablesorter thead tr .headerSortDown, table.tablesorter thead tr .headerSortUp {
     background-color: #8dbdd8;
 }
 
 /* End of tablesorter CSS*/
 
-
-.deltaCondensed{
+.deltaCondensed {
     /*border: 1px;*/
     /*border-style: solid solid none solid;*/
     /*padding: 1px;*/
     /*color: #d3d3d3;*/
 }
 
-.extraPlots{}
-
-
+.extraPlots {
+}
 
 /*D3 violins plots*/
-.area{
+.area {
     shape-rendering: geometricPrecision;
     /*fill: #ccc !important;*/
     /*fill: url(#violin-gradient);*/
 }
-.boxplot{
+
+.boxplot {
     shape-rendering: crispEdges;
     fill: none;
     stroke: black;
     stroke-width: 1px;
 }
-.boxplot.fill{
+
+.boxplot.fill {
     fill: black;
 }
-.boxplot.mean, .boxplot.median{
+
+.boxplot.mean, .boxplot.median {
     fill: white;
     stroke: white;
 }
-.boxplot.mean{
+
+.boxplot.mean {
     shape-rendering: geometricPrecision;
 }
-.violin{
+
+.violin {
     shape-rendering: geometricPrecision;
     fill: none !important;
     stroke: #777;
@@ -162,15 +171,15 @@ table.tablesorter thead tr .headerSortDown, table.tablesorter thead tr .headerSo
 
 }
 
-.lsvSingleCompactPercentiles{
+.lsvSingleCompactPercentiles {
     cursor: -webkit-zoom-in;
 }
 
-.violin-boxplot{
+.violin-boxplot {
     cursor: -webkit-zoom-out;
 }
 
-.excl-incl-rect{
+.excl-incl-rect {
     cursor: -webkit-zoom-in;
     display: block;
     margin: auto;
@@ -180,7 +189,7 @@ table.tablesorter thead tr .headerSortDown, table.tablesorter thead tr .headerSo
     position: relative;
     top: -24px;
     padding: 5px;
-    font-family: Arial;
+    font-family: 'Arial', sans-serif;
     background: #fffec9;
     border: 2px solid #fc0;
     border-radius: 5px;
@@ -194,18 +203,18 @@ table.tablesorter thead tr .headerSortDown, table.tablesorter thead tr .headerSo
     cursor: -webkit-zoom-in;
 }
 
-.extendedDeltaPsi, .extendedPsi{
+.extendedDeltaPsi, .extendedPsi {
     cursor: -webkit-zoom-out;
 }
 
-.section-border{
+.section-border {
     padding: 25px;
     border: 3px solid #20A0DF;
     margin: 10px;
     border-radius: 7px;
 }
 
-.prime3hidden, .prime5hidden, .EShidden, .targethidden, .sourcehidden, .njuncsfromhidden, .njuncstohidden, .nexonsfromhidden, .nexonstohidden{
+.prime3hidden, .prime5hidden, .EShidden, .targethidden, .sourcehidden, .njuncsfromhidden, .njuncstohidden, .nexonsfromhidden, .nexonstohidden {
     display: none;
 }
 
@@ -220,28 +229,30 @@ footer {
 }
 
 header, footer {
-    /*background-color:#005DB5;*/
     color: #0053A0;
-    text-align:center;
-    padding:5px;
+    text-align: center;
+    padding: 5px;
 }
+
 nav {
-    line-height:30px;
-    background-color:#eeeeee;
-    height:300px;
-    width:100px;
-    float:left;
-    padding:5px;
+    line-height: 30px;
+    background-color: #eeeeee;
+    height: 300px;
+    width: 100px;
+    float: left;
+    padding: 5px;
 }
+
 section {
-    width:auto;
-    float:left;
+    width: auto;
+    float: left;
     position: relative;
     left: 200px;
     /*padding:10px;*/
 }
+
 footer {
-    clear:both;
+    clear: both;
 }
 
 .filters {
@@ -250,7 +261,6 @@ footer {
     left: 5px;
 }
 
-
 .prevPage, .nextPage {
     position: absolute;
     color: #005DB5;
@@ -258,33 +268,39 @@ footer {
 }
 
 .prevPage {
-    left:0;
+    left: 0;
     padding-left: 30px;
 }
 
-.nextPage{
+.nextPage {
     right: 0;
     padding-right: 30px;
 }
 
-.spliceDiv{
+.spliceDiv {
     width: 1000px;
     overflow: scroll;
+    overflow-y: hidden;
+    overflow-x: auto;
 }
 
-.spliceGraphTools{
+.spliceGraphTools {
     position: absolute;
+}
+
+.spliceGraphTools > * {
+    vertical-align: middle;
 }
 
 .gene_id {
     margin-top: 2px;
 }
 
-.exp2{
+.exp2 {
     padding-top: 25px;
 }
 
-.logoBiociphers{
+.logoBiociphers {
     height: 35px;
     position: absolute;
     left: 0;
@@ -292,58 +308,107 @@ footer {
     padding-top: 12px;
 }
 
-.headerText{
+.headerText {
     display: block;
     font-size: 1.17em;
     -webkit-margin-before: 1em;
     -webkit-margin-after: 1em;
-    -webkit-margin-start: 0px;
-    -webkit-margin-end: 0px;
+    -webkit-margin-start: 0;
+    -webkit-margin-end: 0;
     font-weight: bold;
 }
 
-.deltaHeader{
+.deltaHeader {
     margin: auto;
-    display:block;
-    text-align:center;
+    display: block;
+    text-align: center;
 }
 
-.gtfLink{
+.gtfLink {
     font-size: 1.5em;
 }
 
-.text-wrapped{
+.text-wrapped {
     word-wrap: break-word;
 }
 
-table.tablesorter tbody td.njunc-bg-0{ background-color: #e41a1c; }
-table.tablesorter tbody td.njunc-bg-1{ background-color: #377eb8; }
-table.tablesorter tbody td.njunc-bg-2{ background-color: #4daf4a; }
-table.tablesorter tbody td.njunc-bg-3{ background-color: #984ea3; }
-table.tablesorter tbody td.njunc-bg-4{ background-color: #ff7f00; }
-table.tablesorter tbody td.njunc-bg-5{ background-color: #a65628; }
-table.tablesorter tbody td.njunc-bg-6{ background-color: #f781bf; }
-table.tablesorter tbody td.njunc-bg-7{ background-color: #999999; }
-table.tablesorter tbody td.njunc-bg-8{ background-color: #1c7e80; }
-table.tablesorter tbody td.njunc-bg-9{ background-color: #9be21d; }
-table.tablesorter tbody td.njunc-bg-10{ background-color: #b111313; }
-table.tablesorter tbody td.njunc-bg-11{ background-color: #fcb208; }
-table.tablesorter tbody td.njunc-bg-12{ background-color: #37e364; }
-table.tablesorter tbody td.njunc-bg-13{ background-color: #0bba8c; }
-table.tablesorter tbody td.njunc-bg-14{ background-color: #2fe524; }
-table.tablesorter tbody td.njunc-bg-15{ background-color: #fdfdfd; }
+table.tablesorter tbody td.njunc-bg-0 {
+    background-color: #e41a1c;
+}
+
+table.tablesorter tbody td.njunc-bg-1 {
+    background-color: #377eb8;
+}
+
+table.tablesorter tbody td.njunc-bg-2 {
+    background-color: #4daf4a;
+}
+
+table.tablesorter tbody td.njunc-bg-3 {
+    background-color: #984ea3;
+}
+
+table.tablesorter tbody td.njunc-bg-4 {
+    background-color: #ff7f00;
+}
+
+table.tablesorter tbody td.njunc-bg-5 {
+    background-color: #a65628;
+}
+
+table.tablesorter tbody td.njunc-bg-6 {
+    background-color: #f781bf;
+}
+
+table.tablesorter tbody td.njunc-bg-7 {
+    background-color: #999999;
+}
+
+table.tablesorter tbody td.njunc-bg-8 {
+    background-color: #1c7e80;
+}
+
+table.tablesorter tbody td.njunc-bg-9 {
+    background-color: #9be21d;
+}
+
+table.tablesorter tbody td.njunc-bg-10 {
+    background-color: #b11113;
+}
+
+table.tablesorter tbody td.njunc-bg-11 {
+    background-color: #fcb208;
+}
+
+table.tablesorter tbody td.njunc-bg-12 {
+    background-color: #37e364;
+}
+
+table.tablesorter tbody td.njunc-bg-13 {
+    background-color: #0bba8c;
+}
+
+table.tablesorter tbody td.njunc-bg-14 {
+    background-color: #2fe524;
+}
+
+table.tablesorter tbody td.njunc-bg-15 {
+    background-color: #fdfdfd;
+}
 
 .njunc-text {
     color: white;
 }
 
-.junc-changed{
-    border-color: black;
-    border-width: 2px;
-    border-style: solid;
+.junc-changed {
+    border: 2px solid black;
 }
 
-.arrow-down{
+.arrow-down {
     color: white;
     font-size: 14px;
+}
+
+.toggleReadCounts {
+    width: 32px;
 }

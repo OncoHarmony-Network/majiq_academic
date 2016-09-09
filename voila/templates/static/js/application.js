@@ -26,8 +26,31 @@ $(document).ready(function () {
     window.gene_objs = [];
     window.gene_obj_list = [];
 
-    $("#junction-filters").find("input[name='numReads']").keyup(function () {
-        updateSGFilter();
+    /**
+     * Process splice graph filters
+     */
+    $("#sg-filters").on('keyup submit', function (event) {
+        // prevent form submit
+        event.preventDefault();
+
+        // variables
+        var filterNumReads = parseInt(d3.select("[name='numReads']").node().value);
+        var currentNumReads;
+        var displayNormReads;
+
+        // filter elements with these four classes
+        ['.junction', '.readcounts', '.irlines', '.irreads'].forEach(function (value) {
+            d3.selectAll(value).classed('sgfilter', function (d) {
+                // check read counts toggle button for read counts state
+                displayNormReads = d3.select(this.parentNode.parentNode).select('.toggleReadCounts').classed('corrected');
+
+                // get read counts based on this specific splice graphs state
+                currentNumReads = displayNormReads ? d.num_clean_reads : d.num_reads;
+
+                // return if this element should have the 'sgfilter' class
+                return !isNaN(filterNumReads) && currentNumReads <= filterNumReads
+            });
+        })
     });
 
     $('.floatingLegend').each(function () {
@@ -140,17 +163,6 @@ var initLargeCanvasSettings = function (num_bins, canvas) {
     }();
 
 };
-
-function updateSGFilter() {
-    var numReads = $("#junction-filters").find("input[name='numReads']").val();
-    ['.junction', '.readcounts', '.irlines', '.irreads']
-        .forEach(function (value) {
-            d3.selectAll(value)
-                .classed('sgfilter', function (d) {
-                    return numReads != "" && d.num_reads <= parseInt(numReads)
-                });
-        })
-}
 
 function drawLine(contextO, startx, starty, endx, endy) {
     contextO.beginPath();
