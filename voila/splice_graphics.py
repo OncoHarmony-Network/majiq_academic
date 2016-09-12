@@ -1,8 +1,14 @@
 import json
+from multiprocessing import Manager, Pool
+from multiprocessing.process import Process
+from multiprocessing.queues import JoinableQueue
+
+import h5py
+
+from voila.hdf5 import HDF5
 
 
-class GeneGraphic(object):
-
+class GeneGraphic(HDF5):
     __eq__ = lambda self, other: (self.chrom == other.chrom and self.strand == other.strand
                                   and self.start < other.end and self.end > other.start)
     __ne__ = lambda self, other: (self.chrom != other.chrom or self.strand != other.strand
@@ -18,7 +24,8 @@ class GeneGraphic(object):
                                            or (self.end > other.start and self.start < other.end
                                                and self.strand == '-' and other.strand == '+'))))
 
-    def __init__(self, id, name=None, strand=None, exons=list(), junctions=list(), chrom=None, **kwds):
+    def __init__(self, id, name=None, strand=None, exons=list(), junctions=list(), chrom=None):
+        super(GeneGraphic, self).__init__()
         self.id = id
         self.name = name
         self.strand = strand
@@ -27,10 +34,10 @@ class GeneGraphic(object):
         self.chrom = chrom
         try:
             self.start = exons[0].get_coords()[0]
+            self.end = exons[-1].get_coords()[1]
         except:
-            print "KK", exons
-        self.end = exons[-1].get_coords()[1]
-        super(GeneGraphic, self).__init__(**kwds)
+            self.start = None
+            self.end = None
 
     def get_id(self):
         return self.id
@@ -68,7 +75,7 @@ class GeneGraphic(object):
 
     def to_bed12(self):
         #  "%(a)s, %(a)s" % {'a':'test'}
-        #fields = ['chrom', 'chromStart', 'chromEnd', 'name', 'score', 'strand', 'thickStart', 'thickEnd', 'itemRgb', 'blockCount', 'blockSizes', 'blockStarts']
+        # fields = ['chrom', 'chromStart', 'chromEnd', 'name', 'score', 'strand', 'thickStart', 'thickEnd', 'itemRgb', 'blockCount', 'blockSizes', 'blockStarts']
         bed_fields = [
             self.chrom,
             self.start,
@@ -80,15 +87,23 @@ class GeneGraphic(object):
             self.end,
             0,
             len(self.exons),
-            ','.join([str(abs(e.get_coords()[0] - e.get_coords()[1])) for e in self.exons]), #[::int(self.strand + '1')]
+            ','.join([str(abs(e.get_coords()[0] - e.get_coords()[1])) for e in self.exons]),
+            # [::int(self.strand + '1')]
             ','.join([str(abs(e.get_coords()[0] - self.start)) for e in self.exons]),
         ]
         return "\t".join([str(b) for b in bed_fields])
 
+    def cls_list(self):
+        return {'exons':
+                    {'class': ExonGraphic, 'args': (None, None, None, None)},
+                'junctions':
+                    {'class': JunctionGraphic, 'args': ((), None, None)}
+                }
 
-class ExonGraphic(object):
 
-    def __init__(self, a3, a5, coords, type_exon, coords_extra=list(), intron_retention=None, lsv_type=0, alt_starts=list(), alt_ends=list()):
+class ExonGraphic(HDF5):
+    def __init__(self, a3, a5, coords, type_exon, coords_extra=list(), intron_retention=None, lsv_type=0,
+                 alt_starts=list(), alt_ends=list()):
         """
         ExonGraphic constructor
 
@@ -102,6 +117,7 @@ class ExonGraphic(object):
         :param alt_starts: list of coordinates for alternative start sites of the exon (no junction "landing" on it)
         :param alt_ends: list of coordinates for alternative end sites of the exon (no junction "departing" from it)
         """
+        super(ExonGraphic, self).__init__()
         self.a3 = a3
         self.a5 = a5
         self.coords = coords
@@ -119,6 +135,7 @@ class ExonGraphic(object):
 
     def get_a5_list(self):
         return self.a5
+
     def get_coords(self):
         # Mask unkonwn start or ends
         def mask_unknown(coords):
@@ -127,6 +144,7 @@ class ExonGraphic(object):
             if coords[1] is None:
                 coords[1] = -1
             return coords
+
         return mask_unknown(list(self.coords))
 
     def get_type(self):
@@ -157,8 +175,9 @@ class ExonGraphic(object):
         return json.dumps(self, default=lambda o: o.__dict__, sort_keys=True, cls=encoder)
 
 
-class JunctionGraphic(object):
-    def __init__(self, coords, type_junction, nreads, clean_nreads=0, transcripts=list(), ir=None):
+class JunctionGraphic(HDF5):
+    def __init__(self, coords, type_junction, nreads, clean_nreads=0, transcripts=list(), ir=0):
+        super(JunctionGraphic, self).__init__()
         self.coords = list(coords)
         self.type_junction = type_junction
         self.num_reads = nreads
@@ -195,10 +214,48 @@ class JunctionGraphic(object):
 
 
 class LsvGraphic(GeneGraphic):
-    def __init__(self, type_lsv, coords, **kwds):
+    def __init__(self, type_lsv, coords, id, name=None, strand=None, exons=list(), junctions=list(), chrom=None):
+        super(LsvGraphic, self).__init__(id, name, strand, exons, junctions, chrom)
         self.type = type_lsv
         self.coords = coords
-        super(LsvGraphic, self).__init__(**kwds)
 
     def get_type(self):
         return self.type
+
+
+def splice_graph_from_hdf5(hdf5_filename, logger):
+    def worker():
+        with h5py.File(hdf5_filename, 'r', swmr=True) as h:
+            while True:
+                index = queue.get()
+                manager_dict[index] = GeneGraphic(None).from_hdf5(h[index])
+                queue.task_done()
+
+    def producer():
+        with h5py.File(hdf5_filename, 'r', swmr=True) as h:
+            for x in h:
+                queue.put(x)
+
+    if logger:
+        logger.info('Loading {0}.'.format(hdf5_filename))
+
+    queue = JoinableQueue()
+    manager_dict = Manager().dict()
+
+    producer_proc = Process(target=producer)
+    producer_proc.daemon = True
+    producer_proc.start()
+
+    pool = Pool(None, worker)
+
+    producer_proc.join()
+    queue.join()
+
+    pool.close()
+    queue.close()
+
+    ggs = [None] * len(manager_dict)
+    for key in manager_dict.keys():
+        ggs[int(key)] = manager_dict[key]
+
+    return ggs

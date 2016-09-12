@@ -20,6 +20,7 @@ EXON_TYPE_DB_OTHER_RNASEQ = 3
 EXON_TYPE_MISSING_START = 4
 EXON_TYPE_MISSING_END = 5
 
+NONE_IR_TYPE = 0
 IR_TYPE_START = 1
 IR_TYPE_END = 2
 
@@ -28,7 +29,7 @@ SUFFIX_SPLICEGRAPH = 'splicegraph'
 DELIMITER = '\t'
 EXTENSION = 'txt'
 MAX_GENES = 10  # Max. 10 genes per page, create as many HTMLs as needed
-MAX_LSVS_DELTAPSI_INDEX = 10000 # Max. LSVs allowed to create full index.html
+MAX_LSVS_DELTAPSI_INDEX = 10000  # Max. LSVs allowed to create full index.html
 MAX_LSVS_PSI_INDEX = 15000
 COMBINED_PREFIX = 'ALL_'
 

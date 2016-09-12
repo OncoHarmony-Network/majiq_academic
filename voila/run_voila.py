@@ -12,6 +12,9 @@ import voila.constants as constants
 import voila.io_voila as io_voila
 import voila.module_locator as module_locator
 import voila.utils.utils_voila as utils_voila
+import voila.constants as constants
+import fileinput
+import time
 
 try:
     import cPickle as pkl
@@ -51,7 +54,7 @@ def render_summary(output_dir, output_html, majiq_output, type_summary, threshol
 
     :param output_dir: output directory for the summaries.
     :param output_html: name for the output html files.
-    :param majiq_output: parsed data from majiq.
+    :param majiq_output: parsed data from old_majiq.
     :param type_summary: type of analysis performed.
     :param threshold: minimum change considered as significant (in deltapsi analysis).
     :param extra_args: additional arguments needed for certain summaries.
@@ -238,7 +241,7 @@ def render_summary(output_dir, output_html, majiq_output, type_summary, threshol
             voila_output.write(sum_template.render(
                 genes=genes[count_pages * constants.MAX_GENES:(count_pages + 1) * constants.MAX_GENES],
                 gene_dicts=majiq_output['gene_dicts'],
-                first_sample=[sam for sam in majiq_output['gene_dicts'].keys() if 'ALL' in sam][0],
+                first_sample=[sam for sam in majiq_output['gene_dicts'].keys()][0],
                 prevPage=prev_page,
                 nextPage=next_page,
                 namePage=name_page
@@ -305,8 +308,7 @@ def parse_gene_graphics(splicegraph_flist, gene_name_list, condition_names=('gro
         gg_combined_name = "%s%s" % (constants.COMBINED_PREFIX, condition_names[grp_i])
 
         for splice_graph_f in splice_files:
-            logger.info("Loading %s." % splice_graph_f)
-            genesG = pkl.load(open(splice_graph_f, 'r'))
+            genesG = splice_graph_from_hdf5(splice_graph_f, logger)
             genes_graphic = defaultdict(list)
             genesG.sort()
             for gene_obj in genesG:
@@ -375,8 +377,7 @@ def parse_gene_graphics_obj(splicegraph_flist, gene_name_list, condition_names=(
         gg_combined_name = "%s%s" % (constants.COMBINED_PREFIX, condition_names[grp_i])
 
         for splice_graph_f in splice_files:
-            logger.info("Loading %s." % splice_graph_f)
-            genesG = pkl.load(open(splice_graph_f, 'r'))
+            genesG = splice_graph_from_hdf5(splice_graph_f, logger)
             genes_graphic = defaultdict()
             genesG.sort()
             for gene_obj in genesG:
@@ -407,7 +408,7 @@ def parse_gene_graphics_obj(splicegraph_flist, gene_name_list, condition_names=(
 
 
 def parse_input(args):
-    """This method generates an html summary from a majiq output file and the rest of the arguments."""
+    """This method generates an html summary from a old_majiq output file and the rest of the arguments."""
 
     type_summary = args.type_analysis
     output_dir = args.output_dir
@@ -426,6 +427,7 @@ def parse_input(args):
 
     threshold = None
     pairwise = None
+    voila_file = None
 
     if type_summary != constants.COND_TABLE:
         voila_file = args.majiq_bins
@@ -443,7 +445,8 @@ def parse_input(args):
             for gene_name in fileinput.input(args.gene_names):
                 gene_name_list.append(gene_name.rstrip().upper())
 
-        voila_input = io_voila.load_voila_input(voila_file, logger=logger)
+        # voila_input = io_voila.load_voila_input(voila_file, logger=logger)
+        voila_input = io_voila.voila_input_from_hdf5(voila_file, logger)
         majiq_output = utils_voila.lsvs_to_gene_dict(voila_input, gene_name_list=gene_name_list, lsv_types=lsv_types,
                                                      logger=logger)
 
@@ -473,7 +476,8 @@ def parse_input(args):
             for lsv_name in fileinput.input(args.lsv_names):
                 lsv_names.append(lsv_name.rstrip())
 
-        voila_input = io_voila.load_voila_input(voila_file, logger=logger)
+        # voila_input = io_voila.load_voila_input(voila_file, logger=logger)
+        voila_input = io_voila.voila_input_from_hdf5(voila_file, logger)
         majiq_output = utils_voila.lsvs_to_gene_dict(voila_input, gene_name_list=gene_name_list, logger=logger,
                                                      threshold=args.threshold, show_all=args.show_all,
                                                      lsv_types=args.lsv_types, lsv_names=lsv_names)
@@ -536,7 +540,7 @@ def parse_input(args):
             lsv_name_list = []
             for lsv_name in fileinput.input(args.lsv_names):
                 lsv_name_list.append(lsv_name.rstrip().upper())
-
+        print thres_change
         output_html = "%s_%s_comp_table_%.2f.html" % (cond_pair[0], cond_pair[1], thres_change)
         lsvs_dict = io_voila.load_dpsi_tab(sample_files, sample_names, thres_change=thres_change,
                                            filter_genes=gene_name_list, filter_lsvs=lsv_name_list,

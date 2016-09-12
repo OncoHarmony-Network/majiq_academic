@@ -349,9 +349,9 @@ def get_coverage(majiq_files_or_dir, are_clean_reads=False):
     else:
         if os.path.isdir(majiq_files_or_dir):
             for file in os.listdir(majiq_files_or_dir):
-                if file.endswith(".majiq") and "toJuan.resting" in file:
+                if file.endswith(".old_majiq") and "toJuan.resting" in file:
                     cond1_flist.append(majiq_files_or_dir+'/'+file)
-                if file.endswith(".majiq") and "toJuan.stim" in file:
+                if file.endswith(".old_majiq") and "toJuan.stim" in file:
                     cond2_flist.append(majiq_files_or_dir+'/'+file)
         else:
             for file in majiq_files_or_dir:
@@ -428,7 +428,7 @@ def load_rtpcr_results(pcr_file):
 def main():
     parser = argparse.ArgumentParser(description="Compare Delta PSIs computed with MAJIQ against the RT-PCR results.")
     parser.add_argument("pcr", help="Tab-delimted file with the RT-PCR scores")
-    parser.add_argument("--majiq-deltas", required=True, dest='majiq_deltas', nargs='+', help='MAJIQ Delta PSI predictions for resting and stimuli RNA-Seq data.')
+    parser.add_argument("--old_majiq-deltas", required=True, dest='majiq_deltas', nargs='+', help='MAJIQ Delta PSI predictions for resting and stimuli RNA-Seq data.')
     parser.add_argument("--miso-deltas", dest='miso_deltas', nargs='+', help='MISO Delta PSI predictions for resting and stimuli RNA-Seq data.')
     parser.add_argument("--names-map-file", dest='names_map_file', help='File containing the mapping for events names used in MAJIQ and RT-PCR files.')
     parser.add_argument("--builder-files", dest='majiq_builder_files', help='File containing MAJIQ builder output file.')
@@ -659,8 +659,8 @@ def main():
     if args.miso_deltas:
         plot_rtpcr_majiq_miso(rt_pcr, majiq, miso, args.plotpath)
     if args.majiq_builder_files:
-        # plot_rtpcr_majiq(rt_pcr, majiq, coverage, args.plotpath)
-        # plot_rtpcr_majiq_var(np.array(rt_pcr), np.array(majiq), np.array(coverage), np.array(delta_delta_psi), args.plotpath, final_names)
+        # plot_rtpcr_majiq(rt_pcr, old_majiq, coverage, args.plotpath)
+        # plot_rtpcr_majiq_var(np.array(rt_pcr), np.array(old_majiq), np.array(coverage), np.array(delta_delta_psi), args.plotpath, final_names)
         plot_rtpcr_majiq_reads_deltas(rt_pcr, majiq, coverage, delta_delta_psi, args.plotpath)
 
     print "%d elements flipped" % len(flipped_lsv_dict.keys())

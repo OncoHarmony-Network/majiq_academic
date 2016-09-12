@@ -1,6 +1,6 @@
 from matplotlib import use
 
-from majiq.src import basic_pipeline
+from old_majiq.src import basic_pipeline
 
 
 use('Agg', warn=False)

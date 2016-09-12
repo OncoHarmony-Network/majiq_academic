@@ -85,7 +85,7 @@ def main():
     changing/non-changing events between two pairs of conditions.
     """
     methods = [
-        'majiq',
+        'old_majiq',
         'miso',
         'mats',
         'naive',

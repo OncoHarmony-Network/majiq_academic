@@ -2,7 +2,7 @@ import random
 from numpy.ma import masked_less
 import numpy as np
 from scipy.stats import nbinom, poisson
-import plotting as mplot
+import majiq.src.plotting as mplot
 
 def get_ecdf(pvalues):
     # print sorted(pvalues)
@@ -108,7 +108,7 @@ def adjust_fit(starting_a, junctions, precision, previous_score, plotpath, indic
 
 def fit_nb(junctionl, outpath, plotpath, nbdisp=0.1, logger=None):
     if logger and plotpath:
-        logger.info("NBFit: Plots will be drawn in %s..." % plotpath)
+        logger.debug("NBFit: Plots will be drawn in %s..." % plotpath)
 
     filtered = []
 
@@ -143,7 +143,7 @@ def fit_nb(junctionl, outpath, plotpath, nbdisp=0.1, logger=None):
         one_over_r, score, ecdf, pvalues = adjust_fit(one_over_r, junctions, precision, score, plotpath,
                                                       indices=indices, logger=logger)
         if logger:
-            logger.info("Corrected to %.5f with precision %s. Current score is %.5f" % (one_over_r, precision, score))
+            logger.debug("Corrected to %.5f with precision %s. Current score is %.5f" % (one_over_r, precision, score))
         if i + 1 != len(precision_values):
             #go "up" in the scale so we dont miss better solution
             one_over_r += precision - precision_values[i + 1]

@@ -97,7 +97,7 @@ def rank_majiq(vlsv_list, V=0.2, absolute=True, dofilter=True, E=False, ranknoch
         MINTHRESHOLD = 0.20
     rank = []
 
-    print "Num of LSVs in majiq: %d" % len(vlsv_list)
+    print "Num of LSVs in old_majiq: %d" % len(vlsv_list)
     covered_exons = []
     for i, vlsv in enumerate(vlsv_list):
         lsv_bins = vlsv.get_bins()
@@ -310,7 +310,7 @@ def event_names_set(rank):
 
 def skim_rank(rank, common_names, method):
     # print "Before filter: %d" % len(rank)
-    if method == 'majiq':
+    if method == 'old_majiq':
         names = [ranked_pair[0][1] for ranked_pair in rank]
     if method == 'miso':
         names = [ranked_pair[0] for ranked_pair in rank]
@@ -323,7 +323,7 @@ def skim_rank(rank, common_names, method):
 def create_restrict_plot(ratios_list):
     from scipy.integrate import simps, trapz
 
-    method_name = 'majiq'
+    method_name = 'old_majiq'
     for ratios in ratios_list:
         area_simp = simps(ratios, dx=1)
         area_trap = trapz(ratios, dx=1)
@@ -332,15 +332,15 @@ def create_restrict_plot(ratios_list):
         print "Method: %s. Area Under Curve (Trapezoid)\t: %.3f " % (method_name, area_trap)
 
 
-# python ~/Projects/majiq/scripts/pair_rank.py --majiq-files
-# ~/workspace/majiq/data/deltapsi/genomewise/Hippo1_Liver1_deltamatrix.pickle
-# ~/workspace/majiq/data/deltapsi/genomewise/results_nofilter/Hippo1_Liver1_deltamatrix.pickle
-# ~/workspace/majiq/data/deltapsi/genomewise/Hippo2_Liver2_deltamatrix.pickle
-# ~/workspace/majiq/data/deltapsi/genomewise/results_nofilter/Hippo2_Liver2_deltamatrix.pickle
+# python ~/Projects/old_majiq/scripts/pair_rank.py --old_majiq-files
+# ~/workspace/old_majiq/data/deltapsi/genomewise/Hippo1_Liver1_deltamatrix.pickle
+# ~/workspace/old_majiq/data/deltapsi/genomewise/results_nofilter/Hippo1_Liver1_deltamatrix.pickle
+# ~/workspace/old_majiq/data/deltapsi/genomewise/Hippo2_Liver2_deltamatrix.pickle
+# ~/workspace/old_majiq/data/deltapsi/genomewise/results_nofilter/Hippo2_Liver2_deltamatrix.pickle
 # --output output/repro/pair_rank_all/nooutlier/exp1_union_exp2 --nofilter --type-rank exp1_and_exp2 --max 300 $conf_ranks
 
-# python ~/Projects/majiq/scripts/pair_rank.py
-# --majiq-files /data/MGP/majiq/dpsi/Hippo_Liver/pos5reads10/Hippo1_Liver1.deltapsi.pickle /data/MGP/majiq/dpsi/Hippo_Liver/pos2reads2/Hippo5_Liver5.deltapsi.pickle
+# python ~/Projects/old_majiq/scripts/pair_rank.py
+# --old_majiq-files /data/MGP/old_majiq/dpsi/Hippo_Liver/pos5reads10/Hippo1_Liver1.deltapsi.pickle /data/MGP/old_majiq/dpsi/Hippo_Liver/pos2reads2/Hippo5_Liver5.deltapsi.pickle
 # --miso-files miso/Hip1Liv1/Hip1_vs_Liv1/bayes-factors/Hip1_vs_Liv1.miso_bf miso/Hip5Liv5/Hip5_vs_Liv5/bayes-factors/Hip5_vs_Liv5.miso_bf
 # --mats-files mats/Hip1_Liv1/MATS_output/all.txt mats/Hip5_Liv5/MATS_output/all.txt
 # --output repro/pair_rank/H1L1H5L5/full.E/ --fullrank --E --type-rank only_exp1 --max 154
@@ -364,7 +364,7 @@ def plot_fdr(output, method_name, fdr):
 
 def main():
     parser = argparse.ArgumentParser(description="")
-    parser.add_argument('--majiq-files', dest='majiq_files', nargs='+',
+    parser.add_argument('--old_majiq-files', dest='majiq_files', nargs='+',
                         help='MAJIQ files with paired events to analyze')
     parser.add_argument('--miso-files', dest='miso_files', nargs=2, help='MISO files with paired events to analyze')
     parser.add_argument('--mats-files', dest='mats_files', nargs=2, help='MATS files with paired events to analyze')
@@ -605,7 +605,7 @@ def main():
                 "%s/fdr.%s.%s_v.pickle" % (args.output, method_name, str(args.type_rank).replace('-', '_')), 'w'))
             plot_fdr(args.output, method_name, fdr)
 
-        if "majiq" in method_name:
+        if "old_majiq" in method_name:
             only_exp1_ranks.append(ratios)
 
     if args.create_restrict_plot:

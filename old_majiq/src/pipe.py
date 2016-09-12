@@ -1,19 +1,22 @@
-import sys
 import os
+import sys
 from multiprocessing import current_process
-import pickle
-import scipy.misc
+
 import numpy as np
-from majiq.src.psi import prob_data_sample_given_psi, __get_prior_params
-from majiq.src.utils.utils import get_logger
+import scipy.misc
+
+import majiq.src.io_utils
 import majiq.src.sample as majiq_sample
+import old_majiq.src.io as majiq_io
+from majiq.src.psi import prob_data_sample_given_psi, get_prior_params
+from majiq.src.utils import get_logger
 
 
-def parallel_lsv_child_calculation(func, args, tempdir, name, chunk):
+def parallel_lsv_child_calculation(func, args, tempdir, name, chunk, store=True):
     # try:
     if not os.path.isdir(tempdir):
         os.mkdir(tempdir)
-    thread_logger = get_logger("%s/majiq.w%s.log" % (tempdir, chunk), silent=False)
+    thread_logger = get_logger("%s/old_majiq.w%s.log" % (tempdir, chunk), silent=False)
     thread_logger.info("[Th %s]: START child,%s" % (chunk, current_process().name))
     thread_logger.info('[Th %s]: Filtering ...' % chunk)
 
@@ -22,23 +25,16 @@ def parallel_lsv_child_calculation(func, args, tempdir, name, chunk):
     results = func(*args)
 
     sys.stdout.flush()
-    thread_logger.info("[Th %s]: Saving DeltaPSI..." % chunk)
-    output = open("%s/%s_th%s.%s.pickle" % (tempdir, name, chunk, func.__name__), 'w')
-    pickle.dump(results, output)
-    #
-    # except Exception as e:
-    #     print "%s" % sys.exc_traceback.tb_lineno, e
-    #     sys.stdout.flush()
-
-    return
+    if store:
+        thread_logger.info("[Th %s]: Saving ...%s " % (chunk, func.__name__))
+        majiq_io.dump_bin_file(results, "%s/%s_th%s.%s.pickle" % (tempdir, name, chunk, func.__name__))
 
 
 def __load_execution_chunk(filename, delta=None):
-    l_vals = pickle.load(open(filename))
+    l_vals = majiq.src.io_utils.load_bin_file(filename)
     if not delta is None:
-        prior = pickle.load(open(delta))
+        prior = majiq.src.io_utils.load_bin_file(delta)
         l_vals.append(prior)
-
     return l_vals
 
 
@@ -68,20 +64,21 @@ def calcpsi(fname, conf, logger):
 
     #
     # #TODO: DELETE THIS ONLY TEMP
-    # print "IF YOU READ THIS, your code needs to be changed, ask Jordi"
+    # print "IF YOU READ THIS, your code needs to be changed, ask Jordi", len(info), info
     #
     # num_exp = len(matched_lsv[0])
     # print num_exp
-    # dir = './to_scott'
-    # if not os.path.isdir(dir):
-    #     os.mkdir(dir)
+    # import pickle
+    # dirn = './to_scott'
+    # if not os.path.isdir(dirn):
+    #     os.mkdir(dirn)
     # for ii in range(num_exp):
     #     res = []
     #     for lidx, lsv_info in enumerate(info):
     #         res.append(lsv_samples[lidx, ii])
     #
     #
-    #     outfp = open('%s/%s.%d.pickle' % (dir, conf['name'], ii), 'w+bcott')
+    #     outfp = open('%s/%s.%d.pickle' % (dirn, conf['name'], ii), 'w+')
     #     pickle.dump([res, info], outfp)
     #     outfp.close()
     # exit()

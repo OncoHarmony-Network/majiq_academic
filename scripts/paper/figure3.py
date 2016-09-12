@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 import sys
-grimoire_path = '/Users/Jordi/software/majiq'
+grimoire_path = '/Users/Jordi/software/old_majiq'
 if grimoire_path not in sys.path:
     sys.path.append(grimoire_path)
 
@@ -750,7 +750,7 @@ def fdr_parse(direc, file_list, group_list, intronic_junc=False):
 if __name__ == '__main__':
 
     dire = sys.argv[1]
-    #onlyfiles = [f for f in listdir(dire) if isfile(join(dire, f)) and f.endswith('majiq')]
+    #onlyfiles = [f for f in listdir(dire) if isfile(join(dire, f)) and f.endswith('old_majiq')]
     #groups = ['Adr', 'Aor', 'BFat', 'Bstm', 'Cer', 'Hrt', 'Hyp', 'Kid', 'Liv', 'Lun', 'Mus', 'WFat']
     groups = ['BALB_cJ',
                  'NOD_ShiLtJ',
@@ -767,7 +767,7 @@ if __name__ == '__main__':
                  '129S1_SvImJ',
                  'A_J',
                  'C57BL_6NJ']
-    # onlyfiles = ['Adr_CT22.mm10.sorted.majiq', 'Aor_CT22.mm10.sorted.majiq']
+    # onlyfiles = ['Adr_CT22.mm10.sorted.old_majiq', 'Aor_CT22.mm10.sorted.old_majiq']
 
     global ir_plots
     ir_plots = True

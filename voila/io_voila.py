@@ -2,20 +2,28 @@ import csv
 import os
 from collections import defaultdict
 
+from collections import defaultdict
+from multiprocessing import Manager, Process, Pool
+from multiprocessing.queues import JoinableQueue
+
+import h5py
 import numpy as np
 
 import vlsv
 from voila import constants
+from voila.hdf5 import HDF5, BinsDataSet, Psi1DataSet, Psi2DataSet
 from voila.utils import utils_voila
+from voila.vlsv import VoilaLsv
 
 __author__ = 'abarrera'
 import cPickle as pkl
 
 
-class VoilaInput(object):
+class VoilaInput(HDF5):
     """Standard input interface by experiment used by Voila"""
 
     def __init__(self, lsvs=(), metainfo=None):
+        super(VoilaInput, self).__init__()
         self.lsvs = lsvs
         self.metainfo = metainfo
 
@@ -33,6 +41,123 @@ class VoilaInput(object):
         """Sample information generator, one by one."""
         for sample_info in self.metainfo:
             yield sample_info
+
+    def to_hdf5(self, h):
+        # bins dataset
+        bins_length = sum([len(lsv.bins) for lsv in self.lsvs])
+        BinsDataSet(h, bins_length)
+
+        # psi1 dataset
+        psi1_length = sum([len(lsv.psi1) for lsv in self.lsvs])
+        Psi1DataSet(h, psi1_length)
+
+        # psi2 dataset
+        psi2_length = sum([len(lsv.psi2) for lsv in self.lsvs])
+        Psi2DataSet(h, psi2_length)
+
+        # metainfo
+        metainfo_grp = h.create_group('metainfo')
+        for array_index, array in enumerate(self.metainfo):
+            array_grp = metainfo_grp.create_group(str(array_index))
+            for dict_index, meta_dict in enumerate(array):
+                dict_grp = array_grp.create_group(str(dict_index))
+                for key in meta_dict:
+                    dict_grp.attrs[key] = meta_dict[key]
+
+        super(VoilaInput, self).to_hdf5(h)
+
+    def from_hdf5(self, h):
+        metainfo_grp = h['metainfo']
+
+        self.metainfo = [[None for _ in metainfo_grp[x]] for x in metainfo_grp]
+        for array_index in metainfo_grp:
+            for dict_index in metainfo_grp[array_index]:
+                mi_dict = {}
+                mi_attrs = metainfo_grp[array_index][dict_index].attrs
+                for key in mi_attrs:
+                    mi_dict[key] = mi_attrs[key]
+
+                self.metainfo[int(array_index)][int(dict_index)] = mi_dict
+
+        return super(VoilaInput, self).from_hdf5(h)
+
+    def exclude(self):
+        return ['metainfo']
+
+    def cls_list(self):
+        return {'lsvs': {'class': VoilaLsv, 'args': ((), None)}}
+
+
+def voila_input_from_hdf5(hdf5_filename, logger):
+    """
+    Create VoilaInput object from HDF5 file.  This will process each of the VoilaLsvs in their own thread useing the
+    Producer Consumer design pattern.
+    :param hdf5_filename: HDF5 filename string
+    :param logger: instance of logger
+    :return: VoilaInput object
+    """
+
+    def worker():
+        with h5py.File(hdf5_filename, 'r', swmr=True) as h:
+            while True:
+                index = queue.get()
+                manager_dict[index] = VoilaLsv((), None).from_hdf5(h['lsvs'][index])
+                queue.task_done()
+
+    def producer():
+        with h5py.File(hdf5_filename, 'r', swmr=True) as h:
+            for x in h['lsvs']:
+                queue.put(x)
+
+    def metainfo():
+        with h5py.File(hdf5_filename, 'r', swmr=True) as h:
+            metainfo_grp = h['metainfo']
+
+            mi_list = [[None for _ in metainfo_grp[x]] for x in metainfo_grp]
+            for array_index in metainfo_grp:
+                for dict_index in metainfo_grp[array_index]:
+                    mi_dict = {}
+                    mi_attrs = metainfo_grp[array_index][dict_index].attrs
+                    for key in mi_attrs:
+                        mi_dict[key] = mi_attrs[key]
+
+                    mi_list[int(array_index)][int(dict_index)] = mi_dict
+
+            manager_dict['metainfo'] = mi_list
+
+    logger.info('Loading {0}.'.format(hdf5_filename))
+
+    queue = JoinableQueue()
+    manager_dict = Manager().dict()
+
+    metainfo_proc = Process(target=metainfo)
+    metainfo_proc.daemon = True
+    metainfo_proc.start()
+
+    producer_proc = Process(target=producer)
+    producer_proc.daemon = True
+    producer_proc.start()
+
+    pool = Pool(None, worker)
+
+    metainfo_proc.join()
+    producer_proc.join()
+    queue.join()
+
+    pool.close()
+    queue.close()
+
+    voila_input = VoilaInput()
+
+    voila_input.metainfo = manager_dict['metainfo']
+    del manager_dict['metainfo']
+
+    lsvs = [None] * len(manager_dict)
+    for key in manager_dict.keys():
+        lsvs[int(key)] = manager_dict[key]
+    voila_input.lsvs = lsvs
+
+    return voila_input
 
 
 def dump_voila_input(voila_input, target, logger=None, protocol=-1):
@@ -62,7 +187,7 @@ def load_dpairs(pairwise_dir, majiq_output, logger):
     Load pairwise files from MAJIQ analysis.
 
     :param str pairwise_dir: directory containing pairwise comparisons produced by MAJIQ.
-    :param majiq_output: parsed data from majiq.
+    :param majiq_output: parsed data from old_majiq.
     :param logger: logger instance.
     :return: list of deltapsi lsvs
     :return: name of condition 1
@@ -96,7 +221,7 @@ def write_tab_output(input_parsed):
 
     :param output_dir: output directory for the file.
     :param output_html: name for the output html file used to create a *.txt version.
-    :param majiq_output: parsed data from majiq.
+    :param majiq_output: parsed data from old_majiq.
     :param type_summary: type of analysis performed.
     :param logger: logger instance.
     :param pairwise_dir: whether pairwise comparisons are included or not.
@@ -387,7 +512,7 @@ def create_gff3_txt_files(input_parsed, out_gff3=False):
     """
     Create GFF3 files for each LSV.
     :param output_dir: output directory for the file.
-    :param majiq_output: parsed data from majiq.
+    :param majiq_output: parsed data from old_majiq.
     :param logger: logger instance.
     :param out_gff3:
     :return: nothing.

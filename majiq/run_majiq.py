@@ -1,11 +1,9 @@
 import argparse
+from majiq.src.build import build
+from majiq.src.calc_psi import calcpsi
+# from majiq.src.deltapsi import deltapair, multi_dpsi
 
-from matplotlib import use
-use('Agg')
-from majiq.src.basic_pipeline import builder, calcpsi
-from majiq.src.deltapsi import deltapair, multi_dpsi
-
-VERSION = '0.9.2'
+VERSION = '1.0.0'
 
 
 def new_subparser():
@@ -19,7 +17,7 @@ def main():
     #REMINDER parser.add_parser(..... parents='[bla, ble]')
     parser = argparse.ArgumentParser(description="MAJIQ is a suite of tools for the analysis of Alternative "
                                                  "Splicing Events and Alternative Splicing Quantification.")
-    parser.add_argument('-v', action='version', version='%s' % VERSION)
+    parser.add_argument('-v', action='version', version=VERSION)
 
     #common flags (first ones are required)
     common = new_subparser()
@@ -43,14 +41,10 @@ def main():
     buildparser.add_argument('--pcr', dest='pcr_filename', action="store", help='PCR bed file as gold_standard')
     buildparser.add_argument('--gff_output', dest='gff_output', default="lsvs.gff", action="store",
                              help='Filename where a gff with the lsv events will be generated')
-    buildparser.add_argument('--simplify', default=0, type=int,
-                             help='Ratio for junction simplification. [Default: %(default)s]')
-
     buildparser.add_argument('--min_denovo', default=2, type=int,
                              help='Minimum number of reads threshold combining all positions in a LSV to consider that'
                                   'denovo junction is real". '
                              '[Default: %(default)s]')
-
     buildparser.add_argument('--minreads', default=3, type=int,
                              help='Minimum number of reads threshold combining all positions in a LSV to consider that'
                                   'the LSV "exist in the data". '
@@ -58,6 +52,10 @@ def main():
     buildparser.add_argument('--min_intronic_cov', default=1.5, type=float,
                              help='Minimum number of reads on average in intronic sites, only for intron retention.'
                                   'Default: %(default)s]')
+    buildparser.add_argument('--num_chunks', default=-1, type=float,
+                             help='Numbers of chunks the execution will be divided. That differs of nthread in the '
+                                  'concurrency. Chunks is the total chunks of the execution, nthreads set how many of '
+                                  'this chunks will be executed at the same time.')
     buildparser.add_argument('--minpos', default=2, type=int, help='Minimum number of start positions with at least 1 '
                                                                    'read in a LSV to consider that the LSV "exist in '
                                                                    'the data"')
@@ -74,6 +72,7 @@ def main():
                                                                                       'detected')
     buildparser.add_argument('--only_gather', action='store_true', dest='onlygather', default=False)
     buildparser.add_argument('--permissive_ir', action='store_true', dest='permissive', default=False)
+    buildparser.add_argument('--min_experiments', default=-1, type=float, dest='min_exp')
 
 
     #flags shared by calcpsi and deltapair
@@ -99,6 +98,7 @@ def main():
                                   'to start from x=0, y=0')
     psianddelta.add_argument('--discardzeros', default=5, type=int, dest="discardzeros",
                              help='Discarding zeroes, up to a minimum of N positions per junction. [Default: 5]')
+    psianddelta.add_argument('--only_bootstrap', action='store_true', dest='only_boots', default=False)
 
     #deltapair and deltagroup flags
     delta = new_subparser()
@@ -163,22 +163,22 @@ def main():
 
     parser_preprocess = subparsers.add_parser('build', help='Preprocess SAM/BAM files as preparation for the rest of '
                                                             'the tools (psi, deltapsi)', parents=[common, buildparser])
-    parser_preprocess.set_defaults(func=builder)
+    parser_preprocess.set_defaults(func=build)
 
     parser_calcpsi = subparsers.add_parser('psi', help="Calculate PSI values for N experiments, given a folder of "
                                                        "preprocessed events by 'majiq preprocess' or SAM/BAM files",
                                            parents=[common, psi, psianddelta])
     parser_calcpsi.set_defaults(func=calcpsi)
 
-    parser_deltagroup = subparsers.add_parser('deltapsi', help='Calculate Delta PSI values given a pair of experiments '
-                                                               '(1 VS 1 conditions *with* replicas)',
-                                              parents=[common, delta, psianddelta])
-    parser_deltagroup.set_defaults(func=deltapair)
-
-    parser_multidelta = subparsers.add_parser('multi_delta', help='Calculate Delta PSI values given a pair of experiments '
-                                                               '(1 VS 1 conditions *with* replicas)',
-                                              parents=[common, mdelta, psianddelta])
-    parser_multidelta.set_defaults(func=multi_dpsi)
+    # parser_deltagroup = subparsers.add_parser('deltapsi', help='Calculate Delta PSI values given a pair of experiments '
+    #                                                            '(1 VS 1 conditions *with* replicas)',
+    #                                           parents=[common, delta, psianddelta])
+    # parser_deltagroup.set_defaults(func=deltapair)
+    #
+    # parser_multidelta = subparsers.add_parser('multi_delta', help='Calculate Delta PSI values given a pair of experiments '
+    #                                                            '(1 VS 1 conditions *with* replicas)',
+    #                                           parents=[common, mdelta, psianddelta])
+    # parser_multidelta.set_defaults(func=multi_dpsi)
     args = parser.parse_args()
     args.func(args)
 

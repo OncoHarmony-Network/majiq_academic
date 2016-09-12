@@ -20,7 +20,7 @@ LSV_TYPES_DICT = {
     's|1e1.1|2e1.1':'A5SS'
 }
 
-BUILDER_OUT_FILE_TEMPLATE = "data/builder_output/toJuan.%s.majiq"
+BUILDER_OUT_FILE_TEMPLATE = "data/builder_output/toJuan.%s.old_majiq"
 
 def grouped(iterable, n):
     "s -> (s0,s1,s2,...sn-1), (sn,sn+1,sn+2,...s2n-1), (s2n,s2n+1,s2n+2,...s3n-1), ..."
@@ -451,9 +451,9 @@ def main():
     - All LSVs 'ways' are equally considered. The order of each way within a LSV should be the same in MAJIQ and MISO.
     """
 
-    #python ~/Projects/majiq/scripts/psi_plot_barcharts.py --majiq majiq/ --miso miso/ --names Hip1 Hip2 Hip1 Hip4 Hip5 Hip6 Liv1 Liv2 Liv1 Liv4 Liv4 Liv5 --plotpath ./output/
+    #python ~/Projects/old_majiq/scripts/psi_plot_barcharts.py --old_majiq old_majiq/ --miso miso/ --names Hip1 Hip2 Hip1 Hip4 Hip5 Hip6 Liv1 Liv2 Liv1 Liv4 Liv4 Liv5 --plotpath ./output/
     parser = argparse.ArgumentParser()
-    parser.add_argument('--majiq', dest='majiq_dir', type=str, help='Path for MAJIQ psi pickles to evaluate')
+    parser.add_argument('--old_majiq', dest='majiq_dir', type=str, help='Path for MAJIQ psi pickles to evaluate')
     parser.add_argument('--miso', dest='miso_dir', type=str,  help='Path for MISO psi pickles to evaluate')
     parser.add_argument('--nb', dest='nb_dir', required=False, type=str,  help='Path for Naive Bootstrapping psi pickles to evaluate')
     parser.add_argument('--names', dest='rep_names', nargs='+', required=True, help='Replicate names used to identify each pair [NOTE that the order in which the names are provided defines the pairs]')

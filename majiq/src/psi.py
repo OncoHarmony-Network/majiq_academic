@@ -1,19 +1,19 @@
-import argparse
-from collections import defaultdict
-import random
-
-from scipy.special import gamma, gammaln
-from scipy.stats import binom_test, beta
-from numpy.random import dirichlet
-import numpy as np
-import sys
-import cPickle as pickle
-import matplotlib.pyplot as plt
-import majiq.src.filter as majiq_filter
-import majiq.src.adjustdelta as majiq_delta
-import majiq.src.sample as majiq_sample
 import operator
 import os
+import random
+import sys
+from collections import defaultdict
+
+import matplotlib.pyplot as plt
+import numpy as np
+from numpy.random import dirichlet
+from scipy.special import gamma, gammaln
+from scipy.stats import beta
+
+import majiq.src.filter as majiq_filter
+import majiq.src.sample as majiq_sample
+import majiq.src.adjustdelta as majiq_delta
+import majiq.src.io_utils
 
 """
 Calculate and manipulate PSI and Delta PSI values
@@ -29,7 +29,7 @@ def plot_matrix(matrix, my_title, plotname, plotpath):
     plt.clf()
     ax = plt.subplot(1, 1, 1)
     plt.title(my_title)
-    #plt.imshow(matrix)
+    plt.imshow(matrix)
     plt.xlabel(u"PSI i")
     plt.ylabel(u"PSI j")
     ax.set_xticklabels([0, 0, 0.25, 0.5, 0.75, 1])
@@ -242,8 +242,7 @@ def __load_default_prior():
 
     encoding = sys.getfilesystemencoding()
     direc = os.path.dirname(unicode(__file__, encoding))
-    #direc = "%s/../data" % os.path.dirname(os.path.realpath(__file__))
-    def_mat = pickle.load(open('%s/../data/defaultprior.pickle' % direc, 'r'))
+    def_mat = majiq.src.io_utils.load_bin_file('%s/../data/defaultprior.pickle' % direc)
     return def_mat
 
 
@@ -256,7 +255,7 @@ def gen_prior_matrix(pip, lsv_exp1, lsv_exp2, output, numbins=20, defaultprior=F
         prior_matrix = [def_mat, def_mat]
         return psi_space, prior_matrix
 
-    pip.logger.info('Filtering to obtain "best set"...')
+    pip.logger.debug('Filtering to obtain "best set"...')
 
     filtered_lsv1 = majiq_filter.lsv_quantifiable(lsv_exp1, minnonzero=10, min_reads=20, logger=pip.logger)
     filtered_lsv2 = majiq_filter.lsv_quantifiable(lsv_exp2, minnonzero=10, min_reads=20, logger=pip.logger)
@@ -293,9 +292,9 @@ def gen_prior_matrix(pip, lsv_exp1, lsv_exp2, output, numbins=20, defaultprior=F
                     best_set_mean2[1].append(filtered_lsv2[1][idx])
                 break
 
-    pip.logger.info("'Best set' is %s events (out of %s)" % (len(best_set_mean1[0]), len(lsv_exp1[0])))
+    pip.logger.debug("'Best set' is %s events (out of %s)" % (len(best_set_mean1[0]), len(lsv_exp1[0])))
     best_dpsi = empirical_delta_psi(best_set_mean1[0], best_set_mean2[0])
-    pip.logger.info("'Best set IR' is %s events (out of %s)" % (len(best_set_mean_ir1[0]), len(lsv_exp1[0])))
+    pip.logger.debug("'Best set IR' is %s events (out of %s)" % (len(best_set_mean_ir1[0]), len(lsv_exp1[0])))
     best_dpsi_ir = empirical_delta_psi(best_set_mean_ir1[0], best_set_mean_ir2[0])
 
     prior_matrix = [[], []]
@@ -318,11 +317,10 @@ def gen_prior_matrix(pip, lsv_exp1, lsv_exp2, output, numbins=20, defaultprior=F
                     prior_matrix[prior_idx] = prior_matrix[0]
                 continue
 
-            pip.logger.info("Parametrizing 'best set'...%s", prior_idx)
+            pip.logger.debug("Parametrizing 'best set'...%s", prior_idx)
             mixture_pdf = majiq_delta.adjustdelta_lsv(best_delta_psi, output, plotpath=pip.plotpath,
                                                       title=" ".join(pip.names), numiter=pip.iter,
                                                       breakiter=pip.breakiter, njunc=nj, logger=pip.logger)
-            #pickle.dump(mixture_pdf, open("%s%s_%s_bestset_junc_%s.pickle"%(output, pip.names[0], pip.names[1], nj), 'w'))
             pmat = []
             for i in xrange(numbins):
                 pmat.extend(mixture_pdf[numbins - i:(numbins * 2) - i])
@@ -330,7 +328,7 @@ def gen_prior_matrix(pip, lsv_exp1, lsv_exp2, output, numbins=20, defaultprior=F
             prior_matrix[prior_idx] = np.array(pmat).reshape(numbins, -1)
             if np.isnan(prior_matrix[prior_idx]).any():
                 if prior_idx == 1:
-                    pip.logger.info("Not enought statistic power to calculate the intron retention specific prior, "
+                    pip.logger.WARNING("Not enought statistic power to calculate the intron retention specific prior, "
                                     "in that case we will use the global prior")
                     prior_matrix[prior_idx] = prior_matrix[0]
                 else:
@@ -341,11 +339,8 @@ def gen_prior_matrix(pip, lsv_exp1, lsv_exp2, output, numbins=20, defaultprior=F
                 prior_matrix[prior_idx] /= sum(prior_matrix[prior_idx])
                 #renormalize so it sums 1
 
-        plot_matrix(prior_matrix[prior_idx], "Prior Matrix , version %s" % prior_idx,
-                    "prior_matrix_jun_%s" % nj, pip.plotpath)
-    # pip.logger.info("Saving prior matrix for %s..." % pip.names)
-    # pickle.dump(prior_matrix, open("%s/%s_%s_priormatrix_jun_%s.pickle" % (output, pip.names[0], pip.names[1], nj),
-    #                                'w'))
+            plot_matrix(prior_matrix[prior_idx], "Prior Matrix , version %s" % prior_idx,
+                        "prior_matrix_jun_%s" % nj, pip.plotpath)
 
     return psi_space, prior_matrix
 
@@ -378,7 +373,7 @@ def combine_for_priormatrix(group1, group2, matched_info, num_exp):
     return grp1, grp2
 
 
-def __get_prior_params(lsvinfo, num_ways):
+def get_prior_params(lsvinfo, num_ways):
     if 'i' in lsvinfo[2]:
         alpha = 1.0 / (num_ways - 1)
         alpha *= float(num_ways) / (num_ways + 1)

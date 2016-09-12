@@ -2,6 +2,7 @@ import numpy as np
 import scipy.sparse
 
 import majiq.src.config as majiq_config
+from majiq.src.constants import *
 
 
 class Junction:
@@ -12,9 +13,11 @@ class Junction:
     __gt__ = lambda self, other: self.start > other.start or (self.start == other.start and self.end > other.end)
     __ge__ = lambda self, other: self.start >= other.start or (self.start == other.start and self.end >= other.end)
 
-    def __init__(self, start, end, donor, acceptor, gene, readN=0, annotated=False):
+    def __init__(self, start, end, donor, acceptor, gene, annotated=False, retrieve=False):
         ''' The start and end in junctions are the last exon in '''
 
+        self.gene_name = gene.get_id()
+        self.id = "%s:%s-%s" % (self.gene_name, start, end)
         self.start = start
         self.end = end
         if donor is None:
@@ -25,19 +28,34 @@ class Junction:
             self.acceptor_id = -1
         else:
             self.acceptor_id = acceptor.get_id()
-        self.gene_name = gene.get_id()
         self.annotated = annotated
-        self.coverage = scipy.sparse.lil_matrix((majiq_config.num_experiments,  (majiq_config.readLen - 16) + 1),
-                                                dtype=np.float)
-        self.gc_content = scipy.sparse.lil_matrix((1, (majiq_config.readLen - 16) + 1), dtype=np.float)
-        self.id = "%s:%s-%s" % (self.gene_name, start, end)
+
+        if retrieve:
+            self.coverage = scipy.sparse.lil_matrix((majiq_config.num_experiments,  (majiq_config.readLen - 16) + 1),
+                                                    dtype=np.float)
+            self.gc_content = scipy.sparse.lil_matrix((1, (majiq_config.readLen - 16) + 1), dtype=np.float)
+
         self.transcript_id_list = []
 
     def __hash__(self):
         return hash(self.start) ^ hash(self.end) ^ hash(self.gene_name)
 
-    # def __del__(self):
-    # junc_list = self.get_gene().get_junction_list()
+    def to_hdf5(self, hdf5grps):
+        h_jnc = hdf5grps.create_group("%s-%s" % (self.start, self.end))
+        if self.start is None:
+            h_jnc.attrs['start'] = -1
+        else:
+            h_jnc.attrs['start'] = self.start
+
+        if self.end is None:
+            h_jnc.attrs['end'] = -1
+        else:
+            h_jnc.attrs['end'] = self.end
+        h_jnc.attrs['donor_id'] = self.donor_id
+        h_jnc.attrs['acceptor_id'] = self.acceptor_id
+        h_jnc.attrs['id'] = self.id
+        #h_jnc.attrs['transcript_id_list'] = self.transcript_id_list
+
 
     # GETTERs
     def get_id(self):
@@ -47,7 +65,7 @@ class Junction:
         if experiment is None:
             return self.coverage
         else:
-            return self.coverage[experiment, :]
+            return self.coverage[experiment]
 
     def get_ss_5p(self):
         return self.start
@@ -99,8 +117,9 @@ class Junction:
             ex = self.get_gene().get_exon_by_id(self.acceptor_id)
         return ex
 
-    def get_gc_content(self):
+    def get_gc_content(self, experiment=None):
         return self.gc_content
+
 
     def get_read_num(self, idx):
         if idx == -1:
@@ -126,11 +145,9 @@ class Junction:
         return res
 
     # MODIFIERs
-
     def add_gc_content_positions(self, pos, gc):
         self.gc_content = gc
-
-    #        self.gc_factor[exp_idx,:] = gc_factor
+    #   self.gc_factor[exp_idx,:] = gc_factor
 
     def add_donor(self, donor):
         if donor is None:
@@ -148,18 +165,75 @@ class Junction:
         self.transcript_id_list.append(trnscrpt.get_id())
 
     def update_junction_read(self, exp_idx, read_n, start, gc, unique):
-        left_ind = majiq_config.readLen - (self.start - start) - 8 + 1
-        if unique:
-            self.coverage[exp_idx, left_ind] += read_n
-        else:
-            self.coverage[exp_idx, left_ind] = -1
-        self.gc_content[0, left_ind] = gc
+        try:
+            left_ind = majiq_config.readLen - (self.start - start) - MIN_BP_OVERLAP + 1
+            if unique:
+                self.coverage[exp_idx, left_ind] += read_n
+            else:
+                self.coverage[exp_idx, left_ind] = -1
+            self.gc_content[0, left_ind] = gc
+        except:
+            print self.gene_name, start, exp_idx, left_ind, self.gc_content.shape
+            raise
 
     def reset_coverage(self, exp_idx):
         self.coverage[exp_idx, :] = 0
 
+# def set_gc_factor(hdf5grp, exp_idx):
+#     return
+#     if majiq_config.gcnorm:
+#         gc_factor = majiq_io_utils.load_sparse_mat(hdf5grp['gc_factor'])
+#         cov = majiq_io_utils.load_sparse_mat(hdf5grp['coverage'])
+#
+#         nnz = gc_factor.nonzero()
+#         for idx in xrange(nnz[0].shape[0]):
+#             i = nnz[0][idx]
+#             j = nnz[1][idx]
+#             dummy = gc_factor[i, j]
+#             cov[i, j] *= majiq_config.gc_factor[exp_idx](dummy)
+#     del hdf5grp['gc_factor']
 
-class MajiqJunction:
+
+class Queue_Junction:
+    def __init__(self, jnc, exp_idx):
+        self.coverage = jnc.coverage[exp_idx, :]
+        if majiq_config.gcnorm:
+            self.gc_factor = scipy.sparse.lil_matrix((1, (majiq_config.readLen - 16) + 1), dtype=np.float)
+        else:
+             self.gc_factor = None
+        for jj in range(majiq_config.readLen - 16 + 1):
+            dummy = jnc.gc_content[jj]
+            self.gc_factor[jj] *= dummy
+
+    def set_gc_factor(self, exp_idx):
+        if majiq_config.gcnorm:
+            nnz = self.gc_factor.nonzero()
+            for idx in xrange(nnz[0].shape[0]):
+                i = nnz[0][idx]
+                j = nnz[1][idx]
+                dummy = self.gc_factor[i, j]
+                self.coverage[i, j] *= majiq_config.gc_factor[exp_idx](dummy)
+        del self.gc_factor
+
+    def to_hdf5(self, hdf5grps, exp_idx):
+        h_jnc = hdf5grps.create_group(self.id)
+        h_jnc['annotated'] = self.annot
+        h_jnc['name'] = self.name
+        h_jnc['id'] = self.id
+        h_jnc['chrom'] = self.exons['chrom']
+        h_jnc['strand'] = self.exons['strand']
+        h_jnc['coord1'] = self.exons['coord1']
+        h_jnc['coord2'] = self.exons['coord2']
+
+        if majiq_config.gcnorm:
+           # self.set_gc_factor(exp_idx)
+            pass
+        print exp_idx
+        h_jnc.create_dataset('coverage', data=self.coverage.toarray(),
+                             compression='gzip', compression_opts=9)
+        return h_jnc
+
+class Majiq_Junction:
     def __init__(self, jnc, exp_idx):
         self.exons = {}
         self.annot = jnc.is_annotated()
@@ -207,3 +281,21 @@ class MajiqJunction:
                 dummy = self.gc_factor[i, j]
                 self.coverage[i, j] *= majiq_config.gc_factor[exp_idx](dummy)
         del self.gc_factor
+
+    def to_hdf5(self, hdf5grps, exp_idx):
+        h_jnc = hdf5grps.create_group(self.id)
+        h_jnc['annotated'] = self.annot
+        h_jnc['name'] = self.name
+        h_jnc['id'] = self.id
+        h_jnc['chrom'] = self.exons['chrom']
+        h_jnc['strand'] = self.exons['strand']
+        h_jnc['coord1'] = self.exons['coord1']
+        h_jnc['coord2'] = self.exons['coord2']
+
+        if majiq_config.gcnorm:
+           # self.set_gc_factor(exp_idx)
+            pass
+        print exp_idx
+        h_jnc.create_dataset('coverage', data=self.coverage.toarray(),
+                             compression='gzip', compression_opts=9)
+        return h_jnc

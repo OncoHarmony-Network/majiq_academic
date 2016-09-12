@@ -1,10 +1,14 @@
-from collections import defaultdict
 import json
+from collections import defaultdict
+
 import numpy as np
+
+from voila.hdf5 import HDF5, BinsDataSet, Psi1DataSet, Psi2DataSet
+from voila.splice_graphics import LsvGraphic
 
 
 def get_expected_dpsi(bins):
-    return sum(np.array(bins) * np.arange(-1+1./len(bins), 1., 2./len(bins)))
+    return sum(np.array(bins) * np.arange(-1 + 1. / len(bins), 1., 2. / len(bins)))
 
 
 def get_expected_psi(bins):
@@ -18,7 +22,7 @@ def collapse_matrix(matrix):
     """Collapse the diagonals probabilities in 1-D and return them"""
     collapse = []
     matrix_corner = matrix.shape[0]
-    for i in xrange(-matrix_corner+1, matrix_corner):
+    for i in xrange(-matrix_corner + 1, matrix_corner):
         collapse.append(np.diagonal(matrix, offset=i).sum())
 
     return np.array(collapse)
@@ -61,7 +65,7 @@ class OrphanJunctionException(Exception):
         self.message = m
 
 
-class VoilaLsv(object):
+class VoilaLsv(HDF5):
     """LSV information unit managed by Voila"""
 
     @classmethod
@@ -71,13 +75,15 @@ class VoilaLsv(object):
             for eG in lexonG:
                 if jidx in eG.get_a5_list():
                     return eG
-            raise OrphanJunctionException("Orphan junction %s in lsv %s." % (repr(vlsv.get_lsv_graphic().get_junctions()[jidx].get_coords()), lsvId))
+            raise OrphanJunctionException("Orphan junction %s in lsv %s." % (
+                repr(vlsv.get_lsv_graphic().get_junctions()[jidx].get_coords()), lsvId))
 
         def find_exon_a3(lexonG, jidx):
             for eG in lexonG:
                 if jidx in eG.get_a3_list():
                     return eG
-            raise OrphanJunctionException("Orphan junction %s in lsv %s." % (repr(vlsv.get_lsv_graphic().get_junctions()[jidx].get_coords()), lsvId))
+            raise OrphanJunctionException("Orphan junction %s in lsv %s." % (
+                repr(vlsv.get_lsv_graphic().get_junctions()[jidx].get_coords()), lsvId))
 
         # fields = ['seqid', 'source', 'type', 'start', 'end', 'score', 'strand', 'phase', 'attributes']
         trans = []
@@ -94,15 +100,15 @@ class VoilaLsv(object):
             gEnd = lexons[0].coords[0]
             first, last = last, first
 
-        gene_str = '\t'.join([chrom, 'majiq', 'gene', str(gStart), str(gEnd), '.', strand, '0',
+        gene_str = '\t'.join([chrom, 'old_majiq', 'gene', str(gStart), str(gEnd), '.', strand, '0',
                               'Name=%s;ID=%s' % (lsvId, lsvId)])
 
         trans.append(gene_str)
         for jid, junc in enumerate(vlsv.get_lsv_graphic().get_junctions()):
-            mrna = '%s\tmajiq\tmRNA\t' % chrom
+            mrna = '%s\told_majiq\tmRNA\t' % chrom
             mrna_id = '%s.%d' % (lsvId, jid)
-            ex1 = '%s\tmajiq\texon\t' % chrom
-            ex2 = '%s\tmajiq\texon\t' % chrom
+            ex1 = '%s\told_majiq\texon\t' % chrom
+            ex2 = '%s\told_majiq\texon\t' % chrom
 
             ex1G = find_exon_a5(lexons, jid)
             ex2G = find_exon_a3(lexons, jid)
@@ -130,7 +136,7 @@ class VoilaLsv(object):
             if strand == '-':
                 for ii, t in enumerate(trans):
                     t_fields = t.split()
-                    t_fields[3],  t_fields[4] = t_fields[4], t_fields[3]
+                    t_fields[3], t_fields[4] = t_fields[4], t_fields[3]
                     trans[ii] = '\t'.join(t_fields)
 
             lsv_gtf = '\n'.join(trans)
@@ -169,6 +175,7 @@ class VoilaLsv(object):
         return categories
 
     def __init__(self, bins_list, lsv_graphic, psi1=None, psi2=None, logger=None):
+        super(VoilaLsv, self).__init__()
         self.lsv_graphic = lsv_graphic
         self.psi1 = psi1
         self.psi2 = psi2
@@ -194,9 +201,9 @@ class VoilaLsv(object):
                     self.excl_incl.append([0, self.means[-1]])
             else:
                 self.means.append(get_expected_psi(np.array(lsv_bins)))
-                step_bins = 1.0 / lsv_bins.size
-                projection_prod = lsv_bins * np.arange(step_bins / 2, 1, step_bins)**2
-                self.variances.append(np.sum(projection_prod) - self.means[-1]**2)
+                step_bins = 1.0 / len(lsv_bins)
+                projection_prod = lsv_bins * np.arange(step_bins / 2, 1, step_bins) ** 2
+                self.variances.append(np.sum(projection_prod) - self.means[-1] ** 2)
 
         # For LSV filtering
         if lsv_graphic:
@@ -307,3 +314,50 @@ class VoilaLsv(object):
         return max(means[means > 0].sum(), means[means < 0].sum()) >= thres
         #return np.any(np.array(self.get_means()) >= thres)
 
+    def exclude(self):
+        return ['lsv_graphic', 'categories', 'bins', 'psi1', 'psi2']
+
+    def to_hdf5(self, h):
+        super(VoilaLsv, self).to_hdf5(h)
+
+        # lsv graphic
+        self.lsv_graphic.to_hdf5(h.create_group('lsv_graphic'))
+
+        # categories
+        cat_grp = h.create_group('categories')
+        for key in self.categories:
+            cat_grp.attrs[key] = self.categories[key]
+
+        # bins
+        BinsDataSet(h).encode_list(self.bins)
+
+        # psi1
+        Psi1DataSet(h).encode_list(self.psi1)
+
+        # psi2
+        Psi2DataSet(h).encode_list(self.psi2)
+
+    def from_hdf5(self, h):
+        # lsv graphic
+        self.lsv_graphic = LsvGraphic((), None, None).from_hdf5(h['lsv_graphic'])
+
+        # categories
+        self.categories = {}
+        cat_attrs = h['categories'].attrs
+        for key in cat_attrs:
+            value = cat_attrs[key]
+            if type(value) is np.bool_:
+                value = value.item()
+
+            self.categories[key] = value
+
+        # bins
+        self.bins = BinsDataSet(h).decode_list()
+
+        # psi1
+        self.psi1 = Psi1DataSet(h).decode_list()
+
+        # psi2
+        self.psi2 = Psi2DataSet(h).decode_list()
+
+        return super(VoilaLsv, self).from_hdf5(h)

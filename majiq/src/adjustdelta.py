@@ -193,7 +193,7 @@ def plot_pi(p_mixture, fig):
 def EM(a_change, b_change, a_center, b_center, pi_change, pi_center, deltadata, num_iter, plotpath, logger=False):
     fig = plt.figure(figsize=[15, 10])
     prev_likelihood = likelihood(a_change, b_change, a_center, b_center, pi_change, pi_center, deltadata)
-    if logger: logger.info("INIT: Center %s Change %s Likelihood: %.5f" % (
+    if logger: logger.debug("INIT: Center %s Change %s Likelihood: %.5f" % (
         label_beta(a_center, b_center, pi_center), label_beta(a_change, b_change, pi_change), prev_likelihood))
 
     plot_all(a_center, b_center, pi_center, "Center", a_change, b_change, pi_change, "change", "Initial Parameters",
@@ -204,7 +204,7 @@ def EM(a_change, b_change, a_center, b_center, pi_change, pi_center, deltadata, 
                                                                                            b_center, pi_change,
                                                                                            pi_center, deltadata)
         current_likelihood = likelihood(a_change, b_change, a_center, b_center, pi_change, pi_center, deltadata)
-        if logger: logger.info("EM iteration %s: Center %s Change %s Likelihood: %.5f" % (
+        if logger: logger.debug("EM iteration %s: Center %s Change %s Likelihood: %.5f" % (
             iteration, label_beta(a_center, b_center, pi_center), label_beta(a_change, b_change, pi_change),
             current_likelihood))
         plot_all(a_center, b_center, pi_center, "Center", a_change, b_change, pi_change, "Change",
@@ -396,7 +396,7 @@ def EMBetaMixture(D, p0_mix, beta0_mix, num_iter, min_ratio=1e-5, logger=False, 
     logp_D, logp_Dsum, LL, zrow = loglikelihood(D, beta_mix, logp_mix)
     plot_all_lsv(D0, beta_mix, pmix, labels, 'iteration 0')
     mplot.save_or_show(plotpath, "iter_0.jun_%s" % nj)
-    if logger: logger.info("[NJ:%s] Initial Log_Likelihood %.3f \n" % (nj, LL))
+    if logger: logger.debug("[NJ:%s] Initial Log_Likelihood %.3f \n" % (nj, LL))
     #    pdb.set_trace()
     ones_1k = np.ones(shape=(1, K), dtype=np.float)
     for mm in xrange(num_iter):
@@ -423,13 +423,13 @@ def EMBetaMixture(D, p0_mix, beta0_mix, num_iter, min_ratio=1e-5, logger=False, 
 
         LLold = LL
         logp_D, logp_Dsum, LL, zrow = loglikelihood(D, new_beta_mix, np.log(new_pmix))
-        if logger: logger.info("[NJ:%s] EM Iteration %d:\t LL: %.3f\n" % (nj, mm, LL))
+        if logger: logger.debug("[NJ:%s] EM Iteration %d:\t LL: %.3f\n" % (nj, mm, LL))
         plot_all_lsv(D0, beta_mix, pmix, labels, 'iteration %s' % str(mm + 1))
         mplot.save_or_show(plotpath, "iter_%05d.jun_%s" % (mm + 1, nj))
 
         if LL < LLold:
             if logger:
-                logger.info("Log_Likelihood DECREASE new %d old %d - Aborting ....\n" % (LL, LLold))
+                logger.debug("Log_Likelihood DECREASE new %d old %d - Aborting ....\n" % (LL, LLold))
             break
 
         pmix = new_pmix
@@ -438,7 +438,7 @@ def EMBetaMixture(D, p0_mix, beta0_mix, num_iter, min_ratio=1e-5, logger=False, 
 
         if np.exp(LL - LLold) < (1.0 + min_ratio):
             if logger:
-                logger.info("Ratio = %.3f < 1+R(%.3f) - Aborting ... \n" % (LL - LLold, min_ratio))
+                logger.debug("Ratio = %.3f < 1+R(%.3f) - Aborting ... \n" % (LL - LLold, min_ratio))
             break
 
     return beta_mix, np.array(pmix)
