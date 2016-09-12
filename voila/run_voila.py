@@ -16,6 +16,8 @@ import voila.constants as constants
 import fileinput
 import time
 
+from voila.splice_graphics import splice_graph_from_hdf5
+
 try:
     import cPickle as pkl
 except ImportError:
