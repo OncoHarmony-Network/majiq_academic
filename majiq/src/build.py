@@ -204,10 +204,6 @@ class Builder(BasicPipeline):
             f.create_dataset(LSV_JUNCTIONS_DATASET_NAME,
                              (majiq_config.nrandom_junctions, effective_readlen),
                              maxshape=(None, effective_readlen))
-            jj_list = rnaf[CONST_JUNCTIONS_DATASET_NAME][()]
-            indx = np.arange(jj_list.shape[0])[jj_list.sum(axis=1) >= 2]
-
-            f.create_dataset(CONST_JUNCTIONS_DATASET_NAME, data=jj_list[indx, :])
 
         out_files_idx = [0] * majiq_config.num_experiments
 
