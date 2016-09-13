@@ -73,6 +73,10 @@ def main():
     buildparser.add_argument('--only_gather', action='store_true', dest='onlygather', default=False)
     buildparser.add_argument('--permissive_ir', action='store_true', dest='permissive', default=False)
     buildparser.add_argument('--min_experiments', default=-1, type=float, dest='min_exp')
+    buildparser.add_argument('--markstacks', default=0.0000001, type=float,
+                             help='Mark stack positions. Expects a p-value. Use a negative value in order to '
+                                  'disable it. [Default: %(default)s]')
+    buildparser.add_argument('--prebam', default=True,  action='store_false')
 
 
     #flags shared by calcpsi and deltapair
@@ -90,9 +94,6 @@ def main():
     psianddelta.add_argument('--trimborder', default=5, type=int,
                              help='Trim the borders when sampling (keeping the ones with reads). '
                                   '[Default: %(default)s]')
-    psianddelta.add_argument('--markstacks', default=0.0000001, type=float,
-                             help='Mark stack positions. Expects a p-value. Use a negative value in order to '
-                                  'disable it. [Default: %(default)s]')
     psianddelta.add_argument('--nodiscardb', dest="discardb", action='store_false',  default=True,
                              help='Skip biscarding the b from the NB polynomial function, since we expect our fit '
                                   'to start from x=0, y=0')

@@ -22,7 +22,8 @@ def detect_lsv(exon, gn, lsv_type, dummy, jun, only_annot=False):
     sstype = {SSOURCE: ['5prime', 0], STARGET: ['3prime', 1]}
     jlist = exon.get_junctions(sstype[lsv_type][0])
     jlist = [x for x in jlist if x is not None]
-    if jlist < 2:
+# 'ENSMUSG00000025980:55080347-55081073'
+    if len(jlist) < 2:
         return
     lsv_in = gn.new_lsv_definition(exon, jlist, lsv_type)
 
@@ -52,11 +53,11 @@ def detect_lsv(exon, gn, lsv_type, dummy, jun, only_annot=False):
         return
 
 
-def lsv_detection(gn, gc_vfunc, chnk, only_real_data=False, out_queue=None, logging=None):
+def lsv_detection(gn, gc_vfunc, lsv_list, lsv_idx, only_real_data=False, out_queue=None, logging=None):
 
     const_set = {}
 
-    local_const = set(gn.get_all_junctions())
+    # local_const = set(gn.get_all_junctions())
     local_lsv_jun = {}
 
     dummy = {}
@@ -77,48 +78,31 @@ def lsv_detection(gn, gc_vfunc, chnk, only_real_data=False, out_queue=None, logg
 
     for name, ind_list in majiq_config.tissue_repl.items():
 
-        local_const.difference(local_lsv_jun)
-        const_set[name].update(local_const)
-
-        njuncs = len(local_const)
-        t_juncs = float(majiq_config.nrandom_junctions) / (50 * majiq_config.num_final_chunks)
-
-        prb = min(1.0, float(t_juncs) / njuncs) * 100
-        kk = np.random.choice(100, njuncs)
-        indx = np.arange(njuncs)[kk <= prb]
-        sample_junc = list(local_const)[0].get_coverage(ind_list)
-
-        r_junctions = np.zeros(shape=(len(indx), sample_junc.shape[0], sample_junc.shape[1]))
-        #r_junctions_gc = np.zeros(shape=(len(indx), list(local_const)[0].shape[0], list(local_const)[0].shape[1]))
-
-        r_junctions_gc = []
-
-        for jidx, jn in enumerate(np.array(list(local_const))[indx]):
-            r_junctions[jidx, :, :] = jn.get_coverage(ind_list).toarray()
-            if majiq_config.gcnorm:
-                gc_array = jn.get_gc_content().toarray()
-                gc_array = np.reshape(gc_array, (gc_array.shape[1],))
-                r_junctions_gc.append([gc_vfunc[exp_idx](gc_array) for exp_idx in ind_list])
-        if majiq_config.gcnorm:
-            r_junctions = np.multiply(r_junctions, np.array(r_junctions_gc))
-
-        qm = QueueMessage(QUEUE_MESSAGE_BUILD_CONST_JUNCTION, [r_junctions, name], chnk)
-        out_queue.put(qm, block=True)
-
         for ss in dummy[name][0]:
             for st in dummy[name][1]:
                 if ss.contained(st):
                     break
             else:
-                qm = QueueMessage(QUEUE_MESSAGE_BUILD_LSV, [majiq_lsv.Queue_Lsv(ss, name), name], chnk)
-                out_queue.put(qm, block=True)
+                # qm = QueueMessage(QUEUE_MESSAGE_BUILD_LSV, [majiq_lsv.Queue_Lsv(ss, name), name], chnk)
+                for dx, exp_idx in enumerate(ind_list):
+                    lsv_idx[exp_idx] = majiq_lsv.Queue_Lsv(ss, name).to_hdf5(hdf5grp=lsv_list[exp_idx],
+                                                                             lsv_idx=lsv_idx[exp_idx],
+                                                                             exp_idx=dx,
+                                                                             gc_func=gc_vfunc[exp_idx])
+                # out_queue.put(qm, block=True)
 
         for st in dummy[name][1]:
             for ss in dummy[name][0]:
                 if st.contained(ss):
                     break
             else:
-                qm = QueueMessage(QUEUE_MESSAGE_BUILD_LSV, [majiq_lsv.Queue_Lsv(st, name), name], chnk)
-                out_queue.put(qm, block=True)
+                for dx, exp_idx in enumerate(ind_list):
+                    lsv_idx[exp_idx] = majiq_lsv.Queue_Lsv(st, name).to_hdf5(hdf5grp=lsv_list[exp_idx],
+                                                                             lsv_idx=lsv_idx[exp_idx],
+                                                                             exp_idx=dx,
+                                                                             gc_func=gc_vfunc[exp_idx])
+
+                # qm = QueueMessage(QUEUE_MESSAGE_BUILD_LSV, [majiq_lsv.Queue_Lsv(st, name), name], chnk)
+                # out_queue.put(qm, block=True)
 
 

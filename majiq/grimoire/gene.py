@@ -146,7 +146,7 @@ class Gene:
     def add_ir_definition(self, start, end):
         self.ir_definition.append((start, end))
 
-    def add_read_count(self, read_num, exp_idx):
+    def add_read_count(self, read_num):
         self.total_read += read_num
 
     def exist_antisense_gene(self, list_of_genes):
@@ -395,13 +395,15 @@ def clear_gene_tlb():
     gc.collect()
 
 
-def retrieve_gene(gene_id, dbfile, logger=None):
+def retrieve_gene(gene_id, dbfile, all_exp=False, logger=None):
     gg = dbfile[gene_id]
     gn = Gene(gene_id, gg.attrs['name'], gg.attrs['chromosome'], gg.attrs['strand'],
               gg.attrs['start'], gg.attrs['end'], retrieve=True)
 
     majiq_config.gene_tlb[gene_id] = gn
     junction_list = {}
+
+    num_exp = 1 if not all_exp else majiq_config.num_experiments
 
     for ex_grp_id in gg['exons']:
         ex_grp = gg['exons/%s' % ex_grp_id]
@@ -429,9 +431,10 @@ def retrieve_gene(gene_id, dbfile, logger=None):
                     junc = junction_list[jj_grp.attrs['start'], jj_grp.attrs['end']]
                 except KeyError:
                     junc = Junction(jj_grp.attrs['start'], jj_grp.attrs['end'], None, None,
-                                    gn, annotated=True, retrieve=True)
+                                    gn, annotated=True, retrieve=True, num_exp=num_exp)
                     junc.donor_id = jj_grp.attrs['donor_id']
                     junc.acceptor_id = jj_grp.attrs['acceptor_id']
+                    junction_list[jj_grp.attrs['start'], jj_grp.attrs['end']] = junc
 
                 ext.add_3prime_junc(junc)
 
@@ -441,9 +444,24 @@ def retrieve_gene(gene_id, dbfile, logger=None):
                     junc = junction_list[jj_grp.attrs['start'], jj_grp.attrs['end']]
                 except KeyError:
                     junc = Junction(jj_grp.attrs['start'], jj_grp.attrs['end'], None, None,
-                                    gn, annotated=True, retrieve=True)
+                                    gn, annotated=True, retrieve=True, num_exp=num_exp)
                     junc.donor_id = jj_grp.attrs['donor_id']
                     junc.acceptor_id = jj_grp.attrs['acceptor_id']
+                    junction_list[jj_grp.attrs['start'], jj_grp.attrs['end']] = junc
+
                 ext.add_5prime_junc(junc)
 
     return gn
+
+
+def extract_junctions_hdf5(gene_obj, jj_grp, junction_list, annotated=True, all_exp=False):
+    num_exp = 1 if not all_exp else majiq_config.num_experiments
+
+    try:
+        junc = junction_list[jj_grp.attrs['start'], jj_grp.attrs['end']]
+    except KeyError:
+        junc = Junction(jj_grp.attrs['start'], jj_grp.attrs['end'], None, None,
+                        gene_obj, annotated=annotated, retrieve=True, num_exp=num_exp)
+        junction_list[jj_grp.attrs['start'], jj_grp.attrs['end']] = junc
+
+    return junc
