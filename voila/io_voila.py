@@ -1,8 +1,6 @@
 import csv
 import os
 from collections import defaultdict
-
-from collections import defaultdict
 from multiprocessing import Manager, Process, Pool
 from multiprocessing.queues import JoinableQueue
 
@@ -17,6 +15,8 @@ from voila.vlsv import VoilaLsv
 
 __author__ = 'abarrera'
 import cPickle as pkl
+
+logger = utils_voila.get_logger(__name__)
 
 
 class VoilaInput(HDF5):
@@ -45,39 +45,45 @@ class VoilaInput(HDF5):
     def to_hdf5(self, h):
         # bins dataset
         bins_length = sum([len(lsv.bins) for lsv in self.lsvs])
-        BinsDataSet(h, bins_length)
+        bins_width = len(self.lsvs[0].bins[0])
+        BinsDataSet(h, bins_length, bins_width)
 
         # psi1 dataset
-        psi1_length = sum([len(lsv.psi1) for lsv in self.lsvs])
-        Psi1DataSet(h, psi1_length)
+        try:
+            psi1_length = sum([len(lsv.psi1) for lsv in self.lsvs])
+            Psi1DataSet(h, psi1_length)
+        except TypeError:
+            logger.info('Skipping psi1 HDF5 encoding.')
 
         # psi2 dataset
-        psi2_length = sum([len(lsv.psi2) for lsv in self.lsvs])
-        Psi2DataSet(h, psi2_length)
+        try:
+            psi2_length = sum([len(lsv.psi2) for lsv in self.lsvs])
+            Psi2DataSet(h, psi2_length)
+        except TypeError:
+            logger.info('Skipping psi2 HDF5 encoding.  This is probably psi.')
 
         # metainfo
-        metainfo_grp = h.create_group('metainfo')
-        for array_index, array in enumerate(self.metainfo):
-            array_grp = metainfo_grp.create_group(str(array_index))
-            for dict_index, meta_dict in enumerate(array):
-                dict_grp = array_grp.create_group(str(dict_index))
-                for key in meta_dict:
-                    dict_grp.attrs[key] = meta_dict[key]
+        self.encode_metainfo(h.create_group('metainfo'), self.metainfo)
 
         super(VoilaInput, self).to_hdf5(h)
 
+    def encode_metainfo(self, h, metainfo):
+        if type(metainfo) is list:
+            for index, mi in enumerate(metainfo):
+                self.encode_metainfo(h.create_group(str(index)), mi)
+        else:
+            for key in metainfo:
+                h.attrs[key] = metainfo[key]
+
+    def decode_metainfo(self, h):
+        if h.keys():
+            return [self.decode_metainfo(h[key]) for key in h]
+        else:
+            return {key: h.attrs[key] for key in h.attrs}
+
     def from_hdf5(self, h):
-        metainfo_grp = h['metainfo']
-
-        self.metainfo = [[None for _ in metainfo_grp[x]] for x in metainfo_grp]
-        for array_index in metainfo_grp:
-            for dict_index in metainfo_grp[array_index]:
-                mi_dict = {}
-                mi_attrs = metainfo_grp[array_index][dict_index].attrs
-                for key in mi_attrs:
-                    mi_dict[key] = mi_attrs[key]
-
-                self.metainfo[int(array_index)][int(dict_index)] = mi_dict
+        # metainfo
+        self.metainfo = self.decode_metainfo(h['metainfo'])
 
         return super(VoilaInput, self).from_hdf5(h)
 
@@ -90,13 +96,12 @@ class VoilaInput(HDF5):
 
 def voila_input_from_hdf5(hdf5_filename, logger):
     """
-    Create VoilaInput object from HDF5 file.  This will process each of the VoilaLsvs in their own thread useing the
+    Create VoilaInput object from HDF5 file.  This will process each of the VoilaLsvs in their own thread using the
     Producer Consumer design pattern.
     :param hdf5_filename: HDF5 filename string
     :param logger: instance of logger
     :return: VoilaInput object
     """
-
     def worker():
         with h5py.File(hdf5_filename, 'r', swmr=True) as h:
             while True:
@@ -111,21 +116,11 @@ def voila_input_from_hdf5(hdf5_filename, logger):
 
     def metainfo():
         with h5py.File(hdf5_filename, 'r', swmr=True) as h:
-            metainfo_grp = h['metainfo']
-
-            mi_list = [[None for _ in metainfo_grp[x]] for x in metainfo_grp]
-            for array_index in metainfo_grp:
-                for dict_index in metainfo_grp[array_index]:
-                    mi_dict = {}
-                    mi_attrs = metainfo_grp[array_index][dict_index].attrs
-                    for key in mi_attrs:
-                        mi_dict[key] = mi_attrs[key]
-
-                    mi_list[int(array_index)][int(dict_index)] = mi_dict
-
-            manager_dict['metainfo'] = mi_list
+            manager_dict['metainfo'] = voila_input.decode_metainfo(h['metainfo'])
 
     logger.info('Loading {0}.'.format(hdf5_filename))
+
+    voila_input = VoilaInput()
 
     queue = JoinableQueue()
     manager_dict = Manager().dict()
@@ -146,8 +141,6 @@ def voila_input_from_hdf5(hdf5_filename, logger):
 
     pool.close()
     queue.close()
-
-    voila_input = VoilaInput()
 
     voila_input.metainfo = manager_dict['metainfo']
     del manager_dict['metainfo']

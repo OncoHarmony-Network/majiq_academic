@@ -12,10 +12,6 @@ import voila.constants as constants
 import voila.io_voila as io_voila
 import voila.module_locator as module_locator
 import voila.utils.utils_voila as utils_voila
-import voila.constants as constants
-import fileinput
-import time
-
 from voila.splice_graphics import splice_graph_from_hdf5
 
 try:

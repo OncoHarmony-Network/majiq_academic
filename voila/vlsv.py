@@ -211,7 +211,7 @@ class VoilaLsv(HDF5):
         self.psi_junction = 0
 
     def is_delta_psi(self):
-        return not (self.psi2 is None)
+        return {2: True, 0: False}[sum([bool(self.psi1), bool(self.psi2)])]
 
     def get_lsv_graphic(self):
         return self.lsv_graphic
@@ -310,9 +310,9 @@ class VoilaLsv(HDF5):
 
     def is_lsv_changing(self, thres):
         means = np.array(self.get_means())
-        #TODO: should we check that pos and neg are kind of matched?
+        # TODO: should we check that pos and neg are kind of matched?
         return max(means[means > 0].sum(), means[means < 0].sum()) >= thres
-        #return np.any(np.array(self.get_means()) >= thres)
+        # return np.any(np.array(self.get_means()) >= thres)
 
     def exclude(self):
         return ['lsv_graphic', 'categories', 'bins', 'psi1', 'psi2']
