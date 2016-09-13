@@ -93,6 +93,9 @@ class GeneGraphic(HDF5):
         ]
         return "\t".join([str(b) for b in bed_fields])
 
+    def to_hdf5(self, h):
+        super(GeneGraphic, self).to_hdf5(h.create_group(self.id))
+
     def cls_list(self):
         return {'exons':
                     {'class': ExonGraphic, 'args': (None, None, None, None)},
@@ -168,9 +171,6 @@ class ExonGraphic(HDF5):
     def get_alt_ends(self):
         return self.alt_ends
 
-    # def get_size(self):
-    #     return self.
-
     def to_JSON(self, encoder=json.JSONEncoder):
         return json.dumps(self, default=lambda o: o.__dict__, sort_keys=True, cls=encoder)
 
@@ -222,13 +222,16 @@ class LsvGraphic(GeneGraphic):
     def get_type(self):
         return self.type
 
+    def to_hdf5(self, h):
+        HDF5.to_hdf5(self, h)
+
 
 def splice_graph_from_hdf5(hdf5_filename, logger):
     def worker():
         with h5py.File(hdf5_filename, 'r', swmr=True) as h:
             while True:
-                index = queue.get()
-                manager_dict[index] = GeneGraphic(None).from_hdf5(h[index])
+                id = queue.get()
+                manager_dict[id] = GeneGraphic(None).from_hdf5(h[id])
                 queue.task_done()
 
     def producer():
@@ -254,8 +257,4 @@ def splice_graph_from_hdf5(hdf5_filename, logger):
     pool.close()
     queue.close()
 
-    ggs = [None] * len(manager_dict)
-    for key in manager_dict.keys():
-        ggs[int(key)] = manager_dict[key]
-
-    return ggs
+    return manager_dict.values()
