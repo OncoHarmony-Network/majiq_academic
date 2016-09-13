@@ -83,18 +83,13 @@ def mark_stacks(lsv_list, fitfunc_r, pvalue_limit, logger=None):
 
 
 def gc_normalization(output_gc_vals, logger=None):
-
-    logger.info("Gc Content normalization")
+    if logger is not None:
+        logger.info("Gc Content normalization")
     # factor, meanbins = gc_factor_calculation(gc_pairs, nbins=10)
-    v_gcfactor_func = [None] * majiq_config.num_experiments
-
-    for exp_n in xrange(majiq_config.num_experiments):
-        # a = np.append(factor[exp_n], factor[exp_n][-1])
-        factor, meanbins = output_gc_vals[exp_n]
-        gc_factor = interpolate.interp1d(meanbins, factor, bounds_error=False, fill_value=1)
-        v_gcfactor_func[exp_n] = np.vectorize(gc_factor)
-
-    return v_gcfactor_func
+    # a = np.append(factor[exp_n], factor[exp_n][-1])
+    factor, meanbins = output_gc_vals
+    gc_factor = interpolate.interp1d(meanbins, factor, bounds_error=False, fill_value=1)
+    return np.vectorize(gc_factor)
 
 
 def gc_normalization_old(lsv_list, gc_content_files, gc_pairs, logger):
@@ -129,7 +124,10 @@ def gc_factor_calculation(gc_pairs, nbins=10):
     count = gc_pairs['COV']
     gc = gc_pairs['GC']
 
-    #if len(gc) == 0: continue
+    if len(gc) == 0:
+        local_factor = [1.0]*nbins
+        local_meanbins = np.arange(0,1, 0.1)
+        return local_factor, local_meanbins
 
     count, gc = izip(*sorted(izip(count, gc), key=lambda x: x[1]))
 

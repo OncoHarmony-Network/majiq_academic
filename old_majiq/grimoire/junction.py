@@ -102,7 +102,7 @@ class Junction:
     def get_gc_content(self):
         return self.gc_content
 
-    def get_read_num(self, idx):
+    def get_read_num(self, idx=0):
         if idx == -1:
             res = self.coverage.sum()
         else:

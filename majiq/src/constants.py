@@ -41,6 +41,10 @@ def get_builder_majiq_filename(outdir, name):
     return "%s/%s.majiq.hdf5" % (outdir, name)
 
 
+def get_builder_temp_majiq_filename(outdir, name):
+    return "%s/tmp/%s.tmp.hdf5" % (outdir, name)
+
+
 def get_builder_splicegraph_filename(outdir, name):
     return "%s/%s.splicegraph.hdf5" % (outdir, name)
 

@@ -66,7 +66,7 @@ def calc_pvalues(junctions, one_over_r, indices_list=None):
 def adjust_fit(starting_a, junctions, precision, previous_score, plotpath, indices=None, logger=None):
     previous_a = -1
     if logger:
-        logger.info("Starting from %s with precision %s" % (starting_a, precision))
+        logger.debug("Starting from %s with precision %s" % (starting_a, precision))
     idx = 0
 
     steps = np.arange(starting_a, 0, -precision)
@@ -80,10 +80,10 @@ def adjust_fit(starting_a, junctions, precision, previous_score, plotpath, indic
         ecdf = get_ecdf(pvalues)
         score = score_ecdf(ecdf)
         mplot.plot_fitting(ecdf, plotpath, title="%s.[step %d] 1\_r %s" % (precision, idx, corrected_a),
-                     plotname='%s.step%s' % (precision, idx))
+                           plotname='%s.step%s' % (precision, idx))
         idx += 1
         if logger:
-            logger.info("New Score %.5f" % score)
+            logger.debug("New Score %.5f" % score)
         if previous_score < score:
             # the best fit are previous_a and previous_score
             if previous_a == -1:

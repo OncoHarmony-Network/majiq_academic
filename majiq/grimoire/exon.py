@@ -2,6 +2,7 @@ import os
 
 from majiq.src import config
 
+
 # FLAGS
 NEUTRAL = 0b00000
 
@@ -51,8 +52,8 @@ class Exon:
         self.flag |= INTRON if isintron else NEUTRAL
         self.flag |= INDATA if indata else NEUTRAL
 
-        # if not retrieve:
-        #     self.coverage = np.zeros(shape=config.num_experiments)
+        if retrieve:
+            self.coverage = 0
 
     def __hash__(self):
         return hash(self.id) ^ hash(self.gene_name)
@@ -143,7 +144,7 @@ class Exon:
 
     def add_new_read(self, start, end, read_seq, s3p_junc, s5p_junc):
 
-        #assert start < end , " INCORRECT exon definition %s - %s "%(start, end)
+        # assert start < end , " INCORRECT exon definition %s - %s "%(start, end)
         if start >= end:
             return None
         self.start = min(self.start, start)
@@ -155,7 +156,7 @@ class Exon:
                 res.add_5prime_junc(s5p_junc)
                 res.add_3prime_junc(s3p_junc)
 
-                #self.exonRead_list.append(res)
+                # self.exonRead_list.append(res)
                 break
         else:
             for idx1, i1 in enumerate(self.ss_3p_list):
@@ -170,8 +171,8 @@ class Exon:
             self.exonRead_list.append(res)
         return res
 
-    def get_coverage(self, exp_idx):
-        return self.coverage[exp_idx]
+    def get_coverage(self, exp_idx=0):
+        return self.coverage
 
     def get_gc_content(self):
         return self.gc_content
@@ -187,8 +188,8 @@ class Exon:
             ex_reads += j5.get_read_num(exp_idx)
         return ex_reads
 
-    def update_coverage(self, exp_idx, num):
-        self.coverage[exp_idx] += num
+    def update_coverage(self, num):
+        self.coverage += num
 
     def set_gc_content_val(self, value):
         self.gc_content = value
@@ -270,10 +271,10 @@ class ExonRead(object):
         self.end = end
         self.RNASeq = rna_seq
         self.p3_junc = []
-        if not pre_junc is None:
+        if pre_junc is not None:
             self.p3_junc.append(pre_junc)
         self.p5_junc = []
-        if not post_junc is None:
+        if post_junc is not None:
             self.p5_junc.append(post_junc)
 
     def get_coordinates(self):
@@ -283,12 +284,11 @@ class ExonRead(object):
         return self.p5_junc
 
     def add_5prime_junc(self, junc):
-
-        if not junc is None and not junc in self.p5_junc:
+        if junc is not None and junc not in self.p5_junc:
             self.p5_junc.append(junc)
 
     def add_3prime_junc(self, junc):
-        if not junc is None and not junc in self.p3_junc:
+        if junc is not None and junc not in self.p3_junc:
             self.p3_junc.append(junc)
 
     def bed_format(self):
@@ -323,8 +323,8 @@ class ExonTx(object):
 
         p5_junc = h_ex.create_group("p5_junc")
         p3_junc = h_ex.create_group("p3_junc")
-        [jun.to_hdf5(p5_junc) for jun in set(self.p5_junc)]
-        [jun.to_hdf5(p3_junc) for jun in set(self.p3_junc)]
+        [jun.to_db_hdf5(p5_junc) for jun in set(self.p5_junc)]
+        [jun.to_db_hdf5(p3_junc) for jun in set(self.p3_junc)]
 
     def get_coordinates(self):
         return self.start, self.end
@@ -379,7 +379,7 @@ class ExonTx(object):
         exb = exb1 & exb2
         if exb:
             junc = gn.exist_junction(txex2.end, txex1.start)
-            if not junc is None:
+            if junc is not None:
                 txex2.p5_junc.append(junc)
                 txex1.p3_junc.append(junc)
 
@@ -457,7 +457,7 @@ class ExonTx(object):
             ex = Exon(min(all_3prime), max(all_5prime), gne, annot=True)
 
             for txex in list_exontx:
-                #ex.set_ir(txex.ir)
+                # ex.set_ir(txex.ir)
                 ex.ss_3p_list.append(txex.start)
                 ex.ss_5p_list.append(txex.end)
                 ex.exonTx_list.append(txex)
@@ -478,11 +478,13 @@ def print_list_exons(list_ex, msg=""):
     print "%%%%%%%%%%%%%%%%%%%%%%"
 
 num_it = 0
+
+
 def collapse_list_exons(listexons, gne):
     global num_it
     num_it += 1
     # print "[%s] INIT COLLAPSE_LIST EXONS "%(num_it)
-    #print_list_exons(listexons,"[%s] IN INIT"%num_it)
+    # print_list_exons(listexons,"[%s] IN INIT"%num_it)
     overlp = []
     exlist = []
     start = 0
@@ -620,7 +622,7 @@ def detect_exons(gene, junction_list, read_rna):
     junction_list.sort()
     for (coord, jtype, jj) in junction_list:
 
-        if not jj.is_reliable() and not jj.is_annotated():
+        if not jj.is_reliable_in_tissue() and not jj.is_annotated():
             continue
 
         jj_gene = jj.get_gene()
@@ -629,7 +631,7 @@ def detect_exons(gene, junction_list, read_rna):
                 start = opened_exon[-1].get_ss_3p()
                 end = coord
                 new_exons += new_exon_definition(start, end, read_rna, opened_exon[-1], jj, jj_gene)
-                pp = opened_exon.pop()
+                opened_exon.pop()
                 opened -= 1
             elif opened == 0:
                 if first_3prime is None:
@@ -642,7 +644,7 @@ def detect_exons(gene, junction_list, read_rna):
             # end elif opened
         else:
             if opened > 0:
-                if not last_5prime is None:
+                if last_5prime is not None:
                     end = last_5prime.get_ss_5p()
                     for ss in opened_exon:
                         if ss.get_gene() != last_5prime.get_gene():
@@ -664,7 +666,7 @@ def detect_exons(gene, junction_list, read_rna):
         new_exons += __half_exon('3prime', ss, read_rna)
 
     for (coord, jtype, jj) in junction_list:
-        if not jj.is_reliable() and not jj.is_annotated():
+        if not jj.is_reliable_in_tissue() and not jj.is_annotated():
             junction_list.remove((coord, jtype, jj))
             del jj
             continue
@@ -696,7 +698,7 @@ def set_exons_gc_content(chrom, exon_list):
         if end - strt < 5:
             continue
         sequence = loaded_chrom[strt:end]
-        #reverse the sequence if the strand is reverse
+        # reverse the sequence if the strand is reverse
         sequence = sequence.lower()
         if exon.get_strand() == "-":
             new_seq = []
