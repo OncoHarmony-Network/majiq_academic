@@ -158,15 +158,15 @@ class DataSet(object):
         """
         try:
             index = self.ds.attrs['index']
-            start_index = index
-            for obj in objs:
-                self.ds[index] = obj
-                index += 1
-            self.h.attrs[self.ds_name] = self.ds.regionref[start_index:index]
-            self.ds.attrs['index'] = index
         except AttributeError:
-            # pass when dataset doesn't exist
-            pass
+            return
+
+        start_index = index
+        for obj in objs:
+            self.ds[index] = obj
+            index += 1
+        self.h.attrs[self.ds_name] = self.ds.regionref[start_index:index]
+        self.ds.attrs['index'] = index
 
     def decode_list(self):
         """

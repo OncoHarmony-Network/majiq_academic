@@ -318,24 +318,26 @@ class VoilaLsv(HDF5):
         return ['lsv_graphic', 'categories', 'bins', 'psi1', 'psi2']
 
     def to_hdf5(self, h):
-        super(VoilaLsv, self).to_hdf5(h)
+        grp = h.create_group(self.get_id())
+
+        super(VoilaLsv, self).to_hdf5(grp)
 
         # lsv graphic
-        self.lsv_graphic.to_hdf5(h.create_group('lsv_graphic'))
+        self.lsv_graphic.to_hdf5(grp.create_group('lsv_graphic'))
 
         # categories
-        cat_grp = h.create_group('categories')
+        cat_grp = grp.create_group('categories')
         for key in self.categories:
             cat_grp.attrs[key] = self.categories[key]
 
         # bins
-        BinsDataSet(h).encode_list(self.bins)
+        BinsDataSet(grp).encode_list(self.bins)
 
         # psi1
-        Psi1DataSet(h).encode_list(self.psi1)
+        Psi1DataSet(grp).encode_list(self.psi1)
 
         # psi2
-        Psi2DataSet(h).encode_list(self.psi2)
+        Psi2DataSet(grp).encode_list(self.psi2)
 
     def from_hdf5(self, h):
         # lsv graphic
