@@ -257,4 +257,4 @@ def splice_graph_from_hdf5(hdf5_filename, logger):
     pool.close()
     queue.close()
 
-    return manager_dict.values()
+    return list(manager_dict.values())

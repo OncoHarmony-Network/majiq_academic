@@ -42,31 +42,6 @@ class VoilaInput(HDF5):
         for sample_info in self.metainfo:
             yield sample_info
 
-    def to_hdf5(self, h):
-        # bins dataset
-        bins_length = sum([len(lsv.bins) for lsv in self.lsvs])
-        bins_width = len(self.lsvs[0].bins[0])
-        BinsDataSet(h, bins_length, bins_width)
-
-        # psi1 dataset
-        try:
-            psi1_length = sum([len(lsv.psi1) for lsv in self.lsvs])
-            Psi1DataSet(h, psi1_length)
-        except TypeError:
-            logger.info('Skipping psi1 HDF5 encoding.')
-
-        # psi2 dataset
-        try:
-            psi2_length = sum([len(lsv.psi2) for lsv in self.lsvs])
-            Psi2DataSet(h, psi2_length)
-        except TypeError:
-            logger.info('Skipping psi2 HDF5 encoding.  This is probably psi.')
-
-        # metainfo
-        self.encode_metainfo(h.create_group('metainfo'), self.metainfo)
-
-        super(VoilaInput, self).to_hdf5(h)
-
     def encode_metainfo(self, h, metainfo):
         if type(metainfo) is list:
             for index, mi in enumerate(metainfo):
@@ -75,23 +50,51 @@ class VoilaInput(HDF5):
             for key in metainfo:
                 h.attrs[key] = metainfo[key]
 
+    def exclude(self):
+        return ['metainfo', 'lsvs']
+
     def decode_metainfo(self, h):
         if h.keys():
             return [self.decode_metainfo(h[key]) for key in h]
         else:
             return {key: h.attrs[key] for key in h.attrs}
 
+    def to_hdf5(self, h):
+        # bins dataset
+        bins_length = sum([len(lsv.bins) for lsv in self.lsvs])
+        bins_width = len(self.lsvs[0].bins[0])
+        BinsDataSet(h, bins_length, bins_width)
+
+        try:
+            # psi1 dataset
+            psi1_length = sum([len(lsv.psi1) for lsv in self.lsvs])
+            Psi1DataSet(h, psi1_length)
+
+            # psi2 dataset
+            psi2_length = sum([len(lsv.psi2) for lsv in self.lsvs])
+            Psi2DataSet(h, psi2_length)
+        except TypeError:
+            # this is probably psi data
+            pass
+
+        # metainfo
+        self.encode_metainfo(h.create_group('metainfo'), self.metainfo)
+
+        # lsvs
+        lsv_grp = h.create_group('lsvs')
+        for lsv in self.lsvs:
+            lsv.to_hdf5(lsv_grp)
+
+        super(VoilaInput, self).to_hdf5(h)
+
     def from_hdf5(self, h):
         # metainfo
         self.metainfo = self.decode_metainfo(h['metainfo'])
 
+        # lsvs
+        self.lsvs = [VoilaLsv((), None).from_hdf5(h['lsvs'][lsv_id]) for lsv_id in h['lsvs']]
+
         return super(VoilaInput, self).from_hdf5(h)
-
-    def exclude(self):
-        return ['metainfo']
-
-    def cls_list(self):
-        return {'lsvs': {'class': VoilaLsv, 'args': ((), None)}}
 
 
 def voila_input_from_hdf5(hdf5_filename, logger):
@@ -102,17 +105,18 @@ def voila_input_from_hdf5(hdf5_filename, logger):
     :param logger: instance of logger
     :return: VoilaInput object
     """
+
     def worker():
         with h5py.File(hdf5_filename, 'r', swmr=True) as h:
             while True:
-                index = queue.get()
-                manager_dict[index] = VoilaLsv((), None).from_hdf5(h['lsvs'][index])
+                id = queue.get()
+                manager_lsvs.append(VoilaLsv((), None).from_hdf5(h['lsvs'][id]))
                 queue.task_done()
 
     def producer():
         with h5py.File(hdf5_filename, 'r', swmr=True) as h:
-            for x in h['lsvs']:
-                queue.put(x)
+            for id in h['lsvs']:
+                queue.put(id)
 
     def metainfo():
         with h5py.File(hdf5_filename, 'r', swmr=True) as h:
@@ -123,7 +127,10 @@ def voila_input_from_hdf5(hdf5_filename, logger):
     voila_input = VoilaInput()
 
     queue = JoinableQueue()
-    manager_dict = Manager().dict()
+
+    manager = Manager()
+    manager_dict = manager.dict()
+    manager_lsvs = manager.list()
 
     metainfo_proc = Process(target=metainfo)
     metainfo_proc.daemon = True
@@ -142,13 +149,8 @@ def voila_input_from_hdf5(hdf5_filename, logger):
     pool.close()
     queue.close()
 
+    voila_input.lsvs = list(manager_lsvs)
     voila_input.metainfo = manager_dict['metainfo']
-    del manager_dict['metainfo']
-
-    lsvs = [None] * len(manager_dict)
-    for key in manager_dict.keys():
-        lsvs[int(key)] = manager_dict[key]
-    voila_input.lsvs = lsvs
 
     return voila_input
 
