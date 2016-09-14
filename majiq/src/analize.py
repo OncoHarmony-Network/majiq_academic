@@ -53,17 +53,32 @@ def detect_lsv(exon, gn, lsv_type, dummy, jun, only_annot=False):
         return
 
 
-def lsv_detection(gn, gc_vfunc, lsv_list, lsv_idx, only_real_data=False, out_queue=None, logging=None):
+def wrap_result_queue(lsv, name, gc_vfunc, out_queue, chnk, lsv_list=None, lsv_idx=None):
+    qm = QueueMessage(QUEUE_MESSAGE_BUILD_LSV, [majiq_lsv.Queue_Lsv(lsv, name, gc_vfunc), name], chnk)
+    out_queue.put(qm, block=True)
+
+
+def wrap_result_file(lsv, name, gc_vfunc, lsv_list, lsv_idx, chnk=None, out_queue=None):
+    for dx, exp_idx in enumerate(majiq_config.tissue_repl[name]):
+        lsv_idx[exp_idx] = majiq_lsv.Queue_Lsv(lsv, name, gc_vfunc).to_hdf5(hdf5grp=lsv_list[exp_idx],
+                                                                            lsv_idx=lsv_idx[exp_idx],
+                                                                            exp_idx=dx)
+
+
+def lsv_detection(gn, gc_vfunc, chnk=None, lsv_list=None, lsv_idx=None, only_real_data=False, out_queue=None,
+                  logging=None):
 
     const_set = {}
-
-    # local_const = set(gn.get_all_junctions())
     local_lsv_jun = {}
 
     dummy = {}
     for name, ind_list in majiq_config.tissue_repl.items():
         dummy[name] = [[], []]
         const_set[name] = set()
+
+    wrap_result = wrap_result_queue
+    if out_queue is None:
+        wrap_result = wrap_result_file
 
     for ex in gn.get_exon_list():
         try:
@@ -83,26 +98,15 @@ def lsv_detection(gn, gc_vfunc, lsv_list, lsv_idx, only_real_data=False, out_que
                 if ss.contained(st):
                     break
             else:
-                # qm = QueueMessage(QUEUE_MESSAGE_BUILD_LSV, [majiq_lsv.Queue_Lsv(ss, name), name], chnk)
-                for dx, exp_idx in enumerate(ind_list):
-                    lsv_idx[exp_idx] = majiq_lsv.Queue_Lsv(ss, name).to_hdf5(hdf5grp=lsv_list[exp_idx],
-                                                                             lsv_idx=lsv_idx[exp_idx],
-                                                                             exp_idx=dx,
-                                                                             gc_func=gc_vfunc[exp_idx])
-                # out_queue.put(qm, block=True)
+                wrap_result(ss, name, out_queue=out_queue, chnk=chnk,
+                            lsv_list=lsv_list, lsv_idx=lsv_idx, gc_vfunc=gc_vfunc)
 
         for st in dummy[name][1]:
             for ss in dummy[name][0]:
                 if st.contained(ss):
                     break
             else:
-                for dx, exp_idx in enumerate(ind_list):
-                    lsv_idx[exp_idx] = majiq_lsv.Queue_Lsv(st, name).to_hdf5(hdf5grp=lsv_list[exp_idx],
-                                                                             lsv_idx=lsv_idx[exp_idx],
-                                                                             exp_idx=dx,
-                                                                             gc_func=gc_vfunc[exp_idx])
-
-                # qm = QueueMessage(QUEUE_MESSAGE_BUILD_LSV, [majiq_lsv.Queue_Lsv(st, name), name], chnk)
-                # out_queue.put(qm, block=True)
+                wrap_result(st, name, out_queue=out_queue, chnk=chnk,
+                            lsv_list=lsv_list, lsv_idx=lsv_idx, gc_vfunc=gc_vfunc)
 
 

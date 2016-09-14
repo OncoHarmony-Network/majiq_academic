@@ -421,7 +421,7 @@ def print_lsv_extype(list_lsv, filename):
 
 class Queue_Lsv(object):
 
-    def __init__(self, lsv_obj, name):
+    def __init__(self, lsv_obj, name, gc_vfunc=None):
 
         exp_idxs = majiq_config.tissue_repl[name]
         self.coords = lsv_obj.coords
@@ -429,38 +429,27 @@ class Queue_Lsv(object):
         self.id = lsv_obj.id
         self.type = lsv_obj.ext_type
         self.iretention = lsv_obj.intron_retention
-        self.coverage = np.ndarray(shape=(lsv_obj.junctions.shape[0], len(exp_idxs), (majiq_config.readLen - 16) + 1),
-                                   dtype=np.float)
+        self.coverage = np.zeros(shape=(lsv_obj.junctions.shape[0], len(exp_idxs), (majiq_config.readLen - 16) + 1),
+                                 dtype=np.float)
 
         self.junction_id = []
 
         if majiq_config.gcnorm:
-            self.gc_factor = np.ones(shape=(lsv_obj.junctions.shape[0], (majiq_config.readLen - 16) + 1),
-                                     dtype=np.float)
-        else:
-            self.gc_factor = None
+            gc_factor = np.ones(shape=(lsv_obj.junctions.shape[0], (majiq_config.readLen - 16) + 1),
+                                dtype=np.float)
 
         for idx, junc in enumerate(lsv_obj.junctions):
             self.coverage[idx] = junc.coverage[exp_idxs, :]
             self.junction_id.append(junc.get_id())
-            if majiq_config.gcnorm:
-                for jidx in range((majiq_config.readLen - 16) + 1):
-                    dummy = junc.get_gc_content()[0, jidx]
-                    self.gc_factor[idx, jidx] = dummy
+            gc_factor[idx] = junc.get_gc_content()
 
+        if gc_vfunc is not None:
+            for eidx in range(len(exp_idxs)):
+                vals = gc_vfunc[eidx](gc_factor)
+                self.coverage[:, eidx, :] = np.multiply(self.coverage[:, eidx, :], vals)
         self.visual = lsv_obj.get_visual(exp_idxs)
 
-    def set_gc_factor(self, exp_idx):
-        if majiq_config.gcnorm:
-            nnz = self.gc_factor.nonzero()
-            for idx in xrange(nnz[0].shape[0]):
-                i = nnz[0][idx]
-                j = nnz[1][idx]
-                dummy = self.gc_factor[i, j]
-                self.coverage[i, j] *= majiq_config.gc_factor[exp_idx](dummy)
-        del self.gc_factor
-
-    def to_hdf5(self, hdf5grp, lsv_idx, exp_idx, gc_func=None):
+    def to_hdf5(self, hdf5grp, lsv_idx, exp_idx):
 
         try:
             njunc = len(self.junction_id)
@@ -469,9 +458,6 @@ class Queue_Lsv(object):
                 shp_new = shp[0] + majiq_config.nrandom_junctions
                 hdf5grp[LSV_JUNCTIONS_DATASET_NAME].resize((shp_new, shp[1]))
 
-            if majiq_config.gcnorm:
-                vals = gc_func(self.gc_factor)
-                self.coverage[:, exp_idx, :] = np.multiply(self.coverage[:, exp_idx, :], vals)
             hdf5grp[LSV_JUNCTIONS_DATASET_NAME][lsv_idx:lsv_idx+njunc, :] = self.coverage[:, exp_idx, :]
 
             h_lsv = hdf5grp.create_group("LSVs/%s" % self.id)
