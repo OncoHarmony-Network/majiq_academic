@@ -107,20 +107,16 @@ def voila_input_from_hdf5(hdf5_filename, logger):
     """
 
     def worker():
-        with h5py.File(hdf5_filename, 'r', swmr=True) as h:
+        with h5py.File(hdf5_filename, 'r') as h:
             while True:
                 id = queue.get()
-                manager_lsvs.append(VoilaLsv((), None).from_hdf5(h['lsvs'][id]))
+                manage_dict[id] = VoilaLsv((), None).from_hdf5(h['lsvs'][id])
                 queue.task_done()
 
     def producer():
-        with h5py.File(hdf5_filename, 'r', swmr=True) as h:
+        with h5py.File(hdf5_filename, 'r') as h:
             for id in h['lsvs']:
                 queue.put(id)
-
-    def metainfo():
-        with h5py.File(hdf5_filename, 'r', swmr=True) as h:
-            manager_dict['metainfo'] = voila_input.decode_metainfo(h['metainfo'])
 
     logger.info('Loading {0}.'.format(hdf5_filename))
 
@@ -128,13 +124,7 @@ def voila_input_from_hdf5(hdf5_filename, logger):
 
     queue = JoinableQueue()
 
-    manager = Manager()
-    manager_dict = manager.dict()
-    manager_lsvs = manager.list()
-
-    metainfo_proc = Process(target=metainfo)
-    metainfo_proc.daemon = True
-    metainfo_proc.start()
+    manage_dict = Manager().dict()
 
     producer_proc = Process(target=producer)
     producer_proc.daemon = True
@@ -142,15 +132,16 @@ def voila_input_from_hdf5(hdf5_filename, logger):
 
     pool = Pool(None, worker)
 
-    metainfo_proc.join()
     producer_proc.join()
     queue.join()
 
     pool.close()
     queue.close()
 
-    voila_input.lsvs = list(manager_lsvs)
-    voila_input.metainfo = manager_dict['metainfo']
+    with h5py.File(hdf5_filename, 'r') as h:
+        voila_input.metainfo = voila_input.decode_metainfo(h['metainfo'])
+
+    voila_input.lsvs = manage_dict.values()
 
     return voila_input
 

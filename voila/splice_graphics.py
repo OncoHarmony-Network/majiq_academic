@@ -228,14 +228,14 @@ class LsvGraphic(GeneGraphic):
 
 def splice_graph_from_hdf5(hdf5_filename, logger):
     def worker():
-        with h5py.File(hdf5_filename, 'r', swmr=True) as h:
+        with h5py.File(hdf5_filename, 'r') as h:
             while True:
                 id = queue.get()
                 manager_dict[id] = GeneGraphic(None).from_hdf5(h[id])
                 queue.task_done()
 
     def producer():
-        with h5py.File(hdf5_filename, 'r', swmr=True) as h:
+        with h5py.File(hdf5_filename, 'r') as h:
             for x in h:
                 queue.put(x)
 
@@ -257,4 +257,4 @@ def splice_graph_from_hdf5(hdf5_filename, logger):
     pool.close()
     queue.close()
 
-    return list(manager_dict.values())
+    return manager_dict.values()

@@ -143,7 +143,7 @@ class DataSet(object):
             self.ds = h['/datasets/' + ds_name]
         except KeyError:
             try:
-                self.ds = h.create_dataset('/datasets/' + ds_name, shape, dtype=numpy.float64)
+                self.ds = h.create_dataset('/datasets/' + ds_name, shape, dtype=numpy.float64, chunks=(1, shape[1]))
                 # store how many objects we've worked with in the HDF5 file
                 self.ds.attrs['index'] = 0
             except TypeError:
