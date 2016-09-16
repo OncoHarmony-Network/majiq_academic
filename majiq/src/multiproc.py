@@ -5,9 +5,9 @@ from multiprocessing import current_process
 
 import majiq.src.io as majiq_io
 from majiq.src import io as majiq_io
-from majiq.src.constants import QUEUE_MESSAGE_PSI_RESULT, QUEUE_MESSAGE_DELTAPSI_RESULT, QUEUE_MESSAGE_END_WORKER
+from majiq.src.constants import *
 import majiq.src.utils as majiq_utils
-
+import majiq.src.config as majiq_config
 
 def parallel_lsv_child_calculation(func, args, tempdir, name, chunk, store=True):
     # try:
@@ -45,9 +45,6 @@ class QueueMessage:
         return self.type
 
 
-
-
-
 def quantification_init(q, lock, output, names, silent, debug, nbins, m, k,
                         discardzeros, trimborder, num_exp, only_boots):
 
@@ -73,10 +70,19 @@ def queue_manager(input_h5dfp, output_h5dfp, lock_array, result_queue, num_chunk
     psi1 = []
     psi2 = []
     names = []
+
+    lsv_idx = [0] * majiq_config.num_experiments
     while True:
         try:
             val = result_queue.get(block=True, timeout=10)
-            if val.get_type() == QUEUE_MESSAGE_PSI_RESULT:
+            if val.get_type() == QUEUE_MESSAGE_BUILD_LSV:
+                for jdx, exp_idx in enumerate(majiq_config.tissue_repl[val.get_value()[1]]):
+                    lsvobj = val.get_value()[0]
+                    lsv_idx[exp_idx] = lsvobj.to_hdf5(hdf5grp=output_h5dfp[exp_idx],
+                                                      lsv_idx=lsv_idx[exp_idx],
+                                                      exp_idx=jdx)
+
+            elif val.get_type() == QUEUE_MESSAGE_PSI_RESULT:
                 posterior_matrix.append(val.get_value()[0])
                 names.append([majiq_io.load_lsvgraphic_from_majiq(input_h5dfp, val.get_value()[-1])])
 
@@ -97,4 +103,3 @@ def queue_manager(input_h5dfp, output_h5dfp, lock_array, result_queue, num_chunk
             if nthr_count < num_chunks:
                 continue
             break
-    #majiq_io.dump_lsvs_voila(pickle_path, posterior_matrix, names, meta_info, psi1=psi1, psi2=psi2)

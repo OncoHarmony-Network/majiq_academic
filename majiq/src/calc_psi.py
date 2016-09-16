@@ -203,11 +203,6 @@ class CalcPsi(BasicPipeline):
             pool.apply_async(parse_and_norm_majiq, [fname, fidx, conf(output_dir=self.output, name=self.name,
                                                                            debug=self.debug, silent=self.silent,
                                                                            markstacks=self.markstacks)])
-
-            # CalcPsi.parse_and_norm_majiq(fname, fidx, conf(output_dir=self.output, name=self.name,
-            #                                                debug=self.debug, silent=self.silent,
-            #                                                markstacks=self.markstacks,
-            #                                                fitfunc=self.fitfunc))
         pool.close()
         pool.join()
         self.logger = logger

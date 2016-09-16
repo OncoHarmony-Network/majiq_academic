@@ -23,10 +23,11 @@ from majiq.src.polyfitnb import fit_nb
 def build(args):
     pipeline_run(Builder(args))
 
-
-def builder_init(sam_list, pcr_filename, gff_output, only_rna,
+def builder_init(queue, lock_array, sam_list, pcr_filename, gff_output, only_rna,
                  non_denovo, dbfile, list_of_genes, silent, debug):
 
+    builder_init.out_queue = queue
+    builder_init.lock = lock_array
     builder_init.sam_list = sam_list
     builder_init.pcr_filename = pcr_filename
     builder_init.gff_output = gff_output
@@ -38,6 +39,56 @@ def builder_init(sam_list, pcr_filename, gff_output, only_rna,
     builder_init.list_of_genes = list_of_genes
 
 
+def merging_files(args_vals):
+
+    list_of_genes, chnk = args_vals
+    logger = majiq_utils.get_logger("%s/%s.majiq.log" % (majiq_config.outDir, chnk),
+                                    silent=builder_init.silent, debug=builder_init.debug)
+
+    rna_files = []
+    vfunc_gc = []
+    for exp_idx, sam_file in enumerate(builder_init.sam_list):
+        rnaf = h5py.File(get_builder_temp_majiq_filename(majiq_config.outDir, sam_file))
+        rna_files.append(rnaf)
+        if majiq_config.gcnorm:
+            vfunc_gc.append(gc_normalization(rnaf.attrs['gc_values']))
+        else:
+            vfunc_gc.append(None)
+    db_f = h5py.File(builder_init.dbfile)
+    for gne_idx, gne_id in enumerate(list_of_genes):
+        logger.info("[%s] Progress %s/%s" % (chnk, gne_idx, len(list_of_genes)))
+        loop_id = '%s - %s' % (chnk, gne_id)
+        logger.debug("[%s] Retrieving gene" % loop_id)
+        gene_obj = majiq.grimoire.gene.retrieve_gene(gne_id, db_f, all_exp=True)
+
+        junction_list = {}
+        splice_list = set()
+
+        for exp_idx, filename in enumerate(builder_init.sam_list):
+            for jj_grp_id in rna_files[exp_idx]["%s/junctions" % gne_id]:
+                jj_grp = rna_files[exp_idx]["%s/junctions/%s" % (gne_id, jj_grp_id)]
+                annot = jj_grp.attrs['annotated']
+                junc = majiq.grimoire.gene.extract_junctions_hdf5(gene_obj, jj_grp, junction_list, annotated=annot,
+                                                                  all_exp=True)
+                junc.set_coverage(exp_idx,
+                                  rna_files[exp_idx][CONST_JUNCTIONS_DATASET_NAME][jj_grp.attrs['coverage_index'], :])
+                splice_list.add((junc.start, '5prime', junc))
+                splice_list.add((junc.end, '3prime', junc))
+
+        detect_exons(gene_obj, list(splice_list), None)
+
+        logger.debug("[%s] Detecting LSV" % loop_id)
+        lsv_detection(gene_obj, gc_vfunc=vfunc_gc, chnk=chnk, out_queue=builder_init.out_queue, logging=None)
+        #lsv_detection(gene_obj, gene_obj, out_files, out_files_idx, only_real_data=builder_init.only_rna, logging=logger)
+        del gene_obj
+        del majiq_config.gene_tlb[gne_id]
+    [xx.close() for xx in rna_files]
+    logger.info("[%s] Waiting to be freed" % chnk)
+    qm = majiq_multi.QueueMessage(QUEUE_MESSAGE_END_WORKER, None, chnk)
+    builder_init.out_queue.put(qm, block=True)
+    builder_init.lock[chnk].acquire()
+    builder_init.lock[chnk].release()
+    logger.info("[%s] End" % chnk)
 
 
 def parsing_files(args_vals):
@@ -46,15 +97,9 @@ def parsing_files(args_vals):
     tlogger = majiq_utils.get_logger("%s/%s.majiq.log" % (majiq_config.outDir, chnk),
                                      silent=builder_init.silent, debug=builder_init.debug)
 
-
-
     tlogger.debug("[%s] Starting new thread" % chnk)
     majiq_utils.monitor('CHILD %s:: CREATION' % chnk)
-
     db_f = h5py.File(builder_init.dbfile)
-
-
-
     # samfile = [pysam.Samfile(xx, "rb") for xx in majiq_builder.sam_list]
     counter = [0] * 6
 
@@ -63,13 +108,6 @@ def parsing_files(args_vals):
     for vals in filesnames:
         chnk, sam_file = vals
         loop_id = sam_file
-        #tlogger.info("Analizing %s" % loop_id)
-        location = (0, chnk)
-        writer = majiq_utils.Writer(location)
-        pbar = ProgressBar(fd=writer)
-
-        pbar.start()
-
         out_f = h5py.File(get_builder_temp_majiq_filename(majiq_config.outDir, sam_file),
                           'w', compression='gzip', compression_opts=9)
         effective_readlen = (majiq_config.readLen - MIN_BP_OVERLAP*2) + 1
@@ -77,16 +115,14 @@ def parsing_files(args_vals):
                              (majiq_config.nrandom_junctions, effective_readlen),
                              maxshape=(None, effective_readlen))
 
-        #majiq_utils.monitor('CHILD %s:: STARTLOOP' % chnk)
         try:
             samfl = majiq_io.open_rnaseq("%s/%s.bam" % (majiq_config.sam_dir, sam_file))
             gc_pairs = {'GC': [], 'COV': []}
             jnc_idx = 0
-            ind = 0
+
             for gne_idx, gne_id in enumerate(builder_init.list_of_genes):
                 ind = (float(gne_idx)/num_genes) * 100
-                pbar.update(int(ind))
-                tlogger.debug("[%s] Progress %s/%s" % (loop_id, gne_idx, len(builder_init.list_of_genes)))
+                tlogger.info("[%s] Progress %s/%s" % (loop_id, gne_idx, len(builder_init.list_of_genes)))
                 out_f.create_group('%s/junctions' % gne_id)
                 tlogger.debug("[%s] Retrieving gene" % gne_id)
                 gene_obj = majiq.grimoire.gene.retrieve_gene(gne_id, db_f)
@@ -136,11 +172,11 @@ def parsing_files(args_vals):
             raise
 
         finally:
-            pbar.finish()
+            #pbar.finish()
             majiq_io.close_rnaseq(samfl)
 
     db_f.close()
-    tlogger.info("[%s] Child work done." % chnk)
+    tlogger.info("[%s] End" % chnk)
 
 
 class Builder(BasicPipeline):
@@ -168,12 +204,11 @@ class Builder(BasicPipeline):
         logger.info("... waiting gff3 parsing")
         p.start()
         p.join()
-        majiq_utils.monitor('AFTER READ GFF')
 
         if self.prebam:
             pool = mp.Pool(processes=self.nthreads, initializer=builder_init,
-                           initargs=[sam_list, self.pcr_filename, self.gff_output, self.only_rna, self.non_denovo,
-                                     get_build_temp_db_filename(majiq_config.outDir), list_of_genes,
+                           initargs=[None, None, sam_list, self.pcr_filename, self.gff_output, self.only_rna,
+                                     self.non_denovo, get_build_temp_db_filename(majiq_config.outDir), list_of_genes,
                                      self.silent, self.debug],
                            maxtasksperchild=1)
             lchnksize = max(len(sam_list)/self.nchunks, 1)
@@ -183,59 +218,43 @@ class Builder(BasicPipeline):
             pool.close()
             pool.join()
 
+
+        # Detect LSVs
+
+        lock_array = [mp.Lock() for xx in range(self.nthreads)]
+        q = mp.Queue(maxsize=50*self.nthreads)
+
+        pool = mp.Pool(processes=self.nthreads, initializer=builder_init,
+                       initargs=[q, lock_array, sam_list, self.pcr_filename, self.gff_output,
+                                 self.only_rna, self.non_denovo, get_build_temp_db_filename(majiq_config.outDir),
+                                 None, self.silent, self.debug],
+                       maxtasksperchild=1)
+
+        lchnksize = max(len(list_of_genes)/self.nthreads, 1) + 1
+        [xx.acquire() for xx in lock_array]
+
+        pool.map_async(merging_files, majiq_utils.chunks(list_of_genes, lchnksize, extra=range(self.nthreads)))
+        pool.close()
+
         db_f = h5py.File(get_build_temp_db_filename(majiq_config.outDir))
 
         out_files = []
-        rna_files = []
-        vfunc_gc = []
         for exp_idx, sam_file in enumerate(sam_list):
-            rnaf = h5py.File(get_builder_temp_majiq_filename(majiq_config.outDir, sam_file))
-            rna_files.append(rnaf)
-            if majiq_config.gcnorm:
-                vfunc_gc.append(gc_normalization(rnaf.attrs['gc_values']))
-            else:
-                vfunc_gc.append(None)
-
             f = h5py.File(get_builder_majiq_filename(majiq_config.outDir, sam_file),
                           'w', compression='gzip', compression_opts=9)
             out_files.append(f)
-
             effective_readlen = (majiq_config.readLen - 16) + 1
             f.create_dataset(LSV_JUNCTIONS_DATASET_NAME,
                              (majiq_config.nrandom_junctions, effective_readlen),
                              maxshape=(None, effective_readlen))
 
-        out_files_idx = [0] * majiq_config.num_experiments
+        majiq_multi.queue_manager(input_h5dfp=None, output_h5dfp=out_files, lock_array=lock_array, result_queue=q,
+                                  num_chunks=self.nthreads, logger=self.logger)
 
-        for gne_id in list_of_genes:
-            loop_id = 'MASTER - %s' % (gne_id)
-            logger.info("[%s] Retrieving gene" % loop_id)
-            gene_obj = majiq.grimoire.gene.retrieve_gene(gne_id, db_f, all_exp=True)
-
-            junction_list = {}
-
-            splice_list = set()
-
-            for exp_idx, filename in enumerate(sam_list):
-                for jj_grp_id in rna_files[exp_idx]["%s/junctions" % gne_id]:
-                    jj_grp = rna_files[exp_idx]["%s/junctions/%s" % (gne_id, jj_grp_id)]
-                    annot = jj_grp.attrs['annotated']
-                    junc = majiq.grimoire.gene.extract_junctions_hdf5(gene_obj, jj_grp, junction_list, annotated=annot,
-                                                                      all_exp=True)
-                    junc.set_coverage(exp_idx, rna_files[exp_idx][CONST_JUNCTIONS_DATASET_NAME][jj_grp.attrs['coverage_index'], :])
-                    splice_list.add((junc.start, '5prime', junc))
-                    splice_list.add((junc.end, '3prime', junc))
-
-            detect_exons(gene_obj, list(splice_list), None)
-
-            logger.info("[%s] Detecting LSV" % loop_id)
-            lsv_detection(gene_obj, vfunc_gc, out_files, out_files_idx, only_real_data=self.only_rna, logging=logger)
-            del gene_obj
-            del majiq_config.gene_tlb[gne_id]
+        pool.join()
 
         ''' Closing HDF5 files'''
         db_f.close()
-        [xx.close() for xx in rna_files]
         [xx.close() for xx in out_files]
 
         logger.info("MAJIQ Builder is ended succesfully!")
