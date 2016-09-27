@@ -5,7 +5,7 @@ use('Agg')
 from majiq.src.basic_pipeline import builder, calcpsi
 from majiq.src.deltapsi import deltapair, multi_dpsi
 
-VERSION = '0.9.2'
+VERSION = '0.9.2a'
 
 
 def new_subparser():
