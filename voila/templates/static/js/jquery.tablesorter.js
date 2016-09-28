@@ -1,15 +1,15 @@
 /*
- * 
+ *
  * TableSorter 2.0 - Client-side table sorting with ease!
  * Version 2.0.5b
  * @requires jQuery v1.2.3
- * 
+ *
  * Copyright (c) 2007 Christian Bach
  * Examples and docs at: http://tablesorter.com
  * Dual licensed under the MIT and GPL licenses:
  * http://www.opensource.org/licenses/mit-license.php
  * http://www.gnu.org/licenses/gpl.html
- * 
+ *
  */
 /**
  *
@@ -1030,13 +1030,13 @@
     ts.addWidget({
         id: "renderCanvas",
         format: function (table) {
-
-            $(table.parentElement).children('.spliceDiv').each(function () {
+            d3.select(table.parentNode).selectAll('.spliceDiv').each(function () {
                 /**
                  * D3 - SpliceGraph
                  * */
 
                 var genes_obj = JSON.parse($(this)[0].getAttribute('data-exon-list').replace(/\\'/g, "\"").replace(/'/g, ""));
+
 
                 var exons_obj = genes_obj.exons;
                 var junctions_obj = genes_obj.junctions;
@@ -1065,99 +1065,98 @@
                 }
 
                 // toggle norm flag on read counts button and redraw splicegraph
-                d3.select(this).select('.toggleReadCounts').on('click', function () {
-                    var correctedClassed = !d3.select(this).classed('corrected');
-                    d3.select(this).classed('corrected', correctedClassed);
-                    this.innerHTML = correctedClassed ? 'CR' : 'RR';
-                    spliceg.call(chart)
+                d3.select(this.parentNode.parentNode).select('.readCounts').on('click', function () {
+                    var spliceDivs = this.parentNode.parentNode.parentNode.querySelectorAll('.spliceDiv');
+                    d3.selectAll(spliceDivs).call(chart);
                 });
 
-
-                d3.select(this).select('.toogleScale').on('click', function () {
-                    var index_gene = parseInt(this.parentNode.parentNode.id.split("_")[1]);
-                    if ($(this.parentNode.parentNode).hasClass('exp1') || $(this.parentNode.parentNode).hasClass('exp2')) {
-                        index_gene *= 2;
-                        if ($(this.parentNode.parentNode).hasClass('exp2')) {
-                            index_gene++;
+                d3.select(this.parentNode.parentNode).select('.toogleScale').on('click', function () {
+                    var toogleScale = this;
+                    $(this).toggleClass('scaled');
+                    d3.select(this.parentNode.parentNode).selectAll('.spliceDiv').each(function () {
+                        var index_gene = parseInt(this.id.split('_')[1]);
+                        if (d3.select(this).classed('exp1') || d3.select(this).classed('exp2')) {
+                            index_gene *= 2;
+                            if (d3.select(this).classed('exp2')) {
+                                index_gene++
+                            }
                         }
-                    }
-                    if (d3.select(this).classed('scaled')) {
-                        d3.select(this.parentNode.parentNode)
-                            .datum([gene_objs[index_gene].orig.exons, gene_objs[index_gene].orig.junc, gene_objs[index_gene].strand])
-                            .call(chart);
-                        d3.select(this).classed('scaled', false);
-                    } else {
-                        d3.select(this.parentNode.parentNode)
-                            .datum([gene_objs[index_gene].mapped[0], gene_objs[index_gene].mapped[1], gene_objs[index_gene].strand])
-                            .call(chart);
-                        d3.select(this).classed('scaled', true);
-                    }
+
+                        var gene_datum = geneDatum(toogleScale, gene_objs[index_gene])
+                        d3.select(this).datum(gene_datum).call(chart);
+                    });
 
                 });
 
-                d3.select(this).select('.zoomInSplice').on('click', function () {
+                d3.select(this.parentNode.parentNode).select('.zoomInSplice').on('click', function () {
                     chart.width(chart.width() + 600);
                     chart.height(chart.height() + 100);
-                    spliceg.call(chart);
-//                    $('.filters').css({'left': parseInt($('.filters').css('left').split('px')[0]) + 600 + 'px'});
+                    d3.select(this.parentNode.parentNode).selectAll('.spliceDiv').call(chart);
                 });
 
-                d3.select(this).select('.zoomOutSplice').on('click', function () {
+                d3.select(this.parentNode.parentNode).select('.zoomOutSplice').on('click', function () {
                     chart.width(chart.width() - 600);
                     chart.height(chart.height() - 100);
-                    spliceg.call(chart);
-//                    $('.filters').css({'left': Math.max(1080, parseInt($('.filters').css('left').split('px')[0]) - 600) + 'px'});
+                    d3.select(this.parentNode.parentNode).selectAll('.spliceDiv').call(chart);
                 });
 
-                d3.select(this).select('.zoomResetSplice').on('click', function () {
+                d3.select(this.parentNode.parentNode).select('.zoomResetSplice').on('click', function () {
                     chart.width(1000);
                     chart.height(160);
-                    spliceg.call(chart);
-
+                    d3.select(this.parentNode.parentNode).selectAll('.spliceDiv').call(chart);
                 });
 
 
                 /**
                  * Splice Graph selector
                  * */
-                var sgSelectors = $(this).find('.spliceGraphSelector');
-                if (sgSelectors.length) {
-                    sgSelectors.change(function () {
-                        var index_gene = 2 * parseInt(this.parentNode.parentNode.id.split("_")[1]);
-                        if ($(this.parentElement.parentElement).hasClass('exp2')) {
-                            index_gene++;
-                        }
+                var spliceGraphSelector = d3.select(this.parentNode.parentNode).selectAll('.spliceGraphSelector');
+                spliceGraphSelector.on('change', function () {
+                    var parent = this.parentNode.parentNode;
+                    var toogleScale = parent.querySelector('.toogleScale');
+                    var spliceDiv;
 
-                        var genes_obj;
-                        try {
-                            genes_obj = JSON.parse(JSON.parse(this.value.replace(/\\'/g, "\"").replace(/'/g, "")));
-                        } catch (syntaxError) {
-                            genes_obj = JSON.parse(this.value.replace(/\\'/g, "\"").replace(/'/g, ""));
-                        }
+                    if(d3.select(this).classed('exp2'))
+                      spliceDiv = parent.querySelector('.spliceDiv.exp2');
+                    else if(d3.select(this).classed('exp1'))
+                      spliceDiv = parent.querySelector('.spliceDiv.exp1');
 
+                    var index_gene = 2 * spliceDiv.id.split("_")[1];
+                    if ($(parent).hasClass('exp2'))
+                        index_gene++;
 
-                        var exons_obj = genes_obj.exons;
-                        var junctions_obj = genes_obj.junctions;
+                    var genes_obj;
+                    try {
+                        genes_obj = JSON.parse(JSON.parse(this.value.replace(/\\'/g, "\"").replace(/'/g, "")));
+                    } catch (syntaxError) {
+                        genes_obj = JSON.parse(this.value.replace(/\\'/g, "\"").replace(/'/g, ""));
+                    }
 
-                        var orig_objs = {'exons': add_keys(clone(exons_obj)), 'junc': clone(junctions_obj)};
+                    var exons_obj = genes_obj.exons;
+                    var junctions_obj = genes_obj.junctions;
 
-                        var exons_mapped = map_exon_list(exons_obj, junctions_obj); //exons_obj; //
-                        exons_mapped = add_keys(exons_mapped);
+                    var orig_objs = {'exons': add_keys(clone(exons_obj)), 'junc': clone(junctions_obj)};
 
-                        gene_objs[index_gene] = {
-                            'orig': orig_objs,
-                            'mapped': [exons_mapped, junctions_obj],
-                            'strand': genes_obj.strand
-                        };
+                    var exons_mapped = map_exon_list(exons_obj, junctions_obj);
+                    exons_mapped = add_keys(exons_mapped);
 
-                        d3.select(this.parentNode.parentNode)
-                            .datum([gene_objs[index_gene].mapped[0], gene_objs[index_gene].mapped[1], gene_objs[index_gene].strand])
-                            .call(chart);
-                        $(this.parentNode.parentNode).children('.toogleScale').addClass('scaled');
+                    gene_objs[index_gene] = {
+                        'orig': orig_objs,
+                        'mapped': [exons_mapped, junctions_obj],
+                        'strand': genes_obj.strand
+                    };
 
-                    });
+                    var gene_datum = geneDatum(toogleScale, gene_objs[index_gene])
+                    d3.select(spliceDiv).datum(gene_datum).call(chart);
+
+                })
+
+                function geneDatum(toogleScale, gene){
+                  if (d3.select(toogleScale).classed('scaled'))
+                    return [gene.mapped[0], gene.mapped[1], gene.strand];
+                  else
+                    return [gene.orig.exons, gene.orig.junc, gene.strand];
                 }
-
             });
 
             $('.lsvLegend', table).each(function () {
