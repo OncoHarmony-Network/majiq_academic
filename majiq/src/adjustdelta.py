@@ -7,7 +7,7 @@ import matplotlib.pyplot as plt
 from scipy.stats import beta
 from scipy.misc import logsumexp
 import majiq.src.plotting as mplot
-PSEUDO = 0.0001
+PSEUDO = 1e-300
 
 
 def likelihood(a_change, b_change, a_center, b_center, pi_change, pi_center, deltadata):
@@ -359,15 +359,15 @@ def loglikelihood(D, beta_mix, logp_mix, logger=False):
     K = beta_mix.shape[0]
     ''' logp_DgK = log P (D | model K ) for each data point without the weight '''
     logp_DgK = np.zeros(shape=( N, K), dtype=np.float)
-    logp_DgK = ma.asarray(logp_DgK)
+    #logp_DgK = ma.asarray(logp_DgK)
     #print "logp_mix=%s"%(logp_mix)
     for k in xrange(K):
         #print "beta_mix[%d] = %s"%(k, beta_mix[k])
-        logp_DgK[:, k] = ma.log(beta.pdf(D[:, 0], beta_mix[k, 0], beta_mix[k, 1]))
+        logp_DgK[:, k] = np.log(beta.pdf(D[:, 0], beta_mix[k, 0], beta_mix[k, 1]) + PSEUDO)
 
     logp_D = logp_DgK + logp_mix * np.ones(shape=(N, 1), dtype=np.float)
 
-    dm = np.sum(logp_DgK.mask, axis=1)
+    dm = np.sum(logp_DgK, axis=1)
     zrow = dm.astype(np.bool)
     no_zrow = np.logical_not(zrow)
 
