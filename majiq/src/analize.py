@@ -17,12 +17,12 @@ def reliable_in_data(junc, exp_idx):
     return in_data_filter
 
 
-def detect_lsv(exon, gn, lsv_type, dummy, jun, only_annot=False):
+def detect_lsv(exon, gn, lsv_type, dummy, only_annot=False):
 
     sstype = {SSOURCE: ['5prime', 0], STARGET: ['3prime', 1]}
     jlist = exon.get_junctions(sstype[lsv_type][0])
     jlist = [x for x in jlist if x is not None]
-# 'ENSMUSG00000025980:55080347-55081073'
+
     if len(jlist) < 2:
         return
     lsv_in = gn.new_lsv_definition(exon, jlist, lsv_type)
@@ -32,7 +32,6 @@ def detect_lsv(exon, gn, lsv_type, dummy, jun, only_annot=False):
         if group_thresh == -1:
             group_thresh = min((len(ind_list) * 0.5), 2)
         counter = 0
-        e_data = 0
         for jj in jlist:
             for exp_idx in ind_list:
                 if only_annot or majiq_filter.reliable_in_data(jj, exp_idx,
@@ -41,16 +40,10 @@ def detect_lsv(exon, gn, lsv_type, dummy, jun, only_annot=False):
                     counter += 1
             if counter < group_thresh:
                 continue
-            e_data += 1
-            try:
-                jun[name].add(jj)
-            except KeyError:
-                jun[name] = set()
-                jun[name].add(jj)
-        if e_data == 0:
+            break
+        else:
             continue
         dummy[name][sstype[lsv_type][1]].append(lsv_in)
-        return
 
 
 def wrap_result_queue(lsv, name, gc_vfunc, out_queue, chnk, lsv_list=None, lsv_idx=None):
@@ -68,13 +61,9 @@ def wrap_result_file(lsv, name, gc_vfunc, lsv_list, lsv_idx, chnk=None, out_queu
 def lsv_detection(gn, gc_vfunc, chnk=None, lsv_list=None, lsv_idx=None, only_real_data=False, out_queue=None,
                   logging=None):
 
-    const_set = {}
-    local_lsv_jun = {}
-
     dummy = {}
     for name, ind_list in majiq_config.tissue_repl.items():
         dummy[name] = [[], []]
-        const_set[name] = set()
 
     wrap_result = wrap_result_queue
     if out_queue is None:
@@ -82,12 +71,8 @@ def lsv_detection(gn, gc_vfunc, chnk=None, lsv_list=None, lsv_idx=None, only_rea
 
     for ex in gn.get_exon_list():
         try:
-            detect_lsv(ex, gn, SSOURCE, dummy, local_lsv_jun)
-        except InvalidLSV:
-            pass
-
-        try:
-            detect_lsv(ex, gn, STARGET, dummy, local_lsv_jun)
+            detect_lsv(ex, gn, SSOURCE, dummy)
+            detect_lsv(ex, gn, STARGET, dummy)
         except InvalidLSV:
             pass
 

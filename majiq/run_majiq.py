@@ -1,9 +1,8 @@
 import argparse
 from majiq.src.build import build
 from majiq.src.calc_psi import calcpsi
+from majiq.src.constants import *
 # from majiq.src.deltapsi import deltapair, multi_dpsi
-
-VERSION = '1.0.0'
 
 
 def new_subparser():

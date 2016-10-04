@@ -118,18 +118,17 @@ def psi_quantification(args_vals):
         traceback.print_exc()
         sys.stdout.flush()
         raise()
-
 ##
 
 conf = collections.namedtuple('conf', 'name output_dir silent debug markstacks')
+
+
 def parse_and_norm_majiq(fname, replica_num, config):
     try:
         logger = majiq_utils.get_logger("%s/%s_%s.majiq.log" % (config.output_dir, config.name, replica_num),
                                         silent=config.silent, debug=config.debug)
         meta_info, lsv_junc = majiq_io.load_data_lsv(fname, config.name, logger)
-        fitfunc = fit_nb(majiq_io.get_const_junctions(fname, logging=logger), "%s/nbfit" % config.output_dir,
-                         None, logger=logger)
-        filtered_lsv = majiq_norm.mark_stacks(lsv_junc, fitfunc, config.markstacks, logger)
+        filtered_lsv = majiq_norm.mark_stacks(lsv_junc, meta_info.fitfunc, config.markstacks, logger)
 
         sys.stdout.flush()
 
@@ -144,7 +143,7 @@ def parse_and_norm_majiq(fname, replica_num, config):
                              maxshape=(None, effective_readlen))
             f.attrs['meta_info'] = meta_info['group']
             # f.attrs['effective_readlen'] = effective_readlen
-            f.attrs['fitfunc'] = fitfunc
+            f.attrs['fitfunc'] = meta_info.fitfunc
 
             old_shape = nlsvs
             lsv_idx = 0

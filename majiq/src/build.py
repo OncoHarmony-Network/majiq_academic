@@ -18,6 +18,7 @@ from majiq.src.analize import lsv_detection
 from majiq.src.constants import *
 from majiq.src.basic_pipeline import BasicPipeline, pipeline_run
 from majiq.src.polyfitnb import fit_nb
+import datetime
 
 
 def build(args):
@@ -45,49 +46,62 @@ def merging_files(args_vals):
     logger = majiq_utils.get_logger("%s/%s.majiq.log" % (majiq_config.outDir, chnk),
                                     silent=builder_init.silent, debug=builder_init.debug)
 
-    rna_files = []
-    vfunc_gc = []
-    for exp_idx, sam_file in enumerate(builder_init.sam_list):
-        rnaf = h5py.File(get_builder_temp_majiq_filename(majiq_config.outDir, sam_file))
-        rna_files.append(rnaf)
-        if majiq_config.gcnorm:
-            vfunc_gc.append(gc_normalization(rnaf.attrs['gc_values']))
-        else:
-            vfunc_gc.append(None)
-    db_f = h5py.File(builder_init.dbfile)
-    for gne_idx, gne_id in enumerate(list_of_genes):
-        logger.info("[%s] Progress %s/%s" % (chnk, gne_idx, len(list_of_genes)))
-        loop_id = '%s - %s' % (chnk, gne_id)
-        logger.debug("[%s] Retrieving gene" % loop_id)
-        gene_obj = majiq.grimoire.gene.retrieve_gene(gne_id, db_f, all_exp=True)
+    try:
+        rna_files = []
+        vfunc_gc = []
+        for exp_idx, sam_file in enumerate(builder_init.sam_list):
+            rnaf = h5py.File(get_builder_temp_majiq_filename(majiq_config.outDir, sam_file))
+            rna_files.append(rnaf)
+            if majiq_config.gcnorm:
+                vfunc_gc.append(gc_normalization(rnaf.attrs['gc_values']))
+            else:
+                vfunc_gc.append(None)
 
-        junction_list = {}
-        splice_list = set()
+        db_f = h5py.File(builder_init.dbfile)
+        for gne_idx, gne_id in enumerate(list_of_genes):
+            logger.info("[%s] Progress %s/%s" % (chnk, gne_idx, len(list_of_genes)))
+            loop_id = '%s - %s' % (chnk, gne_id)
+            logger.debug("[%s] Retrieving gene" % loop_id)
+            gene_obj = majiq.grimoire.gene.retrieve_gene(gne_id, db_f, all_exp=True)
 
-        for exp_idx, filename in enumerate(builder_init.sam_list):
-            for jj_grp_id in rna_files[exp_idx]["%s/junctions" % gne_id]:
-                jj_grp = rna_files[exp_idx]["%s/junctions/%s" % (gne_id, jj_grp_id)]
-                annot = jj_grp.attrs['annotated']
-                junc = majiq.grimoire.gene.extract_junctions_hdf5(gene_obj, jj_grp, junction_list, annotated=annot,
-                                                                  all_exp=True)
-                junc.set_coverage(exp_idx,
-                                  rna_files[exp_idx][CONST_JUNCTIONS_DATASET_NAME][jj_grp.attrs['coverage_index'], :])
-                splice_list.add((junc.start, '5prime', junc))
-                splice_list.add((junc.end, '3prime', junc))
+            junction_list = {}
+            splice_list = set()
 
-        detect_exons(gene_obj, list(splice_list), None)
+            for exp_idx, filename in enumerate(builder_init.sam_list):
+                for jj_grp_id in rna_files[exp_idx]["%s/junctions" % gne_id]:
+                    jj_grp = rna_files[exp_idx]["%s/junctions/%s" % (gne_id, jj_grp_id)]
+                    annot = jj_grp.attrs['annotated']
+                    junc = majiq.grimoire.gene.extract_junctions_hdf5(gene_obj, jj_grp, junction_list, annotated=annot,
+                                                                      all_exp=True)
+                    junc.set_coverage(exp_idx,
+                                      rna_files[exp_idx][CONST_JUNCTIONS_DATASET_NAME][jj_grp.attrs['coverage_index'], :])
+                    splice_list.add((junc.start, '5prime', junc))
+                    splice_list.add((junc.end, '3prime', junc))
 
-        logger.debug("[%s] Detecting LSV" % loop_id)
-        lsv_detection(gene_obj, gc_vfunc=vfunc_gc, chnk=chnk, out_queue=builder_init.out_queue, logging=None)
-        #lsv_detection(gene_obj, gene_obj, out_files, out_files_idx, only_real_data=builder_init.only_rna, logging=logger)
-        del gene_obj
-        del majiq_config.gene_tlb[gne_id]
-    [xx.close() for xx in rna_files]
+            detect_exons(gene_obj, list(splice_list), None)
+
+            logger.debug("[%s] Detecting LSV" % loop_id)
+            lsv_detection(gene_obj, gc_vfunc=vfunc_gc, chnk=chnk, out_queue=builder_init.out_queue, logging=None)
+            del gene_obj
+            del majiq_config.gene_tlb[gne_id]
+
+    except Exception:
+        majiq_utils.monitor('CHILD %s:: EXCEPT' % chnk)
+        traceback.print_exc()
+        sys.stdout.flush()
+        raise
+
+    finally:
+        [xx.close() for xx in rna_files]
+
     logger.info("[%s] Waiting to be freed" % chnk)
+
     qm = majiq_multi.QueueMessage(QUEUE_MESSAGE_END_WORKER, None, chnk)
     builder_init.out_queue.put(qm, block=True)
     builder_init.lock[chnk].acquire()
     builder_init.lock[chnk].release()
+
+
     logger.info("[%s] End" % chnk)
 
 
@@ -247,6 +261,14 @@ class Builder(BasicPipeline):
             f.create_dataset(LSV_JUNCTIONS_DATASET_NAME,
                              (majiq_config.nrandom_junctions, effective_readlen),
                              maxshape=(None, effective_readlen))
+
+
+            # fill meta info
+            f.attrs['sample_id'] = sam_file
+            path = get_builder_temp_majiq_filename(majiq_config.outDir, sam_file)
+            f.attrs['fitfunc'] = majiq_utils.get_fitfunc_from_rnafile(path)
+            f.attrs['date'] = datetime.datetime.utcnow()
+            f.attrs['VERSION'] = VERSION
 
         majiq_multi.queue_manager(input_h5dfp=None, output_h5dfp=out_files, lock_array=lock_array, result_queue=q,
                                   num_chunks=self.nthreads, logger=self.logger)

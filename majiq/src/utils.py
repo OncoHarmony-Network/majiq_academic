@@ -74,6 +74,12 @@ def get_logger(logger_name, silent=False, debug=False, child=False):
     return logger
 
 
+def get_fitfunc_from_rnafile(path):
+    with h5py.File(path) as p:
+        res = p.attrs['fitfunc']
+    return res
+
+
 """
 Majiq file generation
 """

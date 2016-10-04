@@ -1,3 +1,5 @@
+VERSION = '1.0.0'
+
 LSV_JUNCTIONS_DATASET_NAME = '/lsv_junctions'
 CONST_JUNCTIONS_DATASET_NAME = '/const_junctions'
 

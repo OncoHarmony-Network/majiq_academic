@@ -1,27 +1,23 @@
 import gzip
-import math
 import urllib
 from collections import namedtuple
 from constants import *
 import h5py
 import numpy as np
 import pysam
-import random
 import os
+import pickle
+import traceback
+import sys
+
 from majiq.grimoire.exon import detect_exons, new_exon_definition, set_exons_gc_content
 from majiq.grimoire.gene import Gene, Transcript
 from majiq.grimoire.junction import Junction
-
 import majiq.src.config as majiq_config
 import majiq.src.utils as majiq_utils
-
 from majiq.src.normalize import gc_factor_calculation
 from voila.io_voila import VoilaInput
 from voila.vlsv import VoilaLsv
-import pickle
-
-import traceback
-import sys
 
 # READING BAM FILES
 
@@ -133,16 +129,6 @@ def gc_content_per_file(args_vals, output_gc_vals, outdir):
         traceback.print_exc()
         sys.stdout.flush()
         raise
-
-# def get_exon_gc_content(gc_pairs, sam_list, all_genes):
-#     import multiprocessing as mp
-#
-#     global gg_strand
-#     gc_pairs['GC'] = [[] for xx in xrange(majiq_config.num_experiments)]
-#     gc_pairs['COV'] = [[] for xx in xrange(majiq_config.num_experiments)]
-#     pool = mp.Pool(processes=majiq_config.nthreads, maxtasksperchild=1)
-#     for filename, ff in enumerate(sam_list):
-#         pool.map_async(__gc_content_per_file, majiq_utils.chunks(sam_list, extra=range(len(sam_list))))
 
 
 def rnaseq_intron_retention(gne, samfl, chnk, permissive=True, nondenovo=False, logging=None):
@@ -597,14 +583,13 @@ def load_data_lsv(path, group_name, logger=None):
     """Load data from the preprocess step. Could change to a DDBB someday"""
     data = h5py.File(path)
     lsv_cov_list = []
-    #lsv_gc = []
     lsv_info = []
-    const_info = []
 
-    #num_pos = data[1][0].junction_list.shape[1]
-    meta_info = {}#'test' #data['group_name']
-
+    meta_info = {}
     meta_info['group'] = group_name
+    meta_info['sample_id'] = data.attrs['sample_id']
+    meta_info['fitfunc'] = data.attrs['fitfunc']
+
     try:
         for lsvid in data['LSVs'].keys():
             lsv = data['LSVs/%s' % lsvid]

@@ -166,8 +166,8 @@ class DeltaPsi(BasicPipeline):
             for ii, fname in enumerate(self.files[grp_idx]):
                 meta_info[ii], lsv_junc = majiq_io.load_data_lsv(fname, name, self.logger)
 
-                fitfunc[ii] = self.fitfunc(majiq_io.get_const_junctions(fname, logging=self.logger))
-                filtered_lsv[ii] = majiq_norm.mark_stacks(lsv_junc, fitfunc[ii], self.markstacks, self.logger)
+                # fitfunc[ii] = self.fitfunc(majiq_io.get_const_junctions(fname, logging=self.logger))
+                filtered_lsv[ii] = majiq_norm.mark_stacks(lsv_junc, meta_info[ii].fitfunc, self.markstacks, self.logger)
 
             f = h5py.File(get_quantifier_temp_filename(self.output, name), 'w', compression='gzip', compression_opts=9)
             lsv_ids.append(majiq_filter.quantifiable_in_group_to_hdf5(f, filtered_lsv, self.minpos, self.minreads,
@@ -187,8 +187,6 @@ class DeltaPsi(BasicPipeline):
         self.logger.info("Saving prior matrix for %s..." % self.names)
         majiq_io.dump_bin_file(prior_matrix, get_prior_matrix_filename(self.output,
                                                                        self.names))
-
-
 
         lock_arr = [mp.Lock() for xx in range(self.nthreads)]
         q = mp.Queue()
