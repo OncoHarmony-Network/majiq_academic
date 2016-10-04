@@ -444,7 +444,7 @@ class Queue_Lsv(object):
             if majiq_config.gcnorm:
                 gc_factor[idx] = junc.get_gc_content()
 
-        if gc_vfunc is not None:
+        if majiq_config.gcnorm:
             for eidx in range(len(exp_idxs)):
                 vals = gc_vfunc[eidx](gc_factor)
                 self.coverage[:, eidx, :] = np.multiply(self.coverage[:, eidx, :], vals)
