@@ -441,7 +441,8 @@ class Queue_Lsv(object):
         for idx, junc in enumerate(lsv_obj.junctions):
             self.coverage[idx] = junc.coverage[exp_idxs, :]
             self.junction_id.append(junc.get_id())
-            gc_factor[idx] = junc.get_gc_content()
+            if majiq_config.gcnorm:
+                gc_factor[idx] = junc.get_gc_content()
 
         if gc_vfunc is not None:
             for eidx in range(len(exp_idxs)):
