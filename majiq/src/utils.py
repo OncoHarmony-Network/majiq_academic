@@ -76,7 +76,7 @@ def get_logger(logger_name, silent=False, debug=False, child=False):
 
 def get_fitfunc_from_rnafile(path):
     with h5py.File(path) as p:
-        res = p.attrs['fitfunc']
+        res = p.attrs['one_over_r']
     return res
 
 
