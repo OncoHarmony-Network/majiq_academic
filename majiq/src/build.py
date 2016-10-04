@@ -267,7 +267,7 @@ class Builder(BasicPipeline):
             f.attrs['sample_id'] = sam_file
             path = get_builder_temp_majiq_filename(majiq_config.outDir, sam_file)
             f.attrs['fitfunc'] = majiq_utils.get_fitfunc_from_rnafile(path)
-            f.attrs['date'] = datetime.datetime.utcnow()
+            f.attrs['date'] = datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S')
             f.attrs['VERSION'] = VERSION
 
         majiq_multi.queue_manager(input_h5dfp=None, output_h5dfp=out_files, lock_array=lock_array, result_queue=q,
