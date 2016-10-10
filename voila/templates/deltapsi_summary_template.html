@@ -42,7 +42,7 @@
                     Gene ID: {{ gene_name }};
                 </h3>
 
-                <div>
+                <div class="gene-container">
 
                     <div class="spliceGraphTools">
 
@@ -105,6 +105,7 @@
                     <table id="event_table{{ loop.index }}" class="tablesorter">
                         <thead>
                         <tr>
+                            <th class="short-header">Highlight</th>
                             <th class="short-header">LSV ID</th>
                             <th class="short-header">LSV Type</th>
                             <th class="short-header">PSI {{ lexps[0][0].group }}</th>
@@ -112,7 +113,6 @@
                                 <p class="deltaHeader">&#8592; More in {{ lexps[0][0].group }} | More
                                     in {{ lexps[1][0].group }}
                                     &#8594;</p>
-                                <!--<p style="color: black; margin: auto; display:block; text-align:center; font-weight: bold" >&#8592; More in OldBeta | More in YoungBeta &#8594;</p>-->
                             </th>
 
                             <th class="short-header">PSI {{ lexps[1][0].group }}</th>
@@ -121,6 +121,7 @@
                         </thead>
                         <tfoot>
                         <tr>
+                            <th>Highlight</th>
                             <th>LSV ID</th>
                             <th>LSV Type</th>
                             <th>PSI {{ lexps[0][0].group }}</th>
@@ -128,7 +129,6 @@
                                 <p class="deltaHeader">&#8592; More in {{ lexps[0][0].group }} | More
                                     in {{ lexps[1][0].group }}
                                     &#8594;</p>
-                                <!--<p style="color: black; margin: auto; display:block; text-align:center; font-weight: bold" >&#8592; More in OldBeta | More in YoungBeta &#8594;</p>-->
                             </th>
 
                             <th>PSI {{ lexps[1][0].group }}</th>
@@ -140,6 +140,19 @@
                             <tr class="{{ gene['lsv'].categories2css() }} lsvrow"
                                 data-njuncs="{{ gene['lsv'].njuncs() }}"
                                 data-nexons="{{ gene['lsv'].nexons() }}">
+                                <td>
+                                    <form class='highlight-lsv'>
+                                        <label>
+                                            <input class="highlight" type="checkbox" value="highlight">
+                                             Highlight
+                                        </label>
+                                        <label>
+
+                                            <input class="weighted" type="checkbox" value="weighted">
+                                            Weighted
+                                        </label>
+                                    </form>
+                                </td>
                                 <td>{{ gene['lsv'].get_id() }}</td>
                                 <td>
                                     <p style="top:0;" class="hidden">{{ gene['lsv'].get_type() }}</p>
@@ -152,7 +165,6 @@
                                 </td>
 
                                 <td id="data_psi1_td{{ gene_index }}{{ loop.index }}">
-                                    <!--<img class="expandLsv" src="static/img/arrow_down.png" data-is-expanded=0/>-->
                                     <canvas class="lsvSingleCompactPercentiles"
                                             id="lsvSingleCompact_psi1_{{ loop.index }}"
                                             width="20px" height="70px" data-lsv="[{{ gene['psi1']|to_json }}]">
@@ -176,7 +188,6 @@
 
 
                                 <td id="data_psi2_td{{ gene_index }}{{ loop.index }}">
-                                    <!--<img class="expandLsv" src="static/img/arrow_down.png" data-is-expanded=0/>-->
                                     <canvas class="lsvSingleCompactPercentiles"
                                             id="lsvSingleCompact_psi2_{{ loop.index }}"
                                             width="20px" height="70px" data-lsv="[{{ gene['psi2']|to_json }}]">
@@ -190,9 +201,6 @@
                                            target="_blank">
                                             <img src="static/img/icons/ucsc3.png" title="View in UCSC Genome Browser"/>
                                         </a>
-                                        <!--</p>-->
-                                        <!--<p>-->
-                                        <!--<a href="static/doc/lsvs/{{ gene['lsv'].get_id() }}.gff3" target="_blank"><img src="static/img/icons/gff3.png" title="Go to GFF3 LSV definition"/></a>-->
                                         <a href="../static/doc/lsvs/{{ gene['lsv'].get_id() }}.gtf" target="_blank"><img
                                                 src="static/img/icons/gtf.png" title="Go to GTF LSV definition"/></a>
                                     </p>

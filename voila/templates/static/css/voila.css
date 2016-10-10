@@ -460,3 +460,7 @@ label.toggleSwitch {
 }
 
 /*end toggle switch*/
+
+form.highlight-lsv label {
+    width: 80px;
+}

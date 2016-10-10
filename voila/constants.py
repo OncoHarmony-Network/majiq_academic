@@ -1,5 +1,6 @@
-import math
 import multiprocessing
+
+import math
 
 ANALYSIS_PSI = 'psi'
 ANALYSIS_PSI_GENE = 'psi-gene'
@@ -45,4 +46,5 @@ SUMMARIES_SUBFOLDER = 'summaries'
 DEBUG = 1
 
 # Multi-Processing
-PROCESS_COUNT = multiprocessing.cpu_count()
+PROCESS_COUNT = int(math.ceil(multiprocessing.cpu_count() / 3))
+

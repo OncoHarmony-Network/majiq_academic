@@ -488,6 +488,9 @@ window.splicegraph = function () {
     }
 
     function map_exon_list(exons, junctions) {
+        var i;
+        var k;
+        var j;
         var reshape_exons = false,
             exons_mapped_tmp = [],
             exon_tmp,
@@ -500,7 +503,7 @@ window.splicegraph = function () {
         // Note: to account for overlapping exons_obj where exons_obj within a very large exon have long introns, we should
         // ^^^^^ store the last
         var coords_extra = [];
-        for (var k = 0; k < exons[0].coords_extra.length; k++) {
+        for (k = 0; k < exons[0].coords_extra.length; k++) {
             coords_extra.push(map(function (x) {
                 return add(x, -acc_offset);
             }, exons[0].coords_extra[k]));
@@ -514,27 +517,26 @@ window.splicegraph = function () {
             'lsv_type': exons[0].lsv_type
         };
         exon_tmp.coords_extra = coords_extra;
-//        exons_mapped.push({'coords': map(function(x) { return add(x, -acc_offset);}, resize_exon(exons_obj[0].coords, reshape_exons)), 'type': exons_obj[0].type_exon});
 
         exons_mapped_tmp[0] = exon_tmp;
         last_end = exon_tmp.coords[1];
 
 
-        for (var i = 0; i < exons[0]['a3'].length; i++) {
+        for (i = 0; i < exons[0]['a3'].length; i++) {
             junctions[exons[0]['a3'][i]].coords[1] -= offset;
         }
 
-        for (var i = 0; i < exons[0]['a5'].length; i++) {
+        for (i = 0; i < exons[0]['a5'].length; i++) {
             junctions[exons[0]['a5'][i]].coords[0] -= offset;
         }
 
-        for (var i = 1; i < exons.length; i++) {
+        for (i = 1; i < exons.length; i++) {
             offset = reshape_intron(exons[i - 1], exons[i], reshape_exons);
             acc_offset += offset;
 
             // Check if there are exons_obj to make shorter (intron retention)
             coords_extra = [];
-            for (var k = 0; k < exons[i].coords_extra.length; k++) {
+            for (k = 0; k < exons[i].coords_extra.length; k++) {
                 coords_extra.push(map(function (x) {
                     return add(x, -acc_offset);
                 }, exons[i].coords_extra[k]));
@@ -557,30 +559,28 @@ window.splicegraph = function () {
             }
 
             if (offset) {
-                for (var k = 0; k < index_exons_to_update.length; k++) {
+                for (k = 0; k < index_exons_to_update.length; k++) {
                     if (exons[index_exons_to_update[k]].coords[1] > exons[i].coords[0]) {
                         exons_mapped_tmp[index_exons_to_update[k]].coords[1] -= offset;
                     }
                 }
             }
 
-//            exons_mapped.push({'coords': map(function(x) { return add(x, -acc_offset);}, resize_exon(exons_obj[i].coords, reshape_exons)), 'type': exons_obj[i].type_exon});
-            for (var j = 0; j < exons[i]['a3'].length; j++) {
+            for (j = 0; j < exons[i]['a3'].length; j++) {
                 junctions[exons[i]['a3'][j]].coords[1] -= acc_offset;
             }
 
-            for (var j = 0; j < exons[i]['a5'].length; j++) {
+            for (j = 0; j < exons[i]['a5'].length; j++) {
                 junctions[exons[i]['a5'][j]].coords[0] -= acc_offset;
             }
         }
 
-//        return exons_mapped;
         return exons_mapped_tmp;
     }
 
 
     var render_lsv_marker = function (canvas, exon, exon2, pixel_factor, margin) {
-        var ctx = canvas.getContext("2d")
+        var ctx = canvas.getContext("2d");
         var x1, x2,
             exon_length = exon.coords[1] - exon.coords[0];
 
@@ -669,7 +669,6 @@ window.splicegraph = function () {
         }
     }
 
-
     function renderLsvSpliceGraph(canvas, gene) {
         if (canvas.getContext) {
             // Render LSV representation from a string text representing the LSV i.e.: s|1e1.3o3|2e1.2o3|3e1.2o3|i|4e1.1o3  NEW: Intron Retention (i field)
@@ -692,7 +691,8 @@ window.splicegraph = function () {
             }
 
             if (exon_lsv_coords) {
-                exon_lsv_coords = exon_lsv_coords.replace('(', '').replace(')', '').replace(' ', '').split(',');
+                var regex_coords = /[\[|(](\d+?),\s+(\d+?)[\]|)]/.exec(exon_lsv_coords);
+                exon_lsv_coords = [regex_coords[1], regex_coords[2]];
 
                 // Find LSV exon number in the splice graph
                 for (var exon_i = 0; exon_i < exons_gene.length; exon_i++) {
@@ -893,9 +893,10 @@ window.splicegraph = function () {
 
     }
 
-
     function renderLsvLegend(canvas) {
         if (canvas.getContext) {
+            var i;
+
             // Render LSV representation from a string text representing the LSV i.e.: s|1,2e1.1,1.2|3
             var ctx = canvas.getContext("2d");
 
@@ -925,7 +926,7 @@ window.splicegraph = function () {
 
             // Render exons_obj
             var exons = [];
-            for (var i = 0; i < num_exons; i++) {
+            for (i = 0; i < num_exons; i++) {
                 var exon = {
                     'coords': [Math.round(start), Math.round(start + exon_width)],
                     'type': (direction > 0 && i === 0 || direction < 0 && i === num_exons - 1 ? 1 : 0)
@@ -957,7 +958,7 @@ window.splicegraph = function () {
             coords[0] += exon_width / 2 + direction * exon_width / 4;
             coords[1] = canvas.height - exon_height - margins[3];
 
-            for (var i = 0; i < list_ss.length; i++) {
+            for (i = 0; i < list_ss.length; i++) {
                 if (list_ss.length === 1) {
                     coords[0] += direction * (exon_width / 4 );
                 }
@@ -969,7 +970,7 @@ window.splicegraph = function () {
             }
 
             // Render junctions from black box
-            for (var i = 0; i < restExons.length; i++) {
+            for (i = 0; i < restExons.length; i++) {
                 var index_ss = restExons[i].split('.');
                 var x_dest = exons[index_first].coords[(direction > 0 ? 0 : 1)];
                 x_dest += direction * index_ss[0] * 2 * exon_width;
@@ -990,11 +991,6 @@ window.splicegraph = function () {
      * Main - Beginning of the execution
      * */
 
-//        $('.floatingLegend').each(function () {
-//            if ($(this)[0].getContext) {
-//                renderFloatingLegend($(this)[0]);
-//            }
-//        });
 
         // add sortable functionality to the table
     var exon_table = $('.exon_table');
@@ -1002,10 +998,6 @@ window.splicegraph = function () {
         exon_table.tablesorter();
     }
 
-//        var lsv_canvases = $('.lsvLegend');
-//        for (var lsv_index = 0; lsv_index < lsv_canvases.length; lsv_index++) {
-//            renderLsvLegend(lsv_canvases[lsv_index]);
-//        }
 
     var canvases = $('.spliceGraph');
 
@@ -1076,4 +1068,3 @@ window.splicegraph = function () {
         }
     }
 };
-

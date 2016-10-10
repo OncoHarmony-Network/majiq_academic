@@ -69,6 +69,10 @@ $(document).ready(function () {
         }
     });
 
+    $('.lsvSelect').on('change', function () {
+        splicegraph().selectLSV(this, this);
+    });
+
     $('.tablesorter').each(function () {
         $(this).tablesorter({
             sortList: [
@@ -1185,15 +1189,17 @@ function translate_lsv_bins(lsv_bins, num_samples) {
     for (var lsv_way = 0; lsv_way < lsv_bins.length; lsv_way++) {
         var tmp_bins = [];
         var bins_size = lsv_bins[lsv_way].length;
+
         for (var ii = 1; ii < bins_size + 1; ii++) {
+
             var num_copies = Math.round(num_samples * lsv_bins[lsv_way][ii - 1]);
+
             for (var bins_i = 0; bins_i < num_copies; bins_i++) {
                 tmp_bins.push((1 / bins_size) / 2 + ((ii - 1) / bins_size));
             }
         }
         adjusted_bins.push(tmp_bins);
     }
-
     return adjusted_bins
 }
 

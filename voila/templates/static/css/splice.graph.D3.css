@@ -2,9 +2,7 @@
     fill: grey;
     fill-opacity: .3;
     stroke: black;
-    /*    stroke-lineca: round;*/
     stroke-linejoin: round;
-    alpha: 9;
 }
 
 .exon.found {
@@ -52,7 +50,6 @@
 .ssite3, .ssite5 {
     stroke-opacity: 0.7;
     stroke-dasharray: 2, 2;
-    alpha: 1;
 }
 
 .ssite3.found, .ssite5.found, .junction.found, .intronret.found, .irlines.found {
@@ -81,7 +78,8 @@
     stroke-dasharray: 5, 2;
 }
 
-.ssite3.highlighted, .ssite5.highlighted, .exon.hovered, .junction.hovered, .intronret.hovered {
+.ssite3.highlighted, .ssite5.highlighted, .exon.hovered, .junction.hovered,
+.intronret.hovered, .exon.highlight-lsv {
     fill: orange;
     stroke: orange;
     stroke-width: 2;
@@ -115,7 +113,8 @@
     stroke-opacity: 0.1;
 }
 
-.ssite3.blurred, .ssite5.blurred, .readcounts.blurred, .readcounts.sgfilter, .irreads.sgfilter {
+.ssite3.blurred, .ssite5.blurred, .readcounts.blurred, .readcounts.sgfilter,
+.irreads.sgfilter {
     fill-opacity: 0.1;
 }
 
@@ -125,18 +124,6 @@
 }
 
 .tooltipD3 {
-    /*position: absolute;*/
-    /*width: 170px;*/
-    /*height: auto;*/
-    /*padding: 10px;*/
-    /*background-color: white;*/
-    /*-webkit-border-radius: 10px;*/
-    /*-moz-border-radius: 10px;*/
-    /*border-radius: 10px;*/
-    /*-webkit-box-shadow: 4px 4px 10px rgba(0, 0, 0, 0.4);*/
-    /*-moz-box-shadow: 4px 4px 10px rgba(0, 0, 0, 0.4);*/
-    /*box-shadow: 4px 4px 10px rgba(0, 0, 0, 0.4);*/
-    /*pointer-events: none;*/
     display: inline-block;
 }
 
@@ -153,17 +140,22 @@
 
 .toogleScale {
     cursor: pointer;
-    /*float: right;*/
-    /*position: absolute;*/
 }
 
 .newpartialexon {
     fill: green;
     fill-opacity: .3;
     stroke: green;
-    stroke-lineca: round;
     stroke-linejoin: round;
     stroke-dasharray: 5, 2;
-    alpha: 9;
     pointer-events: none;
+}
+
+.highlight-lsv-blurred {
+    opacity: 0;
+}
+
+.junction.highlight-lsv {
+    stroke-dasharray: none;
+    stroke-width: 1.5;
 }
