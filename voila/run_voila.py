@@ -678,7 +678,6 @@ def main():
     end_time = time.time()
     elapsed_str = utils_voila.secs2hms(end_time - start_time)
     input_parsed.logger.info("Execution time: %s" % elapsed_str)
-    sys.exit(1)
 
 
 if __name__ == '__main__':

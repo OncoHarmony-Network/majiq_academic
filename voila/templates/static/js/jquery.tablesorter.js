@@ -1,15 +1,15 @@
 /*
- * 
+ *
  * TableSorter 2.0 - Client-side table sorting with ease!
  * Version 2.0.5b
  * @requires jQuery v1.2.3
- * 
+ *
  * Copyright (c) 2007 Christian Bach
  * Examples and docs at: http://tablesorter.com
  * Dual licensed under the MIT and GPL licenses:
  * http://www.opensource.org/licenses/mit-license.php
  * http://www.gnu.org/licenses/gpl.html
- * 
+ *
  */
 /**
  *
@@ -846,7 +846,7 @@
                     if (a) {
                         parsers.push(parser);
                     }
-                    ;
+
                 };
                 this.addWidget = function (widget) {
                     widgets.push(widget);
@@ -1030,13 +1030,13 @@
     ts.addWidget({
         id: "renderCanvas",
         format: function (table) {
-
-            $(table.parentElement).children('.spliceDiv').each(function () {
+            d3.select(table.parentNode).selectAll('.spliceDiv').each(function () {
                 /**
                  * D3 - SpliceGraph
                  * */
 
                 var genes_obj = JSON.parse($(this)[0].getAttribute('data-exon-list').replace(/\\'/g, "\"").replace(/'/g, ""));
+
 
                 var exons_obj = genes_obj.exons;
                 var junctions_obj = genes_obj.junctions;
@@ -1065,110 +1065,120 @@
                 }
 
                 // toggle norm flag on read counts button and redraw splicegraph
-                d3.select(this).select('.toggleReadCounts').on('click', function () {
-                    var correctedClassed = !d3.select(this).classed('corrected');
-                    d3.select(this).classed('corrected', correctedClassed);
-                    this.innerHTML = correctedClassed ? 'CR' : 'RR';
-                    spliceg.call(chart)
+                d3.select(this.parentNode.parentNode).select('.readCounts').on('click', function () {
+                    var spliceDivs = this.parentNode.parentNode.parentNode.querySelectorAll('.spliceDiv');
+                    d3.selectAll(spliceDivs).call(chart);
                 });
 
-
-                d3.select(this).select('.toogleScale').on('click', function () {
-                    var index_gene = parseInt(this.parentNode.parentNode.id.split("_")[1]);
-                    if ($(this.parentNode.parentNode).hasClass('exp1') || $(this.parentNode.parentNode).hasClass('exp2')) {
-                        index_gene *= 2;
-                        if ($(this.parentNode.parentNode).hasClass('exp2')) {
-                            index_gene++;
+                d3.select(this.parentNode.parentNode).select('.toogleScale').on('click', function () {
+                    var toogleScale = this;
+                    $(this).toggleClass('scaled');
+                    d3.select(this.parentNode.parentNode).selectAll('.spliceDiv').each(function () {
+                        var index_gene = parseInt(this.id.split('_')[1]);
+                        if (d3.select(this).classed('exp1') || d3.select(this).classed('exp2')) {
+                            index_gene *= 2;
+                            if (d3.select(this).classed('exp2')) {
+                                index_gene++
+                            }
                         }
-                    }
-                    if (d3.select(this).classed('scaled')) {
-                        d3.select(this.parentNode.parentNode)
-                            .datum([gene_objs[index_gene].orig.exons, gene_objs[index_gene].orig.junc, gene_objs[index_gene].strand])
-                            .call(chart);
-                        d3.select(this).classed('scaled', false);
-                    } else {
-                        d3.select(this.parentNode.parentNode)
-                            .datum([gene_objs[index_gene].mapped[0], gene_objs[index_gene].mapped[1], gene_objs[index_gene].strand])
-                            .call(chart);
-                        d3.select(this).classed('scaled', true);
-                    }
+
+                        var gene_datum = geneDatum(toogleScale, gene_objs[index_gene]);
+                        d3.select(this).datum(gene_datum).call(chart);
+                    });
 
                 });
 
-                d3.select(this).select('.zoomInSplice').on('click', function () {
+
+                d3.select(this.parentNode.parentNode).select('.zoomInSplice').on('click', function () {
                     chart.width(chart.width() + 600);
                     chart.height(chart.height() + 100);
-                    spliceg.call(chart);
-//                    $('.filters').css({'left': parseInt($('.filters').css('left').split('px')[0]) + 600 + 'px'});
+                    d3.select(this.parentNode.parentNode).selectAll('.spliceDiv').call(chart);
                 });
 
-                d3.select(this).select('.zoomOutSplice').on('click', function () {
+                d3.select(this.parentNode.parentNode).select('.zoomOutSplice').on('click', function () {
                     chart.width(chart.width() - 600);
                     chart.height(chart.height() - 100);
-                    spliceg.call(chart);
-//                    $('.filters').css({'left': Math.max(1080, parseInt($('.filters').css('left').split('px')[0]) - 600) + 'px'});
+                    d3.select(this.parentNode.parentNode).selectAll('.spliceDiv').call(chart);
                 });
 
-                d3.select(this).select('.zoomResetSplice').on('click', function () {
+                d3.select(this.parentNode.parentNode).select('.zoomResetSplice').on('click', function () {
                     chart.width(1000);
                     chart.height(160);
-                    spliceg.call(chart);
-
+                    d3.select(this.parentNode.parentNode).selectAll('.spliceDiv').call(chart);
                 });
 
+                d3.select(this.parentNode.parentNode).selectAll('.weighted').on('change', function () {
+                    var highlight = $(this).closest('form').find('.highlight').get(0);
+                    var geneContainer = $(this).closest('.gene-container').get(0);
+                    if (this.checked && !highlight.checked)
+                        highlight.checked = true;
+                    d3.select(geneContainer).selectAll('.spliceDiv').call(chart);
+                });
+
+                d3.select(this.parentNode.parentNode).selectAll('.highlight').on('change', function () {
+                    var geneContainer = $(this).closest('.gene-container').get(0);
+                    d3.select(geneContainer).selectAll('.spliceDiv').call(chart);
+                });
 
                 /**
                  * Splice Graph selector
                  * */
-                var sgSelectors = $(this).find('.spliceGraphSelector');
-                if (sgSelectors.length) {
-                    sgSelectors.change(function () {
-                        var index_gene = 2 * parseInt(this.parentNode.parentNode.id.split("_")[1]);
-                        if ($(this.parentElement.parentElement).hasClass('exp2')) {
-                            index_gene++;
-                        }
+                var spliceGraphSelector = d3.select(this.parentNode.parentNode).selectAll('.spliceGraphSelector');
+                spliceGraphSelector.on('change', function () {
+                    var parent = this.parentNode.parentNode;
+                    var toogleScale = parent.querySelector('.toogleScale');
+                    var spliceDiv;
 
-                        var genes_obj;
-                        try {
-                            genes_obj = JSON.parse(JSON.parse(this.value.replace(/\\'/g, "\"").replace(/'/g, "")));
-                        } catch (syntaxError) {
-                            genes_obj = JSON.parse(this.value.replace(/\\'/g, "\"").replace(/'/g, ""));
-                        }
+                    if (d3.select(this).classed('exp2'))
+                        spliceDiv = parent.querySelector('.spliceDiv.exp2');
+                    else if (d3.select(this).classed('exp1'))
+                        spliceDiv = parent.querySelector('.spliceDiv.exp1');
 
+                    var index_gene = 2 * spliceDiv.id.split("_")[1];
+                    if ($(parent).hasClass('exp2'))
+                        index_gene++;
 
-                        var exons_obj = genes_obj.exons;
-                        var junctions_obj = genes_obj.junctions;
+                    var genes_obj;
+                    try {
+                        genes_obj = JSON.parse(JSON.parse(this.value.replace(/\\'/g, "\"").replace(/'/g, "")));
+                    } catch (syntaxError) {
+                        genes_obj = JSON.parse(this.value.replace(/\\'/g, "\"").replace(/'/g, ""));
+                    }
 
-                        var orig_objs = {'exons': add_keys(clone(exons_obj)), 'junc': clone(junctions_obj)};
+                    var exons_obj = genes_obj.exons;
+                    var junctions_obj = genes_obj.junctions;
 
-                        var exons_mapped = map_exon_list(exons_obj, junctions_obj); //exons_obj; //
-                        exons_mapped = add_keys(exons_mapped);
+                    var orig_objs = {'exons': add_keys(clone(exons_obj)), 'junc': clone(junctions_obj)};
 
-                        gene_objs[index_gene] = {
-                            'orig': orig_objs,
-                            'mapped': [exons_mapped, junctions_obj],
-                            'strand': genes_obj.strand
-                        };
+                    var exons_mapped = map_exon_list(exons_obj, junctions_obj);
+                    exons_mapped = add_keys(exons_mapped);
 
-                        d3.select(this.parentNode.parentNode)
-                            .datum([gene_objs[index_gene].mapped[0], gene_objs[index_gene].mapped[1], gene_objs[index_gene].strand])
-                            .call(chart);
-                        $(this.parentNode.parentNode).children('.toogleScale').addClass('scaled');
+                    gene_objs[index_gene] = {
+                        'orig': orig_objs,
+                        'mapped': [exons_mapped, junctions_obj],
+                        'strand': genes_obj.strand
+                    };
 
-                    });
+                    var gene_datum = geneDatum(toogleScale, gene_objs[index_gene]);
+                    d3.select(spliceDiv).datum(gene_datum).call(chart);
+
+                });
+
+                function geneDatum(toogleScale, gene) {
+                    if (d3.select(toogleScale).classed('scaled'))
+                        return [gene.mapped[0], gene.mapped[1], gene.strand];
+                    else
+                        return [gene.orig.exons, gene.orig.junc, gene.strand];
                 }
-
             });
 
             $('.lsvLegend', table).each(function () {
                 splicegraph().renderLsvSpliceGraph(this, gene_obj_list[this.id]); //
             });
 
-
             /**
              * Single LSV visualization
              */
-
             $('.lsvSingleCompactPercentiles', table).each(function () {
                 drawLSVCompactStackBars($(this)[0], 1);
 
@@ -1182,73 +1192,30 @@
                         return;
                     }
 
-                    var lsv_list = JSON.parse($(this)[0].getAttribute("data-lsv").replace(/\\\"/g, "\'").replace(/\"/g, "").replace(/'/g, "\""));  // NOTE: lsv_data is an array to support groups
+                    // NOTE: lsv_data is an array to support groups
+                    var lsv_list = JSON.parse(
+                        $(this)[0]
+                            .getAttribute("data-lsv")
+                            .replace(/\\\"/g, "\'")
+                            .replace(/\"/g, "")
+                            .replace(/'/g, "\"")
+                    );
 
-                    if (1) { //(lsv_list[0].bins.length > 2) {
-                        var sampled_bins = translate_lsv_bins(lsv_list[0].bins, 1000);
+                    var sampled_bins = translate_lsv_bins(lsv_list[0].bins, 1000);
 
-                        var svg = renderViolin($(this).parent()[0].id, sampled_bins, table.id, {
-                            'delta': 0,
-                            'num_bins': lsv_list[0].bins[0].length
-                        });
-                        $(svg).on("click", function (e) {
-                            e.preventDefault();
-                            $(this).toggle("show");
-                            var lsvCompact = $(this).parent().children('.lsvSingleCompactPercentiles');
-                            if (lsvCompact.length) {
-                                $(lsvCompact[0]).toggle();
-                            }
-                        });
-                    } else {
-                        var parentTd = $(this).parent()[0];
-                        var canvasChildren = $(parentTd).children('.extendedPsi');
-                        var canvasBarchart,
-                            canvasSettings;
-                        if (canvasChildren.length) {
-                            canvasBarchart = canvasChildren[0];
-                            canvasSettings = initLargeCanvasSettings(lsv_list[0].bins[0].length, canvasBarchart);
-                            $(canvasBarchart).toggle();
-                        } else {
-                            canvasBarchart = $('<canvas/>', {
-                                'id': "barchart_" + $(this).closest('td')[0].id,
-                                'class': 'extendedPsi tooltip',
-                                'Title': 'Mousewheel up/down to zoom in/out'
-                            })[0];
-                            canvasBarchart.width = 419;
-                            canvasBarchart.height = 200;
-                            canvasBarchart.setAttribute('data-lsv', JSON.stringify(lsv_list[0]));
-
-                            canvasSettings = initLargeCanvasSettings(lsv_list[0].bins[0].length, canvasBarchart);
-                            $(parentTd).append(canvasBarchart);
-                            initExpandedDeltaCanvas(canvasBarchart, canvasSettings);
-
-                            $(canvasBarchart).on("click", function (e) {
-                                e.preventDefault();
-                                $(this).toggle("show");
-                                var lsvCompact = $(this).parent().children(".lsvSingleCompactPercentiles");
-                                if (lsvCompact.length) {
-                                    $(lsvCompact[0]).toggle();
-                                }
-                            });
-
-                            $(canvasBarchart).on('mousewheel', function (event) {
-                                event.preventDefault();
-                                var deltaY = event.deltaY;
-                                if (!deltaY) {
-                                    deltaY = -event.originalEvent.deltaY;
-                                }
-                                if (deltaY > 0) {
-                                    drawExpDeltaWithCanvasId($(this)[0].id, 1, canvasSettings);
-                                } else if (deltaY < 0) {
-                                    drawExpDeltaWithCanvasId($(this)[0].id, -1, canvasSettings);
-                                }
-                            });
-
-                            $('.tooltip').tooltipster({
-                                theme: 'tooltipster-shadow'
-                            });
+                    var svg = renderViolin($(this).parent()[0].id, sampled_bins, table.id, {
+                        'delta': 0,
+                        'num_bins': lsv_list[0].bins[0].length
+                    });
+                    $(svg).on("click", function (e) {
+                        e.preventDefault();
+                        $(this).toggle("show");
+                        var lsvCompact = $(this).parent().children('.lsvSingleCompactPercentiles');
+                        if (lsvCompact.length) {
+                            $(lsvCompact[0]).toggle();
                         }
-                    }
+                    });
+
                 });
 
             });

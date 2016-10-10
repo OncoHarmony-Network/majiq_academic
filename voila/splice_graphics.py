@@ -1,10 +1,12 @@
 import json
+import multiprocessing
 from multiprocessing import Manager, Pool
 from multiprocessing.process import Process
 from multiprocessing.queues import JoinableQueue
 
 import h5py
 
+from voila.constants import PROCESS_COUNT
 from voila.hdf5 import HDF5
 
 
@@ -249,7 +251,7 @@ def splice_graph_from_hdf5(hdf5_filename, logger):
     producer_proc.daemon = True
     producer_proc.start()
 
-    pool = Pool(None, worker)
+    pool = Pool(PROCESS_COUNT, worker)
 
     producer_proc.join()
     queue.join()
