@@ -462,5 +462,6 @@ label.toggleSwitch {
 /*end toggle switch*/
 
 form.highlight-lsv label {
+    display: inline-block;
     width: 80px;
 }

@@ -31,7 +31,7 @@
     stroke-linejoin: round;
 }
 
-.halfexon.hovered {
+.halfexon.hovered, .halfexon.selected {
     fill: purple;
     stroke: purple;
     stroke-width: 2;
@@ -78,8 +78,8 @@
     stroke-dasharray: 5, 2;
 }
 
-.ssite3.highlighted, .ssite5.highlighted, .exon.hovered, .junction.hovered,
-.intronret.hovered, .exon.highlight-lsv {
+.ssite3.highlighted, .ssite5.highlighted, .exon.hovered, .junction.hovered, .intronret.hovered, .exon.highlight-lsv,
+.junction.selected, .exon.selected, .intronret.selected {
     fill: orange;
     stroke: orange;
     stroke-width: 2;
@@ -113,8 +113,7 @@
     stroke-opacity: 0.1;
 }
 
-.ssite3.blurred, .ssite5.blurred, .readcounts.blurred, .readcounts.sgfilter,
-.irreads.sgfilter {
+.ssite3.blurred, .ssite5.blurred, .readcounts.blurred, .readcounts.sgfilter, .irreads.sgfilter {
     fill-opacity: 0.1;
 }
 
