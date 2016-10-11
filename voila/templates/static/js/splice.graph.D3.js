@@ -198,6 +198,10 @@ var exonKey = function (d) {
 
 
 function toolTipD3(strand, begin, end, el) {
+    // if anything is selected, don't change the tool tip
+    if ($(el).closest('.splice-div-container').find('.selected').length)
+        return;
+
     if (d3.select(el).classed('halfexon'))
         if (d3.select(el).classed('missingStart'))
             begin = 'MISSING';
@@ -636,7 +640,7 @@ function spliceGraphD3() {
                     .rangeRound([padding[3], width - padding[1]]);
             };
 
-            var selectLSV = function (spliceDiv, strand, d3Els) {
+            var highlightLSV = function (spliceDiv, strand, d3Els) {
                 var lsvID;
                 var coords;
                 var origCoords;
@@ -651,7 +655,7 @@ function spliceGraphD3() {
                 var w;
                 var isWeighted;
 
-                var selectLSVs = spliceDiv.parentNode.parentNode.querySelectorAll('[value="highlight"]:checked');
+                var highlightLSVs = spliceDiv.parentNode.parentNode.querySelectorAll('[value="highlight"]:checked');
                 var colors = ['red', 'blue', 'green', 'purple', 'orange', 'brown', 'pink', 'grey'];
 
                 var exons = orig_objs.exons.filter(function (d) {
@@ -683,15 +687,15 @@ function spliceGraphD3() {
                     }, []);
                 };
 
-                if (selectLSVs.length > 0) {
+                if (highlightLSVs.length) {
                     d3Els.junctions.classed('highlight-lsv-blurred', true);
                     d3Els.numReads.classed('highlight-lsv-blurred', true);
                     d3Els.irReads.classed('highlight-lsv-blurred', true);
                     d3Els.irLines.classed('highlight-lsv-blurred', true);
                 }
 
-                selectLSVs.forEach(function (selectLSV) {
-                    row = selectLSV.parentNode.parentNode.parentNode.parentNode.querySelectorAll('td');
+                highlightLSVs.forEach(function (highlighLSV) {
+                    row = highlighLSV.parentNode.parentNode.parentNode.parentNode.querySelectorAll('td');
                     isWeighted = row[0].querySelector('.weighted:checked');
                     lsvID = row[1].textContent.split(':');
                     coords = lsvID[1].split("-");
@@ -824,6 +828,28 @@ function spliceGraphD3() {
                     d3.select(this).classed("hovered", false);
                 });
 
+            /**
+             * Add mouse click.
+             */
+            [junctions, exons, introns_ret, halfExons].forEach(function (els) {
+                els.on('click', function () {
+                    var className = 'selected';
+                    var isThisSelected = d3.select(this).classed(className);
+                    var spliceDivContainer = $(this).closest('.splice-div-container').get(0);
+                    var event = document.createEvent('SVGEvents');
+
+                    // un-select all elements
+                    d3.select(spliceDivContainer).selectAll('.junction, .exon, .intronret, .halfexon').classed(className, false);
+
+                    // trigger mouseover event while nothing's selected to update tool tip
+                    event.initEvent('mouseover', true, true);
+                    this.dispatchEvent(event);
+
+                    // toggle selected on this element
+                    d3.select(this).classed(className, !isThisSelected);
+                });
+            });
+
             if (strand == '-')
                 d3.select(this).selectAll(":not(text)").attr("transform", "translate(" + width + ",0) scale(-1 , 1)");
 
@@ -837,7 +863,7 @@ function spliceGraphD3() {
                 'irReads': irReads
             };
 
-            selectLSV(this, strand, d3Elements);
+            highlightLSV(this, strand, d3Elements);
 
         });
 
