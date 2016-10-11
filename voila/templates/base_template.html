@@ -13,7 +13,7 @@
 
     {% block css %}
     {% endblock %}
-    <script src="static/js/jquery-1.11.1.min.js" type="text/javascript"></script>
+    <script src="static/js/jquery-3.1.1.min.js" type="text/javascript"></script>
     <script src="static/js/d3.v3.min.js" type="text/javascript" language="javascript"></script>
     {% block js %}
     {% endblock %}
@@ -22,9 +22,9 @@
 <body>
 <header>
     <a href="http://www.biociphers.org" target="_blank"><img class="logoBiociphers"
-                                                             src="static/img/icons/biociphers_logo.png"/></a>
+                                                             src="static/img/icons/biociphers_logo.png" alt=""/></a>
     <span class="headerText">
-                {% block header%}
+                {% block header %}
                 {% endblock %}
             </span>
 </header>

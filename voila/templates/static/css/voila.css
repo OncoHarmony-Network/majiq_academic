@@ -277,7 +277,7 @@ footer {
     padding-right: 30px;
 }
 
-.spliceDiv {
+.splice-div-container {
     width: 1000px;
     overflow: scroll;
     overflow-y: hidden;
@@ -285,7 +285,7 @@ footer {
 }
 
 .spliceGraphTools {
-    position: absolute;
+    padding-bottom: 3px;
 }
 
 .spliceGraphTools > * {
@@ -411,4 +411,57 @@ table.tablesorter tbody td.njunc-bg-15 {
 
 .toggleReadCounts {
     width: 32px;
+}
+
+form#sg-filters {
+    display: none;
+}
+
+/*toggle switch*/
+input.toggleSwitch {
+    display: none;
+}
+
+div.slider {
+    position: relative;
+    display: inline-block;
+    width: 90px;
+    height: 6px;
+    background-color: lightgrey;
+}
+
+div.slider:before {
+    position: absolute;
+    content: "";
+    height: 4px;
+    width: 23px;
+    left: 1px;
+    bottom: 1px;
+    background-color: #20A0DF;
+    transition: 0.1s;
+}
+
+input:checked + div.slider {
+    background-color: lightgrey;
+}
+
+input:checked + div.slider:before {
+    transform: translateX(45px) scaleX(2.7);
+}
+
+label.toggleSwitch {
+    font-size: 10px;
+    display: inline-block;
+    color: black;
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+    user-select: none;
+}
+
+/*end toggle switch*/
+
+form.highlight-lsv label {
+    display: inline-block;
+    width: 80px;
 }

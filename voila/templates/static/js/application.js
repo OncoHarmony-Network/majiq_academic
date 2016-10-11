@@ -26,29 +26,39 @@ $(document).ready(function () {
     window.gene_objs = [];
     window.gene_obj_list = [];
 
+    var $sgFilters = $('form#sg-filters');
+
+    $("#simplified").on('change', function () {
+        $sgFilters.slideToggle(100).submit();
+    });
+
     /**
      * Process splice graph filters
      */
-    $("#sg-filters").on('keyup submit', function (event) {
+    $sgFilters.on('keyup submit', function (event) {
         // prevent form submit
         event.preventDefault();
 
         // variables
-        var filterNumReads = parseInt(d3.select("[name='numReads']").node().value);
+        var numReads = this.querySelector("[name='numReads']");
+        var numReadsValue = parseInt(numReads.value);
+        var simplified = document.querySelector("[name='simplified']").checked;
         var currentNumReads;
-        var displayNormReads;
 
         // filter elements with these four classes
         ['.junction', '.readcounts', '.irlines', '.irreads'].forEach(function (value) {
             d3.selectAll(value).classed('sgfilter', function (d) {
+                if (!simplified) return false;
+
                 // check read counts toggle button for read counts state
-                displayNormReads = d3.select(this.parentNode.parentNode).select('.toggleReadCounts').classed('corrected');
+                var toggleReadCounts = this.parentNode.parentNode.parentNode.parentNode.querySelector('.readCounts');
+                var displayNormReads = toggleReadCounts.checked;
 
                 // get read counts based on this specific splice graphs state
                 currentNumReads = displayNormReads ? d.num_clean_reads : d.num_reads;
 
                 // return if this element should have the 'sgfilter' class
-                return !isNaN(filterNumReads) && currentNumReads <= filterNumReads
+                return !isNaN(numReadsValue) && currentNumReads <= numReadsValue;
             });
         })
     });
@@ -57,6 +67,10 @@ $(document).ready(function () {
         if ($(this)[0].getContext) {
             splicegraph().renderFloatingLegend($(this)[0]);
         }
+    });
+
+    $('.lsvSelect').on('change', function () {
+        splicegraph().selectLSV(this, this);
     });
 
     $('.tablesorter').each(function () {
@@ -451,9 +465,6 @@ function drawLSVCompactStackBars(canvas, fillMode) {
         } else if (fillMode === 1) {
             // Fill from center to both left and right
             // Second approach, use 1 - the variance
-//            console.log(group.variances[lsv_count]);
-//            console.log(d3.variance(translate_lsv_bins(group.bins[lsv_count],1000));
-
             //area[0] = (1 - group.variances[lsv_count]) * (x2 - x1);
             area[0] = x2 - x1;
             area[1] = y2 - y1;
@@ -1012,8 +1023,6 @@ function renderViolin(htmlElementId, results, tableId, params) {
             .data([
                 {offset: "0%", color: getColor(count, BREWER_PALETTE, 1)},
                 {offset: "100%", color: getColor(count, BREWER_PALETTE, 1)} //"steelblue" "gray"
-//                {offset: "50%", color: "gray"},
-
             ])
             .enter().append("stop")
             .attr("offset", function (d) {
@@ -1032,22 +1041,10 @@ function renderViolin(htmlElementId, results, tableId, params) {
             .attr("class", "area")
             .attr("d", area);
 
-//        gPlus.append("path")
-//            .datum(data)
-//            .attr("class", "violin")
-//            .attr("d", line);
-
-
         gMinus.append("path")
             .datum(data)
             .attr("class", "area")
             .attr("d", area);
-
-//        gMinus.append("path")
-//            .datum(data)
-//            .attr("class", "violin")
-//            .attr("d", line);
-
 
         gPlus.attr("transform", "rotate(90,0,0)  translate(0,-" + width + ")");
         gMinus.attr("transform", "rotate(90,0,0) scale(1,-1)");
@@ -1192,16 +1189,17 @@ function translate_lsv_bins(lsv_bins, num_samples) {
     for (var lsv_way = 0; lsv_way < lsv_bins.length; lsv_way++) {
         var tmp_bins = [];
         var bins_size = lsv_bins[lsv_way].length;
+
         for (var ii = 1; ii < bins_size + 1; ii++) {
+
             var num_copies = Math.round(num_samples * lsv_bins[lsv_way][ii - 1]);
+
             for (var bins_i = 0; bins_i < num_copies; bins_i++) {
                 tmp_bins.push((1 / bins_size) / 2 + ((ii - 1) / bins_size));
             }
-//            console.log((1/bins_size)/2 + ((ii-1) / bins_size));
         }
         adjusted_bins.push(tmp_bins);
     }
-
     return adjusted_bins
 }
 

@@ -1,4 +1,7 @@
-# Parser
+import multiprocessing
+
+import math
+
 ANALYSIS_PSI = 'psi'
 ANALYSIS_PSI_GENE = 'psi-gene'
 ANALYSIS_DELTAPSI = 'deltapsi'
@@ -41,3 +44,7 @@ SUMMARIES_SUBFOLDER = 'summaries'
 
 # Debugging
 DEBUG = 1
+
+# Multi-Processing
+PROCESS_COUNT = int(math.ceil(multiprocessing.cpu_count() / 3))
+

@@ -2,225 +2,238 @@
 {% block title %}LSV &Delta;&Psi; Gene Summary{% endblock %}
 
 {% block css %}
-<link rel="stylesheet" type="text/css" href="static/css/splice.graph.D3.css"/>
-<link rel="stylesheet" type="text/css" href="static/css/bootstrap-frm.css"/>
+    <link rel="stylesheet" type="text/css" href="static/css/splice.graph.D3.css"/>
+    <link rel="stylesheet" type="text/css" href="static/css/bootstrap-frm.css"/>
 {% endblock %}
 
 {% block js %}
-<script src="static/js/splice.graph.js" type="text/javascript" language="javascript"></script>
-<script src="static/js/splice.graph.D3.js" type="text/javascript" language="javascript"></script>
-<script src="static/js/jquery.tablesorter.js" type="text/javascript"></script>
-<script src="static/js/jquery.tablesorter.pager.js" type="text/javascript"></script>
-<script src="static/js/jquery.mousewheel.js" type="text/javascript"></script>
-<script src="static/js/application.js" type="text/javascript"></script>
-<script type="text/javascript" src="static/js/jquery.tooltipster.min.js"></script>
+    <script src="static/js/splice.graph.js" type="text/javascript" language="javascript"></script>
+    <script src="static/js/splice.graph.D3.js" type="text/javascript" language="javascript"></script>
+    <script src="static/js/jquery.tablesorter.js" type="text/javascript"></script>
+    <script src="static/js/jquery.tablesorter.pager.js" type="text/javascript"></script>
+    <script src="static/js/jquery.mousewheel.js" type="text/javascript"></script>
+    <script src="static/js/application.js" type="text/javascript"></script>
+    <script type="text/javascript" src="static/js/jquery.tooltipster.min.js"></script>
 {% endblock %}
 
 {% block header %}
-{% if namePage %}Result page: {{ namePage }}{% endif %}
+    {% if namePage %}Result page: {{ namePage }}{% endif %}
 {% endblock %}
 
 {% block content %}
-<section>
-    <fieldset class="section-border events-summary">
-        <legend>LSV summary</legend>
-        <div class="floatingCanvas">
-            <canvas class="floatingLegend" width="500px" height="40px">
-                This browser or document mode doesn't support canvas
-            </canvas>
-        </div>
-        {% for gene_name, gene_value in genes_dict.iteritems() %}
-        {% set gene_index = loop.index -1 %}
-        <h2>Gene name: <a name="{{ genes_exps_list[0][genes_exps_list[0].keys()[0]][gene_name][4] }}">{{
-            genes_exps_list[0][genes_exps_list[0].keys()[0]][gene_name][4] }}</a>; {{
-            genes_exps_list[0][genes_exps_list[0].keys()[0]][gene_name][3] }}:{{
-            genes_exps_list[0][genes_exps_list[0].keys()[0]][gene_name][1] }}:{{
-            genes_exps_list[0][genes_exps_list[0].keys()[0]][gene_name][2][0] }}-{{
-            genes_exps_list[0][genes_exps_list[0].keys()[0]][gene_name][2][1] }};
-            <a href="http://genome.ucsc.edu/cgi-bin/hgTracks?db={{ lexps[0][0].genome }}&position={{ genes_exps_list[0][genes_exps_list[0].keys()[0]][gene_name][3] }}:{{ genes_exps_list[0][genes_exps_list[0].keys()[0]][gene_name][2][0] }}-{{ genes_exps_list[0][genes_exps_list[0].keys()[0]][gene_name][2][1] }}"
-               target="_blank"><img src="static/img/icons/ucsc3.png"
-                                    title="{{ genes_exps_list[0][genes_exps_list[0].keys()[0]][gene_name][3] }}:{{ genes_exps_list[0][genes_exps_list[0].keys()[0]][gene_name][2][0] }}-{{ genes_exps_list[0][genes_exps_list[0].keys()[0]][gene_name][2][1] }}"/></a>
-        </h2>
-        <h3 class="gene_id">
-            Gene ID: {{ gene_name }};
-        </h3>
-        <div>
-            <div class="spliceDiv exp1" id="spliceDivExp1_{{ gene_index }}"
-                 data-exon-list="{{ genes_exps_list[0][comb_spliceg_cond1][gene_name][0] }}"> {# By default, show the
-                first experiment splice graph #}
-                <div class="spliceGraphTools">
-                    <select class="spliceGraphSelector" autocomplete="off">
-                        {% for nsample in genes_exps_list[0] -%}
-                        {% if nsample == comb_spliceg_cond1 %}
-                        <option selected="selected" value="{{ genes_exps_list[0][nsample][gene_name][0] |to_json}}">{{
-                            nsample }}
-                        </option>
-                        {% else %}
-                        <option value="{{ genes_exps_list[0][nsample][gene_name][0] |to_json }}">{{ nsample }}</option>
-                        {% endif %}
-                        {%- endfor %}
-                    </select>
-                    <button class="toggleReadCounts" title="Toggle from raw read counts to corrected read counts.">RR
-                    </button>
-                    <img class="toogleScale scaled" src="static/img/icons/solve-icon16.png"
-                         title="Change between scaled view and a view where introns are trimmed"/>
-                    <img class="zoomInSplice" src="static/img/zoom_in.png" title="Zoom in" alt=""/>
-                    <img class="zoomOutSplice" src="static/img/zoom_out.png" title="Zoom out" alt=""/>
-                    <img class="zoomResetSplice" src="static/img/undo.png" title="Zoom reset" alt=""/>
-                    <div class="tooltipD3"><strong>Coordinates: </strong><span class="coordsLabel">-</span>;<strong>
-                        Length: </strong><span class="lengthLabel">-;</span></div>
-                </div>
-
-
+    <section>
+        <fieldset class="section-border events-summary">
+            <legend>LSV summary</legend>
+            <div class="floatingCanvas">
+                <canvas class="floatingLegend" width="500px" height="40px">
+                    This browser or document mode doesn't support canvas
+                </canvas>
             </div>
+            {% for gene_name, gene_value in genes_dict.iteritems() %}
+                {% set gene_index = loop.index - 1 %}
+                <h2>Gene name: <a
+                        name="{{ genes_exps_list[0][genes_exps_list[0].keys()[0]][gene_name][4] }}">{{ genes_exps_list[0][genes_exps_list[0].keys()[0]][gene_name][4] }}</a>; {{ genes_exps_list[0][genes_exps_list[0].keys()[0]][gene_name][3] }}:{{ genes_exps_list[0][genes_exps_list[0].keys()[0]][gene_name][1] }}:{{ genes_exps_list[0][genes_exps_list[0].keys()[0]][gene_name][2][0] }}-{{ genes_exps_list[0][genes_exps_list[0].keys()[0]][gene_name][2][1] }};
+                    <a href="http://genome.ucsc.edu/cgi-bin/hgTracks?db={{ lexps[0][0].genome }}&position={{ genes_exps_list[0][genes_exps_list[0].keys()[0]][gene_name][3] }}:{{ genes_exps_list[0][genes_exps_list[0].keys()[0]][gene_name][2][0] }}-{{ genes_exps_list[0][genes_exps_list[0].keys()[0]][gene_name][2][1] }}"
+                       target="_blank"><img src="static/img/icons/ucsc3.png"
+                                            title="{{ genes_exps_list[0][genes_exps_list[0].keys()[0]][gene_name][3] }}:{{ genes_exps_list[0][genes_exps_list[0].keys()[0]][gene_name][2][0] }}-{{ genes_exps_list[0][genes_exps_list[0].keys()[0]][gene_name][2][1] }}"/></a>
+                </h2>
 
-            <div class="spliceDiv exp2" id="spliceDivExp2_{{ gene_index }}"
-                 data-exon-list="{{ genes_exps_list[1][comb_spliceg_cond2][gene_name][0] }}"> {# By default, show the
-                first experiment splice graph #}
-                <div class="spliceGraphTools">
-                    <select class="spliceGraphSelector" autocomplete="off">
-                        {% for nsample in genes_exps_list[1] -%}
-                        {% if nsample == comb_spliceg_cond2 %}
-                        <option selected="selected" value="{{ genes_exps_list[1][nsample][gene_name][0] |to_json }}">{{
-                            nsample }}
-                        </option>
-                        {% else %}
-                        <option value="{{ genes_exps_list[1][nsample][gene_name][0] |to_json }}">{{ nsample }}</option>
-                        {% endif %}
-                        {%- endfor %}
-                    </select>
-                    <button class="toggleReadCounts" title="Toggle from raw read counts to corrected read counts.">RR
-                    </button>
-                    <img class="toogleScale scaled" src="static/img/icons/solve-icon16.png"
-                         title="Change between scaled view and a view where introns are trimmed"/>
-                    <img class="zoomInSplice" src="static/img/zoom_in.png" title="Zoom in" alt=""/>
-                    <img class="zoomOutSplice" src="static/img/zoom_out.png" title="Zoom out" alt=""/>
-                    <img class="zoomResetSplice" src="static/img/undo.png" title="Zoom reset" alt=""/>
-                    <div class="tooltipD3"><strong>Coordinates: </strong><span class="coordsLabel">-</span>;<strong>
-                        Length: </strong><span class="lengthLabel">-;</span></div>
+                <h3 class="gene_id">
+                    Gene ID: {{ gene_name }};
+                </h3>
 
-                </div>
+                <div class="gene-container">
 
-            </div>
+                    <div class="spliceGraphTools">
 
-            <table id="event_table{{ loop.index }}" class="tablesorter">
-                <thead>
-                <tr>
-                    <th class="short-header">LSV ID</th>
-                    <th class="short-header">LSV Type</th>
-                    <th class="short-header">PSI {{ lexps[0][0].group }}</th>
-                    <th class="short-header">
-                        <p class="deltaHeader">&#8592; More in {{ lexps[0][0].group }} | More in {{ lexps[1][0].group }}
-                            &#8594;</p>
-                        <!--<p style="color: black; margin: auto; display:block; text-align:center; font-weight: bold" >&#8592; More in OldBeta | More in YoungBeta &#8594;</p>-->
-                    </th>
-
-                    <th class="short-header">PSI {{ lexps[1][0].group }}</th>
-                    <th class="short-header">LSV links</th>
-                </tr>
-                </thead>
-                <tfoot>
-                <tr>
-                    <th>LSV ID</th>
-                    <th>LSV Type</th>
-                    <th>PSI {{ lexps[0][0].group }}</th>
-                    <th>
-                        <p class="deltaHeader">&#8592; More in {{ lexps[0][0].group }} | More in {{ lexps[1][0].group }}
-                            &#8594;</p>
-                        <!--<p style="color: black; margin: auto; display:block; text-align:center; font-weight: bold" >&#8592; More in OldBeta | More in YoungBeta &#8594;</p>-->
-                    </th>
-
-                    <th>PSI {{ lexps[1][0].group }}</th>
-                    <th>LSV links</th>
-                </tr>
-                </tfoot>
-                <tbody>
-                {% for gene in gene_value %}
-                <tr class="{{ gene['lsv'].categories2css() }} lsvrow" data-njuncs="{{ gene['lsv'].njuncs() }}"
-                    data-nexons="{{ gene['lsv'].nexons() }}">
-                    <td>{{ gene['lsv'].get_id() }}</td>
-                    <td>
-                        <p style="top:0;" class="hidden">{{ gene['lsv'].get_type() }}</p>
-                        <canvas class="lsvLegend" id="{{ gene_index }}" width="200px" height="80px"
-                                data-lsv-string="{{ gene['lsv'].get_type() }}"
-                                data-coord-exon="{{ gene['lsv'].get_coords() }}" title="{{ gene['lsv'].get_type() }}">
-                            This browser or document mode doesn't support canvas
-                        </canvas>
-                    </td>
-
-                    <td id="data_psi1_td{{ gene_index }}{{ loop.index }}">
-                        <!--<img class="expandLsv" src="static/img/arrow_down.png" data-is-expanded=0/>-->
-                        <canvas class="lsvSingleCompactPercentiles" id="lsvSingleCompact_psi1_{{ loop.index }}"
-                                width="20px" height="70px" data-lsv="[{{ gene['psi1']|to_json }}]">
-                            This browser or document mode doesn't support canvas
-                        </canvas>
-                    </td>
-
-
-                    <td id="data_td{{ gene_index }}{{ loop.index }}" class="lsvDeltaCompact"
-                        data-lsv="{{ gene['lsv']|to_json }}" data-threshold="{{ threshold }}">
-                        <p class="hidden"> {# Hidden field to make inclusion/exclusion sortable #}
-                            {% set max_diff = [0.0] %}
-                            {% for excl_incl in gene['lsv'].excl_incl %}
-                            {% if ((excl_incl[0]|abs + excl_incl[1]) > max_diff[-1]) %}
-                            {% do max_diff.append(excl_incl[0]|abs + excl_incl[1]) %}
-                            {% endif%}
+                        <select class="spliceGraphSelector exp1" autocomplete="off">
+                            {% for nsample in genes_exps_list[0] -%}
+                                {% if nsample == comb_spliceg_cond1 %}
+                                    <option selected="selected"
+                                            value="{{ genes_exps_list[0][nsample][gene_name][0] |to_json }}">{{ nsample }}
+                                    </option>
+                                {% else %}
+                                    <option value="{{ genes_exps_list[0][nsample][gene_name][0] |to_json }}">{{ nsample }}</option>
+                                {% endif %}
                             {%- endfor %}
-                            {{ max_diff[-1] }}
-                        </p>
-                    </td>
+                        </select>
+
+                        <label class="toggleSwitch" title="Toggle from raw reads to corrected reads.">
+                            RAW CORRECTED
+                            <br/>
+                            <input class="toggleSwitch readCounts" type="checkbox">
+                            <div class="slider"></div>
+                        </label>
+
+                        <img class="toogleScale scaled" src="static/img/icons/solve-icon16.png"
+                             title="Change between scaled view and a view where introns are trimmed"/>
+                        <img class="zoomInSplice" src="static/img/zoom_in.png" title="Zoom in" alt=""/>
+                        <img class="zoomOutSplice" src="static/img/zoom_out.png" title="Zoom out" alt=""/>
+                        <img class="zoomResetSplice" src="static/img/undo.png" title="Zoom reset" alt=""/>
+                        <div class="tooltipD3"><strong>Coordinates: </strong><span class="coordsLabel">-</span>;<strong>
+                            Length: </strong><span class="lengthLabel">-;</span></div>
+
+                    </div>
+
+                    <div class="spliceGraphTools">
+
+                        <select class="spliceGraphSelector exp2" autocomplete="off">
+                            {% for nsample in genes_exps_list[1] -%}
+                                {% if nsample == comb_spliceg_cond2 %}
+                                    <option selected="selected"
+                                            value="{{ genes_exps_list[1][nsample][gene_name][0] |to_json }}">{{ nsample }}
+                                    </option>
+                                {% else %}
+                                    <option value="{{ genes_exps_list[1][nsample][gene_name][0] |to_json }}">{{ nsample }}</option>
+                                {% endif %}
+                            {%- endfor %}
+                        </select>
+                    </div>
+
+                    <div class="splice-div-container">
+
+                        <div class="spliceDiv exp1" id="spliceDivExp1_{{ gene_index }}"
+                             data-exon-list="{{ genes_exps_list[0][comb_spliceg_cond1][gene_name][0] }}">
+                        </div>
+
+                        <div class="spliceDiv exp2" id="spliceDivExp2_{{ gene_index }}"
+                             data-exon-list="{{ genes_exps_list[1][comb_spliceg_cond2][gene_name][0] }}">
+                        </div>
+
+                    </div>
+
+                    <table id="event_table{{ loop.index }}" class="tablesorter">
+                        <thead>
+                        <tr>
+                            <th class="short-header">Highlight</th>
+                            <th class="short-header">LSV ID</th>
+                            <th class="short-header">LSV Type</th>
+                            <th class="short-header">PSI {{ lexps[0][0].group }}</th>
+                            <th class="short-header">
+                                <p class="deltaHeader">&#8592; More in {{ lexps[0][0].group }} | More
+                                    in {{ lexps[1][0].group }}
+                                    &#8594;</p>
+                            </th>
+
+                            <th class="short-header">PSI {{ lexps[1][0].group }}</th>
+                            <th class="short-header">LSV links</th>
+                        </tr>
+                        </thead>
+                        <tfoot>
+                        <tr>
+                            <th>Highlight</th>
+                            <th>LSV ID</th>
+                            <th>LSV Type</th>
+                            <th>PSI {{ lexps[0][0].group }}</th>
+                            <th>
+                                <p class="deltaHeader">&#8592; More in {{ lexps[0][0].group }} | More
+                                    in {{ lexps[1][0].group }}
+                                    &#8594;</p>
+                            </th>
+
+                            <th>PSI {{ lexps[1][0].group }}</th>
+                            <th>LSV links</th>
+                        </tr>
+                        </tfoot>
+                        <tbody>
+                        {% for gene in gene_value %}
+                            <tr class="{{ gene['lsv'].categories2css() }} lsvrow"
+                                data-njuncs="{{ gene['lsv'].njuncs() }}"
+                                data-nexons="{{ gene['lsv'].nexons() }}">
+                                <td>
+                                    <form class='highlight-lsv'>
+                                        <label>
+                                            <input class="highlight" type="checkbox" value="highlight">
+                                             Highlight
+                                        </label>
+                                        <label>
+
+                                            <input class="weighted" type="checkbox" value="weighted">
+                                            Weighted
+                                        </label>
+                                    </form>
+                                </td>
+                                <td>{{ gene['lsv'].get_id() }}</td>
+                                <td>
+                                    <p style="top:0;" class="hidden">{{ gene['lsv'].get_type() }}</p>
+                                    <canvas class="lsvLegend" id="{{ gene_index }}" width="200px" height="80px"
+                                            data-lsv-string="{{ gene['lsv'].get_type() }}"
+                                            data-coord-exon="{{ gene['lsv'].get_coords() }}"
+                                            title="{{ gene['lsv'].get_type() }}">
+                                        This browser or document mode doesn't support canvas
+                                    </canvas>
+                                </td>
+
+                                <td id="data_psi1_td{{ gene_index }}{{ loop.index }}">
+                                    <canvas class="lsvSingleCompactPercentiles"
+                                            id="lsvSingleCompact_psi1_{{ loop.index }}"
+                                            width="20px" height="70px" data-lsv="[{{ gene['psi1']|to_json }}]">
+                                        This browser or document mode doesn't support canvas
+                                    </canvas>
+                                </td>
 
 
-                    <td id="data_psi2_td{{ gene_index }}{{ loop.index }}">
-                        <!--<img class="expandLsv" src="static/img/arrow_down.png" data-is-expanded=0/>-->
-                        <canvas class="lsvSingleCompactPercentiles" id="lsvSingleCompact_psi2_{{ loop.index }}"
-                                width="20px" height="70px" data-lsv="[{{ gene['psi2']|to_json }}]">
-                            This browser or document mode doesn't support canvas
-                        </canvas>
-                    </td>
+                                <td id="data_td{{ gene_index }}{{ loop.index }}" class="lsvDeltaCompact"
+                                    data-lsv="{{ gene['lsv']|to_json }}" data-threshold="{{ threshold }}">
+                                    <p class="hidden"> {# Hidden field to make inclusion/exclusion sortable #}
+                                        {% set max_diff = [0.0] %}
+                                        {% for excl_incl in gene['lsv'].excl_incl %}
+                                            {% if ((excl_incl[0]|abs + excl_incl[1]) > max_diff[-1]) %}
+                                                {% do max_diff.append(excl_incl[0]|abs + excl_incl[1]) %}
+                                            {% endif %}
+                                        {%- endfor %}
+                                        {{ max_diff[-1] }}
+                                    </p>
+                                </td>
 
-                    <td>
-                        <p>
-                            <a href="http://genome.ucsc.edu/cgi-bin/hgTracks?db={{ lexps[0][0].genome }}&position={{ genes_exps_list[0][genes_exps_list[0].keys()[0]][gene_name][3] }}:{{ gene['lsv'].get_extension()[0] }}-{{ gene['lsv'].get_extension()[1] }}"
-                               target="_blank">
-                                <img src="static/img/icons/ucsc3.png" title="View in UCSC Genome Browser"/>
-                            </a>
-                            <!--</p>-->
-                            <!--<p>-->
-                            <!--<a href="static/doc/lsvs/{{ gene['lsv'].get_id() }}.gff3" target="_blank"><img src="static/img/icons/gff3.png" title="Go to GFF3 LSV definition"/></a>-->
-                            <a href="../static/doc/lsvs/{{ gene['lsv'].get_id() }}.gtf" target="_blank"><img
-                                    src="static/img/icons/gtf.png" title="Go to GTF LSV definition"/></a>
-                        </p>
-                    </td>
 
-                </tr>
-                {%- endfor %}
-                </tbody>
-            </table>
+                                <td id="data_psi2_td{{ gene_index }}{{ loop.index }}">
+                                    <canvas class="lsvSingleCompactPercentiles"
+                                            id="lsvSingleCompact_psi2_{{ loop.index }}"
+                                            width="20px" height="70px" data-lsv="[{{ gene['psi2']|to_json }}]">
+                                        This browser or document mode doesn't support canvas
+                                    </canvas>
+                                </td>
 
-            <div class="pager" id="pager{{ loop.index }}">
-                <form>
-                    <img src="static/img/icons/first.png" class="first"/>
-                    <img src="static/img/icons/prev.png" class="prev"/>
-                    <input type="text" class="pagedisplay"/>
-                    <img src="static/img/icons/next.png" class="next"/>
-                    <img src="static/img/icons/last.png" class="last"/>
-                    <select class="pagesize" autocomplete="off">
+                                <td>
+                                    <p>
+                                        <a href="http://genome.ucsc.edu/cgi-bin/hgTracks?db={{ lexps[0][0].genome }}&position={{ genes_exps_list[0][genes_exps_list[0].keys()[0]][gene_name][3] }}:{{ gene['lsv'].get_extension()[0] }}-{{ gene['lsv'].get_extension()[1] }}"
+                                           target="_blank">
+                                            <img src="static/img/icons/ucsc3.png" title="View in UCSC Genome Browser"/>
+                                        </a>
+                                        <a href="../static/doc/lsvs/{{ gene['lsv'].get_id() }}.gtf" target="_blank"><img
+                                                src="static/img/icons/gtf.png" title="Go to GTF LSV definition"/></a>
+                                    </p>
+                                </td>
 
-                        {% for mark in tableMarks[gene_index] -%}
-                        {% if loop.first %}
-                        <option selected="selected" value="{{ mark }}">{{ mark }}</option>
-                        {% else %}
-                        <option value="{{ mark }}">{{ mark }}</option>
-                        {% endif %}
+                            </tr>
                         {%- endfor %}
-                        <option value="{{ gene_value|length }}">All</option>
-                    </select>
-                </form>
-            </div>
-        </div>
-        {% endfor %}
-    </fieldset>
-</section>
+                        </tbody>
+                    </table>
+
+                    <div class="pager" id="pager{{ loop.index }}">
+                        <form>
+                            <img src="static/img/icons/first.png" class="first"/>
+                            <img src="static/img/icons/prev.png" class="prev"/>
+                            <input type="text" class="pagedisplay"/>
+                            <img src="static/img/icons/next.png" class="next"/>
+                            <img src="static/img/icons/last.png" class="last"/>
+                            <select class="pagesize" autocomplete="off">
+
+                                {% for mark in tableMarks[gene_index] -%}
+                                    {% if loop.first %}
+                                        <option selected="selected" value="{{ mark }}">{{ mark }}</option>
+                                    {% else %}
+                                        <option value="{{ mark }}">{{ mark }}</option>
+                                    {% endif %}
+                                {%- endfor %}
+                                <option value="{{ gene_value|length }}">All</option>
+                            </select>
+                        </form>
+                    </div>
+                </div>
+            {% endfor %}
+        </fieldset>
+    </section>
 {% endblock %}
 

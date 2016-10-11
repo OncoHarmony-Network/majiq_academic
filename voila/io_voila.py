@@ -1,4 +1,5 @@
 import csv
+import multiprocessing
 import os
 from collections import defaultdict
 from multiprocessing import Manager, Process, Pool
@@ -9,6 +10,7 @@ import numpy as np
 
 import vlsv
 from voila import constants
+from voila.constants import PROCESS_COUNT
 from voila.hdf5 import HDF5, BinsDataSet, Psi1DataSet, Psi2DataSet
 from voila.utils import utils_voila
 from voila.vlsv import VoilaLsv
@@ -130,7 +132,7 @@ def voila_input_from_hdf5(hdf5_filename, logger):
     producer_proc.daemon = True
     producer_proc.start()
 
-    pool = Pool(None, worker)
+    pool = Pool(PROCESS_COUNT, worker)
 
     producer_proc.join()
     queue.join()
