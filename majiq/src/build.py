@@ -24,11 +24,11 @@ import datetime
 def build(args):
     pipeline_run(Builder(args))
 
-def builder_init(queue, lock_array, sam_list, pcr_filename, gff_output, only_rna,
+def builder_init(idx_count, lock_array, sam_list, pcr_filename, gff_output, only_rna,
                  non_denovo, dbfile, list_of_genes, silent, debug):
 
-    builder_init.out_queue = queue
-    builder_init.lock = lock_array
+    builder_init.idx_count = idx_count
+    builder_init.files_locks = lock_array
     builder_init.sam_list = sam_list
     builder_init.pcr_filename = pcr_filename
     builder_init.gff_output = gff_output
@@ -49,6 +49,7 @@ def merging_files(args_vals):
     try:
         rna_files = []
         vfunc_gc = []
+        list_of_outfiles = []
         for exp_idx, sam_file in enumerate(builder_init.sam_list):
             rnaf = h5py.File(get_builder_temp_majiq_filename(majiq_config.outDir, sam_file))
             rna_files.append(rnaf)
@@ -56,6 +57,10 @@ def merging_files(args_vals):
                 vfunc_gc.append(gc_normalization(rnaf.attrs['gc_values']))
             else:
                 vfunc_gc.append(None)
+
+            f = h5py.File(get_builder_majiq_filename(majiq_config.outDir, sam_file),
+                          'r+', compression='gzip', compression_opts=9)
+            list_of_outfiles.append(f)
 
         db_f = h5py.File(builder_init.dbfile)
         for gne_idx, gne_id in enumerate(list_of_genes):
@@ -81,7 +86,9 @@ def merging_files(args_vals):
             detect_exons(gene_obj, list(splice_list), None)
 
             logger.debug("[%s] Detecting LSV" % loop_id)
-            lsv_detection(gene_obj, gc_vfunc=vfunc_gc, chnk=chnk, out_queue=builder_init.out_queue, logging=None)
+            lsv_detection(gene_obj, gc_vfunc=vfunc_gc, lsv_list=list_of_outfiles, lsv_idx=builder_init.idx_count,
+                          locks=builder_init.files_locks, logging=None)
+
             del gene_obj
             del majiq_config.gene_tlb[gne_id]
 
@@ -93,13 +100,14 @@ def merging_files(args_vals):
 
     finally:
         [xx.close() for xx in rna_files]
+        [xx.close() for xx in list_of_outfiles]
 
-    logger.info("[%s] Waiting to be freed" % chnk)
+    # logger.info("[%s] Waiting to be freed" % chnk)
 
-    qm = majiq_multi.QueueMessage(QUEUE_MESSAGE_END_WORKER, None, chnk)
-    builder_init.out_queue.put(qm, block=True)
-    builder_init.lock[chnk].acquire()
-    builder_init.lock[chnk].release()
+    # qm = majiq_multi.QueueMessage(QUEUE_MESSAGE_END_WORKER, None, chnk)
+    # builder_init.out_queue.put(qm, block=True)
+    # builder_init.lock[chnk].acquire()
+    # builder_init.lock[chnk].release()
 
 
     logger.info("[%s] End" % chnk)
@@ -235,28 +243,22 @@ class Builder(BasicPipeline):
 
         # Detect LSVs
 
-        lock_array = [mp.Lock() for xx in range(self.nthreads)]
-        q = mp.Queue(maxsize=50*self.nthreads)
+        lock_array = [mp.Lock() for xx in sam_list]
+        idx_array = [0] * len(sam_list)
+        # q = mp.Queue(maxsize=50*self.nthreads)
 
         pool = mp.Pool(processes=self.nthreads, initializer=builder_init,
-                       initargs=[q, lock_array, sam_list, self.pcr_filename, self.gff_output,
+                       initargs=[idx_array, lock_array, sam_list, self.pcr_filename, self.gff_output,
                                  self.only_rna, self.non_denovo, get_build_temp_db_filename(majiq_config.outDir),
                                  None, self.silent, self.debug],
                        maxtasksperchild=1)
 
         lchnksize = max(len(list_of_genes)/self.nthreads, 1) + 1
-        [xx.acquire() for xx in lock_array]
-
-        pool.map_async(merging_files, majiq_utils.chunks(list_of_genes, lchnksize, extra=range(self.nthreads)))
-        pool.close()
-
         db_f = h5py.File(get_build_temp_db_filename(majiq_config.outDir))
 
-        out_files = []
         for exp_idx, sam_file in enumerate(sam_list):
             f = h5py.File(get_builder_majiq_filename(majiq_config.outDir, sam_file),
                           'w', compression='gzip', compression_opts=9)
-            out_files.append(f)
             effective_readlen = (majiq_config.readLen - 16) + 1
             f.create_dataset(LSV_JUNCTIONS_DATASET_NAME,
                              (majiq_config.nrandom_junctions, effective_readlen),
@@ -270,14 +272,15 @@ class Builder(BasicPipeline):
             f.attrs['date'] = datetime.datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S')
             f.attrs['VERSION'] = VERSION
 
-        majiq_multi.queue_manager(input_h5dfp=None, output_h5dfp=out_files, lock_array=lock_array, result_queue=q,
-                                  num_chunks=self.nthreads, logger=self.logger)
+            f.close()
 
+        # majiq_multi.queue_manager(input_h5dfp=None, output_h5dfp=out_files, lock_array=lock_array, result_queue=q,
+        #                           num_chunks=self.nthreads, logger=self.logger)
+        pool.map_async(merging_files, majiq_utils.chunks(list_of_genes, lchnksize, extra=range(self.nthreads)))
+        pool.close()
         pool.join()
 
         ''' Closing HDF5 files'''
         db_f.close()
-        [xx.close() for xx in out_files]
-
         logger.info("MAJIQ Builder is ended succesfully!")
         logger.info("Alakazam! Done.")

@@ -51,28 +51,27 @@ def wrap_result_queue(lsv, name, gc_vfunc, out_queue, chnk, lsv_list=None, lsv_i
     out_queue.put(qm, block=True)
 
 
-def wrap_result_file(lsv, name, gc_vfunc, lsv_list, lsv_idx, chnk=None, out_queue=None):
+def wrap_result_file(lsv, name, gc_vfunc, lsv_list, lsv_idx, lock_per_file=None):
     for dx, exp_idx in enumerate(majiq_config.tissue_repl[name]):
-        lsv_idx[exp_idx] = majiq_lsv.Queue_Lsv(lsv, name, gc_vfunc).to_hdf5(hdf5grp=lsv_list[exp_idx],
-                                                                            lsv_idx=lsv_idx[exp_idx],
-                                                                            exp_idx=dx)
+
+        lock_per_file[exp_idx].acquire()
+        lsv_idx[exp_idx] = lsv.to_hdf5(hdf5grp=lsv_list[exp_idx], lsv_idx=lsv_idx[exp_idx], gc_vfunc=gc_vfunc,
+                                       exp_idx=dx)
+        lsv_list[exp_idx].flush()
+        lock_per_file[exp_idx].release()
 
 
-def lsv_detection(gn, gc_vfunc, chnk=None, lsv_list=None, lsv_idx=None, only_real_data=False, out_queue=None,
+def lsv_detection(gn, gc_vfunc, lsv_list=None, lsv_idx=None, only_real_data=False, locks=None,
                   logging=None):
 
     dummy = {}
     for name, ind_list in majiq_config.tissue_repl.items():
         dummy[name] = [[], []]
 
-    wrap_result = wrap_result_queue
-    if out_queue is None:
-        wrap_result = wrap_result_file
-
     for ex in gn.get_exon_list():
         try:
-            detect_lsv(ex, gn, SSOURCE, dummy)
-            detect_lsv(ex, gn, STARGET, dummy)
+            detect_lsv(ex, gn, SSOURCE, dummy, only_annot=only_real_data)
+            detect_lsv(ex, gn, STARGET, dummy, only_annot=only_real_data)
         except InvalidLSV:
             pass
 
@@ -83,15 +82,13 @@ def lsv_detection(gn, gc_vfunc, chnk=None, lsv_list=None, lsv_idx=None, only_rea
                 if ss.contained(st):
                     break
             else:
-                wrap_result(ss, name, out_queue=out_queue, chnk=chnk,
-                            lsv_list=lsv_list, lsv_idx=lsv_idx, gc_vfunc=gc_vfunc)
+                wrap_result_file(ss, name, gc_vfunc=gc_vfunc, lsv_list=lsv_list, lsv_idx=lsv_idx, lock_per_file=locks)
 
         for st in dummy[name][1]:
             for ss in dummy[name][0]:
                 if st.contained(ss):
                     break
             else:
-                wrap_result(st, name, out_queue=out_queue, chnk=chnk,
-                            lsv_list=lsv_list, lsv_idx=lsv_idx, gc_vfunc=gc_vfunc)
+                wrap_result_file(st, name, gc_vfunc=gc_vfunc, lsv_list=lsv_list, lsv_idx=lsv_idx, lock_per_file=locks)
 
 

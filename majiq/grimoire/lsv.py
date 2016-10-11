@@ -307,6 +307,40 @@ class LSV(object):
 
         return res
 
+    def to_hdf5(self, hdf5grp, lsv_idx, exp_idx, gc_vfunc=None):
+
+        try:
+            cover = np.zeros(shape=(self.junctions.shape[0], (majiq_config.readLen - 16) + 1),
+                             dtype=np.float)
+
+            for idx, junc in enumerate(self.junctions):
+                cover[idx] = junc.coverage[exp_idx, :]
+                if majiq_config.gcnorm:
+                    vals = gc_vfunc[exp_idx](junc.get_gc_content())
+                    cover = np.multiply(cover, vals)
+
+            njunc = len(self.junctions)
+            if lsv_idx + njunc > majiq_config.nrandom_junctions:
+                shp = hdf5grp[LSV_JUNCTIONS_DATASET_NAME].shape
+                shp_new = shp[0] + majiq_config.nrandom_junctions
+                hdf5grp[LSV_JUNCTIONS_DATASET_NAME].resize((shp_new, shp[1]))
+
+            hdf5grp[LSV_JUNCTIONS_DATASET_NAME][lsv_idx:lsv_idx+njunc, :] = cover
+
+            h_lsv = hdf5grp.create_group("LSVs/%s" % self.id)
+            h_lsv.attrs['coords'] = self.coords
+            h_lsv.attrs['id'] = self.id
+            h_lsv.attrs['type'] = self.ext_type
+            h_lsv.attrs['coverage'] = hdf5grp[LSV_JUNCTIONS_DATASET_NAME].regionref[lsv_idx:lsv_idx + njunc]
+
+            self.get_visual(exp_idx).to_hdf5(h_lsv)
+
+        except:
+            print "HDF5 ERROR", self.id, cover.shape, hdf5grp[LSV_JUNCTIONS_DATASET_NAME].shape
+            raise
+
+        return lsv_idx + njunc
+
 
 def extract_se_events(list_lsv_per_gene):
     sslist = list_lsv_per_gene[0]
@@ -425,10 +459,9 @@ class Queue_Lsv(object):
 
         exp_idxs = majiq_config.tissue_repl[name]
         self.coords = lsv_obj.coords
-
         self.id = lsv_obj.id
         self.type = lsv_obj.ext_type
-        self.iretention = lsv_obj.intron_retention
+        # self.iretention = lsv_obj.intron_retention
         self.coverage = np.zeros(shape=(lsv_obj.junctions.shape[0], len(exp_idxs), (majiq_config.readLen - 16) + 1),
                                  dtype=np.float)
 
