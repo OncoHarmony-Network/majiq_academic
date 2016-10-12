@@ -319,8 +319,9 @@ class LSV(object):
                     vals = gc_vfunc(junc.get_gc_content())
                     cover = np.multiply(cover, vals)
 
-            njunc = len(self.junctions)
-            if lsv_idx + njunc > majiq_config.nrandom_junctions:
+            njunc = cover.shape[0]
+#            if lsv_idx + njunc > majiq_config.nrandom_junctions:
+            if lsv_idx + njunc > 2:
                 shp = hdf5grp[LSV_JUNCTIONS_DATASET_NAME].shape
                 shp_new = shp[0] + majiq_config.nrandom_junctions
                 hdf5grp[LSV_JUNCTIONS_DATASET_NAME].resize((shp_new, shp[1]))

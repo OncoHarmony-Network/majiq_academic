@@ -6,7 +6,7 @@ import majiq.src.filter as majiq_filter
 from majiq.grimoire.lsv import SSOURCE, STARGET, InvalidLSV
 from majiq.src.constants import *
 from majiq.src.multiproc import QueueMessage
-
+import h5py
 def reliable_in_data(junc, exp_idx):
     min_read_x_exp = majiq_config.MINREADS
     min_npos_x_exp = majiq_config.MINPOS
@@ -55,9 +55,12 @@ def wrap_result_file(lsv, name, gc_vfunc, lsv_list, lsv_idx, lock_per_file=None)
     for dx, exp_idx in enumerate(majiq_config.tissue_repl[name]):
 
         lock_per_file[exp_idx].acquire()
+        f = h5py.File(get_builder_majiq_filename(majiq_config.outDir, lsv_list[exp_idx]),
+                      'r+', compression='gzip', compression_opts=9)
         lsv_idx[exp_idx] = lsv.to_hdf5(hdf5grp=lsv_list[exp_idx], lsv_idx=lsv_idx[exp_idx], gc_vfunc=gc_vfunc[exp_idx],
                                        exp_idx=exp_idx)
-        lsv_list[exp_idx].flush()
+        f.close()
+        #lsv_list[exp_idx].flush()
         lock_per_file[exp_idx].release()
 
 

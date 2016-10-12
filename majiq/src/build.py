@@ -58,8 +58,8 @@ def merging_files(args_vals):
             else:
                 vfunc_gc.append(None)
 
-            f = h5py.File(get_builder_majiq_filename(majiq_config.outDir, sam_file),
-                          'r+', compression='gzip', compression_opts=9)
+            # f = h5py.File(get_builder_majiq_filename(majiq_config.outDir, sam_file),
+            #               'r+', compression='gzip', compression_opts=9)
             list_of_outfiles.append(f)
 
         db_f = h5py.File(builder_init.dbfile)
@@ -86,7 +86,9 @@ def merging_files(args_vals):
             detect_exons(gene_obj, list(splice_list), None)
 
             logger.debug("[%s] Detecting LSV" % loop_id)
-            lsv_detection(gene_obj, gc_vfunc=vfunc_gc, lsv_list=list_of_outfiles, lsv_idx=builder_init.idx_count,
+
+            #lsv_detection(gene_obj, gc_vfunc=vfunc_gc, lsv_list=list_of_outfiles, lsv_idx=builder_init.idx_count,
+            lsv_detection(gene_obj, gc_vfunc=vfunc_gc, lsv_list=builder_init.sam_list, lsv_idx=builder_init.idx_count,
                           locks=builder_init.files_locks, logging=None)
 
             del gene_obj
@@ -100,7 +102,7 @@ def merging_files(args_vals):
 
     finally:
         [xx.close() for xx in rna_files]
-        [xx.close() for xx in list_of_outfiles]
+        # [xx.close() for xx in list_of_outfiles]
 
     # logger.info("[%s] Waiting to be freed" % chnk)
 
@@ -261,7 +263,8 @@ class Builder(BasicPipeline):
                           'w', compression='gzip', compression_opts=9)
             effective_readlen = (majiq_config.readLen - 16) + 1
             f.create_dataset(LSV_JUNCTIONS_DATASET_NAME,
-                             (majiq_config.nrandom_junctions, effective_readlen),
+                            # (majiq_config.nrandom_junctions, effective_readlen),
+                             (2, effective_readlen),
                              maxshape=(None, effective_readlen))
 
 
