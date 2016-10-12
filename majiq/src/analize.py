@@ -57,7 +57,7 @@ def wrap_result_file(lsv, name, gc_vfunc, lsv_list, lsv_idx, lock_per_file=None)
         lock_per_file[exp_idx].acquire()
         f = h5py.File(get_builder_majiq_filename(majiq_config.outDir, lsv_list[exp_idx]),
                       'r+', compression='gzip', compression_opts=9)
-        lsv_idx[exp_idx] = lsv.to_hdf5(hdf5grp=lsv_list[exp_idx], lsv_idx=lsv_idx[exp_idx], gc_vfunc=gc_vfunc[exp_idx],
+        lsv_idx[exp_idx] = lsv.to_hdf5(hdf5grp=f, lsv_idx=lsv_idx[exp_idx], gc_vfunc=gc_vfunc[exp_idx],
                                        exp_idx=exp_idx)
         f.close()
         #lsv_list[exp_idx].flush()
