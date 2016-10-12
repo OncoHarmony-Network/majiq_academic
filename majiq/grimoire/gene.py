@@ -42,8 +42,8 @@ class Gene:
         if not retrieve:
             self.transcript_tlb = {}
             self.temp_txex_list = []
-        else:
-            self.lsv_list = []
+        # else:
+        #     self.lsv_list = []
 
     def __hash__(self):
         return hash((self.id, self.chromosome, self.strand, self.start, self.end))
@@ -327,14 +327,22 @@ class Gene:
 
         coords = exon.get_coordinates()
         lsv_id = "%s:%d-%d:%s" % (self.get_id(), coords[0], coords[1], lsv_type)
-        for lsv in self.lsv_list:
-            if lsv.id == lsv_id:
-                ret = lsv
-                break
-        else:
-            ret = LSV(exon, lsv_id, jlist, lsv_type)
-            self.lsv_list.append(ret)
+        ret = LSV(exon, lsv_id, jlist, lsv_type)
+        #self.lsv_list.append(ret)
         return ret
+
+    # def new_lsv_definition(self, exon, jlist, lsv_type):
+    #
+    #     coords = exon.get_coordinates()
+    #     lsv_id = "%s:%d-%d:%s" % (self.get_id(), coords[0], coords[1], lsv_type)
+    #     for lsv in self.lsv_list:
+    #         if lsv.id == lsv_id:
+    #             ret = lsv
+    #             break
+    #     else:
+    #         ret = LSV(exon, lsv_id, jlist, lsv_type)
+    #         self.lsv_list.append(ret)
+    #     return ret
 
 
 class Transcript(object):
