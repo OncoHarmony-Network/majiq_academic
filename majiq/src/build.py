@@ -60,7 +60,7 @@ def merging_files(args_vals):
 
             # f = h5py.File(get_builder_majiq_filename(majiq_config.outDir, sam_file),
             #               'r+', compression='gzip', compression_opts=9)
-            list_of_outfiles.append(f)
+            #list_of_outfiles.append(f)
 
         db_f = h5py.File(builder_init.dbfile)
         for gne_idx, gne_id in enumerate(list_of_genes):
