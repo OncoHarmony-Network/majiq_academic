@@ -316,7 +316,7 @@ class LSV(object):
             for idx, junc in enumerate(self.junctions):
                 cover[idx] = junc.coverage[exp_idx, :]
                 if majiq_config.gcnorm:
-                    vals = gc_vfunc[exp_idx](junc.get_gc_content())
+                    vals = gc_vfunc(junc.get_gc_content())
                     cover = np.multiply(cover, vals)
 
             njunc = len(self.junctions)
@@ -325,7 +325,7 @@ class LSV(object):
                 shp_new = shp[0] + majiq_config.nrandom_junctions
                 hdf5grp[LSV_JUNCTIONS_DATASET_NAME].resize((shp_new, shp[1]))
 
-            hdf5grp[LSV_JUNCTIONS_DATASET_NAME][lsv_idx:lsv_idx+njunc, :] = cover
+            hdf5grp[LSV_JUNCTIONS_DATASET_NAME][lsv_idx:lsv_idx+njunc] = cover
 
             h_lsv = hdf5grp.create_group("LSVs/%s" % self.id)
             h_lsv.attrs['coords'] = self.coords
