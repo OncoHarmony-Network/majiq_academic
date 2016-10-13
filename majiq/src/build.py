@@ -49,7 +49,6 @@ def merging_files(args_vals):
     try:
         rna_files = []
         vfunc_gc = []
-        list_of_outfiles = []
         for exp_idx, sam_file in enumerate(builder_init.sam_list):
             rnaf = h5py.File(get_builder_temp_majiq_filename(majiq_config.outDir, sam_file))
             rna_files.append(rnaf)
@@ -57,10 +56,6 @@ def merging_files(args_vals):
                 vfunc_gc.append(gc_normalization(rnaf.attrs['gc_values']))
             else:
                 vfunc_gc.append(None)
-
-            # f = h5py.File(get_builder_majiq_filename(majiq_config.outDir, sam_file),
-            #               'r+', compression='gzip', compression_opts=9)
-            #list_of_outfiles.append(f)
 
         db_f = h5py.File(builder_init.dbfile)
         for gne_idx, gne_id in enumerate(list_of_genes):
@@ -87,12 +82,12 @@ def merging_files(args_vals):
 
             logger.debug("[%s] Detecting LSV" % loop_id)
 
-            #lsv_detection(gene_obj, gc_vfunc=vfunc_gc, lsv_list=list_of_outfiles, lsv_idx=builder_init.idx_count,
             lsv_detection(gene_obj, gc_vfunc=vfunc_gc, lsv_list=builder_init.sam_list, lsv_idx=builder_init.idx_count,
                           locks=builder_init.files_locks, logging=None)
 
-            del gene_obj
             del majiq_config.gene_tlb[gne_id]
+            del gene_obj
+
 
     except Exception:
         majiq_utils.monitor('CHILD %s:: EXCEPT' % chnk)
@@ -102,15 +97,7 @@ def merging_files(args_vals):
 
     finally:
         [xx.close() for xx in rna_files]
-        # [xx.close() for xx in list_of_outfiles]
-
-    # logger.info("[%s] Waiting to be freed" % chnk)
-
-    # qm = majiq_multi.QueueMessage(QUEUE_MESSAGE_END_WORKER, None, chnk)
-    # builder_init.out_queue.put(qm, block=True)
-    # builder_init.lock[chnk].acquire()
-    # builder_init.lock[chnk].release()
-
+        db_f.close()
 
     logger.info("[%s] End" % chnk)
 

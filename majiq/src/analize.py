@@ -26,29 +26,27 @@ def detect_lsv(exon, gn, lsv_type, dummy, only_annot=False):
     if len(jlist) < 2:
         return
     lsv_in = gn.new_lsv_definition(exon, jlist, lsv_type)
-
-    for name, ind_list in majiq_config.tissue_repl.items():
-        group_thresh = majiq_config.min_exp
-        if group_thresh == -1:
-            group_thresh = min((len(ind_list) * 0.5), 2)
-        counter = 0
-        for jj in jlist:
-            for exp_idx in ind_list:
-                if only_annot or majiq_filter.reliable_in_data(jj, exp_idx,
-                                                               minnonzero=majiq_config.MINPOS,
-                                                               min_reads=majiq_config.MINREADS):
-                    counter += 1
-            if counter < group_thresh:
+    try:
+        for name, ind_list in majiq_config.tissue_repl.items():
+            group_thresh = majiq_config.min_exp
+            if group_thresh == -1:
+                group_thresh = min((len(ind_list) * 0.5), 2)
+            counter = 0
+            for jj in jlist:
+                for exp_idx in ind_list:
+                    if only_annot or majiq_filter.reliable_in_data(jj, exp_idx,
+                                                                   minnonzero=majiq_config.MINPOS,
+                                                                   min_reads=majiq_config.MINREADS):
+                        counter += 1
+                if counter < group_thresh:
+                    continue
+                break
+            else:
                 continue
-            break
-        else:
-            continue
-        dummy[name][sstype[lsv_type][1]].append(lsv_in)
-
-
-def wrap_result_queue(lsv, name, gc_vfunc, out_queue, chnk, lsv_list=None, lsv_idx=None):
-    qm = QueueMessage(QUEUE_MESSAGE_BUILD_LSV, [majiq_lsv.Queue_Lsv(lsv, name, gc_vfunc), name], chnk)
-    out_queue.put(qm, block=True)
+            dummy[name][sstype[lsv_type][1]].append(lsv_in)
+    except:
+        print "KK"
+        pass
 
 
 def wrap_result_file(lsv, name, gc_vfunc, lsv_list, lsv_idx, lock_per_file=None):

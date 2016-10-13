@@ -54,19 +54,19 @@ class LSV(object):
                 self.intron_retention = True
                 break
         try:
-            self.tlb_junc = {}
-            self.ext_type = self.set_type(junction_list, self.tlb_junc)
+            tlb_junc = {}
+            self.ext_type = self.set_type(junction_list, tlb_junc)
             if self.ext_type == 'intron':
                 raise InvalidLSV('Auto junction found')
         except:
             raise InvalidLSV('Problematic Type')
 
-        juncs = []
+        self.junctions = []
         order = self.ext_type.split('|')[1:]
         for idx, jj in enumerate(order):
-            if jj[-2:] == 'e0': continue
-            juncs.append(junction_list[self.tlb_junc[jj]])
-        self.junctions = np.array(juncs)
+            if jj[-2:] == 'e0':
+                continue
+            self.junctions.append(junction_list[tlb_junc[jj]])
 
         self.visual = list()
         for exp_idx in xrange(majiq_config.num_experiments):
@@ -310,16 +310,17 @@ class LSV(object):
     def to_hdf5(self, hdf5grp, lsv_idx, exp_idx, gc_vfunc=None):
 
         try:
-            cover = np.zeros(shape=(self.junctions.shape[0], (majiq_config.readLen - 16) + 1),
+            njunc = len(self.junctions)
+            cover = np.zeros(shape=(njunc, (majiq_config.readLen - 16) + 1),
                              dtype=np.float)
 
             for idx, junc in enumerate(self.junctions):
-                cover[idx] = junc.coverage[exp_idx, :]
+                cover[idx] = junc.coverage[exp_idx, :].todense()
                 if majiq_config.gcnorm:
                     vals = gc_vfunc(junc.get_gc_content())
                     cover = np.multiply(cover, vals)
 
-            njunc = cover.shape[0]
+
 #            if lsv_idx + njunc > majiq_config.nrandom_junctions:
             if lsv_idx + njunc > 2:
                 shp = hdf5grp[LSV_JUNCTIONS_DATASET_NAME].shape
@@ -452,58 +453,3 @@ def print_lsv_extype(list_lsv, filename):
         lsv = list_lsv[idx]
         fp.write("%s\n" % lsv.type)
     fp.close()
-
-
-class Queue_Lsv(object):
-
-    def __init__(self, lsv_obj, name, gc_vfunc=None):
-
-        exp_idxs = majiq_config.tissue_repl[name]
-        self.coords = lsv_obj.coords
-        self.id = lsv_obj.id
-        self.type = lsv_obj.ext_type
-        # self.iretention = lsv_obj.intron_retention
-        self.coverage = np.zeros(shape=(lsv_obj.junctions.shape[0], len(exp_idxs), (majiq_config.readLen - 16) + 1),
-                                 dtype=np.float)
-
-        self.junction_id = []
-
-        if majiq_config.gcnorm:
-            gc_factor = np.ones(shape=(lsv_obj.junctions.shape[0], (majiq_config.readLen - 16) + 1),
-                                dtype=np.float)
-
-        for idx, junc in enumerate(lsv_obj.junctions):
-            self.coverage[idx] = junc.coverage[exp_idxs, :]
-            self.junction_id.append(junc.get_id())
-            if majiq_config.gcnorm:
-                gc_factor[idx] = junc.get_gc_content()
-
-        if majiq_config.gcnorm:
-            for eidx in range(len(exp_idxs)):
-                vals = gc_vfunc[eidx](gc_factor)
-                self.coverage[:, eidx, :] = np.multiply(self.coverage[:, eidx, :], vals)
-        self.visual = lsv_obj.get_visual(exp_idxs)
-
-    def to_hdf5(self, hdf5grp, lsv_idx, exp_idx):
-
-        try:
-            njunc = len(self.junction_id)
-            if lsv_idx + njunc > majiq_config.nrandom_junctions:
-                shp = hdf5grp[LSV_JUNCTIONS_DATASET_NAME].shape
-                shp_new = shp[0] + majiq_config.nrandom_junctions
-                hdf5grp[LSV_JUNCTIONS_DATASET_NAME].resize((shp_new, shp[1]))
-
-            hdf5grp[LSV_JUNCTIONS_DATASET_NAME][lsv_idx:lsv_idx+njunc, :] = self.coverage[:, exp_idx, :]
-
-            h_lsv = hdf5grp.create_group("LSVs/%s" % self.id)
-            h_lsv.attrs['coords'] = self.coords
-            h_lsv.attrs['id'] = self.id
-            h_lsv.attrs['type'] = self.type
-            h_lsv.attrs['coverage'] = hdf5grp[LSV_JUNCTIONS_DATASET_NAME].regionref[lsv_idx:lsv_idx + njunc]
-
-            self.visual[exp_idx].to_hdf5(h_lsv)
-        except:
-            print "HDF5 ERROR", self.id, self.junction_id, self.coverage.shape, hdf5grp[LSV_JUNCTIONS_DATASET_NAME].shape
-            raise
-
-        return lsv_idx + njunc

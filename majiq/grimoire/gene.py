@@ -10,21 +10,21 @@ from majiq.src import config as majiq_config
 
 
 class Gene:
-    __eq__ = lambda self, other: (self.chromosome == other.chromosome and self.strand == other.strand
-                                  and self.start < other.end and self.end > other.start
-                                  and self.strand == other.strand)
-    __ne__ = lambda self, other: (self.chromosome != other.chromosome or self.strand != other.strand
-                                  or self.start >= other.end or self.end <= other.start)
-    __lt__ = lambda self, other: (self.chromosome < other.chromosome
-                                  or (self.chromosome == other.chromosome
-                                      and (self.end < other.start
-                                           or (self.end > other.start and self.start < other.end
-                                               and self.strand == '+' and other.strand == '-'))))
-    __gt__ = lambda self, other: (self.chromosome > other.chromosome
-                                  or (self.chromosome == other.chromosome
-                                      and (self.start > other.end
-                                           or (self.end > other.start and self.start < other.END
-                                               and self.strand == '-' and other.strand == '+'))))
+    # __eq__ = lambda self, other: (self.chromosome == other.chromosome and self.strand == other.strand
+    #                               and self.start < other.end and self.end > other.start
+    #                               and self.strand == other.strand)
+    # __ne__ = lambda self, other: (self.chromosome != other.chromosome or self.strand != other.strand
+    #                               or self.start >= other.end or self.end <= other.start)
+    # __lt__ = lambda self, other: (self.chromosome < other.chromosome
+    #                               or (self.chromosome == other.chromosome
+    #                                   and (self.end < other.start
+    #                                        or (self.end > other.start and self.start < other.end
+    #                                            and self.strand == '+' and other.strand == '-'))))
+    # __gt__ = lambda self, other: (self.chromosome > other.chromosome
+    #                               or (self.chromosome == other.chromosome
+    #                                   and (self.start > other.end
+    #                                        or (self.end > other.start and self.start < other.END
+    #                                            and self.strand == '-' and other.strand == '+'))))
 
     def __init__(self, gene_id, gene_name, chrom, strand, start, end, retrieve=False):
         self.id = gene_id
@@ -37,13 +37,10 @@ class Gene:
         self.ir_definition = []
         self.antis_gene = []
 
-        #self.readNum = np.zeros(shape=majiq_config.num_experiments, dtype=np.int)
         self.total_read = 0
         if not retrieve:
             self.transcript_tlb = {}
             self.temp_txex_list = []
-        # else:
-        #     self.lsv_list = []
 
     def __hash__(self):
         return hash((self.id, self.chromosome, self.strand, self.start, self.end))
@@ -193,7 +190,7 @@ class Gene:
     def new_annotated_junctions(self, start, end, trcpt):
         junc = self.exist_junction(start, end)
         if junc is None:
-            junc = Junction(start, end, None, None, self, annotated=True)
+            junc = Junction(start, end, None, None, self.get_id(), annotated=True)
         junc.add_transcript(trcpt)
 
         return junc
@@ -286,63 +283,13 @@ class Gene:
                         break
             else:
                 break
-
-
-            # retrieve_gene(anti_g, majiq_config.dbfile)
-            # # if not self.antis_gene is None:
-            # gg = majiq_config.gene_tlb[anti_g]
-            #
-            # cc = gg.get_coordinates()
-            # if jend < cc[0] or jstart > cc[1]:
-            #     continue
-            # j_list = gg.get_all_junctions()
-            # for jj in j_list:
-            #     if not jj.is_annotated():
-            #         continue
-            #     (j_st, j_ed) = jj.get_coordinates()
-            #     if j_st > jstart or (j_st == jstart and j_ed > jend):
-            #         break
-            #     elif jstart == j_st and jend == j_ed:
-            #         res = True
-            #         break
-            # if not res:
-            #     for ex in gg.get_exon_list():
-            #         coords = ex.get_coordinates()
-            #         # if jend > coords[0]:
-            #         #     break
-            #         coords = [coords[0] - majiq_config.get_max_denovo_difference(),
-            #                   coords[1] + majiq_config.get_max_denovo_difference()]
-            #
-            #         if coords[0] <= jend <= coords[1] or coords[0] <= jstart <= coords[1]:
-            #             res = True
-            #             break
-            #     del majiq_config.gene_tlb[anti_g]
-            # else:
-            #     del majiq_config.gene_tlb[anti_g]
-            #     break
-
         return res
 
     def new_lsv_definition(self, exon, jlist, lsv_type):
 
         coords = exon.get_coordinates()
         lsv_id = "%s:%d-%d:%s" % (self.get_id(), coords[0], coords[1], lsv_type)
-        ret = LSV(exon, lsv_id, jlist, lsv_type)
-        #self.lsv_list.append(ret)
-        return ret
-
-    # def new_lsv_definition(self, exon, jlist, lsv_type):
-    #
-    #     coords = exon.get_coordinates()
-    #     lsv_id = "%s:%d-%d:%s" % (self.get_id(), coords[0], coords[1], lsv_type)
-    #     for lsv in self.lsv_list:
-    #         if lsv.id == lsv_id:
-    #             ret = lsv
-    #             break
-    #     else:
-    #         ret = LSV(exon, lsv_id, jlist, lsv_type)
-    #         self.lsv_list.append(ret)
-    #     return ret
+        return LSV(exon, lsv_id, jlist, lsv_type)
 
 
 class Transcript(object):
@@ -415,7 +362,7 @@ def retrieve_gene(gene_id, dbfile, all_exp=False, logger=None):
 
     for ex_grp_id in gg['exons']:
         ex_grp = gg['exons/%s' % ex_grp_id]
-        ex = Exon(ex_grp.attrs['start'], ex_grp.attrs['end'], gn,
+        ex = Exon(ex_grp.attrs['start'], ex_grp.attrs['end'], gn.get_id(),
                   annot=True, isintron=False, indata=ex_grp.attrs['in_data'], retrieve=True)
         gn.exons.append(ex)
         try:
@@ -439,7 +386,7 @@ def retrieve_gene(gene_id, dbfile, all_exp=False, logger=None):
                     junc = junction_list[jj_grp.attrs['start'], jj_grp.attrs['end']]
                 except KeyError:
                     junc = Junction(jj_grp.attrs['start'], jj_grp.attrs['end'], None, None,
-                                    gn, annotated=True, retrieve=True, num_exp=num_exp)
+                                    gene_id, annotated=True, retrieve=True, num_exp=num_exp)
                     junc.donor_id = jj_grp.attrs['donor_id']
                     junc.acceptor_id = jj_grp.attrs['acceptor_id']
                     junction_list[jj_grp.attrs['start'], jj_grp.attrs['end']] = junc
@@ -452,7 +399,7 @@ def retrieve_gene(gene_id, dbfile, all_exp=False, logger=None):
                     junc = junction_list[jj_grp.attrs['start'], jj_grp.attrs['end']]
                 except KeyError:
                     junc = Junction(jj_grp.attrs['start'], jj_grp.attrs['end'], None, None,
-                                    gn, annotated=True, retrieve=True, num_exp=num_exp)
+                                    gene_id, annotated=True, retrieve=True, num_exp=num_exp)
                     junc.donor_id = jj_grp.attrs['donor_id']
                     junc.acceptor_id = jj_grp.attrs['acceptor_id']
                     junction_list[jj_grp.attrs['start'], jj_grp.attrs['end']] = junc
@@ -469,7 +416,7 @@ def extract_junctions_hdf5(gene_obj, jj_grp, junction_list, annotated=True, all_
         junc = junction_list[jj_grp.attrs['start'], jj_grp.attrs['end']]
     except KeyError:
         junc = Junction(jj_grp.attrs['start'], jj_grp.attrs['end'], None, None,
-                        gene_obj, annotated=annotated, retrieve=True, num_exp=num_exp)
+                        gene_obj.get_id(), annotated=annotated, retrieve=True, num_exp=num_exp)
         junction_list[jj_grp.attrs['start'], jj_grp.attrs['end']] = junc
 
     return junc

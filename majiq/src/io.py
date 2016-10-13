@@ -205,12 +205,12 @@ def rnaseq_intron_retention(gne, samfl, chnk, permissive=True, nondenovo=False, 
 
             if r_start < ex1_end - MIN_BP_OVERLAP:
                 if junc1 is None:
-                    junc1 = Junction(ex1_end, intron_start, exon1, None, gne, retrieve=True)
+                    junc1 = Junction(ex1_end, intron_start, exon1, None, gne.get_id(), retrieve=True)
                 junc1.update_junction_read(nreads, r_start, gc_content, unique)
 
             elif (ex2_start - offset - 1) < r_start < ex2_start:
                 if junc2 is None:
-                    junc2 = Junction(intron_end, ex2_start, exon2, None, gne, retrieve=True)
+                    junc2 = Junction(intron_end, ex2_start, exon2, None, gne.get_id(), retrieve=True)
                 junc2.update_junction_read(nreads, r_start, gc_content, unique)
 
             else:
@@ -365,7 +365,7 @@ def read_sam_or_bam(gne, samfl, counter,  h5py_file, nondenovo=False, info_msg='
                         bb = gne.check_antisense_junctions_hdf5(junc_start, junc_end, h5py_file)
                         if not bb:
                             counter[4] += 1
-                            junc = Junction(junc_start, junc_end, None, None, gne, retrieve=True)
+                            junc = Junction(junc_start, junc_end, None, None, gne.get_id(), retrieve=True)
                             junc.update_junction_read(nreads, r_start, gc_content, unique)
                             junctions.append((junc_start, '5prime', junc))
                             junctions.append((junc_end, '3prime', junc))

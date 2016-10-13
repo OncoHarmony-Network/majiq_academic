@@ -13,10 +13,10 @@ class Junction:
     __gt__ = lambda self, other: self.start > other.start or (self.start == other.start and self.end > other.end)
     __ge__ = lambda self, other: self.start >= other.start or (self.start == other.start and self.end >= other.end)
 
-    def __init__(self, start, end, donor, acceptor, gene, annotated=False, retrieve=False, num_exp=1):
+    def __init__(self, start, end, donor, acceptor, gene_id, annotated=False, retrieve=False, num_exp=1):
         """ The start and end in junctions are the last exon in """
 
-        self.gene_name = gene.get_id()
+        self.gene_name = gene_id
         self.id = "%s:%s-%s" % (self.gene_name, start, end)
         self.start = start
         self.end = end
@@ -31,7 +31,9 @@ class Junction:
         self.annotated = annotated
 
         if retrieve:
-            self.coverage = np.zeros((num_exp, (majiq_config.readLen - 16) + 1), dtype=np.float)
+            self.coverage = scipy.sparse.lil_matrix((num_exp, (majiq_config.readLen - 16) + 1), dtype=np.float)
+            #self.coverage = scipy.sparse.csr_matrix((num_exp, (majiq_config.readLen - 16) + 1), dtype=np.float)
+
             self.gc_content = np.zeros((1, (majiq_config.readLen - 16) + 1), dtype=np.float)
 
         self.transcript_id_list = []
@@ -77,11 +79,11 @@ class Junction:
             #     dataset[data_index, :] = self.coverage
 
             # h_jnc['coverage'] = dataset.regionref[data_index, :]
-            dataset[data_index, :] = self.coverage[0, :]
+            dataset[data_index, :] = self.coverage[0, :].toarray()
             h_jnc.attrs['coverage_index'] = data_index
 
         except:
-            print "HDF5 ERROR", self.id, self.junction_id, self.coverage.shape, self.gc_factor.shape
+            print "HDF5 ERROR", self.id, self.coverage.shape
             raise
 
     # GETTERs
