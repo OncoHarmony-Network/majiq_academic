@@ -14,7 +14,7 @@ def init_splicegraph(filename):
     return hdf5_file
 
 
-def gene_to_splicegraph(gne, temp_dir, hdf5_group):
+def gene_to_splicegraph(gne, hdf5_group):
 
     junc_list = []
     junc_l = []

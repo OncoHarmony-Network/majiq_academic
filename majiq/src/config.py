@@ -3,6 +3,7 @@ import ConfigParser
 from scipy import interpolate
 import numpy as np
 from blessings import Terminal
+from majiq.src.constants import *
 
 
 global gene_tlb
@@ -50,6 +51,7 @@ def global_conf_ini(filename, params, only_db=False):
     global A3SS, A5SS, SEev, bothSS, totalSE
     global MINREADS, MINPOS, MIN_INTRON
     global num_final_chunks, min_denovo, nrandom_junctions, min_exp, term
+    global simplify, simplify_threshold, simplify_type
 
     if not only_db:
         num_final_chunks = params.nthreads if params.nthreads > 1 else 1
@@ -70,15 +72,19 @@ def global_conf_ini(filename, params, only_db=False):
     temp_oDir = []
     count = 0
 
+
+
     MINREADS = params.minreads
     MINPOS = params.minpos
     min_exp = params.min_exp
+    outDir = params.output
+    if not os.path.exists(outDir):
+        os.makedirs(outDir)
 
     if not only_db:
         permissive_ir = params.permissive
         MIN_INTRON = params.min_intronic_cov
 
-    #readLen = [int(xx) for xx in general['readlen'].split([','])
     sam_dir = general['samdir']
     genome = general['genome']
     genome_path = general['genome_path']
@@ -88,11 +94,17 @@ def global_conf_ini(filename, params, only_db=False):
         strand_specific = (general['type'] == 'strand-specific')
     else:
         strand_specific = False
-    outDir = params.output
-    if not os.path.exists(outDir):
-        os.makedirs(outDir)
 
-    dbfile = "%s/tmp/db.hdf5" % outDir
+    simplify = False
+    simplify_threshold = 0.0
+    simplify_type = SIMPLIFY_ALL
+    if params.simplify is not None:
+        simplify = True
+        simplify_threshold = float(params.simplify[1])
+        simplify_type = params.simplify[0]
+        if simplify_type not in (SIMPLIFY_ALL, SIMPLIFY_DB, SIMPLIFY_DENOVO) or not 0 <= simplify_threshold <= 1:
+            raise RuntimeError('Error in simplify option, first argument should be "all|denovo|annotated" and second'
+                               ' a float between 0..1')
 
     for exp_idx, lstnames in exp.items():
         tissue_repl[exp_idx] = []

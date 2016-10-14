@@ -142,7 +142,7 @@ class Exon:
     def add_exon_tx(self, extx):
         self.exonTx_list.append(extx)
 
-    def add_new_read(self, start, end, read_seq, s3p_junc, s5p_junc):
+    def add_new_read(self, start, end, s3p_junc, s5p_junc):
 
         # assert start < end , " INCORRECT exon definition %s - %s "%(start, end)
         if start >= end:
@@ -167,7 +167,7 @@ class Exon:
             else:
                 self.ss_3p_list.append(start)
                 self.ss_5p_list.append(end)
-            res = ExonRead(start, end, s3p_junc, s5p_junc, read_seq)
+            res = ExonRead(start, end, s3p_junc, s5p_junc)
             self.exonRead_list.append(res)
         return res
 
@@ -266,10 +266,9 @@ class Exon:
 
 
 class ExonRead(object):
-    def __init__(self, start, end, pre_junc, post_junc, rna_seq=None):
+    def __init__(self, start, end, pre_junc, post_junc):
         self.start = start
         self.end = end
-        self.RNASeq = rna_seq
         self.p3_junc = []
         if pre_junc is not None:
             self.p3_junc.append(pre_junc)
@@ -509,7 +508,7 @@ def collapse_list_exons(listexons, gne):
     return exlist
 
 
-def __half_exon(ss_type, junc, read_rna):
+def __half_exon(ss_type, junc):
     gene = junc.get_gene()
     if ss_type == '3prime':
         coord = junc.get_ss_3p()
@@ -533,7 +532,7 @@ def __half_exon(ss_type, junc, read_rna):
                 frm = junc
                 # print "half",type,"::",ex_start, ex_end, junc.start, junc.end, end
             # if end - start < 10 : continue
-            res = ex.add_new_read(start, end, read_rna, to, frm)
+            res = ex.add_new_read(start, end, to, frm)
             if res:
                 ex.ss_3p_list.append(start)
                 ex.ss_5p_list.append(end)
@@ -545,7 +544,7 @@ def __half_exon(ss_type, junc, read_rna):
 EMPTY_COORD = -1
 
 
-def new_exon_definition(start, end, read_rna, s3prime_junc, s5prime_junc, gene, nondenovo=False, isintron=False):
+def new_exon_definition(start, end, s3prime_junc, s5prime_junc, gene, nondenovo=False, isintron=False):
     if end - start < 5:
         return 0
 
@@ -573,13 +572,13 @@ def new_exon_definition(start, end, read_rna, s3prime_junc, s5prime_junc, gene, 
             s3prime_junc.add_acceptor(ex1)
             gene.add_exon(ex1)
             cc = ex1.get_coordinates()
-            ex1.add_new_read(cc[0], cc[1], read_rna, s3prime_junc, None)
+            ex1.add_new_read(cc[0], cc[1], s3prime_junc, None)
 
             ex2 = Exon(EMPTY_COORD, end, gene.get_id(), annot=False, isintron=isintron, retrieve=True)
             s5prime_junc.add_donor(ex2)
             gene.add_exon(ex2)
             cc = ex2.get_coordinates()
-            ex2.add_new_read(cc[0], cc[1], read_rna, None, s5prime_junc)
+            ex2.add_new_read(cc[0], cc[1], None, s5prime_junc)
 
     else:
         coords = ex.get_coordinates()
@@ -590,7 +589,7 @@ def new_exon_definition(start, end, read_rna, s3prime_junc, s5prime_junc, gene, 
                 cc = ex1.get_coordinates()
                 s3prime_junc.add_acceptor(ex1)
                 gene.add_exon(ex1)
-                ex1.add_new_read(cc[0], cc[1], read_rna, s3prime_junc, None)
+                ex1.add_new_read(cc[0], cc[1], s3prime_junc, None)
             half = True
 
         if end != EMPTY_COORD and end > (coords[1] + config.get_max_denovo_difference()):
@@ -600,18 +599,18 @@ def new_exon_definition(start, end, read_rna, s3prime_junc, s5prime_junc, gene, 
                 cc = ex2.get_coordinates()
                 s5prime_junc.add_donor(ex2)
                 gene.add_exon(ex2)
-                ex2.add_new_read(cc[0], cc[1], read_rna, None, s5prime_junc)
+                ex2.add_new_read(cc[0], cc[1], None, s5prime_junc)
             half = True
 
     if not half:
-        ex.add_new_read(start, end, read_rna, s3prime_junc, s5prime_junc)
+        ex.add_new_read(start, end, s3prime_junc, s5prime_junc)
         s3prime_junc.add_acceptor(ex)
         s5prime_junc.add_donor(ex)
 
     return new_exons
 
 
-def detect_exons(gene, junction_list, read_rna):
+def detect_exons(gene, junction_list, retrieve=False):
     new_exons = 0
     opened = 0
     opened_exon = []
@@ -622,7 +621,7 @@ def detect_exons(gene, junction_list, read_rna):
     junction_list.sort()
     for (coord, jtype, jj) in junction_list:
 
-        if not jj.is_reliable_in_tissue() and not jj.is_annotated():
+        if retrieve and not jj.is_reliable() and not jj.is_annotated():
             continue
 
         jj_gene = jj.get_gene()
@@ -630,15 +629,15 @@ def detect_exons(gene, junction_list, read_rna):
             if opened > 0:
                 start = opened_exon[-1].get_ss_3p()
                 end = coord
-                new_exons += new_exon_definition(start, end, read_rna, opened_exon[-1], jj, jj_gene)
+                new_exons += new_exon_definition(start, end, opened_exon[-1], jj, jj_gene)
                 opened_exon.pop()
                 opened -= 1
             elif opened == 0:
                 if first_3prime is None:
-                    new_exons += __half_exon('5prime', jj, read_rna)
+                    new_exons += __half_exon('5prime', jj)
                 else:
                     new_exons += new_exon_definition(first_3prime.get_ss_3p(),
-                                                     coord, read_rna, first_3prime,
+                                                     coord, first_3prime,
                                                      jj, jj_gene)
             last_5prime = jj
             # end elif opened
@@ -650,7 +649,7 @@ def detect_exons(gene, junction_list, read_rna):
                         if ss.get_gene() != last_5prime.get_gene():
                             continue
                         start = ss.get_ss_3p()
-                        new_exons += new_exon_definition(start, end, read_rna, ss, last_5prime, ss.get_gene())
+                        new_exons += new_exon_definition(start, end, ss, last_5prime, ss.get_gene())
                     last_5prime = None
                     opened = 0
                     opened_exon = []
@@ -663,16 +662,7 @@ def detect_exons(gene, junction_list, read_rna):
             opened += 1
 
     for ss in opened_exon:
-        new_exons += __half_exon('3prime', ss, read_rna)
-
-    for (coord, jtype, jj) in junction_list:
-        if not jj.is_reliable_in_tissue() and not jj.is_annotated():
-            junction_list.remove((coord, jtype, jj))
-            del jj
-            continue
-        if jj.get_donor() is None and jj.get_acceptor() is None:
-            junction_list.remove((coord, jtype, jj))
-            del jj
+        new_exons += __half_exon('3prime', ss)
 
     return
 

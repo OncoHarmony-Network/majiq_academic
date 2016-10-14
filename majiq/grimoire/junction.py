@@ -31,8 +31,8 @@ class Junction:
         self.annotated = annotated
 
         if retrieve:
-            # self.coverage = scipy.sparse.lil_matrix((num_exp, (majiq_config.readLen - 16) + 1), dtype=np.float)
-            self.coverage = scipy.sparse.lil_matrix((num_exp, (majiq_config.readLen - 16) + 1), dtype=np.float)
+            self.coverage = np.zeros((num_exp, (majiq_config.readLen - 16) + 1), dtype=np.float)
+            #self.coverage = scipy.sparse.lil_matrix((num_exp, (majiq_config.readLen - 16) + 1), dtype=np.float)
             self.gc_content = np.zeros((1, (majiq_config.readLen - 16) + 1), dtype=np.float)
 
         self.transcript_id_list = []
@@ -145,6 +145,10 @@ class Junction:
         else:
             res = self.coverage[idx, :].sum()
         return res
+
+    def get_coverage_sum(self, idx):
+        return self.coverage[idx].sum()
+
 
     def get_transcript_list(self):
         return self.transcript_id_list

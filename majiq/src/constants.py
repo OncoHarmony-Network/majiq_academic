@@ -20,6 +20,10 @@ MIN_BP_OVERLAP = 8
 MIN_JUNC_LENGTH = 10
 NUM_INTRON_BINS = 10
 
+SIMPLIFY_ALL = 'all'
+SIMPLIFY_DB = 'annotated'
+SIMPLIFY_DENOVO = 'denovo'
+
 def get_quantifier_temp_filename(outdir, name):
     return "%s/tmp.%s.filtered.hdf5" % (outdir, name)
 

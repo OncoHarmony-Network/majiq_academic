@@ -18,11 +18,13 @@ from majiq.src.analize import lsv_detection
 from majiq.src.constants import *
 from majiq.src.basic_pipeline import BasicPipeline, pipeline_run
 from majiq.src.polyfitnb import fit_nb
+from majiq.src.voila_wrapper import gene_to_splicegraph, init_splicegraph
 import datetime
 
 
 def build(args):
     pipeline_run(Builder(args))
+
 
 def builder_init(idx_count, lock_array, sam_list, pcr_filename, gff_output, only_rna,
                  non_denovo, dbfile, list_of_genes, silent, debug):
@@ -59,7 +61,8 @@ def merging_files(args_vals):
 
         db_f = h5py.File(builder_init.dbfile)
         for gne_idx, gne_id in enumerate(list_of_genes):
-            logger.info("[%s] Progress %s/%s" % (chnk, gne_idx, len(list_of_genes)))
+            if gne_idx % 50 == 0:
+                logger.info("[%s] Progress %s/%s" % (chnk, gne_idx, len(list_of_genes)))
             loop_id = '%s - %s' % (chnk, gne_id)
             logger.debug("[%s] Retrieving gene" % loop_id)
             gene_obj = majiq.grimoire.gene.retrieve_gene(gne_id, db_f, all_exp=True)
@@ -78,16 +81,15 @@ def merging_files(args_vals):
                     splice_list.add((junc.start, '5prime', junc))
                     splice_list.add((junc.end, '3prime', junc))
 
-            detect_exons(gene_obj, list(splice_list), None)
+            detect_exons(gene_obj, list(splice_list), retrieve=True)
+            del splice_list
 
             logger.debug("[%s] Detecting LSV" % loop_id)
-
             lsv_detection(gene_obj, gc_vfunc=vfunc_gc, lsv_list=builder_init.sam_list, lsv_idx=builder_init.idx_count,
                           locks=builder_init.files_locks, logging=None)
 
             del majiq_config.gene_tlb[gne_id]
             del gene_obj
-
 
     except Exception:
         majiq_utils.monitor('CHILD %s:: EXCEPT' % chnk)
@@ -111,10 +113,7 @@ def parsing_files(args_vals):
     tlogger.debug("[%s] Starting new thread" % chnk)
     majiq_utils.monitor('CHILD %s:: CREATION' % chnk)
     db_f = h5py.File(builder_init.dbfile)
-    # samfile = [pysam.Samfile(xx, "rb") for xx in majiq_builder.sam_list]
     counter = [0] * 6
-
-    num_genes = len(builder_init.list_of_genes)
 
     for vals in filesnames:
         chnk, sam_file = vals
@@ -126,14 +125,17 @@ def parsing_files(args_vals):
                              (majiq_config.nrandom_junctions, effective_readlen),
                              maxshape=(None, effective_readlen))
 
+        sgraph = init_splicegraph(get_builder_splicegraph_filename(majiq_config.outDir, sam_file))
+
+
         try:
             samfl = majiq_io.open_rnaseq("%s/%s.bam" % (majiq_config.sam_dir, sam_file))
             gc_pairs = {'GC': [], 'COV': []}
             jnc_idx = 0
 
             for gne_idx, gne_id in enumerate(builder_init.list_of_genes):
-                ind = (float(gne_idx)/num_genes) * 100
-                tlogger.info("[%s] Progress %s/%s" % (loop_id, gne_idx, len(builder_init.list_of_genes)))
+                if gne_idx % 50 == 0:
+                    tlogger.info("[%s] Progress %s/%s" % (loop_id, gne_idx, len(builder_init.list_of_genes)))
                 out_f.create_group('%s/junctions' % gne_id)
                 tlogger.debug("[%s] Retrieving gene" % gne_id)
                 gene_obj = majiq.grimoire.gene.retrieve_gene(gne_id, db_f)
@@ -160,6 +162,8 @@ def parsing_files(args_vals):
                                     data_index=jnc_idx)
                     jnc_idx += 1
 
+                gene_to_splicegraph(gene_obj, sgraph)
+
                 del gene_obj
                 del majiq_config.gene_tlb[gne_id]
 
@@ -174,6 +178,7 @@ def parsing_files(args_vals):
                                                None, logger=tlogger)
 
             out_f.close()
+            sgraph.close()
             majiq_utils.monitor('CHILD %s:: ENDLOOP' % chnk)
 
         except Exception:
@@ -183,7 +188,6 @@ def parsing_files(args_vals):
             raise
 
         finally:
-            #pbar.finish()
             majiq_io.close_rnaseq(samfl)
 
     db_f.close()
@@ -234,7 +238,6 @@ class Builder(BasicPipeline):
 
         lock_array = [mp.Lock() for xx in sam_list]
         idx_array = [0] * len(sam_list)
-        # q = mp.Queue(maxsize=50*self.nthreads)
 
         pool = mp.Pool(processes=self.nthreads, initializer=builder_init,
                        initargs=[idx_array, lock_array, sam_list, self.pcr_filename, self.gff_output,
@@ -250,7 +253,6 @@ class Builder(BasicPipeline):
                           'w', compression='gzip', compression_opts=9)
             effective_readlen = (majiq_config.readLen - 16) + 1
             f.create_dataset(LSV_JUNCTIONS_DATASET_NAME,
-                            # (majiq_config.nrandom_junctions, effective_readlen),
                              (2, effective_readlen),
                              maxshape=(None, effective_readlen))
 

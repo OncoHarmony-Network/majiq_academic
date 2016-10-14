@@ -37,8 +37,24 @@ class LSV(object):
         self.id = lsv_id
 
         junction_list = [x for x in junctions if x is not None]
-        n_viable_juncs = len([x for x in junction_list if x.get_donor() is not None and x.get_acceptor() is not None])
 
+
+        if majiq_config.simplify:
+            jj_set = set()
+            for exp_idx in xrange(majiq_config.num_experiments):
+                cover = [float(junc.get_coverage_sum(exp_idx)) for junc in junction_list]
+                if sum(cover) == 0:
+                    continue
+                bool_map = [majiq_config.simplify_type == SIMPLIFY_ALL or
+                            (junc.is_annotated() and majiq_config.simplify_type == SIMPLIFY_DB) or
+                            (not junc.is_annotated() and majiq_config.simplify_type == SIMPLIFY_DENOVO)
+                            for junc in junction_list]
+
+                jj_set = jj_set.union(set([junc for eidx, junc in enumerate(junction_list)
+                                           if cover[eidx]/sum(cover) >= majiq_config.simplify_threshold and bool_map[eidx]]))
+            junction_list = list(jj_set)
+
+        n_viable_juncs = len([x for x in junction_list if x.get_donor() is not None and x.get_acceptor() is not None])
         if n_viable_juncs < 2:
             raise InvalidLSV('Not enought junctions')
         self.type = lsv_type
