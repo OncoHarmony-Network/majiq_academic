@@ -114,21 +114,21 @@ def parsing_files(args_vals):
     majiq_utils.monitor('CHILD %s:: CREATION' % chnk)
     db_f = h5py.File(builder_init.dbfile)
     counter = [0] * 6
+    try:
+        for vals in filesnames:
+            chnk, sam_file = vals
+            loop_id = sam_file
+            out_f = h5py.File(get_builder_temp_majiq_filename(majiq_config.outDir, sam_file),
+                              'w', compression='gzip', compression_opts=9)
+            effective_readlen = (majiq_config.readLen - MIN_BP_OVERLAP*2) + 1
+            out_f.create_dataset(CONST_JUNCTIONS_DATASET_NAME,
+                                 (majiq_config.nrandom_junctions, effective_readlen),
+                                 maxshape=(None, effective_readlen))
 
-    for vals in filesnames:
-        chnk, sam_file = vals
-        loop_id = sam_file
-        out_f = h5py.File(get_builder_temp_majiq_filename(majiq_config.outDir, sam_file),
-                          'w', compression='gzip', compression_opts=9)
-        effective_readlen = (majiq_config.readLen - MIN_BP_OVERLAP*2) + 1
-        out_f.create_dataset(CONST_JUNCTIONS_DATASET_NAME,
-                             (majiq_config.nrandom_junctions, effective_readlen),
-                             maxshape=(None, effective_readlen))
-
-        sgraph = init_splicegraph(get_builder_splicegraph_filename(majiq_config.outDir, sam_file))
+            sgraph = init_splicegraph(get_builder_splicegraph_filename(majiq_config.outDir, sam_file))
 
 
-        try:
+
             samfl = majiq_io.open_rnaseq("%s/%s.bam" % (majiq_config.sam_dir, sam_file))
             gc_pairs = {'GC': [], 'COV': []}
             jnc_idx = 0
@@ -181,13 +181,13 @@ def parsing_files(args_vals):
             sgraph.close()
             majiq_utils.monitor('CHILD %s:: ENDLOOP' % chnk)
 
-        except Exception:
+    except Exception:
             majiq_utils.monitor('CHILD %s:: EXCEPT' % chnk)
             traceback.print_exc()
             sys.stdout.flush()
             raise
 
-        finally:
+    finally:
             majiq_io.close_rnaseq(samfl)
 
     db_f.close()

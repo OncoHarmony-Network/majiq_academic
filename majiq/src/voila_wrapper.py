@@ -3,12 +3,12 @@ import numpy as np
 from majiq.src import config as majiq_config
 from voila import constants as voila_const
 from voila.splice_graphics import JunctionGraphic, ExonGraphic, GeneGraphic
-from majiq.run_majiq import VERSION
+from majiq.src.constants import VERSION
 import h5py
 
 
 def init_splicegraph(filename):
-    hdf5_file = h5py.File(filename, 'w+')
+    hdf5_file = h5py.File(filename, 'w', compression='gzip', compression_opts=9)
     hdf5_file.attrs['majiq_version'] = VERSION
 
     return hdf5_file
@@ -101,5 +101,5 @@ def gene_to_splicegraph(gne, hdf5_group):
                          intron_retention=ex.get_ir(), alt_starts=alt_start, alt_ends=alt_ends)
         exon_list.append(eg)
     ggraph = GeneGraphic(id=gne.get_id(), name=gne.get_name(), strand=gne.get_strand(), exons=exon_list,
-                         junctions=junc_list, chrom=gg.get_chromosome())
+                         junctions=junc_list, chrom=gne.get_chromosome())
     ggraph.to_hdf5(hdf5_group)

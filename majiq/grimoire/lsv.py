@@ -332,7 +332,7 @@ class LSV(object):
                              dtype=np.float)
 
             for idx, junc in enumerate(self.junctions):
-                cover[idx] = junc.coverage[exp_idx, :].todense()
+                cover[idx] = junc.coverage[exp_idx, :]
                 if majiq_config.gcnorm:
                     vals = gc_vfunc(junc.get_gc_content())
                     cover = np.multiply(cover, vals)

@@ -248,7 +248,7 @@ def rnaseq_intron_retention(gne, samfl, chnk, permissive=True, nondenovo=False, 
 
         if cov1 >= majiq_config.min_denovo and cov2 >= majiq_config.min_denovo and intron_body_covered:
             exnum = new_exon_definition(intron_start, intron_end,
-                                        None, junc1, junc2, gne, nondenovo=nondenovo,
+                                        junc1, junc2, gne, nondenovo=nondenovo,
                                         isintron=True)
             if exnum == -1:
                 continue
