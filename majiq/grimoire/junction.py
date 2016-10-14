@@ -31,9 +31,8 @@ class Junction:
         self.annotated = annotated
 
         if retrieve:
+            # self.coverage = scipy.sparse.lil_matrix((num_exp, (majiq_config.readLen - 16) + 1), dtype=np.float)
             self.coverage = scipy.sparse.lil_matrix((num_exp, (majiq_config.readLen - 16) + 1), dtype=np.float)
-            #self.coverage = scipy.sparse.csr_matrix((num_exp, (majiq_config.readLen - 16) + 1), dtype=np.float)
-
             self.gc_content = np.zeros((1, (majiq_config.readLen - 16) + 1), dtype=np.float)
 
         self.transcript_id_list = []
@@ -73,13 +72,7 @@ class Junction:
                 shp_new = dataset.shape[0] + majiq_config.nrandom_junctions
                 dataset.resize((shp_new, dataset.shape[1]))
 
-            # if majiq_config.gcnorm:
-            #     vals = gc_func(self.gc_content)
-            #     self.coverage = np.multiply(self.coverage, vals)
-            #     dataset[data_index, :] = self.coverage
-
-            # h_jnc['coverage'] = dataset.regionref[data_index, :]
-            dataset[data_index, :] = self.coverage[0, :].toarray()
+            dataset[data_index, :] = self.coverage[0, :]
             h_jnc.attrs['coverage_index'] = data_index
 
         except:

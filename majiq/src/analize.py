@@ -46,7 +46,7 @@ def detect_lsv(exon, gn, lsv_type, dummy, only_annot=False):
             dummy[name][sstype[lsv_type][1]].append(lsv_in)
     except:
         print "KK"
-        pass
+        raise
 
 
 def wrap_result_file(lsv, name, gc_vfunc, lsv_list, lsv_idx, lock_per_file=None):

@@ -12,6 +12,7 @@ from majiq.src.constants import *
 SSOURCE = 'source'
 STARGET = 'target'
 
+
 def dump_bin_file(data, filename):
     with open(filename, 'wb') as ofp:
         fast_pickler = pickle.Pickler(ofp, protocol=2)
