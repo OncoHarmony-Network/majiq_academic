@@ -21,32 +21,28 @@ def detect_lsv(exon, gn, lsv_type, dummy, only_annot=False):
 
     sstype = {SSOURCE: ['5prime', 0], STARGET: ['3prime', 1]}
     jlist = exon.get_junctions(sstype[lsv_type][0])
-    jlist = [x for x in jlist if x is not None]
-
+    jlist = [x for x in jlist if x is not None and x.get_donor() is not None and x.get_acceptor() is not None]
     if len(jlist) < 2:
         return
-    lsv_in = gn.new_lsv_definition(exon, jlist, lsv_type)
-    try:
-        for name, ind_list in majiq_config.tissue_repl.items():
-            group_thresh = majiq_config.min_exp
-            if group_thresh == -1:
-                group_thresh = min((len(ind_list) * 0.5), 2)
-            counter = 0
-            for jj in jlist:
-                for exp_idx in ind_list:
-                    if only_annot or majiq_filter.reliable_in_data(jj, exp_idx,
-                                                                   minnonzero=majiq_config.MINPOS,
-                                                                   min_reads=majiq_config.MINREADS):
-                        counter += 1
-                if counter < group_thresh:
-                    continue
-                break
-            else:
+
+    for name, ind_list in majiq_config.tissue_repl.items():
+        group_thresh = majiq_config.min_exp
+        if group_thresh == -1:
+            group_thresh = min((len(ind_list) * 0.5), 2)
+        counter = 0
+        for jj in jlist:
+            for exp_idx in ind_list:
+                if only_annot or majiq_filter.reliable_in_data(jj, exp_idx,
+                                                               minnonzero=majiq_config.MINPOS,
+                                                               min_reads=majiq_config.MINREADS):
+                    counter += 1
+            if counter < group_thresh:
                 continue
-            dummy[name][sstype[lsv_type][1]].append(lsv_in)
-    except:
-        print "KK"
-        raise
+            break
+        else:
+            continue
+        lsv_in = gn.new_lsv_definition(exon, jlist, lsv_type)
+        dummy[name][sstype[lsv_type][1]].append(lsv_in)
 
 
 def wrap_result_file(lsv, name, gc_vfunc, lsv_list, lsv_idx, lock_per_file=None):
@@ -72,6 +68,9 @@ def lsv_detection(gn, gc_vfunc, lsv_list=None, lsv_idx=None, only_real_data=Fals
     for ex in gn.get_exon_list():
         try:
             detect_lsv(ex, gn, SSOURCE, dummy, only_annot=only_real_data)
+        except InvalidLSV:
+            pass
+        try:
             detect_lsv(ex, gn, STARGET, dummy, only_annot=only_real_data)
         except InvalidLSV:
             pass

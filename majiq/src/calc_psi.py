@@ -24,6 +24,24 @@ import collections
 ################################
 
 
+def boots_write(hg_grp, vals, lsv_idx):
+
+    njunc = vals['samples'].shape[0]
+    if lsv_idx + njunc > 2:
+        shp = hg_grp['junctions'].shape
+        shp_new = shp[0] + 5000
+        hg_grp['junctions'].resize((shp_new, shp[1]))
+
+    hg_grp['junctions'][lsv_idx:lsv_idx+njunc] = vals['samples']
+
+    h_lsv = hg_grp.create_group("LSVs/%s" % vals['id'])
+    h_lsv.attrs['id'] = vals['id']
+    h_lsv.attrs['type'] = vals['type']
+    h_lsv.attrs['coverage'] = hg_grp['junctions'].regionref[lsv_idx:lsv_idx + njunc]
+
+    return lsv_idx+njunc
+
+
 def calcpsi(args):
     return pipeline_run(CalcPsi(args))
 
@@ -46,9 +64,6 @@ def psi_quantification(args_vals):
         for eidx in np.arange(num_exp):
             f_list.append(h5py.File(get_quantifier_norm_temp_files(quantification_init.output,
                                                                    quantification_init.names, eidx)))
-        if quantification_init.only_boots:
-            res = [[] for xx in range(num_exp)]
-            info_res = [[] for xx in range(num_exp)]
 
         for lidx, lsv_id in enumerate(list_of_lsv):
             if lidx % 50 == 0:
@@ -71,8 +86,16 @@ def psi_quantification(args_vals):
 
             if quantification_init.only_boots:
                 for ii in range(num_exp):
-                    res[ii].append(np.array(lsv_samples[ii]))
-                    info_res[ii].append((lsvobj.attrs['id'], lsvobj.attrs['type']))
+                    vals = {'samples': lsv_samples[ii], 'id': lsvobj.attrs['id'], 'type': lsvobj.attrs['type']}
+                    file_name = '%s/%s.%d.boots.hdf5' % (quantification_init.output, quantification_init.names, ii)
+                    quantification_init.lock_per_file[ii].acquire()
+                    f = h5py.File(file_name, 'r+', compression='gzip', compression_opts=9)
+                    lsv_idx = f.attrs['lsv_idx']
+                    lsv_idx = boots_write(f, vals, lsv_idx)
+                    f.attrs['lsv_idx'] = lsv_idx
+                    f.close()
+                    quantification_init.lock_per_file[ii].release()
+
                 continue
 
             psi = np.array(lsv_samples)
@@ -99,14 +122,6 @@ def psi_quantification(args_vals):
             qm = QueueMessage(QUEUE_MESSAGE_PSI_RESULT, (post_psi, lsv_id), chnk)
             quantification_init.queue.put(qm, block=True)
 
-        if quantification_init.only_boots:
-            import pickle
-            for ii in range(num_exp):
-                outfp = open('%s/%s.%d.boots_%s.pickle' % (quantification_init.output,
-                                                           quantification_init.names, ii, chnk), 'w+')
-                pickle.dump([res[ii], info_res[ii]], outfp)
-                outfp.close()
-
         qm = QueueMessage(QUEUE_MESSAGE_END_WORKER, None, chnk)
         quantification_init.queue.put(qm, block=True)
         quantification_init.lock[chnk].acquire()
@@ -128,7 +143,7 @@ def parse_and_norm_majiq(fname, replica_num, config):
         logger = majiq_utils.get_logger("%s/%s_%s.majiq.log" % (config.output_dir, config.name, replica_num),
                                         silent=config.silent, debug=config.debug)
         meta_info, lsv_junc = majiq_io.load_data_lsv(fname, config.name, logger)
-        filtered_lsv = majiq_norm.mark_stacks(lsv_junc, meta_info.fitfunc, config.markstacks, logger)
+        filtered_lsv = majiq_norm.mark_stacks(lsv_junc, meta_info['fitfunc'], config.markstacks, logger)
 
         sys.stdout.flush()
 
@@ -143,7 +158,7 @@ def parse_and_norm_majiq(fname, replica_num, config):
                              maxshape=(None, effective_readlen))
             f.attrs['meta_info'] = meta_info['group']
             # f.attrs['effective_readlen'] = effective_readlen
-            f.attrs['fitfunc'] = meta_info.fitfunc
+            f.attrs['fitfunc'] = meta_info['fitfunc']
 
             old_shape = nlsvs
             lsv_idx = 0
@@ -173,6 +188,7 @@ def parse_and_norm_majiq(fname, replica_num, config):
         traceback.print_exc()
         sys.stdout.flush()
         raise
+
 
 class CalcPsi(BasicPipeline):
 
@@ -209,14 +225,29 @@ class CalcPsi(BasicPipeline):
         list_of_lsv = majiq_filter.merge_files_hdf5([get_quantifier_norm_temp_files(self.output, self.name, xx)
                                                      for xx in xrange(len(self.files))], self.minpos, self.minreads,
                                                     logger=self.logger)
+        file_locks = None
+        if self.only_boots:
+            import datetime
+            for ii, ff in enumerate(self.files):
+                f = h5py.File('%s/%s.%d.boots.hdf5' % (self.output, self.name, ii),
+                              'w', compression='gzip', compression_opts=9)
+                f.create_dataset('junctions', (5000, self.m), maxshape=(None, self.m))
+                # fill meta info
+                f.attrs['sample_id'] = ff
+                f.attrs['date'] = datetime.datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S')
+                f.attrs['VERSION'] = VERSION
+                f.attrs['lsv_idx'] = 0
+                f.close()
 
+            file_locks = [mp.Lock() for xx in self.files]
         lock_arr = [mp.Lock() for xx in range(self.nthreads)]
         q = mp.Queue()
         processes = self.nthreads if not self.only_boots else 1
 
         pool = mp.Pool(processes=processes, initializer=quantification_init,
                        initargs=[q, lock_arr, self.output, self.name, self.silent, self.debug, self.nbins, self.m,
-                                 self.k, self.discardzeros, self.trimborder, len(self.files), self.only_boots],
+                                 self.k, self.discardzeros, self.trimborder, len(self.files), self.only_boots,
+                                 file_locks],
                        maxtasksperchild=1)
 
         lchnksize = max(len(list_of_lsv)/processes, 1) + 1
@@ -229,13 +260,18 @@ class CalcPsi(BasicPipeline):
             out_h5p = h5py.File(get_quantifier_voila_filename(self.output, self.name),
                                 'w', compression='gzip', compression_opts=9)
             in_h5p = h5py.File(get_quantifier_norm_temp_files(self.output, self.name, 0))
-
             queue_manager(in_h5p, out_h5p, lock_arr, q, num_chunks=processes, logger=self.logger)
-
             in_h5p.close()
             out_h5p.close()
-
             pool.join()
+
+        if self.only_boots:
+            for ii, ff in enumerate(self.files):
+                file_name = '%s/%s.%d.boots.hdf5' % (self.output, self.name, ii)
+                f = h5py.File(file_name, 'r+', compression='gzip', compression_opts=9)
+                lsv_idx = f.attrs['lsv_idx']
+                f['junctions'].resize((lsv_idx, self.m))
+                f.close()
 
         self.logger.info("PSI calculation for %s ended succesfully! Result can be found at %s" % (self.name, self.output))
         self.logger.info("Alakazam! Done.")

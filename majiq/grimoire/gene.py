@@ -350,13 +350,14 @@ def clear_gene_tlb():
     gc.collect()
 
 
-def retrieve_gene(gene_id, dbfile, all_exp=False, logger=None):
+def retrieve_gene(gene_id, dbfile, all_exp=False, junction_list=None, logger=None):
     gg = dbfile[gene_id]
     gn = Gene(gene_id, gg.attrs['name'], gg.attrs['chromosome'], gg.attrs['strand'],
               gg.attrs['start'], gg.attrs['end'], retrieve=True)
 
     majiq_config.gene_tlb[gene_id] = gn
-    junction_list = {}
+    if junction_list is None:
+        junction_list = {}
 
     num_exp = 1 if not all_exp else majiq_config.num_experiments
 
@@ -415,8 +416,12 @@ def extract_junctions_hdf5(gene_obj, jj_grp, junction_list, annotated=True, all_
     try:
         junc = junction_list[jj_grp.attrs['start'], jj_grp.attrs['end']]
     except KeyError:
+        if jj_grp.attrs['end'] - jj_grp.attrs['end'] == 1:
+            intronic = True
+        else:
+            intronic = False
         junc = Junction(jj_grp.attrs['start'], jj_grp.attrs['end'], None, None,
-                        gene_obj.get_id(), annotated=annotated, retrieve=True, num_exp=num_exp)
+                        gene_obj.get_id(), annotated=annotated, retrieve=True, num_exp=num_exp, intronic=intronic)
         junction_list[jj_grp.attrs['start'], jj_grp.attrs['end']] = junc
 
     return junc

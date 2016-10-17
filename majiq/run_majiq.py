@@ -68,9 +68,7 @@ def main():
     buildparser.add_argument('--only_gather', action='store_true', dest='onlygather', default=False)
     buildparser.add_argument('--permissive_ir', action='store_true', dest='permissive', default=False)
     buildparser.add_argument('--min_experiments', default=-1, type=float, dest='min_exp')
-    buildparser.add_argument('--markstacks', default=0.0000001, type=float,
-                             help='Mark stack positions. Expects a p-value. Use a negative value in order to '
-                                  'disable it. [Default: %(default)s]')
+
     buildparser.add_argument('--simplify', nargs='*')
 
 
@@ -98,6 +96,9 @@ def main():
     psianddelta.add_argument('--discardzeros', default=5, type=int, dest="discardzeros",
                              help='Discarding zeroes, up to a minimum of N positions per junction. [Default: 5]')
     psianddelta.add_argument('--only_bootstrap', action='store_true', dest='only_boots', default=False)
+    psianddelta.add_argument('--markstacks', default=0.0000001, type=float,
+                             help='Mark stack positions. Expects a p-value. Use a negative value in order to '
+                                  'disable it. [Default: %(default)s]')
 
     #deltapair and deltagroup flags
     delta = new_subparser()
@@ -179,8 +180,6 @@ def main():
     #                                           parents=[common, mdelta, psianddelta])
     # parser_multidelta.set_defaults(func=multi_dpsi)
     args = parser.parse_args()
-    if args.simplify is not None and len(args.simplify) not in (0, 2):
-        parser.error('Simplify requires 2 values type of junctions afected and E(PSI) threshold.')
     args.func(args)
 
 

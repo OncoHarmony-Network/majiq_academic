@@ -619,6 +619,7 @@ def detect_exons(gene, junction_list, retrieve=False):
 
     junction_list.extend(gene.get_all_ss())
     junction_list.sort()
+    intronic = False
     for (coord, jtype, jj) in junction_list:
 
         if retrieve and not jj.is_reliable() and not jj.is_annotated():
@@ -626,10 +627,12 @@ def detect_exons(gene, junction_list, retrieve=False):
 
         jj_gene = jj.get_gene()
         if jtype == '5prime':
+
             if opened > 0:
                 start = opened_exon[-1].get_ss_3p()
                 end = coord
-                new_exons += new_exon_definition(start, end, opened_exon[-1], jj, jj_gene)
+                new_exons += new_exon_definition(start, end, opened_exon[-1], jj, jj_gene,
+                                                 isintron=jj.is_intronic() or intronic)
                 opened_exon.pop()
                 opened -= 1
             elif opened == 0:
@@ -642,6 +645,7 @@ def detect_exons(gene, junction_list, retrieve=False):
             last_5prime = jj
             # end elif opened
         else:
+            intronic = jj.is_intronic()
             if opened > 0:
                 if last_5prime is not None:
                     end = last_5prime.get_ss_5p()
@@ -657,6 +661,7 @@ def detect_exons(gene, junction_list, retrieve=False):
             else:
                 last_5prime = None
                 first_3prime = jj
+
             # end else ...
             opened_exon.append(jj)
             opened += 1

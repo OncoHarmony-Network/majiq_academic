@@ -13,7 +13,8 @@ class Junction:
     __gt__ = lambda self, other: self.start > other.start or (self.start == other.start and self.end > other.end)
     __ge__ = lambda self, other: self.start >= other.start or (self.start == other.start and self.end >= other.end)
 
-    def __init__(self, start, end, donor, acceptor, gene_id, annotated=False, retrieve=False, num_exp=1):
+    def __init__(self, start, end, donor, acceptor, gene_id, annotated=False, retrieve=False, num_exp=1,
+                 intronic=False):
         """ The start and end in junctions are the last exon in """
 
         self.gene_name = gene_id
@@ -34,7 +35,7 @@ class Junction:
             self.coverage = np.zeros((num_exp, (majiq_config.readLen - 16) + 1), dtype=np.float)
             #self.coverage = scipy.sparse.lil_matrix((num_exp, (majiq_config.readLen - 16) + 1), dtype=np.float)
             self.gc_content = np.zeros((1, (majiq_config.readLen - 16) + 1), dtype=np.float)
-
+            self.intronic = intronic
         self.transcript_id_list = []
 
     def __hash__(self):
@@ -98,6 +99,9 @@ class Junction:
     def get_coordinates(self):
         return self.start, self.end
 
+    def is_intronic(self):
+        return self.intronic
+
     def get_donor(self):
         if self.donor_id == -1:
             ex = None
@@ -148,7 +152,6 @@ class Junction:
 
     def get_coverage_sum(self, idx):
         return self.coverage[idx].sum()
-
 
     def get_transcript_list(self):
         return self.transcript_id_list

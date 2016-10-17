@@ -65,9 +65,9 @@ def merging_files(args_vals):
                 logger.info("[%s] Progress %s/%s" % (chnk, gne_idx, len(list_of_genes)))
             loop_id = '%s - %s' % (chnk, gne_id)
             logger.debug("[%s] Retrieving gene" % loop_id)
-            gene_obj = majiq.grimoire.gene.retrieve_gene(gne_id, db_f, all_exp=True)
-
             junction_list = {}
+            gene_obj = majiq.grimoire.gene.retrieve_gene(gne_id, db_f, junction_list=junction_list, all_exp=True)
+
             splice_list = set()
 
             for exp_idx, filename in enumerate(builder_init.sam_list):
@@ -126,8 +126,6 @@ def parsing_files(args_vals):
                                  maxshape=(None, effective_readlen))
 
             sgraph = init_splicegraph(get_builder_splicegraph_filename(majiq_config.outDir, sam_file))
-
-
 
             samfl = majiq_io.open_rnaseq("%s/%s.bam" % (majiq_config.sam_dir, sam_file))
             gc_pairs = {'GC': [], 'COV': []}
@@ -197,6 +195,8 @@ def parsing_files(args_vals):
 class Builder(BasicPipeline):
 
     def run(self):
+        if self.simplify is not None and len(args.simplify) not in (0, 2):
+            raise RuntimeError('Simplify requires 2 values type of junctions afected and E(PSI) threshold.')
         if not os.path.exists(self.conf):
             raise RuntimeError("Config file %s does not exist" % self.conf)
         sam_list = majiq_config.global_conf_ini(self.conf, self)
@@ -249,13 +249,12 @@ class Builder(BasicPipeline):
         db_f = h5py.File(get_build_temp_db_filename(majiq_config.outDir))
 
         for exp_idx, sam_file in enumerate(sam_list):
+
             f = h5py.File(get_builder_majiq_filename(majiq_config.outDir, sam_file),
                           'w', compression='gzip', compression_opts=9)
             effective_readlen = (majiq_config.readLen - 16) + 1
-            f.create_dataset(LSV_JUNCTIONS_DATASET_NAME,
-                             (2, effective_readlen),
+            f.create_dataset(LSV_JUNCTIONS_DATASET_NAME, (majiq_config.nrandom_junctions, effective_readlen),
                              maxshape=(None, effective_readlen))
-
 
             # fill meta info
             f.attrs['sample_id'] = sam_file

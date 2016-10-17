@@ -46,7 +46,7 @@ class QueueMessage:
 
 
 def quantification_init(q, lock, output, names, silent, debug, nbins, m, k,
-                        discardzeros, trimborder, num_exp, only_boots):
+                        discardzeros, trimborder, num_exp, only_boots, lock_per_file):
 
     quantification_init.lock = lock
     quantification_init.queue = q
@@ -61,9 +61,11 @@ def quantification_init(q, lock, output, names, silent, debug, nbins, m, k,
     quantification_init.trimborder = trimborder
     quantification_init.num_exp = num_exp
     quantification_init.only_boots = only_boots
+    quantification_init.lock_per_file = lock_per_file
 
 
-def queue_manager(input_h5dfp, output_h5dfp, lock_array, result_queue, num_chunks, meta_info=None, logger=None):
+def queue_manager(input_h5dfp, output_h5dfp, lock_array, result_queue, num_chunks, meta_info=None, num_exp=0,
+                  logger=None):
 
     nthr_count = 0
     posterior_matrix = []
@@ -71,7 +73,7 @@ def queue_manager(input_h5dfp, output_h5dfp, lock_array, result_queue, num_chunk
     psi2 = []
     names = []
 
-    lsv_idx = [0] * majiq_config.num_experiments
+    lsv_idx = [0] * num_exp
     while True:
         try:
             val = result_queue.get(block=True, timeout=10)
