@@ -443,7 +443,6 @@ def parse_input(args):
             for gene_name in fileinput.input(args.gene_names):
                 gene_name_list.append(gene_name.rstrip().upper())
 
-        # voila_input = io_voila.load_voila_input(voila_file, logger=logger)
         voila_input = io_voila.voila_input_from_hdf5(voila_file, logger)
         majiq_output = utils_voila.lsvs_to_gene_dict(voila_input, gene_name_list=gene_name_list, lsv_types=lsv_types,
                                                      logger=logger)

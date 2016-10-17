@@ -67,10 +67,6 @@ table {
     float: left;
 }
 
-/*.largePsiPlot{*/
-/*width: 419px;*/
-/*}*/
-
 /* tablesorter CSS */
 table.tablesorter {
     font-family: 'Arial', sans-serif;
@@ -96,11 +92,6 @@ table.tablesorter thead tr .header {
 table.tablesorter tbody td {
     padding: 4px;
     background-color: #FFF;
-    /*vertical-align: top;*/
-}
-
-table.tablesorter tbody tr.odd td {
-    /*background-color:#F0F0F6;*/
 }
 
 table.tablesorter thead tr .headerSortUp {
@@ -117,21 +108,12 @@ table.tablesorter thead tr .headerSortDown, table.tablesorter thead tr .headerSo
 
 /* End of tablesorter CSS*/
 
-.deltaCondensed {
-    /*border: 1px;*/
-    /*border-style: solid solid none solid;*/
-    /*padding: 1px;*/
-    /*color: #d3d3d3;*/
-}
-
 .extraPlots {
 }
 
 /*D3 violins plots*/
 .area {
     shape-rendering: geometricPrecision;
-    /*fill: #ccc !important;*/
-    /*fill: url(#violin-gradient);*/
 }
 
 .boxplot {

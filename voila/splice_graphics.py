@@ -1,5 +1,4 @@
 import json
-import multiprocessing
 from multiprocessing import Manager, Pool
 from multiprocessing.process import Process
 from multiprocessing.queues import JoinableQueue
@@ -66,11 +65,7 @@ class GeneGraphic(HDF5):
         return self.end
 
     def get_coords(self):
-        # return [self.start, self.end]
-        # if self.strand == '+':
-        return [self.exons[0].get_coords()[0], self.exons[-1].get_coords()[1]]
-        # if self.strand == '-':
-        #     return [self.exons[-1].coords[1], self.exons[0].coords[0]]
+        return [self.start, self.end]
 
     def to_JSON(self, encoder=json.JSONEncoder):
         return json.dumps(self, default=lambda o: o.__dict__, sort_keys=True, cls=encoder)
@@ -90,13 +85,15 @@ class GeneGraphic(HDF5):
             0,
             len(self.exons),
             ','.join([str(abs(e.get_coords()[0] - e.get_coords()[1])) for e in self.exons]),
-            # [::int(self.strand + '1')]
             ','.join([str(abs(e.get_coords()[0] - self.start)) for e in self.exons]),
         ]
         return "\t".join([str(b) for b in bed_fields])
 
-    def to_hdf5(self, h):
-        super(GeneGraphic, self).to_hdf5(h.create_group(self.id))
+    def to_hdf5(self, h, use_id=True):
+        if use_id:
+            h = h.create_group('/' + self.id)
+
+        super(GeneGraphic, self).to_hdf5(h, use_id)
 
     def cls_list(self):
         return {'exons':
@@ -215,19 +212,6 @@ class JunctionGraphic(HDF5):
         return json.dumps(self, default=lambda o: o.__dict__, sort_keys=True, cls=encoder)
 
 
-class LsvGraphic(GeneGraphic):
-    def __init__(self, type_lsv, coords, id, name=None, strand=None, exons=list(), junctions=list(), chrom=None):
-        super(LsvGraphic, self).__init__(id, name, strand, exons, junctions, chrom)
-        self.type = type_lsv
-        self.coords = coords
-
-    def get_type(self):
-        return self.type
-
-    def to_hdf5(self, h):
-        HDF5.to_hdf5(self, h)
-
-
 def splice_graph_from_hdf5(hdf5_filename, logger):
     def worker():
         with h5py.File(hdf5_filename, 'r') as h:
@@ -260,3 +244,16 @@ def splice_graph_from_hdf5(hdf5_filename, logger):
     queue.close()
 
     return manager_dict.values()
+
+
+class LsvGraphic(GeneGraphic):
+    def __init__(self, type_lsv, coords, id, name=None, strand=None, exons=list(), junctions=list(), chrom=None):
+        super(LsvGraphic, self).__init__(id, name, strand, exons, junctions, chrom)
+        self.type = type_lsv
+        self.coords = coords
+
+    def get_type(self):
+        return self.type
+
+    def to_hdf5(self, h, use_id=True):
+        HDF5.to_hdf5(self, h, use_id)

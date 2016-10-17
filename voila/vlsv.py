@@ -3,8 +3,8 @@ from collections import defaultdict
 
 import numpy as np
 
-from voila.hdf5 import HDF5, BinsDataSet, Psi1DataSet, Psi2DataSet
-from voila.splice_graphics import LsvGraphic
+from voila.hdf5 import BinsDataSet, Psi1DataSet, Psi2DataSet
+from voila.splice_graphics import GeneGraphic
 
 
 def get_expected_dpsi(bins):
@@ -60,13 +60,200 @@ def matrix_area(matrix, V=0.2, absolute=True, collapsed_mat=False):
     return sum(area)
 
 
-class OrphanJunctionException(Exception):
-    def __init__(self, m):
-        self.message = m
+class VoilaLsv(GeneGraphic):
+    def __init__(self, id, coords, bins, type_lsv=None, psi1=None, psi2=None, name=None, strand=None, exons=(),
+                 junctions=(), chrom=None):
 
+        super(VoilaLsv, self).__init__(id, name, strand, exons, junctions, chrom)
 
-class VoilaLsv(HDF5):
-    """LSV information unit managed by Voila"""
+        self.coords = coords
+        self.type = type_lsv
+        self.psi1 = psi1
+        self.psi2 = psi2
+        self.bed12_str = None
+
+        self.means = []
+        self.variances = []
+
+        self.bins = bins
+        self.excl_incl = []
+
+        if self.is_delta_psi():  # Store collapsed matrix to save some space
+            self.bins = [collapse_matrix(np.array(lsv_bins)) for lsv_bins in self.bins]
+
+        if len(self.bins) == 1:
+            self.bins.append(self.bins[-1][::-1])  # Recreate complementary junction in binary LSV
+
+        for lsv_bins in self.bins:
+            if self.is_delta_psi():
+                self.means.append(get_expected_dpsi(lsv_bins))
+                if self.means[-1] < 0:
+                    self.excl_incl.append([-self.means[-1], 0])
+                else:
+                    self.excl_incl.append([0, self.means[-1]])
+            else:
+                self.means.append(get_expected_psi(np.array(lsv_bins)))
+                step_bins = 1.0 / len(lsv_bins)
+                projection_prod = lsv_bins * np.arange(step_bins / 2, 1, step_bins) ** 2
+                self.variances.append(np.sum(projection_prod) - self.means[-1] ** 2)
+
+        # For LSV filtering
+        if type_lsv:
+            self.categories = VoilaLsv.init_categories(type_lsv)
+
+        self.psi_junction = 0
+
+    def is_delta_psi(self):
+        return sum([bool(self.psi1), bool(self.psi2)]) == 2
+
+    def get_lsv_graphic(self):
+        return self
+
+    def get_chrom(self):
+        return self.chrom
+
+    def get_strand(self):
+        return self.strand
+
+    def set_chrom(self, chrom):
+        self.chrom = chrom
+
+    def set_strand(self, strand):
+        self.strand = strand
+
+    def set_id(self, id):
+        self.id = id
+
+    def get_id(self):
+        return self.id
+
+    def get_gene_name(self):
+        return self.name
+
+    def set_type(self, type):
+        self.type_lsv = type
+
+    def get_type(self):
+        return self.type
+
+    def get_bins(self):
+        return self.bins
+
+    def set_means(self, means):
+        self.means = means
+
+    def get_means(self):
+        return self.means
+
+    def set_coords(self, coords):
+        self.coords = coords
+
+    def get_coords(self):
+        return self.coords
+
+    def get_variances(self):
+        return self.variances
+
+    def set_excl_incl(self, excl_incl_set):
+        self.excl_incl = excl_incl_set
+
+    def get_excl_incl(self):
+        return self.excl_incl
+
+    def get_extension(self):
+        return [self.get_exons()[0].get_coords()[0], self.get_exons()[-1].get_coords()[1]]
+
+    def get_categories(self):
+        return self.categories
+
+    def njuncs(self):
+        return self.categories['njuncs']
+
+    def nexons(self):
+        return self.categories['nexons']
+
+    def categories2css(self):
+        css_cats = []
+        for c in self.categories:
+            if type(self.categories[c]) == bool and self.categories[c]:
+                css_cats.append(c)
+        return ' '.join(css_cats)
+
+    def set_bed12(self, bed12_str):
+        self.bed12_str = bed12_str
+
+    def get_bed12(self):
+        return self.bed12_str
+
+    def get_gff3(self, logger=None):
+        try:
+            return VoilaLsv.to_gff3(self)
+        except OrphanJunctionException, e:
+            if logger:
+                logger.warning(e.message)
+            else:
+                print "[WARNING] :: %s" % e.message
+
+    def to_JSON(self, encoder=json.JSONEncoder):
+        self.bins = np.array(self.bins).tolist()
+        if self.is_delta_psi():
+            self.psi1 = np.array(self.psi1).tolist()
+            self.psi2 = np.array(self.psi2).tolist()
+        return json.dumps(self, default=lambda o: o.__dict__, sort_keys=True, cls=encoder)
+
+    def is_lsv_changing(self, thres):
+        means = np.array(self.get_means())
+        # TODO: should we check that pos and neg are kind of matched?
+        return max(means[means > 0].sum(), means[means < 0].sum()) >= thres
+        # return np.any(np.array(self.get_means()) >= thres)
+
+    def exclude(self):
+        return ['categories', 'bins', 'psi1', 'psi2']
+
+    def to_hdf5(self, h, use_id=True):
+        if use_id:
+            h = h.create_group('/lsvs/' + self.id)
+
+        super(VoilaLsv, self).to_hdf5(h, use_id=False)
+
+        # categories
+        cat_grp = h.create_group('categories')
+        for key in self.categories:
+            cat_grp.attrs[key] = self.categories[key]
+
+        # bins
+        BinsDataSet(h, self.bins).encode_list()
+
+        # psi1
+        Psi1DataSet(h, self.psi1).encode_list()
+
+        # psi2
+        Psi2DataSet(h, self.psi2).encode_list()
+
+    def from_hdf5(self, h):
+        # categories
+        self.categories = {}
+        cat_attrs = h['categories'].attrs
+        for key in cat_attrs:
+            value = cat_attrs[key]
+            if type(value) is np.bool_:
+                value = value.item()
+
+            self.categories[key] = value
+
+        # bins
+        self.bins = BinsDataSet(h).decode_list()
+
+        # psi1
+        self.psi1 = Psi1DataSet(h).decode_list()
+
+        # psi2
+        self.psi2 = Psi2DataSet(h).decode_list()
+
+        return super(VoilaLsv, self).from_hdf5(h)
+
+    def __eq__(self, other):
+        return self.__dict__ == other.__dict__
 
     @classmethod
     def to_gff3(cls, vlsv):
@@ -174,192 +361,7 @@ class VoilaLsv(HDF5):
             categories['prime5'], categories['prime3'] = categories['prime3'], categories['prime5']
         return categories
 
-    def __init__(self, bins_list, lsv_graphic, psi1=None, psi2=None, logger=None):
-        super(VoilaLsv, self).__init__()
-        self.lsv_graphic = lsv_graphic
-        self.psi1 = psi1
-        self.psi2 = psi2
 
-        self.means = []
-        self.variances = []
-
-        self.bins = bins_list
-        self.excl_incl = []
-
-        if self.is_delta_psi():  # Store collapsed matrix to save some space
-            self.bins = [collapse_matrix(np.array(lsv_bins)) for lsv_bins in self.bins]
-
-        if len(self.bins) == 1:
-            self.bins.append(self.bins[-1][::-1])  # Recreate complementary junction in binary LSV
-
-        for lsv_bins in self.bins:
-            if self.is_delta_psi():
-                self.means.append(get_expected_dpsi(lsv_bins))
-                if self.means[-1] < 0:
-                    self.excl_incl.append([-self.means[-1], 0])
-                else:
-                    self.excl_incl.append([0, self.means[-1]])
-            else:
-                self.means.append(get_expected_psi(np.array(lsv_bins)))
-                step_bins = 1.0 / len(lsv_bins)
-                projection_prod = lsv_bins * np.arange(step_bins / 2, 1, step_bins) ** 2
-                self.variances.append(np.sum(projection_prod) - self.means[-1] ** 2)
-
-        # For LSV filtering
-        if lsv_graphic:
-            self.categories = VoilaLsv.init_categories(self.get_type())
-        self.psi_junction = 0
-
-    def is_delta_psi(self):
-        return {2: True, 0: False}[sum([bool(self.psi1), bool(self.psi2)])]
-
-    def get_lsv_graphic(self):
-        return self.lsv_graphic
-
-    def get_chrom(self):
-        return self.lsv_graphic.chrom
-
-    def get_strand(self):
-        return self.lsv_graphic.strand
-
-    def set_chrom(self, c):
-        self.lsv_graphic.chrom = c
-
-    def set_strand(self, s):
-        self.lsv_graphic.strand = s
-
-    def set_id(self, idp):
-        self.lsv_graphic.id = idp
-
-    def get_id(self):
-        return self.lsv_graphic.id
-
-    def get_gene_name(self):
-        return self.lsv_graphic.name
-
-    def set_type(self, t):
-        self.lsv_graphic.type = t
-
-    def get_type(self):
-        return self.lsv_graphic.type
-
-    def get_bins(self):
-        return self.bins
-
-    def set_means(self, m):
-        self.means = m
-
-    def get_means(self):
-        return self.means
-
-    def set_coords(self, coords):
-        self.lsv_graphic.coords = coords
-
-    def get_coords(self):
-        return self.lsv_graphic.coords
-
-    def get_variances(self):
-        return self.variances
-
-    def set_excl_incl(self, excl_incl_set):
-        self.excl_incl = excl_incl_set
-
-    def get_excl_incl(self):
-        return self.excl_incl
-
-    def get_extension(self):
-        return [self.lsv_graphic.get_exons()[0].get_coords()[0], self.lsv_graphic.get_exons()[-1].get_coords()[1]]
-
-    def get_categories(self):
-        return self.categories
-
-    def njuncs(self):
-        return self.categories['njuncs']
-
-    def nexons(self):
-        return self.categories['nexons']
-
-    def categories2css(self):
-        css_cats = []
-        for c in self.categories:
-            if type(self.categories[c]) == bool and self.categories[c]:
-                css_cats.append(c)
-        return ' '.join(css_cats)
-
-    def set_bed12(self, bed12_str):
-        self.bed12_str = bed12_str
-
-    def get_bed12(self):
-        return self.bed12_str
-
-    def get_gff3(self, logger=None):
-        try:
-            return VoilaLsv.to_gff3(self)
-        except OrphanJunctionException, e:
-            if logger:
-                logger.warning(e.message)
-            else:
-                print "[WARNING] :: %s" % e.message
-
-    def to_JSON(self, encoder=json.JSONEncoder):
-        self.bins = np.array(self.bins).tolist()
-        if self.is_delta_psi():
-            self.psi1 = np.array(self.psi1).tolist()
-            self.psi2 = np.array(self.psi2).tolist()
-        return json.dumps(self, default=lambda o: o.__dict__, sort_keys=True, cls=encoder)
-
-    def is_lsv_changing(self, thres):
-        means = np.array(self.get_means())
-        # TODO: should we check that pos and neg are kind of matched?
-        return max(means[means > 0].sum(), means[means < 0].sum()) >= thres
-        # return np.any(np.array(self.get_means()) >= thres)
-
-    def exclude(self):
-        return ['lsv_graphic', 'categories', 'bins', 'psi1', 'psi2']
-
-    def to_hdf5(self, h):
-        grp = h.create_group(self.get_id())
-
-        super(VoilaLsv, self).to_hdf5(grp)
-
-        # lsv graphic
-        self.lsv_graphic.to_hdf5(grp.create_group('lsv_graphic'))
-
-        # categories
-        cat_grp = grp.create_group('categories')
-        for key in self.categories:
-            cat_grp.attrs[key] = self.categories[key]
-
-        # bins
-        BinsDataSet(grp).encode_list(self.bins)
-
-        # psi1
-        Psi1DataSet(grp).encode_list(self.psi1)
-
-        # psi2
-        Psi2DataSet(grp).encode_list(self.psi2)
-
-    def from_hdf5(self, h):
-        # lsv graphic
-        self.lsv_graphic = LsvGraphic((), None, None).from_hdf5(h['lsv_graphic'])
-
-        # categories
-        self.categories = {}
-        cat_attrs = h['categories'].attrs
-        for key in cat_attrs:
-            value = cat_attrs[key]
-            if type(value) is np.bool_:
-                value = value.item()
-
-            self.categories[key] = value
-
-        # bins
-        self.bins = BinsDataSet(h).decode_list()
-
-        # psi1
-        self.psi1 = Psi1DataSet(h).decode_list()
-
-        # psi2
-        self.psi2 = Psi2DataSet(h).decode_list()
-
-        return super(VoilaLsv, self).from_hdf5(h)
+class OrphanJunctionException(Exception):
+    def __init__(self, m):
+        self.message = m

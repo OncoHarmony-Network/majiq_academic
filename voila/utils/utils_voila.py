@@ -9,7 +9,7 @@ import shutil
 import sys
 from collections import defaultdict
 
-from voila.splice_graphics import ExonGraphic, JunctionGraphic, GeneGraphic, LsvGraphic
+from voila.splice_graphics import ExonGraphic, JunctionGraphic, GeneGraphic
 from voila.vlsv import VoilaLsv
 
 try:
@@ -62,8 +62,6 @@ class LsvGraphicEncoder(json.JSONEncoder):
             return obj.to_JSON(PickleEncoder)
         if isinstance(obj, GeneGraphic):
             return obj.to_JSON(PickleEncoder)
-        if isinstance(obj, LsvGraphic):
-            return obj.to_JSON(PickleEncoder)
 
         return json.JSONEncoder.default(self, obj)
 
@@ -97,18 +95,20 @@ def lsvs_to_gene_dict(voila_input, gene_name_list=(), lsv_types=None, lsv_names=
             logger.warning("LSV %s bins contain NaNs" % vlsv.get_id())
             continue
         if vlsv.is_delta_psi and not show_all and not vlsv.is_lsv_changing(threshold): continue
-        if len(lsv_names)>0 and vlsv.get_id() not in lsv_names: continue
+        if len(lsv_names) > 0 and vlsv.get_id() not in lsv_names: continue
         gene_name_id = vlsv.get_id().split(':')[0]
-        gene_name = vlsv.lsv_graphic.name.upper()
+        gene_name = vlsv.name.upper()
         if nofilter_genes or gene_name_id in gene_name_list or gene_name in gene_name_list or vlsv.get_type() in lsv_types:
             if vlsv.is_delta_psi():
-                genes_dict[gene_name_id].append({'lsv': vlsv, 'psi1': VoilaLsv(vlsv.psi1, lsv_graphic=None),
-                                                 'psi2': VoilaLsv(vlsv.psi2, lsv_graphic=None)})
+                genes_dict[gene_name_id].append({
+                    'lsv': vlsv,
+                    'psi1': VoilaLsv(None, None, vlsv.psi1),
+                    'psi2': VoilaLsv(None, None, vlsv.psi2)
+                })
             else:
                 genes_dict[gene_name_id].append(vlsv)
 
-    return {'genes_dict': genes_dict,
-            'meta_exps': voila_input.metainfo}
+    return {'genes_dict': genes_dict, 'meta_exps': voila_input.metainfo}
 
 
 def copyanything(src, dst):

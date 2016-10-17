@@ -1,5 +1,4 @@
 import csv
-import multiprocessing
 import os
 from collections import defaultdict
 from multiprocessing import Manager, Process, Pool
@@ -11,7 +10,7 @@ import numpy as np
 import vlsv
 from voila import constants
 from voila.constants import PROCESS_COUNT
-from voila.hdf5 import HDF5, BinsDataSet, Psi1DataSet, Psi2DataSet
+from voila.hdf5 import HDF5
 from voila.utils import utils_voila
 from voila.vlsv import VoilaLsv
 
@@ -61,40 +60,29 @@ class VoilaInput(HDF5):
         else:
             return {key: h.attrs[key] for key in h.attrs}
 
-    def to_hdf5(self, h):
-        # bins dataset
-        bins_length = sum([len(lsv.bins) for lsv in self.lsvs])
-        bins_width = len(self.lsvs[0].bins[0])
-        BinsDataSet(h, bins_length, bins_width)
-
-        try:
-            # psi1 dataset
-            psi1_length = sum([len(lsv.psi1) for lsv in self.lsvs])
-            Psi1DataSet(h, psi1_length)
-
-            # psi2 dataset
-            psi2_length = sum([len(lsv.psi2) for lsv in self.lsvs])
-            Psi2DataSet(h, psi2_length)
-        except TypeError:
-            # this is probably psi data
-            pass
-
+    def to_hdf5(self, h, use_id=True):
         # metainfo
         self.encode_metainfo(h.create_group('metainfo'), self.metainfo)
 
         # lsvs
         lsv_grp = h.create_group('lsvs')
         for lsv in self.lsvs:
-            lsv.to_hdf5(lsv_grp)
+            # TODO: Remove this conditional!
+            if lsv.__dict__['lsv_graphic']:
+                for attr in ['type', 'coords', 'id', 'name', 'strand', 'exons', 'junctions', 'chrom']:
+                    lsv.__dict__[attr] = lsv.lsv_graphic.__dict__[attr]
+                del lsv.__dict__['lsv_graphic']
 
-        super(VoilaInput, self).to_hdf5(h)
+            lsv.to_hdf5(lsv_grp, use_id)
+
+        super(VoilaInput, self).to_hdf5(h, use_id)
 
     def from_hdf5(self, h):
         # metainfo
         self.metainfo = self.decode_metainfo(h['metainfo'])
 
         # lsvs
-        self.lsvs = [VoilaLsv((), None).from_hdf5(h['lsvs'][lsv_id]) for lsv_id in h['lsvs']]
+        self.lsvs = [VoilaLsv((), None, ()).from_hdf5(h['lsvs'][lsv_id]) for lsv_id in h['lsvs']]
 
         return super(VoilaInput, self).from_hdf5(h)
 
@@ -112,7 +100,7 @@ def voila_input_from_hdf5(hdf5_filename, logger):
         with h5py.File(hdf5_filename, 'r') as h:
             while True:
                 id = queue.get()
-                manage_dict[id] = VoilaLsv((), None).from_hdf5(h['lsvs'][id])
+                manage_dict[id] = VoilaLsv((), None, ()).from_hdf5(h['lsvs'][id])
                 queue.task_done()
 
     def producer():
@@ -120,7 +108,8 @@ def voila_input_from_hdf5(hdf5_filename, logger):
             for id in h['lsvs']:
                 queue.put(id)
 
-    logger.info('Loading {0}.'.format(hdf5_filename))
+    if logger:
+        logger.info('Loading {0}.'.format(hdf5_filename))
 
     voila_input = VoilaInput()
 
@@ -330,7 +319,7 @@ def tab_output(input_parsed):
                 if type(llsv_dict) == dict:
                     llsv = llsv_dict['lsv']
                 lline = []
-                lline.extend([llsv.lsv_graphic.get_name(), gene, llsv.get_id()])
+                lline.extend([llsv.get_name(), gene, llsv.get_id()])
                 lexpected = []
                 lconfidence = []
                 lexpecs_psi1 = []
@@ -358,26 +347,26 @@ def tab_output(input_parsed):
                 lline.append(repr(llsv.get_categories()[tlb_categx['ES']]))
                 lline.append(repr(llsv.get_categories()[tlb_categx['Num. Junctions']]))
                 lline.append(repr(llsv.get_categories()[tlb_categx['Num. Exons']]))
-                lline.append(str(int(np.any([junc.get_type() == 1 for junc in llsv.lsv_graphic.get_junctions()]))))
+                lline.append(str(int(np.any([junc.get_type() == 1 for junc in llsv.get_junctions()]))))
 
-                lline.append(llsv.lsv_graphic.get_chrom())
-                lline.append(llsv.lsv_graphic.get_strand())
+                lline.append(llsv.get_chrom())
+                lline.append(llsv.get_strand())
 
                 lline.append(';'.join(
-                    ['-'.join(str(c) for c in junc.get_coords()) for junc in llsv.lsv_graphic.get_junctions()]))
+                    ['-'.join(str(c) for c in junc.get_coords()) for junc in llsv.get_junctions()]))
                 lline.append(
-                    ';'.join(['-'.join(str(c) for c in exon.get_coords()) for exon in llsv.lsv_graphic.get_exons()]))
+                    ';'.join(['-'.join(str(c) for c in exon.get_coords()) for exon in llsv.get_exons()]))
 
                 try:
                     lline.append(';'.join(
-                        ['|'.join([str(c) for c in exon.get_alt_starts()]) for exon in llsv.lsv_graphic.get_exons()]))
+                        ['|'.join([str(c) for c in exon.get_alt_starts()]) for exon in llsv.get_exons()]))
                     lline.append(';'.join(
-                        ['|'.join([str(c) for c in exon.get_alt_ends()]) for exon in llsv.lsv_graphic.get_exons()]))
+                        ['|'.join([str(c) for c in exon.get_alt_ends()]) for exon in llsv.get_exons()]))
                 except TypeError:
                     pass
 
                 lline.append(
-                    ';'.join([repr(exon.coords) for exon in llsv.lsv_graphic.get_exons() if exon.intron_retention]))
+                    ';'.join([repr(exon.coords) for exon in llsv.get_exons() if exon.intron_retention]))
 
                 if pairwise_dir:
                     llpairwise = []

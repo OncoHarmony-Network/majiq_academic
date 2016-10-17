@@ -38,10 +38,9 @@ def convert(pickle_files):
     def worker():
         while True:
             pickle_file = queue.get()
-
-            convert_func[extension(pickle_file)](pickle_file)
+            ext = extension(pickle_file)
+            convert_func[ext](pickle_file)
             logger.info('done {0}.'.format(pickle_file))
-
             queue.task_done()
 
     convert_func = {'.splicegraph': splice_graph, '.pickle': pickle}
