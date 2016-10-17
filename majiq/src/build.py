@@ -195,7 +195,7 @@ def parsing_files(args_vals):
 class Builder(BasicPipeline):
 
     def run(self):
-        if self.simplify is not None and len(args.simplify) not in (0, 2):
+        if self.simplify is not None and len(self.simplify) not in (0, 2):
             raise RuntimeError('Simplify requires 2 values type of junctions afected and E(PSI) threshold.')
         if not os.path.exists(self.conf):
             raise RuntimeError("Config file %s does not exist" % self.conf)
