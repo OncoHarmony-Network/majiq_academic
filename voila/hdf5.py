@@ -61,9 +61,10 @@ class HDF5(object):
         """
         return {}
 
-    def to_hdf5(self, h):
+    def to_hdf5(self, h, use_id=True):
         """
         Adds attributes from this class to HDF5 file.
+        :param use_id:
         :param h: HDF5 file object
         :return: None
         """
@@ -75,7 +76,7 @@ class HDF5(object):
         for cls in self.cls_list():
             cls_grp = h.create_group(cls)
             for index, cls_obj in enumerate(attrs_dict[cls]):
-                cls_obj.to_hdf5(cls_grp.create_group(str(index)))
+                cls_obj.to_hdf5(cls_grp.create_group(str(index)), use_id)
             del attrs_dict[cls]
 
         for key in attrs_dict:
@@ -129,83 +130,90 @@ class HDF5(object):
 
 
 class DataSet(object):
-    def __init__(self, h, ds_name, shape):
+    def __init__(self, h, ds_name, objs):
         """
-        Encode and Decode class attributes in to a HDF5 dataset.
-        :param h: HDF5 file object
-        :param ds_name: name of datset
-        :param shape: shape of data stored in dataset
+        Store data as data sets in hdf5 file.
+        :param h: hdf5 file
+        :param ds_name: name of data set
+        :param objs: objects needing to be stored
         """
         self.h = h
         self.ds_name = ds_name
+        self.objs = objs
+        self.width = len(objs[0])
 
-        try:
-            self.ds = h['/datasets/' + ds_name]
-        except KeyError:
-            try:
-                self.ds = h.create_dataset('/datasets/' + ds_name, shape, dtype=numpy.float64, chunks=(1, shape[1]))
-                # store how many objects we've worked with in the HDF5 file
-                self.ds.attrs['index'] = 0
-            except TypeError:
-                # pass when dataset doesn't exist
-                pass
-
-    def encode_list(self, objs):
+    def encode_list(self):
         """
         Encode attribute data into datasets.
         :param objs: list of values to store in dataset.
         :return: None
         """
-        try:
-            index = self.ds.attrs['index']
-        except AttributeError:
-            return
-
+        self.resize()
+        ds = self.dataset()
+        index = ds.attrs['index']
         start_index = index
-        for obj in objs:
-            self.ds[index] = obj
+
+        for obj in self.objs:
+            ds[index] = obj
             index += 1
-        self.h.attrs[self.ds_name] = self.ds.regionref[start_index:index]
-        self.ds.attrs['index'] = index
+
+        self.h.attrs[self.ds_name] = ds.regionref[start_index:index]
+
+        ds.attrs['index'] = index
 
     def decode_list(self):
         """
         Decode stored data
         :return: list of stored data
         """
+        ref = self.h.attrs[self.ds_name]
+        return self.dataset()[ref].tolist()
+
+    def resize(self):
+        ds = self.dataset()
+        curr_length = len(ds)
+        ds.resize((curr_length + len(self.objs), self.width))
+
+    def dataset(self):
         try:
-            ref = self.h.attrs[self.ds_name]
-            return self.ds[ref].tolist()
+            dataset = self.h['/datasets/' + self.ds_name]
         except KeyError:
-            # couldn't find dataset return empty list
-            return []
+            dataset = self.h.create_dataset('/datasets/' + self.ds_name, (0, self.width),
+                                            dtype=numpy.float64,
+                                            chunks=(1, self.width),
+                                            maxshape=(None, self.width))
+
+            # store how many objects we've worked with in the HDF5 file
+            dataset.attrs['index'] = 0
+
+        return dataset
 
 
 class BinsDataSet(DataSet):
-    def __init__(self, h, length=None, width=None):
+    def __init__(self, h, objs=((),)):
         """
         VoilaLsv bins dataset.
         :param h: HDF5 file object
         :param length: total number of bins' rows in VoilaInput
         """
-        super(BinsDataSet, self).__init__(h, 'bins', (length, width))
+        super(BinsDataSet, self).__init__(h, 'bins', objs)
 
 
 class Psi1DataSet(DataSet):
-    def __init__(self, h, length=None):
+    def __init__(self, h, objs=((),)):
         """
         VoilaLsv PSI1 dataset
         :param h: HDF5 file object
         :param length: total number PSI1 rows in VoilaInput
         """
-        super(Psi1DataSet, self).__init__(h, 'psi1', (length, 20))
+        super(Psi1DataSet, self).__init__(h, 'psi1', objs)
 
 
 class Psi2DataSet(DataSet):
-    def __init__(self, h, length=None):
+    def __init__(self, h, objs=((),)):
         """
         VoilaLsv PSI2 dataset
         :param h:  HDF5 file object
         :param length: total number of PSI2 rows in VoilaInput
         """
-        super(Psi2DataSet, self).__init__(h, 'psi2', (length, 20))
+        super(Psi2DataSet, self).__init__(h, 'psi2', objs)
