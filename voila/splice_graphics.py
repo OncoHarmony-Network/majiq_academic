@@ -2,6 +2,7 @@ import json
 from multiprocessing import Manager, Pool
 from multiprocessing.process import Process
 from multiprocessing.queues import JoinableQueue
+from warnings import warn
 
 import h5py
 
@@ -249,6 +250,8 @@ def splice_graph_from_hdf5(hdf5_filename, logger):
 class LsvGraphic(GeneGraphic):
     def __init__(self, type_lsv, coords, id, name=None, strand=None, exons=list(), junctions=list(), chrom=None):
         super(LsvGraphic, self).__init__(id, name, strand, exons, junctions, chrom)
+        warn('For now, LsvGraphic is deprecated and VoilaLsv should be used in the interim.  Once we phase out the use '
+             'of pickle files to store data, then VoilaLsv will be renamed LsvGraphic')
         self.type = type_lsv
         self.coords = coords
 
