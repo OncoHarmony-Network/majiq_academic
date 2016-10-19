@@ -26,6 +26,12 @@ class VoilaInput(HDF5):
         self.lsvs = lsvs
         self.metainfo = metainfo
 
+    def add_metainfo(self, condition1_grp, condition2_grp=None):
+        metainfo = [{'group': condition1_grp}]
+        if condition2_grp:
+            metainfo = [metainfo, [{'group': condition2_grp}]]
+        self.metainfo = metainfo
+
     def get_lsvs(self):
         return self.lsvs
 
@@ -73,7 +79,7 @@ class VoilaInput(HDF5):
         self.metainfo = self.decode_metainfo(h['metainfo'])
 
         # lsvs
-        self.lsvs = [VoilaLsv((), None, ()).from_hdf5(h['lsvs'][lsv_id]) for lsv_id in h['lsvs']]
+        self.lsvs = [VoilaLsv((), None).from_hdf5(h['lsvs'][lsv_id]) for lsv_id in h['lsvs']]
 
         return super(VoilaInput, self).from_hdf5(h)
 
@@ -91,7 +97,7 @@ def voila_input_from_hdf5(hdf5_filename, logger):
         with h5py.File(hdf5_filename, 'r') as h:
             while True:
                 id = queue.get()
-                manage_dict[id] = VoilaLsv((), None, ()).from_hdf5(h['lsvs'][id])
+                manage_dict[id] = VoilaLsv((), None).from_hdf5(h['lsvs'][id])
                 queue.task_done()
 
     def producer():
@@ -99,8 +105,7 @@ def voila_input_from_hdf5(hdf5_filename, logger):
             for id in h['lsvs']:
                 queue.put(id)
 
-    if logger:
-        logger.info('Loading {0}.'.format(hdf5_filename))
+    logger.info('Loading {0}.'.format(hdf5_filename))
 
     voila_input = VoilaInput()
 
@@ -310,7 +315,7 @@ def tab_output(input_parsed):
                 if type(llsv_dict) == dict:
                     llsv = llsv_dict['lsv']
                 lline = []
-                lline.extend([llsv.get_name(), gene, llsv.get_id()])
+                lline.extend([llsv.lsv_graphic.get_name(), gene, llsv.get_id()])
                 lexpected = []
                 lconfidence = []
                 lexpecs_psi1 = []
@@ -338,26 +343,26 @@ def tab_output(input_parsed):
                 lline.append(repr(llsv.get_categories()[tlb_categx['ES']]))
                 lline.append(repr(llsv.get_categories()[tlb_categx['Num. Junctions']]))
                 lline.append(repr(llsv.get_categories()[tlb_categx['Num. Exons']]))
-                lline.append(str(int(np.any([junc.get_type() == 1 for junc in llsv.get_junctions()]))))
+                lline.append(str(int(np.any([junc.get_type() == 1 for junc in llsv.lsv_graphic.get_junctions()]))))
 
-                lline.append(llsv.get_chrom())
-                lline.append(llsv.get_strand())
+                lline.append(llsv.lsv_graphic.get_chrom())
+                lline.append(llsv.lsv_graphic.get_strand())
 
                 lline.append(';'.join(
-                    ['-'.join(str(c) for c in junc.get_coords()) for junc in llsv.get_junctions()]))
+                    ['-'.join(str(c) for c in junc.get_coords()) for junc in llsv.lsv_graphic.get_junctions()]))
                 lline.append(
-                    ';'.join(['-'.join(str(c) for c in exon.get_coords()) for exon in llsv.get_exons()]))
+                    ';'.join(['-'.join(str(c) for c in exon.get_coords()) for exon in llsv.lsv_graphic.get_exons()]))
 
                 try:
                     lline.append(';'.join(
-                        ['|'.join([str(c) for c in exon.get_alt_starts()]) for exon in llsv.get_exons()]))
+                        ['|'.join([str(c) for c in exon.get_alt_starts()]) for exon in llsv.lsv_graphic.get_exons()]))
                     lline.append(';'.join(
-                        ['|'.join([str(c) for c in exon.get_alt_ends()]) for exon in llsv.get_exons()]))
+                        ['|'.join([str(c) for c in exon.get_alt_ends()]) for exon in llsv.lsv_graphic.get_exons()]))
                 except TypeError:
                     pass
 
                 lline.append(
-                    ';'.join([repr(exon.coords) for exon in llsv.get_exons() if exon.intron_retention]))
+                    ';'.join([repr(exon.coords) for exon in llsv.lsv_graphic.get_exons() if exon.intron_retention]))
 
                 if pairwise_dir:
                     llpairwise = []
