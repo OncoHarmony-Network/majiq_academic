@@ -3,8 +3,8 @@ from collections import defaultdict
 
 import numpy as np
 
-from voila.hdf5 import BinsDataSet, Psi1DataSet, Psi2DataSet
-from voila.splice_graphics import GeneGraphic
+from voila.hdf5 import HDF5, BinsDataSet, Psi1DataSet, Psi2DataSet
+from voila.splice_graphics import LsvGraphic
 
 
 def get_expected_dpsi(bins):
@@ -60,22 +60,22 @@ def matrix_area(matrix, V=0.2, absolute=True, collapsed_mat=False):
     return sum(area)
 
 
-class VoilaLsv(GeneGraphic):
-    def __init__(self, id, coords, bins, type_lsv=None, psi1=None, psi2=None, name=None, strand=None, exons=(),
-                 junctions=(), chrom=None):
+class OrphanJunctionException(Exception):
+    def __init__(self, m):
+        self.message = m
 
-        super(VoilaLsv, self).__init__(id, name, strand, exons, junctions, chrom)
 
-        self.coords = coords
-        self.type = type_lsv
+class VoilaLsv(HDF5):
+    def __init__(self, bins_list, lsv_graphic, psi1=None, psi2=None):
+        super(VoilaLsv, self).__init__()
+
+        self.lsv_graphic = lsv_graphic
         self.psi1 = psi1
         self.psi2 = psi2
-        self.bed12_str = None
+        self.bins = bins_list
 
         self.means = []
         self.variances = []
-
-        self.bins = bins
         self.excl_incl = []
 
         if self.is_delta_psi():  # Store collapsed matrix to save some space
@@ -98,58 +98,57 @@ class VoilaLsv(GeneGraphic):
                 self.variances.append(np.sum(projection_prod) - self.means[-1] ** 2)
 
         # For LSV filtering
-        if type_lsv:
-            self.categories = VoilaLsv.init_categories(type_lsv)
-
+        if lsv_graphic:
+            self.categories = VoilaLsv.init_categories(self.get_type())
         self.psi_junction = 0
 
     def is_delta_psi(self):
         return sum([bool(self.psi1), bool(self.psi2)]) == 2
 
     def get_lsv_graphic(self):
-        return self
+        return self.lsv_graphic
 
     def get_chrom(self):
-        return self.chrom
+        return self.lsv_graphic.chrom
 
     def get_strand(self):
-        return self.strand
+        return self.lsv_graphic.strand
 
-    def set_chrom(self, chrom):
-        self.chrom = chrom
+    def set_chrom(self, c):
+        self.lsv_graphic.chrom = c
 
-    def set_strand(self, strand):
-        self.strand = strand
+    def set_strand(self, s):
+        self.lsv_graphic.strand = s
 
-    def set_id(self, id):
-        self.id = id
+    def set_id(self, idp):
+        self.lsv_graphic.id = idp
 
     def get_id(self):
-        return self.id
+        return self.lsv_graphic.id
 
     def get_gene_name(self):
-        return self.name
+        return self.lsv_graphic.name
 
-    def set_type(self, type):
-        self.type_lsv = type
+    def set_type(self, t):
+        self.lsv_graphic.type = t
 
     def get_type(self):
-        return self.type
+        return self.lsv_graphic.type
 
     def get_bins(self):
         return self.bins
 
-    def set_means(self, means):
-        self.means = means
+    def set_means(self, m):
+        self.means = m
 
     def get_means(self):
         return self.means
 
     def set_coords(self, coords):
-        self.coords = coords
+        self.lsv_graphic.coords = coords
 
     def get_coords(self):
-        return self.coords
+        return self.lsv_graphic.coords
 
     def get_variances(self):
         return self.variances
@@ -161,7 +160,7 @@ class VoilaLsv(GeneGraphic):
         return self.excl_incl
 
     def get_extension(self):
-        return [self.get_exons()[0].get_coords()[0], self.get_exons()[-1].get_coords()[1]]
+        return [self.lsv_graphic.get_exons()[0].get_coords()[0], self.lsv_graphic.get_exons()[-1].get_coords()[1]]
 
     def get_categories(self):
         return self.categories
@@ -208,13 +207,16 @@ class VoilaLsv(GeneGraphic):
         # return np.any(np.array(self.get_means()) >= thres)
 
     def exclude(self):
-        return ['categories', 'bins', 'psi1', 'psi2']
+        return ['lsv_graphic', 'categories', 'bins', 'psi1', 'psi2']
 
     def to_hdf5(self, h, use_id=True):
         if use_id:
-            h = h.create_group('/lsvs/' + self.id)
+            h = h.create_group('/lsvs/' + self.get_id())
 
-        super(VoilaLsv, self).to_hdf5(h, use_id=False)
+        super(VoilaLsv, self).to_hdf5(h, use_id)
+
+        # lsv graphic
+        self.lsv_graphic.to_hdf5(h.create_group('lsv_graphic'), use_id=False)
 
         # categories
         cat_grp = h.create_group('categories')
@@ -231,6 +233,9 @@ class VoilaLsv(GeneGraphic):
         Psi2DataSet(h, self.psi2).encode_list()
 
     def from_hdf5(self, h):
+        # lsv graphic
+        self.lsv_graphic = LsvGraphic((), None, None).from_hdf5(h['lsv_graphic'])
+
         # categories
         self.categories = {}
         cat_attrs = h['categories'].attrs
@@ -252,12 +257,8 @@ class VoilaLsv(GeneGraphic):
 
         return super(VoilaLsv, self).from_hdf5(h)
 
-    def __eq__(self, other):
-        return self.__dict__ == other.__dict__
-
     @classmethod
     def to_gff3(cls, vlsv):
-
         def find_exon_a5(lexonG, jidx):
             for eG in lexonG:
                 if jidx in eG.get_a5_list():
@@ -360,8 +361,3 @@ class VoilaLsv(GeneGraphic):
         if juns[0] == 't':
             categories['prime5'], categories['prime3'] = categories['prime3'], categories['prime5']
         return categories
-
-
-class OrphanJunctionException(Exception):
-    def __init__(self, m):
-        self.message = m
