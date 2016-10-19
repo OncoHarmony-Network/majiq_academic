@@ -2,7 +2,6 @@ import json
 from multiprocessing import Manager, Pool
 from multiprocessing.process import Process
 from multiprocessing.queues import JoinableQueue
-from warnings import warn
 
 import h5py
 
@@ -40,6 +39,27 @@ class GeneGraphic(HDF5):
         except:
             self.start = None
             self.end = None
+
+    def merge(self, other):
+        # quick sanity check
+        self_dict = self.__dict__.copy()
+        other_dict = other.__dict__.copy()
+
+        for attr in ['junctions', 'exons']:
+            del self_dict[attr]
+            del other_dict[attr]
+
+        assert self_dict == other_dict
+
+        # concat exons and junctions
+        self.exons += other.exons
+        self.junctions += other.junctions
+
+        # merge exons
+        self.merge_overlapping_exons()
+
+        # remove duplicate junctions
+        self.remove_duplicate_junctions()
 
     def get_id(self):
         return self.id
@@ -92,7 +112,7 @@ class GeneGraphic(HDF5):
 
     def to_hdf5(self, h, use_id=True):
         if use_id:
-            h = h.create_group('/' + self.id)
+            h = h.create_group(self.id)
 
         super(GeneGraphic, self).to_hdf5(h, use_id)
 
@@ -102,6 +122,25 @@ class GeneGraphic(HDF5):
                 'junctions':
                     {'class': JunctionGraphic, 'args': ((), None, None)}
                 }
+
+    def merge_overlapping_exons(self):
+        exons = sorted(self.exons, key=lambda exon: exon.coords[0])
+        merged_exons = [exons[0]]
+        for exon in exons[1:]:
+            if not merged_exons[-1].merge(exon):
+                merged_exons.append(exon)
+
+        self.exons = merged_exons
+
+    def remove_duplicate_junctions(self):
+        self.junctions = sorted(set(self.junctions), key=lambda junction: junction.coords[0])
+
+    def __str__(self):
+        return str(self.__dict__)
+
+
+class ExonException(Exception):
+    pass
 
 
 class ExonGraphic(HDF5):
@@ -132,6 +171,36 @@ class ExonGraphic(HDF5):
 
         self.alt_starts = alt_starts
         self.alt_ends = alt_ends
+
+    def merge(self, other):
+        # only merge exons with other exons after itself
+        assert self.coords[0] <= other.coords[0]
+
+        if other.coords[0] <= self.coords[1]:
+            o = other.__dict__.copy()
+
+            self.coords = [min(self.coords[0], o['coords'][0]), max(self.coords[1], o['coords'][1])]
+            del o['coords']
+
+            if o['type_exon'] < 4 and self.type_exon < 4:
+                self.type_exon = min(o['type_exon'], self.type_exon)
+            elif o['type_exon'] != self.type_exon:
+                raise ExonException(('Attempting to merge a missing end exon with a normal exon.', self, other))
+
+            del o['type_exon']
+
+            for attr in o:
+                try:
+                    for item in o[attr]:
+                        if item not in self.__dict__[attr]:
+                            self.__dict__[attr].append(item)
+                except TypeError:
+                    # if object attribute isn't iterable...
+                    pass
+
+            return True
+        else:
+            return False
 
     def get_a3_list(self):
         return self.a3
@@ -174,6 +243,12 @@ class ExonGraphic(HDF5):
     def to_JSON(self, encoder=json.JSONEncoder):
         return json.dumps(self, default=lambda o: o.__dict__, sort_keys=True, cls=encoder)
 
+    def __str__(self):
+        return str(self.__dict__)
+
+    def __repr__(self):
+        return self.__str__()
+
 
 class JunctionGraphic(HDF5):
     def __init__(self, coords, type_junction, nreads, clean_nreads=0, transcripts=list(), ir=0):
@@ -211,6 +286,18 @@ class JunctionGraphic(HDF5):
 
     def to_JSON(self, encoder=json.JSONEncoder):
         return json.dumps(self, default=lambda o: o.__dict__, sort_keys=True, cls=encoder)
+
+    def __hash__(self):
+        return int(str(self.coords[0]) + str(self.coords[1]))
+
+    def __eq__(self, other):
+        return self.coords == other.coords
+
+    def __str__(self):
+        return str(self.__dict__)
+
+    def __repr__(self):
+        return self.__str__()
 
 
 def splice_graph_from_hdf5(hdf5_filename, logger):
@@ -250,13 +337,12 @@ def splice_graph_from_hdf5(hdf5_filename, logger):
 class LsvGraphic(GeneGraphic):
     def __init__(self, type_lsv, coords, id, name=None, strand=None, exons=list(), junctions=list(), chrom=None):
         super(LsvGraphic, self).__init__(id, name, strand, exons, junctions, chrom)
-        warn('For now, LsvGraphic is deprecated and VoilaLsv should be used in the interim.  Once we phase out the use '
-             'of pickle files to store data, then VoilaLsv will be renamed LsvGraphic')
         self.type = type_lsv
         self.coords = coords
 
     def get_type(self):
         return self.type
 
-    def to_hdf5(self, h, use_id=True):
-        HDF5.to_hdf5(self, h, use_id)
+    @classmethod
+    def easy_from_hdf5(cls, h):
+        return cls(None, None, None).from_hdf5(h)

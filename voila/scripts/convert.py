@@ -55,8 +55,8 @@ def convert(pickle_files):
             files_count += 1
             queue.put(f)
 
-    thread_count = min(files_count, multiprocessing.cpu_count())
-    pool = Pool(thread_count, worker, maxtasksperchild=1)
+    process_count = min(files_count, multiprocessing.cpu_count())
+    pool = Pool(process_count, worker, maxtasksperchild=1)
 
     pool.close()
     queue.join()

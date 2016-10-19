@@ -17,8 +17,6 @@ from voila.vlsv import VoilaLsv
 __author__ = 'abarrera'
 import cPickle as pkl
 
-logger = utils_voila.get_logger(__name__)
-
 
 class VoilaInput(HDF5):
     """Standard input interface by experiment used by Voila"""
@@ -65,15 +63,8 @@ class VoilaInput(HDF5):
         self.encode_metainfo(h.create_group('metainfo'), self.metainfo)
 
         # lsvs
-        lsv_grp = h.create_group('lsvs')
         for lsv in self.lsvs:
-            # TODO: Remove this conditional!
-            if lsv.__dict__['lsv_graphic']:
-                for attr in ['type', 'coords', 'id', 'name', 'strand', 'exons', 'junctions', 'chrom']:
-                    lsv.__dict__[attr] = lsv.lsv_graphic.__dict__[attr]
-                del lsv.__dict__['lsv_graphic']
-
-            lsv.to_hdf5(lsv_grp, use_id)
+            lsv.to_hdf5(h, use_id)
 
         super(VoilaInput, self).to_hdf5(h, use_id)
 
