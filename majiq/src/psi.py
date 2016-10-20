@@ -60,7 +60,7 @@ def empirical_delta_psi(list_lsv, files, logger=None):
     delta_psi_ir = []
 
     group1 = [majiq_io.open_hdf5_file(xx) for xx in files[0]]
-    group2 = [majiq_io.open_hdf5_file(xx) for xx in files[0]]
+    group2 = [majiq_io.open_hdf5_file(xx) for xx in files[1]]
     for idx, lsv in enumerate(list_lsv):
         # Assuming that the type is the same in all the replicas and groups
         if group1[0]['LSV/%s' % lsv].attrs['type'].endswith('i'):
@@ -68,14 +68,14 @@ def empirical_delta_psi(list_lsv, files, logger=None):
         else:
             delta_psi_res = delta_psi
 
-        cov = np.array([fp[LSV_JUNCTIONS_DATASET_NAME][fp['LSV/%s' % lsv].attrs['coverage']].sum(axis=1) for fp in group1])
-        cov = cov.mean(axis=0)
-        psi1 = np.array([float(cov[jidx]) / float(np.sum(cov)) for jidx in range(len(cov))])
+        cov1 = np.array([fp[LSV_JUNCTIONS_DATASET_NAME][fp['LSV/%s' % lsv].attrs['coverage']].sum(axis=1) for fp in group1])
+        cov1 = cov1.mean(axis=0)
+        psi1 = np.array([float(cov1[jidx]) / float(np.sum(cov1)) for jidx in range(len(cov1))])
         psi1[np.isnan(psi1)] = 0.5
 
-        cov = np.array([fp[LSV_JUNCTIONS_DATASET_NAME][fp['LSV/%s' % lsv].attrs['coverage']].sum(axis=1) for fp in group2])
-        cov = cov.mean(axis=0)
-        psi2 = np.array([float(cov[jidx]) / float(np.sum(cov)) for jidx in range(len(cov))])
+        cov2 = np.array([fp[LSV_JUNCTIONS_DATASET_NAME][fp['LSV/%s' % lsv].attrs['coverage']].sum(axis=1) for fp in group2])
+        cov2 = cov2.mean(axis=0)
+        psi2 = np.array([float(cov2[jidx]) / float(np.sum(cov2)) for jidx in range(len(cov2))])
         psi2[np.isnan(psi2)] = 0.5
 
         delta_psi_res.append(psi1 - psi2)

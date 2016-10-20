@@ -349,7 +349,8 @@ class LSV(object):
             h_lsv.attrs['type'] = self.ext_type
             h_lsv.attrs['coverage'] = hdf5grp[LSV_JUNCTIONS_DATASET_NAME].regionref[lsv_idx:lsv_idx + njunc]
 
-            self.get_visual(exp_idx).to_hdf5(h_lsv)
+            vh_lsv = h_lsv.create_group('visual')
+            self.get_visual(exp_idx).to_hdf5(vh_lsv)
 
         except:
             print "HDF5 ERROR", self.id, cover.shape, hdf5grp[LSV_JUNCTIONS_DATASET_NAME].shape

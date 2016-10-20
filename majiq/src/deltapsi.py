@@ -197,7 +197,7 @@ class DeltaPsi(BasicPipeline):
                                  self.k, self.discardzeros, self.trimborder, [len(files[0]), len(files[1])], False,
                                  None],
                        maxtasksperchild=1)
-        lchnksize = max(len(list_of_lsv)/self.nthreads, 1) +1
+        lchnksize = max(len(list_of_lsv)/self.nthreads, 1) + 1
         [xx.acquire() for xx in lock_arr]
 
         if len(list_of_lsv) > 0:
