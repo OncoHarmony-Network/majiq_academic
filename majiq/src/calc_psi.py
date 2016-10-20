@@ -216,8 +216,8 @@ class CalcPsi(BasicPipeline):
 
         for fidx, fname in enumerate(self.files):
             pool.apply_async(parse_and_norm_majiq, [fname, fidx, conf(output_dir=self.output, name=self.name,
-                                                                           debug=self.debug, silent=self.silent,
-                                                                           markstacks=self.markstacks)])
+                                                                      debug=self.debug, silent=self.silent,
+                                                                      markstacks=self.markstacks)])
         pool.close()
         pool.join()
         self.logger = logger
@@ -242,25 +242,24 @@ class CalcPsi(BasicPipeline):
             file_locks = [mp.Lock() for xx in self.files]
         lock_arr = [mp.Lock() for xx in range(self.nthreads)]
         q = mp.Queue()
-        processes = self.nthreads if not self.only_boots else 1
 
-        pool = mp.Pool(processes=processes, initializer=quantification_init,
+        pool = mp.Pool(processes=self.nthreads, initializer=quantification_init,
                        initargs=[q, lock_arr, self.output, self.name, self.silent, self.debug, self.nbins, self.m,
                                  self.k, self.discardzeros, self.trimborder, len(self.files), self.only_boots,
                                  file_locks],
                        maxtasksperchild=1)
 
-        lchnksize = max(len(list_of_lsv)/processes, 1) + 1
+        lchnksize = max(len(list_of_lsv)/self.nthreads, 1) + 1
         [xx.acquire() for xx in lock_arr]
 
         if len(list_of_lsv) > 0:
-            pool.map_async(psi_quantification, majiq_utils.chunks(list_of_lsv, lchnksize, extra=range(processes)))
+            pool.map_async(psi_quantification, majiq_utils.chunks(list_of_lsv, lchnksize, extra=range(self.nthreads)))
             pool.close()
 
             out_h5p = h5py.File(get_quantifier_voila_filename(self.output, self.name),
                                 'w', compression='gzip', compression_opts=9)
             in_h5p = h5py.File(get_quantifier_norm_temp_files(self.output, self.name, 0))
-            queue_manager(in_h5p, out_h5p, lock_arr, q, num_chunks=processes, logger=self.logger)
+            queue_manager(in_h5p, out_h5p, lock_arr, q, num_chunks=self.nthreads, logger=self.logger)
             in_h5p.close()
             out_h5p.close()
             pool.join()

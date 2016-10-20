@@ -1,13 +1,11 @@
-__author__ = 'jordi@biociphers.org'
-
 import pickle
-
 import numpy as np
-
 import majiq.src.config as majiq_config
 from voila import constants as voila_const
 from voila.splice_graphics import ExonGraphic, LsvGraphic, JunctionGraphic
 from majiq.src.constants import *
+
+__author__ = 'jordi@biociphers.org'
 
 SSOURCE = 'source'
 STARGET = 'target'
@@ -336,7 +334,6 @@ class LSV(object):
                 if majiq_config.gcnorm:
                     vals = gc_vfunc(junc.get_gc_content())
                     cover = np.multiply(cover, vals)
-
 
 #            if lsv_idx + njunc > majiq_config.nrandom_junctions:
             if lsv_idx + njunc > 2:

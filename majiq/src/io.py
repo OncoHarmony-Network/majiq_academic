@@ -620,3 +620,11 @@ def dump_lsvs_voila(pickle_path, posterior_matrix, lsvs_info, meta_info, psi_lis
     pickle.dump(VoilaInput(vlsvs, meta_info), open(pickle_path, 'w'))
 
 
+def open_hdf5_file(filename, **kwargs):
+    return h5py.File(filename)
+
+
+def close_hdf5_file(fp):
+    return fp.close()
+
+

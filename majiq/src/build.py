@@ -265,8 +265,6 @@ class Builder(BasicPipeline):
 
             f.close()
 
-        # majiq_multi.queue_manager(input_h5dfp=None, output_h5dfp=out_files, lock_array=lock_array, result_queue=q,
-        #                           num_chunks=self.nthreads, logger=self.logger)
         pool.map_async(merging_files, majiq_utils.chunks(list_of_genes, lchnksize, extra=range(self.nthreads)))
         pool.close()
         pool.join()

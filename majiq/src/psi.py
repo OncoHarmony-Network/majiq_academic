@@ -14,6 +14,8 @@ import majiq.src.filter as majiq_filter
 import majiq.src.sample as majiq_sample
 import majiq.src.adjustdelta as majiq_delta
 import majiq.src.io_utils
+import majiq.src.io as majiq_io
+from majiq.src.constants import *
 
 """
 Calculate and manipulate PSI and Delta PSI values
@@ -47,33 +49,42 @@ def _save_or_show(plotpath, plotname=None):
         plt.show()
 
 
-def empirical_delta_psi(lsv_list1, lsv_list2, logger=None):
-    """Simple PSI calculation without involving a dirichlet prior, coming from reads from junctions"""
-
-    #    if  not logger: logger.info("Calculating PSI for 'best set'...")
+def empirical_delta_psi(list_lsv, files, logger=None):
+    """Simple PSI calculation without involving a dirichlet prior, coming from reads from junctions
+    :param logger:
+    :param files:
+    :param list_lsv:
+    """
 
     delta_psi = []
     delta_psi_ir = []
-    for idx, lsv in enumerate(lsv_list1):
-        psi1 = np.zeros(shape=len(lsv), dtype=np.dtype('float'))
-        psi2 = np.zeros(shape=len(lsv), dtype=np.dtype('float'))
-        for ii, rate in enumerate(lsv):
-            val = float(rate) / float(np.sum(lsv))
-            if np.isnan(val):
-                val = 0.5
-            psi1[ii] = val
 
-        for ii, rate in enumerate(lsv_list2[idx]):
-            val = float(rate) / float(np.sum(lsv_list2[idx]))
-            if np.isnan(val):
-                val = 0.5
-            psi2[ii] = val
+    group1 = [majiq_io.open_hdf5_file(xx) for xx in files[0]]
+    group2 = [majiq_io.open_hdf5_file(xx) for xx in files[0]]
+    for idx, lsv in enumerate(list_lsv):
+        # Assuming that the type is the same in all the replicas and groups
+        if group1[0]['LSV/%s' % lsv].attrs['type'].endswith('i'):
+            delta_psi_res = delta_psi_ir
+        else:
+            delta_psi_res = delta_psi
 
-        sys.stdout.flush()
+        cov = np.array([fp[LSV_JUNCTIONS_DATASET_NAME][fp['LSV/%s' % lsv].attrs['coverage']].sum(axis=1) for fp in group1])
+        cov = cov.mean(axis=0)
+        psi1 = np.array([float(cov[jidx]) / float(np.sum(cov)) for jidx in range(len(cov))])
+        psi1[np.isnan(psi1)] = 0.5
 
-        delta_psi.append(psi1 - psi2)
+        cov = np.array([fp[LSV_JUNCTIONS_DATASET_NAME][fp['LSV/%s' % lsv].attrs['coverage']].sum(axis=1) for fp in group2])
+        cov = cov.mean(axis=0)
+        psi2 = np.array([float(cov[jidx]) / float(np.sum(cov)) for jidx in range(len(cov))])
+        psi2[np.isnan(psi2)] = 0.5
+
+        delta_psi_res.append(psi1 - psi2)
         #   if logger: logger.info("Calculating delta PSI for 'best set'...")
-    return delta_psi
+
+    [majiq_io.close_hdf5_file(fp) for fp in group1]
+    [majiq_io.close_hdf5_file(fp) for fp in group2]
+
+    return delta_psi, delta_psi_ir
 
 
 class DirichletCalc:
@@ -246,56 +257,31 @@ def __load_default_prior():
     return def_mat
 
 
-def gen_prior_matrix(pip, lsv_exp1, lsv_exp2, output, numbins=20, defaultprior=False):
+def gen_prior_matrix(files, lsv_exp1, lsv_exp2, output, conf, numbins=20, defaultprior=False, logger=None):
     #Start prior matrix
-    pip.logger.info("Calculating prior matrix...")
-    psi_space = np.linspace(0, 1 - pip.binsize, num=numbins) + pip.binsize / 2
+    logger.info("Calculating prior matrix...")
+    psi_space = np.linspace(0, 1 - conf.binsize, num=numbins) + conf.binsize / 2
     if defaultprior:
         def_mat = __load_default_prior()
         prior_matrix = [def_mat, def_mat]
         return psi_space, prior_matrix
 
-    pip.logger.debug('Filtering to obtain "best set"...')
+    logger.debug('Filtering to obtain "best set"...')
 
-    filtered_lsv1 = majiq_filter.lsv_quantifiable(lsv_exp1, minnonzero=10, min_reads=20, logger=pip.logger)
-    filtered_lsv2 = majiq_filter.lsv_quantifiable(lsv_exp2, minnonzero=10, min_reads=20, logger=pip.logger)
+    temp_files = [[get_quantifier_norm_temp_files(output, conf.names[0], xx) for xx in xrange(len(files[0]))],
+                  [get_quantifier_norm_temp_files(output, conf.names[1], xx) for xx in xrange(len(files[1]))]]
 
-    ids1 = set([(xx[1], xx[2]) for xx in filtered_lsv1[1]])
-    ids2 = set([(xx[1], xx[2]) for xx in filtered_lsv2[1]])
-    matched_names = ids1.intersection(ids2)
-    best_set_mean1 = [[], []]
-    best_set_mean2 = [[], []]
-    best_set_mean_ir1 = [[], []]
-    best_set_mean_ir2 = [[], []]
+    filtered_lsv1 = majiq_filter.merge_files_hdf5(temp_files[0], minnonzero=10, min_reads=20, merge_replicas=True,
+                                                  logger=logger)
+    filtered_lsv2 = majiq_filter.merge_files_hdf5(temp_files[1], minnonzero=10, min_reads=20, merge_replicas=True,
+                                                  logger=logger)
 
-    for ii, tt in matched_names:
-        if 'i' in tt:
-            continue
-        for idx, nm in enumerate(filtered_lsv1[1]):
-            if nm[1] == ii:
-                nz = np.count_nonzero(filtered_lsv1[0][idx])
-                if 'i' in nm[2]:
-                    best_set_mean_ir1[0].append(nz * majiq_sample.mean_junction(filtered_lsv1[0][idx]))
-                    best_set_mean_ir1[1].append(filtered_lsv1[1][idx])
-                else:
-                    best_set_mean1[0].append(nz * majiq_sample.mean_junction(filtered_lsv1[0][idx]))
-                    best_set_mean1[1].append(filtered_lsv1[1][idx])
-                break
-        for idx, nm in enumerate(filtered_lsv2[1]):
-            if nm[1] == ii:
-                nz = np.count_nonzero(filtered_lsv2[0][idx])
-                if 'i' in nm[2]:
-                    best_set_mean_ir2[0].append(nz * majiq_sample.mean_junction(filtered_lsv2[0][idx]))
-                    best_set_mean_ir2[1].append(filtered_lsv2[1][idx])
-                else:
-                    best_set_mean2[0].append(nz * majiq_sample.mean_junction(filtered_lsv2[0][idx]))
-                    best_set_mean2[1].append(filtered_lsv2[1][idx])
-                break
+    list_of_lsv = list(set(filtered_lsv1).intersection(set(filtered_lsv2)))
 
-    pip.logger.debug("'Best set' is %s events (out of %s)" % (len(best_set_mean1[0]), len(lsv_exp1[0])))
-    best_dpsi = empirical_delta_psi(best_set_mean1[0], best_set_mean2[0])
-    pip.logger.debug("'Best set IR' is %s events (out of %s)" % (len(best_set_mean_ir1[0]), len(lsv_exp1[0])))
-    best_dpsi_ir = empirical_delta_psi(best_set_mean_ir1[0], best_set_mean_ir2[0])
+    logger.debug("'Best set' is %s events" % len(list_of_lsv))
+    best_dpsi, best_dpsi_ir = empirical_delta_psi(list_of_lsv, temp_files)
+    # logger.debug("'Best set IR' is %s events (out of %s)" % (len(list_of_lsv_ir), len(lsv_exp1[0])))
+    # best_dpsi_ir = empirical_delta_psi(list_of_lsv, files)
 
     prior_matrix = [[], []]
 
@@ -317,10 +303,10 @@ def gen_prior_matrix(pip, lsv_exp1, lsv_exp2, output, numbins=20, defaultprior=F
                     prior_matrix[prior_idx] = prior_matrix[0]
                 continue
 
-            pip.logger.debug("Parametrizing 'best set'...%s", prior_idx)
-            mixture_pdf = majiq_delta.adjustdelta_lsv(best_delta_psi, output, plotpath=pip.plotpath,
-                                                      title=" ".join(pip.names), numiter=pip.iter,
-                                                      breakiter=pip.breakiter, njunc=nj, logger=pip.logger)
+            logger.debug("Parametrizing 'best set'...%s", prior_idx)
+            mixture_pdf = majiq_delta.adjustdelta_lsv(best_delta_psi, output, plotpath=conf.plotpath,
+                                                      title=" ".join(conf.names), numiter=conf.iter,
+                                                      breakiter=conf.breakiter, njunc=nj, logger=logger)
             pmat = []
             for i in xrange(numbins):
                 pmat.extend(mixture_pdf[numbins - i:(numbins * 2) - i])
@@ -328,8 +314,8 @@ def gen_prior_matrix(pip, lsv_exp1, lsv_exp2, output, numbins=20, defaultprior=F
             prior_matrix[prior_idx] = np.array(pmat).reshape(numbins, -1)
             if np.isnan(prior_matrix[prior_idx]).any():
                 if prior_idx == 1:
-                    pip.logger.WARNING("Not enought statistic power to calculate the intron retention specific prior, "
-                                    "in that case we will use the global prior")
+                    logger.WARNING("Not enought statistic power to calculate the intron retention specific prior, "
+                                   "in that case we will use the global prior")
                     prior_matrix[prior_idx] = prior_matrix[0]
                 else:
                     raise ValueError(" The input data does not have enought statistic power in order to calculate "
@@ -340,7 +326,7 @@ def gen_prior_matrix(pip, lsv_exp1, lsv_exp2, output, numbins=20, defaultprior=F
                 #renormalize so it sums 1
 
             plot_matrix(prior_matrix[prior_idx], "Prior Matrix , version %s" % prior_idx,
-                        "prior_matrix_jun_%s" % nj, pip.plotpath)
+                        "prior_matrix_jun_%s" % nj, conf.plotpath)
 
     return psi_space, prior_matrix
 

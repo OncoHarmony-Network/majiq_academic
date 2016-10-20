@@ -46,7 +46,7 @@ from majiq.src import polyfitnb as majiqfit
 
 
 def mark_stacks(lsv_list, fitfunc_r, pvalue_limit, logger=None):
-
+    import numpy.ma as ma
     if pvalue_limit < 0:
         return lsv_list
     logger.debug("Marking and masking stacks")
@@ -60,15 +60,10 @@ def mark_stacks(lsv_list, fitfunc_r, pvalue_limit, logger=None):
                 continue
             for j, value in enumerate(junction):
                 if value > 0:
-                    # TODO Use masker, and marking stacks will probably be faster.
-                    copy_junc = list(junction)
-                    copy_junc.pop(j)
-                    copy_junc = np.array(copy_junc)
-                    copy_junc = copy_junc[copy_junc > 0]
-                    nzpos = np.count_nonzero(copy_junc)
-
-                    #FINISH TODO
-                    mean_rest = np.mean(copy_junc) * nzpos
+                    msk = junction <= 0
+                    msk[j] = 1
+                    copy_junc = ma.masked_array(junction, mask=msk)
+                    mean_rest = 0.5 if copy_junc.mean() is ma.masked else copy_junc.mean() * copy_junc.count()
                     pval = majiqfit.get_negbinom_pval(fitfunc_r, mean_rest, value)
                     if pval < pvalue_limit:
                         lsv_list[0][lidx][i, j] = -2

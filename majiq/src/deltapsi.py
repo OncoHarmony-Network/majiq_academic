@@ -11,10 +11,14 @@ import majiq.src.utils as majiq_utils
 import majiq.src.filter as majiq_filter
 import majiq.src.normalize as majiq_norm
 import majiq.src.io as majiq_io
+from majiq.src.io_utils import dump_bin_file, load_bin_file
 import majiq.src.sample as majiq_sample
 from majiq.src.psi import prob_data_sample_given_psi, get_prior_params, gen_prior_matrix
 from majiq.src.constants import *
 from majiq.src.multiproc import QueueMessage, quantification_init, queue_manager
+from majiq.src.calc_psi import parse_and_norm_majiq
+from voila.io_voila import VoilaInput
+import collections
 
 def deltapsi(args):
     return pipeline_run(DeltaPsi(args))
@@ -28,62 +32,54 @@ def deltapsi_quantification(args_vals):#, delta_prior_path, boots_sample=True, l
                                         silent=quantification_init.silent, debug=quantification_init.debug)
 
         logger.info("Quantifying LSVs PSI.. %s" % chnk)
-        filesp = [h5py.File(get_quantifier_temp_filename(quantification_init.output, quantification_init.names[0])),
-                  h5py.File(get_quantifier_temp_filename(quantification_init.output, quantification_init.names[1]))]
+        num_exp = quantification_init.num_exp
+        f_list = [[], []]
 
-        num_exp = [filesp[0].attrs['num_exp'], filesp[1].attrs['num_exp']]
-        prior_matrix = np.array(majiq_io.load_bin_file(get_prior_matrix_filename(quantification_init.output,
-                                                       quantification_init.names)))
+        for grp_idx in range(2):
+            for eidx in np.arange(num_exp[grp_idx]):
+                fname = get_quantifier_norm_temp_files(quantification_init.output, quantification_init.names[grp_idx],
+                                                       eidx)
+                f_list[grp_idx].append(majiq_io.open_hdf5_file(fname))
+
+        prior_matrix = np.array(load_bin_file(get_prior_matrix_filename(quantification_init.output,
+                                                                        quantification_init.names)))
 
         ones_n = np.ones(shape=(1, quantification_init.nbins), dtype=np.float)
-
         for lidx, lsv_id in enumerate(list_of_lsv):
             if lidx % 50 == 0:
                 print "Event %d ..." % lidx
                 sys.stdout.flush()
 
-            lsv_samples1 = []
-            lsv_samples2 = []
+            lsv_samples = [[], []]
 
-            lsv_type = filesp[0][lsv_id].attrs['type']
+            lsv_type = f_list[0][0]['LSV/%s' % lsv_id].attrs['type']
 
-            logger.info("Bootstrapping for all samples...")
             for grp_idx in range(2):
-                f = filesp[grp_idx]
-                lsvobj = f[lsv_id]
-
-                assert lsv_type == lsvobj.attrs['type'], "LSV %s has different definition in groups" % lsv_id
-
-                for eidx in np.arange(num_exp[grp_idx]):
-                    lsv = f[grp_idx][LSV_JUNCTIONS_DATASET_NAME][lsvobj.attrs['coverage']][grp_idx, :, eidx, :]
+                for eidx, f in enumerate(f_list[grp_idx]):
+                    lsvobj = f['LSV/%s' % lsv_id]
+                    assert lsv_type == lsvobj.attrs['type'], "LSV %s has different definition in groups" % lsv_id
+                    lsv = f[LSV_JUNCTIONS_DATASET_NAME][lsvobj.attrs['coverage']]
                     m_lsv, var_lsv, s_lsv = majiq_sample.sample_from_junctions(junction_list=lsv,
                                                                                m=quantification_init.m,
                                                                                k=quantification_init.k,
                                                                                discardzeros=quantification_init.discardzeros,
                                                                                trimborder=quantification_init.trimborder,
-                                                                               fitted_one_over_r=f.attrs['fitfunc'][eidx],
+                                                                               fitted_one_over_r=f.attrs['fitfunc'],
                                                                                debug=quantification_init.debug)
-                    if grp_idx == 0:
-                        lsv_samples1.append(s_lsv)
-                    else:
-                        lsv_samples2.append(s_lsv)
+                    lsv_samples[grp_idx].append(s_lsv)
 
-            psi1 = np.array(lsv_samples1)
-            psi2 = np.array(lsv_samples2)
+            psi1 = np.array(lsv_samples[0])
+            psi2 = np.array(lsv_samples[1])
 
-            alpha_prior, beta_prior = get_prior_params(lsv_type, num_ways)
 
-            if 'i' in lsv_type:
-                prior_idx = 1
-            else:
-                prior_idx = 0
+            prior_idx = 1 if 'i' in lsv_type else 0
 
             post_matrix = []
             posterior_psi1 = []
             posterior_psi2 = []
 
             num_ways = len(psi1)
-
+            alpha_prior, beta_prior = get_prior_params(lsv_type, num_ways)
             for p_idx in xrange(num_ways):
 
                 posterior = np.zeros(shape=(quantification_init.nbins, quantification_init.nbins), dtype=np.float)
@@ -136,6 +132,10 @@ def deltapsi_quantification(args_vals):#, delta_prior_path, boots_sample=True, l
         raise()
 
 
+conf = collections.namedtuple('conf', 'name output_dir silent debug markstacks')
+prior_conf = collections.namedtuple('conf', 'iter plotpath breakiter names binsize')
+
+
 class DeltaPsi(BasicPipeline):
 
     def run(self):
@@ -146,54 +146,58 @@ class DeltaPsi(BasicPipeline):
         Given a file path with the junctions, return psi distributions.
         write_pickle indicates if a .pickle should be saved in disk
         """
-
-        self.logger = majiq_utils.get_logger("%s/psi_majiq.log" % self.logger_path, silent=self.silent,
+        majiq_utils.create_if_not_exists(self.logger_path)
+        self.logger = majiq_utils.get_logger("%s/deltapsi_majiq.log" % self.logger_path, silent=self.silent,
                                              debug=self.debug)
 
         self.logger.info("")
         self.logger.info("Command: %s" % self)
         self.logger.info("Running Psi ...")
-        self.logger.info("GROUP: %s" % self.files)
+        self.logger.info("GROUP1: %s" % self.files1)
+        self.logger.info("GROUP2: %s" % self.files2)
         self.nbins = 20
 
+        logger = self.logger
+        self.logger = None
+        pool = mp.Pool(processes=self.nthreads, maxtasksperchild=1)
+
         lsv_ids = []
-        for grp_idx, name in self.names:
+        files = [self.files1, self.files2]
+        for grp_idx, name in enumerate(self.names):
 
-            num_exp = len(self.files[grp_idx])
-            meta_info = [0] * num_exp
-            filtered_lsv = [None] * num_exp
-            fitfunc = [None] * num_exp
-            for ii, fname in enumerate(self.files[grp_idx]):
-                meta_info[ii], lsv_junc = majiq_io.load_data_lsv(fname, name, self.logger)
+            for fidx, fname in enumerate(files[grp_idx]):
+                pool.apply_async(parse_and_norm_majiq, [fname, fidx, conf(output_dir=self.output, name=name,
+                                                                          debug=self.debug, silent=self.silent,
+                                                                          markstacks=self.markstacks)])
+        pool.close()
+        pool.join()
+        self.logger = logger
 
-                # fitfunc[ii] = self.fitfunc(majiq_io.get_const_junctions(fname, logging=self.logger))
-                filtered_lsv[ii] = majiq_norm.mark_stacks(lsv_junc, meta_info[ii].fitfunc, self.markstacks, self.logger)
+        list_of_lsv_group1 = majiq_filter.merge_files_hdf5([get_quantifier_norm_temp_files(self.output, self.names[0], xx)
+                                                     for xx in xrange(len(files[0]))], self.minpos,
+                                                           self.minreads, logger=self.logger)
+        list_of_lsv_group2 = majiq_filter.merge_files_hdf5([get_quantifier_norm_temp_files(self.output, self.names[1], xx)
+                                                            for xx in xrange(len(files[1]))], self.minpos,
+                                                           self.minreads, logger=self.logger)
 
-            f = h5py.File(get_quantifier_temp_filename(self.output, name), 'w', compression='gzip', compression_opts=9)
-            lsv_ids.append(majiq_filter.quantifiable_in_group_to_hdf5(f, filtered_lsv, self.minpos, self.minreads,
-                                                                      effective_readlen=61, logger=self.logger))
+        list_of_lsv = list(set(list_of_lsv_group1).intersection(set(list_of_lsv_group2)))
 
-            f.attrs['num_exp'] = num_exp
-            f.attrs['fitfunc'] = fitfunc
-            f.close()
-
-        list_of_lsv = list(lsv_ids[0].intersection(lsv_ids[1]))
-
-
-        #group1, group2 = combine_for_priormatrix(matched_lsv[0], matched_lsv[1], matched_info, num_exp)
-        psi_space, prior_matrix = gen_prior_matrix(self, group1, group2, self.output, numbins=self.nbins,
-                                                   defaultprior=self.default_prior)
+        psi_space, prior_matrix = gen_prior_matrix(files, list_of_lsv_group1, list_of_lsv_group2, self.output,
+                                                   prior_conf(self.iter, self.plotpath, self.breakiter, self.names,
+                                                              self.binsize), numbins=self.nbins,
+                                                   defaultprior=self.default_prior, logger=self.logger)
 
         self.logger.info("Saving prior matrix for %s..." % self.names)
-        majiq_io.dump_bin_file(prior_matrix, get_prior_matrix_filename(self.output,
-                                                                       self.names))
+        dump_bin_file(prior_matrix, get_prior_matrix_filename(self.output, self.names))
 
         lock_arr = [mp.Lock() for xx in range(self.nthreads)]
         q = mp.Queue()
         pool = mp.Pool(processes=self.nthreads, initializer=quantification_init,
-                       initargs=[q, lock_arr, self.output, self.names, self.silent, self.debug, self.nbins, self.m, self.k,
-                                 self.discardzeros, self.trimborder], maxtasksperchild=1)
-        lchnksize = max(len(list_of_lsv)/self.nthreads, 1)
+                       initargs=[q, lock_arr, self.output, self.names, self.silent, self.debug, self.nbins, self.m,
+                                 self.k, self.discardzeros, self.trimborder, [len(files[0]), len(files[1])], False,
+                                 None],
+                       maxtasksperchild=1)
+        lchnksize = max(len(list_of_lsv)/self.nthreads, 1) +1
         [xx.acquire() for xx in lock_arr]
 
         if len(list_of_lsv) > 0:
@@ -203,7 +207,9 @@ class DeltaPsi(BasicPipeline):
 
             out_h5p = h5py.File(get_quantifier_voila_filename(self.output, self.names, deltapsi=True),
                                 'w', compression='gzip', compression_opts=9)
-            in_h5p = h5py.File(get_quantifier_temp_filename(self.output, name))
+            VoilaInput.metainfo_to_hdf5(out_h5p, 'hg19', self.names[0], files[0],
+                                        group2=self.names[1], experiments2=files[1])
+            in_h5p = h5py.File(get_quantifier_norm_temp_files(self.output, self.names[0], 0))
             queue_manager(in_h5p, out_h5p, lock_arr, q, num_chunks=self.nthreads, logger=self.logger)
             in_h5p.close()
             out_h5p.close()

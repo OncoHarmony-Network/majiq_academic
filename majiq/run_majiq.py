@@ -1,6 +1,7 @@
 import argparse
 from majiq.src.build import build
 from majiq.src.calc_psi import calcpsi
+from majiq.src.deltapsi import deltapsi
 from majiq.src.constants import *
 # from majiq.src.deltapsi import deltapair, multi_dpsi
 
@@ -170,11 +171,11 @@ def main():
                                            parents=[common, psi, psianddelta])
     parser_calcpsi.set_defaults(func=calcpsi)
 
-    # parser_deltagroup = subparsers.add_parser('deltapsi', help='Calculate Delta PSI values given a pair of experiments '
-    #                                                            '(1 VS 1 conditions *with* replicas)',
-    #                                           parents=[common, delta, psianddelta])
-    # parser_deltagroup.set_defaults(func=deltapair)
-    #
+    parser_deltagroup = subparsers.add_parser('deltapsi', help='Calculate Delta PSI values given a pair of experiments '
+                                                               '(1 VS 1 conditions *with* replicas)',
+                                              parents=[common, delta, psianddelta])
+    parser_deltagroup.set_defaults(func=deltapsi)
+
     # parser_multidelta = subparsers.add_parser('multi_delta', help='Calculate Delta PSI values given a pair of experiments '
     #                                                            '(1 VS 1 conditions *with* replicas)',
     #                                           parents=[common, mdelta, psianddelta])

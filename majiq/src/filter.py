@@ -24,7 +24,7 @@ def filter_message(when, value, logger, junc):
         else:
             logger.debug(message)
 
-def merge_files_hdf5(hdf5_file_list, minnonzero, min_reads, percent=-1, logger=None):
+def merge_files_hdf5(hdf5_file_list, minnonzero, min_reads, percent=-1, merge_replicas=False, logger=None):
 
     logger.debug("Quantifible filter...")
     lsv_dict = {}

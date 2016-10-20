@@ -8,6 +8,8 @@ from majiq.src import io as majiq_io
 from majiq.src.constants import *
 import majiq.src.utils as majiq_utils
 import majiq.src.config as majiq_config
+from voila.splice_graphics import LsvGraphic
+from voila.vlsv import VoilaLsv
 
 def parallel_lsv_child_calculation(func, args, tempdir, name, chunk, store=True):
     # try:
@@ -85,15 +87,15 @@ def queue_manager(input_h5dfp, output_h5dfp, lock_array, result_queue, num_chunk
                                                       exp_idx=jdx)
 
             elif val.get_type() == QUEUE_MESSAGE_PSI_RESULT:
-                posterior_matrix.append(val.get_value()[0])
-                names.append([majiq_io.load_lsvgraphic_from_majiq(input_h5dfp, val.get_value()[-1])])
+                lsv_graph = LsvGraphic.easy_from_hdf5(majiq_io.load_lsvgraphic_from_majiq(input_h5dfp,
+                                                                                            val.get_value()[-1]))
+                VoilaLsv(bins_list=val.get_value()[0], lsv_graphic=lsv_graph).to_hdf5(output_h5dfp)
 
             elif val.get_type() == QUEUE_MESSAGE_DELTAPSI_RESULT:
-                posterior_matrix.append(val.get_value()[0])
-                psi1.append(val.get_value()[1])
-                psi2.append(val.get_value()[2])
-                names.append([majiq_io.load_lsvgraphic_from_majiq(input_h5dfp, val.get_value()[-1])])
-                pass
+                lsv_graph = LsvGraphic.easy_from_hdf5(majiq_io.load_lsvgraphic_from_majiq(input_h5dfp,
+                                                                                            val.get_value()[-1]))
+                VoilaLsv(bins_list=val.get_value()[0], lsv_graphic=lsv_graph,
+                         psi1=val.get_value()[1], psi2=val.get_value()[2]).to_hdf5(output_h5dfp)
 
             elif val.get_type() == QUEUE_MESSAGE_END_WORKER:
                 lock_array[val.get_chunk()].release()
