@@ -26,12 +26,6 @@ class VoilaInput(HDF5):
         self.lsvs = lsvs
         self.metainfo = metainfo
 
-    def add_metainfo(self, condition1_grp, condition2_grp=None):
-        metainfo = [{'group': condition1_grp}]
-        if condition2_grp:
-            metainfo = [metainfo, [{'group': condition2_grp}]]
-        self.metainfo = metainfo
-
     def get_lsvs(self):
         return self.lsvs
 
@@ -48,21 +42,32 @@ class VoilaInput(HDF5):
             yield sample_info
 
     def encode_metainfo(self, h, metainfo):
-        if type(metainfo) is list:
-            for index, mi in enumerate(metainfo):
-                self.encode_metainfo(h.create_group(str(index)), mi)
-        else:
-            for key in metainfo:
-                h.attrs[key] = metainfo[key]
+        h = h.create_group('metainfo')
 
-    def exclude(self):
-        return ['metainfo', 'lsvs']
+        experiments1 = h.create_group('experiments1')
+        for index, item in enumerate(metainfo['experiments1']):
+            experiments1.attrs[str(index)] = item
+
+        del metainfo['experiments1']
+
+        if 'group2' in metainfo and 'experiments2' in metainfo:
+            experiments2 = h.create_group('experiments2')
+            for index, item in enumerate(metainfo['experiments2']):
+                experiments2.attrs[str(index)] = item
+
+            del metainfo['experiments2']
+
+        for key in metainfo:
+            h.attrs[key] = metainfo[key]
 
     def decode_metainfo(self, h):
         if h.keys():
             return [self.decode_metainfo(h[key]) for key in h]
         else:
             return {key: h.attrs[key] for key in h.attrs}
+
+    def exclude(self):
+        return ['metainfo', 'lsvs']
 
     def to_hdf5(self, h, use_id=True):
         # metainfo
@@ -82,6 +87,14 @@ class VoilaInput(HDF5):
         self.lsvs = [VoilaLsv((), None).from_hdf5(h['lsvs'][lsv_id]) for lsv_id in h['lsvs']]
 
         return super(VoilaInput, self).from_hdf5(h)
+
+    @classmethod
+    def metainfo_to_hdf5(cls, h, genome, group1, experiments1, group2=None, experiments2=None):
+        metainfo = {'group1': group1, 'experiments1': experiments1, 'genome': genome}
+        if group2 and experiments2:
+            metainfo['experiments2'] = experiments2
+            metainfo['group2'] = group2
+        cls().encode_metainfo(h['/'], metainfo)
 
 
 def voila_input_from_hdf5(hdf5_filename, logger):
