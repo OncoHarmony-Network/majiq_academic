@@ -307,6 +307,10 @@ def parse_gene_graphics(splicegraph_flist, gene_name_list, condition_names=('gro
 
         for splice_graph_f in splice_files:
             genesG = splice_graph_from_hdf5(splice_graph_f, logger)
+
+            if not genesG:
+                continue
+
             genes_graphic = defaultdict(list)
             genesG.sort()
             for gene_obj in genesG:
@@ -346,6 +350,7 @@ def parse_gene_graphics(splicegraph_flist, gene_name_list, condition_names=('gro
         genes_exp1_exp2.append(cc.OrderedDict(sorted(genes_exp.items(), key=lambda t: t[0])))
 
     logger.info("Splice graph information files correctly loaded.")
+
     return genes_exp1_exp2
 
 
@@ -488,8 +493,8 @@ def parse_input(args):
 
         # Get gene info
         majiq_output['genes_exp'] = parse_gene_graphics([args.genesf_exp1, args.genesf_exp2], gene_name_list,
-                                                        condition_names=[majiq_output['meta_exps'][0][0]['group'],
-                                                                         majiq_output['meta_exps'][1][0]['group']],
+                                                        condition_names=[majiq_output['meta_exps']['group1'],
+                                                                         majiq_output['meta_exps']['group2']],
                                                         logger=logger)
         majiq_output['lsv_list'] = [ll['lsv'] for g in majiq_output['genes_dict'].viewvalues() for ll in g]
 
