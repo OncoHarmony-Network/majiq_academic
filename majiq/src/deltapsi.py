@@ -77,8 +77,8 @@ def deltapsi_quantification(args_vals):#, delta_prior_path, boots_sample=True, l
             post_matrix = []
             posterior_psi1 = []
             posterior_psi2 = []
+            num_ways = len(psi1[0])
 
-            num_ways = len(psi1)
             alpha_prior, beta_prior = get_prior_params(lsv_type, num_ways)
             for p_idx in xrange(num_ways):
 
@@ -96,7 +96,7 @@ def deltapsi_quantification(args_vals):#, delta_prior_path, boots_sample=True, l
                                                                         alpha_prior[p_idx], beta_prior[p_idx]))
 
                     psi_v1 = data_given_psi1.reshape(quantification_init.nbins, -1)
-                    post_psi1 += (data_given_psi1 - scipy.misc.logsumexp(data_given_psi1))
+                    post_psi1 += np.exp(data_given_psi1 - scipy.misc.logsumexp(data_given_psi1))
 
                     junc = [psi2[xx][p_idx][m] for xx in xrange(num_exp[1])]
                     junc = np.array(junc)
@@ -105,7 +105,7 @@ def deltapsi_quantification(args_vals):#, delta_prior_path, boots_sample=True, l
                     data_given_psi2 = np.log(prob_data_sample_given_psi(junc.sum(), all_sample.sum(),
                                                                         quantification_init.nbins,
                                                                         alpha_prior[p_idx], beta_prior[p_idx]))
-                    post_psi2 += (data_given_psi2 - scipy.misc.logsumexp(data_given_psi2))
+                    post_psi2 += np.exp(data_given_psi2 - scipy.misc.logsumexp(data_given_psi2))
                     psi_v2 = data_given_psi2.reshape(-1, quantification_init.nbins)
 
                     A = (psi_v1 * ones_n + psi_v2 * ones_n.T) + np.log(prior_matrix[prior_idx])
