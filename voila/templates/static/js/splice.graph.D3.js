@@ -763,7 +763,7 @@ function spliceGraphD3() {
 
             // are we displaying normalized reads?
             var toggleReadCounts = this.parentNode.parentNode.querySelector('.readCounts');
-            var displayCorrectedReads = toggleReadCounts.checked;
+            var displayCorrectedReads = toggleReadCounts ? toggleReadCounts.checked : false;
 
             // generate chart here, using `w` and `h`
             var exonsp = d[0],

@@ -1,4 +1,5 @@
 import json
+import os
 from multiprocessing import Manager, Pool
 from multiprocessing.process import Process
 from multiprocessing.queues import JoinableQueue
@@ -45,11 +46,15 @@ class GeneGraphic(HDF5):
         self_dict = self.__dict__.copy()
         other_dict = other.__dict__.copy()
 
-        for attr in ['junctions', 'exons']:
+        for attr in ['junctions', 'exons', 'end']:
             del self_dict[attr]
             del other_dict[attr]
 
-        assert self_dict == other_dict
+        if self_dict != other_dict:
+            print ('Attemping to merge two genes that aren\'t technically equal.', self_dict, other_dict)
+
+        # adjust end point
+        self.end = max(other.end, self.end)
 
         # concat exons and junctions
         self.exons += other.exons
@@ -173,34 +178,37 @@ class ExonGraphic(HDF5):
         self.alt_ends = alt_ends
 
     def merge(self, other):
-        # only merge exons with other exons after itself
-        assert self.coords[0] <= other.coords[0]
 
-        if other.coords[0] <= self.coords[1]:
-            o = other.__dict__.copy()
-
-            self.coords = [min(self.coords[0], o['coords'][0]), max(self.coords[1], o['coords'][1])]
-            del o['coords']
-
-            if o['type_exon'] < 4 and self.type_exon < 4:
-                self.type_exon = min(o['type_exon'], self.type_exon)
-            elif o['type_exon'] != self.type_exon:
-                raise ExonException(('Attempting to merge a missing end exon with a normal exon.', self, other))
-
-            del o['type_exon']
-
-            for attr in o:
-                try:
-                    for item in o[attr]:
-                        if item not in self.__dict__[attr]:
-                            self.__dict__[attr].append(item)
-                except TypeError:
-                    # if object attribute isn't iterable...
-                    pass
-
-            return True
-        else:
+        if not self.overlaps(other):
             return False
+
+        other_dict = other.__dict__.copy()
+
+        self.coords = [min(self.coords[0], other_dict['coords'][0]), max(self.coords[1], other_dict['coords'][1])]
+        del other_dict['coords']
+
+        if other_dict['type_exon'] < 4 and self.type_exon < 4:
+            self.type_exon = min(other_dict['type_exon'], self.type_exon)
+        elif other_dict['type_exon'] != self.type_exon:
+            # raise ExonException(('Attempting to merge a missing end exon with a normal exon.', self, other))
+            print ('Attempting to merge a missing end exon with a normal exon.', self, other)
+
+        del other_dict['type_exon']
+
+        for attr in other_dict:
+            try:
+                for item in other_dict[attr]:
+                    if item not in self.__dict__[attr]:
+                        self.__dict__[attr].append(item)
+            except TypeError:
+                # if object attribute isn't iterable...
+                pass
+
+        return True
+
+    def overlaps(self, other):
+        assert self.coords[0] <= other.coords[0]
+        return other.coords[0] <= self.coords[1]
 
     def get_a3_list(self):
         return self.a3
@@ -244,7 +252,7 @@ class ExonGraphic(HDF5):
         return json.dumps(self, default=lambda o: o.__dict__, sort_keys=True, cls=encoder)
 
     def __str__(self):
-        return str(self.__dict__)
+        return str((self.coords, self.type_exon))
 
     def __repr__(self):
         return self.__str__()
@@ -294,7 +302,7 @@ class JunctionGraphic(HDF5):
         return self.coords == other.coords
 
     def __str__(self):
-        return str(self.__dict__)
+        return str([self.coords, self.type_junction])
 
     def __repr__(self):
         return self.__str__()
@@ -313,8 +321,11 @@ def splice_graph_from_hdf5(hdf5_filename, logger):
             for x in h:
                 queue.put(x)
 
-    if logger:
-        logger.info('Loading {0}.'.format(hdf5_filename))
+    if not os.path.isfile(hdf5_filename):
+        logger.error('unable to load file: {0}'.format(hdf5_filename))
+        return
+
+    logger.info('Loading {0}.'.format(hdf5_filename))
 
     queue = JoinableQueue()
     manager_dict = Manager().dict()
