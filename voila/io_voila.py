@@ -61,10 +61,12 @@ class VoilaInput(HDF5):
             h.attrs[key] = metainfo[key]
 
     def decode_metainfo(self, h):
-        if h.keys():
-            return [self.decode_metainfo(h[key]) for key in h]
-        else:
-            return {key: h.attrs[key] for key in h.attrs}
+        self.metainfo = {}
+        for key in h.attrs:
+            self.metainfo[key] = h.attrs[key]
+
+        for key in h:
+            self.metainfo[key] = [h[key].attrs[attr] for attr in h[key].attrs]
 
     def exclude(self):
         return ['metainfo', 'lsvs']
@@ -118,6 +120,10 @@ def voila_input_from_hdf5(hdf5_filename, logger):
             for id in h['lsvs']:
                 queue.put(id)
 
+    if not os.path.isfile(hdf5_filename):
+        logger.error('unable to load file: {0}'.format(hdf5_filename))
+        raise IOError('Voila input file does not exist.')
+
     logger.info('Loading {0}.'.format(hdf5_filename))
 
     voila_input = VoilaInput()
@@ -139,7 +145,7 @@ def voila_input_from_hdf5(hdf5_filename, logger):
     queue.close()
 
     with h5py.File(hdf5_filename, 'r') as h:
-        voila_input.metainfo = voila_input.decode_metainfo(h['metainfo'])
+        voila_input.decode_metainfo(h['metainfo'])
 
     voila_input.lsvs = manage_dict.values()
 
@@ -298,8 +304,8 @@ def tab_output(input_parsed):
         if 'delta' in type_summary:
             headers[3] = 'E(dPSI) per LSV junction'
             headers[4] = 'P(|E(dPSI)|>=%.2f) per LSV junction' % threshold
-            psi_headers = ['%s E(PSI)' % majiq_output['meta_exps'][0][0]['group'],
-                           '%s E(PSI)' % majiq_output['meta_exps'][1][0]['group']]
+            psi_headers = ['%s E(PSI)' % majiq_output['meta_exps']['group1'],
+                           '%s E(PSI)' % majiq_output['meta_exps']['group2']]
             headers = headers[:5] + psi_headers + headers[5:]
 
             if pairwise_dir:
@@ -399,6 +405,7 @@ def tab_output(input_parsed):
                                 lpairwise.append('N/A')
                             llpairwise.append(';'.join(lpairwise))
                     lline.extend(llpairwise)
+
                 if 'voila_links' in majiq_output.keys():
                     summary_path = majiq_output['voila_links'][llsv.get_gene_name()]
                     if not os.path.isabs(summary_path):

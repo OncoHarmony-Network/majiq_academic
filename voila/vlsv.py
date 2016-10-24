@@ -226,11 +226,12 @@ class VoilaLsv(HDF5):
         # bins
         BinsDataSet(h, self.bins).encode_list()
 
-        # psi1
-        Psi1DataSet(h, self.psi1).encode_list()
+        if self.is_delta_psi():
+            # psi1
+            Psi1DataSet(h, self.psi1).encode_list()
 
-        # psi2
-        Psi2DataSet(h, self.psi2).encode_list()
+            # psi2
+            Psi2DataSet(h, self.psi2).encode_list()
 
     def from_hdf5(self, h):
         # lsv graphic
@@ -249,11 +250,12 @@ class VoilaLsv(HDF5):
         # bins
         self.bins = BinsDataSet(h).decode_list()
 
-        # psi1
-        self.psi1 = Psi1DataSet(h).decode_list()
+        if self.is_delta_psi():
+            # psi1
+            self.psi1 = Psi1DataSet(h).decode_list()
 
-        # psi2
-        self.psi2 = Psi2DataSet(h).decode_list()
+            # psi2
+            self.psi2 = Psi2DataSet(h).decode_list()
 
         return super(VoilaLsv, self).from_hdf5(h)
 
