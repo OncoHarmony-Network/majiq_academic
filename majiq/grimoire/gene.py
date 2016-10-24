@@ -10,21 +10,6 @@ from majiq.src import config as majiq_config
 
 
 class Gene:
-    # __eq__ = lambda self, other: (self.chromosome == other.chromosome and self.strand == other.strand
-    #                               and self.start < other.end and self.end > other.start
-    #                               and self.strand == other.strand)
-    # __ne__ = lambda self, other: (self.chromosome != other.chromosome or self.strand != other.strand
-    #                               or self.start >= other.end or self.end <= other.start)
-    # __lt__ = lambda self, other: (self.chromosome < other.chromosome
-    #                               or (self.chromosome == other.chromosome
-    #                                   and (self.end < other.start
-    #                                        or (self.end > other.start and self.start < other.end
-    #                                            and self.strand == '+' and other.strand == '-'))))
-    # __gt__ = lambda self, other: (self.chromosome > other.chromosome
-    #                               or (self.chromosome == other.chromosome
-    #                                   and (self.start > other.end
-    #                                        or (self.end > other.start and self.start < other.END
-    #                                            and self.strand == '-' and other.strand == '+'))))
 
     def __init__(self, gene_id, gene_name, chrom, strand, start, end, retrieve=False):
         self.id = gene_id
@@ -41,6 +26,11 @@ class Gene:
         if not retrieve:
             self.transcript_tlb = {}
             self.temp_txex_list = []
+
+    def __del__(self):
+        for ex in self.exons:
+
+            del ex
 
     def __hash__(self):
         return hash((self.id, self.chromosome, self.strand, self.start, self.end))

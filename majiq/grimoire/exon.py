@@ -55,6 +55,12 @@ class Exon:
         if retrieve:
             self.coverage = 0
 
+    def __del__(self):
+        for ext in self.exonTx_list:
+            del ext
+        for exr in self.exonRead_list:
+            del exr
+
     def __hash__(self):
         return hash(self.id) ^ hash(self.gene_name)
 
@@ -276,6 +282,12 @@ class ExonRead(object):
         if post_junc is not None:
             self.p5_junc.append(post_junc)
 
+    def __del__(self):
+        for jj in self.p3_junc:
+            del jj
+        for jj in self.p5_junc:
+            del jj
+
     def get_coordinates(self):
         return self.start, self.end
 
@@ -314,6 +326,12 @@ class ExonTx(object):
             self.gene_name = trnscpt.get_gene().get_id()
         self.p3_junc = []
         self.p5_junc = []
+
+    def __del__(self):
+        for jj in self.p3_junc:
+            del jj
+        for jj in self.p5_junc:
+            del jj
 
     def to_hdf5(self, hdf5grps):
         h_ex = hdf5grps.create_group("tx/%s-%s" % (self.start, self.end))
@@ -406,7 +424,8 @@ class ExonTx(object):
 
         return
 
-    def collapse(self, list_exontx, gne):
+    @staticmethod
+    def collapse(list_exontx, gne):
 
         all_5prime = [xx.end for xx in list_exontx]
         all_3prime = [xx.start for xx in list_exontx]

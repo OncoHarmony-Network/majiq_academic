@@ -47,6 +47,12 @@ def builder_init(idx_count, lock_array, sam_list, pcr_filename, gff_output, only
 
 def merging_files(args_vals):
 
+    from guppy import hpy
+    hp = hpy()
+
+
+
+
     list_of_genes, chnk = args_vals
     logger = majiq_utils.get_logger("%s/%s.majiq.log" % (majiq_config.outDir, chnk),
                                     silent=builder_init.silent, debug=builder_init.debug)
@@ -54,18 +60,19 @@ def merging_files(args_vals):
     try:
         rna_files = []
         vfunc_gc = []
-        for exp_idx, sam_file in enumerate(builder_init.sam_list):
-            rnaf = h5py.File(get_builder_temp_majiq_filename(majiq_config.outDir, sam_file))
-            rna_files.append(rnaf)
+        for exp_idx in xrange(len(builder_init.sam_list)):
+            rna_files.append(h5py.File(get_builder_temp_majiq_filename(majiq_config.outDir,
+                                                                       builder_init.sam_list[exp_idx])))
             if majiq_config.gcnorm:
-                vfunc_gc.append(gc_normalization(rnaf.attrs['gc_values']))
+                vfunc_gc.append(gc_normalization(rna_files[-1].attrs['gc_values']))
             else:
-                vfunc_gc.append(None)
+                vfunc_gc = None
 
         db_f = h5py.File(builder_init.dbfile)
         for gne_idx, gne_id in enumerate(list_of_genes):
             print gne_id
             memory_tracker = tracker.SummaryTracker()
+            before = hp.heap()
             if gne_idx % 50 == 0:
                 logger.info("[%s] Progress %s/%s" % (chnk, gne_idx, len(list_of_genes)))
             loop_id = '%s - %s' % (chnk, gne_id)
@@ -78,14 +85,15 @@ def merging_files(args_vals):
             for exp_idx, filename in enumerate(builder_init.sam_list):
                 for jj_grp_id in rna_files[exp_idx]["%s/junctions" % gne_id]:
                     jj_grp = rna_files[exp_idx]["%s/junctions/%s" % (gne_id, jj_grp_id)]
-                    annot = jj_grp.attrs['annotated']
-                    junc = majiq.grimoire.gene.extract_junctions_hdf5(gene_obj, jj_grp, junction_list, annotated=annot,
+                    junc = majiq.grimoire.gene.extract_junctions_hdf5(gene_obj, jj_grp, junction_list,
+                                                                      annotated=jj_grp.attrs['annotated'],
                                                                       all_exp=True)
                     junc.set_coverage(exp_idx,
                                       rna_files[exp_idx][CONST_JUNCTIONS_DATASET_NAME][jj_grp.attrs['coverage_index'], :])
                     splice_list.add((junc.start, '5prime', junc))
                     splice_list.add((junc.end, '3prime', junc))
 
+            del junction_list
             detect_exons(gene_obj, list(splice_list), retrieve=True)
             del splice_list
 
@@ -95,7 +103,11 @@ def merging_files(args_vals):
 
             del majiq_config.gene_tlb[gne_id]
             del gene_obj
-            memory_tracker.print_diff()
+            # memory_tracker.print_diff()
+            after = hp.heap()
+            leftover = after - before
+            print leftover
+            print 'BT'
 
     except Exception:
         majiq_utils.monitor('CHILD %s:: EXCEPT' % chnk)
