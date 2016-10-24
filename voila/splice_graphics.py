@@ -354,6 +354,9 @@ class LsvGraphic(GeneGraphic):
     def get_type(self):
         return self.type
 
+    def to_hdf5(self, h, use_id=True):
+        super(LsvGraphic, self).to_hdf5(h, False)
+
     @classmethod
     def easy_from_hdf5(cls, h):
         return cls(None, None, None).from_hdf5(h)
