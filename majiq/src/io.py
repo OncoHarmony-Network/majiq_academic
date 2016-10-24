@@ -593,7 +593,7 @@ def load_data_lsv(path, group_name, logger=None):
     try:
         for lsvid in data['LSVs'].keys():
             lsv = data['LSVs/%s' % lsvid]
-            lsv_info.append([lsv.attrs['id'], lsv.attrs['type'], lsv])
+            lsv_info.append([lsv.attrs['id'], lsv.attrs['type'], lsv['visual']])
             lsv_cov_list.append(data[LSV_JUNCTIONS_DATASET_NAME][lsv.attrs['coverage']])
 
     except KeyError:

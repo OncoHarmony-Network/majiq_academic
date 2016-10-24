@@ -20,6 +20,9 @@ from majiq.src.basic_pipeline import BasicPipeline, pipeline_run
 from majiq.src.polyfitnb import fit_nb
 from majiq.src.voila_wrapper import gene_to_splicegraph, init_splicegraph
 import datetime
+from pympler import tracker
+
+
 
 
 def build(args):
@@ -61,6 +64,8 @@ def merging_files(args_vals):
 
         db_f = h5py.File(builder_init.dbfile)
         for gne_idx, gne_id in enumerate(list_of_genes):
+            print gne_id
+            memory_tracker = tracker.SummaryTracker()
             if gne_idx % 50 == 0:
                 logger.info("[%s] Progress %s/%s" % (chnk, gne_idx, len(list_of_genes)))
             loop_id = '%s - %s' % (chnk, gne_id)
@@ -90,6 +95,7 @@ def merging_files(args_vals):
 
             del majiq_config.gene_tlb[gne_id]
             del gene_obj
+            memory_tracker.print_diff()
 
     except Exception:
         majiq_utils.monitor('CHILD %s:: EXCEPT' % chnk)
