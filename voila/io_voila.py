@@ -338,21 +338,21 @@ def tab_output(input_parsed):
                 lline.append(repr(llsv.get_categories()[tlb_categx['ES']]))
                 lline.append(repr(llsv.get_categories()[tlb_categx['Num. Junctions']]))
                 lline.append(repr(llsv.get_categories()[tlb_categx['Num. Exons']]))
-                lline.append(str(int(np.any([junc.get_type() == 1 for junc in llsv.lsv_graphic.junctions]))))
+                lline.append(str(int(np.any([junc.type_junction == 1 for junc in llsv.lsv_graphic.junctions]))))
 
                 lline.append(llsv.lsv_graphic.chrom)
                 lline.append(llsv.lsv_graphic.strand)
 
                 lline.append(';'.join(
-                    ['-'.join(str(c) for c in junc.get_coords()) for junc in llsv.lsv_graphic.junctions]))
+                    ['-'.join(str(c) for c in junc.coords) for junc in llsv.lsv_graphic.junctions]))
                 lline.append(
-                    ';'.join(['-'.join(str(c) for c in exon.get_coords()) for exon in llsv.lsv_graphic.exons]))
+                    ';'.join(['-'.join(str(c) for c in exon.coords) for exon in llsv.lsv_graphic.exons]))
 
                 try:
                     lline.append(';'.join(
-                        ['|'.join([str(c) for c in exon.get_alt_starts()]) for exon in llsv.lsv_graphic.exons]))
+                        ['|'.join([str(c) for c in exon.alt_starts]) for exon in llsv.lsv_graphic.exons]))
                     lline.append(';'.join(
-                        ['|'.join([str(c) for c in exon.get_alt_ends()]) for exon in llsv.lsv_graphic.exons]))
+                        ['|'.join([str(c) for c in exon.alt_ends]) for exon in llsv.lsv_graphic.exons]))
                 except TypeError:
                     pass
 

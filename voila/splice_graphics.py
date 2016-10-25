@@ -1,36 +1,26 @@
 import csv
 import io
 import json
-import os
-from multiprocessing import Manager, Pool
-from multiprocessing.process import Process
-from multiprocessing.queues import JoinableQueue
 
 import h5py
 
 from voila import constants
-from voila.constants import PROCESS_COUNT
 from voila.hdf5 import HDF5
 from voila.utils.voilaLog import voilaLog
 
 
 class GeneGraphic(HDF5):
-    __eq__ = lambda self, other: (self.chrom == other.chrom and self.strand == other.strand
-                                  and self.start < other.end and self.end > other.start)
-    __ne__ = lambda self, other: (self.chrom != other.chrom or self.strand != other.strand
-                                  or self.start >= other.end or self.end <= other.start)
-    __lt__ = lambda self, other: (self.chrom < other.chrom
-                                  or (self.chrom == other.chrom
-                                      and (self.end < other.start
-                                           or (self.end > other.start and self.start < other.end
-                                               and self.strand == '+' and other.strand == '-'))))
-    __gt__ = lambda self, other: (self.chrom > other.chrom
-                                  or (self.chrom == other.chrom
-                                      and (self.start > other.end
-                                           or (self.end > other.start and self.start < other.end
-                                               and self.strand == '-' and other.strand == '+'))))
-
     def __init__(self, id, name=None, strand=None, exons=list(), junctions=list(), chrom=None):
+        """
+        Gene data.
+        :param id: Gene ID
+        :param name: Gene name
+        :param strand: Gene strand, either '-' or '+'
+        :param exons: List of this gene's exons
+        :param junctions: List of this gene's junctions
+        :param chrom: String name of this gene's chromosome
+        """
+
         super(GeneGraphic, self).__init__()
         self.id = id
         self.name = name
@@ -46,14 +36,20 @@ class GeneGraphic(HDF5):
             self.end = None
 
     def merge(self, other):
-        # quick sanity check
+        """
+        Merge another gene into this one.
+        :param other: Other gene object
+        :return: None
+        """
+
+        # for a sanity check, we'll remove the known changing elements and verify the rest are equal
         self_dict = self.__dict__.copy()
         other_dict = other.__dict__.copy()
-
         for attr in ['junctions', 'exons', 'end']:
             del self_dict[attr]
             del other_dict[attr]
 
+        # log warning if gene's some seem equal
         if self_dict != other_dict:
             voilaLog().warning('Attemping to merge two genes that aren\'t technically equal.', self_dict, other_dict)
 
@@ -71,12 +67,25 @@ class GeneGraphic(HDF5):
         self.remove_duplicate_junctions()
 
     def get_coords(self):
+        """
+        Construct and return this gene's coordinates.
+        :return: list of coordinates
+        """
         return [self.start, self.end]
 
     def to_JSON(self, encoder=json.JSONEncoder):
+        """
+        Generate and return JSON representation for a gene object.
+        :param encoder: encoder used in the json.dumps call
+        :return: JSON string
+        """
         return json.dumps(self, default=lambda o: o.__dict__, sort_keys=True, cls=encoder)
 
     def to_bed12(self):
+        """
+        Bed 12 representation of this gene object.
+        :return: bed 12 string
+        """
         fieldnames = ['chrom', 'chromStart', 'chromEnd', 'name', 'score', 'strand', 'thickStart', 'thickEnd', 'itemRgb',
                       'blockCount', 'blockSizes', 'blockStarts']
         csvfile = io.BytesIO()
@@ -92,8 +101,8 @@ class GeneGraphic(HDF5):
             'thickEnd': self.end,
             'itemRgb': 0,
             'blockCount': len(self.exons),
-            'blockSizes': ','.join([str(abs(e.get_coords()[0] - e.get_coords()[1])) for e in self.exons]),
-            'blockStarts': ','.join([str(abs(e.get_coords()[0] - self.start)) for e in self.exons])
+            'blockSizes': ','.join([str(abs(e.coords[0] - e.coords[1])) for e in self.exons]),
+            'blockStarts': ','.join([str(abs(e.coords[0] - self.start)) for e in self.exons])
         })
         return csvfile.getvalue()
 
@@ -111,6 +120,10 @@ class GeneGraphic(HDF5):
                 }
 
     def merge_overlapping_exons(self):
+        """
+        For all the exons for this gene, merge any that overlap.
+        :return: None
+        """
         exons = sorted(self.exons, key=lambda exon: exon.coords)
         merged_exons = [exons[0]]
         for exon in exons[1:]:
@@ -120,10 +133,18 @@ class GeneGraphic(HDF5):
         self.exons = merged_exons
 
     def remove_duplicate_junctions(self):
+        """
+        Remove any duplicate junctions for this gene.
+        :return: None
+        """
         self.junctions = sorted(set(self.junctions), key=lambda junction: junction.coords)
 
     def get_missing_exons(self, master_gene):
-
+        """
+        Get any exons that this gene is missing from a "master gene".
+        :param master_gene: A gene object containing a "master" list of exons and junctions
+        :return: None
+        """
         # Create splice graph for this gene as compared to master splice graph
         master_exons_iter = iter(master_gene.exons)
         sample_exons_iter = iter(self.exons)
@@ -162,7 +183,11 @@ class GeneGraphic(HDF5):
         self.exons = exons
 
     def get_missing_junctions(self, master_gene):
-
+        """
+        Get any missing junctions from a "master gene".
+        :param master_gene: A gene object containing a "master" list of exons and junctions
+        :return: None
+        """
         for junction in master_gene.junctions:
             if not junction in self.junctions:
                 jg = junction.copy()
@@ -170,13 +195,20 @@ class GeneGraphic(HDF5):
                 self.junctions.append(jg)
         self.junctions.sort(key=lambda junction: junction.coords)
 
+
     @classmethod
     def create_master(cls, splice_graphs, gene_id):
+        """
+        Creates a "master gene" from a list of splice graph files and the gene id.
+        :param splice_graphs: List of splice graph files
+        :param gene_id: The gene id
+        :return: Gene object
+        """
         master = None
         for h5_file in splice_graphs:
             voilaLog().info('loading ' + h5_file)
             with h5py.File(h5_file) as h:
-                gene = cls.easy_from_hdf5(h, gene_id)
+                gene = cls.easy_from_hdf5(h[gene_id])
                 try:
                     master.merge(gene)
                 except AttributeError:
@@ -184,11 +216,8 @@ class GeneGraphic(HDF5):
         return master
 
     @classmethod
-    def easy_from_hdf5(cls, h, gene_id):
-        return GeneGraphic(None).from_hdf5(h[gene_id])
-
-    def __str__(self):
-        return str(self.__dict__)
+    def easy_from_hdf5(cls, h):
+        return cls(None).from_hdf5(h)
 
 
 class ExonGraphic(HDF5):
@@ -221,7 +250,13 @@ class ExonGraphic(HDF5):
         self.alt_ends = alt_ends
 
     def merge(self, other):
+        """
+        Merge another exon with this one.
+        :param other: Exon object
+        :return: Boolean. True if exon is merged with this one.
+        """
 
+        # if the other exon doesn't overlap, then return False
         if not self.overlaps(other):
             return False
 
@@ -230,11 +265,7 @@ class ExonGraphic(HDF5):
         self.coords = [min(self.coords[0], other_dict['coords'][0]), max(self.coords[1], other_dict['coords'][1])]
         del other_dict['coords']
 
-        if other_dict['type_exon'] < 4 and self.type_exon < 4:
-            self.type_exon = min(other_dict['type_exon'], self.type_exon)
-        elif other_dict['type_exon'] != self.type_exon:
-            voilaLog().warning('Attempting to merge a missing end exon with a normal exon. ' + str((self, other)))
-
+        self.type_exon = min(other_dict['type_exon'], self.type_exon)
         del other_dict['type_exon']
 
         for attr in other_dict:
@@ -249,55 +280,21 @@ class ExonGraphic(HDF5):
         return True
 
     def overlaps(self, other):
-        assert self.coords[0] <= other.coords[0]
+        """
+        Checks if another exon overlaps with this one.
+        :param other: Exon object
+        :return: Boolean.  True if other exon overlaps with this one.
+        """
+        assert self.coords[0] <= other.coords[0], 'Exons have to be in order to check if they overlap.'
         return other.coords[0] <= self.coords[1]
 
-    def get_a3_list(self):
-        return self.a3
-
-    def get_a5_list(self):
-        return self.a5
-
-    def get_coords(self):
-        # Mask unkonwn start or ends
-        def mask_unknown(coords):
-            if coords[0] is None:
-                coords[0] = -1
-            if coords[1] is None:
-                coords[1] = -1
-            return coords
-
-        return mask_unknown(list(self.coords))
-
-    def get_type(self):
-        return self.type_exon
-
-    def get_coords_extra(self):
-        return self.coords_extra
-
-    def get_intron_retention(self):
-        return self.intron_retention
-
-    def get_lsv_type(self):
-        return self.lsv_type
-
-    def set_intron_retention(self, intron_retention):
-        self.intron_retention = intron_retention
-
-    def get_alt_starts(self):
-        return self.alt_starts
-
-    def get_alt_ends(self):
-        return self.alt_ends
-
     def to_JSON(self, encoder=json.JSONEncoder):
+        """
+        JSON representation of this class.
+        :param encoder: JSON encoder passed to json.dumps
+        :return: JSON string
+        """
         return json.dumps(self, default=lambda o: o.__dict__, sort_keys=True, cls=encoder)
-
-    def __str__(self):
-        return str((self.coords, self.type_exon))
-
-    def __repr__(self):
-        return self.__str__()
 
     def __copy__(self):
         eg = type(self)(None, None, None, None)
@@ -305,11 +302,24 @@ class ExonGraphic(HDF5):
         return eg
 
     def copy(self):
+        """
+        Attribute for attribute copy of this class.
+        :return: Copied class object
+        """
         return self.__copy__()
 
 
 class JunctionGraphic(HDF5):
     def __init__(self, coords, type_junction, nreads, clean_nreads=0, transcripts=list(), ir=0):
+        """
+        Junction data.
+        :param coords: junction start and end points
+        :param type_junction: junction type.  See constants file.
+        :param nreads: number of reads
+        :param clean_nreads: number of clean reads
+        :param transcripts: list of transtripts
+        :param ir: intron retention
+        """
         super(JunctionGraphic, self).__init__()
         self.coords = list(coords)
         self.type_junction = type_junction
@@ -318,32 +328,20 @@ class JunctionGraphic(HDF5):
         self.transcripts = transcripts
         self.ir = ir
 
-    def get_coords(self):
-        return self.coords
-
-    def get_type(self):
-        return self.type_junction
-
-    def get_num_reads(self):
-        return self.num_reads
-
-    def get_num_clean_reads(self):
-        return self.num_clean_reads
-
-    def set_clean_reads(self, cr):
-        self.num_clean_reads = cr
-
-    def get_transcripts(self):
-        return self.transcripts
-
-    def set_transcripts(self, t):
-        self.transcripts = t
-
-    def get_ir(self):
-        return self.ir
-
     def to_JSON(self, encoder=json.JSONEncoder):
+        """
+        JSON representation of this class.
+        :param encoder: json encoder passed to json.dumps
+        :return: JSON string
+        """
         return json.dumps(self, default=lambda o: o.__dict__, sort_keys=True, cls=encoder)
+
+    def copy(self):
+        """
+        Copy of this class
+        :return: Copied object
+        """
+        return self.__copy__()
 
     def __hash__(self):
         return int(str(self.coords[0]) + str(self.coords[1]))
@@ -351,72 +349,32 @@ class JunctionGraphic(HDF5):
     def __eq__(self, other):
         return self.coords == other.coords
 
-    def __str__(self):
-        return str([self.coords, self.type_junction])
-
-    def __repr__(self):
-        return self.__str__()
-
     def __copy__(self):
         jg = type(self)((), None, None)
         jg.__dict__.update(self.__dict__)
         return jg
 
-    def copy(self):
-        return self.__copy__()
-
-
-def splice_graph_from_hdf5(hdf5_filename):
-    def worker():
-        with h5py.File(hdf5_filename, 'r') as h:
-            while True:
-                id = queue.get()
-                manager_dict[id] = GeneGraphic(None).from_hdf5(h[id])
-                queue.task_done()
-
-    def producer():
-        with h5py.File(hdf5_filename, 'r') as h:
-            for x in h:
-                queue.put(x)
-
-    log = voilaLog()
-
-    if not os.path.isfile(hdf5_filename):
-        log.error('unable to load file: {0}'.format(hdf5_filename))
-        return
-
-    log.info('Loading {0}.'.format(hdf5_filename))
-
-    queue = JoinableQueue()
-    manager_dict = Manager().dict()
-
-    producer_proc = Process(target=producer)
-    producer_proc.daemon = True
-    producer_proc.start()
-
-    pool = Pool(PROCESS_COUNT, worker)
-
-    producer_proc.join()
-    queue.join()
-
-    pool.close()
-    queue.close()
-
-    return manager_dict.values()
-
 
 class LsvGraphic(GeneGraphic):
     def __init__(self, type_lsv, coords, id, name=None, strand=None, exons=list(), junctions=list(), chrom=None):
+        """
+        LSV Data.
+        :param type_lsv: LSV type.  See constants file.
+        :param coords: Start and end of LSV
+        :param id: LSV id
+        :param name: LSV name
+        :param strand: LSV Strand. Either '-' or '+'
+        :param exons: List of exons associated with this LSV
+        :param junctions: List of junctions associtated with this LSV
+        :param chrom: This LSV's Chromosome
+        """
         super(LsvGraphic, self).__init__(id, name, strand, exons, junctions, chrom)
         self.type = type_lsv
         self.coords = coords
-
-    def get_type(self):
-        return self.type
 
     def to_hdf5(self, h, use_id=True):
         super(LsvGraphic, self).to_hdf5(h, False)
 
     @classmethod
-    def easy_from_hdf5(cls, h, lsv_id=None):
+    def easy_from_hdf5(cls, h):
         return cls(None, None, None).from_hdf5(h)

@@ -161,7 +161,7 @@ class VoilaLsv(HDF5):
         return self.excl_incl
 
     def get_extension(self):
-        return [self.lsv_graphic.exons[0].get_coords()[0], self.lsv_graphic.exons[-1].get_coords()[1]]
+        return [self.lsv_graphic.exons[0].coords[0], self.lsv_graphic.exons[-1].coords[1]]
 
     def get_categories(self):
         return self.categories
@@ -260,14 +260,14 @@ class VoilaLsv(HDF5):
     def to_gff3(cls, vlsv):
         def find_exon_a5(lexonG, jidx):
             for eG in lexonG:
-                if jidx in eG.get_a5_list():
+                if jidx in eG.a5:
                     return eG
             raise OrphanJunctionException("Orphan junction %s in lsv %s." % (
                 repr(vlsv.get_lsv_graphic().get_junctions()[jidx].get_coords()), lsvId))
 
         def find_exon_a3(lexonG, jidx):
             for eG in lexonG:
-                if jidx in eG.get_a3_list():
+                if jidx in eG.a3:
                     return eG
             raise OrphanJunctionException("Orphan junction %s in lsv %s." % (
                 repr(vlsv.get_lsv_graphic().get_junctions()[jidx].get_coords()), lsvId))
@@ -303,15 +303,15 @@ class VoilaLsv(HDF5):
             if strand == '-':
                 ex1G, ex2G = ex2G, ex1G
 
-            mrna += '%d\t%d\t' % (ex1G.get_coords()[first], ex2G.get_coords()[last])
+            mrna += '%d\t%d\t' % (ex1G.coords[first], ex2G.coords[last])
 
             if vlsv.get_type().startswith('t'):
                 ex1G, ex2G = ex2G, ex1G
-                ex1 += '%d\t%d\t' % (junc.get_coords()[last], ex1G.get_coords()[last])
-                ex2 += '%d\t%d\t' % (ex2G.get_coords()[first], junc.get_coords()[first])
+                ex1 += '%d\t%d\t' % (junc.coords[last], ex1G.coords[last])
+                ex2 += '%d\t%d\t' % (ex2G.coords[first], junc.coords[first])
             else:
-                ex1 += '%d\t%d\t' % (ex1G.get_coords()[first], junc.get_coords()[first])
-                ex2 += '%d\t%d\t' % (junc.get_coords()[last], ex2G.get_coords()[last])
+                ex1 += '%d\t%d\t' % (ex1G.coords[first], junc.coords[first])
+                ex2 += '%d\t%d\t' % (junc.coords[last], ex2G.coords[last])
             mrna += '.\t%s\t0\tName=%s;Parent=%s;ID=%s' % (strand, mrna_id, lsvId, mrna_id)
             ex1 += '.\t%s\t0\tName=%s.lsv;Parent=%s;ID=%s.lsv' % (strand, mrna_id, mrna_id, mrna_id)
             ex2 += '.\t%s\t0\tName=%s.ex;Parent=%s;ID=%s.ex' % (strand, mrna_id, mrna_id, mrna_id)

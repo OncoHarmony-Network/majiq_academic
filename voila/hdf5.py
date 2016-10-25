@@ -128,6 +128,15 @@ class HDF5(object):
 
         return self
 
+    @classmethod
+    def easy_from_hdf5(cls, h):
+        """
+        Create object from hdf5 file without knowing this class's arguments.
+        :param h: hdf5 file pointer
+        :return:
+        """
+        cls().from_hdf5(h)
+
 
 class DataSet(object):
     def __init__(self, h, ds_name, objs):

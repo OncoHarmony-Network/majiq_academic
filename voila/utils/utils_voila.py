@@ -7,8 +7,14 @@ import os
 import shutil
 import sys
 from collections import defaultdict
+from multiprocessing import Manager, Process, Pool
+from multiprocessing.queues import JoinableQueue
+
+import h5py
 
 from voila import splice_graphics
+from voila.constants import PROCESS_COUNT
+from voila.splice_graphics import GeneGraphic
 from voila.utils.voilaLog import voilaLog
 from voila.vlsv import VoilaLsv
 
@@ -206,6 +212,7 @@ def gff2gtf(gff_f, out_f):
             gff = gff_f
         else:
             gff = open(gff_f)
+
         for gff_l in gff:
             gff_fields = gff_l.strip().split()
             if len(gff_fields) < 3: continue
@@ -267,3 +274,42 @@ def secs2hms(secs):
     m, s = divmod(secs, 60)
     h, m = divmod(m, 60)
     return "%d:%02d:%02d" % (h, m, s)
+
+
+def splice_graph_from_hdf5(hdf5_filename):
+    def worker():
+        with h5py.File(hdf5_filename, 'r') as h:
+            while True:
+                id = queue.get()
+                manager_dict[id] = GeneGraphic.easy_from_hdf5(h[id])
+                queue.task_done()
+
+    def producer():
+        with h5py.File(hdf5_filename, 'r') as h:
+            for x in h:
+                queue.put(x)
+
+    log = voilaLog()
+
+    if not os.path.isfile(hdf5_filename):
+        log.error('unable to load file: {0}'.format(hdf5_filename))
+        return
+
+    log.info('Loading {0}.'.format(hdf5_filename))
+
+    queue = JoinableQueue()
+    manager_dict = Manager().dict()
+
+    producer_proc = Process(target=producer)
+    producer_proc.daemon = True
+    producer_proc.start()
+
+    pool = Pool(PROCESS_COUNT, worker)
+
+    producer_proc.join()
+    queue.join()
+
+    pool.close()
+    queue.close()
+
+    return manager_dict.values()
