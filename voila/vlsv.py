@@ -303,7 +303,6 @@ class VoilaLsv(object):
 
     def is_lsv_changing(self, thres):
         means = np.array(self.get_means())
-        #TODO: should we check that pos and neg are kind of matched?
-        return max(means[means > 0].sum(), means[means < 0].sum()) >= thres
-        #return np.any(np.array(self.get_means()) >= thres)
+        # TODO: should we check that pos and neg are kind of matched?
+        return max(means[means > 0].sum(), abs(means[means < 0].sum())) >= thres
 
