@@ -3,13 +3,13 @@ from __future__ import division
 import errno
 import fnmatch
 import json
-import logging
 import os
 import shutil
 import sys
 from collections import defaultdict
 
-from voila.splice_graphics import ExonGraphic, JunctionGraphic, GeneGraphic, LsvGraphic
+from voila import splice_graphics
+from voila.utils.voilaLog import voilaLog
 from voila.vlsv import VoilaLsv
 
 try:
@@ -56,13 +56,13 @@ class LsvGraphicEncoder(json.JSONEncoder):
             return list(obj)
         if isinstance(obj, np.int64):
             return int(obj)
-        if isinstance(obj, ExonGraphic):
+        if isinstance(obj, splice_graphics.ExonGraphic):
             return obj.to_JSON(PickleEncoder)
-        if isinstance(obj, JunctionGraphic):
+        if isinstance(obj, splice_graphics.JunctionGraphic):
             return obj.to_JSON(PickleEncoder)
-        if isinstance(obj, GeneGraphic):
+        if isinstance(obj, splice_graphics.GeneGraphic):
             return obj.to_JSON(PickleEncoder)
-        if isinstance(obj, LsvGraphic):
+        if isinstance(obj, splice_graphics.LsvGraphic):
             return obj.to_JSON(PickleEncoder)
 
         return json.JSONEncoder.default(self, obj)
@@ -86,24 +86,32 @@ def get_prob_delta_psi_greater_v(bins, expected, V=.2):
     return np.sum(bins[:left] + np.sum(bins[right:]))
 
 
-def lsvs_to_gene_dict(voila_input, gene_name_list=(), lsv_types=None, lsv_names=(), logger=None, threshold=.2,
-                      show_all=False):
+def lsvs_to_gene_dict(voila_input, gene_name_list=(), lsv_types=None, lsv_names=(), threshold=.2, show_all=False):
+    log = voilaLog()
     genes_dict = defaultdict(list)
     nofilter_genes = not gene_name_list and not lsv_types
 
     for i, vlsv in enumerate(voila_input.lsvs):
 
         if np.any(np.isnan(vlsv.bins)):
-            logger.warning("LSV %s bins contain NaNs" % vlsv.get_id())
+            log.warning("LSV %s bins contain NaNs" % vlsv.get_id())
             continue
-        if vlsv.is_delta_psi and not show_all and not vlsv.is_lsv_changing(threshold): continue
-        if len(lsv_names) > 0 and vlsv.get_id() not in lsv_names: continue
+
+        if vlsv.is_delta_psi() and not show_all and not vlsv.is_lsv_changing(threshold):
+            continue
+
+        if len(lsv_names) > 0 and vlsv.get_id() not in lsv_names:
+            continue
+
         gene_name_id = vlsv.get_id().split(':')[0]
         gene_name = vlsv.lsv_graphic.name.upper()
         if nofilter_genes or gene_name_id in gene_name_list or gene_name in gene_name_list or vlsv.get_type() in lsv_types:
             if vlsv.is_delta_psi():
-                genes_dict[gene_name_id].append({'lsv': vlsv, 'psi1': VoilaLsv(vlsv.psi1, lsv_graphic=None),
-                                                 'psi2': VoilaLsv(vlsv.psi2, lsv_graphic=None)})
+                genes_dict[gene_name_id].append({
+                    'lsv': vlsv,
+                    'psi1': VoilaLsv(vlsv.psi1, lsv_graphic=None),
+                    'psi2': VoilaLsv(vlsv.psi2, lsv_graphic=None)
+                })
             else:
                 genes_dict[gene_name_id].append(vlsv)
 
@@ -180,42 +188,13 @@ def list_files_or_dir(file_or_dir_list, prefix='*', suffix='*', containing='*'):
     return files
 
 
-def get_logger(logger_name, silent=False, debug=False):
-    """
-    Returns a logger instance. verbose = False will silence the logger, debug will give
-    more information intended for debugging purposes.
-    """
-    logging_format = "%(asctime)s (PID:%(process)s) - %(levelname)s - %(message)s"
-    logging.basicConfig(filename=logger_name, format=logging_format)
-    logger = logging.getLogger(logger_name)
-    if debug:
-        logger.setLevel(logging.DEBUG)
-    else:
-        logger.setLevel(logging.INFO)
-
-    ch = logging.StreamHandler()
-    if debug:
-        ch.setLevel(logging.DEBUG)
-    elif not silent:
-        ch.setLevel(logging.INFO)
-    else:
-        ch.setLevel(logging.WARNING)
-
-    formatter = logging.Formatter("%(asctime)s (PID:%(process)s) - %(levelname)s - %(message)s")
-    ch.setFormatter(formatter)
-    logger.addHandler(ch)
-    return logger
-
-
-def create_if_not_exists(my_dir, logger=None):
+def create_if_not_exists(my_dir):
     """Create a directory path if it does not exist"""
     try:
-        if logger:
-            logger.info("\nCreating directory %s..." % my_dir)
         os.makedirs(my_dir)
-    except OSError:
-        if logger:
-            logger.info("\nDirectory %s already exists..." % my_dir)
+    except OSError as err:
+        if err.errno == 17:
+            pass
 
 
 def gff2gtf(gff_f, out_f):

@@ -46,3 +46,6 @@ DEBUG = 1
 
 # Multi-Processing
 PROCESS_COUNT = int(math.ceil(multiprocessing.cpu_count() / 3))
+
+# logging
+VOILA_LOG_NAME = '3a4f4528-e572-404e-b143-acff61cee9ed'

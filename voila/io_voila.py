@@ -9,13 +9,12 @@ import numpy as np
 
 import vlsv
 from voila import constants
-from voila.constants import PROCESS_COUNT
 from voila.hdf5 import HDF5
 from voila.utils import utils_voila
+from voila.utils.voilaLog import voilaLog
 from voila.vlsv import VoilaLsv
 
 __author__ = 'abarrera'
-import cPickle as pkl
 
 
 class VoilaInput(HDF5):
@@ -98,89 +97,66 @@ class VoilaInput(HDF5):
             metainfo['group2'] = group2
         cls().encode_metainfo(h['/'], metainfo)
 
+    @classmethod
+    def from_hdf5_file(cls, hdf5_filename):
+        """
+        Create VoilaInput object from HDF5 file.  This will process each of the VoilaLsvs in their own thread using the
+        Producer Consumer design pattern.
+        :param hdf5_filename: HDF5 filename string
+        :return: VoilaInput object
+        """
 
-def voila_input_from_hdf5(hdf5_filename, logger):
-    """
-    Create VoilaInput object from HDF5 file.  This will process each of the VoilaLsvs in their own thread using the
-    Producer Consumer design pattern.
-    :param hdf5_filename: HDF5 filename string
-    :param logger: instance of logger
-    :return: VoilaInput object
-    """
+        def worker():
+            with h5py.File(hdf5_filename, 'r') as h:
+                while True:
+                    id = queue.get()
+                    manage_dict[id] = VoilaLsv((), None).from_hdf5(h['lsvs'][id])
+                    queue.task_done()
 
-    def worker():
+        def producer():
+            with h5py.File(hdf5_filename, 'r') as h:
+                for id in h['lsvs']:
+                    queue.put(id)
+
+        log = voilaLog()
+        if not os.path.isfile(hdf5_filename):
+            log.error('unable to load file: {0}'.format(hdf5_filename))
+            raise IOError('Voila input file does not exist.')
+
+        log.info('Loading {0}.'.format(hdf5_filename))
+
+        voila_input = VoilaInput()
+
+        queue = JoinableQueue()
+
+        manage_dict = Manager().dict()
+
+        producer_proc = Process(target=producer)
+        producer_proc.daemon = True
+        producer_proc.start()
+
+        pool = Pool(constants.PROCESS_COUNT, worker)
+
+        producer_proc.join()
+        queue.join()
+
+        pool.close()
+        queue.close()
+
         with h5py.File(hdf5_filename, 'r') as h:
-            while True:
-                id = queue.get()
-                manage_dict[id] = VoilaLsv((), None).from_hdf5(h['lsvs'][id])
-                queue.task_done()
+            voila_input.decode_metainfo(h['metainfo'])
 
-    def producer():
-        with h5py.File(hdf5_filename, 'r') as h:
-            for id in h['lsvs']:
-                queue.put(id)
+        voila_input.lsvs = manage_dict.values()
 
-    if not os.path.isfile(hdf5_filename):
-        logger.error('unable to load file: {0}'.format(hdf5_filename))
-        raise IOError('Voila input file does not exist.')
-
-    logger.info('Loading {0}.'.format(hdf5_filename))
-
-    voila_input = VoilaInput()
-
-    queue = JoinableQueue()
-
-    manage_dict = Manager().dict()
-
-    producer_proc = Process(target=producer)
-    producer_proc.daemon = True
-    producer_proc.start()
-
-    pool = Pool(PROCESS_COUNT, worker)
-
-    producer_proc.join()
-    queue.join()
-
-    pool.close()
-    queue.close()
-
-    with h5py.File(hdf5_filename, 'r') as h:
-        voila_input.decode_metainfo(h['metainfo'])
-
-    voila_input.lsvs = manage_dict.values()
-
-    return voila_input
+        return voila_input
 
 
-def dump_voila_input(voila_input, target, logger=None, protocol=-1):
-    import os
-    base_path, name = os.path.split(target)
-    if not os.path.exists(base_path):
-        os.makedirs(base_path)
-    try:
-        pkl.dump(voila_input, target, protocol)
-    except pkl.PickleError, e:
-        if logger:
-            logger.error("Dumping file %s in %s:\n\t%s." % (voila_input, target, e.message), exc_info=1)
-
-
-def load_voila_input(voila_input_file, logger=None):
-    try:
-        with open(voila_input_file, 'rb') as vif:
-            voila_input = pkl.load(vif)
-            return voila_input
-    except pkl.PickleError, e:
-        if logger:
-            logger.error("Loading the file %s:\n\t%s." % (voila_input_file, e.message), exc_info=1)
-
-
-def load_dpairs(pairwise_dir, majiq_output, logger):
+def load_dpairs(pairwise_dir, majiq_output):
     """
     Load pairwise files from MAJIQ analysis.
 
     :param str pairwise_dir: directory containing pairwise comparisons produced by MAJIQ.
     :param majiq_output: parsed data from old_majiq.
-    :param logger: logger instance.
     :return: list of deltapsi lsvs
     :return: name of condition 1
     :return: name of condition 2
@@ -198,10 +174,11 @@ def load_dpairs(pairwise_dir, majiq_output, logger):
             pairwise_file = "%s/%s_%d_%s_%d.deltapsi.pickle" % (
                 pairwise_dir, group1_name, idx1 + 1, group2_name, idx2 + 1)
             try:
-                lmajiq_pairs[idx1][idx2] = utils_voila.get_lsv_delta_exp_data(pairwise_file,
-                                                                              show_all=True,
-                                                                              gene_name_list=lsv_names,
-                                                                              logger=logger)
+                lmajiq_pairs[idx1][idx2] = utils_voila.get_lsv_delta_exp_data(
+                    pairwise_file,
+                    show_all=True,
+                    gene_name_list=lsv_names
+                )
             except IOError:
                 pass
     return lmajiq_pairs, group1_name, group2_name
@@ -215,7 +192,6 @@ def write_tab_output(input_parsed):
     :param output_html: name for the output html file used to create a *.txt version.
     :param majiq_output: parsed data from old_majiq.
     :param type_summary: type of analysis performed.
-    :param logger: logger instance.
     :param pairwise_dir: whether pairwise comparisons are included or not.
     :param threshold: minimum change considered as significant (in deltapsi analysis).
     :return: nothing.
@@ -230,11 +206,12 @@ def cond_table_tab_output(input_parsed):
     majiq_output = input_parsed.majiq_output
     lsvs = majiq_output['lsvs']
     sample_names = majiq_output['sample_names']
+    log = voilaLog()
 
-    input_parsed.logger.info('Creating cond-table TSV...')
+    log.info('Creating cond-table TSV...')
 
     tsv_file = os.path.join(input_parsed.output_dir, input_parsed.output_html.split('.html')[0] + '.tsv')
-    input_parsed.logger.info(tsv_file)
+    log.info(tsv_file)
 
     with open(tsv_file, 'w') as csvfile:
         fieldnames = ['Gene', 'LSV ID', '#Disagreeing', '#Changing samples', 'Junction'] + sample_names
@@ -262,7 +239,7 @@ def cond_table_tab_output(input_parsed):
 def tab_output(input_parsed):
     output_dir = input_parsed.output_dir
     output_html = input_parsed.output_html
-    logger = input_parsed.logger
+    log = voilaLog()
     pairwise_dir = input_parsed.pairwise_dir
     majiq_output = input_parsed.majiq_output
     threshold = input_parsed.threshold
@@ -271,12 +248,12 @@ def tab_output(input_parsed):
     ofile_str = "%s%s.%s" % (output_dir, output_html.rsplit('.html', 1)[0], constants.EXTENSION)
     tlb_categx = {'A5SS': 'prime5', 'A3SS': 'prime3', 'Num. Junctions': 'njuncs', 'Num. Exons': 'nexons', 'ES': 'ES'}
 
-    logger.info("Creating Tab-delimited output file in %s..." % ofile_str)
+    log.info("Creating Tab-delimited output file in %s..." % ofile_str)
 
     if pairwise_dir:
         # In deltapsi, add columns with pairwise comparisons between group members
-        logger.info("Load pairwise comparison files from %s..." % pairwise_dir)
-        lmajiq_pairs, group1_name, group2_name = load_dpairs(pairwise_dir, majiq_output, logger=logger)
+        log.info("Load pairwise comparison files from %s..." % pairwise_dir)
+        lmajiq_pairs, group1_name, group2_name = load_dpairs(pairwise_dir, majiq_output)
 
     with open(ofile_str, 'w+') as ofile:
         headers = ['#Gene Name',
@@ -394,9 +371,9 @@ def tab_output(input_parsed):
                                         lsv_pair = llsv_tmp[0]
                                         break
                                 else:
-                                    logger.warning("LSV %s present in deltagroup but missing in %s." %
-                                                   (llsv.get_id(), "%s_%d_%s_%d" % (group1_name, idx1 + 1,
-                                                                                    group2_name, idx2 + 1)))
+                                    log.warning("LSV %s present in deltagroup but missing in %s." %
+                                                (llsv.get_id(), "%s_%d_%s_%d" % (group1_name, idx1 + 1,
+                                                                                 group2_name, idx2 + 1)))
                                     lpairwise.append('N/A')
                                     continue
                                 for iway in range(len(llsv.get_bins())):
@@ -414,7 +391,7 @@ def tab_output(input_parsed):
                 ofile.write(constants.DELIMITER.join(lline))
                 ofile.write('\n')
 
-    logger.info("Delimited output file successfully created in: %s" % ofile_str)
+    log.info("Delimited output file successfully created in: %s" % ofile_str)
 
 
 def load_dpsi_tab(tab_files_list, sample_names, thres_change=None, filter_genes=None, filter_lsvs=None,
@@ -506,21 +483,20 @@ def create_gff3_txt_files(input_parsed, out_gff3=False):
     Create GFF3 files for each LSV.
     :param output_dir: output directory for the file.
     :param majiq_output: parsed data from old_majiq.
-    :param logger: logger instance.
     :param out_gff3:
     :return: nothing.
     """
-    logger = input_parsed.logger
+    log = voilaLog()
     majiq_output = input_parsed.majiq_output
     output_dir = input_parsed.output_dir
 
     if input_parsed.type_summary == constants.COND_TABLE:
-        logger.info('Skipping generating gff3 format.')
+        log.info('Skipping generating gff3 format.')
         return
 
-    logger.info("Saving LSVs files in gff3 format ...")
+    log.info("Saving LSVs files in gff3 format ...")
     if 'genes_dict' not in majiq_output or len(majiq_output['genes_dict']) < 1:
-        logger.warning("No gene information provided. Genes files are needed to calculate the gff3 files.")
+        log.warning("No gene information provided. Genes files are needed to calculate the gff3 files.")
         return
 
     header = "##gff-version 3"
@@ -535,7 +511,7 @@ def create_gff3_txt_files(input_parsed, out_gff3=False):
             lsv_file_basename = "%s/%s" % (odir, lsv.get_id())
 
             try:
-                lsv_gff3_str = lsv.get_gff3(logger=logger)
+                lsv_gff3_str = lsv.get_gff3()
                 utils_voila.gff2gtf(lsv_gff3_str.split('\n'), "%s.gtf" % lsv_file_basename)
                 if out_gff3:
                     gff_file = "%s.gff3" % (lsv_file_basename)
@@ -543,8 +519,8 @@ def create_gff3_txt_files(input_parsed, out_gff3=False):
                         ofile.write(header + "\n")
                         ofile.write(lsv_gff3_str + "\n")
             except UnboundLocalError, e:
-                logger.warning("problem generating GTF file for %s" % lsv.get_id())
-                logger.error(e.message)
-    logger.info("GTF files for LSVs saved in %s" % odir)
+                log.warning("problem generating GTF file for %s" % lsv.get_id())
+                log.error(e.message)
+    log.info("GTF files for LSVs saved in %s" % odir)
     if out_gff3:
-        logger.info("GFF3 files for LSVs saved in %s" % odir)
+        log.info("GFF3 files for LSVs saved in %s" % odir)

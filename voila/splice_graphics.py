@@ -6,8 +6,10 @@ from multiprocessing.queues import JoinableQueue
 
 import h5py
 
+from voila import constants
 from voila.constants import PROCESS_COUNT
 from voila.hdf5 import HDF5
+from voila.utils.voilaLog import voilaLog
 
 
 class GeneGraphic(HDF5):
@@ -28,6 +30,7 @@ class GeneGraphic(HDF5):
 
     def __init__(self, id, name=None, strand=None, exons=list(), junctions=list(), chrom=None):
         super(GeneGraphic, self).__init__()
+
         self.id = id
         self.name = name
         self.strand = strand
@@ -51,7 +54,7 @@ class GeneGraphic(HDF5):
             del other_dict[attr]
 
         if self_dict != other_dict:
-            print ('Attemping to merge two genes that aren\'t technically equal.', self_dict, other_dict)
+            voilaLog().warning('Attemping to merge two genes that aren\'t technically equal.', self_dict, other_dict)
 
         # adjust end point
         self.end = max(other.end, self.end)
@@ -129,7 +132,7 @@ class GeneGraphic(HDF5):
                 }
 
     def merge_overlapping_exons(self):
-        exons = sorted(self.exons, key=lambda exon: exon.coords[0])
+        exons = sorted(self.exons, key=lambda exon: exon.coords)
         merged_exons = [exons[0]]
         for exon in exons[1:]:
             if not merged_exons[-1].merge(exon):
@@ -138,7 +141,72 @@ class GeneGraphic(HDF5):
         self.exons = merged_exons
 
     def remove_duplicate_junctions(self):
-        self.junctions = sorted(set(self.junctions), key=lambda junction: junction.coords[0])
+        self.junctions = sorted(set(self.junctions), key=lambda junction: junction.coords)
+
+    def get_missing_exons(self, master_gene):
+
+        # Create splice graph for this gene as compared to master splice graph
+        master_exons_iter = iter(master_gene.exons)
+        sample_exons_iter = iter(self.exons)
+
+        # Figure out which exons are missing from the sample and make sure that the sample has the updated exons
+        m = master_exons_iter.next()
+        s = sample_exons_iter.next()
+
+        missing = True
+        output_exons = []
+
+        try:
+
+            while True:
+                if m.overlaps(s):
+                    missing = False
+                    s = sample_exons_iter.next()
+                else:
+                    m = m.copy()
+
+                    if missing:
+                        m.type_exon = constants.EXON_TYPE_DB
+
+                    output_exons.append(m)
+                    missing = True
+                    m = master_exons_iter.next()
+
+        except StopIteration:
+            output_exons.append(m)
+            try:
+                while True:
+                    output_exons.append(master_exons_iter.next())
+            except StopIteration:
+                pass
+
+        self.exons = output_exons
+
+    def get_missing_junctions(self, master_gene):
+
+        for junction in master_gene.junctions:
+            if not junction in self.junctions:
+                jg = junction.copy()
+                jg.type_junction = constants.JUNCTION_TYPE_DB
+                self.junctions.append(jg)
+        self.junctions.sort(key=lambda junction: junction.coords)
+
+    @classmethod
+    def create_master(cls, splice_graphs, gene_id):
+        master = None
+        for h5_file in splice_graphs:
+            voilaLog().info('loading ' + h5_file)
+            with h5py.File(h5_file) as h:
+                gene = cls.easy_from_hdf5(h, gene_id)
+                try:
+                    master.merge(gene)
+                except AttributeError:
+                    master = gene
+        return master
+
+    @classmethod
+    def easy_from_hdf5(cls, h, gene_id):
+        return GeneGraphic(None).from_hdf5(h[gene_id])
 
     def __str__(self):
         return str(self.__dict__)
@@ -190,8 +258,7 @@ class ExonGraphic(HDF5):
         if other_dict['type_exon'] < 4 and self.type_exon < 4:
             self.type_exon = min(other_dict['type_exon'], self.type_exon)
         elif other_dict['type_exon'] != self.type_exon:
-            # raise ExonException(('Attempting to merge a missing end exon with a normal exon.', self, other))
-            print ('Attempting to merge a missing end exon with a normal exon.', self, other)
+            voilaLog().warning('Attempting to merge a missing end exon with a normal exon. ' + str((self, other)))
 
         del other_dict['type_exon']
 
@@ -257,6 +324,14 @@ class ExonGraphic(HDF5):
     def __repr__(self):
         return self.__str__()
 
+    def __copy__(self):
+        eg = type(self)(None, None, None, None)
+        eg.__dict__.update(self.__dict__)
+        return eg
+
+    def copy(self):
+        return self.__copy__()
+
 
 class JunctionGraphic(HDF5):
     def __init__(self, coords, type_junction, nreads, clean_nreads=0, transcripts=list(), ir=0):
@@ -307,8 +382,16 @@ class JunctionGraphic(HDF5):
     def __repr__(self):
         return self.__str__()
 
+    def __copy__(self):
+        jg = type(self)((), None, None)
+        jg.__dict__.update(self.__dict__)
+        return jg
 
-def splice_graph_from_hdf5(hdf5_filename, logger):
+    def copy(self):
+        return self.__copy__()
+
+
+def splice_graph_from_hdf5(hdf5_filename):
     def worker():
         with h5py.File(hdf5_filename, 'r') as h:
             while True:
@@ -321,11 +404,13 @@ def splice_graph_from_hdf5(hdf5_filename, logger):
             for x in h:
                 queue.put(x)
 
+    log = voilaLog()
+
     if not os.path.isfile(hdf5_filename):
-        logger.error('unable to load file: {0}'.format(hdf5_filename))
+        log.error('unable to load file: {0}'.format(hdf5_filename))
         return
 
-    logger.info('Loading {0}.'.format(hdf5_filename))
+    log.info('Loading {0}.'.format(hdf5_filename))
 
     queue = JoinableQueue()
     manager_dict = Manager().dict()
@@ -358,5 +443,5 @@ class LsvGraphic(GeneGraphic):
         super(LsvGraphic, self).to_hdf5(h, False)
 
     @classmethod
-    def easy_from_hdf5(cls, h):
+    def easy_from_hdf5(cls, h, lsv_id=None):
         return cls(None, None, None).from_hdf5(h)

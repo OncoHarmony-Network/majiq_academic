@@ -5,6 +5,7 @@ import numpy as np
 
 from voila.hdf5 import HDF5, BinsDataSet, Psi1DataSet, Psi2DataSet
 from voila.splice_graphics import LsvGraphic
+from voila.utils.voilaLog import voilaLog
 
 
 def get_expected_dpsi(bins):
@@ -184,27 +185,24 @@ class VoilaLsv(HDF5):
     def get_bed12(self):
         return self.bed12_str
 
-    def get_gff3(self, logger=None):
+    def get_gff3(self):
+        log = voilaLog()
         try:
             return VoilaLsv.to_gff3(self)
         except OrphanJunctionException, e:
-            if logger:
-                logger.warning(e.message)
-            else:
-                print "[WARNING] :: %s" % e.message
+            log.warning(e.message)
 
     def to_JSON(self, encoder=json.JSONEncoder):
-        self.bins = np.array(self.bins).tolist()
-        if self.is_delta_psi():
-            self.psi1 = np.array(self.psi1).tolist()
-            self.psi2 = np.array(self.psi2).tolist()
+        # TODO: remove this!!!
+        if self.lsv_graphic and 'coverage' in self.lsv_graphic.__dict__:
+            del self.lsv_graphic.__dict__['coverage']
+
         return json.dumps(self, default=lambda o: o.__dict__, sort_keys=True, cls=encoder)
 
     def is_lsv_changing(self, thres):
         means = np.array(self.get_means())
         # TODO: should we check that pos and neg are kind of matched?
-        return max(means[means > 0].sum(), means[means < 0].sum()) >= thres
-        # return np.any(np.array(self.get_means()) >= thres)
+        return max(means[means > 0].sum(), abs(means[means < 0].sum())) >= thres
 
     def exclude(self):
         return ['lsv_graphic', 'categories', 'bins', 'psi1', 'psi2']
@@ -250,12 +248,11 @@ class VoilaLsv(HDF5):
         # bins
         self.bins = BinsDataSet(h).decode_list()
 
-        if self.is_delta_psi():
-            # psi1
-            self.psi1 = Psi1DataSet(h).decode_list()
+        # psi1
+        self.psi1 = Psi1DataSet(h).decode_list()
 
-            # psi2
-            self.psi2 = Psi2DataSet(h).decode_list()
+        # psi2
+        self.psi2 = Psi2DataSet(h).decode_list()
 
         return super(VoilaLsv, self).from_hdf5(h)
 
