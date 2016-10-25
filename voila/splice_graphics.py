@@ -1,3 +1,5 @@
+import csv
+import io
 import json
 import os
 from multiprocessing import Manager, Pool
@@ -30,7 +32,6 @@ class GeneGraphic(HDF5):
 
     def __init__(self, id, name=None, strand=None, exons=list(), junctions=list(), chrom=None):
         super(GeneGraphic, self).__init__()
-
         self.id = id
         self.name = name
         self.strand = strand
@@ -69,30 +70,6 @@ class GeneGraphic(HDF5):
         # remove duplicate junctions
         self.remove_duplicate_junctions()
 
-    def get_id(self):
-        return self.id
-
-    def get_name(self):
-        return self.name
-
-    def get_strand(self):
-        return self.strand
-
-    def get_exons(self):
-        return self.exons
-
-    def get_junctions(self):
-        return self.junctions
-
-    def get_chrom(self):
-        return self.chrom
-
-    def get_start(self):
-        return self.start
-
-    def get_end(self):
-        return self.end
-
     def get_coords(self):
         return [self.start, self.end]
 
@@ -100,23 +77,25 @@ class GeneGraphic(HDF5):
         return json.dumps(self, default=lambda o: o.__dict__, sort_keys=True, cls=encoder)
 
     def to_bed12(self):
-        #  "%(a)s, %(a)s" % {'a':'test'}
-        # fields = ['chrom', 'chromStart', 'chromEnd', 'name', 'score', 'strand', 'thickStart', 'thickEnd', 'itemRgb', 'blockCount', 'blockSizes', 'blockStarts']
-        bed_fields = [
-            self.chrom,
-            self.start,
-            self.end,
-            'lsv',
-            0,
-            self.strand,
-            self.start,
-            self.end,
-            0,
-            len(self.exons),
-            ','.join([str(abs(e.get_coords()[0] - e.get_coords()[1])) for e in self.exons]),
-            ','.join([str(abs(e.get_coords()[0] - self.start)) for e in self.exons]),
-        ]
-        return "\t".join([str(b) for b in bed_fields])
+        fieldnames = ['chrom', 'chromStart', 'chromEnd', 'name', 'score', 'strand', 'thickStart', 'thickEnd', 'itemRgb',
+                      'blockCount', 'blockSizes', 'blockStarts']
+        csvfile = io.BytesIO()
+        writer = csv.DictWriter(csvfile, fieldnames, delimiter='\t')
+        writer.writerow({
+            'chrom': self.chrom,
+            'chromStart': self.start,
+            'chromEnd': self.end,
+            'name': 'lsv',
+            'score': 0,
+            'strand': self.strand,
+            'thickStart': self.start,
+            'thickEnd': self.end,
+            'itemRgb': 0,
+            'blockCount': len(self.exons),
+            'blockSizes': ','.join([str(abs(e.get_coords()[0] - e.get_coords()[1])) for e in self.exons]),
+            'blockStarts': ','.join([str(abs(e.get_coords()[0] - self.start)) for e in self.exons])
+        })
+        return csvfile.getvalue()
 
     def to_hdf5(self, h, use_id=True):
         if use_id:
@@ -154,7 +133,7 @@ class GeneGraphic(HDF5):
         s = sample_exons_iter.next()
 
         missing = True
-        output_exons = []
+        exons = []
 
         try:
 
@@ -168,19 +147,19 @@ class GeneGraphic(HDF5):
                     if missing:
                         m.type_exon = constants.EXON_TYPE_DB
 
-                    output_exons.append(m)
+                    exons.append(m)
                     missing = True
                     m = master_exons_iter.next()
 
         except StopIteration:
-            output_exons.append(m)
+            exons.append(m)
             try:
                 while True:
-                    output_exons.append(master_exons_iter.next())
+                    exons.append(master_exons_iter.next())
             except StopIteration:
                 pass
 
-        self.exons = output_exons
+        self.exons = exons
 
     def get_missing_junctions(self, master_gene):
 
@@ -210,10 +189,6 @@ class GeneGraphic(HDF5):
 
     def __str__(self):
         return str(self.__dict__)
-
-
-class ExonException(Exception):
-    pass
 
 
 class ExonGraphic(HDF5):

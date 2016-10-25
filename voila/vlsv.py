@@ -161,7 +161,7 @@ class VoilaLsv(HDF5):
         return self.excl_incl
 
     def get_extension(self):
-        return [self.lsv_graphic.get_exons()[0].get_coords()[0], self.lsv_graphic.get_exons()[-1].get_coords()[1]]
+        return [self.lsv_graphic.exons[0].get_coords()[0], self.lsv_graphic.exons[-1].get_coords()[1]]
 
     def get_categories(self):
         return self.categories
@@ -274,7 +274,7 @@ class VoilaLsv(HDF5):
 
         # fields = ['seqid', 'source', 'type', 'start', 'end', 'score', 'strand', 'phase', 'attributes']
         trans = []
-        lexons = vlsv.get_lsv_graphic().get_exons()
+        lexons = vlsv.get_lsv_graphic().exons
         lsvId = vlsv.get_id()
         chrom = vlsv.get_chrom()
         strand = vlsv.get_strand()
@@ -291,7 +291,7 @@ class VoilaLsv(HDF5):
                               'Name=%s;ID=%s' % (lsvId, lsvId)])
 
         trans.append(gene_str)
-        for jid, junc in enumerate(vlsv.get_lsv_graphic().get_junctions()):
+        for jid, junc in enumerate(vlsv.get_lsv_graphic().junctions):
             mrna = '%s\told_majiq\tmRNA\t' % chrom
             mrna_id = '%s.%d' % (lsvId, jid)
             ex1 = '%s\told_majiq\texon\t' % chrom

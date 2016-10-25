@@ -267,9 +267,9 @@ def render_summary(output_dir, output_html, majiq_output, type_summary, threshol
 
 def combine_gg(gg_comb_dict, gg_new):
     """Combine a set of gene graphs (new) with an already existing collection."""
-    gg = gg_comb_dict[gg_new.get_id()]
+    gg = gg_comb_dict[gg_new.id]
     if gg is None:
-        gg_comb_dict[gg_new.get_id()] = copy.deepcopy(gg_new)
+        gg_comb_dict[gg_new.id] = copy.deepcopy(gg_new)
         return
 
     for i, eg in enumerate(gg.get_exons()):
@@ -313,13 +313,13 @@ def parse_gene_graphics(splicegraph_flist, gene_name_list, condition_names=('gro
             genes_graphic = defaultdict(list)
             genesG.sort()
             for gene_obj in genesG:
-                if gene_name_list is None or gene_obj.get_id() in gene_name_list or gene_obj.get_name().upper() in gene_name_list:
-                    genes_graphic[gene_obj.get_id()].append(
+                if gene_name_list is None or gene_obj.id in gene_name_list or gene_obj.name.upper() in gene_name_list:
+                    genes_graphic[gene_obj.id].append(
                         json.dumps(gene_obj, cls=utils_voila.LsvGraphicEncoder).replace("\"", "'"))
-                    genes_graphic[gene_obj.get_id()].append(gene_obj.get_strand())
-                    genes_graphic[gene_obj.get_id()].append(gene_obj.get_coords())
-                    genes_graphic[gene_obj.get_id()].append(gene_obj.get_chrom())
-                    genes_graphic[gene_obj.get_id()].append(gene_obj.get_name())
+                    genes_graphic[gene_obj.id].append(gene_obj.strand)
+                    genes_graphic[gene_obj.id].append(gene_obj.get_coords())
+                    genes_graphic[gene_obj.id].append(gene_obj.chrom)
+                    genes_graphic[gene_obj.id].append(gene_obj.name)
 
                     # Combine genes from different Splice Graphs
                     combine_gg(gg_combined, gene_obj)

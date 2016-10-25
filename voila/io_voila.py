@@ -311,7 +311,7 @@ def tab_output(input_parsed):
                 if type(llsv_dict) == dict:
                     llsv = llsv_dict['lsv']
                 lline = []
-                lline.extend([llsv.lsv_graphic.get_name(), gene, llsv.get_id()])
+                lline.extend([llsv.lsv_graphic.name, gene, llsv.get_id()])
                 lexpected = []
                 lconfidence = []
                 lexpecs_psi1 = []
@@ -319,7 +319,6 @@ def tab_output(input_parsed):
                 for i, bins in enumerate(llsv.get_bins()):
                     if 'delta' in type_summary:
                         lexpected.append(str(-llsv.get_excl_incl()[i][0] + llsv.get_excl_incl()[i][1]))
-                        # lconfidence.append(str(utils_voila.get_prob_delta_psi_greater_v(bins, float(lexpected[-1]), threshold)))
                         lconfidence.append(str(vlsv.matrix_area(np.array(bins), threshold, collapsed_mat=True).sum()))
                         lexpecs_psi1.append('%.3f' % vlsv.get_expected_psi(np.array(llsv.psi1[i])))
                         lexpecs_psi2.append('%.3f' % vlsv.get_expected_psi(np.array(llsv.psi2[i])))
@@ -339,26 +338,26 @@ def tab_output(input_parsed):
                 lline.append(repr(llsv.get_categories()[tlb_categx['ES']]))
                 lline.append(repr(llsv.get_categories()[tlb_categx['Num. Junctions']]))
                 lline.append(repr(llsv.get_categories()[tlb_categx['Num. Exons']]))
-                lline.append(str(int(np.any([junc.get_type() == 1 for junc in llsv.lsv_graphic.get_junctions()]))))
+                lline.append(str(int(np.any([junc.get_type() == 1 for junc in llsv.lsv_graphic.junctions]))))
 
-                lline.append(llsv.lsv_graphic.get_chrom())
-                lline.append(llsv.lsv_graphic.get_strand())
+                lline.append(llsv.lsv_graphic.chrom)
+                lline.append(llsv.lsv_graphic.strand)
 
                 lline.append(';'.join(
-                    ['-'.join(str(c) for c in junc.get_coords()) for junc in llsv.lsv_graphic.get_junctions()]))
+                    ['-'.join(str(c) for c in junc.get_coords()) for junc in llsv.lsv_graphic.junctions]))
                 lline.append(
-                    ';'.join(['-'.join(str(c) for c in exon.get_coords()) for exon in llsv.lsv_graphic.get_exons()]))
+                    ';'.join(['-'.join(str(c) for c in exon.get_coords()) for exon in llsv.lsv_graphic.exons]))
 
                 try:
                     lline.append(';'.join(
-                        ['|'.join([str(c) for c in exon.get_alt_starts()]) for exon in llsv.lsv_graphic.get_exons()]))
+                        ['|'.join([str(c) for c in exon.get_alt_starts()]) for exon in llsv.lsv_graphic.exons]))
                     lline.append(';'.join(
-                        ['|'.join([str(c) for c in exon.get_alt_ends()]) for exon in llsv.lsv_graphic.get_exons()]))
+                        ['|'.join([str(c) for c in exon.get_alt_ends()]) for exon in llsv.lsv_graphic.exons]))
                 except TypeError:
                     pass
 
                 lline.append(
-                    ';'.join([repr(exon.coords) for exon in llsv.lsv_graphic.get_exons() if exon.intron_retention]))
+                    ';'.join([repr(exon.coords) for exon in llsv.lsv_graphic.exons if exon.intron_retention]))
 
                 if pairwise_dir:
                     llpairwise = []
@@ -367,12 +366,12 @@ def tab_output(input_parsed):
                             lpairwise = []
                             if gene in lmajiq_pairs[idx1][idx2]['genes_dict']:
                                 for llsv_tmp in lmajiq_pairs[idx1][idx2]['genes_dict'][gene]:
-                                    if llsv_tmp[0].get_id() == llsv.get_id():
+                                    if llsv_tmp[0].id == llsv.id:
                                         lsv_pair = llsv_tmp[0]
                                         break
                                 else:
                                     log.warning("LSV %s present in deltagroup but missing in %s." %
-                                                (llsv.get_id(), "%s_%d_%s_%d" % (group1_name, idx1 + 1,
+                                                (llsv.id, "%s_%d_%s_%d" % (group1_name, idx1 + 1,
                                                                                  group2_name, idx2 + 1)))
                                     lpairwise.append('N/A')
                                     continue
@@ -519,7 +518,7 @@ def create_gff3_txt_files(input_parsed, out_gff3=False):
                         ofile.write(header + "\n")
                         ofile.write(lsv_gff3_str + "\n")
             except UnboundLocalError, e:
-                log.warning("problem generating GTF file for %s" % lsv.get_id())
+                log.warning("problem generating GTF file for %s" % lsv.id)
                 log.error(e.message)
     log.info("GTF files for LSVs saved in %s" % odir)
     if out_gff3:
