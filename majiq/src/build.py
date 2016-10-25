@@ -236,7 +236,7 @@ class Builder(BasicPipeline):
 
         if self.prebam:
             pool = mp.Pool(processes=self.nthreads, initializer=builder_init,
-                           initargs=[None, None, sam_list, self.pcr_filename, self.gff_output, self.only_rna,
+                           initargs=[None, sam_list, self.pcr_filename, self.gff_output, self.only_rna,
                                      self.non_denovo, get_build_temp_db_filename(majiq_config.outDir), list_of_genes,
                                      self.silent, self.debug],
                            maxtasksperchild=1)
