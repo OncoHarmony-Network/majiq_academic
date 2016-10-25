@@ -353,21 +353,20 @@ def plot_all_lsv(deltadata, beta_params, pmix, labels, figure_title):
     plot_pi(pmix, sp[1, 1])
     plt.suptitle(figure_title, fontsize=24)
 
-
 def loglikelihood(D, beta_mix, logp_mix, logger=False):
     N = D.shape[0]
     K = beta_mix.shape[0]
     ''' logp_DgK = log P (D | model K ) for each data point without the weight '''
     logp_DgK = np.zeros(shape=( N, K), dtype=np.float)
-    logp_DgK = ma.asarray(logp_DgK)
+    #logp_DgK = ma.asarray(logp_DgK)
     #print "logp_mix=%s"%(logp_mix)
     for k in xrange(K):
         #print "beta_mix[%d] = %s"%(k, beta_mix[k])
-        logp_DgK[:, k] = ma.log(beta.pdf(D[:, 0], beta_mix[k, 0], beta_mix[k, 1]))
+        logp_DgK[:, k] = np.log(beta.pdf(D[:, 0], beta_mix[k, 0], beta_mix[k, 1]))
 
     logp_D = logp_DgK + logp_mix * np.ones(shape=(N, 1), dtype=np.float)
 
-    dm = np.sum(logp_DgK.mask, axis=1)
+    dm = np.sum(logp_DgK, axis=1)
     zrow = dm.astype(np.bool)
     no_zrow = np.logical_not(zrow)
 
@@ -378,6 +377,32 @@ def loglikelihood(D, beta_mix, logp_mix, logger=False):
     LL = np.sum(logp_Dsum * D[:, 1], axis=0)
 
     return logp_D, logp_Dsum, LL, zrow
+
+
+# def loglikelihood(D, beta_mix, logp_mix, logger=False):
+#     N = D.shape[0]
+#     K = beta_mix.shape[0]
+#     ''' logp_DgK = log P (D | model K ) for each data point without the weight '''
+#     logp_DgK = np.zeros(shape=( N, K), dtype=np.float)
+#     logp_DgK = ma.asarray(logp_DgK)
+#     #print "logp_mix=%s"%(logp_mix)
+#     for k in xrange(K):
+#         #print "beta_mix[%d] = %s"%(k, beta_mix[k])
+#         logp_DgK[:, k] = ma.log(beta.pdf(D[:, 0], beta_mix[k, 0], beta_mix[k, 1]))
+# 
+#     logp_D = logp_DgK + logp_mix * np.ones(shape=(N, 1), dtype=np.float)
+# 
+#     dm = np.sum(logp_DgK.mask, axis=1)
+#     zrow = dm.astype(np.bool)
+#     no_zrow = np.logical_not(zrow)
+# 
+#     logp_Dsum = np.zeros(shape=(N), dtype=np.float)
+#     logp_Dsum[no_zrow] = logsumexp(logp_D[no_zrow, :], axis=1)
+#     logp_Dsum[zrow] = logsumexp(logp_D[zrow, :-1], axis=1)
+# 
+#     LL = np.sum(logp_Dsum * D[:, 1], axis=0)
+# 
+#     return logp_D, logp_Dsum, LL, zrow
 
 
 def EMBetaMixture(D, p0_mix, beta0_mix, num_iter, min_ratio=1e-5, logger=False, plotpath=None, nj=0, labels=None):

@@ -3,7 +3,7 @@ from setuptools import setup, find_packages
 setup(
     name="majiq",
     packages=find_packages(),
-    version="0.9.2",
+    version="0.9.2a",
     description="MAJIQ",
     author='BioCiphers Lab',
     author_email='majiq@biociphers.org',
