@@ -29,10 +29,9 @@ def build(args):
     pipeline_run(Builder(args))
 
 
-def builder_init(idx_count, lock_array, sam_list, pcr_filename, gff_output, only_rna,
+def builder_init(lock_array, sam_list, pcr_filename, gff_output, only_rna,
                  non_denovo, dbfile, list_of_genes, silent, debug):
 
-    builder_init.idx_count = idx_count
     builder_init.files_locks = lock_array
     builder_init.sam_list = sam_list
     builder_init.pcr_filename = pcr_filename
@@ -49,9 +48,6 @@ def merging_files(args_vals):
 
     from guppy import hpy
     hp = hpy()
-
-
-
 
     list_of_genes, chnk = args_vals
     logger = majiq_utils.get_logger("%s/%s.majiq.log" % (majiq_config.outDir, chnk),
@@ -70,9 +66,9 @@ def merging_files(args_vals):
 
         db_f = h5py.File(builder_init.dbfile)
         for gne_idx, gne_id in enumerate(list_of_genes):
-            print gne_id
-            memory_tracker = tracker.SummaryTracker()
-            before = hp.heap()
+            # print gne_id
+            # memory_tracker = tracker.SummaryTracker()
+            # # before = hp.heap()
             if gne_idx % 50 == 0:
                 logger.info("[%s] Progress %s/%s" % (chnk, gne_idx, len(list_of_genes)))
             loop_id = '%s - %s' % (chnk, gne_id)
@@ -82,14 +78,14 @@ def merging_files(args_vals):
 
             splice_list = set()
 
-            for exp_idx, filename in enumerate(builder_init.sam_list):
-                for jj_grp_id in rna_files[exp_idx]["%s/junctions" % gne_id]:
-                    jj_grp = rna_files[exp_idx]["%s/junctions/%s" % (gne_id, jj_grp_id)]
+            for exp_idx, rnaf in enumerate(rna_files):
+                for jj_grp_id in rnaf["%s/junctions" % gne_id]:
+                    jj_grp = rnaf["%s/junctions/%s" % (gne_id, jj_grp_id)]
                     junc = majiq.grimoire.gene.extract_junctions_hdf5(gene_obj, jj_grp, junction_list,
                                                                       annotated=jj_grp.attrs['annotated'],
                                                                       all_exp=True)
                     junc.set_coverage(exp_idx,
-                                      rna_files[exp_idx][CONST_JUNCTIONS_DATASET_NAME][jj_grp.attrs['coverage_index'], :])
+                                      rnaf[CONST_JUNCTIONS_DATASET_NAME][jj_grp.attrs['coverage_index'], :])
                     splice_list.add((junc.start, '5prime', junc))
                     splice_list.add((junc.end, '3prime', junc))
 
@@ -98,16 +94,16 @@ def merging_files(args_vals):
             del splice_list
 
             logger.debug("[%s] Detecting LSV" % loop_id)
-            lsv_detection(gene_obj, gc_vfunc=vfunc_gc, lsv_list=builder_init.sam_list, lsv_idx=builder_init.idx_count,
+            lsv_detection(gene_obj, gc_vfunc=vfunc_gc, lsv_list=builder_init.sam_list,
                           locks=builder_init.files_locks, logging=None)
 
             del majiq_config.gene_tlb[gne_id]
             del gene_obj
             # memory_tracker.print_diff()
-            after = hp.heap()
-            leftover = after - before
-            print leftover
-            print 'BT'
+            # # after = hp.heap()
+            # # leftover = after - before
+            # # print leftover
+            # print 'BT'
 
     except Exception:
         majiq_utils.monitor('CHILD %s:: EXCEPT' % chnk)
@@ -255,10 +251,8 @@ class Builder(BasicPipeline):
         # Detect LSVs
 
         lock_array = [mp.Lock() for xx in sam_list]
-        idx_array = [0] * len(sam_list)
-
         pool = mp.Pool(processes=self.nthreads, initializer=builder_init,
-                       initargs=[idx_array, lock_array, sam_list, self.pcr_filename, self.gff_output,
+                       initargs=[lock_array, sam_list, self.pcr_filename, self.gff_output,
                                  self.only_rna, self.non_denovo, get_build_temp_db_filename(majiq_config.outDir),
                                  None, self.silent, self.debug],
                        maxtasksperchild=1)
@@ -279,6 +273,7 @@ class Builder(BasicPipeline):
             path = get_builder_temp_majiq_filename(majiq_config.outDir, sam_file)
             f.attrs['fitfunc'] = majiq_utils.get_fitfunc_from_rnafile(path)
             f.attrs['date'] = datetime.datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S')
+            f.attrs['data_index'] = 0
             f.attrs['VERSION'] = VERSION
 
             f.close()

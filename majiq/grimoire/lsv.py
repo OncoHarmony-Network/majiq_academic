@@ -348,6 +348,7 @@ class LSV(object):
             h_lsv.attrs['id'] = self.id
             h_lsv.attrs['type'] = self.ext_type
             h_lsv.attrs['coverage'] = hdf5grp[LSV_JUNCTIONS_DATASET_NAME].regionref[lsv_idx:lsv_idx + njunc]
+            h_lsv.attrs['coverage_index'] = (lsv_idx, lsv_idx + njunc)
 
             vh_lsv = h_lsv.create_group('visual')
             self.get_visual(exp_idx).to_hdf5(vh_lsv)

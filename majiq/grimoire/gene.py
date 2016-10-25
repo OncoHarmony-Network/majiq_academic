@@ -404,14 +404,14 @@ def extract_junctions_hdf5(gene_obj, jj_grp, junction_list, annotated=True, all_
     num_exp = 1 if not all_exp else majiq_config.num_experiments
 
     try:
-        junc = junction_list[jj_grp.attrs['start'], jj_grp.attrs['end']]
+        junc = junction_list[(jj_grp.attrs['start'], jj_grp.attrs['end'])]
     except KeyError:
-        if jj_grp.attrs['end'] - jj_grp.attrs['end'] == 1:
+        if jj_grp.attrs['end'] - jj_grp.attrs['start'] == 1:
             intronic = True
         else:
             intronic = False
         junc = Junction(jj_grp.attrs['start'], jj_grp.attrs['end'], None, None,
                         gene_obj.get_id(), annotated=annotated, retrieve=True, num_exp=num_exp, intronic=intronic)
-        junction_list[jj_grp.attrs['start'], jj_grp.attrs['end']] = junc
+        junction_list[(jj_grp.attrs['start'], jj_grp.attrs['end'])] = junc
 
     return junc
