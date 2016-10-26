@@ -449,10 +449,12 @@ def find_intron_retention(gene_obj, dict_of_junctions, nondenovo, logging=None):
             continue
 
         elif jin is not None:
-            jout = Junction(intron_end, ex2_start, exon2, None, gene_obj.get_id(), retrieve=True)
+            jout = Junction(intron_end, ex2_start, exon2, None, gene_obj.get_id(), retrieve=True,
+                            num_exp=majiq_config.num_experiments)
 
         elif jout is not None:
-            jin = Junction(ex1_end, intron_start, exon1, None, gene_obj.get_id(), retrieve=True)
+            jin = Junction(ex1_end, intron_start, exon1, None, gene_obj.get_id(), retrieve=True,
+                           num_exp=majiq_config.num_experiments)
 
             exnum = new_exon_definition(intron_start, intron_end,
                                         jin, jout, gene_obj, nondenovo=nondenovo,
