@@ -54,6 +54,7 @@ def merging_files(args_vals):
                                     silent=builder_init.silent, debug=builder_init.debug)
 
     try:
+
         rna_files = []
         vfunc_gc = []
         for exp_idx in xrange(len(builder_init.sam_list)):
@@ -257,8 +258,10 @@ class Builder(BasicPipeline):
                                  None, self.silent, self.debug],
                        maxtasksperchild=1)
         db_f = h5py.File(get_build_temp_db_filename(majiq_config.outDir))
+
         if not self.prebam:
             list_of_genes = db_f.keys()
+
 
         lchnksize = max(len(list_of_genes)/self.nthreads, 1) + 1
 

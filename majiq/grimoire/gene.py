@@ -342,61 +342,64 @@ def clear_gene_tlb():
 
 def retrieve_gene(gene_id, dbfile, all_exp=False, junction_list=None, logger=None):
     gg = dbfile[gene_id]
-    gn = Gene(gene_id, gg.attrs['name'], gg.attrs['chromosome'], gg.attrs['strand'],
-              gg.attrs['start'], gg.attrs['end'], retrieve=True)
+    try:
+        gn = Gene(gene_id, gg.attrs['name'], gg.attrs['chromosome'], gg.attrs['strand'],
+                  gg.attrs['start'], gg.attrs['end'], retrieve=True)
 
-    majiq_config.gene_tlb[gene_id] = gn
-    if junction_list is None:
-        junction_list = {}
+        majiq_config.gene_tlb[gene_id] = gn
+        if junction_list is None:
+            junction_list = {}
 
-    num_exp = 1 if not all_exp else majiq_config.num_experiments
+        num_exp = 1 if not all_exp else majiq_config.num_experiments
 
-    for ex_grp_id in gg['exons']:
-        ex_grp = gg['exons/%s' % ex_grp_id]
-        ex = Exon(ex_grp.attrs['start'], ex_grp.attrs['end'], gn.get_id(),
-                  annot=True, isintron=False, indata=ex_grp.attrs['in_data'], retrieve=True)
-        gn.exons.append(ex)
-        try:
-            ex.set_pcr_score(ex_grp.attrs['pcr_name'], ex_grp.attrs['score'], ex_grp.attrs['candidate'])
-        except KeyError:
-            pass
-        if majiq_config.gcnorm:
-            ex.set_gc_content_val(ex_grp.attrs['gc_content'])
+        for ex_grp_id in gg['exons']:
+            ex_grp = gg['exons/%s' % ex_grp_id]
+            ex = Exon(ex_grp.attrs['start'], ex_grp.attrs['end'], gn.get_id(),
+                      annot=True, isintron=False, indata=ex_grp.attrs['in_data'], retrieve=True)
+            gn.exons.append(ex)
+            try:
+                ex.set_pcr_score(ex_grp.attrs['pcr_name'], ex_grp.attrs['score'], ex_grp.attrs['candidate'])
+            except KeyError:
+                pass
+            if majiq_config.gcnorm:
+                ex.set_gc_content_val(ex_grp.attrs['gc_content'])
 
-        for ex_tx_id in ex_grp['tx']:
-            ex_tx = ex_grp['tx/%s' % ex_tx_id]
-#            TODO: Do we need trasncript? for now is None
+            for ex_tx_id in ex_grp['tx']:
+                ex_tx = ex_grp['tx/%s' % ex_tx_id]
+    #            TODO: Do we need trasncript? for now is None
 
-            transcript_id = None
-            ext = ExonTx(ex_tx.attrs['start'], ex_tx.attrs['end'], transcript_id, intron=False)
-            ext.gene_name = gene_id
-            ex.add_exon_tx(ext)
-            for jj_grp_id in ex_tx["p3_junc"]:
-                jj_grp = ex_tx["p3_junc/%s" % jj_grp_id]
-                try:
-                    junc = junction_list[jj_grp.attrs['start'], jj_grp.attrs['end']]
-                except KeyError:
-                    junc = Junction(jj_grp.attrs['start'], jj_grp.attrs['end'], None, None,
-                                    gene_id, annotated=True, retrieve=True, num_exp=num_exp)
-                    junc.donor_id = jj_grp.attrs['donor_id']
-                    junc.acceptor_id = jj_grp.attrs['acceptor_id']
-                    junction_list[jj_grp.attrs['start'], jj_grp.attrs['end']] = junc
+                transcript_id = None
+                ext = ExonTx(ex_tx.attrs['start'], ex_tx.attrs['end'], transcript_id, intron=False)
+                ext.gene_name = gene_id
+                ex.add_exon_tx(ext)
+                for jj_grp_id in ex_tx["p3_junc"]:
+                    jj_grp = ex_tx["p3_junc/%s" % jj_grp_id]
+                    try:
+                        junc = junction_list[jj_grp.attrs['start'], jj_grp.attrs['end']]
+                    except KeyError:
+                        junc = Junction(jj_grp.attrs['start'], jj_grp.attrs['end'], None, None,
+                                        gene_id, annotated=True, retrieve=True, num_exp=num_exp)
+                        junc.donor_id = jj_grp.attrs['donor_id']
+                        junc.acceptor_id = jj_grp.attrs['acceptor_id']
+                        junction_list[jj_grp.attrs['start'], jj_grp.attrs['end']] = junc
 
-                ext.add_3prime_junc(junc)
+                    ext.add_3prime_junc(junc)
 
-            for jj_grp_id in ex_tx["p5_junc"]:
-                jj_grp = ex_tx["p5_junc/%s" % jj_grp_id]
-                try:
-                    junc = junction_list[jj_grp.attrs['start'], jj_grp.attrs['end']]
-                except KeyError:
-                    junc = Junction(jj_grp.attrs['start'], jj_grp.attrs['end'], None, None,
-                                    gene_id, annotated=True, retrieve=True, num_exp=num_exp)
-                    junc.donor_id = jj_grp.attrs['donor_id']
-                    junc.acceptor_id = jj_grp.attrs['acceptor_id']
-                    junction_list[jj_grp.attrs['start'], jj_grp.attrs['end']] = junc
+                for jj_grp_id in ex_tx["p5_junc"]:
+                    jj_grp = ex_tx["p5_junc/%s" % jj_grp_id]
+                    try:
+                        junc = junction_list[jj_grp.attrs['start'], jj_grp.attrs['end']]
+                    except KeyError:
+                        junc = Junction(jj_grp.attrs['start'], jj_grp.attrs['end'], None, None,
+                                        gene_id, annotated=True, retrieve=True, num_exp=num_exp)
+                        junc.donor_id = jj_grp.attrs['donor_id']
+                        junc.acceptor_id = jj_grp.attrs['acceptor_id']
+                        junction_list[jj_grp.attrs['start'], jj_grp.attrs['end']] = junc
 
-                ext.add_5prime_junc(junc)
-
+                    ext.add_5prime_junc(junc)
+    except KeyError:
+        logger.info('ERROR in Gene %s: Annotation db analysis is corrupted' % gene_id)
+        raise
     return gn
 
 
