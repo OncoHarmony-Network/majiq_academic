@@ -224,17 +224,18 @@ class Builder(BasicPipeline):
         logger.info("Command: %s" % self)
 
         manager = mp.Manager()
-        list_of_genes = manager.list()
-
-        p = mp.Process(target=majiq_multi.parallel_lsv_child_calculation,
-                       args=(majiq_io.read_gff, [self.transcripts, list_of_genes, sam_list],
-                             '%s/tmp' % majiq_config.outDir, 'db', 0, False))
-
-        logger.info("... waiting gff3 parsing")
-        p.start()
-        p.join()
 
         if self.prebam:
+            list_of_genes = manager.list()
+
+            p = mp.Process(target=majiq_multi.parallel_lsv_child_calculation,
+                           args=(majiq_io.read_gff, [self.transcripts, list_of_genes, sam_list],
+                                 '%s/tmp' % majiq_config.outDir, 'db', 0, False))
+
+            logger.info("... waiting gff3 parsing")
+            p.start()
+            p.join()
+
             pool = mp.Pool(processes=self.nthreads, initializer=builder_init,
                            initargs=[None, sam_list, self.pcr_filename, self.gff_output, self.only_rna,
                                      self.non_denovo, get_build_temp_db_filename(majiq_config.outDir), list_of_genes,
@@ -247,7 +248,6 @@ class Builder(BasicPipeline):
             pool.close()
             pool.join()
 
-
         # Detect LSVs
 
         lock_array = [mp.Lock() for xx in sam_list]
@@ -256,10 +256,13 @@ class Builder(BasicPipeline):
                                  self.only_rna, self.non_denovo, get_build_temp_db_filename(majiq_config.outDir),
                                  None, self.silent, self.debug],
                        maxtasksperchild=1)
+        db_f = h5py.File(get_build_temp_db_filename(majiq_config.outDir))
+        if not self.prebam:
+            list_of_genes = db_f.keys()
 
         lchnksize = max(len(list_of_genes)/self.nthreads, 1) + 1
-        db_f = h5py.File(get_build_temp_db_filename(majiq_config.outDir))
 
+        print "VAL", len(list_of_genes)
         for exp_idx, sam_file in enumerate(sam_list):
 
             f = h5py.File(get_builder_majiq_filename(majiq_config.outDir, sam_file),
