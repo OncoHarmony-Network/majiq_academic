@@ -73,9 +73,10 @@ def merging_files(args_vals):
             loop_id = '%s - %s' % (chnk, gne_id)
             logger.debug("[%s] Retrieving gene" % loop_id)
             junction_list = {}
-            gene_obj = majiq.grimoire.gene.retrieve_gene(gne_id, db_f, junction_list=junction_list, all_exp=True)
 
+            gene_obj = majiq.grimoire.gene.retrieve_gene(gne_id, db_f, junction_list=junction_list, all_exp=True)
             splice_list = set()
+            dict_of_junctions = {}
 
             for exp_idx, rnaf in enumerate(rna_files):
                 for jj_grp_id in rnaf["%s/junctions" % gne_id]:
@@ -85,12 +86,21 @@ def merging_files(args_vals):
                                                                       all_exp=True)
                     junc.set_coverage(exp_idx,
                                       rnaf[CONST_JUNCTIONS_DATASET_NAME][jj_grp.attrs['coverage_index'], :])
-                    splice_list.add((junc.start, '5prime', junc))
-                    splice_list.add((junc.end, '3prime', junc))
+                    if junc.is_intronic():
+                        coord = junc.get_coordinates()
+                        dict_of_junctions[coord[0]] = junc
+                        dict_of_junctions[coord[1]] = junc
+                    else:
+                        splice_list.add((junc.start, '5prime', junc))
+                        splice_list.add((junc.end, '3prime', junc))
 
             del junction_list
             detect_exons(gene_obj, list(splice_list), retrieve=True)
             del splice_list
+            majiq.grimoire.gene.find_intron_retention(gene_obj, dict_of_junctions, builder_init.non_denovo,
+                                                      logging=logger)
+            gene_obj.prepare_exons()
+            del dict_of_junctions
 
             logger.debug("[%s] Detecting LSV" % loop_id)
             lsv_detection(gene_obj, gc_vfunc=vfunc_gc, lsv_list=builder_init.sam_list,
@@ -251,8 +261,7 @@ class Builder(BasicPipeline):
                                  self.non_denovo, self.silent, self.debug],
                        maxtasksperchild=1)
 
-        if not self.prebam:
-            with h5py.File(get_build_temp_db_filename(majiq_config.outDir)) as db_f:
+        with h5py.File(get_build_temp_db_filename(majiq_config.outDir)) as db_f:
                 list_of_genes = db_f.keys()
 
         lchnksize = max(len(list_of_genes)/self.nthreads, 1) + 1

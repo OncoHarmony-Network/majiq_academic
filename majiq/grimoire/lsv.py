@@ -33,10 +33,9 @@ class LSV(object):
             raise InvalidLSV('Incorrect LSV type %s' % lsv_type)
         self.coords = exon.get_coordinates()
         self.id = lsv_id
-
-        junction_list = [x for x in junctions if x is not None]
-
-
+        junction_list = [x for x in junctions if x is not None and
+                                                 x.get_donor() is not None and
+                                                 x.get_acceptor() is not None]
         if majiq_config.simplify:
             jj_set = set()
             for exp_idx in xrange(majiq_config.num_experiments):
@@ -52,11 +51,16 @@ class LSV(object):
                                            if cover[eidx]/sum(cover) >= majiq_config.simplify_threshold and bool_map[eidx]]))
             junction_list = list(jj_set)
 
-        n_viable_juncs = len([x for x in junction_list if x.get_donor() is not None and x.get_acceptor() is not None])
+        n_viable_juncs = len(junction_list)
         if n_viable_juncs < 2:
             raise InvalidLSV('Not enought junctions')
         self.type = lsv_type
         self.exon = exon
+
+# WRONG LSV ENSMUSG00000001436:77059105-77059178:source
+# WRONG LSV ENSMUSG00000001436:77059258-77059402:target
+# WRONG LSV ENSMUSG00000001436:77059105-77059178:source
+# WRONG LSV ENSMUSG00000001436:77059258-77059402:target
 
         self.intron_retention = False
         for jj in junction_list:

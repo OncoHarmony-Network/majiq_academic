@@ -595,6 +595,9 @@ def load_data_lsv(path, group_name, logger=None):
             lsv = data['LSVs/%s' % lsvid]
             lsv_info.append([lsv.attrs['id'], lsv.attrs['type'], lsv['visual']])
             lsv_cov_list.append(data[LSV_JUNCTIONS_DATASET_NAME][lsv.attrs['coverage']])
+            sh = data[LSV_JUNCTIONS_DATASET_NAME][lsv.attrs['coverage']].shape
+            if sh[0] <2:
+                print "WRONG LSV %s" % lsvid
 
     except KeyError:
         logger.info("No LSVs in file")
@@ -604,7 +607,7 @@ def load_data_lsv(path, group_name, logger=None):
 
 
 def load_lsvgraphic_from_majiq(h5df_grp, lsv_id):
-    return h5df_grp['/LSV/%s/visuals/%s' % (lsv_id, lsv_id)]
+    return h5df_grp['/LSV/%s/visuals/' % lsv_id]
 
 
 def dump_lsvs_voila(pickle_path, posterior_matrix, lsvs_info, meta_info, psi_list1=None, psi_list2=None):

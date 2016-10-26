@@ -7,7 +7,7 @@ from exon import ExonTx, collapse_list_exons
 from majiq.grimoire.junction import Junction
 from majiq.grimoire.lsv import LSV
 from majiq.src import config as majiq_config
-
+from majiq.grimoire.exon import new_exon_definition
 
 class Gene:
 
@@ -422,3 +422,61 @@ def extract_junctions_hdf5(gene_obj, jj_grp, junction_list, annotated=True, all_
         junction_list[(jj_grp.attrs['start'], jj_grp.attrs['end'])] = junc
 
     return junc
+
+
+def find_intron_retention(gene_obj, dict_of_junctions, nondenovo, logging=None):
+    intron_list = gene_obj.get_all_introns()
+    for exon1, exon2 in intron_list:
+        ex1_end = exon1.get_coordinates()[1]
+        ex2_start = exon2.get_coordinates()[0]
+        intron_start = ex1_end + 1
+        intron_end = ex2_start - 1
+
+        intron_len = intron_end - intron_start
+        if intron_len <= 0:
+            continue
+
+        try:
+            jin = dict_of_junctions[intron_start]
+        except KeyError:
+            jin = None
+        try:
+            jout = dict_of_junctions[intron_end]
+        except KeyError:
+            jout = None
+
+        if jin is None and jout is None:
+            continue
+
+        elif jin is not None:
+            jout = Junction(intron_end, ex2_start, exon2, None, gene_obj.get_id(), retrieve=True)
+
+        elif jout is not None:
+            jin = Junction(ex1_end, intron_start, exon1, None, gene_obj.get_id(), retrieve=True)
+
+            exnum = new_exon_definition(intron_start, intron_end,
+                                        jin, jout, gene_obj, nondenovo=nondenovo,
+                                        isintron=True)
+            if exnum == -1:
+                continue
+            logging.debug("NEW INTRON RETENTION EVENT %s, %d-%d" % (gene_obj.get_name(), intron_start, intron_end))
+            jin.add_donor(exon1)
+            for ex in exon1.exonRead_list:
+                st, end = ex.get_coordinates()
+                if end == jin.get_coordinates()[0]:
+                    ex.add_5prime_junc(jin)
+                    break
+
+            jout.add_acceptor(exon2)
+            for ex in exon2.exonRead_list:
+                st, end = ex.get_coordinates()
+                if st == jout.get_coordinates()[1]:
+                    ex.add_3prime_junc(jout)
+                    break
+
+
+
+
+
+
+
