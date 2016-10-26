@@ -150,9 +150,8 @@ class DeltaPsi(BasicPipeline):
         self.logger = majiq_utils.get_logger("%s/deltapsi_majiq.log" % self.logger_path, silent=self.silent,
                                              debug=self.debug)
 
-        self.logger.info("")
-        self.logger.info("Command: %s" % self)
-        self.logger.info("Running Psi ...")
+        self.logger.info("Majiq deltapsi v%s" % VERSION)
+        self.logger.info("Command: %s" % " ".join(sys.argv))
         self.logger.info("GROUP1: %s" % self.files1)
         self.logger.info("GROUP2: %s" % self.files2)
         self.nbins = 20
@@ -174,7 +173,7 @@ class DeltaPsi(BasicPipeline):
         self.logger = logger
 
         list_of_lsv_group1 = majiq_filter.merge_files_hdf5([get_quantifier_norm_temp_files(self.output, self.names[0], xx)
-                                                     for xx in xrange(len(files[0]))], self.minpos,
+                                                            for xx in xrange(len(files[0]))], self.minpos,
                                                            self.minreads, logger=self.logger)
         list_of_lsv_group2 = majiq_filter.merge_files_hdf5([get_quantifier_norm_temp_files(self.output, self.names[1], xx)
                                                             for xx in xrange(len(files[1]))], self.minpos,

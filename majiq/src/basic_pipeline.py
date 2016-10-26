@@ -35,9 +35,7 @@ class BasicPipeline:
     def __init__(self, args):
         """Basic configuration shared by all pipelines"""
 
-        #trick to dump argparse arguments into self
         self.__dict__.update(args.__dict__)
-        #majiq_utils.create_if_not_exists(self.output)
         if self.plotpath:
             majiq_utils.create_if_not_exists(self.plotpath)
         self.logger_path = self.logger
@@ -46,7 +44,7 @@ class BasicPipeline:
 
         self.nthreads = args.nthreads
         self.psi_paths = []
-        self.nchunks = self.nthreads #if args.nchunks == -1 else args.nchunks
+        self.nchunks = self.nthreads
         try:
             self.replica_len = [len(self.files1), len(self.files2)]
         except AttributeError:

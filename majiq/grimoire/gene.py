@@ -372,6 +372,8 @@ def retrieve_gene(gene_id, dbfile, all_exp=False, junction_list=None, logger=Non
                 ext = ExonTx(ex_tx.attrs['start'], ex_tx.attrs['end'], transcript_id, intron=False)
                 ext.gene_name = gene_id
                 ex.add_exon_tx(ext)
+                ex.add_ss_3p(ex_tx.attrs['start'])
+                ex.add_ss_5p(ex_tx.attrs['end'])
                 for jj_grp_id in ex_tx["p3_junc"]:
                     jj_grp = ex_tx["p3_junc/%s" % jj_grp_id]
                     try:
@@ -382,6 +384,7 @@ def retrieve_gene(gene_id, dbfile, all_exp=False, junction_list=None, logger=Non
                         junc.donor_id = jj_grp.attrs['donor_id']
                         junc.acceptor_id = jj_grp.attrs['acceptor_id']
                         junction_list[jj_grp.attrs['start'], jj_grp.attrs['end']] = junc
+
 
                     ext.add_3prime_junc(junc)
 
@@ -395,6 +398,7 @@ def retrieve_gene(gene_id, dbfile, all_exp=False, junction_list=None, logger=Non
                         junc.donor_id = jj_grp.attrs['donor_id']
                         junc.acceptor_id = jj_grp.attrs['acceptor_id']
                         junction_list[jj_grp.attrs['start'], jj_grp.attrs['end']] = junc
+
 
                     ext.add_5prime_junc(junc)
     except KeyError:

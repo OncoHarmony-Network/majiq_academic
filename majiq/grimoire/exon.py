@@ -197,6 +197,12 @@ class Exon:
     def update_coverage(self, num):
         self.coverage += num
 
+    def add_ss_3p(self, coord):
+        self.ss_3p_list.append(coord)
+
+    def add_ss_5p(self, coord):
+        self.ss_5p_list.append(coord)
+
     def set_gc_content_val(self, value):
         self.gc_content = value
 

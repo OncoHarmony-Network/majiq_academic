@@ -30,7 +30,7 @@ def build(args):
 
 
 def builder_init(lock_array, sam_list, pcr_filename, gff_output, only_rna,
-                 non_denovo, dbfile, list_of_genes, silent, debug):
+                 non_denovo, silent, debug):
 
     builder_init.files_locks = lock_array
     builder_init.sam_list = sam_list
@@ -38,10 +38,8 @@ def builder_init(lock_array, sam_list, pcr_filename, gff_output, only_rna,
     builder_init.gff_output = gff_output
     builder_init.only_rna = only_rna
     builder_init.non_denovo = non_denovo
-    builder_init.dbfile = dbfile
     builder_init.silent = silent
     builder_init.debug = debug
-    builder_init.list_of_genes = list_of_genes
 
 
 def merging_files(args_vals):
@@ -65,7 +63,7 @@ def merging_files(args_vals):
             else:
                 vfunc_gc = None
 
-        db_f = h5py.File(builder_init.dbfile)
+        db_f = h5py.File(get_build_temp_db_filename(majiq_config.outDir))
         for gne_idx, gne_id in enumerate(list_of_genes):
             # print gne_id
             # memory_tracker = tracker.SummaryTracker()
@@ -120,14 +118,14 @@ def merging_files(args_vals):
 
 
 def parsing_files(args_vals):
-
     filesnames, chnk = args_vals
     tlogger = majiq_utils.get_logger("%s/%s.majiq.log" % (majiq_config.outDir, chnk),
                                      silent=builder_init.silent, debug=builder_init.debug)
 
     tlogger.debug("[%s] Starting new thread" % chnk)
     majiq_utils.monitor('CHILD %s:: CREATION' % chnk)
-    db_f = h5py.File(builder_init.dbfile)
+    db_f = h5py.File(get_build_temp_db_filename(majiq_config.outDir))
+    list_of_genes = db_f.keys()
     counter = [0] * 6
     try:
         for vals in filesnames:
@@ -146,9 +144,9 @@ def parsing_files(args_vals):
             gc_pairs = {'GC': [], 'COV': []}
             jnc_idx = 0
 
-            for gne_idx, gne_id in enumerate(builder_init.list_of_genes):
+            for gne_idx, gne_id in enumerate(list_of_genes):
                 if gne_idx % 50 == 0:
-                    tlogger.info("[%s] Progress %s/%s" % (loop_id, gne_idx, len(builder_init.list_of_genes)))
+                    tlogger.info("[%s] Progress %s/%s" % (loop_id, gne_idx, len(list_of_genes)))
                 out_f.create_group('%s/junctions' % gne_id)
                 tlogger.debug("[%s] Retrieving gene" % gne_id)
                 gene_obj = majiq.grimoire.gene.retrieve_gene(gne_id, db_f)
@@ -195,15 +193,15 @@ def parsing_files(args_vals):
             majiq_utils.monitor('CHILD %s:: ENDLOOP' % chnk)
 
     except Exception:
-            majiq_utils.monitor('CHILD %s:: EXCEPT' % chnk)
-            traceback.print_exc()
-            sys.stdout.flush()
-            raise
+        majiq_utils.monitor('CHILD %s:: EXCEPT' % chnk)
+        traceback.print_exc()
+        sys.stdout.flush()
+        raise
 
     finally:
-            majiq_io.close_rnaseq(samfl)
+        majiq_io.close_rnaseq(samfl)
+        db_f.close()
 
-    db_f.close()
     tlogger.info("[%s] End" % chnk)
 
 
@@ -221,16 +219,15 @@ class Builder(BasicPipeline):
 
         logger = majiq_utils.get_logger("%s/majiq.log" % majiq_config.outDir, silent=False,
                                         debug=self.debug)
-        logger.info("")
-        logger.info("Command: %s" % self)
+        logger.info("Majiq Build v%s" % VERSION)
+        logger.info("Command: %s" % " ".join(sys.argv))
 
         manager = mp.Manager()
 
         if self.prebam:
-            list_of_genes = manager.list()
 
             p = mp.Process(target=majiq_multi.parallel_lsv_child_calculation,
-                           args=(majiq_io.read_gff, [self.transcripts, list_of_genes, sam_list],
+                           args=(majiq_io.read_gff, [self.transcripts, sam_list],
                                  '%s/tmp' % majiq_config.outDir, 'db', 0, False))
 
             logger.info("... waiting gff3 parsing")
@@ -239,8 +236,7 @@ class Builder(BasicPipeline):
 
             pool = mp.Pool(processes=self.nthreads, initializer=builder_init,
                            initargs=[None, sam_list, self.pcr_filename, self.gff_output, self.only_rna,
-                                     self.non_denovo, get_build_temp_db_filename(majiq_config.outDir), list_of_genes,
-                                     self.silent, self.debug],
+                                     self.non_denovo, self.silent, self.debug],
                            maxtasksperchild=1)
             lchnksize = max(len(sam_list)/self.nchunks, 1)
             lchnksize = lchnksize if len(sam_list) % self.nchunks == 0 else lchnksize + 1
@@ -249,46 +245,48 @@ class Builder(BasicPipeline):
             pool.close()
             pool.join()
 
-        # Detect LSVs
-
         lock_array = [mp.Lock() for xx in sam_list]
         pool = mp.Pool(processes=self.nthreads, initializer=builder_init,
-                       initargs=[lock_array, sam_list, self.pcr_filename, self.gff_output,
-                                 self.only_rna, self.non_denovo, get_build_temp_db_filename(majiq_config.outDir),
-                                 None, self.silent, self.debug],
+                       initargs=[lock_array, sam_list, self.pcr_filename, self.gff_output, self.only_rna,
+                                 self.non_denovo, self.silent, self.debug],
                        maxtasksperchild=1)
-        db_f = h5py.File(get_build_temp_db_filename(majiq_config.outDir))
 
         if not self.prebam:
-            list_of_genes = db_f.keys()
-
+            with h5py.File(get_build_temp_db_filename(majiq_config.outDir)) as db_f:
+                list_of_genes = db_f.keys()
 
         lchnksize = max(len(list_of_genes)/self.nthreads, 1) + 1
 
-        print "VAL", len(list_of_genes)
         for exp_idx, sam_file in enumerate(sam_list):
+            with h5py.File(get_builder_majiq_filename(majiq_config.outDir, sam_file),
+                           'w', compression='gzip', compression_opts=9) as f:
+                effective_readlen = (majiq_config.readLen - 16) + 1
+                f.create_dataset(LSV_JUNCTIONS_DATASET_NAME, (majiq_config.nrandom_junctions, effective_readlen),
+                                 maxshape=(None, effective_readlen))
 
-            f = h5py.File(get_builder_majiq_filename(majiq_config.outDir, sam_file),
-                          'w', compression='gzip', compression_opts=9)
-            effective_readlen = (majiq_config.readLen - 16) + 1
-            f.create_dataset(LSV_JUNCTIONS_DATASET_NAME, (majiq_config.nrandom_junctions, effective_readlen),
-                             maxshape=(None, effective_readlen))
+                # fill meta info
+                f.attrs['sample_id'] = sam_file
+                path = get_builder_temp_majiq_filename(majiq_config.outDir, sam_file)
+                f.attrs['fitfunc'] = majiq_utils.get_fitfunc_from_rnafile(path)
+                f.attrs['date'] = datetime.datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S')
+                f.attrs['data_index'] = 0
+                f.attrs['VERSION'] = VERSION
 
-            # fill meta info
-            f.attrs['sample_id'] = sam_file
-            path = get_builder_temp_majiq_filename(majiq_config.outDir, sam_file)
-            f.attrs['fitfunc'] = majiq_utils.get_fitfunc_from_rnafile(path)
-            f.attrs['date'] = datetime.datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S')
-            f.attrs['data_index'] = 0
-            f.attrs['VERSION'] = VERSION
-
-            f.close()
 
         pool.map_async(merging_files, majiq_utils.chunks(list_of_genes, lchnksize, extra=range(self.nthreads)))
         pool.close()
         pool.join()
 
-        ''' Closing HDF5 files'''
-        db_f.close()
+        for exp_idx, sam_file in enumerate(sam_list):
+            with h5py.File(get_builder_majiq_filename(majiq_config.outDir, sam_file),
+                           'r+', compression='gzip', compression_opts=9) as f:
+
+                n_juncs = f.attrs['data_index']
+                shp = f[LSV_JUNCTIONS_DATASET_NAME].shape
+                f[LSV_JUNCTIONS_DATASET_NAME].resize((n_juncs, shp[1]))
+
+                nlsvs = len(f['LSVs'].keys())
+                logger.info('%s LSVs found in %s' % (nlsvs, sam_file))
+
         logger.info("MAJIQ Builder is ended succesfully!")
         logger.info("Alakazam! Done.")
