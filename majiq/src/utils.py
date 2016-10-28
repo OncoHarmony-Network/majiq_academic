@@ -273,21 +273,43 @@ def histogram_for_exon_analysis(genes, output):
     majiq_io_utils.dump_bin_file([annotated_list, denovo_list], output)
 
 
-def chunks(l, n, extra=None):
+# def chunks(l, n):
+#     """Yield successive n-sized chunks from l.
+#     :param l: list to be split
+#     :param n: max length of chunks
+#     """
+#     try:
+#         idx = -1
+#         rep_chunk = [0] * n
+#         for i in range(len(l)):
+#             idx += 1
+#             eidx = idx % n
+#             print (l[i], extra[eidx], rep_chunk[eidx], n)
+#             yield (l[i], extra[eidx], rep_chunk[eidx], n)
+#             rep_chunk[eidx] += 1
+#
+#     except:
+#         print "ERROR: extra value has incorrect size %s" % idx, extra
+#         raise
+
+
+def chunks(l, n, extra):
     """Yield successive n-sized chunks from l.
+    :param extra:
     :param l: list to be split
     :param n: max length of chunks
     """
     try:
         idx = -1
-        for i in range(0, len(l), n):
+        rep_chunk = [0] * len(extra)
+        for i in range(len(l)):
             idx += 1
-            if extra is not None:
-                yield (l[i:i+n], extra[idx])
-            else:
-                yield l[i:i+n]
+            eidx = idx % len(extra)
+            yield (l[i], extra[eidx], rep_chunk[eidx], n)
+            rep_chunk[eidx] += 1
+
     except:
-        print "ERROR: extra value has incorrect size %s" %idx, extra
+        print "ERROR: extra value has incorrect size %s" % idx, extra
         raise
 
 import sys

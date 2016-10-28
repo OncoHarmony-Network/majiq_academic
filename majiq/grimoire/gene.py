@@ -428,7 +428,6 @@ def retrieve_gene(gene_id, dbfile, all_exp=False, junction_list=None, logger=Non
                         junc.acceptor_id = jj_grp.attrs['acceptor_id']
                         junction_list[jj_grp.attrs['start'], jj_grp.attrs['end']] = junc
 
-
                     ext.add_3prime_junc(junc)
 
                 for jj_grp_id in ex_tx["p5_junc"]:
@@ -524,11 +523,3 @@ def find_intron_retention(gene_obj, dict_of_junctions, nondenovo, logging=None):
                 if st == jout.get_coordinates()[1]:
                     ex.add_3prime_junc(jout)
                     break
-
-
-
-
-
-
-
-

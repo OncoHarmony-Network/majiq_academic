@@ -93,11 +93,10 @@ class Junction:
             return self.coverage
         else:
             if self.idx == -1:
-                cov = np.array([0]*majiq_config.num_experiments)
+                cov = np.zeros(shape=(majiq_config.num_experiments, 2))
             else:
                 cov = self.get_gene().junc_matrix[self.idx]
             return cov
-
 
     def get_ss_5p(self):
         return self.start
@@ -185,10 +184,7 @@ class Junction:
 
     def is_reliable(self):
         res = False
-        if self.all_data:
-            cov = self.get_coverage().sum(axis=1)
-        else:
-            cov = self.get_gene().junc_matrix[self.idx].sum(axis=1)
+        cov = self.get_coverage().sum(axis=1)
 
         for tissue, list_idx in majiq_config.tissue_repl.items():
             mu = np.mean(cov[list_idx])
