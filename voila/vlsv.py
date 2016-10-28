@@ -67,104 +67,56 @@ class OrphanJunctionException(Exception):
 
 
 class VoilaLsv(HDF5):
-    def __init__(self, bins_list, lsv_graphic, psi1=None, psi2=None):
+    def __init__(self, bins_list, lsv_graphic, means=None, means_psi1=None, psi1=None, means_psi2=None, psi2=None):
         super(VoilaLsv, self).__init__()
 
-        self.lsv_graphic = lsv_graphic
-        self.psi1 = psi1
-        self.psi2 = psi2
         self.bins = bins_list
+        self.lsv_graphic = lsv_graphic
+        self.means = means
+        self.means_psi1 = means_psi1
+        self.psi1 = psi1
+        self.means_psi2 = means_psi2
+        self.psi2 = psi2
 
-        self.means = []
         self.variances = []
         self.excl_incl = []
 
-        if self.is_delta_psi():  # Store collapsed matrix to save some space
+        # Store collapsed matrix to save some space
+        if self.is_delta_psi():
             self.bins = [collapse_matrix(np.array(lsv_bins)) for lsv_bins in self.bins]
 
+        # Recreate complementary junction in binary LSV
         if len(self.bins) == 1:
-            self.bins.append(self.bins[-1][::-1])  # Recreate complementary junction in binary LSV
+            self.bins.append(self.bins[-1][::-1])
+
+        if not self.means:
+            if self.is_delta_psi():
+                self.means = [get_expected_dpsi(b) for b in self.bins]
+            else:
+                self.means = [get_expected_psi(b) for b in self.bins]
+        else:
+            voilaLog().warning('Did not have to generate means.')
 
         for lsv_bins in self.bins:
             if self.is_delta_psi():
-                self.means.append(get_expected_dpsi(lsv_bins))
                 if self.means[-1] < 0:
                     self.excl_incl.append([-self.means[-1], 0])
                 else:
                     self.excl_incl.append([0, self.means[-1]])
             else:
-                self.means.append(get_expected_psi(np.array(lsv_bins)))
                 step_bins = 1.0 / len(lsv_bins)
                 projection_prod = lsv_bins * np.arange(step_bins / 2, 1, step_bins) ** 2
                 self.variances.append(np.sum(projection_prod) - self.means[-1] ** 2)
 
         # For LSV filtering
         if lsv_graphic:
-            self.categories = VoilaLsv.init_categories(self.get_type())
-        self.psi_junction = 0
+            self.init_categories()
 
     def is_delta_psi(self):
         return sum([bool(self.psi1), bool(self.psi2)]) == 2
 
-    def get_lsv_graphic(self):
-        return self.lsv_graphic
-
-    def get_chrom(self):
-        return self.lsv_graphic.chrom
-
-    def get_strand(self):
-        return self.lsv_graphic.strand
-
-    def set_chrom(self, c):
-        self.lsv_graphic.chrom = c
-
-    def set_strand(self, s):
-        self.lsv_graphic.strand = s
-
-    def set_id(self, idp):
-        self.lsv_graphic.id = idp
-
-    def get_id(self):
-        return self.lsv_graphic.id
-
-    def get_gene_name(self):
-        return self.lsv_graphic.name
-
-    def set_type(self, t):
-        self.lsv_graphic.type = t
-
-    def get_type(self):
-        return self.lsv_graphic.type
-
-    def get_bins(self):
-        return self.bins
-
-    def set_means(self, m):
-        self.means = m
-
-    def get_means(self):
-        return self.means
-
-    def set_coords(self, coords):
-        self.lsv_graphic.coords = coords
-
-    def get_coords(self):
-        return self.lsv_graphic.coords
-
-    def get_variances(self):
-        return self.variances
-
-    def set_excl_incl(self, excl_incl_set):
-        self.excl_incl = excl_incl_set
-
-    def get_excl_incl(self):
-        return self.excl_incl
-
     def get_extension(self):
-        return [self.lsv_graphic.get_exons()[0].get_coords()[0], self.lsv_graphic.get_exons()[-1].get_coords()[1]]
-
-    def get_categories(self):
-        return self.categories
+        return [self.lsv_graphic.exons[0].coords[0], self.lsv_graphic.exons[-1].coords[1]]
 
     def njuncs(self):
         return self.categories['njuncs']
@@ -182,14 +134,12 @@ class VoilaLsv(HDF5):
     def set_bed12(self, bed12_str):
         self.bed12_str = bed12_str
 
-    def get_bed12(self):
-        return self.bed12_str
-
     def get_gff3(self):
         log = voilaLog()
         try:
             return VoilaLsv.to_gff3(self)
-        except OrphanJunctionException, e:
+        except OrphanJunctionException as e:
+            log.exception(e)
             log.warning(e.message)
 
     def to_JSON(self, encoder=json.JSONEncoder):
@@ -200,7 +150,7 @@ class VoilaLsv(HDF5):
         return json.dumps(self, default=lambda o: o.__dict__, sort_keys=True, cls=encoder)
 
     def is_lsv_changing(self, thres):
-        means = np.array(self.get_means())
+        means = np.array(self.means)
         # TODO: should we check that pos and neg are kind of matched?
         return max(means[means > 0].sum(), abs(means[means < 0].sum())) >= thres
 
@@ -209,7 +159,7 @@ class VoilaLsv(HDF5):
 
     def to_hdf5(self, h, use_id=True):
         if use_id:
-            h = h.create_group('/lsvs/' + self.get_id())
+            h = h.create_group('/lsvs/' + self.lsv_graphic.id)
 
         super(VoilaLsv, self).to_hdf5(h, use_id)
 
@@ -260,24 +210,24 @@ class VoilaLsv(HDF5):
     def to_gff3(cls, vlsv):
         def find_exon_a5(lexonG, jidx):
             for eG in lexonG:
-                if jidx in eG.get_a5_list():
+                if jidx in eG.a5:
                     return eG
             raise OrphanJunctionException("Orphan junction %s in lsv %s." % (
-                repr(vlsv.get_lsv_graphic().get_junctions()[jidx].get_coords()), lsvId))
+                repr(vlsv.lsv_graphic.junctions[jidx].coords), lsvId))
 
         def find_exon_a3(lexonG, jidx):
             for eG in lexonG:
-                if jidx in eG.get_a3_list():
+                if jidx in eG.a3:
                     return eG
             raise OrphanJunctionException("Orphan junction %s in lsv %s." % (
-                repr(vlsv.get_lsv_graphic().get_junctions()[jidx].get_coords()), lsvId))
+                repr(vlsv.lsv_graphic.junctions[jidx].coords), lsvId))
 
         # fields = ['seqid', 'source', 'type', 'start', 'end', 'score', 'strand', 'phase', 'attributes']
         trans = []
-        lexons = vlsv.get_lsv_graphic().get_exons()
-        lsvId = vlsv.get_id()
-        chrom = vlsv.get_chrom()
-        strand = vlsv.get_strand()
+        lexons = vlsv.lsv_graphic.exons
+        lsvId = vlsv.lsv_graphic.id
+        chrom = vlsv.lsv_graphic.chrom
+        strand = vlsv.lsv_graphic.strand
         gStart = lexons[0].coords[0]
         gEnd = lexons[-1].coords[1]
         first = 0
@@ -291,7 +241,7 @@ class VoilaLsv(HDF5):
                               'Name=%s;ID=%s' % (lsvId, lsvId)])
 
         trans.append(gene_str)
-        for jid, junc in enumerate(vlsv.get_lsv_graphic().get_junctions()):
+        for jid, junc in enumerate(vlsv.lsv_graphic.junctions):
             mrna = '%s\told_majiq\tmRNA\t' % chrom
             mrna_id = '%s.%d' % (lsvId, jid)
             ex1 = '%s\told_majiq\texon\t' % chrom
@@ -303,15 +253,15 @@ class VoilaLsv(HDF5):
             if strand == '-':
                 ex1G, ex2G = ex2G, ex1G
 
-            mrna += '%d\t%d\t' % (ex1G.get_coords()[first], ex2G.get_coords()[last])
+            mrna += '%d\t%d\t' % (ex1G.coords[first], ex2G.coords[last])
 
-            if vlsv.get_type().startswith('t'):
+            if vlsv.lsv_graphic.type.startswith('t'):
                 ex1G, ex2G = ex2G, ex1G
-                ex1 += '%d\t%d\t' % (junc.get_coords()[last], ex1G.get_coords()[last])
-                ex2 += '%d\t%d\t' % (ex2G.get_coords()[first], junc.get_coords()[first])
+                ex1 += '%d\t%d\t' % (junc.coords[last], ex1G.coords[last])
+                ex2 += '%d\t%d\t' % (ex2G.coords[first], junc.coords[first])
             else:
-                ex1 += '%d\t%d\t' % (ex1G.get_coords()[first], junc.get_coords()[first])
-                ex2 += '%d\t%d\t' % (junc.get_coords()[last], ex2G.get_coords()[last])
+                ex1 += '%d\t%d\t' % (ex1G.coords[first], junc.coords[first])
+                ex2 += '%d\t%d\t' % (junc.coords[last], ex2G.coords[last])
             mrna += '.\t%s\t0\tName=%s;Parent=%s;ID=%s' % (strand, mrna_id, lsvId, mrna_id)
             ex1 += '.\t%s\t0\tName=%s.lsv;Parent=%s;ID=%s.lsv' % (strand, mrna_id, mrna_id, mrna_id)
             ex2 += '.\t%s\t0\tName=%s.ex;Parent=%s;ID=%s.ex' % (strand, mrna_id, mrna_id, mrna_id)
@@ -330,10 +280,9 @@ class VoilaLsv(HDF5):
 
         return lsv_gtf
 
-    @classmethod
-    def init_categories(cls, lsv_type):
+    def init_categories(self):
         categories = defaultdict()
-        juns = lsv_type.split('|')
+        juns = self.lsv_graphic.type.split('|')
         ir = 'i' in juns
         try:
             juns.remove('i')
@@ -359,4 +308,9 @@ class VoilaLsv(HDF5):
         categories['ir'] = ir
         if juns[0] == 't':
             categories['prime5'], categories['prime3'] = categories['prime3'], categories['prime5']
-        return categories
+
+        self.categories = categories
+
+    @classmethod
+    def easy_from_hdf5(cls, h):
+        return cls((), None).from_hdf5(h)
