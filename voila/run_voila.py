@@ -15,7 +15,7 @@ import voila.constants as constants
 import voila.io_voila as io_voila
 import voila.module_locator as module_locator
 import voila.utils.utils_voila as utils_voila
-from voila.splice_graphics import splice_graph_from_hdf5
+from voila.utils.utils_voila import splice_graph_from_hdf5
 from voila.utils.voilaLog import voilaLog
 
 EXEC_DIR = module_locator.module_path() + "/"
@@ -38,7 +38,7 @@ def table_marks_set(size):
     # TODO: Customizable by script options
     ideal_set = (10, 20, 50, 100)
     index = 0
-    for mark in ideal_set:
+    for _ in ideal_set:
         if size < ideal_set[index]:
             break
         index += 1
@@ -196,7 +196,7 @@ def render_summary(output_dir, output_html, majiq_output, type_summary, threshol
                                     ))
             voila_output.close()
             for g_key, glsv_list in genes_dict.iteritems():
-                links_dict[glsv_list[0]['lsv'].get_gene_name()] = "%s/%s" % (constants.SUMMARIES_SUBFOLDER, name_page)
+                links_dict[glsv_list[0]['lsv'].lsv_graphic.name] = "%s/%s" % (constants.SUMMARIES_SUBFOLDER, name_page)
             count_pages += 1
         majiq_output['voila_links'] = links_dict
 
@@ -267,17 +267,18 @@ def render_summary(output_dir, output_html, majiq_output, type_summary, threshol
 
 def combine_gg(gg_comb_dict, gg_new):
     """Combine a set of gene graphs (new) with an already existing collection."""
-    gg = gg_comb_dict[gg_new.get_id()]
+    gg = gg_comb_dict[gg_new.id]
+    log = voilaLog()
     if gg is None:
-        gg_comb_dict[gg_new.get_id()] = copy.deepcopy(gg_new)
+        gg_comb_dict[gg_new.id] = copy.deepcopy(gg_new)
         return
 
-    for i, eg in enumerate(gg.get_exons()):
-        eg.type_exon = min(eg.type_exon, gg_new.get_exons()[i].type_exon)
+    for i, eg in enumerate(gg.exons):
+        eg.type_exon = min(eg.type_exon, gg_new.exons[i].type_exon)
 
-    for j, jg in enumerate(gg.get_junctions()):
-        jg.type_junction = min(jg.type_junction, gg_new.get_junctions()[j].type_junction)
-        jg.num_reads += gg_new.get_junctions()[j].num_reads
+    for j, jg in enumerate(gg.junctions):
+        jg.type_junction = min(jg.type_junction, gg_new.junctions[j].type_junction)
+        jg.num_reads += gg_new.junctions[j].num_reads
 
 
 def parse_gene_graphics(splicegraph_flist, gene_name_list, condition_names=('group1', 'group2')):
@@ -292,12 +293,23 @@ def parse_gene_graphics(splicegraph_flist, gene_name_list, condition_names=('gro
     log = voilaLog()
     genes_exp1_exp2 = []
     log.info("Parsing splice graph information files ...")
+
+    # master_gene_dict = {}
+    # genes_dict = {}
+    # for f in (f for x in splicegraph_flist for f in x):
+    #     genes = splice_graph_from_hdf5(f)
+    #     for gene in genes:
+    #         genes_dict[f][gene.id] = gene
+    #
+    # print genes_dict
+
     for grp_i, gene_flist in enumerate(splicegraph_flist):
+
         genes_exp = defaultdict()
-        splice_files = utils_voila.list_files_or_dir(gene_flist, suffix=constants.SUFFIX_SPLICEGRAPH)
+        splice_files = utils_voila.list_files_or_dir(gene_flist, constants.SUFFIX_SPLICEGRAPH)
 
         # Check that the folders have splicegraphs
-        if not len(splice_files):
+        if not splice_files:
             log.error("No file with extension .%s found in %s." % (constants.SUFFIX_SPLICEGRAPH, gene_flist))
 
         # Combined SpliceGraph data structures
@@ -305,30 +317,32 @@ def parse_gene_graphics(splicegraph_flist, gene_name_list, condition_names=('gro
         gg_combined_name = "%s%s" % (constants.COMBINED_PREFIX, condition_names[grp_i])
 
         for splice_graph_f in splice_files:
-            genesG = splice_graph_from_hdf5(splice_graph_f)
+            genes_g = splice_graph_from_hdf5(splice_graph_f)
 
-            if not genesG:
+            if not genes_g:
                 continue
 
             genes_graphic = defaultdict(list)
-            genesG.sort()
-            for gene_obj in genesG:
-                if gene_name_list is None or gene_obj.get_id() in gene_name_list or gene_obj.get_name().upper() in gene_name_list:
-                    genes_graphic[gene_obj.get_id()].append(
-                        json.dumps(gene_obj, cls=utils_voila.LsvGraphicEncoder).replace("\"", "'"))
-                    genes_graphic[gene_obj.get_id()].append(gene_obj.get_strand())
-                    genes_graphic[gene_obj.get_id()].append(gene_obj.get_coords())
-                    genes_graphic[gene_obj.get_id()].append(gene_obj.get_chrom())
-                    genes_graphic[gene_obj.get_id()].append(gene_obj.get_name())
+            genes_g.sort()
+
+            for gene_obj in genes_g:
+                if not gene_name_list or gene_obj.id in gene_name_list or gene_obj.name.upper() in gene_name_list:
+                    genes_graphic[gene_obj.id].append(
+                        json.dumps(gene_obj, cls=utils_voila.LsvGraphicEncoder).replace("\"", "'")
+                    )
+                    genes_graphic[gene_obj.id].append(gene_obj.strand)
+                    genes_graphic[gene_obj.id].append(gene_obj.get_coords())
+                    genes_graphic[gene_obj.id].append(gene_obj.chrom)
+                    genes_graphic[gene_obj.id].append(gene_obj.name)
 
                     # Combine genes from different Splice Graphs
-                    combine_gg(gg_combined, gene_obj)
+                    # combine_gg(gg_combined, gene_obj)
 
             ggenes_set = set(genes_graphic.keys())
             if not len(ggenes_set):
                 log.warning("No gene matching the splice graph file %s." % splice_graph_f)
 
-            if gene_name_list is not None and len(gene_name_list) != len(ggenes_set):
+            if gene_name_list and len(gene_name_list) != len(ggenes_set):
                 log.warning("Different number of genes in splicegraph (%d) and majiq (%d) files! Hint: Are you sure "
                             "you are using bins and splicegraph files from the same execution?" % (
                                 len(ggenes_set), len(gene_name_list)))
@@ -379,11 +393,11 @@ def parse_gene_graphics_obj(splicegraph_flist, gene_name_list, condition_names=(
         gg_combined_name = "%s%s" % (constants.COMBINED_PREFIX, condition_names[grp_i])
 
         for splice_graph_f in splice_files:
-            genesG = splice_graph_from_hdf5(splice_graph_f)
+            genes_g = splice_graph_from_hdf5(splice_graph_f)
             genes_graphic = defaultdict()
-            genesG.sort()
-            for gene_obj in genesG:
-                if gene_name_list is None or gene_obj.get_id() in gene_name_list or gene_obj.get_name().upper() in gene_name_list:
+            genes_g.sort()
+            for gene_obj in genes_g:
+                if not gene_name_list or gene_obj.id in gene_name_list or gene_obj.name.upper() in gene_name_list:
                     genes_graphic[gene_obj.get_id()] = gene_obj
 
                     # Combine genes from different Splice Graphs
@@ -420,7 +434,7 @@ def parse_input(args):
     utils_voila.create_if_not_exists(output_dir)
 
     log = voilaLog()
-    log.info("Execution line: %s" % repr(args))
+    log.debug("Execution line: %s" % repr(args))
     log.info("Processing %s summary." % type_summary)
 
     threshold = None
@@ -443,14 +457,14 @@ def parse_input(args):
             for gene_name in fileinput.input(args.gene_names):
                 gene_name_list.append(gene_name.rstrip().upper())
 
-        voila_input = io_voila.voila_input_from_hdf5(voila_file, log)
+        voila_input = io_voila.VoilaInput.from_hdf5_file(voila_file)
         majiq_output = utils_voila.lsvs_to_gene_dict(voila_input, gene_name_list=gene_name_list, lsv_types=lsv_types)
 
         if not gene_name_list:
             gene_name_list = majiq_output['genes_dict'].keys()
 
         if not gene_name_list:
-            raise VoilaException("There are no LSVs detected in Voila.", log)
+            raise VoilaException("There are no LSVs detected in Voila.")
 
         # Get gene info
         majiq_output['genes_exp'] = parse_gene_graphics(
@@ -558,11 +572,11 @@ def parse_input(args):
         majiq_output = {'lsvs': lsvs_dict, 'sample_names': sample_names, 'cond_pair': cond_pair, 'thres': thres_change}
         render_summary(output_dir, output_html, majiq_output, type_summary)
 
-    InputParsed = namedtuple('InputParsed',
-                             'output_dir output_html majiq_output type_summary threshold meta_postprocess pairwise_dir')
-    return InputParsed(output_dir=output_dir, output_html=output_html, majiq_output=majiq_output,
-                       type_summary=type_summary, threshold=threshold, meta_postprocess=meta_postprocess,
-                       pairwise_dir=pairwise)
+    input_parsed = namedtuple('InputParsed',
+                              'output_dir output_html majiq_output type_summary threshold meta_postprocess pairwise_dir')
+    return input_parsed(output_dir=output_dir, output_html=output_html, majiq_output=majiq_output,
+                        type_summary=type_summary, threshold=threshold, meta_postprocess=meta_postprocess,
+                        pairwise_dir=pairwise)
 
 
 def main():
@@ -593,11 +607,14 @@ def main():
     common_parser.add_argument('majiq_bins', metavar='majiq_output.pickle', type=str,
                                help='Pickle file with the bins produced by Majiq.')
     common_parser.add_argument('--lsv-types', nargs='*', default=[], type=str, dest='lsv_types',
-                               help='LSV type to filter the results. (If no gene list is provided, this option will display only genes containing LSVs of the specified type).')
+                               help='LSV type to filter the results. (If no gene list is provided, this option will '
+                                    'display only genes containing LSVs of the specified type).')
     common_parser.add_argument('--gene-names-file', type=str, dest='gene_names',
-                               help='File with gene names to filter the results (one gene per line). Use - to type in the gene names.')
+                               help='File with gene names to filter the results (one gene per line). Use - to type in '
+                                    'the gene names.')
     common_parser.add_argument('--filter-lsvs', type=str, dest='lsv_names',
-                               help='File with lsv names to filter the results (one gene per line). Use - to type in the gene names.')
+                               help='File with lsv names to filter the results (one gene per line). Use - to type in '
+                                    'the gene names.')
 
     # Subparser module to agglutinate all subparsers
     subparsers = parser.add_subparsers(dest='type_analysis')
@@ -619,8 +636,11 @@ def main():
     parser_delta.add_argument('-splice-graphs2', required=True, nargs='+', dest='genesf_exp2',
                               metavar='Liver1.splicegraph [Liver2.splicegraph ...]', type=str,
                               help='Experiment 2 splice graph information file(s) or directory.')
+
+    # Probability threshold used to sum the accumulative probability of inclusion/exclusion.
     parser_delta.add_argument('--threshold', type=float, default=0.2,
-                              help='Filter out LSVs with no junction predicted to change over a certain value (in percentage).')  # Probability threshold used to sum the accumulative probability of inclusion/exclusion.
+                              help='Filter out LSVs with no junction predicted to change over a certain value (in '
+                                   'percentage).')
     parser_delta.add_argument('--show-all', dest='show_all', action='store_true', default=False,
                               help='Show all LSVs including those with no junction with significant change predicted')
     parser_delta.add_argument('--pairwise-dir', type=str, dest='pairwise',
@@ -637,10 +657,16 @@ def main():
 
     # Splice graphs generation option (dev) TODO: Delete??
     parser_splice_graphs = argparse.ArgumentParser(add_help=False)
-    parser_splice_graphs.add_argument('--max', type=int, default=20,
-                                      help='Maximum number of splice graphs to show (*.splicegraph files may be quite large).')
-    parser_splice_graphs.add_argument('--filter-genes', type=str, dest='gene_names',
-                                      help='File with gene names to filter the results (one gene per line). Use - to type in the gene names.')
+    parser_splice_graphs.add_argument('--max',
+                                      type=int,
+                                      default=20,
+                                      help='Maximum number of splice graphs to show (*.splicegraph files may be quite '
+                                           'large).')
+    parser_splice_graphs.add_argument('--filter-genes',
+                                      type=str,
+                                      dest='gene_names',
+                                      help='File with gene names to filter the results (one gene per line). Use - to '
+                                           'type in the gene names.')
     subparsers.add_parser(constants.SPLICE_GRAPHS, help='Generate only splice graphs [DEBUGING!].',
                           parents=[base_parser, common_parser, parser_splice_graphs])
 
@@ -657,11 +683,14 @@ def main():
     parser_comptable.add_argument('--thres-change', dest='thres_change', type=float, metavar='0.2',
                                   help='Threshold used to filter non-changing LSVs.')
     parser_comptable.add_argument('--filter-genes', type=str, dest='gene_names',
-                                  help='File with gene names to filter the results (one gene per line). Use - to type in the gene names.')
+                                  help='File with gene names to filter the results (one gene per line). Use - to type '
+                                       'in the gene names.')
     parser_comptable.add_argument('--filter-lsvs', type=str, dest='lsv_names',
-                                  help='File with lsv names to filter the results (one gene per line). Use - to type in the gene names.')
+                                  help='File with lsv names to filter the results (one gene per line). Use - to type '
+                                       'in the gene names.')
     subparsers.add_parser(constants.COND_TABLE,
-                          help='Generate a HTML table with a list of LSVs changing between conditions in multiple samples [DEBUGING!].',
+                          help='Generate a HTML table with a list of LSVs changing between conditions in multiple '
+                               'samples [DEBUGING!].',
                           parents=[base_parser, parser_comptable])
 
     # Time execution time
@@ -677,9 +706,7 @@ def main():
 
     log_filename = 'voila.log'
     if args.logger:
-        utils_voila.create_if_not_exists(args.logger)
-        log_filename = os.path.join(args.logger, 'voila.log')
-
+        log_filename = os.path.join(args.logger, log_filename)
     log = voilaLog(filename=log_filename, level=log_level)
 
     # Parse input
