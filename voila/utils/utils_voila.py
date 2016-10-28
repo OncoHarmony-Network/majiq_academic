@@ -5,35 +5,18 @@ import fnmatch
 import json
 import os
 import shutil
-import sys
 from collections import defaultdict
 from multiprocessing import Manager, Process, Pool
 from multiprocessing.queues import JoinableQueue
 
 import h5py
+import numpy as np
 
 from voila import splice_graphics
 from voila.constants import PROCESS_COUNT
 from voila.splice_graphics import GeneGraphic
 from voila.utils.voilaLog import voilaLog
 from voila.vlsv import VoilaLsv
-
-try:
-    import cPickle as pkl
-except ImportError:
-    try:
-        import pickle as pkl
-    except ImportError:
-        print "[Error] :: Neither pickle nor cPickle are installed. Please, check python dependencies."
-        import sys
-
-        sys.exit(1)
-
-try:
-    import numpy as np
-except ImportError:
-    print "[Error] :: Numpy not installed. Please, check python dependencies."
-    sys.exit(1)
 
 
 class PickleEncoder(json.JSONEncoder):
@@ -67,9 +50,9 @@ class LsvGraphicEncoder(json.JSONEncoder):
         if isinstance(obj, splice_graphics.JunctionGraphic):
             return obj.to_JSON(PickleEncoder)
         if isinstance(obj, splice_graphics.GeneGraphic):
-            return obj.to_JSON(PickleEncoder)
+            return obj.to_json(PickleEncoder)
         if isinstance(obj, splice_graphics.LsvGraphic):
-            return obj.to_JSON(PickleEncoder)
+            return obj.to_json(PickleEncoder)
 
         return json.JSONEncoder.default(self, obj)
 
@@ -95,7 +78,7 @@ def get_prob_delta_psi_greater_v(bins, expected, V=.2):
 def lsvs_to_gene_dict(voila_input, gene_name_list=(), lsv_types=None, lsv_names=(), threshold=.2, show_all=False):
     log = voilaLog()
     genes_dict = defaultdict(list)
-    nofilter_genes = not gene_name_list and not lsv_types
+    nofilter_genes = not (gene_name_list and lsv_types)
 
     for i, vlsv in enumerate(voila_input.lsvs):
 
@@ -109,9 +92,10 @@ def lsvs_to_gene_dict(voila_input, gene_name_list=(), lsv_types=None, lsv_names=
         if len(lsv_names) > 0 and vlsv.get_id() not in lsv_names:
             continue
 
-        gene_name_id = vlsv.get_id().split(':')[0]
+        gene_name_id = vlsv.lsv_graphic.id.split(':')[0]
         gene_name = vlsv.lsv_graphic.name.upper()
-        if nofilter_genes or gene_name_id in gene_name_list or gene_name in gene_name_list or vlsv.get_type() in lsv_types:
+        if (nofilter_genes or gene_name_id in gene_name_list or
+                    gene_name in gene_name_list or vlsv.get_type() in lsv_types):
             if vlsv.is_delta_psi():
                 genes_dict[gene_name_id].append({
                     'lsv': vlsv,
@@ -154,7 +138,7 @@ def collapse_lsv(lsv_type):
         min_sss = min(min_sss, ss2)
         try:
             ss3 = int(pp[1].split('.')[1])
-        except IndexError, e:
+        except IndexError:
             ss3 = 1
         ext = int(pp[1].split('.')[0])
 
@@ -186,9 +170,6 @@ def list_files_or_dir(file_or_dir_list, prefix='*', suffix='*', containing='*'):
             for root, dirnames, filenames in os.walk(file_or_dir):
                 for filename in fnmatch.filter(filenames, '%s*%s*%s' % (prefix, containing, suffix)):
                     files.append(os.path.join(root, filename))
-                    # for file in os.listdir(file_or_dir):
-                    #     if not suffix or file.endswith(suffix):
-                    #         files.append(file_or_dir+'/'+file)
         else:
             files.append(file_or_dir)
     return files
@@ -215,7 +196,8 @@ def gff2gtf(gff_f, out_f):
 
         for gff_l in gff:
             gff_fields = gff_l.strip().split()
-            if len(gff_fields) < 3: continue
+            if len(gff_fields) < 3:
+                continue
             if gff_fields[2] == 'mRNA':
                 if mrna:
                     to_gtf(wfile, seq_name, source, gene, mrna, start_trans, end_trans, strand, exon_l, frame_l)

@@ -40,8 +40,9 @@ class VoilaInput(HDF5):
         for sample_info in self.metainfo:
             yield sample_info
 
-    def encode_metainfo(self, h, metainfo):
-        h = h.create_group('metainfo')
+    def encode_metainfo(self, h):
+        h = h.create_group('/metainfo')
+        metainfo = self.metainfo.copy()
 
         experiments1 = h.create_group('experiments1')
         for index, item in enumerate(metainfo['experiments1']):
@@ -72,7 +73,7 @@ class VoilaInput(HDF5):
 
     def to_hdf5(self, h, use_id=True):
         # metainfo
-        self.encode_metainfo(h.create_group('metainfo'), self.metainfo)
+        self.encode_metainfo(h)
 
         # lsvs
         for lsv in self.lsvs:
@@ -82,10 +83,10 @@ class VoilaInput(HDF5):
 
     def from_hdf5(self, h):
         # metainfo
-        self.metainfo = self.decode_metainfo(h['metainfo'])
+        self.decode_metainfo(h['metainfo'])
 
         # lsvs
-        self.lsvs = [VoilaLsv((), None).from_hdf5(h['lsvs'][lsv_id]) for lsv_id in h['lsvs']]
+        self.lsvs = [VoilaLsv.easy_from_hdf5(h['lsvs'][lsv_id]) for lsv_id in h['lsvs']]
 
         return super(VoilaInput, self).from_hdf5(h)
 
@@ -95,7 +96,9 @@ class VoilaInput(HDF5):
         if group2 and experiments2:
             metainfo['experiments2'] = experiments2
             metainfo['group2'] = group2
-        cls().encode_metainfo(h['/'], metainfo)
+        vi = cls()
+        vi.metainfo = metainfo
+        vi.encode_metainfo(h['/'])
 
     @classmethod
     def from_hdf5_file(cls, hdf5_filename):
@@ -110,7 +113,7 @@ class VoilaInput(HDF5):
             with h5py.File(hdf5_filename, 'r') as h:
                 while True:
                     id = queue.get()
-                    manage_dict[id] = VoilaLsv((), None).from_hdf5(h['lsvs'][id])
+                    manage_dict[id] = VoilaLsv.easy_from_hdf5(h['lsvs'][id])
                     queue.task_done()
 
         def producer():
@@ -188,14 +191,10 @@ def write_tab_output(input_parsed):
     """
     Create tab-delimited output file summarizing all the LSVs detected and quantified with MAJIQ.
 
-    :param output_dir: output directory for the file.
-    :param output_html: name for the output html file used to create a *.txt version.
-    :param majiq_output: parsed data from old_majiq.
-    :param type_summary: type of analysis performed.
-    :param pairwise_dir: whether pairwise comparisons are included or not.
-    :param threshold: minimum change considered as significant (in deltapsi analysis).
-    :return: nothing.
+    :param input_parsed: parsed input data
+    :return:
     """
+
     if input_parsed.type_summary == constants.COND_TABLE:
         cond_table_tab_output(input_parsed)
     else:
@@ -311,20 +310,20 @@ def tab_output(input_parsed):
                 if type(llsv_dict) == dict:
                     llsv = llsv_dict['lsv']
                 lline = []
-                lline.extend([llsv.lsv_graphic.name, gene, llsv.get_id()])
+                lline.extend([llsv.lsv_graphic.name, gene, llsv.lsv_graphic.id])
                 lexpected = []
                 lconfidence = []
                 lexpecs_psi1 = []
                 lexpecs_psi2 = []
-                for i, bins in enumerate(llsv.get_bins()):
+                for i, bins in enumerate(llsv.bins):
                     if 'delta' in type_summary:
-                        lexpected.append(str(-llsv.get_excl_incl()[i][0] + llsv.get_excl_incl()[i][1]))
+                        lexpected.append(str(-llsv.excl_incl[i][0] + llsv.excl_incl[i][1]))
                         lconfidence.append(str(vlsv.matrix_area(np.array(bins), threshold, collapsed_mat=True).sum()))
                         lexpecs_psi1.append('%.3f' % vlsv.get_expected_psi(np.array(llsv.psi1[i])))
                         lexpecs_psi2.append('%.3f' % vlsv.get_expected_psi(np.array(llsv.psi2[i])))
                     else:
-                        lexpected.append(repr(llsv.get_means()[i]))
-                        lconfidence.append(repr(llsv.get_variances()[i]))
+                        lexpected.append(repr(llsv.means[i]))
+                        lconfidence.append(repr(llsv.variances[i]))
 
                 lline.append(';'.join(lexpected))
                 lline.append(';'.join(lconfidence))
@@ -332,12 +331,12 @@ def tab_output(input_parsed):
                     lline.append(';'.join(lexpecs_psi1))
                     lline.append(';'.join(lexpecs_psi2))
 
-                lline.append(llsv.get_type())
-                lline.append(repr(llsv.get_categories()[tlb_categx['A5SS']]))
-                lline.append(repr(llsv.get_categories()[tlb_categx['A3SS']]))
-                lline.append(repr(llsv.get_categories()[tlb_categx['ES']]))
-                lline.append(repr(llsv.get_categories()[tlb_categx['Num. Junctions']]))
-                lline.append(repr(llsv.get_categories()[tlb_categx['Num. Exons']]))
+                lline.append(llsv.lsv_graphic.type)
+                lline.append(repr(llsv.categories[tlb_categx['A5SS']]))
+                lline.append(repr(llsv.categories[tlb_categx['A3SS']]))
+                lline.append(repr(llsv.categories[tlb_categx['ES']]))
+                lline.append(repr(llsv.categories[tlb_categx['Num. Junctions']]))
+                lline.append(repr(llsv.categories[tlb_categx['Num. Exons']]))
                 lline.append(str(int(np.any([junc.type_junction == 1 for junc in llsv.lsv_graphic.junctions]))))
 
                 lline.append(llsv.lsv_graphic.chrom)
@@ -372,21 +371,21 @@ def tab_output(input_parsed):
                                 else:
                                     log.warning("LSV %s present in deltagroup but missing in %s." %
                                                 (llsv.id, "%s_%d_%s_%d" % (group1_name, idx1 + 1,
-                                                                                 group2_name, idx2 + 1)))
+                                                                           group2_name, idx2 + 1)))
                                     lpairwise.append('N/A')
                                     continue
-                                for iway in range(len(llsv.get_bins())):
-                                    lpairwise.append(str(sum(lsv_pair.get_excl_incl()[iway])))
+                                for iway in range(len(llsv.bins)):
+                                    lpairwise.append(str(sum(lsv_pair.excl_incl[iway])))
                             else:
                                 lpairwise.append('N/A')
                             llpairwise.append(';'.join(lpairwise))
                     lline.extend(llpairwise)
 
                 if 'voila_links' in majiq_output.keys():
-                    summary_path = majiq_output['voila_links'][llsv.get_gene_name()]
+                    summary_path = majiq_output['voila_links'][llsv.lsv_graphic.name]
                     if not os.path.isabs(summary_path):
                         summary_path = "%s/%s/%s" % (os.getcwd(), output_dir, summary_path)
-                    lline.append(constants.URL_COMPOSITE % (summary_path, llsv.get_gene_name()))
+                    lline.append(constants.URL_COMPOSITE % (summary_path, llsv.lsv_graphic.name))
                 ofile.write(constants.DELIMITER.join(lline))
                 ofile.write('\n')
 
@@ -427,10 +426,12 @@ def load_dpsi_tab(tab_files_list, sample_names, thres_change=None, filter_genes=
                     root_path = pr
 
                 if filter_genes:
-                    if fields[0] not in filter_genes and fields[1] not in filter_genes: continue
+                    if fields[0] not in filter_genes and fields[1] not in filter_genes:
+                        continue
 
                 if filter_lsvs:
-                    if fields[2].upper() not in filter_lsvs: continue
+                    if fields[2].upper() not in filter_lsvs:
+                        continue
 
                 expecs = [float(aa) for aa in fields[3].split(";")]
 
@@ -456,8 +457,6 @@ def load_dpsi_tab(tab_files_list, sample_names, thres_change=None, filter_genes=
                                                   (np.array(lsvs_dict[lsv_idx]['njunc']) > -1) & np.array(
                                                       [np.any(np.array([abs(fff) for fff in expec]) > thres_change) for
                                                        expec in lsvs_dict[lsv_idx]['expecs']])]))
-        # Update the number of changing
-        # lsvs_dict[lsv_idx]['nchangs'] = np.sum([1 for ff in lsvs_dict[lsv_idx]['expecs'] if np.any(np.array([abs(fff) for fff in ff]) > thres_change)])
 
         lsvs_dict[lsv_idx]['expecs_marks'] = ~np.array(
             idx_most_freq == lsvs_dict[lsv_idx]['njunc'])  # Mark adjusted most changing junction
@@ -480,11 +479,11 @@ def load_dpsi_tab(tab_files_list, sample_names, thres_change=None, filter_genes=
 def create_gff3_txt_files(input_parsed, out_gff3=False):
     """
     Create GFF3 files for each LSV.
-    :param output_dir: output directory for the file.
-    :param majiq_output: parsed data from old_majiq.
-    :param out_gff3:
-    :return: nothing.
+    :param input_parsed: parsed input data
+    :param out_gff3: output as a GFF3 file
+    :return: None
     """
+
     log = voilaLog()
     majiq_output = input_parsed.majiq_output
     output_dir = input_parsed.output_dir
@@ -507,7 +506,7 @@ def create_gff3_txt_files(input_parsed, out_gff3=False):
             lsv = lsv_dict
             if type(lsv_dict) == dict:
                 lsv = lsv_dict['lsv']
-            lsv_file_basename = "%s/%s" % (odir, lsv.get_id())
+            lsv_file_basename = "%s/%s" % (odir, lsv.lsv_graphic.id)
 
             try:
                 lsv_gff3_str = lsv.get_gff3()

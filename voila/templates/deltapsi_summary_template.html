@@ -126,7 +126,7 @@
                             <th>LSV Type</th>
                             <th>PSI {{ lexps.group1 }}</th>
                             <th>
-                                <p class="deltaHeader">&#8592; More in {{ lexps.group1}} | More
+                                <p class="deltaHeader">&#8592; More in {{ lexps.group1 }} | More
                                     in {{ lexps.group2 }}
                                     &#8594;</p>
                             </th>
@@ -144,7 +144,7 @@
                                     <form class='highlight-lsv'>
                                         <label>
                                             <input class="highlight" type="checkbox" value="highlight">
-                                             Highlight
+                                            Highlight
                                         </label>
                                         <label>
 
@@ -153,13 +153,13 @@
                                         </label>
                                     </form>
                                 </td>
-                                <td>{{ gene['lsv'].get_id() }}</td>
+                                <td>{{ gene['lsv'].lsv_graphic.id }}</td>
                                 <td>
-                                    <p style="top:0;" class="hidden">{{ gene['lsv'].get_type() }}</p>
+                                    <p style="top:0;" class="hidden">{{ gene['lsv'].lsv_graphic.type }}</p>
                                     <canvas class="lsvLegend" id="{{ gene_index }}" width="200px" height="80px"
-                                            data-lsv-string="{{ gene['lsv'].get_type() }}"
-                                            data-coord-exon="{{ gene['lsv'].get_coords() }}"
-                                            title="{{ gene['lsv'].get_type() }}">
+                                            data-lsv-string="{{ gene['lsv'].lsv_graphic.type }}"
+                                            data-coord-exon="{{ gene['lsv'].lsv_graphic.coords }}"
+                                            title="{{ gene['lsv'].lsv_graphic.type }}">
                                         This browser or document mode doesn't support canvas
                                     </canvas>
                                 </td>
@@ -201,7 +201,8 @@
                                            target="_blank">
                                             <img src="static/img/icons/ucsc3.png" title="View in UCSC Genome Browser"/>
                                         </a>
-                                        <a href="../static/doc/lsvs/{{ gene['lsv'].get_id() }}.gtf" target="_blank"><img
+                                        <a href="../static/doc/lsvs/{{ gene['lsv'].lsv_graphic.id }}.gtf"
+                                           target="_blank"><img
                                                 src="static/img/icons/gtf.png" title="Go to GTF LSV definition"/></a>
                                     </p>
                                 </td>

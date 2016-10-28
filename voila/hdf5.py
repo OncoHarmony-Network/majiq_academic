@@ -103,9 +103,8 @@ class HDF5(object):
             cls_grp = h[cls]
             self.__dict__[cls] = [None] * len(cls_grp)
             for index in cls_grp:
-                new_class = cls_dict[cls]['class']
-                args = cls_dict[cls]['args']
-                self.__dict__[cls][int(index)] = new_class(*args).from_hdf5(cls_grp[index])
+                new_class = cls_dict[cls]
+                self.__dict__[cls][int(index)] = new_class.easy_from_hdf5(cls_grp[index])
 
         for key in self.exclude():
             # Some of the exclude keys will be in attributes and others will be
@@ -135,7 +134,7 @@ class HDF5(object):
         :param h: hdf5 file pointer
         :return:
         """
-        cls().from_hdf5(h)
+        return cls().from_hdf5(h)
 
 
 class DataSet(object):
@@ -154,7 +153,6 @@ class DataSet(object):
     def encode_list(self):
         """
         Encode attribute data into datasets.
-        :param objs: list of values to store in dataset.
         :return: None
         """
         self.resize()
@@ -203,7 +201,7 @@ class BinsDataSet(DataSet):
         """
         VoilaLsv bins dataset.
         :param h: HDF5 file object
-        :param length: total number of bins' rows in VoilaInput
+        :param objs: objects to be stored as Bins Data
         """
         super(BinsDataSet, self).__init__(h, 'bins', objs)
 
@@ -211,10 +209,11 @@ class BinsDataSet(DataSet):
 class Psi1DataSet(DataSet):
     def __init__(self, h, objs=((),)):
         """
-        VoilaLsv PSI1 dataset
+                VoilaLsv PSI1 dataset
         :param h: HDF5 file object
-        :param length: total number PSI1 rows in VoilaInput
+        :param objs: objects to be stored as Psi1 data
         """
+
         super(Psi1DataSet, self).__init__(h, 'psi1', objs)
 
 
@@ -223,6 +222,6 @@ class Psi2DataSet(DataSet):
         """
         VoilaLsv PSI2 dataset
         :param h:  HDF5 file object
-        :param length: total number of PSI2 rows in VoilaInput
+        :param objs: Objects to be stored as Psi2 data
         """
         super(Psi2DataSet, self).__init__(h, 'psi2', objs)

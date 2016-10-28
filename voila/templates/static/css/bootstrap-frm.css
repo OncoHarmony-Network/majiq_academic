@@ -52,10 +52,9 @@
 .bootstrap-frm select {
     background: #FFF url('static/img/arrow_up.png') no-repeat right;
     background: #FFF url('static/img/arrow_down.png') no-repeat right;
-    appearance:none;
     -webkit-appearance:none;
     -moz-appearance: none;
-    text-indent: 0.01px;
+    text-indent: 0;
     text-overflow: '';
     width: 70%;
     height: 35px;

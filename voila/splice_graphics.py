@@ -10,6 +10,27 @@ from voila.utils.voilaLog import voilaLog
 
 
 class GeneGraphic(HDF5):
+    def __eq__(self, other):
+        return (self.chrom == other.chrom and self.strand == other.strand
+                and self.start < other.end and self.end > other.start)
+
+    def __ne__(self, other):
+        return not self.__eq__(other)
+
+    def __lt__(self, other):
+        return (self.chrom < other.chrom
+                or (self.chrom == other.chrom
+                    and (self.end < other.start
+                         or (self.end > other.start and self.start < other.end
+                             and self.strand == '+' and other.strand == '-'))))
+
+    def __gt__(self, other):
+        return (self.chrom > other.chrom
+                or (self.chrom == other.chrom
+                    and (self.start > other.end
+                         or (self.end > other.start and self.start < other.end
+                             and self.strand == '-' and other.strand == '+'))))
+
     def __init__(self, id, name=None, strand=None, exons=list(), junctions=list(), chrom=None):
         """
         Gene data.
@@ -51,7 +72,7 @@ class GeneGraphic(HDF5):
 
         # log warning if gene's some seem equal
         if self_dict != other_dict:
-            voilaLog().warning('Attemping to merge two genes that aren\'t technically equal.', self_dict, other_dict)
+            voilaLog().warning('Attemping to merge two genes that might not be equal.')
 
         # adjust end point
         self.end = max(other.end, self.end)
@@ -73,7 +94,7 @@ class GeneGraphic(HDF5):
         """
         return [self.start, self.end]
 
-    def to_JSON(self, encoder=json.JSONEncoder):
+    def to_json(self, encoder=json.JSONEncoder):
         """
         Generate and return JSON representation for a gene object.
         :param encoder: encoder used in the json.dumps call
@@ -113,11 +134,7 @@ class GeneGraphic(HDF5):
         super(GeneGraphic, self).to_hdf5(h, use_id)
 
     def cls_list(self):
-        return {'exons':
-                    {'class': ExonGraphic, 'args': (None, None, None, None)},
-                'junctions':
-                    {'class': JunctionGraphic, 'args': ((), None, None)}
-                }
+        return {'exons': ExonGraphic, 'junctions': JunctionGraphic}
 
     def merge_overlapping_exons(self):
         """
@@ -189,12 +206,11 @@ class GeneGraphic(HDF5):
         :return: None
         """
         for junction in master_gene.junctions:
-            if not junction in self.junctions:
+            if junction not in self.junctions:
                 jg = junction.copy()
                 jg.type_junction = constants.JUNCTION_TYPE_DB
                 self.junctions.append(jg)
         self.junctions.sort(key=lambda junction: junction.coords)
-
 
     @classmethod
     def create_master(cls, splice_graphs, gene_id):
@@ -205,14 +221,17 @@ class GeneGraphic(HDF5):
         :return: Gene object
         """
         master = None
+        log = voilaLog()
         for h5_file in splice_graphs:
-            voilaLog().info('loading ' + h5_file)
             with h5py.File(h5_file) as h:
-                gene = cls.easy_from_hdf5(h[gene_id])
                 try:
-                    master.merge(gene)
-                except AttributeError:
-                    master = gene
+                    gene = cls.easy_from_hdf5(h[gene_id])
+                    try:
+                        master.merge(gene)
+                    except AttributeError:
+                        master = gene
+                except KeyError:
+                    pass
         return master
 
     @classmethod
@@ -308,6 +327,16 @@ class ExonGraphic(HDF5):
         """
         return self.__copy__()
 
+    @classmethod
+    def easy_from_hdf5(cls, h):
+        return cls(None, None, None, None).from_hdf5(h)
+
+    def __str__(self):
+        return str((self.coords, self.type_exon))
+
+    def __repr__(self):
+        return self.__str__()
+
 
 class JunctionGraphic(HDF5):
     def __init__(self, coords, type_junction, nreads, clean_nreads=0, transcripts=list(), ir=0):
@@ -343,6 +372,10 @@ class JunctionGraphic(HDF5):
         """
         return self.__copy__()
 
+    @classmethod
+    def easy_from_hdf5(cls, h):
+        return cls((), None, None).from_hdf5(h)
+
     def __hash__(self):
         return int(str(self.coords[0]) + str(self.coords[1]))
 
@@ -353,6 +386,12 @@ class JunctionGraphic(HDF5):
         jg = type(self)((), None, None)
         jg.__dict__.update(self.__dict__)
         return jg
+
+    def __str__(self):
+        return str((self.coords, self.type_junction))
+
+    def __repr__(self):
+        return self.__str__()
 
 
 class LsvGraphic(GeneGraphic):
