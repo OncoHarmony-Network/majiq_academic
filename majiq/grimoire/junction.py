@@ -13,7 +13,7 @@ class Junction:
     __gt__ = lambda self, other: self.start > other.start or (self.start == other.start and self.end > other.end)
     __ge__ = lambda self, other: self.start >= other.start or (self.start == other.start and self.end >= other.end)
 
-    def __init__(self, start, end, donor, acceptor, gene_id, annotated=False, retrieve=False, num_exp=1,
+    def __init__(self, start, end, donor, acceptor, gene_id, annotated=False, retrieve=False, num_exp=1, jindex=-1,
                  intronic=False):
         """ The start and end in junctions are the last exon in """
 
@@ -32,9 +32,13 @@ class Junction:
         self.annotated = annotated
 
         if retrieve:
-            self.coverage = np.zeros((num_exp, (majiq_config.readLen - 16) + 1), dtype=np.float)
-            #self.coverage = scipy.sparse.lil_matrix((num_exp, (majiq_config.readLen - 16) + 1), dtype=np.float)
-            self.gc_content = np.zeros((1, (majiq_config.readLen - 16) + 1), dtype=np.float)
+            if num_exp == 1:
+                self.coverage = np.zeros((num_exp, (majiq_config.readLen - 16) + 1), dtype=np.float)
+                self.gc_content = np.zeros((1, (majiq_config.readLen - 16) + 1), dtype=np.float)
+                self.all_data = True
+            else:
+                self.idx = jindex
+                self.all_data = False
             self.intronic = intronic
         self.transcript_id_list = []
 
@@ -85,7 +89,15 @@ class Junction:
         return self.id
 
     def get_coverage(self):
-        return self.coverage
+        if self.all_data:
+            return self.coverage
+        else:
+            if self.idx == -1:
+                cov = np.array([0]*majiq_config.num_experiments)
+            else:
+                cov = self.get_gene().junc_matrix[self.idx]
+            return cov
+
 
     def get_ss_5p(self):
         return self.start
@@ -144,11 +156,23 @@ class Junction:
         return self.gc_content
 
     def get_read_num(self, idx=0):
-        if idx == -1:
-            res = self.coverage.sum()
+        if self.all_data:
+            cov = self.coverage
         else:
-            res = self.coverage[idx, :].sum()
+            cov = self.get_gene().junc_matrix[self.idx]
+
+        if idx == -1:
+            res = cov.sum()
+        else:
+            res = cov[idx].sum()
+
         return res
+
+    def get_index(self):
+        return self.idx
+
+    def get_gene_name(self):
+        return self.gene_name
 
     def get_coverage_sum(self, idx):
         return self.coverage[idx].sum()
@@ -160,10 +184,14 @@ class Junction:
         return self.annotated
 
     def is_reliable(self):
-        cov = self.get_coverage()
         res = False
+        if self.all_data:
+            cov = self.get_coverage().sum(axis=1)
+        else:
+            cov = self.get_gene().junc_matrix[self.idx].sum(axis=1)
+
         for tissue, list_idx in majiq_config.tissue_repl.items():
-            mu = np.mean(cov[list_idx].sum(axis=1))
+            mu = np.mean(cov[list_idx])
             if mu > majiq_config.min_denovo:
                 res = True
                 break
@@ -208,3 +236,10 @@ class Junction:
 
     def set_coverage(self, exp_idx, cov):
         self.coverage[exp_idx] = cov
+
+    def set_coverage_vals(self, exp_idx, cov):
+        self.tot_reads[exp_idx] = cov.sum()
+        self.n_pos[exp_idx] = np.count_nonzero(cov)
+
+    def set_index(self, idx):
+        self.idx = idx

@@ -1,13 +1,13 @@
 #!/usr/bin/python
 import gc
 
-from majiq.grimoire.exon import Exon
-
-from exon import ExonTx, collapse_list_exons
+from majiq.grimoire.exon import Exon, ExonTx, collapse_list_exons, detect_exons
 from majiq.grimoire.junction import Junction
 from majiq.grimoire.lsv import LSV
 from majiq.src import config as majiq_config
 from majiq.grimoire.exon import new_exon_definition
+from majiq.src.constants import *
+
 
 class Gene:
 
@@ -26,10 +26,10 @@ class Gene:
         if not retrieve:
             self.transcript_tlb = {}
             self.temp_txex_list = []
+        self.junc_index = 0
 
     def __del__(self):
         for ex in self.exons:
-
             del ex
 
     def __hash__(self):
@@ -98,6 +98,16 @@ class Gene:
 
     def get_ir_definition(self):
         return self.ir_definition
+
+    def incr_junc_index(self):
+        self.junc_index += 1
+
+    def get_junc_index(self):
+        return self.junc_index
+
+    def set_junc_index(self, val):
+        self.junc_index = val
+
 
     def get_all_junctions(self):
         lst = set()
@@ -281,6 +291,39 @@ class Gene:
         lsv_id = "%s:%d-%d:%s" % (self.get_id(), coords[0], coords[1], lsv_type)
         return LSV(exon, lsv_id, jlist, lsv_type)
 
+    def simplify(self):
+        jj_set = set()
+        for ex in self.exons:
+            for ttype in ('5prime', '3prime'):
+                jlist = ex.get_junctions(ttype)
+                jlist = [x for x in jlist if x is not None and
+                                             x.get_donor() is not None and
+                                             x.get_acceptor() is not None]
+
+                for exp_idx in xrange(majiq_config.num_experiments):
+                    cover = [float(junc.get_coverage_sum(exp_idx)) for junc in jlist]
+                    if sum(cover) == 0:
+                        continue
+                    bool_map = [majiq_config.simplify_type == SIMPLIFY_ALL or
+                                (junc.is_annotated() and majiq_config.simplify_type == SIMPLIFY_DB) or
+                                (not junc.is_annotated() and majiq_config.simplify_type == SIMPLIFY_DENOVO)
+                                for junc in jlist]
+
+                    jj_set = jj_set.union(set([junc for eidx, junc in enumerate(jlist)
+                                               if cover[eidx]/sum(cover) >= majiq_config.simplify_threshold and
+                                               bool_map[eidx]]))
+
+            del ex
+        self.exons = []
+        splice_list = set()
+        for jj in jj_set:
+            jj.add_donor(None)
+            jj.add_acceptor(None)
+            splice_list.add((jj.start, '5prime', jj))
+            splice_list.add((jj.end, '3prime', jj))
+        detect_exons(self, list(splice_list), retrieve=True)
+        del splice_list
+
 
 class Transcript(object):
 
@@ -412,14 +455,20 @@ def extract_junctions_hdf5(gene_obj, jj_grp, junction_list, annotated=True, all_
 
     try:
         junc = junction_list[(jj_grp.attrs['start'], jj_grp.attrs['end'])]
+        if junc.get_index() == -1:
+            junc.set_index(gene_obj.get_junc_index())
+            gene_obj.incr_junc_index()
+
     except KeyError:
         if jj_grp.attrs['end'] - jj_grp.attrs['start'] == 1:
             intronic = True
         else:
             intronic = False
         junc = Junction(jj_grp.attrs['start'], jj_grp.attrs['end'], None, None,
-                        gene_obj.get_id(), annotated=annotated, retrieve=True, num_exp=num_exp, intronic=intronic)
+                        gene_obj.get_id(), annotated=annotated, retrieve=True, num_exp=num_exp,
+                        jindex=gene_obj.get_junc_index(), intronic=intronic)
         junction_list[(jj_grp.attrs['start'], jj_grp.attrs['end'])] = junc
+        gene_obj.incr_junc_index()
 
     return junc
 
@@ -475,6 +524,7 @@ def find_intron_retention(gene_obj, dict_of_junctions, nondenovo, logging=None):
                 if st == jout.get_coordinates()[1]:
                     ex.add_3prime_junc(jout)
                     break
+
 
 
 

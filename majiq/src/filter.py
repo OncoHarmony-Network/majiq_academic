@@ -10,8 +10,14 @@ def reliable_in_data(junc, exp_idx, minnonzero=2, min_reads=3):
     min_read_x_exp = min_reads
     min_npos_x_exp = minnonzero
     in_data_filter = False
-    cover = junc.coverage[exp_idx]
-    if junc.get_read_num(exp_idx) >= min_read_x_exp and np.count_nonzero(cover) >= min_npos_x_exp:
+    if junc.all_data:
+        numpos = np.count_nonzero(junc.coverage[exp_idx])
+        totreads = junc.get_read_num(exp_idx)
+    else:
+        cov = junc.get_gene().junc_matrix[junc.get_index(), exp_idx]
+        numpos = np.count_nonzero(cov)
+        totreads = cov.sum()
+    if totreads >= min_read_x_exp and numpos >= min_npos_x_exp:
         in_data_filter = True
     return in_data_filter
 

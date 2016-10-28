@@ -103,10 +103,16 @@ class Junction:
         return self.gc_content
 
     def get_read_num(self, idx=0):
-        if idx == -1:
-            res = self.coverage.sum()
+        if self.all_data:
+            cov = self.coverage
         else:
-            res = self.coverage[idx, :].sum()
+            cov = self.tot_reads
+
+        if idx == -1:
+            res = cov.sum()
+        else:
+            res = cov[idx].sum()
+
         return res
 
     def get_transcript_list(self):
