@@ -67,40 +67,40 @@ def merging_files(args_vals):
 
         jset = set()
         for exp_idx in xrange(len(builder_init.sam_list)):
-
-            rfa = h5py.File(get_builder_temp_majiq_filename(majiq_config.outDir, builder_init.sam_list[exp_idx]))
-            try:
-                jset = jset.union(set(rfa["%s/junctions" % gne_id].keys()))
-                rna_files.append(rfa)
-            except KeyError:
-                continue
-            if majiq_config.gcnorm:
-                vfunc_gc.append(gc_normalization(rna_files[-1].attrs['gc_values']))
-            else:
-                vfunc_gc = None
+            fname = get_builder_temp_majiq_filename(majiq_config.outDir, builder_init.sam_list[exp_idx])
+            with h5py.File(fname) as rfa:
+                try:
+                    jset = jset.union(set(rfa["%s/junctions" % gne_id].keys()))
+                    rna_files.append(fname)
+                except KeyError:
+                    continue
+                if majiq_config.gcnorm:
+                    vfunc_gc.append(gc_normalization(rna_files[-1].attrs['gc_values']))
+                else:
+                    vfunc_gc = None
 
         njunc = len(jset)
 
         gene_obj.junc_matrix = np.zeros(shape=(njunc, len(builder_init.sam_list), (majiq_config.readLen - 16 + 1)),
                                         dtype=np.uint32)
 
-        for exp_idx, rnaf in enumerate(rna_files):
-            for jj_grp_id in rnaf["%s/junctions" % gne_id]:
-                jj_grp = rnaf["%s/junctions/%s" % (gne_id, jj_grp_id)]
-                junc = majiq.grimoire.gene.extract_junctions_hdf5(gene_obj, jj_grp, junction_list,
-                                                                  annotated=jj_grp.attrs['annotated'],
-                                                                  all_exp=True)
-                hdfidx = jj_grp.attrs['coverage_index']
-                gene_obj.junc_matrix[junc.get_index(), exp_idx, :] = rnaf[CONST_JUNCTIONS_DATASET_NAME][hdfidx, :]
+        for exp_idx, fname in enumerate(rna_files):
+            with h5py.File(fname) as rnaf:
+                for jj_grp_id in rnaf["%s/junctions" % gne_id]:
+                    jj_grp = rnaf["%s/junctions/%s" % (gne_id, jj_grp_id)]
+                    junc = majiq.grimoire.gene.extract_junctions_hdf5(gene_obj, jj_grp, junction_list,
+                                                                      annotated=jj_grp.attrs['annotated'],
+                                                                      all_exp=True)
+                    hdfidx = jj_grp.attrs['coverage_index']
+                    gene_obj.junc_matrix[junc.get_index(), exp_idx, :] = rnaf[CONST_JUNCTIONS_DATASET_NAME][hdfidx, :]
 
-                if junc.is_intronic():
-                    coord = junc.get_coordinates()
-                    dict_of_junctions[coord[0]] = junc
-                    dict_of_junctions[coord[1]] = junc
-                else:
-                    splice_list.add((junc.start, '5prime', junc))
-                    splice_list.add((junc.end, '3prime', junc))
-        [xx.close() for xx in rna_files]
+                    if junc.is_intronic():
+                        coord = junc.get_coordinates()
+                        dict_of_junctions[coord[0]] = junc
+                        dict_of_junctions[coord[1]] = junc
+                    else:
+                        splice_list.add((junc.start, '5prime', junc))
+                        splice_list.add((junc.end, '3prime', junc))
 
         del junction_list
         majiq.grimoire.exon.detect_exons(gene_obj, list(splice_list), retrieve=True)
