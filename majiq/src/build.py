@@ -80,7 +80,6 @@ def merging_files(args_vals):
                     vfunc_gc = None
 
         njunc = len(jset)
-
         gene_obj.junc_matrix = np.zeros(shape=(njunc, len(builder_init.sam_list), (majiq_config.readLen - 16 + 1)),
                                         dtype=np.uint32)
 
@@ -128,7 +127,8 @@ def merging_files(args_vals):
             majiq_utils.monitor('CHILD %s::' % chnk)
         del majiq_config.gene_tlb[gne_id]
         del gene_obj
-        pass
+        import logging
+        logging.shutdown()
 
 
 def parsing_files(args_vals):

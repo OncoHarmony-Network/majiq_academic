@@ -105,21 +105,25 @@ def psi_quantification(args_vals):
 
             for p_idx in xrange(int(num_ways)):
                 posterior = np.zeros(shape=nbins, dtype=np.float)
-
+                mu_psi = []
                 for m in xrange(quantification_init.m):
+
                     # log(p(D_T1(m) | psi_T1)) = SUM_t1 T ( log ( P( D_t1 (m) | psi _T1)))
                     junc = np.array([psi[xx][p_idx][m] for xx in xrange(num_exp)])
+
                     all_sample = np.array([psi[xx][yy][m].sum() for xx in xrange(num_exp) for yy in xrange(num_ways)])
+                    mu_psi.append(float(junc.sum()) / all_sample.sum())
                     data_given_psi = np.log(prob_data_sample_given_psi(junc.sum(), all_sample.sum(), nbins,
                                                                        alpha_prior[p_idx], beta_prior[p_idx]))
                     # normalizing
                     posterior += np.exp(data_given_psi - scipy.misc.logsumexp(data_given_psi))
 
+                mu_psi = np.median(mu_psi)
                 post_psi.append(posterior / quantification_init.m)
                 if num_ways == 2:
                     break
 
-            qm = QueueMessage(QUEUE_MESSAGE_PSI_RESULT, (post_psi, lsv_id), chnk)
+            qm = QueueMessage(QUEUE_MESSAGE_PSI_RESULT, (post_psi, mu_psi, lsv_id), chnk)
             quantification_init.queue.put(qm, block=True)
 
         qm = QueueMessage(QUEUE_MESSAGE_END_WORKER, None, chnk)

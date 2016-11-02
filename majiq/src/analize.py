@@ -51,14 +51,14 @@ def wrap_result_file(lsv, name, gc_vfunc, lsv_list, rna_files, lock_per_file=Non
     for exp_idx in majiq_config.tissue_repl[name]:
 
         lock_per_file[exp_idx].acquire()
-        f = h5py.File(get_builder_majiq_filename(majiq_config.outDir, lsv_list[exp_idx]),
-                      'r+', compression='gzip', compression_opts=9)
-        gc_f = None
-        if majiq_config.gcnorm:
-            gc_f = gc_vfunc[exp_idx]
+        with h5py.File(get_builder_majiq_filename(majiq_config.outDir, lsv_list[exp_idx]),
+                       'r+', compression='gzip', compression_opts=9) as f:
+            gc_f = None
+            if majiq_config.gcnorm:
+                gc_f = gc_vfunc[exp_idx]
 
-        f.attrs['data_index'] = lsv.to_hdf5(hdf5grp=f, lsv_idx=f.attrs['data_index'], gc_vfunc=gc_f, exp_idx=exp_idx)
-        f.close()
+            f.attrs['data_index'] = lsv.to_hdf5(hdf5grp=f, lsv_idx=f.attrs['data_index'], gc_vfunc=gc_f, exp_idx=exp_idx)
+
         lock_per_file[exp_idx].release()
 
 
