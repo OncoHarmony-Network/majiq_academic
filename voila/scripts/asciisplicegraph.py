@@ -1,6 +1,13 @@
 from voila.utils.voilaLog import voilaLog
 
-log = voilaLog()
+SPLICE_GRAPH_MAX_LENGTH = 5000
+
+
+class AsciiSpliceGraphTooLargeException(Exception):
+    def __init__(self, gene):
+        super(AsciiSpliceGraphTooLargeException, self).__init__(
+            'Splice Graph is too large.  Maybe there\'s something wrong with the input data.')
+        voilaLog().error(gene)
 
 
 class AsciiSpliceGraph(object):
@@ -21,6 +28,8 @@ class AsciiSpliceGraph(object):
         display_length = 1
         while not display:
             display_length += 1
+            if display_length > SPLICE_GRAPH_MAX_LENGTH:
+                raise AsciiSpliceGraphTooLargeException(self.gene)
             display = self.make_junctions_display(self.make_exons_display(display_length))
 
         return display
@@ -141,7 +150,8 @@ class AsciiSpliceGraph(object):
         junctions_display.append(['-' for _ in range(display_length)])
         return junctions_display
 
-    def validate(self, exons_display):
+    @staticmethod
+    def validate(exons_display):
         """
         Validate exon display
         :param exons_display: exon display

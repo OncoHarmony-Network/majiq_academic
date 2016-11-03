@@ -156,23 +156,32 @@ class HDF5(object):
 
 
 class DataSet(object):
-    def __init__(self, h, ds_name, objs):
+    def __init__(self, h, ds_name, objs, dtype=numpy.float64):
         """
         Store data as data sets in hdf5 file.
         :param h: hdf5 file
         :param ds_name: name of data set
         :param objs: objects needing to be stored
         """
+        self.dtype = dtype
         self.h = h
         self.ds_name = ds_name
         self.objs = objs
-        self.width = len(objs[0])
+        self.width = None
+
+    def encode(self):
+        self.objs = [self.objs]
+        self.encode_list()
+
+    def decode(self):
+        return self.decode_list()[0]
 
     def encode_list(self):
         """
         Encode attribute data into datasets.
         :return: None
         """
+        self.width = len(self.objs[0])
         self.resize()
         ds = self.dataset()
         index = ds.attrs['index']
@@ -203,10 +212,15 @@ class DataSet(object):
         try:
             dataset = self.h['/datasets/' + self.ds_name]
         except KeyError:
-            dataset = self.h.create_dataset('/datasets/' + self.ds_name, (0, self.width),
-                                            dtype=numpy.float64,
-                                            chunks=(1, self.width),
-                                            maxshape=(None, self.width))
+            dataset = self.h.create_dataset(
+                name='/datasets/' + self.ds_name,
+                shape=(0, self.width),
+                dtype=self.dtype,
+                chunks=(1, self.width),
+                maxshape=(None, self.width),
+                compression="lzf",
+                shuffle=True,
+            )
 
             # store how many objects we've worked with in the HDF5 file
             dataset.attrs['index'] = 0
@@ -227,7 +241,7 @@ class BinsDataSet(DataSet):
 class Psi1DataSet(DataSet):
     def __init__(self, h, objs=((),)):
         """
-                VoilaLsv PSI1 dataset
+        VoilaLsv PSI1 dataset
         :param h: HDF5 file object
         :param objs: objects to be stored as Psi1 data
         """
@@ -243,3 +257,33 @@ class Psi2DataSet(DataSet):
         :param objs: Objects to be stored as Psi2 data
         """
         super(Psi2DataSet, self).__init__(h, 'psi2', objs)
+
+
+class ExonTypeDataSet(DataSet):
+    def __init__(self, h, objs=()):
+        """
+        ExonGraphic's type list
+        :param h: HDF5 file pointer
+        :param objs: List to be stored
+        """
+        super(ExonTypeDataSet, self).__init__(h, 'exon_type', objs, dtype=numpy.int8)
+
+
+class JunctionTypeDataSet(DataSet):
+    def __init__(self, h, objs=()):
+        """
+        JunctionGraphic's type list
+        :param h: HDF5 file pointer
+        :param objs:
+        """
+        super(JunctionTypeDataSet, self).__init__(h, 'junction_type', objs, dtype=numpy.int8)
+
+
+class ReadsDataSet(DataSet):
+    def __init__(self, h, objs=()):
+        super(ReadsDataSet, self).__init__(h, 'reads', objs, dtype=numpy.int32)
+
+
+class CleanReadsDataSet(DataSet):
+    def __init__(self, h, objs=()):
+        super(CleanReadsDataSet, self).__init__(h, 'clean_reads', objs, dtype=numpy.int32)
