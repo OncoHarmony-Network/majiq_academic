@@ -183,7 +183,7 @@ class VoilaLsv(HDF5):
 
     def from_hdf5(self, h):
         # lsv graphic
-        self.lsv_graphic = LsvGraphic((), None, None).from_hdf5(h['lsv_graphic'])
+        self.lsv_graphic = LsvGraphic.easy_from_hdf5(h['lsv_graphic'])
 
         # categories
         self.categories = {}

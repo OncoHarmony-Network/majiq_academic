@@ -6,7 +6,7 @@ import sys
 import h5py
 
 from voila import constants
-from voila.hdf5 import HDF5
+from voila.hdf5 import HDF5, ExonTypeDataSet, JunctionTypeDataSet, ReadsDataSet, CleanReadsDataSet
 from voila.utils.voilaLog import voilaLog
 
 
@@ -14,14 +14,14 @@ class ExperimentIndexExperimentException(IndexError):
     def __init__(self):
         super(ExperimentIndexExperimentException, self).__init__(
             'Attempted to access an out of range experiment.')
-        voilaLog().info(self.message)
+        voilaLog().error(self.message)
 
 
 class ExperimentFieldException(Exception):
     def __init__(self, field):
         super(ExperimentFieldException, self).__init__(
             '"{0}" might not contain data that has been sorted into a list by experiment.'.format(field))
-        voilaLog().info(self.message)
+        voilaLog().error(self.message)
 
 
 class Experiment(HDF5):
@@ -60,8 +60,8 @@ class GeneGraphic(HDF5):
         self.gene_id = gene_id
         self.name = name
         self.strand = strand
-        self.exons = exons
-        self.junctions = sorted(junctions, key=lambda junction: junction.start)
+        self.exons = sorted(exons)
+        self.junctions = sorted(junctions)
         self.chromosome = chromosome
 
     def start(self):
@@ -87,9 +87,6 @@ class GeneGraphic(HDF5):
         # log warning if gene's some seem equal
         if self_dict != other_dict:
             voilaLog().warning('Attemping to merge two genes that might not be equal.')
-
-        # adjust end point
-        self.end = max(other.end, self.end)
 
         # concat exons and junctions
         self.exons += other.exons
@@ -155,7 +152,7 @@ class GeneGraphic(HDF5):
         For all the exons for this gene, merge any that overlap.
         :return: None
         """
-        exons = sorted(self.exons, key=lambda exon: exon.coords)
+        exons = sorted(self.exons)
         merged_exons = [exons[0]]
         for exon in exons[1:]:
             if not merged_exons[-1].merge(exon):
@@ -224,7 +221,7 @@ class GeneGraphic(HDF5):
                 jg = junction.copy()
                 jg.type_junction = constants.JUNCTION_TYPE_DB
                 self.junctions.append(jg)
-        self.junctions.sort(key=lambda junction: junction.coords)
+        self.junctions.sort()
 
     @classmethod
     def create_master(cls, splice_graphs, gene_id):
@@ -286,7 +283,6 @@ class ExonGraphic(Experiment):
         :param end: End coordinate for exon
         :param a3: list of junction indexes for alternative 3'acceptor sites.
         :param a5: list of junction indexes for alternative 5' donor sites.
-        :param coords: exon coords.
         :param exon_type_list: 0: Annotated+found in RNASeq data; 1: Only found in RNASeq data; 2: Only annotated.
         :param coords_extra: coordinates of parts of the exon detected de novo.
         :param intron_retention: boolean to indicate that the intron after the exon has been identified as retained.
@@ -324,8 +320,10 @@ class ExonGraphic(Experiment):
 
         other_dict = other.__dict__.copy()
 
-        self.coords = [min(self.coords[0], other_dict['coords'][0]), max(self.coords[1], other_dict['coords'][1])]
-        del other_dict['coords']
+        self.start = min(self.start, other_dict['start'])
+        self.end = max(self.end, other_dict['end'])
+        del other_dict['start']
+        del other_dict['end']
 
         # if both exons are 'normal'...
         if self.exon_type <= 3 and other_dict['type_exon'] <= 3:
@@ -349,8 +347,8 @@ class ExonGraphic(Experiment):
         :param other: Exon object
         :return: Boolean.  True if other exon overlaps with this one.
         """
-        assert self.coords[0] <= other.coords[0], 'Exons have to be in order to check if they overlap.'
-        return other.coords[0] <= self.coords[1]
+        assert self.start <= other.start, 'Exons have to be in order to check if they overlap.'
+        return other.start <= self.end
 
     def to_json(self, encoder=json.JSONEncoder):
         """
@@ -359,6 +357,18 @@ class ExonGraphic(Experiment):
         :return: JSON string
         """
         return json.dumps(self, default=lambda o: o.__dict__, sort_keys=True, cls=encoder)
+
+    def exclude(self):
+        return ['exon_type']
+
+    def to_hdf5(self, h, use_id=True):
+        super(ExonGraphic, self).to_hdf5(h, use_id)
+
+        ExonTypeDataSet(h, self.exon_type).encode()
+
+    def from_hdf5(self, h):
+        self.exon_type = ExonTypeDataSet(h).decode()
+        return super(ExonGraphic, self).from_hdf5(h)
 
     def __copy__(self):
         eg = type(self)(None, None, None, None)
@@ -385,6 +395,9 @@ class ExonGraphic(Experiment):
     def __sizeof__(self):
         return sum([sys.getsizeof(self.__dict__[key] for key in self.__dict__)])
 
+    def __lt__(self, other):
+        return self.start < other.start
+
 
 class JunctionGraphic(Experiment):
     def __init__(self, start, end, junction_type_list, reads_list, clean_reads_list=(), transcripts=(),
@@ -393,7 +406,6 @@ class JunctionGraphic(Experiment):
         Junction data.
         :param start: Start coordinate for junction
         :param end: End coordinate for junction
-        :param coords: junction start and end points
         :param junction_type_list: junction type.  See constants file.
         :param reads_list: number of reads
         :param clean_reads_list: number of clean reads
@@ -432,6 +444,21 @@ class JunctionGraphic(Experiment):
         """
         return self.__copy__()
 
+    def exclude(self):
+        return ['junction_type', 'reads', 'clean_reads']
+
+    def to_hdf5(self, h, use_id=True):
+        super(JunctionGraphic, self).to_hdf5(h, use_id)
+        JunctionTypeDataSet(h, self.junction_type).encode()
+        ReadsDataSet(h, self.reads).encode()
+        CleanReadsDataSet(h, self.clean_reads).encode()
+
+    def from_hdf5(self, h):
+        self.junction_type = JunctionTypeDataSet(h).decode()
+        self.reads = ReadsDataSet(h).decode()
+        self.clean_reads = CleanReadsDataSet(h).decode()
+        return super(JunctionGraphic, self).from_hdf5(h)
+
     @classmethod
     def easy_from_hdf5(cls, h):
         return cls(None, None, (), ()).from_hdf5(h)
@@ -453,6 +480,9 @@ class JunctionGraphic(Experiment):
     def __repr__(self):
         return self.__str__()
 
+    def __lt__(self, other):
+        return self.start < other.start
+
 
 class LsvGraphic(GeneGraphic):
     def __init__(self, type_lsv, start, end, gene_id, name=None, strand=None, exons=list(), junctions=list(),
@@ -460,7 +490,6 @@ class LsvGraphic(GeneGraphic):
         """
         LSV Data.
         :param type_lsv: LSV type.  See constants file.
-        :param coords: Start and end of LSV
         :param gene_id: LSV id
         :param name: LSV name
         :param strand: LSV Strand. Either '-' or '+'
