@@ -1,6 +1,8 @@
 import math
 import multiprocessing
 
+VERSION = '0.8.0.yeolab'
+FILE_VERSION = '0.1'
 ANALYSIS_PSI = 'psi'
 ANALYSIS_PSI_GENE = 'psi-gene'
 ANALYSIS_DELTAPSI = 'deltapsi'
@@ -9,12 +11,13 @@ LSV_THUMBNAILS = 'lsv-thumbnails'
 SPLICE_GRAPHS = 'splicegraphs'
 COND_TABLE = 'cond-table'
 
-# LSV Graphics
+# Junction Types
 JUNCTION_TYPE_DB_RNASEQ = 0
 JUNCTION_TYPE_RNASEQ = 1
 JUNCTION_TYPE_DB = 2
 JUNCTION_TYPE_DB_OTHER_RNASEQ = 3
 
+# Exon Types
 EXON_TYPE_DB_RNASEQ = 0
 EXON_TYPE_RNASEQ = 1
 EXON_TYPE_DB = 2
@@ -22,6 +25,7 @@ EXON_TYPE_DB_OTHER_RNASEQ = 3
 EXON_TYPE_MISSING_START = 4
 EXON_TYPE_MISSING_END = 5
 
+# Intron Retention Types
 NONE_IR_TYPE = 0
 IR_TYPE_START = 1
 IR_TYPE_END = 2

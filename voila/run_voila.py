@@ -15,11 +15,11 @@ import voila.constants as constants
 import voila.io_voila as io_voila
 import voila.module_locator as module_locator
 import voila.utils.utils_voila as utils_voila
+from voila.splice_graphics import GeneGraphic
 from voila.utils.utils_voila import splice_graph_from_hdf5
 from voila.utils.voilaLog import voilaLog
 
 EXEC_DIR = module_locator.module_path() + "/"
-VERSION = '0.8.0.yeolab'
 
 
 class VoilaException(Exception):
@@ -294,14 +294,7 @@ def parse_gene_graphics(splicegraph_flist, gene_name_list, condition_names=('gro
     genes_exp1_exp2 = []
     log.info("Parsing splice graph information files ...")
 
-    # master_gene_dict = {}
-    # genes_dict = {}
-    # for f in (f for x in splicegraph_flist for f in x):
-    #     genes = splice_graph_from_hdf5(f)
-    #     for gene in genes:
-    #         genes_dict[f][gene.id] = gene
-    #
-    # print genes_dict
+    splice_graphs = [f for x in splicegraph_flist for f in x]
 
     for grp_i, gene_flist in enumerate(splicegraph_flist):
 
@@ -317,6 +310,7 @@ def parse_gene_graphics(splicegraph_flist, gene_name_list, condition_names=('gro
         gg_combined_name = "%s%s" % (constants.COMBINED_PREFIX, condition_names[grp_i])
 
         for splice_graph_f in splice_files:
+
             genes_g = splice_graph_from_hdf5(splice_graph_f)
 
             if not genes_g:
@@ -325,13 +319,25 @@ def parse_gene_graphics(splicegraph_flist, gene_name_list, condition_names=('gro
             genes_graphic = defaultdict(list)
             genes_g.sort()
 
+            master_gene_dict = {}
+
             for gene_obj in genes_g:
+
+                try:
+                    master_gene = master_gene_dict[gene_obj.id]
+                except KeyError:
+                    master_gene = GeneGraphic.create_master(splice_graphs, gene_obj.id)
+                    master_gene_dict[gene_obj.id] = master_gene
+
+                gene_obj.get_missing_exons(master_gene)
+                gene_obj.get_missing_junctions(master_gene)
+
                 if not gene_name_list or gene_obj.id in gene_name_list or gene_obj.name.upper() in gene_name_list:
                     genes_graphic[gene_obj.id].append(
                         json.dumps(gene_obj, cls=utils_voila.LsvGraphicEncoder).replace("\"", "'")
                     )
                     genes_graphic[gene_obj.id].append(gene_obj.strand)
-                    genes_graphic[gene_obj.id].append(gene_obj.get_coords())
+                    genes_graphic[gene_obj.id].append(gene_obj.get_coordinates())
                     genes_graphic[gene_obj.id].append(gene_obj.chrom)
                     genes_graphic[gene_obj.id].append(gene_obj.name)
 
@@ -355,7 +361,7 @@ def parse_gene_graphics(splicegraph_flist, gene_name_list, condition_names=('gro
                 gg_combined[gkey] = [
                     json.dumps(gg_comb, cls=utils_voila.LsvGraphicEncoder).replace("\"", "'"),
                     gg_comb.get_strand(),
-                    gg_comb.get_coords(),
+                    gg_comb.get_coordinates(),
                     gg_comb.get_chrom(),
                     gg_comb.get_name()
                 ]
@@ -587,7 +593,7 @@ def main():
             -----------------------------------------------------------------------
 
             '''))
-    parser.add_argument('-v', action='version', version=VERSION)
+    parser.add_argument('-v', action='version', version=constants.VERSION)
 
     # Base script options
     base_parser = argparse.ArgumentParser(add_help=False)

@@ -46,9 +46,9 @@ class LsvGraphicEncoder(json.JSONEncoder):
         if isinstance(obj, np.int64):
             return int(obj)
         if isinstance(obj, splice_graphics.ExonGraphic):
-            return obj.to_JSON(PickleEncoder)
+            return obj.to_json(PickleEncoder)
         if isinstance(obj, splice_graphics.JunctionGraphic):
-            return obj.to_JSON(PickleEncoder)
+            return obj.to_json(PickleEncoder)
         if isinstance(obj, splice_graphics.GeneGraphic):
             return obj.to_json(PickleEncoder)
         if isinstance(obj, splice_graphics.LsvGraphic):
