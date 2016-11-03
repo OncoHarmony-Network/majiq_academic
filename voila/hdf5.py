@@ -1,5 +1,16 @@
 import numpy
 
+from voila import constants
+from voila.utils.voilaLog import voilaLog
+
+VOILA_FILE_VERSION = '/voila_file_version'
+
+
+class HDF5VersionException(Exception):
+    def __init__(self):
+        super(HDF5VersionException, self).__init__('The hdf5 file version does not match the current version of Voila.')
+        voilaLog().error(self.message)
+
 
 class HDF5(object):
     def __init__(self):
@@ -68,6 +79,11 @@ class HDF5(object):
         :param h: HDF5 file object
         :return: None
         """
+        try:
+            h[VOILA_FILE_VERSION] = constants.FILE_VERSION
+        except RuntimeError:
+            pass
+
         attrs_dict = self.__dict__.copy()
 
         for key in self.exclude():
@@ -96,7 +112,10 @@ class HDF5(object):
         :param h: HDF5 file object
         :return: self
         """
-        attrs_dict = dict(h.attrs)
+
+        if h[VOILA_FILE_VERSION].value != constants.FILE_VERSION:
+            raise HDF5VersionException()
+
         cls_dict = self.cls_list()
 
         for cls in cls_dict:
@@ -106,26 +125,25 @@ class HDF5(object):
                 new_class = cls_dict[cls]
                 self.__dict__[cls][int(index)] = new_class.easy_from_hdf5(cls_grp[index])
 
-        for key in self.exclude():
-            # Some of the exclude keys will be in attributes and others will be
-            # in groups, we want to make sure we don't write over these values.
-            try:
-                del attrs_dict[key]
-            except KeyError:
-                pass
+        for key in h.attrs:
+            if key not in self.exclude():
+                # H5py stores attributes as numpy objects where it can.  Numpy objects
+                # cause issues with the json conversion, therefore corner cases are handled below.
+                value = h.attrs[key]
+                if type(value) is numpy.ndarray:
+                    value = value.tolist()
+                elif type(value) is numpy.bool_:
+                    value = value.item()
 
-        for key in attrs_dict:
-            # H5py stores attributes as numpy objects where it can.  Numpy objects
-            # cause issues with the json conversion, therefore corner cases are handled below.
-            value = attrs_dict[key]
-            if type(value) is numpy.ndarray:
-                value = value.tolist()
-            elif type(value) is numpy.bool_:
-                value = value.item()
-
-            self.__dict__[key] = value
+                self.__dict__[key] = value
 
         return self
+
+    def __str__(self):
+        return str(self.__dict__)
+
+    def __repr__(self):
+        return self.__str__()
 
     @classmethod
     def easy_from_hdf5(cls, h):
