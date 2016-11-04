@@ -36,6 +36,11 @@ class Experiment(HDF5):
             raise UnknownField(field)
 
 
+class NoExons(Exception):
+    def __init__(self):
+        super(NoExons, self).__init__('There no exons in this gene.')
+
+
 class GeneGraphic(HDF5):
     def __init__(self, gene_id, name=None, strand=None, exons=list(), junctions=list(), chromosome=None):
         """
@@ -67,14 +72,20 @@ class GeneGraphic(HDF5):
         Start of gene.
         :return: Integer
         """
-        return self.exons[0].start
+        try:
+            return self.exons[0].start
+        except IndexError:
+            raise NoExons()
 
     def end(self):
         """
         End of gene.
         :return: Integer
         """
-        return self.exons[-1].end
+        try:
+            return self.exons[-1].end
+        except IndexError:
+            raise NoExons()
 
     def merge(self, other):
         """
@@ -145,9 +156,12 @@ class GeneGraphic(HDF5):
         return csvfile.getvalue()
 
     def to_hdf5(self, h, use_id=True):
-        if use_id:
-            h = h.create_group(self.gene_id)
+        group = '/genes'
 
+        if use_id:
+            group += '/' + self.gene_id
+
+        h = h.create_group(group)
         super(GeneGraphic, self).to_hdf5(h, use_id)
 
     def cls_list(self):

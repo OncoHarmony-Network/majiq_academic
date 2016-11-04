@@ -90,9 +90,8 @@ class HDF5(object):
             del attrs_dict[key]
 
         for cls in self.cls_list():
-            cls_grp = h.create_group(cls)
             for index, cls_obj in enumerate(attrs_dict[cls]):
-                cls_obj.to_hdf5(cls_grp.create_group(str(index)), use_id)
+                cls_obj.to_hdf5(h.create_group(cls + '/' + str(index)), use_id)
             del attrs_dict[cls]
 
         for key in attrs_dict:
@@ -119,11 +118,15 @@ class HDF5(object):
         cls_dict = self.cls_list()
 
         for cls in cls_dict:
-            cls_grp = h[cls]
-            self.__dict__[cls] = [None] * len(cls_grp)
-            for index in cls_grp:
-                new_class = cls_dict[cls]
-                self.__dict__[cls][int(index)] = new_class.easy_from_hdf5(cls_grp[index])
+            try:
+                cls_grp = h[cls]
+                self.__dict__[cls] = [None] * len(cls_grp)
+                for index in cls_grp:
+                    new_class = cls_dict[cls]
+                    self.__dict__[cls][int(index)] = new_class.easy_from_hdf5(cls_grp[index])
+            except KeyError:
+                # for when there's none of a class list in the hdf5...
+                pass
 
         for key in h.attrs:
             if key not in self.exclude():

@@ -25,20 +25,25 @@ class RandomSpliceGraph(object):
             self.gene_id = uuid.uuid4().hex
 
         self.junctions = junctions
-        if not junctions:
-            self.junctions = random.randrange(1, 10)
+        if junctions is None:
+            self.junctions = random.randrange(0, 10)
 
         self.exons = exons
-        if not exons:
-            self.exons = random.randrange(1, 20)
+        if exons is None:
+            self.exons = random.randrange(1, 30)
 
         self.experiments = experiments
-        if not experiments:
+        if experiments is None:
             self.experiments = 2
 
         self.gene_max_length = 2500
         self.exon_length_multiplier = 2
         self.junction_start_stop_iterations = 100
+
+    def get_gene_graphic(self):
+        exons = self.exons_generator(number=self.exons, experiments=self.experiments)
+        junctions = self.junction_generator(number=self.junctions, exons=exons, experiments=self.experiments)
+        return GeneGraphic(self.gene_id, exons=exons, junctions=junctions)
 
     def exons_generator(self, number, experiments):
         """
@@ -71,7 +76,6 @@ class RandomSpliceGraph(object):
         :param experiments: number of experiments
         :return: list of junctions
         """
-
         junctions = []
 
         # randomly choose two exons
@@ -111,8 +115,3 @@ class RandomSpliceGraph(object):
             junctions.append(junction)
 
         return junctions
-
-    def get_gene_graphic(self):
-        exons = self.exons_generator(number=self.exons, experiments=self.experiments)
-        junctions = self.junction_generator(number=self.junctions, exons=exons, experiments=self.experiments)
-        return GeneGraphic(self.gene_id, exons=exons, junctions=junctions)
