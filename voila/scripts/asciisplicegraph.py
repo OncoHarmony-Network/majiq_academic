@@ -1,7 +1,5 @@
 from voila.utils.voilaLog import voilaLog
 
-SPLICE_GRAPH_MAX_LENGTH = 5000
-
 
 class AsciiSpliceGraphTooLargeException(Exception):
     def __init__(self, gene):
@@ -18,6 +16,11 @@ class AsciiSpliceGraph(object):
         """
         self.experiment = experiment
         self.gene = gene
+        self.gene_length = float(self.gene.end() - self.gene.start())
+
+        self.splice_graph_max_length = 10000
+        self.display_length = 1
+        self.display_length_increment = 1
 
     def make_display(self):
         """
@@ -25,12 +28,11 @@ class AsciiSpliceGraph(object):
         :return:
         """
         display = []
-        display_length = 1
         while not display:
-            display_length += 1
-            if display_length > SPLICE_GRAPH_MAX_LENGTH:
+            self.display_length += self.display_length_increment
+            if self.display_length > self.splice_graph_max_length:
                 raise AsciiSpliceGraphTooLargeException(self.gene)
-            display = self.make_junctions_display(self.make_exons_display(display_length))
+            display = self.make_junctions_display(self.make_exons_display(self.display_length))
 
         return display
 
@@ -39,8 +41,19 @@ class AsciiSpliceGraph(object):
         Return ascii string for splice graph.
         :return: String
         """
-        display = self.make_display()
-        return '\n'.join([''.join(d) for d in display])
+
+        return '\n'.join(
+            [
+                '\n'.join(''.join(d) for d in self.make_display()),
+                ', '.join(
+                    [
+                        'Legend: 1 char == {0} base(s)'.format(round(self.gene_length / self.display_length, 3)),
+                        'Gene Length: {0} bases'.format(int(self.gene_length)),
+                        'Display Length: {0} chars'.format(self.display_length)
+                    ]
+                )
+            ]
+        )
 
     def make_exons_display(self, display_length):
         """
@@ -52,7 +65,7 @@ class AsciiSpliceGraph(object):
         display = [empty_char for _ in range(int(display_length))]
 
         for exon in self.gene.exons:
-            exon_start_index, exon_end_index = self.get_indexes((exon.start, exon.end), display_length)
+            exon_start_index, exon_end_index = self.get_indexes(exon)
 
             if display[exon_start_index] != empty_char:
                 return []
@@ -77,25 +90,22 @@ class AsciiSpliceGraph(object):
         self.validate(display)
         return display
 
-    def get_indexes(self, coords, display_length):
+    def get_indexes(self, obj):
         """
         Get indexes for elements.
-        :param coords: coordinates
-        :param display_length: how long the display is
+        :param obj: either exon or junction object
         :return:
         """
-        return self.get_index(coords[0], display_length), self.get_index(coords[1], display_length)
+        return self.get_index(obj.start), self.get_index(obj.end)
 
-    def get_index(self, coord, display_length):
+    def get_index(self, coord):
         """
         Get index for a coordinate.
         :param coord: coordinate
-        :param display_length: length of display
         :return: int
         """
-        gene_length = float(self.gene.end() - self.gene.start())
-        start_percent_from_start = (coord - self.gene.start()) / gene_length
-        return int(start_percent_from_start * (display_length - 1))
+        start_percent_from_start = (coord - self.gene.start()) / self.gene_length
+        return int(start_percent_from_start * (self.display_length - 1))
 
     def make_junctions_display(self, exons_display):
         """
@@ -106,13 +116,12 @@ class AsciiSpliceGraph(object):
         if not exons_display:
             return []
 
-        display_length = len(exons_display)
         junctions_display = []
 
         for junction in self.gene.junctions:
             level_index = 0
 
-            junc_start_index, junc_end_index = self.get_indexes((junction.start, junction.end), display_length)
+            junc_start_index, junc_end_index = self.get_indexes(junction)
 
             try:
                 while [junctions_display[level_index][junc_start_index],
@@ -147,7 +156,7 @@ class AsciiSpliceGraph(object):
 
         junctions_display.reverse()
         junctions_display.append(exons_display)
-        junctions_display.append(['-' for _ in range(display_length)])
+        junctions_display.append(['-' for _ in range(self.display_length)])
         return junctions_display
 
     @staticmethod

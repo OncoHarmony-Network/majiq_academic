@@ -10,18 +10,16 @@ from voila.hdf5 import HDF5, ExonTypeDataSet, JunctionTypeDataSet, ReadsDataSet,
 from voila.utils.voilaLog import voilaLog
 
 
-class ExperimentIndexExperimentException(IndexError):
+class ExperimentIndexError(IndexError):
     def __init__(self):
-        super(ExperimentIndexExperimentException, self).__init__(
+        super(ExperimentIndexError, self).__init__(
             'Attempted to access an out of range experiment.')
-        voilaLog().error(self.message)
 
 
-class ExperimentFieldException(Exception):
+class UnknownField(Exception):
     def __init__(self, field):
-        super(ExperimentFieldException, self).__init__(
+        super(UnknownField, self).__init__(
             '"{0}" might not contain data that has been sorted into a list by experiment.'.format(field))
-        voilaLog().error(self.message)
 
 
 class Experiment(HDF5):
@@ -33,9 +31,9 @@ class Experiment(HDF5):
             try:
                 return self.__dict__[field][experiment]
             except IndexError:
-                raise ExperimentIndexExperimentException()
+                raise ExperimentIndexError()
         else:
-            raise ExperimentFieldException(field)
+            raise UnknownField(field)
 
 
 class GeneGraphic(HDF5):
@@ -65,9 +63,17 @@ class GeneGraphic(HDF5):
         self.chromosome = chromosome
 
     def start(self):
+        """
+        Start of gene.
+        :return: Integer
+        """
         return self.exons[0].start
 
     def end(self):
+        """
+        End of gene.
+        :return: Integer
+        """
         return self.exons[-1].end
 
     def merge(self, other):
