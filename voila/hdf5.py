@@ -90,9 +90,8 @@ class HDF5(object):
             del attrs_dict[key]
 
         for cls in self.cls_list():
-            cls_grp = h.create_group(cls)
             for index, cls_obj in enumerate(attrs_dict[cls]):
-                cls_obj.to_hdf5(cls_grp.create_group(str(index)), use_id)
+                cls_obj.to_hdf5(h.create_group(cls + '/' + str(index)), use_id)
             del attrs_dict[cls]
 
         for key in attrs_dict:
@@ -119,11 +118,15 @@ class HDF5(object):
         cls_dict = self.cls_list()
 
         for cls in cls_dict:
-            cls_grp = h[cls]
-            self.__dict__[cls] = [None] * len(cls_grp)
-            for index in cls_grp:
-                new_class = cls_dict[cls]
-                self.__dict__[cls][int(index)] = new_class.easy_from_hdf5(cls_grp[index])
+            try:
+                cls_grp = h[cls]
+                self.__dict__[cls] = [None] * len(cls_grp)
+                for index in cls_grp:
+                    new_class = cls_dict[cls]
+                    self.__dict__[cls][int(index)] = new_class.easy_from_hdf5(cls_grp[index])
+            except KeyError:
+                # for when there's none of a class list in the hdf5...
+                pass
 
         for key in h.attrs:
             if key not in self.exclude():
@@ -170,15 +173,23 @@ class DataSet(object):
         self.width = None
 
     def encode(self):
+        """
+        Encode a list of data.
+        :return: None
+        """
         self.objs = [self.objs]
         self.encode_list()
 
     def decode(self):
+        """
+        Decode a list of data.
+        :return: list of data
+        """
         return self.decode_list()[0]
 
     def encode_list(self):
         """
-        Encode attribute data into datasets.
+        Encode a list of lists.
         :return: None
         """
         self.width = len(self.objs[0])
@@ -197,7 +208,7 @@ class DataSet(object):
 
     def decode_list(self):
         """
-        Decode stored data
+        Decode a list of lists.
         :return: list of stored data
         """
         ref = self.h.attrs[self.ds_name]
@@ -245,7 +256,6 @@ class Psi1DataSet(DataSet):
         :param h: HDF5 file object
         :param objs: objects to be stored as Psi1 data
         """
-
         super(Psi1DataSet, self).__init__(h, 'psi1', objs)
 
 
@@ -274,16 +284,26 @@ class JunctionTypeDataSet(DataSet):
         """
         JunctionGraphic's type list
         :param h: HDF5 file pointer
-        :param objs:
+        :param objs: junction type list
         """
         super(JunctionTypeDataSet, self).__init__(h, 'junction_type', objs, dtype=numpy.int8)
 
 
 class ReadsDataSet(DataSet):
     def __init__(self, h, objs=()):
-        super(ReadsDataSet, self).__init__(h, 'reads', objs, dtype=numpy.int32)
+        """
+        JuctionGraphic's reads list
+        :param h:  HDF5 file pointer
+        :param objs: reads list
+        """
+        super(ReadsDataSet, self).__init__(h, 'reads', objs, dtype=numpy.int16)
 
 
 class CleanReadsDataSet(DataSet):
     def __init__(self, h, objs=()):
-        super(CleanReadsDataSet, self).__init__(h, 'clean_reads', objs, dtype=numpy.int32)
+        """
+        JunctionGraphic's clean reads list.
+        :param h: HDF5 file pointer
+        :param objs: clean reads list
+        """
+        super(CleanReadsDataSet, self).__init__(h, 'clean_reads', objs, dtype=numpy.int16)

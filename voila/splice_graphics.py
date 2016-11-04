@@ -10,18 +10,16 @@ from voila.hdf5 import HDF5, ExonTypeDataSet, JunctionTypeDataSet, ReadsDataSet,
 from voila.utils.voilaLog import voilaLog
 
 
-class ExperimentIndexExperimentException(IndexError):
+class ExperimentIndexError(IndexError):
     def __init__(self):
-        super(ExperimentIndexExperimentException, self).__init__(
+        super(ExperimentIndexError, self).__init__(
             'Attempted to access an out of range experiment.')
-        voilaLog().error(self.message)
 
 
-class ExperimentFieldException(Exception):
+class UnknownField(Exception):
     def __init__(self, field):
-        super(ExperimentFieldException, self).__init__(
+        super(UnknownField, self).__init__(
             '"{0}" might not contain data that has been sorted into a list by experiment.'.format(field))
-        voilaLog().error(self.message)
 
 
 class Experiment(HDF5):
@@ -33,9 +31,14 @@ class Experiment(HDF5):
             try:
                 return self.__dict__[field][experiment]
             except IndexError:
-                raise ExperimentIndexExperimentException()
+                raise ExperimentIndexError()
         else:
-            raise ExperimentFieldException(field)
+            raise UnknownField(field)
+
+
+class NoExons(Exception):
+    def __init__(self):
+        super(NoExons, self).__init__('There no exons in this gene.')
 
 
 class GeneGraphic(HDF5):
@@ -65,10 +68,24 @@ class GeneGraphic(HDF5):
         self.chromosome = chromosome
 
     def start(self):
-        return self.exons[0].start
+        """
+        Start of gene.
+        :return: Integer
+        """
+        try:
+            return self.exons[0].start
+        except IndexError:
+            raise NoExons()
 
     def end(self):
-        return self.exons[-1].end
+        """
+        End of gene.
+        :return: Integer
+        """
+        try:
+            return self.exons[-1].end
+        except IndexError:
+            raise NoExons()
 
     def merge(self, other):
         """
@@ -139,9 +156,12 @@ class GeneGraphic(HDF5):
         return csvfile.getvalue()
 
     def to_hdf5(self, h, use_id=True):
-        if use_id:
-            h = h.create_group(self.gene_id)
+        group = '/genes'
 
+        if use_id:
+            group += '/' + self.gene_id
+
+        h = h.create_group(group)
         super(GeneGraphic, self).to_hdf5(h, use_id)
 
     def cls_list(self):
