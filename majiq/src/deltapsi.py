@@ -85,12 +85,15 @@ def deltapsi_quantification(args_vals):#, delta_prior_path, boots_sample=True, l
                 posterior = np.zeros(shape=(quantification_init.nbins, quantification_init.nbins), dtype=np.float)
                 post_psi1 = np.zeros(shape=quantification_init.nbins, dtype=np.float)
                 post_psi2 = np.zeros(shape=quantification_init.nbins, dtype=np.float)
+                mu_psi1 = []
+                mu_psi2 = []
                 for m in xrange(quantification_init.m):
                     # log(p(D_T1(m) | psi_T1)) = SUM_t1 T ( log ( P( D_t1 (m) | psi _T1)))
                     junc = [psi1[xx][p_idx][m] for xx in xrange(num_exp[0])]
                     junc = np.array(junc)
                     all_sample = [psi1[xx][yy][m].sum() for xx in xrange(num_exp[0]) for yy in xrange(num_ways)]
                     all_sample = np.array(all_sample)
+                    mu_psi1.append(float(junc.sum()) / all_sample.sum())
                     data_given_psi1 = np.log(prob_data_sample_given_psi(junc.sum(), all_sample.sum(),
                                                                         quantification_init.nbins,
                                                                         alpha_prior[p_idx], beta_prior[p_idx]))
@@ -102,6 +105,7 @@ def deltapsi_quantification(args_vals):#, delta_prior_path, boots_sample=True, l
                     junc = np.array(junc)
                     all_sample = [psi2[xx][yy][m].sum() for xx in xrange(num_exp[1]) for yy in xrange(num_ways)]
                     all_sample = np.array(all_sample)
+                    mu_psi2.append(float(junc.sum()) / all_sample.sum())
                     data_given_psi2 = np.log(prob_data_sample_given_psi(junc.sum(), all_sample.sum(),
                                                                         quantification_init.nbins,
                                                                         alpha_prior[p_idx], beta_prior[p_idx]))
@@ -111,14 +115,16 @@ def deltapsi_quantification(args_vals):#, delta_prior_path, boots_sample=True, l
                     A = (psi_v1 * ones_n + psi_v2 * ones_n.T) + np.log(prior_matrix[prior_idx])
 
                     posterior += np.exp(A - scipy.misc.logsumexp(A))
-
+                mu_psi1 = np.median(mu_psi1)
+                mu_psi2 = np.median(mu_psi2)
                 post_matrix.append(posterior / quantification_init.m)
                 posterior_psi1.append(post_psi1 / quantification_init.m)
                 posterior_psi2.append(post_psi2 / quantification_init.m)
                 if num_ways == 2:
                     break
 
-            qm = QueueMessage(QUEUE_MESSAGE_DELTAPSI_RESULT, (post_matrix, posterior_psi1, posterior_psi2, lsv_id), chnk)
+            qm = QueueMessage(QUEUE_MESSAGE_DELTAPSI_RESULT, (post_matrix, posterior_psi1, posterior_psi2,
+                                                              mu_psi1, mu_psi2, lsv_id), chnk)
             quantification_init.queue.put(qm, block=True)
 
         qm = QueueMessage(QUEUE_MESSAGE_END_WORKER, None, chnk)

@@ -89,13 +89,14 @@ def queue_manager(input_h5dfp, output_h5dfp, lock_array, result_queue, num_chunk
             elif val.get_type() == QUEUE_MESSAGE_PSI_RESULT:
                 lsv_graph = LsvGraphic.easy_from_hdf5(majiq_io.load_lsvgraphic_from_majiq(input_h5dfp,
                                                                                           val.get_value()[-1]))
-                VoilaLsv(bins_list=val.get_value()[0], lsv_graphic=lsv_graph).to_hdf5(output_h5dfp)
+                VoilaLsv(bins_list=val.get_value()[0], mean_psi1=val.get_value()[1], lsv_graphic=lsv_graph).to_hdf5(output_h5dfp)
 
             elif val.get_type() == QUEUE_MESSAGE_DELTAPSI_RESULT:
                 lsv_graph = LsvGraphic.easy_from_hdf5(majiq_io.load_lsvgraphic_from_majiq(input_h5dfp,
                                                                                           val.get_value()[-1]))
                 VoilaLsv(bins_list=val.get_value()[0], lsv_graphic=lsv_graph,
-                         psi1=val.get_value()[1], psi2=val.get_value()[2]).to_hdf5(output_h5dfp)
+                         psi1=val.get_value()[1], psi2=val.get_value()[2],
+                         mean_psi1=val.get_value()[3], mean_psi2=val.get_value()[4]).to_hdf5(output_h5dfp)
 
             elif val.get_type() == QUEUE_MESSAGE_END_WORKER:
                 lock_array[val.get_chunk()].release()

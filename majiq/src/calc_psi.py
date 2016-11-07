@@ -257,7 +257,7 @@ class CalcPsi(BasicPipeline):
         [xx.acquire() for xx in lock_arr]
 
         if len(list_of_lsv) > 0:
-            pool.map_async(psi_quantification, majiq_utils.chunks(list_of_lsv, lchnksize, extra=range(self.nthreads)))
+            pool.map_async(psi_quantification, majiq_utils.chunks2(list_of_lsv, lchnksize, extra=range(self.nthreads)))
             pool.close()
 
             out_h5p = h5py.File(get_quantifier_voila_filename(self.output, self.name),
