@@ -81,7 +81,7 @@ class TestVoilaLsv(TestCase):
         self.assertTrue(self.lsv.lsv_graphic.coords, l)
 
     def test_get_coords(self):
-        self.assertEqual(self.lsv.get_coords(), self.lsv.lsv_graphic.coords)
+        self.assertEqual(self.lsv.get_coordinates(), self.lsv.lsv_graphic.coords)
 
     def test_get_variances(self):
         self.assertEqual(self.lsv.get_variances(), self.lsv.variances)
@@ -124,7 +124,7 @@ class TestVoilaLsv(TestCase):
         lsv = getLSV()
 
         with open('tests/data/lsv.json', 'r') as json:
-            self.assertEqual(lsv.to_JSON(), json.read())
+            self.assertEqual(lsv.to_json(), json.read())
 
     def test_is_lsv_changing(self):
         self.assertFalse(self.lsv.is_lsv_changing(0.5))
