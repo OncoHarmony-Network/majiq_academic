@@ -156,12 +156,9 @@ class GeneGraphic(HDF5):
         return csvfile.getvalue()
 
     def to_hdf5(self, h, use_id=True):
-        group = '/genes'
-
         if use_id:
-            group += '/' + self.gene_id
+            h = h.create_group('/genes/{0}'.format(self.gene_id))
 
-        h = h.create_group(group)
         super(GeneGraphic, self).to_hdf5(h, use_id)
 
     def cls_list(self):
@@ -505,11 +502,11 @@ class JunctionGraphic(Experiment):
 
 
 class LsvGraphic(GeneGraphic):
-    def __init__(self, type_lsv, start, end, gene_id, name=None, strand=None, exons=list(), junctions=list(),
+    def __init__(self, lsv_type, start, end, gene_id, name=None, strand=None, exons=list(), junctions=list(),
                  chromosome=None):
         """
         LSV Data.
-        :param type_lsv: LSV type.  See constants file.
+        :param lsv_type: LSV type.  See constants file.
         :param gene_id: LSV id
         :param name: LSV name
         :param strand: LSV Strand. Either '-' or '+'
@@ -520,7 +517,7 @@ class LsvGraphic(GeneGraphic):
         super(LsvGraphic, self).__init__(gene_id, name, strand, exons, junctions, chromosome)
         self.end = end
         self.start = start
-        self.type = type_lsv
+        self.type = lsv_type
 
     def start(self):
         """

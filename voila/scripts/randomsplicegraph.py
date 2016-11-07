@@ -41,25 +41,23 @@ class RandomSpliceGraph(object):
         self.junction_start_stop_iterations = 100
 
     def get_gene_graphic(self):
-        exons = self.exons_generator(number=self.exons, experiments=self.experiments)
-        junctions = self.junction_generator(number=self.junctions, exons=exons, experiments=self.experiments)
+        exons = self.exons_generator()
+        junctions = self.junctions_generator(exons=exons)
         return GeneGraphic(self.gene_id, exons=exons, junctions=junctions)
 
-    def exons_generator(self, number, experiments):
+    def exons_generator(self):
         """
         Generate random exons.
-        :param number: number of exons
-        :param experiments: number of experiments
         :return: list of exons
         """
         # get a list of random unique integers and group them into twos
         starts_ends = grouped(
-            sorted(random.sample(range(self.gene_max_length / self.exon_length_multiplier), number * 2)),
+            sorted(random.sample(range(self.gene_max_length / self.exon_length_multiplier), self.exons * 2)),
             2
         )
 
         # list of exon types
-        exons_types = grouped((random.randrange(0, 3) for _ in range(number * experiments)), experiments)
+        exons_types = grouped((random.randrange(0, 3) for _ in range(self.exons * self.experiments)), self.experiments)
 
         return [ExonGraphic(a3=None,
                             a5=None,
@@ -68,12 +66,10 @@ class RandomSpliceGraph(object):
                             exon_type_list=exon_type_list)
                 for (start, end), exon_type_list in zip(starts_ends, exons_types)]
 
-    def junction_generator(self, exons, number, experiments):
+    def junctions_generator(self, exons):
         """
         Generate random junctions.
         :param exons: list of exons
-        :param number: number of junctions
-        :param experiments: number of experiments
         :return: list of junctions
         """
         junctions = []
@@ -82,17 +78,19 @@ class RandomSpliceGraph(object):
         exon_pairs = (
             sorted(exon_pair)
             for exon_pair in grouped((random.randrange(0, len(exons))
-                                      for _ in range(number * 2)), 2)
+                                      for _ in range(self.junctions * 2)), 2)
         )
 
         # list of junction types
-        junc_types = grouped((random.randrange(0, 3) for _ in range(number * experiments)), experiments)
+        junc_types = grouped((random.randrange(0, 3) for _ in range(self.junctions * self.experiments)),
+                             self.experiments)
 
         # list of junction reads
-        reads = grouped((random.randrange(0, 2000) for _ in range(number * experiments)), experiments)
+        reads = grouped((random.randrange(0, 2000) for _ in range(self.junctions * self.experiments)), self.experiments)
 
         # list of junction clean reads
-        clean_reads = grouped((random.randrange(0, 2000) for _ in range(number * experiments)), experiments)
+        clean_reads = grouped((random.randrange(0, 2000) for _ in range(self.junctions * self.experiments)),
+                              self.experiments)
 
         for (start_exon, end_exon), t, r, c in zip(exon_pairs, junc_types, reads, clean_reads):
             start = 0
