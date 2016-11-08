@@ -280,7 +280,7 @@ class ExonTypeDataSet(DataSet):
         :param objs: List to be stored
         """
         # sanity check
-        assert all([x.bit_length() <= 8 and x >= 0 for x in objs]), 'Exon Type data must be unsigned 8 bit integer.'
+        assert unsigned_int(objs, 8), 'Exon Type data must be unsigned 8 bit integer.'
         super(ExonTypeDataSet, self).__init__(h, 'exon_type', objs, dtype=numpy.uint8)
 
 
@@ -292,7 +292,7 @@ class JunctionTypeDataSet(DataSet):
         :param objs: junction type list
         """
         # sanity check
-        assert all([x.bit_length() <= 8 and x >= 0 for x in objs]), 'Junction Type data must be unsigned 8 bit integer.'
+        assert unsigned_int(objs, 8), 'Junction Type data must be unsigned 8 bit integer.'
         super(JunctionTypeDataSet, self).__init__(h, 'junction_type', objs, dtype=numpy.uint8)
 
 
@@ -304,5 +304,9 @@ class ReadsDataSet(DataSet):
         :param objs: reads list
         """
         # sanity check
-        assert all([x.bit_length() <= 32 and x >= 0 for x in objs]), 'Reads data must be unsigned 32 bit integer.'
+        assert unsigned_int(objs, 32), 'Junction Type data must be unsigned 8 bit integer.'
         super(ReadsDataSet, self).__init__(h, 'reads', objs, dtype=numpy.uint32)
+
+
+def unsigned_int(objs, bits):
+    return all([x.bit_length() <= bits and x >= 0 for x in list(objs)])
