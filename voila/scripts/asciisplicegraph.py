@@ -11,7 +11,8 @@ class AsciiSpliceGraphTooLargeException(Exception):
 class AsciiSpliceGraph(object):
     def __init__(self, gene, experiment):
         """
-        Show splice graph for gene object
+        Show splice graph for gene object. There are several splice graph features that aren't implemented.
+        USER BEWARE!!! (MWAhahahaha)
         :param gene: gene object
         """
         self.experiment = experiment
