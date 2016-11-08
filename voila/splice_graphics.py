@@ -6,7 +6,7 @@ import sys
 import h5py
 
 from voila import constants
-from voila.hdf5 import HDF5, ExonTypeDataSet, JunctionTypeDataSet, ReadsDataSet, CleanReadsDataSet
+from voila.hdf5 import HDF5, ExonTypeDataSet, JunctionTypeDataSet, ReadsDataSet
 from voila.utils.voilaLog import voilaLog
 
 
@@ -417,7 +417,7 @@ class ExonGraphic(Experiment):
 
 
 class JunctionGraphic(Experiment):
-    def __init__(self, start, end, junction_type_list, reads_list, clean_reads_list=(), transcripts=(),
+    def __init__(self, start, end, junction_type_list, reads_list, transcripts=(),
                  intron_retention=constants.NONE_IR_TYPE):
         """
         Junction data.
@@ -425,21 +425,19 @@ class JunctionGraphic(Experiment):
         :param end: End coordinate for junction
         :param junction_type_list: junction type.  See constants file.
         :param reads_list: number of reads
-        :param clean_reads_list: number of clean reads
         :param transcripts: list of transtripts
         :param intron_retention: intron retention
         """
 
         # sanity check
-        assert len(junction_type_list) == len(reads_list) == len(
-            clean_reads_list), 'There is an uneven number of experiments.'
+        assert len(junction_type_list) == len(reads_list), 'There is an uneven number of experiments.'
 
         super(JunctionGraphic, self).__init__()
         self.start = start
         self.end = end
         self.junction_type = junction_type_list
         self.reads = reads_list
-        self.clean_reads = clean_reads_list
+        self.clean_reads = None
         self.transcripts = transcripts
         self.intron_retention = intron_retention
 
@@ -462,18 +460,16 @@ class JunctionGraphic(Experiment):
         return self.__copy__()
 
     def exclude(self):
-        return ['junction_type', 'reads', 'clean_reads']
+        return ['junction_type', 'reads']
 
     def to_hdf5(self, h, use_id=True):
         super(JunctionGraphic, self).to_hdf5(h, use_id)
         JunctionTypeDataSet(h, self.junction_type).encode()
         ReadsDataSet(h, self.reads).encode()
-        CleanReadsDataSet(h, self.clean_reads).encode()
 
     def from_hdf5(self, h):
         self.junction_type = JunctionTypeDataSet(h).decode()
         self.reads = ReadsDataSet(h).decode()
-        self.clean_reads = CleanReadsDataSet(h).decode()
         return super(JunctionGraphic, self).from_hdf5(h)
 
     @classmethod
@@ -492,13 +488,13 @@ class JunctionGraphic(Experiment):
         return jg
 
     def __str__(self):
-        return str(((self.start, self.end), self.junction_type))
+        return str({'Coordinates': (self.start, self.end), 'Type': self.junction_type})
 
     def __repr__(self):
         return self.__str__()
 
     def __lt__(self, other):
-        return self.start < other.start
+        return (self.start, self.end) < (other.start, other.end)
 
 
 class LsvGraphic(GeneGraphic):
@@ -540,7 +536,4 @@ class LsvGraphic(GeneGraphic):
 
     @classmethod
     def easy_from_hdf5(cls, h):
-        return cls(None, None, None).from_hdf5(h)
-
-    def __sizeof__(self):
-        return sum([sys.getsizeof(self.__dict__[key] for key in self.__dict__)])
+        return cls(None, None, None, None).from_hdf5(h)

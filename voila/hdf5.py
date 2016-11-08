@@ -112,7 +112,10 @@ class HDF5(object):
         :return: self
         """
 
-        if h[VOILA_FILE_VERSION].value != constants.FILE_VERSION:
+        try:
+            if h[VOILA_FILE_VERSION].value != constants.FILE_VERSION:
+                raise HDF5VersionException()
+        except KeyError:
             raise HDF5VersionException()
 
         cls_dict = self.cls_list()
@@ -276,7 +279,7 @@ class ExonTypeDataSet(DataSet):
         :param h: HDF5 file pointer
         :param objs: List to be stored
         """
-        super(ExonTypeDataSet, self).__init__(h, 'exon_type', objs, dtype=numpy.int8)
+        super(ExonTypeDataSet, self).__init__(h, 'exon_type', objs, dtype=numpy.uint8)
 
 
 class JunctionTypeDataSet(DataSet):
@@ -286,7 +289,7 @@ class JunctionTypeDataSet(DataSet):
         :param h: HDF5 file pointer
         :param objs: junction type list
         """
-        super(JunctionTypeDataSet, self).__init__(h, 'junction_type', objs, dtype=numpy.int8)
+        super(JunctionTypeDataSet, self).__init__(h, 'junction_type', objs, dtype=numpy.uint8)
 
 
 class ReadsDataSet(DataSet):
@@ -296,14 +299,4 @@ class ReadsDataSet(DataSet):
         :param h:  HDF5 file pointer
         :param objs: reads list
         """
-        super(ReadsDataSet, self).__init__(h, 'reads', objs, dtype=numpy.int16)
-
-
-class CleanReadsDataSet(DataSet):
-    def __init__(self, h, objs=()):
-        """
-        JunctionGraphic's clean reads list.
-        :param h: HDF5 file pointer
-        :param objs: clean reads list
-        """
-        super(CleanReadsDataSet, self).__init__(h, 'clean_reads', objs, dtype=numpy.int16)
+        super(ReadsDataSet, self).__init__(h, 'reads', objs, dtype=numpy.uint32)

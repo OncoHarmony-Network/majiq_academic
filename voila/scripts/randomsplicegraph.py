@@ -88,11 +88,7 @@ class RandomSpliceGraph(object):
         # list of junction reads
         reads = grouped((random.randrange(0, 2000) for _ in range(self.junctions * self.experiments)), self.experiments)
 
-        # list of junction clean reads
-        clean_reads = grouped((random.randrange(0, 2000) for _ in range(self.junctions * self.experiments)),
-                              self.experiments)
-
-        for (start_exon, end_exon), t, r, c in zip(exon_pairs, junc_types, reads, clean_reads):
+        for (start_exon, end_exon), t, r in zip(exon_pairs, junc_types, reads):
             start = 0
             stop = 0
             count = 0
@@ -108,8 +104,7 @@ class RandomSpliceGraph(object):
             junction = JunctionGraphic(start=start,
                                        end=stop,
                                        junction_type_list=t,
-                                       reads_list=r,
-                                       clean_reads_list=c)
+                                       reads_list=r)
             junctions.append(junction)
 
         return junctions
