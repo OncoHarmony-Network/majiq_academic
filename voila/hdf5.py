@@ -88,7 +88,7 @@ class HDF5(object):
 
         for cls in self.cls_list():
             for index, cls_obj in enumerate(attrs_dict[cls]):
-                cls_obj.to_hdf5(h.create_group(cls + '/' + str(index)), use_id)
+                cls_obj.to_hdf5(h.create_group(join(cls, str(index))), use_id)
             del attrs_dict[cls]
 
         for key in attrs_dict:
@@ -172,18 +172,24 @@ class DataSet(object):
         assert False, 'Validate has not been implemented for this class.'
 
     def unsigned_bits(self, bits):
-        return all(int(x).bit_length() <= bits and x >= 0 for x in self.objs)
+        if self.objs is not None:
+            return all(int(x).bit_length() <= bits and x >= 0 for x in self.objs)
+
+        return True
 
     def array_2d(self):
-        return numpy.array(self.objs).ndim == 2
+        if self.objs is not None:
+            return numpy.array(self.objs).ndim == 2
+        return True
 
     def encode(self):
         """
         Encode a list of data.
         :return: None
         """
-        self.objs = [self.objs]
-        self.encode_list()
+        if self.objs:
+            self.objs = [self.objs]
+            self.encode_list()
 
     def decode(self):
         """
@@ -199,6 +205,9 @@ class DataSet(object):
         Encode a list of lists.
         :return: None
         """
+        if not self.objs:
+            return
+
         self.width = len(self.objs[0])
         self.resize()
         ds = self.dataset()
@@ -262,7 +271,7 @@ class BinsDataSet(DataSet):
 
 
 class Psi1DataSet(DataSet):
-    def __init__(self, h, objs=((),)):
+    def __init__(self, h, objs=None):
         """
         VoilaLsv PSI1 dataset
         :param h: HDF5 file object
@@ -275,7 +284,7 @@ class Psi1DataSet(DataSet):
 
 
 class Psi2DataSet(DataSet):
-    def __init__(self, h, objs=((),)):
+    def __init__(self, h, objs=None):
         """
         VoilaLsv PSI2 dataset
         :param h:  HDF5 file object
@@ -288,7 +297,7 @@ class Psi2DataSet(DataSet):
 
 
 class ExonTypeDataSet(DataSet):
-    def __init__(self, h, objs=()):
+    def __init__(self, h, objs=None):
         """
         ExonGraphic's type list
         :param h: HDF5 file pointer
@@ -302,7 +311,7 @@ class ExonTypeDataSet(DataSet):
 
 
 class JunctionTypeDataSet(DataSet):
-    def __init__(self, h, objs=()):
+    def __init__(self, h, objs=None):
         """
         JunctionGraphic's type list
         :param h: HDF5 file pointer
@@ -316,7 +325,7 @@ class JunctionTypeDataSet(DataSet):
 
 
 class ReadsDataSet(DataSet):
-    def __init__(self, h, objs=()):
+    def __init__(self, h, objs=None):
         """
         JuctionGraphic's reads list
         :param h:  HDF5 file pointer
