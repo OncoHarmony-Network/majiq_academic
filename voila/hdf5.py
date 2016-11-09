@@ -1,3 +1,5 @@
+from os.path import join
+
 import numpy
 
 from voila.utils.voilaLog import voilaLog
@@ -78,11 +80,6 @@ class HDF5(object):
         :param h: HDF5 file object
         :return: None
         """
-        # TODO:Debug why this doesn't work for quantifier files.
-        # try:
-        #     h[VOILA_FILE_VERSION] = constants.FILE_VERSION
-        # except RuntimeError:
-        #     pass
 
         attrs_dict = self.__dict__.copy()
 
@@ -111,13 +108,6 @@ class HDF5(object):
         :param h: HDF5 file object
         :return: self
         """
-
-        # TODO:Debug why this doesn't work for quantifier files.
-        # try:
-        #     if h[VOILA_FILE_VERSION].value != constants.FILE_VERSION:
-        #         raise HDF5VersionException()
-        # except KeyError:
-        #     raise HDF5VersionException()
 
         cls_dict = self.cls_list()
 
@@ -200,7 +190,9 @@ class DataSet(object):
         Decode a list of data.
         :return: list of data
         """
-        return self.decode_list()[0]
+        l = self.decode_list()
+        if l:
+            return l[0]
 
     def encode_list(self):
         """
@@ -227,7 +219,8 @@ class DataSet(object):
         :return: list of stored data
         """
         ref = self.h.attrs[self.ds_name]
-        return self.dataset()[ref].tolist()
+        if ref:
+            return self.dataset()[ref].tolist()
 
     def resize(self):
         ds = self.dataset()
@@ -235,11 +228,12 @@ class DataSet(object):
         ds.resize((curr_length + len(self.objs), self.width))
 
     def dataset(self):
+        datasets_folder = '/voila_datasets'
         try:
-            dataset = self.h['/datasets/' + self.ds_name]
+            dataset = self.h[join(datasets_folder, self.ds_name)]
         except KeyError:
             dataset = self.h.create_dataset(
-                name='/datasets/' + self.ds_name,
+                name=join(datasets_folder, self.ds_name),
                 shape=(0, self.width),
                 dtype=self.dtype,
                 chunks=(1, self.width),
