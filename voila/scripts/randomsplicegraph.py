@@ -2,7 +2,7 @@ import random
 import uuid
 from itertools import izip
 
-from voila.splice_graphics import ExonGraphic, JunctionGraphic, GeneGraphic
+from voila.splice_graphics import ExonGraphic, JunctionGraphic, GeneGraphic, LsvGraphic
 
 
 def grouped(iterable, n):
@@ -45,6 +45,18 @@ class RandomSpliceGraph(object):
         junctions = self.junctions_generator(exons=exons)
         return GeneGraphic(self.gene_id, exons=exons, junctions=junctions)
 
+    def get_lsv_graphic(self):
+        exons = self.exons_generator()
+        junctions = self.junctions_generator(exons=exons)
+        return LsvGraphic(
+            lsv_type='t|1e1.1o1|1e2.1o2|1e2.2o2',
+            start=exons[0].start,
+            end=exons[-1].end,
+            gene_id=self.gene_id,
+            exons=exons,
+            junctions=junctions
+        )
+
     def exons_generator(self):
         """
         Generate random exons.
@@ -82,12 +94,16 @@ class RandomSpliceGraph(object):
         )
 
         # list of junction types
-        junc_types = grouped((random.randrange(0, 3) for _ in range(self.junctions * self.experiments)),
-                             self.experiments)
+        junc_types = grouped(
+            (random.randrange(0, 3) for _ in range(self.junctions * self.experiments)),
+            self.experiments
+        )
 
         # list of junction reads
-        reads = grouped((random.randrange(0, 2 ** 32) for _ in range(self.junctions * self.experiments)),
-                        self.experiments)
+        reads = grouped(
+            (random.randrange(0, 2 ** 32) for _ in range(self.junctions * self.experiments)),
+            self.experiments
+        )
 
         for (start_exon, end_exon), t, r in zip(exon_pairs, junc_types, reads):
             start = 0
@@ -102,10 +118,13 @@ class RandomSpliceGraph(object):
                 if count > self.junction_start_stop_iterations:
                     raise Exception('Yeah, we can\'t decide on a start and stop for this junction...')
 
-            junction = JunctionGraphic(start=start,
-                                       end=stop,
-                                       junction_type_list=t,
-                                       reads_list=r)
+            junction = JunctionGraphic(
+                start=start,
+                end=stop,
+                junction_type_list=t,
+                reads_list=r
+            )
+
             junctions.append(junction)
 
         return junctions

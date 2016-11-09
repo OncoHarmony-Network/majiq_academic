@@ -159,7 +159,7 @@ class VoilaLsv(HDF5):
 
     def to_hdf5(self, h, use_id=True):
         if use_id:
-            h = h.create_group('/lsvs/' + self.lsv_graphic.id)
+            h = h.create_group('/lsvs/' + self.lsv_graphic.gene_id)
 
         super(VoilaLsv, self).to_hdf5(h, use_id)
 
@@ -225,7 +225,7 @@ class VoilaLsv(HDF5):
         # fields = ['seqid', 'source', 'type', 'start', 'end', 'score', 'strand', 'phase', 'attributes']
         trans = []
         lexons = vlsv.lsv_graphic.exons
-        lsvId = vlsv.lsv_graphic.id
+        lsvId = vlsv.lsv_graphic.gene_id
         chrom = vlsv.lsv_graphic.chrom
         strand = vlsv.lsv_graphic.strand
         gStart = lexons[0].coords[0]

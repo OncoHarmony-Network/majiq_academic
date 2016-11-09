@@ -267,10 +267,10 @@ def render_summary(output_dir, output_html, majiq_output, type_summary, threshol
 
 def combine_gg(gg_comb_dict, gg_new):
     """Combine a set of gene graphs (new) with an already existing collection."""
-    gg = gg_comb_dict[gg_new.id]
+    gg = gg_comb_dict[gg_new.gene_id]
     log = voilaLog()
     if gg is None:
-        gg_comb_dict[gg_new.id] = copy.deepcopy(gg_new)
+        gg_comb_dict[gg_new.gene_id] = copy.deepcopy(gg_new)
         return
 
     for i, eg in enumerate(gg.exons):
