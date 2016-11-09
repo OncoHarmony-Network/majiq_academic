@@ -263,12 +263,12 @@ def splice_graph_from_hdf5(hdf5_filename):
         with h5py.File(hdf5_filename, 'r') as h:
             while True:
                 id = queue.get()
-                manager_dict[id] = GeneGraphic.easy_from_hdf5(h[id])
+                manager_dict[id] = GeneGraphic.easy_from_hdf5(h['/genes'][id])
                 queue.task_done()
 
     def producer():
         with h5py.File(hdf5_filename, 'r') as h:
-            for x in h:
+            for x in h['/genes']:
                 queue.put(x)
 
     log = voilaLog()

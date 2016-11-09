@@ -35,6 +35,16 @@ class Experiment(HDF5):
         else:
             raise UnknownField(field)
 
+    def get_dict(self, experiment):
+        d = {}
+        for key in self.__dict__:
+            if key in self.field_by_experiment():
+                if self.__dict__[key]:
+                    d[key] = self.__dict__[key][experiment]
+            else:
+                d[key] = self.__dict__[key]
+        return d
+
 
 class NoExons(Exception):
     def __init__(self):
@@ -240,6 +250,12 @@ class GeneGraphic(HDF5):
                 self.junctions.append(jg)
         self.junctions.sort()
 
+    def get_dict(self, experiment):
+        d = self.__dict__.copy()
+        d['exons'] = [e.get_dict(experiment) for e in self.exons]
+        d['junctions'] = [j.get_dict(experiment) for j in self.junctions]
+        return d
+
     @classmethod
     def create_master(cls, splice_graphs, gene_id):
         """
@@ -276,8 +292,8 @@ class GeneGraphic(HDF5):
         return not self.__eq__(other)
 
     def __lt__(self, other):
-        return (self.chromosome < other.chrom
-                or (self.chromosome == other.chrom
+        return (self.chromosome < other.chromosome
+                or (self.chromosome == other.chromosome
                     and (self.end < other.start
                          or (self.end > other.start and self.start < other.end
                              and self.strand == '+' and other.strand == '-'))))
@@ -488,7 +504,7 @@ class JunctionGraphic(Experiment):
         return jg
 
     def __str__(self):
-        return str({'Coordinates': (self.start, self.end), 'Type': self.junction_type})
+        return str(((self.start, self.end), self.junction_type))
 
     def __repr__(self):
         return self.__str__()
@@ -513,7 +529,7 @@ class LsvGraphic(GeneGraphic):
         super(LsvGraphic, self).__init__(gene_id, name, strand, exons, junctions, chromosome)
         self.end = end
         self.start = start
-        self.type = lsv_type
+        self.lsv_type = lsv_type
 
     def start(self):
         """
