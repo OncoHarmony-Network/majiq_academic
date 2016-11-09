@@ -1,6 +1,5 @@
 import numpy
 
-from voila import constants
 from voila.utils.voilaLog import voilaLog
 
 VOILA_FILE_VERSION = '/voila_file_version'
@@ -79,10 +78,11 @@ class HDF5(object):
         :param h: HDF5 file object
         :return: None
         """
-        try:
-            h[VOILA_FILE_VERSION] = constants.FILE_VERSION
-        except RuntimeError:
-            pass
+        # TODO:Debug why this doesn't work for quantifier files.
+        # try:
+        #     h[VOILA_FILE_VERSION] = constants.FILE_VERSION
+        # except RuntimeError:
+        #     pass
 
         attrs_dict = self.__dict__.copy()
 
@@ -112,11 +112,12 @@ class HDF5(object):
         :return: self
         """
 
-        try:
-            if h[VOILA_FILE_VERSION].value != constants.FILE_VERSION:
-                raise HDF5VersionException()
-        except KeyError:
-            raise HDF5VersionException()
+        # TODO:Debug why this doesn't work for quantifier files.
+        # try:
+        #     if h[VOILA_FILE_VERSION].value != constants.FILE_VERSION:
+        #         raise HDF5VersionException()
+        # except KeyError:
+        #     raise HDF5VersionException()
 
         cls_dict = self.cls_list()
 
@@ -174,6 +175,17 @@ class DataSet(object):
         self.ds_name = ds_name
         self.objs = objs
         self.width = None
+
+        self.validate()
+
+    def validate(self):
+        assert False, 'Validate has not been implemented for this class.'
+
+    def unsigned_bits(self, bits):
+        return all(int(x).bit_length() <= bits and x >= 0 for x in self.objs)
+
+    def array_2d(self):
+        return numpy.array(self.objs).ndim == 2
 
     def encode(self):
         """
@@ -251,6 +263,9 @@ class BinsDataSet(DataSet):
         """
         super(BinsDataSet, self).__init__(h, 'bins', objs)
 
+    def validate(self):
+        assert self.array_2d(), 'Bins data must be  2d array.'
+
 
 class Psi1DataSet(DataSet):
     def __init__(self, h, objs=((),)):
@@ -260,6 +275,9 @@ class Psi1DataSet(DataSet):
         :param objs: objects to be stored as Psi1 data
         """
         super(Psi1DataSet, self).__init__(h, 'psi1', objs)
+
+    def validate(self):
+        assert self.array_2d(), 'Psi1 data must be 2d array.'
 
 
 class Psi2DataSet(DataSet):
@@ -271,6 +289,9 @@ class Psi2DataSet(DataSet):
         """
         super(Psi2DataSet, self).__init__(h, 'psi2', objs)
 
+    def validate(self):
+        assert self.array_2d(), 'Psi2 data must be 2d array.'
+
 
 class ExonTypeDataSet(DataSet):
     def __init__(self, h, objs=()):
@@ -280,8 +301,10 @@ class ExonTypeDataSet(DataSet):
         :param objs: List to be stored
         """
         # sanity check
-        # assert unsigned_int(objs, 8), 'Exon Type data must be unsigned 8 bit integer.'
         super(ExonTypeDataSet, self).__init__(h, 'exon_type', objs, dtype=numpy.uint8)
+
+    def validate(self):
+        assert self.unsigned_bits(8), 'Exon Type must be unsigned 8 bit integer.'
 
 
 class JunctionTypeDataSet(DataSet):
@@ -292,8 +315,10 @@ class JunctionTypeDataSet(DataSet):
         :param objs: junction type list
         """
         # sanity check
-        # assert unsigned_int(objs, 8), 'Junction Type data must be unsigned 8 bit integer.'
         super(JunctionTypeDataSet, self).__init__(h, 'junction_type', objs, dtype=numpy.uint8)
+
+    def validate(self):
+        assert self.unsigned_bits(8), 'Junction Type must be unsigned 8 bit integer'
 
 
 class ReadsDataSet(DataSet):
@@ -303,10 +328,7 @@ class ReadsDataSet(DataSet):
         :param h:  HDF5 file pointer
         :param objs: reads list
         """
-        # sanity check
-        # assert unsigned_int(objs, 32), 'Junction Type data must be unsigned 8 bit integer.'
         super(ReadsDataSet, self).__init__(h, 'reads', objs, dtype=numpy.uint32)
 
-
-def unsigned_int(objs, bits):
-    return all([x.bit_length() <= bits and x >= 0 for x in list(objs)])
+    def validate(self):
+        assert self.unsigned_bits(32), 'Reads data must be unsigned 32 bit integer.'
