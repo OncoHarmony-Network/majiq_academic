@@ -187,7 +187,8 @@ class DataSet(object):
         Encode a list of data.
         :return: None
         """
-        if self.objs:
+
+        if list(self.objs):
             self.objs = [self.objs]
             self.encode_list()
 
@@ -205,7 +206,7 @@ class DataSet(object):
         Encode a list of lists.
         :return: None
         """
-        if not self.objs:
+        if not list(self.objs):
             return
 
         self.width = len(self.objs[0])
@@ -258,7 +259,7 @@ class DataSet(object):
 
 
 class BinsDataSet(DataSet):
-    def __init__(self, h, objs=((),)):
+    def __init__(self, h, objs=None):
         """
         VoilaLsv bins dataset.
         :param h: HDF5 file object
