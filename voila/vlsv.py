@@ -282,7 +282,7 @@ class VoilaLsv(HDF5):
 
     def init_categories(self):
         categories = defaultdict()
-        juns = self.lsv_graphic.type.split('|')
+        juns = self.lsv_graphic.lsv_type.split('|')
         ir = 'i' in juns
         try:
             juns.remove('i')
