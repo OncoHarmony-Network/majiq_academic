@@ -1,4 +1,3 @@
-import collections as cc
 import copy
 import fileinput
 import json
@@ -7,7 +6,8 @@ import os
 import sys
 import textwrap
 import time
-from collections import defaultdict, namedtuple
+from collections import defaultdict, namedtuple, OrderedDict
+from os.path import basename
 
 from jinja2 import Environment, FileSystemLoader, escape
 
@@ -15,8 +15,7 @@ import voila.constants as constants
 import voila.io_voila as io_voila
 import voila.module_locator as module_locator
 import voila.utils.utils_voila as utils_voila
-from voila.splice_graphics import GeneGraphic
-from voila.utils.utils_voila import splice_graph_from_hdf5
+from voila.splice_graphics import GeneGraphic, SpliceGraph
 from voila.utils.voilaLog import voilaLog
 
 EXEC_DIR = module_locator.module_path() + "/"
@@ -311,7 +310,7 @@ def parse_gene_graphics(splicegraph_flist, gene_name_list, condition_names=('gro
 
         for splice_graph_f in splice_files:
 
-            genes_g = splice_graph_from_hdf5(splice_graph_f)
+            genes_g = SpliceGraph(splice_graph_f).get_genes_list()
 
             if not genes_g:
                 continue
@@ -365,8 +364,8 @@ def parse_gene_graphics(splicegraph_flist, gene_name_list, condition_names=('gro
                     gg_comb.get_chrom(),
                     gg_comb.get_name()
                 ]
-            genes_exp[gg_combined_name] = gg_combined
-        genes_exp1_exp2.append(cc.OrderedDict(sorted(genes_exp.items(), key=lambda t: t[0])))
+
+        genes_exp1_exp2.append(OrderedDict(sorted(genes_exp.items(), key=lambda t: t[0])))
 
     log.info("Splice graph information files correctly loaded.")
 
@@ -386,7 +385,7 @@ def parse_gene_graphics_obj(splicegraph_flist, gene_name_list, condition_names=(
     log = voilaLog()
     log.info("Parsing splice graph information files ...")
     for grp_i, gene_flist in enumerate(splicegraph_flist):
-        genes_exp = defaultdict()
+        genes_exp = {}
         splice_files = utils_voila.list_files_or_dir(gene_flist, suffix=constants.SUFFIX_SPLICEGRAPH)
 
         # Check that the folders have splicegraphs
@@ -394,37 +393,23 @@ def parse_gene_graphics_obj(splicegraph_flist, gene_name_list, condition_names=(
             log.error("No file with extension .%s found in %s." % (constants.SUFFIX_SPLICEGRAPH, gene_flist))
             sys.exit(1)
 
-        # Combined SpliceGraph data structure
-        gg_combined = defaultdict(lambda: None)
-        gg_combined_name = "%s%s" % (constants.COMBINED_PREFIX, condition_names[grp_i])
-
         for splice_graph_f in splice_files:
-            genes_g = splice_graph_from_hdf5(splice_graph_f)
-            genes_graphic = defaultdict()
-            genes_g.sort()
-            for gene_obj in genes_g:
-                if not gene_name_list or gene_obj.id in gene_name_list or gene_obj.name.upper() in gene_name_list:
-                    genes_graphic[gene_obj.get_id()] = gene_obj
+            splice_graph = SpliceGraph(splice_graph_f)
+            genes = splice_graph.get_genes_list()
+            experiments = splice_graph.get_experiments_list()
+            genes.sort()
 
-                    # Combine genes from different Splice Graphs
-                    combine_gg(gg_combined, gene_obj)
+            for experiment_number, experiment_name in enumerate(experiments):
+                for gene in genes:
+                    if not gene_name_list or gene.gene_id in gene_name_list or gene.name.upper() in gene_name_list:
+                        experiment_dict = gene.get_dict(experiment_number)
+                        drop_down_name = '{0}: {1}'.format(basename(splice_graph_f), experiment_name)
+                        try:
+                            genes_exp[drop_down_name][gene.gene_id] = experiment_dict
+                        except KeyError:
+                            genes_exp[drop_down_name] = {gene.gene_id: experiment_dict}
 
-            ggenes_set = set(genes_graphic.keys())
-            if not len(ggenes_set):
-                log.warning("No gene matching the splice graph file %s." % splice_graph_f)
-
-            if gene_name_list is not None and len(gene_name_list) != len(ggenes_set):
-                log.warning("Different number of genes in splicegraph (%d) and majiq (%d) files! Hint: Are you sure "
-                            "you are using bins and splicegraph files from the same execution?" % (
-                                len(ggenes_set), len(gene_name_list)))
-
-            genes_exp[os.path.basename(splice_graph_f)] = genes_graphic
-
-        # Add combined SpliceGraph (when more than one sample)
-        if len(genes_exp.keys()) > 1:
-            genes_exp[gg_combined_name] = gg_combined
-        genes_exp1_exp2.append(cc.OrderedDict(sorted(genes_exp.items(), key=lambda t: t[0])))
-
+        genes_exp1_exp2.append(OrderedDict(sorted(genes_exp.items(), key=lambda t: t[0])))
     log.info("Splice graph information files correctly loaded.")
     return genes_exp1_exp2
 
@@ -531,7 +516,9 @@ def parse_input(args):
             log.error(e.message, exc_info=1)
 
         meta_postprocess['collapsed'] = args.collapsed
+
         render_summary(output_dir, output_html, majiq_output, type_summary, threshold, meta_postprocess)
+
         return
 
     if type_summary == constants.SPLICE_GRAPHS:
@@ -731,7 +718,8 @@ def main():
     if args.gtf_out:
         io_voila.create_gff3_txt_files(input_parsed)
 
-    log.info("Voila! Summaries created in: %s" % input_parsed.output_dir)
+    if input_parsed:
+        log.info("Voila! Summaries created in: %s" % input_parsed.output_dir)
 
     # Add ellapsed time
     end_time = time.time()

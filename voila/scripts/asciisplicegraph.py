@@ -8,7 +8,7 @@ class AsciiSpliceGraphTooLargeException(Exception):
         voilaLog().error(gene)
 
 
-class AsciiSpliceGraph(object):
+class AsciiSplicegraph(object):
     def __init__(self, gene, experiment):
         """
         Show splice graph for gene object. There are several splice graph features that aren't implemented.

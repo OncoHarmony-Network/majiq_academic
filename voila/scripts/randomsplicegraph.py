@@ -26,7 +26,7 @@ class RandomSpliceGraph(object):
 
         self.junctions = junctions
         if junctions is None:
-            self.junctions = random.randrange(0, 10)
+            self.junctions = random.randrange(1, 15)
 
         self.exons = exons
         if exons is None:
@@ -43,7 +43,17 @@ class RandomSpliceGraph(object):
     def get_gene_graphic(self):
         exons = self.exons_generator()
         junctions = self.junctions_generator(exons=exons)
-        return GeneGraphic(self.gene_id, exons=exons, junctions=junctions)
+
+        for index, junction in enumerate(junctions):
+            for exon in exons:
+                if junction.start in exon:
+                    exon.a3.append(index)
+                if junction.end in exon:
+                    exon.a5.append(index)
+
+        strand = ['-', '+'][random.randrange(0, 2)]
+
+        return GeneGraphic(self.gene_id, exons=exons, junctions=junctions, strand=strand, name='Random')
 
     def get_lsv_graphic(self):
         exons = self.exons_generator()
@@ -71,8 +81,10 @@ class RandomSpliceGraph(object):
         # list of exon types
         exons_types = grouped((random.randrange(0, 3) for _ in range(self.exons * self.experiments)), self.experiments)
 
-        return [ExonGraphic(a3=None,
-                            a5=None,
+        intron_retention = bool(random.randrange(0, 2))
+
+        return [ExonGraphic(a3=[],
+                            a5=[],
                             start=start * self.exon_length_multiplier,
                             end=end * self.exon_length_multiplier,
                             exon_type_list=exon_type_list)
@@ -85,6 +97,7 @@ class RandomSpliceGraph(object):
         :return: list of junctions
         """
         junctions = []
+        exons = [exon for exon in exons if not exon.intron_retention]
 
         # randomly choose two exons
         exon_pairs = (
@@ -101,7 +114,7 @@ class RandomSpliceGraph(object):
 
         # list of junction reads
         reads = grouped(
-            (random.randrange(0, 2 ** 32) for _ in range(self.junctions * self.experiments)),
+            (random.randrange(0, 2000) for _ in range(self.junctions * self.experiments)),
             self.experiments
         )
 
@@ -114,6 +127,7 @@ class RandomSpliceGraph(object):
             while start == stop:
                 start, stop = sorted((random.randrange(exons[start_exon].start, exons[start_exon].end),
                                       random.randrange(exons[end_exon].start, exons[end_exon].end)))
+
                 count += 1
                 if count > self.junction_start_stop_iterations:
                     raise Exception('Yeah, we can\'t decide on a start and stop for this junction...')

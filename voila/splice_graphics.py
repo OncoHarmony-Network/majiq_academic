@@ -1,11 +1,17 @@
 import csv
 import io
 import json
+import os
 import sys
+from multiprocessing import Manager
+from multiprocessing import Process, Pool
+from multiprocessing.queues import JoinableQueue
+from os.path import join, isfile
 
 import h5py
 
 from voila import constants
+from voila.constants import PROCESS_COUNT, EXPERIMENTS_NAMES
 from voila.hdf5 import HDF5, ExonTypeDataSet, JunctionTypeDataSet, ReadsDataSet
 from voila.utils.voilaLog import voilaLog
 
@@ -40,7 +46,10 @@ class Experiment(HDF5):
         for key in self.__dict__:
             if key in self.field_by_experiment():
                 if self.__dict__[key]:
-                    d[key] = self.__dict__[key][experiment]
+                    try:
+                        d[key] = self.__dict__[key][experiment]
+                    except IndexError:
+                        raise ExperimentIndexError()
             else:
                 d[key] = self.__dict__[key]
         return d
@@ -52,7 +61,7 @@ class NoExons(Exception):
 
 
 class GeneGraphic(HDF5):
-    def __init__(self, gene_id, name=None, strand=None, exons=list(), junctions=list(), chromosome=None):
+    def __init__(self, gene_id, name=None, strand=None, exons=(), junctions=(), chromosome=None):
         """
         Gene data.
         :param gene_id: Gene ID
@@ -167,7 +176,7 @@ class GeneGraphic(HDF5):
 
     def to_hdf5(self, h, use_id=True):
         if use_id:
-            h = h.create_group('/genes/{0}'.format(self.gene_id))
+            h = h.create_group(join('/genes', self.gene_id))
 
         super(GeneGraphic, self).to_hdf5(h, use_id)
 
@@ -254,6 +263,8 @@ class GeneGraphic(HDF5):
         d = self.__dict__.copy()
         d['exons'] = [e.get_dict(experiment) for e in self.exons]
         d['junctions'] = [j.get_dict(experiment) for j in self.junctions]
+        d['start'] = self.start()
+        d['end'] = self.end()
         return d
 
     @classmethod
@@ -431,6 +442,9 @@ class ExonGraphic(Experiment):
     def __lt__(self, other):
         return self.start < other.start
 
+    def __contains__(self, item):
+        return self.start <= item <= self.end
+
 
 class JunctionGraphic(Experiment):
     def __init__(self, start, end, junction_type_list, reads_list, transcripts=(),
@@ -514,7 +528,7 @@ class JunctionGraphic(Experiment):
 
 
 class LsvGraphic(GeneGraphic):
-    def __init__(self, lsv_type, start, end, gene_id, name=None, strand=None, exons=list(), junctions=list(),
+    def __init__(self, lsv_type, start, end, gene_id, name=None, strand=None, exons=(), junctions=(),
                  chromosome=None):
         """
         LSV Data.
@@ -553,3 +567,69 @@ class LsvGraphic(GeneGraphic):
     @classmethod
     def easy_from_hdf5(cls, h):
         return cls(None, None, None, None).from_hdf5(h)
+
+
+class SpliceGraph(object):
+    def __init__(self, splice_graph_file_name):
+        self.file_name = splice_graph_file_name
+        self.hdf5 = None
+
+    def __enter__(self):
+        self.hdf5 = h5py.File(self.file_name, 'a')
+        return self
+
+    def __exit__(self, type, value, traceback):
+        self.hdf5.close()
+
+    def add_experiments_names(self, experiments_names):
+        self.hdf5[EXPERIMENTS_NAMES] = experiments_names
+
+    def erase_splice_graph_file(self):
+        os.remove(self.file_name)
+        self.__enter__()
+
+    def add_gene(self, gene):
+        gene.to_hdf5(self.hdf5)
+
+    def get_genes_list(self):
+        def worker():
+            with h5py.File(self.file_name, 'r') as h:
+                while True:
+                    id = queue.get()
+                    manager_dict[id] = GeneGraphic.easy_from_hdf5(h['/genes'][id])
+                    queue.task_done()
+
+        def producer():
+            with h5py.File(self.file_name, 'r') as h:
+                for x in h['/genes']:
+                    queue.put(x)
+
+        log = voilaLog()
+
+        if not isfile(self.file_name):
+            log.error('unable to load file: {0}'.format(self.file_name))
+            return
+
+        log.info('Loading {0}.'.format(self.file_name))
+
+        queue = JoinableQueue()
+        manager_dict = Manager().dict()
+
+        producer_proc = Process(target=producer)
+        producer_proc.daemon = True
+        producer_proc.start()
+
+        pool = Pool(PROCESS_COUNT, worker)
+
+        producer_proc.join()
+        queue.join()
+
+        pool.close()
+        queue.close()
+
+        return manager_dict.values()
+
+    def get_experiments_list(self):
+        with h5py.File(self.file_name, 'r') as h:
+            experiments_names = h[EXPERIMENTS_NAMES].value
+        return experiments_names

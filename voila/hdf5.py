@@ -1,7 +1,9 @@
 from os.path import join
 
 import numpy
+from h5py.h5r import RegionReference
 
+from voila.constants import EXPERIMENTS_NAMES
 from voila.utils.voilaLog import voilaLog
 
 VOILA_FILE_VERSION = '/voila_file_version'
@@ -187,8 +189,10 @@ class DataSet(object):
         Encode a list of data.
         :return: None
         """
+        if all(x == self.objs[0] for x in self.objs):
+            self.h.attrs[self.ds_name] = self.objs[0]
 
-        if list(self.objs):
+        elif list(self.objs):
             self.objs = [self.objs]
             self.encode_list()
 
@@ -228,9 +232,12 @@ class DataSet(object):
         Decode a list of lists.
         :return: list of stored data
         """
-        ref = self.h.attrs[self.ds_name]
-        if ref:
-            return self.dataset()[ref].tolist()
+        if isinstance(self.h.attrs[self.ds_name], RegionReference):
+            ref = self.h.attrs[self.ds_name]
+            if ref:
+                return self.dataset()[ref].tolist()
+        else:
+            return [[self.h.attrs[self.ds_name]] * len(self.h[EXPERIMENTS_NAMES].value)]
 
     def resize(self):
         ds = self.dataset()
