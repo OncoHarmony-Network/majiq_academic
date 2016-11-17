@@ -1,21 +1,15 @@
-import operator
+
 import os
 import random
 import sys
-from collections import defaultdict
-
-import matplotlib.pyplot as plt
 import numpy as np
-from numpy.random import dirichlet
-from scipy.special import gamma, gammaln
 from scipy.stats import beta
-
-import majiq.src.filter as majiq_filter
-import majiq.src.sample as majiq_sample
 import majiq.src.adjustdelta as majiq_delta
-import majiq.src.io_utils
+import majiq.src.filter as majiq_filter
 import majiq.src.io as majiq_io
+import majiq.src.io_utils
 from majiq.src.constants import *
+from majiq.src.plotting import plot_matrix
 
 """
 Calculate and manipulate PSI and Delta PSI values
@@ -25,28 +19,6 @@ BINS = np.arange(0, 1, BSIZE)
 # The bins for PSI values. With a BSIZE of 0.025, we have 40 BINS
 BINS_CENTER = np.arange(0 + BSIZE / 2, 1, BSIZE)
 # The center of the previous BINS. This is used to calculate the mean value of each bin.
-
-
-def plot_matrix(matrix, my_title, plotname, plotpath):
-    plt.clf()
-    ax = plt.subplot(1, 1, 1)
-    plt.title(my_title)
-    plt.imshow(matrix)
-    plt.xlabel(u"PSI i")
-    plt.ylabel(u"PSI j")
-    ax.set_xticklabels([0, 0, 0.25, 0.5, 0.75, 1])
-    ax.set_yticklabels([0, 0, 0.25, 0.5, 0.75, 1])
-
-    _save_or_show(plotpath, plotname=plotname)
-
-
-def _save_or_show(plotpath, plotname=None):
-    """Generic function that either shows in a popup or saves the figure, depending if the plotpath flag"""
-    if plotpath:
-        plt.savefig("%s%s.png" % (plotpath, plotname), bbox_inches='tight')
-        plt.clf()
-    else:
-        plt.show()
 
 
 def empirical_delta_psi(list_lsv, files, logger=None):
@@ -87,168 +59,6 @@ def empirical_delta_psi(list_lsv, files, logger=None):
     return delta_psi, delta_psi_ir
 
 
-class DirichletCalc:
-    def __init__(self):
-        self.cache = defaultdict(float)
-
-    def pdf(self, x, alpha):
-        k = x
-        k.extend(alpha)
-        key = " ".join(map(str, k))
-        if self.cache[key]:
-            #try to figure out if we already calculated this pdf
-            return self.cache[key]
-        else:
-            #formula taken from stackoverflow "How to calculate dirichlet PDF", author based it on
-            #  Wikipedia's PDF definition
-            ret = gamma(sum(alpha)) / reduce(operator.mul, [gamma(a) for a in alpha]) \
-                  * reduce(operator.mul, [x[i] ** (alpha[i] - 1.0) for i in xrange(len(alpha))])
-            self.cache[key] = ret
-            return ret
-
-
-def dirichlet_pdf(x, alpha):
-    """Returns a Dirichlet PDF function"""
-    alphap = alpha - 1
-    c = np.exp(gammaln(alpha.sum()) - gammaln(alpha).sum())
-    dir_res = c * (x ** alphap).prod(axis=1)
-    dir_res = np.array(dir_res)
-    psi = dir_res / float(dir_res.sum())
-
-    return psi
-
-
-def lsv_psi(samples_events, alpha, n, debug):
-    """
-    Given a set of matching inclusion and exclusion samples, calculate psi, save it in disk, and
-    return the psi-per-juntion matrix
-    """
-
-    psi_scores = []
-    for i, lsv in enumerate(samples_events):
-
-        if i % 50 == 0:
-            print "event %s..." % i,
-            sys.stdout.flush()
-        if 0 < debug == i:
-            break
-        psi = np.zeros(shape=(lsv.shape[0], BINS.shape[0]), dtype=np.float)
-        #if debug: print "Paired samples to dirichlet..."
-        #sampling PSI by pairing the samples of the previous step sequentially
-        for idx, junc in enumerate(lsv):
-            aggr = np.zeros(shape=(junc.shape[0]))
-            for xidx, xx in enumerate(lsv):
-                if idx == xidx:
-                    continue
-                aggr += xx + alpha
-
-            samples = np.ndarray(shape=(2, junc.shape[0]))
-            samples[0, :] = junc + alpha
-            samples[1, :] = aggr
-            total_psi = np.zeros(shape=(n, BINS.shape[0]), dtype=np.float)
-            for pidx, paired_samples in enumerate(samples.T):
-                total_psi[pidx] = dirichlet_pdf(np.array([BINS_CENTER, 1 - BINS_CENTER]).T, paired_samples)
-
-            total_psi = np.median(total_psi, axis=0)
-            psi[idx] = total_psi / total_psi.sum()
-
-        psi_scores.append(psi)
-
-    return psi_scores
-
-
-def calc_psi(inc_samples, exc_samples, name, alpha, n, debug, psiparam):
-    """
-    Given a set of matching inclusion and exclusion samples, calculate
-    psi, save it in disk, and return the psi-per-juntion matrix
-    """
-
-    print inc_samples.shape
-    samples = np.vstack([inc_samples, exc_samples]).reshape(2, inc_samples.shape[0], inc_samples.shape[1])
-    psi_scores = calc_dirichlet(alpha, n, samples, debug=debug, psiparam=psiparam)
-    if psiparam:
-        return psi_scores
-    else:
-        return psi_scores[:, 0]
-        #psi_scores[:,1] is PSE
-
-
-def mean_psi(psi_events):
-    "Calculate the mean for every junction. Used for delta PSI calculation."
-    ret = []
-    for psi_dist in psi_events:
-        #print "PSI_DIST", psi_dist
-        #print "sum(PSI_DIST)", sum(psi_dist)
-        ret.append(sum(psi_dist * BINS_CENTER))
-
-    return np.array(ret)
-
-
-def calc_dirichlet(alpha, n, samples_events, debug=False, psiparam=False):
-    "Expects 3 dimensional matrix in samples_events"
-    psi_matrix = []
-    dircalc = DirichletCalc()
-    if psiparam:
-        for i, event_samples in enumerate(np.rollaxis(samples_events, 1)):
-            #The second dimension of the matrix corresponds to the paired samples per event (3rd dimension) for different
-            # experiments (1st dimension)
-            if i % 5 == 0:
-                print "event %s..." % i,
-                sys.stdout.flush()
-
-            if 0 < debug == i:
-                break
-            #if debug: print "Paired samples to dirichlet..."
-            #sampling PSI by pairing the samples of the previous step sequentially
-            total_acum = 0.
-            acum_samples = np.array([0] * BINS)
-            for h, paired_samples in enumerate(event_samples.T):
-                dir_pdf = [dircalc.pdf([x, 1 - x], alpha + paired_samples) for x in BINS_CENTER]
-                acum_samples += dir_pdf
-                total_acum += sum(dir_pdf)
-
-                #if debug: print "Dividing by total acum..."
-            psi_matrix.append(acum_samples / total_acum)
-            #print "Junction %s PSI distribution: %s sum_N: %s"%(i, psi_matrix[-1], sum(psi_matrix[-1]))
-    else:
-        for i, event_samples in enumerate(np.rollaxis(samples_events, 1)):
-            #we iterate through the second dimension of the matrix, which corresponds to the paired samples per event
-            # for different experiments
-            #This is sampling the PSI. Instead of doing this, we want to fit a parametric form.
-            if i % 50 == 0:
-                print "event %s..." % i,
-                sys.stdout.flush()
-
-            if 0 < debug == i:
-                break
-
-            if len(event_samples.shape) == 1:
-                #only one sample (this is only used if bootstrapping of reads is deactivated)
-                event_psi_samples = dirichlet(event_samples + alpha, n)
-            else:
-                event_psi_samples = []
-                #sampling PSI by pairing the samples of the previous step sequentially (to gain execution time)
-                for paired_samples in event_samples.T:
-                    event_psi_samples.extend(dirichlet(paired_samples + alpha, n))
-
-            #discretization step. Get the psi samples and transform them into a histogram-like distribution
-            event_psi_discrete = []
-            for psi_dist in np.array(event_psi_samples).transpose():
-                my_bins = list(BINS)
-                my_bins.extend([1])
-                #extend because:  If `bins` is a sequence,it defines the bin edges, including the rightmost edge,
-                # allowing for non-uniform bin widths (form histogram docs)
-                counts, limits = np.histogram(psi_dist, bins=my_bins)
-                event_psi_discrete.append(counts / float(sum(counts)))
-
-            #print event_psi_discrete[-1], len(event_psi_discrete), len(event_psi_discrete[-1])
-            psi_matrix.append(event_psi_discrete)
-            #print "Junction %s PSI distribution:"%i, psi_matrix[-1]
-
-    psi_matrix = np.array(psi_matrix)
-    return psi_matrix
-
-
 def __load_default_prior():
 
     encoding = sys.getfilesystemencoding()
@@ -277,11 +87,8 @@ def gen_prior_matrix(files, lsv_exp1, lsv_exp2, output, conf, numbins=20, defaul
                                                   logger=logger)
 
     list_of_lsv = list(set(filtered_lsv1).intersection(set(filtered_lsv2)))
-
     logger.debug("'Best set' is %s events" % len(list_of_lsv))
     best_dpsi, best_dpsi_ir = empirical_delta_psi(list_of_lsv, temp_files)
-    # logger.debug("'Best set IR' is %s events (out of %s)" % (len(list_of_lsv_ir), len(lsv_exp1[0])))
-    # best_dpsi_ir = empirical_delta_psi(list_of_lsv, files)
 
     prior_matrix = [[], []]
 
@@ -323,7 +130,7 @@ def gen_prior_matrix(files, lsv_exp1, lsv_exp2, output, conf, numbins=20, defaul
                                      " order to use a precomputed prior")
             else:
                 prior_matrix[prior_idx] /= sum(prior_matrix[prior_idx])
-                #renormalize so it sums 1
+                # renormalize so it sums 1
 
             plot_matrix(prior_matrix[prior_idx], "Prior Matrix , version %s" % prior_idx,
                         "prior_matrix_jun_%s" % nj, conf.plotpath)

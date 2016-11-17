@@ -1,12 +1,9 @@
 import multiprocessing as mp
 import sys
 import traceback
-
 import h5py
 import numpy as np
 import scipy.misc
-
-from majiq.src.polyfitnb import fit_nb
 import majiq.src.filter as majiq_filter
 import majiq.src.io as majiq_io
 import majiq.src.normalize as majiq_norm
@@ -16,6 +13,8 @@ from majiq.src.basic_pipeline import BasicPipeline, pipeline_run
 from majiq.src.constants import *
 from majiq.src.multiproc import QueueMessage, quantification_init, queue_manager
 from majiq.src.psi import prob_data_sample_given_psi, get_prior_params
+from voila.io_voila import Voila
+
 import collections
 
 
@@ -61,9 +60,13 @@ def psi_quantification(args_vals):
         num_exp = quantification_init.num_exp
 
         f_list = []
-        for eidx in np.arange(num_exp):
-            f_list.append(h5py.File(get_quantifier_norm_temp_files(quantification_init.output,
-                                                                   quantification_init.names, eidx)))
+        # for eidx in np.arange(num_exp):
+        #
+        #     f_list.append(h5py.File(get_quantifier_norm_temp_files(quantification_init.output,
+        #                                                           quantification_init.names, eidx)))
+
+        for fname in quantification_init.files:
+            f_list.append(h5py.File(fname))
 
         for lidx, lsv_id in enumerate(list_of_lsv):
             if lidx % 50 == 0:
@@ -72,7 +75,7 @@ def psi_quantification(args_vals):
 
             lsv_samples = []
             for ff in f_list:
-                lsvobj = ff['LSV/%s' % lsv_id]
+                lsvobj = ff['LSVs/%s' % lsv_id]
                 lsv = ff[LSV_JUNCTIONS_DATASET_NAME][lsvobj.attrs['coverage']]
                 m_lsv, var_lsv, s_lsv = majiq_sample.sample_from_junctions(junction_list=lsv,
                                                                            m=quantification_init.m,
@@ -171,7 +174,7 @@ def parse_and_norm_majiq(fname, replica_num, config):
                 h_lsv = f.create_group('LSV/%s' % filtered_lsv[1][lidx][0])
                 h_lsv.attrs['id'] = filtered_lsv[1][lidx][0]
                 h_lsv.attrs['type'] = filtered_lsv[1][lidx][1]
-                filtered_lsv[1][lidx][2].copy(filtered_lsv[1][lidx][2], h_lsv, name='visuals')
+                filtered_lsv[1][lidx][2].copy(filtered_lsv[1][lidx][2], h_lsv, name='visual')
 
                 all_vals = filtered_lsv[0][lidx]
                 njunc = filtered_lsv[0][lidx].shape[0]
@@ -214,20 +217,25 @@ class CalcPsi(BasicPipeline):
         self.logger.info("GROUP: %s" % self.files)
         self.nbins = 40
 
-        logger = self.logger
-        self.logger = None
-        pool = mp.Pool(processes=self.nthreads, maxtasksperchild=1)
+        # logger = self.logger
+        # self.logger = None
+        # pool = mp.Pool(processes=self.nthreads, maxtasksperchild=1)
+        #
+        # for fidx, fname in enumerate(self.files):
+        #     if self.nthreads > 1:
+        #         pool.apply_async(parse_and_norm_majiq, [fname, fidx, conf(output_dir=self.output, name=self.name,
+        #                                                                   debug=self.debug, silent=self.silent,
+        #                                                                   markstacks=self.markstacks)])
+        #     else:
+        #         parse_and_norm_majiq(fname, fidx, conf(output_dir=self.output, name=self.name,
+        #                                                debug=self.debug, silent=self.silent,
+        #                                                markstacks=self.markstacks))
+        # pool.close()
+        # pool.join()
+        # self.logger = logger
 
-        for fidx, fname in enumerate(self.files):
-            pool.apply_async(parse_and_norm_majiq, [fname, fidx, conf(output_dir=self.output, name=self.name,
-                                                                      debug=self.debug, silent=self.silent,
-                                                                      markstacks=self.markstacks)])
-        pool.close()
-        pool.join()
-        self.logger = logger
-
-        list_of_lsv = majiq_filter.merge_files_hdf5([get_quantifier_norm_temp_files(self.output, self.name, xx)
-                                                     for xx in xrange(len(self.files))], self.minpos, self.minreads,
+        #list_of_lsv = majiq_filter.merge_files_hdf5([get_quantifier_norm_temp_files(self.output, self.name, xx)
+        list_of_lsv = majiq_filter.merge_files_hdf5(self.files, self.minpos, self.minreads,
                                                     logger=self.logger)
         file_locks = None
         if self.only_boots:
@@ -249,7 +257,7 @@ class CalcPsi(BasicPipeline):
 
         pool = mp.Pool(processes=self.nthreads, initializer=quantification_init,
                        initargs=[q, lock_arr, self.output, self.name, self.silent, self.debug, self.nbins, self.m,
-                                 self.k, self.discardzeros, self.trimborder, len(self.files), self.only_boots,
+                                 self.k, self.discardzeros, self.trimborder, self.files, self.only_boots,
                                  file_locks],
                        maxtasksperchild=1)
 
@@ -257,15 +265,16 @@ class CalcPsi(BasicPipeline):
         [xx.acquire() for xx in lock_arr]
 
         if len(list_of_lsv) > 0:
+            # psi_quantification((list_of_lsv, 0))
             pool.map_async(psi_quantification, majiq_utils.chunks2(list_of_lsv, lchnksize, extra=range(self.nthreads)))
             pool.close()
+            meta = majiq_io.read_meta_info(self.files)
+            with Voila(get_quantifier_voila_filename(self.output, self.name), 'w') as out_h5p:
+                out_h5p.add_metainfo(meta['genome'], self.name, meta['experiments'])
+                in_h5p = h5py.File(self.files[0])
+                queue_manager(in_h5p, out_h5p, lock_arr, q, num_chunks=self.nthreads, logger=self.logger)
+                in_h5p.close()
 
-            out_h5p = h5py.File(get_quantifier_voila_filename(self.output, self.name),
-                                'w', compression='gzip', compression_opts=9)
-            in_h5p = h5py.File(get_quantifier_norm_temp_files(self.output, self.name, 0))
-            queue_manager(in_h5p, out_h5p, lock_arr, q, num_chunks=self.nthreads, logger=self.logger)
-            in_h5p.close()
-            out_h5p.close()
             pool.join()
 
         if self.only_boots:

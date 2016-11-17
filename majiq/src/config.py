@@ -2,7 +2,6 @@ import os
 import ConfigParser
 from scipy import interpolate
 import numpy as np
-from blessings import Terminal
 from majiq.src.constants import *
 
 
@@ -131,8 +130,6 @@ def global_conf_ini(filename, params, only_db=False):
         sam_list.append(samfile)
         samfile_name_list.append(exp)
         exp_list[exp_idx] = os.path.split(exp)[1]
-
-    term = Terminal()
 
     return samfile_name_list
 

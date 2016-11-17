@@ -65,6 +65,7 @@ def wrap_result_file(lsv, name, gc_vfunc, lsv_list, rna_files, lock_per_file=Non
 def lsv_detection(gn, gc_vfunc, lsv_list=None, only_real_data=False, locks=None, rna_files=[], logging=None):
 
     dummy = {}
+    count = 0
     for name, ind_list in majiq_config.tissue_repl.items():
         dummy[name] = [[], []]
 
@@ -85,6 +86,7 @@ def lsv_detection(gn, gc_vfunc, lsv_list=None, only_real_data=False, locks=None,
                 if ss.contained(st):
                     break
             else:
+                count += 1
                 wrap_result_file(ss, name, gc_vfunc=gc_vfunc, lsv_list=lsv_list, rna_files=rna_files, lock_per_file=locks)
 
         for st in dummy[name][1]:
@@ -92,7 +94,8 @@ def lsv_detection(gn, gc_vfunc, lsv_list=None, only_real_data=False, locks=None,
                 if st.contained(ss):
                     break
             else:
+                count += 1
                 wrap_result_file(st, name, gc_vfunc=gc_vfunc, lsv_list=lsv_list, rna_files=rna_files, lock_per_file=locks)
 
-
+    return count
 

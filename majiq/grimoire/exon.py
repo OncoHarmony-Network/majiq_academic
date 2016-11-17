@@ -1,5 +1,4 @@
 import os
-
 from majiq.src import config
 
 
