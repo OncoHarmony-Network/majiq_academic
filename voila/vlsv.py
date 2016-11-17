@@ -314,3 +314,7 @@ class VoilaLsv(HDF5):
     @classmethod
     def easy_from_hdf5(cls, h):
         return cls((), None).from_hdf5(h)
+
+
+
+

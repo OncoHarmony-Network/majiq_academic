@@ -28,11 +28,10 @@ class PercentComplete(object):
             rate = round(self.count / delta, 1)
 
             print '\r', '{0}%'.format(percent),
-            if self.count > 10:
-                print '--', ' -- '.join([
-                    'Estimated Remaining Time: {0}'.format(remaining),
-                    'Jobs/Second: {0}'.format(rate)
-                ]),
+            print '--', ' -- '.join([
+                'Estimated Remaining Time: {0}'.format(remaining),
+                'Jobs/Second: {0}'.format(rate)
+            ]),
 
     def range(self):
         return range(self.length)

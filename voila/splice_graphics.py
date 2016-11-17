@@ -11,7 +11,7 @@ from os.path import join, isfile
 import h5py
 
 from voila import constants
-from voila.constants import PROCESS_COUNT, EXPERIMENTS_NAMES
+from voila.constants import PROCESS_COUNT
 from voila.hdf5 import HDF5, ExonTypeDataSet, JunctionTypeDataSet, ReadsDataSet
 from voila.utils.voilaLog import voilaLog
 
@@ -545,8 +545,8 @@ class LsvGraphic(GeneGraphic):
         :param chromosome: This LSV's Chromosome
         """
         super(LsvGraphic, self).__init__(gene_id, name, strand, exons, junctions, chromosome)
-        self.end = end
-        self.start = start
+        self.lsv_end = end
+        self.lsv_start = start
         self.lsv_type = lsv_type
 
     def start(self):
@@ -555,7 +555,7 @@ class LsvGraphic(GeneGraphic):
         protect us from accidentally calling the super class 'start()' method.
         :return: integer
         """
-        return self.start
+        return self.lsv_start
 
     def end(self):
         """
@@ -563,7 +563,7 @@ class LsvGraphic(GeneGraphic):
         us from accidentally calling the super class 'end()' method.
         :return:
         """
-        return self.end
+        return self.lsv_end
 
     def to_hdf5(self, h, use_id=True):
         super(LsvGraphic, self).to_hdf5(h, False)
@@ -585,9 +585,6 @@ class Splicegraph(object):
 
     def __exit__(self, type, value, traceback):
         self.hdf5.close()
-
-    def add_experiments_names(self, experiments_names):
-        self.hdf5[EXPERIMENTS_NAMES] = experiments_names
 
     def erase_splice_graph_file(self):
         os.remove(self.file_name)
@@ -633,9 +630,6 @@ class Splicegraph(object):
         queue.close()
 
         return manager_dict.values()
-
-    def get_experiments_list(self):
-        return self.hdf5[EXPERIMENTS_NAMES].value
 
     def get_gene_ids(self):
         return self.hdf5['genes'].keys()

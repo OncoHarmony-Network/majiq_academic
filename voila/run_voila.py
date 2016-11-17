@@ -15,7 +15,7 @@ import voila.constants as constants
 import voila.io_voila as io_voila
 import voila.module_locator as module_locator
 import voila.utils.utils_voila as utils_voila
-from voila.splice_graphics import GeneGraphic, SpliceGraph
+from voila.splice_graphics import GeneGraphic, Splicegraph
 from voila.utils.voilaLog import voilaLog
 
 EXEC_DIR = module_locator.module_path() + "/"
@@ -310,7 +310,8 @@ def parse_gene_graphics(splicegraph_flist, gene_name_list, condition_names=('gro
 
         for splice_graph_f in splice_files:
 
-            genes_g = SpliceGraph(splice_graph_f).get_genes_list()
+            with Splicegraph(splice_graph_f, 'r') as sg:
+                genes_g = sg.get_genes_list()
 
             if not genes_g:
                 continue
@@ -394,9 +395,9 @@ def parse_gene_graphics_obj(splicegraph_flist, gene_name_list, condition_names=(
             sys.exit(1)
 
         for splice_graph_f in splice_files:
-            splice_graph = SpliceGraph(splice_graph_f)
-            genes = splice_graph.get_genes_list()
-            experiments = splice_graph.get_experiments_list()
+            with Splicegraph(splice_graph_f, 'r') as sg:
+                genes = sg.get_genes_list()
+                experiments = sg.get_experiments_list()
             genes.sort()
 
             for experiment_number, experiment_name in enumerate(experiments):

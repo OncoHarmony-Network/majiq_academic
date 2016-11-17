@@ -2,6 +2,8 @@ import random
 import uuid
 from itertools import izip
 
+import numpy
+
 from voila.splice_graphics import ExonGraphic, JunctionGraphic, GeneGraphic, LsvGraphic
 
 
@@ -10,7 +12,7 @@ def grouped(iterable, n):
     return izip(*[iter(iterable)] * n)
 
 
-class RandomSpliceGraph(object):
+class RandomSplicegraph(object):
     def __init__(self, experiments=None, exons=None, junctions=None, gene_id=None):
         """
         Generate random exons and random junctions for creating a GeneGraphic object. The developer admits this isn't
@@ -135,8 +137,8 @@ class RandomSpliceGraph(object):
             junction = JunctionGraphic(
                 start=start,
                 end=stop,
-                junction_type_list=t,
-                reads_list=r
+                junction_type_list=numpy.array(t),
+                reads_list=numpy.array(r)
             )
 
             junctions.append(junction)

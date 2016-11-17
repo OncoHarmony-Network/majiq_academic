@@ -9,12 +9,45 @@ import numpy as np
 
 import vlsv
 from voila import constants
+from voila.constants import EXPERIMENTS_NAMES
 from voila.hdf5 import HDF5
 from voila.utils import utils_voila
 from voila.utils.voilaLog import voilaLog
 from voila.vlsv import VoilaLsv
 
 __author__ = 'abarrera'
+
+
+class Voila(object):
+    def __init__(self, voila_file_name, mode):
+        self.mode = mode
+        self.file_name = voila_file_name
+        self.hdf5 = None
+
+    def __enter__(self):
+        self.hdf5 = h5py.File(self.file_name, self.mode)
+        return self
+
+    def __exit__(self, type, value, traceback):
+        self.hdf5.close()
+
+    def add_lsv(self, voilaLsv):
+        voilaLsv.to_hdf5(self.hdf5)
+
+    def add_metainfo(self, genome, group1, experiments1, group2=None, experiments2=None):
+        metainfo = {'group1': group1, 'experiments1': experiments1, 'genome': genome}
+        if group2 and experiments2:
+            metainfo['experiments2'] = experiments2
+            metainfo['group2'] = group2
+        vi = VoilaInput()
+        vi.metainfo = metainfo
+        vi.encode_metainfo(self.hdf5['/'])
+
+    def add_experiment_names(self, experiment_names):
+        self.hdf5['/'].attrs[EXPERIMENTS_NAMES] = experiment_names
+
+    def get_experiments_list(self):
+        return self.hdf5['/'].attrs[EXPERIMENTS_NAMES].value
 
 
 class VoilaInput(HDF5):
