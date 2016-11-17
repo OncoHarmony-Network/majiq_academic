@@ -189,12 +189,12 @@ class DataSet(object):
         Encode a list of data.
         :return: None
         """
-        if all(x == self.objs[0] for x in self.objs):
-            self.h.attrs[self.ds_name] = self.objs[0]
-
-        elif list(self.objs):
-            self.objs = [self.objs]
-            self.encode_list()
+        if list(self.objs):
+            if all(x == self.objs[0] for x in self.objs):
+                self.h.attrs[self.ds_name] = self.objs[0]
+            else:
+                self.objs = [self.objs]
+                self.encode_list()
 
     def decode(self):
         """
@@ -202,7 +202,7 @@ class DataSet(object):
         :return: list of data
         """
         l = self.decode_list()
-        if l:
+        if list(l):
             return l[0]
 
     def encode_list(self):
@@ -237,7 +237,20 @@ class DataSet(object):
             if ref:
                 return self.dataset()[ref].tolist()
         else:
-            return [[self.h.attrs[self.ds_name]] * len(self.h[EXPERIMENTS_NAMES].value)]
+
+            # When we find a reference that's not a reference it's actually an array of the value found. If 'ref'
+            # has the value of '0' then we know it's a list of '0' with the size equal to the number of experiments.
+            # There may be points while the data is being moved around that we don't know the number of experiments,
+            # therefore we set the length of the list to one and expand it to its actual length later down the
+            # pipeline.
+
+            try:
+                experiments_length = len(self.h[EXPERIMENTS_NAMES].value)
+            except KeyError:
+                voilaLog().warning('Unable to find number of experiments. Expanding compressed data to length 1.')
+                experiments_length = 1
+
+            return [[self.h.attrs[self.ds_name]] * experiments_length]
 
     def resize(self):
         ds = self.dataset()
