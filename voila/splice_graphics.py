@@ -11,7 +11,7 @@ from os.path import join, isfile
 import h5py
 
 from voila import constants
-from voila.constants import PROCESS_COUNT
+from voila.constants import PROCESS_COUNT, EXPERIMENTS_NAMES
 from voila.hdf5 import HDF5, ExonTypeDataSet, JunctionTypeDataSet, ReadsDataSet
 from voila.utils.voilaLog import voilaLog
 
@@ -636,3 +636,9 @@ class Splicegraph(object):
 
     def get_gene(self, gene_id):
         return GeneGraphic.easy_from_hdf5(self.hdf5['genes'][gene_id])
+
+    def add_experiment_names(self, experiment_names):
+        self.hdf5['/'].attrs[EXPERIMENTS_NAMES] = experiment_names
+
+    def get_experiments_list(self):
+        return self.hdf5['/'].attrs[EXPERIMENTS_NAMES].value

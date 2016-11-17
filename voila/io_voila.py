@@ -9,7 +9,6 @@ import numpy as np
 
 import vlsv
 from voila import constants
-from voila.constants import EXPERIMENTS_NAMES
 from voila.hdf5 import HDF5
 from voila.utils import utils_voila
 from voila.utils.voilaLog import voilaLog
@@ -42,12 +41,6 @@ class Voila(object):
         vi = VoilaInput()
         vi.metainfo = metainfo
         vi.encode_metainfo(self.hdf5['/'])
-
-    def add_experiment_names(self, experiment_names):
-        self.hdf5['/'].attrs[EXPERIMENTS_NAMES] = experiment_names
-
-    def get_experiments_list(self):
-        return self.hdf5['/'].attrs[EXPERIMENTS_NAMES].value
 
 
 class VoilaInput(HDF5):
