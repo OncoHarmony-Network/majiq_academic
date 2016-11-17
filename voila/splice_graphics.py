@@ -86,6 +86,9 @@ class GeneGraphic(HDF5):
         self.junctions = sorted(junctions)
         self.chromosome = chromosome
 
+    def __len__(self):
+        return self.end() - self.start()
+
     def start(self):
         """
         Start of gene.
@@ -265,6 +268,7 @@ class GeneGraphic(HDF5):
         d['junctions'] = [j.get_dict(experiment) for j in self.junctions]
         d['start'] = self.start()
         d['end'] = self.end()
+        d['length'] = len(self)
         return d
 
     @classmethod
@@ -569,13 +573,14 @@ class LsvGraphic(GeneGraphic):
         return cls(None, None, None, None).from_hdf5(h)
 
 
-class SpliceGraph(object):
-    def __init__(self, splice_graph_file_name):
+class Splicegraph(object):
+    def __init__(self, splice_graph_file_name, mode):
         self.file_name = splice_graph_file_name
         self.hdf5 = None
+        self.mode = mode
 
     def __enter__(self):
-        self.hdf5 = h5py.File(self.file_name, 'a')
+        self.hdf5 = h5py.File(self.file_name, self.mode)
         return self
 
     def __exit__(self, type, value, traceback):
@@ -630,6 +635,10 @@ class SpliceGraph(object):
         return manager_dict.values()
 
     def get_experiments_list(self):
-        with h5py.File(self.file_name, 'r') as h:
-            experiments_names = h[EXPERIMENTS_NAMES].value
-        return experiments_names
+        return self.hdf5[EXPERIMENTS_NAMES].value
+
+    def get_gene_ids(self):
+        return self.hdf5['genes'].keys()
+
+    def get_gene(self, gene_id):
+        return GeneGraphic.easy_from_hdf5(self.hdf5['genes'][gene_id])
