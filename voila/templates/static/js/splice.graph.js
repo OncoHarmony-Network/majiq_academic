@@ -611,7 +611,7 @@ window.splicegraph = function () {
 
             // NOTE: The list of exons_obj is assumed to be sorted.
             // NEW 20140318: Exons have type: 0=Both reads & annotations; 1=New (no annotations); 2=Missing (annotated, no reads)
-            var genomic_data = JSON.parse(canvas.getAttribute('data-exon-list').replace(/\\'/g, "\"").replace(/'/g, ""));   // RESTORE ME WHEN DEBUGGING FINISH!
+            var genomic_data = JSON.parse(canvas.getAttribute('data-exon-list').replace(/'/g, "\""));   // RESTORE ME WHEN DEBUGGING FINISH!
 
             var MARGIN = [10, 10, 0, 10];    // Global E, W, N, S
 
@@ -684,28 +684,27 @@ window.splicegraph = function () {
             var exon_lsv_number = '';
             var exon_lsv_coords = canvas.getAttribute('data-coord-exon');
 
+
             if (gene) {
                 var exons_gene = gene.exons.filter(function (v) {
-                    return v.type_exon < 3 && !v.intron_retention;
+                    return v.exon_type < 3 && !v.intron_retention;
                 });
             }
 
             if (exon_lsv_coords) {
-                var regex_coords = /[\[|(](\d+?),\s+(\d+?)[\]|)]/.exec(exon_lsv_coords);
+                var regex_coords = /[\[|(](\d+?),\s*(\d+?)[\]|)]/.exec(exon_lsv_coords);
                 exon_lsv_coords = [regex_coords[1], regex_coords[2]];
 
                 // Find LSV exon number in the splice graph
-                for (var exon_i = 0; exon_i < exons_gene.length; exon_i++) {
-                    if (exons_gene[exon_i].coords[0] == exon_lsv_coords[0] && exons_gene[exon_i].coords[1] == exon_lsv_coords[1]) {
-                        exon_lsv_number = exon_i + 1;
-                        break;
-                    }
-                }
+                var lsv_exon = exons_gene.find(function (element) {
+                    return element.start == exon_lsv_coords[0] && element.end == exon_lsv_coords[1]
+                });
+                exon_lsv_number = exons_gene.indexOf(lsv_exon) + 1;
+
                 // If negative strand, complement the exon ordinal
                 if (gene.strand === '-') {
                     exon_lsv_number = exons_gene.length - exon_lsv_number + 1;
                 }
-
             }
 
             var lsv_data = canvas.getAttribute('data-lsv-string');

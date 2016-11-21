@@ -32,38 +32,48 @@
 
             {% for gene in genes %}
                 {% set gene_index = loop.index - 1 %}
-                <h2>Gene name: {{ gene.name }}; {{ gene.chrom }}:{{ gene.strand }}:{{ gene.start }}-{{ gene.end }};</h2>
+                <h2>Gene
+                    name: {{ gene.name }}; {{ gene.chromosome }}:{{ gene.strand }}:{{ gene.start }}-{{ gene.end }};</h2>
+
                 <h3 class="gene_id">
-                    Gene ID: {{ gene.id }};
+                    Gene ID: {{ gene.gene_id }};
                 </h3>
 
-                <div>
-                    <div class="spliceDiv" id="spliceDivExp1_{{ gene_index }}"
-                         data-exon-list="{{ gene_dicts[gene_dicts.keys()[0]][gene.get_id()] | to_json_especial }}">
-                        <div class="spliceGraphTools">
-                            <select class="spliceGraphSelector" autocomplete="off">
-                                {% for nsample in gene_dicts.keys() -%}
-                                    {% if nsample == first_sample %}
-                                        <option selected="selected"
-                                                value="{{ gene_dicts[nsample][gene.get_id()] |to_json_especial }}">{{ nsample }}
-                                        </option>
-                                    {% else %}
-                                        <option value="{{ gene_dicts[nsample][gene.get_id()] |to_json_especial }}">{{ nsample }}
-                                        </option>
-                                    {% endif %}
-                                {%- endfor %}
-                            </select>
-                            <img class="toogleScale scaled" src="static/img/icons/solve-icon.png"
-                                 title="Change between scaled view and a view where introns are trimmed"/>
-                            <img class="zoomInSplice" src="static/img/zoom_in.png" title="Zoom in" alt=""/>
-                            <img class="zoomOutSplice" src="static/img/zoom_out.png" title="Zoom out" alt=""/>
-                            <img class="zoomResetSplice" src="static/img/undo.png" title="Zoom reset" alt=""/>
-                            <div class="tooltipD3"><strong>Coordinates: </strong><span
-                                    class="coordsLabel">-</span>;<strong>
-                                Length: </strong><span class="lengthLabel">-;</span></div>
+                <div class="gene-container">
+
+                    <div class="spliceGraphTools">
+
+                        <select class="spliceGraphSelector exp1" autocomplete="off">
+                            {% for nsample in gene_dicts.keys() -%}
+                                {% if nsample == first_sample %}
+                                    <option selected="selected"
+                                            value="{{ gene_dicts[nsample][gene.gene_id] |to_json_especial }}">{{ nsample }}
+                                    </option>
+                                {% else %}
+                                    <option value="{{ gene_dicts[nsample][gene.gene_id] |to_json_especial }}">{{ nsample }}
+                                    </option>
+                                {% endif %}
+                            {%- endfor %}
+                        </select>
+
+                        <img class="toogleScale scaled" src="static/img/icons/solve-icon.png"
+                             title="Change between scaled view and a view where introns are trimmed"/>
+                        <img class="zoomInSplice" src="static/img/zoom_in.png" title="Zoom in" alt=""/>
+                        <img class="zoomOutSplice" src="static/img/zoom_out.png" title="Zoom out" alt=""/>
+                        <img class="zoomResetSplice" src="static/img/undo.png" title="Zoom reset" alt=""/>
+                        <div class="tooltipD3"><strong>Coordinates: </strong><span
+                                class="coordsLabel">-</span>;<strong>
+                            Length: </strong><span class="lengthLabel">-;</span></div>
+
+                    </div>
+
+                    <div class="splice-div-container">
+                        <div class="spliceDiv exp1" id="spliceDivExp1_{{ gene_index }}"
+                             data-exon-list="{{ gene_dicts[gene_dicts.keys()[0]][gene.gene_id] | to_json_especial }}">
 
                         </div>
                     </div>
+
                     <table id="event_table{{ loop.index }}" class="tablesorter hidden">
                         <thead>
                         <tr>

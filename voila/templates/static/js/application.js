@@ -52,10 +52,11 @@ $(document).ready(function () {
 
                 // check read counts toggle button for read counts state
                 var toggleReadCounts = this.parentNode.parentNode.parentNode.parentNode.querySelector('.readCounts');
-                var displayNormReads = toggleReadCounts.checked;
+                var displayNormReads = !toggleReadCounts.checked;
 
                 // get read counts based on this specific splice graphs state
-                currentNumReads = displayNormReads ? d.num_clean_reads : d.num_reads;
+                var cleanReads = d.clean_reads ? d.clean_reads : 0;
+                currentNumReads = displayNormReads ? d.reads : cleanReads;
 
                 // return if this element should have the 'sgfilter' class
                 return !isNaN(numReadsValue) && currentNumReads <= numReadsValue;
@@ -495,7 +496,7 @@ function drawLSVCompactStackBars(canvas, fillMode) {
 
         var groups_str = canvas.getAttribute("data-lsv");
 
-        var groups = JSON.parse(groups_str.replace(/\\\"/g, "\'").replace(/\"/g, "").replace(/'/g, "\""));
+        var groups = JSON.parse(groups_str.replace(/'/g, '"'));
 
         // Calculate origins_coords
         var header_height = 0; // canvas.height*.1;
@@ -980,6 +981,7 @@ function renderViolin(htmlElementId, results, tableId, params) {
             .range(domain)
             (results);
 
+
         var y = d3.scale.linear()
             .range([width / 2, 0])
             .domain([0, Math.max(imposeMax, d3.max(data, function (d) {
@@ -1007,7 +1009,7 @@ function renderViolin(htmlElementId, results, tableId, params) {
             .interpolate(interpolation)
             .x(function (d) {
                 if (interpolation == "step-before")
-                    return x(d.x + d.dx / 2)
+                    return x(d.x + d.dx / 2);
                 return x(d.x);
             })
             .y(function (d) {
@@ -1168,12 +1170,10 @@ function renderViolin(htmlElementId, results, tableId, params) {
         .attr("y2", y(0));
 
     for (var i = 0; i < results.length; i++) {
-        results[i] = results[i]; //.sort(d3.ascending);
         var g = svg.append("g").attr("transform", "translate(" + (i * (boxWidth + boxSpacing) + margin.left) + ",0)");
         addViolin(g, results[i], height, boxWidth, domain, 0.25, i, htmlElementId, tableId);
         addBoxPlot(g, results[i], height, boxWidth, domain, .15);
         addExpectedPSI(g, d3.mean(results[i]), height, boxWidth, i);
-
     }
 
     svg.append("g")
