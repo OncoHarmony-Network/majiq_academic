@@ -61,7 +61,6 @@ def quantification_init(q, lock, output, names, silent, debug, nbins, m, k,
     quantification_init.k = k
     quantification_init.discardzeros = discardzeros
     quantification_init.trimborder = trimborder
-    quantification_init.num_exp = len(files)
     quantification_init.files = files
     quantification_init.only_boots = only_boots
     quantification_init.lock_per_file = lock_per_file

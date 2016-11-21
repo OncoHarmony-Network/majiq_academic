@@ -35,17 +35,17 @@ def empirical_delta_psi(list_lsv, files, logger=None):
     group2 = [majiq_io.open_hdf5_file(xx) for xx in files[1]]
     for idx, lsv in enumerate(list_lsv):
         # Assuming that the type is the same in all the replicas and groups
-        if group1[0]['LSV/%s' % lsv].attrs['type'].endswith('i'):
+        if group1[0]['LSVs/%s' % lsv].attrs['type'].endswith('i'):
             delta_psi_res = delta_psi_ir
         else:
             delta_psi_res = delta_psi
 
-        cov1 = np.array([fp[LSV_JUNCTIONS_DATASET_NAME][fp['LSV/%s' % lsv].attrs['coverage']].sum(axis=1) for fp in group1])
+        cov1 = np.array([fp[LSV_JUNCTIONS_DATASET_NAME][fp['LSVs/%s' % lsv].attrs['coverage']].sum(axis=1) for fp in group1])
         cov1 = cov1.mean(axis=0)
         psi1 = np.array([float(cov1[jidx]) / float(np.sum(cov1)) for jidx in range(len(cov1))])
         psi1[np.isnan(psi1)] = 0.5
 
-        cov2 = np.array([fp[LSV_JUNCTIONS_DATASET_NAME][fp['LSV/%s' % lsv].attrs['coverage']].sum(axis=1) for fp in group2])
+        cov2 = np.array([fp[LSV_JUNCTIONS_DATASET_NAME][fp['LSVs/%s' % lsv].attrs['coverage']].sum(axis=1) for fp in group2])
         cov2 = cov2.mean(axis=0)
         psi2 = np.array([float(cov2[jidx]) / float(np.sum(cov2)) for jidx in range(len(cov2))])
         psi2[np.isnan(psi2)] = 0.5
@@ -78,17 +78,16 @@ def gen_prior_matrix(files, lsv_exp1, lsv_exp2, output, conf, numbins=20, defaul
 
     logger.debug('Filtering to obtain "best set"...')
 
-    temp_files = [[get_quantifier_norm_temp_files(output, conf.names[0], xx) for xx in xrange(len(files[0]))],
-                  [get_quantifier_norm_temp_files(output, conf.names[1], xx) for xx in xrange(len(files[1]))]]
+    # temp_files = [files[0],files[]]
 
-    filtered_lsv1 = majiq_filter.merge_files_hdf5(temp_files[0], minnonzero=10, min_reads=20, merge_replicas=True,
+    filtered_lsv1 = majiq_filter.merge_files_hdf5(files[0], minnonzero=10, min_reads=20, merge_replicas=True,
                                                   logger=logger)
-    filtered_lsv2 = majiq_filter.merge_files_hdf5(temp_files[1], minnonzero=10, min_reads=20, merge_replicas=True,
+    filtered_lsv2 = majiq_filter.merge_files_hdf5(files[1], minnonzero=10, min_reads=20, merge_replicas=True,
                                                   logger=logger)
 
     list_of_lsv = list(set(filtered_lsv1).intersection(set(filtered_lsv2)))
     logger.debug("'Best set' is %s events" % len(list_of_lsv))
-    best_dpsi, best_dpsi_ir = empirical_delta_psi(list_of_lsv, temp_files)
+    best_dpsi, best_dpsi_ir = empirical_delta_psi(list_of_lsv, files)
 
     prior_matrix = [[], []]
 

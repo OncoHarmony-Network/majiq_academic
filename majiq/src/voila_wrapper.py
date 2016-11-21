@@ -21,7 +21,7 @@ def gene_to_splicegraph(gne, lock):
         junc_l = []
         alt_empty_ends = []
         alt_empty_starts = []
-        for jj in gne.get_all_junctions():
+        for jj in gne.get_all_junctions(filter=False):
 
             cc = jj.get_coordinates()
             if jj.get_donor() is None:

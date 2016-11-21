@@ -109,7 +109,7 @@ class Gene:
         self.junc_index = val
 
 
-    def get_all_junctions(self):
+    def get_all_junctions(self, filter=True):
         lst = set()
         for ex in self.get_exon_list():
             for ex_rna in ex.exonRead_list:
@@ -120,7 +120,7 @@ class Gene:
                     lst = lst.union(set(ex_tx.p5_junc))
 
         s_junc = list(lst)
-        return sorted([xx for xx in s_junc if not xx is None and xx.get_coverage().sum() > 0])
+        return sorted([xx for xx in s_junc if not xx is None and (not filter or xx.get_coverage().sum() > 0)])
 
     def get_all_introns(self):
         lintrons = []

@@ -57,7 +57,7 @@ def psi_quantification(args_vals):
             logger.info(".. Only Bootstrap enabled .. %s" % chnk)
 
         nbins = quantification_init.nbins
-        num_exp = quantification_init.num_exp
+        num_exp = len(quantification_init.files)
 
         f_list = []
         # for eidx in np.arange(num_exp):
@@ -102,26 +102,26 @@ def psi_quantification(args_vals):
                 continue
 
             psi = np.array(lsv_samples)
-            num_ways = len(lsv_samples)
+            num_ways = psi.shape[1]
             alpha_prior, beta_prior = get_prior_params(lsvobj.attrs['type'], num_ways)
             post_psi = []
-
+            mu_psi = []
             for p_idx in xrange(int(num_ways)):
                 posterior = np.zeros(shape=nbins, dtype=np.float)
-                mu_psi = []
+                mu_psi_m = []
                 for m in xrange(quantification_init.m):
 
                     # log(p(D_T1(m) | psi_T1)) = SUM_t1 T ( log ( P( D_t1 (m) | psi _T1)))
                     junc = np.array([psi[xx][p_idx][m] for xx in xrange(num_exp)])
 
                     all_sample = np.array([psi[xx][yy][m].sum() for xx in xrange(num_exp) for yy in xrange(num_ways)])
-                    mu_psi.append(float(junc.sum()) / all_sample.sum())
+                    mu_psi_m.append(float(junc.sum()) / all_sample.sum())
                     data_given_psi = np.log(prob_data_sample_given_psi(junc.sum(), all_sample.sum(), nbins,
                                                                        alpha_prior[p_idx], beta_prior[p_idx]))
                     # normalizing
                     posterior += np.exp(data_given_psi - scipy.misc.logsumexp(data_given_psi))
 
-                mu_psi = np.median(mu_psi)
+                mu_psi.append(np.median(mu_psi_m))
                 post_psi.append(posterior / quantification_init.m)
                 if num_ways == 2:
                     break
