@@ -11,7 +11,7 @@ from os.path import join, isfile
 import h5py
 
 from voila import constants
-from voila.constants import PROCESS_COUNT, EXPERIMENTS_NAMES
+from voila.constants import PROCESS_COUNT, EXPERIMENT_NAMES
 from voila.hdf5 import HDF5, ExonTypeDataSet, JunctionTypeDataSet, ReadsDataSet
 from voila.utils.voilaLog import voilaLog
 
@@ -41,7 +41,7 @@ class Experiment(HDF5):
         else:
             raise UnknownField(field)
 
-    def get_dict(self, experiment):
+    def get_experiment(self, experiment):
         d = {}
         for key in self.__dict__:
             if key in self.field_by_experiment():
@@ -142,7 +142,7 @@ class GeneGraphic(HDF5):
         Construct and return this gene's coordinates.
         :return: list of coordinates
         """
-        return [self.start, self.end]
+        return [self.start(), self.end()]
 
     def to_json(self, encoder=json.JSONEncoder):
         """
@@ -262,10 +262,10 @@ class GeneGraphic(HDF5):
                 self.junctions.append(jg)
         self.junctions.sort()
 
-    def get_dict(self, experiment):
+    def get_experiment(self, experiment):
         d = self.__dict__.copy()
-        d['exons'] = [e.get_dict(experiment) for e in self.exons]
-        d['junctions'] = [j.get_dict(experiment) for j in self.junctions]
+        d['exons'] = [e.get_experiment(experiment) for e in self.exons]
+        d['junctions'] = [j.get_experiment(experiment) for j in self.junctions]
         d['start'] = self.start()
         d['end'] = self.end()
         d['length'] = len(self)
@@ -352,6 +352,24 @@ class ExonGraphic(Experiment):
         self.alt_starts = alt_starts
         self.alt_ends = alt_ends
 
+    # def __str__(self):
+    #     return str(((self.start, self.end), self.exon_type))
+
+    # def __repr__(self):
+    #     return self.__str__()
+
+    def __sizeof__(self):
+        return sum([sys.getsizeof(self.__dict__[key] for key in self.__dict__)])
+
+    def __lt__(self, other):
+        return self.start < other.start
+
+    def __contains__(self, item):
+        return self.start <= item <= self.end
+
+    def __len__(self):
+        return self.end - self.start
+
     def field_by_experiment(self):
         return ['exon_type']
 
@@ -430,24 +448,17 @@ class ExonGraphic(Experiment):
         """
         return self.__copy__()
 
+    def to_dict(self):
+        return self.__dict__.copy()
+
+    def get_experiment(self, experiment):
+        d = super(ExonGraphic, self).get_experiment(experiment)
+        d['length'] = len(self)
+        return d
+
     @classmethod
     def easy_from_hdf5(cls, h):
         return cls(None, None, None, None, None).from_hdf5(h)
-
-    def __str__(self):
-        return str(((self.start, self.end), self.exon_type))
-
-    def __repr__(self):
-        return self.__str__()
-
-    def __sizeof__(self):
-        return sum([sys.getsizeof(self.__dict__[key] for key in self.__dict__)])
-
-    def __lt__(self, other):
-        return self.start < other.start
-
-    def __contains__(self, item):
-        return self.start <= item <= self.end
 
 
 class JunctionGraphic(Experiment):
@@ -474,6 +485,26 @@ class JunctionGraphic(Experiment):
         self.clean_reads = None
         self.transcripts = transcripts
         self.intron_retention = intron_retention
+
+    def __hash__(self):
+        return int(str(self.start) + str(self.end))
+
+    def __eq__(self, other):
+        return (self.start, self.end) == (other.start, other.end)
+
+    def __copy__(self):
+        jg = type(self)((), None, None)
+        jg.__dict__.update(self.__dict__)
+        return jg
+
+    def __str__(self):
+        return str(((self.start, self.end), self.junction_type))
+
+    def __repr__(self):
+        return self.__str__()
+
+    def __lt__(self, other):
+        return (self.start, self.end) < (other.start, other.end)
 
     def field_by_experiment(self):
         return ['junction_type', 'reads', 'clean_reads']
@@ -506,29 +537,12 @@ class JunctionGraphic(Experiment):
         self.reads = ReadsDataSet(h).decode()
         return super(JunctionGraphic, self).from_hdf5(h)
 
+    def to_dict(self):
+        return self.__dict__.copy()
+
     @classmethod
     def easy_from_hdf5(cls, h):
         return cls(None, None, (), ()).from_hdf5(h)
-
-    def __hash__(self):
-        return int(str(self.start) + str(self.end))
-
-    def __eq__(self, other):
-        return (self.start, self.end) == (other.start, other.end)
-
-    def __copy__(self):
-        jg = type(self)((), None, None)
-        jg.__dict__.update(self.__dict__)
-        return jg
-
-    def __str__(self):
-        return str(((self.start, self.end), self.junction_type))
-
-    def __repr__(self):
-        return self.__str__()
-
-    def __lt__(self, other):
-        return (self.start, self.end) < (other.start, other.end)
 
 
 class LsvGraphic(GeneGraphic):
@@ -565,6 +579,12 @@ class LsvGraphic(GeneGraphic):
         """
         return self.lsv_end
 
+    def to_dict(self):
+        d = self.__dict__.copy()
+        d['exons'] = [exon.to_dict() for exon in self.exons]
+        d['junctions'] = [junction.to_dict() for junction in self.junctions]
+        return d
+
     def to_hdf5(self, h, use_id=True):
         super(LsvGraphic, self).to_hdf5(h, False)
 
@@ -574,9 +594,9 @@ class LsvGraphic(GeneGraphic):
 
 
 class Splicegraph(object):
-    def __init__(self, splice_graph_file_name, mode):
+    def __init__(self, splice_graph_file_name, mode, hdf5=None):
         self.file_name = splice_graph_file_name
-        self.hdf5 = None
+        self.hdf5 = hdf5
         self.mode = mode
 
     def __enter__(self):
@@ -614,6 +634,8 @@ class Splicegraph(object):
 
         log.info('Loading {0}.'.format(self.file_name))
 
+        self.__exit__(None, None, None)
+
         queue = JoinableQueue()
         manager_dict = Manager().dict()
 
@@ -629,6 +651,8 @@ class Splicegraph(object):
         pool.close()
         queue.close()
 
+        self.__enter__()
+
         return manager_dict.values()
 
     def get_gene_ids(self):
@@ -638,7 +662,7 @@ class Splicegraph(object):
         return GeneGraphic.easy_from_hdf5(self.hdf5['genes'][gene_id])
 
     def add_experiment_names(self, experiment_names):
-        self.hdf5['/'].attrs[EXPERIMENTS_NAMES] = experiment_names
+        self.hdf5['/'].attrs[EXPERIMENT_NAMES] = experiment_names
 
     def get_experiments_list(self):
-        return self.hdf5['/'].attrs[EXPERIMENTS_NAMES].value
+        return self.hdf5['/'].attrs[EXPERIMENT_NAMES].tolist()

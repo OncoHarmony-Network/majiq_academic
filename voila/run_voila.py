@@ -15,7 +15,7 @@ import voila.constants as constants
 import voila.io_voila as io_voila
 import voila.module_locator as module_locator
 import voila.utils.utils_voila as utils_voila
-from voila.splice_graphics import GeneGraphic, Splicegraph
+from voila.splice_graphics import Splicegraph
 from voila.utils.voilaLog import voilaLog
 
 EXEC_DIR = module_locator.module_path() + "/"
@@ -61,7 +61,7 @@ def render_summary(output_dir, output_html, majiq_output, type_summary, threshol
     log.info("Creating the interactive HTML5 summary in %s ..." % output_dir)
 
     def to_json(value):
-        return escape(json.dumps(value, cls=utils_voila.PickleEncoder))
+        return json.dumps(value.to_dict()).replace('"', '\'')
 
     def to_json_especial(value):
         return escape(json.dumps(value, cls=utils_voila.LsvGraphicEncoder).replace('\"', '\''))
@@ -100,7 +100,7 @@ def render_summary(output_dir, output_html, majiq_output, type_summary, threshol
             next_page = None
 
             subset_keys = gene_keys[count_pages * constants.MAX_GENES: constants.MAX_GENES * (count_pages + 1)]
-            genes_dict = cc.OrderedDict((k, majiq_output['genes_dict'][k]) for k in subset_keys)
+            genes_dict = OrderedDict((k, majiq_output['genes_dict'][k]) for k in subset_keys)
             log.info("Processing %d out of %d genes ..." % (
                 min((count_pages + 1) * constants.MAX_GENES, len(gene_keys)), len(majiq_output['genes_dict'])))
             if (count_pages + 1) * constants.MAX_GENES < len(majiq_output['genes_dict']):
@@ -123,7 +123,7 @@ def render_summary(output_dir, output_html, majiq_output, type_summary, threshol
                                     ))
             voila_output.close()
             for g_key, glsv_list in genes_dict.iteritems():
-                links_dict[glsv_list[0].get_gene_name()] = "%s/%s" % (constants.SUMMARIES_SUBFOLDER, name_page)
+                links_dict[glsv_list[0].lsv_graphic.name] = "%s/%s" % (constants.SUMMARIES_SUBFOLDER, name_page)
             count_pages += 1
         majiq_output['voila_links'] = links_dict
 
@@ -169,7 +169,7 @@ def render_summary(output_dir, output_html, majiq_output, type_summary, threshol
             next_page = None
 
             subset_keys = gene_keys[count_pages * constants.MAX_GENES: constants.MAX_GENES * (count_pages + 1)]
-            genes_dict = cc.OrderedDict((k, majiq_output['genes_dict'][k]) for k in subset_keys)
+            genes_dict = OrderedDict((k, majiq_output['genes_dict'][k]) for k in subset_keys)
 
             log.info("Processing %d out of %d genes ..." % (
                 min((count_pages + 1) * constants.MAX_GENES, len(gene_keys)), len(majiq_output['genes_dict'])))
@@ -280,7 +280,7 @@ def combine_gg(gg_comb_dict, gg_new):
         jg.num_reads += gg_new.junctions[j].num_reads
 
 
-def parse_gene_graphics(splicegraph_flist, gene_name_list, condition_names=('group1', 'group2')):
+def parse_gene_graphics(splicegraph_flist, gene_name_list, metainfo, condition_names=('group1', 'group2')):
     """
     Load and combine splice graph files.
 
@@ -293,8 +293,6 @@ def parse_gene_graphics(splicegraph_flist, gene_name_list, condition_names=('gro
     genes_exp1_exp2 = []
     log.info("Parsing splice graph information files ...")
 
-    splice_graphs = [f for x in splicegraph_flist for f in x]
-
     for grp_i, gene_flist in enumerate(splicegraph_flist):
 
         genes_exp = defaultdict()
@@ -305,70 +303,61 @@ def parse_gene_graphics(splicegraph_flist, gene_name_list, condition_names=('gro
             log.error("No file with extension .%s found in %s." % (constants.SUFFIX_SPLICEGRAPH, gene_flist))
 
         # Combined SpliceGraph data structures
-        gg_combined = defaultdict(lambda: None)
-        gg_combined_name = "%s%s" % (constants.COMBINED_PREFIX, condition_names[grp_i])
+        # gg_combined = defaultdict(lambda: None)
+        # gg_combined_name = "%s%s" % (constants.COMBINED_PREFIX, condition_names[grp_i])
 
         for splice_graph_f in splice_files:
-
             with Splicegraph(splice_graph_f, 'r') as sg:
                 genes_g = sg.get_genes_list()
+                gene_experiments_list = sg.get_experiments_list()
 
-            if not genes_g:
-                continue
+                if not genes_g:
+                    continue
 
-            genes_graphic = defaultdict(list)
-            genes_g.sort()
+            for experiments in [metainfo['experiments1'], metainfo.get('experiments2', [])]:
+                for experiment in experiments:
 
-            master_gene_dict = {}
+                    genes_graphic = {}
+                    genes_g.sort()
 
-            for gene_obj in genes_g:
+                    for gene_obj in genes_g:
 
-                try:
-                    master_gene = master_gene_dict[gene_obj.id]
-                except KeyError:
-                    master_gene = GeneGraphic.create_master(splice_graphs, gene_obj.id)
-                    master_gene_dict[gene_obj.id] = master_gene
+                        if not gene_name_list or gene_obj.gene_id in gene_name_list or gene_obj.name.upper() in gene_name_list:
+                            experiment_index = gene_experiments_list.index(experiment)
 
-                gene_obj.get_missing_exons(master_gene)
-                gene_obj.get_missing_junctions(master_gene)
+                            genes_graphic[gene_obj.gene_id] = {
+                                'json': json.dumps(gene_obj.get_experiment(experiment_index)).replace("\"", "'"),
+                                'coordinates': gene_obj.get_coordinates()
+                            }
 
-                if not gene_name_list or gene_obj.id in gene_name_list or gene_obj.name.upper() in gene_name_list:
-                    genes_graphic[gene_obj.id].append(
-                        json.dumps(gene_obj, cls=utils_voila.LsvGraphicEncoder).replace("\"", "'")
-                    )
-                    genes_graphic[gene_obj.id].append(gene_obj.strand)
-                    genes_graphic[gene_obj.id].append(gene_obj.get_coordinates())
-                    genes_graphic[gene_obj.id].append(gene_obj.chrom)
-                    genes_graphic[gene_obj.id].append(gene_obj.name)
+                    ggenes_set = set(genes_graphic.keys())
+                    if not len(ggenes_set):
+                        log.warning("No gene matching the splice graph file %s." % splice_graph_f)
 
-                    # Combine genes from different Splice Graphs
-                    # combine_gg(gg_combined, gene_obj)
-
-            ggenes_set = set(genes_graphic.keys())
-            if not len(ggenes_set):
-                log.warning("No gene matching the splice graph file %s." % splice_graph_f)
-
-            if gene_name_list and len(gene_name_list) != len(ggenes_set):
-                log.warning("Different number of genes in splicegraph (%d) and majiq (%d) files! Hint: Are you sure "
+                    if gene_name_list and len(gene_name_list) != len(ggenes_set):
+                        log.warning(
+                            "Different number of genes in splicegraph (%d) and majiq (%d) files! Hint: Are you sure "
                             "you are using bins and splicegraph files from the same execution?" % (
                                 len(ggenes_set), len(gene_name_list)))
 
-            genes_exp[os.path.basename(splice_graph_f)] = genes_graphic
+                    # genes_exp[os.path.basename(splice_graph_f)] = genes_graphic
+                    genes_exp[experiment] = genes_graphic
 
-        # Add combined SpliceGraph (when more than one sample)
-        if len(genes_exp.keys()) > 1:
-            for gkey, gg_comb in gg_combined.iteritems():
-                gg_combined[gkey] = [
-                    json.dumps(gg_comb, cls=utils_voila.LsvGraphicEncoder).replace("\"", "'"),
-                    gg_comb.get_strand(),
-                    gg_comb.get_coordinates(),
-                    gg_comb.get_chrom(),
-                    gg_comb.get_name()
-                ]
+                    # Add combined SpliceGraph (when more than one sample)
+                    # if len(genes_exp.keys()) > 1:
+                    #     for gkey, gg_comb in gg_combined.iteritems():
+                    #         gg_combined[gkey] = [
+                    #             json.dumps(gg_comb, cls=utils_voila.LsvGraphicEncoder).replace("\"", "'"),
+                    #             gg_comb.get_strand(),
+                    #             gg_comb.get_coordinates(),
+                    #             gg_comb.get_chrom(),
+                    #             gg_comb.get_name()
+                    #         ]
 
         genes_exp1_exp2.append(OrderedDict(sorted(genes_exp.items(), key=lambda t: t[0])))
 
     log.info("Splice graph information files correctly loaded.")
+    log.debug(genes_exp1_exp2)
 
     return genes_exp1_exp2
 
@@ -403,7 +392,7 @@ def parse_gene_graphics_obj(splicegraph_flist, gene_name_list, condition_names=(
             for experiment_number, experiment_name in enumerate(experiments):
                 for gene in genes:
                     if not gene_name_list or gene.gene_id in gene_name_list or gene.name.upper() in gene_name_list:
-                        experiment_dict = gene.get_dict(experiment_number)
+                        experiment_dict = gene.get_experiment(experiment_number)
                         drop_down_name = '{0}: {1}'.format(basename(splice_graph_f), experiment_name)
                         try:
                             genes_exp[drop_down_name][gene.gene_id] = experiment_dict
@@ -458,11 +447,16 @@ def parse_input(args):
         if not gene_name_list:
             raise VoilaException("There are no LSVs detected in Voila.")
 
+        log.debug(majiq_output['meta_exps'])
+
         # Get gene info
         majiq_output['genes_exp'] = parse_gene_graphics(
-            [args.genes_files], gene_name_list,
-            condition_names=[majiq_output['meta_exps'][0]['group'], None],
+            [args.genes_files],
+            gene_name_list,
+            voila_input.get_metainfo(),
+            condition_names=[majiq_output['meta_exps']['group1'], None],
         )
+
         majiq_output['lsv_list'] = [ll for g in majiq_output['genes_dict'].viewvalues() for ll in g]
 
     if type_summary == constants.ANALYSIS_DELTAPSI:

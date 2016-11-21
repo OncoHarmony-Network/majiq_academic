@@ -112,11 +112,14 @@ class VoilaLsv(HDF5):
         if lsv_graphic:
             self.init_categories()
 
+    def lsv_id(self):
+        return self.lsv_graphic.gene_id
+
     def is_delta_psi(self):
         return sum([bool(self.psi1), bool(self.psi2)]) == 2
 
     def get_extension(self):
-        return [self.lsv_graphic.exons[0].coords[0], self.lsv_graphic.exons[-1].coords[1]]
+        return [self.lsv_graphic.exons[0].start, self.lsv_graphic.exons[-1].end]
 
     def njuncs(self):
         return self.categories['njuncs']
@@ -143,10 +146,6 @@ class VoilaLsv(HDF5):
             log.warning(e.message)
 
     def to_JSON(self, encoder=json.JSONEncoder):
-        # TODO: remove this!!!
-        if self.lsv_graphic and 'coverage' in self.lsv_graphic.__dict__:
-            del self.lsv_graphic.__dict__['coverage']
-
         return json.dumps(self, default=lambda o: o.__dict__, sort_keys=True, cls=encoder)
 
     def is_lsv_changing(self, thres):
@@ -311,10 +310,11 @@ class VoilaLsv(HDF5):
 
         self.categories = categories
 
+    def to_dict(self):
+        d = self.__dict__.copy()
+        d['lsv_graphic'] = self.lsv_graphic.to_dict()
+        return d
+
     @classmethod
     def easy_from_hdf5(cls, h):
         return cls((), None).from_hdf5(h)
-
-
-
-

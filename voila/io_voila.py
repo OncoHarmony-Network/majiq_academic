@@ -42,6 +42,9 @@ class Voila(object):
         vi.metainfo = metainfo
         vi.encode_metainfo(self.hdf5['/'])
 
+    def get_voila_lsv(self, lsv_id):
+        return VoilaLsv.easy_from_hdf5(self.hdf5['lsvs'][lsv_id])
+
 
 class VoilaInput(HDF5):
     """Standard input interface by experiment used by Voila"""

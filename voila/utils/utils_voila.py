@@ -92,7 +92,7 @@ def lsvs_to_gene_dict(voila_input, gene_name_list=(), lsv_types=None, lsv_names=
         if len(lsv_names) > 0 and vlsv.get_id() not in lsv_names:
             continue
 
-        gene_name_id = vlsv.lsv_graphic.id.split(':')[0]
+        gene_name_id = vlsv.lsv_graphic.gene_id.split(':')[0]
         gene_name = vlsv.lsv_graphic.name.upper()
         if (nofilter_genes or gene_name_id in gene_name_list or
                     gene_name in gene_name_list or vlsv.get_type() in lsv_types):
