@@ -2,7 +2,11 @@ from setuptools import setup, find_packages
 from distutils.core import Extension
 from Cython.Build import cythonize
 
-extensions = [Extension("majiq/src/*", ["*.pyx"])]
+
+extensions = [Extension('majiq.src.normalize', ['majiq/src/normalize.pyx'])]
+extensions += [Extension('majiq.src.plotting', ['majiq/src/plotting.pyx'])]
+extensions += [Extension('majiq.src.polyfitnb', ['majiq/src/polyfitnb.pyx'])]
+extensions += [Extension('majiq.src.sample', ['majiq/src/sample.pyx'])]
 
 setup(
     name="majiq",
