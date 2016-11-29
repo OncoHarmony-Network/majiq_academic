@@ -1,5 +1,4 @@
 __author__ = 'jordi@biociphers.org'
-
 import sys
 from itertools import izip
 
@@ -7,10 +6,9 @@ import numpy as np
 from numpy.ma import masked_less
 from scipy import interpolate
 from scipy.stats.mstats_basic import mquantiles
-
 import majiq.src.config as majiq_config
 from majiq.src.constants import *
-from majiq.src import polyfitnb as majiqfit
+import majiq.src.polyfitnb as majiqfit
 
 #
 # def mark_stacks(hdf5_fp, fitfunc_r, pvalue_limit, logger=None):

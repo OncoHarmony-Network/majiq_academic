@@ -1,6 +1,5 @@
 from matplotlib import use
 use('Agg')
-
 from matplotlib import pyplot as plt
 from scipy.stats import pearsonr
 from majiq.src import config as mglobals
@@ -119,4 +118,23 @@ def plot_pearsoncorr(var1, var2, my_title, my_xlabel, my_ylabel, plotpath=None, 
         save_or_show(plotpath, my_title)
 
 
+def plot_matrix(matrix, my_title, plotname, plotpath):
+    plt.clf()
+    ax = plt.subplot(1, 1, 1)
+    plt.title(my_title)
+    plt.imshow(matrix)
+    plt.xlabel(u"PSI i")
+    plt.ylabel(u"PSI j")
+    ax.set_xticklabels([0, 0, 0.25, 0.5, 0.75, 1])
+    ax.set_yticklabels([0, 0, 0.25, 0.5, 0.75, 1])
 
+    _save_or_show(plotpath, plotname=plotname)
+
+
+def _save_or_show(plotpath, plotname=None):
+    """Generic function that either shows in a popup or saves the figure, depending if the plotpath flag"""
+    if plotpath:
+        plt.savefig("%s%s.png" % (plotpath, plotname), bbox_inches='tight')
+        plt.clf()
+    else:
+        plt.show()

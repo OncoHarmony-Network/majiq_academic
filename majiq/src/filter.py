@@ -40,8 +40,8 @@ def merge_files_hdf5(hdf5_file_list, minnonzero, min_reads, percent=-1, merge_re
 
     for fname in hdf5_file_list:
         fp = h5py.File(fname)
-        for lsv_name in fp['LSV']:
-            cov = fp[LSV_JUNCTIONS_DATASET_NAME][fp['LSV/%s' % lsv_name].attrs['coverage']]
+        for lsv_name in fp['LSVs']:
+            cov = fp[LSV_JUNCTIONS_DATASET_NAME][fp['LSVs/%s' % lsv_name].attrs['coverage']]
             if ((cov != 0).sum(axis=1) > minnonzero * (cov.sum(axis=1) > min_reads)).sum() >= 1:
                 try:
                     lsv_dict[lsv_name] += 1

@@ -2,7 +2,7 @@ import random
 from numpy.ma import masked_less
 import numpy as np
 from scipy.stats import nbinom, poisson
-import majiq.src.plotting as mplot
+# import majiq.src.plotting as mplot
 
 def get_ecdf(pvalues):
     # print sorted(pvalues)
@@ -79,8 +79,8 @@ def adjust_fit(starting_a, junctions, precision, previous_score, plotpath, indic
         pvalues = calc_pvalues(junctions, corrected_a, indices)
         ecdf = get_ecdf(pvalues)
         score = score_ecdf(ecdf)
-        mplot.plot_fitting(ecdf, plotpath, title="%s.[step %d] 1\_r %s" % (precision, idx, corrected_a),
-                           plotname='%s.step%s' % (precision, idx))
+        # mplot.plot_fitting(ecdf, plotpath, title="%s.[step %d] 1\_r %s" % (precision, idx, corrected_a),
+        #                    plotname='%s.step%s' % (precision, idx))
         idx += 1
         if logger:
             logger.debug("New Score %.5f" % score)
@@ -131,7 +131,7 @@ def fit_nb(junctionl, outpath, plotpath, nbdisp=0.1, logger=None):
 
     pvalues = calc_pvalues(junctions, one_over_r0, indices)
     ecdf = get_ecdf(pvalues)
-    mplot.plot_fitting(ecdf, plotpath, title="NON-Corrected ECDF 1\_r %s" % one_over_r0)
+    # mplot.plot_fitting(ecdf, plotpath, title="NON-Corrected ECDF 1\_r %s" % one_over_r0)
     # plot_negbinomial_fit(mean_junc, std_junc, fit_function, plotpath, "Before correction")
     score = score_ecdf(ecdf)
 

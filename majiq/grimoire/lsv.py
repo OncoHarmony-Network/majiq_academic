@@ -238,8 +238,9 @@ class LSV(object):
                 ir_type = voila_const.IR_TYPE_END
 
             junc_l.append(jj.get_coordinates())
-            junc_list.append(JunctionGraphic(jj.get_coordinates(), jtype, jj.get_read_num(exp_idx),
-                                             transcripts=jj.get_transcript_list(), ir=ir_type))
+            junc_list.append(JunctionGraphic(jj.get_coordinates()[0], jj.get_coordinates()[1],
+                                             junction_type_list=[], reads_list=[],
+                                             transcripts=jj.get_transcript_list(), intron_retention=ir_type))
         junc_l = np.asarray(junc_l)
         lsv_exon_list.sort()
         exon_list = []
@@ -282,15 +283,14 @@ class LSV(object):
                     extra_coords.append([ex.start, ex.db_coord[0] - 1])
                 if ex.end > ex.db_coord[1]:
                     extra_coords.append([ex.db_coord[1] + 1, ex.end])
-            eg = ExonGraphic(a3, a5, cc, type_exon=visual_type, coords_extra=extra_coords,
+
+            eg = ExonGraphic(a3, a5, start=cc[0], end=cc[1], exon_type_list=[], coords_extra=extra_coords,
                              intron_retention=ex.get_ir(), alt_starts=alt_start, alt_ends=alt_ends)
             exon_list.append(eg)
 
-        splice_lsv = LsvGraphic(type_lsv=self.ext_type, coords=self.coords, id=self.id,
-                                name=self.exon.get_gene().get_name(),
-                                strand=self.get_strand(), exons=exon_list, junctions=junc_list,
-                                chrom=self.get_chromosome())
-
+        splice_lsv = LsvGraphic(lsv_type=self.ext_type, start=self.coords[0], end=self.coords[1], gene_id=self.id,
+                                name=self.exon.get_gene().get_name(), chromosome=self.get_chromosome(),
+                                strand=self.get_strand(), exons=exon_list, junctions=junc_list)
         return splice_lsv
 
     def is_equivalent(self, variant):

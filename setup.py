@@ -1,6 +1,9 @@
 from setuptools import setup, find_packages
+from distutils.core import Extension
+from Cython.Build import cythonize
 
-#Values
+extensions = [Extension("majiq/src/*", ["*.pyx"])]
+
 setup(
     name="majiq",
     packages=find_packages(),
@@ -15,6 +18,7 @@ setup(
     ##install_requires=['numpy', 'scipy', 'matplotlib', 'multiprocessing'],
     entry_points={'console_scripts': ['majiq = majiq.run_majiq:main', 'voila = voila.run_voila:main']},
     zip_safe=False,
+    ext_modules=cythonize(extensions),
     classifiers=[
         'Development Status :: 4 - Beta',
         'Environment :: Console',

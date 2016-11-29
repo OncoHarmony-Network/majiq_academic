@@ -287,7 +287,7 @@ def chunks2(l, n, extra):
             else:
                 yield l[i:i+n]
     except:
-        print "ERROR: extra value has incorrect size %s" %idx, extra
+        print "ERROR: extra value has incorrect size %s" % idx, extra
         raise
 
 
@@ -310,6 +310,7 @@ def chunks(l, n, extra):
         print "ERROR: extra value has incorrect size %s" % idx, extra
         raise
 
+
 import sys
 from numbers import Number
 from collections import Set, Mapping, deque
@@ -320,6 +321,7 @@ try: # Python 2
 except NameError: # Python 3
     zero_depth_bases = (str, bytes, Number, range, bytearray)
     iteritems = 'items'
+
 
 def getsize(obj_0):
     """Recursively iterate to sum size of object & members."""

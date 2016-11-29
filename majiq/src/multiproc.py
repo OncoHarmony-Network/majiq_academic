@@ -48,7 +48,7 @@ class QueueMessage:
 
 
 def quantification_init(q, lock, output, names, silent, debug, nbins, m, k,
-                        discardzeros, trimborder, num_exp, only_boots, lock_per_file):
+                        discardzeros, trimborder, files, only_boots, lock_per_file):
 
     quantification_init.lock = lock
     quantification_init.queue = q
@@ -61,7 +61,7 @@ def quantification_init(q, lock, output, names, silent, debug, nbins, m, k,
     quantification_init.k = k
     quantification_init.discardzeros = discardzeros
     quantification_init.trimborder = trimborder
-    quantification_init.num_exp = num_exp
+    quantification_init.files = files
     quantification_init.only_boots = only_boots
     quantification_init.lock_per_file = lock_per_file
 
@@ -89,14 +89,15 @@ def queue_manager(input_h5dfp, output_h5dfp, lock_array, result_queue, num_chunk
             elif val.get_type() == QUEUE_MESSAGE_PSI_RESULT:
                 lsv_graph = LsvGraphic.easy_from_hdf5(majiq_io.load_lsvgraphic_from_majiq(input_h5dfp,
                                                                                           val.get_value()[-1]))
-                VoilaLsv(bins_list=val.get_value()[0], mean_psi1=val.get_value()[1], lsv_graphic=lsv_graph).to_hdf5(output_h5dfp)
+                output_h5dfp.add_lsv(VoilaLsv(bins_list=val.get_value()[0], means_psi1=val.get_value()[1],
+                                              lsv_graphic=lsv_graph))
 
             elif val.get_type() == QUEUE_MESSAGE_DELTAPSI_RESULT:
                 lsv_graph = LsvGraphic.easy_from_hdf5(majiq_io.load_lsvgraphic_from_majiq(input_h5dfp,
                                                                                           val.get_value()[-1]))
-                VoilaLsv(bins_list=val.get_value()[0], lsv_graphic=lsv_graph,
-                         psi1=val.get_value()[1], psi2=val.get_value()[2],
-                         mean_psi1=val.get_value()[3], mean_psi2=val.get_value()[4]).to_hdf5(output_h5dfp)
+                output_h5dfp.add_lsv(VoilaLsv(bins_list=val.get_value()[0], lsv_graphic=lsv_graph,
+                                              psi1=val.get_value()[1], psi2=val.get_value()[2],
+                                              means_psi1=val.get_value()[3], means_psi2=val.get_value()[4]))
 
             elif val.get_type() == QUEUE_MESSAGE_END_WORKER:
                 lock_array[val.get_chunk()].release()

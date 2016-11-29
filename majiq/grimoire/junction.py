@@ -161,9 +161,9 @@ class Junction:
             cov = self.get_gene().junc_matrix[self.idx]
 
         if idx == -1:
-            res = cov.sum()
+            res = cov.sum(dtype=np.uint32)
         else:
-            res = cov[idx].sum()
+            res = cov[idx].sum(dtype=np.uint32)
 
         return res
 
