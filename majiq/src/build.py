@@ -76,7 +76,7 @@ def merging_files(args_vals):
                                         dtype=np.uint32)
         if majiq_config.gcnorm:
             gene_obj.gc_content = np.zeros(shape=(njunc, len(builder_init.sam_list), (majiq_config.readLen - 16 + 1)),
-                                           dtype=np.long)
+                                           dtype=np.float)
 
         for exp_idx, fname in enumerate(rna_files):
             with h5py.File(fname, 'r') as rnaf:

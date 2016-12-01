@@ -18,6 +18,7 @@ import majiq.src.utils as majiq_utils
 from majiq.src.normalize import gc_factor_calculation
 from voila.io_voila import VoilaInput
 from voila.vlsv import VoilaLsv
+from voila.splice_graphics import LsvGraphic
 
 # READING BAM FILES
 
@@ -266,7 +267,6 @@ def rnaseq_intron_retention(gne, samfl, chnk, permissive=True, nondenovo=False, 
                 if st == junc2.get_coordinates()[1]:
                     ex.add_3prime_junc(junc2)
                     break
-
     gne.prepare_exons()
 
 
@@ -573,10 +573,47 @@ def get_const_junctions(filename, logging=None):
             logging.error('File % doesn\'t exists' % filename)
             raise UserWarning
     else:
-        db_f = h5py.File(filename, 'r')
-        cc = db_f[CONST_JUNCTIONS_DATASET_NAME][()]
+        db_f = h5py.File(filename)
+        cc = db_f[JUNCTIONS_DATASET_NAME][()]
         db_f.close()
         return np.array(cc)
+
+
+def extract_lsv_summary(files):
+
+    lsvid2idx = {}
+    lsv_types = {}
+    idx_junc = {}
+    total_idx = 0
+    simpl_juncs = []
+    for fidx, ff in enumerate(files):
+        simpl_juncs.append([[0, 0.0] for xx in idx_junc.keys()])
+        data = h5py.File(ff)
+        for lsvid in data['LSVs']:
+            lsv = data['LSVs/%s' % lsvid]
+            lsvgraph = LsvGraphic.easy_from_hdf5(data['LSVs/%s/visual' % lsvid])
+            cov = data[JUNCTIONS_DATASET_NAME][lsv.attrs['coverage']]
+
+            lsv_types[lsvid] = lsvgraph.lsv_type
+            ljunc = lsvgraph.junctions_ids()
+            cov = [(cov != 0).sum(axis=1), cov.sum(axis=1)]
+            lsvid2idx[lsvid] = []
+            for jidx, jj in enumerate(ljunc):
+                try:
+                    indx = idx_junc[jj]
+                    simpl_juncs[fidx][indx] = [cov[0][jidx], cov[1][jidx]]
+                except KeyError:
+                    idx_junc[jj] = total_idx
+                    total_idx += 1
+                    indx = total_idx
+                    simpl_juncs[fidx].append([cov[0][jidx], cov[1][jidx]])
+                lsvid2idx[lsvid].append(indx)
+
+    simpl_juncs = np.array(simpl_juncs)
+
+    metas = read_meta_info(files)
+
+    return lsvid2idx, lsv_types, simpl_juncs, metas
 
 
 def load_data_lsv(path, group_name, logger=None):

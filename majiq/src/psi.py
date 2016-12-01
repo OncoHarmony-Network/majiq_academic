@@ -20,40 +20,36 @@ BINS_CENTER = np.arange(0 + BSIZE / 2, 1, BSIZE)
 # The center of the previous BINS. This is used to calculate the mean value of each bin.
 
 
-def empirical_delta_psi(list_lsv, files, logger=None):
+def empirical_delta_psi(list_lsv, lsv_types, lsv_dict1, lsv_summarized1, lsv_dict2, lsv_summarized2, logger=None):
     """Simple PSI calculation without involving a dirichlet prior, coming from reads from junctions
-    :param logger:
-    :param files:
-    :param list_lsv:
+    :type list_lsv: object
     """
 
     delta_psi = []
     delta_psi_ir = []
 
-    group1 = [majiq_io.open_hdf5_file(xx) for xx in files[0]]
-    group2 = [majiq_io.open_hdf5_file(xx) for xx in files[1]]
     for idx, lsv in enumerate(list_lsv):
         # Assuming that the type is the same in all the replicas and groups
-        if group1[0]['LSVs/%s' % lsv].attrs['type'].endswith('i'):
+        if lsv_types[lsv].endswith('i'):
             delta_psi_res = delta_psi_ir
         else:
             delta_psi_res = delta_psi
 
-        cov1 = np.array([fp[JUNCTIONS_DATASET_NAME][fp['LSVs/%s' % lsv].attrs['coverage']].sum(axis=1) for fp in group1])
-        cov1 = cov1.mean(axis=0)
+        cov1 = lsv_summarized1[:, lsv_dict1[lsv], 0].mean()
+
+        # cov1 = [fp[JUNCTIONS_DATASET_NAME][fp['LSVs/%s' % lsv].attrs['coverage']].sum(axis=1) for fp in group1])
+        # cov1 = cov1.mean(axis=0)
         psi1 = np.array([float(cov1[jidx]) / float(np.sum(cov1)) for jidx in range(len(cov1))])
         psi1[np.isnan(psi1)] = 0.5
 
-        cov2 = np.array([fp[JUNCTIONS_DATASET_NAME][fp['LSVs/%s' % lsv].attrs['coverage']].sum(axis=1) for fp in group2])
-        cov2 = cov2.mean(axis=0)
+        cov2 = lsv_summarized2[:, lsv_dict2[lsv], 0].mean()
+        # cov2 = np.array([fp[JUNCTIONS_DATASET_NAME][fp['LSVs/%s' % lsv].attrs['coverage']].sum(axis=1) for fp in group2])
+        # cov2 = cov2.mean(axis=0)
         psi2 = np.array([float(cov2[jidx]) / float(np.sum(cov2)) for jidx in range(len(cov2))])
         psi2[np.isnan(psi2)] = 0.5
 
         delta_psi_res.append(psi1 - psi2)
         #   if logger: logger.info("Calculating delta PSI for 'best set'...")
-
-    [majiq_io.close_hdf5_file(fp) for fp in group1]
-    [majiq_io.close_hdf5_file(fp) for fp in group2]
 
     return delta_psi, delta_psi_ir
 
@@ -66,7 +62,8 @@ def __load_default_prior():
     return def_mat
 
 
-def gen_prior_matrix(files, lsv_exp1, lsv_exp2, output, conf, numbins=20, defaultprior=False, logger=None):
+def gen_prior_matrix(lsv_dict1, lsv_summarized1, lsv_dict2, lsv_summarized2, lsv_types, output, conf, numbins=20,
+                     defaultprior=False, logger=None):
     #Start prior matrix
     logger.info("Calculating prior matrix...")
     psi_space = np.linspace(0, 1 - conf.binsize, num=numbins) + conf.binsize / 2
@@ -79,14 +76,16 @@ def gen_prior_matrix(files, lsv_exp1, lsv_exp2, output, conf, numbins=20, defaul
 
     # temp_files = [files[0],files[]]
 
-    filtered_lsv1 = majiq_filter.merge_files_hdf5(files[0], minnonzero=10, min_reads=20, merge_replicas=True,
-                                                  logger=logger)
-    filtered_lsv2 = majiq_filter.merge_files_hdf5(files[1], minnonzero=10, min_reads=20, merge_replicas=True,
-                                                  logger=logger)
+    filtered_lsv1 = majiq_filter.merge_files_hdf5(lsv_dict1, lsv_summarized1, minnonzero=10, min_reads=20,
+                                                  merge_replicas=True, logger=logger)
+    filtered_lsv2 = majiq_filter.merge_files_hdf5(lsv_dict2, lsv_summarized2, minnonzero=10, min_reads=20,
+                                                  merge_replicas=True, logger=logger)
 
     list_of_lsv = list(set(filtered_lsv1).intersection(set(filtered_lsv2)))
     logger.debug("'Best set' is %s events" % len(list_of_lsv))
-    best_dpsi, best_dpsi_ir = empirical_delta_psi(list_of_lsv, files)
+    best_dpsi, best_dpsi_ir = empirical_delta_psi(list_of_lsv, lsv_types,
+                                                  lsv_dict1, lsv_summarized1,
+                                                  lsv_dict2, lsv_summarized2, )
 
     prior_matrix = [[], []]
 
