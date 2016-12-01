@@ -249,7 +249,7 @@ def analyze_denovo_junctions(genes, output):
         for jj in jlist:
             for tissue, list_idx in majiq_config.tissue_repl.items():
                 for exp_n in list_idx:
-                    if jj.is_annotated():
+                    if jj.annotated:
                         annot_list[exp_n].append(jj)
                     else:
                         denovo_list[exp_n].append(jj)

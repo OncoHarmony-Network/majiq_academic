@@ -1,6 +1,4 @@
 import numpy as np
-import scipy.sparse
-
 import majiq.src.config as majiq_config
 from majiq.src.constants import *
 
@@ -61,7 +59,7 @@ class Junction:
         h_jnc.attrs['donor_id'] = self.donor_id
         h_jnc.attrs['acceptor_id'] = self.acceptor_id
 
-    def to_rna_hdf5(self, hdf5grps, dataset, data_index):
+    def to_rna_hdf5(self, hdf5grps, dataset, data_index, gc_dataset=None):
         h_jnc = hdf5grps.create_group(self.id)
         h_jnc.attrs['id'] = self.id
         h_jnc.attrs['start'] = self.start
@@ -76,8 +74,12 @@ class Junction:
             if data_index == dataset.shape[0]:
                 shp_new = dataset.shape[0] + majiq_config.nrandom_junctions
                 dataset.resize((shp_new, dataset.shape[1]))
+                if gc_dataset is not None:
+                    gc_dataset.resize((shp_new, dataset.shape[1]))
 
             dataset[data_index, :] = self.coverage[0, :]
+            if gc_dataset is not None:
+                gc_dataset[data_index, :] = self.gc_content[0, :]
             h_jnc.attrs['coverage_index'] = data_index
 
         except:
@@ -98,20 +100,11 @@ class Junction:
                 cov = self.get_gene().junc_matrix[self.idx]
             return cov
 
-    def get_ss_5p(self):
-        return self.start
-
-    def get_ss_3p(self):
-        return self.end
-
     def get_gene(self):
         return majiq_config.gene_tlb[self.gene_name]
 
     def get_coordinates(self):
         return self.start, self.end
-
-    def is_intronic(self):
-        return self.intronic
 
     def get_donor(self):
         if self.donor_id == -1:
@@ -151,8 +144,15 @@ class Junction:
             ex = self.get_gene().get_exon_by_id(self.acceptor_id)
         return ex
 
-    def get_gc_content(self):
-        return self.gc_content
+    def get_gc_content(self,exp_idx):
+        if self.all_data:
+            return self.gc_content
+        else:
+            if self.idx == -1:
+                gc = None
+            else:
+                gc = self.get_gene().gc_content[self.idx, exp_idx]
+            return gc
 
     def get_read_num(self, idx=0):
         if self.all_data:
@@ -179,9 +179,6 @@ class Junction:
     def get_transcript_list(self):
         return self.transcript_id_list
 
-    def is_annotated(self):
-        return self.annotated
-
     def is_reliable(self):
         res = False
         cov = self.get_coverage().sum(axis=1)
@@ -196,9 +193,6 @@ class Junction:
     def is_reliable_in_tissue(self):
         return self.get_coverage().sum() > majiq_config.min_denovo
 
-    # MODIFIERs
-    def add_gc_content_positions(self, gc):
-        self.gc_content = gc
 
     def add_donor(self, donor):
         if donor is None:
@@ -226,16 +220,3 @@ class Junction:
         except:
             print self.gene_name, start, left_ind, self.gc_content.shape
             raise
-
-    def reset_coverage(self):
-        self.coverage[:] = 0
-
-    def set_coverage(self, exp_idx, cov):
-        self.coverage[exp_idx] = cov
-
-    def set_coverage_vals(self, exp_idx, cov):
-        self.tot_reads[exp_idx] = cov.sum()
-        self.n_pos[exp_idx] = np.count_nonzero(cov)
-
-    def set_index(self, idx):
-        self.idx = idx

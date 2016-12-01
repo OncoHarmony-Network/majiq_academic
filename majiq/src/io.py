@@ -594,8 +594,8 @@ def load_data_lsv(path, group_name, logger=None):
         for lsvid in data['LSVs'].keys():
             lsv = data['LSVs/%s' % lsvid]
             lsv_info.append([lsv.attrs['id'], lsv.attrs['type'], lsv['visual']])
-            lsv_cov_list.append(data[LSV_JUNCTIONS_DATASET_NAME][lsv.attrs['coverage']])
-            sh = data[LSV_JUNCTIONS_DATASET_NAME][lsv.attrs['coverage']].shape
+            lsv_cov_list.append(data[JUNCTIONS_DATASET_NAME][lsv.attrs['coverage']])
+            sh = data[JUNCTIONS_DATASET_NAME][lsv.attrs['coverage']].shape
             if sh[0] < 2:
                 print "WRONG LSV %s" % lsvid
 

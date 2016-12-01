@@ -56,7 +56,7 @@ def deltapsi_quantification(args_vals):#, delta_prior_path, boots_sample=True, l
                 for eidx, f in enumerate(f_list[grp_idx]):
                     lsvobj = f['LSVs/%s' % lsv_id]
                     assert lsv_type == lsvobj.attrs['type'], "LSV %s has different definition in groups" % lsv_id
-                    lsv = f[LSV_JUNCTIONS_DATASET_NAME][lsvobj.attrs['coverage']]
+                    lsv = f[JUNCTIONS_DATASET_NAME][lsvobj.attrs['coverage']]
                     m_lsv, var_lsv, s_lsv = majiq_sample.sample_from_junctions(junction_list=lsv,
                                                                                m=quantification_init.m,
                                                                                k=quantification_init.k,
