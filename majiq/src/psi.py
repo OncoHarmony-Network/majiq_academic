@@ -40,12 +40,12 @@ def empirical_delta_psi(list_lsv, files, logger=None):
         else:
             delta_psi_res = delta_psi
 
-        cov1 = np.array([fp[LSV_JUNCTIONS_DATASET_NAME][fp['LSVs/%s' % lsv].attrs['coverage']].sum(axis=1) for fp in group1])
+        cov1 = np.array([fp[JUNCTIONS_DATASET_NAME][fp['LSVs/%s' % lsv].attrs['coverage']].sum(axis=1) for fp in group1])
         cov1 = cov1.mean(axis=0)
         psi1 = np.array([float(cov1[jidx]) / float(np.sum(cov1)) for jidx in range(len(cov1))])
         psi1[np.isnan(psi1)] = 0.5
 
-        cov2 = np.array([fp[LSV_JUNCTIONS_DATASET_NAME][fp['LSVs/%s' % lsv].attrs['coverage']].sum(axis=1) for fp in group2])
+        cov2 = np.array([fp[JUNCTIONS_DATASET_NAME][fp['LSVs/%s' % lsv].attrs['coverage']].sum(axis=1) for fp in group2])
         cov2 = cov2.mean(axis=0)
         psi2 = np.array([float(cov2[jidx]) / float(np.sum(cov2)) for jidx in range(len(cov2))])
         psi2[np.isnan(psi2)] = 0.5

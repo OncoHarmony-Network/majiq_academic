@@ -24,7 +24,7 @@ import majiq.src.polyfitnb as majiqfit
 #         for i, junction in enumerate(junctions):
 #             if np.count_nonzero(junction) == 0:
 #                 continue
-#             for j, value in enumerate(junction):
+#             for j, value   in enumerate(junction):
 #                 if value > 0:
 #                     # TODO Use masker, and marking stacks will probably be faster.
 #                     copy_junc = list(junction)
@@ -52,7 +52,6 @@ def mark_stacks(lsv_list, fitfunc_r, pvalue_limit, logger=None):
     # the minimum value marked as stack
     numstacks = 0
     for lidx, junctions in enumerate(lsv_list[0]):
-
         for i, junction in enumerate(junctions):
             if np.count_nonzero(junction) == 0:
                 continue
@@ -74,6 +73,34 @@ def mark_stacks(lsv_list, fitfunc_r, pvalue_limit, logger=None):
     #                   % (len(lsv_list[0]), numstacks, pvalue_limit, (float(numstacks) / len(lsv_list[0])) * 100))
     return lsv_list
 
+def mark_stacks_per_junc(junction, fitfunc_r, pvalue_limit, logger=None):
+    import numpy.ma as ma
+    if logger is not None:
+        logger.debug("Marking and masking stacks")
+    minstack = sys.maxint
+    # the minimum value marked as stack
+    numstacks = 0
+
+    for j, value in enumerate(junction):
+        if value <= 0:
+            continue
+        msk = junction <= 0
+        msk[j] = 1
+        copy_junc = ma.masked_array(junction, mask=msk)
+        mean_rest = 0.5 if copy_junc.mean() is ma.masked else copy_junc.mean() * copy_junc.count()
+        pval = majiqfit.get_negbinom_pval(fitfunc_r, mean_rest, value)
+        if pval < pvalue_limit:
+            junction[j] = -2
+            minstack = min(minstack, value)
+            numstacks += 1
+    masked_less(junction, 0)
+
+    # if logger:
+    #     logger.debug("Out of %s values, %s marked as stacks with a p-value threshold of %s (%.3f%%)"
+    #                   % (len(lsv_list[0]), numstacks, pvalue_limit, (float(numstacks) / len(lsv_list[0])) * 100))
+    return junction
+
+
 
 def gc_normalization(output_gc_vals, logger=None):
     if logger is not None:
@@ -83,30 +110,6 @@ def gc_normalization(output_gc_vals, logger=None):
     factor, meanbins = output_gc_vals
     gc_factor = interpolate.interp1d(meanbins, factor, bounds_error=False, fill_value=1)
     return np.vectorize(gc_factor)
-
-
-def gc_normalization_old(lsv_list, gc_content_files, gc_pairs, logger):
-
-    logger.info("Gc Content normalization")
-    factor, meanbins = gc_factor_calculation(gc_pairs, nbins=10)
-    # v_gcfactor_func = np.vectorize(_test_func)
-    for exp_n in xrange(majiq_config.num_experiments):
-
-        a = np.append(factor[exp_n], factor[exp_n][-1])
-        gc_factor = interpolate.interp1d(meanbins[exp_n], factor[exp_n], bounds_error=False, fill_value=1)
-
-        v_gcfactor_func = np.vectorize(gc_factor)
-        lsv_matrix = lsv_list[exp_n][LSV_JUNCTIONS_DATASET_NAME]
-        const_matrix = lsv_list[exp_n][CONST_JUNCTIONS_DATASET_NAME]
-        for idx in xrange(lsv_list[exp_n][LSV_JUNCTIONS_DATASET_NAME].shape[0]):
-
-            vals = v_gcfactor_func(gc_content_files[exp_n][LSV_GC_CONTENT][idx, :])
-            lsv_matrix[idx, :] = np.multiply(lsv_matrix[idx, :], vals)
-
-        for idx in xrange(const_matrix.shape[0]):
-
-            vals = v_gcfactor_func(gc_content_files[exp_n][CONST_JUNCTIONS_GC_CONTENT][idx, :])
-            const_matrix[idx, :] = np.multiply(const_matrix[idx, :], vals)
 
 
 def gc_factor_calculation(gc_pairs, nbins=10):

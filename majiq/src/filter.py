@@ -30,6 +30,7 @@ def filter_message(when, value, logger, junc):
         else:
             logger.debug(message)
 
+
 def merge_files_hdf5(hdf5_file_list, minnonzero, min_reads, percent=-1, merge_replicas=False, logger=None):
 
     logger.debug("Quantifible filter...")
@@ -41,7 +42,7 @@ def merge_files_hdf5(hdf5_file_list, minnonzero, min_reads, percent=-1, merge_re
     for fname in hdf5_file_list:
         fp = h5py.File(fname)
         for lsv_name in fp['LSVs']:
-            cov = fp[LSV_JUNCTIONS_DATASET_NAME][fp['LSVs/%s' % lsv_name].attrs['coverage']]
+            cov = fp[JUNCTIONS_DATASET_NAME][fp['LSVs/%s' % lsv_name].attrs['coverage']]
             if ((cov != 0).sum(axis=1) > minnonzero * (cov.sum(axis=1) > min_reads)).sum() >= 1:
                 try:
                     lsv_dict[lsv_name] += 1
@@ -87,7 +88,7 @@ def quantifiable_in_group_to_hdf5(hdf5_p, list_of_experiments, minnonzero, min_r
     old_shape = len(info)
     lsv_idx = 0
 
-    hdf5_p.create_dataset(LSV_JUNCTIONS_DATASET_NAME, (len(info)*2, nexp, effective_readlen),
+    hdf5_p.create_dataset(JUNCTIONS_DATASET_NAME, (len(info)*2, nexp, effective_readlen),
                           maxshape=(None, nexp, effective_readlen))
 
     list_lsv = []
@@ -112,12 +113,12 @@ def quantifiable_in_group_to_hdf5(hdf5_p, list_of_experiments, minnonzero, min_r
             all_vals.append(val)
         njunc = len(val)
         if lsv_idx + njunc > old_shape:
-            shp = hdf5_p[LSV_JUNCTIONS_DATASET_NAME].shape
+            shp = hdf5_p[JUNCTIONS_DATASET_NAME].shape
             shp_new = shp[0] + len(info)
-            hdf5_p[LSV_JUNCTIONS_DATASET_NAME].resize((shp_new, shp[1]))
+            hdf5_p[JUNCTIONS_DATASET_NAME].resize((shp_new, shp[1]))
 
-        hdf5_p[LSV_JUNCTIONS_DATASET_NAME][lsv_idx:lsv_idx+njunc] = np.reshape(np.array(all_vals), (njunc, nexp, effective_readlen))
-        h_lsv.attrs['coverage'] = hdf5_p[LSV_JUNCTIONS_DATASET_NAME].regionref[lsv_idx:lsv_idx + njunc]
+        hdf5_p[JUNCTIONS_DATASET_NAME][lsv_idx:lsv_idx+njunc] = np.reshape(np.array(all_vals), (njunc, nexp, effective_readlen))
+        h_lsv.attrs['coverage'] = hdf5_p[JUNCTIONS_DATASET_NAME].regionref[lsv_idx:lsv_idx + njunc]
 
     return list_lsv
 

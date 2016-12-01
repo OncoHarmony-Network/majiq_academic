@@ -535,9 +535,9 @@ def collapse_list_exons(listexons, gne):
 def __half_exon(ss_type, junc):
     gene = junc.get_gene()
     if ss_type == '3prime':
-        coord = junc.get_ss_3p()
+        coord = junc.end
     else:
-        coord = junc.get_ss_5p()
+        coord = junc.start
 
     for ex in gene.get_exon_list():
         (ex_start, ex_end) = ex.get_coordinates()
@@ -646,14 +646,14 @@ def detect_exons(gene, junction_list, retrieve=False):
 
     for (coord, jtype, jj) in junction_list:
 
-        if retrieve and not jj.is_reliable() and not jj.is_annotated():
+        if retrieve and not jj.is_reliable() and not jj.annotated:
             continue
 
         jj_gene = jj.get_gene()
         if jtype == '5prime':
 
             if opened > 0:
-                start = opened_exon[-1].get_ss_3p()
+                start = opened_exon[-1].end
                 end = coord
                 new_exons += new_exon_definition(start, end, opened_exon[-1], jj, jj_gene)
                 opened_exon.pop()
@@ -662,7 +662,7 @@ def detect_exons(gene, junction_list, retrieve=False):
                 if first_3prime is None:
                     new_exons += __half_exon('5prime', jj)
                 else:
-                    new_exons += new_exon_definition(first_3prime.get_ss_3p(),
+                    new_exons += new_exon_definition(first_3prime.end,
                                                      coord, first_3prime,
                                                      jj, jj_gene)
             last_5prime = jj
@@ -670,11 +670,11 @@ def detect_exons(gene, junction_list, retrieve=False):
         else:
             if opened > 0:
                 if last_5prime is not None:
-                    end = last_5prime.get_ss_5p()
+                    end = last_5prime.start
                     for ss in opened_exon:
                         if ss.get_gene() != last_5prime.get_gene():
                             continue
-                        start = ss.get_ss_3p()
+                        start = ss.end
                         new_exons += new_exon_definition(start, end, ss, last_5prime, ss.get_gene())
                     last_5prime = None
                     opened = 0

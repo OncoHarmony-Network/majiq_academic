@@ -33,14 +33,14 @@ def gene_to_splicegraph(gne, lock):
             num_reads = jj.get_coverage().sum(axis=1)
             jtype_list = []
             for exp_idx in xrange(majiq_config.num_experiments):
-                if jj.is_annotated() and num_reads[exp_idx] == 0:
+                if jj.annotated and num_reads[exp_idx] == 0:
                     if (num_reads.sum() - num_reads[exp_idx]) > 0:
                         jtype = voila_const.JUNCTION_TYPE_DB_OTHER_RNASEQ
                     else:
                         jtype = voila_const.JUNCTION_TYPE_DB
-                elif jj.is_annotated() and num_reads[exp_idx] > 0:
+                elif jj.annotated and num_reads[exp_idx] > 0:
                     jtype = voila_const.JUNCTION_TYPE_DB_RNASEQ
-                elif not jj.is_annotated() and num_reads[exp_idx] > majiq_config.MINREADS:
+                elif not jj.annotated and num_reads[exp_idx] > majiq_config.MINREADS:
                     jtype = voila_const.JUNCTION_TYPE_RNASEQ
                 else:
                     jtype = voila_const.JUNCTION_TYPE_RNASEQ

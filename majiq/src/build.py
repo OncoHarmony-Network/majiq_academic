@@ -67,13 +67,16 @@ def merging_files(args_vals):
                 except KeyError:
                     continue
                 if majiq_config.gcnorm:
-                    vfunc_gc.append(gc_normalization(rna_files[-1].attrs['gc_values']))
+                    vfunc_gc.append(gc_normalization(rfa.attrs['gc_values']))
                 else:
                     vfunc_gc = None
 
         njunc = len(jset)
         gene_obj.junc_matrix = np.zeros(shape=(njunc, len(builder_init.sam_list), (majiq_config.readLen - 16 + 1)),
                                         dtype=np.uint32)
+        if majiq_config.gcnorm:
+            gene_obj.gc_content = np.zeros(shape=(njunc, len(builder_init.sam_list), (majiq_config.readLen - 16 + 1)),
+                                           dtype=np.long)
 
         for exp_idx, fname in enumerate(rna_files):
             with h5py.File(fname) as rnaf:
@@ -83,9 +86,10 @@ def merging_files(args_vals):
                                                                       annotated=jj_grp.attrs['annotated'],
                                                                       all_exp=True)
                     hdfidx = jj_grp.attrs['coverage_index']
-                    gene_obj.junc_matrix[junc.get_index(), exp_idx, :] = rnaf[CONST_JUNCTIONS_DATASET_NAME][hdfidx, :]
-
-                    if junc.is_intronic():
+                    gene_obj.junc_matrix[junc.get_index(), exp_idx, :] = rnaf[JUNCTIONS_DATASET_NAME][hdfidx, :]
+                    if majiq_config.gcnorm:
+                        gene_obj.gc_content[junc.get_index(), exp_idx, :] = rnaf[JUNCTIONS_GC_CONTENT][hdfidx, :]
+                    if junc.intronic:
                         coord = junc.get_coordinates()
                         dict_of_junctions[coord[0]] = junc
                         dict_of_junctions[coord[1]] = junc
@@ -140,9 +144,12 @@ def parsing_files(args_vals):
         out_f = h5py.File(get_builder_temp_majiq_filename(majiq_config.outDir, sam_file),
                           'w', compression='gzip', compression_opts=9)
         effective_readlen = (majiq_config.readLen - MIN_BP_OVERLAP*2) + 1
-        out_f.create_dataset(CONST_JUNCTIONS_DATASET_NAME,
+        out_f.create_dataset(JUNCTIONS_DATASET_NAME,
                              (majiq_config.nrandom_junctions, effective_readlen),
-                             maxshape=(None, effective_readlen))
+                             maxshape=(None, effective_readlen), compression='gzip', compression_opts=9)
+        out_f.create_dataset(JUNCTIONS_GC_CONTENT,
+                             (majiq_config.nrandom_junctions, effective_readlen),
+                             maxshape=(None, effective_readlen), compression='gzip', compression_opts=9)
 
         # init_splicegraph(get_builder_splicegraph_filename(majiq_config.outDir, sam_file))
 
@@ -179,8 +186,8 @@ def parsing_files(args_vals):
                                                  nondenovo=builder_init.non_denovo, logging=tlogger)
 
                 for jnc in gene_obj.get_all_junctions():
-                    jnc.to_rna_hdf5(out_f['%s/junctions' % gne_id], out_f[CONST_JUNCTIONS_DATASET_NAME],
-                                    data_index=jnc_idx)
+                    jnc.to_rna_hdf5(out_f['%s/junctions' % gne_id], out_f[JUNCTIONS_DATASET_NAME],
+                                    data_index=jnc_idx, gc_dataset=out_f[JUNCTIONS_GC_CONTENT])
                     jnc_idx += 1
 
                 # gene_to_splicegraph(gene_obj, sgraph)
@@ -194,7 +201,7 @@ def parsing_files(args_vals):
             factor, meanbins = gc_factor_calculation(gc_pairs, nbins=10)
             out_f.attrs['gc_values'] = (factor, meanbins)
 
-        jj_list = out_f[CONST_JUNCTIONS_DATASET_NAME][()]
+        jj_list = out_f[JUNCTIONS_DATASET_NAME][()]
         indx = np.arange(jj_list.shape[0])[jj_list.sum(axis=1) >= majiq_config.MINREADS]
         tlogger.debug("[%s] Fitting NB function with constitutive events..." % gne_id)
         out_f.attrs['one_over_r'] = fit_nb(jj_list[indx, :], "%s/nbfit" % majiq_config.outDir,
@@ -265,7 +272,7 @@ class Builder(BasicPipeline):
             with h5py.File(get_builder_majiq_filename(majiq_config.outDir, sam_file),
                            'w', compression='gzip', compression_opts=9) as f:
                 effective_readlen = (majiq_config.readLen - 16) + 1
-                f.create_dataset(LSV_JUNCTIONS_DATASET_NAME, (majiq_config.nrandom_junctions, effective_readlen),
+                f.create_dataset(JUNCTIONS_DATASET_NAME, (majiq_config.nrandom_junctions, effective_readlen),
                                  maxshape=(None, effective_readlen))
 
                 # fill meta info
@@ -286,8 +293,8 @@ class Builder(BasicPipeline):
                            'r+', compression='gzip', compression_opts=9) as f:
 
                 n_juncs = f.attrs['data_index']
-                shp = f[LSV_JUNCTIONS_DATASET_NAME].shape
-                f[LSV_JUNCTIONS_DATASET_NAME].resize((n_juncs, shp[1]))
+                shp = f[JUNCTIONS_DATASET_NAME].shape
+                f[JUNCTIONS_DATASET_NAME].resize((n_juncs, shp[1]))
 
                 nlsvs = len(f['LSVs'].keys())
                 logger.info('%s LSVs found in %s' % (nlsvs, sam_file))

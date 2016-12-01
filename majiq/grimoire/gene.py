@@ -27,6 +27,7 @@ class Gene:
             self.transcript_tlb = {}
             self.temp_txex_list = []
         self.junc_index = 0
+        self.gc_content = None
 
     def __del__(self):
         for ex in self.exons:
@@ -107,7 +108,6 @@ class Gene:
 
     def set_junc_index(self, val):
         self.junc_index = val
-
 
     def get_all_junctions(self, filter=True):
         lst = set()
@@ -215,11 +215,11 @@ class Gene:
             tx_list = ex.get_annotated_exon()
             for txex in tx_list:
                 for junc in txex.get_3prime_junc():
-                    coord = junc.get_ss_3p()
+                    coord = junc.end
                     if coord is not None:
                         ss.add((coord, '3prime', junc))
                 for junc in txex.get_5prime_junc():
-                    coord = junc.get_ss_5p()
+                    coord = junc.start
                     if coord is not None:
                         ss.add((coord, '5prime', junc))
 
@@ -455,7 +455,7 @@ def extract_junctions_hdf5(gene_obj, jj_grp, junction_list, annotated=True, all_
     try:
         junc = junction_list[(jj_grp.attrs['start'], jj_grp.attrs['end'])]
         if junc.get_index() == -1:
-            junc.set_index(gene_obj.get_junc_index())
+            junc.idx = gene_obj.get_junc_index()
             gene_obj.incr_junc_index()
 
     except KeyError:
