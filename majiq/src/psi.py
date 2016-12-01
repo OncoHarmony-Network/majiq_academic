@@ -63,7 +63,7 @@ def __load_default_prior():
 
 
 def gen_prior_matrix(lsv_dict1, lsv_summarized1, lsv_dict2, lsv_summarized2, lsv_types, output, conf, numbins=20,
-                     defaultprior=False, logger=None):
+                     defaultprior=False, minpercent=-1, logger=None):
     #Start prior matrix
     logger.info("Calculating prior matrix...")
     psi_space = np.linspace(0, 1 - conf.binsize, num=numbins) + conf.binsize / 2
@@ -77,9 +77,9 @@ def gen_prior_matrix(lsv_dict1, lsv_summarized1, lsv_dict2, lsv_summarized2, lsv
     # temp_files = [files[0],files[]]
 
     filtered_lsv1 = majiq_filter.merge_files_hdf5(lsv_dict1, lsv_summarized1, minnonzero=10, min_reads=20,
-                                                  merge_replicas=True, logger=logger)
+                                                  merge_replicas=True, percent=minpercent, logger=logger)
     filtered_lsv2 = majiq_filter.merge_files_hdf5(lsv_dict2, lsv_summarized2, minnonzero=10, min_reads=20,
-                                                  merge_replicas=True, logger=logger)
+                                                  merge_replicas=True, percent=minpercent, logger=logger)
 
     list_of_lsv = list(set(filtered_lsv1).intersection(set(filtered_lsv2)))
     logger.debug("'Best set' is %s events" % len(list_of_lsv))

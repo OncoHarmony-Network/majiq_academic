@@ -171,11 +171,11 @@ class DeltaPsi(BasicPipeline):
 
         lsv_dict1, lsv_types1, lsv_summarized1, meta1 = majiq_io.extract_lsv_summary(self.files1)
         list_of_lsv_group1 = majiq_filter.merge_files_hdf5(lsv_dict1, lsv_summarized1, self.minpos,
-                                                           self.minreads, logger=self.logger)
+                                                           self.minreads, percent=self.min_exp, logger=self.logger)
 
         lsv_dict2, lsv_types2, lsv_summarized2, meta2 = majiq_io.extract_lsv_summary(self.files2)
         list_of_lsv_group2 = majiq_filter.merge_files_hdf5(lsv_dict2, lsv_summarized2, self.minpos,
-                                                           self.minreads, logger=self.logger)
+                                                           self.minreads, percent=self.min_exp, logger=self.logger)
 
         list_of_lsv = list(set(list_of_lsv_group1).intersection(set(list_of_lsv_group2)))
 
@@ -183,7 +183,7 @@ class DeltaPsi(BasicPipeline):
                                                    self.output, prior_conf(self.iter, self.plotpath, self.breakiter,
                                                                            self.names, self.binsize),
                                                    numbins=self.nbins, defaultprior=self.default_prior,
-                                                   logger=self.logger)
+                                                   minpercent=self.min_exp, logger=self.logger)
 
         self.logger.info("Saving prior matrix for %s..." % self.names)
         dump_bin_file(prior_matrix, get_prior_matrix_filename(self.output, self.names))

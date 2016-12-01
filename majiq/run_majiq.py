@@ -31,6 +31,7 @@ def main():
     common.add_argument('--debug', type=int, default=0,
                         help="Activate this flag for debugging purposes, activates logger and jumps some "
                              "processing steps.")
+    common.add_argument('--min_experiments', default=-1, type=float, dest='min_exp')
 
     buildparser = new_subparser()
     buildparser.add_argument('transcripts', action="store", help='read file in SAM format')
@@ -68,7 +69,6 @@ def main():
                                                                                       'detected')
     buildparser.add_argument('--only_gather', action='store_true', dest='onlygather', default=False)
     buildparser.add_argument('--permissive_ir', action='store_true', dest='permissive', default=False)
-    buildparser.add_argument('--min_experiments', default=-1, type=float, dest='min_exp')
     buildparser.add_argument('--markstacks', default=0.0000001, type=float,
                              help='Mark stack positions. Expects a p-value. Use a negative value in order to '
                                   'disable it. [Default: %(default)s]')
