@@ -99,7 +99,7 @@ def gc_content_per_file(args_vals, output_gc_vals, outdir):
     global gg_strand
     try:
         gc_pairs = {'GC': [], 'COV': []}
-        db_f = h5py.File(get_build_temp_db_filename(outdir))
+        db_f = h5py.File(get_build_temp_db_filename(outdir), 'r')
         for exp_idx, ff in args_vals:
             samfile = pysam.AlignmentFile(ff, "rb")
             for gene_name in db_f.keys():
@@ -573,7 +573,7 @@ def get_const_junctions(filename, logging=None):
             logging.error('File % doesn\'t exists' % filename)
             raise UserWarning
     else:
-        db_f = h5py.File(filename)
+        db_f = h5py.File(filename, 'r')
         cc = db_f[CONST_JUNCTIONS_DATASET_NAME][()]
         db_f.close()
         return np.array(cc)
@@ -581,7 +581,7 @@ def get_const_junctions(filename, logging=None):
 
 def load_data_lsv(path, group_name, logger=None):
     """Load data from the preprocess step. Could change to a DDBB someday"""
-    data = h5py.File(path)
+    data = h5py.File(path, 'r')
     lsv_cov_list = []
     lsv_info = []
 
@@ -639,7 +639,7 @@ def dump_lsvs_voila(pickle_path, posterior_matrix, lsvs_info, meta_info, psi_lis
 
 
 def open_hdf5_file(filename, **kwargs):
-    return h5py.File(filename)
+    return h5py.File(filename, 'r')
 
 
 def close_hdf5_file(fp):

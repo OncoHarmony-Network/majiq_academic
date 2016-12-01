@@ -48,7 +48,7 @@ def merging_files(args_vals):
         logger.debug("[%s] Retrieving gene" % loop_id)
         junction_list = {}
 
-        with h5py.File(get_build_temp_db_filename(majiq_config.outDir)) as db_f:
+        with h5py.File(get_build_temp_db_filename(majiq_config.outDir), 'r') as db_f:
             gene_obj = majiq.grimoire.gene.retrieve_gene(gne_id, db_f, junction_list=junction_list, all_exp=True)
 
         splice_list = set()
@@ -60,7 +60,7 @@ def merging_files(args_vals):
         jset = set()
         for exp_idx in xrange(len(builder_init.sam_list)):
             fname = get_builder_temp_majiq_filename(majiq_config.outDir, builder_init.sam_list[exp_idx])
-            with h5py.File(fname) as rfa:
+            with h5py.File(fname, 'r') as rfa:
                 try:
                     jset = jset.union(set(rfa["%s/junctions" % gne_id].keys()))
                     rna_files.append(fname)
@@ -79,7 +79,7 @@ def merging_files(args_vals):
                                            dtype=np.long)
 
         for exp_idx, fname in enumerate(rna_files):
-            with h5py.File(fname) as rnaf:
+            with h5py.File(fname, 'r') as rnaf:
                 for jj_grp_id in rnaf["%s/junctions" % gne_id]:
                     jj_grp = rnaf["%s/junctions/%s" % (gne_id, jj_grp_id)]
                     junc = majiq.grimoire.gene.extract_junctions_hdf5(gene_obj, jj_grp, junction_list,
@@ -157,7 +157,7 @@ def parsing_files(args_vals):
         gc_pairs = {'GC': [], 'COV': []}
         jnc_idx = 0
 
-        with h5py.File(get_build_temp_db_filename(majiq_config.outDir)) as db_f:
+        with h5py.File(get_build_temp_db_filename(majiq_config.outDir), 'r') as db_f:
             list_of_genes = db_f.keys()
 
             for gne_idx, gne_id in enumerate(list_of_genes):
@@ -264,7 +264,7 @@ class Builder(BasicPipeline):
                                  self.non_denovo, self.silent, self.debug],
                        maxtasksperchild=1)
 
-        with h5py.File(get_build_temp_db_filename(majiq_config.outDir)) as db_f:
+        with h5py.File(get_build_temp_db_filename(majiq_config.outDir), 'r') as db_f:
                 list_of_genes = db_f.keys()
         lchnksize = max(len(list_of_genes)/self.nthreads, 1) + 1
         init_splicegraph(get_builder_splicegraph_filename(majiq_config.outDir))

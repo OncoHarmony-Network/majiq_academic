@@ -34,10 +34,10 @@
     {% for lsv in lsvList -%}
         <tr class="{{ lsv.categories2css() }} lsvrow" data-njuncs="{{ lsv.njuncs() }}" data-nexons="{{ lsv.nexons() }}">
             <td>{{ loop.index }}</td>
-            <td><a href="{{ links_dict[lsv.lsv_graphic.name] }}#{{ lsv.lsv_graphic.name }}"
-                   target="_blank">{{ lsv.lsv_graphic.name }}</a></td>
-            <td><a href="{{ links_dict[lsv.lsv_graphic.name] }}#{{ lsv.lsv_graphic.name }}"
-                   target="_blank">{{ lsv.lsv_graphic.id }}</a></td>
+            <td><a href="{{ links_dict[lsv.name] }}#{{ lsv.name }}"
+                   target="_blank">{{ lsv.name }}</a></td>
+            <td><a href="{{ links_dict[lsv.name] }}#{{ lsv.name }}"
+                   target="_blank">{{ lsv.lsv_id }}</a></td>
             {% if lsvList|length > maxLsvs -%}
                 <td class="medium-header text-wrapped">
                     {{ lsv.lsv_graphic.type }}
@@ -57,9 +57,9 @@
                 </td>
             {% else %}
                 <td>
-                    <p class="hidden" style="top:0;">{{ lsv.lsv_graphic.type }}</p>
-                    <canvas class="lsvLegend" width="200px" height="60px" data-lsv-string="{{ lsv.lsv_graphic.type }}"
-                            title="{{ lsv.lsv_graphic.type }}">
+                    <p class="hidden" style="top:0;">{{ lsv.lsv_type }}</p>
+                    <canvas class="lsvLegend" width="200px" height="60px" data-lsv-string="{{ lsv.lsv_type }}"
+                            title="{{ lsv.lsv_type }}">
                         This browser or document mode doesn't support canvas
                     </canvas>
                 </td>
@@ -78,7 +78,7 @@
             {% endif -%}
             <td>
                 <p>
-                    <a href="http://genome.ucsc.edu/cgi-bin/hgTracks?db={{ lexps.genome }}&position={{ lsv.lsv_graphic.chrom }}:{{ lsv.get_extension()[0] }}-{{ lsv.get_extension()[1] }}"
+                    <a href="http://genome.ucsc.edu/cgi-bin/hgTracks?db={{ lexps.genome }}&position={{ lsv.chrom }}:{{ lsv.get_extension()[0] }}-{{ lsv.get_extension()[1] }}"
                        target="_blank">
                         <img src="static/img/icons/ucsc3.png" title="View in UCSC Genome Browser"/>
                     </a>
@@ -90,5 +90,3 @@
     </tbody>
 
 {% endblock %}
-
-

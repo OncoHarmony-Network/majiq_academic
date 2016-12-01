@@ -65,7 +65,7 @@ def psi_quantification(args_vals):
         #                                                           quantification_init.names, eidx)))
 
         for fname in quantification_init.files:
-            f_list.append(h5py.File(fname))
+            f_list.append(h5py.File(fname, 'r'))
 
         for lidx, lsv_id in enumerate(list_of_lsv):
             if lidx % 50 == 0:
@@ -270,7 +270,7 @@ class CalcPsi(BasicPipeline):
             meta = majiq_io.read_meta_info(self.files)
             with Voila(get_quantifier_voila_filename(self.output, self.name), 'w') as out_h5p:
                 out_h5p.add_metainfo(meta['genome'], self.name, meta['experiments'])
-                in_h5p = h5py.File(self.files[0])
+                in_h5p = h5py.File(self.files[0], 'r')
                 queue_manager(in_h5p, out_h5p, lock_arr, q, num_chunks=self.nthreads, logger=self.logger)
                 in_h5p.close()
 

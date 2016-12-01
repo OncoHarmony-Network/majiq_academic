@@ -1,6 +1,5 @@
 import csv
 import io
-import json
 import os
 import sys
 from multiprocessing import Manager
@@ -89,6 +88,30 @@ class GeneGraphic(HDF5):
     def __len__(self):
         return self.end() - self.start()
 
+    def __sizeof__(self):
+        return sum([sys.getsizeof(self.__dict__[key]) for key in self.__dict__])
+
+    def __eq__(self, other):
+        return (self.chromosome == other.chrom and self.strand == other.strand
+                and self.start < other.end and self.end > other.start)
+
+    def __ne__(self, other):
+        return not self.__eq__(other)
+
+    def __lt__(self, other):
+        return (self.chromosome < other.chromosome
+                or (self.chromosome == other.chromosome
+                    and (self.end < other.start
+                         or (self.end > other.start and self.start < other.end
+                             and self.strand == '+' and other.strand == '-'))))
+
+    def __gt__(self, other):
+        return (self.chromosome > other.chrom
+                or (self.chromosome == other.chrom
+                    and (self.start > other.end
+                         or (self.end > other.start and self.start < other.end
+                             and self.strand == '-' and other.strand == '+'))))
+
     def start(self):
         """
         Start of gene.
@@ -142,15 +165,7 @@ class GeneGraphic(HDF5):
         Construct and return this gene's coordinates.
         :return: list of coordinates
         """
-        return [self.start(), self.end()]
-
-    def to_json(self, encoder=json.JSONEncoder):
-        """
-        Generate and return JSON representation for a gene object.
-        :param encoder: encoder used in the json.dumps call
-        :return: JSON string
-        """
-        return json.dumps(self, default=lambda o: o.__dict__, sort_keys=True, cls=encoder)
+        return self.start(), self.end()
 
     def to_bed12(self):
         """
@@ -264,11 +279,13 @@ class GeneGraphic(HDF5):
 
     def get_experiment(self, experiment):
         d = self.__dict__.copy()
-        d['exons'] = [e.get_experiment(experiment) for e in self.exons]
-        d['junctions'] = [j.get_experiment(experiment) for j in self.junctions]
-        d['start'] = self.start()
-        d['end'] = self.end()
-        d['length'] = len(self)
+        d.update({
+            'exons': [e.get_experiment(experiment) for e in self.exons],
+            'junctions': [j.get_experiment(experiment) for j in self.junctions],
+            'start': self.start(),
+            'end': self.end(),
+            'length': len(self)
+        })
         return d
 
     @classmethod
@@ -295,30 +312,6 @@ class GeneGraphic(HDF5):
     @classmethod
     def easy_from_hdf5(cls, h):
         return cls(None).from_hdf5(h)
-
-    def __sizeof__(self):
-        return sum([sys.getsizeof(self.__dict__[key]) for key in self.__dict__])
-
-    def __eq__(self, other):
-        return (self.chromosome == other.chrom and self.strand == other.strand
-                and self.start < other.end and self.end > other.start)
-
-    def __ne__(self, other):
-        return not self.__eq__(other)
-
-    def __lt__(self, other):
-        return (self.chromosome < other.chromosome
-                or (self.chromosome == other.chromosome
-                    and (self.end < other.start
-                         or (self.end > other.start and self.start < other.end
-                             and self.strand == '+' and other.strand == '-'))))
-
-    def __gt__(self, other):
-        return (self.chromosome > other.chrom
-                or (self.chromosome == other.chrom
-                    and (self.start > other.end
-                         or (self.end > other.start and self.start < other.end
-                             and self.strand == '-' and other.strand == '+'))))
 
 
 class ExonGraphic(Experiment):
@@ -352,12 +345,6 @@ class ExonGraphic(Experiment):
         self.alt_starts = alt_starts
         self.alt_ends = alt_ends
 
-    # def __str__(self):
-    #     return str(((self.start, self.end), self.exon_type))
-
-    # def __repr__(self):
-    #     return self.__str__()
-
     def __sizeof__(self):
         return sum([sys.getsizeof(self.__dict__[key] for key in self.__dict__)])
 
@@ -369,6 +356,9 @@ class ExonGraphic(Experiment):
 
     def __len__(self):
         return self.end - self.start
+
+    def coords(self):
+        return self.start, self.end
 
     def field_by_experiment(self):
         return ['exon_type']
@@ -415,14 +405,6 @@ class ExonGraphic(Experiment):
         """
         assert self.start <= other.start, 'Exons have to be in order to check if they overlap.'
         return other.start <= self.end
-
-    def to_json(self, encoder=json.JSONEncoder):
-        """
-        JSON representation of this class.
-        :param encoder: JSON encoder passed to json.dumps
-        :return: JSON string
-        """
-        return json.dumps(self, default=lambda o: o.__dict__, sort_keys=True, cls=encoder)
 
     def exclude(self):
         return ['exon_type']
@@ -506,16 +488,11 @@ class JunctionGraphic(Experiment):
     def __lt__(self, other):
         return (self.start, self.end) < (other.start, other.end)
 
+    def coords(self):
+        return self.start, self.end
+
     def field_by_experiment(self):
         return ['junction_type', 'reads', 'clean_reads']
-
-    def to_json(self, encoder=json.JSONEncoder):
-        """
-        JSON representation of this class.
-        :param encoder: json encoder passed to json.dumps
-        :return: JSON string
-        """
-        return json.dumps(self, default=lambda o: o.__dict__, sort_keys=True, cls=encoder)
 
     def copy(self):
         """
@@ -540,44 +517,36 @@ class JunctionGraphic(Experiment):
     def to_dict(self):
         return self.__dict__.copy()
 
+    def junction_id(self, chromosome, strand):
+        return '{0}:{1}:{2}-{3}'.format(chromosome, strand, self.start, self.end)
+
     @classmethod
     def easy_from_hdf5(cls, h):
         return cls(None, None, (), ()).from_hdf5(h)
 
 
-class LsvGraphic(GeneGraphic):
-    def __init__(self, lsv_type, start, end, gene_id, name=None, strand=None, exons=(), junctions=(),
-                 chromosome=None):
+class LsvGraphic(HDF5):
+    def __init__(self, lsv_type, start, end, lsv_id, name=None, strand=None, exons=(), junctions=(), chromosome=None):
         """
         LSV Data.
         :param lsv_type: LSV type.  See constants file.
-        :param gene_id: LSV id
+        :param lsv_id: LSV id
         :param name: LSV name
         :param strand: LSV Strand. Either '-' or '+'
         :param exons: List of exons associated with this LSV
         :param junctions: List of junctions associtated with this LSV
         :param chromosome: This LSV's Chromosome
         """
-        super(LsvGraphic, self).__init__(gene_id, name, strand, exons, junctions, chromosome)
-        self.lsv_end = end
-        self.lsv_start = start
+        super(LsvGraphic, self).__init__()
+        self.end = end
+        self.start = start
         self.lsv_type = lsv_type
-
-    def start(self):
-        """
-        LSV has defined start, which is different then its super class where it's generated. This method is here to
-        protect us from accidentally calling the super class 'start()' method.
-        :return: integer
-        """
-        return self.lsv_start
-
-    def end(self):
-        """
-        LSV has a defined end, which is different then its super where it's generated. This method is here to protect
-        us from accidentally calling the super class 'end()' method.
-        :return:
-        """
-        return self.lsv_end
+        self.lsv_id = lsv_id
+        self.name = name
+        self.strand = strand
+        self.exons = exons
+        self.junctions = junctions
+        self.chromosome = chromosome
 
     def to_dict(self):
         d = self.__dict__.copy()
@@ -585,15 +554,18 @@ class LsvGraphic(GeneGraphic):
         d['junctions'] = [junction.to_dict() for junction in self.junctions]
         return d
 
-    def to_hdf5(self, h, use_id=True):
-        super(LsvGraphic, self).to_hdf5(h, False)
+    def cls_list(self):
+        return {'exons': ExonGraphic, 'junctions': JunctionGraphic}
+
+    def junctions_ids(self):
+        return (junction.junction_id(self.chromosome, self.strand) for junction in self.junctions)
 
     @classmethod
     def easy_from_hdf5(cls, h):
         return cls(None, None, None, None).from_hdf5(h)
 
 
-class Splicegraph(object):
+class SpliceGraph(object):
     def __init__(self, splice_graph_file_name, mode, hdf5=None):
         self.file_name = splice_graph_file_name
         self.hdf5 = hdf5

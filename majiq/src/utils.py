@@ -75,7 +75,7 @@ def get_logger(logger_name, silent=False, debug=False, child=False):
 
 
 def get_fitfunc_from_rnafile(path):
-    with h5py.File(path) as p:
+    with h5py.File(path, 'r') as p:
         res = p.attrs['one_over_r']
     return res
 
@@ -163,7 +163,7 @@ def merge_and_create_majiq_file(exp_idx, pref_file):
         temp_dir = "%s/tmp/chunk_%s" % (majiq_config.outDir, chnk)
         filename = "%s/%s.majiq.hdf5" % (temp_dir, majiq_config.exp_list[exp_idx])
         if os.path.exists(filename):
-            with h5py.File(filename) as temp_table:
+            with h5py.File(filename, 'r') as temp_table:
                 for kk in temp_table['LSVs'].keys():
                     h5py.h5o.copy(temp_table['LSVs'].id, kk, as_table.id, kk)
                     majiq_lsv.set_gc_factor(as_table[kk], exp_idx)
@@ -172,7 +172,7 @@ def merge_and_create_majiq_file(exp_idx, pref_file):
 
     clist = random.sample(nat, min(5000, len(nat)))
     for jnc in clist:
-        with h5py.File(jnc[1]) as tt:
+        with h5py.File(jnc[1], 'r') as tt:
             h5py.h5o.copy(tt['const'].id, jnc[0], nonas_table.id, jnc[0])
             majiq_junction.set_gc_factor(nonas_table[jnc[0]], exp_idx)
 

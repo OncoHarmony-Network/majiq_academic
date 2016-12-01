@@ -40,7 +40,7 @@ def merge_files_hdf5(hdf5_file_list, minnonzero, min_reads, percent=-1, merge_re
         percent = percent + 1 if len(hdf5_file_list) % 2 != 0 else percent
 
     for fname in hdf5_file_list:
-        fp = h5py.File(fname)
+        fp = h5py.File(fname, 'r')
         for lsv_name in fp['LSVs']:
             cov = fp[JUNCTIONS_DATASET_NAME][fp['LSVs/%s' % lsv_name].attrs['coverage']]
             if ((cov != 0).sum(axis=1) > minnonzero * (cov.sum(axis=1) > min_reads)).sum() >= 1:
@@ -49,7 +49,7 @@ def merge_files_hdf5(hdf5_file_list, minnonzero, min_reads, percent=-1, merge_re
                 except KeyError:
                     lsv_dict[lsv_name] = 1
 
-    list_of_lsvs = [kk for kk, vv in lsv_dict.items() if vv > percent]
+    list_of_lsvs = [kk for kk, vv in lsv_dict.items() if vv >= percent]
     return list_of_lsvs
 
 

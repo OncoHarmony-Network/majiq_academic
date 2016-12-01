@@ -2,12 +2,12 @@ import numpy as np
 
 from majiq.src import config as majiq_config
 from voila import constants as voila_const
-from voila.splice_graphics import JunctionGraphic, ExonGraphic, GeneGraphic, Splicegraph
+from voila.splice_graphics import JunctionGraphic, ExonGraphic, GeneGraphic, SpliceGraph
 from majiq.src.constants import *
 
 
 def init_splicegraph(filename):
-    with Splicegraph(filename, 'w') as sg:
+    with SpliceGraph(filename, 'w') as sg:
         sg.erase_splice_graph_file()
         sg.add_experiment_names(majiq_config.exp_list)
 
@@ -15,7 +15,7 @@ def init_splicegraph(filename):
 def gene_to_splicegraph(gne, lock):
 
     lock.acquire()
-    with Splicegraph(get_builder_splicegraph_filename(majiq_config.outDir), 'r+') as sg:
+    with SpliceGraph(get_builder_splicegraph_filename(majiq_config.outDir), 'r+') as sg:
 
         junc_list = []
         junc_l = []

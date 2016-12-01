@@ -289,7 +289,7 @@ class LSV(object):
                              intron_retention=ex.get_ir(), alt_starts=alt_start, alt_ends=alt_ends)
             exon_list.append(eg)
 
-        splice_lsv = LsvGraphic(lsv_type=self.ext_type, start=self.coords[0], end=self.coords[1], gene_id=self.id,
+        splice_lsv = LsvGraphic(lsv_type=self.ext_type, start=self.coords[0], end=self.coords[1], lsv_id=self.id,
                                 name=self.exon.get_gene().get_name(), chromosome=self.get_chromosome(),
                                 strand=self.get_strand(), exons=exon_list, junctions=junc_list)
         return splice_lsv

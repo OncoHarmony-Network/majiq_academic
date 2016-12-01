@@ -2,59 +2,14 @@ from __future__ import division
 
 import errno
 import fnmatch
-import json
 import os
 import shutil
 from collections import defaultdict
-from multiprocessing import Manager, Process, Pool
-from multiprocessing.queues import JoinableQueue
 
-import h5py
 import numpy as np
 
-from voila import splice_graphics
-from voila.constants import PROCESS_COUNT
-from voila.splice_graphics import GeneGraphic
 from voila.utils.voilaLog import voilaLog
 from voila.vlsv import VoilaLsv
-
-
-class PickleEncoder(json.JSONEncoder):
-    def default(self, obj):
-        if isinstance(obj, set):
-            return list(obj)
-        if isinstance(obj, np.ndarray):
-            return list(obj)
-        if isinstance(obj, tuple):
-            return list(obj)
-        if isinstance(obj, np.int64):
-            return int(obj)
-        if isinstance(obj, VoilaLsv):
-            return obj.to_JSON(encoder=PickleEncoder)
-
-        return json.JSONEncoder.default(self, obj)
-
-
-class LsvGraphicEncoder(json.JSONEncoder):
-    def default(self, obj):
-        if isinstance(obj, set):
-            return list(obj)
-        if isinstance(obj, np.ndarray):
-            return list(obj)
-        if isinstance(obj, tuple):
-            return list(obj)
-        if isinstance(obj, np.int64):
-            return int(obj)
-        if isinstance(obj, splice_graphics.ExonGraphic):
-            return obj.to_json(PickleEncoder)
-        if isinstance(obj, splice_graphics.JunctionGraphic):
-            return obj.to_json(PickleEncoder)
-        if isinstance(obj, splice_graphics.GeneGraphic):
-            return obj.to_json(PickleEncoder)
-        if isinstance(obj, splice_graphics.LsvGraphic):
-            return obj.to_json(PickleEncoder)
-
-        return json.JSONEncoder.default(self, obj)
 
 
 def expected_dpsi(bins):
@@ -75,10 +30,9 @@ def get_prob_delta_psi_greater_v(bins, expected, V=.2):
     return np.sum(bins[:left] + np.sum(bins[right:]))
 
 
-def lsvs_to_gene_dict(voila_input, gene_name_list=(), lsv_types=None, lsv_names=(), threshold=.2, show_all=False):
+def lsvs_to_gene_dict(voila_input, threshold=.2, show_all=False):
     log = voilaLog()
     genes_dict = defaultdict(list)
-    nofilter_genes = not (gene_name_list and lsv_types)
 
     for i, vlsv in enumerate(voila_input.lsvs):
 
@@ -89,21 +43,16 @@ def lsvs_to_gene_dict(voila_input, gene_name_list=(), lsv_types=None, lsv_names=
         if vlsv.is_delta_psi() and not show_all and not vlsv.is_lsv_changing(threshold):
             continue
 
-        if len(lsv_names) > 0 and vlsv.get_id() not in lsv_names:
-            continue
+        gene_id = vlsv.lsv_id.split(':')[0]
 
-        gene_name_id = vlsv.lsv_graphic.gene_id.split(':')[0]
-        gene_name = vlsv.lsv_graphic.name.upper()
-        if (nofilter_genes or gene_name_id in gene_name_list or
-                    gene_name in gene_name_list or vlsv.get_type() in lsv_types):
-            if vlsv.is_delta_psi():
-                genes_dict[gene_name_id].append({
-                    'lsv': vlsv,
-                    'psi1': VoilaLsv(vlsv.psi1, lsv_graphic=None),
-                    'psi2': VoilaLsv(vlsv.psi2, lsv_graphic=None)
-                })
-            else:
-                genes_dict[gene_name_id].append(vlsv)
+        if vlsv.is_delta_psi():
+            genes_dict[gene_id].append({
+                'lsv': vlsv,
+                'psi1': VoilaLsv(vlsv.psi1, lsv_graphic=None),
+                'psi2': VoilaLsv(vlsv.psi2, lsv_graphic=None)
+            })
+        else:
+            genes_dict[gene_id].append(vlsv)
 
     return {'genes_dict': genes_dict,
             'meta_exps': voila_input.metainfo}

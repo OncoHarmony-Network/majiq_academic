@@ -1,9 +1,8 @@
-import json
 from collections import defaultdict
 
 import numpy as np
 
-from voila.hdf5 import HDF5, BinsDataSet, Psi1DataSet, Psi2DataSet
+from voila.hdf5 import BinsDataSet, Psi1DataSet, Psi2DataSet
 from voila.splice_graphics import LsvGraphic
 from voila.utils.voilaLog import voilaLog
 
@@ -66,12 +65,24 @@ class OrphanJunctionException(Exception):
         self.message = m
 
 
-class VoilaLsv(HDF5):
+class VoilaLsv(LsvGraphic):
     def __init__(self, bins_list, lsv_graphic, means=None, means_psi1=None, psi1=None, means_psi2=None, psi2=None):
-        super(VoilaLsv, self).__init__()
+        try:
+            super(VoilaLsv, self).__init__(
+                lsv_type=lsv_graphic.lsv_type,
+                start=lsv_graphic.start,
+                end=lsv_graphic.end,
+                lsv_id=lsv_graphic.lsv_id,
+                name=lsv_graphic.name,
+                strand=lsv_graphic.strand,
+                exons=lsv_graphic.exons,
+                junctions=lsv_graphic.junctions,
+                chromosome=lsv_graphic.chromosome
+            )
+        except AttributeError:
+            super(VoilaLsv, self).__init__(None, None, None, None)
 
         self.bins = bins_list
-        self.lsv_graphic = lsv_graphic
         self.means = means
         self.means_psi1 = means_psi1
         self.psi1 = psi1
@@ -112,14 +123,11 @@ class VoilaLsv(HDF5):
         if lsv_graphic:
             self.init_categories()
 
-    def lsv_id(self):
-        return self.lsv_graphic.gene_id
-
     def is_delta_psi(self):
         return sum([bool(self.psi1), bool(self.psi2)]) == 2
 
     def get_extension(self):
-        return [self.lsv_graphic.exons[0].start, self.lsv_graphic.exons[-1].end]
+        return [self.exons[0].start, self.exons[-1].end]
 
     def njuncs(self):
         return self.categories['njuncs']
@@ -145,25 +153,19 @@ class VoilaLsv(HDF5):
             log.exception(e)
             log.warning(e.message)
 
-    def to_JSON(self, encoder=json.JSONEncoder):
-        return json.dumps(self, default=lambda o: o.__dict__, sort_keys=True, cls=encoder)
-
     def is_lsv_changing(self, thres):
         means = np.array(self.means)
         # TODO: should we check that pos and neg are kind of matched?
         return max(means[means > 0].sum(), abs(means[means < 0].sum())) >= thres
 
     def exclude(self):
-        return ['lsv_graphic', 'categories', 'bins', 'psi1', 'psi2']
+        return ['categories', 'bins', 'psi1', 'psi2']
 
     def to_hdf5(self, h, use_id=True):
         if use_id:
-            h = h.create_group('/lsvs/' + self.lsv_graphic.gene_id)
+            h = h.create_group('/lsvs/' + self.lsv_id)
 
         super(VoilaLsv, self).to_hdf5(h, use_id)
-
-        # lsv graphic
-        self.lsv_graphic.to_hdf5(h.create_group('lsv_graphic'), use_id=False)
 
         # categories
         cat_grp = h.create_group('categories')
@@ -181,9 +183,6 @@ class VoilaLsv(HDF5):
             Psi2DataSet(h, self.psi2).encode_list()
 
     def from_hdf5(self, h):
-        # lsv graphic
-        self.lsv_graphic = LsvGraphic.easy_from_hdf5(h['lsv_graphic'])
-
         # categories
         self.categories = {}
         cat_attrs = h['categories'].attrs
@@ -223,24 +222,24 @@ class VoilaLsv(HDF5):
 
         # fields = ['seqid', 'source', 'type', 'start', 'end', 'score', 'strand', 'phase', 'attributes']
         trans = []
-        lexons = vlsv.lsv_graphic.exons
-        lsvId = vlsv.lsv_graphic.gene_id
-        chrom = vlsv.lsv_graphic.chrom
-        strand = vlsv.lsv_graphic.strand
-        gStart = lexons[0].coords[0]
-        gEnd = lexons[-1].coords[1]
+        lexons = vlsv.exons
+        lsvId = vlsv.lsv_id
+        chrom = vlsv.chromosome
+        strand = vlsv.strand
+        gStart = lexons[0].coords()[0]
+        gEnd = lexons[-1].coords()[1]
         first = 0
         last = 1
         if strand == '-':
-            gStart = lexons[-1].coords[1]
-            gEnd = lexons[0].coords[0]
+            gStart = lexons[-1].coords()[1]
+            gEnd = lexons[0].coords()[0]
             first, last = last, first
 
         gene_str = '\t'.join([chrom, 'old_majiq', 'gene', str(gStart), str(gEnd), '.', strand, '0',
                               'Name=%s;ID=%s' % (lsvId, lsvId)])
 
         trans.append(gene_str)
-        for jid, junc in enumerate(vlsv.lsv_graphic.junctions):
+        for jid, junc in enumerate(vlsv.junctions):
             mrna = '%s\told_majiq\tmRNA\t' % chrom
             mrna_id = '%s.%d' % (lsvId, jid)
             ex1 = '%s\told_majiq\texon\t' % chrom
@@ -252,15 +251,15 @@ class VoilaLsv(HDF5):
             if strand == '-':
                 ex1G, ex2G = ex2G, ex1G
 
-            mrna += '%d\t%d\t' % (ex1G.coords[first], ex2G.coords[last])
+            mrna += '%d\t%d\t' % (ex1G.coords()[first], ex2G.coords()[last])
 
-            if vlsv.lsv_graphic.type.startswith('t'):
+            if vlsv.lsv_type.startswith('t'):
                 ex1G, ex2G = ex2G, ex1G
-                ex1 += '%d\t%d\t' % (junc.coords[last], ex1G.coords[last])
-                ex2 += '%d\t%d\t' % (ex2G.coords[first], junc.coords[first])
+                ex1 += '%d\t%d\t' % (junc.coords()[last], ex1G.coords()[last])
+                ex2 += '%d\t%d\t' % (ex2G.coords()[first], junc.coords()[first])
             else:
-                ex1 += '%d\t%d\t' % (ex1G.coords[first], junc.coords[first])
-                ex2 += '%d\t%d\t' % (junc.coords[last], ex2G.coords[last])
+                ex1 += '%d\t%d\t' % (ex1G.coords()[first], junc.coords()[first])
+                ex2 += '%d\t%d\t' % (junc.coords()[last], ex2G.coords()[last])
             mrna += '.\t%s\t0\tName=%s;Parent=%s;ID=%s' % (strand, mrna_id, lsvId, mrna_id)
             ex1 += '.\t%s\t0\tName=%s.lsv;Parent=%s;ID=%s.lsv' % (strand, mrna_id, mrna_id, mrna_id)
             ex2 += '.\t%s\t0\tName=%s.ex;Parent=%s;ID=%s.ex' % (strand, mrna_id, mrna_id, mrna_id)
@@ -281,7 +280,7 @@ class VoilaLsv(HDF5):
 
     def init_categories(self):
         categories = defaultdict()
-        juns = self.lsv_graphic.lsv_type.split('|')
+        juns = self.lsv_type.split('|')
         ir = 'i' in juns
         try:
             juns.remove('i')
@@ -309,11 +308,6 @@ class VoilaLsv(HDF5):
             categories['prime5'], categories['prime3'] = categories['prime3'], categories['prime5']
 
         self.categories = categories
-
-    def to_dict(self):
-        d = self.__dict__.copy()
-        d['lsv_graphic'] = self.lsv_graphic.to_dict()
-        return d
 
     @classmethod
     def easy_from_hdf5(cls, h):

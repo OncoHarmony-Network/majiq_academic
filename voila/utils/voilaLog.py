@@ -7,9 +7,8 @@ from logging.handlers import RotatingFileHandler
 from voila.constants import VOILA_LOG_NAME
 
 
-def voilaLog(filename=None, level=logging.DEBUG):
+def voilaLog(filename=None, silent=False):
     try:
-        # noinspection PyUnresolvedReferences
         return Logger.manager.loggerDict[VOILA_LOG_NAME]
     except KeyError:
         pass
@@ -30,10 +29,11 @@ def voilaLog(filename=None, level=logging.DEBUG):
         handler.setFormatter(formatter)
         log.addHandler(handler)
 
-    streamHandler = StreamHandler()
+    if not silent:
+        streamHandler = StreamHandler()
+        streamHandler.setFormatter(formatter)
+        log.addHandler(streamHandler)
 
-    streamHandler.setFormatter(formatter)
-    log.addHandler(streamHandler)
-    log.setLevel(level)
+    log.setLevel(logging.DEBUG)
 
     return log

@@ -211,7 +211,7 @@ class DeltaPsi(BasicPipeline):
                 out_h5p.add_metainfo(meta1['genome'], group1=self.names[0], experiments1=meta1['experiments'],
                                      group2=self.names[1], experiments2=meta1['experiments'])
 
-                in_h5p = h5py.File(files[0][0])
+                in_h5p = h5py.File(files[0][0], 'r')
                 queue_manager(in_h5p, out_h5p, lock_arr, q, num_chunks=self.nthreads, logger=self.logger)
                 in_h5p.close()
 

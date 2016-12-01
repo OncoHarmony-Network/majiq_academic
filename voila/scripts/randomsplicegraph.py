@@ -12,7 +12,7 @@ def grouped(iterable, n):
     return izip(*[iter(iterable)] * n)
 
 
-class RandomSplicegraph(object):
+class RandomSpliceGraph(object):
     def __init__(self, experiments=None, exons=None, junctions=None, gene_id=None):
         """
         Generate random exons and random junctions for creating a GeneGraphic object. The developer admits this isn't
@@ -64,7 +64,7 @@ class RandomSplicegraph(object):
             lsv_type='t|1e1.1o1|1e2.1o2|1e2.2o2',
             start=exons[0].start,
             end=exons[-1].end,
-            gene_id=self.gene_id,
+            lsv_id=self.gene_id,
             exons=exons,
             junctions=junctions
         )

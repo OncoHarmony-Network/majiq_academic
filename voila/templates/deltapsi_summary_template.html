@@ -31,11 +31,15 @@
             </div>
             {% for gene_name, gene_value in genes_dict.iteritems() %}
                 {% set gene_index = loop.index - 1 %}
-                <h2>Gene name: <a
-                        name="{{ genes_exps_list[0][genes_exps_list[0].keys()[0]][gene_name][4] }}">{{ genes_exps_list[0][genes_exps_list[0].keys()[0]][gene_name][4] }}</a>; {{ genes_exps_list[0][genes_exps_list[0].keys()[0]][gene_name][3] }}:{{ genes_exps_list[0][genes_exps_list[0].keys()[0]][gene_name][1] }}:{{ genes_exps_list[0][genes_exps_list[0].keys()[0]][gene_name][2][0] }}-{{ genes_exps_list[0][genes_exps_list[0].keys()[0]][gene_name][2][1] }};
-                    <a href="http://genome.ucsc.edu/cgi-bin/hgTracks?db={{ lexps.genome }}&position={{ genes_exps_list[0][genes_exps_list[0].keys()[0]][gene_name][3] }}:{{ genes_exps_list[0][genes_exps_list[0].keys()[0]][gene_name][2][0] }}-{{ genes_exps_list[0][genes_exps_list[0].keys()[0]][gene_name][2][1] }}"
-                       target="_blank"><img src="static/img/icons/ucsc3.png"
-                                            title="{{ genes_exps_list[0][genes_exps_list[0].keys()[0]][gene_name][3] }}:{{ genes_exps_list[0][genes_exps_list[0].keys()[0]][gene_name][2][0] }}-{{ genes_exps_list[0][genes_exps_list[0].keys()[0]][gene_name][2][1] }}"/></a>
+                <h2>Gene
+                    name:
+                    {{ gene_value[0].lsv.name }};{{ gene_value[0].lsv.chromosome }}:{{ gene_value[0].lsv.strand }}:{{ genes_exps_list[0][genes_exps_list[0].keys()[0]][gene_name].coordinates[0] }}-{{ genes_exps_list[0][genes_exps_list[0].keys()[0]][gene_name].coordinates[1] }};
+
+                    {% if lexps %}
+                        <a href="http://genome.ucsc.edu/cgi-bin/hgTracks?db={{ lexps.genome }}&position={{ genes_exps_list[0][genes_exps_list[0].keys()[0]][gene_name][3] }}:{{ genes_exps_list[0][genes_exps_list[0].keys()[0]][gene_name]['coordinates'][0] }}-{{ genes_exps_list[0][genes_exps_list[0].keys()[0]][gene_name].coordinates[1] }}"
+                           target="_blank"><img src="static/img/icons/ucsc3.png"
+                                                title="{{ genes_exps_list[0][genes_exps_list[0].keys()[0]][gene_name][3] }}:{{ genes_exps_list[0][genes_exps_list[0].keys()[0]][gene_name].coordinates[0] }}-{{ genes_exps_list[0][genes_exps_list[0].keys()[0]][gene_name].coordinates[1] }}"/></a>
+                    {% endif %}
                 </h2>
 
                 <h3 class="gene_id">
@@ -48,13 +52,9 @@
 
                         <select class="spliceGraphSelector exp1" autocomplete="off">
                             {% for nsample in genes_exps_list[0] -%}
-                                {% if nsample == comb_spliceg_cond1 %}
-                                    <option selected="selected"
-                                            value="{{ genes_exps_list[0][nsample][gene_name][0] |to_json }}">{{ nsample }}
-                                    </option>
-                                {% else %}
-                                    <option value="{{ genes_exps_list[0][nsample][gene_name][0] |to_json }}">{{ nsample }}</option>
-                                {% endif %}
+                                <option {% if nsample == comb_spliceg_cond1 %}selected="selected"{% endif %}
+                                        value="{{ genes_exps_list[0][nsample][gene_name].json }}">{{ nsample }}
+                                </option>
                             {%- endfor %}
                         </select>
 
@@ -79,13 +79,9 @@
 
                         <select class="spliceGraphSelector exp2" autocomplete="off">
                             {% for nsample in genes_exps_list[1] -%}
-                                {% if nsample == comb_spliceg_cond2 %}
-                                    <option selected="selected"
-                                            value="{{ genes_exps_list[1][nsample][gene_name][0] |to_json }}">{{ nsample }}
-                                    </option>
-                                {% else %}
-                                    <option value="{{ genes_exps_list[1][nsample][gene_name][0] |to_json }}">{{ nsample }}</option>
-                                {% endif %}
+                                <option {% if nsample == comb_spliceg_cond2 %}selected="selected"{% endif %}
+                                        value="{{ genes_exps_list[1][nsample][gene_name].json }}">{{ nsample }}
+                                </option>
                             {%- endfor %}
                         </select>
                     </div>
@@ -93,11 +89,11 @@
                     <div class="splice-div-container">
 
                         <div class="spliceDiv exp1" id="spliceDivExp1_{{ gene_index }}"
-                             data-exon-list="{{ genes_exps_list[0][comb_spliceg_cond1][gene_name][0] }}">
+                             data-exon-list="{{ genes_exps_list[0][comb_spliceg_cond1][gene_name].json }}">
                         </div>
 
                         <div class="spliceDiv exp2" id="spliceDivExp2_{{ gene_index }}"
-                             data-exon-list="{{ genes_exps_list[1][comb_spliceg_cond2][gene_name][0] }}">
+                             data-exon-list="{{ genes_exps_list[1][comb_spliceg_cond2][gene_name].json }}">
                         </div>
 
                     </div>
@@ -153,13 +149,13 @@
                                         </label>
                                     </form>
                                 </td>
-                                <td>{{ gene['lsv'].lsv_graphic.id }}</td>
+                                <td>{{ gene['lsv'].lsv_id }}</td>
                                 <td>
-                                    <p style="top:0;" class="hidden">{{ gene['lsv'].lsv_graphic.type }}</p>
+                                    <p style="top:0;" class="hidden">{{ gene['lsv'].lsv_type }}</p>
                                     <canvas class="lsvLegend" id="{{ gene_index }}" width="200px" height="80px"
-                                            data-lsv-string="{{ gene['lsv'].lsv_graphic.type }}"
-                                            data-coord-exon="{{ gene['lsv'].lsv_graphic.coords }}"
-                                            title="{{ gene['lsv'].lsv_graphic.type }}">
+                                            data-lsv-string="{{ gene['lsv'].lsv_type }}"
+                                            data-coord-exon="{{ gene['lsv'].coords }}"
+                                            title="{{ gene['lsv'].lsv_type }}">
                                         This browser or document mode doesn't support canvas
                                     </canvas>
                                 </td>
@@ -201,7 +197,7 @@
                                            target="_blank">
                                             <img src="static/img/icons/ucsc3.png" title="View in UCSC Genome Browser"/>
                                         </a>
-                                        <a href="../static/doc/lsvs/{{ gene['lsv'].lsv_graphic.id }}.gtf"
+                                        <a href="../static/doc/lsvs/{{ gene['lsv'].lsv_id }}.gtf"
                                            target="_blank"><img
                                                 src="static/img/icons/gtf.png" title="Go to GTF LSV definition"/></a>
                                     </p>

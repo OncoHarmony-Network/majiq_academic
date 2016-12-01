@@ -9,7 +9,6 @@ import majiq.src.filter as majiq_filter
 import majiq.src.io as majiq_io
 import majiq.src.io_utils
 from majiq.src.constants import *
-from majiq.src.plotting import plot_matrix
 
 """
 Calculate and manipulate PSI and Delta PSI values

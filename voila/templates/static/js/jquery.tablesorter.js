@@ -977,6 +977,7 @@
                  * D3 - SpliceGraph
                  * */
 
+                console.log($(this));
                 var genes_obj = JSON.parse($(this)[0].getAttribute('data-exon-list').replace(/'/g, '"'));
 
 

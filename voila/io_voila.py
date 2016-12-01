@@ -3,12 +3,14 @@ import os
 from collections import defaultdict
 from multiprocessing import Manager, Process, Pool
 from multiprocessing.queues import JoinableQueue
+from os.path import join
 
 import h5py
 import numpy as np
 
 import vlsv
 from voila import constants
+from voila.constants import JUNCTION_TYPE_RNASEQ
 from voila.hdf5 import HDF5
 from voila.utils import utils_voila
 from voila.utils.voilaLog import voilaLog
@@ -59,10 +61,6 @@ class VoilaInput(HDF5):
 
     def add_lsv(self, l):
         self.lsvs.append(l)
-
-    def get_metainfo(self):
-        """Retrieve experiment metainfo (primarily samples information, expandable)"""
-        return self.metainfo
 
     def samples_metainfo(self):
         """Sample information generator, one by one."""
@@ -130,7 +128,7 @@ class VoilaInput(HDF5):
         vi.encode_metainfo(h['/'])
 
     @classmethod
-    def from_hdf5_file(cls, hdf5_filename):
+    def from_hdf5_file(cls, hdf5_filename, lsv_types=None, lsv_ids=None, gene_names=None):
         """
         Create VoilaInput object from HDF5 file.  This will process each of the VoilaLsvs in their own thread using the
         Producer Consumer design pattern.
@@ -142,7 +140,12 @@ class VoilaInput(HDF5):
             with h5py.File(hdf5_filename, 'r') as h:
                 while True:
                     id = queue.get()
-                    manage_dict[id] = VoilaLsv.easy_from_hdf5(h['lsvs'][id])
+                    lsv = VoilaLsv.easy_from_hdf5(h['lsvs'][id])
+
+                    if not lsv_types or lsv.lsv_graphic.lsv_type in lsv_types:
+                        if not gene_names or lsv.gene_name() in gene_names:
+                            if not lsv_ids or lsv.lsv_id() in lsv_ids:
+                                manage_dict[id] = lsv
                     queue.task_done()
 
         def producer():
@@ -265,160 +268,108 @@ def cond_table_tab_output(input_parsed):
 
 
 def tab_output(input_parsed):
+    def j(value_list):
+        return ';'.join(str(x) for x in value_list)
+
     output_dir = input_parsed.output_dir
     output_html = input_parsed.output_html
     log = voilaLog()
-    pairwise_dir = input_parsed.pairwise_dir
     majiq_output = input_parsed.majiq_output
     threshold = input_parsed.threshold
     type_summary = input_parsed.type_summary
+    group1 = None
+    group2 = None
+    tsv_file = join(output_dir, output_html.rsplit('.html', 1)[0] + '.tsv')
 
-    ofile_str = "%s%s.%s" % (output_dir, output_html.rsplit('.html', 1)[0], constants.EXTENSION)
-    tlb_categx = {'A5SS': 'prime5', 'A3SS': 'prime3', 'Num. Junctions': 'njuncs', 'Num. Exons': 'nexons', 'ES': 'ES'}
+    log.info("Creating Tab-delimited output file in %s..." % tsv_file)
 
-    log.info("Creating Tab-delimited output file in %s..." % ofile_str)
+    fieldnames = ['Gene Name', 'Gene ID', 'LSV ID', 'E(PSI) per LSV junction', 'Var(E(PSI)) per LSV junction']
 
-    if pairwise_dir:
-        # In deltapsi, add columns with pairwise comparisons between group members
-        log.info("Load pairwise comparison files from %s..." % pairwise_dir)
-        lmajiq_pairs, group1_name, group2_name = load_dpairs(pairwise_dir, majiq_output)
+    if 'delta' in type_summary:
+        group1 = majiq_output['meta_exps']['group1']
+        group2 = majiq_output['meta_exps']['group2']
+        fieldnames = fieldnames[:3] + ['E(dPSI) per LSV junction', 'P(|E(dPSI)|>=%.2f) per LSV junction' % threshold,
+                                       '%s E(PSI)' % group1, '%s E(PSI)' % group2]
 
-    with open(ofile_str, 'w+') as ofile:
-        headers = ['#Gene Name',
-                   'Gene ID',
-                   'LSV ID',
-                   'E(PSI) per LSV junction',
-                   'Var(E(PSI)) per LSV junction',
-                   'LSV Type',
-                   'A5SS',
-                   'A3SS',
-                   'ES',
-                   'Num. Junctions',
-                   'Num. Exons',
-                   'De Novo Junctions?',
-                   'chr',
-                   'strand',
-                   'Junctions coords',
-                   'Exons coords',
-                   'Exons Alternative Start',
-                   'Exons Alternative End',
+    fieldnames += ['LSV Type', 'A5SS', 'A3SS', 'ES', 'Num. Junctions', 'Num. Exons', 'De Novo Junctions', 'chr',
+                   'strand', 'Junctions coords', 'Exons coords', 'Exons Alternative Start', 'Exons Alternative End',
                    'IR coords']
-        if 'voila_links' in majiq_output.keys():
-            headers.append('Voila link')
 
-        if 'delta' in type_summary:
-            headers[3] = 'E(dPSI) per LSV junction'
-            headers[4] = 'P(|E(dPSI)|>=%.2f) per LSV junction' % threshold
-            psi_headers = ['%s E(PSI)' % majiq_output['meta_exps']['group1'],
-                           '%s E(PSI)' % majiq_output['meta_exps']['group2']]
-            headers = headers[:5] + psi_headers + headers[5:]
+    if 'voila_links' in majiq_output:
+        fieldnames.append('Voila link')
 
-            if pairwise_dir:
-                for idx1 in xrange(len(lmajiq_pairs)):
-                    for idx2 in xrange(len(lmajiq_pairs[0])):
-                        headers.append("%s_%d_%s_%d" % (group1_name, idx1 + 1, group2_name, idx2 + 1))
-
-                exp_names_map = ['#Group names and file names mapping']
-                for iexp in xrange(len(lmajiq_pairs)):
-                    exp_names_map.append(
-                        "#%s_%d=%s" % (group1_name, iexp + 1, lmajiq_pairs[0][0]['meta_exps'][0][iexp]['experiment']))
-                for iexp in xrange(len(lmajiq_pairs[0])):
-                    exp_names_map.append(
-                        "#%s_%d=%s" % (group2_name, iexp + 1, lmajiq_pairs[0][0]['meta_exps'][1][iexp]['experiment']))
-                ofile.write('\n'.join(exp_names_map))
-                ofile.write('\n')
-                ofile.write('#\n')
-
-        # ofile.write("#Tab-delimited file\n#\n")
-        ofile.write(constants.DELIMITER.join(headers))
-        ofile.write('\n')
-
+    with open(tsv_file, 'w') as tsv:
+        writer = csv.DictWriter(tsv, fieldnames=fieldnames, delimiter='\t')
+        writer.writeheader()
         for gene in majiq_output['genes_dict']:
-            for llsv_dict in majiq_output['genes_dict'][gene]:
-                llsv = llsv_dict
-                if type(llsv_dict) == dict:
-                    llsv = llsv_dict['lsv']
-                lline = []
-                lline.extend([llsv.lsv_graphic.name, gene, llsv.lsv_graphic.id])
-                lexpected = []
-                lconfidence = []
-                lexpecs_psi1 = []
-                lexpecs_psi2 = []
-                for i, bins in enumerate(llsv.bins):
-                    if 'delta' in type_summary:
-                        lexpected.append(str(-llsv.excl_incl[i][0] + llsv.excl_incl[i][1]))
-                        lconfidence.append(str(vlsv.matrix_area(np.array(bins), threshold, collapsed_mat=True).sum()))
-                        lexpecs_psi1.append('%.3f' % vlsv.get_expected_psi(np.array(llsv.psi1[i])))
-                        lexpecs_psi2.append('%.3f' % vlsv.get_expected_psi(np.array(llsv.psi2[i])))
-                    else:
-                        lexpected.append(repr(llsv.means[i]))
-                        lconfidence.append(repr(llsv.variances[i]))
+            for lsv in majiq_output['genes_dict'][gene]:
 
-                lline.append(';'.join(lexpected))
-                lline.append(';'.join(lconfidence))
-                if 'delta' in type_summary:
-                    lline.append(';'.join(lexpecs_psi1))
-                    lline.append(';'.join(lexpecs_psi2))
+                if constants.ANALYSIS_DELTAPSI == type_summary:
+                    lsv = lsv['lsv']
 
-                lline.append(llsv.lsv_graphic.type)
-                lline.append(repr(llsv.categories[tlb_categx['A5SS']]))
-                lline.append(repr(llsv.categories[tlb_categx['A3SS']]))
-                lline.append(repr(llsv.categories[tlb_categx['ES']]))
-                lline.append(repr(llsv.categories[tlb_categx['Num. Junctions']]))
-                lline.append(repr(llsv.categories[tlb_categx['Num. Exons']]))
-                lline.append(str(int(np.any([junc.type_junction == 1 for junc in llsv.lsv_graphic.junctions]))))
+                row = {
+                    'Gene Name': lsv.name,
+                    'Gene ID': gene,
+                    'LSV ID': lsv.lsv_id,
+                    'LSV Type': lsv.lsv_type,
+                    'A5SS': lsv.categories['prime5'],
+                    'A3SS': lsv.categories['prime3'],
+                    'ES': lsv.categories['ES'],
+                    'Num. Junctions': lsv.categories['njuncs'],
+                    'Num. Exons': lsv.categories['nexons'],
+                    'chr': lsv.chromosome,
+                    'strand': lsv.strand,
+                    'De Novo Junctions': any(
+                        junc.junction_type == JUNCTION_TYPE_RNASEQ for junc in lsv.junctions
+                    ),
+                    'Junctions coords': j(
+                        '{0}-{1}'.format(junc.start, junc.end) for junc in lsv.junctions
+                    ),
+                    'Exons coords': j(
+                        '{0}-{1}'.format(e.start, e.end) for e in lsv.exons
+                    ),
+                    'Exons Alternative Start': j(
+                        '|'.join(str(a) for a in e.alt_starts) for e in lsv.exons if e.alt_starts
+                    ),
+                    'Exons Alternative End': j(
+                        '|'.join(str(a) for a in e.alt_ends) for e in lsv.exons if e.alt_ends
+                    ),
+                    'IR coords': j(
+                        e.coords for e in lsv.exons if e.intron_retention
+                    )
+                }
 
-                lline.append(llsv.lsv_graphic.chrom)
-                lline.append(llsv.lsv_graphic.strand)
+                if constants.ANALYSIS_DELTAPSI == type_summary:
+                    row.update({
+                        'E(dPSI) per LSV junction': j(
+                            -lsv.excl_incl[i][0] + lsv.excl_incl[i][1] for i in range(len(lsv.bins))
+                        ),
+                        'P(|E(dPSI)|>=%.2f) per LSV junction' % threshold: j(
+                            vlsv.matrix_area(np.array(bin), threshold, collapsed_mat=True).sum() for bin in lsv.bins
+                        ),
+                        '%s E(PSI)' % group1: j(
+                            '%.3f' % vlsv.get_expected_psi(np.array(lsv.psi1[i])) for i in range(len(lsv.bins))
+                        ),
+                        '%s E(PSI)' % group2: j(
+                            '%.3f' % vlsv.get_expected_psi(np.array(lsv.psi2[i])) for i in range(len(lsv.bins))
+                        )
+                    })
 
-                lline.append(';'.join(
-                    ['-'.join(str(c) for c in junc.coords) for junc in llsv.lsv_graphic.junctions]))
-                lline.append(
-                    ';'.join(['-'.join(str(c) for c in exon.coords) for exon in llsv.lsv_graphic.exons]))
+                if constants.ANALYSIS_PSI == type_summary:
+                    row.update({
+                        'E(PSI) per LSV junction': j(lsv.means),
+                        'Var(E(PSI)) per LSV junction': j(lsv.variances)
+                    })
 
-                try:
-                    lline.append(';'.join(
-                        ['|'.join([str(c) for c in exon.alt_starts]) for exon in llsv.lsv_graphic.exons]))
-                    lline.append(';'.join(
-                        ['|'.join([str(c) for c in exon.alt_ends]) for exon in llsv.lsv_graphic.exons]))
-                except TypeError:
-                    pass
-
-                lline.append(
-                    ';'.join([repr(exon.coords) for exon in llsv.lsv_graphic.exons if exon.intron_retention]))
-
-                if pairwise_dir:
-                    llpairwise = []
-                    for idx1 in range(len(lmajiq_pairs)):
-                        for idx2 in range(len(lmajiq_pairs[0])):
-                            lpairwise = []
-                            if gene in lmajiq_pairs[idx1][idx2]['genes_dict']:
-                                for llsv_tmp in lmajiq_pairs[idx1][idx2]['genes_dict'][gene]:
-                                    if llsv_tmp[0].id == llsv.id:
-                                        lsv_pair = llsv_tmp[0]
-                                        break
-                                else:
-                                    log.warning("LSV %s present in deltagroup but missing in %s." %
-                                                (llsv.id, "%s_%d_%s_%d" % (group1_name, idx1 + 1,
-                                                                           group2_name, idx2 + 1)))
-                                    lpairwise.append('N/A')
-                                    continue
-                                for iway in range(len(llsv.bins)):
-                                    lpairwise.append(str(sum(lsv_pair.excl_incl[iway])))
-                            else:
-                                lpairwise.append('N/A')
-                            llpairwise.append(';'.join(lpairwise))
-                    lline.extend(llpairwise)
-
-                if 'voila_links' in majiq_output.keys():
-                    summary_path = majiq_output['voila_links'][llsv.lsv_graphic.name]
+                if 'voila_links' in majiq_output:
+                    summary_path = majiq_output['voila_links'][lsv.name]
                     if not os.path.isabs(summary_path):
-                        summary_path = "%s/%s/%s" % (os.getcwd(), output_dir, summary_path)
-                    lline.append(constants.URL_COMPOSITE % (summary_path, llsv.lsv_graphic.name))
-                ofile.write(constants.DELIMITER.join(lline))
-                ofile.write('\n')
+                        summary_path = join(os.getcwd(), output_dir, summary_path)
+                    row['Voila link'] = constants.URL_COMPOSITE % (summary_path, lsv.name)
 
-    log.info("Delimited output file successfully created in: %s" % ofile_str)
+                writer.writerow(row)
+
+    log.info("Delimited output file successfully created in: %s" % tsv_file)
 
 
 def load_dpsi_tab(tab_files_list, sample_names, thres_change=None, filter_genes=None, filter_lsvs=None,
@@ -505,7 +456,7 @@ def load_dpsi_tab(tab_files_list, sample_names, thres_change=None, filter_genes=
     return lsvs_dict
 
 
-def create_gff3_txt_files(input_parsed, out_gff3=False):
+def generic_feature_format_txt_files(input_parsed, out_gff3=False):
     """
     Create GFF3 files for each LSV.
     :param input_parsed: parsed input data
@@ -528,26 +479,29 @@ def create_gff3_txt_files(input_parsed, out_gff3=False):
 
     header = "##gff-version 3"
 
-    odir = output_dir + "/static/doc/lsvs"
+    odir = join(output_dir, "static/doc/lsvs")
     utils_voila.create_if_not_exists(odir)
+
     for gkey, gvalue in majiq_output['genes_dict'].iteritems():
         for lsv_dict in gvalue:
             lsv = lsv_dict
             if type(lsv_dict) == dict:
                 lsv = lsv_dict['lsv']
-            lsv_file_basename = "%s/%s" % (odir, lsv.lsv_graphic.id)
+            lsv_file_basename = "%s/%s" % (odir, lsv.lsv_id)
 
             try:
                 lsv_gff3_str = lsv.get_gff3()
                 utils_voila.gff2gtf(lsv_gff3_str.split('\n'), "%s.gtf" % lsv_file_basename)
+
+                # not accessible from command line
                 if out_gff3:
                     gff_file = "%s.gff3" % (lsv_file_basename)
                     with open(gff_file, 'w') as ofile:
                         ofile.write(header + "\n")
                         ofile.write(lsv_gff3_str + "\n")
+
             except UnboundLocalError, e:
                 log.warning("problem generating GTF file for %s" % lsv.id)
                 log.error(e.message)
+
     log.info("GTF files for LSVs saved in %s" % odir)
-    if out_gff3:
-        log.info("GFF3 files for LSVs saved in %s" % odir)
