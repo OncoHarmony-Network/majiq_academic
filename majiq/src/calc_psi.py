@@ -206,6 +206,7 @@ class CalcPsi(BasicPipeline):
         Given a file path with the junctions, return psi distributions.
         write_pickle indicates if a .pickle should be saved in disk
         """
+        majiq_utils.create_if_not_exists(self.logger_path)
 
         self.logger = majiq_utils.get_logger("%s/psi_majiq.log" % self.logger_path, silent=self.silent,
                                              debug=self.debug)
@@ -216,27 +217,21 @@ class CalcPsi(BasicPipeline):
         self.logger.info("GROUP: %s" % self.files)
         self.nbins = 40
 
-        # logger = self.logger
-        # self.logger = None
-        # pool = mp.Pool(processes=self.nthreads, maxtasksperchild=1)
-        #
-        # for fidx, fname in enumerate(self.files):
-        #     if self.nthreads > 1:
-        #         pool.apply_async(parse_and_norm_majiq, [fname, fidx, conf(output_dir=self.output, name=self.name,
-        #                                                                   debug=self.debug, silent=self.silent,
-        #                                                                   markstacks=self.markstacks)])
-        #     else:
-        #         parse_and_norm_majiq(fname, fidx, conf(output_dir=self.output, name=self.name,
-        #                                                debug=self.debug, silent=self.silent,
-        #                                                markstacks=self.markstacks))
-        # pool.close()
-        # pool.join()
-        # self.logger = logger
-
-        #list_of_lsv = majiq_filter.merge_files_hdf5([get_quantifier_norm_temp_files(self.output, self.name, xx)
-        list_of_lsv = majiq_filter.merge_files_hdf5(self.files, self.minpos, self.minreads,
-                                                    logger=self.logger)
         file_locks = None
+        if self.only_boots:
+            file_locks = [mp.Lock() for xx in self.files]
+
+        lock_arr = [mp.Lock() for xx in range(self.nthreads)]
+        q = mp.Queue()
+        pool = mp.Pool(processes=self.nthreads, initializer=quantification_init,
+                       initargs=[q, lock_arr, self.output, self.name, self.silent, self.debug, self.nbins, self.m,
+                                 self.k, self.discardzeros, self.trimborder, self.files, self.only_boots,
+                                 file_locks],
+                       maxtasksperchild=1)
+
+        lsv_dict, lsv_types, lsv_summarized, meta = majiq_io.extract_lsv_summary(self.files)
+        list_of_lsv = majiq_filter.merge_files_hdf5(lsv_dict, lsv_summarized, self.minpos, self.minreads,
+                                                    percent=self.min_exp,logger=self.logger)
         if self.only_boots:
             import datetime
             for ii, ff in enumerate(self.files):
@@ -250,16 +245,6 @@ class CalcPsi(BasicPipeline):
                 f.attrs['lsv_idx'] = 0
                 f.close()
 
-            file_locks = [mp.Lock() for xx in self.files]
-        lock_arr = [mp.Lock() for xx in range(self.nthreads)]
-        q = mp.Queue()
-
-        pool = mp.Pool(processes=self.nthreads, initializer=quantification_init,
-                       initargs=[q, lock_arr, self.output, self.name, self.silent, self.debug, self.nbins, self.m,
-                                 self.k, self.discardzeros, self.trimborder, self.files, self.only_boots,
-                                 file_locks],
-                       maxtasksperchild=1)
-
         lchnksize = max(len(list_of_lsv)/self.nthreads, 1) + 1
         [xx.acquire() for xx in lock_arr]
 
@@ -267,7 +252,6 @@ class CalcPsi(BasicPipeline):
             # psi_quantification((list_of_lsv, 0))
             pool.map_async(psi_quantification, majiq_utils.chunks2(list_of_lsv, lchnksize, extra=range(self.nthreads)))
             pool.close()
-            meta = majiq_io.read_meta_info(self.files)
             with Voila(get_quantifier_voila_filename(self.output, self.name), 'w') as out_h5p:
                 out_h5p.add_metainfo(meta['genome'], self.name, meta['experiments'])
                 in_h5p = h5py.File(self.files[0], 'r')

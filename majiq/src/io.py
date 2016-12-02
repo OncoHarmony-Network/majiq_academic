@@ -604,8 +604,8 @@ def extract_lsv_summary(files):
                     simpl_juncs[fidx][indx] = [cov[0][jidx], cov[1][jidx]]
                 except KeyError:
                     idx_junc[jj] = total_idx
-                    total_idx += 1
                     indx = total_idx
+                    total_idx += 1
                     simpl_juncs[fidx].append([cov[0][jidx], cov[1][jidx]])
                 lsvid2idx[lsvid].append(indx)
 
