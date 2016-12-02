@@ -255,7 +255,7 @@ class DataSet(object):
                 chunks=(1, self.width),
                 maxshape=(None, self.width),
                 compression="gzip",
-                compress_opts=9,
+                compression_opts=9,
                 shuffle=True,
             )
 
