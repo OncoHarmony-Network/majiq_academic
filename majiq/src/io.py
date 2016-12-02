@@ -682,4 +682,59 @@ def open_hdf5_file(filename, **kwargs):
 def close_hdf5_file(fp):
     return fp.close()
 
+# bootstrap files
 
+
+def add_lsv_to_bootstrapfile(lsv_id, lsv_type, samples, num_exp, lock_per_file, outdir, name):
+
+    for ii in range(num_exp):
+        vals = {'samples': samples[0][ii], 'id': lsv_id, 'type': lsv_type}
+        file_name = '%s/%s.%d.boots.hdf5' % (outdir, name, ii)
+        lock_per_file[ii].acquire()
+        with h5py.File(file_name, 'r+') as f:
+            lsv_idx = f.attrs['lsv_idx']
+            boots_write(f, vals, lsv_idx)
+            f.attrs['lsv_idx'] = lsv_idx
+
+        lock_per_file[ii].release()
+
+
+def create_bootstrap_file(file_list, outdir, name, m=100):
+    import datetime
+    for ii, ff in enumerate(file_list):
+        f = h5py.File('%s/%s.%d.boots.hdf5' % (outdir, name, ii),
+                      'w', compression='gzip', compression_opts=9)
+        f.create_dataset('junctions', (5000, m), maxshape=(None, m))
+        # fill meta info
+        f.attrs['sample_id'] = ff
+        f.attrs['date'] = datetime.datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S')
+        f.attrs['VERSION'] = VERSION
+        f.attrs['lsv_idx'] = 0
+        f.close()
+
+
+def close_bootstrap_file(file_list, outdir, name, m=100):
+    for ii, ff in enumerate(file_list):
+        file_name = '%s/%s.%d.boots.hdf5' % (outdir, name, ii)
+        f = h5py.File(file_name, 'r+', compression='gzip', compression_opts=9)
+        lsv_idx = f.attrs['lsv_idx']
+        f['junctions'].resize((lsv_idx, m))
+        f.close()
+
+
+def boots_write(hg_grp, vals, lsv_idx, dpsi=False):
+
+    njunc = vals['samples'].shape[0]
+    if lsv_idx + njunc > 2:
+        shp = hg_grp['junctions'].shape
+        shp_new = shp[0] + 5000
+        hg_grp['junctions'].resize((shp_new, shp[1]))
+
+    hg_grp['junctions'][lsv_idx:lsv_idx+njunc] = vals['samples']
+
+    h_lsv = hg_grp.create_group("LSVs/%s" % vals['id'])
+    h_lsv.attrs['id'] = vals['id']
+    h_lsv.attrs['type'] = vals['type']
+    h_lsv.attrs['coverage'] = hg_grp['junctions'].regionref[lsv_idx:lsv_idx + njunc]
+
+    return lsv_idx+njunc

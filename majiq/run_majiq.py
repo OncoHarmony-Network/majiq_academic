@@ -125,6 +125,7 @@ def main():
                        help="Uniform distribution to give a bit more of a chance to values out of the normal "
                             "distribution. that the synthetic prior matrix has. Only works with --synthprior. "
                             "[Default: %(default)s]")
+    delta.add_argument('--extra_bootstrap', action='store_true', dest='export_boots', default=False)
 
     mdelta = new_subparser()
     mdelta.add_argument('-pairs_file', dest="deltapairs", required=True)
