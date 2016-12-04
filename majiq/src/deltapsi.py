@@ -166,7 +166,7 @@ class DeltaPsi(BasicPipeline):
         self.logger.info("GROUP2: %s" % self.files2)
         self.nbins = 20
         files = [self.files1, self.files2]
-
+        file_locks = None
         if self.export_boots:
             file_locks = [[mp.Lock() for xx in self.files1], [mp.Lock() for xx in self.files2]]
 
