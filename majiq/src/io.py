@@ -693,7 +693,7 @@ def add_lsv_to_bootstrapfile(lsv_id, lsv_type, samples, num_exp, lock_per_file, 
         lock_per_file[ii].acquire()
         with h5py.File(file_name, 'r+') as f:
             lsv_idx = f.attrs['lsv_idx']
-            boots_write(f, vals, lsv_idx)
+            lsv_idx = boots_write(f, vals, lsv_idx)
             f.attrs['lsv_idx'] = lsv_idx
 
         lock_per_file[ii].release()
@@ -737,4 +737,4 @@ def boots_write(hg_grp, vals, lsv_idx, dpsi=False):
     h_lsv.attrs['type'] = vals['type']
     h_lsv.attrs['coverage'] = hg_grp['junctions'].regionref[lsv_idx:lsv_idx + njunc]
 
-    return lsv_idx+njunc
+    return lsv_idx + njunc
