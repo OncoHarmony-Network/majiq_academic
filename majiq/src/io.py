@@ -688,7 +688,7 @@ def close_hdf5_file(fp):
 def add_lsv_to_bootstrapfile(lsv_id, lsv_type, samples, num_exp, lock_per_file, outdir, name):
 
     for ii in range(num_exp):
-        vals = {'samples': samples[0][ii], 'id': lsv_id, 'type': lsv_type}
+        vals = {'samples': samples[ii], 'id': lsv_id, 'type': lsv_type}
         file_name = '%s/%s.%d.boots.hdf5' % (outdir, name, ii)
         lock_per_file[ii].acquire()
         with h5py.File(file_name, 'r+') as f:
