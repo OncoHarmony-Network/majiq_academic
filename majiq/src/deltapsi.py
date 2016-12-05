@@ -14,6 +14,7 @@ import majiq.src.sample as majiq_sample
 from majiq.src.psi import prob_data_sample_given_psi, get_prior_params, gen_prior_matrix
 from majiq.src.constants import *
 from majiq.src.multiproc import QueueMessage, quantification_init, queue_manager
+
 from voila.io_voila import Voila
 import collections
 
@@ -65,6 +66,11 @@ def deltapsi_quantification(args_vals):#, delta_prior_path, boots_sample=True, l
                                                                                fitted_one_over_r=fitfunc[grp_idx][eidx],
                                                                                debug=quantification_init.debug)
                     lsv_samples[grp_idx].append(s_lsv)
+
+                if quantification_init.boots:
+                    majiq_io.add_lsv_to_bootstrapfile(lsv_id, lsvobj.attrs['type'], lsv_samples[grp_idx],
+                                                      num_exp[grp_idx], quantification_init.lock_per_file[grp_idx],
+                                                      quantification_init.output, quantification_init.names[grp_idx])
 
             psi1 = np.array(lsv_samples[0])
             psi2 = np.array(lsv_samples[1])
@@ -160,63 +166,59 @@ class DeltaPsi(BasicPipeline):
         self.logger.info("GROUP2: %s" % self.files2)
         self.nbins = 20
         files = [self.files1, self.files2]
-
-        # logger = self.logger
-        # self.logger = None
-        # pool = mp.Pool(processes=self.nthreads, maxtasksperchild=1)
-        #
-        # lsv_ids = []
-
-        # for grp_idx, name in enumerate(self.names):
-        #
-        #     for fidx, fname in enumerate(files[grp_idx]):
-        #         pool.apply_async(parse_and_norm_majiq, [fname, fidx, conf(output_dir=self.output, name=name,
-        #                                                                   debug=self.debug, silent=self.silent,
-        #                                                                   markstacks=self.markstacks)])
-        # pool.close()
-        # pool.join()
-        # self.logger = logger
-
-        list_of_lsv_group1 = majiq_filter.merge_files_hdf5(self.files1, self.minpos,
-                                                           self.minreads, logger=self.logger)
-        list_of_lsv_group2 = majiq_filter.merge_files_hdf5(self.files2, self.minpos,
-                                                           self.minreads, logger=self.logger)
-
-        list_of_lsv = list(set(list_of_lsv_group1).intersection(set(list_of_lsv_group2)))
-
-        psi_space, prior_matrix = gen_prior_matrix(files, list_of_lsv_group1, list_of_lsv_group2, self.output,
-                                                   prior_conf(self.iter, self.plotpath, self.breakiter, self.names,
-                                                              self.binsize), numbins=self.nbins,
-                                                   defaultprior=self.default_prior, logger=self.logger)
-
-        self.logger.info("Saving prior matrix for %s..." % self.names)
-        dump_bin_file(prior_matrix, get_prior_matrix_filename(self.output, self.names))
+        file_locks = None
+        if self.export_boots:
+            file_locks = [[mp.Lock() for xx in self.files1], [mp.Lock() for xx in self.files2]]
 
         lock_arr = [mp.Lock() for xx in range(self.nthreads)]
         q = mp.Queue()
         pool = mp.Pool(processes=self.nthreads, initializer=quantification_init,
                        initargs=[q, lock_arr, self.output, self.names, self.silent, self.debug, self.nbins, self.m,
-                                 self.k, self.discardzeros, self.trimborder, files, False, None],
+                                 self.k, self.discardzeros, self.trimborder, files, self.export_boots, file_locks],
                        maxtasksperchild=1)
+
+        lsv_dict1, lsv_types1, lsv_summarized1, meta1 = majiq_io.extract_lsv_summary(self.files1)
+        list_of_lsv_group1 = majiq_filter.merge_files_hdf5(lsv_dict1, lsv_summarized1, self.minpos,
+                                                           self.minreads, percent=self.min_exp, logger=self.logger)
+
+        lsv_dict2, lsv_types2, lsv_summarized2, meta2 = majiq_io.extract_lsv_summary(self.files2)
+        list_of_lsv_group2 = majiq_filter.merge_files_hdf5(lsv_dict2, lsv_summarized2, self.minpos,
+                                                           self.minreads, percent=self.min_exp, logger=self.logger)
+
+        list_of_lsv = list(set(list_of_lsv_group1).intersection(set(list_of_lsv_group2)))
+
+        psi_space, prior_matrix = gen_prior_matrix(lsv_dict1, lsv_summarized1, lsv_dict2, lsv_summarized2, lsv_types1,
+                                                   self.output, prior_conf(self.iter, self.plotpath, self.breakiter,
+                                                                           self.names, self.binsize),
+                                                   numbins=self.nbins, defaultprior=self.default_prior,
+                                                   minpercent=self.min_exp, logger=self.logger)
+
+        self.logger.info("Saving prior matrix for %s..." % self.names)
+        dump_bin_file(prior_matrix, get_prior_matrix_filename(self.output, self.names))
+
         lchnksize = max(len(list_of_lsv)/self.nthreads, 1) + 1
         [xx.acquire() for xx in lock_arr]
+
+        if self.export_boots:
+            majiq_io.create_bootstrap_file(self.files1, self.output, self.names[0], m=100)
+            majiq_io.create_bootstrap_file(self.files2, self.output, self.names[1], m=100)
 
         if len(list_of_lsv) > 0:
             pool.map_async(deltapsi_quantification,
                            majiq_utils.chunks2(list_of_lsv, lchnksize, extra=range(self.nthreads)))
             pool.close()
-            meta1 = majiq_io.read_meta_info(self.files1)
-            meta2 = majiq_io.read_meta_info(self.files2)
             with Voila(get_quantifier_voila_filename(self.output, self.names, deltapsi=True), 'w') as out_h5p:
                 out_h5p.add_metainfo(meta1['genome'], group1=self.names[0], experiments1=meta1['experiments'],
-                                     group2=self.names[1], experiments2=meta1['experiments'])
+                                     group2=self.names[1], experiments2=meta2['experiments'])
 
                 in_h5p = h5py.File(files[0][0], 'r')
                 queue_manager(in_h5p, out_h5p, lock_arr, q, num_chunks=self.nthreads, logger=self.logger)
                 in_h5p.close()
-
-
             pool.join()
+
+        if self.export_boots:
+            majiq_io.close_bootstrap_file(self.files1, self.output, self.names[0], m=self.m)
+            majiq_io.close_bootstrap_file(self.files2, self.output, self.names[1], m=self.m)
 
         self.logger.info("DeltaPSI calculation for %s_%s ended succesfully! Result can be found at %s" % (self.names[0],
                                                                                                           self.names[1],

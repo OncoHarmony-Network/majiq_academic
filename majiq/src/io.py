@@ -18,6 +18,7 @@ import majiq.src.utils as majiq_utils
 from majiq.src.normalize import gc_factor_calculation
 from voila.io_voila import VoilaInput
 from voila.vlsv import VoilaLsv
+from voila.splice_graphics import LsvGraphic
 
 # READING BAM FILES
 
@@ -266,7 +267,6 @@ def rnaseq_intron_retention(gne, samfl, chnk, permissive=True, nondenovo=False, 
                 if st == junc2.get_coordinates()[1]:
                     ex.add_3prime_junc(junc2)
                     break
-
     gne.prepare_exons()
 
 
@@ -573,10 +573,47 @@ def get_const_junctions(filename, logging=None):
             logging.error('File % doesn\'t exists' % filename)
             raise UserWarning
     else:
-        db_f = h5py.File(filename, 'r')
-        cc = db_f[CONST_JUNCTIONS_DATASET_NAME][()]
+        db_f = h5py.File(filename)
+        cc = db_f[JUNCTIONS_DATASET_NAME][()]
         db_f.close()
         return np.array(cc)
+
+
+def extract_lsv_summary(files):
+
+    lsvid2idx = {}
+    lsv_types = {}
+    idx_junc = {}
+    total_idx = 0
+    simpl_juncs = []
+    for fidx, ff in enumerate(files):
+        simpl_juncs.append([[0, 0.0] for xx in idx_junc.keys()])
+        data = h5py.File(ff)
+        for lsvid in data['LSVs']:
+            lsv = data['LSVs/%s' % lsvid]
+            lsvgraph = LsvGraphic.easy_from_hdf5(data['LSVs/%s/visual' % lsvid])
+            cov = data[JUNCTIONS_DATASET_NAME][lsv.attrs['coverage']]
+
+            lsv_types[lsvid] = lsvgraph.lsv_type
+            ljunc = lsvgraph.junctions_ids()
+            cov = [(cov != 0).sum(axis=1), cov.sum(axis=1)]
+            lsvid2idx[lsvid] = []
+            for jidx, jj in enumerate(ljunc):
+                try:
+                    indx = idx_junc[jj]
+                    simpl_juncs[fidx][indx] = [cov[0][jidx], cov[1][jidx]]
+                except KeyError:
+                    idx_junc[jj] = total_idx
+                    indx = total_idx
+                    total_idx += 1
+                    simpl_juncs[fidx].append([cov[0][jidx], cov[1][jidx]])
+                lsvid2idx[lsvid].append(indx)
+
+    simpl_juncs = np.array(simpl_juncs)
+
+    metas = read_meta_info(files)
+
+    return lsvid2idx, lsv_types, simpl_juncs, metas
 
 
 def load_data_lsv(path, group_name, logger=None):
@@ -645,4 +682,59 @@ def open_hdf5_file(filename, **kwargs):
 def close_hdf5_file(fp):
     return fp.close()
 
+# bootstrap files
 
+
+def add_lsv_to_bootstrapfile(lsv_id, lsv_type, samples, num_exp, lock_per_file, outdir, name):
+
+    for ii in range(num_exp):
+        vals = {'samples': samples[ii], 'id': lsv_id, 'type': lsv_type}
+        file_name = '%s/%s.%d.boots.hdf5' % (outdir, name, ii)
+        lock_per_file[ii].acquire()
+        with h5py.File(file_name, 'r+') as f:
+            lsv_idx = f.attrs['lsv_idx']
+            lsv_idx = boots_write(f, vals, lsv_idx)
+            f.attrs['lsv_idx'] = lsv_idx
+
+        lock_per_file[ii].release()
+
+
+def create_bootstrap_file(file_list, outdir, name, m=100):
+    import datetime
+    for ii, ff in enumerate(file_list):
+        f = h5py.File('%s/%s.%d.boots.hdf5' % (outdir, name, ii),
+                      'w', compression='gzip', compression_opts=9)
+        f.create_dataset('junctions', (5000, m), maxshape=(None, m))
+        # fill meta info
+        f.attrs['sample_id'] = ff
+        f.attrs['date'] = datetime.datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S')
+        f.attrs['VERSION'] = VERSION
+        f.attrs['lsv_idx'] = 0
+        f.close()
+
+
+def close_bootstrap_file(file_list, outdir, name, m=100):
+    for ii, ff in enumerate(file_list):
+        file_name = '%s/%s.%d.boots.hdf5' % (outdir, name, ii)
+        f = h5py.File(file_name, 'r+', compression='gzip', compression_opts=9)
+        lsv_idx = f.attrs['lsv_idx']
+        f['junctions'].resize((lsv_idx, m))
+        f.close()
+
+
+def boots_write(hg_grp, vals, lsv_idx, dpsi=False):
+
+    njunc = vals['samples'].shape[0]
+    if lsv_idx + njunc > 2:
+        shp = hg_grp['junctions'].shape
+        shp_new = shp[0] + 5000
+        hg_grp['junctions'].resize((shp_new, shp[1]))
+
+    hg_grp['junctions'][lsv_idx:lsv_idx+njunc] = vals['samples']
+
+    h_lsv = hg_grp.create_group("LSVs/%s" % vals['id'])
+    h_lsv.attrs['id'] = vals['id']
+    h_lsv.attrs['type'] = vals['type']
+    h_lsv.attrs['coverage'] = hg_grp['junctions'].regionref[lsv_idx:lsv_idx + njunc]
+
+    return lsv_idx + njunc
