@@ -426,6 +426,7 @@ def retrieve_gene(gene_id, dbfile, all_exp=False, junction_list=None, logger=Non
                                         gene_id, annotated=True, retrieve=True, num_exp=num_exp, jindex=-1)
                         junc.donor_id = jj_grp.attrs['donor_id']
                         junc.acceptor_id = jj_grp.attrs['acceptor_id']
+                        junc.transcript_id_list = jj_grp.attrs['transcript_id_list']
                         junction_list[jj_grp.attrs['start'], jj_grp.attrs['end']] = junc
 
                     ext.add_3prime_junc(junc)

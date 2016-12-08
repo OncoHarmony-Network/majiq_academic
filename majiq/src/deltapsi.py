@@ -55,6 +55,9 @@ def deltapsi_quantification(args_vals):
 
             for grp_idx in range(2):
                 for eidx, f in enumerate(f_list[grp_idx]):
+                    if lsv_id not in f['LSVs']:
+                        lsv_samples[grp_idx].append([0] * quantification_init.m)
+                        continue
                     lsvobj = f['LSVs/%s' % lsv_id]
                     assert lsv_type == lsvobj.attrs['type'], "LSV %s has different definition in groups" % lsv_id
                     lsv = f[JUNCTIONS_DATASET_NAME][lsvobj.attrs['coverage']]

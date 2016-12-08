@@ -50,6 +50,9 @@ def psi_quantification(args_vals):
 
             lsv_samples = []
             for ff in f_list:
+                if lsv_id not in ff['LSVs']:
+                    lsv_samples.append(np.zeros(shape=(1, quantification_init.m)))
+                    continue
                 lsvobj = ff['LSVs/%s' % lsv_id]
                 lsv = ff[JUNCTIONS_DATASET_NAME][lsvobj.attrs['coverage']]
                 m_lsv, var_lsv, s_lsv = majiq_sample.sample_from_junctions(junction_list=lsv,
