@@ -8,7 +8,7 @@ from collections import defaultdict
 
 import numpy as np
 
-from voila.utils.voilaLog import voilaLog
+from voila.utils.voila_log import voila_log
 from voila.vlsv import VoilaLsv
 
 
@@ -30,11 +30,11 @@ def get_prob_delta_psi_greater_v(bins, expected, V=.2):
     return np.sum(bins[:left] + np.sum(bins[right:]))
 
 
-def lsvs_to_gene_dict(voila_input, threshold=.2, show_all=False):
-    log = voilaLog()
+def lsvs_to_gene_dict(voila_lsvs, metainfo, threshold=.2, show_all=False):
+    log = voila_log()
     genes_dict = defaultdict(list)
 
-    for i, vlsv in enumerate(voila_input.lsvs):
+    for i, vlsv in enumerate(voila_lsvs):
 
         if np.any(np.isnan(vlsv.bins)):
             log.warning("LSV %s bins contain NaNs" % vlsv.get_id())
@@ -55,7 +55,7 @@ def lsvs_to_gene_dict(voila_input, threshold=.2, show_all=False):
             genes_dict[gene_id].append(vlsv)
 
     return {'genes_dict': genes_dict,
-            'meta_exps': voila_input.metainfo}
+            'meta_exps': metainfo}
 
 
 def copyanything(src, dst):
@@ -129,7 +129,7 @@ def create_if_not_exists(my_dir):
     try:
         os.makedirs(my_dir)
     except OSError as err:
-        if err.errno == 17:
+        if err.errno == errno.EEXIST:
             pass
 
 
@@ -201,7 +201,4 @@ def debug(text):
     return ''
 
 
-def secs2hms(secs):
-    m, s = divmod(secs, 60)
-    h, m = divmod(m, 60)
-    return "%d:%02d:%02d" % (h, m, s)
+

@@ -2,17 +2,18 @@ import csv
 import io
 import os
 import sys
-from multiprocessing import Manager
-from multiprocessing import Process, Pool
-from multiprocessing.queues import JoinableQueue
-from os.path import join, isfile
+from os.path import join
 
 import h5py
+import numpy
 
 from voila import constants
-from voila.constants import PROCESS_COUNT, EXPERIMENT_NAMES
+from voila.constants import EXPERIMENT_NAMES
 from voila.hdf5 import HDF5, ExonTypeDataSet, JunctionTypeDataSet, ReadsDataSet
-from voila.utils.voilaLog import voilaLog
+from voila.producer_consumer import ProducerConsumer
+from voila.utils.voila_log import voila_log
+
+COMBINE_INDEX = 0
 
 
 class ExperimentIndexError(IndexError):
@@ -46,7 +47,16 @@ class Experiment(HDF5):
             if key in self.field_by_experiment():
                 if self.__dict__[key]:
                     try:
-                        d[key] = self.__dict__[key][experiment]
+                        value = self.__dict__[key][experiment]
+
+                        # todo: this might be able to be done in hdf5
+                        if isinstance(value, (numpy.int64, numpy.uint64)):
+                            value = int(value)
+                        elif isinstance(value, numpy.float64):
+                            value = float(value)
+
+                        d[key] = value
+
                     except IndexError:
                         raise ExperimentIndexError()
             else:
@@ -112,6 +122,18 @@ class GeneGraphic(HDF5):
                          or (self.end > other.start and self.start < other.end
                              and self.strand == '-' and other.strand == '+'))))
 
+    def __copy__(self):
+        gg = type(self)(None, None, (), ())
+        gg.__dict__.update(self.__dict__)
+        return gg
+
+    def copy(self):
+        """
+        Attribute for attribute copy of this class.
+        :return: Copied class object
+        """
+        return self.__copy__()
+
     def start(self):
         """
         Start of gene.
@@ -148,7 +170,7 @@ class GeneGraphic(HDF5):
 
         # log warning if gene's some seem equal
         if self_dict != other_dict:
-            voilaLog().warning('Attemping to merge two genes that might not be equal.')
+            voila_log().warning('Attemping to merge two genes that might not be equal.')
 
         # concat exons and junctions
         self.exons += other.exons
@@ -159,6 +181,20 @@ class GeneGraphic(HDF5):
 
         # remove duplicate junctions
         self.remove_duplicate_junctions()
+
+    def combine(self, experiment_index, gene_dict=None):
+        if not gene_dict:
+            return self.get_experiment(experiment_index)
+
+        assert self.gene_id == gene_dict['gene_id'], 'cannot combine two different genes'
+
+        gene_dict['junctions'] = [s.combine(experiment_index, d) for s, d in
+                                  zip(self.junctions, gene_dict['junctions'])]
+
+        gene_dict['exons'] = [s.combine(experiment_index, d) for s, d in
+                              zip(self.exons, gene_dict['exons'])]
+
+        return gene_dict
 
     def get_coordinates(self):
         """
@@ -363,6 +399,10 @@ class ExonGraphic(Experiment):
     def field_by_experiment(self):
         return ['exon_type']
 
+    def combine(self, experiment_index, exon_dict):
+        exon_dict['exon_type'] = min(self.exon_type[experiment_index], exon_dict['exon_type'])
+        return exon_dict
+
     def merge(self, other):
         """
         Merge another exon with this one.
@@ -419,7 +459,7 @@ class ExonGraphic(Experiment):
         return super(ExonGraphic, self).from_hdf5(h)
 
     def __copy__(self):
-        eg = type(self)(None, None, None, None)
+        eg = type(self)(None, None, None, None, None)
         eg.__dict__.update(self.__dict__)
         return eg
 
@@ -475,7 +515,7 @@ class JunctionGraphic(Experiment):
         return (self.start, self.end) == (other.start, other.end)
 
     def __copy__(self):
-        jg = type(self)((), None, None)
+        jg = type(self)(None, None, (), ())
         jg.__dict__.update(self.__dict__)
         return jg
 
@@ -500,6 +540,13 @@ class JunctionGraphic(Experiment):
         :return: Copied object
         """
         return self.__copy__()
+
+    def combine(self, experiment_index, junc_dict):
+        junc_dict['reads'] += self.reads[experiment_index]
+        junc_dict['junction_type'] = min(self.junction_type[experiment_index], junc_dict['junction_type'])
+        if 'clean_reads' in junc_dict:
+            junc_dict['clean_reads'] += self.clean_reads[experiment_index]
+        return junc_dict
 
     def exclude(self):
         return ['junction_type', 'reads']
@@ -565,17 +612,45 @@ class LsvGraphic(HDF5):
         return cls(None, None, None, None).from_hdf5(h)
 
 
-class SpliceGraph(object):
-    def __init__(self, splice_graph_file_name, mode, hdf5=None):
+class SpliceGraph(ProducerConsumer):
+    GENES = '/genes'
+    ROOT = '/'
+
+    def __init__(self, splice_graph_file_name, mode):
+        super(SpliceGraph, self).__init__()
         self.file_name = splice_graph_file_name
-        self.hdf5 = hdf5
         self.mode = mode
+        self.hdf5 = None
+        self.limit = None
+        self.gene_ids = None
 
     def __enter__(self):
         self.hdf5 = h5py.File(self.file_name, self.mode)
         return self
 
     def __exit__(self, type, value, traceback):
+        self.close()
+
+    def _worker(self):
+        with h5py.File(self.file_name, 'r') as h:
+            while True:
+                id = self.queue.get()
+                self.manager_dict[id] = GeneGraphic.easy_from_hdf5(h[self.GENES][id])
+                self.queue.task_done()
+
+    def _producer(self):
+        gene_ids = self.gene_ids
+        gene_ids_length = len(gene_ids)
+        limit = self.limit
+
+        if limit and limit > gene_ids_length:
+            voila_log().info('Found {0} genes, but limited to {0}'.format(gene_ids_length, limit))
+            gene_ids = gene_ids[:limit]
+
+        for gene_id in gene_ids:
+            self.queue.put(gene_id)
+
+    def close(self):
         self.hdf5.close()
 
     def erase_splice_graph_file(self):
@@ -585,56 +660,22 @@ class SpliceGraph(object):
     def add_gene(self, gene):
         gene.to_hdf5(self.hdf5)
 
-    def get_genes_list(self):
-        def worker():
-            with h5py.File(self.file_name, 'r') as h:
-                while True:
-                    id = queue.get()
-                    manager_dict[id] = GeneGraphic.easy_from_hdf5(h['/genes'][id])
-                    queue.task_done()
-
-        def producer():
-            with h5py.File(self.file_name, 'r') as h:
-                for x in h['/genes']:
-                    queue.put(x)
-
-        log = voilaLog()
-
-        if not isfile(self.file_name):
-            log.error('unable to load file: {0}'.format(self.file_name))
-            return
-
-        log.info('Loading {0}.'.format(self.file_name))
-
-        self.__exit__(None, None, None)
-
-        queue = JoinableQueue()
-        manager_dict = Manager().dict()
-
-        producer_proc = Process(target=producer)
-        producer_proc.daemon = True
-        producer_proc.start()
-
-        pool = Pool(PROCESS_COUNT, worker)
-
-        producer_proc.join()
-        queue.join()
-
-        pool.close()
-        queue.close()
-
-        self.__enter__()
-
-        return manager_dict.values()
+    def get_genes_list(self, gene_ids, limit=None):
+        voila_log().info('Getting genes from {0} ...'.format(self.file_name))
+        self.limit = limit
+        self.gene_ids = gene_ids
+        self.run()
+        return self.manager_dict.values()
 
     def get_gene_ids(self):
-        return self.hdf5['genes'].keys()
+        return self.hdf5[self.GENES].keys()
 
     def get_gene(self, gene_id):
-        return GeneGraphic.easy_from_hdf5(self.hdf5['genes'][gene_id])
+        return GeneGraphic.easy_from_hdf5(self.hdf5[self.GENES][gene_id])
 
     def add_experiment_names(self, experiment_names):
-        self.hdf5['/'].attrs[EXPERIMENT_NAMES] = experiment_names
+        self.hdf5[self.ROOT].attrs[EXPERIMENT_NAMES] = experiment_names
 
     def get_experiments_list(self):
-        return self.hdf5['/'].attrs[EXPERIMENT_NAMES].tolist()
+        voila_log().info('Getting splice graph experiment names from {0} ...'.format(self.file_name))
+        return self.hdf5[self.ROOT].attrs[EXPERIMENT_NAMES].tolist()

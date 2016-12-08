@@ -573,7 +573,7 @@ def get_const_junctions(filename, logging=None):
             logging.error('File % doesn\'t exists' % filename)
             raise UserWarning
     else:
-        db_f = h5py.File(filename)
+        db_f = h5py.File(filename, 'r')
         cc = db_f[JUNCTIONS_DATASET_NAME][()]
         db_f.close()
         return np.array(cc)
@@ -588,7 +588,7 @@ def extract_lsv_summary(files):
     simpl_juncs = []
     for fidx, ff in enumerate(files):
         simpl_juncs.append([[0, 0.0] for xx in idx_junc.keys()])
-        data = h5py.File(ff)
+        data = h5py.File(ff, 'r')
         for lsvid in data['LSVs']:
             lsv = data['LSVs/%s' % lsvid]
             lsvgraph = LsvGraphic.easy_from_hdf5(data['LSVs/%s/visual' % lsvid])

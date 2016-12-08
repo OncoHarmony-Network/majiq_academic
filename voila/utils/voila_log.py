@@ -7,7 +7,7 @@ from logging.handlers import RotatingFileHandler
 from voila.constants import VOILA_LOG_NAME
 
 
-def voilaLog(filename=None, silent=False):
+def voila_log(filename=None, silent=False):
     try:
         return Logger.manager.loggerDict[VOILA_LOG_NAME]
     except KeyError:
@@ -25,7 +25,9 @@ def voilaLog(filename=None, silent=False):
         except OSError as e:
             if e.errno != errno.EEXIST:
                 raise
-        handler = RotatingFileHandler(filename, maxBytes=1000 * 1000 * 1000, backupCount=5)
+
+        # keep newest 2 gigs of logs in two files
+        handler = RotatingFileHandler(filename, maxBytes=1000 * 1000 * 1000, backupCount=2)
         handler.setFormatter(formatter)
         log.addHandler(handler)
 

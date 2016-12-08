@@ -395,7 +395,7 @@ function spliceGraphD3() {
                         return d.num_reads;
                     })
                     .attr("x", function (d) {
-                        var pos = Math.round(scaleX(d.coords[(d.ir == 1 ? 1 : 0)]) + (d.ir == 1 ? 2 : -2));
+                        var pos = Math.round(scaleX(d[d.ir == 1 ? 'end' : 'start']) + (d.ir == 1 ? 2 : -2));
                         if (strand == '-')
                             return Math.round(width - pos);
                         else
@@ -417,13 +417,13 @@ function spliceGraphD3() {
                     .duration(100)
                     .ease("linear")
                     .attr("x1", function (d) {
-                        return Math.round(scaleX(d.coords[(d.ir == 1 ? 1 : 0)]));
+                        return Math.round(scaleX(d[d.ir == 1 ? 'end' : 'start']));
                     })
                     .attr("y1", function () {
                         return Math.round(height * JUNC_AREA + EXON_H / 5 + 2);
                     })
                     .attr("x2", function (d) {
-                        return Math.round(scaleX(d.coords[(d.ir == 1 ? 1 : 0)]) + ((d.ir == 1) ? 14 : -14));
+                        return Math.round(scaleX(d[d.ir == 1 ? 'end' : 'start']) + ((d.ir == 1) ? 14 : -14));
                     })
                     .attr("y2", function () {
                         return Math.round(height * JUNC_AREA + EXON_H / 5 + 2);
@@ -563,11 +563,24 @@ function spliceGraphD3() {
                         var index_missing = 0;  // missing start
                         if (d.value.exon_type == 4) //missing end
                             index_missing = 1;
+
                         var halfExonsPoints = [
-                            {'x': scaleX(d.value.coords[(index_missing + 1) % 2]), 'y': height * JUNC_AREA},
-                            {'x': scaleX(d.value.coords[index_missing]), 'y': height * JUNC_AREA},
-                            {'x': scaleX(d.value.coords[index_missing]), 'y': height * JUNC_AREA + EXON_H},
-                            {'x': scaleX(d.value.coords[(index_missing + 1) % 2]), 'y': height * JUNC_AREA + EXON_H}
+                            {
+                                'x': scaleX(d.value[(index_missing + 1) % 2 == 0 ? 'start' : 'end']),
+                                'y': height * JUNC_AREA
+                            },
+                            {
+                                'x': scaleX(d.value[index_missing == 0 ? 'start' : 'end']),
+                                'y': height * JUNC_AREA
+                            },
+                            {
+                                'x': scaleX(d.value[index_missing == 0 ? 'start' : 'end']),
+                                'y': height * JUNC_AREA + EXON_H
+                            },
+                            {
+                                'x': scaleX(d.value[(index_missing + 1) % 2 == 0 ? 'start' : 'end']),
+                                'y': height * JUNC_AREA + EXON_H
+                            }
                         ];
                         return lineFunction(halfExonsPoints);
                     });
@@ -628,11 +641,11 @@ function spliceGraphD3() {
                     .duration(100)
                     .ease("linear")
                     .attr("x", function (d) {
-                        return scaleX(d.value.coords[0]);
+                        return scaleX(d.value.start);
                     })
                     .attr("y", Math.round(height * JUNC_AREA + EXON_H * 2 / 5))
                     .attr("width", function (d) {
-                        return Math.round(scaleX(d.value.coords[1]) - scaleX(d.value.coords[0]));
+                        return Math.round(scaleX(d.value.end) - scaleX(d.value.start));
                     })
                     .attr("height", Math.round(EXON_H * 2 / 5));
                 return intronsRet;

@@ -1,7 +1,8 @@
 import csv
 import os
 from collections import defaultdict
-from multiprocessing import Manager, Process, Pool
+from multiprocessing import Manager
+from multiprocessing import Process, Pool
 from multiprocessing.queues import JoinableQueue
 from os.path import join
 
@@ -12,24 +13,33 @@ import vlsv
 from voila import constants
 from voila.constants import JUNCTION_TYPE_RNASEQ
 from voila.hdf5 import HDF5
+from voila.producer_consumer import ProducerConsumer
 from voila.utils import utils_voila
-from voila.utils.voilaLog import voilaLog
+from voila.utils.run_voila_utils import get_output_html
+from voila.utils.voila_log import voila_log
 from voila.vlsv import VoilaLsv
 
 __author__ = 'abarrera'
 
 
-class Voila(object):
+class Voila(ProducerConsumer):
     def __init__(self, voila_file_name, mode):
+        super(Voila, self).__init__()
         self.mode = mode
         self.file_name = voila_file_name
         self.hdf5 = None
+        self.lsv_ids = None
+        self.lsv_types = None
+        self.gene_names = None
 
     def __enter__(self):
         self.hdf5 = h5py.File(self.file_name, self.mode)
         return self
 
     def __exit__(self, type, value, traceback):
+        self.close()
+
+    def close(self):
         self.hdf5.close()
 
     def add_lsv(self, voilaLsv):
@@ -37,15 +47,74 @@ class Voila(object):
 
     def add_metainfo(self, genome, group1, experiments1, group2=None, experiments2=None):
         metainfo = {'group1': group1, 'experiments1': experiments1, 'genome': genome}
+
         if group2 and experiments2:
-            metainfo['experiments2'] = experiments2
-            metainfo['group2'] = group2
-        vi = VoilaInput()
-        vi.metainfo = metainfo
-        vi.encode_metainfo(self.hdf5['/'])
+            metainfo.update({
+                'experiments2': experiments2,
+                'group2': group2
+            })
+
+        h = self.hdf5.create_group('/metainfo')
+        metainfo = metainfo.copy()
+
+        experiments1 = h.create_group('experiments1')
+        for index, item in enumerate(metainfo['experiments1']):
+            experiments1.attrs[str(index)] = item
+
+        del metainfo['experiments1']
+
+        if 'group2' in metainfo and 'experiments2' in metainfo:
+            experiments2 = h.create_group('experiments2')
+            for index, item in enumerate(metainfo['experiments2']):
+                experiments2.attrs[str(index)] = item
+
+            del metainfo['experiments2']
+
+        for key in metainfo:
+            h.attrs[key] = metainfo[key]
+
+    def get_metainfo(self):
+        voila_log().info('Getting Voila Metainfo from {0} ...'.format(self.file_name))
+        metainfo = {}
+        h = self.hdf5['/metainfo']
+
+        for key in h.attrs:
+            metainfo[key] = h.attrs[key]
+
+        for key in h:
+            metainfo[key] = [h[key].attrs[attr] for attr in h[key].attrs]
+
+        return metainfo
 
     def get_voila_lsv(self, lsv_id):
         return VoilaLsv.easy_from_hdf5(self.hdf5['lsvs'][lsv_id])
+
+    def get_voila_lsvs(self, lsv_types=None, lsv_ids=None, gene_names=None):
+        voila_log().info('Getting Voila LSVs from {0} ...'.format(self.file_name))
+        self.lsv_types = lsv_types
+        self.lsv_ids = lsv_ids
+        self.gene_names = gene_names
+        self.run()
+        return self.manager_dict.values()
+
+    def _producer(self):
+        with h5py.File(self.file_name, 'r') as h:
+            for id in h['lsvs']:
+                self.queue.put(id)
+
+    def _worker(self):
+        with h5py.File(self.file_name, 'r') as h:
+            while True:
+                id = self.queue.get()
+                lsv = VoilaLsv.easy_from_hdf5(h['lsvs'][id])
+
+                print lsv.means
+
+                if not self.lsv_types or lsv.lsv_type in self.lsv_types:
+                    if not self.gene_names or lsv.name in self.gene_names:
+                        if not self.lsv_ids or lsv.lsv_id in self.lsv_ids:
+                            self.manager_dict[id] = lsv
+                self.queue.task_done()
 
 
 class VoilaInput(HDF5):
@@ -53,6 +122,7 @@ class VoilaInput(HDF5):
 
     def __init__(self, lsvs=(), metainfo=None):
         super(VoilaInput, self).__init__()
+        voila_log().warning('VoilaInput has been deprecated')
         self.lsvs = lsvs
         self.metainfo = metainfo
 
@@ -142,9 +212,9 @@ class VoilaInput(HDF5):
                     id = queue.get()
                     lsv = VoilaLsv.easy_from_hdf5(h['lsvs'][id])
 
-                    if not lsv_types or lsv.lsv_graphic.lsv_type in lsv_types:
-                        if not gene_names or lsv.gene_name() in gene_names:
-                            if not lsv_ids or lsv.lsv_id() in lsv_ids:
+                    if not lsv_types or lsv.lsv_type in lsv_types:
+                        if not gene_names or lsv.name in gene_names:
+                            if not lsv_ids or lsv.lsv_id in lsv_ids:
                                 manage_dict[id] = lsv
                     queue.task_done()
 
@@ -153,7 +223,7 @@ class VoilaInput(HDF5):
                 for id in h['lsvs']:
                     queue.put(id)
 
-        log = voilaLog()
+        log = voila_log()
         if not os.path.isfile(hdf5_filename):
             log.error('unable to load file: {0}'.format(hdf5_filename))
             raise IOError('Voila input file does not exist.')
@@ -219,25 +289,25 @@ def load_dpairs(pairwise_dir, majiq_output):
     return lmajiq_pairs, group1_name, group2_name
 
 
-def write_tab_output(input_parsed):
+def write_tab_output(args, majiq_output):
     """
     Create tab-delimited output file summarizing all the LSVs detected and quantified with MAJIQ.
 
-    :param input_parsed: parsed input data
+    :param args: parsed input data
     :return:
     """
 
-    if input_parsed.type_summary == constants.COND_TABLE:
-        cond_table_tab_output(input_parsed)
+    if args.type_analysis == constants.COND_TABLE:
+        cond_table_tab_output(args)
     else:
-        tab_output(input_parsed)
+        tab_output(args, majiq_output)
 
 
 def cond_table_tab_output(input_parsed):
     majiq_output = input_parsed.majiq_output
     lsvs = majiq_output['lsvs']
     sample_names = majiq_output['sample_names']
-    log = voilaLog()
+    log = voila_log()
 
     log.info('Creating cond-table TSV...')
 
@@ -267,28 +337,27 @@ def cond_table_tab_output(input_parsed):
             writer.writerow(row)
 
 
-def tab_output(input_parsed):
-    def j(value_list):
+def tab_output(args, majiq_output):
+    def semicolon_join(value_list):
         return ';'.join(str(x) for x in value_list)
 
-    output_dir = input_parsed.output_dir
-    output_html = input_parsed.output_html
-    log = voilaLog()
-    majiq_output = input_parsed.majiq_output
-    threshold = input_parsed.threshold
-    type_summary = input_parsed.type_summary
+    output_dir = args.output
+    output_html = get_output_html(args, args.majiq_quantifier)
+    log = voila_log()
+    type_summary = args.type_analysis
     group1 = None
     group2 = None
     tsv_file = join(output_dir, output_html.rsplit('.html', 1)[0] + '.tsv')
 
     log.info("Creating Tab-delimited output file in %s..." % tsv_file)
 
-    fieldnames = ['Gene Name', 'Gene ID', 'LSV ID', 'E(PSI) per LSV junction', 'Var(E(PSI)) per LSV junction']
+    fieldnames = ['#Gene Name', 'Gene ID', 'LSV ID', 'E(PSI) per LSV junction', 'Var(E(PSI)) per LSV junction']
 
     if 'delta' in type_summary:
         group1 = majiq_output['meta_exps']['group1']
         group2 = majiq_output['meta_exps']['group2']
-        fieldnames = fieldnames[:3] + ['E(dPSI) per LSV junction', 'P(|E(dPSI)|>=%.2f) per LSV junction' % threshold,
+        fieldnames = fieldnames[:3] + ['E(dPSI) per LSV junction',
+                                       'P(|E(dPSI)|>=%.2f) per LSV junction' % args.threshold,
                                        '%s E(PSI)' % group1, '%s E(PSI)' % group2]
 
     fieldnames += ['LSV Type', 'A5SS', 'A3SS', 'ES', 'Num. Junctions', 'Num. Exons', 'De Novo Junctions', 'chr',
@@ -308,7 +377,7 @@ def tab_output(input_parsed):
                     lsv = lsv['lsv']
 
                 row = {
-                    'Gene Name': lsv.name,
+                    '#Gene Name': lsv.name,
                     'Gene ID': gene,
                     'LSV ID': lsv.lsv_id,
                     'LSV Type': lsv.lsv_type,
@@ -322,43 +391,44 @@ def tab_output(input_parsed):
                     'De Novo Junctions': any(
                         junc.junction_type == JUNCTION_TYPE_RNASEQ for junc in lsv.junctions
                     ),
-                    'Junctions coords': j(
+                    'Junctions coords': semicolon_join(
                         '{0}-{1}'.format(junc.start, junc.end) for junc in lsv.junctions
                     ),
-                    'Exons coords': j(
+                    'Exons coords': semicolon_join(
                         '{0}-{1}'.format(e.start, e.end) for e in lsv.exons
                     ),
-                    'Exons Alternative Start': j(
+                    'Exons Alternative Start': semicolon_join(
                         '|'.join(str(a) for a in e.alt_starts) for e in lsv.exons if e.alt_starts
                     ),
-                    'Exons Alternative End': j(
+                    'Exons Alternative End': semicolon_join(
                         '|'.join(str(a) for a in e.alt_ends) for e in lsv.exons if e.alt_ends
                     ),
-                    'IR coords': j(
-                        e.coords for e in lsv.exons if e.intron_retention
+                    'IR coords': semicolon_join(
+                        '{0}-{1}'.format(e.start, e.end) for e in lsv.exons if e.intron_retention
                     )
                 }
 
                 if constants.ANALYSIS_DELTAPSI == type_summary:
                     row.update({
-                        'E(dPSI) per LSV junction': j(
-                            -lsv.excl_incl[i][0] + lsv.excl_incl[i][1] for i in range(len(lsv.bins))
+                        'E(dPSI) per LSV junction': semicolon_join(
+                            lsv.excl_incl[i][1] - lsv.excl_incl[i][0] for i in range(len(lsv.bins))
                         ),
-                        'P(|E(dPSI)|>=%.2f) per LSV junction' % threshold: j(
-                            vlsv.matrix_area(np.array(bin), threshold, collapsed_mat=True).sum() for bin in lsv.bins
+                        'P(|E(dPSI)|>=%.2f) per LSV junction' % args.threshold: semicolon_join(
+                            vlsv.matrix_area(np.array(bin), args.threshold, collapsed_mat=True).sum() for bin in
+                            lsv.bins
                         ),
-                        '%s E(PSI)' % group1: j(
+                        '%s E(PSI)' % group1: semicolon_join(
                             '%.3f' % vlsv.get_expected_psi(np.array(lsv.psi1[i])) for i in range(len(lsv.bins))
                         ),
-                        '%s E(PSI)' % group2: j(
+                        '%s E(PSI)' % group2: semicolon_join(
                             '%.3f' % vlsv.get_expected_psi(np.array(lsv.psi2[i])) for i in range(len(lsv.bins))
                         )
                     })
 
                 if constants.ANALYSIS_PSI == type_summary:
                     row.update({
-                        'E(PSI) per LSV junction': j(lsv.means),
-                        'Var(E(PSI)) per LSV junction': j(lsv.variances)
+                        'E(PSI) per LSV junction': semicolon_join(lsv.means),
+                        'Var(E(PSI)) per LSV junction': semicolon_join(lsv.variances)
                     })
 
                 if 'voila_links' in majiq_output:
@@ -372,8 +442,18 @@ def tab_output(input_parsed):
     log.info("Delimited output file successfully created in: %s" % tsv_file)
 
 
-def load_dpsi_tab(tab_files_list, sample_names, thres_change=None, filter_genes=None, filter_lsvs=None,
-                  pairwise_dir=None, outdir=None):
+# def load_dpsi_tab(tab_files_list, sample_names, thres_change=None, filter_genes=None, filter_lsvs=None,
+#                   pairwise_dir=None, outdir=None):
+
+def load_dpsi_tab(args):
+    pairwise_dir = args.pairwise_dir
+    outdir = args.output
+    tab_files_list = args.sample_files
+    filter_genes = args.gene_names
+    filter_lsvs = args.lsv_ids
+    sample_names = args.sample_names
+    thres_change = args.threshold_change
+
     """Load LSV delta psi information from tab-delimited file."""
     lsvs_dict = defaultdict(lambda: defaultdict(lambda: None))
     if pairwise_dir is None:
@@ -415,6 +495,8 @@ def load_dpsi_tab(tab_files_list, sample_names, thres_change=None, filter_genes=
 
                 expecs = [float(aa) for aa in fields[3].split(";")]
 
+                print expecs
+
                 if lsvs_dict[fields[2]]['expecs'] is None:
                     lsvs_dict[fields[2]]['expecs'] = [[]] * len(sample_names)
                     lsvs_dict[fields[2]]['expecs_marks'] = [None] * len(sample_names)
@@ -433,24 +515,34 @@ def load_dpsi_tab(tab_files_list, sample_names, thres_change=None, filter_genes=
             del lsvs_dict[lsv_idx]  # Remove LSVs not passing the changing threshold
             continue
 
+        has_valid_junc = (np.array(lsvs_dict[lsv_idx]['njunc']) > -1)
+
         idx_most_freq = np.argmax(np.bincount(np.array(lsvs_dict[lsv_idx]['njunc'])[
                                                   (np.array(lsvs_dict[lsv_idx]['njunc']) > -1) & np.array(
                                                       [np.any(np.array([abs(fff) for fff in expec]) > thres_change) for
                                                        expec in lsvs_dict[lsv_idx]['expecs']])]))
 
-        lsvs_dict[lsv_idx]['expecs_marks'] = ~np.array(
-            idx_most_freq == lsvs_dict[lsv_idx]['njunc'])  # Mark adjusted most changing junction
+        # Mark adjusted most changing junction
+        lsvs_dict[lsv_idx]['expecs_marks'] = ~np.array(idx_most_freq == lsvs_dict[lsv_idx]['njunc'])
+
         for idx_exp, expec in enumerate(lsvs_dict[lsv_idx]['expecs']):
             if len(expec) > 0:
                 lsvs_dict[lsv_idx]['expecs'][idx_exp] = expec[idx_most_freq]
             else:
                 lsvs_dict[lsv_idx]['expecs'][idx_exp] = -1
+
         lsvs_dict[lsv_idx]['nchangs'] = np.count_nonzero(
             [abs(ee) > thres_change for ee in lsvs_dict[lsv_idx]['expecs'] if ee > -1])
+
         lsvs_dict[lsv_idx]['njunc'] = idx_most_freq
+
         exist_expecs = np.array(lsvs_dict[lsv_idx]['expecs'])[(np.array(lsvs_dict[lsv_idx]['expecs']) > -1) & (
             np.array([abs(xx) for xx in lsvs_dict[lsv_idx]['expecs']]) > thres_change)]
+
         lsvs_dict[lsv_idx]['ndisagree'] = len(exist_expecs) - max(
+            (np.count_nonzero(exist_expecs > 0), np.count_nonzero(exist_expecs <= 0)))
+
+        lsvs_dict[lsv_idx]['nagree'] = len(exist_expecs) - min(
             (np.count_nonzero(exist_expecs > 0), np.count_nonzero(exist_expecs <= 0)))
 
     return lsvs_dict
@@ -464,7 +556,7 @@ def generic_feature_format_txt_files(input_parsed, out_gff3=False):
     :return: None
     """
 
-    log = voilaLog()
+    log = voila_log()
     majiq_output = input_parsed.majiq_output
     output_dir = input_parsed.output_dir
 

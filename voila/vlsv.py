@@ -4,7 +4,7 @@ import numpy as np
 
 from voila.hdf5 import BinsDataSet, Psi1DataSet, Psi2DataSet
 from voila.splice_graphics import LsvGraphic
-from voila.utils.voilaLog import voilaLog
+from voila.utils.voila_log import voila_log
 
 
 def get_expected_dpsi(bins):
@@ -21,6 +21,7 @@ def get_expected_psi(bins):
 def collapse_matrix(matrix):
     """Collapse the diagonals probabilities in 1-D and return them"""
     collapse = []
+    matrix = np.array(matrix)
     matrix_corner = matrix.shape[0]
     for i in xrange(-matrix_corner + 1, matrix_corner):
         collapse.append(np.diagonal(matrix, offset=i).sum())
@@ -67,7 +68,7 @@ class OrphanJunctionException(Exception):
 
 class VoilaLsv(LsvGraphic):
     def __init__(self, bins_list, lsv_graphic, means=None, means_psi1=None, psi1=None, means_psi2=None, psi2=None):
-        try:
+        if lsv_graphic:
             super(VoilaLsv, self).__init__(
                 lsv_type=lsv_graphic.lsv_type,
                 start=lsv_graphic.start,
@@ -79,7 +80,7 @@ class VoilaLsv(LsvGraphic):
                 junctions=lsv_graphic.junctions,
                 chromosome=lsv_graphic.chromosome
             )
-        except AttributeError:
+        else:
             super(VoilaLsv, self).__init__(None, None, None, None)
 
         self.bins = bins_list
@@ -94,19 +95,19 @@ class VoilaLsv(LsvGraphic):
 
         # Store collapsed matrix to save some space
         if self.is_delta_psi():
-            self.bins = [collapse_matrix(np.array(lsv_bins)) for lsv_bins in self.bins]
+            self.bins = [collapse_matrix(lsv_bins) for lsv_bins in self.bins]
 
         # Recreate complementary junction in binary LSV
         if len(self.bins) == 1:
             self.bins.append(self.bins[-1][::-1])
 
-        if not self.means:
+        if self.means is None:
             if self.is_delta_psi():
                 self.means = [get_expected_dpsi(b) for b in self.bins]
             else:
                 self.means = [get_expected_psi(b) for b in self.bins]
         else:
-            voilaLog().warning('Did not have to generate means.')
+            voila_log().warning('Did not have to generate means.')
 
         for lsv_bins in self.bins:
             if self.is_delta_psi():
@@ -124,7 +125,8 @@ class VoilaLsv(LsvGraphic):
             self.init_categories()
 
     def is_delta_psi(self):
-        return sum([bool(self.psi1), bool(self.psi2)]) == 2
+        # we have to check for None, because they might be numpy objects
+        return self.psi1 is not None and self.psi2 is not None
 
     def get_extension(self):
         return [self.exons[0].start, self.exons[-1].end]
@@ -146,7 +148,7 @@ class VoilaLsv(LsvGraphic):
         self.bed12_str = bed12_str
 
     def get_gff3(self):
-        log = voilaLog()
+        log = voila_log()
         try:
             return VoilaLsv.to_gff3(self)
         except OrphanJunctionException as e:

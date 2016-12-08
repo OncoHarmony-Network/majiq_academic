@@ -977,7 +977,6 @@
                  * D3 - SpliceGraph
                  * */
 
-                console.log($(this));
                 var genes_obj = JSON.parse($(this)[0].getAttribute('data-exon-list').replace(/'/g, '"'));
 
 
@@ -1017,9 +1016,11 @@
                 d3.select(this.parentNode.parentNode).select('.toogleScale').on('click', function () {
                     var toogleScale = this;
                     $(this).toggleClass('scaled');
+
                     d3.select(this.parentNode.parentNode).selectAll('.spliceDiv').each(function () {
                         var index_gene = parseInt(this.id.split('_')[1]);
-                        if (d3.select(this).classed('exp1') || d3.select(this).classed('exp2')) {
+
+                        if (d3.select(this).classed('delta')) {
                             index_gene *= 2;
                             if (d3.select(this).classed('exp2')) {
                                 index_gene++
