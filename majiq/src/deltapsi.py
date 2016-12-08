@@ -23,7 +23,7 @@ def deltapsi(args):
     return pipeline_run(DeltaPsi(args))
 
 
-def deltapsi_quantification(args_vals):#, delta_prior_path, boots_sample=True, logger=None):
+def deltapsi_quantification(args_vals):
     try:
 
         list_of_lsv, chnk = args_vals
@@ -156,6 +156,7 @@ class DeltaPsi(BasicPipeline):
         Given a file path with the junctions, return psi distributions.
         write_pickle indicates if a .pickle should be saved in disk
         """
+
         majiq_utils.create_if_not_exists(self.logger_path)
         self.logger = majiq_utils.get_logger("%s/deltapsi_majiq.log" % self.logger_path, silent=self.silent,
                                              debug=self.debug)
@@ -165,6 +166,7 @@ class DeltaPsi(BasicPipeline):
         self.logger.info("GROUP1: %s" % self.files1)
         self.logger.info("GROUP2: %s" % self.files2)
         self.nbins = 20
+
         files = [self.files1, self.files2]
         file_locks = None
         if self.export_boots:

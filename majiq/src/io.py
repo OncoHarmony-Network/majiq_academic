@@ -607,6 +607,7 @@ def extract_lsv_summary(files):
                     indx = total_idx
                     total_idx += 1
                     simpl_juncs[fidx].append([cov[0][jidx], cov[1][jidx]])
+                    [simpl_juncs[dx].append([0, 0.0]) for dx in xrange(fidx)]
                 lsvid2idx[lsvid].append(indx)
 
     simpl_juncs = np.array(simpl_juncs)
@@ -695,7 +696,6 @@ def add_lsv_to_bootstrapfile(lsv_id, lsv_type, samples, num_exp, lock_per_file, 
             lsv_idx = f.attrs['lsv_idx']
             lsv_idx = boots_write(f, vals, lsv_idx)
             f.attrs['lsv_idx'] = lsv_idx
-
         lock_per_file[ii].release()
 
 

@@ -55,7 +55,10 @@ def wrap_result_file(lsv, name, gc_vfunc, lsv_list, rna_files, lock_per_file=Non
                        'r+', compression='gzip', compression_opts=9) as f:
             gc_f = None
             if majiq_config.gcnorm:
-                gc_f = gc_vfunc[exp_idx]
+                try:
+                    gc_f = gc_vfunc[exp_idx]
+                except:
+                    pass
 
             f.attrs['data_index'] = lsv.to_hdf5(hdf5grp=f, lsv_idx=f.attrs['data_index'], gc_vfunc=gc_f, exp_idx=exp_idx)
 

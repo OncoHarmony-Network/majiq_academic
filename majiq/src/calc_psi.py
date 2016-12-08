@@ -27,7 +27,7 @@ def calcpsi(args):
 
 def psi_quantification(args_vals):
     try:
-        print len(args_vals), args_vals
+        #print len(args_vals), args_vals
         list_of_lsv, chnk = args_vals
         logger = majiq_utils.get_logger("%s/%s.majiq.log" % (quantification_init.output, chnk),
                                         silent=quantification_init.silent, debug=quantification_init.debug)
@@ -156,8 +156,8 @@ class CalcPsi(BasicPipeline):
 
         if len(list_of_lsv) > 0:
             # psi_quantification((list_of_lsv, 0))
-            for xx in majiq_utils.chunks2(list_of_lsv, lchnksize, extra=range(self.nthreads)):
-                print xx
+            # for xx in majiq_utils.chunks2(list_of_lsv, lchnksize, extra=range(self.nthreads)):
+            #     print xx
 
             pool.map_async(psi_quantification, majiq_utils.chunks2(list_of_lsv, lchnksize, extra=range(self.nthreads)))
             pool.close()

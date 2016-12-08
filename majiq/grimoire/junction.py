@@ -168,7 +168,10 @@ class Junction:
         return res
 
     def get_index(self):
-        return self.idx
+        try:
+            return self.idx
+        except:
+            pass
 
     def get_gene_name(self):
         return self.gene_name
