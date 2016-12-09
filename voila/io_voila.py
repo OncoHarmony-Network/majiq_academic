@@ -39,8 +39,29 @@ class Voila(ProducerConsumer):
     def __exit__(self, type, value, traceback):
         self.close()
 
+    def _producer(self):
+        with h5py.File(self.file_name, 'r') as h:
+            for id in h['lsvs']:
+                self.queue.put(id)
+
+    def _worker(self):
+        with h5py.File(self.file_name, 'r') as h:
+            while True:
+                id = self.queue.get()
+                lsv = VoilaLsv.easy_from_hdf5(h['lsvs'][id])
+
+                if not self.lsv_types or lsv.lsv_type in self.lsv_types:
+                    if not self.gene_names or lsv.name in self.gene_names:
+                        if not self.lsv_ids or lsv.lsv_id in self.lsv_ids:
+                            self.dict(id, lsv)
+
+                self.queue.task_done()
+
     def close(self):
-        self.hdf5.close()
+        try:
+            self.hdf5.close()
+        except ValueError:
+            pass
 
     def add_lsv(self, voilaLsv):
         voilaLsv.to_hdf5(self.hdf5)
@@ -95,26 +116,9 @@ class Voila(ProducerConsumer):
         self.lsv_ids = lsv_ids
         self.gene_names = gene_names
         self.run()
-        voila_lsvs = self.manager_dict.values()
+        voila_lsvs = self.get_values()
         self.manager_shutdown()
         return voila_lsvs
-
-    def _producer(self):
-        with h5py.File(self.file_name, 'r') as h:
-            for id in h['lsvs']:
-                self.queue.put(id)
-
-    def _worker(self):
-        with h5py.File(self.file_name, 'r') as h:
-            while True:
-                id = self.queue.get()
-                lsv = VoilaLsv.easy_from_hdf5(h['lsvs'][id])
-
-                if not self.lsv_types or lsv.lsv_type in self.lsv_types:
-                    if not self.gene_names or lsv.name in self.gene_names:
-                        if not self.lsv_ids or lsv.lsv_id in self.lsv_ids:
-                            self.manager_dict[id] = lsv
-                self.queue.task_done()
 
 
 class VoilaInput(HDF5):

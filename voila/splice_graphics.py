@@ -654,8 +654,8 @@ class SpliceGraph(ProducerConsumer):
         """
         with h5py.File(self.file_name, 'r') as h:
             while True:
-                id = self.queue.get()
-                self.manager_dict[id] = GeneGraphic.easy_from_hdf5(h[self.GENES][id])
+                gene_id = self.queue.get()
+                self.dict(gene_id, GeneGraphic.easy_from_hdf5(h[self.GENES][gene_id]))
                 self.queue.task_done()
 
     def _producer(self):
@@ -708,7 +708,7 @@ class SpliceGraph(ProducerConsumer):
         self.limit = limit
         self.gene_ids = gene_ids
         self.run()
-        gene_list = self.manager_dict.values()
+        gene_list = self.get_values()
         self.manager_shutdown()
         return gene_list
 

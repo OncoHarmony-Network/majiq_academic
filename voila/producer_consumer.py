@@ -1,7 +1,14 @@
+import signal
 from multiprocessing import Process, Pool, Manager
 from multiprocessing.queues import JoinableQueue
 
 from voila.constants import PROCESS_COUNT
+from voila.utils.voila_log import voila_log
+
+
+def voila_exit(error_no=1):
+    voila_log().warning("Voila exiting...")
+    exit(error_no)
 
 
 class ProducerConsumer(object):
@@ -24,6 +31,11 @@ class ProducerConsumer(object):
         self.manager.shutdown()
 
     def run(self):
+        """
+        Runs multiple process producer/consumer pattern.
+        :return: None
+        """
+
         # this process can't have the same hdf5 file open twice
         self.close()
 
@@ -31,19 +43,50 @@ class ProducerConsumer(object):
         self.manager_dict = self.manager.dict()
         self.queue = JoinableQueue()
 
-        producer_proc = Process(target=self._producer)
-        producer_proc.start()
+        original_sigint_handler = signal.signal(signal.SIGINT, signal.SIG_IGN)
 
+        producer_proc = Process(target=self._producer)
         pool = Pool(PROCESS_COUNT, self._worker)
 
-        producer_proc.join()
-        self.queue.join()
+        signal.signal(signal.SIGINT, original_sigint_handler)
 
-        pool.close()
-        self.queue.close()
+        try:
+
+            producer_proc.start()
+
+            producer_proc.join()
+            self.queue.join()
+
+            pool.close()
+            self.queue.close()
+
+        except (KeyboardInterrupt, SystemExit):
+            producer_proc.terminate()
+            pool.terminate()
+            self.manager_shutdown()
+            voila_exit()
 
         # when finished, open file back up for this process
         self.__enter__()
+
+    def dict(self, key, value):
+        """
+        Manager dictionary to hold data created by worker processes.
+
+        Note: EOF and IO Error will happen when script is terminated early.
+        :param key: key
+        :param value: value
+        :return: None
+        """
+        try:
+            self.manager_dict[key] = value
+        except EOFError:
+            pass
+        except IOError:
+            pass
+
+    def get_values(self):
+        return self.manager_dict.values()
 
     def _worker(self):
         """
