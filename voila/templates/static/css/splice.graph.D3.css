@@ -19,7 +19,7 @@
 .exon.missing, .intronret.missing {
     stroke: black;
     stroke-dasharray: 5, 2;
-    fill: none;
+    fill: transparent;
 }
 
 .halfexon {

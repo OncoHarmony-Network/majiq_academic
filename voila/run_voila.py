@@ -21,17 +21,33 @@ class VoilaCantFindFile(argparse.ArgumentTypeError):
 
 
 def secs2hms(secs):
+    """
+    Convert secs into a human readable format.
+    :param secs: seconds
+    :return: formated time
+    """
     m, s = divmod(secs, 60)
     h, m = divmod(m, 60)
     return "%d:%02d:%02d" % (h, m, s)
 
 
 def check_dir(value):
+    """
+    check if directory exists.  If not, create it.
+    :param value: directory path
+    :return: value
+    """
     create_if_not_exists(value)
     return value
 
 
 def check_list_file(value):
+    """
+    Take file, which is a newline separated list of values, and convert it to a list of strings.  Raise error if file
+    doesn't exist.
+    :param value: file path
+    :return: return list of strings
+    """
     try:
         with open(value, 'r') as f:
             return [line.strip() for line in f]
@@ -43,17 +59,31 @@ def check_list_file(value):
 
 
 def check_file(value):
+    """
+    Check if file exists.
+    :param value: file path
+    :return:
+    """
     if not path.isfile(value):
         raise VoilaCantFindFile(value)
     return value
 
 
 def psi_args():
+    """
+    Psi specific arguments.
+    :return: parser
+    """
+
     parser_single = argparse.ArgumentParser(add_help=False)
     return parser_single
 
 
 def deltapsi_args():
+    """
+    Deltapsi specific arguments.
+    :return: parser
+    """
     parser_delta = argparse.ArgumentParser(add_help=False)
 
     # Probability threshold used to sum the accumulative probability of inclusion/exclusion.
@@ -73,6 +103,10 @@ def deltapsi_args():
 
 
 def splice_graphs_args():
+    """
+    Splice graphs specific arguments.
+    :return: parser
+    """
     parser_splice_graphs = argparse.ArgumentParser(add_help=False)
     parser_splice_graphs.add_argument('splice_graph',
                                       type=check_file,
@@ -87,6 +121,11 @@ def splice_graphs_args():
 
 
 def thumbnails_args():
+    """
+    LSV thumbnail specific arguments.
+    :return: parser
+    """
+
     parser_thumbs = argparse.ArgumentParser(add_help=False)
     parser_thumbs.add_argument('--collapsed',
                                action='store_true',
@@ -96,6 +135,11 @@ def thumbnails_args():
 
 
 def conditional_table_args():
+    """
+    Conditional table specific arguments.
+    :return: parser
+    """
+
     parser_conditional_table = argparse.ArgumentParser(add_help=False)
     parser_required = parser_conditional_table.add_argument_group('required arguments')
 
@@ -130,6 +174,11 @@ def conditional_table_args():
 
 
 def base_args():
+    """
+    Arguments common to all analysis types.
+    :return:  parser
+    """
+
     base_parser = argparse.ArgumentParser(add_help=False)
     required_parser = base_parser.add_argument_group('required arguments')
 
@@ -138,6 +187,8 @@ def base_args():
                                  required=True,
                                  type=check_dir,
                                  help='path for output directory')
+
+    base_parser.add_argument('-v', action='version', version=constants.VERSION)
 
     base_parser.add_argument('-l', '--logger',
                              default=None,
@@ -149,6 +200,11 @@ def base_args():
 
 
 def majiq_quantifier_args():
+    """
+    Arguments needs for analysis types who use the majiq quantifier file.
+    :return: parser
+    """
+
     majiq_quantifier_parser = argparse.ArgumentParser(add_help=False)
     majiq_quantifier_parser.add_argument('majiq_quantifier',
                                          type=check_file,
@@ -179,6 +235,11 @@ def majiq_quantifier_args():
 
 
 def gene_search_args():
+    """
+    Arguments for analysis types who search for specific genes.
+    :return: parser
+    """
+
     gene_search_parser = argparse.ArgumentParser(add_help=False)
     gene_search_parser.add_argument('--gene-names-file',
                                     dest='gene_names',
@@ -195,6 +256,10 @@ def gene_search_args():
 
 
 def lsv_type_search_args():
+    """
+    Arguments for analysis types who search for specific LSV types.
+    :return: parser
+    """
     lsv_search_parser = argparse.ArgumentParser(add_help=False)
     lsv_search_parser.add_argument('--lsv-types-file',
                                    type=check_list_file,
@@ -211,6 +276,10 @@ def lsv_type_search_args():
 
 
 def lsv_id_search_args():
+    """
+    Arguments for analysis types who search for specific LSV IDs.
+    :return: parser
+    """
     lsv_search_parser = argparse.ArgumentParser(add_help=False)
     lsv_search_parser.add_argument('--lsv-ids-file',
                                    type=check_list_file,
@@ -227,6 +296,11 @@ def lsv_id_search_args():
 
 
 def main():
+    """
+    Main function.
+    :return: None
+    """
+
     # Time execution time
     start_time = time.time()
 
@@ -237,21 +311,15 @@ def main():
 
             '''))
 
-    parser.add_argument('-v', action='version', version=constants.VERSION)
-
-    # Common script options
-    majiq_quantifier = majiq_quantifier_args()
-
-    gene_search = gene_search_args()
-
-    lsv_type_search = lsv_type_search_args()
-    lsv_id_search = lsv_id_search_args()
-
-    base = base_args()
-
     # Subparser module to agglutinate all subparsers
     subparsers = parser.add_subparsers(dest='type_analysis')
     subparsers.required = True
+
+    majiq_quantifier = majiq_quantifier_args()
+    gene_search = gene_search_args()
+    lsv_type_search = lsv_type_search_args()
+    lsv_id_search = lsv_id_search_args()
+    base = base_args()
 
     # Single LSV by Gene(s) of interest
     parser_single = psi_args()
@@ -293,6 +361,7 @@ def main():
         log_filename = os.path.join(args.logger, log_filename)
     log = voila_log(filename=log_filename, silent=args.silent)
 
+    # run function for this analysis type
     type_analysis = {
         constants.ANALYSIS_PSI: psi,
         constants.ANALYSIS_DELTAPSI: deltapsi,

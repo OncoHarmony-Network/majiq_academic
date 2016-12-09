@@ -59,14 +59,14 @@ def render_summary(args, majiq_output):
 
 
 def parse_gene_graphics_obj(splice_graph, gene_names_list=None, limit=None):
-    genes_exp1_exp2 = []
     log = voila_log()
     genes_exp = {}
 
     log.info("Parsing splice graph information files ...")
 
     with SpliceGraph(splice_graph, 'r') as sg:
-        genes = sg.get_genes_list(limit=limit)
+        gene_ids = sg.get_gene_ids()
+        genes = sg.get_genes_list(gene_ids, limit=limit)
         experiments = sg.get_experiments_list()
 
     gene_names_list = [g.lower() for g in gene_names_list]
@@ -82,8 +82,6 @@ def parse_gene_graphics_obj(splice_graph, gene_names_list=None, limit=None):
                 except KeyError:
                     genes_exp[experiment_name] = {gene.gene_id: experiment_dict}
 
-        # todo: there will only be one "exp"... this needs to be refactored.
-        genes_exp1_exp2.append(OrderedDict(sorted(genes_exp.items(), key=lambda t: t[0])))
-
     log.info("Splice graph information files correctly loaded.")
-    return genes_exp1_exp2
+
+    return [OrderedDict(sorted(genes_exp.items(), key=lambda t: t[0]))]

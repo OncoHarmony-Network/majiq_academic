@@ -90,6 +90,7 @@ class VoilaLsv(LsvGraphic):
         self.means_psi2 = means_psi2
         self.psi2 = psi2
 
+        self.categories = None
         self.variances = []
         self.excl_incl = []
 
@@ -101,21 +102,20 @@ class VoilaLsv(LsvGraphic):
         if len(self.bins) == 1:
             self.bins.append(self.bins[-1][::-1])
 
-        if self.means is None:
+        if self.means:
             if self.is_delta_psi():
                 self.means = [get_expected_dpsi(b) for b in self.bins]
             else:
                 self.means = [get_expected_psi(b) for b in self.bins]
-        else:
-            voila_log().warning('Did not have to generate means.')
 
-        for lsv_bins in self.bins:
-            if self.is_delta_psi():
-                if self.means[-1] < 0:
-                    self.excl_incl.append([-self.means[-1], 0])
+        if self.means and self.is_delta_psi():
+            for mean in self.means:
+                if mean < 0:
+                    self.excl_incl.append([-mean, 0])
                 else:
-                    self.excl_incl.append([0, self.means[-1]])
-            else:
+                    self.excl_incl.append([0, mean])
+        else:
+            for lsv_bins in self.bins:
                 step_bins = 1.0 / len(lsv_bins)
                 projection_prod = lsv_bins * np.arange(step_bins / 2, 1, step_bins) ** 2
                 self.variances.append(np.sum(projection_prod) - self.means[-1] ** 2)
@@ -284,20 +284,25 @@ class VoilaLsv(LsvGraphic):
         categories = defaultdict()
         juns = self.lsv_type.split('|')
         ir = 'i' in juns
+
         try:
             juns.remove('i')
         except ValueError:
-            pass  # No sign of intron retention
+            # No sign of intron retention
+            pass
+
         ssites = set(int(s[0]) for s in juns[1:])
         exons = defaultdict(list)
 
         for s in juns[1:]:
             exs = s[1:].split('.')
+
             try:
                 ssite = int(exs[1].split('o')[0])
                 exons[exs[0]].append(ssite)
             except IndexError:
                 pass
+
         categories['ES'] = len(exons.keys()) > 1
         categories['prime5'] = len(ssites) > 1
         categories['prime3'] = max([len(exons[e]) for e in exons]) > 1

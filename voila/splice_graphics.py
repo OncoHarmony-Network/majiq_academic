@@ -617,6 +617,11 @@ class SpliceGraph(ProducerConsumer):
     ROOT = '/'
 
     def __init__(self, splice_graph_file_name, mode):
+        """
+        Class for creating and accessing the splice graph file.
+        :param splice_graph_file_name: path to splice graph file
+        :param mode: mode to pass to hdf5
+        """
         super(SpliceGraph, self).__init__()
         self.file_name = splice_graph_file_name
         self.mode = mode
@@ -625,13 +630,28 @@ class SpliceGraph(ProducerConsumer):
         self.gene_ids = None
 
     def __enter__(self):
+        """
+        Open hdf5 in with block.
+        :return: self
+        """
         self.hdf5 = h5py.File(self.file_name, self.mode)
         return self
 
     def __exit__(self, type, value, traceback):
+        """
+        Close when with block exits.
+        :param type: unused
+        :param value: unused
+        :param traceback: unused
+        :return: None
+        """
         self.close()
 
     def _worker(self):
+        """
+        Worker function which creates GeneGraphic objects from the data stored in the splice graph file.
+        :return: None
+        """
         with h5py.File(self.file_name, 'r') as h:
             while True:
                 id = self.queue.get()
@@ -639,33 +659,58 @@ class SpliceGraph(ProducerConsumer):
                 self.queue.task_done()
 
     def _producer(self):
+        """
+        Gets list of gene id used to parse splice graph file
+        :return: None
+        """
         gene_ids = self.gene_ids
         gene_ids_length = len(gene_ids)
         limit = self.limit
 
-        if limit and limit > gene_ids_length:
-            voila_log().info('Found {0} genes, but limited to {0}'.format(gene_ids_length, limit))
+        if limit and limit < gene_ids_length:
+            voila_log().info('Found {0} genes, but limited to {1}'.format(gene_ids_length, limit))
             gene_ids = gene_ids[:limit]
 
         for gene_id in gene_ids:
             self.queue.put(gene_id)
 
     def close(self):
+        """
+        Close hdf5 file.
+        :return: None
+        """
         self.hdf5.close()
 
     def erase_splice_graph_file(self):
+        """
+        Remove splice graph file and reopen it.
+        :return:
+        """
         os.remove(self.file_name)
         self.__enter__()
 
     def add_gene(self, gene):
+        """
+        Add gene object to splice graph file.
+        :param gene: GeneGraphic object
+        :return: None
+        """
         gene.to_hdf5(self.hdf5)
 
     def get_genes_list(self, gene_ids, limit=None):
+        """
+        Get all genes contained in file in a list
+        :param gene_ids: gene ids to parse
+        :param limit: limit the genes list to this number
+        :return: list of GeneGraphic objects
+        """
         voila_log().info('Getting genes from {0} ...'.format(self.file_name))
         self.limit = limit
         self.gene_ids = gene_ids
         self.run()
-        return self.manager_dict.values()
+        gene_list = self.manager_dict.values()
+        self.manager_shutdown()
+        return gene_list
 
     def get_gene_ids(self):
         return self.hdf5[self.GENES].keys()

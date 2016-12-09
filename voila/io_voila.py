@@ -95,7 +95,9 @@ class Voila(ProducerConsumer):
         self.lsv_ids = lsv_ids
         self.gene_names = gene_names
         self.run()
-        return self.manager_dict.values()
+        voila_lsvs = self.manager_dict.values()
+        self.manager_shutdown()
+        return voila_lsvs
 
     def _producer(self):
         with h5py.File(self.file_name, 'r') as h:
@@ -107,8 +109,6 @@ class Voila(ProducerConsumer):
             while True:
                 id = self.queue.get()
                 lsv = VoilaLsv.easy_from_hdf5(h['lsvs'][id])
-
-                print lsv.means
 
                 if not self.lsv_types or lsv.lsv_type in self.lsv_types:
                     if not self.gene_names or lsv.name in self.gene_names:
@@ -122,7 +122,7 @@ class VoilaInput(HDF5):
 
     def __init__(self, lsvs=(), metainfo=None):
         super(VoilaInput, self).__init__()
-        voila_log().warning('VoilaInput has been deprecated')
+        print 'VoilaInput has been deprecated.  Use Voila instead.'
         self.lsvs = lsvs
         self.metainfo = metainfo
 
@@ -495,8 +495,6 @@ def load_dpsi_tab(args):
 
                 expecs = [float(aa) for aa in fields[3].split(";")]
 
-                print expecs
-
                 if lsvs_dict[fields[2]]['expecs'] is None:
                     lsvs_dict[fields[2]]['expecs'] = [[]] * len(sample_names)
                     lsvs_dict[fields[2]]['expecs_marks'] = [None] * len(sample_names)
@@ -514,8 +512,6 @@ def load_dpsi_tab(args):
         if np.max([abs(bb) for ff in lsvs_dict[lsv_idx]['expecs'] for bb in ff]) < thres_change:
             del lsvs_dict[lsv_idx]  # Remove LSVs not passing the changing threshold
             continue
-
-        has_valid_junc = (np.array(lsvs_dict[lsv_idx]['njunc']) > -1)
 
         idx_most_freq = np.argmax(np.bincount(np.array(lsvs_dict[lsv_idx]['njunc'])[
                                                   (np.array(lsvs_dict[lsv_idx]['njunc']) > -1) & np.array(
