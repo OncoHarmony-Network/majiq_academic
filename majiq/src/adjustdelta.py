@@ -355,14 +355,14 @@ def plot_all_lsv(deltadata, beta_params, pmix, labels, figure_title):
 
 
 def loglikelihood(D, beta_mix, logp_mix, logger=False):
+
     N = D.shape[0]
     K = beta_mix.shape[0]
     ''' logp_DgK = log P (D | model K ) for each data point without the weight '''
-    logp_DgK = np.zeros(shape=( N, K), dtype=np.float)
-    #logp_DgK = ma.asarray(logp_DgK)
-    #print "logp_mix=%s"%(logp_mix)
+    logp_DgK = np.zeros(shape=(N, K), dtype=np.float)
+
     for k in xrange(K):
-        #print "beta_mix[%d] = %s"%(k, beta_mix[k])
+
         logp_DgK[:, k] = np.log(beta.pdf(D[:, 0], beta_mix[k, 0], beta_mix[k, 1]) + PSEUDO)
 
     logp_D = logp_DgK + logp_mix * np.ones(shape=(N, 1), dtype=np.float)
@@ -387,8 +387,8 @@ def EMBetaMixture(D, p0_mix, beta0_mix, num_iter, min_ratio=1e-5, logger=False, 
 
     c = 1
     a = -1
-    #transform the data to a z-space of 0-1
-    if min(D[:, 0]) < 0.0: D[:, 0] = (D[:, 0] + 1) / ( c - a)
+
+    if min(D[:, 0]) < 0.0: D[:, 0] = (D[:, 0] + 1) / (c - a)
     pmix = p0_mix
     beta_mix = beta0_mix
     logp_mix = np.log(pmix)
@@ -396,8 +396,9 @@ def EMBetaMixture(D, p0_mix, beta0_mix, num_iter, min_ratio=1e-5, logger=False, 
     logp_D, logp_Dsum, LL, zrow = loglikelihood(D, beta_mix, logp_mix)
     plot_all_lsv(D0, beta_mix, pmix, labels, 'iteration 0')
     mplot.save_or_show(plotpath, "iter_0.jun_%s" % nj)
-    if logger: logger.debug("[NJ:%s] Initial Log_Likelihood %.3f \n" % (nj, LL))
-    #    pdb.set_trace()
+    if logger:
+        logger.debug("[NJ:%s] Initial Log_Likelihood %.3f \n" % (nj, LL))
+
     ones_1k = np.ones(shape=(1, K), dtype=np.float)
     for mm in xrange(num_iter):
         new_beta_mix = beta_mix

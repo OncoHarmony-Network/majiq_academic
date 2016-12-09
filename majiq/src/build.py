@@ -65,7 +65,7 @@ def merging_files(args_vals):
                     jset = jset.union(set(rfa["%s/junctions" % gne_id].keys()))
                     rna_files.append(fname)
                 except KeyError:
-                    continue
+                    pass
                 if majiq_config.gcnorm:
                     vfunc_gc.append(gc_normalization(rfa.attrs['gc_values']))
                 else:
@@ -177,8 +177,9 @@ def parsing_files(args_vals):
                 out_f.create_group('%s/junctions' % gne_id)
                 if majiq_config.gcnorm:
                     for ex in gene_obj.get_exon_list():
-                        gc_pairs['GC'].append(ex.get_gc_content())
-                        gc_pairs['COV'].append(ex.get_coverage())
+                        if ex.get_gc_content() > 0 and ex.get_coverage() > 0:
+                            gc_pairs['GC'].append(ex.get_gc_content())
+                            gc_pairs['COV'].append(ex.get_coverage())
 
                 tlogger.debug("[%s] Detecting intron retention events" % gne_id)
                 majiq_io.rnaseq_intron_retention(gene_obj, samfl, chnk,

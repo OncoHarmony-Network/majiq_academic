@@ -58,6 +58,7 @@ class Junction:
 
         h_jnc.attrs['donor_id'] = self.donor_id
         h_jnc.attrs['acceptor_id'] = self.acceptor_id
+        h_jnc.attrs['transcript_id_list'] = self.transcript_id_list
 
     def to_rna_hdf5(self, hdf5grps, dataset, data_index, gc_dataset=None):
         h_jnc = hdf5grps.create_group(self.id)
@@ -168,7 +169,10 @@ class Junction:
         return res
 
     def get_index(self):
-        return self.idx
+        try:
+            return self.idx
+        except:
+            pass
 
     def get_gene_name(self):
         return self.gene_name
