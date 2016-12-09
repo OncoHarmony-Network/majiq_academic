@@ -282,7 +282,7 @@ def read_sam_or_bam(gne, samfl, counter,  h5py_file, nondenovo=False, info_msg='
 
     junctions = []
     strt, end = gne.get_coordinates()
-    j_list = gne.get_all_junctions()
+    j_list = gne.get_all_junctions(filter=False)
     ex_list = gne.get_exon_list()
     strand = gne.get_strand()
     chrom = gne.get_chromosome()
@@ -645,8 +645,10 @@ def load_data_lsv(path, group_name, logger=None):
 
 
 def load_lsvgraphic_from_majiq(h5df_grp, lsv_id):
-    return h5df_grp['/LSVs/%s/visual' % lsv_id]
-
+    try:
+        return h5df_grp['/LSVs/%s/visual' % lsv_id]
+    except KeyError:
+        return None
 
 def read_meta_info(list_of_files):
     meta = {'experiments': []}
