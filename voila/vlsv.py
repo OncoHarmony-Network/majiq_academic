@@ -4,7 +4,7 @@ import numpy as np
 
 from voila.hdf5 import BinsDataSet, Psi1DataSet, Psi2DataSet
 from voila.splice_graphics import LsvGraphic
-from voila.utils.voilaLog import voilaLog
+from voila.utils.voila_log import voila_log
 
 
 def get_expected_dpsi(bins):
@@ -21,6 +21,7 @@ def get_expected_psi(bins):
 def collapse_matrix(matrix):
     """Collapse the diagonals probabilities in 1-D and return them"""
     collapse = []
+    matrix = np.array(matrix)
     matrix_corner = matrix.shape[0]
     for i in xrange(-matrix_corner + 1, matrix_corner):
         collapse.append(np.diagonal(matrix, offset=i).sum())
@@ -67,7 +68,7 @@ class OrphanJunctionException(Exception):
 
 class VoilaLsv(LsvGraphic):
     def __init__(self, bins_list, lsv_graphic, means=None, means_psi1=None, psi1=None, means_psi2=None, psi2=None):
-        try:
+        if lsv_graphic:
             super(VoilaLsv, self).__init__(
                 lsv_type=lsv_graphic.lsv_type,
                 start=lsv_graphic.start,
@@ -79,7 +80,7 @@ class VoilaLsv(LsvGraphic):
                 junctions=lsv_graphic.junctions,
                 chromosome=lsv_graphic.chromosome
             )
-        except AttributeError:
+        else:
             super(VoilaLsv, self).__init__(None, None, None, None)
 
         self.bins = bins_list
@@ -89,12 +90,13 @@ class VoilaLsv(LsvGraphic):
         self.means_psi2 = means_psi2
         self.psi2 = psi2
 
+        self.categories = None
         self.variances = []
         self.excl_incl = []
 
         # Store collapsed matrix to save some space
         if self.is_delta_psi():
-            self.bins = [collapse_matrix(np.array(lsv_bins)) for lsv_bins in self.bins]
+            self.bins = [collapse_matrix(lsv_bins) for lsv_bins in self.bins]
 
         # Recreate complementary junction in binary LSV
         if len(self.bins) == 1:
@@ -105,16 +107,15 @@ class VoilaLsv(LsvGraphic):
                 self.means = [get_expected_dpsi(b) for b in self.bins]
             else:
                 self.means = [get_expected_psi(b) for b in self.bins]
-        else:
-            voilaLog().warning('Did not have to generate means.')
 
-        for lsv_bins in self.bins:
-            if self.is_delta_psi():
-                if self.means[-1] < 0:
-                    self.excl_incl.append([-self.means[-1], 0])
+        if self.means and self.is_delta_psi():
+            for mean in self.means:
+                if mean < 0:
+                    self.excl_incl.append([-mean, 0])
                 else:
-                    self.excl_incl.append([0, self.means[-1]])
-            else:
+                    self.excl_incl.append([0, mean])
+        else:
+            for lsv_bins in self.bins:
                 step_bins = 1.0 / len(lsv_bins)
                 projection_prod = lsv_bins * np.arange(step_bins / 2, 1, step_bins) ** 2
                 self.variances.append(np.sum(projection_prod) - self.means[-1] ** 2)
@@ -124,7 +125,8 @@ class VoilaLsv(LsvGraphic):
             self.init_categories()
 
     def is_delta_psi(self):
-        return sum([bool(self.psi1), bool(self.psi2)]) == 2
+        # we have to check for None, because they might be numpy objects
+        return self.psi1 is not None and self.psi2 is not None
 
     def get_extension(self):
         return [self.exons[0].start, self.exons[-1].end]
@@ -146,7 +148,7 @@ class VoilaLsv(LsvGraphic):
         self.bed12_str = bed12_str
 
     def get_gff3(self):
-        log = voilaLog()
+        log = voila_log()
         try:
             return VoilaLsv.to_gff3(self)
         except OrphanJunctionException as e:
@@ -282,20 +284,25 @@ class VoilaLsv(LsvGraphic):
         categories = defaultdict()
         juns = self.lsv_type.split('|')
         ir = 'i' in juns
+
         try:
             juns.remove('i')
         except ValueError:
-            pass  # No sign of intron retention
+            # No sign of intron retention
+            pass
+
         ssites = set(int(s[0]) for s in juns[1:])
         exons = defaultdict(list)
 
         for s in juns[1:]:
             exs = s[1:].split('.')
+
             try:
                 ssite = int(exs[1].split('o')[0])
                 exons[exs[0]].append(ssite)
             except IndexError:
                 pass
+
         categories['ES'] = len(exons.keys()) > 1
         categories['prime5'] = len(ssites) > 1
         categories['prime3'] = max([len(exons[e]) for e in exons]) > 1

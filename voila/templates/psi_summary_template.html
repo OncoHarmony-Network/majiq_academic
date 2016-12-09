@@ -32,6 +32,7 @@
             {% for gene_id, gene_value in genes_dict.iteritems() %}
                 {% if gene_id in genes_exps_list[0][genes_exps_list[0].keys()[0]].keys() %}
                     {% set gene_index = loop.index - 1 %}
+                    <a name="{{ gene_value[0].name }}"></a>
                     <h2>Gene
                         name: {{ gene_value[0].name }}; {{ gene_value[0].chromosome }}:{{ gene_value[0].strand }}:{{ genes_exps_list[0][genes_exps_list[0].keys()[0]][gene_id].coordinates[0] }}-{{ genes_exps_list[0][genes_exps_list[0].keys()[0]][gene_id].coordinates[1] }};
                         {% if lexps %}

@@ -4,7 +4,7 @@ import numpy
 from h5py.h5r import RegionReference
 
 from voila.constants import EXPERIMENT_NAMES
-from voila.utils.voilaLog import voilaLog
+from voila.utils.voila_log import voila_log
 
 VOILA_FILE_VERSION = '/voila_file_version'
 
@@ -12,7 +12,7 @@ VOILA_FILE_VERSION = '/voila_file_version'
 class HDF5VersionException(Exception):
     def __init__(self):
         super(HDF5VersionException, self).__init__('The hdf5 file version does not match the current version of Voila.')
-        voilaLog().error(self.message)
+        voila_log().error(self.message)
 
 
 class HDF5(object):
@@ -275,7 +275,7 @@ class BinsDataSet(DataSet):
         super(BinsDataSet, self).__init__(h, 'bins', objs)
 
     def validate(self):
-        assert self.array_2d(), 'Bins data must be  2d array.'
+        assert self.array_2d(), 'Bins data must be 2d array.'
 
 
 class Psi1DataSet(DataSet):

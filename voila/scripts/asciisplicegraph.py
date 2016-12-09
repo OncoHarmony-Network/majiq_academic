@@ -1,11 +1,11 @@
-from voila.utils.voilaLog import voilaLog
+from voila.utils.voila_log import voila_log
 
 
 class AsciiSpliceGraphTooLargeException(Exception):
     def __init__(self, gene):
         super(AsciiSpliceGraphTooLargeException, self).__init__(
             'Splice Graph is too large.  Maybe there\'s something wrong with the input data.')
-        voilaLog().error(gene)
+        voila_log().error(gene)
 
 
 class AsciiSplicegraph(object):

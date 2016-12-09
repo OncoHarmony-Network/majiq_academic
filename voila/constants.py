@@ -8,7 +8,7 @@ ANALYSIS_PSI_GENE = 'psi-gene'
 ANALYSIS_DELTAPSI = 'deltapsi'
 ANALYSIS_DELTAPSI_GENE = 'deltapsi-gene'
 LSV_THUMBNAILS = 'lsv-thumbnails'
-SPLICE_GRAPHS = 'splicegraphs'
+SPLICE_GRAPHS = 'splice-graphs'
 COND_TABLE = 'cond-table'
 
 # Junction Types
@@ -49,7 +49,8 @@ SUMMARIES_SUBFOLDER = 'summaries'
 DEBUG = 1
 
 # Multi-Processing
-PROCESS_COUNT = int(math.ceil(multiprocessing.cpu_count() / 3))
+PROCESS_COUNT = multiprocessing.cpu_count()
+# PROCESS_COUNT = int(math.ceil(multiprocessing.cpu_count() / 3))
 
 # logging
 VOILA_LOG_NAME = '3a4f4528-e572-404e-b143-acff61cee9ed'

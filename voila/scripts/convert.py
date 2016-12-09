@@ -8,9 +8,9 @@ from multiprocessing.queues import JoinableQueue
 
 import h5py
 
-from voila.utils.voilaLog import voilaLog
+from voila.utils.voila_log import voila_log
 
-log = voilaLog(filename='convert.log')
+log = voila_log(filename='convert.log')
 
 
 def convert(pickle_files):

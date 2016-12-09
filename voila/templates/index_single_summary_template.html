@@ -34,22 +34,22 @@
             <td><a href="{{ links_dict[lsv.name] }}#{{ lsv.name }}"
                    target="_blank">{{ lsv.name }}</a></td>
             <td><a href="{{ links_dict[lsv.name] }}#{{ lsv.name }}"
-                   target="_blank">{{ lsv.gene_id }}</a></td>
+                   target="_blank">{{ lsv.lsv_id }}</a></td>
             {% if lsvList|length > maxLsvs -%}
                 <td class="medium-header text-wrapped">
-                    {{ lsv.get_type() }}
+                    {{ lsv.lsv_type }}
                 </td>
                 <td id="data_td{{ loop.index }}" class="medium-header text-wrapped">
                 <span class="hidden">
                     {% set max_diff = [0.0] %}
-                    {% for mean_b in lsv.get_means() %}
+                    {% for mean_b in lsv.means %}
                         {% if mean_b > max_diff[-1] %}
                             {% do max_diff.append(mean_b) %}
                         {% endif %}
                     {%- endfor %}
                     {{ max_diff[-1]|round(4) }}
                 </span>
-                    {{ lsv.get_means() }}
+                    {{ lsv.means }}
                 </td>
             {% else %}
                 <td>
