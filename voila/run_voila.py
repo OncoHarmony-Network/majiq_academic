@@ -6,13 +6,13 @@ import time
 from os import path
 
 import voila.constants as constants
-from voila.conditional_table import conditional_table
-from voila.deltapsi import deltapsi
-from voila.lsv_thumbnails import lsv_thumbnails
-from voila.psi import psi
-from voila.splice_graphs import splice_graphs
 from voila.utils.utils_voila import create_if_not_exists
 from voila.utils.voila_log import voila_log
+from voila.view.conditional_table import conditional_table
+from voila.view.deltapsi import deltapsi
+from voila.view.lsv_thumbnails import lsv_thumbnails
+from voila.view.psi import psi
+from voila.view.splice_graphs import splice_graphs
 
 
 class VoilaCantFindFile(argparse.ArgumentTypeError):

@@ -1,9 +1,7 @@
 from os import path
 
-from voila.run_voila_utils import table_marks_set
-
 from voila import io_voila
-from voila.utils.run_voila_utils import get_env, get_summary_template, copy_static
+from voila.utils.run_voila_utils import get_env, get_summary_template, copy_static, table_marks_set
 from voila.utils.voila_log import voila_log
 
 

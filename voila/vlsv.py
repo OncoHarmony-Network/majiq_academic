@@ -102,7 +102,7 @@ class VoilaLsv(LsvGraphic):
         if len(self.bins) == 1:
             self.bins.append(self.bins[-1][::-1])
 
-        if self.means:
+        if not self.means:
             if self.is_delta_psi():
                 self.means = [get_expected_dpsi(b) for b in self.bins]
             else:

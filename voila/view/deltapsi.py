@@ -1,16 +1,15 @@
 from collections import OrderedDict
-from math import ceil
 from os import path
 
 from voila import constants
 from voila import io_voila
 from voila.io_voila import Voila
-from voila.splice_graphs import get_env
 from voila.utils import utils_voila
 from voila.utils.run_voila_utils import VoilaNoLSVsException, parse_gene_graphics, table_marks_set, get_output_html, \
-    grouper, \
-    copy_static
+    grouper, copy_static
 from voila.utils.voila_log import voila_log
+from voila.view.psi import get_prev_next_pages
+from voila.view.splice_graphs import get_env
 
 
 def deltapsi(args):
@@ -66,7 +65,6 @@ def render_html(args, majiq_output):
     template_file_name = args.type_analysis.replace("-", "_") + "_summary_template.html"
     sum_template = env.get_template(template_file_name)
 
-    last_page = ceil(len(majiq_output['genes_dict']) / constants.MAX_GENES)
     comb_spliceg_cond1 = majiq_output['genes_exp'][0].keys()[0]
     comb_spliceg_cond2 = majiq_output['genes_exp'][1].keys()[0]
 
@@ -78,17 +76,12 @@ def render_html(args, majiq_output):
             min((page_number + 1) * constants.MAX_GENES, len(gene_keys)), len(majiq_output['genes_dict'])))
 
         subset_keys = [x for x in subset_keys if x]
+
         genes_dict = OrderedDict((k, majiq_output['genes_dict'][k]) for k in subset_keys)
+
         name_page = '{0}_{1}'.format(page_number, output_html)
 
-        prev_page = None
-        next_page = None
-
-        if page_number != last_page:
-            next_page = str(page_number + 1) + "_" + output_html
-
-        if page_number != 0:
-            prev_page = str(page_number - 1) + "_" + output_html
+        prev_page, next_page = get_prev_next_pages(page_number, len(gene_keys), output_html)
 
         full_path = path.join(summaries_subfolder, name_page)
 

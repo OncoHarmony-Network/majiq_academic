@@ -45,6 +45,24 @@ def psi(args):
         io_voila.generic_feature_format_txt_files(args, out_gff3=True)
 
 
+def get_prev_next_pages(page_number, genes_count, output_html, limit=None):
+    if limit:
+        genes_count = min(genes_count, limit)
+
+    last_page = ceil(genes_count / float(constants.MAX_GENES)) - 1
+
+    next_page = None
+    prev_page = None
+
+    if page_number != last_page:
+        next_page = '{0}_{1}'.format(page_number + 1, output_html)
+
+    if page_number != 0:
+        prev_page = '{0}_{1}'.format(page_number - 1, output_html)
+
+    return prev_page, next_page
+
+
 def render_html(args, majiq_output):
     log = voila_log()
     gene_keys = sorted(majiq_output['genes_dict'].keys())
@@ -61,7 +79,6 @@ def render_html(args, majiq_output):
     env = get_env()
     sum_template = get_summary_template(args, env)
 
-    last_page = ceil(len(majiq_output['genes_dict']) / constants.MAX_GENES)
     comb_spliceg_cond1 = majiq_output['genes_exp'][0].keys()[0]
 
     links_dict = {}
@@ -75,16 +92,9 @@ def render_html(args, majiq_output):
         genes_dict = OrderedDict((k, majiq_output['genes_dict'][k]) for k in subset_keys)
         page_name = '{0}_{1}'.format(page_number, output_html)
 
-        prev_page = None
-        next_page = None
-
         full_path = path.join(summaries_subfolder, page_name)
 
-        if page_number != last_page:
-            next_page = '{0}_{1}'.format(page_number + 1, output_html)
-
-        if page_number != 0:
-            prev_page = '{0}_{1}'.format(page_number - 1, output_html)
+        prev_page, next_page = get_prev_next_pages(page_number, len(gene_keys), output_html)
 
         with open(full_path, 'w') as voila_output:
             voila_output.write(
