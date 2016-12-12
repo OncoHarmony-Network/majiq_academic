@@ -2,6 +2,8 @@
 Functions to filter junction pairs by number of positions covered or number of reads
 """
 import numpy as np
+import majiq.src.config as majiq_config
+
 
 
 def reliable_in_data(junc, exp_idx, minnonzero=2, min_reads=3):
@@ -26,9 +28,11 @@ def filter_message(when, value, logger, junc):
 def quantifiable_in_group(list_of_experiments, minnonzero, min_reads, filter_vals=None, logger=None):
     nexp = len(list_of_experiments)
 
-    filtr = nexp / 2
-    if nexp % 2 != 0:
-        filtr += 1
+    if majiq_config.min_exp == -1:
+        filtr = nexp / 2
+        filtr = filtr + 1 if filtr % 2 != 0 else filtr
+    else:
+        filtr = majiq_config.min_exp
 
     filt_exp = {}
     for idx, exp in enumerate(list_of_experiments):

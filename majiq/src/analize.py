@@ -97,13 +97,18 @@ def lsv_detection_old(gene_list, chrom, only_real_data=False, logging=None):
         # utils.print_junc_matrices(mat, tlb=tlb, fp=True)
         SS, ST = lsv_matrix_detection(mat, tlb, (False, False, False), vip)
         dummy = {}
+        group_thresh = {}
         for name, ind_list in config.tissue_repl.items():
             dummy[name] = [[], []]
+            group_thresh[name] = config.min_exp
+            if group_thresh[name] == -1:
+                group_thresh[name] = min((len(ind_list) * 0.5), 2)
 
         for lsv_index, lsv_lst in enumerate((SS, ST)):
             lsv_type = (SSOURCE, STARGET)[lsv_index]
             sstype = ['5prime', '3prime'][lsv_index]
             # print lsv_lst
+
 
             for idx in lsv_lst:
                 jlist = exon_list[idx].get_junctions(sstype)
@@ -122,7 +127,7 @@ def lsv_detection_old(gene_list, chrom, only_real_data=False, logging=None):
                         for exp_idx in ind_list:
                             if reliable_in_data(jj, exp_idx):
                                 counter += 1
-                        if counter < 0.1 * len(ind_list):
+                        if counter < group_thresh[name]:
                             continue
                         e_data += 1
                         jun[name].add(jj)

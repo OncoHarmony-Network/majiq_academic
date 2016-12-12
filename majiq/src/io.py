@@ -195,7 +195,11 @@ def rnaseq_intron_retention(filenames, gene_list, chnk, permissive=True, nondeno
 
             for name, ind_list in majiq_config.tissue_repl.items():
                 n_exp = 0
-                repl_thresh = int(math.ceil(len(ind_list) * 0.5))
+                if majiq_config.min_exp == -1:
+                    repl_thresh = len(ind_list) / 2
+                    repl_thresh = repl_thresh + 1 if repl_thresh % 2 != 0 else repl_thresh
+                else:
+                    repl_thresh = majiq_config.min_exp
 
                 for idx, exp_index in enumerate(ind_list):
                     try:

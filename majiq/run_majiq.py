@@ -33,6 +33,7 @@ def main():
     common.add_argument('--debug', type=int, default=0,
                         help="Activate this flag for debugging purposes, activates logger and jumps some "
                              "processing steps.")
+    common.add_argument('--min_experiments', default=-1, type=float, dest='min_exp')
 
     buildparser = new_subparser()
     buildparser.add_argument('transcripts', action="store", help='read file in SAM format')
@@ -43,8 +44,6 @@ def main():
     buildparser.add_argument('--pcr', dest='pcr_filename', action="store", help='PCR bed file as gold_standard')
     buildparser.add_argument('--gff_output', dest='gff_output', default="lsvs.gff", action="store",
                              help='Filename where a gff with the lsv events will be generated')
-    buildparser.add_argument('--simplify', default=0, type=int,
-                             help='Ratio for junction simplification. [Default: %(default)s]')
 
     buildparser.add_argument('--min_denovo', default=2, type=int,
                              help='Minimum number of reads threshold combining all positions in a LSV to consider that'
