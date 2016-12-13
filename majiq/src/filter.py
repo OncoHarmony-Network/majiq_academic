@@ -25,14 +25,14 @@ def filter_message(when, value, logger, junc):
             logger.info(message)
 
 
-def quantifiable_in_group(list_of_experiments, minnonzero, min_reads, filter_vals=None, logger=None):
+def quantifiable_in_group(list_of_experiments, minnonzero, min_reads, min_exp=-1, filter_vals=None, logger=None):
     nexp = len(list_of_experiments)
 
-    if majiq_config.min_exp == -1:
+    if min_exp == -1:
         filtr = nexp / 2
         filtr = filtr + 1 if filtr % 2 != 0 else filtr
     else:
-        filtr = majiq_config.min_exp
+        filtr = min_exp
 
     filt_exp = {}
     for idx, exp in enumerate(list_of_experiments):

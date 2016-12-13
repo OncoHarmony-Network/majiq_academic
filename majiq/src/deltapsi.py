@@ -48,7 +48,7 @@ class DeltaPair(BasicPipeline):
             fitfunc[0][ii] = self.fitfunc(const[0])
             filtered_lsv1[ii] = majiq_norm.mark_stacks(lsv_junc, fitfunc[0][ii], self.markstacks, self.logger)
         filtered_lsv1 = majiq_filter.quantifiable_in_group(filtered_lsv1, self.minpos, self.minreads,
-                                                           logger=logger)
+                                                           min_exp=self.min_exp, logger=logger)
         logger.info("Group1: %s quantifiable in group" % str(len(filtered_lsv1[0])))
 
         filtered_lsv2 = [None] * num_exp[1]
@@ -60,7 +60,7 @@ class DeltaPair(BasicPipeline):
             fitfunc[1][ii] = self.fitfunc(const[0])
             filtered_lsv2[ii] = majiq_norm.mark_stacks(lsv_junc, fitfunc[1][ii], self.markstacks, self.logger)
         filtered_lsv2 = majiq_filter.quantifiable_in_group(filtered_lsv2, self.minpos, self.minreads,
-                                                           logger=logger)
+                                                           min_exp=self.min_exp, logger=logger)
         logger.info("Group2: %s quantifiable in group" % str(len(filtered_lsv2[0])))
 
         matched_lsv, matched_info = majiq_filter.lsv_intersection(filtered_lsv1, filtered_lsv2)

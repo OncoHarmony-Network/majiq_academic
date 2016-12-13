@@ -118,7 +118,7 @@ class CalcPsi(BasicPipeline):
             filtered_lsv[ii] = majiq_norm.mark_stacks(lsv_junc, fitfunc[ii], self.markstacks, self.logger)
 
         matched_lsv, matched_info = majiq_filter.quantifiable_in_group(filtered_lsv, self.minpos, self.minreads,
-                                                                       logger=logger)
+                                                                       min_exp=self.min_exp, logger=logger)
 
         get_clean_raw_reads(matched_info, matched_lsv, self.output, self.name, num_exp)
 
