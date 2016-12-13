@@ -33,7 +33,7 @@ def main():
     common.add_argument('--debug', type=int, default=0,
                         help="Activate this flag for debugging purposes, activates logger and jumps some "
                              "processing steps.")
-    common.add_argument('--min_experiments', default=-1, type=float, dest='Mini',
+    common.add_argument('--min_experiments', default=-1, type=float, dest='min_exp',
                         help='Lower threshold for group filters. min_experiments is the minimum number of experiments '
                              'where the different filters check in order to pass an lsv or junction.')
 

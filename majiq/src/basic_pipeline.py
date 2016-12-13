@@ -159,8 +159,6 @@ class CalcPsi(BasicPipeline):
         logger.info("Running Psi ...")
         logger.info("GROUP: %s" % self.files)
 
-
-
         conf = {'minnonzero': self.minpos,
                 'minreads': self.minreads,
                 'm': self.m,
