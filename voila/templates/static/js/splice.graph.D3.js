@@ -101,6 +101,8 @@ function map_exon_list(exons, junctions) {
         'exon_type': exons[0].exon_type,
         'intron_retention': exons[0].intron_retention,
         'lsv_type': exons[0].lsv_type,
+        'alt_starts': exons[0].alt_starts,
+        'alt_ends': exons[0].alt_ends,
         'a3': exons[0].a3,
         'a5': exons[0].a5
     };
@@ -138,6 +140,8 @@ function map_exon_list(exons, junctions) {
             'exon_type': exons[i].exon_type,
             'intron_retention': exons[i].intron_retention,
             'lsv_type': exons[i].lsv_type,
+            'alt_starts': exons[0].alt_starts,
+            'alt_ends': exons[0].alt_ends,
             'a3': exons[i].a3,
             'a5': exons[i].a5
         };
@@ -201,10 +205,6 @@ var longestJunc = function (junctions, scale) {
     return longest;
 };
 
-var exonKey = function (d) {
-    return d.key;
-};
-
 
 function toolTipD3(strand, begin, end, el) {
     // if anything is selected, don't change the tool tip
@@ -259,7 +259,9 @@ function spliceGraphD3() {
             // Otherwise, create the skeletal chart.
             svgCanvas.enter().append("svg");
 
-            svgCanvas.attr("width", width).attr("height", height);
+            svgCanvas
+                .attr("width", width)
+                .attr("height", height);
 
             var clipP = svgCanvas.selectAll('.cut-off-junctions').data([1]);
             clipP.enter().append('svg:clipPath');
@@ -514,14 +516,27 @@ function spliceGraphD3() {
 
             };
 
-            var renderExons = function (datap, keyf, scaleX) {
+            var renderExons = function (datap, scaleX) {
                 // Represent exons as rectangles - filter out half exons
-                var exons = svgCanvas.selectAll("rect.exon").data(datap.filter(function (v) {
-                    return v.value.exon_type < 3 && !v.value.intron_retention;
-                }), keyf);
+                var exons = svgCanvas.selectAll("rect.exon")
+                    .data(
+                        datap.filter(function (v) {
+                                return ([0, 1, 2, 3].indexOf(v.value.exon_type) > -1) && !v.value.intron_retention;
+                            }
+                        ));
 
-                exons.enter().append("rect");
-                exons.attr("class", "exon")
+                exons.enter().append('rect');
+
+                exons.attr('class', 'exon')
+                    .classed('found', function (d) {
+                        return d.value.exon_type == 0
+                    })
+                    .classed('novel', function (d) {
+                        return d.value.exon_type == 1
+                    })
+                    .classed('missing', function (d) {
+                        return d.value.exon_type == 2
+                    })
                     .transition()
                     .duration(100)
                     .ease("linear")
@@ -534,28 +549,27 @@ function spliceGraphD3() {
                     })
                     .attr("height", EXON_H);
 
-                exons.each(function (d) {
-                    if (d.value.exon_type == 0) {
-                        d3.select(this).classed("found", true);
-                    }
-                    if (d.value.exon_type == 1) {
-                        d3.select(this).classed("novel", true);
-                    }
-                    if (d.value.exon_type == 2) {
-                        d3.select(this).classed("missing", true);
-                    }
-                });
-
                 return exons;
             };
 
-            var renderHalfExons = function (datap, keyf, scaleX) {
+            var renderHalfExons = function (datap, scaleX) {
 
-                var halfExons = svgCanvas.selectAll("path.halfexon").data(datap.filter(function (v) {
-                    return v.value.exon_type > 2;
-                }), keyf);
-                halfExons.enter().append("path");
-                halfExons.attr("class", "halfexon")
+                var halfExons = svgCanvas.selectAll('.halfexon')
+                    .data(
+                        datap.filter(function (v) {
+                            return [4, 5].indexOf(v.value.exon_type) > -1;
+                        })
+                    );
+
+                halfExons.enter().append('path');
+
+                halfExons.attr('class', 'halfexon')
+                    .classed('missingStart', function (d) {
+                        return d.value.exon_type == 4
+                    })
+                    .classed('missingEnd', function (d) {
+                        return d.value.exon_type == 5
+                    })
                     .transition()
                     .duration(100)
                     .ease("linear")
@@ -585,14 +599,6 @@ function spliceGraphD3() {
                         return lineFunction(halfExonsPoints);
                     });
 
-                halfExons.each(function (d) {
-                    if (d.value.exon_type == 3) {
-                        d3.select(this).classed("missingStart", true);
-                    }
-                    if (d.value.exon_type == 4) {
-                        d3.select(this).classed("missingEnd", true);
-                    }
-                });
                 return halfExons;
             };
 
@@ -626,8 +632,10 @@ function spliceGraphD3() {
                 var intronsRet = svgCanvas.selectAll("rect.intronret")
                     .data(exons.filter(function (v) {
                         return v.value.intron_retention;
-                    }));  // Only exons with intron retention
+                    }));
+
                 intronsRet.enter().append("rect");
+
                 intronsRet
                     .attr("class", "intronret")
                     .attr("style", "")
@@ -648,6 +656,7 @@ function spliceGraphD3() {
                         return Math.round(scaleX(d.value.end) - scaleX(d.value.start));
                     })
                     .attr("height", Math.round(EXON_H * 2 / 5));
+
                 return intronsRet;
             };
 
@@ -773,15 +782,15 @@ function spliceGraphD3() {
                     irArray = [];
 
                     intronRetentions.forEach(function (ir, index) {
-                        if (isSource && end == ir.value.start - 1 ||
-                            !isSource && start == ir.value.end + 1) {
+                        if (isSource && coords[1] == ir.value.start - 1 ||
+                            !isSource && coords[0] == ir.value.end + 1) {
                             irArray.push(d3Els.intronRets[0][index]);
                         }
                     });
 
                     irLines.forEach(function (irLine, index) {
-                        if (!isSource && start == irLine.end ||
-                            isSource && end == irLine.start) {
+                        if (!isSource && coords[0] == irLine.end ||
+                            isSource && coords[1] == irLine.start) {
                             d3.select(d3Els.irReads[0][index]).classed('highlight-lsv-blurred', false);
                             irArray.push(d3Els.irLines[0][index]);
                         }
@@ -808,22 +817,22 @@ function spliceGraphD3() {
             var displayCorrectedReads = toggleReadCounts ? toggleReadCounts.checked : false;
 
             // generate chart here, using `w` and `h`
-            var exonsp = d[0],
-                junctionsp = d[1],
-                strand = d[2];
+            var exonsp = d[0];
+            var junctionsp = d[1];
+            var strand = d[2];
 
             /** Compute the scale used */
             var scaleX = updateScale(exonsp);
 
             /** Render exons and compute disperison for junctions */
-            var exons = renderExons(exonsp, exonKey, scaleX);
+            var exons = renderExons(exonsp, scaleX);
             addDispersion(exonsp, junctionsp);
             renderNumExons(exonsp, scaleX);
             var introns_ret = renderIntronRetention(exonsp, scaleX);
             renderCoordsExtra(exonsp, scaleX);
 
             /** Render half exons */
-            var halfExons = renderHalfExons(exonsp, exonKey, scaleX);
+            var halfExons = renderHalfExons(exonsp, scaleX);
 
             /** Render junctions and read numbers */
             var junctions = renderJunctions(junctionsp, scaleX, this.id);

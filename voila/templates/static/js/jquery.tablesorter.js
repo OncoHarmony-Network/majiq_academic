@@ -883,7 +883,7 @@
             return /^\d{4}[\/-]\d{1,2}[\/-]\d{1,2}$/.test(s);
         }, format: function (s) {
             return $.tablesorter.formatFloat((s != "") ? new Date(s.replace(
-                new RegExp(/-/g), "/")).getTime() : "0");
+                    new RegExp(/-/g), "/")).getTime() : "0");
         }, type: "numeric"
     });
 

@@ -42,10 +42,10 @@ def deltapsi(args):
         io_voila.tab_output(args, majiq_output)
 
     if args.gtf:
-        io_voila.generic_feature_format_txt_files(args)
+        io_voila.generic_feature_format_txt_files(args, majiq_output)
 
     if args.gff:
-        io_voila.generic_feature_format_txt_files(args, out_gff3=True)
+        io_voila.generic_feature_format_txt_files(args, majiq_output, out_gff3=True)
 
 
 def render_html(args, majiq_output):

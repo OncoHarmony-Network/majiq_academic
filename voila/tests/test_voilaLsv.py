@@ -118,7 +118,7 @@ class TestVoilaLsv(TestCase):
         self.assertEqual(self.lsv.get_bed12(), self.lsv.bed12_str)
 
     def test_get_gff3(self):
-        self.assertEqual(self.lsv.get_gff3(), VoilaLsv.to_gff3(self.lsv))
+        self.assertEqual(self.lsv.to_gff3(), VoilaLsv.to_gff3(self.lsv))
 
     def test_to_JSON(self):
         lsv = getLSV()

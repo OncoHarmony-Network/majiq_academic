@@ -776,7 +776,7 @@ window.splicegraph = function () {
                     'coords': (direction > 0
                         ? [margins[0] + exon_width, margins[0] + exon_width + percentage_intron * area[0]]
                         : [margins[0] + (num_exons - 1) * exon_width + (num_exons - 2) * percentage_intron * area[0],
-                        margins[0] + (num_exons - 1) * exon_width + (num_exons - 1) * percentage_intron * area[0]])
+                            margins[0] + (num_exons - 1) * exon_width + (num_exons - 1) * percentage_intron * area[0]])
                 };
                 render_intron_retained(canvas, intron, pixel_factor, margins, percentage_exon, intron_ret_i - 1);
             }

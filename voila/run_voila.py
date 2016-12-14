@@ -188,11 +188,10 @@ def base_args():
                                  type=check_dir,
                                  help='path for output directory')
 
-    base_parser.add_argument('-v', action='version', version=constants.VERSION)
-
     base_parser.add_argument('-l', '--logger',
                              default=None,
                              help='path for log files')
+
     base_parser.add_argument('-s', '--silent',
                              action='store_true',
                              help='do not write logs to standard out')
@@ -310,6 +309,8 @@ def main():
             -----------------------------------------------------------------------
 
             '''))
+
+    parser.add_argument('-v', action='version', version=constants.VERSION)
 
     # Subparser module to agglutinate all subparsers
     subparsers = parser.add_subparsers(dest='type_analysis')

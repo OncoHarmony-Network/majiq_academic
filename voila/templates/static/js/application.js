@@ -52,7 +52,10 @@ $(document).ready(function () {
 
                 // check read counts toggle button for read counts state
                 var toggleReadCounts = this.parentNode.parentNode.parentNode.parentNode.querySelector('.readCounts');
-                var displayNormReads = !toggleReadCounts.checked;
+
+                // For now.. we're going to comment this out and add per LSV clean reads after this release.
+                // var displayNormReads = !toggleReadCounts.checked;
+                var displayNormReads = true;
 
                 // get read counts based on this specific splice graphs state
                 var cleanReads = d.clean_reads ? d.clean_reads : 0;

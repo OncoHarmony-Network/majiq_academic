@@ -18,49 +18,65 @@ COMBINE_INDEX = 0
 
 class ExperimentIndexError(IndexError):
     def __init__(self):
+        """
+        Error thrown when experiment index is out of range.
+        """
         super(ExperimentIndexError, self).__init__(
             'Attempted to access an out of range experiment.')
 
 
 class UnknownField(Exception):
     def __init__(self, field):
+        """
+        Error thrown when attempting to access a class attribute that hasn't been marked as an "experiment" attribute.
+        :param field:
+        """
         super(UnknownField, self).__init__(
             '"{0}" might not contain data that has been sorted into a list by experiment.'.format(field))
 
 
 class Experiment(HDF5):
     def field_by_experiment(self):
+        """
+        List of fields that are actually a list of data for a set of experiments.
+        :return: list
+        """
         return ()
 
     def get(self, field, experiment):
+        """
+        Get data from a field for a specifice experiment index.
+        :param field: class attribute name
+        :param experiment: experiment index
+        :return: dict
+        """
         if field in self.field_by_experiment():
             try:
-                return self.__dict__[field][experiment]
+                value = self.__dict__[field][experiment]
+                # todo: this might be able to be done in hdf5
+                if isinstance(value, (numpy.int64, numpy.uint64)):
+                    value = int(value)
+                elif isinstance(value, numpy.float64):
+                    value = float(value)
+                return value
             except IndexError:
                 raise ExperimentIndexError()
+            except TypeError:
+                print field
+                raise
         else:
             raise UnknownField(field)
 
     def get_experiment(self, experiment):
-        d = {}
-        for key in self.__dict__:
-            if key in self.field_by_experiment():
-                if self.__dict__[key]:
-                    try:
-                        value = self.__dict__[key][experiment]
-
-                        # todo: this might be able to be done in hdf5
-                        if isinstance(value, (numpy.int64, numpy.uint64)):
-                            value = int(value)
-                        elif isinstance(value, numpy.float64):
-                            value = float(value)
-
-                        d[key] = value
-
-                    except IndexError:
-                        raise ExperimentIndexError()
-            else:
-                d[key] = self.__dict__[key]
+        """
+        Get data for a sp
+        :param experiment:
+        :return:
+        """
+        d = self.__dict__.copy()
+        for field in self.__dict__:
+            if field in self.field_by_experiment():
+                d[field] = self.get(field, experiment)
         return d
 
 
@@ -532,7 +548,7 @@ class JunctionGraphic(Experiment):
         return self.start, self.end
 
     def field_by_experiment(self):
-        return ['junction_type', 'reads', 'clean_reads']
+        return ['junction_type', 'reads']
 
     def copy(self):
         """
@@ -679,7 +695,10 @@ class SpliceGraph(ProducerConsumer):
         Close hdf5 file.
         :return: None
         """
-        self.hdf5.close()
+        try:
+            self.hdf5.close()
+        except Exception:
+            pass
 
     def erase_splice_graph_file(self):
         """

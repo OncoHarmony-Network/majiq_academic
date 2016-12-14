@@ -41,26 +41,26 @@ class Voila(ProducerConsumer):
 
     def _producer(self):
         with h5py.File(self.file_name, 'r') as h:
-            for id in h['lsvs']:
-                self.queue.put(id)
+            for lsv_id in h['lsvs']:
+                self.queue.put(lsv_id)
 
     def _worker(self):
         with h5py.File(self.file_name, 'r') as h:
             while True:
-                id = self.queue.get()
-                lsv = VoilaLsv.easy_from_hdf5(h['lsvs'][id])
+                lsv_id = self.queue.get()
+                lsv = VoilaLsv.easy_from_hdf5(h['lsvs'][lsv_id])
 
                 if not self.lsv_types or lsv.lsv_type in self.lsv_types:
                     if not self.gene_names or lsv.name in self.gene_names:
                         if not self.lsv_ids or lsv.lsv_id in self.lsv_ids:
-                            self.dict(id, lsv)
+                            self.dict(lsv_id, lsv)
 
                 self.queue.task_done()
 
     def close(self):
         try:
             self.hdf5.close()
-        except ValueError:
+        except Exception:
             pass
 
     def add_lsv(self, voilaLsv):
@@ -293,20 +293,6 @@ def load_dpairs(pairwise_dir, majiq_output):
     return lmajiq_pairs, group1_name, group2_name
 
 
-def write_tab_output(args, majiq_output):
-    """
-    Create tab-delimited output file summarizing all the LSVs detected and quantified with MAJIQ.
-
-    :param args: parsed input data
-    :return:
-    """
-
-    if args.type_analysis == constants.COND_TABLE:
-        cond_table_tab_output(args)
-    else:
-        tab_output(args, majiq_output)
-
-
 def cond_table_tab_output(input_parsed):
     majiq_output = input_parsed.majiq_output
     lsvs = majiq_output['lsvs']
@@ -361,7 +347,7 @@ def tab_output(args, majiq_output):
         group1 = majiq_output['meta_exps']['group1']
         group2 = majiq_output['meta_exps']['group2']
         fieldnames = fieldnames[:3] + ['E(dPSI) per LSV junction',
-                                       'P(|E(dPSI)|>=%.2f) per LSV junction' % args.threshold,
+                                       'P(|dPSI|>=%.2f) per LSV junction' % args.threshold,
                                        '%s E(PSI)' % group1, '%s E(PSI)' % group2]
 
     fieldnames += ['LSV Type', 'A5SS', 'A3SS', 'ES', 'Num. Junctions', 'Num. Exons', 'De Novo Junctions', 'chr',
@@ -417,7 +403,7 @@ def tab_output(args, majiq_output):
                         'E(dPSI) per LSV junction': semicolon_join(
                             lsv.excl_incl[i][1] - lsv.excl_incl[i][0] for i in range(len(lsv.bins))
                         ),
-                        'P(|E(dPSI)|>=%.2f) per LSV junction' % args.threshold: semicolon_join(
+                        'P(|dPSI|>=%.2f) per LSV junction' % args.threshold: semicolon_join(
                             vlsv.matrix_area(np.array(bin), args.threshold, collapsed_mat=True).sum() for bin in
                             lsv.bins
                         ),
@@ -445,9 +431,6 @@ def tab_output(args, majiq_output):
 
     log.info("Delimited output file successfully created in: %s" % tsv_file)
 
-
-# def load_dpsi_tab(tab_files_list, sample_names, thres_change=None, filter_genes=None, filter_lsvs=None,
-#                   pairwise_dir=None, outdir=None):
 
 def load_dpsi_tab(args):
     pairwise_dir = args.pairwise_dir
@@ -548,25 +531,25 @@ def load_dpsi_tab(args):
     return lsvs_dict
 
 
-def generic_feature_format_txt_files(input_parsed, out_gff3=False):
+def generic_feature_format_txt_files(args, majiq_output, out_gff3=False):
     """
     Create GFF3 files for each LSV.
-    :param input_parsed: parsed input data
+    :param majiq_output: majiq data
+    :param args: parsed input data
     :param out_gff3: output as a GFF3 file
     :return: None
     """
 
     log = voila_log()
-    majiq_output = input_parsed.majiq_output
-    output_dir = input_parsed.output_dir
+    output_dir = args.output
 
-    if input_parsed.type_summary == constants.COND_TABLE:
-        log.info('Skipping generating gff3 format.')
-        return
+    if out_gff3:
+        log.info("Saving LSVs files in gff format ...")
+    else:
+        log.info("Saving LSVs files in gtf format ...")
 
-    log.info("Saving LSVs files in gff3 format ...")
-    if 'genes_dict' not in majiq_output or len(majiq_output['genes_dict']) < 1:
-        log.warning("No gene information provided. Genes files are needed to calculate the gff3 files.")
+    if 'genes_dict' not in majiq_output or not len(majiq_output['genes_dict']):
+        log.warning("No gene information provided. Genes files are needed to calculate the gtf/gff files.")
         return
 
     header = "##gff-version 3"
@@ -582,7 +565,7 @@ def generic_feature_format_txt_files(input_parsed, out_gff3=False):
             lsv_file_basename = "%s/%s" % (odir, lsv.lsv_id)
 
             try:
-                lsv_gff3_str = lsv.get_gff3()
+                lsv_gff3_str = lsv.to_gff3()
                 utils_voila.gff2gtf(lsv_gff3_str.split('\n'), "%s.gtf" % lsv_file_basename)
 
                 # not accessible from command line
@@ -595,5 +578,3 @@ def generic_feature_format_txt_files(input_parsed, out_gff3=False):
             except UnboundLocalError, e:
                 log.warning("problem generating GTF file for %s" % lsv.id)
                 log.error(e.message)
-
-    log.info("GTF files for LSVs saved in %s" % odir)
