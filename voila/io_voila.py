@@ -24,6 +24,11 @@ __author__ = 'abarrera'
 
 class Voila(ProducerConsumer):
     def __init__(self, voila_file_name, mode):
+        """
+        Parse or edit the voila (quantifier output) file.
+        :param voila_file_name: location of voila file
+        :param mode: file mode passed to h5py
+        """
         super(Voila, self).__init__()
         self.mode = mode
         self.file_name = voila_file_name
@@ -60,41 +65,48 @@ class Voila(ProducerConsumer):
     def close(self):
         try:
             self.hdf5.close()
-        except Exception:
+        except ValueError:
             pass
 
     def add_lsv(self, voilaLsv):
+        """
+        Add VoilaLsv to Voila file.
+        :param voilaLsv: VoilaLsv object
+        :return: None
+        """
         voilaLsv.to_hdf5(self.hdf5)
 
     def add_metainfo(self, genome, group1, experiments1, group2=None, experiments2=None):
-        metainfo = {'group1': group1, 'experiments1': experiments1, 'genome': genome}
-
-        if group2 and experiments2:
-            metainfo.update({
-                'experiments2': experiments2,
-                'group2': group2
-            })
+        """
+        Add metainfo to Voila file.
+        :param genome: genome where the genes are found
+        :param group1: first group name (used in psi and deltapsi)
+        :param experiments1: first list of experiment names (used in psi and deltapsi)
+        :param group2: second group (only deltapsi)
+        :param experiments2: second list of experiment names (only deltapsi)
+        :return: None
+        """
 
         h = self.hdf5.create_group('/metainfo')
-        metainfo = metainfo.copy()
 
-        experiments1 = h.create_group('experiments1')
-        for index, item in enumerate(metainfo['experiments1']):
-            experiments1.attrs[str(index)] = item
+        h.attrs['genome'] = genome
 
-        del metainfo['experiments1']
+        h.attrs['group1'] = group1
+        experiments1_grp = h.create_group('experiments1')
+        for index, item in enumerate(experiments1):
+            experiments1_grp.attrs[str(index)] = item
 
-        if 'group2' in metainfo and 'experiments2' in metainfo:
-            experiments2 = h.create_group('experiments2')
-            for index, item in enumerate(metainfo['experiments2']):
-                experiments2.attrs[str(index)] = item
-
-            del metainfo['experiments2']
-
-        for key in metainfo:
-            h.attrs[key] = metainfo[key]
+        if group2 and experiments2:
+            h.attrs['group2'] = group2
+            experiments2_grp = h.create_group('experiments2')
+            for index, item in enumerate(experiments2):
+                experiments2_grp.attrs[str(index)] = item
 
     def get_metainfo(self):
+        """
+        Get metainfo from voila file.
+        :return: dict
+        """
         voila_log().info('Getting Voila Metainfo from {0} ...'.format(self.file_name))
         metainfo = {}
         h = self.hdf5['/metainfo']
@@ -108,16 +120,32 @@ class Voila(ProducerConsumer):
         return metainfo
 
     def get_voila_lsv(self, lsv_id):
+        """
+        Get LSV by LSV id.
+        :param lsv_id:
+        :return: VoilaLsv
+        """
         return VoilaLsv.easy_from_hdf5(self.hdf5['lsvs'][lsv_id])
 
     def get_voila_lsvs(self, lsv_types=None, lsv_ids=None, gene_names=None):
+        """
+        Get list of LSVs from voila file.
+        :param lsv_types: search for lsv types
+        :param lsv_ids: search for lsv ids
+        :param gene_names: search for gene names
+        :return: list
+        """
         voila_log().info('Getting Voila LSVs from {0} ...'.format(self.file_name))
+
         self.lsv_types = lsv_types
         self.lsv_ids = lsv_ids
         self.gene_names = gene_names
+
         self.run()
+
         voila_lsvs = self.get_values()
         self.manager_shutdown()
+
         return voila_lsvs
 
 
@@ -293,38 +321,7 @@ def load_dpairs(pairwise_dir, majiq_output):
     return lmajiq_pairs, group1_name, group2_name
 
 
-def cond_table_tab_output(input_parsed):
-    majiq_output = input_parsed.majiq_output
-    lsvs = majiq_output['lsvs']
-    sample_names = majiq_output['sample_names']
-    log = voila_log()
 
-    log.info('Creating cond-table TSV...')
-
-    tsv_file = os.path.join(input_parsed.output_dir, input_parsed.output_html.split('.html')[0] + '.tsv')
-    log.info(tsv_file)
-
-    with open(tsv_file, 'w') as csvfile:
-        fieldnames = ['Gene', 'LSV ID', '#Disagreeing', '#Changing samples', 'Junction'] + sample_names
-        writer = csv.DictWriter(csvfile, fieldnames=fieldnames, delimiter='\t')
-
-        writer.writeheader()
-
-        for lsv in lsvs:
-            row = {
-                'Gene': lsvs[lsv]['gene'],
-                'LSV ID': lsv,
-                '#Disagreeing': lsvs[lsv]['ndisagree'],
-                '#Changing samples': lsvs[lsv]['nchangs'],
-                'Junction': lsvs[lsv]['njunc']
-            }
-
-            for index, sample_name in enumerate(sample_names):
-                sample = round(lsvs[lsv]['expecs'][index], 3)
-                if sample > -1:
-                    row[sample_name] = sample
-
-            writer.writerow(row)
 
 
 def tab_output(args, majiq_output):
@@ -432,103 +429,7 @@ def tab_output(args, majiq_output):
     log.info("Delimited output file successfully created in: %s" % tsv_file)
 
 
-def load_dpsi_tab(args):
-    pairwise_dir = args.pairwise_dir
-    outdir = args.output
-    tab_files_list = args.sample_files
-    filter_genes = args.gene_names
-    filter_lsvs = args.lsv_ids
-    sample_names = args.sample_names
-    thres_change = args.threshold_change
 
-    """Load LSV delta psi information from tab-delimited file."""
-    lsvs_dict = defaultdict(lambda: defaultdict(lambda: None))
-    if pairwise_dir is None:
-        pairwise_dir = os.getcwd()
-
-    root_path = None
-    path_prefix = '/'.join(['..'] * len(outdir.strip('./').split('/'))) + '/'
-    if len(outdir.strip('./')) == 0:
-        path_prefix = './'
-    # 2-step process:
-    #   1. create a data structure finding the most changing junction,
-    #   2. select the expected psi from the most changing junction more frequent in the set
-    for idx, tab_file in enumerate(tab_files_list):
-        with open(tab_file, 'r') as tabf:
-            for line in tabf:
-                if line.startswith("#"):
-                    continue
-
-                fields = line.split()
-
-                if root_path is None:
-                    pr, linkk = os.path.split(fields[-1])
-                    linkk = linkk.split('#')[0]
-                    while not os.path.exists(pairwise_dir + '/' + linkk) and len(pr) > 0:
-                        pr, aux = os.path.split(pr)
-                        linkk = aux + '/' + linkk
-
-                    if len(pr) == 0:
-                        raise Exception('Couldn\'t determine links to delta psi summaries')
-                    root_path = pr
-
-                if filter_genes:
-                    if fields[0] not in filter_genes and fields[1] not in filter_genes:
-                        continue
-
-                if filter_lsvs:
-                    if fields[2].upper() not in filter_lsvs:
-                        continue
-
-                expecs = [float(aa) for aa in fields[3].split(";")]
-
-                if lsvs_dict[fields[2]]['expecs'] is None:
-                    lsvs_dict[fields[2]]['expecs'] = [[]] * len(sample_names)
-                    lsvs_dict[fields[2]]['expecs_marks'] = [None] * len(sample_names)
-                    lsvs_dict[fields[2]]['links'] = [None] * len(sample_names)
-                    lsvs_dict[fields[2]]['njunc'] = [-1] * len(sample_names)
-
-                idx_max = np.argmax([abs(ee) for ee in expecs])
-
-                lsvs_dict[fields[2]]['expecs'][idx] = expecs
-                lsvs_dict[fields[2]]['njunc'][idx] = idx_max
-                lsvs_dict[fields[2]]['links'][idx] = path_prefix + pairwise_dir + fields[-1].split(root_path)[1]
-                lsvs_dict[fields[2]]['gene'] = fields[0]
-
-    for lsv_idx in lsvs_dict.keys():
-        if np.max([abs(bb) for ff in lsvs_dict[lsv_idx]['expecs'] for bb in ff]) < thres_change:
-            del lsvs_dict[lsv_idx]  # Remove LSVs not passing the changing threshold
-            continue
-
-        idx_most_freq = np.argmax(np.bincount(np.array(lsvs_dict[lsv_idx]['njunc'])[
-                                                  (np.array(lsvs_dict[lsv_idx]['njunc']) > -1) & np.array(
-                                                      [np.any(np.array([abs(fff) for fff in expec]) > thres_change) for
-                                                       expec in lsvs_dict[lsv_idx]['expecs']])]))
-
-        # Mark adjusted most changing junction
-        lsvs_dict[lsv_idx]['expecs_marks'] = ~np.array(idx_most_freq == lsvs_dict[lsv_idx]['njunc'])
-
-        for idx_exp, expec in enumerate(lsvs_dict[lsv_idx]['expecs']):
-            if len(expec) > 0:
-                lsvs_dict[lsv_idx]['expecs'][idx_exp] = expec[idx_most_freq]
-            else:
-                lsvs_dict[lsv_idx]['expecs'][idx_exp] = -1
-
-        lsvs_dict[lsv_idx]['nchangs'] = np.count_nonzero(
-            [abs(ee) > thres_change for ee in lsvs_dict[lsv_idx]['expecs'] if ee > -1])
-
-        lsvs_dict[lsv_idx]['njunc'] = idx_most_freq
-
-        exist_expecs = np.array(lsvs_dict[lsv_idx]['expecs'])[(np.array(lsvs_dict[lsv_idx]['expecs']) > -1) & (
-            np.array([abs(xx) for xx in lsvs_dict[lsv_idx]['expecs']]) > thres_change)]
-
-        lsvs_dict[lsv_idx]['ndisagree'] = len(exist_expecs) - max(
-            (np.count_nonzero(exist_expecs > 0), np.count_nonzero(exist_expecs <= 0)))
-
-        lsvs_dict[lsv_idx]['nagree'] = len(exist_expecs) - min(
-            (np.count_nonzero(exist_expecs > 0), np.count_nonzero(exist_expecs <= 0)))
-
-    return lsvs_dict
 
 
 def generic_feature_format_txt_files(args, majiq_output, out_gff3=False):

@@ -3,7 +3,7 @@ from os import path
 
 from voila import constants
 from voila.splice_graphics import SpliceGraph
-from voila.utils.run_voila_utils import get_env, get_output_html, copy_static, grouper
+from voila.utils.run_voila_utils import get_env, get_output_html, copy_static, grouper, get_prev_next_pages
 from voila.utils.voila_log import voila_log
 from voila.view.psi import get_prev_next_pages
 
@@ -17,7 +17,7 @@ def splice_graphs(args):
 
     log = voila_log()
     log.info("Loading %s." % args.splice_graph)
-    gene_dicts = parse_gene_graphics_obj(args.splice_graph, args.gene_names, args.limit)
+    gene_dicts = get_gene_dicts(args.splice_graph, args.gene_names, args.limit)
 
     output_html = get_output_html(args, args.splice_graph)
     output_dir = args.output
@@ -53,7 +53,7 @@ def splice_graphs(args):
     copy_static(args)
 
 
-def parse_gene_graphics_obj(splice_graph, gene_names_list=None, limit=None):
+def get_gene_dicts(splice_graph, gene_names_list, limit):
     log = voila_log()
     genes_exp = {}
 
@@ -66,16 +66,24 @@ def parse_gene_graphics_obj(splice_graph, gene_names_list=None, limit=None):
 
     gene_names_list = [g.lower() for g in gene_names_list]
 
-    for gene in genes:
-        for experiment_number, experiment_name in enumerate(experiments):
+    combined_genes_exp = {}
+
+    for experiment_index, experiment_name in enumerate(experiments):
+        for gene in genes:
 
             if not gene_names_list or gene.name.lower() in gene_names_list:
-                experiment_dict = gene.get_experiment(experiment_number)
+                experiment_dict = gene.get_experiment(experiment_index)
 
                 try:
                     genes_exp[experiment_name][gene.gene_id] = experiment_dict
                 except KeyError:
                     genes_exp[experiment_name] = {gene.gene_id: experiment_dict}
+
+                combined_genes_exp[gene.gene_id] = gene.combine(experiment_index,
+                                                                combined_genes_exp.get(gene.gene_id, None))
+
+                if len(experiments) > 1:
+                    genes_exp['Combined'] = {gene_id: combined_genes_exp[gene_id] for gene_id in combined_genes_exp}
 
     log.info("Splice graph information files correctly loaded.")
 

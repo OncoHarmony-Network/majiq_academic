@@ -77,7 +77,7 @@
             <img src="static/img/icons/next.png" class="next"/>
             <img src="static/img/icons/last.png" class="last"/>
             <select class="pagesize" autocomplete="off">
-                {% for mark in tableMarks -%}
+                {% for mark in table_marks -%}
                     {% if loop.first %}
                         <option selected="selected" value="{{ mark }}">{{ mark }}</option>
                     {% else %}

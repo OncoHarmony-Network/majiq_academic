@@ -198,6 +198,18 @@ def base_args():
     return base_parser
 
 
+def html_args():
+    html_parser = argparse.ArgumentParser(add_help=False)
+    html_parser.add_argument('--no-html',
+                             action='store_true',
+                             help='do not write html files')
+
+    html_parser.add_argument('--no-tsv',
+                             action='store_true',
+                             help='do not generate tab-separated values output file')
+    return html_parser
+
+
 def majiq_quantifier_args():
     """
     Arguments needs for analysis types who use the majiq quantifier file.
@@ -213,14 +225,6 @@ def majiq_quantifier_args():
     majiq_quantifier_parser.add_argument('--splice-graph',
                                          type=check_file,
                                          help='path to splice graph file')
-
-    majiq_quantifier_parser.add_argument('--no-html',
-                                         action='store_true',
-                                         help='do not write html files')
-
-    majiq_quantifier_parser.add_argument('--no-tsv',
-                                         action='store_true',
-                                         help='do not generate tab-separated values output file')
 
     majiq_quantifier_parser.add_argument('--gtf',
                                          action='store_true',
@@ -320,26 +324,29 @@ def main():
     gene_search = gene_search_args()
     lsv_type_search = lsv_type_search_args()
     lsv_id_search = lsv_id_search_args()
+    html = html_args()
     base = base_args()
 
     # Single LSV by Gene(s) of interest
     parser_single = psi_args()
     subparsers.add_parser(constants.ANALYSIS_PSI,
                           help='Single LSV analysis by gene(s) of interest.',
-                          parents=[base, gene_search, lsv_type_search, lsv_id_search, majiq_quantifier, parser_single])
+                          parents=[base, html, gene_search, lsv_type_search, lsv_id_search, majiq_quantifier,
+                                   parser_single])
 
     # Delta LSV
     parser_delta = deltapsi_args()
     subparsers.add_parser(constants.ANALYSIS_DELTAPSI,
                           help='Delta LSV analysis by gene(s) of interest.',
-                          parents=[base, gene_search, lsv_type_search, lsv_id_search, majiq_quantifier, parser_delta])
+                          parents=[base, html, gene_search, lsv_type_search, lsv_id_search, majiq_quantifier,
+                                   parser_delta])
 
     # In-group out-group analysis option
     parser_conditional_table = conditional_table_args()
     subparsers.add_parser(constants.COND_TABLE,
                           help='Generate a HTML table with a list of LSVs changing between conditions in multiple '
                                'samples.',
-                          parents=[base, gene_search, lsv_type_search, lsv_id_search, parser_conditional_table])
+                          parents=[base, html, gene_search, lsv_type_search, lsv_id_search, parser_conditional_table])
 
     # Splice graphs generation option
     parser_splicegraphs = splice_graphs_args()
