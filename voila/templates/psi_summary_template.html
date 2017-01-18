@@ -12,7 +12,7 @@
     <script src="static/js/jquery.tablesorter.pager.js" type="text/javascript"></script>
     <script src="static/js/application.js" type="text/javascript"></script>
     <script src="static/js/jquery.tooltipster.min.js" type="text/javascript"></script>
-
+    <script src="static/js/clipboard.min.js" type="text/javascript"></script>
 {% endblock %}
 
 {% block header %}
@@ -54,10 +54,10 @@
                                 {% for nsample in genes_exps_list[0] -%}
                                     {% if nsample == comb_spliceg_cond1 %}
                                         <option selected="selected"
-                                                value="{{ genes_exps_list[0][nsample][gene_id] | to_json_especial}}">{{ nsample }}
+                                                value="{{ genes_exps_list[0][nsample][gene_id] | to_json_especial }}">{{ nsample }}
                                         </option>
                                     {% else %}
-                                        <option value="{{ genes_exps_list[0][nsample][gene_id] | to_json_especial}}">{{ nsample }}</option>
+                                        <option value="{{ genes_exps_list[0][nsample][gene_id] | to_json_especial }}">{{ nsample }}</option>
                                     {% endif %}
                                 {%- endfor %}
                             </select>
@@ -151,6 +151,12 @@
                                             <a href="../static/doc/lsvs/{{ lsv.gene_id }}.gtf" target="_blank"><img
                                                     src="static/img/icons/gtf.png"
                                                     title="Go to GFT LSV definition"/></a>
+                                        </p>
+                                        <p>
+
+                                            <button class="copy-to-clipboard">
+                                                <img src="static/img/icons/gtf.png"/>
+                                            </button>
                                         </p>
                                     </td>
 

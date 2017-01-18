@@ -340,6 +340,7 @@ class GeneGraphic(HDF5):
 
     def get_experiment(self, experiment):
         d = self.__dict__.copy()
+        experiment = int(experiment)
         d.update({
             'exons': [e.get_experiment(experiment) for e in self.exons],
             'junctions': [j.get_experiment(experiment) for j in self.junctions],
@@ -680,7 +681,10 @@ class SpliceGraph(ProducerConsumer):
         with h5py.File(self.file_name, 'r') as h:
             while True:
                 gene_id = self.queue.get()
-                self.dict(gene_id, GeneGraphic.easy_from_hdf5(h[self.GENES][gene_id]))
+                try:
+                    self.dict(gene_id, GeneGraphic.easy_from_hdf5(h[self.GENES][gene_id]))
+                except KeyError:
+                    voila_log().error('unable to find splicegraph for gene {0}'.format(gene_id))
                 self.queue.task_done()
 
     def _producer(self):
@@ -761,7 +765,7 @@ class SpliceGraph(ProducerConsumer):
         :param experiment_names: list of experiment names
         :return: None
         """
-        self.hdf5[self.ROOT].attrs[EXPERIMENT_NAMES] = experiment_names
+        self.hdf5[self.ROOT].attrs[EXPERIMENT_NAMES] = list(experiment_names)
 
     def get_experiments_list(self):
         """

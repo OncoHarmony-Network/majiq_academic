@@ -11,7 +11,7 @@ from voila.utils.voila_log import voila_log
 from voila.view.conditional_table import conditional_table
 from voila.view.deltapsi import deltapsi
 from voila.view.lsv_thumbnails import lsv_thumbnails
-from voila.view.psi import psi
+from voila.view.psi import Psi
 from voila.view.splice_graphs import splice_graphs
 
 
@@ -371,7 +371,7 @@ def main():
 
     # run function for this analysis type
     type_analysis = {
-        constants.ANALYSIS_PSI: psi,
+        constants.ANALYSIS_PSI: Psi,
         constants.ANALYSIS_DELTAPSI: deltapsi,
         constants.SPLICE_GRAPHS: splice_graphs,
         constants.COND_TABLE: conditional_table,

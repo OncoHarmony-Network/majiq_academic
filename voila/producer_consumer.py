@@ -88,6 +88,9 @@ class ProducerConsumer(object):
     def get_values(self):
         return self.manager_dict.values()
 
+    def get_dict(self):
+        return dict(self.manager_dict)
+
     def _worker(self):
         """
         Function that the worker processes run.

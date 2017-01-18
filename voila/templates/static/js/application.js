@@ -19,8 +19,71 @@ CanvasRenderingContext2D.prototype.dashedLine = function (x1, y1, x2, y2, dashLe
     this[q % 2 == 0 ? 'moveTo' : 'lineTo'](x2, y2);
 };
 
+function moveSpliceGraphDataToLsv(spliceGraph, lsv) {
+    var foundJunctions = [];
+    var foundExons = [];
+    var starts = false;
+    var ends = false;
+
+    spliceGraph.exons.forEach(function (sgExon) {
+        lsv.exons.forEach(function (lsvExon) {
+            if ((lsvExon.start == sgExon.start) && (lsvExon.end == sgExon.end))
+                foundExons.push(sgExon)
+        })
+    });
+
+    lsv.exons = foundExons;
+
+    // Find all juctions that will go in the exons for this lsv...
+    spliceGraph.junctions.forEach(function (junction, juncIndex) {
+        lsv.exons.forEach(function (exon) {
+            if ((junction.start >= exon.start) && (junction.start <= exon.end))
+                starts = true;
+            if ((junction.end >= exon.start) && (junction.end <= exon.end))
+                ends = true
+        });
+
+        if (starts && ends)
+            foundJunctions.push(junction);
+
+        starts = false;
+        ends = false
+    });
+
+    // replace juctions with the juctions from the splice graphd
+    lsv.junctions = foundJunctions;
+
+    // clear start and stop indexes
+    lsv.exons.forEach(function (exon) {
+        exon.a3 = [];
+        exon.a5 = []
+    });
+
+    // find new start and stop indexes
+    lsv.junctions.forEach(function (junction, juncIndex) {
+        lsv.exons.forEach(function (exon) {
+            if (junction.start >= exon.start && junction.start <= exon.end)
+                exon.a5.push(juncIndex);
+            if (junction.end >= exon.start && junction.end <= exon.end)
+                exon.a3.push(juncIndex)
+        })
+    });
+}
 
 $(document).ready(function () {
+
+    new Clipboard('.copy-to-clipboard', {
+        text: function (trigger) {
+            var lsv = $(trigger).parents('tr').find('.lsvSingleCompactPercentiles').attr('data-lsv');
+            lsv = JSON.parse(lsv.replace(/'/g, '"'))[0];
+
+            var spliceGraph = $(trigger).parents('.gene-container').find('.spliceDiv').attr('data-exon-list');
+            spliceGraph = JSON.parse(spliceGraph.replace(/'/g, '"'));
+            moveSpliceGraphDataToLsv(spliceGraph, lsv);
+
+            return JSON.stringify(lsv)
+        }
+    });
 
     // add sortable functionality to the table
     window.gene_objs = [];
@@ -51,7 +114,7 @@ $(document).ready(function () {
                 if (!simplified) return false;
 
                 // check read counts toggle button for read counts state
-                var toggleReadCounts = this.parentNode.parentNode.parentNode.parentNode.querySelector('.readCounts');
+                // var toggleReadCounts = this.parentNode.parentNode.parentNode.parentNode.querySelector('.readCounts');
 
                 // For now.. we're going to comment this out and add per LSV clean reads after this release.
                 // var displayNormReads = !toggleReadCounts.checked;
