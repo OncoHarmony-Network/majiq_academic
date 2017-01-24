@@ -80,9 +80,7 @@ def legacy_lsv_junctions_new_voila(graphs_hdf5):
             while E_id >= len(exons):
                 exons.append(None)
             kwargs = dict(exon.attrs)
-            # if 'start' in kwargs:
-            #     kwargs['coords'] = [kwargs.pop('start'), kwargs.pop('end')]
-            if 'type_exon' not in kwargs:
+            if 'exon_type_list' not in kwargs:
                 kwargs['exon_type_list'] = [0]
             exons[E_id] = ExonGraphic(**kwargs)
         junctions = []
@@ -92,17 +90,14 @@ def legacy_lsv_junctions_new_voila(graphs_hdf5):
                 junctions.append(None)
             kwargs = dict(junction.attrs)
             kwargs['nreads'] = kwargs.pop('num_reads', 0)
-            kwargs['clean_nreads'] = kwargs.pop('num_clean_reads', 0)
-            if 'start' in kwargs:
-                kwargs['coords'] = [kwargs.pop('start'), kwargs.pop('end')]
             if 'intron_retention' in kwargs:
                 kwargs['ir'] = kwargs.pop('intron_retention')
-            if 'type_junction' not in kwargs:
-                kwargs['type_junction'] = 0
+            if 'junction_type_list' not in kwargs:
+                kwargs['junction_type_list'] = [0]
             junctions[J_id] = JunctionGraphic(**kwargs)
         lsv_type = lsv_attrs.attrs.get('lsv_type')
         coords = [lsv_attrs.attrs.get('start'), lsv_attrs.attrs.get('end')]
-        output[lsv_id] = LsvGraphic(lsv_type, coords, id = lsv_id, exons = exons, junctions = junctions)
+        output[lsv_id] = LsvGraphic(lsv_type, coords, id = lsv_id, exons=exons, junctions=junctions)
     return output
 
 
