@@ -82,6 +82,9 @@ class Experiment(HDF5):
 
 class NoExons(Exception):
     def __init__(self):
+        """
+        Thrown when gene, for some reason, doesn't have any exons...
+        """
         super(NoExons, self).__init__('There no exons in this gene.')
 
 
@@ -199,6 +202,12 @@ class GeneGraphic(HDF5):
         self.remove_duplicate_junctions()
 
     def combine(self, experiment_index, gene_dict=None):
+        """
+        Used to create the "Combined" option in a splice graph when there's more than one experiment.
+        :param experiment_index:
+        :param gene_dict:
+        :return:
+        """
         if not gene_dict:
             return self.get_experiment(experiment_index)
 
@@ -560,7 +569,7 @@ class JunctionGraphic(Experiment):
     def combine(self, experiment_index, junc_dict):
         junc_dict['reads'] += self.reads[experiment_index]
         junc_dict['junction_type'] = min(self.junction_type[experiment_index], junc_dict['junction_type'])
-        if 'clean_reads' in junc_dict:
+        if 'clean_reads' in junc_dict and junc_dict['clean_reads']:
             junc_dict['clean_reads'] += self.clean_reads[experiment_index]
         return junc_dict
 
@@ -732,14 +741,32 @@ class SpliceGraph(ProducerConsumer):
         return gene_list
 
     def get_gene_ids(self):
-        return self.hdf5[self.GENES].keys()
+        """
+        Get list of gene ids.
+        :return: list
+        """
+        return list(self.hdf5[self.GENES].keys())
 
     def get_gene(self, gene_id):
+        """
+        Get gene by its gene id.
+        :param gene_id: unique gene id
+        :return: GeneGraphics
+        """
         return GeneGraphic.easy_from_hdf5(self.hdf5[self.GENES][gene_id])
 
     def add_experiment_names(self, experiment_names):
+        """
+        Add experiment names to splice graph.
+        :param experiment_names: list of experiment names
+        :return: None
+        """
         self.hdf5[self.ROOT].attrs[EXPERIMENT_NAMES] = experiment_names
 
     def get_experiments_list(self):
+        """
+        Get list of experiment names from splice graph.
+        :return: list
+        """
         voila_log().info('Getting splice graph experiment names from {0} ...'.format(self.file_name))
         return self.hdf5[self.ROOT].attrs[EXPERIMENT_NAMES].tolist()

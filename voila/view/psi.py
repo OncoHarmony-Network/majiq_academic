@@ -1,5 +1,4 @@
 from collections import OrderedDict
-from math import ceil
 from os import path
 
 from voila import constants
@@ -8,12 +7,18 @@ from voila.io_voila import Voila
 from voila.utils import utils_voila
 from voila.utils.run_voila_utils import parse_gene_graphics, VoilaNoLSVsException, table_marks_set, get_env, \
     get_output_html, \
-    grouper, copy_static, get_summary_template
+    grouper, copy_static, get_summary_template, get_prev_next_pages
 from voila.utils.utils_voila import create_if_not_exists
 from voila.utils.voila_log import voila_log
 
 
 def psi(args):
+    """
+    Render psi output.
+    :param args: command line arguments
+    :return: None
+    """
+
     with Voila(args.majiq_quantifier, 'r') as v:
         voila_lsvs = v.get_voila_lsvs(lsv_types=args.lsv_types,
                                       lsv_ids=args.lsv_ids,
@@ -27,7 +32,6 @@ def psi(args):
     if not len(voila_lsvs):
         raise VoilaNoLSVsException()
 
-    # Get gene info
     majiq_output['genes_exp'] = parse_gene_graphics(args.splice_graph, metainfo, gene_ids_list)
 
     majiq_output['lsv_list'] = [ll for g in majiq_output['genes_dict'].viewvalues() for ll in g]
@@ -39,49 +43,35 @@ def psi(args):
         io_voila.tab_output(args, majiq_output)
 
     if args.gtf:
-        io_voila.generic_feature_format_txt_files(args)
+        io_voila.generic_feature_format_txt_files(args, majiq_output)
 
     if args.gff:
-        io_voila.generic_feature_format_txt_files(args, out_gff3=True)
-
-
-def get_prev_next_pages(page_number, genes_count, output_html, limit=None):
-    if limit:
-        genes_count = min(genes_count, limit)
-
-    last_page = ceil(genes_count / float(constants.MAX_GENES)) - 1
-
-    next_page = None
-    prev_page = None
-
-    if page_number != last_page:
-        next_page = '{0}_{1}'.format(page_number + 1, output_html)
-
-    if page_number != 0:
-        prev_page = '{0}_{1}'.format(page_number - 1, output_html)
-
-    return prev_page, next_page
+        io_voila.generic_feature_format_txt_files(args, majiq_output, out_gff3=True)
 
 
 def render_html(args, majiq_output):
+    """
+    Render psi html output.
+    :param args: command line arguments
+    :param majiq_output: dictionary containing majiq output values
+    :return: None
+    """
+
     log = voila_log()
     gene_keys = sorted(majiq_output['genes_dict'].keys())
-    log.info("Number of genes detected in Voila: %d." % len(gene_keys))
-    log.info("Number of LSVs detected in Voila: %d." % sum(
-        [len(majiq_output['genes_dict'][g]) for g in majiq_output['genes_dict']]))
-    log.info("Creating HTML5 with splice graphs summaries ...")
-
     output_dir = args.output
     output_html = get_output_html(args, args.majiq_quantifier)
     summaries_subfolder = path.join(output_dir, constants.SUMMARIES_SUBFOLDER)
     create_if_not_exists(summaries_subfolder)
-
     env = get_env()
     sum_template = get_summary_template(args, env)
-
     comb_spliceg_cond1 = majiq_output['genes_exp'][0].keys()[0]
-
     links_dict = {}
+
+    log.info("Number of genes detected in Voila: %d." % len(gene_keys))
+    log.info("Number of LSVs detected in Voila: %d." % sum(
+        [len(majiq_output['genes_dict'][g]) for g in majiq_output['genes_dict']]))
+    log.info("Creating HTML5 with splice graphs summaries ...")
 
     for page_number, subset_keys in enumerate(grouper(gene_keys, constants.MAX_GENES)):
 

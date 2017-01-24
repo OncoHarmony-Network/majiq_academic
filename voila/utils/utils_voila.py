@@ -54,8 +54,7 @@ def lsvs_to_gene_dict(voila_lsvs, metainfo, threshold=.2, show_all=False):
         else:
             genes_dict[gene_id].append(vlsv)
 
-    return {'genes_dict': genes_dict,
-            'meta_exps': metainfo}
+    return {'genes_dict': genes_dict, 'meta_exps': metainfo}
 
 
 def copyanything(src, dst):
@@ -199,6 +198,3 @@ def to_gtf(wfile, seq_name, source, gene, mrna, start_trans, end_trans, strand, 
 def debug(text):
     print text
     return ''
-
-
-

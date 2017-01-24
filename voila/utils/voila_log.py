@@ -8,6 +8,13 @@ from voila.constants import VOILA_LOG_NAME
 
 
 def voila_log(filename=None, silent=False):
+    """
+    Logger used throughout voila.  After this has been initialized, then it will retrieve the same logger each time
+    this function is called.
+    :param filename: location of log
+    :param silent: if true, then logger will not print to command line
+    :return: log
+    """
     try:
         return Logger.manager.loggerDict[VOILA_LOG_NAME]
     except KeyError:

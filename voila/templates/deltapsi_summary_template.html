@@ -34,12 +34,12 @@
                 <a name="{{ gene_value[0].lsv.name }}"></a>
                 <h2>Gene name:
                     {{ gene_value[0].lsv.name }};
-                    {{ gene_value[0].lsv.chromosome }}:{{ gene_value[0].lsv.strand }}:{{ genes_exps_list[0][genes_exps_list[0].keys()[0]][gene_name].coordinates[0] }}-{{ genes_exps_list[0][genes_exps_list[0].keys()[0]][gene_name].coordinates[1] }};
+                    {{ gene_value[0].lsv.chromosome }}:{{ gene_value[0].lsv.strand }}:{{ genes_exps_list[0][genes_exps_list[0].keys()[0]][gene_name].start }}-{{ genes_exps_list[0][genes_exps_list[0].keys()[0]][gene_name].end }};
 
                     {% if lexps %}
-                        <a href="http://genome.ucsc.edu/cgi-bin/hgTracks?db={{ lexps.genome }}&position={{ genes_exps_list[0][genes_exps_list[0].keys()[0]][gene_name][3] }}:{{ genes_exps_list[0][genes_exps_list[0].keys()[0]][gene_name]['coordinates'][0] }}-{{ genes_exps_list[0][genes_exps_list[0].keys()[0]][gene_name].coordinates[1] }}"
+                        <a href="http://genome.ucsc.edu/cgi-bin/hgTracks?db={{ lexps.genome }}&position={{ genes_exps_list[0][genes_exps_list[0].keys()[0]][gene_name][3] }}:{{ genes_exps_list[0][genes_exps_list[0].keys()[0]][gene_name].start }}-{{ genes_exps_list[0][genes_exps_list[0].keys()[0]][gene_name].end }}"
                            target="_blank"><img src="static/img/icons/ucsc3.png"
-                                                title="{{ genes_exps_list[0][genes_exps_list[0].keys()[0]][gene_name][3] }}:{{ genes_exps_list[0][genes_exps_list[0].keys()[0]][gene_name].coordinates[0] }}-{{ genes_exps_list[0][genes_exps_list[0].keys()[0]][gene_name].coordinates[1] }}"/></a>
+                                                title="{{ genes_exps_list[0][genes_exps_list[0].keys()[0]][gene_name][3] }}:{{ genes_exps_list[0][genes_exps_list[0].keys()[0]][gene_name].start }}-{{ genes_exps_list[0][genes_exps_list[0].keys()[0]][gene_name].end }}"/></a>
                     {% endif %}
                 </h2>
 
@@ -54,17 +54,17 @@
                         <select class="spliceGraphSelector exp1" autocomplete="off">
                             {% for nsample in genes_exps_list[0] -%}
                                 <option {% if nsample == comb_spliceg_cond1 %}selected="selected"{% endif %}
-                                        value="{{ genes_exps_list[0][nsample][gene_name].json }}">{{ nsample }}
+                                        value="{{ genes_exps_list[0][nsample][gene_name] | to_json_especial }}">{{ nsample }}
                                 </option>
                             {%- endfor %}
                         </select>
 
-{#                        <label class="toggleSwitch" title="Toggle from raw reads to corrected reads.">#}
-{#                            RAW CORRECTED#}
-{#                            <br/>#}
-{#                            <input class="toggleSwitch readCounts" type="checkbox">#}
-{#                            <div class="slider"></div>#}
-{#                        </label>#}
+                        {#                        <label class="toggleSwitch" title="Toggle from raw reads to corrected reads.">#}
+                        {#                            RAW CORRECTED#}
+                        {#                            <br/>#}
+                        {#                            <input class="toggleSwitch readCounts" type="checkbox">#}
+                        {#                            <div class="slider"></div>#}
+                        {#                        </label>#}
 
                         <img class="toogleScale scaled" src="static/img/icons/solve-icon16.png"
                              title="Change between scaled view and a view where introns are trimmed"/>
@@ -81,7 +81,7 @@
                         <select class="spliceGraphSelector exp2" autocomplete="off">
                             {% for nsample in genes_exps_list[1] -%}
                                 <option {% if nsample == comb_spliceg_cond2 %}selected="selected"{% endif %}
-                                        value="{{ genes_exps_list[1][nsample][gene_name].json }}">{{ nsample }}
+                                        value="{{ genes_exps_list[1][nsample][gene_name] | to_json_especial }}">{{ nsample }}
                                 </option>
                             {%- endfor %}
                         </select>
@@ -90,11 +90,11 @@
                     <div class="splice-div-container">
 
                         <div class="spliceDiv delta exp1" id="spliceDivExp1_{{ gene_index }}"
-                             data-exon-list="{{ genes_exps_list[0][comb_spliceg_cond1][gene_name].json }}">
+                             data-exon-list="{{ genes_exps_list[0][comb_spliceg_cond1][gene_name] | to_json_especial }}">
                         </div>
 
                         <div class="spliceDiv delta exp2" id="spliceDivExp2_{{ gene_index }}"
-                             data-exon-list="{{ genes_exps_list[1][comb_spliceg_cond2][gene_name].json }}">
+                             data-exon-list="{{ genes_exps_list[1][comb_spliceg_cond2][gene_name] | to_json_especial }}">
                         </div>
 
                     </div>

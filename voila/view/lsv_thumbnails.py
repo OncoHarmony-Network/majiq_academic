@@ -4,6 +4,11 @@ from voila.utils.run_voila_utils import get_env, copy_static, get_output_html
 
 
 def lsv_thumbnails(args):
+    """
+    Render html output for lsv thumbnails.
+    :param args: command line arguments
+    :return: None
+    """
     output_dir = args.output
     output_html = get_output_html(args)
 

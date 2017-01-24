@@ -1,7 +1,6 @@
-import math
 import multiprocessing
 
-VERSION = '0.8.0.yeolab'
+VERSION = '1.0.0'
 FILE_VERSION = '0.1'
 ANALYSIS_PSI = 'psi'
 ANALYSIS_PSI_GENE = 'psi-gene'
@@ -50,7 +49,6 @@ DEBUG = 1
 
 # Multi-Processing
 PROCESS_COUNT = multiprocessing.cpu_count()
-# PROCESS_COUNT = int(math.ceil(multiprocessing.cpu_count() / 3))
 
 # logging
 VOILA_LOG_NAME = '3a4f4528-e572-404e-b143-acff61cee9ed'
