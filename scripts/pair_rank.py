@@ -94,8 +94,8 @@ def legacy_lsv_junctions_new_voila(graphs_hdf5):
                 kwargs['junction_type_list'] = [0]
             junctions[J_id] = JunctionGraphic(**kwargs)
         lsv_type = lsv_attrs.attrs.get('lsv_type')
-        coords = [lsv_attrs.attrs.get('start'), lsv_attrs.attrs.get('end')]
-        output[lsv_id] = LsvGraphic(lsv_type, coords, lsv_id=lsv_id, exons=exons, junctions=junctions)
+        output[lsv_id] = LsvGraphic(lsv_type, start=lsv_attrs.attrs.get('start'), end=lsv_attrs.attrs.get('end'),
+                                    lsv_id=lsv_id, exons=exons, junctions=junctions)
     return output
 
 
