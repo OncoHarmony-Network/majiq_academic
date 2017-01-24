@@ -4,6 +4,7 @@ Rank MAJIQ, MISO or MATS events to test delta PSI reproducibility
 
 import matplotlib as mplot
 mplot.use('Agg')
+import os
 import scripts.utils
 from collections import defaultdict
 import argparse
@@ -198,14 +199,14 @@ def rank_majiq(vlsv_list, V=0.2, absolute=True, dofilter=True, ranknochange=Fals
     covered_exons = []
     rank = []
     for i, vlsv in enumerate(vlsv_list):
-        lsv_bins = vlsv.get_bins()
-        if 'i' in vlsv.get_type():
+        lsv_bins = vlsv.bins
+        if 'i' in vlsv.lsv_type:
             if max(get_expected_psi(vlsv.psi1[-1]), get_expected_psi(vlsv.psi2[-1])) > 0.1 or len(lsv_bins)<2:
                 continue
             lsv_bins = lsv_bins[:-1]
 
         # Filtering out lsvs that have exons shared with an already added lsv
-        lsv_exon_coords = [int(coord) for coord in vlsv.get_id().split(':')[1].split('-')]
+        lsv_exon_coords = [int(coord) for coord in vlsv.lsv_id.split(':')[1].split('-')]
         if np.any([ee.get_coords() in covered_exons for ee in vlsv.lsv_graphic.get_exons() if list(ee.get_coords()) <> lsv_exon_coords ]):
             continue
         covered_exons.extend([ee.get_coords() for ee in vlsv.lsv_graphic.get_exons() if list(ee.get_coords()) <> lsv_exon_coords ])
@@ -369,7 +370,7 @@ def rank_dexseq(dexseq_file, dofilter=True, ranknochange=False, majiq_n=None, V=
         ev_name = sline[0]
         pass_thres = int(padj<0.05 and log2fold>4)
         dexseq_nn += pass_thres
-        if padj<0.1:
+        if padj<0.05:
             rank.append([ev_name, log2fold, padj, pass_thres])
 
     if not majiq_n[0]:
@@ -592,8 +593,6 @@ def main():
         for file_str in args.suppa_files:
             msuppa_n, suppa_rank = rank_suppa2(file_str, args.filter, args.ranknochange,
                                                majiq_n=method_N['suppa'], V=args.V)
-            if not mats_n_orig:
-                mats_n_orig = msuppa_n
             if len(ranks['suppa']) > 0:
                 names_suppa_exp1 = [suppa_info[0] for suppa_info in ranks['suppa'][0]]
                 names_suppa = [suppa_info[0] for suppa_info in suppa_rank]
@@ -612,8 +611,7 @@ def main():
             mdexseq_n, dexseq_rank = rank_dexseq(file_str, args.filter,
                                                  args.ranknochange,
                                                  majiq_n=method_N['dexseq'], V=args.V)
-            if not mats_n_orig:
-                mats_n_orig = mdexseq_n
+            print method_N['dexseq']
             if len(ranks['dexseq']) > 0:
                 names_dexseq_exp1 = [dexseq_info[0] for dexseq_info in
                                      ranks['dexseq'][0]]
@@ -668,7 +666,7 @@ def main():
         # calculate the ratios
         ratios = []
         events = []
-
+        print args.max, method_N[method_name][0]
         max_events = min(args.max, len(rank1))
         max_events = min(max_events, method_N[method_name][0])
 
@@ -713,7 +711,8 @@ def main():
                 fdr /= fdr.shape[0]
 
         else:  # "equalrank" chunks of same n size in both ranks
-            N, ratios = get_ratio_nu(rank1, rank2, max_events)
+            print "USING equalrank"
+            N, ratios = get_ratio_nu(rank1, rank2, max_events, max_N=args.max)
 
         print "RESULT:", ratios[0:10], "...", ratios[-10:], "length", ratios.shape
         print "Saving in %s" % args.output
