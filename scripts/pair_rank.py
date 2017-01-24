@@ -89,7 +89,7 @@ def legacy_lsv_junctions_new_voila(graphs_hdf5):
             while J_id >= len(junctions):
                 junctions.append(None)
             kwargs = dict(junction.attrs)
-            kwargs['nreads'] = kwargs.pop('num_reads', 0)
+            kwargs['reads_list'] = [kwargs.pop('num_reads', 0)]
             if 'junction_type_list' not in kwargs:
                 kwargs['junction_type_list'] = [0]
             junctions[J_id] = JunctionGraphic(**kwargs)
