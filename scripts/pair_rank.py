@@ -90,8 +90,6 @@ def legacy_lsv_junctions_new_voila(graphs_hdf5):
                 junctions.append(None)
             kwargs = dict(junction.attrs)
             kwargs['nreads'] = kwargs.pop('num_reads', 0)
-            if 'intron_retention' in kwargs:
-                kwargs['ir'] = kwargs.pop('intron_retention')
             if 'junction_type_list' not in kwargs:
                 kwargs['junction_type_list'] = [0]
             junctions[J_id] = JunctionGraphic(**kwargs)
