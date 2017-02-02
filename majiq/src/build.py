@@ -197,7 +197,8 @@ def parsing_files(args_vals):
         out_f.create_dataset(JUNCTIONS_DATASET_NAME, data=junc_mtrx, compression='gzip', compression_opts=9)
         if majiq_config.gcnorm:
             gc_matrx = np.array(gc_matrx)
-            out_f.create_dataset(JUNCTIONS_GC_CONTENT, data=gc_matrx, compression='gzip', compression_opts=9)
+            out_f.create_dataset(JUNCTIONS_GC_CONTENT, data=gc_matrx, compression='gzip', compression_opts=9,
+                                 dtype=np.float)
             factor, meanbins = gc_factor_calculation(gc_pairs, nbins=10)
             out_f.attrs['gc_values'] = (factor, meanbins)
 
