@@ -94,16 +94,19 @@ def deltapsi_quantification(args_vals):
                 post_psi2 = np.zeros(shape=quantification_init.nbins, dtype=np.float)
                 mu_psi1_m = []
                 mu_psi2_m = []
+                alpha_0 = alpha_prior[p_idx]
+                beta_0 = beta_prior[p_idx]
                 for m in xrange(quantification_init.m):
                     # log(p(D_T1(m) | psi_T1)) = SUM_t1 T ( log ( P( D_t1 (m) | psi _T1)))
                     junc = [psi1[xx][p_idx][m] for xx in xrange(num_exp[0])]
                     junc = np.array(junc)
                     all_sample = [psi1[xx][yy][m].sum() for xx in xrange(num_exp[0]) for yy in xrange(num_ways)]
                     all_sample = np.array(all_sample)
-                    mu_psi1_m.append(float(junc.sum()) / all_sample.sum())
+
+                    mu_psi1_m.append(float(junc.sum() + alpha_0) / (all_sample.sum() + alpha_0 + beta_0))
                     data_given_psi1 = np.log(prob_data_sample_given_psi(junc.sum(), all_sample.sum(),
                                                                         quantification_init.nbins,
-                                                                        alpha_prior[p_idx], beta_prior[p_idx]))
+                                                                        alpha_0, beta_0))
 
                     psi_v1 = data_given_psi1.reshape(quantification_init.nbins, -1)
                     post_psi1 += np.exp(data_given_psi1 - scipy.misc.logsumexp(data_given_psi1))
@@ -112,10 +115,10 @@ def deltapsi_quantification(args_vals):
                     junc = np.array(junc)
                     all_sample = [psi2[xx][yy][m].sum() for xx in xrange(num_exp[1]) for yy in xrange(num_ways)]
                     all_sample = np.array(all_sample)
-                    mu_psi2_m.append(float(junc.sum()) / all_sample.sum())
+                    mu_psi2_m.append(float(junc.sum() + alpha_0) / (all_sample.sum() + alpha_0 + beta_0))
                     data_given_psi2 = np.log(prob_data_sample_given_psi(junc.sum(), all_sample.sum(),
                                                                         quantification_init.nbins,
-                                                                        alpha_prior[p_idx], beta_prior[p_idx]))
+                                                                        alpha_0, beta_0))
                     post_psi2 += np.exp(data_given_psi2 - scipy.misc.logsumexp(data_given_psi2))
                     psi_v2 = data_given_psi2.reshape(-1, quantification_init.nbins)
 
@@ -205,8 +208,8 @@ class DeltaPsi(BasicPipeline):
         [xx.acquire() for xx in lock_arr]
 
         if self.export_boots:
-            majiq_io.create_bootstrap_file(self.files1, self.output, self.names[0], m=100)
-            majiq_io.create_bootstrap_file(self.files2, self.output, self.names[1], m=100)
+            majiq_io.create_bootstrap_file(self.files1, self.output, self.names[0], m=self.m)
+            majiq_io.create_bootstrap_file(self.files2, self.output, self.names[1], m=self.m)
 
         if len(list_of_lsv) > 0:
             pool.map_async(deltapsi_quantification,
