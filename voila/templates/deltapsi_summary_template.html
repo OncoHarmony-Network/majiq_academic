@@ -164,13 +164,13 @@
                                 <td id="data_psi1_td{{ gene_index }}{{ loop.index }}">
                                     <canvas class="lsvSingleCompactPercentiles"
                                             id="lsvSingleCompact_psi1_{{ loop.index }}"
-                                            width="20px" height="70px" data-lsv="[{{ gene['psi1']|to_json }}]">
+                                            width="20px" height="70px" data-lsv="{{ gene['psi1']|to_json }}">
                                         This browser or document mode doesn't support canvas
                                     </canvas>
                                 </td>
 
 
-                                <td id="data_td{{ gene_index }}{{ loop.index }}" class="lsvDeltaCompact"
+                                <td id="data_td{{ gene_index }}{{ loop.index }}" class="lsvDeltaCompact primer"
                                     data-lsv="{{ gene['lsv']|to_json }}" data-threshold="{{ threshold }}">
                                     {# Hidden field to make inclusion/exclusion sortable #}
                                     <p class="hidden">
@@ -188,7 +188,7 @@
                                 <td id="data_psi2_td{{ gene_index }}{{ loop.index }}">
                                     <canvas class="lsvSingleCompactPercentiles"
                                             id="lsvSingleCompact_psi2_{{ loop.index }}"
-                                            width="20px" height="70px" data-lsv="[{{ gene['psi2']|to_json }}]">
+                                            width="20px" height="70px" data-lsv="{{ gene['psi2']|to_json }}">
                                         This browser or document mode doesn't support canvas
                                     </canvas>
                                 </td>
@@ -202,6 +202,11 @@
                                         <a href="../static/doc/lsvs/{{ gene['lsv'].lsv_id }}.gtf"
                                            target="_blank"><img
                                                 src="static/img/icons/gtf.png" title="Go to GTF LSV definition"/></a>
+                                    </p>
+                                    <p>
+                                        <button class="copy-to-clipboard">
+                                            Copy LSV
+                                        </button>
                                     </p>
                                 </td>
 

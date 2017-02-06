@@ -25,10 +25,10 @@ class Psi(ProducerConsumer):
         self.majiq_output = None
 
         with Voila(args.majiq_quantifier, 'r') as v:
+            metainfo = v.get_metainfo()
             voila_lsvs = v.get_voila_lsvs(lsv_types=args.lsv_types,
                                           lsv_ids=args.lsv_ids,
                                           gene_names=args.gene_names)
-            metainfo = v.get_metainfo()
 
         self.majiq_output = utils_voila.lsvs_to_gene_dict(voila_lsvs, metainfo)
         majiq_output = self.majiq_output
@@ -108,11 +108,11 @@ class Psi(ProducerConsumer):
 
     def render_html(self):
         """
-           Render psi html output.
-           :param args: command line arguments
-           :param majiq_output: dictionary containing majiq output values
-           :return: None
-           """
+        Render psi html output.
+        :param args: command line arguments
+        :param majiq_output: dictionary containing majiq output values
+        :return: None
+        """
 
         log = voila_log()
         args = self.args

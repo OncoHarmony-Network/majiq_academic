@@ -19,68 +19,69 @@ CanvasRenderingContext2D.prototype.dashedLine = function (x1, y1, x2, y2, dashLe
     this[q % 2 == 0 ? 'moveTo' : 'lineTo'](x2, y2);
 };
 
-function moveSpliceGraphDataToLsv(spliceGraph, lsv) {
-    var foundJunctions = [];
-    var foundExons = [];
-    var starts = false;
-    var ends = false;
+function moveSpliceGraphDataToLsv(spliceGraphs, lsv) {
+    var lsvStart = lsv.exons[0].start;
+    var lsvEnd = lsv.exons[lsv.exons.length - 1].end;
+    lsv.splice_graphs = [];
 
-    spliceGraph.exons.forEach(function (sgExon) {
-        lsv.exons.forEach(function (lsvExon) {
-            if ((lsvExon.start == sgExon.start) && (lsvExon.end == sgExon.end))
-                foundExons.push(sgExon)
-        })
-    });
+    delete lsv.exons;
+    delete lsv.junctions;
 
-    lsv.exons = foundExons;
+    spliceGraphs.forEach(function (spliceGraph) {
+        var foundJunctions = [];
+        var starts = false;
+        var ends = false;
 
-    // Find all juctions that will go in the exons for this lsv...
-    spliceGraph.junctions.forEach(function (junction, juncIndex) {
-        lsv.exons.forEach(function (exon) {
-            if ((junction.start >= exon.start) && (junction.start <= exon.end))
-                starts = true;
-            if ((junction.end >= exon.start) && (junction.end <= exon.end))
-                ends = true
+        var foundExons = spliceGraph.exons.filter(function (exon) {
+            return (exon.start >= lsvStart) && (exon.end <= lsvEnd)
         });
 
-        if (starts && ends)
-            foundJunctions.push(junction);
+        spliceGraph.junctions.forEach(function (junction, juncIndex) {
+            foundExons.forEach(function (exon) {
+                if ((junction.start >= exon.start) && (junction.start <= exon.end))
+                    starts = true;
+                if ((junction.end >= exon.start) && (junction.end <= exon.end))
+                    ends = true
+            });
 
-        starts = false;
-        ends = false
-    });
+            if (starts && ends)
+                foundJunctions.push(junction);
 
-    // replace juctions with the juctions from the splice graphd
-    lsv.junctions = foundJunctions;
+            starts = false;
+            ends = false
+        });
 
-    // clear start and stop indexes
-    lsv.exons.forEach(function (exon) {
-        exon.a3 = [];
-        exon.a5 = []
-    });
+        foundExons.forEach(function (exon) {
+            exon.a3 = [];
+            exon.a5 = [];
+            foundJunctions.forEach(function (junction, juncIndex) {
+                if ((junction.start >= exon.start) && (junction.start <= exon.end))
+                    exon.a5.push(juncIndex);
+                if ((junction.end >= exon.start) && (junction.end <= exon.end))
+                    exon.a3.push(juncIndex)
+            })
+        });
 
-    // find new start and stop indexes
-    lsv.junctions.forEach(function (junction, juncIndex) {
-        lsv.exons.forEach(function (exon) {
-            if (junction.start >= exon.start && junction.start <= exon.end)
-                exon.a5.push(juncIndex);
-            if (junction.end >= exon.start && junction.end <= exon.end)
-                exon.a3.push(juncIndex)
-        })
-    });
+        lsv.splice_graphs.push({'exons': foundExons, 'junctions': foundJunctions})
+
+    })
+
+
 }
 
 $(document).ready(function () {
-
     new Clipboard('.copy-to-clipboard', {
         text: function (trigger) {
-            var lsv = $(trigger).parents('tr').find('.lsvSingleCompactPercentiles').attr('data-lsv');
-            lsv = JSON.parse(lsv.replace(/'/g, '"'))[0];
+            var lsv = $(trigger).parents('tr').find('.primer').attr('data-lsv');
+            lsv = JSON.parse(lsv.replace(/'/g, '"'));
 
-            var spliceGraph = $(trigger).parents('.gene-container').find('.spliceDiv').attr('data-exon-list');
-            spliceGraph = JSON.parse(spliceGraph.replace(/'/g, '"'));
-            moveSpliceGraphDataToLsv(spliceGraph, lsv);
+            var spliceDivs = $(trigger).parents('.gene-container').find('.spliceDiv').get();
+            var spliceGraphs = spliceDivs.reduce(function (accu, currVal) {
+                accu.push(JSON.parse(currVal.getAttribute('data-exon-list').replace(/'/g, '"')));
+                return accu
+            }, []);
 
+            moveSpliceGraphDataToLsv(spliceGraphs, lsv);
             return JSON.stringify(lsv)
         }
     });
@@ -560,8 +561,7 @@ function drawLSVCompactStackBars(canvas, fillMode) {
         // Clear canvas
         ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-        var groups_str = canvas.getAttribute("data-lsv");
-
+        var groups_str = '[' + canvas.getAttribute("data-lsv") + ']';
         var groups = JSON.parse(groups_str.replace(/'/g, '"'));
 
         // Calculate origins_coords

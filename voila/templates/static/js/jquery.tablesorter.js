@@ -1139,11 +1139,11 @@
                     );
 
 
-                    var sampled_bins = translate_lsv_bins(lsv_list[0].bins, 1000);
+                    var sampled_bins = translate_lsv_bins(lsv_list.bins, 1000);
 
                     var svg = renderViolin($(this).parent()[0].id, sampled_bins, table.id, {
                         'delta': 0,
-                        'num_bins': lsv_list[0].bins[0].length
+                        'num_bins': lsv_list.bins[0].length
                     });
 
                     $(svg).on("click", function (e) {
