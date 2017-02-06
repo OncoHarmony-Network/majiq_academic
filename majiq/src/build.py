@@ -143,22 +143,14 @@ def parsing_files(args_vals):
         loop_id = sam_file
         out_f = h5py.File(get_builder_temp_majiq_filename(majiq_config.outDir, sam_file),
                           'w', compression='gzip', compression_opts=9)
-        effective_readlen = (majiq_config.readLen - MIN_BP_OVERLAP*2) + 1
-        out_f.create_dataset(JUNCTIONS_DATASET_NAME,
-                             (majiq_config.nrandom_junctions, effective_readlen),
-                             maxshape=(None, effective_readlen), compression='gzip', compression_opts=9)
-        out_f.create_dataset(JUNCTIONS_GC_CONTENT,
-                             (majiq_config.nrandom_junctions, effective_readlen),
-                             maxshape=(None, effective_readlen), compression='gzip', compression_opts=9)
-
-        # init_splicegraph(get_builder_splicegraph_filename(majiq_config.outDir, sam_file))
-
         samfl = majiq_io.open_rnaseq("%s/%s.bam" % (majiq_config.sam_dir, sam_file))
         gc_pairs = {'GC': [], 'COV': []}
         jnc_idx = 0
 
         with h5py.File(get_build_temp_db_filename(majiq_config.outDir), 'r') as db_f:
             list_of_genes = db_f.keys()
+            junc_mtrx = []
+            gc_matrx = [] if majiq_config.gcnorm else None
 
             for gne_idx, gne_id in enumerate(list_of_genes):
                 if gne_idx % 50 == 0:
@@ -187,26 +179,28 @@ def parsing_files(args_vals):
                                                  nondenovo=builder_init.non_denovo, logging=tlogger)
 
                 for jnc in gene_obj.get_all_junctions():
-                    jnc.to_rna_hdf5(out_f['%s/junctions' % gne_id], out_f[JUNCTIONS_DATASET_NAME],
-                                    data_index=jnc_idx, gc_dataset=out_f[JUNCTIONS_GC_CONTENT])
-                    jnc_idx += 1
+                    jnc.to_rna_hdf5(out_f['%s/junctions' % gne_id], junc_mtrx,
+                                    data_index=jnc_idx, gc_dataset=gc_matrx)
 
-                # gene_to_splicegraph(gene_obj, sgraph)
+                    jnc_idx += 1
 
                 del gene_obj
                 del majiq_config.gene_tlb[gne_id]
 
             majiq_io.close_rnaseq(samfl)
 
+        junc_mtrx = np.array(junc_mtrx)
+        indx = np.arange(junc_mtrx.shape[0])[junc_mtrx.sum(axis=1) >= majiq_config.MINREADS]
+        tlogger.debug("[%s] Fitting NB function with constitutive events..." % gne_id)
+        out_f.attrs['one_over_r'] = fit_nb(junc_mtrx[indx, :], "%s/nbfit" % majiq_config.outDir,
+                                           None, logger=tlogger)
+        out_f.create_dataset(JUNCTIONS_DATASET_NAME, data=junc_mtrx, compression='gzip', compression_opts=9)
         if majiq_config.gcnorm:
+            gc_matrx = np.array(gc_matrx)
+            out_f.create_dataset(JUNCTIONS_GC_CONTENT, data=gc_matrx, compression='gzip', compression_opts=9,
+                                 dtype=np.float)
             factor, meanbins = gc_factor_calculation(gc_pairs, nbins=10)
             out_f.attrs['gc_values'] = (factor, meanbins)
-
-        jj_list = out_f[JUNCTIONS_DATASET_NAME][()]
-        indx = np.arange(jj_list.shape[0])[jj_list.sum(axis=1) >= majiq_config.MINREADS]
-        tlogger.debug("[%s] Fitting NB function with constitutive events..." % gne_id)
-        out_f.attrs['one_over_r'] = fit_nb(jj_list[indx, :], "%s/nbfit" % majiq_config.outDir,
-                                           None, logger=tlogger)
 
         out_f.close()
         majiq_utils.monitor('CHILD %s:: ENDLOOP' % chnk)
