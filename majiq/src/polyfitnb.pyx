@@ -116,6 +116,9 @@ def fit_nb(junctionl, outpath, plotpath, nbdisp=0.1, logger=None):
         if np.count_nonzero(jun) >= 5 and jun.sum() >= 10:
             filtered.append(jun)
 
+    if len(filtered) < 10:
+        logger.warning("Your dataset is not deep enougth to define an apropiate NB factor. The default 0 is given")
+        return 0.0
     junctions = np.array(filtered)
     junctions = masked_less(junctions, 0.1)
     mean_junc = junctions.mean(axis=1)
