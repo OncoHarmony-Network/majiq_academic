@@ -28,6 +28,21 @@ function moveSpliceGraphDataToLsv(spliceGraphs, lsv) {
     delete lsv.junctions;
 
     spliceGraphs.forEach(function (spliceGraph) {
+        var juncs = spliceGraph.junctions;
+
+        spliceGraph.exons.forEach(function (exon) {
+            var expressed_start = exon.start;
+            var expressed_end = exon.end;
+            exon.a3.forEach(function (junc_index) {
+                expressed_start = Math.max(juncs[junc_index].end, expressed_start);
+            });
+            exon.expressed_start = expressed_start;
+            exon.a5.forEach(function (junc_index) {
+                expressed_end = Math.min(juncs[junc_index].start, expressed_end)
+            });
+            exon.expressed_end = expressed_end
+        });
+
         var foundJunctions = [];
         var starts = false;
         var ends = false;
@@ -82,7 +97,7 @@ $(document).ready(function () {
             }, []);
 
             moveSpliceGraphDataToLsv(spliceGraphs, lsv);
-            return JSON.stringify(lsv)
+            return JSON.stringify(lsv).replace(/"/g, '\\"')
         }
     });
 

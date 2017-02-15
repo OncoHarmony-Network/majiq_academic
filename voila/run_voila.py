@@ -217,12 +217,14 @@ def majiq_quantifier_args():
     """
 
     majiq_quantifier_parser = argparse.ArgumentParser(add_help=False)
+    parser_required = majiq_quantifier_parser.add_argument_group('required arguments')
+
     majiq_quantifier_parser.add_argument('majiq_quantifier',
                                          type=check_file,
                                          help='location of majiq\'s quantifier file, sometimes referred to as the '
                                               '"voila" file')
 
-    majiq_quantifier_parser.add_argument('--splice-graph',
+    parser_required.add_argument('--splice-graph',
                                          type=check_file,
                                          help='path to splice graph file')
 

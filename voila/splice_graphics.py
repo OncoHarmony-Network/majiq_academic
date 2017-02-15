@@ -746,7 +746,7 @@ class SpliceGraph(ProducerConsumer):
 
     def get_gene_ids(self):
         """
-        Get list of gene ids.
+        Get list of gene ids
         :return: list
         """
         return list(self.hdf5[self.GENES].keys())
