@@ -87,8 +87,11 @@ function moveSpliceGraphDataToLsv(spliceGraphs, lsv) {
 $(document).ready(function () {
     new Clipboard('.copy-to-clipboard', {
         text: function (trigger) {
-            var lsv = $(trigger).parents('tr').find('.primer').attr('data-lsv');
+            var primer = $(trigger).parents('tr').find('.primer');
+            var lsv = primer.attr('data-lsv');
+            var genome = primer.attr('genome');
             lsv = JSON.parse(lsv.replace(/'/g, '"'));
+            lsv.genome = genome;
 
             var spliceDivs = $(trigger).parents('.gene-container').find('.spliceDiv').get();
             var spliceGraphs = spliceDivs.reduce(function (accu, currVal) {

@@ -133,7 +133,7 @@
                                     <td id="data_td{{ gene_index }}{{ loop.index }}">
                                         <canvas class="lsvSingleCompactPercentiles primer"
                                                 id="lsvSingleCompact{{ loop.index }}" width="50px"
-                                                height="50px" data-lsv="{{ lsv|to_json }}"
+                                                height="50px" data-lsv="{{ lsv|to_json }}" genome="{{ lexps.genome }}"
                                                 style="border: solid; border-width: 2pt; border-color: darkgrey;">
                                             This browser or document mode doesn't support canvas
                                         </canvas>
