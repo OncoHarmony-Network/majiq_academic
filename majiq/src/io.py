@@ -149,6 +149,13 @@ def rnaseq_intron_retention(gne, samfl, chnk, permissive=True, nondenovo=False, 
         if intron_len <= 0:
             continue
 
+        try:
+            read_iter = samfl.fetch(chrom, intron_start + 8, intron_end - 8)
+
+        except ValueError:
+            # logging.info('There are no reads in %s:%d-%d' % (chrom, ex1_end, ex1_end+1))
+            continue
+
         nchunks = 1 if intron_len <= MIN_INTRON_LEN else num_bins
 
         # we want to take just the middle part not the reads that are crossing the junctions
@@ -167,12 +174,6 @@ def rnaseq_intron_retention(gne, samfl, chnk, permissive=True, nondenovo=False, 
         intron_parts = np.zeros(shape=nchunks, dtype=np.float)
         junc1 = None
         junc2 = None
-
-        try:
-            read_iter = samfl.fetch(chrom, intron_start + 8, intron_end - 8)
-        except ValueError:
-            # logging.info('There are no reads in %s:%d-%d' % (chrom, ex1_end, ex1_end+1))
-            continue
 
         for read in read_iter:
             is_cross, junc_list = __cross_junctions(read)
@@ -289,7 +290,7 @@ def read_sam_or_bam(gne, samfl, counter,  h5py_file, nondenovo=False, info_msg='
 
     try:
         read_iter = samfl.fetch(chrom, strt, end, multiple_iterators=True)
-
+       # kk = samfl.pileup(reference=chrom, start=strt, end=end)
         for read in read_iter:
             r_start = read.pos
             unique = __is_unique(read)
@@ -447,6 +448,11 @@ def __parse_gff3(filename):
             #    yield normalized_info
             yield GFFRecord(**normalized_info)
 
+accepted_transcripts = ['mRNA', 'transcript']
+transcript_id_keys = ['ID']
+gene_name_keys = ['Name', 'gene_name']
+gene_id_keys = ['ID', 'gene_id']
+
 
 def read_gff(filename, list_of_genes, sam_list, logging=None):
     """
@@ -469,8 +475,28 @@ def read_gff(filename, list_of_genes, sam_list, logging=None):
         end = record.end
 
         if record.type == 'gene':
-            gene_name = record.attributes['Name']
-            gene_id = record.attributes['ID']
+
+            for gname_k in gene_name_keys:
+                try:
+                    gene_name = record.attributes[gname_k]
+                    break
+                except KeyError:
+                    continue
+            else:
+                if logging is not None:
+                    logging.info("Error, Gene doesn't contain one of the Name attribute "
+                                 "information values: %s" % gene_name_keys)
+
+            for gid_k in gene_id_keys:
+                try:
+                    gene_id = record.attributes[gid_k]
+                    break
+                except KeyError:
+                    continue
+            else:
+                if logging is not None:
+                    logging.info("Error, Gene doesn't contain one of the ID attribute "
+                                 "information values: %s" % gene_id_keys)
 
             if chrom not in all_genes:
                 all_genes[chrom] = {'+': [], '-': []}
@@ -483,11 +509,27 @@ def read_gff(filename, list_of_genes, sam_list, logging=None):
             majiq_config.gene_tlb[gene_id] = gn
             list_of_genes.append(gene_id)
             all_genes[chrom][strand].append(gn)
-            gene_id_dict[record.attributes['ID']] = gn
+            gene_id_dict[gene_id] = gn
 
-        elif record.type == 'mRNA' or record.type == 'transcript':
-            transcript_name = record.attributes['ID']
-            parent = record.attributes['Parent']
+        elif record.type in accepted_transcripts:
+            for tid_k in transcript_id_keys:
+                try:
+                    transcript_name = record.attributes[tid_k]
+                    break
+                except KeyError:
+                    continue
+            else:
+                if logging is not None:
+                    logging.info("Error, Transcript doesn't contain one of the ID attribute "
+                                 "information values: %s" % transcript_id_keys)
+
+            try:
+                parent = record.attributes['Parent']
+            except KeyError:
+                if logging is not None:
+                    logging.info("Error, incorrect gff. mRNA %s doesn't have valid parent attribute"
+                                 % (transcript_name, parent))
+
             try:
                 gn = gene_id_dict[parent]
                 trcpt = Transcript(transcript_name, gn, start, end)
@@ -510,9 +552,8 @@ def read_gff(filename, list_of_genes, sam_list, logging=None):
 
             except KeyError:
                 if not logging is None:
-
-                    logging.WARNING("Error, incorrect gff. exon at line %s doesn't have valid mRNA %s" % (0,
-                                                                                                          parent_tx_id))
+                    logging.WARNING("Error, incorrect gff. exon at line %s "
+                                    "doesn't have valid mRNA %s" % (0, parent_tx_id))
                     # end elif
     # end for
     for tid, trcpt in trcpt_id_dict.items():
@@ -685,7 +726,39 @@ def open_hdf5_file(filename, **kwargs):
 def close_hdf5_file(fp):
     return fp.close()
 
+
+
 # bootstrap files
+
+from majiq.grimoire.lsv import quant_lsv
+
+def get_extract_lsv_list(list_of_lsv_id, file_list):
+    result = []
+    fitfunc = []
+
+    for lsv_id in list_of_lsv_id:
+        lsv_cov = []
+        lsv_type = None
+        for fidx, fname in enumerate(file_list):
+
+            with open_hdf5_file(fname) as data:
+                if len(fitfunc) < (fidx+1):
+                    fitfunc.append(data.attrs['fitfunc'])
+                if lsv_type is None:
+                    lsv_type = data['LSVs/%s' % lsv_id].attrs['type']
+
+                assert data['LSVs/%s' % lsv_id].attrs['type'] == lsv_type, "ERROR lsv_type doesn't match for %s" % lsv_id
+                lsv_cov.append(data[JUNCTIONS_DATASET_NAME][data['LSVs/%s' % lsv_id].attrs['coverage']])
+
+#        lsv_cov = np.array(lsv_cov)
+        qq = quant_lsv(lsv_id, lsv_type, lsv_cov)
+        result.append(qq)
+    return result, fitfunc
+
+
+
+
+
 
 
 def add_lsv_to_bootstrapfile(lsv_id, lsv_type, samples, num_exp, lock_per_file, outdir, name):
