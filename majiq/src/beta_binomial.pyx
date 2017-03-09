@@ -5,11 +5,11 @@
 # http://en.wikipedia.org/wiki/Beta-binomial_distribution
 # author: scnorton@biociphers.org
 
-from numpy import exp, floor, ceil, sqrt, r_, maximum, where, sum, zeros, linspace
+from numpy import exp, floor, ceil, sqrt, r_, maximum, where, sum, linspace
 from numpy.lib.function_base import vectorize
-from scipy.stats._distn_infrastructure import rv_discrete, rv_frozen
-from scipy.stats import beta, binom
-from scipy.special import betaln, gammaln, bdtr, bdtrc, btdtri, bdtrik, btdtr
+from scipy.stats._distn_infrastructure import rv_discrete
+from scipy.stats import beta
+from scipy.special import betaln, gammaln, bdtr, bdtrc, btdtr
 try:
     from scipy.special import entr # scipy[>=0.15.0]
 except ImportError:

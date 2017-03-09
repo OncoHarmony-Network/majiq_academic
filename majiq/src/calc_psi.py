@@ -143,6 +143,7 @@ class CalcPsi(BasicPipeline):
         self.logger.info("GROUP: %s" % self.files)
         self.nbins = 40
 
+
         file_locks = None
         if self.only_boots:
             file_locks = [mp.Lock() for xx in self.files]
@@ -155,6 +156,7 @@ class CalcPsi(BasicPipeline):
                                                     minnonzero=self.minpos, min_reads=self.minreads,
                                                     percent=self.min_exp, logger=self.logger)
         lchnksize = max(len(list_of_lsv)/self.nthreads, 1) + 1
+        self.names = self.name
         weights = self.calc_weights(self.weights, self.files, list_of_lsv, lock_arr, lchnksize,
                                     file_locks, q)
 
