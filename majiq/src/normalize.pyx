@@ -8,7 +8,7 @@ from scipy import interpolate
 from scipy.stats.mstats_basic import mquantiles
 import majiq.src.config as majiq_config
 from majiq.src.constants import *
-import majiq.src.checkpolyfitnb as majiqfit
+import majiq.src.polyfitnb as majiqfit
 
 #
 # def mark_stacks(hdf5_fp, fitfunc_r, pvalue_limit, logger=None):
