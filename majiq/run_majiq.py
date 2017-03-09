@@ -111,6 +111,18 @@ def main():
                              help='Dispersion hyperparameter (Default: %(default)0.02f)')
     psianddelta.add_argument('--weights_threshold', action=FRange01, default=0.75,
                              help='Threshold hyperparameter (Default: %(default)0.02f)')
+    psi = new_subparser()
+    psi.add_argument('files', nargs='+', help='The experiment files to analyze. You can include more than one '
+                                              '(they will all be analyzed independently though) Glob syntax supported.')
+    psi.add_argument('--name', required=True, help="The names that identify each of the experiments. "
+                                                   "[Default: %(default)s]")
+    psi.add_argument('--only_bootstrap', action='store_true', dest='only_boots', default=False)
+    psi.add_argument('--weights', dest="weights", default='None',
+                     help='Defines weights for each one of the replicas, for group1 and group2. The expected '
+                          'value is --weights [Auto|None|<w1[,w2,..]>]\n'
+                          '\t Auto will make majiq calculate the best weights, None will use uniform weights. '
+                          'Select the weights manually requires specifying one weight for each replica or an '
+                          'error will be triggered.')
 
 
 
@@ -167,12 +179,7 @@ def main():
     #                         "[Default: %(default)s]")
 
     #calcpsi flags
-    psi = new_subparser()
-    psi.add_argument('files', nargs='+', help='The experiment files to analyze. You can include more than one '
-                                              '(they will all be analyzed independently though) Glob syntax supported.')
-    psi.add_argument('--name', required=True, help="The names that identify each of the experiments. "
-                                                   "[Default: %(default)s]")
-    psi.add_argument('--only_bootstrap', action='store_true', dest='only_boots', default=False)
+
 
     subparsers = parser.add_subparsers(help='')
 
