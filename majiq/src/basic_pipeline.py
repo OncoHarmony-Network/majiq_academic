@@ -109,7 +109,7 @@ class BasicPipeline:
 
             pool = mp.Pool(processes=self.nthreads, initializer=quantification_init,
                            initargs=[q, lock_arr, self.output, self.names, self.silent, self.debug, self.nbins,
-                                     self.m, self.k, self.discardzeros, self.trimborder, file_list, self.export_boots,
+                                     self.m, self.k, self.discardzeros, self.trimborder, file_list, None,
                                      None, file_locks],
                            maxtasksperchild=1)
 
