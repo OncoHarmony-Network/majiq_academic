@@ -18,6 +18,7 @@ from majiq.src.polyfitnb import fit_nb
 from majiq.src.voila_wrapper import gene_to_splicegraph, init_splicegraph
 import datetime
 
+
 def build(args):
     pipeline_run(Builder(args))
 
@@ -38,7 +39,6 @@ def builder_init(lock_array, sam_list, pcr_filename, gff_output, only_rna,
 def merging_files(args_vals):
 
     try:
-
         gne_id, chnk, loop_idx, total = args_vals
         logger = majiq_utils.get_logger("%s/%s.majiq.log" % (majiq_config.outDir, chnk),
                                         silent=builder_init.silent, debug=builder_init.debug)

@@ -13,7 +13,7 @@ import majiq.src.filter as majiq_filter
 import old_majiq.src.io as majiq_io
 import old_majiq.src.pipe as pipe
 import old_majiq.src.normalize as majiq_norm
-from majiq.src.polyfitnb import fit_nb
+from majiq.src.checkpolyfitnb import fit_nb
 
 # ###############################
 # Data loading and Boilerplate #

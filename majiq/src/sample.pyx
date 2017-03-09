@@ -2,7 +2,7 @@ import sys
 from random import choice
 
 import numpy as np
-import majiq.src.polyfitnb as majiq_fit
+import majiq.src.checkpolyfitnb as majiq_fit
 
 """
 Sampling from junctions using a Negative Binomial model.

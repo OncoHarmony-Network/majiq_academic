@@ -11,6 +11,8 @@ QUEUE_MESSAGE_BUILD_CONST_JUNCTION = 1
 QUEUE_MESSAGE_SPLICEGRAPH = 2
 QUEUE_MESSAGE_PSI_RESULT = 3
 QUEUE_MESSAGE_DELTAPSI_RESULT = 4
+QUEUE_MESSAGE_BOOTSTRAP = 5
+
 
 MIN_INTRON_LEN = 1000
 MIN_BP_OVERLAP = 8
@@ -20,6 +22,10 @@ NUM_INTRON_BINS = 10
 SIMPLIFY_ALL = 'all'
 SIMPLIFY_DB = 'annotated'
 SIMPLIFY_DENOVO = 'denovo'
+
+WEIGTHS_AUTO = 'auto'
+WEIGTHS_NONE = 'none'
+MINVAL = 1e-300
 
 def get_quantifier_temp_filename(outdir, name):
     return "%s/tmp.%s.filtered.hdf5" % (outdir, name)

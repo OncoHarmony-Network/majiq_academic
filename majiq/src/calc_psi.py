@@ -42,7 +42,7 @@ def psi_quantification(args_vals):
 
         for fname in quantification_init.files:
             f_list.append(h5py.File(fname, 'r'))
-
+        weights = quantification_init.weights[:, np.newaxis, np.newaxis]
         for lidx, lsv_id in enumerate(list_of_lsv):
             if lidx % 50 == 0:
                 print "Event %d ..." % lidx
@@ -78,7 +78,7 @@ def psi_quantification(args_vals):
 
                 continue
 
-            psi = np.array(lsv_samples)
+            psi = weights * np.array(lsv_samples)
             num_ways = psi.shape[1]
             alpha_prior, beta_prior = get_prior_params(lsvobj.attrs['type'], num_ways)
             post_psi = []
@@ -148,26 +148,26 @@ class CalcPsi(BasicPipeline):
             file_locks = [mp.Lock() for xx in self.files]
         lock_arr = [mp.Lock() for xx in range(self.nthreads)]
         q = mp.Queue()
-        pool = mp.Pool(processes=self.nthreads, initializer=quantification_init,
-                       initargs=[q, lock_arr, self.output, self.name, self.silent, self.debug, self.nbins, self.m,
-                                 self.k, self.discardzeros, self.trimborder, self.files, self.only_boots,
-                                 file_locks],
-                       maxtasksperchild=1)
 
         lsv_dict, lsv_types, lsv_summarized, meta = majiq_io.extract_lsv_summary(self.files)
+
         list_of_lsv = majiq_filter.merge_files_hdf5(lsv_dict=lsv_dict, lsv_summarized=lsv_summarized,
                                                     minnonzero=self.minpos, min_reads=self.minreads,
                                                     percent=self.min_exp, logger=self.logger)
+        lchnksize = max(len(list_of_lsv)/self.nthreads, 1) + 1
+        weights = self.calc_weights(self.weights, self.files, list_of_lsv, lock_arr, lchnksize,
+                                    file_locks, q)
+
         if self.only_boots:
             majiq_io.create_bootstrap_file(self.files, self.output, self.name, m=self.m)
 
-        lchnksize = max(len(list_of_lsv)/self.nthreads, 1) + 1
-        [xx.acquire() for xx in lock_arr]
-
         if len(list_of_lsv) > 0:
-            # psi_quantification((list_of_lsv, 0))
-            # for xx in majiq_utils.chunks2(list_of_lsv, lchnksize, extra=range(self.nthreads)):
-            #     print xx
+            [xx.acquire() for xx in lock_arr]
+            pool = mp.Pool(processes=self.nthreads, initializer=quantification_init,
+                           initargs=[q, lock_arr, self.output, self.name, self.silent, self.debug, self.nbins, self.m,
+                                     self.k, self.discardzeros, self.trimborder, self.files, self.only_boots, weights,
+                                     file_locks],
+                           maxtasksperchild=1)
 
             pool.map_async(psi_quantification, majiq_utils.chunks2(list_of_lsv, lchnksize, extra=range(self.nthreads)))
             pool.close()
@@ -182,6 +182,7 @@ class CalcPsi(BasicPipeline):
         if self.only_boots:
             majiq_io.close_bootstrap_file(self.files, self.output, self.name, m=self.m)
 
-        self.logger.info("PSI calculation for %s ended succesfully! Result can be found at %s" % (self.name, self.output))
+        self.logger.info("PSI calculation for %s ended succesfully! "
+                         "Result can be found at %s" % (self.name, self.output))
         self.logger.info("Alakazam! Done.")
 
