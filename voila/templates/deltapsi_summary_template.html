@@ -172,7 +172,7 @@
 
                                 <td id="data_td{{ gene_index }}{{ loop.index }}" class="lsvDeltaCompact primer"
                                     data-lsv="{{ gene['lsv']|to_json }}" data-threshold="{{ threshold }}"
-                                    genome="{{ lexps.genome }}">
+                                    genome="{{ lexps.genome }}" lsv-text-version="{{ lsv_text_version }}">
                                     {# Hidden field to make inclusion/exclusion sortable #}
                                     <p class="hidden">
                                         {% set max_diff = [0.0] %}

@@ -33,10 +33,12 @@ function moveSpliceGraphDataToLsv(spliceGraphs, lsv) {
         spliceGraph.exons.forEach(function (exon) {
             var expressed_start = exon.start;
             var expressed_end = exon.end;
+
             exon.a3.forEach(function (junc_index) {
                 expressed_start = Math.max(juncs[junc_index].end, expressed_start);
             });
             exon.expressed_start = expressed_start;
+
             exon.a5.forEach(function (junc_index) {
                 expressed_end = Math.min(juncs[junc_index].start, expressed_end)
             });
@@ -89,9 +91,9 @@ $(document).ready(function () {
         text: function (trigger) {
             var primer = $(trigger).parents('tr').find('.primer');
             var lsv = primer.attr('data-lsv');
-            var genome = primer.attr('genome');
             lsv = JSON.parse(lsv.replace(/'/g, '"'));
-            lsv.genome = genome;
+            lsv.genome = primer.attr('genome');
+            lsv.lsv_text_version = primer.attr('lsv-text-version');
 
             var spliceDivs = $(trigger).parents('.gene-container').find('.spliceDiv').get();
             var spliceGraphs = spliceDivs.reduce(function (accu, currVal) {

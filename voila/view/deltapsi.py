@@ -3,6 +3,7 @@ from os import path
 
 from voila import constants
 from voila import io_voila
+from voila.constants import LSV_TEXT_VERSION
 from voila.io_voila import Voila
 from voila.producer_consumer import ProducerConsumer
 from voila.utils import utils_voila
@@ -112,7 +113,8 @@ class Deltapsi(ProducerConsumer):
                         threshold=args.threshold,
                         lexps=majiq_output['meta_exps'],
                         comb_spliceg_cond1=comb_spliceg_cond1,
-                        comb_spliceg_cond2=comb_spliceg_cond2
+                        comb_spliceg_cond2=comb_spliceg_cond2,
+                        lsv_text_version=LSV_TEXT_VERSION
                     )
                 )
 

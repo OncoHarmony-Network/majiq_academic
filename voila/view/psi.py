@@ -3,6 +3,7 @@ from os import path
 
 from voila import constants
 from voila import io_voila
+from voila.constants import LSV_TEXT_VERSION
 from voila.io_voila import Voila
 from voila.producer_consumer import ProducerConsumer
 from voila.utils import utils_voila
@@ -94,7 +95,8 @@ class Psi(ProducerConsumer):
                         namePage=page_name,
                         lexps=majiq_output['meta_exps'],
                         genes_exps_list=majiq_output['genes_exp'],
-                        comb_spliceg_cond1=comb_spliceg_cond1
+                        comb_spliceg_cond1=comb_spliceg_cond1,
+                        lsv_text_version=LSV_TEXT_VERSION
                     )
                 )
 
