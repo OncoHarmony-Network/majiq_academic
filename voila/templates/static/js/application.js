@@ -19,90 +19,23 @@ CanvasRenderingContext2D.prototype.dashedLine = function (x1, y1, x2, y2, dashLe
     this[q % 2 == 0 ? 'moveTo' : 'lineTo'](x2, y2);
 };
 
-function moveSpliceGraphDataToLsv(spliceGraphs, lsv) {
-    var lsvStart = lsv.exons[0].start;
-    var lsvEnd = lsv.exons[lsv.exons.length - 1].end;
-    lsv.splice_graphs = [];
-
-    delete lsv.exons;
-    delete lsv.junctions;
-
-    spliceGraphs.forEach(function (spliceGraph) {
-        var juncs = spliceGraph.junctions;
-
-        spliceGraph.exons.forEach(function (exon) {
-            var expressed_start = exon.start;
-            var expressed_end = exon.end;
-
-            exon.a3.forEach(function (junc_index) {
-                expressed_start = Math.max(juncs[junc_index].end, expressed_start);
-            });
-            exon.expressed_start = expressed_start;
-
-            exon.a5.forEach(function (junc_index) {
-                expressed_end = Math.min(juncs[junc_index].start, expressed_end)
-            });
-            exon.expressed_end = expressed_end
-        });
-
-        var foundJunctions = [];
-        var starts = false;
-        var ends = false;
-
-        var foundExons = spliceGraph.exons.filter(function (exon) {
-            return (exon.start >= lsvStart) && (exon.end <= lsvEnd)
-        });
-
-        spliceGraph.junctions.forEach(function (junction, juncIndex) {
-            foundExons.forEach(function (exon) {
-                if ((junction.start >= exon.start) && (junction.start <= exon.end))
-                    starts = true;
-                if ((junction.end >= exon.start) && (junction.end <= exon.end))
-                    ends = true
-            });
-
-            if (starts && ends)
-                foundJunctions.push(junction);
-
-            starts = false;
-            ends = false
-        });
-
-        foundExons.forEach(function (exon) {
-            exon.a3 = [];
-            exon.a5 = [];
-            foundJunctions.forEach(function (junction, juncIndex) {
-                if ((junction.start >= exon.start) && (junction.start <= exon.end))
-                    exon.a5.push(juncIndex);
-                if ((junction.end >= exon.start) && (junction.end <= exon.end))
-                    exon.a3.push(juncIndex)
-            })
-        });
-
-        lsv.splice_graphs.push({'exons': foundExons, 'junctions': foundJunctions})
-
-    })
-
-
-}
-
 $(document).ready(function () {
     new Clipboard('.copy-to-clipboard', {
         text: function (trigger) {
             var primer = $(trigger).parents('tr').find('.primer');
+            var data = {};
             var lsv = primer.attr('data-lsv');
-            lsv = JSON.parse(lsv.replace(/'/g, '"'));
-            lsv.genome = primer.attr('genome');
-            lsv.lsv_text_version = primer.attr('lsv-text-version');
+            data.lsv = JSON.parse(lsv.replace(/'/g, '"'));
+            data.genome = primer.attr('genome');
+            data.lsv_text_version = primer.attr('lsv-text-version');
 
             var spliceDivs = $(trigger).parents('.gene-container').find('.spliceDiv').get();
-            var spliceGraphs = spliceDivs.reduce(function (accu, currVal) {
+            data.splice_graphs = spliceDivs.reduce(function (accu, currVal) {
                 accu.push(JSON.parse(currVal.getAttribute('data-exon-list').replace(/'/g, '"')));
                 return accu
             }, []);
 
-            moveSpliceGraphDataToLsv(spliceGraphs, lsv);
-            return JSON.stringify(lsv).replace(/"/g, '\\"')
+            return JSON.stringify(data).replace(/"/g, '\\"')
         }
     });
 
