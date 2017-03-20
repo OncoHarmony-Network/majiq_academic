@@ -23,8 +23,9 @@ def main():
     Main MAJIQ parser with all flags and subcommands
     """
     #REMINDER parser.add_parser(..... parents='[bla, ble]')
-    parser = argparse.ArgumentParser(description="MAJIQ is a suite of tools for the analysis of Alternative "
-                                                 "Splicing Events and Alternative Splicing Quantification.")
+    parser = argparse.ArgumentParser(description="MAJIQ is a suite of tools for the Splicing Events "
+                                                 "and Alternative Splicing Quantification.")
+
     parser.add_argument('-v', action='version', version=VERSION)
 
     #common flags (first ones are required)
