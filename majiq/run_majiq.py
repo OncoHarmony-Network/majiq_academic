@@ -46,7 +46,7 @@ def main():
     buildparser.add_argument('transcripts', action="store", help='read file in SAM format')
     buildparser.add_argument('-conf', default=None, required=True, help='Provide study configuration file with all '
                                                                         'the execution information')
-    buildparser.add_argument('--nogc', dest="gcnorm", action='store_true', default=True,
+    buildparser.add_argument('--nogc', dest="gcnorm", action='store_false', default=False,
                              help='psianddelta GC content normalization [Default: GC content normalization activated]')
     buildparser.add_argument('--pcr', dest='pcr_filename', action="store", help='PCR bed file as gold_standard')
     buildparser.add_argument('--gff_output', dest='gff_output', default="lsvs.gff", action="store",
