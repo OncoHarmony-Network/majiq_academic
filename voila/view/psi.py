@@ -100,8 +100,8 @@ class Psi(ProducerConsumer):
                     )
                 )
 
-            for key in genes_dict:
-                self.dict(genes_dict[key][0].name, path.join(constants.SUMMARIES_SUBFOLDER, page_name))
+            for _, value in genes_dict.iteritems():
+                self.dict(value[0].name, path.join(constants.SUMMARIES_SUBFOLDER, page_name))
 
             self.queue.task_done()
 

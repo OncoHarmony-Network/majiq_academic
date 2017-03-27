@@ -69,6 +69,13 @@ def check_file(value):
     return value
 
 
+def required_argument(*args, **kwargs):
+    parser = args[0]
+    required = parser.add_argument_group('required arguments')
+    kwargs['required'] = True
+    required.add_argument(*args[1:], **kwargs)
+
+
 def psi_args():
     """
     Psi specific arguments.
@@ -108,6 +115,7 @@ def splice_graphs_args():
     :return: parser
     """
     parser_splice_graphs = argparse.ArgumentParser(add_help=False)
+
     parser_splice_graphs.add_argument('splice_graph',
                                       type=check_file,
                                       help='location of majiq\'s splice graph file')
@@ -141,30 +149,35 @@ def conditional_table_args():
     """
 
     parser_conditional_table = argparse.ArgumentParser(add_help=False)
-    parser_required = parser_conditional_table.add_argument_group('required arguments')
 
-    parser_required.add_argument('--cond-pair',
-                                 required=True,
-                                 nargs=2,
-                                 metavar='M1 M2',
-                                 help='condition pair to compare')
+    required_argument(
+        parser_conditional_table,
+        '--cond-pair',
+        nargs=2,
+        metavar='M1 M2',
+        help='condition pair to compare'
+    )
 
-    parser_required.add_argument('--sample-files',
-                                 required=True,
-                                 type=check_file,
-                                 nargs='+',
-                                 help='samples Voila output files')
+    required_argument(
+        parser_conditional_table,
+        '--sample-files',
+        type=check_file,
+        nargs='+',
+        help='samples Voila output files')
 
-    parser_required.add_argument('--sample-names',
-                                 dest='sample_names',
-                                 required=True,
-                                 nargs='+',
-                                 help='sample names')
+    required_argument(
+        parser_conditional_table,
+        '--sample-names',
+        dest='sample_names',
+        nargs='+',
+        help='sample names'
+    )
 
-    parser_required.add_argument('--pairwise-dir',
-                                 required=True,
-                                 help='root directory where the pairwise delta psi VOILA summaries were '
-                                      'created')
+    required_argument(
+        parser_conditional_table,
+        '--pairwise-dir',
+        help='root directory where the pairwise delta psi VOILA summaries were created'
+    )
 
     parser_conditional_table.add_argument('--threshold-change',
                                           type=float,
@@ -180,21 +193,32 @@ def base_args():
     """
 
     base_parser = argparse.ArgumentParser(add_help=False)
-    required_parser = base_parser.add_argument_group('required arguments')
 
-    required_parser.add_argument('-o', '--output',
-                                 dest='output',
-                                 required=True,
-                                 type=check_dir,
-                                 help='path for output directory')
+    required_argument(
+        base_parser,
+        '-o', '--output',
+        dest='output',
+        type=check_dir,
+        help='path for output directory'
+    )
 
-    base_parser.add_argument('-l', '--logger',
-                             default=None,
-                             help='path for log files')
+    base_parser.add_argument(
+        '-p', '--processes',
+        type=int,
+        help='Max number of processes used.  Processes will never exceed the number of available processes.'
+    )
 
-    base_parser.add_argument('-s', '--silent',
-                             action='store_true',
-                             help='do not write logs to standard out')
+    base_parser.add_argument(
+        '-l', '--logger',
+        default=None,
+        help='path for log files'
+    )
+
+    base_parser.add_argument(
+        '-s', '--silent',
+        action='store_true',
+        help='do not write logs to standard out'
+    )
     return base_parser
 
 
@@ -217,16 +241,18 @@ def majiq_quantifier_args():
     """
 
     majiq_quantifier_parser = argparse.ArgumentParser(add_help=False)
-    parser_required = majiq_quantifier_parser.add_argument_group('required arguments')
 
     majiq_quantifier_parser.add_argument('majiq_quantifier',
                                          type=check_file,
                                          help='location of majiq\'s quantifier file, sometimes referred to as the '
                                               '"voila" file')
 
-    parser_required.add_argument('--splice-graph',
-                                         type=check_file,
-                                         help='path to splice graph file')
+    required_argument(
+        majiq_quantifier_parser,
+        '--splice-graph',
+        type=check_file,
+        help='path to splice graph file'
+    )
 
     majiq_quantifier_parser.add_argument('--gtf',
                                          action='store_true',
@@ -370,6 +396,16 @@ def main():
     if args.logger:
         log_filename = os.path.join(args.logger, log_filename)
     log = voila_log(filename=log_filename, silent=args.silent)
+    log.info('Starting voila.')
+
+    # set number of processes
+    if args.processes and args.processes < constants.PROCESS_COUNT:
+        constants.PROCESS_COUNT = args.processes
+
+    if constants.PROCESS_COUNT == 1:
+        log.info('Using 1 process.')
+    else:
+        log.info('Using {0} processes'.format(constants.PROCESS_COUNT))
 
     # run function for this analysis type
     type_analysis = {
@@ -382,11 +418,11 @@ def main():
 
     type_analysis[args.type_analysis](args)
 
-    log.info("Voila! Summaries created in: %s" % args.output)
+    log.info("Voila! Summaries created in: {0}.".format(args.output))
 
     # Add elapsed time
     elapsed_str = secs2hms(time.time() - start_time)
-    log.info("Execution time: {0}".format(elapsed_str))
+    log.info("Execution time: {0}.".format(elapsed_str))
 
 
 if __name__ == '__main__':

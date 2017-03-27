@@ -1,3 +1,4 @@
+import os
 from collections import OrderedDict
 from os import path
 
@@ -18,6 +19,13 @@ class Deltapsi(ProducerConsumer):
     def __init__(self, args):
         super(Deltapsi, self).__init__()
         self.args = args
+        self.comb_spliceg_cond1 = None
+        self.comb_spliceg_cond2 = None
+        self.template_file_name = None
+        self.output_html = None
+        self.gene_keys_length = None
+        self.sum_template = None
+
         with Voila(args.majiq_quantifier, 'r') as v:
             metainfo = v.get_metainfo()
             voila_lsvs = v.get_voila_lsvs(lsv_ids=args.lsv_ids,
@@ -56,85 +64,73 @@ class Deltapsi(ProducerConsumer):
         pass
 
     def _producer(self):
-        gene_keys = sorted(self.majiq_output['genes_dict'].keys())
+        majiq_output = self.majiq_output
+        gene_keys = sorted(majiq_output['genes_dict'].keys())
 
         for page_number, subset_keys in enumerate(grouper(gene_keys, constants.MAX_GENES)):
-            self.queue.put((page_number, subset_keys))
+            subset_keys = (x for x in subset_keys if x)
+            genes_dict = OrderedDict((k, majiq_output['genes_dict'][k]) for k in subset_keys)
+            self.queue.put((page_number, genes_dict))
 
     def _worker(self):
-        pass
-
-    def render_html(self):
-        log = voila_log()
         majiq_output = self.majiq_output
-        args = self.args
-        gene_keys = sorted(majiq_output['genes_dict'].keys())
-        output_dir = args.output
-        output_html = get_output_html(args, args.majiq_quantifier)
-        summaries_subfolder = path.join(output_dir, constants.SUMMARIES_SUBFOLDER)
-        utils_voila.create_if_not_exists(summaries_subfolder)
-        env = get_env()
-        template_file_name = args.type_analysis.replace("-", "_") + "_summary_template.html"
-        sum_template = env.get_template(template_file_name)
-        comb_spliceg_cond1 = majiq_output['genes_exp'][0].keys()[0]
-        comb_spliceg_cond2 = majiq_output['genes_exp'][1].keys()[0]
-        links_dict = {}
 
-        log.info("Number of genes detected in Voila: %d." % len(gene_keys))
-        log.info("Number of LSVs detected in Voila: %d." % sum(
-            [len(majiq_output['genes_dict'][g]) for g in majiq_output['genes_dict']]))
-        log.info("Creating HTML5 with splice graphs summaries ...")
+        while True:
+            page_number, genes_dict = self.queue.get()
+            page_name = '{0}_{1}'.format(page_number, self.output_html)
+            prev_page, next_page = get_prev_next_pages(page_number, self.gene_keys_length, self.output_html)
 
-        # Generate summary
-        for page_number, subset_keys in enumerate(grouper(gene_keys, constants.MAX_GENES)):
-
-            log.info("Processing %d out of %d genes ..." % (
-                min((page_number + 1) * constants.MAX_GENES, len(gene_keys)), len(majiq_output['genes_dict'])))
-
-            subset_keys = [x for x in subset_keys if x]
-
-            genes_dict = OrderedDict((k, majiq_output['genes_dict'][k]) for k in subset_keys)
-
-            name_page = '{0}_{1}'.format(page_number, output_html)
-
-            prev_page, next_page = get_prev_next_pages(page_number, len(gene_keys), output_html)
-
-            full_path = path.join(summaries_subfolder, name_page)
-
-            with open(full_path, 'w') as voila_output:
+            with open(path.join(self.args.output, constants.SUMMARIES_SUBFOLDER, page_name), 'w') as voila_output:
                 voila_output.write(
-                    sum_template.render(
+                    self.sum_template.render(
                         tableMarks=[table_marks_set(len(gene_set)) for gene_set in genes_dict],
                         genes_dict=genes_dict,
                         genes_exps_list=majiq_output['genes_exp'],
                         prevPage=prev_page,
                         nextPage=next_page,
-                        namePage=name_page,
-                        threshold=args.threshold,
+                        namePage=page_name,
+                        threshold=self.args.threshold,
                         lexps=majiq_output['meta_exps'],
-                        comb_spliceg_cond1=comb_spliceg_cond1,
-                        comb_spliceg_cond2=comb_spliceg_cond2,
+                        comb_spliceg_cond1=self.comb_spliceg_cond1,
+                        comb_spliceg_cond2=self.comb_spliceg_cond2,
                         lsv_text_version=LSV_TEXT_VERSION
                     )
                 )
 
-            for glsv_list in genes_dict.values():
-                links_dict[glsv_list[0]['lsv'].name] = "%s/%s" % (constants.SUMMARIES_SUBFOLDER, name_page)
+            for _, value in genes_dict.iteritems():
+                self.dict(value[0]['lsv'].name, os.path.join(constants.SUMMARIES_SUBFOLDER, page_name))
 
-        majiq_output['voila_links'] = links_dict
+            self.queue.task_done()
+
+    def render_html(self):
+        args = self.args
+        majiq_output = self.majiq_output
+
+        self.comb_spliceg_cond1 = majiq_output['genes_exp'][0].keys()[0]
+        self.comb_spliceg_cond2 = majiq_output['genes_exp'][1].keys()[0]
+        self.template_file_name = args.type_analysis.replace("-", "_") + "_summary_template.html"
+        self.output_html = get_output_html(args, args.majiq_quantifier)
+        self.gene_keys_length = len(majiq_output['genes_dict'].keys())
+        self.sum_template = get_env().get_template(self.template_file_name)
+
+        utils_voila.create_if_not_exists(os.path.join(args.output, constants.SUMMARIES_SUBFOLDER))
+
+        self.run()
+
+        majiq_output['voila_links'] = self.get_dict()
 
         # Generate index
-        log.info("Creating HTML5 index summary ...")
-        sum_template = env.get_template("index_delta_summary_template.html")
+        voila_log().info("Creating HTML5 index summary ...")
+        sum_template = get_env().get_template("index_delta_summary_template.html")
 
-        with open(path.join(output_dir, 'index.html'), 'w') as voila_output:
+        with open(path.join(args.output, 'index.html'), 'w') as voila_output:
             voila_output.write(
                 sum_template.render(
                     lsvList=majiq_output['lsv_list'],
                     tableMarks=table_marks_set(len(majiq_output['lsv_list'])),
                     threshold=args.threshold,
                     lexps=majiq_output['meta_exps'],
-                    links_dict=links_dict,
+                    links_dict=majiq_output['voila_links'],
                     maxLsvs=constants.MAX_LSVS_DELTAPSI_INDEX
                 )
             )
