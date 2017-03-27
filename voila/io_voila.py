@@ -1,6 +1,5 @@
 import csv
 import os
-from collections import defaultdict
 from multiprocessing import Manager
 from multiprocessing import Process, Pool
 from multiprocessing.queues import JoinableQueue
@@ -149,6 +148,145 @@ class Voila(ProducerConsumer):
         return voila_lsvs
 
 
+class VoilaInput(HDF5):
+    """Standard input interface by experiment used by Voila"""
+
+    def __init__(self, lsvs=(), metainfo=None):
+        super(VoilaInput, self).__init__()
+        print 'VoilaInput has been deprecated.  Use Voila instead.'
+        self.lsvs = lsvs
+        self.metainfo = metainfo
+
+    def get_lsvs(self):
+        return self.lsvs
+
+    def add_lsv(self, l):
+        self.lsvs.append(l)
+
+    def samples_metainfo(self):
+        """Sample information generator, one by one."""
+        for sample_info in self.metainfo:
+            yield sample_info
+
+    def encode_metainfo(self, h):
+        h = h.create_group('/metainfo')
+        metainfo = self.metainfo.copy()
+
+        experiments1 = h.create_group('experiments1')
+        for index, item in enumerate(metainfo['experiments1']):
+            experiments1.attrs[str(index)] = item
+
+        del metainfo['experiments1']
+
+        if 'group2' in metainfo and 'experiments2' in metainfo:
+            experiments2 = h.create_group('experiments2')
+            for index, item in enumerate(metainfo['experiments2']):
+                experiments2.attrs[str(index)] = item
+
+            del metainfo['experiments2']
+
+        for key in metainfo:
+            h.attrs[key] = metainfo[key]
+
+    def decode_metainfo(self, h):
+        self.metainfo = {}
+        for key in h.attrs:
+            self.metainfo[key] = h.attrs[key]
+
+        for key in h:
+            self.metainfo[key] = [h[key].attrs[attr] for attr in h[key].attrs]
+
+    def exclude(self):
+        return ['metainfo', 'lsvs']
+
+    def to_hdf5(self, h, use_id=True):
+        # metainfo
+        self.encode_metainfo(h)
+
+        # lsvs
+        for lsv in self.lsvs:
+            lsv.to_hdf5(h, use_id)
+
+        super(VoilaInput, self).to_hdf5(h, use_id)
+
+    def from_hdf5(self, h):
+        # metainfo
+        self.decode_metainfo(h['metainfo'])
+
+        # lsvs
+        self.lsvs = [VoilaLsv.easy_from_hdf5(h['lsvs'][lsv_id]) for lsv_id in h['lsvs']]
+
+        return super(VoilaInput, self).from_hdf5(h)
+
+    @classmethod
+    def metainfo_to_hdf5(cls, h, genome, group1, experiments1, group2=None, experiments2=None):
+        metainfo = {'group1': group1, 'experiments1': experiments1, 'genome': genome}
+        if group2 and experiments2:
+            metainfo['experiments2'] = experiments2
+            metainfo['group2'] = group2
+        vi = cls()
+        vi.metainfo = metainfo
+        vi.encode_metainfo(h['/'])
+
+    @classmethod
+    def from_hdf5_file(cls, hdf5_filename, lsv_types=None, lsv_ids=None, gene_names=None):
+        """
+        Create VoilaInput object from HDF5 file.  This will process each of the VoilaLsvs in their own thread using the
+        Producer Consumer design pattern.
+        :param hdf5_filename: HDF5 filename string
+        :return: VoilaInput object
+        """
+
+        def worker():
+            with h5py.File(hdf5_filename, 'r') as h:
+                while True:
+                    id = queue.get()
+                    lsv = VoilaLsv.easy_from_hdf5(h['lsvs'][id])
+
+                    if not lsv_types or lsv.lsv_type in lsv_types:
+                        if not gene_names or lsv.name in gene_names:
+                            if not lsv_ids or lsv.lsv_id in lsv_ids:
+                                manage_dict[id] = lsv
+                    queue.task_done()
+
+        def producer():
+            with h5py.File(hdf5_filename, 'r') as h:
+                for id in h['lsvs']:
+                    queue.put(id)
+
+        log = voila_log()
+        if not os.path.isfile(hdf5_filename):
+            log.error('unable to load file: {0}'.format(hdf5_filename))
+            raise IOError('Voila input file does not exist.')
+
+        log.info('Loading {0}.'.format(hdf5_filename))
+
+        voila_input = VoilaInput()
+
+        queue = JoinableQueue()
+
+        manage_dict = Manager().dict()
+
+        producer_proc = Process(target=producer)
+        producer_proc.daemon = True
+        producer_proc.start()
+
+        pool = Pool(constants.PROCESS_COUNT, worker)
+
+        producer_proc.join()
+        queue.join()
+
+        pool.close()
+        queue.close()
+
+        with h5py.File(hdf5_filename, 'r') as h:
+            voila_input.decode_metainfo(h['metainfo'])
+
+        voila_input.lsvs = manage_dict.values()
+
+        return voila_input
+
+
 def load_dpairs(pairwise_dir, majiq_output):
     """
     Load pairwise files from MAJIQ analysis.
@@ -180,9 +318,6 @@ def load_dpairs(pairwise_dir, majiq_output):
             except IOError:
                 pass
     return lmajiq_pairs, group1_name, group2_name
-
-
-
 
 
 def tab_output(args, majiq_output):
@@ -288,9 +423,6 @@ def tab_output(args, majiq_output):
                 writer.writerow(row)
 
     log.info("Delimited output file successfully created in: %s" % tsv_file)
-
-
-
 
 
 def generic_feature_format_txt_files(args, majiq_output, out_gff3=False):
