@@ -4,6 +4,13 @@ import abc
 import numpy as np
 from numpy.ma import masked_less
 import majiq.src.utils as majiq_utils
+from majiq.src.psi import divs_from_bootsamples, calc_weights_from_divs
+from majiq.src.multiproc import QueueMessage, quantification_init, queue_manager
+from majiq.src.constants import *
+import sys
+import traceback
+import multiprocessing as mp
+import collections
 
 # ###############################
 # Data loading and Boilerplate #
@@ -22,6 +29,35 @@ def get_clean_raw_reads(matched_info, matched_lsv, outdir, names, num_exp):
     majiq_io.dump_bin_file(res, '%s/clean_reads.%s.pkl' % (outdir, names))
 
 
+def bootstrap_samples_with_divs(args_vals):
+
+    try:
+        list_of_lsv, chnk = args_vals
+        logger = majiq_utils.get_logger("%s/%s.majiq.log" % (quantification_init.output, chnk),
+                                        silent=quantification_init.silent, debug=quantification_init.debug)
+
+        lsvs_to_work, fitfunc_r = majiq_io.get_extract_lsv_list(list_of_lsv, quantification_init.files)
+
+        divs = divs_from_bootsamples(lsvs_to_work, fitfunc_r=fitfunc_r,
+                                     n_replica=len(quantification_init.files), pnorm=1, m_samples=quantification_init.m,
+                                     k_positions=quantification_init.k, discardzeros=quantification_init.discardzeros,
+                                     trimborder=quantification_init.trimborder, debug=False,
+                                     nbins=quantification_init.nbins, store_bootsamples=True)
+
+        qm = QueueMessage(QUEUE_MESSAGE_BOOTSTRAP, divs, chnk)
+        quantification_init.queue.put(qm, block=True)
+
+        qm = QueueMessage(QUEUE_MESSAGE_END_WORKER, None, chnk)
+        quantification_init.queue.put(qm, block=True)
+        quantification_init.lock[chnk].acquire()
+        quantification_init.lock[chnk].release()
+
+    except Exception as e:
+        traceback.print_exc()
+        sys.stdout.flush()
+        raise()
+
+
 def pipeline_run(pipeline):
     """ Exception catching for all the pipelines """
     try:
@@ -32,10 +68,15 @@ def pipeline_run(pipeline):
 
 
 class BasicPipeline:
+    #
+    # boots_conf = collections.namedtuple('boots_conf', 'm, k, discardzeros, trimborder')
+    # basic_conf = collections.namedtuple('basic_conf', 'output, nbins, silent, debug')
+
     def __init__(self, args):
         """Basic configuration shared by all pipelines"""
 
         self.__dict__.update(args.__dict__)
+
         if self.plotpath:
             majiq_utils.create_if_not_exists(self.plotpath)
         self.logger_path = self.logger
@@ -60,6 +101,42 @@ class BasicPipeline:
             if self.logger is not None:
                 self.logger.debug("Fitting NB function with constitutive events...")
             return fit_nb(const_junctions, "%s/nbfit" % self.output, self.plotpath, logger=self.logger)
+
+    def calc_weights(self, weight_type, file_list, list_of_lsv, lock_arr, lchnksize, file_locks, q):
+
+        if weight_type.lower() == WEIGTHS_AUTO:
+            """ Calculate bootstraps samples and weights """
+
+            pool = mp.Pool(processes=self.nthreads, initializer=quantification_init,
+                           initargs=[q, lock_arr, self.output, self.names, self.silent, self.debug, self.nbins,
+                                     self.m, self.k, self.discardzeros, self.trimborder, file_list, None,
+                                     None, file_locks],
+                           maxtasksperchild=1)
+
+            [xx.acquire() for xx in lock_arr]
+            pool.map_async(bootstrap_samples_with_divs,
+                           majiq_utils.chunks2(list_of_lsv, lchnksize, extra=range(self.nthreads)))
+            pool.close()
+            divs = []
+            queue_manager(input_h5dfp=None, output_h5dfp=None, lock_array=lock_arr, result_queue=q,
+                          num_chunks=self.nthreads, out_inplace=divs,
+                          logger=self.logger)
+            pool.join()
+
+            weights = calc_weights_from_divs(np.array(divs), thresh=self.weights_threshold, alpha=self.weights_alpha,
+                                             logger=self.logger)
+
+        elif weight_type.lower() == WEIGTHS_NONE:
+            weights = np.ones(shape=(len(file_list)))
+
+        else:
+            weights = np.array([float(xx) for xx in weight_type.split(',')])
+            if len(weights) != len(file_list):
+                self.logger.error('weights wrong arguments number of weights values is different than number of '
+                                  'specified replicas for that group')
+
+        return weights
+
 
 
     @abc.abstractmethod

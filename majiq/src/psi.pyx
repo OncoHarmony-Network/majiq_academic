@@ -10,6 +10,10 @@ import majiq.src.io as majiq_io
 import majiq.src.io_utils
 from majiq.src.plotting import plot_matrix
 from majiq.src.constants import *
+from majiq.src.sample import sample_from_junctions
+
+from majiq.src.beta_binomial import betabinom
+import scipy.misc
 
 """
 Calculate and manipulate PSI and Delta PSI values
@@ -19,6 +23,65 @@ BINS = np.arange(0, 1, BSIZE)
 # The bins for PSI values. With a BSIZE of 0.025, we have 40 BINS
 BINS_CENTER = np.arange(0 + BSIZE / 2, 1, BSIZE)
 # The center of the previous BINS. This is used to calculate the mean value of each bin.
+
+
+def divs_from_bootsamples(lsvs_to_work, fitfunc_r, n_replica, pnorm, m_samples, k_positions, discardzeros,
+                          trimborder, debug=False, nbins=40, store_bootsamples=True):
+
+    bsize = 1.0 / float(nbins)
+    psi_border = np.arange(0, 1.01, bsize)
+
+    div = []#np.zeros(shape=(len(lsvs_to_work), n_replica), dtype=np.float)
+    for lsv_idx, quant_lsv in enumerate(lsvs_to_work):
+        num_ways = quant_lsv.coverage[0].shape[0]
+        post_cdf = np.zeros(shape=(n_replica, num_ways, psi_border.shape[0]), dtype=np.float)
+        for rr in xrange(n_replica):
+
+            alpha_prior, beta_prior = get_prior_params(quant_lsv.type, num_ways)
+            m_lsv, var_lsv, s_lsv = sample_from_junctions(junction_list=quant_lsv.coverage[rr],
+                                                          m=m_samples,
+                                                          k=k_positions,
+                                                          discardzeros=discardzeros,
+                                                          trimborder=trimborder,
+                                                          fitted_one_over_r=fitfunc_r[rr],
+                                                          debug=debug)
+
+            for jidx in range(num_ways):
+                alpha_0 = alpha_prior[jidx]
+                beta_0 = beta_prior[jidx]
+                for m in xrange(m_samples):
+
+                    sample = s_lsv[jidx][m]
+                    notsample = s_lsv[:, m].sum() - sample
+                    post_cdf[rr, jidx] += beta.cdf(psi_border, a=sample + alpha_0, b=notsample + beta_0)
+
+                post_cdf[rr, jidx] /= m_samples
+
+        med = np.median(post_cdf, axis=0, keepdims=True)
+
+        psi = np.log(np.diff(post_cdf, axis=2) + MINVAL)
+        psi -= scipy.misc.logsumexp(post_cdf, axis=2, keepdims=True)
+        med = np.log(np.diff(med, axis=2) + MINVAL)
+        med -= scipy.misc.logsumexp(med, axis=2, keepdims=True)
+        ldist = np.log(np.abs(np.exp(psi) - np.exp(med)) + MINVAL)
+        div.append(np.exp((scipy.misc.logsumexp(ldist * pnorm, axis=2) - np.log(2)) / pnorm).max(axis=1))
+
+    return div
+
+
+def calc_weights_from_divs(divs, thresh=0.75, alpha=15., logger=None):
+    k_T = np.where(divs.max(1) > thresh)[0]
+    if k_T.size > 0:
+        iter_k_t = (divs[k_T] == divs[k_T].max(1)[:, np.newaxis]).sum(0)
+        alpha_param = float(alpha) / iter_k_t.size
+        num_N = k_T.size / iter_k_t.size
+        beta_param = alpha - alpha_param
+        distr = betabinom(k_T.size, alpha_param, beta_param)
+        weights = np.clip(distr.sf(iter_k_t) / distr.sf(num_N), 0, 1)
+        logger.debug('|K_T|=%d, N=%d, Alpha=%0.03f, Beta=%0.03f' % (k_T.size, num_N, alpha_param, beta_param), logger)
+    else:
+        weights = np.ones(divs.shape[1], dtype=float)
+    return weights
 
 
 def empirical_delta_psi(list_lsv, lsv_types, lsv_dict1, lsv_summarized1, lsv_dict2, lsv_summarized2, logger=None):

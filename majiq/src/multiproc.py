@@ -48,8 +48,7 @@ class QueueMessage:
 
 
 def quantification_init(q, lock, output, names, silent, debug, nbins, m, k,
-                        discardzeros, trimborder, files, only_boots, lock_per_file):
-
+                        discardzeros, trimborder, files, only_boots, weights, lock_per_file):
     quantification_init.lock = lock
     quantification_init.queue = q
     quantification_init.output = output
@@ -63,11 +62,12 @@ def quantification_init(q, lock, output, names, silent, debug, nbins, m, k,
     quantification_init.trimborder = trimborder
     quantification_init.files = files
     quantification_init.boots = only_boots
+    quantification_init.weights = weights
     quantification_init.lock_per_file = lock_per_file
 
 
 def queue_manager(input_h5dfp, output_h5dfp, lock_array, result_queue, num_chunks, meta_info=None, num_exp=0,
-                  logger=None):
+                  out_inplace=None, logger=None):
 
     nthr_count = 0
     posterior_matrix = []
@@ -99,6 +99,9 @@ def queue_manager(input_h5dfp, output_h5dfp, lock_array, result_queue, num_chunk
                                               psi1=val.get_value()[1], psi2=val.get_value()[2],
                                               means_psi1=val.get_value()[3], means_psi2=val.get_value()[4]))
 
+            elif val.get_type() == QUEUE_MESSAGE_BOOTSTRAP:
+                out_inplace.extend(val.get_value())
+
             elif val.get_type() == QUEUE_MESSAGE_END_WORKER:
                 lock_array[val.get_chunk()].release()
                 nthr_count += 1
@@ -109,3 +112,4 @@ def queue_manager(input_h5dfp, output_h5dfp, lock_array, result_queue, num_chunk
             if nthr_count < num_chunks:
                 continue
             break
+

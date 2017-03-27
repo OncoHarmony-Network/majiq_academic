@@ -5,13 +5,13 @@ import sys
 import multiprocessing as mp
 import traceback
 
-from majiq.src.basic_pipeline import BasicPipeline, pipeline_run
+from majiq.src.basic_pipeline import BasicPipeline, pipeline_run, bootstrap_samples_with_divs
 import majiq.src.utils as majiq_utils
 import majiq.src.filter as majiq_filter
 import majiq.src.io as majiq_io
 from majiq.src.io_utils import dump_bin_file, load_bin_file
 import majiq.src.sample as majiq_sample
-from majiq.src.psi import prob_data_sample_given_psi, get_prior_params, gen_prior_matrix
+from majiq.src.psi import prob_data_sample_given_psi, get_prior_params, gen_prior_matrix, calc_weights_from_divs
 from majiq.src.constants import *
 from majiq.src.multiproc import QueueMessage, quantification_init, queue_manager
 
@@ -44,6 +44,8 @@ def deltapsi_quantification(args_vals):
                                                                         quantification_init.names)))
 
         ones_n = np.ones(shape=(1, quantification_init.nbins), dtype=np.float)
+        weights1 = quantification_init.weights[0][:, np.newaxis, np.newaxis]
+        weights2 = quantification_init.weights[1][:, np.newaxis, np.newaxis]
         for lidx, lsv_id in enumerate(list_of_lsv):
             if lidx % 50 == 0:
                 print "Event %d ..." % lidx
@@ -52,7 +54,6 @@ def deltapsi_quantification(args_vals):
             lsv_samples = [[], []]
 
             lsv_type = f_list[0][0]['LSVs/%s' % lsv_id].attrs['type']
-
             for grp_idx in range(2):
                 for eidx, f in enumerate(f_list[grp_idx]):
                     if lsv_id not in f['LSVs']:
@@ -75,8 +76,9 @@ def deltapsi_quantification(args_vals):
                                                       num_exp[grp_idx], quantification_init.lock_per_file[grp_idx],
                                                       quantification_init.output, quantification_init.names[grp_idx])
 
-            psi1 = np.array(lsv_samples[0])
-            psi2 = np.array(lsv_samples[1])
+            psi1 = weights1 * np.array(lsv_samples[0])
+
+            psi2 = weights2 * np.array(lsv_samples[1])
 
             prior_idx = 1 if 'i' in lsv_type else 0
 
@@ -178,12 +180,9 @@ class DeltaPsi(BasicPipeline):
         if self.export_boots:
             file_locks = [[mp.Lock() for xx in self.files1], [mp.Lock() for xx in self.files2]]
 
-        lock_arr = [mp.Lock() for xx in range(self.nthreads)]
+        # lock_arr = [mp.Lock() for xx in range(self.nthreads)]
         q = mp.Queue()
-        pool = mp.Pool(processes=self.nthreads, initializer=quantification_init,
-                       initargs=[q, lock_arr, self.output, self.names, self.silent, self.debug, self.nbins, self.m,
-                                 self.k, self.discardzeros, self.trimborder, files, self.export_boots, file_locks],
-                       maxtasksperchild=1)
+        lock_arr = [mp.Lock() for xx in range(self.nthreads)]
 
         lsv_dict1, lsv_types1, lsv_summarized1, meta1 = majiq_io.extract_lsv_summary(self.files1)
         list_of_lsv_group1 = majiq_filter.merge_files_hdf5(lsv_dict1, lsv_summarized1, self.minpos,
@@ -205,6 +204,16 @@ class DeltaPsi(BasicPipeline):
         dump_bin_file(prior_matrix, get_prior_matrix_filename(self.output, self.names))
 
         lchnksize = max(len(list_of_lsv)/self.nthreads, 1) + 1
+
+        weights = [None, None]
+        for grp_idx, fil in enumerate(files):
+            weights[grp_idx] = self.calc_weights(self.weights[grp_idx], fil, list_of_lsv, lock_arr, lchnksize, file_locks, q)
+
+        pool = mp.Pool(processes=self.nthreads, initializer=quantification_init,
+                       initargs=[q, lock_arr, self.output, self.names, self.silent, self.debug, self.nbins, self.m,
+                                 self.k, self.discardzeros, self.trimborder, files, self.export_boots, weights,
+                                 file_locks],
+                       maxtasksperchild=1)
         [xx.acquire() for xx in lock_arr]
 
         if self.export_boots:
@@ -212,6 +221,7 @@ class DeltaPsi(BasicPipeline):
             majiq_io.create_bootstrap_file(self.files2, self.output, self.names[1], m=self.m)
 
         if len(list_of_lsv) > 0:
+
             pool.map_async(deltapsi_quantification,
                            majiq_utils.chunks2(list_of_lsv, lchnksize, extra=range(self.nthreads)))
             pool.close()

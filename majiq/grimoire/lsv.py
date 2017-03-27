@@ -5,11 +5,14 @@ from voila import constants as voila_const
 from voila.splice_graphics import ExonGraphic, LsvGraphic, JunctionGraphic
 from majiq.src.constants import *
 import majiq.src.normalize as majiq_norm
+import collections
 
 __author__ = 'jordi@biociphers.org'
 
 SSOURCE = 'source'
 STARGET = 'target'
+
+quant_lsv = collections.namedtuple('quant_lsv', 'id type coverage')
 
 
 def dump_bin_file(data, filename):

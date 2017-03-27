@@ -9,7 +9,7 @@ from scipy import interpolate
 from scipy.stats.mstats_basic import mquantiles
 
 import majiq.src.config as majiq_config
-from majiq.src import polyfitnb as majiqfit
+from majiq.src import checkpolyfitnb as majiqfit
 
 
 def mark_stacks(lsv_list, fitfunc_r, pvalue_limit, logger=None):
