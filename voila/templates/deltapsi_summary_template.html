@@ -53,7 +53,7 @@
 
                         <select class="spliceGraphSelector exp1" autocomplete="off">
                             {% for nsample in genes_exps_list[0] -%}
-                                <option {% if nsample == comb_spliceg_cond1 %}selected="selected"{% endif %}
+                                <option {% if nsample == "Combined" %}selected="selected"{% endif %}
                                         value="{{ genes_exps_list[0][nsample][gene_name] | to_json_especial }}">{{ nsample }}
                                 </option>
                             {%- endfor %}
@@ -80,7 +80,7 @@
 
                         <select class="spliceGraphSelector exp2" autocomplete="off">
                             {% for nsample in genes_exps_list[1] -%}
-                                <option {% if nsample == comb_spliceg_cond2 %}selected="selected"{% endif %}
+                                <option {% if nsample == "Combined" %}selected="selected"{% endif %}
                                         value="{{ genes_exps_list[1][nsample][gene_name] | to_json_especial }}">{{ nsample }}
                                 </option>
                             {%- endfor %}

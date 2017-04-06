@@ -51,8 +51,7 @@
 
                             <select class="spliceGraphSelector exp1" autocomplete="off" title="splice graph selector">
                                 {% for nsample in genes_exps_list[0] -%}
-                                    {% if nsample == comb_spliceg_cond1 %}
-                                        <option selected="selected"
+                                     <option {% if nsample == "Combined" %} selected="selected" {% endif %}
                                                 value="{{ genes_exps_list[0][nsample][gene_id] | to_json_especial }}">{{ nsample }}
                                         </option>
                                     {% else %}
