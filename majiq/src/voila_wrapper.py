@@ -24,6 +24,7 @@ def gene_to_splicegraph(gne, lock):
         for jj in gne.get_all_junctions(filter=False):
 
             cc = jj.get_coordinates()
+
             if jj.get_donor() is None:
                 alt_empty_ends.append(cc[1])
                 continue
@@ -31,6 +32,8 @@ def gene_to_splicegraph(gne, lock):
                 alt_empty_starts.append(cc[0])
                 continue
             num_reads = jj.get_coverage().sum(axis=1)
+            jj.get_acceptor().coverage += num_reads.sum()
+            jj.get_donor().coverage += num_reads.sum()
             jtype_list = []
             for exp_idx in xrange(majiq_config.num_experiments):
                 if jj.annotated and num_reads[exp_idx] == 0:
