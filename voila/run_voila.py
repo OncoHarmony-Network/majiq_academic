@@ -6,6 +6,8 @@ import time
 from os import path
 
 import voila.constants as constants
+from voila.io_voila import Voila
+from voila.splice_graphics import SpliceGraph
 from voila.utils.utils_voila import create_if_not_exists
 from voila.utils.voila_log import voila_log
 from voila.view.conditional_table import conditional_table
@@ -69,6 +71,20 @@ def check_file(value):
     return value
 
 
+def check_splice_graph_file(value):
+    check_file(value)
+    with SpliceGraph(value, 'r') as sg:
+        sg.check_version()
+    return value
+
+
+def check_voila_file(value):
+    check_file(value)
+    with Voila(value, 'r') as v:
+        v.check_version()
+    return value
+
+
 def required_argument(*args, **kwargs):
     parser = args[0]
     required = parser.add_argument_group('required arguments')
@@ -117,7 +133,7 @@ def splice_graphs_args():
     parser_splice_graphs = argparse.ArgumentParser(add_help=False)
 
     parser_splice_graphs.add_argument('splice_graph',
-                                      type=check_file,
+                                      type=check_splice_graph_file,
                                       help='location of majiq\'s splice graph file')
 
     parser_splice_graphs.add_argument('--limit',
@@ -234,35 +250,34 @@ def html_args():
     return html_parser
 
 
-def majiq_quantifier_args():
+def voila_file():
     """
     Arguments needs for analysis types who use the majiq quantifier file.
     :return: parser
     """
 
-    majiq_quantifier_parser = argparse.ArgumentParser(add_help=False)
+    voila_file_parser = argparse.ArgumentParser(add_help=False)
 
-    majiq_quantifier_parser.add_argument('majiq_quantifier',
-                                         type=check_file,
-                                         help='location of majiq\'s quantifier file, sometimes referred to as the '
-                                              '"voila" file')
+    voila_file_parser.add_argument('voila_file',
+                                   type=check_voila_file,
+                                   help='location of majiq\'s voila file')
 
     required_argument(
-        majiq_quantifier_parser,
+        voila_file_parser,
         '--splice-graph',
-        type=check_file,
+        type=check_splice_graph_file,
         help='path to splice graph file'
     )
 
-    majiq_quantifier_parser.add_argument('--gtf',
-                                         action='store_true',
-                                         help='generate GTF (GFF2) files for LSVs')
+    voila_file_parser.add_argument('--gtf',
+                                   action='store_true',
+                                   help='generate GTF (GFF2) files for LSVs')
 
-    majiq_quantifier_parser.add_argument('--gff',
-                                         action='store_true',
-                                         help='generate GFF3 files for LSVs')
+    voila_file_parser.add_argument('--gff',
+                                   action='store_true',
+                                   help='generate GFF3 files for LSVs')
 
-    return majiq_quantifier_parser
+    return voila_file_parser
 
 
 def gene_search_args():
@@ -348,7 +363,7 @@ def main():
     subparsers = parser.add_subparsers(dest='type_analysis')
     subparsers.required = True
 
-    majiq_quantifier = majiq_quantifier_args()
+    majiq_file = voila_file()
     gene_search = gene_search_args()
     lsv_type_search = lsv_type_search_args()
     lsv_id_search = lsv_id_search_args()
@@ -359,14 +374,14 @@ def main():
     parser_single = psi_args()
     subparsers.add_parser(constants.ANALYSIS_PSI,
                           help='Single LSV analysis by gene(s) of interest.',
-                          parents=[base, html, gene_search, lsv_type_search, lsv_id_search, majiq_quantifier,
+                          parents=[base, html, gene_search, lsv_type_search, lsv_id_search, majiq_file,
                                    parser_single])
 
     # Delta LSV
     parser_delta = deltapsi_args()
     subparsers.add_parser(constants.ANALYSIS_DELTAPSI,
                           help='Delta LSV analysis by gene(s) of interest.',
-                          parents=[base, html, gene_search, lsv_type_search, lsv_id_search, majiq_quantifier,
+                          parents=[base, html, gene_search, lsv_type_search, lsv_id_search, majiq_file,
                                    parser_delta])
 
     # In-group out-group analysis option

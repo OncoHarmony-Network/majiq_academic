@@ -25,7 +25,7 @@ class Psi(ProducerConsumer):
         self.args = args
         self.majiq_output = None
 
-        with Voila(args.majiq_quantifier, 'r') as v:
+        with Voila(args.voila_file, 'r') as v:
             metainfo = v.get_metainfo()
             voila_lsvs = v.get_voila_lsvs(lsv_types=args.lsv_types,
                                           lsv_ids=args.lsv_ids,
@@ -69,7 +69,7 @@ class Psi(ProducerConsumer):
         args = self.args
         output_dir = args.output
         gene_keys = sorted(self.majiq_output['genes_dict'].keys())
-        output_html = get_output_html(args, args.majiq_quantifier)
+        output_html = get_output_html(args, args.voila_file)
         summaries_subfolder = path.join(output_dir, constants.SUMMARIES_SUBFOLDER)
         sum_template = get_summary_template(args, get_env())
         comb_spliceg_cond1 = majiq_output['genes_exp'][0].keys()[0]

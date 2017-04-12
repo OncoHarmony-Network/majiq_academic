@@ -621,10 +621,16 @@ class LsvGraphic(HDF5):
         self.junctions = junctions
         self.chromosome = chromosome
 
-    def to_dict(self):
+    def to_dict(self, ignore_keys=()):
         d = self.__dict__.copy()
-        d['exons'] = [exon.to_dict() for exon in self.exons]
-        d['junctions'] = [junction.to_dict() for junction in self.junctions]
+
+        for key in ignore_keys:
+            del d[key]
+
+        d.update({
+            'exons': [exon.to_dict() for exon in self.exons],
+            'junctions': [junction.to_dict() for junction in self.junctions]
+        })
         return d
 
     def cls_list(self):
@@ -641,6 +647,7 @@ class LsvGraphic(HDF5):
 class SpliceGraph(ProducerConsumer):
     GENES = '/genes'
     ROOT = '/'
+    VERSION = '/splice_graph_file_version'
 
     def __init__(self, splice_graph_file_name, mode):
         """
@@ -654,6 +661,7 @@ class SpliceGraph(ProducerConsumer):
         self.hdf5 = None
         self.limit = None
         self.gene_ids = None
+        self.file_version = None
 
     def __enter__(self):
         """
@@ -661,6 +669,16 @@ class SpliceGraph(ProducerConsumer):
         :return: self
         """
         self.hdf5 = h5py.File(self.file_name, self.mode)
+
+        if self.VERSION not in self.hdf5:
+            if self.mode == constants.FILE_MODE.write:
+                self.hdf5[self.VERSION] = constants.SPLICE_GRAPH_FILE_VERSION
+
+        try:
+            self.file_version = self.hdf5[self.VERSION].value
+        except KeyError:
+            pass
+
         return self
 
     def __exit__(self, type, value, traceback):
@@ -774,3 +792,9 @@ class SpliceGraph(ProducerConsumer):
         """
         voila_log().info('Getting splice graph experiment names from {0} ...'.format(self.file_name))
         return self.hdf5[self.ROOT].attrs[EXPERIMENT_NAMES].tolist()
+
+    def check_version(self):
+        if self.file_version != constants.SPLICE_GRAPH_FILE_VERSION:
+            voila_log().warning('Splice graph file version isn\'t current.  This will probably cause significant '
+                                'issues with the voila output.  It would be best to run build again with the current '
+                                'version of MAJIQ.')

@@ -26,7 +26,7 @@ class Deltapsi(ProducerConsumer):
         self.gene_keys_length = None
         self.sum_template = None
 
-        with Voila(args.majiq_quantifier, 'r') as v:
+        with Voila(args.voila_file, 'r') as v:
             metainfo = v.get_metainfo()
             voila_lsvs = v.get_voila_lsvs(lsv_ids=args.lsv_ids,
                                           gene_names=args.gene_names,
@@ -109,7 +109,7 @@ class Deltapsi(ProducerConsumer):
         self.comb_spliceg_cond1 = majiq_output['genes_exp'][0].keys()[0]
         self.comb_spliceg_cond2 = majiq_output['genes_exp'][1].keys()[0]
         self.template_file_name = args.type_analysis.replace("-", "_") + "_summary_template.html"
-        self.output_html = get_output_html(args, args.majiq_quantifier)
+        self.output_html = get_output_html(args, args.voila_file)
         self.gene_keys_length = len(majiq_output['genes_dict'].keys())
         self.sum_template = get_env().get_template(self.template_file_name)
 

@@ -272,7 +272,7 @@ class BinsDataSet(DataSet):
         :param h: HDF5 file object
         :param objs: objects to be stored as Bins Data
         """
-        super(BinsDataSet, self).__init__(h, 'bins', objs)
+        super(BinsDataSet, self).__init__(h, 'trunc_bins', objs)
 
     def validate(self):
         assert self.array_2d(), 'Bins data must be 2d array.'
@@ -285,7 +285,7 @@ class Psi1DataSet(DataSet):
         :param h: HDF5 file object
         :param objs: objects to be stored as Psi1 data
         """
-        super(Psi1DataSet, self).__init__(h, 'psi1', objs)
+        super(Psi1DataSet, self).__init__(h, 'trunc_psi1', objs)
 
     def validate(self):
         assert self.array_2d(), 'Psi1 data must be 2d array.'
@@ -298,7 +298,7 @@ class Psi2DataSet(DataSet):
         :param h:  HDF5 file object
         :param objs: Objects to be stored as Psi2 data
         """
-        super(Psi2DataSet, self).__init__(h, 'psi2', objs)
+        super(Psi2DataSet, self).__init__(h, 'trunc_psi2', objs)
 
     def validate(self):
         assert self.array_2d(), 'Psi2 data must be 2d array.'

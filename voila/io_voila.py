@@ -22,6 +22,8 @@ __author__ = 'abarrera'
 
 
 class Voila(ProducerConsumer):
+    VERSION = '/voila_file_version'
+
     def __init__(self, voila_file_name, mode):
         """
         Parse or edit the voila (quantifier output) file.
@@ -35,9 +37,20 @@ class Voila(ProducerConsumer):
         self.lsv_ids = None
         self.lsv_types = None
         self.gene_names = None
+        self.file_version = None
 
     def __enter__(self):
         self.hdf5 = h5py.File(self.file_name, self.mode)
+
+        if self.VERSION not in self.hdf5:
+            if self.mode == constants.FILE_MODE.write:
+                self.hdf5[self.VERSION] = constants.VOILA_FILE_VERSION
+
+        try:
+            self.file_version = self.hdf5[self.VERSION].value
+        except KeyError:
+            pass
+
         return self
 
     def __exit__(self, type, value, traceback):
@@ -146,6 +159,12 @@ class Voila(ProducerConsumer):
         self.manager_shutdown()
 
         return voila_lsvs
+
+    def check_version(self):
+        if self.file_version != constants.VOILA_FILE_VERSION:
+            voila_log().warning('Voila file version isn\'t current.  This will probably cause significant '
+                                'issues with the voila output.  It would be best to run quantifier again with the '
+                                'current version of MAJIQ.')
 
 
 class VoilaInput(HDF5):
@@ -325,7 +344,7 @@ def tab_output(args, majiq_output):
         return ';'.join(str(x) for x in value_list)
 
     output_dir = args.output
-    output_html = get_output_html(args, args.majiq_quantifier)
+    output_html = get_output_html(args, args.voila_file)
     log = voila_log()
     type_summary = args.type_analysis
     group1 = None
