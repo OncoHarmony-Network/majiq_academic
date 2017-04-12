@@ -420,10 +420,10 @@ def tab_output(args, majiq_output):
                             lsv.bins
                         ),
                         '%s E(PSI)' % group1: semicolon_join(
-                            '%.3f' % vlsv.get_expected_psi(np.array(lsv.psi1[i])) for i in range(len(lsv.bins))
+                            '%.3f' % i for i in lsv.means_psi1
                         ),
                         '%s E(PSI)' % group2: semicolon_join(
-                            '%.3f' % vlsv.get_expected_psi(np.array(lsv.psi2[i])) for i in range(len(lsv.bins))
+                            '%.3f' % i for i in lsv.means_psi2
                         )
                     })
 
