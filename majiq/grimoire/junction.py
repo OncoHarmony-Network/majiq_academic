@@ -83,7 +83,7 @@ class Junction:
             #     gc_dataset[data_index, :] = self.gc_content[0, :]
 
             dataset.append(self.coverage[0, :])
-            if gc_dataset:
+            if gc_dataset is not None:
                 gc_dataset.append(self.gc_content[0, :])
 
             h_jnc.attrs['coverage_index'] = data_index
@@ -183,7 +183,8 @@ class Junction:
         return self.gene_name
 
     def get_coverage_sum(self, idx):
-        return self.coverage[idx].sum()
+
+        return self.get_coverage()[idx].sum()
 
     def get_transcript_list(self):
         return self.transcript_id_list
