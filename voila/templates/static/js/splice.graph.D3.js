@@ -903,6 +903,7 @@ function spliceGraphD3() {
 
             if (strand == '-')
                 d3.select(this).selectAll(":not(text)").attr("transform", "translate(" + width + ",0) scale(-1 , 1)");
+                d3.select(this).selectAll("svg").attr("transform", "");
 
             var d3Elements = {
                 'exons': exons,
