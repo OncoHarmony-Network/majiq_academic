@@ -71,8 +71,6 @@ def global_conf_ini(filename, params, only_db=False):
     temp_oDir = []
     count = 0
 
-
-
     MINREADS = params.minreads
     MINPOS = params.minpos
     min_exp = params.min_exp

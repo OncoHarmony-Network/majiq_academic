@@ -3,8 +3,6 @@ from majiq.src.build import build
 from majiq.src.calc_psi import calcpsi
 from majiq.src.deltapsi import deltapsi
 from majiq.src.constants import *
-from majiq.src.config import get_vwindow, get_bins, get_minsamps
-# from majiq.src.deltapsi import deltapair, multi_dpsi
 
 
 class FRange01(argparse.Action):
@@ -184,53 +182,6 @@ def main():
     #                         "distribution. that the synthetic prior matrix has. Only works with --synthprior. "
     #                         "[Default: %(default)s]")
 
-
-    indep = new_subparser()
-    indep.add_argument('-grp1', dest="files1", nargs='+', required=True)
-    indep.add_argument('-grp2', dest="files2", nargs='+', required=True)
-    indep.add_argument('--vwindow', type=get_vwindow, default=0.0,
-                        help='Width of sample rejection window. '
-                             'If equal to 0, do not reject samples. '
-                             'Default: %(default)0.02f.')
-
-    indep.add_argument('--nsamples', type=int, default=100,
-                        help='Number of PSI samples to take per LSV junction. '
-                             'If equal to 1, use expected value only. '
-                             'Default: %(default)d')
-
-    indep.add_argument('--bins', type=get_bins, default=get_bins(40),
-                        help='Fixed-width binning resolution of PSI '
-                             'distributions. '
-                             'Default: 40')
-    # parser.add_argument('--stats', nargs='+', choices=all_tests,
-    #                     default=all_tests, help='Test statistics to run. '
-    #                          'Default: all of them')
-    indep.add_argument('--minsamps', type=get_minsamps, default=2,
-                        help='Minimum number of samples that need to be '
-                             'present for an LSV junction in order to '
-                             'perform each test statistic. '
-                             'Default: %(default)d')
-
-    # parser.add_argument('--log-file', type=get_logger,
-    #                     default=get_logger(None),
-    #                     help='Log filename. '
-    #                          'Default: stderr')
-    # parser.add_argument('--log-level', type=logging.getLevelName,
-    #                     default='INFO',
-    #                     help='Logging level. '
-    #                          'Default: %(default)s')
-
-    #
-    # parser.add_argument('--save-samps', action='store_true',
-    #                     help='If set, save PSI samples in the output '
-    #                          'directory.')
-    # parser.add_argument('--pre-samps', action='store_true',
-    #                     help='If set, reads pre-computed samples from the '
-    #                          'output directory.')
-    # parser.add_argument('--samps-only', action='store_true',
-    #                     help='If set, only does sampling. Requires '
-    #                          '--save-samps.')
-    #args = parser.parse_args()
     #calcpsi flags
     subparsers = parser.add_subparsers(help='')
     parser_preprocess = subparsers.add_parser('build', help='Preprocess SAM/BAM files as preparation for the rest of '
