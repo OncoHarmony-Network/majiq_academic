@@ -390,8 +390,8 @@ def tab_output(args, majiq_output):
                     'Num. Exons': lsv.categories['nexons'],
                     'chr': lsv.chromosome,
                     'strand': lsv.strand,
-                    'De Novo Junctions': any(
-                        junc.junction_type == JUNCTION_TYPE_RNASEQ for junc in lsv.junctions
+                    'De Novo Junctions': semicolon_join(
+                        int(junc.junction_type == JUNCTION_TYPE_RNASEQ) for junc in lsv.junctions
                     ),
                     'Junctions coords': semicolon_join(
                         '{0}-{1}'.format(junc.start, junc.end) for junc in lsv.junctions
