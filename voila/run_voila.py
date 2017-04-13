@@ -16,6 +16,8 @@ from voila.view.lsv_thumbnails import lsv_thumbnails
 from voila.view.psi import Psi
 from voila.view.splice_graphs import splice_graphs
 
+SPLICE_GRAPH_HELP = 'Path to splice graph file.  File should be named "splicegraph.hdf5"'
+
 
 class VoilaCantFindFile(argparse.ArgumentTypeError):
     def __init__(self, value):
@@ -120,7 +122,7 @@ def deltapsi_args():
                               dest='show_all',
                               action='store_true',
                               default=False,
-                              help='Show all LSVs including those with no junction with significant change predicted')
+                              help='Show all LSVs including those with no junction with significant change predicted.')
 
     return parser_delta
 
@@ -134,12 +136,12 @@ def splice_graphs_args():
 
     parser_splice_graphs.add_argument('splice_graph',
                                       type=check_splice_graph_file,
-                                      help='location of majiq\'s splice graph file')
+                                      help=SPLICE_GRAPH_HELP)
 
     parser_splice_graphs.add_argument('--limit',
                                       type=int,
                                       default=20,
-                                      help='Limit the number of splice graphs shown, default is 20')
+                                      help='Limit the number of splice graphs shown.  Default is 20.')
 
     return parser_splice_graphs
 
@@ -171,7 +173,7 @@ def conditional_table_args():
         '--cond-pair',
         nargs=2,
         metavar='M1 M2',
-        help='condition pair to compare'
+        help='Condition pair to compare.'
     )
 
     required_argument(
@@ -179,7 +181,7 @@ def conditional_table_args():
         '--sample-files',
         type=check_file,
         nargs='+',
-        help='samples Voila output files')
+        help='Samples Voila output files.')
 
     required_argument(
         parser_conditional_table,
@@ -192,13 +194,13 @@ def conditional_table_args():
     required_argument(
         parser_conditional_table,
         '--pairwise-dir',
-        help='root directory where the pairwise delta psi VOILA summaries were created'
+        help='Root directory where the pairwise delta psi VOILA summaries were created.'
     )
 
     parser_conditional_table.add_argument('--threshold-change',
                                           type=float,
                                           default=0.2,
-                                          help='threshold used to filter non-changing LSVs, default is 0.2')
+                                          help='Threshold used to filter non-changing LSVs.  Default is 0.2.')
     return parser_conditional_table
 
 
@@ -215,11 +217,11 @@ def base_args():
         '-o', '--output',
         dest='output',
         type=check_dir,
-        help='path for output directory'
+        help='Path for output directory.'
     )
 
     base_parser.add_argument(
-        '-p', '--processes',
+        '--max-processes',
         type=int,
         help='Max number of processes used.  Processes will never exceed the number of available processes.'
     )
@@ -227,13 +229,13 @@ def base_args():
     base_parser.add_argument(
         '-l', '--logger',
         default=None,
-        help='path for log files'
+        help='Path for log files.'
     )
 
     base_parser.add_argument(
         '-s', '--silent',
         action='store_true',
-        help='do not write logs to standard out'
+        help='Do not write logs to standard out.'
     )
     return base_parser
 
@@ -242,11 +244,11 @@ def html_args():
     html_parser = argparse.ArgumentParser(add_help=False)
     html_parser.add_argument('--no-html',
                              action='store_true',
-                             help='do not write html files')
+                             help='Do not write html files.')
 
     html_parser.add_argument('--no-tsv',
                              action='store_true',
-                             help='do not generate tab-separated values output file')
+                             help='Do not generate tab-separated values output file.')
     return html_parser
 
 
@@ -260,22 +262,22 @@ def voila_file():
 
     voila_file_parser.add_argument('voila_file',
                                    type=check_voila_file,
-                                   help='location of majiq\'s voila file')
+                                   help='Location of majiq\'s voila file.  File should end with ".voila".')
 
     required_argument(
         voila_file_parser,
         '--splice-graph',
         type=check_splice_graph_file,
-        help='path to splice graph file'
+        help=SPLICE_GRAPH_HELP
     )
 
     voila_file_parser.add_argument('--gtf',
                                    action='store_true',
-                                   help='generate GTF (GFF2) files for LSVs')
+                                   help='Generate GTF (GFF2) files for LSVs.')
 
     voila_file_parser.add_argument('--gff',
                                    action='store_true',
-                                   help='generate GFF3 files for LSVs')
+                                   help='Generate GFF3 files for LSVs.')
 
     return voila_file_parser
 
@@ -291,13 +293,14 @@ def gene_search_args():
                                     dest='gene_names',
                                     type=check_list_file,
                                     default=[],
-                                    help='location of file that contains a list of gene names which should remain in the '
-                                         'results, one name per line')
+                                    help='Location of file that contains a list of common gene names which should '
+                                         'remain in the results.  One name per line.')
 
     gene_search_parser.add_argument('--gene-names',
                                     nargs='*',
                                     default=[],
-                                    help='gene names which should remain in the results')
+                                    help='Common gene names, separated by spaces, which should remain in the results. '
+                                         'e.g. GENE1 GENE2 ...')
     return gene_search_parser
 
 
@@ -310,8 +313,8 @@ def lsv_type_search_args():
     lsv_search_parser.add_argument('--lsv-types-file',
                                    type=check_list_file,
                                    dest='lsv_types',
-                                   help='location of file that contains a list of LSV types which should remain in the '
-                                        'results, one type per line')
+                                   help='Location of file that contains a list of LSV types which should remain in the '
+                                        'results.  One type per line')
 
     lsv_search_parser.add_argument('--lsv-types',
                                    nargs='*',
@@ -330,13 +333,14 @@ def lsv_id_search_args():
     lsv_search_parser.add_argument('--lsv-ids-file',
                                    type=check_list_file,
                                    dest='lsv_ids',
-                                   help='location of file that contains a list of LSV IDs which should remain in the '
-                                        'results, one ID per line')
+                                   help='Location of file that contains a list of LSV IDs which should remain in '
+                                        'the results.  One ID per line.')
 
     lsv_search_parser.add_argument('--lsv-ids',
                                    nargs='*',
                                    default=[],
-                                   help='LSV IDs which should remain in the results')
+                                   help='LSV IDs, separated by spaces, which should remain in the results.  e.g. '
+                                        'LSV_ID1 LSV_ID2 ...')
 
     return lsv_search_parser
 
