@@ -63,7 +63,7 @@ EXPERIMENT_NAMES = 'experiments_names'
 LSV_TEXT_VERSION = 2
 
 SPLICE_GRAPH_FILE_VERSION = 1
-VOILA_FILE_VERSION = 2
+VOILA_FILE_VERSION = 1
 
 FILE_MODE = collections.namedtuple('FILE_MODE', 'read write')('r', 'w')
 
