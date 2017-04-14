@@ -12,7 +12,7 @@ class OrphanJunctionException(Exception):
 
 
 class VoilaLsv(LsvGraphic):
-    def __init__(self, bins_list, lsv_graphic, means=None, means_psi1=None, psi1=None, means_psi2=None, bin=None):
+    def __init__(self, bins_list, lsv_graphic, means=None, means_psi1=None, psi1=None, means_psi2=None, psi2=None):
         """
         The lsv data voila needs to visualize LSVs.
         :param bins_list: bins matrix
@@ -42,7 +42,7 @@ class VoilaLsv(LsvGraphic):
         # For binary LSVs, we only store one of the junctions... use their property for the full value.
         self.trunc_bins = bins_list
         self.trunc_psi1 = psi1
-        self.trunc_psi2 = bin
+        self.trunc_psi2 = psi2
         self.trunc_means = means
         self.trunc_means_psi1 = means_psi1
         self.trunc_means_psi2 = means_psi2
