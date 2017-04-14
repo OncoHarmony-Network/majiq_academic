@@ -63,12 +63,12 @@ class VoilaInput(VI):
         return [junc for junc in gg[lsv_attrs.attrs[kk]]]
 
 
-def get_ratio_nu(rank1, rank2, N, max_N=2000):
+def get_ratio_nu(rank1, rank2, N, maxN):
     LSVs_1 = map(lambda xx: xx[0], rank1)
     LSVs_2 = map(lambda xx: xx[0], rank2)
-    frac_max_N = 1.0/max_N
+#    frac_max_N = 1.0/max_N
     return N, np.array([intersect1d(LSVs_1[:n+1], LSVs_2[:n+1]).size *
-                        frac_max_N for n in range(max_N)])
+                        (1.0/(n+1)) for n in xrange(maxN)])
 
 
 def legacy_lsv_junctions_new_voila(graphs_hdf5):
@@ -192,7 +192,7 @@ def expected_dpsi(matrix, collapsed_mat=False, absolute = True):
     return collapsed.dot(xbins)
 
 
-def rank_majiq(vlsv_list, V=0.2, absolute=True, dofilter=True, ranknochange=False, 
+def rank_majiq(vlsv_list, V=0.2, absolute=True, dofilter=True, ranknochange=False,
                prior=None, shrink=True, junc_selection=None, majiq_n=None):
 
     print "Num of LSVs in majiq: %d" % len(vlsv_list)
@@ -207,13 +207,13 @@ def rank_majiq(vlsv_list, V=0.2, absolute=True, dofilter=True, ranknochange=Fals
 
         # Filtering out lsvs that have exons shared with an already added lsv
         lsv_exon_coords = [int(coord) for coord in vlsv.lsv_id.split(':')[1].split('-')]
-        if np.any([ee.get_coords() in covered_exons for ee in vlsv.lsv_graphic.get_exons() if list(ee.get_coords()) <> lsv_exon_coords ]):
+        if np.any([[ee.start, ee.end] in covered_exons for ee in vlsv.exons if [ee.start, ee.end] <> lsv_exon_coords ]):
             continue
-        covered_exons.extend([ee.get_coords() for ee in vlsv.lsv_graphic.get_exons() if list(ee.get_coords()) <> lsv_exon_coords ])
+        covered_exons.extend([[ee.start, ee.end] for ee in vlsv.exons if [ee.start, ee.end] <> lsv_exon_coords ])
 
         if len(lsv_bins) > 2:
             if junc_selection:
-                junc_n = junc_selection[vlsv.get_id()]
+                junc_n = junc_selection[vlsv.lsv_id]
             else:
                 e_dpsi = [abs(expected_dpsi(np.array(junc_bins), collapsed_mat=True)) for junc_bins in lsv_bins]
                 junc_n = np.argmax(e_dpsi)
@@ -229,12 +229,12 @@ def rank_majiq(vlsv_list, V=0.2, absolute=True, dofilter=True, ranknochange=Fals
 
         v_expected = expected_dpsi(dmatrix, collapsed_mat=True)
         area = 1.0 - matrix_area(dmatrix, V, absolute, collapsed_mat=True)  # P(Delta PSI < V) = 1 - P(Delta PSI > V)
-        rank.append(["%s#%d" % (vlsv.get_id(), junc_n), v_expected, area, int(abs(v_expected)>=V and area<=0.05)])
+        rank.append(["%s#%d" % (vlsv.lsv_id, junc_n), v_expected, area, int(abs(v_expected)>=V and area<=0.05)])
 
     expected_mask = np.array([abs(r[1]) >= V for r in rank])
     fdr_mask = np.array([r[2] <= 0.05 for r in rank])
     expected_fdr_mask = np.logical_and(expected_mask, fdr_mask)
-    if not majiq_n[0]:
+    if majiq_n is not None:
         majiq_n[0] = np.count_nonzero(expected_fdr_mask)
 
     print "#FDR < 0.05: %d" % np.count_nonzero(fdr_mask)
@@ -326,13 +326,15 @@ def rank_mats_original(mats_file, dofilter=True, ranknochange=False, majiq_n=Non
             fdr = float(sline[-4])
             delta_psi = float(sline[-1])
             pass_thres =int(abs(delta_psi)>=V and fdr<=0.05)
-            mats_nn += pass_thres
 #            rank.append([geneID, delta_psi, pvalue, fdr, pass_thres])
-#            if majiq_n[0]:
-#                rank.append([geneID, delta_psi, pvalue, fdr, pass_thres])
-#            else:
-            if pvalue <= 0.05:
+
+            if majiq_n[0]:
+                mats_nn += pass_thres
                 rank.append([geneID, delta_psi, pvalue, fdr, pass_thres])
+            else:
+                if pvalue <= 0.05:
+                    mats_nn += pass_thres
+                    rank.append([geneID, delta_psi, pvalue, fdr, pass_thres])
 
     expected_mask = np.array([abs(r[1]) >= V for r in rank])
     fdr_cutoff = 0.05
@@ -351,7 +353,7 @@ def rank_mats_original(mats_file, dofilter=True, ranknochange=False, majiq_n=Non
     print "#E(Delta(PSI))>%.2f: %d" % (V, np.count_nonzero(expected_mask))
     print "#E(Delta(PSI))>%.2f and FDR<0.05: %d" % (V, np.count_nonzero(np.logical_and(expected_mask, fdr_mask)))
 
-    rank.sort(key=lambda x: (abs(float(x[1])), -float(x[3])))  # biggest delta PSI first, small p-value
+    rank.sort(key=lambda x: (abs(float(x[1])), -float(x[2])), reverse=True)  # biggest delta PSI first, small p-value
 
     return mats_nn, rank
 
@@ -387,7 +389,6 @@ def rank_dexseq(dexseq_file, dofilter=True, ranknochange=False, majiq_n=None, V=
 def rank_suppa2(suppa_file, dofilter=True, ranknochange=False, majiq_n=None, V=0.2):
     rank = []
     suppa_nn = 0
-    print "LL"
     for line in open(suppa_file).readlines()[1:]:
         sline = line.strip().split()
         if sline[1] == 'nan':
@@ -396,16 +397,15 @@ def rank_suppa2(suppa_file, dofilter=True, ranknochange=False, majiq_n=None, V=0
         pval = float(sline[2])
         ev_name = sline[0]
         pass_thres = int(abs(dpsi)>=V and pval<=0.05)
-        suppa_nn += pass_thres
-#        if pval<=0.05:
-#            rank.append([ev_name, dpsi, pval, pass_thres])
+        if pval<=0.05:
+            suppa_nn += pass_thres
+            rank.append([ev_name, dpsi, pval, pass_thres])
 #        if majiq_n[0]:
-#            if abs(dpsi)< V:
-#                continue
-#            rank.append([ev_name, dpsi, pval, pass_thres])
+#                rank.append([ev_name, dpsi, pval, pass_thres])
 #        else:
-        if pval <= 0.05:
-                rank.append([ev_name, dpsi, pval, pass_thres])
+#                if pval <= 0.05:
+#               # if abs(dpsi)>=V:
+#                    rank.append([ev_name, dpsi, pval, pass_thres])
 
     expected_mask = np.array([abs(r[1]) >= V for r in rank])
     pval_cutoff = 0.05
@@ -420,7 +420,7 @@ def rank_suppa2(suppa_file, dofilter=True, ranknochange=False, majiq_n=None, V=0
     print "#E(Delta(PSI))>%.2f: %d" % (V, np.count_nonzero(expected_mask))
     print "#E(Delta(PSI))>%.2f and FDR<0.05: %d" % (V, np.count_nonzero(np.logical_and(expected_mask, fdr_mask)))
 
-    rank.sort(key=lambda x: (abs(float(x[1])), -float(x[2])))  # biggest delta PSI first, small p-value
+    rank.sort(key=lambda x: (abs(x[1]), -x[2]), reverse=True)  # biggest delta PSI first, small p-value
 
     return suppa_nn, rank
 
@@ -549,21 +549,23 @@ def main():
                 count_pairs += 1
                 majiq_rank = rank_majiq(majiq_data.get_lsvs(), args.V, args.absolute, args.filter, args.ranknochange,
                                         args.complex_lsvs, shrink=args.shrink, majiq_n=method_N['majiq'])
-                ranks['majiq_' + str(count_pairs)].append(majiq_rank)
-                majiq_file1_names = [a[0].split('#')[0] for a in ranks['majiq_1'][0]]
+                ranks['majiq'].append(majiq_rank)
+                majiq_file1_names = [a[0].split('#')[0] for a in ranks['majiq'][0]]
                 print "MAJIQ 1st delta(psi) ALL pair %d" % len(majiq_data.get_lsvs())
                 print "MAJIQ 1st delta(psi) AFTER RANK pair %d" % len(majiq_file1_names)
                 continue
 
             if args.type_rank == 'only_exp1':
                 # Select events from experiment 1
-                exp1_index = np.array([v_lsv.get_id() in majiq_file1_names for v_lsv in majiq_data.get_lsvs()])
-                junc_dict = dict([(rr[0].split('#')[0], int(rr[0].split('#')[1])) for rr in ranks['majiq_' + str(count_pairs)][-1]])
+                exp1_index = np.array([v_lsv.lsv_id in majiq_file1_names for v_lsv in majiq_data.get_lsvs()])
+                junc_dict = dict([(rr[0].split('#')[0],
+                                   int(rr[0].split('#')[1])) for rr in
+                                  ranks['majiq'][0]])
                 majiq_rank = rank_majiq(np.array(majiq_data.get_lsvs())[exp1_index].tolist(), args.V, args.absolute,
                                         args.filter, args.ranknochange, args.complex_lsvs, shrink=args.shrink,
                                         junc_selection=junc_dict)
-                ranks['majiq_' + str(count_pairs)].append(majiq_rank)
-                n1['majiq_' + str(count_pairs)] = [np.count_nonzero(exp1_index), np.count_nonzero(exp1_index)]
+                ranks['majiq'].append(majiq_rank)
+                n1['majiq'] = [np.count_nonzero(exp1_index), np.count_nonzero(exp1_index)]
                 print "MAJIQ 2nd delta(psi) pair %d" % np.count_nonzero(exp1_index)
         names_majiq_exp1 = [m[1] for m in majiq_file1_names]
 
@@ -669,52 +671,12 @@ def main():
         print args.max, method_N[method_name][0]
         max_events = min(args.max, len(rank1))
         max_events = min(max_events, method_N[method_name][0])
-
+#        max_events = min(max_events, method_N[method_name][0])
+        print max_events
         fdr = []
-        if args.proximity or args.fullrank:
-            # Using proximity or full rank window
-            if args.proximity:
-                print "Using proximity window of %s..." % args.proximity
-            else:
-                print "Using full rank2 for all events %s..." % max_events
-            found = 0
-            fdr = [0]  #zero to avoid using "first" flag for first element
-            v_values = []
-            for i in xrange(max_events):
-                if args.proximity:
-                    min_chunk = max(0, i - args.proximity / 2)
-                    max_chunk = min_chunk + args.proximity
-
-                elif args.fullrank:  #check in the whole set instead of subsets
-                    min_chunk = 0
-                    max_chunk = max_events
-
-                if i % 20 == 0:
-                    print "Event rank1 n=%s. Window rank2: %s-%s" % (i, min_chunk, max_chunk)
-
-                #check if event1 is inside the window of rank2
-                is_hit, rank2_exp = _is_in_chunk(rank1[i], list(rank2[min_chunk:max_chunk]), report_rank2_expec=True)
-                found += is_hit
-                if args.fdr:
-                    v_values.append(rank1[i][1])
-                    fdr.append(fdr[-1] + v_values[-1])
-
-                ratios.append(float(found))
-                events.append([rank1[i], is_hit, rank2_exp, method_N[method_name][0] if 'mats' not in method_name else mats_n_orig])
-
-            fdr.pop(0)  #remove now useless first item
-            #normalize ratios
-            ratios = array(ratios)
-            ratios /= ratios.shape[0]
-            if args.fdr:  #normalize fdr if we are calculating it
-                fdr = array(fdr)
-                fdr /= fdr.shape[0]
-
-        else:  # "equalrank" chunks of same n size in both ranks
-            print "USING equalrank"
-            N, ratios = get_ratio_nu(rank1, rank2, max_events, max_N=args.max)
-
-        print "RESULT:", ratios[0:10], "...", ratios[-10:], "length", ratios.shape
+        N, ratios = get_ratio_nu(rank1, rank2, max_events, maxN=args.max)
+        print "N=%s, RR=%s" % (N, ratios[N-1])
+        print "RESULT_1:", ratios[0:10], "...", ratios[-10:], "length", ratios.shape
         print "Saving in %s" % args.output
 
         if not os.path.exists(args.output):
