@@ -418,8 +418,8 @@ def main():
     log.info('Starting voila.')
 
     # set number of processes
-    if args.processes and args.processes < constants.PROCESS_COUNT:
-        constants.PROCESS_COUNT = args.processes
+    if args.max_processes and args.max_processes < constants.PROCESS_COUNT:
+        constants.PROCESS_COUNT = args.max_processes
 
     if constants.PROCESS_COUNT == 1:
         log.info('Using 1 process.')
