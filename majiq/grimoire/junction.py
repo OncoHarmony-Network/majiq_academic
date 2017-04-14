@@ -83,7 +83,7 @@ class Junction:
             #     gc_dataset[data_index, :] = self.gc_content[0, :]
 
             dataset.append(self.coverage[0, :])
-            if gc_dataset:
+            if gc_dataset is not None:
                 gc_dataset.append(self.gc_content[0, :])
 
             h_jnc.attrs['coverage_index'] = data_index

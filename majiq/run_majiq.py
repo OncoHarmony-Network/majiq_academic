@@ -3,7 +3,6 @@ from majiq.src.build import build
 from majiq.src.calc_psi import calcpsi
 from majiq.src.deltapsi import deltapsi
 from majiq.src.constants import *
-# from majiq.src.deltapsi import deltapair, multi_dpsi
 
 
 class FRange01(argparse.Action):
@@ -46,7 +45,7 @@ def main():
     buildparser.add_argument('transcripts', action="store", help='read file in SAM format')
     buildparser.add_argument('-conf', default=None, required=True, help='Provide study configuration file with all '
                                                                         'the execution information')
-    buildparser.add_argument('--nogc', dest="gcnorm", action='store_false', default=False,
+    buildparser.add_argument('--nogc', dest="gcnorm", action='store_false', default=True,
                              help='psianddelta GC content normalization [Default: GC content normalization activated]')
     buildparser.add_argument('--pcr', dest='pcr_filename', action="store", help='PCR bed file as gold_standard')
     buildparser.add_argument('--gff_output', dest='gff_output', default="lsvs.gff", action="store",
@@ -87,31 +86,35 @@ def main():
     buildparser.add_argument('--prebam', default=True,  action='store_false')
 
 
-    #flags shared by calcpsi and deltapair
-    psianddelta = new_subparser()
-    psianddelta.add_argument('--k', default=50, type=int,
+
+    sampling = new_subparser()
+    sampling.add_argument('--k', default=50, type=int,
                              help='Number of positions to sample per iteration. [Default: %(default)s]')
-    psianddelta.add_argument('--m', default=100, type=int,
+    sampling.add_argument('--m', default=100, type=int,
                              help='Number of bootstrapping samples. [Default: %(default)s]')
-    psianddelta.add_argument('--minreads', default=10, type=int,
+    sampling.add_argument('--minreads', default=10, type=int,
                              help='Minimum number of reads combining all positions in an event to be considered. '
-                             '[Default: %(default)s]')
-    psianddelta.add_argument('--minpos', default=3, type=int, help='Minimum number of start positions with at least 1 '
+                                  '[Default: %(default)s]')
+    sampling.add_argument('--minpos', default=3, type=int, help='Minimum number of start positions with at least 1 '
                                                                    'read for an event to be considered.'
                                                                    '[Default: %(default)s]')
-    psianddelta.add_argument('--trimborder', default=5, type=int,
+    sampling.add_argument('--trimborder', default=5, type=int,
                              help='Trim the borders when sampling (keeping the ones with reads). '
                                   '[Default: %(default)s]')
-    psianddelta.add_argument('--nodiscardb', dest="discardb", action='store_false',  default=True,
+    sampling.add_argument('--nodiscardb', dest="discardb", action='store_false', default=True,
                              help='Skip biscarding the b from the NB polynomial function, since we expect our fit '
                                   'to start from x=0, y=0')
-    psianddelta.add_argument('--discardzeros', default=5, type=int, dest="discardzeros",
+    sampling.add_argument('--discardzeros', default=5, type=int, dest="discardzeros",
                              help='Discarding zeroes, up to a minimum of N positions per junction. [Default: 5]')
 
-    psianddelta.add_argument('--weights_alpha', type=float, default=15.,
+
+    #flags shared by calcpsi and deltapair
+    weights = new_subparser()
+    weights.add_argument('--weights_alpha', type=float, default=15.,
                              help='Dispersion hyperparameter (Default: %(default)0.02f)')
-    psianddelta.add_argument('--weights_threshold', action=FRange01, default=0.75,
+    weights.add_argument('--weights_threshold', action=FRange01, default=0.75,
                              help='Threshold hyperparameter (Default: %(default)0.02f)')
+
     psi = new_subparser()
     psi.add_argument('files', nargs='+', help='The experiment files to analyze. You can include more than one '
                                               '(they will all be analyzed independently though) Glob syntax supported.')
@@ -180,22 +183,17 @@ def main():
     #                         "[Default: %(default)s]")
 
     #calcpsi flags
-
-
     subparsers = parser.add_subparsers(help='')
-
     parser_preprocess = subparsers.add_parser('build', help='Preprocess SAM/BAM files as preparation for the rest of '
                                                             'the tools (psi, deltapsi)', parents=[common, buildparser])
     parser_preprocess.set_defaults(func=build)
-
     parser_calcpsi = subparsers.add_parser('psi', help="Calculate PSI values for N experiments, given a folder of "
                                                        "preprocessed events by 'majiq preprocess' or SAM/BAM files",
-                                           parents=[common, psi, psianddelta])
+                                           parents=[common, psi, sampling, weights])
     parser_calcpsi.set_defaults(func=calcpsi)
-
     parser_deltagroup = subparsers.add_parser('deltapsi', help='Calculate Delta PSI values given a pair of experiments '
                                                                '(1 VS 1 conditions *with* replicas)',
-                                              parents=[common, delta, psianddelta])
+                                              parents=[common, delta, sampling, weights])
     parser_deltagroup.set_defaults(func=deltapsi)
 
     # parser_multidelta = subparsers.add_parser('multi_delta', help='Calculate Delta PSI values given a pair of experiments '
