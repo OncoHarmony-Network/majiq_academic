@@ -294,11 +294,15 @@ class Gene:
     def simplify(self):
         jj_set = set()
         for ex in self.exons:
+            jlist = []
             for ttype in ('5prime', '3prime'):
-                jlist = ex.get_junctions(ttype)
-                jlist = [x for x in jlist if x is not None and
-                                             x.get_donor() is not None and
-                                             x.get_acceptor() is not None]
+                for xx in ex.get_junctions(ttype):
+                    if xx is None:
+                        continue
+                    if xx.get_donor() is None or xx.get_acceptor() is None:
+                        jj_set.add(xx)
+                    else:
+                        jlist.append(xx)
 
                 for exp_idx in xrange(majiq_config.num_experiments):
                     cover = [float(junc.get_coverage_sum(exp_idx)) for junc in jlist]
