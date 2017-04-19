@@ -716,7 +716,7 @@ function spliceGraphD3() {
                 });
 
                 var junctions = orig_objs.junc.filter(function (d) {
-                    return d.intron_retention == 0;
+                    return d.intron_retention === 0;
                 });
 
                 var intronRetentions = orig_objs.exons.filter(function (d) {
@@ -731,7 +731,7 @@ function spliceGraphD3() {
                     var index = d3.select(spliceDiv).classed('exp1') ? 3 : 5;
                     var jsonData = row[index].querySelector('canvas').getAttribute('data-lsv');
                     var lsv_list = JSON.parse(jsonData.replace(/'/g, '"'));
-                    var trans_lsv = translate_lsv_bins(lsv_list[0].bins, 1000);
+                    var trans_lsv = translate_lsv_bins(lsv_list.bins, 1000);
                     return trans_lsv.reduce(function (prev, curr) {
                         return prev.concat((d3.mean(curr) * 3).toFixed(3));
                     }, []);
