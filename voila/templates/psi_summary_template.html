@@ -35,7 +35,7 @@
                     <h2>Gene
                         name: {{ gene_value[0].name }}; {{ gene_value[0].chromosome }}:{{ gene_value[0].strand }}:{{ genes_exps_list[0][genes_exps_list[0].keys()[0]][gene_id].start }}-{{ genes_exps_list[0][genes_exps_list[0].keys()[0]][gene_id].end }};
                         {% if lexps %}
-                            <a href="http://genome.ucsc.edu/cgi-bin/hgTracks?db={{ lexps.genome }}&position={{ genes_exps_list[0][genes_exps_list[0].keys()[0]][gene_id][3] }}:{{ genes_exps_list[0][genes_exps_list[0].keys()[0]][gene_id].start }}-{{ genes_exps_list[0][genes_exps_list[0].keys()[0]][gene_id].end }}"
+                            <a href="http://genome.ucsc.edu/cgi-bin/hgTracks?db={{ lexps.genome }}&position={{ gene_value[0].chromosome }}:{{ genes_exps_list[0][genes_exps_list[0].keys()[0]][gene_id].start }}-{{ genes_exps_list[0][genes_exps_list[0].keys()[0]][gene_id].end }}"
                                target="_blank"><img src="static/img/icons/ucsc3.png"
                                                     title="{{ genes_exps_list[0][genes_exps_list[0].keys()[0]][gene_id][3] }}:{{ genes_exps_list[0][genes_exps_list[0].keys()[0]][gene_id].start }}-{{ genes_exps_list[0][genes_exps_list[0].keys()[0]][gene_id].end }}"/></a>
                         {% endif %}
