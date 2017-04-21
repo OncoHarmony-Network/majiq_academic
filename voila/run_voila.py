@@ -201,6 +201,12 @@ def conditional_table_args():
                                           type=float,
                                           default=0.2,
                                           help='Threshold used to filter non-changing LSVs.  Default is 0.2.')
+    parser_conditional_table.add_argument('--best-comparisons',
+                                          type=int,
+                                          help='Filter out all but the best comparisons.  The number remaining is '
+                                               'the user supplied argument.  "Best comparisons" is defined by '
+                                               'comparisons with most agreeing with the least dissagreeing.')
+
     return parser_conditional_table
 
 
