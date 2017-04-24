@@ -54,9 +54,6 @@
                                      <option {% if nsample == "Combined" %} selected="selected" {% endif %}
                                                 value="{{ genes_exps_list[0][nsample][gene_id] | to_json_especial }}">{{ nsample }}
                                         </option>
-                                    {% else %}
-                                        <option value="{{ genes_exps_list[0][nsample][gene_id] | to_json_especial }}">{{ nsample }}</option>
-                                    {% endif %}
                                 {%- endfor %}
                             </select>
 
