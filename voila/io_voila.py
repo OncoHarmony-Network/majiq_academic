@@ -359,7 +359,7 @@ def tab_output(args, majiq_output):
         group1 = majiq_output['meta_exps']['group1']
         group2 = majiq_output['meta_exps']['group2']
         fieldnames = fieldnames[:3] + ['E(dPSI) per LSV junction',
-                                       'P(|dPSI|>=%.2f) per LSV junction' % args.threshold,
+                                       'P(|E(dPSI)|>=%.2f) per LSV junction' % args.threshold,
                                        '%s E(PSI)' % group1, '%s E(PSI)' % group2]
 
     fieldnames += ['LSV Type', 'A5SS', 'A3SS', 'ES', 'Num. Junctions', 'Num. Exons', 'De Novo Junctions', 'chr',
