@@ -2,7 +2,7 @@ import signal
 from multiprocessing import Process, Pool, Manager
 from multiprocessing.queues import JoinableQueue
 
-from voila.constants import PROCESS_COUNT
+from voila import constants
 from voila.utils.voila_log import voila_log
 
 
@@ -46,7 +46,7 @@ class ProducerConsumer(object):
         original_sigint_handler = signal.signal(signal.SIGINT, signal.SIG_IGN)
 
         producer_proc = Process(target=self._producer)
-        pool = Pool(PROCESS_COUNT, self._worker)
+        pool = Pool(constants.PROCESS_COUNT, self._worker)
 
         signal.signal(signal.SIGINT, original_sigint_handler)
 
@@ -86,7 +86,16 @@ class ProducerConsumer(object):
             pass
 
     def get_values(self):
-        return self.manager_dict.values()
+        try:
+            return self.manager_dict.values()
+        except KeyboardInterrupt:
+            voila_exit()
+
+    def get_dict(self):
+        try:
+            return dict(self.manager_dict)
+        except KeyboardInterrupt:
+            voila_exit()
 
     def _worker(self):
         """

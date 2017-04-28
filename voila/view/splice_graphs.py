@@ -68,6 +68,8 @@ def get_gene_dicts(splice_graph, gene_names_list, limit):
 
     combined_genes_exp = {}
 
+    log.info('Getting gene experiment data...')
+
     for experiment_index, experiment_name in enumerate(experiments):
         for gene in genes:
 
@@ -82,8 +84,8 @@ def get_gene_dicts(splice_graph, gene_names_list, limit):
                 combined_genes_exp[gene.gene_id] = gene.combine(experiment_index,
                                                                 combined_genes_exp.get(gene.gene_id, None))
 
-                if len(experiments) > 1:
-                    genes_exp['Combined'] = {gene_id: combined_genes_exp[gene_id] for gene_id in combined_genes_exp}
+    if len(experiments) > 1:
+        genes_exp['Combined'] = {gene_id: combined_genes_exp[gene_id] for gene_id in combined_genes_exp}
 
     log.info("Splice graph information files correctly loaded.")
 

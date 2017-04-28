@@ -12,7 +12,6 @@
     <script src="static/js/jquery.tablesorter.pager.js" type="text/javascript"></script>
     <script src="static/js/application.js" type="text/javascript"></script>
     <script src="static/js/jquery.tooltipster.min.js" type="text/javascript"></script>
-
 {% endblock %}
 
 {% block header %}
@@ -36,7 +35,7 @@
                     <h2>Gene
                         name: {{ gene_value[0].name }}; {{ gene_value[0].chromosome }}:{{ gene_value[0].strand }}:{{ genes_exps_list[0][genes_exps_list[0].keys()[0]][gene_id].start }}-{{ genes_exps_list[0][genes_exps_list[0].keys()[0]][gene_id].end }};
                         {% if lexps %}
-                            <a href="http://genome.ucsc.edu/cgi-bin/hgTracks?db={{ lexps.genome }}&position={{ genes_exps_list[0][genes_exps_list[0].keys()[0]][gene_id][3] }}:{{ genes_exps_list[0][genes_exps_list[0].keys()[0]][gene_id].start }}-{{ genes_exps_list[0][genes_exps_list[0].keys()[0]][gene_id].end }}"
+                            <a href="http://genome.ucsc.edu/cgi-bin/hgTracks?db={{ lexps.genome }}&position={{ gene_value[0].chromosome }}:{{ genes_exps_list[0][genes_exps_list[0].keys()[0]][gene_id].start }}-{{ genes_exps_list[0][genes_exps_list[0].keys()[0]][gene_id].end }}"
                                target="_blank"><img src="static/img/icons/ucsc3.png"
                                                     title="{{ genes_exps_list[0][genes_exps_list[0].keys()[0]][gene_id][3] }}:{{ genes_exps_list[0][genes_exps_list[0].keys()[0]][gene_id].start }}-{{ genes_exps_list[0][genes_exps_list[0].keys()[0]][gene_id].end }}"/></a>
                         {% endif %}
@@ -52,13 +51,9 @@
 
                             <select class="spliceGraphSelector exp1" autocomplete="off" title="splice graph selector">
                                 {% for nsample in genes_exps_list[0] -%}
-                                    {% if nsample == comb_spliceg_cond1 %}
-                                        <option selected="selected"
-                                                value="{{ genes_exps_list[0][nsample][gene_id] | to_json_especial}}">{{ nsample }}
+                                     <option {% if nsample == "Combined" %} selected="selected" {% endif %}
+                                                value="{{ genes_exps_list[0][nsample][gene_id] | to_json_especial }}">{{ nsample }}
                                         </option>
-                                    {% else %}
-                                        <option value="{{ genes_exps_list[0][nsample][gene_id] | to_json_especial}}">{{ nsample }}</option>
-                                    {% endif %}
                                 {%- endfor %}
                             </select>
 
@@ -81,7 +76,7 @@
 
                         <div class="splice-div-container">
                             <div class="spliceDiv exp1" id="spliceDivExp1_{{ gene_index }}"
-                                 data-exon-list="{{ genes_exps_list[0][comb_spliceg_cond1][gene_id] | to_json_especial }}">
+                                 data-exon-list="{{ genes_exps_list[0]["Combined"][gene_id] | to_json_especial }}">
                             </div>
                         </div>
 
@@ -132,9 +127,9 @@
                                         </canvas>
                                     </td>
                                     <td id="data_td{{ gene_index }}{{ loop.index }}">
-                                        <canvas class="lsvSingleCompactPercentiles"
+                                        <canvas class="lsvSingleCompactPercentiles primer"
                                                 id="lsvSingleCompact{{ loop.index }}" width="50px"
-                                                height="50px" data-lsv="[{{ lsv|to_json }}]"
+                                                height="50px" data-lsv="{{ lsv|to_json }}" genome="{{ lexps.genome }}" lsv-text-version="{{ lsv_text_version }}"
                                                 style="border: solid; border-width: 2pt; border-color: darkgrey;">
                                             This browser or document mode doesn't support canvas
                                         </canvas>
@@ -151,6 +146,12 @@
                                             <a href="../static/doc/lsvs/{{ lsv.gene_id }}.gtf" target="_blank"><img
                                                     src="static/img/icons/gtf.png"
                                                     title="Go to GFT LSV definition"/></a>
+                                        </p>
+                                        <p>
+
+                                            <button class="copy-to-clipboard">
+                                                Copy LSV
+                                            </button>
                                         </p>
                                     </td>
 

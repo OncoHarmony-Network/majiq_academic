@@ -21,7 +21,7 @@ class VoilaLsv(LsvGraphic):
         :param means_psi1: means data for psi1
         :param psi1: psi1 matrix
         :param means_psi2: means data for psi2
-        :param psi2: psi2 matrix
+        :param bin: psi2 matrix
         """
 
         if lsv_graphic:
@@ -39,12 +39,13 @@ class VoilaLsv(LsvGraphic):
         else:
             super(VoilaLsv, self).__init__(None, None, None, None)
 
-        self.bins = bins_list
-        self.means = means
-        self.means_psi1 = means_psi1
-        self.psi1 = psi1
-        self.means_psi2 = means_psi2
-        self.psi2 = psi2
+        # For binary LSVs, we only store one of the junctions... use their property for the full value.
+        self.trunc_bins = bins_list
+        self.trunc_psi1 = psi1
+        self.trunc_psi2 = psi2
+        self.trunc_means = means
+        self.trunc_means_psi1 = means_psi1
+        self.trunc_means_psi2 = means_psi2
 
         self.categories = None
         self.variances = []
@@ -52,19 +53,7 @@ class VoilaLsv(LsvGraphic):
 
         # Store collapsed matrix to save some space
         if self.is_delta_psi():
-            self.bins = [collapse_matrix(lsv_bins) for lsv_bins in self.bins]
-
-        # Recreate complementary junction in binary LSV
-        if len(self.bins) == 1:
-            self.bins.append(self.bins[-1][::-1])
-
-        # if means data is not supplied when ths object is created, then generate it.  Currently, this will always
-        # happen, but there are plans to create the means in Majiq.
-        if not self.means:
-            if self.is_delta_psi():
-                self.means = [get_expected_dpsi(b) for b in self.bins]
-            else:
-                self.means = [get_expected_psi(b) for b in self.bins]
+            self.trunc_bins = [collapse_matrix(bins) for bins in self.trunc_bins]
 
         # excl_incl is used to calculate the expected psi
         if self.means and self.is_delta_psi():
@@ -74,14 +63,67 @@ class VoilaLsv(LsvGraphic):
                 else:
                     self.excl_incl.append([0, mean])
         else:
-            for lsv_bins in self.bins:
-                step_bins = 1.0 / len(lsv_bins)
-                projection_prod = lsv_bins * np.arange(step_bins / 2, 1, step_bins) ** 2
+            for bin in self.bins:
+                step_bins = 1.0 / len(bin)
+                projection_prod = bin * np.arange(step_bins / 2, 1, step_bins) ** 2
                 self.variances.append(np.sum(projection_prod) - self.means[-1] ** 2)
 
         # For LSV filtering
         if lsv_graphic:
             self.init_categories()
+
+    def _extend_means(self, means):
+        if means and len(means) == 1:
+            means.append(1 - means[0])
+        return means
+
+    def _extend_bins(self, bins):
+        if bins and len(bins) == 1:
+            bins.append(bins[-1][::-1])
+        return bins
+
+    @property
+    def bins(self):
+        return self._extend_bins(self.trunc_bins)
+
+    @property
+    def psi1(self):
+        return self._extend_bins(self.trunc_psi1)
+
+    @property
+    def psi2(self):
+        return self._extend_bins(self.trunc_psi2)
+
+    @property
+    def means(self):
+        ms = self._extend_means(self.trunc_means)
+        if not ms:
+            if self.is_delta_psi():
+                ms = [get_expected_dpsi(b) for b in self.bins]
+            else:
+                ms = [get_expected_psi(b) for b in self.bins]
+        return ms
+
+    @property
+    def means_psi1(self):
+        return self._extend_means(self.trunc_means_psi1)
+
+    @property
+    def means_psi2(self):
+        return self._extend_means(self.trunc_means_psi2)
+
+    def to_dict(self, ignore_keys=()):
+        ignore_keys = ('trunc_bins', 'trunc_psi1', 'trunc_psi2', 'trunc_means', 'trunc_means_psi1', 'trunc_means_psi2')
+        d = super(VoilaLsv, self).to_dict(ignore_keys)
+        d.update({
+            'bins': self.bins,
+            'psi1': self.psi1,
+            'psi2': self.psi2,
+            'means': self.means,
+            'means_psi1': self.means_psi1,
+            'means_psi2': self.means_psi2
+        })
+        return d
 
     def is_delta_psi(self):
         """
@@ -89,7 +131,7 @@ class VoilaLsv(LsvGraphic):
         :return: bool
         """
         # we have to check for None, because they might be numpy objects
-        return self.psi1 is not None and self.psi2 is not None
+        return self.trunc_psi1 is not None and self.trunc_psi2 is not None
 
     def get_extension(self):
         """
@@ -117,7 +159,6 @@ class VoilaLsv(LsvGraphic):
         Return css class names used when rendering some HTML files.
         :return: str
         """
-        # TODO: This needs to be revisited... and maybe refactored.
         css_cats = []
         for c in self.categories:
             if type(self.categories[c]) == bool and self.categories[c]:
@@ -134,7 +175,7 @@ class VoilaLsv(LsvGraphic):
         return max(means[means > 0].sum(), abs(means[means < 0].sum())) >= threshold
 
     def exclude(self):
-        return ['categories', 'bins', 'psi1', 'psi2']
+        return ['categories', 'trunc_bins', 'trunc_psi1', 'trunc_psi2']
 
     def to_hdf5(self, h, use_id=True):
         if use_id:
@@ -148,14 +189,14 @@ class VoilaLsv(LsvGraphic):
             cat_grp.attrs[key] = self.categories[key]
 
         # bins
-        BinsDataSet(h, self.bins).encode_list()
+        BinsDataSet(h, self.trunc_bins).encode_list()
 
         if self.is_delta_psi():
             # psi1
-            Psi1DataSet(h, self.psi1).encode_list()
+            Psi1DataSet(h, self.trunc_psi1).encode_list()
 
             # psi2
-            Psi2DataSet(h, self.psi2).encode_list()
+            Psi2DataSet(h, self.trunc_psi2).encode_list()
 
     def from_hdf5(self, h):
         # categories
@@ -169,13 +210,13 @@ class VoilaLsv(LsvGraphic):
             self.categories[key] = value
 
         # bins
-        self.bins = BinsDataSet(h).decode_list()
+        self.trunc_bins = BinsDataSet(h).decode_list()
 
         # psi1
-        self.psi1 = Psi1DataSet(h).decode_list()
+        self.trunc_psi1 = Psi1DataSet(h).decode_list()
 
         # psi2
-        self.psi2 = Psi2DataSet(h).decode_list()
+        self.trunc_psi2 = Psi2DataSet(h).decode_list()
 
         return super(VoilaLsv, self).from_hdf5(h)
 

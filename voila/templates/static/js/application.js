@@ -19,8 +19,25 @@ CanvasRenderingContext2D.prototype.dashedLine = function (x1, y1, x2, y2, dashLe
     this[q % 2 == 0 ? 'moveTo' : 'lineTo'](x2, y2);
 };
 
-
 $(document).ready(function () {
+    new Clipboard('.copy-to-clipboard', {
+        text: function (trigger) {
+            var primer = $(trigger).parents('tr').find('.primer');
+            var data = {};
+            var lsv = primer.attr('data-lsv');
+            data.lsv = JSON.parse(lsv.replace(/'/g, '"'));
+            data.genome = primer.attr('genome');
+            data.lsv_text_version = primer.attr('lsv-text-version');
+
+            var spliceDivs = $(trigger).parents('.gene-container').find('.spliceDiv').get();
+            data.splice_graphs = spliceDivs.reduce(function (accu, currVal) {
+                accu.push(JSON.parse(currVal.getAttribute('data-exon-list').replace(/'/g, '"')));
+                return accu
+            }, []);
+
+            return JSON.stringify(data).replace(/"/g, '\\"')
+        }
+    });
 
     // add sortable functionality to the table
     window.gene_objs = [];
@@ -51,7 +68,7 @@ $(document).ready(function () {
                 if (!simplified) return false;
 
                 // check read counts toggle button for read counts state
-                var toggleReadCounts = this.parentNode.parentNode.parentNode.parentNode.querySelector('.readCounts');
+                // var toggleReadCounts = this.parentNode.parentNode.parentNode.parentNode.querySelector('.readCounts');
 
                 // For now.. we're going to comment this out and add per LSV clean reads after this release.
                 // var displayNormReads = !toggleReadCounts.checked;
@@ -497,8 +514,7 @@ function drawLSVCompactStackBars(canvas, fillMode) {
         // Clear canvas
         ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-        var groups_str = canvas.getAttribute("data-lsv");
-
+        var groups_str = '[' + canvas.getAttribute("data-lsv") + ']';
         var groups = JSON.parse(groups_str.replace(/'/g, '"'));
 
         // Calculate origins_coords

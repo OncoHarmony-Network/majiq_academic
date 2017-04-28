@@ -17,6 +17,11 @@ def conditional_table(args):
     """
     lsvs_dict = load_dpsi_tab(args)
 
+    if args.best_comparisons:
+        voila_log().info('Only displaying the best {0} comparisons.'.format(args.best_comparisons))
+        sorted_lsvs_dict = sorted(lsvs_dict.items(), key=lambda x: (-x[1]['nagree'], x[1]['ndisagree']))
+        lsvs_dict = {key: value for key, value in sorted_lsvs_dict[:args.best_comparisons]}
+
     if not args.no_html:
         render_html(args, lsvs_dict)
 

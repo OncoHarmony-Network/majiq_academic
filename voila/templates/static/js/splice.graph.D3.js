@@ -206,27 +206,27 @@ var longestJunc = function (junctions, scale) {
 };
 
 
-function toolTipD3(strand, begin, end, el) {
+function toolTipD3(begin, end, el) {
     // if anything is selected, don't change the tool tip
     if ($(el).closest('.splice-div-container').find('.selected').length)
         return;
 
-    if (d3.select(el).classed('halfexon'))
+    if (d3.select(el).classed('halfexon')) {
         if (d3.select(el).classed('missingStart'))
             begin = 'MISSING';
-        else
+        if (d3.select(el).classed('missingEnd'))
             end = 'MISSING';
+    }
 
     var length = (end - begin) + 1;
     var toolTip = d3.select(el.parentNode.parentNode.parentNode.parentNode).select('.tooltipD3');
 
-    if (strand === '-')
-        toolTip.select('.coordsLabel').text(end + ' - ' + begin);
-    else
-        toolTip.select('.coordsLabel').text(begin + ' - ' + end);
+
+    toolTip.select('.coordsLabel').text(begin + ' - ' + end);
 
     toolTip.select('.lengthLabel').text(isNaN(length) ? 'UNKNOWN' : length);
 }
+
 
 function spliceGraphD3() {
 
@@ -716,7 +716,7 @@ function spliceGraphD3() {
                 });
 
                 var junctions = orig_objs.junc.filter(function (d) {
-                    return d.intron_retention == 0;
+                    return d.intron_retention === 0;
                 });
 
                 var intronRetentions = orig_objs.exons.filter(function (d) {
@@ -731,7 +731,7 @@ function spliceGraphD3() {
                     var index = d3.select(spliceDiv).classed('exp1') ? 3 : 5;
                     var jsonData = row[index].querySelector('canvas').getAttribute('data-lsv');
                     var lsv_list = JSON.parse(jsonData.replace(/'/g, '"'));
-                    var trans_lsv = translate_lsv_bins(lsv_list[0].bins, 1000);
+                    var trans_lsv = translate_lsv_bins(lsv_list.bins, 1000);
                     return trans_lsv.reduce(function (prev, curr) {
                         return prev.concat((d3.mean(curr) * 3).toFixed(3));
                     }, []);
@@ -846,7 +846,7 @@ function spliceGraphD3() {
                 el
                     .on('mouseover', function (d) {
                         d3.select(this).classed("hovered", true);
-                        toolTipD3(strand, orig_objs.exons[d.key].value.start, orig_objs.exons[d.key].value.end, this);
+                        toolTipD3(orig_objs.exons[d.key].value.start, orig_objs.exons[d.key].value.end, this);
                     })
                     .on('mouseout', function () {
                         d3.select(this).classed("hovered", false);
@@ -869,7 +869,7 @@ function spliceGraphD3() {
                     d3.select(d3svg.selectAll('.readcounts')[0][i]).classed("blurred", false).classed("highlighted", true);
                     d3this.classed("blurred", false);
                     d3this.classed("hovered", true);
-                    toolTipD3(strand, juncs_orig_filtered[i].start, juncs_orig_filtered[i].end, this);
+                    toolTipD3(juncs_orig_filtered[i].start, juncs_orig_filtered[i].end, this);
                 })
                 .on('mouseout', function () {
                     d3.selectAll('.junction').classed('blurred', false);
@@ -903,6 +903,7 @@ function spliceGraphD3() {
 
             if (strand == '-')
                 d3.select(this).selectAll(":not(text)").attr("transform", "translate(" + width + ",0) scale(-1 , 1)");
+            d3.select(this).selectAll("svg").attr("transform", "");
 
             var d3Elements = {
                 'exons': exons,

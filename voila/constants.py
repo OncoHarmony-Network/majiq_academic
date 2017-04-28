@@ -1,4 +1,7 @@
 import multiprocessing
+from collections import namedtuple
+
+import collections
 
 VERSION = '1.0.0'
 FILE_VERSION = '0.1'
@@ -55,3 +58,13 @@ VOILA_LOG_NAME = '3a4f4528-e572-404e-b143-acff61cee9ed'
 
 # HDF5
 EXPERIMENT_NAMES = 'experiments_names'
+
+# MAJIQ-SPEL
+LSV_TEXT_VERSION = 2
+
+SPLICE_GRAPH_FILE_VERSION = 1
+VOILA_FILE_VERSION = 1
+
+FILE_MODE = collections.namedtuple('FILE_MODE', 'read write')('r', 'w')
+
+
