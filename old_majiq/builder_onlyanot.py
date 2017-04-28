@@ -18,7 +18,7 @@ from old_majiq.grimoire.gene import recreate_gene_tlb
 import old_majiq.src.io as majiq_io
 from old_majiq.src.normalize import prepare_gc_content
 import majiq.src.utils as utils
-import majiq.src.config as config
+import majiq.src.config_old as config
 from majiq.grimoire.lsv import SSOURCE, STARGET, InvalidLSV
 
 try:

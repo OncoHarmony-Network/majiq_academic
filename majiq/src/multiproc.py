@@ -1,22 +1,22 @@
 import Queue
 import os
 import sys
-from multiprocessing import current_process
 
-import majiq.src.io as majiq_io
+import multiprocessing as mp
 from majiq.src import io as majiq_io
 from majiq.src.constants import *
 import majiq.src.utils as majiq_utils
-import majiq.src.config as majiq_config
+from majiq.src.config import Config
 from voila.splice_graphics import LsvGraphic
 from voila.vlsv import VoilaLsv
+
 
 def parallel_lsv_child_calculation(func, args, tempdir, name, chunk, store=True):
     # try:
     if not os.path.isdir(tempdir):
         os.mkdir(tempdir)
     thread_logger = majiq_utils.get_logger("%s/majiq.%s.log" % (tempdir, chunk), silent=False)
-    thread_logger.info("[Th %s]: START child,%s" % (chunk, current_process().name))
+    thread_logger.info("[Th %s]: START child,%s" % (chunk, mp.current_process().name))
 
     args.append(thread_logger)
     results = func(*args)
@@ -25,6 +25,20 @@ def parallel_lsv_child_calculation(func, args, tempdir, name, chunk, store=True)
     if store:
         thread_logger.info("[Th %s]: Saving ...%s " % (chunk, func.__name__))
         majiq_io.dump_bin_file(results, "%s/%s_th%s.%s.pickle" % (tempdir, name, chunk, func.__name__))
+
+
+# def pool_process(func, iter_args, nthreads, initializer, init_args,
+#                  input_h5dfp=None, output_h5dfp=None, out_inplace=None, logger=None):
+#     pool = mp.Pool(processes=nthreads, initializer=initializer,
+#                    initargs=init_args,
+#                    maxtasksperchild=1)
+#     lchnksize = max(len(iter_args) / nthreads, 1) + 1
+#     [xx.acquire() for xx in lock_arr]
+#     pool.map_async(func, majiq_utils.chunks2(iter_args, lchnksize, extra=range(nthreads)))
+#     pool.close()
+#     queue_manager(input_h5dfp=input_h5dfp, output_h5dfp=output_h5dfp, lock_array=lock_arr, result_queue=q,
+#                   num_chunks=nthreads, out_inplace=out_inplace,
+#                   logger=logger)
 
 
 class QueueMessage:
@@ -70,16 +84,16 @@ def queue_manager(input_h5dfp, output_h5dfp, lock_array, result_queue, num_chunk
                   out_inplace=None, logger=None):
 
     nthr_count = 0
-    posterior_matrix = []
-    psi1 = []
-    psi2 = []
-    names = []
-
+    # posterior_matrix = []
+    # psi1 = []
+    # psi2 = []
+    # names = []
     lsv_idx = [0] * num_exp
     while True:
         try:
             val = result_queue.get(block=True, timeout=10)
             if val.get_type() == QUEUE_MESSAGE_BUILD_LSV:
+                majiq_config = Config()
                 for jdx, exp_idx in enumerate(majiq_config.tissue_repl[val.get_value()[1]]):
                     lsvobj = val.get_value()[0]
                     lsv_idx[exp_idx] = lsvobj.to_hdf5(hdf5grp=output_h5dfp[exp_idx],
@@ -100,7 +114,8 @@ def queue_manager(input_h5dfp, output_h5dfp, lock_array, result_queue, num_chunk
                                               means_psi1=val.get_value()[3], means_psi2=val.get_value()[4]))
 
             elif val.get_type() == QUEUE_MESSAGE_BOOTSTRAP:
-                out_inplace.extend(val.get_value())
+                out_inplace[0].extend(val.get_value()[0])
+                out_inplace[1].extend(val.get_value()[1])
 
             elif val.get_type() == QUEUE_MESSAGE_END_WORKER:
                 lock_array[val.get_chunk()].release()

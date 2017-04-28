@@ -1,6 +1,6 @@
 import os
-from majiq.src import config
-
+from majiq.src.config import Config
+from majiq.src.constants import *
 
 # FLAGS
 NEUTRAL = 0b00000
@@ -89,7 +89,8 @@ class Exon:
         return self.start, self.end
 
     def get_gene(self):
-        return config.gene_tlb[self.gene_name]
+        majiq_config = Config()
+        return majiq_config.gene_tlb[self.gene_name]
 
     def get_strand(self):
         return self.get_gene().get_strand()
@@ -363,9 +364,10 @@ class ExonTx(object):
             self.p3_junc.append(p3_junc)
 
     def get_transcript(self):
+        majiq_config = Config()
         res = []
         for tx_name in self.transcript_name:
-            res.append(config.gene_tlb[self.gene_name].get_transcript(tx_name))
+            res.append(majiq_config.gene_tlb[self.gene_name].get_transcript(tx_name))
         return res
 
     def get_5prime_junc(self):
@@ -575,9 +577,9 @@ def new_exon_definition(start, end, s3prime_junc, s5prime_junc, gene, nondenovo=
     ex = gene.exist_exon(start, end)
     new_exons = 0
     half = False
-
+    #majiq_config = Config()
     if ex is None:
-        if isintron or end - start <= config.get_max_denovo_difference():
+        if isintron or end - start <= MAX_DENOVO_DIFFERENCE:
             new_exons = 1
             in_db = False
             for xx in gene.get_ir_definition():
@@ -606,7 +608,7 @@ def new_exon_definition(start, end, s3prime_junc, s5prime_junc, gene, nondenovo=
 
     else:
         coords = ex.get_coordinates()
-        if start != EMPTY_COORD and start < (coords[0] - config.get_max_denovo_difference()):
+        if start != EMPTY_COORD and start < (coords[0] - MAX_DENOVO_DIFFERENCE):
             if gene.exist_exon(start, start + 10) is None:
                 new_exons += 1
                 ex1 = Exon(start, EMPTY_COORD, gene.get_id(), annot=False, isintron=isintron, retrieve=True)
@@ -616,7 +618,7 @@ def new_exon_definition(start, end, s3prime_junc, s5prime_junc, gene, nondenovo=
                 ex1.add_new_read(cc[0], cc[1], s3prime_junc, None)
             half = True
 
-        if end != EMPTY_COORD and end > (coords[1] + config.get_max_denovo_difference()):
+        if end != EMPTY_COORD and end > (coords[1] + MAX_DENOVO_DIFFERENCE):
             if gene.exist_exon(end - 10, end) is None:
                 new_exons += 1
                 ex2 = Exon(EMPTY_COORD, end, gene.get_id(), annot=False, isintron=isintron, retrieve=True)
@@ -695,7 +697,8 @@ def detect_exons(gene, junction_list, retrieve=False):
 
 
 def set_exons_gc_content(chrom, exon_list):
-    fastadir_path = "%s/" % config.genome_path
+    majiq_config = Config()
+    fastadir_path = "%s/" % majiq_config.genome_path
 
     # print "Loading chromosome... %s"%chrom
     chrom_path = fastadir_path + chrom + ".fa"

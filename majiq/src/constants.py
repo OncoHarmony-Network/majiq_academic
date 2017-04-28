@@ -18,6 +18,9 @@ MIN_INTRON_LEN = 1000
 MIN_BP_OVERLAP = 8
 MIN_JUNC_LENGTH = 10
 NUM_INTRON_BINS = 10
+MAX_DENOVO_DIFFERENCE = 500
+NRANDOM_JUNCTIONS = 5000
+
 
 SIMPLIFY_ALL = 'all'
 SIMPLIFY_DB = 'annotated'
@@ -26,6 +29,9 @@ SIMPLIFY_DENOVO = 'denovo'
 WEIGTHS_AUTO = 'auto'
 WEIGTHS_NONE = 'none'
 MINVAL = 1e-300
+import numpy as np
+EPSILON = np.finfo(np.float64).eps
+
 
 def get_quantifier_temp_filename(outdir, name):
     return "%s/tmp.%s.filtered.hdf5" % (outdir, name)

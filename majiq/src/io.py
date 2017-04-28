@@ -13,7 +13,7 @@ import sys
 from majiq.grimoire.exon import detect_exons, new_exon_definition, set_exons_gc_content
 from majiq.grimoire.gene import Gene, Transcript
 from majiq.grimoire.junction import Junction
-import majiq.src.config as majiq_config
+from majiq.src.config import Config
 import majiq.src.utils as majiq_utils
 from majiq.src.normalize import gc_factor_calculation
 from voila.io_voila import VoilaInput
@@ -83,6 +83,7 @@ def __get_num_reads(read):
 
 
 def _match_strand(read, gene_strand):
+    majiq_config = Config()
     res = True
     if majiq_config.strand_specific:
         if (read.flag & 0x10 == 0x10 and gene_strand == '+') or (read.flag & 0x10 == 0x00 and gene_strand == '-'):
@@ -139,6 +140,7 @@ def rnaseq_intron_retention(gne, samfl, chnk, permissive=True, nondenovo=False, 
     intron_list = gne.get_all_introns()
     strand = gne.get_strand()
     chrom = gne.get_chromosome()
+    majiq_config = Config()
     for exon1, exon2 in intron_list:
         ex1_end = exon1.get_coordinates()[1]
         ex2_start = exon2.get_coordinates()[0]
@@ -244,7 +246,7 @@ def rnaseq_intron_retention(gne, samfl, chnk, permissive=True, nondenovo=False, 
                     continue
                 else:
                     val = float(nii) / num_positions
-                if val < majiq_config.MIN_INTRON:
+                if val < majiq_config.min_intronic_cov:
                     intron_body_covered = False
                     break
 
@@ -287,7 +289,7 @@ def read_sam_or_bam(gne, samfl, counter,  h5py_file, nondenovo=False, info_msg='
     ex_list = gne.get_exon_list()
     strand = gne.get_strand()
     chrom = gne.get_chromosome()
-
+    majiq_config = Config()
     try:
         read_iter = samfl.fetch(chrom, strt, end, multiple_iterators=True)
        # kk = samfl.pileup(reference=chrom, start=strt, end=end)
@@ -463,7 +465,7 @@ def read_gff(filename, list_of_genes, sam_list, logging=None):
     """
 
     majiq_utils.monitor('PRE_GFF')
-
+    majiq_config = Config()
     all_genes = {}
     gene_id_dict = {}
     trcpt_id_dict = {}
@@ -528,7 +530,7 @@ def read_gff(filename, list_of_genes, sam_list, logging=None):
             except KeyError:
                 if logging is not None:
                     logging.info("Error, incorrect gff. mRNA %s doesn't have valid parent attribute"
-                                 % (transcript_name, parent))
+                                 % transcript_name)
 
             try:
                 gn = gene_id_dict[parent]
@@ -600,7 +602,7 @@ def read_gff(filename, list_of_genes, sam_list, logging=None):
 #######
 
 def _prepare_and_dump(filename, logging=None):
-
+    majiq_config = Config()
     if logging is not None:
         logging.debug("Number of Genes in DB", len(majiq_config.gene_tlb))
     db_f = h5py.File(filename, 'w', compression='gzip', compression_opts=9)
@@ -732,6 +734,7 @@ def close_hdf5_file(fp):
 
 from majiq.grimoire.lsv import quant_lsv
 
+
 def get_extract_lsv_list(list_of_lsv_id, file_list):
     result = []
     fitfunc = []
@@ -744,8 +747,9 @@ def get_extract_lsv_list(list_of_lsv_id, file_list):
             with open_hdf5_file(fname) as data:
                 if len(fitfunc) < (fidx+1):
                     fitfunc.append(data.attrs['fitfunc'])
+
                 if lsv_type is None:
-                    lsv_type = data['LSVs/%s' % lsv_id].attrs['type']
+                        lsv_type = data['LSVs/%s' % lsv_id].attrs['type']
 
                 assert data['LSVs/%s' % lsv_id].attrs['type'] == lsv_type, "ERROR lsv_type doesn't match for %s" % lsv_id
                 lsv_cov.append(data[JUNCTIONS_DATASET_NAME][data['LSVs/%s' % lsv_id].attrs['coverage']])
@@ -754,11 +758,6 @@ def get_extract_lsv_list(list_of_lsv_id, file_list):
         qq = quant_lsv(lsv_id, lsv_type, lsv_cov)
         result.append(qq)
     return result, fitfunc
-
-
-
-
-
 
 
 def add_lsv_to_bootstrapfile(lsv_id, lsv_type, samples, num_exp, lock_per_file, outdir, name):
@@ -777,8 +776,7 @@ def add_lsv_to_bootstrapfile(lsv_id, lsv_type, samples, num_exp, lock_per_file, 
 def create_bootstrap_file(file_list, outdir, name, m=100):
     import datetime
     for ii, ff in enumerate(file_list):
-        f = h5py.File('%s/%s.%d.boots.hdf5' % (outdir, name, ii),
-                      'w', compression='gzip', compression_opts=9)
+        f = h5py.File('%s/%s.%d.boots.hdf5' % (outdir, name, ii), 'w')
         f.create_dataset('junctions', (5000, m), maxshape=(None, m))
         # fill meta info
         f.attrs['sample_id'] = ff
@@ -788,10 +786,42 @@ def create_bootstrap_file(file_list, outdir, name, m=100):
         f.close()
 
 
+def load_bootstrap_samples(lsv_id, file_list, weight=True):
+    lsv_samples = []
+    lsv_type = None
+    for ii, f in enumerate(file_list):
+        samples = f['junctions'][f['LSVs/%s' % lsv_id].attrs['coverage']]
+        lsv_type = f['LSVs/%s' % lsv_id].attrs['type']
+        if weight:
+            #wght = f['weights'][f["LSVs/%s" % lsv_id].attrs['weight_idx']]
+            wght = f["LSVs/%s" % lsv_id].attrs['weight']
+            samples *= wght
+        lsv_samples.append(samples)
+    return lsv_samples, lsv_type
+
+
+def store_weights_bootstrap(lsv_list, wgts, file_list, outdir, name):
+    for ii, ff in enumerate(file_list):
+        file_name = '%s/%s.%d.boots.hdf5' % (outdir, name, ii)
+        with h5py.File(file_name, 'r+') as f:
+            #f.create_dataset('weights', data=wgts[:, ii], compression='gzip', compression_opts=9)
+            for idx, lsv in lsv_list.items():
+                f["LSVs/%s" % lsv.id].attrs['weight'] = wgts[idx, ii]
+            f.close()
+
+
+def open_bootstrap_samples(num_exp, directory, name):
+    result = []
+    for ii in range(num_exp):
+        file_name = '%s/%s.%d.boots.hdf5' % (directory, name, ii)
+        result.append(h5py.File(file_name, 'r+'))
+    return result
+
+
 def close_bootstrap_file(file_list, outdir, name, m=100):
     for ii, ff in enumerate(file_list):
         file_name = '%s/%s.%d.boots.hdf5' % (outdir, name, ii)
-        f = h5py.File(file_name, 'r+', compression='gzip', compression_opts=9)
+        f = h5py.File(file_name, 'r+')
         lsv_idx = f.attrs['lsv_idx']
         f['junctions'].resize((lsv_idx, m))
         f.close()

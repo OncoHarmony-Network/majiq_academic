@@ -11,7 +11,7 @@ import majiq.src.utils as majiq_utils
 from majiq.src.basic_pipeline import BasicPipeline, pipeline_run
 from majiq.src.constants import *
 from majiq.src.multiproc import QueueMessage, quantification_init, queue_manager
-from majiq.src.psi import prob_data_sample_given_psi, get_prior_params
+from majiq.src.psi import prob_data_sample_given_psi, get_prior_params, bootstrap_samples_calculation
 from voila.io_voila import Voila
 
 import collections
@@ -38,49 +38,45 @@ def psi_quantification(args_vals):
 
         nbins = quantification_init.nbins
         num_exp = len(quantification_init.files)
-        f_list = []
 
-        for fname in quantification_init.files:
-            f_list.append(h5py.File(fname, 'r'))
-        weights = quantification_init.weights[:, np.newaxis, np.newaxis]
+        if not quantification_init.weights:
+            f_list = majiq_io.open_bootstrap_samples(num_exp=num_exp, directory=quantification_init.output,
+                                                     name=quantification_init.names)
+        else:
+            lsvs, fitfunc = majiq_io.get_extract_lsv_list(list_of_lsv, quantification_init.files)
+
         for lidx, lsv_id in enumerate(list_of_lsv):
             if lidx % 50 == 0:
                 print "Event %d ..." % lidx
                 sys.stdout.flush()
+            if quantification_init.weights:
+                quant_lsv = lsvs[lidx]
+                lsv_type = quant_lsv.type
+                weights = np.tile(quantification_init.weights, (len(list_of_lsv), 1))
 
-            lsv_samples = []
-            skipped = 0
-            for fidx, ff in enumerate(f_list):
-                if lsv_id not in ff['LSVs']:
-                    skipped += 1
-                #     lsv_samples.append(np.zeros(shape=(1, quantification_init.m)))
-                    continue
-
-                lsvobj = ff['LSVs/%s' % lsv_id]
-                lsv = ff[JUNCTIONS_DATASET_NAME][lsvobj.attrs['coverage']]
-                m_lsv, var_lsv, s_lsv = majiq_sample.sample_from_junctions(junction_list=lsv,
-                                                                           m=quantification_init.m,
-                                                                           k=quantification_init.k,
-                                                                           discardzeros=quantification_init.discardzeros,
-                                                                           trimborder=quantification_init.trimborder,
-                                                                           fitted_one_over_r=ff.attrs['fitfunc'],
-                                                                           debug=quantification_init.debug)
-
-                for ss in xrange(skipped):
-                    lsv_samples.append(np.zeros(shape=s_lsv.shape))
-                skipped = 0
-                lsv_samples.append(s_lsv)
+                psi = bootstrap_samples_calculation(quant_lsv, n_replica=num_exp,
+                                                    name=quantification_init.names,
+                                                    outdir=quantification_init.output,
+                                                    nbins=quantification_init.nbins,
+                                                    store_bootsamples=quantification_init.boots,
+                                                    lock_array=quantification_init.lock_per_file,
+                                                    fitfunc_r=fitfunc,
+                                                    m_samples=quantification_init.m,
+                                                    k_positions=quantification_init.k,
+                                                    discardzeros=quantification_init.discardzeros,
+                                                    trimborder=quantification_init.trimborder,
+                                                    debug=quantification_init.debug)
+                psi = np.array(psi) * weights
+            else:
+                lsv_id = list_of_lsv[lidx]
+                psi, lsv_type = majiq_io.load_bootstrap_samples(list_of_lsv[lidx], f_list)
+                psi = np.array(psi)
 
             if quantification_init.boots:
-                majiq_io.add_lsv_to_bootstrapfile(lsv_id, lsvobj.attrs['type'], lsv_samples,
-                                                  num_exp, quantification_init.lock_per_file,
-                                                  quantification_init.output, quantification_init.names)
-
                 continue
 
-            psi = weights * np.array(lsv_samples)
             num_ways = psi.shape[1]
-            alpha_prior, beta_prior = get_prior_params(lsvobj.attrs['type'], num_ways)
+            alpha_prior, beta_prior = get_prior_params(lsv_type, num_ways)
             post_psi = []
             mu_psi = []
             for p_idx in xrange(int(num_ways)):
@@ -143,7 +139,6 @@ class CalcPsi(BasicPipeline):
         self.logger.info("GROUP: %s" % self.files)
         self.nbins = 40
 
-
         file_locks = None
         if self.only_boots:
             file_locks = [mp.Lock() for xx in self.files]
@@ -156,24 +151,23 @@ class CalcPsi(BasicPipeline):
                                                     minnonzero=self.minpos, min_reads=self.minreads,
                                                     percent=self.min_exp, logger=self.logger)
         lchnksize = max(len(list_of_lsv)/self.nthreads, 1) + 1
-        self.names = self.name
         weights = self.calc_weights(self.weights, self.files, list_of_lsv, lock_arr, lchnksize,
-                                    file_locks, q)
+                                    q, self.name)
 
         if self.only_boots:
-            majiq_io.create_bootstrap_file(self.files, self.output, self.name, m=self.m)
+            majiq_io.create_bootstrap_file(self.files, self.outDir, self.name, m=self.m)
 
         if len(list_of_lsv) > 0:
             [xx.acquire() for xx in lock_arr]
             pool = mp.Pool(processes=self.nthreads, initializer=quantification_init,
-                           initargs=[q, lock_arr, self.output, self.name, self.silent, self.debug, self.nbins, self.m,
+                           initargs=[q, lock_arr, self.outDir, self.name, self.silent, self.debug, self.nbins, self.m,
                                      self.k, self.discardzeros, self.trimborder, self.files, self.only_boots, weights,
                                      file_locks],
                            maxtasksperchild=1)
 
             pool.map_async(psi_quantification, majiq_utils.chunks2(list_of_lsv, lchnksize, extra=range(self.nthreads)))
             pool.close()
-            with Voila(get_quantifier_voila_filename(self.output, self.name), 'w') as out_h5p:
+            with Voila(get_quantifier_voila_filename(self.outDir, self.name), 'w') as out_h5p:
                 out_h5p.add_metainfo(meta['genome'], self.name, meta['experiments'])
                 in_h5p = h5py.File(self.files[0], 'r')
                 queue_manager(in_h5p, out_h5p, lock_arr, q, num_chunks=self.nthreads, logger=self.logger)
@@ -182,9 +176,9 @@ class CalcPsi(BasicPipeline):
             pool.join()
 
         if self.only_boots:
-            majiq_io.close_bootstrap_file(self.files, self.output, self.name, m=self.m)
+            majiq_io.close_bootstrap_file(self.files, self.outDir, self.name, m=self.m)
 
         self.logger.info("PSI calculation for %s ended succesfully! "
-                         "Result can be found at %s" % (self.name, self.output))
+                         "Result can be found at %s" % (self.name, self.outDir))
         self.logger.info("Alakazam! Done.")
 

@@ -1,17 +1,14 @@
-import numpy as np
-import majiq.src.config as majiq_config
+from majiq.src.config import Config
 import majiq.src.filter as majiq_filter
-import majiq.grimoire.exon
-import majiq.grimoire.gene
 from majiq.grimoire.lsv import SSOURCE, STARGET, InvalidLSV
 from majiq.src.constants import *
-from majiq.src.normalize import gc_normalization
 import h5py
 
 
 def reliable_in_data(junc, exp_idx):
-    min_read_x_exp = majiq_config.MINREADS
-    min_npos_x_exp = majiq_config.MINPOS
+    majiq_config = Config()
+    min_read_x_exp = majiq_config.minreads
+    min_npos_x_exp = majiq_config.minpos
     in_data_filter = False
     cover = junc.coverage.toarray()[exp_idx]
     if junc.get_read_num(exp_idx) >= min_read_x_exp and np.count_nonzero(cover) >= min_npos_x_exp:
@@ -20,7 +17,7 @@ def reliable_in_data(junc, exp_idx):
 
 
 def detect_lsv(exon, gn, lsv_type, dummy, only_annot=False):
-
+    majiq_config = Config()
     sstype = {SSOURCE: ['5prime', 0], STARGET: ['3prime', 1]}
     jlist = exon.get_junctions(sstype[lsv_type][0])
     jlist = [x for x in jlist if x is not None and x.get_donor() is not None and x.get_acceptor() is not None]
@@ -35,8 +32,8 @@ def detect_lsv(exon, gn, lsv_type, dummy, only_annot=False):
         for jj in jlist:
             for exp_idx in ind_list:
                 if only_annot or majiq_filter.reliable_in_data(jj, exp_idx,
-                                                               minnonzero=majiq_config.MINPOS,
-                                                               min_reads=majiq_config.MINREADS):
+                                                               minnonzero=majiq_config.minpos,
+                                                               min_reads=majiq_config.minreads):
                     counter += 1
             if counter < group_thresh:
                 continue
@@ -48,6 +45,7 @@ def detect_lsv(exon, gn, lsv_type, dummy, only_annot=False):
 
 
 def wrap_result_file(lsv, name, gc_vfunc, lsv_list, rna_files, lock_per_file=None):
+    majiq_config = Config()
     for exp_idx in majiq_config.tissue_repl[name]:
 
         lock_per_file[exp_idx].acquire()
@@ -60,13 +58,14 @@ def wrap_result_file(lsv, name, gc_vfunc, lsv_list, rna_files, lock_per_file=Non
                 except:
                     pass
 
-            f.attrs['data_index'] = lsv.to_hdf5(hdf5grp=f, lsv_idx=f.attrs['data_index'], gc_vfunc=gc_f, exp_idx=exp_idx)
+            f.attrs['data_index'] = lsv.to_hdf5(hdf5grp=f, lsv_idx=f.attrs['data_index'], gc_vfunc=gc_f,
+                                                exp_idx=exp_idx)
 
         lock_per_file[exp_idx].release()
 
 
 def lsv_detection(gn, gc_vfunc, lsv_list=None, only_real_data=False, locks=None, rna_files=[], logging=None):
-
+    majiq_config = Config()
     dummy = {}
     count = 0
     for name, ind_list in majiq_config.tissue_repl.items():

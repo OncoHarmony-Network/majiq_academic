@@ -1,9 +1,7 @@
 """
 Functions to filter junction pairs by number of positions covered or number of reads
 """
-import numpy as np
 from majiq.src.constants import *
-import h5py
 
 
 def reliable_in_data(junc, exp_idx, minnonzero=2, min_reads=3):

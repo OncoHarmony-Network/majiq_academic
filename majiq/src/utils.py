@@ -8,7 +8,7 @@ import h5py
 import numpy as np
 
 import majiq.grimoire.lsv as majiq_lsv
-import majiq.src.config as majiq_config
+from majiq.src.config import Config
 import majiq.grimoire.junction as majiq_junction
 import majiq.src.io_utils as majiq_io_utils
 
@@ -29,6 +29,7 @@ class Writer(object):
         self.location = location
 
     def write(self, string):
+        majiq_config = Config()
         with majiq_config.term.location(*self.location):
             print(string)
 
@@ -110,11 +111,11 @@ def send_output(lsv_list, non_as, temp_dir, out_queue, chnk, mlock):
 
 def prepare_lsv_table(lsv_list, non_as, temp_dir):
     """
-
     :param lsv_list:
     :param non_as:
     :param temp_dir:
     """
+    majiq_config = Config()
     for name, ind_list in majiq_config.tissue_repl.items():
         for idx, exp_idx in enumerate(ind_list):
             fname = "%s/%s.majiq.hdf5" % (temp_dir, majiq_config.exp_list[exp_idx])
@@ -134,7 +135,7 @@ def merge_and_create_majiq_file(exp_idx, pref_file):
     :param exp_idx: Index of experiment in config file
     :param pref_file: Prefix for the majiq name
     """
-
+    majiq_config = Config()
     experiment = majiq_config.exp_list[exp_idx]
     all_visual = []
     for chnk in range(majiq_config.num_final_chunks):
@@ -241,6 +242,7 @@ def get_validated_pcr_lsv(candidates, out_dir):
 # ANALYSIS FUNCTIONS
 
 def analyze_denovo_junctions(genes, output):
+    majiq_config = Config()
     denovo_list = [[] for xx in range(majiq_config.num_experiments)]
     annot_list = [[] for xx in range(majiq_config.num_experiments)]
 

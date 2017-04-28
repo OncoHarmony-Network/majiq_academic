@@ -18,6 +18,7 @@ import scipy.misc
 """
 Calculate and manipulate PSI and Delta PSI values
 """
+
 BSIZE = 0.025  # TODO To parameters
 BINS = np.arange(0, 1, BSIZE)
 # The bins for PSI values. With a BSIZE of 0.025, we have 40 BINS
@@ -25,32 +26,53 @@ BINS_CENTER = np.arange(0 + BSIZE / 2, 1, BSIZE)
 # The center of the previous BINS. This is used to calculate the mean value of each bin.
 
 
-def divs_from_bootsamples(lsvs_to_work, fitfunc_r, n_replica, pnorm, m_samples, k_positions, discardzeros,
-                          trimborder, debug=False, nbins=40, store_bootsamples=True):
+def bootstrap_samples_calculation(quant_lsv, n_replica, name, outdir, nbins=40, store_bootsamples=True,
+                                  lock_array=None, fitfunc_r=0, m_samples=100, k_positions=50, discardzeros=5,
+                                  trimborder=True, debug=False):
+
+    num_ways = quant_lsv.coverage[0].shape[0]
+    alpha_prior, beta_prior = get_prior_params(quant_lsv.type, num_ways)
+
+    lsv_samples = []
+    for rr in xrange(n_replica):
+
+        m_lsv, var_lsv, s_lsv = sample_from_junctions(junction_list=quant_lsv.coverage[rr],
+                                                      m=m_samples,
+                                                      k=k_positions,
+                                                      discardzeros=discardzeros,
+                                                      trimborder=trimborder,
+                                                      fitted_one_over_r=fitfunc_r[rr],
+                                                      debug=debug)
+        lsv_samples.append(s_lsv)
+
+    if store_bootsamples:
+        majiq_io.add_lsv_to_bootstrapfile(quant_lsv.id, quant_lsv.type, lsv_samples, n_replica, lock_array,
+                                          outdir, name)
+    return lsv_samples
+
+
+def divs_from_bootsamples(lsvs_to_work, fitfunc_r, n_replica, pnorm, m_samples, k_positions, discardzeros, name,
+                          trimborder, debug=False, nbins=40, store_bootsamples=True, lock_array=None, outdir='./tmp'):
 
     bsize = 1.0 / float(nbins)
     psi_border = np.arange(0, 1.01, bsize)
 
-    div = []#np.zeros(shape=(len(lsvs_to_work), n_replica), dtype=np.float)
+    div = []
     for lsv_idx, quant_lsv in enumerate(lsvs_to_work):
         num_ways = quant_lsv.coverage[0].shape[0]
         post_cdf = np.zeros(shape=(n_replica, num_ways, psi_border.shape[0]), dtype=np.float)
-        for rr in xrange(n_replica):
+        lsv_samples = bootstrap_samples_calculation(quant_lsv, n_replica=n_replica, name=name, outdir=outdir,
+                                                    nbins=nbins, store_bootsamples=store_bootsamples,
+                                                    lock_array=lock_array, fitfunc_r=fitfunc_r, m_samples=m_samples,
+                                                    k_positions=k_positions, discardzeros=discardzeros,
+                                                    trimborder=trimborder, debug=debug)
 
-            alpha_prior, beta_prior = get_prior_params(quant_lsv.type, num_ways)
-            m_lsv, var_lsv, s_lsv = sample_from_junctions(junction_list=quant_lsv.coverage[rr],
-                                                          m=m_samples,
-                                                          k=k_positions,
-                                                          discardzeros=discardzeros,
-                                                          trimborder=trimborder,
-                                                          fitted_one_over_r=fitfunc_r[rr],
-                                                          debug=debug)
-
+        alpha_prior, beta_prior = get_prior_params(quant_lsv.type, num_ways)
+        for rr, s_lsv in enumerate(lsv_samples):
             for jidx in range(num_ways):
                 alpha_0 = alpha_prior[jidx]
                 beta_0 = beta_prior[jidx]
                 for m in xrange(m_samples):
-
                     sample = s_lsv[jidx][m]
                     notsample = s_lsv[:, m].sum() - sample
                     post_cdf[rr, jidx] += beta.cdf(psi_border, a=sample + alpha_0, b=notsample + beta_0)
@@ -69,19 +91,37 @@ def divs_from_bootsamples(lsvs_to_work, fitfunc_r, n_replica, pnorm, m_samples, 
     return div
 
 
-def calc_weights_from_divs(divs, thresh=0.75, alpha=15., logger=None):
-    k_T = np.where(divs.max(1) > thresh)[0]
-    if k_T.size > 0:
-        iter_k_t = (divs[k_T] == divs[k_T].max(1)[:, np.newaxis]).sum(0)
-        alpha_param = float(alpha) / iter_k_t.size
-        num_N = k_T.size / iter_k_t.size
-        beta_param = alpha - alpha_param
-        distr = betabinom(k_T.size, alpha_param, beta_param)
-        weights = np.clip(distr.sf(iter_k_t) / distr.sf(num_N), 0, 1)
-        logger.debug('|K_T|=%d, N=%d, Alpha=%0.03f, Beta=%0.03f' % (k_T.size, num_N, alpha_param, beta_param), logger)
+def calc_rho_from_divs(divs, thresh=0.75, alpha=15., nreps=1, logger=None):
+    K_T, bad_reps = np.where(divs > thresh)
+    K_T = np.unique(K_T)
+    logger.debug('%d' % K_T.size)
+
+    if K_T.size > 0:
+        K_t = np.bincount(bad_reps, minlength=nreps)
+        logger.debug('%s' % (', '.join(['%d' % xx for xx in K_t])))
+        Alpha = float(alpha) / K_t.size
+        N = K_T.size / K_t.size
+        Beta = alpha - Alpha
+        distr = betabinom(K_T.size, Alpha, Beta)
+        rho = np.clip(distr.sf(K_t) / distr.sf(N), 0, 1)
+        logger.debug('|K_T|=%d, N=%d, Alpha=%0.03f, Beta=%0.03f' % (K_T.size, N,
+                                                                 Alpha, Beta))
     else:
-        weights = np.ones(divs.shape[1], dtype=float)
-    return weights
+        rho = np.ones(nreps)
+    return rho
+
+
+def calc_local_weights(divs, rho, local):
+    dshp = divs.shape
+    cur_wt = np.zeros(shape=dshp)
+    for ii in xrange(dshp[0]):
+        lsv = divs[ii, :]
+        for rep, dist in enumerate(lsv):
+            p_given_rep = ((divs >= (dist - local)) & (divs <= (dist + local))).mean(axis=0)
+            p_given_signal = rho.dot(p_given_rep)
+            cur_wt[ii, rep] = np.clip(p_given_signal / p_given_rep[rep], 0, 1)
+    cur_wt = np.array(cur_wt)
+    return cur_wt.squeeze()
 
 
 def empirical_delta_psi(list_lsv, lsv_types, lsv_dict1, lsv_summarized1, lsv_dict2, lsv_summarized2, logger=None):
@@ -228,17 +268,17 @@ def combine_for_priormatrix(group1, group2, matched_info, num_exp):
 
 
 def get_prior_params(lsvinfo, num_ways):
+
     if 'i' in lsvinfo[2]:
         alpha = 1.0 / (num_ways - 1)
         alpha *= float(num_ways) / (num_ways + 1)
         alpha_prior = np.array([alpha] * num_ways)
-
         alpha_prior[-1] = 1.0 / (num_ways + 1)
         beta_prior = 1 - alpha_prior
+
     else:
         alpha = 1.0 / num_ways
         bta = float(num_ways - 1.0) / num_ways
-
         alpha_prior = np.array([alpha] * num_ways)
         beta_prior = np.array([bta] * num_ways)
 

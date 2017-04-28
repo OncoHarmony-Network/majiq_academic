@@ -1,6 +1,5 @@
 import pickle
-import numpy as np
-import majiq.src.config as majiq_config
+from majiq.src.config import Config
 from voila import constants as voila_const
 from voila.splice_graphics import ExonGraphic, LsvGraphic, JunctionGraphic
 from majiq.src.constants import *
@@ -32,7 +31,7 @@ class InvalidLSV(Exception):
 
 class LSV(object):
     def __init__(self, exon, lsv_id, junctions, lsv_type):
-
+        majiq_config = Config()
         if lsv_type != SSOURCE and lsv_type != STARGET:
             raise InvalidLSV('Incorrect LSV type %s' % lsv_type)
         self.coords = exon.get_coordinates()
@@ -202,7 +201,7 @@ class LSV(object):
         return ext_type
 
     def get_visual_lsv(self, junction_list, exp_idx):
-
+        majiq_config = Config()
         junc_list = []
         junc_l = []
         lsv_exon_list = [self.exon]
@@ -229,7 +228,7 @@ class LSV(object):
                 jtype = 2
             elif jj.annotated and jj.get_read_num(exp_idx) > 0:
                 jtype = 0
-            elif not jj.annotated and jj.get_read_num(exp_idx) > majiq_config.MINREADS:
+            elif not jj.annotated and jj.get_read_num(exp_idx) > majiq_config.minreads:
                 jtype = 1
             else:
                 jtype = 1
@@ -326,7 +325,7 @@ class LSV(object):
         return res
 
     def to_hdf5(self, hdf5grp, lsv_idx, exp_idx, fitfunc_r=1, gc_vfunc=None):
-
+        majiq_config = Config()
         try:
             njunc = len(self.junctions)
             cover = np.zeros(shape=(njunc, (majiq_config.readLen - 16) + 1),
@@ -345,7 +344,7 @@ class LSV(object):
 #            if lsv_idx + njunc > majiq_config.nrandom_junctions:
             if lsv_idx + njunc > 2:
                 shp = hdf5grp[JUNCTIONS_DATASET_NAME].shape
-                shp_new = shp[0] + majiq_config.nrandom_junctions
+                shp_new = shp[0] + NRANDOM_JUNCTIONS
                 hdf5grp[JUNCTIONS_DATASET_NAME].resize((shp_new, shp[1]))
 
             hdf5grp[JUNCTIONS_DATASET_NAME][lsv_idx:lsv_idx+njunc] = cover

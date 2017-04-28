@@ -8,7 +8,7 @@ from multiprocessing import Pool
 
 import h5py
 
-import majiq.src.config as majiq_config
+import majiq.src.config_old as majiq_config
 import majiq.src.io_utils
 import majiq.src.utils as utils
 import old_majiq.grimoire.gene as majiq_gene

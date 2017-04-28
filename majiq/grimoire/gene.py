@@ -4,7 +4,8 @@ import gc
 from majiq.grimoire.exon import Exon, ExonTx, collapse_list_exons, detect_exons
 from majiq.grimoire.junction import Junction
 from majiq.grimoire.lsv import LSV
-from majiq.src import config as majiq_config
+#from majiq.src import config_old as majiq_config
+from majiq.src.config import Config
 from majiq.grimoire.exon import new_exon_definition
 from majiq.src.constants import *
 
@@ -258,6 +259,7 @@ class Gene:
         return res
 
     def check_antisense_junctions_hdf5(self, jstart, jend, h5_file):
+        majiq_config = Config()
         res = False
         for anti_g in self.antis_gene:
             gg = h5_file[anti_g]
@@ -292,6 +294,7 @@ class Gene:
         return LSV(exon, lsv_id, jlist, lsv_type)
 
     def simplify(self):
+        majiq_config = Config()
         jj_set = set()
         for ex in self.exons:
             jlist = []
@@ -339,6 +342,7 @@ class Transcript(object):
         self.txend = txend
 
     def get_gene(self):
+        majiq_config = Config()
         return majiq_config.gene_tlb[self.gene_id]
 
     def get_exon_list(self):
@@ -378,16 +382,19 @@ class Transcript(object):
 
 
 def recreate_gene_tlb(gene_list):
+    majiq_config = Config()
     for gn in gene_list:
         majiq_config.gene_tlb[gn.get_id()] = gn
 
 
 def clear_gene_tlb():
+    majiq_config = Config()
     majiq_config.gene_tlb.clear()
     gc.collect()
 
 
 def retrieve_gene(gene_id, dbfile, all_exp=False, junction_list=None, logger=None):
+    majiq_config = Config()
     gg = dbfile[gene_id]
     try:
         gn = Gene(gene_id, gg.attrs['name'], gg.attrs['chromosome'], gg.attrs['strand'],
@@ -454,6 +461,7 @@ def retrieve_gene(gene_id, dbfile, all_exp=False, junction_list=None, logger=Non
 
 
 def extract_junctions_hdf5(gene_obj, jj_grp, junction_list, annotated=True, all_exp=False):
+    majiq_config = Config()
     num_exp = 1 if not all_exp else majiq_config.num_experiments
 
     try:
@@ -477,6 +485,7 @@ def extract_junctions_hdf5(gene_obj, jj_grp, junction_list, annotated=True, all_
 
 
 def find_intron_retention(gene_obj, dict_of_junctions, nondenovo, logging=None):
+    majiq_config = Config()
     intron_list = gene_obj.get_all_introns()
     for exon1, exon2 in intron_list:
         ex1_end = exon1.get_coordinates()[1]

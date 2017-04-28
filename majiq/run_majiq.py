@@ -31,7 +31,7 @@ def main():
     common = new_subparser()
     common.add_argument('--nthreads', default=4, type=int, help='Number of threads')
     common.add_argument('--tmp', default="/tmp/", help='Path to save the temporary files. [Default: %(default)s]')
-    common.add_argument('--output', required=True, help='Path to save the pickle output to.')
+    common.add_argument('--output', dest="outDir", required=True, help='Path to save the pickle output to.')
     common.add_argument('--logger', default=None, help='Path for the logger. Default is output directory')
     common.add_argument('--silent', action='store_true', default=False, help='Silence the logger.')
     common.add_argument('--plotpath', default=None,
@@ -76,7 +76,7 @@ def main():
                                                                                       ' but reduce the number of LSVs '
                                                                                       'detected')
     buildparser.add_argument('--only_gather', action='store_true', dest='onlygather', default=False)
-    buildparser.add_argument('--permissive_ir', action='store_true', dest='permissive', default=False)
+    buildparser.add_argument('--permissive_ir', action='store_true', dest='permissive_ir', default=False)
     buildparser.add_argument('--markstacks', default=0.0000001, type=float,
                              help='Mark stack positions. Expects a p-value. Use a negative value in order to '
                                   'disable it. [Default: %(default)s]')
@@ -114,6 +114,11 @@ def main():
                              help='Dispersion hyperparameter (Default: %(default)0.02f)')
     weights.add_argument('--weights_threshold', action=FRange01, default=0.75,
                              help='Threshold hyperparameter (Default: %(default)0.02f)')
+    weights.add_argument('--weights_local', dest='local', type=float, default=0.,
+                            help='Window for computation of local weights. '
+                                 'If negative, uses a parametric '
+                                 'approximation instead. ('
+                                 'Default: %(default)0.02f)')
 
     psi = new_subparser()
     psi.add_argument('files', nargs='+', help='The experiment files to analyze. You can include more than one '

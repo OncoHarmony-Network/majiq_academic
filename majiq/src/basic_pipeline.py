@@ -4,7 +4,7 @@ import abc
 import numpy as np
 from numpy.ma import masked_less
 import majiq.src.utils as majiq_utils
-from majiq.src.psi import divs_from_bootsamples, calc_weights_from_divs
+from majiq.src.psi import divs_from_bootsamples, calc_rho_from_divs, calc_local_weights
 from majiq.src.multiproc import QueueMessage, quantification_init, queue_manager
 from majiq.src.constants import *
 import sys
@@ -25,7 +25,6 @@ def get_clean_raw_reads(matched_info, matched_lsv, outdir, names, num_exp):
 
             num = jlist.sum(axis=1)
             res.append([lsv[1], num.data])
-    #with open('%s/clean_reads.%s.pkl' % (outdir, names), 'wb') as fp:
     majiq_io.dump_bin_file(res, '%s/clean_reads.%s.pkl' % (outdir, names))
 
 
@@ -42,9 +41,11 @@ def bootstrap_samples_with_divs(args_vals):
                                      n_replica=len(quantification_init.files), pnorm=1, m_samples=quantification_init.m,
                                      k_positions=quantification_init.k, discardzeros=quantification_init.discardzeros,
                                      trimborder=quantification_init.trimborder, debug=False,
-                                     nbins=quantification_init.nbins, store_bootsamples=True)
+                                     nbins=quantification_init.nbins, store_bootsamples=True,
+                                     lock_array=quantification_init.lock_per_file,
+                                     outdir=quantification_init.output, name=quantification_init.names)
 
-        qm = QueueMessage(QUEUE_MESSAGE_BOOTSTRAP, divs, chnk)
+        qm = QueueMessage(QUEUE_MESSAGE_BOOTSTRAP, (lsvs_to_work, divs), chnk)
         quantification_init.queue.put(qm, block=True)
 
         qm = QueueMessage(QUEUE_MESSAGE_END_WORKER, None, chnk)
@@ -81,7 +82,7 @@ class BasicPipeline:
             majiq_utils.create_if_not_exists(self.plotpath)
         self.logger_path = self.logger
         if not self.logger_path:
-            self.logger_path = self.output
+            self.logger_path = self.outDir
 
         self.nthreads = args.nthreads
         self.psi_paths = []
@@ -100,15 +101,17 @@ class BasicPipeline:
         else:
             if self.logger is not None:
                 self.logger.debug("Fitting NB function with constitutive events...")
-            return fit_nb(const_junctions, "%s/nbfit" % self.output, self.plotpath, logger=self.logger)
+            return fit_nb(const_junctions, "%s/nbfit" % self.outDir, self.plotpath, logger=self.logger)
 
-    def calc_weights(self, weight_type, file_list, list_of_lsv, lock_arr, lchnksize, file_locks, q):
+    def calc_weights(self, weight_type, file_list, list_of_lsv, lock_arr, lchnksize, q, name):
 
         if weight_type.lower() == WEIGTHS_AUTO:
             """ Calculate bootstraps samples and weights """
+            file_locks = [mp.Lock() for xx in file_list]
+            majiq_io.create_bootstrap_file(file_list, self.outDir, name, m=self.m)
 
             pool = mp.Pool(processes=self.nthreads, initializer=quantification_init,
-                           initargs=[q, lock_arr, self.output, self.names, self.silent, self.debug, self.nbins,
+                           initargs=[q, lock_arr, self.outDir, name, self.silent, self.debug, self.nbins,
                                      self.m, self.k, self.discardzeros, self.trimborder, file_list, None,
                                      None, file_locks],
                            maxtasksperchild=1)
@@ -118,24 +121,29 @@ class BasicPipeline:
                            majiq_utils.chunks2(list_of_lsv, lchnksize, extra=range(self.nthreads)))
             pool.close()
             divs = []
+            lsvs = []
             queue_manager(input_h5dfp=None, output_h5dfp=None, lock_array=lock_arr, result_queue=q,
-                          num_chunks=self.nthreads, out_inplace=divs,
+                          num_chunks=self.nthreads, out_inplace=(lsvs, divs),
                           logger=self.logger)
             pool.join()
+            lsvs = {xx: vv for xx, vv in enumerate(lsvs)}
+            divs = np.array(divs)
+            rho = calc_rho_from_divs(divs, thresh=self.weights_threshold, alpha=self.weights_alpha,
+                                     nreps=len(file_list), logger=self.logger)
 
-            weights = calc_weights_from_divs(np.array(divs), thresh=self.weights_threshold, alpha=self.weights_alpha,
-                                             logger=self.logger)
-
+            wgts = calc_local_weights(divs, rho, self.local)
+            majiq_io.store_weights_bootstrap(lsvs, wgts, file_list, self.outDir, name)
+            wgts = None
         elif weight_type.lower() == WEIGTHS_NONE:
-            weights = np.ones(shape=(len(file_list)))
+            wgts = np.ones(shape=(len(file_list)))
 
         else:
-            weights = np.array([float(xx) for xx in weight_type.split(',')])
-            if len(weights) != len(file_list):
+            wgts = np.array([float(xx) for xx in weight_type.split(',')])
+            if len(wgts) != len(file_list):
                 self.logger.error('weights wrong arguments number of weights values is different than number of '
                                   'specified replicas for that group')
 
-        return weights
+        return wgts
 
 
 

@@ -6,42 +6,9 @@ import numpy as np
 from numpy.ma import masked_less
 from scipy import interpolate
 from scipy.stats.mstats_basic import mquantiles
-import majiq.src.config as majiq_config
+from majiq.src.config import Config
 from majiq.src.constants import *
 import majiq.src.polyfitnb as majiqfit
-
-#
-# def mark_stacks(hdf5_fp, fitfunc_r, pvalue_limit, logger=None):
-#     if pvalue_limit < 0:
-#         return lsv_list
-#     logger.debug("PCR amplification stacks normalization")
-#     minstack = sys.maxint
-#     # the minimum value marked as stack
-#     numstacks = 0
-#
-#     for lidx, lsv in enumerate(hdf5_fp['LSVs']):
-#         junctions = np.array(hdf5_fp[LSV_JUNCTIONS_DATASET_NAME][lsv['coverage']])
-#         for i, junction in enumerate(junctions):
-#             if np.count_nonzero(junction) == 0:
-#                 continue
-#             for j, value   in enumerate(junction):
-#                 if value > 0:
-#                     # TODO Use masker, and marking stacks will probably be faster.
-#                     copy_junc = list(junction)
-#                     copy_junc.pop(j)
-#                     copy_junc = np.array(copy_junc)
-#                     copy_junc = copy_junc[copy_junc > 0]
-#                     nzpos = np.count_nonzero(copy_junc)
-#
-#                     #FINISH TODO
-#                     mean_rest = np.mean(copy_junc) * nzpos
-#                     pval = majiqfit.get_negbinom_pval(fitfunc_r, mean_rest, value)
-#                     if pval < pvalue_limit:
-#                         lsv_list[0][lidx][i, j] = -2
-#                         minstack = min(minstack, value)
-#                         numstacks += 1
-#         masked_less(lsv_list[0][lidx], 0)
-
 
 def mark_stacks(lsv_list, fitfunc_r, pvalue_limit, logger=None):
     import numpy.ma as ma
@@ -165,6 +132,7 @@ def gc_factor_calculation(gc_pairs, nbins=10):
 
 
 def prepare_gc_content(gn):
+    majiq_config = Config()
     gc_pairs = {'GC': [[] for xx in xrange(majiq_config.num_experiments)],
                 'COV': [[] for xx in xrange(majiq_config.num_experiments)]}
 

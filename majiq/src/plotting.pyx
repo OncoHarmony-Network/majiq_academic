@@ -2,7 +2,8 @@ from matplotlib import use
 use('Agg')
 from matplotlib import pyplot as plt
 from scipy.stats import pearsonr
-from majiq.src import config as mglobals
+from majiq.src.config import Config
+
 import os
 import numpy as np
 
@@ -66,26 +67,26 @@ def plot_fitting(ecdf, plotpath, extra=[], title='', title_extra=[], plotname=No
 
 
 def plot_gc_content():
-
+    majiq_config = Config()
     idx = 0
-    for tissue, list_idx in mglobals.tissue_repl.items():
+    for tissue, list_idx in majiq_config.tissue_repl.items():
         plt.figure(idx)
         for exp_n in list_idx:
 #            f = interpolate.interp1d(mglobals.gc_means[exp_n], mglobals.gc_bins_vaL[exp_n])
 #            print mglobals.gc_means[exp_n]
-            mn = mglobals.gc_means[exp_n].min()
-            mx = mglobals.gc_means[exp_n].max()
+            mn = majiq_config.gc_means[exp_n].min()
+            mx = majiq_config.gc_means[exp_n].max()
             xx = np.arange(mn, mx, 0.001)
-            yy = mglobals.gc_factor[exp_n](xx)
+            yy = majiq_config.gc_factor[exp_n](xx)
             # print "XX ",exp_n, xx
             # print "Yy", exp_n, yy
-            plt.plot(xx, yy, label=mglobals.exp_list[exp_n])
+            plt.plot(xx, yy, label=majiq_config.exp_list[exp_n])
             plt.axis((0.3, 0.7, 0.5, 1.5))
             plt.title("Gc factor")
             plt.grid()
             plt.legend(loc='upper left')
 #        pyplot.show()
-        plt.savefig('%s/gcontent_%s.png' % (mglobals.outDir, tissue))
+        plt.savefig('%s/gcontent_%s.png' % (majiq_config.outDir, tissue))
         idx += 1
 
 

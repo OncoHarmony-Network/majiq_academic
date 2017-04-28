@@ -11,7 +11,7 @@ import majiq.src.filter as majiq_filter
 import majiq.src.io as majiq_io
 from majiq.src.io_utils import dump_bin_file, load_bin_file
 import majiq.src.sample as majiq_sample
-from majiq.src.psi import prob_data_sample_given_psi, get_prior_params, gen_prior_matrix, calc_weights_from_divs
+from majiq.src.psi import prob_data_sample_given_psi, get_prior_params, gen_prior_matrix, bootstrap_samples_calculation
 from majiq.src.constants import *
 from majiq.src.multiproc import QueueMessage, quantification_init, queue_manager
 
@@ -32,55 +32,63 @@ def deltapsi_quantification(args_vals):
 
         logger.info("Quantifying LSVs PSI.. %s" % chnk)
         num_exp = [len(quantification_init.files[0]), len(quantification_init.files[1])]
-        f_list = [[], []]
 
-        fitfunc = [[], []]
+        fitfunc = [None, None]
+        f_list = [None, None]
+        lsvs = [None, None]
         for grp_idx in range(2):
-            for fname in quantification_init.files[grp_idx]:
+            if not quantification_init.weights[grp_idx]:
 
-                f_list[grp_idx].append(majiq_io.open_hdf5_file(fname))
-                fitfunc[grp_idx].append(f_list[grp_idx][-1].attrs['fitfunc'])
+                f_list[grp_idx] = majiq_io.open_bootstrap_samples(num_exp=num_exp[grp_idx],
+                                                                  directory=quantification_init.output,
+                                                                  name=quantification_init.names[grp_idx])
+                lsvs[grp_idx] = list_of_lsv
+            else:
+
+                lsvs[grp_idx], fitfunc[grp_idx] = majiq_io.get_extract_lsv_list(list_of_lsv,
+                                                                                quantification_init.files[grp_idx])
+
         prior_matrix = np.array(load_bin_file(get_prior_matrix_filename(quantification_init.output,
                                                                         quantification_init.names)))
 
         ones_n = np.ones(shape=(1, quantification_init.nbins), dtype=np.float)
-        weights1 = quantification_init.weights[0][:, np.newaxis, np.newaxis]
-        weights2 = quantification_init.weights[1][:, np.newaxis, np.newaxis]
+
         for lidx, lsv_id in enumerate(list_of_lsv):
             if lidx % 50 == 0:
                 print "Event %d ..." % lidx
                 sys.stdout.flush()
+            lsv_samples = [None, None]
 
-            lsv_samples = [[], []]
-
-            lsv_type = f_list[0][0]['LSVs/%s' % lsv_id].attrs['type']
             for grp_idx in range(2):
-                for eidx, f in enumerate(f_list[grp_idx]):
-                    if lsv_id not in f['LSVs']:
-                        lsv_samples[grp_idx].append([0] * quantification_init.m)
-                        continue
-                    lsvobj = f['LSVs/%s' % lsv_id]
-                    assert lsv_type == lsvobj.attrs['type'], "LSV %s has different definition in groups" % lsv_id
-                    lsv = f[JUNCTIONS_DATASET_NAME][lsvobj.attrs['coverage']]
-                    m_lsv, var_lsv, s_lsv = majiq_sample.sample_from_junctions(junction_list=lsv,
-                                                                               m=quantification_init.m,
-                                                                               k=quantification_init.k,
-                                                                               discardzeros=quantification_init.discardzeros,
-                                                                               trimborder=quantification_init.trimborder,
-                                                                               fitted_one_over_r=fitfunc[grp_idx][eidx],
-                                                                               debug=quantification_init.debug)
-                    lsv_samples[grp_idx].append(s_lsv)
 
-                if quantification_init.boots:
-                    majiq_io.add_lsv_to_bootstrapfile(lsv_id, lsvobj.attrs['type'], lsv_samples[grp_idx],
-                                                      num_exp[grp_idx], quantification_init.lock_per_file[grp_idx],
-                                                      quantification_init.output, quantification_init.names[grp_idx])
+                if quantification_init.weights[grp_idx]:
+                    quant_lsv = lsvs[grp_idx][lidx]
+                    assert lsv_id == quant_lsv.id, "LSV order on lsvs is mixed. %s != %s" % (lsv_id, quant_lsv.id)
+                    lsv_type = quant_lsv.type
+#                    weights = np.tile(quantification_init.weights[grp_idx], (len(quantification_init.m), 1))
 
-            psi1 = weights1 * np.array(lsv_samples[0])
+                    lsv_samples[grp_idx] = bootstrap_samples_calculation(quant_lsv, n_replica=num_exp[grp_idx],
+                                                                         name=quantification_init.names[grp_idx],
+                                                                         outdir=quantification_init.output,
+                                                                         nbins=quantification_init.nbins,
+                                                                         store_bootsamples=quantification_init.boots,
+                                                                         lock_array=quantification_init.lock_per_file,
+                                                                         fitfunc_r=fitfunc[grp_idx],
+                                                                         m_samples=quantification_init.m,
+                                                                         k_positions=quantification_init.k,
+                                                                         discardzeros=quantification_init.discardzeros,
+                                                                         trimborder=quantification_init.trimborder,
+                                                                         debug=quantification_init.debug)
 
-            psi2 = weights2 * np.array(lsv_samples[1])
+                    lsv_samples[grp_idx] = np.array(lsv_samples[grp_idx]) * quantification_init.weights[grp_idx]
+
+                else:
+                    lsv_samples[grp_idx], lsv_type = majiq_io.load_bootstrap_samples(lsv_id, f_list[0])
 
             prior_idx = 1 if 'i' in lsv_type else 0
+
+            psi1, psi2 = [np.array(xx) for xx in lsv_samples]
+            del lsv_samples
 
             post_matrix = []
             posterior_psi1 = []
@@ -100,12 +108,13 @@ def deltapsi_quantification(args_vals):
                 beta_0 = beta_prior[p_idx]
                 for m in xrange(quantification_init.m):
                     # log(p(D_T1(m) | psi_T1)) = SUM_t1 T ( log ( P( D_t1 (m) | psi _T1)))
-                    junc = [psi1[xx][p_idx][m] for xx in xrange(num_exp[0])]
-                    junc = np.array(junc)
+                    # junc = [psi1[xx][p_idx][m] for xx in xrange(num_exp[0])]
+                    # junc = np.array(junc)
+                    junc = psi1[:, p_idx, m]
                     all_sample = [psi1[xx][yy][m].sum() for xx in xrange(num_exp[0]) for yy in xrange(num_ways)]
                     all_sample = np.array(all_sample)
-
                     mu_psi1_m.append(float(junc.sum() + alpha_0) / (all_sample.sum() + alpha_0 + beta_0))
+
                     data_given_psi1 = np.log(prob_data_sample_given_psi(junc.sum(), all_sample.sum(),
                                                                         quantification_init.nbins,
                                                                         alpha_0, beta_0))
@@ -113,8 +122,9 @@ def deltapsi_quantification(args_vals):
                     psi_v1 = data_given_psi1.reshape(quantification_init.nbins, -1)
                     post_psi1 += np.exp(data_given_psi1 - scipy.misc.logsumexp(data_given_psi1))
 
-                    junc = [psi2[xx][p_idx][m] for xx in xrange(num_exp[1])]
-                    junc = np.array(junc)
+                    # junc = [psi2[xx][p_idx][m] for xx in xrange(num_exp[1])]
+                    # junc = np.array(junc)
+                    junc = psi2[:, p_idx, m]
                     all_sample = [psi2[xx][yy][m].sum() for xx in xrange(num_exp[1]) for yy in xrange(num_ways)]
                     all_sample = np.array(all_sample)
                     mu_psi2_m.append(float(junc.sum() + alpha_0) / (all_sample.sum() + alpha_0 + beta_0))
@@ -176,9 +186,6 @@ class DeltaPsi(BasicPipeline):
         self.nbins = 20
 
         files = [self.files1, self.files2]
-        file_locks = None
-        if self.export_boots:
-            file_locks = [[mp.Lock() for xx in self.files1], [mp.Lock() for xx in self.files2]]
 
         # lock_arr = [mp.Lock() for xx in range(self.nthreads)]
         q = mp.Queue()
@@ -195,37 +202,44 @@ class DeltaPsi(BasicPipeline):
         list_of_lsv = list(set(list_of_lsv_group1).intersection(set(list_of_lsv_group2)))
 
         psi_space, prior_matrix = gen_prior_matrix(lsv_dict1, lsv_summarized1, lsv_dict2, lsv_summarized2, lsv_types1,
-                                                   self.output, prior_conf(self.iter, self.plotpath, self.breakiter,
+                                                   self.outDir, prior_conf(self.iter, self.plotpath, self.breakiter,
                                                                            self.names, self.binsize),
                                                    numbins=self.nbins, defaultprior=self.default_prior,
                                                    minpercent=self.min_exp, logger=self.logger)
 
         self.logger.info("Saving prior matrix for %s..." % self.names)
-        dump_bin_file(prior_matrix, get_prior_matrix_filename(self.output, self.names))
+        dump_bin_file(prior_matrix, get_prior_matrix_filename(self.outDir, self.names))
 
         lchnksize = max(len(list_of_lsv)/self.nthreads, 1) + 1
 
         weights = [None, None]
         for grp_idx, fil in enumerate(files):
-            weights[grp_idx] = self.calc_weights(self.weights[grp_idx], fil, list_of_lsv, lock_arr, lchnksize, file_locks, q)
+            weights[grp_idx] = self.calc_weights(self.weights[grp_idx], fil, list_of_lsv, lock_arr, lchnksize, q,
+                                        self.names[grp_idx])
+
+        file_locks = None
+        if self.export_boots:
+            file_locks = [[mp.Lock() for xx in self.files1], [mp.Lock() for xx in self.files2]]
 
         pool = mp.Pool(processes=self.nthreads, initializer=quantification_init,
-                       initargs=[q, lock_arr, self.output, self.names, self.silent, self.debug, self.nbins, self.m,
+                       initargs=[q, lock_arr, self.outDir, self.names, self.silent, self.debug, self.nbins, self.m,
                                  self.k, self.discardzeros, self.trimborder, files, self.export_boots, weights,
                                  file_locks],
                        maxtasksperchild=1)
         [xx.acquire() for xx in lock_arr]
 
+        file_locks = None
         if self.export_boots:
-            majiq_io.create_bootstrap_file(self.files1, self.output, self.names[0], m=self.m)
-            majiq_io.create_bootstrap_file(self.files2, self.output, self.names[1], m=self.m)
+            file_locks = [[mp.Lock() for xx in self.files1], [mp.Lock() for xx in self.files2]]
+            majiq_io.create_bootstrap_file(self.files1, self.outDir, self.names[0], m=self.m)
+            majiq_io.create_bootstrap_file(self.files2, self.outDir, self.names[1], m=self.m)
 
         if len(list_of_lsv) > 0:
 
             pool.map_async(deltapsi_quantification,
                            majiq_utils.chunks2(list_of_lsv, lchnksize, extra=range(self.nthreads)))
             pool.close()
-            with Voila(get_quantifier_voila_filename(self.output, self.names, deltapsi=True), 'w') as out_h5p:
+            with Voila(get_quantifier_voila_filename(self.outDir, self.names, deltapsi=True), 'w') as out_h5p:
                 out_h5p.add_metainfo(meta1['genome'], group1=self.names[0], experiments1=meta1['experiments'],
                                      group2=self.names[1], experiments2=meta2['experiments'])
 
@@ -235,10 +249,10 @@ class DeltaPsi(BasicPipeline):
             pool.join()
 
         if self.export_boots:
-            majiq_io.close_bootstrap_file(self.files1, self.output, self.names[0], m=self.m)
-            majiq_io.close_bootstrap_file(self.files2, self.output, self.names[1], m=self.m)
+            majiq_io.close_bootstrap_file(self.files1, self.outDir, self.names[0], m=self.m)
+            majiq_io.close_bootstrap_file(self.files2, self.outDir, self.names[1], m=self.m)
 
         self.logger.info("DeltaPSI calculation for %s_%s ended succesfully! Result can be found at %s" % (self.names[0],
                                                                                                           self.names[1],
-                                                                                                          self.output))
+                                                                                                          self.outDir))
         self.logger.info("Alakazam! Done.")

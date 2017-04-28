@@ -1,5 +1,5 @@
 import numpy as np
-import majiq.src.config as majiq_config
+from majiq.src.config import Config
 from majiq.src.constants import *
 
 
@@ -31,6 +31,7 @@ class Junction:
 
         if retrieve:
             if num_exp == 1:
+                majiq_config = Config()
                 self.coverage = np.zeros((num_exp, (majiq_config.readLen - 16) + 1), dtype=np.float)
                 self.gc_content = np.zeros((1, (majiq_config.readLen - 16) + 1), dtype=np.float)
                 self.all_data = True
@@ -101,12 +102,14 @@ class Junction:
             return self.coverage
         else:
             if self.idx == -1:
+                majiq_config = Config()
                 cov = np.zeros(shape=(majiq_config.num_experiments, 2))
             else:
                 cov = self.get_gene().junc_matrix[self.idx]
             return cov
 
     def get_gene(self):
+        majiq_config = Config()
         return majiq_config.gene_tlb[self.gene_name]
 
     def get_coordinates(self):
@@ -192,7 +195,7 @@ class Junction:
     def is_reliable(self):
         res = False
         cov = self.get_coverage().sum(axis=1)
-
+        majiq_config = Config()
         for tissue, list_idx in majiq_config.tissue_repl.items():
             mu = np.mean(cov[list_idx])
             if mu > majiq_config.min_denovo:
@@ -201,6 +204,7 @@ class Junction:
         return res
 
     def is_reliable_in_tissue(self):
+        majiq_config = Config()
         return self.get_coverage().sum() > majiq_config.min_denovo
 
 
@@ -220,6 +224,7 @@ class Junction:
         self.transcript_id_list.append(trnscrpt.get_id())
 
     def update_junction_read(self, read_n, start, gc, unique):
+        majiq_config = Config()
         left_ind = majiq_config.readLen - (self.start - start) - MIN_BP_OVERLAP + 1
         try:
             if unique:

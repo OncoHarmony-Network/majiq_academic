@@ -6,7 +6,6 @@ import h5py
 import numpy as np
 import majiq.src.io as majiq_io
 import majiq.grimoire.gene
-import majiq.src.config as majiq_config
 import majiq.src.utils as majiq_utils
 import majiq.src.multiproc as majiq_multi
 from majiq.grimoire.exon import detect_exons
@@ -16,6 +15,7 @@ from majiq.src.constants import *
 from majiq.src.basic_pipeline import BasicPipeline, pipeline_run
 from majiq.src.polyfitnb import fit_nb
 from majiq.src.voila_wrapper import gene_to_splicegraph, init_splicegraph
+from majiq.src.config import Config
 import datetime
 
 
@@ -40,8 +40,9 @@ def merging_files(args_vals):
 
     try:
         gne_id, chnk, loop_idx, total = args_vals
+        majiq_config = Config()
         logger = majiq_utils.get_logger("%s/%s.majiq.log" % (majiq_config.outDir, chnk),
-                                        silent=builder_init.silent, debug=builder_init.debug)
+                                        silent=majiq_config.silent, debug=majiq_config.debug)
         if loop_idx % 50 == 0:
             logger.info("[%s] Progress %s/%s" % (chnk, loop_idx, total))
         loop_id = '%s - %s' % (chnk, gne_id)
@@ -58,8 +59,8 @@ def merging_files(args_vals):
         vfunc_gc = []
 
         jset = set()
-        for exp_idx in xrange(len(builder_init.sam_list)):
-            fname = get_builder_temp_majiq_filename(majiq_config.outDir, builder_init.sam_list[exp_idx])
+        for exp_idx in xrange(len(majiq_config.sam_list)):
+            fname = get_builder_temp_majiq_filename(majiq_config.outDir, majiq_config.sam_list[exp_idx])
             with h5py.File(fname, 'r') as rfa:
                 try:
                     jset = jset.union(set(rfa["%s/junctions" % gne_id].keys()))
@@ -72,10 +73,10 @@ def merging_files(args_vals):
                     vfunc_gc = None
 
         njunc = len(jset)
-        gene_obj.junc_matrix = np.zeros(shape=(njunc, len(builder_init.sam_list), (majiq_config.readLen - 16 + 1)),
+        gene_obj.junc_matrix = np.zeros(shape=(njunc, len(majiq_config.sam_list), (majiq_config.readLen - 16 + 1)),
                                         dtype=np.uint32)
         if majiq_config.gcnorm:
-            gene_obj.gc_content = np.zeros(shape=(njunc, len(builder_init.sam_list), (majiq_config.readLen - 16 + 1)),
+            gene_obj.gc_content = np.zeros(shape=(njunc, len(majiq_config.sam_list), (majiq_config.readLen - 16 + 1)),
                                            dtype=np.float)
 
         for exp_idx, fname in enumerate(rna_files):
@@ -100,7 +101,7 @@ def merging_files(args_vals):
         del junction_list
         majiq.grimoire.exon.detect_exons(gene_obj, list(splice_list), retrieve=True)
         del splice_list
-        majiq.grimoire.gene.find_intron_retention(gene_obj, dict_of_junctions, builder_init.non_denovo,
+        majiq.grimoire.gene.find_intron_retention(gene_obj, dict_of_junctions, majiq_config.non_denovo,
                                                   logging=logger)
         del dict_of_junctions
         if majiq_config.simplify:
@@ -109,7 +110,7 @@ def merging_files(args_vals):
         gene_obj.prepare_exons()
 
         logger.debug("[%s] Detecting LSV" % loop_id)
-        nlsv = lsv_detection(gene_obj, gc_vfunc=vfunc_gc, lsv_list=builder_init.sam_list,
+        nlsv = lsv_detection(gene_obj, gc_vfunc=vfunc_gc, lsv_list=majiq_config.sam_list,
                              locks=builder_init.files_locks, rna_files=rna_files, logging=None)
 
         if nlsv:
@@ -133,8 +134,9 @@ def merging_files(args_vals):
 def parsing_files(args_vals):
     try:
         sam_file, chnk, loop_idx, total = args_vals
+        majiq_config = Config()
         tlogger = majiq_utils.get_logger("%s/%s.majiq.log" % (majiq_config.outDir, chnk),
-                                         silent=builder_init.silent, debug=builder_init.debug)
+                                         silent=majiq_config.silent, debug=majiq_config.debug)
 
         tlogger.info("[%s] Starting new thread" % sam_file)
         majiq_utils.monitor('CHILD %s:: CREATION' % chnk)
@@ -161,7 +163,7 @@ def parsing_files(args_vals):
 
                 tlogger.debug("[%s] Reading BAM files" % gne_id)
                 majiq_io.read_sam_or_bam(gene_obj, samfl, counter, h5py_file=db_f,
-                                         nondenovo=builder_init.non_denovo, info_msg=loop_id, logging=tlogger)
+                                         nondenovo=majiq_config.non_denovo, info_msg=loop_id, logging=tlogger)
 
                 if gene_obj.get_read_count() == 0:
                     continue
@@ -176,7 +178,7 @@ def parsing_files(args_vals):
                 tlogger.debug("[%s] Detecting intron retention events" % gne_id)
                 majiq_io.rnaseq_intron_retention(gene_obj, samfl, chnk,
                                                  permissive=majiq_config.permissive_ir,
-                                                 nondenovo=builder_init.non_denovo, logging=tlogger)
+                                                 nondenovo=majiq_config.non_denovo, logging=tlogger)
 
                 for jnc in gene_obj.get_all_junctions():
                     jnc.to_rna_hdf5(out_f['%s/junctions' % gne_id], junc_mtrx,
@@ -190,7 +192,7 @@ def parsing_files(args_vals):
             majiq_io.close_rnaseq(samfl)
 
         junc_mtrx = np.array(junc_mtrx)
-        indx = np.arange(junc_mtrx.shape[0])[junc_mtrx.sum(axis=1) >= majiq_config.MINREADS]
+        indx = np.arange(junc_mtrx.shape[0])[junc_mtrx.sum(axis=1) >= majiq_config.minreads]
         tlogger.debug("[%s] Fitting NB function with constitutive events..." % gne_id)
         out_f.attrs['one_over_r'] = fit_nb(junc_mtrx[indx, :], "%s/nbfit" % majiq_config.outDir,
                                            None, logger=tlogger)
@@ -222,10 +224,10 @@ class Builder(BasicPipeline):
             raise RuntimeError('Simplify requires 2 values type of junctions afected and E(PSI) threshold.')
         if not os.path.exists(self.conf):
             raise RuntimeError("Config file %s does not exist" % self.conf)
-        sam_list = majiq_config.global_conf_ini(self.conf, self)
-        self.builder(sam_list)
+        majiq_config = Config(self.conf, self)
+        self.builder(majiq_config)
 
-    def builder(self, sam_list):
+    def builder(self, majiq_config):
 
         logger = majiq_utils.get_logger("%s/majiq.log" % majiq_config.outDir, silent=False,
                                         debug=self.debug)
@@ -235,7 +237,7 @@ class Builder(BasicPipeline):
         if self.prebam:
 
             p = mp.Process(target=majiq_multi.parallel_lsv_child_calculation,
-                           args=(majiq_io.read_gff, [self.transcripts, sam_list],
+                           args=(majiq_io.read_gff, [self.transcripts, majiq_config.sam_list],
                                  '%s/tmp' % majiq_config.outDir, 'db', 0, False))
 
             logger.info("... waiting gff3 parsing")
@@ -243,19 +245,19 @@ class Builder(BasicPipeline):
             p.join()
 
             pool = mp.Pool(processes=self.nthreads, initializer=builder_init,
-                           initargs=[None, sam_list, self.pcr_filename, self.gff_output, self.only_rna,
+                           initargs=[None, majiq_config.sam_list, self.pcr_filename, self.gff_output, self.only_rna,
                                      self.non_denovo, self.silent, self.debug],
                            maxtasksperchild=1)
 
-            lchnksize = max(len(sam_list)/self.nthreads, 1) + 1
-            pool.map_async(parsing_files, majiq_utils.chunks(sam_list, lchnksize, extra=range(self.nthreads)))
+            lchnksize = max(len(majiq_config.sam_list)/self.nthreads, 1) + 1
+            pool.map_async(parsing_files, majiq_utils.chunks(majiq_config.sam_list, lchnksize, extra=range(self.nthreads)))
             pool.close()
             pool.join()
 
-        lock_array = [mp.Lock() for xx in sam_list]
+        lock_array = [mp.Lock() for xx in majiq_config.sam_list]
         lock_array.append(mp.Lock())
         pool = mp.Pool(processes=self.nthreads, initializer=builder_init,
-                       initargs=[lock_array, sam_list, self.pcr_filename, self.gff_output, self.only_rna,
+                       initargs=[lock_array, majiq_config.sam_list, self.pcr_filename, self.gff_output, self.only_rna,
                                  self.non_denovo, self.silent, self.debug],
                        maxtasksperchild=1)
 
@@ -263,11 +265,11 @@ class Builder(BasicPipeline):
                 list_of_genes = db_f.keys()
         lchnksize = max(len(list_of_genes)/self.nthreads, 1) + 1
         init_splicegraph(get_builder_splicegraph_filename(majiq_config.outDir))
-        for exp_idx, sam_file in enumerate(sam_list):
+        for exp_idx, sam_file in enumerate(majiq_config.sam_list):
             with h5py.File(get_builder_majiq_filename(majiq_config.outDir, sam_file),
                            'w', compression='gzip', compression_opts=9) as f:
                 effective_readlen = (majiq_config.readLen - 16) + 1
-                f.create_dataset(JUNCTIONS_DATASET_NAME, (majiq_config.nrandom_junctions, effective_readlen),
+                f.create_dataset(JUNCTIONS_DATASET_NAME, (NRANDOM_JUNCTIONS, effective_readlen),
                                  maxshape=(None, effective_readlen))
 
                 # fill meta info
@@ -283,7 +285,7 @@ class Builder(BasicPipeline):
         pool.close()
         pool.join()
 
-        for exp_idx, sam_file in enumerate(sam_list):
+        for exp_idx, sam_file in enumerate(majiq_config.sam_list):
             with h5py.File(get_builder_majiq_filename(majiq_config.outDir, sam_file),
                            'r+', compression='gzip', compression_opts=9) as f:
 

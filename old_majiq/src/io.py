@@ -12,7 +12,7 @@ from collections import namedtuple
 import numpy as np
 import pysam
 
-import majiq.src.config as majiq_config
+import majiq.src.config_old as majiq_config
 import majiq.src.io_utils as io_utils
 import old_majiq.grimoire.exon as majiq_exons
 from old_majiq.grimoire.gene import Gene, Transcript

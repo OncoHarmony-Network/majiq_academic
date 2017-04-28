@@ -8,7 +8,7 @@ from numpy.ma import masked_less
 from scipy import interpolate
 from scipy.stats.mstats_basic import mquantiles
 
-import majiq.src.config as majiq_config
+import majiq.src.config_old as majiq_config
 from majiq.src import checkpolyfitnb as majiqfit
 
 

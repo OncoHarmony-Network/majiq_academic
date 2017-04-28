@@ -1,7 +1,7 @@
 import numpy as np
 
 import majiq.grimoire.lsv as majiq_lsv
-import majiq.src.config as majiq_config
+import majiq.src.config_old as majiq_config
 import majiq.src.filter as majiq_filter
 from majiq.grimoire.lsv import SSOURCE, STARGET, InvalidLSV
 

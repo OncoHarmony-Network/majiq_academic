@@ -1,6 +1,6 @@
 import numpy as np
 
-from majiq.src import config as majiq_config
+from majiq.src import config_old as majiq_config
 from voila import constants as voila_const
 from voila.splice_graphics import JunctionGraphic, ExonGraphic, GeneGraphic
 

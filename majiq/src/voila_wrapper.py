@@ -1,19 +1,20 @@
 import numpy as np
 
-from majiq.src import config as majiq_config
+from majiq.src.config import Config
 from voila import constants as voila_const
 from voila.splice_graphics import JunctionGraphic, ExonGraphic, GeneGraphic, SpliceGraph
 from majiq.src.constants import *
 
 
 def init_splicegraph(filename):
+    majiq_config = Config()
     with SpliceGraph(filename, 'w') as sg:
         sg.erase_splice_graph_file()
         sg.add_experiment_names(majiq_config.exp_list)
 
 
 def gene_to_splicegraph(gne, lock):
-
+    majiq_config = Config()
     lock.acquire()
     with SpliceGraph(get_builder_splicegraph_filename(majiq_config.outDir), 'r+') as sg:
 
@@ -43,7 +44,7 @@ def gene_to_splicegraph(gne, lock):
                         jtype = voila_const.JUNCTION_TYPE_DB
                 elif jj.annotated and num_reads[exp_idx] > 0:
                     jtype = voila_const.JUNCTION_TYPE_DB_RNASEQ
-                elif not jj.annotated and num_reads[exp_idx] > majiq_config.MINREADS:
+                elif not jj.annotated and num_reads[exp_idx] > majiq_config.minreads:
                     jtype = voila_const.JUNCTION_TYPE_RNASEQ
                 else:
                     jtype = voila_const.JUNCTION_TYPE_RNASEQ
