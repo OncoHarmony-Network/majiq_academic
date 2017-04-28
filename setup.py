@@ -8,7 +8,7 @@ extensions += [Extension('majiq.src.plotting', ['majiq/src/plotting.pyx'])]
 extensions += [Extension('majiq.src.polyfitnb', ['majiq/src/polyfitnb.pyx'])]
 extensions += [Extension('majiq.src.sample', ['majiq/src/sample.pyx'])]
 #extensions += [Extension('majiq.src.beta_binomial', ['majiq/src/beta_binomial.py'])]
-extensions += [Extension('majiq.src.psi', ['majiq/src/psi.py'])]
+extensions += [Extension('majiq.src.psi', ['majiq/src/psi.pyx'])]
 
 setup(
     name="majiq",
