@@ -51,9 +51,9 @@
 
                             <select class="spliceGraphSelector exp1" autocomplete="off" title="splice graph selector">
                                 {% for nsample in genes_exps_list[0] -%}
-                                     <option {% if nsample == "Combined" %} selected="selected" {% endif %}
-                                                value="{{ genes_exps_list[0][nsample][gene_id] | to_json_especial }}">{{ nsample }}
-                                        </option>
+                                    <option {% if nsample == "Combined" %} selected="selected" {% endif %}
+                                                                           value="{{ genes_exps_list[0][nsample][gene_id] | to_json_especial }}">{{ nsample }}
+                                    </option>
                                 {%- endfor %}
                             </select>
 
@@ -75,8 +75,12 @@
                         </div>
 
                         <div class="splice-div-container">
-                            <div class="spliceDiv exp1" id="spliceDivExp1_{{ gene_index }}"
-                                 data-exon-list="{{ genes_exps_list[0]["Combined"][gene_id] | to_json_especial }}">
+                            <div class="spliceDiv exp1" id="spliceDivExp1_{{ gene_index }}" data-exon-list=
+                                    {% if "Combined" in  genes_exps_list[0] %}
+                                        "{{ genes_exps_list[0]["Combined"][gene_id] | to_json_especial }}">
+                                    {% else %}
+                                        "{{ genes_exps_list[0][comb_spliceg_cond1][gene_id] | to_json_especial }}">
+                                    {% endif %}
                             </div>
                         </div>
 
@@ -129,7 +133,8 @@
                                     <td id="data_td{{ gene_index }}{{ loop.index }}">
                                         <canvas class="lsvSingleCompactPercentiles primer"
                                                 id="lsvSingleCompact{{ loop.index }}" width="50px"
-                                                height="50px" data-lsv="{{ lsv|to_json }}" genome="{{ lexps.genome }}" lsv-text-version="{{ lsv_text_version }}"
+                                                height="50px" data-lsv="{{ lsv|to_json }}" genome="{{ lexps.genome }}"
+                                                lsv-text-version="{{ lsv_text_version }}"
                                                 style="border: solid; border-width: 2pt; border-color: darkgrey;">
                                             This browser or document mode doesn't support canvas
                                         </canvas>
