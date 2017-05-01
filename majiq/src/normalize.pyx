@@ -2,7 +2,6 @@ __author__ = 'jordi@biociphers.org'
 import sys
 from itertools import izip
 
-import numpy as np
 from numpy.ma import masked_less
 from scipy import interpolate
 from scipy.stats.mstats_basic import mquantiles

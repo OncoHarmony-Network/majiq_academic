@@ -25,7 +25,6 @@ def deltapsi(args):
 
 def deltapsi_quantification(args_vals):
     try:
-
         list_of_lsv, chnk = args_vals
         logger = majiq_utils.get_logger("%s/%s.majiq.log" % (quantification_init.output, chnk),
                                         silent=quantification_init.silent, debug=quantification_init.debug)
@@ -37,8 +36,7 @@ def deltapsi_quantification(args_vals):
         f_list = [None, None]
         lsvs = [None, None]
         for grp_idx in range(2):
-            if not quantification_init.weights[grp_idx]:
-
+            if quantification_init.weights[grp_idx] is None:
                 f_list[grp_idx] = majiq_io.open_bootstrap_samples(num_exp=num_exp[grp_idx],
                                                                   directory=quantification_init.output,
                                                                   name=quantification_init.names[grp_idx])
@@ -61,7 +59,7 @@ def deltapsi_quantification(args_vals):
 
             for grp_idx in range(2):
 
-                if quantification_init.weights[grp_idx]:
+                if quantification_init.weights[grp_idx] is not None:
                     quant_lsv = lsvs[grp_idx][lidx]
                     assert lsv_id == quant_lsv.id, "LSV order on lsvs is mixed. %s != %s" % (lsv_id, quant_lsv.id)
                     lsv_type = quant_lsv.type
@@ -215,7 +213,7 @@ class DeltaPsi(BasicPipeline):
         weights = [None, None]
         for grp_idx, fil in enumerate(files):
             weights[grp_idx] = self.calc_weights(self.weights[grp_idx], fil, list_of_lsv, lock_arr, lchnksize, q,
-                                        self.names[grp_idx])
+                                                 self.names[grp_idx])
 
         file_locks = None
         if self.export_boots:

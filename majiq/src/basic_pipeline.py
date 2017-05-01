@@ -138,7 +138,6 @@ class BasicPipeline:
             else:
                 wgts = rho
 
-
         elif weight_type.lower() == WEIGTHS_NONE:
             wgts = np.ones(shape=(len(file_list)))
 
