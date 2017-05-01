@@ -43,7 +43,8 @@ class Weights(BasicPipeline):
                                                     percent=self.min_exp, logger=self.logger)
 
         lchnksize = max(len(list_of_lsv)/self.nthreads, 1) + 1
-        weights = self.calc_weights(self.weights, self.files, list_of_lsv, lock_arr, lchnksize, q, self.name)
+        weights = self.calc_weights(self.weights, self.files, list_of_lsv, lock_arr, lchnksize, q,
+                                    self.name, store=False)
 
         self.logger.info("Weights for %s are %s" %(self.name, weights))
         self.logger.info("Weights calculation ended succesfully!")

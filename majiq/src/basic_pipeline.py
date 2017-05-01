@@ -103,7 +103,7 @@ class BasicPipeline:
                 self.logger.debug("Fitting NB function with constitutive events...")
             return fit_nb(const_junctions, "%s/nbfit" % self.outDir, self.plotpath, logger=self.logger)
 
-    def calc_weights(self, weight_type, file_list, list_of_lsv, lock_arr, lchnksize, q, name):
+    def calc_weights(self, weight_type, file_list, list_of_lsv, lock_arr, lchnksize, q, name, store=True):
 
         if weight_type.lower() == WEIGTHS_AUTO:
             """ Calculate bootstraps samples and weights """
@@ -132,8 +132,13 @@ class BasicPipeline:
                                      nreps=len(file_list), logger=self.logger)
 
             wgts = calc_local_weights(divs, rho, self.local)
-            majiq_io.store_weights_bootstrap(lsvs, wgts, file_list, self.outDir, name)
-            wgts = None
+            if store:
+                majiq_io.store_weights_bootstrap(lsvs, wgts, file_list, self.outDir, name)
+                wgts = None
+            else:
+                wgts = rho
+
+
         elif weight_type.lower() == WEIGTHS_NONE:
             wgts = np.ones(shape=(len(file_list)))
 
