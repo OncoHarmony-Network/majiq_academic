@@ -3,6 +3,7 @@ from majiq.src.build import build
 from majiq.src.calc_psi import calcpsi
 from majiq.src.deltapsi import deltapsi
 from majiq.src.constants import *
+from majiq.src.wght_pipeline import calc_weights
 
 
 class FRange01(argparse.Action):
@@ -82,10 +83,7 @@ def main():
                                   'disable it. [Default: %(default)s]')
     buildparser.add_argument('--simplify', nargs='*')
 
-
     buildparser.add_argument('--prebam', default=True,  action='store_false')
-
-
 
     sampling = new_subparser()
     sampling.add_argument('--k', default=50, type=int,
@@ -141,7 +139,6 @@ def main():
     delta.add_argument('-grp2', dest="files2", nargs='+', required=True)
     delta.add_argument('--default_prior', action='store_true', default=False,
                        help="Use a default prior instead of computing it using the empirical data")
-    #delta.add_argument('--pairwise', default=False, action='store_true', help='')
     delta.add_argument('--names', nargs='+', required=True,
                        help="The names that identify each of the experiments. [Default: %(default)s]")
     delta.add_argument('--binsize', default=0.025, type=int,
@@ -166,6 +163,13 @@ def main():
                             '\t Auto will make majiq calculate the best weights, None will use uniform weights. '
                             'Select the weights manually requires specifying one weight for each replica or an '
                             'error will be triggered.')
+
+    wght = new_subparser()
+    wght.add_argument('files', nargs='+', help='The experiment files to analyze. You can include more than one '
+                                              '(they will all be analyzed independently though) Glob syntax supported.')
+    wght.add_argument('--name', required=True, help="The names that identify each of the experiments. "
+                                                   "[Default: %(default)s]")
+
 
     # mdelta = new_subparser()
     # mdelta.add_argument('-pairs_file', dest="deltapairs", required=True)
@@ -192,14 +196,23 @@ def main():
     parser_preprocess = subparsers.add_parser('build', help='Preprocess SAM/BAM files as preparation for the rest of '
                                                             'the tools (psi, deltapsi)', parents=[common, buildparser])
     parser_preprocess.set_defaults(func=build)
+
     parser_calcpsi = subparsers.add_parser('psi', help="Calculate PSI values for N experiments, given a folder of "
                                                        "preprocessed events by 'majiq preprocess' or SAM/BAM files",
                                            parents=[common, psi, sampling, weights])
     parser_calcpsi.set_defaults(func=calcpsi)
+
     parser_deltagroup = subparsers.add_parser('deltapsi', help='Calculate Delta PSI values given a pair of experiments '
                                                                '(1 VS 1 conditions *with* replicas)',
                                               parents=[common, delta, sampling, weights])
     parser_deltagroup.set_defaults(func=deltapsi)
+
+    parser_weights = subparsers.add_parser('weights', help='Calculate weights values given a group of experiment '
+                                                           'replicas',
+                                              parents=[common, sampling, weights, wght])
+    parser_weights.set_defaults(func=calc_weights)
+
+
 
     # parser_multidelta = subparsers.add_parser('multi_delta', help='Calculate Delta PSI values given a pair of experiments '
     #                                                            '(1 VS 1 conditions *with* replicas)',
