@@ -30,7 +30,10 @@ def bootstrap_samples_calculation(quant_lsv, n_replica, name, outdir, nbins=40, 
                                   lock_array=None, fitfunc_r=0, m_samples=100, k_positions=50, discardzeros=5,
                                   trimborder=True, debug=False):
 
-    num_ways = quant_lsv.coverage[0].shape[0]
+    for ii in quant_lsv.coverage:
+        if ii is not None:
+            num_ways = quant_lsv.coverage[0].shape[0]
+            break
     alpha_prior, beta_prior = get_prior_params(quant_lsv.type, num_ways)
 
     lsv_samples = []
