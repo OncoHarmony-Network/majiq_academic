@@ -82,6 +82,11 @@ def sample_from_junctions(junction_list, m, k, discardzeros=5, trimborder=True, 
             print "junction %s..." % i,
             sys.stdout.flush()
 
+        if junction is None:
+            sampled_means.append(0)
+            sampled_var.append(0)
+            all_samples.append([0] * m)
+
         if trimborder:
             junction = _trimborders(junction, trimborder)
             # trim the zeroes from the borders regardless of the discardzeros flag

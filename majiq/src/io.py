@@ -748,11 +748,15 @@ def get_extract_lsv_list(list_of_lsv_id, file_list):
                 if len(fitfunc) < (fidx+1):
                     fitfunc.append(data.attrs['fitfunc'])
 
-                if lsv_type is None:
+                try:
+                    if lsv_type is None:
+
                         lsv_type = data['LSVs/%s' % lsv_id].attrs['type']
 
-                assert data['LSVs/%s' % lsv_id].attrs['type'] == lsv_type, "ERROR lsv_type doesn't match for %s" % lsv_id
-                lsv_cov.append(data[JUNCTIONS_DATASET_NAME][data['LSVs/%s' % lsv_id].attrs['coverage']])
+                    assert data['LSVs/%s' % lsv_id].attrs['type'] == lsv_type, "ERROR lsv_type doesn't match for %s" % lsv_id
+                    lsv_cov.append(data[JUNCTIONS_DATASET_NAME][data['LSVs/%s' % lsv_id].attrs['coverage']])
+                except KeyError:
+                    lsv_cov.append(None)
 
 #        lsv_cov = np.array(lsv_cov)
         qq = quant_lsv(lsv_id, lsv_type, lsv_cov)
