@@ -76,7 +76,7 @@ def cond_table_tsv(args, lsvs_dict):
     log.info('Creating conditional table TSV...')
 
     with open(tsv_file, 'w') as csvfile:
-        fieldnames = ['Gene', 'LSV ID', '#Disagreeing', '#Changing samples', 'Junction'] + sample_names
+        fieldnames = ['Gene', 'LSV ID', '#Disagreeing', '#Agreeing', '#Changing samples'] + sample_names
         writer = csv.DictWriter(csvfile, fieldnames=fieldnames, delimiter='\t')
 
         writer.writeheader()
@@ -86,8 +86,8 @@ def cond_table_tsv(args, lsvs_dict):
                 'Gene': lsvs_dict[lsv]['gene'],
                 'LSV ID': lsv,
                 '#Disagreeing': lsvs_dict[lsv]['ndisagree'],
-                '#Changing samples': lsvs_dict[lsv]['nchangs'],
-                'Junction': lsvs_dict[lsv]['njunc']
+                '#Agreeing': lsvs_dict[lsv]['nagree'],
+                '#Changing samples': lsvs_dict[lsv]['nchangs']
             }
 
             for index, sample_name in enumerate(sample_names):
