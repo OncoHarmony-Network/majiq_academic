@@ -35,14 +35,17 @@ def bootstrap_samples_calculation(quant_lsv, n_replica, name, outdir, nbins=40, 
 
     lsv_samples = []
     for rr in xrange(n_replica):
+        if quant_lsv.coverage[rr] is None:
+            s_lsv = np.array([0] * m_samples)
+        else:
+            m_lsv, var_lsv, s_lsv = sample_from_junctions(junction_list=quant_lsv.coverage[rr],
+                                                          m=m_samples,
+                                                          k=k_positions,
+                                                          discardzeros=discardzeros,
+                                                          trimborder=trimborder,
+                                                          fitted_one_over_r=fitfunc_r[rr],
+                                                          debug=debug)
 
-        m_lsv, var_lsv, s_lsv = sample_from_junctions(junction_list=quant_lsv.coverage[rr],
-                                                      m=m_samples,
-                                                      k=k_positions,
-                                                      discardzeros=discardzeros,
-                                                      trimborder=trimborder,
-                                                      fitted_one_over_r=fitfunc_r[rr],
-                                                      debug=debug)
         lsv_samples.append(s_lsv)
 
     if store_bootsamples:

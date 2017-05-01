@@ -78,7 +78,8 @@ def deltapsi_quantification(args_vals):
                                                                          trimborder=quantification_init.trimborder,
                                                                          debug=quantification_init.debug)
 
-                    lsv_samples[grp_idx] = np.array(lsv_samples[grp_idx]) * quantification_init.weights[grp_idx]
+                    #lsv_samples[grp_idx] = np.array([lsv_samples[grp_idx] * quantification_init.weights[grp_idx][xx] for xx in range(len(lsv_samples[grp_idx]))])
+                    lsv_samples[grp_idx] = np.array(lsv_samples[grp_idx])
 
                 else:
                     lsv_samples[grp_idx], lsv_type = majiq_io.load_bootstrap_samples(lsv_id, f_list[0])
