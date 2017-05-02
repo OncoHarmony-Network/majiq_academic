@@ -81,7 +81,7 @@ def quantification_init(q, lock, output, names, silent, debug, nbins, m, k,
 
 
 def queue_manager(input_h5dfp, output_h5dfp, lock_array, result_queue, num_chunks, meta_info=None, num_exp=0,
-                  out_inplace=None, logger=None):
+                  out_inplace=None, logger=None, list_of_lsv_graphics={}):
 
     nthr_count = 0
     # posterior_matrix = []
@@ -107,8 +107,10 @@ def queue_manager(input_h5dfp, output_h5dfp, lock_array, result_queue, num_chunk
                                               lsv_graphic=lsv_graph))
 
             elif val.get_type() == QUEUE_MESSAGE_DELTAPSI_RESULT:
-                lsv_graph = LsvGraphic.easy_from_hdf5(majiq_io.load_lsvgraphic_from_majiq(input_h5dfp,
-                                                                                          val.get_value()[-1]))
+
+                # lsv_graph = LsvGraphic.easy_from_hdf5(majiq_io.load_lsvgraphic_from_majiq(input_h5dfp,
+                #                                                                           val.get_value()[-1]))
+                lsv_graph = list_of_lsv_graphics[val.get_value()[-1]]
                 output_h5dfp.add_lsv(VoilaLsv(bins_list=val.get_value()[0], lsv_graphic=lsv_graph,
                                               psi1=val.get_value()[1], psi2=val.get_value()[2],
                                               means_psi1=val.get_value()[3], means_psi2=val.get_value()[4]))

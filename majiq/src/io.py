@@ -629,6 +629,8 @@ def extract_lsv_summary(files):
     idx_junc = {}
     total_idx = 0
     simpl_juncs = []
+
+    lsv_dict_graph = {}
     for fidx, ff in enumerate(files):
         simpl_juncs.append([[0, 0.0] for xx in idx_junc.keys()])
         data = h5py.File(ff, 'r')
@@ -639,6 +641,10 @@ def extract_lsv_summary(files):
 
             lsv_types[lsvid] = lsvgraph.lsv_type
             ljunc = lsvgraph.junctions_ids()
+
+            #JV
+            lsv_dict_graph[lsvid] = lsvgraph
+
             cov = [(cov != 0).sum(axis=1), cov.sum(axis=1)]
             lsvid2idx[lsvid] = []
             for jidx, jj in enumerate(ljunc):
@@ -657,7 +663,7 @@ def extract_lsv_summary(files):
 
     metas = read_meta_info(files)
 
-    return lsvid2idx, lsv_types, simpl_juncs, metas
+    return lsvid2idx, lsv_types, simpl_juncs, metas, lsv_dict_graph
 
 
 def load_data_lsv(path, group_name, logger=None):

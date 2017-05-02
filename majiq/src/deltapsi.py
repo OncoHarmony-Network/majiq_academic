@@ -188,11 +188,11 @@ class DeltaPsi(BasicPipeline):
         q = mp.Queue()
         lock_arr = [mp.Lock() for xx in range(self.nthreads)]
 
-        lsv_dict1, lsv_types1, lsv_summarized1, meta1 = majiq_io.extract_lsv_summary(self.files1)
+        lsv_dict1, lsv_types1, lsv_summarized1, meta1, lsv_dict_graph1 = majiq_io.extract_lsv_summary(self.files1)
         list_of_lsv_group1 = majiq_filter.merge_files_hdf5(lsv_dict1, lsv_summarized1, self.minpos,
                                                            self.minreads, percent=self.min_exp, logger=self.logger)
 
-        lsv_dict2, lsv_types2, lsv_summarized2, meta2 = majiq_io.extract_lsv_summary(self.files2)
+        lsv_dict2, lsv_types2, lsv_summarized2, meta2, lsv_dict_graph2 = majiq_io.extract_lsv_summary(self.files2)
         list_of_lsv_group2 = majiq_filter.merge_files_hdf5(lsv_dict2, lsv_summarized2, self.minpos,
                                                            self.minreads, percent=self.min_exp, logger=self.logger)
 
@@ -241,7 +241,8 @@ class DeltaPsi(BasicPipeline):
                                      group2=self.names[1], experiments2=meta2['experiments'])
 
                 in_h5p = h5py.File(files[0][0], 'r')
-                queue_manager(in_h5p, out_h5p, lock_arr, q, num_chunks=self.nthreads, logger=self.logger)
+                queue_manager(in_h5p, out_h5p, lock_arr, q, num_chunks=self.nthreads, logger=self.logger,
+                              list_of_lsv_graphics=lsv_dict_graph1)
                 in_h5p.close()
             pool.join()
 
