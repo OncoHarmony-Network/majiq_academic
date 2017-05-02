@@ -52,7 +52,6 @@ def psi_quantification(args_vals):
             if quantification_init.weights:
                 quant_lsv = lsvs[lidx]
                 lsv_type = quant_lsv.type
-                weights = np.tile(quantification_init.weights, (len(list_of_lsv), 1))
 
                 psi = bootstrap_samples_calculation(quant_lsv, n_replica=num_exp,
                                                     name=quantification_init.names,
@@ -66,7 +65,8 @@ def psi_quantification(args_vals):
                                                     discardzeros=quantification_init.discardzeros,
                                                     trimborder=quantification_init.trimborder,
                                                     debug=quantification_init.debug)
-                psi = np.array(psi) * weights
+
+                psi = np.array(psi) * quantification_init.weights[:, None, None]
             else:
                 lsv_id = list_of_lsv[lidx]
                 psi, lsv_type = majiq_io.load_bootstrap_samples(list_of_lsv[lidx], f_list)

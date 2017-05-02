@@ -63,7 +63,6 @@ def deltapsi_quantification(args_vals):
                     quant_lsv = lsvs[grp_idx][lidx]
                     assert lsv_id == quant_lsv.id, "LSV order on lsvs is mixed. %s != %s" % (lsv_id, quant_lsv.id)
                     lsv_type = quant_lsv.type
-#                    weights = np.tile(quantification_init.weights[grp_idx], (len(quantification_init.m), 1))
 
                     lsv_samples[grp_idx] = bootstrap_samples_calculation(quant_lsv, n_replica=num_exp[grp_idx],
                                                                          name=quantification_init.names[grp_idx],
@@ -77,9 +76,8 @@ def deltapsi_quantification(args_vals):
                                                                          discardzeros=quantification_init.discardzeros,
                                                                          trimborder=quantification_init.trimborder,
                                                                          debug=quantification_init.debug)
-
-                    #lsv_samples[grp_idx] = np.array([lsv_samples[grp_idx] * quantification_init.weights[grp_idx][xx] for xx in range(len(lsv_samples[grp_idx]))])
-                    lsv_samples[grp_idx] = np.array(lsv_samples[grp_idx])
+                    weigths =  quantification_init.weights[grp_idx]
+                    lsv_samples[grp_idx] = np.array(lsv_samples[grp_idx]) * weigths[:, None, None]
 
                 else:
                     lsv_samples[grp_idx], lsv_type = majiq_io.load_bootstrap_samples(lsv_id, f_list[0])

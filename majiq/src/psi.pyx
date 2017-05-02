@@ -32,7 +32,7 @@ def bootstrap_samples_calculation(quant_lsv, n_replica, name, outdir, nbins=40, 
 
     for ii in quant_lsv.coverage:
         if ii is not None:
-            num_ways = quant_lsv.coverage[0].shape[0]
+            num_ways = ii.shape[0]
             break
     alpha_prior, beta_prior = get_prior_params(quant_lsv.type, num_ways)
 
