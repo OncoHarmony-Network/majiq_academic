@@ -394,7 +394,7 @@ function spliceGraphD3() {
                     .duration(100)
                     .ease("linear")
                     .text(function (d) {
-                        return d.num_reads;
+                        return d.reads;
                     })
                     .attr("x", function (d) {
                         var pos = Math.round(scaleX(d[d.intron_retention === 1 ? 'end' : 'start']) + (d.intron_retention === 1 ? 2 : -2));
