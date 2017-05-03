@@ -283,7 +283,7 @@ function spliceGraphD3() {
                     var d = exons[ii];
                     for (var i = 0; i < d.value.a3.length; i++) {
                         junctions[d.value.a3[i]].dispFrom = junctions[d.value.a3[0]].start;
-                        if (i == 0) {
+                        if (i === 0) {
                             junctions[d.value.a3[i]].dispersion = 1;
                         } else {
                             junctions[d.value.a3[i]].dispersion = d.value.a3.length - i + 1;
@@ -318,7 +318,7 @@ function spliceGraphD3() {
                         return '';
                     })
                     .attr("x", function (d) {
-                        if (strand == '-')
+                        if (strand === '-')
                             return Math.round((2 * width - scaleX(d.start) - scaleX(d.end)) / 2);
                         return Math.round((scaleX(d.end) + scaleX(d.start)) / 2);
                     })
@@ -361,19 +361,19 @@ function spliceGraphD3() {
                     });
 
                 juncs.classed("found", function (d) {
-                    return d.junction_type == 0;
+                    return d.junction_type === 0;
                 });
                 juncs.classed("novel", function (d) {
-                    return d.junction_type == 1;
+                    return d.junction_type === 1;
                 });
                 juncs.classed("missing", function (d) {
-                    return d.junction_type == 2;
+                    return d.junction_type === 2;
                 });
                 juncs.classed("foundInOthers", function (d) {
-                    return d.junction_type == 3;
+                    return d.junction_type === 3;
                 });
                 juncs.classed("novelInOthers", function (d) {
-                    return d.junction_type == 1 && d.reads < 1;
+                    return d.junction_type === 1 && d.reads < 1;
                 });
 
                 return juncs;
@@ -388,17 +388,17 @@ function spliceGraphD3() {
                 labels.enter().append("text");
                 labels.attr("class", "irreads")
                     .attr("text-anchor", function (d) {
-                        return ((d.ir === 1 && strand == '-' || d.ir === 2 && strand == '+' ) ? "end" : "start" );
+                        return ((d.intron_retention === 1 && strand === '-' || d.intron_retention === 2 && strand === '+' ) ? "end" : "start" );
                     })
                     .transition()
                     .duration(100)
                     .ease("linear")
                     .text(function (d) {
-                        return d.num_reads;
+                        return d.reads;
                     })
                     .attr("x", function (d) {
-                        var pos = Math.round(scaleX(d[d.ir == 1 ? 'end' : 'start']) + (d.ir == 1 ? 2 : -2));
-                        if (strand == '-')
+                        var pos = Math.round(scaleX(d[d.intron_retention === 1 ? 'end' : 'start']) + (d.intron_retention === 1 ? 2 : -2));
+                        if (strand === '-')
                             return Math.round(width - pos);
                         else
                             return pos;
@@ -419,22 +419,22 @@ function spliceGraphD3() {
                     .duration(100)
                     .ease("linear")
                     .attr("x1", function (d) {
-                        return Math.round(scaleX(d[d.ir == 1 ? 'end' : 'start']));
+                        return Math.round(scaleX(d[d.intron_retention === 1 ? 'end' : 'start']));
                     })
                     .attr("y1", function () {
                         return Math.round(height * JUNC_AREA + EXON_H / 5 + 2);
                     })
                     .attr("x2", function (d) {
-                        return Math.round(scaleX(d[d.ir == 1 ? 'end' : 'start']) + ((d.ir == 1) ? 14 : -14));
+                        return Math.round(scaleX(d[d.intron_retention === 1 ? 'end' : 'start']) + ((d.intron_retention === 1) ? 14 : -14));
                     })
                     .attr("y2", function () {
                         return Math.round(height * JUNC_AREA + EXON_H / 5 + 2);
                     });
                 irlines.classed("found", function (d) {
-                    return d.junction_type == 0;
+                    return d.junction_type === 0;
                 });
                 irlines.classed("novel", function (d) {
-                    return d.junction_type == 1;
+                    return d.junction_type === 1;
                 });
                 return irlines;
             };
@@ -468,13 +468,13 @@ function spliceGraphD3() {
 
                 ssites3
                     .classed("found", function (d) {
-                        return d.junction_type == 0;
+                        return d.junction_type === 0;
                     })
                     .classed("novel", function (d) {
-                        return d.junction_type == 1;
+                        return d.junction_type === 1;
                     })
                     .classed("missing", function (d) {
-                        return d.junction_type == 2;
+                        return d.junction_type === 2;
                     });
 
                 var ssites5 = svgCanvas
@@ -505,13 +505,13 @@ function spliceGraphD3() {
 
                 ssites5
                     .classed("found", function (d) {
-                        return d.junction_type == 0;
+                        return d.junction_type === 0;
                     })
                     .classed("novel", function (d) {
-                        return d.junction_type == 1;
+                        return d.junction_type === 1;
                     })
                     .classed("missing", function (d) {
-                        return d.junction_type == 2;
+                        return d.junction_type === 2;
                     });
 
             };
@@ -529,13 +529,13 @@ function spliceGraphD3() {
 
                 exons.attr('class', 'exon')
                     .classed('found', function (d) {
-                        return d.value.exon_type == 0
+                        return d.value.exon_type === 0
                     })
                     .classed('novel', function (d) {
-                        return d.value.exon_type == 1
+                        return d.value.exon_type === 1
                     })
                     .classed('missing', function (d) {
-                        return d.value.exon_type == 2
+                        return d.value.exon_type === 2
                     })
                     .transition()
                     .duration(100)
@@ -565,34 +565,34 @@ function spliceGraphD3() {
 
                 halfExons.attr('class', 'halfexon')
                     .classed('missingStart', function (d) {
-                        return d.value.exon_type == 4
+                        return d.value.exon_type === 4
                     })
                     .classed('missingEnd', function (d) {
-                        return d.value.exon_type == 5
+                        return d.value.exon_type === 5
                     })
                     .transition()
                     .duration(100)
                     .ease("linear")
                     .attr("d", function (d) {
                         var index_missing = 0;  // missing start
-                        if (d.value.exon_type == 4) //missing end
+                        if (d.value.exon_type === 4) //missing end
                             index_missing = 1;
 
                         var halfExonsPoints = [
                             {
-                                'x': scaleX(d.value[(index_missing + 1) % 2 == 0 ? 'start' : 'end']),
+                                'x': scaleX(d.value[(index_missing + 1) % 2 === 0 ? 'start' : 'end']),
                                 'y': height * JUNC_AREA
                             },
                             {
-                                'x': scaleX(d.value[index_missing == 0 ? 'start' : 'end']),
+                                'x': scaleX(d.value[index_missing === 0 ? 'start' : 'end']),
                                 'y': height * JUNC_AREA
                             },
                             {
-                                'x': scaleX(d.value[index_missing == 0 ? 'start' : 'end']),
+                                'x': scaleX(d.value[index_missing === 0 ? 'start' : 'end']),
                                 'y': height * JUNC_AREA + EXON_H
                             },
                             {
-                                'x': scaleX(d.value[(index_missing + 1) % 2 == 0 ? 'start' : 'end']),
+                                'x': scaleX(d.value[(index_missing + 1) % 2 === 0 ? 'start' : 'end']),
                                 'y': height * JUNC_AREA + EXON_H
                             }
                         ];
@@ -614,12 +614,12 @@ function spliceGraphD3() {
                     .duration(100)
                     .ease("linear")
                     .text(function (d, i) {
-                        if (strand == '-')
+                        if (strand === '-')
                             return (exons_only.length - (i)).toString();
                         return (i + 1).toString();
                     })
                     .attr("x", function (exon) {
-                        if (strand == '-')
+                        if (strand === '-')
                             return Math.round((2 * width - scaleX(exon.value.start) - scaleX(exon.value.end)) / 2);
                         return Math.round((scaleX(exon.value.end) + scaleX(exon.value.start)) / 2);
                     })
@@ -640,10 +640,10 @@ function spliceGraphD3() {
                     .attr("class", "intronret")
                     .attr("style", "")
                     .classed('missing', function (d) {
-                        return d.value.exon_type == 2;
+                        return d.value.exon_type === 2;
                     })
                     .classed('novel', function (d) {
-                        return d.value.exon_type == 1;
+                        return d.value.exon_type === 1;
                     })
                     .transition()
                     .duration(100)
@@ -653,7 +653,7 @@ function spliceGraphD3() {
                     })
                     .attr("y", Math.round(height * JUNC_AREA + EXON_H * 2 / 5))
                     .attr("width", function (d) {
-                        return Math.round(scaleX(d.value.end) - scaleX(d.value.start));
+                            return Math.round(scaleX(d.value.end) - scaleX(d.value.start));
                     })
                     .attr("height", Math.round(EXON_H * 2 / 5));
 
@@ -663,7 +663,7 @@ function spliceGraphD3() {
             var renderCoordsExtra = function (exons, scaleX) {
                 var coords_extra = [];
                 exons.forEach(function (e) {
-                    if (e.value.coords_extra.length > 0 && e.value.exon_type != 2) {
+                    if (e.value.coords_extra.length > 0 && e.value.exon_type !== 2) {
                         e.value.coords_extra.forEach(function (ce) {
                             coords_extra.push(ce);
                         });
@@ -755,7 +755,7 @@ function spliceGraphD3() {
 
                     exons.forEach(function (exon, index) {
                         origCoords = [exon.value.start, exon.value.end];
-                        if (origCoords[0] == coords[0] && origCoords[1] == coords[1]) {
+                        if (origCoords[0] === coords[0] && origCoords[1] === coords[1]) {
                             // number of half exons before this exon
                             halfExonsLength = d3Els.halfExons.filter(function (d) {
                                 return d.key < exon.key
@@ -775,22 +775,22 @@ function spliceGraphD3() {
                     });
 
                     // junctions in genes with strand '-' are colored backwards
-                    if (strand == '-')
+                    if (strand === '-')
                         colorEls.reverse();
 
                     // ir and ir lines are colored at the same time
                     irArray = [];
 
                     intronRetentions.forEach(function (ir, index) {
-                        if (isSource && coords[1] == ir.value.start - 1 ||
-                            !isSource && coords[0] == ir.value.end + 1) {
+                        if (isSource && coords[1] === ir.value.start - 1 ||
+                            !isSource && coords[0] === ir.value.end + 1) {
                             irArray.push(d3Els.intronRets[0][index]);
                         }
                     });
 
                     irLines.forEach(function (irLine, index) {
-                        if (!isSource && coords[0] == irLine.end ||
-                            isSource && coords[1] == irLine.start) {
+                        if (!isSource && coords[0] === irLine.end ||
+                            isSource && coords[1] === irLine.start) {
                             d3.select(d3Els.irReads[0][index]).classed('highlight-lsv-blurred', false);
                             irArray.push(d3Els.irLines[0][index]);
                         }
@@ -901,7 +901,7 @@ function spliceGraphD3() {
                 });
             });
 
-            if (strand == '-')
+            if (strand === '-')
                 d3.select(this).selectAll(":not(text)").attr("transform", "translate(" + width + ",0) scale(-1 , 1)");
             d3.select(this).selectAll("svg").attr("transform", "");
 
