@@ -105,9 +105,10 @@ class BasicPipeline:
 
     def calc_weights(self, weight_type, file_list, list_of_lsv, lock_arr, lchnksize, q, name, store=True):
 
-        if weight_type.lower() == WEIGTHS_AUTO:
+        if weight_type.lower() == WEIGTHS_AUTO and len(file_list) >= 3:
             """ Calculate bootstraps samples and weights """
             file_locks = [mp.Lock() for xx in file_list]
+
             majiq_io.create_bootstrap_file(file_list, self.outDir, name, m=self.m)
 
             pool = mp.Pool(processes=self.nthreads, initializer=quantification_init,
@@ -138,7 +139,7 @@ class BasicPipeline:
             else:
                 wgts = rho
 
-        elif weight_type.lower() == WEIGTHS_NONE:
+        elif weight_type.lower() == WEIGTHS_NONE or len(file_list) < 3:
             wgts = np.ones(shape=(len(file_list)))
 
         else:
