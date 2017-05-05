@@ -134,6 +134,7 @@ class BasicPipeline:
 
             wgts = calc_local_weights(divs, rho, self.local)
             if store:
+
                 majiq_io.store_weights_bootstrap(lsvs, wgts, file_list, self.outDir, name)
                 wgts = None
             else:
