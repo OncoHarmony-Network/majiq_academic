@@ -653,7 +653,7 @@ function spliceGraphD3() {
                     })
                     .attr("y", Math.round(height * JUNC_AREA + EXON_H * 2 / 5))
                     .attr("width", function (d) {
-                            return Math.round(scaleX(d.value.end) - scaleX(d.value.start));
+                        return Math.round(scaleX(d.value.end) - scaleX(d.value.start));
                     })
                     .attr("height", Math.round(EXON_H * 2 / 5));
 
@@ -693,31 +693,10 @@ function spliceGraphD3() {
                     .rangeRound([padding[3], width - padding[1]]);
             };
 
+
             var highlightLSV = function (spliceDiv, strand, d3Els) {
-                var lsvID;
-                var coords;
-                var origCoords;
-                var row;
-                var halfExonsLength;
-                var colorEls;
-                var isSource;
-                var wls;
-                var irArray;
-                var alreadySelected;
-                var c;
-                var w;
-                var isWeighted;
-
                 var highlightLSVs = spliceDiv.parentNode.parentNode.querySelectorAll('[value="highlight"]:checked');
-                var colors = ['red', 'blue', 'green', 'purple', 'orange', 'brown', 'pink', 'grey'];
-
-                var exons = orig_objs.exons.filter(function (d) {
-                    return !d.value.intron_retention;
-                });
-
-                var junctions = orig_objs.junc.filter(function (d) {
-                    return d.intron_retention === 0;
-                });
+                var colors = ['red', 'blue', 'green', 'purple', 'orange', 'brown', 'pink', 'grey'].reverse();
 
                 var intronRetentions = orig_objs.exons.filter(function (d) {
                     return d.value.intron_retention;
@@ -738,79 +717,133 @@ function spliceGraphD3() {
                 };
 
                 if (highlightLSVs.length) {
-                    d3Els.junctions.classed('highlight-lsv-blurred', true);
-                    d3Els.numReads.classed('highlight-lsv-blurred', true);
-                    d3Els.irReads.classed('highlight-lsv-blurred', true);
-                    d3Els.irLines.classed('highlight-lsv-blurred', true);
+                    d3.select(spliceDiv).selectAll('.junction, .irreads, .irlines, .readcounts')
+                        .classed('highlight-lsv-blurred', true);
                 }
 
                 highlightLSVs.forEach(function (highlighLSV) {
-                    row = highlighLSV.parentNode.parentNode.parentNode.parentNode.querySelectorAll('td');
-                    isWeighted = row[0].querySelector('.weighted:checked');
-                    lsvID = row[1].textContent.split(':');
-                    coords = lsvID[1].split("-");
-                    isSource = lsvID[2] === "source";
-                    colorEls = [];
-                    wls = weightedLines(row);
+                    var color_index = 0;
+                    var row = highlighLSV.parentNode.parentNode.parentNode.parentNode.querySelectorAll('td');
+                    var isWeighted = row[0].querySelector('.weighted:checked');
+                    var lsvID = row[1].textContent.split(':');
+                    var coords = lsvID[1].split("-").map(function (c) {
+                        return Number(c)
+                    });
+                    var isSource = lsvID[2] === "source";
+                    var lsvType = row[2].querySelector('p').textContent;
+                    var hasIR = lsvType[lsvType.length - 1] === 'i';
+                    var isTarget = !isSource;
+                    var isPositiveStrand = strand === '+';
+                    var isNegativeStrand = !isPositiveStrand;
+                    var junc_indexes;
+                    var wls = weightedLines(row).reverse();
+                    var d3AllExons = d3.select(spliceDiv).selectAll('.exon, .halfexon, .intronRet')[0];
+                    var d3AllJunctions = d3.select(spliceDiv).selectAll('.junction, .irlines')[0];
+                    var d3AllReads = d3.select(spliceDiv).selectAll('.readcounts, .irreads')[0];
+                    var reference_exon = orig_objs.exons.find(function (exon) {
+                        return exon.value.start === coords[0] && exon.value.end === coords[1]
+                    });
+                    var colorElement = function (el, color_index, lineWeight) {
+                        var alreadySelected;
+                        var c;
+                        var w;
 
-                    exons.forEach(function (exon, index) {
-                        origCoords = [exon.value.start, exon.value.end];
-                        if (origCoords[0] === coords[0] && origCoords[1] === coords[1]) {
-                            // number of half exons before this exon
-                            halfExonsLength = d3Els.halfExons.filter(function (d) {
-                                return d.key < exon.key
-                            })[0].length;
-                            var exon_index = index - halfExonsLength;
-                            d3.select(d3Els.exons[0][exon_index]).classed('highlight-lsv', true);
-                        }
+                        el.attr("style", function () {
+                            alreadySelected = d3.select(this).classed('highlight-lsv');
+                            c = alreadySelected ? "black" : 'rgb(' + BREWER_PALETTE[color_index % BREWER_PALETTE.length].join(',') + ')';
+                            w = !alreadySelected && isWeighted ? ";stroke-width:" + lineWeight : "";
+                            return 'stroke:' + c + ';fill:' + c + w + ";";
+                        })
+                    };
+                    var sortJunctions = function (a, b) {
+                        var s = d3.select(a).data()[0].start - d3.select(b).data()[0].start;
+                        if (s === 0)
+                            s = d3.select(a).data()[0].end - d3.select(b).data()[0].end;
+                        return s
+                    };
+
+                    // sort exons by start value.
+                    d3AllExons.sort(function (a, b) {
+                        return d3.select(a).data()[0].value.start - d3.select(b).data()[0].value.start
                     });
 
-                    junctions.forEach(function (junction, index) {
-                        origCoords = [junction.start, junction.end];
-                        if (coords[0] <= origCoords[isSource ? 0 : 1] &&
-                            coords[1] >= origCoords[isSource ? 0 : 1]) {
-                            colorEls.push([d3Els.junctions[0][index]]);
-                            d3.select(d3Els.numReads[0][index]).classed('highlight-lsv-blurred', false);
+                    // sort junctions by start then end value
+                    d3AllJunctions.sort(sortJunctions);
+                    d3AllReads.sort(sortJunctions);
+
+                    // highlight reference exon
+                    d3.select(d3AllExons[reference_exon.key]).classed('highlight-lsv', true);
+
+                    if (isSource) {
+                        junc_indexes = reference_exon.value.a5.slice()
+                    } else if (isTarget) {
+                        junc_indexes = reference_exon.value.a3.slice()
+                    }
+
+                    junc_indexes = junc_indexes.sort(function (a, b) {
+                        var junc_a = d3.select(d3AllJunctions[a]).data()[0];
+                        var junc_b = d3.select(d3AllJunctions[b]).data()[0];
+                        var val;
+
+                        if (isSource) {
+                            val = junc_a.start - junc_b.start;
+                            if (!val)
+                                val = junc_a.end - junc_b.end;
+                        } else if (isTarget) {
+                            val = junc_a.end - junc_b.end;
+                            if (!val)
+                                val = junc_a.start - junc_b.start;
                         }
+
+                        return val
                     });
 
-                    // junctions in genes with strand '-' are colored backwards
-                    if (strand === '-')
-                        colorEls.reverse();
+                    if (isNegativeStrand)
+                        junc_indexes.reverse();
 
-                    // ir and ir lines are colored at the same time
-                    irArray = [];
-
-                    intronRetentions.forEach(function (ir, index) {
-                        if (isSource && coords[1] === ir.value.start - 1 ||
-                            !isSource && coords[0] === ir.value.end + 1) {
-                            irArray.push(d3Els.intronRets[0][index]);
-                        }
+                    junc_indexes = junc_indexes.filter(function (ji) {
+                        return d3.select(d3AllJunctions[ji]).data()[0].intron_retention === 0
                     });
 
-                    irLines.forEach(function (irLine, index) {
-                        if (!isSource && coords[0] === irLine.end ||
-                            isSource && coords[1] === irLine.start) {
-                            d3.select(d3Els.irReads[0][index]).classed('highlight-lsv-blurred', false);
-                            irArray.push(d3Els.irLines[0][index]);
-                        }
+                    junc_indexes.forEach(function (junc_index) {
+                        var el = d3.select(d3AllJunctions[junc_index])
+                            .classed('highlight-lsv-blurred', false);
+                        colorElement(el, color_index, wls.pop());
+                        color_index++;
+                        el.classed('highlight-lsv', true);
+                        d3.select(d3AllJunctions[junc_index]).classed('highlight-lsv-blurred', false);
+                        d3.select(d3AllReads[junc_index]).classed('highlight-lsv-blurred', false);
                     });
 
-                    colorEls.push(irArray);
 
-                    colorEls.forEach(function (junction, index) {
-                        d3.selectAll(junction)
-                            .classed('highlight-lsv-blurred', false)
-                            .attr("style", function () {
-                                alreadySelected = d3.select(this).classed('highlight-lsv');
-                                c = alreadySelected ? "black" : colors[index];
-                                w = !alreadySelected && isWeighted ? ";stroke-width:" + wls[index] : "";
-                                return 'stroke:' + c + ';fill:' + c + w + ";";
-                            })
-                            .classed('highlight-lsv', true);
-                    })
+                    if (hasIR) {
+                        var lineWeight = wls.pop();
+                        var el;
+
+                        intronRetentions.forEach(function (ir, index) {
+                            if ((isTarget && ir.value.end + 1 === reference_exon.value.start) ||
+                                (isSource && ir.value.start - 1 === reference_exon.value.end)) {
+                                el = d3.select(d3Els.intronRets[0][index]);
+                                colorElement(el, color_index, lineWeight);
+                            }
+                        });
+
+                        irLines.forEach(function (line, index) {
+                            if ((isTarget && line.end === reference_exon.value.start) ||
+                                (isSource && line.start === reference_exon.value.end)) {
+                                el = d3.select(d3Els.irLines[0][index])
+                                    .classed('highlight-lsv-blurred', false);
+                                colorElement(el, color_index, lineWeight);
+                                d3.select(d3Els.irReads[0][index])
+                                    .classed('highlight-lsv-blurred', false)
+                            }
+                        })
+                    }
+
+
                 })
             };
+
 
             // are we displaying normalized reads?
             var toggleReadCounts = this.parentNode.parentNode.querySelector('.readCounts');
