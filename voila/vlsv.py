@@ -2,8 +2,9 @@ from collections import defaultdict
 
 import numpy as np
 
-from voila.hdf5 import BinsDataSet, Psi1DataSet, Psi2DataSet
+from voila.hdf5 import BinsDataSet, Psi1DataSet, Psi2DataSet, HDF5
 from voila.splice_graphics import LsvGraphic
+from voila.utils.voila_log import voila_log
 
 
 class OrphanJunctionException(Exception):
@@ -11,8 +12,52 @@ class OrphanJunctionException(Exception):
         self.message = m
 
 
+class HetGroups(HDF5):
+    def __init__(self, experiment_names):
+        super(HetGroups, self).__init__()
+        self.junction_ids = []
+        self.experiment_names = experiment_names
+        self.het_groups = []
+        self.group_names = []
+        self.stat_names = []
+        self.stats = []
+
+    def add_group(self, expected_psi, median, group_name):
+        if group_name in self.group_names:
+            voila_log().error('The HET group name of "{0}" is already used.'.format(group_name))
+        else:
+            self.het_groups.append(HetGroup(expected_psi, median))
+            self.group_names.append(group_name)
+
+    def add_junction(self, stats, stat_name, junction_id):
+        if junction_id in self.junction_ids:
+            voila_log().error('The junction ID of "{0}" is already used.'.format(junction_id))
+        else:
+            self.stat_names.append(stat_name)
+            self.stats.append(stats)
+
+    def cls_list(self):
+        return {'het_groups': HetGroup}
+
+    @classmethod
+    def easy_from_hdf5(cls, h):
+        return cls(None).from_hdf5(h)
+
+
+class HetGroup(HDF5):
+    def __init__(self, expected_psi, median):
+        super(HetGroup, self).__init__()
+        self.expected_psi = expected_psi
+        self.median = median
+
+    @classmethod
+    def easy_from_hdf5(cls, h):
+        return cls(None, None).from_hdf5(h)
+
+
 class VoilaLsv(LsvGraphic):
-    def __init__(self, bins_list, lsv_graphic, means=None, means_psi1=None, psi1=None, means_psi2=None, psi2=None):
+    def __init__(self, bins_list, lsv_graphic, means=None, means_psi1=None, psi1=None, means_psi2=None, psi2=None,
+                 het_groups=None):
         """
         The lsv data voila needs to visualize LSVs.
         :param bins_list: bins matrix
@@ -23,6 +68,8 @@ class VoilaLsv(LsvGraphic):
         :param means_psi2: means data for psi2
         :param bin: psi2 matrix
         """
+
+        assert bins_list is not None, 'Must have bins data for LSV.'
 
         if lsv_graphic:
             super(VoilaLsv, self).__init__(
@@ -46,6 +93,8 @@ class VoilaLsv(LsvGraphic):
         self.trunc_means = means
         self.trunc_means_psi1 = means_psi1
         self.trunc_means_psi2 = means_psi2
+
+        self.het_groups = het_groups
 
         self.categories = None
         self.variances = []
@@ -175,7 +224,7 @@ class VoilaLsv(LsvGraphic):
         return max(means[means > 0].sum(), abs(means[means < 0].sum())) >= threshold
 
     def exclude(self):
-        return ['categories', 'trunc_bins', 'trunc_psi1', 'trunc_psi2']
+        return ['categories', 'trunc_bins', 'trunc_psi1', 'trunc_psi2', 'het_groups']
 
     def to_hdf5(self, h, use_id=True):
         if use_id:
@@ -198,6 +247,10 @@ class VoilaLsv(LsvGraphic):
             # psi2
             Psi2DataSet(h, self.trunc_psi2).encode_list()
 
+        # het groups
+        het_groups_grp = h.create_group('het_groups')
+        self.het_groups.to_hdf5(het_groups_grp)
+
     def from_hdf5(self, h):
         # categories
         self.categories = {}
@@ -217,6 +270,8 @@ class VoilaLsv(LsvGraphic):
 
         # psi2
         self.trunc_psi2 = Psi2DataSet(h).decode_list()
+
+        self.het_groups = HetGroups.easy_from_hdf5(h['het_groups'])
 
         return super(VoilaLsv, self).from_hdf5(h)
 
