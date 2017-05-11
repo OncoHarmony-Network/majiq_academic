@@ -359,7 +359,7 @@ def tab_output(args, majiq_output):
         group1 = majiq_output['meta_exps']['group1']
         group2 = majiq_output['meta_exps']['group2']
         fieldnames = fieldnames[:3] + ['E(dPSI) per LSV junction',
-                                       'P(|E(dPSI)|>=%.2f) per LSV junction' % args.threshold,
+                                       'P(|dPSI|>=%.2f) per LSV junction' % args.threshold,
                                        '%s E(PSI)' % group1, '%s E(PSI)' % group2]
 
     fieldnames += ['LSV Type', 'A5SS', 'A3SS', 'ES', 'Num. Junctions', 'Num. Exons', 'De Novo Junctions', 'chr',
@@ -415,7 +415,7 @@ def tab_output(args, majiq_output):
                         'E(dPSI) per LSV junction': semicolon_join(
                             lsv.excl_incl[i][1] - lsv.excl_incl[i][0] for i in range(len(lsv.bins))
                         ),
-                        'P(|E(dPSI)|>=%.2f) per LSV junction' % args.threshold: semicolon_join(
+                        'P(|dPSI|>=%.2f) per LSV junction' % args.threshold: semicolon_join(
                             vlsv.matrix_area(np.array(bin), args.threshold, collapsed_mat=True).sum() for bin in
                             lsv.bins
                         ),
