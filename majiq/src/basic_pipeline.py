@@ -1,22 +1,16 @@
-from matplotlib import use
-use('Agg')
-
+import majiq.src.io as majiq_io
+from majiq.src.polyfitnb import fit_nb
 import abc
-import pickle
-from multiprocessing import Pool, Process
-import os
-import gc
-
 import numpy as np
 from numpy.ma import masked_less
-
-from majiq.src import builder as majiq_builder
-from majiq.src.utils.utils import create_if_not_exists, get_logger
-import majiq.src.filter as majiq_filter
-import majiq.src.io as majiq_io
-import majiq.src.pipe as pipe
-import majiq.src.normalize as majiq_norm
-from majiq.src.polyfitnb import fit_nb
+import majiq.src.utils as majiq_utils
+from majiq.src.psi import divs_from_bootsamples, calc_rho_from_divs, calc_local_weights
+from majiq.src.multiproc import QueueMessage, quantification_init, queue_manager
+from majiq.src.constants import *
+import sys
+import traceback
+import multiprocessing as mp
+import collections
 
 # ###############################
 # Data loading and Boilerplate #
@@ -31,12 +25,41 @@ def get_clean_raw_reads(matched_info, matched_lsv, outdir, names, num_exp):
 
             num = jlist.sum(axis=1)
             res.append([lsv[1], num.data])
-
-    with open('%s/clean_reads.%s.pkl' % (outdir, names), 'wb') as fp:
-        pickle.dump(res, fp)
+    majiq_io.dump_bin_file(res, '%s/clean_reads.%s.pkl' % (outdir, names))
 
 
-def _pipeline_run(pipeline):
+def bootstrap_samples_with_divs(args_vals):
+
+    try:
+        list_of_lsv, chnk = args_vals
+        logger = majiq_utils.get_logger("%s/%s.majiq.log" % (quantification_init.output, chnk),
+                                        silent=quantification_init.silent, debug=quantification_init.debug)
+
+        lsvs_to_work, fitfunc_r = majiq_io.get_extract_lsv_list(list_of_lsv, quantification_init.files)
+
+        divs = divs_from_bootsamples(lsvs_to_work, fitfunc_r=fitfunc_r,
+                                     n_replica=len(quantification_init.files), pnorm=1, m_samples=quantification_init.m,
+                                     k_positions=quantification_init.k, discardzeros=quantification_init.discardzeros,
+                                     trimborder=quantification_init.trimborder, debug=False,
+                                     nbins=quantification_init.nbins, store_bootsamples=True,
+                                     lock_array=quantification_init.lock_per_file,
+                                     outdir=quantification_init.output, name=quantification_init.names)
+
+        qm = QueueMessage(QUEUE_MESSAGE_BOOTSTRAP, (lsvs_to_work, divs), chnk)
+        quantification_init.queue.put(qm, block=True)
+
+        qm = QueueMessage(QUEUE_MESSAGE_END_WORKER, None, chnk)
+        quantification_init.queue.put(qm, block=True)
+        quantification_init.lock[chnk].acquire()
+        quantification_init.lock[chnk].release()
+
+    except Exception as e:
+        traceback.print_exc()
+        sys.stdout.flush()
+        raise()
+
+
+def pipeline_run(pipeline):
     """ Exception catching for all the pipelines """
     try:
         return pipeline.run()
@@ -45,25 +68,25 @@ def _pipeline_run(pipeline):
             pipeline.logger.info("MAJIQ manually interrupted. Avada kedavra...")
 
 
-def builder(args):
-    majiq_builder.main(args)
-
-
 class BasicPipeline:
+    #
+    # boots_conf = collections.namedtuple('boots_conf', 'm, k, discardzeros, trimborder')
+    # basic_conf = collections.namedtuple('basic_conf', 'output, nbins, silent, debug')
+
     def __init__(self, args):
         """Basic configuration shared by all pipelines"""
-        #trick to dump argparse arguments into self
+
         self.__dict__.update(args.__dict__)
-        create_if_not_exists(self.output)
+
         if self.plotpath:
-            create_if_not_exists(self.plotpath)
+            majiq_utils.create_if_not_exists(self.plotpath)
         self.logger_path = self.logger
         if not self.logger_path:
-            self.logger_path = self.output
-
+            self.logger_path = self.outDir
 
         self.nthreads = args.nthreads
         self.psi_paths = []
+        self.nchunks = self.nthreads
         try:
             self.replica_len = [len(self.files1), len(self.files2)]
         except AttributeError:
@@ -72,150 +95,65 @@ class BasicPipeline:
     def fitfunc(self, const_junctions):
         """Calculate the Negative Binomial function to sample from using the Constitutive events"""
         if self.debug:
-            self.logger.debug("Skipping fitfunc because --debug!")
+            if self.logger is not None:
+                self.logger.debug("Skipping fitfunc because --debug!")
             return np.poly1d([1, 0])
         else:
-            self.logger.info("Fitting NB function with constitutive events...")
-            return fit_nb(const_junctions, "%s/nbfit" % self.output, self.plotpath, logger=self.logger)
+            if self.logger is not None:
+                self.logger.debug("Fitting NB function with constitutive events...")
+            return fit_nb(const_junctions, "%s/nbfit" % self.outDir, self.plotpath, logger=self.logger)
+
+    def calc_weights(self, weight_type, file_list, list_of_lsv, lock_arr, lchnksize, q, name, store=True):
+
+        if weight_type.lower() == WEIGTHS_AUTO and len(file_list) >= 3:
+            """ Calculate bootstraps samples and weights """
+            file_locks = [mp.Lock() for xx in file_list]
+
+            majiq_io.create_bootstrap_file(file_list, self.outDir, name, m=self.m)
+
+            pool = mp.Pool(processes=self.nthreads, initializer=quantification_init,
+                           initargs=[q, lock_arr, self.outDir, name, self.silent, self.debug, self.nbins,
+                                     self.m, self.k, self.discardzeros, self.trimborder, file_list, None,
+                                     None, file_locks],
+                           maxtasksperchild=1)
+
+            [xx.acquire() for xx in lock_arr]
+            pool.map_async(bootstrap_samples_with_divs,
+                           majiq_utils.chunks2(list_of_lsv, lchnksize, extra=range(self.nthreads)))
+            pool.close()
+            divs = []
+            lsvs = []
+            queue_manager(input_h5dfp=None, output_h5dfp=None, lock_array=lock_arr, result_queue=q,
+                          num_chunks=self.nthreads, out_inplace=(lsvs, divs),
+                          logger=self.logger)
+            pool.join()
+            lsvs = {xx: vv for xx, vv in enumerate(lsvs)}
+            divs = np.array(divs)
+            rho = calc_rho_from_divs(divs, thresh=self.weights_threshold, alpha=self.weights_alpha,
+                                     nreps=len(file_list), logger=self.logger)
+
+            wgts = calc_local_weights(divs, rho, self.local)
+            if store:
+
+                majiq_io.store_weights_bootstrap(lsvs, wgts, file_list, self.outDir, name)
+                wgts = None
+            else:
+                wgts = rho
+
+        elif weight_type.lower() == WEIGTHS_NONE or len(file_list) < 3:
+            wgts = np.ones(shape=(len(file_list)))
+
+        else:
+            wgts = np.array([float(xx) for xx in weight_type.split(',')])
+            if len(wgts) != len(file_list):
+                self.logger.error('weights wrong arguments number of weights values is different than number of '
+                                  'specified replicas for that group')
+
+        return wgts
+
 
 
     @abc.abstractmethod
-    def run(self, lsv):
+    def run(self):
         """This is the entry point for all pipelines"""
         return
-
-
-
-
-################################
-# PSI calculation pipeline     #
-################################
-
-def calcpsi(args):
-    return _pipeline_run(CalcPsi(args))
-
-
-class CalcPsi(BasicPipeline):
-    def run(self):
-        self.calcpsi()
-
-    def pre_psi(self, nchunks, logger=None):
-
-        if logger is None:
-            logger = get_logger("%s/majiq.log" % self.output, silent=False)
-
-        self.logger = logger
-
-        num_exp = len(self.files)
-        meta_info = [0] * num_exp
-        filtered_lsv = [None] * num_exp
-        fitfunc = [None] * num_exp
-        for ii, fname in enumerate(self.files):
-            meta_info[ii], lsv_junc, const = majiq_io.load_data_lsv(fname, self.name, logger)
-            #fitting the function
-            #lsv_junc, const = self.gc_content_norm(lsv_junc, const)
-            fitfunc[ii] = self.fitfunc(const[0])
-            filtered_lsv[ii] = majiq_norm.mark_stacks(lsv_junc, fitfunc[ii], self.markstacks, self.logger)
-
-        matched_lsv, matched_info = majiq_filter.quantifiable_in_group(filtered_lsv, self.minpos, self.minreads,
-                                                                       min_exp=self.min_exp, logger=logger)
-
-        get_clean_raw_reads(matched_info, matched_lsv, self.output, self.name, num_exp)
-
-        csize = len(matched_lsv) / nchunks
-        outfdir = '%s/tmp/chunks/' % self.output
-        if not os.path.exists(outfdir):
-            os.makedirs(outfdir)
-
-        logger.info("Saving meta info for %s..." % self.name)
-        tout = open("%s/tmp/%s_metainfo.pickle" % (self.output, self.name), 'w+')
-        pickle.dump(meta_info, tout)
-        tout.close()
-
-        logger.info("Creating %s chunks with <= %s lsv" % (nchunks, csize))
-        for nthrd in xrange(nchunks):
-            lb = nthrd * csize
-            ub = min((nthrd + 1) * csize, len(matched_lsv))
-            if nthrd == nchunks - 1:
-                ub = len(matched_lsv)
-            lsv_list = matched_lsv[lb:ub]
-            lsv_info = matched_info[lb:ub]
-
-            out_file = '%s/chunk_%d.pickle' % (outfdir, nthrd)
-            tout = open(out_file, 'w+')
-            pickle.dump([lsv_list, lsv_info, num_exp, fitfunc], tout)
-            tout.close()
-
-        gc.collect()
-
-    def calcpsi(self):
-        """
-        Given a file path with the junctions, return psi distributions.
-        write_pickle indicates if a .pickle should be saved in disk
-        """
-
-        logger = get_logger("%s/majiq.log" % self.logger_path, silent=self.silent, debug=self.debug)
-        logger.info("")
-        logger.info("Running Psi ...")
-        logger.info("GROUP: %s" % self.files)
-
-        conf = {'minnonzero': self.minpos,
-                'minreads': self.minreads,
-                'm': self.m,
-                'k': self.k,
-                'discardzeros': self.discardzeros,
-                'trimborder': self.trimborder,
-                'debug': self.debug,
-                'nbins': 40,
-                'name': self.name}
-
-        nchunks = self.nthreads
-        if self.nthreads > 1:
-            p = Process(target=self.pre_psi, args=[nchunks])
-            p.start()
-            p.join()
-
-            pool = Pool(processes=self.nthreads)
-        else:
-            self.pre_psi(nchunks)
-
-        for nthrd in xrange(nchunks):
-            chunk_fname = '%s/tmp/chunks/chunk_%d.pickle' % (self.output, nthrd)
-            if self.nthreads == 1:
-                pipe.parallel_lsv_child_calculation(pipe.calcpsi,
-                                                    [chunk_fname, conf],
-                                                    '%s/tmp' % self.output,
-                                                    self.name,
-                                                    nthrd)
-
-            else:
-                pool.apply_async(pipe.parallel_lsv_child_calculation, [pipe.calcpsi,
-                                                                       [chunk_fname, conf],
-                                                                       '%s/tmp' % self.output,
-                                                                       self.name,
-                                                                       nthrd])
-
-        if self.nthreads > 1:
-            pool.close()
-            pool.join()
-
-        posterior_matrix = []
-        names = []
-        logger.info("GATHER pickles")
-        for nt in xrange(self.nthreads):
-            tempfile = open("%s/tmp/%s_th%s.calcpsi.pickle" % (self.output, self.name, nt))
-            ptempt = pickle.load(tempfile)
-            posterior_matrix.extend(ptempt[0])
-            names.extend(ptempt[1])
-
-        logger.info("Getting meta info for %s..." % self.name)
-        tin = open("%s/tmp/%s_metainfo.pickle" % (self.output, self.name))
-        meta_info = pickle.load(tin)
-        tin.close()
-
-
-        pickle_path = "%s/%s_psigroup.pickle" % (self.output, self.name)
-        majiq_io.dump_lsvs_voila(pickle_path, posterior_matrix, names, meta_info)
-        # pickle.dump([posterior_matrix, names, meta_info], open(pickle_path, 'w'))
-        logger.info("PSI calculation for %s ended succesfully! Result can be found at %s" % (self.name, self.output))
-        logger.info("Alakazam! Done.")

@@ -32,7 +32,7 @@ def scatterplot_rtpcr_majiq(rt_pcr_majiq, rt_pcr_miso, majiq, miso, plotpath, pc
 
 
     diagonal = np.linspace(0, 1, num=len(rt_pcr_majiq_all))
-    # print majiq[0], rt_pcr_majiq[0], miso[0]
+    # print old_majiq[0], rt_pcr_majiq[0], miso[0]
     # fit = np.polyfit(majiq_all, rt_pcr_majiq_all, 1)
     fit = np.polyfit(np.append(majiq_all, majiq_extra_all), np.append(rt_pcr_majiq_all, np.array(pcr_majiq_extra_all)), 1)
     fit_fn = np.poly1d(fit) # fit_fn is now a function which takes in x and returns an estimate for y
@@ -235,7 +235,7 @@ def parse_rtpcr_results(pcr_file, names_pcr2majiq_dict):
 
 def parse_majiq_results(files_majiq, names_junc_majiq):
     majiq_dict = defaultdict(list)
-    files_majiq = scripts.utils.list_files_or_dir(files_majiq, containing='majiq')
+    files_majiq = scripts.utils.list_files_or_dir(files_majiq, containing='old_majiq')
     for mfile in files_majiq:
         expected_psis = []
         with open(mfile) as mfile_open:
@@ -313,13 +313,13 @@ def plot_dpsi_rtpcr_majiq_miso(rt_pcr_majiq, rt_pcr_miso, majiq, miso, plotpath)
 def main():
     parser = argparse.ArgumentParser(description="Compare PSIs computed with MAJIQ against the RT-PCR results.")
     parser.add_argument("pcr", help="Tab-delimted file with the RT-PCR scores")
-    parser.add_argument("--majiq-rest", required=True, dest='majiq_rest', nargs='+', help='MAJIQ PSI predictions for resting RNA-Seq data.')
-    parser.add_argument("--majiq-stim", required=True, dest='majiq_stim', nargs='+', help='MAJIQ PSI predictions for stimulated RNA-Seq data.')
+    parser.add_argument("--old_majiq-rest", required=True, dest='majiq_rest', nargs='+', help='MAJIQ PSI predictions for resting RNA-Seq data.')
+    parser.add_argument("--old_majiq-stim", required=True, dest='majiq_stim', nargs='+', help='MAJIQ PSI predictions for stimulated RNA-Seq data.')
     parser.add_argument("--miso-rest", required=True, dest='miso_rest', nargs='*', help='MISO PSI predictions for resting RNA-Seq data.')
     parser.add_argument("--miso-stim", required=True, dest='miso_stim', nargs='*', help='MISO PSI predictions for stimulated RNA-Seq data.')
     parser.add_argument("--names-map-file", required=True, dest='names_map_file', help='File containing the mapping for events names used in MAJIQ and RT-PCR files.')
 
-    parser.add_argument("--majiq-extra", dest='majiq_extra', nargs='+', help='MAJIQ PSI predictions for extra conditions.')
+    parser.add_argument("--old_majiq-extra", dest='majiq_extra', nargs='+', help='MAJIQ PSI predictions for extra conditions.')
     parser.add_argument("--miso-extra", dest='miso_extra', nargs='+', help='MISO PSI predictions for extra conditions.')
     parser.add_argument("--pcr-extra", dest='pcr_extra', help='RT-PCR validations for extra conditions.')
     parser.add_argument("--tlb-extra", dest='tlb_extra', help='TLB for ENSEMBL gene and transcript names.')
@@ -574,8 +574,8 @@ def main():
                 else:
                     majiq[0].append(majiq_rest_stat)
                     majiq[1].append(majiq_stim_stat)
-                    # majiq[0].append(majiq_rest_dist)
-                    # majiq[1].append(majiq_stim_dist)
+                    # old_majiq[0].append(majiq_rest_dist)
+                    # old_majiq[1].append(majiq_stim_dist)
 
                 if abs(miso_rest_stat - rt_pcr_miso[0][-1]) > flipped_thres or abs(miso_stim_stat - rt_pcr_miso[1][-1]) > flipped_thres:
                     flipped_miso_dict[name] = "%s\t%s\t%f\t%f\t%f\t%f\t%d\t%d\n" % (names_majiq2pcr_dict[name], name, rt_pcr_miso[0][-1], miso_rest_stat, rt_pcr_miso[1][-1], miso_stim_stat, int(gene_names_counts[names_majiq2pcr_dict[name]]<2), int(len(names_junc_majiq[str(name).split('#')[0]])<2) )
@@ -607,13 +607,13 @@ def main():
                 # print "[Stimuli]: Mean of %s:\t%f" % (majiq_stim_dict[name], float(majiq_stim_stat))
 
 
-    # print repr(rt_pcr), repr(majiq)
+    # print repr(rt_pcr), repr(old_majiq)
 
 
 
     scatterplot_rtpcr_majiq(rt_pcr_majiq, rt_pcr_miso, majiq, miso, args.plotpath, pcr_majiq_extra=lrtpcr_majiq_extra, pcr_miso_extra=lrtpcr_miso_extra, majiq_extra=lmajiq_extra, miso_extra=lmiso_extra)
 
-    # Save presumably flipped events in majiq
+    # Save presumably flipped events in old_majiq
     # flipped_lsv_names = [str(name_str).split("#")[0] for name_str in flipped_majiq_dict.keys()]
     with open('flipped_majiq_thres_%.2f.txt' % flipped_thres, 'w') as flipped_file:
         flipped_file.write("name_rtpcr\tname_majiq\trtpcr_rest%f\tmajiq_rest\trtpcr_stim\tmajiq_stim\tunique_rtpcr_name?\tlsv_1_way?\ttarget_junction_coord\n")

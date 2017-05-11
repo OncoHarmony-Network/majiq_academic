@@ -1,10 +1,10 @@
-from matplotlib import use, pyplot
-from scipy.stats import pearsonr
-from majiq.src import config as mglobals, config
-
+from matplotlib import use
 use('Agg')
-import os
 from matplotlib import pyplot as plt
+from scipy.stats import pearsonr
+from majiq.src.config import Config
+
+import os
 import numpy as np
 
 __author__ = 'jordi'
@@ -64,27 +64,29 @@ def plot_fitting(ecdf, plotpath, extra=[], title='', title_extra=[], plotname=No
         save_or_show(plotpath, fname)
 
 
-def plot_gc_content():
 
+
+def plot_gc_content():
+    majiq_config = Config()
     idx = 0
-    for tissue, list_idx in mglobals.tissue_repl.items():
-        pyplot.figure(idx)
+    for tissue, list_idx in majiq_config.tissue_repl.items():
+        plt.figure(idx)
         for exp_n in list_idx:
 #            f = interpolate.interp1d(mglobals.gc_means[exp_n], mglobals.gc_bins_vaL[exp_n])
 #            print mglobals.gc_means[exp_n]
-            mn = mglobals.gc_means[exp_n].min()
-            mx = mglobals.gc_means[exp_n].max()
+            mn = majiq_config.gc_means[exp_n].min()
+            mx = majiq_config.gc_means[exp_n].max()
             xx = np.arange(mn, mx, 0.001)
-            yy = mglobals.gc_factor[exp_n](xx)
+            yy = majiq_config.gc_factor[exp_n](xx)
             # print "XX ",exp_n, xx
             # print "Yy", exp_n, yy
-            pyplot.plot(xx, yy, label=mglobals.exp_list[exp_n])
-            pyplot.axis((0.3, 0.7, 0.5, 1.5))
-            pyplot.title("Gc factor")
-            pyplot.grid()
-            pyplot.legend(loc='upper left')
+            plt.plot(xx, yy, label=majiq_config.exp_list[exp_n])
+            plt.axis((0.3, 0.7, 0.5, 1.5))
+            plt.title("Gc factor")
+            plt.grid()
+            plt.legend(loc='upper left')
 #        pyplot.show()
-        pyplot.savefig('%s/gcontent_%s.png' % (mglobals.outDir, tissue))
+        plt.savefig('%s/gcontent_%s.png' % (majiq_config.outDir, tissue))
         idx += 1
 
 
@@ -115,3 +117,25 @@ def plot_pearsoncorr(var1, var2, my_title, my_xlabel, my_ylabel, plotpath=None, 
     plt.plot(var1, var2, '.')
     if plotpath:
         save_or_show(plotpath, my_title)
+
+
+def plot_matrix(matrix, my_title, plotname, plotpath):
+    plt.clf()
+    ax = plt.subplot(1, 1, 1)
+    plt.title(my_title)
+    plt.imshow(matrix)
+    plt.xlabel(u"PSI i")
+    plt.ylabel(u"PSI j")
+    ax.set_xticklabels([0, 0, 0.25, 0.5, 0.75, 1])
+    ax.set_yticklabels([0, 0, 0.25, 0.5, 0.75, 1])
+
+    _save_or_show(plotpath, plotname=plotname)
+
+
+def _save_or_show(plotpath, plotname=None):
+    """Generic function that either shows in a popup or saves the figure, depending if the plotpath flag"""
+    if plotpath:
+        plt.savefig("%s%s.png" % (plotpath, plotname), bbox_inches='tight')
+        plt.clf()
+    else:
+        plt.show()

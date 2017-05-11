@@ -7,7 +7,7 @@ import matplotlib.pyplot as plt
 from scipy.stats import beta
 from scipy.misc import logsumexp
 import majiq.src.plotting as mplot
-PSEUDO = 0.0001
+PSEUDO = 1e-300
 
 
 def likelihood(a_change, b_change, a_center, b_center, pi_change, pi_center, deltadata):
@@ -193,7 +193,7 @@ def plot_pi(p_mixture, fig):
 def EM(a_change, b_change, a_center, b_center, pi_change, pi_center, deltadata, num_iter, plotpath, logger=False):
     fig = plt.figure(figsize=[15, 10])
     prev_likelihood = likelihood(a_change, b_change, a_center, b_center, pi_change, pi_center, deltadata)
-    if logger: logger.info("INIT: Center %s Change %s Likelihood: %.5f" % (
+    if logger: logger.debug("INIT: Center %s Change %s Likelihood: %.5f" % (
         label_beta(a_center, b_center, pi_center), label_beta(a_change, b_change, pi_change), prev_likelihood))
 
     plot_all(a_center, b_center, pi_center, "Center", a_change, b_change, pi_change, "change", "Initial Parameters",
@@ -204,7 +204,7 @@ def EM(a_change, b_change, a_center, b_center, pi_change, pi_center, deltadata, 
                                                                                            b_center, pi_change,
                                                                                            pi_center, deltadata)
         current_likelihood = likelihood(a_change, b_change, a_center, b_center, pi_change, pi_center, deltadata)
-        if logger: logger.info("EM iteration %s: Center %s Change %s Likelihood: %.5f" % (
+        if logger: logger.debug("EM iteration %s: Center %s Change %s Likelihood: %.5f" % (
             iteration, label_beta(a_center, b_center, pi_center), label_beta(a_change, b_change, pi_change),
             current_likelihood))
         plot_all(a_center, b_center, pi_center, "Center", a_change, b_change, pi_change, "Change",
@@ -353,16 +353,17 @@ def plot_all_lsv(deltadata, beta_params, pmix, labels, figure_title):
     plot_pi(pmix, sp[1, 1])
     plt.suptitle(figure_title, fontsize=24)
 
+
 def loglikelihood(D, beta_mix, logp_mix, logger=False):
+
     N = D.shape[0]
     K = beta_mix.shape[0]
     ''' logp_DgK = log P (D | model K ) for each data point without the weight '''
-    logp_DgK = np.zeros(shape=( N, K), dtype=np.float)
-    #logp_DgK = ma.asarray(logp_DgK)
-    #print "logp_mix=%s"%(logp_mix)
+    logp_DgK = np.zeros(shape=(N, K), dtype=np.float)
+
     for k in xrange(K):
-        #print "beta_mix[%d] = %s"%(k, beta_mix[k])
-        logp_DgK[:, k] = np.log(beta.pdf(D[:, 0], beta_mix[k, 0], beta_mix[k, 1]))
+
+        logp_DgK[:, k] = np.log(beta.pdf(D[:, 0], beta_mix[k, 0], beta_mix[k, 1]) + PSEUDO)
 
     logp_D = logp_DgK + logp_mix * np.ones(shape=(N, 1), dtype=np.float)
 
@@ -379,32 +380,6 @@ def loglikelihood(D, beta_mix, logp_mix, logger=False):
     return logp_D, logp_Dsum, LL, zrow
 
 
-# def loglikelihood(D, beta_mix, logp_mix, logger=False):
-#     N = D.shape[0]
-#     K = beta_mix.shape[0]
-#     ''' logp_DgK = log P (D | model K ) for each data point without the weight '''
-#     logp_DgK = np.zeros(shape=( N, K), dtype=np.float)
-#     logp_DgK = ma.asarray(logp_DgK)
-#     #print "logp_mix=%s"%(logp_mix)
-#     for k in xrange(K):
-#         #print "beta_mix[%d] = %s"%(k, beta_mix[k])
-#         logp_DgK[:, k] = ma.log(beta.pdf(D[:, 0], beta_mix[k, 0], beta_mix[k, 1]))
-# 
-#     logp_D = logp_DgK + logp_mix * np.ones(shape=(N, 1), dtype=np.float)
-# 
-#     dm = np.sum(logp_DgK.mask, axis=1)
-#     zrow = dm.astype(np.bool)
-#     no_zrow = np.logical_not(zrow)
-# 
-#     logp_Dsum = np.zeros(shape=(N), dtype=np.float)
-#     logp_Dsum[no_zrow] = logsumexp(logp_D[no_zrow, :], axis=1)
-#     logp_Dsum[zrow] = logsumexp(logp_D[zrow, :-1], axis=1)
-# 
-#     LL = np.sum(logp_Dsum * D[:, 1], axis=0)
-# 
-#     return logp_D, logp_Dsum, LL, zrow
-
-
 def EMBetaMixture(D, p0_mix, beta0_mix, num_iter, min_ratio=1e-5, logger=False, plotpath=None, nj=0, labels=None):
     D0 = D.copy()
     N = D.shape[0]
@@ -412,8 +387,8 @@ def EMBetaMixture(D, p0_mix, beta0_mix, num_iter, min_ratio=1e-5, logger=False, 
 
     c = 1
     a = -1
-    #transform the data to a z-space of 0-1
-    if min(D[:, 0]) < 0.0: D[:, 0] = (D[:, 0] + 1) / ( c - a)
+
+    if min(D[:, 0]) < 0.0: D[:, 0] = (D[:, 0] + 1) / (c - a)
     pmix = p0_mix
     beta_mix = beta0_mix
     logp_mix = np.log(pmix)
@@ -421,8 +396,9 @@ def EMBetaMixture(D, p0_mix, beta0_mix, num_iter, min_ratio=1e-5, logger=False, 
     logp_D, logp_Dsum, LL, zrow = loglikelihood(D, beta_mix, logp_mix)
     plot_all_lsv(D0, beta_mix, pmix, labels, 'iteration 0')
     mplot.save_or_show(plotpath, "iter_0.jun_%s" % nj)
-    if logger: logger.info("[NJ:%s] Initial Log_Likelihood %.3f \n" % (nj, LL))
-    #    pdb.set_trace()
+    if logger:
+        logger.debug("[NJ:%s] Initial Log_Likelihood %.3f \n" % (nj, LL))
+
     ones_1k = np.ones(shape=(1, K), dtype=np.float)
     for mm in xrange(num_iter):
         new_beta_mix = beta_mix
@@ -448,13 +424,13 @@ def EMBetaMixture(D, p0_mix, beta0_mix, num_iter, min_ratio=1e-5, logger=False, 
 
         LLold = LL
         logp_D, logp_Dsum, LL, zrow = loglikelihood(D, new_beta_mix, np.log(new_pmix))
-        if logger: logger.info("[NJ:%s] EM Iteration %d:\t LL: %.3f\n" % (nj, mm, LL))
+        if logger: logger.debug("[NJ:%s] EM Iteration %d:\t LL: %.3f\n" % (nj, mm, LL))
         plot_all_lsv(D0, beta_mix, pmix, labels, 'iteration %s' % str(mm + 1))
         mplot.save_or_show(plotpath, "iter_%05d.jun_%s" % (mm + 1, nj))
 
         if LL < LLold:
             if logger:
-                logger.info("Log_Likelihood DECREASE new %d old %d - Aborting ....\n" % (LL, LLold))
+                logger.debug("Log_Likelihood DECREASE new %d old %d - Aborting ....\n" % (LL, LLold))
             break
 
         pmix = new_pmix
@@ -463,7 +439,7 @@ def EMBetaMixture(D, p0_mix, beta0_mix, num_iter, min_ratio=1e-5, logger=False, 
 
         if np.exp(LL - LLold) < (1.0 + min_ratio):
             if logger:
-                logger.info("Ratio = %.3f < 1+R(%.3f) - Aborting ... \n" % (LL - LLold, min_ratio))
+                logger.debug("Ratio = %.3f < 1+R(%.3f) - Aborting ... \n" % (LL - LLold, min_ratio))
             break
 
     return beta_mix, np.array(pmix)

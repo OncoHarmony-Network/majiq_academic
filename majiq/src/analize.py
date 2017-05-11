@@ -1,12 +1,14 @@
-import numpy as np
-
+from majiq.src.config import Config
+import majiq.src.filter as majiq_filter
 from majiq.grimoire.lsv import SSOURCE, STARGET, InvalidLSV
-from majiq.src import config
+from majiq.src.constants import *
+import h5py
 
 
 def reliable_in_data(junc, exp_idx):
-    min_read_x_exp = config.MINREADS
-    min_npos_x_exp = config.MINPOS
+    majiq_config = Config()
+    min_read_x_exp = majiq_config.minreads
+    min_npos_x_exp = majiq_config.minpos
     in_data_filter = False
     cover = junc.coverage.toarray()[exp_idx]
     if junc.get_read_num(exp_idx) >= min_read_x_exp and np.count_nonzero(cover) >= min_npos_x_exp:
@@ -14,212 +16,88 @@ def reliable_in_data(junc, exp_idx):
     return in_data_filter
 
 
-def lsv_detection(gene_list, chrom, only_real_data=False, logging=None):
+def detect_lsv(exon, gn, lsv_type, dummy, only_annot=False):
+    majiq_config = Config()
+    sstype = {SSOURCE: ['5prime', 0], STARGET: ['3prime', 1]}
+    jlist = exon.get_junctions(sstype[lsv_type][0])
+    jlist = [x for x in jlist if x is not None and x.get_donor() is not None and x.get_acceptor() is not None]
+    if len(jlist) < 2:
+        return
 
-    lsv_list = {}
-    const_set = {}
-
-    for name, ind_list in config.tissue_repl.items():
-        lsv_list[name] = []
-        const_set[name] = set()
-
-    for gn in gene_list:
-        local_const = set(gn.get_all_junctions())
-        local_lsv_jun = {}
-        if gn.get_read_count().sum() == 0:
-            continue
-        dummy = {}
-        for name, ind_list in config.tissue_repl.items():
-            dummy[name] = [[], []]
-        for ex in gn.get_exon_list():
-            try:
-                ex.detect_lsv(gn, SSOURCE, dummy, local_lsv_jun)
-            except InvalidLSV as e:
-                #print e.msg
-                pass
-
-            try:
-                ex.detect_lsv(gn, STARGET, dummy, local_lsv_jun)
-            except InvalidLSV as e:
-                #print e.msg
-                pass
-
-        for name, ind_list in config.tissue_repl.items():
-
-            local_const.difference(local_lsv_jun)
-            const_set[name].update(local_const)
-
-            for ss in dummy[name][0]:
-                for st in dummy[name][1]:
-                    if ss.contained(st):
-                        break
-                else:
-                    lsv_list[name].append(ss)
-
-            for st in dummy[name][1]:
-                for ss in dummy[name][0]:
-                    if st.contained(ss):
-                        break
-                else:
-                    lsv_list[name].append(st) 
-
-    return lsv_list, const_set
-
-
-def lsv_detection_old(gene_list, chrom, only_real_data=False, logging=None):
-
-    num_ss_var = [[0] * 20, [0] * 20, 0]
-
-    const_set = [set() for xx in range(config.num_experiments)]
-    lsv_list = [[] for xx in range(config.num_experiments)]
-    jun = {}
-    for xx in config.tissue_repl.keys():
-        jun[xx] = set()
-
-    for gn in gene_list:
-        gn.check_exons()
-
-        mat, exon_list, tlb, var_ss = gn.get_rnaseq_mat(const_set, use_annot=not only_real_data)
-        vip = []
-        for idx, ex in enumerate(exon_list):
-            sc = ex.get_pcr_score()
-            if sc is None:
+    for name, ind_list in majiq_config.tissue_repl.items():
+        group_thresh = majiq_config.min_exp
+        if group_thresh == -1:
+            group_thresh = min((len(ind_list) * 0.5), 2)
+        counter = 0
+        for jj in jlist:
+            for exp_idx in ind_list:
+                if only_annot or majiq_filter.reliable_in_data(jj, exp_idx,
+                                                               minnonzero=majiq_config.minpos,
+                                                               min_reads=majiq_config.minreads):
+                    counter += 1
+            if counter < group_thresh:
                 continue
-            vip.append(idx)
-
-        for ss in range(2):
-            for ssnum in range(20):
-                num_ss_var[ss][ssnum] += var_ss[ss][ssnum]
-        num_ss_var[2] += var_ss[2]
-        # num_ss_var [1]+= var_ss[1]
-
-        # print "---------------- %s --------------"%gn.get_id()
-        # utils.print_junc_matrices(mat, tlb=tlb, fp=True)
-        SS, ST = lsv_matrix_detection(mat, tlb, (False, False, False), vip)
-        dummy = {}
-        group_thresh = {}
-        for name, ind_list in config.tissue_repl.items():
-            dummy[name] = [[], []]
-            group_thresh[name] = config.min_exp
-            if group_thresh[name] == -1:
-                group_thresh[name] = min((len(ind_list) * 0.5), 2)
-
-        for lsv_index, lsv_lst in enumerate((SS, ST)):
-            lsv_type = (SSOURCE, STARGET)[lsv_index]
-            sstype = ['5prime', '3prime'][lsv_index]
-            # print lsv_lst
+            break
+        else:
+            continue
+        lsv_in = gn.new_lsv_definition(exon, jlist, lsv_type)
+        dummy[name][sstype[lsv_type][1]].append(lsv_in)
 
 
-            for idx in lsv_lst:
-                jlist = exon_list[idx].get_junctions(sstype)
-                jlist = [x for x in jlist if x is not None]
-                if len(jlist) == 0:
-                    continue
+def wrap_result_file(lsv, name, gc_vfunc, lsv_list, rna_files, lock_per_file=None):
+    majiq_config = Config()
+    for exp_idx in majiq_config.tissue_repl[name]:
 
-                lsv_in = gn.new_lsv_definition(exon_list[idx], jlist, lsv_type)
-                if lsv_in is None:
-                    continue
+        lock_per_file[exp_idx].acquire()
+        with h5py.File(get_builder_majiq_filename(majiq_config.outDir, lsv_list[exp_idx]),
+                       'r+', compression='gzip', compression_opts=9) as f:
+            gc_f = None
+            if majiq_config.gcnorm:
+                try:
+                    gc_f = gc_vfunc[exp_idx]
+                except:
+                    pass
 
-                for name, ind_list in config.tissue_repl.items():
-                    counter = 0
-                    e_data = 0
-                    for jj in jlist:
-                        for exp_idx in ind_list:
-                            if reliable_in_data(jj, exp_idx):
-                                counter += 1
-                        if counter < group_thresh[name]:
-                            continue
-                        e_data += 1
-                        jun[name].add(jj)
-                    if e_data == 0:
-                        continue
+            f.attrs['data_index'] = lsv.to_hdf5(hdf5grp=f, lsv_idx=f.attrs['data_index'], gc_vfunc=gc_f,
+                                                exp_idx=exp_idx)
 
-                    dummy[name][lsv_index].append(lsv_in)
-                    # for exp_idx in ind_list:
-                    # for lsvinlist in lsv_list[exp_idx]:
-                    # if lsv_in.is_equivalent(lsvinlist):
-                    #             break
-                    #     else:
-                    #         if lsv_in.get_junctions_list().shape[0] >= 2:
-                    #             lsv_list[exp_idx].append(lsv_in)
+        lock_per_file[exp_idx].release()
 
-        for name, ind_list in config.tissue_repl.items():
-            for ss in dummy[name][0]:
-                for st in dummy[name][1]:
-                    if ss.contained(st):
-                        break
-                else:
-                    for exp_idx in ind_list:
-                        lsv_list[exp_idx].append(ss)
 
+def lsv_detection(gn, gc_vfunc, lsv_list=None, only_real_data=False, locks=None, rna_files=[], logging=None):
+    majiq_config = Config()
+    dummy = {}
+    count = 0
+    for name, ind_list in majiq_config.tissue_repl.items():
+        dummy[name] = [[], []]
+
+    for ex in gn.get_exon_list():
+        try:
+            detect_lsv(ex, gn, SSOURCE, dummy, only_annot=only_real_data)
+        except InvalidLSV:
+            pass
+        try:
+            detect_lsv(ex, gn, STARGET, dummy, only_annot=only_real_data)
+        except InvalidLSV:
+            pass
+
+    for name, ind_list in majiq_config.tissue_repl.items():
+
+        for ss in dummy[name][0]:
             for st in dummy[name][1]:
-                for ss in dummy[name][0]:
-                    if st.contained(ss):
-                        break
-                else:
-                    for exp_idx in ind_list:
-                        lsv_list[exp_idx].append(st)
+                if ss.contained(st):
+                    break
+            else:
+                count += 1
+                wrap_result_file(ss, name, gc_vfunc=gc_vfunc, lsv_list=lsv_list, rna_files=rna_files, lock_per_file=locks)
 
-    for name, ind_list in config.tissue_repl.items():
-        for exp_idx in ind_list:
-            const_set[exp_idx].difference(jun[name])
+        for st in dummy[name][1]:
+            for ss in dummy[name][0]:
+                if st.contained(ss):
+                    break
+            else:
+                count += 1
+                wrap_result_file(st, name, gc_vfunc=gc_vfunc, lsv_list=lsv_list, rna_files=rna_files, lock_per_file=locks)
 
-    return lsv_list, const_set
+    return count
 
-
-def lsv_matrix_detection(mat, exon_to_ss, b_list, vip_set=[]):
-    """
-       Rules for const are:
-        1. All the junction from A should go to C1 or C2
-        2. All the junction from C1 should go to A
-        3. All the junction to C2 should come from A
-        4. Number of reads from C1-A should be equivalent to number of reads from A-C2
-    """
-    lsv_list = [[], []]
-
-    # change bucle for iterate by exons
-    for ii in range(0, len(exon_to_ss) - 1):
-        lsv = exon_to_ss[ii]
-        # Single Source detection
-        ss = mat[lsv[1][0]:lsv[1][-1] + 1, :]
-        ss_valid = True
-
-        # cand = range(ii+1, len(exon_to_ss))
-        # if ii > 0:
-        # pre_lsv = exon_to_ss[ii-1]
-        #     for ex_idx, ex in enumerate(cand):
-        #         pt = exon_to_ss[ex]
-        #         junc_cand = mat[lsv[1][0]:lsv[1][-1]+1, pt[0][0]:pt[0][-1]+1]
-        #         if np.count_nonzero(junc_cand) < 1:
-        #             continue
-        #         to_trgt = mat[: pre_lsv[1][0]+1, pt[0][0]:pt[0][-1]+1]
-        #         if np.count_nonzero(to_trgt) > 0 and not ex in vip_set:
-        #             ss_valid = False
-        #             break
-
-        if ss_valid and np.count_nonzero(ss) > 1:
-            lsv_list[0].append(ii)
-
-    for ii in range(1, len(exon_to_ss)):
-        lsv = exon_to_ss[ii]
-        # Single Targe detection
-        st = mat[:, lsv[0][0]:lsv[0][-1] + 1]
-        st_valid = True
-
-        # cand = range(0, ii)
-        # if ii+1 < len(exon_to_ss):
-        # post_lsv = exon_to_ss[ii+1]
-        #     for ex_idx, ex in enumerate(cand):
-        #         pt = exon_to_ss[ex]
-        #         junc_cand = mat[pt[1][0]:pt[1][-1]+1, lsv[0][0]:lsv[0][-1]+1]
-        #         if np.count_nonzero(junc_cand) < 1:
-        #             continue
-        #         from_src = mat[pt[1][0]:pt[1][-1]+1, post_lsv[0][0]:]
-        #         if np.count_nonzero(from_src) > 0 and not ex in vip_set:
-        #             st_valid = False
-        #             break
-
-        if st_valid and np.count_nonzero(st) > 1:
-            lsv_list[1].append(ii)
-
-    return lsv_list

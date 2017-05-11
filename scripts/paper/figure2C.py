@@ -391,13 +391,13 @@ def load_coverage(lcov_met1, lcov_met2, clean_reads_files, dataset='ho'):
 def main():
     parser = argparse.ArgumentParser(description="Compare PSIs computed with MAJIQ against the RT-PCR results.")
     parser.add_argument("pcr", help="Tab-delimted file with the RT-PCR scores")
-    parser.add_argument("--majiq-rest-stim", required=True, dest='majiq_rest_stim', nargs=1, help='MAJIQ delta PSI predictions for Unstim Vs Stim RNA-Seq data.')
+    parser.add_argument("--old_majiq-rest-stim", required=True, dest='majiq_rest_stim', nargs=1, help='MAJIQ delta PSI predictions for Unstim Vs Stim RNA-Seq data.')
     parser.add_argument("--miso-rest", dest='miso_rest', nargs='*', help='MISO PSI predictions for resting RNA-Seq data.')
     parser.add_argument("--miso-stim", dest='miso_stim', nargs='*', help='MISO PSI predictions for stimulated RNA-Seq data.')
     parser.add_argument("--names-map-file", required=True, dest='names_map_file', help='File containing the mapping for events names used in MAJIQ and RT-PCR files.')
     parser.add_argument("--clean-reads", dest='clean_reads', nargs=2, help='Clean reads from MAJIQ quantifications (one file per condition).')
 
-    parser.add_argument("--majiq-extra", dest='majiq_extra', nargs=1, help='MAJIQ PSI predictions for extra conditions.')
+    parser.add_argument("--old_majiq-extra", dest='majiq_extra', nargs=1, help='MAJIQ PSI predictions for extra conditions.')
     parser.add_argument("--miso-extra", dest='miso_extra', nargs='+', help='MISO PSI predictions for extra conditions.')
     parser.add_argument("--pcr-extra", dest='pcr_extra', help='RT-PCR validations for extra conditions.')
     parser.add_argument("--clean-reads-extra", dest='clean_reads_extra', nargs=2, help='Clean reads from MAJIQ quantifications (one file per condition).')

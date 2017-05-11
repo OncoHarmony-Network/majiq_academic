@@ -1,110 +1,109 @@
 /*
- * 
+ *
  * TableSorter 2.0 - Client-side table sorting with ease!
  * Version 2.0.5b
  * @requires jQuery v1.2.3
- * 
+ *
  * Copyright (c) 2007 Christian Bach
  * Examples and docs at: http://tablesorter.com
  * Dual licensed under the MIT and GPL licenses:
  * http://www.opensource.org/licenses/mit-license.php
  * http://www.gnu.org/licenses/gpl.html
- * 
+ *
  */
 /**
- * 
+ *
  * @description Create a sortable table with multi-column sorting capabilitys
- * 
+ *
  * @example $('table').tablesorter();
  * @desc Create a simple tablesorter interface.
- * 
+ *
  * @example $('table').tablesorter({ sortList:[[0,0],[1,0]] });
  * @desc Create a tablesorter interface and sort on the first and secound column column headers.
- * 
+ *
  * @example $('table').tablesorter({ headers: { 0: { sorter: false}, 1: {sorter: false} } });
- *          
+ *
  * @desc Create a tablesorter interface and disableing the first and second  column headers.
- *      
- * 
+ *
+ *
  * @example $('table').tablesorter({ headers: { 0: {sorter:"integer"}, 1: {sorter:"currency"} } });
- * 
+ *
  * @desc Create a tablesorter interface and set a column parser for the first
  *       and second column.
- * 
- * 
+ *
+ *
  * @param Object
  *            settings An object literal containing key/value pairs to provide
  *            optional settings.
- * 
- * 
+ *
+ *
  * @option String cssHeader (optional) A string of the class name to be appended
  *         to sortable tr elements in the thead of the table. Default value:
  *         "header"
- * 
+ *
  * @option String cssAsc (optional) A string of the class name to be appended to
  *         sortable tr elements in the thead on a ascending sort. Default value:
  *         "headerSortUp"
- * 
+ *
  * @option String cssDesc (optional) A string of the class name to be appended
  *         to sortable tr elements in the thead on a descending sort. Default
  *         value: "headerSortDown"
- * 
+ *
  * @option String sortInitialOrder (optional) A string of the inital sorting
  *         order can be asc or desc. Default value: "asc"
- * 
+ *
  * @option String sortMultisortKey (optional) A string of the multi-column sort
  *         key. Default value: "shiftKey"
- * 
+ *
  * @option String textExtraction (optional) A string of the text-extraction
  *         method to use. For complex html structures inside td cell set this
  *         option to "complex", on large tables the complex option can be slow.
  *         Default value: "simple"
- * 
+ *
  * @option Object headers (optional) An array containing the forces sorting
  *         rules. This option let's you specify a default sorting rule. Default
  *         value: null
- * 
+ *
  * @option Array sortList (optional) An array containing the forces sorting
  *         rules. This option let's you specify a default sorting rule. Default
  *         value: null
- * 
+ *
  * @option Array sortForce (optional) An array containing forced sorting rules.
  *         This option let's you specify a default sorting rule, which is
  *         prepended to user-selected rules. Default value: null
- * 
+ *
  * @option Boolean sortLocaleCompare (optional) Boolean flag indicating whatever
  *         to use String.localeCampare method or not. Default set to true.
- * 
- * 
+ *
+ *
  * @option Array sortAppend (optional) An array containing forced sorting rules.
  *         This option let's you specify a default sorting rule, which is
  *         appended to user-selected rules. Default value: null
- * 
+ *
  * @option Boolean widthFixed (optional) Boolean flag indicating if tablesorter
  *         should apply fixed widths to the table columns. This is usefull when
  *         using the pager companion plugin. This options requires the dimension
  *         jquery plugin. Default value: false
- * 
+ *
  * @option Boolean cancelSelection (optional) Boolean flag indicating if
  *         tablesorter should cancel selection of the table headers text.
  *         Default value: true
- * 
+ *
  * @option Boolean debug (optional) Boolean flag indicating if tablesorter
  *         should display debuging information usefull for development.
- * 
+ *
  * @type jQuery
- * 
+ *
  * @name tablesorter
- * 
+ *
  * @cat Plugins/Tablesorter
- * 
+ *
  * @author Christian Bach/christian.bach@polyester.se
  */
 
 (function ($) {
     $.extend({
-        tablesorter: new
-        function () {
+        tablesorter: new function () {
 
             var parsers = [],
                 widgets = [];
@@ -197,7 +196,7 @@
                 }
 
                 return list;
-            };
+            }
 
             function detectParserForColumn(table, rows, rowIndex, cellIndex) {
                 var l = parsers.length,
@@ -282,14 +281,13 @@
                     cols.push(cache.normalized.length); // add position for rowCache
                     cache.normalized.push(cols);
                     cols = null;
-                };
-
+                }
                 if (table.config.debug) {
                     benchmark("Building cache for " + totalRows + " rows:", cacheTime);
                 }
 
                 return cache;
-            };
+            }
 
             function getElementText(config, node) {
 
@@ -347,10 +345,9 @@
                             tableBody[0].appendChild(r[pos][j]);
                         }
 
-                        // 
+                        //
                     }
                 }
-
 
 
                 if (table.config.appender) {
@@ -372,7 +369,7 @@
                     $(table).trigger("sortEnd");
                 }, 0);
 
-            };
+            }
 
             function buildHeaders(table) {
 
@@ -381,7 +378,7 @@
                 }
 
                 var meta = ($.metadata) ? true : false;
-                
+
                 var header_index = computeTableHeaderCellIndexes(table);
 
                 $tableHeaders = $(table.config.selectorHeaders, table).each(function (index) {
@@ -389,12 +386,12 @@
                     this.column = header_index[this.parentNode.rowIndex + "-" + this.cellIndex];
                     // this.column = index;
                     this.order = formatSortingOrder(table.config.sortInitialOrder);
-                    
-					
-					this.count = this.order;
+
+
+                    this.count = this.order;
 
                     if (checkHeaderMetadata(this) || checkHeaderOptions(table, index)) this.sortDisabled = true;
-					if (checkHeaderOptionsSortingLocked(table, index)) this.order = this.lockedOrder = checkHeaderOptionsSortingLocked(table, index);
+                    if (checkHeaderOptionsSortingLocked(table, index)) this.order = this.lockedOrder = checkHeaderOptionsSortingLocked(table, index);
 
                     if (!this.sortDisabled) {
                         var $th = $(this).addClass(table.config.cssHeader);
@@ -412,7 +409,7 @@
 
                 return $tableHeaders;
 
-            };
+            }
 
             // from:
             // http://www.javascripttoolbox.com/lib/table/examples.php
@@ -424,6 +421,7 @@
                 var lookup = {};
                 var thead = t.getElementsByTagName('THEAD')[0];
                 var trs = thead.getElementsByTagName('TR');
+                var k;
 
                 for (var i = 0; i < trs.length; i++) {
                     var cells = trs[i].cells;
@@ -433,20 +431,20 @@
                         var rowIndex = c.parentNode.rowIndex;
                         var cellId = rowIndex + "-" + c.cellIndex;
                         var rowSpan = c.rowSpan || 1;
-                        var colSpan = c.colSpan || 1
+                        var colSpan = c.colSpan || 1;
                         var firstAvailCol;
                         if (typeof(matrix[rowIndex]) == "undefined") {
                             matrix[rowIndex] = [];
                         }
                         // Find first available column in the first row
-                        for (var k = 0; k < matrix[rowIndex].length + 1; k++) {
+                        for (k = 0; k < matrix[rowIndex].length + 1; k++) {
                             if (typeof(matrix[rowIndex][k]) == "undefined") {
                                 firstAvailCol = k;
                                 break;
                             }
                         }
                         lookup[cellId] = firstAvailCol;
-                        for (var k = rowIndex; k < rowIndex + rowSpan; k++) {
+                        for (k = rowIndex; k < rowIndex + rowSpan; k++) {
                             if (typeof(matrix[k]) == "undefined") {
                                 matrix[k] = [];
                             }
@@ -474,31 +472,24 @@
                         if (table.tHead.length == 1 || (cell.rowSpan > 1 || !r[row + 1])) {
                             arr.push(cell);
                         }
-                        // headerArr[row] = (i+row);
                     }
                 }
                 return arr;
-            };
+            }
 
             function checkHeaderMetadata(cell) {
-                if (($.metadata) && ($(cell).metadata().sorter === false)) {
-                    return true;
-                };
-                return false;
+                return !!(($.metadata) && ($(cell).metadata().sorter === false));
             }
 
             function checkHeaderOptions(table, i) {
-                if ((table.config.headers[i]) && (table.config.headers[i].sorter === false)) {
-                    return true;
-                };
-                return false;
+                return !!((table.config.headers[i]) && (table.config.headers[i].sorter === false));
             }
-			
-			 function checkHeaderOptionsSortingLocked(table, i) {
+
+            function checkHeaderOptionsSortingLocked(table, i) {
                 if ((table.config.headers[i]) && (table.config.headers[i].lockedOrder)) return table.config.headers[i].lockedOrder;
                 return false;
             }
-			
+
             function applyWidget(table) {
                 var c = table.config.widgets;
                 var l = c.length;
@@ -516,10 +507,10 @@
                         return widgets[i];
                     }
                 }
-            };
+            }
 
             function formatSortingOrder(v) {
-                if (typeof(v) != "Number") {
+                if (typeof(v) !== "number") {
                     return (v.toLowerCase() == "desc") ? 1 : 0;
                 } else {
                     return (v == 1) ? 1 : 0;
@@ -561,7 +552,7 @@
                         colgroup.append($('<col>').css('width', $(this).width()));
                     });
                     $(table).prepend(colgroup);
-                };
+                }
             }
 
             function updateHeaderSortCount(table, sortList) {
@@ -576,8 +567,8 @@
             }
 
             /* sorting methods */
-
             function multisort(table, sortList, cache) {
+                var i;
 
                 if (table.config.debug) {
                     var sortTime = new Date();
@@ -586,32 +577,23 @@
                 var dynamicExp = "var sortWrapper = function(a,b) {",
                     l = sortList.length;
 
-                // TODO: inline functions.
-                for (var i = 0; i < l; i++) {
 
+                for (i = 0; i < l; i++) {
                     var c = sortList[i][0];
                     var order = sortList[i][1];
-                    // var s = (getCachedSortType(table.config.parsers,c) == "text") ?
-                    // ((order == 0) ? "sortText" : "sortTextDesc") : ((order == 0) ?
-                    // "sortNumeric" : "sortNumericDesc");
-                    // var s = (table.config.parsers[c].type == "text") ? ((order == 0)
-                    // ? makeSortText(c) : makeSortTextDesc(c)) : ((order == 0) ?
-                    // makeSortNumeric(c) : makeSortNumericDesc(c));
                     var s = (table.config.parsers[c].type == "text") ? ((order == 0) ? makeSortFunction("text", "asc", c) : makeSortFunction("text", "desc", c)) : ((order == 0) ? makeSortFunction("numeric", "asc", c) : makeSortFunction("numeric", "desc", c));
                     var e = "e" + i;
 
-                    dynamicExp += "var " + e + " = " + s; // + "(a[" + c + "],b[" + c
-                    // + "]); ";
+                    dynamicExp += "var " + e + " = " + s;
                     dynamicExp += "if(" + e + ") { return " + e + "; } ";
                     dynamicExp += "else { ";
-
                 }
 
                 // if value is the same keep orignal order
                 var orgOrderCol = cache.normalized[0].length - 1;
                 dynamicExp += "return a[" + orgOrderCol + "]-b[" + orgOrderCol + "];";
 
-                for (var i = 0; i < l; i++) {
+                for (i = 0; i < l; i++) {
                     dynamicExp += "}; ";
                 }
 
@@ -631,7 +613,7 @@
                 }
 
                 return cache;
-            };
+            }
 
             function makeSortFunction(type, direction, index) {
                 var a = "a[" + index + "]",
@@ -645,47 +627,12 @@
                 } else if (type == 'numeric' && direction == 'desc') {
                     return "(" + a + " === null && " + b + " === null) ? 0 :(" + a + " === null ? Number.POSITIVE_INFINITY : (" + b + " === null ? Number.NEGATIVE_INFINITY : " + b + " - " + a + "));";
                 }
-            };
+            }
 
-            function makeSortText(i) {
-                return "((a[" + i + "] < b[" + i + "]) ? -1 : ((a[" + i + "] > b[" + i + "]) ? 1 : 0));";
-            };
-
-            function makeSortTextDesc(i) {
-                return "((b[" + i + "] < a[" + i + "]) ? -1 : ((b[" + i + "] > a[" + i + "]) ? 1 : 0));";
-            };
-
-            function makeSortNumeric(i) {
-                return "a[" + i + "]-b[" + i + "];";
-            };
-
-            function makeSortNumericDesc(i) {
-                return "b[" + i + "]-a[" + i + "];";
-            };
-
-            function sortText(a, b) {
-                if (table.config.sortLocaleCompare) return a.localeCompare(b);
-                return ((a < b) ? -1 : ((a > b) ? 1 : 0));
-            };
-
-            function sortTextDesc(a, b) {
-                if (table.config.sortLocaleCompare) return b.localeCompare(a);
-                return ((b < a) ? -1 : ((b > a) ? 1 : 0));
-            };
-
-            function sortNumeric(a, b) {
-                return a - b;
-            };
-
-            function sortNumericDesc(a, b) {
-                return b - a;
-            };
-
-            function getCachedSortType(parsers, i) {
-                return parsers[i].type;
-            }; /* public methods */
+            /* public methods */
             this.construct = function (settings) {
                 return this.each(function () {
+                    var j;
                     // if no thead or tbody quit.
                     if (!this.tHead || !this.tBodies) return;
                     // declare
@@ -712,71 +659,70 @@
                     // apply event handling to headers
                     // this is to big, perhaps break it out?
                     $headers.click(
+                        function (e) {
+                            var totalRows = ($this[0].tBodies[0] && $this[0].tBodies[0].rows.length) || 0;
+                            if (!this.sortDisabled && totalRows > 0) {
+                                // Only call sortStart if sorting is
+                                // enabled.
+                                $this.trigger("sortStart");
+                                // store exp, for speed
+                                var $cell = $(this);
+                                // get current column index
+                                var i = this.column;
+                                // get current column sort order
+                                this.order = this.count++ % 2;
+                                // always sort on the locked order.
+                                if (this.lockedOrder) this.order = this.lockedOrder;
 
-                    function (e) {
-                        var totalRows = ($this[0].tBodies[0] && $this[0].tBodies[0].rows.length) || 0;
-                        if (!this.sortDisabled && totalRows > 0) {
-                            // Only call sortStart if sorting is
-                            // enabled.
-                            $this.trigger("sortStart");
-                            // store exp, for speed
-                            var $cell = $(this);
-                            // get current column index
-                            var i = this.column;
-                            // get current column sort order
-                            this.order = this.count++ % 2;
-							// always sort on the locked order.
-							if(this.lockedOrder) this.order = this.lockedOrder;
-							
-							// user only whants to sort on one
-                            // column
-                            if (!e[config.sortMultiSortKey]) {
-                                // flush the sort list
-                                config.sortList = [];
-                                if (config.sortForce != null) {
-                                    var a = config.sortForce;
-                                    for (var j = 0; j < a.length; j++) {
-                                        if (a[j][0] != i) {
-                                            config.sortList.push(a[j]);
+                                // user only whants to sort on one
+                                // column
+                                if (!e[config.sortMultiSortKey]) {
+                                    // flush the sort list
+                                    config.sortList = [];
+                                    if (config.sortForce != null) {
+                                        var a = config.sortForce;
+                                        for (j = 0; j < a.length; j++) {
+                                            if (a[j][0] != i) {
+                                                config.sortList.push(a[j]);
+                                            }
                                         }
                                     }
-                                }
-                                // add column to sort list
-                                config.sortList.push([i, this.order]);
-                                // multi column sorting
-                            } else {
-                                // the user has clicked on an all
-                                // ready sortet column.
-                                if (isValueInArray(i, config.sortList)) {
-                                    // revers the sorting direction
-                                    // for all tables.
-                                    for (var j = 0; j < config.sortList.length; j++) {
-                                        var s = config.sortList[j],
-                                            o = config.headerList[s[0]];
-                                        if (s[0] == i) {
-                                            o.count = s[1];
-                                            o.count++;
-                                            s[1] = o.count % 2;
-                                        }
-                                    }
-                                } else {
-                                    // add column to sort list array
+                                    // add column to sort list
                                     config.sortList.push([i, this.order]);
+                                    // multi column sorting
+                                } else {
+                                    // the user has clicked on an all
+                                    // ready sortet column.
+                                    if (isValueInArray(i, config.sortList)) {
+                                        // revers the sorting direction
+                                        // for all tables.
+                                        for (j = 0; j < config.sortList.length; j++) {
+                                            var s = config.sortList[j],
+                                                o = config.headerList[s[0]];
+                                            if (s[0] == i) {
+                                                o.count = s[1];
+                                                o.count++;
+                                                s[1] = o.count % 2;
+                                            }
+                                        }
+                                    } else {
+                                        // add column to sort list array
+                                        config.sortList.push([i, this.order]);
+                                    }
                                 }
-                            };
-                            setTimeout(function () {
-                                // set css for headers
-                                setHeadersCss($this[0], $headers, config.sortList, sortCSS);
-                                appendToTable(
-	                                $this[0], multisort(
-	                                $this[0], config.sortList, cache)
-								);
-                            }, 1);
-                            // stop normal event by returning false
-                            return false;
-                        }
-                        // cancel selection
-                    }).mousedown(function () {
+                                setTimeout(function () {
+                                    // set css for headers
+                                    setHeadersCss($this[0], $headers, config.sortList, sortCSS);
+                                    appendToTable(
+                                        $this[0], multisort(
+                                            $this[0], config.sortList, cache)
+                                    );
+                                }, 1);
+                                // stop normal event by returning false
+                                return false;
+                            }
+                            // cancel selection
+                        }).mousedown(function () {
                         if (config.cancelSelection) {
                             this.onselectstart = function () {
                                 return false
@@ -790,7 +736,7 @@
                         setTimeout(function () {
                             // rebuild parsers.
                             me.config.parsers = buildParserCache(
-                            me, $headers);
+                                me, $headers);
                             // rebuild the cache map
                             cache = buildCache(me);
                         }, 1);
@@ -800,7 +746,7 @@
                         var pos = [(cell.parentNode.rowIndex - 1), cell.cellIndex];
                         // update cache
                         cache.normalized[pos[0]][pos[1]] = config.parsers[pos[1]].format(
-                        getElementText(config, cell), cell);
+                            getElementText(config, cell), cell);
                     }).bind("sorton", function (e, list) {
                         $(this).trigger("sortStart");
                         config.sortList = list;
@@ -841,7 +787,8 @@
                 }
                 if (a) {
                     parsers.push(parser);
-                };
+                }
+
             };
             this.addWidget = function (widget) {
                 widgets.push(widget);
@@ -936,7 +883,7 @@
             return /^\d{4}[\/-]\d{1,2}[\/-]\d{1,2}$/.test(s);
         }, format: function (s) {
             return $.tablesorter.formatFloat((s != "") ? new Date(s.replace(
-            new RegExp(/-/g), "/")).getTime() : "0");
+                    new RegExp(/-/g), "/")).getTime() : "0");
         }, type: "numeric"
     });
 
@@ -1012,8 +959,8 @@
                 if (!$tr.hasClass(table.config.cssChildRow)) row++;
                 odd = (row % 2 == 0);
                 $tr.removeClass(
-                table.config.widgetZebra.css[odd ? 0 : 1]).addClass(
-                table.config.widgetZebra.css[odd ? 1 : 0])
+                    table.config.widgetZebra.css[odd ? 0 : 1]).addClass(
+                    table.config.widgetZebra.css[odd ? 1 : 0])
             });
             if (table.config.debug) {
                 $.tablesorter.benchmark("Applying Zebra widget", time);
@@ -1025,23 +972,28 @@
     ts.addWidget({
         id: "renderCanvas",
         format: function (table) {
-
-            $(table.parentElement).children('.spliceDiv').each( function(){
+            d3.select(table.parentNode).selectAll('.spliceDiv').each(function () {
                 /**
                  * D3 - SpliceGraph
                  * */
 
-                var genes_obj =  JSON.parse($(this)[0].getAttribute('data-exon-list').replace(/\\'/g, "\"").replace(/'/g, ""));
+                var genes_obj = JSON.parse($(this)[0].getAttribute('data-exon-list').replace(/'/g, '"'));
+
 
                 var exons_obj = genes_obj.exons;
                 var junctions_obj = genes_obj.junctions;
 
+
                 var orig_objs = {'exons': add_keys(clone(exons_obj)), 'junc': clone(junctions_obj)};
 
-                var exons_mapped = map_exon_list(exons_obj, junctions_obj); //exons_obj; //
+                var exons_mapped = map_exon_list(exons_obj, junctions_obj);
                 exons_mapped = add_keys(exons_mapped);
 
-                var gene_obj_cpy = {'orig': orig_objs, 'mapped': [exons_mapped, junctions_obj], 'strand': genes_obj.strand};
+                var gene_obj_cpy = {
+                    'orig': orig_objs,
+                    'mapped': [exons_mapped, junctions_obj],
+                    'strand': genes_obj.strand
+                };
 
                 /** Render initial splice graph */
                 var chart = spliceGraphD3().orig_objs(orig_objs);
@@ -1055,104 +1007,122 @@
                     gene_obj_list.push(genes_obj);
                 }
 
+                // toggle norm flag on read counts button and redraw splicegraph
+                d3.select(this.parentNode.parentNode).select('.readCounts').on('click', function () {
+                    var spliceDivs = this.parentNode.parentNode.parentNode.querySelectorAll('.spliceDiv');
+                    d3.selectAll(spliceDivs).call(chart);
+                });
 
-                d3.select(this).select('.toogleScale').on('click', function(){
-                    var index_gene = parseInt(this.parentNode.parentNode.id.split("_")[1]);
-                    if ($(this.parentNode.parentNode).hasClass('exp1') || $(this.parentNode.parentNode).hasClass('exp2')){
-                        index_gene *= 2;
-                        if ($(this.parentNode.parentNode).hasClass('exp2')){
-                            index_gene++;
+                d3.select(this.parentNode.parentNode).select('.toogleScale').on('click', function () {
+                    var toogleScale = this;
+                    $(this).toggleClass('scaled');
+
+                    d3.select(this.parentNode.parentNode).selectAll('.spliceDiv').each(function () {
+                        var index_gene = parseInt(this.id.split('_')[1]);
+
+                        if (d3.select(this).classed('delta')) {
+                            index_gene *= 2;
+                            if (d3.select(this).classed('exp2')) {
+                                index_gene++
+                            }
                         }
-                    }
-                    if (d3.select(this).classed('scaled')) {
-                        d3.select(this.parentNode.parentNode)
-                            .datum([gene_objs[index_gene].orig.exons, gene_objs[index_gene].orig.junc, gene_objs[index_gene].strand])
-                            .call(chart);
-                        d3.select(this).classed('scaled', false);
-                    } else {
-                        d3.select(this.parentNode.parentNode)
-                            .datum([gene_objs[index_gene].mapped[0], gene_objs[index_gene].mapped[1], gene_objs[index_gene].strand])
-                            .call(chart);
-                        d3.select(this).classed('scaled', true);
-                    }
+
+                        var gene_datum = geneDatum(toogleScale, gene_objs[index_gene]);
+                        d3.select(this).datum(gene_datum).call(chart);
+                    });
 
                 });
 
-                d3.select(this).select('.zoomInSplice').on('click', function() {
+
+                d3.select(this.parentNode.parentNode).select('.zoomInSplice').on('click', function () {
                     chart.width(chart.width() + 600);
                     chart.height(chart.height() + 100);
-                    spliceg.call(chart);
-//                    $('.filters').css({'left': parseInt($('.filters').css('left').split('px')[0]) + 600 + 'px'});
+                    d3.select(this.parentNode.parentNode).selectAll('.spliceDiv').call(chart);
                 });
 
-                d3.select(this).select('.zoomOutSplice').on('click', function() {
+                d3.select(this.parentNode.parentNode).select('.zoomOutSplice').on('click', function () {
                     chart.width(chart.width() - 600);
                     chart.height(chart.height() - 100);
-                    spliceg.call(chart);
-//                    $('.filters').css({'left': Math.max(1080, parseInt($('.filters').css('left').split('px')[0]) - 600) + 'px'});
+                    d3.select(this.parentNode.parentNode).selectAll('.spliceDiv').call(chart);
                 });
 
-                d3.select(this).select('.zoomResetSplice').on('click', function() {
+                d3.select(this.parentNode.parentNode).select('.zoomResetSplice').on('click', function () {
                     chart.width(1000);
                     chart.height(160);
-                    spliceg.call(chart);
-
+                    d3.select(this.parentNode.parentNode).selectAll('.spliceDiv').call(chart);
                 });
 
+                d3.select(this.parentNode.parentNode).selectAll('.weighted').on('change', function () {
+                    var highlight = $(this).closest('form').find('.highlight').get(0);
+                    var geneContainer = $(this).closest('.gene-container').get(0);
+                    if (this.checked && !highlight.checked)
+                        highlight.checked = true;
+                    d3.select(geneContainer).selectAll('.spliceDiv').call(chart);
+                });
+
+                d3.select(this.parentNode.parentNode).selectAll('.highlight').on('change', function () {
+                    var geneContainer = $(this).closest('.gene-container').get(0);
+                    d3.select(geneContainer).selectAll('.spliceDiv').call(chart);
+                });
 
                 /**
                  * Splice Graph selector
                  * */
-                var sgSelectors = $(this).find('.spliceGraphSelector');
-                if (sgSelectors.length) {
-                    sgSelectors.change(function () {
-                        var index_gene = 2*parseInt(this.parentNode.parentNode.id.split("_")[1]);
-                        if ($(this.parentElement.parentElement).hasClass('exp2')){
-                            index_gene++;
-                        }
+                var spliceGraphSelector = d3.select(this.parentNode.parentNode).selectAll('.spliceGraphSelector');
+                spliceGraphSelector.on('change', function () {
+                    var parent = this.parentNode.parentNode;
+                    var toogleScale = parent.querySelector('.toogleScale');
+                    var spliceDiv;
 
-                        var genes_obj;
-                        try{
-                            genes_obj = JSON.parse(JSON.parse(this.value.replace(/\\'/g, "\"").replace(/'/g, "")));
-                        } catch (syntaxError){
-                            genes_obj = JSON.parse(this.value.replace(/\\'/g, "\"").replace(/'/g, ""));
-                        }
+                    if (d3.select(this).classed('exp2'))
+                        spliceDiv = parent.querySelector('.spliceDiv.exp2');
+                    else if (d3.select(this).classed('exp1'))
+                        spliceDiv = parent.querySelector('.spliceDiv.exp1');
 
+                    var index_gene = 2 * spliceDiv.id.split("_")[1];
+                    if ($(parent).hasClass('exp2'))
+                        index_gene++;
 
-                        var exons_obj = genes_obj.exons;
-                        var junctions_obj = genes_obj.junctions;
+                    var genes_obj = JSON.parse(this.value.replace(/'/g, '"'));
 
-                        var orig_objs = {'exons': add_keys(clone(exons_obj)), 'junc': clone(junctions_obj)};
+                    var exons_obj = genes_obj.exons;
+                    var junctions_obj = genes_obj.junctions;
 
-                        var exons_mapped = map_exon_list(exons_obj, junctions_obj); //exons_obj; //
-                        exons_mapped = add_keys(exons_mapped);
+                    var orig_objs = {'exons': add_keys(clone(exons_obj)), 'junc': clone(junctions_obj)};
 
-                        gene_objs[index_gene] = {'orig': orig_objs, 'mapped': [exons_mapped, junctions_obj], 'strand': genes_obj.strand};
+                    var exons_mapped = map_exon_list(exons_obj, junctions_obj);
+                    exons_mapped = add_keys(exons_mapped);
 
-                        d3.select(this.parentNode.parentNode)
-                            .datum([gene_objs[index_gene].mapped[0], gene_objs[index_gene].mapped[1], gene_objs[index_gene].strand])
-                            .call(chart);
-                        $(this.parentNode.parentNode).children('.toogleScale').addClass('scaled');
+                    gene_objs[index_gene] = {
+                        'orig': orig_objs,
+                        'mapped': [exons_mapped, junctions_obj],
+                        'strand': genes_obj.strand
+                    };
 
-                    });
+                    var gene_datum = geneDatum(toogleScale, gene_objs[index_gene]);
+                    d3.select(spliceDiv).datum(gene_datum).call(chart);
+
+                });
+
+                function geneDatum(toogleScale, gene) {
+                    if (d3.select(toogleScale).classed('scaled'))
+                        return [gene.mapped[0], gene.mapped[1], gene.strand];
+                    else
+                        return [gene.orig.exons, gene.orig.junc, gene.strand];
                 }
-
             });
 
-            $('.lsvLegend', table).each( function(){
-                splicegraph().renderLsvSpliceGraph(this, gene_obj_list[this.id]); //
+            $('.lsvLegend', table).each(function () {
+                splicegraph().renderLsvSpliceGraph(this, gene_obj_list[this.id]);
             });
-
 
             /**
              * Single LSV visualization
              */
-
-            $('.lsvSingleCompactPercentiles', table).each(function(){
+            $('.lsvSingleCompactPercentiles', table).each(function () {
                 drawLSVCompactStackBars($(this)[0], 1);
 
-                $(this).on("click", function(e){
-                    e.preventDefault();
+                $(this).on("click", function (e) {
 
                     $(this).toggle("show");
                     var svg_children = $(this).parent().children("svg");
@@ -1161,66 +1131,29 @@
                         return;
                     }
 
-                    var lsv_list = JSON.parse($(this)[0].getAttribute("data-lsv").replace(/\\\"/g, "\'").replace(/\"/g,"").replace(/'/g, "\""));  // NOTE: lsv_data is an array to support groups
+                    // NOTE: lsv_data is an array to support groups
+                    var lsv_list = JSON.parse(
+                        $(this)[0]
+                            .getAttribute("data-lsv")
+                            .replace(/'/g, "\"")
+                    );
 
-                    if (1){ //(lsv_list[0].bins.length > 2) {
-                        var sampled_bins = translate_lsv_bins(lsv_list[0].bins, 1000);
 
-                        var svg = renderViolin($(this).parent()[0].id, sampled_bins, table.id, {'delta': 0, 'num_bins': lsv_list[0].bins[0].length});
-                        $(svg).on("click", function (e) {
-                            e.preventDefault();
-                            $(this).toggle("show");
-                            var lsvCompact = $(this).parent().children('.lsvSingleCompactPercentiles');
-                            if (lsvCompact.length) {
-                                $(lsvCompact[0]).toggle();
-                            }
-                        });
-                    } else {
-                        var parentTd = $(this).parent()[0];
-                        var canvasChildren = $(parentTd).children('.extendedPsi');
-                        var canvasBarchart,
-                            canvasSettings;
-                        if (canvasChildren.length){
-                            canvasBarchart = canvasChildren[0];
-                            canvasSettings = initLargeCanvasSettings(lsv_list[0].bins[0].length, canvasBarchart);
-                            $(canvasBarchart).toggle();
-                        } else{
-                            canvasBarchart = $('<canvas/>',{'id': "barchart_" + $(this).closest('td')[0].id, 'class':'extendedPsi tooltip', 'Title': 'Mousewheel up/down to zoom in/out'})[0];
-                            canvasBarchart.width = 419;
-                            canvasBarchart.height = 200;
-                            canvasBarchart.setAttribute('data-lsv', JSON.stringify(lsv_list[0]));
+                    var sampled_bins = translate_lsv_bins(lsv_list.bins, 1000);
 
-                            canvasSettings = initLargeCanvasSettings(lsv_list[0].bins[0].length, canvasBarchart);
-                            $(parentTd).append(canvasBarchart);
-                            initExpandedDeltaCanvas(canvasBarchart, canvasSettings);
+                    var svg = renderViolin($(this).parent()[0].id, sampled_bins, table.id, {
+                        'delta': 0,
+                        'num_bins': lsv_list.bins[0].length
+                    });
 
-                            $(canvasBarchart).on("click", function (e) {
-                                e.preventDefault();
-                                $(this).toggle("show");
-                                var lsvCompact = $(this).parent().children(".lsvSingleCompactPercentiles");
-                                if (lsvCompact.length) {
-                                    $(lsvCompact[0]).toggle();
-                                }
-                            });
-
-                            $(canvasBarchart).on('mousewheel', function(event) {
-                                event.preventDefault();
-                                var deltaY = event.deltaY;
-                                if (!deltaY){
-                                    deltaY = -event.originalEvent.deltaY;
-                                }
-                                if (deltaY > 0){
-                                    drawExpDeltaWithCanvasId($(this)[0].id, 1, canvasSettings);
-                                } else if(deltaY < 0){
-                                    drawExpDeltaWithCanvasId($(this)[0].id, -1, canvasSettings);
-                                }
-                            });
-
-                            $('.tooltip').tooltipster({
-                                theme: 'tooltipster-shadow'
-                            });
+                    $(svg).on("click", function (e) {
+                        $(this).toggle("show");
+                        var lsvCompact = $(this).parent().children('.lsvSingleCompactPercentiles');
+                        if (lsvCompact.length) {
+                            $(lsvCompact[0]).toggle();
                         }
-                    }
+                    });
+
                 });
 
             });
@@ -1230,8 +1163,8 @@
              * Delta PSI LSV visualization
              */
 
-            $('.lsvDeltaCompact', table).each(function(){
-                var lsv = JSON.parse($(this)[0].getAttribute("data-lsv").replace(/\\\"/g, "\'").replace(/\"/g,"").replace(/'/g, "\""));
+            $('.lsvDeltaCompact', table).each(function () {
+                var lsv = JSON.parse($(this)[0].getAttribute("data-lsv").replace(/'/g, '"'));
                 var threshold = $(this)[0].getAttribute("data-threshold");
 
                 var svg_children = $(this).children(".excl-incl-rect"),
@@ -1249,7 +1182,7 @@
 
 
                     // For now: if LSV has 2 ways, show zoomable barchart, otherwise violin boxplots
-                    if (1){ //(lsv.bins.length > 2){
+                    if (1) { //(lsv.bins.length > 2){
                         var svgViolin;
 
                         var svg_children = $(this).parent().children("violin-boxplot");
@@ -1259,7 +1192,10 @@
                             $(svgViolin).toggle();
                         } else {
                             var sampled_bins = translate_delta_lsv_bins(lsv.bins, 1000);
-                            svgViolin = renderViolin($(this).parent()[0].id, sampled_bins, table.id, {'delta': 1, 'num_bins': lsv.bins[0].length})[0];
+                            svgViolin = renderViolin($(this).parent()[0].id, sampled_bins, table.id, {
+                                'delta': 1,
+                                'num_bins': lsv.bins[0].length
+                            })[0];
                         }
                         $(svgViolin).on("click", function (e) {
                             e.preventDefault();
@@ -1274,12 +1210,16 @@
                         var canvasChildren = $(parentTd).children('.extendedDeltaPsi');
                         var canvasBarchart,
                             canvasSettings;
-                        if (canvasChildren.length){
+                        if (canvasChildren.length) {
                             canvasBarchart = canvasChildren[0];
                             canvasSettings = initLargeCanvasSettings(lsv.bins[0].length, canvasBarchart);
                             $(canvasBarchart).toggle();
-                        } else{
-                            canvasBarchart = $('<canvas/>',{'id': "barchart_" + $(this).closest('td')[0].id, 'class':'extendedDeltaPsi tooltip', 'Title': 'Mousewheel up/down to zoom in/out'})[0];
+                        } else {
+                            canvasBarchart = $('<canvas/>', {
+                                'id': "barchart_" + $(this).closest('td')[0].id,
+                                'class': 'extendedDeltaPsi tooltip',
+                                'Title': 'Mousewheel up/down to zoom in/out'
+                            })[0];
                             canvasBarchart.width = 419;
                             canvasBarchart.height = 400;
                             canvasBarchart.setAttribute('data-lsv', JSON.stringify(lsv));
@@ -1298,11 +1238,11 @@
                                 }
                             });
 
-                            $(canvasBarchart).on('mousewheel', function(event) {
+                            $(canvasBarchart).on('mousewheel', function (event) {
                                 event.preventDefault();
-                                if (event.deltaY > 0){
+                                if (event.deltaY > 0) {
                                     drawExpDeltaWithCanvasId($(this)[0].id, 1, canvasSettings);
-                                } else if(event.deltaY < 0){
+                                } else if (event.deltaY < 0) {
                                     drawExpDeltaWithCanvasId($(this)[0].id, -1, canvasSettings);
                                 }
                             });
@@ -1334,20 +1274,20 @@
                 }
             });
 
-            $(canvasBarcharts).on('mousewheel', function(event) {
+            $(canvasBarcharts).on('mousewheel', function (event) {
                 event.preventDefault();
 
                 var lsv = JSON.parse($(this)[0].getAttribute('data-lsv'));
                 var canvasSettings = initLargeCanvasSettings(lsv.bins[0].length, this);
 
-                if (event.deltaY > 0){
+                if (event.deltaY > 0) {
                     drawExpDeltaWithCanvasId($(this)[0].id, 1, canvasSettings);
-                } else if(event.deltaY < 0){
+                } else if (event.deltaY < 0) {
                     drawExpDeltaWithCanvasId($(this)[0].id, -1, canvasSettings);
                 }
             });
 
-            $('.resetZoom').on("click", function(){
+            $('.resetZoom').on("click", function () {
                 var canvas = $(this).parent().children('.extendedDeltaPsi')[0];
                 var lsv = JSON.parse(canvas.getAttribute('data-lsv'));
                 var canvasSettings = initLargeCanvasSettings(lsv.bins[0].length, canvas);
@@ -1355,7 +1295,7 @@
             });
 
             var tooltip = $('.tooltip');
-            if (tooltip.length){
+            if (tooltip.length) {
                 tooltip.tooltipster({
                     theme: 'tooltipster-shadow'
                 });

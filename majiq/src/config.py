@@ -2,172 +2,119 @@ import os
 import ConfigParser
 from scipy import interpolate
 import numpy as np
-#from majiq.src.io import ConfigSectionMap
-
-global gene_tlb
-global gc_factor
+from majiq.src.constants import *
 
 
-def ConfigSectionMap(Config, section):
-    dict1 = {}
-    options = Config.options(section)
-    for option in options:
-        try:
-            dict1[option] = Config.get(section, option)
-            if dict1[option] == -1:
-                print("skip: %s" % option)
-        except:
-            print("exception on %s!" % option)
-            dict1[option] = None
-    return dict1
+class SingletonMetaClass(type):
+    def __init__(cls, name, bases, dict):
+        super(SingletonMetaClass, cls).__init__(name,bases, dict)
+        original_new = cls.__new__
+
+        def my_new(cls, *args, **kwds):
+
+            if cls.instance:
+                cls.instance = original_new(cls, *args, **kwds)
+            return cls.instance
+        cls.instance = None
+        cls.__new__ = staticmethod(my_new)
 
 
-def keep_info(SEevents, a3, a5, both, SE):
-    global SEev, A3SS, A5SS, bothSS, totalSE
-    for idx in range(20):
-        A3SS[idx] += a3[idx]
-        A5SS[idx] += a5[idx]
+class Config(object):
 
-    for idx, ii in enumerate(SEevents):
-        SEev[idx] += ii
+    instance = None
 
-    bothSS += both
-    totalSE += SE
+    def __new__(cls, *argv):
+        if not Config.instance:
+            Config.instance = Config.__Config(*argv)
+        return Config.instance
 
+    def __getattr__(self, name):
+        return getattr(self.instance, name)
 
-def print_numbers():
-    print "A3SS", A3SS
-    print "A5SS", A5SS
-    print "SE events", SEev
-    print "Total SE", totalSE
-    print "BOTH", bothSS
+    def __setattr__(self, name):
+        return setattr(self.instance, name)
 
+    class __Config(object):
+        def __init__(self, filename, params, only_db=False):
 
-def global_conf_ini(filename, params, only_db=False):
-    global num_experiments, exp_list, readLen, tissue_repl, sam_dir, num_mapped_reads, genome, \
-        genome_path, outDir, temp_oDir, gene_tlb, strand_specific, permissive_ir, gcnorm
-    global A3SS, A5SS, SEev, bothSS, totalSE, simplify, min_exp
-    global MINREADS, MINPOS, MIN_INTRON
-    global num_final_chunks, min_denovo
+            self.__dict__.update(params.__dict__)
 
-    if not only_db:
-        num_final_chunks = params.nthreads * 5 if params.nthreads > 1 else 1
-    else:
-        num_final_chunks = 1
-    min_denovo = params.min_denovo
-    gcnorm = params.gcnorm
-    
-    config = ConfigParser.ConfigParser()
-    config.read(filename)
-    # TODO: check if filename exists
-    exp = ConfigSectionMap(config, "experiments")
-#    lengths_exp = ConfigSectionMap(config, "readlen")
-    general = ConfigSectionMap(config, "info")
-    exp_list = []
-    tissue_repl = {}
+            if not os.path.exists(self.outDir):
+                os.makedirs(self.outDir)
 
-    temp_oDir = []
-    count = 0
+            config = ConfigParser.ConfigParser()
+            config.read(filename)
+            # TODO: check if filename exists
+            exps = Config.config_section_map(config, "experiments")
+            general = Config.config_section_map(config, "info")
+            self.tissue_repl = {}
+            self.exp_list = []
+            count = 0
+            if not os.path.exists(self.outDir):
+                os.makedirs(self.outDir)
 
-    MINREADS = params.minreads
-    MINPOS = params.minpos
-    min_exp = params.min_exp
+            self.sam_dir = general['samdir']
+            self.genome = general['genome']
+            self.genome_path = general['genome_path']
+            self.readLen = int(general['readlen'])
 
-    if not only_db:
-        permissive_ir = params.permissive
-        MIN_INTRON = params.min_intronic_cov
+            if 'type' in general:
+                self.strand_specific = (general['type'] == 'strand-specific')
+            else:
+                self.strand_specific = False
 
-    #readLen = [int(xx) for xx in general['readlen'].split([','])
-    sam_dir = general['samdir']
-    genome = general['genome']
-    genome_path = general['genome_path']
-    readLen = int(general['readlen'])
-    if 'type' in general:
-        strand_specific = (general['type'] == 'strand-specific')
-    else:
-        strand_specific = False
-    outDir = params.output
-    if not os.path.exists(outDir):
-        os.makedirs(outDir)
-    for exp_idx, lstnames in exp.items():
-        tissue_repl[exp_idx] = []
-        elist = lstnames.split(',')
-        for exp in elist:
-            exp_list.append(exp)
-            tissue_repl[exp_idx].append(count)
-            count += 1
+            self.simplify_threshold = 0.0
+            self.simplify_type = SIMPLIFY_ALL
+            if self.simplify:
 
-    #readLen = [0] * len(exp_list)
-    # for grp, grp_lens in lengths_exp.items():
-    #     if not grp in tissue_repl:
-    #         raise RuntimeError('%s no found.  Wrong Config file' % grp)
-    #     for ii in tissue_repl[grp]:
-    #         readLen[ii] = int(grp_lens)
+                self.simplify_threshold = float(params.simplify[1])
+                self.simplify_type = self.simplify[0]
+                if self.simplify_type not in (
+                SIMPLIFY_ALL, SIMPLIFY_DB, SIMPLIFY_DENOVO) or not 0 <= self.simplify_threshold <= 1:
+                    raise RuntimeError(
+                        'Error in simplify option, first argument should be "all|denovo|annotated" and second'
+                        ' a float between 0..1')
+            #self.simplify = self.simplify is not None
 
-    num_experiments = len(exp_list)
-    num_mapped_reads = [0] * num_experiments
-    gene_tlb = {}
+            for exp_idx, lstnames in exps.items():
+                self.tissue_repl[exp_idx] = []
+                elist = lstnames.split(',')
+                for exp in elist:
+                    self.exp_list.append(exp)
+                    self.tissue_repl[exp_idx].append(count)
+                    count += 1
 
-    A3SS = [0] * 20
-    A5SS = [0] * 20
-    bothSS = 0
-    SEev = [0] * 5
-    totalSE = 0
+            self.num_experiments = len(self.exp_list)
+            self.gene_tlb = {}
 
+            self.samfile_name_list = []
+            self.sam_list = []
+            for exp_idx, exp in enumerate(self.exp_list):
+                samfile = "%s/%s.bam" % (self.sam_dir, exp)
+                if not os.path.exists(samfile):
+                    raise RuntimeError("Skipping %s.... not found" % samfile)
+                baifile = "%s/%s.bam.bai" % (self.sam_dir, exp)
+                if not os.path.exists(baifile):
+                    raise RuntimeError("Skipping %s.... not found ( index file for bam file is required)" % baifile)
+                # self.samfile_name_list.append(exp)
+                self.sam_list.append(exp)
+#                self.exp_list[exp_idx] = os.path.split(exp)[1]
 
-def global_default():
-    global num_experiments, exp_list, readLen, tissue_repl, sam_dir, num_mapped_reads, genome, \
-        genome_path, outDir, temp_oDir, gene_tlb, strand_specific, permissive_ir, gc_norm
-    global A3SS, A5SS, SEev, bothSS, totalSE
-    global MINREADS, MINPOS, MIN_INTRON
+            return
 
-    num_experiments = 1
-    readLen = 30
-    MINREADS = 1
-    MINPOS = 1
-    genome = 'mm10'
+        def __str__(self):
+            return `self` + self.val
 
-    gene_tlb = {}
-
-
-def get_max_denovo_difference():
-    return 500
-
-
-def add_chunk():
-    global num_final_chunks
-    num_final_chunks += 1
-
-
-def set_gc_factors(bins, factor, means):
-    global gc_factor, gc_bins_val, gc_bins, gc_means
-    gc_factor = [None] * num_experiments
-    for idx, exp in enumerate(exp_list):
-        # gc_factor[idx] = interpolate.interp1d( bins[idx], factor[idx],bounds_error=False )
-        a = np.append(factor[idx], factor[idx][-1])
-        gc_factor[idx] = interpolate.interp1d(means[idx], factor[idx], bounds_error=False, fill_value=1)
-    # gc_factor[idx] = interpolate.interp1d( bins[idx], a , bounds_error=False)
-
-    gc_bins_val = factor
-    gc_bins = bins
-    gc_means = means
-
-
-def global_init(read_l, my_dir=None, paths=None):
-    global num_experiments, exp_list, readLen, gc_factor, gc_bins, gc_bins_val, tissue_repl
-
-    exp_list = []
-    if paths:
-        exp_list = paths
-    else:
-        for path in os.listdir(my_dir):
-            print path
-            if path.endswith("sam"):
-                exp_list.append((os.path.join(my_dir, path)))
-
-    print "Experiments:", exp_list
-
-    num_experiments = len(exp_list)
-    readLen = read_l
-    gc_factor = [None] * num_experiments
-    gc_bins_val = [None] * num_experiments
+    @staticmethod
+    def config_section_map(config_d, section):
+        dict1 = {}
+        options = config_d.options(section)
+        for option in options:
+            try:
+                dict1[option] = config_d.get(section, option)
+                if dict1[option] == -1:
+                    print("skip: %s" % option)
+            except:
+                print("exception on %s!" % option)
+                dict1[option] = None
+        return dict1

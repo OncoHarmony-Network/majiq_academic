@@ -2,7 +2,7 @@
 
 from matplotlib import use
 
-from majiq.src import io as majiq_io
+from old_majiq.src import io as majiq_io
 
 
 use('Agg')
@@ -143,7 +143,7 @@ if __name__ == '__main__':
 
     subparsers = parser.add_subparsers(help='')
     parser_calcpsi = subparsers.add_parser('calcpsi', help="Calculate PSI values for N experiments, given a folder of "
-                                                           "preprocessed events by 'majiq preprocess' or SAM/BAM files "
+                                                           "preprocessed events by 'old_majiq preprocess' or SAM/BAM files "
                                                            "(This last not implemented yet)", parents=[calcpsi, common])
     parser_calcpsi.set_defaults(func=calcpsi_func)
     parser_deltapair = subparsers.add_parser('deltapsi', help='Calculate Delta PSI values given a pair of experiments '

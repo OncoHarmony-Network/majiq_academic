@@ -1,17 +1,21 @@
 """
 Functions to filter junction pairs by number of positions covered or number of reads
 """
-import numpy as np
-import majiq.src.config as majiq_config
-
+from majiq.src.constants import *
 
 
 def reliable_in_data(junc, exp_idx, minnonzero=2, min_reads=3):
     min_read_x_exp = min_reads
     min_npos_x_exp = minnonzero
     in_data_filter = False
-    cover = junc.coverage.toarray()[exp_idx]
-    if junc.get_read_num(exp_idx) >= min_read_x_exp and np.count_nonzero(cover) >= min_npos_x_exp:
+    if junc.all_data:
+        numpos = np.count_nonzero(junc.coverage[exp_idx])
+        totreads = junc.get_read_num(exp_idx)
+    else:
+        cov = junc.get_coverage()[exp_idx]
+        numpos = np.count_nonzero(cov)
+        totreads = cov.sum()
+    if totreads >= min_read_x_exp and numpos >= min_npos_x_exp:
         in_data_filter = True
     return in_data_filter
 
@@ -22,17 +26,100 @@ def filter_message(when, value, logger, junc):
         if type(logger) == bool:
             print message
         else:
-            logger.info(message)
+            logger.debug(message)
 
 
-def quantifiable_in_group(list_of_experiments, minnonzero, min_reads, min_exp=-1, filter_vals=None, logger=None):
+def merge_files_hdf5(lsv_dict, lsv_summarized, minnonzero, min_reads, percent=-1, logger=None):
+
+    logger.debug("Quantifible filter...")
+    nfiles = lsv_summarized.shape[0]
+    if percent == -1:
+        percent = nfiles / 2
+        percent = percent + 1 if nfiles % 2 != 0 else percent
+    try:
+        vals = ((lsv_summarized[:, :, 0] >= minnonzero) * (lsv_summarized[:, :, 1] >= min_reads)).sum(axis=0) >= percent
+    except:
+        pass
+    list_of_lsvs = [kk for kk, vv in lsv_dict.items() if vals[vv].sum() >= 1]
+    return list_of_lsvs
+
+
+def quantifiable_in_group_to_hdf5(hdf5_p, list_of_experiments, minnonzero, min_reads, effective_readlen,
+                                  filter_vals=None, logger=None):
+    logger.debug("Quantifible filter...")
     nexp = len(list_of_experiments)
 
-    if min_exp == -1:
-        filtr = nexp / 2
-        filtr = filtr + 1 if filtr % 2 != 0 else filtr
-    else:
-        filtr = min_exp
+    filtr = nexp / 2
+    if nexp % 2 != 0:
+        filtr += 1
+
+    filt_exp = {}
+    for idx, exp in enumerate(list_of_experiments):
+        temp = lsv_quantifiable(exp, minnonzero, min_reads, filter_vals, logger)
+        for ldx, lsv in enumerate(temp[1]):
+            if not lsv[1] in filt_exp:
+                filt_exp[lsv[0]] = 0
+            filt_exp[lsv[0]] += 1
+
+    tlb = {}
+    info_tlb = {}
+    info_tlb2 = {}
+    for idx, exp in enumerate(list_of_experiments):
+        for idx_lsv, lsv in enumerate(exp[1]):
+            if not lsv[0] in tlb:
+                tlb[lsv[0]] = [None] * nexp
+                nways = len(exp[0][idx_lsv])
+                info_tlb[lsv[0]] = lsv
+                info_tlb2[lsv[0]] = np.zeros(shape=exp[0][idx_lsv].shape)
+            tlb[lsv[0]][idx] = idx_lsv
+
+    # filtered = []
+    # filtered_info = []
+    info = tlb.keys()
+    old_shape = len(info)
+    lsv_idx = 0
+
+    hdf5_p.create_dataset(JUNCTIONS_DATASET_NAME, (len(info)*2, nexp, effective_readlen),
+                          maxshape=(None, nexp, effective_readlen))
+
+    list_lsv = []
+    for ii in info:
+        if ii not in filt_exp or filt_exp[ii] < filtr:
+            continue
+
+        type_lsv = info_tlb[ii][1]
+        list_lsv.append(ii)
+        lsv_idx += 1
+        h_lsv = hdf5_p.create_group(ii)
+        h_lsv.attrs['id'] = ii
+        h_lsv.attrs['type'] = type_lsv
+        info_tlb[ii][2].copy(info_tlb[ii][2], h_lsv, name='visuals')
+        all_vals = []
+        for idx, exp in enumerate(list_of_experiments):
+
+            if tlb[ii][idx] is not None:
+                val = exp[0][tlb[ii][idx]]
+            else:
+                val = info_tlb2[ii]
+            all_vals.append(val)
+        njunc = len(val)
+        if lsv_idx + njunc > old_shape:
+            shp = hdf5_p[JUNCTIONS_DATASET_NAME].shape
+            shp_new = shp[0] + len(info)
+            hdf5_p[JUNCTIONS_DATASET_NAME].resize((shp_new, shp[1]))
+
+        hdf5_p[JUNCTIONS_DATASET_NAME][lsv_idx:lsv_idx+njunc] = np.reshape(np.array(all_vals), (njunc, nexp, effective_readlen))
+        h_lsv.attrs['coverage'] = hdf5_p[JUNCTIONS_DATASET_NAME].regionref[lsv_idx:lsv_idx + njunc]
+
+    return list_lsv
+
+
+def quantifiable_in_group(list_of_experiments, minnonzero, min_reads, filter_vals=None, logger=None):
+    nexp = len(list_of_experiments)
+
+    filtr = nexp / 2
+    if nexp % 2 != 0:
+        filtr += 1
 
     filt_exp = {}
     for idx, exp in enumerate(list_of_experiments):

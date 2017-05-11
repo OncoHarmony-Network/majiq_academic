@@ -1,8 +1,8 @@
 import sys
 from random import choice
+
 import numpy as np
 import majiq.src.polyfitnb as majiq_fit
-
 
 """
 Sampling from junctions using a Negative Binomial model.
@@ -13,7 +13,13 @@ PSEUDO = 0.0000000001  # EPSILON is too small for some calculations
 
 
 def _trimborders(junction, border):
-    "Discard the borders of the junctions unless they have reads"
+    """Discard the borders of the junctions unless they have reads
+    :param junction:
+    :param border:
+    :return:
+    """
+
+
     # TODO use a masker strategy instead of generating a new array (warning: Assigning values in a numpy
     # array creates a new one, so it is more inneficient than this)
     # discard left side
@@ -32,7 +38,11 @@ def _trimborders(junction, border):
 
 
 def mean_junction(junctions, discardzeros=True):
-    """Simple mean of junctions without bootstrapping, but discarding zeroes and flagged stuff"""
+    """Simple mean of junctions without bootstrapping, but discarding zeroes and flagged stuff
+    :param junctions:
+    :param discardzeros:
+    :return:
+    """
     ret = []
     for junc in junctions:
         junc = junc[junc > -EPSILON]
@@ -51,7 +61,16 @@ def mean_junction(junctions, discardzeros=True):
 
 def sample_from_junctions(junction_list, m, k, discardzeros=5, trimborder=True, fitted_one_over_r=None,
                           debug=False):
-    """Given the filtered reads, bootstrap samples from every junction"""
+    """Given the filtered reads, bootstrap samples from every junction
+    :param m:
+    :param k:
+    :param discardzeros:
+    :param trimborder:
+    :param fitted_one_over_r:
+    :param debug:
+    :return:
+    :param junction_list:
+    """
     sampled_means = []
     sampled_var = []
     all_samples = []

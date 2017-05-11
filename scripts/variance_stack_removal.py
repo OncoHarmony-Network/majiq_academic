@@ -3,9 +3,8 @@ from collections import defaultdict
 from matplotlib import use
 from numpy.ma import masked_less
 
+from majiq.src import checkpolyfitnb
 from scripts.utils import save_or_show
-from majiq.src import polyfitnb
-
 
 use('Agg', warn=False)
 
@@ -337,7 +336,7 @@ def lsv_mark_stacks(lsv_list, fitfunc_r, pvalue_limit, dispersion, logger=None):
 
                     #FINISH TODO
                     mean_rest = np.mean(copy_junc)
-                    pval = polyfitnb.get_negbinom_pval(fitfunc_r, mean_rest, value)
+                    pval = checkpolyfitnb.get_negbinom_pval(fitfunc_r, mean_rest, value)
                     if pval < pvalue_limit:
                         lsv_list[0][lidx][i, j] = -2
                         minstack = min(minstack, value)
@@ -354,7 +353,7 @@ def lsv_mark_stacks(lsv_list, fitfunc_r, pvalue_limit, dispersion, logger=None):
 def mark_stacks(junctions, fitted_1_r, pvalue_limit, dispersion, logger=False):
     """Mark stacks with zeros and return a logic index vector for modified junctions
 
-    NOTE: Use ONLY for testing the variances (otherwise use analysis.filter in majiq)"""
+    NOTE: Use ONLY for testing the variances (otherwise use analysis.filter in old_majiq)"""
 
     minstack = sys.maxint  # the minimum value marked as stack
     numstacks = 0
@@ -369,7 +368,7 @@ def mark_stacks(junctions, fitted_1_r, pvalue_limit, dispersion, logger=False):
                 copy_junc = copy_junc[copy_junc > 0]
                 # FINISH TODO
                 mean_rest = np.mean(copy_junc)
-                pval = polyfitnb.get_negbinom_pval(fitted_1_r, mean_rest, value)
+                pval = checkpolyfitnb.get_negbinom_pval(fitted_1_r, mean_rest, value)
                 if pval < pvalue_limit:
                     junctions[i, j] = -2
                     minstack = min(minstack, value)

@@ -1,50 +1,78 @@
 #!/usr/bin/python
 import gc
-import numpy as np
 
-from majiq.grimoire.exon import ExonTx, collapse_list_exons
-from majiq.grimoire.lsv import LSV, InvalidLSV
+from majiq.grimoire.exon import Exon, ExonTx, collapse_list_exons, detect_exons
 from majiq.grimoire.junction import Junction
-from majiq.src import config as majiq_config
-from majiq.src.analize import reliable_in_data
+from majiq.grimoire.lsv import LSV
+#from majiq.src import config_old as majiq_config
+from majiq.src.config import Config
+from majiq.grimoire.exon import new_exon_definition
+from majiq.src.constants import *
 
 
 class Gene:
-    __eq__ = lambda self, other: (self.chromosome == other.chromosome and self.strand == other.strand
-                                  and self.start < other.end and self.end > other.start
-                                  and self.strand == other.strand)
-    __ne__ = lambda self, other: (self.chromosome != other.chromosome or self.strand != other.strand
-                                  or self.start >= other.end or self.end <= other.start)
-    __lt__ = lambda self, other: (self.chromosome < other.chromosome
-                                  or (self.chromosome == other.chromosome
-                                      and (self.end < other.start
-                                           or (self.end > other.start and self.start < other.end
-                                               and self.strand == '+' and other.strand == '-'))))
-    __gt__ = lambda self, other: (self.chromosome > other.chromosome
-                                  or (self.chromosome == other.chromosome
-                                      and (self.start > other.end
-                                           or (self.end > other.start and self.start < other.end
-                                               and self.strand == '-' and other.strand == '+'))))
 
-    def __init__(self, gene_id, gene_name, chrom, strand, start, end):
+    def __init__(self, gene_id, gene_name, chrom, strand, start, end, retrieve=False):
         self.id = gene_id
         self.name = gene_name
         self.chromosome = chrom
         self.strand = strand
-        self.transcript_tlb = {}
         self.exons = []
         self.start = start
         self.end = end
-        self.readNum = np.zeros(shape=majiq_config.num_experiments, dtype=np.int)
-        self.temp_txex_list = []
-        self.ir_list = []
         self.ir_definition = []
-        self.lsv_list = []
-        # self.RPKM = np.zeros(shape=mglobals.num_experiments, dtype=np.float)
         self.antis_gene = []
+
+        self.total_read = 0
+        if not retrieve:
+            self.transcript_tlb = {}
+            self.temp_txex_list = []
+        self.junc_index = 0
+        self.gc_content = None
+
+    def __del__(self):
+        for ex in self.exons:
+            del ex
 
     def __hash__(self):
         return hash((self.id, self.chromosome, self.strand, self.start, self.end))
+
+    def to_hdf5(self, hdf5grps):
+        h_gen = hdf5grps.create_group("%s" % self.id)
+
+        h_gen.attrs['id'] = self.id
+        h_gen.attrs['name'] = self.name
+        h_gen.attrs['chromosome'] = self.chromosome
+        h_gen.attrs['strand'] = self.strand
+        h_gen.attrs['start'] = self.start
+        h_gen.attrs['end'] = self.end
+        if len(self.ir_definition) > 0:
+            h_gen.attrs['ir_definition'] = self.ir_definition
+        if len(self.antis_gene) > 0:
+            h_gen.attrs['antis_gene'] = self.antis_gene
+
+        [ex.to_hdf5(h_gen) for ex_count, ex in enumerate(self.exons)]
+
+    @staticmethod
+    def get_junctions_from_hdf5(hdf5_gene):
+        junc_res = []
+        for ex_hdf5 in hdf5_gene['exons']:
+            for extx_hdf5 in hdf5_gene['exons/%s' % ex_hdf5]:
+                for jj in hdf5_gene['exons/%s/%s/p5_junc' % (ex_hdf5, extx_hdf5)]:
+                    junc = hdf5_gene['exons/%s/%s/p5_junc/%s' % (ex_hdf5, extx_hdf5, jj)]
+                    junc_res.append((junc.attrs['start'], junc.attrs['end']))
+
+        return junc_res
+
+    @staticmethod
+    def get_exons_from_hdf5(hdf5_gene):
+        ex_res = []
+        for ex_hdf5 in hdf5_gene['exons']:
+            for extx_hdf5 in hdf5_gene['exons/%s' % ex_hdf5]:
+                exn = hdf5_gene['exons/%s' % ex_hdf5]
+                ex_res.append((exn.attrs['start'], exn.attrs['end']))
+
+        return ex_res
 
     def get_id(self):
         return self.id
@@ -56,10 +84,7 @@ class Gene:
         return self.strand
 
     def get_read_count(self):
-        return self.readNum
-
-    # def get_rpkm(self):
-    # return self.RPKM
+        return self.total_read
 
     def get_exon_list(self):
         return self.exons
@@ -73,33 +98,40 @@ class Gene:
     def get_transcript(self, trans_id):
         return self.transcript_tlb[trans_id]
 
-    def get_exon_in_coord(self, coord):
-        res = None
-        for ex in self.exons:
-            cc = ex.get_coordinates()
-            if cc[0] <= coord <= cc[1]:
-                res = ex
-                break
-        return res
-
-    def get_exon_by_id(self, ex_id):
-        # return self.exons[ex_id-1]
-        for ex in self.exons:
-            if ex.get_id() == ex_id:
-                res = ex
-                break
-        else:
-            res = None
-
-        return res
-
-    def get_overlapped_genes(self):
-        return self.antis_gene
-
     def get_ir_definition(self):
         return self.ir_definition
 
-    ''' Set functions '''
+    def incr_junc_index(self):
+        self.junc_index += 1
+
+    def get_junc_index(self):
+        return self.junc_index
+
+    def set_junc_index(self, val):
+        self.junc_index = val
+
+    def get_all_junctions(self, filter=True):
+        lst = set()
+        for ex in self.get_exon_list():
+            for ex_rna in ex.exonRead_list:
+                if len(ex_rna.p5_junc) > 0:
+                    lst = lst.union(set(ex_rna.p5_junc))
+            for ex_tx in ex.exonTx_list:
+                if len(ex_tx.p5_junc) > 0:
+                    lst = lst.union(set(ex_tx.p5_junc))
+
+        s_junc = list(lst)
+        return sorted([xx for xx in s_junc if not xx is None and (not filter or xx.get_coverage().sum() > 0)])
+
+    def get_all_introns(self):
+        lintrons = []
+        if len(self.exons) > 1:
+            for ex_idx, ex in enumerate(self.exons[:-1]):
+                lintrons.append((ex, self.exons[ex_idx+1]))
+        return lintrons
+
+    def add_exon(self, exon):
+        self.exons.append(exon)
 
     def add_transcript(self, tcrpt):
         if tcrpt.txstart < self.start:
@@ -108,21 +140,12 @@ class Gene:
             self.end = tcrpt.txend
 
         self.transcript_tlb[tcrpt.get_id()] = tcrpt
-        return
-
-    # def add_intron_retention(self, lsv_ir):
-    #     self.ir_list.append(lsv_ir)
-
-    def add_read_count(self, read_num, exp_idx):
-        self.readNum[exp_idx] += read_num
-        return
-
-    def add_exon(self, exon):
-        self.exons.append(exon)
-        return
 
     def add_ir_definition(self, start, end):
         self.ir_definition.append((start, end))
+
+    def add_read_count(self, read_num):
+        self.total_read += read_num
 
     def exist_antisense_gene(self, list_of_genes):
         # strnd = '-'
@@ -142,57 +165,77 @@ class Gene:
         self.antis_gene.append(gn_id)
 
     def overlaps(self, gne):
-        if self.start < gne.end and self.end > gne.start:
-            res = True
+        return self.start < gne.end and self.end > gne.start
+
+    def new_annotated_exon(self, start, end, transcript, bl=True, intron=False):
+        for txex in self.temp_txex_list:
+            if txex.start == start and txex.end == end:
+                res = txex
+                break
         else:
-            res = False
+            res = ExonTx(start, end, transcript, intron=intron)
+            if bl:
+                self.temp_txex_list.append(res)
         return res
 
-    def check_antisense_junctions(self, jstart, jend):
-        res = False
-        for anti_g in self.antis_gene:
-            # if not self.antis_gene is None:
-            gg = majiq_config.gene_tlb[anti_g]
-            cc = gg.get_coordinates()
-            if jend < cc[0] or jstart > cc[1]:
-                continue
-            j_list = gg.get_all_junctions()
-            for jj in j_list:
-                if not jj.is_annotated():
-                    continue
-                (j_st, j_ed) = jj.get_coordinates()
-                if j_st > jstart or (j_st == jstart and j_ed > jend):
-                    break
-                elif jstart == j_st and jend == j_ed:
-                    res = True
-                    break
-            if not res:
-                for ex in gg.get_exon_list():
-                    coords = ex.get_coordinates()
-                    # if jend > coords[0]:
-                    #     break
-                    coords = [coords[0] - majiq_config.get_max_denovo_difference(),
-                              coords[1] + majiq_config.get_max_denovo_difference()]
-
-                    if coords[0] <= jend <= coords[1] or coords[0] <= jstart <= coords[1]:
-                        res = True
-                        break
-            else:
+    def exist_junction(self, start, end):
+        if start is None or end is None:
+            return
+        res = None
+        for txcpt in self.transcript_tlb.values():
+            res = txcpt.in_junction_list(start, end)
+            if res is not None:
                 break
         return res
 
-    # def is_gene_in_list(self, list_of_genes, name):
-    #     res = None
-    #     for ll in list_of_genes:
-    #         if self.chromosome == ll.chromosome and self.strand == ll.strand \
-    #                 and self.start < ll.end and self.end > ll.start:
-    #
-    #             res = ll
-    #             ll.start = min(ll.start, self.start)
-    #             ll.end = max(ll.end, self.end)
-    #             break
-    #
-    #     return res
+    def new_annotated_junctions(self, start, end, trcpt):
+        junc = self.exist_junction(start, end)
+        if junc is None:
+            junc = Junction(start, end, None, None, self.get_id(), annotated=True)
+        junc.add_transcript(trcpt)
+
+        return junc
+
+    def prepare_exons(self):
+        self.exons.sort()
+
+    def remove_temp_attributes(self):
+        del self.temp_txex_list
+
+    def collapse_exons(self):
+
+        self.temp_txex_list.sort()
+        list_ex = collapse_list_exons(self.temp_txex_list, self)
+        self.exons.extend(list_ex)
+        self.prepare_exons()
+        self.remove_temp_attributes()
+
+    def get_all_ss(self):
+        ss = set()
+        for ex in self.exons:
+            tx_list = ex.get_annotated_exon()
+            for txex in tx_list:
+                for junc in txex.get_3prime_junc():
+                    coord = junc.end
+                    if coord is not None:
+                        ss.add((coord, '3prime', junc))
+                for junc in txex.get_5prime_junc():
+                    coord = junc.start
+                    if coord is not None:
+                        ss.add((coord, '5prime', junc))
+
+        return sorted(ss)
+
+    def get_exon_by_id(self, ex_id):
+        # return self.exons[ex_id-1]
+        for ex in self.exons:
+            if ex.get_id() == ex_id:
+                res = ex
+                break
+        else:
+            res = None
+
+        return res
 
     def exist_exon(self, start, end):
         """
@@ -215,207 +258,78 @@ class Gene:
 
         return res
 
-    def exist_junction(self, start, end):
-        if start is None or end is None:
-            return
-        res = None
-        for txcpt in self.transcript_tlb.values():
-            res = txcpt.in_junction_list(start, end)
-            if not res is None:
+    def check_antisense_junctions_hdf5(self, jstart, jend, h5_file):
+        majiq_config = Config()
+        res = False
+        for anti_g in self.antis_gene:
+            gg = h5_file[anti_g]
+            gg_start = gg.attrs['start']
+            gg_end = gg.attrs['end']
+            if jend < gg_start or jstart > gg_end:
+                continue
+            j_list = Gene.get_junctions_from_hdf5(gg)
+            for j_st, j_ed in j_list:
+                if j_st > jstart or (j_st == jstart and j_ed > jend):
+                    break
+                elif jstart == j_st and jend == j_ed:
+                    res = True
+                    break
+            if not res:
+                for ex_start, ex_end in Gene.get_exons_from_hdf5(gg):
+
+                    coords = [ex_start - majiq_config.get_max_denovo_difference(),
+                              ex_end + majiq_config.get_max_denovo_difference()]
+
+                    if coords[0] <= jend <= coords[1] or coords[0] <= jstart <= coords[1]:
+                        res = True
+                        break
+            else:
                 break
         return res
 
-    def get_all_junctions(self):
-        lst = set()
-        for ex in self.get_exon_list():
-            for ex_rna in ex.exonRead_list:
-                if len(ex_rna.p5_junc) > 0:
-                    lst = lst.union(set(ex_rna.p5_junc))
-
-        for tt in self.transcript_tlb.values():
-            for jj in tt.get_junction_list():
-                if not jj is None and not jj in lst:
-                    lst.add(jj)
-        s_junc = list(lst)
-        return sorted([xx for xx in s_junc if not xx is None])
-
-    # def sort_in_list(self):
-    #     lst = set()
-    #     for tt in self.transcript_tlb.values():
-    #         for jj in tt.get_junction_list():
-    #             if not jj is None and not jj in lst:
-    #                 lst.add(jj)
-    #     s_junc = list(lst)
-    #     return sorted(s_junc)
-
-    # def get_all_rna_junctions(self):
-    #     lst = []
-    #     for ex in self.get_exon_list():
-    #         for ex_rna in ex.exonRead_list:
-    #             if len(ex_rna.p5_junc) > 0:
-    #                 lst.union(set(ex_rna.p5_junc))
-    #     lst.sort()
-    #     return lst
-
-    def prepare_exons(self):
-#        self.exons.sort(reverse = isneg)
-        self.exons.sort()
-
-    def get_all_ss(self, anot_only=False):
-
-        ss = set()
-        for ex in self.exons:
-            tx_list = ex.get_annotated_exon()
-            for txex in tx_list:
-                for junc in txex.get_3prime_junc():
-                    coord = junc.get_ss_3p()
-                    if not coord is None:
-                        ss.add((coord, '3prime', junc))
-                for junc in txex.get_5prime_junc():
-                    coord = junc.get_ss_5p()
-                    if not coord is None:
-                        ss.add((coord, '5prime', junc))
-
-        return sorted(ss)
-
-    def collapse_exons(self):
-
-        self.temp_txex_list.sort()
-        list_ex = collapse_list_exons(self.temp_txex_list, self)
-        self.exons.extend(list_ex)
-        self.prepare_exons()
-        self.remove_temp_attributes()
-
-    def check_exons(self):
-
-        s_exons = set()
-
-        for ex in self.exons:
-            s_exons.add(ex.get_coordinates())
-
-
-        #assert len(s_exons) == len(self.exons), "Exist duplicates in exons in Gene %s, " % self.id
-        if len(s_exons) != len(self.exons):
-            for xx in self.exons:
-                print xx, xx.get_coordinates()
-
-            raise RuntimeError
-
-    def new_lsv_definition(self, exon, jlist, lsv_type, logger=None):
+    def new_lsv_definition(self, exon, jlist, lsv_type):
 
         coords = exon.get_coordinates()
-        ret = None
         lsv_id = "%s:%d-%d:%s" % (self.get_id(), coords[0], coords[1], lsv_type)
-        for lsv in self.lsv_list:
-            if lsv.id == lsv_id:
-                ret = lsv
-                break
-        else:
-            # try:
-                ret = LSV(exon, lsv_id, jlist, lsv_type)
-                self.lsv_list.append(ret)
-            # except InvalidLSV as e:
-            #     if logger:
-            #         logger.info("Attempt to create LSV with wrong type or not enought junction coverage %s" %
-            #                     exon.get_id())
-            #     raise InvalidLSV(e.msg)
+        return LSV(exon, lsv_id, jlist, lsv_type)
 
-        # for jj in jlist:
-        #     if jj.is_virtual() and logger:
-        #         logger.info("WE FOUND INTRON RETENTION in exon %s" % exon.get_coordinates())
+    def simplify(self):
+        majiq_config = Config()
+        jj_set = set()
+        for ex in self.exons:
+            jlist = []
+            for ttype in ('5prime', '3prime'):
+                for xx in ex.get_junctions(ttype):
+                    if xx is None:
+                        continue
+                    if xx.get_donor() is None or xx.get_acceptor() is None:
+                        jj_set.add(xx)
+                    else:
+                        jlist.append(xx)
 
-        return ret
+                for exp_idx in xrange(majiq_config.num_experiments):
+                    cover = [float(junc.get_coverage_sum(exp_idx)) for junc in jlist]
+                    if sum(cover) == 0:
+                        continue
+                    bool_map = [majiq_config.simplify_type == SIMPLIFY_ALL or
+                                (junc.is_annotated() and majiq_config.simplify_type == SIMPLIFY_DB) or
+                                (not junc.is_annotated() and majiq_config.simplify_type == SIMPLIFY_DENOVO)
+                                for junc in jlist]
 
-    def remove_temp_attributes(self):
-        del self.temp_txex_list
+                    jj_set = jj_set.union(set([junc for eidx, junc in enumerate(jlist)
+                                               if cover[eidx]/sum(cover) >= majiq_config.simplify_threshold and
+                                               bool_map[eidx]]))
 
-    def new_annotated_exon(self, start, end, transcript, bl=True, intron=False):
-        for txex in self.temp_txex_list:
-            if txex.start == start and txex.end == end:
-                res = txex
-                break
-        else:
-            res = ExonTx(start, end, transcript, intron=intron)
-            if bl:
-                self.temp_txex_list.append(res)
-        return res
-
-    def new_annotated_junctions(self, start, end, trcpt):
-        junc = self.exist_junction(start, end)
-        if junc is None:
-            junc = Junction(start, end, None, None, self, annotated=True)
-        junc.add_transcript(trcpt)
-
-        return junc
-
-    def get_all_introns(self):
-        lintrons = []
-        if len(self.exons) > 1:
-            for ex_idx, ex in enumerate(self.exons[:-1]):
-                lintrons.append((ex, self.exons[ex_idx+1]))
-        return lintrons
-
-    def get_rnaseq_mat(self, rand10k, use_annot=True):
-
-        ss3_l = []
-        ss5_l = []
-        tlb = {}
-        exidx = 0
-        ss_3p_vars = [0]*20
-        ss_5p_vars = [0]*20
-        ss_both_var = 0
-        exon_list = []
-        ex_list = self.get_exon_list()
-        for ex in ex_list:
-#            if ex.id is None:
-#                continue
-            l3 = len(set(ex.ss_3p_list))
-            l5 = len(set(ex.ss_5p_list))
-            if l3 == 0 or l5 == 0:
-                continue
-
-            local_3p, local_5p = ex.ss_variant_counts()
-            if local_3p > 1 and local_5p > 1:
-                ss_both_var += 1
-
-            ss_3p_vars[local_3p] += 1
-            ss_5p_vars[local_5p] += 1
-
-            st3 = len(ss3_l)
-            st5 = len(ss5_l)
-            ss3_l += sorted([ss3 for ss3 in set(ex.ss_3p_list)])
-            ss5_l += sorted([ss5 for ss5 in set(ex.ss_5p_list)])
-            tlb[exidx] = [range(st3, len(ss3_l)), range(st5, len(ss5_l))]
-            exon_list.append(ex)
-            exidx += 1
-
-        mat = np.zeros(shape=(len(ss5_l), len(ss3_l)), dtype='int')
-        # jmat = np.empty(shape=(len(ss5_l), len(ss3_l)), dtype='object')
-        # jmat.fill(None)
-
-        junc_list = self.get_all_junctions()
-        for junc in junc_list:
-            st, end = junc.get_coordinates()
-            if not st in ss5_l or not end in ss3_l:
-                continue
-            x = ss5_l.index(st)
-            y = ss3_l.index(end)
-
-            read_num = junc.get_coverage().sum()
-            if read_num > 0:
-                count_mat = read_num
-            elif junc.is_annotated() and use_annot:
-                count_mat = -1
-            else:
-                count_mat = 0
-            mat[x, y] = count_mat
-            # jmat[x, y] = junc
-
-            for exp_idx in range(majiq_config.num_experiments):
-                if reliable_in_data(junc, exp_idx):
-                    rand10k[exp_idx].add(junc)
-
-        return mat, exon_list, tlb, [ss_3p_vars, ss_5p_vars, ss_both_var]
+            del ex
+        self.exons = []
+        splice_list = set()
+        for jj in jj_set:
+            jj.add_donor(None)
+            jj.add_acceptor(None)
+            splice_list.add((jj.start, '5prime', jj))
+            splice_list.add((jj.end, '3prime', jj))
+        detect_exons(self, list(splice_list), retrieve=True)
+        del splice_list
 
 
 class Transcript(object):
@@ -424,14 +338,11 @@ class Transcript(object):
         self.id = name
         self.gene_id = gene.get_id()
         self.exon_list = []
-        #self.junction_list = []
         self.txstart = txstart
         self.txend = txend
-        # self.cdsStart = None
-        # self.cdsStop = None
 
     def get_gene(self):
-
+        majiq_config = Config()
         return majiq_config.gene_tlb[self.gene_id]
 
     def get_exon_list(self):
@@ -453,7 +364,7 @@ class Transcript(object):
         return self.exon_list
 
     def in_junction_list(self, start, end):
-        res = None 
+        res = None
         for ex in self.exon_list:
             for jj in ex.get_5prime_junc():
                 jjstart, jjend = jj.get_coordinates()
@@ -469,26 +380,159 @@ class Transcript(object):
         self.exon_list.append(exon)
         return
 
-    # def add_junction(self, junc):
-    #     if junc not in self.junction_list:
-    #         self.junction_list.append(junc)
-
-#     def sort_in_list(self):
-#         # strand = self.get_gene().get_strand()
-#         # if strand == '+':
-#         #     isneg = False
-#         # else:
-#         #     isneg = True
-# #        self.exon_list.sort(reverse=isneg)
-#         self.exon_list.sort()
-
 
 def recreate_gene_tlb(gene_list):
-
+    majiq_config = Config()
     for gn in gene_list:
         majiq_config.gene_tlb[gn.get_id()] = gn
 
 
 def clear_gene_tlb():
+    majiq_config = Config()
     majiq_config.gene_tlb.clear()
     gc.collect()
+
+
+def retrieve_gene(gene_id, dbfile, all_exp=False, junction_list=None, logger=None):
+    majiq_config = Config()
+    gg = dbfile[gene_id]
+    try:
+        gn = Gene(gene_id, gg.attrs['name'], gg.attrs['chromosome'], gg.attrs['strand'],
+                  gg.attrs['start'], gg.attrs['end'], retrieve=True)
+
+        majiq_config.gene_tlb[gene_id] = gn
+        if junction_list is None:
+            junction_list = {}
+
+        num_exp = 1 if not all_exp else majiq_config.num_experiments
+
+        for ex_grp_id in gg['exons']:
+            ex_grp = gg['exons/%s' % ex_grp_id]
+            ex = Exon(ex_grp.attrs['start'], ex_grp.attrs['end'], gn.get_id(),
+                      annot=True, isintron=False, indata=ex_grp.attrs['in_data'], retrieve=True)
+            gn.exons.append(ex)
+            try:
+                ex.set_pcr_score(ex_grp.attrs['pcr_name'], ex_grp.attrs['score'], ex_grp.attrs['candidate'])
+            except KeyError:
+                pass
+            if majiq_config.gcnorm:
+                ex.set_gc_content_val(ex_grp.attrs['gc_content'])
+
+            for ex_tx_id in ex_grp['tx']:
+                ex_tx = ex_grp['tx/%s' % ex_tx_id]
+    #            TODO: Do we need trasncript? for now is None
+
+                transcript_id = None
+                ext = ExonTx(ex_tx.attrs['start'], ex_tx.attrs['end'], transcript_id, intron=False)
+                ext.gene_name = gene_id
+                ex.add_exon_tx(ext)
+                ex.add_ss_3p(ex_tx.attrs['start'])
+                ex.add_ss_5p(ex_tx.attrs['end'])
+                for jj_grp_id in ex_tx["p3_junc"]:
+                    jj_grp = ex_tx["p3_junc/%s" % jj_grp_id]
+                    try:
+                        junc = junction_list[jj_grp.attrs['start'], jj_grp.attrs['end']]
+                    except KeyError:
+                        junc = Junction(jj_grp.attrs['start'], jj_grp.attrs['end'], None, None,
+                                        gene_id, annotated=True, retrieve=True, num_exp=num_exp, jindex=-1)
+                        junc.donor_id = jj_grp.attrs['donor_id']
+                        junc.acceptor_id = jj_grp.attrs['acceptor_id']
+                        junc.transcript_id_list = jj_grp.attrs['transcript_id_list']
+                        junction_list[jj_grp.attrs['start'], jj_grp.attrs['end']] = junc
+
+                    ext.add_3prime_junc(junc)
+
+                for jj_grp_id in ex_tx["p5_junc"]:
+                    jj_grp = ex_tx["p5_junc/%s" % jj_grp_id]
+                    try:
+                        junc = junction_list[jj_grp.attrs['start'], jj_grp.attrs['end']]
+                    except KeyError:
+                        junc = Junction(jj_grp.attrs['start'], jj_grp.attrs['end'], None, None,
+                                        gene_id, annotated=True, retrieve=True, num_exp=num_exp)
+                        junc.donor_id = jj_grp.attrs['donor_id']
+                        junc.acceptor_id = jj_grp.attrs['acceptor_id']
+                        junction_list[jj_grp.attrs['start'], jj_grp.attrs['end']] = junc
+
+                    ext.add_5prime_junc(junc)
+    except KeyError:
+        logger.info('ERROR in Gene %s: Annotation db analysis is corrupted' % gene_id)
+        raise
+    return gn
+
+
+def extract_junctions_hdf5(gene_obj, jj_grp, junction_list, annotated=True, all_exp=False):
+    majiq_config = Config()
+    num_exp = 1 if not all_exp else majiq_config.num_experiments
+
+    try:
+        junc = junction_list[(jj_grp.attrs['start'], jj_grp.attrs['end'])]
+        if junc.get_index() == -1:
+            junc.idx = gene_obj.get_junc_index()
+            gene_obj.incr_junc_index()
+
+    except KeyError:
+        if jj_grp.attrs['end'] - jj_grp.attrs['start'] == 1:
+            intronic = True
+        else:
+            intronic = False
+        junc = Junction(jj_grp.attrs['start'], jj_grp.attrs['end'], None, None,
+                        gene_obj.get_id(), annotated=annotated, retrieve=True, num_exp=num_exp,
+                        jindex=gene_obj.get_junc_index(), intronic=intronic)
+        junction_list[(jj_grp.attrs['start'], jj_grp.attrs['end'])] = junc
+        gene_obj.incr_junc_index()
+
+    return junc
+
+
+def find_intron_retention(gene_obj, dict_of_junctions, nondenovo, logging=None):
+    majiq_config = Config()
+    intron_list = gene_obj.get_all_introns()
+    for exon1, exon2 in intron_list:
+        ex1_end = exon1.get_coordinates()[1]
+        ex2_start = exon2.get_coordinates()[0]
+        intron_start = ex1_end + 1
+        intron_end = ex2_start - 1
+
+        intron_len = intron_end - intron_start
+        if intron_len <= 0:
+            continue
+
+        try:
+            jin = dict_of_junctions[intron_start]
+        except KeyError:
+            jin = None
+        try:
+            jout = dict_of_junctions[intron_end]
+        except KeyError:
+            jout = None
+
+        if jin is None and jout is None:
+            continue
+
+        elif jin is not None:
+            jout = Junction(intron_end, ex2_start, exon2, None, gene_obj.get_id(), retrieve=True,
+                            num_exp=majiq_config.num_experiments)
+
+        elif jout is not None:
+            jin = Junction(ex1_end, intron_start, exon1, None, gene_obj.get_id(), retrieve=True,
+                           num_exp=majiq_config.num_experiments)
+
+            exnum = new_exon_definition(intron_start, intron_end,
+                                        jin, jout, gene_obj, nondenovo=nondenovo,
+                                        isintron=True)
+            if exnum == -1:
+                continue
+            logging.debug("NEW INTRON RETENTION EVENT %s, %d-%d" % (gene_obj.get_name(), intron_start, intron_end))
+            jin.add_donor(exon1)
+            for ex in exon1.exonRead_list:
+                st, end = ex.get_coordinates()
+                if end == jin.get_coordinates()[0]:
+                    ex.add_5prime_junc(jin)
+                    break
+
+            jout.add_acceptor(exon2)
+            for ex in exon2.exonRead_list:
+                st, end = ex.get_coordinates()
+                if st == jout.get_coordinates()[1]:
+                    ex.add_3prime_junc(jout)
+                    break

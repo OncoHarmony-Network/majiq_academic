@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 import sys
-grimoire_path = '/Users/Jordi/software/majiq'
+grimoire_path = '/Users/Jordi/software/old_majiq'
 if grimoire_path not in sys.path:
     sys.path.append(grimoire_path)
 
@@ -750,24 +750,24 @@ def fdr_parse(direc, file_list, group_list, intronic_junc=False):
 if __name__ == '__main__':
 
     dire = sys.argv[1]
-    #onlyfiles = [f for f in listdir(dire) if isfile(join(dire, f)) and f.endswith('majiq')]
+    #onlyfiles = [f for f in listdir(dire) if isfile(join(dire, f)) and f.endswith('old_majiq')]
     #groups = ['Adr', 'Aor', 'BFat', 'Bstm', 'Cer', 'Hrt', 'Hyp', 'Kid', 'Liv', 'Lun', 'Mus', 'WFat']
-    groups = ['BALB_cJ',
-                 'NOD_ShiLtJ',
-                 'PWK_PhJ',
-                 'LP_J',
-                 'AKR_J',
-                 'NZO_HILtJ',
-                 'WSB_EiJ',
-                 'CAST_EiJ',
-                 'CBA_J',
-                 'DBA_2J',
-                 'C3H_HeJ',
-                 'SPRET_EiJ',
-                 '129S1_SvImJ',
-                 'A_J',
-                 'C57BL_6NJ']
-    # onlyfiles = ['Adr_CT22.mm10.sorted.majiq', 'Aor_CT22.mm10.sorted.majiq']
+    # groups = ['BALB_cJ',
+    #              'NOD_ShiLtJ',
+    #              'PWK_PhJ',
+    #              'LP_J',
+    #              'AKR_J',
+    #              'NZO_HILtJ',
+    #              'WSB_EiJ',
+    #              'CAST_EiJ',
+    #              'CBA_J',
+    #              'DBA_2J',
+    #              'C3H_HeJ',
+    #              'SPRET_EiJ',
+    #              '129S1_SvImJ',
+    #              'A_J',
+    #              'C57BL_6NJ']
+    # onlyfiles = ['Adr_CT22.mm10.sorted.old_majiq', 'Aor_CT22.mm10.sorted.old_majiq']
 
     global ir_plots
     ir_plots = True
@@ -780,28 +780,28 @@ if __name__ == '__main__':
         os.makedirs(output)
         os.makedirs('%s/news' % output)
 
-    # list_types, group_types = get_types(dire, onlyfiles, groups)
-    # count_lsv = len(set(list_types.keys()))
-    # stypes = {}
-    # for kk, tyt in list_types.items():
-    #     if not tyt in stypes:
-    #         stypes[tyt] = 0
-    #     stypes[tyt] += 1
-    # print "Plot 3.a 3.b"
-    # all_plots_wrapper(stypes, count_lsv, output=output)
+    list_types, group_types = get_types(dire, onlyfiles, groups)
+    count_lsv = len(set(list_types.keys()))
+    stypes = {}
+    for kk, tyt in list_types.items():
+        if not tyt in stypes:
+            stypes[tyt] = 0
+        stypes[tyt] += 1
+    print "Plot 3.a 3.b"
+    all_plots_wrapper(stypes, count_lsv, output=output)
 
 
-    #
+
     #read psi values
-    # groups_vals = []
-    # filename_list = ['./psi/%s_psigroup_psi.txt' % grp for grp in groups]
-    # print "Plot Dominant exons"
-    # values = psi_dominant(filename_list)
-    # plot_dominant_exons(values, 'exons', color=cb.Blues[9])
-    # values = ss_dominant(filename_list)
-    # print "Plot Dominant splicesites"
-    # plot_dominant_exons(values[0], ' 5\'splice sites', color=cb.Oranges[9])
-    # plot_dominant_exons(values[1], ' 3\'splice sites', color=cb.PuRd[9])
+    groups_vals = []
+    filename_list = ['./psi/%s_psigroup_psi.txt' % grp for grp in groups]
+    print "Plot Dominant exons"
+    values = psi_dominant(filename_list)
+    plot_dominant_exons(values, 'exons', color=cb.Blues[9])
+    values = ss_dominant(filename_list)
+    print "Plot Dominant splicesites"
+    plot_dominant_exons(values[0], ' 5\'splice sites', color=cb.Oranges[9])
+    plot_dominant_exons(values[1], ' 3\'splice sites', color=cb.PuRd[9])
 
     #heatmap
     print "Plot dpsi changing events heatmap"

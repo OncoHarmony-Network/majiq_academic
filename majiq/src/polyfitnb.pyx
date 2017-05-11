@@ -2,7 +2,7 @@ import random
 from numpy.ma import masked_less
 import numpy as np
 from scipy.stats import nbinom, poisson
-import plotting as mplot
+# import majiq.src.plotting as mplot
 
 def get_ecdf(pvalues):
     # print sorted(pvalues)
@@ -69,7 +69,7 @@ def calc_pvalues(junctions, one_over_r, indices_list=None):
 def adjust_fit(starting_a, junctions, precision, previous_score, plotpath, indices=None, logger=None):
     previous_a = -1
     if logger:
-        logger.info("Starting from %s with precision %s" % (starting_a, precision))
+        logger.debug("Starting from %s with precision %s" % (starting_a, precision))
     idx = 0
 
     steps = np.arange(starting_a, 0, -precision)
@@ -82,11 +82,11 @@ def adjust_fit(starting_a, junctions, precision, previous_score, plotpath, indic
         pvalues = calc_pvalues(junctions, corrected_a, indices)
         ecdf = get_ecdf(pvalues)
         score = score_ecdf(ecdf)
-        mplot.plot_fitting(ecdf, plotpath, title="%s.[step %d] 1\_r %s" % (precision, idx, corrected_a),
-                     plotname='%s.step%s' % (precision, idx))
+        # mplot.plot_fitting(ecdf, plotpath, title="%s.[step %d] 1\_r %s" % (precision, idx, corrected_a),
+        #                    plotname='%s.step%s' % (precision, idx))
         idx += 1
         if logger:
-            logger.info("New Score %.5f" % score)
+            logger.debug("New Score %.5f" % score)
         if previous_score < score:
             # the best fit are previous_a and previous_score
             if previous_a == -1:
@@ -111,7 +111,7 @@ def adjust_fit(starting_a, junctions, precision, previous_score, plotpath, indic
 
 def fit_nb(junctionl, outpath, plotpath, nbdisp=0.1, logger=None):
     if logger and plotpath:
-        logger.info("NBFit: Plots will be drawn in %s..." % plotpath)
+        logger.debug("NBFit: Plots will be drawn in %s..." % plotpath)
 
     filtered = []
 
@@ -119,6 +119,9 @@ def fit_nb(junctionl, outpath, plotpath, nbdisp=0.1, logger=None):
         if np.count_nonzero(jun) >= 1 and jun.sum() >= 1:
             filtered.append(jun)
 
+    if len(filtered) < 10:
+        logger.warning("Your dataset is not deep enougth to define an apropiate NB factor. The default 0 is given")
+        return 0.0
     junctions = np.array(filtered)
     junctions = masked_less(junctions, 0.1)
     mean_junc = junctions.mean(axis=1)
@@ -134,7 +137,7 @@ def fit_nb(junctionl, outpath, plotpath, nbdisp=0.1, logger=None):
 
     pvalues = calc_pvalues(junctions, one_over_r0, indices)
     ecdf = get_ecdf(pvalues)
-    mplot.plot_fitting(ecdf, plotpath, title="NON-Corrected ECDF 1\_r %s" % one_over_r0)
+    # mplot.plot_fitting(ecdf, plotpath, title="NON-Corrected ECDF 1\_r %s" % one_over_r0)
     # plot_negbinomial_fit(mean_junc, std_junc, fit_function, plotpath, "Before correction")
     score = score_ecdf(ecdf)
 
@@ -146,7 +149,7 @@ def fit_nb(junctionl, outpath, plotpath, nbdisp=0.1, logger=None):
         one_over_r, score, ecdf, pvalues = adjust_fit(one_over_r, junctions, precision, score, plotpath,
                                                       indices=indices, logger=logger)
         if logger:
-            logger.info("Corrected to %.5f with precision %s. Current score is %.5f" % (one_over_r, precision, score))
+            logger.debug("Corrected to %.5f with precision %s. Current score is %.5f" % (one_over_r, precision, score))
         if i + 1 != len(precision_values):
             #go "up" in the scale so we dont miss better solution
             one_over_r += precision - precision_values[i + 1]

@@ -1,16 +1,24 @@
-__author__ = 'jordi@biociphers.org'
-
-import cPickle as pickle
-
-import numpy as np
-import scipy.sparse
-import majiq.src.config as majiq_config
-from voila.splice_graphics import ExonGraphic, LsvGraphic, JunctionGraphic
+import pickle
+from majiq.src.config import Config
 from voila import constants as voila_const
+from voila.splice_graphics import ExonGraphic, LsvGraphic, JunctionGraphic
+from majiq.src.constants import *
+import majiq.src.normalize as majiq_norm
+import collections
 
+__author__ = 'jordi@biociphers.org'
 
 SSOURCE = 'source'
 STARGET = 'target'
+
+quant_lsv = collections.namedtuple('quant_lsv', 'id type coverage')
+
+
+def dump_bin_file(data, filename):
+    with open(filename, 'wb') as ofp:
+        fast_pickler = pickle.Pickler(ofp, protocol=2)
+        # fast_pickler.fast = 1
+        fast_pickler.dump(data)
 
 
 class InvalidLSV(Exception):
@@ -23,85 +31,64 @@ class InvalidLSV(Exception):
 
 class LSV(object):
     def __init__(self, exon, lsv_id, junctions, lsv_type):
+        majiq_config = Config()
         if lsv_type != SSOURCE and lsv_type != STARGET:
             raise InvalidLSV('Incorrect LSV type %s' % lsv_type)
         self.coords = exon.get_coordinates()
         self.id = lsv_id
+        junction_list = [x for x in junctions if x is not None and
+                                                 x.get_donor() is not None and
+                                                 x.get_acceptor() is not None]
+        if majiq_config.simplify:
+            jj_set = set()
+            for exp_idx in xrange(majiq_config.num_experiments):
+                cover = [float(junc.get_coverage_sum(exp_idx)) for junc in junction_list]
+                if sum(cover) == 0:
+                    continue
+                bool_map = [majiq_config.simplify_type == SIMPLIFY_ALL or
+                            (junc.is_annotated() and majiq_config.simplify_type == SIMPLIFY_DB) or
+                            (not junc.is_annotated() and majiq_config.simplify_type == SIMPLIFY_DENOVO)
+                            for junc in junction_list]
 
-        for x in junctions:
-            if x is None:
-                pass
-        junction_list = [x for x in junctions if x is not None]
-        # and x.get_donor() is not None
-        # and x.get_acceptor() is not None]
-        n_viable_juncs = len([x for x in junction_list if x.get_donor() is not None
-                              and x.get_acceptor() is not None])
+                jj_set = jj_set.union(set([junc for eidx, junc in enumerate(junction_list)
+                                           if cover[eidx]/sum(cover) >= majiq_config.simplify_threshold and bool_map[eidx]]))
+            junction_list = list(jj_set)
 
+        n_viable_juncs = len(junction_list)
         if n_viable_juncs < 2:
             raise InvalidLSV('Not enought junctions')
         self.type = lsv_type
         self.exon = exon
 
-        #print lsv_id
         self.intron_retention = False
         for jj in junction_list:
             x1 = jj.get_acceptor()
             x2 = jj.get_donor()
-            #print "\t ", jj.get_id()
+
             if x1 is None or x2 is None:
                 continue
             if x1.is_intron() or x2.is_intron():
-                #print "LSV with intron"
                 self.intron_retention = True
                 break
         try:
-            self.tlb_junc = {}
-            self.ext_type = self.set_type(junction_list, self.tlb_junc)
+            tlb_junc = {}
+            self.ext_type = self.set_type(junction_list, tlb_junc)
             if self.ext_type == 'intron':
-                #print "KKKKKKKKV %s" % exon.get_gene()
                 raise InvalidLSV('Auto junction found')
         except:
             raise InvalidLSV('Problematic Type')
 
-        juncs = []
+        self.junctions = []
         order = self.ext_type.split('|')[1:]
         for idx, jj in enumerate(order):
-            if jj[-2:] == 'e0': continue
-            juncs.append(junction_list[self.tlb_junc[jj]])
-        self.junctions = np.array(juncs)
+            if jj[-2:] == 'e0':
+                continue
+            self.junctions.append(junction_list[tlb_junc[jj]])
 
         self.visual = list()
         for exp_idx in xrange(majiq_config.num_experiments):
             self.visual.append(self.get_visual_lsv(self.junctions, exp_idx))
-
-    def check_type(self, lsv_type):
-        tab = lsv_type.split('|')[1:]
-        exss = []
-        targ = {}
-        for tt in tab:
-            dum = tt.split('e')
-            exss.append(int(dum[0]))
-            tr = dum[1].split('.')
-            if len(tr) == 1 and dum[1] == '0':
-                continue
-            if int(tr[0]) not in targ:
-                targ[int(tr[0])] = []
-            targ[int(tr[0])].append(int(tr[1]))
-
-        exss.sort()
-        for iidx, ii in enumerate(exss[1:]):
-            if ii != exss[iidx] + 1 and ii != exss[iidx]:
-                print "ERROR 1", lsv_type
-                return -1
-
-        for kk, vlist in targ.items():
-            vlist.sort()
-            for vidx, vv in enumerate(vlist[1:]):
-                if vv != vlist[vidx] + 1 and vv != vlist[vidx]:
-                    print "ERROR 2", lsv_type
-                    return -1
-
-        return 0
+        self.visual = np.array(self.visual)
 
     def get_coordinates(self):
         return self.coords
@@ -191,7 +178,7 @@ class LSV(object):
                     try:
                         ex = '%s.%so%s' % (ex1, s3.index(junc.end) + 1, len(s3))
                     except Exception as e:
-                        print "ERRORRR", ex_id
+                        print "ERRORRR", ex_id, e
                         raise e
                     jtype = "|%se%s" % (spsite.index(junc.start) + 1, ex)
             else:
@@ -214,7 +201,7 @@ class LSV(object):
         return ext_type
 
     def get_visual_lsv(self, junction_list, exp_idx):
-
+        majiq_config = Config()
         junc_list = []
         junc_l = []
         lsv_exon_list = [self.exon]
@@ -237,25 +224,26 @@ class LSV(object):
             if jdonor != self.exon:
                 lsv_exon_list.append(jdonor)
 
-            if jj.is_annotated() and jj.get_read_num(exp_idx) == 0:
+            if jj.annotated and jj.get_read_num(exp_idx) == 0:
                 jtype = 2
-            elif jj.is_annotated() and jj.get_read_num(exp_idx) > 0:
+            elif jj.annotated and jj.get_read_num(exp_idx) > 0:
                 jtype = 0
-            elif not jj.is_annotated() and jj.get_read_num(exp_idx) > majiq_config.MINREADS:
+            elif not jj.annotated and jj.get_read_num(exp_idx) > majiq_config.minreads:
                 jtype = 1
             else:
                 jtype = 1
                 # continue
 
-            ir_type = None
+            ir_type = 0
             if jj.get_donor().is_intron():
                 ir_type = voila_const.IR_TYPE_START
             elif jj.get_acceptor().is_intron():
                 ir_type = voila_const.IR_TYPE_END
 
             junc_l.append(jj.get_coordinates())
-            junc_list.append(JunctionGraphic(jj.get_coordinates(), jtype, jj.get_read_num(exp_idx),
-                                             transcripts=jj.get_transcript_list(), ir=ir_type))
+            junc_list.append(JunctionGraphic(jj.get_coordinates()[0], jj.get_coordinates()[1],
+                                             junction_type_list=[], reads_list=[],
+                                             transcripts=jj.get_transcript_list(), intron_retention=ir_type))
         junc_l = np.asarray(junc_l)
         lsv_exon_list.sort()
         exon_list = []
@@ -298,15 +286,14 @@ class LSV(object):
                     extra_coords.append([ex.start, ex.db_coord[0] - 1])
                 if ex.end > ex.db_coord[1]:
                     extra_coords.append([ex.db_coord[1] + 1, ex.end])
-            eg = ExonGraphic(a3, a5, cc, type_exon=visual_type, coords_extra=extra_coords,
+
+            eg = ExonGraphic(a3, a5, start=cc[0], end=cc[1], exon_type_list=[], coords_extra=extra_coords,
                              intron_retention=ex.get_ir(), alt_starts=alt_start, alt_ends=alt_ends)
             exon_list.append(eg)
 
-        splice_lsv = LsvGraphic(type_lsv=self.ext_type, coords=self.coords, id=self.id,
-                                name=self.exon.get_gene().get_name(),
-                                strand=self.get_strand(), exons=exon_list, junctions=junc_list,
-                                chrom=self.get_chromosome())
-
+        splice_lsv = LsvGraphic(lsv_type=self.ext_type, start=self.coords[0], end=self.coords[1], lsv_id=self.id,
+                                name=self.exon.get_gene().get_name(), chromosome=self.get_chromosome(),
+                                strand=self.get_strand(), exons=exon_list, junctions=junc_list)
         return splice_lsv
 
     def is_equivalent(self, variant):
@@ -337,8 +324,46 @@ class LSV(object):
 
         return res
 
-    def to_majiqLSV(self, exp_idx):
-        return MajiqLsv(self, exp_idx)
+    def to_hdf5(self, hdf5grp, lsv_idx, exp_idx, fitfunc_r=1, gc_vfunc=None):
+        majiq_config = Config()
+        try:
+            njunc = len(self.junctions)
+            cover = np.zeros(shape=(njunc, (majiq_config.readLen - 16) + 1),
+                             dtype=np.float)
+
+            pvalue_limit = 0.0000001
+            for idx, junc in enumerate(self.junctions):
+                if junc.get_index() != -1:
+                    cover[idx] = junc.get_coverage()[exp_idx]
+                    if majiq_config.gcnorm and junc.get_gc_content(exp_idx).sum() > 0:
+                        vals = gc_vfunc(junc.get_gc_content(exp_idx))
+                        cover[idx] = np.multiply(cover[idx], vals)
+                    if pvalue_limit >= 0:
+                        cover[idx] = majiq_norm.mark_stacks_per_junc(cover[idx], fitfunc_r, pvalue_limit)
+
+#            if lsv_idx + njunc > majiq_config.nrandom_junctions:
+            if lsv_idx + njunc > 2:
+                shp = hdf5grp[JUNCTIONS_DATASET_NAME].shape
+                shp_new = shp[0] + NRANDOM_JUNCTIONS
+                hdf5grp[JUNCTIONS_DATASET_NAME].resize((shp_new, shp[1]))
+
+            hdf5grp[JUNCTIONS_DATASET_NAME][lsv_idx:lsv_idx+njunc] = cover
+
+            h_lsv = hdf5grp.create_group("LSVs/%s" % self.id)
+            h_lsv.attrs['coords'] = self.coords
+            h_lsv.attrs['id'] = self.id
+            h_lsv.attrs['type'] = self.ext_type
+            h_lsv.attrs['coverage'] = hdf5grp[JUNCTIONS_DATASET_NAME].regionref[lsv_idx:lsv_idx + njunc]
+            h_lsv.attrs['coverage_index'] = (lsv_idx, lsv_idx + njunc)
+
+            vh_lsv = h_lsv.create_group('visual')
+            self.get_visual(exp_idx).to_hdf5(vh_lsv)
+
+        except:
+            print "HDF5 ERROR", self.id, cover.shape, hdf5grp[JUNCTIONS_DATASET_NAME].shape
+            raise
+
+        return lsv_idx + njunc
 
 
 def extract_se_events(list_lsv_per_gene):
@@ -438,8 +463,7 @@ def extract_gff(list_lsv, out_dir):
     gtf = sorted(gtf)
     fname = '%s/temp_gff.pkl' % out_dir
     with open(fname, 'w+b') as ofp:
-        fast_pickler = pickle.Pickler(ofp, protocol=2)
-        fast_pickler.dump(gtf)
+        dump_bin_file(gtf, fname)
 
     return gtf
 
@@ -451,45 +475,3 @@ def print_lsv_extype(list_lsv, filename):
         lsv = list_lsv[idx]
         fp.write("%s\n" % lsv.type)
     fp.close()
-
-
-class MajiqLsv(object):
-    def __init__(self, lsv_obj, exp_idx):
-
-        self.coords = lsv_obj.coords
-        self.id = lsv_obj.id
-        self.type = lsv_obj.ext_type
-        self.iretention = lsv_obj.intron_retention
-        self.junction_list = scipy.sparse.lil_matrix((lsv_obj.junctions.shape[0], (majiq_config.readLen - 16) + 1),
-                                                     dtype=np.float)
-        self.junction_id = []
-
-        if majiq_config.gcnorm:
-            self.gc_factor = scipy.sparse.lil_matrix((lsv_obj.junctions.shape[0], (majiq_config.readLen - 16) + 1),
-                                                     dtype=np.dtype('float'))
-        else:
-
-            self.gc_factor = None
-
-        for idx, junc in enumerate(lsv_obj.junctions):
-            self.junction_list[idx, :] = junc.coverage[exp_idx, :]
-            self.junction_id.append(junc.get_id())
-            if majiq_config.gcnorm:
-                for jidx in range((majiq_config.readLen - 16) + 1):
-                    dummy = junc.get_gc_content()[0, jidx]
-                    self.gc_factor[idx, jidx] = dummy
-
-        self.visual = lsv_obj.get_visual(exp_idx)
-
-    def set_gc_factor(self, exp_idx):
-        if majiq_config.gcnorm:
-            nnz = self.gc_factor.nonzero()
-            for idx in xrange(nnz[0].shape[0]):
-                i = nnz[0][idx]
-                j = nnz[1][idx]
-                dummy = self.gc_factor[i, j]
-                self.junction_list[i, j] *= majiq_config.gc_factor[exp_idx](dummy)
-        del self.gc_factor
-
-
-

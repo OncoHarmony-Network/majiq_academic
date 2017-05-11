@@ -1,0 +1,9 @@
+*.pyc
+*.c
+*.so
+.DS_Store
+.idea
+voila/templates/.idea
+voila/templates/static/matrix_plots
+build/
+voila/templates/spliceGraphD3.html

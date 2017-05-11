@@ -1,17 +1,15 @@
-#!/usr/bin/python
 import os
-
-import numpy as np
-from majiq.grimoire.lsv import SSOURCE, STARGET
-import majiq.src.filter as majiqfilter
-from majiq.src import config
-
+from majiq.src.config import Config
+from majiq.src.constants import *
 
 # FLAGS
-ANNOTATED = 0b0001
-INTRON = 0b0010
-MISS_START = 0b0100
-MISS_END = 0b1000
+NEUTRAL = 0b00000
+
+ANNOTATED = 0b00001
+INTRON = 0b00010
+MISS_START = 0b00100
+MISS_END = 0b01000
+INDATA = 0b10000
 
 
 class Exon:
@@ -22,43 +20,65 @@ class Exon:
     __gt__ = lambda self, other: self.start >= other.end
     __ge__ = lambda self, other: self.start >= other.end or (self.start < other.end and self.end > other.start)
 
-    def __init__(self, start, end, gene, strand, annot=False, isintron=False):
+    def __init__(self, start, end, gene_id, annot=False, isintron=False, indata=False, retrieve=False):
 
-        self.flag = 0b0000
+        self.flag = NEUTRAL
         if start == EMPTY_COORD:
             start = end - 10
-            self.flag |= 0b0100
+            self.flag |= MISS_START
         if end == EMPTY_COORD:
             end = start + 10
-            self.flag |= 0b1000
+            self.flag |= MISS_END
 
+        self.gene_name = gene_id
+        self.id = "%s:%d-%d" % (self.gene_name, start, end)
         self.start = start
         self.end = end
-        self.gene_name = gene.get_id()
+
         self.exonTx_list = []
         self.exonRead_list = []
         self.ss_3p_list = []
         self.ss_5p_list = []
-        self.id = "%s:%d-%d" % (self.gene_name, start, end)
-        # self.strand = strand
+
         self.gc_content = 0
-        self.coverage = np.zeros(shape=config.num_experiments)
+
         self.score = None
         self.pcr_name = None
         self.pcr_candidate = None
         self.db_coord = (start, end)
 
-        self.flag |= 0b0001 if annot else 0b0000
-        self.flag |= 0b0010 if isintron else 0b0000
+        self.flag |= ANNOTATED if annot else NEUTRAL
+        self.flag |= INTRON if isintron else NEUTRAL
+        self.flag |= INDATA if indata else NEUTRAL
+
+        if retrieve:
+            self.coverage = 0
+
+    def __del__(self):
+        for ext in self.exonTx_list:
+            del ext
+        for exr in self.exonRead_list:
+            del exr
 
     def __hash__(self):
         return hash(self.id) ^ hash(self.gene_name)
 
+    def to_hdf5(self, hdf5grps):
+        h_ex = hdf5grps.create_group("exons/%s" % self.id)
+
+        h_ex.attrs['start'] = self.start
+        h_ex.attrs['end'] = self.end
+        h_ex.attrs['gc_content'] = self.gc_content
+        h_ex.attrs['in_data'] = self.is_in_data()
+
+        [tex.to_hdf5(h_ex) for tex in self.exonTx_list]
+        if self.score is not None:
+            h_ex.attrs['score'] = self.score
+            h_ex.attrs['pcr_name'] = self.pcr_name
+            h_ex.attrs['pcr_candidate'] = self.pcr_candidate
+
     def get_id(self):
         return self.id
-
-    # def get_strand(self):
-    # return self.strand
 
     def get_coordinates(self):
         """
@@ -69,7 +89,8 @@ class Exon:
         return self.start, self.end
 
     def get_gene(self):
-        return config.gene_tlb[self.gene_name]
+        majiq_config = Config()
+        return majiq_config.gene_tlb[self.gene_name]
 
     def get_strand(self):
         return self.get_gene().get_strand()
@@ -85,6 +106,9 @@ class Exon:
 
     def is_miss_end(self):
         return self.flag & MISS_END == MISS_END
+
+    def is_in_data(self):
+        return self.flag & INDATA == INDATA
 
     def get_ir(self):
 
@@ -118,9 +142,15 @@ class Exon:
     def get_pcr_name(self):
         return self.pcr_name
 
-    def add_new_read(self, start, end, read_seq, s3p_junc, s5p_junc):
+    def set_in_data(self):
+        self.flag |= INDATA
 
-        #assert start < end , " INCORRECT exon definition %s - %s "%(start, end)
+    def add_exon_tx(self, extx):
+        self.exonTx_list.append(extx)
+
+    def add_new_read(self, start, end, s3p_junc, s5p_junc):
+
+        # assert start < end , " INCORRECT exon definition %s - %s "%(start, end)
         if start >= end:
             return None
         self.start = min(self.start, start)
@@ -132,7 +162,7 @@ class Exon:
                 res.add_5prime_junc(s5p_junc)
                 res.add_3prime_junc(s3p_junc)
 
-                #self.exonRead_list.append(res)
+                # self.exonRead_list.append(res)
                 break
         else:
             for idx1, i1 in enumerate(self.ss_3p_list):
@@ -143,18 +173,18 @@ class Exon:
             else:
                 self.ss_3p_list.append(start)
                 self.ss_5p_list.append(end)
-            res = ExonRead(start, end, s3p_junc, s5p_junc, read_seq)
+            res = ExonRead(start, end, s3p_junc, s5p_junc)
             self.exonRead_list.append(res)
         return res
 
-    def get_coverage(self, exp_idx):
-        return self.coverage[exp_idx]
+    def get_coverage(self, exp_idx=0):
+        return self.coverage
 
     def get_gc_content(self):
         return self.gc_content
 
     def get_total_read_num(self, exp_idx):
-        ex_reads = self.coverage[exp_idx].sum()
+        ex_reads = 1 if self.is_in_data() else 0
         junc3 = self.get_junctions('3prime')
         for j3 in junc3:
             ex_reads += j3.get_read_num(exp_idx)
@@ -164,8 +194,17 @@ class Exon:
             ex_reads += j5.get_read_num(exp_idx)
         return ex_reads
 
-    def update_coverage(self, exp_idx, num):
-        self.coverage[exp_idx] += num
+    def update_coverage(self, num):
+        self.coverage += num
+
+    def add_ss_3p(self, coord):
+        self.ss_3p_list.append(coord)
+
+    def add_ss_5p(self, coord):
+        self.ss_5p_list.append(coord)
+
+    def set_gc_content_val(self, value):
+        self.gc_content = value
 
     def set_gc_content(self, sequence):
         #        if len(self.exonTx_list) != 0 and len(self.exonRead_list) != 0 :
@@ -192,31 +231,6 @@ class Exon:
                             continue
                         jlist.add(junc)
         return jlist
-
-    # def print_triplet_coord(self, fp):
-    #     gene = mglobals.gene_tlb[self.gene_name]
-    #     chrom = gene.chromosome
-    #     strand = gene.get_strand()
-    #     start_a = self.start
-    #     end_a = self.end
-    #
-    #     if strand == '-':
-    #         id_a = gene.exonNum - (self.id - 1)
-    #         vid_c1 = self.id
-    #         vid_c2 = self.id - 2
-    #     else:
-    #         id_a = self.id
-    #         vid_c1 = self.id - 2
-    #         vid_c2 = self.id
-    #
-    #     start_c1, end_c1 = gene.exons[vid_c1].get_coordinates()
-    #     start_c2, end_c2 = gene.exons[vid_c2].get_coordinates()
-    #
-    #     name = "%s.%s" % (gene.id, id_a)
-    #
-    #     fp.write("%s\t%d\t%d\t%s_C1\t0\t%s\n" % (chrom, start_c1, end_c1, name, strand))
-    #     fp.write("%s\t%d\t%d\t%s_A\t0\t%s\n" % (chrom, start_a, end_a, name, strand))
-    #     fp.write("%s\t%d\t%d\t%s_C2\t0\t%s\n" % (chrom, start_c2, end_c2, name, strand))
 
     def bed_format(self):
         bed_str = ""
@@ -262,53 +276,23 @@ class Exon:
 
         return local_3p, local_5p
 
-    def detect_lsv(self, gn, lsv_type, dummy, jun, only_annot=False):
-        #jun = {}
-
-        sstype = {SSOURCE: ['5prime', 0], STARGET: ['3prime', 1]}
-
-
-        jlist = self.get_junctions(sstype[lsv_type][0])
-        jlist = [x for x in jlist if x is not None]
-        if jlist < 2:
-            return
-        lsv_in = gn.new_lsv_definition(self, jlist, lsv_type)
-
-        for name, ind_list in config.tissue_repl.items():
-            group_thresh = min((len(ind_list) * 0.5), 2)
-            counter = 0
-            e_data = 0
-            for jj in jlist:
-                for exp_idx in ind_list:
-                    if only_annot or majiqfilter.reliable_in_data(jj, exp_idx,
-                                                                  minnonzero=config.MINPOS,
-                                                                  min_reads=config.MINREADS):
-                        counter += 1
-                if counter < group_thresh:
-                    continue
-                e_data += 1
-                try:
-                    jun[name].add(jj)
-                except KeyError:
-                    jun[name] = set()
-                    jun[name].add(jj)
-            if e_data == 0:
-                continue
-            dummy[name][sstype[lsv_type][1]].append(lsv_in)
-        return
-
 
 class ExonRead(object):
-    def __init__(self, start, end, pre_junc, post_junc, rna_seq=None):
+    def __init__(self, start, end, pre_junc, post_junc):
         self.start = start
         self.end = end
-        self.RNASeq = rna_seq
         self.p3_junc = []
-        if not pre_junc is None:
+        if pre_junc is not None:
             self.p3_junc.append(pre_junc)
         self.p5_junc = []
-        if not post_junc is None:
+        if post_junc is not None:
             self.p5_junc.append(post_junc)
+
+    def __del__(self):
+        for jj in self.p3_junc:
+            del jj
+        for jj in self.p5_junc:
+            del jj
 
     def get_coordinates(self):
         return self.start, self.end
@@ -317,12 +301,11 @@ class ExonRead(object):
         return self.p5_junc
 
     def add_5prime_junc(self, junc):
-
-        if not junc is None and not junc in self.p5_junc:
+        if junc is not None and junc not in self.p5_junc:
             self.p5_junc.append(junc)
 
     def add_3prime_junc(self, junc):
-        if not junc is None and not junc in self.p3_junc:
+        if junc is not None and junc not in self.p3_junc:
             self.p3_junc.append(junc)
 
     def bed_format(self):
@@ -342,11 +325,29 @@ class ExonTx(object):
     def __init__(self, start, end, trnscpt, intron=False):
         self.start = start
         self.end = end
-        self.transcript_name = [trnscpt.get_id()]
-        self.gene_name = trnscpt.get_gene().get_id()
+        if trnscpt is None:
+            self.transcript_name = None
+        else:
+            self.transcript_name = [trnscpt.get_id()]
+            self.gene_name = trnscpt.get_gene().get_id()
         self.p3_junc = []
         self.p5_junc = []
-        self.ir = intron
+
+    def __del__(self):
+        for jj in self.p3_junc:
+            del jj
+        for jj in self.p5_junc:
+            del jj
+
+    def to_hdf5(self, hdf5grps):
+        h_ex = hdf5grps.create_group("tx/%s-%s" % (self.start, self.end))
+        h_ex.attrs['start'] = self.start
+        h_ex.attrs['end'] = self.end
+
+        p5_junc = h_ex.create_group("p5_junc")
+        p3_junc = h_ex.create_group("p3_junc")
+        [jun.to_db_hdf5(p5_junc) for jun in set(self.p5_junc)]
+        [jun.to_db_hdf5(p3_junc) for jun in set(self.p3_junc)]
 
     def get_coordinates(self):
         return self.start, self.end
@@ -363,9 +364,10 @@ class ExonTx(object):
             self.p3_junc.append(p3_junc)
 
     def get_transcript(self):
+        majiq_config = Config()
         res = []
         for tx_name in self.transcript_name:
-            res.append(config.gene_tlb[self.gene_name].get_transcript(tx_name))
+            res.append(majiq_config.gene_tlb[self.gene_name].get_transcript(tx_name))
         return res
 
     def get_5prime_junc(self):
@@ -401,7 +403,7 @@ class ExonTx(object):
         exb = exb1 & exb2
         if exb:
             junc = gn.exist_junction(txex2.end, txex1.start)
-            if not junc is None:
+            if junc is not None:
                 txex2.p5_junc.append(junc)
                 txex1.p3_junc.append(junc)
 
@@ -429,7 +431,8 @@ class ExonTx(object):
 
         return
 
-    def collapse(self, list_exontx, gne):
+    @staticmethod
+    def collapse(list_exontx, gne):
 
         all_5prime = [xx.end for xx in list_exontx]
         all_3prime = [xx.start for xx in list_exontx]
@@ -476,10 +479,10 @@ class ExonTx(object):
             exlist.extend(collapse_list_exons(list_exontx, gne))
 
         else:
-            ex = Exon(min(all_3prime), max(all_5prime), gne, gne.get_strand(), annot=True)
+            ex = Exon(min(all_3prime), max(all_5prime), gne.get_id(), annot=True)
 
             for txex in list_exontx:
-                ex.set_ir(txex.ir)
+                # ex.set_ir(txex.ir)
                 ex.ss_3p_list.append(txex.start)
                 ex.ss_5p_list.append(txex.end)
                 ex.exonTx_list.append(txex)
@@ -500,11 +503,13 @@ def print_list_exons(list_ex, msg=""):
     print "%%%%%%%%%%%%%%%%%%%%%%"
 
 num_it = 0
+
+
 def collapse_list_exons(listexons, gne):
     global num_it
     num_it += 1
     # print "[%s] INIT COLLAPSE_LIST EXONS "%(num_it)
-    #print_list_exons(listexons,"[%s] IN INIT"%num_it)
+    # print_list_exons(listexons,"[%s] IN INIT"%num_it)
     overlp = []
     exlist = []
     start = 0
@@ -529,12 +534,12 @@ def collapse_list_exons(listexons, gne):
     return exlist
 
 
-def __half_exon(ss_type, junc, read_rna):
+def __half_exon(ss_type, junc):
     gene = junc.get_gene()
     if ss_type == '3prime':
-        coord = junc.get_ss_3p()
+        coord = junc.end
     else:
-        coord = junc.get_ss_5p()
+        coord = junc.start
 
     for ex in gene.get_exon_list():
         (ex_start, ex_end) = ex.get_coordinates()
@@ -553,7 +558,7 @@ def __half_exon(ss_type, junc, read_rna):
                 frm = junc
                 # print "half",type,"::",ex_start, ex_end, junc.start, junc.end, end
             # if end - start < 10 : continue
-            res = ex.add_new_read(start, end, read_rna, to, frm)
+            res = ex.add_new_read(start, end, to, frm)
             if res:
                 ex.ss_3p_list.append(start)
                 ex.ss_5p_list.append(end)
@@ -565,16 +570,16 @@ def __half_exon(ss_type, junc, read_rna):
 EMPTY_COORD = -1
 
 
-def new_exon_definition(start, end, read_rna, s3prime_junc, s5prime_junc, gene, nondenovo=False, isintron=False):
+def new_exon_definition(start, end, s3prime_junc, s5prime_junc, gene, nondenovo=False, isintron=False):
     if end - start < 5:
         return 0
 
     ex = gene.exist_exon(start, end)
     new_exons = 0
     half = False
-
+    #majiq_config = Config()
     if ex is None:
-        if isintron or end - start <= config.get_max_denovo_difference():
+        if isintron or end - start <= MAX_DENOVO_DIFFERENCE:
             new_exons = 1
             in_db = False
             for xx in gene.get_ir_definition():
@@ -583,55 +588,55 @@ def new_exon_definition(start, end, read_rna, s3prime_junc, s5prime_junc, gene, 
                     break
             if not in_db and nondenovo:
                 return -1
-            ex = Exon(start, end, gene, gene.get_strand(), annot=in_db, isintron=isintron)
+            ex = Exon(start, end, gene.get_id(), annot=in_db, isintron=isintron, retrieve=True)
             gene.add_exon(ex)
         else:
             half = True
             new_exons += 2
 
-            ex1 = Exon(start, EMPTY_COORD, gene, gene.get_strand(), annot=False, isintron=isintron)
+            ex1 = Exon(start, EMPTY_COORD, gene.get_id(), annot=False, isintron=isintron, retrieve=True)
             s3prime_junc.add_acceptor(ex1)
             gene.add_exon(ex1)
             cc = ex1.get_coordinates()
-            ex1.add_new_read(cc[0], cc[1], read_rna, s3prime_junc, None)
+            ex1.add_new_read(cc[0], cc[1], s3prime_junc, None)
 
-            ex2 = Exon(EMPTY_COORD, end, gene, gene.get_strand(), annot=False, isintron=isintron)
+            ex2 = Exon(EMPTY_COORD, end, gene.get_id(), annot=False, isintron=isintron, retrieve=True)
             s5prime_junc.add_donor(ex2)
             gene.add_exon(ex2)
             cc = ex2.get_coordinates()
-            ex2.add_new_read(cc[0], cc[1], read_rna, None, s5prime_junc)
+            ex2.add_new_read(cc[0], cc[1], None, s5prime_junc)
 
     else:
         coords = ex.get_coordinates()
-        if start != EMPTY_COORD and start < (coords[0] - config.get_max_denovo_difference()):
+        if start != EMPTY_COORD and start < (coords[0] - MAX_DENOVO_DIFFERENCE):
             if gene.exist_exon(start, start + 10) is None:
                 new_exons += 1
-                ex1 = Exon(start, EMPTY_COORD, gene, gene.get_strand(), annot=False, isintron=isintron)
+                ex1 = Exon(start, EMPTY_COORD, gene.get_id(), annot=False, isintron=isintron, retrieve=True)
                 cc = ex1.get_coordinates()
                 s3prime_junc.add_acceptor(ex1)
                 gene.add_exon(ex1)
-                ex1.add_new_read(cc[0], cc[1], read_rna, s3prime_junc, None)
+                ex1.add_new_read(cc[0], cc[1], s3prime_junc, None)
             half = True
 
-        if end != EMPTY_COORD and end > (coords[1] + config.get_max_denovo_difference()):
+        if end != EMPTY_COORD and end > (coords[1] + MAX_DENOVO_DIFFERENCE):
             if gene.exist_exon(end - 10, end) is None:
                 new_exons += 1
-                ex2 = Exon(EMPTY_COORD, end, gene, gene.get_strand(), annot=False, isintron=isintron)
+                ex2 = Exon(EMPTY_COORD, end, gene.get_id(), annot=False, isintron=isintron, retrieve=True)
                 cc = ex2.get_coordinates()
                 s5prime_junc.add_donor(ex2)
                 gene.add_exon(ex2)
-                ex2.add_new_read(cc[0], cc[1], read_rna, None, s5prime_junc)
+                ex2.add_new_read(cc[0], cc[1], None, s5prime_junc)
             half = True
 
     if not half:
-        ex.add_new_read(start, end, read_rna, s3prime_junc, s5prime_junc)
+        ex.add_new_read(start, end, s3prime_junc, s5prime_junc)
         s3prime_junc.add_acceptor(ex)
         s5prime_junc.add_donor(ex)
 
     return new_exons
 
 
-def detect_exons(gene, junction_list, read_rna):
+def detect_exons(gene, junction_list, retrieve=False):
     new_exons = 0
     opened = 0
     opened_exon = []
@@ -640,37 +645,39 @@ def detect_exons(gene, junction_list, read_rna):
 
     junction_list.extend(gene.get_all_ss())
     junction_list.sort()
+
     for (coord, jtype, jj) in junction_list:
 
-        if not jj.is_reliable() and not jj.is_annotated():
+        if retrieve and not jj.is_reliable() and not jj.annotated:
             continue
 
         jj_gene = jj.get_gene()
         if jtype == '5prime':
+
             if opened > 0:
-                start = opened_exon[-1].get_ss_3p()
+                start = opened_exon[-1].end
                 end = coord
-                new_exons += new_exon_definition(start, end, read_rna, opened_exon[-1], jj, jj_gene)
-                pp = opened_exon.pop()
+                new_exons += new_exon_definition(start, end, opened_exon[-1], jj, jj_gene)
+                opened_exon.pop()
                 opened -= 1
             elif opened == 0:
                 if first_3prime is None:
-                    new_exons += __half_exon('5prime', jj, read_rna)
+                    new_exons += __half_exon('5prime', jj)
                 else:
-                    new_exons += new_exon_definition(first_3prime.get_ss_3p(),
-                                                     coord, read_rna, first_3prime,
+                    new_exons += new_exon_definition(first_3prime.end,
+                                                     coord, first_3prime,
                                                      jj, jj_gene)
             last_5prime = jj
             # end elif opened
         else:
             if opened > 0:
-                if not last_5prime is None:
-                    end = last_5prime.get_ss_5p()
+                if last_5prime is not None:
+                    end = last_5prime.start
                     for ss in opened_exon:
                         if ss.get_gene() != last_5prime.get_gene():
                             continue
-                        start = ss.get_ss_3p()
-                        new_exons += new_exon_definition(start, end, read_rna, ss, last_5prime, ss.get_gene())
+                        start = ss.end
+                        new_exons += new_exon_definition(start, end, ss, last_5prime, ss.get_gene())
                     last_5prime = None
                     opened = 0
                     opened_exon = []
@@ -678,31 +685,25 @@ def detect_exons(gene, junction_list, read_rna):
             else:
                 last_5prime = None
                 first_3prime = jj
+
             # end else ...
             opened_exon.append(jj)
             opened += 1
 
     for ss in opened_exon:
-        new_exons += __half_exon('3prime', ss, read_rna)
-
-    for (coord, jtype, jj) in junction_list:
-        if not jj.is_reliable() and not jj.is_annotated():
-            junction_list.remove((coord, jtype, jj))
-            del jj
-            continue
-        if jj.get_donor() is None and jj.get_acceptor() is None:
-            junction_list.remove((coord, jtype, jj))
-            del jj
+        new_exons += __half_exon('3prime', ss)
 
     return
 
 
 def set_exons_gc_content(chrom, exon_list):
-    fastadir_path = "%s/" % config.genome_path
+    majiq_config = Config()
+    fastadir_path = "%s/" % majiq_config.genome_path
 
     # print "Loading chromosome... %s"%chrom
     chrom_path = fastadir_path + chrom + ".fa"
     if not os.path.exists(chrom_path):
+        raise RuntimeWarning('GC content not calculated, genome files not found')
         return
     chrom_file = open(chrom_path)
     loaded_chrom = []
@@ -717,7 +718,7 @@ def set_exons_gc_content(chrom, exon_list):
         if end - strt < 5:
             continue
         sequence = loaded_chrom[strt:end]
-        #reverse the sequence if the strand is reverse
+        # reverse the sequence if the strand is reverse
         sequence = sequence.lower()
         if exon.get_strand() == "-":
             new_seq = []
