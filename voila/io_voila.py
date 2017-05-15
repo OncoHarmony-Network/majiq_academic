@@ -74,6 +74,20 @@ class Voila(ProducerConsumer):
 
                 self.queue.task_done()
 
+    def _metainfo(self):
+        metainfo = '/metainfo'
+        try:
+            return self.hdf5[metainfo]
+        except KeyError:
+            return self.hdf5.create_group(metainfo)
+
+    def _groups(self):
+        groups = 'groups'
+        try:
+            return self._metainfo()[groups]
+        except KeyError:
+            return self._metainfo().create_group(groups)
+
     def close(self):
         try:
             self.hdf5.close()
@@ -88,31 +102,17 @@ class Voila(ProducerConsumer):
         """
         voilaLsv.to_hdf5(self.hdf5)
 
-    def add_metainfo(self, genome, group1, experiments1, group2=None, experiments2=None):
-        """
-        Add metainfo to Voila file.
-        :param genome: genome where the genes are found
-        :param group1: first group name (used in psi and deltapsi)
-        :param experiments1: first list of experiment names (used in psi and deltapsi)
-        :param group2: second group (only deltapsi)
-        :param experiments2: second list of experiment names (only deltapsi)
-        :return: None
-        """
-
-        h = self.hdf5.create_group('/metainfo')
-
+    def add_genome(self, genome):
+        h = self._metainfo()
         h.attrs['genome'] = genome
 
-        h.attrs['group1'] = group1
-        experiments1_grp = h.create_group('experiments1')
-        for index, item in enumerate(experiments1):
-            experiments1_grp.attrs[str(index)] = item
-
-        if group2 and experiments2:
-            h.attrs['group2'] = group2
-            experiments2_grp = h.create_group('experiments2')
-            for index, item in enumerate(experiments2):
-                experiments2_grp.attrs[str(index)] = item
+    def add_experiments(self, group_name, experiments_list):
+        try:
+            h = self._groups().create_group(group_name)
+        except ValueError:
+            voila_log().error('Are you trying to add the same group name twice to your voila file?')
+            raise
+        h.attrs['experiments'] = experiments_list
 
     def get_metainfo(self):
         """
@@ -120,16 +120,10 @@ class Voila(ProducerConsumer):
         :return: dict
         """
         voila_log().info('Getting Voila Metainfo from {0} ...'.format(self.file_name))
-        metainfo = {}
-        h = self.hdf5['/metainfo']
-
-        for key in h.attrs:
-            metainfo[key] = h.attrs[key]
-
-        for key in h:
-            metainfo[key] = [h[key].attrs[attr] for attr in h[key].attrs]
-
-        return metainfo
+        return {
+            'genome': self._metainfo().attrs['genome'],
+            'groups': {group: self._groups()[group].attrs['experiments'].tolist() for group in self._groups()}
+        }
 
     def get_voila_lsv(self, lsv_id):
         """
