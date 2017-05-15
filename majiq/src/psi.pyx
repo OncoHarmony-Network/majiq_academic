@@ -18,12 +18,29 @@ import scipy.misc
 """
 Calculate and manipulate PSI and Delta PSI values
 """
+# BSIZE = 0.025  # TODO To parameters
+# BINS = np.arange(0, 1, BSIZE)
+# # The bins for PSI values. With a BSIZE of 0.025, we have 40 BINS
+# BINS_CENTER = np.arange(0 + BSIZE / 2, 1, BSIZE)
+# # The center of the previous BINS. This is used to calculate the mean value of each bin.
 
-BSIZE = 0.025  # TODO To parameters
-BINS = np.arange(0, 1, BSIZE)
-# The bins for PSI values. With a BSIZE of 0.025, we have 40 BINS
-BINS_CENTER = np.arange(0 + BSIZE / 2, 1, BSIZE)
-# The center of the previous BINS. This is used to calculate the mean value of each bin.
+
+def samples_from_psi(post_psi, mu_psi, vwindow, nsamples, nbins):
+    bsize = 1.0 / float(nbins)
+    psi_border = np.arange(0, 1.01, bsize)
+    outsamps = np.random.choice(psi_border[:-1], p=post_psi, size=nsamples)
+    outsamps += np.random.rand(nsamples) * bsize
+    if vwindow > 0:
+        xs = [mu_psi - vwindow, mu_psi + vwindow]
+        cdf = np.append([0.], post_psi.cumsum())
+        pr = np.interp(xs, psi_border, cdf, left=0., right=1.).dot([-1, 1])
+        if pr == 0:
+            outsamps = -1.
+        elif pr < 1:
+            mask = np.random.rand(nsamples) < pr
+            outsamps *= mask
+            outsamps += mask - 1
+    return outsamps
 
 
 def bootstrap_samples_calculation(quant_lsv, n_replica, name, outdir, nbins=40, store_bootsamples=True,
@@ -57,24 +74,27 @@ def bootstrap_samples_calculation(quant_lsv, n_replica, name, outdir, nbins=40, 
     return lsv_samples
 
 
-def divs_from_bootsamples(lsvs_to_work, fitfunc_r, n_replica, pnorm, m_samples, k_positions, discardzeros, name,
-                          trimborder, debug=False, nbins=40, store_bootsamples=True, lock_array=None, outdir='./tmp'):
+def divs_from_bootsamples(lsvs_to_work, fitfunc_r, n_replica, pnorm, m_samples, k_positions, discardzeros,
+                          trimborder, debug=False, nbins=40, store_bootsamples=True):
 
     bsize = 1.0 / float(nbins)
     psi_border = np.arange(0, 1.01, bsize)
 
-    div = []
+    div = []#np.zeros(shape=(len(lsvs_to_work), n_replica), dtype=np.float)
     for lsv_idx, quant_lsv in enumerate(lsvs_to_work):
         num_ways = quant_lsv.coverage[0].shape[0]
         post_cdf = np.zeros(shape=(n_replica, num_ways, psi_border.shape[0]), dtype=np.float)
-        lsv_samples = bootstrap_samples_calculation(quant_lsv, n_replica=n_replica, name=name, outdir=outdir,
-                                                    nbins=nbins, store_bootsamples=store_bootsamples,
-                                                    lock_array=lock_array, fitfunc_r=fitfunc_r, m_samples=m_samples,
-                                                    k_positions=k_positions, discardzeros=discardzeros,
-                                                    trimborder=trimborder, debug=debug)
+        for rr in xrange(n_replica):
 
-        alpha_prior, beta_prior = get_prior_params(quant_lsv.type, num_ways)
-        for rr, s_lsv in enumerate(lsv_samples):
+            alpha_prior, beta_prior = get_prior_params(quant_lsv.type, num_ways)
+            m_lsv, var_lsv, s_lsv = sample_from_junctions(junction_list=quant_lsv.coverage[rr],
+                                                          m=m_samples,
+                                                          k=k_positions,
+                                                          discardzeros=discardzeros,
+                                                          trimborder=trimborder,
+                                                          fitted_one_over_r=fitfunc_r[rr],
+                                                          debug=debug)
+
             for jidx in range(num_ways):
                 alpha_0 = alpha_prior[jidx]
                 beta_0 = beta_prior[jidx]
