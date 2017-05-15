@@ -56,10 +56,6 @@ class Het(HDF5):
     def cls_list(self):
         return {'het_groups': HetGroup}
 
-    @classmethod
-    def easy_from_hdf5(cls, h):
-        return cls(None).from_hdf5(h)
-
 
 class HetGroup(HDF5):
     def __init__(self, expected_psi, median):
@@ -73,7 +69,7 @@ class HetGroup(HDF5):
 
 
 class VoilaLsv(LsvGraphic):
-    def __init__(self, bins_list, lsv_graphic, means=None, means_psi1=None, psi1=None, means_psi2=None, psi2=None,
+    def __init__(self, lsv_graphic, bins_list=None, means=None, means_psi1=None, psi1=None, means_psi2=None, psi2=None,
                  het=None):
         """
         The lsv data voila needs to visualize LSVs.
@@ -85,8 +81,6 @@ class VoilaLsv(LsvGraphic):
         :param means_psi2: means data for psi2
         :param bin: psi2 matrix
         """
-
-        assert bins_list is not None, 'Must have bins data for LSV.'
 
         if lsv_graphic:
             super(VoilaLsv, self).__init__(
@@ -114,7 +108,6 @@ class VoilaLsv(LsvGraphic):
         self.het = het
 
         self.categories = None
-        self.variances = []
         self.excl_incl = []
 
         # Store collapsed matrix to save some space
@@ -128,22 +121,19 @@ class VoilaLsv(LsvGraphic):
                     self.excl_incl.append([-mean, 0])
                 else:
                     self.excl_incl.append([0, mean])
-        else:
-            for bin in self.bins:
-                step_bins = 1.0 / len(bin)
-                projection_prod = bin * np.arange(step_bins / 2, 1, step_bins) ** 2
-                self.variances.append(np.sum(projection_prod) - self.means[-1] ** 2)
 
         # For LSV filtering
         if lsv_graphic:
             self.init_categories()
 
-    def _extend_means(self, means):
+    @staticmethod
+    def _extend_means(means):
         if means and len(means) == 1:
             means.append(1 - means[0])
         return means
 
-    def _extend_bins(self, bins):
+    @staticmethod
+    def _extend_bins(bins):
         if bins and len(bins) == 1:
             bins.append(bins[-1][::-1])
         return bins
@@ -163,7 +153,7 @@ class VoilaLsv(LsvGraphic):
     @property
     def means(self):
         ms = self._extend_means(self.trunc_means)
-        if not ms:
+        if not ms and self.bins:
             if self.is_delta_psi():
                 ms = [get_expected_dpsi(b) for b in self.bins]
             else:
@@ -178,6 +168,16 @@ class VoilaLsv(LsvGraphic):
     def means_psi2(self):
         return self._extend_means(self.trunc_means_psi2)
 
+    @property
+    def variances(self):
+        variances = None
+        if self.bins:
+            for bin in self.bins:
+                step_bins = 1.0 / len(bin)
+                projection_prod = bin * np.arange(step_bins / 2, 1, step_bins) ** 2
+                variances.append(np.sum(projection_prod) - self.means[-1] ** 2)
+        return variances
+
     def to_dict(self, ignore_keys=()):
         ignore_keys = ('trunc_bins', 'trunc_psi1', 'trunc_psi2', 'trunc_means', 'trunc_means_psi1', 'trunc_means_psi2')
         d = super(VoilaLsv, self).to_dict(ignore_keys)
@@ -187,7 +187,8 @@ class VoilaLsv(LsvGraphic):
             'psi2': self.psi2,
             'means': self.means,
             'means_psi1': self.means_psi1,
-            'means_psi2': self.means_psi2
+            'means_psi2': self.means_psi2,
+            'variances': self.variances
         })
         return d
 
@@ -412,7 +413,7 @@ class VoilaLsv(LsvGraphic):
 
     @classmethod
     def easy_from_hdf5(cls, h):
-        return cls((), None).from_hdf5(h)
+        return cls(None).from_hdf5(h)
 
 
 def get_expected_dpsi(bins):
