@@ -13,13 +13,12 @@ class OrphanJunctionException(Exception):
 
 
 class Het(HDF5):
-    def __init__(self, junction_ids):
+    def __init__(self):
         """
         Het stat data. 
         :param experiment_names: List of experiment names. 
         """
         super(Het, self).__init__()
-        self.junction_ids = junction_ids
         self.het_groups = []
         self.group_names = []
         self.stat_names = []
@@ -48,10 +47,6 @@ class Het(HDF5):
 
     def cls_list(self):
         return {'het_groups': HetGroup}
-
-    @classmethod
-    def easy_from_hdf5(cls, h):
-        return cls(None).from_hdf5(h)
 
 
 class HetGroup(HDF5):
