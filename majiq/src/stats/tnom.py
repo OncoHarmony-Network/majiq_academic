@@ -11,7 +11,9 @@ class Tnom(Stats):
         def create(self): return Tnom()
 
     @staticmethod
-    def operator(psi, labels):
+    def operator(psi, labels):#psi, labels):
+        # nsamps = csamps[clabels == 0]
+        # psamps = csamps[clabels == 1]
         tnom_pval, tnom_score = Tnom.__operator(psi, labels, assume_sorted=True)
         return np.log(tnom_pval)
 

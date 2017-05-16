@@ -14,6 +14,22 @@ class FRange01(argparse.Action):
         setattr(namespace, self.dest, values)
 
 
+def get_vwindow(param):
+    param = float(param)
+    assert 0.0 <= param <= 1.0
+    return param
+
+
+def get_bins(param):
+    return np.linspace(0, 1, num=int(param) + 1)
+
+
+def get_minsamps(param):
+    param = int(param)
+    assert param >= 2
+    return param
+
+
 def new_subparser():
     return argparse.ArgumentParser(add_help=False)
 
@@ -46,13 +62,16 @@ def main():
 
     buildparser = new_subparser()
     buildparser.add_argument('transcripts', action="store", help='read file in SAM format')
-    buildparser.add_argument('-conf', default=None, required=True, help='Provide study configuration file with all '
-                                                                        'the execution information')
+    buildparser.add_argument('-conf', default=None, required=True,
+                             help='Provide study configuration file with all the execution information')
     buildparser.add_argument('--nogc', dest="gcnorm", action='store_false', default=True,
-                             help='psianddelta GC content normalization [Default: GC content normalization activated]')
-    buildparser.add_argument('--pcr', dest='pcr_filename', action="store", help='PCR bed file as gold_standard')
+                             help='psianddelta GC content normalization [Default: %(default)s]')
+
+    buildparser.add_argument('--pcr', dest='pcr_filename', action="store",
+                             help='PCR bed file as gold_standard')
+
     buildparser.add_argument('--gff_output', dest='gff_output', default="lsvs.gff", action="store",
-                             help='Filename where a gff with the lsv events will be generated')
+                             help='Filename where a gff with the lsv events will be generated. [Default: %(default)s]')
     buildparser.add_argument('--min_denovo', default=2, type=int,
                              help='Minimum number of reads threshold combining all positions in a LSV to consider that'
                                   'denovo junction is real". '
@@ -64,20 +83,18 @@ def main():
     buildparser.add_argument('--min_intronic_cov', default=1.5, type=float,
                              help='Minimum number of reads on average in intronic sites, only for intron retention.'
                                   'Default: %(default)s]')
-    buildparser.add_argument('--minpos', default=2, type=int, help='Minimum number of start positions with at least 1 '
-                                                                   'read in a LSV to consider that the LSV "exist in '
-                                                                   'the data"')
+    buildparser.add_argument('--minpos', default=2, type=int,
+                             help='Minimum number of start positions with at least 1 read in a LSV to consider that '
+                                  'the LSV "exist in the data". [Default: %(default)s]')
 
-    buildparser.add_argument('--only_rna', default=False, action='store_true', help='Use only rna detected junction in '
-                                                                                    'order to detect LSV. If an exon '
-                                                                                    'has only one junction with '
-                                                                                    'coverage, it is not going to be '
-                                                                                    'detected as an LSV')
-    buildparser.add_argument('--non_denovo', default=False, action='store_true', help='Avoid denovo detection of '
-                                                                                      'junction, splicesites and exons.'
-                                                                                      ' This will speedup the execution'
-                                                                                      ' but reduce the number of LSVs '
-                                                                                      'detected')
+    buildparser.add_argument('--only_rna', default=False, action='store_true',
+                             help='Use only rna detected junction in order to detect LSV. If an exon has only one '
+                                  'junction with coverage, it is not going to be detected as an LSV. '
+                                  '[Default: %(default)s]')
+    buildparser.add_argument('--non_denovo', default=False, action='store_true',
+                             help='Avoid denovo detection of junction, splicesites and exons. This will speedup the '
+                                  'execution but reduce the number of LSVs detected. [Default: %(default)s]')
+
     buildparser.add_argument('--only_gather', action='store_true', dest='onlygather', default=False)
     buildparser.add_argument('--permissive_ir', action='store_true', dest='permissive_ir', default=False)
     buildparser.add_argument('--markstacks', default=0.0000001, type=float,
@@ -89,36 +106,34 @@ def main():
 
     sampling = new_subparser()
     sampling.add_argument('--k', default=50, type=int,
-                             help='Number of positions to sample per iteration. [Default: %(default)s]')
+                          help='Number of positions to sample per iteration. [Default: %(default)s]')
     sampling.add_argument('--m', default=100, type=int,
-                             help='Number of bootstrapping samples. [Default: %(default)s]')
+                          help='Number of bootstrapping samples. [Default: %(default)s]')
     sampling.add_argument('--minreads', default=10, type=int,
-                             help='Minimum number of reads combining all positions in an event to be considered. '
-                                  '[Default: %(default)s]')
-    sampling.add_argument('--minpos', default=3, type=int, help='Minimum number of start positions with at least 1 '
-                                                                   'read for an event to be considered.'
-                                                                   '[Default: %(default)s]')
+                          help='Minimum number of reads combining all positions in an event to be considered. '
+                               '[Default: %(default)s]')
+    sampling.add_argument('--minpos', default=3, type=int,
+                          help='Minimum number of start positions with at least 1 read for an event to be considered.'
+                               '[Default: %(default)s]')
     sampling.add_argument('--trimborder', default=5, type=int,
-                             help='Trim the borders when sampling (keeping the ones with reads). '
+                          help='Trim the borders when sampling (keeping the ones with reads). '
                                   '[Default: %(default)s]')
     sampling.add_argument('--nodiscardb', dest="discardb", action='store_false', default=True,
-                             help='Skip biscarding the b from the NB polynomial function, since we expect our fit '
+                          help='Skip biscarding the b from the NB polynomial function, since we expect our fit '
                                   'to start from x=0, y=0')
     sampling.add_argument('--discardzeros', default=5, type=int, dest="discardzeros",
-                             help='Discarding zeroes, up to a minimum of N positions per junction. [Default: 5]')
+                          help='Discarding zeroes, up to a minimum of N positions per junction. [Default: 5]')
 
 
     #flags shared by calcpsi and deltapair
     weights = new_subparser()
     weights.add_argument('--weights_alpha', type=float, default=15.,
-                             help='Dispersion hyperparameter (Default: %(default)0.02f)')
+                         help='Dispersion hyperparameter (Default: %(default)0.02f)')
     weights.add_argument('--weights_threshold', action=FRange01, default=0.75,
-                             help='Threshold hyperparameter (Default: %(default)0.02f)')
+                         help='Threshold hyperparameter (Default: %(default)0.02f)')
     weights.add_argument('--weights_local', dest='local', type=float, default=0.,
-                            help='Window for computation of local weights. '
-                                 'If negative, uses a parametric '
-                                 'approximation instead. ('
-                                 'Default: %(default)0.02f)')
+                         help='Window for computation of local weights. If negative, uses a parametric approximation '
+                              'instead. [Default: %(default)0.02f]')
 
     psi = new_subparser()
     psi.add_argument('files', nargs='+', help='The experiment files to analyze. You can include more than one '
@@ -168,9 +183,9 @@ def main():
 
     wght = new_subparser()
     wght.add_argument('files', nargs='+', help='The experiment files to analyze. You can include more than one '
-                                              '(they will all be analyzed independently though) Glob syntax supported.')
+                                               '(they will be analyzed independently though) Glob syntax supported.')
     wght.add_argument('--name', required=True, help="The names that identify each of the experiments. "
-                                                   "[Default: %(default)s]")
+                                                    "[Default: %(default)s]")
 
 
     # mdelta = new_subparser()
@@ -193,6 +208,33 @@ def main():
     #                         "distribution. that the synthetic prior matrix has. Only works with --synthprior. "
     #                         "[Default: %(default)s]")
 
+    htrgen = new_subparser()
+    delta.add_argument('-grp1', dest="files1", nargs='+', required=True)
+    delta.add_argument('-grp2', dest="files2", nargs='+', required=True)
+    delta.add_argument('--names', nargs='+', required=True,
+                       help="The names that identify each of the experiments.")
+    htrgen.add_argument('--nsamples', type=int, default=100,
+                        help='Number of PSI samples to take per LSV junction. If equal to 1, use expected value only. '
+                             '[Default: %(default)d]')
+    htrgen.add_argument('--vwindow', type=get_vwindow, default=0.0,
+                        help='Width of sample rejection window. If equal to 0, do not reject samples. '
+                             '[Default: %(default)0.02f.]')
+    htrgen.add_argument('--bins', type=get_bins, default=get_bins(40),
+                        help='Fixed-width binning resolution of PSI distributions. [Default: 40')
+    htrgen.add_argument('--stats', nargs='+', choices=all_tests, default=all_tests,
+                        help='Test statistics to run. [Default: %(default)s]')
+    htrgen.add_argument('--minsamps', type=get_minsamps, default=2,
+                        help='Minimum number of samples that need to be present for an LSV junction in order to '
+                             'perform each test statistic. [Default: %(default)d]')
+    # parser.add_argument('--save-samps', action='store_true',
+    #                     help='If set, save PSI samples in the output '
+    #                          'directory.')
+    # parser.add_argument('--pre-samps', action='store_true',
+    #                     help='If set, reads pre-computed samples from the '
+    #                          'output directory.')
+
+
+
     #calcpsi flags
     subparsers = parser.add_subparsers(help='')
     parser_preprocess = subparsers.add_parser('build', help='Preprocess SAM/BAM files as preparation for the rest of '
@@ -214,7 +256,10 @@ def main():
                                               parents=[common, sampling, weights, wght])
     parser_weights.set_defaults(func=calc_weights)
 
-
+    parser_weights = subparsers.add_parser('heterogen', help='Calculate Delta PSI values given a pair of experiments '
+                                                             'groups. This approach does not assume underlying PSI)',
+                                           parents=[common, sampling, htrgen])
+    parser_weights.set_defaults(func=calc_weights)
 
     # parser_multidelta = subparsers.add_parser('multi_delta', help='Calculate Delta PSI values given a pair of experiments '
     #                                                            '(1 VS 1 conditions *with* replicas)',

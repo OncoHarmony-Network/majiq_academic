@@ -101,8 +101,7 @@ def queue_manager(input_h5dfp, output_h5dfp, lock_array, result_queue, num_chunk
                                                       exp_idx=jdx)
 
             elif val.get_type() == QUEUE_MESSAGE_PSI_RESULT:
-                lsv_graph = LsvGraphic.easy_from_hdf5(majiq_io.load_lsvgraphic_from_majiq(input_h5dfp,
-                                                                                          val.get_value()[-1]))
+                lsv_graph = list_of_lsv_graphics[val.get_value()[-1]]
                 output_h5dfp.add_lsv(VoilaLsv(bins_list=val.get_value()[0], means_psi1=val.get_value()[1],
                                               lsv_graphic=lsv_graph))
 
@@ -114,6 +113,13 @@ def queue_manager(input_h5dfp, output_h5dfp, lock_array, result_queue, num_chunk
                 output_h5dfp.add_lsv(VoilaLsv(bins_list=val.get_value()[0], lsv_graphic=lsv_graph,
                                               psi1=val.get_value()[1], psi2=val.get_value()[2],
                                               means_psi1=val.get_value()[3], means_psi2=val.get_value()[4]))
+
+            elif val.get_type() == QUEUE_MESSAGE_HETER_DELTAPSI:
+                lsv_graph = list_of_lsv_graphics[val.get_value()[-1]]
+
+                output_h5dfp.add_lsv(VoilaLsv(bins_list=None, lsv_graphic=lsv_graph, psi1=None, psi2=None,
+                                              means_psi1=None, means_psi2=None, het=val.get_value()[0]))
+
 
             elif val.get_type() == QUEUE_MESSAGE_BOOTSTRAP:
                 out_inplace[0].extend(val.get_value()[0])

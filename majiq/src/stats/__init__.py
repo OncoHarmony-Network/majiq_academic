@@ -1,4 +1,7 @@
 
+operators = {'infoscore'}
+
+
 class StatsFactory:
 
     factories = {}
