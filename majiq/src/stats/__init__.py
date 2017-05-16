@@ -1,7 +1,9 @@
+from os.path import dirname, basename, isfile
+import glob
+modules = glob.glob(dirname(__file__)+"/*.py")
+all_stats = [basename(f)[:-3] for f in modules if isfile(f) if basename(f)[:-3] != '__init__']
 
-operators = {'infoscore'}
-
-
+operator = {}
 class StatsFactory:
 
     factories = {}

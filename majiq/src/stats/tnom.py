@@ -28,7 +28,7 @@ class Tnom(Stats):
         Arguments: neg, pos, score
         Returns p-value for TNOM score given neg negative and pos positive labels.
         """
-        pval = self.__pval_cache__.get((neg, pos, score)) or self.__pval_cache__.get((pos, neg, score))
+        pval = Tnom.__pval_cache__.get((neg, pos, score)) or Tnom.__pval_cache__.get((pos, neg, score))
         if pval is None:
             if (pos <= score) or (neg <= score):
                 pval = 1.

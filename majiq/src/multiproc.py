@@ -61,24 +61,11 @@ class QueueMessage:
         return self.type
 
 
-def quantification_init(q, lock, output, names, silent, debug, nbins, m, k,
-                        discardzeros, trimborder, files, only_boots, weights, lock_per_file):
+def quantification_init(pipeline, queue, lock, lock_per_file):
+    quantification_init.__dict__.update(pipeline.__dict__)
     quantification_init.lock = lock
-    quantification_init.queue = q
-    quantification_init.output = output
-    quantification_init.names = names
-    quantification_init.silent = silent
-    quantification_init.debug = debug
-    quantification_init.nbins = nbins
-    quantification_init.m = m
-    quantification_init.k = k
-    quantification_init.discardzeros = discardzeros
-    quantification_init.trimborder = trimborder
-    quantification_init.files = files
-    quantification_init.boots = only_boots
-    quantification_init.weights = weights
+    quantification_init.queue = queue
     quantification_init.lock_per_file = lock_per_file
-
 
 def queue_manager(input_h5dfp, output_h5dfp, lock_array, result_queue, num_chunks, meta_info=None, num_exp=0,
                   out_inplace=None, logger=None, list_of_lsv_graphics={}):
@@ -119,7 +106,6 @@ def queue_manager(input_h5dfp, output_h5dfp, lock_array, result_queue, num_chunk
 
                 output_h5dfp.add_lsv(VoilaLsv(bins_list=None, lsv_graphic=lsv_graph, psi1=None, psi2=None,
                                               means_psi1=None, means_psi2=None, het=val.get_value()[0]))
-
 
             elif val.get_type() == QUEUE_MESSAGE_BOOTSTRAP:
                 out_inplace[0].extend(val.get_value()[0])

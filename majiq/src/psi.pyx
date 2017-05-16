@@ -71,7 +71,7 @@ def bootstrap_samples_calculation(quant_lsv, n_replica, name, outdir, nbins=40, 
     if store_bootsamples:
         majiq_io.add_lsv_to_bootstrapfile(quant_lsv.id, quant_lsv.type, lsv_samples, n_replica, lock_array,
                                           outdir, name)
-    return lsv_samples
+    return np.array(lsv_samples)
 
 
 def divs_from_bootsamples(lsvs_to_work, fitfunc_r, n_replica, pnorm, m_samples, k_positions, discardzeros, name,
