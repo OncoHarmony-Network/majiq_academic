@@ -6,7 +6,7 @@ from multiprocessing.queues import JoinableQueue
 from os.path import join
 
 import h5py
-import numpy as np
+import numpy
 
 import vlsv
 from voila import constants
@@ -19,6 +19,10 @@ from voila.utils.voila_log import voila_log
 from voila.vlsv import VoilaLsv
 
 __author__ = 'abarrera'
+
+
+class VoilaMetaValueNotFound(Exception):
+    pass
 
 
 class Voila(ProducerConsumer):
@@ -81,13 +85,6 @@ class Voila(ProducerConsumer):
         except KeyError:
             return self.hdf5.create_group(metainfo)
 
-    def _groups(self):
-        groups = 'groups'
-        try:
-            return self._metainfo()[groups]
-        except KeyError:
-            return self._metainfo().create_group(groups)
-
     def close(self):
         try:
             self.hdf5.close()
@@ -103,16 +100,16 @@ class Voila(ProducerConsumer):
         voilaLsv.to_hdf5(self.hdf5)
 
     def add_genome(self, genome):
-        h = self._metainfo()
-        h.attrs['genome'] = genome
+        self._metainfo().attrs['genome'] = genome
 
-    def add_experiments(self, group_name, experiments_list):
+    def add_experiments(self, group_name, experiment_names):
+        m = self._metainfo()
         try:
-            h = self._groups().create_group(group_name)
-        except ValueError:
-            voila_log().error('Are you trying to add the same group name twice to your voila file?')
-            raise
-        h.attrs['experiments'] = experiments_list
+            m.attrs['group_names'] = numpy.append(m.attrs['group_names'], group_name)
+            m.attrs['experiment_names'] = numpy.append(m.attrs['experiment_names'], [experiment_names], axis=0)
+        except KeyError:
+            m.attrs['group_names'] = [group_name]
+            m.attrs['experiment_names'] = [experiment_names]
 
     def get_metainfo(self):
         """
@@ -120,10 +117,7 @@ class Voila(ProducerConsumer):
         :return: dict
         """
         voila_log().info('Getting Voila Metainfo from {0} ...'.format(self.file_name))
-        return {
-            'genome': self._metainfo().attrs['genome'],
-            'groups': {group: self._groups()[group].attrs['experiments'].tolist() for group in self._groups()}
-        }
+        return {key: self._metainfo().attrs[key] for key in self._metainfo().attrs.keys()}
 
     def get_voila_lsv(self, lsv_id):
         """
@@ -410,7 +404,7 @@ def tab_output(args, majiq_output):
                             lsv.excl_incl[i][1] - lsv.excl_incl[i][0] for i in range(len(lsv.bins))
                         ),
                         'P(|dPSI|>=%.2f) per LSV junction' % args.threshold: semicolon_join(
-                            vlsv.matrix_area(np.array(bin), args.threshold, collapsed_mat=True).sum() for bin in
+                            vlsv.matrix_area(numpy.array(bin), args.threshold, collapsed_mat=True).sum() for bin in
                             lsv.bins
                         ),
                         '%s E(PSI)' % group1: semicolon_join(

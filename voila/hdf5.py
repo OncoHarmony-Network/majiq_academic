@@ -207,7 +207,7 @@ class DataSet(object):
         Encode a list of lists.
         :return: None
         """
-        if self.objs is None and not list(self.objs):
+        if self.objs is None or not list(self.objs):
             return
 
         self.width = len(self.objs[0])

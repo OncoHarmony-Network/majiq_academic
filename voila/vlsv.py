@@ -13,19 +13,19 @@ class OrphanJunctionException(Exception):
 
 
 class Het(HDF5):
-    def __init__(self):
+    def __init__(self, junction_ids):
         """
         Het stat data. 
         :param experiment_names: List of experiment names. 
         """
         super(Het, self).__init__()
-        self.junction_ids = []
+        self.junction_ids = junction_ids
         self.het_groups = []
         self.group_names = []
         self.stat_names = []
         self.stats = []
 
-    def add_group(self, expected_psi, median, group_name):
+    def add_group(self, expected_psi, median):
         """
         Add per LSV het group stats. 
         :param expected_psi: Expected psi 2d array, where x axis is experiments and y axis is junctions
@@ -33,13 +33,9 @@ class Het(HDF5):
         :param group_name: The name of the group being added
         :return: 
         """
-        if group_name in self.group_names:
-            voila_log().error('The HET group name of "{0}" is already used.'.format(group_name))
-        else:
-            self.het_groups.append(HetGroup(expected_psi, median))
-            self.group_names.append(group_name)
+        self.het_groups.append(HetGroup(expected_psi, median))
 
-    def add_junction(self, stats, stat_name, junction_id):
+    def add_junction_stats(self, stats, stat_name):
         """
         Add per junction het stat data.
         :param stats: 2d array of group comparison stats 
@@ -47,14 +43,15 @@ class Het(HDF5):
         :param junction_id: Junction id
         :return: 
         """
-        if junction_id in self.junction_ids:
-            voila_log().error('The junction ID of "{0}" is already used.'.format(junction_id))
-        else:
-            self.stat_names.append(stat_name)
-            self.stats.append(stats)
+        self.stat_names.append(stat_name)
+        self.stats.append(stats)
 
     def cls_list(self):
         return {'het_groups': HetGroup}
+
+    @classmethod
+    def easy_from_hdf5(cls, h):
+        return cls(None).from_hdf5(h)
 
 
 class HetGroup(HDF5):
