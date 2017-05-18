@@ -84,7 +84,7 @@ def het_quantification(args_vals):
                         if process_conf.nsamples == 1:
                             samps[grp_idx][exp, p_idx, 0] = mu_psi
                         else:
-                            samps[grp_idx][exp, p_idx, :] = samples_from_psi(post_psi, mu_psi, process_conf.vwindow,
+                            samps[grp_idx][exp, p_idx, :] = samples_from_psi(post_psi, mu_psi[exp, p_idx], process_conf.vwindow,
                                                                              process_conf.nsamples,
                                                                              process_conf.nbins)
 
@@ -211,6 +211,7 @@ class independent(BasicPipeline):
                 out_h5p.add_genome(meta1['genome'])
                 out_h5p.add_experiments(self.names[0], experiment_names=meta1['experiments'])
                 out_h5p.add_experiments(self.names[1], experiment_names=meta2['experiments'])
+                out_h5p.add_stats_names(self.stats)
 
                 in_h5p = h5py.File(self.files1[0], 'r')
                 queue_manager(in_h5p, out_h5p, lock_arr, q, num_chunks=self.nthreads, logger=logger,
