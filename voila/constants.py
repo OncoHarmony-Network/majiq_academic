@@ -1,7 +1,5 @@
-import multiprocessing
-from collections import namedtuple
-
 import collections
+import multiprocessing
 
 VERSION = '1.0.0'
 FILE_VERSION = '0.1'
@@ -9,6 +7,7 @@ ANALYSIS_PSI = 'psi'
 ANALYSIS_PSI_GENE = 'psi-gene'
 ANALYSIS_DELTAPSI = 'deltapsi'
 ANALYSIS_DELTAPSI_GENE = 'deltapsi-gene'
+ANALYSIS_HETEROGEN = 'heterogen'
 LSV_THUMBNAILS = 'lsv-thumbnails'
 SPLICE_GRAPHS = 'splice-graphs'
 COND_TABLE = 'cond-table'
@@ -66,5 +65,4 @@ SPLICE_GRAPH_FILE_VERSION = 1
 VOILA_FILE_VERSION = 1
 
 FILE_MODE = collections.namedtuple('FILE_MODE', 'read write')('r', 'w')
-
 

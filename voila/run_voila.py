@@ -12,11 +12,13 @@ from voila.utils.utils_voila import create_if_not_exists
 from voila.utils.voila_log import voila_log
 from voila.view.conditional_table import conditional_table
 from voila.view.deltapsi import Deltapsi
+from voila.view.heterogen import Heterogen
 from voila.view.lsv_thumbnails import lsv_thumbnails
 from voila.view.psi import Psi
 from voila.view.splice_graphs import splice_graphs
 
-SPLICE_GRAPH_HELP = 'Path to splice graph file.  File should be named "splicegraph.hdf5"'
+SPLICE_GRAPH_HELP = 'Path to splice graph file.  File should be named "splicegraph.hdf5".  This is required unless ' \
+                    'the --no-html flag is set.'
 
 
 class VoilaCantFindFile(argparse.ArgumentTypeError):
@@ -258,7 +260,12 @@ def html_args():
     return html_parser
 
 
-def voila_file():
+def heterogen_args():
+    het_parser = argparse.ArgumentParser(add_help=False)
+    return het_parser
+
+
+def voila_file_args():
     """
     Arguments needs for analysis types who use the majiq quantifier file.
     :return: parser
@@ -270,12 +277,9 @@ def voila_file():
                                    type=check_voila_file,
                                    help='Location of majiq\'s voila file.  File should end with ".voila".')
 
-    required_argument(
-        voila_file_parser,
-        '--splice-graph',
-        type=check_splice_graph_file,
-        help=SPLICE_GRAPH_HELP
-    )
+    voila_file_parser.add_argument('--splice-graph',
+                                   type=check_splice_graph_file,
+                                   help=SPLICE_GRAPH_HELP)
 
     voila_file_parser.add_argument('--gtf',
                                    action='store_true',
@@ -373,7 +377,7 @@ def main():
     subparsers = parser.add_subparsers(dest='type_analysis')
     subparsers.required = True
 
-    majiq_file = voila_file()
+    voila_file = voila_file_args()
     gene_search = gene_search_args()
     lsv_type_search = lsv_type_search_args()
     lsv_id_search = lsv_id_search_args()
@@ -384,14 +388,14 @@ def main():
     parser_single = psi_args()
     subparsers.add_parser(constants.ANALYSIS_PSI,
                           help='Single LSV analysis by gene(s) of interest.',
-                          parents=[base, html, gene_search, lsv_type_search, lsv_id_search, majiq_file,
+                          parents=[base, html, gene_search, lsv_type_search, lsv_id_search, voila_file,
                                    parser_single])
 
     # Delta LSV
     parser_delta = deltapsi_args()
     subparsers.add_parser(constants.ANALYSIS_DELTAPSI,
                           help='Delta LSV analysis by gene(s) of interest.',
-                          parents=[base, html, gene_search, lsv_type_search, lsv_id_search, majiq_file,
+                          parents=[base, html, gene_search, lsv_type_search, lsv_id_search, voila_file,
                                    parser_delta])
 
     # In-group out-group analysis option
@@ -413,8 +417,18 @@ def main():
                           help='Generate LSV thumbnails.',
                           parents=[base, lsv_type_search, parser_thumbs])
 
+    # Heterogen analysis option
+    parser_het = heterogen_args()
+    subparsers.add_parser(constants.ANALYSIS_HETEROGEN,
+                          help='Heterogen analysis by gene(s) of interest.',
+                          parents=[base, html, voila_file, parser_het])
+
     # get args
     args = parser.parse_args()
+
+    # conditional splice graph requirement
+    if not args.no_html and not args.splice_graph:
+        parser.error('argument --splice-graph is required')
 
     # set up logging
     log_filename = 'voila.log'
@@ -438,7 +452,8 @@ def main():
         constants.ANALYSIS_DELTAPSI: Deltapsi,
         constants.SPLICE_GRAPHS: splice_graphs,
         constants.COND_TABLE: conditional_table,
-        constants.LSV_THUMBNAILS: lsv_thumbnails
+        constants.LSV_THUMBNAILS: lsv_thumbnails,
+        constants.ANALYSIS_HETEROGEN: Heterogen,
     }
 
     type_analysis[args.type_analysis](args)

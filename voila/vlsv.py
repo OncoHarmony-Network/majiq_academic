@@ -20,8 +20,6 @@ class Het(HDF5):
         """
         super(Het, self).__init__()
         self.het_groups = []
-        self.group_names = []
-        self.stat_names = []
         self.stats = []
 
     def add_group(self, expected_psi, median):
@@ -34,7 +32,7 @@ class Het(HDF5):
         """
         self.het_groups.append(HetGroup(expected_psi, median))
 
-    def add_junction_stats(self, stats, stat_name):
+    def add_junction_stats(self, stats):
         """
         Add per junction het stat data.
         :param stats: 2d array of group comparison stats 
@@ -42,7 +40,6 @@ class Het(HDF5):
         :param junction_id: Junction id
         :return: 
         """
-        self.stat_names.append(stat_name)
         self.stats.append(stats)
 
     def cls_list(self):

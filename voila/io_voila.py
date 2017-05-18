@@ -111,6 +111,9 @@ class Voila(ProducerConsumer):
             m.attrs['group_names'] = [group_name]
             m.attrs['experiment_names'] = [experiment_names]
 
+    def add_stat_names(self, stat_names):
+        self._metainfo().attrs['stat_names'] = stat_names
+
     def get_metainfo(self):
         """
         Get metainfo from voila file.
@@ -479,3 +482,27 @@ def generic_feature_format_txt_files(args, majiq_output, out_gff3=False):
             except UnboundLocalError, e:
                 log.warning("problem generating GTF file for %s" % lsv.id)
                 log.error(e.message)
+
+
+def het_tab_output(args, lsvs, metainfo):
+    output_html = get_output_html(args, args.voila_file)
+    tsv_file = join(args.output, output_html.rsplit('.html', 1)[0] + '.tsv')
+
+    fieldnames = ['Gene Name', 'Gene ID', 'LSV ID', 'LSV Type']
+    print metainfo.keys()
+
+    with open(tsv_file, 'w') as tsvfile:
+        tsv = csv.DictWriter(tsvfile, fieldnames=fieldnames, delimiter='\t')
+        tsv.writeheader()
+
+        for lsv in lsvs:
+            # print lsv.het.__dict__.keys()
+            # print lsv.het.stats
+            # print lsv.het.stat_names
+            # print lsv.het.group_names
+            tsv.writerow({
+                'Gene Name': lsv.name,
+                'Gene ID': lsv.lsv_id.split(':')[0],
+                'LSV ID': lsv.lsv_id,
+                'LSV Type': lsv.lsv_type
+            })
