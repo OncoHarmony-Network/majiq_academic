@@ -456,7 +456,7 @@ gene_name_keys = ['Name', 'gene_name']
 gene_id_keys = ['ID', 'gene_id']
 
 
-def read_gff(filename, list_of_genes, sam_list, logging=None):
+def read_gff(filename, list_of_genes, logging=None):
     """
     :param filename: GFF input filename
     :param list_of_genes: List of genes that will be updated with all the gene_id detected on the gff file

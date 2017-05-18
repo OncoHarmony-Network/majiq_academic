@@ -30,10 +30,9 @@ def het_quantification(args_vals):
         fitfunc = [None, None]
         lsvs = [None, None]
 
-
-
         for grp_idx in range(2):
             lsvs[grp_idx], fitfunc[grp_idx] = majiq_io.get_extract_lsv_list(list_of_lsv, files[grp_idx])
+
         for lidx, lsv_id in enumerate(list_of_lsv):
             if lidx % 50 == 0:
                 print "Event %d ..." % lidx
@@ -211,7 +210,7 @@ class independent(BasicPipeline):
                 out_h5p.add_genome(meta1['genome'])
                 out_h5p.add_experiments(self.names[0], experiment_names=meta1['experiments'])
                 out_h5p.add_experiments(self.names[1], experiment_names=meta2['experiments'])
-                out_h5p.add_stats_names(self.stats)
+                out_h5p.add_stat_names(self.stats)
 
                 in_h5p = h5py.File(self.files1[0], 'r')
                 queue_manager(in_h5p, out_h5p, lock_arr, q, num_chunks=self.nthreads, logger=logger,
