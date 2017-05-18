@@ -640,7 +640,7 @@ def extract_lsv_summary(files):
             cov = data[JUNCTIONS_DATASET_NAME][lsv.attrs['coverage']]
 
             lsv_types[lsvid] = lsvgraph.lsv_type
-            ljunc = lsvgraph.junctions_ids()
+            ljunc = lsvgraph.junction_ids()
 
             #JV
             lsv_dict_graph[lsvid] = lsvgraph

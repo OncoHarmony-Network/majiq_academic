@@ -1,4 +1,5 @@
 import csv
+import itertools
 import os
 from multiprocessing import Manager
 from multiprocessing import Process, Pool
@@ -330,10 +331,59 @@ def load_dpairs(pairwise_dir, majiq_output):
     return lmajiq_pairs, group1_name, group2_name
 
 
-def tab_output(args, majiq_output):
-    def semicolon_join(value_list):
-        return ';'.join(str(x) for x in value_list)
+def get_lsv_info_fieldnames():
+    return ['Gene Name', 'Gene ID', 'LSV ID']
 
+
+def get_lsv_info(lsv):
+    return {
+        'Gene Name': lsv.name,
+        'Gene ID': lsv.lsv_id.split(':')[0],
+        'LSV ID': lsv.lsv_id,
+    }
+
+
+def get_lsv_extra_info_fieldnames():
+    return ['LSV Type', 'A5SS', 'A3SS', 'ES', 'Num. Junctions', 'Num. Exons', 'De Novo Junctions', 'chr', 'strand',
+            'Junctions coords', 'Exons coords', 'Exons Alternative Start', 'Exons Alternative End', 'IR coords']
+
+
+def get_lsv_extra_info(lsv):
+    return {
+        'LSV Type': lsv.lsv_type,
+        'A5SS': lsv.categories['prime5'],
+        'A3SS': lsv.categories['prime3'],
+        'ES': lsv.categories['ES'],
+        'Num. Junctions': lsv.categories['njuncs'],
+        'Num. Exons': lsv.categories['nexons'],
+        'chr': lsv.chromosome,
+        'strand': lsv.strand,
+        'De Novo Junctions': semicolon_join(
+            int(junc.junction_type == JUNCTION_TYPE_RNASEQ) for junc in lsv.junctions
+        ),
+        'Junctions coords': semicolon_join(
+            '{0}-{1}'.format(junc.start, junc.end) for junc in lsv.junctions
+        ),
+        'Exons coords': semicolon_join(
+            '{0}-{1}'.format(e.start, e.end) for e in lsv.exons
+        ),
+        'Exons Alternative Start': semicolon_join(
+            '|'.join(str(a) for a in e.alt_starts) for e in lsv.exons if e.alt_starts
+        ),
+        'Exons Alternative End': semicolon_join(
+            '|'.join(str(a) for a in e.alt_ends) for e in lsv.exons if e.alt_ends
+        ),
+        'IR coords': semicolon_join(
+            '{0}-{1}'.format(e.start, e.end) for e in lsv.exons if e.intron_retention
+        )
+    }
+
+
+def semicolon_join(value_list):
+    return ';'.join(str(x) for x in value_list)
+
+
+def tab_output(args, majiq_output):
     output_dir = args.output
     output_html = get_output_html(args, args.voila_file)
     log = voila_log()
@@ -344,7 +394,7 @@ def tab_output(args, majiq_output):
 
     log.info("Creating Tab-delimited output file in %s..." % tsv_file)
 
-    fieldnames = ['#Gene Name', 'Gene ID', 'LSV ID', 'E(PSI) per LSV junction', 'Var(E(PSI)) per LSV junction']
+    fieldnames = get_lsv_info_fieldnames() + ['E(PSI) per LSV junction', 'Var(E(PSI)) per LSV junction']
 
     if 'delta' in type_summary:
         group1 = majiq_output['meta_exps']['group1']
@@ -353,9 +403,7 @@ def tab_output(args, majiq_output):
                                        'P(|dPSI|>=%.2f) per LSV junction' % args.threshold,
                                        '%s E(PSI)' % group1, '%s E(PSI)' % group2]
 
-    fieldnames += ['LSV Type', 'A5SS', 'A3SS', 'ES', 'Num. Junctions', 'Num. Exons', 'De Novo Junctions', 'chr',
-                   'strand', 'Junctions coords', 'Exons coords', 'Exons Alternative Start', 'Exons Alternative End',
-                   'IR coords']
+    fieldnames += get_lsv_extra_info_fieldnames()
 
     if 'voila_links' in majiq_output:
         fieldnames.append('Voila link')
@@ -369,37 +417,8 @@ def tab_output(args, majiq_output):
                 if constants.ANALYSIS_DELTAPSI == type_summary:
                     lsv = lsv['lsv']
 
-                row = {
-                    '#Gene Name': lsv.name,
-                    'Gene ID': gene,
-                    'LSV ID': lsv.lsv_id,
-                    'LSV Type': lsv.lsv_type,
-                    'A5SS': lsv.categories['prime5'],
-                    'A3SS': lsv.categories['prime3'],
-                    'ES': lsv.categories['ES'],
-                    'Num. Junctions': lsv.categories['njuncs'],
-                    'Num. Exons': lsv.categories['nexons'],
-                    'chr': lsv.chromosome,
-                    'strand': lsv.strand,
-                    'De Novo Junctions': semicolon_join(
-                        int(junc.junction_type == JUNCTION_TYPE_RNASEQ) for junc in lsv.junctions
-                    ),
-                    'Junctions coords': semicolon_join(
-                        '{0}-{1}'.format(junc.start, junc.end) for junc in lsv.junctions
-                    ),
-                    'Exons coords': semicolon_join(
-                        '{0}-{1}'.format(e.start, e.end) for e in lsv.exons
-                    ),
-                    'Exons Alternative Start': semicolon_join(
-                        '|'.join(str(a) for a in e.alt_starts) for e in lsv.exons if e.alt_starts
-                    ),
-                    'Exons Alternative End': semicolon_join(
-                        '|'.join(str(a) for a in e.alt_ends) for e in lsv.exons if e.alt_ends
-                    ),
-                    'IR coords': semicolon_join(
-                        '{0}-{1}'.format(e.start, e.end) for e in lsv.exons if e.intron_retention
-                    )
-                }
+                row = get_lsv_info(lsv)
+                row.update(get_lsv_extra_info(lsv))
 
                 if constants.ANALYSIS_DELTAPSI == type_summary:
                     row.update({
@@ -485,24 +504,46 @@ def generic_feature_format_txt_files(args, majiq_output, out_gff3=False):
 
 
 def het_tab_output(args, lsvs, metainfo):
+    voila_log().info('Creating HET TSV file...')
+
     output_html = get_output_html(args, args.voila_file)
     tsv_file = join(args.output, output_html.rsplit('.html', 1)[0] + '.tsv')
 
-    fieldnames = ['Gene Name', 'Gene ID', 'LSV ID', 'LSV Type']
-    print metainfo.keys()
+    fieldnames = get_lsv_info_fieldnames() + list(metainfo['stat_names']) + get_lsv_extra_info_fieldnames()
+
+    lsv_fieldnames = ['Junction ID'] + list(itertools.chain.from_iterable(metainfo['experiment_names']))
 
     with open(tsv_file, 'w') as tsvfile:
         tsv = csv.DictWriter(tsvfile, fieldnames=fieldnames, delimiter='\t')
         tsv.writeheader()
 
         for lsv in lsvs:
-            # print lsv.het.__dict__.keys()
-            # print lsv.het.stats
-            # print lsv.het.stat_names
-            # print lsv.het.group_names
-            tsv.writerow({
-                'Gene Name': lsv.name,
-                'Gene ID': lsv.lsv_id.split(':')[0],
-                'LSV ID': lsv.lsv_id,
-                'LSV Type': lsv.lsv_type
-            })
+
+            row = get_lsv_info(lsv)
+            row.update(get_lsv_extra_info(lsv))
+
+            for stat_name, junction_stat in zip(metainfo['stat_names'], lsv.het.junction_stats):
+                row[stat_name] = semicolon_join(junction_stat)
+
+            tsv.writerow(row)
+
+        for lsv in lsvs:
+
+            rows = {}
+
+            for group, experiment_names in zip(lsv.het.groups, metainfo['experiment_names']):
+                for psis, experiment_name in zip(group.expected_psi, experiment_names):
+                    for psi, junction_id in zip(psis, lsv.junction_ids()):
+
+                        try:
+                            rows[junction_id][experiment_name] = psi
+                        except KeyError:
+                            rows[junction_id] = {experiment_name: psi}
+
+            with open(join(args.output, lsv.lsv_id.replace(':', '_') + '.tsv'), 'w') as tsvfile:
+                tsv = csv.DictWriter(tsvfile, fieldnames=lsv_fieldnames, delimiter='\t')
+                tsv.writeheader()
+                for junction_id, row_dict in rows.items():
+                    row = {'Junction ID': junction_id}
+                    row.update({column: value for column, value in row_dict.items()})
+                    tsv.writerow(row)

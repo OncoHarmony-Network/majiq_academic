@@ -4,7 +4,6 @@ import numpy as np
 
 from voila.hdf5 import BinsDataSet, Psi1DataSet, Psi2DataSet, HDF5
 from voila.splice_graphics import LsvGraphic
-from voila.utils.voila_log import voila_log
 
 
 class OrphanJunctionException(Exception):
@@ -19,8 +18,8 @@ class Het(HDF5):
         :param experiment_names: List of experiment names. 
         """
         super(Het, self).__init__()
-        self.het_groups = []
-        self.stats = []
+        self.groups = []
+        self.junction_stats = []
 
     def add_group(self, expected_psi, median):
         """
@@ -30,7 +29,7 @@ class Het(HDF5):
         :param group_name: The name of the group being added
         :return: 
         """
-        self.het_groups.append(HetGroup(expected_psi, median))
+        self.groups.append(HetGroup(expected_psi, median))
 
     def add_junction_stats(self, stats):
         """
@@ -40,10 +39,10 @@ class Het(HDF5):
         :param junction_id: Junction id
         :return: 
         """
-        self.stats.append(stats)
+        self.junction_stats.append(stats)
 
     def cls_list(self):
-        return {'het_groups': HetGroup}
+        return {'groups': HetGroup}
 
 
 class HetGroup(HDF5):

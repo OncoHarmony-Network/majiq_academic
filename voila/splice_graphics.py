@@ -636,7 +636,7 @@ class LsvGraphic(HDF5):
     def cls_list(self):
         return {'exons': ExonGraphic, 'junctions': JunctionGraphic}
 
-    def junctions_ids(self):
+    def junction_ids(self):
         return (junction.junction_id(self.chromosome, self.strand) for junction in self.junctions)
 
     @classmethod
