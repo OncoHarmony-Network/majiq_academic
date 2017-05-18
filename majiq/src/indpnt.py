@@ -12,7 +12,7 @@ import majiq.src.io as majiq_io
 from majiq.src.io_utils import dump_bin_file, load_bin_file
 from majiq.src.psi import prob_data_sample_given_psi, get_prior_params, samples_from_psi, bootstrap_samples_calculation
 from majiq.src.constants import *
-from majiq.src.multiproc import QueueMessage, quantification_init, queue_manager
+from majiq.src.multiproc import QueueMessage, process_conf, queue_manager
 
 from voila.io_voila import Voila
 from voila.vlsv import Het
@@ -21,12 +21,12 @@ from majiq.src.stats import operator, all_stats
 
 def het_quantification(args_vals):
     list_of_lsv, chnk = args_vals
-    logger = majiq_utils.get_logger("%s/%s.majiq.log" % (quantification_init.outDir, chnk),
-                                    silent=quantification_init.silent, debug=quantification_init.debug)
+    logger = majiq_utils.get_logger("%s/%s.majiq.log" % (process_conf.outDir, chnk),
+                                    silent=process_conf.silent, debug=process_conf.debug)
     try:
         logger.info("Quantifying LSVs PSI.. %s" % chnk)
-        num_exp = [len(quantification_init.files1), len(quantification_init.files2)]
-        files = [quantification_init.files1, quantification_init.files2]
+        num_exp = [len(process_conf.files1), len(process_conf.files2)]
+        files = [process_conf.files1, process_conf.files2]
         fitfunc = [None, None]
         lsvs = [None, None]
 
@@ -46,65 +46,65 @@ def het_quantification(args_vals):
                 quant_lsv = lsvs[grp_idx][lidx]
                 lsv_type = quant_lsv.type
                 boots = bootstrap_samples_calculation(quant_lsv, n_replica=num_exp[grp_idx],
-                                                      name=quantification_init.names[grp_idx],
-                                                      outdir=quantification_init.outDir,
-                                                      nbins=quantification_init.nbins,
+                                                      name=process_conf.names[grp_idx],
+                                                      outdir=process_conf.outDir,
+                                                      nbins=process_conf.nbins,
                                                       store_bootsamples=False,
-                                                      lock_array=quantification_init.lock_per_file,
+                                                      lock_array=process_conf.lock_per_file,
                                                       fitfunc_r=fitfunc[grp_idx],
-                                                      m_samples=quantification_init.m,
-                                                      k_positions=quantification_init.k,
-                                                      discardzeros=quantification_init.discardzeros,
-                                                      trimborder=quantification_init.trimborder,
-                                                      debug=quantification_init.debug)
+                                                      m_samples=process_conf.m,
+                                                      k_positions=process_conf.k,
+                                                      discardzeros=process_conf.discardzeros,
+                                                      trimborder=process_conf.trimborder,
+                                                      debug=process_conf.debug)
 
                 num_ways = boots.shape[1]
                 alpha_prior, beta_prior = get_prior_params(lsv_type, num_ways)
                 mu_psi = np.zeros(shape=(num_exp[grp_idx], num_ways))
-                mean_psi = np.zeros(shape=(num_ways, quantification_init.nbins), dtype=np.float)
-                samps[grp_idx] = np.zeros(shape=(num_exp[grp_idx], num_ways, quantification_init.nsamples))
+                mean_psi = np.zeros(shape=(num_ways, process_conf.nbins), dtype=np.float)
+                samps[grp_idx] = np.zeros(shape=(num_exp[grp_idx], num_ways, process_conf.nsamples))
                 for exp in xrange(num_exp[grp_idx]):
                     all_sample = boots[exp].sum(axis=0)
                     for p_idx in xrange(num_ways):
                         alpha_0 = alpha_prior[p_idx]
                         beta_0 = beta_prior[p_idx]
-                        post_psi = np.zeros(shape=quantification_init.nbins, dtype=np.float)
-                        for m in xrange(quantification_init.m):
+                        post_psi = np.zeros(shape=process_conf.nbins, dtype=np.float)
+                        for m in xrange(process_conf.m):
                             junc = boots[exp, p_idx, m]
                             data_given_psi = np.log(prob_data_sample_given_psi(junc, all_sample[m],
-                                                                               quantification_init.nbins,
+                                                                               process_conf.nbins,
                                                                                alpha_0, beta_0))
                             post_psi += np.exp(data_given_psi - scipy.misc.logsumexp(data_given_psi))
                             mu_psi[exp, p_idx] += float(junc + alpha_0) / (all_sample[m] + alpha_0 + beta_0)
 
-                        post_psi /= quantification_init.m
+                        post_psi /= process_conf.m
                         mean_psi[p_idx] += post_psi
-                        mu_psi[exp, p_idx] /= quantification_init.m
+                        mu_psi[exp, p_idx] /= process_conf.m
 
-                        if quantification_init.nsamples == 1:
+                        if process_conf.nsamples == 1:
                             samps[grp_idx][exp, p_idx, 0] = mu_psi
                         else:
-                            samps[grp_idx][exp, p_idx, :] = samples_from_psi(post_psi, mu_psi, quantification_init.vwindow,
-                                                                        quantification_init.nsamples,
-                                                                        quantification_init.nbins)
+                            samps[grp_idx][exp, p_idx, :] = samples_from_psi(post_psi, mu_psi, process_conf.vwindow,
+                                                                             process_conf.nsamples,
+                                                                             process_conf.nbins)
 
                 mean_psi /= num_exp[grp_idx]
                 lsv_het.add_group(mu_psi, mean_psi)
 
-            out_stats = do_test_stats(samps, quantification_init.stats, quantification_init.minsamps)
+            out_stats = do_test_stats(samps, process_conf.stats, process_conf.minsamps)
             for stat_idx in xrange(out_stats.shape[1]):
-                lsv_het.add_junction_stats(out_stats[:, stat_idx], quantification_init.stats[stat_idx])
+                lsv_het.add_junction_stats(out_stats[:, stat_idx])
 
                 # if num_ways == 2:
                 #     break
 
             qm = QueueMessage(QUEUE_MESSAGE_HETER_DELTAPSI, (lsv_het, lsv_id), chnk)
-            quantification_init.queue.put(qm, block=True)
+            process_conf.queue.put(qm, block=True)
 
         qm = QueueMessage(QUEUE_MESSAGE_END_WORKER, None, chnk)
-        quantification_init.queue.put(qm, block=True)
-        quantification_init.lock[chnk].acquire()
-        quantification_init.lock[chnk].release()
+        process_conf.queue.put(qm, block=True)
+        process_conf.lock[chnk].acquire()
+        process_conf.lock[chnk].release()
 
     except Exception as e:
         traceback.print_exc()
@@ -201,7 +201,7 @@ class independent(BasicPipeline):
             q = mp.Queue()
             lock_arr = [mp.Lock() for xx in range(self.nthreads)]
             [xx.acquire() for xx in lock_arr]
-            pool = mp.Pool(processes=self.nthreads, initializer=quantification_init,
+            pool = mp.Pool(processes=self.nthreads, initializer=process_conf,
                            initargs=[self, q, lock_arr, None],
                            maxtasksperchild=1)
 

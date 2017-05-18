@@ -10,7 +10,7 @@ import majiq.src.sample as majiq_sample
 import majiq.src.utils as majiq_utils
 from majiq.src.basic_pipeline import BasicPipeline, pipeline_run
 from majiq.src.constants import *
-from majiq.src.multiproc import QueueMessage, quantification_init, queue_manager
+from majiq.src.multiproc import QueueMessage, process_conf, queue_manager
 from majiq.src.psi import prob_data_sample_given_psi, get_prior_params, bootstrap_samples_calculation
 from voila.io_voila import Voila
 
@@ -29,50 +29,50 @@ def psi_quantification(args_vals):
     try:
         #print len(args_vals), args_vals
         list_of_lsv, chnk = args_vals
-        logger = majiq_utils.get_logger("%s/%s.majiq.log" % (quantification_init.output, chnk),
-                                        silent=quantification_init.silent, debug=quantification_init.debug)
+        logger = majiq_utils.get_logger("%s/%s.majiq.log" % (process_conf.output, chnk),
+                                        silent=process_conf.silent, debug=process_conf.debug)
 
         logger.info("Quantifying LSVs PSI.. %s" % chnk)
-        if quantification_init.boots:
+        if process_conf.boots:
             logger.info(".. Only Bootstrap enabled .. %s" % chnk)
 
-        nbins = quantification_init.nbins
-        num_exp = len(quantification_init.files)
+        nbins = process_conf.nbins
+        num_exp = len(process_conf.files)
 
-        if not quantification_init.weights:
-            f_list = majiq_io.open_bootstrap_samples(num_exp=num_exp, directory=quantification_init.output,
-                                                     name=quantification_init.names)
+        if not process_conf.weights:
+            f_list = majiq_io.open_bootstrap_samples(num_exp=num_exp, directory=process_conf.output,
+                                                     name=process_conf.names)
         else:
-            lsvs, fitfunc = majiq_io.get_extract_lsv_list(list_of_lsv, quantification_init.files)
+            lsvs, fitfunc = majiq_io.get_extract_lsv_list(list_of_lsv, process_conf.files)
 
         for lidx, lsv_id in enumerate(list_of_lsv):
             if lidx % 50 == 0:
                 print "Event %d ..." % lidx
                 sys.stdout.flush()
-            if quantification_init.weights:
+            if process_conf.weights:
                 quant_lsv = lsvs[lidx]
                 lsv_type = quant_lsv.type
 
                 psi = bootstrap_samples_calculation(quant_lsv, n_replica=num_exp,
-                                                    name=quantification_init.names,
-                                                    outdir=quantification_init.output,
-                                                    nbins=quantification_init.nbins,
-                                                    store_bootsamples=quantification_init.boots,
-                                                    lock_array=quantification_init.lock_per_file,
+                                                    name=process_conf.names,
+                                                    outdir=process_conf.output,
+                                                    nbins=process_conf.nbins,
+                                                    store_bootsamples=process_conf.boots,
+                                                    lock_array=process_conf.lock_per_file,
                                                     fitfunc_r=fitfunc,
-                                                    m_samples=quantification_init.m,
-                                                    k_positions=quantification_init.k,
-                                                    discardzeros=quantification_init.discardzeros,
-                                                    trimborder=quantification_init.trimborder,
-                                                    debug=quantification_init.debug)
+                                                    m_samples=process_conf.m,
+                                                    k_positions=process_conf.k,
+                                                    discardzeros=process_conf.discardzeros,
+                                                    trimborder=process_conf.trimborder,
+                                                    debug=process_conf.debug)
 
-                psi = np.array(psi) * quantification_init.weights[:, None, None]
+                psi = np.array(psi) * process_conf.weights[:, None, None]
             else:
                 lsv_id = list_of_lsv[lidx]
                 psi, lsv_type = majiq_io.load_bootstrap_samples(list_of_lsv[lidx], f_list)
                 psi = np.array(psi)
 
-            if quantification_init.boots:
+            if process_conf.boots:
                 continue
 
             num_ways = psi.shape[1]
@@ -82,7 +82,7 @@ def psi_quantification(args_vals):
             for p_idx in xrange(int(num_ways)):
                 posterior = np.zeros(shape=nbins, dtype=np.float)
                 mu_psi_m = []
-                for m in xrange(quantification_init.m):
+                for m in xrange(process_conf.m):
 
                     # log(p(D_T1(m) | psi_T1)) = SUM_t1 T ( log ( P( D_t1 (m) | psi _T1)))
                     junc = np.array([psi[xx][p_idx][m] for xx in xrange(num_exp)])
@@ -95,17 +95,17 @@ def psi_quantification(args_vals):
                     posterior += np.exp(data_given_psi - scipy.misc.logsumexp(data_given_psi))
 
                 mu_psi.append(np.median(mu_psi_m))
-                post_psi.append(posterior / quantification_init.m)
+                post_psi.append(posterior / process_conf.m)
                 if num_ways == 2:
                     break
 
             qm = QueueMessage(QUEUE_MESSAGE_PSI_RESULT, (post_psi, mu_psi, lsv_id), chnk)
-            quantification_init.queue.put(qm, block=True)
+            process_conf.queue.put(qm, block=True)
 
         qm = QueueMessage(QUEUE_MESSAGE_END_WORKER, None, chnk)
-        quantification_init.queue.put(qm, block=True)
-        quantification_init.lock[chnk].acquire()
-        quantification_init.lock[chnk].release()
+        process_conf.queue.put(qm, block=True)
+        process_conf.lock[chnk].acquire()
+        process_conf.lock[chnk].release()
 
         [xx.close() for xx in f_list]
 
@@ -159,7 +159,7 @@ class CalcPsi(BasicPipeline):
 
         if len(list_of_lsv) > 0:
             [xx.acquire() for xx in lock_arr]
-            pool = mp.Pool(processes=self.nthreads, initializer=quantification_init,
+            pool = mp.Pool(processes=self.nthreads, initializer=process_conf,
                            initargs=[q, lock_arr, self.outDir, self.name, self.silent, self.debug, self.nbins, self.m,
                                      self.k, self.discardzeros, self.trimborder, self.files, self.only_boots, weights,
                                      file_locks],

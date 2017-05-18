@@ -13,7 +13,7 @@ from majiq.src.io_utils import dump_bin_file, load_bin_file
 import majiq.src.sample as majiq_sample
 from majiq.src.psi import prob_data_sample_given_psi, get_prior_params, gen_prior_matrix, bootstrap_samples_calculation
 from majiq.src.constants import *
-from majiq.src.multiproc import QueueMessage, quantification_init, queue_manager
+from majiq.src.multiproc import QueueMessage, process_conf, queue_manager
 
 from voila.io_voila import Voila
 import collections
@@ -26,30 +26,30 @@ def deltapsi(args):
 def deltapsi_quantification(args_vals):
     try:
         list_of_lsv, chnk = args_vals
-        logger = majiq_utils.get_logger("%s/%s.majiq.log" % (quantification_init.output, chnk),
-                                        silent=quantification_init.silent, debug=quantification_init.debug)
+        logger = majiq_utils.get_logger("%s/%s.majiq.log" % (process_conf.output, chnk),
+                                        silent=process_conf.silent, debug=process_conf.debug)
 
         logger.info("Quantifying LSVs PSI.. %s" % chnk)
-        num_exp = [len(quantification_init.files[0]), len(quantification_init.files[1])]
+        num_exp = [len(process_conf.files[0]), len(process_conf.files[1])]
 
         fitfunc = [None, None]
         f_list = [None, None]
         lsvs = [None, None]
         for grp_idx in range(2):
-            if quantification_init.weights[grp_idx] is None:
+            if process_conf.weights[grp_idx] is None:
                 f_list[grp_idx] = majiq_io.open_bootstrap_samples(num_exp=num_exp[grp_idx],
-                                                                  directory=quantification_init.output,
-                                                                  name=quantification_init.names[grp_idx])
+                                                                  directory=process_conf.output,
+                                                                  name=process_conf.names[grp_idx])
                 lsvs[grp_idx] = list_of_lsv
             else:
 
                 lsvs[grp_idx], fitfunc[grp_idx] = majiq_io.get_extract_lsv_list(list_of_lsv,
-                                                                                quantification_init.files[grp_idx])
+                                                                                process_conf.files[grp_idx])
 
-        prior_matrix = np.array(load_bin_file(get_prior_matrix_filename(quantification_init.output,
-                                                                        quantification_init.names)))
+        prior_matrix = np.array(load_bin_file(get_prior_matrix_filename(process_conf.output,
+                                                                        process_conf.names)))
 
-        ones_n = np.ones(shape=(1, quantification_init.nbins), dtype=np.float)
+        ones_n = np.ones(shape=(1, process_conf.nbins), dtype=np.float)
 
         for lidx, lsv_id in enumerate(list_of_lsv):
             if lidx % 50 == 0:
@@ -59,24 +59,24 @@ def deltapsi_quantification(args_vals):
 
             for grp_idx in range(2):
 
-                if quantification_init.weights[grp_idx] is not None:
+                if process_conf.weights[grp_idx] is not None:
                     quant_lsv = lsvs[grp_idx][lidx]
                     assert lsv_id == quant_lsv.id, "LSV order on lsvs is mixed. %s != %s" % (lsv_id, quant_lsv.id)
                     lsv_type = quant_lsv.type
 
                     lsv_samples[grp_idx] = bootstrap_samples_calculation(quant_lsv, n_replica=num_exp[grp_idx],
-                                                                         name=quantification_init.names[grp_idx],
-                                                                         outdir=quantification_init.output,
-                                                                         nbins=quantification_init.nbins,
-                                                                         store_bootsamples=quantification_init.boots,
-                                                                         lock_array=quantification_init.lock_per_file,
+                                                                         name=process_conf.names[grp_idx],
+                                                                         outdir=process_conf.output,
+                                                                         nbins=process_conf.nbins,
+                                                                         store_bootsamples=process_conf.boots,
+                                                                         lock_array=process_conf.lock_per_file,
                                                                          fitfunc_r=fitfunc[grp_idx],
-                                                                         m_samples=quantification_init.m,
-                                                                         k_positions=quantification_init.k,
-                                                                         discardzeros=quantification_init.discardzeros,
-                                                                         trimborder=quantification_init.trimborder,
-                                                                         debug=quantification_init.debug)
-                    weigths = quantification_init.weights[grp_idx]
+                                                                         m_samples=process_conf.m,
+                                                                         k_positions=process_conf.k,
+                                                                         discardzeros=process_conf.discardzeros,
+                                                                         trimborder=process_conf.trimborder,
+                                                                         debug=process_conf.debug)
+                    weigths = process_conf.weights[grp_idx]
                     lsv_samples[grp_idx] = np.array(lsv_samples[grp_idx]) * weigths[:, None, None]
 
                 else:
@@ -96,14 +96,14 @@ def deltapsi_quantification(args_vals):
             alpha_prior, beta_prior = get_prior_params(lsv_type, num_ways)
             for p_idx in xrange(num_ways):
 
-                posterior = np.zeros(shape=(quantification_init.nbins, quantification_init.nbins), dtype=np.float)
-                post_psi1 = np.zeros(shape=quantification_init.nbins, dtype=np.float)
-                post_psi2 = np.zeros(shape=quantification_init.nbins, dtype=np.float)
+                posterior = np.zeros(shape=(process_conf.nbins, process_conf.nbins), dtype=np.float)
+                post_psi1 = np.zeros(shape=process_conf.nbins, dtype=np.float)
+                post_psi2 = np.zeros(shape=process_conf.nbins, dtype=np.float)
                 mu_psi1_m = []
                 mu_psi2_m = []
                 alpha_0 = alpha_prior[p_idx]
                 beta_0 = beta_prior[p_idx]
-                for m in xrange(quantification_init.m):
+                for m in xrange(process_conf.m):
                     # log(p(D_T1(m) | psi_T1)) = SUM_t1 T ( log ( P( D_t1 (m) | psi _T1)))
                     # junc = [psi1[xx][p_idx][m] for xx in xrange(num_exp[0])]
                     # junc = np.array(junc)
@@ -113,10 +113,10 @@ def deltapsi_quantification(args_vals):
                     mu_psi1_m.append(float(junc.sum() + alpha_0) / (all_sample.sum() + alpha_0 + beta_0))
 
                     data_given_psi1 = np.log(prob_data_sample_given_psi(junc.sum(), all_sample.sum(),
-                                                                        quantification_init.nbins,
+                                                                        process_conf.nbins,
                                                                         alpha_0, beta_0))
 
-                    psi_v1 = data_given_psi1.reshape(quantification_init.nbins, -1)
+                    psi_v1 = data_given_psi1.reshape(process_conf.nbins, -1)
                     post_psi1 += np.exp(data_given_psi1 - scipy.misc.logsumexp(data_given_psi1))
 
                     # junc = [psi2[xx][p_idx][m] for xx in xrange(num_exp[1])]
@@ -126,30 +126,30 @@ def deltapsi_quantification(args_vals):
                     all_sample = np.array(all_sample)
                     mu_psi2_m.append(float(junc.sum() + alpha_0) / (all_sample.sum() + alpha_0 + beta_0))
                     data_given_psi2 = np.log(prob_data_sample_given_psi(junc.sum(), all_sample.sum(),
-                                                                        quantification_init.nbins,
+                                                                        process_conf.nbins,
                                                                         alpha_0, beta_0))
                     post_psi2 += np.exp(data_given_psi2 - scipy.misc.logsumexp(data_given_psi2))
-                    psi_v2 = data_given_psi2.reshape(-1, quantification_init.nbins)
+                    psi_v2 = data_given_psi2.reshape(-1, process_conf.nbins)
 
                     A = (psi_v1 * ones_n + psi_v2 * ones_n.T) + np.log(prior_matrix[prior_idx])
 
                     posterior += np.exp(A - scipy.misc.logsumexp(A))
                 mu_psi1.append(np.median(mu_psi1_m))
                 mu_psi2.append(np.median(mu_psi2_m))
-                post_matrix.append(posterior / quantification_init.m)
-                posterior_psi1.append(post_psi1 / quantification_init.m)
-                posterior_psi2.append(post_psi2 / quantification_init.m)
+                post_matrix.append(posterior / process_conf.m)
+                posterior_psi1.append(post_psi1 / process_conf.m)
+                posterior_psi2.append(post_psi2 / process_conf.m)
                 if num_ways == 2:
                     break
 
             qm = QueueMessage(QUEUE_MESSAGE_DELTAPSI_RESULT, (post_matrix, posterior_psi1, posterior_psi2,
                                                               mu_psi1, mu_psi2, lsv_id), chnk)
-            quantification_init.queue.put(qm, block=True)
+            process_conf.queue.put(qm, block=True)
 
         qm = QueueMessage(QUEUE_MESSAGE_END_WORKER, None, chnk)
-        quantification_init.queue.put(qm, block=True)
-        quantification_init.lock[chnk].acquire()
-        quantification_init.lock[chnk].release()
+        process_conf.queue.put(qm, block=True)
+        process_conf.lock[chnk].acquire()
+        process_conf.lock[chnk].release()
 
     except Exception as e:
         traceback.print_exc()
@@ -218,7 +218,7 @@ class DeltaPsi(BasicPipeline):
         if self.export_boots:
             file_locks = [[mp.Lock() for xx in self.files1], [mp.Lock() for xx in self.files2]]
 
-        pool = mp.Pool(processes=self.nthreads, initializer=quantification_init,
+        pool = mp.Pool(processes=self.nthreads, initializer=process_conf,
                        initargs=[q, lock_arr, self.outDir, self.names, self.silent, self.debug, self.nbins, self.m,
                                  self.k, self.discardzeros, self.trimborder, files, self.export_boots, weights,
                                  file_locks],

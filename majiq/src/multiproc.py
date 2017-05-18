@@ -11,6 +11,13 @@ from voila.splice_graphics import LsvGraphic
 from voila.vlsv import VoilaLsv
 
 
+def process_wrapper():
+    if not os.path.isdir(process_conf):
+        os.mkdir(tempdir)
+    thread_logger = majiq_utils.get_logger("%s/majiq.%s.log" % (tempdir, chunk), silent=False)
+    thread_logger.info("[Th %s]: START child,%s" % (chunk, mp.current_process().name))
+
+
 def parallel_lsv_child_calculation(func, args, tempdir, name, chunk, store=True):
     # try:
     if not os.path.isdir(tempdir):
@@ -61,11 +68,11 @@ class QueueMessage:
         return self.type
 
 
-def quantification_init(pipeline, queue, lock, lock_per_file):
-    quantification_init.__dict__.update(pipeline.__dict__)
-    quantification_init.lock = lock
-    quantification_init.queue = queue
-    quantification_init.lock_per_file = lock_per_file
+def process_conf(pipeline, queue, lock, lock_per_file):
+    process_conf.__dict__.update(pipeline.__dict__)
+    process_conf.lock = lock
+    process_conf.queue = queue
+    process_conf.lock_per_file = lock_per_file
 
 def queue_manager(input_h5dfp, output_h5dfp, lock_array, result_queue, num_chunks, meta_info=None, num_exp=0,
                   out_inplace=None, logger=None, list_of_lsv_graphics={}):

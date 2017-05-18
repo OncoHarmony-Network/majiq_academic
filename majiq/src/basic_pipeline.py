@@ -5,7 +5,7 @@ import numpy as np
 from numpy.ma import masked_less
 import majiq.src.utils as majiq_utils
 from majiq.src.psi import divs_from_bootsamples, calc_rho_from_divs, calc_local_weights
-from majiq.src.multiproc import QueueMessage, quantification_init, queue_manager
+from majiq.src.multiproc import QueueMessage, process_conf, queue_manager
 from majiq.src.constants import *
 import sys
 import traceback
@@ -32,26 +32,26 @@ def bootstrap_samples_with_divs(args_vals):
 
     try:
         list_of_lsv, chnk = args_vals
-        logger = majiq_utils.get_logger("%s/%s.majiq.log" % (quantification_init.output, chnk),
-                                        silent=quantification_init.silent, debug=quantification_init.debug)
+        logger = majiq_utils.get_logger("%s/%s.majiq.log" % (process_conf.output, chnk),
+                                        silent=process_conf.silent, debug=process_conf.debug)
 
-        lsvs_to_work, fitfunc_r = majiq_io.get_extract_lsv_list(list_of_lsv, quantification_init.files)
+        lsvs_to_work, fitfunc_r = majiq_io.get_extract_lsv_list(list_of_lsv, process_conf.files)
 
         divs = divs_from_bootsamples(lsvs_to_work, fitfunc_r=fitfunc_r,
-                                     n_replica=len(quantification_init.files), pnorm=1, m_samples=quantification_init.m,
-                                     k_positions=quantification_init.k, discardzeros=quantification_init.discardzeros,
-                                     trimborder=quantification_init.trimborder, debug=False,
-                                     nbins=quantification_init.nbins, store_bootsamples=True,
-                                     lock_array=quantification_init.lock_per_file,
-                                     outdir=quantification_init.output, name=quantification_init.names)
+                                     n_replica=len(process_conf.files), pnorm=1, m_samples=process_conf.m,
+                                     k_positions=process_conf.k, discardzeros=process_conf.discardzeros,
+                                     trimborder=process_conf.trimborder, debug=False,
+                                     nbins=process_conf.nbins, store_bootsamples=True,
+                                     lock_array=process_conf.lock_per_file,
+                                     outdir=process_conf.output, name=process_conf.names)
 
         qm = QueueMessage(QUEUE_MESSAGE_BOOTSTRAP, (lsvs_to_work, divs), chnk)
-        quantification_init.queue.put(qm, block=True)
+        process_conf.queue.put(qm, block=True)
 
         qm = QueueMessage(QUEUE_MESSAGE_END_WORKER, None, chnk)
-        quantification_init.queue.put(qm, block=True)
-        quantification_init.lock[chnk].acquire()
-        quantification_init.lock[chnk].release()
+        process_conf.queue.put(qm, block=True)
+        process_conf.lock[chnk].acquire()
+        process_conf.lock[chnk].release()
 
     except Exception as e:
         traceback.print_exc()
@@ -111,7 +111,7 @@ class BasicPipeline:
 
             majiq_io.create_bootstrap_file(file_list, self.outDir, name, m=self.m)
 
-            pool = mp.Pool(processes=self.nthreads, initializer=quantification_init,
+            pool = mp.Pool(processes=self.nthreads, initializer=process_conf,
                            initargs=[q, lock_arr, self.outDir, name, self.silent, self.debug, self.nbins,
                                      self.m, self.k, self.discardzeros, self.trimborder, file_list, None,
                                      None, file_locks],
