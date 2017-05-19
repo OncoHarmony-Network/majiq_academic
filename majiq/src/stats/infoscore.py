@@ -17,7 +17,7 @@ class Infoscore(Stats):
         # psi = samples[asort]
         # labels = labels[asort]
         info_pval, info_score = Infoscore.__operator(psi, labels, assume_sorted=True)
-        return np.log(info_pval)
+        return info_pval
 
     @staticmethod
     def lchoose(k, n):

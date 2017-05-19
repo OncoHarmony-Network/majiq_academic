@@ -15,7 +15,8 @@ class Tnom(Stats):
         # nsamps = csamps[clabels == 0]
         # psamps = csamps[clabels == 1]
         tnom_pval, tnom_score = Tnom.__operator(psi, labels, assume_sorted=True)
-        return np.log(tnom_pval)
+#        return np.log(tnom_pval)
+        return tnom_pval
 
     @staticmethod
     def __lpathn(l, o):
@@ -88,4 +89,5 @@ class Tnom(Stats):
         else:
             retval = pval, best_loss
         return retval
+
 

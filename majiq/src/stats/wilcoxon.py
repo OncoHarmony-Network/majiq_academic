@@ -16,4 +16,4 @@ class Wilcoxon(Stats):
         neg = samples[labels == 0]
         pos = samples[labels == 1]
         wilcoxon_score, wilcoxon_pval = ranksums(neg, pos)
-        return np.log(wilcoxon_pval)
+        return wilcoxon_pval

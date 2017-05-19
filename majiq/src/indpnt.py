@@ -1,5 +1,4 @@
 import h5py
-import numpy as np
 import scipy.misc
 import sys
 import multiprocessing as mp
@@ -9,7 +8,6 @@ from majiq.src.basic_pipeline import BasicPipeline, pipeline_run
 import majiq.src.utils as majiq_utils
 import majiq.src.filter as majiq_filter
 import majiq.src.io as majiq_io
-from majiq.src.io_utils import dump_bin_file, load_bin_file
 from majiq.src.psi import prob_data_sample_given_psi, get_prior_params, samples_from_psi, bootstrap_samples_calculation
 from majiq.src.constants import *
 from majiq.src.multiproc import QueueMessage, process_conf, queue_manager
@@ -89,6 +87,7 @@ def het_quantification(args_vals):
 
                 mean_psi /= num_exp[grp_idx]
                 lsv_het.add_group(mu_psi, mean_psi)
+                print grp_idx, mu_psi
 
             out_stats = do_test_stats(samps, process_conf.stats, process_conf.minsamps)
             for stat_idx in xrange(out_stats.shape[1]):
@@ -181,7 +180,7 @@ class independent(BasicPipeline):
                 module_ = __import__('majiq.src.stats.'+stats_name.lower(), fromlist=stats_name.title())
                 class_ = getattr(module_, stats_name.title())
                 operator[stats_name] = class_()
-        except ImportError as  i_err:
+        except ImportError as i_err:
             logger.error("The %s statistic is not one of the available statistics, "
                          "in  [ %s ]" % (stats_name, ' | '.join(all_stats)))
             return
