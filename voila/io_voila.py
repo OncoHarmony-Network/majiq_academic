@@ -12,7 +12,7 @@ import numpy
 from voila import constants
 from voila.constants import JUNCTION_TYPE_RNASEQ
 from voila.hdf5 import HDF5
-from voila.producer_consumer import ProducerConsumer
+from voila.producer_consumer import ProducerConsumer, voila_exit
 from voila.utils import utils_voila
 from voila.utils.run_voila_utils import get_output_html
 from voila.utils.voila_log import voila_log
@@ -27,8 +27,9 @@ class VoilaMetaValueNotFound(Exception):
 
 class Voila(ProducerConsumer):
     VERSION = '/voila_file_version'
+    ANALYSIS = '/analysis_type'
 
-    def __init__(self, voila_file_name, mode):
+    def __init__(self, voila_file_name, mode=constants.FILE_MODE.read):
         """
         Parse or edit the voila (quantifier output) file.
         :param voila_file_name: location of voila file
@@ -41,19 +42,13 @@ class Voila(ProducerConsumer):
         self.lsv_ids = None
         self.lsv_types = None
         self.gene_names = None
-        self.file_version = None
 
     def __enter__(self):
         self.hdf5 = h5py.File(self.file_name, self.mode)
 
-        if self.VERSION not in self.hdf5:
-            if self.mode == constants.FILE_MODE.write:
+        if self.mode == constants.FILE_MODE.write:
+            if self.VERSION not in self.hdf5:
                 self.hdf5[self.VERSION] = constants.VOILA_FILE_VERSION
-
-        try:
-            self.file_version = self.hdf5[self.VERSION].value
-        except KeyError:
-            pass
 
         return self
 
@@ -104,15 +99,22 @@ class Voila(ProducerConsumer):
 
     def add_experiments(self, group_name, experiment_names):
         m = self._metainfo()
+        experiment_names = HDF5.convert(experiment_names)
+
         try:
-            m.attrs['group_names'] = numpy.append(m.attrs['group_names'], group_name)
-            m.attrs['experiment_names'] = numpy.append(m.attrs['experiment_names'], [experiment_names], axis=0)
+            m.attrs.create('group_names', numpy.append(m.attrs['group_names'], group_name), dtype=HDF5.UNICODE_DTYPE)
+            m.attrs.create('exeperiment_names', numpy.append(m.attrs['experiment_names'], [experiment_names], axis=0),
+                           dtype=HDF5.UNICODE_DTYPE)
         except KeyError:
-            m.attrs['group_names'] = [group_name]
-            m.attrs['experiment_names'] = [experiment_names]
+            m.attrs.create('group_names', [group_name], dtype=HDF5.UNICODE_DTYPE)
+            m.attrs.create('experiment_names', [experiment_names], dtype=HDF5.UNICODE_DTYPE)
 
     def add_stat_names(self, stat_names):
-        self._metainfo().attrs['stat_names'] = stat_names
+        self._metainfo().attrs.create('stat_names', HDF5.convert(stat_names), dtype=HDF5.UNICODE_DTYPE)
+
+    def set_analysis_type(self, analysis_type):
+        assert analysis_type in [constants.ANALYSIS_HETEROGEN, constants.ANALYSIS_DELTAPSI, constants.ANALYSIS_PSI]
+        self.hdf5[self.ANALYSIS] = analysis_type
 
     def get_metainfo(self):
         """
@@ -152,10 +154,25 @@ class Voila(ProducerConsumer):
         return voila_lsvs
 
     def check_version(self):
-        if self.file_version != constants.VOILA_FILE_VERSION:
+        file_version = self.hdf5[self.VERSION].value
+        if file_version != constants.VOILA_FILE_VERSION:
             voila_log().warning('Voila file version isn\'t current.  This will probably cause significant '
                                 'issues with the voila output.  It would be best to run quantifier again with the '
                                 'current version of MAJIQ.')
+
+    def check_analysis_type(self, analysis_type):
+        if self.ANALYSIS not in self.hdf5:
+            voila_log().error('Voila file has an unknown quanfication type.')
+            voila_exit()
+
+        current_analysis_type = self.hdf5[self.ANALYSIS].value
+
+        if current_analysis_type != analysis_type:
+            voila_log().error(
+                'Voila file was quantified for "{0}".  Re-run voila with the "{0}" option.'.format(
+                    current_analysis_type)
+            )
+            voila_exit()
 
 
 class VoilaInput(HDF5):
@@ -499,7 +516,7 @@ def generic_feature_format_txt_files(args, majiq_output, out_gff3=False):
 
             except UnboundLocalError as e:
                 log.warning("problem generating GTF file for %s" % lsv.id)
-                log.error(e.message)
+                log.error(e)
 
 
 def het_tab_output(args, lsvs, metainfo):
@@ -526,23 +543,25 @@ def het_tab_output(args, lsvs, metainfo):
 
             tsv.writerow(row)
 
-        for lsv in lsvs:
-
             rows = {}
 
-            for group, experiment_names in zip(lsv.het.groups, metainfo['experiment_names']):
-                for psis, experiment_name in zip(group.expected_psi, experiment_names):
-                    for psi, junction_id in zip(psis, lsv.junction_ids()):
+    for lsv in lsvs:
 
-                        try:
-                            rows[junction_id][experiment_name] = psi
-                        except KeyError:
-                            rows[junction_id] = {experiment_name: psi}
+        for group, experiment_names in zip(lsv.het.groups, metainfo['experiment_names']):
+            for experiment_index, experiment_name in enumerate(experiment_names):
+                for junction_index, junction_id in enumerate(lsv.junction_ids()):
 
-            with open(join(args.output, lsv.lsv_id.replace(':', '_') + '.tsv'), 'w') as tsvfile:
-                tsv = csv.DictWriter(tsvfile, fieldnames=lsv_fieldnames, delimiter='\t')
-                tsv.writeheader()
-                for junction_id, row_dict in rows.items():
-                    row = {'Junction ID': junction_id}
-                    row.update({column: value for column, value in row_dict.items()})
-                    tsv.writerow(row)
+                    psi = group.get_psi(experiment_index=experiment_index, junction_index=junction_index)
+
+                    try:
+                        rows[junction_id][experiment_name] = psi
+                    except KeyError:
+                        rows[junction_id] = {experiment_name: psi}
+
+        with open(join(args.output, lsv.lsv_id.replace(':', '_') + '.tsv'), 'w') as tsvfile:
+            tsv = csv.DictWriter(tsvfile, fieldnames=lsv_fieldnames, delimiter='\t')
+            tsv.writeheader()
+            for junction_id, row_dict in rows.items():
+                row = {'Junction ID': junction_id}
+                row.update({column: value for column, value in row_dict.items()})
+                tsv.writerow(row)

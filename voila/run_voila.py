@@ -430,6 +430,11 @@ def main():
     if not args.no_html and not args.splice_graph:
         parser.error('argument --splice-graph is required')
 
+    # voila must be build for this type analysis
+    if args.voila_file:
+        with Voila(args.voila_file) as v:
+            v.check_analysis_type(args.type_analysis)
+
     # set up logging
     log_filename = 'voila.log'
     if args.logger:

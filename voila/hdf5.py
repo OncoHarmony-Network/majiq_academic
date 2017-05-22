@@ -1,21 +1,23 @@
 from os.path import join
 
+import h5py
 import numpy
 from h5py.h5r import RegionReference
+from numpy import unicode
 
 from voila.constants import EXPERIMENT_NAMES
 from voila.utils.voila_log import voila_log
-
-VOILA_FILE_VERSION = '/voila_file_version'
 
 
 class HDF5VersionException(Exception):
     def __init__(self):
         super(HDF5VersionException, self).__init__('The hdf5 file version does not match the current version of Voila.')
-        voila_log().error(self.message)
+        voila_log().error(self)
 
 
 class HDF5(object):
+    UNICODE_DTYPE = h5py.special_dtype(vlen=unicode)
+
     def __init__(self):
         """
         Move data in this class to and from HDF5 files.
@@ -149,6 +151,18 @@ class HDF5(object):
         :return:
         """
         return cls().from_hdf5(h)
+
+    @staticmethod
+    def convert_list(v):
+        return [HDF5.convert(x) for x in v]
+
+    @staticmethod
+    def convert(v):
+        if isinstance(v, list):
+            return HDF5.convert_list(v)
+        if isinstance(v, bytes):
+            return v.decode('utf-8')
+        return v
 
 
 class DataSet(object):

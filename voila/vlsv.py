@@ -51,6 +51,9 @@ class HetGroup(HDF5):
         self.expected_psi = expected_psi
         self.median = median
 
+    def get_psi(self, experiment_index, junction_index):
+        return self.expected_psi[experiment_index][junction_index]
+
     @classmethod
     def easy_from_hdf5(cls, h):
         return cls(None, None).from_hdf5(h)
