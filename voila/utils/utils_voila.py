@@ -196,5 +196,5 @@ def to_gtf(wfile, seq_name, source, gene, mrna, start_trans, end_trans, strand, 
 
 
 def debug(text):
-    print text
+    print(text)
     return ''

@@ -72,7 +72,7 @@ class Tnom(Stats):
         neg = n - pos
         best_loss = min(neg, pos)
         threshold = data[-1] + 1
-        for idx, value, cumnpos in zip(xrange(n), data, cumpos):
+        for idx, value, cumnpos in zip(range(n), data, cumpos):
             if idx > 0 and value == data[idx - 1]:
                 continue
             loss = idx + 1 + pos - cumnpos * 2

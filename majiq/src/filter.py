@@ -24,7 +24,7 @@ def filter_message(when, value, logger, junc):
     message = "%s (Filter=%s). %s" % (when, value, len(junc[0]))
     if logger:
         if type(logger) == bool:
-            print message
+            print(message)
         else:
             logger.debug(message)
 

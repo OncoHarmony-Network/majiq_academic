@@ -19,7 +19,7 @@ import collections
 
 def get_clean_raw_reads(matched_info, matched_lsv, outdir, names, num_exp):
     res = []
-    for eidx in xrange(num_exp):
+    for eidx in range(num_exp):
         for ldx, lsv in enumerate(matched_info):
             jlist = masked_less(matched_lsv[ldx][eidx], 0)
 

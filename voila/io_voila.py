@@ -9,7 +9,6 @@ from os.path import join
 import h5py
 import numpy
 
-import vlsv
 from voila import constants
 from voila.constants import JUNCTION_TYPE_RNASEQ
 from voila.hdf5 import HDF5
@@ -17,7 +16,7 @@ from voila.producer_consumer import ProducerConsumer
 from voila.utils import utils_voila
 from voila.utils.run_voila_utils import get_output_html
 from voila.utils.voila_log import voila_log
-from voila.vlsv import VoilaLsv
+from voila.vlsv import VoilaLsv, matrix_area
 
 __author__ = 'abarrera'
 
@@ -164,7 +163,7 @@ class VoilaInput(HDF5):
 
     def __init__(self, lsvs=(), metainfo=None):
         super(VoilaInput, self).__init__()
-        print 'VoilaInput has been deprecated.  Use Voila instead.'
+        print('VoilaInput has been deprecated.  Use Voila instead.')
         self.lsvs = lsvs
         self.metainfo = metainfo
 
@@ -426,7 +425,7 @@ def tab_output(args, majiq_output):
                             lsv.excl_incl[i][1] - lsv.excl_incl[i][0] for i in range(len(lsv.bins))
                         ),
                         'P(|dPSI|>=%.2f) per LSV junction' % args.threshold: semicolon_join(
-                            vlsv.matrix_area(numpy.array(bin), args.threshold, collapsed_mat=True).sum() for bin in
+                            matrix_area(numpy.array(bin), args.threshold, collapsed_mat=True).sum() for bin in
                             lsv.bins
                         ),
                         '%s E(PSI)' % group1: semicolon_join(
@@ -498,7 +497,7 @@ def generic_feature_format_txt_files(args, majiq_output, out_gff3=False):
                         ofile.write(header + "\n")
                         ofile.write(lsv_gff3_str + "\n")
 
-            except UnboundLocalError, e:
+            except UnboundLocalError as e:
                 log.warning("problem generating GTF file for %s" % lsv.id)
                 log.error(e.message)
 

@@ -59,7 +59,7 @@ class Junction:
 
         h_jnc.attrs['donor_id'] = self.donor_id
         h_jnc.attrs['acceptor_id'] = self.acceptor_id
-        h_jnc.attrs['transcript_id_list'] = self.transcript_id_list
+        h_jnc.attrs['transcript_id_list'] = [xx.encode('utf8') for xx in self.transcript_id_list]
 
     def to_rna_hdf5(self, hdf5grps, dataset, data_index, gc_dataset=None):
         h_jnc = hdf5grps.create_group(self.id)
@@ -90,7 +90,7 @@ class Junction:
             h_jnc.attrs['coverage_index'] = data_index
 
         except:
-            print "HDF5 ERROR", self.id, self.coverage.shape
+            print("HDF5 ERROR", self.id, self.coverage.shape)
             raise
 
     # GETTERs
@@ -233,5 +233,5 @@ class Junction:
                 self.coverage[0, left_ind] = -1
             self.gc_content[0, left_ind] = gc
         except:
-            print self.gene_name, start, left_ind, self.gc_content.shape
+            print(self.gene_name, start, left_ind, self.gc_content.shape)
             raise

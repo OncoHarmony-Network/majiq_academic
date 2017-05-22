@@ -59,7 +59,7 @@ def merging_files(args_vals):
         vfunc_gc = []
 
         jset = set()
-        for exp_idx in xrange(len(majiq_config.sam_list)):
+        for exp_idx in range(len(majiq_config.sam_list)):
             fname = get_builder_temp_majiq_filename(majiq_config.outDir, majiq_config.sam_list[exp_idx])
             with h5py.File(fname, 'r') as rfa:
                 try:
@@ -143,8 +143,7 @@ def parsing_files(args_vals):
 
         counter = [0] * 6
         loop_id = sam_file
-        out_f = h5py.File(get_builder_temp_majiq_filename(majiq_config.outDir, sam_file),
-                          'w', compression='gzip', compression_opts=9)
+        out_f = h5py.File(get_builder_temp_majiq_filename(majiq_config.outDir, sam_file), 'w')
         samfl = majiq_io.open_rnaseq("%s/%s.bam" % (majiq_config.sam_dir, sam_file))
         gc_pairs = {'GC': [], 'COV': []}
         jnc_idx = 0
@@ -266,8 +265,7 @@ class Builder(BasicPipeline):
         lchnksize = max(len(list_of_genes)/self.nthreads, 1) + 1
         init_splicegraph(get_builder_splicegraph_filename(majiq_config.outDir))
         for exp_idx, sam_file in enumerate(majiq_config.sam_list):
-            with h5py.File(get_builder_majiq_filename(majiq_config.outDir, sam_file),
-                           'w', compression='gzip', compression_opts=9) as f:
+            with h5py.File(get_builder_majiq_filename(majiq_config.outDir, sam_file), 'w') as f:
                 effective_readlen = (majiq_config.readLen - 16) + 1
                 f.create_dataset(JUNCTIONS_DATASET_NAME, (NRANDOM_JUNCTIONS, effective_readlen),
                                  maxshape=(None, effective_readlen))
@@ -286,8 +284,7 @@ class Builder(BasicPipeline):
         pool.join()
 
         for exp_idx, sam_file in enumerate(majiq_config.sam_list):
-            with h5py.File(get_builder_majiq_filename(majiq_config.outDir, sam_file),
-                           'r+', compression='gzip', compression_opts=9) as f:
+            with h5py.File(get_builder_majiq_filename(majiq_config.outDir, sam_file), 'r+') as f:
 
                 n_juncs = f.attrs['data_index']
                 shp = f[JUNCTIONS_DATASET_NAME].shape

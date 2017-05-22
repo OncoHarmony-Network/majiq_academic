@@ -1,4 +1,4 @@
-import Queue
+import queue
 import os
 import sys
 
@@ -11,11 +11,11 @@ from voila.splice_graphics import LsvGraphic
 from voila.vlsv import VoilaLsv
 
 
-def process_wrapper():
-    if not os.path.isdir(process_conf):
-        os.mkdir(tempdir)
-    thread_logger = majiq_utils.get_logger("%s/majiq.%s.log" % (tempdir, chunk), silent=False)
-    thread_logger.info("[Th %s]: START child,%s" % (chunk, mp.current_process().name))
+# def process_wrapper():
+#     if not os.path.isdir(process_conf):
+#         os.mkdir(tempdir)
+#     thread_logger = majiq_utils.get_logger("%s/majiq.%s.log" % (tempdir, chunk), silent=False)
+#     thread_logger.info("[Th %s]: START child,%s" % (chunk, mp.current_process().name))
 
 
 def parallel_lsv_child_calculation(func, args, tempdir, name, chunk, store=True):
@@ -124,7 +124,7 @@ def queue_manager(input_h5dfp, output_h5dfp, lock_array, result_queue, num_chunk
                 if nthr_count >= num_chunks:
                     break
 
-        except Queue.Empty:
+        except queue.Empty:
             if nthr_count < num_chunks:
                 continue
             break

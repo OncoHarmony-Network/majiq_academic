@@ -422,7 +422,7 @@ def collapse_matrix(matrix):
     collapse = []
     matrix = np.array(matrix)
     matrix_corner = matrix.shape[0]
-    for i in xrange(-matrix_corner + 1, matrix_corner):
+    for i in range(-matrix_corner + 1, matrix_corner):
         collapse.append(np.diagonal(matrix, offset=i).sum())
 
     return np.array(collapse)

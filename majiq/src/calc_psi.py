@@ -47,7 +47,7 @@ def psi_quantification(args_vals):
 
         for lidx, lsv_id in enumerate(list_of_lsv):
             if lidx % 50 == 0:
-                print "Event %d ..." % lidx
+                print("Event %d ..." % lidx)
                 sys.stdout.flush()
             if process_conf.weights:
                 quant_lsv = lsvs[lidx]
@@ -79,15 +79,15 @@ def psi_quantification(args_vals):
             alpha_prior, beta_prior = get_prior_params(lsv_type, num_ways)
             post_psi = []
             mu_psi = []
-            for p_idx in xrange(int(num_ways)):
+            for p_idx in range(int(num_ways)):
                 posterior = np.zeros(shape=nbins, dtype=np.float)
                 mu_psi_m = []
-                for m in xrange(process_conf.m):
+                for m in range(process_conf.m):
 
                     # log(p(D_T1(m) | psi_T1)) = SUM_t1 T ( log ( P( D_t1 (m) | psi _T1)))
-                    junc = np.array([psi[xx][p_idx][m] for xx in xrange(num_exp)])
+                    junc = np.array([psi[xx][p_idx][m] for xx in range(num_exp)])
 
-                    all_sample = np.array([psi[xx][yy][m].sum() for xx in xrange(num_exp) for yy in xrange(num_ways)])
+                    all_sample = np.array([psi[xx][yy][m].sum() for xx in range(num_exp) for yy in range(num_ways)])
                     mu_psi_m.append(float(junc.sum()) / all_sample.sum())
                     data_given_psi = np.log(prob_data_sample_given_psi(junc.sum(), all_sample.sum(), nbins,
                                                                        alpha_prior[p_idx], beta_prior[p_idx]))

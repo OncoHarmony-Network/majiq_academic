@@ -33,7 +33,7 @@ def het_quantification(args_vals):
 
         for lidx, lsv_id in enumerate(list_of_lsv):
             if lidx % 50 == 0:
-                print "Event %d ..." % lidx
+                print("Event %d ..." % lidx)
                 sys.stdout.flush()
 
             lsv_het = Het()
@@ -60,13 +60,13 @@ def het_quantification(args_vals):
                 mu_psi = np.zeros(shape=(num_exp[grp_idx], num_ways))
                 mean_psi = np.zeros(shape=(num_ways, process_conf.nbins), dtype=np.float)
                 samps[grp_idx] = np.zeros(shape=(num_exp[grp_idx], num_ways, process_conf.nsamples))
-                for exp in xrange(num_exp[grp_idx]):
+                for exp in range(num_exp[grp_idx]):
                     all_sample = boots[exp].sum(axis=0)
-                    for p_idx in xrange(num_ways):
+                    for p_idx in range(num_ways):
                         alpha_0 = alpha_prior[p_idx]
                         beta_0 = beta_prior[p_idx]
                         post_psi = np.zeros(shape=process_conf.nbins, dtype=np.float)
-                        for m in xrange(process_conf.m):
+                        for m in range(process_conf.m):
                             junc = boots[exp, p_idx, m]
                             data_given_psi = np.log(prob_data_sample_given_psi(junc, all_sample[m],
                                                                                process_conf.nbins,
@@ -87,10 +87,10 @@ def het_quantification(args_vals):
 
                 mean_psi /= num_exp[grp_idx]
                 lsv_het.add_group(mu_psi, mean_psi)
-                print grp_idx, mu_psi
+                print(grp_idx, mu_psi)
 
             out_stats = do_test_stats(samps, process_conf.stats, process_conf.minsamps)
-            for stat_idx in xrange(out_stats.shape[1]):
+            for stat_idx in range(out_stats.shape[1]):
                 lsv_het.add_junction_stats(out_stats[:, stat_idx])
 
                 # if num_ways == 2:

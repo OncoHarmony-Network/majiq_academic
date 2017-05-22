@@ -54,7 +54,7 @@ def bootstrap_samples_calculation(quant_lsv, n_replica, name, outdir, nbins=40, 
     alpha_prior, beta_prior = get_prior_params(quant_lsv.type, num_ways)
 
     lsv_samples = []
-    for rr in xrange(n_replica):
+    for rr in range(n_replica):
         if quant_lsv.coverage[rr] is None:
             s_lsv = np.zeros(shape=(num_ways, m_samples))
         else:
@@ -95,7 +95,7 @@ def divs_from_bootsamples(lsvs_to_work, fitfunc_r, n_replica, pnorm, m_samples, 
             for jidx in range(num_ways):
                 alpha_0 = alpha_prior[jidx]
                 beta_0 = beta_prior[jidx]
-                for m in xrange(m_samples):
+                for m in range(m_samples):
                     sample = s_lsv[jidx][m]
                     notsample = s_lsv[:, m].sum() - sample
                     post_cdf[rr, jidx] += beta.cdf(psi_border, a=sample + alpha_0, b=notsample + beta_0)
@@ -137,7 +137,7 @@ def calc_rho_from_divs(divs, thresh=0.75, alpha=15., nreps=1, logger=None):
 def calc_local_weights(divs, rho, local):
     dshp = divs.shape
     cur_wt = np.zeros(shape=dshp)
-    for ii in xrange(dshp[0]):
+    for ii in range(dshp[0]):
         lsv = divs[ii, :]
         for rep, dist in enumerate(lsv):
             p_given_rep = ((divs >= (dist - local)) & (divs <= (dist + local))).mean(axis=0)
@@ -239,7 +239,7 @@ def gen_prior_matrix(lsv_dict1, lsv_summarized1, lsv_dict2, lsv_summarized2, lsv
                                                       title=" ".join(conf.names), numiter=conf.iter,
                                                       breakiter=conf.breakiter, njunc=nj, logger=logger)
             pmat = []
-            for i in xrange(numbins):
+            for i in range(numbins):
                 pmat.extend(mixture_pdf[numbins - i:(numbins * 2) - i])
 
             prior_matrix[prior_idx] = np.array(pmat).reshape(numbins, -1)

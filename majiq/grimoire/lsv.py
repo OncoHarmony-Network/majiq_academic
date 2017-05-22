@@ -41,7 +41,7 @@ class LSV(object):
                                                  x.get_acceptor() is not None]
         if majiq_config.simplify:
             jj_set = set()
-            for exp_idx in xrange(majiq_config.num_experiments):
+            for exp_idx in range(majiq_config.num_experiments):
                 cover = [float(junc.get_coverage_sum(exp_idx)) for junc in junction_list]
                 if sum(cover) == 0:
                     continue
@@ -86,7 +86,7 @@ class LSV(object):
             self.junctions.append(junction_list[tlb_junc[jj]])
 
         self.visual = list()
-        for exp_idx in xrange(majiq_config.num_experiments):
+        for exp_idx in range(majiq_config.num_experiments):
             self.visual.append(self.get_visual_lsv(self.junctions, exp_idx))
         self.visual = np.array(self.visual)
 
@@ -178,7 +178,7 @@ class LSV(object):
                     try:
                         ex = '%s.%so%s' % (ex1, s3.index(junc.end) + 1, len(s3))
                     except Exception as e:
-                        print "ERRORRR", ex_id, e
+                        print("ERRORRR", ex_id, e)
                         raise e
                     jtype = "|%se%s" % (spsite.index(junc.start) + 1, ex)
             else:
@@ -360,7 +360,7 @@ class LSV(object):
             self.get_visual(exp_idx).to_hdf5(vh_lsv)
 
         except:
-            print "HDF5 ERROR", self.id, cover.shape, hdf5grp[JUNCTIONS_DATASET_NAME].shape
+            print("HDF5 ERROR", self.id, cover.shape, hdf5grp[JUNCTIONS_DATASET_NAME].shape)
             raise
 
         return lsv_idx + njunc
@@ -470,7 +470,7 @@ def extract_gff(list_lsv, out_dir):
 
 def print_lsv_extype(list_lsv, filename):
     fp = open(filename, 'w+')
-    print list_lsv.shape
+    print(list_lsv.shape)
     for idx in range(list_lsv.shape[0]):
         lsv = list_lsv[idx]
         fp.write("%s\n" % lsv.type)

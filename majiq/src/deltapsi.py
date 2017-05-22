@@ -53,7 +53,7 @@ def deltapsi_quantification(args_vals):
 
         for lidx, lsv_id in enumerate(list_of_lsv):
             if lidx % 50 == 0:
-                print "Event %d ..." % lidx
+                print("Event %d ..." % lidx)
                 sys.stdout.flush()
             lsv_samples = [None, None]
 
@@ -94,7 +94,7 @@ def deltapsi_quantification(args_vals):
             mu_psi1 = []
             mu_psi2 = []
             alpha_prior, beta_prior = get_prior_params(lsv_type, num_ways)
-            for p_idx in xrange(num_ways):
+            for p_idx in range(num_ways):
 
                 posterior = np.zeros(shape=(process_conf.nbins, process_conf.nbins), dtype=np.float)
                 post_psi1 = np.zeros(shape=process_conf.nbins, dtype=np.float)
@@ -103,12 +103,12 @@ def deltapsi_quantification(args_vals):
                 mu_psi2_m = []
                 alpha_0 = alpha_prior[p_idx]
                 beta_0 = beta_prior[p_idx]
-                for m in xrange(process_conf.m):
+                for m in range(process_conf.m):
                     # log(p(D_T1(m) | psi_T1)) = SUM_t1 T ( log ( P( D_t1 (m) | psi _T1)))
                     # junc = [psi1[xx][p_idx][m] for xx in xrange(num_exp[0])]
                     # junc = np.array(junc)
                     junc = psi1[:, p_idx, m]
-                    all_sample = [psi1[xx][yy][m].sum() for xx in xrange(num_exp[0]) for yy in xrange(num_ways)]
+                    all_sample = [psi1[xx][yy][m].sum() for xx in range(num_exp[0]) for yy in range(num_ways)]
                     all_sample = np.array(all_sample)
                     mu_psi1_m.append(float(junc.sum() + alpha_0) / (all_sample.sum() + alpha_0 + beta_0))
 
@@ -122,7 +122,7 @@ def deltapsi_quantification(args_vals):
                     # junc = [psi2[xx][p_idx][m] for xx in xrange(num_exp[1])]
                     # junc = np.array(junc)
                     junc = psi2[:, p_idx, m]
-                    all_sample = [psi2[xx][yy][m].sum() for xx in xrange(num_exp[1]) for yy in xrange(num_ways)]
+                    all_sample = [psi2[xx][yy][m].sum() for xx in range(num_exp[1]) for yy in range(num_ways)]
                     all_sample = np.array(all_sample)
                     mu_psi2_m.append(float(junc.sum() + alpha_0) / (all_sample.sum() + alpha_0 + beta_0))
                     data_given_psi2 = np.log(prob_data_sample_given_psi(junc.sum(), all_sample.sum(),

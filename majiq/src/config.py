@@ -1,5 +1,5 @@
 import os
-import ConfigParser
+import configparser
 from scipy import interpolate
 import numpy as np
 from majiq.src.constants import *
@@ -42,7 +42,7 @@ class Config(object):
             if not os.path.exists(self.outDir):
                 os.makedirs(self.outDir)
 
-            config = ConfigParser.ConfigParser()
+            config = configparser.ConfigParser()
             config.read(filename)
             # TODO: check if filename exists
             exps = Config.config_section_map(config, "experiments")
@@ -103,7 +103,7 @@ class Config(object):
             return
 
         def __str__(self):
-            return `self` + self.val
+            return repr(self) + self.val
 
     @staticmethod
     def config_section_map(config_d, section):

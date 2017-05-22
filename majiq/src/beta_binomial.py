@@ -5,7 +5,8 @@
 # http://en.wikipedia.org/wiki/Beta-binomial_distribution
 # author: scnorton@biociphers.org
 
-from numpy import exp, floor, ceil, sqrt, r_, maximum, where, sum, linspace
+
+import numpy as np
 from numpy.lib.function_base import vectorize
 from scipy.stats._distn_infrastructure import rv_discrete
 from scipy.stats import beta
@@ -32,16 +33,16 @@ class BetabinomGen(rv_discrete):
         return (n >= 0) & beta._argcheck(a, b)
 
     def _logpmf(self, x, n, a, b):
-        k = floor(x)
+        k = np.floor(x)
         combiln = gammaln(n + 1) - (gammaln(k + 1) + gammaln(n - k + 1))
         return combiln + betaln(k + a, n - k + b) - betaln(a, b)
 
     def _pmf(self, x, n, a, b):
-        return exp(self._logpmf(x, n, a, b))
+        return np.exp(self._logpmf(x, n, a, b))
 
     def _cdf_single(self, x, n, a, b):
-        k = floor(x)
-        p = linspace(0, 1, num=10001)
+        k = np.floor(x)
+        p = np.linspace(0, 1, num=10001)
         bta = btdtr(a, b, p)
         p_med = (p[:-1] + p[1:]) / 2
         bta_med = bta[1:] - bta[:-1]
@@ -49,8 +50,8 @@ class BetabinomGen(rv_discrete):
         return vals
 
     def _sf_single(self, x, n, a, b):
-        k = floor(x)
-        p = linspace(0, 1, num=10001)
+        k = np.floor(x)
+        p = np.linspace(0, 1, num=10001)
         bta = btdtr(a, b, p)
         p_med = (p[:-1] + p[1:]) / 2
         bta_med = bta[1:] - bta[:-1]
@@ -63,12 +64,12 @@ class BetabinomGen(rv_discrete):
         k = 0
         d = n
         while (d > 1).any():
-            d = ceil(d / 2)
+            d = np.ceil(d / 2)
             temp = self._cdfvec(k, n, a, b)
-            k += where(temp <= q, d, -d)
+            k += np.where(temp <= q, d, -d)
         temp = self._cdfvec(k, n, a, b)
-        vals1 = maximum(k - 1, 0)
-        return where(temp <= q, k, vals1)
+        vals1 = np.maximum(k - 1, 0)
+        return np.where(temp <= q, k, vals1)
 
     def _stats(self, n, a, b, moments='mv'):
         e_p = float(a) / (a + b)
@@ -77,7 +78,7 @@ class BetabinomGen(rv_discrete):
         var = n * (a + b + n) * e_p * e_q / (a + b + 1)
         g1, g2 = None, None
         if 's' in moments:
-            g1 = 1.0 / sqrt(var)
+            g1 = 1.0 / np.sqrt(var)
             g1 *= (a + b + 2 * n) * (b ** 2 - a ** 2)
             g1 /= (a + b + 2)
         if 'k' in moments:
@@ -92,7 +93,7 @@ class BetabinomGen(rv_discrete):
         return mu, var, g1, g2
 
     def _entropy(self, n, a, b):
-        k = r_[0:n + 1]
+        k = np.r_[0:n + 1]
         vals = self._pmf(k, n, a, b)
         return sum(entr(vals), axis=0)
 

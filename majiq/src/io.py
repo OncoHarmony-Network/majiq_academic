@@ -1,7 +1,7 @@
 import gzip
-import urllib
+import urllib.parse as urllib
 from collections import namedtuple
-from constants import *
+from majiq.src.constants import *
 import h5py
 import numpy as np
 import pysam
@@ -605,7 +605,7 @@ def _prepare_and_dump(filename, logging=None):
     majiq_config = Config()
     if logging is not None:
         logging.debug("Number of Genes in DB", len(majiq_config.gene_tlb))
-    db_f = h5py.File(filename, 'w', compression='gzip', compression_opts=9)
+    db_f = h5py.File(filename, 'w')
     for gidx, gn in enumerate(majiq_config.gene_tlb.values()):
         gn.to_hdf5(db_f)
 
@@ -656,7 +656,7 @@ def extract_lsv_summary(files):
                     indx = total_idx
                     total_idx += 1
                     simpl_juncs[fidx].append([cov[0][jidx], cov[1][jidx]])
-                    [simpl_juncs[dx].append([0, 0.0]) for dx in xrange(fidx)]
+                    [simpl_juncs[dx].append([0, 0.0]) for dx in range(fidx)]
                 lsvid2idx[lsvid].append(indx)
 
     simpl_juncs = np.array(simpl_juncs)
@@ -672,7 +672,7 @@ def load_data_lsv(path, group_name, logger=None):
     lsv_cov_list = []
     lsv_info = []
 
-    meta_info = {}
+    meta_info = dict()
     meta_info['group'] = group_name
     meta_info['sample_id'] = data.attrs['sample_id']
     meta_info['fitfunc'] = data.attrs['fitfunc']
@@ -684,7 +684,7 @@ def load_data_lsv(path, group_name, logger=None):
             lsv_cov_list.append(data[JUNCTIONS_DATASET_NAME][lsv.attrs['coverage']])
             sh = data[JUNCTIONS_DATASET_NAME][lsv.attrs['coverage']].shape
             if sh[0] < 2:
-                print "WRONG LSV %s" % lsvid
+                print("WRONG LSV %s" % lsvid)
 
     except KeyError:
         logger.info("No LSVs in file")
@@ -814,7 +814,7 @@ def store_weights_bootstrap(lsv_list, wgts, file_list, outdir, name):
     for ii, ff in enumerate(file_list):
         file_name = '%s/%s.%d.boots.hdf5' % (outdir, name, ii)
         with h5py.File(file_name, 'r+') as f:
-            #f.create_dataset('weights', data=wgts[:, ii], compression='gzip', compression_opts=9)
+
             for idx, lsv in lsv_list.items():
                 f["LSVs/%s" % lsv.id].attrs['weight'] = wgts[idx, ii]
             f.close()

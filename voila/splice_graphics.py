@@ -62,7 +62,7 @@ class Experiment(HDF5):
             except IndexError:
                 raise ExperimentIndexError()
             except TypeError:
-                print field
+                print(field)
                 raise
         else:
             raise UnknownField(field)

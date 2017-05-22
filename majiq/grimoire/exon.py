@@ -497,10 +497,10 @@ class ExonTx(object):
 
 def print_list_exons(list_ex, msg=""):
     # list_ex.sort()
-    print "%%%%%%%%%%%%LIST_EXONS %s" % msg
+    print("%%%%%%%%%%%%LIST_EXONS %s" % msg)
     for ex in list_ex:
-        print "\t\t", ex.get_coordinates(), ex
-    print "%%%%%%%%%%%%%%%%%%%%%%"
+        print("\t\t", ex.get_coordinates(), ex)
+    print("%%%%%%%%%%%%%%%%%%%%%%")
 
 num_it = 0
 

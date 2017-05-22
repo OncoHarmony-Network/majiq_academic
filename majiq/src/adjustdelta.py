@@ -1,7 +1,6 @@
 from matplotlib import use
 use('Agg')
 import numpy as np
-import numpy.ma as ma
 import matplotlib.pyplot as plt
 
 from scipy.stats import beta
@@ -189,7 +188,6 @@ def plot_pi(p_mixture, fig):
     fig.set_xticks(np.arange(2) + 0.3, ["Center", "change"])
 
 
-
 def EM(a_change, b_change, a_center, b_center, pi_change, pi_center, deltadata, num_iter, plotpath, logger=False):
     fig = plt.figure(figsize=[15, 10])
     prev_likelihood = likelihood(a_change, b_change, a_center, b_center, pi_change, pi_center, deltadata)
@@ -199,7 +197,7 @@ def EM(a_change, b_change, a_center, b_center, pi_change, pi_center, deltadata, 
     plot_all(a_center, b_center, pi_center, "Center", a_change, b_change, pi_change, "change", "Initial Parameters",
              deltadata)
     mplot.save_or_show(plotpath, "init")
-    for iteration in xrange(num_iter):
+    for iteration in range(num_iter):
         a_change, b_change, a_center, b_center, pi_change, pi_center = estimate_parameters(a_change, b_change, a_center,
                                                                                            b_center, pi_change,
                                                                                            pi_center, deltadata)
@@ -316,21 +314,6 @@ def adjustdelta_lsv(deltapsi, output, plotpath=None, title=None, numiter=10, bre
 
     labels = ['Uniform', 'center', 'spike']
 
-
-    #    p_mixture = np.array([0.05, 0.95])
-    #    beta_params = np.array([ [1 , 1], [2000, 2000]])
-    #    labels = ['Uniform','Center']
-
-    #    p_mixture = np.array([0.03, 0.03, 0.03, 0.91])
-    #    beta_params = np.array([[2.5, 3],[3, 2.5],[2, 2],[2000, 2000]])
-    #    labels = ['beta left', 'beta center', 'beta right','delta']
-
-
-
-    # temp = open('./temp.pickle', 'wb')
-    # pickle.dump((D, p_mixture, beta_params), temp)
-    # temp.close()
-
     beta_params, pmix = EMBetaMixture(D, p_mixture, beta_params, 0, logger=logger, plotpath=plotpath, nj=njunc,
                                       labels=labels)
 
@@ -345,7 +328,7 @@ def plot_all_lsv(deltadata, beta_params, pmix, labels, figure_title):
     plot_densities(deltadata, sp[0, 0])
     cmb = []
 
-    for pl in xrange(beta_params.shape[0]):
+    for pl in range(beta_params.shape[0]):
         plot_mixture(beta_params[pl, 0], beta_params[pl, 1], pmix[pl], labels[pl], sp[0, 1])
         cmb.append([beta_params[pl, 0], beta_params[pl, 1], pmix[pl]])
 
@@ -361,8 +344,7 @@ def loglikelihood(D, beta_mix, logp_mix, logger=False):
     ''' logp_DgK = log P (D | model K ) for each data point without the weight '''
     logp_DgK = np.zeros(shape=(N, K), dtype=np.float)
 
-    for k in xrange(K):
-
+    for k in range(K):
         logp_DgK[:, k] = np.log(beta.pdf(D[:, 0], beta_mix[k, 0], beta_mix[k, 1]) + PSEUDO)
 
     logp_D = logp_DgK + logp_mix * np.ones(shape=(N, 1), dtype=np.float)
@@ -400,7 +382,7 @@ def EMBetaMixture(D, p0_mix, beta0_mix, num_iter, min_ratio=1e-5, logger=False, 
         logger.debug("[NJ:%s] Initial Log_Likelihood %.3f \n" % (nj, LL))
 
     ones_1k = np.ones(shape=(1, K), dtype=np.float)
-    for mm in xrange(num_iter):
+    for mm in range(num_iter):
         new_beta_mix = beta_mix
         new_pmix = pmix
 

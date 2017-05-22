@@ -3,12 +3,11 @@ from random import choice
 
 import numpy as np
 import majiq.src.polyfitnb as majiq_fit
-
+from majiq.src.constants import EPSILON
 """
 Sampling from junctions using a Negative Binomial model.
 """
 LIM = 100
-EPSILON = 1. / sys.maxint
 PSEUDO = 0.0000000001  # EPSILON is too small for some calculations
 
 
@@ -79,7 +78,7 @@ def sample_from_junctions(junction_list, m, k, discardzeros=5, trimborder=True, 
         if 0 < debug == i:
             break
         if i % 100 == 0 and debug > 0:
-            print "junction %s..." % i,
+            print("junction %s..." % i)
             sys.stdout.flush()
 
         if trimborder:
@@ -107,9 +106,9 @@ def sample_from_junctions(junction_list, m, k, discardzeros=5, trimborder=True, 
 
             npos_mult = np.count_nonzero(junction)
             samples = []
-            for iternumber in xrange(m):
+            for iternumber in range(m):
                 junction_samples = []
-                for numsamples in xrange(k):
+                for numsamples in range(k):
                     junction_samples.append(choice(junction))
 
                 sampled_mean = np.mean(junction_samples)

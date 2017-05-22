@@ -1,6 +1,7 @@
 __author__ = 'jordi@biociphers.org'
 import sys
-from itertools import izip
+#from itertools import izip
+import zip
 
 from numpy.ma import masked_less
 from scipy import interpolate
@@ -91,7 +92,7 @@ def gc_factor_calculation(gc_pairs, nbins=10):
         local_meanbins = np.arange(0,1, 0.1)
         return local_factor, local_meanbins
 
-    count, gc = izip(*sorted(izip(count, gc), key=lambda x: x[1]))
+    count, gc = zip(*sorted(zip(count, gc), key=lambda x: x[1]))
 
     num_regions = len(count)
     nperbin = num_regions / nbins
@@ -132,15 +133,15 @@ def gc_factor_calculation(gc_pairs, nbins=10):
 
 def prepare_gc_content(gn):
     majiq_config = Config()
-    gc_pairs = {'GC': [[] for xx in xrange(majiq_config.num_experiments)],
-                'COV': [[] for xx in xrange(majiq_config.num_experiments)]}
+    gc_pairs = {'GC': [[] for xx in range(majiq_config.num_experiments)],
+                'COV': [[] for xx in range(majiq_config.num_experiments)]}
 
     for ex in gn.get_exon_list():
         gc_val = ex.get_gc_content()
         st, end = ex.get_coordinates()
         if gc_val == 0 or end - st < 30:
             continue
-        for exp_n in xrange(majiq_config.num_experiments):
+        for exp_n in range(majiq_config.num_experiments):
             cov = ex.get_coverage(exp_n)
             if cov < 1:
                 continue

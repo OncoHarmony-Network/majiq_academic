@@ -162,7 +162,7 @@ class Gene:
                     gg.set_antisense_gene(self.id)
 
     def set_antisense_gene(self, gn_id):
-        self.antis_gene.append(gn_id)
+        self.antis_gene.append(gn_id.encode('utf8'))
 
     def overlaps(self, gne):
         return self.start < gne.end and self.end > gne.start
@@ -307,7 +307,7 @@ class Gene:
                     else:
                         jlist.append(xx)
 
-                for exp_idx in xrange(majiq_config.num_experiments):
+                for exp_idx in range(majiq_config.num_experiments):
                     cover = [float(junc.get_coverage_sum(exp_idx)) for junc in jlist]
                     if sum(cover) == 0:
                         continue

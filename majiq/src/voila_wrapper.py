@@ -36,7 +36,7 @@ def gene_to_splicegraph(gne, lock):
             jj.get_acceptor().coverage += num_reads.sum()
             jj.get_donor().coverage += num_reads.sum()
             jtype_list = []
-            for exp_idx in xrange(majiq_config.num_experiments):
+            for exp_idx in range(majiq_config.num_experiments):
                 if jj.annotated and num_reads[exp_idx] == 0:
                     if (num_reads.sum() - num_reads[exp_idx]) > 0:
                         jtype = voila_const.JUNCTION_TYPE_DB_OTHER_RNASEQ
@@ -88,7 +88,7 @@ def gene_to_splicegraph(gne, lock):
 
             ex_reads = ex.get_coverage()
             visual_types = []
-            for exp_idx in xrange(majiq_config.num_experiments):
+            for exp_idx in range(majiq_config.num_experiments):
 
                 if ex.is_miss_start():
                     visual_type = voila_const.EXON_TYPE_MISSING_START

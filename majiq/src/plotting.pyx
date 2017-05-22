@@ -113,7 +113,7 @@ def plot_pearsoncorr(var1, var2, my_title, my_xlabel, my_ylabel, plotpath=None, 
              r'$R^2$: %.2f (p-value: %.2E)' % (r_squared, pvalue),
              fontsize=18, bbox={'facecolor': 'yellow', 'alpha': 0.3, 'pad': 10})
     plt.title(my_title)
-    print r"%s R^2: %.2f (p-value: %.2E)" % (my_title, r_squared, pvalue)
+    print(r"%s R^2: %.2f (p-value: %.2E)" % (my_title, r_squared, pvalue))
     plt.plot(var1, var2, '.')
     if plotpath:
         save_or_show(plotpath, my_title)

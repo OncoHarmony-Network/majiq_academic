@@ -110,7 +110,7 @@ class Infoscore(Stats):
         right = np.array([neg, pos])
         best_loss = Infoscore.__entropy(right)
         threshold = data[-1] + 1
-        for idx, value, cumnpos in zip(xrange(n), data, cumpos):
+        for idx, value, cumnpos in zip(range(n), data, cumpos):
             if idx == 0 or value > data[idx - 1]:
                 loss = Infoscore.__entropy(left) + Infoscore.__entropy(right - left)
                 if loss < best_loss:

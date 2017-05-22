@@ -1,7 +1,8 @@
 import json
 from collections import OrderedDict
 from distutils.dir_util import copy_tree
-from itertools import izip_longest
+from itertools import zip_longest
+
 from math import ceil
 from os import path
 
@@ -145,7 +146,7 @@ def grouper(iterable, n, fillvalue=None):
     """
 
     args = [iter(iterable)] * n
-    return izip_longest(fillvalue=fillvalue, *args)
+    return zip_longest(fillvalue=fillvalue, *args)
 
 
 def copy_static(args):

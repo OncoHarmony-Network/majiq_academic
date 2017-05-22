@@ -3,16 +3,15 @@ import os
 import random
 import resource
 import sys
-
 import h5py
 import numpy as np
+from numbers import Number
+from collections import Set, Mapping, deque
 
 import majiq.grimoire.lsv as majiq_lsv
 from majiq.src.config import Config
 import majiq.grimoire.junction as majiq_junction
 import majiq.src.io_utils as majiq_io_utils
-
-
 
 
 class Writer(object):
@@ -33,8 +32,9 @@ class Writer(object):
         with majiq_config.term.location(*self.location):
             print(string)
 
+
 def monitor(msg):
-    print "MONITOR", msg, resource.getrusage(resource.RUSAGE_SELF).ru_maxrss / 1000, 'MB'
+    print("MONITOR", msg, resource.getrusage(resource.RUSAGE_SELF).ru_maxrss / 1000, 'MB')
     sys.stdout.flush()
 
 
@@ -219,7 +219,7 @@ def get_validated_pcr_lsv(candidates, out_dir):
     :param out_dir:
     """
     pcr_list = []
-    print "get_validated_pcr_lsv", len(candidates[0])
+    print("get_validated_pcr_lsv", len(candidates[0]))
     for lsv in candidates[0]:
         if not lsv.has_pcr_score():
             continue
@@ -234,7 +234,7 @@ def get_validated_pcr_lsv(candidates, out_dir):
                 name = "%s#%s" % (lsv.id, jidx)
                 pcr_lsv = [lsv.exon.get_pcr_name(), name, score]
                 pcr_list.append(pcr_lsv)
-                print "PCR", ' '.join(pcr_lsv)
+                print("PCR", ' '.join(pcr_lsv))
     fname = '%s/pcr.pkl' % out_dir
     majiq_io_utils.dump_bin_file(pcr_list, fname)
 
@@ -275,13 +275,14 @@ def histogram_for_exon_analysis(genes, output):
     majiq_io_utils.dump_bin_file([annotated_list, denovo_list], output)
 
 
-def chunks2(l, n, extra):
+def chunks2(l, n_in, extra):
     """Yield successive n-sized chunks from l.
     :param l: list to be split
     :param n: max length of chunks
     """
     try:
         idx = -1
+        n = int(n_in)
         for i in range(0, len(l), n):
             idx += 1
             if extra is not None:
@@ -289,7 +290,7 @@ def chunks2(l, n, extra):
             else:
                 yield l[i:i+n]
     except:
-        print "ERROR: extra value has incorrect size %s" % idx, extra
+        print("ERROR: extra value has incorrect size %s" % idx, extra)
         raise
 
 
@@ -309,20 +310,12 @@ def chunks(l, n, extra):
             rep_chunk[eidx] += 1
 
     except:
-        print "ERROR: extra value has incorrect size %s" % idx, extra
+        print("ERROR: extra value has incorrect size %s" % idx, extra)
         raise
 
 
-import sys
-from numbers import Number
-from collections import Set, Mapping, deque
-
-try: # Python 2
-    zero_depth_bases = (basestring, Number, xrange, bytearray)
-    iteritems = 'iteritems'
-except NameError: # Python 3
-    zero_depth_bases = (str, bytes, Number, range, bytearray)
-    iteritems = 'items'
+zero_depth_bases = (str, bytes, Number, range, bytearray)
+iteritems = 'items'
 
 
 def getsize(obj_0):
