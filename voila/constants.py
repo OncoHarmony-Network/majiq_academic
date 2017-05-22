@@ -55,14 +55,11 @@ PROCESS_COUNT = multiprocessing.cpu_count()
 # logging
 VOILA_LOG_NAME = '3a4f4528-e572-404e-b143-acff61cee9ed'
 
-# HDF5
-EXPERIMENT_NAMES = 'experiments_names'
-
 # MAJIQ-SPEL
 LSV_TEXT_VERSION = 2
 
-SPLICE_GRAPH_FILE_VERSION = 1
-VOILA_FILE_VERSION = 1
+SPLICE_GRAPH_FILE_VERSION = 2
+VOILA_FILE_VERSION = 2
 
 FILE_MODE = collections.namedtuple('FILE_MODE', 'read write')('r', 'w')
 

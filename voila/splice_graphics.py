@@ -8,7 +8,6 @@ import h5py
 import numpy
 
 from voila import constants
-from voila.constants import EXPERIMENT_NAMES
 from voila.hdf5 import HDF5, ExonTypeDataSet, JunctionTypeDataSet, ReadsDataSet
 from voila.producer_consumer import ProducerConsumer
 from voila.utils.voila_log import voila_log
@@ -783,7 +782,7 @@ class SpliceGraph(ProducerConsumer):
         :param experiment_names: list of experiment names
         :return: None
         """
-        self.hdf5[self.ROOT].attrs[EXPERIMENT_NAMES] = list(experiment_names)
+        self.hdf5[self.ROOT].attrs.create('experiment_names', [experiment_names], dtype=HDF5.UNICODE_DTYPE)
 
     def get_experiments_list(self):
         """
@@ -791,7 +790,7 @@ class SpliceGraph(ProducerConsumer):
         :return: list
         """
         voila_log().info('Getting splice graph experiment names from {0} ...'.format(self.file_name))
-        return self.hdf5[self.ROOT].attrs[EXPERIMENT_NAMES].tolist()
+        return self.hdf5[self.ROOT].attrs['experiment_names']
 
     def check_version(self):
         if self.file_version != constants.SPLICE_GRAPH_FILE_VERSION:

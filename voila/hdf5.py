@@ -5,7 +5,6 @@ import numpy
 from h5py.h5r import RegionReference
 from numpy import unicode
 
-from voila.constants import EXPERIMENT_NAMES
 from voila.utils.voila_log import voila_log
 
 
@@ -249,7 +248,7 @@ class DataSet(object):
                 if ref:
                     return self.dataset()[ref].tolist()
             else:
-                experiment_length = len(self.h['/'].attrs[EXPERIMENT_NAMES].tolist())
+                experiment_length = len(self.h['/'].attrs['experiment_names'].tolist())
                 return [[self.h.attrs[self.ds_name]] * experiment_length]
 
     def resize(self):
