@@ -260,8 +260,9 @@ class Builder(BasicPipeline):
                                  self.non_denovo, self.silent, self.debug],
                        maxtasksperchild=1)
 
+        list_of_genes = None
         with h5py.File(get_build_temp_db_filename(majiq_config.outDir), 'r') as db_f:
-                list_of_genes = db_f.keys()
+                list_of_genes = list(db_f.keys())
         lchnksize = max(len(list_of_genes)/self.nthreads, 1) + 1
         init_splicegraph(get_builder_splicegraph_filename(majiq_config.outDir))
         for exp_idx, sam_file in enumerate(majiq_config.sam_list):

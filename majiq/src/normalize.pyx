@@ -44,7 +44,7 @@ def mark_stacks_per_junc(junction, fitfunc_r, pvalue_limit, logger=None):
     import numpy.ma as ma
     if logger is not None:
         logger.debug("Marking and masking stacks")
-    minstack = sys.maxint
+    minstack = sys.maxsize
     # the minimum value marked as stack
     numstacks = 0
 

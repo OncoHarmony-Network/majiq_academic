@@ -290,9 +290,9 @@ def combine_for_priormatrix(group1, group2, matched_info, num_exp):
     return grp1, grp2
 
 
-def get_prior_params(lsvinfo, num_ways):
+def get_prior_params(lsv_type, num_ways):
 
-    if 'i' in lsvinfo[2]:
+    if b'i' in lsv_type:
         alpha = 1.0 / (num_ways - 1)
         alpha *= float(num_ways) / (num_ways + 1)
         alpha_prior = np.array([alpha] * num_ways)

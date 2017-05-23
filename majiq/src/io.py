@@ -164,7 +164,7 @@ def rnaseq_intron_retention(gne, samfl, chnk, permissive=True, nondenovo=False, 
         # since 8 is the overlapping number of nucleotites we accept, the inner part is the
         # real intron size - (readlen-8)/*start part*/ - (readlen-8)/*end part*/
 
-        chunk_len = intron_len / nchunks
+        chunk_len = int(intron_len / nchunks)
 
         bmap = np.ones(shape=intron_len, dtype=bool)
         index_list = []
@@ -220,7 +220,7 @@ def rnaseq_intron_retention(gne, samfl, chnk, permissive=True, nondenovo=False, 
             else:
                 # section 3
                 intron_idx = r_start - (ex1_end + 1)
-                rel_start = intron_idx / chunk_len
+                rel_start = int(intron_idx / chunk_len)
                 indx = -1 if rel_start > nchunks else rel_start
                 if not bmap[intron_idx]:
                     bmap[intron_idx] = True

@@ -49,8 +49,7 @@ def wrap_result_file(lsv, name, gc_vfunc, lsv_list, rna_files, lock_per_file=Non
     for exp_idx in majiq_config.tissue_repl[name]:
 
         lock_per_file[exp_idx].acquire()
-        with h5py.File(get_builder_majiq_filename(majiq_config.outDir, lsv_list[exp_idx]),
-                       'r+', compression='gzip', compression_opts=9) as f:
+        with h5py.File(get_builder_majiq_filename(majiq_config.outDir, lsv_list[exp_idx]), 'r+') as f:
             gc_f = None
             if majiq_config.gcnorm:
                 try:
