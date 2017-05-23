@@ -99,18 +99,16 @@ class Voila(ProducerConsumer):
 
     def add_experiments(self, group_name, experiment_names):
         m = self._metainfo()
-        experiment_names = HDF5.convert(experiment_names)
-
         try:
-            m.attrs.create('group_names', numpy.append(m.attrs['group_names'], group_name), dtype=HDF5.UNICODE_DTYPE)
-            m.attrs.create('exeperiment_names', numpy.append(m.attrs['experiment_names'], [experiment_names], axis=0),
-                           dtype=HDF5.UNICODE_DTYPE)
+            HDF5.create(m.attrs, 'group_names', numpy.append(m.attrs['group_names'], group_name))
+            HDF5.create(m.attrs, 'exeperiment_names',
+                        numpy.append(m.attrs['experiment_names'], [experiment_names], axis=0))
         except KeyError:
-            m.attrs.create('group_names', [group_name], dtype=HDF5.UNICODE_DTYPE)
-            m.attrs.create('experiment_names', [experiment_names], dtype=HDF5.UNICODE_DTYPE)
+            HDF5.create(m.attrs, 'group_names', [group_name])
+            HDF5.create(m.attrs, 'experiment_names', [experiment_names])
 
     def add_stat_names(self, stat_names):
-        self._metainfo().attrs.create('stat_names', HDF5.convert(stat_names), dtype=HDF5.UNICODE_DTYPE)
+        HDF5.create(self._metainfo().attrs, 'stat_names', stat_names)
 
     def set_analysis_type(self, analysis_type):
         assert analysis_type in [constants.ANALYSIS_HETEROGEN, constants.ANALYSIS_DELTAPSI, constants.ANALYSIS_PSI]

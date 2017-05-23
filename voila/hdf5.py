@@ -15,8 +15,6 @@ class HDF5VersionException(Exception):
 
 
 class HDF5(object):
-    UNICODE_DTYPE = h5py.special_dtype(vlen=unicode)
-
     def __init__(self):
         """
         Move data in this class to and from HDF5 files.
@@ -126,11 +124,14 @@ class HDF5(object):
             if key not in self.exclude():
                 # H5py stores attributes as numpy objects where it can.  Numpy objects
                 # cause issues with the json conversion, therefore corner cases are handled below.
-                value = h.attrs[key]
-                if type(value) is numpy.ndarray:
-                    value = value.tolist()
-                elif type(value) is numpy.bool_:
-                    value = value.item()
+
+                # value = h.attrs[key]
+                # if type(value) is numpy.ndarray:
+                #     value = value.tolist()
+                # elif type(value) is numpy.bool_:
+                #     value = value.item()
+
+                value = self.convert(h.attrs[key])
 
                 self.__dict__[key] = value
 
@@ -162,6 +163,10 @@ class HDF5(object):
         if isinstance(v, bytes):
             return v.decode('utf-8')
         return v
+
+    @staticmethod
+    def create(attrs, location, value, ):
+        attrs.create(location, value, dtype=h5py.special_dtype(vlen=unicode))
 
 
 class DataSet(object):
