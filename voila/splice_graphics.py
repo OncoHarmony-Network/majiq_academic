@@ -648,7 +648,7 @@ class SpliceGraph(ProducerConsumer):
     ROOT = '/'
     VERSION = '/splice_graph_file_version'
 
-    def __init__(self, splice_graph_file_name, mode):
+    def __init__(self, splice_graph_file_name, mode, erase_splice_graph_file=False):
         """
         Class for creating and accessing the splice graph file.
         :param splice_graph_file_name: path to splice graph file
@@ -661,6 +661,13 @@ class SpliceGraph(ProducerConsumer):
         self.limit = None
         self.gene_ids = None
         self.file_version = None
+
+        # Erase splice graph file, if needed, before creating it.
+        if erase_splice_graph_file:
+            if mode != constants.FILE_MODE.write:
+                voila_log().warn('Attempting to remove Splice Graph file when mode is "{0}"'.format(mode))
+            elif os.path.isfile(erase_splice_graph_file):
+                os.remove(splice_graph_file_name)
 
     def __enter__(self):
         """
@@ -729,14 +736,6 @@ class SpliceGraph(ProducerConsumer):
             self.hdf5.close()
         except Exception:
             pass
-
-    def erase_splice_graph_file(self):
-        """
-        Remove splice graph file and reopen it.
-        :return:
-        """
-        os.remove(self.file_name)
-        self.__enter__()
 
     def add_gene(self, gene):
         """

@@ -1,5 +1,3 @@
-import numpy as np
-
 from majiq.src.config import Config
 from voila import constants as voila_const
 from voila.splice_graphics import JunctionGraphic, ExonGraphic, GeneGraphic, SpliceGraph
@@ -8,8 +6,7 @@ from majiq.src.constants import *
 
 def init_splicegraph(filename):
     majiq_config = Config()
-    with SpliceGraph(filename, 'w') as sg:
-        sg.erase_splice_graph_file()
+    with SpliceGraph(filename, 'w', erase_splice_graph_file=True) as sg:
         sg.add_experiment_names(majiq_config.exp_list)
 
 
