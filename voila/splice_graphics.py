@@ -782,7 +782,7 @@ class SpliceGraph(ProducerConsumer):
         :param experiment_names: list of experiment names
         :return: None
         """
-        self.hdf5[self.ROOT].attrs.create('experiment_names', [experiment_names], dtype=HDF5.UNICODE_DTYPE)
+        HDF5.create(self.hdf5[self.ROOT].attrs, 'experiment_names', [experiment_names])
 
     def get_experiments_list(self):
         """
