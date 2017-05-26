@@ -59,6 +59,7 @@ def wrap_result_file(lsv, name, gc_vfunc, lsv_list, rna_files, lock_per_file=Non
 
             f.attrs['data_index'] = lsv.to_hdf5(hdf5grp=f, lsv_idx=f.attrs['data_index'], gc_vfunc=gc_f,
                                                 exp_idx=exp_idx)
+            f.attrs['num_lsvs'] += 1
 
         lock_per_file[exp_idx].release()
 

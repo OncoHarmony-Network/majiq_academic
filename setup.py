@@ -1,6 +1,10 @@
 from setuptools import setup, find_packages
 from distutils.core import Extension
 from Cython.Build import cythonize
+try:
+    import pysam
+except ImportError:
+    raise Exception('pysam not found; please install pysam first')
 
 
 extensions = [Extension('majiq.src.normalize', ['majiq/src/normalize.pyx'])]
@@ -9,6 +13,9 @@ extensions += [Extension('majiq.src.polyfitnb', ['majiq/src/polyfitnb.pyx'])]
 extensions += [Extension('majiq.src.sample', ['majiq/src/sample.pyx'])]
 #extensions += [Extension('majiq.src.beta_binomial', ['majiq/src/beta_binomial.py'])]
 extensions += [Extension('majiq.src.psi', ['majiq/src/psi.pyx'])]
+extensions += [Extension('majiq.src.io_base', ['majiq/src/io_base.pyx'], include_dirs=pysam.get_include())]
+
+include_dirs=pysam.get_include()
 
 setup(
     name="majiq",
