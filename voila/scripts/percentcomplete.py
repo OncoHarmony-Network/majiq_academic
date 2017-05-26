@@ -27,15 +27,16 @@ class PercentComplete(object):
             remaining = self.start_time + total - now
             rate = round(self.count / delta, 1)
 
-            print '\r', '{0}%'.format(percent),
-            print '--', ' -- '.join([
-                'Estimated Remaining Time: {0}'.format(remaining),
-                'Jobs/Second: {0}'.format(rate)
-            ]),
+            # todo: this needs to be properly converted to py3
+            # print '\r', '{0}%'.format(percent),
+            # print '--', ' -- '.join([
+            #     'Estimated Remaining Time: {0}'.format(remaining),
+            #     'Jobs/Second: {0}'.format(rate)
+            # ]),
 
     def range(self):
         return range(self.length)
 
     @staticmethod
     def end():
-        print ''
+        print()
