@@ -257,7 +257,7 @@ class Builder(BasicPipeline):
                                      self.non_denovo, self.silent, self.debug])
 
             lchnksize = max(int(len(majiq_config.sam_list)/self.nthreads), 1) + 1
-            pool.map_async(parsing_files, majiq_utils.chunks(majiq_config.sam_list, lchnksize, extra=range(self.nthreads)))
+            pool.map_async(parsing_files, majiq_utils.chunks2(majiq_config.sam_list, lchnksize, extra=range(self.nthreads)))
             pool.close()
             pool.join()
 
