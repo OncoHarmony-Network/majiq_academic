@@ -17,7 +17,7 @@ class VoilaArgs:
                         'the --no-html flag is set.'
 
     def get_parents(self):
-        pass
+        raise NotImplementedError('get_parents needs to be implemented.')
 
     @staticmethod
     def check_dir(value):
@@ -78,28 +78,28 @@ class VoilaArgs:
         kwargs['required'] = True
         required.add_argument(*args[1:], **kwargs)
 
-    @staticmethod
+    @classmethod
     def splice_graphs_args(cls):
         """
         Splice graphs specific arguments.
         :return: parser
         """
-        parser_splice_graphs = argparse.ArgumentParser(add_help=False)
+        parser = cls.get_parser()
 
-        parser_splice_graphs.add_argument('splice_graph',
-                                          type=cls.check_splice_graph_file,
-                                          help=cls.SPLICE_GRAPH_HELP)
+        parser.add_argument('splice_graph',
+                            type=cls.check_splice_graph_file,
+                            help=cls.SPLICE_GRAPH_HELP)
 
-        parser_splice_graphs.add_argument('--limit',
-                                          type=int,
-                                          default=20,
-                                          help='Limit the number of splice graphs shown.  Default is 20.')
+        parser.add_argument('--limit',
+                            type=int,
+                            default=20,
+                            help='Limit the number of splice graphs shown.  Default is 20.')
 
-        return parser_splice_graphs
+        return parser
 
-    @staticmethod
-    def multiproccess_args():
-        parser = argparse.ArgumentParser(add_help=False)
+    @classmethod
+    def multiproccess_args(cls):
+        parser = cls.get_parser()
         parser.add_argument(
             '--max-processes',
             type=int,
@@ -145,17 +145,17 @@ class VoilaArgs:
         )
         return parser
 
-    @staticmethod
-    def html_args():
-        html_parser = argparse.ArgumentParser(add_help=False)
-        html_parser.add_argument('--no-html',
-                                 action='store_true',
-                                 help='Do not write html files.')
+    @classmethod
+    def html_args(cls):
+        parser = cls.get_parser()
+        parser.add_argument('--no-html',
+                            action='store_true',
+                            help='Do not write html files.')
 
-        html_parser.add_argument('--no-tsv',
-                                 action='store_true',
-                                 help='Do not generate tab-separated values output file.')
-        return html_parser
+        parser.add_argument('--no-tsv',
+                            action='store_true',
+                            help='Do not generate tab-separated values output file.')
+        return parser
 
     @classmethod
     def voila_file_args(cls):
@@ -164,25 +164,25 @@ class VoilaArgs:
         :return: parser
         """
 
-        voila_file_parser = argparse.ArgumentParser(add_help=False)
+        parser = cls.get_parser()
 
-        voila_file_parser.add_argument('voila_file',
-                                       type=cls.check_voila_file,
-                                       help='Location of majiq\'s voila file.  File should end with ".voila".')
-        cls.splice_graph = True
-        voila_file_parser.add_argument('--splice-graph',
-                                       type=cls.check_splice_graph_file,
-                                       help=cls.SPLICE_GRAPH_HELP)
+        parser.add_argument('voila_file',
+                            type=cls.check_voila_file,
+                            help='Location of majiq\'s voila file.  File should end with ".voila".')
 
-        voila_file_parser.add_argument('--gtf',
-                                       action='store_true',
-                                       help='Generate GTF (GFF2) files for LSVs.')
+        parser.add_argument('--splice-graph',
+                            type=cls.check_splice_graph_file,
+                            help=cls.SPLICE_GRAPH_HELP)
 
-        voila_file_parser.add_argument('--gff',
-                                       action='store_true',
-                                       help='Generate GFF3 files for LSVs.')
+        parser.add_argument('--gtf',
+                            action='store_true',
+                            help='Generate GTF (GFF2) files for LSVs.')
 
-        return voila_file_parser
+        parser.add_argument('--gff',
+                            action='store_true',
+                            help='Generate GFF3 files for LSVs.')
+
+        return parser
 
     @classmethod
     def gene_search_args(cls):
@@ -191,20 +191,20 @@ class VoilaArgs:
         :return: parser
         """
 
-        gene_search_parser = argparse.ArgumentParser(add_help=False)
-        gene_search_parser.add_argument('--gene-names-file',
-                                        dest='gene_names',
-                                        type=cls.check_list_file,
-                                        default=[],
-                                        help='Location of file that contains a list of common gene names which should '
-                                             'remain in the results.  One name per line.')
+        parser = cls.get_parser()
+        parser.add_argument('--gene-names-file',
+                            dest='gene_names',
+                            type=cls.check_list_file,
+                            default=[],
+                            help='Location of file that contains a list of common gene names which should '
+                                 'remain in the results.  One name per line.')
 
-        gene_search_parser.add_argument('--gene-names',
-                                        nargs='*',
-                                        default=[],
-                                        help='Common gene names, separated by spaces, which should remain in the results. '
-                                             'e.g. GENE1 GENE2 ...')
-        return gene_search_parser
+        parser.add_argument('--gene-names',
+                            nargs='*',
+                            default=[],
+                            help='Common gene names, separated by spaces, which should remain in the results. '
+                                 'e.g. GENE1 GENE2 ...')
+        return parser
 
     @classmethod
     def lsv_type_search_args(cls):
@@ -212,19 +212,19 @@ class VoilaArgs:
         Arguments for analysis types who search for specific LSV types.
         :return: parser
         """
-        lsv_search_parser = argparse.ArgumentParser(add_help=False)
-        lsv_search_parser.add_argument('--lsv-types-file',
-                                       type=cls.check_list_file,
-                                       dest='lsv_types',
-                                       help='Location of file that contains a list of LSV types which should remain in the '
-                                            'results.  One type per line')
+        parser = cls.get_parser()
+        parser.add_argument('--lsv-types-file',
+                            type=cls.check_list_file,
+                            dest='lsv_types',
+                            help='Location of file that contains a list of LSV types which should remain in the '
+                                 'results.  One type per line')
 
-        lsv_search_parser.add_argument('--lsv-types',
-                                       nargs='*',
-                                       default=[],
-                                       help='LSV types which should remain in the results')
+        parser.add_argument('--lsv-types',
+                            nargs='*',
+                            default=[],
+                            help='LSV types which should remain in the results')
 
-        return lsv_search_parser
+        return parser
 
     @classmethod
     def lsv_id_search_args(cls):
@@ -232,7 +232,7 @@ class VoilaArgs:
         Arguments for analysis types who search for specific LSV IDs.
         :return: parser
         """
-        parser = argparse.ArgumentParser(add_help=False)
+        parser = cls.get_parser()
         parser.add_argument('--lsv-ids-file',
                             type=cls.check_list_file,
                             dest='lsv_ids',
@@ -246,5 +246,3 @@ class VoilaArgs:
                                  'LSV_ID1 LSV_ID2 ...')
 
         return parser
-
-

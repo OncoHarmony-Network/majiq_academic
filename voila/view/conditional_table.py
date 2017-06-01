@@ -16,9 +16,6 @@ class ConditionalTable(VoilaArgs):
 
     @classmethod
     def arg_parents(cls):
-        # base, html, gene_search, lsv_type_search, lsv_id_search, parser_conditional_table,
-        #                                output
-
         parser = cls.get_parser()
 
         cls.required_argument(
