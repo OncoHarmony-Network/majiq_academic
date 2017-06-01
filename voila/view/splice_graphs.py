@@ -3,9 +3,34 @@ from os import path
 
 from voila import constants
 from voila.splice_graphics import SpliceGraph
-from voila.utils.run_voila_utils import get_env, get_output_html, copy_static, grouper, get_prev_next_pages
+from voila.utils.run_voila_utils import get_env, get_output_html, copy_static, grouper
 from voila.utils.voila_log import voila_log
 from voila.view.psi import get_prev_next_pages
+from voila.voila_args import VoilaArgs
+
+
+class SpliceGraphs(VoilaArgs):
+    def __init__(self, args):
+        splice_graphs(args)
+
+    @classmethod
+    def arg_parents(cls):
+        # base, gene_search, parser_splicegraphs, output
+
+        parser = cls.get_parser()
+
+        parser.add_argument('splice_graph',
+                            type=cls.check_splice_graph_file,
+                            help=cls.SPLICE_GRAPH_HELP)
+
+        parser.add_argument('--limit',
+                            type=int,
+                            default=20,
+                            help='Limit the number of splice graphs shown.  Default is 20.')
+
+        return (
+            cls.base_args(), cls.gene_search_args(), cls.output_args(), parser
+        )
 
 
 def splice_graphs(args):

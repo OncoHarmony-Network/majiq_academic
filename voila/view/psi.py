@@ -11,9 +11,10 @@ from voila.utils.run_voila_utils import parse_gene_graphics, VoilaNoLSVsExceptio
     get_output_html, grouper, copy_static, get_summary_template, get_prev_next_pages
 from voila.utils.utils_voila import create_if_not_exists
 from voila.utils.voila_log import voila_log
+from voila.voila_args import VoilaArgs
 
 
-class Psi(ProducerConsumer):
+class Psi(ProducerConsumer, VoilaArgs):
     def __init__(self, args):
         """
         Render psi output.
@@ -107,6 +108,11 @@ class Psi(ProducerConsumer):
 
     def close(self):
         pass
+
+    @classmethod
+    def arg_parents(cls):
+        return (cls.base_args(), cls.html_args(), cls.gene_search_args(), cls.lsv_type_search_args(),
+                cls.lsv_id_search_args(), cls.voila_file_args())
 
     def render_html(self):
         """

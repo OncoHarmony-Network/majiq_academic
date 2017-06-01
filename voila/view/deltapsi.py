@@ -13,9 +13,10 @@ from voila.utils.run_voila_utils import VoilaNoLSVsException, parse_gene_graphic
 from voila.utils.voila_log import voila_log
 from voila.view.psi import get_prev_next_pages
 from voila.view.splice_graphs import get_env
+from voila.voila_args import VoilaArgs
 
 
-class Deltapsi(ProducerConsumer):
+class Deltapsi(ProducerConsumer, VoilaArgs):
     def __init__(self, args):
         super(Deltapsi, self).__init__()
         self.args = args
@@ -101,6 +102,30 @@ class Deltapsi(ProducerConsumer):
                 self.dict(value[0]['lsv'].name, os.path.join(constants.SUMMARIES_SUBFOLDER, page_name))
 
             self.queue.task_done()
+
+    @classmethod
+    def arg_parents(cls):
+        # base, html, gene_search, lsv_type_search, lsv_id_search, voila_file,
+        #                                parser_delta, multiprocess, output
+
+        parser = cls.get_parser()
+        # Probability threshold used to sum the accumulative probability of inclusion/exclusion.
+        parser.add_argument('--threshold',
+                            type=float,
+                            default=0.2,
+                            help='Filter out LSVs with no junction predicted to change over a certain value (in '
+                                 'percentage).')
+
+        parser.add_argument('--show-all',
+                            dest='show_all',
+                            action='store_true',
+                            default=False,
+                            help='Show all LSVs including those with no junction with significant change predicted.')
+
+        return (
+            cls.base_args(), cls.html_args(), cls.gene_search_args(), cls.lsv_type_search_args(),
+            cls.lsv_id_search_args(), cls.voila_file_args(), cls.multiproccess_args(), cls.output_args(), parser
+        )
 
     def render_html(self):
         args = self.args

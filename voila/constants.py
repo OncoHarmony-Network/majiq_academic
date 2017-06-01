@@ -11,6 +11,7 @@ ANALYSIS_HETEROGEN = 'heterogen'
 LSV_THUMBNAILS = 'lsv-thumbnails'
 SPLICE_GRAPHS = 'splice-graphs'
 COND_TABLE = 'cond-table'
+TOOLS = 'tools'
 
 # Junction Types
 JUNCTION_TYPE_DB_RNASEQ = 0

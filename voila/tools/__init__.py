@@ -1,0 +1,58 @@
+import importlib
+import inspect
+import os
+
+from voila.tools.tool import Tool
+from voila.voila_args import VoilaArgs
+
+
+class ToolParserEmptyException(Exception):
+    pass
+
+
+class ToolClassNotFoundException(Exception):
+    pass
+
+
+class Tools(VoilaArgs):
+    filter = ('__init__.py', 'tool.py')
+    tool_subclass = Tool
+    module = 'voila.tools'
+    tool_dir = os.path.dirname(os.path.realpath(__file__))
+
+    def __init__(self, args):
+        self.get_tool(args.tool).run(args)
+
+    @classmethod
+    def add_arguments(cls, parser):
+        subparser = parser.add_subparsers(dest='tool')
+        subparser.required = True
+
+        for tool_name in cls.tool_names():
+            tool = cls.get_tool(tool_name)
+            tool_parser = tool.arguments()
+            base_parser = cls.base_args()
+            if not tool_parser:
+                raise ToolParserEmptyException
+            subparser.add_parser(tool_name, parents=[base_parser, tool_parser], help=tool.help)
+
+    @classmethod
+    def tool_names(cls):
+        for x in os.listdir(cls.tool_dir):
+            if os.path.isfile(os.path.join(cls.tool_dir, x)) and x not in cls.filter:
+                yield x.split('.')[0]
+
+    @classmethod
+    def get_tool(cls, tool_name):
+        module = importlib.import_module('{0}.{1}'.format(cls.module, tool_name))
+        members = inspect.getmembers(module, inspect.isclass)
+        for member in members:
+            tool_cls = member[1]
+            if issubclass(tool_cls, cls.tool_subclass):
+                return tool_cls()
+        raise ToolClassNotFoundException(
+            'No subclass of {0} was found in {1}'.format(cls.tool_subclass.__name__, tool_name))
+
+    @classmethod
+    def arg_parents(cls):
+        return ()
