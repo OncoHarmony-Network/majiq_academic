@@ -1,6 +1,7 @@
 from setuptools import setup, find_packages
 from distutils.core import Extension
 from Cython.Build import cythonize
+from majiq.src.constants import VERSION
 try:
     import pysam
 except ImportError:
@@ -20,8 +21,8 @@ include_dirs=pysam.get_include()
 setup(
     name="majiq",
     packages=find_packages(),
-    version="1.0.0",
-    description="MAJIQ",
+    version=VERSION,
+    description="MAJIQ and VOILA",
     author='BioCiphers Lab',
     author_email='majiq@biociphers.org',
     url='https://biociphers.org',

@@ -6,23 +6,27 @@ from majiq.src.config import Config
 from pysam.libcalignmentfile cimport AlignmentFile, AlignedSegment
 # from libcpp cimport bool
 import pysam
+import cython
 
 # READING BAM FILES
 
-
-def __cross_junctions(AlignedSegment read):
+@cython.boundscheck(False) # turn off bounds-checking for entire function
+@cython.wraparound(False)  # turn off negative index wrapping for entire function
+cdef __cross_junctions2(AlignedSegment read):
     """
       This part will parse the jI from STAR
       # Column 17: jI:B:I,Start1,End1,Start2,End2,... Start and End of introns for all junctions (1- based)
       # jI:B:I,-1 means that the read doesn't cross any junction
     """
 
-    jlist = []
+    cdef list jlist = []
     cdef bint cross = False
     cdef int idx
     cdef unsigned int op
     cdef unsigned int num
     cdef unsigned int off
+    cdef int junc_end, junc_start
+
     try:
         list_junc = read.opt('jI')
         if len(list_junc) > 1 and list_junc[0] != -1:
@@ -52,26 +56,46 @@ def __cross_junctions(AlignedSegment read):
 
     return cross, jlist
 
+cdef __cross_junctions(AlignedSegment read):
+    """
+      This part will parse the jI from STAR
+      # Column 17: jI:B:I,Start1,End1,Start2,End2,... Start and End of introns for all junctions (1- based)
+      # jI:B:I,-1 means that the read doesn't cross any junction
+    """
+
+    cdef list jlist = []
+    cdef bint cross = False
+    cdef int idx
+    cdef unsigned int op
+    cdef unsigned int num
+    cdef unsigned int off
+    cdef int junc_end, junc_start
+    # if len(jlist) != 0: print "STAR ::",jlist
+    # print"THIS IS NOT a WELL defined STAR output"
+    off = 0
+    for op, num in read.cigar:
+        if op in [0, 5, 6, 7, 8]:
+            off += num
+        elif op in [1, 5]:
+            off += 0
+        elif op == 2:
+            off += num
+        elif op == 3:
+            jlist.append((read.pos + off, read.pos + off + num + 1))
+            off += num
+            cross = True
+            # if len(jlist) !=0 : print "NOSTAR:", jlist, read.cigar
+
+    return cross, jlist
+
+
 
 cdef inline bint __is_unique(AlignedSegment read):
-    cdef bint unique = True
-    try:
-        if read.opt('NH') > 1:
-            unique = False
-    except KeyError:
-        if read.flag & 0x100 == 1:
-            unique = False
-    return unique
+    return read.flag & 0x100 == 0x100
 
 
 cdef inline int __get_num_reads(AlignedSegment read):
-    cdef int nreads
-    try:
-        nreads = int(read.opt('HI'))
-    except KeyError:
-        nreads = 1
-    # return 1
-    return nreads
+    return 1
 
 
 cdef inline bint _match_strand(AlignedSegment read, str gene_strand):
@@ -92,44 +116,125 @@ cpdef AlignmentFile open_rnaseq(str samfile):
 cpdef long close_rnaseq(AlignmentFile samfl) except -1:
     samfl.close()
 
-
-cpdef long read_sam_or_bam(object gne, AlignmentFile samfl, list counter, object h5py_file, bint nondenovo=False,
+cpdef long read_sam_or_bam(object gne, AlignmentFile samfl, object h5py_file,
                           str info_msg='0', object logging=None) except -1:
-    cdef unsigned int strt, end, r_start, junc_start, junc_end, readlen, nc, ng
+    _read_sam_or_bam(gne, samfl, h5py_file, info_msg=info_msg, logging=logging)
 
+
+@cython.boundscheck(False) # turn off bounds-checking for entire function
+@cython.wraparound(False)  # turn off negative index wrapping for entire function
+cdef long _read_sam_or_bam2(object gne, AlignmentFile samfl, object h5py_file,
+                           str info_msg='0', object logging=None) except -1:
+
+    cdef unsigned int strt, end, r_start, junc_start, junc_end, readlen, nc, ng
     cdef str strand
     cdef AlignedSegment read
     cdef bint unique, found
     cdef float gc_content
     cdef bint bb
+    cdef dict junctions = {xx.get_coordinates(): xx for xx in gne.get_all_junctions(filter=False)}
+    cdef list ex_list
+    cdef str chrom
+    cdef int counter = 0
 
-    strand = gne.get_strand()
-    strt, end = gne.get_coordinates()
-    j_list = gne.get_all_junctions(filter=False)
-    ex_list = gne.get_exon_list()
-
-    chrom = gne.get_chromosome()
-    majiq_config = Config()
-
-    junctions = []
     try:
+        strand = gne.get_strand()
+        strt, end = gne.get_coordinates()
+        # ex_list = gne.get_exon_list()
+        chrom = gne.get_chromosome()
+        majiq_config = Config()
+
+
         read_iter = samfl.fetch(chrom, strt, end, multiple_iterators=False)
+        junc_k = samfl.find_introns(read_iter)
+
+        for (junc_start, junc_end) in junc_k.keys():
+            if junc_end - junc_start < MIN_JUNC_LENGTH :
+                continue
+
+            junc_start_reg = junc_start - (majiq_config.readLen - MIN_BP_OVERLAP)
+            read_iter = samfl.fetch(chrom, junc_start_reg, junc_start - MIN_BP_OVERLAP, multiple_iterators=False)
+
+            if (junc_start, junc_end) in junctions:
+                ''' update junction and add to list'''
+                junc = junctions[(junc_start, junc_end)]
+            elif not majiq_config.non_denovo:
+                bb = gne.check_antisense_junctions_hdf5(junc_start, junc_end, h5py_file)
+                if not bb:
+                    counter += 1
+                    junc = Junction(junc_start, junc_end, None, None, gne.get_id(), retrieve=True)
+                    junctions[(junc_start, junc_end)] = junc
+
+            for read in read_iter:
+                unique = __is_unique(read)
+
+                r_start = read.pos
+                is_cross, junc_list = __cross_junctions(read)
+                if not _match_strand(read, gene_strand=strand) or r_start < strt or not unique or not is_cross:
+                    continue
+
+                if (junc_start, junc_end) in junc_list:
+                    nreads = __get_num_reads(read)
+                    nc = read.seq.count('C') + read.seq.count('c')
+                    ng = read.seq.count('g') + read.seq.count('G')
+                    gc_content = float(nc + ng) / float(len(read.seq))
+                    readlen = len(read.seq)
+                    if junc_start - r_start > readlen:
+                        r_start_offset = junc_list[0][0] - r_start
+                        r_start = junc_start - r_start_offset
+                    junc.update_junction_read(nreads, r_start, gc_content, unique)
+
+
+        if counter > 0:
+            detect_exons(gne, junctions, None)
+    except ValueError as e:
+        print(e)
+        logging.error('\t[%s]There are no reads in %s:%d-%d' % (info_msg, chrom, strt, end))
+
+
+@cython.boundscheck(False) # turn off bounds-checking for entire function
+@cython.wraparound(False)  # turn off negative index wrapping for entire function
+cdef long _read_sam_or_bam(object gne, AlignmentFile samfl, object h5py_file,
+                           str info_msg='0', object logging=None) except -1:
+
+    cdef unsigned int strt, end, r_start, junc_start, junc_end, readlen, nc, ng
+    cdef str strand
+    cdef AlignedSegment read
+    cdef bint unique, found
+    cdef float gc_content
+    cdef bint bb
+    cdef dict junctions = {xx.get_coordinates(): xx for xx in gne.get_all_junctions(filter=False)}
+    cdef list ex_list
+    cdef str chrom
+    cdef int counter = 0
+    cdef int tot_reads = 0
+
+    try:
+        strand = gne.get_strand()
+        strt, end = gne.get_coordinates()
+        # ex_list = gne.get_exon_list()
+        chrom = gne.get_chromosome()
+        majiq_config = Config()
+
+
+        read_iter = samfl.fetch(chrom, strt, end, multiple_iterators=False)
+
         for read in read_iter:
+            is_cross, junc_list = __cross_junctions(read)
             r_start = read.pos
             unique = __is_unique(read)
             if not _match_strand(read, gene_strand=strand) or r_start < strt or not unique:
                 continue
 
             nreads = __get_num_reads(read)
-            gne.add_read_count(nreads)
-            is_cross, junc_list = __cross_junctions(read)
+            tot_reads += nreads
 
-            if majiq_config.gcnorm:
-                for ex_idx in range(len(ex_list)):
-                    ex_start, ex_end = ex_list[ex_idx].get_coordinates()
-                    if ex_start <= r_start <= ex_end:
-                        ex_list[ex_idx].update_coverage(nreads)
-                        break
+            # if majiq_config.gcnorm:
+            #     for ex_idx in range(len(ex_list)):
+            #         ex_start, ex_end = ex_list[ex_idx].get_coordinates()
+            #         if ex_start <= r_start <= ex_end:
+            #             ex_list[ex_idx].update_coverage(nreads)
+            #             break
 
             if not is_cross:
                 continue
@@ -139,59 +244,30 @@ cpdef long read_sam_or_bam(object gne, AlignmentFile samfl, list counter, object
             gc_content = float(nc + ng) / float(len(read.seq))
             readlen = len(read.seq)
             for (junc_start, junc_end) in junc_list:
+
                 if junc_start - r_start > readlen:
                     r_start_offset = junc_list[0][0] - r_start
                     r_start = junc_start - r_start_offset
-                    if junc_start - r_start >= readlen - MIN_BP_OVERLAP or junc_start - r_start <= MIN_BP_OVERLAP:
-                        continue
-                elif junc_start - r_start >= readlen - MIN_BP_OVERLAP or junc_start - r_start <= MIN_BP_OVERLAP:
+
+                if (junc_start - r_start >= readlen - MIN_BP_OVERLAP) or (junc_start - r_start <= MIN_BP_OVERLAP) or \
+                        (junc_end - junc_start < MIN_JUNC_LENGTH):
                     continue
 
-                if junc_end - junc_start < MIN_JUNC_LENGTH:
-                    counter[0] += 1
-                    continue
-
-                found = False
-                for jj in j_list:
-                    (j_st, j_ed) = jj.get_coordinates()
-                    if j_st > junc_start or (j_st == junc_start and j_ed > junc_end):
-                        break
-                    elif j_st < junc_start or (j_st == junc_start and j_ed < junc_end):
-                        continue
-                    elif junc_start == j_st and junc_end == j_ed:
-                        ''' update junction and add to list'''
-                        found = True
-                        counter[3] += 1
-                        jj.update_junction_read(nreads, r_start, gc_content, unique)
-                        if not (junc_start, '5prime', jj) in junctions:
-                            junctions.append((junc_start, '5prime', jj))
-                            junctions.append((junc_end, '3prime', jj))
-                        break
-
-                if not found and not nondenovo:
+                if (junc_start, junc_end) in junctions:
                     ''' update junction and add to list'''
-                    junc = None
-                    for (coord, t, jnc) in junctions:
-                        if jnc.start == junc_start and jnc.end == junc_end:
-                            jnc.update_junction_read(nreads, r_start, gc_content, unique)
-                            if not (junc_start, '5prime', jnc) in junctions:
-                                junctions.append((junc_start, '5prime', jnc))
-                                junctions.append((junc_end, '3prime', jnc))
-                            junc = jnc
-                            break
+                    jj = junctions[(junc_start, junc_end)]
+                    jj.update_junction_read(nreads, r_start, gc_content, unique)
 
-                    if junc is None:
-                        '''mark a new junction '''
-                        bb = gne.check_antisense_junctions_hdf5(junc_start, junc_end, h5py_file)
-                        if not bb:
-                            counter[4] += 1
-                            junc = Junction(junc_start, junc_end, None, None, gne.get_id(), retrieve=True)
-                            junc.update_junction_read(nreads, r_start, gc_content, unique)
-                            junctions.append((junc_start, '5prime', junc))
-                            junctions.append((junc_end, '3prime', junc))
+                elif not majiq_config.non_denovo:
+                    bb = gne.check_antisense_junctions_hdf5(junc_start, junc_end, h5py_file)
+                    if not bb:
+                        counter += 1
+                        junc = Junction(junc_start, junc_end, None, None, gne.get_id(), retrieve=True)
+                        junc.update_junction_read(nreads, r_start, gc_content, unique)
+                        junctions[(junc_start, junc_end)] = junc
 
-
-        if len(junctions) > 0:
+        gne.add_read_count(tot_reads)
+        if counter > 0:
             detect_exons(gne, junctions, None)
     except ValueError as e:
         print(e)
@@ -199,7 +275,8 @@ cpdef long read_sam_or_bam(object gne, AlignmentFile samfl, list counter, object
 
 
 
-
+@cython.boundscheck(False) # turn off bounds-checking for entire function
+@cython.wraparound(False)  # turn off negative index wrapping for entire function
 cpdef long rnaseq_intron_retention(object gne, AlignmentFile samfl, int chnk, bint permissive=True,
                                   bint nondenovo=False, object logging=None) except -1:
 
@@ -209,8 +286,8 @@ cpdef long rnaseq_intron_retention(object gne, AlignmentFile samfl, int chnk, bi
     cdef AlignedSegment read
     cdef float gc_content
     cdef bint bb, is_cross, unique, intron_body_covered
-    cdef unsigned int strt, end, r_start, intron_start, intron_end, readlen, nc, ng
-    cdef unsigned int nreads, offset, ex1_end, ex2_start, intron_len, cov1, cov2
+    cdef int strt, end, r_start, intron_start, intron_end, readlen, nc, ng
+    cdef int nreads, offset, ex1_end, ex2_start, intron_len, cov1, cov2
     cdef unsigned int intron_idx
 
     intron_list = gne.get_all_introns()
@@ -227,7 +304,8 @@ cpdef long rnaseq_intron_retention(object gne, AlignmentFile samfl, int chnk, bi
             continue
 
         try:
-            read_iter = samfl.fetch(chrom, intron_start + 8, intron_end - 8, multiple_iterators=False)
+            read_iter = samfl.fetch(chrom, intron_start + MIN_BP_OVERLAP, intron_end - MIN_BP_OVERLAP,
+                                    multiple_iterators=False)
         except ValueError:
             continue
 

@@ -1,4 +1,4 @@
-VERSION = '1.0.0'
+VERSION = '1.1.0'
 
 JUNCTIONS_DATASET_NAME = '/junctions'
 JUNCTIONS_GC_CONTENT = '/junctions_gc'

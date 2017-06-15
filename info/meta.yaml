@@ -1,6 +1,6 @@
 package:
     name: majiq
-    version: 0.9.2
+    version: "{{ load_setup_py_data().version }}"
 
 source:
     #git_tag: master
@@ -9,21 +9,25 @@ source:
 
 requirements:
     build:
-        - python >=2.7
+        - python >= 3.3
         - jinja2
         - numpy
         - scipy
         - matplotlib
         - pysam
         - setuptools
+        - cython
+        - h5py
     run:
-        - python >=2.7
+        - python >= 3.3
         - jinja2
         - numpy
         - scipy
         - matplotlib
-        - pysam >=0.8 
+        - pysam >= 0.8
         - setuptools
+        - cython
+        - h5py
 
 build:
     preserve_egg_dir: True
