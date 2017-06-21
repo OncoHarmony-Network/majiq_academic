@@ -636,14 +636,17 @@ def new_exon_definition(start, end, s3prime_junc, s5prime_junc, gene, nondenovo=
     return new_exons
 
 
-def detect_exons(gene, junction_list, retrieve=False):
+def detect_exons(gene, junction_dict, retrieve=False):
     new_exons = 0
     opened = 0
     opened_exon = []
     last_5prime = None
     first_3prime = None
 
-    junction_list.extend(gene.get_all_ss())
+    junction_list = []
+    for kk, vv in junction_dict.items():
+        junction_list.append((kk[0], '5prime', vv))
+        junction_list.append((kk[1], '3prime', vv))
     junction_list.sort()
 
     for (coord, jtype, jj) in junction_list:

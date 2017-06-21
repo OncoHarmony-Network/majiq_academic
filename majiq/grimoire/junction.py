@@ -73,15 +73,6 @@ class Junction:
         h_jnc.attrs['gene_name'] = self.gene_name
 
         try:
-            # if data_index == dataset.shape[0]:
-            #     shp_new = dataset.shape[0] + majiq_config.nrandom_junctions
-            #     dataset.resize((shp_new, dataset.shape[1]))
-            #     if gc_dataset is not None:
-            #         gc_dataset.resize((shp_new, dataset.shape[1]))
-            #
-            # dataset[data_index, :] = self.coverage[0, :]
-            # if gc_dataset is not None:
-            #     gc_dataset[data_index, :] = self.gc_content[0, :]
 
             dataset.append(self.coverage[0, :])
             if gc_dataset is not None:

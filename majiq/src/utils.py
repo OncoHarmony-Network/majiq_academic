@@ -1,4 +1,5 @@
 import logging
+import multiprocessing as mp
 import os
 import random
 import resource
@@ -12,25 +13,6 @@ import majiq.grimoire.lsv as majiq_lsv
 from majiq.src.config import Config
 import majiq.grimoire.junction as majiq_junction
 import majiq.src.io_utils as majiq_io_utils
-
-
-class Writer(object):
-    """Create an object with a write method that writes to a
-    specific place on the screen, defined at instantiation.
-
-    This is the glue between blessings and progressbar.
-    """
-    def __init__(self, location):
-        """
-        Input: location - tuple of ints (x, y), the position
-                        of the bar in the terminal
-        """
-        self.location = location
-
-    def write(self, string):
-        majiq_config = Config()
-        with majiq_config.term.location(*self.location):
-            print(string)
 
 
 def monitor(msg):
@@ -49,28 +31,30 @@ def create_if_not_exists(my_dir, logger=False):
             logger.debug("\nDirectory %s already exists..." % my_dir)
 
 
-def get_logger(logger_name, silent=False, debug=False, child=False):
+def get_logger(logger_name, silent=False, debug=False):
     """
-    Returns a logger instance. verbose = False will silence the logger, debug will give 
+    Returns a logger instance. silent=False will silence the logger, debug will give
     more information intended for debugging purposes.
     """
     logging_format = "%(asctime)s (PID:%(process)s) - %(levelname)s - %(message)s"
     logger = logging.getLogger(logger_name)
     formatter = logging.Formatter(logging_format)
 
-    fileHandler = logging.FileHandler(logger_name, mode='w')
-    fileHandler.setFormatter(formatter)
+    file_handler = logging.FileHandler(logger_name, mode='w')
+    file_handler.setFormatter(formatter)
 
-    streamHandler = logging.StreamHandler()
-    streamHandler.setFormatter(formatter)
+    stream_handler = logging.StreamHandler()
+    stream_handler.setFormatter(formatter)
 
     if debug:
         logger.setLevel(logging.DEBUG)
+    elif silent:
+        logger.setLevel(logging.ERROR)
     else:
         logger.setLevel(logging.INFO)
 
-    logger.addHandler(fileHandler)
-    logger.addHandler(streamHandler)
+    logger.addHandler(file_handler)
+    logger.addHandler(stream_handler)
 
     return logger
 
