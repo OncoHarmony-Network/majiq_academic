@@ -16,6 +16,7 @@ from majiq.src.constants import *
 from majiq.src.multiproc import QueueMessage, process_conf, queue_manager
 
 from voila.io_voila import Voila
+from voila.constants import ANALYSIS_DELTAPSI
 import collections
 
 
@@ -46,7 +47,6 @@ def deltapsi_quantification(args_vals):
             if lidx % 50 == 0:
                 print("Event %d ..." % lidx)
                 sys.stdout.flush()
-            print("Event %d ..." % lidx)
             lsv_samples = [None, None]
 
             for grp_idx in range(2):
@@ -200,6 +200,7 @@ class DeltaPsi(BasicPipeline):
             pool.close()
             with Voila(get_quantifier_voila_filename(self.outDir, self.names, deltapsi=True), 'w') as out_h5p:
                 #out_h5p.add_genome(meta1['genome'])
+                out_h5p.set_analysis_type(ANALYSIS_DELTAPSI)
                 out_h5p.add_experiments(group_name=self.names[0], experiment_names=meta1['experiments'])
                 out_h5p.add_experiments(group_name=self.names[1], experiment_names=meta2['experiments'])
                 # out_h5p.add_metainfo(meta1['genome'], group1=self.names[0], experiments1=meta1['experiments'],
