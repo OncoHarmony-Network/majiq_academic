@@ -622,16 +622,17 @@ def get_const_junctions(filename, logging=None):
         return np.array(cc)
 
 
-def extract_lsv_summary(files):
+def extract_lsv_summary_old(files):
 
-    lsvid2idx = {}
+
     lsv_types = {}
     idx_junc = {}
     total_idx = 0
     simpl_juncs = []
-
+    lsvid2idx = {}
     lsv_dict_graph = {}
     for fidx, ff in enumerate(files):
+
         simpl_juncs.append([[0, 0.0] for xx in idx_junc.keys()])
         data = h5py.File(ff, 'r')
         for lsvid in data['LSVs']:
@@ -659,11 +660,51 @@ def extract_lsv_summary(files):
                     [simpl_juncs[dx].append([0, 0.0]) for dx in range(fidx)]
                 lsvid2idx[lsvid].append(indx)
 
-    simpl_juncs = np.array(simpl_juncs)
+    metas = read_meta_info(files)
+
+    return lsvid2idx, lsv_types, np.array(simpl_juncs), metas, lsv_dict_graph
+
+
+def extract_lsv_summary(files):
+
+    lsvid2idx = {}
+    lsv_types = {}
+    idx_junc = {}
+    total_idx = 0
+    simpl_juncs = []
+
+    lsv_dict_graph = {}
+    for fidx, ff in enumerate(files):
+        data = h5py.File(ff, 'r')
+        junc_cov = data['junc_cov'][()]
+        lsv_list = {}
+        lsv_dict_graph = {}
+        for xx in data['LSVs']:
+            lsv_list[xx] = dict(data['LSVs/%s' % xx].attrs)
+            lsv_dict_graph[xx] = LsvGraphic.easy_from_hdf5(data['LSVs/%s/visual' % xx])
+
+        simpl_juncs.append([[0, 0.0] for xx in idx_junc.keys()])
+
+        for lsvid, attrs in lsv_list.items():
+            cov = junc_cov[attrs['coverage'][0]:attrs['coverage'][1]]
+            lsv_types[lsvid] = attrs['type']
+            lsvid2idx[lsvid] = []
+            ljunc = lsv_dict_graph[lsvid].junction_ids()
+            for jidx, jj in enumerate(ljunc):
+                try:
+                    indx = idx_junc[jj]
+                    simpl_juncs[fidx][indx] = cov[jidx]
+                except KeyError:
+                    idx_junc[jj] = total_idx
+                    indx = total_idx
+                    total_idx += 1
+                    simpl_juncs[fidx].append(cov[jidx])
+                    [simpl_juncs[dx].append([0, 0.0]) for dx in range(fidx)]
+                lsvid2idx[lsvid].append(indx)
 
     metas = read_meta_info(files)
 
-    return lsvid2idx, lsv_types, simpl_juncs, metas, lsv_dict_graph
+    return lsvid2idx, lsv_types, np.array(simpl_juncs), metas, lsv_dict_graph
 
 
 def load_data_lsv(path, group_name, logger=None):
@@ -699,6 +740,7 @@ def load_lsvgraphic_from_majiq(h5df_grp, lsv_id):
     except KeyError:
         return None
 
+
 def read_meta_info(list_of_files):
     meta = {'experiments': []}
     for fl in list_of_files:
@@ -708,7 +750,7 @@ def read_meta_info(list_of_files):
                 if meta['genome'] != fp.attrs['genome']:
                     raise RuntimeError('Combining experiments from different genome assemblies. Exiting')
             except KeyError:
-                meta['genome'] = fp.attrs['genome']
+                #meta['genome'] = fp.attrs['genome']
                 continue
 
     return meta
@@ -743,7 +785,6 @@ from majiq.grimoire.lsv import quant_lsv
 
 def get_extract_lsv_list(list_of_lsv_id, file_list):
     result = []
-    fitfunc = []
 
     for lsv_id in list_of_lsv_id:
         lsv_cov = []
@@ -751,26 +792,23 @@ def get_extract_lsv_list(list_of_lsv_id, file_list):
         for fidx, fname in enumerate(file_list):
 
             with open_hdf5_file(fname) as data:
-                if len(fitfunc) < (fidx+1):
-                    fitfunc.append(data.attrs['fitfunc'])
-
                 try:
                     if lsv_type is None:
-
                         lsv_type = data['LSVs/%s' % lsv_id].attrs['type']
 
                     assert data['LSVs/%s' % lsv_id].attrs['type'] == lsv_type, "ERROR lsv_type doesn't match for %s" % lsv_id
-                    lsv_cov.append(data[JUNCTIONS_DATASET_NAME][data['LSVs/%s' % lsv_id].attrs['coverage']])
+                    cov = data['LSVs/%s' % lsv_id].attrs['coverage']
+                    lsv_cov.append(data[JUNCTIONS_DATASET_NAME][cov[0]:cov[1]])
                 except KeyError:
                     lsv_cov.append(None)
 
 #        lsv_cov = np.array(lsv_cov)
         qq = quant_lsv(lsv_id, lsv_type, lsv_cov)
         result.append(qq)
-    return result, fitfunc
+    return result
 
 
-def add_lsv_to_bootstrapfile(lsv_id, lsv_type, samples, num_exp, lock_per_file, outdir, name):
+def add_lsv_to_bootstrapfile_with_lock(lsv_id, lsv_type, samples, num_exp, lock_per_file, outdir, name):
 
     for ii in range(num_exp):
         vals = {'samples': samples[ii], 'id': lsv_id, 'type': lsv_type}
@@ -781,6 +819,14 @@ def add_lsv_to_bootstrapfile(lsv_id, lsv_type, samples, num_exp, lock_per_file, 
             lsv_idx = boots_write(f, vals, lsv_idx)
             f.attrs['lsv_idx'] = lsv_idx
         lock_per_file[ii].release()
+
+
+def add_lsv_to_bootstrapfile(f, vals):
+    lsv_idx = f.attrs['lsv_idx']
+    lsv_idx = boots_write(f, vals, lsv_idx)
+    f.attrs['lsv_idx'] = lsv_idx
+    f.attrs['num_lsvs'] += 1
+
 
 
 def create_bootstrap_file(file_list, outdir, name, m=100):
@@ -844,12 +890,17 @@ def boots_write(hg_grp, vals, lsv_idx, dpsi=False):
         shp = hg_grp['junctions'].shape
         shp_new = shp[0] + 5000
         hg_grp['junctions'].resize((shp_new, shp[1]))
+        hg_grp['junc_cov'].resize((shp_new, 2))
 
     hg_grp['junctions'][lsv_idx:lsv_idx+njunc] = vals['samples']
+    hg_grp['junc_cov'][lsv_idx:lsv_idx + njunc] = vals['junc_attr']
 
     h_lsv = hg_grp.create_group("LSVs/%s" % vals['id'])
     h_lsv.attrs['id'] = vals['id']
     h_lsv.attrs['type'] = vals['type']
-    h_lsv.attrs['coverage'] = hg_grp['junctions'].regionref[lsv_idx:lsv_idx + njunc]
+    h_lsv.attrs['coverage'] = [lsv_idx, lsv_idx + njunc]
+    #TODO: CHECK
+    vh_lsv = h_lsv.create_group('visual')
+    vals['lsv_graphic'].to_hdf5(vh_lsv)
 
     return lsv_idx + njunc

@@ -11,35 +11,25 @@ import majiq.src.utils as majiq_utils
 import majiq.src.multiproc as majiq_multi
 from majiq.grimoire.exon import detect_exons
 from majiq.src.normalize import gc_factor_calculation, gc_normalization
-from majiq.src.analize import lsv_detection
+from majiq.src.analize import lsv_detection, lsv_detection2
 from majiq.src.constants import *
 from majiq.src.basic_pipeline import BasicPipeline, pipeline_run
 from majiq.src.polyfitnb import fit_nb
 from majiq.src.voila_wrapper import gene_to_splicegraph, init_splicegraph
 from majiq.src.config import Config
 import datetime
+from majiq.src.multiproc import QueueMessage, process_conf, queue_manager
 
 
 def build(args):
     pipeline_run(Builder(args))
 
 
-def builder_init(lock_array, sam_list, pcr_filename, gff_output, only_rna,
-                 non_denovo, silent, debug):
-
-    builder_init.files_locks = lock_array
-    builder_init.sam_list = sam_list
-    builder_init.pcr_filename = pcr_filename
-    builder_init.gff_output = gff_output
-    builder_init.only_rna = only_rna
-    builder_init.non_denovo = non_denovo
-    builder_init.silent = silent
-    builder_init.debug = debug
-
-
 def merging_files(args_vals):
 
     try:
+
+        dummy = 0
         # gne_id, chnk, loop_idx, total = args_vals
         majiq_config = Config()
         list_of_genes, chnk = args_vals
@@ -57,13 +47,14 @@ def merging_files(args_vals):
             with h5py.File(get_build_temp_db_filename(majiq_config.outDir), 'r') as db_f:
                 gene_obj = majiq.grimoire.gene.retrieve_gene(gne_id, db_f, junction_list=junction_list, all_exp=True)
 
-            splice_list = {}
+            splice_list = {xx.get_coordinates(): xx for xx in gene_obj.get_all_junctions(filter=False)}
             dict_of_junctions = {}
 
             rna_files = []
             vfunc_gc = []
 
             jset = set()
+            fitfunc_r = []
             for exp_idx in range(len(majiq_config.sam_list)):
                 fname = get_builder_temp_majiq_filename(majiq_config.outDir, majiq_config.sam_list[exp_idx])
                 with h5py.File(fname, 'r') as rfa:
@@ -76,6 +67,7 @@ def merging_files(args_vals):
                         vfunc_gc.append(gc_normalization(rfa.attrs['gc_values']))
                     else:
                         vfunc_gc = None
+                    fitfunc_r.append(rfa.attrs['one_over_r'])
 
             njunc = len(jset)
             gene_obj.junc_matrix = np.zeros(shape=(njunc, len(majiq_config.sam_list), (majiq_config.readLen - 16 + 1)),
@@ -100,7 +92,7 @@ def merging_files(args_vals):
                             dict_of_junctions[coord[0]] = junc
                             dict_of_junctions[coord[1]] = junc
                         else:
-                            splice_list[(junc.start,junc.end)] = junc
+                            splice_list[(junc.start, junc.end)] = junc
 
             del junction_list
             majiq.grimoire.exon.detect_exons(gene_obj, splice_list, retrieve=True)
@@ -114,12 +106,16 @@ def merging_files(args_vals):
             gene_obj.prepare_exons()
 
             logger.debug("[%s] Detecting LSV" % loop_id)
-            nlsv = lsv_detection(gene_obj, gc_vfunc=vfunc_gc, lsv_list=majiq_config.sam_list,
-                                 locks=builder_init.files_locks, rna_files=rna_files, logging=None)
 
+            # nlsv = lsv_detection(gene_obj, gc_vfunc=vfunc_gc, lsv_list=majiq_config.sam_list,
+            #                      locks = builder_init.files_locks, rna_files = rna_files, logging = None)
+
+            nlsv = lsv_detection2(gene_obj, gc_vfunc=vfunc_gc, fitfunc_r=fitfunc_r, queue=process_conf.queue)
+
+            dummy += nlsv
             if nlsv:
-                gene_to_splicegraph(gene_obj, builder_init.files_locks[-1])
-
+                gene_to_splicegraph(gene_obj, process_conf.lock[-1])
+            # print(gene_obj.id, dummy)
             del majiq_config.gene_tlb[gne_id]
             del gene_obj
 
@@ -130,8 +126,12 @@ def merging_files(args_vals):
         raise
 
     finally:
+        qm = QueueMessage(QUEUE_MESSAGE_END_WORKER, None, chnk)
+        process_conf.queue.put(qm, block=True)
+        process_conf.lock[chnk].acquire()
+        process_conf.lock[chnk].release()
         import logging
-   #     logging.shutdown()
+        logging.shutdown()
 
 
 def parsing_files(args_vals):
@@ -159,9 +159,6 @@ def parsing_files(args_vals):
             gc_pairs = {'GC': [], 'COV': []}
             jnc_idx = 0
 
-            #with h5py.File(get_build_temp_db_filename(majiq_config.outDir), 'r') as db_f:
-                #list_of_genes = db_f.keys()
-
             junc_mtrx = []
             gc_matrx = [] if majiq_config.gcnorm else None
 
@@ -171,6 +168,7 @@ def parsing_files(args_vals):
                     tlogger.info("[%s] Progress %s/%s" % (loop_id, gne_idx, len(list_of_genes)))
 
                 gene_obj = majiq_config.gene_tlb[gne_id]
+                gene_obj.reset_to_db()
                 # tlogger.debug("[%s] Retrieving gene" % gne_id)
                 # gene_obj = majiq.grimoire.gene.retrieve_gene(gne_id, db_f)
 
@@ -188,9 +186,7 @@ def parsing_files(args_vals):
                             gc_pairs['COV'].append(ex.get_coverage())
 
                 tlogger.debug("[%s] Detecting intron retention events" % gne_id)
-                io_base.rnaseq_intron_retention(gene_obj, samfl, chnk,
-                                                permissive=majiq_config.permissive_ir,
-                                                nondenovo=majiq_config.non_denovo, logging=tlogger)
+                io_base.rnaseq_intron_retention(gene_obj, samfl, chnk, logging=tlogger)
 
                 for jnc in gene_obj.get_all_junctions():
                     jnc.to_rna_hdf5(out_f['%s/junctions' % gne_id], junc_mtrx,
@@ -214,7 +210,6 @@ def parsing_files(args_vals):
                                      dtype=np.float)
                 factor, meanbins = gc_factor_calculation(gc_pairs, nbins=10)
                 out_f.attrs['gc_values'] = (factor, meanbins)
-
             out_f.close()
         majiq_utils.monitor('CHILD %s:: ENDLOOP' % chnk)
 
@@ -226,7 +221,8 @@ def parsing_files(args_vals):
 
     finally:
         tlogger.info("[%s] End" % sam_file)
-     #   tlogger.shutdown()
+        import logging
+        logging.shutdown()
 
 
 class Builder(BasicPipeline):
@@ -257,62 +253,58 @@ class Builder(BasicPipeline):
             p.join()
 
             if self.nthreads > 1:
-                pool = mp.Pool(processes=self.nthreads, initializer=builder_init,
-                               initargs=[None, majiq_config.sam_list, self.pcr_filename, self.gff_output, self.only_rna,
-                                         self.non_denovo, self.silent, self.debug])
-
+                pool = mp.Pool(processes=self.nthreads, initializer=process_conf, initargs=[None, None, None])
                 lchnksize = max(int(len(majiq_config.sam_list)/self.nthreads), 1) + 1
-                pool.map_async(parsing_files, majiq_utils.chunks2(majiq_config.sam_list, lchnksize, extra=range(self.nthreads)))
+                pool.map_async(parsing_files, majiq_utils.chunks2(majiq_config.sam_list, lchnksize,
+                                                                  extra=range(self.nthreads)))
                 pool.close()
                 pool.join()
             else:
-                builder_init(None, majiq_config.sam_list, self.pcr_filename, self.gff_output, self.only_rna,
-                             self.non_denovo, self.silent, self.debug)
+                process_conf(self, None, None, None)
                 parsing_files([majiq_config.sam_list, 0])
 
-        lock_array = [mp.Lock() for xx in majiq_config.sam_list]
+
+        q = mp.Queue()
+        lock_array = [mp.Lock() for xx in range(self.nthreads)]
         lock_array.append(mp.Lock())
-        pool = mp.Pool(processes=self.nthreads, initializer=builder_init,
-                       initargs=[lock_array, majiq_config.sam_list, self.pcr_filename, self.gff_output, self.only_rna,
-                                 self.non_denovo, self.silent, self.debug],
+        pool = mp.Pool(processes=self.nthreads, initializer=process_conf, initargs=[self, q, lock_array, None],
                        maxtasksperchild=1)
+        [xx.acquire() for xx in lock_array[:-1]]
 
         with h5py.File(get_build_temp_db_filename(majiq_config.outDir), 'r') as db_f:
                 list_of_genes = list(db_f.keys())
+
         lchnksize = max(len(list_of_genes)/self.nthreads, 1) + 1
         init_splicegraph(get_builder_splicegraph_filename(majiq_config.outDir))
+
+        out_h5p_list = []
         for exp_idx, sam_file in enumerate(majiq_config.sam_list):
-            with h5py.File(get_builder_majiq_filename(majiq_config.outDir, sam_file), 'w') as f:
-                effective_readlen = (majiq_config.readLen - 16) + 1
-                f.create_dataset(JUNCTIONS_DATASET_NAME, (NRANDOM_JUNCTIONS, effective_readlen),
-                                 maxshape=(None, effective_readlen))
+            #TODO: CHANGE NAME BOOTS FOR MAJIQ
+            f = h5py.File('%s/%s.boots.hdf5' % (majiq_config.outDir, sam_file), 'w')
+            f.create_dataset('junctions', (5000,  majiq_config.m), maxshape=(None, majiq_config.m))
+            f.create_dataset('junc_cov', (5000, 2), maxshape=(None, 2))
 
-                # fill meta info
-                f.attrs['sample_id'] = sam_file
-                path = get_builder_temp_majiq_filename(majiq_config.outDir, sam_file)
-                f.attrs['fitfunc'] = majiq_utils.get_fitfunc_from_rnafile(path)
-                f.attrs['date'] = datetime.datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S')
-                f.attrs['data_index'] = 0
-                f.attrs['num_lsvs'] = 0
-                f.attrs['genome'] = majiq_config.genome
-                f.attrs['VERSION'] = VERSION
+            # fill meta info
+            f.attrs['sample_id'] = sam_file
+            f.attrs['date'] = datetime.datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S')
+            f.attrs['VERSION'] = VERSION
+            f.attrs['lsv_idx'] = 0
+            f.attrs['num_lsvs'] = 0
+            f.attrs['genome'] = majiq_config.genome
+            out_h5p_list.append(f)
 
-        if self.nthreads > 1:
-            pool.map_async(merging_files, majiq_utils.chunks2(list_of_genes, lchnksize, range(self.nthreads)))
-            pool.close()
-            pool.join()
-        else:
-            builder_init(lock_array, majiq_config.sam_list, self.pcr_filename, self.gff_output, self.only_rna,
-                         self.non_denovo, self.silent, self.debug)
-            merging_files((list_of_genes, 0))
+        pool.map_async(merging_files, majiq_utils.chunks2(list_of_genes, lchnksize, range(self.nthreads)))
+        pool.close()
 
+        queue_manager(None, out_h5p_list, lock_array, q, num_chunks=self.nthreads, logger=self.logger)
+        pool.join()
         for exp_idx, sam_file in enumerate(majiq_config.sam_list):
-            with h5py.File(get_builder_majiq_filename(majiq_config.outDir, sam_file), 'r+') as f:
-
-                n_juncs = f.attrs['data_index']
-                shp = f[JUNCTIONS_DATASET_NAME].shape
-                f[JUNCTIONS_DATASET_NAME].resize((n_juncs, shp[1]))
-                logger.info('%s LSVs found in %s' % (f.attrs['num_lsvs'], sam_file))
+            f = out_h5p_list[exp_idx]
+            n_juncs = f.attrs['lsv_idx']
+            shp = f[JUNCTIONS_DATASET_NAME].shape
+            f[JUNCTIONS_DATASET_NAME].resize((n_juncs, shp[1]))
+            logger.info('%s LSVs found in %s' % (f.attrs['num_lsvs'], sam_file))
+            f.close()
 
         logger.info("MAJIQ Builder is ended succesfully!")
         logger.info("Alakazam! Done.")

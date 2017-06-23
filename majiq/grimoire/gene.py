@@ -114,9 +114,13 @@ class Gene:
         lst = set()
         for ex in self.get_exon_list():
             for ex_rna in ex.exonRead_list:
+                if len(ex_rna.p3_junc) > 0:
+                    lst = lst.union(set(ex_rna.p3_junc))
                 if len(ex_rna.p5_junc) > 0:
                     lst = lst.union(set(ex_rna.p5_junc))
             for ex_tx in ex.exonTx_list:
+                if len(ex_tx.p3_junc) > 0:
+                    lst = lst.union(set(ex_tx.p3_junc))
                 if len(ex_tx.p5_junc) > 0:
                     lst = lst.union(set(ex_tx.p5_junc))
 
@@ -293,6 +297,10 @@ class Gene:
         lsv_id = "%s:%d-%d:%s" % (self.get_id(), coords[0], coords[1], lsv_type)
         return LSV(exon, lsv_id, jlist, lsv_type)
 
+    def reset_to_db(self):
+        for xx in self.get_all_junctions():
+            xx.coverage.fill(0)
+
     def simplify(self):
         majiq_config = Config()
         jj_set = set()
@@ -377,6 +385,7 @@ class Transcript(object):
         return res
 
     def add_exon(self, exon):
+
         self.exon_list.append(exon)
         return
 

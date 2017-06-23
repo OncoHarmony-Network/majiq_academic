@@ -12,7 +12,7 @@ import cython
 
 @cython.boundscheck(False) # turn off bounds-checking for entire function
 @cython.wraparound(False)  # turn off negative index wrapping for entire function
-cdef __cross_junctions2(AlignedSegment read):
+cdef __cross_junctions(AlignedSegment read):
     """
       This part will parse the jI from STAR
       # Column 17: jI:B:I,Start1,End1,Start2,End2,... Start and End of introns for all junctions (1- based)
@@ -56,42 +56,47 @@ cdef __cross_junctions2(AlignedSegment read):
 
     return cross, jlist
 
-cdef __cross_junctions(AlignedSegment read):
+def __cross_junctions2(read):
     """
       This part will parse the jI from STAR
       # Column 17: jI:B:I,Start1,End1,Start2,End2,... Start and End of introns for all junctions (1- based)
       # jI:B:I,-1 means that the read doesn't cross any junction
     """
 
-    cdef list jlist = []
-    cdef bint cross = False
-    cdef int idx
-    cdef unsigned int op
-    cdef unsigned int num
-    cdef unsigned int off
-    cdef int junc_end, junc_start
-    # if len(jlist) != 0: print "STAR ::",jlist
-    # print"THIS IS NOT a WELL defined STAR output"
-    off = 0
-    for op, num in read.cigar:
-        if op in [0, 5, 6, 7, 8]:
-            off += num
-        elif op in [1, 5]:
-            off += 0
-        elif op == 2:
-            off += num
-        elif op == 3:
-            jlist.append((read.pos + off, read.pos + off + num + 1))
-            off += num
+    jlist = []
+    cross = False
+    try:
+        list_junc = read.opt('jI')
+        if len(list_junc) > 1 and list_junc[0] != -1:
+            for idx in range(0, len(list_junc), 2):
+                junc_start = int(list_junc[idx]) - 1
+                junc_end = int(list_junc[idx + 1]) + 1
+                jlist.append((junc_start, junc_end))
+            # end for idx ...
             cross = True
-            # if len(jlist) !=0 : print "NOSTAR:", jlist, read.cigar
+            # end else ...
+    except KeyError:
+        # if len(jlist) != 0: print "STAR ::",jlist
+        # print"THIS IS NOT a WELL defined STAR output"
+        off = 0
+        for op, num in read.cigar:
+            if op in [0, 5, 6, 7, 8]:
+                off += num
+            elif op in [1, 5]:
+                off += 0
+            elif op == 2:
+                off += num
+            elif op == 3:
+                jlist.append((read.pos + off, read.pos + off + num + 1))
+                off += num
+                cross = True
+                # if len(jlist) !=0 : print "NOSTAR:", jlist, read.cigar
 
     return cross, jlist
 
 
-
 cdef inline bint __is_unique(AlignedSegment read):
-    return read.flag & 0x100 == 0x100
+    return not(read.flag & 0x100 == 0x100)
 
 
 cdef inline int __get_num_reads(AlignedSegment read):
@@ -102,6 +107,8 @@ cdef inline bint _match_strand(AlignedSegment read, str gene_strand):
     majiq_config = Config()
     res = True
     if majiq_config.strand_specific:
+        #TODO: REMOVE
+        print (gene_strand, b'+')
         if (read.flag & 0x10 == 0x10 and gene_strand == b'+') or (read.flag & 0x10 == 0x00 and gene_strand == b'-'):
             res = True
         else:
@@ -272,23 +279,24 @@ cdef long _read_sam_or_bam(object gne, AlignmentFile samfl, object h5py_file,
     except ValueError as e:
         print(e)
         logging.error('\t[%s]There are no reads in %s:%d-%d' % (info_msg, chrom, strt, end))
+    finally:
+        gne.prepare_exons()
 
 
 
 @cython.boundscheck(False) # turn off bounds-checking for entire function
 @cython.wraparound(False)  # turn off negative index wrapping for entire function
-cpdef long rnaseq_intron_retention(object gne, AlignmentFile samfl, int chnk, bint permissive=True,
-                                  bint nondenovo=False, object logging=None) except -1:
+cpdef long rnaseq_intron_retention(object gne, AlignmentFile samfl, int chnk, object logging=None) except -1:
 
-    # filenames, gene_list, chnk, permissive=True, nondenovo=False, logging=None)
-    cdef unsigned short num_bins = NUM_INTRON_BINS
+    cdef unsigned short num_bins = NUM_INTRON_BINS, nchunks
     cdef str strand = gne.get_strand()
     cdef AlignedSegment read
     cdef float gc_content
     cdef bint bb, is_cross, unique, intron_body_covered
     cdef int strt, end, r_start, intron_start, intron_end, readlen, nc, ng
     cdef int nreads, offset, ex1_end, ex2_start, intron_len, cov1, cov2
-    cdef unsigned int intron_idx
+    cdef unsigned int intron_idx, num_positions, chunk_len
+    cdef object junc1, junc2, ex, exon1, exon2
 
     intron_list = gne.get_all_introns()
     chrom = gne.get_chromosome()
@@ -317,7 +325,7 @@ cpdef long rnaseq_intron_retention(object gne, AlignmentFile samfl, int chnk, bi
 
         chunk_len = int(intron_len / nchunks)
 
-        bmap = np.ones(shape=intron_len, dtype=np.bool)
+        # bmap = np.ones(shape=intron_len, dtype=np.bool)
         index_list = []
         for ii in range(nchunks):
             start = ii * chunk_len
@@ -338,10 +346,10 @@ cpdef long rnaseq_intron_retention(object gne, AlignmentFile samfl, int chnk, bi
             nreads = __get_num_reads(read)
 
             if not unique:
-                intron_idx = r_start - (ex1_end + 1)
-                if not (0 <= intron_idx <= intron_len):
-                    continue
-                bmap[intron_idx] = False
+                # intron_idx = r_start - (ex1_end + 1)
+                # if not (0 <= intron_idx <= intron_len):
+                #     continue
+                # bmap[intron_idx] = False
                 continue
 
             if is_cross:
@@ -375,8 +383,8 @@ cpdef long rnaseq_intron_retention(object gne, AlignmentFile samfl, int chnk, bi
                 # print (intron_idx, r_start, ex1_end)
                 rel_start = int(intron_idx / chunk_len)
                 indx = -1 if rel_start > nchunks else rel_start
-                if not bmap[intron_idx]:
-                    bmap[intron_idx] = True
+                # if not bmap[intron_idx]:
+                #     bmap[intron_idx] = True
                 intron_parts[indx] += nreads
 
         if junc1 is None or junc2 is None:
@@ -391,7 +399,8 @@ cpdef long rnaseq_intron_retention(object gne, AlignmentFile samfl, int chnk, bi
 
         if intron_len > majiq_config.readLen:
             for ii in range(nchunks):
-                num_positions = np.count_nonzero(bmap[index_list[ii][0]:index_list[ii][1]])
+                #num_positions = np.count_nonzero(bmap[index_list[ii][0]:index_list[ii][1]])
+                num_positions = chunk_len
                 nii = intron_parts[ii]
                 if nii == 0:
                     val = 0
@@ -405,7 +414,7 @@ cpdef long rnaseq_intron_retention(object gne, AlignmentFile samfl, int chnk, bi
 
         if cov1 >= majiq_config.min_denovo and cov2 >= majiq_config.min_denovo and intron_body_covered:
             exnum = new_exon_definition(intron_start, intron_end,
-                                        junc1, junc2, gne, nondenovo=nondenovo,
+                                        junc1, junc2, gne, nondenovo=majiq_config.non_denovo,
                                         isintron=True)
             if exnum == -1:
                 continue

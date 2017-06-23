@@ -107,14 +107,8 @@ class BasicPipeline:
 
         if weight_type.lower() == WEIGTHS_AUTO and len(file_list) >= 3:
             """ Calculate bootstraps samples and weights """
-            file_locks = [mp.Lock() for xx in file_list]
 
-            majiq_io.create_bootstrap_file(file_list, self.outDir, name, m=self.m)
-
-            pool = mp.Pool(processes=self.nthreads, initializer=process_conf,
-                           initargs=[q, lock_arr, self.outDir, name, self.silent, self.debug, self.nbins,
-                                     self.m, self.k, self.discardzeros, self.trimborder, file_list, None,
-                                     None, file_locks],
+            pool = mp.Pool(processes=self.nthreads, initializer=process_conf, initargs=[self, q, lock_arr, None],
                            maxtasksperchild=1)
 
             [xx.acquire() for xx in lock_arr]

@@ -257,8 +257,10 @@ class VoilaLsv(LsvGraphic):
             Psi2DataSet(h, self.trunc_psi2).encode_list()
 
         # het groups
-        het_groups_grp = h.create_group('het')
-        self.het.to_hdf5(het_groups_grp)
+        # TODO: Revisit this solution
+        if hasattr(self, 'het') and self.het:
+            het_groups_grp = h.create_group('het')
+            self.het.to_hdf5(het_groups_grp)
 
     def from_hdf5(self, h):
         # categories
