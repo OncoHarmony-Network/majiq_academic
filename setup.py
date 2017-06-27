@@ -2,6 +2,7 @@ from setuptools import setup, find_packages
 from distutils.core import Extension
 from Cython.Build import cythonize
 from majiq.src.constants import VERSION
+import numpy
 try:
     import pysam
 except ImportError:
@@ -11,9 +12,8 @@ except ImportError:
 extensions = [Extension('majiq.src.normalize', ['majiq/src/normalize.pyx'])]
 extensions += [Extension('majiq.src.plotting', ['majiq/src/plotting.pyx'])]
 extensions += [Extension('majiq.src.polyfitnb', ['majiq/src/polyfitnb.pyx'])]
-extensions += [Extension('majiq.src.sample', ['majiq/src/sample.pyx'])]
-#extensions += [Extension('majiq.src.beta_binomial', ['majiq/src/beta_binomial.py'])]
-extensions += [Extension('majiq.src.psi', ['majiq/src/psi.pyx'])]
+extensions += [Extension('majiq.src.sample', ['majiq/src/sample.pyx'], include_dirs=numpy.get_include())]
+extensions += [Extension('majiq.src.psi', ['majiq/src/psi.pyx'], include_dirs=[numpy.get_include()])]
 extensions += [Extension('majiq.src.io_base', ['majiq/src/io_base.pyx'], include_dirs=pysam.get_include())]
 
 include_dirs=pysam.get_include()

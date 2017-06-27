@@ -1,8 +1,8 @@
 import majiq.src.io as majiq_io
 from majiq.src.polyfitnb import fit_nb
 import abc
-import numpy as np
-from numpy.ma import masked_less
+
+# from numpy.ma import masked_less
 import majiq.src.utils as majiq_utils
 from majiq.src.psi import divs_from_bootsamples, calc_rho_from_divs, calc_local_weights
 from majiq.src.multiproc import QueueMessage, process_conf, queue_manager
@@ -10,22 +10,22 @@ from majiq.src.constants import *
 import sys
 import traceback
 import multiprocessing as mp
-import collections
+
 
 # ###############################
 # Data loading and Boilerplate #
 ################################
 
 
-def get_clean_raw_reads(matched_info, matched_lsv, outdir, names, num_exp):
-    res = []
-    for eidx in range(num_exp):
-        for ldx, lsv in enumerate(matched_info):
-            jlist = masked_less(matched_lsv[ldx][eidx], 0)
-
-            num = jlist.sum(axis=1)
-            res.append([lsv[1], num.data])
-    majiq_io.dump_bin_file(res, '%s/clean_reads.%s.pkl' % (outdir, names))
+# def get_clean_raw_reads(matched_info, matched_lsv, outdir, names, num_exp):
+#     res = []
+#     for eidx in range(num_exp):
+#         for ldx, lsv in enumerate(matched_info):
+#             jlist = masked_less(matched_lsv[ldx][eidx], 0)
+#
+#             num = jlist.sum(axis=1)
+#             res.append([lsv[1], num.data])
+#     majiq_io.dump_bin_file(res, '%s/clean_reads.%s.pkl' % (outdir, names))
 
 
 def bootstrap_samples_with_divs(args_vals):
@@ -103,7 +103,7 @@ class BasicPipeline:
                 self.logger.debug("Fitting NB function with constitutive events...")
             return fit_nb(const_junctions, "%s/nbfit" % self.outDir, self.plotpath, logger=self.logger)
 
-    def calc_weights(self, weight_type, file_list, list_of_lsv, lock_arr, lchnksize, q, name, store=True):
+    def calc_weights(self, weight_type, file_list, list_of_lsv, lock_arr, lchnksize, q, name, store=True, logger=None):
 
         if weight_type.lower() == WEIGTHS_AUTO and len(file_list) >= 3:
             """ Calculate bootstraps samples and weights """
@@ -140,7 +140,7 @@ class BasicPipeline:
         else:
             wgts = np.array([float(xx) for xx in weight_type.split(',')])
             if len(wgts) != len(file_list):
-                self.logger.error('weights wrong arguments number of weights values is different than number of '
+                logger.error('weights wrong arguments number of weights values is different than number of '
                                   'specified replicas for that group')
 
         return wgts
