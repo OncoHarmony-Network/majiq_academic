@@ -8,12 +8,13 @@ from majiq.src.basic_pipeline import BasicPipeline, pipeline_run
 import majiq.src.utils as majiq_utils
 import majiq.src.filter as majiq_filter
 import majiq.src.io as majiq_io
-from majiq.src.psi import prob_data_sample_given_psi, get_prior_params, samples_from_psi, bootstrap_samples_calculation
+from majiq.src.psi import heterogen_posterior
 from majiq.src.constants import *
 from majiq.src.multiproc import QueueMessage, process_conf, queue_manager
 
 from voila.io_voila import Voila
 from voila.vlsv import Het
+from voila.constants import ANALYSIS_HETEROGEN
 from majiq.src.stats import operator, all_stats
 
 
@@ -28,66 +29,25 @@ def het_quantification(args_vals):
         fitfunc = [None, None]
         lsvs = [None, None]
 
-        for grp_idx in range(2):
-            lsvs[grp_idx], fitfunc[grp_idx] = majiq_io.get_extract_lsv_list(list_of_lsv, files[grp_idx])
+        f_list = [None, None]
+        f_list[0] = majiq_io.get_extract_lsv_list(list_of_lsv, process_conf.files1)
+        f_list[1] = majiq_io.get_extract_lsv_list(list_of_lsv, process_conf.files2)
 
         for lidx, lsv_id in enumerate(list_of_lsv):
             if lidx % 50 == 0:
                 print("Event %d ..." % lidx)
                 sys.stdout.flush()
 
+            boots = [np.array(f_list[0][lidx].coverage), np.array(f_list[1][lidx].coverage)]
+            lsv_type = [f_list[0][lidx].type, f_list[1][lidx].type]
             lsv_het = Het()
-
-            samps = [None, None]
-            for grp_idx in range(2):
-                quant_lsv = lsvs[grp_idx][lidx]
-                lsv_type = quant_lsv.type
-                boots = bootstrap_samples_calculation(quant_lsv, n_replica=num_exp[grp_idx],
-                                                      name=process_conf.names[grp_idx],
-                                                      outdir=process_conf.outDir,
-                                                      nbins=process_conf.nbins,
-                                                      store_bootsamples=False,
-                                                      lock_array=process_conf.lock_per_file,
-                                                      fitfunc_r=fitfunc[grp_idx],
-                                                      m_samples=process_conf.m,
-                                                      k_positions=process_conf.k,
-                                                      discardzeros=process_conf.discardzeros,
-                                                      trimborder=process_conf.trimborder,
-                                                      debug=process_conf.debug)
-
-                num_ways = boots.shape[1]
-                alpha_prior, beta_prior = get_prior_params(lsv_type, num_ways)
-                mu_psi = np.zeros(shape=(num_exp[grp_idx], num_ways))
-                mean_psi = np.zeros(shape=(num_ways, process_conf.nbins), dtype=np.float)
-                samps[grp_idx] = np.zeros(shape=(num_exp[grp_idx], num_ways, process_conf.nsamples))
-                for exp in range(num_exp[grp_idx]):
-                    all_sample = boots[exp].sum(axis=0)
-                    for p_idx in range(num_ways):
-                        alpha_0 = alpha_prior[p_idx]
-                        beta_0 = beta_prior[p_idx]
-                        post_psi = np.zeros(shape=process_conf.nbins, dtype=np.float)
-                        for m in range(process_conf.m):
-                            junc = boots[exp, p_idx, m]
-                            data_given_psi = np.log(prob_data_sample_given_psi(junc, all_sample[m],
-                                                                               process_conf.nbins,
-                                                                               alpha_0, beta_0))
-                            post_psi += np.exp(data_given_psi - scipy.misc.logsumexp(data_given_psi))
-                            mu_psi[exp, p_idx] += float(junc + alpha_0) / (all_sample[m] + alpha_0 + beta_0)
-
-                        post_psi /= process_conf.m
-                        mean_psi[p_idx] += post_psi
-                        mu_psi[exp, p_idx] /= process_conf.m
-
-                        if process_conf.nsamples == 1:
-                            samps[grp_idx][exp, p_idx, 0] = mu_psi
-                        else:
-                            samps[grp_idx][exp, p_idx, :] = samples_from_psi(post_psi, mu_psi[exp, p_idx], process_conf.vwindow,
-                                                                             process_conf.nsamples,
-                                                                             process_conf.nbins)
-
-                mean_psi /= num_exp[grp_idx]
-                lsv_het.add_group(mu_psi, mean_psi)
-                print(grp_idx, mu_psi)
+            msamples = boots[0].shape[2]
+            assert boots[0].shape[2] == boots[1].shape[2], "LSV %s, has different types in %s and %s (%s vs %s). " \
+                                                           "Please check that the conditions has been build together." \
+                                                           % (lsv_id, process_conf.names[0], process_conf.names[1],
+                                                              boots[0].shape[2], boots[1].shape[2])
+            samps = heterogen_posterior(boots, lsv_het, msamples, process_conf.nsamples, process_conf.vwindow, num_exp,
+                                        process_conf.nbins, lsv_type[0])
 
             out_stats = do_test_stats(samps, process_conf.stats, process_conf.minsamps)
             for stat_idx in range(out_stats.shape[1]):
@@ -206,7 +166,8 @@ class independent(BasicPipeline):
             pool.map_async(het_quantification, majiq_utils.chunks2(list_of_lsv, lchnksize, extra=range(self.nthreads)))
             pool.close()
             with Voila(get_quantifier_voila_filename(self.outDir, self.names, deltapsi=True), 'w') as out_h5p:
-                out_h5p.add_genome(meta1['genome'])
+                #out_h5p.add_genome(meta1['genome'])
+                out_h5p.set_analysis_type(ANALYSIS_HETEROGEN)
                 out_h5p.add_experiments(self.names[0], experiment_names=meta1['experiments'])
                 out_h5p.add_experiments(self.names[1], experiment_names=meta2['experiments'])
                 out_h5p.add_stat_names(self.stats)

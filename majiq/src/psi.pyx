@@ -1,31 +1,67 @@
-
 import os
-import random
 import sys
-import numpy as np
 from scipy.stats import beta
 import majiq.src.adjustdelta as majiq_delta
 import majiq.src.filter as majiq_filter
-import majiq.src.io as majiq_io
 import majiq.src.io_utils
 from majiq.src.plotting import plot_matrix
 from majiq.src.constants import *
-from majiq.src.sample import sample_from_junctions
-
 from majiq.src.beta_binomial import betabinom
 import scipy.misc
+import numpy as np
+cimport numpy as np
+import cython
 
 """
 Calculate and manipulate PSI and Delta PSI values
 """
-# BSIZE = 0.025  # TODO To parameters
-# BINS = np.arange(0, 1, BSIZE)
-# # The bins for PSI values. With a BSIZE of 0.025, we have 40 BINS
-# BINS_CENTER = np.arange(0 + BSIZE / 2, 1, BSIZE)
-# # The center of the previous BINS. This is used to calculate the mean value of each bin.
 
+# Internal functions
+@cython.boundscheck(False) # turn off bounds-checking for entire function
+@cython.wraparound(True)  # turn off negative index wrapping for entire function
+cdef tuple _get_prior_params(str lsv_type, int num_ways):
+    cdef float alpha, bta
+    cdef np.ndarray alpha_prior, beta_prior
 
-def samples_from_psi(post_psi, mu_psi, vwindow, nsamples, nbins):
+    if 'i' in lsv_type:
+        alpha = 1.0 / (num_ways - 1)
+        alpha *= float(num_ways) / (num_ways + 1)
+        alpha_prior = np.array([alpha] * num_ways)
+        alpha_prior[-1] = 1.0 / (num_ways + 1)
+        beta_prior = 1 - alpha_prior
+
+    else:
+        alpha = 1.0 / num_ways
+        bta = float(num_ways - 1.0) / num_ways
+        alpha_prior = np.array([alpha] * num_ways)
+        beta_prior = np.array([bta] * num_ways)
+
+    return alpha_prior, beta_prior
+
+@cython.boundscheck(False) # turn off bounds-checking for entire function
+@cython.wraparound(True)  # turn off negative index wrapping for entire function
+cdef np.ndarray _prob_data_sample_given_psi(float sample, float all_sample, int nbins, float alpha_prior,
+                                            float beta_prior):
+    cdef float bsize
+    cdef np.ndarray psi_border, bincdf, bin_test
+    cdef float notsample
+
+    bsize = 1.0 / float(nbins)
+    psi_border = np.arange(0, 1.01, bsize)
+    notsample = all_sample - sample
+
+    bincdf = beta.cdf(psi_border, a=sample + alpha_prior, b=notsample + beta_prior)
+    bin_test = bincdf[1:] - bincdf[:-1] + 1e-300
+
+    return bin_test
+
+@cython.boundscheck(False) # turn off bounds-checking for entire function
+@cython.wraparound(True)  # turn off negative index wrapping for entire function
+cdef np.ndarray _samples_from_psi(np.ndarray post_psi, float mu_psi, float vwindow, int nsamples, int nbins):
+    cdef float bsize
+    cdef np.ndarray psi_border, outsamps, cdf, pr, mask
+    cdef list xs
+
     bsize = 1.0 / float(nbins)
     psi_border = np.arange(0, 1.01, bsize)
     outsamps = np.random.choice(psi_border[:-1], p=post_psi, size=nsamples)
@@ -42,50 +78,220 @@ def samples_from_psi(post_psi, mu_psi, vwindow, nsamples, nbins):
             outsamps += mask - 1
     return outsamps
 
+@cython.boundscheck(False) # turn off bounds-checking for entire function
+@cython.wraparound(False)  # turn off negative index wrapping for entire function
+cdef tuple _psi_posterior(psi, int p_idx, int m_samples, int num_exp, int num_ways, int nbins,
+                    float alpha_0, float beta_0):
 
-def bootstrap_samples_calculation(quant_lsv, n_replica, name, outdir, nbins=40, store_bootsamples=True,
-                                  lock_array=None, fitfunc_r=0, m_samples=100, k_positions=50, discardzeros=5,
-                                  trimborder=True, debug=False):
+    cdef np.ndarray posterior = np.zeros(shape=nbins, dtype=np.float)
+    cdef np.ndarray data_given_psi
+    cdef list mu_psi_m = []
+    cdef float mu_psi
+    cdef int m
+    cdef np.ndarray alls
+    alls = psi.sum(axis=(0,1))
+    for m in range(m_samples):
+        # log(p(D_T1(m) | psi_T1)) = SUM_t1 T ( log ( P( D_t1 (m) | psi _T1)))
+        junc = psi[:, p_idx, m]
+        #all_sample = np.array([psi[xx][yy][m].sum() for xx in range(num_exp) for yy in range(num_ways)])
+        mu_psi_m.append(float(junc.sum()) / alls[m].sum())
+        data_given_psi = np.log(_prob_data_sample_given_psi(junc.sum(), alls[m].sum(), nbins, alpha_0, beta_0))
+        posterior += np.exp(data_given_psi - scipy.misc.logsumexp(data_given_psi))
 
-    for ii in quant_lsv.coverage:
-        if ii is not None:
-            num_ways = ii.shape[0]
+    mu_psi = np.median(mu_psi_m)
+    posterior /=  m_samples
+
+    return mu_psi, posterior
+
+@cython.boundscheck(False) # turn off bounds-checking for entire function
+@cython.wraparound(False)  # turn off negative index wrapping for entire function
+cdef tuple _deltapsi_posterior(np.ndarray psi1, np.ndarray psi2, np.ndarray prior_matrix, int p_idx, int m_samples,
+                         list num_exp, int num_ways, int nbins, float alpha_0, float beta_0):
+
+    cdef np.ndarray ones_n = np.ones(shape=(1, nbins), dtype=np.float)
+    cdef np.ndarray posterior = np.zeros(shape=(nbins, nbins), dtype=np.float)
+    cdef np.ndarray post_psi1 = np.zeros(shape=nbins, dtype=np.float)
+    cdef np.ndarray post_psi2 = np.zeros(shape=nbins, dtype=np.float)
+    cdef np.ndarray A, psi_v1, psi_v2
+    cdef np.ndarray data_given_psi1, data_given_psi2
+    cdef list mu_psi1_m = []
+    cdef list mu_psi2_m = []
+    cdef int m
+
+    cdef float junc
+    cdef float all_sample
+    cdef float mu_psi1, mu_psi2
+    cdef np.ndarray alls1, alls2
+
+    alls1 = psi1.sum(axis=(0,1))
+    alls2 = psi2.sum(axis=(0,1))
+
+    for m in range(m_samples):
+        # log(p(D_T1(m) | psi_T1)) = SUM_t1 T ( log ( P( D_t1 (m) | psi _T1)))
+
+        junc = psi1[:, p_idx, m].sum()
+        #TODO: check this
+
+        # all_sample = np.array([psi1[xx, yy, m].sum() for xx in range(num_exp[0]) for yy in range(num_ways)]).sum()
+        # if all_sample - alls1[m] > 0.00001: print (all_sample, psi1[:,:,m].sum(), alls1[m])
+        mu_psi1_m.append(float(junc + alpha_0) / (alls1[m] + alpha_0 + beta_0))
+        data_given_psi1 = np.log(_prob_data_sample_given_psi(junc, alls1[m], nbins, alpha_0, beta_0))
+
+        psi_v1 = data_given_psi1.reshape(nbins, -1)
+        post_psi1 += np.exp(data_given_psi1 - scipy.misc.logsumexp(data_given_psi1))
+
+        junc = psi2[:, p_idx, m].sum()
+        # all_sample = np.array([psi2[xx][yy][m] for xx in range(num_exp[1]) for yy in range(num_ways)]).sum()
+        # if all_sample - alls2[m] > 0.00001: print (all_sample, psi2[:,:,m].sum(), alls2[m])
+        mu_psi2_m.append(float(junc + alpha_0) / (alls2[m] + alpha_0 + beta_0))
+        data_given_psi2 = np.log(_prob_data_sample_given_psi(junc, alls2[m], nbins, alpha_0, beta_0))
+
+        post_psi2 += np.exp(data_given_psi2 - scipy.misc.logsumexp(data_given_psi2))
+        psi_v2 = data_given_psi2.reshape(-1, nbins)
+
+        A = (psi_v1 * ones_n + psi_v2 * ones_n.T) + np.log(prior_matrix)
+        posterior += np.exp(A - scipy.misc.logsumexp(A))
+
+
+    mu_psi1 = np.median(mu_psi1_m)
+    mu_psi2 = np.median(mu_psi2_m)
+    posterior /= m_samples
+    post_psi1 /= m_samples
+    post_psi2 /= m_samples
+
+    return mu_psi1_m, mu_psi2_m, posterior, post_psi1, post_psi2
+
+@cython.boundscheck(False) # turn off bounds-checking for entire function
+@cython.wraparound(False)  # turn off negative index wrapping for entire function
+cdef tuple _heterogen_posterior(np.ndarray boots, int m_samples, int psi_samples, float vwindow, int num_exp, int nbins,
+                          np.ndarray alpha_prior, np.ndarray beta_prior):
+    cdef int num_ways =  boots.shape[1]
+
+    mu_psi = np.zeros(shape=(num_exp, num_ways))
+    mean_psi = np.zeros(shape=(num_ways, nbins), dtype=np.float)
+    samps = np.zeros(shape=(num_exp, num_ways, psi_samples))
+
+    for exp in range(num_exp):
+        all_sample = boots[exp].sum(axis=0)
+        for p_idx in range(num_ways):
+            alpha_0 = alpha_prior[p_idx]
+            beta_0 = beta_prior[p_idx]
+            post_psi = np.zeros(shape=nbins, dtype=np.float)
+            for m in range(m_samples):
+                junc = boots[exp, p_idx, m]
+                data_given_psi = np.log(_prob_data_sample_given_psi(junc, all_sample[m], nbins, alpha_0, beta_0))
+                post_psi += np.exp(data_given_psi - scipy.misc.logsumexp(data_given_psi))
+                mu_psi[exp, p_idx] += float(junc + alpha_0) / (all_sample[m] + alpha_0 + beta_0)
+
+            post_psi /= m_samples
+            mean_psi[p_idx] += post_psi
+            mu_psi[exp, p_idx] /= m_samples
+
+            if psi_samples == 1:
+                samps[exp, p_idx, 0] = mu_psi
+            else:
+                samps[exp, p_idx, :] = _samples_from_psi(post_psi, mu_psi[exp, p_idx], vwindow, psi_samples, nbins)
+
+    mean_psi /= num_exp
+
+    return samps, mean_psi, mu_psi
+
+# External calls
+@cython.boundscheck(False) # turn off bounds-checking for entire function
+@cython.wraparound(False)  # turn off negative index wrapping for entire function
+cpdef tuple psi_posterior(np.ndarray psi, int m, int num_exp, int nbins, str lsv_type):
+
+    cdef list mu_psi = []
+    cdef list post_psi = []
+    cdef int num_ways = <int> psi.shape[1]
+    cdef int p_idx
+    cdef np.ndarray alpha_prior, beta_prior
+    alpha_prior, beta_prior = _get_prior_params(lsv_type, num_ways)
+
+    for p_idx in range(int(num_ways)):
+        mu_psi_m, posterior = _psi_posterior(psi, p_idx, m, num_exp, num_ways, nbins, alpha_prior[p_idx],
+                                             beta_prior[p_idx])
+
+        mu_psi.append(mu_psi_m)
+        post_psi.append(posterior)
+        if num_ways == 2:
             break
-    alpha_prior, beta_prior = get_prior_params(quant_lsv.ext_type, num_ways)
 
-    lsv_samples = []
-    for rr in range(n_replica):
-        if quant_lsv.coverage[rr] is None:
-            s_lsv = np.zeros(shape=(num_ways, m_samples))
-        else:
-            m_lsv, var_lsv, s_lsv = sample_from_junctions(junction_list=quant_lsv.coverage[rr],
-                                                          m=m_samples,
-                                                          k=k_positions,
-                                                          discardzeros=discardzeros,
-                                                          trimborder=trimborder,
-                                                          fitted_one_over_r=fitfunc_r[rr],
-                                                          debug=debug)
+    return mu_psi, post_psi
 
-        lsv_samples.append(s_lsv)
+@cython.boundscheck(False) # turn off bounds-checking for entire function
+@cython.wraparound(False)  # turn off negative index wrapping for entire function
+cpdef tuple deltapsi_posterior(np.ndarray psi1, np.ndarray psi2, np.ndarray prior_matrix, int m, list num_exp, int nbins,
+                         str lsv_type):
 
-    if store_bootsamples:
-        majiq_io.add_lsv_to_bootstrapfile_with_lock(quant_lsv.id, quant_lsv.type, lsv_samples, n_replica, lock_array,
-                                                    outdir, name)
-    return np.array(lsv_samples)
+    cdef list mu_psi1 = []
+    cdef list mu_psi2 = []
+    cdef list post_matrix = []
+    cdef list posterior_psi1 = []
+    cdef list posterior_psi2 = []
+    cdef int num_ways = <int> psi1.shape[1]
+    cdef np.ndarray alpha_prior, beta_prior
+    cdef int p_idx, prior_idx
+    cdef tuple vals
 
+    alpha_prior, beta_prior = _get_prior_params(lsv_type, num_ways)
+    prior_idx = 1 if 'i' in lsv_type else 0
+    for p_idx in range(num_ways):
+        vals = _deltapsi_posterior(psi1, psi2, prior_matrix[prior_idx], p_idx, m, num_exp, num_ways, nbins,
+                                   alpha_prior[p_idx], beta_prior[p_idx])
 
-def divs_from_bootsamples(lsvs_to_work, fitfunc_r, n_replica, pnorm, m_samples, k_positions, discardzeros, name,
-                          trimborder, debug=False, nbins=40, store_bootsamples=True, lock_array=None, outdir='./tmp'):
+        mu_psi1.append(vals[0])
+        mu_psi2.append(vals[1])
+        post_matrix.append(vals[2])
+        posterior_psi1.append(vals[3])
+        posterior_psi2.append(vals[4])
+
+        if num_ways == 2:
+            break
+
+    return post_matrix, posterior_psi1, posterior_psi2, mu_psi1, mu_psi2
+
+@cython.boundscheck(False) # turn off bounds-checking for entire function
+@cython.wraparound(False)  # turn off negative index wrapping for entire function
+cpdef list heterogen_posterior(list boots, object out_het, int m_samples, int psi_samples, float vwindow, list num_exp,
+                          int nbins, str lsv_type):
+
+    cdef np.ndarray alpha_prior, beta_prior
+    cdef list samps
+    cdef int num_ways =  boots[0].shape[1]
+
+    samps = [None, None]
+    alpha_prior, beta_prior = _get_prior_params(lsv_type, num_ways)
+    for grp_idx in range(2):
+        samps[grp_idx], mean_psi, mu_psi = _heterogen_posterior(boots[grp_idx], m_samples, psi_samples, vwindow,
+                                                                num_exp[grp_idx], nbins, alpha_prior, beta_prior)
+
+        out_het.add_group(mu_psi, mean_psi)
+        #print(grp_idx, mu_psi)
+
+    return samps
+
+@cython.boundscheck(False) # turn off bounds-checking for entire function
+@cython.wraparound(False)  # turn off negative index wrapping for entire function
+cpdef list divs_from_bootsamples(list lsvs_to_work, int n_replica, float pnorm, int m_samples, int k_positions,
+                                 int nbins=40):
+
+    cdef float bsize, alpha_0, beta_0
+    cdef np.ndarray psi_border, psi, med, post_cdf
+    cdef list div = []
+    cdef int lsv_idx, rr, num_ways, jidx
+    cdef np.ndarray alpha_prior, beta_prior, s_lsv
+    cdef float sample, notsample
+
 
     bsize = 1.0 / float(nbins)
     psi_border = np.arange(0, 1.01, bsize)
 
-    div = []
     for lsv_idx, quant_lsv in enumerate(lsvs_to_work):
         num_ways = quant_lsv.coverage[0].shape[0]
         post_cdf = np.zeros(shape=(n_replica, num_ways, psi_border.shape[0]), dtype=np.float)
 
-        alpha_prior, beta_prior = get_prior_params(quant_lsv.type, num_ways)
+        alpha_prior, beta_prior = _get_prior_params(quant_lsv.type, num_ways)
         for rr, s_lsv in enumerate(quant_lsv.coverage):
             for jidx in range(num_ways):
                 alpha_0 = alpha_prior[jidx]
@@ -108,8 +314,10 @@ def divs_from_bootsamples(lsvs_to_work, fitfunc_r, n_replica, pnorm, m_samples, 
 
     return div
 
+@cython.boundscheck(False) # turn off bounds-checking for entire function
+@cython.wraparound(False)  # turn off negative index wrapping for entire function
+def calc_rho_from_divs(np.ndarray divs, float thresh=0.75, float alpha=15., int nreps=1, object logger=None):
 
-def calc_rho_from_divs(divs, thresh=0.75, alpha=15., nreps=1, logger=None):
     K_T, bad_reps = np.where(divs > thresh)
     K_T = np.unique(K_T)
     logger.debug('%d' % K_T.size)
@@ -128,7 +336,8 @@ def calc_rho_from_divs(divs, thresh=0.75, alpha=15., nreps=1, logger=None):
         rho = np.ones(nreps)
     return rho
 
-
+@cython.boundscheck(False) # turn off bounds-checking for entire function
+@cython.wraparound(False)  # turn off negative index wrapping for entire function
 def calc_local_weights(divs, rho, local):
     dshp = divs.shape
     cur_wt = np.zeros(shape=dshp)
@@ -141,7 +350,8 @@ def calc_local_weights(divs, rho, local):
     cur_wt = np.array(cur_wt)
     return cur_wt.squeeze()
 
-
+@cython.boundscheck(False) # turn off bounds-checking for entire function
+@cython.wraparound(False)  # turn off negative index wrapping for entire function
 def empirical_delta_psi(list_lsv, lsv_types, lsv_dict1, lsv_summarized1, lsv_dict2, lsv_summarized2, logger=None):
     """Simple PSI calculation without involving a dirichlet prior, coming from reads from junctions
     :type list_lsv: object
@@ -257,47 +467,3 @@ def gen_prior_matrix(lsv_dict1, lsv_summarized1, lsv_dict2, lsv_summarized2, lsv
     return psi_space, prior_matrix
 
 
-def prob_data_sample_given_psi(sample, all_sample, nbins, alpha_prior, beta_prior):
-    bsize = 1.0 / float(nbins)
-    psi_border = np.arange(0, 1.01, bsize)
-    notsample = all_sample - sample
-
-    bincdf = beta.cdf(psi_border, a=sample + alpha_prior, b=notsample + beta_prior)
-    bin_test = bincdf[1:] - bincdf[:-1] + 1e-300
-
-    return bin_test
-
-
-def combine_for_priormatrix(group1, group2, matched_info, num_exp):
-    res_group1 = []
-    res_group2 = []
-
-    for lidx, lsv in enumerate(matched_info):
-        idx = random.randrange(num_exp[0])
-        res_group1.append(group1[lidx][idx])
-
-        idx = random.randrange(num_exp[1])
-        res_group2.append(group2[lidx][idx])
-
-    grp1 = [res_group1, matched_info]
-    grp2 = [res_group2, matched_info]
-
-    return grp1, grp2
-
-
-def get_prior_params(lsv_type, num_ways):
-
-    if 'i' in lsv_type:
-        alpha = 1.0 / (num_ways - 1)
-        alpha *= float(num_ways) / (num_ways + 1)
-        alpha_prior = np.array([alpha] * num_ways)
-        alpha_prior[-1] = 1.0 / (num_ways + 1)
-        beta_prior = 1 - alpha_prior
-
-    else:
-        alpha = 1.0 / num_ways
-        bta = float(num_ways - 1.0) / num_ways
-        alpha_prior = np.array([alpha] * num_ways)
-        beta_prior = np.array([bta] * num_ways)
-
-    return alpha_prior, beta_prior

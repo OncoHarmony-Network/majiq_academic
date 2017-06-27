@@ -1,6 +1,5 @@
 __author__ = 'jordi@biociphers.org'
 import sys
-#from itertools import izip
 import zip
 
 from numpy.ma import masked_less
