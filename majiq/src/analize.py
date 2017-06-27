@@ -101,3 +101,59 @@ def lsv_detection(gn, gc_vfunc, lsv_list=None, only_real_data=False, locks=None,
 
     return count
 
+
+from majiq.src.multiproc import QueueMessage
+
+
+def prepare_lsvs(lsv, name, gc_vfunc, fitfunc_r, queue):
+    majiq_config = Config()
+    for exp_idx in majiq_config.tissue_repl[name]:
+        if majiq_config.gcnorm:
+            try:
+                gc_f = gc_vfunc[exp_idx]
+            except:
+                gc_f = None
+
+        lsv_q = lsv.to_queue(gc_vfunc=gc_vfunc, fitfunc_r=fitfunc_r[exp_idx], exp_idx=exp_idx)
+
+        qm = QueueMessage(QUEUE_MESSAGE_BUILD_LSV, (lsv_q, exp_idx), 0)
+        queue.put(qm, block=True)
+
+
+def lsv_detection2(gn, gc_vfunc, fitfunc_r, queue, only_real_data=False):
+    majiq_config = Config()
+    dummy = {}
+    count = 0
+    for name, ind_list in majiq_config.tissue_repl.items():
+        dummy[name] = [[], []]
+
+    for ex in gn.get_exon_list():
+        try:
+            detect_lsv(ex, gn, SSOURCE, dummy, only_annot=only_real_data)
+        except InvalidLSV:
+            pass
+        try:
+            detect_lsv(ex, gn, STARGET, dummy, only_annot=only_real_data)
+        except InvalidLSV:
+            pass
+
+    for name, ind_list in majiq_config.tissue_repl.items():
+
+        for ss in dummy[name][0]:
+            for st in dummy[name][1]:
+                if ss.contained(st):
+                    break
+            else:
+                count += 1
+                prepare_lsvs(ss, name, gc_vfunc=gc_vfunc, fitfunc_r=fitfunc_r, queue=queue)
+
+        for st in dummy[name][1]:
+            for ss in dummy[name][0]:
+                if st.contained(ss):
+                    break
+            else:
+                count += 1
+                prepare_lsvs(st, name, gc_vfunc=gc_vfunc, fitfunc_r=fitfunc_r, queue=queue)
+
+    return count
+

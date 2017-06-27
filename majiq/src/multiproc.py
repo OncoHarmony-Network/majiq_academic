@@ -68,11 +68,12 @@ class QueueMessage:
         return self.type
 
 
-def process_conf(pipeline, queue, lock, lock_per_file):
+def process_conf(pipeline, queue, lock, weights):
     process_conf.__dict__.update(pipeline.__dict__)
     process_conf.lock = lock
     process_conf.queue = queue
-    process_conf.lock_per_file = lock_per_file
+    process_conf.weights = weights
+
 
 def queue_manager(input_h5dfp, output_h5dfp, lock_array, result_queue, num_chunks, meta_info=None, num_exp=0,
                   out_inplace=None, logger=None, list_of_lsv_graphics={}):
@@ -86,13 +87,10 @@ def queue_manager(input_h5dfp, output_h5dfp, lock_array, result_queue, num_chunk
     while True:
         try:
             val = result_queue.get(block=True, timeout=10)
+            sys.stdout.flush()
             if val.get_type() == QUEUE_MESSAGE_BUILD_LSV:
-                majiq_config = Config()
-                for jdx, exp_idx in enumerate(majiq_config.tissue_repl[val.get_value()[1]]):
-                    lsvobj = val.get_value()[0]
-                    lsv_idx[exp_idx] = lsvobj.to_hdf5(hdf5grp=output_h5dfp[exp_idx],
-                                                      lsv_idx=lsv_idx[exp_idx],
-                                                      exp_idx=jdx)
+                sys.stdout.flush()
+                majiq_io.add_lsv_to_bootstrapfile(output_h5dfp[val.get_value()[1]], val.get_value()[0])
 
             elif val.get_type() == QUEUE_MESSAGE_PSI_RESULT:
                 lsv_graph = list_of_lsv_graphics[val.get_value()[-1]]
@@ -101,8 +99,6 @@ def queue_manager(input_h5dfp, output_h5dfp, lock_array, result_queue, num_chunk
 
             elif val.get_type() == QUEUE_MESSAGE_DELTAPSI_RESULT:
 
-                # lsv_graph = LsvGraphic.easy_from_hdf5(majiq_io.load_lsvgraphic_from_majiq(input_h5dfp,
-                #                                                                           val.get_value()[-1]))
                 lsv_graph = list_of_lsv_graphics[val.get_value()[-1]]
                 output_h5dfp.add_lsv(VoilaLsv(bins_list=val.get_value()[0], lsv_graphic=lsv_graph,
                                               psi1=val.get_value()[1], psi2=val.get_value()[2],
@@ -110,7 +106,6 @@ def queue_manager(input_h5dfp, output_h5dfp, lock_array, result_queue, num_chunk
 
             elif val.get_type() == QUEUE_MESSAGE_HETER_DELTAPSI:
                 lsv_graph = list_of_lsv_graphics[val.get_value()[-1]]
-
                 output_h5dfp.add_lsv(VoilaLsv(bins_list=None, lsv_graphic=lsv_graph, psi1=None, psi2=None,
                                               means_psi1=None, means_psi2=None, het=val.get_value()[0]))
 

@@ -51,7 +51,7 @@ def bootstrap_samples_calculation(quant_lsv, n_replica, name, outdir, nbins=40, 
         if ii is not None:
             num_ways = ii.shape[0]
             break
-    alpha_prior, beta_prior = get_prior_params(quant_lsv.type, num_ways)
+    alpha_prior, beta_prior = get_prior_params(quant_lsv.ext_type, num_ways)
 
     lsv_samples = []
     for rr in range(n_replica):
@@ -69,8 +69,8 @@ def bootstrap_samples_calculation(quant_lsv, n_replica, name, outdir, nbins=40, 
         lsv_samples.append(s_lsv)
 
     if store_bootsamples:
-        majiq_io.add_lsv_to_bootstrapfile(quant_lsv.id, quant_lsv.type, lsv_samples, n_replica, lock_array,
-                                          outdir, name)
+        majiq_io.add_lsv_to_bootstrapfile_with_lock(quant_lsv.id, quant_lsv.type, lsv_samples, n_replica, lock_array,
+                                                    outdir, name)
     return np.array(lsv_samples)
 
 
@@ -84,14 +84,9 @@ def divs_from_bootsamples(lsvs_to_work, fitfunc_r, n_replica, pnorm, m_samples, 
     for lsv_idx, quant_lsv in enumerate(lsvs_to_work):
         num_ways = quant_lsv.coverage[0].shape[0]
         post_cdf = np.zeros(shape=(n_replica, num_ways, psi_border.shape[0]), dtype=np.float)
-        lsv_samples = bootstrap_samples_calculation(quant_lsv, n_replica=n_replica, name=name, outdir=outdir,
-                                                    nbins=nbins, store_bootsamples=store_bootsamples,
-                                                    lock_array=lock_array, fitfunc_r=fitfunc_r, m_samples=m_samples,
-                                                    k_positions=k_positions, discardzeros=discardzeros,
-                                                    trimborder=trimborder, debug=debug)
 
         alpha_prior, beta_prior = get_prior_params(quant_lsv.type, num_ways)
-        for rr, s_lsv in enumerate(lsv_samples):
+        for rr, s_lsv in enumerate(quant_lsv.coverage):
             for jidx in range(num_ways):
                 alpha_0 = alpha_prior[jidx]
                 beta_0 = beta_prior[jidx]
@@ -245,7 +240,7 @@ def gen_prior_matrix(lsv_dict1, lsv_summarized1, lsv_dict2, lsv_summarized2, lsv
             prior_matrix[prior_idx] = np.array(pmat).reshape(numbins, -1)
             if np.isnan(prior_matrix[prior_idx]).any():
                 if prior_idx == 1:
-                    logger.WARNING("Not enought statistic power to calculate the intron retention specific prior, "
+                    logger.warning("Not enought statistic power to calculate the intron retention specific prior, "
                                    "in that case we will use the global prior")
                     prior_matrix[prior_idx] = prior_matrix[0]
                 else:

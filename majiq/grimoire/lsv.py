@@ -5,6 +5,7 @@ from voila.splice_graphics import ExonGraphic, LsvGraphic, JunctionGraphic
 from majiq.src.constants import *
 import majiq.src.normalize as majiq_norm
 import collections
+from majiq.src.sample import sample_from_junctions
 
 __author__ = 'jordi@biociphers.org'
 
@@ -305,6 +306,7 @@ class LSV(object):
         return np.array_equal(jlist1, jlist2)
 
     def contained(self, variant):
+        #TODO: Change for set subset
         res = True
         jlist1 = sorted(self.junctions)
         jlist2 = sorted(variant.junctions)
@@ -318,7 +320,7 @@ class LSV(object):
                 res = True
         else:
             for jj1 in jlist1:
-                if not jj1 in jlist2:
+                if jj1 not in jlist2:
                     res = False
                     break
 
@@ -350,10 +352,10 @@ class LSV(object):
             hdf5grp[JUNCTIONS_DATASET_NAME][lsv_idx:lsv_idx+njunc] = cover
 
             h_lsv = hdf5grp.create_group("LSVs/%s" % self.id)
-            h_lsv.attrs['coords'] = self.coords
+            # h_lsv.attrs['coords'] = self.coords
             h_lsv.attrs['id'] = self.id
             h_lsv.attrs['type'] = self.ext_type
-            h_lsv.attrs['coverage'] = hdf5grp[JUNCTIONS_DATASET_NAME].regionref[lsv_idx:lsv_idx + njunc]
+            # h_lsv.attrs['coverage'] = hdf5grp[JUNCTIONS_DATASET_NAME].regionref[lsv_idx:lsv_idx + njunc]
             h_lsv.attrs['coverage_index'] = (lsv_idx, lsv_idx + njunc)
 
             vh_lsv = h_lsv.create_group('visual')
@@ -364,6 +366,33 @@ class LSV(object):
             raise
 
         return lsv_idx + njunc
+
+    def to_queue(self, gc_vfunc, fitfunc_r, exp_idx):
+        majiq_config = Config()
+
+        njunc = len(self.junctions)
+        cover = np.zeros(shape=(njunc, (majiq_config.readLen - 16) + 1),
+                         dtype=np.float)
+
+        pvalue_limit = majiq_config.markstacks
+        for idx, junc in enumerate(self.junctions):
+            if junc.get_index() != -1:
+                cover[idx] = junc.get_coverage()[exp_idx]
+                if majiq_config.gcnorm and junc.get_gc_content(exp_idx).sum() > 0:
+                    vals = gc_vfunc(junc.get_gc_content(exp_idx))
+                    cover[idx] = np.multiply(cover[idx], vals)
+                if pvalue_limit >= 0:
+                    cover[idx] = majiq_norm.mark_stacks_per_junc(cover[idx], fitfunc_r, pvalue_limit)
+
+        m_lsv, var_lsv, s_lsv = sample_from_junctions(junction_list=cover,
+                                                      m=majiq_config.m,
+                                                      k=majiq_config.k,
+                                                      fitted_one_over_r=fitfunc_r,
+                                                      debug=majiq_config.debug)
+        lsv_trs = np.array([cover.sum(axis=1), np.count_nonzero(cover, axis=1)]).T
+        vals = {'samples': s_lsv, 'id': self.id, 'type': self.ext_type, 'junc_attr': lsv_trs,
+                'lsv_graphic': self.get_visual(exp_idx)}
+        return vals
 
 
 def extract_se_events(list_lsv_per_gene):

@@ -104,27 +104,19 @@ def main():
     buildparser.add_argument('--simplify', nargs='*')
 
     buildparser.add_argument('--prebam', default=True,  action='store_false')
+    buildparser.add_argument('--k', default=50, type=int,
+                             help='Number of positions to sample per iteration. [Default: %(default)s]')
+    buildparser.add_argument('--m', default=100, type=int,
+                             help='Number of bootstrapping samples. [Default: %(default)s]')
 
     sampling = new_subparser()
-    sampling.add_argument('--k', default=50, type=int,
-                          help='Number of positions to sample per iteration. [Default: %(default)s]')
-    sampling.add_argument('--m', default=100, type=int,
-                          help='Number of bootstrapping samples. [Default: %(default)s]')
+
     sampling.add_argument('--minreads', default=10, type=int,
                           help='Minimum number of reads combining all positions in an event to be considered. '
                                '[Default: %(default)s]')
     sampling.add_argument('--minpos', default=3, type=int,
                           help='Minimum number of start positions with at least 1 read for an event to be considered.'
                                '[Default: %(default)s]')
-    sampling.add_argument('--trimborder', default=5, type=int,
-                          help='Trim the borders when sampling (keeping the ones with reads). '
-                                  '[Default: %(default)s]')
-    sampling.add_argument('--nodiscardb', dest="discardb", action='store_false', default=True,
-                          help='Skip biscarding the b from the NB polynomial function, since we expect our fit '
-                                  'to start from x=0, y=0')
-    sampling.add_argument('--discardzeros', default=5, type=int, dest="discardzeros",
-                          help='Discarding zeroes, up to a minimum of N positions per junction. [Default: 5]')
-
 
     #flags shared by calcpsi and deltapair
     weights = new_subparser()
@@ -141,7 +133,6 @@ def main():
                                               '(they will all be analyzed independently though) Glob syntax supported.')
     psi.add_argument('--name', required=True, help="The names that identify each of the experiments. "
                                                    "[Default: %(default)s]")
-    psi.add_argument('--only_bootstrap', action='store_true', dest='only_boots', default=False)
     psi.add_argument('--weights', dest="weights", default='None',
                      help='Defines weights for each one of the replicas, for group1 and group2. The expected '
                           'value is --weights [Auto|None|<w1[,w2,..]>]\n'
@@ -174,7 +165,6 @@ def main():
                        help="Uniform distribution to give a bit more of a chance to values out of the normal "
                             "distribution. that the synthetic prior matrix has. Only works with --synthprior. "
                             "[Default: %(default)s]")
-    delta.add_argument('--extra_bootstrap', action='store_true', dest='export_boots', default=False)
     delta.add_argument('--weights', dest="weights", nargs=2, default=['None', 'None'],
                        help='Defines weights for each one of the replicas, for group1 and group2. The expected '
                             'value is --weights [Auto|None|<w1[,w2,..]>] [Auto|None|<w\'1[,w\'2,..]>]\n'
