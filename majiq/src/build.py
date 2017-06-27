@@ -263,7 +263,6 @@ class Builder(BasicPipeline):
                 process_conf(self, None, None, None)
                 parsing_files([majiq_config.sam_list, 0])
 
-
         q = mp.Queue()
         lock_array = [mp.Lock() for xx in range(self.nthreads)]
         lock_array.append(mp.Lock())

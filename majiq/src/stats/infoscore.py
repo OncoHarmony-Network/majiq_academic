@@ -20,7 +20,7 @@ class Infoscore(Stats):
         return info_pval
 
     @staticmethod
-    def lchoose(k, n):
+    def __lchoose(k, n):
         return gammaln(n + 1) - gammaln(k + 1) - gammaln(n - k + 1)
 
     @staticmethod
