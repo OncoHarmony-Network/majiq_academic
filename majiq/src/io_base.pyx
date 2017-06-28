@@ -219,7 +219,7 @@ cdef long _read_sam_or_bam(object gne, AlignmentFile samfl, object h5py_file,
     try:
         strand = gne.get_strand()
         strt, end = gne.get_coordinates()
-        # ex_list = gne.get_exon_list()
+        ex_list = gne.get_exon_list()
         chrom = gne.get_chromosome()
         majiq_config = Config()
 
@@ -236,12 +236,12 @@ cdef long _read_sam_or_bam(object gne, AlignmentFile samfl, object h5py_file,
             nreads = __get_num_reads(read)
             tot_reads += nreads
 
-            # if majiq_config.gcnorm:
-            #     for ex_idx in range(len(ex_list)):
-            #         ex_start, ex_end = ex_list[ex_idx].get_coordinates()
-            #         if ex_start <= r_start <= ex_end:
-            #             ex_list[ex_idx].update_coverage(nreads)
-            #             break
+            if majiq_config.gcnorm:
+                for ex_idx in range(len(ex_list)):
+                    ex_start, ex_end = ex_list[ex_idx].get_coordinates()
+                    if ex_start <= r_start <= ex_end:
+                        ex_list[ex_idx].update_coverage(nreads)
+                        break
 
             if not is_cross:
                 continue
