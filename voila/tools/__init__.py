@@ -7,7 +7,9 @@ from voila.voila_args import VoilaArgs
 
 
 class ToolParserEmptyException(Exception):
-    pass
+    def __init__(self, tool_name):
+        m = 'Parser is empty for tool {0}.  Check to see if its arguments method returns a parser.'.format(tool_name)
+        super(ToolParserEmptyException, self).__init__(m)
 
 
 class ToolClassNotFoundException(Exception):
@@ -37,7 +39,7 @@ class Tools(VoilaArgs):
             tool_parser = tool.arguments()
             base_parser = cls.base_args()
             if not tool_parser:
-                raise ToolParserEmptyException
+                raise ToolParserEmptyException(tool_name)
             subparser.add_parser(tool_name, parents=[base_parser, tool_parser], help=tool.help)
 
     @classmethod
@@ -74,3 +76,4 @@ class Tools(VoilaArgs):
     @classmethod
     def arg_parents(cls):
         return ()
+

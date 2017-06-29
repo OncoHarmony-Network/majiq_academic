@@ -16,8 +16,9 @@ class VoilaArgs:
     SPLICE_GRAPH_HELP = 'Path to splice graph file.  File should be named "splicegraph.hdf5".  This is required unless ' \
                         'the --no-html flag is set.'
 
-    def get_parents(self):
-        raise NotImplementedError('get_parents needs to be implemented.')
+    @classmethod
+    def arg_parents(cls):
+        raise NotImplementedError('arg_parents needs to be implemented.')
 
     @staticmethod
     def check_dir(value):

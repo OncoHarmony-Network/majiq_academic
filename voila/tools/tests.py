@@ -1,7 +1,6 @@
 import os
 import unittest
 
-from voila import run_voila
 from voila.tools import Tool
 
 
