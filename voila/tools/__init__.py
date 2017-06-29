@@ -62,7 +62,7 @@ class Tools(VoilaArgs):
         members = tuple(cls.get_members(tool_name))
 
         if len(members) > 1:
-            m = 'Found more than one Tool class in {0}'.format(tool_name)
+            m = 'Found more than one {0} class in {1}'.format(cls.tool_subclass.__name__, tool_name)
             raise TooManyToolClasses(m)
 
         if len(members) == 0:
