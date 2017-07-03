@@ -159,7 +159,7 @@ cdef tuple _deltapsi_posterior(np.ndarray psi1, np.ndarray psi2, np.ndarray prio
     post_psi1 /= m_samples
     post_psi2 /= m_samples
 
-    return mu_psi1_m, mu_psi2_m, posterior, post_psi1, post_psi2
+    return mu_psi1, mu_psi2, posterior, post_psi1, post_psi2
 
 @cython.boundscheck(False) # turn off bounds-checking for entire function
 @cython.wraparound(False)  # turn off negative index wrapping for entire function
