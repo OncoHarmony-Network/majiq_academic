@@ -7,10 +7,16 @@ from voila.voila_args import VoilaArgs
 
 
 class ToolParserEmptyException(Exception):
-    pass
+    def __init__(self, tool_name):
+        m = 'Parser is empty for tool {0}.  Check to see if its arguments method returns a parser.'.format(tool_name)
+        super(ToolParserEmptyException, self).__init__(m)
 
 
 class ToolClassNotFoundException(Exception):
+    pass
+
+
+class TooManyToolClasses(Exception):
     pass
 
 
@@ -33,26 +39,41 @@ class Tools(VoilaArgs):
             tool_parser = tool.arguments()
             base_parser = cls.base_args()
             if not tool_parser:
-                raise ToolParserEmptyException
+                raise ToolParserEmptyException(tool_name)
             subparser.add_parser(tool_name, parents=[base_parser, tool_parser], help=tool.help)
 
     @classmethod
+    def validate_tool_file(cls, file_name):
+        return file_name not in cls.filter and os.path.isfile(
+            os.path.join(cls.tool_dir, file_name)) and not file_name.endswith('.pyc')
+
+    @classmethod
     def tool_names(cls):
-        for x in os.listdir(cls.tool_dir):
-            if os.path.isfile(os.path.join(cls.tool_dir, x)) and x not in cls.filter:
-                yield x.split('.')[0]
+        for tool_file_name in filter(lambda x: cls.validate_tool_file(x), os.listdir(cls.tool_dir)):
+            yield tool_file_name.split('.')[0]
+
+    @classmethod
+    def get_members(cls, tool_name):
+        module = importlib.import_module('{0}.{1}'.format(cls.module, tool_name))
+        for member in inspect.getmembers(module, inspect.isclass):
+            if member[0] != 'Tool' and issubclass(member[1], cls.tool_subclass):
+                yield member[1]
 
     @classmethod
     def get_tool(cls, tool_name):
-        module = importlib.import_module('{0}.{1}'.format(cls.module, tool_name))
-        members = inspect.getmembers(module, inspect.isclass)
-        for member in members:
-            tool_cls = member[1]
-            if issubclass(tool_cls, cls.tool_subclass):
-                return tool_cls()
-        raise ToolClassNotFoundException(
-            'No subclass of {0} was found in {1}'.format(cls.tool_subclass.__name__, tool_name))
+        members = tuple(cls.get_members(tool_name))
+
+        if len(members) > 1:
+            m = 'Found more than one {0} class in {1}'.format(cls.tool_subclass.__name__, tool_name)
+            raise TooManyToolClasses(m)
+
+        if len(members) == 0:
+            m = 'No subclass of {0} was found in {1}'.format(cls.tool_subclass.__name__, tool_name)
+            raise ToolClassNotFoundException(m)
+
+        return members[0]()
 
     @classmethod
     def arg_parents(cls):
         return ()
+
