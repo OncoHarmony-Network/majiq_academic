@@ -12,7 +12,7 @@ except ImportError:
 extensions = [Extension('majiq.src.normalize', ['majiq/src/normalize.pyx'])]
 extensions += [Extension('majiq.src.plotting', ['majiq/src/plotting.pyx'])]
 extensions += [Extension('majiq.src.polyfitnb', ['majiq/src/polyfitnb.pyx'])]
-extensions += [Extension('majiq.src.sample', ['majiq/src/sample.pyx'], include_dirs=numpy.get_include())]
+extensions += [Extension('majiq.src.sample', ['majiq/src/sample.pyx'], include_dirs=[numpy.get_include()])]
 extensions += [Extension('majiq.src.psi', ['majiq/src/psi.pyx'], include_dirs=[numpy.get_include()])]
 extensions += [Extension('majiq.src.io_base', ['majiq/src/io_base.pyx'], include_dirs=pysam.get_include())]
 
@@ -40,6 +40,5 @@ setup(
         'Operating System :: MacOS',
         'Operating System :: Microsoft :: Windows',
         'Operating System :: POSIX',
-        'Programming Language :: Python :: 2.7',
-    ]
+        'Programming Language :: Python :: 3.4']
 )

@@ -114,7 +114,7 @@ def prepare_lsvs(lsv, name, gc_vfunc, fitfunc_r, queue):
             except:
                 gc_f = None
 
-        lsv_q = lsv.to_queue(gc_vfunc=gc_vfunc, fitfunc_r=fitfunc_r[exp_idx], exp_idx=exp_idx)
+        lsv_q = lsv.to_queue(gc_vfunc=gc_f, fitfunc_r=fitfunc_r[exp_idx], exp_idx=exp_idx)
 
         qm = QueueMessage(QUEUE_MESSAGE_BUILD_LSV, (lsv_q, exp_idx), 0)
         queue.put(qm, block=True)

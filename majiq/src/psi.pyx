@@ -277,7 +277,7 @@ cpdef list divs_from_bootsamples(list lsvs_to_work, int n_replica, float pnorm, 
                                  int nbins=40):
 
     cdef float bsize, alpha_0, beta_0
-    cdef np.ndarray psi_border, psi, med, post_cdf
+    cdef np.ndarray psi_border, psi, med, post_cdf, ldist
     cdef list div = []
     cdef int lsv_idx, rr, num_ways, jidx
     cdef np.ndarray alpha_prior, beta_prior, s_lsv
@@ -306,7 +306,7 @@ cpdef list divs_from_bootsamples(list lsvs_to_work, int n_replica, float pnorm, 
         med = np.median(post_cdf, axis=0, keepdims=True)
 
         psi = np.log(np.diff(post_cdf, axis=2) + MINVAL)
-        psi -= scipy.misc.logsumexp(post_cdf, axis=2, keepdims=True)
+        psi -= scipy.misc.logsumexp(psi, axis=2, keepdims=True)
         med = np.log(np.diff(med, axis=2) + MINVAL)
         med -= scipy.misc.logsumexp(med, axis=2, keepdims=True)
         ldist = np.log(np.abs(np.exp(psi) - np.exp(med)) + MINVAL)
@@ -389,7 +389,8 @@ def empirical_delta_psi(list_lsv, lsv_types, lsv_dict1, lsv_summarized1, lsv_dic
 def __load_default_prior():
 
     encoding = sys.getfilesystemencoding()
-    direc = os.path.dirname(unicode(__file__, encoding))
+    direc = os.path.dirname(__file__)
+    print '%s/../data/defaultprior.pickle' % direc
     def_mat = majiq.src.io_utils.load_bin_file('%s/../data/defaultprior.pickle' % direc)
     return def_mat
 
