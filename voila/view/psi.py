@@ -1,158 +1,134 @@
-from collections import OrderedDict
-from os import path
+import os
+from tempfile import NamedTemporaryFile
 
-from voila import constants
-from voila import io_voila
-from voila.constants import LSV_TEXT_VERSION
-from voila.io_voila import Voila
-from voila.producer_consumer import ProducerConsumer
-from voila.utils import utils_voila
-from voila.utils.run_voila_utils import parse_gene_graphics, VoilaNoLSVsException, table_marks_set, get_env, \
-    get_output_html, grouper, copy_static, get_summary_template, get_prev_next_pages
-from voila.utils.utils_voila import create_if_not_exists
+from voila import io_voila, constants
+from voila.api import Voila, SpliceGraphs
+from voila.utils.exceptions import NoLsvsFound
+from voila.utils.run_voila_utils import table_marks_set, copy_static, get_template_dir
 from voila.utils.voila_log import voila_log
+from voila.view.html import Html
 from voila.voila_args import VoilaArgs
 
 
-class Psi(ProducerConsumer, VoilaArgs):
+class Psi(Html, VoilaArgs):
     def __init__(self, args):
         """
         Render psi output.
         :param args: command line arguments
         :return: None
         """
-        super(Psi, self).__init__()
+        super(Psi, self).__init__(args)
 
-        self.args = args
-        self.majiq_output = None
-
-        with Voila(args.voila_file, 'r') as v:
-            metainfo = v.get_metainfo()
-            voila_lsvs = v.get_voila_lsvs(lsv_types=args.lsv_types,
-                                          lsv_ids=args.lsv_ids,
-                                          gene_names=args.gene_names)
-
-        self.majiq_output = utils_voila.lsvs_to_gene_dict(voila_lsvs, metainfo)
-        majiq_output = self.majiq_output
-
-        gene_ids_list = majiq_output['genes_dict'].keys()
-
-        if not len(voila_lsvs):
-            raise VoilaNoLSVsException()
-
-        majiq_output['genes_exp'] = parse_gene_graphics(args.splice_graph, metainfo, gene_ids_list)
-
-        majiq_output['lsv_list'] = [ll for g in majiq_output['genes_dict'].viewvalues() for ll in g]
+        voila_log().info('Voila psi {0}'.format(constants.VERSION))
 
         if not args.no_html:
-            self.render_html()
+            with Voila(args.voila_file, 'r') as v:
+                self.metainfo = v.get_metainfo()
+            self.render_summaries()
+            self.render_index()
+            copy_static(args)
 
         if not args.no_tsv:
-            io_voila.tab_output(args, majiq_output)
+            io_voila.tab_output(args, self.voila_links)
 
         if args.gtf:
-            io_voila.generic_feature_format_txt_files(args, majiq_output)
+            io_voila.generic_feature_format_txt_files(args)
 
         if args.gff:
-            io_voila.generic_feature_format_txt_files(args, majiq_output, out_gff3=True)
+            io_voila.generic_feature_format_txt_files(args, out_gff3=True)
 
-    def __enter__(self):
-        pass
+    def render_index(self):
+        log = voila_log()
+        log.info('Render PSI HTML index')
+        log.debug('Start index render')
 
-    def _producer(self):
-        gene_keys = sorted(self.majiq_output['genes_dict'].keys())
-
-        for page_number, subset_keys in enumerate(grouper(gene_keys, constants.MAX_GENES)):
-            self.queue.put((page_number, subset_keys))
-
-    def _worker(self):
-        majiq_output = self.majiq_output
         args = self.args
-        output_dir = args.output
-        gene_keys = sorted(self.majiq_output['genes_dict'].keys())
-        output_html = get_output_html(args, args.voila_file)
-        summaries_subfolder = path.join(output_dir, constants.SUMMARIES_SUBFOLDER)
-        sum_template = get_summary_template(args, get_env())
-        comb_spliceg_cond1 = majiq_output['genes_exp'][0].keys()[0]
+        env = self.env
+        metainfo = self.metainfo
+        index_row_template = env.get_template('psi_index_row.html')
 
-        while True:
-            page_number, subset_keys = self.queue.get()
+        with NamedTemporaryFile(dir=get_template_dir()) as tmp_index_file:
 
-            subset_keys = [x for x in subset_keys if x]
-            genes_dict = OrderedDict((k, majiq_output['genes_dict'][k]) for k in subset_keys)
-            page_name = '{0}_{1}'.format(page_number, output_html)
+            with Voila(args.voila_file, 'r') as v:
 
-            full_path = path.join(summaries_subfolder, page_name)
+                lsv_count = v.get_lsv_count(args)
+                too_many_lsvs = lsv_count > constants.MAX_LSVS_PSI_INDEX
 
-            prev_page, next_page = get_prev_next_pages(page_number, len(gene_keys), output_html)
+                for index, lsv in enumerate(v.get_voila_lsvs(args)):
+                    log.debug('Writing LSV {0} to index'.format(lsv.lsv_id))
 
-            with open(full_path, 'w') as voila_output:
-                voila_output.write(
-                    sum_template.render(
-                        tableMarks=[table_marks_set(len(gene_set)) for gene_set in genes_dict],
-                        genes_dict=genes_dict,
-                        prevPage=prev_page,
-                        nextPage=next_page,
-                        namePage=page_name,
-                        lexps=majiq_output['meta_exps'],
-                        genes_exps_list=majiq_output['genes_exp'],
-                        comb_spliceg_cond1=comb_spliceg_cond1,
-                        lsv_text_version=LSV_TEXT_VERSION
-                    )
-                )
+                    for el in index_row_template.generate(
+                            lsv=lsv,
+                            index=index,
+                            link=self.voila_links[lsv.name],
+                            lexps=metainfo,
+                            too_many_lsvs=too_many_lsvs
+                    ):
+                        tmp_index_file.write(bytearray(el, encoding='utf-8'))
 
-            for _, value in genes_dict.iteritems():
-                self.dict(value[0].name, path.join(constants.SUMMARIES_SUBFOLDER, page_name))
+                if not tmp_index_file.tell():
+                    raise NoLsvsFound()
 
-            self.queue.task_done()
-
-    def close(self):
-        pass
+                with open(os.path.join(args.output, 'index.html'), 'w') as html:
+                    index_template = env.get_template('index_single_summary_template.html')
+                    for el in index_template.generate(
+                            lexps=metainfo,
+                            tmp_index_file_name=os.path.basename(tmp_index_file.name),
+                            lsvs_count=lsv_count,
+                            table_marks=table_marks_set(lsv_count),
+                            prev_page=None,
+                            next_page=None
+                    ):
+                        html.write(el)
 
     @classmethod
     def arg_parents(cls):
-        return (cls.base_args(), cls.html_args(), cls.gene_search_args(), cls.lsv_type_search_args(),
+        return (cls.base_args(), cls.output_args(), cls.html_args(), cls.gene_search_args(), cls.lsv_type_search_args(),
                 cls.lsv_id_search_args(), cls.voila_file_args())
 
-    def render_html(self):
-        """
-        Render psi html output.
-        :param args: command line arguments
-        :param majiq_output: dictionary containing majiq output values
-        :return: None
-        """
-
+    def render_summaries(self):
         log = voila_log()
+        log.info('Render PSI HTML summaries')
+        log.debug('Start summaries render')
+
+        summary_template = self.env.get_template("psi_summary_template.html")
         args = self.args
-        majiq_output = self.majiq_output
-        gene_keys = sorted(majiq_output['genes_dict'].keys())
-        output_dir = args.output
-        summaries_subfolder = path.join(output_dir, constants.SUMMARIES_SUBFOLDER)
-        create_if_not_exists(summaries_subfolder)
-        env = get_env()
+        summaries_subfolder = self.get_summaries_subfolder()
+        metainfo = self.metainfo
 
-        log.info("Number of genes detected in Voila: %d." % len(gene_keys))
-        log.info("Number of LSVs detected in Voila: %d." % sum(
-            [len(majiq_output['genes_dict'][g]) for g in majiq_output['genes_dict']]))
-        log.info("Creating HTML5 with splice graphs summaries ...")
+        with SpliceGraphs(args.splice_graph, 'r') as sg:
+            gene_experiments_list = sg.get_experiments()
+            prev_page = None
+            page_count = sg.get_page_count(args)
 
-        self.run()
-        links_dict = self.get_dict()
-        majiq_output['voila_links'] = links_dict
-        self.manager_shutdown()
+            for index, (lsv_dict, genes) in enumerate(sg.get_paginated_genes_with_lsvs(args)):
+                page_name = self.get_page_name(index)
+                table_marks = tuple(table_marks_set(len(gene_set)) for gene_set in lsv_dict)
+                next_page = self.get_next_page(index, page_count)
+                try:
+                    experiments = self.gene_experiments(metainfo['experiment_names'][0], genes, gene_experiments_list)
+                except KeyError:
+                    print(metainfo)
+                    exit(1)
 
-        # Generate index
-        log.info("Creating HTML5 index summary ...")
-        sum_template = env.get_template("index_single_summary_template.html")
-        with open(path.join(output_dir, 'index.html'), 'w') as voila_output:
-            voila_output.write(
-                sum_template.render(
-                    lsvList=majiq_output['lsv_list'],
-                    tableMarks=table_marks_set(len(majiq_output['lsv_list'])),
-                    lexps=majiq_output['meta_exps'],
-                    links_dict=links_dict,
-                    maxLsvs=constants.MAX_LSVS_PSI_INDEX
-                )
-            )
+                self.add_to_voila_links(lsv_dict, page_name)
 
-        copy_static(args)
+                log.debug('Writing {0}'.format(page_name))
+                with open(os.path.join(summaries_subfolder, page_name), 'w') as html:
+
+                    for el in summary_template.generate(
+                            table_marks=table_marks,
+                            genes_dict=lsv_dict,
+                            prev_page=prev_page,
+                            next_page=next_page,
+                            namePage=page_name,
+                            lexps=metainfo,
+                            genes_exps_list=experiments,
+                            lsv_text_version=constants.LSV_TEXT_VERSION,
+                            gtf=args.gtf
+                    ):
+                        html.write(el)
+
+                prev_page = page_name
+
+        log.debug('End summaries render')

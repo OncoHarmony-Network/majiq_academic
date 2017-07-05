@@ -3,8 +3,8 @@ import errno
 import os
 
 from majiq.src.io_utils import create_if_not_exists
+from voila.api import SpliceGraphs
 from voila.io_voila import Voila
-from voila.splice_graphics import SpliceGraph
 
 
 class VoilaCantFindFile(argparse.ArgumentTypeError):
@@ -61,7 +61,7 @@ class VoilaArgs:
     @classmethod
     def check_splice_graph_file(cls, value):
         cls.check_file(value)
-        with SpliceGraph(value, 'r') as sg:
+        with SpliceGraphs(value, 'r') as sg:
             sg.check_version()
         return value
 
@@ -132,6 +132,9 @@ class VoilaArgs:
             action='store_true',
             help='Do not write logs to standard out.'
         )
+
+        parser.add_argument('--debug', action='store_true')
+
         return parser
 
     @classmethod
@@ -204,7 +207,21 @@ class VoilaArgs:
                             nargs='*',
                             default=[],
                             help='Common gene names, separated by spaces, which should remain in the results. '
-                                 'e.g. GENE1 GENE2 ...')
+                                 'e.g. GENE1 GENE2 ...'
+                            )
+
+        parser.add_argument('--gene-ids-file',
+                            dest='gene_ids',
+                            type=cls.check_list_file,
+                            default=[],
+                            help='Location of file that contains a list of gene IDs which should remain in the results.'
+                                 '  One name per line.')
+
+        parser.add_argument('--gene-ids',
+                            nargs='*',
+                            default=[],
+                            help='Gene IDs, separated by spaces, which should remain in the results. '
+                                 'e.g. GENE_ID1 GENE_ID2 ...')
         return parser
 
     @classmethod

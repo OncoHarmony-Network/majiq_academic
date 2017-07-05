@@ -1,6 +1,6 @@
 __author__ = 'jordi@biociphers.org'
 import sys
-import zip
+# import zip
 
 from numpy.ma import masked_less
 from scipy import interpolate

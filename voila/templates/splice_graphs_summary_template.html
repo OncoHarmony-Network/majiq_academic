@@ -16,7 +16,7 @@
 {% endblock %}
 
 {% block header %}
-    {% if namePage %}Result page: {{ namePage }}{% endif %}
+    {% if page_name %}Result page: {{ page_name }}{% endif %}
 {% endblock %}
 
 {% block content %}
@@ -44,15 +44,10 @@
                     <div class="spliceGraphTools">
 
                         <select class="spliceGraphSelector exp1" autocomplete="off">
-                            {% for nsample in gene_dicts.keys() -%}
-                                {% if nsample == first_sample %}
-                                    <option selected="selected"
-                                            value="{{ gene_dicts[nsample][gene.gene_id] |to_json_especial }}">{{ nsample }}
-                                    </option>
-                                {% else %}
-                                    <option value="{{ gene_dicts[nsample][gene.gene_id] |to_json_especial }}">{{ nsample }}
-                                    </option>
-                                {% endif %}
+                            {% for experiment in experiments -%}
+                                <option value="{{ gene.get_experiment(loop.index0) | to_json_especial }}">
+                                    {{ experiment }}
+                                </option>
                             {%- endfor %}
                         </select>
 
@@ -69,7 +64,7 @@
 
                     <div class="splice-div-container">
                         <div class="spliceDiv exp1" id="spliceDivExp1_{{ gene_index }}"
-                             data-exon-list="{{ gene_dicts[gene_dicts.keys()[0]][gene.gene_id] | to_json_especial }}">
+                             data-exon-list="{{ gene.get_experiment(0) | to_json_especial }}">
 
                         </div>
                     </div>

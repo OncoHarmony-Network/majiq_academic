@@ -1,21 +1,20 @@
-import h5py
-import scipy.misc
-import sys
 import multiprocessing as mp
+import sys
 import traceback
 
-from majiq.src.basic_pipeline import BasicPipeline, pipeline_run
-import majiq.src.utils as majiq_utils
+import h5py
+
 import majiq.src.filter as majiq_filter
 import majiq.src.io as majiq_io
-from majiq.src.psi import heterogen_posterior
+import majiq.src.utils as majiq_utils
+from majiq.src.basic_pipeline import BasicPipeline, pipeline_run
 from majiq.src.constants import *
 from majiq.src.multiproc import QueueMessage, process_conf, queue_manager
-
-from voila.io_voila import Voila
-from voila.vlsv import Het
-from voila.constants import ANALYSIS_HETEROGEN
+from majiq.src.psi import heterogen_posterior
 from majiq.src.stats import operator, all_stats
+from voila.api import Voila
+from voila.constants import ANALYSIS_HETEROGEN
+from voila.vlsv import Het
 
 
 def het_quantification(args_vals):
@@ -68,11 +67,11 @@ def het_quantification(args_vals):
         traceback.print_exc()
         sys.stdout.flush()
         logger.error(e)
-        raise()
+        raise ()
 
 
 def do_test_stats(insamps, stats, minsamps):
-#def do_test_stats(lsv_attrs, samples, stats, minsamps):
+    # def do_test_stats(lsv_attrs, samples, stats, minsamps):
     """
     Log P values for the given set of statistical tests
     :param lsv_attrs: 2-tuple (lsv_id, lsv_type)
@@ -137,7 +136,7 @@ class independent(BasicPipeline):
 
         try:
             for stats_name in self.stats:
-                module_ = __import__('majiq.src.stats.'+stats_name.lower(), fromlist=stats_name.title())
+                module_ = __import__('majiq.src.stats.' + stats_name.lower(), fromlist=stats_name.title())
                 class_ = getattr(module_, stats_name.title())
                 operator[stats_name] = class_()
         except ImportError as i_err:
@@ -166,7 +165,7 @@ class independent(BasicPipeline):
             pool.map_async(het_quantification, majiq_utils.chunks2(list_of_lsv, lchnksize, extra=range(self.nthreads)))
             pool.close()
             with Voila(get_quantifier_voila_filename(self.outDir, self.names, deltapsi=True), 'w') as out_h5p:
-                #out_h5p.add_genome(meta1['genome'])
+                # out_h5p.add_genome(meta1['genome'])
                 out_h5p.set_analysis_type(ANALYSIS_HETEROGEN)
                 out_h5p.add_experiments(self.names[0], experiment_names=meta1['experiments'])
                 out_h5p.add_experiments(self.names[1], experiment_names=meta2['experiments'])

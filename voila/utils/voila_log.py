@@ -7,7 +7,7 @@ from logging.handlers import RotatingFileHandler
 from voila.constants import VOILA_LOG_NAME
 
 
-def voila_log(filename=None, silent=False):
+def voila_log(filename=None, silent=False, debug=False):
     """
     Logger used throughout voila.  After this has been initialized, then it will retrieve the same logger each time
     this function is called.
@@ -43,6 +43,9 @@ def voila_log(filename=None, silent=False):
         streamHandler.setFormatter(formatter)
         log.addHandler(streamHandler)
 
-    log.setLevel(logging.DEBUG)
+    if debug:
+        log.setLevel(logging.DEBUG)
+    else:
+        log.setLevel(logging.INFO)
 
     return log

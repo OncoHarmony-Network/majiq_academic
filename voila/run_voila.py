@@ -1,10 +1,10 @@
 import argparse
 import os
+import sys
 import textwrap
 import time
 
 import voila.constants as constants
-from voila.io_voila import Voila
 from voila.tools import Tools
 from voila.utils.voila_log import voila_log
 from voila.view.conditional_table import ConditionalTable
@@ -12,7 +12,7 @@ from voila.view.deltapsi import Deltapsi
 from voila.view.heterogen import Heterogen
 from voila.view.lsv_thumbnails import LsvThumbnails
 from voila.view.psi import Psi
-from voila.view.splice_graphs import SpliceGraphs
+from voila.view.splice_graphs import RenderSpliceGraphs
 
 
 def secs2hms(secs):
@@ -26,21 +26,13 @@ def secs2hms(secs):
     return "%d:%02d:%02d" % (h, m, s)
 
 
-def main():
-    """
-    Main function.
-    :return: None
-    """
-
-    # Time execution time
-    start_time = time.time()
-
+def voila_parser():
     parser = argparse.ArgumentParser(formatter_class=argparse.RawDescriptionHelpFormatter,
                                      description=textwrap.dedent('''
-            VOILA is a visualization package for Alternative Local Splicing Events.
-            -----------------------------------------------------------------------
+                VOILA is a visualization package for Alternative Local Splicing Events.
+                -----------------------------------------------------------------------
 
-            '''))
+                '''))
 
     parser.add_argument('-v', action='version', version=constants.VERSION)
 
@@ -62,7 +54,7 @@ def main():
 
     subparsers.add_parser(constants.SPLICE_GRAPHS,
                           help='Generate only splice graphs.',
-                          parents=SpliceGraphs.arg_parents())
+                          parents=RenderSpliceGraphs.arg_parents())
 
     subparsers.add_parser(constants.LSV_THUMBNAILS,
                           help='Generate LSV thumbnails.',
@@ -77,6 +69,20 @@ def main():
                                         parents=Tools.arg_parents())
     Tools.add_arguments(parser_tool)
 
+    return parser
+
+
+def main():
+    """
+    Main function.
+    :return: None
+    """
+
+    # Time execution time
+    start_time = time.time()
+
+    parser = voila_parser()
+
     # get args
     args = parser.parse_args()
 
@@ -84,10 +90,11 @@ def main():
     if hasattr(args, 'no_html') and not args.no_html and not args.splice_graph:
         parser.error('argument --splice-graph is required')
 
-    # voila must be build for this type analysis
-    if hasattr(args, 'voila_file') and args.voila_file:
-        with Voila(args.voila_file) as v:
-            v.check_analysis_type(args.type_analysis)
+    # # voila must be build for this type analysis
+    # if hasattr(args, 'voila_file') and args.voila_file:
+    #     with Voila(args.voila_file, 'r') as v:
+    #         v.check_analysis_type(args.type_analysis)
+
 
     # set up logging
     log_filename = 'voila.log'
@@ -96,23 +103,14 @@ def main():
     elif hasattr(args, 'output') and args.output:
         log_filename = os.path.join(args.output, log_filename)
 
-    log = voila_log(filename=log_filename, silent=args.silent)
-    log.info('Starting voila.')
-
-    # set number of processes
-    if hasattr(args, 'max_processes') and args.max_processes and args.max_processes < constants.PROCESS_COUNT:
-        constants.PROCESS_COUNT = args.max_processes
-
-    if constants.PROCESS_COUNT == 1:
-        log.info('Using 1 process.')
-    else:
-        log.info('Using {0} processes'.format(constants.PROCESS_COUNT))
+    log = voila_log(filename=log_filename, silent=args.silent, debug=args.debug)
+    log.info('Command: {0}'.format(' '.join(sys.argv)))
 
     # run function for this analysis type
     type_analysis = {
         constants.ANALYSIS_PSI: Psi,
         constants.ANALYSIS_DELTAPSI: Deltapsi,
-        constants.SPLICE_GRAPHS: SpliceGraphs,
+        constants.SPLICE_GRAPHS: RenderSpliceGraphs,
         constants.COND_TABLE: ConditionalTable,
         constants.LSV_THUMBNAILS: LsvThumbnails,
         constants.ANALYSIS_HETEROGEN: Heterogen,

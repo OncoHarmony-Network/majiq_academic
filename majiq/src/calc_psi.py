@@ -1,6 +1,7 @@
 import multiprocessing as mp
 import sys
 import traceback
+
 import h5py
 
 import majiq.src.filter as majiq_filter
@@ -10,10 +11,9 @@ from majiq.src.basic_pipeline import BasicPipeline, pipeline_run
 from majiq.src.constants import *
 from majiq.src.multiproc import QueueMessage, process_conf, queue_manager
 from majiq.src.psi import psi_posterior
-from voila.io_voila import Voila
+from voila.api import Voila
 from voila.constants import ANALYSIS_PSI
 
-import collections
 
 
 ################################
@@ -51,12 +51,13 @@ def psi_quantification(args_vals):
     except Exception as e:
         traceback.print_exc()
         sys.stdout.flush()
-        raise()
+        raise ()
+
+
 ##
 
 
 class CalcPsi(BasicPipeline):
-
     def run(self):
         self.calcpsi()
 
@@ -83,7 +84,7 @@ class CalcPsi(BasicPipeline):
         list_of_lsv = majiq_filter.merge_files_hdf5(lsv_dict=lsv_dict, lsv_summarized=lsv_summarized,
                                                     minnonzero=self.minpos, min_reads=self.minreads,
                                                     percent=self.min_exp, logger=logger)
-        lchnksize = max(len(list_of_lsv)/self.nthreads, 1) + 1
+        lchnksize = max(len(list_of_lsv) / self.nthreads, 1) + 1
         weights = self.calc_weights(self.weights, self.files, list_of_lsv, lock_arr, lchnksize, q, self.name)
 
         if len(list_of_lsv) > 0:
@@ -94,7 +95,7 @@ class CalcPsi(BasicPipeline):
             pool.map_async(psi_quantification, majiq_utils.chunks2(list_of_lsv, lchnksize, extra=range(self.nthreads)))
             pool.close()
             with Voila(get_quantifier_voila_filename(self.outDir, self.name), 'w') as out_h5p:
-                #out_h5p.add_genome(meta['genome'])
+                out_h5p.add_genome(meta['genome'])
                 out_h5p.set_analysis_type(ANALYSIS_PSI)
                 out_h5p.add_experiments(group_name=self.name, experiment_names=meta['experiments'])
 
@@ -108,4 +109,3 @@ class CalcPsi(BasicPipeline):
         logger.info("PSI calculation for %s ended succesfully! "
                     "Result can be found at %s" % (self.name, self.outDir))
         logger.info("Alakazam! Done.")
-

@@ -1,0 +1,56 @@
+<tr class="{{ lsv.categories2css() }} lsvrow" data-njuncs="{{ lsv.njuncs() }}" data-nexons="{{ lsv.nexons() }}">
+    <td>{{ index }}</td>
+    <td><a href="{{ link }}"
+           target="_blank">{{ lsv.name }}</a></td>
+    <td><a href="{{ link }}"
+           target="_blank">{{ lsv.lsv_id }}</a></td>
+    {% if too_many_lsvs -%}
+        <td class="medium-header text-wrapped">
+            {{ lsv.lsv_type }}
+        </td>
+        <td id="data_td{{ index }}" class="medium-header text-wrapped">
+                <span class="hidden">
+                    {% set max_diff = [0.0] %}
+                    {% for mean_b in lsv.means %}
+                        {% if mean_b > max_diff[-1] %}
+                            {% do max_diff.append(mean_b) %}
+                        {% endif %}
+                    {%- endfor %}
+                    {{ max_diff[-1]|round(4) }}
+                </span>
+            {{ lsv.means }}
+        </td>
+    {% else %}
+        <td>
+            <p class="hidden" style="top:0;">{{ lsv.lsv_type }}</p>
+            <canvas class="lsvLegend" width="200px" height="60px" data-lsv-string="{{ lsv.lsv_type }}"
+                    title="{{ lsv.lsv_type }}">
+                This browser or document mode doesn't support canvas
+            </canvas>
+        </td>
+        <td id="data_td{{ index }}">
+                <span class="hidden">
+                    {% set max_diff = [0.0] %}
+                    {% for mean_b in lsv.means %}
+                        {% if mean_b > max_diff[-1] %}
+                            {% do max_diff.append(mean_b) %}
+                        {% endif %}
+                    {%- endfor %}
+                    {{ max_diff[-1]|round(4) }}
+                </span>
+            <canvas class="lsvSingleCompactPercentiles" id="lsvSingleCompact{{ index }}" width="50px"
+                    height="50px" style="border: solid; border-width: 2pt; border-color: darkgrey;"
+                    data-lsv="{{ lsv|to_json }}">
+                This browser or document mode doesn't support canvas
+            </canvas>
+        </td>
+    {% endif -%}
+    <td>
+        <p>
+            <a href="http://genome.ucsc.edu/cgi-bin/hgTracks?db={{ lexps.genome }}&position={{ lsv.chromosome }}:{{ lsv.get_extension()[0] }}-{{ lsv.get_extension()[1] }}"
+               target="_blank">
+                <img src="static/img/icons/ucsc3.png" title="View in UCSC Genome Browser"/>
+            </a>
+        </p>
+    </td>
+</tr>

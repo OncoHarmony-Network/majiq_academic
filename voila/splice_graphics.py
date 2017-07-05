@@ -1,6 +1,5 @@
 import csv
 import io
-import os
 import sys
 from os.path import join
 
@@ -9,29 +8,7 @@ import numpy
 
 from voila import constants
 from voila.hdf5 import HDF5, ExonTypeDataSet, JunctionTypeDataSet, ReadsDataSet
-from voila.producer_consumer import ProducerConsumer
-from voila.utils.voila_log import voila_log
-
-COMBINE_INDEX = 0
-
-
-class ExperimentIndexError(IndexError):
-    def __init__(self):
-        """
-        Error thrown when experiment index is out of range.
-        """
-        super(ExperimentIndexError, self).__init__(
-            'Attempted to access an out of range experiment.')
-
-
-class UnknownField(Exception):
-    def __init__(self, field):
-        """
-        Error thrown when attempting to access a class attribute that hasn't been marked as an "experiment" attribute.
-        :param field:
-        """
-        super(UnknownField, self).__init__(
-            '"{0}" might not contain data that has been sorted into a list by experiment.'.format(field))
+from voila.utils.exceptions import NoExonsInGene, ExperimentIndexError, ExperimentUnknowField
 
 
 class Experiment(HDF5):
@@ -50,9 +27,13 @@ class Experiment(HDF5):
         :return: dict
         """
         if field in self.field_by_experiment():
+            experiment_field = self.__dict__[field]
+
+            if experiment_field is None:
+                raise Exception(experiment_field, field, self.__class__.__name__)
+
             try:
-                value = self.__dict__[field][experiment]
-                # todo: this might be able to be done in hdf5
+                value = experiment_field[experiment]
                 if isinstance(value, (numpy.int64, numpy.uint64)):
                     value = int(value)
                 elif isinstance(value, numpy.float64):
@@ -60,11 +41,9 @@ class Experiment(HDF5):
                 return value
             except IndexError:
                 raise ExperimentIndexError()
-            except TypeError:
-                print(field)
-                raise
+
         else:
-            raise UnknownField(field)
+            raise ExperimentUnknowField(field)
 
     def get_experiment(self, experiment):
         """
@@ -77,14 +56,6 @@ class Experiment(HDF5):
             if field in self.field_by_experiment():
                 d[field] = self.get(field, experiment)
         return d
-
-
-class NoExons(Exception):
-    def __init__(self):
-        """
-        Thrown when gene, for some reason, doesn't have any exons...
-        """
-        super(NoExons, self).__init__('There no exons in this gene.')
 
 
 class GeneGraphic(HDF5):
@@ -160,7 +131,7 @@ class GeneGraphic(HDF5):
         try:
             return self.exons[0].start
         except IndexError:
-            raise NoExons()
+            raise NoExonsInGene(self.gene_id)
 
     def end(self):
         """
@@ -170,35 +141,7 @@ class GeneGraphic(HDF5):
         try:
             return self.exons[-1].end
         except IndexError:
-            raise NoExons()
-
-    def merge(self, other):
-        """
-        Merge another gene into this one.
-        :param other: Other gene object
-        :return: None
-        """
-
-        # for a sanity check, we'll remove the known changing elements and verify the rest are equal
-        self_dict = self.__dict__.copy()
-        other_dict = other.__dict__.copy()
-        for attr in ['junctions', 'exons', 'end']:
-            del self_dict[attr]
-            del other_dict[attr]
-
-        # log warning if gene's some seem equal
-        if self_dict != other_dict:
-            voila_log().warning('Attemping to merge two genes that might not be equal.')
-
-        # concat exons and junctions
-        self.exons += other.exons
-        self.junctions += other.junctions
-
-        # merge exons
-        self.merge_overlapping_exons()
-
-        # remove duplicate junctions
-        self.remove_duplicate_junctions()
+            raise NoExonsInGene(self.gene_id)
 
     def combine(self, experiment_index, gene_dict=None):
         """
@@ -258,84 +201,8 @@ class GeneGraphic(HDF5):
 
         super(GeneGraphic, self).to_hdf5(h, use_id)
 
-    def cls_list(self):
+    def cls_dict(self):
         return {'exons': ExonGraphic, 'junctions': JunctionGraphic}
-
-    def merge_overlapping_exons(self):
-        """
-        For all the exons for this gene, merge any that overlap.
-        :return: None
-        """
-        exons = sorted(self.exons)
-        merged_exons = [exons[0]]
-        for exon in exons[1:]:
-            if not merged_exons[-1].merge(exon):
-                merged_exons.append(exon)
-
-        self.exons = merged_exons
-
-    def remove_duplicate_junctions(self):
-        """
-        Remove any duplicate junctions for this gene.
-        :return: None
-        """
-        self.junctions = sorted(set(self.junctions), key=lambda junction: junction.coords)
-
-    def get_missing_exons(self, master_gene):
-        """
-        Get any exons that this gene is missing from a "master gene".
-        :param master_gene: A gene object containing a "master" list of exons and junctions
-        :return: None
-        """
-        # Create splice graph for this gene as compared to master splice graph
-        master_exons_iter = iter(master_gene.exons)
-        sample_exons_iter = iter(self.exons)
-
-        # Figure out which exons are missing from the sample and make sure that the sample has the updated exons
-        m = master_exons_iter.next()
-        s = sample_exons_iter.next()
-
-        missing = True
-        exons = []
-
-        try:
-
-            while True:
-                if m.overlaps(s):
-                    missing = False
-                    s = sample_exons_iter.next()
-                else:
-                    m = m.copy()
-
-                    if missing and m.type_exon <= constants.EXON_TYPE_DB_OTHER_RNASEQ:
-                        m.type_exon = constants.EXON_TYPE_DB
-
-                    exons.append(m)
-                    missing = True
-                    m = master_exons_iter.next()
-
-        except StopIteration:
-            exons.append(m)
-            try:
-                while True:
-                    exons.append(master_exons_iter.next())
-            except StopIteration:
-                pass
-
-        self.exons = exons
-
-    def get_missing_junctions(self, master_gene):
-        """
-        Get any missing junctions from a "master gene".
-        :param master_gene: A gene object containing a "master" list of exons and junctions
-        :return: None
-        """
-        for junction in master_gene.junctions:
-            if junction not in self.junctions:
-                jg = junction.copy()
-                jg.type_junction = constants.JUNCTION_TYPE_DB
-                self.junctions.append(jg)
-        self.junctions.sort()
 
     def get_experiment(self, experiment):
         d = self.__dict__.copy()
@@ -632,7 +499,7 @@ class LsvGraphic(HDF5):
         })
         return d
 
-    def cls_list(self):
+    def cls_dict(self):
         return {'exons': ExonGraphic, 'junctions': JunctionGraphic}
 
     def junction_ids(self):
@@ -641,158 +508,3 @@ class LsvGraphic(HDF5):
     @classmethod
     def easy_from_hdf5(cls, h):
         return cls(None, None, None, None).from_hdf5(h)
-
-
-class SpliceGraph(ProducerConsumer):
-    GENES = '/genes'
-    ROOT = '/'
-    VERSION = '/splice_graph_file_version'
-
-    def __init__(self, splice_graph_file_name, mode, erase_splice_graph_file=False):
-        """
-        Class for creating and accessing the splice graph file.
-        :param splice_graph_file_name: path to splice graph file
-        :param mode: mode to pass to hdf5
-        """
-        super(SpliceGraph, self).__init__()
-        self.file_name = splice_graph_file_name
-        self.mode = mode
-        self.hdf5 = None
-        self.limit = None
-        self.gene_ids = None
-        self.file_version = None
-
-        # Erase splice graph file, if needed, before creating it.
-        if erase_splice_graph_file:
-            if mode != constants.FILE_MODE.write:
-                voila_log().warn('Attempting to remove Splice Graph file when mode is "{0}"'.format(mode))
-            elif os.path.isfile(erase_splice_graph_file):
-                os.remove(splice_graph_file_name)
-
-    def __enter__(self):
-        """
-        Open hdf5 in with block.
-        :return: self
-        """
-        self.hdf5 = h5py.File(self.file_name, self.mode)
-
-        if self.VERSION not in self.hdf5:
-            if self.mode == constants.FILE_MODE.write:
-                self.hdf5[self.VERSION] = constants.SPLICE_GRAPH_FILE_VERSION
-
-        try:
-            self.file_version = self.hdf5[self.VERSION].value
-        except KeyError:
-            pass
-
-        return self
-
-    def __exit__(self, type, value, traceback):
-        """
-        Close when with block exits.
-        :param type: unused
-        :param value: unused
-        :param traceback: unused
-        :return: None
-        """
-        self.close()
-
-    def _worker(self):
-        """
-        Worker function which creates GeneGraphic objects from the data stored in the splice graph file.
-        :return: None
-        """
-        with h5py.File(self.file_name, 'r') as h:
-            while True:
-                gene_id = self.queue.get()
-                try:
-                    self.dict(gene_id, GeneGraphic.easy_from_hdf5(h[self.GENES][gene_id]))
-                except KeyError:
-                    voila_log().error('unable to find splicegraph for gene {0}'.format(gene_id))
-                self.queue.task_done()
-
-    def _producer(self):
-        """
-        Gets list of gene id used to parse splice graph file
-        :return: None
-        """
-        gene_ids = self.gene_ids
-        gene_ids_length = len(gene_ids)
-        limit = self.limit
-
-        if limit and limit < gene_ids_length:
-            voila_log().info('Found {0} genes, but limited to {1}'.format(gene_ids_length, limit))
-            gene_ids = gene_ids[:limit]
-
-        for gene_id in gene_ids:
-            self.queue.put(gene_id)
-
-    def close(self):
-        """
-        Close hdf5 file.
-        :return: None
-        """
-        try:
-            self.hdf5.close()
-        except Exception:
-            pass
-
-    def add_gene(self, gene):
-        """
-        Add gene object to splice graph file.
-        :param gene: GeneGraphic object
-        :return: None
-        """
-        gene.to_hdf5(self.hdf5)
-
-    def get_genes_list(self, gene_ids, limit=None):
-        """
-        Get all genes contained in file in a list
-        :param gene_ids: gene ids to parse
-        :param limit: limit the genes list to this number
-        :return: list of GeneGraphic objects
-        """
-        voila_log().info('Getting genes from {0} ...'.format(self.file_name))
-        self.limit = limit
-        self.gene_ids = gene_ids
-        self.run()
-        gene_list = self.get_values()
-        self.manager_shutdown()
-        return gene_list
-
-    def get_gene_ids(self):
-        """
-        Get list of gene ids
-        :return: list
-        """
-        return list(self.hdf5[self.GENES].keys())
-
-    def get_gene(self, gene_id):
-        """
-        Get gene by its gene id.
-        :param gene_id: unique gene id
-        :return: GeneGraphics
-        """
-        return GeneGraphic.easy_from_hdf5(self.hdf5[self.GENES][gene_id])
-
-    def add_experiment_names(self, experiment_names):
-        """
-        Add experiment names to splice graph.
-        :param experiment_names: list of experiment names
-        :return: None
-        """
-        HDF5.create(self.hdf5[self.ROOT].attrs, 'experiment_names', [experiment_names])
-
-    def get_experiments_list(self):
-        """
-        Get list of experiment names from splice graph.
-        :return: list
-        """
-        voila_log().info('Getting splice graph experiment names from {0} ...'.format(self.file_name))
-        return self.hdf5[self.ROOT].attrs['experiment_names']
-
-    def check_version(self):
-        if self.file_version != constants.SPLICE_GRAPH_FILE_VERSION:
-            voila_log().warning('Splice graph file version isn\'t current.  This will probably cause significant '
-                                'issues with the voila output.  It would be best to run build again with the current '
-                                'version of MAJIQ.')

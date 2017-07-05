@@ -108,6 +108,7 @@ from majiq.src.multiproc import QueueMessage
 def prepare_lsvs(lsv, name, gc_vfunc, fitfunc_r, queue):
     majiq_config = Config()
     for exp_idx in majiq_config.tissue_repl[name]:
+        gc_f = None
         if majiq_config.gcnorm:
             try:
                 gc_f = gc_vfunc[exp_idx]

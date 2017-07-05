@@ -1,8 +1,11 @@
+import os
 from collections import defaultdict
 
+import numpy
 import numpy as np
 
-from voila.hdf5 import BinsDataSet, Psi1DataSet, Psi2DataSet, HDF5
+from voila.hdf5 import BinsDataSet, Psi1DataSet, Psi2DataSet
+from voila.hdf5 import HDF5
 from voila.splice_graphics import LsvGraphic
 
 
@@ -41,7 +44,7 @@ class Het(HDF5):
         """
         self.junction_stats.append(stats)
 
-    def cls_list(self):
+    def cls_dict(self):
         return {'groups': HetGroup}
 
 
@@ -101,32 +104,51 @@ class VoilaLsv(LsvGraphic):
         self.categories = None
         self.excl_incl = []
 
-        # Store collapsed matrix to save some space
-        if self.is_delta_psi():
-            self.trunc_bins = [collapse_matrix(bins) for bins in self.trunc_bins]
-
-        # excl_incl is used to calculate the expected psi
-        if self.means and self.is_delta_psi():
-            for mean in self.means:
-                if mean < 0:
-                    self.excl_incl.append([-mean, 0])
-                else:
-                    self.excl_incl.append([0, mean])
-
-        # For LSV filtering
         if lsv_graphic:
+            # Store collapsed matrix to save some space
+            if self.is_delta_psi():
+                self.trunc_bins = [collapse_matrix(bins) for bins in self.trunc_bins]
+
+            # excl_incl is used to calculate the expected psi
+            if self.means and self.is_delta_psi():
+                for mean in self.means:
+                    if mean < 0:
+                        self.excl_incl.append([-mean, 0])
+                    else:
+                        self.excl_incl.append([0, mean])
+
             self.init_categories()
 
     @staticmethod
     def _extend_means(means):
-        if means and len(means) == 1:
-            means.append(1 - means[0])
+        # try:
+        #     means = [m.tolist() for m in means]
+        # except (AttributeError, TypeError):
+        #     pass
+        # except ValueError:
+        #     print(means)
+        #     print(type(means))
+        #     raise
+        if means is not None and means.size == 1:
+            # means.append(1 - means[0])
+            means = numpy.append(means, numpy.array(1 - means[0]))
         return means
 
     @staticmethod
     def _extend_bins(bins):
-        if bins and len(bins) == 1:
-            bins.append(bins[-1][::-1])
+        # try:
+        #     if bins:
+        #         bins = [b.tolist() for b in bins]
+        # except AttributeError:
+        #     pass
+        # except ValueError:
+        #     print(bins)
+        #     raise
+        if bins is not None:
+            bins = numpy.array(bins)
+            if bins.size == 1:
+                # bins.append(bins[-1][::-1])
+                bins = numpy.append(bins, [numpy.flip(bins[-1], 0)], axis=0)
         return bins
 
     @property
@@ -144,7 +166,7 @@ class VoilaLsv(LsvGraphic):
     @property
     def means(self):
         ms = self._extend_means(self.trunc_means)
-        if not ms and self.bins:
+        if ms is None and self.bins.size > 0:
             if self.is_delta_psi():
                 ms = [get_expected_dpsi(b) for b in self.bins]
             else:
@@ -153,7 +175,9 @@ class VoilaLsv(LsvGraphic):
 
     @property
     def means_psi1(self):
-        return self._extend_means(self.trunc_means_psi1)
+        # print(self.trunc_means_psi1)
+        # print(self._extend_means(self.trunc_means_psi1))
+        return  self._extend_means(self.trunc_means_psi1)
 
     @property
     def means_psi2(self):
@@ -161,8 +185,8 @@ class VoilaLsv(LsvGraphic):
 
     @property
     def variances(self):
-        variances = None
-        if self.bins:
+        variances = []
+        if self.bins.size > 0:
             for bin in self.bins:
                 step_bins = 1.0 / len(bin)
                 projection_prod = bin * np.arange(step_bins / 2, 1, step_bins) ** 2
@@ -223,13 +247,14 @@ class VoilaLsv(LsvGraphic):
                 css_cats.append(c)
         return ' '.join(css_cats)
 
-    def is_lsv_changing(self, threshold):
+    @staticmethod
+    def is_lsv_changing(means, threshold):
         """
         Return true if lsv is changing based on threshold.
         :param threshold: lsv threshold value
         :return: bool
         """
-        means = np.array(self.means)
+        means = np.array(means)
         return max(means[means > 0].sum(), abs(means[means < 0].sum())) >= threshold
 
     def exclude(self):
@@ -237,7 +262,7 @@ class VoilaLsv(LsvGraphic):
 
     def to_hdf5(self, h, use_id=True):
         if use_id:
-            h = h.create_group('/lsvs/' + self.lsv_id)
+            h = h.create_group(os.path.join('/lsvs', self.lsv_id.split(':')[0], self.lsv_id))
 
         super(VoilaLsv, self).to_hdf5(h, use_id)
 
@@ -266,11 +291,7 @@ class VoilaLsv(LsvGraphic):
         # categories
         self.categories = {}
         cat_attrs = h['categories'].attrs
-        for key in cat_attrs:
-            value = cat_attrs[key]
-            if type(value) is np.bool_:
-                value = value.item()
-
+        for key, value in cat_attrs.items():
             self.categories[key] = value
 
         # bins
@@ -282,7 +303,10 @@ class VoilaLsv(LsvGraphic):
         # psi2
         self.trunc_psi2 = Psi2DataSet(h).decode_list()
 
-        self.het = Het.easy_from_hdf5(h['het'])
+        try:
+            self.het = Het.easy_from_hdf5(h['het'])
+        except KeyError:
+            self.het = None
 
         return super(VoilaLsv, self).from_hdf5(h)
 
