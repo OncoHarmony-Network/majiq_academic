@@ -522,7 +522,7 @@ class JunctionGraphic(Experiment):
         """
 
         # sanity check
-        assert len(junction_type_list) == len(reads_list), 'There is an uneven number of experiments.'
+        assert reads_list is None or (len(junction_type_list) == len(reads_list)), 'There is an uneven number of experiments.'
 
         super(JunctionGraphic, self).__init__()
         self.start = start
