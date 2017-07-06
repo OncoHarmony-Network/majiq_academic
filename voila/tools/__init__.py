@@ -1,7 +1,6 @@
 import importlib
 import inspect
 import os
-import pdb
 
 from voila.tools.tool import Tool
 from voila.voila_args import VoilaArgs
@@ -45,8 +44,7 @@ class Tools(VoilaArgs):
 
     @classmethod
     def validate_tool_file(cls, file_name):
-        return file_name not in cls.filter and os.path.isfile(
-            os.path.join(cls.tool_dir, file_name)) and not file_name.endswith('.pyc')
+        return file_name.endswith('.py') and file_name not in cls.filter
 
     @classmethod
     def tool_names(cls):
@@ -55,11 +53,7 @@ class Tools(VoilaArgs):
 
     @classmethod
     def get_members(cls, tool_name):
-        # module = importlib.import_module('{0}.{1}'.format(cls.module, tool_name))
-        if len(tool_name) > 0:
-            module = importlib.import_module('{0}.{1}'.format(cls.module, tool_name))
-        else:
-            module = importlib.import_module('{0}.{1}'.format(cls.module, "tests"))
+        module = importlib.import_module('{0}.{1}'.format(cls.module, tool_name))
         for member in inspect.getmembers(module, inspect.isclass):
             if member[0] != 'Tool' and issubclass(member[1], cls.tool_subclass):
                 yield member[1]
@@ -81,4 +75,3 @@ class Tools(VoilaArgs):
     @classmethod
     def arg_parents(cls):
         return ()
-
