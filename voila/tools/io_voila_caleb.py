@@ -1,4 +1,6 @@
-from voila.tools import Tool, lookup, find_voila_txts
+from voila.tools import Tool
+from voila.tools import lookup
+from voila.tools import find_voila_txts
 import os
 import pandas as pa
 import pdb
