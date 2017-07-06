@@ -1,7 +1,5 @@
 from voila.tools import Tool
-from voila.tools import lookup
 from voila.tools import find_voila_txts
-from voila.tools import binary_like_arrays
 import os
 import pandas as pa
 import pdb
@@ -1033,29 +1031,6 @@ def get_name_of_psi_keys(lsv):
     if count != 2:
         raise RuntimeError("Couldn't find 2 E(PSI) in the LSV...")
     return keys[0], keys[1]
-
-
-def get_lsv(data, lsv_id, comparison=False):
-    """
-    Given LSV ID, and quick import, return any LSV from the
-     data.
-
-     Args:
-         data : quick import
-         lsv_id : lsv id...
-        comparison: if comparison name (Str) given, use that to get the LSV.
-    """
-    check_is_quick_import(data)
-    lsv_dicts = lookup.lookup_everywhere(data,
-                                         lsv_id,
-                                         save_lsv_structure_lookup=False,
-                                         print_bool=False)
-    if comparison:
-        comparison = comparison
-    else:
-        comparison = lsv_dicts.keys()[0]
-    lsv = lsv_dicts[comparison].values()[0]
-    return lsv
 
 
 def get_lsvs_quickly(data_qu, lsvids_qu, comparison_qu=False):

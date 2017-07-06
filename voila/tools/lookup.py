@@ -1,6 +1,5 @@
 from voila.tools import Tool
 from voila.tools import io_voila_caleb
-from voila.tools import find_voila_txts
 import os
 import subprocess
 import platform
@@ -215,6 +214,29 @@ def lookup(lsv_dictionary,
         print_lsv(new_dict, print_bool=True, abbreviated=abbreviated)
         return
     return new_dict
+
+
+def get_lsv(data, lsv_id, comparison=False):
+    """
+    Given LSV ID, and quick import, return any LSV from the
+     data.
+
+     Args:
+         data : quick import
+         lsv_id : lsv id...
+        comparison: if comparison name (Str) given, use that to get the LSV.
+    """
+    io_voila_caleb.check_is_quick_import(data)
+    lsv_dicts = lookup_everywhere(data,
+                                         lsv_id,
+                                         save_lsv_structure_lookup=False,
+                                         print_bool=False)
+    if comparison:
+        comparison = comparison
+    else:
+        comparison = lsv_dicts.keys()[0]
+    lsv = lsv_dicts[comparison].values()[0]
+    return lsv
 
 
 def get_voila_link(vo_data,
