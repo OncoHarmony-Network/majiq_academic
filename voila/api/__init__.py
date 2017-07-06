@@ -12,6 +12,7 @@ from voila.utils.exceptions import GeneIdNotFoundInVoilaFile, GeneIdNotFoundInSp
 from voila.utils.voila_log import voila_log
 from voila.vlsv import VoilaLsv, get_expected_dpsi
 
+import pdb
 
 class Voila(object):
     VERSION = '/voila_file_version'
@@ -128,6 +129,7 @@ class Voila(object):
         return sum(1 for _ in self.get_lsvs(args))
 
     def get_voila_lsvs(self, args=None, gene_id=None):
+        #pdb.set_trace()
         return (self.get_voila_lsv(gene_id, lsv_id) for gene_id, lsv_id in self.get_lsvs(args, gene_id))
 
     def get_gene_ids(self, args=None):
@@ -145,7 +147,6 @@ class Voila(object):
         :return: list
         """
         lsv_ids, threshold = None, None
-
         if args:
             lsv_ids = args.lsv_ids
 

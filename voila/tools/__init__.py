@@ -33,7 +33,6 @@ class Tools(VoilaArgs):
     def add_arguments(cls, parser):
         subparser = parser.add_subparsers(dest='tool')
         subparser.required = True
-
         for tool_name in cls.tool_names():
             tool = cls.get_tool(tool_name)
             tool_parser = tool.arguments()

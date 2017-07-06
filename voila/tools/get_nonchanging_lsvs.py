@@ -3,6 +3,7 @@ from voila.io_voila import Voila
 import pickle as pkl
 import numpy as np
 import pdb
+import os
 
 class ThisisGetNonChangingLSVs(Tool):
     help = 'Given a directory, return all voila txt files inside it, recursively'
@@ -18,6 +19,10 @@ class ThisisGetNonChangingLSVs(Tool):
         parser.add_argument('voila_txt',
                             type=str,
                             help='Voila tab output text file')
+        parser.add_argument('out_dir',
+                            type=str,
+                            help='Directory save pickle file results. Name will be same as tsv, but '
+                                 'with deltapsi_no_prior instead of deltapsi_deltapsi.')
         # help_mes = 'Optional flag: return comparison names ?'
         # parser.add_argument('--return-names',
         #                     action='store_true',
@@ -29,15 +34,15 @@ class ThisisGetNonChangingLSVs(Tool):
         dv = "/Users/cradens/Desktop/data_transfer/nonchange_tests/KA_N_0_AvsKA_T0_72_A/KA_N_0_A_KA_T0_72_A.deltapsi.voila"
         pl = "/Users/cradens/Desktop/data_transfer/nonchange_tests/KA_N_0_AvsKA_T0_72_A/KA_N_0_A_KA_T0_72_A.priormatrix.pkl"
         tsv = "/Users/cradens/Desktop/data_transfer/nonchange_tests/KA_N_0_AvsKA_T0_72_A/KA_N_0_A_KA_T0_72_A.deltapsi_deltapsi.tsv"
-        tsv = "/Users/cradens/home_base/majiq/voila/tools/unittests/tool_test_data/example_voila_tab_out.deltapsi_deltapsi.tsv"
-        res=get_conf_nonchange(deltapsi_voila=dv,
-                                 deltapsi_prior=pl,
-                                 deltapsi_tabfile=tsv)
-        pdb.set_trace()
-        # print(get_conf_nonchange(deltapsi_voila=args.voila_deltapsi_object,
-        #                          deltapsi_prior=args.prior_matrix,
-        #                          deltapsi_tabfile=args.voila_txt))
 
+        res = get_conf_nonchange(deltapsi_voila=args.voila_deltapsi_object,
+                                 deltapsi_prior=args.prior_matrix,
+                                 deltapsi_tabfile=args.voila_txt)
+        newname = os.path.basename(tsv)
+        newname.replace("deltapsi_deltapsi", "deltapsi_no_prior")
+        newname.replace("tsv", "pickle")
+        outpath = os.path.join(args.out_dir, newname)
+        pkl.dump(res, open(outpath, "wb"))
 
 def get_conf_nonchange(deltapsi_voila, deltapsi_prior, deltapsi_tabfile):
     """
@@ -52,8 +57,6 @@ def get_conf_nonchange(deltapsi_voila, deltapsi_prior, deltapsi_tabfile):
         print("done")
         tissue_priors = np.array(get_file(deltapsi_prior))
         print("Loading voila text file %s" % deltapsi_tabfile)
-        #deltapsi_txt = np.loadtxt(deltapsi_tabfile, delimiter='\t', dtype=str)
-        #pdb.set_trace()
         deltapsi_txt = np.loadtxt(deltapsi_tabfile, delimiter='\t', dtype=bytes).astype(str)
         print("done")
         lsv_ids = deltapsi_txt[:, 2]
@@ -63,13 +66,13 @@ def get_conf_nonchange(deltapsi_voila, deltapsi_prior, deltapsi_tabfile):
             junctions[lsv_ids[ii]] = junction_list[ii].split(';')
 
         dist_no_priors_edpsi_all = dict()
-        i=0
+        i=1
         for tissue_lsv in tissue_lsvs:
             print(i)
             dist_no_priors_edpsi = list()
             if tissue_lsv.lsv_id not in lsv_ids:
                 continue
-            elif i >= len(lsv_ids):
+            elif i == len(lsv_ids):
                 break
             for junction_number in range(len(junctions[tissue_lsv.lsv_id])):
                 prior_info = np.log(collapse_matrix(tissue_priors[0, :, :]))
