@@ -1,6 +1,7 @@
 import importlib
 import inspect
 import os
+import pdb
 
 from voila.tools.tool import Tool
 from voila.voila_args import VoilaArgs
@@ -54,7 +55,11 @@ class Tools(VoilaArgs):
 
     @classmethod
     def get_members(cls, tool_name):
-        module = importlib.import_module('{0}.{1}'.format(cls.module, tool_name))
+        # module = importlib.import_module('{0}.{1}'.format(cls.module, tool_name))
+        if len(tool_name) > 0:
+            module = importlib.import_module('{0}.{1}'.format(cls.module, tool_name))
+        else:
+            module = importlib.import_module('{0}.{1}'.format(cls.module, "tests"))
         for member in inspect.getmembers(module, inspect.isclass):
             if member[0] != 'Tool' and issubclass(member[1], cls.tool_subclass):
                 yield member[1]
