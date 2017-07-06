@@ -31,20 +31,19 @@ class ThisisGetNonChangingLSVs(Tool):
         return parser
 
     def run(self, args):
-        dv = "/Users/cradens/Desktop/data_transfer/nonchange_tests/KA_N_0_AvsKA_T0_72_A/KA_N_0_A_KA_T0_72_A.deltapsi.voila"
-        pl = "/Users/cradens/Desktop/data_transfer/nonchange_tests/KA_N_0_AvsKA_T0_72_A/KA_N_0_A_KA_T0_72_A.priormatrix.pkl"
-        tsv = "/Users/cradens/Desktop/data_transfer/nonchange_tests/KA_N_0_AvsKA_T0_72_A/KA_N_0_A_KA_T0_72_A.deltapsi_deltapsi.tsv"
-
-        res = get_conf_nonchange(deltapsi_voila=args.voila_deltapsi_object,
-                                 deltapsi_prior=args.prior_matrix,
-                                 deltapsi_tabfile=args.voila_txt)
-        newname = os.path.basename(tsv)
+        newname = os.path.basename(args.voila_txt)
+        print("removing prior from %s " % newname)
+        res = remove_prior(deltapsi_voila=args.voila_deltapsi_object,
+                           deltapsi_prior=args.prior_matrix,
+                           deltapsi_tabfile=args.voila_txt)
+        print("Saving results to % " % args.out_dir)
         newname.replace("deltapsi_deltapsi", "deltapsi_no_prior")
         newname.replace("tsv", "pickle")
         outpath = os.path.join(args.out_dir, newname)
         pkl.dump(res, open(outpath, "wb"))
 
-def get_conf_nonchange(deltapsi_voila, deltapsi_prior, deltapsi_tabfile):
+
+def remove_prior(deltapsi_voila, deltapsi_prior, deltapsi_tabfile):
     """
     :param deltapsi_voila: *.deltapsi.voila
     :param deltapsi_prior: *.priomatrix.pkl
@@ -94,14 +93,15 @@ def collapse_matrix(matrix):
 
 
 def find_delta_border(V, numbins):
-    "Finds the border index to which a V corresponds in its delta_space given the number of bins the matrix will have"
+    """Finds the border index to which a V corresponds in its delta_space given
+    the number of bins the matrix will have"""
     delta_space = list(np.linspace(-1, 1, num=numbins+1))
-    delta_space.pop(0) #first border to the left is -1, and we are not interested in it
-    #get the index position that corresponds to the V threshold
+    delta_space.pop(0)  # first border to the left is -1, and we are not interested in it
+    # get the index position that corresponds to the V threshold
     for i, value in enumerate(delta_space):
         if value > V:
             return i
-    #if nothing hit, V = 1
+    # if nothing hit, V = 1
     return numbins
 
 
@@ -111,17 +111,17 @@ def matrix_area(matrix, thresh=0.2, absolute=True, collapsed_mat=True):
     collapse = matrix
     if not collapsed_mat:
         collapse = collapse_matrix(matrix)
-    #get the delta psi histogram borders based on the size of 'collapse'
+    # get the delta psi histogram borders based on the size of 'collapse'
     border = find_delta_border(thresh, collapse.shape[0])
-    #grab the values inside the area of interest
+    # grab the values inside the area of interest
     area = []
     if thresh < 0:
         area.append(collapse[0:border+1])
-        if absolute: #if absolute V, pick the other side of the array
+        if absolute:  # if absolute V, pick the other side of the array
             area.append(collapse[-border-1:])
     else:
         area.append(collapse[border:])
-        if absolute: #if absolute V, pick the other side of the array
+        if absolute:  # if absolute V, pick the other side of the array
             area.append(collapse[0:len(collapse)-border])
     return np.sum(area)
 
