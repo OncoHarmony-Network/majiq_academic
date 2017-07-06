@@ -1,6 +1,7 @@
 from voila.tools import Tool
 from voila.tools import lookup
 from voila.tools import find_voila_txts
+from voila.tools import binary_like_arrays
 import os
 import pandas as pa
 import pdb
