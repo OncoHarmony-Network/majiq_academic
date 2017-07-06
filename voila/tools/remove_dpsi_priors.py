@@ -33,9 +33,9 @@ class ThisisGetNonChangingLSVs(Tool):
     def run(self, args):
         newname = os.path.basename(args.voila_txt)
         print("removing prior from %s " % newname)
-        res = remove_prior(deltapsi_voila=args.voila_deltapsi_object,
-                           deltapsi_prior=args.prior_matrix,
-                           deltapsi_tabfile=args.voila_txt)
+        res = remove_dpsi_priors(deltapsi_voila=args.voila_deltapsi_object,
+                                 deltapsi_prior=args.prior_matrix,
+                                 deltapsi_tabfile=args.voila_txt)
         print("Saving results to % " % args.out_dir)
         newname.replace("deltapsi_deltapsi", "deltapsi_no_prior")
         newname.replace("tsv", "pickle")
@@ -43,7 +43,7 @@ class ThisisGetNonChangingLSVs(Tool):
         pkl.dump(res, open(outpath, "wb"))
 
 
-def remove_prior(deltapsi_voila, deltapsi_prior, deltapsi_tabfile):
+def remove_dpsi_priors(deltapsi_voila, deltapsi_prior, deltapsi_tabfile):
     """
     :param deltapsi_voila: *.deltapsi.voila
     :param deltapsi_prior: *.priomatrix.pkl
