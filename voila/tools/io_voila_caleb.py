@@ -1,9 +1,11 @@
 from voila.tools import Tool
-from voila.tools import find_voila_files
 import os
 import pandas as pa
 import pdb
 import copy
+
+from voila.tools.utils import find_files
+from voila.utils.voila_log import voila_log
 
 
 class ThisisFindBinaryLSVs(Tool):
@@ -48,6 +50,9 @@ class ThisisFindBinaryLSVs(Tool):
                                 cutoff_prob=0,
                                 pattern=args.pattern,
                                 keep_ir=consider_ir)
+
+
+LOG = voila_log()
 
 
 def quick_import(dir,
@@ -117,17 +122,18 @@ def quick_import(dir,
         else:
             raise ValueError(dir + " not found.")
     else:
-        print("Searching for %s files ..." % pattern)
-        dpsi_comparison_name, dpsi_files = find_voila_files.get_voila_files(dir,
-                                                                            pattern=pattern,
-                                                                            get_comp_names=True)
+        LOG.info("Searching for %s files ..." % pattern)
+        dpsi_comparison_name, dpsi_files = find_files.get_voila_files(dir,
+                                                                      pattern=pattern,
+                                                                      get_comp_names=True)
         if len(dpsi_comparison_name) != len(dpsi_files):
             raise ValueError("Something is probably screwy with the names "
                              "of the dPSI text files...")
     if len(dpsi_files) == 0:
         raise RuntimeError("Didn't find any voila txt files...")
-    print("Found " + str(len(dpsi_files)) +
-          " dPSI text files to import ...")
+
+    LOG.info("Found " + str(len(dpsi_files)) +
+             " dPSI text files to import ...")
     imported_files = dict()
     funky_ids = list()
 
@@ -221,7 +227,7 @@ def import_dpsi(fp,
                 file_headers.extend(line_split)
                 condition_1_name = line_split[5].split(" ")[0]
                 condition_2_name = line_split[6].split(" ")[0]
-                print("Importing %s vs %s deltapsi data ..." % (condition_1_name, condition_2_name))
+                LOG.info("Importing %s vs %s deltapsi data ..." % (condition_1_name, condition_2_name))
                 if "Voila Link" in file_headers:
                     has_voila = True
                 else:
@@ -522,7 +528,7 @@ def get_deseq_diff_expr_genes(deseq_dir,
     """
     if deseq_res_pref_pattern[-1] != "_":
         deseq_res_pref_pattern = deseq_res_pref_pattern + "_"
-    deseq_fps = find_voila_files.find_files(Path=deseq_dir, Pattern=deseq_fname_pattern, Recursive=recursive)
+    deseq_fps = find_files.find_files(Path=deseq_dir, Pattern=deseq_fname_pattern, Recursive=recursive)
     if len(deseq_fps) == 0:
         raise RuntimeError(
             "No DESeq files found with pattern: '%s' in Directory:\n%s" % (deseq_fname_pattern, deseq_dir))
@@ -553,7 +559,7 @@ def get_deseq_genes(DESeqDirectory,
     """
     if Prefix[-1] != "_":
         Prefix = Prefix + "_"
-    deseq_fps = find_voila_files.find_files(Path=DESeqDirectory, Pattern=Pattern, Recursive=Recursive)
+    deseq_fps = find_files.find_files(Path=DESeqDirectory, Pattern=Pattern, Recursive=Recursive)
     if len(deseq_fps) == 0:
         raise RuntimeError("No DESeq files found with pattern: '%s' in Directory:\n%s" % (Pattern, DESeqDirectory))
     results = dict()
@@ -734,8 +740,8 @@ def lsv_dict_subset(dictionary,
             new_dict["condition_2_name"] = dictionary["condition_2_name"]
 
     if None in new_dict.values():
-        print("Warning: at least 1 key wasn't found in the dictionary."
-              "value of None was assigned to such keys.")
+        LOG.info("Warning: at least 1 key wasn't found in the dictionary."
+                 "value of None was assigned to such keys.")
     if new_values:
         for key, new_value in zip(keys, new_values):
             new_dict[key][new_sub_key] = new_value
@@ -756,8 +762,8 @@ def lsvs_length(data):
             n_shared = len(shared_lsvs)
         else:
             n_shared = 0
-        print("%s Shared LSVs between all comparisons." % (n_shared))
-        print("Total of %s unique LSVs across all comparisons." % (n_all))
+        LOG.info("%s Shared LSVs between all comparisons." % (n_shared))
+        LOG.info("Total of %s unique LSVs across all comparisons." % (n_all))
 
 
 def remove_genes(rm_data,
@@ -787,12 +793,12 @@ def remove_genes(rm_data,
             if gene in sig_gene_ids:
                 n_r += 1
                 removed_ids.append(rm_data[comp].pop(lsv_id))
-        print("%s: %s LSVs (%s diff-expr genes) removed leaving %s LSVs" % (comp, n_r, n_s, n_t - n_r))
+        LOG.info("%s: %s LSVs (%s diff-expr genes) removed leaving %s LSVs" % (comp, n_r, n_s, n_t - n_r))
     data_comps = set(rm_data.keys())
     comps_with_deseq_res = set(comps_with_deseq_res)
     leftover = list(comps_with_deseq_res - data_comps)
     if len(leftover) > 0:
-        print("The following comparisons didn't have DESeq results:\n%s" % leftover)
+        LOG.info("The following comparisons didn't have DESeq results:\n%s" % leftover)
     if return_diff_expr_lsvids:
         return removed_ids
 
@@ -994,7 +1000,7 @@ def get_all_unique_lsv_ids(data,
         all_lsvs.extend(lsvs)
         if verbose:
             n_lsvs = len(lsvs)
-            print("%s LSVs in %s" % (n_lsvs, comparison_name))
+            LOG.info("%s LSVs in %s" % (n_lsvs, comparison_name))
     return list(set(all_lsvs))
 
 
@@ -1093,7 +1099,7 @@ def greatest_dpsi(LSV_dict, Change=1.0, Probability=0.95, Verbose=True):
         all_changes = dict()
         for LSV_dict_name in LSV_dict.keys():
             if Verbose:
-                print("Analyzing " + LSV_dict_name + " ...")
+                LOG.info("Analyzing " + LSV_dict_name + " ...")
             all_changes[LSV_dict_name] = greatest_dpsi(LSV_dict[LSV_dict_name], Change, Probability, Verbose)
         non_empty_lsv_dicts = remove_empty_lsv_dicts(all_changes, Verbose)
         return non_empty_lsv_dicts
@@ -1107,20 +1113,20 @@ def greatest_dpsi(LSV_dict, Change=1.0, Probability=0.95, Verbose=True):
     # If nothing met cutoff, tell user what highest cuttoff is:
     if len(over_cutoff) == 0:
         if Verbose:
-            print("No junctions in the LSVs had a dPSI of " + str(Change) +
-                  ", now searching for biggest dPSI...")
+            LOG.info("No junctions in the LSVs had a dPSI of " + str(Change) +
+                     ", now searching for biggest dPSI...")
 
         # Keep trying to find LSVs starting at Change %,
         #  and going down bit by bit until a LSV is returned.
         for cutoff in calebs_xrange(Change, 0, -0.01):
             if int(cutoff * 100.0) % int(0.05 * 100.0) == 0:
                 if Verbose:
-                    print("trying", cutoff, "...")
+                    LOG.info("trying", cutoff, "...")
             # Don't sum for the cutoff! (False) <- see function desc
             over_cutoff = get_sig_lsv_ids(LSV_dict, cutoff, Probability, False)
             if len(over_cutoff) > 0:
                 if Verbose:
-                    print("Max dPSI identifed as: ", cutoff)
+                    LOG.info("Max dPSI identifed as: ", cutoff)
                 break
 
     subset_lsv_dict = lsv_dict_subset(LSV_dict, over_cutoff, True)
@@ -1164,11 +1170,11 @@ def remove_empty_lsv_dicts(data, print_status=True):
             remove_empty = remove_empty_lsv_dicts(lsv_dict, print_status)
             if remove_empty == "empty":
                 if print_status:
-                    print(LSV_dict_name + " was empty.")
+                    LOG.info(LSV_dict_name + " was empty.")
             else:
                 new_dict[LSV_dict_name] = lsv_dict
         if len(new_dict) == 0:
-            print("Warning! All LSV_dicts were empty...")
+            LOG.info("Warning! All LSV_dicts were empty...")
         return new_dict
     check_is_lsv_dict(data)
     lsv_ids = get_LSV_IDs(data)
@@ -1416,38 +1422,38 @@ def impute_missing_lsvs(data,
     """
     if in_place:
         if warnings:
-            print("WARNING: YOUR MAJIQ RESULTS WILL BE OVERWRITTERN SINCE InPlace=True")
+            LOG.info("WARNING: YOUR MAJIQ RESULTS WILL BE OVERWRITTERN SINCE InPlace=True")
     check_is_quick_import(data)
     unique_ids = set(get_all_unique_lsv_ids(data))
     new_dict = dict()
     blanked_dict = dict()
     for comparison in list(data.keys()):
         if verbose:
-            print("Filling in the LSV gaps for", comparison, "...")
+            LOG.info("Filling in the LSV gaps for", comparison, "...")
         this_comps_lsvids = set(get_LSV_IDs(data[comparison]))
         only_in_unique = unique_ids - this_comps_lsvids
         blanked_dict[comparison] = only_in_unique
         if len(only_in_unique) == 0:
-            print("%s has all the LSVs already!" % comparison)
+            LOG.info("%s has all the LSVs already!" % comparison)
             if not in_place:
                 if verbose:
-                    print("Deep copying...")
+                    LOG.info("Deep copying...")
                 new_dict[comparison] = copy.deepcopy(data[comparison])
             continue
         only_in_unique_lsvs = get_lsvs_quickly(data, only_in_unique)
         if verbose:
-            print("Imputing...")
+            LOG.info("Imputing...")
         only_in_unique_lsvs_blanked = impute_lsvs(only_in_unique_lsvs, imputing_with=impute_with)
         if verbose:
-            print("Finished imputing...")
+            LOG.info("Finished imputing...")
         only_in_unique_lsvs_blanked_dict = {x["LSV ID"]: x for x in only_in_unique_lsvs_blanked}
         if not in_place:
             # Copy the dict, new object!
             if verbose:
-                print("Deep copying...")
+                LOG.info("Deep copying...")
             new_dict[comparison] = copy.deepcopy(data[comparison])
             if verbose:
-                print("Updating...")
+                LOG.info("Updating...")
             new_dict[comparison].update(only_in_unique_lsvs_blanked_dict)
         else:
             data[comparison].update(only_in_unique_lsvs_blanked_dict)

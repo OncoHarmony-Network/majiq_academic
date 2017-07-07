@@ -1,6 +1,6 @@
 import unittest
 
-from voila.tools.find_voila_files import get_voila_files
+from voila.tools.utils.find_files import get_voila_files
 
 
 class TestStringMethods(unittest.TestCase):

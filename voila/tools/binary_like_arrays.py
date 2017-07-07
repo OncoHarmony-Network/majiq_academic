@@ -2,16 +2,9 @@ from voila.tools import Tool
 from voila.tools import io_voila_caleb
 from voila.tools import find_binary_lsvs
 from voila.tools.utils import random_merge_numpy
-import pandas as pa
-import os
-import itertools
-import math
+
 import numpy as np
-import numpy.lib.recfunctions
 import pandas as pa
-import copy
-import operator
-import pdb
 
 
 class ThisisBinaryLikeArrays(Tool):

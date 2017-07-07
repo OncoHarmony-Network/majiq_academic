@@ -1,5 +1,7 @@
 from voila.tools import Tool
 from voila.tools import io_voila_caleb
+from voila.utils.voila_log import voila_log
+
 import os
 import itertools
 import math
@@ -90,7 +92,10 @@ class ThisisFindBinaryLSVs(Tool):
                                                         cutoff_prob=args.prob_dpsi_thresh,
                                                         keep_introns=consider_ir)
         if args.just_ids:
-            print(results)
+            LOG.info(results)
+
+
+LOG = voila_log()
 
 
 def get_binary_lsvs(data,
@@ -117,15 +122,15 @@ def get_binary_lsvs(data,
         method: 'sum_to_95' or 'count' ... see find_binary_lsv_ids and find_binary_lsvs_95
     """
     io_voila_caleb.check_is_quick_import(data)
-    print("Getting num_d_psi data ...")
+    LOG.info("Getting num_d_psi data ...")
     num_d_psi_data = get_num_d_psi(data)
     if cutoff_psi < 1:
-        print("Getting num_psi data ...")
+        LOG.info("Getting num_psi data ...")
         numPSIs_data = get_num_psi(data)
     else:
         numPSIs_data = "doesnt matter"
-    print("Categorizing LSVs from the following comparisons ...")
-    print(list(data.keys()))
+    LOG.info("Categorizing LSVs from the following comparisons ...")
+    LOG.info(list(data.keys()))
     if method == "count":
         results = find_binary_lsv_ids(num_d_psi_data,
                                       numPSIs_data,
@@ -225,12 +230,12 @@ def find_binary_lsv_ids(num_d_psi,
     zero_over_ids = list()  # zero junctions
     all_indices = dict()
     sig_juncs_dict = dict()
-    print("Counting how many juncs utilized in %s LSVs ..." % len(lsv_ids))
+    LOG.info("Counting how many juncs utilized in %s LSVs ..." % len(lsv_ids))
     i = 1.0
     indeces_at_10_percent = percent_through_list(lsv_ids, 0.1)
     for lsv_id in lsv_ids:
         if i > 0.0 and i in indeces_at_10_percent:
-            print(str(indeces_at_10_percent[i]) + "% of juncs looked at...")
+            LOG.info(str(indeces_at_10_percent[i]) + "% of juncs looked at...")
         i += 1.0
         this_num_d_psi = num_d_psi[lsv_id]
 
@@ -291,7 +296,7 @@ def find_binary_lsv_ids(num_d_psi,
     n_1 = len(complex_single_ids)
     n_2 = len(binary_ids)
     n_comp = len(complex_over_ids)
-    print("%s non-sig, %s single junc, %s binary-like, %s complex LSVs categorized." % (n_0, n_1, n_2, n_comp))
+    LOG.info("%s non-sig, %s single junc, %s binary-like, %s complex LSVs categorized." % (n_0, n_1, n_2, n_comp))
     return results
 
 
@@ -317,7 +322,7 @@ def find_binary_lsvs_95(num_d_psi,
     zero_over_ids = list()  # zero junctions
     all_indices = dict()
     sig_juncs_dict = dict()
-    print("%s shared LSVs being categorized..." % len(lsv_ids))
+    LOG.info("%s shared LSVs being categorized..." % len(lsv_ids))
     for lsv_id in lsv_ids:
         # if lsv_id == 'ENSG00000003756:50131151-50131763:target':
         #     #pass
@@ -331,7 +336,7 @@ def find_binary_lsvs_95(num_d_psi,
         top = 0  # initialize
         # Use PSI to determing binary-ness:
         if by_psi:
-            print("Gotta be straight with you, Caleb was lazy and didn't implement "
+            LOG.info("Gotta be straight with you, Caleb was lazy and didn't implement "
                   "the thresh option for binary PSI... fix this")
             abs_junc_maxes = np.max(abs(this_num_psi), axis=1)  # max per row (junction)
             i = -1
@@ -408,7 +413,7 @@ def find_binary_lsvs_95(num_d_psi,
     n_1 = len(complex_single_ids)
     n_2 = len(binary_ids)
     n_comp = len(complex_over_ids)
-    print("%s non-sig, %s single junc, %s binary-like, %s complex LSVs categorized." % (n_0,
+    LOG.info("%s non-sig, %s single junc, %s binary-like, %s complex LSVs categorized." % (n_0,
                                                                                         n_1,
                                                                                         n_2,
                                                                                         n_comp))
@@ -545,7 +550,7 @@ def get_exons_containing_junc(Data, LSV_ID, Junc):
     LSV = io_voila_caleb.get_lsv(Data, LSV_ID)
     exons_str = io_voila_caleb.get_exons(LSV)
     exons_int = string_to_int_coords(exons_str)
-    matched_exons_int = io_voila_caleb.get_exons_containing_coord(exons_int, Junc)
+    matched_exons_int = get_exons_containing_coord(exons_int, Junc)
     return matched_exons_int
 
 
@@ -645,7 +650,7 @@ def is_junc_connected_to_utilized_exon(Data,
     Junction_str = int_to_string_coords([Junction_Int])[0]
     ref_junc_coord = ref_chrm + "_" + ref_strand + "_" + Junction_str
     if Junc_maxPSI_dict[ref_junc_coord] < PSI_thresh:
-        print("Warning, junction %s isn't even used by LSV %s..." % (Junction_Int, LSV_ID))
+        LOG.info("Warning, junction %s isn't even used by LSV %s..." % (Junction_Int, LSV_ID))
         return False
     lsv_type_to_check = opposite_type(LSV["Reference_Type"])
     source_target_dict = get_sources_and_targets(Data, LSV_ID, Junction_Int)
@@ -700,7 +705,7 @@ def is_junc_connected_to_utilized_exon(Data,
         # for example 'NOVEL_INTRON_RETENTION'
         if isinstance(non_ref_junc, str):
             return False
-        ex_to_ch_int = io_voila_caleb.get_exons_containing_coord(ex_to_ch_int, non_ref_junc)
+        ex_to_ch_int = get_exons_containing_coord(ex_to_ch_int, non_ref_junc)
         # make doubly sure that the junction of interest is hitting a non-ref
         # exon of some sort
         if len(ex_to_ch_int) < 1:
@@ -935,7 +940,7 @@ def Junc_to_LSVs(Data, LSV_ID, Junc):
         exon_coords_str = key.split("_")[1]
         exon_coords_int = string_to_int_coords([exon_coords_str])[0]
         exons.append(exon_coords_int)
-    matched_exons = io_voila_caleb.get_exons_containing_coord(exons, Junc)
+    matched_exons = get_exons_containing_coord(exons, Junc)
     matched_exons_str = int_to_string_coords(matched_exons)
     matched_gene_exons_str = [gene_id + "_" + ex_str for ex_str in matched_exons_str]
     matched_exon_to_lsv_dict = {k: exon_to_lsv_dict.get(k, None) for k in matched_gene_exons_str}
@@ -1109,13 +1114,13 @@ def check_if_alt_exon_shared(alt1_junc, alt2_junc, ex):
         else:
             junc_df_ex = [min(alt2_junc), max(alt1_junc)]
         if junc_df_ex == ex:
-            print("stuck in loop ...")
+            LOG.info("stuck in loop ...")
             pdb.set_trace()
         if check_if_alt_exon_shared(alt1_junc, alt2_junc, junc_df_ex):
-            print("recursively checking alt exon...")
+            LOG.info("recursively checking alt exon...")
             return True
         else:
-            print("Oddity here..")
+            LOG.info("Oddity here..")
             return False
     else:
         # print "hmm ..."
@@ -1166,10 +1171,10 @@ def get_cassettes(Excl_dict):
                     n_complex += n_lsvs
                     three_plus.append(data)
                 else:
-                    print("Why are there 0 here?")
+                    LOG.info("Why are there 0 here?")
                     pdb.set_trace()
                 total += n_lsvs
-    print("Found %s single LSV, %s cassette-like, %s matched excl non-cassette, and %s (%s LSVs) multi-LSV events "
+    LOG.info("Found %s single LSV, %s cassette-like, %s matched excl non-cassette, and %s (%s LSVs) multi-LSV events "
           "from %s total." % (len(single),
                               len(cassette),
                               len(matched_excl_non_cassette),
@@ -1221,7 +1226,7 @@ def gen_excl_dict(Binary_coord_data):
         excl_dict[chrom][strand][excl_junc_coords]["strand"] = strand
         n_lsvs += 1
         # excl_dict[chrom][strand][alt_junc_coords]["ref_coords"].append()
-    print("From %s LSVs, extracted %s exclusion coordinates..." % (len(Binary_coord_data), n_lsvs))
+    LOG.info("From %s LSVs, extracted %s exclusion coordinates..." % (len(Binary_coord_data), n_lsvs))
     return excl_dict
 
 
@@ -1337,7 +1342,7 @@ def get_binary_coords(Binary_Data,
                 not_enough_exons.append(lsv_id)
                 new_lsv_dict[lsv_id]["alt_exons"] = "ODDITY"
         except:
-            print("Unknown Error...")
+            LOG.info("Unknown Error...")
             pdb.set_trace()
     oddities.extend(alt_ref_same_target)
     oddities = list(set(oddities))
@@ -1346,7 +1351,7 @@ def get_binary_coords(Binary_Data,
             new_lsv_dict.pop(lsvid)
     if Return_oddity_ids:
         return new_lsv_dict, oddities
-    print("%s non-classical events discarded from %s total, leaving %s" % (len(oddities),
+    LOG.info("%s non-classical events discarded from %s total, leaving %s" % (len(oddities),
                                                                            len(lsv_ids),
                                                                            len(new_lsv_dict)))
     return new_lsv_dict
@@ -1444,11 +1449,11 @@ def singly_unique(data,
                                                                             cutoff_psi=1,
                                                                             save_blanked_structure=True,
                                                                             return_numdpsis_dat=True)
-    print("Building non_red id dictionary ...")
+    LOG.info("Building non_red id dictionary ...")
     id_dict = non_redundant_id_dict(non_red_sets,
                                     cutoff_dpsi=0.1,
                                     cutoff_psi=1)
-    print("Getting all Prob(dPSI) data ...")
+    LOG.info("Getting all Prob(dPSI) data ...")
     all_prob_data, comp_names = get_num_prob(data, True)
     sig_subset = io_voila_caleb.subset_significant(data,
                                                    sig_dpsi_thresh,
@@ -1479,11 +1484,11 @@ def singly_unique(data,
         comparisons_ii = [comp_names.index(x) for x in data.keys()]
     thelsvs = all_num_dpsis_data.keys()
     indeces_at_10_percent = percent_through_list(thelsvs, 0.1)
-    print("Assigning %s LSVs to groups ... " % (len(thelsvs)))
+    LOG.info("Assigning %s LSVs to groups ... " % (len(thelsvs)))
     i = 0.0
     for lsv_id in thelsvs:
         if i > 0.0 and i in indeces_at_10_percent:
-            print(str(indeces_at_10_percent[i]) + "% of LSVs processed...")
+            LOG.info(str(indeces_at_10_percent[i]) + "% of LSVs processed...")
         i += 1.0
         if firstpdb:
             if isinstance(firstpdb, str):
@@ -1586,7 +1591,7 @@ def singly_unique(data,
             # if multiple junctions agree on a LSVs comparisons:
             if neg1 == pos1:
                 if neg1 == 0 and pos1 == 0:
-                    print("unsure0")
+                    LOG.info("unsure0")
                     pdb.set_trace()
                 # could be an LSV shared by multiple comparisons..
                 if must_reciprocate:
@@ -1656,10 +1661,10 @@ def singly_unique(data,
                 else:
                     non_sig["no_comp_assoc"].append(lsv_id)
             else:
-                print("unsure4")
+                LOG.info("unsure4")
                 pdb.set_trace()
 
-    print("Finished analyzing LSVs!")
+    LOG.info("Finished analyzing LSVs!")
     all_uniques = list(set(all_uniques))
     comp_names = list(singly_unique_sig.keys())
     comp_names.sort()
@@ -1752,7 +1757,7 @@ def singly_unique(data,
         summary_text += "%s LSVs were not grouped because they're non-reciprocating, %s NonRedNetworks\n" % (
             n_lsvs_nonrec,
             n_nonrec_sets)
-    print(summary_text)
+    LOG.info(summary_text)
     if unblank_the_data:
         io_voila_caleb.unimpute_lsv_data(data, blanked_lsvs_dict)
     results = {"singly_unique": singly_unique_sig,
@@ -1881,13 +1886,13 @@ def sig_utilized_non_red_sets(Data,
                                                         Keep_introns)
     sig_ids = io_voila_caleb.get_all_unique_lsv_ids(sig_dict_subset)
     n_s = len(sig_ids)
-    print("Identifying which NonRed sets are 'utilized' by sig LSVs in each comparison...")
-    print("Out of %s total unique LSV IDs, %s are sig (dPSI>=%s,Prob>=%s)" % (n_a,
+    LOG.info("Identifying which NonRed sets are 'utilized' by sig LSVs in each comparison...")
+    LOG.info("Out of %s total unique LSV IDs, %s are sig (dPSI>=%s,Prob>=%s)" % (n_a,
                                                                               n_s,
                                                                               CUTOFF_dPSI_nonredset_hit,
                                                                               CUTOFF_PROB_nonredset_hit))
     all_sets = get_all_nrsets(non_red_sets, Join="_")
-    print("Building non-redundant set dPSI array dictionary...")
+    LOG.info("Building non-redundant set dPSI array dictionary...")
     nrsets_dpsis, dpsi_comps = non_redundant_dpsis(Data, all_sets, dpsi_array_comparisons)
     for comparison in comparisons:
         sig_ids = io_voila_caleb.get_LSV_IDs(sig_dict_subset[comparison])
@@ -2035,7 +2040,7 @@ def find_set_partners(connected_sets, lsv_id, sig_ids=False):
                 else:
                     return partners
     else:
-        print(lsv_id, "wasn't found in sets...")
+        LOG.info(lsv_id, "wasn't found in sets...")
 
 
 def non_redundant_set(data,
@@ -2069,7 +2074,7 @@ def non_redundant_set(data,
     # to the Data. I'm doing it InPlace, so it alters the inut object.
     # No worries, though, because I'll revert the Data to its original state.
     blanked_lsvs_dict = io_voila_caleb.impute_missing_lsvs(data=data, in_place=True, warnings=False)
-    print("Finished filling in the gaps, running non-redundant algorithm...")
+    LOG.info("Finished filling in the gaps, running non-redundant algorithm...")
     if return_numdpsis_dat:
         nr_connected_lsvs, nr_numdpsis = get_connected_lsvs_by_junc(data=data,
                                                                     Cutoff_dPSI=cutoff_dpsi,
@@ -2080,14 +2085,14 @@ def non_redundant_set(data,
                                                        Cutoff_dPSI=cutoff_dpsi,
                                                        Cutoff_PSI=cutoff_psi,
                                                        ret_numpdsis_data=return_numdpsis_dat)
-    print("Accounting for LSVs from different genes that overlap according to genomic coordinates ...")
+    LOG.info("Accounting for LSVs from different genes that overlap according to genomic coordinates ...")
     by_type = most_lsvs_same_gene(Connected_LSVs=nr_connected_lsvs)
     if not save_blanked_structure:
-        print("Reverting Data to original state....")
+        LOG.info("Reverting Data to original state....")
         for comparison in data.keys():
             for lsv_id in blanked_lsvs_dict[comparison]:
                 data[comparison].pop(lsv_id)
-    print("Done!!!\n\n\n")
+    LOG.info("Done!!!\n\n\n")
     s = len(by_type["singles"])
     ns = len(by_type["singles_all_lsvs"])
     d = len(by_type["twos"])
@@ -2096,9 +2101,9 @@ def non_redundant_set(data,
     ntp = len(by_type["three_plus_lsvs"])
     total = s + d + tp
     total_lsvs = ns + nd + ntp
-    print(total_lsvs, "total LSVs met junction utilization cutoffs...")
-    print(total, "Total non-redundant splicing sets")
-    print("%s singles (%s LSVs), %s doubles (%s LSVs), %s three_pluses (%s LSVs) ..." % (s, ns, d, nd, tp, ntp))
+    LOG.info(total_lsvs, "total LSVs met junction utilization cutoffs...")
+    LOG.info(total, "Total non-redundant splicing sets")
+    LOG.info("%s singles (%s LSVs), %s doubles (%s LSVs), %s three_pluses (%s LSVs) ..." % (s, ns, d, nd, tp, ntp))
     if return_numdpsis_dat:
         if save_blanked_structure:
             return by_type, blanked_lsvs_dict, nr_numdpsis
@@ -2234,13 +2239,13 @@ def get_connected_lsvs_by_junc(data,
     junc_to_lsv = junc_lsv_dicts["junc_lsv_dict"]
     lsv_to_junc = junc_lsv_dicts["lsv_junc_dict"]
     sig_juncs = junc_to_lsv.keys()
-    print("Recursively processing %s sig junctions to build connectivity graph ..." % (len(sig_juncs)))
+    LOG.info("Recursively processing %s sig junctions to build connectivity graph ..." % (len(sig_juncs)))
     indeces_at_10_percent = percent_through_list(sig_juncs, 0.01)
     i = 0.0
     n_to_start = len(sig_juncs)
     while len(sig_juncs) > 0:
         if i > 0.0 and i in indeces_at_10_percent:
-            print(str(indeces_at_10_percent[i]) + "% of sig juncs processed...")
+            LOG.info(str(indeces_at_10_percent[i]) + "% of sig juncs processed...")
         next_junc = sig_juncs.pop()
         conn_lsvs = connected_lsvs(all_lsvs, sig_juncs, junc_to_lsv, lsv_to_junc, next_junc)
         master_junc_dict[next_junc] = conn_lsvs
@@ -2397,13 +2402,13 @@ def get_junc_lsv_dicts(data,
 
     """
     io_voila_caleb.check_is_quick_import(data)
-    print("Getting all dPSI data ...")
+    LOG.info("Getting all dPSI data ...")
     numdPSIs_data = get_num_d_psi(data)
-    print("Getting all PSI data ...")
+    LOG.info("Getting all PSI data ...")
     numPSIs_data = get_num_psi(data)
-    print("Getting all junction coordinates ...")
+    LOG.info("Getting all junction coordinates ...")
     lsv_junc_dict = get_junc_coords(data)
-    print("Running find_binary_LSV_IDs() ...")
+    LOG.info("Running find_binary_LSV_IDs() ...")
     sig_junc_dict = find_binary_lsv_ids(num_d_psi=numdPSIs_data,
                                         this_num_psi=numPSIs_data,
                                         cutoff_d_psi=cutoff_dpsi,
@@ -2877,18 +2882,18 @@ def dict_print(obj):
     if type(obj) == dict:
         for k, v in obj.items():
             if hasattr(v, '__iter__'):
-                print(k)
+                LOG.info(k)
                 dict_print(v)
             else:
-                print('%s : %s' % (k, v))
+                LOG.info('%s : %s' % (k, v))
     elif type(obj) == list:
         for v in obj:
             if hasattr(v, '__iter__'):
                 dict_print(v)
             else:
-                print(v)
+                LOG.info(v)
     else:
-        print(obj)
+        LOG.info(obj)
 
 
 def get_inconclusive_cassettes(data, dpsi=0.05, psi=0.05):
@@ -2953,7 +2958,7 @@ def is_LSV_altSS_weird(LSV):
     n_ref_ex_util_juncs_go_into = list()
     for util_j in util_juncs:
         for side in util_j:
-            n_ref_ex_util_juncs_go_into.extend(io_voila_caleb.get_exons_containing_coord(n_ref_ex_int, side))
+            n_ref_ex_util_juncs_go_into.extend(get_exons_containing_coord(n_ref_ex_int, side))
     unique_exons = set(int_to_string_coords(n_ref_ex_util_juncs_go_into))
     if len(unique_exons) == 1:
         return True
@@ -2990,7 +2995,7 @@ def are_used_juncs_sharing_non_ref_coord(Ref_LSV, Junctions):
         if len(non_refs) == 1:
             return True
         elif len(non_refs) == 0:
-            print("likely novel intronic event...")
+            LOG.info("likely novel intronic event...")
             pdb.set_trace()
         else:
             # 2+ non-ref coords are different
@@ -3033,7 +3038,7 @@ def are_used_juncs_sharing_ref_coord(Ref_LSV, Junctions):
         if len(refs) == 1:
             return True
         elif len(refs) == 0:
-            print("likely novel intronic event...")
+            LOG.info("likely novel intronic event...")
             pdb.set_trace()
         else:
             # 2+ ref coords are different
