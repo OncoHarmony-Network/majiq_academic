@@ -1,28 +1,44 @@
 from voila.tools import Tool
 from voila.io_voila import Voila
+from voila.tools.utils import find_files
 import pickle as pkl
 import numpy as np
 import pdb
 import os
 
-class ThisisGetNonChangingLSVs(Tool):
-    help = 'Given a directory, return all voila txt files inside it, recursively'
+from voila.utils.voila_log import voila_log
+
+LOG = voila_log()
+
+
+class ThisisRemoveDpsiPriors(Tool):
+    help = 'Intelligently find the voila_deltapsi file, priormatrix.pkl file, ' \
+           'and the tab file given a directory and a comparison name, then remove' \
+           'the prior from the expected dPSI values, and write the results to file' \
+           'as a pickle dictionary.'
 
     def arguments(self):
         parser = self.get_parser()
-        parser.add_argument('voila_deltapsi_object',
+        parser.add_argument('directory',
                             type=str,
-                            help='*.deltapsi.voila file')
-        parser.add_argument('prior_matrix',
+                            help='Directory where voila texts are.')
+        parser.add_argument('comparison_name',
                             type=str,
-                            help='*.priomatrix.pkl file')
-        parser.add_argument('voila_txt',
-                            type=str,
-                            help='Voila tab output text file')
+                            help='Comparison name you want to remove priors for.')
+        # TODO : optionally instead of giving directory + comp name, directly give file paths
+        # parser.add_argument('--voila_deltapsi_object',
+        #                     type=str,
+        #                     help='Optional *.deltapsi.voila file path if)
+        # parser.add_argument('--prior_matrix',
+        #                     type=str,
+        #                     help='*.priormatrix.pkl file')
+        # parser.add_argument('--voila_txt',
+        #                     type=str,
+        #                     help='Voila tab output text file')
         parser.add_argument('out_dir',
                             type=str,
                             help='Directory save pickle file results. Name will be same as tsv, but '
-                                 'with deltapsi_no_prior instead of deltapsi_deltapsi.')
+                                 'with deltapsi_no_prior instead of deltapsi_deltapsi')
         # help_mes = 'Optional flag: return comparison names ?'
         # parser.add_argument('--return-names',
         #                     action='store_true',
@@ -31,16 +47,29 @@ class ThisisGetNonChangingLSVs(Tool):
         return parser
 
     def run(self, args):
-        newname = os.path.basename(args.voila_txt)
-        print("removing prior from %s " % newname)
-        res = remove_dpsi_priors(deltapsi_voila=args.voila_deltapsi_object,
-                                 deltapsi_prior=args.prior_matrix,
-                                 deltapsi_tabfile=args.voila_txt)
-        print("Saving results to %s " % args.out_dir)
-        newname.replace("deltapsi_deltapsi", "deltapsi_no_prior")
-        newname.replace("tsv", "pickle")
-        outpath = os.path.join(args.out_dir, newname)
+        deltapsi_voila_fp = find_files.find_files(path=args.directory,
+                                                  pattern="%s.deltapsi.voila" % args.comparison_name)
+        deltapsi_prior_fp = find_files.find_files(path=args.directory,
+                                                  pattern="%s.priormatrix.pkl" % args.comparison_name)
+        deltapsi_tabfile_fp = find_files.find_files(path=args.directory,
+                                                  pattern="%s.deltapsi_deltapsi.tsv" % args.comparison_name)
+        if len(deltapsi_voila_fp) != 1:
+            raise RuntimeError("Didn't find 1 deltapsi_voila file, instead found %s" % len(deltapsi_voila_fp))
+        if len(deltapsi_prior_fp) != 1:
+            raise RuntimeError("Didn't find 1 deltapsi_prior file, instead found %s" % len(deltapsi_prior_fp))
+        if len(deltapsi_tabfile_fp) != 1:
+            raise RuntimeError("Didn't find 1 deltapsi_tabfile file, instead found %s" % len(deltapsi_tabfile_fp))
+        outname = os.path.basename(deltapsi_tabfile_fp[0])
+        LOG.info("removing prior from %s " % outname)
+        res = remove_dpsi_priors(deltapsi_voila=deltapsi_voila_fp[0],
+                                 deltapsi_prior=deltapsi_prior_fp[0],
+                                 deltapsi_tabfile=deltapsi_tabfile_fp[0])
+        LOG.info("Saving results to %s " % args.out_dir)
+        outname.replace("deltapsi_deltapsi", "deltapsi_no_prior")
+        outname.replace("tsv", "pickle")
+        outpath = os.path.join(args.out_dir, outname)
         pkl.dump(res, open(outpath, "wb"))
+        LOG.info("Finished removing removing prior from %s" % os.path.basename(deltapsi_tabfile_fp[0]))
 
 
 def remove_dpsi_priors(deltapsi_voila, deltapsi_prior, deltapsi_tabfile):
