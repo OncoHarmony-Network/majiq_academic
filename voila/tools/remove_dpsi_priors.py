@@ -48,11 +48,14 @@ class ThisisRemoveDpsiPriors(Tool):
 
     def run(self, args):
         deltapsi_voila_fp = find_files.find_files(path=args.directory,
-                                                  pattern="%s.deltapsi.voila" % args.comparison_name)
+                                                  pattern="%s.deltapsi.voila" % args.comparison_name,
+                                                  recursive=True)
         deltapsi_prior_fp = find_files.find_files(path=args.directory,
-                                                  pattern="%s.priormatrix.pkl" % args.comparison_name)
+                                                  pattern="%s.priormatrix.pkl" % args.comparison_name,
+                                                  recursive=True)
         deltapsi_tabfile_fp = find_files.find_files(path=args.directory,
-                                                  pattern="%s.deltapsi_deltapsi.tsv" % args.comparison_name)
+                                                    pattern="%s.deltapsi_deltapsi.tsv" % args.comparison_name,
+                                                    recursive=True)
         if len(deltapsi_voila_fp) != 1:
             raise RuntimeError("Didn't find 1 deltapsi_voila file, instead found %s" % len(deltapsi_voila_fp))
         if len(deltapsi_prior_fp) != 1:
@@ -94,7 +97,7 @@ def remove_dpsi_priors(deltapsi_voila, deltapsi_prior, deltapsi_tabfile):
             junctions[lsv_ids[ii]] = junction_list[ii].split(';')
 
         dist_no_priors_edpsi_all = dict()
-        i=1
+        i = 1
         for tissue_lsv in tissue_lsvs:
             print(i)
             dist_no_priors_edpsi = list()
@@ -116,7 +119,7 @@ def collapse_matrix(matrix):
     """Collapse the diagonals probabilities in 1-D and return them"""
     collapse = []
     matrix_corner = matrix.shape[0]
-    for i in range(-matrix_corner+1, matrix_corner):
+    for i in range(-matrix_corner + 1, matrix_corner):
         collapse.append(np.diagonal(matrix, offset=i).sum())
     return np.array(collapse)
 
@@ -124,7 +127,7 @@ def collapse_matrix(matrix):
 def find_delta_border(v, numbins):
     """Finds the border index to which a V corresponds in its delta_space given
     the number of bins the matrix will have"""
-    delta_space = list(np.linspace(-1, 1, num=numbins+1))
+    delta_space = list(np.linspace(-1, 1, num=numbins + 1))
     delta_space.pop(0)  # first border to the left is -1, and we are not interested in it
     # get the index position that corresponds to the V threshold
     for i, value in enumerate(delta_space):
@@ -145,18 +148,18 @@ def matrix_area(matrix, thresh=0.2, absolute=True, collapsed_mat=True):
     # grab the values inside the area of interest
     area = []
     if thresh < 0:
-        area.append(collapse[0:border+1])
+        area.append(collapse[0:border + 1])
         if absolute:  # if absolute V, pick the other side of the array
-            area.append(collapse[-border-1:])
+            area.append(collapse[-border - 1:])
     else:
         area.append(collapse[border:])
         if absolute:  # if absolute V, pick the other side of the array
-            area.append(collapse[0:len(collapse)-border])
+            area.append(collapse[0:len(collapse) - border])
     return np.sum(area)
 
 
 def expected_dpsi(bins):
-    return sum(np.array(bins) * np.arange(-1+1./len(bins), 1., 2./len(bins)))
+    return sum(np.array(bins) * np.arange(-1 + 1. / len(bins), 1., 2. / len(bins)))
 
 
 def get_file_voila(file_name):
