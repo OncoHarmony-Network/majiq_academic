@@ -121,14 +121,6 @@ class VoilaLsv(LsvGraphic):
 
     @staticmethod
     def _extend_means(means):
-        # try:
-        #     means = [m.tolist() for m in means]
-        # except (AttributeError, TypeError):
-        #     pass
-        # except ValueError:
-        #     print(means)
-        #     print(type(means))
-        #     raise
         if means is not None and means.size == 1:
             # means.append(1 - means[0])
             means = numpy.append(means, numpy.array(1 - means[0]))
@@ -136,14 +128,6 @@ class VoilaLsv(LsvGraphic):
 
     @staticmethod
     def _extend_bins(bins):
-        # try:
-        #     if bins:
-        #         bins = [b.tolist() for b in bins]
-        # except AttributeError:
-        #     pass
-        # except ValueError:
-        #     print(bins)
-        #     raise
         if bins is not None:
             bins = numpy.array(bins)
             if bins.size == 1:
@@ -166,7 +150,10 @@ class VoilaLsv(LsvGraphic):
     @property
     def means(self):
         ms = self._extend_means(self.trunc_means)
-        if ms is None and self.bins.size > 0:
+        if ms is not None:
+            return ms
+
+        if self.bins is not None and self.bins.size > 0:
             if self.is_delta_psi():
                 ms = [get_expected_dpsi(b) for b in self.bins]
             else:
@@ -175,9 +162,7 @@ class VoilaLsv(LsvGraphic):
 
     @property
     def means_psi1(self):
-        # print(self.trunc_means_psi1)
-        # print(self._extend_means(self.trunc_means_psi1))
-        return  self._extend_means(self.trunc_means_psi1)
+        return self._extend_means(self.trunc_means_psi1)
 
     @property
     def means_psi2(self):
