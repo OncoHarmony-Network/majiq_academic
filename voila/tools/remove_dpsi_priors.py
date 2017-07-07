@@ -35,10 +35,11 @@ class ThisisRemoveDpsiPriors(Tool):
         # parser.add_argument('--voila_txt',
         #                     type=str,
         #                     help='Voila tab output text file')
-        parser.add_argument('out_dir',
+        parser.add_argument('--out_dir',
                             type=str,
-                            help='Directory save pickle file results. Name will be same as tsv, but '
-                                 'with deltapsi_no_prior instead of deltapsi_deltapsi')
+                            help='Optional directory save pickle file results. Name will be same as tsv, but '
+                                 'with deltapsi_no_prior instead of deltapsi_deltapsi. If not specified, save the'
+                                 'pickle file in the same directory as the tsv file.')
         # help_mes = 'Optional flag: return comparison names ?'
         # parser.add_argument('--return-names',
         #                     action='store_true',
@@ -63,18 +64,27 @@ class ThisisRemoveDpsiPriors(Tool):
         if len(deltapsi_tabfile_fp) == 0:
             raise RuntimeError("Didn't find any deltapsi_tabfile files")
         LOG.info("Found %s voila tab files" % len(deltapsi_tabfile_fp))
+        unique_outpaths = set()
         for tab_file in deltapsi_tabfile_fp:
             outname = os.path.basename(tab_file)
-            LOG.info("removing prior from %s " % outname)
+            LOG.info("removing prior from %s " % tab_file)
             res = remove_dpsi_priors(deltapsi_voila=deltapsi_voila_fp[0],
                                      deltapsi_prior=deltapsi_prior_fp[0],
                                      deltapsi_tabfile=tab_file)
             LOG.info("Saving results to %s " % args.out_dir)
             outname.replace("deltapsi_deltapsi", "deltapsi_no_prior")
             outname.replace("tsv", "pickle")
-            outpath = os.path.join(args.out_dir, outname)
+            if args.out_dir:
+                outpath = os.path.join(args.out_dir, outname)
+            else:
+                outdir = os.path.dirname(tab_file)
+                outpath = os.path.join(outdir, outname)
+            if outpath in unique_outpaths:
+                raise RuntimeError("Oops, the same exact outpath is being used more than once.. stuff"
+                                   "will be overwritten...")
+            unique_outpaths.add(outpath)
             pkl.dump(res, open(outpath, "wb"))
-            LOG.info("Finished removing removing prior from %s" % os.path.basename(tab_file))
+            LOG.info("Finished removing removing prior from %s" % tab_file)
 
 
 def remove_dpsi_priors(deltapsi_voila, deltapsi_prior, deltapsi_tabfile):
