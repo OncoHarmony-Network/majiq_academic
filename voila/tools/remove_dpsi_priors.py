@@ -60,19 +60,21 @@ class ThisisRemoveDpsiPriors(Tool):
             raise RuntimeError("Didn't find 1 deltapsi_voila file, instead found %s" % len(deltapsi_voila_fp))
         if len(deltapsi_prior_fp) != 1:
             raise RuntimeError("Didn't find 1 deltapsi_prior file, instead found %s" % len(deltapsi_prior_fp))
-        if len(deltapsi_tabfile_fp) != 1:
-            raise RuntimeError("Didn't find 1 deltapsi_tabfile file, instead found %s" % len(deltapsi_tabfile_fp))
-        outname = os.path.basename(deltapsi_tabfile_fp[0])
-        LOG.info("removing prior from %s " % outname)
-        res = remove_dpsi_priors(deltapsi_voila=deltapsi_voila_fp[0],
-                                 deltapsi_prior=deltapsi_prior_fp[0],
-                                 deltapsi_tabfile=deltapsi_tabfile_fp[0])
-        LOG.info("Saving results to %s " % args.out_dir)
-        outname.replace("deltapsi_deltapsi", "deltapsi_no_prior")
-        outname.replace("tsv", "pickle")
-        outpath = os.path.join(args.out_dir, outname)
-        pkl.dump(res, open(outpath, "wb"))
-        LOG.info("Finished removing removing prior from %s" % os.path.basename(deltapsi_tabfile_fp[0]))
+        if len(deltapsi_tabfile_fp) == 0:
+            raise RuntimeError("Didn't find any deltapsi_tabfile files")
+        LOG.info("Found %s voila tab files" % len(deltapsi_tabfile_fp))
+        for tab_file in deltapsi_tabfile_fp:
+            outname = os.path.basename(tab_file)
+            LOG.info("removing prior from %s " % outname)
+            res = remove_dpsi_priors(deltapsi_voila=deltapsi_voila_fp[0],
+                                     deltapsi_prior=deltapsi_prior_fp[0],
+                                     deltapsi_tabfile=tab_file)
+            LOG.info("Saving results to %s " % args.out_dir)
+            outname.replace("deltapsi_deltapsi", "deltapsi_no_prior")
+            outname.replace("tsv", "pickle")
+            outpath = os.path.join(args.out_dir, outname)
+            pkl.dump(res, open(outpath, "wb"))
+            LOG.info("Finished removing removing prior from %s" % os.path.basename(tab_file))
 
 
 def remove_dpsi_priors(deltapsi_voila, deltapsi_prior, deltapsi_tabfile):
