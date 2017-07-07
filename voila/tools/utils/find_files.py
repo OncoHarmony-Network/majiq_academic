@@ -1,46 +1,8 @@
-from voila.tools import Tool
 import os
 import subprocess
 import platform
 import fnmatch
 import pdb
-
-
-class ThisisFindVOilaTexts(Tool):
-    help = 'Given a directory, return all voila files inside it, recursively'
-
-    def arguments(self):
-        parser = self.get_parser()
-        parser.add_argument('directory',
-                            type=str,
-                            help='Directory where voila texts are.')
-        help_mes = "Optional pattern matching to identify the voila text files\n" \
-                   "Default for voila txt file: *tsv\n" \
-                   "Default for deltapsi_voila: *.deltapsi.voila\n" \
-                   "Default for deltapsi_prior: *.priomatrix.pkl"
-        parser.add_argument('-p',
-                            '--pattern',
-                            default="*tsv",
-                            type=str,
-                            help=help_mes)
-        help_mes = 'Optional flag: return comparison names ?'
-        parser.add_argument('--return-names',
-                            action='store_true',
-                            help=help_mes)
-        help_mes = "Voila file type:"
-        parser.add_argument('--file_type',
-                            choices={"tsv", "deltapsi_voila", "prior_matrix"},
-                            default="tsv",
-                            type=str,
-                            help=help_mes)
-
-        return parser
-
-    def run(self, args):
-        print(find_voila_files(directory=args.directory,
-                               pattern=args.pattern,
-                               file_type=args.file_type,
-                               get_comp_names=args.return_names))
 
 
 def find_voila_files(directory, pattern, file_type, get_comp_names=False):
