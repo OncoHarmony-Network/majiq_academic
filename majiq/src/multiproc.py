@@ -9,13 +9,31 @@ import majiq.src.utils as majiq_utils
 from majiq.src.config import Config
 from voila.splice_graphics import LsvGraphic
 from voila.vlsv import VoilaLsv
+import traceback
 
+def process_wrapper(args_vals):
 
-# def process_wrapper():
-#     if not os.path.isdir(process_conf):
-#         os.mkdir(tempdir)
-#     thread_logger = majiq_utils.get_logger("%s/majiq.%s.log" % (tempdir, chunk), silent=False)
-#     thread_logger.info("[Th %s]: START child,%s" % (chunk, mp.current_process().name))
+    try:
+        majiq_config = Config()
+        vals, chnk = args_vals
+        logger = majiq_utils.get_logger("%s/%s.majiq.log" % (majiq_config.outDir, chnk),
+                                        silent=majiq_config.silent, debug=majiq_config.debug)
+
+        process_conf.func(vals, chnk, logger, majiq_config, process_conf, logger=logger)
+
+    except:
+        # majiq_utils.monitor('CHILD %s:: EXCEPT' % chnk)
+        traceback.print_exc()
+        sys.stdout.flush()
+        raise
+
+    finally:
+        qm = QueueMessage(QUEUE_MESSAGE_END_WORKER, None, chnk)
+        process_conf.queue.put(qm, block=True)
+        process_conf.lock[chnk].acquire()
+        process_conf.lock[chnk].release()
+        import logging
+        logging.shutdown()
 
 
 def parallel_lsv_child_calculation(func, args, tempdir, name, chunk, store=True):
