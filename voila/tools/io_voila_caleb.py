@@ -1,4 +1,5 @@
-from voila.tools import Tool, lookup, find_voila_txts
+from voila.tools import Tool
+from voila.tools import find_voila_files
 import os
 import pandas as pa
 import pdb
@@ -117,9 +118,9 @@ def quick_import(dir,
             raise ValueError(dir + " not found.")
     else:
         print("Searching for %s files ..." % pattern)
-        dpsi_comparison_name, dpsi_files = find_voila_txts.find_voila_txts(dir,
-                                                                           pattern=pattern,
-                                                                           get_comp_names=True)
+        dpsi_comparison_name, dpsi_files = find_voila_files.get_voila_files(dir,
+                                                                            pattern=pattern,
+                                                                            get_comp_names=True)
         if len(dpsi_comparison_name) != len(dpsi_files):
             raise ValueError("Something is probably screwy with the names "
                              "of the dPSI text files...")
@@ -521,7 +522,7 @@ def get_deseq_diff_expr_genes(deseq_dir,
     """
     if deseq_res_pref_pattern[-1] != "_":
         deseq_res_pref_pattern = deseq_res_pref_pattern + "_"
-    deseq_fps = find_voila_txts.find_files(Path=deseq_dir, Pattern=deseq_fname_pattern, Recursive=recursive)
+    deseq_fps = find_voila_files.find_files(Path=deseq_dir, Pattern=deseq_fname_pattern, Recursive=recursive)
     if len(deseq_fps) == 0:
         raise RuntimeError(
             "No DESeq files found with pattern: '%s' in Directory:\n%s" % (deseq_fname_pattern, deseq_dir))
@@ -552,7 +553,7 @@ def get_deseq_genes(DESeqDirectory,
     """
     if Prefix[-1] != "_":
         Prefix = Prefix + "_"
-    deseq_fps = find_voila_txts.find_files(Path=DESeqDirectory, Pattern=Pattern, Recursive=Recursive)
+    deseq_fps = find_voila_files.find_files(Path=DESeqDirectory, Pattern=Pattern, Recursive=Recursive)
     if len(deseq_fps) == 0:
         raise RuntimeError("No DESeq files found with pattern: '%s' in Directory:\n%s" % (Pattern, DESeqDirectory))
     results = dict()
@@ -1030,29 +1031,6 @@ def get_name_of_psi_keys(lsv):
     if count != 2:
         raise RuntimeError("Couldn't find 2 E(PSI) in the LSV...")
     return keys[0], keys[1]
-
-
-def get_lsv(data, lsv_id, comparison=False):
-    """
-    Given LSV ID, and quick import, return any LSV from the
-     data.
-
-     Args:
-         data : quick import
-         lsv_id : lsv id...
-        comparison: if comparison name (Str) given, use that to get the LSV.
-    """
-    check_is_quick_import(data)
-    lsv_dicts = lookup.lookup_everywhere(data,
-                                         lsv_id,
-                                         save_lsv_structure_lookup=False,
-                                         print_bool=False)
-    if comparison:
-        comparison = comparison
-    else:
-        comparison = lsv_dicts.keys()[0]
-    lsv = lsv_dicts[comparison].values()[0]
-    return lsv
 
 
 def get_lsvs_quickly(data_qu, lsvids_qu, comparison_qu=False):

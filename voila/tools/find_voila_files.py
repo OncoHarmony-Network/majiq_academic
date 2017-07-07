@@ -5,15 +5,19 @@ import platform
 import fnmatch
 import pdb
 
+
 class ThisisFindVOilaTexts(Tool):
-    help = 'Given a directory, return all voila txt files inside it, recursively'
+    help = 'Given a directory, return all voila files inside it, recursively'
 
     def arguments(self):
         parser = self.get_parser()
         parser.add_argument('directory',
                             type=str,
                             help='Directory where voila texts are.')
-        help_mes = 'Optional pattern matching to identify the voila text files'
+        help_mes = "Optional pattern matching to identify the voila text files\n" \
+                   "Default for voila txt file: *tsv\n" \
+                   "Default for deltapsi_voila: *.deltapsi.voila\n" \
+                   "Default for deltapsi_prior: *.priomatrix.pkl"
         parser.add_argument('-p',
                             '--pattern',
                             default="*tsv",
@@ -23,22 +27,63 @@ class ThisisFindVOilaTexts(Tool):
         parser.add_argument('--return-names',
                             action='store_true',
                             help=help_mes)
+        help_mes = "Voila file type:"
+        parser.add_argument('--file_type',
+                            choices={"tsv", "deltapsi_voila", "prior_matrix"},
+                            default="tsv",
+                            type=str,
+                            help=help_mes)
 
         return parser
 
     def run(self, args):
-        print(find_voila_txts(directory=args.directory,
-                              pattern=args.pattern,
-                              get_comp_names=args.return_names))
+        print(find_voila_files(directory=args.directory,
+                               pattern=args.pattern,
+                               file_type=args.file_type,
+                               get_comp_names=args.return_names))
 
 
-def find_voila_txts(directory, pattern, get_comp_names=False):
+def find_voila_files(directory, pattern, file_type, get_comp_names=False):
+    """
+    Find and return all "tsv", "deltapsi_voila", or "prior_matrix" files.
+    :param directory:
+    :param pattern:
+    :param file_type: "tsv", "deltapsi_voila",or "prior_matrix"
+    :param get_comp_names: True/False ... only change this to True if tsv and if you want
+    :return:
+    """
+    if file_type not in ["tsv", "deltapsi_voila", "prior_matrix"]:
+        raise ValueError("%s is not a valid file_type" % file_type)
+    if file_type == "tsv":
+        files = find_voila_files(directory=directory,
+                                 pattern=pattern,
+                                 get_comp_names=get_comp_names)
+        return files
+    if pattern == "*tsv":
+        if file_type == "deltapsi_voila":
+            pattern_match = "*.deltapsi.voila"
+            files = find_voila_files(directory=directory,
+                                     pattern=pattern_match,
+                                     get_comp_names=False)
+        else:  # file_type == "prior_matrix":
+            pattern_match = "*.priomatrix.pkl"
+            files = find_voila_files(directory=directory,
+                                     pattern=pattern_match,
+                                     get_comp_names=False)
+        return files
+    else:
+        return find_voila_files(directory=directory,
+                                pattern=pattern,
+                                get_comp_names=False)
+
+
+def get_voila_files(directory, pattern, get_comp_names=False):
     """
     Recursive search directory for files matching pattern. Speed-optimized for searching
         a directory where majiq was run.
     :param directory: path where txt files are
     :param pattern: grep-capable pattern match for file
-    :param get_comp_names: True/False ... change this to True if Caleb, otherwise you prob shouldn't
+    :param get_comp_names: True/False ... only change this to True if tsv and if you want
     :return: list of full file paths
     """
     if not (os.path.isdir(directory)):
@@ -66,7 +111,7 @@ def find_voila_txts(directory, pattern, get_comp_names=False):
             continue
         break
     if get_comp_names:
-        #dpsi_comparison_name = [x.decode('ascii') for x in dpsi_comparison_name]
+        # dpsi_comparison_name = [x.decode('ascii') for x in dpsi_comparison_name]
         return dpsi_comparison_name, dpsi_files
     return dpsi_files
 
