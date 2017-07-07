@@ -8,8 +8,8 @@ from voila.tools.utils import find_files
 from voila.utils.voila_log import voila_log
 
 
-class ThisisFindBinaryLSVs(Tool):
-    help = 'Given a list of voila dPSI txt files, return LSVs that are binary-like'
+class ThisisIoCaleb(Tool):
+    help = 'Handle importing voila text files...'
 
     def arguments(self):
         parser = self.get_parser()
@@ -29,7 +29,7 @@ class ThisisFindBinaryLSVs(Tool):
         help_mes = 'Optional pattern matching to identify the voila text files'
         parser.add_argument('-p',
                             '--pattern',
-                            default="tsv",
+                            default="*tsv",
                             type=str,
                             help=help_mes)
         help_mes = "Flag: don't consider IR LSVs"
@@ -61,7 +61,7 @@ def quick_import(dir,
                  keep_ir=True,
                  cutoff_sum=False,
                  return_funky_ids=False,
-                 pattern="tsv",
+                 pattern="*tsv",
                  deseq_dir=False,
                  deseq_prefix=False,
                  deseq_pat="*csv",
@@ -206,7 +206,6 @@ def import_dpsi(fp,
         raise TypeError("Expected file path to be string, instead it was %s" % type(fp))
     lsv_dictionary = dict()
     funky_lsvs = list()
-    pre_voila_1_0_0 = True
     has_voila = True
     file_headers = list()
     with open(fp, "r") as handle:
@@ -230,7 +229,9 @@ def import_dpsi(fp,
                 LOG.info("Importing %s vs %s deltapsi data ..." % (condition_1_name, condition_2_name))
                 if "Voila Link" in file_headers:
                     has_voila = True
+                    pre_voila_1_0_0 = True
                 else:
+                    pre_voila_1_0_0 = False
                     has_voila = False
                 # p_thresh = line_split[4]
                 # if DPSI_HEADER[4] == "TBD":
@@ -301,11 +302,6 @@ def import_dpsi(fp,
 
             n_exons = int(line_split[12])
 
-            if line_i == 1:
-                if "True" in str(line_split[13]):
-                    pre_voila_1_0_0 = False
-                if "False" in str(line_split[13]):
-                    pre_voila_1_0_0 = False
             if pre_voila_1_0_0:
                 de_novo_junct = int(line_split[13])
             else:  # Else it is boolean
@@ -757,7 +753,7 @@ def lsvs_length(data):
     if len(data.keys()) > 1:
         all_lsvs = list(set(all_lsvs))
         n_all = len(all_lsvs)
-        shared_lsvs = get_shared_slv_ids(data, bool=True)
+        shared_lsvs = get_shared_lsv_ids(data, bool=True)
         if shared_lsvs:
             n_shared = len(shared_lsvs)
         else:
@@ -1004,7 +1000,7 @@ def get_all_unique_lsv_ids(data,
     return list(set(all_lsvs))
 
 
-def get_shared_slv_ids(data, bool=False):
+def get_shared_lsv_ids(data, bool=False):
     """
     Given a quick import format, return LSV IDs
         that are shared by all LSV DIctionaries.
@@ -1424,7 +1420,7 @@ def impute_missing_lsvs(data,
         if warnings:
             LOG.info("WARNING: YOUR MAJIQ RESULTS WILL BE OVERWRITTERN SINCE InPlace=True")
     check_is_quick_import(data)
-    unique_ids = set(get_all_unique_lsv_ids(data))
+    unique_ids = set(get_all_unique_lsv_ids(data, verbose=False))
     new_dict = dict()
     blanked_dict = dict()
     for comparison in list(data.keys()):

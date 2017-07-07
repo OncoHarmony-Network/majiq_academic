@@ -2231,7 +2231,7 @@ def get_connected_lsvs_by_junc(data,
     """
     # sig_juncs = get_sorted_juncs(Data)
     master_junc_dict = dict()
-    all_lsvs = io_voila_caleb.get_shared_slv_ids(data)
+    all_lsvs = io_voila_caleb.get_shared_lsv_ids(data)
     junc_lsv_dicts = get_junc_lsv_dicts(data,
                                         cutoff_dpsi=Cutoff_dPSI,
                                         cutoff_psi=Cutoff_PSI,
@@ -2300,7 +2300,7 @@ def get_sorted_juncs(Data):
     if io_voila_caleb.check_is_lsv_dict(Data, da_bool=True):
         master_junc_weight_dict = get_junc_weights(Data)
     elif io_voila_caleb.check_is_quick_import(Data):
-        shared_ids = io_voila_caleb.get_shared_slv_ids(Data)
+        shared_ids = io_voila_caleb.get_shared_lsv_ids(Data)
         comp_to_junc_weights = dict()
         all_comparisons = Data.keys()
         for comparison in all_comparisons:
@@ -2337,7 +2337,7 @@ def get_master_junc_weights(Data, Weights="dPSI"):
     """
     io_voila_caleb.check_is_quick_import(Data)
     comparisons = Data.keys()
-    shared_ids = io_voila_caleb.get_shared_slv_ids(Data)
+    shared_ids = io_voila_caleb.get_shared_lsv_ids(Data)
     shared_dicts = dict()
     for comparison in comparisons:
         share_dict = io_voila_caleb.lsv_dict_subset(Data[comparison], shared_ids)
@@ -2516,7 +2516,7 @@ def get_num_d_psi(data,
     for comparison in data.keys():
         d_psis = listdPSI(data[comparison])
         comparison_dict[comparison] = d_psis
-    union_of_lsv_ids = io_voila_caleb.get_shared_slv_ids(data)
+    union_of_lsv_ids = io_voila_caleb.get_shared_lsv_ids(data)
     lsv_dict = dict()
     comparisons = list(comparison_dict.keys())
     comparisons.sort()  # alphabatized
@@ -2586,7 +2586,7 @@ def get_num_prob(data,
     for nup_comparison in data.keys():
         nu_probs = list_probs(data[nup_comparison])
         comparison_dict[nup_comparison] = nu_probs
-    union_of_lsv_ids = io_voila_caleb.get_shared_slv_ids(data)
+    union_of_lsv_ids = io_voila_caleb.get_shared_lsv_ids(data)
     lsv_dict = dict()
     comparisons = list(comparison_dict.keys())
     comparisons.sort()  # alphabatized
@@ -2697,7 +2697,7 @@ def get_num_psi(data,
         cond_2_PSIs = PSIs[cond_2_name]
         condition_dict[cond_1_name] = cond_1_PSIs
         condition_dict[cond_2_name] = cond_2_PSIs
-    union_of_lsv_ids = io_voila_caleb.get_shared_slv_ids(data)
+    union_of_lsv_ids = io_voila_caleb.get_shared_lsv_ids(data)
     lsv_dict = dict()
     conditions = list(condition_dict.keys())
     conditions.sort()

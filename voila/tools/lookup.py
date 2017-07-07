@@ -8,7 +8,7 @@ import argparse
 import pdb
 
 class ThisisLookup(Tool):
-    help = 'Given a directory and Gene Name, or Gene ID, or LSV ID, pretty-print all LSVs'
+    help = 'Given a directory and Gene Name, or Gene ID, or LSV ID, prettily-print all LSVs'
 
     def arguments(self):
         parser = self.get_parser()
