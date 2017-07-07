@@ -212,9 +212,6 @@ def tab_output(args, voila_links):
         fieldnames = ['#Gene Name', 'Gene ID', 'LSV ID', 'E(PSI) per LSV junction', 'Var(E(PSI)) per LSV junction']
 
         if args.type_analysis == constants.ANALYSIS_DELTAPSI:
-            print(metainfo)
-            # group1 = metainfo['group1']
-            # group2 = metainfo['group2']
             group1 = metainfo['group_names'][0]
             group2 = metainfo['group_names'][1]
             fieldnames = fieldnames[:3] + ['E(dPSI) per LSV junction',

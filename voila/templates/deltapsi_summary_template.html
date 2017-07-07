@@ -95,7 +95,9 @@
                                      {% if "Combined" in genes_exps_list[0] %}
                                          "{{ genes_exps_list[0]["Combined"][gene_name] | to_json_especial }}">
                                      {% else %}
-                                         "{{ genes_exps_list[0][first_exp][gene_name] | to_json_especial }}">
+                                         {% for exp in genes_exps_list[0].values() %}
+                                             "{{ exp[gene_name] | to_json_especial }}">
+                                         {% endfor %}
                                      {% endif %}
                         </div>
 
@@ -104,7 +106,9 @@
                                      {% if "Combined" in genes_exps_list[1] %}
                                          "{{ genes_exps_list[1]["Combined"][gene_name] | to_json_especial }}">
                                      {% else %}
-                                         "{{ genes_exps_list[1][first_exp][gene_name] | to_json_especial }}">
+                                         {% for exp in genes_exps_list[1].values() %}
+                                             "{{ exp[gene_name] | to_json_especial }}">
+                                         {% endfor %}
                                      {% endif %}
                         </div>
 

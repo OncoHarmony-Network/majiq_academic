@@ -106,6 +106,8 @@ def main():
     log = voila_log(filename=log_filename, silent=args.silent, debug=args.debug)
     log.info('Command: {0}'.format(' '.join(sys.argv)))
 
+    log.info('Voila {0} v{1}'.format(args.type_analysis, constants.VERSION))
+
     # run function for this analysis type
     type_analysis = {
         constants.ANALYSIS_PSI: Psi,

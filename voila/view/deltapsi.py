@@ -14,8 +14,6 @@ class Deltapsi(Html, VoilaArgs):
     def __init__(self, args):
         super(Deltapsi, self).__init__(args)
 
-        voila_log().info('Voila deltapsi {0}'.format(constants.VERSION))
-
         if not args.no_html:
             with Voila(args.voila_file, 'r') as v:
                 self.metainfo = v.get_metainfo()

@@ -81,6 +81,10 @@
                             <div class="spliceDiv exp1" id="spliceDivExp1_{{ gene_index }}" data-exon-list=
                                     {% if "Combined" in  genes_exps_list %}
                                         "{{ genes_exps_list["Combined"][gene_id] | to_json_especial }}">
+                                    {% else %}
+                                        {% for exp in genes_exps_list.values() %}
+                                            "{{ exp[gene_id] | to_json_especial }}">
+                                        {% endfor %}
                                     {% endif %}
                             </div>
                         </div>
