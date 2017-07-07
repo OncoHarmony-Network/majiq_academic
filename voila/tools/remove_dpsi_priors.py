@@ -36,7 +36,7 @@ class ThisisGetNonChangingLSVs(Tool):
         res = remove_dpsi_priors(deltapsi_voila=args.voila_deltapsi_object,
                                  deltapsi_prior=args.prior_matrix,
                                  deltapsi_tabfile=args.voila_txt)
-        print("Saving results to % " % args.out_dir)
+        print("Saving results to %s " % args.out_dir)
         newname.replace("deltapsi_deltapsi", "deltapsi_no_prior")
         newname.replace("tsv", "pickle")
         outpath = os.path.join(args.out_dir, newname)
@@ -47,7 +47,7 @@ def remove_dpsi_priors(deltapsi_voila, deltapsi_prior, deltapsi_tabfile):
     """
     :param deltapsi_voila: *.deltapsi.voila
     :param deltapsi_prior: *.priomatrix.pkl
-    :param deltapsi_tabfile: tab output text file of voila
+    :param deltapsi_tabfile: *tsv tab output text file of voila
     :return:
     """
     with Voila(deltapsi_voila, 'r') as v:
@@ -92,14 +92,14 @@ def collapse_matrix(matrix):
     return np.array(collapse)
 
 
-def find_delta_border(V, numbins):
+def find_delta_border(v, numbins):
     """Finds the border index to which a V corresponds in its delta_space given
     the number of bins the matrix will have"""
     delta_space = list(np.linspace(-1, 1, num=numbins+1))
     delta_space.pop(0)  # first border to the left is -1, and we are not interested in it
     # get the index position that corresponds to the V threshold
     for i, value in enumerate(delta_space):
-        if value > V:
+        if value > v:
             return i
     # if nothing hit, V = 1
     return numbins
