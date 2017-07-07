@@ -52,7 +52,7 @@ def find_voila_files(directory, pattern, file_type, get_comp_names=False):
     :param get_comp_names: True/False ... only change this to True if tsv and if you want
     :return:
     """
-    if file_type not in ["tsv", "deltapsi_voila",or "prior_matrix"]:
+    if file_type not in ["tsv", "deltapsi_voila", "prior_matrix"]:
         raise ValueError("%s is not a valid file_type" % file_type)
     if file_type == "tsv":
         files = find_voila_files(directory=directory,
