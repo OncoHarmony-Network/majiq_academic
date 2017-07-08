@@ -163,6 +163,7 @@ def remove_dpsi_priors(deltapsi_voila, deltapsi_prior, deltapsi_tabfile):
                 junctions[lsv_ids[ii]] = junction_list[ii].split(';')
             dist_no_priors_edpsi_all = dict()
             i = 0.0
+            n_lsvs = float(len(lsv_ids))
             indeces_at_x_percent = percent_through_list(len(lsv_ids), 0.01)
             for tissue_lsv in tissue_lsvs:
                 if i in indeces_at_x_percent:
@@ -173,7 +174,7 @@ def remove_dpsi_priors(deltapsi_voila, deltapsi_prior, deltapsi_tabfile):
                 # It will simply skip trying to process lsvs not in the provided tsv file..
                 if tissue_lsv.lsv_id not in lsv_ids:
                     continue
-                elif i == len(lsv_ids):
+                elif i == n_lsvs:
                     break
                 for junction_number in range(len(junctions[tissue_lsv.lsv_id])):
                     prior_info = np.log(collapse_matrix(tissue_priors[0, :, :]))
