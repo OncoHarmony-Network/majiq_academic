@@ -129,7 +129,11 @@ class HDF5(object):
                 try:
                     setattr(self, key, value)
                 except AttributeError:
-                    log.error('Unable to add {0}:{1} to {2}'.format(key, value, self.__class__.__name__))
+                    # TEMPORARILY removing this log because it is killing my voila tools scripts
+                    #log.error('Unable to add {0}:{1} to {2}'.format(key, value, self.__class__.__name__))
+                    # TODO put the log file back when the variances bug is fixed:
+                    # https://basecamp.com/2340013/projects/4389998/todos/315585955
+                    pass
 
         return self
 
