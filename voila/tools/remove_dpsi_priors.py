@@ -63,12 +63,12 @@ class ThisisRemoveDpsiPriors(Tool):
             raise RuntimeError("Didn't find 1 deltapsi_prior file, instead found %s" % len(deltapsi_prior_fp))
         if len(deltapsi_tabfile_fp) == 0:
             raise RuntimeError("Didn't find any deltapsi_tabfile files")
-        LOG.info("Found %s voila tab files" % len(deltapsi_tabfile_fp))
-        LOG.info("Removing priors from:\n%s\n%s\n%s" %
-                 deltapsi_voila_fp,
+        LOG.info("Removing priors using:\n%s\n%s\n%s" % (
+                 "\n".join(deltapsi_tabfile_fp),
                  deltapsi_prior_fp,
-                 deltapsi_tabfile_fp)
+                 deltapsi_voila_fp))
         unique_outpaths = set()
+        LOG.info("Note: there are %s voila tab files to be processed." % len(deltapsi_tabfile_fp))
         for tab_file in deltapsi_tabfile_fp:
             outname = os.path.basename(tab_file)
             LOG.info("removing prior from %s " % tab_file)
