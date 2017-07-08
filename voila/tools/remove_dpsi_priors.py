@@ -64,6 +64,10 @@ class ThisisRemoveDpsiPriors(Tool):
         if len(deltapsi_tabfile_fp) == 0:
             raise RuntimeError("Didn't find any deltapsi_tabfile files")
         LOG.info("Found %s voila tab files" % len(deltapsi_tabfile_fp))
+        LOG.info("Removing priors from:\n%s\n%s\n%s" %
+                 deltapsi_voila_fp,
+                 deltapsi_prior_fp,
+                 deltapsi_tabfile_fp)
         unique_outpaths = set()
         for tab_file in deltapsi_tabfile_fp:
             outname = os.path.basename(tab_file)
@@ -82,6 +86,7 @@ class ThisisRemoveDpsiPriors(Tool):
             if outpath in unique_outpaths:
                 raise RuntimeError("Oops, the same exact outpath is being used more than once.. stuff"
                                    "will be overwritten...")
+            # make sure you aren't going to overwrite a result you just created...
             unique_outpaths.add(outpath)
             pkl.dump(res, open(outpath, "wb"))
             LOG.info("Finished removing removing prior from %s" % tab_file)
