@@ -5,6 +5,7 @@ import pdb
 import copy
 
 from voila.tools.utils import find_files
+from voila.tools.utils.calebs_xrange import calebs_xrange
 from voila.utils.voila_log import voila_log
 
 
@@ -1129,32 +1130,6 @@ def greatest_dpsi(LSV_dict, Change=1.0, Probability=0.95, Verbose=True):
     return subset_lsv_dict
 
 
-def calebs_xrange(start, end, by):
-    """
-    Does an xrange, but can handle floats instead of integers.
-
-    Warning: floats don't behave quite as you'd expect on computers.
-     Be careful how you use this function.
-    """
-    start = float(start)
-    end = float(end)
-    by = float(by)
-    stuff_after_dec = str(1.0).split(".")[1]
-    # Figure out which number has the smallest digits, use that
-    # to generate the multiplier (to prevent rounding error)
-    for number in start, end, by:
-        if len(str(number).split(".")[1]) > len(stuff_after_dec):
-            stuff_after_dec = str(number).split(".")[1]
-    Multyplier = float(pow(10, len(stuff_after_dec)))
-    iteratable = list()
-    # I add 'int(By*Multyplier)' to the End here because I like things to be explicitly
-    #  defnied. This function starts and ends exactly how you tell it, rather than
-    #  Python's stupid way. Blah. Sorry, Caleb was cranky when he wrote this.
-    for i in range(int(start * Multyplier), int(end * Multyplier) + int(by * Multyplier), int(by * Multyplier)):
-        iteratable.append(float(i) / Multyplier)
-    return iteratable
-
-
 def remove_empty_lsv_dicts(data, print_status=True):
     """
     Given a LSV dictionary or quick_import, return non-empty LSV_dictionaries.
@@ -1457,3 +1432,38 @@ def impute_missing_lsvs(data,
         return blanked_dict
         # return Data
     return new_dict, blanked_dict
+
+
+def import_dpsi_pandas(tsv_file, columns=None):
+    """
+
+    :param tsv_file: path to tsv file
+    :param columns: if provided as a list, only import columns at [indices provided]
+    :return: pandas dataframe
+    """
+    # first, get the header of the tsv file (there is a # sign we need to remove)
+    with open(tsv_file, "r") as handle:
+        for line in handle:
+            line = line.rstrip("\n\r")
+            header = line
+            header.replace("#", "")
+            header = header.split("\t")
+            # if columns:
+            #     header = [header[ii] for ii in columns]
+            break
+    if columns:
+        if isinstance(columns, int):
+            columns = [columns]
+        elif not isinstance(columns, list):
+            LOG.error("Expected columns to be in int or [list of ints], "
+                      "instead it was: %s and looked like: %s" % type(columns), columns)
+            exit(1)
+    else:  # else columns was empty, so import everything
+        columns = range(len(header))
+    pa_dataframe = pa.read_csv(tsv_file,
+                               sep="\t",
+                               header=None,
+                               skiprows=1,
+                               names=header,
+                               usecols=columns)
+    return pa_dataframe

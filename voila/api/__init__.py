@@ -129,7 +129,6 @@ class Voila(object):
         return sum(1 for _ in self.get_lsvs(args))
 
     def get_voila_lsvs(self, args=None, gene_id=None):
-        #pdb.set_trace()
         return (self.get_voila_lsv(gene_id, lsv_id) for gene_id, lsv_id in self.get_lsvs(args, gene_id))
 
     def get_gene_ids(self, args=None):

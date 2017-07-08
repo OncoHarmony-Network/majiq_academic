@@ -1,11 +1,13 @@
 from voila.tools import Tool
 from voila.io_voila import Voila
+from voila.tools.io_voila_caleb import import_dpsi_pandas
 from voila.tools.utils import find_files
 import pickle as pkl
 import numpy as np
 import pdb
 import os
 
+from voila.tools.utils.percent_through_list import percent_through_list
 from voila.utils.voila_log import voila_log
 
 LOG = voila_log()
@@ -22,114 +24,166 @@ class ThisisRemoveDpsiPriors(Tool):
         parser.add_argument('directory',
                             type=str,
                             help='Directory where voila texts are.')
-        parser.add_argument('comparison_name',
-                            type=str,
-                            help='Comparison name you want to remove priors for.')
-        # TODO : optionally instead of giving directory + comp name, directly give file paths
-        # parser.add_argument('--voila_deltapsi_object',
-        #                     type=str,
-        #                     help='Optional *.deltapsi.voila file path if)
-        # parser.add_argument('--prior_matrix',
-        #                     type=str,
-        #                     help='*.priormatrix.pkl file')
-        # parser.add_argument('--voila_txt',
-        #                     type=str,
-        #                     help='Voila tab output text file')
-        parser.add_argument('--out_dir',
-                            type=str,
-                            help='Optional directory save pickle file results. Name will be same as tsv, but '
-                                 'with deltapsi_no_prior instead of deltapsi_deltapsi. If not specified, save the'
-                                 'pickle file in the same directory as the tsv file.')
-        # help_mes = 'Optional flag: return comparison names ?'
-        # parser.add_argument('--return-names',
-        #                     action='store_true',
-        #                     help=help_mes)
-
+        mutually_excl_grp = parser.add_mutually_exclusive_group(required=True)
+        mutually_excl_grp.add_argument('--comparison_name',
+                                       type=str,
+                                       help='Comparison name you want to remove priors for.')
+        mutually_excl_grp.add_argument('--deltapsi_run_lines',
+                                       type=str,
+                                       help='The file path to the scriptthat was used to run majiq and '
+                                            'voila deltapsi. All of the\'deltapsi comparisons in the script '
+                                            'will be automatically processed.')
         return parser
 
     def run(self, args):
-        deltapsi_voila_fp = find_files.find_files(path=args.directory,
-                                                  pattern="%s.deltapsi.voila" % args.comparison_name,
-                                                  recursive=True)
-        deltapsi_prior_fp = find_files.find_files(path=args.directory,
-                                                  pattern="%s.priormatrix.pkl" % args.comparison_name,
-                                                  recursive=True)
-        deltapsi_tabfile_fp = find_files.find_files(path=args.directory,
-                                                    pattern="%s.deltapsi_deltapsi.tsv" % args.comparison_name,
-                                                    recursive=True)
-        if len(deltapsi_voila_fp) != 1:
-            raise RuntimeError("Didn't find 1 deltapsi_voila file, instead found %s" % len(deltapsi_voila_fp))
-        if len(deltapsi_prior_fp) != 1:
-            raise RuntimeError("Didn't find 1 deltapsi_prior file, instead found %s" % len(deltapsi_prior_fp))
-        if len(deltapsi_tabfile_fp) == 0:
-            raise RuntimeError("Didn't find any deltapsi_tabfile files")
+        second_arg = args.comparison_name if args.comparison_name else args.delta_psi_run_lines
+        wrapper(directory=args.directory, second_arg=second_arg)
+
+
+def wrapper(directory, second_arg):
+    """
+
+    :param directory: directory where majiq was run
+    :param second_arg: either a single deltapsi comparison name
+                        OR a file path to the script used to run majiq/voila deltapsi
+    :return: nothing
+    """
+    if os.path.isfile(second_arg):
+        comparisons = get_comparisons_from_runlines(runline_fp=second_arg)
+    else:  # else a single comparison provided
+        comparisons = [second_arg]
+    for comparison in comparisons:
+        dpsi_voila, dpsi_prior, dpsi_tsv = get_matched_voila_files(directory=directory,
+                                                                   comparison_name=comparison)
         LOG.info("Removing priors using:\n%s\n%s\n%s" % (
-                 "\n".join(deltapsi_tabfile_fp),
-                 deltapsi_prior_fp,
-                 deltapsi_voila_fp))
+            "\n".join(dpsi_tsv),
+            dpsi_prior,
+            dpsi_voila))
         unique_outpaths = set()
-        LOG.info("Note: there are %s voila tab files to be processed." % len(deltapsi_tabfile_fp))
-        for tab_file in deltapsi_tabfile_fp:
+        LOG.info("Note: there are %s voila tab files to be processed." % len(dpsi_tsv))
+        priors_removed = remove_dpsi_priors(deltapsi_voila=dpsi_voila[0],
+                                            deltapsi_prior=dpsi_prior[0],
+                                            deltapsi_tabfile=dpsi_tsv)
+        for tab_file, prior_rem in zip(dpsi_tsv, priors_removed):
             outname = os.path.basename(tab_file)
-            LOG.info("removing prior from %s " % tab_file)
-            res = remove_dpsi_priors(deltapsi_voila=deltapsi_voila_fp[0],
-                                     deltapsi_prior=deltapsi_prior_fp[0],
-                                     deltapsi_tabfile=tab_file)
-            LOG.info("Saving results to %s " % args.out_dir)
             outname.replace("deltapsi_deltapsi", "deltapsi_no_prior")
             outname.replace("tsv", "pickle")
-            if args.out_dir:
-                outpath = os.path.join(args.out_dir, outname)
-            else:
-                outdir = os.path.dirname(tab_file)
-                outpath = os.path.join(outdir, outname)
+            outdir = os.path.dirname(tab_file)
+            outpath = os.path.join(outdir, outname)
             if outpath in unique_outpaths:
-                raise RuntimeError("Oops, the same exact outpath is being used more than once.. stuff"
-                                   "will be overwritten...")
+                LOG.error("Oops, the same exact outpath is being used more than once.. files"
+                          "from this analysis will be overwritten...")
+                exit(1)
             # make sure you aren't going to overwrite a result you just created...
             unique_outpaths.add(outpath)
-            pkl.dump(res, open(outpath, "wb"))
-            LOG.info("Finished removing removing prior from %s" % tab_file)
+            pkl.dump(prior_rem, open(outpath, "wb"))
+            LOG.info("Finished removing prior from %s" % tab_file)
+
+
+def get_comparisons_from_runlines(runline_fp):
+    """
+
+    :param runline_fp: path to majiq deltapsi and voila deltapsi run lines script
+    :return: [deltapsi comparison names]
+    """
+    comparisons = list()
+    with open(runline_fp, "r") as handle:
+        for line in handle:
+            if line.startswith("majiq deltapsi"):
+                line = line.rstrip("\n\r")
+                line_split = line[line.find("--name"):].split(" ")
+                comp1 = line_split[1]
+                comp2 = line_split[2]
+                comparison = comp1+"_"+comp2
+                comparisons.append(comparison)
+    return comparisons
+
+
+def get_matched_voila_files(directory, comparison_name):
+    """
+    Given a comparison name and a directory, return file paths for the
+            voila_deltapsi file,
+            priormatrix.pkl file,
+            and the voila tab-separated file(s) <- there could be more than one...
+
+    :rtype: str
+    :param directory: where majiq was run
+    :param comparison_name: which deltapsi data to get
+    :return: (deltapsi_voila_fp, deltapsi_prior_fp, deltapsi_tabfile_fp)
+    """
+    deltapsi_voila_fp = find_files.find_files(path=directory,
+                                              pattern="%s.deltapsi.voila" % comparison_name,
+                                              recursive=True)
+    deltapsi_prior_fp = find_files.find_files(path=directory,
+                                              pattern="%s.priormatrix.pkl" % comparison_name,
+                                              recursive=True)
+    deltapsi_tabfile_fp = find_files.find_files(path=directory,
+                                                pattern="%s.deltapsi_deltapsi.tsv" % comparison_name,
+                                                recursive=True)
+    if len(deltapsi_voila_fp) != 1:
+        raise RuntimeError("Didn't find 1 deltapsi_voila file, instead found %s" % len(deltapsi_voila_fp))
+    if len(deltapsi_prior_fp) != 1:
+        raise RuntimeError("Didn't find 1 deltapsi_prior file, instead found %s" % len(deltapsi_prior_fp))
+    if len(deltapsi_tabfile_fp) == 0:
+        raise RuntimeError("Didn't find any deltapsi_tabfile files")
+    return deltapsi_voila_fp, deltapsi_prior_fp, deltapsi_tabfile_fp
 
 
 def remove_dpsi_priors(deltapsi_voila, deltapsi_prior, deltapsi_tabfile):
     """
     :param deltapsi_voila: *.deltapsi.voila
     :param deltapsi_prior: *.priomatrix.pkl
-    :param deltapsi_tabfile: *tsv tab output text file of voila
-    :return:
+    :param deltapsi_tabfile: list of [*tsv tab output text file of voila]
+     Returns a list of results; each elem in same order as elem in [deltapsi_tabfile]
+    :return: [ {LSV_IDs:[junction_dPSIs_minus_prior]} ]
     """
+    res = list()
     with Voila(deltapsi_voila, 'r') as v:
-        print('loading hdf5 file: ', deltapsi_voila)
+        LOG.info('loading hdf5 file: %s' % deltapsi_voila)
         tissue_lsvs = v.get_voila_lsvs()
-        print("done")
+        LOG.info("done")
+        LOG.info("Loading priormatrix file %s" % deltapsi_prior)
         tissue_priors = np.array(get_file(deltapsi_prior))
-        print("Loading voila text file %s" % deltapsi_tabfile)
-        deltapsi_txt = np.loadtxt(deltapsi_tabfile, delimiter='\t', dtype=bytes).astype(str)
-        print("done")
-        lsv_ids = deltapsi_txt[:, 2]
-        junction_list = deltapsi_txt[:, 16]
-        junctions = dict()
-        for ii in range(len(lsv_ids)):
-            junctions[lsv_ids[ii]] = junction_list[ii].split(';')
-
-        dist_no_priors_edpsi_all = dict()
-        i = 1
-        for tissue_lsv in tissue_lsvs:
-            print(i)
-            dist_no_priors_edpsi = list()
-            if tissue_lsv.lsv_id not in lsv_ids:
-                continue
-            elif i == len(lsv_ids):
-                break
-            for junction_number in range(len(junctions[tissue_lsv.lsv_id])):
-                prior_info = np.log(collapse_matrix(tissue_priors[0, :, :]))
-                mle_bins = np.exp(np.log(np.array(tissue_lsv.bins[int(junction_number)])) - prior_info)
-                mle_bins /= 1. * np.sum(mle_bins)
-                dist_no_priors_edpsi.append(expected_dpsi(mle_bins))
-            dist_no_priors_edpsi_all[tissue_lsv.lsv_id] = dist_no_priors_edpsi
-            i += 1
-    return dist_no_priors_edpsi_all
+        LOG.info("done")
+        for tsv in deltapsi_tabfile:
+            LOG.info("Loading voila text file %s" % tsv)
+            #deltapsi_txt = np.loadtxt(tsv, delimiter='\t', dtype=bytes).astype(str)
+            # Just read the lsv ids and junction coordinate column into memory
+            deltapsi_txt = import_dpsi_pandas(tsv, columns=[2, 16])
+            LOG.info("done")
+            # column 0 is LSV IDs
+            lsv_ids = deltapsi_txt[deltapsi_txt.columns[0]]
+            # convert to list
+            lsv_ids = [x for x in lsv_ids]
+            #junction_list = deltapsi_txt[:, 16]
+            # column 1 is junction coordinates
+            junction_list = deltapsi_txt[deltapsi_txt.columns[1]]
+            junctions = dict()
+            for ii in range(len(lsv_ids)):
+                junctions[lsv_ids[ii]] = junction_list[ii].split(';')
+            dist_no_priors_edpsi_all = dict()
+            i = 0.0
+            indeces_at_x_percent = percent_through_list(len(lsv_ids), 0.01)
+            for tissue_lsv in tissue_lsvs:
+                if i in indeces_at_x_percent:
+                    perc = indeces_at_x_percent[i]
+                    LOG.info("Processed %s%% of the LSVs... " % perc)
+                dist_no_priors_edpsi = list()
+                # This script will work even if you truncate the tsv file
+                # It will simply skip trying to process lsvs not in the provided tsv file..
+                if tissue_lsv.lsv_id not in lsv_ids:
+                    continue
+                elif i == len(lsv_ids):
+                    break
+                for junction_number in range(len(junctions[tissue_lsv.lsv_id])):
+                    prior_info = np.log(collapse_matrix(tissue_priors[0, :, :]))
+                    mle_bins = np.exp(np.log(np.array(tissue_lsv.bins[int(junction_number)])) - prior_info)
+                    mle_bins /= 1. * np.sum(mle_bins)
+                    dist_no_priors_edpsi.append(expected_dpsi(mle_bins))
+                dist_no_priors_edpsi_all[tissue_lsv.lsv_id] = dist_no_priors_edpsi
+                i += 1.0
+            res.append(dist_no_priors_edpsi_all)
+    return res
 
 
 def collapse_matrix(matrix):

@@ -1,5 +1,6 @@
 from voila.tools import Tool
 from voila.tools import io_voila_caleb
+from voila.tools.utils.percent_through_list import percent_through_list
 from voila.utils.voila_log import voila_log
 
 import os
@@ -2846,36 +2847,6 @@ def index_all(array, element, nottt=False):
 
 
 ##################################### GENERAL HELPER #####################################
-
-
-def percent_through_list(List,
-                         By=0.1):
-    """
-    Given a List (or length of the list), determine which
-        indices in the list corrsepond to By percent along the list.
-
-        for example, List = [A,B,C,D,E,F,G,H,I,J] (length = 10)
-        if By = 0.2, the dictionary would be:
-        {0: 0.0, 2: 20.0, 4: 40.0, 6: 60.0, 8: 80.0, 10: 100.0}
-
-    Use this function to help you determine how many intervals of a given
-        percentage along a list loop you are...
-    """
-    if isinstance(List, list):
-        list_n = len(List)
-    elif isinstance(List, int):
-        list_n = List
-        # print "Assuming you gave len(List) instead of the list itself..."
-    else:
-        raise ValueError("List needs to be a list (or the length of one ...)")
-    if not isinstance(By, float) or By <= 0 or By >= 1:
-        raise ValueError("By needs to be float >0 and <1")
-    # get items at each By percent interval
-    by_percent_index = dict()
-    for by in io_voila_caleb.calebs_xrange(0, 1, By):
-        index = int(math.floor(by * list_n))
-        by_percent_index[index] = by * 100.0
-    return by_percent_index
 
 
 def dict_print(obj):
