@@ -243,13 +243,13 @@ def import_dpsi(fp,
     """
     if not isinstance(fp, str):
         raise TypeError("Expected file path to be string, instead it was %s" % type(fp))
+    if not have_permission(fp):
+        LOG.info("Uhhh this is embarrassing, it looks like you don't have permissions to view"
+                 " this file: %s" % fp)
     if check_if_file_binary(fp):
         LOG.info("%s matched search pattern, but it is binary, so the file is not"
                  "a voila tsv ... skipping it" % fp)
         return False
-    if not have_permission(fp):
-        LOG.info("Uhhh this is embarrassing, it looks like you don't have permissions to view"
-                 " this file: %s" % fp)
     lsv_dictionary = dict()
     funky_lsvs = list()
     has_voila = True
