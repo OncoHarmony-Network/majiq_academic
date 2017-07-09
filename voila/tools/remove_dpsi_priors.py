@@ -62,7 +62,6 @@ def wrapper(directory, second_arg):
             dpsi_voila))
         unique_outpaths = set()
         LOG.info("Note: there are %s voila tab files to be processed." % len(dpsi_tsv))
-        pdb.set_trace()
         priors_removed = remove_dpsi_priors(deltapsi_voila=dpsi_voila[0],
                                             deltapsi_prior=dpsi_prior[0],
                                             deltapsi_tabfile=dpsi_tsv)

@@ -147,7 +147,7 @@ def quick_import(dir,
                 else:
                     to_keep.append(ii)
             if len(to_keep) < len(comparisons):
-                LOG.error("Couldn't find all these comparisons you wanted:\n%s" % comparisons)
+                LOG.error("Couldn't find all these comparisons you wanted: %s" % comparisons)
             for index in sorted(to_remove, reverse=True):
                 del dpsi_comparison_name[index]
                 del dpsi_files[index]
@@ -167,7 +167,7 @@ def quick_import(dir,
         raise RuntimeError("Didn't find any voila txt files...")
 
     LOG.info("Found " + str(len(dpsi_files)) +
-             " dPSI text files to import ...")
+             " dPSI text files ...")
     imported_files = dict()
     funky_ids = list()
 
