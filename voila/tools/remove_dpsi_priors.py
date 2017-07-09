@@ -38,7 +38,7 @@ class ThisisRemoveDpsiPriors(Tool):
 
     def run(self, args):
         second_arg = args.comparison_name if args.comparison_name else args.delta_psi_run_lines
-        wrapper(directory=args.directory, second_arg=second_arg)
+        wrapper(directory=os.path.abspath(args.directory), second_arg=second_arg)
 
 
 def wrapper(directory, second_arg):
@@ -62,6 +62,7 @@ def wrapper(directory, second_arg):
             dpsi_voila))
         unique_outpaths = set()
         LOG.info("Note: there are %s voila tab files to be processed." % len(dpsi_tsv))
+        pdb.set_trace()
         priors_removed = remove_dpsi_priors(deltapsi_voila=dpsi_voila[0],
                                             deltapsi_prior=dpsi_prior[0],
                                             deltapsi_tabfile=dpsi_tsv)
@@ -77,8 +78,8 @@ def wrapper(directory, second_arg):
                 exit(1)
             # make sure you aren't going to overwrite a result you just created...
             unique_outpaths.add(outpath)
-            pkl.dump(prior_rem, open(outpath, "wb"))
-            LOG.info("Finished removing prior from %s" % tab_file)
+            pkl.dump(prior_rem, open(outpath, "w"))
+            LOG.info("Wrote results to file: %s" % outpath)
 
 
 def get_comparisons_from_runlines(runline_fp):
