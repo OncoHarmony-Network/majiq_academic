@@ -61,6 +61,7 @@ def get_voila_files(directory, pattern, get_comp_names=False):
                    "doc",
                    "lsvs",
                    "tmp"]
+        # don't os.walk down these directories..
         subdirs[:] = [d for d in subdirs if d not in exclude]
         # if os.path.basename(root) == "summaries" or os.path.basename(root) == "static":
         #     continue  # this folder contains all the html files.. skip over this dir

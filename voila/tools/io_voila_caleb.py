@@ -247,6 +247,9 @@ def import_dpsi(fp,
         LOG.info("%s matched search pattern, but it is binary, so the file is not"
                  "a voila tsv ... skipping it" % fp)
         return False
+    if have_permission(fp):
+        LOG.info("Uhhh this is embarrassing, it looks like you don't have permissions to view"
+                 " this file: %s" % fp)
     lsv_dictionary = dict()
     funky_lsvs = list()
     has_voila = True
@@ -429,6 +432,27 @@ def import_dpsi(fp,
         if return_funky_ids:
             return lsv_dictionary, funky_lsvs
         return lsv_dictionary
+
+
+def have_permission(file_path):
+    """
+    Check if you have user permission to read file
+    :param file_path:
+    :return: Bool
+    """
+    try:
+        i = 0
+        with open(file_path, "r") as handle:
+            for line in handle:
+                i += 1
+                if i > 10:
+                    break
+    except UnicodeDecodeError:
+        raise RuntimeError("Oops, only check permission after ensuring"
+                           "the file is *not* binary, please.")
+    except PermissionError:
+        return False
+    return True
 
 
 def check_if_file_binary(file_path):
