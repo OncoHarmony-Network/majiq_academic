@@ -203,6 +203,7 @@ def import_dpsi(fp,
 
 
     """
+    pdb.set_trace()
     if not isinstance(fp, str):
         raise TypeError("Expected file path to be string, instead it was %s" % type(fp))
     lsv_dictionary = dict()
