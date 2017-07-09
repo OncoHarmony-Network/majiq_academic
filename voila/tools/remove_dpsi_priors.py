@@ -77,7 +77,7 @@ def wrapper(directory, second_arg):
                 exit(1)
             # make sure you aren't going to overwrite a result you just created...
             unique_outpaths.add(outpath)
-            pkl.dump(prior_rem, open(outpath, "w"))
+            pkl.dump(prior_rem, open(outpath, "wb"))
             LOG.info("Wrote results to file: %s" % outpath)
 
 
