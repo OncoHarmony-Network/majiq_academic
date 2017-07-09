@@ -1,3 +1,5 @@
+import mimetypes
+
 from voila.tools import Tool
 import os
 import pandas as pa
@@ -241,6 +243,10 @@ def import_dpsi(fp,
     """
     if not isinstance(fp, str):
         raise TypeError("Expected file path to be string, instead it was %s" % type(fp))
+    if check_if_file_binary(fp):
+        LOG.info("%s matched search pattern, but it is binary, so the file is not"
+                 "a voila tsv ... skipping it" % fp)
+        return False
     lsv_dictionary = dict()
     funky_lsvs = list()
     has_voila = True
@@ -249,169 +255,171 @@ def import_dpsi(fp,
         line_i = 0
         found_stop_at = False
         can_stop = False
-        for line in handle:
-            if isinstance(stop_at, str):
-                if stop_at in line:
-                    found_stop_at = True
-                    can_stop = True
-                else:
-                    found_stop_at = False
-                    if line_i > 0:
-                        line_i += 1
-                        continue
-            line_split = line.rstrip("\r\n").split("\t")
-            if line_i == 0:
-                if not is_valid_tsv_file(line):
-                    LOG.info("%s matched search pattern (%s), but this file doesn't appear"
-                             "to be a valid voila tsv output... skipping it...")
-                    return False
-                # Fix pound sign silliness
-                line_split[0] = line_split[0].replace("#", "")
-                file_headers.extend(line_split)
-                condition_1_name = line_split[5].split(" ")[0]
-                condition_2_name = line_split[6].split(" ")[0]
-                LOG.info("Importing %s vs %s deltapsi data ..." % (condition_1_name, condition_2_name))
-                if "Voila Link" in file_headers:
-                    has_voila = True
-                    pre_voila_1_0_0 = True
-                else:
-                    pre_voila_1_0_0 = False
-                    has_voila = False
-                # p_thresh = line_split[4]
-                # if DPSI_HEADER[4] == "TBD":
-                #     left = p_thresh.find("=")
-                #     right = p_thresh.find(") ")
-                #     p_thresh_float = float(p_thresh[left+1:right])
-                #     DPSI_HEADER[4] = p_thresh
-                #     print "Voila results were generated with threshold d_psi of %s"%(p_thresh_float)
-                # elif DPSI_HEADER[4] != p_thresh:
-                #     ERROR="The deltapsi txtfiles were generated with different thresholds."
-                #     ERROR+=" That isn't currently supported (and you probably don't want to"
-                #     ERROR+=" compare these results ... talk to Caleb."
-                #     raise RuntimeError(ERROR)
+        try:
+            for line in handle:
+                if isinstance(stop_at, str):
+                    if stop_at in line:
+                        found_stop_at = True
+                        can_stop = True
+                    else:
+                        found_stop_at = False
+                        if line_i > 0:
+                            line_i += 1
+                            continue
+                line_split = line.rstrip("\r\n").split("\t")
+                if line_i == 0:
+                    if not has_valid_voila_tsv_header(line):
+                        LOG.info("%s matched search pattern, but this file doesn't appear"
+                                 " to be a valid voila tsv output... skipping it..." % fp)
+                        return False
+                    # Fix pound sign silliness
+                    line_split[0] = line_split[0].replace("#", "")
+                    file_headers.extend(line_split)
+                    condition_1_name = line_split[5].split(" ")[0]
+                    condition_2_name = line_split[6].split(" ")[0]
+                    LOG.info("Importing %s vs %s deltapsi data ..." % (condition_1_name, condition_2_name))
+                    if "Voila Link" in file_headers:
+                        has_voila = True
+                        pre_voila_1_0_0 = True
+                    else:
+                        pre_voila_1_0_0 = False
+                        has_voila = False
+                    # p_thresh = line_split[4]
+                    # if DPSI_HEADER[4] == "TBD":
+                    #     left = p_thresh.find("=")
+                    #     right = p_thresh.find(") ")
+                    #     p_thresh_float = float(p_thresh[left+1:right])
+                    #     DPSI_HEADER[4] = p_thresh
+                    #     print "Voila results were generated with threshold d_psi of %s"%(p_thresh_float)
+                    # elif DPSI_HEADER[4] != p_thresh:
+                    #     ERROR="The deltapsi txtfiles were generated with different thresholds."
+                    #     ERROR+=" That isn't currently supported (and you probably don't want to"
+                    #     ERROR+=" compare these results ... talk to Caleb."
+                    #     raise RuntimeError(ERROR)
+                    line_i += 1
+                    continue
+
+                gene_name = str(line_split[0])
+
+                gene_id = str(line_split[1])
+
+                d_psi_floated = [float(x) for x in line_split[3].split(';')]
+
+                prob_d_psis_floated = [float(x) for x in line_split[4].split(';')]
+
+                # Saves the junction # and directionality of change
+                over_cutoff = list()
+
+                # Just saves which junction index for those that are significant
+                sig_junctions = list()
+
+                if keep_cutoff_info:
+                    # Junction index
+                    i = 0
+                    for d_psi, prob_dPSI in zip(d_psi_floated, prob_d_psis_floated):
+                        # If the d_psi is > than 0 and > the cutoff d_psi and prob.
+                        if ((d_psi > cutoff_d_psi) and (prob_dPSI > cutoff_prob)):
+                            # junctionIndex_over
+                            over_cutoff.append(str(i) + "_over")
+                            sig_junctions.append(i)
+                        # Else if the d_psi is < than 0 and > the cutoff d_psi and prob.
+                        elif ((d_psi < -cutoff_d_psi) and (prob_dPSI > cutoff_prob)):
+                            # junctionIndex_under
+                            over_cutoff.append(str(i) + "_under")
+                            sig_junctions.append(i)
+                        if abs(d_psi) < 0.2 and prob_dPSI >= 0.95:
+                            pdb.set_trace()
+                        i += 1
+
+                LSV_ID = str(line_split[2])
+                if "target" in LSV_ID:
+                    ref_type = "target"
+                elif "source" in LSV_ID:
+                    ref_type = "source"
+
+                psi_1_floated = [float(x) for x in line_split[5].split(';')]
+
+                psi_2_floated = [float(x) for x in line_split[6].split(';')]
+
+                lsv_type = str(line_split[7])
+
+                a5ss = bool(line_split[8])
+
+                a3ss = bool(line_split[9])
+
+                es = bool(line_split[10])
+
+                n_junctions = int(line_split[11])
+
+                n_exons = int(line_split[12])
+
+                if pre_voila_1_0_0:
+                    de_novo_junct = int(line_split[13])
+                else:  # Else it is boolean
+                    de_novo_junct = str(line_split[13])
+
+                chrom = str(line_split[14])
+
+                strand = str(line_split[15])
+
+                junct_coord = str(line_split[16]).split(";")
+                # if condition_1_name+"_"+condition_2_name == "KA_N_0_C_KA_T2_72_B"
+                try:
+                    exon_coord = str(line_split[17]).split(";")
+                except:
+                    pdb.set_trace()
+
+                if len(d_psi_floated) != len(exon_coord) - 1:
+                    funky_lsvs.append(LSV_ID)
+                    # line_i+=1
+                    # continue
+
+                exon_alt_start = str(line_split[18])
+
+                exon_alt_end = str(line_split[19])
+
+                ir_coords = str(line_split[20])
+
+                if has_voila:
+                    voila_link = str(line_split[21])
+
+                lsv_dictionary[LSV_ID] = dict({
+                    file_headers[0]: gene_name,
+                    file_headers[1]: gene_id,
+                    file_headers[2]: LSV_ID,
+                    file_headers[3]: d_psi_floated,
+                    file_headers[4]: prob_d_psis_floated,
+                    file_headers[5]: psi_1_floated,
+                    file_headers[6]: psi_2_floated,
+                    file_headers[7]: lsv_type,
+                    file_headers[8]: a5ss,
+                    file_headers[9]: a3ss,
+                    file_headers[10]: es,
+                    file_headers[11]: n_junctions,
+                    file_headers[12]: n_exons,
+                    file_headers[13]: de_novo_junct,
+                    file_headers[14]: chrom,
+                    file_headers[15]: strand,
+                    file_headers[16]: junct_coord,
+                    file_headers[17]: exon_coord,
+                    file_headers[18]: exon_alt_start,
+                    file_headers[19]: exon_alt_end,
+                    file_headers[20]: ir_coords})
+                if has_voila:
+                    lsv_dictionary["Voila Link"] = voila_link
+
+                if keep_cutoff_info:
+                    lsv_dictionary[LSV_ID]["dPSI_over_cutoff"] = over_cutoff
+                    lsv_dictionary[LSV_ID]["sig_junctions"] = sig_junctions
+
+                lsv_dictionary[LSV_ID]["Reference_Type"] = ref_type
+
                 line_i += 1
-                continue
-
-            gene_name = str(line_split[0])
-
-            gene_id = str(line_split[1])
-
-            d_psi_floated = [float(x) for x in line_split[3].split(';')]
-
-            prob_d_psis_floated = [float(x) for x in line_split[4].split(';')]
-
-            # Saves the junction # and directionality of change
-            over_cutoff = list()
-
-            # Just saves which junction index for those that are significant
-            sig_junctions = list()
-
-            if keep_cutoff_info:
-                # Junction index
-                i = 0
-                for d_psi, prob_dPSI in zip(d_psi_floated, prob_d_psis_floated):
-                    # If the d_psi is > than 0 and > the cutoff d_psi and prob.
-                    if ((d_psi > cutoff_d_psi) and (prob_dPSI > cutoff_prob)):
-                        # junctionIndex_over
-                        over_cutoff.append(str(i) + "_over")
-                        sig_junctions.append(i)
-                    # Else if the d_psi is < than 0 and > the cutoff d_psi and prob.
-                    elif ((d_psi < -cutoff_d_psi) and (prob_dPSI > cutoff_prob)):
-                        # junctionIndex_under
-                        over_cutoff.append(str(i) + "_under")
-                        sig_junctions.append(i)
-                    if abs(d_psi) < 0.2 and prob_dPSI >= 0.95:
-                        pdb.set_trace()
-                    i += 1
-
-            LSV_ID = str(line_split[2])
-            if "target" in LSV_ID:
-                ref_type = "target"
-            elif "source" in LSV_ID:
-                ref_type = "source"
-
-            psi_1_floated = [float(x) for x in line_split[5].split(';')]
-
-            psi_2_floated = [float(x) for x in line_split[6].split(';')]
-
-            lsv_type = str(line_split[7])
-
-            a5ss = bool(line_split[8])
-
-            a3ss = bool(line_split[9])
-
-            es = bool(line_split[10])
-
-            n_junctions = int(line_split[11])
-
-            n_exons = int(line_split[12])
-
-            if pre_voila_1_0_0:
-                de_novo_junct = int(line_split[13])
-            else:  # Else it is boolean
-                de_novo_junct = str(line_split[13])
-
-            chrom = str(line_split[14])
-
-            strand = str(line_split[15])
-
-            junct_coord = str(line_split[16]).split(";")
-            #if condition_1_name+"_"+condition_2_name == "KA_N_0_C_KA_T2_72_B"
-            try:
-                exon_coord = str(line_split[17]).split(";")
-            except:
-                pdb.set_trace()
-
-            if len(d_psi_floated) != len(exon_coord) - 1:
-                funky_lsvs.append(LSV_ID)
-                # line_i+=1
-                # continue
-
-            exon_alt_start = str(line_split[18])
-
-            exon_alt_end = str(line_split[19])
-
-            ir_coords = str(line_split[20])
-
-            if has_voila:
-                voila_link = str(line_split[21])
-
-            lsv_dictionary[LSV_ID] = dict({
-                file_headers[0]: gene_name,
-                file_headers[1]: gene_id,
-                file_headers[2]: LSV_ID,
-                file_headers[3]: d_psi_floated,
-                file_headers[4]: prob_d_psis_floated,
-                file_headers[5]: psi_1_floated,
-                file_headers[6]: psi_2_floated,
-                file_headers[7]: lsv_type,
-                file_headers[8]: a5ss,
-                file_headers[9]: a3ss,
-                file_headers[10]: es,
-                file_headers[11]: n_junctions,
-                file_headers[12]: n_exons,
-                file_headers[13]: de_novo_junct,
-                file_headers[14]: chrom,
-                file_headers[15]: strand,
-                file_headers[16]: junct_coord,
-                file_headers[17]: exon_coord,
-                file_headers[18]: exon_alt_start,
-                file_headers[19]: exon_alt_end,
-                file_headers[20]: ir_coords})
-            if has_voila:
-                lsv_dictionary["Voila Link"] = voila_link
-
-            if keep_cutoff_info:
-                lsv_dictionary[LSV_ID]["dPSI_over_cutoff"] = over_cutoff
-                lsv_dictionary[LSV_ID]["sig_junctions"] = sig_junctions
-
-            lsv_dictionary[LSV_ID]["Reference_Type"] = ref_type
-
-            line_i += 1
-            if can_stop:
-                if not found_stop_at:
-                    break
-
+                if can_stop:
+                    if not found_stop_at:
+                        break
+        except:
+            pdb.set_trace()
         lsv_dictionary["condition_1_name"] = condition_1_name
         lsv_dictionary["condition_2_name"] = condition_2_name
 
@@ -423,7 +431,29 @@ def import_dpsi(fp,
         return lsv_dictionary
 
 
-def is_valid_tsv_file(header_line):
+def check_if_file_binary(file_path):
+    """
+    https://stackoverflow.com/a/7392391/7378802
+    :param file_path:
+    :return: Bool
+    """
+    textchars = bytearray({7, 8, 9, 10, 12, 13, 27} | set(range(0x20, 0x100)) - {0x7f})
+    the_bytes = open(file_path, 'rb').read(1024)
+    if bool(the_bytes.translate(None, textchars)):
+        return True
+    try:
+        i = 0
+        with open(file_path, "r") as handle:
+            for line in handle:
+                i += 1
+                if i > 10:
+                    break
+    except UnicodeDecodeError:
+        return True
+    return False
+
+
+def has_valid_voila_tsv_header(header_line):
     """
     Make sure the supposed tsv file is actually a tsv file
     :param header_line: str, from file's first line
@@ -445,6 +475,7 @@ def is_valid_tsv_file(header_line):
             return False
     return is_valid
 
+
 def comp_without_dup(comp_name):
     """
     If there were duplicate tsv files with the same comparison name,
@@ -457,6 +488,7 @@ def comp_without_dup(comp_name):
     if "_duplicate" in comp_name:
         fixed_name = comp_name[0:comp_name.index("_duplicate")]
     return fixed_name
+
 
 def subset_significant(data,
                        cutoff_dpsi=0.2,

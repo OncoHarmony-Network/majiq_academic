@@ -127,8 +127,11 @@ def find_files(path, pattern, recursive=True):
         (stdout, stderr) = out.communicate()
         # need to decode bytes .. tested on Mac.. I bet this is going to break someday
         stdout = stdout.decode('ascii')
-        # Save found files to list
-        file_list = stdout.split()
+        # Save found files to list (each result has a newline character
+        file_list = stdout.split(os.linesep)
+        # remove empy elements (probably last thing in the stdout is '\n' which is '' now)
+        while '' in file_list:
+            file_list.remove('')
     else:
         # Walk through directory
         for dName, sdName, fList in os.walk(path):
