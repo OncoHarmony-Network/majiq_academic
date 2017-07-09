@@ -246,6 +246,7 @@ def import_dpsi(fp,
     if not have_permission(fp):
         LOG.info("Uhhh this is embarrassing, it looks like you don't have permissions to view"
                  " this file: %s" % fp)
+        return False
     if check_if_file_binary(fp):
         LOG.info("%s matched search pattern, but it is binary, so the file is not"
                  "a voila tsv ... skipping it" % fp)
