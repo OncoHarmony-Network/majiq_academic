@@ -71,7 +71,8 @@ def quick_import(dir,
                  deseq_sep="\t",
                  deseq_id_colname="ensembl_gene_id",
                  just_one=False,
-                 stop_at=False):
+                 stop_at=False,
+                 comparisons=None):
     """
     Given a directory with '*_quantify_deltapsi' files, import all dPSI
         text files, throwing away intron events, return dictionary as follows.
@@ -105,6 +106,7 @@ def quick_import(dir,
                 See get_deseq_diff_expr_genes() for details.
         just_one: only import and return one txt path (only really need this for lookup.lookup_everywhere()...)
         stop_at: if provided, stop reading voila file when you reach this LSV ID
+        comparisons: if provided, only import tsv files with the provided list of comparison names
 
     Assumptions:
         Directory contains files that end in ".deltapsi_quantify_deltapsi.txt"
@@ -130,6 +132,37 @@ def quick_import(dir,
         if len(dpsi_comparison_name) != len(dpsi_files):
             raise ValueError("Something is probably screwy with the names "
                              "of the dPSI text files...")
+        # Only want to import stuff in list of comparisons...
+        if comparisons:
+            if isinstance(comparisons, str):
+                comparisons = [comparisons]
+            elif not isinstance(comparisons, list):
+                LOG.error("User provided comparisons is not a list :(")
+                exit(1)
+            to_remove = list()
+            to_keep = list()
+            for ii in range(len(dpsi_files)):
+                if not dpsi_comparison_name[ii] in comparisons:
+                    to_remove.append(ii)
+                else:
+                    to_keep.append(ii)
+            if len(to_keep) < len(comparisons):
+                LOG.error("Couldn't find all these comparisons you wanted:\n%s" % comparisons)
+            for index in sorted(to_remove, reverse=True):
+                del dpsi_comparison_name[index]
+                del dpsi_files[index]
+        if len(set(dpsi_comparison_name)) != len(set(dpsi_files)):
+            # this means more than one tsv with the same name is in this directory substructure
+            # possibly because user ran different thresholds (e.g. 10% and 20%) but kept the same names
+            # no worries, I think I have a fix... maybe... this could come back and bite me in the @$$
+            dupes = [x for n, x in enumerate(dpsi_comparison_name) if x in dpsi_comparison_name[:n]]
+            for dup in dupes:
+                i = 0
+                while dup in dpsi_comparison_name:
+                    new_name = "%s_duplicate%s" % (dup, i)
+                    dpsi_comparison_name[dpsi_comparison_name.index(dup)] = new_name
+                    i += 1
+
     if len(dpsi_files) == 0:
         raise RuntimeError("Didn't find any voila txt files...")
 
@@ -223,7 +256,7 @@ def import_dpsi(fp,
             line_split = line.rstrip("\r\n").split("\t")
             if line_i == 0:
                 # Fix pound sign silliness
-                line_split[line_split.index("#Gene Name")] = "Gene Name"
+                line_split[0] = line_split[0].replace("#", "")
                 file_headers.extend(line_split)
                 condition_1_name = line_split[5].split(" ")[0]
                 condition_2_name = line_split[6].split(" ")[0]
@@ -377,6 +410,19 @@ def import_dpsi(fp,
             return lsv_dictionary, funky_lsvs
         return lsv_dictionary
 
+
+def comp_without_dup(comp_name):
+    """
+    If there were duplicate tsv files with the same comparison name,
+        I add duplicate_# to the end. This will return the name without
+        the duplicate_#, or just the name if it doesn't have duplicate_
+    :param comp_name:
+    :return:
+    """
+    fixed_name = comp_name
+    if "_duplicate" in comp_name:
+        fixed_name = comp_name[0:comp_name.index("_duplicate")]
+    return fixed_name
 
 def subset_significant(data,
                        cutoff_dpsi=0.2,

@@ -68,8 +68,8 @@ def wrapper(directory, second_arg):
                                             deltapsi_tabfile=dpsi_tsv)
         for tab_file, prior_rem in zip(dpsi_tsv, priors_removed):
             outname = os.path.basename(tab_file)
-            outname.replace("deltapsi_deltapsi", "deltapsi_no_prior")
-            outname.replace("tsv", "pickle")
+            outname = outname.replace("deltapsi_deltapsi", "deltapsi_no_prior")
+            outname = outname.replace("tsv", "pickle")
             outdir = os.path.dirname(tab_file)
             outpath = os.path.join(outdir, outname)
             if outpath in unique_outpaths:
@@ -154,30 +154,34 @@ def remove_dpsi_priors(deltapsi_voila, deltapsi_prior, deltapsi_tabfile):
         # As long as they came from the same build, we know any given LSV will have
         # all the possible junctions, so we just need a master list of all LSVs here
         master_junction_dict = merge_dicts(*tsv_dict.values())
-        for a in [1]:
-            dist_no_priors_edpsi_all = dict()
-            i = 0.0
-            #n_lsvs = float(len(lsv_ids))
-            #indeces_at_x_percent = percent_through_list(len(lsv_ids), 0.01)
-            for tissue_lsv in tissue_lsvs:
-                if i in indeces_at_x_percent:
-                    perc = indeces_at_x_percent[i]
-                    LOG.info("Processed %s%% of the LSVs... " % perc)
-                dist_no_priors_edpsi = list()
-                # This script will work even if you truncate the tsv file
-                # It will simply skip trying to process lsvs not in the provided tsv file..
-                if tissue_lsv.lsv_id not in lsv_ids:
-                    continue
-                elif i == n_lsvs:
-                    break
-                for junction_number in range(len(junctions[tissue_lsv.lsv_id])):
-                    prior_info = np.log(collapse_matrix(tissue_priors[0, :, :]))
-                    mle_bins = np.exp(np.log(np.array(tissue_lsv.bins[int(junction_number)])) - prior_info)
-                    mle_bins /= 1. * np.sum(mle_bins)
-                    dist_no_priors_edpsi.append(expected_dpsi(mle_bins))
-                dist_no_priors_edpsi_all[tissue_lsv.lsv_id] = dist_no_priors_edpsi
-                i += 1.0
-            res.append(dist_no_priors_edpsi_all)
+        lsv_ids = list(master_junction_dict.keys())
+        n_lsvs = float(len(lsv_ids))  # floating for some reason
+        dist_no_priors_edpsi_all = dict()
+        i = 0.0
+        indeces_at_x_percent = percent_through_list(len(lsv_ids), 0.01)
+        for tissue_lsv in tissue_lsvs:
+            if i in indeces_at_x_percent:
+                perc = indeces_at_x_percent[i]
+                LOG.info("Processed %s%% of the LSVs... " % perc)
+            dist_no_priors_edpsi = list()
+            # This script will work even if you truncate the tsv file
+            # It will simply skip trying to process lsvs not in the provided tsv file..
+            if tissue_lsv.lsv_id not in lsv_ids:
+                continue
+            elif i == n_lsvs:
+                break
+            for junction_number in range(len(master_junction_dict[tissue_lsv.lsv_id])):
+                prior_info = np.log(collapse_matrix(tissue_priors[0, :, :]))
+                mle_bins = np.exp(np.log(np.array(tissue_lsv.bins[int(junction_number)])) - prior_info)
+                mle_bins /= 1. * np.sum(mle_bins)
+                dist_no_priors_edpsi.append(expected_dpsi(mle_bins))
+            dist_no_priors_edpsi_all[tissue_lsv.lsv_id] = dist_no_priors_edpsi
+            i += 1.0
+        for tsv in deltapsi_tabfile:
+            # get all the prior-removed dPSI data for only the LSV IDs
+            # in this given tsv
+            this_res = {k: dist_no_priors_edpsi_all.get(k) for k in tsv_dict[tsv].keys()}
+            res.append(this_res)
     return res
 
 

@@ -45,25 +45,21 @@ class ThisisLookup(Tool):
         return parser
 
     def run(self, args):
+        if args.comparisons:
+            if "," in args.comparisons or " " in args.comparisons:
+                args.comparisons.replace(" ", ",")
+                to_lookup = args.comparisons.split(",")
+            else:
+                to_lookup = [args.comparisons]
         imported = io_voila_caleb.quick_import(dir=args.directory,
                                                cutoff_d_psi=0,
                                                cutoff_prob=0,
                                                pattern=args.pattern,
                                                keep_ir=True,
                                                just_one=args.just_one,
-                                               stop_at=args.lookup_val)
-        if args.comparisons:
-            if "," in args.comparisons or " " in args.comparisons:
-                args.comparisons.replace(" ", ",")
-                to_lookup = args.comparisons.split(",")
-            else:
-                to_lookup = list(args.comparisons)
-        else:
-            to_lookup = list(imported.keys())
-        avail_comps = list(imported.keys())
-        for tolook in to_lookup:
-            if tolook not in avail_comps:
-                raise ValueError("%s is not a valid comparison name..." % tolook)
+                                               stop_at=args.lookup_val,
+                                               comparisons=to_lookup)
+
         # coding for readability here...
         # default is True..
         abbreviated_bool = True
@@ -98,19 +94,11 @@ def lookup_everywhere(dictionary_lookup,
             comparisons_lookup: if provided, only look in these comparisons
     """
     io_voila_caleb.check_is_quick_import(dictionary_lookup)
-    # if not isinstance(Dictionary,dict) or not isinstance(Dictionary[Dictionary.keys()[0]],dict):
-    #     raise ValueError("Please provide a dictionary of dictionaries.")
-    # if Dictionary[Dictionary.keys()[0]].has_key("Gene ID"):
-    #     raise ValueError("Please provide a dictionary of LSV dictionaries,"
-    #                         " not a single LSV dictionary. Or, use lookup().")
-    # if not Dictionary[Dictionary.keys()[0]].has_key("condition_1_name"):
-    #     raise ValueError("Please provide a dictionary of LSV dictionaries.")
-
     found_dicts = dict()
     found_data = False
     for LSV_dict_name in dictionary_lookup.keys():
         if comparisons_lookup:
-            if LSV_dict_name not in comparisons_lookup:
+            if io_voila_caleb.comp_without_dup(LSV_dict_name) not in comparisons_lookup:
                 continue
         found_data = lookup(dictionary_lookup[LSV_dict_name],
                             name=name,
