@@ -185,6 +185,9 @@ def quick_import(dir,
             imported_file = import_dpsi(f, cutoff_d_psi, cutoff_prob,
                                         return_funky_ids=return_funky_ids,
                                         stop_at=stop_at)
+        # imported_file will be False if import_dpsi thinks its not a valid tsv...
+        if not imported_file:
+            continue
         imported_files[comparison_name] = imported_file
     if cutoff_d_psi != 0 or cutoff_prob != 0 or not keep_ir:
         imported_files = subset_significant(imported_files,
@@ -258,6 +261,10 @@ def import_dpsi(fp,
                         continue
             line_split = line.rstrip("\r\n").split("\t")
             if line_i == 0:
+                if not is_valid_tsv_file(line):
+                    LOG.info("%s matched search pattern (%s), but this file doesn't appear"
+                             "to be a valid voila tsv output... skipping it...")
+                    return False
                 # Fix pound sign silliness
                 line_split[0] = line_split[0].replace("#", "")
                 file_headers.extend(line_split)
@@ -415,6 +422,28 @@ def import_dpsi(fp,
             return lsv_dictionary, funky_lsvs
         return lsv_dictionary
 
+
+def is_valid_tsv_file(header_line):
+    """
+    Make sure the supposed tsv file is actually a tsv file
+    :param header_line: str, from file's first line
+    :return: True or False
+    """
+    is_valid = True
+    expect_to_be_in = ["E(dPSI) per LSV junction",
+                       "#Gene Name",
+                       "Gene ID",
+                       "LSV ID",
+                       "E(PSI)",
+                       "LSV Type",
+                       "Exons coords",
+                       "Junctions coords",
+                       "strand",
+                       "chr"]
+    for expected in expect_to_be_in:
+        if expected not in header_line:
+            return False
+    return is_valid
 
 def comp_without_dup(comp_name):
     """
