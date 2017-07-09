@@ -253,6 +253,9 @@ def import_dpsi(fp,
                     can_stop = True
                 else:
                     found_stop_at = False
+                    if line_i > 0:
+                        line_i += 1
+                        continue
             line_split = line.rstrip("\r\n").split("\t")
             if line_i == 0:
                 # Fix pound sign silliness
@@ -346,8 +349,11 @@ def import_dpsi(fp,
             strand = str(line_split[15])
 
             junct_coord = str(line_split[16]).split(";")
-
-            exon_coord = str(line_split[17]).split(";")
+            #if condition_1_name+"_"+condition_2_name == "KA_N_0_C_KA_T2_72_B"
+            try:
+                exon_coord = str(line_split[17]).split(";")
+            except:
+                pdb.set_trace()
 
             if len(d_psi_floated) != len(exon_coord) - 1:
                 funky_lsvs.append(LSV_ID)
@@ -405,7 +411,6 @@ def import_dpsi(fp,
         n_lsvs = str(line_i - 1)
         n_funky = str(len(funky_lsvs))
         fn = str(os.path.basename(fp))
-        # print "%s LSVs (%s funky ones discarded) extracted from %s"%(n_lsvs,n_funky,fn)
         if return_funky_ids:
             return lsv_dictionary, funky_lsvs
         return lsv_dictionary

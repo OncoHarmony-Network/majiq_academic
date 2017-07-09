@@ -51,6 +51,8 @@ class ThisisLookup(Tool):
                 to_lookup = args.comparisons.split(",")
             else:
                 to_lookup = [args.comparisons]
+        else:
+            to_lookup = None
         imported = io_voila_caleb.quick_import(dir=args.directory,
                                                cutoff_d_psi=0,
                                                cutoff_prob=0,
@@ -59,7 +61,7 @@ class ThisisLookup(Tool):
                                                just_one=args.just_one,
                                                stop_at=args.lookup_val,
                                                comparisons=to_lookup)
-
+        to_lookup = list(imported.keys())
         # coding for readability here...
         # default is True..
         abbreviated_bool = True
