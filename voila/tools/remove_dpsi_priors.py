@@ -7,6 +7,7 @@ import numpy as np
 import pdb
 import os
 
+from voila.tools.utils.merge_dicts import merge_dicts
 from voila.tools.utils.percent_through_list import percent_through_list
 from voila.utils.voila_log import voila_log
 
@@ -145,26 +146,18 @@ def remove_dpsi_priors(deltapsi_voila, deltapsi_prior, deltapsi_tabfile):
         LOG.info("Loading priormatrix file %s" % deltapsi_prior)
         tissue_priors = np.array(get_file(deltapsi_prior))
         LOG.info("done")
+        tsv_dict = dict()
         for tsv in deltapsi_tabfile:
-            LOG.info("Loading voila text file %s" % tsv)
-            #deltapsi_txt = np.loadtxt(tsv, delimiter='\t', dtype=bytes).astype(str)
-            # Just read the lsv ids and junction coordinate column into memory
-            deltapsi_txt = import_dpsi_pandas(tsv, columns=[2, 16])
-            LOG.info("done")
-            # column 0 is LSV IDs
-            lsv_ids = deltapsi_txt[deltapsi_txt.columns[0]]
-            # convert to list
-            lsv_ids = [x for x in lsv_ids]
-            #junction_list = deltapsi_txt[:, 16]
-            # column 1 is junction coordinates
-            junction_list = deltapsi_txt[deltapsi_txt.columns[1]]
-            junctions = dict()
-            for ii in range(len(lsv_ids)):
-                junctions[lsv_ids[ii]] = junction_list[ii].split(';')
+            this_tsvs_juncs = get_tsv_junctions(tsv)
+            tsv_dict[tsv] = this_tsvs_juncs
+        # As long as they came from the same build, we know any given LSV will have
+        # all the possible junctions, so we just need a master list of all LSVs here
+        master_junction_dict = merge_dicts(*tsv_dict.values())
+        for a in [1]:
             dist_no_priors_edpsi_all = dict()
             i = 0.0
-            n_lsvs = float(len(lsv_ids))
-            indeces_at_x_percent = percent_through_list(len(lsv_ids), 0.01)
+            #n_lsvs = float(len(lsv_ids))
+            #indeces_at_x_percent = percent_through_list(len(lsv_ids), 0.01)
             for tissue_lsv in tissue_lsvs:
                 if i in indeces_at_x_percent:
                     perc = indeces_at_x_percent[i]
@@ -185,6 +178,28 @@ def remove_dpsi_priors(deltapsi_voila, deltapsi_prior, deltapsi_tabfile):
                 i += 1.0
             res.append(dist_no_priors_edpsi_all)
     return res
+
+
+def get_tsv_junctions(tsv_file):
+    """
+    :param tsv_file: path to tsv
+    :return: {LSV_ID : junctions}
+    """
+    LOG.info("Getting junction coords from voila text file %s" % tsv_file)
+    # Just read the lsv ids and junction coordinate column into memory
+    deltapsi_txt = import_dpsi_pandas(tsv_file, columns=[2, 16])
+    # column 0 is LSV IDs
+    lsv_ids = deltapsi_txt[deltapsi_txt.columns[0]]
+    # convert to list
+    lsv_ids = [x for x in lsv_ids]
+    # junction_list = deltapsi_txt[:, 16]
+    # column 1 is junction coordinates
+    junction_list = deltapsi_txt[deltapsi_txt.columns[1]]
+    junctions = dict()
+    for ii in range(len(lsv_ids)):
+        junctions[lsv_ids[ii]] = junction_list[ii].split(';')
+    LOG.info("done")
+    return junctions
 
 
 def collapse_matrix(matrix):

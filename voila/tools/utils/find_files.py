@@ -52,6 +52,8 @@ def get_voila_files(directory, pattern, get_comp_names=False):
         raise ValueError("Directory doesn't seem to exist. ~_~")
     dpsi_comparison_name = list()
     dpsi_files = list()
+    # Ensure ./blah becomes /abs/path/blah
+    directory = os.path.abspath(directory)
     # Find all voila dPSI text files in directory
     for root, subdirs, files in os.walk(directory):
         if os.path.basename(root) == "summaries" or os.path.basename(root) == "static":
