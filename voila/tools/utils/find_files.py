@@ -56,14 +56,20 @@ def get_voila_files(directory, pattern, get_comp_names=False):
     directory = os.path.abspath(directory)
     # Find all voila dPSI text files in directory
     for root, subdirs, files in os.walk(directory):
-        if os.path.basename(root) == "summaries" or os.path.basename(root) == "static":
-            continue  # this folder contains all the html files.. skip over this dir
-        elif os.path.basename(root) == "doc":
-            if os.path.basename(os.path.dirname(root)) == "static":
-                continue  # lots of docs in this dir, don't need to look through em..
-        elif os.path.basename(root) == "lsvs":
-            if os.path.basename(os.path.dirname(root)) == "doc":
-                continue  # lots of .gtfs in this dir, don't need to look through em..
+        exclude = ["summaries",
+                   "static",
+                   "doc",
+                   "lsvs",
+                   "tmp"]
+        subdirs[:] = [d for d in subdirs if d not in exclude]
+        # if os.path.basename(root) == "summaries" or os.path.basename(root) == "static":
+        #     continue  # this folder contains all the html files.. skip over this dir
+        # elif os.path.basename(root) == "doc":
+        #     if os.path.basename(os.path.dirname(root)) == "static":
+        #         continue  # lots of docs in this dir, don't need to look through em..
+        # elif os.path.basename(root) == "lsvs":
+        #     if os.path.basename(os.path.dirname(root)) == "doc":
+        #         continue  # lots of .gtfs in this dir, don't need to look through em..
         # ID files that contain the Pattern
         found = _deltpsitextfinder(root, pattern=pattern)
         if found:
@@ -98,12 +104,22 @@ def _deltpsitextfinder(directory, pattern):
         return False
 
 
-def find_files(path, pattern, recursive=True):
+def find_files(path,
+               pattern,
+               recursive=True,
+               must_be_files=True):
     """
     Given a path, return all files that match pattern.
 
-        If Mac or Linux, this uses subprocess.Popen
-        else, uses os.walk(), which is much slower
+    If Mac or Linux, this uses subprocess.Popen
+    else, uses os.walk(), which is much slower
+    :param path:
+    :param pattern: grep style patterm matching
+    :param recursive: search inside directories recursively?
+    :param must_be_files: after finding matches, make sure they are files?
+        If this is False, this function will also return directories that match
+        the pattern...
+    :return: [list of file paths]
     """
     if path:
         if not os.path.exists(path):
@@ -140,6 +156,15 @@ def find_files(path, pattern, recursive=True):
                     file_list.append(os.path.join(dName, fileName))
             if not recursive:
                 return file_list
+    if must_be_files:
+        to_remove = list()
+        to_keep = list()
+        for ii in range(len(file_list)):
+            if not os.path.isfile(file_list[ii]):
+                to_remove.append(ii)
+            else:
+                to_keep.append(ii)
+        file_list = [file_list[i] for i in to_keep]
     return file_list
 
 
