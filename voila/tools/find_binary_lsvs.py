@@ -1,5 +1,5 @@
 from voila.tools import Tool
-from voila.tools import io_voila_caleb
+from voila.tools.utils import io_caleb
 from voila.tools.utils.percent_through_list import percent_through_list
 from voila.utils.voila_log import voila_log
 
@@ -11,6 +11,13 @@ import pandas as pa
 import copy
 import operator
 import pdb
+
+
+# Caleb Matthew Radens
+# radlinsky@gmail.com
+
+
+__author__ = 'cradens'
 
 
 class ThisisFindBinaryLSVs(Tool):
@@ -74,24 +81,24 @@ class ThisisFindBinaryLSVs(Tool):
         impute = True
         if args.dont_impute:
             impute = False
-        imported = io_voila_caleb.quick_import(dir=args.directory,
-                                               cutoff_d_psi=0,
-                                               cutoff_prob=0,
-                                               pattern=args.pattern,
-                                               keep_ir=consider_ir)
+        imported = io_caleb.quick_import(dir=args.directory,
+                                         cutoff_d_psi=0,
+                                         cutoff_prob=0,
+                                         pattern=args.pattern,
+                                         keep_ir=consider_ir)
         if impute:
-            imported = io_voila_caleb.impute_missing_lsvs(data=imported,
-                                                          impute_with=0)
+            imported = io_caleb.impute_missing_lsvs(data=imported,
+                                                    impute_with=0)
         results = get_binary_lsvs(data=imported,
                                   method=args.method,
                                   cutoff_d_psi=args.dpsi_thresh,
                                   just_lsv_ids=args.just_ids,
                                   must_reciprocate=args.non_reciprocating)
         if args.prob_dpsi_thresh:
-            results = io_voila_caleb.subset_significant(results,
-                                                        cutoff_dpsi=0,
-                                                        cutoff_prob=args.prob_dpsi_thresh,
-                                                        keep_introns=consider_ir)
+            results = io_caleb.subset_significant(results,
+                                                  cutoff_dpsi=0,
+                                                  cutoff_prob=args.prob_dpsi_thresh,
+                                                  keep_introns=consider_ir)
         if args.just_ids:
             LOG.info(results)
 
@@ -122,7 +129,7 @@ def get_binary_lsvs(data,
         must_reciprocate: Trye/False, binary-like LSVs must have a junc go up AND down
         method: 'sum_to_95' or 'count' ... see find_binary_lsv_ids and find_binary_lsvs_95
     """
-    io_voila_caleb.check_is_quick_import(data)
+    io_caleb.check_is_quick_import(data)
     LOG.info("Getting num_d_psi data ...")
     num_d_psi_data = get_num_d_psi(data)
     if cutoff_psi < 1:
@@ -159,17 +166,17 @@ def get_binary_lsvs(data,
         return_dict = dict()
     for comparison in list(data.keys()):
         if make_copy:
-            return_dict[comparison] = io_voila_caleb.lsv_dict_subset(dictionary=data[comparison],
-                                                                     keys=binary_ids,
-                                                                     save_LSV_data=True,
-                                                                     new_sub_key="binary_indices",
-                                                                     new_values=binary_indices)
+            return_dict[comparison] = io_caleb.lsv_dict_subset(dictionary=data[comparison],
+                                                               keys=binary_ids,
+                                                               save_LSV_data=True,
+                                                               new_sub_key="binary_indices",
+                                                               new_values=binary_indices)
         else:
-            data[comparison] = io_voila_caleb.lsv_dict_subset(dictionary=data[comparison],
-                                                              keys=binary_ids,
-                                                              save_LSV_data=True,
-                                                              new_sub_key="binary_indices",
-                                                              new_values=binary_indices)
+            data[comparison] = io_caleb.lsv_dict_subset(dictionary=data[comparison],
+                                                        keys=binary_ids,
+                                                        save_LSV_data=True,
+                                                        new_sub_key="binary_indices",
+                                                        new_values=binary_indices)
     if make_copy:
         return return_dict
     else:
@@ -442,8 +449,8 @@ def get_binary_type(lsv_a, lsv_b):
         or
         Neither
     """
-    io_voila_caleb.check_is_lsv(lsv_a)
-    io_voila_caleb.check_is_lsv(lsv_b)
+    io_caleb.check_is_lsv(lsv_a)
+    io_caleb.check_is_lsv(lsv_b)
     if not lsv_a.has_key("binary_indices"):
         raise RuntimeError("Expected binary indices for A")
     if not lsv_b.has_key("binary_indices"):
@@ -548,8 +555,8 @@ def get_exons_containing_junc(Data, LSV_ID, Junc):
 
         retuns exon coords as list of ints [[#,#], [#,#], ...]
     """
-    LSV = io_voila_caleb.get_lsv(Data, LSV_ID)
-    exons_str = io_voila_caleb.get_exons(LSV)
+    LSV = io_caleb.get_lsv(Data, LSV_ID)
+    exons_str = io_caleb.get_exons(LSV)
     exons_int = string_to_int_coords(exons_str)
     matched_exons_int = get_exons_containing_coord(exons_int, Junc)
     return matched_exons_int
@@ -562,9 +569,9 @@ def get_juncs_that_share_exon(data, lsv_id_sh, junc):
 
         Junc cannot be within the LSV's reference exon.
     """
-    matched_exons_int = io_voila_caleb.get_exons_containing_junc(data, lsv_id_sh, junc)
+    matched_exons_int = io_caleb.get_exons_containing_junc(data, lsv_id_sh, junc)
     matched_exons_str = int_to_string_coords(matched_exons_int)
-    ref_exon_int = get_reference_exon(io_voila_caleb.get_lsv(data, lsv_id_sh))
+    ref_exon_int = get_reference_exon(io_caleb.get_lsv(data, lsv_id_sh))
     ref_exon_str = int_to_string_coords([ref_exon_int])[0]
     if ref_exon_str in matched_exons_str:
         raise RuntimeError("Oops, junc %s within %s" % (junc, lsv_id_sh))
@@ -589,7 +596,7 @@ def is_junc_in_lsv(lsv, junction_coord):
     :param junction_coord: either "###-###" or [###,###]
     :return: Boolean
     """
-    io_voila_caleb.check_is_lsv(lsv)
+    io_caleb.check_is_lsv(lsv)
     if isinstance(junction_coord, list):
         if isinstance(junction_coord[0], int):
             junc_str = int_to_string_coords([junction_coord])[0]
@@ -600,7 +607,7 @@ def is_junc_in_lsv(lsv, junction_coord):
             junc_str = junction_coord
     else:
         raise RuntimeError("Unexpected Argument...")
-    lsv_juncs = io_voila_caleb.get_juncs(lsv)
+    lsv_juncs = io_caleb.get_juncs(lsv)
     if junc_str not in lsv_juncs:
         return False
     else:
@@ -615,7 +622,7 @@ def find_lsvs_with_junc(data, junc):
     """
     lsv_ids = []
     for comparison in data:
-        lsvs = io_voila_caleb.get_lsvs_quickly(data, io_voila_caleb.get_LSV_IDs(data[comparison]), comparison)
+        lsvs = io_caleb.get_lsvs_quickly(data, io_caleb.get_LSV_IDs(data[comparison]), comparison)
         for lsv in lsvs:
             if is_junc_in_lsv(lsv, junc):
                 lsv_ids.append(lsv["LSV ID"])
@@ -643,11 +650,11 @@ def is_junc_connected_to_utilized_exon(Data,
             could just be a cassette event (LSVs sharing an exclusion junction)
 
     """
-    LSV = io_voila_caleb.get_lsv(Data, LSV_ID)
+    LSV = io_caleb.get_lsv(Data, LSV_ID)
     if not is_junc_in_lsv(LSV, Junction_Int):
         raise RuntimeError("Please ensure junction is in LSV...")
-    ref_chrm = io_voila_caleb.get_chr(LSV)
-    ref_strand = io_voila_caleb.get_strand(LSV)
+    ref_chrm = io_caleb.get_chr(LSV)
+    ref_strand = io_caleb.get_strand(LSV)
     Junction_str = int_to_string_coords([Junction_Int])[0]
     ref_junc_coord = ref_chrm + "_" + ref_strand + "_" + Junction_str
     if Junc_maxPSI_dict[ref_junc_coord] < PSI_thresh:
@@ -657,8 +664,8 @@ def is_junc_connected_to_utilized_exon(Data,
     source_target_dict = get_sources_and_targets(Data, LSV_ID, Junction_Int)
     same_type_lsvs = source_target_dict[LSV["Reference_Type"]]
     for same_type in same_type_lsvs:
-        LSV_to_check = io_voila_caleb.get_lsv(Data, same_type)
-        ex_to_ch_str = io_voila_caleb.get_exons(LSV_to_check)
+        LSV_to_check = io_caleb.get_lsv(Data, same_type)
+        ex_to_ch_str = io_caleb.get_exons(LSV_to_check)
         ex_to_ch_str = set(list(ex_to_ch_str))
         ref_to_check_int = get_reference_exon(LSV_to_check)
         if is_junc_half_in_exon(Junction_Int, ref_to_check_int):
@@ -676,9 +683,9 @@ def is_junc_connected_to_utilized_exon(Data,
     for lsv in lsvs_to_check:
         if check_if_lsv_utilizes_intron(Data, lsv, 0.05):
             return True  # lets go with this is utilized...
-        LSV_to_check = io_voila_caleb.get_lsv(Data, lsv)
+        LSV_to_check = io_caleb.get_lsv(Data, lsv)
         # chr_strand_coords:max PSI
-        ex_to_ch_str = io_voila_caleb.get_exons(LSV_to_check)
+        ex_to_ch_str = io_caleb.get_exons(LSV_to_check)
         ex_to_ch_str = set(list(ex_to_ch_str))  # remove dups
         # junction of interest may go into the lsv to check,
         # in which case this exon is def. 'utilized', but
@@ -718,12 +725,12 @@ def is_junc_connected_to_utilized_exon(Data,
             pdb.set_trace()
         # figure out which junction uses the exon
         juncs_to_ch = get_juncs_using_exon(LSV_to_check, ex_to_ch_int[0], Return_indices=True)
-        lsv_juncs = io_voila_caleb.get_juncs(LSV_to_check)
+        lsv_juncs = io_caleb.get_juncs(LSV_to_check)
         max_psi = 0
         for junc_ii in juncs_to_ch:
             this_junc = lsv_juncs[junc_ii]
-            chrm = io_voila_caleb.get_chr(LSV_to_check)
-            strand = io_voila_caleb.get_strand(LSV_to_check)
+            chrm = io_caleb.get_chr(LSV_to_check)
+            strand = io_caleb.get_strand(LSV_to_check)
             junc_coord = chrm + "_" + strand + "_" + this_junc
             this_junc_max_psi = Junc_maxPSI_dict[junc_coord]
             max_psi = max(max_psi, this_junc_max_psi)
@@ -745,11 +752,11 @@ def get_juncs_using_exon(LSV, Exon, Return_indices=True):
         Return_indices: if True, return index of junction. If false,
             return the string '#-#'
     """
-    io_voila_caleb.check_is_lsv(LSV)
+    io_caleb.check_is_lsv(LSV)
     ref_exon = get_reference_exon(LSV)
     if are_exons_overlapping(ref_exon, Exon):
         pdb.set_trace()
-    juncs_str = io_voila_caleb.get_juncs(LSV)
+    juncs_str = io_caleb.get_juncs(LSV)
     juncs_int = string_to_int_coords(juncs_str)
     juncs_in_intron = list()
     junc_ii_in_intron = list()
@@ -788,7 +795,7 @@ def get_sources_and_targets(Data, LSV_ID, Junction_int):
     res = dict()
     res["source"] = list()
     res["target"] = list()
-    ref_lsv = io_voila_caleb.get_lsv(Data, LSV_ID)
+    ref_lsv = io_caleb.get_lsv(Data, LSV_ID)
     ref_ex_int = get_reference_exon(ref_lsv)
     non_ref_ju_int = get_non_ref_junc_coord(ref_ex_int, Junction_int)
     Gene_ExCoords_to_lsv_dict = Junc_to_LSVs(Data, LSV_ID, non_ref_ju_int)
@@ -802,7 +809,7 @@ def get_sources_and_targets(Data, LSV_ID, Junction_int):
     if len(lsv_ids) == 0:  # empty ..
         return res
     for lsv_id in lsv_ids:
-        LSV = io_voila_caleb.get_lsv(Data, lsv_id)
+        LSV = io_caleb.get_lsv(Data, lsv_id)
         lsvtype = LSV["Reference_Type"]
         if lsvtype == "source":
             res["source"].append(lsv_id)
@@ -820,8 +827,8 @@ def check_if_novel_intron_lsv(Data, LSV_ID, dPSI_Thresh=0.05):
         dPSI_Thresh= if threshold over which non-binary LSV junctions are
             tested for the above behavior.
     """
-    io_voila_caleb.check_is_quick_import(Data)
-    io_voila_caleb.check_is_lsv_id(LSV_ID)
+    io_caleb.check_is_quick_import(Data)
+    io_caleb.check_is_lsv_id(LSV_ID)
     LSV = Data[Data.keys()[0]][LSV_ID]
     ref_ex = get_reference_exon(LSV)
     juncs = string_to_int_coords(LSV["Junctions coords"])
@@ -832,7 +839,7 @@ def check_if_novel_intron_lsv(Data, LSV_ID, dPSI_Thresh=0.05):
         if is_junc_completely_within_exon(juncs[bin_inds[1]], ref_ex):
             return True
     else:
-        dpsis = io_voila_caleb.get_dpsis(LSV)
+        dpsis = io_caleb.get_dpsis(LSV)
         if len(dpsis) != len(juncs):
             pdb.set_trace()
         abs_dpsis = [abs(x) for x in dpsis]
@@ -931,8 +938,8 @@ def Junc_to_LSVs(Data, LSV_ID, Junc):
     """
     if isinstance(Junc, list):
         raise RuntimeError("Received [] instead of # ...")
-    io_voila_caleb.check_is_quick_import(Data)
-    io_voila_caleb.check_is_lsv_id(LSV_ID)
+    io_caleb.check_is_quick_import(Data)
+    io_caleb.check_is_lsv_id(LSV_ID)
     gene_id = LSV_ID.split(":")[0]
     exon_to_lsv_dict = GeneExons_to_LSVs(Data=Data, Gene_ID=gene_id)
     gene_exon_keys = exon_to_lsv_dict
@@ -952,12 +959,12 @@ def GeneExons_to_LSVs(Data, Gene_ID):
     """
     Generate dictionary of GeneID_ExonCoords:[list of LSVs]
     """
-    io_voila_caleb.check_is_quick_import(Data)
+    io_caleb.check_is_quick_import(Data)
     comparisons = Data.keys()
-    LSV_comparisons = io_voila_caleb.lookup_everywhere(Data,
-                                                       Gene_ID,
-                                                       save_lsv_structure_lookup=False,
-                                                       print_bool=False)
+    LSV_comparisons = io_caleb.lookup_everywhere(Data,
+                                                 Gene_ID,
+                                                 save_lsv_structure_lookup=False,
+                                                 print_bool=False)
     results = dict()
     for comparison in comparisons:
         LSVs = LSV_comparisons[comparison]
@@ -994,7 +1001,7 @@ def get_exons_containing_coord(exons, coord):
 def get_non_reference_exons(LSV):
     ref_ex = get_reference_exon(LSV)
     ref_ex_str = int_to_string_coords([ref_ex])[0]
-    all_ex = io_voila_caleb.get_exons(LSV)
+    all_ex = io_caleb.get_exons(LSV)
     all_ex.remove(ref_ex_str)
     all_ex_int = string_to_int_coords(all_ex)
     return all_ex_int
@@ -1004,13 +1011,13 @@ def get_reference_exon(LSV):
     """
     Given LSV, return reference coord.
     """
-    io_voila_caleb.check_is_lsv(LSV)
+    io_caleb.check_is_lsv(LSV)
     exon = LSV["LSV ID"].split(":")[1]
     return string_to_int_coords([exon])[0]
 
 
 def get_binary_exons(LSV):
-    io_voila_caleb.check_is_lsv(LSV)
+    io_caleb.check_is_lsv(LSV)
     if not LSV.has_key("binary_indices"):
         raise RuntimeError("LSV doesnt't look binary.")
     LSV_juncs = copy.copy(LSV['Junctions coords'])
@@ -1273,7 +1280,7 @@ def get_binary_coords(Binary_Data,
     new_lsv_dict = dict()
     one_comparison = Binary_Data.keys()[0]
     lsv_dict = Binary_Data[one_comparison]
-    lsv_ids = io_voila_caleb.get_LSV_IDs(lsv_dict)
+    lsv_ids = io_caleb.get_LSV_IDs(lsv_dict)
     alt_ref_same_target = list()
     alt_exon_ov_ref = list()
     not_enough_exons = list()
@@ -1456,10 +1463,10 @@ def singly_unique(data,
                                     cutoff_psi=1)
     LOG.info("Getting all Prob(dPSI) data ...")
     all_prob_data, comp_names = get_num_prob(data, True)
-    sig_subset = io_voila_caleb.subset_significant(data,
-                                                   sig_dpsi_thresh,
-                                                   sig_prob_thresh,
-                                                   keep_introns=evaluate_introns)
+    sig_subset = io_caleb.subset_significant(data,
+                                             sig_dpsi_thresh,
+                                             sig_prob_thresh,
+                                             keep_introns=evaluate_introns)
     all_uniques = list()
     singly_unique_sig = dict()
     non_sig = {"no_comp_assoc": []}
@@ -1473,15 +1480,15 @@ def singly_unique(data,
     all_sig = []
     if comparisons:
         for c in comparisons:
-            these_ids = io_voila_caleb.get_LSV_IDs(sig_subset[c])
+            these_ids = io_caleb.get_LSV_IDs(sig_subset[c])
             sig_subset_ids[c] = these_ids
             all_sig.extend(these_ids)
         comparisons_ii = [comp_names.index(x) for x in comparisons]
         all_sig = list(set(all_sig))
     else:
         for c in data.keys():
-            sig_subset_ids[c] = io_voila_caleb.get_LSV_IDs(sig_subset[c])
-        all_sig = io_voila_caleb.get_all_LSV_IDs(sig_subset)
+            sig_subset_ids[c] = io_caleb.get_LSV_IDs(sig_subset[c])
+        all_sig = io_caleb.get_all_LSV_IDs(sig_subset)
         comparisons_ii = [comp_names.index(x) for x in data.keys()]
     thelsvs = all_num_dpsis_data.keys()
     indeces_at_10_percent = percent_through_list(thelsvs, 0.1)
@@ -1760,7 +1767,7 @@ def singly_unique(data,
             n_nonrec_sets)
     LOG.info(summary_text)
     if unblank_the_data:
-        io_voila_caleb.unimpute_lsv_data(data, blanked_lsvs_dict)
+        io_caleb.unimpute_lsv_data(data, blanked_lsvs_dict)
     results = {"singly_unique": singly_unique_sig,
                "cococombos": cococombo_breaker,
                "opposites": opposite_dict,
@@ -1879,13 +1886,13 @@ def sig_utilized_non_red_sets(Data,
     # non_red_sets = set(id_dict.values())
     comparisons = Data.keys()
     results = {x: set() for x in comparisons}
-    all_ids = io_voila_caleb.get_all_unique_lsv_ids(Data)
+    all_ids = io_caleb.get_all_unique_lsv_ids(Data)
     n_a = len(all_ids)
-    sig_dict_subset = io_voila_caleb.subset_significant(Data,
-                                                        CUTOFF_dPSI_nonredset_hit,
-                                                        CUTOFF_PROB_nonredset_hit,
-                                                        Keep_introns)
-    sig_ids = io_voila_caleb.get_all_unique_lsv_ids(sig_dict_subset)
+    sig_dict_subset = io_caleb.subset_significant(Data,
+                                                  CUTOFF_dPSI_nonredset_hit,
+                                                  CUTOFF_PROB_nonredset_hit,
+                                                  Keep_introns)
+    sig_ids = io_caleb.get_all_unique_lsv_ids(sig_dict_subset)
     n_s = len(sig_ids)
     LOG.info("Identifying which NonRed sets are 'utilized' by sig LSVs in each comparison...")
     LOG.info("Out of %s total unique LSV IDs, %s are sig (dPSI>=%s,Prob>=%s)" % (n_a,
@@ -1896,7 +1903,7 @@ def sig_utilized_non_red_sets(Data,
     LOG.info("Building non-redundant set dPSI array dictionary...")
     nrsets_dpsis, dpsi_comps = non_redundant_dpsis(Data, all_sets, dpsi_array_comparisons)
     for comparison in comparisons:
-        sig_ids = io_voila_caleb.get_LSV_IDs(sig_dict_subset[comparison])
+        sig_ids = io_caleb.get_LSV_IDs(sig_dict_subset[comparison])
         for sig_id in sig_ids:
             if sig_id in id_dict:
                 results[comparison].add(id_dict[sig_id])
@@ -2074,7 +2081,7 @@ def non_redundant_set(data,
     # with respect to LSVs. This will add 'blank' (dPSI, PSI, Prob =0) LSVs
     # to the Data. I'm doing it InPlace, so it alters the inut object.
     # No worries, though, because I'll revert the Data to its original state.
-    blanked_lsvs_dict = io_voila_caleb.impute_missing_lsvs(data=data, in_place=True, warnings=False)
+    blanked_lsvs_dict = io_caleb.impute_missing_lsvs(data=data, in_place=True, warnings=False)
     LOG.info("Finished filling in the gaps, running non-redundant algorithm...")
     if return_numdpsis_dat:
         nr_connected_lsvs, nr_numdpsis = get_connected_lsvs_by_junc(data=data,
@@ -2232,7 +2239,7 @@ def get_connected_lsvs_by_junc(data,
     """
     # sig_juncs = get_sorted_juncs(Data)
     master_junc_dict = dict()
-    all_lsvs = io_voila_caleb.get_shared_lsv_ids(data)
+    all_lsvs = io_caleb.get_shared_lsv_ids(data)
     junc_lsv_dicts = get_junc_lsv_dicts(data,
                                         cutoff_dpsi=Cutoff_dPSI,
                                         cutoff_psi=Cutoff_PSI,
@@ -2298,14 +2305,14 @@ def get_sorted_juncs(Data):
         the Data.
     """
     master_junc_weight_dict = dict()
-    if io_voila_caleb.check_is_lsv_dict(Data, da_bool=True):
+    if io_caleb.check_is_lsv_dict(Data, da_bool=True):
         master_junc_weight_dict = get_junc_weights(Data)
-    elif io_voila_caleb.check_is_quick_import(Data):
-        shared_ids = io_voila_caleb.get_shared_lsv_ids(Data)
+    elif io_caleb.check_is_quick_import(Data):
+        shared_ids = io_caleb.get_shared_lsv_ids(Data)
         comp_to_junc_weights = dict()
         all_comparisons = Data.keys()
         for comparison in all_comparisons:
-            share_dict = io_voila_caleb.lsv_dict_subset(Data[comparison], shared_ids)
+            share_dict = io_caleb.lsv_dict_subset(Data[comparison], shared_ids)
             junc_to_weights = get_junc_weights(share_dict, Weights="dPSI")
             comp_to_junc_weights[comparison] = junc_to_weights
         all_juncs = comp_to_junc_weights[all_comparisons[0]].keys()
@@ -2336,12 +2343,12 @@ def get_master_junc_weights(Data, Weights="dPSI"):
         Arguments:
         Weight = "dPSI" or "PSI" <- which value to use?
     """
-    io_voila_caleb.check_is_quick_import(Data)
+    io_caleb.check_is_quick_import(Data)
     comparisons = Data.keys()
-    shared_ids = io_voila_caleb.get_shared_lsv_ids(Data)
+    shared_ids = io_caleb.get_shared_lsv_ids(Data)
     shared_dicts = dict()
     for comparison in comparisons:
-        share_dict = io_voila_caleb.lsv_dict_subset(Data[comparison], shared_ids)
+        share_dict = io_caleb.lsv_dict_subset(Data[comparison], shared_ids)
         junc_to_weights = get_junc_weights(share_dict, Weights=Weights)
         shared_dicts[comparison] = junc_to_weights
     all_juncs = shared_dicts[comparisons[0]].keys()
@@ -2364,8 +2371,8 @@ def get_junc_weights(Data, Weights="dPSI"):
     """
     if Weights != "dPSI" and Weights != "PSI":
         raise RuntimeError("Weights mst be 'dPSI' or 'PSI'")
-    io_voila_caleb.check_is_lsv_dict(Data)
-    lsv_ids = io_voila_caleb.get_LSV_IDs(Data)
+    io_caleb.check_is_lsv_dict(Data)
+    lsv_ids = io_caleb.get_LSV_IDs(Data)
     junc_weight_dict = dict()
     all_juncs = dict()
     for lsv_id in lsv_ids:
@@ -2402,7 +2409,7 @@ def get_junc_lsv_dicts(data,
             pointing at all their junctions (utilized only).
 
     """
-    io_voila_caleb.check_is_quick_import(data)
+    io_caleb.check_is_quick_import(data)
     LOG.info("Getting all dPSI data ...")
     numdPSIs_data = get_num_d_psi(data)
     LOG.info("Getting all PSI data ...")
@@ -2446,14 +2453,14 @@ def get_junc_coords(Data):
      return dict of lsv_ids pointing at array of junction loci:
         'chr_strand_start_end'
     """
-    if io_voila_caleb.check_is_quick_import(Data, the_bool=True):
+    if io_caleb.check_is_quick_import(Data, the_bool=True):
         junc_dict = dict()
         for comp in Data:
             junc_dict.update(get_junc_coords(Data[comp]))
         return junc_dict
-    io_voila_caleb.check_is_lsv_dict(Data)
+    io_caleb.check_is_lsv_dict(Data)
     junc_dict = dict()
-    lsv_ids = io_voila_caleb.get_LSV_IDs(Data)
+    lsv_ids = io_caleb.get_LSV_IDs(Data)
     for lsv_id in lsv_ids:
         lsv = Data[lsv_id]
         chrm = lsv["chr"]
@@ -2512,12 +2519,12 @@ def get_num_d_psi(data,
         binary_index = 0
     if use_binary_index_info == "further":
         binary_index = 1
-    io_voila_caleb.check_is_quick_import(data)
+    io_caleb.check_is_quick_import(data)
     comparison_dict = dict()
     for comparison in data.keys():
         d_psis = listdPSI(data[comparison])
         comparison_dict[comparison] = d_psis
-    union_of_lsv_ids = io_voila_caleb.get_shared_lsv_ids(data)
+    union_of_lsv_ids = io_caleb.get_shared_lsv_ids(data)
     lsv_dict = dict()
     comparisons = list(comparison_dict.keys())
     comparisons.sort()  # alphabatized
@@ -2582,12 +2589,12 @@ def get_num_prob(data,
             binary_index = 1
         else:
             raise RuntimeError("I don't know what to do here")
-    io_voila_caleb.check_is_quick_import(data)
+    io_caleb.check_is_quick_import(data)
     comparison_dict = dict()
     for nup_comparison in data.keys():
         nu_probs = list_probs(data[nup_comparison])
         comparison_dict[nup_comparison] = nu_probs
-    union_of_lsv_ids = io_voila_caleb.get_shared_lsv_ids(data)
+    union_of_lsv_ids = io_caleb.get_shared_lsv_ids(data)
     lsv_dict = dict()
     comparisons = list(comparison_dict.keys())
     comparisons.sort()  # alphabatized
@@ -2616,12 +2623,12 @@ def list_probs(lsv_dict):
             2   |   #  |
             ... |   ...|
     """
-    io_voila_caleb.check_is_lsv_dict(lsv_dict)
+    io_caleb.check_is_lsv_dict(lsv_dict)
     lsv_to_prob_dict = dict()
-    lsvs = io_voila_caleb.get_LSV_IDs(lsv_dict)
+    lsvs = io_caleb.get_LSV_IDs(lsv_dict)
     # Extract dPSI from each LSV, using cutoff.
     for lsv_id in lsvs:
-        lsv_to_prob_dict[lsv_id] = io_voila_caleb.get_probs(lsv_dict[lsv_id])
+        lsv_to_prob_dict[lsv_id] = io_caleb.get_probs(lsv_dict[lsv_id])
     return lsv_to_prob_dict
 
 
@@ -2636,12 +2643,12 @@ def listdPSI(LSV_dict):
             2   |   #  |
             ... |   ...|
     """
-    io_voila_caleb.check_is_lsv_dict(LSV_dict)
+    io_caleb.check_is_lsv_dict(LSV_dict)
     lsv_to_dPSI_dict = dict()
-    lsvs = io_voila_caleb.get_LSV_IDs(LSV_dict)
+    lsvs = io_caleb.get_LSV_IDs(LSV_dict)
     # Extract dPSI from each LSV, using cutoff.
     for lsv_id in lsvs:
-        lsv_to_dPSI_dict[lsv_id] = io_voila_caleb.get_dpsis(LSV_dict[lsv_id])
+        lsv_to_dPSI_dict[lsv_id] = io_caleb.get_dpsis(LSV_dict[lsv_id])
     return lsv_to_dPSI_dict
 
 
@@ -2686,7 +2693,7 @@ def get_num_psi(data,
         binary_index = 1
     comparison = "thing to make PyCharm happy"
     binary_index = "thing to make PyCharm happy"
-    io_voila_caleb.check_is_quick_import(data)
+    io_caleb.check_is_quick_import(data)
     condition_dict = dict()
     lsv_id_lists = list()
     for comparison in data.keys():
@@ -2698,7 +2705,7 @@ def get_num_psi(data,
         cond_2_PSIs = PSIs[cond_2_name]
         condition_dict[cond_1_name] = cond_1_PSIs
         condition_dict[cond_2_name] = cond_2_PSIs
-    union_of_lsv_ids = io_voila_caleb.get_shared_lsv_ids(data)
+    union_of_lsv_ids = io_caleb.get_shared_lsv_ids(data)
     lsv_dict = dict()
     conditions = list(condition_dict.keys())
     conditions.sort()
@@ -2732,16 +2739,16 @@ def list_psi(lsv_dict):
             2   |   #  |
             ... |   ...|
     """
-    io_voila_caleb.check_is_lsv_dict(lsv_dict)
+    io_caleb.check_is_lsv_dict(lsv_dict)
     cond_1_name = lsv_dict["condition_1_name"]
     cond_2_name = lsv_dict["condition_2_name"]
     condtion_dict = dict()
     condtion_dict[cond_1_name] = dict()
     condtion_dict[cond_2_name] = dict()
-    lsvs = io_voila_caleb.get_LSV_IDs(lsv_dict)
+    lsvs = io_caleb.get_LSV_IDs(lsv_dict)
     # Extract dPSI from each LSV, using cutoff.
     for lsv_id in lsvs:
-        PSIs = io_voila_caleb.get_psis(lsv_dict[lsv_id])
+        PSIs = io_caleb.get_psis(lsv_dict[lsv_id])
         cond_1_psi = PSIs[0]
         cond_2_psi = PSIs[1]
         condtion_dict[cond_1_name][lsv_id] = cond_1_psi
@@ -2777,10 +2784,10 @@ def check_is_binary_lsv_data(data,
                              thisbool=False):
     """
     """
-    io_voila_caleb.check_is_quick_import(data)
-    io_voila_caleb.check_lsv_ids_all_shared(data)
+    io_caleb.check_is_quick_import(data)
+    io_caleb.check_lsv_ids_all_shared(data)
     lsv_dict = data[list(data.keys())[0]]
-    random_lsv_id = io_voila_caleb.get_LSV_IDs(lsv_dict)[0]
+    random_lsv_id = io_caleb.get_LSV_IDs(lsv_dict)[0]
     if "binary_indices" in lsv_dict[random_lsv_id]:
         if thisbool:
             return True
@@ -2791,8 +2798,8 @@ def check_is_binary_lsv_data(data,
 
 
 def get_junc_index(data, lsv, junc_coord):
-    io_voila_caleb.check_is_quick_import(data)
-    io_voila_caleb.check_is_lsv(lsv)
+    io_caleb.check_is_quick_import(data)
+    io_caleb.check_is_lsv(lsv)
     if isinstance(junc_coord, str):
         if not "-" in junc_coord:
             raise RuntimeError("junc_cood should be '###-###', not %s" % junc_coord)
@@ -2803,7 +2810,7 @@ def get_junc_index(data, lsv, junc_coord):
             raise RuntimeError("Bad argument here ...")
     else:
         raise RuntimeError("Unexpected argument")
-    lsv_juncs = io_voila_caleb.get_juncs(lsv)
+    lsv_juncs = io_caleb.get_juncs(lsv)
     if not junc_coord in lsv_juncs:
         raise RuntimeError("Junc not in LSV ...")
     indices = index_all(lsv_juncs, junc_coord)
@@ -2888,20 +2895,20 @@ def get_inconclusive_cassettes(data, dpsi=0.05, psi=0.05):
     nonsig_dict = dict()
 
     for comparison in list(data.keys()):
-        binary_dict[comparison] = io_voila_caleb.lsv_dict_subset(dictionary=data[comparison],
-                                                                 keys=binary_ids,
-                                                                 save_LSV_data=True,
-                                                                 new_sub_key="binary_indices",
-                                                                 new_values=binary_indices)
-        complex_dict[comparison] = io_voila_caleb.lsv_dict_subset(dictionary=data[comparison],
-                                                                  keys=complex_over_ids,
-                                                                  save_LSV_data=True)
-        single_sig_dict[comparison] = io_voila_caleb.lsv_dict_subset(dictionary=data[comparison],
-                                                                     keys=complex_single_ids,
-                                                                     save_LSV_data=True)
-        nonsig_dict[comparison] = io_voila_caleb.lsv_dict_subset(dictionary=data[comparison],
-                                                                 keys=zero_over_ids,
-                                                                 save_LSV_data=True)
+        binary_dict[comparison] = io_caleb.lsv_dict_subset(dictionary=data[comparison],
+                                                           keys=binary_ids,
+                                                           save_LSV_data=True,
+                                                           new_sub_key="binary_indices",
+                                                           new_values=binary_indices)
+        complex_dict[comparison] = io_caleb.lsv_dict_subset(dictionary=data[comparison],
+                                                            keys=complex_over_ids,
+                                                            save_LSV_data=True)
+        single_sig_dict[comparison] = io_caleb.lsv_dict_subset(dictionary=data[comparison],
+                                                               keys=complex_single_ids,
+                                                               save_LSV_data=True)
+        nonsig_dict[comparison] = io_caleb.lsv_dict_subset(dictionary=data[comparison],
+                                                           keys=zero_over_ids,
+                                                           save_LSV_data=True)
     binary_coords = get_binary_coords(binary_dict)
     excl_dict = gen_excl_dict(binary_coords)
     bi_single, bi_cassette, matched_excl_noncassette, bi_complex = get_cassettes(excl_dict)
@@ -2918,11 +2925,11 @@ def is_LSV_altSS_weird(LSV):
     to check if all the PSI-util junctions are just alt SS bet
     the ref exon and one other exon.
     """
-    psis = np.array(io_voila_caleb.get_psis(LSV))
-    chrm = io_voila_caleb.get_chr(LSV)
-    strd = io_voila_caleb.get_strand(LSV)
+    psis = np.array(io_caleb.get_psis(LSV))
+    chrm = io_caleb.get_chr(LSV)
+    strd = io_caleb.get_strand(LSV)
     util_bool = np.max(psis, axis=0) > 0.025
-    util_juncs = np.array(io_voila_caleb.get_juncs(LSV))[util_bool].tolist()
+    util_juncs = np.array(io_caleb.get_juncs(LSV))[util_bool].tolist()
     util_juncs = string_to_int_coords(util_juncs)
     ref_ex_int = get_reference_exon(LSV)
     n_ref_ex_int = get_non_reference_exons(LSV)
@@ -2949,7 +2956,7 @@ def are_used_juncs_sharing_non_ref_coord(Ref_LSV, Junctions):
             still be alt SS (esp if they go into same exon), but that's
             outside the scope of this function.
     """
-    io_voila_caleb.check_is_lsv(Ref_LSV)
+    io_caleb.check_is_lsv(Ref_LSV)
     ref_exon = get_reference_exon(Ref_LSV)
     juncs = [x.split("_")[2] for x in Junctions]
     juncs = string_to_int_coords(juncs)
@@ -2992,7 +2999,7 @@ def are_used_juncs_sharing_ref_coord(Ref_LSV, Junctions):
             still be alt SS (esp if they go into same exon), but that's
             outside the scope of this function.
     """
-    io_voila_caleb.check_is_lsv(Ref_LSV)
+    io_caleb.check_is_lsv(Ref_LSV)
     ref_exon = get_reference_exon(Ref_LSV)
     juncs = [x.split("_")[2] for x in Junctions]
     juncs = string_to_int_coords(juncs)
@@ -3027,11 +3034,11 @@ def check_if_lsv_utilizes_intron(data, lsv_id, psi_cutoff=0.05):
     """
     Given ONE LSV, return True if IR PSI is > PSI_cutoff
     """
-    io_voila_caleb.check_is_lsv_id(lsv_id)
-    LSV = io_voila_caleb.get_lsv(data, lsv_id)
+    io_caleb.check_is_lsv_id(lsv_id)
+    LSV = io_caleb.get_lsv(data, lsv_id)
     if LSV["LSV Type"][-1:] != "i":
         return False
-    ir_psi = np.array(io_voila_caleb.get_psis(LSV))[:, -1]
+    ir_psi = np.array(io_caleb.get_psis(LSV))[:, -1]
     if np.max(ir_psi) > psi_cutoff:
         return True
     return False  # else intron isn't really utilized

@@ -1,6 +1,13 @@
 import numpy as np
 
 
+# Caleb Matthew Radens
+# radlinsky@gmail.com
+
+
+__author__ = 'cradens'
+
+
 def random_merge(mat_a,
                  mat_b,
                  preserve_order=False,

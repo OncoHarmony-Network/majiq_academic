@@ -1,3 +1,10 @@
+# Caleb Matthew Radens
+# radlinsky@gmail.com
+
+
+__author__ = 'cradens'
+
+
 def calebs_xrange(start, end, by):
     """
     Does an xrange, but can handle floats instead of integers.

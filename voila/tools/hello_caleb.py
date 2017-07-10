@@ -1,6 +1,13 @@
 from voila.tools import Tool
 
 
+# Caleb Matthew Radens
+# radlinsky@gmail.com
+
+
+__author__ = 'cradens'
+
+
 class DoesNotMatter(Tool):
     help = 'example code who cares'
 

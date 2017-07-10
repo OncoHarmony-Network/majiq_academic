@@ -1,11 +1,13 @@
 from voila.tools import Tool
-from voila.tools import io_voila_caleb
-import os
-import subprocess
-import platform
-import fnmatch
-import argparse
-import pdb
+from voila.tools.utils import io_caleb
+
+
+# Caleb Matthew Radens
+# radlinsky@gmail.com
+
+
+__author__ = 'cradens'
+
 
 class ThisisLookup(Tool):
     help = 'Given a directory and Gene Name, or Gene ID, or LSV ID, prettily-print all LSVs'
@@ -53,14 +55,14 @@ class ThisisLookup(Tool):
                 to_lookup = [args.comparisons]
         else:
             to_lookup = None
-        imported = io_voila_caleb.quick_import(dir=args.directory,
-                                               cutoff_d_psi=0,
-                                               cutoff_prob=0,
-                                               pattern=args.pattern,
-                                               keep_ir=True,
-                                               just_one=args.just_one,
-                                               stop_at=args.lookup_val,
-                                               comparisons=to_lookup)
+        imported = io_caleb.quick_import(dir=args.directory,
+                                         cutoff_d_psi=0,
+                                         cutoff_prob=0,
+                                         pattern=args.pattern,
+                                         keep_ir=True,
+                                         just_one=args.just_one,
+                                         stop_at=args.lookup_val,
+                                         comparisons=to_lookup)
         to_lookup = list(imported.keys())
         # coding for readability here...
         # default is True..
@@ -95,12 +97,12 @@ def lookup_everywhere(dictionary_lookup,
             abbreviated: only print/return the useful data?
             comparisons_lookup: if provided, only look in these comparisons
     """
-    io_voila_caleb.check_is_quick_import(dictionary_lookup)
+    io_caleb.check_is_quick_import(dictionary_lookup)
     found_dicts = dict()
     found_data = False
     for LSV_dict_name in dictionary_lookup.keys():
         if comparisons_lookup:
-            if io_voila_caleb.comp_without_dup(LSV_dict_name) not in comparisons_lookup:
+            if io_caleb.comp_without_dup(LSV_dict_name) not in comparisons_lookup:
                 continue
         found_data = lookup(dictionary_lookup[LSV_dict_name],
                             name=name,
@@ -158,12 +160,12 @@ def lookup(lsv_dictionary,
             raise RuntimeError("%s is weird. Is a full LSV ID?" % name)
     else:
         lsv_id = False
-    io_voila_caleb.check_is_lsv_dict(lsv_dictionary)
+    io_caleb.check_is_lsv_dict(lsv_dictionary)
 
     if lsv_id:
-        possible_ids = io_voila_caleb.get_LSV_IDs(lsv_dictionary)
+        possible_ids = io_caleb.get_LSV_IDs(lsv_dictionary)
         if name in possible_ids:
-            new_dict = io_voila_caleb.lsv_dict_subset(lsv_dictionary, name, save_lsv_structure)
+            new_dict = io_caleb.lsv_dict_subset(lsv_dictionary, name, save_lsv_structure)
         else:
             return "lsv_id_not_found"
     else:  # gene name or Ensembl ID !
@@ -172,7 +174,7 @@ def lookup(lsv_dictionary,
         else:
             ensembl_id = False
         matched_ids = list()
-        all_ids = io_voila_caleb.get_LSV_IDs(lsv_dictionary)
+        all_ids = io_caleb.get_LSV_IDs(lsv_dictionary)
         for lsvid in all_ids:
             if lsvid == "condition_1_name" or lsvid == "condition_2_name":
                 continue
@@ -190,7 +192,7 @@ def lookup(lsv_dictionary,
             else:
                 return "gene_not_found"
 
-        new_dict = io_voila_caleb.lsv_dict_subset(lsv_dictionary, matched_ids, save_lsv_structure)
+        new_dict = io_caleb.lsv_dict_subset(lsv_dictionary, matched_ids, save_lsv_structure)
         if save_lsv_structure:
             correction = 2
         else:
@@ -216,7 +218,7 @@ def get_lsv(data, lsv_id, comparison=False):
          lsv_id : lsv id...
         comparison: if comparison name (Str) given, use that to get the LSV.
     """
-    io_voila_caleb.check_is_quick_import(data)
+    io_caleb.check_is_quick_import(data)
     lsv_dicts = lookup_everywhere(data,
                                          lsv_id,
                                          save_lsv_structure_lookup=False,
@@ -248,7 +250,7 @@ def get_voila_link(vo_data,
     """
     if isinstance(vo_lsvid, set):
         vo_lsvid = list(vo_lsvid)
-    if not io_voila_caleb.check_is_lsv_id(vo_lsvid, Bool=True):
+    if not io_caleb.check_is_lsv_id(vo_lsvid, Bool=True):
         if isinstance(vo_lsvid, list):
             all_links = list()
             all_ids = list()
@@ -268,7 +270,7 @@ def get_voila_link(vo_data,
                 return
             else:
                 return all_links, all_ids
-    io_voila_caleb.check_is_quick_import(vo_data)
+    io_caleb.check_is_quick_import(vo_data)
     lsv_dict = vo_data[vo_data.keys()[vo_comp]]
     if vo_lsvid not in lsv_dict:
         raise RuntimeError("%s not found in %s" % (vo_lsvid, vo_data.keys()[vo_comp]))
@@ -303,17 +305,17 @@ def print_lsv(lsv, print_bool=True, abbreviated=True):
             lsv: quick import, lsv dict, or lsv
     """
     printable = ""
-    if io_voila_caleb.check_is_lsv(lsv, True):
+    if io_caleb.check_is_lsv(lsv, True):
         helped_print = _help_print_lsv(lsv, abbreviated)
         printable += helped_print
-    elif io_voila_caleb.check_is_lsv_dict(lsv, True):
-        lsv_ids = io_voila_caleb.get_LSV_IDs(lsv)
-        comparison_name = io_voila_caleb.get_comparison_name(lsv)
+    elif io_caleb.check_is_lsv_dict(lsv, True):
+        lsv_ids = io_caleb.get_LSV_IDs(lsv)
+        comparison_name = io_caleb.get_comparison_name(lsv)
         printable += "\n=====" + comparison_name + "=====\n"
         for lsv_id_p in lsv_ids:
             printable += print_lsv(lsv[lsv_id_p], print_bool=False, abbreviated=abbreviated)
             printable += "\n"
-    elif io_voila_caleb.check_is_quick_import(lsv, True):
+    elif io_caleb.check_is_quick_import(lsv, True):
         comparison_names = lsv.keys()
         for comparison_p in comparison_names:
             printable += print_lsv(lsv[comparison_p], print_bool=False, abbreviated=abbreviated)
@@ -333,7 +335,7 @@ def _help_print_lsv(lsv, abbreviated=True):
 
         Depends on keys defined in DPSI_HEADER.
     """
-    io_voila_caleb.check_is_lsv(lsv)
+    io_caleb.check_is_lsv(lsv)
     dpsi_header = ["Gene Name",
                    "Gene ID",
                    "LSV ID",
@@ -355,8 +357,8 @@ def _help_print_lsv(lsv, abbreviated=True):
                    "Exons Alternative Start",
                    "Exons Alternative End",
                    "IR coords"]
-    dpsi_header[4] = io_voila_caleb.get_name_of_prob_key(lsv)
-    dpsi_header[5], dpsi_header[6] = io_voila_caleb.get_name_of_psi_keys(lsv)
+    dpsi_header[4] = io_caleb.get_name_of_prob_key(lsv)
+    dpsi_header[5], dpsi_header[6] = io_caleb.get_name_of_psi_keys(lsv)
     stringed_lsv = ""
     if abbreviated:
         headers_to_keep = [0, 1, 2, 3, 4, 5, 6, 7, 14, 15, 16, 17]

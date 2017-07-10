@@ -1,10 +1,17 @@
 from voila.tools import Tool
-from voila.tools import io_voila_caleb
+from voila.tools.utils import io_caleb
 from voila.tools import find_binary_lsvs
 from voila.tools.utils import random_merge_numpy
 
 import numpy as np
 import pandas as pa
+
+
+# Caleb Matthew Radens
+# radlinsky@gmail.com
+
+
+__author__ = 'cradens'
 
 
 class ThisisBinaryLikeArrays(Tool):
@@ -84,16 +91,16 @@ class ThisisBinaryLikeArrays(Tool):
         impute = True
         if args.dont_impute:
             impute = False
-        imported = io_voila_caleb.quick_import(dir=args.directory,
-                                               cutoff_d_psi=0,
-                                               cutoff_prob=0,
-                                               pattern=args.pattern,
-                                               keep_ir=consider_ir)
+        imported = io_caleb.quick_import(dir=args.directory,
+                                         cutoff_d_psi=0,
+                                         cutoff_prob=0,
+                                         pattern=args.pattern,
+                                         keep_ir=consider_ir)
         if impute:
-            blanked_dict = io_voila_caleb.impute_missing_lsvs(data=imported,
-                                                              impute_with=0,
-                                                              in_place=True,
-                                                              warnings=False)
+            blanked_dict = io_caleb.impute_missing_lsvs(data=imported,
+                                                        impute_with=0,
+                                                        in_place=True,
+                                                        warnings=False)
         results_count = find_binary_lsvs.get_binary_lsvs(data=imported,
                                                          method=args.method,
                                                          cutoff_d_psi=args.dpsi_thresh,
@@ -105,7 +112,7 @@ class ThisisBinaryLikeArrays(Tool):
                 blanked_ids = blanked_dict[comp]
                 binary_and_blank_ids = binary_ids & blanked_ids
                 blanked_dict[comp] = binary_and_blank_ids
-            io_voila_caleb.change_imputed_values(results_count, blanked_dict, new_val=np.NAN)
+            io_caleb.change_imputed_values(results_count, blanked_dict, new_val=np.NAN)
         the_final_array, lsv_ids, col_names = get_num_array(results_count,
                                                             which_junc=args.junction,
                                                             datatype=args.data_type)
@@ -208,7 +215,7 @@ def num_psi_arrays(data,
     Results returned in the following order:
     lsv_psi_arrays_close, lsv_psi_arrays_far, Conditions, LSV_IDs
     """
-    io_voila_caleb.check_is_binary_lsv_data(data)
+    io_caleb.check_is_binary_lsv_data(data)
     # psi from junction closer to reference
     psis_close, conditions = find_binary_lsvs.get_num_psi(data,
                                                           return_comparisons=True,
@@ -256,7 +263,7 @@ def num_prob_arrays(data,
     Results returned in the following order:
     lsv_prob_arrays_close, lsv_prob_arrays_far, Conditions, LSV_IDs
     """
-    io_voila_caleb.check_is_binary_lsv_data(data)
+    io_caleb.check_is_binary_lsv_data(data)
     # prob from junction closer to reference
     probs_close, conditions = find_binary_lsvs.get_num_prob(data,
                                                             return_comparisons=True,

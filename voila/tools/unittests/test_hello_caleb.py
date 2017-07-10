@@ -1,6 +1,12 @@
 import unittest
-
 from voila.tools.hello_caleb import hello_world
+
+
+# Caleb Matthew Radens
+# radlinsky@gmail.com
+
+
+__author__ = 'cradens'
 
 
 class TestStringMethods(unittest.TestCase):

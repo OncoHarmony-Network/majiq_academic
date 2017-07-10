@@ -1,5 +1,3 @@
-import mimetypes
-
 from voila.tools import Tool
 import os
 import pandas as pa
@@ -11,48 +9,11 @@ from voila.tools.utils.calebs_xrange import calebs_xrange
 from voila.utils.voila_log import voila_log
 
 
-class ThisisIoCaleb(Tool):
-    help = 'Handle importing voila text files...'
+# Caleb Matthew Radens
+# radlinsky@gmail.com
 
-    def arguments(self):
-        parser = self.get_parser()
-        parser.add_argument('directory',
-                            type=str,
-                            help='Directory where voila texts are.')
-        help_mes = "dPSI threshold by which to call junctions as changing"
-        parser.add_argument('--dpsi_thresh',
-                            type=float,
-                            help=help_mes,
-                            default=0.1)
-        help_mes = "Prob(dPSI) threshold by which to call junctions as changing"
-        parser.add_argument('--prob_dpsi_thresh',
-                            type=float,
-                            help=help_mes,
-                            default=0.0)
-        help_mes = 'Optional pattern matching to identify the voila text files'
-        parser.add_argument('-p',
-                            '--pattern',
-                            default="*tsv",
-                            type=str,
-                            help=help_mes)
-        help_mes = "Flag: don't consider IR LSVs"
-        parser.add_argument('--no_ir',
-                            action='store_true',
-                            help=help_mes,
-                            default=False)
 
-        return parser
-
-    def run(self, args):
-        # this is for code readability, not efficiency
-        consider_ir = True
-        if args.no_ir:
-            consider_ir = False
-        imported = quick_import(dir=args.directory,
-                                cutoff_d_psi=0,
-                                cutoff_prob=0,
-                                pattern=args.pattern,
-                                keep_ir=consider_ir)
+__author__ = 'cradens'
 
 
 LOG = voila_log()

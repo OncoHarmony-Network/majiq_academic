@@ -4,6 +4,12 @@ import platform
 import fnmatch
 import pdb
 
+# Caleb Matthew Radens
+# radlinsky@gmail.com
+
+
+__author__ = 'cradens'
+
 
 def find_voila_files(directory, pattern, file_type, get_comp_names=False):
     """

@@ -3,6 +3,13 @@ import math
 from voila.tools.utils.calebs_xrange import calebs_xrange
 
 
+# Caleb Matthew Radens
+# radlinsky@gmail.com
+
+
+__author__ = 'cradens'
+
+
 def percent_through_list(the_list,
                          update_at_this_perc=0.1):
     """

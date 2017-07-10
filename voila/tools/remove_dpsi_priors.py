@@ -1,15 +1,23 @@
 from voila.tools import Tool
 from voila.io_voila import Voila
-from voila.tools.io_voila_caleb import import_dpsi_pandas
 from voila.tools.utils import find_files
+from voila.tools.utils import io_caleb
 import pickle as pkl
 import numpy as np
-import pdb
 import os
 
 from voila.tools.utils.merge_dicts import merge_dicts
 from voila.tools.utils.percent_through_list import percent_through_list
 from voila.utils.voila_log import voila_log
+
+
+# Caleb Matthew Radens
+# radlinsky@gmail.com
+
+
+# Adapted from Anu's code, though..
+__author__ = 'cradens'
+
 
 LOG = voila_log()
 
@@ -191,7 +199,7 @@ def get_tsv_junctions(tsv_file):
     """
     LOG.info("Getting junction coords from voila text file %s" % tsv_file)
     # Just read the lsv ids and junction coordinate column into memory
-    deltapsi_txt = import_dpsi_pandas(tsv_file, columns=[2, 16])
+    deltapsi_txt = io_caleb.import_dpsi_pandas(tsv_file, columns=[2, 16])
     # column 0 is LSV IDs
     lsv_ids = deltapsi_txt[deltapsi_txt.columns[0]]
     # convert to list

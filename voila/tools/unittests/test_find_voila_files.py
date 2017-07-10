@@ -1,8 +1,15 @@
 import unittest
-
 from voila.tools.utils.find_files import get_voila_files
 from voila import tools
 import os
+
+
+# Caleb Matthew Radens
+# radlinsky@gmail.com
+
+
+__author__ = 'cradens'
+
 
 class TestStringMethods(unittest.TestCase):
 
