@@ -14,7 +14,7 @@ class DoesNotMatter(Tool):
     def arguments(self):
         parser = self.get_parser()
         parser.add_argument('--yup', action='store_true', help='this is yup')
-        parser.add_argument('--upper', action='store_true', help='upper case')
+        parser.add_argument('--upper', action='store_true', help='upper case', default=False)
         return parser
 
     def run(self, args):

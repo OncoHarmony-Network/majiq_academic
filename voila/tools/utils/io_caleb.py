@@ -20,8 +20,8 @@ LOG = voila_log()
 
 
 def quick_import(input,
-                 cutoff_d_psi=0.2,
-                 cutoff_prob=0.95,
+                 cutoff_d_psi=0.0,
+                 cutoff_prob=0.0,
                  keep_ir=True,
                  cutoff_sum=False,
                  return_funky_ids=False,
@@ -389,8 +389,10 @@ def import_dpsi(fp,
             if can_stop:
                 if not found_stop_at:
                     break
-        lsv_dictionary["condition_1_name"] = condition_1_name
-        lsv_dictionary["condition_2_name"] = condition_2_name
+        lsv_dictionary["meta_info"] = dict()
+        lsv_dictionary["meta_info"]["condition_1_name"] = condition_1_name
+        lsv_dictionary["meta_info"]["condition_2_name"] = condition_2_name
+        lsv_dictionary["meta_info"]["abs_path"] = os.path.abspath(fp)
 
         n_lsvs = str(line_i - 1)
         n_funky = str(len(funky_lsvs))
@@ -640,14 +642,14 @@ def no_intron_retention(LSV_dict,
     """
     # names AKA LSV IDs
     check_is_lsv_dict(LSV_dict)
-    names = LSV_dict.keys()
+    names = list(LSV_dict.keys())
     non_intron_names = list()
     intron_names = list()
 
     for name in names:
-        if name == "condition_1_name" or name == "condition_2_name":
-            non_intron_names.append(name)
-            intron_names.append(name)
+        if name == "meta_info":
+            # non_intron_names.append(name)
+            # intron_names.append(name)
             continue
         # If LSV type is intron:
         if LSV_dict[name]["LSV Type"][-1:] == "i":
@@ -657,8 +659,8 @@ def no_intron_retention(LSV_dict,
             non_intron_names.append(name)
 
     for intron in intron_names:
-        if intron == "condition_1_name" or intron == "condition_2_name":
-            continue
+        # if intron == "condition_1_name" or intron == "condition_2_name":
+        #     continue
         dPSI_intron = LSV_dict[intron]["E(dPSI) per LSV junction"][-1]
         # If dPSI of the intron junction is not changing significantly, keep it
         #     0.05 was suggested by Yoseph Barash
@@ -773,8 +775,9 @@ def check_is_lsv_dict(lsv_dict, da_bool=False):
     lsv_ids = list()
     lsv_ids.extend(lsv_dict.keys())
     try:
-        lsv_ids.remove("condition_1_name")
-        lsv_ids.remove("condition_2_name")
+        lsv_ids.remove("meta_info")
+        # lsv_ids.remove("condition_1_name")
+        # lsv_ids.remove("condition_2_name")
     except:
         if not da_bool:
             raise ValueError("Expected a LSV dictionary.")
@@ -822,8 +825,9 @@ def check_is_lsv(lsv, Bool=False):
     keys = list(lsv.keys())
     sub_dict = lsv[keys[0]]
     if isinstance(sub_dict, dict):
-        keys = sub_dict.keys()
-        if "condition_1_name" in keys:
+        keys = list(sub_dict.keys())
+        # if "condition_1_name" in keys:
+        if "meta_info" in keys:
             if not Bool:
                 raise ValueError("Please pick one comparison from the dictionary, "
                                  "not the entire dictionary returned by quick_import()."
@@ -894,12 +898,13 @@ def lsv_dict_subset(dictionary,
 
     # If it's an LSV dictionary, and if you want to Save the condition names:
     if save_LSV_data:
-        if "condition_1_name" in dictionary:
+        # if "condition_1_name" in dictionary:
+        if "meta_info" in dictionary:
             # new_dict["dPSI_over_cutoff"]=Dictionary["dPSI_over_cutoff"]
             # new_dict["sig_junctions"]=Dictionary["sig_junctions"]
-            new_dict["condition_1_name"] = dictionary["condition_1_name"]
-            new_dict["condition_2_name"] = dictionary["condition_2_name"]
-
+            # new_dict["condition_1_name"] = dictionary["condition_1_name"]
+            # new_dict["condition_2_name"] = dictionary["condition_2_name"]
+            new_dict["meta_info"] = dictionary["meta_info"]
     if None in new_dict.values():
         LOG.info("Warning: at least 1 key wasn't found in the dictionary."
                  "value of None was assigned to such keys.")
@@ -1035,9 +1040,11 @@ def get_lsv_ids(lsv_dict):
     """
     check_is_lsv_dict(lsv_dict)
     lsv_ids = copy.copy(list(lsv_dict.keys()))
-    lsv_ids.remove("condition_1_name")
-    lsv_ids.remove("condition_2_name")
+    # lsv_ids.remove("condition_1_name")
+    # lsv_ids.remove("condition_2_name")
+    lsv_ids.remove("meta_info")
     return lsv_ids
+
 
 
 def get_dpsis(lsv,
@@ -1194,8 +1201,10 @@ def list_psi(lsv_dict,
             ... |   ...|
     """
     check_is_lsv_dict(lsv_dict)
-    cond_1_name = lsv_dict["condition_1_name"]
-    cond_2_name = lsv_dict["condition_2_name"]
+    # cond_1_name = lsv_dict["condition_1_name"]
+    # cond_2_name = lsv_dict["condition_2_name"]
+    cond_1_name = get_cond_1_name(lsv_dict)
+    cond_2_name = get_cond_2_name(lsv_dict)
     condtion_dict = dict()
     condtion_dict[cond_1_name] = dict()
     condtion_dict[cond_2_name] = dict()
@@ -1244,7 +1253,7 @@ def get_num_d_psi(data,
         each LSV ID in the dictionary is pointing at an array that
         looks like this:
 
-                |A vs B|A vs C  | all other comparisons ...
+                |A vs B|A vs C  | all other comparisons [IN SORTED ORDER]
     Junction:   | dPSI | dPSI   | ...
             0   |   #  |  #     | ...
             1   |   #  |  #     | ...
@@ -1288,7 +1297,7 @@ def get_num_d_psi(data,
     union_of_lsv_ids = get_shared_lsv_ids(data)
     lsv_dict = dict()
     comparisons = list(comparison_dict.keys())
-    comparisons.sort()  # alphabatized
+    comparisons.sort()  # alphabatized!!!
     for lsv_id in list(union_of_lsv_ids):
         list_of_dpsis = list()
         for comparison in comparisons:
@@ -1312,7 +1321,7 @@ def get_num_prob(data,
         each LSV ID in the dictionary is pointing at an array that
         looks like this:
 
-                |A vs B|A vs C  | all other comparisons ...
+                |A vs B|A vs C  | all other comparisons [ SORTED!!!]...
     Junction:   | P(dPSI) | P(dPSI)   | ...
             0   |   #     |     #     | ...
             1   |   #     |     #     | ...
@@ -1382,7 +1391,7 @@ def get_num_psi(data,
         each LSV ID in the dictionary is pointing at an array that
         looks like this:
 
-                |   A  |  B     | all other conditions ...
+                |   A  |  B     | all other conditions [SORTED]...
     Junction:   |  PSI |  PSI   | ...
             0   |   #  |  #     | ...
             1   |   #  |  #     | ...
@@ -1419,8 +1428,10 @@ def get_num_psi(data,
     lsv_id_lists = list()
     for comparison in data.keys():
         lsv_dict = data[comparison]
-        cond_1_name = lsv_dict["condition_1_name"]
-        cond_2_name = lsv_dict["condition_2_name"]
+        # cond_1_name = lsv_dict["condition_1_name"]
+        # cond_2_name = lsv_dict["condition_2_name"]
+        cond_1_name = get_cond_1_name(lsv_dict)
+        cond_2_name = get_cond_2_name(lsv_dict)
         PSIs = list_psi(lsv_dict)
         cond_1_PSIs = PSIs[cond_1_name]
         cond_2_PSIs = PSIs[cond_2_name]
@@ -1681,7 +1692,7 @@ def get_cond_1_name(lsv_dict):
     :return: str condition 1 name
     """
     check_is_lsv_dict(lsv_dict)
-    return lsv_dict["condition_1_name"]
+    return lsv_dict["meta_info"]["condition_1_name"]
 
 
 def get_cond_2_name(lsv_dict):
@@ -1690,32 +1701,41 @@ def get_cond_2_name(lsv_dict):
     :return: str condition 2 name
     """
     check_is_lsv_dict(lsv_dict)
-    return lsv_dict["condition_2_name"]
+    return lsv_dict["meta_info"]["condition_2_name"]
 
 
-def get_comparison_name(LSV_dict, sep="_"):
+def get_abs_path(lsv_dict):
+    """
+    :param lsv_dict: lsv dict..
+    :return: str abs file path to txt file
+    """
+    check_is_lsv_dict(lsv_dict)
+    return lsv_dict["meta_info"]["abs_path"]
+
+
+def get_comparison_name(lsv_dict, sep="_"):
     """
     Given LSV dictionary, return condition_1_name[sep]condition_2_name
     """
-    check_is_lsv_dict(LSV_dict)
+    check_is_lsv_dict(lsv_dict)
     if not isinstance(sep, str):
         raise ValueError("sep needs to be a string, not a: " + str(type(sep)))
-    return LSV_dict["condition_1_name"] + sep + LSV_dict["condition_2_name"]
+    return get_cond_1_name(lsv_dict) + sep + get_cond_2_name(lsv_dict)
 
 
-def get_all_lsv_ids(Data):
-    if not check_is_quick_import(Data,
-                          the_bool=True):
-        if check_is_lsv_dict(Data,
+def get_all_lsv_ids(data):
+    if not check_is_quick_import(data,
+                                 the_bool=True):
+        if check_is_lsv_dict(data,
                              da_bool=True):
-            return get_lsv_ids(Data)
+            return get_lsv_ids(data)
         else:
             LOG.error("Expected a LSV dictionary or Quick Import...")
             exit(1)
-    comparisons = Data.keys()
+    comparisons = data.keys()
     all_ids = list()
     for comparison in comparisons:
-        all_ids.extend(get_lsv_ids(Data[comparison]))
+        all_ids.extend(get_lsv_ids(data[comparison]))
     return list(set(all_ids))
 
 
@@ -1754,7 +1774,7 @@ def copy_lsv(lsv):
 def impute_lsvs(lsvs,
                 imputing_with=0):
     """
-    Given a list or single LSV, return the LSV(s) with 0s for
+    Given a list of or a single LSV, return the LSV(s) with 0s for
         dPSI, prob(dPSI), and PSI
 
         imputing_with : impute missing values with what?

@@ -186,7 +186,7 @@ def lookup(lsv_dictionary,
         matched_ids = list()
         all_ids = io_caleb.get_lsv_ids(lsv_dictionary)
         for lsvid in all_ids:
-            if lsvid == "condition_1_name" or lsvid == "condition_2_name":
+            if lsvid == "meta_info":
                 continue
             if lsv_dictionary[lsvid]["Gene Name"] == name:
                 matched_ids.append(lsvid)
@@ -204,7 +204,7 @@ def lookup(lsv_dictionary,
 
         new_dict = io_caleb.lsv_dict_subset(lsv_dictionary, matched_ids, save_lsv_structure)
         if save_lsv_structure:
-            correction = 2
+            correction = 1
         else:
             correction = 0
         if len(new_dict) - correction != len(matched_ids):

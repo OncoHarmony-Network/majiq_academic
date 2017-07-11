@@ -1,5 +1,6 @@
 import pdb
 import numpy as np
+import os
 from voila.tools import Tool
 from voila.tools.find_binary_lsvs import non_redundant_id_dict, counts_per_row
 from voila.tools.non_redundant_sets import non_redundant_set
@@ -63,9 +64,86 @@ class ThisisRelativelyUniq(Tool):
                             help=help_mes)
         return parser
 
+    def run(self, args):
+        ex_pkl = "/Volumes/data/THelper/lisp/voila/dpsi/groups/thresh_20/" \
+                 "KA_N_0vsKA_T0_72/KA_N_0_KA_T0_72.deltapsi_no_prior.pickle"
+        ex_lsv =  "/Volumes/data/THelper/lisp/voila/dpsi/groups/thresh_20/" \
+                 "KA_N_0vsKA_T0_72/"
+        ex_lsv = io_caleb.quick_import(ex_lsv)
+        all_lsv_ids = io_caleb.get_all_lsv_ids(ex_lsv)
+        test = get_tsvs_no_prior_pkl(ex_lsv["KA_N_0_KA_T0_72"])
+        print(test == ex_pkl)
+        no_change = num_nonchanging(ex_lsv, test)
+        non_red_sets, blank_dict, num_dpsi = non_redundant_set(data=ex_lsv,
+                                                            cutoff_dpsi=0.1,
+                                                            cutoff_psi=1,
+                                                            save_blanked_structure=True,
+                                                            return_numdpsis_dat=True)
+        num_probs, comparisons = io_caleb.get_num_prob(ex_lsv, True)
+        for lsv_id in all_lsv_ids:
+            this_prob = num_probs[lsv_id]
+            this_dpsi = num_dpsi[lsv_id]
+            this_nch = no_change[lsv_id]
+            thresh_bool = over_thresh(num_dpsi=this_dpsi,
+                                      num_prob=this_prob,
+                                      dpsi_thresh=0.1,
+                                      prob_thresh=0)
+            break
+        pdb.set_trace()
+
+
+def comparisons_quantifiable(comparisons, blank_dict, lsv_id):
+    """
+    Determine which dPSI comparisons were able to quantify the LSV.
+        Comparisons must be SORTED.
+
+    :param comparisons: list of comparisons
+    :param blank_dict: returned from impute_missing_lsvs()
+    :param lsv_id: check which comparisons could quantify this LSV ID
+    :return: numpy array of Bools corresponding to the comparisons able to quantify the LSV
+    """
+    bools = list()
+    for comp in comparisons:
+        this_bool = lsv_id in blank_dict[comp]
+        bools.append(this_bool)
+    return np.array(bools)
+
+
+def over_thresh(num_dpsi, num_prob, dpsi_thresh, prob_thresh):
+    """
+    :param num_dpsi: rows = junctions, cols = comparisons
+    :param num_prob: rows = junctions, cols = comparisons
+    :param dpsi_thresh: abs(num_dpsi) >= abs(dpsi_thresh)
+    :param prob_thresh: num_prob >= prob_thresh
+    :return: numpy array of True/False
+    """
+    bool_array = (abs(num_dpsi) >= abs(dpsi_thresh)) & (num_prob >= prob_thresh)
+    return bool_array
+
 
 def relatively_uniq():
     pass
+
+
+def get_tsvs_no_prior_pkl(lsv_dict):
+    """
+    Given a lsv dict, return the prior-removed associated pickle file path.
+
+    :rtype: dict
+    :param lsv_dict: where majiq was run
+    :return: prior-removed {lsv id : dpsi - prior}
+    """
+    abs_path = io_caleb.get_abs_path(lsv_dict)
+    tsv_base = os.path.basename(abs_path)
+    poss_pkl_path = tsv_base.replace("deltapsi_deltapsi", "deltapsi_no_prior")
+    poss_pkl_path = poss_pkl_path.replace("tsv", "pickle")
+    tsv_dir = os.path.dirname(abs_path)
+    poss_pkl_path = os.path.join(tsv_dir, poss_pkl_path)
+    if not os.path.isfile(poss_pkl_path):
+        print(poss_pkl_path)
+        LOG.error("Couldn't find dpsi prior removed pickle file associated with %s" % abs_path)
+        exit(1)
+    return poss_pkl_path
 
 
 def num_nonchanging(lsv_dict,
