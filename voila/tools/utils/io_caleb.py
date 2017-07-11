@@ -24,8 +24,7 @@ def quick_import(input,
                  cutoff_prob=0.0,
                  keep_ir=True,
                  cutoff_sum=False,
-                 return_funky_ids=False,
-                 pattern="*tsv",
+                 pattern="*deltapsi_deltapsi.tsv",
                  deseq_dir=False,
                  deseq_prefix=False,
                  deseq_pat="*csv",
@@ -35,14 +34,15 @@ def quick_import(input,
                  deseq_id_colname="ensembl_gene_id",
                  just_one=False,
                  stop_at=False,
-                 comparisons=None):
+                 comparisons=None,
+                 prefered_type=None):
     """
     Given a directory with '*_quantify_deltapsi' files, import all dPSI
         text files and return dictionary as follows:
         {NAME_OF_COMPARISON : {LSV IDs: {LSV INFO: VALUES}}}
 
     Arguments:
-        input: a directory, a path to a list of voil atext files, or a voila text file
+        input: a directory, a path to a list of voila text files, or a voila text file
         cutoff_d_psi: LSVs must have at least 1 junction dPSI >= this.
             (and those junctions must meet the Cutoff_prob)
             0<=X<=1
@@ -56,8 +56,6 @@ def quick_import(input,
             sum(dPSI>0)>=Cutoff
             OR
             abs(sum(dPSI<0))>=Cutoff
-        return_funky_ids: Return LSV IDs for those LSVs that I think
-            are odd and will break some of my other programs?
         pattern: What does the base voila deltapsi output file format look like?\
             Default (pre voila 1.0.0) looks like:
                 .deltapsi_quantify_deltapsi.txt
@@ -70,6 +68,7 @@ def quick_import(input,
         just_one: only import and return one txt path (only really need this for lookup.lookup_everywhere()...)
         stop_at: if provided, stop reading voila file when you reach this LSV ID
         comparisons: if provided, only import tsv files with the provided list of comparison names
+        prefered_type: If provided, only import "deltapsi" or only "psi" files
 
     Assumptions:
         Directory contains files that end in ".deltapsi_quantify_deltapsi.txt"
@@ -80,15 +79,21 @@ def quick_import(input,
 
     Returns all voila dPSI results in a dictionary format.
     """
+    if prefered_type:
+        if not isinstance(prefered_type, str) or prefered_type not in ["deltapsi", "psi"]:
+            LOG.error("prefered_type must be either 'deltapsi' or 'psi' if specified at all, not '%s'" % prefered_type)
+            exit(1)
     if not (os.path.isdir(input)):
         if name_looks_like_voila_txt_file(input, pattern=pattern):
             basename = os.path.basename(input)
-            dpsi_comparison_name = [_get_deltapsi_txt_file_comparison(basename)]
-            dpsi_files = [input]
+            # Get the file name before .psi_psi or before .deltapsi_deltapsi
+            basenames = [get_base_names(basename)]
+            voila_txt_files = [input]
         elif os.path.isfile(input):
-            is_valid_list, dpsi_files = is_likely_list_of_txtfiles(input)
+            is_valid_list, voila_txt_files = is_likely_list_of_txtfiles(input)
             if is_valid_list:
-                dpsi_comparison_name = [_get_deltapsi_txt_file_comparison(os.path.basename(x)) for x in dpsi_files]
+                # Get the file names before .psi_psi or before .deltapsi_deltapsi
+                basenames = [get_base_names(os.path.basename(x)) for x in voila_txt_files]
             else:
                 LOG.error("%s wasn't  valid list of voila txt files.")
                 exit(1)
@@ -96,12 +101,12 @@ def quick_import(input,
             raise ValueError(input + " not found.")
     else:
         LOG.info("Searching for %s files ..." % pattern)
-        dpsi_comparison_name, dpsi_files = find_files.get_voila_files(input,
-                                                                      pattern=pattern,
-                                                                      get_comp_names=True)
-        if len(dpsi_comparison_name) != len(dpsi_files):
+        basenames, voila_txt_files = find_files.get_voila_files(input,
+                                                                pattern=pattern,
+                                                                get_base_names=True)
+        if len(basenames) != len(voila_txt_files):
             raise ValueError("Something is probably screwy with the names "
-                             "of the dPSI text files...")
+                             "of the voila text files...")
         # Only want to import stuff in list of comparisons...
         if comparisons:
             if isinstance(comparisons, str):
@@ -111,51 +116,49 @@ def quick_import(input,
                 exit(1)
             to_remove = list()
             to_keep = list()
-            for ii in range(len(dpsi_files)):
-                if not dpsi_comparison_name[ii] in comparisons:
+            for ii in range(len(voila_txt_files)):
+                if not basenames[ii] in comparisons:
                     to_remove.append(ii)
                 else:
                     to_keep.append(ii)
             if len(to_keep) < len(comparisons):
                 LOG.error("Couldn't find all these comparisons you wanted: %s" % comparisons)
             for index in sorted(to_remove, reverse=True):
-                del dpsi_comparison_name[index]
-                del dpsi_files[index]
-    if len(set(dpsi_comparison_name)) != len(set(dpsi_files)):
+                del basenames[index]
+                del voila_txt_files[index]
+    if len(set(basenames)) != len(set(voila_txt_files)):
         # this means more than one tsv with the same name is in this directory substructure
         # possibly because user ran different thresholds (e.g. 10% and 20%) but kept the same names
         # no worries, I think I have a fix... maybe... this could come back and bite me in the @$$
-        dupes = [x for n, x in enumerate(dpsi_comparison_name) if x in dpsi_comparison_name[:n]]
+        dupes = [x for n, x in enumerate(basenames) if x in basenames[:n]]
         for dup in dupes:
             i = 0
-            while dup in dpsi_comparison_name:
+            while dup in basenames:
                 new_name = "%s_duplicate%s" % (dup, i)
-                dpsi_comparison_name[dpsi_comparison_name.index(dup)] = new_name
+                basenames[basenames.index(dup)] = new_name
                 i += 1
 
-    if len(dpsi_files) == 0:
+    if len(voila_txt_files) == 0:
         raise RuntimeError("Didn't find any voila txt files...")
 
-    LOG.info("Found " + str(len(dpsi_files)) +
+    LOG.info("Found " + str(len(voila_txt_files)) +
              " dPSI text files ...")
     imported_files = dict()
     funky_ids = list()
 
     if just_one:
-        dpsi_files = [dpsi_files[0]]
-    for f, comparison_name in zip(dpsi_files, dpsi_comparison_name):
-        if return_funky_ids:
-            imported_file, funk = import_dpsi(f,
-                                              cutoff_d_psi,
-                                              cutoff_prob,
-                                              return_funky_ids=return_funky_ids,
-                                              stop_at=stop_at)
-            funky_ids.extend(funk)
+        voila_txt_files = [voila_txt_files[0]]
+    for f, comparison_name in zip(voila_txt_files, basenames):
+        if prefered_type:
+            expected = prefered_type
         else:
-            imported_file = import_dpsi(f, cutoff_d_psi, cutoff_prob,
-                                        return_funky_ids=return_funky_ids,
-                                        stop_at=stop_at)
-        # imported_file will be False if import_dpsi thinks its not a valid tsv...
+            expected = "deltapsi" if "deltapsi_deltapsi" in os.path.basename(f) else "psi"
+        imported_file = import_voila_txt(f,
+                                         cutoff_d_psi,
+                                         cutoff_prob,
+                                         stop_at=stop_at,
+                                         expected_type=expected)
+        # imported_file will be False if import_dpsi thinks it is not a valid tsv...
         if not imported_file:
             continue
         imported_files[comparison_name] = imported_file
@@ -165,9 +168,6 @@ def quick_import(input,
                                             cutoff_prob=cutoff_prob,
                                             keep_introns=keep_ir,
                                             cutoff_sum=cutoff_sum)
-    if return_funky_ids:
-        funky_ids = list(set(funky_ids))
-        return imported_files, funky_ids
     lsvs_length(imported_files)
     if deseq_dir:
         deseqres = get_deseq_diff_expr_genes(deseq_dir=deseq_dir,
@@ -182,12 +182,11 @@ def quick_import(input,
     return imported_files
 
 
-def import_dpsi(fp,
-                cutoff_d_psi=0,
-                cutoff_prob=0,
-                keep_cutoff_info=False,
-                return_funky_ids=False,
-                stop_at=False):
+def import_voila_txt(fp,
+                     cutoff_d_psi=0,
+                     cutoff_prob=0,
+                     stop_at=False,
+                     expected_type="deltapsi_deltapsi"):
     """
     Given a file path pointing at voila .txt output,
     return a dictionary with LSV_ID->data about that LSV.
@@ -203,9 +202,8 @@ def import_dpsi(fp,
         cutoff_prob: All LSVs must have at least 1 junction prob >= this.
             (and those junctions must meet the Cutoff_dPSI)
             0<=X<=1
-        keep_cutoff_info: depcreated, don't use
-        return_funky_ids: deprecated, don't use
         stop_at: if provided, stop reading voila file when you reach this LSV ID
+        expected_type: If provided, only import "deltapsi" or only "psi" files
 
 
     """
@@ -220,7 +218,6 @@ def import_dpsi(fp,
                  "a voila tsv ... skipping it" % fp)
         return False
     lsv_dictionary = dict()
-    funky_lsvs = list()
     has_voila = True
     file_headers = list()
     with open(fp, "r") as handle:
@@ -239,168 +236,237 @@ def import_dpsi(fp,
                         continue
             line_split = line.rstrip("\r\n").split("\t")
             if line_i == 0:
-                if not has_valid_voila_tsv_header(line):
-                    LOG.info("%s matched search pattern, but this file doesn't appear"
-                             " to be a valid voila tsv output... skipping it..." % fp)
-                    return False
+                if expected_type == "deltapsi":
+                    if not has_valid_voila_dpsi_tsv_header(line):
+                        LOG.info("%s matched search pattern, but this file doesn't appear"
+                                 " to be a valid voila deltapsi_deltapsi output... skipping it..." % fp)
+                        return False
+                else:
+                    if not has_valid_voila_psi_tsv_header(line):
+                        LOG.info("%s matched search pattern, but this file doesn't appear"
+                                 " to be a valid psi_psi tsv output... skipping it..." % fp)
+                        return False
                 # Fix pound sign silliness
                 line_split[0] = line_split[0].replace("#", "")
                 file_headers.extend(line_split)
-                condition_1_name = line_split[5].split(" ")[0]
-                condition_2_name = line_split[6].split(" ")[0]
-                LOG.info("Importing %s vs %s deltapsi data ..." % (condition_1_name, condition_2_name))
+                if expected_type == "deltapsi":
+                    condition_1_name = line_split[5].split(" ")[0]
+                    condition_2_name = line_split[6].split(" ")[0]
+                    LOG.info("Importing %s vs %s deltapsi data ..." % (condition_1_name, condition_2_name))
+                # Else its a psi file
+                else:
+                    sample_id = get_base_names(fp)
+                    LOG.info("Importing %s psi_psi data ..." % (sample_id))
                 if "Voila Link" in file_headers:
                     has_voila = True
                     pre_voila_1_0_0 = True
                 else:
                     pre_voila_1_0_0 = False
                     has_voila = False
-                # p_thresh = line_split[4]
-                # if DPSI_HEADER[4] == "TBD":
-                #     left = p_thresh.find("=")
-                #     right = p_thresh.find(") ")
-                #     p_thresh_float = float(p_thresh[left+1:right])
-                #     DPSI_HEADER[4] = p_thresh
-                #     print "Voila results were generated with threshold d_psi of %s"%(p_thresh_float)
-                # elif DPSI_HEADER[4] != p_thresh:
-                #     ERROR="The deltapsi txtfiles were generated with different thresholds."
-                #     ERROR+=" That isn't currently supported (and you probably don't want to"
-                #     ERROR+=" compare these results ... talk to Caleb."
-                #     raise RuntimeError(ERROR)
+
                 line_i += 1
                 continue
 
-            gene_name = str(line_split[0])
-
-            gene_id = str(line_split[1])
-
-            d_psi_floated = [float(x) for x in line_split[3].split(';')]
-
-            prob_d_psis_floated = [float(x) for x in line_split[4].split(';')]
-
-            # Saves the junction # and directionality of change
-            over_cutoff = list()
-
-            # Just saves which junction index for those that are significant
-            sig_junctions = list()
-
-            if keep_cutoff_info:
-                # Junction index
-                i = 0
-                for d_psi, prob_dPSI in zip(d_psi_floated, prob_d_psis_floated):
-                    # If the d_psi is > than 0 and > the cutoff d_psi and prob.
-                    if ((d_psi > cutoff_d_psi) and (prob_dPSI > cutoff_prob)):
-                        # junctionIndex_over
-                        over_cutoff.append(str(i) + "_over")
-                        sig_junctions.append(i)
-                    # Else if the d_psi is < than 0 and > the cutoff d_psi and prob.
-                    elif ((d_psi < -cutoff_d_psi) and (prob_dPSI > cutoff_prob)):
-                        # junctionIndex_under
-                        over_cutoff.append(str(i) + "_under")
-                        sig_junctions.append(i)
-                    if abs(d_psi) < 0.2 and prob_dPSI >= 0.95:
-                        pdb.set_trace()
-                    i += 1
-
-            LSV_ID = str(line_split[2])
-            if "target" in LSV_ID:
-                ref_type = "target"
-            elif "source" in LSV_ID:
-                ref_type = "source"
-
-            psi_1_floated = [float(x) for x in line_split[5].split(';')]
-
-            psi_2_floated = [float(x) for x in line_split[6].split(';')]
-
-            lsv_type = str(line_split[7])
-
-            a5ss = bool(line_split[8])
-
-            a3ss = bool(line_split[9])
-
-            es = bool(line_split[10])
-
-            n_junctions = int(line_split[11])
-
-            n_exons = int(line_split[12])
-
-            if pre_voila_1_0_0:
-                de_novo_junct = int(line_split[13])
-            else:  # Else it is boolean
-                de_novo_junct = str(line_split[13])
-
-            chrom = str(line_split[14])
-
-            strand = str(line_split[15])
-
-            junct_coord = str(line_split[16]).split(";")
-            # if condition_1_name+"_"+condition_2_name == "KA_N_0_C_KA_T2_72_B"
-            try:
-                exon_coord = str(line_split[17]).split(";")
-            except:
-                pdb.set_trace()
-
-            if len(d_psi_floated) != len(exon_coord) - 1:
-                funky_lsvs.append(LSV_ID)
-                # line_i+=1
-                # continue
-
-            exon_alt_start = str(line_split[18])
-
-            exon_alt_end = str(line_split[19])
-
-            ir_coords = str(line_split[20])
-
-            if has_voila:
-                voila_link = str(line_split[21])
-
-            lsv_dictionary[LSV_ID] = dict({
-                file_headers[0]: gene_name,
-                file_headers[1]: gene_id,
-                file_headers[2]: LSV_ID,
-                file_headers[3]: d_psi_floated,
-                file_headers[4]: prob_d_psis_floated,
-                file_headers[5]: psi_1_floated,
-                file_headers[6]: psi_2_floated,
-                file_headers[7]: lsv_type,
-                file_headers[8]: a5ss,
-                file_headers[9]: a3ss,
-                file_headers[10]: es,
-                file_headers[11]: n_junctions,
-                file_headers[12]: n_exons,
-                file_headers[13]: de_novo_junct,
-                file_headers[14]: chrom,
-                file_headers[15]: strand,
-                file_headers[16]: junct_coord,
-                file_headers[17]: exon_coord,
-                file_headers[18]: exon_alt_start,
-                file_headers[19]: exon_alt_end,
-                file_headers[20]: ir_coords})
-            if has_voila:
-                lsv_dictionary["Voila Link"] = voila_link
-
-            if keep_cutoff_info:
-                lsv_dictionary[LSV_ID]["dPSI_over_cutoff"] = over_cutoff
-                lsv_dictionary[LSV_ID]["sig_junctions"] = sig_junctions
-
-            lsv_dictionary[LSV_ID]["Reference_Type"] = ref_type
+            if expected_type == "deltapsi":
+                the_data = get_dpsi_data(line_split,
+                                         pre_voila_1_0_0,
+                                         file_headers,
+                                         has_voila)
+            else:
+                the_data = get_psi_data(line_split,
+                                         pre_voila_1_0_0,
+                                         file_headers,
+                                         has_voila)
 
             line_i += 1
             if can_stop:
                 if not found_stop_at:
                     break
-        lsv_dictionary["meta_info"] = dict()
-        lsv_dictionary["meta_info"]["condition_1_name"] = condition_1_name
-        lsv_dictionary["meta_info"]["condition_2_name"] = condition_2_name
-        lsv_dictionary["meta_info"]["abs_path"] = os.path.abspath(fp)
 
-        n_lsvs = str(line_i - 1)
-        n_funky = str(len(funky_lsvs))
-        fn = str(os.path.basename(fp))
-        if return_funky_ids:
-            return lsv_dictionary, funky_lsvs
+        lsv_dictionary.update(the_data)
+        lsv_dictionary["meta_info"] = dict()
+        lsv_dictionary["meta_info"]["abs_path"] = os.path.abspath(fp)
+        if expected_type == "deltapsi":
+            lsv_dictionary["meta_info"]["condition_1_name"] = condition_1_name
+            lsv_dictionary["meta_info"]["condition_2_name"] = condition_2_name
+        else:
+            lsv_dictionary["meta_info"]["sample_id"] = sample_id
         return lsv_dictionary
 
+
+def get_dpsi_data(line_split,
+                  pre_voila_1_0_0,
+                  file_headers,
+                  has_voila):
+    """
+
+    :param line_split:
+    :return:
+    """
+    lsv_dictionary = dict()
+    gene_name = str(line_split[0])
+
+    gene_id = str(line_split[1])
+
+    d_psi_floated = [float(x) for x in line_split[3].split(';')]
+
+    prob_d_psis_floated = [float(x) for x in line_split[4].split(';')]
+
+    LSV_ID = str(line_split[2])
+    if "target" in LSV_ID:
+        ref_type = "target"
+    elif "source" in LSV_ID:
+        ref_type = "source"
+
+    psi_1_floated = [float(x) for x in line_split[5].split(';')]
+
+    psi_2_floated = [float(x) for x in line_split[6].split(';')]
+
+    lsv_type = str(line_split[7])
+
+    a5ss = bool(line_split[8])
+
+    a3ss = bool(line_split[9])
+
+    es = bool(line_split[10])
+
+    n_junctions = int(line_split[11])
+
+    n_exons = int(line_split[12])
+
+    if pre_voila_1_0_0:
+        de_novo_junct = int(line_split[13])
+    else:  # Else it is boolean
+        de_novo_junct = str(line_split[13])
+
+    chrom = str(line_split[14])
+
+    strand = str(line_split[15])
+
+    junct_coord = str(line_split[16]).split(";")
+
+    exon_coord = str(line_split[17]).split(";")
+
+    exon_alt_start = str(line_split[18])
+
+    exon_alt_end = str(line_split[19])
+
+    ir_coords = str(line_split[20])
+
+    if has_voila:
+        voila_link = str(line_split[21])
+
+    lsv_dictionary[LSV_ID] = dict({
+        file_headers[0]: gene_name,
+        file_headers[1]: gene_id,
+        file_headers[2]: LSV_ID,
+        file_headers[3]: d_psi_floated,
+        file_headers[4]: prob_d_psis_floated,
+        file_headers[5]: psi_1_floated,
+        file_headers[6]: psi_2_floated,
+        file_headers[7]: lsv_type,
+        file_headers[8]: a5ss,
+        file_headers[9]: a3ss,
+        file_headers[10]: es,
+        file_headers[11]: n_junctions,
+        file_headers[12]: n_exons,
+        file_headers[13]: de_novo_junct,
+        file_headers[14]: chrom,
+        file_headers[15]: strand,
+        file_headers[16]: junct_coord,
+        file_headers[17]: exon_coord,
+        file_headers[18]: exon_alt_start,
+        file_headers[19]: exon_alt_end,
+        file_headers[20]: ir_coords})
+    if has_voila:
+        lsv_dictionary["Voila Link"] = voila_link
+
+    lsv_dictionary[LSV_ID]["Reference_Type"] = ref_type
+    return lsv_dictionary
+
+def get_psi_data(line_split,
+                 pre_voila_1_0_0,
+                 file_headers,
+                 has_voila):
+    """
+
+    :param split_line:
+    :return:
+    """
+    lsv_dictionary = dict()
+    gene_name = str(line_split[0])
+
+    gene_id = str(line_split[1])
+
+    psi_floated = [float(x) for x in line_split[3].split(';')]
+
+    var_psi_float = [float(x) for x in line_split[4].split(';')]
+
+    LSV_ID = str(line_split[2])
+    if "target" in LSV_ID:
+        ref_type = "target"
+    elif "source" in LSV_ID:
+        ref_type = "source"
+
+    lsv_type = str(line_split[5])
+
+    a5ss = bool(line_split[6])
+
+    a3ss = bool(line_split[7])
+
+    es = bool(line_split[8])
+
+    n_junctions = int(line_split[9])
+
+    n_exons = int(line_split[10])
+
+    if pre_voila_1_0_0:
+        de_novo_junct = int(line_split[11])
+    else:  # Else it is boolean
+        de_novo_junct = str(line_split[11])
+
+    chrom = str(line_split[12])
+
+    strand = str(line_split[13])
+
+    junct_coord = str(line_split[14]).split(";")
+
+    exon_coord = str(line_split[15]).split(";")
+
+    exon_alt_start = str(line_split[16])
+
+    exon_alt_end = str(line_split[17])
+
+    ir_coords = str(line_split[18])
+
+    if has_voila:
+        voila_link = str(line_split[19])
+
+    lsv_dictionary[LSV_ID] = dict({
+        file_headers[0]: gene_name,
+        file_headers[1]: gene_id,
+        file_headers[2]: LSV_ID,
+        file_headers[3]: psi_floated,
+        file_headers[4]: var_psi_float,
+        file_headers[5]: lsv_type,
+        file_headers[6]: a5ss,
+        file_headers[7]: a3ss,
+        file_headers[8]: es,
+        file_headers[9]: n_junctions,
+        file_headers[10]: n_exons,
+        file_headers[11]: de_novo_junct,
+        file_headers[12]: chrom,
+        file_headers[13]: strand,
+        file_headers[14]: junct_coord,
+        file_headers[15]: exon_coord,
+        file_headers[16]: exon_alt_start,
+        file_headers[17]: exon_alt_end,
+        file_headers[18]: ir_coords})
+    if has_voila:
+        lsv_dictionary["Voila Link"] = voila_link
+
+    lsv_dictionary[LSV_ID]["Reference_Type"] = ref_type
+    return lsv_dictionary
 
 def is_likely_list_of_txtfiles(the_file):
     """
@@ -457,7 +523,7 @@ def is_voila_txt_file(the_file):
     with open(the_file, "r") as handle:
         for line in handle:
             if line_i == 0:
-                if has_valid_voila_tsv_header(line):
+                if has_valid_voila_dpsi_tsv_header(line):
                     looks_like_voila = True
             break
     return looks_like_voila
@@ -506,7 +572,7 @@ def check_if_file_binary(file_path):
     return False
 
 
-def has_valid_voila_tsv_header(header_line):
+def has_valid_voila_dpsi_tsv_header(header_line):
     """
     Make sure the supposed tsv file is actually a tsv file
     :param header_line: str, from file's first line
@@ -514,6 +580,30 @@ def has_valid_voila_tsv_header(header_line):
     """
     is_valid = True
     expect_to_be_in = ["E(dPSI) per LSV junction",
+                       "#Gene Name",
+                       "Gene ID",
+                       "LSV ID",
+                       "E(PSI)",
+                       "LSV Type",
+                       "Exons coords",
+                       "Junctions coords",
+                       "strand",
+                       "chr"]
+    for expected in expect_to_be_in:
+        if expected not in header_line:
+            return False
+    return is_valid
+
+
+def has_valid_voila_psi_tsv_header(header_line):
+    """
+    Make sure the supposed tsv file is actually a tsv file
+    :param header_line: str, from file's first line
+    :return: True or False
+    """
+    is_valid = True
+    expect_to_be_in = ["E(PSI) per LSV junction",
+                       "Var(E(PSI)) per LSV junction",
                        "#Gene Name",
                        "Gene ID",
                        "LSV ID",
@@ -573,7 +663,10 @@ def subset_significant(data,
                                                          intron_dpsi_thresh=intron_dpsi_thresh)
         return new_dict
     elif check_is_lsv_dict(data, da_bool=True):
-        over_cutoff_ids = get_sig_lsv_ids(data, cutoff_dpsi, cutoff_prob, cutoff_sum)
+        over_cutoff_ids = get_sig_lsv_ids(data,
+                                          cutoff_dpsi,
+                                          cutoff_prob,
+                                          cutoff_sum)
         if keep_introns:
             ids_to_keep = over_cutoff_ids
         else:
@@ -589,19 +682,20 @@ def subset_significant(data,
         raise ValueError("subset_significant only takes quick_import-style or LSV dictionaries.")
 
 
-def _get_deltapsi_txt_file_comparison(File):
-    if os.path.exists(File):
-        basename = os.path.basename(File)
+def get_base_names(file):
+    if os.path.exists(file):
+        basename = os.path.basename(file)
     else:
-        basename = File
+        basename = file
     split_file_name = basename.split(".")
     comparison_name = split_file_name[0]
     return comparison_name
 
 
-def name_looks_like_voila_txt_file(the_file, pattern="*tsv"):
+def name_looks_like_voila_txt_file(the_file, pattern="*deltapsi_deltapsi.tsv"):
     if not os.path.exists(the_file):
-        raise ValueError("Suposed deltapsi txt file doesn't exist.")
+        LOG.error("Supposed deltapsi txt file doesn't exist.")
+        exit(1)
     newpat = pattern.replace("*", ".*")
     if re.search(newpat, the_file):
         return True
@@ -803,6 +897,27 @@ def check_is_lsv_dict(lsv_dict, da_bool=False):
     return True
 
 
+def psi_or_deltapsi(the_thing):
+    if check_is_lsv_dict(the_thing,
+                         da_bool=True):
+        if "sample_id" in the_thing["meta_info"]:
+            return "psi"
+        elif "condition_1_name" in the_thing["meta_info"]:
+            return "deltapsi"
+        else:
+            LOG.error("No sample_id or condition_1_name... are you sure this is an LSV dict??")
+            exit(1)
+    if check_is_lsv(the_thing,
+                    Bool=True):
+        if "E(PSI) per LSV junction" in the_thing:
+            return "psi"
+        elif "E(dPSI) per LSV junction" in the_thing:
+            return "deltapsi"
+        else:
+            LOG.error("Not psi or deltapsi... are you sure this is an LSV??")
+            exit(1)
+
+
 def check_is_lsv(lsv, Bool=False):
     """
     Check that LSV is, in fact, a LSV.
@@ -816,7 +931,7 @@ def check_is_lsv(lsv, Bool=False):
     for header in ["Gene Name",
                    "Gene ID",
                    "LSV ID",
-                   "E(dPSI) per LSV junction"]:
+                   "Exons coords"]:
         if header not in lsv:
             if not Bool:
                 raise ValueError("Expected a LSV, but didn't get one.")
@@ -970,8 +1085,8 @@ def remove_genes(rm_data,
 
 
 def get_sig_lsv_ids(Data,
-                    Cutoff_dPSI=0,
-                    Probability_dPSI=0,
+                    Cutoff_dPSI=0.0,
+                    Probability_dPSI=0.0,
                     Sum_for_cutoff=False):
     """
     Given LSV dictionary, return set of unique LSV IDs over cutoff
@@ -1704,6 +1819,11 @@ def get_cond_2_name(lsv_dict):
     return lsv_dict["meta_info"]["condition_2_name"]
 
 
+def get_sample_id(lsv_dict):
+    check_is_lsv_dict(lsv_dict)
+    return lsv_dict["meta_info"]["sample_id"]
+
+
 def get_abs_path(lsv_dict):
     """
     :param lsv_dict: lsv dict..
@@ -1713,14 +1833,18 @@ def get_abs_path(lsv_dict):
     return lsv_dict["meta_info"]["abs_path"]
 
 
-def get_comparison_name(lsv_dict, sep="_"):
+def get_base_name(lsv_dict, sep="_"):
     """
     Given LSV dictionary, return condition_1_name[sep]condition_2_name
     """
     check_is_lsv_dict(lsv_dict)
     if not isinstance(sep, str):
         raise ValueError("sep needs to be a string, not a: " + str(type(sep)))
-    return get_cond_1_name(lsv_dict) + sep + get_cond_2_name(lsv_dict)
+    type = psi_or_deltapsi(lsv_dict)
+    if type == "deltapsi":
+        return get_cond_1_name(lsv_dict) + sep + get_cond_2_name(lsv_dict)
+    else:
+        return get_sample_id(lsv_dict)
 
 
 def get_all_lsv_ids(data):

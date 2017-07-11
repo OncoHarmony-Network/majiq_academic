@@ -67,19 +67,19 @@ class ThisisRelativelyUniq(Tool):
     def run(self, args):
         ex_pkl = "/Volumes/data/THelper/lisp/voila/dpsi/groups/thresh_20/" \
                  "KA_N_0vsKA_T0_72/KA_N_0_KA_T0_72.deltapsi_no_prior.pickle"
-        ex_lsv =  "/Volumes/data/THelper/lisp/voila/dpsi/groups/thresh_20/" \
+        ex_lsv1 =  "/Volumes/data/THelper/lisp/voila/dpsi/groups/thresh_20/" \
                  "KA_N_0vsKA_T0_72/"
-        ex_lsv = io_caleb.quick_import(ex_lsv)
-        all_lsv_ids = io_caleb.get_all_lsv_ids(ex_lsv)
-        test = get_tsvs_no_prior_pkl(ex_lsv["KA_N_0_KA_T0_72"])
+        ex_lsv1 = io_caleb.quick_import(ex_lsv1)
+        all_lsv_ids = io_caleb.get_all_lsv_ids(ex_lsv1)
+        test = get_tsvs_no_prior_pkl(ex_lsv1["KA_N_0_KA_T0_72"])
         print(test == ex_pkl)
-        no_change = num_nonchanging(ex_lsv, test)
-        non_red_sets, blank_dict, num_dpsi = non_redundant_set(data=ex_lsv,
+        no_change = num_nonchanging(ex_lsv1, test)
+        non_red_sets, blank_dict, num_dpsi = non_redundant_set(data=ex_lsv1,
                                                             cutoff_dpsi=0.1,
                                                             cutoff_psi=1,
                                                             save_blanked_structure=True,
                                                             return_numdpsis_dat=True)
-        num_probs, comparisons = io_caleb.get_num_prob(ex_lsv, True)
+        num_probs, comparisons = io_caleb.get_num_prob(ex_lsv1, True)
         for lsv_id in all_lsv_ids:
             this_prob = num_probs[lsv_id]
             this_dpsi = num_dpsi[lsv_id]

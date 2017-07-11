@@ -11,6 +11,8 @@ import pdb
 __author__ = 'cradens'
 
 
+# TODO use find better
+
 def find_voila_files(directory, pattern, file_type, get_comp_names=False):
     """
     Find and return all "tsv", "deltapsi_voila", or "prior_matrix" files.
@@ -45,19 +47,20 @@ def find_voila_files(directory, pattern, file_type, get_comp_names=False):
                                 get_comp_names=False)
 
 
-def get_voila_files(directory, pattern, get_comp_names=False):
+def get_voila_files(directory, pattern, get_base_names=False):
     """
     Recursive search directory for files matching pattern. Speed-optimized for searching
         a directory where majiq was run.
     :param directory: path where txt files are
     :param pattern: grep-capable pattern match for file
-    :param get_comp_names: True/False ... only change this to True if tsv and if you want
+    :param get_base_names: True/False ... only change this to True if you really want to
     :return: list of full file paths
     """
+    from voila.tools.utils import io_caleb
     if not (os.path.isdir(directory)):
         raise ValueError("Directory doesn't seem to exist. ~_~")
-    dpsi_comparison_name = list()
-    dpsi_files = list()
+    base_names = list()
+    voila_txt_files = list()
     # Ensure ./blah becomes /abs/path/blah
     directory = os.path.abspath(directory)
     # Find all voila dPSI text files in directory
@@ -69,41 +72,21 @@ def get_voila_files(directory, pattern, get_comp_names=False):
                    "tmp"]
         # don't os.walk down these directories..
         subdirs[:] = [d for d in subdirs if d not in exclude]
-        # if os.path.basename(root) == "summaries" or os.path.basename(root) == "static":
-        #     continue  # this folder contains all the html files.. skip over this dir
-        # elif os.path.basename(root) == "doc":
-        #     if os.path.basename(os.path.dirname(root)) == "static":
-        #         continue  # lots of docs in this dir, don't need to look through em..
-        # elif os.path.basename(root) == "lsvs":
-        #     if os.path.basename(os.path.dirname(root)) == "doc":
-        #         continue  # lots of .gtfs in this dir, don't need to look through em..
-        # ID files that contain the Pattern
-        found = _deltpsitextfinder(root, pattern=pattern)
+        found = voila_txt_finder(root, pattern=pattern)
         if found:
             for found_file in found:
-                if get_comp_names:
-                    dpsi_comparison_name.append(_get_deltapsi_txt_file_comparison(found_file))
-                dpsi_files.append(os.path.join(root, found_file))
+                if get_base_names:
+                    base_names.append(io_caleb.get_base_names(found_file))
+                voila_txt_files.append(os.path.join(root, found_file))
         else:
             continue
         break
-    if get_comp_names:
-        # dpsi_comparison_name = [x.decode('ascii') for x in dpsi_comparison_name]
-        return dpsi_comparison_name, dpsi_files
-    return dpsi_files
+    if get_base_names:
+        return base_names, voila_txt_files
+    return voila_txt_files
 
 
-def _get_deltapsi_txt_file_comparison(filename):
-    if os.path.exists(filename):
-        basename = os.path.basename(filename)
-    else:
-        basename = filename
-    split_file_name = basename.split(".")
-    comparison_name = split_file_name[0]
-    return comparison_name
-
-
-def _deltpsitextfinder(directory, pattern):
+def voila_txt_finder(directory, pattern):
     files = find_files(directory, pattern)
     if len(files) > 0:
         return files
