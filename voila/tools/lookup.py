@@ -1,3 +1,5 @@
+import pdb
+
 from voila.tools import Tool
 from voila.tools.utils import io_caleb
 
@@ -47,15 +49,18 @@ class ThisisLookup(Tool):
         return parser
 
     def run(self, args):
+        # parse the comparisons argument
         if args.comparisons:
             if "," in args.comparisons or " " in args.comparisons:
                 args.comparisons.replace(" ", ",")
                 to_lookup = args.comparisons.split(",")
             else:
                 to_lookup = [args.comparisons]
+            dont_remove_dups = False
         else:
             to_lookup = None
-        imported = io_caleb.quick_import(dir=args.directory,
+            dont_remove_dups=True
+        imported = io_caleb.quick_import(input=args.directory,
                                          cutoff_d_psi=0,
                                          cutoff_prob=0,
                                          pattern=args.pattern,
@@ -64,6 +69,7 @@ class ThisisLookup(Tool):
                                          stop_at=args.lookup_val,
                                          comparisons=to_lookup)
         to_lookup = list(imported.keys())
+
         # coding for readability here...
         # default is True..
         abbreviated_bool = True
@@ -73,7 +79,8 @@ class ThisisLookup(Tool):
                           name=args.lookup_val,
                           just_one=args.just_one,
                           abbreviated=abbreviated_bool,
-                          comparisons_lookup=to_lookup)
+                          comparisons_lookup=to_lookup,
+                          dont_rem_dup=dont_remove_dups)
 
 
 def lookup_everywhere(dictionary_lookup,
@@ -82,7 +89,8 @@ def lookup_everywhere(dictionary_lookup,
                       just_one=False,
                       print_bool=True,
                       abbreviated=True,
-                      comparisons_lookup=False):
+                      comparisons_lookup=False,
+                      dont_rem_dup=False):
     """
     Given dictionary of LSV dictionaries, return or print LSV dictionaries
         within the gene if gene id or ENSG ID provided. Return the LSVs if LSV IDs
@@ -96,14 +104,16 @@ def lookup_everywhere(dictionary_lookup,
             print_bool: should results be returned or printed?
             abbreviated: only print/return the useful data?
             comparisons_lookup: if provided, only look in these comparisons
+            dont_remove_dups : When True, if comparisons_lookup has *duplicate# in it, then keep that
     """
     io_caleb.check_is_quick_import(dictionary_lookup)
     found_dicts = dict()
     found_data = False
     for LSV_dict_name in dictionary_lookup.keys():
         if comparisons_lookup:
-            if io_caleb.comp_without_dup(LSV_dict_name) not in comparisons_lookup:
-                continue
+            if not dont_rem_dup:
+                if io_caleb.comp_without_dup(LSV_dict_name) not in comparisons_lookup:
+                    continue
         found_data = lookup(dictionary_lookup[LSV_dict_name],
                             name=name,
                             printable=print_bool,
@@ -163,7 +173,7 @@ def lookup(lsv_dictionary,
     io_caleb.check_is_lsv_dict(lsv_dictionary)
 
     if lsv_id:
-        possible_ids = io_caleb.get_LSV_IDs(lsv_dictionary)
+        possible_ids = io_caleb.get_lsv_ids(lsv_dictionary)
         if name in possible_ids:
             new_dict = io_caleb.lsv_dict_subset(lsv_dictionary, name, save_lsv_structure)
         else:
@@ -174,7 +184,7 @@ def lookup(lsv_dictionary,
         else:
             ensembl_id = False
         matched_ids = list()
-        all_ids = io_caleb.get_LSV_IDs(lsv_dictionary)
+        all_ids = io_caleb.get_lsv_ids(lsv_dictionary)
         for lsvid in all_ids:
             if lsvid == "condition_1_name" or lsvid == "condition_2_name":
                 continue
@@ -309,7 +319,7 @@ def print_lsv(lsv, print_bool=True, abbreviated=True):
         helped_print = _help_print_lsv(lsv, abbreviated)
         printable += helped_print
     elif io_caleb.check_is_lsv_dict(lsv, True):
-        lsv_ids = io_caleb.get_LSV_IDs(lsv)
+        lsv_ids = io_caleb.get_lsv_ids(lsv)
         comparison_name = io_caleb.get_comparison_name(lsv)
         printable += "\n=====" + comparison_name + "=====\n"
         for lsv_id_p in lsv_ids:

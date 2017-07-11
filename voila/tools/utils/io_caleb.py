@@ -1,9 +1,9 @@
-from voila.tools import Tool
+import re
+import numpy as np
 import os
 import pandas as pa
 import pdb
 import copy
-
 from voila.tools.utils import find_files
 from voila.tools.utils.calebs_xrange import calebs_xrange
 from voila.utils.voila_log import voila_log
@@ -19,7 +19,7 @@ __author__ = 'cradens'
 LOG = voila_log()
 
 
-def quick_import(dir,
+def quick_import(input,
                  cutoff_d_psi=0.2,
                  cutoff_prob=0.95,
                  keep_ir=True,
@@ -38,11 +38,11 @@ def quick_import(dir,
                  comparisons=None):
     """
     Given a directory with '*_quantify_deltapsi' files, import all dPSI
-        text files, throwing away intron events, return dictionary as follows.
-        Key : Value
-        NAME_OF_COMPARISON : Non-intron containing imported LSV dictionary
+        text files and return dictionary as follows:
+        {NAME_OF_COMPARISON : {LSV IDs: {LSV INFO: VALUES}}}
 
     Arguments:
+        input: a directory, a path to a list of voil atext files, or a voila text file
         cutoff_d_psi: LSVs must have at least 1 junction dPSI >= this.
             (and those junctions must meet the Cutoff_prob)
             0<=X<=1
@@ -80,16 +80,23 @@ def quick_import(dir,
 
     Returns all voila dPSI results in a dictionary format.
     """
-    if not (os.path.isdir(dir)):
-        if _is_deltapsi_file(dir, Pattern=pattern):
-            basename = os.path.basename(dir)
+    if not (os.path.isdir(input)):
+        if name_looks_like_voila_txt_file(input, pattern=pattern):
+            basename = os.path.basename(input)
             dpsi_comparison_name = [_get_deltapsi_txt_file_comparison(basename)]
-            dpsi_files = [dir]
+            dpsi_files = [input]
+        elif os.path.isfile(input):
+            is_valid_list, dpsi_files = is_likely_list_of_txtfiles(input)
+            if is_valid_list:
+                dpsi_comparison_name = [_get_deltapsi_txt_file_comparison(os.path.basename(x)) for x in dpsi_files]
+            else:
+                LOG.error("%s wasn't  valid list of voila txt files.")
+                exit(1)
         else:
-            raise ValueError(dir + " not found.")
+            raise ValueError(input + " not found.")
     else:
         LOG.info("Searching for %s files ..." % pattern)
-        dpsi_comparison_name, dpsi_files = find_files.get_voila_files(dir,
+        dpsi_comparison_name, dpsi_files = find_files.get_voila_files(input,
                                                                       pattern=pattern,
                                                                       get_comp_names=True)
         if len(dpsi_comparison_name) != len(dpsi_files):
@@ -114,17 +121,17 @@ def quick_import(dir,
             for index in sorted(to_remove, reverse=True):
                 del dpsi_comparison_name[index]
                 del dpsi_files[index]
-        if len(set(dpsi_comparison_name)) != len(set(dpsi_files)):
-            # this means more than one tsv with the same name is in this directory substructure
-            # possibly because user ran different thresholds (e.g. 10% and 20%) but kept the same names
-            # no worries, I think I have a fix... maybe... this could come back and bite me in the @$$
-            dupes = [x for n, x in enumerate(dpsi_comparison_name) if x in dpsi_comparison_name[:n]]
-            for dup in dupes:
-                i = 0
-                while dup in dpsi_comparison_name:
-                    new_name = "%s_duplicate%s" % (dup, i)
-                    dpsi_comparison_name[dpsi_comparison_name.index(dup)] = new_name
-                    i += 1
+    if len(set(dpsi_comparison_name)) != len(set(dpsi_files)):
+        # this means more than one tsv with the same name is in this directory substructure
+        # possibly because user ran different thresholds (e.g. 10% and 20%) but kept the same names
+        # no worries, I think I have a fix... maybe... this could come back and bite me in the @$$
+        dupes = [x for n, x in enumerate(dpsi_comparison_name) if x in dpsi_comparison_name[:n]]
+        for dup in dupes:
+            i = 0
+            while dup in dpsi_comparison_name:
+                new_name = "%s_duplicate%s" % (dup, i)
+                dpsi_comparison_name[dpsi_comparison_name.index(dup)] = new_name
+                i += 1
 
     if len(dpsi_files) == 0:
         raise RuntimeError("Didn't find any voila txt files...")
@@ -393,6 +400,67 @@ def import_dpsi(fp,
         return lsv_dictionary
 
 
+def is_likely_list_of_txtfiles(the_file):
+    """
+    Check if the_file is a line-by-line list of voila text files
+    :param the_file:
+    :return: True, [list, of, files] OR False, [list of files found until oe isn't a txt file]
+    """
+    poss_files = list()
+    if not os.path.isfile(the_file):
+        LOG.error("Sorry, this doesn't appear to be a valid filepath: %s..." % the_file)
+        exit(1)
+    if not have_permission(the_file):
+        LOG.error("Sorry, you don't have permission to open %s..." % the_file)
+        exit(1)
+    if is_voila_txt_file(the_file):
+        return False, poss_files
+    if check_if_file_binary(the_file):
+        rtype = "rb"
+    else:
+        rtype = "r"
+    with open(the_file, rtype) as handle:
+        for line in handle:
+            poss_file = line.rstrip("\n\r")
+            if len(poss_file) == 0:
+                continue
+            if not is_voila_txt_file(poss_file):
+                LOG.info("%s doesn't look like a voila txt file" % poss_file)
+                return False, poss_files
+            else:
+                poss_files.append(poss_file)
+    if len(poss_files) == 0:
+        LOG.info("No voila text files found in %s" % the_file)
+        return False, poss_files
+    return True, poss_files
+
+
+def is_voila_txt_file(the_file):
+    """
+    Check if the file is a voila txt file
+    :param the_file:
+    :return: Bool
+    """
+    if not os.path.isfile(the_file):
+        LOG.error("Sorry, this doesn't appear to be a valid filepath: %s..." % the_file)
+        exit(1)
+    if not have_permission(the_file):
+        LOG.error("Sorry, you don't have permission to open %s..." % the_file)
+        exit(1)
+    if check_if_file_binary(the_file):
+        LOG.info("%s was binary, so it's definitely not a voila text file..." % the_file)
+        return False
+    looks_like_voila = False
+    line_i = 0
+    with open(the_file, "r") as handle:
+        for line in handle:
+            if line_i == 0:
+                if has_valid_voila_tsv_header(line):
+                    looks_like_voila = True
+            break
+    return looks_like_voila
+
+
 def have_permission(file_path, f_type="r"):
     """
     Check if you have user permission to read file
@@ -529,16 +597,17 @@ def _get_deltapsi_txt_file_comparison(File):
     return comparison_name
 
 
-def _is_deltapsi_file(File, Pattern=".deltapsi_quantify_deltapsi.txt"):
-    if not os.path.exists(File):
+def name_looks_like_voila_txt_file(the_file, pattern="*tsv"):
+    if not os.path.exists(the_file):
         raise ValueError("Suposed deltapsi txt file doesn't exist.")
-    if Pattern in File:
+    newpat = pattern.replace("*", ".*")
+    if re.search(newpat, the_file):
         return True
     else:
         return False
 
 
-def _recursive_dirs(Directory):
+def recursive_dirs(Directory):
     """
     Given a directory, return all sub directories, recursively.
     """
@@ -547,7 +616,7 @@ def _recursive_dirs(Directory):
         thing = os.path.join(Directory, thing)
         if os.path.isdir(thing):
             is_dir.append(thing)
-            is_dir.extend(_recursive_dirs(thing))
+            is_dir.extend(recursive_dirs(thing))
     return is_dir
 
 
@@ -875,7 +944,7 @@ def remove_genes(rm_data,
         if comp not in rm_data:
             raise RuntimeError("%s was found in DESeq directory, but not in Majiq results...")
         sig_gene_ids = comp_to_lsvid_dict[comp]
-        all_lsv_ids = get_LSV_IDs(rm_data[comp])
+        all_lsv_ids = get_lsv_ids(rm_data[comp])
         n_s = len(sig_gene_ids)
         n_t = len(all_lsv_ids)
         n_r = 0
@@ -928,7 +997,7 @@ def get_sig_lsv_ids(Data,
     check_is_lsv_dict(Data)
 
     # names AKA LSV IDs
-    names = get_LSV_IDs(Data)
+    names = get_lsv_ids(Data)
     names_over_cutoff = set()
     if len(names) < 1:
         raise RuntimeError("No LSVs made Cutoff dPSI of %s and Prob of %s" % (Cutoff_dPSI,
@@ -960,21 +1029,25 @@ def get_sig_lsv_ids(Data,
     return names_over_cutoff
 
 
-def get_LSV_IDs(LSV_dict):
+def get_lsv_ids(lsv_dict):
     """
     Return LSV IDs from dictionary.
     """
-    check_is_lsv_dict(LSV_dict)
-    lsv_ids = copy.copy(list(LSV_dict.keys()))
+    check_is_lsv_dict(lsv_dict)
+    lsv_ids = copy.copy(list(lsv_dict.keys()))
     lsv_ids.remove("condition_1_name")
     lsv_ids.remove("condition_2_name")
     return lsv_ids
 
 
-def get_dpsis(lsv, prob_cutoff=None):
+def get_dpsis(lsv,
+              prob_cutoff=None,
+              as_np_array=False):
     """
     Given LSV, return list of dPSIs over Prob_Cutoff, if provided.
         If not Prob_cutoff provided, return all dPSIs
+
+        as_np_array: bool
     """
     check_is_lsv(lsv)
     if prob_cutoff:
@@ -991,74 +1064,18 @@ def get_dpsis(lsv, prob_cutoff=None):
             index_of_max_prb = probs.index(max(probs))
             probs.pop(index_of_max_prb)
             dPSI.append(all_dPSI.pop(index_of_max_prb))
-        return dPSI
+        return np.array(dPSI) if as_np_array else dPSI
     else:
-        return all_dPSI
+        return np.array(all_dPSI) if as_np_array else all_dPSI
 
 
-def get_strand(LSV):
-    check_is_lsv(LSV)
-    return copy.copy(LSV["strand"])
-
-
-def get_chr(LSV):
-    check_is_lsv(LSV)
-    return copy.copy(LSV["chr"])
-
-
-def get_probs(LSV):
-    """
-    Given LSV, return exons coords
-    """
-    check_is_lsv(LSV)
-    return copy.copy(LSV[get_name_of_prob_key(LSV)])
-
-
-def get_juncs(LSV):
-    """
-    Given LSV, return exons coords
-    """
-    check_is_lsv(LSV)
-    return copy.copy(LSV["Junctions coords"])
-
-
-def get_exons(LSV):
-    """
-    Given LSV, return exons coords
-    """
-    check_is_lsv(LSV)
-    return copy.copy(LSV["Exons coords"])
-
-
-def get_all_dpsis(LSVs, Prob_Cutoff=0):
-    """
-    Given LSV dictionary or quick_import structure, return list of all dPSIs from all
-        LSVs over Prob_Cutoff.
-    """
-    all_dPSI = list()
-    try:
-        check_is_lsv_dict(LSVs)
-        lsvs = get_LSV_IDs(LSVs)
-        # Extract dPSI from each LSV, using cutoff.
-        for lsv_id in lsvs:
-            all_dPSI.extend(get_dpsis(LSVs[lsv_id], Prob_Cutoff))
-    except:
-        try:
-            check_is_quick_import(LSVs)
-            for key in LSVs.keys():
-                LSV_dict = LSVs[key]
-                all_dPSI.extend(get_all_dpsis(LSV_dict))
-        except:
-            raise ValueError("Expected LSV dictionary or quick_import return value.")
-    return all_dPSI
-
-
-def get_psis(lsv, cond_1=False, cond_2=False, as_dict=False):
+def get_psis(lsv, cond_1=False, cond_2=False, as_dict=False, as_np_array=False):
     """
     :param lsv:
     :param cond_1: string, optional
     :param cond_2: string, optional
     :param as_dict: if True, return as dict with cond:psis
+    :param as_np_array: if True, return as np arrays instead of lists
     :return: [cond1 psis, cond2 psis]
     """
     check_is_lsv(lsv)
@@ -1071,9 +1088,363 @@ def get_psis(lsv, cond_1=False, cond_2=False, as_dict=False):
         psi_key_2 = cond_2
     cond_1_psi = copy.copy(lsv[psi_key_1])
     cond_2_psi = copy.copy(lsv[psi_key_2])
+    if as_np_array:
+        cond_1_psi = np.array(cond_1_psi)
+        cond_2_psi = np.array(cond_2_psi)
     if as_dict:
         return {psi_key_1.split(" ")[0]: cond_1_psi, psi_key_2.split(" ")[0]: cond_2_psi}
     return [cond_1_psi, cond_2_psi]
+
+
+def get_strand(lsv):
+    check_is_lsv(lsv)
+    return copy.copy(lsv["strand"])
+
+
+def get_chr(lsv):
+    check_is_lsv(lsv)
+    return copy.copy(lsv["chr"])
+
+
+def get_probs(lsv,
+              as_np_array=False):
+    """
+    Given LSV, return P(E(dPSI))
+    """
+    check_is_lsv(lsv)
+    res = copy.copy(lsv[get_name_of_prob_key(lsv)])
+    if as_np_array:
+        res = np.array(res)
+    return res
+
+
+def get_juncs(lsv):
+    """
+    Given LSV, return exons coords
+    """
+    check_is_lsv(lsv)
+    return copy.copy(lsv["Junctions coords"])
+
+
+def get_exons(lsv):
+    """
+    Given LSV, return exons coords
+    """
+    check_is_lsv(lsv)
+    return copy.copy(lsv["Exons coords"])
+
+
+def list_d_psis(lsv_dict,
+                as_np_array=False):
+    """
+    Return dictionary of LSV IDs pointing at list of dPSIs:
+    (this col
+    not in dict) list:
+    Junction:   | dPSI |
+            0   |   #  |
+            1   |   #  |
+            2   |   #  |
+            ... |   ...|
+    """
+    check_is_lsv_dict(lsv_dict)
+    lsv_to_psi_dict = dict()
+    lsvs = get_lsv_ids(lsv_dict)
+    # Extract dPSI from each LSV, using cutoff.
+    for lsv_id in lsvs:
+        lsv_to_psi_dict[lsv_id] = get_dpsis(lsv_dict[lsv_id],
+                                            as_np_array=as_np_array)
+    return lsv_to_psi_dict
+
+
+def list_probs(lsv_dict,
+               as_np_array=False):
+    """
+    Return dictionary of LSV IDs pointing at list of P(dPSIs):
+    (this col
+    not in dict) list (or array):
+    Junction:   | Prob |
+            0   |   #  |
+            1   |   #  |
+            2   |   #  |
+            ... |   ...|
+    """
+    check_is_lsv_dict(lsv_dict)
+    lsv_to_prob_dict = dict()
+    lsvs = get_lsv_ids(lsv_dict)
+    # Extract dPSI from each LSV, using cutoff.
+    for lsv_id in lsvs:
+        lsv_to_prob_dict[lsv_id] = get_probs(lsv_dict[lsv_id],
+                                             as_np_array=as_np_array)
+    return lsv_to_prob_dict
+
+
+def list_psi(lsv_dict,
+             as_np_array=False):
+    """
+    Return dictionary of conditions pointing at dictionary of
+        LSV IDs pointing at list of PSIs:
+
+    condition_* points at:
+    (this col
+    not in dict) list:
+    Junction:   | PSI  |
+            0   |   #  |
+            1   |   #  |
+            2   |   #  |
+            ... |   ...|
+    """
+    check_is_lsv_dict(lsv_dict)
+    cond_1_name = lsv_dict["condition_1_name"]
+    cond_2_name = lsv_dict["condition_2_name"]
+    condtion_dict = dict()
+    condtion_dict[cond_1_name] = dict()
+    condtion_dict[cond_2_name] = dict()
+    lsvs = get_lsv_ids(lsv_dict)
+    # Extract dPSI from each LSV, using cutoff.
+    for lsv_id in lsvs:
+        PSIs = get_psis(lsv_dict[lsv_id], as_np_array=as_np_array)
+        cond_1_psi = PSIs[0]
+        cond_2_psi = PSIs[1]
+        condtion_dict[cond_1_name][lsv_id] = cond_1_psi
+        condtion_dict[cond_2_name][lsv_id] = cond_2_psi
+    return condtion_dict
+
+
+def get_all_dpsis(lsvs,
+                  prob_cutoff=0,
+                  as_np_arrays=False):
+    """
+    Given LSV dictionary or quick_import structure, return list of all dPSIs from all
+        LSVs over Prob_Cutoff.
+    """
+    all_dpsi = list()
+    try:
+        check_is_lsv_dict(lsvs)
+        lsvs = get_lsv_ids(lsvs)
+        # Extract dPSI from each LSV, using cutoff.
+        for lsv_id in lsvs:
+            all_dpsi.extend(get_dpsis(lsvs[lsv_id], prob_cutoff, as_np_arrays))
+    except:
+        try:
+            check_is_quick_import(lsvs)
+            for key in lsvs.keys():
+                lsv_dict = lsvs[key]
+                all_dpsi.extend(get_all_dpsis(lsv_dict, prob_cutoff, as_np_arrays))
+        except:
+            raise ValueError("Expected LSV dictionary or quick_import return value.")
+    return all_dpsi
+
+
+def get_num_d_psi(data,
+                  return_comparisons=False,
+                  use_binary_index_info=None):
+    """
+    Given dictionary of LSV dictionaries return numpy arrays
+        of all dPSIs from all comparisons for each LSV. Such that
+        each LSV ID in the dictionary is pointing at an array that
+        looks like this:
+
+                |A vs B|A vs C  | all other comparisons ...
+    Junction:   | dPSI | dPSI   | ...
+            0   |   #  |  #     | ...
+            1   |   #  |  #     | ...
+            2   |   #  |  #     | ...
+            ... |   ...|  ...   | ...
+
+    Arguments:
+        data: quick imp
+        return_comparisons: Boolean. If True, also return a list
+            of the comparison names, in the same order as the columns
+            of the numpy array.
+        use_binary_index_info: None, "closer", or "further"
+            If the LSV dictionaries were returned by get_binary_LSVs(),
+            then they will have a "binary_indices" key that points at
+            the binary indices. Use this info to return only the dPSI
+            value that corresponds to the closer or further junction
+            from the reference exon.
+
+    NOTES:
+        - only those LSV IDs that are shared by all LSV dictionaries
+        in Data are evaluated. LSV IDs that are unique to or missing from
+        any of the LSV Dictionaries are not returned by this function.
+        - columns are sorted by name
+
+
+    Returns the numpy array and a list of LSV_IDs
+    """
+    binary_index = "cow"  # stupid pep
+    if use_binary_index_info:
+        if not use_binary_index_info == "closer" and not use_binary_index_info == "further":
+            raise ValueError("Use_binary_index_info needs to be 'closer' or 'further' if provided")
+    if use_binary_index_info == "closer":
+        binary_index = 0
+    if use_binary_index_info == "further":
+        binary_index = 1
+    check_is_quick_import(data)
+    comparison_dict = dict()
+    for comparison in data.keys():
+        d_psis = list_d_psis(data[comparison])
+        comparison_dict[comparison] = d_psis
+    union_of_lsv_ids = get_shared_lsv_ids(data)
+    lsv_dict = dict()
+    comparisons = list(comparison_dict.keys())
+    comparisons.sort()  # alphabatized
+    for lsv_id in list(union_of_lsv_ids):
+        list_of_dpsis = list()
+        for comparison in comparisons:
+            d_psis = comparison_dict[comparison][lsv_id]
+            if use_binary_index_info:
+                binary_i = data[comparison][lsv_id]["binary_indices"][binary_index]
+                d_psis = d_psis[binary_i]
+            list_of_dpsis.append(d_psis)
+        lsv_dict[lsv_id] = np.array(list_of_dpsis).T
+    if return_comparisons:
+        return lsv_dict, comparisons
+    return lsv_dict
+
+
+def get_num_prob(data,
+                 return_comparisons=False,
+                 use_binary_index_info=False):
+    """
+    Given dictionary of LSV dictionaries return numpy arrays
+        of all P(dPSIs) from all comparisons for each LSV. Such that
+        each LSV ID in the dictionary is pointing at an array that
+        looks like this:
+
+                |A vs B|A vs C  | all other comparisons ...
+    Junction:   | P(dPSI) | P(dPSI)   | ...
+            0   |   #     |     #     | ...
+            1   |   #     |     #     | ...
+            2   |   #     |     #     | ...
+            ... |   ...   |     ...   | ...
+    Arguments:
+        data: Quick Import structure
+        return_comparisons: Boolean. If True, also return a list
+            of the comparison names, in the same order as the columns
+            of the numpy array.
+        use_binary_index_info: None, "closer", or "further"
+            If the LSV dictionaries were returned by get_binary_LSVs(),
+            then they will have a "binary_indices" key that points at
+            the binary indices. Use this info to return only the P(dPSI)
+            value that corresponds to the closer or further junction
+            from the reference exon.
+
+    NOTES:
+        - only those LSV IDs that are shared by all LSV dictionaries
+        in Data are evaluated. LSV IDs that are unique to or missing from
+        any of the LSV Dictionaries are not returned by this function.
+        - columns are sorted by name
+
+
+    Returns the numpy array and a list of LSV_IDs
+    """
+    # stupid pep rules
+    binary_index = "cow"
+    if use_binary_index_info:
+        if not use_binary_index_info == "closer" and not use_binary_index_info == "further":
+            raise ValueError("Use_binary_index_info needs to be 'closer' or 'further' if provided")
+        if use_binary_index_info == "closer":
+            binary_index = 0
+        elif use_binary_index_info == "further":
+            binary_index = 1
+        else:
+            raise RuntimeError("I don't know what to do here")
+    check_is_quick_import(data)
+    comparison_dict = dict()
+    for nup_comparison in data.keys():
+        nu_probs = list_probs(data[nup_comparison])
+        comparison_dict[nup_comparison] = nu_probs
+    union_of_lsv_ids = get_shared_lsv_ids(data)
+    lsv_dict = dict()
+    comparisons = list(comparison_dict.keys())
+    comparisons.sort()  # alphabatized
+    for lsv_id in list(union_of_lsv_ids):
+        list_of_probs = list()
+        for nup_comparison in comparisons:
+            probs = comparison_dict[nup_comparison][lsv_id]
+            if use_binary_index_info:
+                binary_i = data[nup_comparison][lsv_id]["binary_indices"][binary_index]
+                probs = probs[binary_i]
+            list_of_probs.append(probs)
+        lsv_dict[lsv_id] = np.array(list_of_probs).T
+    if return_comparisons:
+        return lsv_dict, comparisons
+    return lsv_dict
+
+
+def get_num_psi(data,
+                return_comparisons=False,
+                use_binary_index_info=None):
+    """
+    Given dictionary of LSV dictionaries return numpy array
+        of all PSIs from all conditions for each LSV. Such that
+        each LSV ID in the dictionary is pointing at an array that
+        looks like this:
+
+                |   A  |  B     | all other conditions ...
+    Junction:   |  PSI |  PSI   | ...
+            0   |   #  |  #     | ...
+            1   |   #  |  #     | ...
+            2   |   #  |  #     | ...
+            ... |   ...|  ...   | ...
+
+    Arguments:
+        return_comparisons: if True, also return a list of conditions
+            found in the same order as the numpy array columns.
+        use_binary_index_info: None, "closer", or "further"
+            If the LSV dictionaries were returned by get_binary_LSVs(),
+            then they will have a "binary_indices" key that points at
+            the binary indices. Use this info to return only the PSI
+            value that corresponds to the closer or further junction
+            from the reference exon.
+
+    NOTE: only those LSV IDs that are shared by all LSV dictionaries
+        in Data are evaluated. LSV IDs that are unique to or missing from
+        any of the LSV Dictionaries are not returned by this function.
+
+    Returns the numpy array and a list of LSV_IDs
+    """
+    if use_binary_index_info:
+        if not use_binary_index_info == "closer" and not use_binary_index_info == "further":
+            raise ValueError("Use_binary_index_info needs to be 'closer' or 'further' if provided")
+    if use_binary_index_info == "closer":
+        binary_index = 0
+    if use_binary_index_info == "further":
+        binary_index = 1
+    comparison = "thing to make PyCharm happy"
+    binary_index = "thing to make PyCharm happy"
+    check_is_quick_import(data)
+    condition_dict = dict()
+    lsv_id_lists = list()
+    for comparison in data.keys():
+        lsv_dict = data[comparison]
+        cond_1_name = lsv_dict["condition_1_name"]
+        cond_2_name = lsv_dict["condition_2_name"]
+        PSIs = list_psi(lsv_dict)
+        cond_1_PSIs = PSIs[cond_1_name]
+        cond_2_PSIs = PSIs[cond_2_name]
+        condition_dict[cond_1_name] = cond_1_PSIs
+        condition_dict[cond_2_name] = cond_2_PSIs
+    union_of_lsv_ids = get_shared_lsv_ids(data)
+    lsv_dict = dict()
+    conditions = list(condition_dict.keys())
+    conditions.sort()
+    for lsv_id in list(union_of_lsv_ids):
+        # if lsv_id == "ENSG00000173744:228395807-228395926:target":
+        #     pdb.set_trace()
+        list_of_PSIs = list()
+        for condition in conditions:
+            PSI = condition_dict[condition][lsv_id]
+            if use_binary_index_info:
+                binary_i = data[comparison][lsv_id]["binary_indices"][binary_index]
+                PSI = PSI[binary_i]
+            list_of_PSIs.append(PSI)
+        lsv_dict[lsv_id] = np.array(list_of_PSIs).T
+    if return_comparisons:
+        return lsv_dict, conditions
+    return lsv_dict
+
 
 
 def get_all_unique_lsv_ids(data,
@@ -1088,7 +1459,7 @@ def get_all_unique_lsv_ids(data,
     comparisons.sort()
     for comparison_name in comparisons:
         lsv_dict = data[comparison_name]
-        lsvs = get_LSV_IDs(lsv_dict)
+        lsvs = get_lsv_ids(lsv_dict)
         all_lsvs.extend(lsvs)
         if verbose:
             n_lsvs = len(lsvs)
@@ -1104,7 +1475,7 @@ def get_shared_lsv_ids(data, bool=False):
     check_is_quick_import(data)
     lsvids = list()
     for comparison in data.keys():
-        lsvids.append(set(get_LSV_IDs(data[comparison])))
+        lsvids.append(set(get_lsv_ids(data[comparison])))
     union_of_lsv_ids = set.intersection(*lsvids)
     if len(union_of_lsv_ids) == 0:
         if bool:
@@ -1243,7 +1614,7 @@ def remove_empty_lsv_dicts(data, print_status=True):
             LOG.info("Warning! All LSV_dicts were empty...")
         return new_dict
     check_is_lsv_dict(data)
-    lsv_ids = get_LSV_IDs(data)
+    lsv_ids = get_lsv_ids(data)
     if len(lsv_ids) > 0:
         return data
     else:
@@ -1290,7 +1661,7 @@ def check_lsv_ids_all_shared(Data, Bool=False):
     check_is_quick_import(Data)
     list_of_ids = list()
     for comparison in Data.keys():
-        ids = copy.copy(get_LSV_IDs(Data[comparison]))
+        ids = copy.copy(get_lsv_ids(Data[comparison]))
         list_of_ids.append(set(ids))
     benchmark = list_of_ids[0]
     for i in range(1, len(list_of_ids)):
@@ -1332,12 +1703,19 @@ def get_comparison_name(LSV_dict, sep="_"):
     return LSV_dict["condition_1_name"] + sep + LSV_dict["condition_2_name"]
 
 
-def get_all_LSV_IDs(Data):
-    check_is_quick_import(Data)
+def get_all_lsv_ids(Data):
+    if not check_is_quick_import(Data,
+                          the_bool=True):
+        if check_is_lsv_dict(Data,
+                             da_bool=True):
+            return get_lsv_ids(Data)
+        else:
+            LOG.error("Expected a LSV dictionary or Quick Import...")
+            exit(1)
     comparisons = Data.keys()
     all_ids = list()
     for comparison in comparisons:
-        all_ids.extend(get_LSV_IDs(Data[comparison]))
+        all_ids.extend(get_lsv_ids(Data[comparison]))
     return list(set(all_ids))
 
 
@@ -1495,8 +1873,8 @@ def impute_missing_lsvs(data,
     blanked_dict = dict()
     for comparison in list(data.keys()):
         if verbose:
-            LOG.info("Filling in the LSV gaps for", comparison, "...")
-        this_comps_lsvids = set(get_LSV_IDs(data[comparison]))
+            LOG.info("Filling in the LSV gaps for %s ... " % comparison)
+        this_comps_lsvids = set(get_lsv_ids(data[comparison]))
         only_in_unique = unique_ids - this_comps_lsvids
         blanked_dict[comparison] = only_in_unique
         if len(only_in_unique) == 0:
@@ -1505,6 +1883,8 @@ def impute_missing_lsvs(data,
                 if verbose:
                     LOG.info("Deep copying...")
                 new_dict[comparison] = copy.deepcopy(data[comparison])
+            else:
+                new_dict[comparison] = data[comparison]
             continue
         only_in_unique_lsvs = get_lsvs_quickly(data, only_in_unique)
         if verbose:

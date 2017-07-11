@@ -2,16 +2,11 @@ from voila.tools import Tool
 from voila.tools.utils import io_caleb
 from voila.tools.utils.percent_through_list import percent_through_list
 from voila.utils.voila_log import voila_log
-
-import os
-import itertools
-import math
 import numpy as np
 import pandas as pa
 import copy
-import operator
 import pdb
-
+import os
 
 # Caleb Matthew Radens
 # radlinsky@gmail.com
@@ -19,12 +14,34 @@ import pdb
 
 __author__ = 'cradens'
 
+LOG = voila_log()
+
 
 class ThisisFindBinaryLSVs(Tool):
-    help = 'Given a list of voila dPSI txt files, return LSVs that are binary-like'
+    help = 'Given a directory (searches within it recursively) with dPSI txt files,' \
+           ' return LSVs that are binary-like.'
 
     def arguments(self):
         parser = self.get_parser()
+        # parser.epilog('\n'
+        # helptxt =              '        If the # == True column has exactly two junctions > 0,\n'
+        #               '          then the LSV is considered functionally binary.\n'
+        #               ''
+        #               '            |A vs B|A vs C  | ... |\n'
+        #               'Junction:   | dPSI | dPSI   | ... |\n'
+        #               '    0       |>0.1? |>0.1?   | ... | # == True\n'
+        #               '    1       |>0.1? |>0.1?   | ... | # == True\n'
+        #               '    2       |>0.1? |>0.1?   | ... | # == True\n'
+        #               '   ...      |   ...|  ...   | ... | ...\n'
+        # helptxt = """If the # == True column has exactly two junctions > 0,
+        #         then the LSV is considered functionally binary.
+        #
+        #                      |A vs B|A vs C  | ... |
+        #          Junction:   | dPSI | dPSI   | ... |
+        #              0       |>0.1? |>0.1?   | ... | # == True
+        #              1       |>0.1? |>0.1?   | ... | # == True
+        #              2       |>0.1? |>0.1?   | ... | # == True
+        #             ...      |   ...|  ...   | ... | ..."""
         parser.add_argument('directory',
                             type=str,
                             help='Directory where voila texts are.')
@@ -56,16 +73,23 @@ class ThisisFindBinaryLSVs(Tool):
                             default="sum_to_95",
                             type=str,
                             help=help_mes)
+        mutually_excl_grp = parser.add_mutually_exclusive_group(required=True)
         help_mes = "Flag: just return the LSV IDs?"
-        parser.add_argument('--just_ids',
+        mutually_excl_grp.add_argument('--just_ids',
+                                       action='store_true',
+                                       help=help_mes,
+                                       default=False)
+        help_mes = 'File path to write results to'
+        mutually_excl_grp.add_argument('-o',
+                                       '--outfile',
+                                       type=str,
+                                       help=help_mes)
+        help_mes = "Flag: If you think the binary-like LSVs should reciprocate\n" \
+                   "Note: this is broken at the moment, so don't use it.."
+        parser.add_argument('--must_reciprocate',
                             action='store_true',
                             help=help_mes,
                             default=False)
-        help_mes = "Flag: If you don't care whether the binary-like LSVs are reciprocating"
-        parser.add_argument('--non_reciprocating',
-                            action='store_false',
-                            help=help_mes,
-                            default=True)
         help_mes = "Flag: If you don't want to impute missing values with 0"
         parser.add_argument('--dont_impute',
                             action='store_true',
@@ -81,29 +105,41 @@ class ThisisFindBinaryLSVs(Tool):
         impute = True
         if args.dont_impute:
             impute = False
-        imported = io_caleb.quick_import(dir=args.directory,
+        if args.must_reciprocate:
+            LOG.error("Please don't use --must_reciprocate yet... Caleb needs ot fix it.")
+            exit(1)
+        # Import the text files
+        imported = io_caleb.quick_import(input=args.directory,
                                          cutoff_d_psi=0,
                                          cutoff_prob=0,
                                          pattern=args.pattern,
                                          keep_ir=consider_ir)
         if impute:
-            imported = io_caleb.impute_missing_lsvs(data=imported,
-                                                    impute_with=0)
+            blank_dict = io_caleb.impute_missing_lsvs(data=imported,
+                                                      impute_with=0)
         results = get_binary_lsvs(data=imported,
                                   method=args.method,
                                   cutoff_d_psi=args.dpsi_thresh,
-                                  just_lsv_ids=args.just_ids,
-                                  must_reciprocate=args.non_reciprocating)
+                                  just_lsv_ids=False,
+                                  must_reciprocate=args.must_reciprocate)
         if args.prob_dpsi_thresh:
             results = io_caleb.subset_significant(results,
                                                   cutoff_dpsi=0,
                                                   cutoff_prob=args.prob_dpsi_thresh,
                                                   keep_introns=consider_ir)
-        if args.just_ids:
-            LOG.info(results)
 
-
-LOG = voila_log()
+        res = io_caleb.get_all_lsv_ids(results)
+        if args.outfile:
+            outpath = os.path.abspath(args.outfile)
+            with open(outpath, "w") as handle:
+                for lsvid in res:
+                    print(lsvid, file=handle)
+        elif args.just_ids:
+            for lsvid in res:
+                print(lsvid)
+        else:
+            LOG.error("Uh oh")
+            exit(1)
 
 
 def get_binary_lsvs(data,
@@ -131,10 +167,10 @@ def get_binary_lsvs(data,
     """
     io_caleb.check_is_quick_import(data)
     LOG.info("Getting num_d_psi data ...")
-    num_d_psi_data = get_num_d_psi(data)
+    num_d_psi_data = io_caleb.get_num_d_psi(data)
     if cutoff_psi < 1:
         LOG.info("Getting num_psi data ...")
-        numPSIs_data = get_num_psi(data)
+        numPSIs_data = io_caleb.get_num_psi(data)
     else:
         numPSIs_data = "doesnt matter"
     LOG.info("Categorizing LSVs from the following comparisons ...")
@@ -345,7 +381,7 @@ def find_binary_lsvs_95(num_d_psi,
         # Use PSI to determing binary-ness:
         if by_psi:
             LOG.info("Gotta be straight with you, Caleb was lazy and didn't implement "
-                  "the thresh option for binary PSI... fix this")
+                     "the thresh option for binary PSI... fix this")
             abs_junc_maxes = np.max(abs(this_num_psi), axis=1)  # max per row (junction)
             i = -1
             perc_of_total = 0
@@ -422,9 +458,9 @@ def find_binary_lsvs_95(num_d_psi,
     n_2 = len(binary_ids)
     n_comp = len(complex_over_ids)
     LOG.info("%s non-sig, %s single junc, %s binary-like, %s complex LSVs categorized." % (n_0,
-                                                                                        n_1,
-                                                                                        n_2,
-                                                                                        n_comp))
+                                                                                           n_1,
+                                                                                           n_2,
+                                                                                           n_comp))
     return results
 
 
@@ -622,7 +658,7 @@ def find_lsvs_with_junc(data, junc):
     """
     lsv_ids = []
     for comparison in data:
-        lsvs = io_caleb.get_lsvs_quickly(data, io_caleb.get_LSV_IDs(data[comparison]), comparison)
+        lsvs = io_caleb.get_lsvs_quickly(data, io_caleb.get_lsv_ids(data[comparison]), comparison)
         for lsv in lsvs:
             if is_junc_in_lsv(lsv, junc):
                 lsv_ids.append(lsv["LSV ID"])
@@ -1183,12 +1219,12 @@ def get_cassettes(Excl_dict):
                     pdb.set_trace()
                 total += n_lsvs
     LOG.info("Found %s single LSV, %s cassette-like, %s matched excl non-cassette, and %s (%s LSVs) multi-LSV events "
-          "from %s total." % (len(single),
-                              len(cassette),
-                              len(matched_excl_non_cassette),
-                              len(three_plus),
-                              n_complex,
-                              total))
+             "from %s total." % (len(single),
+                                 len(cassette),
+                                 len(matched_excl_non_cassette),
+                                 len(three_plus),
+                                 n_complex,
+                                 total))
     return single, cassette, matched_excl_non_cassette, three_plus
 
 
@@ -1280,7 +1316,7 @@ def get_binary_coords(Binary_Data,
     new_lsv_dict = dict()
     one_comparison = Binary_Data.keys()[0]
     lsv_dict = Binary_Data[one_comparison]
-    lsv_ids = io_caleb.get_LSV_IDs(lsv_dict)
+    lsv_ids = io_caleb.get_lsv_ids(lsv_dict)
     alt_ref_same_target = list()
     alt_exon_ov_ref = list()
     not_enough_exons = list()
@@ -1360,427 +1396,14 @@ def get_binary_coords(Binary_Data,
     if Return_oddity_ids:
         return new_lsv_dict, oddities
     LOG.info("%s non-classical events discarded from %s total, leaving %s" % (len(oddities),
-                                                                           len(lsv_ids),
-                                                                           len(new_lsv_dict)))
+                                                                              len(lsv_ids),
+                                                                              len(new_lsv_dict)))
     return new_lsv_dict
-
-
-def singly_unique(data,
-                  threshold=0.05,
-                  sig_dpsi_thresh=0.1,
-                  sig_prob_thresh=0.95,
-                  evaluate_introns=True,
-                  comparisons=False,
-                  stringent_prob=0,
-                  must_reciprocate=True,
-                  firstpdb=False,
-                  secondpdb=False,
-                  unblank_the_data=True):
-    """
-    Identify sigLSVs in the data that change in a pattern unique to a comparison.
-
-    This algorithm is sensitive to the thresholds. Borderline cases will
-        always be an issue. So, please check the results by eye to make sure
-        the results pass the ole' "Yeah that checks out" intuition test.
-
-    Arguments:
-        data : Quick Import
-        threshold (default 0.05) : dPSI w/in +/-[threshold] of 0 are converted to 0
-        sig_dpsi_thresh (default 0.2) : dPSI thresh for ID'ing sig LSVs
-        sig_prob_thresh (default 0.95) : Prob(dPSI) thresh for ID'ing sig LSVs
-        evaluate_introns : True/False, should intronic LSVs be considered?
-        comparisons (default False) : return list of comparisons corresponding to columns?
-        stringent_prob (default 0) : convert dPSI to 0 if P(dPSI) < stringent_prob_thresh
-            default 0 means no dPSI will be converted to 0 by this argument
-            0.95 is very stringent, and will vastly reduce power to detect unique changes
-                however, these unique changes will be highly supported by the RNA seq data!
-        must_reciprocate (default True) : must the uniquely called LSV dPSIs sum to 0?
-            (CAREFUL: BEHAVIOUR IF SET TO FALSE NOT TESTED YET)
-            (not quite 'binary-like' b/c LSV with 4 junctions (2 pos, 2 neg) is reciprocating)
-            after converting dPSI to 1,0,-1, checks that the sum for a uniquely called
-                LSV is 0. For example, if it is a binary-like LSV, one junction goes up, then
-                the other junction must go down. In conjunction with stringent_prob,
-                this will very stringently identify uniquely changing LSVs of high confidence
-                that make sense with respect to how splicing works on a biological level.
-                Note: you will lose a binary LSV where one junction goes up, and the other
-                    one doesn't go down enough or with enough probability to pass your threshes...
-        firstpdb : debug? Boolean
-        secondpdb : debug? Boolean
-        unblank_the_data : Boolean
-            If False, does not unblank the data, so you can play with the unblanked data if you want.
-
-    Algorithm steps ::
-     --(1)--
-     --Convert dPSI to -1, 0, or 1
-        if:
-          dPSI < (-)Threshold, make it (-1)
-          dPSI > (+)Threshold, make it ( 1)
-          (-)Threshold <= dPSI <= (+)Threshold, make it 0
-          prob(dPSI) < stringent_prob, make it 0
-
-     --(2)--
-     --Identify which junctions in which comparisons agree/disagree
-        For each junction, check if all columns agree or not.
-        - if all columns are the same, ignore the junction.
-        - else, identify what the least common #(s) is(are), and then
-        assign the column(s) name(s) to that row.
-
-     --(3)--
-     --Detect whether there is 1 disagreement that is singly unique to 1 comparison
-        After going through all the junctions if:
-         - at least one row is assigned a *single* column name
-         - all rows agree on any *single* column name assignments
-         - LSV reciprocates, if applicable (see must_reciprocate definition)
-        Then that LSV is assigned to that column (it is unique to that comparison)
-
-     --(4)-- TBD
-     --Detect groups of comparisons that agree/disagree (TBD)
-    if:
-     - at least one row is assigned more than one column name
-     - all rows agree on column name assignments
-    Then that LSV is assigned to a combination of the comparisons
-    eg: Comparison1_Comparison2 <- names will be sorted before joined
-
-                |A vs B|A vs C  | all other comparisons ...
-    Junction:   | dPSI | dPSI   | ...
-            0   |   #  |  #     | ...
-            1   |   #  |  #     | ...
-            2   |   #  |  #     | ...
-            ... |   ...|  ...   | ...
-
-    Returns dictionary
-        {SinglyUnique: {Comparisons: [LSV IDs ...]},
-         cococombo_breaker: (Comparison_Combos: [LSV IDs ...])} <-TBD
-    """
-    non_red_sets, blanked_lsvs_dict, all_num_dpsis_data = non_redundant_set(data=data,
-                                                                            cutoff_dpsi=0.1,
-                                                                            cutoff_psi=1,
-                                                                            save_blanked_structure=True,
-                                                                            return_numdpsis_dat=True)
-    LOG.info("Building non_red id dictionary ...")
-    id_dict = non_redundant_id_dict(non_red_sets,
-                                    cutoff_dpsi=0.1,
-                                    cutoff_psi=1)
-    LOG.info("Getting all Prob(dPSI) data ...")
-    all_prob_data, comp_names = get_num_prob(data, True)
-    sig_subset = io_caleb.subset_significant(data,
-                                             sig_dpsi_thresh,
-                                             sig_prob_thresh,
-                                             keep_introns=evaluate_introns)
-    all_uniques = list()
-    singly_unique_sig = dict()
-    non_sig = {"no_comp_assoc": []}
-    cococombo_breaker = dict()
-    opposite_dict = dict()
-    not_changing = []
-    non_recriprocating = []
-    unsure = []
-    sig_not_singly_so = []
-    sig_subset_ids = dict()
-    all_sig = []
-    if comparisons:
-        for c in comparisons:
-            these_ids = io_caleb.get_LSV_IDs(sig_subset[c])
-            sig_subset_ids[c] = these_ids
-            all_sig.extend(these_ids)
-        comparisons_ii = [comp_names.index(x) for x in comparisons]
-        all_sig = list(set(all_sig))
-    else:
-        for c in data.keys():
-            sig_subset_ids[c] = io_caleb.get_LSV_IDs(sig_subset[c])
-        all_sig = io_caleb.get_all_LSV_IDs(sig_subset)
-        comparisons_ii = [comp_names.index(x) for x in data.keys()]
-    thelsvs = all_num_dpsis_data.keys()
-    indeces_at_10_percent = percent_through_list(thelsvs, 0.1)
-    LOG.info("Assigning %s LSVs to groups ... " % (len(thelsvs)))
-    i = 0.0
-    for lsv_id in thelsvs:
-        if i > 0.0 and i in indeces_at_10_percent:
-            LOG.info(str(indeces_at_10_percent[i]) + "% of LSVs processed...")
-        i += 1.0
-        if firstpdb:
-            if isinstance(firstpdb, str):
-                if lsv_id == firstpdb:
-                    pdb.set_trace()
-            else:
-                pdb.set_trace()
-        num_dpsis_data = all_num_dpsis_data[lsv_id]
-        num_probs_data = all_prob_data[lsv_id]
-        if comparisons:
-            num_dpsis_data = num_dpsis_data[:, comparisons_ii]
-            num_probs_data = num_probs_data[:, comparisons_ii]
-        # convert dPSIs to 1s and 0s
-        num_probs_data[num_probs_data < stringent_prob] = 0
-        num_probs_data[num_probs_data >= stringent_prob] = 1
-        between_thresh_inclus = (num_dpsis_data >= -threshold) & (num_dpsis_data <= threshold)
-        above_thresh = num_dpsis_data > threshold
-        below_thresh = num_dpsis_data < -threshold
-        num_dpsis_data[between_thresh_inclus] = 0
-        num_dpsis_data[above_thresh] = 1
-        num_dpsis_data[below_thresh] = -1
-        # Account for stringent_prob_thresh
-        num_dpsis_data = num_dpsis_data * num_probs_data
-        # how many 1s, 0s, and -1s per junction?
-        # Three arrays: -1s, 0s, and 1s
-        # [j1, j2, ...] , [j1, j2, ...] , [j1, j2, ...]
-        simplified_counts = counts_per_row(num_dpsis_data, [-1, 0, 1])
-        # np.array(simplified_counts) = above col-concatenated, so first row is -1s,
-        # second row is 0s, and last row is +1s
-        # columns are junctions
-        #
-        # Which junctions have a n=1 for -1s, 0s, or 1s?
-        sing_unique_calls = np.sum(np.array(simplified_counts) == 1, 0)
-        if max(sing_unique_calls) == 1:
-            if secondpdb:
-                if isinstance(secondpdb, str):
-                    if lsv_id == secondpdb:
-                        pdb.set_trace()
-                else:
-                    pdb.set_trace()
-            un_0s = np.where(np.array(simplified_counts) == 1)[0]  # row indices for 1s
-            ov_0s = np.where(np.array(simplified_counts) == 1)[1]  # cols indices for 1s
-            comp_iis = list()
-            # get the comps corresponding to the uniquely called -1/1s
-            for un_0, ov_0 in zip(un_0s, ov_0s):
-                comp_i = np.where(num_dpsis_data[ov_0,] == [-1, 0, 1][un_0])[0][0]
-                comp_iis.append(comp_i)
-            # If only one comp implicated for the LSV
-            if len(set(comp_iis)) == 1:
-                unique_comp_i = list(set(comp_iis))[0]
-                unique_comp = comp_names[comparisons_ii[unique_comp_i]]
-                # if sig id for this comparison
-                if lsv_id in sig_subset_ids[unique_comp]:
-                    if must_reciprocate:
-                        # sum junctions (cols) for each comparison
-                        summed_juncs = np.sum(num_dpsis_data, axis=0)
-                        if summed_juncs[unique_comp_i] != 0:
-                            # Not a reciprocating LSV!! Skip it.
-                            non_recriprocating.append(lsv_id)
-                            continue
-                    if unique_comp not in singly_unique_sig:
-                        singly_unique_sig[unique_comp] = [lsv_id]
-                        all_uniques.append(lsv_id)
-                    else:
-                        singly_unique_sig[unique_comp].append(lsv_id)
-                        all_uniques.append(lsv_id)
-                # not sig id for this comparison
-                else:
-                    # Maybe it is only sig for other comparison(s)
-                    if lsv_id in all_sig:
-                        sig_not_singly_so.append(lsv_id)
-                    elif unique_comp not in non_sig:
-                        non_sig[unique_comp] = [lsv_id]
-                    else:
-                        non_sig[unique_comp].append(lsv_id)
-            else:
-                # junctions seen changing at most in one comparison,
-                # but more than one comparison implicated.
-                # Thus, different junctions changing in different comparisons.
-                # Could be non-reciprocating. If so, classify it as such.
-                if False in (num_dpsis_data.sum(axis=0) == 0):
-                    if lsv_id in all_sig:
-                        non_recriprocating.append(lsv_id)
-                    else:
-                        non_sig["no_comp_assoc"].append(lsv_id)
-                else:
-                    if lsv_id in all_sig:
-                        unsure.append(lsv_id)
-                    else:
-                        non_sig["no_comp_assoc"].append(lsv_id)
-
-        # else if no -1s and no 1s
-        elif simplified_counts[0].sum() == 0 and simplified_counts[2].sum() == 0:
-            not_changing.append(lsv_id)
-        else:
-            # how many different junctions saw -1, 0, and 1?
-            junc_counts = np.sum(simplified_counts, 1)
-            neg1 = junc_counts[0]
-            pos1 = junc_counts[2]
-            # if multiple junctions agree on a LSVs comparisons:
-            if neg1 == pos1:
-                if neg1 == 0 and pos1 == 0:
-                    LOG.info("unsure0")
-                    pdb.set_trace()
-                # could be an LSV shared by multiple comparisons..
-                if must_reciprocate:
-                    if False in (num_dpsis_data.sum(axis=0) == 0):
-                        if lsv_id in all_sig:
-                            non_recriprocating.append(lsv_id)
-                        else:
-                            non_sig["no_comp_assoc"].append(lsv_id)
-                        continue
-                comps_accrding_to_juncs = "immastring"
-                dpsi_dir_agree = False
-                opposites = False
-                for row_ii in range(0, num_dpsis_data.shape[0]):
-                    neg_comps = np.where(num_dpsis_data[row_ii,] < 0)
-                    pos_comps = np.where(num_dpsis_data[row_ii,] > 0)
-                    if neg_comps[0].shape[0] > 0 and pos_comps[0].shape[0] > 0:
-                        # Comps that completely disagree on directionality of same juncs!
-                        opposites = True
-                    elif neg_comps[0].shape[0] == 0 and pos_comps[0].shape[0] == 0:
-                        # then this junction never changes
-                        continue
-                    this_comps = np.where(abs(num_dpsis_data[row_ii,]) > 0)[0]
-                    if not isinstance(comps_accrding_to_juncs, str):
-                        dpsi_dir_agree = np.array_equal(this_comps, comps_accrding_to_juncs)
-                        if not dpsi_dir_agree:
-                            # Different comps use different junctions
-                            break
-                    elif this_comps.shape[0] != 0:
-                        comps_accrding_to_juncs = this_comps
-                # col_comps_ov_0 = np.where(num_dpsis_data > 0)[1]
-                # col_comps_un_0 = np.where(num_dpsis_data < 0)[1]
-                # # check if under and over 0 agree on which comparisons belong together
-                # dpsi_dir_agree = np.array_equal(col_comps_ov_0, col_comps_un_0)
-                if dpsi_dir_agree:
-                    comp_iis = comps_accrding_to_juncs.tolist()
-                    comps = [comp_names[comparisons_ii[comp_ii]] for comp_ii in comp_iis]
-                    comps.sort()
-                    comps = "_and_".join(comps)
-                    if lsv_id in all_sig:
-                        if opposites:
-                            if comps in opposite_dict:
-                                opposite_dict[comps].append(lsv_id)
-                            else:
-                                opposite_dict[comps] = [lsv_id]
-                            continue
-                        if comps in cococombo_breaker:
-                            cococombo_breaker[comps].append(lsv_id)
-                        else:
-                            cococombo_breaker[comps] = [lsv_id]
-                    elif comps in non_sig:
-                        non_sig[comps].append(lsv_id)
-                    else:
-                        non_sig[comps] = [lsv_id]
-                else:
-                    if lsv_id in all_sig:
-                        if False in (num_dpsis_data.sum(axis=0) == 0):
-                            non_recriprocating.append(lsv_id)
-                        else:
-                            # Different comps use different junctions
-                            unsure.append(lsv_id)
-                    else:
-                        non_sig["no_comp_assoc"].append(lsv_id)
-            elif neg1 != pos1:
-                # different number of -dPSI and +dPSI juncs cannot possibly reciprocate
-                if lsv_id in all_sig:
-                    non_recriprocating.append(lsv_id)
-                else:
-                    non_sig["no_comp_assoc"].append(lsv_id)
-            else:
-                LOG.info("unsure4")
-                pdb.set_trace()
-
-    LOG.info("Finished analyzing LSVs!")
-    all_uniques = list(set(all_uniques))
-    comp_names = list(singly_unique_sig.keys())
-    comp_names.sort()
-    nonrednetworks = dict()
-    nonrednetworks["all_non_red_sets"] = non_red_sets
-    nonrednetworks["unique_nonredsets"] = dict()
-    nonrednetworks["cococombos"] = {x: [] for x in cococombo_breaker.keys()}
-    nonrednetworks["opposites"] = {x: [] for x in opposite_dict.keys()}
-    all_non_red_sets = non_red_sets['singles'].values()
-    all_non_red_sets.extend(non_red_sets['twos'].values())
-    all_non_red_sets.extend(non_red_sets['three_plus'].values())
-    all_non_red_lsvs = non_red_sets['singles_all_lsvs']
-    all_non_red_lsvs.extend(non_red_sets['twos_lsvs'])
-    all_non_red_lsvs.extend(non_red_sets['three_plus_lsvs'])
-    # n_sets = len(all_non_red_sets)
-    n_lsvs = len(all_sig)
-    summary_text = ""
-    summary_text += "%s Sig LSVs using %s dPSI were grouped (or not)... ::\n" % (n_lsvs,
-                                                                                 # n_sets,
-                                                                                 sig_dpsi_thresh)
-    if must_reciprocate:
-        nonrednetworks["not_grouped"] = {"unsure": [],
-                                         "sig_not_singly_so": [],
-                                         "NonReciprocates": []}
-    else:
-        nonrednetworks["not_grouped"] = {"unsure": [],
-                                         "sig_not_singly_so": []}
-    # For each LSV identified as singly unique, generate a dict
-    # that has the nonredsets that contain each LSV
-    n_unique_lsvs = 0
-    n_unique_sets = 0
-    for comp in comp_names:
-        nonrednetworks["unique_nonredsets"][comp] = []
-        for sig_id in all_uniques:
-            if sig_id in singly_unique_sig[comp]:
-                nonrednetworks["unique_nonredsets"][comp].append(id_dict[sig_id])
-        nonrednetworks["unique_nonredsets"][comp] = list(set(nonrednetworks["unique_nonredsets"][comp]))
-        n_u = len(singly_unique_sig[comp])
-        n_unique_lsvs += n_u
-        n_nrn = len(nonrednetworks["unique_nonredsets"][comp])
-        n_unique_sets += n_nrn
-        summary_text += "%s: %s SinglyUnique LSVs, %s NonRedNetworks\n" % (comp, n_u, n_nrn)
-    summary_text += "TOTAL Singly Uniques: %s LSVs, %s NonRedNetworks\n" % (n_unique_lsvs, n_unique_sets)
-    n_combo_lsvs = 0
-    n_combo_sets = 0
-    for comp in cococombo_breaker.keys():
-        n_ids = len(cococombo_breaker[comp])
-        n_combo_lsvs += n_ids
-        for sig_id in cococombo_breaker[comp]:
-            if sig_id in all_sig:
-                nonrednetworks["cococombos"][comp].append(id_dict[sig_id])
-        nonrednetworks["cococombos"][comp] = list(set(nonrednetworks["cococombos"][comp]))
-        n_nrn = len(nonrednetworks["cococombos"][comp])
-        n_combo_sets += n_nrn
-        summary_text += "===\n%s\n%s LSVs shared, %s NonRedNetworks\n" % (comp, n_ids, n_nrn)
-    summary_text += "TOTAL combos: %s LSVs, %s NonRedNetworks\n" % (n_combo_lsvs, n_combo_sets)
-    n_opp_lsvs = 0
-    n_opp_sets = 0
-    for comp in opposite_dict.keys():
-        n_ids = len(opposite_dict[comp])
-        n_opp_lsvs += n_ids
-        for sig_id in opposite_dict[comp]:
-            if sig_id in all_sig:
-                nonrednetworks["opposites"][comp].append(id_dict[sig_id])
-        nonrednetworks["opposites"][comp] = list(set(nonrednetworks["opposites"][comp]))
-        n_nrn = len(nonrednetworks["opposites"][comp])
-        n_opp_sets += n_nrn
-        summary_text += "===\n%s\n%s LSVs show oppositivity, %s NonRedNetworks\n" % (comp, n_ids, n_nrn)
-    summary_text += "TOTAL opposites: %s LSVs, %s NonRedNetworks\n" % (n_opp_lsvs, n_opp_sets)
-    for sig_id in unsure:
-        if sig_id in all_sig:
-            nonrednetworks["not_grouped"]["unsure"].append(id_dict[sig_id])
-    nonrednetworks["not_grouped"]["unsure"] = list(set(nonrednetworks["not_grouped"]["unsure"]))
-    n_unsure_sets = len(nonrednetworks["not_grouped"]["unsure"])
-    summary_text += "%s LSVs were not grouped because 'unsure,' %s NonRedNetworks\n" % (len(unsure), n_unsure_sets)
-    for sig_id in sig_not_singly_so:
-        if sig_id in all_sig:
-            nonrednetworks["not_grouped"]["sig_not_singly_so"].append(id_dict[sig_id])
-    nonrednetworks["not_grouped"]["sig_not_singly_so"] = list(set(nonrednetworks["not_grouped"]["sig_not_singly_so"]))
-    n_sig_not_singly_so_sets = len(nonrednetworks["not_grouped"]["sig_not_singly_so"])
-    summary_text += "%s LSVs were not grouped because 'sig_not_singly_so,' %s NonRedNetworks\n" % (
-        len(sig_not_singly_so), n_sig_not_singly_so_sets)
-    if must_reciprocate:
-        for sig_id in non_recriprocating:
-            if sig_id in all_sig:
-                nonrednetworks["not_grouped"]["NonReciprocates"].append(id_dict[sig_id])
-        nonrednetworks["not_grouped"]["NonReciprocates"] = list(set(nonrednetworks["not_grouped"]["NonReciprocates"]))
-        n_lsvs_nonrec = len(non_recriprocating)
-        n_nonrec_sets = len(nonrednetworks["not_grouped"]["NonReciprocates"])
-        summary_text += "%s LSVs were not grouped because they're non-reciprocating, %s NonRedNetworks\n" % (
-            n_lsvs_nonrec,
-            n_nonrec_sets)
-    LOG.info(summary_text)
-    if unblank_the_data:
-        io_caleb.unimpute_lsv_data(data, blanked_lsvs_dict)
-    results = {"singly_unique": singly_unique_sig,
-               "cococombos": cococombo_breaker,
-               "opposites": opposite_dict,
-               "nonredsets": nonrednetworks,
-               "summary": summary_text}
-    return results
 
 
 def counts_per_row(numpy_array: np.array,
                    elements_to_count):
     """
-
-
     :type numpy_array: numpy array duh
     :param numpy_array: np.array
     :param elements_to_count: list of elements to count, row-wise
@@ -1876,6 +1499,7 @@ def sig_utilized_non_red_sets(Data,
         dpsi_array_comparisons: list of comparisons to use for generating
             the dpsi_array results. Optional!
     """
+    from voila.tools.non_redundant_sets import non_redundant_set
     non_red_sets, blankdictids = non_redundant_set(data=Data,
                                                    cutoff_dpsi=CUTOFF_dPSI_nonred,
                                                    cutoff_psi=CUTOFF_PSI_nonred,
@@ -1896,14 +1520,14 @@ def sig_utilized_non_red_sets(Data,
     n_s = len(sig_ids)
     LOG.info("Identifying which NonRed sets are 'utilized' by sig LSVs in each comparison...")
     LOG.info("Out of %s total unique LSV IDs, %s are sig (dPSI>=%s,Prob>=%s)" % (n_a,
-                                                                              n_s,
-                                                                              CUTOFF_dPSI_nonredset_hit,
-                                                                              CUTOFF_PROB_nonredset_hit))
+                                                                                 n_s,
+                                                                                 CUTOFF_dPSI_nonredset_hit,
+                                                                                 CUTOFF_PROB_nonredset_hit))
     all_sets = get_all_nrsets(non_red_sets, Join="_")
     LOG.info("Building non-redundant set dPSI array dictionary...")
     nrsets_dpsis, dpsi_comps = non_redundant_dpsis(Data, all_sets, dpsi_array_comparisons)
     for comparison in comparisons:
-        sig_ids = io_caleb.get_LSV_IDs(sig_dict_subset[comparison])
+        sig_ids = io_caleb.get_lsv_ids(sig_dict_subset[comparison])
         for sig_id in sig_ids:
             if sig_id in id_dict:
                 results[comparison].add(id_dict[sig_id])
@@ -1962,6 +1586,7 @@ def non_redundant_id_dict(data,
     if check_is_non_red_set(data, True):
         non_red_sets = data
     else:
+        from voila.tools.non_redundant_sets import non_redundant_set
         non_red_sets = non_redundant_set(data=data,
                                          cutoff_dpsi=cutoff_dpsi,
                                          cutoff_psi=cutoff_psi)
@@ -1993,7 +1618,7 @@ def non_redundant_dpsis(BlankedData,
         comparisons = BlankedData.keys()
         comparisons.sort()
     BlankedData = {k: BlankedData[k] for k in comparisons}
-    all_numdpsis, comparisons = get_num_d_psi(BlankedData, True)
+    all_numdpsis, comparisons = io_caleb.get_num_d_psi(BlankedData, True)
     nrset_numdpsis = dict()
     for nrset in NonRedSets:
         nrset_numdpsis[nrset] = dict()
@@ -2051,711 +1676,6 @@ def find_set_partners(connected_sets, lsv_id, sig_ids=False):
         LOG.info(lsv_id, "wasn't found in sets...")
 
 
-def non_redundant_set(data,
-                      cutoff_dpsi=0.1,
-                      cutoff_psi=1.0,
-                      save_blanked_structure=False,
-                      return_numdpsis_dat=False):
-    """
-    Identify how many non-redundant AS events there are, whereby LSVs
-        that are connected by 'utilized junctions' are considered part
-        of the same splicing event.
-
-            "Utilized junctions": utilized meaning, dPSI/PSI cutoff
-                met in at least one comparison/group in the data.
-
-        Arguments:
-            data : quick import...
-            cutoff_dpsi: how much must the junction dPSI be (in at least
-                one comparison) in order to be considered utilized?
-            cutoff_psi: If PSI of junciton is greater than this cutoff in
-                at least one sample, it is considered utilized?
-                Default is 1 : no junction makes the PSI cutoff >1.0
-            save_blanked_structure: if True, don't revert the Data.
-            However, need to also return the blanked_lsvs_dict so you
-            know which LSVs were blanked.
-            return_numdpsis_dat: boolean
-
-    """
-    # First need to fill in LSV Gaps. deltapsi comparisons don't overlap 100%
-    # with respect to LSVs. This will add 'blank' (dPSI, PSI, Prob =0) LSVs
-    # to the Data. I'm doing it InPlace, so it alters the inut object.
-    # No worries, though, because I'll revert the Data to its original state.
-    blanked_lsvs_dict = io_caleb.impute_missing_lsvs(data=data, in_place=True, warnings=False)
-    LOG.info("Finished filling in the gaps, running non-redundant algorithm...")
-    if return_numdpsis_dat:
-        nr_connected_lsvs, nr_numdpsis = get_connected_lsvs_by_junc(data=data,
-                                                                    Cutoff_dPSI=cutoff_dpsi,
-                                                                    Cutoff_PSI=cutoff_psi,
-                                                                    ret_numpdsis_data=return_numdpsis_dat)
-    else:
-        nr_connected_lsvs = get_connected_lsvs_by_junc(data=data,
-                                                       Cutoff_dPSI=cutoff_dpsi,
-                                                       Cutoff_PSI=cutoff_psi,
-                                                       ret_numpdsis_data=return_numdpsis_dat)
-    LOG.info("Accounting for LSVs from different genes that overlap according to genomic coordinates ...")
-    by_type = most_lsvs_same_gene(Connected_LSVs=nr_connected_lsvs)
-    if not save_blanked_structure:
-        LOG.info("Reverting Data to original state....")
-        for comparison in data.keys():
-            for lsv_id in blanked_lsvs_dict[comparison]:
-                data[comparison].pop(lsv_id)
-    LOG.info("Done!!!\n\n\n")
-    s = len(by_type["singles"])
-    ns = len(by_type["singles_all_lsvs"])
-    d = len(by_type["twos"])
-    nd = len(by_type["twos_lsvs"])
-    tp = len(by_type["three_plus"])
-    ntp = len(by_type["three_plus_lsvs"])
-    total = s + d + tp
-    total_lsvs = ns + nd + ntp
-    LOG.info(total_lsvs, "total LSVs met junction utilization cutoffs...")
-    LOG.info(total, "Total non-redundant splicing sets")
-    LOG.info("%s singles (%s LSVs), %s doubles (%s LSVs), %s three_pluses (%s LSVs) ..." % (s, ns, d, nd, tp, ntp))
-    if return_numdpsis_dat:
-        if save_blanked_structure:
-            return by_type, blanked_lsvs_dict, nr_numdpsis
-        return by_type, nr_numdpsis
-    else:
-        if save_blanked_structure:
-            return by_type, blanked_lsvs_dict
-        return by_type
-
-
-def most_lsvs_same_gene(Connected_LSVs,
-                        Return_shared_junc_genes=False):
-    """
-    Some lsvs that are connected by a junction turn out to
-        to be due to overlapping genes. Thus, this function teases
-        out how which connected LSVs correspond to connections in
-        the same gene. Removes LSVs that are redundant.
-
-        Return_shared_junc_genes: if True, return list of junctions that
-            multiple LSVs (in more than 1 gene) share in the Connected
-            LSV network.
-    """
-
-    lengths = [len(Connected_LSVs[x]) for x in Connected_LSVs.keys()]
-    lengths = np.array(lengths)
-    singles = np.where(lengths == 1)[0]
-    singles = singles.tolist()
-    singles_lsvs = list()
-    for single in singles:
-        singles_lsvs.extend(Connected_LSVs[Connected_LSVs.keys()[single]])
-    results = dict()
-    twos = list()
-    two_lsvs = list()
-    three_plus = list()
-    three_lsvs = list()
-    two_plus_connected = np.where(lengths > 1)[0]
-    two_plus_connected = two_plus_connected.tolist()
-    genes_share_junc = list()
-    for two_plus in two_plus_connected:
-        # pdb.set_trace()
-        connected = Connected_LSVs[Connected_LSVs.keys()[two_plus]]
-        gene_ids = [x.split(":")[0] for x in connected]
-        if len(set(gene_ids)) > 1:
-            genes_share_junc.append(Connected_LSVs.keys()[two_plus])
-        # gene_with_mult_lsvs = [x for x in gene_ids if gene_ids.count(x) > 1]
-        gene_with_max_lsvs = most_common(gene_ids)
-        n_max_lsvs_one_gene = gene_ids.count(gene_with_max_lsvs)
-        # if count_of_most_common>1:
-        #     gene_with_max_lsvs = max([x for x in gene_ids if gene_ids.count(x) > 1])
-        if n_max_lsvs_one_gene == 1:
-            singles.append(two_plus)  # there is only 1 lsv from each gene in this connection
-            singles_lsvs.extend(connected)
-            continue
-        elif n_max_lsvs_one_gene == 0:
-            raise RuntimeError("No idea what happened...")
-        n_max_lsvs_one_gene = gene_ids.count(gene_with_max_lsvs)
-        if n_max_lsvs_one_gene > 2:
-            # print "==="
-            # print connected
-            # print two_plus
-            three_plus.append(two_plus)
-            three_lsvs.extend(connected)
-            # print "==="
-        if n_max_lsvs_one_gene == 2:
-            twos.append(two_plus)
-            two_lsvs.extend(connected)
-    results["singles"] = {Connected_LSVs.keys()[k]: Connected_LSVs[Connected_LSVs.keys()[k]] for k in singles}
-    results["singles_all_lsvs"] = singles_lsvs
-    results["twos"] = {Connected_LSVs.keys()[k]: Connected_LSVs[Connected_LSVs.keys()[k]] for k in twos}
-    results["twos_lsvs"] = two_lsvs
-    results["three_plus"] = {Connected_LSVs.keys()[k]: Connected_LSVs[Connected_LSVs.keys()[k]] for k in three_plus}
-    results["three_plus_lsvs"] = three_lsvs
-    if Return_shared_junc_genes:
-        dict_res = dict()
-        dict_res["types"] = results
-        dict_res["genes_share_junc"] = genes_share_junc
-        return dict_res
-    return results
-
-
-def most_common(L):
-    """
-    return most common element of list
-
-    http://stackoverflow.com/a/1520716
-    """
-    # get an iterable of (item, iterable) pairs
-    SL = sorted((x, i) for i, x in enumerate(L))
-    # print 'SL:', SL
-    groups = itertools.groupby(SL, key=operator.itemgetter(0))
-
-    # auxiliary function to get "quality" for an item
-    def _auxfun(g):
-        item, iterable = g
-        count = 0
-        min_index = len(L)
-        for _, where in iterable:
-            count += 1
-            min_index = min(min_index, where)
-        # print 'item %r, count %r, minind %r' % (item, count, min_index)
-        return count, -min_index
-
-    # pick the highest-count/earliest item
-    return max(groups, key=_auxfun)[0]
-
-
-def get_connected_lsvs_by_junc(data,
-                               Cutoff_dPSI=0.1,
-                               Cutoff_PSI=1.0,
-                               ret_numpdsis_data=False):
-    """
-        Given LSV quick import, identify which LSVs are connected
-            using utilized junctions as edges and LSVs as nodes.
-
-            Utilized: may use dPSI OR PSI to define whether a junction
-            is utilized.
-
-            Cutoff_dPSI: how much must the junction dPSI be (in at least
-                one comparison) in order to be considered utilized?
-            Cutoff_PSI: What PSI must the junciton be greater than in order
-                to be considered utilized? If set to 1, then no junction
-                makes the PSI cutoff.
-            ret_numpdsis_data: boolean
-
-    """
-    # sig_juncs = get_sorted_juncs(Data)
-    master_junc_dict = dict()
-    all_lsvs = io_caleb.get_shared_lsv_ids(data)
-    junc_lsv_dicts = get_junc_lsv_dicts(data,
-                                        cutoff_dpsi=Cutoff_dPSI,
-                                        cutoff_psi=Cutoff_PSI,
-                                        return_numdpsis=ret_numpdsis_data)
-    junc_to_lsv = junc_lsv_dicts["junc_lsv_dict"]
-    lsv_to_junc = junc_lsv_dicts["lsv_junc_dict"]
-    sig_juncs = junc_to_lsv.keys()
-    LOG.info("Recursively processing %s sig junctions to build connectivity graph ..." % (len(sig_juncs)))
-    indeces_at_10_percent = percent_through_list(sig_juncs, 0.01)
-    i = 0.0
-    n_to_start = len(sig_juncs)
-    while len(sig_juncs) > 0:
-        if i > 0.0 and i in indeces_at_10_percent:
-            LOG.info(str(indeces_at_10_percent[i]) + "% of sig juncs processed...")
-        next_junc = sig_juncs.pop()
-        conn_lsvs = connected_lsvs(all_lsvs, sig_juncs, junc_to_lsv, lsv_to_junc, next_junc)
-        master_junc_dict[next_junc] = conn_lsvs
-        i = n_to_start - len(sig_juncs)
-    if ret_numpdsis_data:
-        return master_junc_dict, junc_lsv_dicts["numdPSIs_data"]
-    return master_junc_dict
-
-
-def connected_lsvs(All_lsvs, Sig_juncs, Junc_to_LSV, LSV_to_Junc, Start_junc):
-    """
-    Return all the LSVs connected to the start junc, recursively.
-    """
-    conn_lsvs = Junc_to_LSV[Start_junc]
-    associated_juncs = list()
-    associated_lsvs = list()
-    # if Start_junc == 'chr11_+_8705628-8706265':
-    #     pdb.set_trace()
-    # if Start_junc == 'chr11_+_8705628-8706370':
-    #     pdb.set_trace()
-    for found_lsv in conn_lsvs:
-        if found_lsv not in All_lsvs:
-            continue
-        else:
-            associated_lsvs.append(found_lsv)
-            All_lsvs.remove(found_lsv)
-            found_lsv_juncs = LSV_to_Junc[found_lsv]
-            found_lsv_juncs = found_lsv_juncs.tolist()
-            associated_juncs.extend(found_lsv_juncs)
-    associated_juncs = [x for x in associated_juncs if x in Sig_juncs]  # only keep unseen juncs
-    for found_junc in associated_juncs:
-        if found_junc not in Sig_juncs:
-            continue
-        else:
-            Sig_juncs.remove(found_junc)
-            recursive_call = connected_lsvs(All_lsvs,
-                                            Sig_juncs,
-                                            Junc_to_LSV,
-                                            LSV_to_Junc,
-                                            found_junc)
-            associated_lsvs.extend(recursive_call)
-    return associated_lsvs
-
-
-def get_sorted_juncs(Data):
-    """
-    Return list of junctions sorted by the maximum
-        dPSI they have across all comparisons in
-        the Data.
-    """
-    master_junc_weight_dict = dict()
-    if io_caleb.check_is_lsv_dict(Data, da_bool=True):
-        master_junc_weight_dict = get_junc_weights(Data)
-    elif io_caleb.check_is_quick_import(Data):
-        shared_ids = io_caleb.get_shared_lsv_ids(Data)
-        comp_to_junc_weights = dict()
-        all_comparisons = Data.keys()
-        for comparison in all_comparisons:
-            share_dict = io_caleb.lsv_dict_subset(Data[comparison], shared_ids)
-            junc_to_weights = get_junc_weights(share_dict, Weights="dPSI")
-            comp_to_junc_weights[comparison] = junc_to_weights
-        all_juncs = comp_to_junc_weights[all_comparisons[0]].keys()
-
-        for junc_coord in all_juncs:
-            max_weight = max([comp_to_junc_weights[comp][junc_coord] for comp in all_comparisons])
-            master_junc_weight_dict[junc_coord] = max_weight
-    else:
-        raise RuntimeError("Data needs to be LSV dict or quick import...")
-    junc_coords = np.array(master_junc_weight_dict.keys())
-    weights = np.array(master_junc_weight_dict.values())
-    sort_inds_by_weight = np.argsort(weights)
-    sort_inds_by_weight = sort_inds_by_weight[::-1]  # reverse order
-    sorted_coords = junc_coords[sort_inds_by_weight]
-    sorted_coords = sorted_coords.tolist()
-    return sorted_coords
-
-
-def get_master_junc_weights(Data, Weights="dPSI"):
-    """
-    Given quick import, look through all comparisons
-        for the max Weight associated with a junc and
-        return dictionary of junctions
-        pointing at their maximum abs(dPSI) or PSI value.
-
-        chr_strand_coords : Weight
-
-        Arguments:
-        Weight = "dPSI" or "PSI" <- which value to use?
-    """
-    io_caleb.check_is_quick_import(Data)
-    comparisons = Data.keys()
-    shared_ids = io_caleb.get_shared_lsv_ids(Data)
-    shared_dicts = dict()
-    for comparison in comparisons:
-        share_dict = io_caleb.lsv_dict_subset(Data[comparison], shared_ids)
-        junc_to_weights = get_junc_weights(share_dict, Weights=Weights)
-        shared_dicts[comparison] = junc_to_weights
-    all_juncs = shared_dicts[comparisons[0]].keys()
-    max_dict = dict()
-    for junc_key in all_juncs:
-        max_weight = max([shared_dicts[comp][junc_key] for comp in comparisons])
-        max_dict[junc_key] = max_weight
-    return max_dict
-
-
-def get_junc_weights(Data, Weights="dPSI"):
-    """
-    Given LSV dict, return dictionary of junctions
-        pointing at their maximum abs(dPSI) or PSI value.
-
-        Arguments:
-        Weight = "dPSI" or "PSI" <- which value to use?
-
-        PS: if dPSI, uses abs(dPSI)
-    """
-    if Weights != "dPSI" and Weights != "PSI":
-        raise RuntimeError("Weights mst be 'dPSI' or 'PSI'")
-    io_caleb.check_is_lsv_dict(Data)
-    lsv_ids = io_caleb.get_LSV_IDs(Data)
-    junc_weight_dict = dict()
-    all_juncs = dict()
-    for lsv_id in lsv_ids:
-        lsv = Data[lsv_id]
-        chrm = lsv["chr"]
-        strand = lsv["strand"]
-        junc_coords = copy.copy(lsv["Junctions coords"])
-        if Weights == "dPSI":
-            weights = copy.copy(lsv["E(dPSI) per LSV junction"])
-        else:
-            weights_1 = copy.copy(lsv["E(PSI)1"])
-            weights_2 = copy.copy(lsv["E(PSI)2"])
-            weights = list()
-            for weight_1, weight_2 in zip(weights_1, weights_2):
-                weights.append(max([weight_1, weight_2]))
-        new_coords = list()
-        for coord in junc_coords:
-            new_coords.append(chrm + "_" + strand + "_" + coord)
-        for weight, coord in zip(weights, new_coords):
-            if coord in all_juncs:
-                all_juncs[coord] = max(all_juncs[coord], abs(weight))
-            else:
-                all_juncs[coord] = abs(weight)
-    return all_juncs
-
-
-def get_junc_lsv_dicts(data,
-                       cutoff_dpsi=0.1,
-                       cutoff_psi=0.05,
-                       return_numdpsis=False):
-    """
-        Return a dictionary of junctions pointing at lists of LSV IDs
-            that use them significantly. Also return dict of LSV IDs
-            pointing at all their junctions (utilized only).
-
-    """
-    io_caleb.check_is_quick_import(data)
-    LOG.info("Getting all dPSI data ...")
-    numdPSIs_data = get_num_d_psi(data)
-    LOG.info("Getting all PSI data ...")
-    numPSIs_data = get_num_psi(data)
-    LOG.info("Getting all junction coordinates ...")
-    lsv_junc_dict = get_junc_coords(data)
-    LOG.info("Running find_binary_LSV_IDs() ...")
-    sig_junc_dict = find_binary_lsv_ids(num_d_psi=numdPSIs_data,
-                                        this_num_psi=numPSIs_data,
-                                        cutoff_d_psi=cutoff_dpsi,
-                                        cutoff_psi=cutoff_psi,
-                                        return_sig_juncs=True)
-    junc_lsv_dict = dict()
-    for lsv_id in sig_junc_dict.keys():
-        junc_loci = lsv_junc_dict[lsv_id]
-        try:
-            sig_junc_bools = sig_junc_dict[lsv_id] > 0
-            sig_coords = junc_loci[sig_junc_bools]
-            lsv_junc_dict[lsv_id] = sig_coords
-            if len(lsv_junc_dict[lsv_id]) == 0:
-                del lsv_junc_dict[lsv_id]
-        except:
-            pdb.set_trace()
-        for sig_coord in sig_coords:
-            if sig_coord in junc_lsv_dict:
-                junc_lsv_dict[sig_coord].append(lsv_id)
-            else:
-                junc_lsv_dict[sig_coord] = list()
-                junc_lsv_dict[sig_coord].append(lsv_id)
-    res = dict()
-    res["junc_lsv_dict"] = junc_lsv_dict
-    res["lsv_junc_dict"] = lsv_junc_dict
-    if return_numdpsis:
-        res["numdPSIs_data"] = numdPSIs_data
-    return res
-
-
-def get_junc_coords(Data):
-    """
-    Given LSV dict info (quick import, or LSV dict),
-     return dict of lsv_ids pointing at array of junction loci:
-        'chr_strand_start_end'
-    """
-    if io_caleb.check_is_quick_import(Data, the_bool=True):
-        junc_dict = dict()
-        for comp in Data:
-            junc_dict.update(get_junc_coords(Data[comp]))
-        return junc_dict
-    io_caleb.check_is_lsv_dict(Data)
-    junc_dict = dict()
-    lsv_ids = io_caleb.get_LSV_IDs(Data)
-    for lsv_id in lsv_ids:
-        lsv = Data[lsv_id]
-        chrm = lsv["chr"]
-        strand = lsv["strand"]
-        junc_coords = copy.copy(lsv["Junctions coords"])
-        new_coords = list()
-        for coord in junc_coords:
-            new_coords.append(chrm + "_" + strand + "_" + coord)
-        new_coords = np.array(new_coords)
-        junc_dict[lsv_id] = new_coords
-    return junc_dict
-
-
-def get_num_d_psi(data,
-                  return_comparisons=False,
-                  use_binary_index_info=None):
-    """
-    Given dictionary of LSV dictionaries return numpy arrays
-        of all dPSIs from all comparisons for each LSV. Such that
-        each LSV ID in the dictionary is pointing at an array that
-        looks like this:
-
-                |A vs B|A vs C  | all other comparisons ...
-    Junction:   | dPSI | dPSI   | ...
-            0   |   #  |  #     | ...
-            1   |   #  |  #     | ...
-            2   |   #  |  #     | ...
-            ... |   ...|  ...   | ...
-
-    Arguments:
-        data: quick imp
-        return_comparisons: Boolean. If True, also return a list
-            of the comparison names, in the same order as the columns
-            of the numpy array.
-        use_binary_index_info: None, "closer", or "further"
-            If the LSV dictionaries were returned by get_binary_LSVs(),
-            then they will have a "binary_indices" key that points at
-            the binary indices. Use this info to return only the dPSI
-            value that corresponds to the closer or further junction
-            from the reference exon.
-
-    NOTES:
-        - only those LSV IDs that are shared by all LSV dictionaries
-        in Data are evaluated. LSV IDs that are unique to or missing from
-        any of the LSV Dictionaries are not returned by this function.
-        - columns are sorted by name
-
-
-    Returns the numpy array and a list of LSV_IDs
-    """
-    binary_index = "cow"  # stupid pep
-    if use_binary_index_info:
-        if not use_binary_index_info == "closer" and not use_binary_index_info == "further":
-            raise ValueError("Use_binary_index_info needs to be 'closer' or 'further' if provided")
-    if use_binary_index_info == "closer":
-        binary_index = 0
-    if use_binary_index_info == "further":
-        binary_index = 1
-    io_caleb.check_is_quick_import(data)
-    comparison_dict = dict()
-    for comparison in data.keys():
-        d_psis = listdPSI(data[comparison])
-        comparison_dict[comparison] = d_psis
-    union_of_lsv_ids = io_caleb.get_shared_lsv_ids(data)
-    lsv_dict = dict()
-    comparisons = list(comparison_dict.keys())
-    comparisons.sort()  # alphabatized
-    for lsv_id in list(union_of_lsv_ids):
-        list_of_dPSIs = list()
-        for comparison in comparisons:
-            d_psis = comparison_dict[comparison][lsv_id]
-            if use_binary_index_info:
-                binary_i = data[comparison][lsv_id]["binary_indices"][binary_index]
-                d_psis = d_psis[binary_i]
-            list_of_dPSIs.append(d_psis)
-        lsv_dict[lsv_id] = np.array(list_of_dPSIs).T
-    if return_comparisons:
-        return lsv_dict, comparisons
-    return lsv_dict
-
-
-def get_num_prob(data,
-                 return_comparisons=False,
-                 use_binary_index_info=False):
-    """
-    Given dictionary of LSV dictionaries return numpy arrays
-        of all P(dPSIs) from all comparisons for each LSV. Such that
-        each LSV ID in the dictionary is pointing at an array that
-        looks like this:
-
-                |A vs B|A vs C  | all other comparisons ...
-    Junction:   | P(dPSI) | P(dPSI)   | ...
-            0   |   #     |     #     | ...
-            1   |   #     |     #     | ...
-            2   |   #     |     #     | ...
-            ... |   ...   |     ...   | ...
-    Arguments:
-        data: Quick Import structure
-        return_comparisons: Boolean. If True, also return a list
-            of the comparison names, in the same order as the columns
-            of the numpy array.
-        use_binary_index_info: None, "closer", or "further"
-            If the LSV dictionaries were returned by get_binary_LSVs(),
-            then they will have a "binary_indices" key that points at
-            the binary indices. Use this info to return only the P(dPSI)
-            value that corresponds to the closer or further junction
-            from the reference exon.
-
-    NOTES:
-        - only those LSV IDs that are shared by all LSV dictionaries
-        in Data are evaluated. LSV IDs that are unique to or missing from
-        any of the LSV Dictionaries are not returned by this function.
-        - columns are sorted by name
-
-
-    Returns the numpy array and a list of LSV_IDs
-    """
-    # stupid pep rules
-    binary_index = "cow"
-    if use_binary_index_info:
-        if not use_binary_index_info == "closer" and not use_binary_index_info == "further":
-            raise ValueError("Use_binary_index_info needs to be 'closer' or 'further' if provided")
-        if use_binary_index_info == "closer":
-            binary_index = 0
-        elif use_binary_index_info == "further":
-            binary_index = 1
-        else:
-            raise RuntimeError("I don't know what to do here")
-    io_caleb.check_is_quick_import(data)
-    comparison_dict = dict()
-    for nup_comparison in data.keys():
-        nu_probs = list_probs(data[nup_comparison])
-        comparison_dict[nup_comparison] = nu_probs
-    union_of_lsv_ids = io_caleb.get_shared_lsv_ids(data)
-    lsv_dict = dict()
-    comparisons = list(comparison_dict.keys())
-    comparisons.sort()  # alphabatized
-    for lsv_id in list(union_of_lsv_ids):
-        list_of_probs = list()
-        for nup_comparison in comparisons:
-            probs = comparison_dict[nup_comparison][lsv_id]
-            if use_binary_index_info:
-                binary_i = data[nup_comparison][lsv_id]["binary_indices"][binary_index]
-                probs = probs[binary_i]
-            list_of_probs.append(probs)
-        lsv_dict[lsv_id] = np.array(list_of_probs).T
-    if return_comparisons:
-        return lsv_dict, comparisons
-    return lsv_dict
-
-
-def list_probs(lsv_dict):
-    """
-    Return dictionary of LSV IDs pointing at list of P(dPSIs):
-    (this col
-    not in dict) list:
-    Junction:   | Prob |
-            0   |   #  |
-            1   |   #  |
-            2   |   #  |
-            ... |   ...|
-    """
-    io_caleb.check_is_lsv_dict(lsv_dict)
-    lsv_to_prob_dict = dict()
-    lsvs = io_caleb.get_LSV_IDs(lsv_dict)
-    # Extract dPSI from each LSV, using cutoff.
-    for lsv_id in lsvs:
-        lsv_to_prob_dict[lsv_id] = io_caleb.get_probs(lsv_dict[lsv_id])
-    return lsv_to_prob_dict
-
-
-def listdPSI(LSV_dict):
-    """
-    Return dictionary of LSV IDs pointing at list of dPSIs:
-    (this col
-    not in dict) list:
-    Junction:   | dPSI |
-            0   |   #  |
-            1   |   #  |
-            2   |   #  |
-            ... |   ...|
-    """
-    io_caleb.check_is_lsv_dict(LSV_dict)
-    lsv_to_dPSI_dict = dict()
-    lsvs = io_caleb.get_LSV_IDs(LSV_dict)
-    # Extract dPSI from each LSV, using cutoff.
-    for lsv_id in lsvs:
-        lsv_to_dPSI_dict[lsv_id] = io_caleb.get_dpsis(LSV_dict[lsv_id])
-    return lsv_to_dPSI_dict
-
-
-def get_num_psi(data,
-                return_comparisons=False,
-                use_binary_index_info=None):
-    """
-    Given dictionary of LSV dictionaries return numpy array
-        of all PSIs from all conditions for each LSV. Such that
-        each LSV ID in the dictionary is pointing at an array that
-        looks like this:
-
-                |   A  |  B     | all other conditions ...
-    Junction:   |  PSI |  PSI   | ...
-            0   |   #  |  #     | ...
-            1   |   #  |  #     | ...
-            2   |   #  |  #     | ...
-            ... |   ...|  ...   | ...
-
-    Arguments:
-        return_comparisons: if True, also return a list of conditions
-            found in the same order as the numpy array columns.
-        use_binary_index_info: None, "closer", or "further"
-            If the LSV dictionaries were returned by get_binary_LSVs(),
-            then they will have a "binary_indices" key that points at
-            the binary indices. Use this info to return only the PSI
-            value that corresponds to the closer or further junction
-            from the reference exon.
-
-    NOTE: only those LSV IDs that are shared by all LSV dictionaries
-        in Data are evaluated. LSV IDs that are unique to or missing from
-        any of the LSV Dictionaries are not returned by this function.
-
-    Returns the numpy array and a list of LSV_IDs
-    """
-    if use_binary_index_info:
-        if not use_binary_index_info == "closer" and not use_binary_index_info == "further":
-            raise ValueError("Use_binary_index_info needs to be 'closer' or 'further' if provided")
-    if use_binary_index_info == "closer":
-        binary_index = 0
-    if use_binary_index_info == "further":
-        binary_index = 1
-    comparison = "thing to make PyCharm happy"
-    binary_index = "thing to make PyCharm happy"
-    io_caleb.check_is_quick_import(data)
-    condition_dict = dict()
-    lsv_id_lists = list()
-    for comparison in data.keys():
-        lsv_dict = data[comparison]
-        cond_1_name = lsv_dict["condition_1_name"]
-        cond_2_name = lsv_dict["condition_2_name"]
-        PSIs = list_psi(lsv_dict)
-        cond_1_PSIs = PSIs[cond_1_name]
-        cond_2_PSIs = PSIs[cond_2_name]
-        condition_dict[cond_1_name] = cond_1_PSIs
-        condition_dict[cond_2_name] = cond_2_PSIs
-    union_of_lsv_ids = io_caleb.get_shared_lsv_ids(data)
-    lsv_dict = dict()
-    conditions = list(condition_dict.keys())
-    conditions.sort()
-    for lsv_id in list(union_of_lsv_ids):
-        # if lsv_id == "ENSG00000173744:228395807-228395926:target":
-        #     pdb.set_trace()
-        list_of_PSIs = list()
-        for condition in conditions:
-            PSI = condition_dict[condition][lsv_id]
-            if use_binary_index_info:
-                binary_i = data[comparison][lsv_id]["binary_indices"][binary_index]
-                PSI = PSI[binary_i]
-            list_of_PSIs.append(PSI)
-        lsv_dict[lsv_id] = np.array(list_of_PSIs).T
-    if return_comparisons:
-        return lsv_dict, conditions
-    return lsv_dict
-
-
-def list_psi(lsv_dict):
-    """
-    Return dictionary of conditions pointing at dictionary of
-        LSV IDs pointing at list of PSIs:
-
-    condition_* points at:
-    (this col
-    not in dict) list:
-    Junction:   | PSI  |
-            0   |   #  |
-            1   |   #  |
-            2   |   #  |
-            ... |   ...|
-    """
-    io_caleb.check_is_lsv_dict(lsv_dict)
-    cond_1_name = lsv_dict["condition_1_name"]
-    cond_2_name = lsv_dict["condition_2_name"]
-    condtion_dict = dict()
-    condtion_dict[cond_1_name] = dict()
-    condtion_dict[cond_2_name] = dict()
-    lsvs = io_caleb.get_LSV_IDs(lsv_dict)
-    # Extract dPSI from each LSV, using cutoff.
-    for lsv_id in lsvs:
-        PSIs = io_caleb.get_psis(lsv_dict[lsv_id])
-        cond_1_psi = PSIs[0]
-        cond_2_psi = PSIs[1]
-        condtion_dict[cond_1_name][lsv_id] = cond_1_psi
-        condtion_dict[cond_2_name][lsv_id] = cond_2_psi
-    return condtion_dict
-
-
 def check_is_non_red_set(NonRedSet, Bool=False):
     """
     Check that NonRedSet is, in fact, value returned by non_red_set()
@@ -2787,7 +1707,7 @@ def check_is_binary_lsv_data(data,
     io_caleb.check_is_quick_import(data)
     io_caleb.check_lsv_ids_all_shared(data)
     lsv_dict = data[list(data.keys())[0]]
-    random_lsv_id = io_caleb.get_LSV_IDs(lsv_dict)[0]
+    random_lsv_id = io_caleb.get_lsv_ids(lsv_dict)[0]
     if "binary_indices" in lsv_dict[random_lsv_id]:
         if thisbool:
             return True
@@ -2875,8 +1795,8 @@ def dict_print(obj):
 
 
 def get_inconclusive_cassettes(data, dpsi=0.05, psi=0.05):
-    num_d_psis_data = get_num_d_psi(data)
-    num_psis_data = get_num_psi(data)
+    num_d_psis_data = io_caleb.get_num_d_psi(data)
+    num_psis_data = io_caleb.get_num_psi(data)
     results = find_binary_lsv_ids(
         num_d_psi=num_d_psis_data,
         this_num_psi=num_psis_data,
@@ -3042,38 +1962,3 @@ def check_if_lsv_utilizes_intron(data, lsv_id, psi_cutoff=0.05):
     if np.max(ir_psi) > psi_cutoff:
         return True
     return False  # else intron isn't really utilized
-
-
-def discretize_d_psi(numpy_data,
-                     d_psi_thresh=0.1):
-    """
-    Given a numpy array with rows as junctions, columns as dpsi comparisons,
-        modify array so that:
-            dpsi >= abs(d_psi_thresh) = 1
-            dpsi <= -abs(d_psi_thresh) = -1
-            dpsi < abs(d_psi_thresh) = 0
-            dpsi > -abs(d_psi_thresh) = 0
-    :param numpy_data: numpy array
-    :param d_psi_thresh: float threshold. Default 0.1
-    :return: nothing
-    """
-    numpy_data[numpy_data >= abs(d_psi_thresh)] = 1
-    numpy_data[numpy_data <= -abs(d_psi_thresh)] = -1
-    numpy_data[(numpy_data < abs(d_psi_thresh)) & (numpy_data > -abs(d_psi_thresh))] = 0
-    pass
-
-
-def discretize_prob(numpy_data,
-                    prob_thresh=0.0):
-    """
-    Given a numpy array with rows as junctions, columns as dpsi comparisons,
-        modify array so that:
-            P(dpsi) >= abs(prob_thresh) = 1
-            P(dpsi) < abs(prob_thresh) = 0
-    :param numpy_data: numpy array
-    :param prob_thresh: float threshold. Default 0.0
-    :return: nothing
-    """
-    numpy_data[numpy_data >= abs(prob_thresh)] = 1
-    numpy_data[numpy_data < abs(prob_thresh)] = 0
-    pass
