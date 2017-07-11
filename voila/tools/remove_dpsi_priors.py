@@ -45,7 +45,7 @@ class ThisisRemoveDpsiPriors(Tool):
         return parser
 
     def run(self, args):
-        second_arg = args.comparison_name if args.comparison_name else args.delta_psi_run_lines
+        second_arg = args.comparison_name if args.comparison_name else args.deltapsi_run_lines
         wrapper(directory=os.path.abspath(args.directory), second_arg=second_arg)
 
 
