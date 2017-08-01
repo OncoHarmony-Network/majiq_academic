@@ -3,9 +3,11 @@ import majiq.src.filter as majiq_filter
 from majiq.grimoire.lsv import SSOURCE, STARGET, InvalidLSV
 from majiq.src.constants import *
 from majiq.src.multiproc import QueueMessage
+cimport numpy as np
 
 
-cdef bint reliable_in_data(object junc, int exp_idx):
+
+cdef bint reliable_in_data(object junc, int exp_idx) except -1:
 
     cdef object majiq_config = Config()
     cdef int min_read_x_exp = majiq_config.minreads
@@ -16,20 +18,22 @@ cdef bint reliable_in_data(object junc, int exp_idx):
 
 
 
-cdef int _detect_lsv(object exon, object gn, str lsv_type, dict dummy, bint only_annot=False):
+cdef int _detect_lsv(object exon, object gn, str lsv_type, dict dummy, bint only_annot=False) except -1:
 
     cdef object majiq_config = Config()
     cdef dict sstype = {SSOURCE: ('5prime', 0), STARGET: ('3prime', 1)}
     cdef list jlist
     cdef object x
     cdef object jj, lsv_in
-    cdef int group_thresh, counter
+    cdef int counter
+    cdef double group_thresh
 
-    jlist = exon.get_junctions(sstype[lsv_type][0])
-    jlist = [x for x in jlist if x is not None and x.get_donor() is not None and x.get_acceptor() is not None]
+    jlist = [x for x in exon.get_junctions(sstype[lsv_type][0]) if x is not None and
+                                                                   x.get_donor() is not None and
+                                                                   x.get_acceptor() is not None]
 
     if len(jlist) < 2:
-        return
+        return 0
 
     for name, ind_list in majiq_config.tissue_repl.items():
         group_thresh = majiq_config.min_exp
@@ -51,14 +55,22 @@ cdef int _detect_lsv(object exon, object gn, str lsv_type, dict dummy, bint only
         dummy[name][sstype[lsv_type][1]].append(lsv_in)
 
 
-cdef int __prepare_lsvs(object lsv, str name, object gc_vfunc, list fitfunc_r, object queue):
+cdef int __prepare_lsvs(object lsv, str name, object gc_vfunc, list fitfunc_r, object queue) except -1:
+    cdef object majiq_config
+    cdef int exp_idx
+    cdef object gc_f
+    cdef dict lsv_q
+    cdef object qm
+
     majiq_config = Config()
     for exp_idx in majiq_config.tissue_repl[name]:
+        gc_f = None
         if majiq_config.gcnorm:
             try:
                 gc_f = gc_vfunc[exp_idx]
             except:
-                gc_f = None
+                pass
+
 
         lsv_q = lsv.to_queue(gc_vfunc=gc_f, fitfunc_r=fitfunc_r[exp_idx], exp_idx=exp_idx)
 
@@ -67,6 +79,14 @@ cdef int __prepare_lsvs(object lsv, str name, object gc_vfunc, list fitfunc_r, o
 
 
 cpdef int lsv_detection(object gn, gc_vfunc, fitfunc_r, queue, only_real_data=False):
+    cdef object majiq_config
+    cdef dict dummy
+    cdef int count
+    cdef str name
+    cdef list ind_list
+    cdef object ex
+    cdef object ss, st
+
     majiq_config = Config()
     dummy = {}
     count = 0

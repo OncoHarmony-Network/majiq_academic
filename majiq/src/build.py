@@ -283,9 +283,8 @@ class Builder(BasicPipeline):
         self.queue = mp.Queue()
         self.lock = [mp.Lock() for xx in range(self.nthreads)]
         self.lock.append(mp.Lock())
-        self.func = merging_files
 
-        pool = mp.Pool(processes=self.nthreads, initializer=process_conf, initargs=[self],
+        pool = mp.Pool(processes=self.nthreads, initializer=process_conf, initargs=[merging_files, self],
                        maxtasksperchild=1)
         [xx.acquire() for xx in self.lock[:-1]]
 

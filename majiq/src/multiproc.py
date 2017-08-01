@@ -19,7 +19,7 @@ def process_wrapper(args_vals):
         logger = majiq_utils.get_logger("%s/%s.majiq.log" % (majiq_config.outDir, chnk),
                                         silent=majiq_config.silent, debug=majiq_config.debug)
 
-        process_conf.func(vals, chnk, logger, majiq_config, process_conf, logger=logger)
+        process_conf.func(vals, chnk, majiq_config, process_conf, logger=logger)
 
     except:
         # majiq_utils.monitor('CHILD %s:: EXCEPT' % chnk)
@@ -86,11 +86,9 @@ class QueueMessage:
         return self.type
 
 
-def process_conf(pipeline, queue, lock, weights):
+def process_conf(func, pipeline):
     process_conf.__dict__.update(pipeline.__dict__)
-    process_conf.lock = lock
-    process_conf.queue = queue
-    process_conf.weights = weights
+    process_conf.func = func
 
 
 def queue_manager(input_h5dfp, output_h5dfp, lock_array, result_queue, num_chunks, meta_info=None, num_exp=0,
