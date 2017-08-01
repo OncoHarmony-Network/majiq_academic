@@ -1,12 +1,14 @@
 from voila import io_voila
-from voila.io_voila import Voila
+from voila.voila_args import VoilaArgs
 
 
-class Heterogen(object):
+class Heterogen(VoilaArgs):
     def __init__(self, args):
-        with Voila(args.voila_file, 'r') as v:
-            metainfo = v.get_metainfo()
-            lsvs = v.get_voila_lsvs()
-
         if not args.no_tsv:
-            io_voila.het_tab_output(args, lsvs, metainfo)
+            io_voila.het_tab_output(args)
+
+    @classmethod
+    def arg_parents(cls):
+        return (
+            cls.base_args(), cls.html_args(), cls.voila_file_args(), cls.multiproccess_args(), cls.output_args(), cls.lsv_id_search_args(), cls.gene_search_args()
+        )

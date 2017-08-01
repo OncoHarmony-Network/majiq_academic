@@ -5,6 +5,7 @@ import numpy
 from h5py.h5r import RegionReference
 from numpy import unicode
 
+from voila.utils.exceptions import NotNumpyObject, NotCorrectUnsignedBits
 from voila.utils.voila_log import voila_log
 
 
@@ -65,7 +66,7 @@ class HDF5(object):
         """
         return ()
 
-    def cls_list(self):
+    def cls_dict(self):
         """
         Identify class attributes that are a list of a specific class.  e.g [VoilaLsv(), VoilaLsv(), ... ].  The
         returned dictionary should contain the name of the attribute that points to the list of classes and how
@@ -87,18 +88,18 @@ class HDF5(object):
         for key in self.exclude():
             del attrs_dict[key]
 
-        for cls in self.cls_list():
-            for index, cls_obj in enumerate(attrs_dict[cls]):
-                cls_obj.to_hdf5(h.create_group(join(cls, str(index))), use_id)
-            del attrs_dict[cls]
+        for cls_name in self.cls_dict().keys():
+            for index, cls_obj in enumerate(attrs_dict[cls_name]):
+                cls_obj.to_hdf5(h.create_group(join(cls_name, str(index))), use_id)
+            del attrs_dict[cls_name]
 
-        for key in attrs_dict:
+        for key, value in attrs_dict.items():
             try:
-                h.attrs[key] = attrs_dict[key]
+                h.attrs[key] = value
             except TypeError as e:
                 # Where the value stored is None, skip it.  This assumes that the default value for the attribute in
                 # the class is sufficient and that 'None' doesn't have some extra meaning for this attribute.
-                if attrs_dict[key] is None:
+                if value is None:
                     pass
                 else:
                     raise type(e)('There was an issue with key "{0}" with value "{1}"'.format(key, attrs_dict[key]))
@@ -110,30 +111,29 @@ class HDF5(object):
         :return: self
         """
 
-        cls_dict = self.cls_list()
+        cls_dict = self.cls_dict()
+        log = voila_log()
 
-        for cls in cls_dict:
-            if cls in h:
-                cls_grp = h[cls]
-                self.__dict__[cls] = [None] * len(cls_grp)
+        for cls_name, new_class in cls_dict.items():
+            if cls_name in h:
+                cls_grp = h[cls_name]
+                self.__dict__[cls_name] = [None] * len(cls_grp)
                 for index in cls_grp:
-                    new_class = cls_dict[cls]
-                    self.__dict__[cls][int(index)] = new_class.easy_from_hdf5(cls_grp[index])
+                    self.__dict__[cls_name][int(index)] = new_class.easy_from_hdf5(cls_grp[index])
 
-        for key in h.attrs:
+        for key, value in h.attrs.items():
             if key not in self.exclude():
-                # H5py stores attributes as numpy objects where it can.  Numpy objects
-                # cause issues with the json conversion, therefore corner cases are handled below.
 
-                # value = h.attrs[key]
-                # if type(value) is numpy.ndarray:
-                #     value = value.tolist()
-                # elif type(value) is numpy.bool_:
-                #     value = value.item()
+                value = self.convert(value)
 
-                value = self.convert(h.attrs[key])
-
-                self.__dict__[key] = value
+                try:
+                    setattr(self, key, value)
+                except AttributeError:
+                    # TEMPORARILY removing this log because it is killing my voila tools scripts
+                    #log.error('Unable to add {0}:{1} to {2}'.format(key, value, self.__class__.__name__))
+                    # TODO put the log file back when the variances bug is fixed:
+                    # https://basecamp.com/2340013/projects/4389998/todos/315585955
+                    pass
 
         return self
 
@@ -162,10 +162,11 @@ class HDF5(object):
             return HDF5.convert_list(v)
         if isinstance(v, bytes):
             return v.decode('utf-8')
+
         return v
 
     @staticmethod
-    def create(attrs, location, value, ):
+    def create(attrs, location, value):
         attrs.create(location, value, dtype=h5py.special_dtype(vlen=unicode))
 
 
@@ -189,9 +190,12 @@ class DataSet(object):
         assert False, 'Validate has not been implemented for this class.'
 
     def unsigned_bits(self, bits):
-        if self.objs is not None:
-            return all(int(x).bit_length() <= bits and x >= 0 for x in self.objs)
-
+        try:
+            if self.objs is not None:
+                if self.objs.dtype is not numpy.dtype(bits):
+                    raise NotCorrectUnsignedBits(bits)
+        except AttributeError:
+            raise NotNumpyObject(self.objs)
         return True
 
     def array_2d(self):
@@ -204,12 +208,9 @@ class DataSet(object):
         Encode a list of data.
         :return: None
         """
-        if self.objs is not None and list(self.objs):
-            if all(x == self.objs[0] for x in self.objs):
-                self.h.attrs[self.ds_name] = self.objs[0]
-            else:
-                self.objs = [self.objs]
-                self.encode_list()
+        if self.objs is not None and self.objs.size > 0:
+            self.objs = numpy.array([self.objs])
+            self.encode_list()
 
     def decode(self):
         """
@@ -217,7 +218,7 @@ class DataSet(object):
         :return: list of data
         """
         l = self.decode_list()
-        if l:
+        if l is not None:
             return l[0]
 
     def encode_list(self):
@@ -225,6 +226,7 @@ class DataSet(object):
         Encode a list of lists.
         :return: None
         """
+
         if self.objs is None or not list(self.objs):
             return
 
@@ -239,7 +241,6 @@ class DataSet(object):
             index += 1
 
         self.h.attrs[self.ds_name] = ds.regionref[start_index:index]
-
         ds.attrs['index'] = index
 
     def decode_list(self):
@@ -247,14 +248,13 @@ class DataSet(object):
         Decode a list of lists.
         :return: list of stored data
         """
+
         if self.ds_name in self.h.attrs:
             if isinstance(self.h.attrs[self.ds_name], RegionReference):
                 ref = self.h.attrs[self.ds_name]
                 if ref:
-                    return self.dataset()[ref].tolist()
-            else:
-                experiment_length = len(self.h['/'].attrs['experiment_names'].tolist())
-                return [[self.h.attrs[self.ds_name]] * experiment_length]
+                    return self.dataset()[ref]
+
 
     def resize(self):
         ds = self.dataset()
@@ -290,6 +290,8 @@ class BinsDataSet(DataSet):
         :param h: HDF5 file object
         :param objs: objects to be stored as Bins Data
         """
+        if objs is not None:
+            objs = numpy.array(objs)
         super(BinsDataSet, self).__init__(h, 'trunc_bins', objs)
 
     def validate(self):
@@ -330,10 +332,13 @@ class ExonTypeDataSet(DataSet):
         :param objs: List to be stored
         """
         # sanity check
+        if objs is not None:
+            objs = numpy.array(objs, dtype=numpy.dtype('uint8'))
         super(ExonTypeDataSet, self).__init__(h, 'exon_type', objs, dtype=numpy.uint8)
 
     def validate(self):
-        assert self.unsigned_bits(8), 'Exon Type must be unsigned 8 bit integer.'
+        assert self.unsigned_bits('uint8'), 'Exon Type must be unsigned 8 bit integer.'
+
 
 
 class JunctionTypeDataSet(DataSet):
@@ -344,10 +349,12 @@ class JunctionTypeDataSet(DataSet):
         :param objs: junction type list
         """
         # sanity check
+        if objs is not None:
+            objs = numpy.array(objs, dtype=numpy.dtype('uint8'))
         super(JunctionTypeDataSet, self).__init__(h, 'junction_type', objs, dtype=numpy.uint8)
 
     def validate(self):
-        assert self.unsigned_bits(8), 'Junction Type must be unsigned 8 bit integer'
+        assert self.unsigned_bits('uint8'), 'Junction Type must be unsigned 8 bit integer'
 
 
 class ReadsDataSet(DataSet):
@@ -357,7 +364,9 @@ class ReadsDataSet(DataSet):
         :param h:  HDF5 file pointer
         :param objs: reads list
         """
+        if objs is not None:
+            objs = numpy.array(objs, dtype=numpy.dtype('uint32'))
         super(ReadsDataSet, self).__init__(h, 'reads', objs, dtype=numpy.uint32)
 
     def validate(self):
-        assert self.unsigned_bits(32), 'Reads data must be unsigned 32 bit integer.'
+        assert self.unsigned_bits('uint32'), 'Reads data must be unsigned 32 bit integer.'

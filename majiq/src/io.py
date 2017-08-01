@@ -750,7 +750,7 @@ def read_meta_info(list_of_files):
                 if meta['genome'] != fp.attrs['genome']:
                     raise RuntimeError('Combining experiments from different genome assemblies. Exiting')
             except KeyError:
-                #meta['genome'] = fp.attrs['genome']
+                meta['genome'] = fp.attrs['genome']
                 continue
 
     return meta

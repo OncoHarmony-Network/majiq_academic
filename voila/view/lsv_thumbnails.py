@@ -1,6 +1,24 @@
 from os import path
 
 from voila.utils.run_voila_utils import get_env, copy_static, get_output_html
+from voila.voila_args import VoilaArgs
+
+
+class LsvThumbnails(VoilaArgs):
+    def __init__(self, args):
+        lsv_thumbnails(args)
+
+    @classmethod
+    def arg_parents(cls):
+        parser = cls.get_parser()
+
+        parser.add_argument('--collapsed',
+                            action='store_true',
+                            default=False,
+                            help='Collapsed LSVs thumbnails in the HTML summary.')
+        return (
+            cls.base_args(), cls.lsv_type_search_args(), cls.output_args(), parser
+        )
 
 
 def lsv_thumbnails(args):

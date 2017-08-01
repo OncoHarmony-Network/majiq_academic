@@ -7,170 +7,18 @@ from multiprocessing.queues import JoinableQueue
 from os.path import join
 
 import h5py
-import numpy
+import numpy as np
 
-from voila import constants
+from voila import constants, vlsv
+from voila.api import Voila
 from voila.constants import JUNCTION_TYPE_RNASEQ
 from voila.hdf5 import HDF5
-from voila.producer_consumer import ProducerConsumer, voila_exit
 from voila.utils import utils_voila
 from voila.utils.run_voila_utils import get_output_html
 from voila.utils.voila_log import voila_log
-from voila.vlsv import VoilaLsv, matrix_area
+from voila.vlsv import VoilaLsv
 
 __author__ = 'abarrera'
-
-
-class VoilaMetaValueNotFound(Exception):
-    pass
-
-
-class Voila(ProducerConsumer):
-    VERSION = '/voila_file_version'
-    ANALYSIS = '/analysis_type'
-
-    def __init__(self, voila_file_name, mode=constants.FILE_MODE.read):
-        """
-        Parse or edit the voila (quantifier output) file.
-        :param voila_file_name: location of voila file
-        :param mode: file mode passed to h5py
-        """
-        super(Voila, self).__init__()
-        self.mode = mode
-        self.file_name = voila_file_name
-        self.hdf5 = None
-        self.lsv_ids = None
-        self.lsv_types = None
-        self.gene_names = None
-
-    def __enter__(self):
-        self.hdf5 = h5py.File(self.file_name, self.mode)
-
-        if self.mode == constants.FILE_MODE.write:
-            if self.VERSION not in self.hdf5:
-                self.hdf5[self.VERSION] = constants.VOILA_FILE_VERSION
-
-        return self
-
-    def __exit__(self, type, value, traceback):
-        self.close()
-
-    def _producer(self):
-        with h5py.File(self.file_name, 'r') as h:
-            for lsv_id in h['lsvs']:
-                self.queue.put(lsv_id)
-
-    def _worker(self):
-        with h5py.File(self.file_name, 'r') as h:
-            while True:
-                lsv_id = self.queue.get()
-                lsv = VoilaLsv.easy_from_hdf5(h['lsvs'][lsv_id])
-
-                if not self.lsv_types or lsv.lsv_type in self.lsv_types:
-                    if not self.gene_names or lsv.name in self.gene_names:
-                        if not self.lsv_ids or lsv.lsv_id in self.lsv_ids:
-                            self.dict(lsv_id, lsv)
-
-                self.queue.task_done()
-
-    def _metainfo(self):
-        metainfo = '/metainfo'
-        try:
-            return self.hdf5[metainfo]
-        except KeyError:
-            return self.hdf5.create_group(metainfo)
-
-    def close(self):
-        try:
-            self.hdf5.close()
-        except ValueError:
-            pass
-
-    def add_lsv(self, voilaLsv):
-        """
-        Add VoilaLsv to Voila file.
-        :param voilaLsv: VoilaLsv object
-        :return: None
-        """
-        voilaLsv.to_hdf5(self.hdf5)
-
-    def add_genome(self, genome):
-        self._metainfo().attrs['genome'] = genome
-
-    def add_experiments(self, group_name, experiment_names):
-        m = self._metainfo()
-        try:
-            HDF5.create(m.attrs, 'group_names', numpy.append(m.attrs['group_names'], group_name))
-            HDF5.create(m.attrs, 'exeperiment_names',
-                        numpy.append(m.attrs['experiment_names'], [experiment_names], axis=0))
-        except KeyError:
-            HDF5.create(m.attrs, 'group_names', [group_name])
-            HDF5.create(m.attrs, 'experiment_names', [experiment_names])
-
-    def add_stat_names(self, stat_names):
-        HDF5.create(self._metainfo().attrs, 'stat_names', stat_names)
-
-    def set_analysis_type(self, analysis_type):
-        assert analysis_type in [constants.ANALYSIS_HETEROGEN, constants.ANALYSIS_DELTAPSI, constants.ANALYSIS_PSI]
-        self.hdf5[self.ANALYSIS] = analysis_type
-
-    def get_metainfo(self):
-        """
-        Get metainfo from voila file.
-        :return: dict
-        """
-        voila_log().info('Getting Voila Metainfo from {0} ...'.format(self.file_name))
-        return {key: self._metainfo().attrs[key] for key in self._metainfo().attrs.keys()}
-
-    def get_voila_lsv(self, lsv_id):
-        """
-        Get LSV by LSV id.
-        :param lsv_id:
-        :return: VoilaLsv
-        """
-        return VoilaLsv.easy_from_hdf5(self.hdf5['lsvs'][lsv_id])
-
-    def get_voila_lsvs(self, lsv_types=None, lsv_ids=None, gene_names=None):
-        """
-        Get list of LSVs from voila file.
-        :param lsv_types: search for lsv types
-        :param lsv_ids: search for lsv ids
-        :param gene_names: search for gene names
-        :return: list
-        """
-        voila_log().info('Getting Voila LSVs from {0} ...'.format(self.file_name))
-
-        self.lsv_types = lsv_types
-        self.lsv_ids = lsv_ids
-        self.gene_names = gene_names
-
-        self.run()
-
-        voila_lsvs = self.get_values()
-        self.manager_shutdown()
-
-        return voila_lsvs
-
-    def check_version(self):
-        file_version = self.hdf5[self.VERSION].value
-        if file_version != constants.VOILA_FILE_VERSION:
-            voila_log().warning('Voila file version isn\'t current.  This will probably cause significant '
-                                'issues with the voila output.  It would be best to run quantifier again with the '
-                                'current version of MAJIQ.')
-
-    def check_analysis_type(self, analysis_type):
-        if self.ANALYSIS not in self.hdf5:
-            voila_log().error('Voila file has an unknown quanfication type.')
-            voila_exit()
-
-        current_analysis_type = self.hdf5[self.ANALYSIS].value
-
-        if current_analysis_type != analysis_type:
-            voila_log().error(
-                'Voila file was quantified for "{0}".  Re-run voila with the "{0}" option.'.format(
-                    current_analysis_type)
-            )
-            voila_exit()
 
 
 class VoilaInput(HDF5):
@@ -345,6 +193,152 @@ def load_dpairs(pairwise_dir, majiq_output):
     return lmajiq_pairs, group1_name, group2_name
 
 
+def tab_output(args, voila_links):
+    def semicolon_join(value_list):
+        return ';'.join(str(x) for x in value_list)
+
+    log = voila_log()
+    log.info("Creating Tab-delimited output file")
+
+    output_html = get_output_html(args, args.voila_file)
+    type_summary = args.type_analysis
+    group1 = None
+    group2 = None
+    tsv_file = join(args.output, output_html.rsplit('.html', 1)[0] + '.tsv')
+
+    with Voila(args.voila_file, 'r') as v:
+        metainfo = v.get_metainfo()
+
+        fieldnames = ['#Gene Name', 'Gene ID', 'LSV ID', 'E(PSI) per LSV junction', 'Var(E(PSI)) per LSV junction']
+
+        if args.type_analysis == constants.ANALYSIS_DELTAPSI:
+            group1 = metainfo['group_names'][0]
+            group2 = metainfo['group_names'][1]
+            fieldnames = fieldnames[:3] + ['E(dPSI) per LSV junction',
+                                           'P(|dPSI|>=%.2f) per LSV junction' % args.threshold,
+                                           '%s E(PSI)' % group1, '%s E(PSI)' % group2]
+
+        fieldnames += ['LSV Type', 'A5SS', 'A3SS', 'ES', 'Num. Junctions', 'Num. Exons', 'De Novo Junctions', 'chr',
+                       'strand', 'Junctions coords', 'Exons coords', 'Exons Alternative Start', 'Exons Alternative End',
+                       'IR coords']
+
+        if voila_links:
+            fieldnames.append('Voila link')
+
+        with open(tsv_file, 'w') as tsv:
+            writer = csv.DictWriter(tsv, fieldnames=fieldnames, delimiter='\t')
+            writer.writeheader()
+            for lsv in v.get_voila_lsvs(args):
+
+                row = {
+                    '#Gene Name': lsv.name,
+                    'Gene ID': lsv.lsv_id.split(':')[0],
+                    'LSV ID': lsv.lsv_id,
+                    'LSV Type': lsv.lsv_type,
+                    'A5SS': lsv.categories['prime5'],
+                    'A3SS': lsv.categories['prime3'],
+                    'ES': lsv.categories['ES'],
+                    'Num. Junctions': lsv.categories['njuncs'],
+                    'Num. Exons': lsv.categories['nexons'],
+                    'chr': lsv.chromosome,
+                    'strand': lsv.strand,
+                    'De Novo Junctions': semicolon_join(
+                        int(junc.junction_type == JUNCTION_TYPE_RNASEQ) for junc in lsv.junctions
+                    ),
+                    'Junctions coords': semicolon_join(
+                        '{0}-{1}'.format(junc.start, junc.end) for junc in lsv.junctions
+                    ),
+                    'Exons coords': semicolon_join(
+                        '{0}-{1}'.format(e.start, e.end) for e in lsv.exons
+                    ),
+                    'Exons Alternative Start': semicolon_join(
+                        '|'.join(str(a) for a in e.alt_starts) for e in lsv.exons if e.alt_starts
+                    ),
+                    'Exons Alternative End': semicolon_join(
+                        '|'.join(str(a) for a in e.alt_ends) for e in lsv.exons if e.alt_ends
+                    ),
+                    'IR coords': semicolon_join(
+                        '{0}-{1}'.format(e.start, e.end) for e in lsv.exons if e.intron_retention
+                    )
+                }
+
+                if constants.ANALYSIS_DELTAPSI == type_summary:
+                    row.update({
+                        'E(dPSI) per LSV junction': semicolon_join(
+                            lsv.excl_incl[i][1] - lsv.excl_incl[i][0] for i in range(len(lsv.bins))
+                        ),
+                        'P(|dPSI|>=%.2f) per LSV junction' % args.threshold: semicolon_join(
+                            vlsv.matrix_area(np.array(bin), args.threshold, collapsed_mat=True).sum() for bin in
+                            lsv.bins
+                        ),
+                        '%s E(PSI)' % group1: semicolon_join(
+                            '%.3f' % i for i in lsv.means_psi1
+                        ),
+                        '%s E(PSI)' % group2: semicolon_join(
+                            '%.3f' % i for i in lsv.means_psi2
+                        )
+                    })
+
+                if constants.ANALYSIS_PSI == type_summary:
+                    row.update({
+                        'E(PSI) per LSV junction': semicolon_join(lsv.means),
+                        'Var(E(PSI)) per LSV junction': semicolon_join(lsv.variances)
+                    })
+
+                if voila_links:
+                    summary_path = voila_links[lsv.name]
+                    if not os.path.isabs(summary_path):
+                        summary_path = join(os.getcwd(), args.output, summary_path)
+                    row['Voila link'] = "file://{0}".format(summary_path)
+
+                log.debug('Write TSV row for {0}'.format(lsv.lsv_id))
+
+                writer.writerow(row)
+
+    log.info("Delimited output file successfully created in: %s" % tsv_file)
+
+
+def generic_feature_format_txt_files(args, out_gff3=False):
+    """
+    Create GFF3 files for each LSV.
+    :param majiq_output: majiq data
+    :param args: parsed input data
+    :param out_gff3: output as a GFF3 file
+    :return: None
+    """
+
+    log = voila_log()
+    output_dir = args.output
+
+    if out_gff3:
+        log.info("Create GFF files for LSVs")
+    else:
+        log.info("Create GTF files for LSVs")
+
+    header = "##gff-version 3"
+
+    odir = join(output_dir, "static/doc/lsvs")
+    utils_voila.create_if_not_exists(odir)
+
+    with Voila(args.voila_file, 'r') as v:
+        for lsv in v.get_voila_lsvs(args):
+            lsv_file_basename = "%s/%s" % (odir, lsv.lsv_id)
+            try:
+                lsv_gff3_str = lsv.to_gff3()
+                utils_voila.gff2gtf(lsv_gff3_str.split('\n'), "%s.gtf" % lsv_file_basename)
+
+                # not accessible from command line
+                if out_gff3:
+                    gff_file = "%s.gff3" % (lsv_file_basename)
+                    with open(gff_file, 'w') as ofile:
+                        ofile.write(header + "\n")
+                        ofile.write(lsv_gff3_str + "\n")
+
+            except UnboundLocalError as e:
+                log.warning("problem generating GTF file for %s" % lsv.id)
+                log.error(e)
+
+
 def get_lsv_info_fieldnames():
     return ['Gene Name', 'Gene ID', 'LSV ID']
 
@@ -397,169 +391,53 @@ def semicolon_join(value_list):
     return ';'.join(str(x) for x in value_list)
 
 
-def tab_output(args, majiq_output):
-    output_dir = args.output
-    output_html = get_output_html(args, args.voila_file)
-    log = voila_log()
-    type_summary = args.type_analysis
-    group1 = None
-    group2 = None
-    tsv_file = join(output_dir, output_html.rsplit('.html', 1)[0] + '.tsv')
-
-    log.info("Creating Tab-delimited output file in %s..." % tsv_file)
-
-    fieldnames = get_lsv_info_fieldnames() + ['E(PSI) per LSV junction', 'Var(E(PSI)) per LSV junction']
-
-    if 'delta' in type_summary:
-        group1 = majiq_output['meta_exps']['group1']
-        group2 = majiq_output['meta_exps']['group2']
-        fieldnames = fieldnames[:3] + ['E(dPSI) per LSV junction',
-                                       'P(|dPSI|>=%.2f) per LSV junction' % args.threshold,
-                                       '%s E(PSI)' % group1, '%s E(PSI)' % group2]
-
-    fieldnames += get_lsv_extra_info_fieldnames()
-
-    if 'voila_links' in majiq_output:
-        fieldnames.append('Voila link')
-
-    with open(tsv_file, 'w') as tsv:
-        writer = csv.DictWriter(tsv, fieldnames=fieldnames, delimiter='\t')
-        writer.writeheader()
-        for gene in majiq_output['genes_dict']:
-            for lsv in majiq_output['genes_dict'][gene]:
-
-                if constants.ANALYSIS_DELTAPSI == type_summary:
-                    lsv = lsv['lsv']
-
-                row = get_lsv_info(lsv)
-                row.update(get_lsv_extra_info(lsv))
-
-                if constants.ANALYSIS_DELTAPSI == type_summary:
-                    row.update({
-                        'E(dPSI) per LSV junction': semicolon_join(
-                            lsv.excl_incl[i][1] - lsv.excl_incl[i][0] for i in range(len(lsv.bins))
-                        ),
-                        'P(|dPSI|>=%.2f) per LSV junction' % args.threshold: semicolon_join(
-                            matrix_area(numpy.array(bin), args.threshold, collapsed_mat=True).sum() for bin in
-                            lsv.bins
-                        ),
-                        '%s E(PSI)' % group1: semicolon_join(
-                            '%.3f' % i for i in lsv.means_psi1
-                        ),
-                        '%s E(PSI)' % group2: semicolon_join(
-                            '%.3f' % i for i in lsv.means_psi2
-                        )
-                    })
-
-                if constants.ANALYSIS_PSI == type_summary:
-                    row.update({
-                        'E(PSI) per LSV junction': semicolon_join(lsv.means),
-                        'Var(E(PSI)) per LSV junction': semicolon_join(lsv.variances)
-                    })
-
-                if 'voila_links' in majiq_output:
-                    summary_path = majiq_output['voila_links'][lsv.name]
-                    if not os.path.isabs(summary_path):
-                        summary_path = join(os.getcwd(), output_dir, summary_path)
-                    row['Voila link'] = constants.URL_COMPOSITE % (summary_path, lsv.name)
-
-                writer.writerow(row)
-
-    log.info("Delimited output file successfully created in: %s" % tsv_file)
-
-
-def generic_feature_format_txt_files(args, majiq_output, out_gff3=False):
-    """
-    Create GFF3 files for each LSV.
-    :param majiq_output: majiq data
-    :param args: parsed input data
-    :param out_gff3: output as a GFF3 file
-    :return: None
-    """
-
-    log = voila_log()
-    output_dir = args.output
-
-    if out_gff3:
-        log.info("Saving LSVs files in gff format ...")
-    else:
-        log.info("Saving LSVs files in gtf format ...")
-
-    if 'genes_dict' not in majiq_output or not len(majiq_output['genes_dict']):
-        log.warning("No gene information provided. Genes files are needed to calculate the gtf/gff files.")
-        return
-
-    header = "##gff-version 3"
-
-    odir = join(output_dir, "static/doc/lsvs")
-    utils_voila.create_if_not_exists(odir)
-
-    for gkey, gvalue in majiq_output['genes_dict'].iteritems():
-        for lsv_dict in gvalue:
-            lsv = lsv_dict
-            if type(lsv_dict) == dict:
-                lsv = lsv_dict['lsv']
-            lsv_file_basename = "%s/%s" % (odir, lsv.lsv_id)
-
-            try:
-                lsv_gff3_str = lsv.to_gff3()
-                utils_voila.gff2gtf(lsv_gff3_str.split('\n'), "%s.gtf" % lsv_file_basename)
-
-                # not accessible from command line
-                if out_gff3:
-                    gff_file = "%s.gff3" % (lsv_file_basename)
-                    with open(gff_file, 'w') as ofile:
-                        ofile.write(header + "\n")
-                        ofile.write(lsv_gff3_str + "\n")
-
-            except UnboundLocalError as e:
-                log.warning("problem generating GTF file for %s" % lsv.id)
-                log.error(e)
-
-
-def het_tab_output(args, lsvs, metainfo):
+def het_tab_output(args):
     voila_log().info('Creating HET TSV file...')
 
     output_html = get_output_html(args, args.voila_file)
     tsv_file = join(args.output, output_html.rsplit('.html', 1)[0] + '.tsv')
 
-    fieldnames = get_lsv_info_fieldnames() + list(metainfo['stat_names']) + get_lsv_extra_info_fieldnames()
+    with Voila(args.voila_file, 'r') as v:
 
-    lsv_fieldnames = ['Junction ID'] + list(itertools.chain.from_iterable(metainfo['experiment_names']))
+        metainfo = v.get_metainfo()
 
-    with open(tsv_file, 'w') as tsvfile:
-        tsv = csv.DictWriter(tsvfile, fieldnames=fieldnames, delimiter='\t')
-        tsv.writeheader()
+        fieldnames = get_lsv_info_fieldnames() + list(metainfo['stat_names']) + get_lsv_extra_info_fieldnames()
 
-        for lsv in lsvs:
+        lsv_fieldnames = ['Junction ID'] + list(itertools.chain.from_iterable(metainfo['experiment_names']))
 
-            row = get_lsv_info(lsv)
-            row.update(get_lsv_extra_info(lsv))
-
-            for stat_name, junction_stat in zip(metainfo['stat_names'], lsv.het.junction_stats):
-                row[stat_name] = semicolon_join(junction_stat)
-
-            tsv.writerow(row)
-
-            rows = {}
-
-    for lsv in lsvs:
-
-        for group, experiment_names in zip(lsv.het.groups, metainfo['experiment_names']):
-            for experiment_index, experiment_name in enumerate(experiment_names):
-                for junction_index, junction_id in enumerate(lsv.junction_ids()):
-
-                    psi = group.get_psi(experiment_index=experiment_index, junction_index=junction_index)
-
-                    try:
-                        rows[junction_id][experiment_name] = psi
-                    except KeyError:
-                        rows[junction_id] = {experiment_name: psi}
-
-        with open(join(args.output, lsv.lsv_id.replace(':', '_') + '.tsv'), 'w') as tsvfile:
-            tsv = csv.DictWriter(tsvfile, fieldnames=lsv_fieldnames, delimiter='\t')
+        with open(tsv_file, 'w') as tsvfile:
+            tsv = csv.DictWriter(tsvfile, fieldnames=fieldnames, delimiter='\t')
             tsv.writeheader()
-            for junction_id, row_dict in rows.items():
-                row = {'Junction ID': junction_id}
-                row.update({column: value for column, value in row_dict.items()})
+
+            for lsv in v.get_voila_lsvs(args):
+
+                row = get_lsv_info(lsv)
+                row.update(get_lsv_extra_info(lsv))
+
+                for stat_name, junction_stat in zip(metainfo['stat_names'], lsv.het.junction_stats):
+                    row[stat_name] = semicolon_join(junction_stat)
+
                 tsv.writerow(row)
+
+                rows = {}
+
+        for lsv in v.get_voila_lsvs(args):
+
+            for group, experiment_names in zip(lsv.het.groups, metainfo['experiment_names']):
+                for experiment_index, experiment_name in enumerate(experiment_names):
+                    for junction_index, junction_id in enumerate(lsv.junction_ids()):
+
+                        psi = group.get_psi(experiment_index=experiment_index, junction_index=junction_index)
+
+                        try:
+                            rows[junction_id][experiment_name] = psi
+                        except KeyError:
+                            rows[junction_id] = {experiment_name: psi}
+
+            with open(join(args.output, lsv.lsv_id.replace(':', '_') + '.tsv'), 'w') as tsvfile:
+                tsv = csv.DictWriter(tsvfile, fieldnames=lsv_fieldnames, delimiter='\t')
+                tsv.writeheader()
+                for junction_id, row_dict in rows.items():
+                    row = {'Junction ID': junction_id}
+                    row.update({column: value for column, value in row_dict.items()})
+                    tsv.writerow(row)

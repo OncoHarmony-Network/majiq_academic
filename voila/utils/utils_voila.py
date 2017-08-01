@@ -48,8 +48,8 @@ def lsvs_to_gene_dict(voila_lsvs, metainfo, threshold=.2, show_all=False):
         if vlsv.is_delta_psi():
             genes_dict[gene_id].append({
                 'lsv': vlsv,
-                'psi1': VoilaLsv(vlsv.psi1, lsv_graphic=None),
-                'psi2': VoilaLsv(vlsv.psi2, lsv_graphic=None)
+                'psi1': VoilaLsv(vlsv.psi1),
+                'psi2': VoilaLsv(vlsv.psi2)
             })
         else:
             genes_dict[gene_id].append(vlsv)

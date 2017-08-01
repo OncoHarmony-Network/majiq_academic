@@ -11,8 +11,8 @@ from majiq.src.io_utils import dump_bin_file, load_bin_file
 from majiq.src.psi import deltapsi_posterior, gen_prior_matrix
 from majiq.src.constants import *
 from majiq.src.multiproc import QueueMessage, process_conf, queue_manager
+from voila.api import Voila
 
-from voila.io_voila import Voila
 from voila.constants import ANALYSIS_DELTAPSI
 import collections
 
@@ -137,7 +137,7 @@ class DeltaPsi(BasicPipeline):
                            majiq_utils.chunks2(list_of_lsv, lchnksize, extra=range(self.nthreads)))
             pool.close()
             with Voila(get_quantifier_voila_filename(self.outDir, self.names, deltapsi=True), 'w') as out_h5p:
-                #out_h5p.add_genome(meta1['genome'])
+                out_h5p.add_genome(meta1['genome'])
                 out_h5p.set_analysis_type(ANALYSIS_DELTAPSI)
                 out_h5p.add_experiments(group_name=self.names[0], experiment_names=meta1['experiments'])
                 out_h5p.add_experiments(group_name=self.names[1], experiment_names=meta2['experiments'])

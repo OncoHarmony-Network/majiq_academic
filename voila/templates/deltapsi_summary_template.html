@@ -17,7 +17,7 @@
 {% endblock %}
 
 {% block header %}
-    {% if namePage %}Result page: {{ namePage }}{% endif %}
+    {% if page_name %}Result page: {{ page_name }}{% endif %}
 {% endblock %}
 
 {% block content %}
@@ -29,17 +29,18 @@
                     This browser or document mode doesn't support canvas
                 </canvas>
             </div>
-            {% for gene_name, gene_value in genes_dict.iteritems() %}
+            {% for gene_name, lsvs in genes_dict.items() %}
                 {% set gene_index = loop.index - 1 %}
-                <a name="{{ gene_value[0].lsv.name }}"></a>
+                <a name="{{ lsvs[0].name }}"></a>
                 <h2>Gene name:
-                    {{ gene_value[0].lsv.name }};
-                    {{ gene_value[0].lsv.chromosome }}:{{ gene_value[0].lsv.strand }}:{{ genes_exps_list[0][genes_exps_list[0].keys()[0]][gene_name].start }}-{{ genes_exps_list[0][genes_exps_list[0].keys()[0]][gene_name].end }};
+                    {% set experiments = genes_exps_list[0].keys() | list %}
+                    {% set first_exp = experiments[0] %}
+                    {{ lsvs[0].name }};{{ lsvs[0].chromosome }}:{{ lsvs[0].strand }}:{{ genes_exps_list[0][first_exp][gene_name].start }}-{{ genes_exps_list[0][first_exp][gene_name].end }};
 
                     {% if lexps %}
-                        <a href="http://genome.ucsc.edu/cgi-bin/hgTracks?db={{ lexps.genome }}&position={{ gene_value[0].lsv.chromosome }}:{{ genes_exps_list[0][genes_exps_list[0].keys()[0]][gene_name].start }}-{{ genes_exps_list[0][genes_exps_list[0].keys()[0]][gene_name].end }}"
+                        <a href="http://genome.ucsc.edu/cgi-bin/hgTracks?db={{ lexps.genome }}&position={{ lsvs[0].chromosome }}:{{ genes_exps_list[0][first_exp][gene_name].start }}-{{ genes_exps_list[0][first_exp][gene_name].end }}"
                            target="_blank"><img src="static/img/icons/ucsc3.png"
-                                                title="{{ genes_exps_list[0][genes_exps_list[0].keys()[0]][gene_name][3] }}:{{ genes_exps_list[0][genes_exps_list[0].keys()[0]][gene_name].start }}-{{ genes_exps_list[0][genes_exps_list[0].keys()[0]][gene_name].end }}"/></a>
+                                                title="{{ lsvs[0].chromosome }}:{{ genes_exps_list[0][first_exp][gene_name].start }}-{{ genes_exps_list[0][first_exp][gene_name].end }}"/></a>
                     {% endif %}
                 </h2>
 
@@ -94,7 +95,9 @@
                                      {% if "Combined" in genes_exps_list[0] %}
                                          "{{ genes_exps_list[0]["Combined"][gene_name] | to_json_especial }}">
                                      {% else %}
-                                         "{{ genes_exps_list[0][comb_spliceg_cond1][gene_name] | to_json_especial }}">
+                                         {% for exp in genes_exps_list[0].values() %}
+                                             "{{ exp[gene_name] | to_json_especial }}">
+                                         {% endfor %}
                                      {% endif %}
                         </div>
 
@@ -103,7 +106,9 @@
                                      {% if "Combined" in genes_exps_list[1] %}
                                          "{{ genes_exps_list[1]["Combined"][gene_name] | to_json_especial }}">
                                      {% else %}
-                                         "{{ genes_exps_list[1][comb_spliceg_cond2][gene_name] | to_json_especial }}">
+                                         {% for exp in genes_exps_list[1].values() %}
+                                             "{{ exp[gene_name] | to_json_especial }}">
+                                         {% endfor %}
                                      {% endif %}
                         </div>
 
@@ -115,14 +120,14 @@
                             <th class="short-header">Highlight</th>
                             <th class="short-header">LSV ID</th>
                             <th class="short-header">LSV Type</th>
-                            <th class="short-header">PSI {{ lexps.group1 }}</th>
+                            <th class="short-header">PSI {{ lexps.group_names[0] }}</th>
                             <th class="short-header">
-                                <p class="deltaHeader">&#8592; More in {{ lexps.group1 }} | More
-                                    in {{ lexps.group2 }}
+                                <p class="deltaHeader">&#8592; More in {{ lexps.group_names[0] }} | More
+                                    in {{ lexps.group_names[1] }}
                                     &#8594;</p>
                             </th>
 
-                            <th class="short-header">PSI {{ lexps.group2 }}</th>
+                            <th class="short-header">PSI {{ lexps.group_names[1] }}</th>
                             <th class="short-header">LSV links</th>
                         </tr>
                         </thead>
@@ -131,22 +136,22 @@
                             <th>Highlight</th>
                             <th>LSV ID</th>
                             <th>LSV Type</th>
-                            <th>PSI {{ lexps.group1 }}</th>
+                            <th>PSI {{ lexps.group_names[0] }}</th>
                             <th>
-                                <p class="deltaHeader">&#8592; More in {{ lexps.group1 }} | More
-                                    in {{ lexps.group2 }}
+                                <p class="deltaHeader">&#8592; More in {{ lexps.group_names[0] }} | More
+                                    in {{ lexps.group_names[1] }}
                                     &#8594;</p>
                             </th>
 
-                            <th>PSI {{ lexps.group2 }}</th>
+                            <th>PSI {{ lexps.group_names[1] }}</th>
                             <th>LSV links</th>
                         </tr>
                         </tfoot>
                         <tbody>
-                        {% for gene in gene_value %}
-                            <tr class="{{ gene['lsv'].categories2css() }} lsvrow"
-                                data-njuncs="{{ gene['lsv'].njuncs() }}"
-                                data-nexons="{{ gene['lsv'].nexons() }}">
+                        {% for lsv in lsvs %}
+                            <tr class="{{ lsv.categories2css() }} lsvrow"
+                                data-njuncs="{{ lsv.njuncs() }}"
+                                data-nexons="{{ lsv.nexons() }}">
                                 <td>
                                     <form class='highlight-lsv'>
                                         <label>
@@ -160,13 +165,13 @@
                                         </label>
                                     </form>
                                 </td>
-                                <td>{{ gene['lsv'].lsv_id }}</td>
+                                <td>{{ lsv.lsv_id }}</td>
                                 <td>
-                                    <p style="top:0;" class="hidden">{{ gene['lsv'].lsv_type }}</p>
+                                    <p style="top:0;" class="hidden">{{ lsv.lsv_type }}</p>
                                     <canvas class="lsvLegend" id="{{ gene_index }}" width="200px" height="80px"
-                                            data-lsv-string="{{ gene['lsv'].lsv_type }}"
-                                            data-coord-exon="[{{ gene['lsv'].start }},{{ gene['lsv'].end }}]"
-                                            title="{{ gene['lsv'].lsv_type }}">
+                                            data-lsv-string="{{ lsv.lsv_type }}"
+                                            data-coord-exon="[{{ lsv.start }},{{ lsv.end }}]"
+                                            title="{{ lsv.lsv_type }}">
                                         This browser or document mode doesn't support canvas
                                     </canvas>
                                 </td>
@@ -174,19 +179,19 @@
                                 <td id="data_psi1_td{{ gene_index }}{{ loop.index }}">
                                     <canvas class="lsvSingleCompactPercentiles"
                                             id="lsvSingleCompact_psi1_{{ loop.index }}"
-                                            width="20px" height="70px" data-lsv="{{ gene['psi1']|to_json }}">
+                                            width="20px" height="70px" data-lsv="{{ lsv|to_json_psi1 }}">
                                         This browser or document mode doesn't support canvas
                                     </canvas>
                                 </td>
 
 
                                 <td id="data_td{{ gene_index }}{{ loop.index }}" class="lsvDeltaCompact primer"
-                                    data-lsv="{{ gene['lsv']|to_json }}" data-threshold="{{ threshold }}"
+                                    data-lsv="{{ lsv|to_json }}" data-threshold="{{ threshold }}"
                                     genome="{{ lexps.genome }}" lsv-text-version="{{ lsv_text_version }}">
                                     {# Hidden field to make inclusion/exclusion sortable #}
                                     <p class="hidden">
                                         {% set max_diff = [0.0] %}
-                                        {% for excl_incl in gene['lsv'].excl_incl %}
+                                        {% for excl_incl in lsv.excl_incl %}
                                             {% if ((excl_incl[0]|abs + excl_incl[1]) > max_diff[-1]) %}
                                                 {% do max_diff.append(excl_incl[0]|abs + excl_incl[1]) %}
                                             {% endif %}
@@ -199,20 +204,22 @@
                                 <td id="data_psi2_td{{ gene_index }}{{ loop.index }}">
                                     <canvas class="lsvSingleCompactPercentiles"
                                             id="lsvSingleCompact_psi2_{{ loop.index }}"
-                                            width="20px" height="70px" data-lsv="{{ gene['psi2']|to_json }}">
+                                            width="20px" height="70px" data-lsv="{{ lsv|to_json_psi2 }}">
                                         This browser or document mode doesn't support canvas
                                     </canvas>
                                 </td>
 
                                 <td>
                                     <p>
-                                        <a href="http://genome.ucsc.edu/cgi-bin/hgTracks?db={{ lexps.genome }}&position={{ gene['lsv'].chromosome }}:{{ gene['lsv'].get_extension()[0] }}-{{ gene['lsv'].get_extension()[1] }}"
+                                        <a href="http://genome.ucsc.edu/cgi-bin/hgTracks?db={{ lexps.genome }}&position={{ lsv.chromosome }}:{{ lsv.get_extension()[0] }}-{{ lsv.get_extension()[1] }}"
                                            target="_blank">
                                             <img src="static/img/icons/ucsc3.png" title="View in UCSC Genome Browser"/>
                                         </a>
-                                        <a href="../static/doc/lsvs/{{ gene['lsv'].lsv_id }}.gtf"
-                                           target="_blank"><img
-                                                src="static/img/icons/gtf.png" title="Go to GTF LSV definition"/></a>
+                                        {% if gtf %}
+                                            <a href="../static/doc/lsvs/{{ lsv.lsv_id }}.gtf"
+                                               target="_blank"><img src="static/img/icons/gtf.png"
+                                                                    title="Go to GTF LSV definition"/></a>
+                                        {% endif %}
                                     </p>
                                     <p>
                                         <button class="copy-to-clipboard">
@@ -235,14 +242,14 @@
                             <img src="static/img/icons/last.png" class="last"/>
                             <select class="pagesize" autocomplete="off">
 
-                                {% for mark in tableMarks[gene_index] -%}
+                                {% for mark in table_marks[gene_index] -%}
                                     {% if loop.first %}
                                         <option selected="selected" value="{{ mark }}">{{ mark }}</option>
                                     {% else %}
                                         <option value="{{ mark }}">{{ mark }}</option>
                                     {% endif %}
                                 {%- endfor %}
-                                <option value="{{ gene_value|length }}">All</option>
+                                <option value="{{ lsvs|length }}">All</option>
                             </select>
                         </form>
                     </div>

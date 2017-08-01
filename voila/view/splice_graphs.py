@@ -1,92 +1,71 @@
-from collections import OrderedDict
-from os import path
+import os
 
-from voila import constants
-from voila.splice_graphics import SpliceGraph
-from voila.utils.run_voila_utils import get_env, get_output_html, copy_static, grouper, get_prev_next_pages
+from voila.api import SpliceGraphs
+from voila.utils.exceptions import VoilaException
+from voila.utils.run_voila_utils import get_output_html, copy_static
 from voila.utils.voila_log import voila_log
-from voila.view.psi import get_prev_next_pages
+from voila.view.html import Html
+from voila.voila_args import VoilaArgs
 
 
-def splice_graphs(args):
-    """
-    Render splice graph htmls.
-    :param args: arguments parsed from the
-    :return:
-    """
+class RenderSpliceGraphs(Html, VoilaArgs):
+    def __init__(self, args):
+        super(RenderSpliceGraphs, self).__init__(args)
+        self.render_summaries()
 
-    log = voila_log()
-    log.info("Loading %s." % args.splice_graph)
-    gene_dicts = get_gene_dicts(args.splice_graph, args.gene_names, args.limit)
+    @classmethod
+    def arg_parents(cls):
+        # base, gene_search, parser_splicegraphs, output
 
-    output_html = get_output_html(args, args.splice_graph)
-    output_dir = args.output
+        parser = cls.get_parser()
 
-    env = get_env()
-    template_file_name = args.type_analysis.replace("-", "_") + "_summary_template.html"
-    sum_template = env.get_template(template_file_name)
+        parser.add_argument('splice_graph',
+                            type=cls.check_splice_graph_file,
+                            help=cls.SPLICE_GRAPH_HELP)
 
-    genes = gene_dicts[gene_dicts.keys()[0]].values()
-    genes_length = len(genes)
-    log.info("Number of genes detected in Voila: %d." % genes_length)
+        parser.add_argument('--limit',
+                            type=int,
+                            default=20,
+                            help='Limit the number of splice graphs shown.  Default is 20.')
 
-    for page_number, subset_genes in enumerate(grouper(genes, constants.MAX_GENES)):
-        log.info("Processing %d out of %d genes ..." % (
-            min((page_number + 1) * constants.MAX_GENES, genes_length), genes_length))
+        return (
+            cls.base_args(), cls.gene_search_args(), cls.output_args(), parser
+        )
 
-        subset_genes = [x for x in subset_genes if x]
+    def render_summaries(self):
+        voila_log().info('Rendering Splice Graph HTML output')
+        summary_template = self.env.get_template('splice_graphs_summary_template.html')
+        args = self.args
+        output_html = get_output_html(args, args.splice_graph)
+        summaries_subfolder = self.get_summaries_subfolder()
+        log = voila_log()
 
-        prev_page, next_page = get_prev_next_pages(page_number, genes_length, output_html, args.limit)
+        with SpliceGraphs(args.splice_graph, 'r') as sg:
+            experiments = sg.get_experiments()
+            prev_page = None
+            page_count = sg.get_page_count(args)
 
-        name_page = '{0}_{1}'.format(page_number, output_html)
+            log.debug('Page count is {0}'.format(page_count))
 
-        with open(path.join(output_dir, name_page), 'w') as voila_output:
-            voila_output.write(sum_template.render(
-                genes=subset_genes,
-                gene_dicts=gene_dicts,
-                first_sample=[sam for sam in gene_dicts.keys()][0],
-                prevPage=prev_page,
-                nextPage=next_page,
-                namePage=name_page
-            ))
+            if not page_count:
+                raise VoilaException('No Splice Graphs found')
 
-    copy_static(args)
+            for index, genes in enumerate(sg.get_paginated_genes(args)):
+                page_name = '{0}_{1}'.format(index, output_html)
+                next_page = self.get_next_page(index, page_count)
 
+                log.debug('Writing page {0}'.format(page_name))
+                with open(os.path.join(summaries_subfolder, page_name), 'w') as html:
+                    html.write(
+                        summary_template.render(
+                            page_name=self.get_page_name(index),
+                            genes=genes,
+                            experiments=experiments,
+                            prev_page=prev_page,
+                            next_page=next_page
+                        )
+                    )
 
-def get_gene_dicts(splice_graph, gene_names_list, limit):
-    log = voila_log()
-    genes_exp = {}
+                prev_page = page_name
 
-    log.info("Parsing splice graph information files ...")
-
-    with SpliceGraph(splice_graph, 'r') as sg:
-        gene_ids = sg.get_gene_ids()
-        genes = sg.get_genes_list(gene_ids, limit=limit)
-        experiments = sg.get_experiments_list()
-
-    gene_names_list = [g.lower() for g in gene_names_list]
-
-    combined_genes_exp = {}
-
-    log.info('Getting gene experiment data...')
-
-    for experiment_index, experiment_name in enumerate(experiments):
-        for gene in genes:
-
-            if not gene_names_list or gene.name.lower() in gene_names_list:
-                experiment_dict = gene.get_experiment(experiment_index)
-
-                try:
-                    genes_exp[experiment_name][gene.gene_id] = experiment_dict
-                except KeyError:
-                    genes_exp[experiment_name] = {gene.gene_id: experiment_dict}
-
-                combined_genes_exp[gene.gene_id] = gene.combine(experiment_index,
-                                                                combined_genes_exp.get(gene.gene_id, None))
-
-    if len(experiments) > 1:
-        genes_exp['Combined'] = {gene_id: combined_genes_exp[gene_id] for gene_id in combined_genes_exp}
-
-    log.info("Splice graph information files correctly loaded.")
-
-    return OrderedDict(sorted(genes_exp.items(), key=lambda t: t[0]))
+        copy_static(args, index=False)

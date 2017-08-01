@@ -7,6 +7,60 @@ import numpy as np
 
 from voila.utils.run_voila_utils import get_env, get_summary_template, copy_static, table_marks_set, get_output_html
 from voila.utils.voila_log import voila_log
+from voila.voila_args import VoilaArgs
+
+
+class ConditionalTable(VoilaArgs):
+    def __init__(self, args):
+        conditional_table(args)
+
+    @classmethod
+    def arg_parents(cls):
+        parser = cls.get_parser()
+
+        cls.required_argument(
+            parser,
+            '--cond-pair',
+            nargs=2,
+            metavar='M1 M2',
+            help='Condition pair to compare.'
+        )
+
+        cls.required_argument(
+            parser,
+            '--sample-files',
+            type=cls.check_file,
+            nargs='+',
+            help='Samples Voila output files.')
+
+        cls.required_argument(
+            parser,
+            '--sample-names',
+            dest='sample_names',
+            nargs='+',
+            help='sample names'
+        )
+
+        cls.required_argument(
+            parser,
+            '--pairwise-dir',
+            help='Root directory where the pairwise delta psi VOILA summaries were created.'
+        )
+
+        parser.add_argument('--threshold-change',
+                            type=float,
+                            default=0.2,
+                            help='Threshold used to filter non-changing LSVs.  Default is 0.2.')
+        parser.add_argument('--best-comparisons',
+                            type=int,
+                            help='Filter out all but the best comparisons.  The number remaining is '
+                                 'the user supplied argument.  "Best comparisons" is defined by '
+                                 'comparisons with most agreeing with the least dissagreeing.')
+
+        return (
+            cls.base_args(), cls.html_args(), cls.gene_search_args(), cls.lsv_type_search_args(),
+            cls.lsv_id_search_args(), cls.output_args(), parser
+        )
 
 
 def conditional_table(args):
