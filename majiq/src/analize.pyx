@@ -51,7 +51,7 @@ cdef int _detect_lsv(object exon, object gn, str lsv_type, dict dummy, bint only
         dummy[name][sstype[lsv_type][1]].append(lsv_in)
 
 
-cdef int __prepare_lsvs(object lsv, str name, object gc_vfunc, list fitfunc_r, Queue queue):
+cdef int __prepare_lsvs(object lsv, str name, object gc_vfunc, list fitfunc_r, object queue):
     majiq_config = Config()
     for exp_idx in majiq_config.tissue_repl[name]:
         if majiq_config.gcnorm:
