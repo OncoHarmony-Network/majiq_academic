@@ -413,7 +413,7 @@ def retrieve_gene(gene_id, dbfile, all_exp=False, junction_list=None, logger=Non
         if junction_list is None:
             junction_list = {}
 
-        num_exp = 1 if not all_exp else majiq_config.num_experiments
+        num_exp = 0 if not all_exp else majiq_config.num_experiments
 
         for ex_grp_id in gg['exons']:
             ex_grp = gg['exons/%s' % ex_grp_id]

@@ -59,6 +59,13 @@ def get_logger(logger_name, silent=False, debug=False):
     return logger
 
 
+def close_logger(logger):
+    handlers = logger.handlers[:]
+    for handler in handlers:
+        handler.close()
+        logger.removeHandler(handler)
+    logging.shutdown()
+
 def get_fitfunc_from_rnafile(path):
     with h5py.File(path, 'r') as p:
         res = p.attrs['one_over_r']

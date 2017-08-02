@@ -30,7 +30,8 @@ class Junction:
         self.annotated = annotated
 
         if retrieve:
-            if num_exp == 1:
+            if num_exp == 0:
+                num_exp = 1
                 majiq_config = Config()
                 self.coverage = np.zeros((num_exp, (majiq_config.readLen - 16) + 1), dtype=np.float)
                 self.gc_content = np.zeros((1, (majiq_config.readLen - 16) + 1), dtype=np.float)

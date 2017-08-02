@@ -32,8 +32,7 @@ def process_wrapper(args_vals):
         process_conf.queue.put(qm, block=True)
         process_conf.lock[chnk].acquire()
         process_conf.lock[chnk].release()
-        import logging
-        logging.shutdown()
+        majiq_utils.close_logger(logger)
 
 
 def parallel_lsv_child_calculation(func, args, tempdir, name, chunk, store=True):
