@@ -220,6 +220,7 @@ def import_voila_txt(fp,
     lsv_dictionary = dict()
     has_voila = True
     file_headers = list()
+
     with open(fp, "r") as handle:
         line_i = 0
         found_stop_at = False
@@ -282,16 +283,18 @@ def import_voila_txt(fp,
             if can_stop:
                 if not found_stop_at:
                     break
+            # Add the line's data to the dict
+            lsv_dictionary.update(the_data)
 
-        lsv_dictionary.update(the_data)
-        lsv_dictionary["meta_info"] = dict()
-        lsv_dictionary["meta_info"]["abs_path"] = os.path.abspath(fp)
-        if expected_type == "deltapsi":
-            lsv_dictionary["meta_info"]["condition_1_name"] = condition_1_name
-            lsv_dictionary["meta_info"]["condition_2_name"] = condition_2_name
-        else:
-            lsv_dictionary["meta_info"]["sample_id"] = sample_id
-        return lsv_dictionary
+    # add the meta_info for the experiment
+    lsv_dictionary["meta_info"] = dict()
+    lsv_dictionary["meta_info"]["abs_path"] = os.path.abspath(fp)
+    if expected_type == "deltapsi":
+        lsv_dictionary["meta_info"]["condition_1_name"] = condition_1_name
+        lsv_dictionary["meta_info"]["condition_2_name"] = condition_2_name
+    else:
+        lsv_dictionary["meta_info"]["sample_id"] = sample_id
+    return lsv_dictionary
 
 
 def get_dpsi_data(line_split,
@@ -383,6 +386,7 @@ def get_dpsi_data(line_split,
 
     lsv_dictionary[LSV_ID]["Reference_Type"] = ref_type
     return lsv_dictionary
+
 
 def get_psi_data(line_split,
                  pre_voila_1_0_0,
