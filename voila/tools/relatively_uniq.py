@@ -67,7 +67,7 @@ class ThisisRelativelyUniq(Tool):
     def run(self, args):
         ex_pkl = "/Volumes/data/THelper/lisp/voila/dpsi/groups/thresh_20/" \
                  "KA_N_0vsKA_T0_72/KA_N_0_KA_T0_72.deltapsi_no_prior.pickle"
-        ex_lsv1 =  "/Volumes/data/THelper/lisp/voila/dpsi/groups/thresh_20/" \
+        ex_lsv1 = "/Volumes/data/THelper/lisp/voila/dpsi/groups/thresh_20/" \
                  "KA_N_0vsKA_T0_72/"
         ex_lsv1 = io_caleb.quick_import(ex_lsv1)
         all_lsv_ids = io_caleb.get_all_lsv_ids(ex_lsv1)
