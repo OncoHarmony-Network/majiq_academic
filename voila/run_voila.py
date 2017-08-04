@@ -6,6 +6,7 @@ import time
 
 import voila.constants as constants
 from voila.tools import Tools
+from voila.utils.exceptions import VoilaException
 from voila.utils.voila_log import voila_log
 from voila.view.conditional_table import ConditionalTable
 from voila.view.deltapsi import Deltapsi
@@ -99,9 +100,12 @@ def main():
     # set up logging
     log_filename = 'voila.log'
     if hasattr(args, 'logger') and args.logger:
+        print(args.logger)
         log_filename = os.path.join(args.logger, log_filename)
     elif hasattr(args, 'output') and args.output:
         log_filename = os.path.join(args.output, log_filename)
+    else:
+        log_filename = None
 
     log = voila_log(filename=log_filename, silent=args.silent, debug=args.debug)
     log.info('Command: {0}'.format(' '.join(sys.argv)))
@@ -119,14 +123,30 @@ def main():
         constants.TOOLS: Tools
     }
 
-    type_analysis[args.type_analysis](args)
+    try:
 
-    if hasattr(args, 'output'):
-        log.info("Voila! Created in: {0}.".format(args.output))
+        type_analysis[args.type_analysis](args)
 
-    # Add elapsed time
-    elapsed_str = secs2hms(time.time() - start_time)
-    log.info("Execution time: {0}.".format(elapsed_str))
+        if hasattr(args, 'output'):
+            log.info("Voila! Created in: {0}.".format(args.output))
+
+        # Add elapsed time
+        elapsed_str = secs2hms(time.time() - start_time)
+        log.info("Execution time: {0}.".format(elapsed_str))
+
+    except KeyboardInterrupt:
+        log.warning('Voila exiting')
+
+    except VoilaException as ve:
+        if args.debug:
+            log.exception(ve)
+        else:
+            log.error(ve)
+        exit(1)
+
+    except Exception as e:
+        log.exception(e)
+        exit(2)
 
 
 if __name__ == '__main__':
