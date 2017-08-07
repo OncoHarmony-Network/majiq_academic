@@ -114,6 +114,7 @@ class ThisisFindBinaryLSVs(Tool):
                                          cutoff_prob=0,
                                          pattern=args.pattern,
                                          keep_ir=consider_ir)
+        io_caleb.check_is_ignant(imported, args.prob_dpsi_thresh)
         if impute:
             blank_dict = io_caleb.impute_missing_lsvs(data=imported,
                                                       impute_with=0)

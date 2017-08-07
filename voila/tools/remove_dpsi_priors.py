@@ -1,3 +1,5 @@
+import pdb
+
 from voila.tools import Tool
 from voila.io_voila import Voila
 from voila.tools.utils import find_files
@@ -10,14 +12,12 @@ from voila.tools.utils.merge_dicts import merge_dicts
 from voila.tools.utils.percent_through_list import percent_through_list
 from voila.utils.voila_log import voila_log
 
-
 # Caleb Matthew Radens
 # radlinsky@gmail.com
 
 
 # Adapted from Anu's code, though..
 __author__ = 'cradens'
-
 
 LOG = voila_log()
 
@@ -87,6 +87,7 @@ def wrapper(directory, second_arg):
             unique_outpaths.add(outpath)
             pkl.dump(prior_rem, open(outpath, "wb"))
             LOG.info("Wrote results to file: %s" % outpath)
+        LOG.info("Processed %s out of %s comparisons" % (comparisons.index(comparison) + 1, len(comparisons)))
 
 
 def get_comparisons_from_runlines(runline_fp):
@@ -103,7 +104,7 @@ def get_comparisons_from_runlines(runline_fp):
                 line_split = line[line.find("--name"):].split(" ")
                 comp1 = line_split[1]
                 comp2 = line_split[2]
-                comparison = comp1+"_"+comp2
+                comparison = comp1 + "_" + comp2
                 comparisons.append(comparison)
     return comparisons
 
@@ -273,3 +274,186 @@ def get_file(file_name):
     pkl_file = pkl.load(open(file_name, 'rb'), encoding='bytes')
     print('done')
     return pkl_file
+
+
+def get_num_nonchanging(data,
+                        return_comparisons=False,
+                        use_binary_index_info=False,
+                        blank_info=None):
+    """
+    Given dictionary of LSV dictionaries return numpy arrays
+        indicating whether each junc for each comparison is confidently non-changing.
+        Each LSV ID in the returned dictionary is pointing at an array that
+        looks like this:
+
+                | comparison column is SORTED ...
+    Junction:   | Comp1   | Comp2     | ...
+            0   |   bool  |   bool    | ...
+            1   |   bool  |   bool    | ...
+            2   |   bool  |   bool    | ...
+            ... |   ...   |     ...   | ...
+    Arguments:
+        data: Quick Import structure
+        return_comparisons: Boolean. If True, also return a list
+            of the comparison names, in the same order as the columns
+            of the numpy array.
+        use_binary_index_info: None, "closer", or "further"
+            If the LSV dictionaries were returned by get_binary_LSVs(),
+            then they will have a "binary_indices" key that points at
+            the binary indices. Use this info to return only the boolean
+            value that corresponds to the closer or further junction
+            from the reference exon.
+        blanked_info: if data comes from blanked (imputed data), you need to provide that info
+
+    NOTES:
+        - only those LSV IDs that are shared by all LSV dictionaries
+        in Data are evaluated. LSV IDs that are unique to or missing from
+        any of the LSV Dictionaries are not returned by this function.
+        - columns are sorted by name!!
+
+
+    Returns the numpy array and a list of LSV_IDs
+    """
+    # cow because stupid pep rules
+    binary_index = "cow"
+    if use_binary_index_info:
+        if not use_binary_index_info == "closer" and not use_binary_index_info == "further":
+            raise ValueError("Use_binary_index_info needs to be 'closer' or 'further' if provided")
+        if use_binary_index_info == "closer":
+            binary_index = 0
+        elif use_binary_index_info == "further":
+            binary_index = 1
+        else:
+            raise RuntimeError("I don't know what to do here")
+    io_caleb.check_is_quick_import(data)
+    comparison_dict = dict()
+    for nup_comparison in io_caleb.get_comparisons(data):
+        this_lsv_dict = data[nup_comparison]
+        thisblank = blank_info[nup_comparison]
+        comparison_dict[nup_comparison] = list_nonchanging(lsv_dict=this_lsv_dict,
+                                                           as_np_array=True,
+                                                           blankeddata=thisblank)
+    if blank_info:
+        impute_removed_dpsi_priors(data, comparison_dict, blank_info)
+    union_of_lsv_ids = io_caleb.get_shared_lsv_ids(data)
+    lsv_dict = dict()
+    comparisons = io_caleb.get_comparisons(data, sort=True)
+    for lsv_id in list(union_of_lsv_ids):
+        list_of_ncs = list()
+        for nup_comparison in comparisons:
+            non_changings = comparison_dict[nup_comparison][lsv_id]
+            if use_binary_index_info:
+                binary_i = data[nup_comparison][lsv_id]["binary_indices"][binary_index]
+                non_changings = non_changings[binary_i]
+            list_of_ncs.append(non_changings)
+        lsv_dict[lsv_id] = np.array(list_of_ncs).T
+    if return_comparisons:
+        return lsv_dict, comparisons
+    return lsv_dict
+
+
+def list_nonchanging(lsv_dict,
+                     as_np_array=False,
+                     blankeddata=None):
+    """
+    Return dictionary of LSV IDs pointing at list of non_changing bools:
+    (this col
+    not in dict) list (or array):
+    Junction:   | Bool |
+            0   |   .  |
+            1   |   .  |
+            2   |   .  |
+            ... |   ...|
+    """
+    io_caleb.check_is_lsv_dict(lsv_dict)
+    prior_rem_path = get_tsvs_no_prior_pkl(lsv_dict)
+    prior_rem_data = load_prior_rem(prior_rem_path)
+    try:
+        # Extract dPSI from each LSV, using cutoff.
+        lsv_to_prob_dict = num_nonchanging(lsv_dict,
+                                           prior_rem_dat=prior_rem_data,
+                                           blankdata=blankeddata)
+    except:
+        pdb.set_trace()
+    return lsv_to_prob_dict
+
+
+def get_tsvs_no_prior_pkl(lsv_dict):
+    """
+    Given a lsv dict, return the prior-removed associated pickle file path.
+
+    :rtype: dict
+    :param lsv_dict: where majiq was run
+    :return: prior-removed {lsv id : dpsi - prior}
+    """
+    abs_path = io_caleb.get_abs_path(lsv_dict)
+    tsv_base = os.path.basename(abs_path)
+    poss_pkl_path = tsv_base.replace("deltapsi_deltapsi", "deltapsi_no_prior")
+    poss_pkl_path = poss_pkl_path.replace("tsv", "pickle")
+    tsv_dir = os.path.dirname(abs_path)
+    poss_pkl_path = os.path.join(tsv_dir, poss_pkl_path)
+    if not os.path.isfile(poss_pkl_path):
+        print(poss_pkl_path)
+        LOG.error("Couldn't find dpsi prior removed pickle file associated with %s" % abs_path)
+        exit(1)
+    return poss_pkl_path
+
+
+def num_nonchanging(lsv_dict,
+                    prior_rem_dat,
+                    blankdata=None):
+    """
+    Given a single lsv dict, return np array of bools regarding whether nor not each junc is confidently non-changing
+    :param lsv_dict: lsv dictionary
+    :param prior_rem_dat: dict of prior removed dpsi data
+    :return: {lsv id : np.array([True or False list]) }
+    """
+    all_lsvs = io_caleb.get_all_lsv_ids(lsv_dict)
+    non_changing = dict()
+    for lsvid in all_lsvs:
+        if blankdata:
+            if lsvid in blankdata:
+                continue
+        nummed = np.array(prior_rem_dat[lsvid])
+        non_changing[lsvid] = (abs(nummed) <= 0.05)
+    return non_changing
+
+
+def impute_removed_dpsi_priors(data,
+                               prior_rem_data,
+                               blankedinfo):
+    """
+    Impute the prior_rem_data so that LSVs that weren't quantifiable have False for all juncs
+    :param data: quick import
+    :param prior_rem_data: data from get_num_nonchanging() (not the return, rather something in the middle
+        of the function)
+    :param blankedinfo: returned from impute_missing_lsvs()
+    Does not return, rather:
+        Updates prior_rem_data
+    """
+    comparisons = io_caleb.get_comparisons(data)
+    comps_np = np.array(comparisons)
+    for comp in comparisons:
+        non_quantifiable_ids = blankedinfo[comp]
+        for nonquant in non_quantifiable_ids:
+            if nonquant in prior_rem_data[comp]:
+                raise RuntimeError("Uh oh, %s was in prior_rem_data but it shouldn't have been..."
+                                   " maybe this is the second time you're imputing the prior_rem dict?")
+            quant_comps = io_caleb.comparisons_quantifiable(comparisons, blankedinfo, nonquant)
+            quantifiable_comp = comps_np[quant_comps][0]  # first comparison that was able to quanify this lsv
+            # get the dpsi data from a comparison that was able to quanitfy it, turn into 0s
+            imputed_array = io_caleb.get_dpsis(data[quantifiable_comp][nonquant],
+                                               as_np_array=True) * 0
+            prior_rem_data[comp][nonquant] = imputed_array > 0 # this will all be false!
+
+
+def load_prior_rem(prior_rem_pkl_fp):
+    """
+
+    :param prior_rem_pkl_fp: path to pickle file
+    :return: return dict of prior removed dPSI data
+    """
+    LOG.info("Loading dpsi minus prior data from %s" % prior_rem_pkl_fp)
+    pkl_imp = pkl.load(open(prior_rem_pkl_fp, 'rb'), encoding='bytes')
+    LOG.info("Done")
+    return pkl_imp
