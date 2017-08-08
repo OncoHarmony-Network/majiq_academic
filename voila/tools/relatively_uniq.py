@@ -115,7 +115,9 @@ def relative_uniq_wrapper(directory,
                              prob_thresh,
                              dpsi_thresh,
                              the_lsv_data)
-    pass
+    for comp in results["stats"]:
+        LOG.info("Number of %s-discriminating LSVs with respect to %s" % (comp, results["stats"][comp]))
+        print("%s-discriminating LSVs with respect to %s" % (comp, results["comparison"][comp]))
 
 
 def stringent_uniq(notchanging,
@@ -150,6 +152,9 @@ def stringent_uniq(notchanging,
                                  probthresh)
         # if Trues are only in 1 comparison (column)
         if (ischanging.sum(axis=0) > 0).sum() == 1:
+            # TODO : funciton that handles when Trues are only in 1 column
+            if lsvid == 'ENSG00000249915:353845-354026:target':
+                pdb.set_trace()
             # Get the dPSI values corresponding to these significanrly changing junctions
             # dpsichanges = dpsidata[lsvid][ischanging]
             # TODO: add function argument specifiying whether only binary-like and/or reciprocal LSVs are considered
@@ -166,6 +171,9 @@ def stringent_uniq(notchanging,
             #  This array will be used to identify which comparisons are confidently not changing with respect to the
             # changing comparison
             not_changing_data_subset = not_changing_data_subset[:, nonchanging_col_iis]
+            # For now, I'm skipping the LSVs if *all* the nonchangers were unable to be called confidently nonchanging
+            if not_changing_data_subset.sum() == 0:
+                continue
             # Now select the columns that correspond to these indices in the dpsi array too
             dpsi_subset = dpsi_subset[:, nonchanging_col_iis]
             # number of non-changing rows/juncs per col/comparison
@@ -174,15 +182,33 @@ def stringent_uniq(notchanging,
             # if so, then those cols/comparisons are confidently non-changing with respect to the col/comparison that
             # IS changing! woot!
             non_ch_wrt_change = n_nonchange == not_changing_data_subset.shape[0]
-            # n_conf_nonch_comparisons = non_ch_wrt_change.sum()
+            # If the sum below is 0, that means each column had at least one False.
+            # Those False(s) are NOT confidently non-changing, meaning they could be changing. They're either
+            # (a) dPSI >=0.05 but below user's threshold (taking into account P(E(dPSI)) )
+            # or
+            # (b) dPSI < 0.05, but when the prior is removed, the dPSI goes to >=0.05
+            # If (a), then the junction could really be changing...
+            # if (b), well, ... borderline...
+            if non_ch_wrt_change.sum() == 0:
+                # culprits = dpsi_subset[np.logical_not(not_changing_data_subset)]
+                # Check if junctions are case (a) or (b)
+                lower_thresh_check = dpsi_subset < 0.05
+                # Now, go ahead and re-run some code (TODO: this is horribly inefficient...)
+                # number of non-changing (according to simple dPSI check) rows/juncs per col/comparison
+                n_nonchange = lower_thresh_check.sum(axis=0)
+                # for each col/comparison, are the # of n_nonchanging equal to the number of juncs changing?
+                # if so, then those cols/comps are possibly (not confidently) non-changing with respect to the
+                #  col/comparison that IS changing ...
+                non_ch_wrt_change = n_nonchange == lower_thresh_check.shape[0]
+                # Now check again .. this time, if all columns are False, then at least one junction
+                # in each comparison has a dPSI >= 0.05 ... case (a) ...
+                if non_ch_wrt_change.sum() == 0:
+                    continue
             # These are the col iis corresponding to the cols/comparisons that were called changing
             # There will be one True; the others will be False
-            try:
-                changing_col_iis = (ischanging.sum(axis=0) > 0)
-                changing_comparison = comparisons[quantifiable][changing_col_iis]
-                nonchanging_comparisons = comparisons[quantifiable][np.logical_not(changing_col_iis)][non_ch_wrt_change]
-            except:
-                pdb.set_trace()
+            changing_col_iis = (ischanging.sum(axis=0) > 0)
+            changing_comparison = comparisons[quantifiable][changing_col_iis]
+            nonchanging_comparisons = comparisons[quantifiable][np.logical_not(changing_col_iis)][non_ch_wrt_change]
             update_res_dict(results,
                             changing_comparison,
                             nonchanging_comparisons,
@@ -191,7 +217,10 @@ def stringent_uniq(notchanging,
             ### As of now, the not_changing_data_subset array's Trues are confidently non-changing. False could have
             ### border-line cases. If the dpsi array says TODO do I want to do this?
             ### abs(dpsi_subset) <= 0.05
-    pdb.set_trace()
+        else:
+            continue
+            # else Trues not just in 1 column
+            # TODO: something
     return results
 
 
@@ -208,7 +237,7 @@ def update_res_dict(results,
     changing_comp = list(changing_comp)[0]
     nonchanging_comps = list(nonchanging_comps)
     nonchanging_comps.sort()
-    nonchanging_comps = "_".join(nonchanging_comps)
+    nonchanging_comps = " + ".join(nonchanging_comps)
     if changing_comp not in results["comparison"]:
         results["comparison"][changing_comp] = dict()
         results["stats"][changing_comp] = dict()

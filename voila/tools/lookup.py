@@ -38,11 +38,10 @@ class ThisisLookup(Tool):
                             default=False,
                             action="store_true",
                             help=help_mes)
-        help_mes = 'Which comparisons or samples to lookup ID in? Sinlge space or comma separated please.'
+        help_mes = 'Which comparisons or samples to lookup ID in? Single space or comma separated please.'
         parser.add_argument('--names',
                             type=str,
                             help=help_mes)
-
         return parser
 
     def run(self, args):

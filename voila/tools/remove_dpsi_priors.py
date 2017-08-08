@@ -368,13 +368,10 @@ def list_nonchanging(lsv_dict,
     io_caleb.check_is_lsv_dict(lsv_dict)
     prior_rem_path = get_tsvs_no_prior_pkl(lsv_dict)
     prior_rem_data = load_prior_rem(prior_rem_path)
-    try:
-        # Extract dPSI from each LSV, using cutoff.
-        lsv_to_prob_dict = num_nonchanging(lsv_dict,
-                                           prior_rem_dat=prior_rem_data,
-                                           blankdata=blankeddata)
-    except:
-        pdb.set_trace()
+    # Extract dPSI from each LSV, using cutoff.
+    lsv_to_prob_dict = num_nonchanging(lsv_dict,
+                                       prior_rem_dat=prior_rem_data,
+                                       blankdata=blankeddata)
     return lsv_to_prob_dict
 
 
