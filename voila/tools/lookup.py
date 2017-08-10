@@ -40,7 +40,7 @@ class ThisisLookup(Tool):
                             help=help_mes)
         help_mes = 'Which comparisons or samples to lookup ID in? Single space or comma separated please.'
         parser.add_argument('--names',
-                            'comparisons',
+                            '--comparisons',
                             type=str,
                             help=help_mes)
         return parser
