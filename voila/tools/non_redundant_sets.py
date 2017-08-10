@@ -29,9 +29,11 @@ class ThisisNonRedundantSets(Tool):
         parser = self.get_parser()
         mutually_excl_grp = parser.add_mutually_exclusive_group(required=True)
         mutually_excl_grp.add_argument('--directory',
+                                       '-d',
                                        type=str,
                                        help='Directory where voila texts are. (searches recursively)')
         mutually_excl_grp.add_argument('--file_list',
+                                       '-fl',
                                        type=str,
                                        help='A file with a list of voila text file paths (one line each).')
         help_mes = "Output to save file to (include full path)"

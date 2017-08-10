@@ -39,11 +39,13 @@ class ThisisRelativelyUniq(Tool):
                                        help='A file with a list of voila text file paths (one line each).')
         help_mes = "dPSI threshold by which to call junctions as changing"
         parser.add_argument('--dpsi_thresh',
+                            '--dpsi',
                             type=float,
                             help=help_mes,
-                            default=0.1)
+                            default=0.2)
         help_mes = "Prob(dPSI) threshold by which to call junctions as changing"
         parser.add_argument('--prob_dpsi_thresh',
+                            '--prob',
                             type=float,
                             help=help_mes,
                             default=0.95)
@@ -66,22 +68,16 @@ class ThisisRelativelyUniq(Tool):
         return parser
 
     def run(self, args):
-        test = relative_uniq_wrapper(directory=args.directory if args.directory else args.file_list,
+        res = relative_uniq_wrapper(directory=args.directory if args.directory else args.file_list,
                                      dpsi_thresh=args.dpsi_thresh,
                                      prob_thresh=args.prob_dpsi_thresh,
                                      pattern=args.pattern)
-        #
-        # for lsv_id in all_lsv_ids:
-        #     #this_prob = num_probs[lsv_id]
-        #     #this_dpsi = num_dpsi[lsv_id]
-        #     # numpy bool of confidently non-changing
-        #     this_no_ch_bool = no_change[lsv_id]
-        #     # numpy bool of confidently changing
-        #     this_sig_ch_bool = over_thresh(num_dpsi=this_dpsi,
-        #                               num_prob=this_prob,
-        #                               dpsi_thresh=args.dpsi_thresh,
-        #                               prob_thresh=args.prob_dpsi_thresh)
-        #     break
+        if args.outfile:
+            with open(args.outfile, "w") as handle:
+                handle.write(res)
+        else:
+            print(res)
+
 
 
 def relative_uniq_wrapper(directory,
@@ -89,14 +85,12 @@ def relative_uniq_wrapper(directory,
                           prob_thresh,
                           pattern):
     """"""
+    LOG.info("Identifying relatively unique LSVs with E(dPSI) threshold %s, P(E(dPSI) threshold %s ..." % (dpsi_thresh,
+                                                                                                           prob_thresh))
     the_lsv_data = io_caleb.quick_import(directory,
                                          pattern=pattern)
     io_caleb.check_is_ignant(the_lsv_data, prob_thresh)
-    non_red_sets, blank_dict, num_dpsi = non_redundant_set(data=the_lsv_data,
-                                                           cutoff_dpsi=dpsi_thresh,
-                                                           cutoff_psi=1,  # don't use psi for this.
-                                                           save_blanked_structure=True,
-                                                           return_numdpsis_dat=True)
+    blank_dict = io_caleb.impute_missing_lsvs(data=the_lsv_data, in_place=True, warnings=False)
     num_non_changing = remove_dpsi_priors.get_num_nonchanging(the_lsv_data,
                                                               blank_info=blank_dict)
     num_dpsi = io_caleb.get_num_d_psi(the_lsv_data)
@@ -115,9 +109,17 @@ def relative_uniq_wrapper(directory,
                              prob_thresh,
                              dpsi_thresh,
                              the_lsv_data)
+    printable = ""
     for comp in results["stats"]:
-        LOG.info("Number of %s-discriminating LSVs with respect to %s" % (comp, results["stats"][comp]))
-        print("%s-discriminating LSVs with respect to %s" % (comp, results["comparison"][comp]))
+        printable += "Total number of thresh-passing LSVs in %s: %s\n" % (comp,
+                                                                 len(io_caleb.get_sig_lsv_ids(the_lsv_data[comp],
+                                                                                              cutoff_d_psi=dpsi_thresh,
+                                                                                              prob_d_psi=prob_thresh)))
+        printable += "Number of %s-discriminating LSVs with respect to %s\n" % (comp, results["stats"][comp])
+        printable += "%s-discriminating LSVs with respect to %s" % (comp, results["comparison"][comp])
+    for comp in results["stats"]:
+        LOG.info("%s stats: %s" % (comp, results["stats"][comp]))
+    return printable
 
 
 def stringent_uniq(notchanging,
@@ -153,14 +155,16 @@ def stringent_uniq(notchanging,
         # if Trues are only in 1 comparison (column)
         if (ischanging.sum(axis=0) > 0).sum() == 1:
             # TODO : funciton that handles when Trues are only in 1 column
-            if lsvid == 'ENSG00000249915:353845-354026:target':
-                pdb.set_trace()
             # Get the dPSI values corresponding to these significanrly changing junctions
             # dpsichanges = dpsidata[lsvid][ischanging]
             # TODO: add function argument specifiying whether only binary-like and/or reciprocal LSVs are considered
             ###
             # These are the row iis corresponding to the junctions that were called changing
             changing_row_iis = (ischanging.sum(axis=1) > 0)
+            # These are the col iis corresponding to the cols/comparisons that were called changing
+            # There will be one True; the others will be False
+            changing_col_iis = (ischanging.sum(axis=0) > 0)
+            changing_comparison = comparisons[quantifiable][changing_col_iis]
             # Get all the cols from the above rows in the notchanging array
             not_changing_data_subset = notchanging[lsvid][changing_row_iis, :]
             # Get all the cols from the above rows in the dpsi array
@@ -171,8 +175,12 @@ def stringent_uniq(notchanging,
             #  This array will be used to identify which comparisons are confidently not changing with respect to the
             # changing comparison
             not_changing_data_subset = not_changing_data_subset[:, nonchanging_col_iis]
-            # For now, I'm skipping the LSVs if *all* the nonchangers were unable to be called confidently nonchanging
+            # *all* the nonchangers were unable to be called confidently nonchanging
             if not_changing_data_subset.sum() == 0:
+                update_res_dict(results,
+                                changing_comparison,
+                                np.array(["None"]),
+                                lsvid)
                 continue
             # Now select the columns that correspond to these indices in the dpsi array too
             dpsi_subset = dpsi_subset[:, nonchanging_col_iis]
@@ -204,10 +212,6 @@ def stringent_uniq(notchanging,
                 # in each comparison has a dPSI >= 0.05 ... case (a) ...
                 if non_ch_wrt_change.sum() == 0:
                     continue
-            # These are the col iis corresponding to the cols/comparisons that were called changing
-            # There will be one True; the others will be False
-            changing_col_iis = (ischanging.sum(axis=0) > 0)
-            changing_comparison = comparisons[quantifiable][changing_col_iis]
             nonchanging_comparisons = comparisons[quantifiable][np.logical_not(changing_col_iis)][non_ch_wrt_change]
             update_res_dict(results,
                             changing_comparison,
@@ -423,7 +427,7 @@ def singly_unique(data,
             sig_subset_ids[c] = io_caleb.get_lsv_ids(sig_subset[c])
         all_sig = io_caleb.get_all_lsv_ids(sig_subset)
         comparisons_ii = [comp_names.index(x) for x in data.keys()]
-    thelsvs = all_num_dpsis_data.keys()
+    thelsvs = list(all_num_dpsis_data.keys())
     indeces_at_10_percent = percent_through_list(thelsvs, 0.1)
     LOG.info("Assigning %s LSVs to groups ... " % (len(thelsvs)))
     i = 0.0
@@ -614,7 +618,7 @@ def singly_unique(data,
     nonrednetworks["unique_nonredsets"] = dict()
     nonrednetworks["cococombos"] = {x: [] for x in cococombo_breaker.keys()}
     nonrednetworks["opposites"] = {x: [] for x in opposite_dict.keys()}
-    all_non_red_sets = non_red_sets['singles'].values()
+    all_non_red_sets = list(non_red_sets['singles'].values())
     all_non_red_sets.extend(non_red_sets['twos'].values())
     all_non_red_sets.extend(non_red_sets['three_plus'].values())
     all_non_red_lsvs = non_red_sets['singles_all_lsvs']

@@ -702,7 +702,7 @@ def comp_without_dup(comp_name):
 def subset_significant(data,
                        cutoff_dpsi=0.2,
                        cutoff_prob=0.95,
-                       keep_introns=False,
+                       keep_introns=True,
                        cutoff_sum=False,
                        intron_dpsi_thresh=0.05):
     """
