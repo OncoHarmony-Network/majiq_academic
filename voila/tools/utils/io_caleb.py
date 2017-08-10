@@ -83,7 +83,7 @@ def quick_import(input,
         if not isinstance(prefered_type, str) or prefered_type not in ["deltapsi", "psi"]:
             raise ValueError("prefered_type must be either 'deltapsi' or 'psi' if specified at all, not '%s'" % prefered_type)
     if not os.path.isdir(input):
-        LOG.info("Look slike the user provided a file...")
+        LOG.info("Looks like the user provided a file...")
         if name_looks_like_voila_txt_file(input, pattern=pattern):
             LOG.info("It could be a voila tab file ...")
             basename = os.path.basename(input)
@@ -759,11 +759,13 @@ def get_base_names(file):
 
 def name_looks_like_voila_txt_file(the_file, pattern="*deltapsi_deltapsi.tsv"):
     if not os.path.exists(the_file):
-        LOG.error("Supposed deltapsi txt file doesn't exist.")
-        exit(1)
+        raise ValueError("Supposed deltapsi txt file doesn't exist.")
     newpat = pattern.replace("*", ".*")
     if re.search(newpat, the_file):
-        return True
+        if the_file[:-4].endswith("deltapsi_deltapsi") or the_file[:-4].endswith("psi_psi"):
+            return True
+        else:
+            return False
     else:
         return False
 
