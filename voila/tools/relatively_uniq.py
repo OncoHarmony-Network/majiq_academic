@@ -69,15 +69,14 @@ class ThisisRelativelyUniq(Tool):
 
     def run(self, args):
         res = relative_uniq_wrapper(directory=args.directory if args.directory else args.file_list,
-                                     dpsi_thresh=args.dpsi_thresh,
-                                     prob_thresh=args.prob_dpsi_thresh,
-                                     pattern=args.pattern)
+                                    dpsi_thresh=args.dpsi_thresh,
+                                    prob_thresh=args.prob_dpsi_thresh,
+                                    pattern=args.pattern)
         if args.outfile:
             with open(args.outfile, "w") as handle:
                 handle.write(res)
         else:
             print(res)
-
 
 
 def relative_uniq_wrapper(directory,
@@ -112,9 +111,10 @@ def relative_uniq_wrapper(directory,
     printable = ""
     for comp in results["stats"]:
         printable += "Total number of thresh-passing LSVs in %s: %s\n" % (comp,
-                                                                 len(io_caleb.get_sig_lsv_ids(the_lsv_data[comp],
-                                                                                              cutoff_d_psi=dpsi_thresh,
-                                                                                              prob_d_psi=prob_thresh)))
+                                                                          len(io_caleb.get_sig_lsv_ids(
+                                                                              the_lsv_data[comp],
+                                                                              cutoff_d_psi=dpsi_thresh,
+                                                                              prob_d_psi=prob_thresh)))
         printable += "Number of %s-discriminating LSVs with respect to %s\n" % (comp, results["stats"][comp])
         printable += "%s-discriminating LSVs with respect to %s" % (comp, results["comparison"][comp])
     for comp in results["stats"]:

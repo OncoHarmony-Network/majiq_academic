@@ -104,7 +104,6 @@ def lookup_everywhere(dictionary_lookup,
             dont_remove_dup : When True, if comparisons_lookup has *duplicate# in it, then keep that
     """
     io_caleb.check_is_quick_import(dictionary_lookup)
-    pdb.set_trace()
     found_dicts = dict()
     found_data = False
     for lsv_dict_name in dictionary_lookup.keys():

@@ -279,7 +279,9 @@ def get_file(file_name):
 def get_num_nonchanging(data,
                         return_comparisons=False,
                         use_binary_index_info=False,
-                        blank_info=None):
+                        blank_info=None,
+                        impute_with=False,
+                        as_bools=True):
     """
     Given dictionary of LSV dictionaries return numpy arrays
         indicating whether each junc for each comparison is confidently non-changing.
@@ -304,15 +306,19 @@ def get_num_nonchanging(data,
             value that corresponds to the closer or further junction
             from the reference exon.
         blanked_info: if data comes from blanked (imputed data), you need to provide that info
+        impute_with: what should we impute with? 9 by default
+        as_bools: if True, the results will be True or False
+            if False, the results will be the dPSI values with the priors removed
 
     NOTES:
         - only those LSV IDs that are shared by all LSV dictionaries
         in Data are evaluated. LSV IDs that are unique to or missing from
-        any of the LSV Dictionaries are not returned by this function.
+        any of the LSV Dictionaries are not returned by this function, unless blank info is provided.
+         in this case, the prior removed dpsi are imputed with impute_with
         - columns are sorted by name!!
 
 
-    Returns the numpy array and a list of LSV_IDs
+    Returns the dictionary of LSV IDs pointing at numpy arrays
     """
     # cow because stupid pep rules
     binary_index = "cow"
@@ -332,9 +338,13 @@ def get_num_nonchanging(data,
         thisblank = blank_info[nup_comparison]
         comparison_dict[nup_comparison] = list_nonchanging(lsv_dict=this_lsv_dict,
                                                            as_np_array=True,
-                                                           blankeddata=thisblank)
+                                                           blankeddata=thisblank,
+                                                           as_bools=as_bools)
     if blank_info:
-        impute_removed_dpsi_priors(data, comparison_dict, blank_info)
+        impute_removed_dpsi_priors(data,
+                                   comparison_dict,
+                                   blank_info,
+                                   impute_with=impute_with)
     union_of_lsv_ids = io_caleb.get_shared_lsv_ids(data)
     lsv_dict = dict()
     comparisons = io_caleb.get_comparisons(data, sort=True)
@@ -354,7 +364,8 @@ def get_num_nonchanging(data,
 
 def list_nonchanging(lsv_dict,
                      as_np_array=False,
-                     blankeddata=None):
+                     blankeddata=None,
+                     as_bools=True):
     """
     Return dictionary of LSV IDs pointing at list of non_changing bools:
     (this col
@@ -371,7 +382,8 @@ def list_nonchanging(lsv_dict,
     # Extract dPSI from each LSV, using cutoff.
     lsv_to_prob_dict = num_nonchanging(lsv_dict,
                                        prior_rem_dat=prior_rem_data,
-                                       blankdata=blankeddata)
+                                       blankdata=blankeddata,
+                                       asbools=as_bools)
     return lsv_to_prob_dict
 
 
@@ -391,18 +403,19 @@ def get_tsvs_no_prior_pkl(lsv_dict):
     poss_pkl_path = os.path.join(tsv_dir, poss_pkl_path)
     if not os.path.isfile(poss_pkl_path):
         print(poss_pkl_path)
-        LOG.error("Couldn't find dpsi prior removed pickle file associated with %s" % abs_path)
-        exit(1)
+        raise RuntimeError("Couldn't find dpsi prior removed pickle file associated with %s" % abs_path)
     return poss_pkl_path
 
 
 def num_nonchanging(lsv_dict,
                     prior_rem_dat,
-                    blankdata=None):
+                    blankdata=None,
+                    asbools=True):
     """
     Given a single lsv dict, return np array of bools regarding whether nor not each junc is confidently non-changing
     :param lsv_dict: lsv dictionary
     :param prior_rem_dat: dict of prior removed dpsi data
+    :param asbools: True or False, should the data be returned as booleans?
     :return: {lsv id : np.array([True or False list]) }
     """
     all_lsvs = io_caleb.get_all_lsv_ids(lsv_dict)
@@ -412,19 +425,25 @@ def num_nonchanging(lsv_dict,
             if lsvid in blankdata:
                 continue
         nummed = np.array(prior_rem_dat[lsvid])
-        non_changing[lsvid] = (abs(nummed) <= 0.05)
+        if asbools:
+            non_changing[lsvid] = (abs(nummed) <= 0.05)
+        else:
+            non_changing[lsvid] = nummed
     return non_changing
 
 
 def impute_removed_dpsi_priors(data,
                                prior_rem_data,
-                               blankedinfo):
+                               blankedinfo,
+                               impute_with=False):
     """
     Impute the prior_rem_data so that LSVs that weren't quantifiable have False for all juncs
     :param data: quick import
     :param prior_rem_data: data from get_num_nonchanging() (not the return, rather something in the middle
         of the function)
     :param blankedinfo: returned from impute_missing_lsvs()
+    :param impute_with: what to impute with? Default:False
+        Can be: True, False, a float, or an int
     Does not return, rather:
         Updates prior_rem_data
     """
@@ -441,7 +460,16 @@ def impute_removed_dpsi_priors(data,
             # get the dpsi data from a comparison that was able to quanitfy it, turn into 0s
             imputed_array = io_caleb.get_dpsis(data[quantifiable_comp][nonquant],
                                                as_np_array=True) * 0
-            prior_rem_data[comp][nonquant] = imputed_array > 0 # this will all be false!
+            if isinstance(impute_with, bool):
+                if not impute_with:
+                    prior_rem_data[comp][nonquant] = imputed_array > 0  # this will all be False!
+                else:
+                    prior_rem_data[comp][nonquant] = imputed_array == 0  # this will all be True!
+            elif isinstance(impute_with, int) or isinstance(impute_with, float):
+                prior_rem_data[comp][nonquant] = ((imputed_array * 0) +1) *impute_with
+            else:
+                raise RuntimeError("%s isn't a valid impute_with argument."
+                                   " It must be a bool, int, or float, not %s" % (impute_with, type(impute_with)))
 
 
 def load_prior_rem(prior_rem_pkl_fp):
