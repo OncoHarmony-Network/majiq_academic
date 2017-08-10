@@ -12,35 +12,36 @@ __author__ = 'cradens'
 
 
 class ThisisLookup(Tool):
-    help = 'Given a directory and Gene Name, or Gene ID, or LSV ID, prettily-print all LSVs'
+    help = 'Directory with voila tab files and prior removed pickle files, generate a matrix where each row is a' \
+           ' lsv\'s junction and each column is a comparison. All the columns in a given matrix will come from ' \
+           'a voila run with the same trheshold. So, if you run voila deltapsi --threshold 0.1 and --threshold 0.2,' \
+           ' two separate'
 
     def arguments(self):
         parser = self.get_parser()
         parser.add_argument('directory',
                             type=str,
-                            help='Directory where voila texts are.')
-        parser.add_argument('lookup_val',
-                            type=str,
-                            help='Gene Name, Gene ID, or LSV ID to lookup')
+                            help='Directory or file list where voila texts are listed.')
+        help_mes = "dPSI threshold by which to call junctions as changing"
+        parser.add_argument('--dpsi_thresh',
+                            '--dpsi',
+                            type=float,
+                            help=help_mes,
+                            default=0.2)
+        help_mes = "Prob(dPSI) threshold by which to call junctions as changing"
+        parser.add_argument('--prob_dpsi_thresh',
+                            '--prob',
+                            type=float,
+                            help=help_mes,
+                            default=0.95)
         help_mes = 'Optional pattern matching to identify the voila text files'
         parser.add_argument('-p',
                             '--pattern',
                             default="*tsv",
                             type=str,
                             help=help_mes)
-        help_mes = 'Flag: use this if you just want to lookup result from one (random) text file'
-        parser.add_argument('--just_one',
-                            action='store_true',
-                            default=False,
-                            help=help_mes)
-        help_mes = 'Flag: Don\'t just print essential stats, print all the columns from LSV file.'
-        parser.add_argument('--dont_abbreviate',
-                            default=False,
-                            action="store_true",
-                            help=help_mes)
         help_mes = 'Which comparisons or samples to lookup ID in? Single space or comma separated please.'
         parser.add_argument('--names',
-                            'comparisons',
                             type=str,
                             help=help_mes)
         return parser
@@ -58,26 +59,12 @@ class ThisisLookup(Tool):
             to_lookup = None
             dont_remove_dups=True
         imported = io_caleb.quick_import(input=args.directory,
-                                         cutoff_d_psi=0,
-                                         cutoff_prob=0,
+                                         cutoff_d_psi=args.dpsi_thresh,
+                                         cutoff_prob=args.prob_dpsi_thresh,
                                          pattern=args.pattern,
                                          keep_ir=True,
-                                         just_one=args.just_one,
-                                         stop_at=args.lookup_val,
                                          comparisons=to_lookup)
-        to_lookup = list(imported.keys())
-
-        # coding for readability here...
-        # default is True..
-        abbreviated_bool = True
-        if args.dont_abbreviate:
-            abbreviated_bool = False
-        lookup_everywhere(dictionary_lookup=imported,
-                          name=args.lookup_val,
-                          just_one=args.just_one,
-                          abbreviated=abbreviated_bool,
-                          comparisons_lookup=to_lookup,
-                          dont_rem_dup=dont_remove_dups)
+        pdb.set_trace()
 
 
 def lookup_everywhere(dictionary_lookup,
@@ -104,7 +91,6 @@ def lookup_everywhere(dictionary_lookup,
             dont_remove_dups : When True, if comparisons_lookup has *duplicate# in it, then keep that
     """
     io_caleb.check_is_quick_import(dictionary_lookup)
-    pdb.set_trace()
     found_dicts = dict()
     found_data = False
     for lsv_dict_name in dictionary_lookup.keys():
