@@ -101,7 +101,7 @@ def lookup_everywhere(dictionary_lookup,
             print_bool: should results be returned or printed?
             abbreviated: only print/return the useful data?
             comparisons_lookup: if provided, only look in these comparisons
-            dont_remove_dups : When True, if comparisons_lookup has *duplicate# in it, then keep that
+            dont_remove_dup : When True, if comparisons_lookup has *duplicate# in it, then keep that
     """
     io_caleb.check_is_quick_import(dictionary_lookup)
     pdb.set_trace()
@@ -110,7 +110,8 @@ def lookup_everywhere(dictionary_lookup,
     for lsv_dict_name in dictionary_lookup.keys():
         if comparisons_lookup:
             if not dont_rem_dup:
-                if io_caleb.comp_without_dup(lsv_dict_name) not in comparisons_lookup:
+                if io_caleb.comp_without_dup(lsv_dict_name) not in \
+                        [io_caleb.comp_without_dup(x) for x in comparisons_lookup]:
                     continue
         found_data = lookup(dictionary_lookup[lsv_dict_name],
                             name=name,
