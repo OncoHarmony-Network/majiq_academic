@@ -75,7 +75,7 @@ def get_voila_files(directory, pattern, get_base_names=False):
         found = voila_txt_finder(root, pattern=pattern)
         if found:
             for found_file in found:
-                if found.endswith("html"):
+                if found_file.endswith("html"):
                     continue
                 if get_base_names:
                     base_names.append(io_caleb.get_base_names(found_file))
