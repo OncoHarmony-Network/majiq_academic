@@ -81,22 +81,23 @@ def quick_import(input,
     """
     if prefered_type:
         if not isinstance(prefered_type, str) or prefered_type not in ["deltapsi", "psi"]:
-            LOG.error("prefered_type must be either 'deltapsi' or 'psi' if specified at all, not '%s'" % prefered_type)
-            exit(1)
-    if not (os.path.isdir(input)):
+            raise ValueError("prefered_type must be either 'deltapsi' or 'psi' if specified at all, not '%s'" % prefered_type)
+    if not os.path.isdir(input):
+        LOG.info("Look slike the user provided a file...")
         if name_looks_like_voila_txt_file(input, pattern=pattern):
+            LOG.info("It could be a voila tab file ...")
             basename = os.path.basename(input)
             # Get the file name before .psi_psi or before .deltapsi_deltapsi
             basenames = [get_base_names(basename)]
             voila_txt_files = [input]
         elif os.path.isfile(input):
+            LOG.info("It could be a file with file paths to voila tab files ...")
             is_valid_list, voila_txt_files = is_likely_list_of_txtfiles(input)
             if is_valid_list:
                 # Get the file names before .psi_psi or before .deltapsi_deltapsi
                 basenames = [get_base_names(os.path.basename(x)) for x in voila_txt_files]
             else:
-                LOG.error("%s wasn't  valid list of voila txt files.")
-                exit(1)
+                raise ValueError("%s wasn't  valid list of voila txt files.")
         else:
             raise ValueError(input + " not found.")
     else:
@@ -542,11 +543,9 @@ def is_likely_list_of_txtfiles(the_file):
     """
     poss_files = list()
     if not os.path.isfile(the_file):
-        LOG.error("Sorry, this doesn't appear to be a valid filepath:\n%s" % the_file)
-        exit(1)
+        raise ValueError("Sorry, this doesn't appear to be a valid filepath:\n%s" % the_file)
     if not have_permission(the_file):
-        LOG.error("Sorry, you don't have permission to open:\n%s" % the_file)
-        exit(1)
+        raise ValueError("Sorry, you don't have permission to open:\n%s" % the_file)
     if is_voila_txt_file(the_file):
         return False, poss_files
     if check_if_file_binary(the_file):
