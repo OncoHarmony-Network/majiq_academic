@@ -1039,6 +1039,28 @@ def check_is_lsv(lsv, Bool=False):
     return True
 
 
+def quick_import_subset(data,
+                        lsv_ids,
+                        in_place=False):
+    """
+    Assuming the data is imputed or shares all lsv ids
+    :param data: quick import (maybe imputed)
+    :param lsv_ids:
+    :param in_place: if True, overwerite data
+    :return:
+    """
+    comparisons = get_comparisons(data, sort=True)
+    res = dict()
+    for comp in comparisons:
+        this_subset = lsv_dict_subset(data[comp], lsv_ids)
+        if in_place:
+            data[comp] = this_subset
+        else:
+            res[comp] = this_subset
+    if not in_place:
+        return res
+
+
 def lsv_dict_subset(dictionary,
                     keys,
                     save_LSV_data=True,
@@ -1206,7 +1228,7 @@ def get_sig_lsv_ids(data,
             one big set to return
 
     Return:
-        Set
+        set or dict of sets
     """
     if check_is_quick_import(data, the_bool=True):
         comparisons = data.keys()
@@ -1324,6 +1346,22 @@ def get_psis(lsv, cond_1=False, cond_2=False, as_dict=False, as_np_array=False):
     if as_dict:
         return {psi_key_1.split(" ")[0]: cond_1_psi, psi_key_2.split(" ")[0]: cond_2_psi}
     return [cond_1_psi, cond_2_psi]
+
+
+def lsvid_to_genename(lsvdict, lsvid):
+    """
+    Given an LSV dictionary and an lsv id, return the gene name
+    :param lsvdict:
+    :param lsvid:
+    :return: str
+    """
+    check_is_lsv_dict(lsvdict)
+    return get_gene_name(lsvdict[lsvid])
+
+
+def get_gene_name(lsv):
+    check_is_lsv(lsv)
+    return lsv["Gene Name"]
 
 
 def get_strand(lsv):

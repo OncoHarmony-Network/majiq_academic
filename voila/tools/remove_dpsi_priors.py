@@ -458,8 +458,9 @@ def impute_removed_dpsi_priors(data,
             quant_comps = io_caleb.comparisons_quantifiable(comparisons, blankedinfo, nonquant)
             quantifiable_comp = comps_np[quant_comps][0]  # first comparison that was able to quanify this lsv
             # get the dpsi data from a comparison that was able to quanitfy it, turn into 0s
+
             imputed_array = io_caleb.get_dpsis(data[quantifiable_comp][nonquant],
-                                               as_np_array=True) * 0
+                                                   as_np_array=True) * 0
             if isinstance(impute_with, bool):
                 if not impute_with:
                     prior_rem_data[comp][nonquant] = imputed_array > 0  # this will all be False!

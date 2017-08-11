@@ -1,17 +1,20 @@
 import pdb
 
 from voila.tools import Tool
+from voila.utils.voila_log import voila_log
 from voila.tools.utils import io_caleb
 from voila.tools import remove_dpsi_priors
 import pandas as pd
 import numpy as np
-
+from voila.tools.utils.percent_through_list import percent_through_list
 
 # Caleb Matthew Radens
 # radlinsky@gmail.com
 
 
 __author__ = 'cradens'
+
+LOG = voila_log()
 
 
 class ThisisLookup(Tool):
@@ -24,22 +27,36 @@ class ThisisLookup(Tool):
         parser.add_argument('directory',
                             type=str,
                             help='Directory or file list where voila texts are listed.')
+        help_mes = "Output filepath and prefix to save matrices to.)"
+        parser.add_argument('outpath',
+                            type=str,
+                            help=help_mes)
+        help_mes = 'Optional: generate a single csv file for all the data?'
+        parser.add_argument('--as_one',
+                            action='store_true',
+                            default=False,
+                            help=help_mes)
         help_mes = 'Optional pattern matching to identify the voila text files'
         parser.add_argument('-p',
                             '--pattern',
                             default="*tsv",
                             type=str,
                             help=help_mes)
-        help_mes = "Output to save file to (include full path)"
-        parser.add_argument('-o',
-                            '--outfile',
-                            type=str,
-                            help=help_mes)
-        help_mes = "Flag: don't consider IR LSVs"
-        parser.add_argument('--no_ir',
+        help_mes = "Flag: DO consider IR LSVs (default is to skip)"
+        parser.add_argument('--also_ir',
                             action='store_true',
                             help=help_mes,
                             default=False)
+        help_mes = "dPSI threshold by which to call junctions as changing"
+        parser.add_argument('--dpsi_thresh',
+                            type=float,
+                            help=help_mes,
+                            default=0.2)
+        help_mes = "Prob(dPSI) threshold by which to call junctions as changing"
+        parser.add_argument('--prob_dpsi_thresh',
+                            type=float,
+                            help=help_mes,
+                            default=0.95)
         help_mes = 'Which comparisons or samples to lookup ID in? Single space or comma separated please.'
         parser.add_argument('--names',
                             '--comparisons',
@@ -55,26 +72,70 @@ class ThisisLookup(Tool):
                 to_lookup = args.names.split(",")
             else:
                 to_lookup = [args.names]
-            dont_remove_dups = False
         else:
             to_lookup = None
-            dont_remove_dups=True
         imported = io_caleb.quick_import(input=args.directory,
                                          pattern=args.pattern,
-                                         keep_ir=True,
+                                         keep_ir=args.also_ir,
                                          comparisons=to_lookup)
+        sig_ids = io_caleb.get_sig_lsv_ids(data=imported,
+                                           cutoff_d_psi=args.dpsi_thresh,
+                                           prob_d_psi=args.prob_dpsi_thresh,
+                                           collapse=True)
         blanked_dict = io_caleb.impute_missing_lsvs(imported,
                                                     impute_with=9)  # imputing with 9s b/c I'll replace this with NA
-        flat_info = flatten(imported, blank_data=blanked_dict)
+        io_caleb.quick_import_subset(imported,
+                                     sig_ids,
+                                     in_place=True)
+        # Remove the blanked info for lsvids that were not significantly changing
+        for comp in blanked_dict:
+            blanked_dict[comp] = set(sig_ids) & blanked_dict[comp]
+        flattened = flatten(imported,
+                            blank_data=blanked_dict,
+                            lsv_ids=sig_ids,
+                            return_pandas=not args.as_one)
+        if args.as_one:
+            dpsi_mat, prb_mat, priormat, row_names = flattened
 
+            all_comparisons = io_caleb.get_comparisons(imported)
+            col_order = ["Gene Name", "LSV ID", "Junction"]
+            final_frame = pd.DataFrame({keyn: dpsi_mat[keyn] for keyn in col_order})
+            final_frame = final_frame[col_order]
+            for comp in all_comparisons:
+                # first 3 cols
+                subeaaders = ["E(dPSI)", "P(E(dPSI))", "Prior Removed"]
+                header_to_add = [comp + ", " + subheader for subheader in subeaaders]
+                col_order.append(header_to_add)
+                # data_to_add.extend([dpsi_mat[comp], prb_mat[comp], priormat[comp]])
+                thisframe = pd.DataFrame([dpsi_mat[comp], prb_mat[comp], priormat[comp]]).T
+                thisframe.columns = header_to_add
+                final_frame = pd.concat([final_frame, thisframe], axis=1)
+            expanded_header = final_frame.columns.str.split(', ', expand=True).values
+            final_frame.columns = pd.MultiIndex.from_tuples([('', x[0]) if pd.isnull(x[1]) else x for x in expanded_header])
+            final_frame = final_frame.replace(9, np.NaN)
+            final_frame["LSV_JUNC"] = row_names
+            final_frame = final_frame.set_index("LSV_JUNC")
+            final_frame.to_csv(args.outpath)
+        else:
+            dpsi_mat, prb_mat, priormat = flattened
+            outp = args.outpath + "dpsi.csv"
+            dpsi_mat.to_csv(outp)
+            outp = args.outpath + "prob.csv"
+            prb_mat.to_csv(outp)
+            outp = args.outpath + "priorem.csv"
+            priormat.to_csv(outp)
 
 
 def flatten(imputed_data,
-            blank_data):
+            blank_data,
+            lsv_ids,
+            return_pandas=False):
     """
     Return a pandas dataframe where each row is a junction and each column is a comparison.
     :param imputed_data:
     :param blank_data: returned from impute_missing_lsvs
+    :param lsv_ids:
+    :param return_pandas: If True, make a dataframe for each data, Flase, return dicts
     :return: pnadas dataframe
     """
     all_lsvs = io_caleb.get_all_lsv_ids(imputed_data)
@@ -84,21 +145,59 @@ def flatten(imputed_data,
                                                              blank_info=blank_data,
                                                              impute_with=9,
                                                              as_bools=False)
-    all_dpsi_dat = dict()
-    all_prob_dat = dict()
-    all_prior_dat = dict()
+    all_dpsi_dat = {comp: list() for comp in all_comparisons}
+    all_prob_dat = {comp: list() for comp in all_comparisons}
+    all_prior_dat = {comp: list() for comp in all_comparisons}
+    all_row_names = list()
+    lsv_id_col = {"LSV ID": list()}
+    junc_col = {"Junction": list()}
+    gene_col = {"Gene Name": list()}
+    indeces_at_10_percent = percent_through_list(all_lsvs, 0.1)
+    i = 0.0
+    LOG.info("Flattening %s LSVs ..." % len(all_lsvs))
     for lsvid in all_lsvs:
+        if i > 0.0 and i in indeces_at_10_percent:
+            LOG.info(str(indeces_at_10_percent[i]) + "% of LSVs flattened...")
+        i += 1.0
+        gene_name = io_caleb.lsvid_to_genename(imputed_data[all_comparisons[0]], lsvid)
         these_juncs = io_caleb.get_juncs(imputed_data[all_comparisons[0]][lsvid])
         row_names = [("%s_%s" % (lsvid, jj)) for jj in these_juncs]
+        [lsv_id_col["LSV ID"].append(lsvid) for jj in these_juncs]
+        [junc_col["Junction"].append(jj) for jj in these_juncs]
+        [gene_col["Gene Name"].append(gene_name) for jj in these_juncs]
+        all_row_names.extend(row_names)
         flat_dpsi = flatten_dpsi(imputed_data, lsvid)
         flat_prob = flatten_prob(imputed_data, lsvid)
         flat_prio = flatten_priors(num_nonchanging, lsvid, all_comparisons)
-        all_dpsi_dat.update(flat_dpsi)
-        all_prob_dat.update(flat_prob)
-        all_prior_dat.update(flat_prio)
+        [all_dpsi_dat[comp].extend(flat_dpsi[comp]) for comp in all_comparisons]
+        [all_prob_dat[comp].extend(flat_prob[comp]) for comp in all_comparisons]
+        [all_prior_dat[comp].extend(flat_prio[comp]) for comp in all_comparisons]
+    all_dpsi_dat.update(lsv_id_col)
+    all_dpsi_dat.update(junc_col)
+    all_dpsi_dat.update(gene_col)
+    all_prob_dat.update(lsv_id_col)
+    all_prob_dat.update(junc_col)
+    all_prob_dat.update(gene_col)
+    all_prior_dat.update(lsv_id_col)
+    all_prior_dat.update(junc_col)
+    all_prior_dat.update(gene_col)
+    if return_pandas:
+        # Make sure order of columns is good
+        col_order = ["Gene Name", "LSV ID", "Junction"]
+        col_order.extend(all_comparisons)
+        dpsi_mat = pd.DataFrame(data=all_dpsi_dat, index=all_row_names)
+        dpsi_mat = dpsi_mat.replace(9, np.NaN)
+        dpsi_mat = dpsi_mat[col_order]
+        prb_mat = pd.DataFrame(data=all_prob_dat, index=all_row_names)
+        prb_mat = prb_mat.replace(9, np.NaN)
+        prb_mat = prb_mat[col_order]
+        priormat = pd.DataFrame(data=all_prior_dat, index=all_row_names)
+        priormat = priormat.replace(9, np.NaN)
+        priormat = priormat[col_order]
+        return dpsi_mat, prb_mat, priormat
+    else:
+        return all_dpsi_dat, all_prob_dat, all_prior_dat, all_row_names
 
-    res = pd.DataFrame(data=row_data, index=row_names)
-    res = res.replace(9, np.NaN)
 
 def flatten_dpsi(imputed_dat, lsvid):
     """
@@ -109,7 +208,7 @@ def flatten_dpsi(imputed_dat, lsvid):
     comparisons = io_caleb.get_comparisons(imputed_dat, sort=True)
     dpsis = [io_caleb.get_dpsis(imputed_dat[comp][lsvid]) for comp in comparisons]
     row_data = {comp: list() for comp in comparisons}
-    for dpsi_list,comp in zip(dpsis,comparisons):
+    for dpsi_list, comp in zip(dpsis, comparisons):
         for dpsi in dpsi_list:
             row_data[comp].append(dpsi)
     return row_data
@@ -125,7 +224,7 @@ def flatten_prob(imputed_dat, lsvid):
     comparisons = io_caleb.get_comparisons(imputed_dat, sort=True)
     probs = [io_caleb.get_probs(imputed_dat[comp][lsvid]) for comp in comparisons]
     row_data = {comp: list() for comp in comparisons}
-    for dpsi_list,comp in zip(probs,comparisons):
+    for dpsi_list, comp in zip(probs, comparisons):
         for dpsi in dpsi_list:
             row_data[comp].append(dpsi)
     return row_data
@@ -142,6 +241,5 @@ def flatten_priors(nonchanging_np, lsvid, comparisons):
     # As of now, this array is as follows:
     # rows = junctions, cols = comparisons
     this_nc = nonchanging_np[lsvid]
-    as_list = this_nc.tolist()
-    res = {comp}
-    pdb.set_trace()
+    as_list = this_nc.T.tolist()
+    return {comp: data for comp, data in zip(comparisons, as_list)}
