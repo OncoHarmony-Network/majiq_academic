@@ -127,11 +127,13 @@ class ThisisLookup(Tool):
             prb_cols = final_frame.columns.get_level_values("second") == prob_header
             final_frame.iloc[:, prb_cols] = final_frame.iloc[:, prb_cols] * 100
             # Make prior removed column just say Yes or be blank
+            pdb.set_trace()
             prior_cols = final_frame.columns.get_level_values("second") == "Confidently non-changing?"
-            is_conf_noch = (final_frame.iloc[:, prior_cols] < 0.05) & (pd.notnull(final_frame.iloc[:, prior_cols]))
+            is_conf_noch = (abs(final_frame.iloc[:, prior_cols]) < 0.05) & (pd.notnull(final_frame.iloc[:, prior_cols]))
             final_frame.iloc[:, prior_cols] = is_conf_noch
             final_frame.iloc[:, prior_cols] = final_frame.iloc[:, prior_cols].replace(False, np.NaN)
             final_frame.iloc[:, prior_cols] = final_frame.iloc[:, prior_cols].replace(1.0, "Yes")
+
             final_frame.to_csv(args.outpath)
         else:
             dpsi_mat, prb_mat, priormat = flattened
