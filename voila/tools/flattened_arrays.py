@@ -79,6 +79,7 @@ class ThisisLookup(Tool):
                                          pattern=args.pattern,
                                          keep_ir=args.also_ir,
                                          comparisons=to_lookup)
+        io_caleb.check_is_ignant(imported, args.prob_dpsi_thresh)
         sig_ids = io_caleb.get_sig_lsv_ids(data=imported,
                                            cutoff_d_psi=args.dpsi_thresh,
                                            prob_d_psi=args.prob_dpsi_thresh,
