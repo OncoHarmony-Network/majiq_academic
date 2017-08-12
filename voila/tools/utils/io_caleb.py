@@ -910,7 +910,7 @@ def check_is_ignant(data, users_prob):
     lsv_dictlist = [data[comp] for comp in comps]
     all_threshes = [get_prob_threshold(thed) for thed in lsv_dictlist]
     for comp, tsv_thresh in zip(comps, all_threshes):
-        if users_prob < tsv_thresh and users_prob != 0:
+        if users_prob != tsv_thresh and users_prob != 0:
             raise ValueError("WARNING !!! You are using an ill-advised threshold (%s) "
                              " ... %s was run with voila thresh of %s!" % (users_prob,
                                                                            comp,

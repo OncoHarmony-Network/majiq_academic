@@ -88,7 +88,7 @@ def relative_uniq_wrapper(directory,
                                                                                                            prob_thresh))
     the_lsv_data = io_caleb.quick_import(directory,
                                          pattern=pattern)
-    io_caleb.check_is_ignant(the_lsv_data, prob_thresh)
+    io_caleb.check_is_ignant(the_lsv_data, dpsi_thresh)
     blank_dict = io_caleb.impute_missing_lsvs(data=the_lsv_data, in_place=True, warnings=False)
     num_non_changing = remove_dpsi_priors.get_num_nonchanging(the_lsv_data,
                                                               blank_info=blank_dict)
