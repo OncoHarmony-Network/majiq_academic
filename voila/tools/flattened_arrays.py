@@ -18,9 +18,10 @@ LOG = voila_log()
 
 
 class ThisisLookup(Tool):
-    help = 'Directory with voila tab files and prior removed pickle files, generate matrix files where each row is a' \
+    help = 'Given voila tab files and prior removed pickle files, generate matrix files where each row is a' \
            ' lsv\'s junction and each column is a comparison. Matrix files generated will be: E(dpsi), P(E(dpsi)) for' \
-           ' each --threshold voila was run at, and prior-removed E(dpsi). If a column is missing data, it will say NA.'
+           ' each --threshold voila was run at, and prior-removed E(dpsi). If a column is missing data, ' \
+           'it will be blank.'
 
     def arguments(self):
         parser = self.get_parser()
@@ -31,7 +32,7 @@ class ThisisLookup(Tool):
         parser.add_argument('outpath',
                             type=str,
                             help=help_mes)
-        help_mes = 'Optional: generate a single csv file for all the data?'
+        help_mes = 'Optional: generate a single csv file for all the data? This makes a halfway decent Excel-ready file'
         parser.add_argument('--as_one',
                             action='store_true',
                             default=False,
@@ -101,9 +102,11 @@ class ThisisLookup(Tool):
             col_order = ["Gene Name", "LSV ID", "Junction"]
             final_frame = pd.DataFrame({keyn: dpsi_mat[keyn] for keyn in col_order})
             final_frame = final_frame[col_order]
+            example_lsv = imported[comp][list(sig_ids)[0]]
+            prob_header = io_caleb.get_name_of_prob_key(example_lsv)
             for comp in all_comparisons:
                 # first 3 cols
-                subeaaders = ["E(dPSI)", "P(E(dPSI))", "Prior Removed"]
+                subeaaders = ["dPSI", prob_header, "Confidently non-changing?"]
                 header_to_add = [comp + ", " + subheader for subheader in subeaaders]
                 col_order.append(header_to_add)
                 # data_to_add.extend([dpsi_mat[comp], prb_mat[comp], priormat[comp]])
@@ -115,6 +118,19 @@ class ThisisLookup(Tool):
             final_frame = final_frame.replace(9, np.NaN)
             final_frame["LSV_JUNC"] = row_names
             final_frame = final_frame.set_index("LSV_JUNC")
+            # First row called first, second row called second...
+            final_frame.columns.names = ["first", "second"]
+            # Multiple dPSI and P(dPSI) by 100
+            dpsi_cols = final_frame.columns.get_level_values("second") == "dPSI"
+            final_frame.iloc[:, dpsi_cols] = final_frame.iloc[:, dpsi_cols] * 100
+            prb_cols = final_frame.columns.get_level_values("second") == prob_header
+            final_frame.iloc[:, prb_cols] = final_frame.iloc[:, prb_cols] * 100
+            # Make prior removed column just say Yes or be blank
+            prior_cols = final_frame.columns.get_level_values("second") == "Confidently non-changing?"
+            is_conf_noch = (final_frame.iloc[:, prior_cols] < 0.05) & (pd.notnull(final_frame.iloc[:, prior_cols]))
+            final_frame.iloc[:, prior_cols] = is_conf_noch
+            final_frame.iloc[:, prior_cols] = final_frame.iloc[:, prior_cols].replace(False, np.NaN)
+            final_frame.iloc[:, prior_cols] = final_frame.iloc[:, prior_cols].replace(1.0, "Yes")
             final_frame.to_csv(args.outpath)
         else:
             dpsi_mat, prb_mat, priormat = flattened
