@@ -1360,7 +1360,7 @@ def lsvid_to_genename(lsvdict, lsvid):
     check_is_quick_import(lsvdict)
     pdb.set_trace()
     for comp in lsvdict:
-        if lsvid in lsvid[comp]:
+        if lsvid in lsvdict[comp]:
             return get_gene_name(lsvdict[comp][lsvid])
     raise ValueError("%s not found.")
 
