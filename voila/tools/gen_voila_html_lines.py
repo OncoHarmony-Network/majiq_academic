@@ -136,8 +136,8 @@ def write_voila_bash(data,
     elif not overwrite and os.path.exists(out_file):
         raise RuntimeError("Filename already exists and you don't want to overwrite...")
     voila_outdir = os.path.join(outdir, gene_list_join + "_htmls/")
-    deltapsi_voila_loc_abs = os.path.join(outdir, deltapsi_voila_loc)
-    splicegraph_loc_abs = os.path.join(outdir, splicegraph_loc, "splicegraph.hdf5")
+    deltapsi_voila_loc_abs = os.path.join(indir, deltapsi_voila_loc)
+    splicegraph_loc_abs = os.path.join(indir, splicegraph_loc, "splicegraph.hdf5")
     run_lines = []
     with open(out_file, "w") as handle:
         # Don't need to do this anymore..
