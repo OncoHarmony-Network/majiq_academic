@@ -1348,7 +1348,7 @@ def get_psis(lsv, cond_1=False, cond_2=False, as_dict=False, as_np_array=False):
     return [cond_1_psi, cond_2_psi]
 
 
-def lsvid_to_genename(lsvdict, lsvid):
+def genename_from_id(lsvdict, lsvid):
     """
     Given an LSV dictionaryor quick import  and an lsv id, return the gene name
     :param lsvdict:
@@ -1360,9 +1360,10 @@ def lsvid_to_genename(lsvdict, lsvid):
     check_is_quick_import(lsvdict)
     pdb.set_trace()
     for comp in lsvdict:
-        if lsvid in lsvdict[comp]:
-            return get_gene_name(lsvdict[comp][lsvid])
-    raise ValueError("%s not found.")
+        for thislsvid in lsvdict[comp]:
+            if lsvid in thislsvid:
+                return get_gene_name(lsvdict[comp][thislsvid])
+    raise ValueError("%s not found." % lsvid)
 
 
 def get_gene_name(lsv):

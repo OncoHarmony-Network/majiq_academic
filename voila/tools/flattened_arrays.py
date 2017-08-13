@@ -177,7 +177,7 @@ def flatten(imputed_data,
         if i > 0.0 and i in indeces_at_10_percent:
             LOG.info(str(indeces_at_10_percent[i]) + "% of LSVs flattened...")
         i += 1.0
-        gene_name = io_caleb.lsvid_to_genename(imputed_data[all_comparisons[0]], lsvid)
+        gene_name = io_caleb.genename_from_id(imputed_data[all_comparisons[0]], lsvid)
         these_juncs = io_caleb.get_juncs(imputed_data[all_comparisons[0]][lsvid])
         row_names = [("%s_%s" % (lsvid, jj)) for jj in these_juncs]
         [lsv_id_col["LSV ID"].append(lsvid) for jj in these_juncs]
