@@ -126,6 +126,8 @@ def write_voila_bash(data,
         gene_list = gene
     else:
         raise ValueError("gene must be a string or list of strings")
+    for thisgene in gene_list:
+        io_caleb.get_gene_name()
     gene_list_join = "_".join(gene_list)
     filename = "html_gen_" + gene_list_join
     if not os.path.exists(outdir):

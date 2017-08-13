@@ -1350,13 +1350,18 @@ def get_psis(lsv, cond_1=False, cond_2=False, as_dict=False, as_np_array=False):
 
 def lsvid_to_genename(lsvdict, lsvid):
     """
-    Given an LSV dictionary and an lsv id, return the gene name
+    Given an LSV dictionaryor quick import  and an lsv id, return the gene name
     :param lsvdict:
     :param lsvid:
     :return: str
     """
-    check_is_lsv_dict(lsvdict)
-    return get_gene_name(lsvdict[lsvid])
+    if check_is_lsv_dict(lsvdict, da_bool=True):
+        return get_gene_name(lsvdict[lsvid])
+    check_is_quick_import(lsvdict)
+    for comp in lsvdict:
+        if lsvid in lsvid[comp]:
+            return get_gene_name(lsvdict[comp][lsvid])
+    raise ValueError("%s not found.")
 
 
 def get_gene_name(lsv):
