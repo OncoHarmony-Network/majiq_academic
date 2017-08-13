@@ -12,7 +12,6 @@ class Test(Tool):
         return self.get_parser()
 
     def run(self, args):
-        raise VoilaException("OH NO")
         loader = unittest.TestLoader()
         start_dir = os.path.join(os.path.dirname(os.path.realpath(__file__)), 'unittests')
         suite = loader.discover(start_dir, '*')

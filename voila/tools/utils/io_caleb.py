@@ -1974,6 +1974,16 @@ def get_prob_threshold(lsv_dict):
     return lsv_dict["meta_info"]["prob_thresh"]
 
 
+def gen_comparison_name(LSV_dict, sep="_"):
+    """
+    Given LSV dictionary, return condition_1_name[sep]condition_2_name
+    """
+    check_is_lsv_dict(LSV_dict)
+    if not isinstance(sep, str):
+        raise ValueError("sep needs to be a string, not a: " + str(type(sep)))
+    return LSV_dict["condition_1_name"] + sep + LSV_dict["condition_2_name"]
+
+
 def get_abs_path(lsv_dict):
     """
     :param lsv_dict: lsv dict..
@@ -2252,3 +2262,83 @@ def import_dpsi_pandas(tsv_file, columns=None):
                                names=header,
                                usecols=columns)
     return pa_dataframe
+
+
+def write_voila_bash(data,
+                     gene,
+                     outdir,
+                     deltapsi_voila_loc="majiq/dpsi/",
+                     splicegraph_loc="build/",
+                     comparisons=False,
+                     overwrite=True,
+                     comp_joiner="vs"):
+    """
+    :param data: Quick import
+    :param gene: Gene name (common ONLY)
+        string or list of strings
+    :param outdir: Path to write file to
+    :param deltapsi_voila_loc: location of deltapsi voila file relative to outdir
+    :param splicegraph_loc: location of splicegraph file relative to outdir
+    :param comparisons: Boolean. If provided as string or
+        list of strings only generate voila lines for these comparisons
+    :param overwrite: Boolean. Overwrite outfile if it already exists?
+    :param comp_joiner: What are the comparison names joined by in directory?
+    :return: String that is written to file..
+    """
+    check_is_quick_import(data)
+    from voila.tools.lookup import lookup
+    if comparisons:
+        if isinstance(comparisons, str):
+            comparison_list = [comparisons]
+        elif isinstance(comparisons, list) and isinstance(comparisons[0], str):
+            comparison_list = comparisons
+        else:
+            raise ValueError("Comparison must be a string or list of strings")
+    else:
+        comparison_list = data.keys()
+    if isinstance(gene, str):
+        gene_list = [gene]
+    elif isinstance(gene, list) and isinstance(gene[0], str):
+        gene_list = gene
+    else:
+        raise ValueError("gene must be a string or list of strings")
+    gene_list_join = "_".join(gene_list)
+    filename = "html_gen_" + gene_list_join
+    if not os.path.exists(outdir):
+        raise ValueError("%s path doesn't exist.." % (outdir))
+    out_file = os.path.join(outdir, filename + ".sh")
+    if overwrite and os.path.exists(out_file):
+        LOG.info("Warning! Over-writing existing file...")
+    elif not overwrite and os.path.exists(out_file):
+        raise RuntimeError("Filename already exists and you don't want to overwrite...")
+    voila_outdir = os.path.join(outdir, gene_list_join + "_htmls/")
+    deltapsi_voila_loc_abs = os.path.join(outdir, deltapsi_voila_loc)
+    splicegraph_loc_abs = os.path.join(outdir, splicegraph_loc, "splicegraph.hdf5")
+    run_lines = []
+    with open(out_file, "w") as handle:
+        handle.write('source /opt/venv/majiq_hdf5/bin/activate')
+        found_something = False
+        for comp in comparison_list:
+            if found_something:
+                break
+            for gene in gene_list:
+                result = lookup(data[comp], gene, not_found_error=False, printable=True)
+                if result != "gene_not_found":
+                    found_something = True
+                    break
+        if not found_something:
+            raise RuntimeError("None of your genes found in the data ...")
+        for comp in comparison_list:
+            cname = gen_comparison_name(data[comp], comp_joiner)
+            runline = 'voila deltapsi '
+            this_deltapsi_voila_loc_abs = os.path.join(deltapsi_voila_loc_abs, cname, comp + ".deltapsi.voila")
+            if not os.path.exists(this_deltapsi_voila_loc_abs):
+                raise RuntimeError("Couldn't find %s deltapsi voila file..." % (this_deltapsi_voila_loc_abs))
+            runline += this_deltapsi_voila_loc_abs
+            runline += " --show-all --no-tsv --gene-names %s --splice-graph " % (" ".join(gene_list))
+            runline += splicegraph_loc_abs
+            voila_outfile = os.path.join(voila_outdir, comp)
+            runline += " -o " + voila_outfile
+            handle.writelines(runline)
+            run_lines.append(runline)
+    return run_lines
