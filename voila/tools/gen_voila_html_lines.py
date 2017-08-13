@@ -147,7 +147,7 @@ def write_voila_bash(data,
         # Don't need to do this anymore..
         #handle.write('source /opt/venv/majiq_hdf5/bin/activate')
         good_to_go = False
-        bad_comp = list()
+        good_comps = list()
         for lsv_dict_name in data.keys():
             if comparisons:
                 if io_caleb.comp_without_dup(lsv_dict_name) not in \
@@ -159,19 +159,18 @@ def write_voila_bash(data,
                                 not_found_error=False)
             if found_data != "gene_not_found" and found_data != "lsv_id_not_found":
                 good_to_go = True
+                good_comps.append(lsv_dict_name)
             else:
                 LOG.info("%s not found in %s" % (gene, lsv_dict_name))
-                bad_comp.append(lsv_dict_name)
         if not good_to_go:
             raise RuntimeError("None of your genes found in the data ...")
-        for comp in comparison_list:
-            if comp in bad_comp:
-                # No point generating these lines because the genes aren't here..
-                continue
+        for comp in good_comps:
             cname = io_caleb.gen_comparison_name(data[comp], comp_joiner)
             runline = 'voila deltapsi '
             pdb.set_trace()
-            this_deltapsi_voila_loc_abs = os.path.join(deltapsi_voila_loc_abs, cname, comp + ".deltapsi.voila")
+            this_deltapsi_voila_loc_abs = os.path.join(deltapsi_voila_loc_abs,
+                                                       cname,
+                                                       io_caleb.comp_without_dup(comp) + ".deltapsi.voila")
             if not os.path.exists(this_deltapsi_voila_loc_abs):
                 raise RuntimeError("Couldn't find %s deltapsi voila file..." % (this_deltapsi_voila_loc_abs))
             runline += this_deltapsi_voila_loc_abs
