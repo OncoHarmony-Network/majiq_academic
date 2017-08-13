@@ -186,11 +186,11 @@ def lookup(lsv_dictionary,
         for lsvid in all_ids:
             if lsvid == "meta_info":
                 continue
-            if lsv_dictionary[lsvid]["Gene Name"] == name:
+            if lsv_dictionary[lsvid]["Gene Name"].lower() == name.lower():
                 matched_ids.append(lsvid)
                 continue
             if ensembl_id:
-                if lsv_dictionary[lsvid]["Gene ID"] == name:
+                if lsv_dictionary[lsvid]["Gene ID"].lower() == name.lower():
                     matched_ids.append(lsvid)
 
         if len(matched_ids) == 0:
