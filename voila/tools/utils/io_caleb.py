@@ -1981,7 +1981,7 @@ def gen_comparison_name(LSV_dict, sep="_"):
     check_is_lsv_dict(LSV_dict)
     if not isinstance(sep, str):
         raise ValueError("sep needs to be a string, not a: " + str(type(sep)))
-    return LSV_dict["condition_1_name"] + sep + LSV_dict["condition_2_name"]
+    return get_cond_1_name(LSV_dict) + sep + get_cond_1_name(LSV_dict)
 
 
 def get_abs_path(lsv_dict):

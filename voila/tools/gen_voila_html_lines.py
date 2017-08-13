@@ -164,8 +164,7 @@ def write_voila_bash(data,
             if comp in bad_comp:
                 # No point generating these lines because the genes aren't here..
                 continue
-            #cname = io_caleb.gen_comparison_name(data[comp], comp_joiner)
-            cname = comp
+            cname = io_caleb.gen_comparison_name(data[comp], comp_joiner)
             runline = 'voila deltapsi '
             pdb.set_trace()
             this_deltapsi_voila_loc_abs = os.path.join(deltapsi_voila_loc_abs, cname, comp + ".deltapsi.voila")
