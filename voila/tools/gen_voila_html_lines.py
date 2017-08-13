@@ -135,7 +135,6 @@ def write_voila_bash(data,
         LOG.info("Warning! Over-writing existing file...")
     elif not overwrite and os.path.exists(out_file):
         raise RuntimeError("Filename already exists and you don't want to overwrite...")
-    pdb.set_trace()
     voila_outdir = os.path.join(outdir, gene_list_join + "_htmls/")
     deltapsi_voila_loc_abs = os.path.join(outdir, deltapsi_voila_loc)
     splicegraph_loc_abs = os.path.join(outdir, splicegraph_loc, "splicegraph.hdf5")
@@ -168,6 +167,7 @@ def write_voila_bash(data,
             #cname = io_caleb.gen_comparison_name(data[comp], comp_joiner)
             cname = comp
             runline = 'voila deltapsi '
+            pdb.set_trace()
             this_deltapsi_voila_loc_abs = os.path.join(deltapsi_voila_loc_abs, cname, comp + ".deltapsi.voila")
             if not os.path.exists(this_deltapsi_voila_loc_abs):
                 raise RuntimeError("Couldn't find %s deltapsi voila file..." % (this_deltapsi_voila_loc_abs))
