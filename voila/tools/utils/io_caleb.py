@@ -1358,6 +1358,7 @@ def lsvid_to_genename(lsvdict, lsvid):
     if check_is_lsv_dict(lsvdict, da_bool=True):
         return get_gene_name(lsvdict[lsvid])
     check_is_quick_import(lsvdict)
+    pdb.set_trace()
     for comp in lsvdict:
         if lsvid in lsvid[comp]:
             return get_gene_name(lsvdict[comp][lsvid])
