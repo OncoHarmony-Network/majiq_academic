@@ -22,7 +22,7 @@ class ThisisLookup(Tool):
         parser = self.get_parser()
         parser.add_argument('indir',
                             type=str,
-                            help='Directory where voila data are.')
+                            help='Directory where majiq was run.')
         parser.add_argument('gene',
                             type=str,
                             help='Gene Name or Gene IDs to lookup. Maybe be more than 1 separated by commas'
@@ -139,17 +139,21 @@ def write_voila_bash(data,
     splicegraph_loc_abs = os.path.join(outdir, splicegraph_loc, "splicegraph.hdf5")
     run_lines = []
     with open(out_file, "w") as handle:
-        handle.write('source /opt/venv/majiq_hdf5/bin/activate')
-        found_something = False
-        for comp in comparison_list:
-            if found_something:
-                break
-            for gene in gene_list:
-                result = lookup(data[comp], gene, not_found_error=False, printable=True)
-                if result != "gene_not_found":
-                    found_something = True
-                    break
-        if not found_something:
+        # Don't need to do this anymore..
+        #handle.write('source /opt/venv/majiq_hdf5/bin/activate')
+        good_to_go = False
+        for lsv_dict_name in data.keys():
+            if comparisons:
+                if io_caleb.comp_without_dup(lsv_dict_name) not in \
+                        [io_caleb.comp_without_dup(x) for x in comparison_list]:
+                    continue
+            found_data = lookup(data[lsv_dict_name],
+                                name=gene,
+                                printable=True,
+                                not_found_error=False)
+            if found_data != "gene_not_found" and found_data != "lsv_id_not_found":
+                good_to_go = True
+        if not good_to_go:
             raise RuntimeError("None of your genes found in the data ...")
         for comp in comparison_list:
             cname = io_caleb.gen_comparison_name(data[comp], comp_joiner)
