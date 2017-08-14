@@ -117,7 +117,9 @@ def get_binary_lsvs(data,
         method: 'sum_to_95' or 'count' ... see find_binary_lsv_ids and find_binary_lsvs_95
     """
     io_voila_caleb.check_is_quick_import(data)
+
     print("Getting num_d_psi data ...")
+
     num_d_psi_data = get_num_d_psi(data)
     if cutoff_psi < 1:
         print("Getting num_psi data ...")

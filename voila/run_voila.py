@@ -100,7 +100,6 @@ def main():
     # set up logging
     log_filename = 'voila.log'
     if hasattr(args, 'logger') and args.logger:
-        print(args.logger)
         log_filename = os.path.join(args.logger, log_filename)
     elif hasattr(args, 'output') and args.output:
         log_filename = os.path.join(args.output, log_filename)
