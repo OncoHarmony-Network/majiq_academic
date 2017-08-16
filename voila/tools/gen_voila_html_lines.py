@@ -16,7 +16,7 @@ LOG = voila_log()
 
 class ThisisLookup(Tool):
     help = 'Given appropriate directories and a Gene Name or ID, write bash script to generate' \
-           ' voila htmls.'
+           ' voila htmls. Automatically generates htmls for each voila threshold you ran.'
 
     def arguments(self):
         parser = self.get_parser()
@@ -31,8 +31,7 @@ class ThisisLookup(Tool):
                             type=str,
                             help='Directory to write bash script to.')
         help_mes = 'Optional pattern matching to identify the voila text files'
-        parser.add_argument('-p',
-                            '--pattern',
+        parser.add_argument('--pattern',
                             default="*tsv",
                             type=str,
                             help=help_mes)
@@ -148,6 +147,7 @@ def write_voila_bash(data,
         #handle.write('source /opt/venv/majiq_hdf5/bin/activate')
         good_to_go = False
         good_comps = list()
+        good_p_threshs = list()
         for lsv_dict_name in data.keys():
             if comparisons:
                 if io_caleb.comp_without_dup(lsv_dict_name) not in \
@@ -160,11 +160,12 @@ def write_voila_bash(data,
             if found_data != "gene_not_found" and found_data != "lsv_id_not_found":
                 good_to_go = True
                 good_comps.append(lsv_dict_name)
+                good_p_threshs = io_caleb.get_prob_threshold(data[lsv_dict_name])
             else:
                 LOG.info("%s not found in %s" % (gene, lsv_dict_name))
         if not good_to_go:
             raise RuntimeError("None of your genes found in the data ...")
-        for comp in good_comps:
+        for comp, prob in zip(good_comps, good_p_threshs):
             cname = io_caleb.gen_comparison_name(data[comp], comp_joiner)
             runline = 'voila deltapsi '
             pdb.set_trace()
@@ -176,8 +177,10 @@ def write_voila_bash(data,
             runline += this_deltapsi_voila_loc_abs
             runline += " --show-all --no-tsv --gene-names %s --splice-graph " % (" ".join(gene_list))
             runline += splicegraph_loc_abs
-            voila_outfile = os.path.join(voila_outdir, comp)
-            runline += " -o " + voila_outfile
+            runline += " --threshold %s" % prob
+            voila_outfile = os.path.join(voila_outdir, io_caleb.comp_without_dup(comp))
+            prob = str(int(float(prob)*100.0))
+            runline += " -o " + voila_outfile + "_prob%s" % prob
             handle.writelines(runline)
             run_lines.append(runline)
     return run_lines, out_file

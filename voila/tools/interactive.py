@@ -41,6 +41,11 @@ class ThisisLookup(Tool):
         parser.add_argument('--names',
                             type=str,
                             help=help_mes)
+        help_mes = "Flag: don't import IR LSVs"
+        parser.add_argument('--no_ir',
+                            action='store_true',
+                            help=help_mes,
+                            default=True)
         return parser
 
     def run(self, args):
@@ -59,6 +64,7 @@ class ThisisLookup(Tool):
                                          cutoff_d_psi=args.dpsi_thresh,
                                          cutoff_prob=args.prob_dpsi_thresh,
                                          pattern=args.pattern,
-                                         keep_ir=True,
+                                         keep_ir=args.no_ir,
                                          comparisons=to_lookup)
+        io_caleb.check_is_ignant(imported, args.dpsi_thresh)
         pdb.set_trace()

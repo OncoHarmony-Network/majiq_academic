@@ -1358,7 +1358,6 @@ def genename_from_id(lsvdict, lsvid):
     if check_is_lsv_dict(lsvdict, da_bool=True):
         return get_gene_name(lsvdict[lsvid])
     check_is_quick_import(lsvdict)
-    pdb.set_trace()
     for comp in lsvdict:
         for thislsvid in lsvdict[comp]:
             if lsvid in thislsvid:
@@ -1988,7 +1987,7 @@ def gen_comparison_name(LSV_dict, sep="_"):
     check_is_lsv_dict(LSV_dict)
     if not isinstance(sep, str):
         raise ValueError("sep needs to be a string, not a: " + str(type(sep)))
-    return get_cond_1_name(LSV_dict) + sep + get_cond_1_name(LSV_dict)
+    return get_cond_1_name(LSV_dict) + sep + get_cond_2_name(LSV_dict)
 
 
 def get_abs_path(lsv_dict):
