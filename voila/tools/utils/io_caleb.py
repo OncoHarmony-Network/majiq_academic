@@ -35,7 +35,8 @@ def quick_import(input,
                  just_one=False,
                  stop_at=False,
                  comparisons=None,
-                 prefered_type=None):
+                 prefered_type=None,
+                 just_file_paths=False):
     """
     Given a directory with '*_quantify_deltapsi' files, import all dPSI
         text files and return dictionary as follows:
@@ -69,6 +70,7 @@ def quick_import(input,
         stop_at: if provided, stop reading voila file when you reach this LSV ID
         comparisons: if provided, only import tsv files with the provided list of comparison names
         prefered_type: If provided, only import "deltapsi" or only "psi" files
+        just_file_paths: if True, just return the file paths for found voila txt files
 
     Assumptions:
         Directory contains files that end in ".deltapsi_quantify_deltapsi.txt"
@@ -155,11 +157,13 @@ def quick_import(input,
 
     LOG.info("Found " + str(len(voila_txt_files)) +
              " dPSI text files ...")
+
     imported_files = dict()
     funky_ids = list()
 
     if just_one:
         voila_txt_files = [voila_txt_files[0]]
+    valid_fps = list()
     for f, comparison_name in zip(voila_txt_files, basenames):
         if prefered_type:
             expected = prefered_type
@@ -169,11 +173,17 @@ def quick_import(input,
                                          cutoff_d_psi,
                                          cutoff_prob,
                                          stop_at=stop_at,
-                                         expected_type=expected)
+                                         expected_type=expected,
+                                         just_checking_validity=just_file_paths)
         # imported_file will be False if import_dpsi thinks it is not a valid tsv...
         if not imported_file:
             continue
-        imported_files[comparison_name] = imported_file
+        if just_file_paths:
+            valid_fps.append(f)
+        else:
+            imported_files[comparison_name] = imported_file
+    if just_file_paths:
+        return valid_fps
     if cutoff_d_psi != 0 or cutoff_prob != 0 or not keep_ir:
         imported_files = subset_significant(imported_files,
                                             cutoff_dpsi=cutoff_d_psi,
@@ -325,7 +335,8 @@ def import_voila_txt(fp,
                     break
             # Add the line's data to the dict
             lsv_dictionary.update(the_data)
-
+            if just_checking_validity:
+                return True
     # add the meta_info for the experiment
     lsv_dictionary["meta_info"] = dict()
     lsv_dictionary["meta_info"]["abs_path"] = os.path.abspath(fp)

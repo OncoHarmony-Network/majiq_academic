@@ -2,26 +2,36 @@ import pdb
 
 from voila.tools import Tool
 from voila.tools.utils import io_caleb
+from voila.utils.voila_log import voila_log
 
 
 # Caleb Matthew Radens
 # radlinsky@gmail.com
 
-
 __author__ = 'cradens'
 
 
+LOG = voila_log()
+
+
 class ThisisLookup(Tool):
-    help = 'Given a directory and Gene Name, or Gene ID, or LSV ID, prettily-print all LSVs'
+    help = 'Given a directory and Gene Name, or Gene ID, or LSV ID, prettily-print all LSVs. Alternatively, ' \
+           'just return all the voila text files that match your pattern and/or comparisons.'
 
     def arguments(self):
         parser = self.get_parser()
         parser.add_argument('directory',
                             type=str,
                             help='Directory where voila texts are.')
-        parser.add_argument('lookup_val',
+        mutually_excl_grp = parser.add_mutually_exclusive_group(required=True)
+        mutually_excl_grp.add_argument('--lookup_val',
                             type=str,
                             help='Gene Name, Gene ID, or LSV ID to lookup')
+        help_mes = 'Flag: only return file paths for the voila txt files found..'
+        mutually_excl_grp.add_argument('--just_file_paths',
+                            action='store_true',
+                            default=False,
+                            help=help_mes)
         help_mes = 'Optional pattern matching to identify the voila text files'
         parser.add_argument('-p',
                             '--pattern',
@@ -43,6 +53,7 @@ class ThisisLookup(Tool):
                             '--comparisons',
                             type=str,
                             help=help_mes)
+
         return parser
 
     def run(self, args):
@@ -64,7 +75,11 @@ class ThisisLookup(Tool):
                                          keep_ir=True,
                                          just_one=args.just_one,
                                          stop_at=args.lookup_val,
-                                         comparisons=to_lookup)
+                                         comparisons=to_lookup,
+                                         just_file_paths=args.just_file_paths)
+        if args.just_file_paths:
+            print("\n".join(imported))
+            return
         to_lookup = list(imported.keys())
 
         # coding for readability here...
