@@ -3,11 +3,8 @@ import pdb
 from voila.tools import Tool
 from voila.tools.utils import io_caleb
 from voila.utils.voila_log import voila_log
-try:
-    import pylab as pyl
-    from matplotlib_venn import venn2, venn3
-except:
-    print("Can't import pyplot or matplotlib right now...")
+
+
 
 # Created by Matthew Gazzara, adapted by Caleb
 # Caleb Matthew Radens
@@ -76,6 +73,7 @@ def rgb_to_hex(rgb):
 
 
 def get_events(voila_all_path, thresh=0.2, prob_thresh=0, write_names=False, fname='ChangingLSVs', only_genes=False):
+
     events = []
     LOG.info(voila_all_path)
     fd = open(voila_all_path, 'r')
@@ -188,7 +186,8 @@ def make_venn(voila_list, set_names, thresh=0.2, prob_thresh=0, no_nums=False, w
         remove_non_shared: Remove from consideration LSVs that were not quantified in all dPSI files given to make the
         comparison more fair
     """
-
+    import pylab as pyl
+    from matplotlib_venn import venn2, venn3
     if not len(voila_list) == len(set_names):
         raise RuntimeError('number of voila paths input should equal number of set names...')
     if len(voila_list) > 3: raise RuntimeError \
