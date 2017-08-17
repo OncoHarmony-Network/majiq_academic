@@ -64,7 +64,7 @@ class ThisisLsvVenns(Tool):
             raise RuntimeError("%s is not a valid list of set names. Please provide 2 or 3 sep by commas, no spaces."
                                % set_names)
         if args.write_shared:
-            out_dir = os.path.dirname(args.outfile)
+            out_dir = os.path.dirname(args.outfile) + os.path.basename(args.outfile)[0:-4] + "_"
         else:
             out_dir = "./"
         the_plot = make_venn(the_res,
@@ -219,7 +219,7 @@ def make_venn(voila_list,
                     dic[ID][expt]['psi1'] = l[5]
                     dic[ID][expt]['psi2'] = l[6]
                 fd.close()
-            fw = open(out_dir + '/' + out_file, 'w')
+            fw = open(out_dir + '/' + out_file + ".txt", 'w')
             fw.write('#Name\tLSV')
             for n in range(len(set_names)):
                 fw.write('\t%s_hit' % set_names[n])
