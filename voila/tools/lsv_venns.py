@@ -197,9 +197,12 @@ def make_venn(voila_list, set_names, thresh=0.2, prob_thresh=0, no_nums=False, w
         remove_non_shared: Remove from consideration LSVs that were not quantified in all dPSI files given to make the
         comparison more fair
     """
+
     import pylab as pyl
     if not interactive_plotting:
-        pyl.ioff()
+        import matplotlib
+        matplotlib.use('Agg')
+        #pyl.ioff()
     from matplotlib_venn import venn2, venn3
     if not len(voila_list) == len(set_names):
         raise RuntimeError('number of voila paths input should equal number of set names...')
