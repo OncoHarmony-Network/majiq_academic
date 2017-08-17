@@ -64,7 +64,7 @@ class ThisisLsvVenns(Tool):
             raise RuntimeError("%s is not a valid list of set names. Please provide 2 or 3 sep by commas, no spaces."
                                % set_names)
         if args.write_shared:
-            out_dir = os.path.dirname(args.outfile) + os.path.basename(args.outfile)[0:-4] + "_"
+            out_dir = os.path.join(os.path.dirname(args.outfile), os.path.basename(args.outfile)[0:-4] + "_")
         else:
             out_dir = "./"
         the_plot = make_venn(the_res,
