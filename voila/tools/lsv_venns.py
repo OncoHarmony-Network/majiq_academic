@@ -82,7 +82,7 @@ class ThisisLsvVenns(Tool):
                              write_shared=args.write_shared,
                              out_dir=out_dir,
                              out_file=outfile,
-                             no_nums=args.clean_plot,
+                             no_txt=args.clean_plot,
                              interactive_plotting=False)  # for non-gui systems, need to turn off interactive plotting.
         if args.savefig_args:
             # TODO this..
@@ -96,7 +96,7 @@ def make_venn(voila_list,
               set_names,
               thresh=0.2,
               prob_thresh=0,
-              no_nums=False,
+              no_txt=False,
               write_shared=False,
               out_file='OverlapOutput',
               remove_non_shared=False,
@@ -112,7 +112,7 @@ def make_venn(voila_list,
     junctions meeting this to be considered changing
 
     Other Options:
-        no_nums: do not display the numbers in the Venn diagram [default: False]
+        no_txt: do not display the numbers nor the labels in the Venn diagram [default: False]
         compare_genes: Do overlaps / counts at gene level and not LSV level [default: False]
         remove_non_shared: Remove from consideration LSVs that were not quantified in all dPSI files given to make the
         comparison more fair
@@ -129,6 +129,8 @@ def make_venn(voila_list,
     if len(voila_list) > 3: raise RuntimeError \
         ('too many dPSI sets to compare...can only handle 2 or 3 for venn diagram')
     if len(voila_list) < 2: raise RuntimeError('too few dPSI sets to compare...can only handle 2 or 3 for venn diagram')
+    if no_txt:
+        set_names = ["" for x in set_names]
     nSets = len(voila_list)
     set_list = []
     all_sets = []
@@ -146,12 +148,12 @@ def make_venn(voila_list,
     if remove_non_shared == False:
         if nSets == 2:
             venn = venn2(subsets=(set_list[0], set_list[1]), set_labels=set_names)
-            if no_nums == True:
+            if no_txt == True:
                 for vv in ['10', '11', '01']:
                     venn.get_label_by_id(vv).set_text('')
         else:
             venn = venn3(subsets=(set_list[0], set_list[1], set_list[2]), set_labels=set_names)
-            if no_nums == True:
+            if no_txt == True:
                 for vv in ['100', '010', '001', '110', '101', '011', '111']:
                     venn.get_label_by_id(vv).set_text('')
         pyl.title('%s overlaps:\n|dPSI|>=%s at prob %s' % (title_prefix, thresh, prob_thresh))
@@ -159,14 +161,14 @@ def make_venn(voila_list,
         if nSets == 2:
             all_evs = all_sets[0] & all_sets[1]
             venn = venn2(subsets=(set_list[0] & all_evs, set_list[1] & all_evs), set_labels=set_names)
-            if no_nums == True:
+            if no_txt == True:
                 for vv in ['10', '11', '01']:
                     venn.get_label_by_id(vv).set_text('')
         else:
             all_evs = all_sets[0] & all_sets[1] & all_sets[2]
             venn = venn3(subsets=(set_list[0] & all_evs, set_list[1] & all_evs, set_list[2] & all_evs),
                          set_labels=set_names, set_colors=['#3182bd', '#de2d26', '#31a354'], alpha=0.6)
-            if no_nums == True:
+            if no_txt == True:
                 for vv in ['100', '010', '001', '110', '101', '011', '111']:
                     venn.get_label_by_id(vv).set_text('')
         pyl.title('%s overlaps:\n|dPSI|>=%s at prob %s' % (title_prefix, thresh, prob_thresh))
