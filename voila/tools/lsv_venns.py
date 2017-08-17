@@ -3,8 +3,11 @@ import pdb
 from voila.tools import Tool
 from voila.tools.utils import io_caleb
 from voila.utils.voila_log import voila_log
-import pylab as pyl
-from matplotlib_venn import venn2, venn3
+try:
+    import pylab as pyl
+    from matplotlib_venn import venn2, venn3
+except:
+    print("Can't import pyplot or matplotlib right now...")
 
 # Created by Matthew Gazzara, adapted by Caleb
 # Caleb Matthew Radens
