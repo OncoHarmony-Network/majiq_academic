@@ -65,7 +65,7 @@ class ThisisLsvVenns(Tool):
                                % set_names)
         if args.write_shared:
             out_dir = os.path.dirname(args.outfile)
-            outfile = os.path.basename(args.outfile)[0:-4] + "OverlapOutput.txt"
+            outfile = os.path.basename(args.outfile)[0:-4] + "_OverlapOutput.txt"
         else:
             out_dir = "./"
             outfile = 'OverlapOutput'
