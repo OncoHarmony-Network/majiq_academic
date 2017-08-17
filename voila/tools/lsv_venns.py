@@ -199,8 +199,8 @@ def make_venn(voila_list, set_names, thresh=0.2, prob_thresh=0, no_nums=False, w
     """
     if not interactive_plotting:
         import matplotlib
-        matplotlib.use('Agg')
-        #pyl.ioff()
+        #matplotlib.use('Agg')
+        pyl.ioff()
     import pylab as pyl
     from matplotlib_venn import venn2, venn3
     if not len(voila_list) == len(set_names):
