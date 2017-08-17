@@ -129,8 +129,6 @@ def make_venn(voila_list,
     if len(voila_list) > 3: raise RuntimeError \
         ('too many dPSI sets to compare...can only handle 2 or 3 for venn diagram')
     if len(voila_list) < 2: raise RuntimeError('too few dPSI sets to compare...can only handle 2 or 3 for venn diagram')
-    if no_txt:
-        set_names = ["" for x in set_names]
     nSets = len(voila_list)
     set_list = []
     all_sets = []
@@ -148,14 +146,18 @@ def make_venn(voila_list,
     if remove_non_shared == False:
         if nSets == 2:
             venn = venn2(subsets=(set_list[0], set_list[1]), set_labels=set_names)
-            if no_txt == True:
+            if no_txt:
                 for vv in ['10', '11', '01']:
                     venn.get_label_by_id(vv).set_text('')
+                for text in venn.set_labels:
+                    text.set_text('')
         else:
             venn = venn3(subsets=(set_list[0], set_list[1], set_list[2]), set_labels=set_names)
-            if no_txt == True:
+            if no_txt:
                 for vv in ['100', '010', '001', '110', '101', '011', '111']:
                     venn.get_label_by_id(vv).set_text('')
+                for text in venn.set_labels:
+                    text.set_text('')
         pyl.title('%s overlaps:\n|dPSI|>=%s at prob %s' % (title_prefix, thresh, prob_thresh))
     else:
         if nSets == 2:
@@ -164,6 +166,8 @@ def make_venn(voila_list,
             if no_txt == True:
                 for vv in ['10', '11', '01']:
                     venn.get_label_by_id(vv).set_text('')
+                for text in venn.set_labels:
+                    text.set_text('')
         else:
             all_evs = all_sets[0] & all_sets[1] & all_sets[2]
             venn = venn3(subsets=(set_list[0] & all_evs, set_list[1] & all_evs, set_list[2] & all_evs),
@@ -171,6 +175,8 @@ def make_venn(voila_list,
             if no_txt == True:
                 for vv in ['100', '010', '001', '110', '101', '011', '111']:
                     venn.get_label_by_id(vv).set_text('')
+                for text in venn.set_labels:
+                    text.set_text('')
         pyl.title('%s overlaps:\n|dPSI|>=%s at prob %s' % (title_prefix, thresh, prob_thresh))
 
     if nSets == 2:
