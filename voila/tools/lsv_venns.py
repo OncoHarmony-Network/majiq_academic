@@ -1,5 +1,5 @@
+import os
 import pdb
-
 from voila.tools import Tool
 from voila.tools.utils import io_caleb
 from voila.utils.voila_log import voila_log
@@ -44,6 +44,11 @@ class ThisisLsvVenns(Tool):
                             action='store_true',
                             default=False,
                             help=help_mes)
+        help_mes = "Flag: Write to file the shared LSVs?"
+        parser.add_argument('--write_shared',
+                            action='store_true',
+                            default=False,
+                            help=help_mes)
         help_mes = "Optional. Additional pylab.savefig() arguments."
         parser.add_argument('--savefig_args',
                             nargs='*',
@@ -58,11 +63,17 @@ class ThisisLsvVenns(Tool):
         if len(set_names) != 2 and len(set_names) != 3:
             raise RuntimeError("%s is not a valid list of set names. Please provide 2 or 3 sep by commas, no spaces."
                                % set_names)
+        if args.write_shared:
+            out_dir = os.path.dirname(args.outfile)
+        else:
+            out_dir = "./"
         the_plot = make_venn(the_res,
                              set_names,
                              thresh=args.dpsi_thresh,
                              prob_thresh=args.prob_thresh,
                              remove_non_shared=args.remove_non_shared,
+                             write_shared=args.write_shared,
+                             out_dir=out_dir,
                              interactive_plotting=False)  # for non-gui systems, need to turn off interactive plotting.
         if args.savefig_args:
             # TODO this..
@@ -72,117 +83,17 @@ class ThisisLsvVenns(Tool):
             the_plot.savefig(args.outfile)
 
 
-def hex_to_rgb(value):
-    value = value.lstrip('#')
-    lv = len(value)
-    return tuple(int(value[i:i + lv // 3], 16) for i in range(0, lv, lv // 3))
-
-
-def rgb_to_hex(rgb):
-    return '#%02x%02x%02x' % rgb
-
-
-def get_events(voila_all_path, thresh=0.2, prob_thresh=0, write_names=False, fname='ChangingLSVs', only_genes=False):
-
-    events = []
-    LOG.info(voila_all_path)
-    fd = open(voila_all_path, 'r')
-    if only_genes == True:
-        idx = 1
-    else:
-        idx = 2
-    for line in fd:
-        l = line.strip().split('\t')
-        if line.startswith('#'):
-            if prob_thresh > 0.0:
-                voila_prob = float(l[4].split('=')[-1].split(')')[0])
-                if not voila_prob == thresh:
-                    raise RuntimeError \
-                        ('WARNING! For dPSI file %s the voila probability threshold was run for %s ... '
-                         'not your threshold of %s' %
-                         (voila_all_path, voila_prob, thresh))
-            continue
-        dPSIs = [abs(float(x)) for x in l[3].split(';')]
-        probs = [float(x) for x in l[4].split(';')]
-        if max(dPSIs) >= thresh:
-            if max(probs) >= prob_thresh:
-                events.append(l[idx])
-    fd.close()
-    if write_names == True:
-        fw = open('%s_dPSI%s_Prob%s.txt' % (fname, str(int(thresh * 100)), str(int(prob_thresh * 100))), 'w')
-        evs = set(events)
-        for e in evs: fw.write('%s\n' % e)
-        fw.close()
-    return set(events)
-
-
-def write_all_changing_data(voila_list, set_names, out_file, thresh=0.2, prob_thresh=0):
-    all_changes = set()
-    set_list = [[] for x in range(len(voila_list))]
-    for n in range(len(voila_list)):
-        voila_file = voila_list[n]
-        chg_evs = get_events(voila_file, thresh=thresh, prob_thresh=prob_thresh)
-        for ev in chg_evs:
-            all_changes.add(ev)
-            set_list[n].append(ev)
-    dic = {}
-    for ss in set_list:
-        LOG.info(len(ss))
-    for n in range(len(set_names)):
-        expt = set_names[n]
-        LOG.info('###%s' % expt)
-        fd = open(voila_list[n], 'r')
-        for line in fd:
-            if line.startswith('#'):
-                continue
-            l = line.strip().split('\t')
-            ID = l[2]
-            if not ID in all_changes:
-                continue
-            try:
-                dic[ID]
-            except:
-                dic[ID] = {}
-                dic[ID]['info'] = {}
-                dic[ID]['info']['name'] = l[0]
-                dic[ID]['info']['rest'] = l[7:]
-            dic[ID][expt] = {}
-            if ID in set_list[n]:
-                dic[ID][expt]['hit'] = 1
-            else:
-                dic[ID][expt]['hit'] = 0
-            dic[ID][expt]['dPSIs'] = l[3]
-            dic[ID][expt]['psi1'] = l[5]
-            dic[ID][expt]['psi2'] = l[6]
-        fd.close()
-    fw = open(out_file, 'w')
-    fw.write('#Name\tLSV')
-    for n in range(len(set_names)):
-        fw.write('\t%s_hit' % set_names[n])
-    for n in range(len(set_names)):
-        fw.write('\t%s_dPSI' % set_names[n])
-    fw.write('\tLSVtype\tA5SS\tA3SS\tES\tNumJunc\tNumExon\tDeNovoJunc\t'
-             'chr\tstrand\tJuncCoord\tExonCoord\tExonAltStart\tExonAltEnd\tIRcoords\tLink\n')
-    for e in all_changes:
-        fw.write('%s\t%s' % (dic[e]['info']['name'], e))
-        for exp in set_names:
-            try:
-                fw.write('\t%s' % (dic[e][exp]['hit']))
-            except:
-                fw.write('\tNaN')
-        for exp in set_names:
-            try:
-                fw.write('\t%s' % (dic[e][exp]['dPSIs']))
-            except:
-                fw.write('\tNaN')
-        for ii in dic[e]['info']['rest']:
-            fw.write('\t%s' % ii)
-        fw.write('\n')
-    fw.close()
-
-
-def make_venn(voila_list, set_names, thresh=0.2, prob_thresh=0, no_nums=False, write_shared=False,
-              out_file='OverlapOutput', remove_non_shared=False, title_prefix='', out_dir='./', compare_genes=False,
+def make_venn(voila_list,
+              set_names,
+              thresh=0.2,
+              prob_thresh=0,
+              no_nums=False,
+              write_shared=False,
+              out_file='OverlapOutput',
+              remove_non_shared=False,
+              title_prefix='',
+              out_dir='./',
+              compare_genes=False,
               interactive_plotting=False):
     """
     voila_list should be a list of strings that are the paths to the 2 or 3 dPSI voila text files you wish to overlap
@@ -198,9 +109,10 @@ def make_venn(voila_list, set_names, thresh=0.2, prob_thresh=0, no_nums=False, w
         comparison more fair
     """
     if not interactive_plotting:
+        # Must do this before importing other matplotlib stuff
+        # This turns of the display capabilities of matplotlib, which is necessary when working on a dumb linux machine
         import matplotlib
-        #matplotlib.use('Agg')
-        pyl.ioff()
+        matplotlib.use('Agg')
     import pylab as pyl
     from matplotlib_venn import venn2, venn3
     if not len(voila_list) == len(set_names):
@@ -332,3 +244,112 @@ def make_venn(voila_list, set_names, thresh=0.2, prob_thresh=0, no_nums=False, w
                 fw.write('\n')
             fw.close()
     return pyl
+
+
+def hex_to_rgb(value):
+    value = value.lstrip('#')
+    lv = len(value)
+    return tuple(int(value[i:i + lv // 3], 16) for i in range(0, lv, lv // 3))
+
+
+def rgb_to_hex(rgb):
+    return '#%02x%02x%02x' % rgb
+
+
+def get_events(voila_all_path, thresh=0.2, prob_thresh=0, write_names=False, fname='ChangingLSVs', only_genes=False):
+
+    events = []
+    LOG.info(voila_all_path)
+    fd = open(voila_all_path, 'r')
+    if only_genes == True:
+        idx = 1
+    else:
+        idx = 2
+    for line in fd:
+        l = line.strip().split('\t')
+        if line.startswith('#'):
+            if prob_thresh > 0.0:
+                voila_prob = float(l[4].split('=')[-1].split(')')[0])
+                if not voila_prob == thresh:
+                    raise RuntimeError \
+                        ('WARNING! For dPSI file %s the voila probability threshold was run for %s ... '
+                         'not your threshold of %s' %
+                         (voila_all_path, voila_prob, thresh))
+            continue
+        dPSIs = [abs(float(x)) for x in l[3].split(';')]
+        probs = [float(x) for x in l[4].split(';')]
+        if max(dPSIs) >= thresh:
+            if max(probs) >= prob_thresh:
+                events.append(l[idx])
+    fd.close()
+    if write_names == True:
+        fw = open('%s_dPSI%s_Prob%s.txt' % (fname, str(int(thresh * 100)), str(int(prob_thresh * 100))), 'w')
+        evs = set(events)
+        for e in evs: fw.write('%s\n' % e)
+        fw.close()
+    return set(events)
+
+
+def write_all_changing_data(voila_list, set_names, out_file, thresh=0.2, prob_thresh=0):
+    all_changes = set()
+    set_list = [[] for x in range(len(voila_list))]
+    for n in range(len(voila_list)):
+        voila_file = voila_list[n]
+        chg_evs = get_events(voila_file, thresh=thresh, prob_thresh=prob_thresh)
+        for ev in chg_evs:
+            all_changes.add(ev)
+            set_list[n].append(ev)
+    dic = {}
+    for ss in set_list:
+        LOG.info(len(ss))
+    for n in range(len(set_names)):
+        expt = set_names[n]
+        LOG.info('###%s' % expt)
+        fd = open(voila_list[n], 'r')
+        for line in fd:
+            if line.startswith('#'):
+                continue
+            l = line.strip().split('\t')
+            ID = l[2]
+            if not ID in all_changes:
+                continue
+            try:
+                dic[ID]
+            except:
+                dic[ID] = {}
+                dic[ID]['info'] = {}
+                dic[ID]['info']['name'] = l[0]
+                dic[ID]['info']['rest'] = l[7:]
+            dic[ID][expt] = {}
+            if ID in set_list[n]:
+                dic[ID][expt]['hit'] = 1
+            else:
+                dic[ID][expt]['hit'] = 0
+            dic[ID][expt]['dPSIs'] = l[3]
+            dic[ID][expt]['psi1'] = l[5]
+            dic[ID][expt]['psi2'] = l[6]
+        fd.close()
+    fw = open(out_file, 'w')
+    fw.write('#Name\tLSV')
+    for n in range(len(set_names)):
+        fw.write('\t%s_hit' % set_names[n])
+    for n in range(len(set_names)):
+        fw.write('\t%s_dPSI' % set_names[n])
+    fw.write('\tLSVtype\tA5SS\tA3SS\tES\tNumJunc\tNumExon\tDeNovoJunc\t'
+             'chr\tstrand\tJuncCoord\tExonCoord\tExonAltStart\tExonAltEnd\tIRcoords\tLink\n')
+    for e in all_changes:
+        fw.write('%s\t%s' % (dic[e]['info']['name'], e))
+        for exp in set_names:
+            try:
+                fw.write('\t%s' % (dic[e][exp]['hit']))
+            except:
+                fw.write('\tNaN')
+        for exp in set_names:
+            try:
+                fw.write('\t%s' % (dic[e][exp]['dPSIs']))
+            except:
+                fw.write('\tNaN')
+        for ii in dic[e]['info']['rest']:
+            fw.write('\t%s' % ii)
+        fw.write('\n')
+    fw.close()
