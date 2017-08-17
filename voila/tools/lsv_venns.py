@@ -64,10 +64,11 @@ class ThisisLsvVenns(Tool):
             raise RuntimeError("%s is not a valid list of set names. Please provide 2 or 3 sep by commas, no spaces."
                                % set_names)
         if args.write_shared:
-            pdb.set_trace()
-            out_dir = os.path.join(os.path.dirname(args.outfile), os.path.basename(args.outfile)[0:-4] + "_")
+            out_dir = os.path.dirname(args.outfile)
+            outfile = os.path.basename(args.outfile)[0:-4] + "OverlapOutput.txt"
         else:
             out_dir = "./"
+            outfile = 'OverlapOutput'
         the_plot = make_venn(the_res,
                              set_names,
                              thresh=args.dpsi_thresh,
@@ -75,6 +76,7 @@ class ThisisLsvVenns(Tool):
                              remove_non_shared=args.remove_non_shared,
                              write_shared=args.write_shared,
                              out_dir=out_dir,
+                             out_file=outfile,
                              interactive_plotting=False)  # for non-gui systems, need to turn off interactive plotting.
         if args.savefig_args:
             # TODO this..
