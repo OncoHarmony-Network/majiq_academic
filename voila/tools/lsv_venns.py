@@ -54,6 +54,11 @@ class ThisisLsvVenns(Tool):
                             action='store_true',
                             default=False,
                             help=help_mes)
+        help_mes = "Flag: Consider intron retention events?"
+        parser.add_argument('--consider_ir_events',
+                            action='store_true',
+                            default=False,
+                            help=help_mes)
         help_mes = "Optional. Additional pylab.savefig() arguments."
         parser.add_argument('--savefig_args',
                             nargs='*',
@@ -83,6 +88,7 @@ class ThisisLsvVenns(Tool):
                              out_dir=out_dir,
                              out_file=outfile,
                              no_txt=args.clean_plot,
+                             consider_ir_events=args.consider_ir_events,
                              interactive_plotting=False)  # for non-gui systems, need to turn off interactive plotting.
         if args.savefig_args:
             # TODO this..
@@ -103,7 +109,8 @@ def make_venn(voila_list,
               title_prefix='',
               out_dir='./',
               compare_genes=False,
-              interactive_plotting=False):
+              interactive_plotting=False,
+              consider_ir_events=False):
     """
     voila_list should be a list of strings that are the paths to the 2 or 3 dPSI voila text files you wish to overlap
     set_names should be a list of strings used as names in the Venn diagram
@@ -116,6 +123,7 @@ def make_venn(voila_list,
         compare_genes: Do overlaps / counts at gene level and not LSV level [default: False]
         remove_non_shared: Remove from consideration LSVs that were not quantified in all dPSI files given to make the
         comparison more fair
+        consider_ir_events: should IR LSVs be ignored? (IR is ignored if its dPSI is >= 0.05 in a given LSV)
     """
     if not interactive_plotting:
         # Must do this before importing other matplotlib stuff
@@ -134,7 +142,11 @@ def make_venn(voila_list,
     all_sets = []
     for n in range(len(set_names)):
         v_file = voila_list[n]
-        evs = get_events(v_file, thresh=thresh, prob_thresh=prob_thresh, only_genes=compare_genes)
+        evs = get_events(v_file,
+                         thresh=thresh,
+                         prob_thresh=prob_thresh,
+                         only_genes=compare_genes,
+                         ignore_ir=consider_ir_events)
         set_list.append(evs)
         if remove_non_shared == True:
             allEvents = get_events(v_file, thresh=0, prob_thresh=0, only_genes=compare_genes)
@@ -273,7 +285,13 @@ def rgb_to_hex(rgb):
     return '#%02x%02x%02x' % rgb
 
 
-def get_events(voila_all_path, thresh=0.2, prob_thresh=0, write_names=False, fname='ChangingLSVs', only_genes=False):
+def get_events(voila_all_path,
+               thresh=0.2,
+               prob_thresh=0,
+               write_names=False,
+               fname='ChangingLSVs',
+               only_genes=False,
+               ignore_ir=False):
 
     events = []
     LOG.info(voila_all_path)
@@ -285,6 +303,7 @@ def get_events(voila_all_path, thresh=0.2, prob_thresh=0, write_names=False, fna
     for line in fd:
         l = line.strip().split('\t')
         if line.startswith('#'):
+            lsv_type_index = l.index("LSV Type")
             if prob_thresh > 0.0:
                 voila_prob = float(l[4].split('=')[-1].split(')')[0])
                 if not voila_prob == thresh:
@@ -297,6 +316,12 @@ def get_events(voila_all_path, thresh=0.2, prob_thresh=0, write_names=False, fna
         probs = [float(x) for x in l[4].split(';')]
         if max(dPSIs) >= thresh:
             if max(probs) >= prob_thresh:
+                if ignore_ir:
+                    is_intron_ret_ev = True if l[lsv_type_index][-1] == "i" else False
+                    if is_intron_ret_ev:
+                        # My threshold for an intron changing event being ignore-worthy
+                        if dPSIs[-1] >= 0.05:
+                            continue
                 events.append(l[idx])
     fd.close()
     if write_names == True:
