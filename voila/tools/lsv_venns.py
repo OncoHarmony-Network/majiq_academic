@@ -140,20 +140,26 @@ def make_venn(voila_list,
     nSets = len(voila_list)
     set_list = []
     all_sets = []
+    all_irs = list()
     for n in range(len(set_names)):
         v_file = voila_list[n]
         evs = get_events(v_file,
                          thresh=thresh,
                          prob_thresh=prob_thresh,
                          only_genes=compare_genes,
-                         ignore_ir=consider_ir_events)
+                         ignore_ir=not consider_ir_events)
+        if not consider_ir_events:
+            evs, these_ir = evs
+            all_irs.extend(these_ir)
         set_list.append(evs)
         if remove_non_shared == True:
             allEvents = get_events(v_file, thresh=0, prob_thresh=0, only_genes=compare_genes)
             all_sets.append(allEvents)
         LOG.info('Expt %s had %s events at E(dPSI) thresh of %s and prob thresh of %s' %
               (set_names[n], len(evs), thresh, prob_thresh))
-
+    if not consider_ir_events:
+        all_irs = set(all_irs)
+        set_list = [thisset - all_irs for thisset in set_list]
     pyl.figure(0)
     if remove_non_shared == False:
         if nSets == 2:
@@ -293,7 +299,8 @@ def get_events(voila_all_path,
                only_genes=False,
                ignore_ir=False):
 
-    events = []
+    events = list()
+    ir_event = list()
     LOG.info(voila_all_path)
     fd = open(voila_all_path, 'r')
     if only_genes == True:
@@ -321,6 +328,7 @@ def get_events(voila_all_path,
                     if is_intron_ret_ev:
                         # My threshold for an intron changing event being ignore-worthy
                         if dPSIs[-1] >= 0.05:
+                            ir_event.append(l[idx])
                             continue
                 events.append(l[idx])
     fd.close()
@@ -329,6 +337,8 @@ def get_events(voila_all_path,
         evs = set(events)
         for e in evs: fw.write('%s\n' % e)
         fw.close()
+    if ignore_ir:
+        return set(events), set(ir_event)
     return set(events)
 
 
