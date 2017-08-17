@@ -64,6 +64,7 @@ class ThisisLsvVenns(Tool):
             raise RuntimeError("%s is not a valid list of set names. Please provide 2 or 3 sep by commas, no spaces."
                                % set_names)
         if args.write_shared:
+            pdb.set_trace()
             out_dir = os.path.join(os.path.dirname(args.outfile), os.path.basename(args.outfile)[0:-4] + "_")
         else:
             out_dir = "./"
