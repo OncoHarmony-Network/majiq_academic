@@ -49,6 +49,11 @@ class ThisisLsvVenns(Tool):
                             action='store_true',
                             default=False,
                             help=help_mes)
+        help_mes = "Flag: Turn off plot text so you can add your own?"
+        parser.add_argument('--clean_plot',
+                            action='store_true',
+                            default=False,
+                            help=help_mes)
         help_mes = "Optional. Additional pylab.savefig() arguments."
         parser.add_argument('--savefig_args',
                             nargs='*',
@@ -77,6 +82,7 @@ class ThisisLsvVenns(Tool):
                              write_shared=args.write_shared,
                              out_dir=out_dir,
                              out_file=outfile,
+                             no_nums=args.clean_plot,
                              interactive_plotting=False)  # for non-gui systems, need to turn off interactive plotting.
         if args.savefig_args:
             # TODO this..
