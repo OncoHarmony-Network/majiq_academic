@@ -39,6 +39,11 @@ class ThisisLsvVenns(Tool):
         parser.add_argument('outfile',
                             type=str,
                             help=help_mes)
+        help_mes = "Flag: only consider LSVs that were quantifiable in all comparisons."
+        parser.add_argument('--remove_non_shared',
+                            action='store_true',
+                            default=False,
+                            help=help_mes)
         help_mes = "Optional. Additional pylab.savefig() arguments."
         parser.add_argument('--savefig_args',
                             nargs='*',
@@ -53,11 +58,16 @@ class ThisisLsvVenns(Tool):
         if len(set_names) != 2 and len(set_names) != 3:
             raise RuntimeError("%s is not a valid list of set names. Please provide 2 or 3 sep by commas, no spaces."
                                % set_names)
-        the_plot = make_venn(the_res, set_names, thresh=args.dpsi_thresh, prob_thresh=args.prob_thresh)
+        the_plot = make_venn(the_res,
+                             set_names,
+                             thresh=args.dpsi_thresh,
+                             prob_thresh=args.prob_thresh,
+                             remove_non_shared=args.remove_non_shared,
+                             interactive_plotting=False)  # for non-gui systems, need to turn off interactive plotting.
         if args.savefig_args:
             # TODO this..
             raise RuntimeError("I haven't implemented this yet... - Caleb")
-            the_plot.savefig(args.outfile, args.savefig_args)
+            #the_plot.savefig(args.outfile, args.savefig_args)
         else:
             the_plot.savefig(args.outfile)
 
@@ -172,7 +182,8 @@ def write_all_changing_data(voila_list, set_names, out_file, thresh=0.2, prob_th
 
 
 def make_venn(voila_list, set_names, thresh=0.2, prob_thresh=0, no_nums=False, write_shared=False,
-              out_file='OverlapOutput', remove_non_shared=False, title_prefix='', out_dir='./', compare_genes=False):
+              out_file='OverlapOutput', remove_non_shared=False, title_prefix='', out_dir='./', compare_genes=False,
+              interactive_plotting=False):
     """
     voila_list should be a list of strings that are the paths to the 2 or 3 dPSI voila text files you wish to overlap
     set_names should be a list of strings used as names in the Venn diagram
@@ -187,6 +198,8 @@ def make_venn(voila_list, set_names, thresh=0.2, prob_thresh=0, no_nums=False, w
         comparison more fair
     """
     import pylab as pyl
+    if not interactive_plotting:
+        pyl.ioff()
     from matplotlib_venn import venn2, venn3
     if not len(voila_list) == len(set_names):
         raise RuntimeError('number of voila paths input should equal number of set names...')
