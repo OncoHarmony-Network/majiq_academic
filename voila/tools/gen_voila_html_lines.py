@@ -160,7 +160,7 @@ def write_voila_bash(data,
             if found_data != "gene_not_found" and found_data != "lsv_id_not_found":
                 good_to_go = True
                 good_comps.append(lsv_dict_name)
-                good_p_threshs = io_caleb.get_prob_threshold(data[lsv_dict_name])
+                good_p_threshs.append(io_caleb.get_prob_threshold(data[lsv_dict_name]))
             else:
                 LOG.info("%s not found in %s" % (gene, lsv_dict_name))
         if not good_to_go:
