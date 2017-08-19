@@ -168,7 +168,6 @@ def write_voila_bash(data,
         for comp, prob in zip(good_comps, good_p_threshs):
             cname = io_caleb.gen_comparison_name(data[comp], comp_joiner)
             runline = 'voila deltapsi '
-            pdb.set_trace()
             this_deltapsi_voila_loc_abs = os.path.join(deltapsi_voila_loc_abs,
                                                        cname,
                                                        io_caleb.comp_without_dup(comp) + ".deltapsi.voila")
@@ -180,7 +179,7 @@ def write_voila_bash(data,
             runline += " --threshold %s" % prob
             voila_outfile = os.path.join(voila_outdir, io_caleb.comp_without_dup(comp))
             prob = str(int(float(prob)*100.0))
-            runline += " -o " + voila_outfile + "_prob%s" % prob
+            runline += " -o " + voila_outfile + "_prob%s\n" % prob
             handle.writelines(runline)
             run_lines.append(runline)
     return run_lines, out_file
