@@ -251,7 +251,7 @@ def import_voila_txt(fp,
 
 
     """
-    if not isinstance(stop_at, list) or not isinstance(stop_at, str):
+    if not isinstance(stop_at, list) and not isinstance(stop_at, str):
         raise ValueError("%s needs to be a list or str, not %s" % (stop_at, type(stop_at)))
     if not isinstance(fp, str):
         raise TypeError("Expected file path to be string, instead it was %s" % type(fp))
