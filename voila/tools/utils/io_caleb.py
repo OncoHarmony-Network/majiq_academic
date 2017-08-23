@@ -268,6 +268,8 @@ def import_voila_txt(fp,
     has_voila = True
     file_headers = list()
     with open(fp, "r") as handle:
+        if fp == '/data/THelper/lisp/classifications/KA_T0_72_KA_T2_72/KA_T0_72_KA_T2_72_OpenEndedExons.dPSI_10_Prob_0.txt':
+            pdb.set_trace()
         line_i = 0
         found_stop_at = False if isinstance(stop_at, str) else [False for x in stop_at]
         can_stop = False
@@ -369,8 +371,6 @@ def import_voila_txt(fp,
         if not just_checking_validity:
             lsv_dictionary["meta_info"]["prob_thresh"] = threshold
     else:
-        if just_checking_validity:
-            pdb.set_trace()
         lsv_dictionary["meta_info"]["sample_id"] = sample_id
     return lsv_dictionary
 
