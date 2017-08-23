@@ -264,12 +264,13 @@ def import_voila_txt(fp,
         LOG.info("%s matched search pattern, but it is binary, so the file is not"
                  " a voila tsv ... skipping it" % fp)
         return False
+    if os.stat(fp).st_size == 0:
+        LOG.info("%s is empty... skipping it" % fp)
+        return False
     lsv_dictionary = dict()
     has_voila = True
     file_headers = list()
     with open(fp, "r") as handle:
-        if fp == '/data/THelper/lisp/classifications/KA_T0_72_KA_T2_72/KA_T0_72_KA_T2_72_OpenEndedExons.dPSI_10_Prob_0.txt':
-            pdb.set_trace()
         line_i = 0
         found_stop_at = False if isinstance(stop_at, str) else [False for x in stop_at]
         can_stop = False
