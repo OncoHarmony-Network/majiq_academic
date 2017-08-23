@@ -155,7 +155,13 @@ def lookup_everywhere(dictionary_lookup,
                     print("Nothing found...")
                     return
                 else:
-                    found_dicts[lsv_dict_name].update(found_data)
+                    if lsv_dict_name in found_dicts:
+                        if print_bool:
+                            found_dicts[lsv_dict_name] += found_data
+                        else:
+                            found_dicts[lsv_dict_name].update(found_data)
+                    else:
+                        found_dicts[lsv_dict_name] = found_data
         else:
             found_data = lookup(dictionary_lookup[lsv_dict_name],
                                 name=name,

@@ -175,6 +175,7 @@ def quick_import(input,
                                          stop_at=stop_at,
                                          expected_type=expected,
                                          just_checking_validity=just_file_paths)
+
         # imported_file will be False if import_dpsi thinks it is not a valid tsv...
         if not imported_file:
             continue
@@ -271,6 +272,8 @@ def import_voila_txt(fp,
         found_stop_at = False if isinstance(stop_at, str) else [False for x in stop_at]
         can_stop = False
         for line in handle:
+            # if "ENSG00000078061" in line:
+            #     pdb.set_trace()
             if isinstance(stop_at, str):
                 if stop_at in line:
                     found_stop_at = True
@@ -287,7 +290,6 @@ def import_voila_txt(fp,
                 if True in gene_in_line_bools:
                     gene_ii = gene_in_line_bools.index(True)
                     found_stop_at[gene_ii] = True
-                    can_stop = True
                 else:
                     if line_i > 0 and not can_stop:
                         line_i += 1
@@ -355,6 +357,11 @@ def import_voila_txt(fp,
             lsv_dictionary.update(the_data)
             if just_checking_validity:
                 return True
+            if isinstance(stop_at, list):
+                if False not in found_stop_at:
+                    can_stop = True
+                else:
+                    can_stop = False
     # add the meta_info for the experiment
     lsv_dictionary["meta_info"] = dict()
     lsv_dictionary["meta_info"]["abs_path"] = os.path.abspath(fp)
