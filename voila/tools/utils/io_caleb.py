@@ -286,7 +286,7 @@ def import_voila_txt(fp,
                 gene_in_line_bools = [gene in line for gene in stop_at]
                 if True in gene_in_line_bools:
                     gene_ii = gene_in_line_bools.index(True)
-                    found_stop_at[gen_ii] = True
+                    found_stop_at[gene_ii] = True
                     can_stop = True
                 else:
                     if line_i > 0 and not can_stop:
