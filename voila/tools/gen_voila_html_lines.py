@@ -73,7 +73,7 @@ class ThisisLookup(Tool):
         elif "," in args.gene:
             gene = args.gene.split(",")
         else:
-            gene = [gene]
+            gene = [args.gene]
         imported = io_caleb.quick_import(input=args.indir,
                                          cutoff_d_psi=0,
                                          cutoff_prob=0,
