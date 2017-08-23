@@ -26,7 +26,8 @@ class ThisisLookup(Tool):
         mutually_excl_grp = parser.add_mutually_exclusive_group(required=True)
         mutually_excl_grp.add_argument('--lookup_val',
                             type=str,
-                            help='Gene Name, Gene ID, or LSV ID to lookup')
+                            help='Gene Names, Gene IDs, or LSV IDs to lookup. Comma separated, or a file'
+                                 'with each line as a lookup value.')
         help_mes = 'Flag: only return file paths for the voila txt files found..'
         mutually_excl_grp.add_argument('--just_file_paths',
                             action='store_true',
@@ -53,7 +54,16 @@ class ThisisLookup(Tool):
                             '--comparisons',
                             type=str,
                             help=help_mes)
-
+        help_mes = "dPSI threshold by which to call junctions as changing"
+        parser.add_argument('--dpsi_thresh',
+                            type=float,
+                            help=help_mes,
+                            default=0.1)
+        help_mes = "Prob(dPSI) threshold by which to call junctions as changing"
+        parser.add_argument('--prob_dpsi_thresh',
+                            type=float,
+                            help=help_mes,
+                            default=0.0)
         return parser
 
     def run(self, args):
@@ -68,15 +78,18 @@ class ThisisLookup(Tool):
         else:
             to_lookup = None
             dont_remove_dups=True
+        if args.lookup_val:
+            the_lookup_vals = args.lookup_val.replace(" ","").split(",")
         imported = io_caleb.quick_import(input=args.directory,
-                                         cutoff_d_psi=0,
-                                         cutoff_prob=0,
+                                         cutoff_d_psi=args.dpsi_thresh,
+                                         cutoff_prob=args.prob_dpsi_thresh,
                                          pattern=args.pattern,
                                          keep_ir=True,
                                          just_one=args.just_one,
-                                         stop_at=args.lookup_val,
+                                         stop_at=the_lookup_vals,
                                          comparisons=to_lookup,
                                          just_file_paths=args.just_file_paths)
+        io_caleb.check_is_ignant(imported, args.prob_dpsi_thresh)
         if args.just_file_paths:
             print("\n".join(imported))
             return
@@ -88,7 +101,7 @@ class ThisisLookup(Tool):
         if args.dont_abbreviate:
             abbreviated_bool = False
         lookup_everywhere(dictionary_lookup=imported,
-                          name=args.lookup_val,
+                          name=the_lookup_vals,
                           just_one=args.just_one,
                           abbreviated=abbreviated_bool,
                           comparisons_lookup=to_lookup,
@@ -127,20 +140,37 @@ def lookup_everywhere(dictionary_lookup,
                 if io_caleb.comp_without_dup(lsv_dict_name) not in \
                         [io_caleb.comp_without_dup(x) for x in comparisons_lookup]:
                     continue
-        found_data = lookup(dictionary_lookup[lsv_dict_name],
-                            name=name,
+        if isinstance(name, list):
+            for na in name:
+                found_data = lookup(dictionary_lookup[lsv_dict_name],
+                            name=na,
                             printable=print_bool,
                             save_lsv_structure=save_lsv_structure_lookup,
                             not_found_error=False,
                             abbreviated=abbreviated)
-        if found_data == "gene_not_found" or found_data == "lsv_id_not_found":
-            if print_bool:
-                print(name + " not found in " + lsv_dict_name + "\n")
-        elif not found_data:
-            print("Nothing found...")
-            return
+                if found_data == "gene_not_found" or found_data == "lsv_id_not_found":
+                    if print_bool:
+                        print(name + " not found in " + lsv_dict_name + "\n")
+                elif not found_data:
+                    print("Nothing found...")
+                    return
+                else:
+                    found_dicts[lsv_dict_name].update(found_data)
         else:
-            found_dicts[lsv_dict_name] = found_data
+            found_data = lookup(dictionary_lookup[lsv_dict_name],
+                                name=name,
+                                printable=print_bool,
+                                save_lsv_structure=save_lsv_structure_lookup,
+                                not_found_error=False,
+                                abbreviated=abbreviated)
+            if found_data == "gene_not_found" or found_data == "lsv_id_not_found":
+                if print_bool:
+                    print(name + " not found in " + lsv_dict_name + "\n")
+            elif not found_data:
+                print("Nothing found...")
+                return
+            else:
+                found_dicts[lsv_dict_name] = found_data
         if just_one:
             break
     if print_bool:
