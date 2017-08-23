@@ -150,7 +150,7 @@ def lookup_everywhere(dictionary_lookup,
                             abbreviated=abbreviated)
                 if found_data == "gene_not_found" or found_data == "lsv_id_not_found":
                     if print_bool:
-                        print(name + " not found in " + lsv_dict_name + "\n")
+                        print(na + " not found in " + lsv_dict_name + "\n")
                 elif not found_data:
                     print("Nothing found...")
                     return
