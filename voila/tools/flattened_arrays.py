@@ -107,8 +107,8 @@ class ThisisLookup(Tool):
             prob_header = io_caleb.get_name_of_prob_key(example_lsv)
             for comp in all_comparisons:
                 # first 3 cols
-                subeaaders = ["dPSI", prob_header, "Confidently non-changing?"]
-                header_to_add = [comp + ", " + subheader for subheader in subeaaders]
+                subheaders = ["dPSI", prob_header, "Confidently non-changing?"]
+                header_to_add = [comp + ", " + subheader for subheader in subheaders]
                 col_order.append(header_to_add)
                 # data_to_add.extend([dpsi_mat[comp], prb_mat[comp], priormat[comp]])
                 thisframe = pd.DataFrame([dpsi_mat[comp], prb_mat[comp], priormat[comp]]).T

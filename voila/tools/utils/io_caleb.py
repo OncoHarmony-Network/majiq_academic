@@ -251,6 +251,8 @@ def import_voila_txt(fp,
 
 
     """
+    if not isinstance(stop_at, list) or not isinstance(stop_at, str):
+        raise ValueError("%s needs to be a list or str, not %s" % (stop_at, type(stop_at)))
     if not isinstance(fp, str):
         raise TypeError("Expected file path to be string, instead it was %s" % type(fp))
     if not have_permission(fp):
@@ -266,7 +268,7 @@ def import_voila_txt(fp,
     file_headers = list()
     with open(fp, "r") as handle:
         line_i = 0
-        found_stop_at = False
+        found_stop_at = False if isinstance(stop_at, str) else [False for x in stop_at]
         can_stop = False
         for line in handle:
             if isinstance(stop_at, str):
@@ -275,6 +277,18 @@ def import_voila_txt(fp,
                     can_stop = True
                 else:
                     found_stop_at = False
+                    if line_i > 0 and not can_stop:
+                        line_i += 1
+                        continue
+                    elif line_i > 0 and can_stop:
+                        break
+            elif isinstance(stop_at, list):
+                gene_in_line_bools = [gene in line for gene in stop_at]
+                if True in gene_in_line_bools:
+                    gene_ii = gene_in_line_bools.index(True)
+                    found_stop_at[gen_ii] = True
+                    can_stop = True
+                else:
                     if line_i > 0 and not can_stop:
                         line_i += 1
                         continue
@@ -331,8 +345,12 @@ def import_voila_txt(fp,
 
             line_i += 1
             if can_stop:
-                if not found_stop_at:
-                    break
+                if isinstance(stop_at, str):
+                    if not found_stop_at:
+                        break
+                else:
+                    if False not in found_stop_at:
+                        break
             # Add the line's data to the dict
             lsv_dictionary.update(the_data)
             if just_checking_validity:
@@ -2281,4 +2299,14 @@ def import_dpsi_pandas(tsv_file, columns=None):
     return pa_dataframe
 
 
-
+def file_to_list(filepath):
+    """
+    Given a file path, return list of each line rstriped
+    :param filepath: str to file..
+    :return: list
+    """
+    filelist = list()
+    with open(filepath, "r") as handle:
+        for line in handle:
+            filelist.append(line.rstrip("\n\r"))
+    return filelist

@@ -25,8 +25,9 @@ class ThisisLookup(Tool):
                             help='Directory where majiq was run.')
         parser.add_argument('gene',
                             type=str,
-                            help='Gene Name or Gene IDs to lookup. Maybe be more than 1 separated by commas'
-                                 ' without any spaces. Case-insensitive. (e.g. gapdh,RUNX1,Ptprc)')
+                            help='Gene Name or Gene IDs to lookup. May be more than 1 separated by commas'
+                                 ' without any spaces. Case-insensitive. (e.g. gapdh,RUNX1,Ptprc) Can also be'
+                                 ' a file with each line a separate gene name/ID.')
         parser.add_argument('outdir',
                             type=str,
                             help='Directory to write bash script to.')
@@ -67,6 +68,12 @@ class ThisisLookup(Tool):
                 to_lookup = [args.names]
         else:
             to_lookup = None
+        if os.path.isfile(args.gene):
+            gene = io_caleb.file_to_list(args.gene)
+        elif "," in args.gene:
+            gene = args.gene.split(",")
+        else:
+            gene = [gene]
         imported = io_caleb.quick_import(input=args.indir,
                                          cutoff_d_psi=0,
                                          cutoff_prob=0,
