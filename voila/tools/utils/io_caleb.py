@@ -934,21 +934,21 @@ def get_deseq_genes(DESeqDirectory,
     return results
 
 
-def check_is_ignant(data, users_prob):
+def check_is_ignant(data, users_dpsi_thresh):
     """
     You should only use P(Expected dPSI) to ID significantly changing LSVs at the
         threshold voila was run with. So, only 0 or exactly the threshold. Raise
         error if this isn't the case for any of the data
     :param data:
-    :param users_prob:
+    :param users_dpsi_thresh:
     """
     comps = get_comparisons(data, sort=True)
     lsv_dictlist = [data[comp] for comp in comps]
     all_threshes = [get_prob_threshold(thed) for thed in lsv_dictlist]
     for comp, tsv_thresh in zip(comps, all_threshes):
-        if users_prob != tsv_thresh and users_prob != 0:
+        if users_dpsi_thresh != tsv_thresh and users_dpsi_thresh != 0:
             raise ValueError("WARNING !!! You are using an ill-advised threshold (%s) "
-                             " ... %s was run with voila thresh of %s!" % (users_prob,
+                             " ... %s was run with voila thresh of %s!" % (users_dpsi_thresh,
                                                                            comp,
                                                                            tsv_thresh))
 
