@@ -272,8 +272,6 @@ def import_voila_txt(fp,
         found_stop_at = False if isinstance(stop_at, str) else [False for x in stop_at]
         can_stop = False
         for line in handle:
-            # if "ENSG00000078061" in line:
-            #     pdb.set_trace()
             if isinstance(stop_at, str):
                 if stop_at in line:
                     found_stop_at = True
@@ -371,6 +369,8 @@ def import_voila_txt(fp,
         if not just_checking_validity:
             lsv_dictionary["meta_info"]["prob_thresh"] = threshold
     else:
+        if just_checking_validity:
+            pdb.set_trace()
         lsv_dictionary["meta_info"]["sample_id"] = sample_id
     return lsv_dictionary
 
