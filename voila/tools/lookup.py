@@ -49,6 +49,11 @@ class ThisisLookup(Tool):
                             default=False,
                             action="store_true",
                             help=help_mes)
+        help_mes = 'Flag: Ignore the fact that user-provided dPSI threshold isn\'t what voila was run at.'
+        parser.add_argument('--ignore_dpsi_thresh',
+                            default=False,
+                            action="store_true",
+                            help=help_mes)
         help_mes = 'Which comparisons or samples to lookup ID in? Single space or comma separated please.'
         parser.add_argument('--names',
                             '--comparisons',
@@ -89,7 +94,8 @@ class ThisisLookup(Tool):
                                          stop_at=the_lookup_vals,
                                          comparisons=to_lookup,
                                          just_file_paths=args.just_file_paths)
-        io_caleb.check_is_ignant(imported, args.dpsi_thresh)
+        if not args.ignore_dpsi_thresh:
+            io_caleb.check_is_ignant(imported, args.dpsi_thresh)
         if args.just_file_paths:
             print("\n".join(imported))
             return
