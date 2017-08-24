@@ -190,7 +190,8 @@ def quick_import(input,
                                             cutoff_dpsi=cutoff_d_psi,
                                             cutoff_prob=cutoff_prob,
                                             keep_introns=keep_ir,
-                                            cutoff_sum=cutoff_sum)
+                                            cutoff_sum=cutoff_sum,
+                                            throw_no_sig_error=False)
     lsvs_length(imported_files)
     if deseq_dir:
         deseqres = get_deseq_diff_expr_genes(deseq_dir=deseq_dir,
@@ -740,7 +741,8 @@ def subset_significant(data,
                        cutoff_prob=0.95,
                        keep_introns=True,
                        cutoff_sum=False,
-                       intron_dpsi_thresh=0.05):
+                       intron_dpsi_thresh=0.05,
+                       throw_no_sig_error=True):
     """
     Given a quick_import dictionary, copy each LSV dicitonary to a new dictionary
         whereby only LSVs that meet provided cutoff settings are retained.
@@ -751,6 +753,7 @@ def subset_significant(data,
             Introns_across_comparisons: if Keep_introns=False, and if this arg is True,
             if intron retention changing in any comparison, that LSV is considered
             intronic and is discarded from all
+            throw_no_sig_error: if True, throw error if dict is going to be empty
     """
     if check_is_quick_import(data, the_bool=True):
         new_dict = dict()
@@ -768,7 +771,8 @@ def subset_significant(data,
         over_cutoff_ids = get_sig_lsv_ids(data,
                                           cutoff_dpsi,
                                           cutoff_prob,
-                                          cutoff_sum)
+                                          cutoff_sum,
+                                          throw_no_sig_error=throw_no_sig_error)
         if keep_introns:
             ids_to_keep = over_cutoff_ids
         else:
@@ -1247,7 +1251,8 @@ def get_sig_lsv_ids(data,
                     cutoff_d_psi=0.0,
                     prob_d_psi=0.0,
                     sum_for_cutoff=False,
-                    collapse=False):
+                    collapse=False,
+                    throw_no_sig_error=True):
     """
     Given LSV dictionary, return set of unique LSV IDs over cutoff
 
@@ -1263,6 +1268,7 @@ def get_sig_lsv_ids(data,
             This is less conservative than default.
         Collapse: if data is quick import, and collapse=True, collapse all sets into
             one big set to return
+        throw_no_sig_error: if True, when no sig ids make cutoff, throw error
 
     Return:
         set or dict of sets
@@ -1288,8 +1294,11 @@ def get_sig_lsv_ids(data,
     names = get_lsv_ids(data)
     names_over_cutoff = set()
     if len(names) < 1:
-        raise RuntimeError("No LSVs made Cutoff dPSI of %s and Prob of %s" % (cutoff_d_psi,
+        if throw_no_sig_error:
+            raise RuntimeError("No LSVs made Cutoff dPSI of %s and Prob of %s" % (cutoff_d_psi,
                                                                               prob_d_psi))
+        else:
+            return names_over_cutoff
     prob_name = get_name_of_prob_key(data[names[0]])
     for name in names:
         dPSIs = data[name]["E(dPSI) per LSV junction"]
