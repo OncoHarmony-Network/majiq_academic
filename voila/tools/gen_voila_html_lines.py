@@ -125,7 +125,7 @@ def write_voila_bash(data,
         else:
             raise ValueError("Comparison must be a string or list of strings")
     else:
-        comparison_list = data.keys()
+        comparison_list = io_caleb.get_comparisons(data)
     if isinstance(gene, str):
         gene_list = [gene]
     elif isinstance(gene, list) and isinstance(gene[0], str):
