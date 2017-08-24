@@ -765,7 +765,8 @@ def subset_significant(data,
                                                          cutoff_prob=cutoff_prob,
                                                          keep_introns=keep_introns,
                                                          cutoff_sum=cutoff_sum,
-                                                         intron_dpsi_thresh=intron_dpsi_thresh)
+                                                         intron_dpsi_thresh=intron_dpsi_thresh,
+                                                         throw_no_sig_error=throw_no_sig_error)
         return new_dict
     elif check_is_lsv_dict(data, da_bool=True):
         over_cutoff_ids = get_sig_lsv_ids(data,
