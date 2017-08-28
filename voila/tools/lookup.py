@@ -96,7 +96,7 @@ class ThisisLookup(Tool):
                                          stop_at=the_lookup_vals,
                                          comparisons=to_lookup,
                                          just_file_paths=args.just_file_paths)
-        if not args.ignore_dpsi_thresh:
+        if not args.ignore_dpsi_thresh and not args.just_file_paths:
             io_caleb.check_is_ignant(imported, args.dpsi_thresh)
         if args.just_file_paths:
             print("\n".join(imported))
