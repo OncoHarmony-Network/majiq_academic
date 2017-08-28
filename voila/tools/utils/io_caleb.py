@@ -253,8 +253,8 @@ def import_voila_txt(fp,
 
 
     """
-    if not isinstance(stop_at, list) and not isinstance(stop_at, str):
-        raise ValueError("%s needs to be a list or str, not %s" % (stop_at, type(stop_at)))
+    if not isinstance(stop_at, list) and not isinstance(stop_at, str) and not isinstance(stop_at, bool):
+        raise ValueError("%s needs to be a bool list or str, not %s" % (stop_at, type(stop_at)))
     if not isinstance(fp, str):
         raise TypeError("Expected file path to be string, instead it was %s" % type(fp))
     if not have_permission(fp):
@@ -273,7 +273,7 @@ def import_voila_txt(fp,
     file_headers = list()
     with open(fp, "r") as handle:
         line_i = 0
-        found_stop_at = False if isinstance(stop_at, str) else [False for x in stop_at]
+        found_stop_at = False if isinstance(stop_at, str) or isinstance(stop_at, bool) else [False for x in stop_at]
         can_stop = False
         for line in handle:
             if isinstance(stop_at, str):
