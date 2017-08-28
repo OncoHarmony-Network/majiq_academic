@@ -36,6 +36,10 @@ class ThisisLookup(Tool):
                             default="*tsv",
                             type=str,
                             help=help_mes)
+        help_mes = 'Optional: path to file with list of voila txt files abs paths to use'
+        parser.add_argument('--abs_fps',
+                            type=str,
+                            help=help_mes)
         help_mes = 'Which comparisons or samples to lookup ID in? Single space or comma separated please.'
         parser.add_argument('--names',
                             '--comparisons',
@@ -74,7 +78,7 @@ class ThisisLookup(Tool):
             gene = args.gene.split(",")
         else:
             gene = [args.gene]
-        imported = io_caleb.quick_import(input=args.indir,
+        imported = io_caleb.quick_import(input=args.abs_fps if args.abs_fps else args.indir,
                                          cutoff_d_psi=0,
                                          cutoff_prob=0,
                                          pattern=args.pattern,
