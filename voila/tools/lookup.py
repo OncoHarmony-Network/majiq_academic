@@ -116,8 +116,8 @@ class ThisisLookup(Tool):
             geneinfo = lookup_val
             gene_name = io_caleb.genename_from_id(imported, lookup_val, false_or_error="False")
             if gene_name:
-                geneinfo += "\t%s" % gene_name
-            print("=-=-=-=-=\n=-=-=-=-=\n=-=-=-=-=\n %s\n%s =-=-=-=-=\n=-=-=-=-=\n=-=-=-=-=\n" % (geneinfo, details))
+                geneinfo += " aka %s" % gene_name
+            print("=-=-=-=-=\n=-=-=-=-=\n=-=-=-=-=\n%s\n%s=-=-=-=-=\n=-=-=-=-=\n=-=-=-=-=\n" % (geneinfo, details))
 
             lookup_everywhere(dictionary_lookup=imported,
                               name=lookup_val,
