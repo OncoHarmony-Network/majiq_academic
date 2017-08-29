@@ -1185,10 +1185,11 @@ def lsv_dict_subset(dictionary,
 
 def lsvs_length(data):
     """
-    Given quick import, print the number of LSVs in each comparisons
+    Given quick import, print the number of LSVs in each comparisons. Also returns the printed string.
     """
     check_is_quick_import(data)
     all_lsvs = get_all_unique_lsv_ids(data, verbose=True)
+    the_string = ""
     if len(data.keys()) > 1:
         all_lsvs = list(set(all_lsvs))
         n_all = len(all_lsvs)
@@ -1197,8 +1198,11 @@ def lsvs_length(data):
             n_shared = len(shared_lsvs)
         else:
             n_shared = 0
-        LOG.info("%s Shared LSVs between all comparisons." % (n_shared))
-        LOG.info("Total of %s unique LSVs across all comparisons." % (n_all))
+        thistring = "%s Shared LSVs between all comparisons.\n" % (n_shared)
+        thistring += "Total of %s unique LSVs across all comparisons." % (n_all)
+        LOG.info(thistring)
+        the_string += thistring
+    return the_string
 
 
 def remove_genes(rm_data,
