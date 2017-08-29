@@ -1805,9 +1805,9 @@ def get_all_unique_lsv_ids(data,
         lsv_dict = data[comparison_name]
         lsvs = get_lsv_ids(lsv_dict)
         all_lsvs.extend(lsvs)
+        n_lsvs = len(lsvs)
         thisstr = "%s LSVs in %s\n" % (n_lsvs, comparison_name)
         if verbose:
-            n_lsvs = len(lsvs)
             LOG.info(thisstr)
         if return_string_instead:
             ret_str += thisstr
