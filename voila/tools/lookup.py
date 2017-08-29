@@ -4,12 +4,10 @@ from voila.tools import Tool
 from voila.tools.utils import io_caleb
 from voila.utils.voila_log import voila_log
 
-
 # Caleb Matthew Radens
 # radlinsky@gmail.com
 
 __author__ = 'cradens'
-
 
 LOG = voila_log()
 
@@ -25,14 +23,14 @@ class ThisisLookup(Tool):
                             help='Directory where voila texts are.')
         mutually_excl_grp = parser.add_mutually_exclusive_group(required=True)
         mutually_excl_grp.add_argument('--lookup_val',
-                            type=str,
-                            help='Gene Names, Gene IDs, or LSV IDs to lookup. Comma separated, or a file'
-                                 'with each line as a lookup value.')
+                                       type=str,
+                                       help='Gene Names, Gene IDs, or LSV IDs to lookup. Comma separated, or a file'
+                                            'with each line as a lookup value.')
         help_mes = 'Flag: only return file paths for the voila txt files found..'
         mutually_excl_grp.add_argument('--just_file_paths',
-                            action='store_true',
-                            default=False,
-                            help=help_mes)
+                                       action='store_true',
+                                       default=False,
+                                       help=help_mes)
         help_mes = 'Optional pattern matching to identify the voila text files'
         parser.add_argument('-p',
                             '--pattern',
@@ -82,7 +80,7 @@ class ThisisLookup(Tool):
             dont_remove_dups = False
         else:
             to_lookup = None
-            dont_remove_dups=True
+            dont_remove_dups = True
         if args.lookup_val:
             if os.path.exists(args.lookup_val):
                 the_lookup_vals = io_caleb.file_to_list(args.lookup_val)
@@ -113,6 +111,14 @@ class ThisisLookup(Tool):
             abbreviated_bool = False
         for lookup_val in the_lookup_vals:
             details = "dPSI cutoff: %s\nProb cutoff: %s\n" % (args.dpsi_thresh, args.prob_dpsi_thresh)
+            lookup_res = lookup_everywhere(dictionary_lookup=imported,
+                                           name=lookup_val,
+                                           just_one=args.just_one,
+                                           abbreviated=abbreviated_bool,
+                                           comparisons_lookup=to_lookup,
+                                           dont_rem_dup=dont_remove_dups,
+                                           print_bool=False)
+            details += io_caleb.lsvs_length(lookup_res)
             geneinfo = lookup_val
             gene_name = io_caleb.genename_from_id(imported, lookup_val, false_or_error="False")
             if gene_name:
@@ -162,11 +168,11 @@ def lookup_everywhere(dictionary_lookup,
         if isinstance(name, list):
             for na in name:
                 found_data = lookup(dictionary_lookup[lsv_dict_name],
-                            name=na,
-                            printable=print_bool,
-                            save_lsv_structure=save_lsv_structure_lookup,
-                            not_found_error=False,
-                            abbreviated=abbreviated)
+                                    name=na,
+                                    printable=print_bool,
+                                    save_lsv_structure=save_lsv_structure_lookup,
+                                    not_found_error=False,
+                                    abbreviated=abbreviated)
                 if found_data == "gene_not_found" or found_data == "lsv_id_not_found":
                     if print_bool:
                         print(na + " not found in " + lsv_dict_name + "\n")
@@ -298,9 +304,9 @@ def get_lsv(data, lsv_id, comparison=False):
     """
     io_caleb.check_is_quick_import(data)
     lsv_dicts = lookup_everywhere(data,
-                                         lsv_id,
-                                         save_lsv_structure_lookup=False,
-                                         print_bool=False)
+                                  lsv_id,
+                                  save_lsv_structure_lookup=False,
+                                  print_bool=False)
     if comparison:
         comparison = comparison
     else:
@@ -415,49 +421,49 @@ def help_print_lsv(lsv, abbreviated=True):
     type_lsv = io_caleb.psi_or_deltapsi(lsv)
     if type_lsv == "deltapsi":
         the_header = ["Gene Name",
-                       "Gene ID",
-                       "LSV ID",
-                       "E(dPSI) per LSV junction",
-                       "TBD",
-                       "E(PSI)1",  # This header also has the 1st condition name
-                       "E(PSI)2",  # This header also has the 2nd condition name
-                       "LSV Type",
-                       "A5SS",
-                       "A3SS",
-                       "ES",
-                       "Num. Junctions",
-                       "Num. Exons",
-                       "De Novo Junctions",
-                       "chr",
-                       "strand",
-                       "Junctions coords",
-                       "Exons coords",
-                       "Exons Alternative Start",
-                       "Exons Alternative End",
-                       "IR coords"]
+                      "Gene ID",
+                      "LSV ID",
+                      "E(dPSI) per LSV junction",
+                      "TBD",
+                      "E(PSI)1",  # This header also has the 1st condition name
+                      "E(PSI)2",  # This header also has the 2nd condition name
+                      "LSV Type",
+                      "A5SS",
+                      "A3SS",
+                      "ES",
+                      "Num. Junctions",
+                      "Num. Exons",
+                      "De Novo Junctions",
+                      "chr",
+                      "strand",
+                      "Junctions coords",
+                      "Exons coords",
+                      "Exons Alternative Start",
+                      "Exons Alternative End",
+                      "IR coords"]
         the_header[4] = io_caleb.get_name_of_prob_key(lsv)
         the_header[5], the_header[6] = io_caleb.get_name_of_psi_keys(lsv)
         headers_to_keep = [0, 1, 2, 3, 4, 5, 6, 7, 14, 15, 16, 17]
     else:  # it is a psi file
         the_header = ["Gene Name",
-                       "Gene ID",
-                       "LSV ID",
-                       "E(PSI) per LSV junction",
-                       "Var(E(PSI)) per LSV junction",
-                       "LSV Type",
-                       "A5SS",
-                       "A3SS",
-                       "ES",
-                       "Num. Junctions",
-                       "Num. Exons",
-                       "De Novo Junctions",
-                       "chr",
-                       "strand",
-                       "Junctions coords",
-                       "Exons coords",
-                       "Exons Alternative Start",
-                       "Exons Alternative End",
-                       "IR coords"]
+                      "Gene ID",
+                      "LSV ID",
+                      "E(PSI) per LSV junction",
+                      "Var(E(PSI)) per LSV junction",
+                      "LSV Type",
+                      "A5SS",
+                      "A3SS",
+                      "ES",
+                      "Num. Junctions",
+                      "Num. Exons",
+                      "De Novo Junctions",
+                      "chr",
+                      "strand",
+                      "Junctions coords",
+                      "Exons coords",
+                      "Exons Alternative Start",
+                      "Exons Alternative End",
+                      "IR coords"]
         headers_to_keep = [0, 1, 2, 3, 4, 5, 12, 13, 14, 15]
     stringed_lsv = ""
     if abbreviated:
