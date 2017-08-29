@@ -249,7 +249,7 @@ class Builder(BasicPipeline):
             p.join()
 
             if self.nthreads > 1:
-                pool = mp.Pool(processes=self.nthreads, initializer=process_conf, initargs=[self, None, None, None])
+                pool = mp.Pool(processes=self.nthreads, initializer=process_conf, initargs=[self, None])
                 lchnksize = max(int(len(majiq_config.sam_list)/self.nthreads), 1) + 1
                 pool.map_async(parsing_files, majiq_utils.chunks2(majiq_config.sam_list, lchnksize,
                                                                   extra=range(self.nthreads)))
