@@ -354,7 +354,7 @@ def import_voila_txt(fp,
                     if not found_stop_at:
                         break
                 else:
-                    pdb.set_trace()
+                    #pdb.set_trace()
                     if False not in found_stop_at:
                         if True not in gene_in_line_bools:
                             break
