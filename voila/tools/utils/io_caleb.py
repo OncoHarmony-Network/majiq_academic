@@ -287,7 +287,8 @@ def import_voila_txt(fp,
             elif isinstance(stop_at, list):
                 if fp == "/data/THelper/lisp/voila/dpsi/groups/thresh_10/TU_T0_72vsTU_T17_72/TU_T0_72_TU_T17_72.deltapsi_deltapsi.tsv":
                     if stop_at[0] in line:
-                        pdb.set_trace()
+                        print("here")
+                        #pdb.set_trace()
                 gene_in_line_bools = [gene in line for gene in stop_at]
                 if True in gene_in_line_bools:
                     gene_ii = gene_in_line_bools.index(True)
