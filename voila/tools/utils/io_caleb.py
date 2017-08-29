@@ -354,7 +354,8 @@ def import_voila_txt(fp,
                         break
                 else:
                     if False not in found_stop_at:
-                        break
+                        if True not in gene_in_line_bools:
+                            break
             # Add the line's data to the dict
             lsv_dictionary.update(the_data)
             if just_checking_validity:
