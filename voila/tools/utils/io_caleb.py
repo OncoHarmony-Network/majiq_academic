@@ -1199,7 +1199,7 @@ def lsvs_length(data):
         else:
             n_shared = 0
         thistring = "%s Shared LSVs between all comparisons.\n" % (n_shared)
-        thistring += "Total of %s unique LSVs across all comparisons." % (n_all)
+        thistring += "Total of %s unique LSVs across all comparisons.\n" % (n_all)
         LOG.info(thistring)
         the_string += thistring
     return the_string
@@ -1805,7 +1805,7 @@ def get_all_unique_lsv_ids(data,
         lsv_dict = data[comparison_name]
         lsvs = get_lsv_ids(lsv_dict)
         all_lsvs.extend(lsvs)
-        thisstr = "%s LSVs in %s" % (n_lsvs, comparison_name)
+        thisstr = "%s LSVs in %s\n" % (n_lsvs, comparison_name)
         if verbose:
             n_lsvs = len(lsvs)
             LOG.info(thisstr)
