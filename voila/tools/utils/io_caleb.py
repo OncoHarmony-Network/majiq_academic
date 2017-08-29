@@ -82,7 +82,6 @@ def quick_import(input,
 
     Returns all voila dPSI results in a dictionary format.
     """
-    pdb.set_trace()
     if isinstance(stop_at, str):
         if os.path.exists(stop_at):
             stop_at = file_to_list(stop_at)
