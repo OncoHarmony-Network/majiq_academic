@@ -70,6 +70,7 @@ class ThisisLookup(Tool):
         return parser
 
     def run(self, args):
+        pdb.set_trace()
         # parse the comparisons argument
         if args.names:
             if "," in args.names or " " in args.names:
