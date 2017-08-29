@@ -36,5 +36,6 @@ def percent_through_list(the_list,
     by_percent_index = dict()
     for by in calebs_xrange(0, 1, update_at_this_perc):
         index = int(math.floor(by * list_n))
-        by_percent_index[index] = by * 100.0
+        # round because of python weird numeric issues
+        by_percent_index[index] = round(by * 100.0, 2)
     return by_percent_index

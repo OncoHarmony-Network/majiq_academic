@@ -29,9 +29,11 @@ class ThisisNonRedundantSets(Tool):
         parser = self.get_parser()
         mutually_excl_grp = parser.add_mutually_exclusive_group(required=True)
         mutually_excl_grp.add_argument('--directory',
+                                       '-d',
                                        type=str,
                                        help='Directory where voila texts are. (searches recursively)')
         mutually_excl_grp.add_argument('--file_list',
+                                       '-fl',
                                        type=str,
                                        help='A file with a list of voila text file paths (one line each).')
         help_mes = "Output to save file to (include full path)"
@@ -83,6 +85,7 @@ class ThisisNonRedundantSets(Tool):
                                          cutoff_prob=0,
                                          pattern=args.pattern,
                                          keep_ir=consider_ir)
+        io_caleb.check_is_ignant(imported, args.dpsi_thresh)
         non_red_res = non_redundant_set(imported,
                                         cutoff_dpsi=args.dpsi_thresh,
                                         cutoff_psi=args.psi_thresh)

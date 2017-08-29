@@ -1,4 +1,6 @@
 import re
+import traceback
+
 import numpy as np
 import os
 import pandas as pa
@@ -8,13 +10,11 @@ from voila.tools.utils import find_files
 from voila.tools.utils.calebs_xrange import calebs_xrange
 from voila.utils.voila_log import voila_log
 
-
 # Caleb Matthew Radens
 # radlinsky@gmail.com
 
 
 __author__ = 'cradens'
-
 
 LOG = voila_log()
 
@@ -35,7 +35,8 @@ def quick_import(input,
                  just_one=False,
                  stop_at=False,
                  comparisons=None,
-                 prefered_type=None):
+                 prefered_type=None,
+                 just_file_paths=False):
     """
     Given a directory with '*_quantify_deltapsi' files, import all dPSI
         text files and return dictionary as follows:
@@ -66,9 +67,11 @@ def quick_import(input,
                 in genes exhibiting significant changes in gene expression.
                 See get_deseq_diff_expr_genes() for details.
         just_one: only import and return one txt path (only really need this for lookup.lookup_everywhere()...)
-        stop_at: if provided, stop reading voila file when you reach this LSV ID
+        stop_at: if provided, stop reading voila file when you reach this LSV ID or Gene name/ID. Could also
+            be a file path to a line-by-line list of Gene names/IDs or LSVIDs.
         comparisons: if provided, only import tsv files with the provided list of comparison names
         prefered_type: If provided, only import "deltapsi" or only "psi" files
+        just_file_paths: if True, just return the file paths for found voila txt files
 
     Assumptions:
         Directory contains files that end in ".deltapsi_quantify_deltapsi.txt"
@@ -79,24 +82,28 @@ def quick_import(input,
 
     Returns all voila dPSI results in a dictionary format.
     """
+    if isinstance(stop_at, str):
+        if os.path.exists(stop_at):
+            stop_at = file_to_list(stop_at)
     if prefered_type:
         if not isinstance(prefered_type, str) or prefered_type not in ["deltapsi", "psi"]:
-            LOG.error("prefered_type must be either 'deltapsi' or 'psi' if specified at all, not '%s'" % prefered_type)
-            exit(1)
-    if not (os.path.isdir(input)):
+            raise ValueError("prefered_type must be either 'deltapsi' or 'psi' if specified at all, not '%s'" % prefered_type)
+    if not os.path.isdir(input):
+        LOG.info("Looks like the user provided a file...")
         if name_looks_like_voila_txt_file(input, pattern=pattern):
+            LOG.info("It could be a voila tab file ...")
             basename = os.path.basename(input)
             # Get the file name before .psi_psi or before .deltapsi_deltapsi
             basenames = [get_base_names(basename)]
             voila_txt_files = [input]
         elif os.path.isfile(input):
+            LOG.info("It could be a file with file paths to voila tab files ...")
             is_valid_list, voila_txt_files = is_likely_list_of_txtfiles(input)
             if is_valid_list:
                 # Get the file names before .psi_psi or before .deltapsi_deltapsi
                 basenames = [get_base_names(os.path.basename(x)) for x in voila_txt_files]
             else:
-                LOG.error("%s wasn't  valid list of voila txt files.")
-                exit(1)
+                raise ValueError("%s wasn't  valid list of voila txt files.")
         else:
             raise ValueError(input + " not found.")
     else:
@@ -107,6 +114,17 @@ def quick_import(input,
         if len(basenames) != len(voila_txt_files):
             raise ValueError("Something is probably screwy with the names "
                              "of the voila text files...")
+        # Preemptively check if the file paths are all actually pointing at valid voila txt files. Remove the baddies.
+        basenames_fix = list()
+        voila_txt_files_fix = list()
+        check_txtfiles = check_valid_voila_txts(voila_txt_files)
+        for bn, fp, is_valid in zip(basenames, voila_txt_files, check_txtfiles):
+            if is_valid:
+                basenames_fix.append(bn)
+                voila_txt_files_fix.append(fp)
+        # too lazy to rename things
+        basenames = basenames_fix
+        voila_txt_files = voila_txt_files_fix
         # Only want to import stuff in list of comparisons...
         if comparisons:
             if isinstance(comparisons, str):
@@ -143,31 +161,39 @@ def quick_import(input,
 
     LOG.info("Found " + str(len(voila_txt_files)) +
              " dPSI text files ...")
+
     imported_files = dict()
     funky_ids = list()
 
     if just_one:
         voila_txt_files = [voila_txt_files[0]]
+    valid_fps = list()
     for f, comparison_name in zip(voila_txt_files, basenames):
         if prefered_type:
             expected = prefered_type
         else:
             expected = "deltapsi" if "deltapsi_deltapsi" in os.path.basename(f) else "psi"
         imported_file = import_voila_txt(f,
-                                         cutoff_d_psi,
-                                         cutoff_prob,
                                          stop_at=stop_at,
-                                         expected_type=expected)
+                                         expected_type=expected,
+                                         just_checking_validity=just_file_paths)
+
         # imported_file will be False if import_dpsi thinks it is not a valid tsv...
         if not imported_file:
             continue
-        imported_files[comparison_name] = imported_file
+        if just_file_paths:
+            valid_fps.append(f)
+        else:
+            imported_files[comparison_name] = imported_file
+    if just_file_paths:
+        return valid_fps
     if cutoff_d_psi != 0 or cutoff_prob != 0 or not keep_ir:
         imported_files = subset_significant(imported_files,
                                             cutoff_dpsi=cutoff_d_psi,
                                             cutoff_prob=cutoff_prob,
                                             keep_introns=keep_ir,
-                                            cutoff_sum=cutoff_sum)
+                                            cutoff_sum=cutoff_sum,
+                                            throw_no_sig_error=False)
     lsvs_length(imported_files)
     if deseq_dir:
         deseqres = get_deseq_diff_expr_genes(deseq_dir=deseq_dir,
@@ -182,11 +208,30 @@ def quick_import(input,
     return imported_files
 
 
+def check_valid_voila_txts(file_path_list):
+    """
+    For each file in the list, check if it is a valid voila txt file, return list of bools
+    :param file_path_list:
+    :return: list of bools
+    """
+    passed = list()
+    for fp in file_path_list:
+        expected = "deltapsi" if "deltapsi_deltapsi" in os.path.basename(fp) else "psi"
+        test_imp = import_voila_txt(fp,
+                                    stop_at="Gene Name",  # my trick to not actually import the file ;)
+                                    expected_type=expected,
+                                    just_checking_validity=True)
+        if test_imp:
+            passed.append(True)
+        else:
+            passed.append(False)
+    return passed
+
+
 def import_voila_txt(fp,
-                     cutoff_d_psi=0,
-                     cutoff_prob=0,
                      stop_at=False,
-                     expected_type="deltapsi_deltapsi"):
+                     expected_type="deltapsi_deltapsi",
+                     just_checking_validity=False):
     """
     Given a file path pointing at voila .txt output,
     return a dictionary with LSV_ID->data about that LSV.
@@ -196,17 +241,14 @@ def import_voila_txt(fp,
 
     Arguments:
         fp: file path for a voila d_psi quantify text file
-        cutoff_d_psi: LSVs must have at least 1 junction d_psi >= this.
-            (and those junctions must meet the Cutoff_prob)
-            0<=X<=1
-        cutoff_prob: All LSVs must have at least 1 junction prob >= this.
-            (and those junctions must meet the Cutoff_dPSI)
-            0<=X<=1
         stop_at: if provided, stop reading voila file when you reach this LSV ID
         expected_type: If provided, only import "deltapsi" or only "psi" files
+        just_checking_validity: Bool. If True, don't print "Importing..."
 
 
     """
+    if not isinstance(stop_at, list) and not isinstance(stop_at, str) and not isinstance(stop_at, bool):
+        raise ValueError("%s needs to be a bool list or str, not %s" % (stop_at, type(stop_at)))
     if not isinstance(fp, str):
         raise TypeError("Expected file path to be string, instead it was %s" % type(fp))
     if not have_permission(fp):
@@ -215,14 +257,20 @@ def import_voila_txt(fp,
         return False
     if check_if_file_binary(fp):
         LOG.info("%s matched search pattern, but it is binary, so the file is not"
-                 "a voila tsv ... skipping it" % fp)
+                 " a voila tsv ... skipping it" % fp)
+        return False
+    if os.stat(fp).st_size == 0:
+        LOG.info("%s is empty... skipping it" % fp)
         return False
     lsv_dictionary = dict()
     has_voila = True
     file_headers = list()
     with open(fp, "r") as handle:
         line_i = 0
-        found_stop_at = False
+        if isinstance(stop_at, str) or isinstance(stop_at, bool):
+            found_stop_at = False
+        else:
+            found_stop_at = [False for x in stop_at]
         can_stop = False
         for line in handle:
             if isinstance(stop_at, str):
@@ -231,9 +279,22 @@ def import_voila_txt(fp,
                     can_stop = True
                 else:
                     found_stop_at = False
-                    if line_i > 0:
+                    if line_i > 0 and not can_stop:
                         line_i += 1
                         continue
+                    elif line_i > 0 and can_stop:
+                        break
+            elif isinstance(stop_at, list):
+                gene_in_line_bools = [gene in line for gene in stop_at]
+                if True in gene_in_line_bools:
+                    gene_ii = gene_in_line_bools.index(True)
+                    found_stop_at[gene_ii] = True
+                else:
+                    if line_i > 0 and not can_stop:
+                        line_i += 1
+                        continue
+                    elif line_i > 0 and can_stop:
+                        break
             line_split = line.rstrip("\r\n").split("\t")
             if line_i == 0:
                 if expected_type == "deltapsi":
@@ -252,11 +313,16 @@ def import_voila_txt(fp,
                 if expected_type == "deltapsi":
                     condition_1_name = line_split[5].split(" ")[0]
                     condition_2_name = line_split[6].split(" ")[0]
-                    LOG.info("Importing %s vs %s deltapsi data ..." % (condition_1_name, condition_2_name))
+                    if not just_checking_validity:
+                        threshold = get_threshold(line_split)
+                        LOG.info("Importing %s vs %s deltapsi data (P>=%s) ..." % (condition_1_name,
+                                                                                   condition_2_name,
+                                                                                   threshold))
                 # Else its a psi file
                 else:
                     sample_id = get_base_names(fp)
-                    LOG.info("Importing %s psi_psi data ..." % (sample_id))
+                    if not just_checking_validity:
+                        LOG.info("Importing %s psi_psi data ..." % (sample_id))
                 if "Voila Link" in file_headers:
                     has_voila = True
                     pre_voila_1_0_0 = True
@@ -274,24 +340,59 @@ def import_voila_txt(fp,
                                          has_voila)
             else:
                 the_data = get_psi_data(line_split,
-                                         pre_voila_1_0_0,
-                                         file_headers,
-                                         has_voila)
+                                        pre_voila_1_0_0,
+                                        file_headers,
+                                        has_voila)
 
             line_i += 1
             if can_stop:
-                if not found_stop_at:
-                    break
+                if isinstance(stop_at, str):
+                    if not found_stop_at:
+                        break
+                else:
+                    if False not in found_stop_at:
+                        if True not in gene_in_line_bools:
+                            break
+            # Add the line's data to the dict
+            lsv_dictionary.update(the_data)
+            if just_checking_validity:
+                return True
+            if isinstance(stop_at, list):
+                if False not in found_stop_at:
+                    can_stop = True
+                else:
+                    can_stop = False
+    # add the meta_info for the experiment
+    lsv_dictionary["meta_info"] = dict()
+    lsv_dictionary["meta_info"]["abs_path"] = os.path.abspath(fp)
+    if expected_type == "deltapsi":
+        lsv_dictionary["meta_info"]["condition_1_name"] = condition_1_name
+        lsv_dictionary["meta_info"]["condition_2_name"] = condition_2_name
+        if not just_checking_validity:
+            lsv_dictionary["meta_info"]["prob_thresh"] = threshold
+    else:
+        lsv_dictionary["meta_info"]["sample_id"] = sample_id
+    return lsv_dictionary
 
-        lsv_dictionary.update(the_data)
-        lsv_dictionary["meta_info"] = dict()
-        lsv_dictionary["meta_info"]["abs_path"] = os.path.abspath(fp)
-        if expected_type == "deltapsi":
-            lsv_dictionary["meta_info"]["condition_1_name"] = condition_1_name
-            lsv_dictionary["meta_info"]["condition_2_name"] = condition_2_name
-        else:
-            lsv_dictionary["meta_info"]["sample_id"] = sample_id
-        return lsv_dictionary
+
+def get_threshold(line_split):
+    """
+    From split dpsi voila text file header, return the probabily threshold as a float
+    :param line_split: the first line of the file
+    :return: float
+    """
+    try:
+        the_thresh = float(line_split[4].split("P(|dPSI|>=")[1].split(") per LSV junction")[0])
+    except:
+        err_message = ""
+        if "P(|dPSI|>=" not in line_split[4]:
+            err_message += "...Uh oh, 'P(|dPSI|>=' wasn't in the prob column header..."
+        if ") per LSV junction" not in line_split[4]:
+            err_message += "\n...Uh oh, ') per LSV junction' wasn't in the prob column header..."
+        if len(err_message) > 0:
+            LOG.error(err_message)
+        raise
+    return the_thresh
 
 
 def get_dpsi_data(line_split,
@@ -384,6 +485,7 @@ def get_dpsi_data(line_split,
     lsv_dictionary[LSV_ID]["Reference_Type"] = ref_type
     return lsv_dictionary
 
+
 def get_psi_data(line_split,
                  pre_voila_1_0_0,
                  file_headers,
@@ -468,6 +570,7 @@ def get_psi_data(line_split,
     lsv_dictionary[LSV_ID]["Reference_Type"] = ref_type
     return lsv_dictionary
 
+
 def is_likely_list_of_txtfiles(the_file):
     """
     Check if the_file is a line-by-line list of voila text files
@@ -476,11 +579,9 @@ def is_likely_list_of_txtfiles(the_file):
     """
     poss_files = list()
     if not os.path.isfile(the_file):
-        LOG.error("Sorry, this doesn't appear to be a valid filepath: %s..." % the_file)
-        exit(1)
+        raise ValueError("Sorry, this doesn't appear to be a valid filepath:\n%s" % the_file)
     if not have_permission(the_file):
-        LOG.error("Sorry, you don't have permission to open %s..." % the_file)
-        exit(1)
+        raise ValueError("Sorry, you don't have permission to open:\n%s" % the_file)
     if is_voila_txt_file(the_file):
         return False, poss_files
     if check_if_file_binary(the_file):
@@ -493,12 +594,12 @@ def is_likely_list_of_txtfiles(the_file):
             if len(poss_file) == 0:
                 continue
             if not is_voila_txt_file(poss_file):
-                LOG.info("%s doesn't look like a voila txt file" % poss_file)
+                LOG.info("This doesn't look like a voila txt file:\n%s" % poss_file)
                 return False, poss_files
             else:
                 poss_files.append(poss_file)
     if len(poss_files) == 0:
-        LOG.info("No voila text files found in %s" % the_file)
+        LOG.info("No voila text files found in:\n%s" % the_file)
         return False, poss_files
     return True, poss_files
 
@@ -510,13 +611,13 @@ def is_voila_txt_file(the_file):
     :return: Bool
     """
     if not os.path.isfile(the_file):
-        LOG.error("Sorry, this doesn't appear to be a valid filepath: %s..." % the_file)
+        LOG.error("Sorry, first line of supposed list doesn't appear to be a valid filepath:\n%s" % the_file)
         exit(1)
     if not have_permission(the_file):
-        LOG.error("Sorry, you don't have permission to open %s..." % the_file)
+        LOG.error("Sorry, you don't have permission to open:\n%s" % the_file)
         exit(1)
     if check_if_file_binary(the_file):
-        LOG.info("%s was binary, so it's definitely not a voila text file..." % the_file)
+        LOG.info("This is binary, so it's definitely not a voila text file:\n%s" % the_file)
         return False
     looks_like_voila = False
     line_i = 0
@@ -636,9 +737,10 @@ def comp_without_dup(comp_name):
 def subset_significant(data,
                        cutoff_dpsi=0.2,
                        cutoff_prob=0.95,
-                       keep_introns=False,
+                       keep_introns=True,
                        cutoff_sum=False,
-                       intron_dpsi_thresh=0.05):
+                       intron_dpsi_thresh=0.05,
+                       throw_no_sig_error=True):
     """
     Given a quick_import dictionary, copy each LSV dicitonary to a new dictionary
         whereby only LSVs that meet provided cutoff settings are retained.
@@ -649,6 +751,7 @@ def subset_significant(data,
             Introns_across_comparisons: if Keep_introns=False, and if this arg is True,
             if intron retention changing in any comparison, that LSV is considered
             intronic and is discarded from all
+            throw_no_sig_error: if True, throw error if dict is going to be empty
     """
     if check_is_quick_import(data, the_bool=True):
         new_dict = dict()
@@ -660,13 +763,15 @@ def subset_significant(data,
                                                          cutoff_prob=cutoff_prob,
                                                          keep_introns=keep_introns,
                                                          cutoff_sum=cutoff_sum,
-                                                         intron_dpsi_thresh=intron_dpsi_thresh)
+                                                         intron_dpsi_thresh=intron_dpsi_thresh,
+                                                         throw_no_sig_error=throw_no_sig_error)
         return new_dict
     elif check_is_lsv_dict(data, da_bool=True):
         over_cutoff_ids = get_sig_lsv_ids(data,
                                           cutoff_dpsi,
                                           cutoff_prob,
-                                          cutoff_sum)
+                                          cutoff_sum,
+                                          throw_no_sig_error=throw_no_sig_error)
         if keep_introns:
             ids_to_keep = over_cutoff_ids
         else:
@@ -694,11 +799,13 @@ def get_base_names(file):
 
 def name_looks_like_voila_txt_file(the_file, pattern="*deltapsi_deltapsi.tsv"):
     if not os.path.exists(the_file):
-        LOG.error("Supposed deltapsi txt file doesn't exist.")
-        exit(1)
+        raise ValueError("Supposed deltapsi txt file doesn't exist.")
     newpat = pattern.replace("*", ".*")
     if re.search(newpat, the_file):
-        return True
+        if the_file[:-4].endswith("deltapsi_deltapsi") or the_file[:-4].endswith("psi_psi"):
+            return True
+        else:
+            return False
     else:
         return False
 
@@ -831,6 +938,25 @@ def get_deseq_genes(DESeqDirectory,
     return results
 
 
+def check_is_ignant(data, users_dpsi_thresh):
+    """
+    You should only use P(Expected dPSI) to ID significantly changing LSVs at the
+        threshold voila was run with. So, only 0 or exactly the threshold. Raise
+        error if this isn't the case for any of the data
+    :param data:
+    :param users_dpsi_thresh:
+    """
+    comps = get_comparisons(data, sort=True)
+    lsv_dictlist = [data[comp] for comp in comps]
+    all_threshes = [get_prob_threshold(thed) for thed in lsv_dictlist]
+    for comp, tsv_thresh in zip(comps, all_threshes):
+        if users_dpsi_thresh != tsv_thresh and users_dpsi_thresh != 0:
+            raise ValueError("WARNING !!! You are using an ill-advised threshold (%s) "
+                             " ... %s was run with voila thresh of %s!" % (users_dpsi_thresh,
+                                                                           comp,
+                                                                           tsv_thresh))
+
+
 def check_is_quick_import(quick_imp, the_bool=False):
     """
     Check if Quick_import looks like something returned by quick import.
@@ -953,6 +1079,28 @@ def check_is_lsv(lsv, Bool=False):
     return True
 
 
+def quick_import_subset(data,
+                        lsv_ids,
+                        in_place=False):
+    """
+    Assuming the data is imputed or shares all lsv ids
+    :param data: quick import (maybe imputed)
+    :param lsv_ids:
+    :param in_place: if True, overwerite data
+    :return:
+    """
+    comparisons = get_comparisons(data, sort=True)
+    res = dict()
+    for comp in comparisons:
+        this_subset = lsv_dict_subset(data[comp], lsv_ids)
+        if in_place:
+            data[comp] = this_subset
+        else:
+            res[comp] = this_subset
+    if not in_place:
+        return res
+
+
 def lsv_dict_subset(dictionary,
                     keys,
                     save_LSV_data=True,
@@ -1029,12 +1177,14 @@ def lsv_dict_subset(dictionary,
     return new_dict
 
 
-def lsvs_length(data):
+def lsvs_length(data,
+                verbose=True):
     """
-    Given quick import, print the number of LSVs in each comparisons
+    Given quick import, print the number of LSVs in each comparisons. Also returns the printed string.
     """
     check_is_quick_import(data)
-    all_lsvs = get_all_unique_lsv_ids(data, verbose=True)
+    all_lsvs = get_all_unique_lsv_ids(data, verbose=verbose)
+    the_string = get_all_unique_lsv_ids(data, verbose=False, return_string_instead=True)
     if len(data.keys()) > 1:
         all_lsvs = list(set(all_lsvs))
         n_all = len(all_lsvs)
@@ -1043,8 +1193,12 @@ def lsvs_length(data):
             n_shared = len(shared_lsvs)
         else:
             n_shared = 0
-        LOG.info("%s Shared LSVs between all comparisons." % (n_shared))
-        LOG.info("Total of %s unique LSVs across all comparisons." % (n_all))
+        thistring = "%s Shared LSVs between all comparisons.\n" % (n_shared)
+        thistring += "Total of %s unique LSVs across all comparisons.\n" % (n_all)
+        if verbose:
+            LOG.info(thistring)
+        the_string += thistring
+    return the_string
 
 
 def remove_genes(rm_data,
@@ -1084,54 +1238,82 @@ def remove_genes(rm_data,
         return removed_ids
 
 
-def get_sig_lsv_ids(Data,
-                    Cutoff_dPSI=0.0,
-                    Probability_dPSI=0.0,
-                    Sum_for_cutoff=False):
+def get_comparisons(data, sort=True):
+    """
+
+    :param data: quick import
+    :param sort: return names sorted? True or False
+    :return: list of comparison names
+    """
+    check_is_quick_import(data)
+    comps = list(data.keys())
+    if sort:
+        comps.sort()
+    return comps
+
+
+def get_sig_lsv_ids(data,
+                    cutoff_d_psi=0.0,
+                    prob_d_psi=0.0,
+                    sum_for_cutoff=False,
+                    collapse=False,
+                    throw_no_sig_error=True):
     """
     Given LSV dictionary, return set of unique LSV IDs over cutoff
+
         Note: recursively handles Quick_import and returns dict of
-        comparison_name -> sig_ids set
+        comparison_name -> sig_ids set, unless collapse=True
 
     Arguments:
-        Data: output of import_dpsi
-        Cutoff_dPSI: Only return LSV IDs with at least 1 junction abs(dPSI) >= Cutoff_dPSI
-        Probability_dPSI: junction must have a dPSI>= this to be considered
-        Sum_for_cutoff: If the sum of all +dPSI (that meet probability cutoff)
+        data: output of import_dpsi
+        cutoff_d_psi: Only return LSV IDs with at least 1 junction abs(dPSI) >= Cutoff_dPSI
+        prob_d_psi: junction must have a dPSI>= this to be considered
+        sum_for_cutoff: If the sum of all +dPSI (that meet probability cutoff)
             is >= Cutoff_dPSI, then include the LSV. Or if abs(sum of dPSI<0) is >= Cutoff_dPSI.
             This is less conservative than default.
+        Collapse: if data is quick import, and collapse=True, collapse all sets into
+            one big set to return
+        throw_no_sig_error: if True, when no sig ids make cutoff, throw error
 
     Return:
-        Set
+        set or dict of sets
     """
-    if check_is_quick_import(Data, the_bool=True):
-        comparisons = Data.keys()
+    if check_is_quick_import(data, the_bool=True):
+        comparisons = data.keys()
         results = dict()
         for comparison in comparisons:
-            LSV_Dict = Data[comparison]
+            LSV_Dict = data[comparison]
             results[comparison] = get_sig_lsv_ids(LSV_Dict,
-                                                  Cutoff_dPSI,
-                                                  Probability_dPSI,
-                                                  Sum_for_cutoff)
+                                                  cutoff_d_psi,
+                                                  prob_d_psi,
+                                                  sum_for_cutoff)
+        if collapse:
+            collapsed_res = set()
+            for this_set in results.values():
+                collapsed_res = collapsed_res | this_set
+            results = collapsed_res
         return results
-    check_is_lsv_dict(Data)
+    check_is_lsv_dict(data)
 
     # names AKA LSV IDs
-    names = get_lsv_ids(Data)
+    names = get_lsv_ids(data)
     names_over_cutoff = set()
     if len(names) < 1:
-        raise RuntimeError("No LSVs made Cutoff dPSI of %s and Prob of %s" % (Cutoff_dPSI,
-                                                                              Probability_dPSI))
-    prob_name = get_name_of_prob_key(Data[names[0]])
+        if throw_no_sig_error:
+            raise RuntimeError("No LSVs made Cutoff dPSI of %s and Prob of %s" % (cutoff_d_psi,
+                                                                              prob_d_psi))
+        else:
+            return names_over_cutoff
+    prob_name = get_name_of_prob_key(data[names[0]])
     for name in names:
-        dPSIs = Data[name]["E(dPSI) per LSV junction"]
-        prob_dPSIs = Data[name][prob_name]
-        if Sum_for_cutoff:
+        dPSIs = data[name]["E(dPSI) per LSV junction"]
+        prob_dPSIs = data[name][prob_name]
+        if sum_for_cutoff:
             sum_dPSI_over = 0
             sum_dPSI_under = 0
             meets_prob_cutoff = False
             for dPSI, prob_dPSI in zip(dPSIs, prob_dPSIs):
-                if prob_dPSI < Probability_dPSI:
+                if prob_dPSI < prob_d_psi:
                     continue
                 else:
                     meets_prob_cutoff = True
@@ -1139,12 +1321,12 @@ def get_sig_lsv_ids(Data,
                     sum_dPSI_over += dPSI
                 elif dPSI < 0:
                     sum_dPSI_under -= dPSI
-            if sum_dPSI_over >= Cutoff_dPSI or abs(sum_dPSI_under) >= Cutoff_dPSI:
+            if sum_dPSI_over >= cutoff_d_psi or abs(sum_dPSI_under) >= cutoff_d_psi:
                 if meets_prob_cutoff:
                     names_over_cutoff.add(name)
         else:
             for dPSI, prob_dPSI in zip(dPSIs, prob_dPSIs):
-                if (abs(dPSI) >= Cutoff_dPSI) and (prob_dPSI >= Probability_dPSI):
+                if (abs(dPSI) >= cutoff_d_psi) and (prob_dPSI >= prob_d_psi):
                     names_over_cutoff.add(name)
     return names_over_cutoff
 
@@ -1159,7 +1341,6 @@ def get_lsv_ids(lsv_dict):
     # lsv_ids.remove("condition_2_name")
     lsv_ids.remove("meta_info")
     return lsv_ids
-
 
 
 def get_dpsis(lsv,
@@ -1216,6 +1397,36 @@ def get_psis(lsv, cond_1=False, cond_2=False, as_dict=False, as_np_array=False):
     if as_dict:
         return {psi_key_1.split(" ")[0]: cond_1_psi, psi_key_2.split(" ")[0]: cond_2_psi}
     return [cond_1_psi, cond_2_psi]
+
+
+def genename_from_id(lsvdict,
+                     theid,
+                     false_or_error="False"):
+    """
+    Given an LSV dictionary or quick import  and an lsv id or gene id, return the gene name
+    :param lsvdict:
+    :param theid: LSV ID or Gene ID
+    :param false_or_error: "False" or "Error" - specify which to return if lsvid not found
+    :return: str
+    """
+    if check_is_lsv_dict(lsvdict, da_bool=True):
+        return get_gene_name(lsvdict[theid])
+    check_is_quick_import(lsvdict)
+    for comp in lsvdict:
+        for thislsvid in lsvdict[comp]:
+            if theid in thislsvid:
+                return get_gene_name(lsvdict[comp][thislsvid])
+    if false_or_error == "False":
+        return False
+    elif false_or_error == "Error":
+        raise ValueError("%s not found." % theid)
+    else:
+        raise ValueError("%s is not as expected: 'False' or 'Error' only please ..." % false_or_error)
+
+
+def get_gene_name(lsv):
+    check_is_lsv(lsv)
+    return lsv["Gene Name"]
 
 
 def get_strand(lsv):
@@ -1572,24 +1783,32 @@ def get_num_psi(data,
     return lsv_dict
 
 
-
 def get_all_unique_lsv_ids(data,
-                           verbose=False):
+                           verbose=False,
+                           return_string_instead=False):
     """
     Given a quick import format, return all unique LSV IDs
-        seen across all all LSV DIctionaries.
+        seen across all all LSV Dictionaries.
+
+        return_string_instead: if True, instead of returning lsv ids, return print statements.
     """
     check_is_quick_import(data)
     all_lsvs = list()
     comparisons = list(data.keys())
     comparisons.sort()
+    ret_str = ""
     for comparison_name in comparisons:
         lsv_dict = data[comparison_name]
         lsvs = get_lsv_ids(lsv_dict)
         all_lsvs.extend(lsvs)
+        n_lsvs = len(lsvs)
+        thisstr = "%s LSVs in %s\n" % (n_lsvs, comparison_name)
         if verbose:
-            n_lsvs = len(lsvs)
-            LOG.info("%s LSVs in %s" % (n_lsvs, comparison_name))
+            LOG.info(thisstr)
+        if return_string_instead:
+            ret_str += thisstr
+    if return_string_instead:
+        return ret_str
     return list(set(all_lsvs))
 
 
@@ -1824,6 +2043,21 @@ def get_sample_id(lsv_dict):
     return lsv_dict["meta_info"]["sample_id"]
 
 
+def get_prob_threshold(lsv_dict):
+    check_is_lsv_dict(lsv_dict)
+    return lsv_dict["meta_info"]["prob_thresh"]
+
+
+def gen_comparison_name(LSV_dict, sep="_"):
+    """
+    Given LSV dictionary, return condition_1_name[sep]condition_2_name
+    """
+    check_is_lsv_dict(LSV_dict)
+    if not isinstance(sep, str):
+        raise ValueError("sep needs to be a string, not a: " + str(type(sep)))
+    return get_cond_1_name(LSV_dict) + sep + get_cond_2_name(LSV_dict)
+
+
 def get_abs_path(lsv_dict):
     """
     :param lsv_dict: lsv dict..
@@ -1854,8 +2088,7 @@ def get_all_lsv_ids(data):
                              da_bool=True):
             return get_lsv_ids(data)
         else:
-            LOG.error("Expected a LSV dictionary or Quick Import...")
-            exit(1)
+            raise RuntimeError("Expected a LSV dictionary or Quick Import...")
     comparisons = data.keys()
     all_ids = list()
     for comparison in comparisons:
@@ -1893,6 +2126,23 @@ def copy_lsv(lsv):
         else:
             raise RuntimeError("Not sure what to do with %s" % str(type(lsv[elem])))
     return copied
+
+
+def comparisons_quantifiable(comparisons, blank_dict, lsv_id):
+    """
+    Determine which dPSI comparisons were able to quantify the LSV.
+        Comparisons must be SORTED.
+
+    :param comparisons: list of comparisons
+    :param blank_dict: returned from impute_missing_lsvs()
+    :param lsv_id: check which comparisons could quantify this LSV ID
+    :return: numpy array of Bools corresponding to the comparisons able to quantify the LSV
+    """
+    bools = list()
+    for comp in comparisons:
+        this_bool = lsv_id in blank_dict[comp]
+        bools.append(not this_bool)
+    return np.array(bools)
 
 
 def impute_lsvs(lsvs,
@@ -2086,3 +2336,16 @@ def import_dpsi_pandas(tsv_file, columns=None):
                                names=header,
                                usecols=columns)
     return pa_dataframe
+
+
+def file_to_list(filepath):
+    """
+    Given a file path, return list of each line rstriped
+    :param filepath: str to file..
+    :return: list
+    """
+    filelist = list()
+    with open(filepath, "r") as handle:
+        for line in handle:
+            filelist.append(line.rstrip("\n\r"))
+    return filelist

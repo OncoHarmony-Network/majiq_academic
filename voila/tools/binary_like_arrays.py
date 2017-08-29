@@ -102,6 +102,7 @@ class ThisisBinaryLikeArrays(Tool):
                                          cutoff_prob=0,
                                          pattern=args.pattern,
                                          keep_ir=consider_ir)
+        io_caleb.check_is_ignant(imported, args.dpsi_thresh)
         if impute:
             blanked_dict = io_caleb.impute_missing_lsvs(data=imported,
                                                         impute_with=0,

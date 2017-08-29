@@ -2,6 +2,7 @@ import pdb
 import numpy as np
 import os
 from voila.tools import Tool
+from voila.tools import remove_dpsi_priors
 from voila.tools.find_binary_lsvs import non_redundant_id_dict, counts_per_row
 from voila.tools.non_redundant_sets import non_redundant_set
 from voila.tools.utils import io_caleb
@@ -9,13 +10,11 @@ from voila.tools.utils.percent_through_list import percent_through_list
 from voila.utils.voila_log import voila_log
 import pickle as pkl
 
-
 # Caleb Matthew Radens
 # radlinsky@gmail.com
 
 
 __author__ = 'cradens'
-
 
 LOG = voila_log()
 
@@ -31,18 +30,22 @@ class ThisisRelativelyUniq(Tool):
         parser = self.get_parser()
         mutually_excl_grp = parser.add_mutually_exclusive_group(required=True)
         mutually_excl_grp.add_argument('--directory',
+                                       '-d',
                                        type=str,
                                        help='Directory where voila texts are. (searches recursively)')
         mutually_excl_grp.add_argument('--file_list',
+                                       '-fl',
                                        type=str,
                                        help='A file with a list of voila text file paths (one line each).')
         help_mes = "dPSI threshold by which to call junctions as changing"
         parser.add_argument('--dpsi_thresh',
+                            '--dpsi',
                             type=float,
                             help=help_mes,
-                            default=0.1)
+                            default=0.2)
         help_mes = "Prob(dPSI) threshold by which to call junctions as changing"
         parser.add_argument('--prob_dpsi_thresh',
+                            '--prob',
                             type=float,
                             help=help_mes,
                             default=0.95)
@@ -65,48 +68,188 @@ class ThisisRelativelyUniq(Tool):
         return parser
 
     def run(self, args):
-        ex_pkl = "/Volumes/data/THelper/lisp/voila/dpsi/groups/thresh_20/" \
-                 "KA_N_0vsKA_T0_72/KA_N_0_KA_T0_72.deltapsi_no_prior.pickle"
-        ex_lsv1 =  "/Volumes/data/THelper/lisp/voila/dpsi/groups/thresh_20/" \
-                 "KA_N_0vsKA_T0_72/"
-        ex_lsv1 = io_caleb.quick_import(ex_lsv1)
-        all_lsv_ids = io_caleb.get_all_lsv_ids(ex_lsv1)
-        test = get_tsvs_no_prior_pkl(ex_lsv1["KA_N_0_KA_T0_72"])
-        print(test == ex_pkl)
-        no_change = num_nonchanging(ex_lsv1, test)
-        non_red_sets, blank_dict, num_dpsi = non_redundant_set(data=ex_lsv1,
-                                                            cutoff_dpsi=0.1,
-                                                            cutoff_psi=1,
-                                                            save_blanked_structure=True,
-                                                            return_numdpsis_dat=True)
-        num_probs, comparisons = io_caleb.get_num_prob(ex_lsv1, True)
-        for lsv_id in all_lsv_ids:
-            this_prob = num_probs[lsv_id]
-            this_dpsi = num_dpsi[lsv_id]
-            this_nch = no_change[lsv_id]
-            thresh_bool = over_thresh(num_dpsi=this_dpsi,
-                                      num_prob=this_prob,
-                                      dpsi_thresh=0.1,
-                                      prob_thresh=0)
-            break
-        pdb.set_trace()
+        res = relative_uniq_wrapper(directory=args.directory if args.directory else args.file_list,
+                                    dpsi_thresh=args.dpsi_thresh,
+                                    prob_thresh=args.prob_dpsi_thresh,
+                                    pattern=args.pattern)
+        if args.outfile:
+            with open(args.outfile, "w") as handle:
+                handle.write(res)
+        else:
+            print(res)
 
 
-def comparisons_quantifiable(comparisons, blank_dict, lsv_id):
+def relative_uniq_wrapper(directory,
+                          dpsi_thresh,
+                          prob_thresh,
+                          pattern):
+    """"""
+    LOG.info("Identifying relatively unique LSVs with E(dPSI) threshold %s, P(E(dPSI) threshold %s ..." % (dpsi_thresh,
+                                                                                                           prob_thresh))
+    the_lsv_data = io_caleb.quick_import(directory,
+                                         pattern=pattern)
+    io_caleb.check_is_ignant(the_lsv_data, dpsi_thresh)
+    blank_dict = io_caleb.impute_missing_lsvs(data=the_lsv_data, in_place=True, warnings=False)
+    num_non_changing = remove_dpsi_priors.get_num_nonchanging(the_lsv_data,
+                                                              blank_info=blank_dict)
+    num_dpsi = io_caleb.get_num_d_psi(the_lsv_data)
+    num_probs, comparisons = io_caleb.get_num_prob(the_lsv_data, return_comparisons=True)
+    changing_lsv_ids = io_caleb.get_sig_lsv_ids(data=the_lsv_data,
+                                                cutoff_d_psi=dpsi_thresh,
+                                                prob_d_psi=prob_thresh,
+                                                collapse=True)
+    comparisons = np.array(comparisons)
+    results = stringent_uniq(num_non_changing,
+                             num_dpsi,
+                             num_probs,
+                             changing_lsv_ids,
+                             comparisons,
+                             blank_dict,
+                             prob_thresh,
+                             dpsi_thresh,
+                             the_lsv_data)
+    printable = ""
+    for comp in results["stats"]:
+        printable += "Total number of thresh-passing LSVs in %s: %s\n" % (comp,
+                                                                          len(io_caleb.get_sig_lsv_ids(
+                                                                              the_lsv_data[comp],
+                                                                              cutoff_d_psi=dpsi_thresh,
+                                                                              prob_d_psi=prob_thresh)))
+        printable += "Number of %s-discriminating LSVs with respect to %s\n" % (comp, results["stats"][comp])
+        printable += "%s-discriminating LSVs with respect to %s" % (comp, results["comparison"][comp])
+    for comp in results["stats"]:
+        LOG.info("%s stats: %s" % (comp, results["stats"][comp]))
+    return printable
+
+
+def stringent_uniq(notchanging,
+                   dpsidata,
+                   probdata,
+                   changingdata,
+                   comparisons,
+                   blankdata,
+                   probthresh,
+                   dpsithresh,
+                   data):
+    np.seterr(all='warn')
+    import warnings
+    warnings.filterwarnings('error')
+    results = dict()
+    results["comparison"] = dict()
+    results["stats"] = dict()
+    for lsvid in changingdata:
+        # use this variable to subset the numpy arrays such that only
+        #  those comparisons (columns) that quantified the LSV are considered
+        quantifiable = io_caleb.comparisons_quantifiable(comparisons, blankdata, lsvid)
+        if not True in quantifiable:
+            # This should NOT happen since these are all significantly changing LSVs...
+            raise RuntimeError("Uh oh, %s is not quantifiable in any comparison???" % lsvid)
+        # only consider quantifiable comparisons
+        dpsidata[lsvid] = dpsidata[lsvid][:, quantifiable]
+        probdata[lsvid] = probdata[lsvid][:, quantifiable]
+        notchanging[lsvid] = notchanging[lsvid][:, quantifiable]
+        ischanging = over_thresh(dpsidata[lsvid],
+                                 probdata[lsvid],
+                                 dpsithresh,
+                                 probthresh)
+        # if Trues are only in 1 comparison (column)
+        if (ischanging.sum(axis=0) > 0).sum() == 1:
+            # TODO : funciton that handles when Trues are only in 1 column
+            # Get the dPSI values corresponding to these significanrly changing junctions
+            # dpsichanges = dpsidata[lsvid][ischanging]
+            # TODO: add function argument specifiying whether only binary-like and/or reciprocal LSVs are considered
+            ###
+            # These are the row iis corresponding to the junctions that were called changing
+            changing_row_iis = (ischanging.sum(axis=1) > 0)
+            # These are the col iis corresponding to the cols/comparisons that were called changing
+            # There will be one True; the others will be False
+            changing_col_iis = (ischanging.sum(axis=0) > 0)
+            changing_comparison = comparisons[quantifiable][changing_col_iis]
+            # Get all the cols from the above rows in the notchanging array
+            not_changing_data_subset = notchanging[lsvid][changing_row_iis, :]
+            # Get all the cols from the above rows in the dpsi array
+            dpsi_subset = abs(dpsidata[lsvid])[changing_row_iis, :]
+            # These are the col iis corresponding to the comparison(s) that didn't pass the changing thresholds
+            nonchanging_col_iis = (ischanging.sum(axis=0) == 0)
+            # Now, select the columns that correspond to the above indices
+            #  This array will be used to identify which comparisons are confidently not changing with respect to the
+            # changing comparison
+            not_changing_data_subset = not_changing_data_subset[:, nonchanging_col_iis]
+            # *all* the nonchangers were unable to be called confidently nonchanging
+            if not_changing_data_subset.sum() == 0:
+                update_res_dict(results,
+                                changing_comparison,
+                                np.array(["None"]),
+                                lsvid)
+                continue
+            # Now select the columns that correspond to these indices in the dpsi array too
+            dpsi_subset = dpsi_subset[:, nonchanging_col_iis]
+            # number of non-changing rows/juncs per col/comparison
+            n_nonchange = not_changing_data_subset.sum(axis=0)
+            # for each col/comparison, are the # of n_nonchanging equal to the number of juncs changing?
+            # if so, then those cols/comparisons are confidently non-changing with respect to the col/comparison that
+            # IS changing! woot!
+            non_ch_wrt_change = n_nonchange == not_changing_data_subset.shape[0]
+            # If the sum below is 0, that means each column had at least one False.
+            # Those False(s) are NOT confidently non-changing, meaning they could be changing. They're either
+            # (a) dPSI >=0.05 but below user's threshold (taking into account P(E(dPSI)) )
+            # or
+            # (b) dPSI < 0.05, but when the prior is removed, the dPSI goes to >=0.05
+            # If (a), then the junction could really be changing...
+            # if (b), well, ... borderline...
+            if non_ch_wrt_change.sum() == 0:
+                # culprits = dpsi_subset[np.logical_not(not_changing_data_subset)]
+                # Check if junctions are case (a) or (b)
+                lower_thresh_check = dpsi_subset < 0.05
+                # Now, go ahead and re-run some code (TODO: this is horribly inefficient...)
+                # number of non-changing (according to simple dPSI check) rows/juncs per col/comparison
+                n_nonchange = lower_thresh_check.sum(axis=0)
+                # for each col/comparison, are the # of n_nonchanging equal to the number of juncs changing?
+                # if so, then those cols/comps are possibly (not confidently) non-changing with respect to the
+                #  col/comparison that IS changing ...
+                non_ch_wrt_change = n_nonchange == lower_thresh_check.shape[0]
+                # Now check again .. this time, if all columns are False, then at least one junction
+                # in each comparison has a dPSI >= 0.05 ... case (a) ...
+                if non_ch_wrt_change.sum() == 0:
+                    continue
+            nonchanging_comparisons = comparisons[quantifiable][np.logical_not(changing_col_iis)][non_ch_wrt_change]
+            update_res_dict(results,
+                            changing_comparison,
+                            nonchanging_comparisons,
+                            lsvid)
+            ### Get more evidence the Falses in not_changing_data_subset are really non-changing
+            ### As of now, the not_changing_data_subset array's Trues are confidently non-changing. False could have
+            ### border-line cases. If the dpsi array says TODO do I want to do this?
+            ### abs(dpsi_subset) <= 0.05
+        else:
+            continue
+            # else Trues not just in 1 column
+            # TODO: something
+    return results
+
+
+def update_res_dict(results,
+                    changing_comp,
+                    nonchanging_comps,
+                    lsv_id):
     """
-    Determine which dPSI comparisons were able to quantify the LSV.
-        Comparisons must be SORTED.
-
-    :param comparisons: list of comparisons
-    :param blank_dict: returned from impute_missing_lsvs()
-    :param lsv_id: check which comparisons could quantify this LSV ID
-    :return: numpy array of Bools corresponding to the comparisons able to quantify the LSV
+    Update results dictionary to include stats and lsv ids
+    :param results:
+    :param changing_comp:
+    :param nonchanging_comps:
     """
-    bools = list()
-    for comp in comparisons:
-        this_bool = lsv_id in blank_dict[comp]
-        bools.append(this_bool)
-    return np.array(bools)
+    changing_comp = list(changing_comp)[0]
+    nonchanging_comps = list(nonchanging_comps)
+    nonchanging_comps.sort()
+    nonchanging_comps = " + ".join(nonchanging_comps)
+    if changing_comp not in results["comparison"]:
+        results["comparison"][changing_comp] = dict()
+        results["stats"][changing_comp] = dict()
+    if nonchanging_comps not in results["comparison"][changing_comp]:
+        results["comparison"][changing_comp][nonchanging_comps] = list()
+        results["stats"][changing_comp][nonchanging_comps] = 0
+    results["comparison"][changing_comp][nonchanging_comps].append(lsv_id)
+    results["stats"][changing_comp][nonchanging_comps] += 1
 
 
 def over_thresh(num_dpsi, num_prob, dpsi_thresh, prob_thresh):
@@ -119,50 +262,6 @@ def over_thresh(num_dpsi, num_prob, dpsi_thresh, prob_thresh):
     """
     bool_array = (abs(num_dpsi) >= abs(dpsi_thresh)) & (num_prob >= prob_thresh)
     return bool_array
-
-
-def relatively_uniq():
-    pass
-
-
-def get_tsvs_no_prior_pkl(lsv_dict):
-    """
-    Given a lsv dict, return the prior-removed associated pickle file path.
-
-    :rtype: dict
-    :param lsv_dict: where majiq was run
-    :return: prior-removed {lsv id : dpsi - prior}
-    """
-    abs_path = io_caleb.get_abs_path(lsv_dict)
-    tsv_base = os.path.basename(abs_path)
-    poss_pkl_path = tsv_base.replace("deltapsi_deltapsi", "deltapsi_no_prior")
-    poss_pkl_path = poss_pkl_path.replace("tsv", "pickle")
-    tsv_dir = os.path.dirname(abs_path)
-    poss_pkl_path = os.path.join(tsv_dir, poss_pkl_path)
-    if not os.path.isfile(poss_pkl_path):
-        print(poss_pkl_path)
-        LOG.error("Couldn't find dpsi prior removed pickle file associated with %s" % abs_path)
-        exit(1)
-    return poss_pkl_path
-
-
-def num_nonchanging(lsv_dict,
-                    prior_rem_dat):
-    """
-
-    :param lsv_dict: lsv dictionary
-    :param prior_rem_dat: file path from non_redundant_set
-    :return: {lsv id : np.array([True or False list]) }
-    """
-    LOG.info("Loading dpsi minus prior data from %s" % prior_rem_dat)
-    pkl_imp = pkl.load(open(prior_rem_dat, 'rb'), encoding='bytes')
-    LOG.info("Done")
-    all_lsvs = io_caleb.get_all_lsv_ids(lsv_dict)
-    non_changing = dict()
-    for lsvid in all_lsvs:
-        nummed = np.array(pkl_imp[lsvid])
-        non_changing[lsvid] = (abs(nummed) <= 0.05)
-    return non_changing
 
 
 def discretize_d_psi(numpy_data,
@@ -268,13 +367,16 @@ def singly_unique(data,
          - LSV reciprocates, if applicable (see must_reciprocate definition)
         Then that LSV is assigned to that column (it is unique to that comparison)
 
-     --(4)-- TBD
+     --(4)--
      --Detect groups of comparisons that agree/disagree (TBD)
     if:
      - at least one row is assigned more than one column name
      - all rows agree on column name assignments
     Then that LSV is assigned to a combination of the comparisons
     eg: Comparison1_Comparison2 <- names will be sorted before joined
+
+    --(5)--
+    --Group LSVs together if they belong to the same non-redundant set
 
                 |A vs B|A vs C  | all other comparisons ...
     Junction:   | dPSI | dPSI   | ...
@@ -325,7 +427,7 @@ def singly_unique(data,
             sig_subset_ids[c] = io_caleb.get_lsv_ids(sig_subset[c])
         all_sig = io_caleb.get_all_lsv_ids(sig_subset)
         comparisons_ii = [comp_names.index(x) for x in data.keys()]
-    thelsvs = all_num_dpsis_data.keys()
+    thelsvs = list(all_num_dpsis_data.keys())
     indeces_at_10_percent = percent_through_list(thelsvs, 0.1)
     LOG.info("Assigning %s LSVs to groups ... " % (len(thelsvs)))
     i = 0.0
@@ -516,7 +618,7 @@ def singly_unique(data,
     nonrednetworks["unique_nonredsets"] = dict()
     nonrednetworks["cococombos"] = {x: [] for x in cococombo_breaker.keys()}
     nonrednetworks["opposites"] = {x: [] for x in opposite_dict.keys()}
-    all_non_red_sets = non_red_sets['singles'].values()
+    all_non_red_sets = list(non_red_sets['singles'].values())
     all_non_red_sets.extend(non_red_sets['twos'].values())
     all_non_red_sets.extend(non_red_sets['three_plus'].values())
     all_non_red_lsvs = non_red_sets['singles_all_lsvs']
