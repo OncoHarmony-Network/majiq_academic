@@ -119,7 +119,7 @@ class ThisisLookup(Tool):
                                            dont_rem_dup=dont_remove_dups,
                                            print_bool=False)
             if len(lookup_res) > 0:
-                details += "\n"+io_caleb.lsvs_length(lookup_res)+"\n"
+                details += "\n"+io_caleb.lsvs_length(lookup_res, verbose=False)+"\n"
             geneinfo = lookup_val
             gene_name = io_caleb.genename_from_id(imported, lookup_val, false_or_error="False")
             if gene_name:

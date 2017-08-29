@@ -174,8 +174,6 @@ def quick_import(input,
         else:
             expected = "deltapsi" if "deltapsi_deltapsi" in os.path.basename(f) else "psi"
         imported_file = import_voila_txt(f,
-                                         cutoff_d_psi,
-                                         cutoff_prob,
                                          stop_at=stop_at,
                                          expected_type=expected,
                                          just_checking_validity=just_file_paths)
@@ -190,6 +188,7 @@ def quick_import(input,
     if just_file_paths:
         return valid_fps
     if cutoff_d_psi != 0 or cutoff_prob != 0 or not keep_ir:
+        pdb.set_trace()
         imported_files = subset_significant(imported_files,
                                             cutoff_dpsi=cutoff_d_psi,
                                             cutoff_prob=cutoff_prob,
@@ -231,8 +230,6 @@ def check_valid_voila_txts(file_path_list):
 
 
 def import_voila_txt(fp,
-                     cutoff_d_psi=0,
-                     cutoff_prob=0,
                      stop_at=False,
                      expected_type="deltapsi_deltapsi",
                      just_checking_validity=False):
@@ -245,12 +242,6 @@ def import_voila_txt(fp,
 
     Arguments:
         fp: file path for a voila d_psi quantify text file
-        cutoff_d_psi: LSVs must have at least 1 junction d_psi >= this.
-            (and those junctions must meet the Cutoff_prob)
-            0<=X<=1
-        cutoff_prob: All LSVs must have at least 1 junction prob >= this.
-            (and those junctions must meet the Cutoff_dPSI)
-            0<=X<=1
         stop_at: if provided, stop reading voila file when you reach this LSV ID
         expected_type: If provided, only import "deltapsi" or only "psi" files
         just_checking_validity: Bool. If True, don't print "Importing..."
@@ -1183,12 +1174,13 @@ def lsv_dict_subset(dictionary,
     return new_dict
 
 
-def lsvs_length(data):
+def lsvs_length(data,
+                verbose=True):
     """
     Given quick import, print the number of LSVs in each comparisons. Also returns the printed string.
     """
     check_is_quick_import(data)
-    all_lsvs = get_all_unique_lsv_ids(data, verbose=True)
+    all_lsvs = get_all_unique_lsv_ids(data, verbose=verbose)
     the_string = get_all_unique_lsv_ids(data, verbose=False, return_string_instead=True)
     if len(data.keys()) > 1:
         all_lsvs = list(set(all_lsvs))
@@ -1200,7 +1192,8 @@ def lsvs_length(data):
             n_shared = 0
         thistring = "%s Shared LSVs between all comparisons.\n" % (n_shared)
         thistring += "Total of %s unique LSVs across all comparisons.\n" % (n_all)
-        LOG.info(thistring)
+        if verbose:
+            LOG.info(thistring)
         the_string += thistring
     return the_string
 
