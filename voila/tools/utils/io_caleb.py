@@ -266,8 +266,6 @@ def import_voila_txt(fp,
     has_voila = True
     file_headers = list()
     with open(fp, "r") as handle:
-        if fp == "/data/THelper/lisp/voila/dpsi/groups/thresh_10/TU_T0_72vsTU_T17_72/TU_T0_72_TU_T17_72.deltapsi_deltapsi.tsv":
-            pdb.set_trace()
         line_i = 0
         if isinstance(stop_at, str) or isinstance(stop_at, bool):
             found_stop_at = False
@@ -277,6 +275,8 @@ def import_voila_txt(fp,
         for line in handle:
             if isinstance(stop_at, str):
                 if stop_at in line:
+                    if fp == "/data/THelper/lisp/voila/dpsi/groups/thresh_10/TU_T0_72vsTU_T17_72/TU_T0_72_TU_T17_72.deltapsi_deltapsi.tsv":
+                        pdb.set_trace()
                     found_stop_at = True
                     can_stop = True
                 else:
