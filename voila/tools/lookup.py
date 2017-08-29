@@ -111,12 +111,15 @@ class ThisisLookup(Tool):
         abbreviated_bool = True
         if args.dont_abbreviate:
             abbreviated_bool = False
-        lookup_everywhere(dictionary_lookup=imported,
-                          name=the_lookup_vals,
-                          just_one=args.just_one,
-                          abbreviated=abbreviated_bool,
-                          comparisons_lookup=to_lookup,
-                          dont_rem_dup=dont_remove_dups)
+        for lookup_val in the_lookup_vals:
+            print("=-=-=-=-=\n=-=-=-=-=\n=-=-=-=-=\n %s =-=-=-=-=\n=-=-=-=-=\n=-=-=-=-=\n" % lookup_val)
+
+            lookup_everywhere(dictionary_lookup=imported,
+                              name=lookup_val,
+                              just_one=args.just_one,
+                              abbreviated=abbreviated_bool,
+                              comparisons_lookup=to_lookup,
+                              dont_rem_dup=dont_remove_dups)
 
 
 def lookup_everywhere(dictionary_lookup,
