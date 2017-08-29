@@ -188,7 +188,6 @@ def quick_import(input,
     if just_file_paths:
         return valid_fps
     if cutoff_d_psi != 0 or cutoff_prob != 0 or not keep_ir:
-        pdb.set_trace()
         imported_files = subset_significant(imported_files,
                                             cutoff_dpsi=cutoff_d_psi,
                                             cutoff_prob=cutoff_prob,
@@ -267,8 +266,13 @@ def import_voila_txt(fp,
     has_voila = True
     file_headers = list()
     with open(fp, "r") as handle:
+        if fp == "/data/THelper/lisp/voila/dpsi/groups/thresh_10/TU_T0_72vsTU_T17_72/TU_T0_72_TU_T17_72.deltapsi_deltapsi.tsv":
+            pdb.set_trace()
         line_i = 0
-        found_stop_at = False if isinstance(stop_at, str) or isinstance(stop_at, bool) else [False for x in stop_at]
+        if isinstance(stop_at, str) or isinstance(stop_at, bool):
+            found_stop_at = False
+        else:
+            found_stop_at = [False for x in stop_at]
         can_stop = False
         for line in handle:
             if isinstance(stop_at, str):
