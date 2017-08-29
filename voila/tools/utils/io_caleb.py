@@ -1399,21 +1399,29 @@ def get_psis(lsv, cond_1=False, cond_2=False, as_dict=False, as_np_array=False):
     return [cond_1_psi, cond_2_psi]
 
 
-def genename_from_id(lsvdict, lsvid):
+def genename_from_id(lsvdict,
+                     theid,
+                     false_or_error="False"):
     """
-    Given an LSV dictionaryor quick import  and an lsv id, return the gene name
+    Given an LSV dictionary or quick import  and an lsv id or gene id, return the gene name
     :param lsvdict:
-    :param lsvid:
+    :param theid: LSV ID or Gene ID
+    :param false_or_error: "False" or "Error" - specify which to return if lsvid not found
     :return: str
     """
     if check_is_lsv_dict(lsvdict, da_bool=True):
-        return get_gene_name(lsvdict[lsvid])
+        return get_gene_name(lsvdict[theid])
     check_is_quick_import(lsvdict)
     for comp in lsvdict:
         for thislsvid in lsvdict[comp]:
-            if lsvid in thislsvid:
+            if theid in thislsvid:
                 return get_gene_name(lsvdict[comp][thislsvid])
-    raise ValueError("%s not found." % lsvid)
+    if false_or_error == "False":
+        return False
+    elif false_or_error == "Error":
+        raise ValueError("%s not found." % theid)
+    else:
+        raise ValueError("%s is not as expected: 'False' or 'Error' only please ..." % false_or_error)
 
 
 def get_gene_name(lsv):

@@ -113,7 +113,11 @@ class ThisisLookup(Tool):
             abbreviated_bool = False
         for lookup_val in the_lookup_vals:
             details = "dPSI cutoff: %s\nProb cutoff: %s\n" % (args.dpsi_thresh, args.prob_dpsi_thresh)
-            print("=-=-=-=-=\n=-=-=-=-=\n=-=-=-=-=\n %s\n%s =-=-=-=-=\n=-=-=-=-=\n=-=-=-=-=\n" % (lookup_val, details))
+            geneinfo = lookup_val
+            gene_name = io_caleb.genename_from_id(imported, lookup_val, false_or_error="False")
+            if gene_name:
+                geneinfo += "\t%s" % gene_name
+            print("=-=-=-=-=\n=-=-=-=-=\n=-=-=-=-=\n %s\n%s =-=-=-=-=\n=-=-=-=-=\n=-=-=-=-=\n" % (geneinfo, details))
 
             lookup_everywhere(dictionary_lookup=imported,
                               name=lookup_val,
