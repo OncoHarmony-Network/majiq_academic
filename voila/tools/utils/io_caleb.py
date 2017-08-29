@@ -82,6 +82,7 @@ def quick_import(input,
 
     Returns all voila dPSI results in a dictionary format.
     """
+    pdb.set_trace()
     if isinstance(stop_at, str):
         if os.path.exists(stop_at):
             stop_at = file_to_list(stop_at)
@@ -161,7 +162,7 @@ def quick_import(input,
 
     LOG.info("Found " + str(len(voila_txt_files)) +
              " dPSI text files ...")
-    pdb.set_trace()
+
     imported_files = dict()
     funky_ids = list()
 
