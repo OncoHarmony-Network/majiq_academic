@@ -85,7 +85,7 @@ class ThisisLookup(Tool):
             dont_remove_dups=True
         if args.lookup_val:
             if os.path.exists(args.lookup_val):
-                the_lookup_vals = args.lookup_val
+                the_lookup_vals = io_caleb.file_to_list(args.lookup_val)
             else:
                 the_lookup_vals = args.lookup_val.replace(" ", "").split(",")
         else:
