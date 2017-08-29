@@ -161,7 +161,7 @@ def quick_import(input,
 
     LOG.info("Found " + str(len(voila_txt_files)) +
              " dPSI text files ...")
-
+    pdb.set_trace()
     imported_files = dict()
     funky_ids = list()
 
