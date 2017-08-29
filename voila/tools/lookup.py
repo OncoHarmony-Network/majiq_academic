@@ -84,7 +84,7 @@ class ThisisLookup(Tool):
             to_lookup = None
             dont_remove_dups=True
         if args.lookup_val:
-            the_lookup_vals = args.lookup_val.replace(" ","").split(",")
+            the_lookup_vals = args.lookup_val.replace(" ", "").split(",")
         else:
             the_lookup_vals = False
         imported = io_caleb.quick_import(input=args.directory,

@@ -67,7 +67,8 @@ def quick_import(input,
                 in genes exhibiting significant changes in gene expression.
                 See get_deseq_diff_expr_genes() for details.
         just_one: only import and return one txt path (only really need this for lookup.lookup_everywhere()...)
-        stop_at: if provided, stop reading voila file when you reach this LSV ID
+        stop_at: if provided, stop reading voila file when you reach this LSV ID or Gene name/ID. Could also
+            be a file path to a line-by-line list of Gene names/IDs or LSVIDs.
         comparisons: if provided, only import tsv files with the provided list of comparison names
         prefered_type: If provided, only import "deltapsi" or only "psi" files
         just_file_paths: if True, just return the file paths for found voila txt files
@@ -81,6 +82,9 @@ def quick_import(input,
 
     Returns all voila dPSI results in a dictionary format.
     """
+    if isinstance(stop_at, str):
+        if os.path.exists(stop_at):
+            stop_at = file_to_list(stop_at)
     if prefered_type:
         if not isinstance(prefered_type, str) or prefered_type not in ["deltapsi", "psi"]:
             raise ValueError("prefered_type must be either 'deltapsi' or 'psi' if specified at all, not '%s'" % prefered_type)
