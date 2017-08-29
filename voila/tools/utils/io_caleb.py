@@ -1189,7 +1189,7 @@ def lsvs_length(data):
     """
     check_is_quick_import(data)
     all_lsvs = get_all_unique_lsv_ids(data, verbose=True)
-    the_string = ""
+    the_string = get_all_unique_lsv_ids(data, verbose=False, return_string_instead=True)
     if len(data.keys()) > 1:
         all_lsvs = list(set(all_lsvs))
         n_all = len(all_lsvs)
@@ -1788,22 +1788,31 @@ def get_num_psi(data,
 
 
 def get_all_unique_lsv_ids(data,
-                           verbose=False):
+                           verbose=False,
+                           return_string_instead=False):
     """
     Given a quick import format, return all unique LSV IDs
-        seen across all all LSV DIctionaries.
+        seen across all all LSV Dictionaries.
+
+        return_string_instead: if True, instead of returning lsv ids, return print statements.
     """
     check_is_quick_import(data)
     all_lsvs = list()
     comparisons = list(data.keys())
     comparisons.sort()
+    ret_str = ""
     for comparison_name in comparisons:
         lsv_dict = data[comparison_name]
         lsvs = get_lsv_ids(lsv_dict)
         all_lsvs.extend(lsvs)
+        thisstr = "%s LSVs in %s" % (n_lsvs, comparison_name)
         if verbose:
             n_lsvs = len(lsvs)
-            LOG.info("%s LSVs in %s" % (n_lsvs, comparison_name))
+            LOG.info(thisstr)
+        if return_string_instead:
+            ret_str += thisstr
+    if return_string_instead:
+        return ret_str
     return list(set(all_lsvs))
 
 
