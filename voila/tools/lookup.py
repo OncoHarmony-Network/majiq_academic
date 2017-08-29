@@ -111,7 +111,6 @@ class ThisisLookup(Tool):
             abbreviated_bool = False
         for lookup_val in the_lookup_vals:
             details = "dPSI cutoff: %s\nProb cutoff: %s\n" % (args.dpsi_thresh, args.prob_dpsi_thresh)
-            pdb.set_trace()
             lookup_res = lookup_everywhere(dictionary_lookup=imported,
                                            name=lookup_val,
                                            just_one=args.just_one,
@@ -119,7 +118,8 @@ class ThisisLookup(Tool):
                                            comparisons_lookup=to_lookup,
                                            dont_rem_dup=dont_remove_dups,
                                            print_bool=False)
-            details += "\n"+io_caleb.lsvs_length(lookup_res)
+            if len(lookup_res) > 0:
+                details += "\n"+io_caleb.lsvs_length(lookup_res)
             geneinfo = lookup_val
             gene_name = io_caleb.genename_from_id(imported, lookup_val, false_or_error="False")
             if gene_name:
