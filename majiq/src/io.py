@@ -893,6 +893,7 @@ def boots_write(hg_grp, vals, lsv_idx, dpsi=False):
         hg_grp['junc_cov'].resize((shp_new, 2))
 
     hg_grp['junctions'][lsv_idx:lsv_idx+njunc] = vals['samples']
+    print('%s::%s' % (vals['junc_attr'], type(vals['junc_attr'])))
     hg_grp['junc_cov'][lsv_idx:lsv_idx + njunc] = vals['junc_attr']
 
     h_lsv = hg_grp.create_group("LSVs/%s" % vals['id'])
