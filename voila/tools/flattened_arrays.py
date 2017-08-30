@@ -1,5 +1,6 @@
 import pdb
 
+import os
 from voila.tools import Tool
 from voila.utils.voila_log import voila_log
 from voila.tools.utils import io_caleb
@@ -52,34 +53,44 @@ class ThisisLookup(Tool):
         parser.add_argument('--dpsi_thresh',
                             type=float,
                             help=help_mes,
-                            default=0.2)
+                            default=0)
         help_mes = "Prob(dPSI) threshold by which to call junctions as changing"
         parser.add_argument('--prob_dpsi_thresh',
                             type=float,
                             help=help_mes,
-                            default=0.95)
-        help_mes = 'Which comparisons or samples to lookup ID in? Single space or comma separated please.'
-        parser.add_argument('--names',
-                            '--comparisons',
+                            default=0)
+        help_mes = 'Which comparisons to import? Single space or comma separated or a file to a line-by-line' \
+                   ' list of tsvs, please.'
+        parser.add_argument('--comparisons',
+                            type=str,
+                            help=help_mes)
+        help_mes = 'Which LSV IDs or gene names/IDs to consider. Path to a file where each line is an id'
+        parser.add_argument('--ids',
                             type=str,
                             help=help_mes)
         return parser
 
     def run(self, args):
         # parse the comparisons argument
-        if args.names:
-            if "," in args.names or " " in args.names:
-                args.names.replace(" ", ",")
-                to_lookup = args.names.split(",")
+        if args.comparisons:
+            if os.path.exists(args.comparisons):
+                import_info = io_caleb.file_to_list(args.comparisons)
+                to_lookup = False
+            elif "," in args.comparisons or " " in args.comparisons:
+                args.comparisons.replace(" ", ",")
+                to_lookup = args.comparisons.split(",")
+                import_info = args.directory
             else:
-                to_lookup = [args.names]
+                to_lookup = [args.comparisons]
+                import_info = args.directory
         else:
             to_lookup = None
-        imported = io_caleb.quick_import(input=args.directory,
+        imported = io_caleb.quick_import(input=import_info,
                                          pattern=args.pattern,
                                          keep_ir=args.also_ir,
                                          comparisons=to_lookup)
-        io_caleb.check_is_ignant(imported, args.dpsi_thresh)
+        if args.dpsi_thresh > 0 or args.prob_dpsi_thresh > 0:
+            io_caleb.check_is_ignant(imported, args.dpsi_thresh)
         sig_ids = io_caleb.get_sig_lsv_ids(data=imported,
                                            cutoff_d_psi=args.dpsi_thresh,
                                            prob_d_psi=args.prob_dpsi_thresh,
