@@ -64,7 +64,7 @@ class ThisisLookup(Tool):
         parser.add_argument('--comparisons',
                             type=str,
                             help=help_mes)
-        help_mes = 'Which LSV IDs or gene names/IDs to consider. Path to a file where each line is an id'
+        help_mes = 'Path to a file where each line is an gene name, gene id, or lsv id'
         parser.add_argument('--ids',
                             type=str,
                             help=help_mes)
@@ -85,10 +85,15 @@ class ThisisLookup(Tool):
                 import_info = args.directory
         else:
             to_lookup = None
+        if args.ids:
+            stop_at_ids = io_caleb.file_to_list(args.ids)
+        else:
+            stop_at_ids = False
         imported = io_caleb.quick_import(input=import_info,
                                          pattern=args.pattern,
                                          keep_ir=args.also_ir,
-                                         comparisons=to_lookup)
+                                         comparisons=to_lookup,
+                                         stop_at=stop_at_ids)
         if args.dpsi_thresh > 0 or args.prob_dpsi_thresh > 0:
             io_caleb.check_is_ignant(imported, args.dpsi_thresh)
         sig_ids = io_caleb.get_sig_lsv_ids(data=imported,
