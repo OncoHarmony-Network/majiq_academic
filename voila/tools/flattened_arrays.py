@@ -74,22 +74,19 @@ class ThisisLookup(Tool):
         # parse the comparisons argument
         if args.comparisons:
             if os.path.exists(args.comparisons):
-                import_info = io_caleb.file_to_list(args.comparisons)
                 to_lookup = False
             elif "," in args.comparisons or " " in args.comparisons:
                 args.comparisons.replace(" ", ",")
                 to_lookup = args.comparisons.split(",")
-                import_info = args.directory
             else:
                 to_lookup = [args.comparisons]
-                import_info = args.directory
         else:
             to_lookup = None
         if args.ids:
             stop_at_ids = io_caleb.file_to_list(args.ids)
         else:
             stop_at_ids = False
-        imported = io_caleb.quick_import(input=import_info,
+        imported = io_caleb.quick_import(input=args.comparisons,
                                          pattern=args.pattern,
                                          keep_ir=args.also_ir,
                                          comparisons=to_lookup,
