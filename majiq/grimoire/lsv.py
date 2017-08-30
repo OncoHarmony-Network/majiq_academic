@@ -390,6 +390,8 @@ class LSV(object):
                                                       fitted_one_over_r=fitfunc_r,
                                                       debug=majiq_config.debug)
         lsv_trs = np.array([cover.sum(axis=1), np.count_nonzero(cover, axis=1)]).T
+        print(lsv_trs)
+        print(cover)
         vals = {'samples': s_lsv, 'id': self.id, 'type': self.ext_type, 'junc_attr': lsv_trs,
                 'lsv_graphic': self.get_visual(exp_idx)}
         return vals
