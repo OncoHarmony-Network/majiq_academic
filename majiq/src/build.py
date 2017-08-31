@@ -29,6 +29,7 @@ def merging_files(list_of_genes, chnk, majiq_config, process_conf, logger):
     try:
         total = len(list_of_genes)
         dummy = 0
+        logger.info("[%s] LIST OF GENES" % ",".join(list_of_genes))
         for gne_idx, gne_id in enumerate(list_of_genes):
             loop_idx = gne_idx
             if loop_idx % 50 == 0:
