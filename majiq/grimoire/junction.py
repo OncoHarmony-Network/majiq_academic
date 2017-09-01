@@ -11,7 +11,7 @@ class Junction:
     __gt__ = lambda self, other: self.start > other.start or (self.start == other.start and self.end > other.end)
     __ge__ = lambda self, other: self.start >= other.start or (self.start == other.start and self.end >= other.end)
 
-    def __init__(self, start, end, donor, acceptor, gene_id, annotated=False, retrieve=False, num_exp=1, jindex=-1,
+    def __init__(self, start, end, donor, acceptor, gene_id, annotated=False, retrieve=False, num_exp=0, jindex=-1,
                  intronic=False):
         """ The start and end in junctions are the last exon in """
 
