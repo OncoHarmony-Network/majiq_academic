@@ -20,8 +20,8 @@ from majiq.src.config import Config
 import datetime
 from majiq.src.multiproc import QueueMessage, process_conf, queue_manager, process_wrapper
 import gc
-import objgraph
-from pympler.tracker import SummaryTracker
+# import objgraph
+# from pympler.tracker import SummaryTracker
 
 def build(args):
     pipeline_run(Builder(args))
@@ -30,7 +30,7 @@ def build(args):
 def merging_files(list_of_genes, chnk, majiq_config, process_conf, logger):
     try:
 
-        tracker = SummaryTracker()
+        # tracker = SummaryTracker()
         total = len(list_of_genes)
         #dummy = 0
         logger.info("[%s] LIST OF GENES" % ",".join(list_of_genes))
@@ -52,6 +52,7 @@ def merging_files(list_of_genes, chnk, majiq_config, process_conf, logger):
             fitfunc_r = []
             for exp_idx in range(len(majiq_config.sam_list)):
                 fname = get_builder_temp_majiq_filename(majiq_config.outDir, majiq_config.sam_list[exp_idx])
+                print(fname)
                 with h5py.File(fname, 'r') as rfa:
                     try:
                         jset = jset.union(set(rfa["%s/junctions" % gne_id].keys()))
