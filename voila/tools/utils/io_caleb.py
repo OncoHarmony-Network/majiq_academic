@@ -89,15 +89,15 @@ def quick_import(input,
         if not isinstance(prefered_type, str) or prefered_type not in ["deltapsi", "psi"]:
             raise ValueError("prefered_type must be either 'deltapsi' or 'psi' if specified at all, not '%s'" % prefered_type)
     if not os.path.isdir(input):
-        LOG.info("Looks like the user provided a file...")
+        LOG.info("Looks like the user provided a file to get import info from...")
         if name_looks_like_voila_txt_file(input, pattern=pattern):
-            LOG.info("It could be a voila tab file ...")
+            LOG.info("User probably gave a voila tab file path ...")
             basename = os.path.basename(input)
             # Get the file name before .psi_psi or before .deltapsi_deltapsi
             basenames = [get_base_names(basename)]
             voila_txt_files = [input]
         elif os.path.isfile(input):
-            LOG.info("It could be a file with file paths to voila tab files ...")
+            LOG.info("Looks like user provided a file with file paths to voila tab files ...")
             is_valid_list, voila_txt_files = is_likely_list_of_txtfiles(input)
             if is_valid_list:
                 # Get the file names before .psi_psi or before .deltapsi_deltapsi
@@ -160,7 +160,7 @@ def quick_import(input,
         raise RuntimeError("Didn't find any voila txt files...")
 
     LOG.info("Found " + str(len(voila_txt_files)) +
-             " dPSI text files ...")
+             " voila text files ...")
 
     imported_files = dict()
     funky_ids = list()
@@ -168,11 +168,15 @@ def quick_import(input,
     if just_one:
         voila_txt_files = [voila_txt_files[0]]
     valid_fps = list()
+    there_was_deltapsi_file = False
     for f, comparison_name in zip(voila_txt_files, basenames):
         if prefered_type:
             expected = prefered_type
         else:
             expected = "deltapsi" if "deltapsi_deltapsi" in os.path.basename(f) else "psi"
+        if expected == "deltapsi_deltapsi":
+            there_was_deltapsi_file = True
+
         imported_file = import_voila_txt(f,
                                          stop_at=stop_at,
                                          expected_type=expected,
@@ -187,6 +191,8 @@ def quick_import(input,
             imported_files[comparison_name] = imported_file
     if just_file_paths:
         return valid_fps
+    if there_was_deltapsi_file:
+        LOG.info("Keeping LSVs at user-defined thresholds %s (dPSI) and %s (Prob)" % cutoff_d_psi, cutoff_prob)
     if cutoff_d_psi != 0 or cutoff_prob != 0 or not keep_ir:
         imported_files = subset_significant(imported_files,
                                             cutoff_dpsi=cutoff_d_psi,
