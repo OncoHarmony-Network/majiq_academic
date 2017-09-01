@@ -8,7 +8,7 @@ def reliable_in_data(junc, exp_idx, minnonzero=2, min_reads=3):
     min_read_x_exp = min_reads
     min_npos_x_exp = minnonzero
     in_data_filter = False
-    if junc.all_data:
+    if not junc.all_data:
         numpos = np.count_nonzero(junc.coverage[exp_idx])
         totreads = junc.get_read_num(exp_idx)
     else:

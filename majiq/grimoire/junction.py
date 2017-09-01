@@ -11,7 +11,7 @@ class Junction:
     __gt__ = lambda self, other: self.start > other.start or (self.start == other.start and self.end > other.end)
     __ge__ = lambda self, other: self.start >= other.start or (self.start == other.start and self.end >= other.end)
 
-    def __init__(self, start, end, donor, acceptor, gene_id, annotated=False, retrieve=False, num_exp=1, jindex=-1,
+    def __init__(self, start, end, donor, acceptor, gene_id, annotated=False, retrieve=False, num_exp=0, jindex=-1,
                  intronic=False):
         """ The start and end in junctions are the last exon in """
 
@@ -35,10 +35,10 @@ class Junction:
                 majiq_config = Config()
                 self.coverage = np.zeros((num_exp, (majiq_config.readLen - 16) + 1), dtype=np.float)
                 self.gc_content = np.zeros((1, (majiq_config.readLen - 16) + 1), dtype=np.float)
-                self.all_data = True
+                self.all_data = False
             else:
                 self.idx = jindex
-                self.all_data = False
+                self.all_data = True
             self.intronic = intronic
         self.transcript_id_list = []
 
@@ -74,7 +74,6 @@ class Junction:
         h_jnc.attrs['gene_name'] = self.gene_name
 
         try:
-
             dataset.append(self.coverage[0, :])
             if gc_dataset is not None:
                 gc_dataset.append(self.gc_content[0, :])
@@ -90,7 +89,7 @@ class Junction:
         return self.id
 
     def get_coverage(self):
-        if self.all_data:
+        if not self.all_data:
             return self.coverage
         else:
             if self.idx == -1:
@@ -145,8 +144,8 @@ class Junction:
             ex = self.get_gene().get_exon_by_id(self.acceptor_id)
         return ex
 
-    def get_gc_content(self,exp_idx):
-        if self.all_data:
+    def get_gc_content(self, exp_idx):
+        if not self.all_data:
             return self.gc_content
         else:
             if self.idx == -1:
@@ -156,7 +155,7 @@ class Junction:
             return gc
 
     def get_read_num(self, idx=0):
-        if self.all_data:
+        if not self.all_data:
             cov = self.coverage
         else:
             cov = self.get_gene().junc_matrix[self.idx]

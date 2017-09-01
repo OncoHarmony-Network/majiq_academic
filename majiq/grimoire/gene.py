@@ -401,6 +401,7 @@ def clear_gene_tlb():
     majiq_config.gene_tlb.clear()
     gc.collect()
 
+
 def retrieve_gene(gene_id, dbfile, all_exp=False, junction_list=None, logger=None):
     majiq_config = Config()
     gg = dbfile[gene_id]
@@ -587,16 +588,9 @@ def find_intron_retention(gene_obj, dict_of_junctions, nondenovo, logging=None):
         except KeyError:
             jout = None
 
-        if jin is None and jout is None:
+        if jin is None or jout is None:
             continue
-
-        elif jin is not None:
-            jout = Junction(intron_end, ex2_start, exon2, None, gene_obj.get_id(), retrieve=True,
-                            num_exp=majiq_config.num_experiments)
-
-        elif jout is not None:
-            jin = Junction(ex1_end, intron_start, exon1, None, gene_obj.get_id(), retrieve=True,
-                           num_exp=majiq_config.num_experiments)
+        else:
 
             exnum = new_exon_definition(intron_start, intron_end,
                                         jin, jout, gene_obj, nondenovo=nondenovo,

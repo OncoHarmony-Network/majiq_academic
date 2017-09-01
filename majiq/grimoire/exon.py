@@ -645,13 +645,14 @@ def detect_exons(gene, junction_dict, retrieve=False):
 
     junction_list = []
     for kk, vv in junction_dict.items():
-        junction_list.append((kk[0], '5prime', vv))
-        junction_list.append((kk[1], '3prime', vv))
+        if not vv.intronic:
+            junction_list.append((kk[0], '5prime', vv))
+            junction_list.append((kk[1], '3prime', vv))
     junction_list.sort()
 
     for (coord, jtype, jj) in junction_list:
 
-        if retrieve and not jj.is_reliable() and not jj.annotated:
+        if not retrieve and not jj.is_reliable() and not jj.annotated:
             continue
 
         jj_gene = jj.get_gene()
