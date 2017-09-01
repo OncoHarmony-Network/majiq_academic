@@ -94,10 +94,13 @@ class Junction:
         else:
             if self.idx == -1:
                 majiq_config = Config()
-                cov = np.zeros(shape=(majiq_config.num_experiments, 2))
+                cov = np.zeros(shape=(majiq_config.num_experiments))
+                pos = np.zeros(shape=(majiq_config.num_experiments))
             else:
-                cov = self.get_gene().junc_matrix[self.idx]
-            return cov
+                # cov = self.get_gene().junc_matrix[self.idx]
+                cov = self.get_gene().junc_cov[self.idx]
+                pos = self.get_gene().junc_pos[self.idx]
+            return cov, pos
 
     def get_gene(self):
         majiq_config = Config()
@@ -158,12 +161,12 @@ class Junction:
         if not self.all_data:
             cov = self.coverage
         else:
-            cov = self.get_gene().junc_matrix[self.idx]
+            cov = self.get_gene().junc_pos[self.idx]
 
         if idx == -1:
             res = cov.sum(dtype=np.uint32)
         else:
-            res = cov[idx].sum(dtype=np.uint32)
+            res = cov[idx]
 
         return res
 

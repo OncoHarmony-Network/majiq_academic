@@ -101,6 +101,7 @@ def queue_manager(input_h5dfp, output_h5dfp, lock_array, result_queue, num_chunk
     lsv_idx = [0] * num_exp
     while True:
         try:
+
             val = result_queue.get(block=True, timeout=10)
             sys.stdout.flush()
             if val.get_type() == QUEUE_MESSAGE_BUILD_LSV:

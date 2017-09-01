@@ -31,6 +31,13 @@ class Gene:
         self.gc_content = None
 
     def __del__(self):
+        if hasattr(self, "junc_cov"):
+            del self.junc_cov
+        if hasattr(self, "junc_pos"):
+            del self.junc_pos
+        if hasattr(self, "gc_content"):
+            del self.gc_content
+
         for ex in self.exons:
             del ex
 
@@ -68,9 +75,8 @@ class Gene:
     def get_exons_from_hdf5(hdf5_gene):
         ex_res = []
         for ex_hdf5 in hdf5_gene['exons']:
-            for extx_hdf5 in hdf5_gene['exons/%s' % ex_hdf5]:
-                exn = hdf5_gene['exons/%s' % ex_hdf5]
-                ex_res.append((exn.attrs['start'], exn.attrs['end']))
+            exn = hdf5_gene['exons/%s' % ex_hdf5]
+            ex_res.append((exn.attrs['start'], exn.attrs['end']))
 
         return ex_res
 
@@ -411,6 +417,7 @@ def retrieve_gene(gene_id, dbfile, all_exp=False, junction_list=None, logger=Non
                   gg_attrs['start'], gg_attrs['end'], retrieve=True)
 
         majiq_config.gene_tlb[gene_id] = gn
+
         if junction_list is None:
             junction_list = {}
 
@@ -473,75 +480,6 @@ def retrieve_gene(gene_id, dbfile, all_exp=False, junction_list=None, logger=Non
     return gn
 
 
-
-def retrieve_gene2(gene_id, dbfile, all_exp=False, junction_list=None, logger=None):
-    majiq_config = Config()
-    gg = dbfile[gene_id]
-    gg_dict = gg.attrs
-    try:
-        gn = Gene(gene_id, gg.attrs['name'], gg.attrs['chromosome'], gg.attrs['strand'],
-                  gg.attrs['start'], gg.attrs['end'], retrieve=True)
-
-        majiq_config.gene_tlb[gene_id] = gn
-        if junction_list is None:
-            junction_list = {}
-
-        num_exp = 1 if not all_exp else majiq_config.num_experiments
-
-        for ex_grp_id in gg['exons']:
-            ex_grp = gg['exons/%s' % ex_grp_id]
-            ex = Exon(ex_grp.attrs['start'], ex_grp.attrs['end'], gn.get_id(),
-                      annot=True, isintron=False, indata=ex_grp.attrs['in_data'], retrieve=True)
-            gn.exons.append(ex)
-            try:
-                ex.set_pcr_score(ex_grp.attrs['pcr_name'], ex_grp.attrs['score'], ex_grp.attrs['candidate'])
-            except KeyError:
-                pass
-            if majiq_config.gcnorm:
-                ex.set_gc_content_val(ex_grp.attrs['gc_content'])
-
-            for ex_tx_id in ex_grp['tx']:
-                ex_tx = ex_grp['tx/%s' % ex_tx_id]
-    #            TODO: Do we need trasncript? for now is None
-
-                transcript_id = None
-                ext = ExonTx(ex_tx.attrs['start'], ex_tx.attrs['end'], transcript_id, intron=False)
-                ext.gene_name = gene_id
-                ex.add_exon_tx(ext)
-                ex.add_ss_3p(ex_tx.attrs['start'])
-                ex.add_ss_5p(ex_tx.attrs['end'])
-                for jj_grp_id in ex_tx["p3_junc"]:
-                    jj_grp = ex_tx["p3_junc/%s" % jj_grp_id]
-                    try:
-                        junc = junction_list[jj_grp.attrs['start'], jj_grp.attrs['end']]
-                    except KeyError:
-                        junc = Junction(jj_grp.attrs['start'], jj_grp.attrs['end'], None, None,
-                                        gene_id, annotated=True, retrieve=True, num_exp=num_exp, jindex=-1)
-                        junc.donor_id = jj_grp.attrs['donor_id']
-                        junc.acceptor_id = jj_grp.attrs['acceptor_id']
-                        junc.transcript_id_list = jj_grp.attrs['transcript_id_list']
-                        junction_list[jj_grp.attrs['start'], jj_grp.attrs['end']] = junc
-
-                    ext.add_3prime_junc(junc)
-
-                for jj_grp_id in ex_tx["p5_junc"]:
-                    jj_grp = ex_tx["p5_junc/%s" % jj_grp_id]
-                    try:
-                        junc = junction_list[jj_grp.attrs['start'], jj_grp.attrs['end']]
-                    except KeyError:
-                        junc = Junction(jj_grp.attrs['start'], jj_grp.attrs['end'], None, None,
-                                        gene_id, annotated=True, retrieve=True, num_exp=num_exp)
-                        junc.donor_id = jj_grp.attrs['donor_id']
-                        junc.acceptor_id = jj_grp.attrs['acceptor_id']
-                        junction_list[jj_grp.attrs['start'], jj_grp.attrs['end']] = junc
-
-                    ext.add_5prime_junc(junc)
-    except KeyError:
-        logger.info('ERROR in Gene %s: Annotation db analysis is corrupted' % gene_id)
-        raise
-    return gn
-
-
 def extract_junctions_hdf5(gene_obj, jj_grp, junction_list, annotated=True, all_exp=False):
     majiq_config = Config()
     num_exp = 1 if not all_exp else majiq_config.num_experiments
@@ -567,7 +505,6 @@ def extract_junctions_hdf5(gene_obj, jj_grp, junction_list, annotated=True, all_
 
 
 def find_intron_retention(gene_obj, dict_of_junctions, nondenovo, logging=None):
-    majiq_config = Config()
     intron_list = gene_obj.get_all_introns()
     for exon1, exon2 in intron_list:
         ex1_end = exon1.get_coordinates()[1]
@@ -592,8 +529,7 @@ def find_intron_retention(gene_obj, dict_of_junctions, nondenovo, logging=None):
             continue
         else:
 
-            exnum = new_exon_definition(intron_start, intron_end,
-                                        jin, jout, gene_obj, nondenovo=nondenovo,
+            exnum = new_exon_definition(intron_start, intron_end, jin, jout, gene_obj, nondenovo=nondenovo,
                                         isintron=True)
             if exnum == -1:
                 continue
