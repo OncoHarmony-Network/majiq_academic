@@ -52,7 +52,7 @@ def merging_files(list_of_genes, chnk, majiq_config, process_conf, logger):
             fitfunc_r = []
             for exp_idx in range(len(majiq_config.sam_list)):
                 fname = get_builder_temp_majiq_filename(majiq_config.outDir, majiq_config.sam_list[exp_idx])
-                print(fname)
+                logger.debug("[%s] open %s" %(loop_id, fname))
                 with h5py.File(fname, 'r') as rfa:
                     try:
                         jset = jset.union(set(rfa["%s/junctions" % gne_id].keys()))
