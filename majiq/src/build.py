@@ -50,6 +50,7 @@ def merging_files(list_of_genes, chnk, majiq_config, process_conf, logger):
             vfunc_gc = []
             jset = set()
             fitfunc_r = []
+            rnaf_list = []
             for exp_idx in range(len(majiq_config.sam_list)):
                 fname = get_builder_temp_majiq_filename(majiq_config.outDir, majiq_config.sam_list[exp_idx])
                 logger.debug("[%s] open %s" %(loop_id, fname))
@@ -57,11 +58,13 @@ def merging_files(list_of_genes, chnk, majiq_config, process_conf, logger):
                     try:
                         jset = jset.union(set(rfa["%s/junctions" % gne_id].keys()))
                     except KeyError:
-                        pass
+                        continue
+
                     if majiq_config.gcnorm:
                         vfunc_gc.append(gc_normalization(rfa.attrs['gc_values']))
                     else:
                         vfunc_gc = None
+                    rnaf_list.append(fname)
                     fitfunc_r.append(rfa.attrs['one_over_r'])
 
             njunc = len(jset)
@@ -74,7 +77,7 @@ def merging_files(list_of_genes, chnk, majiq_config, process_conf, logger):
                 gene_obj.gc_content = np.zeros(shape=(njunc, (majiq_config.readLen - 16 + 1)), dtype=np.float)
 
             dict_of_junctions = {}
-            for exp_idx in range(len(majiq_config.sam_list)):
+            for exp_idx in enumerate(rnaf_list):
                 fname = get_builder_temp_majiq_filename(majiq_config.outDir, majiq_config.sam_list[exp_idx])
                 with h5py.File(fname, 'r') as rnaf:
                     try:
