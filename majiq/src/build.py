@@ -116,6 +116,7 @@ def merging_files(list_of_genes, chnk, majiq_config, process_conf, logger):
                 gene_to_splicegraph(gene_obj, process_conf.lock[-1])
             # print(gene_obj.id, dummy)
             del majiq_config.gene_tlb[gne_id]
+            print(sys.getrefcount(gene_obj))
             del gene_obj
 
         objgraph.show_most_common_types(limit=50)
