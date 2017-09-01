@@ -28,7 +28,7 @@ class ThisisBinaryLikeArrays(Tool):
         parser = self.get_parser()
         parser.add_argument('directory',
                             type=str,
-                            help='Directory where voila texts are.')
+                            help='Directory where voila texts are OR file with list of text files.')
         parser.add_argument('data_type',
                             choices={"dpsi", "psi", "prob"},
                             type=str,
@@ -50,8 +50,8 @@ class ThisisBinaryLikeArrays(Tool):
                             choices={'closer', 'further', 'random'},
                             help=help_mes,
                             default="closer")
-        help_mes = "Flag: don't consider IR LSVs"
-        parser.add_argument('--no_ir',
+        help_mes = "Flag: also consider IR LSVs (default: don't import them)"
+        parser.add_argument('--also_ir',
                             action='store_true',
                             help=help_mes,
                             default=False)
@@ -87,21 +87,16 @@ class ThisisBinaryLikeArrays(Tool):
         return parser
 
     def run(self, args):
-        # this is for code readability, not efficiency
-        consider_ir = True
-        if args.no_ir:
-            consider_ir = False
         impute = True
         if args.dont_impute:
             impute = False
         if args.must_reciprocate:
-            LOG.error("Please don't use --must_reciprocate yet... Caleb needs ot fix it.")
-            exit(1)
+            raise RuntimeError("Please don't use --must_reciprocate yet... Caleb needs ot fix it.")
         imported = io_caleb.quick_import(input=args.directory,
                                          cutoff_d_psi=0,
                                          cutoff_prob=0,
                                          pattern=args.pattern,
-                                         keep_ir=consider_ir)
+                                         keep_ir=args.also_ir)
         io_caleb.check_is_ignant(imported, args.dpsi_thresh)
         if impute:
             blanked_dict = io_caleb.impute_missing_lsvs(data=imported,
