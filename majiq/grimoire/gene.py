@@ -401,6 +401,7 @@ def clear_gene_tlb():
     majiq_config.gene_tlb.clear()
     gc.collect()
 
+
 def retrieve_gene(gene_id, dbfile, all_exp=False, junction_list=None, logger=None):
     majiq_config = Config()
     gg = dbfile[gene_id]
