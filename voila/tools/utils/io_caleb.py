@@ -1754,7 +1754,6 @@ def get_num_psi(data,
     if use_binary_index_info == "further":
         binary_index = 1
     comparison = "thing to make PyCharm happy"
-    binary_index = "thing to make PyCharm happy"
     check_is_quick_import(data)
     condition_dict = dict()
     lsv_id_lists = list()
