@@ -77,24 +77,28 @@ def merging_files(list_of_genes, chnk, majiq_config, process_conf, logger):
             for exp_idx in range(len(majiq_config.sam_list)):
                 fname = get_builder_temp_majiq_filename(majiq_config.outDir, majiq_config.sam_list[exp_idx])
                 with h5py.File(fname, 'r') as rnaf:
-                    for jj_grp_id in rnaf["%s/junctions" % gne_id]:
-                        jj_grp = rnaf["%s/junctions/%s" % (gne_id, jj_grp_id)]
-                        junc = majiq.grimoire.gene.extract_junctions_hdf5(gene_obj, jj_grp, junction_list,
-                                                                          annotated=jj_grp.attrs['annotated'],
-                                                                          all_exp=True)
-                        hdfidx = jj_grp.attrs['coverage_index']
-                        t = rnaf[JUNCTIONS_DATASET_NAME][hdfidx, :]
-                        gene_obj.junc_cov[junc.get_index(), exp_idx] = t.sum()
-                        gene_obj.junc_pos[junc.get_index(), exp_idx] = np.count_nonzero(t)
-                        if majiq_config.gcnorm:
-                            gene_obj.gc_content[junc.get_index(), exp_idx, :] = rnaf[JUNCTIONS_GC_CONTENT][hdfidx, :]
-                        if junc.intronic:
-                            coord = junc.get_coordinates()
-                            dict_of_junctions[coord[0]] = junc
-                            dict_of_junctions[coord[1]] = junc
-                        # else:
-                        #     splice_list[(junc.start, junc.end)] = junc
-                        del junc
+                    try:
+
+                        for jj_grp_id in rnaf["%s/junctions" % gne_id]:
+                            jj_grp = rnaf["%s/junctions/%s" % (gne_id, jj_grp_id)]
+                            junc = majiq.grimoire.gene.extract_junctions_hdf5(gene_obj, jj_grp, junction_list,
+                                                                              annotated=jj_grp.attrs['annotated'],
+                                                                              all_exp=True)
+                            hdfidx = jj_grp.attrs['coverage_index']
+                            t = rnaf[JUNCTIONS_DATASET_NAME][hdfidx, :]
+                            gene_obj.junc_cov[junc.get_index(), exp_idx] = t.sum()
+                            gene_obj.junc_pos[junc.get_index(), exp_idx] = np.count_nonzero(t)
+                            if majiq_config.gcnorm:
+                                gene_obj.gc_content[junc.get_index(), exp_idx, :] = rnaf[JUNCTIONS_GC_CONTENT][hdfidx, :]
+                            if junc.intronic:
+                                coord = junc.get_coordinates()
+                                dict_of_junctions[coord[0]] = junc
+                                dict_of_junctions[coord[1]] = junc
+                            # else:
+                            #     splice_list[(junc.start, junc.end)] = junc
+                            del junc
+                    except KeyError:
+                        continue
 
             majiq.grimoire.exon.detect_exons(gene_obj, junction_list, retrieve=True)
             del junction_list
