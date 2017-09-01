@@ -37,7 +37,7 @@ class ThisisBinaryLikeArrays(Tool):
         parser.add_argument('--dpsi_thresh',
                             type=float,
                             help=help_mes,
-                            default=0.1)
+                            default=0)
         help_mes = "Prob(dPSI) threshold by which to call junctions as changing"
         parser.add_argument('--prob_dpsi_thresh',
                             type=float,

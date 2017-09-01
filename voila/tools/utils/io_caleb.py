@@ -1780,7 +1780,10 @@ def get_num_psi(data,
         for condition in conditions:
             PSI = condition_dict[condition][lsv_id]
             if use_binary_index_info:
-                binary_i = data[comparison][lsv_id]["binary_indices"][binary_index]
+                try:
+                    binary_i = data[comparison][lsv_id]["binary_indices"][binary_index]
+                except:
+                    pdb.set_trace()
                 PSI = PSI[binary_i]
             list_of_PSIs.append(PSI)
         lsv_dict[lsv_id] = np.array(list_of_PSIs).T
