@@ -20,6 +20,8 @@ from majiq.src.config import Config
 import datetime
 from majiq.src.multiproc import QueueMessage, process_conf, queue_manager, process_wrapper
 
+import objgraph
+from pympler.tracker import SummaryTracker
 
 def build(args):
     pipeline_run(Builder(args))
@@ -27,91 +29,100 @@ def build(args):
 
 def merging_files(list_of_genes, chnk, majiq_config, process_conf, logger):
     try:
-        total = len(list_of_genes)
-        dummy = 0
-        logger.info("[%s] LIST OF GENES" % ",".join(list_of_genes))
-        for gne_idx, gne_id in enumerate(list_of_genes):
-            loop_idx = gne_idx
-            if loop_idx % 50 == 0:
-                logger.info("[%s] Progress %s/%s" % (chnk, loop_idx, total))
-            loop_id = '%s - %s' % (chnk, gne_id)
-            logger.debug("[%s] Retrieving gene" % loop_id)
-            junction_list = {}
 
-            with h5py.File(get_build_temp_db_filename(majiq_config.outDir), 'r') as db_f:
-                gene_obj = majiq.grimoire.gene.retrieve_gene(gne_id, db_f, junction_list=junction_list, all_exp=True)
+        tracker = SummaryTracker()
+        # total = len(list_of_genes)
+        # #dummy = 0
+        # logger.info("[%s] LIST OF GENES" % ",".join(list_of_genes))
+        # for gne_idx, gne_id in enumerate(list_of_genes):
+        #     loop_idx = gne_idx
+        #     if loop_idx % 50 == 0:
+        #         logger.info("[%s] Progress %s/%s" % (chnk, loop_idx, total))
+        #     loop_id = '%s - %s' % (chnk, gne_id)
+        #     logger.debug("[%s] Retrieving gene" % loop_id)
+        #     junction_list = {}
+        #
+        #     with h5py.File(get_build_temp_db_filename(majiq_config.outDir), 'r') as db_f:
+        #         gene_obj = majiq.grimoire.gene.retrieve_gene(gne_id, db_f, junction_list=junction_list, all_exp=True)
+        #
+        #     splice_list = {xx.get_coordinates(): xx for xx in gene_obj.get_all_junctions(filter=False)}
+        #
+        #
+        #     vfunc_gc = []
+        #     jset = set()
+        #     fitfunc_r = []
+        #     for exp_idx in range(len(majiq_config.sam_list)):
+        #         fname = get_builder_temp_majiq_filename(majiq_config.outDir, majiq_config.sam_list[exp_idx])
+        #         with h5py.File(fname, 'r') as rfa:
+        #             try:
+        #                 jset = jset.union(set(rfa["%s/junctions" % gne_id].keys()))
+        #             except KeyError:
+        #                 pass
+        #             if majiq_config.gcnorm:
+        #                 vfunc_gc.append(gc_normalization(rfa.attrs['gc_values']))
+        #             else:
+        #                 vfunc_gc = None
+        #             fitfunc_r.append(rfa.attrs['one_over_r'])
+        #
+        #     njunc = len(jset)
+        #     del jset
+        #
+        #     gene_obj.junc_matrix = np.zeros(shape=(njunc, len(majiq_config.sam_list), (majiq_config.readLen - 16 + 1)),
+        #                                     dtype=np.uint32)
+        #     if majiq_config.gcnorm:
+        #         gene_obj.gc_content = np.zeros(shape=(njunc, len(majiq_config.sam_list), (majiq_config.readLen - 16 + 1)),
+        #                                        dtype=np.float)
+        #
+        #     dict_of_junctions = {}
+        #     for exp_idx in range(len(majiq_config.sam_list)):
+        #         fname = get_builder_temp_majiq_filename(majiq_config.outDir, majiq_config.sam_list[exp_idx])
+        #         with h5py.File(fname, 'r') as rnaf:
+        #             for jj_grp_id in rnaf["%s/junctions" % gne_id]:
+        #                 jj_grp = rnaf["%s/junctions/%s" % (gne_id, jj_grp_id)]
+        #                 junc = majiq.grimoire.gene.extract_junctions_hdf5(gene_obj, jj_grp, junction_list,
+        #                                                                   annotated=jj_grp.attrs['annotated'],
+        #                                                                   all_exp=True)
+        #                 hdfidx = jj_grp.attrs['coverage_index']
+        #                 gene_obj.junc_matrix[junc.get_index(), exp_idx, :] = rnaf[JUNCTIONS_DATASET_NAME][hdfidx, :]
+        #                 if majiq_config.gcnorm:
+        #                     gene_obj.gc_content[junc.get_index(), exp_idx, :] = rnaf[JUNCTIONS_GC_CONTENT][hdfidx, :]
+        #                 if junc.intronic:
+        #                     coord = junc.get_coordinates()
+        #                     dict_of_junctions[coord[0]] = junc
+        #                     dict_of_junctions[coord[1]] = junc
+        #                 else:
+        #                     splice_list[(junc.start, junc.end)] = junc
+        #                 del junc
+        #
+        #     del junction_list
+        #     majiq.grimoire.exon.detect_exons(gene_obj, splice_list, retrieve=True)
+        #     del splice_list
+        #     majiq.grimoire.gene.find_intron_retention(gene_obj, dict_of_junctions, majiq_config.non_denovo,
+        #                                               logging=logger)
+        #     del dict_of_junctions
+        #     if majiq_config.simplify:
+        #         logger.debug('[%s] Simplifying gene' % loop_id)
+        #         gene_obj.simplify()
+        #     gene_obj.prepare_exons()
+        #
+        #     logger.debug("[%s] Detecting LSV" % loop_id)
+        #
+        #     # nlsv = lsv_detection(gene_obj, gc_vfunc=vfunc_gc, lsv_list=majiq_config.sam_list,
+        #     #                      locks = builder_init.files_locks, rna_files = rna_files, logging = None)
+        #
+        #     nlsv = lsv_detection(gene_obj, gc_vfunc=vfunc_gc, fitfunc_r=fitfunc_r, queue=process_conf.queue)
+        #     nlsv = 1
+        #     #dummy += nlsv
+        #     if nlsv:
+        #         gene_to_splicegraph(gene_obj, process_conf.lock[-1])
+        #     # print(gene_obj.id, dummy)
+        #     del majiq_config.gene_tlb[gne_id]
+        #     del gene_obj
 
-            splice_list = {xx.get_coordinates(): xx for xx in gene_obj.get_all_junctions(filter=False)}
-            dict_of_junctions = {}
-
-            rna_files = []
-            vfunc_gc = []
-
-            jset = set()
-            fitfunc_r = []
-            for exp_idx in range(len(majiq_config.sam_list)):
-                fname = get_builder_temp_majiq_filename(majiq_config.outDir, majiq_config.sam_list[exp_idx])
-                with h5py.File(fname, 'r') as rfa:
-                    try:
-                        jset = jset.union(set(rfa["%s/junctions" % gne_id].keys()))
-                        rna_files.append(fname)
-                    except KeyError:
-                        pass
-                    if majiq_config.gcnorm:
-                        vfunc_gc.append(gc_normalization(rfa.attrs['gc_values']))
-                    else:
-                        vfunc_gc = None
-                    fitfunc_r.append(rfa.attrs['one_over_r'])
-
-            njunc = len(jset)
-            gene_obj.junc_matrix = np.zeros(shape=(njunc, len(majiq_config.sam_list), (majiq_config.readLen - 16 + 1)),
-                                            dtype=np.uint32)
-            if majiq_config.gcnorm:
-                gene_obj.gc_content = np.zeros(shape=(njunc, len(majiq_config.sam_list), (majiq_config.readLen - 16 + 1)),
-                                               dtype=np.float)
-
-            for exp_idx, fname in enumerate(rna_files):
-                with h5py.File(fname, 'r') as rnaf:
-                    for jj_grp_id in rnaf["%s/junctions" % gne_id]:
-                        jj_grp = rnaf["%s/junctions/%s" % (gne_id, jj_grp_id)]
-                        junc = majiq.grimoire.gene.extract_junctions_hdf5(gene_obj, jj_grp, junction_list,
-                                                                          annotated=jj_grp.attrs['annotated'],
-                                                                          all_exp=True)
-                        hdfidx = jj_grp.attrs['coverage_index']
-                        gene_obj.junc_matrix[junc.get_index(), exp_idx, :] = rnaf[JUNCTIONS_DATASET_NAME][hdfidx, :]
-                        if majiq_config.gcnorm:
-                            gene_obj.gc_content[junc.get_index(), exp_idx, :] = rnaf[JUNCTIONS_GC_CONTENT][hdfidx, :]
-                        if junc.intronic:
-                            coord = junc.get_coordinates()
-                            dict_of_junctions[coord[0]] = junc
-                            dict_of_junctions[coord[1]] = junc
-                        else:
-                            splice_list[(junc.start, junc.end)] = junc
-
-            del junction_list
-            majiq.grimoire.exon.detect_exons(gene_obj, splice_list, retrieve=True)
-            del splice_list
-            majiq.grimoire.gene.find_intron_retention(gene_obj, dict_of_junctions, majiq_config.non_denovo,
-                                                      logging=logger)
-            del dict_of_junctions
-            if majiq_config.simplify:
-                logger.debug('[%s] Simplifying gene' % loop_id)
-                gene_obj.simplify()
-            gene_obj.prepare_exons()
-
-            logger.debug("[%s] Detecting LSV" % loop_id)
-
-            # nlsv = lsv_detection(gene_obj, gc_vfunc=vfunc_gc, lsv_list=majiq_config.sam_list,
-            #                      locks = builder_init.files_locks, rna_files = rna_files, logging = None)
-
-            nlsv = lsv_detection(gene_obj, gc_vfunc=vfunc_gc, fitfunc_r=fitfunc_r, queue=process_conf.queue)
-
-            dummy += nlsv
-            if nlsv:
-                gene_to_splicegraph(gene_obj, process_conf.lock[-1])
-            # print(gene_obj.id, dummy)
-            del majiq_config.gene_tlb[gne_id]
-            del gene_obj
+        objgraph.show_most_common_types(limit=50)
+        obj = objgraph.by_type('list')[1000]
+        objgraph.show_backrefs(obj, max_depth=10)
+        tracker.print_diff()
 
     except Exception:
         # majiq_utils.monitor('CHILD %s:: EXCEPT' % chnk)
@@ -264,6 +275,13 @@ class Builder(BasicPipeline):
                 list_of_genes = list(db_f.keys())
 
         lchnksize = max(len(list_of_genes)/self.nthreads, 1) + 1
+        self.queue = mp.Queue()
+        self.lock = [mp.Lock() for xx in range(self.nthreads)]
+        self.lock.append(mp.Lock())
+        pool = mp.Pool(processes=self.nthreads, initializer=process_conf, initargs=[merging_files, self],
+                       maxtasksperchild=1)
+        [xx.acquire() for xx in self.lock[:-1]]
+
         init_splicegraph(get_builder_splicegraph_filename(majiq_config.outDir))
 
         out_h5p_list = []
@@ -281,14 +299,6 @@ class Builder(BasicPipeline):
             f.attrs['num_lsvs'] = 0
             f.attrs['genome'] = majiq_config.genome
             out_h5p_list.append(f)
-
-        self.queue = mp.Queue()
-        self.lock = [mp.Lock() for xx in range(self.nthreads)]
-        self.lock.append(mp.Lock())
-
-        pool = mp.Pool(processes=self.nthreads, initializer=process_conf, initargs=[merging_files, self],
-                       maxtasksperchild=1)
-        [xx.acquire() for xx in self.lock[:-1]]
 
         pool.map_async(process_wrapper, majiq_utils.chunks2(list_of_genes, lchnksize, range(self.nthreads)))
         pool.close()
