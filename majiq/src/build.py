@@ -69,6 +69,8 @@ def merging_files(list_of_genes, chnk, majiq_config, process_conf, logger):
 
             njunc = len(jset)
             del jset
+            if njunc == 0:
+                continue
 
             gene_obj.junc_cov = np.zeros(shape=(njunc, len(majiq_config.sam_list)), dtype=np.uint32)
             gene_obj.junc_pos = np.zeros(shape=(njunc, len(majiq_config.sam_list)), dtype=np.uint32)
