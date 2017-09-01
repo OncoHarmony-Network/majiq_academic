@@ -31,7 +31,7 @@ def gene_to_splicegraph(gne, lock):
             if jj.get_acceptor() is None:
                 alt_empty_starts.append(cc[0])
                 continue
-            num_reads = jj.get_coverage().sum(axis=1)
+            num_reads, npos = jj.get_coverage()
             jj.get_acceptor().coverage += num_reads.sum()
             jj.get_donor().coverage += num_reads.sum()
             jtype_list = []

@@ -4,6 +4,7 @@ from majiq.grimoire.lsv import SSOURCE, STARGET, InvalidLSV
 from majiq.src.constants import *
 from majiq.src.multiproc import QueueMessage
 cimport numpy as np
+import h5py
 
 
 
@@ -64,18 +65,19 @@ cdef int __prepare_lsvs(object lsv, str name, object gc_vfunc, list fitfunc_r, o
 
     majiq_config = Config()
     for exp_idx in majiq_config.tissue_repl[name]:
-        gc_f = None
-        if majiq_config.gcnorm:
-            try:
-                gc_f = gc_vfunc[exp_idx]
-            except:
-                pass
+        fname = get_builder_temp_majiq_filename(majiq_config.outDir, majiq_config.sam_list[exp_idx])
+        with h5py.File(fname, 'r') as rfa:
+            gc_f = None
+            if majiq_config.gcnorm:
+                try:
+                    gc_f = gc_vfunc[exp_idx]
+                except:
+                    pass
 
+            lsv_q = lsv.to_queue(gc_vfunc=gc_f, fitfunc_r=fitfunc_r[exp_idx], exp=rfa, exp_idx=exp_idx )
 
-        lsv_q = lsv.to_queue(gc_vfunc=gc_f, fitfunc_r=fitfunc_r[exp_idx], exp_idx=exp_idx)
-
-        qm = QueueMessage(QUEUE_MESSAGE_BUILD_LSV, (lsv_q, exp_idx), 0)
-        queue.put(qm, block=True)
+            qm = QueueMessage(QUEUE_MESSAGE_BUILD_LSV, (lsv_q, exp_idx), 0)
+            queue.put(qm, block=True)
 
 
 cpdef int lsv_detection(object gn, gc_vfunc, fitfunc_r, queue, only_real_data=False):

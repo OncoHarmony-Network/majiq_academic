@@ -19,7 +19,7 @@ from majiq.src.voila_wrapper import gene_to_splicegraph, init_splicegraph
 from majiq.src.config import Config
 import datetime
 from majiq.src.multiproc import QueueMessage, process_conf, queue_manager, process_wrapper
-
+import gc
 import objgraph
 from pympler.tracker import SummaryTracker
 
@@ -66,11 +66,11 @@ def merging_files(list_of_genes, chnk, majiq_config, process_conf, logger):
             njunc = len(jset)
             del jset
 
-            gene_obj.junc_matrix = np.zeros(shape=(njunc, len(majiq_config.sam_list), (majiq_config.readLen - 16 + 1)),
-                                            dtype=np.uint32)
+            gene_obj.junc_cov = np.zeros(shape=(njunc, len(majiq_config.sam_list)), dtype=np.uint32)
+            gene_obj.junc_pos = np.zeros(shape=(njunc, len(majiq_config.sam_list)), dtype=np.uint32)
+            logger.info("[%s] Gene matrix [%s]" % (loop_id, gene_obj.junc_cov.shape))
             if majiq_config.gcnorm:
-                gene_obj.gc_content = np.zeros(shape=(njunc, len(majiq_config.sam_list), (majiq_config.readLen - 16 + 1)),
-                                               dtype=np.float)
+                gene_obj.gc_content = np.zeros(shape=(njunc, (majiq_config.readLen - 16 + 1)), dtype=np.float)
 
             dict_of_junctions = {}
             for exp_idx in range(len(majiq_config.sam_list)):
@@ -82,7 +82,9 @@ def merging_files(list_of_genes, chnk, majiq_config, process_conf, logger):
                                                                           annotated=jj_grp.attrs['annotated'],
                                                                           all_exp=True)
                         hdfidx = jj_grp.attrs['coverage_index']
-                        gene_obj.junc_matrix[junc.get_index(), exp_idx, :] = rnaf[JUNCTIONS_DATASET_NAME][hdfidx, :]
+                        t = rnaf[JUNCTIONS_DATASET_NAME][hdfidx, :]
+                        gene_obj.junc_cov[junc.get_index(), exp_idx] = t.sum()
+                        gene_obj.junc_pos[junc.get_index(), exp_idx] = np.count_nonzero(t)
                         if majiq_config.gcnorm:
                             gene_obj.gc_content[junc.get_index(), exp_idx, :] = rnaf[JUNCTIONS_GC_CONTENT][hdfidx, :]
                         if junc.intronic:
@@ -103,21 +105,14 @@ def merging_files(list_of_genes, chnk, majiq_config, process_conf, logger):
                 logger.debug('[%s] Simplifying gene' % loop_id)
                 gene_obj.simplify()
             gene_obj.prepare_exons()
-
             logger.debug("[%s] Detecting LSV" % loop_id)
-
-            # nlsv = lsv_detection(gene_obj, gc_vfunc=vfunc_gc, lsv_list=majiq_config.sam_list,
-            #                      locks = builder_init.files_locks, rna_files = rna_files, logging = None)
-
             nlsv = lsv_detection(gene_obj, gc_vfunc=vfunc_gc, fitfunc_r=fitfunc_r, queue=process_conf.queue)
-            nlsv = 1
-            #dummy += nlsv
+
             if nlsv:
                 gene_to_splicegraph(gene_obj, process_conf.lock[-1])
-            # print(gene_obj.id, dummy)
             del majiq_config.gene_tlb[gne_id]
-            print(sys.getrefcount(gene_obj))
             del gene_obj
+            gc.collect()
 
         objgraph.show_most_common_types(limit=50)
         obj = objgraph.by_type('list')[1000]
