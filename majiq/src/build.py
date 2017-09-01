@@ -114,11 +114,11 @@ def merging_files(list_of_genes, chnk, majiq_config, process_conf, logger):
             del majiq_config.gene_tlb[gne_id]
             del gene_obj
             gc.collect()
-
-        objgraph.show_most_common_types(limit=50)
-        obj = objgraph.by_type('list')[1000]
-        objgraph.show_backrefs(obj, max_depth=10)
-        tracker.print_diff()
+        #
+        # objgraph.show_most_common_types(limit=50)
+        # obj = objgraph.by_type('list')[1000]
+        # objgraph.show_backrefs(obj, max_depth=10)
+        # tracker.print_diff()
 
     except Exception:
         # majiq_utils.monitor('CHILD %s:: EXCEPT' % chnk)
