@@ -15,7 +15,11 @@ def process_wrapper(args_vals):
 
     try:
         majiq_config = Config()
-        vals, chnk = args_vals
+        #print (args_vals)
+        if len(args_vals) == 2 :
+            vals, chnk = args_vals
+        else:
+            vals, chnk = args_vals
         logger = majiq_utils.get_logger("%s/%s.majiq.log" % (majiq_config.outDir, chnk),
                                         silent=majiq_config.silent, debug=majiq_config.debug)
 
@@ -32,6 +36,7 @@ def process_wrapper(args_vals):
         process_conf.queue.put(qm, block=True)
         process_conf.lock[chnk].acquire()
         process_conf.lock[chnk].release()
+        process_conf.queue.close()
         majiq_utils.close_logger(logger)
 
 
@@ -134,6 +139,7 @@ def queue_manager(input_h5dfp, output_h5dfp, lock_array, result_queue, num_chunk
                 nthr_count += 1
                 if nthr_count >= num_chunks:
                     break
+            del val
 
         except queue.Empty:
             if nthr_count < num_chunks:

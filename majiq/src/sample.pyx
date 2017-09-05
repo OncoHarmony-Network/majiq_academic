@@ -69,21 +69,19 @@ def sample_from_junctions(junction_list, m, k, fitted_one_over_r=None, debug=Fal
     :return:
     :param junction_list:
     """
-    sampled_means = []
-    sampled_var = []
+    #sampled_means = []
+    #sampled_var = []
     all_samples = []
 
     for i, junction in enumerate(junction_list):
-        if 0 < debug == i:
-            break
         if i % 100 == 0 and debug > 0:
             print("junction %s..." % i)
             sys.stdout.flush()
 
         junction = junction[junction > 0]
         if np.count_nonzero(junction) == 0:
-            sampled_means.append(0)
-            sampled_var.append(0)
+            #sampled_means.append(0)
+            #sampled_var.append(0)
             all_samples.append([0] * m)
             # k*m zeroes
         else:
@@ -109,12 +107,13 @@ def sample_from_junctions(junction_list, m, k, fitted_one_over_r=None, debug=Fal
 
             lsv_mean = np.mean(samples)
             var_nb = lsv_mean + fitted_one_over_r * (lsv_mean ** 2)
-            sampled_means.append(lsv_mean)
-            sampled_var.append(var_nb)
+            #sampled_means.append(lsv_mean)
+            #sampled_var.append(var_nb)
 
             #            samples = [ npos_mult* (x+1) for x in samples]
             samples = npos_mult * (np.array(samples) + 1)
             #            print i, Nz, samples
             all_samples.append(samples)
 
-    return np.array(sampled_means), np.array(sampled_var), np.array(all_samples)
+    return np.array(all_samples)
+    #return np.array(sampled_means), np.array(sampled_var), np.array(all_samples)
