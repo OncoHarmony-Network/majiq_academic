@@ -22,6 +22,7 @@ from majiq.src.multiproc import QueueMessage, process_conf, queue_manager, proce
 import gc
 import objgraph
 from pympler.tracker import SummaryTracker
+import random
 
 def build(args):
     pipeline_run(Builder(args))
@@ -44,7 +45,6 @@ def merging_files(list_of_genes, chnk, majiq_config, process_conf, logger):
         with h5py.File(get_build_temp_db_filename(majiq_config.outDir), 'r') as db_f:
             gene_obj = majiq.grimoire.gene.retrieve_gene(gne_id, db_f, junction_list=junction_list, all_exp=True)
 
-        #splice_list = {xx.get_coordinates(): xx for xx in gene_obj.get_all_junctions(filter=False)}
         majiq_utils.monitor("KK2 %s" % chnk)
         vfunc_gc = []
         jset = set()
@@ -89,7 +89,7 @@ def merging_files(list_of_genes, chnk, majiq_config, process_conf, logger):
                                                                           all_exp=True)
 
                         hdfidx = jj_grp.attrs['coverage_index']
-                        t = rnaf[JUNCTIONS_DATASET_NAME][hdfidx, :]
+                        t = rnaf[JUNCTIONS_DATASET_NAME][hdfidx]
 
                         gene_obj.junc_cov[junc.get_index(), exp_idx] = t.sum()
                         gene_obj.junc_pos[junc.get_index(), exp_idx] = np.count_nonzero(t)
@@ -104,7 +104,7 @@ def merging_files(list_of_genes, chnk, majiq_config, process_conf, logger):
                         del junc
                 except KeyError:
                     pass
-
+        # objgraph.show_growth(limit=10)
         majiq.grimoire.exon.detect_exons(gene_obj, junction_list, retrieve=True)
         del junction_list
         # del splice_list
@@ -120,15 +120,17 @@ def merging_files(list_of_genes, chnk, majiq_config, process_conf, logger):
         #nlsv = lsv_detection(gene_obj, gc_vfunc=vfunc_gc, fitfunc_r=fitfunc_r, queue=process_conf.queue)
         nlsv = lsv_detection2(gene_obj, gc_vfunc=vfunc_gc, fitfunc_r=fitfunc_r, lock_per_file=process_conf.lock)
 
-        #nlsv = 1
         majiq_utils.monitor("KK6")
         if nlsv:
             gene_to_splicegraph(gene_obj, process_conf.lock[-1])
         del majiq_config.gene_tlb[gne_id]
-        print(majiq_config.gene_tlb)
+        majiq_config.gene_tlb.clear()
+        gene_obj.clean()
+
         del gene_obj
-        gc.collect()
-        majiq_utils.monitor("KK6.5")
+        # gc.collect()
+
+
     majiq_utils.monitor("KK7 %s" % chnk)
 
 # def parsing_files(args_vals):
@@ -211,7 +213,9 @@ def parsing_files(sam_file_list, chnk, majiq_config, process_conf, logger):
                 factor, meanbins = gc_factor_calculation(gc_pairs, nbins=10)
                 out_f.attrs['gc_values'] = (factor, meanbins)
             out_f.close()
+        majiq_config.gene_tlb.clear()
         majiq_utils.monitor('CHILD %s:: ENDLOOP' % chnk)
+
 
     # except Exception:
     #     majiq_utils.monitor('CHILD %s:: EXCEPT' % chnk)
@@ -296,7 +300,8 @@ class Builder(BasicPipeline):
             #out_h5p_list.append(f)
 
         #[xx.acquire() for xx in self.lock[:-1]]
-        pool.map_async(process_wrapper, majiq_utils.chunks2(list_of_genes, lchnksize, range(self.nthreads)))
+        #pool.map_async(process_wrapper, majiq_utils.chunks2(list_of_genes, lchnksize, range(self.nthreads)))
+        pool.imap_unordered(process_wrapper, majiq_utils.chunks2(list_of_genes, lchnksize, range(self.nthreads)))
         pool.close()
 
         #

@@ -32,6 +32,7 @@ class InvalidLSV(Exception):
 
 class LSV(object):
     def __init__(self, exon, lsv_id, junctions, lsv_type):
+
         majiq_config = Config()
         if lsv_type != SSOURCE and lsv_type != STARGET:
             raise InvalidLSV('Incorrect LSV type %s' % lsv_type)
@@ -85,11 +86,11 @@ class LSV(object):
             if jj[-2:] == 'e0':
                 continue
             self.junctions.append(junction_list[tlb_junc[jj]])
-
-        self.visual = list()
-        for exp_idx in range(majiq_config.num_experiments):
-            self.visual.append(self.get_visual_lsv(self.junctions, exp_idx))
-        self.visual = np.array(self.visual)
+        del junction_list
+        #self.visual = list()
+        # for exp_idx in range(majiq_config.num_experiments):
+        #     self.visual.append(self.get_visual_lsv(self.junctions, exp_idx))
+        # self.visual = np.array(self.visual)
 
     def get_coordinates(self):
         return self.coords
@@ -413,13 +414,12 @@ class LSV(object):
         h_lsv.attrs['coverage'] = [lsv_idx, lsv_idx + njunc]
         # TODO: CHECK
         vh_lsv = h_lsv.create_group('visual')
-        self.get_visual(exp_idx).to_hdf5(h_lsv)
+        #self.get_visual(exp_idx).to_hdf5(h_lsv)
+        self.get_visual_lsv(self.junctions, exp_idx).to_hdf5(h_lsv)
 
         # lsv_idx = boots_write(hdf5grp, vals, lsv_idx)
         hdf5grp.attrs['lsv_idx'] = lsv_idx + njunc
         hdf5grp.attrs['num_lsvs'] += 1
-
-
 
     def to_queue(self, gc_vfunc, fitfunc_r, exp, exp_idx):
         majiq_config = Config()
@@ -450,7 +450,7 @@ class LSV(object):
         #
         # print(cover)
         vals = {'samples': s_lsv, 'id': self.id, 'type': self.ext_type, 'junc_attr': lsv_trs,
-                'lsv_graphic': self.get_visual(exp_idx)}
+                'lsv_graphic': self.get_visual_lsv(self.junctions, exp_idx)}
         return vals
 
 
@@ -554,6 +554,12 @@ def extract_gff(list_lsv, out_dir):
         dump_bin_file(gtf, fname)
 
     return gtf
+
+
+def new_lsv_definition(exon, jlist, lsv_type):
+    coords = exon.get_coordinates()
+    lsv_id = "%s:%d-%d:%s" % (exon.get_gene().get_id(), coords[0], coords[1], lsv_type)
+    return LSV(exon, lsv_id, jlist, lsv_type)
 
 
 def print_lsv_extype(list_lsv, filename):

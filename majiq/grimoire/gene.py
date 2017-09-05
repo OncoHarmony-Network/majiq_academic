@@ -30,7 +30,18 @@ class Gene:
         self.junc_index = 0
         self.gc_content = None
 
-    def __del__(self):
+    # def __del__(self):
+    #     if hasattr(self, "junc_cov"):
+    #         del self.junc_cov
+    #     if hasattr(self, "junc_pos"):
+    #         del self.junc_pos
+    #     if hasattr(self, "gc_content"):
+    #         del self.gc_content
+    #
+    #     for ex in self.exons:
+    #         del ex
+
+    def clean(self):
         if hasattr(self, "junc_cov"):
             del self.junc_cov
         if hasattr(self, "junc_pos"):
@@ -39,7 +50,7 @@ class Gene:
             del self.gc_content
 
         for ex in self.exons:
-            del ex
+            ex.clean()
 
     def __hash__(self):
         return hash((self.id, self.chromosome, self.strand, self.start, self.end))

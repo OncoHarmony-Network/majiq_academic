@@ -45,6 +45,9 @@ class Junction:
     def __hash__(self):
         return hash(self.start) ^ hash(self.end) ^ hash(self.gene_name)
 
+    def clean(self):
+        pass
+
     def to_db_hdf5(self, hdf5grps):
         h_jnc = hdf5grps.create_group(self.id)
         h_jnc.attrs['id'] = self.id
