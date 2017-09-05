@@ -1765,8 +1765,7 @@ def singly_unique(data,
     return results
 
 
-def counts_per_row(numpy_array: np.array,
-                   elements_to_count):
+def counts_per_row(numpy_array, elements_to_count):
     """
 
 

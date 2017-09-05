@@ -5,6 +5,7 @@ import h5py
 import numpy
 
 from voila import constants
+from voila.api.api_abstracts import VoilaAbstract, SpliceGraphsAbstract
 from voila.constants import EXPERIMENT_NAMES
 from voila.hdf5 import BinsDataSet, HDF5
 from voila.splice_graphics import GeneGraphic
@@ -12,9 +13,8 @@ from voila.utils.exceptions import GeneIdNotFoundInVoilaFile, GeneIdNotFoundInSp
 from voila.utils.voila_log import voila_log
 from voila.vlsv import VoilaLsv, get_expected_dpsi
 
-import pdb
 
-class Voila(object):
+class Voila(VoilaAbstract):
     VERSION = '/voila_file_version'
     LSVS = 'lsvs'
     ANALYSIS_TYPE = '/analysis_type'
@@ -189,7 +189,8 @@ class Voila(object):
         m = self._metainfo()
         try:
             HDF5.create(m.attrs, 'group_names', numpy.concatenate((m.attrs['group_names'], [group_name])))
-            HDF5.create(m.attrs, 'experiment_names', numpy.concatenate((m.attrs['experiment_names'], [experiment_names])))
+            HDF5.create(m.attrs, 'experiment_names',
+                        numpy.concatenate((m.attrs['experiment_names'], [experiment_names])))
         except KeyError:
             HDF5.create(m.attrs, 'group_names', numpy.array([group_name]))
             HDF5.create(m.attrs, 'experiment_names', numpy.array([experiment_names]))
@@ -207,7 +208,7 @@ class Voila(object):
                                 'current version of MAJIQ.')
 
 
-class SpliceGraphs(object):
+class SpliceGraphs(SpliceGraphsAbstract):
     GENES = '/genes'
     ROOT = '/'
     VERSION = '/splice_graph_file_version'
@@ -355,13 +356,11 @@ class SpliceGraphs(object):
             for gene_id in self.get_gene_ids(args):
                 try:
                     lsvs = tuple(v.get_lsvs(args, gene_id=gene_id))
-                except GeneIdNotFoundInVoilaFile:
-                    lsvs = None
-
-                if lsvs:
                     gene = self.get_gene(gene_id)
                     lsv_dict[gene_id] = tuple(v.get_voila_lsv(gene_id, lsv_id) for gene_id, lsv_id in lsvs)
                     gene_list.append(gene)
+                except GeneIdNotFoundInVoilaFile:
+                    pass
 
                 if len(gene_list) == constants.MAX_GENES:
                     yield lsv_dict, gene_list
