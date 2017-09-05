@@ -28,8 +28,6 @@ def build(args):
 
 
 def merging_files(list_of_genes, chnk, majiq_config, process_conf, logger):
-    try:
-
         # tracker = SummaryTracker()
         total = len(list_of_genes)
         #dummy = 0
@@ -125,19 +123,6 @@ def merging_files(list_of_genes, chnk, majiq_config, process_conf, logger):
         # objgraph.show_backrefs(obj, max_depth=10)
         # tracker.print_diff()
 
-    except Exception:
-        # majiq_utils.monitor('CHILD %s:: EXCEPT' % chnk)
-        traceback.print_exc()
-        sys.stdout.flush()
-        raise
-
-    finally:
-        qm = QueueMessage(QUEUE_MESSAGE_END_WORKER, None, chnk)
-        process_conf.queue.put(qm, block=True)
-        process_conf.lock[chnk].acquire()
-        process_conf.lock[chnk].release()
-        import logging
-        logging.shutdown()
 
 
 # def parsing_files(args_vals):

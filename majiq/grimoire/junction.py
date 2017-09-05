@@ -187,14 +187,15 @@ class Junction:
         return self.transcript_id_list
 
     def is_reliable(self):
-        res = False
-        cov = self.get_coverage().sum(axis=1)
         majiq_config = Config()
-        for tissue, list_idx in majiq_config.tissue_repl.items():
-            mu = np.mean(cov[list_idx])
-            if mu > majiq_config.min_denovo:
-                res = True
-                break
+        cov = self.get_coverage().sum(axis=1)
+        res = cov >= majiq_config.min_denovo
+        # res = False
+        # for tissue, list_idx in majiq_config.tissue_repl.items():
+        #     mu = np.mean(cov[list_idx])
+        #     if mu > majiq_config.min_denovo:
+        #         res = True
+        #         break
         return res
 
     def is_reliable_in_tissue(self):
