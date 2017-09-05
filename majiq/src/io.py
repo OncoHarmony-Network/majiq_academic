@@ -828,7 +828,6 @@ def add_lsv_to_bootstrapfile(f, vals):
     f.attrs['num_lsvs'] += 1
 
 
-
 def create_bootstrap_file(file_list, outdir, name, m=100):
     import datetime
     for ii, ff in enumerate(file_list):

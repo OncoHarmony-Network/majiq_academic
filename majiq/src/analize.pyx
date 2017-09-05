@@ -3,6 +3,7 @@ import majiq.src.filter as majiq_filter
 from majiq.grimoire.lsv import SSOURCE, STARGET, InvalidLSV
 from majiq.src.constants import *
 from majiq.src.multiproc import QueueMessage
+import majiq.src.utils as majiq_utils
 cimport numpy as np
 import h5py
 
@@ -74,10 +75,86 @@ cdef int __prepare_lsvs(object lsv, str name, object gc_vfunc, list fitfunc_r, o
                 except:
                     pass
 
+            majiq_utils.monitor("PRE QUEUE CREAT")
             lsv_q = lsv.to_queue(gc_vfunc=gc_f, fitfunc_r=fitfunc_r[exp_idx], exp=rfa, exp_idx=exp_idx )
-
+            majiq_utils.monitor("POST QUEUE CREAT")
             qm = QueueMessage(QUEUE_MESSAGE_BUILD_LSV, (lsv_q, exp_idx), 0)
-            queue.put(qm, block=True)
+            #qm = QueueMessage(100, (None), 0)
+            #queue.put(qm, block=True)
+
+    del lsv
+
+
+
+cdef wrap_result_file(object lsv, str name, object gc_vfunc, list fitfunc_r, list lock_per_file):
+    cdef object majiq_config
+    cdef int exp_idx
+    cdef object gc_f
+
+    majiq_config = Config()
+    for exp_idx in majiq_config.tissue_repl[name]:
+        fname = get_builder_temp_majiq_filename(majiq_config.outDir, majiq_config.sam_list[exp_idx])
+        lock_per_file[exp_idx].acquire()
+        with h5py.File('%s/%s.boots.hdf5' % (majiq_config.outDir, majiq_config.sam_list[exp_idx]), 'r+') as f:
+            gc_f = None
+            if majiq_config.gcnorm:
+                try:
+                    gc_f = gc_vfunc[exp_idx]
+                except:
+                    pass
+
+            with h5py.File(fname, 'r') as rfa:
+                lsv.to_hdf5(hdf5grp=f, gc_vfunc=gc_f, fitfunc_r=fitfunc_r[exp_idx], exp=rfa, exp_idx=exp_idx)
+
+        lock_per_file[exp_idx].release()
+
+
+cpdef int lsv_detection2(object gn, object gc_vfunc, list fitfunc_r, list lock_per_file, only_real_data=False):
+    cdef object majiq_config
+    cdef dict dummy
+    cdef int count
+    cdef str name
+    cdef list ind_list
+    cdef object ex
+    cdef object ss, st
+
+    majiq_config = Config()
+    dummy = {}
+    count = 0
+    for name, ind_list in majiq_config.tissue_repl.items():
+        dummy[name] = [[], []]
+
+    for ex in gn.get_exon_list():
+        try:
+            _detect_lsv(ex, gn, SSOURCE, dummy, only_annot=only_real_data)
+        except InvalidLSV:
+            pass
+        try:
+            _detect_lsv(ex, gn, STARGET, dummy, only_annot=only_real_data)
+        except InvalidLSV:
+            pass
+
+    for name, ind_list in majiq_config.tissue_repl.items():
+
+        for ss in dummy[name][0]:
+            for st in dummy[name][1]:
+                if ss.contained(st):
+                    break
+            else:
+                count += 1
+                wrap_result_file(ss, name, gc_vfunc, fitfunc_r, lock_per_file)
+
+        for st in dummy[name][1]:
+            for ss in dummy[name][0]:
+                if st.contained(ss):
+                    break
+            else:
+                count += 1
+                wrap_result_file(st, name, gc_vfunc, fitfunc_r, lock_per_file)
+
+    del dummy
+
+    return count
 
 
 cpdef int lsv_detection(object gn, gc_vfunc, fitfunc_r, queue, only_real_data=False):
@@ -113,6 +190,8 @@ cpdef int lsv_detection(object gn, gc_vfunc, fitfunc_r, queue, only_real_data=Fa
                     break
             else:
                 count += 1
+                #__prepare_lsvs(ss, name, gc_vfunc=gc_vfunc, fitfunc_r=fitfunc_r, queue=queue)
+                wrap_result_file(ss, name, gc_vfunc, fitfunc_r,lock_per_file)
                 __prepare_lsvs(ss, name, gc_vfunc=gc_vfunc, fitfunc_r=fitfunc_r, queue=queue)
 
         for st in dummy[name][1]:
@@ -121,7 +200,10 @@ cpdef int lsv_detection(object gn, gc_vfunc, fitfunc_r, queue, only_real_data=Fa
                     break
             else:
                 count += 1
+                # __prepare_lsvs(st, name, gc_vfunc=gc_vfunc, fitfunc_r=fitfunc_r, queue=queue)
                 __prepare_lsvs(st, name, gc_vfunc=gc_vfunc, fitfunc_r=fitfunc_r, queue=queue)
+
+    del dummy
 
     return count
 

@@ -297,7 +297,7 @@ def chunks(l, n, extra):
         for i in range(len(l)):
             idx += 1
             eidx = idx % len(extra)
-            yield (l[i], extra[eidx], rep_chunk[eidx], n)
+            yield (l[i], extra[eidx])
             rep_chunk[eidx] += 1
 
     except:
