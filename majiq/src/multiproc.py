@@ -11,19 +11,15 @@ from voila.splice_graphics import LsvGraphic
 from voila.vlsv import VoilaLsv
 import traceback
 
+
 def process_wrapper(args_vals):
 
     try:
-        majiq_config = Config()
-        #print (args_vals)
-        if len(args_vals) == 2 :
-            vals, chnk = args_vals
-        else:
-            vals, chnk = args_vals
-        logger = majiq_utils.get_logger("%s/%s.majiq.log" % (majiq_config.outDir, chnk),
-                                        silent=majiq_config.silent, debug=majiq_config.debug)
+        vals, chnk = args_vals
+        logger = majiq_utils.get_logger("%s/%s.majiq.log" % (process_conf.outDir, chnk),
+                                        silent=process_conf.silent, debug=process_conf.debug)
 
-        process_conf.func(vals, chnk, majiq_config, process_conf, logger=logger)
+        process_conf.func(vals, chnk, process_conf, logger=logger)
 
     except:
         # majiq_utils.monitor('CHILD %s:: EXCEPT' % chnk)

@@ -676,26 +676,22 @@ def extract_lsv_summary(files):
     lsv_dict_graph = {}
 
     for fidx, ff in enumerate(files):
-        print('ff: ', ff)
         data = h5py.File(ff, 'r')
         junc_cov = data['junc_cov'][()]
         lsv_list = {}
         lsv_dict_graph = {}
         for xx in data['LSVs']:
-            print('in for LSVS, %s' % xx)
             lsv_list[xx] = dict(data['LSVs/%s' % xx].attrs)
             lsv_dict_graph[xx] = LsvGraphic.easy_from_hdf5(data['LSVs/%s/visual' % xx])
 
         simpl_juncs.append([[0, 0.0] for xx in idx_junc.keys()])
 
         for lsvid, attrs in lsv_list.items():
-            print('in for lsv_list')
             cov = junc_cov[attrs['coverage'][0]:attrs['coverage'][1]]
             lsv_types[lsvid] = attrs['type']
             lsvid2idx[lsvid] = []
             ljunc = lsv_dict_graph[lsvid].junction_ids()
             for jidx, jj in enumerate(ljunc):
-                print ('int for junc')
                 try:
                     indx = idx_junc[jj]
                     simpl_juncs[fidx][indx] = cov[jidx]

@@ -113,9 +113,7 @@ def gene_to_splicegraph(gne, lock):
     ggraph = GeneGraphic(gene_id=gne.get_id(), name=gne.get_name(), strand=gne.get_strand(), exons=exon_list,
                          junctions=junc_list, chromosome=gne.get_chromosome())
 
-    majiq_utils.monitor("PRE Splice ")
     lock.acquire()
     with SpliceGraphs(get_builder_splicegraph_filename(majiq_config.outDir), 'r+') as sg:
         sg.add_gene(ggraph)
-    majiq_utils.monitor("POST Splice")
     lock.release()
