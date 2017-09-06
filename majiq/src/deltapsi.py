@@ -23,9 +23,6 @@ def deltapsi(args):
 
 def deltapsi_quantification(list_of_lsv, chnk, process_conf, logger):
 
-    logger = majiq_utils.get_logger("%s/%s.majiq.log" % (process_conf.outDir, chnk),
-                                    silent=process_conf.silent, debug=process_conf.debug)
-
     logger.info("Quantifying LSVs PSI.. %s" % chnk)
     num_exp = [len(process_conf.files1), len(process_conf.files1)]
 

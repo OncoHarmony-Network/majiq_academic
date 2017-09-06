@@ -26,9 +26,6 @@ def calcpsi(args):
 
 def psi_quantification(list_of_lsv, chnk, process_conf, logger):
 
-    logger = majiq_utils.get_logger("%s/%s.majiq.log" % (process_conf.outDir, chnk),
-                                    silent=process_conf.silent, debug=process_conf.debug)
-
     logger.info("Quantifying LSVs PSI.. %s" % chnk)
     f_list = majiq_io.get_extract_lsv_list(list_of_lsv, process_conf.files)
     for lidx, lsv_id in enumerate(list_of_lsv):
@@ -41,12 +38,6 @@ def psi_quantification(list_of_lsv, chnk, process_conf, logger):
                                          f_list[lidx].type)
         qm = QueueMessage(QUEUE_MESSAGE_PSI_RESULT, (post_psi, mu_psi, lsv_id), chnk)
         process_conf.queue.put(qm, block=True)
-
-    qm = QueueMessage(QUEUE_MESSAGE_END_WORKER, None, chnk)
-    process_conf.queue.put(qm, block=True)
-    process_conf.lock[chnk].acquire()
-    process_conf.lock[chnk].release()
-##
 
 
 class CalcPsi(BasicPipeline):
