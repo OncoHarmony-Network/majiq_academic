@@ -19,10 +19,7 @@ from majiq.src.voila_wrapper import gene_to_splicegraph, init_splicegraph
 from majiq.src.config import Config
 import datetime
 from majiq.src.multiproc import QueueMessage, process_conf, queue_manager, process_wrapper
-import gc
-import objgraph
-from pympler.tracker import SummaryTracker
-import random
+
 
 def build(args):
     pipeline_run(Builder(args))
@@ -32,9 +29,8 @@ def merging_files(list_of_genes, chnk, majiq_config, process_conf, logger):
 
     # tracker = SummaryTracker()
     total = len(list_of_genes)
-    logger.info("[%s] LIST OF GENES" % ",".join(list_of_genes))
+    logger.debug("[%s] LIST OF GENES" % ",".join(list_of_genes))
     for gne_idx, gne_id in enumerate(list_of_genes):
-        majiq_utils.monitor("KK1 %s" % chnk)
         loop_idx = gne_idx
         if loop_idx % 50 == 0:
             logger.info("[%s] Progress %s/%s" % (chnk, loop_idx, total))
@@ -45,7 +41,6 @@ def merging_files(list_of_genes, chnk, majiq_config, process_conf, logger):
         with h5py.File(get_build_temp_db_filename(majiq_config.outDir), 'r') as db_f:
             gene_obj = majiq.grimoire.gene.retrieve_gene(gne_id, db_f, junction_list=junction_list, all_exp=True)
 
-        majiq_utils.monitor("KK2 %s" % chnk)
         vfunc_gc = []
         jset = set()
         fitfunc_r = []
@@ -62,17 +57,15 @@ def merging_files(list_of_genes, chnk, majiq_config, process_conf, logger):
                 else:
                     vfunc_gc = None
                 fitfunc_r.append(rfa.attrs['one_over_r'])
-        majiq_utils.monitor("KK3 %s" % chnk)
         njunc = len(jset)
         del jset
         if njunc == 0:
             continue
         gene_obj.junc_cov = np.zeros(shape=(njunc, len(majiq_config.sam_list)), dtype=np.uint32)
         gene_obj.junc_pos = np.zeros(shape=(njunc, len(majiq_config.sam_list)), dtype=np.uint32)
-        logger.info("[%s] Gene matrix [%s]" % (loop_id, gene_obj.junc_cov.shape))
+        logger.debug("[%s] Gene matrix [%s]" % (loop_id, gene_obj.junc_cov.shape))
         if majiq_config.gcnorm:
             gene_obj.gc_content = np.zeros(shape=(njunc, (majiq_config.readLen - 16 + 1)), dtype=np.float)
-        majiq_utils.monitor("KK4 %s" % chnk)
         dict_of_junctions = {}
         for exp_idx in range(len(majiq_config.sam_list)):
             fname = get_builder_temp_majiq_filename(majiq_config.outDir, majiq_config.sam_list[exp_idx])
@@ -111,7 +104,6 @@ def merging_files(list_of_genes, chnk, majiq_config, process_conf, logger):
         majiq.grimoire.gene.find_intron_retention(gene_obj, dict_of_junctions, majiq_config.non_denovo,
                                                   logging=logger)
         del dict_of_junctions
-        majiq_utils.monitor("KK5 %s" % chnk)
         if majiq_config.simplify:
             logger.debug('[%s] Simplifying gene' % loop_id)
             gene_obj.simplify()
@@ -120,7 +112,6 @@ def merging_files(list_of_genes, chnk, majiq_config, process_conf, logger):
         #nlsv = lsv_detection(gene_obj, gc_vfunc=vfunc_gc, fitfunc_r=fitfunc_r, queue=process_conf.queue)
         nlsv = lsv_detection2(gene_obj, gc_vfunc=vfunc_gc, fitfunc_r=fitfunc_r, lock_per_file=process_conf.lock)
 
-        majiq_utils.monitor("KK6")
         if nlsv:
             gene_to_splicegraph(gene_obj, process_conf.lock[-1])
         del majiq_config.gene_tlb[gne_id]
@@ -128,19 +119,7 @@ def merging_files(list_of_genes, chnk, majiq_config, process_conf, logger):
         gene_obj.clean()
 
         del gene_obj
-        # gc.collect()
 
-
-    majiq_utils.monitor("KK7 %s" % chnk)
-
-# def parsing_files(args_vals):
-    # try:
-    #     sam_file_list, chnk = args_vals
-    #     majiq_config = Config()
-    #     tlogger = majiq_utils.get_logger("%s/%s.majiq.log" % (majiq_config.outDir, chnk),
-    #                                      silent=majiq_config.silent, debug=majiq_config.debug)
-    #
-    #     majiq_utils.monitor('CHILD %s:: CREATION' % chnk)
 
 def parsing_files(sam_file_list, chnk, majiq_config, process_conf, logger):
 

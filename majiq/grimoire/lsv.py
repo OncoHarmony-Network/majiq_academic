@@ -368,12 +368,9 @@ class LSV(object):
 #         return lsv_idx + njunc
 
     def to_hdf5(self, hdf5grp, gc_vfunc, fitfunc_r, exp, exp_idx):
-        majiq_config = Config()
-        try:
-            lsv_idx = hdf5grp.attrs['lsv_idx']
-        except:
-            print ("LL")
 
+        majiq_config = Config()
+        lsv_idx = hdf5grp.attrs['lsv_idx']
         njunc = len(self.junctions)
         cover = np.zeros(shape=(njunc, (majiq_config.readLen - 16) + 1), dtype=np.float)
 
@@ -390,7 +387,6 @@ class LSV(object):
                     cover[idx] = majiq_norm.mark_stacks_per_junc(cover[idx], fitfunc_r, pvalue_limit)
 
         s_lsv = sample_from_junctions(junction_list=cover,
-                                      # m_lsv, var_lsv, s_lsv=sample_from_junctions(junction_list=cover,
                                       m=majiq_config.m,
                                       k=majiq_config.k,
                                       fitted_one_over_r=fitfunc_r,
@@ -415,11 +411,11 @@ class LSV(object):
         # TODO: CHECK
         vh_lsv = h_lsv.create_group('visual')
         #self.get_visual(exp_idx).to_hdf5(h_lsv)
-        self.get_visual_lsv(self.junctions, exp_idx).to_hdf5(h_lsv)
+        self.get_visual_lsv(self.junctions, exp_idx).to_hdf5(vh_lsv)
 
         # lsv_idx = boots_write(hdf5grp, vals, lsv_idx)
         hdf5grp.attrs['lsv_idx'] = lsv_idx + njunc
-        hdf5grp.attrs['num_lsvs'] += 1
+        hdf5grp.attrs['num_lsvs'] = hdf5grp.attrs['num_lsvs'] + 1
 
     def to_queue(self, gc_vfunc, fitfunc_r, exp, exp_idx):
         majiq_config = Config()
@@ -439,12 +435,12 @@ class LSV(object):
                 if pvalue_limit >= 0:
                     cover[idx] = majiq_norm.mark_stacks_per_junc(cover[idx], fitfunc_r, pvalue_limit)
 
+        # m_lsv, var_lsv, s_lsv=sample_from_junctions(junction_list=cover,
         s_lsv = sample_from_junctions(junction_list=cover,
-        #m_lsv, var_lsv, s_lsv=sample_from_junctions(junction_list=cover,
-                                                      m=majiq_config.m,
-                                                      k=majiq_config.k,
-                                                      fitted_one_over_r=fitfunc_r,
-                                                      debug=majiq_config.debug)
+                                      m=majiq_config.m,
+                                      k=majiq_config.k,
+                                      fitted_one_over_r=fitfunc_r,
+                                      debug=majiq_config.debug)
         lsv_trs = np.array([cover.sum(axis=1), np.count_nonzero(cover, axis=1)]).T
         # print(lsv_trs, np.count_nonzero(cover, axis=1), np.count_nonzero(cover, axis=0))
         #
