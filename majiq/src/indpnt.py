@@ -154,7 +154,7 @@ class independent(BasicPipeline):
                 out_h5p.add_stat_names(self.stats)
 
                 in_h5p = h5py.File(self.files1[0], 'r')
-                queue_manager(in_h5p, out_h5p, lock_arr, q, num_chunks=self.nthreads, logger=logger,
+                queue_manager(in_h5p, out_h5p, self.lock, self.queue, num_chunks=self.nthreads, logger=logger,
                               list_of_lsv_graphics=lsv_dict_graph1)
                 in_h5p.close()
             pool.join()
