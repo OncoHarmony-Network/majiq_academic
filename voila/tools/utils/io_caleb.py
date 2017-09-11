@@ -25,13 +25,7 @@ def quick_import(input,
                  keep_ir=True,
                  cutoff_sum=False,
                  pattern="*deltapsi_deltapsi.tsv",
-                 deseq_dir=False,
-                 deseq_prefix=False,
-                 deseq_pat="*csv",
-                 deseq_log2fc=1.2,
-                 deseq_pv=0.05,
-                 deseq_sep="\t",
-                 deseq_id_colname="ensembl_gene_id",
+                 remove_these_genes=None,
                  just_one=False,
                  stop_at=False,
                  comparisons=None,
@@ -62,10 +56,8 @@ def quick_import(input,
                 .deltapsi_quantify_deltapsi.txt
             voila 1.0.0 looks like:
                 .deltapsi_deltapsi.tsv
-        DESeq*:
-            Optional arguments to extract DESeq results, and use them to remove LSVs
-                in genes exhibiting significant changes in gene expression.
-                See get_deseq_diff_expr_genes() for details.
+        remove_these_genes: dict[comparisons]->[gene ids]
+            I provided, remove LSVs from the quick import.
         just_one: only import and return one txt path (only really need this for lookup.lookup_everywhere()...)
         stop_at: if provided, stop reading voila file when you reach this LSV ID or Gene name/ID. Could also
             be a file path to a line-by-line list of Gene names/IDs or LSVIDs.
@@ -201,16 +193,8 @@ def quick_import(input,
                                             cutoff_sum=cutoff_sum,
                                             throw_no_sig_error=False)
     lsvs_length(imported_files)
-    if deseq_dir:
-        deseqres = get_deseq_diff_expr_genes(deseq_dir=deseq_dir,
-                                             deseq_res_pref_pattern=deseq_prefix,
-                                             deseq_fname_pattern=deseq_pat,
-                                             log2_foldchange=deseq_log2fc,
-                                             pval_adj=deseq_pv,
-                                             deseq_delim=deseq_sep,
-                                             deseq_geneid_colname=deseq_id_colname,
-                                             recursive=False)
-        remove_genes(imported_files, deseqres)
+    if remove_these_genes:
+        remove_genes(imported_files, remove_these_genes)
     return imported_files
 
 
@@ -1092,7 +1076,7 @@ def quick_import_subset(data,
     Assuming the data is imputed or shares all lsv ids
     :param data: quick import (maybe imputed)
     :param lsv_ids:
-    :param in_place: if True, overwerite data
+    :param in_place: if True, overwrite data
     :return:
     """
     comparisons = get_comparisons(data, sort=True)
@@ -1102,7 +1086,7 @@ def quick_import_subset(data,
         if in_place:
             data[comp] = this_subset
         else:
-            res[comp] = this_subset
+            res[comp] = copy.deepcopy(this_subset)
     if not in_place:
         return res
 
@@ -1157,6 +1141,7 @@ def lsv_dict_subset(dictionary,
     #     The None is not nec., because I know all keys will be in this
     #     Dict, but for future Caleb/aliens modifying this code, I'm keeping it.
     new_dict = {k: dictionary.get(k, None) for k in keys}
+    #new_dict = {k: dictionary[k] for k in keys}
     if remove_empties:
         n_rem = 0
         for key, value in new_dict.items():
@@ -1207,39 +1192,42 @@ def lsvs_length(data,
     return the_string
 
 
-def remove_genes(rm_data,
+def remove_genes(quick_imp,
                  comp_to_lsvid_dict,
                  return_diff_expr_lsvids=False):
     """
-        Given a quick import of rm_data and a comp_to_lsvid_dict,
+        Given a quick import of quick_imp and a comp_to_lsvid_dict,
             remove all the LSVs corresponding to each ID.
 
             return_diff_expr_lsvids : return the LSV IDs that were diff expressed?
 
             NOTE: THIS MODFIES THE QUICK IMPORT OBJECT.
     """
-    check_is_quick_import(rm_data)
-    comps_with_deseq_res = comp_to_lsvid_dict.keys()
-    for comp in comps_with_deseq_res:
-        if comp not in rm_data:
-            raise RuntimeError("%s was found in DESeq directory, but not in Majiq results...")
-        sig_gene_ids = comp_to_lsvid_dict[comp]
-        all_lsv_ids = get_lsv_ids(rm_data[comp])
-        n_s = len(sig_gene_ids)
+    check_is_quick_import(quick_imp)
+    comps_with_rem_ids = list(comp_to_lsvid_dict.keys())
+    removed_ids = dict()
+
+    for comp in comps_with_rem_ids:
+        if comp not in quick_imp:
+            raise RuntimeError("%s is a comparison with remove IDs, but not in the quick import data...")
+        remove_ids = comp_to_lsvid_dict[comp]
+        all_lsv_ids = get_lsv_ids(quick_imp[comp])
+        n_s = len(remove_ids)
         n_t = len(all_lsv_ids)
         n_r = 0
-        removed_ids = []
+        if n_s != 0:
+            removed_ids[comp] = list()
         for lsv_id in all_lsv_ids:
             gene = lsv_id.split(":")[0]
-            if gene in sig_gene_ids:
+            if gene in remove_ids:
                 n_r += 1
-                removed_ids.append(rm_data[comp].pop(lsv_id))
+                removed_ids[comp].append(quick_imp[comp].pop(lsv_id))
         LOG.info("%s: %s LSVs (%s diff-expr genes) removed leaving %s LSVs" % (comp, n_r, n_s, n_t - n_r))
-    data_comps = set(rm_data.keys())
-    comps_with_deseq_res = set(comps_with_deseq_res)
-    leftover = list(comps_with_deseq_res - data_comps)
+    data_comps = set(get_comparisons(quick_imp))
+    comps_with_rem_ids = set(list(removed_ids.keys()))
+    leftover = list(comps_with_rem_ids - data_comps)
     if len(leftover) > 0:
-        LOG.info("The following comparisons didn't have DESeq results:\n%s" % leftover)
+        LOG.info("The following comparisons didn't have remove IDs:\n%s" % leftover)
     if return_diff_expr_lsvids:
         return removed_ids
 
@@ -1337,28 +1325,32 @@ def get_sig_lsv_ids(data,
     return names_over_cutoff
 
 
+def get_lsv_id(lsv):
+    return lsv["LSV ID"]
+
+
 def get_lsv_ids(lsv_dict):
     """
     Return LSV IDs from dictionary.
     """
     check_is_lsv_dict(lsv_dict)
     lsv_ids = copy.copy(list(lsv_dict.keys()))
-    # lsv_ids.remove("condition_1_name")
-    # lsv_ids.remove("condition_2_name")
     lsv_ids.remove("meta_info")
     return lsv_ids
 
 
 def get_dpsis(lsv,
               prob_cutoff=None,
-              as_np_array=False):
+              as_np_array=False,
+              check=True):
     """
     Given LSV, return list of dPSIs over Prob_Cutoff, if provided.
         If not Prob_cutoff provided, return all dPSIs
 
         as_np_array: bool
     """
-    check_is_lsv(lsv)
+    if check:
+        check_is_lsv(lsv)
     if prob_cutoff:
         if prob_cutoff < 0 or prob_cutoff > 1:
             raise ValueError("'Prob_Cutoff' needs to be >=0 or <=1, not: "
@@ -1773,16 +1765,11 @@ def get_num_psi(data,
     conditions = list(condition_dict.keys())
     conditions.sort()
     for lsv_id in list(union_of_lsv_ids):
-        # if lsv_id == "ENSG00000173744:228395807-228395926:target":
-        #     pdb.set_trace()
         list_of_PSIs = list()
         for condition in conditions:
             PSI = condition_dict[condition][lsv_id]
             if use_binary_index_info:
-                try:
-                    binary_i = data[comparison][lsv_id]["binary_indices"][binary_index]
-                except:
-                    pdb.set_trace()
+                binary_i = data[comparison][lsv_id]["binary_indices"][binary_index]
                 PSI = PSI[binary_i]
             list_of_PSIs.append(PSI)
         lsv_dict[lsv_id] = np.array(list_of_PSIs).T

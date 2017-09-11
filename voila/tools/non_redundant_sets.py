@@ -2,6 +2,7 @@ import pdb
 from voila.tools import Tool
 from voila.tools.find_binary_lsvs import find_binary_lsv_ids
 from voila.tools.utils import io_caleb
+from random import shuffle
 from voila.tools.utils.most_common_elem import most_common
 from voila.tools.utils.percent_through_list import percent_through_list
 from voila.utils.voila_log import voila_log
@@ -9,6 +10,7 @@ import numpy as np
 import copy
 import pickle as pkl
 import os
+from operator import itemgetter
 
 # Caleb Matthew Radens
 # radlinsky@gmail.com
@@ -27,15 +29,9 @@ class ThisisNonRedundantSets(Tool):
 
     def arguments(self):
         parser = self.get_parser()
-        mutually_excl_grp = parser.add_mutually_exclusive_group(required=True)
-        mutually_excl_grp.add_argument('--directory',
-                                       '-d',
-                                       type=str,
-                                       help='Directory where voila texts are. (searches recursively)')
-        mutually_excl_grp.add_argument('--file_list',
-                                       '-fl',
-                                       type=str,
-                                       help='A file with a list of voila text file paths (one line each).')
+        parser.add_argument('directory',
+                            type=str,
+                            help='Directory where voila texts are OR file with list of text files.')
         help_mes = "Output to save file to (include full path)"
         parser.add_argument('--outfile',
                             type=str,
@@ -80,15 +76,16 @@ class ThisisNonRedundantSets(Tool):
         consider_ir = True
         if args.no_ir:
             consider_ir = False
-        imported = io_caleb.quick_import(input=args.directory if args.directory else args.file_list,
+        imported = io_caleb.quick_import(input=args.directory,
                                          cutoff_d_psi=0,
                                          cutoff_prob=0,
                                          pattern=args.pattern,
                                          keep_ir=consider_ir)
         io_caleb.check_is_ignant(imported, args.dpsi_thresh)
-        non_red_res = non_redundant_set(imported,
+        non_red_res, blank_info = non_redundant_set(imported,
                                         cutoff_dpsi=args.dpsi_thresh,
-                                        cutoff_psi=args.psi_thresh)
+                                        cutoff_psi=args.psi_thresh,
+                                        save_blanked_structure=True)
         if args.outfile:
             out_path = os.path.abspath(args.outfile)
             if args.ferment:
@@ -100,12 +97,23 @@ class ThisisNonRedundantSets(Tool):
                 with open(out_path, "w") as handle:
                     for line in non_red_list:
                         line.sort()
-                        print("|".join(line), file=handle)
+                        if len(line) == 1:
+                            rep_id = "\t" + line[0]
+                        else:
+                            line.sort()
+                            rep_id = most_changing_lsv(imported, line)
+                            rep_id = "\t"+rep_id
+                        print("|".join(line) + rep_id, file=handle)
         else:
             non_red_list = non_red_sets_to_list(non_red_res)
             for line in non_red_list:
-                line.sort()
-                print("|".join(line))
+                if len(line) == 1:
+                    rep_id = "\t" + line[0]
+                else:
+                    line.sort()
+                    rep_id = most_changing_lsv(imported, line)
+                    rep_id = "\t" + rep_id
+                print("|".join(line) + rep_id)
 
 
 def non_redundant_set(data,
@@ -528,3 +536,129 @@ def get_junc_coords(Data):
         new_coords = np.array(new_coords)
         junc_dict[lsv_id] = new_coords
     return junc_dict
+
+
+def find_set_partners(connected_sets,
+                      lsv_id,
+                      sig_ids=False):
+    """
+    Given data returned from Non_redundant_set and a query LSV_ID,
+        return the LSV's partenr(s) that share a utilized junction.
+
+        Arguments:
+            connected_sets: return value from Non_redundant_set
+            lsv_id: LSV_ID: query LSV to get partnrs for
+            Sig_IDs OPTIONAL list/set
+                If provided, this funciton will only return partner LSV(s)
+                that are in this list/set. For example, if you only
+                want to identify "significant" LSV partners...
+    """
+    if sig_ids:
+        sig_ids = list(sig_ids)
+    if lsv_id in connected_sets['singles_all_lsvs']:
+        return "isolated"
+    elif lsv_id in connected_sets['twos_lsvs']:
+        pairs = connected_sets['twos'].values()
+        for pair in pairs:
+            if lsv_id in pair:
+                partner = copy.copy(pair)
+                partner.remove(lsv_id)
+                if sig_ids:
+                    if partner[0] in sig_ids:
+                        return partner
+                    else:
+                        return "no_sig_partner"
+                else:
+                    return partner
+    elif lsv_id in connected_sets['three_plus_lsvs']:
+        complexes = connected_sets['three_plus'].values()
+        for comp in complexes:
+            if lsv_id in comp:
+                partners = copy.copy(comp)
+                partners.remove(lsv_id)
+                if sig_ids:
+                    sig_partners = list(set(sig_ids).intersection(set(partners)))
+                    if len(sig_partners)>0:
+                        return partners
+                    else:
+                        return "no_sig_partners"
+                else:
+                    return partners
+    else:
+        raise RuntimeError("%s wasn't found in the non_red_set" % lsv_id)
+
+
+def get_representative_lsvs(data,
+                            non_red_set,
+                            dpsi_thresh=0.1,
+                            prob_dpsithresh=0.95):
+    """
+    Return list of LSVs that are non-redundant. LSVs are picked from non_red_sets based
+        on which one shows the maximum change.
+    :param data: quick import
+    :param non_red_set: non redundant set of lsvs
+    :param dpsi_thresh: what thresh to call dPSI significant?
+    :param prob_dpsithresh: what thresh to call dPSI significant?
+
+    :return: list of LSVs
+    """
+    all_lsv_id_nsets = non_red_sets_to_list(non_red_set)
+    nsets = len(all_lsv_id_nsets)
+    LOG.info("Getting representative LSVs from %s Non-redundant sets..." % nsets)
+    sig_ids = set(io_caleb.get_sig_lsv_ids(data, cutoff_d_psi=dpsi_thresh, prob_d_psi=prob_dpsithresh, collapse=True))
+    sig_lib = io_caleb.quick_import_subset(data, lsv_ids=list(sig_ids))
+    representatives = list()
+    indeces_at_10_percent = percent_through_list(all_lsv_id_nsets, 0.01)
+    i = 0.0
+    while len(all_lsv_id_nsets) > 0:
+        if i > 0.0 and i in indeces_at_10_percent:
+            LOG.info(str(indeces_at_10_percent[i]) + "%% of sets processed (%s representative LSVs, %s sets)" % (i,
+                                                                                                                nsets))
+        partners = all_lsv_id_nsets.pop()
+        # only care if it was significant
+        partners = list(sig_ids & set(partners))
+        if len(partners) == 0:
+            i += 1.0
+            continue
+        if len(partners) == 1:
+            representatives.append(partners[0])
+            i += 1.0
+            continue
+        most_changing = most_changing_lsv(sig_lib, partners)
+        representatives.append(most_changing)
+        for lsvid in partners:
+            try:
+                all_lsv_id_nsets.remove(lsvid)
+            except ValueError:
+                pass
+        i += 1.0
+    return representatives
+
+
+def most_changing_lsv(imputed_data, list_of_lsv_ids):
+    """
+    Return the LSV that has max(dPSI) value. TODO: Use max(Prob) for tie-breakers?
+    :param imputed_data: quick import that was imputed with 0s
+    :param list_of_lsv_ids:
+    :return:
+    """
+    if not isinstance(list_of_lsv_ids, list):
+        raise RuntimeError("Expectec a list not a %s " % (type(list_of_lsv_ids)))
+    if len(list_of_lsv_ids) == 1:
+        return list_of_lsv_ids[0]
+    data_subset = io_caleb.quick_import_subset(imputed_data, list_of_lsv_ids)
+    num_dpsis = io_caleb.get_num_d_psi(data_subset)
+    max_dpsi = list()
+    for lsv_id in list_of_lsv_ids:
+        max_abs_dpsi = abs(num_dpsis[lsv_id]).max()
+        # find junc with max abs(dps), with tie-breaking random so as to not bias results
+        juncs_with_max_dpsi = (abs(num_dpsis[lsv_id]) == abs(num_dpsis[lsv_id]).max()).max(axis=1)
+        max_junc_i = np.random.choice(np.flatnonzero(juncs_with_max_dpsi))
+        # same with comps..
+        comps_with_max_dpsi = (abs(num_dpsis[lsv_id]) == abs(num_dpsis[lsv_id]).max()).max(axis=0)
+        max_comp_i = np.random.choice(np.flatnonzero(comps_with_max_dpsi))
+        absmax_dspi = abs(num_dpsis[lsv_id][max_junc_i, max_comp_i])
+        max_dpsi.append(absmax_dspi)
+    max_lsv_id_iis = (np.array(max_dpsi) == np.array(max_dpsi).max())
+    max_lsv_id = np.random.choice(np.flatnonzero(max_lsv_id_iis))
+    return list_of_lsv_ids[max_lsv_id]

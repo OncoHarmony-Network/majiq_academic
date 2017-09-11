@@ -1,5 +1,6 @@
 from voila.tools import Tool
 from voila.tools.utils import io_caleb
+from voila.tools.utils.index_all import index_all
 from voila.tools.utils.percent_through_list import percent_through_list
 from voila.utils.voila_log import voila_log
 import numpy as np
@@ -1756,22 +1757,6 @@ def group_lsvs_by_id(lsv_ids):
         ensembl_ids = ensembl_ids[max(indices) + 1:]
         lsv_ids = lsv_ids[max(indices) + 1:]
     return gene_to_lsvs
-
-
-def index_all(array, element, nottt=False):
-    """Return all indices of array that point to an element.
-        Arguments:
-            array   = type: list.
-            element = object that you wish to get indices for from array.
-            Not     = If True, return indices of elements that do *not* match
-    """
-    if not isinstance(array, list):
-        raise Exception("Please only give lists to this function.")
-    if nottt:
-        matched_indices = [i for i, x in enumerate(array) if x != element]
-    else:
-        matched_indices = [i for i, x in enumerate(array) if x == element]
-    return matched_indices
 
 
 ##################################### GENERAL HELPER #####################################

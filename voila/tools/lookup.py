@@ -72,8 +72,9 @@ class ThisisLookup(Tool):
     def run(self, args):
         # parse the comparisons argument
         if args.names:
-            if "," in args.names or " " in args.names:
+            if "," in args.names or " " in args.names or "|" in args.names:
                 args.names.replace(" ", ",")
+                args.names.replace("|", ",")
                 to_lookup = args.names.split(",")
             else:
                 to_lookup = [args.names]
