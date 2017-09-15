@@ -315,7 +315,7 @@ def find_binary_lsv_ids(num_d_psi,
         elif not isinstance(num_psi, str) and cutoff_psi:
             this_num_psi = num_psi[lsv_id]
             # identify which junctions have PSI > Cutoff_PSI
-            psi_over_cutoff = np.sum(this_num_psi > cutoff_psi)
+            psi_over_cutoff = this_num_psi > cutoff_psi
         if cutoff_d_psi:
             over_cutoff = dpsi_over_cutoff + over_cutoff
         elif cutoff_psi:
