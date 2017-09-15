@@ -234,6 +234,7 @@ def flatten_dpsi(imputed_dat, lsvid):
     """
     :param imputed_dat: quick import that was imputed with 9s
     :param lsvid:
+    :param as_pandas_df: if True, instead return a dataframe with named columns and rows
     :return: dict of comparison:data to be used for intializing a pandas dataframe
     """
     comparisons = io_caleb.get_comparisons(imputed_dat, sort=True)

@@ -150,13 +150,13 @@ def non_redundant_set(data,
     LOG.info("Finished filling in the gaps, running non-redundant algorithm...")
     if return_numdpsis_dat:
         nr_connected_lsvs, nr_numdpsis = get_connected_lsvs_by_junc(data=data,
-                                                                    Cutoff_dPSI=cutoff_dpsi,
-                                                                    Cutoff_PSI=cutoff_psi,
+                                                                    Cutoff_dPSI=None if cutoff_dpsi == 0 else cutoff_dpsi,
+                                                                    Cutoff_PSI=None if cutoff_psi == 1 else cutoff_psi,
                                                                     ret_numpdsis_data=return_numdpsis_dat)
     else:
         nr_connected_lsvs = get_connected_lsvs_by_junc(data=data,
-                                                       Cutoff_dPSI=cutoff_dpsi,
-                                                       Cutoff_PSI=cutoff_psi,
+                                                       Cutoff_dPSI=None if cutoff_dpsi == 0 else cutoff_dpsi,
+                                                       Cutoff_PSI=None if cutoff_psi == 1 else cutoff_psi,
                                                        ret_numpdsis_data=return_numdpsis_dat)
     LOG.info("Accounting for LSVs from different genes that overlap according to genomic coordinates ...")
     by_type = most_lsvs_same_gene(connected_lsv_s=nr_connected_lsvs)
@@ -305,8 +305,8 @@ def get_connected_lsvs_by_junc(data,
     master_junc_dict = dict()
     all_lsvs = io_caleb.get_shared_lsv_ids(data)
     junc_lsv_dicts = get_junc_lsv_dicts(data,
-                                        cutoff_dpsi=Cutoff_dPSI,
-                                        cutoff_psi=Cutoff_PSI,
+                                        cutoff_dpsi=None if Cutoff_dPSI == 0.0 else Cutoff_dPSI,
+                                        cutoff_psi=None if Cutoff_PSI == 1.0 else Cutoff_PSI,
                                         return_numdpsis=ret_numpdsis_data)
     junc_to_lsv = junc_lsv_dicts["junc_lsv_dict"]
     lsv_to_junc = junc_lsv_dicts["lsv_junc_dict"]
@@ -464,8 +464,8 @@ def get_junc_weights(Data, Weights="dPSI"):
 
 
 def get_junc_lsv_dicts(data,
-                       cutoff_dpsi=0.1,
-                       cutoff_psi=0.05,
+                       cutoff_dpsi=None,
+                       cutoff_psi=None,
                        return_numdpsis=False):
     """
         Return a dictionary of junctions pointing at lists of LSV IDs

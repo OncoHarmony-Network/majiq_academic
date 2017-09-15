@@ -47,6 +47,11 @@ class ThisisBinaryLikeArrays(Tool):
                             type=float,
                             help=help_mes,
                             default=0.0)
+        help_mes = "PSI threshold by which to call junctions as changing. Default 1 means it isn't used"
+        parser.add_argument('--psi_thresh',
+                            type=float,
+                            help=help_mes,
+                            default=1)
         help_mes = "Choose which junction to get" \
                    " from reference binary-like LSVs."
         parser.add_argument('--junction',
@@ -114,6 +119,7 @@ class ThisisBinaryLikeArrays(Tool):
         io_caleb.check_is_ignant(imported, args.dpsi_thresh)
         nrset, blanked_dict = non_redundant_sets.non_redundant_set(data=imported,
                                                                    cutoff_dpsi=args.dpsi_thresh,
+                                                                   cutoff_psi=args.psi_thresh,
                                                                    save_blanked_structure=True)
         sig_ids = io_caleb.get_sig_lsv_ids(imported,
                                            cutoff_d_psi=args.dpsi_thresh,
@@ -121,7 +127,8 @@ class ThisisBinaryLikeArrays(Tool):
                                            collapse=True)
         results_count = find_binary_lsvs.get_binary_lsvs(data=imported,
                                                          method=args.method,
-                                                         cutoff_d_psi=args.dpsi_thresh,
+                                                         cutoff_d_psi=None if args.dpsi_thresh == 0 else args.dpsi_thresh,
+                                                         cutoff_psi=None if args.psi_thresh == 1 else args.psi_thresh,
                                                          just_lsv_ids=False,
                                                          must_reciprocate=args.must_reciprocate)
 

@@ -56,6 +56,11 @@ class ThisisFindBinaryLSVs(Tool):
                             type=float,
                             help=help_mes,
                             default=0.0)
+        help_mes = "PSI threshold by which to call junctions as changing. Default 1 means it isn't used"
+        parser.add_argument('--psi_thresh',
+                            type=float,
+                            help=help_mes,
+                            default=1)
         help_mes = "Flag: don't consider IR LSVs"
         parser.add_argument('--no_ir',
                             action='store_true',
@@ -121,7 +126,8 @@ class ThisisFindBinaryLSVs(Tool):
                                                       impute_with=0)
         results = get_binary_lsvs(data=imported,
                                   method=args.method,
-                                  cutoff_d_psi=args.dpsi_thresh,
+                                  cutoff_d_psi=None if args.dpsi_thresh == 0 else args.dpsi_thresh,
+                                  cutoff_psi=None if args.psi_thresh == 1 else args.psi_thresh,
                                   just_lsv_ids=False,
                                   must_reciprocate=args.must_reciprocate)
         if args.prob_dpsi_thresh:
@@ -145,8 +151,8 @@ class ThisisFindBinaryLSVs(Tool):
 
 
 def get_binary_lsvs(data,
-                    cutoff_d_psi=0.1,
-                    cutoff_psi=1,
+                    cutoff_d_psi=None,
+                    cutoff_psi=None,
                     make_copy=False,
                     just_lsv_ids=False,
                     method="sum_to_95",
@@ -223,8 +229,8 @@ def get_binary_lsvs(data,
 
 def find_binary_lsv_ids(num_d_psi,
                         num_psi,
-                        cutoff_d_psi=0.1,
-                        cutoff_psi=1,
+                        cutoff_d_psi=None,
+                        cutoff_psi=None,
                         return_other_ids=False,
                         return_bi_iis=False,
                         return_all_iis=False,
@@ -242,8 +248,8 @@ def find_binary_lsv_ids(num_d_psi,
         Set this to 1 if you only want to categorize LSVs by dPSI.
 
     Arguments
-        Cutoff_dPSI: default dPSI cutoff is 0.1.
-        Cutoff_PSI: defualt PSI cutoff is 1
+        Cutoff_dPSI:
+        Cutoff_PSI:
         Return_other_ids: if True, return LSV IDs that have:
                      ==2, >2 , ==1, ==0
             junctions changing accross all comparisons.
@@ -276,7 +282,8 @@ def find_binary_lsv_ids(num_d_psi,
     zero_over_ids = list()  # zero junctions
     all_indices = dict()
     sig_juncs_dict = dict()
-    LOG.info("Counting how many juncs utilized in %s LSVs ..." % len(lsv_ids))
+    LOG.info("Counting how many juncs utilized (PSI>%s or dPSI>=%s) in %s LSVs ..." % (
+             cutoff_psi, cutoff_d_psi, len(lsv_ids)))
     i = 1.0
     indeces_at_10_percent = percent_through_list(lsv_ids, 0.1)
     for lsv_id in lsv_ids:
@@ -285,20 +292,25 @@ def find_binary_lsv_ids(num_d_psi,
         i += 1.0
         this_num_d_psi = num_d_psi[lsv_id]
 
-        # identify which junctions have PSI > Cutoff_dPSI
-        dpsi_over_cutoff = abs(this_num_d_psi) > cutoff_d_psi
-        if not isinstance(num_psi, str):
+        # start with all being True
+        over_cutoff = abs(this_num_d_psi) >= 0
+
+        if cutoff_d_psi:
+            # identify which junctions have dPSI > Cutoff_dPSI
+            dpsi_over_cutoff = abs(this_num_d_psi) > cutoff_d_psi
+        if not isinstance(num_psi, str) and cutoff_psi:
             this_num_psi = num_psi[lsv_id]
 
             # identify which junctions have PSI > Cutoff_PSI
             psi_over_cutoff = np.sum(this_num_psi > cutoff_psi, axis=1)
             psi_over_cutoff = np.zeros(this_num_d_psi.shape).T + psi_over_cutoff
             psi_over_cutoff = psi_over_cutoff.T > 0
-            # make sure all junctions with dPSI and PSI over the cutoff
-            # are 'True'
-            dpsi_over_cutoff = psi_over_cutoff + dpsi_over_cutoff
+        if cutoff_d_psi:
+            over_cutoff = dpsi_over_cutoff + over_cutoff
+        if cutoff_psi:
+            over_cutoff = psi_over_cutoff + over_cutoff
         # axis=1, meaning sum # of Trues in each row (each junction)
-        sum_truths = np.sum(dpsi_over_cutoff, axis=1)
+        sum_truths = np.sum(over_cutoff, axis=1)
         sig_juncs_dict[lsv_id] = sum_truths
         number_junctions_over_cutoff = sum(sum_truths > 0)
         if number_junctions_over_cutoff == 2:
