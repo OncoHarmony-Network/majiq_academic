@@ -120,7 +120,8 @@ class ThisisBinaryLikeArrays(Tool):
         nrset, blanked_dict = non_redundant_sets.non_redundant_set(data=imported,
                                                                    cutoff_dpsi=args.dpsi_thresh,
                                                                    cutoff_psi=args.psi_thresh,
-                                                                   save_blanked_structure=True)
+                                                                   save_blanked_structure=True,
+                                                                   bi_method=args.method)
         sig_ids = io_caleb.get_sig_lsv_ids(imported,
                                            cutoff_d_psi=args.dpsi_thresh,
                                            prob_d_psi=args.prob_dpsi_thresh,

@@ -300,6 +300,8 @@ def find_binary_lsv_ids(num_d_psi,
     for lsv_id in lsv_ids:
         if i > 0.0 and i in indeces_at_10_percent:
             LOG.info(str(indeces_at_10_percent[i]) + "% of juncs looked at...")
+        if lsv_id =="ENSG00000168077:27516013-27517056:source":
+            pdb.set_trace()
         i += 1.0
         this_num_d_psi = num_d_psi[lsv_id]
 
@@ -376,7 +378,7 @@ def find_binary_lsvs_95(num_d_psi,
                         return_other_ids=False,
                         return_bi_iis=False,
                         return_all_iis=False,
-                        # return_sig_juncs=False,
+                        return_sig_juncs=False,
                         must_reciprocate=True):  # meaning, top 2  juncs are positive AND negative
     """
     if Sum(abs(top two junctions dPSIs)) / Sum(abs(dPSI)) >= 0.95, its binary.
@@ -447,6 +449,7 @@ def find_binary_lsvs_95(num_d_psi,
 
         # axis=1, meaning sum # of Trues in each row (each junction)
         sum_truths = np.sum(which_junctions_utilized)
+        sig_juncs_dict[lsv_id] = sum_truths
         if sum_truths == 2 and over_thresh:
             doesnt_reciprocate = False
             if must_reciprocate:
@@ -468,7 +471,8 @@ def find_binary_lsvs_95(num_d_psi,
             pdb.set_trace()
         else:  # == 0
             zero_over_ids.append(lsv_id)
-
+    if return_sig_juncs:
+        return sig_juncs_dict
     results = dict()
     results["binary"] = binary_ids
     if return_other_ids:

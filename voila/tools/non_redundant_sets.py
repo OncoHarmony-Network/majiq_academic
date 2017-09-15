@@ -1,6 +1,6 @@
 import pdb
 from voila.tools import Tool
-from voila.tools.find_binary_lsvs import find_binary_lsv_ids
+from voila.tools import find_binary_lsvs
 from voila.tools.utils import io_caleb
 from random import shuffle
 from voila.tools.utils.most_common_elem import most_common
@@ -17,7 +17,6 @@ from operator import itemgetter
 
 
 __author__ = 'cradens'
-
 
 LOG = voila_log()
 
@@ -83,9 +82,9 @@ class ThisisNonRedundantSets(Tool):
                                          keep_ir=consider_ir)
         io_caleb.check_is_ignant(imported, args.dpsi_thresh)
         non_red_res, blank_info = non_redundant_set(imported,
-                                        cutoff_dpsi=args.dpsi_thresh,
-                                        cutoff_psi=args.psi_thresh,
-                                        save_blanked_structure=True)
+                                                    cutoff_dpsi=args.dpsi_thresh,
+                                                    cutoff_psi=args.psi_thresh,
+                                                    save_blanked_structure=True)
         if args.outfile:
             out_path = os.path.abspath(args.outfile)
             if args.ferment:
@@ -102,7 +101,7 @@ class ThisisNonRedundantSets(Tool):
                         else:
                             line.sort()
                             rep_id = most_changing_lsv(imported, line)
-                            rep_id = "\t"+rep_id
+                            rep_id = "\t" + rep_id
                         print("|".join(line) + rep_id, file=handle)
         else:
             non_red_list = non_red_sets_to_list(non_red_res)
@@ -120,7 +119,8 @@ def non_redundant_set(data,
                       cutoff_dpsi=0.1,
                       cutoff_psi=1.0,
                       save_blanked_structure=False,
-                      return_numdpsis_dat=False):
+                      return_numdpsis_dat=False,
+                      bi_method="count"):
     """
     Identify how many non-redundant AS events there are, whereby LSVs
         that are connected by 'utilized junctions' are considered part
@@ -140,6 +140,7 @@ def non_redundant_set(data,
             However, need to also return the blanked_lsvs_dict so you
             know which LSVs were blanked.
             return_numdpsis_dat: boolean
+            bi_method: doesn't really matter for this function, this is method how to find binary-like LSVs...
 
     """
     # First need to fill in LSV Gaps. deltapsi comparisons don't overlap 100%
@@ -152,12 +153,14 @@ def non_redundant_set(data,
         nr_connected_lsvs, nr_numdpsis = get_connected_lsvs_by_junc(data=data,
                                                                     Cutoff_dPSI=None if cutoff_dpsi == 0 else cutoff_dpsi,
                                                                     Cutoff_PSI=None if cutoff_psi == 1 else cutoff_psi,
-                                                                    ret_numpdsis_data=return_numdpsis_dat)
+                                                                    ret_numpdsis_data=return_numdpsis_dat,
+                                                                    method=bi_method)
     else:
         nr_connected_lsvs = get_connected_lsvs_by_junc(data=data,
                                                        Cutoff_dPSI=None if cutoff_dpsi == 0 else cutoff_dpsi,
                                                        Cutoff_PSI=None if cutoff_psi == 1 else cutoff_psi,
-                                                       ret_numpdsis_data=return_numdpsis_dat)
+                                                       ret_numpdsis_data=return_numdpsis_dat,
+                                                       method=bi_method)
     LOG.info("Accounting for LSVs from different genes that overlap according to genomic coordinates ...")
     by_type = most_lsvs_same_gene(connected_lsv_s=nr_connected_lsvs)
     if not save_blanked_structure:
@@ -177,11 +180,11 @@ def non_redundant_set(data,
     summary = "%s total LSVs met junction utilization cutoffs...\n" % total_lsvs
     summary += "%s total non-redundant splicing sets\n" % total
     summary += "%s singles (%s LSVs), %s doubles (%s LSVs), %s three_pluses (%s LSVs) ...\n" % (s,
-                                                                                            ns,
-                                                                                            d,
-                                                                                            nd,
-                                                                                            tp,
-                                                                                            ntp)
+                                                                                                ns,
+                                                                                                d,
+                                                                                                nd,
+                                                                                                tp,
+                                                                                                ntp)
     LOG.info(summary)
     by_type["summary"] = summary
     if return_numdpsis_dat:
@@ -281,11 +284,11 @@ def most_lsvs_same_gene(connected_lsv_s,
     return results
 
 
-
 def get_connected_lsvs_by_junc(data,
                                Cutoff_dPSI=0.1,
                                Cutoff_PSI=1.0,
-                               ret_numpdsis_data=False):
+                               ret_numpdsis_data=False,
+                               method="count"):
     """
         Given LSV quick import, identify which LSVs are connected
             using utilized junctions as edges and LSVs as nodes.
@@ -299,6 +302,7 @@ def get_connected_lsvs_by_junc(data,
                 to be considered utilized? If set to 1, then no junction
                 makes the PSI cutoff.
             ret_numpdsis_data: boolean
+            method: how to call binary ids
 
     """
     # sig_juncs = get_sorted_juncs(Data)
@@ -307,7 +311,8 @@ def get_connected_lsvs_by_junc(data,
     junc_lsv_dicts = get_junc_lsv_dicts(data,
                                         cutoff_dpsi=None if Cutoff_dPSI == 0.0 else Cutoff_dPSI,
                                         cutoff_psi=None if Cutoff_PSI == 1.0 else Cutoff_PSI,
-                                        return_numdpsis=ret_numpdsis_data)
+                                        return_numdpsis=ret_numpdsis_data,
+                                        method=method)
     junc_to_lsv = junc_lsv_dicts["junc_lsv_dict"]
     lsv_to_junc = junc_lsv_dicts["lsv_junc_dict"]
     sig_juncs = list(junc_to_lsv.keys())
@@ -466,7 +471,8 @@ def get_junc_weights(Data, Weights="dPSI"):
 def get_junc_lsv_dicts(data,
                        cutoff_dpsi=None,
                        cutoff_psi=None,
-                       return_numdpsis=False):
+                       return_numdpsis=False,
+                       method="count"):
     """
         Return a dictionary of junctions pointing at lists of LSV IDs
             that use them significantly. Also return dict of LSV IDs
@@ -481,11 +487,32 @@ def get_junc_lsv_dicts(data,
     LOG.info("Getting all junction coordinates ...")
     lsv_junc_dict = get_junc_coords(data)
     LOG.info("Running find_binary_LSV_IDs() ...")
-    sig_junc_dict = find_binary_lsv_ids(num_d_psi=this_num_dpsi,
-                                        num_psi=this_nump_psi,
-                                        cutoff_d_psi=cutoff_dpsi,
-                                        cutoff_psi=cutoff_psi,
-                                        return_sig_juncs=True)
+    if method == "count":
+        sig_junc_dict = find_binary_lsvs.find_binary_lsv_ids(num_d_psi=this_num_dpsi,
+                                                             num_psi=this_nump_psi,
+                                                             cutoff_d_psi=cutoff_dpsi,
+                                                             cutoff_psi=cutoff_psi,
+                                                             return_sig_juncs=True)
+    elif method == "sum_to_95":
+        if cutoff_psi:
+            if cutoff_dpsi:
+                bythis = "both"
+                thresh = min([cutoff_dpsi, cutoff_psi])
+            else:
+                bythis = "psi"
+                thresh = cutoff_psi
+        elif cutoff_dpsi:
+            thresh = cutoff_dpsi
+            bythis = "dpsi"
+        else:
+            raise RuntimeError("No thresholds provided...")
+        sig_junc_dict = find_binary_lsvs.find_binary_lsvs_95(num_d_psi=this_num_dpsi,
+                                                             num_psi=this_nump_psi,
+                                                             threshold=thresh,
+                                                             by_what=bythis,
+                                                             return_sig_juncs=True)
+    else:
+        raise RuntimeError("%s not a recognized method..." % method)
     junc_lsv_dict = dict()
     for lsv_id in sig_junc_dict.keys():
         junc_loci = lsv_junc_dict[lsv_id]
@@ -578,7 +605,7 @@ def find_set_partners(connected_sets,
                 partners.remove(lsv_id)
                 if sig_ids:
                     sig_partners = list(set(sig_ids).intersection(set(partners)))
-                    if len(sig_partners)>0:
+                    if len(sig_partners) > 0:
                         return partners
                     else:
                         return "no_sig_partners"
@@ -613,7 +640,7 @@ def get_representative_lsvs(data,
     while len(all_lsv_id_nsets) > 0:
         if i > 0.0 and i in indeces_at_10_percent:
             LOG.info(str(indeces_at_10_percent[i]) + "%% of sets processed (%s representative LSVs, %s sets)" % (i,
-                                                                                                                nsets))
+                                                                                                                 nsets))
         partners = all_lsv_id_nsets.pop()
         # only care if it was significant
         partners = list(sig_ids & set(partners))
