@@ -193,8 +193,7 @@ def get_binary_lsvs(data,
     elif method == "sum_to_95":
         if cutoff_psi:
             if cutoff_d_psi:
-                bythis = "both"
-                thresh = min([cutoff_d_psi, cutoff_psi])
+                raise RuntimeError("Please only use cutoff dPSI or PSI, not both.")
             else:
                 bythis = "psi"
                 thresh = cutoff_psi
@@ -293,6 +292,8 @@ def find_binary_lsv_ids(num_d_psi,
     zero_over_ids = list()  # zero junctions
     all_indices = dict()
     sig_juncs_dict = dict()
+    if cutoff_d_psi and cutoff_psi:
+        raise RuntimeError("Only use PSI or dPSI for binary-like LSV identification.")
     LOG.info("Counting how many juncs utilized (PSI>%s or dPSI>=%s) in %s LSVs ..." % (
              cutoff_psi, cutoff_d_psi, len(lsv_ids)))
     i = 1.0
@@ -311,16 +312,13 @@ def find_binary_lsv_ids(num_d_psi,
         if cutoff_d_psi:
             # identify which junctions have dPSI > Cutoff_dPSI
             dpsi_over_cutoff = abs(this_num_d_psi) > cutoff_d_psi
-        if not isinstance(num_psi, str) and cutoff_psi:
+        elif not isinstance(num_psi, str) and cutoff_psi:
             this_num_psi = num_psi[lsv_id]
-
             # identify which junctions have PSI > Cutoff_PSI
-            psi_over_cutoff = np.sum(this_num_psi > cutoff_psi, axis=1)
-            psi_over_cutoff = np.zeros(this_num_d_psi.shape).T + psi_over_cutoff
-            psi_over_cutoff = psi_over_cutoff.T > 0
+            psi_over_cutoff = np.sum(this_num_psi > cutoff_psi)
         if cutoff_d_psi:
             over_cutoff = dpsi_over_cutoff + over_cutoff
-        if cutoff_psi:
+        elif cutoff_psi:
             over_cutoff = psi_over_cutoff + over_cutoff
         # axis=1, meaning sum # of Trues in each row (each junction)
         sum_truths = np.sum(over_cutoff, axis=1)
@@ -383,7 +381,7 @@ def find_binary_lsvs_95(num_d_psi,
     """
     if Sum(abs(top two junctions dPSIs)) / Sum(abs(dPSI)) >= 0.95, its binary.
         Use the maximum dPSI seen across all comparisons to compute above thing.TODO: ask Yoseph if that's cool.
-        by_what : psi, dpsi, or both
+        by_what : psi or dpsi
     """
     lsv_ids = list(num_d_psi.keys())
     binary_ids = list()  # exacly 2 junctions over cutoff
@@ -403,7 +401,7 @@ def find_binary_lsvs_95(num_d_psi,
         which_junctions_utilized = np.zeros(this_num_d_psi.shape[0], dtype=bool)
         top = 0  # initialize
         # Use PSI to determing binary-ness:
-        if by_what == "psi" or by_what == "both":
+        if by_what == "psi":
             abs_junc_maxes = np.max(this_num_psi, axis=1)  # max per row (junction)
             i = -1
             perc_of_total = 0
@@ -417,7 +415,7 @@ def find_binary_lsvs_95(num_d_psi,
                 i -= 1
             if i == len(abs_junc_maxes) and perc_of_total < 0.95:
                 pdb.set_trace()
-        if by_what == "dpsi" or by_what == "both":
+        elif by_what == "dpsi":
             # Use dPSI to determing binary-ness:
             abs_junc_maxes = np.max(abs(this_num_d_psi), axis=1)  # max per row (junction)
             i = -1
@@ -431,16 +429,13 @@ def find_binary_lsvs_95(num_d_psi,
                 i -= 1
             if i == len(abs_junc_maxes) and perc_of_total < 0.95:
                 pdb.set_trace()
-        if by_what == "both":
-            top_indices = list(set(top_dpsi_indices) & set(top_psi_indices))
-            which_junctions_utilized[top_dpsi_indices] = True
-        elif by_what == "psi":
+        if by_what == "psi":
             top_indices = top_psi_indices
             which_junctions_utilized[top_psi_indices] = True
         elif by_what == "dpsi":
             top_indices = top_dpsi_indices
             which_junctions_utilized[top_dpsi_indices] = True
-        if by_what not in ["dpsi", "psi", "both"]:
+        if by_what not in ["dpsi", "psi"]:
             raise ValueError("by_what was %s, but should be 'both' 'dpsi' or 'psi'" % by_what)
         all_indices[lsv_id] = index_all(which_junctions_utilized.tolist(), 0, nottt=True)
 
