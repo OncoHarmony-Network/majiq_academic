@@ -305,10 +305,6 @@ def find_binary_lsv_ids(num_d_psi,
             pdb.set_trace()
         i += 1.0
         this_num_d_psi = num_d_psi[lsv_id]
-
-        # start with all being True
-        over_cutoff = abs(this_num_d_psi) >= 0
-
         if cutoff_d_psi:
             # identify which junctions have dPSI > Cutoff_dPSI
             dpsi_over_cutoff = abs(this_num_d_psi) > cutoff_d_psi
@@ -317,9 +313,9 @@ def find_binary_lsv_ids(num_d_psi,
             # identify which junctions have PSI > Cutoff_PSI
             psi_over_cutoff = this_num_psi > cutoff_psi
         if cutoff_d_psi:
-            over_cutoff = dpsi_over_cutoff + over_cutoff
+            over_cutoff = dpsi_over_cutoff
         elif cutoff_psi:
-            over_cutoff = psi_over_cutoff + over_cutoff
+            over_cutoff = psi_over_cutoff
         # axis=1, meaning sum # of Trues in each row (each junction)
         sum_truths = np.sum(over_cutoff, axis=1)
         sig_juncs_dict[lsv_id] = sum_truths
