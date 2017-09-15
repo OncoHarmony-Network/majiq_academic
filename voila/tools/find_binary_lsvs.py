@@ -301,8 +301,8 @@ def find_binary_lsv_ids(num_d_psi,
     for lsv_id in lsv_ids:
         if i > 0.0 and i in indeces_at_10_percent:
             LOG.info(str(indeces_at_10_percent[i]) + "% of juncs looked at...")
-        if lsv_id =="ENSG00000168077:27516013-27517056:source":
-            pdb.set_trace()
+        # if lsv_id =="ENSG00000168077:27516013-27517056:source":
+        #     pdb.set_trace()
         i += 1.0
         this_num_d_psi = num_d_psi[lsv_id]
         if cutoff_d_psi:
