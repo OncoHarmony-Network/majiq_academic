@@ -103,6 +103,7 @@ class ThisisLookup(Tool):
                                          just_file_paths=args.just_file_paths)
         if the_lookup_vals:
             lsv_ids = list()
+            lsv_to_coords = dict()
             if "-" in the_lookup_vals[0] and ":" in the_lookup_vals[0]:
                 lsv_to_juncs = get_junc_coords(imported)
                 lsv_to_exons = get_exon_coords(imported)
@@ -116,19 +117,60 @@ class ThisisLookup(Tool):
                     neg_strand = chr+"_-_"+coord
                     found = False
                     if positive_strand in junc_to_lsvs:
-                        lsv_ids.extend(junc_to_lsvs[positive_strand])
-                        found = True
+                        found = junc_to_lsvs[positive_strand]
+                        lsv_ids.extend(found)
+                        for f in found:
+                            if f not in lsv_to_coords:
+                                lsv_to_coords[f] = list()
+                                lsv_to_coords[f].append(lookup)
+                            else:
+                                lsv_to_coords[f].append(lookup)
+                        s1 = lookup
+                        s2 = "+"
+                        s3 = len(found)
+                        LOG.info("%s found on (%s) strand as a junction coordinate in %s LSVs!" % (s1, s2, s3))
                     if positive_strand in exon_to_lsvs:
-                        lsv_ids.extend(exon_to_lsvs[positive_strand])
-                        found = True
+                        found = exon_to_lsvs[positive_strand]
+                        for f in found:
+                            if f not in lsv_to_coords:
+                                lsv_to_coords[f] = list()
+                                lsv_to_coords[f].append(lookup)
+                            else:
+                                lsv_to_coords[f].append(lookup)
+                        lsv_ids.extend(found)
+                        s1 = lookup
+                        s2 = "+"
+                        s3 = len(found)
+                        LOG.info("%s found on (%s) strand as an exon coordinate in %s LSVs!" % (s1, s2, s3))
                     if neg_strand in junc_to_lsvs:
-                        lsv_ids.extend(junc_to_lsvs[neg_strand])
-                        found = True
+                        found = junc_to_lsvs[neg_strand]
+                        for f in found:
+                            if f not in lsv_to_coords:
+                                lsv_to_coords[f] = list()
+                                lsv_to_coords[f].append(lookup)
+                            else:
+                                lsv_to_coords[f].append(lookup)
+                        lsv_ids.extend(found)
+                        s1 = lookup
+                        s2 = "-"
+                        s3 = len(found)
+                        LOG.info("%s found on (%s) strand as a junction coordinate in %s LSVs!" % (s1, s2, s3))
                     if neg_strand in exon_to_lsvs:
-                        lsv_ids.extend(exon_to_lsvs[neg_strand])
-                        found = True
+                        found = exon_to_lsvs[neg_strand]
+                        for f in found:
+                            if f not in lsv_to_coords:
+                                lsv_to_coords[f] = list()
+                                lsv_to_coords[f].append(lookup)
+                            else:
+                                lsv_to_coords[f].append(lookup)
+                        lsv_ids.extend(found)
+                        s1 = lookup
+                        s2 = "-"
+                        s3 = len(found)
+                        LOG.info("%s found on (%s) strand as an exon coordinate in %s LSVs!" % (s1, s2, s3))
                     if not found:
                         print("%s not found on negative or positive strand..." % lookup)
+
                 the_lookup_vals = list(set(lsv_ids))
         if not args.ignore_dpsi_thresh and not args.just_file_paths:
             io_caleb.check_is_ignant(imported, args.dpsi_thresh)
@@ -153,7 +195,11 @@ class ThisisLookup(Tool):
                                            print_bool=False)
             if len(lookup_res) > 0:
                 details += "\n"+io_caleb.lsvs_length(lookup_res, verbose=False)+"\n"
-            geneinfo = lookup_val
+            if lsv_to_coords:
+                just_ints = [x.split(":")[1] for x in lsv_to_coords[lookup_val]]
+                geneinfo = "%s found in %s" % (",".join(just_ints), lookup_val)
+            else:
+                geneinfo = lookup_val
             gene_name = io_caleb.genename_from_id(imported, lookup_val, false_or_error="False")
             if gene_name:
                 geneinfo += "\nGene Name: %s" % gene_name
