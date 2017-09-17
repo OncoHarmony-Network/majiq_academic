@@ -294,6 +294,8 @@ def find_binary_lsv_ids(num_d_psi,
     sig_juncs_dict = dict()
     if cutoff_d_psi and cutoff_psi:
         raise RuntimeError("Only use PSI or dPSI for binary-like LSV identification.")
+    if not cutoff_psi and not cutoff_d_psi:
+        LOG.info("No cutoff dpsi nor psi was provided, so assuming all juncs are utilized..")
     LOG.info("Counting how many juncs utilized (PSI>%s or dPSI>=%s) in %s LSVs ..." % (
              cutoff_psi, cutoff_d_psi, len(lsv_ids)))
     i = 1.0
@@ -308,10 +310,13 @@ def find_binary_lsv_ids(num_d_psi,
         if cutoff_d_psi:
             # identify which junctions have dPSI > Cutoff_dPSI
             dpsi_over_cutoff = abs(this_num_d_psi) > cutoff_d_psi
+
         elif not isinstance(num_psi, str) and cutoff_psi:
             this_num_psi = num_psi[lsv_id]
             # identify which junctions have PSI > Cutoff_PSI
             psi_over_cutoff = this_num_psi > cutoff_psi
+        elif not cutoff_psi and not cutoff_d_psi:
+            over_cutoff = abs(this_num_d_psi) > 0
         if cutoff_d_psi:
             over_cutoff = dpsi_over_cutoff
         elif cutoff_psi:

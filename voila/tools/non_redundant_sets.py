@@ -538,6 +538,18 @@ def get_junc_lsv_dicts(data,
     return res
 
 
+def coords_to_lsvs(lsv_id_to_coord_dict):
+    coord_lsv_dict = dict()
+    for lsvid in lsv_id_to_coord_dict:
+        for coord in lsv_id_to_coord_dict[lsvid]:
+            if coord not in coord_lsv_dict:
+                coord_lsv_dict[coord] = list()
+                coord_lsv_dict[coord].append(lsvid)
+            else:
+                coord_lsv_dict[coord].append(lsvid)
+    return coord_lsv_dict
+
+
 def get_junc_coords(Data):
     """
     Given LSV dict info (quick import, or LSV dict),
@@ -556,13 +568,40 @@ def get_junc_coords(Data):
         lsv = Data[lsv_id]
         chrm = lsv["chr"]
         strand = lsv["strand"]
-        junc_coords = copy.copy(lsv["Junctions coords"])
+        junc_coords = io_caleb.get_juncs(lsv)
         new_coords = list()
         for coord in junc_coords:
             new_coords.append(chrm + "_" + strand + "_" + coord)
         new_coords = np.array(new_coords)
         junc_dict[lsv_id] = new_coords
     return junc_dict
+
+
+def get_exon_coords(Data):
+    """
+    Given LSV dict info (quick import, or LSV dict),
+     return dict of lsv_ids pointing at array of exon loci:
+        'chr_strand_start_end'
+    """
+    if io_caleb.check_is_quick_import(Data, the_bool=True):
+        exon_dict = dict()
+        for comp in Data:
+            exon_dict.update(get_exon_coords(Data[comp]))
+        return exon_dict
+    io_caleb.check_is_lsv_dict(Data)
+    exon_dict = dict()
+    lsv_ids = io_caleb.get_lsv_ids(Data)
+    for lsv_id in lsv_ids:
+        lsv = Data[lsv_id]
+        chrm = lsv["chr"]
+        strand = lsv["strand"]
+        exon_coords = io_caleb.get_exons(lsv)
+        new_coords = list()
+        for coord in exon_coords:
+            new_coords.append(chrm + "_" + strand + "_" + coord)
+        new_coords = np.array(new_coords)
+        exon_dict[lsv_id] = new_coords
+    return exon_dict
 
 
 def find_set_partners(connected_sets,

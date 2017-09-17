@@ -37,7 +37,7 @@ def quick_import(input,
         {NAME_OF_COMPARISON : {LSV IDs: {LSV INFO: VALUES}}}
 
     Arguments:
-        input: a directory, a path to a list of voila text files, or a voila text file
+        input: a directory, a path to a list of voila text files, a voila text file, or a list of filepaths
         cutoff_d_psi: LSVs must have at least 1 junction dPSI >= this.
             (and those junctions must meet the Cutoff_prob)
             0<=X<=1
@@ -59,8 +59,8 @@ def quick_import(input,
         remove_these_genes: dict[comparisons]->[gene ids]
             I provided, remove LSVs from the quick import.
         just_one: only import and return one txt path (only really need this for lookup.lookup_everywhere()...)
-        stop_at: if provided, stop reading voila file when you reach this LSV ID or Gene name/ID. Could also
-            be a file path to a line-by-line list of Gene names/IDs or LSVIDs.
+        stop_at: if provided, stop reading voila file when you reach this LSV ID, Gene name/ID, or junction. Could also
+            be a file path to a line-by-line list of LSVIDs, Gene names/IDs, or junctions.
         comparisons: if provided, only import tsv files with the provided list of comparison names
         prefered_type: If provided, only import "deltapsi" or only "psi" files
         just_file_paths: if True, just return the file paths for found voila txt files
@@ -80,7 +80,18 @@ def quick_import(input,
     if prefered_type:
         if not isinstance(prefered_type, str) or prefered_type not in ["deltapsi", "psi"]:
             raise ValueError("prefered_type must be either 'deltapsi' or 'psi' if specified at all, not '%s'" % prefered_type)
-    if not os.path.isdir(input):
+    if isinstance(input, list):
+        voila_txt_files = list()
+        basenames = list()
+        LOG.info("User provided a list. Checking if each element is a voila file path...")
+        for elem in input:
+            if not is_voila_txt_file(elem):
+                LOG.info("This doesn't look like a voila txt file:\n%s" % elem)
+            else:
+                basename = os.path.basename(elem)
+                basenames.append(get_base_names(basename))
+                voila_txt_files.append(elem)
+    elif not os.path.isdir(input):
         LOG.info("Looks like the user provided a file to get import info from...")
         if name_looks_like_voila_txt_file(input, pattern=pattern):
             LOG.info("User probably gave a voila tab file path ...")
@@ -165,10 +176,17 @@ def quick_import(input,
         if prefered_type:
             expected = prefered_type
         else:
-            expected = "deltapsi" if "deltapsi_deltapsi" in os.path.basename(f) else "psi"
+            if "deltapsi_quantify_deltapsi" in os.path.basename(f):
+                expected = "deltapsi"
+            elif "deltapsi_deltapsi" in os.path.basename(f):
+                expected = "deltapsi"
+            elif "psi_psi" in os.path.basename(f):
+                expected = "psi"
+            else:
+                ts = os.path.basename(f)
+                raise RuntimeError("%s didn't match a known voila tsv pattern..." % ts)
         if expected == "deltapsi_deltapsi":
             there_was_deltapsi_file = True
-
         imported_file = import_voila_txt(f,
                                          stop_at=stop_at,
                                          expected_type=expected,
@@ -206,7 +224,15 @@ def check_valid_voila_txts(file_path_list):
     """
     passed = list()
     for fp in file_path_list:
-        expected = "deltapsi" if "deltapsi_deltapsi" in os.path.basename(fp) else "psi"
+        if "deltapsi_quantify_deltapsi" in os.path.basename(fp):
+            expected = "deltapsi"
+        elif "deltapsi_deltapsi" in os.path.basename(fp):
+            expected = "deltapsi"
+        elif "psi_psi" in os.path.basename(fp):
+            expected = "psi"
+        else:
+            passed.append(False)
+            continue
         test_imp = import_voila_txt(fp,
                                     stop_at="Gene Name",  # my trick to not actually import the file ;)
                                     expected_type=expected,
@@ -231,7 +257,7 @@ def import_voila_txt(fp,
 
     Arguments:
         fp: file path for a voila d_psi quantify text file
-        stop_at: if provided, stop reading voila file when you reach this LSV ID
+        stop_at: if provided, stop reading voila file when you reach this LSV ID, Gene Name/ID, or junction coord
         expected_type: If provided, only import "deltapsi" or only "psi" files
         just_checking_validity: Bool. If True, don't print "Importing..."
 
@@ -371,17 +397,23 @@ def get_threshold(line_split):
     :param line_split: the first line of the file
     :return: float
     """
-    try:
-        the_thresh = float(line_split[4].split("P(|dPSI|>=")[1].split(") per LSV junction")[0])
-    except:
-        err_message = ""
-        if "P(|dPSI|>=" not in line_split[4]:
-            err_message += "...Uh oh, 'P(|dPSI|>=' wasn't in the prob column header..."
-        if ") per LSV junction" not in line_split[4]:
-            err_message += "\n...Uh oh, ') per LSV junction' wasn't in the prob column header..."
-        if len(err_message) > 0:
-            LOG.error(err_message)
-        raise
+    err_message = ""
+    split_with_new = "P(|dPSI|>="
+    split_with_old = "P(|E(dPSI)|>="
+    not_new_nor_old = False
+    if split_with_new not in line_split[4] and split_with_old not in line_split[4]:
+        err_message += "...Uh oh, '%s' wasn't in the prob column header..." % split_with_new
+        err_message += "...(neither was '%s', so it isn't an old voila file)..." % split_with_old
+        not_new_nor_old = True
+    elif split_with_new in line_split[4]:
+        splitwiththis = split_with_new
+    elif split_with_old in line_split[4]:
+        splitwiththis = split_with_old
+    if ") per LSV junction" not in line_split[4]:
+        err_message += "\n...Uh oh, ') per LSV junction' wasn't in the prob column header..."
+    if not_new_nor_old:
+        raise RuntimeError(err_message)
+    the_thresh = float(line_split[4].split(splitwiththis)[1].split(") per LSV junction")[0])
     return the_thresh
 
 
@@ -792,7 +824,9 @@ def name_looks_like_voila_txt_file(the_file, pattern="*deltapsi_deltapsi.tsv"):
         raise ValueError("Supposed deltapsi txt file doesn't exist.")
     newpat = pattern.replace("*", ".*")
     if re.search(newpat, the_file):
-        if the_file[:-4].endswith("deltapsi_deltapsi") or the_file[:-4].endswith("psi_psi"):
+        if the_file[:-4].endswith("deltapsi_deltapsi") \
+                or the_file[:-4].endswith("psi_psi") \
+                or the_file[:-4].endswith("deltapsi_quantify_deltapsi"):
             return True
         else:
             return False

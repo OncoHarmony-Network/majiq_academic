@@ -1,6 +1,7 @@
 import pdb
 import os
 from voila.tools import Tool
+from voila.tools.non_redundant_sets import get_junc_coords, get_exon_coords, coords_to_lsvs
 from voila.tools.utils import io_caleb
 from voila.utils.voila_log import voila_log
 
@@ -89,21 +90,52 @@ class ThisisLookup(Tool):
                 the_lookup_vals = args.lookup_val.replace(" ", "").split(",")
         else:
             the_lookup_vals = False
+        if "-" in the_lookup_vals[0] and ":" in the_lookup_vals[0]:
+            is_junc = True
         imported = io_caleb.quick_import(input=args.directory,
                                          cutoff_d_psi=args.dpsi_thresh,
                                          cutoff_prob=args.prob_dpsi_thresh,
                                          pattern=args.pattern,
                                          keep_ir=True,
                                          just_one=args.just_one,
-                                         stop_at=the_lookup_vals,
+                                         stop_at=the_lookup_vals if not is_junc else False,
                                          comparisons=to_lookup,
                                          just_file_paths=args.just_file_paths)
+        if the_lookup_vals:
+            lsv_ids = list()
+            if "-" in the_lookup_vals[0] and ":" in the_lookup_vals[0]:
+                lsv_to_juncs = get_junc_coords(imported)
+                lsv_to_exons = get_exon_coords(imported)
+                junc_to_lsvs = coords_to_lsvs(lsv_to_juncs)
+                exon_to_lsvs = coords_to_lsvs(lsv_to_exons)
+                for lookup in the_lookup_vals:
+                    split = lookup.split(":")
+                    chr = split[0]
+                    coord = split[1]
+                    positive_strand = chr+"_+_"+coord
+                    neg_strand = chr+"_-_"+coord
+                    found = False
+                    if positive_strand in junc_to_lsvs:
+                        lsv_ids.extend(junc_to_lsvs[positive_strand])
+                        found = True
+                    if positive_strand in exon_to_lsvs:
+                        lsv_ids.extend(exon_to_lsvs[positive_strand])
+                        found = True
+                    if neg_strand in junc_to_lsvs:
+                        lsv_ids.extend(junc_to_lsvs[neg_strand])
+                        found = True
+                    if neg_strand in exon_to_lsvs:
+                        lsv_ids.extend(exon_to_lsvs[neg_strand])
+                        found = True
+                    if not found:
+                        print("%s not found on negative or positive strand..." % lookup)
+                the_lookup_vals = list(set(lsv_ids))
         if not args.ignore_dpsi_thresh and not args.just_file_paths:
             io_caleb.check_is_ignant(imported, args.dpsi_thresh)
         if args.just_file_paths:
             print("\n".join(imported))
             return
-        to_lookup = list(imported.keys())
+        to_lookup = io_caleb.get_comparisons(imported)
 
         # coding for readability here...
         # default is True..
@@ -124,7 +156,7 @@ class ThisisLookup(Tool):
             geneinfo = lookup_val
             gene_name = io_caleb.genename_from_id(imported, lookup_val, false_or_error="False")
             if gene_name:
-                geneinfo += " aka %s" % gene_name
+                geneinfo += "\nGene Name: %s" % gene_name
             print("=-=-=-=-=\n=-=-=-=-=\n=-=-=-=-=\n%s\n%s=-=-=-=-=\n=-=-=-=-=\n=-=-=-=-=\n" % (geneinfo, details))
 
             lookup_everywhere(dictionary_lookup=imported,
@@ -150,7 +182,7 @@ def lookup_everywhere(dictionary_lookup,
 
         Args:
             dictionary_lookup: dict of LSV_dicitonaries (which is returned by quick_import)
-            name: May be a gene name OR Ensembl Gene ID or LSV ID
+            name: May be a gene name, Ensembl Gene ID, LSV ID, or junction
             save_lsv_structure_lookup: if True, saves "condition_1/2_name"
             just_one: should just one LSV be printed?
             print_bool: should results be returned or printed?
@@ -223,7 +255,7 @@ def lookup(lsv_dictionary,
 
         Args:
             lsv_dictionary: lsv dict ...
-            name: May be a gene name OR Ensembl Gene ID or LSV ID
+            name: May be a gene name OR Ensembl Gene ID or LSV ID or junction
             save_lsv_structure: if True, saves "condition_1/2_name"
             printable: True/False or 'print'
                 True/False:
@@ -239,11 +271,14 @@ def lookup(lsv_dictionary,
         raise ValueError("printable needs to be True/False or 'print'")
     if type(name) is not str:
         raise ValueError("Name needs to be a string.")
+    is_junction = False
     if ":" in name:
         if "source" in name or "target" in name:
             lsv_id = True
+        elif "-" in name:
+            is_junction = True
         else:
-            raise RuntimeError("%s is weird. Is a full LSV ID?" % name)
+            raise RuntimeError("%s is weird. Is it a full LSV ID?" % name)
     else:
         lsv_id = False
     io_caleb.check_is_lsv_dict(lsv_dictionary)
