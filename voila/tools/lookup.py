@@ -92,6 +92,8 @@ class ThisisLookup(Tool):
             the_lookup_vals = False
         if "-" in the_lookup_vals[0] and ":" in the_lookup_vals[0]:
             is_junc = True
+        else:
+            is_junc = False
         imported = io_caleb.quick_import(input=args.directory,
                                          cutoff_d_psi=args.dpsi_thresh,
                                          cutoff_prob=args.prob_dpsi_thresh,
