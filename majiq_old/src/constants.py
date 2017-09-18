@@ -22,7 +22,6 @@ NUM_INTRON_BINS = 10
 MAX_DENOVO_DIFFERENCE = 500
 NRANDOM_JUNCTIONS = 5000
 
-EMPTY_COORD = -1
 
 SIMPLIFY_ALL = 'all'
 SIMPLIFY_DB = 'annotated'
@@ -31,7 +30,6 @@ SIMPLIFY_DENOVO = 'denovo'
 WEIGTHS_AUTO = 'auto'
 WEIGTHS_NONE = 'none'
 MINVAL = 1e-300
-
 import numpy as np
 EPSILON = np.finfo(np.float64).eps
 

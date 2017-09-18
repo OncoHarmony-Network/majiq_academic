@@ -45,13 +45,14 @@ class Config(object):
             config = configparser.ConfigParser()
             config.read(filename)
             # TODO: check if filename exists
-
+            exps = Config.config_section_map(config, "experiments")
             general = Config.config_section_map(config, "info")
             self.tissue_repl = {}
             self.exp_list = []
             count = 0
             if not os.path.exists(self.outDir):
                 os.makedirs(self.outDir)
+
             self.sam_dir = general['samdir']
             self.genome = general['genome']
             self.genome_path = general['genome_path']
@@ -75,7 +76,6 @@ class Config(object):
                         ' a float between 0..1')
             #self.simplify = self.simplify is not None
 
-            exps = Config.config_section_map(config, "experiments")
             for exp_idx, lstnames in exps.items():
                 self.tissue_repl[exp_idx] = []
                 elist = lstnames.split(',')
@@ -85,10 +85,10 @@ class Config(object):
                     count += 1
 
             self.num_experiments = len(self.exp_list)
+            self.gene_tlb = {}
 
             self.samfile_name_list = []
             self.sam_list = []
-            self.juncfile_list = []
             for exp_idx, exp in enumerate(self.exp_list):
                 samfile = "%s/%s.bam" % (self.sam_dir, exp)
                 if not os.path.exists(samfile):
@@ -96,13 +96,10 @@ class Config(object):
                 baifile = "%s/%s.bam.bai" % (self.sam_dir, exp)
                 if not os.path.exists(baifile):
                     raise RuntimeError("Skipping %s.... not found ( index file for bam file is required)" % baifile)
+                # self.samfile_name_list.append(exp)
                 self.sam_list.append(exp)
+#                self.exp_list[exp_idx] = os.path.split(exp)[1]
 
-                juncfile = "%s/%s.sjdb" % (self.sam_dir, exp)
-                if not os.path.exists(juncfile):
-                    self.juncfile_list.append((False, samfile))
-                else:
-                    self.juncfile_list.append((True, juncfile))
             return
 
         def __str__(self):

@@ -1,0 +1,1 @@
+cdef inline int read_juncs_from_bam(str filename, set in_juncs, list out_jj, dict out_dd)

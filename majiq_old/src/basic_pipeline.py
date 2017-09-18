@@ -3,10 +3,9 @@ from majiq.src.polyfitnb import fit_nb
 import abc
 
 # from numpy.ma import masked_less
-import majiq.src.logger as majiq_logger
-
+import majiq.src.utils as majiq_utils
 from majiq.src.psi import divs_from_bootsamples, calc_rho_from_divs, calc_local_weights
-from majiq.src.multiproc import QueueMessage, process_conf, queue_manager, chunks
+from majiq.src.multiproc import QueueMessage, process_conf, queue_manager
 from majiq.src.constants import *
 import sys
 import traceback
@@ -33,7 +32,7 @@ def bootstrap_samples_with_divs(args_vals):
 
     try:
         list_of_lsv, chnk = args_vals
-        logger = majiq_logger.get_logger("%s/%s.majiq.log" % (process_conf.output, chnk),
+        logger = majiq_utils.get_logger("%s/%s.majiq.log" % (process_conf.output, chnk),
                                         silent=process_conf.silent, debug=process_conf.debug)
 
         lsvs_to_work, fitfunc_r = majiq_io.get_extract_lsv_list(list_of_lsv, process_conf.files)
@@ -80,7 +79,7 @@ class BasicPipeline:
         self.__dict__.update(args.__dict__)
 
         if self.plotpath:
-            majiq_logger.create_if_not_exists(self.plotpath)
+            majiq_utils.create_if_not_exists(self.plotpath)
         self.logger_path = self.logger
         if not self.logger_path:
             self.logger_path = self.outDir
@@ -114,7 +113,7 @@ class BasicPipeline:
 
             [xx.acquire() for xx in lock_arr]
             pool.map_async(bootstrap_samples_with_divs,
-                           chunks(list_of_lsv, lchnksize, extra=range(self.nthreads)))
+                           majiq_utils.chunks2(list_of_lsv, lchnksize, extra=range(self.nthreads)))
             pool.close()
             divs = []
             lsvs = []

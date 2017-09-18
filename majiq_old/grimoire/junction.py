@@ -205,7 +205,6 @@ class Junction:
         majiq_config = Config()
         return self.get_coverage().sum() > majiq_config.min_denovo
 
-
     def add_donor(self, donor):
         if donor is None:
             self.donor_id = -1

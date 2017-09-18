@@ -4,8 +4,10 @@ import sys
 
 import multiprocessing as mp
 from majiq.src import io as majiq_io
-import majiq.src.logger as majiq_logger
 from majiq.src.constants import *
+import majiq.src.utils as majiq_utils
+from majiq.src.config import Config
+from voila.splice_graphics import LsvGraphic
 from voila.vlsv import VoilaLsv
 import traceback
 
@@ -14,7 +16,7 @@ def process_wrapper(args_vals):
 
     try:
         vals, chnk = args_vals
-        logger = majiq_logger.get_logger("%s/%s.majiq.log" % (process_conf.outDir, chnk),
+        logger = majiq_utils.get_logger("%s/%s.majiq.log" % (process_conf.outDir, chnk),
                                         silent=process_conf.silent, debug=process_conf.debug)
 
         process_conf.func(vals, chnk, process_conf, logger=logger)
@@ -31,37 +33,37 @@ def process_wrapper(args_vals):
         process_conf.lock[chnk].acquire()
         process_conf.lock[chnk].release()
         process_conf.queue.close()
-        majiq_logger.close_logger(logger)
+        majiq_utils.close_logger(logger)
 
 
-def parallel_lsv_child_calculation(func, args, tempdir, name, chunk):
+def parallel_lsv_child_calculation(func, args, tempdir, name, chunk, store=True):
     # try:
     if not os.path.isdir(tempdir):
         os.mkdir(tempdir)
-    thread_logger = majiq_logger.get_logger("%s/majiq.%s.log" % (tempdir, chunk), silent=False)
+    thread_logger = majiq_utils.get_logger("%s/majiq.%s.log" % (tempdir, chunk), silent=False)
     thread_logger.info("[Th %s]: START child,%s" % (chunk, mp.current_process().name))
 
     args.append(thread_logger)
-    func(*args)
-    sys.stdout.flush()
+    results = func(*args)
 
-def chunks(l, n_in, extra):
-    """Yield successive n-sized chunks from l.
-    :param l: list to be split
-    :param n: max length of chunks
-    """
-    try:
-        idx = -1
-        n = int(n_in)
-        for i in range(0, len(l), n):
-            idx += 1
-            if extra is not None:
-                yield (l[i:i+n], extra[idx])
-            else:
-                yield l[i:i+n]
-    except:
-        print("ERROR: extra value has incorrect size %s" % idx, extra)
-        raise
+    sys.stdout.flush()
+    if store:
+        thread_logger.info("[Th %s]: Saving ...%s " % (chunk, func.__name__))
+        majiq_io.dump_bin_file(results, "%s/%s_th%s.%s.pickle" % (tempdir, name, chunk, func.__name__))
+
+
+# def pool_process(func, iter_args, nthreads, initializer, init_args,
+#                  input_h5dfp=None, output_h5dfp=None, out_inplace=None, logger=None):
+#     pool = mp.Pool(processes=nthreads, initializer=initializer,
+#                    initargs=init_args,
+#                    maxtasksperchild=1)
+#     lchnksize = max(len(iter_args) / nthreads, 1) + 1
+#     [xx.acquire() for xx in lock_arr]
+#     pool.map_async(func, majiq_utils.chunks2(iter_args, lchnksize, extra=range(nthreads)))
+#     pool.close()
+#     queue_manager(input_h5dfp=input_h5dfp, output_h5dfp=output_h5dfp, lock_array=lock_arr, result_queue=q,
+#                   num_chunks=nthreads, out_inplace=out_inplace,
+#                   logger=logger)
 
 
 class QueueMessage:

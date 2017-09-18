@@ -3,6 +3,7 @@ import sys
 from scipy.stats import beta
 import majiq.src.adjustdelta as majiq_delta
 import majiq.src.filter as majiq_filter
+import majiq.src.io_utils
 from majiq.src.plotting import plot_matrix
 from majiq.src.constants import *
 from majiq.src.beta_binomial import betabinom
