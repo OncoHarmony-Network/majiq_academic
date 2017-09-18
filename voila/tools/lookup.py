@@ -1,6 +1,7 @@
 import pdb
 import os
 from voila.tools import Tool
+from voila.tools.non_redundant_sets import get_junc_coords, get_exon_coords, coords_to_lsvs
 from voila.tools.utils import io_caleb
 from voila.utils.voila_log import voila_log
 
@@ -72,8 +73,9 @@ class ThisisLookup(Tool):
     def run(self, args):
         # parse the comparisons argument
         if args.names:
-            if "," in args.names or " " in args.names:
+            if "," in args.names or " " in args.names or "|" in args.names:
                 args.names.replace(" ", ",")
+                args.names.replace("|", ",")
                 to_lookup = args.names.split(",")
             else:
                 to_lookup = [args.names]
@@ -88,21 +90,96 @@ class ThisisLookup(Tool):
                 the_lookup_vals = args.lookup_val.replace(" ", "").split(",")
         else:
             the_lookup_vals = False
+        if "-" in the_lookup_vals[0] and ":" in the_lookup_vals[0]:
+            is_junc = True
+        else:
+            is_junc = False
         imported = io_caleb.quick_import(input=args.directory,
                                          cutoff_d_psi=args.dpsi_thresh,
                                          cutoff_prob=args.prob_dpsi_thresh,
                                          pattern=args.pattern,
                                          keep_ir=True,
                                          just_one=args.just_one,
-                                         stop_at=the_lookup_vals,
+                                         stop_at=the_lookup_vals if not is_junc else False,
                                          comparisons=to_lookup,
                                          just_file_paths=args.just_file_paths)
+        if the_lookup_vals:
+            lsv_ids = list()
+            lsv_to_coords = dict()
+            if "-" in the_lookup_vals[0] and ":" in the_lookup_vals[0]:
+                lsv_to_juncs = get_junc_coords(imported)
+                lsv_to_exons = get_exon_coords(imported)
+                junc_to_lsvs = coords_to_lsvs(lsv_to_juncs)
+                exon_to_lsvs = coords_to_lsvs(lsv_to_exons)
+                for lookup in the_lookup_vals:
+                    split = lookup.split(":")
+                    chr = split[0]
+                    coord = split[1]
+                    positive_strand = chr+"_+_"+coord
+                    neg_strand = chr+"_-_"+coord
+                    found = False
+                    if positive_strand in junc_to_lsvs:
+                        found = junc_to_lsvs[positive_strand]
+                        lsv_ids.extend(found)
+                        for f in found:
+                            if f not in lsv_to_coords:
+                                lsv_to_coords[f] = list()
+                                lsv_to_coords[f].append(lookup)
+                            else:
+                                lsv_to_coords[f].append(lookup)
+                        s1 = lookup
+                        s2 = "+"
+                        s3 = len(found)
+                        LOG.info("%s found on (%s) strand as a junction coordinate in %s LSVs!" % (s1, s2, s3))
+                    if positive_strand in exon_to_lsvs:
+                        found = exon_to_lsvs[positive_strand]
+                        for f in found:
+                            if f not in lsv_to_coords:
+                                lsv_to_coords[f] = list()
+                                lsv_to_coords[f].append(lookup)
+                            else:
+                                lsv_to_coords[f].append(lookup)
+                        lsv_ids.extend(found)
+                        s1 = lookup
+                        s2 = "+"
+                        s3 = len(found)
+                        LOG.info("%s found on (%s) strand as an exon coordinate in %s LSVs!" % (s1, s2, s3))
+                    if neg_strand in junc_to_lsvs:
+                        found = junc_to_lsvs[neg_strand]
+                        for f in found:
+                            if f not in lsv_to_coords:
+                                lsv_to_coords[f] = list()
+                                lsv_to_coords[f].append(lookup)
+                            else:
+                                lsv_to_coords[f].append(lookup)
+                        lsv_ids.extend(found)
+                        s1 = lookup
+                        s2 = "-"
+                        s3 = len(found)
+                        LOG.info("%s found on (%s) strand as a junction coordinate in %s LSVs!" % (s1, s2, s3))
+                    if neg_strand in exon_to_lsvs:
+                        found = exon_to_lsvs[neg_strand]
+                        for f in found:
+                            if f not in lsv_to_coords:
+                                lsv_to_coords[f] = list()
+                                lsv_to_coords[f].append(lookup)
+                            else:
+                                lsv_to_coords[f].append(lookup)
+                        lsv_ids.extend(found)
+                        s1 = lookup
+                        s2 = "-"
+                        s3 = len(found)
+                        LOG.info("%s found on (%s) strand as an exon coordinate in %s LSVs!" % (s1, s2, s3))
+                    if not found:
+                        print("%s not found on negative or positive strand..." % lookup)
+
+                the_lookup_vals = list(set(lsv_ids))
         if not args.ignore_dpsi_thresh and not args.just_file_paths:
             io_caleb.check_is_ignant(imported, args.dpsi_thresh)
         if args.just_file_paths:
             print("\n".join(imported))
             return
-        to_lookup = list(imported.keys())
+        to_lookup = io_caleb.get_comparisons(imported)
 
         # coding for readability here...
         # default is True..
@@ -120,10 +197,14 @@ class ThisisLookup(Tool):
                                            print_bool=False)
             if len(lookup_res) > 0:
                 details += "\n"+io_caleb.lsvs_length(lookup_res, verbose=False)+"\n"
-            geneinfo = lookup_val
+            if lsv_to_coords:
+                just_ints = [x.split(":")[1] for x in lsv_to_coords[lookup_val]]
+                geneinfo = "%s found in %s" % (",".join(just_ints), lookup_val)
+            else:
+                geneinfo = lookup_val
             gene_name = io_caleb.genename_from_id(imported, lookup_val, false_or_error="False")
             if gene_name:
-                geneinfo += " aka %s" % gene_name
+                geneinfo += "\nGene Name: %s" % gene_name
             print("=-=-=-=-=\n=-=-=-=-=\n=-=-=-=-=\n%s\n%s=-=-=-=-=\n=-=-=-=-=\n=-=-=-=-=\n" % (geneinfo, details))
 
             lookup_everywhere(dictionary_lookup=imported,
@@ -149,7 +230,7 @@ def lookup_everywhere(dictionary_lookup,
 
         Args:
             dictionary_lookup: dict of LSV_dicitonaries (which is returned by quick_import)
-            name: May be a gene name OR Ensembl Gene ID or LSV ID
+            name: May be a gene name, Ensembl Gene ID, LSV ID, or junction
             save_lsv_structure_lookup: if True, saves "condition_1/2_name"
             just_one: should just one LSV be printed?
             print_bool: should results be returned or printed?
@@ -222,7 +303,7 @@ def lookup(lsv_dictionary,
 
         Args:
             lsv_dictionary: lsv dict ...
-            name: May be a gene name OR Ensembl Gene ID or LSV ID
+            name: May be a gene name OR Ensembl Gene ID or LSV ID or junction
             save_lsv_structure: if True, saves "condition_1/2_name"
             printable: True/False or 'print'
                 True/False:
@@ -238,11 +319,14 @@ def lookup(lsv_dictionary,
         raise ValueError("printable needs to be True/False or 'print'")
     if type(name) is not str:
         raise ValueError("Name needs to be a string.")
+    is_junction = False
     if ":" in name:
         if "source" in name or "target" in name:
             lsv_id = True
+        elif "-" in name:
+            is_junction = True
         else:
-            raise RuntimeError("%s is weird. Is a full LSV ID?" % name)
+            raise RuntimeError("%s is weird. Is it a full LSV ID?" % name)
     else:
         lsv_id = False
     io_caleb.check_is_lsv_dict(lsv_dictionary)

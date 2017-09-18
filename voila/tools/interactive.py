@@ -24,13 +24,13 @@ class ThisisLookup(Tool):
                             '--dpsi',
                             type=float,
                             help=help_mes,
-                            default=0.2)
+                            default=0)
         help_mes = "Prob(dPSI) threshold by which to call junctions as changing"
         parser.add_argument('--prob_dpsi_thresh',
                             '--prob',
                             type=float,
                             help=help_mes,
-                            default=0.95)
+                            default=0)
         help_mes = 'Optional pattern matching to identify the voila text files'
         parser.add_argument('-p',
                             '--pattern',
@@ -41,11 +41,11 @@ class ThisisLookup(Tool):
         parser.add_argument('--names',
                             type=str,
                             help=help_mes)
-        help_mes = "Flag: don't import IR LSVs"
-        parser.add_argument('--no_ir',
+        help_mes = "Flag: Also import IR LSVs"
+        parser.add_argument('--consider_ir',
                             action='store_true',
                             help=help_mes,
-                            default=True)
+                            default=False)
         return parser
 
     def run(self, args):
@@ -64,7 +64,7 @@ class ThisisLookup(Tool):
                                          cutoff_d_psi=args.dpsi_thresh,
                                          cutoff_prob=args.prob_dpsi_thresh,
                                          pattern=args.pattern,
-                                         keep_ir=args.no_ir,
+                                         keep_ir=args.consider_ir,
                                          comparisons=to_lookup)
         io_caleb.check_is_ignant(imported, args.dpsi_thresh)
         pdb.set_trace()

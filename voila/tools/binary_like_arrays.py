@@ -1,11 +1,15 @@
-from voila.tools import Tool
+from voila.tools import Tool, non_redundant_sets
 from voila.tools.find_binary_lsvs import check_is_binary_lsv_data
 from voila.tools.utils import io_caleb
 from voila.tools import find_binary_lsvs
 from voila.tools.utils import random_merge_numpy
+from voila.tools.utils.percent_through_list import percent_through_list
 from voila.utils.voila_log import voila_log
 import numpy as np
 import pandas as pa
+import pdb
+import copy
+import pickle as pkl
 
 # Caleb Matthew Radens
 # radlinsky@gmail.com
@@ -43,6 +47,11 @@ class ThisisBinaryLikeArrays(Tool):
                             type=float,
                             help=help_mes,
                             default=0.0)
+        help_mes = "PSI threshold by which to call junctions as changing. Default 1 means it isn't used"
+        parser.add_argument('--psi_thresh',
+                            type=float,
+                            help=help_mes,
+                            default=1)
         help_mes = "Choose which junction to get" \
                    " from reference binary-like LSVs."
         parser.add_argument('--junction',
@@ -50,15 +59,25 @@ class ThisisBinaryLikeArrays(Tool):
                             choices={'closer', 'further', 'random'},
                             help=help_mes,
                             default="closer")
-        help_mes = "Flag: also consider IR LSVs (default: don't import them)"
+        help_mes = "Flag: also include IR LSVs (default: don't import them)"
         parser.add_argument('--also_ir',
                             action='store_true',
                             help=help_mes,
                             default=False)
+        help_mes = "Flag: don't use IR LSVs for identifying non-redundant sets"
+        parser.add_argument('--no_non_red_ir',
+                            action='store_false',
+                            help=help_mes,
+                            default=True)
         help_mes = 'Optional pattern matching to identify the voila text files'
         parser.add_argument('-p',
                             '--pattern',
                             default="*tsv",
+                            type=str,
+                            help=help_mes)
+        help_mes = 'Remove LSVs in corresponding genes from results before analysis. ' \
+                   'This arg should be a file path to a pickle file. dict[comparisons] -> Gene IDs'
+        parser.add_argument('--remove_these_genes',
                             type=str,
                             help=help_mes)
         help_mes = 'Method: \'count\' or \'sum_to_95\''
@@ -79,51 +98,99 @@ class ThisisBinaryLikeArrays(Tool):
                             '--outfile',
                             type=str,
                             help=help_mes)
-        help_mes = "Flag: If you don't want to impute missing values with 0"
-        parser.add_argument('--dont_impute',
-                            action='store_true',
-                            help=help_mes,
-                            default=False)
         return parser
 
     def run(self, args):
-        impute = True
-        if args.dont_impute:
-            impute = False
-        if args.must_reciprocate:
-            raise RuntimeError("Please don't use --must_reciprocate yet... Caleb needs ot fix it.")
+        if not args.no_non_red_ir:
+            raise RuntimeError("Why not use IR LSVs for non-red set identification??"
+                               " Caleb really doesn't think you should do this, "
+                               "so he hasn't implemented it yet.")
+        if args.remove_these_genes:
+            LOG.info("User will ignore LSVs using data from %s" % args.remove_these_genes)
+            rem_dict = pkl.load(open(args.remove_these_genes, 'rb'), encoding='bytes')
+        else:
+            rem_dict = None
         imported = io_caleb.quick_import(input=args.directory,
                                          cutoff_d_psi=0,
                                          cutoff_prob=0,
                                          pattern=args.pattern,
-                                         keep_ir=args.also_ir)
+                                         keep_ir=args.also_ir,
+                                         remove_these_genes=rem_dict)
         io_caleb.check_is_ignant(imported, args.dpsi_thresh)
-        if impute:
-            blanked_dict = io_caleb.impute_missing_lsvs(data=imported,
-                                                        impute_with=0,
-                                                        in_place=True,
-                                                        warnings=False)
+        nrset, blanked_dict = non_redundant_sets.non_redundant_set(data=imported,
+                                                                   cutoff_dpsi=args.dpsi_thresh,
+                                                                   cutoff_psi=args.psi_thresh,
+                                                                   save_blanked_structure=True,
+                                                                   bi_method=args.method)
+        sig_ids = io_caleb.get_sig_lsv_ids(imported,
+                                           cutoff_d_psi=args.dpsi_thresh,
+                                           prob_d_psi=args.prob_dpsi_thresh,
+                                           collapse=True)
         results_count = find_binary_lsvs.get_binary_lsvs(data=imported,
                                                          method=args.method,
-                                                         cutoff_d_psi=args.dpsi_thresh,
+                                                         cutoff_d_psi=None if args.dpsi_thresh == 0 else args.dpsi_thresh,
+                                                         cutoff_psi=None if args.psi_thresh == 1 else args.psi_thresh,
                                                          just_lsv_ids=False,
                                                          must_reciprocate=args.must_reciprocate)
-        if impute:
-            for comp in list(results_count.keys()):
-                binary_ids = set(list(results_count[comp].keys()))
-                blanked_ids = blanked_dict[comp]
-                binary_and_blank_ids = binary_ids & blanked_ids
-                blanked_dict[comp] = binary_and_blank_ids
-            io_caleb.change_imputed_values(results_count, blanked_dict, new_val=np.NAN)
-        the_final_array, lsv_ids, col_names = get_num_array(results_count,
+
+        all_binary_ids = set()
+        for comp in list(results_count.keys()):
+            binary_ids = set(list(results_count[comp].keys()))
+            all_binary_ids = all_binary_ids | binary_ids
+            blanked_ids = blanked_dict[comp]
+            binary_and_blank_ids = binary_ids & blanked_ids
+            blanked_dict[comp] = binary_and_blank_ids
+        sig_and_binary = list(set(sig_ids) & all_binary_ids)
+        non_red_lsv_ids = remove_redundants(imported, nrset, sig_and_binary)
+        io_caleb.change_imputed_values(results_count, blanked_dict, new_val=np.NAN)
+        the_final_array, bi_lsv_ids, col_names = get_num_array(results_count,
                                                             which_junc=args.junction,
                                                             datatype=args.data_type)
-        pandas_df = pa.DataFrame(the_final_array, index=lsv_ids, columns=col_names)
+        pandas_df = pa.DataFrame(the_final_array, index=bi_lsv_ids, columns=col_names)
+        # Remove redundant rows
+        pandas_df = pandas_df.loc[pandas_df.index.isin(non_red_lsv_ids)]
         if args.outfile:
             pandas_df.to_csv(path_or_buf=str(args.outfile),
                              sep="\t")
         else:
             print_full(pandas_df)
+
+
+def remove_redundants(imputed_data, nrset, lsv_ids):
+    """
+    Given Imputed data, non-redundant set results, and a list of LSV IDs,
+        determine which of your LSV IDs are redundant, and only keep those that
+        have the biggest dPSI value.
+    :param imputed_data: blanked quick import
+    :param nrset: non_red_set
+    :param lsv_ids: LSV IDs that have redundancy
+    :return: subset of lsv_ids such that none overlap
+    """
+    non_red_ids = list()
+    iis_at_1_percent = percent_through_list(lsv_ids, 0.01)
+    i = 0.0
+    LOG.info("Removing redundants IDs from list of %s LSV IDs" % len(lsv_ids))
+    while len(lsv_ids) > 0:
+        if i > 0.0 and i in iis_at_1_percent:
+            LOG.info(str(iis_at_1_percent[i]) + "%% of overlapping sets processed (%s LSVs)" % i)
+        this_id = lsv_ids.pop()
+        # Determine which, if any, LSVs overlap with this_id in your list of lsv_ids
+        partners = non_redundant_sets.find_set_partners(nrset, this_id, lsv_ids)
+        if partners in ["isolated", "no_sig_partner", "no_sig_partners"]:
+            non_red_ids.append(this_id)
+            i += 1.0
+            continue
+        # Ok, this_id has at least 1 partner.
+        overlapping_ids = copy.copy(partners)
+        overlapping_ids.append(this_id)
+        # Only care about testing incoming LSVs
+        overlapping_ids = list(set(overlapping_ids) & set(lsv_ids))
+        most_changing_id = non_redundant_sets.most_changing_lsv(imputed_data, overlapping_ids)
+        non_red_ids.append(most_changing_id)
+        for lid in list(set(overlapping_ids) - {this_id}):
+            lsv_ids.remove(lid)
+        i += 1.0
+    return non_red_ids
 
 
 def print_full(x):

@@ -1,5 +1,6 @@
 from voila.tools import Tool
 from voila.tools.utils import io_caleb
+from voila.tools.utils.index_all import index_all
 from voila.tools.utils.percent_through_list import percent_through_list
 from voila.utils.voila_log import voila_log
 import numpy as np
@@ -55,6 +56,11 @@ class ThisisFindBinaryLSVs(Tool):
                             type=float,
                             help=help_mes,
                             default=0.0)
+        help_mes = "PSI threshold by which to call junctions as changing. Default 1 means it isn't used"
+        parser.add_argument('--psi_thresh',
+                            type=float,
+                            help=help_mes,
+                            default=1)
         help_mes = "Flag: don't consider IR LSVs"
         parser.add_argument('--no_ir',
                             action='store_true',
@@ -120,7 +126,8 @@ class ThisisFindBinaryLSVs(Tool):
                                                       impute_with=0)
         results = get_binary_lsvs(data=imported,
                                   method=args.method,
-                                  cutoff_d_psi=args.dpsi_thresh,
+                                  cutoff_d_psi=None if args.dpsi_thresh == 0 else args.dpsi_thresh,
+                                  cutoff_psi=None if args.psi_thresh == 1 else args.psi_thresh,
                                   just_lsv_ids=False,
                                   must_reciprocate=args.must_reciprocate)
         if args.prob_dpsi_thresh:
@@ -144,8 +151,8 @@ class ThisisFindBinaryLSVs(Tool):
 
 
 def get_binary_lsvs(data,
-                    cutoff_d_psi=0.1,
-                    cutoff_psi=1,
+                    cutoff_d_psi=None,
+                    cutoff_psi=None,
                     make_copy=False,
                     just_lsv_ids=False,
                     method="sum_to_95",
@@ -169,26 +176,36 @@ def get_binary_lsvs(data,
     io_caleb.check_is_quick_import(data)
     LOG.info("Getting num_d_psi data ...")
     num_d_psi_data = io_caleb.get_num_d_psi(data)
-    if cutoff_psi < 1:
+    if cutoff_psi:
         LOG.info("Getting num_psi data ...")
-        numPSIs_data = io_caleb.get_num_psi(data)
+        numpsis_data = io_caleb.get_num_psi(data)
     else:
-        numPSIs_data = "doesnt matter"
+        numpsis_data = "doesnt matter"
     LOG.info("Categorizing LSVs from the following comparisons ...")
     LOG.info(list(data.keys()))
     if method == "count":
         results = find_binary_lsv_ids(num_d_psi_data,
-                                      numPSIs_data,
+                                      numpsis_data,
                                       cutoff_d_psi=cutoff_d_psi,
                                       cutoff_psi=cutoff_psi,
                                       return_bi_iis=True,
                                       must_reciprocate=must_reciprocate)
     elif method == "sum_to_95":
+        if cutoff_psi:
+            if cutoff_d_psi:
+                raise RuntimeError("Please only use cutoff dPSI or PSI, not both.")
+            else:
+                bythis = "psi"
+                thresh = cutoff_psi
+        elif cutoff_d_psi:
+            thresh = cutoff_d_psi
+            bythis = "dpsi"
+        else:
+            raise RuntimeError("No thresholds provided...")
         results = find_binary_lsvs_95(num_d_psi_data,
-                                      numPSIs_data,
-                                      threshold=cutoff_d_psi,
-                                      by_d_psi=True,
-                                      by_psi=False,
+                                      numpsis_data,
+                                      threshold=thresh,
+                                      by_what=bythis,
                                       return_bi_iis=True,
                                       must_reciprocate=must_reciprocate)
     else:
@@ -222,8 +239,8 @@ def get_binary_lsvs(data,
 
 def find_binary_lsv_ids(num_d_psi,
                         num_psi,
-                        cutoff_d_psi=0.1,
-                        cutoff_psi=1,
+                        cutoff_d_psi=None,
+                        cutoff_psi=None,
                         return_other_ids=False,
                         return_bi_iis=False,
                         return_all_iis=False,
@@ -241,8 +258,8 @@ def find_binary_lsv_ids(num_d_psi,
         Set this to 1 if you only want to categorize LSVs by dPSI.
 
     Arguments
-        Cutoff_dPSI: default dPSI cutoff is 0.1.
-        Cutoff_PSI: defualt PSI cutoff is 1
+        Cutoff_dPSI:
+        Cutoff_PSI:
         Return_other_ids: if True, return LSV IDs that have:
                      ==2, >2 , ==1, ==0
             junctions changing accross all comparisons.
@@ -275,29 +292,37 @@ def find_binary_lsv_ids(num_d_psi,
     zero_over_ids = list()  # zero junctions
     all_indices = dict()
     sig_juncs_dict = dict()
-    LOG.info("Counting how many juncs utilized in %s LSVs ..." % len(lsv_ids))
+    if cutoff_d_psi and cutoff_psi:
+        raise RuntimeError("Only use PSI or dPSI for binary-like LSV identification.")
+    if not cutoff_psi and not cutoff_d_psi:
+        LOG.info("No cutoff dpsi nor psi was provided, so assuming all juncs are utilized..")
+    LOG.info("Counting how many juncs utilized (PSI>%s or dPSI>=%s) in %s LSVs ..." % (
+             cutoff_psi, cutoff_d_psi, len(lsv_ids)))
     i = 1.0
     indeces_at_10_percent = percent_through_list(lsv_ids, 0.1)
     for lsv_id in lsv_ids:
         if i > 0.0 and i in indeces_at_10_percent:
             LOG.info(str(indeces_at_10_percent[i]) + "% of juncs looked at...")
+        # if lsv_id =="ENSG00000168077:27516013-27517056:source":
+        #     pdb.set_trace()
         i += 1.0
         this_num_d_psi = num_d_psi[lsv_id]
+        if cutoff_d_psi:
+            # identify which junctions have dPSI > Cutoff_dPSI
+            dpsi_over_cutoff = abs(this_num_d_psi) > cutoff_d_psi
 
-        # identify which junctions have PSI > Cutoff_dPSI
-        dpsi_over_cutoff = abs(this_num_d_psi) > cutoff_d_psi
-        if not isinstance(num_psi, str):
+        elif not isinstance(num_psi, str) and cutoff_psi:
             this_num_psi = num_psi[lsv_id]
-
             # identify which junctions have PSI > Cutoff_PSI
-            psi_over_cutoff = np.sum(this_num_psi > cutoff_psi, axis=1)
-            psi_over_cutoff = np.zeros(this_num_d_psi.shape).T + psi_over_cutoff
-            psi_over_cutoff = psi_over_cutoff.T > 0
-            # make sure all junctions with dPSI and PSI over the cutoff
-            # are 'True'
-            dpsi_over_cutoff = psi_over_cutoff + dpsi_over_cutoff
+            psi_over_cutoff = this_num_psi > cutoff_psi
+        elif not cutoff_psi and not cutoff_d_psi:
+            over_cutoff = abs(this_num_d_psi) > 0
+        if cutoff_d_psi:
+            over_cutoff = dpsi_over_cutoff
+        elif cutoff_psi:
+            over_cutoff = psi_over_cutoff
         # axis=1, meaning sum # of Trues in each row (each junction)
-        sum_truths = np.sum(dpsi_over_cutoff, axis=1)
+        sum_truths = np.sum(over_cutoff, axis=1)
         sig_juncs_dict[lsv_id] = sum_truths
         number_junctions_over_cutoff = sum(sum_truths > 0)
         if number_junctions_over_cutoff == 2:
@@ -348,16 +373,16 @@ def find_binary_lsv_ids(num_d_psi,
 def find_binary_lsvs_95(num_d_psi,
                         num_psi,
                         threshold=0.1,
-                        by_d_psi=True,
-                        by_psi=False,
+                        by_what="dpsi",
                         return_other_ids=False,
                         return_bi_iis=False,
                         return_all_iis=False,
-                        # return_sig_juncs=False,
+                        return_sig_juncs=False,
                         must_reciprocate=True):  # meaning, top 2  juncs are positive AND negative
     """
     if Sum(abs(top two junctions dPSIs)) / Sum(abs(dPSI)) >= 0.95, its binary.
         Use the maximum dPSI seen across all comparisons to compute above thing.TODO: ask Yoseph if that's cool.
+        by_what : psi or dpsi
     """
     lsv_ids = list(num_d_psi.keys())
     binary_ids = list()  # exacly 2 junctions over cutoff
@@ -369,9 +394,6 @@ def find_binary_lsvs_95(num_d_psi,
     sig_juncs_dict = dict()
     LOG.info("%s shared LSVs being categorized..." % len(lsv_ids))
     for lsv_id in lsv_ids:
-        # if lsv_id == 'ENSG00000003756:50131151-50131763:target':
-        #     #pass
-        #     pdb.set_trace()
         this_num_d_psi = num_d_psi[lsv_id]
         if not isinstance(num_psi, str):
             this_num_psi = num_psi[lsv_id]
@@ -380,48 +402,50 @@ def find_binary_lsvs_95(num_d_psi,
         which_junctions_utilized = np.zeros(this_num_d_psi.shape[0], dtype=bool)
         top = 0  # initialize
         # Use PSI to determing binary-ness:
-        if by_psi:
-            LOG.info("Gotta be straight with you, Caleb was lazy and didn't implement "
-                     "the thresh option for binary PSI... fix this")
-            abs_junc_maxes = np.max(abs(this_num_psi), axis=1)  # max per row (junction)
+        if by_what == "psi":
+            abs_junc_maxes = np.max(this_num_psi, axis=1)  # max per row (junction)
             i = -1
             perc_of_total = 0
             while perc_of_total < 0.95 and abs(i) <= len(abs_junc_maxes):
                 # print i
                 # indices in reverse order of the max values
-                top_indices = np.argpartition(abs_junc_maxes, i)[i:]
-                top = abs_junc_maxes[top_indices]  # top values, rev order
+                top_psi_indices = np.argpartition(abs_junc_maxes, i)[i:]
+                top = abs_junc_maxes[top_psi_indices]  # top values, rev order
                 perc_of_total = np.sum(top) / np.sum(abs_junc_maxes)
                 # print perc_of_total
                 i -= 1
             if i == len(abs_junc_maxes) and perc_of_total < 0.95:
                 pdb.set_trace()
-            which_junctions_utilized[top_indices] = True
-        if by_d_psi:
+        elif by_what == "dpsi":
             # Use dPSI to determing binary-ness:
             abs_junc_maxes = np.max(abs(this_num_d_psi), axis=1)  # max per row (junction)
             i = -1
             perc_of_total = 0
             while perc_of_total < 0.95 and abs(i) <= len(abs_junc_maxes):
                 # reverse sorted indices
-                top_indices = np.argpartition(abs_junc_maxes, i)[i:]
-                top = abs_junc_maxes[top_indices]  # top values
+                top_dpsi_indices = np.argpartition(abs_junc_maxes, i)[i:]
+                top = abs_junc_maxes[top_dpsi_indices]  # top values
                 perc_of_total = np.sum(top) / np.sum(abs_junc_maxes)
                 # print perc_of_total
                 i -= 1
             if i == len(abs_junc_maxes) and perc_of_total < 0.95:
                 pdb.set_trace()
-            which_junctions_utilized[top_indices] = True
-
+        if by_what == "psi":
+            top_indices = top_psi_indices
+            which_junctions_utilized[top_psi_indices] = True
+        elif by_what == "dpsi":
+            top_indices = top_dpsi_indices
+            which_junctions_utilized[top_dpsi_indices] = True
+        if by_what not in ["dpsi", "psi"]:
+            raise ValueError("by_what was %s, but should be 'both' 'dpsi' or 'psi'" % by_what)
         all_indices[lsv_id] = index_all(which_junctions_utilized.tolist(), 0, nottt=True)
-        if not by_psi and not by_d_psi:
-            raise RuntimeError("Hey, you need to pick PSI or dPSI...")
 
-        # Check if any of the dPSI or PSI are meating your thresh
+        # Check if any of the dPSI/PSI are meeting your thresh
         over_thresh = True if max(top) >= threshold else False
 
         # axis=1, meaning sum # of Trues in each row (each junction)
         sum_truths = np.sum(which_junctions_utilized)
+        sig_juncs_dict[lsv_id] = sum_truths
         if sum_truths == 2 and over_thresh:
             doesnt_reciprocate = False
             if must_reciprocate:
@@ -443,7 +467,8 @@ def find_binary_lsvs_95(num_d_psi,
             pdb.set_trace()
         else:  # == 0
             zero_over_ids.append(lsv_id)
-
+    if return_sig_juncs:
+        return sig_juncs_dict
     results = dict()
     results["binary"] = binary_ids
     if return_other_ids:
@@ -1756,22 +1781,6 @@ def group_lsvs_by_id(lsv_ids):
         ensembl_ids = ensembl_ids[max(indices) + 1:]
         lsv_ids = lsv_ids[max(indices) + 1:]
     return gene_to_lsvs
-
-
-def index_all(array, element, nottt=False):
-    """Return all indices of array that point to an element.
-        Arguments:
-            array   = type: list.
-            element = object that you wish to get indices for from array.
-            Not     = If True, return indices of elements that do *not* match
-    """
-    if not isinstance(array, list):
-        raise Exception("Please only give lists to this function.")
-    if nottt:
-        matched_indices = [i for i, x in enumerate(array) if x != element]
-    else:
-        matched_indices = [i for i, x in enumerate(array) if x == element]
-    return matched_indices
 
 
 ##################################### GENERAL HELPER #####################################
