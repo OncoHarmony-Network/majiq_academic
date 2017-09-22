@@ -2,6 +2,7 @@ import os
 import unittest
 
 from voila.tools import Tool
+from voila.utils.exceptions import VoilaException
 
 
 class Test(Tool):
@@ -16,3 +17,4 @@ class Test(Tool):
         suite = loader.discover(start_dir, '*')
         runner = unittest.TextTestRunner(verbosity=2)
         runner.run(suite)
+

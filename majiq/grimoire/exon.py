@@ -54,11 +54,12 @@ class Exon:
         if retrieve:
             self.coverage = 0
 
-    def __del__(self):
+    # def __del__(self):
+    def clean(self):
         for ext in self.exonTx_list:
-            del ext
+            ext.clean()
         for exr in self.exonRead_list:
-            del exr
+            exr.clean()
 
     def __hash__(self):
         return hash(self.id) ^ hash(self.gene_name)
@@ -288,11 +289,12 @@ class ExonRead(object):
         if post_junc is not None:
             self.p5_junc.append(post_junc)
 
-    def __del__(self):
+    # def __del__(self):
+    def clean(self):
         for jj in self.p3_junc:
-            del jj
+            jj.clean()
         for jj in self.p5_junc:
-            del jj
+            jj.clean()
 
     def get_coordinates(self):
         return self.start, self.end
@@ -333,11 +335,12 @@ class ExonTx(object):
         self.p3_junc = []
         self.p5_junc = []
 
-    def __del__(self):
+    #def __del__(self):
+    def clean(self):
         for jj in self.p3_junc:
-            del jj
+            jj.clean()
         for jj in self.p5_junc:
-            del jj
+            jj.clean()
 
     def to_hdf5(self, hdf5grps):
         h_ex = hdf5grps.create_group("tx/%s-%s" % (self.start, self.end))
@@ -645,13 +648,14 @@ def detect_exons(gene, junction_dict, retrieve=False):
 
     junction_list = []
     for kk, vv in junction_dict.items():
-        junction_list.append((kk[0], '5prime', vv))
-        junction_list.append((kk[1], '3prime', vv))
+        if not vv.intronic:
+            junction_list.append((kk[0], '5prime', vv))
+            junction_list.append((kk[1], '3prime', vv))
     junction_list.sort()
 
     for (coord, jtype, jj) in junction_list:
 
-        if retrieve and not jj.is_reliable() and not jj.annotated:
+        if not retrieve and not jj.is_reliable() and not jj.annotated:
             continue
 
         jj_gene = jj.get_gene()

@@ -1,24 +1,26 @@
 from voila.tools import Tool
-from voila.tools import io_voila_caleb
+from voila.tools.find_binary_lsvs import check_is_binary_lsv_data
+from voila.tools.utils import io_caleb
 from voila.tools import find_binary_lsvs
 from voila.tools.utils import random_merge_numpy
-import pandas as pa
-import os
-import itertools
-import math
+from voila.utils.voila_log import voila_log
 import numpy as np
-import numpy.lib.recfunctions
 import pandas as pa
-import copy
-import operator
-import pdb
+
+# Caleb Matthew Radens
+# radlinsky@gmail.com
+
+
+__author__ = 'cradens'
+
+LOG = voila_log()
 
 
 class ThisisBinaryLikeArrays(Tool):
     help = 'Given a list of voila dPSI txt files, return matrix of' \
            ' E(PSI), E(dPSI), or P(E(dPS)) from closer, further, or ' \
            'random binary-like LSVs. Rows are LSVs, columns are' \
-           ' conditions/comparisons.\n' \
+           ' dPSI comparisons.\n' \
            'Usage:\n' \
            'voila tools binary_like_arrays <path/to/voila/txt/dir> <data_type>'
 
@@ -26,7 +28,7 @@ class ThisisBinaryLikeArrays(Tool):
         parser = self.get_parser()
         parser.add_argument('directory',
                             type=str,
-                            help='Directory where voila texts are.')
+                            help='Directory where voila texts are OR file with list of text files.')
         parser.add_argument('data_type',
                             choices={"dpsi", "psi", "prob"},
                             type=str,
@@ -35,7 +37,7 @@ class ThisisBinaryLikeArrays(Tool):
         parser.add_argument('--dpsi_thresh',
                             type=float,
                             help=help_mes,
-                            default=0.1)
+                            default=0)
         help_mes = "Prob(dPSI) threshold by which to call junctions as changing"
         parser.add_argument('--prob_dpsi_thresh',
                             type=float,
@@ -48,8 +50,8 @@ class ThisisBinaryLikeArrays(Tool):
                             choices={'closer', 'further', 'random'},
                             help=help_mes,
                             default="closer")
-        help_mes = "Flag: don't consider IR LSVs"
-        parser.add_argument('--no_ir',
+        help_mes = "Flag: also consider IR LSVs (default: don't import them)"
+        parser.add_argument('--also_ir',
                             action='store_true',
                             help=help_mes,
                             default=False)
@@ -66,11 +68,12 @@ class ThisisBinaryLikeArrays(Tool):
                             default="sum_to_95",
                             type=str,
                             help=help_mes)
-        help_mes = "Flag: If you don't care whether the binary-like LSVs are reciprocating"
-        parser.add_argument('--non_reciprocating',
-                            action='store_false',
+        help_mes = "Flag: If you think the binary-like LSVs should reciprocate\n" \
+                   "Note: this is broken at the moment, so don't use it.."
+        parser.add_argument('--must_reciprocate',
+                            action='store_true',
                             help=help_mes,
-                            default=True)
+                            default=False)
         help_mes = "Output to save file to (include full path)"
         parser.add_argument('-o',
                             '--outfile',
@@ -84,35 +87,34 @@ class ThisisBinaryLikeArrays(Tool):
         return parser
 
     def run(self, args):
-        # this is for code readability, not efficiency
-        consider_ir = True
-        if args.no_ir:
-            consider_ir = False
         impute = True
         if args.dont_impute:
             impute = False
-        imported = io_voila_caleb.quick_import(dir=args.directory,
-                                               cutoff_d_psi=0,
-                                               cutoff_prob=0,
-                                               pattern=args.pattern,
-                                               keep_ir=consider_ir)
+        if args.must_reciprocate:
+            raise RuntimeError("Please don't use --must_reciprocate yet... Caleb needs ot fix it.")
+        imported = io_caleb.quick_import(input=args.directory,
+                                         cutoff_d_psi=0,
+                                         cutoff_prob=0,
+                                         pattern=args.pattern,
+                                         keep_ir=args.also_ir)
+        io_caleb.check_is_ignant(imported, args.dpsi_thresh)
         if impute:
-            blanked_dict = io_voila_caleb.impute_missing_lsvs(data=imported,
-                                                              impute_with=0,
-                                                              in_place=True,
-                                                              warnings=False)
+            blanked_dict = io_caleb.impute_missing_lsvs(data=imported,
+                                                        impute_with=0,
+                                                        in_place=True,
+                                                        warnings=False)
         results_count = find_binary_lsvs.get_binary_lsvs(data=imported,
                                                          method=args.method,
                                                          cutoff_d_psi=args.dpsi_thresh,
                                                          just_lsv_ids=False,
-                                                         must_reciprocate=args.non_reciprocating)
+                                                         must_reciprocate=args.must_reciprocate)
         if impute:
             for comp in list(results_count.keys()):
                 binary_ids = set(list(results_count[comp].keys()))
                 blanked_ids = blanked_dict[comp]
                 binary_and_blank_ids = binary_ids & blanked_ids
                 blanked_dict[comp] = binary_and_blank_ids
-            io_voila_caleb.change_imputed_values(results_count, blanked_dict, new_val=np.NAN)
+            io_caleb.change_imputed_values(results_count, blanked_dict, new_val=np.NAN)
         the_final_array, lsv_ids, col_names = get_num_array(results_count,
                                                             which_junc=args.junction,
                                                             datatype=args.data_type)
@@ -121,7 +123,13 @@ class ThisisBinaryLikeArrays(Tool):
             pandas_df.to_csv(path_or_buf=str(args.outfile),
                              sep="\t")
         else:
-            print(pandas_df)
+            print_full(pandas_df)
+
+
+def print_full(x):
+    pa.set_option('display.max_rows', len(x))
+    print(x)
+    pa.reset_option('display.max_rows')
 
 
 def get_num_array(data, which_junc, datatype):
@@ -169,13 +177,13 @@ def num_d_psi_arrays(data,
     """
     find_binary_lsvs.check_is_binary_lsv_data(data)
     # dpsi from junction closer to reference
-    dpsis_close, conditions = find_binary_lsvs.get_num_d_psi(data,
-                                                             return_comparisons=True,
-                                                             use_binary_index_info="closer")
+    dpsis_close, conditions = io_caleb.get_num_d_psi(data,
+                                                     return_comparisons=True,
+                                                     use_binary_index_info="closer")
     # dpsi from junction further from reference
-    dpsis_far, conditions = find_binary_lsvs.get_num_d_psi(data,
-                                                           return_comparisons=True,
-                                                           use_binary_index_info="further")
+    dpsis_far, conditions = io_caleb.get_num_d_psi(data,
+                                                   return_comparisons=True,
+                                                   use_binary_index_info="further")
     n_cols = len(conditions)
     n_lsvs = len(list(dpsis_close.keys()))
     lsv_d_psi_arrays_close = np.empty([n_lsvs, n_cols])
@@ -215,15 +223,15 @@ def num_psi_arrays(data,
     Results returned in the following order:
     lsv_psi_arrays_close, lsv_psi_arrays_far, Conditions, LSV_IDs
     """
-    io_voila_caleb.check_is_binary_lsv_data(data)
+    check_is_binary_lsv_data(data)
     # psi from junction closer to reference
-    psis_close, conditions = find_binary_lsvs.get_num_psi(data,
-                                                          return_comparisons=True,
-                                                          use_binary_index_info="closer")
+    psis_close, conditions = io_caleb.get_num_psi(data,
+                                                  return_comparisons=True,
+                                                  use_binary_index_info="closer")
     # psi from junction further from reference
-    psis_far, conditions = find_binary_lsvs.get_num_psi(data,
-                                                        return_comparisons=True,
-                                                        use_binary_index_info="further")
+    psis_far, conditions = io_caleb.get_num_psi(data,
+                                                return_comparisons=True,
+                                                use_binary_index_info="further")
     n_cols = len(conditions)
     n_lsvs = len(list(psis_close.keys()))
     lsv_psi_arrays_close = np.empty([n_lsvs, n_cols])
@@ -263,15 +271,15 @@ def num_prob_arrays(data,
     Results returned in the following order:
     lsv_prob_arrays_close, lsv_prob_arrays_far, Conditions, LSV_IDs
     """
-    io_voila_caleb.check_is_binary_lsv_data(data)
+    check_is_binary_lsv_data(data)
     # prob from junction closer to reference
-    probs_close, conditions = find_binary_lsvs.get_num_prob(data,
-                                                            return_comparisons=True,
-                                                            use_binary_index_info="closer")
+    probs_close, conditions = io_caleb.get_num_prob(data,
+                                                    return_comparisons=True,
+                                                    use_binary_index_info="closer")
     # prob from junction further from reference
-    probs_far, conditions = find_binary_lsvs.get_num_prob(data,
-                                                          return_comparisons=True,
-                                                          use_binary_index_info="further")
+    probs_far, conditions = io_caleb.get_num_prob(data,
+                                                  return_comparisons=True,
+                                                  use_binary_index_info="further")
     n_cols = len(conditions)
     n_lsvs = len(list(probs_close.keys()))
     lsv_prob_arrays_close = np.empty([n_lsvs, n_cols])

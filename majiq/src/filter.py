@@ -8,13 +8,15 @@ def reliable_in_data(junc, exp_idx, minnonzero=2, min_reads=3):
     min_read_x_exp = min_reads
     min_npos_x_exp = minnonzero
     in_data_filter = False
-    if junc.all_data:
+    if not junc.all_data:
         numpos = np.count_nonzero(junc.coverage[exp_idx])
         totreads = junc.get_read_num(exp_idx)
     else:
-        cov = junc.get_coverage()[exp_idx]
-        numpos = np.count_nonzero(cov)
-        totreads = cov.sum()
+        kk = junc.get_coverage()
+        totreads = kk[0][exp_idx]
+        numpos = kk[1][exp_idx]
+        # numpos = np.count_nonzero(cov)
+        # totreads = cov.sum()
     if totreads >= min_read_x_exp and numpos >= min_npos_x_exp:
         in_data_filter = True
     return in_data_filter
@@ -41,6 +43,7 @@ def merge_files_hdf5(lsv_dict, lsv_summarized, minnonzero, min_reads, percent=-1
 
     try:
         vals = ((lsv_summarized[:, :, 0] >= minnonzero) * (lsv_summarized[:, :, 1] >= min_reads)).sum(axis=0) >= percent
+
     except:
         pass
 

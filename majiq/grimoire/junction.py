@@ -11,7 +11,7 @@ class Junction:
     __gt__ = lambda self, other: self.start > other.start or (self.start == other.start and self.end > other.end)
     __ge__ = lambda self, other: self.start >= other.start or (self.start == other.start and self.end >= other.end)
 
-    def __init__(self, start, end, donor, acceptor, gene_id, annotated=False, retrieve=False, num_exp=1, jindex=-1,
+    def __init__(self, start, end, donor, acceptor, gene_id, annotated=False, retrieve=False, num_exp=0, jindex=-1,
                  intronic=False):
         """ The start and end in junctions are the last exon in """
 
@@ -30,19 +30,23 @@ class Junction:
         self.annotated = annotated
 
         if retrieve:
-            if num_exp == 1:
+            if num_exp == 0:
+                num_exp = 1
                 majiq_config = Config()
                 self.coverage = np.zeros((num_exp, (majiq_config.readLen - 16) + 1), dtype=np.float)
                 self.gc_content = np.zeros((1, (majiq_config.readLen - 16) + 1), dtype=np.float)
-                self.all_data = True
+                self.all_data = False
             else:
                 self.idx = jindex
-                self.all_data = False
+                self.all_data = True
             self.intronic = intronic
         self.transcript_id_list = []
 
     def __hash__(self):
         return hash(self.start) ^ hash(self.end) ^ hash(self.gene_name)
+
+    def clean(self):
+        pass
 
     def to_db_hdf5(self, hdf5grps):
         h_jnc = hdf5grps.create_group(self.id)
@@ -73,7 +77,6 @@ class Junction:
         h_jnc.attrs['gene_name'] = self.gene_name
 
         try:
-
             dataset.append(self.coverage[0, :])
             if gc_dataset is not None:
                 gc_dataset.append(self.gc_content[0, :])
@@ -89,15 +92,18 @@ class Junction:
         return self.id
 
     def get_coverage(self):
-        if self.all_data:
+        if not self.all_data:
             return self.coverage
         else:
             if self.idx == -1:
                 majiq_config = Config()
-                cov = np.zeros(shape=(majiq_config.num_experiments, 2))
+                cov = np.zeros(shape=(majiq_config.num_experiments))
+                pos = np.zeros(shape=(majiq_config.num_experiments))
             else:
-                cov = self.get_gene().junc_matrix[self.idx]
-            return cov
+                # cov = self.get_gene().junc_matrix[self.idx]
+                cov = self.get_gene().junc_cov[self.idx]
+                pos = self.get_gene().junc_pos[self.idx]
+            return cov, pos
 
     def get_gene(self):
         majiq_config = Config()
@@ -144,8 +150,8 @@ class Junction:
             ex = self.get_gene().get_exon_by_id(self.acceptor_id)
         return ex
 
-    def get_gc_content(self,exp_idx):
-        if self.all_data:
+    def get_gc_content(self, exp_idx):
+        if not self.all_data:
             return self.gc_content
         else:
             if self.idx == -1:
@@ -155,15 +161,15 @@ class Junction:
             return gc
 
     def get_read_num(self, idx=0):
-        if self.all_data:
+        if not self.all_data:
             cov = self.coverage
         else:
-            cov = self.get_gene().junc_matrix[self.idx]
+            cov = self.get_gene().junc_pos[self.idx]
 
         if idx == -1:
             res = cov.sum(dtype=np.uint32)
         else:
-            res = cov[idx].sum(dtype=np.uint32)
+            res = cov[idx]
 
         return res
 
@@ -184,14 +190,15 @@ class Junction:
         return self.transcript_id_list
 
     def is_reliable(self):
-        res = False
-        cov = self.get_coverage().sum(axis=1)
         majiq_config = Config()
-        for tissue, list_idx in majiq_config.tissue_repl.items():
-            mu = np.mean(cov[list_idx])
-            if mu > majiq_config.min_denovo:
-                res = True
-                break
+        cov = self.get_coverage().sum(axis=1)
+        res = cov >= majiq_config.min_denovo
+        # res = False
+        # for tissue, list_idx in majiq_config.tissue_repl.items():
+        #     mu = np.mean(cov[list_idx])
+        #     if mu > majiq_config.min_denovo:
+        #         res = True
+        #         break
         return res
 
     def is_reliable_in_tissue(self):

@@ -9,13 +9,31 @@ import majiq.src.utils as majiq_utils
 from majiq.src.config import Config
 from voila.splice_graphics import LsvGraphic
 from voila.vlsv import VoilaLsv
+import traceback
 
 
-# def process_wrapper():
-#     if not os.path.isdir(process_conf):
-#         os.mkdir(tempdir)
-#     thread_logger = majiq_utils.get_logger("%s/majiq.%s.log" % (tempdir, chunk), silent=False)
-#     thread_logger.info("[Th %s]: START child,%s" % (chunk, mp.current_process().name))
+def process_wrapper(args_vals):
+
+    try:
+        vals, chnk = args_vals
+        logger = majiq_utils.get_logger("%s/%s.majiq.log" % (process_conf.outDir, chnk),
+                                        silent=process_conf.silent, debug=process_conf.debug)
+
+        process_conf.func(vals, chnk, process_conf, logger=logger)
+
+    except:
+        # majiq_utils.monitor('CHILD %s:: EXCEPT' % chnk)
+        traceback.print_exc()
+        sys.stdout.flush()
+        raise
+
+    finally:
+        qm = QueueMessage(QUEUE_MESSAGE_END_WORKER, None, chnk)
+        process_conf.queue.put(qm, block=True)
+        process_conf.lock[chnk].acquire()
+        process_conf.lock[chnk].release()
+        process_conf.queue.close()
+        majiq_utils.close_logger(logger)
 
 
 def parallel_lsv_child_calculation(func, args, tempdir, name, chunk, store=True):
@@ -68,11 +86,9 @@ class QueueMessage:
         return self.type
 
 
-def process_conf(pipeline, queue, lock, weights):
+def process_conf(func, pipeline):
     process_conf.__dict__.update(pipeline.__dict__)
-    process_conf.lock = lock
-    process_conf.queue = queue
-    process_conf.weights = weights
+    process_conf.func = func
 
 
 def queue_manager(input_h5dfp, output_h5dfp, lock_array, result_queue, num_chunks, meta_info=None, num_exp=0,
@@ -86,6 +102,7 @@ def queue_manager(input_h5dfp, output_h5dfp, lock_array, result_queue, num_chunk
     lsv_idx = [0] * num_exp
     while True:
         try:
+
             val = result_queue.get(block=True, timeout=10)
             sys.stdout.flush()
             if val.get_type() == QUEUE_MESSAGE_BUILD_LSV:
@@ -118,6 +135,7 @@ def queue_manager(input_h5dfp, output_h5dfp, lock_array, result_queue, num_chunk
                 nthr_count += 1
                 if nthr_count >= num_chunks:
                     break
+            del val
 
         except queue.Empty:
             if nthr_count < num_chunks:

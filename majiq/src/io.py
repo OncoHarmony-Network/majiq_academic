@@ -674,6 +674,7 @@ def extract_lsv_summary(files):
     simpl_juncs = []
 
     lsv_dict_graph = {}
+
     for fidx, ff in enumerate(files):
         data = h5py.File(ff, 'r')
         junc_cov = data['junc_cov'][()]
@@ -828,7 +829,6 @@ def add_lsv_to_bootstrapfile(f, vals):
     f.attrs['num_lsvs'] += 1
 
 
-
 def create_bootstrap_file(file_list, outdir, name, m=100):
     import datetime
     for ii, ff in enumerate(file_list):
@@ -893,6 +893,7 @@ def boots_write(hg_grp, vals, lsv_idx, dpsi=False):
         hg_grp['junc_cov'].resize((shp_new, 2))
 
     hg_grp['junctions'][lsv_idx:lsv_idx+njunc] = vals['samples']
+    #print('%s::%s' % (vals['junc_attr'], type(vals['junc_attr'])))
     hg_grp['junc_cov'][lsv_idx:lsv_idx + njunc] = vals['junc_attr']
 
     h_lsv = hg_grp.create_group("LSVs/%s" % vals['id'])

@@ -32,6 +32,7 @@ class InvalidLSV(Exception):
 
 class LSV(object):
     def __init__(self, exon, lsv_id, junctions, lsv_type):
+
         majiq_config = Config()
         if lsv_type != SSOURCE and lsv_type != STARGET:
             raise InvalidLSV('Incorrect LSV type %s' % lsv_type)
@@ -85,11 +86,11 @@ class LSV(object):
             if jj[-2:] == 'e0':
                 continue
             self.junctions.append(junction_list[tlb_junc[jj]])
-
-        self.visual = list()
-        for exp_idx in range(majiq_config.num_experiments):
-            self.visual.append(self.get_visual_lsv(self.junctions, exp_idx))
-        self.visual = np.array(self.visual)
+        del junction_list
+        #self.visual = list()
+        # for exp_idx in range(majiq_config.num_experiments):
+        #     self.visual.append(self.get_visual_lsv(self.junctions, exp_idx))
+        # self.visual = np.array(self.visual)
 
     def get_coordinates(self):
         return self.coords
@@ -202,7 +203,6 @@ class LSV(object):
         return ext_type
 
     def get_visual_lsv(self, junction_list, exp_idx):
-        majiq_config = Config()
         junc_list = []
         junc_l = []
         lsv_exon_list = [self.exon]
@@ -229,7 +229,7 @@ class LSV(object):
                 jtype = 2
             elif jj.annotated and jj.get_read_num(exp_idx) > 0:
                 jtype = 0
-            elif not jj.annotated and jj.get_read_num(exp_idx) > majiq_config.minreads:
+            elif not jj.annotated and jj.get_read_num(exp_idx) > 0:
                 jtype = 1
             else:
                 jtype = 1
@@ -326,72 +326,127 @@ class LSV(object):
 
         return res
 
-    def to_hdf5(self, hdf5grp, lsv_idx, exp_idx, fitfunc_r=1, gc_vfunc=None):
+#     def to_hdf5(self, hdf5grp, lsv_idx, exp_idx, fitfunc_r=1, gc_vfunc=None):
+#         majiq_config = Config()
+#         try:
+#             njunc = len(self.junctions)
+#             cover = np.zeros(shape=(njunc, (majiq_config.readLen - 16) + 1),
+#                              dtype=np.float)
+#
+#             pvalue_limit = 0.0000001
+#             for idx, junc in enumerate(self.junctions):
+#                 if junc.get_index() != -1:
+#                     cover[idx] = junc.get_coverage()[exp_idx]
+#                     if majiq_config.gcnorm and junc.get_gc_content(exp_idx).sum() > 0:
+#                         vals = gc_vfunc(junc.get_gc_content(exp_idx))
+#                         cover[idx] = np.multiply(cover[idx], vals)
+#                     if pvalue_limit >= 0:
+#                         cover[idx] = majiq_norm.mark_stacks_per_junc(cover[idx], fitfunc_r, pvalue_limit)
+#
+# #            if lsv_idx + njunc > majiq_config.nrandom_junctions:
+#             if lsv_idx + njunc > 2:
+#                 shp = hdf5grp[JUNCTIONS_DATASET_NAME].shape
+#                 shp_new = shp[0] + NRANDOM_JUNCTIONS
+#                 hdf5grp[JUNCTIONS_DATASET_NAME].resize((shp_new, shp[1]))
+#
+#             hdf5grp[JUNCTIONS_DATASET_NAME][lsv_idx:lsv_idx+njunc] = cover
+#
+#             h_lsv = hdf5grp.create_group("LSVs/%s" % self.id)
+#             # h_lsv.attrs['coords'] = self.coords
+#             h_lsv.attrs['id'] = self.id
+#             h_lsv.attrs['type'] = self.ext_type
+#             # h_lsv.attrs['coverage'] = hdf5grp[JUNCTIONS_DATASET_NAME].regionref[lsv_idx:lsv_idx + njunc]
+#             h_lsv.attrs['coverage_index'] = (lsv_idx, lsv_idx + njunc)
+#
+#             vh_lsv = h_lsv.create_group('visual')
+#             self.get_visual(exp_idx).to_hdf5(vh_lsv)
+#
+#         except:
+#             print("HDF5 ERROR", self.id, cover.shape, hdf5grp[JUNCTIONS_DATASET_NAME].shape)
+#             raise
+#
+#         return lsv_idx + njunc
+
+    def to_hdf5(self, hdf5grp, gc_vfunc, fitfunc_r, exp, exp_idx):
+
         majiq_config = Config()
-        try:
-            njunc = len(self.junctions)
-            cover = np.zeros(shape=(njunc, (majiq_config.readLen - 16) + 1),
-                             dtype=np.float)
-
-            pvalue_limit = 0.0000001
-            for idx, junc in enumerate(self.junctions):
-                if junc.get_index() != -1:
-                    cover[idx] = junc.get_coverage()[exp_idx]
-                    if majiq_config.gcnorm and junc.get_gc_content(exp_idx).sum() > 0:
-                        vals = gc_vfunc(junc.get_gc_content(exp_idx))
-                        cover[idx] = np.multiply(cover[idx], vals)
-                    if pvalue_limit >= 0:
-                        cover[idx] = majiq_norm.mark_stacks_per_junc(cover[idx], fitfunc_r, pvalue_limit)
-
-#            if lsv_idx + njunc > majiq_config.nrandom_junctions:
-            if lsv_idx + njunc > 2:
-                shp = hdf5grp[JUNCTIONS_DATASET_NAME].shape
-                shp_new = shp[0] + NRANDOM_JUNCTIONS
-                hdf5grp[JUNCTIONS_DATASET_NAME].resize((shp_new, shp[1]))
-
-            hdf5grp[JUNCTIONS_DATASET_NAME][lsv_idx:lsv_idx+njunc] = cover
-
-            h_lsv = hdf5grp.create_group("LSVs/%s" % self.id)
-            # h_lsv.attrs['coords'] = self.coords
-            h_lsv.attrs['id'] = self.id
-            h_lsv.attrs['type'] = self.ext_type
-            # h_lsv.attrs['coverage'] = hdf5grp[JUNCTIONS_DATASET_NAME].regionref[lsv_idx:lsv_idx + njunc]
-            h_lsv.attrs['coverage_index'] = (lsv_idx, lsv_idx + njunc)
-
-            vh_lsv = h_lsv.create_group('visual')
-            self.get_visual(exp_idx).to_hdf5(vh_lsv)
-
-        except:
-            print("HDF5 ERROR", self.id, cover.shape, hdf5grp[JUNCTIONS_DATASET_NAME].shape)
-            raise
-
-        return lsv_idx + njunc
-
-    def to_queue(self, gc_vfunc, fitfunc_r, exp_idx):
-        majiq_config = Config()
-
+        lsv_idx = hdf5grp.attrs['lsv_idx']
         njunc = len(self.junctions)
-        cover = np.zeros(shape=(njunc, (majiq_config.readLen - 16) + 1),
-                         dtype=np.float)
+        cover = np.zeros(shape=(njunc, (majiq_config.readLen - 16) + 1), dtype=np.float)
 
         pvalue_limit = majiq_config.markstacks
         for idx, junc in enumerate(self.junctions):
             if junc.get_index() != -1:
-                cover[idx] = junc.get_coverage()[exp_idx]
-                if majiq_config.gcnorm and junc.get_gc_content(exp_idx).sum() > 0:
-                    vals = gc_vfunc(junc.get_gc_content(exp_idx))
-                    cover[idx] = np.multiply(cover[idx], vals)
+                cover[idx] = exp[JUNCTIONS_DATASET_NAME][junc.idx]
+                if majiq_config.gcnorm:
+                    mm = exp[JUNCTIONS_GC_CONTENT][junc.idx].sum()
+                    if mm > 0:
+                        vals = gc_vfunc(mm)
+                        cover[idx] = np.multiply(cover[idx], vals)
                 if pvalue_limit >= 0:
                     cover[idx] = majiq_norm.mark_stacks_per_junc(cover[idx], fitfunc_r, pvalue_limit)
 
-        m_lsv, var_lsv, s_lsv = sample_from_junctions(junction_list=cover,
-                                                      m=majiq_config.m,
-                                                      k=majiq_config.k,
-                                                      fitted_one_over_r=fitfunc_r,
-                                                      debug=majiq_config.debug)
+        s_lsv = sample_from_junctions(junction_list=cover,
+                                      m=majiq_config.m,
+                                      k=majiq_config.k,
+                                      fitted_one_over_r=fitfunc_r,
+                                      debug=majiq_config.debug)
         lsv_trs = np.array([cover.sum(axis=1), np.count_nonzero(cover, axis=1)]).T
+
+        njunc = s_lsv.shape[0]
+        if lsv_idx + njunc > 2:
+            shp = hdf5grp[JUNCTIONS_DATASET_NAME].shape
+            shp_new = shp[0] + 5000
+            hdf5grp[JUNCTIONS_DATASET_NAME].resize((shp_new, shp[1]))
+            hdf5grp['junc_cov'].resize((shp_new, 2))
+
+        hdf5grp[JUNCTIONS_DATASET_NAME][lsv_idx:lsv_idx + njunc] = s_lsv
+        # print('%s::%s' % (vals['junc_attr'], type(vals['junc_attr'])))
+        hdf5grp['junc_cov'][lsv_idx:lsv_idx + njunc] = lsv_trs
+
+        h_lsv = hdf5grp.create_group("LSVs/%s" % self.id)
+        h_lsv.attrs['id'] = self.id
+        h_lsv.attrs['type'] = self.ext_type
+        h_lsv.attrs['coverage'] = [lsv_idx, lsv_idx + njunc]
+        # TODO: CHECK
+        vh_lsv = h_lsv.create_group('visual')
+        #self.get_visual(exp_idx).to_hdf5(h_lsv)
+        self.get_visual_lsv(self.junctions, exp_idx).to_hdf5(vh_lsv)
+
+        # lsv_idx = boots_write(hdf5grp, vals, lsv_idx)
+        hdf5grp.attrs['lsv_idx'] = lsv_idx + njunc
+        hdf5grp.attrs['num_lsvs'] = hdf5grp.attrs['num_lsvs'] + 1
+
+    def to_queue(self, gc_vfunc, fitfunc_r, exp, exp_idx):
+        majiq_config = Config()
+
+        njunc = len(self.junctions)
+        cover = np.zeros(shape=(njunc, (majiq_config.readLen - 16) + 1), dtype=np.float)
+
+        pvalue_limit = majiq_config.markstacks
+        for idx, junc in enumerate(self.junctions):
+            if junc.get_index() != -1:
+                cover[idx] = exp[JUNCTIONS_DATASET_NAME][junc.idx]
+                if majiq_config.gcnorm:
+                    mm = exp[JUNCTIONS_GC_CONTENT][junc.idx].sum()
+                    if mm > 0:
+                        vals = gc_vfunc(mm)
+                        cover[idx] = np.multiply(cover[idx], vals)
+                if pvalue_limit >= 0:
+                    cover[idx] = majiq_norm.mark_stacks_per_junc(cover[idx], fitfunc_r, pvalue_limit)
+
+        # m_lsv, var_lsv, s_lsv=sample_from_junctions(junction_list=cover,
+        s_lsv = sample_from_junctions(junction_list=cover,
+                                      m=majiq_config.m,
+                                      k=majiq_config.k,
+                                      fitted_one_over_r=fitfunc_r,
+                                      debug=majiq_config.debug)
+        lsv_trs = np.array([cover.sum(axis=1), np.count_nonzero(cover, axis=1)]).T
+        # print(lsv_trs, np.count_nonzero(cover, axis=1), np.count_nonzero(cover, axis=0))
+        #
+        # print(cover)
         vals = {'samples': s_lsv, 'id': self.id, 'type': self.ext_type, 'junc_attr': lsv_trs,
-                'lsv_graphic': self.get_visual(exp_idx)}
+                'lsv_graphic': self.get_visual_lsv(self.junctions, exp_idx)}
         return vals
 
 
@@ -495,6 +550,12 @@ def extract_gff(list_lsv, out_dir):
         dump_bin_file(gtf, fname)
 
     return gtf
+
+
+def new_lsv_definition(exon, jlist, lsv_type):
+    coords = exon.get_coordinates()
+    lsv_id = "%s:%d-%d:%s" % (exon.get_gene().get_id(), coords[0], coords[1], lsv_type)
+    return LSV(exon, lsv_id, jlist, lsv_type)
 
 
 def print_lsv_extype(list_lsv, filename):

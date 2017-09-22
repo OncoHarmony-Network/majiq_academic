@@ -382,7 +382,7 @@ cpdef long rnaseq_intron_retention(object gne, AlignmentFile samfl, int chnk, ob
                 intron_idx = r_start - (ex1_end + 1)
                 # print (intron_idx, r_start, ex1_end)
                 rel_start = int(intron_idx / chunk_len)
-                indx = -1 if rel_start > nchunks else rel_start
+                indx = -1 if rel_start >= nchunks else rel_start
                 # if not bmap[intron_idx]:
                 #     bmap[intron_idx] = True
                 intron_parts[indx] += nreads
@@ -397,7 +397,7 @@ cpdef long rnaseq_intron_retention(object gne, AlignmentFile samfl, int chnk, ob
 
         intron_body_covered = True
 
-        if intron_len > majiq_config.readLen:
+        if intron_len > 2 * (majiq_config.readLen - MIN_BP_OVERLAP):
             for ii in range(nchunks):
                 #num_positions = np.count_nonzero(bmap[index_list[ii][0]:index_list[ii][1]])
                 num_positions = chunk_len
