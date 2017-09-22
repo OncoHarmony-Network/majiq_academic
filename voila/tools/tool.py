@@ -14,6 +14,7 @@ class MissingHelpMessageException(Exception):
 
 class Tool(ABC):
     def __init__(self):
+        # self.imports_modules()
         if not hasattr(self, 'help'):
             raise MissingHelpMessageException(self)
 
@@ -24,6 +25,10 @@ class Tool(ABC):
     @abstractmethod
     def arguments(self):
         pass
+
+    # @abstractmethod
+    # def imports_modules(self):
+    #     pass
 
     def get_parser(self, parent_args=()):
         return argparse.ArgumentParser(add_help=False, parents=parent_args)
