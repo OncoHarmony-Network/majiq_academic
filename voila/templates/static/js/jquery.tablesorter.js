@@ -883,7 +883,7 @@
             return /^\d{4}[\/-]\d{1,2}[\/-]\d{1,2}$/.test(s);
         }, format: function (s) {
             return $.tablesorter.formatFloat((s != "") ? new Date(s.replace(
-                    new RegExp(/-/g), "/")).getTime() : "0");
+                new RegExp(/-/g), "/")).getTime() : "0");
         }, type: "numeric"
     });
 
@@ -1070,7 +1070,8 @@
                  * */
                 var spliceGraphSelector = d3.select(this.parentNode.parentNode).selectAll('.spliceGraphSelector');
                 spliceGraphSelector.on('change', function () {
-                    var parent = this.parentNode.parentNode;
+                    var parent = this.parentNode.parentNode.parentNode;
+                    console.log(parent);
                     var toogleScale = parent.querySelector('.toogleScale');
                     var spliceDiv;
 
