@@ -111,6 +111,7 @@ class Deltapsi(Html, VoilaArgs):
         args = self.args
         summaries_subfolder = self.get_summaries_subfolder()
         metainfo = self.metainfo
+        group_names = metainfo['group_names']
 
         with SpliceGraphs(args.splice_graph, 'r') as sg:
             gene_experiments_list = sg.get_experiments()
@@ -132,7 +133,6 @@ class Deltapsi(Html, VoilaArgs):
                 log.debug('Write page {0}'.format(page_name))
 
                 with open(os.path.join(summaries_subfolder, page_name), 'w') as html:
-
                     for el in summary_template.generate(
                             page_name=page_name,
                             genes_dict=lsv_dict,
@@ -143,7 +143,8 @@ class Deltapsi(Html, VoilaArgs):
                             table_marks=table_marks,
                             prev_page=prev_page,
                             next_page=next_page,
-                            gtf=args.gtf
+                            gtf=args.gtf,
+                            group_names=group_names
                     ):
                         html.write(el)
 
