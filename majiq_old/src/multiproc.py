@@ -52,6 +52,10 @@ def parallel_lsv_child_calculation(func, args, tempdir, name, chunk, store=True)
         majiq_io.dump_bin_file(results, "%s/%s_th%s.%s.pickle" % (tempdir, name, chunk, func.__name__))
 
 
+
+
+
+
 # def pool_process(func, iter_args, nthreads, initializer, init_args,
 #                  input_h5dfp=None, output_h5dfp=None, out_inplace=None, logger=None):
 #     pool = mp.Pool(processes=nthreads, initializer=initializer,

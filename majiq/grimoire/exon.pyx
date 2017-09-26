@@ -1,8 +1,9 @@
 from majiq.src.constants import *
 from majiq.grimoire.junction cimport Junction
+cimport numpy as np
+import numpy as np
 
 cdef class Exon:
-
     def __init__(self, start, end, annot=False):
         self.start = start
         self.end = end
@@ -14,8 +15,29 @@ cdef class Exon:
         self.intron = False
 
 
-class Intron(Exon):
-    pass
+cdef class Intron:
+
+    num_bins = 10
+    def __init__(self, start, end, annot=False):
+
+        self.nchunks = 1 if (end-start) <= MIN_INTRON_LEN else self.num_bins
+        self.start = start
+        self.end = end
+        self.chunk_len = int((end-start) / self.nchunks)
+
+        self.junc1 = None
+        self.junc2 = None
+
+        self.parts = np.zeros(shape=self.nchunks, dtype=float)
+
+    cdef Exon to_exon(self):
+        ex = Exon(self.start, self.end, annot=False)
+        ex.ib.add(self.junc1)
+        ex.ob.add(self.junc2)
+        ex.intron = True
+        return ex
+
+
 
 
 def new_intron_definition():
@@ -24,7 +46,7 @@ def new_intron_definition():
 
 def exon_overlap(dd, st, end):
     for kk, vv in dd.items():
-        if st <= kk[0] and end >= kk[1]:
+        if st <= kk[1] and end >= kk[0]:
             return vv
 
 
@@ -40,17 +62,17 @@ def new_exon_definition(start, end, exon_dict, inbound_j, outbound_j, in_db=Fals
             exon_dict[(start, end)] = ex1
             count = 1
         else:
-            ex1 = Exon(start, EMPTY_COORD, annot=False)
+            ex1 = Exon(start, EMPTY_COORD, annot=in_db)
             exon_dict[(start, start + 2)] = ex1
 
-            ex2 = Exon(EMPTY_COORD, end, annot=False)
+            ex2 = Exon(EMPTY_COORD, end, annot=in_db)
             exon_dict[(end - 10, end)] = ex2
             count = 2
 
     else:
         ex2 = ex1
         if start < (ex1.start - MAX_DENOVO_DIFFERENCE):
-            ex1 = Exon(start, EMPTY_COORD, annot=False)
+            ex1 = Exon(start, EMPTY_COORD, annot=in_db)
             exon_dict[(start, start + 10)] = ex1
             count = 1
         else:
@@ -58,7 +80,7 @@ def new_exon_definition(start, end, exon_dict, inbound_j, outbound_j, in_db=Fals
                 ex1.start = start
 
         if end > (ex2.end + MAX_DENOVO_DIFFERENCE):
-            ex2 = Exon(EMPTY_COORD, end, annot=False)
+            ex2 = Exon(EMPTY_COORD, end, annot=in_db)
             exon_dict[(end - 10, end)] = ex2
             count += 1
         else:
@@ -102,21 +124,21 @@ def detect_exons(dict junction_dict, list exon_list):
         opened = len(opened_exon)
         if jtype:
             if opened > 0:
-                new_exons += new_exon_definition(opened_exon[-1].end, coord, exon_dict, opened_exon[-1], jj)
+                new_exons += new_exon_definition(opened_exon[-1].end, coord, exon_dict, opened_exon[-1], jj, in_db=False)
                 opened_exon.pop()
             elif opened == 0:
                 if first_3prime is None:
                     new_exons += new_exon_definition(jj.start-10, jj.start, exon_dict, None, jj)
                     #new_exons += __half_exon('5prime', jj)
                 else:
-                    new_exons += new_exon_definition(first_3prime.end, coord, exon_dict, first_3prime, jj)
+                    new_exons += new_exon_definition(first_3prime.end, coord, exon_dict, first_3prime, jj, in_db=False)
             last_5prime = jj
             # end elif opened
         else:
             if opened > 0:
                 if last_5prime is not None:
                     for jj2 in opened_exon:
-                        new_exons += new_exon_definition(jj2.end, last_5prime.start, exon_dict, jj2, last_5prime)
+                        new_exons += new_exon_definition(jj2.end, last_5prime.start, exon_dict, jj2, last_5prime, in_db=False)
                     last_5prime = None
                     opened_exon = []
                     first_3prime = jj
@@ -126,7 +148,7 @@ def detect_exons(dict junction_dict, list exon_list):
             opened_exon.append(jj)
 
     for jj in opened_exon:
-        new_exons += new_exon_definition(jj.end, jj.end+10, exon_dict, jj, None)
+        new_exons += new_exon_definition(jj.end, jj.end+10, exon_dict, jj, None, in_db=False)
 
     exon_list = sorted(exon_dict.values(), key=lambda ex: ex.start)
     return new_exons

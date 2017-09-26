@@ -70,7 +70,7 @@ def main():
                              help='psianddelta GC content normalization [Default: %(default)s]')
 
     # TODO: TEMPORARY
-    buildparser.add_argument('--disable_ir', dest="ir", action='store_false', default=False,
+    buildparser.add_argument('--disable_ir', dest="ir", action='store_false', default=True,
                              help='Disable intron retention detection [Default: %(default)s]')
 
     buildparser.add_argument('--gff_output', dest='gff_output', default="lsvs.gff", action="store",

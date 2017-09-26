@@ -11,7 +11,7 @@ from majiq.grimoire.exon cimport Exon
 from majiq.grimoire.exon import Exon
 from majiq.src.gff import parse_gff3
 from majiq.src.constants import *
-from majiq.src.io_bam cimport read_juncs_from_bam
+# from majiq.src.io_bam cimport read_juncs_from_bam, find_introns
 
 # import majiq.src.utils as majiq_utils
 
@@ -84,72 +84,13 @@ from majiq.src.io_bam cimport read_juncs_from_bam
 #             # yield GFFRecord(**normalized_info)
 
 
-
-
-cdef inline int __read_STAR_junc_file(str filename, set in_juncs, list out_jj, dict out_dd) except -1:
-
-    with open(filename, 'r') as fp:
-        for ln in fp.readlines():
-            tab = ln.strip().split()
-            if (tab[0], tab[1], tab[2]) in in_juncs:
-                continue
-            try:
-                out_dd[(tab[0], tab[1], tab[2])] += tab[6]
-            except KeyError:
-                out_dd[(tab[0], tab[1], tab[2])] = tab[6]
-            out_jj.append((tab[0], tab[1], tab[2], tab[3]))
-
-
-cdef int _read_juncs(db_f, list file_list, set in_juncs, dict all_genes, int min_denovo) except -1:
-
-    cdef str ln, fname, chrom='', jjid
-    cdef list tab
-    cdef list jj_list = []
-    cdef dict jj_dd = {}
-    cdef tuple jj
-    cdef int gidx=0, ngenes=0
-    cdef file fp
-
-    for bb, fname in file_list:
-        if bb:
-            __read_STAR_junc_file(fname, in_juncs, jj_list, jj_dd)
-        else:
-            read_juncs_from_bam(fname, in_juncs, jj_list, jj_dd)
-
-    jj_list.sort(key=lambda xx: (xx[0], xx[1], xx[2]))
-    jj_dd = {kk: float(vv)/len(file_list) for kk, vv in jj_dd.items()}
-
-    for jj in jj_list:
-        if jj_dd[(jj[0], jj[1], jj[2])] < min_denovo:
-            continue
-
-        if chrom != jj[0]:
-            chrom = jj[0]
-            ngenes = len(all_genes[chrom])
-
-        while gidx < ngenes :
-            gstart, gend, gid = all_genes[chrom][gidx]
-            if gend < jj[1]:
-                gidx += 1
-                continue
-            if gstart > jj[2]:
-                break
-
-            if gstart<=jj[1] and gend>= jj[2]:
-                jjid = '%s/junctions/%s-%s' % (gid, jj[1], jj[2])
-                if jjid not in db_f:
-                    _dump_junctions(db_f, gid, jj[1], jj[2], None, annot=False)
-                break
-
-
 cdef list accepted_transcripts = ['mRNA', 'transcript']
 cdef str transcript_id_keys = 'ID'
 cdef list gene_name_keys = ['Name', 'gene_name']
 cdef list gene_id_keys = ['ID', 'gene_id']
 
 
-cdef int _read_gff(str filename, str outDir, dict exp_groups, bint denovo, int min_denovo,
-                   object logging=None) except -1:
+cdef int _read_gff(str filename, str outDir, object logging=None) except -1:
     """
     :param filename: GFF input filename
     :param list_of_genes: List of genes that will be updated with all the gene_id detected on the gff file
@@ -159,12 +100,13 @@ cdef int _read_gff(str filename, str outDir, dict exp_groups, bint denovo, int m
     cdef dict all_genes = {}
     cdef dict gene_id_dict = {}
     cdef dict trcpt_id_dict = {}
-    cdef list exon_list = []
+    cdef dict exon_dict = {}
 
     cdef str chrom, name, strand
     cdef int start, end
     cdef bint bb
     cdef list ind_list
+    # cdef set in_juncs = set()
 
     #with h5py.File(get_build_temp_db_filename(outDir), "w") as db_f:
     db_f = h5py.File(get_build_temp_db_filename(outDir), "w")
@@ -196,7 +138,7 @@ cdef int _read_gff(str filename, str outDir, dict exp_groups, bint denovo, int m
                              "%s" % gene_id_keys)
 
             _dump_gene(db_f, gene_id, gene_name, chrom, strand, start, end)
-
+            exon_dict[gene_id] = []
             # gn = Gene(gene_id, gene_name, chrom, strand, start, end)
             #exist_overlapping_gene(all_genes[chrom], strand, start, end)
 
@@ -220,7 +162,7 @@ cdef int _read_gff(str filename, str outDir, dict exp_groups, bint denovo, int m
 
             try:
                 gn_id = gene_id_dict[parent]
-                trcpt_id_dict[record.attributes['ID']] = [gn_id, 0]
+                trcpt_id_dict[record.attributes['ID']] = [gn_id, FIRST_LAST_JUNC]
 
             except KeyError:
                 logging.info("Error, incorrect gff. mRNA %s doesn't have valid gene %s" % (transcript_name, parent))
@@ -230,27 +172,63 @@ cdef int _read_gff(str filename, str outDir, dict exp_groups, bint denovo, int m
             parent_tx_id = record.attributes['Parent']
             try:
                 gn_id, last_ss = trcpt_id_dict[parent_tx_id]
-                ex_tuple = (start, (start, end), False)
-                exon_list.append(ex_tuple)
-                ex_tuple = (end, (start, end), True)
-                exon_list.append(ex_tuple)
-                _dump_exon(db_f, gn_id, start, end)
+                exon_dict[gn_id].append((start, True))
+                exon_dict[gn_id].append((end, False))
 
-                if last_ss > 0:
-                    _dump_junctions(db_f, gn_id, last_ss, start, parent_tx_id, annot=True)
+                #in_juncs.add((chrom, last_ss, start))
+                _dump_junctions(db_f, gn_id, last_ss, start, parent_tx_id, annot=True)
                 trcpt_id_dict[parent_tx_id][1] = end
 
             except KeyError:
                 logging.WARNING("Error, incorrect gff. exon at line %s "
                                 "doesn't have valid mRNA %s" % (0, parent_tx_id))
 
-    if denovo:
+    for parent_tx_id, (gn_id, last_ss) in trcpt_id_dict.items():
+        _dump_junctions(db_f, gn_id, last_ss, FIRST_LAST_JUNC, parent_tx_id, annot=True)
 
-        for name, ind_list in exp_groups.items():
-            _read_juncs(db_f, ind_list, all_genes, min_denovo)
+    merge_exons(db_f, exon_dict)
 
     db_f.close()
     del all_genes
+
+
+cdef int merge_exons(db_f, dict exon_dict) except -1:
+    cdef list ex_list
+    cdef str gne_id
+    cdef tuple x
+    cdef int ex_start, ex_end, nopen, coord
+    cdef bint is_start
+
+
+    for gne_id, ex_list in exon_dict.items():
+        ex_list.sort(key=lambda x:x[0])
+        ex_start = -1
+        ex_end = -1
+        nopen = 0
+        for coord, is_start in ex_list:
+            # print(coord, is_start, nopen, ex_start, ex_end)
+            if is_start:
+                if nopen <= 0 and ex_end != -1:
+                    # print("NEW EXON, ", gne_id, ex_start, ex_end)
+                    _dump_exon(db_f, gne_id, ex_start, ex_end)
+                    ex_end = -1
+                    nopen = 0
+                    ex_start = coord
+
+                elif nopen > 0 and ex_end != -1:
+                    # print("NEW INTRON, ", gne_id, ex_end+1, coord-1)
+                    _dump_intron(db_f, gne_id, ex_end+1, coord-1, annot=True)
+                    ex_end = -1
+                    nopen = 0
+                    ex_start = coord
+
+                ex_start = coord if ex_start == -1 or coord < ex_start else ex_start
+                nopen += 1
+
+            else:
+                nopen -= 1
+                ex_end = coord if coord > ex_end else ex_end
+
 
 #######
 # HDF5 API
@@ -265,9 +243,6 @@ cdef int _dump_junctions(db_f, str gne_id, int start, int end, str transcript_id
         h_jnc.attrs['end'] = end
         h_jnc.attrs['annotated'] = annot
         #h_jnc.attrs['transcript_id_list'] = [transcript_id.encode('utf8')]
-    else:
-        h_jnc = db_f[jid]
-        #h_jnc.attrs['transcript_id_list'].append(transcript_id.encode('utf8'))
 
 cdef int _dump_exon(db_f, str gne_id, int start, int end) except -1:
     jid = '%s/exons/%s-%s' % (gne_id, start, end)
@@ -288,6 +263,15 @@ cdef int _dump_gene(db_f, str gne_id, str gne_name, str chrom, str strand, int s
     h_gen.attrs['end'] = end
 
 
+cdef int _dump_intron(db_f, str gne_id, int start, int end, bint annot=False) except -1:
+    jid = '%s/ir/%s-%s' % (gne_id, start, end)
+    if jid not in db_f:
+        h_jnc = db_f.create_group(jid)
+        h_jnc.attrs['start'] = start
+        h_jnc.attrs['end'] = end
+        h_jnc.attrs['annotated'] = annot
+
+
 def junction_to_tmp(gne_id, Junction junc, object hdf5grps):
     cdef str jid = "%s-%s" % (junc.start, junc.end)
     h_jnc = hdf5grps.create_group('%s/%s' % (gne_id, jid))
@@ -301,6 +285,13 @@ def junction_to_tmp(gne_id, Junction junc, object hdf5grps):
 ####
 # API
 ##
+
+def dump_junctions(db_f, str gne_id, int start, int end, str transcript_id, bint annot=False):
+    _dump_junctions(db_f, gne_id, start, end, transcript_id, annot=annot)
+
+def dump_intron(db_f, str gne_id, int start, int end, bint annot=False):
+    _dump_intron(db_f, gne_id, start, end, annot=annot)
+
 cpdef int init_majiq_file(str filename, str out_dir, str genome, int msamples):
 
     with h5py.File('%s/%s.majiq' % (out_dir, filename), 'w') as f:
@@ -323,6 +314,7 @@ cpdef retrieve_db_genes(str out_dir):
             dd[ii] = dict(db_f[ii].attrs)
     return dd
 
+
 cpdef list get_list_of_genes(str out_dir):
     cdef list list_of_genes
     with h5py.File(get_build_temp_db_filename(out_dir), 'r') as db_f:
@@ -330,10 +322,9 @@ cpdef list get_list_of_genes(str out_dir):
     return list_of_genes
 
 
-cpdef int parse_annot(str filename, str out_dir, dict exp_groups, bint denovo, int min_denovo, object logging=None):
+cpdef int parse_annot(str filename, str out_dir, object logging=None):
 
-    _read_gff(filename=filename, outDir=out_dir, exp_groups=exp_groups, denovo=denovo, min_denovo=min_denovo,
-              logging=logging)
+    _read_gff(filename=filename, outDir=out_dir, logging=logging)
 
 
 cpdef np.ndarray get_covered_junctions(str gne_id, dict dict_junctions, list list_exons, list fitfunc_r, list sam_list,
@@ -376,25 +367,27 @@ cpdef np.ndarray get_covered_junctions(str gne_id, dict dict_junctions, list lis
                 dict_junctions[tuple([int(xx) for xx in jjid.split('-')])].index = idx
 
     del dd_jj
-
     return junc_mtrx
 
 
-cpdef int retrieve_db_info(str gne_id, str out_dir, list list_exons, dict dict_junctions):
+def retrieve_db_info(str gne_id, str out_dir, list list_exons, dict dict_junctions):
 
     cdef dict j_attrs, ex_attrs
     cdef Junction junc
     cdef str xx
     cdef object db_f
+    cdef int njuncs = 0
 
     with h5py.File(get_build_temp_db_filename(out_dir), 'r') as db_f:
         if dict_junctions is not None:
             for xx in db_f['%s/junctions' % gne_id]:
                 j_attrs = dict(db_f['%s/junctions/%s' % (gne_id, xx)].attrs)
+                njuncs +=1
                 dict_junctions[(j_attrs['start'], j_attrs['end'])] = Junction(j_attrs['start'], j_attrs['end'],
-                                                                              gne_id, -1, annot=True)
+                                                                              gne_id, -1, annot=j_attrs['annotated'])
 
         for xx in db_f['%s/exons' % gne_id]:
             ex_attrs = dict(db_f['%s/exons/%s' % (gne_id, xx)].attrs)
             list_exons.append(Exon(ex_attrs['start'], ex_attrs['end'], annot=True))
         list_exons.sort(key=lambda xx: (xx.start, xx.end))
+    return njuncs

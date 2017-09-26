@@ -38,10 +38,10 @@ class LSV():
         # self.get_visual_lsv(self.junctions, exp_idx).to_hdf5(vh_lsv)
         return lsv_idx + njunc
 
-    def sample_lsvs(self, exp_idx, junc_mtrx, fitfunc_r, majiq_config):
+    def sample_lsvs(self, junc_mtrx, fitfunc_r, majiq_config):
 
         ex_index = sorted([xx.index for xx in self.junctions])
-        cover = junc_mtrx[exp_idx, ex_index]
+        cover = junc_mtrx[ex_index]
 
         s_lsv = sample_from_junctions(junction_list=cover,
                                       m=majiq_config.m,
@@ -129,7 +129,69 @@ class LSV():
         hdf5grp.attrs['lsv_idx'] = lsv_idx + njunc
 
 
-def detect_lsvs(list_exons, junc_mtrx, fitfunc_r, locks, gid, gstrand, majiq_config):
+def detect_lsvs(list_exons, junc_mtrx, fitfunc_r, gid, gstrand, majiq_config, outf):
+
+    count = 0
+    sum_trx = junc_mtrx.sum(axis=1)
+    pos_trx = np.count_nonzero(junc_mtrx, axis=1)
+
+    lsv_list = [[], []]
+
+    for ex in list_exons:
+        for ii, jjlist in enumerate([ex.ib, ex.ob]):
+            if len(jjlist) < 2:
+                continue
+            ex_index = sorted([xx.index for xx in jjlist])
+            ex_mtrx_s = sum_trx[ex_index]
+            ex_mtrx_p = pos_trx[ex_index]
+
+            if np.any(np.logical_and(ex_mtrx_s > majiq_config.minpos, ex_mtrx_p > majiq_config.minreads)):
+                try:
+                    lsv_list[ii].append(LSV(gid, gstrand, ex, ss=(ii == 1)))
+                except InvalidLSV:
+                    continue
+
+    inlist = []
+    for ss in lsv_list[0]:
+        for st in lsv_list[1]:
+            if set(ss.junctions).issubset(set(st.junctions)) and not set(ss.junctions).issuperset(set(st.junctions)):
+                break
+        else:
+            inlist.append(ss)
+    for st in lsv_list[1]:
+        for ss in lsv_list[0]:
+            if set(st.junctions).issubset(set(ss.junctions)):
+                break
+        else:
+            inlist.append(st)
+
+    np_jjlist = []
+    attrs_list = []
+    for lsvobj in inlist:
+        b, c = lsvobj.sample_lsvs(junc_mtrx, fitfunc_r=fitfunc_r, majiq_config=majiq_config)
+
+        np_jjlist.append(b)
+        attrs_list.append(c)
+
+    if len(np_jjlist) > 0:
+        mtrx = np.concatenate(np_jjlist, axis=0)
+        mtrx_attrs = np.concatenate(attrs_list, axis=0)
+
+        lsv_idx = outf.attrs['lsv_idx']
+        for lsv in inlist:
+            lsv_idx = lsv.to_hdf5(outf, lsv_idx)
+        LSV.junc_cov_to_hdf5(outf, mtrx, mtrx_attrs)
+        outf.attrs['num_lsvs'] = outf.attrs['num_lsvs'] + len(inlist)
+        count += len(inlist)
+
+    return count
+
+
+
+
+
+
+def detect_lsvs2(list_exons, junc_mtrx, fitfunc_r, locks, gid, gstrand, majiq_config):
 
     count = 0
 

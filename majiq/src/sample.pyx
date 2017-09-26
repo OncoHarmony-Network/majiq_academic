@@ -53,10 +53,6 @@ cpdef np.ndarray sample_from_junctions(np.ndarray junction_list, int m, int k, f
     cdef int i
 
     for i, junction in enumerate(junction_list):
-        if i % 100 == 0 and debug:
-            print("junction %s..." % i)
-            sys.stdout.flush()
-
         junction = junction[junction > 0]
         if np.count_nonzero(junction) > 0:
             npos_mult = np.count_nonzero(junction)

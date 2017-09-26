@@ -76,33 +76,39 @@ class Config(object):
             #self.simplify = self.simplify is not None
 
             exps = Config.config_section_map(config, "experiments")
+            self.juncfile_list = {}
             for exp_idx, lstnames in exps.items():
                 self.tissue_repl[exp_idx] = []
+                self.juncfile_list[exp_idx] = []
                 elist = lstnames.split(',')
                 for exp in elist:
                     self.exp_list.append(exp)
                     self.tissue_repl[exp_idx].append(count)
+
                     count += 1
 
             self.num_experiments = len(self.exp_list)
 
             self.samfile_name_list = []
             self.sam_list = []
-            self.juncfile_list = []
-            for exp_idx, exp in enumerate(self.exp_list):
-                samfile = "%s/%s.bam" % (self.sam_dir, exp)
-                if not os.path.exists(samfile):
-                    raise RuntimeError("Skipping %s.... not found" % samfile)
-                baifile = "%s/%s.bam.bai" % (self.sam_dir, exp)
-                if not os.path.exists(baifile):
-                    raise RuntimeError("Skipping %s.... not found ( index file for bam file is required)" % baifile)
-                self.sam_list.append(exp)
 
-                juncfile = "%s/%s.sjdb" % (self.sam_dir, exp)
-                if not os.path.exists(juncfile):
-                    self.juncfile_list.append((False, samfile))
-                else:
-                    self.juncfile_list.append((True, juncfile))
+            for name, ind_list in self.tissue_repl.items():
+                for exp_idx in ind_list:
+                    exp = self.exp_list[exp_idx]
+                # for exp_idx, exp in enumerate(self.exp_list):
+                    samfile = "%s/%s.bam" % (self.sam_dir, exp)
+                    if not os.path.exists(samfile):
+                        raise RuntimeError("Skipping %s.... not found" % samfile)
+                    baifile = "%s/%s.bam.bai" % (self.sam_dir, exp)
+                    if not os.path.exists(baifile):
+                        raise RuntimeError("Skipping %s.... not found ( index file for bam file is required)" % baifile)
+                    self.sam_list.append(exp)
+
+                    juncfile = "%s/%s.sjdb" % (self.sam_dir, exp)
+                    if not os.path.exists(juncfile):
+                        self.juncfile_list[name].append((False, samfile))
+                    else:
+                        self.juncfile_list[name].append((True, juncfile))
             return
 
         def __str__(self):

@@ -92,7 +92,7 @@ def main():
                              help='Use only rna detected junction in order to detect LSV. If an exon has only one '
                                   'junction with coverage, it is not going to be detected as an LSV. '
                                   '[Default: %(default)s]')
-    buildparser.add_argument('--non_denovo', default=False, action='store_true',
+    buildparser.add_argument('--non_denovo', dest='denovo', default=True, action='store_false',
                              help='Avoid denovo detection of junction, splicesites and exons. This will speedup the '
                                   'execution but reduce the number of LSVs detected. [Default: %(default)s]')
 

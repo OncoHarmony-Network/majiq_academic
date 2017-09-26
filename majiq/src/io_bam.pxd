@@ -1,1 +1,2 @@
-cdef inline int read_juncs_from_bam(str filename, set in_juncs, list out_jj, dict out_dd)
+# cdef int read_juncs(list file_list, set in_juncs, dict all_genes, int min_denovo) except -1
+# cdef int find_introns(str filename, dict list_introns, float intron_threshold, int group_indx) except -1
