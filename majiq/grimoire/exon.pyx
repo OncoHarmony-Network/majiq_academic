@@ -27,7 +27,7 @@ cdef class Intron:
 
         self.junc1 = None
         self.junc2 = None
-
+        self.annot = annot
         self.parts = np.zeros(shape=self.nchunks, dtype=float)
 
     cdef Exon to_exon(self):

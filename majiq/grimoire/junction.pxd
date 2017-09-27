@@ -6,7 +6,7 @@ cdef class Junction:
     cdef str gene_id
     cdef public int index
 
-    cdef int nreads
+    cdef public int nreads
     cdef public object acceptor
     cdef public object donor
     cdef public bint annot

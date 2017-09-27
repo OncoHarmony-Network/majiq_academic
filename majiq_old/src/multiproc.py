@@ -52,24 +52,6 @@ def parallel_lsv_child_calculation(func, args, tempdir, name, chunk, store=True)
         majiq_io.dump_bin_file(results, "%s/%s_th%s.%s.pickle" % (tempdir, name, chunk, func.__name__))
 
 
-
-
-
-
-# def pool_process(func, iter_args, nthreads, initializer, init_args,
-#                  input_h5dfp=None, output_h5dfp=None, out_inplace=None, logger=None):
-#     pool = mp.Pool(processes=nthreads, initializer=initializer,
-#                    initargs=init_args,
-#                    maxtasksperchild=1)
-#     lchnksize = max(len(iter_args) / nthreads, 1) + 1
-#     [xx.acquire() for xx in lock_arr]
-#     pool.map_async(func, majiq_utils.chunks2(iter_args, lchnksize, extra=range(nthreads)))
-#     pool.close()
-#     queue_manager(input_h5dfp=input_h5dfp, output_h5dfp=output_h5dfp, lock_array=lock_arr, result_queue=q,
-#                   num_chunks=nthreads, out_inplace=out_inplace,
-#                   logger=logger)
-
-
 class QueueMessage:
 
     def __init__(self, msg_type, value, chunk):
@@ -95,7 +77,7 @@ def process_conf(func, pipeline):
     process_conf.func = func
 
 
-def queue_manager(input_h5dfp, output_h5dfp, lock_array, result_queue, num_chunks, meta_info=None, num_exp=0,
+def queue_manager(input_h5dfp, output_h5dfp, lock_array, result_queue, num_chunks, mtrx, meta_info=None, num_exp=0,
                   out_inplace=None, logger=None, list_of_lsv_graphics={}):
 
     nthr_count = 0
@@ -109,9 +91,10 @@ def queue_manager(input_h5dfp, output_h5dfp, lock_array, result_queue, num_chunk
 
             val = result_queue.get(block=True, timeout=10)
             sys.stdout.flush()
-            if val.get_type() == QUEUE_MESSAGE_BUILD_LSV:
-                sys.stdout.flush()
-                majiq_io.add_lsv_to_bootstrapfile(output_h5dfp[val.get_value()[1]], val.get_value()[0])
+            if val.get_type() == QUEUE_MESSAGE_SPLICEGRAPH:
+                pass
+                # sys.stdout.flush()
+                # majiq_io.add_lsv_to_bootstrapfile(output_h5dfp[val.get_value()[1]], val.get_value()[0])
 
             elif val.get_type() == QUEUE_MESSAGE_PSI_RESULT:
                 lsv_graph = list_of_lsv_graphics[val.get_value()[-1]]

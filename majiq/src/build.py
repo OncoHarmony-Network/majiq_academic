@@ -19,48 +19,13 @@ from majiq.src.basic_pipeline import BasicPipeline, pipeline_run
 from majiq.src.config import Config
 from majiq.src.constants import *
 from majiq.src.polyfitnb import fit_nb
+from majiq.src.voila_wrapper import gene_to_splicegraph, init_splicegraph
 import datetime
 
 
 def build(args):
     pipeline_run(Builder(args))
 
-
-# def merging_files(list_of_genes, chnk, process_conf, logger):
-#     majiq_config = Config()
-#     total = len(list_of_genes)
-#     logger.debug("[%s] List of genes" % ",".join(list_of_genes))
-#     for gne_idx, gne_id in enumerate(list_of_genes):
-#         list_exons = []
-#         dict_junctions = {}
-#         fitfunc_r = []
-#         if gne_idx % 50 == 0:
-#             logger.info("[%s] Progress %s/%s" % (chnk, gne_idx, total))
-#
-#         loop_id = '%s - %s' % (chnk, gne_id)
-#         logger.debug("[%s] Retrieving gene" % loop_id)
-#
-#         """Retrieve annot junctions from exon """
-#         majiq_io.retrieve_db_info(gne_id, majiq_config.outDir, list_exons, dict_junctions)
-#
-#         """Retrieve quantifications and denovo juncs"""
-#         junc_mtrx = majiq_io.get_covered_junctions(gne_id, dict_junctions, list_exons, fitfunc_r, majiq_config.sam_list,
-#                                                    majiq_config.readLen, majiq_config.outDir)
-#
-#         """detect exons"""
-#         detect_exons(dict_junctions, list_exons)
-#
-#         """IR adaptation"""
-#
-#         if len(list_exons) > 1 and majiq_config.ir:
-#             if majiq_config.ir:
-#                 logger.debug("[%s] Detecting intron retention events" % gne_id)
-#                 io_bam.rnaseq_intron_retention(gene_obj, list_exons[gne_id], majiq_config.sam_list, junc_mtrx,
-#                                                out_junctions=junc_list, logging=logger)
-#
-#         detect_lsvs(list_exons, junc_mtrx, fitfunc_r, process_conf.lock, gne_id, '+', majiq_config)
-#
-#         del list_exons
 
 def parse_denovo_elements(exp_groups, chnk, process_conf, logger):
 
@@ -76,7 +41,8 @@ def parse_denovo_elements(exp_groups, chnk, process_conf, logger):
     for gne_id, gene_obj in dict_of_genes.items():
         list_exons[gne_id] = []
         dict_junctions[gne_id] = {}
-        majiq_io.retrieve_db_info(gne_id, majiq_config.outDir, list_exons[gne_id], dict_junctions[gne_id])
+        majiq_io.retrieve_db_info(gne_id, majiq_config.outDir, list_exons[gne_id],
+                                  dict_junctions[gne_id], None)
         try:
             all_genes[gene_obj['chromosome']].append((gene_obj['start'], gene_obj['end'], gne_id))
         except KeyError:
@@ -101,7 +67,6 @@ def parse_denovo_elements(exp_groups, chnk, process_conf, logger):
                                      for id_ex, ex in enumerate(list_exons[gne_id][:-1])})
 
             for gidx, (name, ind_list) in enumerate(exp_groups.items()):
-
                 for bb, filename in ind_list:
                     print(filename)
                     find_introns(filename, list_introns, majiq_config.min_intronic_cov, gidx)
@@ -113,7 +78,10 @@ def parse_denovo_elements(exp_groups, chnk, process_conf, logger):
                         majiq_io.dump_intron(db_f, info[0], info[3], info[4], annot=False)
                         # qm = QueueMessage(QUEUE_MESSAGE_BUILD_INTRON, info, 0)
                         # process_conf.queue.put(qm, block=True)
+
         db_f.close()
+
+    gene_to_splicegraph(dict_of_genes, dict_junctions, list_exons, majiq_config, None)
 
 
 def parsing_files(sam_file_list, chnk, process_conf, logger):
@@ -124,11 +92,15 @@ def parsing_files(sam_file_list, chnk, process_conf, logger):
     ngenes = len(dict_of_genes)
     list_exons = {}
     dict_junctions = {}
+    list_introns = {}
 
     for gne_id, gene_obj in dict_of_genes.items():
         list_exons[gne_id] = []
         dict_junctions[gne_id] = {}
-        majiq_io.retrieve_db_info(gne_id, majiq_config.outDir, list_exons[gne_id], dict_junctions[gne_id])
+        list_introns[gne_id] = []
+        majiq_io.retrieve_db_info(gne_id, majiq_config.outDir, list_exons[gne_id],
+                                  dict_junctions[gne_id],
+                                  list_introns[gne_id])
         detect_exons(dict_junctions[gne_id], list_exons[gne_id])
 
     for sam_file in sam_file_list:
@@ -146,7 +118,8 @@ def parsing_files(sam_file_list, chnk, process_conf, logger):
 
             logger.debug("[%s] Reading BAM files" % gne_id)
             gene_reads = majiq_io_bam.read_sam_or_bam(gene_obj, samfl, junc_mtrx, dict_junctions[gne_id],
-                                                list_exons[gne_id], info_msg=loop_id, logging=logger)
+                                                      list_exons[gne_id], list_introns[gne_id],
+                                                      info_msg=loop_id, logging=logger)
             gene_obj['nreads'] = gene_reads
             if gene_reads == 0:
                 continue
@@ -183,7 +156,8 @@ def parsing_files(sam_file_list, chnk, process_conf, logger):
                 if gene_obj['nreads'] == 0:
                     continue
 
-                detect_lsvs(list_exons[gne_id], junc_mtrx, fitfunc_r, gne_id, gene_obj['strand'], majiq_config, out_f)
+                detect_lsvs(list_exons[gne_id], junc_mtrx, fitfunc_r, gne_id, gene_obj['chromosome'],
+                            gene_obj['strand'], majiq_config, out_f)
 
                 for jj in dict_junctions[gne_id].values():
                     jj.index = -1
@@ -244,12 +218,12 @@ class Builder(BasicPipeline):
         #                     majiq_multi.chunks(majiq_config.sam_list, lchnksize, range(self.nthreads)))
         # pool.close()
         # pool.join()
-        parse_denovo_elements(majiq_config.juncfile_list, 0, None, logger)
-
-
-        logger.info("Parsing seq files")
 
         init_splicegraph(get_builder_splicegraph_filename(majiq_config.outDir))
+
+        parse_denovo_elements(majiq_config.juncfile_list, 0, None, logger)
+
+        logger.info("Parsing seq files")
 
         if self.nthreads > 1:
             pool = mp.Pool(processes=self.nthreads,

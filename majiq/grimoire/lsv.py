@@ -2,6 +2,12 @@ import numpy as np
 from majiq.src.constants import *
 import h5py
 from majiq.src.sample import sample_from_junctions
+import collections
+from voila.constants import *
+from voila.splice_graphics import ExonGraphic, LsvGraphic, JunctionGraphic
+
+quant_lsv = collections.namedtuple('quant_lsv', 'id type coverage')
+
 
 class InvalidLSV(Exception):
     def __init__(self, msg):
@@ -13,7 +19,7 @@ class InvalidLSV(Exception):
 
 class LSV():
 
-    def __init__(self, gene_id, gene_strand, ex, ss):
+    def __init__(self, gene_id, gene_chromosome, gene_strand, ex, ss):
 
         self.junctions = []
         if ss:
@@ -21,11 +27,106 @@ class LSV():
         else:
             jncs = list(ex.ib)
 
+        self.exon = ex
         self.type = self.set_type(jncs, ex, gene_strand, ss)
+        self.gene_id = gene_id
+        self.chromosome = gene_chromosome
+        self.strand = gene_strand
+
         self.id = "%s:%s:%s-%s" % (gene_id, self.type[0], ex.start, ex.end)
         self.junctions.sort(key=lambda jj: (jj.start, jj.end))
         if len(self.junctions) < 2:
             raise InvalidLSV("not enougth junctions")
+
+    def get_visual_lsv(self):
+        junc_list = []
+        junc_l = []
+        lsv_exon_list = [self.exon]
+        alt_empty_ends = []
+        alt_empty_starts = []
+
+        for jj in self.junctions:
+            if jj.start == FIRST_LAST_JUNC:
+                alt_empty_starts.append(jj.end)
+                continue
+            if jj.end == FIRST_LAST_JUNC:
+                alt_empty_ends.append(jj.start)
+                continue
+
+            if jj.acceptor != self.exon:
+                lsv_exon_list.append(jj.acceptor)
+            if jj.donor != self.exon:
+                lsv_exon_list.append(jj.donor)
+
+            if jj.annot and jj.nreads == 0:
+                jtype = JUNCTION_TYPE_DB
+            elif jj.annot and jj.nreads > 0:
+                jtype = JUNCTION_TYPE_DB_RNASEQ
+            else:
+                jtype = JUNCTION_TYPE_RNASEQ
+                # continue
+
+            ir_type = 0
+            if jj.donor.intron:
+                ir_type = IR_TYPE_START
+            elif jj.acceptor.intron:
+                ir_type = IR_TYPE_END
+
+            junc_l.append((jj.start, jj.end))
+            junc_list.append(JunctionGraphic(jj.start, jj.end,
+                                             junction_type_list=[jtype], reads_list=[jj.nreads],
+                                             transcripts=[], intron_retention=ir_type))
+        junc_l = np.asarray(junc_l)
+        lsv_exon_list.sort(key=lambda x:(x.start, x.end))
+        exon_list = []
+        for ex in lsv_exon_list:
+            covered = False
+            a3 = []
+            alt_start = []
+            for jji in set(ex.ib):
+                covered = covered or (jji.nreads > 0)
+                if jji.end in alt_empty_starts:
+                    alt_start.append(jji.end)
+                for jidx, jjl in enumerate(junc_l):
+                    if jji.end == jjl[1]:
+                        a3.append(jidx)
+
+            a5 = []
+            alt_ends = []
+
+            for jjo in set(ex.ob):
+                covered = covered or (jjo.nreads > 0)
+                if jjo.start in alt_empty_starts:
+                    alt_ends.append(jjo.start)
+                for jidx, jjl in enumerate(junc_l):
+                    if jjo.start == jjl[0]:
+                        a5.append(jidx)
+
+            if ex.annot and not covered:
+                visual_type = EXON_TYPE_DB
+            elif ex.annot and covered:
+                visual_type = EXON_TYPE_DB_RNASEQ
+            elif not ex.annot and covered:
+                visual_type = EXON_TYPE_RNASEQ
+            else:
+                visual_type = EXON_TYPE_RNASEQ
+
+            extra_coords = []
+            if ex.annot:
+                if ex.start < ex.db_coords[0]:
+                    extra_coords.append([ex.start, ex.db_coords[0] - 1])
+                if ex.end > ex.db_coords[1]:
+                    extra_coords.append([ex.db_coords[1] + 1, ex.end])
+
+            eg = ExonGraphic(a3, a5, start=ex.start, end=ex.end, exon_type_list=[visual_type], coords_extra=extra_coords,
+                             intron_retention=ex.intron, alt_starts=alt_start, alt_ends=alt_ends)
+            exon_list.append(eg)
+
+        splice_lsv = LsvGraphic(lsv_type=self.type, start=self.exon.start, end=self.exon.end,
+                                lsv_id=self.id,
+                                name=self.gene_id, chromosome=self.chromosome,
+                                strand=self.strand, exons=exon_list, junctions=junc_list)
+        return splice_lsv
 
     def to_hdf5(self, hdf5grp, lsv_idx):
         njunc = len(self.junctions)
@@ -35,7 +136,7 @@ class LSV():
         h_lsv.attrs['coverage'] = [lsv_idx, lsv_idx + njunc]
 
         vh_lsv = h_lsv.create_group('visual')
-        # self.get_visual_lsv(self.junctions, exp_idx).to_hdf5(vh_lsv)
+        self.get_visual_lsv().to_hdf5(vh_lsv)
         return lsv_idx + njunc
 
     def sample_lsvs(self, junc_mtrx, fitfunc_r, majiq_config):
@@ -129,7 +230,7 @@ class LSV():
         hdf5grp.attrs['lsv_idx'] = lsv_idx + njunc
 
 
-def detect_lsvs(list_exons, junc_mtrx, fitfunc_r, gid, gstrand, majiq_config, outf):
+def detect_lsvs(list_exons, junc_mtrx, fitfunc_r, gid, gchrom, gstrand, majiq_config, outf):
 
     count = 0
     sum_trx = junc_mtrx.sum(axis=1)
@@ -147,7 +248,7 @@ def detect_lsvs(list_exons, junc_mtrx, fitfunc_r, gid, gstrand, majiq_config, ou
 
             if np.any(np.logical_and(ex_mtrx_s > majiq_config.minpos, ex_mtrx_p > majiq_config.minreads)):
                 try:
-                    lsv_list[ii].append(LSV(gid, gstrand, ex, ss=(ii == 1)))
+                    lsv_list[ii].append(LSV(gid, gchrom, gstrand, ex, ss=(ii == 1)))
                 except InvalidLSV:
                     continue
 

@@ -7,7 +7,7 @@ import numpy as np
 import urllib.parse as urllib
 from majiq.grimoire.junction cimport Junction
 from majiq.grimoire.junction import Junction
-from majiq.grimoire.exon cimport Exon
+from majiq.grimoire.exon cimport Exon, Intron
 from majiq.grimoire.exon import Exon
 from majiq.src.gff import parse_gff3
 from majiq.src.constants import *
@@ -244,13 +244,14 @@ cdef int _dump_junctions(db_f, str gne_id, int start, int end, str transcript_id
         h_jnc.attrs['annotated'] = annot
         #h_jnc.attrs['transcript_id_list'] = [transcript_id.encode('utf8')]
 
-cdef int _dump_exon(db_f, str gne_id, int start, int end) except -1:
+cdef int _dump_exon(db_f, str gne_id, int start, int end, bint annot=True) except -1:
     jid = '%s/exons/%s-%s' % (gne_id, start, end)
 
     if jid not in db_f:
         h_jnc = db_f.create_group(jid)
         h_jnc.attrs['start'] = start
         h_jnc.attrs['end'] = end
+        h_jnc.attrs['annot'] = annot
 
 
 cdef int _dump_gene(db_f, str gne_id, str gne_name, str chrom, str strand, int start, int end) except -1:
@@ -370,7 +371,7 @@ cpdef np.ndarray get_covered_junctions(str gne_id, dict dict_junctions, list lis
     return junc_mtrx
 
 
-def retrieve_db_info(str gne_id, str out_dir, list list_exons, dict dict_junctions):
+def retrieve_db_info(str gne_id, str out_dir, list list_exons, dict dict_junctions, list list_introns):
 
     cdef dict j_attrs, ex_attrs
     cdef Junction junc
@@ -388,6 +389,16 @@ def retrieve_db_info(str gne_id, str out_dir, list list_exons, dict dict_junctio
 
         for xx in db_f['%s/exons' % gne_id]:
             ex_attrs = dict(db_f['%s/exons/%s' % (gne_id, xx)].attrs)
-            list_exons.append(Exon(ex_attrs['start'], ex_attrs['end'], annot=True))
+            list_exons.append(Exon(ex_attrs['start'], ex_attrs['end'], annot=ex_attrs['annot']))
         list_exons.sort(key=lambda xx: (xx.start, xx.end))
+
+        if list_introns is not None:
+
+            for xx in db_f['%s/ir' % gne_id]:
+                ir_attrs = dict(db_f['%s/ir/%s' % (gne_id, xx)].attrs)
+                list_introns.append(Intron(ir_attrs['start'], ir_attrs['end'], annot=ir_attrs['annotated']))
+            list_introns.sort(key=lambda xx: (xx.start, xx.end))
+
+
+
     return njuncs

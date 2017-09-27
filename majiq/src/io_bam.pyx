@@ -86,13 +86,13 @@ cpdef int  find_introns(str filename, dict list_introns, float intron_threshold,
     samfl.close()
     return 0
 
-cdef inline int __read_STAR_junc_file(str filename, set in_juncs, set out_jj, dict out_dd) except -1:
+cdef inline int __read_STAR_junc_file(int fidx, str filename, set out_jj, dict out_dd) except -1:
 
     with open(filename, 'r') as fp:
         for ln in fp.readlines():
             tab = ln.strip().split()
-            if (tab[0], tab[1], tab[2]) in in_juncs:
-                continue
+            # if (tab[0], tab[1], tab[2]) in in_juncs:
+            #     continue
             try:
                 out_dd[(tab[0], tab[1], tab[2])] += tab[6]
             except KeyError:
@@ -100,7 +100,7 @@ cdef inline int __read_STAR_junc_file(str filename, set in_juncs, set out_jj, di
             out_jj.append((tab[0], tab[1], tab[2], tab[3]))
 
 
-cdef int __read_juncs_from_bam(str filename, set in_juncs, list out_jj, dict out_dd) except -1:
+cdef int __read_juncs_from_bam(int fidx, str filename, list out_jj, dict out_dd) except -1:
 
     cdef AlignedSegment read
     cdef AlignmentFile samfl
@@ -122,10 +122,10 @@ cdef int __read_juncs_from_bam(str filename, set in_juncs, list out_jj, dict out
         for junc_start, junc_end in junc_list:
 
             if (junc_start - read.pos >= readlen - MIN_BP_OVERLAP) or (junc_start - read.pos <= MIN_BP_OVERLAP) or \
-                (junc_end - junc_start < MIN_JUNC_LENGTH) or ((chrom, junc_start, junc_end) in in_juncs):
+                (junc_end - junc_start < MIN_JUNC_LENGTH):
                     continue
-            if (chrom, junc_start, junc_end) in out_jj:
-                continue
+            # if (chrom, junc_start, junc_end) in out_jj:
+            #     continue
             #out_jj.add((read.reference, junc_start, junc_end))
             try:
                 out_dd[(chrom, junc_start, junc_end)] += 1
@@ -142,16 +142,15 @@ def read_juncs(db_f, list file_list, set in_juncs, dict junctions, dict all_gene
     cdef int gidx=0, ngenes=0
     cdef object fp
 
-    for bb, fname in file_list:
+    for fidx, (bb, fname) in enumerate(file_list):
         if bb:
-            __read_STAR_junc_file(fname, in_juncs, jj_list, jj_dd)
+            __read_STAR_junc_file(fidx, fname, jj_list, jj_dd)
         else:
-            __read_juncs_from_bam(fname, in_juncs, jj_list, jj_dd)
+            __read_juncs_from_bam(fidx, fname, jj_list, jj_dd)
             jj_list.extend(list(jj_dd.keys()))
 
     jj_list.sort(key=lambda xx: (xx[0], xx[1], xx[2]))
     jj_dd = {kk: float(vv)/len(file_list) for kk, vv in jj_dd.items()}
-
 
     for jj in jj_list:
         if jj_dd[(jj[0], jj[1], jj[2])] < min_denovo:
@@ -173,12 +172,12 @@ def read_juncs(db_f, list file_list, set in_juncs, dict junctions, dict all_gene
                 jjid = '%s/junctions/%s-%s' % (gid, jj[1], jj[2])
                 if jjid not in in_juncs:
                     in_juncs.add((jj[0], jj[1], jj[2]))
-
                     # qm = QueueMessage(QUEUE_MESSAGE_BUILD_JUNCTION, (gid,jj[1],  jj[2]), 0)
                     # q.put(qm, block=True)
-
                     dump_junctions(db_f, gid, jj[1], jj[2], None, annot=False)
                 junctions[gid][(jj[1], jj[2])] = Junction(jj[1],  jj[2], gid, -1, annot=False)
+                junctions[gid][(jj[1], jj[2])].update_junction_read(jj_dd[(jj[0], jj[1], jj[2])])
+
                 break
     return 0
 
@@ -211,11 +210,11 @@ cpdef AlignmentFile open_rnaseq(str samfile):
 cpdef long close_rnaseq(AlignmentFile samfl) except -1:
     samfl.close()
 
-cpdef int read_sam_or_bam(object gne, AlignmentFile samfl, list matrx, dict junctions, list exon_list,
+cpdef int read_sam_or_bam(object gne, AlignmentFile samfl, list matrx, dict junctions, list exon_list, list intron_list,
                           str info_msg='0', object logging=None) except -1:
     cdef int res
-    res = _read_sam_or_bam(gne, samfl, matrx, junctions=junctions, exon_list=exon_list, info_msg=info_msg,
-                           logging=logging)
+    res = _read_sam_or_bam(gne, samfl, matrx, junctions=junctions, exon_list=exon_list, intron_list=intron_list,
+                           info_msg=info_msg, logging=logging)
     return res
 
 
@@ -323,9 +322,7 @@ cdef int _read_sam_or_bam(object gne, AlignmentFile samfl, list matrx, dict junc
     cdef int tot_reads = 0
     cdef int effective_len = 0
     cdef list junc_list
-
     cdef Intron intron
-    cdef list intron_list
 
     try:
 

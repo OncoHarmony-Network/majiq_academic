@@ -41,12 +41,7 @@ def merge_files_hdf5(lsv_dict, lsv_summarized, minnonzero, min_reads, percent=-1
 
     percent = min(percent, nfiles)
 
-    try:
-        vals = ((lsv_summarized[:, :, 0] >= minnonzero) * (lsv_summarized[:, :, 1] >= min_reads)).sum(axis=0) >= percent
-
-    except:
-        pass
-
+    vals = ((lsv_summarized[:, :, 0] >= minnonzero) * (lsv_summarized[:, :, 1] >= min_reads)).sum(axis=0) >= percent
     list_of_lsvs = [kk for kk, vv in lsv_dict.items() if vals[vv].sum() >= 1]
     return list_of_lsvs
 

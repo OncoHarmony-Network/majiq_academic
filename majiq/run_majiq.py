@@ -1,6 +1,6 @@
 import argparse
 from majiq.src.build import build
-# from majiq.src.calc_psi import calcpsi
+from majiq.src.calc_psi import calcpsi
 # from majiq.src.deltapsi import deltapsi
 from majiq.src.constants import *
 # from majiq.src.wght_pipeline import calc_weights
@@ -204,11 +204,11 @@ def main():
     parser_calcpsi = subparsers.add_parser('psi', help="Calculate PSI values for N experiments, given a folder of "
                                                        "preprocessed events by 'majiq preprocess' or SAM/BAM files",
                                            parents=[common, psi, sampling, weights])
-    # parser_calcpsi.set_defaults(func=calcpsi)
-    #
-    # parser_deltagroup = subparsers.add_parser('deltapsi', help='Calculate Delta PSI values given a pair of experiments '
-    #                                                            '(1 VS 1 conditions *with* replicas)',
-    #                                           parents=[common, delta, sampling, weights])
+    parser_calcpsi.set_defaults(func=calcpsi)
+
+    parser_deltagroup = subparsers.add_parser('deltapsi', help='Calculate Delta PSI values given a pair of experiments '
+                                                               '(1 VS 1 conditions *with* replicas)',
+                                              parents=[common, delta, sampling, weights])
     # parser_deltagroup.set_defaults(func=deltapsi)
     #
     # parser_weights = subparsers.add_parser('weights', help='Calculate weights values given a group of experiment '
