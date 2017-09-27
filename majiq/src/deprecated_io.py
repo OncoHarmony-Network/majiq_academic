@@ -12,6 +12,7 @@ from voila.splice_graphics import LsvGraphic
 # HDF5 API
 #######
 
+
 def _prepare_and_dump(filename, logging=None):
     majiq_config = Config()
     if logging is not None:
@@ -103,6 +104,7 @@ def extract_lsv_summary(files):
             lsv_types[lsvid] = attrs['type']
             lsvid2idx[lsvid] = []
             ljunc = lsv_dict_graph[lsvid].junction_ids()
+
             for jidx, jj in enumerate(ljunc):
                 try:
                     indx = idx_junc[jj]

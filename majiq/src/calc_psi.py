@@ -65,6 +65,7 @@ class CalcPsi(BasicPipeline):
         list_of_lsv = majiq_filter.merge_files_hdf5(lsv_dict=lsv_dict, lsv_summarized=lsv_summarized,
                                                     minnonzero=self.minpos, min_reads=self.minreads,
                                                     percent=self.min_exp, logger=logger)
+
         lchnksize = max(len(list_of_lsv) / self.nthreads, 1) + 1
         weights = self.calc_weights(self.weights, self.files, list_of_lsv, self.lock, lchnksize, self.queue, self.name)
         self.weights = weights

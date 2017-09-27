@@ -199,12 +199,13 @@ class Builder(BasicPipeline):
         logger.info("Majiq Build v%s" % VERSION)
         logger.info("Command: %s" % " ".join(sys.argv))
 
-        p = mp.Process(target=majiq_multi.parallel_lsv_child_calculation,
-                       args=(majiq_io.parse_annot, [self.transcripts, majiq_config.outDir],
-                             '%s/tmp' % majiq_config.outDir, 'db', 0))
-        logger.info("... waiting gff3 parsing")
-        p.start()
-        p.join()
+        if self.prebam:
+            p = mp.Process(target=majiq_multi.parallel_lsv_child_calculation,
+                           args=(majiq_io.parse_annot, [self.transcripts, majiq_config.outDir],
+                                 '%s/tmp' % majiq_config.outDir, 'db', 0))
+            logger.info("... waiting gff3 parsing")
+            p.start()
+            p.join()
 
         # self.queue = mp.Queue()
         #
@@ -219,9 +220,9 @@ class Builder(BasicPipeline):
         # pool.close()
         # pool.join()
 
-        init_splicegraph(get_builder_splicegraph_filename(majiq_config.outDir))
+            init_splicegraph(get_builder_splicegraph_filename(majiq_config.outDir))
 
-        parse_denovo_elements(majiq_config.juncfile_list, 0, None, logger)
+            parse_denovo_elements(majiq_config.juncfile_list, 0, None, logger)
 
         logger.info("Parsing seq files")
 

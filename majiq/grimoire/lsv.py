@@ -156,7 +156,6 @@ class LSV():
 
     def set_type(self, jlist, ref_exon, gene_strand, ss):
 
-        # rev = (gene_strand == '-')
         sp_list = []
         ref_exon_id = "%s-%s" %(ref_exon.start, ref_exon.end)
         for junc in jlist:
