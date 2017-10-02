@@ -3,8 +3,8 @@ from majiq.src.build import build
 from majiq.src.calc_psi import calcpsi
 from majiq.src.deltapsi import deltapsi
 from majiq.src.constants import *
-from majiq.src.wght_pipeline import calc_weights
-from majiq.src.indpnt import calc_independent
+# from majiq.src.wght_pipeline import calc_weights
+# from majiq.src.indpnt import calc_independent
 from majiq.src.stats import all_stats
 
 class FRange01(argparse.Action):
@@ -178,27 +178,6 @@ def main():
     wght.add_argument('--name', required=True, help="The names that identify each of the experiments. "
                                                     "[Default: %(default)s]")
 
-
-    # mdelta = new_subparser()
-    # mdelta.add_argument('-pairs_file', dest="deltapairs", required=True)
-    # mdelta.add_argument('--default_prior', action='store_true', default=False,
-    #                    help="Use a default prior instead of computing it using the empirical data")
-    # mdelta.add_argument('--binsize', default=0.025, type=int,
-    #                    help='The bins for PSI values. With a --binsize of 0.025 (default), we have 40 bins')
-    # mdelta.add_argument('--priorminreads', default=20, type=int,
-    #                    help="Minimum number of reads combining all positions in a junction to be considered "
-    #                         "(for the 'best set' calculation). [Default: %(default)s]")
-    # mdelta.add_argument('--priorminnonzero', default=10, type=int,
-    #                    help='Minimum number of positions for the best set.')
-    # mdelta.add_argument('--iter', default=10, type=int,
-    #                    help='Max number of iterations of the EM')
-    # mdelta.add_argument('--breakiter', default=0.01, type=float,
-    #                    help='If the log likelihood increases less that this flag, do not do another EM step')
-    # mdelta.add_argument('--prioruniform', default=3, type=float,
-    #                    help="Uniform distribution to give a bit more of a chance to values out of the normal "
-    #                         "distribution. that the synthetic prior matrix has. Only works with --synthprior. "
-    #                         "[Default: %(default)s]")
-
     htrgen = new_subparser()
     htrgen.add_argument('-grp1', dest="files1", nargs='+', required=True)
     htrgen.add_argument('-grp2', dest="files2", nargs='+', required=True)
@@ -242,20 +221,16 @@ def main():
                                               parents=[common, delta, sampling, weights])
     parser_deltagroup.set_defaults(func=deltapsi)
 
-    parser_weights = subparsers.add_parser('weights', help='Calculate weights values given a group of experiment '
-                                                           'replicas',
-                                           parents=[common, sampling, weights, wght])
-    parser_weights.set_defaults(func=calc_weights)
+    # parser_weights = subparsers.add_parser('weights', help='Calculate weights values given a group of experiment '
+    #                                                        'replicas',
+    #                                        parents=[common, sampling, weights, wght])
+    # parser_weights.set_defaults(func=calc_weights)
+    #
+    # parser_heterogen = subparsers.add_parser('heterogen', help='Calculate Delta PSI values given a pair of experiments '
+    #                                                          'groups. This approach does not assume underlying PSI)',
+    #                                          parents=[common, sampling, htrgen])
+    # parser_heterogen.set_defaults(func=calc_independent)
 
-    parser_heterogen = subparsers.add_parser('heterogen', help='Calculate Delta PSI values given a pair of experiments '
-                                                             'groups. This approach does not assume underlying PSI)',
-                                             parents=[common, sampling, htrgen])
-    parser_heterogen.set_defaults(func=calc_independent)
-
-    # parser_multidelta = subparsers.add_parser('multi_delta', help='Calculate Delta PSI values given a pair of experiments '
-    #                                                            '(1 VS 1 conditions *with* replicas)',
-    #                                           parents=[common, mdelta, psianddelta])
-    # parser_multidelta.set_defaults(func=multi_dpsi)
     args = parser.parse_args()
     args.func(args)
 

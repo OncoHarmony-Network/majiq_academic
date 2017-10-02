@@ -1,4 +1,4 @@
-import majiq.src.io as majiq_io
+import majiq.src.deprecated_io as majiq_io
 from majiq.src.polyfitnb import fit_nb
 import abc
 
@@ -6,7 +6,7 @@ import abc
 import majiq.src.logger as majiq_logger
 
 from majiq.src.psi import divs_from_bootsamples, calc_rho_from_divs, calc_local_weights
-from majiq.src.multiproc import QueueMessage, process_conf, queue_manager, chunks
+from majiq.src.multiproc import QueueMessage, process_conf, queue_manager, chunks, process_wrapper
 from majiq.src.constants import *
 import sys
 import traceback
@@ -18,46 +18,12 @@ import multiprocessing as mp
 ################################
 
 
-# def get_clean_raw_reads(matched_info, matched_lsv, outdir, names, num_exp):
-#     res = []
-#     for eidx in range(num_exp):
-#         for ldx, lsv in enumerate(matched_info):
-#             jlist = masked_less(matched_lsv[ldx][eidx], 0)
-#
-#             num = jlist.sum(axis=1)
-#             res.append([lsv[1], num.data])
-#     majiq_io.dump_bin_file(res, '%s/clean_reads.%s.pkl' % (outdir, names))
+def bootstrap_samples_with_divs(list_of_lsv, chnk, process_conf, logger):
 
-
-def bootstrap_samples_with_divs(args_vals):
-
-    try:
-        list_of_lsv, chnk = args_vals
-        logger = majiq_logger.get_logger("%s/%s.majiq.log" % (process_conf.output, chnk),
-                                        silent=process_conf.silent, debug=process_conf.debug)
-
-        lsvs_to_work, fitfunc_r = majiq_io.get_extract_lsv_list(list_of_lsv, process_conf.files)
-
-        divs = divs_from_bootsamples(lsvs_to_work, fitfunc_r=fitfunc_r,
-                                     n_replica=len(process_conf.files), pnorm=1, m_samples=process_conf.m,
-                                     k_positions=process_conf.k, discardzeros=process_conf.discardzeros,
-                                     trimborder=process_conf.trimborder, debug=False,
-                                     nbins=process_conf.nbins, store_bootsamples=True,
-                                     lock_array=process_conf.lock_per_file,
-                                     outdir=process_conf.output, name=process_conf.names)
-
-        qm = QueueMessage(QUEUE_MESSAGE_BOOTSTRAP, (lsvs_to_work, divs), chnk)
-        process_conf.queue.put(qm, block=True)
-
-        qm = QueueMessage(QUEUE_MESSAGE_END_WORKER, None, chnk)
-        process_conf.queue.put(qm, block=True)
-        process_conf.lock[chnk].acquire()
-        process_conf.lock[chnk].release()
-
-    except Exception as e:
-        traceback.print_exc()
-        sys.stdout.flush()
-        raise()
+    lsvs_to_work = majiq_io.get_extract_lsv_list(list_of_lsv, process_conf.files)
+    divs = divs_from_bootsamples(lsvs_to_work, n_replica=len(process_conf.files), pnorm=1, nbins=process_conf.nbins)
+    qm = QueueMessage(QUEUE_MESSAGE_BOOTSTRAP, (lsvs_to_work, divs), chnk)
+    process_conf.queue.put(qm, block=True)
 
 
 def pipeline_run(pipeline):
@@ -104,23 +70,26 @@ class BasicPipeline:
                 self.logger.debug("Fitting NB function with constitutive events...")
             return fit_nb(const_junctions, "%s/nbfit" % self.outDir, self.plotpath, logger=self.logger)
 
-    def calc_weights(self, weight_type, file_list, list_of_lsv, lock_arr, lchnksize, q, name, store=True, logger=None):
+    def calc_weights(self, weight_type, file_list, list_of_lsv, lchnksize, name, store=True, logger=None):
 
         if weight_type.lower() == WEIGTHS_AUTO and len(file_list) >= 3:
             """ Calculate bootstraps samples and weights """
 
-            pool = mp.Pool(processes=self.nthreads, initializer=process_conf, initargs=[self, q, lock_arr, None],
+            self.files = file_list
+            pool = mp.Pool(processes=self.nthreads, initializer=process_conf,
+                           initargs=[bootstrap_samples_with_divs, self],
                            maxtasksperchild=1)
 
-            [xx.acquire() for xx in lock_arr]
-            pool.map_async(bootstrap_samples_with_divs,
+
+            [xx.acquire() for xx in self.lock]
+            pool.map_async(process_wrapper,
                            chunks(list_of_lsv, lchnksize, extra=range(self.nthreads)))
             pool.close()
             divs = []
             lsvs = []
-            queue_manager(input_h5dfp=None, output_h5dfp=None, lock_array=lock_arr, result_queue=q,
+            queue_manager(input_h5dfp=None, output_h5dfp=None, lock_array=self.lock, result_queue=self.queue,
                           num_chunks=self.nthreads, out_inplace=(lsvs, divs),
-                          logger=self.logger)
+                          logger=logger)
             pool.join()
             lsvs = {xx: vv for xx, vv in enumerate(lsvs)}
             divs = np.array(divs)
@@ -135,6 +104,8 @@ class BasicPipeline:
             else:
                 wgts = rho
 
+            del self.files
+
         elif weight_type.lower() == WEIGTHS_NONE or len(file_list) < 3:
             wgts = np.ones(shape=(len(file_list)))
 
@@ -142,7 +113,7 @@ class BasicPipeline:
             wgts = np.array([float(xx) for xx in weight_type.split(',')])
             if len(wgts) != len(file_list):
                 logger.error('weights wrong arguments number of weights values is different than number of '
-                                  'specified replicas for that group')
+                             'specified replicas for that group')
 
         return wgts
 

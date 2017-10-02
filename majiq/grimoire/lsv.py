@@ -23,9 +23,12 @@ class LSV():
 
         self.junctions = []
         if ss:
-            jncs = list(ex.ob)
+            jncs = [xx for xx in ex.ob if not (xx.donor is None or xx.acceptor is None)]
         else:
-            jncs = list(ex.ib)
+            jncs = [xx for xx in ex.ib if not (xx.donor is None or xx.acceptor is None)]
+
+        if len(jncs) < 2:
+            raise InvalidLSV("not enougth junctions")
 
         self.exon = ex
         self.type = self.set_type(jncs, ex, gene_strand, ss)
@@ -35,8 +38,7 @@ class LSV():
 
         self.id = "%s:%s:%s-%s" % (gene_id, self.type[0], ex.start, ex.end)
         self.junctions.sort(key=lambda jj: (jj.start, jj.end))
-        if len(self.junctions) < 2:
-            raise InvalidLSV("not enougth junctions")
+
 
     def get_visual_lsv(self):
         junc_list = []
@@ -239,6 +241,8 @@ def detect_lsvs(list_exons, junc_mtrx, fitfunc_r, gid, gchrom, gstrand, majiq_co
 
     for ex in list_exons:
         for ii, jjlist in enumerate([ex.ib, ex.ob]):
+            jjlist = [xx for xx in jjlist if not (xx.donor is None or xx.acceptor is None)]
+
             if len(jjlist) < 2:
                 continue
             ex_index = sorted([xx.index for xx in jjlist])
@@ -303,6 +307,7 @@ def detect_lsvs2(list_exons, junc_mtrx, fitfunc_r, locks, gid, gstrand, majiq_co
 
         for ex in list_exons:
             for ii, jjlist in enumerate([ex.ib, ex.ob]):
+                jjlist = [xx for xx in jjlist if not (xx.donor is None or xx.acceptor is None)]
                 if len(jjlist) < 2:
                     continue
                 ex_index = sorted([xx.index for xx in jjlist])

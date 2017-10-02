@@ -77,51 +77,6 @@ def extract_lsv_summary_old(files):
     return lsvid2idx, lsv_types, np.array(simpl_juncs), metas, lsv_dict_graph
 
 
-def extract_lsv_summary(files):
-
-    lsvid2idx = {}
-    lsv_types = {}
-    total_idx = 0
-    simpl_juncs = []
-    idx_junc = set()
-    lsv_dict_graph = {}
-
-    for fidx, ff in enumerate(files):
-        print(ff)
-        data = h5py.File(ff, 'r')
-        junc_cov = data['junc_cov'][()]
-        lsv_list = {}
-        lsv_dict_graph = {}
-        for xx in data['LSVs']:
-            lsv_list[xx] = dict(data['LSVs/%s' % xx].attrs)
-            lsv_dict_graph[xx] = LsvGraphic.easy_from_hdf5(data['LSVs/%s/visual' % xx])
-            idx_junc.update(set(lsv_dict_graph[xx].junction_ids()))
-
-        simpl_juncs.append([[0, 0.0] for xx in idx_junc])
-
-        for lsvid, attrs in lsv_list.items():
-            cov = junc_cov[attrs['coverage'][0]:attrs['coverage'][1]]
-            lsv_types[lsvid] = attrs['type']
-            lsvid2idx[lsvid] = []
-            ljunc = lsv_dict_graph[lsvid].junction_ids()
-
-            for jidx, jj in enumerate(ljunc):
-                try:
-                    indx = idx_junc[jj]
-                    simpl_juncs[fidx][indx] = cov[jidx]
-                except KeyError:
-                    idx_junc[jj] = total_idx
-                    indx = total_idx
-                    total_idx += 1
-                    simpl_juncs[fidx].append(cov[jidx])
-                    [simpl_juncs[dx].append([0, 0.0]) for dx in range(fidx)]
-                lsvid2idx[lsvid].append(indx)
-
-    metas = read_meta_info(files)
-
-    return lsvid2idx, lsv_types, np.array(simpl_juncs), metas, lsv_dict_graph
-
-
 def load_data_lsv(path, group_name, logger=None):
     """Load data from the preprocess step. Could change to a DDBB someday"""
     data = h5py.File(path, 'r')
@@ -273,7 +228,7 @@ def load_bootstrap_samples(lsv_id, file_list, weight=True):
 def store_weights_bootstrap(lsv_list, wgts, file_list, outdir, name):
     for ii, ff in enumerate(file_list):
         file_name = '%s/%s.%d.boots.hdf5' % (outdir, name, ii)
-        with h5py.File(file_name, 'r+') as f:
+        with h5py.File(ff, 'r+') as f:
 
             for idx, lsv in lsv_list.items():
                 f["LSVs/%s" % lsv.id].attrs['weight'] = wgts[idx, ii]

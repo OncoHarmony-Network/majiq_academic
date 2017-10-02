@@ -10,6 +10,7 @@ import scipy.misc
 import numpy as np
 cimport numpy as np
 import cython
+import pickle
 
 """
 Calculate and manipulate PSI and Delta PSI values
@@ -272,8 +273,7 @@ cpdef list heterogen_posterior(list boots, object out_het, int m_samples, int ps
 
 @cython.boundscheck(False) # turn off bounds-checking for entire function
 @cython.wraparound(False)  # turn off negative index wrapping for entire function
-cpdef list divs_from_bootsamples(list lsvs_to_work, int n_replica, float pnorm, int m_samples, int k_positions,
-                                 int nbins=40):
+cpdef list divs_from_bootsamples(list lsvs_to_work, int n_replica, float pnorm, int nbins=40):
 
     cdef float bsize, alpha_0, beta_0
     cdef np.ndarray psi_border, psi, med, post_cdf, ldist
@@ -281,6 +281,7 @@ cpdef list divs_from_bootsamples(list lsvs_to_work, int n_replica, float pnorm, 
     cdef int lsv_idx, rr, num_ways, jidx
     cdef np.ndarray alpha_prior, beta_prior, s_lsv
     cdef float sample, notsample
+    cdef int m_samples = 100
 
 
     bsize = 1.0 / float(nbins)
@@ -289,9 +290,10 @@ cpdef list divs_from_bootsamples(list lsvs_to_work, int n_replica, float pnorm, 
     for lsv_idx, quant_lsv in enumerate(lsvs_to_work):
         num_ways = quant_lsv.coverage[0].shape[0]
         post_cdf = np.zeros(shape=(n_replica, num_ways, psi_border.shape[0]), dtype=np.float)
-
         alpha_prior, beta_prior = _get_prior_params(quant_lsv.type, num_ways)
+
         for rr, s_lsv in enumerate(quant_lsv.coverage):
+            m_samples = s_lsv.shape[1]
             for jidx in range(num_ways):
                 alpha_0 = alpha_prior[jidx]
                 beta_0 = beta_prior[jidx]
@@ -319,17 +321,20 @@ def calc_rho_from_divs(np.ndarray divs, float thresh=0.75, float alpha=15., int 
 
     K_T, bad_reps = np.where(divs > thresh)
     K_T = np.unique(K_T)
-    logger.debug('%d' % K_T.size)
+    if logger:
+        logger.debug('%d' % K_T.size)
 
     if K_T.size > 0:
         K_t = np.bincount(bad_reps, minlength=nreps)
-        logger.debug('%s' % (', '.join(['%d' % xx for xx in K_t])))
+        if logger:
+            logger.debug('%s' % (', '.join(['%d' % xx for xx in K_t])))
         Alpha = float(alpha) / K_t.size
         N = K_T.size / K_t.size
         Beta = alpha - Alpha
         distr = betabinom(K_T.size, Alpha, Beta)
         rho = np.clip(distr.sf(K_t) / distr.sf(N), 0, 1)
-        logger.debug('|K_T|=%d, N=%d, Alpha=%0.03f, Beta=%0.03f' % (K_T.size, N,
+        if logger:
+            logger.debug('|K_T|=%d, N=%d, Alpha=%0.03f, Beta=%0.03f' % (K_T.size, N,
                                                                  Alpha, Beta))
     else:
         rho = np.ones(nreps)
@@ -351,36 +356,21 @@ def calc_local_weights(divs, rho, local):
 
 @cython.boundscheck(False) # turn off bounds-checking for entire function
 @cython.wraparound(False)  # turn off negative index wrapping for entire function
-def empirical_delta_psi(list_lsv, lsv_types, lsv_dict1, lsv_summarized1, lsv_dict2, lsv_summarized2, logger=None):
-    """Simple PSI calculation without involving a dirichlet prior, coming from reads from junctions
-    :type list_lsv: object
+cdef tuple _empirical_delta_psi(list list_of_lsv, dict lsv_empirical_psi1, dict lsv_empirical_psi2, dict lsv_graphic):
     """
+    Simple PSI calculation without involving a dirichlet prior, coming from reads from junctions
+    """
+    cdef str lsv
+    cdef list delta_psi = []
+    cdef list delta_psi_ir = []
 
-    delta_psi = []
-    delta_psi_ir = []
-
-    for idx, lsv in enumerate(list_lsv):
+    for lsv in list_of_lsv:
         # Assuming that the type is the same in all the replicas and groups
-        if lsv_types[lsv].endswith('i'):
+        if lsv_graphic[lsv].lsv_type.endswith('i'):
             delta_psi_res = delta_psi_ir
         else:
             delta_psi_res = delta_psi
-
-        cov1 = lsv_summarized1[:, lsv_dict1[lsv], 0].mean(axis=0)
-
-        # cov1 = [fp[JUNCTIONS_DATASET_NAME][fp['LSVs/%s' % lsv].attrs['coverage']].sum(axis=1) for fp in group1])
-        # cov1 = cov1.mean(axis=0)
-        psi1 = np.array([float(cov1[jidx]) / float(np.sum(cov1)) for jidx in range(len(cov1))])
-        psi1[np.isnan(psi1)] = 0.5
-
-        cov2 = lsv_summarized2[:, lsv_dict2[lsv], 0].mean(axis=0)
-        # cov2 = np.array([fp[JUNCTIONS_DATASET_NAME][fp['LSVs/%s' % lsv].attrs['coverage']].sum(axis=1) for fp in group2])
-        # cov2 = cov2.mean(axis=0)
-        psi2 = np.array([float(cov2[jidx]) / float(np.sum(cov2)) for jidx in range(len(cov2))])
-        psi2[np.isnan(psi2)] = 0.5
-
-        delta_psi_res.append(psi1 - psi2)
-        #   if logger: logger.info("Calculating delta PSI for 'best set'...")
+        delta_psi_res.append(lsv_empirical_psi1[lsv] - lsv_empirical_psi2[lsv])
 
     return delta_psi, delta_psi_ir
 
@@ -389,16 +379,27 @@ def __load_default_prior():
 
     encoding = sys.getfilesystemencoding()
     direc = os.path.dirname(__file__)
-    print '%s/../data/defaultprior.pickle' % direc
-    def_mat = majiq.src.io_utils.load_bin_file('%s/../data/defaultprior.pickle' % direc)
-    return def_mat
+
+    fop = open('%s/../data/defaultprior.pickle' % direc, 'rb')
+    fast_pickler = pickle.Unpickler(fop)
+    data = fast_pickler.load()
+    fop.close()
+
+    return data
 
 
-def gen_prior_matrix(lsv_dict1, lsv_summarized1, lsv_dict2, lsv_summarized2, lsv_types, output, conf, numbins=20,
-                     defaultprior=False, minpercent=-1, logger=None):
+def gen_prior_matrix(dict lsv_dict_graph, dict lsv_empirical_psi1, dict lsv_empirical_psi2, str output, list names,
+                     float breakiter, str plotpath, int iter, float binsize, int numbins=20, bint defaultprior=False,
+                     int minpercent=-1, object logger=None):
+
+    cdef np.ndarray psi_space, def_mat, lsv, mixture_pdf
+    cdef list prior_matrix, list_of_lsv, best_dpsi, best_dpsi_ir, njun_prior, pmat
+    cdef int prior_idx, nj
+
+
     #Start prior matrix
     logger.info("Calculating prior matrix...")
-    psi_space = np.linspace(0, 1 - conf.binsize, num=numbins) + conf.binsize / 2
+    psi_space = np.linspace(0, 1 - binsize, num=numbins) + binsize / 2
     if defaultprior:
         def_mat = __load_default_prior()
         prior_matrix = [def_mat, def_mat]
@@ -408,19 +409,11 @@ def gen_prior_matrix(lsv_dict1, lsv_summarized1, lsv_dict2, lsv_summarized2, lsv
 
     # temp_files = [files[0],files[]]
 
-    filtered_lsv1 = majiq_filter.merge_files_hdf5(lsv_dict1, lsv_summarized1, minnonzero=10, min_reads=20,
-                                                  percent=minpercent, logger=logger)
-    filtered_lsv2 = majiq_filter.merge_files_hdf5(lsv_dict2, lsv_summarized2, minnonzero=10, min_reads=20,
-                                                  percent=minpercent, logger=logger)
-
-    list_of_lsv = list(set(filtered_lsv1).intersection(set(filtered_lsv2)))
+    list_of_lsv = list(set(lsv_empirical_psi1.keys()).intersection(set(lsv_empirical_psi2.keys())))
     logger.debug("'Best set' is %s events" % len(list_of_lsv))
-    best_dpsi, best_dpsi_ir = empirical_delta_psi(list_of_lsv, lsv_types,
-                                                  lsv_dict1, lsv_summarized1,
-                                                  lsv_dict2, lsv_summarized2, )
+    best_dpsi, best_dpsi_ir = _empirical_delta_psi(list_of_lsv, lsv_empirical_psi1, lsv_empirical_psi2, lsv_dict_graph)
 
     prior_matrix = [[], []]
-
     for prior_idx, best_delta_psi in enumerate((best_dpsi, best_dpsi_ir)):
         njun_prior = [[]]
 
@@ -440,9 +433,9 @@ def gen_prior_matrix(lsv_dict1, lsv_summarized1, lsv_dict2, lsv_summarized2, lsv
                 continue
 
             logger.debug("Parametrizing 'best set'...%s", prior_idx)
-            mixture_pdf = majiq_delta.adjustdelta_lsv(best_delta_psi, output, plotpath=conf.plotpath,
-                                                      title=" ".join(conf.names), numiter=conf.iter,
-                                                      breakiter=conf.breakiter, njunc=nj, logger=logger)
+            mixture_pdf = majiq_delta.adjustdelta_lsv(best_delta_psi, output, plotpath=plotpath,
+                                                      title=" ".join(names), numiter=iter,
+                                                      breakiter=breakiter, njunc=nj, logger=logger)
             pmat = []
             for i in range(numbins):
                 pmat.extend(mixture_pdf[numbins - i:(numbins * 2) - i])
@@ -462,7 +455,7 @@ def gen_prior_matrix(lsv_dict1, lsv_summarized1, lsv_dict2, lsv_summarized2, lsv
                 # renormalize so it sums 1
 
             plot_matrix(prior_matrix[prior_idx], "Prior Matrix , version %s" % prior_idx,
-                        "prior_matrix_jun_%s" % nj, conf.plotpath)
+                        "prior_matrix_jun_%s" % nj, plotpath)
 
     return psi_space, prior_matrix
 

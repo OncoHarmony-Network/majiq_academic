@@ -5,84 +5,15 @@ cimport numpy as np
 import h5py
 import numpy as np
 import urllib.parse as urllib
+import os
 from majiq.grimoire.junction cimport Junction
 from majiq.grimoire.junction import Junction
 from majiq.grimoire.exon cimport Exon, Intron
 from majiq.grimoire.exon import Exon
 from majiq.src.gff import parse_gff3
 from majiq.src.constants import *
-# from majiq.src.io_bam cimport read_juncs_from_bam, find_introns
-
-# import majiq.src.utils as majiq_utils
-
-#
-# cdef list gffInfoFields = ["seqid", "source", "type", "start", "end", "score", "strand", "phase", "attributes"]
-# GFFRecord = namedtuple("GFFRecord", gffInfoFields)
-#
-#
-# cdef dict __parse_gff_attributes(str attribute_string):
-#     """
-#     Parse the GFF3 attribute column and return a dict
-#     :param attribute_string:
-#     """
-#     cdef dict ret
-#     cdef str key, value
-#
-#     if attribute_string == ".":
-#         return {}
-#     ret = {}
-#     for attribute in attribute_string.split(";"):
-#         key, value = attribute.split("=")
-#         key = urllib.unquote(key)
-#         if key in ret:
-#             key = 'extra_%s' % key
-#             if key not in ret:
-#                 ret[key] = []
-#             ret[key].append(urllib.unquote(value))
-#         else:
-#             ret[key] = urllib.unquote(value)
-#     return ret
-
-
-# def __parse_gff3(str filename):
-#     """
-#     A minimalistic GFF3 format parser.
-#     Yields objects that contain info about a single GFF3 feature.
-#
-#     Supports transparent gzip decompression.
-#     """
-#     # Parse with transparent decompression
-#
-#     # cdef object infile
-#     cdef str line
-#     # cdef list parts
-#     cdef dict normalized_info
-#     open_func = gzip.open if filename.endswith(".gz") else open
-#     with open_func(filename) as infile:
-#
-#         for line in infile:
-#
-#             if line.startswith("#"):
-#                 continue
-#             parts = line.strip().split("\t")
-#             # If this fails, the file format is not standard-compatible
-#             assert len(parts) == len(gffInfoFields)
-#             # Normalize data
-#             normalized_info = {
-#                 "seqid": None if parts[0] == "." else urllib.unquote(parts[0]),
-#                 "source": None if parts[1] == "." else urllib.unquote(parts[0]),
-#                 "type": None if parts[2] == "." else urllib.unquote(parts[2]),
-#                 "start": None if parts[3] == "." else int(parts[3]),
-#                 "end": None if parts[4] == "." else int(parts[4]),
-#                 "score": None if parts[5] == "." else float(parts[5]),
-#                 "strand": None if parts[6] == "." else urllib.unquote(parts[6]),
-#                 "phase": None if parts[7] == "." else urllib.unquote(parts[7]),
-#                 "attributes": __parse_gff_attributes(parts[8])
-#             }
-#             # Alternatively, you can emit the dictionary here, if you need mutabwility:
-#             yield normalized_info
-#             # yield GFFRecord(**normalized_info)
-
+from voila.splice_graphics import LsvGraphic
+import pickle
 
 cdef list accepted_transcripts = ['mRNA', 'transcript']
 cdef str transcript_id_keys = 'ID'
@@ -148,7 +79,6 @@ cdef int _read_gff(str filename, str outDir, object logging=None) except -1:
                 all_genes[chrom].append([start, end, gene_id])
             except KeyError:
                 all_genes[chrom] = [[start, end, gene_id]]
-
             gene_id_dict[gene_id] = gene_id
 
         elif record.type in accepted_transcripts:
@@ -159,10 +89,9 @@ cdef int _read_gff(str filename, str outDir, object logging=None) except -1:
                 continue
             transcript_name = record.attributes[transcript_id_keys]
             parent = record.attributes['Parent']
-
             try:
                 gn_id = gene_id_dict[parent]
-                trcpt_id_dict[record.attributes['ID']] = [gn_id, FIRST_LAST_JUNC]
+                trcpt_id_dict[record.attributes['ID']] = [gn_id, []]
 
             except KeyError:
                 logging.info("Error, incorrect gff. mRNA %s doesn't have valid gene %s" % (transcript_name, parent))
@@ -171,19 +100,21 @@ cdef int _read_gff(str filename, str outDir, object logging=None) except -1:
         elif record.type == 'exon':
             parent_tx_id = record.attributes['Parent']
             try:
-                gn_id, last_ss = trcpt_id_dict[parent_tx_id]
                 exon_dict[gn_id].append((start, True))
                 exon_dict[gn_id].append((end, False))
-
-                #in_juncs.add((chrom, last_ss, start))
-                _dump_junctions(db_f, gn_id, last_ss, start, parent_tx_id, annot=True)
-                trcpt_id_dict[parent_tx_id][1] = end
+                # _dump_junctions(db_f, gn_id, last_ss, start, parent_tx_id, annot=True)
+                trcpt_id_dict[parent_tx_id][1].append((start, end))
 
             except KeyError:
                 logging.WARNING("Error, incorrect gff. exon at line %s "
                                 "doesn't have valid mRNA %s" % (0, parent_tx_id))
 
-    for parent_tx_id, (gn_id, last_ss) in trcpt_id_dict.items():
+    for parent_tx_id, (gn_id, coord_list) in trcpt_id_dict.items():
+        last_ss = FIRST_LAST_JUNC
+        coord_list.sort(key=lambda x: (x[0], x[1]))
+        for xx, yy in coord_list:
+            _dump_junctions(db_f, gn_id, last_ss, xx, parent_tx_id, annot=True)
+            last_ss = yy
         _dump_junctions(db_f, gn_id, last_ss, FIRST_LAST_JUNC, parent_tx_id, annot=True)
 
     merge_exons(db_f, exon_dict)
@@ -206,18 +137,13 @@ cdef int merge_exons(db_f, dict exon_dict) except -1:
         ex_end = -1
         nopen = 0
         for coord, is_start in ex_list:
-            # print(coord, is_start, nopen, ex_start, ex_end)
+            #print(coord, is_start, nopen, ex_start, ex_end)
             if is_start:
-                if nopen <= 0 and ex_end != -1:
-                    # print("NEW EXON, ", gne_id, ex_start, ex_end)
+                if ex_end != -1:
+                    #print("NEW EXON, ", gne_id, ex_start, ex_end)
                     _dump_exon(db_f, gne_id, ex_start, ex_end)
-                    ex_end = -1
-                    nopen = 0
-                    ex_start = coord
-
-                elif nopen > 0 and ex_end != -1:
-                    # print("NEW INTRON, ", gne_id, ex_end+1, coord-1)
-                    _dump_intron(db_f, gne_id, ex_end+1, coord-1, annot=True)
+                    if nopen > 0:
+                        _dump_intron(db_f, gne_id, ex_end+1, coord-1, annot=True)
                     ex_end = -1
                     nopen = 0
                     ex_start = coord
@@ -228,6 +154,10 @@ cdef int merge_exons(db_f, dict exon_dict) except -1:
             else:
                 nopen -= 1
                 ex_end = coord if coord > ex_end else ex_end
+
+        if ex_end != -1:
+            #print(gne_id, ex_list)
+            _dump_exon(db_f, gne_id, ex_start, ex_end)
 
 
 #######
@@ -287,6 +217,61 @@ def junction_to_tmp(gne_id, Junction junc, object hdf5grps):
 # API
 ##
 
+def read_meta_info(list_of_files):
+    meta = {'experiments': []}
+    for fl in list_of_files:
+        with h5py.File(fl, 'r') as fp :
+            meta['experiments'].append(fp.attrs['sample_id'])
+            try:
+                if meta['genome'] != fp.attrs['genome']:
+                    raise RuntimeError('Combining experiments from different genome assemblies. Exiting')
+            except KeyError:
+                meta['genome'] = fp.attrs['genome']
+                continue
+    return meta
+
+def extract_lsv_summary(list files, int minnonzero, int min_reads, dict epsi=None, int percent=-1, object logger=None):
+    cdef dict lsv_list = {}
+    cdef dict lsv_graphic = {}
+    cdef int nfiles = len(files)
+    cdef int fidx
+    cdef str ff, xx
+    cdef np.ndarray mtrx, vals
+
+    if percent == -1:
+        percent = nfiles / 2
+        percent = percent + 1 if nfiles % 2 != 0 else percent
+
+
+    for fidx, ff in enumerate(files):
+        if logger:
+            logger.info("Parsing file: %s" % ff)
+        data = h5py.File(ff, 'r')
+        for xx in data['LSVs']:
+            mtrx = data['junc_cov'][data['LSVs/%s' % xx].attrs['coverage'][0]:data['LSVs/%s' % xx].attrs['coverage'][1]]
+            vals = (mtrx[:, 0] >= min_reads * (mtrx[:, 1] >= minnonzero))
+            try:
+                lsv_list[xx][fidx] = int(vals.sum() >= 1)
+                if epsi is not None:
+                    epsi[xx] += mtrx[:,0]
+            except:
+                lsv_list[xx]= [0] * nfiles
+                lsv_list[xx][fidx] = int(vals.sum() >= 1)
+                lsv_graphic[xx] = LsvGraphic.easy_from_hdf5(data['LSVs/%s/visual' % xx])
+                if epsi is not None:
+                    epsi[xx] = mtrx[:,0]
+
+    if epsi is not None:
+        for xx in epsi.keys():
+            epsi[xx] /= nfiles
+            epsi[xx] /= (epsi[xx].sum() - epsi[xx])
+            epsi[xx][np.isnan(epsi[xx])] = 0.5
+
+    lsv_id_list = [xx for xx,yy in lsv_list.items() if np.sum(yy) > percent]
+
+    return lsv_id_list, lsv_graphic
+
+
 def dump_junctions(db_f, str gne_id, int start, int end, str transcript_id, bint annot=False):
     _dump_junctions(db_f, gne_id, start, end, transcript_id, annot=annot)
 
@@ -325,7 +310,11 @@ cpdef list get_list_of_genes(str out_dir):
 
 cpdef int parse_annot(str filename, str out_dir, object logging=None):
 
-    _read_gff(filename=filename, outDir=out_dir, logging=logging)
+    try:
+        _read_gff(filename=filename, outDir=out_dir, logging=logging)
+    except Exception as e:
+        print e
+        raise
 
 
 cpdef np.ndarray get_covered_junctions(str gne_id, dict dict_junctions, list list_exons, list fitfunc_r, list sam_list,
@@ -392,13 +381,31 @@ def retrieve_db_info(str gne_id, str out_dir, list list_exons, dict dict_junctio
             list_exons.append(Exon(ex_attrs['start'], ex_attrs['end'], annot=ex_attrs['annot']))
         list_exons.sort(key=lambda xx: (xx.start, xx.end))
 
-        if list_introns is not None:
-
+        if list_introns is not None and 'ir' in db_f['%s' % gne_id]:
             for xx in db_f['%s/ir' % gne_id]:
                 ir_attrs = dict(db_f['%s/ir/%s' % (gne_id, xx)].attrs)
                 list_introns.append(Intron(ir_attrs['start'], ir_attrs['end'], annot=ir_attrs['annotated']))
             list_introns.sort(key=lambda xx: (xx.start, xx.end))
 
-
-
     return njuncs
+
+
+def load_bin_file(filename, logger=None):
+    if not os.path.exists(filename):
+        if logger:
+            logger.error('Path %s for loading does not exist' % filename)
+        return
+
+    fop = open(filename, 'rb')
+    fast_pickler = pickle.Unpickler(fop)
+    # fast_pickler.fast = 1
+    data = fast_pickler.load()
+    fop.close()
+    return data
+
+
+def dump_bin_file(data, str filename):
+    with open(filename, 'wb') as ofp:
+        fast_pickler = pickle.Pickler(ofp, protocol=2)
+        # fast_pickler.fast = 1
+        fast_pickler.dump(data)

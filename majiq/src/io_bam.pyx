@@ -52,7 +52,6 @@ cdef __cross_junctions(AlignedSegment read):
 
 cpdef int  find_introns(str filename, dict list_introns, float intron_threshold, int group_indx) except -1:
 
-
     cdef AlignmentFile samfl
     cdef int nchunks, chunk_len
     cdef bint b_included
@@ -68,7 +67,7 @@ cpdef int  find_introns(str filename, dict list_introns, float intron_threshold,
         #print(chrom, i_st, i_nd)
         intron_len = (i_nd - i_st)
         nchunks = 1 if intron_len <= MIN_INTRON_LEN else num_bins
-        chunk_len = int(intron_len/ num_bins)
+        chunk_len = int(intron_len / nchunks)
         b_included = True
         for ii in range(nchunks):
             lb = i_st + ii*chunk_len
@@ -76,7 +75,6 @@ cpdef int  find_introns(str filename, dict list_introns, float intron_threshold,
             ub = min(ub, i_nd)
             val = samfl.count(contig=chrom, start=lb, stop=ub, until_eof=True, read_callback=__is_unique,
                               reference=None, end=None)
-
             val /= (ub-lb)
             b_included = b_included and (val>=intron_threshold)
 
@@ -86,7 +84,8 @@ cpdef int  find_introns(str filename, dict list_introns, float intron_threshold,
     samfl.close()
     return 0
 
-cdef inline int __read_STAR_junc_file(int fidx, str filename, set out_jj, dict out_dd) except -1:
+
+cdef inline int __read_STAR_junc_file(str filename, set out_jj, dict out_dd) except -1:
 
     with open(filename, 'r') as fp:
         for ln in fp.readlines():
@@ -100,7 +99,7 @@ cdef inline int __read_STAR_junc_file(int fidx, str filename, set out_jj, dict o
             out_jj.append((tab[0], tab[1], tab[2], tab[3]))
 
 
-cdef int __read_juncs_from_bam(int fidx, str filename, list out_jj, dict out_dd) except -1:
+cdef int __read_juncs_from_bam(str filename, list out_jj, dict out_dd) except -1:
 
     cdef AlignedSegment read
     cdef AlignmentFile samfl
@@ -132,7 +131,8 @@ cdef int __read_juncs_from_bam(int fidx, str filename, list out_jj, dict out_dd)
             except KeyError:
                 out_dd[(chrom, junc_start, junc_end)] = 1
 
-def read_juncs(db_f, list file_list, set in_juncs, dict junctions, dict all_genes, int min_denovo, object q):
+
+def read_juncs_old(db_f, list file_list, set in_juncs, dict junctions, dict all_genes, int min_denovo, object q):
 
     cdef str ln, fname, chrom='', jjid
     cdef list tab
@@ -160,8 +160,12 @@ def read_juncs(db_f, list file_list, set in_juncs, dict junctions, dict all_gene
             chrom = jj[0]
             ngenes = len(all_genes[chrom])
 
+            gidx = 0
+
         while gidx < ngenes :
+
             gstart, gend, gid = all_genes[chrom][gidx]
+            # print (gidx, ngenes, gend, gstart, jj[0], jj[1], jj[2])
             if gend < jj[1]:
                 gidx += 1
                 continue
@@ -169,17 +173,95 @@ def read_juncs(db_f, list file_list, set in_juncs, dict junctions, dict all_gene
                 break
 
             if gstart<=jj[1] and gend>= jj[2]:
-                jjid = '%s/junctions/%s-%s' % (gid, jj[1], jj[2])
-                if jjid not in in_juncs:
-                    in_juncs.add((jj[0], jj[1], jj[2]))
-                    # qm = QueueMessage(QUEUE_MESSAGE_BUILD_JUNCTION, (gid,jj[1],  jj[2]), 0)
-                    # q.put(qm, block=True)
+
+                try:
+                    jj_nc = junctions[gid][(jj[1], jj[2])]
+                    jj_nc.update_junction_read(jj_dd[(jj[0], jj[1], jj[2])])
+                except KeyError:
                     dump_junctions(db_f, gid, jj[1], jj[2], None, annot=False)
-                junctions[gid][(jj[1], jj[2])] = Junction(jj[1],  jj[2], gid, -1, annot=False)
-                junctions[gid][(jj[1], jj[2])].update_junction_read(jj_dd[(jj[0], jj[1], jj[2])])
+                    junctions[gid][(jj[1], jj[2])] = Junction(jj[1],  jj[2], gid, -1, annot=False)
+                    junctions[gid][(jj[1], jj[2])].update_junction_read(jj_dd[(jj[0], jj[1], jj[2])])
 
                 break
+            else:
+                gidx +=1
     return 0
+
+
+
+def read_juncs(str fname, bint is_junc_file, dict dict_genes, dict junctions):
+
+    cdef str ln,, chrom='', jjid
+    cdef list tab
+    cdef tuple jj
+    cdef int gidx=0, ngenes=0
+    cdef object fp
+
+    cdef set set_junctions = set([(dict_genes[xx.gene_id]['chrom'], dict_genes[xx.gene_id]['strand'], xx.start, xx.end)
+                                  for xx in junctions.values()])
+
+
+    if is_junc_file:
+       new_junctions =  __read_STAR_junc_file(fname, set_junctions)
+    else:
+        __read_juncs_from_bam(fname, jj_list, jj_dd)
+        jj_list.extend(list(jj_dd.keys()))
+
+
+
+
+
+
+
+
+
+    for fidx, (bb, fname) in enumerate(file_list):
+        if bb:
+            __read_STAR_junc_file(fidx, fname, jj_list, jj_dd)
+        else:
+            __read_juncs_from_bam(fidx, fname, jj_list, jj_dd)
+            jj_list.extend(list(jj_dd.keys()))
+
+    jj_list.sort(key=lambda xx: (xx[0], xx[1], xx[2]))
+    jj_dd = {kk: float(vv)/len(file_list) for kk, vv in jj_dd.items()}
+
+    for jj in jj_list:
+        if jj_dd[(jj[0], jj[1], jj[2])] < min_denovo:
+            continue
+
+        if chrom != jj[0]:
+            chrom = jj[0]
+            ngenes = len(all_genes[chrom])
+
+            gidx = 0
+
+        while gidx < ngenes :
+
+            gstart, gend, gid = all_genes[chrom][gidx]
+            # print (gidx, ngenes, gend, gstart, jj[0], jj[1], jj[2])
+            if gend < jj[1]:
+                gidx += 1
+                continue
+            if gstart > jj[2]:
+                break
+
+            if gstart<=jj[1] and gend>= jj[2]:
+
+                try:
+                    jj_nc = junctions[gid][(jj[1], jj[2])]
+                    jj_nc.update_junction_read(jj_dd[(jj[0], jj[1], jj[2])])
+                except KeyError:
+                    dump_junctions(db_f, gid, jj[1], jj[2], None, annot=False)
+                    junctions[gid][(jj[1], jj[2])] = Junction(jj[1],  jj[2], gid, -1, annot=False)
+                    junctions[gid][(jj[1], jj[2])].update_junction_read(jj_dd[(jj[0], jj[1], jj[2])])
+
+                break
+            else:
+                gidx +=1
+    return 0
+
+
+
 
 
 
@@ -263,7 +345,6 @@ cdef int __junction_read(AlignedSegment read, list junc_list, int max_readlen, i
             except KeyError:
 
                 continue
-
 
 
 cdef int __intronic_read(AlignedSegment read, Intron intron, str gne_id, list junc_list, int max_readlen,
@@ -367,235 +448,3 @@ cdef int _read_sam_or_bam(object gne, AlignmentFile samfl, list matrx, dict junc
         print(e)
         logging.error('\t[%s]There are no reads in %s:%d-%d' % (info_msg, gne['chrom'], gne['start'], gne['end']))
         return 0
-
-
-
-
-
-
-
-
-
-#
-#
-#
-#
-#
-#
-#
-#
-#
-#
-#
-# @cython.boundscheck(False) # turn off bounds-checking for entire function
-# @cython.wraparound(False)  # turn off negative index wrapping for entire function
-# cdef int _read_sam_or_bam2(object gne, AlignmentFile samfl, list matrx, list out_junctions, str info_msg='0',
-#                           object logging=None) except -1:
-#
-#     cdef unsigned int r_start, junc_start, junc_end, readlen, nc, ng
-#     cdef AlignedSegment read
-#     cdef bint unique, found
-#     cdef float gc_content
-#     cdef bint bb
-#     cdef dict junctions = {} #{xx.get_coordinates(): xx for xx in gne.get_all_junctions(filter=False)}
-#     cdef int counter = 0
-#     cdef int tot_reads = 0
-#     cdef int effective_len = 0
-#     cdef Junction junc
-#     cdef list junc_list
-#
-#
-#     try:
-#         majiq_config = Config()
-#         effective_len = (majiq_config.readLen - 2*MIN_BP_OVERLAP) + 1
-#         read_iter = samfl.fetch(gne['chromosome'], gne['start'], gne['end'], multiple_iterators=False)
-#
-#         for read in read_iter:
-#             is_cross, junc_list = __cross_junctions(read)
-#             r_start = read.pos
-#             unique = __is_unique(read)
-#             if not _match_strand(read, gene_strand=gne['strand']) or r_start < gne['start'] or not unique:
-#                 continue
-#
-#             nreads = __get_num_reads(read)
-#             tot_reads += nreads
-#             nc = read.seq.count('C') + read.seq.count('c')
-#             ng = read.seq.count('g') + read.seq.count('G')
-#             gc_content = float(nc + ng) / float(len(read.seq))
-#             readlen = len(read.seq)
-#
-#             if not is_cross:
-#                 continue
-#
-#             if majiq_config.gcnorm:
-#                 pass
-#
-#             for (junc_start, junc_end) in junc_list:
-#
-#                 if junc_start - r_start > readlen:
-#                     r_start_offset = junc_list[0][0] - r_start
-#                     r_start = junc_start - r_start_offset
-#
-#                 if (junc_start - r_start >= readlen - MIN_BP_OVERLAP) or (junc_start - r_start <= MIN_BP_OVERLAP) or \
-#                         (junc_end - junc_start < MIN_JUNC_LENGTH):
-#                     continue
-#
-#                 left_ind = majiq_config.readLen - (junc.start - r_start) - MIN_BP_OVERLAP + 1
-#                 if (junc_start, junc_end) in junctions:
-#                     ''' update junction and add to list'''
-#                     junc = junctions[(junc_start, junc_end)]
-#                     junc.update_junction_read(nreads)
-#                     matrx[junc.index][left_ind] += nreads
-#
-#                 elif not majiq_config.non_denovo:
-#
-#                     #TODO: fix antisense
-#                     bb = False #gne.check_antisense_junctions_hdf5(junc_start, junc_end, h5py_file)
-#                     if not bb:
-#
-#                         counter += 1
-#                         junc = Junction(junc_start, junc_end, gne['id'], cov_idx=len(matrx))
-#                         junc.update_junction_read(nreads)
-#                         matrx.append([0]*effective_len)
-#                         matrx[junc.index][left_ind] += nreads
-#                         junctions[(junc_start, junc_end)] = junc
-#                         out_junctions.append(junc)
-#
-#         return tot_reads
-#     except ValueError as e:
-#         print(e)
-#         logging.error('\t[%s]There are no reads in %s:%d-%d' % (info_msg, gne['chrom'], gne['start'], gne['end']))
-#         return 0
-#
-#
-# @cython.boundscheck(False) # turn off bounds-checking for entire function
-# @cython.wraparound(False)  # turn off negative index wrapping for entire function
-# cdef long _rnaseq_intron_retention(dict gne, list list_exons, list matrx, list out_junctions,
-#                                    object logging=None) except -1:
-#
-#     # cdef unsigned short num_bins = NUM_INTRON_BINS, nchunks
-#     # cdef str strand = gne['strand']
-#     # cdef str chrom = gne['chromosome']
-#     # cdef AlignedSegment read
-#     # cdef float gc_content
-#     # cdef bint is_cross, unique, intron_body_covered
-#     # cdef int nreads, offset, intron_len, strt, end, r_start, intron_start, intron_end, readlen, nc, ng
-#     # cdef unsigned int intron_idx, num_positions, chunk_len, xx, yy
-#     # cdef Junction junc1, junc2
-#     # cdef Exon exon1, exon2
-#     # cdef list jvals, junc1_cov, junc2_cov
-#
-#     cdef int effective_len, ex_idx
-#     cdef object majiq_config
-#
-#     majiq_config = Config()
-#     effective_len = (majiq_config.readLen - 2*MIN_BP_OVERLAP) + 1
-#     for exp_idx, samfl in majiq_config.sam_list:
-#
-#     for ex_idx in list_exons[:-1]:
-#         exon1 = list_exons[ex_idx]
-#         exon2 = list_exons[ex_idx+1]
-#         intron_start = exon1.end + 1
-#         intron_end = exon2.start - 1
-#         intron_len = intron_end - intron_start
-#         if intron_len <= 0:
-#             continue
-#         try:
-#             read_iter = samfl.fetch(chrom, intron_start + MIN_BP_OVERLAP, intron_end - MIN_BP_OVERLAP,
-#                                     multiple_iterators=False)
-#         except ValueError:
-#             continue
-#
-#         nchunks = 1 if intron_len <= MIN_INTRON_LEN else num_bins
-#
-#         # we want to take just the middle part not the reads that are crossing the junctions
-#         # since 8 is the overlapping number of nucleotites we accept, the inner part is the
-#         # real intron size - (readlen-8)/*start part*/ - (readlen-8)/*end part*/
-#
-#         chunk_len = int(intron_len / nchunks)
-#
-#         # bmap = np.ones(shape=intron_len, dtype=np.bool)
-#         index_list = []
-#         for ii in range(nchunks):
-#             start = ii * chunk_len
-#             end = min(intron_len, (ii + 1) * chunk_len)
-#             index_list.append((start, end))
-#
-#         intron_parts = np.zeros(shape=nchunks, dtype=np.float)
-#         junc1 = None
-#         junc2 = None
-#
-#         for read in read_iter:
-#             is_cross, junc_list = __cross_junctions(read)
-#             r_start = read.pos
-#             unique = __is_unique(read)
-#             if not _match_strand(read, gene_strand=gne['strand']) or r_start < gne['start'] or not unique:
-#                 continue
-#             nreads = __get_num_reads(read)
-#
-#             if is_cross:
-#                 jvals = [xx for xx, yy in junc_list if not (yy < intron_start or xx > intron_end)]
-#                 if len(jvals) > 0:
-#                     continue
-#
-#             nc = read.seq.count('C') + read.seq.count('c')
-#             ng = read.seq.count('g') + read.seq.count('G')
-#             gc_content = float(nc + ng) / float(len(read.seq))
-#             readlen = len(read.seq)
-#             offset = readlen - MIN_BP_OVERLAP
-#
-#             left_ind = majiq_config.readLen - (exon1.end - r_start) - MIN_BP_OVERLAP + 1
-#             if intron_start - r_start > readlen:
-#                 r_start = intron_start - (readlen - MIN_BP_OVERLAP*2) - 1
-#
-#             if r_start < exon1.end - MIN_BP_OVERLAP:
-#                 if junc1 is None:
-#                     junc1 = Junction(exon1.end, intron_start, gne['id'], cov_idx=len(matrx), intron=True)
-#                     junc1_cov = [0] * effective_len
-#
-#                 junc1.update_junction_read(nreads)
-#
-#             elif (exon2.start - offset - 1) < r_start < exon2.start:
-#                 if junc2 is None:
-#                     junc2 = Junction(intron_end, exon2.start, gne['id'], cov_idx=len(matrx), intron=True)
-#                     junc2_cov = [0] * effective_len
-#                 junc2.update_junction_read(nreads)
-#
-#             else:
-#                 # section 3
-#                 if r_start <= exon1.end: continue
-#                 intron_idx = r_start - (exon1.end + 1)
-#                 rel_start = int(intron_idx / chunk_len)
-#                 indx = -1 if rel_start >= nchunks else rel_start
-#                 intron_parts[indx] += nreads
-#
-#         if junc1 is None or junc2 is None:
-#             continue
-#
-#         intron_body_covered = True
-#         if intron_len > 2 * (majiq_config.readLen - MIN_BP_OVERLAP):
-#             for ii in range(nchunks):
-#                 num_positions = chunk_len
-#                 if intron_parts[ii] == 0:
-#                     val = 0
-#                 elif num_positions == 0:
-#                     continue
-#                 else:
-#                     val = float(intron_parts[ii]) / num_positions
-#                 if val < majiq_config.min_intronic_cov:
-#                     intron_body_covered = False
-#                     break
-#
-#         if (junc1.nreads >= majiq_config.min_denovo and
-#             junc2.nreads >= majiq_config.min_denovo and
-#             intron_body_covered):
-#
-#             out_junctions.append(junc1)
-#             out_junctions.append(junc2)
-#
-#             matrx[junc1.index].append(junc1_cov)
-#             matrx[junc2.index].append(junc2_cov)
-#             del junc1
-#             del junc2
-#
-#     return 0

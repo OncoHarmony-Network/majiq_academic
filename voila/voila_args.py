@@ -2,7 +2,7 @@ import argparse
 import errno
 import os
 
-from majiq.src.io_utils import create_if_not_exists
+from majiq.src.logger import create_if_not_exists
 from voila.api import SpliceGraphs
 from voila.io_voila import Voila
 

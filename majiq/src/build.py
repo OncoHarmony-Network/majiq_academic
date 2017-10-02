@@ -32,7 +32,7 @@ def parse_denovo_elements(exp_groups, chnk, process_conf, logger):
     majiq_config = Config()
 
     dict_of_genes = majiq_io.retrieve_db_genes(majiq_config.outDir)
-    all_genes = {}
+    # all_genes = {}
     list_exons = {}
     dict_junctions = {}
     in_juncs = set()
@@ -43,13 +43,15 @@ def parse_denovo_elements(exp_groups, chnk, process_conf, logger):
         dict_junctions[gne_id] = {}
         majiq_io.retrieve_db_info(gne_id, majiq_config.outDir, list_exons[gne_id],
                                   dict_junctions[gne_id], None)
-        try:
-            all_genes[gene_obj['chromosome']].append((gene_obj['start'], gene_obj['end'], gne_id))
-        except KeyError:
-            all_genes[gene_obj['chromosome']] = []
-        [in_juncs.add(xx) for xx in dict_junctions]
+        # try:
+        #     all_genes[gene_obj['chromosome']].append((gene_obj['start'], gene_obj['end'], gne_id))
+        # except KeyError:
+        #     all_genes[gene_obj['chromosome']] = [(gene_obj['start'], gene_obj['end'], gne_id)]
+        # [in_juncs.add(xx) for xx in dict_junctions]
 
-    [xx.sort(key=lambda yy: (yy[0], yy[1])) for xx in all_genes.values()]
+    # [xx.sort(key=lambda yy: (yy[0], yy[1])) for xx in all_genes.values()]
+
+    list_introns = {}
 
     if majiq_config.denovo:
         db_f = h5py.File(get_build_temp_db_filename(majiq_config.outDir), "r+")
@@ -57,14 +59,15 @@ def parse_denovo_elements(exp_groups, chnk, process_conf, logger):
             read_juncs(db_f, ind_list, in_juncs, dict_junctions, all_genes, majiq_config.min_denovo, q=None)
 
         if majiq_config.ir:
-            list_introns = {}
             for gne_id, gene_obj in dict_of_genes.items():
                 detect_exons(dict_junctions[gne_id], list_exons[gne_id])
                 list_introns.update({(gne_id, gene_obj['chromosome'],
                                       gene_obj['strand'],
                                       ex.end+1,
                                       list_exons[gne_id][id_ex+1].start-1): 0
-                                     for id_ex, ex in enumerate(list_exons[gne_id][:-1])})
+
+                                     for id_ex, ex in enumerate(list_exons[gne_id][:-1])
+                                     if ex.end+1 < list_exons[gne_id][id_ex+1].start-1})
 
             for gidx, (name, ind_list) in enumerate(exp_groups.items()):
                 for bb, filename in ind_list:
@@ -80,8 +83,7 @@ def parse_denovo_elements(exp_groups, chnk, process_conf, logger):
                         # process_conf.queue.put(qm, block=True)
 
         db_f.close()
-
-    gene_to_splicegraph(dict_of_genes, dict_junctions, list_exons, majiq_config, None)
+    gene_to_splicegraph(dict_of_genes, dict_junctions, list_exons, list_introns, majiq_config, None)
 
 
 def parsing_files(sam_file_list, chnk, process_conf, logger):
@@ -138,7 +140,7 @@ def parsing_files(sam_file_list, chnk, process_conf, logger):
         logger.debug("[%s] Fitting NB function with constitutive events..." % sam_file)
         fitfunc_r = fit_nb(junc_mtrx[indx, :], "%s/nbfit" % majiq_config.outDir, logger=logger)
 
-        with h5py.File(get_builder_temp_majiq_filename(majiq_config.outDir, sam_file), 'w') as out_f:
+        with h5py.File('%s/%s.majiq' % (majiq_config.outDir, sam_file), 'w') as out_f:
             #TODO: keep in mem and fix later
 
             out_f.create_dataset(JUNCTIONS_DATASET_NAME, (5000, majiq_config.m), maxshape=(None, majiq_config.m))

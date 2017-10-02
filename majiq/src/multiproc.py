@@ -103,11 +103,12 @@ def queue_manager(input_h5dfp, output_h5dfp, lock_array, result_queue, num_chunk
 
             val = result_queue.get(block=True, timeout=10)
             sys.stdout.flush()
-            if val.get_type() == QUEUE_MESSAGE_BUILD_LSV:
+            if val.get_type() == QUEUE_MESSAGE_BUILD_JUNCTION:
                 sys.stdout.flush()
-                majiq_io.add_lsv_to_bootstrapfile(output_h5dfp[val.get_value()[1]], val.get_value()[0])
+                # majiq_io.add_lsv_to_bootstrapfile(output_h5dfp[val.get_value()[1]], val.get_value()[0])
 
             elif val.get_type() == QUEUE_MESSAGE_PSI_RESULT:
+
                 lsv_graph = list_of_lsv_graphics[val.get_value()[-1]]
                 output_h5dfp.add_lsv(VoilaLsv(bins_list=val.get_value()[0], means_psi1=val.get_value()[1],
                                               lsv_graphic=lsv_graph))

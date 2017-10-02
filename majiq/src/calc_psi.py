@@ -4,8 +4,8 @@ import traceback
 
 import h5py
 
-import majiq.src.filter as majiq_filter
-import majiq.src.deprecated_io as majiq_io
+import majiq.src.io as majiq_io
+import majiq.src.deprecated_io as majiq_deprio
 from majiq.src.basic_pipeline import BasicPipeline, pipeline_run
 from majiq.src.constants import *
 from majiq.src.multiproc import QueueMessage, process_conf, queue_manager, process_wrapper, chunks
@@ -26,7 +26,7 @@ def calcpsi(args):
 def psi_quantification(list_of_lsv, chnk, process_conf, logger):
 
     logger.info("Quantifying LSVs PSI.. %s" % chnk)
-    f_list = majiq_io.get_extract_lsv_list(list_of_lsv, process_conf.files)
+    f_list = majiq_deprio.get_extract_lsv_list(list_of_lsv, process_conf.files)
     for lidx, lsv_id in enumerate(list_of_lsv):
         if lidx % 50 == 0:
             print("Event %d ..." % lidx)
@@ -60,15 +60,15 @@ class CalcPsi(BasicPipeline):
         self.queue = mp.Queue()
         self.lock = [mp.Lock() for xx in range(self.nthreads)]
 
-        lsv_dict, lsv_types, lsv_summarized, meta, lsv_dict_graph = majiq_io.extract_lsv_summary(self.files)
-
-        list_of_lsv = majiq_filter.merge_files_hdf5(lsv_dict=lsv_dict, lsv_summarized=lsv_summarized,
-                                                    minnonzero=self.minpos, min_reads=self.minreads,
-                                                    percent=self.min_exp, logger=logger)
+        meta = majiq_io.read_meta_info(self.files)
+        list_of_lsv, lsv_dict_graph = majiq_io.extract_lsv_summary(self.files, minnonzero=self.minpos,
+                                                                   min_reads=self.minreads, percent=self.min_exp,
+                                                                   logger=logger)
 
         lchnksize = max(len(list_of_lsv) / self.nthreads, 1) + 1
         weights = self.calc_weights(self.weights, self.files, list_of_lsv, self.lock, lchnksize, self.queue, self.name)
         self.weights = weights
+
         if len(list_of_lsv) > 0:
             pool = mp.Pool(processes=self.nthreads, initializer=process_conf, initargs=[psi_quantification, self],
                            maxtasksperchild=1)
@@ -81,10 +81,8 @@ class CalcPsi(BasicPipeline):
                 out_h5p.set_analysis_type(ANALYSIS_PSI)
                 out_h5p.add_experiments(group_name=self.name, experiment_names=meta['experiments'])
 
-                in_h5p = h5py.File(self.files[0], 'r')
-                queue_manager(in_h5p, out_h5p, self.lock, self.queue, num_chunks=self.nthreads,
+                queue_manager(None, out_h5p, self.lock, self.queue, num_chunks=self.nthreads,
                               list_of_lsv_graphics=lsv_dict_graph, logger=logger)
-                in_h5p.close()
 
             pool.join()
 
