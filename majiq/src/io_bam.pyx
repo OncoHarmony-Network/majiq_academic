@@ -50,7 +50,7 @@ cdef __cross_junctions(AlignedSegment read):
     return cross, jlist, off
 
 
-cpdef int  find_introns(str filename, dict list_introns, float intron_threshold, int group_indx) except -1:
+cpdef int find_introns(str filename, dict list_introns, float intron_threshold, int group_indx) except -1:
 
     cdef AlignmentFile samfl
     cdef int nchunks, chunk_len
@@ -85,26 +85,30 @@ cpdef int  find_introns(str filename, dict list_introns, float intron_threshold,
     return 0
 
 
-cdef inline int __read_STAR_junc_file(str filename, set out_jj, dict out_dd) except -1:
+cdef inline set __read_STAR_junc_file(str filename, set in_jj) except -1:
+
+    cdef set out_dd = set()
 
     with open(filename, 'r') as fp:
         for ln in fp.readlines():
             tab = ln.strip().split()
             # if (tab[0], tab[1], tab[2]) in in_juncs:
             #     continue
-            try:
-                out_dd[(tab[0], tab[1], tab[2])] += tab[6]
-            except KeyError:
-                out_dd[(tab[0], tab[1], tab[2])] = tab[6]
-            out_jj.append((tab[0], tab[1], tab[2], tab[3]))
+
+            if (tab[0], tab[1], tab[2]) not in in_jj:
+                out_dd.add((tab[0], tab[1], tab[2]))
+
+    return out_dd
 
 
-cdef int __read_juncs_from_bam(str filename, list out_jj, dict out_dd) except -1:
+
+cdef set __read_juncs_from_bam(str filename, set in_jj) except -1:
 
     cdef AlignedSegment read
     cdef AlignmentFile samfl
     cdef int readlen
     cdef bint is_cross
+    cdef set out_dd = set()
     cdef list junc_list
     cdef int junc_start, junc_end, rend
 
@@ -123,16 +127,14 @@ cdef int __read_juncs_from_bam(str filename, list out_jj, dict out_dd) except -1
             if (junc_start - read.pos >= readlen - MIN_BP_OVERLAP) or (junc_start - read.pos <= MIN_BP_OVERLAP) or \
                 (junc_end - junc_start < MIN_JUNC_LENGTH):
                     continue
-            # if (chrom, junc_start, junc_end) in out_jj:
-            #     continue
-            #out_jj.add((read.reference, junc_start, junc_end))
-            try:
-                out_dd[(chrom, junc_start, junc_end)] += 1
-            except KeyError:
-                out_dd[(chrom, junc_start, junc_end)] = 1
+            if (chrom, junc_start, junc_end) not in in_jj or (chrom, junc_start, junc_end) not in out_dd:
+                out_dd.add((chrom, junc_start, junc_end))
 
 
-def read_juncs_old(db_f, list file_list, set in_juncs, dict junctions, dict all_genes, int min_denovo, object q):
+    return out_dd
+
+
+def read_juncs(db_f, list file_list, set in_juncs, dict junctions, dict all_genes, int min_denovo, object q):
 
     cdef str ln, fname, chrom='', jjid
     cdef list tab
@@ -189,76 +191,83 @@ def read_juncs_old(db_f, list file_list, set in_juncs, dict junctions, dict all_
 
 
 
-def read_juncs(str fname, bint is_junc_file, dict dict_genes, dict junctions):
-
-    cdef str ln,, chrom='', jjid
-    cdef list tab
-    cdef tuple jj
-    cdef int gidx=0, ngenes=0
-    cdef object fp
-
-    cdef set set_junctions = set([(dict_genes[xx.gene_id]['chrom'], dict_genes[xx.gene_id]['strand'], xx.start, xx.end)
-                                  for xx in junctions.values()])
-
-
-    if is_junc_file:
-       new_junctions =  __read_STAR_junc_file(fname, set_junctions)
-    else:
-        __read_juncs_from_bam(fname, jj_list, jj_dd)
-        jj_list.extend(list(jj_dd.keys()))
-
-
-
-
-
-
-
-
-
-    for fidx, (bb, fname) in enumerate(file_list):
-        if bb:
-            __read_STAR_junc_file(fidx, fname, jj_list, jj_dd)
-        else:
-            __read_juncs_from_bam(fidx, fname, jj_list, jj_dd)
-            jj_list.extend(list(jj_dd.keys()))
-
-    jj_list.sort(key=lambda xx: (xx[0], xx[1], xx[2]))
-    jj_dd = {kk: float(vv)/len(file_list) for kk, vv in jj_dd.items()}
-
-    for jj in jj_list:
-        if jj_dd[(jj[0], jj[1], jj[2])] < min_denovo:
-            continue
-
-        if chrom != jj[0]:
-            chrom = jj[0]
-            ngenes = len(all_genes[chrom])
-
-            gidx = 0
-
-        while gidx < ngenes :
-
-            gstart, gend, gid = all_genes[chrom][gidx]
-            # print (gidx, ngenes, gend, gstart, jj[0], jj[1], jj[2])
-            if gend < jj[1]:
-                gidx += 1
-                continue
-            if gstart > jj[2]:
-                break
-
-            if gstart<=jj[1] and gend>= jj[2]:
-
-                try:
-                    jj_nc = junctions[gid][(jj[1], jj[2])]
-                    jj_nc.update_junction_read(jj_dd[(jj[0], jj[1], jj[2])])
-                except KeyError:
-                    dump_junctions(db_f, gid, jj[1], jj[2], None, annot=False)
-                    junctions[gid][(jj[1], jj[2])] = Junction(jj[1],  jj[2], gid, -1, annot=False)
-                    junctions[gid][(jj[1], jj[2])].update_junction_read(jj_dd[(jj[0], jj[1], jj[2])])
-
-                break
-            else:
-                gidx +=1
-    return 0
+# def read_juncs(str fname, bint is_junc_file, dict dict_genes, dict junctions):
+#
+#     cdef str ln,, chrom='', jjid
+#     cdef list tab
+#     cdef tuple jj
+#     cdef int gidx=0, ngenes=0
+#     cdef object fp
+#
+#     cdef set set_junctions = set([(dict_genes[xx.gene_id]['chrom'], dict_genes[xx.gene_id]['strand'], xx.start, xx.end)
+#                                   for xx in junctions.values()])
+#
+#     if is_junc_file:
+#        new_junctions = __read_STAR_junc_file(fname, set_junctions)
+#     else:
+#        new_junctions = __read_juncs_from_bam(fname, set_junctions)
+#
+#
+#
+#     for chrom, jj_set in new_junctions.items():
+#         gne_list = sorted([xx for xx in dict_genes if xx['chrom']==chrom], key=lambda x: (x['start'], x['end']))
+#         ngenes = len(gne_list)
+#
+#         for junc in jj_set:
+#
+#
+#
+#
+#
+#
+#
+#
+#
+#
+#     for fidx, (bb, fname) in enumerate(file_list):
+#         if bb:
+#             __read_STAR_junc_file(fidx, fname, jj_list, jj_dd)
+#         else:
+#             __read_juncs_from_bam(fidx, fname, jj_list, jj_dd)
+#             jj_list.extend(list(jj_dd.keys()))
+#
+#     jj_list.sort(key=lambda xx: (xx[0], xx[1], xx[2]))
+#     jj_dd = {kk: float(vv)/len(file_list) for kk, vv in jj_dd.items()}
+#
+#     for jj in jj_list:
+#         if jj_dd[(jj[0], jj[1], jj[2])] < min_denovo:
+#             continue
+#
+#         if chrom != jj[0]:
+#             chrom = jj[0]
+#             ngenes = len(all_genes[chrom])
+#
+#             gidx = 0
+#
+#         while gidx < ngenes :
+#
+#             gstart, gend, gid = all_genes[chrom][gidx]
+#             # print (gidx, ngenes, gend, gstart, jj[0], jj[1], jj[2])
+#             if gend < jj[1]:
+#                 gidx += 1
+#                 continue
+#             if gstart > jj[2]:
+#                 break
+#
+#             if gstart<=jj[1] and gend>= jj[2]:
+#
+#                 try:
+#                     jj_nc = junctions[gid][(jj[1], jj[2])]
+#                     jj_nc.update_junction_read(jj_dd[(jj[0], jj[1], jj[2])])
+#                 except KeyError:
+#                     dump_junctions(db_f, gid, jj[1], jj[2], None, annot=False)
+#                     junctions[gid][(jj[1], jj[2])] = Junction(jj[1],  jj[2], gid, -1, annot=False)
+#                     junctions[gid][(jj[1], jj[2])].update_junction_read(jj_dd[(jj[0], jj[1], jj[2])])
+#
+#                 break
+#             else:
+#                 gidx +=1
+#     return 0
 
 
 
