@@ -81,7 +81,7 @@ class CalcPsi(BasicPipeline):
                 out_h5p.set_analysis_type(ANALYSIS_PSI)
                 out_h5p.add_experiments(group_name=self.name, experiment_names=meta['experiments'])
 
-                queue_manager(None, out_h5p, self.lock, self.queue, num_chunks=self.nthreads,
+                queue_manager(out_h5p, self.lock, self.queue, num_chunks=self.nthreads,
                               list_of_lsv_graphics=lsv_dict_graph, logger=logger)
 
             pool.join()

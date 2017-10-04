@@ -145,7 +145,6 @@ def queue_manager(output_h5dfp, lock_array, result_queue, num_chunks,
             elif val.get_type() == QUEUE_MESSAGE_END_WORKER:
                 lock_array[val.get_chunk()].release()
                 nthr_count += 1
-                print ("END CHILD", num_chunks, nthr_count)
                 if nthr_count >= num_chunks:
                     break
             del val

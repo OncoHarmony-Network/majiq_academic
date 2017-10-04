@@ -133,10 +133,9 @@ class DeltaPsi(BasicPipeline):
                 out_h5p.add_experiments(group_name=self.names[0], experiment_names=meta1['experiments'])
                 out_h5p.add_experiments(group_name=self.names[1], experiment_names=meta2['experiments'])
 
-                in_h5p = h5py.File(files[0][0], 'r')
-                queue_manager(in_h5p, out_h5p, self.lock, self.queue, num_chunks=self.nthreads, logger=logger,
+                queue_manager(out_h5p, self.lock, self.queue, num_chunks=self.nthreads, logger=logger,
                               list_of_lsv_graphics=lsv_dict_graph)
-                in_h5p.close()
+
             pool.join()
 
         logger.info("DeltaPSI calculation for %s_%s ended succesfully! Result can be found at %s" % (self.names[0],
