@@ -76,10 +76,10 @@ class Config(object):
             #self.simplify = self.simplify is not None
 
             exps = Config.config_section_map(config, "experiments")
-            self.juncfile_list = {}
+            self.juncfile_list = []
             for exp_idx, lstnames in exps.items():
                 self.tissue_repl[exp_idx] = []
-                self.juncfile_list[exp_idx] = []
+                # self.juncfile_list[exp_idx] = []
                 elist = lstnames.split(',')
                 for exp in elist:
                     self.exp_list.append(exp)
@@ -106,9 +106,9 @@ class Config(object):
 
                     juncfile = "%s/%s.sjdb" % (self.sam_dir, exp)
                     if not os.path.exists(juncfile):
-                        self.juncfile_list[name].append((False, samfile))
+                        self.juncfile_list.append((False, samfile, name))
                     else:
-                        self.juncfile_list[name].append((True, juncfile))
+                        self.juncfile_list.append((True, juncfile, name))
             return
 
         def __str__(self):

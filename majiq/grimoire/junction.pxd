@@ -3,7 +3,7 @@
 cdef class Junction:
     cdef public int start
     cdef public int end
-    cdef str gene_id
+    cdef public str gene_id
     cdef public int index
 
     cdef public int nreads
