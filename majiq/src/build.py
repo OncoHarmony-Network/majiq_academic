@@ -134,6 +134,8 @@ def parse_denovo_elements(pipe_self, logger):
                                   list_introns[gne_id])
         detect_exons(dict_junctions[gne_id], list_exons[gne_id])
 
+    init_splicegraph(get_builder_splicegraph_filename(majiq_config.outDir))
+
     gene_to_splicegraph(dict_of_genes, dict_junctions, list_exons, list_introns, majiq_config, None)
 
 
@@ -268,7 +270,7 @@ class Builder(BasicPipeline):
             p.start()
             p.join()
 
-            init_splicegraph(get_builder_splicegraph_filename(majiq_config.outDir))
+
 
             #parse_denovo_elements(majiq_config.juncfile_list, 0, None, logger)
 

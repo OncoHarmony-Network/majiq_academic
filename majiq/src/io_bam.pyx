@@ -233,7 +233,6 @@ def read_juncs(str fname, bint is_junc_file, dict dict_exons, dict dict_genes, d
                         qm = QueueMessage(QUEUE_MESSAGE_BUILD_JUNCTION, (gid, junc[0], junc[1], gname), 0)
                         queue.put(qm, block=True)
                         junctions[gobj['id']][junc[:-1]] = junc_obj
-#                        dump_junctions(db_f, gobj['id'], junc[0], junc[1], None, annot=False)
                     else:
                         possible_genes.append(gobj)
                     gidx +=1
