@@ -197,7 +197,10 @@ class GeneGraphic(HDF5):
 
     def to_hdf5(self, h, use_id=True):
         if use_id:
-            h = h.create_group(join('/genes', self.gene_id))
+            try:
+                h = h.create_group(join('/genes', self.gene_id))
+            except ValueError:
+                h = h[join('/genes', self.gene_id)]
 
         super(GeneGraphic, self).to_hdf5(h, use_id)
 
