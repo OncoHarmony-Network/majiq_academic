@@ -1,8 +1,5 @@
-import multiprocessing
-import os
-from collections import namedtuple
-
 import collections
+import os
 
 import voila
 
@@ -41,7 +38,7 @@ IR_TYPE_END = 2
 SUFFIX_SPLICEGRAPH = 'splicegraph'
 DELIMITER = '\t'
 EXTENSION = 'txt'
-MAX_GENES = 10 # Max. 10 genes per page, create as many HTMLs as needed
+MAX_GENES = 10  # Max. 10 genes per page, create as many HTMLs as needed
 MAX_LSVS_DELTAPSI_INDEX = 10000  # Max. LSVs allowed to create full index.html
 MAX_LSVS_PSI_INDEX = 15000
 COMBINED_PREFIX = 'ALL_'
@@ -61,7 +58,7 @@ EXPERIMENT_NAMES = 'experiments_names'
 # MAJIQ-SPEL
 LSV_TEXT_VERSION = 2
 
-SPLICE_GRAPH_FILE_VERSION = 2
+SPLICE_GRAPH_FILE_VERSION = 3
 VOILA_FILE_VERSION = 3
 
 FILE_MODE = collections.namedtuple('FILE_MODE', 'read write')('r', 'w')
