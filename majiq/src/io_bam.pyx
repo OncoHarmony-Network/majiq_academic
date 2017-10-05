@@ -420,5 +420,5 @@ cdef int _read_sam_or_bam(object gne, AlignmentFile samfl, list matrx, dict junc
         return tot_reads
     except ValueError as e:
         print(e)
-        logging.error('\t[%s]There are no reads in %s:%d-%d' % (info_msg, gne['chrom'], gne['start'], gne['end']))
+        logging.error('\t[%s]There are no reads in %s:%d-%d' % (info_msg, gne['chromosome'], gne['start'], gne['end']))
         return 0

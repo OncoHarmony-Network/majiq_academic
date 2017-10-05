@@ -113,7 +113,7 @@ def parse_denovo_elements(pipe_self, logger):
         for jj, vv in denovo_junctions.items():
             vv /= group_lens
             if np.any(vv >= majiq_config.min_denovo):
-                majiq_io.dump_junctions(db_f, jj[0], jj[1], jj[2], [], annot=False)
+                majiq_io.dump_junctions(db_f, jj[0], jj[1], jj[2], annot=False)
 
     [xx.acquire() for xx in pipe_self.lock]
     pool2.imap_unordered(majiq_multi.process_wrapper,
