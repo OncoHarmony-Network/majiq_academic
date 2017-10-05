@@ -3,7 +3,7 @@ import errno
 import os
 
 from majiq.src.logger import create_if_not_exists
-from voila.api import SpliceGraphs
+from voila.api import SpliceGraph
 from voila.io_voila import Voila
 
 
@@ -61,7 +61,7 @@ class VoilaArgs:
     @classmethod
     def check_splice_graph_file(cls, value):
         cls.check_file(value)
-        with SpliceGraphs(value, 'r') as sg:
+        with SpliceGraph(value, 'r') as sg:
             sg.check_version()
         return value
 

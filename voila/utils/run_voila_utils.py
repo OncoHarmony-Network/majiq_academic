@@ -11,7 +11,7 @@ from jinja2 import Environment, FileSystemLoader
 from markupsafe import escape
 
 from voila import constants
-from voila.api import SpliceGraphs
+from voila.api import SpliceGraph
 from voila.constants import EXEC_DIR
 from voila.utils.voila_log import voila_log
 
@@ -30,7 +30,7 @@ def parse_gene_graphics(splice_graph_file, metainfo, gene_ids_list):
 
     genes_exp1_exp2 = []
 
-    with SpliceGraphs(splice_graph_file, 'r') as sg:
+    with SpliceGraph(splice_graph_file, 'r') as sg:
         genes = sg.get_genes_list(gene_ids_list)
         gene_experiments_list = sg.get_experiments()
 
