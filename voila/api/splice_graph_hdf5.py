@@ -2,6 +2,7 @@ import os
 from itertools import islice
 
 import h5py
+import numpy as np
 
 from voila.api.splice_graph_type import Gene, Junction, Exon
 
@@ -48,11 +49,13 @@ class SpliceGraphHDF5():
 
     def check_version(self):
         # todo: check file version
-        return ''
+        pass
 
     def add_experiment_names(self, experiment_names):
-        # todo: add experiment names to metainfo
-        pass
+        self.hdf5.attrs['experiment_names'] = [np.string_(e) for e in experiment_names]
+
+    def get_experiments(self):
+        return self.hdf5.attrs['experiment_names']
 
 
 class Genes(SpliceGraphHDF5):

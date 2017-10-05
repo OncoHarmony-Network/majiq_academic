@@ -1,3 +1,4 @@
+import h5py
 import numpy as np
 
 
@@ -75,7 +76,6 @@ class Exon(SpliceGraphType):
         super().__init__(hdf5_grp)
         self._props = {'end', 'start', 'a3', 'a5', 'exon_type_list', 'coords_extra', 'intron_retention', 'lsv_type',
                        'alt_starts', 'alt_ends'}
-        self._process = {'a3': self._uint8, 'a5': self._uint8}
         self.parse_attrs(**kwargs)
 
     @property
@@ -89,6 +89,10 @@ class Gene(SpliceGraphType):
         self._props = {'name', 'strand', 'chromosome', 'junctions', 'exons'}
         self._process = {'junctions': self._references, 'exons': self._references}
         self.parse_attrs(**kwargs)
+
+    def _references(self, vs):
+        print(vs[0]._hdf5_grp)
+        return np.array(tuple(v._hdf5_grp.ref for v in vs), dtype=h5py.special_dtype(ref=h5py.Reference))
 
     @property
     def junctions(self):
