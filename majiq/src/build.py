@@ -20,6 +20,7 @@ from majiq.src.config import Config
 from majiq.src.constants import *
 from majiq.src.polyfitnb import fit_nb
 from majiq.src.voila_wrapper import gene_to_splicegraph, init_splicegraph
+import math
 import datetime
 
 
@@ -82,7 +83,7 @@ def parse_denovo_elements(pipe_self, logger):
     nthreads = min(pipe_self.nthreads, len(majiq_config.sam_list))
     logger.info("Create %s processes" % nthreads)
     pipe_self.lock = [mp.Lock() for _ in range(nthreads)]
-    lchnksize = max(int(len(majiq_config.sam_list) / nthreads), 1) + 1
+    lchnksize = max(math.ceil(len(majiq_config.sam_list) / nthreads), 1)
     print (lchnksize, len(majiq_config.sam_list), nthreads)
     pool1 = mp.Pool(processes=nthreads, initializer=majiq_multi.process_conf, initargs=[find_new_junctions, pipe_self],
                     maxtasksperchild=1)
