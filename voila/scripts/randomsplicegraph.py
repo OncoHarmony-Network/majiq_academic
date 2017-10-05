@@ -1,6 +1,5 @@
 import random
 import uuid
-from itertools import izip
 
 import numpy
 
@@ -9,7 +8,7 @@ from voila.splice_graphics import ExonGraphic, JunctionGraphic, GeneGraphic, Lsv
 
 def grouped(iterable, n):
     "s -> (s0,s1,s2,...sn-1), (sn,sn+1,sn+2,...s2n-1), (s2n,s2n+1,s2n+2,...s3n-1), ..."
-    return izip(*[iter(iterable)] * n)
+    return zip(*[iter(iterable)] * n)
 
 
 class RandomSpliceGraph(object):
@@ -76,7 +75,7 @@ class RandomSpliceGraph(object):
         """
         # get a list of random unique integers and group them into twos
         starts_ends = grouped(
-            sorted(random.sample(range(self.gene_max_length / self.exon_length_multiplier), self.exons * 2)),
+            sorted(random.sample(range(int(self.gene_max_length / self.exon_length_multiplier)), self.exons * 2)),
             2
         )
 
