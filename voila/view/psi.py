@@ -2,7 +2,7 @@ import os
 from tempfile import NamedTemporaryFile
 
 from voila import io_voila, constants
-from voila.api import Voila, SpliceGraphs
+from voila.api import Voila, SpliceGraph
 from voila.utils.exceptions import NoLsvsFound
 from voila.utils.run_voila_utils import table_marks_set, copy_static, get_template_dir
 from voila.utils.voila_log import voila_log
@@ -94,7 +94,7 @@ class Psi(Html, VoilaArgs):
         summaries_subfolder = self.get_summaries_subfolder()
         metainfo = self.metainfo
 
-        with SpliceGraphs(args.splice_graph, 'r') as sg:
+        with SpliceGraph(args.splice_graph, 'r') as sg:
             gene_experiments_list = sg.get_experiments()
             prev_page = None
             page_count = sg.get_page_count(args)
