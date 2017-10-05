@@ -84,7 +84,6 @@ def parse_denovo_elements(pipe_self, logger):
     logger.info("Create %s processes" % nthreads)
     pipe_self.lock = [mp.Lock() for _ in range(nthreads)]
     lchnksize = max(math.ceil(len(majiq_config.sam_list) / nthreads), 1)
-    print (lchnksize, len(majiq_config.sam_list), nthreads)
     pool1 = mp.Pool(processes=nthreads, initializer=majiq_multi.process_conf, initargs=[find_new_junctions, pipe_self],
                     maxtasksperchild=1)
     pool2 = mp.Pool(processes=nthreads, initializer=majiq_multi.process_conf, initargs=[find_new_introns, pipe_self],
