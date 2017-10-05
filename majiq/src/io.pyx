@@ -272,7 +272,7 @@ def extract_lsv_summary(list files, int minnonzero, int min_reads, dict epsi=Non
     return lsv_id_list, lsv_graphic
 
 
-def dump_junctions(db_f, str gne_id, int start, int end, str transcript_id, bint annot=False):
+def dump_junctions(db_f, str gne_id, int start, int end, str transcript_id='', bint annot=False):
     _dump_junctions(db_f, gne_id, start, end, transcript_id, annot=annot)
 
 def dump_intron(db_f, str gne_id, int start, int end, bint annot=False):
