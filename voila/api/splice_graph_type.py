@@ -25,7 +25,11 @@ class SpliceGraphType:
 
     def __getattr__(self, item):
         if item in self._props:
-            return self._hdf5_grp.attrs[item]
+            try:
+                return self._hdf5_grp.attrs[item]
+            except KeyError:
+                return None
+
         raise PropertyDoesNotExist(item, self)
 
     @property
@@ -70,6 +74,25 @@ class Junction(SpliceGraphType):
         self._props = {'start', 'end', 'junction_type_list', 'reads_list', 'transcripts', 'intron_retention'}
         self.parse_attrs(**kwargs)
 
+    def update_reads(self, experiment_name, reads):
+        try:
+            exp_names = self._hdf5_grp.file.attrs['experiment_names']
+        except KeyError:
+            raise KeyError("Experiment names have not been set.")
+
+        try:
+            idx = np.where(exp_names == experiment_name)[0][0]
+        except IndexError:
+            raise IndexError('Experiment name could not be found.')
+
+        if self.reads_list is None:
+            reads_list = [0] * len(exp_names)
+        else:
+            reads_list = self.reads_list
+
+        reads_list[idx] = reads
+        self.reads_list = reads_list
+
 
 class Exon(SpliceGraphType):
     def __init__(self, hdf5_grp, **kwargs):
@@ -91,7 +114,6 @@ class Gene(SpliceGraphType):
         self.parse_attrs(**kwargs)
 
     def _references(self, vs):
-        print(vs[0]._hdf5_grp)
         return np.array(tuple(v._hdf5_grp.ref for v in vs), dtype=h5py.special_dtype(ref=h5py.Reference))
 
     @property

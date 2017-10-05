@@ -139,6 +139,6 @@ def gene_to_splicegraph(dict_of_genes, dict_junctions, exon_dict, list_introns, 
             # with SpliceGraph(get_builder_splicegraph_filename(majiq_config.outDir), 'r+') as sg:
             #     sg.add_gene(ggraph)
             # # lock.release()
-            g = sg.gene(gne_id, name=gne['name'], strand=gne['strand'], exons=exon_list,
+            sg.gene(gne_id, name=gne['name'], strand=gne['strand'], exons=exon_list,
                         junctions=junc_list, chromosome=gne['chromosome'])
 

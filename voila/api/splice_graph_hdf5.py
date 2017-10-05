@@ -30,8 +30,8 @@ class SpliceGraphHDF5():
         try:
             self.hdf5.flush()
             self.hdf5.close()
-        except ValueError:
-            pass
+        except (ValueError, RuntimeError):
+            del self.hdf5
 
     def hdf5_grp(self, t, id):
         id = str(id)
@@ -52,7 +52,7 @@ class SpliceGraphHDF5():
         pass
 
     def add_experiment_names(self, experiment_names):
-        self.hdf5.attrs['experiment_names'] = [np.string_(e) for e in experiment_names]
+        self.hdf5.attrs['experiment_names'] = np.array(experiment_names, dtype=h5py.special_dtype(vlen=np.unicode))
 
     def get_experiments(self):
         return self.hdf5.attrs['experiment_names']
@@ -62,6 +62,7 @@ class Genes(SpliceGraphHDF5):
     def gene(self, id, **kwargs):
         return Gene(self.hdf5_grp('Gene', id), **kwargs)
 
+    @property
     def genes(self):
         gene_hdf5 = self.hdf5['Gene']
         return (Gene(gene_hdf5[id]) for id in gene_hdf5)
@@ -71,6 +72,7 @@ class Junctions(SpliceGraphHDF5):
     def junction(self, id, **kwargs):
         return Junction(self.hdf5_grp('Junctions', id), **kwargs)
 
+    @property
     def junctions(self):
         juncs_hdf5 = self.hdf5['Junctions']
         return (Junction(juncs_hdf5[id]) for id in juncs_hdf5)
@@ -80,6 +82,7 @@ class Exons(SpliceGraphHDF5):
     def exon(self, id, **kwargs):
         return Exon(self.hdf5_grp('Exons', id), **kwargs)
 
+    @property
     def exons(self):
         exons_hdf5 = self.hdf5['Exons']
         return (Exon(exons_hdf5[id]) for id in exons_hdf5)
