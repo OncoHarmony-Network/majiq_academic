@@ -1,14 +1,14 @@
 from majiq.src.config import Config
 from majiq.src.constants import *
 from voila import constants as voila_const
-from voila.api import SpliceGraphs
+from voila.api import SpliceGraph
 from voila.splice_graphics import JunctionGraphic, ExonGraphic, GeneGraphic
 
 
 def init_splicegraph(filename):
     majiq_config = Config()
     # erase splice graph file
-    with SpliceGraphs(filename, 'w') as sg:
+    with SpliceGraph(filename, 'w') as sg:
         sg.add_experiment_names(majiq_config.exp_list)
 
 
@@ -119,6 +119,6 @@ def gene_to_splicegraph(dict_of_genes, dict_junctions, exon_dict, list_introns, 
                              junctions=junc_list, chromosome=gne['chromosome'])
 
         # lock.acquire()
-        with SpliceGraphs(get_builder_splicegraph_filename(majiq_config.outDir), 'r+') as sg:
+        with SpliceGraph(get_builder_splicegraph_filename(majiq_config.outDir), 'r+') as sg:
             sg.add_gene(ggraph)
         # lock.release()
