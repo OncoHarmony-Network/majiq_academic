@@ -19,7 +19,7 @@ from majiq.src.basic_pipeline import BasicPipeline, pipeline_run
 from majiq.src.config import Config
 from majiq.src.constants import *
 from majiq.src.polyfitnb import fit_nb
-from majiq.src.voila_wrapper import gene_to_splicegraph, init_splicegraph
+from majiq.src.voila_wrapper import gene_to_splicegraph, init_splicegraph, update_splicegraph_junctions
 import math
 import datetime
 
@@ -189,9 +189,11 @@ def parsing_files(sam_file_list, chnk, process_conf, logger):
                         gc_pairs['GC'].append(ex.get_gc_content())
                         gc_pairs['COV'].append(ex.get_coverage())
 
-                majiq_io_bam.close_rnaseq(samfl)
+        majiq_io_bam.close_rnaseq(samfl)
 
         junc_mtrx = np.array(junc_mtrx)
+        update_splicegraph_junctions(dict_junctions, junc_mtrx, majiq_config.outDir, sam_file, process_conf.lock)
+
         indx = np.arange(junc_mtrx.shape[0])[junc_mtrx.sum(axis=1) >= majiq_config.minreads]
 
         logger.debug("[%s] Fitting NB function with constitutive events..." % sam_file)
@@ -281,6 +283,7 @@ class Builder(BasicPipeline):
         logger.info("Parsing seq files")
 
         if self.nthreads > 1:
+            self.lock = mp.Lock()
             pool = mp.Pool(processes=self.nthreads,
                            initializer=majiq_multi.process_conf,
                            initargs=[parsing_files, self],
