@@ -2,6 +2,7 @@ import os
 from collections import OrderedDict
 
 from voila import constants
+from voila.api import SpliceGraph
 from voila.utils import utils_voila
 from voila.utils.run_voila_utils import get_env, get_output_html
 
@@ -17,32 +18,35 @@ class Html(object):
         utils_voila.create_if_not_exists(summaries_subfolder)
         return summaries_subfolder
 
-    @staticmethod
-    def gene_experiments(experiments, genes, gene_experiments):
+    def gene_experiments(self, experiments, genes, gene_experiments):
 
         genes_exp = {}
         combined_genes_exp = {}
-        gene_experiments_tuple = tuple(gene_experiments)
+        gene_experiments_tuple = tuple(x.decode('utf-8') for x in gene_experiments.tolist())
 
-        for experiment in experiments:
-            genes_exp[experiment] = {}
+        with SpliceGraph(self.args.splice_graph) as sg:
+            for experiment in experiments:
+                genes_exp[experiment] = {}
 
-            for gene in genes:
-                # map the metainfo experiment name to the experiment index in the splice graph file.
-                experiment_index = gene_experiments_tuple.index(experiment)
+                for gene_id in genes:
+                    gene = sg.gene(gene_id)
 
-                # get the data needed to render the html
-                genes_exp[experiment][gene.gene_id] = gene.get_experiment(experiment_index)
+                    # map the metainfo experiment name to the experiment index in the splice graph file.
+                    experiment_index = gene_experiments_tuple.index(experiment)
 
-                # record all genes and combine their experiment data
-                combined_genes_exp[gene.gene_id] = gene.combine(experiment_index,
-                                                                combined_genes_exp.get(gene.gene_id, None))
+                    # get the data needed to render the html
+                    genes_exp[experiment][gene_id] = gene.get_experiment(experiment_index)
 
-        # if there are more then 1 experiments, then record the combined data
-        if len(experiments) > 1:
-            genes_exp['Combined'] = {gene_id: combined_genes_exp[gene_id] for gene_id in combined_genes_exp}
+                    # record all genes and combine their experiment data
+                    # todo: implement combined
+                    combined_genes_exp[gene.id] = gene.combine(experiment_index,
+                                                                    combined_genes_exp.get(gene.id, None))
 
-        return OrderedDict(sorted(genes_exp.items(), key=lambda t: t[0]))
+            # if there are more then 1 experiments, then record the combined data
+            if len(experiments) > 1:
+                genes_exp['Combined'] = {gene_id: combined_genes_exp[gene_id] for gene_id in combined_genes_exp}
+
+            return OrderedDict(sorted(genes_exp.items(), key=lambda t: t[0]))
 
     def add_to_voila_links(self, lsv_dict, page_name):
         for lsvs in lsv_dict.values():

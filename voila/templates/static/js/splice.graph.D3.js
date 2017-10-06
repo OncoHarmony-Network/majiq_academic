@@ -85,11 +85,12 @@ function map_exon_list(exons, junctions) {
     // Note: to account for overlapping exons_obj where exons_obj within a very large exon have long introns, we should
     // ^^^^^ store the last
     var coords_extra = [];
-    for (k = 0; k < exons[0].coords_extra.length; k++) {
-        coords_extra.push(map(function (x) {
-            return add(x, -acc_offset);
-        }, exons[0].coords_extra[k]));
-    }
+    if (exons[0].coords_extra)
+        for (k = 0; k < exons[0].coords_extra.length; k++) {
+            coords_extra.push(map(function (x) {
+                return add(x, -acc_offset);
+            }, exons[0].coords_extra[k]));
+        }
 
     var coords = map(function (x) {
         return add(x, -acc_offset);
@@ -110,9 +111,10 @@ function map_exon_list(exons, junctions) {
 
     exons_mapped_tmp[0] = exon_tmp;
 
-    for (i = 0; i < exons[0].a3.length; i++) {
-        junctions[exons[0].a3[i]].end -= offset;
-    }
+    if (exons[0].a3)
+        for (i = 0; i < exons[0].a3.length; i++) {
+            junctions[exons[0].a3[i]].end -= offset;
+        }
 
     for (i = 0; i < exons[0].a5.length; i++) {
         junctions[exons[0].a5[i]].start -= offset;
@@ -124,11 +126,12 @@ function map_exon_list(exons, junctions) {
 
         // Check if there are exons_obj to make shorter (intron retention)
         coords_extra = [];
-        for (k = 0; k < exons[i].coords_extra.length; k++) {
-            coords_extra.push(map(function (x) {
-                return add(x, -acc_offset);
-            }, exons[i].coords_extra[k]));
-        }
+        if (exons[i].coords_extra)
+            for (k = 0; k < exons[i].coords_extra.length; k++) {
+                coords_extra.push(map(function (x) {
+                    return add(x, -acc_offset);
+                }, exons[i].coords_extra[k]));
+            }
 
         coords = map(function (x) {
             return add(x, -acc_offset);
@@ -162,12 +165,15 @@ function map_exon_list(exons, junctions) {
             }
         }
 
+        if(exons[i].a3)
         for (j = 0; j < exons[i].a3.length; j++) {
             junctions[exons[i].a3[j]].end -= acc_offset;
         }
-        for (j = 0; j < exons[i].a5.length; j++) {
-            junctions[exons[i].a5[j]].start -= acc_offset;
-        }
+
+        if (exons[i].a5)
+            for (j = 0; j < exons[i].a5.length; j++) {
+                junctions[exons[i].a5[j]].start -= acc_offset;
+            }
     }
     return exons_mapped_tmp;
 
@@ -281,14 +287,15 @@ function spliceGraphD3() {
 
                 for (var ii = 0; ii < exons.length; ii++) {
                     var d = exons[ii];
-                    for (var i = 0; i < d.value.a3.length; i++) {
-                        junctions[d.value.a3[i]].dispFrom = junctions[d.value.a3[0]].start;
-                        if (i === 0) {
-                            junctions[d.value.a3[i]].dispersion = 1;
-                        } else {
-                            junctions[d.value.a3[i]].dispersion = d.value.a3.length - i + 1;
+                    if (d.value.a3)
+                        for (var i = 0; i < d.value.a3.length; i++) {
+                            junctions[d.value.a3[i]].dispFrom = junctions[d.value.a3[0]].start;
+                            if (i === 0) {
+                                junctions[d.value.a3[i]].dispersion = 1;
+                            } else {
+                                junctions[d.value.a3[i]].dispersion = d.value.a3.length - i + 1;
+                            }
                         }
-                    }
                 }
 
             };
@@ -527,6 +534,7 @@ function spliceGraphD3() {
 
                 exons.enter().append('rect');
 
+
                 exons.attr('class', 'exon')
                     .classed('found', function (d) {
                         return d.value.exon_type === 0
@@ -548,7 +556,6 @@ function spliceGraphD3() {
                         return Math.max(EXON_MIN_W, Math.round(scaleX(d.value.end) - scaleX(d.value.start)));
                     })
                     .attr("height", EXON_H);
-
                 return exons;
             };
 
@@ -726,15 +733,15 @@ function spliceGraphD3() {
                     var row = highlighLSV.parentNode.parentNode.parentNode.parentNode.querySelectorAll('td');
                     var isWeighted = row[0].querySelector('.weighted:checked');
                     var lsvID = row[1].textContent.split(':');
-                    var coords = lsvID[1].split("-").map(function (c) {
+                    console.log(lsvID);
+                    var coords = lsvID[2].split("-").map(function (c) {
                         return Number(c)
                     });
-                    var isSource = lsvID[2] === "source";
+                    var isSource = lsvID[1] === "s";
                     var lsvType = row[2].querySelector('p').textContent;
                     var hasIR = lsvType[lsvType.length - 1] === 'i';
                     var isTarget = !isSource;
-                    var isPositiveStrand = strand === '+';
-                    var isNegativeStrand = !isPositiveStrand;
+                    var isNegativeStrand = strand === '-';
                     var junc_indexes;
                     var wls = weightedLines(row).reverse();
                     var d3AllExons = d3.select(spliceDiv).selectAll('.exon, .halfexon, .intronRet')[0];
@@ -774,11 +781,16 @@ function spliceGraphD3() {
                     // highlight reference exon
                     d3.select(d3AllExons[reference_exon.key]).classed('highlight-lsv', true);
 
-                    if (isSource) {
-                        junc_indexes = reference_exon.value.a5.slice()
-                    } else if (isTarget) {
-                        junc_indexes = reference_exon.value.a3.slice()
-                    }
+                    if (isSource)
+                        if (isNegativeStrand)
+                            junc_indexes = reference_exon.value.a3.slice();
+                        else
+                            junc_indexes = reference_exon.value.a5.slice();
+                    else if (isTarget)
+                        if (isNegativeStrand)
+                            junc_indexes = reference_exon.value.a5.slice();
+                        else
+                            junc_indexes = reference_exon.value.a3.slice();
 
                     junc_indexes = junc_indexes.sort(function (a, b) {
                         var junc_a = d3.select(d3AllJunctions[a]).data()[0];
@@ -864,6 +876,7 @@ function spliceGraphD3() {
             var introns_ret = renderIntronRetention(exonsp, scaleX);
             renderCoordsExtra(exonsp, scaleX);
 
+
             /** Render half exons */
             var halfExons = renderHalfExons(exonsp, scaleX);
 
@@ -873,6 +886,7 @@ function spliceGraphD3() {
             var irReads = renderIntRetReads(junctionsp, scaleX);
             var irLines = renderIntRetLines(junctionsp, scaleX);
             spliceSites(junctionsp, scaleX);
+
 
             /** Add interactivity for ... */
             [exons, introns_ret, halfExons].forEach(function (el) {
@@ -951,7 +965,6 @@ function spliceGraphD3() {
             highlightLSV(this, strand, d3Elements);
 
         });
-
 
         $('#sg-filters').submit();
 

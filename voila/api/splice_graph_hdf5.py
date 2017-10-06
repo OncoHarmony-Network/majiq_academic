@@ -1,10 +1,14 @@
+import math
 import os
 from itertools import islice
 
 import h5py
 import numpy as np
 
+from voila import constants, api
 from voila.api.splice_graph_type import Gene, Junction, Exon
+from voila.utils.exceptions import GeneIdNotFoundInVoilaFile
+from voila.utils.voila_log import voila_log
 
 
 class SpliceGraphHDF5():
@@ -56,6 +60,89 @@ class SpliceGraphHDF5():
 
     def get_experiments(self):
         return self.hdf5.attrs['experiment_names']
+
+    def get_gene_ids(self, args=None):
+        if args and args.gene_ids:
+            return args.gene_ids
+
+        if args and hasattr(args, 'lsv_ids') and args.lsv_ids:
+            return (lsv_id.split(':')[0] for lsv_id in args.lsv_ids)
+
+        return self.hdf5['Gene'].keys()
+
+    def get_page_count(self, args):
+        gene_count = 0
+        log = voila_log()
+
+        log.debug('Start page count')
+
+        if hasattr(args, 'voila_file'):
+            with api.Voila(args.voila_file, 'r') as v:
+                for gene_id in self.get_gene_ids(args):
+                    try:
+                        if any(v.get_lsvs(args, gene_id)):
+                            gene_count += 1
+                    except GeneIdNotFoundInVoilaFile:
+                        pass
+
+        else:
+            log.debug('Gene limit is set to {0}'.format(args.limit))
+            for _ in self.get_gene_ids(args):
+                gene_count += 1
+                if gene_count == args.limit:
+                    break
+
+        log.debug('End page count')
+
+        return int(math.ceil(gene_count / float(constants.MAX_GENES)))
+
+    def get_paginated_genes_with_lsvs(self, args):
+        log = voila_log()
+        log.debug('Getting paginated genes with LSVs')
+
+        gene_list = []
+        lsv_dict = {}
+
+        with api.Voila(args.voila_file, 'r') as v:
+            for gene_id in self.get_gene_ids(args):
+                try:
+                    lsvs = tuple(v.get_lsvs(args, gene_id=gene_id))
+                except GeneIdNotFoundInVoilaFile:
+                    lsvs = None
+
+                if lsvs:
+                    lsv_dict[gene_id] = tuple(v.get_voila_lsv(gene_id, lsv_id) for gene_id, lsv_id in lsvs)
+                    gene_list.append(gene_id)
+
+                if len(gene_list) == constants.MAX_GENES:
+                    yield lsv_dict, gene_list
+                    gene_list = []
+                    lsv_dict = {}
+
+            if gene_list:
+                yield lsv_dict, gene_list
+
+    def get_paginated_genes(self, args):
+        log = voila_log()
+        log.debug('Getting paginated genes')
+
+        gene_list = []
+        gene_count = 0
+
+        for gene_id in self.get_gene_ids(args):
+            log.debug('Found {0}'.format(gene_id))
+            gene_list.append(gene_id)
+            gene_count += 1
+
+            if gene_count == args.limit:
+                break
+
+            if len(gene_list) == constants.MAX_GENES:
+                yield gene_list
+                gene_list = []
+
+        if gene_list:
+            yield gene_list
 
 
 class Genes(SpliceGraphHDF5):

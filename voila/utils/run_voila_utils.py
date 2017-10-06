@@ -89,6 +89,8 @@ class NumpyEncoder(json.JSONEncoder):
             return obj.item()
         elif isinstance(obj, numpy.ndarray):
             return obj.tolist()
+        elif isinstance(obj, numpy.bytes_):
+            return obj.decode('utf-8')
         return json.JSONEncoder.default(self, obj)
 
 

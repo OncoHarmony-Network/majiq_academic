@@ -3,13 +3,17 @@ import numpy
 
 from voila import constants
 from voila.api.splice_graph_hdf5 import Exons, Junctions, Genes
+from voila.constants import EXPERIMENT_NAMES
 from voila.hdf5 import BinsDataSet, HDF5
-from voila.utils.exceptions import GeneIdNotFoundInVoilaFile, InValidAnalysisType
+from voila.splice_graphics import GeneGraphic
+from voila.utils.exceptions import GeneIdNotFoundInVoilaFile, InValidAnalysisType, GeneIdNotFoundInSpliceGraphFile
 from voila.utils.voila_log import voila_log
 from voila.vlsv import VoilaLsv, get_expected_dpsi
+import os
+import math
 
 
-class Voila(object):
+class Voila:
     VERSION = '/voila_file_version'
     LSVS = 'lsvs'
     ANALYSIS_TYPE = '/analysis_type'
@@ -203,7 +207,7 @@ class Voila(object):
                                 'current version of MAJIQ.')
 
 
-# class SpliceGraphs(object):
+# class OldSpliceGraphs(object):
 #     GENES = '/genes'
 #     ROOT = '/'
 #     VERSION = '/splice_graph_file_version'
@@ -214,7 +218,7 @@ class Voila(object):
 #         :param splice_graph_file_name: path to splice graph file
 #         :param mode: mode to pass to hdf5
 #         """
-#         super(SpliceGraphs, self).__init__()
+#         super(OldSpliceGraphs, self).__init__()
 #         self.file_name = splice_graph_file_name
 #         self.mode = mode
 #         self.hdf5 = None
@@ -300,7 +304,7 @@ class Voila(object):
 #
 #         log.debug('End page count')
 #
-#         return int(ceil(gene_count / float(constants.MAX_GENES)))
+#         return int(math.ceil(gene_count / float(constants.MAX_GENES)))
 #
 #     def get_gene_name(self, gene_id):
 #         return self.hdf5[self.GENES][gene_id].attrs['name']

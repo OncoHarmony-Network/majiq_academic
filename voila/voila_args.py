@@ -1,5 +1,6 @@
 import argparse
 import errno
+import glob
 import os
 
 from majiq.src.logger import create_if_not_exists
@@ -38,6 +39,7 @@ class VoilaArgs:
         :param value: file path
         :return: return list of strings
         """
+        print(value)
         try:
             with open(value, 'r') as f:
                 return [line.strip() for line in f]
@@ -60,14 +62,14 @@ class VoilaArgs:
 
     @classmethod
     def check_splice_graph_file(cls, value):
-        cls.check_file(value)
+        value = cls.check_file(value)
         with SpliceGraph(value, 'r') as sg:
             sg.check_version()
         return value
 
     @classmethod
     def check_voila_file(cls, value):
-        cls.check_file(value)
+        value = cls.check_file(value)
         with Voila(value, 'r') as v:
             v.check_version()
         return value

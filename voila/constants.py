@@ -3,7 +3,7 @@ import os
 
 import voila
 
-VERSION = '1.0.2'
+VERSION = '1.0.3'
 FILE_VERSION = '0.1'
 ANALYSIS_PSI = 'psi'
 ANALYSIS_PSI_GENE = 'psi-gene'

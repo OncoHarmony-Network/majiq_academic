@@ -117,9 +117,58 @@ class Gene(SpliceGraphType):
         return np.array(tuple(v._hdf5_grp.ref for v in vs), dtype=h5py.special_dtype(ref=h5py.Reference))
 
     @property
+    def start(self):
+        return next(self.exons).start
+
+    @property
+    def end(self):
+        return tuple(self.exons)[-1].end
+
+    @property
     def junctions(self):
-        return tuple(Junction(self._hdf5_grp[ref]) for ref in self._hdf5_grp.attrs['junctions'])
+        for ref in self._hdf5_grp.attrs['junctions']:
+            yield Junction(self._hdf5_grp[ref])
+
+            # return tuple(Junction(self._hdf5_grp[ref]) for ref in self._hdf5_grp.attrs['junctions'])
 
     @property
     def exons(self):
-        return tuple(Exon(self._hdf5_grp[ref]) for ref in self._hdf5_grp.attrs['exons'])
+        for ref in self._hdf5_grp.attrs['exons']:
+            yield Exon(self._hdf5_grp[ref])
+            # return tuple(Exon(self._hdf5_grp[ref]) for ref in self._hdf5_grp.attrs['exons'])
+
+    def get_experiment(self, experiment_index):
+        d = dict(self)
+        d['exons'] = [dict(Exon(self._hdf5_grp[ref])) for ref in d['exons']]
+        d['start'] = d['exons'][0]['start']
+        d['end'] = d['exons'][0 - 1]['end']
+        d['junctions'] = [dict(Junction(self._hdf5_grp[ref])) for ref in d['junctions']]
+        for j in d['junctions']:
+            j['reads'] = j['reads_list'][experiment_index]
+            del j['reads_list']
+            del j['junction_type_list']
+            j['junction_type'] = 0
+            if 'intron_retention' not in j:
+                j['intron_retention'] = 0
+
+        for e in d['exons']:
+            del e['exon_type_list']
+            e['exon_type'] = 0
+            if 'intron_retention' not in e:
+                e['intron_retention'] = 0
+        return d
+
+    def combine(self, experiment_index, gene_dict=None):
+        if not gene_dict:
+            return self.get_experiment(experiment_index)
+
+        # gene_dict['junctions'] = [s.combine(experiment_index, d) for s, d in
+        #                           zip(self.junctions, gene_dict['junctions'])]
+        #
+        # gene_dict['exons'] = [s.combine(experiment_index, d) for s, d in
+        #                       zip(self.exons, gene_dict['exons'])]
+
+        for j, s in zip(gene_dict['junctions'], self.junctions):
+            j['reads'] += s.reads_list[experiment_index]
+
+        return gene_dict
