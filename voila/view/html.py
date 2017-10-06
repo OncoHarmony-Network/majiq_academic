@@ -22,7 +22,7 @@ class Html(object):
 
         genes_exp = {}
         combined_genes_exp = {}
-        gene_experiments_tuple = tuple(x.decode('utf-8') for x in gene_experiments.tolist())
+        gene_experiments_tuple = tuple(gene_experiments)
 
         with SpliceGraph(self.args.splice_graph) as sg:
             for experiment in experiments:

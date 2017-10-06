@@ -26,7 +26,10 @@ class SpliceGraphType:
     def __getattr__(self, item):
         if item in self._props:
             try:
-                return self._hdf5_grp.attrs[item]
+                value = self._hdf5_grp.attrs[item]
+                if isinstance(value, np.bytes_):
+                    value = value.decode('utf-8')
+                return value
             except KeyError:
                 return None
 
@@ -110,11 +113,29 @@ class Gene(SpliceGraphType):
     def __init__(self, hdf5_grp, **kwargs):
         super().__init__(hdf5_grp)
         self._props = {'name', 'strand', 'chromosome', 'junctions', 'exons'}
-        self._process = {'junctions': self._references, 'exons': self._references}
+        # self._process = {'junctions': self._references_juncs, 'exons': self._references_exons}
+        self._process = {'junctions': self._ids, 'exons': self._ids}
         self.parse_attrs(**kwargs)
+
+    @staticmethod
+    def _ids(vs):
+        return ','.join(v.id for v in vs)
+        # return np.array(tuple(v.id for v in vs), dtype=h5py.special_dtype(vlen=np.unicode))
 
     def _references(self, vs):
         return np.array(tuple(v._hdf5_grp.ref for v in vs), dtype=h5py.special_dtype(ref=h5py.Reference))
+
+    def _references_juncs(self, vs):
+        for j in vs:
+            if not isinstance(j, Junction):
+                raise Exception('Wrong!')
+        return self._references(vs)
+
+    def _references_exons(self, vs):
+        for e in vs:
+            if not isinstance(e, Exon):
+                raise Exception('Wrong!')
+        return self._references(vs)
 
     @property
     def start(self):
@@ -126,36 +147,37 @@ class Gene(SpliceGraphType):
 
     @property
     def junctions(self):
-        for ref in self._hdf5_grp.attrs['junctions']:
-            yield Junction(self._hdf5_grp[ref])
-
-            # return tuple(Junction(self._hdf5_grp[ref]) for ref in self._hdf5_grp.attrs['junctions'])
+        for junc_id in self._hdf5_grp.attrs['junctions'].decode('utf-8').split(','):
+            yield Junction(self._hdf5_grp.file['Junctions'][junc_id])
 
     @property
     def exons(self):
-        for ref in self._hdf5_grp.attrs['exons']:
-            yield Exon(self._hdf5_grp[ref])
-            # return tuple(Exon(self._hdf5_grp[ref]) for ref in self._hdf5_grp.attrs['exons'])
+        for exon_id in self._hdf5_grp.attrs['exons'].decode('utf-8').split(','):
+            yield Exon(self._hdf5_grp.file['Exons'][exon_id])
 
     def get_experiment(self, experiment_index):
         d = dict(self)
-        d['exons'] = [dict(Exon(self._hdf5_grp[ref])) for ref in d['exons']]
+        d['exons'] = [dict(e) for e in self.exons]
+        d['junctions'] = [dict(j) for j in self.junctions]
         d['start'] = d['exons'][0]['start']
-        d['end'] = d['exons'][0 - 1]['end']
-        d['junctions'] = [dict(Junction(self._hdf5_grp[ref])) for ref in d['junctions']]
+        d['end'] = d['exons'][-1]['end']
+
         for j in d['junctions']:
             j['reads'] = j['reads_list'][experiment_index]
             del j['reads_list']
-            del j['junction_type_list']
+            if 'junction_type_list' in j:
+                del j['junction_type_list']
             j['junction_type'] = 0
             if 'intron_retention' not in j:
                 j['intron_retention'] = 0
 
         for e in d['exons']:
-            del e['exon_type_list']
+            if 'exon_type_list' in e:
+                del e['exon_type_list']
             e['exon_type'] = 0
             if 'intron_retention' not in e:
                 e['intron_retention'] = 0
+
         return d
 
     def combine(self, experiment_index, gene_dict=None):
