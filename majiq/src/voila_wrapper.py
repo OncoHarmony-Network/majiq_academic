@@ -99,12 +99,12 @@ def gene_to_splicegraph(dict_of_genes, dict_junctions, exon_dict, list_introns, 
                 junc_list.append(sg.junction('%s:%s-%s' % (gne_id, intr_coord, info.start), start=intr_coord,
                                              end=info.start, transcripts=[], intron_retention=True))
 
-                a3 = [len(junc_list)]
+                a3 = [len(junc_list)-1]
                 intr_coord = int(info.end)+1
                 junc_list.append(sg.junction('%s:%s-%s' % (gne_id, info.end, intr_coord), start=info.end, end=intr_coord,
                                  transcripts=[], intron_retention=True))
 
-                a5 = [len(junc_list)]
+                a5 = [len(junc_list)-1]
                 eg = sg.exon('{0}:{1}-{2}'.format(gne_id, info.start, info.end),
                              a3=a3, a5=a5, start=info.start, end=info.end, coords_extra=(), intron_retention=True)
 
