@@ -165,13 +165,18 @@ function map_exon_list(exons, junctions) {
             }
         }
 
-        if(exons[i].a3)
-        for (j = 0; j < exons[i].a3.length; j++) {
-            junctions[exons[i].a3[j]].end -= acc_offset;
-        }
+        if (exons[i].a3)
+            for (j = 0; j < exons[i].a3.length; j++) {
+                junctions[exons[i].a3[j]].end -= acc_offset;
+            }
 
         if (exons[i].a5)
             for (j = 0; j < exons[i].a5.length; j++) {
+                console.log(exons[i].a5[j]);
+                console.log(j);
+                console.log(junctions);
+                console.log(junctions[exons[i].a5[j]]);
+                console.log(exons[i].a5);
                 junctions[exons[i].a5[j]].start -= acc_offset;
             }
     }

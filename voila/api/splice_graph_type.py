@@ -75,9 +75,18 @@ class Junction(SpliceGraphType):
     def __init__(self, hdf5_grp, **kwargs):
         super().__init__(hdf5_grp)
         self._props = {'start', 'end', 'junction_type_list', 'reads_list', 'transcripts', 'intron_retention'}
+        self._process = {
+            'reads_list': self._reads_list
+        }
         self.parse_attrs(**kwargs)
 
+    def _reads_list(self, v):
+        if isinstance(v, (list, tuple)):
+            return '\t'.join(str(x) for x in v)
+        return v
+
     def update_reads(self, experiment_name, reads):
+
         try:
             exp_names = self._hdf5_grp.file.attrs['experiment_names']
         except KeyError:
@@ -89,12 +98,14 @@ class Junction(SpliceGraphType):
             raise IndexError('Experiment name could not be found.')
 
         if self.reads_list is None:
-            reads_list = [0] * len(exp_names)
+            reads_list = [0 for _ in exp_names]
         else:
-            reads_list = self.reads_list
+            # print(self.reads_list)
+            reads_list = self.reads_list.split('\t')
 
         reads_list[idx] = reads
-        self.reads_list = reads_list
+        self.reads_list = '\t'.join(str(r) for r in reads_list)
+        # print('>>>', self.reads_list)
 
 
 class Exon(SpliceGraphType):
@@ -102,7 +113,14 @@ class Exon(SpliceGraphType):
         super().__init__(hdf5_grp)
         self._props = {'end', 'start', 'a3', 'a5', 'exon_type_list', 'coords_extra', 'intron_retention', 'lsv_type',
                        'alt_starts', 'alt_ends'}
+        self._process = {
+            'a3': self._as_list,
+            'a5': self._as_list
+        }
         self.parse_attrs(**kwargs)
+
+    def _as_list(self, v):
+        return '\t'.join(str(x) for x in v)
 
     @property
     def coords(self):
@@ -119,8 +137,7 @@ class Gene(SpliceGraphType):
 
     @staticmethod
     def _ids(vs):
-        return ','.join(v.id for v in vs)
-        # return np.array(tuple(v.id for v in vs), dtype=h5py.special_dtype(vlen=np.unicode))
+        return '\t'.join(v.id for v in vs)
 
     def _references(self, vs):
         return np.array(tuple(v._hdf5_grp.ref for v in vs), dtype=h5py.special_dtype(ref=h5py.Reference))
@@ -147,12 +164,12 @@ class Gene(SpliceGraphType):
 
     @property
     def junctions(self):
-        for junc_id in self._hdf5_grp.attrs['junctions'].decode('utf-8').split(','):
+        for junc_id in self._hdf5_grp.attrs['junctions'].decode('utf-8').split('\t'):
             yield Junction(self._hdf5_grp.file['Junctions'][junc_id])
 
     @property
     def exons(self):
-        for exon_id in self._hdf5_grp.attrs['exons'].decode('utf-8').split(','):
+        for exon_id in self._hdf5_grp.attrs['exons'].decode('utf-8').split('\t'):
             yield Exon(self._hdf5_grp.file['Exons'][exon_id])
 
     def get_experiment(self, experiment_index):
@@ -163,8 +180,12 @@ class Gene(SpliceGraphType):
         d['end'] = d['exons'][-1]['end']
 
         for j in d['junctions']:
-            j['reads'] = j['reads_list'][experiment_index]
-            del j['reads_list']
+            try:
+                j['reads'] = j['reads_list'][experiment_index]
+                del j['reads_list']
+            except KeyError:
+                j['reads'] = 0
+
             if 'junction_type_list' in j:
                 del j['junction_type_list']
             j['junction_type'] = 0
@@ -172,6 +193,10 @@ class Gene(SpliceGraphType):
                 j['intron_retention'] = 0
 
         for e in d['exons']:
+            if 'a3' in e:
+                e['a3'] = e['a3'].decode('utf-8').split('\t')
+            if 'a5' in e:
+                e['a5'] = e['a5'].decode('utf-8').split('\t')
             if 'exon_type_list' in e:
                 del e['exon_type_list']
             e['exon_type'] = 0
@@ -191,6 +216,7 @@ class Gene(SpliceGraphType):
         #                       zip(self.exons, gene_dict['exons'])]
 
         for j, s in zip(gene_dict['junctions'], self.junctions):
-            j['reads'] += s.reads_list[experiment_index]
+            if 'reads_list' in s:
+                j['reads'] += int(s.reads_list.split('\t')[experiment_index])
 
         return gene_dict
