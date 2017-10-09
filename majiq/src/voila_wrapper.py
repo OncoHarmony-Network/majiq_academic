@@ -55,7 +55,7 @@ def gene_to_splicegraph(dict_of_genes, dict_junctions, exon_dict, list_introns, 
 
                 junc_list.append(
                     sg.junction('{0}:{1}-{2}'.format(gne_id, jj.start, jj.end), start=jj.start, end=jj.end, reads_list=read_list,
-                                transcripts=[], intron_retention=jj.intronic))
+                                transcripts=[], annotated=jj.annot, intron_retention=jj.intronic))
                 jidx += 1
 
             exon_list = []
@@ -88,9 +88,11 @@ def gene_to_splicegraph(dict_of_genes, dict_junctions, exon_dict, list_introns, 
                     if ex.end > ex.db_coords[1]:
                         extra_coords.append([ex.db_coords[1] + 1, ex.end])
 
+                ex_start = ex.start if ex.start > -1 else ex.end-10
+                ex_end = ex.end if ex.end > -1 else ex.start + 10
                 exon_list.append(
                     sg.exon('{0}:{1}-{2}'.format(gne_id, ex.start, ex.end),
-                            a3=a3, a5=a5, start=ex.start, end=ex.end, coords_extra=extra_coords, intron_retention=False,
+                            a3=a3, a5=a5, start=ex_start, end=ex_end, coords_extra=extra_coords, intron_retention=False,
                             alt_starts=alt_start, alt_ends=alt_ends)
                 )
 

@@ -20,3 +20,6 @@ cdef class Junction:
         return True
 
 
+
+def create_junction(start, end, gene_id, cov_idx, annot=False, intron=False):
+    return Junction(start, end, gene_id, cov_idx, annot, intron)

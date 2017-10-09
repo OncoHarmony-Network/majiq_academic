@@ -14,6 +14,7 @@ import majiq.src.logger as majiq_logger
 import majiq.src.multiproc as majiq_multi
 import majiq.src.normalize as majiq_norm
 from majiq.grimoire.exon import detect_exons
+from majiq.grimoire.junction import create_junction
 from majiq.grimoire.lsv import detect_lsvs
 from majiq.src.basic_pipeline import BasicPipeline, pipeline_run
 from majiq.src.config import Config
@@ -39,9 +40,10 @@ def find_new_junctions(file_list, chunk, process_conf, logger):
         dict_junctions[gne_id] = {}
         majiq_io.retrieve_db_info(gne_id, majiq_config.outDir, list_exons[gne_id],
                                   dict_junctions[gne_id], None)
+        detect_exons(dict_junctions[gne_id], list_exons[gne_id])
 
     for is_junc_file, fname, name in file_list:
-        logger.info('READ JUNCS from %s' % fname)
+        logger.info('READ JUNCS from %s, %s' % (fname, majiq_config.strand_specific))
         read_juncs(fname, is_junc_file, list_exons, dict_of_genes, dict_junctions,
                    majiq_config.strand_specific, process_conf.queue, gname=name)
 
@@ -111,8 +113,9 @@ def parse_denovo_elements(pipe_self, logger):
                       junctions=denovo_junctions, group_names=group_names)
         pool1.join()
         for jj, vv in denovo_junctions.items():
-            vv /= group_lens
+            #vv /= group_lens
             if np.any(vv >= majiq_config.min_denovo):
+                #dict_junctions[jj[0]].append(create_junction(jj[1], jj[2], jj[0], 0, annot=False, intron=False))
                 majiq_io.dump_junctions(db_f, jj[0], jj[1], jj[2], annot=False)
 
     [xx.acquire() for xx in pipe_self.lock]
@@ -125,7 +128,7 @@ def parse_denovo_elements(pipe_self, logger):
         queue_manager(db_f, pipe_self.lock, pipe_self.queue, num_chunks=nthreads, logger=logger,
                       introns=denovo_introns, group_names=group_names)
         pool2.join()
-        for info, vv in denovo_junctions.items():
+        for info, vv in denovo_introns.items():
             if np.any(vv >= min_experiments):
                 majiq_io.dump_intron(db_f, info[0], info[1], info[2], annot=False)
 
