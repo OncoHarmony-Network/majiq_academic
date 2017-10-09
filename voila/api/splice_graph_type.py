@@ -74,13 +74,14 @@ class SpliceGraphType:
 class Junction(SpliceGraphType):
     def __init__(self, hdf5_grp, **kwargs):
         super().__init__(hdf5_grp)
-        self._props = {'start', 'end', 'junction_type_list', 'reads_list', 'transcripts', 'intron_retention'}
+        self._props = {'start', 'end', 'junction_type_list', 'reads_list', 'transcripts', 'intron_retention', 'annotated'}
         self._process = {
             'reads_list': self._reads_list
         }
         self.parse_attrs(**kwargs)
 
-    def _reads_list(self, v):
+    @staticmethod
+    def _reads_list(v):
         if isinstance(v, (list, tuple)):
             return '\t'.join(str(x) for x in v)
         return v
