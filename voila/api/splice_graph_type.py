@@ -1,6 +1,8 @@
 import h5py
 import numpy as np
 
+from voila import constants
+
 
 class PropertyDoesNotExist(Exception):
     def __init__(self, k, sgt):
@@ -74,7 +76,8 @@ class SpliceGraphType:
 class Junction(SpliceGraphType):
     def __init__(self, hdf5_grp, **kwargs):
         super().__init__(hdf5_grp)
-        self._props = {'start', 'end', 'junction_type_list', 'reads_list', 'transcripts', 'intron_retention', 'annotated'}
+        self._props = {'start', 'end', 'junction_type_list', 'reads_list', 'transcripts', 'intron_retention',
+                       'annotated'}
         self._process = {
             'reads_list': self._reads_list
         }
@@ -101,12 +104,10 @@ class Junction(SpliceGraphType):
         if self.reads_list is None:
             reads_list = [0 for _ in exp_names]
         else:
-            # print(self.reads_list)
             reads_list = self.reads_list.split('\t')
 
         reads_list[idx] = reads
         self.reads_list = '\t'.join(str(r) for r in reads_list)
-        # print('>>>', self.reads_list)
 
 
 class Exon(SpliceGraphType):
@@ -116,11 +117,14 @@ class Exon(SpliceGraphType):
                        'alt_starts', 'alt_ends'}
         self._process = {
             'a3': self._as_list,
-            'a5': self._as_list
+            'a5': self._as_list,
+            'alt_starts': self._as_list,
+            'alt_ends': self._as_list
         }
         self.parse_attrs(**kwargs)
 
-    def _as_list(self, v):
+    @staticmethod
+    def _as_list(v):
         return '\t'.join(str(x) for x in v)
 
     @property
@@ -132,7 +136,6 @@ class Gene(SpliceGraphType):
     def __init__(self, hdf5_grp, **kwargs):
         super().__init__(hdf5_grp)
         self._props = {'name', 'strand', 'chromosome', 'junctions', 'exons'}
-        # self._process = {'junctions': self._references_juncs, 'exons': self._references_exons}
         self._process = {'junctions': self._ids, 'exons': self._ids}
         self.parse_attrs(**kwargs)
 
@@ -177,8 +180,8 @@ class Gene(SpliceGraphType):
         d = dict(self)
         d['exons'] = [dict(e) for e in self.exons]
         d['junctions'] = [dict(j) for j in self.junctions]
-        d['start'] = d['exons'][0]['start']
-        d['end'] = d['exons'][-1]['end']
+        d['start'] = self.start
+        d['end'] = self.end
 
         for j in d['junctions']:
             try:
@@ -195,15 +198,28 @@ class Gene(SpliceGraphType):
 
         for e in d['exons']:
             if 'a3' in e:
-                e['a3'] = e['a3'].decode('utf-8').split('\t')
+                e['a3'] = [int(x) for x in e['a3'].decode('utf-8').split('\t')]
+
             if 'a5' in e:
-                e['a5'] = e['a5'].decode('utf-8').split('\t')
+                e['a5'] = [int(x) for x in e['a5'].decode('utf-8').split('\t')]
+
+            if 'alt_ends' in e:
+                e['alt_ends'] = [int(x) for x in e['alt_ends'].decode('utf-8').split('\t')]
+            if 'alt_starts' in e:
+                e['alt_starts'] = [int(x) for x in e['alt_starts'].decode('utf-8').split('\t')]
+
             if 'exon_type_list' in e:
                 del e['exon_type_list']
             e['exon_type'] = 0
             if 'intron_retention' not in e:
                 e['intron_retention'] = 0
 
+        for e in d['exons']:
+            if 'a5' in e:
+                for j_idx in e['a5']:
+                    j = d['junctions'][j_idx]
+                    if j['intron_retention'] > 0:
+                        j['intron_retention'] = constants.IR_TYPE_END
         return d
 
     def combine(self, experiment_index, gene_dict=None):

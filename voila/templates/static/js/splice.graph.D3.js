@@ -77,6 +77,10 @@ function map_exon_list(exons, junctions) {
     var exon_tmp;
     var index_exons_to_update = [];  // For exons_obj that need to be updated (shorted)
 
+    exons.sort(function (e1, e2) {
+        return e1.start - e2.start;
+    });
+
     // First offset (first exon can have long intron)
 
     var offset = reshape_intron({'coords': [0, 0]}, exons[0], reshape_exons);
@@ -169,14 +173,8 @@ function map_exon_list(exons, junctions) {
             for (j = 0; j < exons[i].a3.length; j++) {
                 junctions[exons[i].a3[j]].end -= acc_offset;
             }
-
         if (exons[i].a5)
             for (j = 0; j < exons[i].a5.length; j++) {
-                console.log(exons[i].a5[j]);
-                console.log(j);
-                console.log(junctions);
-                console.log(junctions[exons[i].a5[j]]);
-                console.log(exons[i].a5);
                 junctions[exons[i].a5[j]].start -= acc_offset;
             }
     }
@@ -345,8 +343,9 @@ function spliceGraphD3() {
 
             var renderJunctions = function (data, scaleX, docId) {
                 var juncs = svgCanvas.selectAll('ellipse').data(data.filter(function (v) {
-                    return v.intron_retention < 1;
-                }));  // Skip intron retention junctions
+                    return v.intron_retention === 0;
+                }));
+
                 var maxJunc = longestJunc(data, scaleX);
                 juncs.enter().append("ellipse");
 
@@ -358,10 +357,11 @@ function spliceGraphD3() {
                     .ease("linear")
 
                     .attr("ry", function (d) {
-                        return Math.round(
+                        var v = Math.round(
                             (scaleX(d.end) - scaleX(d.start)) / maxJunc * JUNC_AREA * (height - padding[0] - padding[2])
                             - ((scaleX(d.end) - scaleX(d.start)) / maxJunc * JUNC_AREA * (height - padding[0] - padding[2]) / d.dispersion) * (d.dispersion - 1 ? 1 : 0)
                         );
+                        return v;
 
                     })
                     .attr("rx", function (d) {
@@ -397,6 +397,8 @@ function spliceGraphD3() {
                     .data(data.filter(function (v) {
                         return v.intron_retention > 0;
                     }));
+
+
                 labels.enter().append("text");
                 labels.attr("class", "irreads")
                     .attr("text-anchor", function (d) {
@@ -454,7 +456,9 @@ function spliceGraphD3() {
             var spliceSites = function (junctions, scaleX) {
                 var ssites3 = svgCanvas
                     .selectAll("line.ssite3")
-                    .data(junctions);
+                    .data(junctions.filter(function (d) {
+                        return d.intron_retention === 0
+                    }));
 
                 ssites3
                     .enter()
@@ -491,7 +495,9 @@ function spliceGraphD3() {
 
                 var ssites5 = svgCanvas
                     .selectAll("line.ssite5")
-                    .data(junctions);
+                    .data(junctions.filter(function (d) {
+                        return d.intron_retention === 0
+                    }));
 
                 ssites5
                     .enter()
@@ -643,20 +649,21 @@ function spliceGraphD3() {
             var renderIntronRetention = function (exons, scaleX) {
                 var intronsRet = svgCanvas.selectAll("rect.intronret")
                     .data(exons.filter(function (v) {
-                        return v.value.intron_retention;
+                        return v.value.intron_retention > 0;
                     }));
 
                 intronsRet.enter().append("rect");
 
                 intronsRet
-                    .attr("class", "intronret")
+                    .attr("class", "intronret novel")
                     .attr("style", "")
-                    .classed('missing', function (d) {
-                        return d.value.exon_type === 2;
-                    })
-                    .classed('novel', function (d) {
-                        return d.value.exon_type === 1;
-                    })
+                    // .classed('missing', function (d) {
+                    //     return d.value.exon_type === 2;
+                    // })
+                    // .classed('novel', function (d) {
+                    //     return d.value.exon_type === 1;
+                    // return true;
+                    // })
                     .transition()
                     .duration(100)
                     .ease("linear")
@@ -675,7 +682,7 @@ function spliceGraphD3() {
             var renderCoordsExtra = function (exons, scaleX) {
                 var coords_extra = [];
                 exons.forEach(function (e) {
-                    if (e.value.coords_extra.length > 0 && e.value.exon_type !== 2) {
+                    if (e.value.coords_extra && e.value.exon_type !== 2) {
                         e.value.coords_extra.forEach(function (ce) {
                             coords_extra.push(ce);
                         });
@@ -738,7 +745,6 @@ function spliceGraphD3() {
                     var row = highlighLSV.parentNode.parentNode.parentNode.parentNode.querySelectorAll('td');
                     var isWeighted = row[0].querySelector('.weighted:checked');
                     var lsvID = row[1].textContent.split(':');
-                    console.log(lsvID);
                     var coords = lsvID[2].split("-").map(function (c) {
                         return Number(c)
                     });
