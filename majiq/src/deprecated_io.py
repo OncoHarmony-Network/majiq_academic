@@ -4,9 +4,6 @@ import numpy as np
 import os
 import pickle
 from majiq.src.config import Config
-from voila.io_voila import VoilaInput
-from voila.vlsv import VoilaLsv
-from voila.splice_graphics import LsvGraphic
 
 #######
 # HDF5 API
@@ -32,50 +29,6 @@ def get_const_junctions(filename, logging=None):
         cc = db_f[JUNCTIONS_DATASET_NAME][()]
         db_f.close()
         return np.array(cc)
-
-
-def extract_lsv_summary_old(files):
-
-
-    lsv_types = {}
-    idx_junc = {}
-    total_idx = 0
-    simpl_juncs = []
-    lsvid2idx = {}
-    lsv_dict_graph = {}
-    for fidx, ff in enumerate(files):
-
-        simpl_juncs.append([[0, 0.0] for xx in idx_junc.keys()])
-        data = h5py.File(ff, 'r')
-        for lsvid in data['LSVs']:
-            lsv = data['LSVs/%s' % lsvid]
-            lsvgraph = LsvGraphic.easy_from_hdf5(data['LSVs/%s/visual' % lsvid])
-            cov = data[JUNCTIONS_DATASET_NAME][lsv.attrs['coverage']]
-
-            lsv_types[lsvid] = lsvgraph.lsv_type
-            ljunc = lsvgraph.junction_ids()
-
-            #JV
-            lsv_dict_graph[lsvid] = lsvgraph
-
-            cov = [(cov != 0).sum(axis=1), cov.sum(axis=1)]
-            lsvid2idx[lsvid] = []
-            for jidx, jj in enumerate(ljunc):
-                try:
-                    indx = idx_junc[jj]
-                    simpl_juncs[fidx][indx] = [cov[0][jidx], cov[1][jidx]]
-                except KeyError:
-                    idx_junc[jj] = total_idx
-                    indx = total_idx
-                    total_idx += 1
-                    simpl_juncs[fidx].append([cov[0][jidx], cov[1][jidx]])
-                    [simpl_juncs[dx].append([0, 0.0]) for dx in range(fidx)]
-                lsvid2idx[lsvid].append(indx)
-
-    metas = read_meta_info(files)
-
-    return lsvid2idx, lsv_types, np.array(simpl_juncs), metas, lsv_dict_graph
-
 
 def load_data_lsv(path, group_name, logger=None):
     """Load data from the preprocess step. Could change to a DDBB someday"""
@@ -124,19 +77,6 @@ def read_meta_info(list_of_files):
                 continue
 
     return meta
-
-
-def dump_lsvs_voila(pickle_path, posterior_matrix, lsvs_info, meta_info, psi_list1=None, psi_list2=None):
-    """Create VoilaLSVs objects readable by voila."""
-    vlsvs = []
-    psi1, psi2 = None, None
-    for ii, bins in enumerate(posterior_matrix):
-        lsv_graphic = lsvs_info[ii][-1]
-        if psi_list1:
-            psi1, psi2 = psi_list1[ii], psi_list2[ii]
-        vlsvs.append(VoilaLsv(bins, lsv_graphic=lsv_graphic, psi1=psi1, psi2=psi2))
-
-    pickle.dump(VoilaInput(vlsvs, meta_info), open(pickle_path, 'w'))
 
 
 def open_hdf5_file(filename, **kwargs):
