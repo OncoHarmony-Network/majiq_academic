@@ -5,13 +5,14 @@ from itertools import islice
 import h5py
 import numpy as np
 
-from voila import constants, api
+from voila import constants
 from voila.api.splice_graph_type import Gene, Junction, Exon
+from voila.api.voila_hdf5 import VoilaHDF5
 from voila.utils.exceptions import GeneIdNotFoundInVoilaFile
 from voila.utils.voila_log import voila_log
 
 
-class SpliceGraphHDF5():
+class SpliceGraphHDF5:
     def __init__(self, filename, mode='r'):
         self.hdf5 = None
 
@@ -77,7 +78,7 @@ class SpliceGraphHDF5():
         log.debug('Start page count')
 
         if hasattr(args, 'voila_file'):
-            with api.Voila(args.voila_file, 'r') as v:
+            with VoilaHDF5(args.voila_file, 'r') as v:
                 for gene_id in self.get_gene_ids(args):
                     try:
                         if any(v.get_lsvs(args, gene_id)):
@@ -103,7 +104,7 @@ class SpliceGraphHDF5():
         gene_list = []
         lsv_dict = {}
 
-        with api.Voila(args.voila_file, 'r') as v:
+        with VoilaHDF5(args.voila_file, 'r') as v:
             for gene_id in self.get_gene_ids(args):
                 try:
                     lsvs = tuple(v.get_lsvs(args, gene_id=gene_id))
