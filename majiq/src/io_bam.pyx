@@ -73,8 +73,13 @@ cpdef int find_introns(str filename, dict list_introns, float intron_threshold, 
             lb = i_st + ii*chunk_len
             ub = i_st + (ii+1)*chunk_len -1
             ub = min(ub, i_nd)
-            val = samfl.count(contig=chrom, start=lb, stop=ub, until_eof=True, read_callback=__is_unique,
-                              reference=None, end=None)
+            try:
+                val = samfl.count(contig=chrom, start=lb, stop=ub, until_eof=True, read_callback=__is_unique,
+                                reference=None, end=None)
+            except ValueError as e:
+                #logging.error('\t[%s]There are no reads in %s:%d-%d' % (info_msg, gne['chromosome'], gne['start'], gne['end']))
+                continue
+
             val /= (ub-lb)
             b_included = b_included and (val>=intron_threshold)
 
