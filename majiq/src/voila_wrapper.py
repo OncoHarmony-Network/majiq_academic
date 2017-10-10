@@ -88,12 +88,12 @@ def gene_to_splicegraph(dict_of_genes, dict_junctions, exon_dict, list_introns, 
                     if ex.end > ex.db_coords[1]:
                         extra_coords.append([ex.db_coords[1] + 1, ex.end])
 
-                ex_start = ex.start if ex.start > -1 else ex.end-10
-                ex_end = ex.end if ex.end > -1 else ex.start + 10
+                # ex_start = ex.start if ex.start > -1 else ex.end-10
+                # ex_end = ex.end if ex.end > -1 else ex.start + 10
                 exon_list.append(
                     sg.exon('{0}:{1}-{2}'.format(gne_id, ex.start, ex.end),
-                            a3=a3, a5=a5, start=ex_start, end=ex_end, coords_extra=extra_coords, intron_retention=False,
-                            alt_starts=alt_start, alt_ends=alt_ends)
+                            a3=a3, a5=a5, start=ex.start, end=ex.end, coords_extra=extra_coords, intron_retention=False,
+                            annotated=ex.annot, alt_starts=alt_start, alt_ends=alt_ends)
                 )
 
             for info in list_introns[gne_id]:

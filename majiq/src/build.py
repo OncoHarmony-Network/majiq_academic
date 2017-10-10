@@ -155,6 +155,7 @@ def parsing_files(sam_file_list, chnk, process_conf, logger):
     list_exons = {}
     dict_junctions = {}
     list_introns = {}
+    effective_len = (majiq_config.readLen - 2*MIN_BP_OVERLAP) + 1
 
     for gne_id, gene_obj in dict_of_genes.items():
         list_exons[gne_id] = []
@@ -162,14 +163,14 @@ def parsing_files(sam_file_list, chnk, process_conf, logger):
         list_introns[gne_id] = []
         majiq_io.retrieve_db_info(gne_id, majiq_config.outDir, list_exons[gne_id],
                                   dict_junctions[gne_id],
-                                  list_introns[gne_id])
+                                  list_introns[gne_id], default_index=0)
         detect_exons(dict_junctions[gne_id], list_exons[gne_id])
 
     for sam_file in sam_file_list:
         logger.info("[%s] Starting new file" % sam_file)
         loop_id = sam_file
         samfl = majiq_io_bam.open_rnaseq("%s/%s.bam" % (majiq_config.sam_dir, sam_file))
-        junc_mtrx = []
+        junc_mtrx = [[0] * effective_len]
 
         gc_pairs = {'GC': [], 'COV': []}
         gc_matrx = [] if majiq_config.gcnorm else None

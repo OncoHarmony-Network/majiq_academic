@@ -360,7 +360,8 @@ cpdef np.ndarray get_covered_junctions(str gne_id, dict dict_junctions, list lis
     return junc_mtrx
 
 
-def retrieve_db_info(str gne_id, str out_dir, list list_exons, dict dict_junctions, list list_introns):
+def retrieve_db_info(str gne_id, str out_dir, list list_exons, dict dict_junctions, list list_introns,
+                     int default_index=-1):
 
     cdef dict j_attrs, ex_attrs
     cdef Junction junc
@@ -374,7 +375,8 @@ def retrieve_db_info(str gne_id, str out_dir, list list_exons, dict dict_junctio
                 j_attrs = dict(db_f['%s/junctions/%s' % (gne_id, xx)].attrs)
                 njuncs +=1
                 dict_junctions[(j_attrs['start'], j_attrs['end'])] = Junction(j_attrs['start'], j_attrs['end'],
-                                                                              gne_id, -1, annot=j_attrs['annotated'])
+                                                                              gne_id, default_index,
+                                                                              annot=j_attrs['annotated'])
 
         for xx in db_f['%s/exons' % gne_id]:
             ex_attrs = dict(db_f['%s/exons/%s' % (gne_id, xx)].attrs)
