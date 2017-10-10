@@ -90,7 +90,6 @@ class Junction(SpliceGraphType):
         return v
 
     def update_reads(self, experiment_name, reads):
-
         try:
             exp_names = self._hdf5_grp.file.attrs['experiment_names']
         except KeyError:

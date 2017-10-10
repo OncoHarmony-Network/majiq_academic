@@ -109,7 +109,18 @@ class VoilaHDF5:
         :return: dict
         """
         voila_log().info('Getting Voila Metainfo from {0} ...'.format(self.file_name))
-        return {key: self._metainfo().attrs[key] for key in self._metainfo().attrs.keys()}
+        metainfo = {key: self._metainfo().attrs[key] for key in self._metainfo().attrs.keys()}
+
+        experiment_names = ['' for _ in self._metainfo()['experiments']]
+        group_names = ['' for _ in self._metainfo()['experiments']]
+        for exp in self._metainfo()['experiments']:
+            idx = self._metainfo()['experiments'][exp].attrs['index']
+            experiment_names[idx] = self._metainfo()['experiments'][exp].value
+            group_names[idx] = exp
+        metainfo['experiment_names'] = experiment_names
+        metainfo['group_names'] = group_names
+
+        return metainfo
 
     def get_voila_lsv(self, gene_id, lsv_id):
         """
@@ -180,14 +191,23 @@ class VoilaHDF5:
             raise GeneIdNotFoundInVoilaFile(gene_id)
 
     def add_experiments(self, group_name, experiment_names):
-        m = self._metainfo()
         try:
-            HDF5.create(m.attrs, 'group_names', numpy.concatenate((m.attrs['group_names'], [group_name])))
-            HDF5.create(m.attrs, 'experiment_names',
-                        numpy.concatenate((m.attrs['experiment_names'], [experiment_names])))
+            exps = self._metainfo()['experiments']
         except KeyError:
-            HDF5.create(m.attrs, 'group_names', numpy.array([group_name]))
-            HDF5.create(m.attrs, 'experiment_names', numpy.array([experiment_names]))
+            exps = self._metainfo().create_group('experiments')
+
+        dset = exps.create_dataset(group_name,
+                                   data=numpy.array(experiment_names, dtype=h5py.special_dtype(vlen=numpy.unicode)))
+
+        dset.attrs['index'] = len(exps.keys()) - 1
+
+        # try:
+        #     HDF5.create(m.attrs, 'group_names', numpy.concatenate((m.attrs['group_names'], [group_name])))
+        #     HDF5.create(m.attrs, 'experiment_names',
+        #                 numpy.concatenate((m.attrs['experiment_names'], [experiment_names])))
+        # except KeyError:
+        #     HDF5.create(m.attrs, 'group_names', numpy.array([group_name]))
+        #     HDF5.create(m.attrs, 'experiment_names', numpy.array([experiment_names]))
 
     def set_analysis_type(self, analysis_type):
         if analysis_type in (constants.ANALYSIS_DELTAPSI, constants.ANALYSIS_PSI, constants.ANALYSIS_HETEROGEN):
