@@ -250,7 +250,8 @@ def detect_lsvs(list_exons, junc_mtrx, fitfunc_r, gid, gchrom, gstrand, majiq_co
             try:
                 ex_mtrx_p = pos_trx[ex_index]
             except TypeError:
-                print (pos_trx, ex_index, jjlist)
+                print (junc_mtrx, pos_trx, ex_index, jjlist)
+                print([(xx.start, xx.end) for xx in jjlist])
 
             if np.any(np.logical_and(ex_mtrx_s > majiq_config.minpos, ex_mtrx_p > majiq_config.minreads)):
                 try:
