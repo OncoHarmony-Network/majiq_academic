@@ -4,7 +4,7 @@ from majiq.src.calc_psi import calcpsi
 from majiq.src.deltapsi import deltapsi
 from majiq.src.constants import *
 # from majiq.src.wght_pipeline import calc_weights
-# from majiq.src.indpnt import calc_independent
+from majiq.src.indpnt import calc_independent
 from majiq.src.stats import all_stats
 
 
@@ -216,10 +216,10 @@ def main():
     #                                        parents=[common, sampling, weights, wght])
     # parser_weights.set_defaults(func=calc_weights)
     #
-    # parser_heterogen = subparsers.add_parser('heterogen', help='Calculate Delta PSI values given a pair of experiments '
-    #                                                          'groups. This approach does not assume underlying PSI)',
-    #                                          parents=[common, sampling, htrgen])
-    # parser_heterogen.set_defaults(func=calc_independent)
+    parser_heterogen = subparsers.add_parser('heterogen', help='Calculate Delta PSI values given a pair of experiments '
+                                                             'groups. This approach does not assume underlying PSI)',
+                                             parents=[common, sampling, htrgen])
+    parser_heterogen.set_defaults(func=calc_independent)
 
     args = parser.parse_args()
     args.func(args)

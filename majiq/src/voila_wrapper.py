@@ -62,7 +62,6 @@ def gene_to_splicegraph(dict_of_genes, dict_junctions, exon_dict, list_introns, 
             for ex in sorted(exon_dict[gne_id], key=lambda x: (x.start, x.end)):
 
                 covered = False
-
                 a3 = []
                 alt_start = []
                 for jj in set(ex.ib):
