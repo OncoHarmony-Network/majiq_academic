@@ -158,7 +158,7 @@ class independent(BasicPipeline):
             pool.map_async(process_wrapper, chunks(list_of_lsv, lchnksize, extra=range(self.nthreads)))
             pool.close()
             with Voila(get_quantifier_voila_filename(self.outDir, self.names, deltapsi=True), 'w') as out_h5p:
-                # out_h5p.add_genome(meta1['genome'])
+                out_h5p.add_genome(meta1['genome'])
                 out_h5p.set_analysis_type(ANALYSIS_HETEROGEN)
                 out_h5p.add_experiments(self.names[0], experiment_names=meta1['experiments'])
                 out_h5p.add_experiments(self.names[1], experiment_names=meta2['experiments'])
