@@ -26,8 +26,8 @@ def deltapsi_quantification(list_of_lsv, chnk, process_conf, logger):
 
     f_list = [None, None]
 
-    f_list[0] = majiq_deprio.get_extract_lsv_list(list_of_lsv, process_conf.files1)
-    f_list[1] = majiq_deprio.get_extract_lsv_list(list_of_lsv, process_conf.files2)
+    f_list[0] = majiq_deprio.get_extract_lsv_list(list_of_lsv, process_conf.files1, process_conf.m_samples)
+    f_list[1] = majiq_deprio.get_extract_lsv_list(list_of_lsv, process_conf.files2, process_conf.m_samples)
 
     prior_matrix = np.array(majiq_io.load_bin_file(get_prior_matrix_filename(process_conf.outDir,
                                                                              process_conf.names)))
@@ -39,16 +39,16 @@ def deltapsi_quantification(list_of_lsv, chnk, process_conf, logger):
         lsv_samples = [None, None]
 
         for grp_idx in range(2):
+
             lsv_samples[grp_idx] = f_list[grp_idx][lidx].coverage
             lsv_type = f_list[grp_idx][lidx].type
 
         psi1, psi2 = [np.array(xx) for xx in lsv_samples]
-        msamples = psi1.shape[2]
         del lsv_samples
 
         post_matrix, posterior_psi1, posterior_psi2, mu_psi1, mu_psi2 = deltapsi_posterior(psi1, psi2, prior_matrix,
-                                                                                           msamples, num_exp,
-                                                                                           process_conf.nbins,
+                                                                                           process_conf.m_samples,
+                                                                                           num_exp, process_conf.nbins,
                                                                                            lsv_type)
 
         qm = QueueMessage(QUEUE_MESSAGE_DELTAPSI_RESULT, (post_matrix, posterior_psi1, posterior_psi2,
@@ -101,6 +101,10 @@ class DeltaPsi(BasicPipeline):
 
         list_of_lsv = list(set(list_of_lsv1).intersection(set(list_of_lsv2)))
         logger.info("Number quantifiable LSVs: %s" % len(list_of_lsv))
+        assert meta1['m_samples'] == meta2['m_samples'], \
+            "Groups have different number of bootstrap samples(%s,%s)" % (meta1['m_samples'], meta2['m_samples'])
+
+        self.m_samples = meta1['m_samples']
 
         psi_space, prior_matrix = gen_prior_matrix(lsv_dict_graph, lsv_empirical_psi1, lsv_empirical_psi2,
                                                    self.outDir, names=self.names, breakiter=self.breakiter,

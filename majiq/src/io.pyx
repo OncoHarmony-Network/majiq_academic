@@ -219,8 +219,13 @@ def junction_to_tmp(gne_id, Junction junc, object hdf5grps):
 
 def read_meta_info(list_of_files):
     meta = {'experiments': []}
+    m_samples = None
     for fl in list_of_files:
         with h5py.File(fl, 'r') as fp :
+            if m_samples is not None:
+                assert m_samples == fp.attrs['m_samples'], "uneven number of bootstrap samples"
+            else:
+                m_samples = fp.attrs['m_samples']
             meta['experiments'].append(fp.attrs['sample_id'])
             try:
                 if meta['genome'] != fp.attrs['genome']:
@@ -228,6 +233,7 @@ def read_meta_info(list_of_files):
             except KeyError:
                 meta['genome'] = fp.attrs['genome']
                 continue
+    meta['m_samples'] = m_samples
     return meta
 
 def extract_lsv_summary(list files, int minnonzero, int min_reads, dict epsi=None, int percent=-1, object logger=None):

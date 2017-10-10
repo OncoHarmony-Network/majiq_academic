@@ -20,8 +20,8 @@ def het_quantification(list_of_lsv, chnk, process_conf, logger):
     num_exp = [len(process_conf.files1), len(process_conf.files2)]
 
     f_list = [None, None]
-    f_list[0] = majiq_deprio.get_extract_lsv_list(list_of_lsv, process_conf.files1)
-    f_list[1] = majiq_deprio.get_extract_lsv_list(list_of_lsv, process_conf.files2)
+    f_list[0] = majiq_deprio.get_extract_lsv_list(list_of_lsv, process_conf.files1, process_conf.m_samples)
+    f_list[1] = majiq_deprio.get_extract_lsv_list(list_of_lsv, process_conf.files2, process_conf.m_samples)
 
     for lidx, lsv_id in enumerate(list_of_lsv):
         if lidx % 50 == 0:
@@ -142,6 +142,10 @@ class independent(BasicPipeline):
                                                                     percent=self.min_exp, logger=logger)
         logger.info("Group %s: %s LSVs" % (self.names[1], len(list_of_lsv1)))
 
+        assert meta1['m_samples'] == meta2['m_samples'], \
+            "Groups have different number of bootstrap samples(%s,%s)" %(meta1['m_samples'], meta2['m_samples'])
+
+        self.m_samples = meta1['m_samples']
         list_of_lsv = list(set(list_of_lsv1).intersection(set(list_of_lsv2)))
         logger.info("Number quantifiable LSVs: %s" % len(list_of_lsv))
 

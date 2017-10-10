@@ -61,6 +61,7 @@ class CalcPsi(BasicPipeline):
         self.lock = [mp.Lock() for xx in range(self.nthreads)]
 
         meta = majiq_io.read_meta_info(self.files)
+        self.m_samples = meta['m_samples']
         list_of_lsv, lsv_dict_graph = majiq_io.extract_lsv_summary(self.files, minnonzero=self.minpos,
                                                                    min_reads=self.minreads, percent=self.min_exp,
                                                                    logger=logger)

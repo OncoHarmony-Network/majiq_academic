@@ -93,7 +93,7 @@ def close_hdf5_file(fp):
 from majiq.grimoire.lsv import quant_lsv
 
 
-def get_extract_lsv_list(list_of_lsv_id, file_list):
+def get_extract_lsv_list(list_of_lsv_id, file_list, msamples):
     result = []
 
     for lsv_id in list_of_lsv_id:
@@ -113,6 +113,11 @@ def get_extract_lsv_list(list_of_lsv_id, file_list):
                     lsv_cov.append(None)
 
 #        lsv_cov = np.array(lsv_cov)
+        njunc = len(lsv_type.split(':')) -1
+        for xidx, xx in enumerate(lsv_cov):
+            if xx is None:
+                lsv_cov[xidx] = np.zeros(shape=(njunc, msamples))
+
         qq = quant_lsv(lsv_id, lsv_type, lsv_cov)
         result.append(qq)
     return result
