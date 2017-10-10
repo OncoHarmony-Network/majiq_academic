@@ -62,6 +62,39 @@ class SpliceGraphHDF5:
     def get_experiments(self):
         return self.hdf5.attrs['experiment_names']
 
+
+class Genes(SpliceGraphHDF5):
+    def gene(self, id, **kwargs):
+        return Gene(self.hdf5_grp('Gene', id), **kwargs)
+
+    @property
+    def genes(self):
+        gene_hdf5 = self.hdf5['Gene']
+        return (Gene(gene_hdf5[id]) for id in gene_hdf5)
+
+    def combined_genes(self, experiments):
+        all_experiments = list(self.get_experiments())
+        gene_dict = {}
+
+        for gene in self.genes:
+
+            comb_gene = None
+
+            for exp in experiments:
+
+                exp_idx = all_experiments.index(exp)
+
+                if comb_gene is None:
+                    comb_gene = gene.get_experiment(exp_idx)
+                else:
+                    new_gene = gene.get_experiment(exp_idx)
+                    for x, y in zip(comb_gene['junctions'], new_gene['junctions']):
+                        x['reads'] += y['reads']
+
+            gene_dict[gene.id] = comb_gene
+
+        return gene_dict
+
     def get_gene_ids(self, args=None):
         if args and args.gene_ids:
             return args.gene_ids
@@ -144,16 +177,6 @@ class SpliceGraphHDF5:
 
         if gene_list:
             yield gene_list
-
-
-class Genes(SpliceGraphHDF5):
-    def gene(self, id, **kwargs):
-        return Gene(self.hdf5_grp('Gene', id), **kwargs)
-
-    @property
-    def genes(self):
-        gene_hdf5 = self.hdf5['Gene']
-        return (Gene(gene_hdf5[id]) for id in gene_hdf5)
 
 
 class Junctions(SpliceGraphHDF5):

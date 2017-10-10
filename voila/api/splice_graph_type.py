@@ -1,6 +1,6 @@
 import h5py
-import numpy as np
 
+from majiq.src.constants import *
 from voila import constants
 
 
@@ -114,7 +114,7 @@ class Exon(SpliceGraphType):
     def __init__(self, hdf5_grp, **kwargs):
         super().__init__(hdf5_grp)
         self._props = {'end', 'start', 'a3', 'a5', 'exon_type_list', 'coords_extra', 'intron_retention', 'lsv_type',
-                       'alt_starts', 'alt_ends'}
+                       'alt_starts', 'alt_ends', 'annotated'}
         self._process = {
             'a3': self._as_list,
             'a5': self._as_list,
@@ -184,6 +184,22 @@ class Gene(SpliceGraphType):
         d['end'] = self.end
 
         for j in d['junctions']:
+
+            if 'annotated' in j and j['reads_list'][experiment_index] == 0:
+                if (sum(j['reads_list']) - j['reads_list'][experiment_index]) > 0:
+                    jtype = constants.JUNCTION_TYPE_DB_OTHER_RNASEQ
+                else:
+                    jtype = constants.JUNCTION_TYPE_DB
+            elif 'annotated' in j and j['reads_list'][experiment_index] > 0:
+                jtype = constants.JUNCTION_TYPE_DB_RNASEQ
+                # min reads is three... the default.
+            elif 'annotated' not in j and 'reads_list' in j and j['reads_list'][experiment_index] > 3:
+                jtype = constants.JUNCTION_TYPE_RNASEQ
+            else:
+                jtype = constants.JUNCTION_TYPE_RNASEQ
+
+            j['junction_type'] = jtype
+
             try:
                 j['reads'] = j['reads_list'][experiment_index]
                 del j['reads_list']
@@ -208,9 +224,8 @@ class Gene(SpliceGraphType):
             if 'alt_starts' in e:
                 e['alt_starts'] = [int(x) for x in e['alt_starts'].decode('utf-8').split('\t')]
 
-            if 'exon_type_list' in e:
-                del e['exon_type_list']
             e['exon_type'] = 0
+
             if 'intron_retention' not in e:
                 e['intron_retention'] = 0
 
@@ -220,9 +235,12 @@ class Gene(SpliceGraphType):
                     j = d['junctions'][j_idx]
                     if j['intron_retention'] > 0:
                         j['intron_retention'] = constants.IR_TYPE_END
+
         return d
 
     def combine(self, experiment_index, gene_dict=None):
+        print(gene_dict)
+
         if not gene_dict:
             return self.get_experiment(experiment_index)
 
@@ -233,7 +251,12 @@ class Gene(SpliceGraphType):
         #                       zip(self.exons, gene_dict['exons'])]
 
         for j, s in zip(gene_dict['junctions'], self.junctions):
-            if 'reads_list' in s:
+            try:
+                print(j['reads'])
                 j['reads'] += int(s.reads_list.split('\t')[experiment_index])
+                print(s.reads_list.split('\t')[experiment_index])
+                print(j['reads'])
+            except AttributeError:
+                pass
 
         return gene_dict
