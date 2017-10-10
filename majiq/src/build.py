@@ -209,6 +209,7 @@ def parsing_files(sam_file_list, chnk, process_conf, logger):
             out_f.create_dataset(JUNCTIONS_DATASET_NAME, (5000, majiq_config.m), maxshape=(None, majiq_config.m))
             out_f.create_dataset('junc_cov', (5000, 2), maxshape=(None, 2))
 
+            out_f.attrs['m_samples'] = process_conf.m
             out_f.attrs['sample_id'] = sam_file
             out_f.attrs['date'] = datetime.datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S')
             out_f.attrs['VERSION'] = VERSION
