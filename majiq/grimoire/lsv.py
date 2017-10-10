@@ -247,7 +247,10 @@ def detect_lsvs(list_exons, junc_mtrx, fitfunc_r, gid, gchrom, gstrand, majiq_co
                 continue
             ex_index = sorted([xx.index for xx in jjlist])
             ex_mtrx_s = sum_trx[ex_index]
-            ex_mtrx_p = pos_trx[ex_index]
+            try:
+                ex_mtrx_p = pos_trx[ex_index]
+            except TypeError:
+                print (pos_trx, ex_index, jjlist)
 
             if np.any(np.logical_and(ex_mtrx_s > majiq_config.minpos, ex_mtrx_p > majiq_config.minreads)):
                 try:
