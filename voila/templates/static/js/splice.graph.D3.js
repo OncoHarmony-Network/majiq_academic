@@ -376,6 +376,7 @@ function spliceGraphD3() {
                         return Math.round((scaleX(d.end) + scaleX(d.start)) / 2);
                     });
 
+
                 juncs.classed("found", function (d) {
                     return d.junction_type === 0;
                 });
@@ -544,7 +545,7 @@ function spliceGraphD3() {
                 var exons = svgCanvas.selectAll("rect.exon")
                     .data(
                         datap.filter(function (v) {
-                                return ([0, 1, 2, 3].indexOf(v.value.exon_type) > -1) && !v.value.intron_retention;
+                                return ([0, 1, 2, 3].indexOf(v.value.exon_type) > -1) && v.value.intron_retention === 0;
                             }
                         ));
 
@@ -660,15 +661,14 @@ function spliceGraphD3() {
                 intronsRet.enter().append("rect");
 
                 intronsRet
-                    .attr("class", "intronret novel")
+                    .attr("class", "intronret")
                     .attr("style", "")
-                    // .classed('missing', function (d) {
-                    //     return d.value.exon_type === 2;
-                    // })
-                    // .classed('novel', function (d) {
-                    //     return d.value.exon_type === 1;
-                    // return true;
-                    // })
+                    .classed('missing', function (d) {
+                        return d.value.exon_type === 2;
+                    })
+                    .classed('novel', function (d) {
+                        return d.value.exon_type === 1;
+                    })
                     .transition()
                     .duration(100)
                     .ease("linear")
@@ -761,7 +761,7 @@ function spliceGraphD3() {
                     var junc_indexes;
                     var wls = weightedLines(row).reverse();
                     var d3AllExons = d3.select(spliceDiv).selectAll('.exon, .halfexon, .intronRet')[0];
-                    var d3AllJunctions = d3.select(spliceDiv).selectAll('.junction, .irlines')[0];
+                    var d3AllJunctions = d3.select(spliceDiv).selectAll('.junction')[0];
                     var d3AllReads = d3.select(spliceDiv).selectAll('.readcounts, .irreads')[0];
                     var reference_exon = orig_objs.exons.find(function (exon) {
                         return exon.value.start === coords[0] && exon.value.end === coords[1]

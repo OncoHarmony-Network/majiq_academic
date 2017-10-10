@@ -177,6 +177,13 @@ class Gene(SpliceGraphType):
             yield Exon(self._hdf5_grp.file['Exons'][exon_id])
 
     def get_experiment(self, experiment_index):
+        """
+        This needs to be refactored out... This is a hack to get the NEW Api working.
+
+        :param experiment_index:
+        :return:
+        """
+
         d = dict(self)
         d['exons'] = [dict(e) for e in self.exons]
         d['junctions'] = [dict(j) for j in self.junctions]
@@ -184,6 +191,8 @@ class Gene(SpliceGraphType):
         d['end'] = self.end
 
         for j in d['junctions']:
+            if 'reads_list' in j:
+                j['reads_list'] = [int(x) for x in j['reads_list'].decode('utf-8').split('\t')]
 
             if 'annotated' in j and j['reads_list'][experiment_index] == 0:
                 if (sum(j['reads_list']) - j['reads_list'][experiment_index]) > 0:
@@ -192,8 +201,7 @@ class Gene(SpliceGraphType):
                     jtype = constants.JUNCTION_TYPE_DB
             elif 'annotated' in j and j['reads_list'][experiment_index] > 0:
                 jtype = constants.JUNCTION_TYPE_DB_RNASEQ
-                # min reads is three... the default.
-            elif 'annotated' not in j and 'reads_list' in j and j['reads_list'][experiment_index] > 3:
+            elif 'annotated' not in j and 'reads_list' in j and j['reads_list'][experiment_index] > 0:
                 jtype = constants.JUNCTION_TYPE_RNASEQ
             else:
                 jtype = constants.JUNCTION_TYPE_RNASEQ
@@ -206,9 +214,6 @@ class Gene(SpliceGraphType):
             except KeyError:
                 j['reads'] = 0
 
-            if 'junction_type_list' in j:
-                del j['junction_type_list']
-            j['junction_type'] = 0
             if 'intron_retention' not in j:
                 j['intron_retention'] = 0
 
@@ -224,8 +229,6 @@ class Gene(SpliceGraphType):
             if 'alt_starts' in e:
                 e['alt_starts'] = [int(x) for x in e['alt_starts'].decode('utf-8').split('\t')]
 
-            e['exon_type'] = 0
-
             if 'intron_retention' not in e:
                 e['intron_retention'] = 0
 
@@ -236,27 +239,31 @@ class Gene(SpliceGraphType):
                     if j['intron_retention'] > 0:
                         j['intron_retention'] = constants.IR_TYPE_END
 
+        for e in d['exons']:
+
+            exon_juncs = []
+            if 'a3' in e:
+                exon_juncs += e['a3']
+            if 'a5' in e:
+                exon_juncs += e['a5']
+
+            exon_has_reads = any(bool(d['junctions'][j_idx]['reads']) for j_idx in exon_juncs)
+
+            if e['start'] == -1:
+                etype = constants.EXON_TYPE_MISSING_START
+                e['start'] = e['end'] - 10
+            elif e['end'] == -1:
+                etype = constants.EXON_TYPE_MISSING_END
+                e['start'] = e['start'] + 10
+            elif 'annotated' in e and not exon_has_reads:
+                etype = constants.EXON_TYPE_DB
+            elif 'annotated' in e and exon_has_reads:
+                etype = constants.EXON_TYPE_DB_RNASEQ
+            elif 'annotated' not in e and exon_has_reads:
+                etype = constants.EXON_TYPE_RNASEQ
+            else:
+                etype = constants.EXON_TYPE_RNASEQ
+
+            e['exon_type'] = etype
+
         return d
-
-    def combine(self, experiment_index, gene_dict=None):
-        print(gene_dict)
-
-        if not gene_dict:
-            return self.get_experiment(experiment_index)
-
-        # gene_dict['junctions'] = [s.combine(experiment_index, d) for s, d in
-        #                           zip(self.junctions, gene_dict['junctions'])]
-        #
-        # gene_dict['exons'] = [s.combine(experiment_index, d) for s, d in
-        #                       zip(self.exons, gene_dict['exons'])]
-
-        for j, s in zip(gene_dict['junctions'], self.junctions):
-            try:
-                print(j['reads'])
-                j['reads'] += int(s.reads_list.split('\t')[experiment_index])
-                print(s.reads_list.split('\t')[experiment_index])
-                print(j['reads'])
-            except AttributeError:
-                pass
-
-        return gene_dict

@@ -1,7 +1,6 @@
 import itertools
 import json
 import os
-from collections import OrderedDict
 from distutils.dir_util import copy_tree
 from math import ceil
 
@@ -11,58 +10,8 @@ from jinja2 import Environment, FileSystemLoader
 from markupsafe import escape
 
 from voila import constants
-from voila.api import SpliceGraph
 from voila.constants import EXEC_DIR
 from voila.utils.voila_log import voila_log
-
-
-def parse_gene_graphics(splice_graph_file, metainfo, gene_ids_list):
-    """
-    Load and combine splice graph files.
-
-    :param splicegraph_flist: list of splice graph files or directory containing splice graphs.
-    :param gene_names_list: list of genes of interest.
-    :param condition_names: ids for condition 1 [and condition 2, in deltapsi].
-    :return: list of genes graphic per condition.
-    """
-    log = voila_log()
-    log.info("Parsing splice graph information files ...")
-
-    genes_exp1_exp2 = []
-
-    with SpliceGraph(splice_graph_file, 'r') as sg:
-        genes = sg.get_genes_list(gene_ids_list)
-        gene_experiments_list = sg.get_experiments()
-
-    genes.sort()
-
-    for experiments in [metainfo['experiments1'], metainfo.get('experiments2', [])]:
-        genes_exp = {}
-        combined_genes_exp = {}
-
-        for experiment in experiments:
-            genes_exp[experiment] = {}
-
-            for gene in genes:
-                # map the metainfo experiment name to the experiment index in the splice graph file.
-                experiment_index = gene_experiments_list.index(experiment)
-
-                # get the data needed to render the html
-                genes_exp[experiment][gene.gene_id] = gene.get_experiment(experiment_index)
-
-                # record all genes and combine their experiment data
-                combined_genes_exp[gene.gene_id] = gene.combine(experiment_index,
-                                                                combined_genes_exp.get(gene.gene_id, None))
-
-        # if there are more then 1 experiments, then record the combined data
-        if len(experiments) > 1:
-            genes_exp['Combined'] = {gene_id: combined_genes_exp[gene_id] for gene_id in combined_genes_exp}
-
-        genes_exp1_exp2.append(OrderedDict(sorted(genes_exp.items(), key=lambda t: t[0])))
-
-    log.info("Splice graph information files correctly loaded.")
-
-    return genes_exp1_exp2
 
 
 def table_marks_set(size):

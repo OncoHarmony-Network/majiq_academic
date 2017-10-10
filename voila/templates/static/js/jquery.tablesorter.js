@@ -883,7 +883,7 @@
             return /^\d{4}[\/-]\d{1,2}[\/-]\d{1,2}$/.test(s);
         }, format: function (s) {
             return $.tablesorter.formatFloat((s != "") ? new Date(s.replace(
-                    new RegExp(/-/g), "/")).getTime() : "0");
+                new RegExp(/-/g), "/")).getTime() : "0");
         }, type: "numeric"
     });
 
@@ -997,6 +997,7 @@
 
                 /** Render initial splice graph */
                 var chart = spliceGraphD3().orig_objs(orig_objs);
+
 
                 var spliceg = d3.select("#" + this.id)
                     .datum([exons_mapped, junctions_obj, genes_obj.strand])
@@ -1227,7 +1228,7 @@
 
                             canvasSettings = initLargeCanvasSettings(lsv.bins[0].length, canvasBarchart);
                             $(parentTd).append(canvasBarchart);
-                            initExpandedDeltaCanvas(canvasBarchart, canvasSettings); //TODO: Draw expanded Delta PSI plot
+                            initExpandedDeltaCanvas(canvasBarchart, canvasSettings);
 
                             $(canvasBarchart).on("click", function (e) {
                                 e.preventDefault();

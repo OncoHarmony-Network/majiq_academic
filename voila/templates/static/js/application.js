@@ -901,7 +901,7 @@ function drawExpDeltaWithCanvasId(eventOrCanvasid, zoomInc, canvasSettings) {
     // To cover the case when the reset button is clicked and when we just render the canvas passing a canvas id
 
     var canvasId;
-    if (eventOrCanvasid.type == "click") {
+    if (eventOrCanvasid.type === "click") {
         // This method was fired by a click event! We need to retrieve the params...
         zoomInc = eventOrCanvasid.data.zoomInc;
         canvasId = eventOrCanvasid.data.canvasId;
@@ -932,7 +932,7 @@ function renderExpandedDeltaCanvas(canvas, zoomInc, canvasSettings) {
         zoom = Math.abs(zoomInc) * zoom; // To reset zoom
 
 //        canvas.zoom = Math.abs(zoomInc)*canvas.zoom; // To reset zoom
-        (zoom == 0) ? hideResetZoomLink(canvas) : showResetZoomLink(canvas);
+        (zoom === 0) ? hideResetZoomLink(canvas) : showResetZoomLink(canvas);
 
         // Canvas attributes to reset barchart from zoom view
         canvas.setAttribute('data-zoom', zoom.toString());

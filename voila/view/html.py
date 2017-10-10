@@ -21,7 +21,6 @@ class Html(object):
     def gene_experiments(self, experiments, genes, gene_experiments):
 
         genes_exp = {}
-        combined_genes_exp = {}
         gene_experiments_tuple = tuple(gene_experiments)
 
         with SpliceGraph(self.args.splice_graph) as sg:
