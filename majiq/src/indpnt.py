@@ -169,3 +169,8 @@ class independent(BasicPipeline):
                               list_of_lsv_graphics=lsv_dict_graph)
                 in_h5p.close()
             pool.join()
+
+        logger.info("DeltaPSI Het calculation for %s_%s ended succesfully! Result can be found at %s" % (self.names[0],
+                                                                                                         self.names[1],
+                                                                                                         self.outDir))
+        logger.info("Alakazam! Done.")
