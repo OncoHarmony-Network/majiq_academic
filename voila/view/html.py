@@ -37,14 +37,9 @@ class Html(object):
                     # get the data needed to render the html
                     genes_exp[experiment][gene_id] = gene.get_experiment(experiment_index)
 
-                    # record all genes and combine their experiment data
-                    # todo: implement combined
-                    combined_genes_exp[gene.id] = gene.combine(experiment_index,
-                                                                    combined_genes_exp.get(gene.id, None))
-
             # if there are more then 1 experiments, then record the combined data
             if len(experiments) > 1:
-                genes_exp['Combined'] = {gene_id: combined_genes_exp[gene_id] for gene_id in combined_genes_exp}
+                genes_exp['Combined'] = sg.combined_genes(experiments)
 
             return OrderedDict(sorted(genes_exp.items(), key=lambda t: t[0]))
 

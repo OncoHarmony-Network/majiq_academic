@@ -305,7 +305,9 @@ function spliceGraphD3() {
 
             var renderNumReads = function (junctions, scaleX, displayCorrectedReads) {
 
-                var maxJunc = longestJunc(junctions, scaleX);
+                var maxJunc = longestJunc(junctions.filter(function (v) {
+                    return v.intron_retention < 1;
+                }), scaleX);
 
                 var labels = svgCanvas.selectAll("text.readcounts")
                     .data(junctions.filter(function (v) {
@@ -346,7 +348,10 @@ function spliceGraphD3() {
                     return v.intron_retention === 0;
                 }));
 
-                var maxJunc = longestJunc(data, scaleX);
+                var maxJunc = longestJunc(data.filter(function (v) {
+                    return v.intron_retention === 0;
+                }), scaleX);
+
                 juncs.enter().append("ellipse");
 
                 juncs.attr("class", "junction")
@@ -357,11 +362,10 @@ function spliceGraphD3() {
                     .ease("linear")
 
                     .attr("ry", function (d) {
-                        var v = Math.round(
+                        return Math.round(
                             (scaleX(d.end) - scaleX(d.start)) / maxJunc * JUNC_AREA * (height - padding[0] - padding[2])
                             - ((scaleX(d.end) - scaleX(d.start)) / maxJunc * JUNC_AREA * (height - padding[0] - padding[2]) / d.dispersion) * (d.dispersion - 1 ? 1 : 0)
                         );
-                        return v;
 
                     })
                     .attr("rx", function (d) {
@@ -408,7 +412,8 @@ function spliceGraphD3() {
                     .duration(100)
                     .ease("linear")
                     .text(function (d) {
-                        return d.reads;
+                        if (d.reads)
+                            return d.reads;
                     })
                     .attr("x", function (d) {
                         var pos = Math.round(scaleX(d[d.intron_retention === 1 ? 'end' : 'start']) + (d.intron_retention === 1 ? 2 : -2));
