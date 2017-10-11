@@ -196,7 +196,7 @@ def parsing_files(sam_file_list, chnk, process_conf, logger):
         majiq_io_bam.close_rnaseq(samfl)
 
         junc_mtrx = np.array(junc_mtrx)
-        #update_splicegraph_junctions(dict_junctions, junc_mtrx, majiq_config.outDir, sam_file, process_conf.lock)
+        update_splicegraph_junctions(dict_junctions, junc_mtrx, majiq_config.outDir, sam_file, process_conf.lock)
 
         indx = np.arange(junc_mtrx.shape[0])[junc_mtrx.sum(axis=1) >= majiq_config.minreads]
 

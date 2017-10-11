@@ -289,6 +289,6 @@ def detect_lsvs(list_exons, junc_mtrx, fitfunc_r, gid, gchrom, gstrand, majiq_co
 
         LSV.junc_cov_to_hdf5(outf, mtrx, mtrx_attrs)
         outf.attrs['num_lsvs'] = outf.attrs['num_lsvs'] + count
-    logger.info("STORE SAMPPLE")
+    # logger.info("STORE SAMPPLE")
     return count
 
