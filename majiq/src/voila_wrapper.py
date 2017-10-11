@@ -16,7 +16,7 @@ def update_splicegraph_junctions(dict_junctions, junc_mtrx, outDir, exp, lock):
     with SpliceGraph(get_builder_splicegraph_filename(outDir), 'r+') as sg:
         for gid, jlist in dict_junctions.items():
             for xx in jlist.values():
-                jg = sg.junction("%s:%s-%s" %(gid, xx.start, xx.end))
+                jg = sg.junction("%s:%s-%s" % (gid, xx.start, xx.end))
                 cov = 0
                 if xx.index != -1:
                     cov = jsum[xx.index]

@@ -26,8 +26,8 @@ def deltapsi_quantification(list_of_lsv, chnk, process_conf, logger):
 
     f_list = [None, None]
 
-    f_list[0] = majiq_deprio.get_extract_lsv_list(list_of_lsv, process_conf.files1, process_conf.m_samples)
-    f_list[1] = majiq_deprio.get_extract_lsv_list(list_of_lsv, process_conf.files2, process_conf.m_samples)
+    f_list[0] = majiq_io.get_extract_lsv_list(list_of_lsv, process_conf.files1, process_conf.m_samples)
+    f_list[1] = majiq_io.get_extract_lsv_list(list_of_lsv, process_conf.files2, process_conf.m_samples)
 
     prior_matrix = np.array(majiq_io.load_bin_file(get_prior_matrix_filename(process_conf.outDir,
                                                                              process_conf.names)))
@@ -36,26 +36,17 @@ def deltapsi_quantification(list_of_lsv, chnk, process_conf, logger):
         if lidx % 50 == 0:
             print("Event %d ..." % lidx)
             sys.stdout.flush()
-        lsv_samples = [None, None]
 
-        for grp_idx in range(2):
-
-            lsv_samples[grp_idx] = f_list[grp_idx][lidx].coverage
-            lsv_type = f_list[grp_idx][lidx].type
-
-        psi1, psi2 = [np.array(xx) for xx in lsv_samples]
-        del lsv_samples
-
-        post_matrix, posterior_psi1, posterior_psi2, mu_psi1, mu_psi2 = deltapsi_posterior(psi1, psi2, prior_matrix,
+        post_matrix, posterior_psi1, posterior_psi2, mu_psi1, mu_psi2 = deltapsi_posterior(f_list[0][lidx].coverage,
+                                                                                           f_list[1][lidx].coverage,
+                                                                                           prior_matrix,
                                                                                            process_conf.m_samples,
                                                                                            num_exp, process_conf.nbins,
-                                                                                           lsv_type)
+                                                                                           f_list[0][lidx].type)
 
         qm = QueueMessage(QUEUE_MESSAGE_DELTAPSI_RESULT, (post_matrix, posterior_psi1, posterior_psi2,
                                                           mu_psi1, mu_psi2, lsv_id), chnk)
         process_conf.queue.put(qm, block=True)
-
-
 
 prior_conf = collections.namedtuple('conf', 'iter plotpath breakiter names binsize')
 

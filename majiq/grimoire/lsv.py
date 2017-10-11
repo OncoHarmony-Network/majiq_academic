@@ -5,6 +5,7 @@ from majiq.src.sample import sample_from_junctions
 import collections
 from voila.constants import *
 from voila.splice_graphics import ExonGraphic, LsvGraphic, JunctionGraphic
+from majiq.src.logger import monitor
 
 quant_lsv = collections.namedtuple('quant_lsv', 'id type coverage')
 
@@ -231,7 +232,7 @@ class LSV():
         hdf5grp.attrs['lsv_idx'] = lsv_idx + njunc
 
 
-def detect_lsvs(list_exons, junc_mtrx, fitfunc_r, gid, gchrom, gstrand, majiq_config, outf):
+def detect_lsvs(list_exons, junc_mtrx, fitfunc_r, gid, gchrom, gstrand, majiq_config, outf, logger):
 
     count = 0
     sum_trx = junc_mtrx.sum(axis=1)
@@ -269,6 +270,7 @@ def detect_lsvs(list_exons, junc_mtrx, fitfunc_r, gid, gchrom, gstrand, majiq_co
         else:
             inlist.append(st)
 
+    logger.info("PRE SAMPPLE")
     np_jjlist = []
     attrs_list = []
     for lsvobj in inlist:
@@ -276,7 +278,7 @@ def detect_lsvs(list_exons, junc_mtrx, fitfunc_r, gid, gchrom, gstrand, majiq_co
 
         np_jjlist.append(b)
         attrs_list.append(c)
-
+    logger.info("Post SAMPPLE %s" % len(np_jjlist))
     if len(np_jjlist) > 0:
         mtrx = np.concatenate(np_jjlist, axis=0)
         mtrx_attrs = np.concatenate(attrs_list, axis=0)
@@ -287,75 +289,6 @@ def detect_lsvs(list_exons, junc_mtrx, fitfunc_r, gid, gchrom, gstrand, majiq_co
         LSV.junc_cov_to_hdf5(outf, mtrx, mtrx_attrs)
         outf.attrs['num_lsvs'] = outf.attrs['num_lsvs'] + len(inlist)
         count += len(inlist)
-
+    logger.info("STORE SAMPPLE")
     return count
 
-
-
-
-
-
-def detect_lsvs2(list_exons, junc_mtrx, fitfunc_r, locks, gid, gstrand, majiq_config):
-
-    count = 0
-
-    sum_trx = junc_mtrx.sum(axis=2)
-    pos_trx = np.count_nonzero(junc_mtrx, axis=2)
-    for name, ind_list in majiq_config.tissue_repl.items():
-
-        lsv_list = [[], []]
-
-        for ex in list_exons:
-            for ii, jjlist in enumerate([ex.ib, ex.ob]):
-                jjlist = [xx for xx in jjlist if not (xx.donor is None or xx.acceptor is None)]
-                if len(jjlist) < 2:
-                    continue
-                ex_index = sorted([xx.index for xx in jjlist])
-                ex_mtrx_s = sum_trx[ind_list][:, ex_index]
-                ex_mtrx_p = pos_trx[ind_list][:, ex_index]
-
-                if np.any(np.logical_and(ex_mtrx_s > majiq_config.minpos, ex_mtrx_p > majiq_config.minreads)):
-                    try:
-                        lsv_list[ii].append(LSV(gid, gstrand, ex, ss=(ii == 1)))
-                    except InvalidLSV:
-                        continue
-
-        inlist = []
-        for ss in lsv_list[0]:
-            for st in lsv_list[1]:
-                if set(ss.junctions).issubset(set(st.junctions)) and not set(ss.junctions).issuperset(set(st.junctions)):
-                    break
-            else:
-                inlist.append(ss)
-        for st in lsv_list[1]:
-            for ss in lsv_list[0]:
-                if set(st.junctions).issubset(set(ss.junctions)):
-                    break
-            else:
-                inlist.append(st)
-
-        for exp_idx in majiq_config.tissue_repl[name]:
-            np_jjlist = []
-            attrs_list = []
-
-            for lsvobj in inlist:
-                b, c = lsvobj.sample_lsvs(exp_idx, junc_mtrx, fitfunc_r=fitfunc_r[exp_idx],
-                                          majiq_config=majiq_config)
-                np_jjlist.append(b)
-                attrs_list.append(c)
-
-            if len(np_jjlist) > 0:
-                mtrx = np.concatenate(np_jjlist, axis=0)
-                mtrx_attrs = np.concatenate(attrs_list, axis=0)
-
-                locks[exp_idx].acquire()
-                with h5py.File('%s/%s.majiq' % (majiq_config.outDir, majiq_config.sam_list[exp_idx]), 'r+') as f:
-                    lsv_idx = f.attrs['lsv_idx']
-                    for lsv in inlist:
-                        lsv_idx = lsv.to_hdf5(f, lsv_idx)
-                    LSV.junc_cov_to_hdf5(f, mtrx, mtrx_attrs)
-                    f.attrs['num_lsvs'] = f.attrs['num_lsvs'] + len(inlist)
-                locks[exp_idx].release()
-                count += len(inlist)
-
-    return count

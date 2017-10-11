@@ -10,6 +10,8 @@ from majiq.grimoire.junction cimport Junction
 from majiq.grimoire.junction import Junction
 from majiq.grimoire.exon cimport Exon, Intron
 from majiq.grimoire.exon import Exon
+from majiq.grimoire.lsv import quant_lsv
+
 from majiq.src.gff import parse_gff3
 from majiq.src.constants import *
 from voila.splice_graphics import LsvGraphic
@@ -211,35 +213,36 @@ def junction_to_tmp(gne_id, Junction junc, object hdf5grps):
     h_jnc.attrs['end'] = junc.end
     h_jnc.attrs['intronic'] = junc.intronic
     h_jnc.attrs['coverage_index'] = junc.index
-#
-# cdef get_extract_lsv_list(list_of_lsv_id, file_list, msamples):
-#     result = []
-#
-#     for lsv_id in list_of_lsv_id:
-#         lsv_cov = []
-#         lsv_type = None
-#         for fidx, fname in enumerate(file_list):
-#
-#             with open_hdf5_file(fname) as data:
-#                 try:
-#                     if lsv_type is None:
-#                         lsv_type = data['LSVs/%s' % lsv_id].attrs['type']
-#
-#                     assert data['LSVs/%s' % lsv_id].attrs['type'] == lsv_type, "ERROR lsv_type doesn't match for %s" % lsv_id
-#                     cov = data['LSVs/%s' % lsv_id].attrs['coverage']
-#                     lsv_cov.append(data[JUNCTIONS_DATASET_NAME][cov[0]:cov[1]])
-#                 except KeyError:
-#                     lsv_cov.append(None)
-#
-# #        lsv_cov = np.array(lsv_cov)
-#         njunc = len(lsv_type.split(':')) -1
-#         for xidx, xx in enumerate(lsv_cov):
-#             if xx is None:
-#                 lsv_cov[xidx] = np.zeros(shape=(njunc, msamples))
-#
-#         qq = quant_lsv(lsv_id, lsv_type, lsv_cov)
-#         result.append(qq)
-#     return result
+
+
+cdef get_extract_lsv_list(list list_of_lsv_id, list file_list, int msamples):
+    cdef list result = []
+    cdef int n_exp = len(file_list)
+    cdef str lsv_id, lsv_type, fname
+    cdef int fidx
+    cdef np.ndarray cov, lsv_cov
+
+    for lsv_id in list_of_lsv_id:
+        lsv_type = None
+        for fidx, fname in enumerate(file_list):
+
+            with h5py.File(fname, 'r') as data:
+                try:
+                    if lsv_type is None:
+                        lsv_type = data['LSVs/%s' % lsv_id].attrs['type']
+                        njunc = len(lsv_type.split(':')) -1
+                        lsv_cov = np.zeros(shape=(n_exp, njunc, msamples))
+
+                    assert data['LSVs/%s' % lsv_id].attrs['type'] == lsv_type, "ERROR lsv_type doesn't match " \
+                                                                               "for %s" % lsv_id
+                    cov = data['LSVs/%s' % lsv_id].attrs['coverage']
+                    lsv_cov[fidx] = data[JUNCTIONS_DATASET_NAME][cov[0]:cov[1]]
+                except KeyError:
+                    pass
+
+        qq = quant_lsv(lsv_id, lsv_type, lsv_cov)
+        result.append(qq)
+    return result
 
 
 ####
