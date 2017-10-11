@@ -217,7 +217,7 @@ def parsing_files(sam_file_list, chnk, process_conf, logger):
             out_f.attrs['num_lsvs'] = 0
             out_f.attrs['genome'] = majiq_config.genome
             out_f.attrs['one_over_r'] = fitfunc_r
-
+            logger.info('Detecting lsvs')
             for gne_idx, (gne_id, gene_obj) in enumerate(dict_of_genes.items()):
                 if gene_obj['nreads'] == 0:
                     continue

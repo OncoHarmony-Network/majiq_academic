@@ -225,7 +225,6 @@ class LSV():
             hdf5grp[JUNCTIONS_DATASET_NAME].resize((shp_new, shp[1]))
             hdf5grp['junc_cov'].resize((shp_new, 2))
 
-
         hdf5grp[JUNCTIONS_DATASET_NAME][lsv_idx:lsv_idx + njunc] = boots
         hdf5grp['junc_cov'][lsv_idx:lsv_idx + njunc] = cov
 
