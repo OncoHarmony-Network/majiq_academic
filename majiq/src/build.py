@@ -221,10 +221,8 @@ def parsing_files(sam_file_list, chnk, process_conf, logger):
             for gne_idx, (gne_id, gene_obj) in enumerate(dict_of_genes.items()):
                 if gene_obj['nreads'] == 0:
                     continue
-
                 detect_lsvs(list_exons[gne_id], junc_mtrx, fitfunc_r, gne_id, gene_obj['chromosome'],
                             gene_obj['strand'], majiq_config, out_f, logger)
-
                 for jj in dict_junctions[gne_id].values():
                     jj.index = -1
 
@@ -245,7 +243,6 @@ def parsing_files(sam_file_list, chnk, process_conf, logger):
         #                          dtype=np.float)
         #     factor, meanbins = gc_factor_calculation(gc_pairs, nbins=10)
         #     out_f.attrs['gc_values'] = (factor, meanbins)
-
 
 
 class Builder(BasicPipeline):

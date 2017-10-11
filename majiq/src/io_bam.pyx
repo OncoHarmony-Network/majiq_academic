@@ -204,17 +204,10 @@ def read_juncs(str fname, bint is_junc_file, dict dict_exons, dict dict_genes, d
 
         found = False
         for junc in sorted(jj_set):
-
-            if junc[0] == 20757728 :
-                print (junc)
-
             gidx = init_gidx[junc[2]]
             possible_genes = []
             while gidx < ngenes:
                 gobj = gne_list[gidx]
-                if junc[0] == 20757728 :
-                    print (gobj)
-
                 if stranded and gobj['strand'] != junc[2]:
                     gidx += 1
                     continue
@@ -234,13 +227,11 @@ def read_juncs(str fname, bint is_junc_file, dict dict_exons, dict dict_genes, d
 
                     break
                 if gobj['start']<=junc[1] and gobj['end']>= junc[0]:
-                    if junc[0] == 20757728 : print('IN FOUND')
                     gid = gobj['id']
                     start_sp = [jj.start for ex in dict_exons[gid] for jj in ex.ob if jj.start > 0 and jj.end > 0]
                     end_sp = [jj.end for ex in dict_exons[gid] for jj in ex.ib if jj.start > 0 and jj.end > 0]
                     #if junc[0] == 20757728 : print [dict_exons[gid]
                     if junc[0] in start_sp or junc[1] in end_sp:
-                        if junc[0] == 20757728 : print('IN FOUND2')
                         found = True
                         junc_obj = Junction(junc[0],  junc[1], gid, -1, annot=False)
                         qm = QueueMessage(QUEUE_MESSAGE_BUILD_JUNCTION, (gid, junc[0], junc[1], gname), 0)
@@ -433,5 +424,5 @@ cdef int _read_sam_or_bam(object gne, AlignmentFile samfl, list matrx, dict junc
         return tot_reads
     except ValueError as e:
         print(e)
-        logging.error('\t[%s]There are no reads in %s:%d-%d' % (info_msg, gne['chromosome'], gne['start'], gne['end']))
+        logging.debug('\t[%s]There are no reads in %s:%d-%d' % (info_msg, gne['chromosome'], gne['start'], gne['end']))
         return 0

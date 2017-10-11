@@ -256,39 +256,39 @@ def detect_lsvs(list_exons, junc_mtrx, fitfunc_r, gid, gchrom, gstrand, majiq_co
                 except InvalidLSV:
                     continue
 
-    inlist = []
+    np_jjlist = []
+    attrs_list = []
+    lsv_idx = outf.attrs['lsv_idx']
+
     for ss in lsv_list[0]:
         for st in lsv_list[1]:
             if set(ss.junctions).issubset(set(st.junctions)) and not set(ss.junctions).issuperset(set(st.junctions)):
                 break
         else:
-            inlist.append(ss)
+            b, c = ss.sample_lsvs(junc_mtrx, fitfunc_r=fitfunc_r, majiq_config=majiq_config)
+            np_jjlist.append(b)
+            attrs_list.append(c)
+            lsv_idx = ss.to_hdf5(outf, lsv_idx)
+            count += 1
+
     for st in lsv_list[1]:
         for ss in lsv_list[0]:
             if set(st.junctions).issubset(set(ss.junctions)):
                 break
         else:
-            inlist.append(st)
+            b, c = st.sample_lsvs(junc_mtrx, fitfunc_r=fitfunc_r, majiq_config=majiq_config)
+            np_jjlist.append(b)
+            attrs_list.append(c)
+            lsv_idx = st.to_hdf5(outf, lsv_idx)
+            count += 1
 
-    logger.info("PRE SAMPPLE")
-    np_jjlist = []
-    attrs_list = []
-    for lsvobj in inlist:
-        b, c = lsvobj.sample_lsvs(junc_mtrx, fitfunc_r=fitfunc_r, majiq_config=majiq_config)
-
-        np_jjlist.append(b)
-        attrs_list.append(c)
-    logger.info("Post SAMPPLE %s" % len(np_jjlist))
+    outf.attrs['lsv_idx'] = lsv_idx
     if len(np_jjlist) > 0:
         mtrx = np.concatenate(np_jjlist, axis=0)
         mtrx_attrs = np.concatenate(attrs_list, axis=0)
 
-        lsv_idx = outf.attrs['lsv_idx']
-        for lsv in inlist:
-            lsv_idx = lsv.to_hdf5(outf, lsv_idx)
         LSV.junc_cov_to_hdf5(outf, mtrx, mtrx_attrs)
-        outf.attrs['num_lsvs'] = outf.attrs['num_lsvs'] + len(inlist)
-        count += len(inlist)
+        outf.attrs['num_lsvs'] = outf.attrs['num_lsvs'] + count
     logger.info("STORE SAMPPLE")
     return count
 
