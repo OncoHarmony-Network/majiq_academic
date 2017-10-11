@@ -223,7 +223,7 @@ def parsing_files(sam_file_list, chnk, process_conf, logger):
                     continue
 
                 detect_lsvs(list_exons[gne_id], junc_mtrx, fitfunc_r, gne_id, gene_obj['chromosome'],
-                            gene_obj['strand'], majiq_config, out_f)
+                            gene_obj['strand'], majiq_config, out_f, logger)
 
                 for jj in dict_junctions[gne_id].values():
                     jj.index = -1
