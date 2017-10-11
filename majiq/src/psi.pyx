@@ -122,7 +122,7 @@ cdef tuple _deltapsi_posterior(np.ndarray psi1, np.ndarray psi2, np.ndarray prio
     cdef float all_sample
     cdef float mu_psi1, mu_psi2
     cdef np.ndarray alls1, alls2
-    print(psi1.shape)
+
     alls1 = psi1.sum(axis=(0,1))
     alls2 = psi2.sum(axis=(0,1))
 
