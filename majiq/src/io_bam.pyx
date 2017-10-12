@@ -315,7 +315,7 @@ cdef int __junction_read(AlignedSegment read, list junc_list, int max_readlen, i
             try:
                 junc = junctions[(junc_start, junc_end)]
                 junc.update_junction_read(nreads)
-                if junc.index == -1:
+                if junc.index == 0:
                     junc.index = len(matrx)
                     matrx.append([0] * effective_len)
 

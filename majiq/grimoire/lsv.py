@@ -232,7 +232,7 @@ class LSV():
         hdf5grp.attrs['lsv_idx'] = lsv_idx + njunc
 
 
-def detect_lsvs(list_exons, junc_mtrx, fitfunc_r, gid, gchrom, gstrand, majiq_config, outf, logger):
+def detect_lsvs(list_exons, junc_mtrx, fitfunc_r, gid, gchrom, gstrand, majiq_config, outf, np_jjlist, attrs_list):
 
     count = 0
     sum_trx = junc_mtrx.sum(axis=1)
@@ -256,8 +256,6 @@ def detect_lsvs(list_exons, junc_mtrx, fitfunc_r, gid, gchrom, gstrand, majiq_co
                 except InvalidLSV:
                     continue
 
-    np_jjlist = []
-    attrs_list = []
     lsv_idx = outf.attrs['lsv_idx']
 
     for ss in lsv_list[0]:
@@ -283,12 +281,14 @@ def detect_lsvs(list_exons, junc_mtrx, fitfunc_r, gid, gchrom, gstrand, majiq_co
             count += 1
 
     outf.attrs['lsv_idx'] = lsv_idx
-    if len(np_jjlist) > 0:
-        mtrx = np.concatenate(np_jjlist, axis=0)
-        mtrx_attrs = np.concatenate(attrs_list, axis=0)
-
-        LSV.junc_cov_to_hdf5(outf, mtrx, mtrx_attrs)
-        outf.attrs['num_lsvs'] = outf.attrs['num_lsvs'] + count
-    # logger.info("STORE SAMPPLE")
+    outf.attrs['num_lsvs'] = outf.attrs['num_lsvs'] + count
+    # if len(np_jjlist) > 0:
+    #     mtrx = np.concatenate(np_jjlist, axis=0)
+    #     mtrx_attrs = np.concatenate(attrs_list, axis=0)
+    #
+    #     LSV.junc_cov_to_hdf5(outf, mtrx, mtrx_attrs)
+    #     outf.attrs['num_lsvs'] = outf.attrs['num_lsvs'] + count
+    # # logger.info("STORE SAMPPLE")
     return count
+
 

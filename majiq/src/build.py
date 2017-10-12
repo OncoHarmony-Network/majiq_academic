@@ -196,6 +196,7 @@ def parsing_files(sam_file_list, chnk, process_conf, logger):
         majiq_io_bam.close_rnaseq(samfl)
 
         junc_mtrx = np.array(junc_mtrx)
+        print (sam_file)
         update_splicegraph_junctions(dict_junctions, junc_mtrx, majiq_config.outDir, sam_file, process_conf.lock)
 
         indx = np.arange(junc_mtrx.shape[0])[junc_mtrx.sum(axis=1) >= majiq_config.minreads]
@@ -206,8 +207,8 @@ def parsing_files(sam_file_list, chnk, process_conf, logger):
         with h5py.File('%s/%s.majiq' % (majiq_config.outDir, sam_file), 'w') as out_f:
             #TODO: keep in mem and fix later
 
-            out_f.create_dataset(JUNCTIONS_DATASET_NAME, (5000, majiq_config.m), maxshape=(None, majiq_config.m))
-            out_f.create_dataset('junc_cov', (5000, 2), maxshape=(None, 2))
+            # out_f.create_dataset(JUNCTIONS_DATASET_NAME, (5000, majiq_config.m), maxshape=(None, majiq_config.m))
+            # out_f.create_dataset('junc_cov', (5000, 2), maxshape=(None, 2))
 
             out_f.attrs['m_samples'] = process_conf.m
             out_f.attrs['sample_id'] = sam_file
@@ -218,17 +219,21 @@ def parsing_files(sam_file_list, chnk, process_conf, logger):
             out_f.attrs['genome'] = majiq_config.genome
             out_f.attrs['one_over_r'] = fitfunc_r
             logger.info('Detecting lsvs')
+
+            np_jjlist = []
+            attrs_list = []
+
             for gne_idx, (gne_id, gene_obj) in enumerate(dict_of_genes.items()):
                 if gene_obj['nreads'] == 0:
                     continue
                 detect_lsvs(list_exons[gne_id], junc_mtrx, fitfunc_r, gne_id, gene_obj['chromosome'],
-                            gene_obj['strand'], majiq_config, out_f, logger)
+                            gene_obj['strand'], majiq_config, out_f, np_jjlist, attrs_list)
                 for jj in dict_junctions[gne_id].values():
-                    jj.index = -1
+                    jj.index = 0
+            majiq_io.dump_lsv_coverage(out_f, np_jjlist, attrs_list)
 
-            n_juncs = out_f.attrs['lsv_idx']
-            shp = out_f[JUNCTIONS_DATASET_NAME].shape
-            out_f[JUNCTIONS_DATASET_NAME].resize((n_juncs, shp[1]))
+            del np_jjlist
+            del attrs_list
 
 
 

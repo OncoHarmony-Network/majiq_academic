@@ -132,6 +132,7 @@ cpdef float fit_nb(np.ndarray junctionl, str outpath, float nbdisp=0.1, object l
         logger.debug("NBFit: Plots will be drawn in %s..." % outpath)
 
     if junctionl.shape[0] < 10:
+        print(junctionl.shape[0])
         logger.warning("Your dataset is not deep enougth to define an apropiate NB factor. The default 0 is given")
         return 0.0
 

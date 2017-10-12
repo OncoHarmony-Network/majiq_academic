@@ -1,7 +1,7 @@
 VERSION = '1.1.0'
 
 JUNCTIONS_DATASET_NAME = '/junctions'
-JUNCTIONS_GC_CONTENT = '/junctions_gc'
+JUNCTIONS_ATTRS = '/junc_cov'
 
 #QUEUE MESSAGE CODES
 

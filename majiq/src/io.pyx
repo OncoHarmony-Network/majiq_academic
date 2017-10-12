@@ -166,8 +166,15 @@ cdef int merge_exons(db_f, dict exon_dict) except -1:
 # HDF5 API
 #######
 
+cdef int _dump_lsv_coverage(out_f, cov_list, attrs_list):
+    out_f.create_dataset(JUNCTIONS_DATASET_NAME, data=np.concatenate(cov_list, axis=0),
+                         compression='gzip', compression_opts=9)
+    out_f.create_dataset(JUNCTIONS_ATTRS, data=np.concatenate(attrs_list, axis=0),
+                         compression='gzip', compression_opts=9)
+
+
 cdef int _dump_junctions(db_f, str gne_id, int start, int end, str transcript_id, bint annot=False) except -1:
-    jid = '%s/junctions/%s-%s' % (gne_id, start, end)
+    cdef str jid = '%s/junctions/%s-%s' % (gne_id, start, end)
 
     if jid not in db_f:
         h_jnc = db_f.create_group(jid)
@@ -177,7 +184,7 @@ cdef int _dump_junctions(db_f, str gne_id, int start, int end, str transcript_id
         #h_jnc.attrs['transcript_id_list'] = [transcript_id.encode('utf8')]
 
 cdef int _dump_exon(db_f, str gne_id, int start, int end, bint annot=True) except -1:
-    jid = '%s/exons/%s-%s' % (gne_id, start, end)
+    cdef str jid = '%s/exons/%s-%s' % (gne_id, start, end)
 
     if jid not in db_f:
         h_jnc = db_f.create_group(jid)
@@ -197,7 +204,7 @@ cdef int _dump_gene(db_f, str gne_id, str gne_name, str chrom, str strand, int s
 
 
 cdef int _dump_intron(db_f, str gne_id, int start, int end, bint annot=False) except -1:
-    jid = '%s/ir/%s-%s' % (gne_id, start, end)
+    cdef str jid = '%s/ir/%s-%s' % (gne_id, start, end)
     if jid not in db_f:
         h_jnc = db_f.create_group(jid)
         h_jnc.attrs['start'] = start
@@ -308,6 +315,10 @@ def extract_lsv_summary(list files, int minnonzero, int min_reads, dict epsi=Non
     lsv_id_list = [xx for xx,yy in lsv_list.items() if np.sum(yy) > percent]
 
     return lsv_id_list, lsv_graphic
+
+
+cpdef int dump_lsv_coverage(out_f, cov_list, attrs_list):
+    _dump_lsv_coverage(out_f, cov_list, attrs_list)
 
 
 def dump_junctions(db_f, str gne_id, int start, int end, str transcript_id='', bint annot=False):
