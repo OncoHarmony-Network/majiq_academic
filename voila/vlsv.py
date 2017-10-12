@@ -47,6 +47,10 @@ class Het(HDF5):
     def cls_dict(self):
         return {'groups': HetGroup}
 
+    def __iter__(self):
+        for k, v in self.__dict__.items():
+            yield k, v
+
 
 class HetGroup(HDF5):
     def __init__(self, expected_psi, median):
@@ -60,6 +64,10 @@ class HetGroup(HDF5):
     @classmethod
     def easy_from_hdf5(cls, h):
         return cls(None, None).from_hdf5(h)
+
+    def __iter__(self):
+        for k, v in self.__dict__.items():
+            yield k, v
 
 
 class VoilaLsv(LsvGraphic):
@@ -171,7 +179,7 @@ class VoilaLsv(LsvGraphic):
     @property
     def variances(self):
         variances = []
-        if self.bins.size > 0:
+        if self.bins is not None and self.bins.size > 0:
             for bin in self.bins:
                 step_bins = 1.0 / len(bin)
                 projection_prod = bin * np.arange(step_bins / 2, 1, step_bins) ** 2

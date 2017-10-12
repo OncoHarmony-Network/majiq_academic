@@ -1,0 +1,230 @@
+{% extends "sg_lsv_sidebar_template.html" %}
+{% block title %}LSV &Delta;&Psi; Gene Summary{% endblock %}
+
+{% block css %}
+    <link rel="stylesheet" type="text/css" href="static/css/splice.graph.D3.css"/>
+    <link rel="stylesheet" type="text/css" href="static/css/bootstrap-frm.css"/>
+{% endblock %}
+
+{% block js %}
+    <script src="static/js/splice.graph.js" type="text/javascript" language="javascript"></script>
+    <script src="static/js/splice.graph.D3.js" type="text/javascript" language="javascript"></script>
+    <script src="static/js/jquery.tablesorter.js" type="text/javascript"></script>
+    <script src="static/js/jquery.tablesorter.pager.js" type="text/javascript"></script>
+    <script src="static/js/jquery.mousewheel.js" type="text/javascript"></script>
+    <script src="static/js/application.js" type="text/javascript"></script>
+    <script type="text/javascript" src="static/js/jquery.tooltipster.min.js"></script>
+    <script src="static/js/d3.v4.min.js"></script>
+    <script src="static/js/het.js"></script>
+    <script src="static/js/colors.js"></script>
+    <script src="static/js/boxPlots.js"></script>
+    <script>
+        $(document).ready(function () {
+            new BoxPlots({
+                elements: document.querySelectorAll(".box-plots")
+            })
+        })
+    </script>
+{% endblock %}
+
+{% block header %}
+    {% if page_name %}Result page: {{ page_name }}{% endif %}
+{% endblock %}
+
+{% block content %}
+    <section>
+        <fieldset class="section-border events-summary">
+            <legend>LSV summary</legend>
+            <div class="floatingCanvas">
+                <canvas class="floatingLegend" width="500px" height="40px">
+                    This browser or document mode doesn't support canvas
+                </canvas>
+            </div>
+            {% for gene_name, lsvs in genes_dict.items() %}
+                {% set gene_index = loop.index - 1 %}
+                <a name="{{ lsvs[0].name }}"></a>
+                <h2>Gene name:
+                    {% set experiments = genes_exps_list[0].keys() | list %}
+                    {% set first_exp = experiments[0] %}
+                    {{ lsvs[0].name }};{{ lsvs[0].chromosome }}:{{ lsvs[0].strand }}:{{ genes_exps_list[0][first_exp][gene_name].start }}-{{ genes_exps_list[0][first_exp][gene_name].end }};
+
+                    {% if lexps %}
+                        <a href="http://genome.ucsc.edu/cgi-bin/hgTracks?db={{ lexps.genome }}&position={{ lsvs[0].chromosome }}:{{ genes_exps_list[0][first_exp][gene_name].start }}-{{ genes_exps_list[0][first_exp][gene_name].end }}"
+                           target="_blank"><img src="static/img/icons/ucsc3.png"
+                                                title="{{ lsvs[0].chromosome }}:{{ genes_exps_list[0][first_exp][gene_name].start }}-{{ genes_exps_list[0][first_exp][gene_name].end }}"/></a>
+                    {% endif %}
+                </h2>
+
+                <h3 class="gene_id">
+                    Gene ID: {{ gene_name }};
+                </h3>
+
+                <div class="gene-container">
+
+                    <div class="spliceGraphTools">
+
+                        <select class="spliceGraphSelector exp1" autocomplete="off">
+                            {% for nsample in genes_exps_list[0] -%}
+                                <option {% if nsample == "Combined" %}selected="selected"{% endif %}
+                                        value="{{ genes_exps_list[0][nsample][gene_name] | to_json_especial }}">{{ nsample }}
+                                </option>
+                            {%- endfor %}
+                        </select>
+
+                        {#                        <label class="toggleSwitch" title="Toggle from raw reads to corrected reads.">#}
+                        {#                            RAW CORRECTED#}
+                        {#                            <br/>#}
+                        {#                            <input class="toggleSwitch readCounts" type="checkbox">#}
+                        {#                            <div class="slider"></div>#}
+                        {#                        </label>#}
+
+                        <img class="toogleScale scaled" src="static/img/icons/solve-icon16.png"
+                             title="Change between scaled view and a view where introns are trimmed"/>
+                        <img class="zoomInSplice" src="static/img/zoom_in.png" title="Zoom in" alt=""/>
+                        <img class="zoomOutSplice" src="static/img/zoom_out.png" title="Zoom out" alt=""/>
+                        <img class="zoomResetSplice" src="static/img/undo.png" title="Zoom reset" alt=""/>
+                        <div class="tooltipD3"><strong>Coordinates: </strong><span class="coordsLabel">-</span>;<strong>
+                            Length: </strong><span class="lengthLabel">-;</span></div>
+
+                    </div>
+
+                    <div class="spliceGraphTools">
+
+                        <select class="spliceGraphSelector exp2" autocomplete="off">
+                            {% for nsample in genes_exps_list[1] -%}
+                                <option {% if nsample == "Combined" %}selected="selected"{% endif %}
+                                        value="{{ genes_exps_list[1][nsample][gene_name] | to_json_especial }}">{{ nsample }}
+                                </option>
+                            {%- endfor %}
+                        </select>
+                    </div>
+
+                    <div class="splice-div-container">
+
+                        <div class="spliceDiv delta exp1" id="spliceDivExp1_{{ gene_index }}"
+                             data-exon-list=
+                                     {% if "Combined" in genes_exps_list[0] %}
+                                         "{{ genes_exps_list[0]["Combined"][gene_name] | to_json_especial }}">
+                                     {% else %}
+                                         {% for exp in genes_exps_list[0].values() %}
+                                             "{{ exp[gene_name] | to_json_especial }}">
+                                         {% endfor %}
+                                     {% endif %}
+                        </div>
+
+                        <div class="spliceDiv delta exp2" id="spliceDivExp2_{{ gene_index }}"
+                             data-exon-list=
+                                     {% if "Combined" in genes_exps_list[1] %}
+                                         "{{ genes_exps_list[1]["Combined"][gene_name] | to_json_especial }}">
+                                     {% else %}
+                                         {% for exp in genes_exps_list[1].values() %}
+                                             "{{ exp[gene_name] | to_json_especial }}">
+                                         {% endfor %}
+                                     {% endif %}
+                        </div>
+
+                    </div>
+
+                    <table id="event_table{{ loop.index }}" class="tablesorter">
+                        <thead>
+                        <tr>
+                            <th class="short-header">Highlight</th>
+                            <th class="short-header">LSV ID</th>
+                            <th class="short-header">LSV Type</th>
+                            <th class="short-header">Heterogen</th>
+                            <th class="short-header">LSV links</th>
+                        </tr>
+                        </thead>
+                        <tfoot>
+                        <tr>
+                            <th>Highlight</th>
+                            <th>LSV ID</th>
+                            <th>LSV Type</th>
+                            <th>Heterogen</th>
+                            <th>LSV links</th>
+                        </tr>
+                        </tfoot>
+                        <tbody>
+                        {% for lsv in lsvs %}
+                            <tr class="{{ lsv.categories2css() }} lsvrow"
+                                data-njuncs="{{ lsv.njuncs() }}"
+                                data-nexons="{{ lsv.nexons() }}">
+                                <td>
+                                    <form class='highlight-lsv'>
+                                        <label>
+                                            <input class="highlight" type="checkbox" value="highlight">
+                                            Highlight
+                                        </label>
+                                        <label>
+
+                                            <input class="weighted" type="checkbox" value="weighted">
+                                            Weighted
+                                        </label>
+                                    </form>
+                                </td>
+                                <td>{{ lsv.lsv_id }}</td>
+                                <td>
+                                    <p style="top:0;" class="hidden">{{ lsv.lsv_type }}</p>
+                                    <canvas class="lsvLegend" id="{{ gene_index }}" width="200px" height="80px"
+                                            data-lsv-string="{{ lsv.lsv_type }}"
+                                            data-coord-exon="[{{ lsv.start }},{{ lsv.end }}]"
+                                            title="{{ lsv.lsv_type }}">
+                                        This browser or document mode doesn't support canvas
+                                    </canvas>
+                                </td>
+
+                                <td>
+                                    <svg box-plot-data="{{ lsv.box_plot_data | to_json_especial }}"
+                                         class="box-plots"></svg>
+                                </td>
+
+                                <td>
+                                    <p>
+                                        <a href="http://genome.ucsc.edu/cgi-bin/hgTracks?db={{ lexps.genome }}&position={{ lsv.chromosome }}:{{ lsv.get_extension()[0] }}-{{ lsv.get_extension()[1] }}"
+                                           target="_blank">
+                                            <img src="static/img/icons/ucsc3.png" title="View in UCSC Genome Browser"/>
+                                        </a>
+                                        {% if gtf %}
+                                            <a href="../static/doc/lsvs/{{ lsv.lsv_id }}.gtf"
+                                               target="_blank"><img src="static/img/icons/gtf.png"
+                                                                    title="Go to GTF LSV definition"/></a>
+                                        {% endif %}
+                                    </p>
+                                    <p>
+                                        <button class="copy-to-clipboard">
+                                            Copy LSV
+                                        </button>
+                                    </p>
+                                </td>
+
+                            </tr>
+                        {%- endfor %}
+                        </tbody>
+                    </table>
+
+                    <div class="pager" id="pager{{ loop.index }}">
+                        <form>
+                            <img src="static/img/icons/first.png" class="first"/>
+                            <img src="static/img/icons/prev.png" class="prev"/>
+                            <input type="text" class="pagedisplay"/>
+                            <img src="static/img/icons/next.png" class="next"/>
+                            <img src="static/img/icons/last.png" class="last"/>
+                            <select class="pagesize" autocomplete="off">
+
+                                {% for mark in table_marks[gene_index] -%}
+                                    {% if loop.first %}
+                                        <option selected="selected" value="{{ mark }}">{{ mark }}</option>
+                                    {% else %}
+                                        <option value="{{ mark }}">{{ mark }}</option>
+                                    {% endif %}
+                                {%- endfor %}
+                                <option value="{{ lsvs|length }}">All</option>
+                            </select>
+                        </form>
+                    </div>
+                </div>
+            {% endfor %}
+        </fieldset>
+    </section>
+{% endblock %}
+
