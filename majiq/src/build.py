@@ -229,7 +229,7 @@ def parsing_files(sam_file_list, chnk, process_conf, logger):
                 detect_lsvs(list_exons[gne_id], junc_mtrx, fitfunc_r, gne_id, gene_obj['chromosome'],
                             gene_obj['strand'], majiq_config, out_f, np_jjlist, attrs_list)
                 for jj in dict_junctions[gne_id].values():
-                    jj.index = 0
+                    jj.reset()
             majiq_io.dump_lsv_coverage(out_f, np_jjlist, attrs_list)
 
             del np_jjlist

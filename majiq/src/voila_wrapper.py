@@ -18,6 +18,7 @@ def update_splicegraph_junctions(dict_junctions, junc_mtrx, outDir, exp, lock):
             for xx in jlist.values():
                 jg = sg.junction("%s:%s-%s" % (gid, xx.start, xx.end))
                 cov = 0
+
                 if xx.index > 0:
                     cov = jsum[xx.index]
                 jg.update_reads(exp, cov)

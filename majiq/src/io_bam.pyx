@@ -47,7 +47,7 @@ cdef __cross_junctions(AlignedSegment read):
             cross = True
             # if len(jlist) !=0 : print "NOSTAR:", jlist, read.cigar
 
-    return cross, jlist, off
+    return cross, jlist, read.reference_end
 
 
 cpdef int find_introns(str filename, dict list_introns, float intron_threshold, queue, str gname) except -1:
@@ -399,24 +399,30 @@ cdef int _read_sam_or_bam(object gne, AlignmentFile samfl, list matrx, dict junc
             if is_cross:
               __junction_read(read, junc_list, majiq_config.readLen, effective_len, matrx, junctions)
             for intron in intron_list:
-
                 if read.pos >= intron.end:
-                    continue
-                elif end_r <= intron.start:
                     break
+                elif end_r <= intron.start:
+                    continue
                 __intronic_read(read, intron, gne['id'], junc_list, majiq_config.readLen, effective_len,
                                 matrx, junctions)
+
         for intron in intron_list:
             if intron.junc1 is None or intron.junc2 is None:
                 del intron
                 continue
+            #
+            # print ("JUNC1 (%s-%s): %s" %(intron.junc1.start, intron.junc1.end, intron.junc1.nreads),
+            #        "JUNC2 (%s-%s): %s" %(intron.junc2.start, intron.junc2.end, intron.junc2.nreads))
 
             if intron.junc1.nreads >= majiq_config.min_denovo and intron.junc2.nreads >= majiq_config.min_denovo:
+
+
+                matrx.append(intron.junc1_cov)
+                intron.junc1.index = len(matrx)
+                matrx.append(intron.junc2_cov)
+                intron.junc2.index = len(matrx)
                 junctions[(intron.junc1.start, intron.junc1.end)] = intron.junc1
                 junctions[(intron.junc2.start, intron.junc2.end)] = intron.junc2
-
-                matrx[intron.junc1.index].append(intron.junc1_cov)
-                matrx[intron.junc2.index].append(intron.junc2_cov)
                 ex = intron.to_exon()
                 exon_list.append(ex)
                 del intron

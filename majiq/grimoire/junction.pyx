@@ -19,6 +19,10 @@ cdef class Junction:
     def is_reliable(self):
         return True
 
+    def reset(self):
+        self.nreads = 0
+        self.index = 0
+
 
 
 def create_junction(start, end, gene_id, cov_idx, annot=False, intron=False):
