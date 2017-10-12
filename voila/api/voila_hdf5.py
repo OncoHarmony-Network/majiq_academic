@@ -2,7 +2,7 @@ import h5py
 import numpy
 
 from voila import constants
-from voila.hdf5 import HDF5, BinsDataSet
+from voila.hdf5 import BinsDataSet
 from voila.utils.exceptions import InValidAnalysisType, GeneIdNotFoundInVoilaFile
 from voila.utils.voila_log import voila_log
 from voila.vlsv import VoilaLsv, get_expected_dpsi
@@ -58,7 +58,8 @@ class VoilaHDF5:
             return self.hdf5.create_group(metainfo)
 
     def add_stat_names(self, stat_names):
-        HDF5.create(self._metainfo().attrs, 'stat_names', stat_names)
+        self._metainfo().create_dataset('stat_names',
+                                        data=numpy.array(stat_names, dtype=h5py.special_dtype(vlen=numpy.unicode)))
 
     def close(self):
         try:
@@ -75,6 +76,7 @@ class VoilaHDF5:
         voilaLsv.to_hdf5(self.hdf5)
 
     def add_genome(self, genome):
+        print('genome', genome)
         self._metainfo().attrs['genome'] = genome
 
     def add_metainfo(self, genome, group1, experiments1, group2=None, experiments2=None):
@@ -119,6 +121,7 @@ class VoilaHDF5:
             group_names[idx] = exp
         metainfo['experiment_names'] = experiment_names
         metainfo['group_names'] = group_names
+        metainfo['stat_names'] = self._metainfo()['stat_names'].value
 
         return metainfo
 

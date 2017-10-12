@@ -12,6 +12,7 @@ from markupsafe import escape
 from voila import constants
 from voila.constants import EXEC_DIR
 from voila.utils.voila_log import voila_log
+from voila.vlsv import Het, HetGroup
 
 
 def table_marks_set(size):
@@ -40,6 +41,8 @@ class NumpyEncoder(json.JSONEncoder):
             return obj.tolist()
         elif isinstance(obj, numpy.bytes_):
             return obj.decode('utf-8')
+        elif isinstance(obj, (Het, HetGroup)):
+            return dict(obj)
         return json.JSONEncoder.default(self, obj)
 
 
