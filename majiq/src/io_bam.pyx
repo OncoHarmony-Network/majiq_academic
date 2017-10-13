@@ -233,10 +233,10 @@ def read_juncs(str fname, bint is_junc_file, dict dict_exons, dict dict_genes, d
                     #if junc[0] == 20757728 : print [dict_exons[gid]
                     if junc[0] in start_sp or junc[1] in end_sp:
                         found = True
-                        junc_obj = Junction(junc[0],  junc[1], gid, -1, annot=False)
+                        #junc_obj = Junction(junc[0],  junc[1], gid, -1, annot=False)
                         qm = QueueMessage(QUEUE_MESSAGE_BUILD_JUNCTION, (gid, junc[0], junc[1], gname), 0)
                         queue.put(qm, block=True)
-                        junctions[gobj['id']][junc[:-1]] = junc_obj
+                       #junctions[gobj['id']][junc[:-1]] = junc_obj
                     else:
                         possible_genes.append(gobj)
                     gidx +=1
@@ -325,7 +325,7 @@ cdef int __junction_read(AlignedSegment read, list junc_list, int max_readlen, i
                 continue
 
 
-cdef int __intronic_read(AlignedSegment read, Intron intron, str gne_id, list junc_list, int max_readlen,
+cdef int __intronic_read(AlignedSegment read, list ref_pos, Intron intron, str gne_id, list junc_list, int max_readlen,
                          int effective_len, list matrx, dict junctions) except -1:
 
     cdef int nreads = __get_num_reads(read)
@@ -337,7 +337,7 @@ cdef int __intronic_read(AlignedSegment read, Intron intron, str gne_id, list ju
     if intron.start - r_start > readlen:
         r_start = intron.start - (readlen - MIN_BP_OVERLAP*2) - 1
 
-    if r_start < intron.start - MIN_BP_OVERLAP:
+    if intron.start in ref_pos and intron.start-1 in ref_pos:
         if intron.junc1 is None:
             try:
                 intron.junc1 = junctions[(intron.start - 1, intron.start)]
@@ -346,7 +346,7 @@ cdef int __intronic_read(AlignedSegment read, Intron intron, str gne_id, list ju
             intron.junc1_cov = [0] * effective_len
         intron.junc1.update_junction_read(nreads)
 
-    elif (intron.end - offset ) < r_start < (intron.end+1):
+    if intron.end in ref_pos and intron.end+1 in ref_pos:
         if intron.junc2 is None:
             try:
                 intron.junc2 = junctions[(intron.end, intron.end+1)]
@@ -354,14 +354,6 @@ cdef int __intronic_read(AlignedSegment read, Intron intron, str gne_id, list ju
                 intron.junc2 = Junction(intron.end, intron.end+1, gne_id, cov_idx=len(matrx), intron=True)
             intron.junc2_cov = [0] * effective_len
         intron.junc2.update_junction_read(nreads)
-
-    else:
-        # section 3
-        if r_start > intron.start - 1:
-            intron_idx = r_start - intron.start
-            rel_start = int(intron_idx / intron.chunk_len)
-            indx = -1 if rel_start >= intron.nchunks else rel_start
-            intron.parts[indx] += nreads
 
 
 
@@ -380,7 +372,7 @@ cdef int _read_sam_or_bam(object gne, AlignmentFile samfl, list matrx, dict junc
     cdef int counter = 0
     cdef int tot_reads = 0
     cdef int effective_len = 0
-    cdef list junc_list
+    cdef list junc_list, ref_pos
     cdef Intron intron
 
     try:
@@ -398,12 +390,14 @@ cdef int _read_sam_or_bam(object gne, AlignmentFile samfl, list matrx, dict junc
             tot_reads += 1
             if is_cross:
               __junction_read(read, junc_list, majiq_config.readLen, effective_len, matrx, junctions)
+
+            ref_pos = read.get_reference_positions()
             for intron in intron_list:
                 if read.pos >= intron.end:
                     break
                 elif end_r <= intron.start:
                     continue
-                __intronic_read(read, intron, gne['id'], junc_list, majiq_config.readLen, effective_len,
+                __intronic_read(read, ref_pos, intron, gne['id'], junc_list, majiq_config.readLen, effective_len,
                                 matrx, junctions)
 
         for intron in intron_list:
@@ -411,12 +405,11 @@ cdef int _read_sam_or_bam(object gne, AlignmentFile samfl, list matrx, dict junc
                 del intron
                 continue
             #
-            # print ("JUNC1 (%s-%s): %s" %(intron.junc1.start, intron.junc1.end, intron.junc1.nreads),
-            #        "JUNC2 (%s-%s): %s" %(intron.junc2.start, intron.junc2.end, intron.junc2.nreads))
 
             if intron.junc1.nreads >= majiq_config.min_denovo and intron.junc2.nreads >= majiq_config.min_denovo:
 
-
+                print ("##\nJUNC1 (%s-%s): %s\n" %(intron.junc1.start, intron.junc1.end, intron.junc1.nreads),
+                       "JUNC2 (%s-%s): %s" %(intron.junc2.start, intron.junc2.end, intron.junc2.nreads))
                 matrx.append(intron.junc1_cov)
                 intron.junc1.index = len(matrx)
                 matrx.append(intron.junc2_cov)

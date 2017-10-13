@@ -99,7 +99,6 @@ def parse_denovo_elements(pipe_self, logger):
                         majiq_multi.chunks(majiq_config.juncfile_list, lchnksize, range(nthreads)))
     pool1.close()
 
-
     group_names = {}
     group_lens = []
     for xidx, xx in enumerate(majiq_config.tissue_repl.keys()):
@@ -114,7 +113,7 @@ def parse_denovo_elements(pipe_self, logger):
         pool1.join()
         for jj, vv in denovo_junctions.items():
             #vv /= group_lens
-            if np.any(vv >= majiq_config.min_denovo):
+            if np.any(vv >= min_experiments):
                 #dict_junctions[jj[0]].append(create_junction(jj[1], jj[2], jj[0], 0, annot=False, intron=False))
                 majiq_io.dump_junctions(db_f, jj[0], jj[1], jj[2], annot=False)
 

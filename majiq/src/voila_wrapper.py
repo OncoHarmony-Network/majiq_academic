@@ -4,12 +4,13 @@ from voila import constants as voila_const
 from voila.api import SpliceGraph
 
 
+
+# kk1 = {'start': 91006695, 'end': 91006696, 'intron_retention': 1, 'reads_list': b'0\t0\t0\t0\t0\t0'}
+# kk2 = {'start': 91008171, 'end': 91008172, 'intron_retention': 1, 'reads_list': b'44\t13\t26\t13\t15\t13'}
+# {'start': 91013402, 'end': 91013403, 'intron_retention': 1}
+# {'start': 91013490, 'end': 91013491, 'intron_retention': 1}
 def update_splicegraph_junctions(dict_junctions, junc_mtrx, outDir, exp, lock):
 
-
-# ggraph = GeneGraphic(gene_id=gne_id, name=gne['name'], strand=gne['strand'], exons=exon_list,
-#                      junctions=junc_list, chromosome=gne['chromosome'])
-#
     jsum = junc_mtrx.sum(axis=1)
 
     lock.acquire()
@@ -18,6 +19,9 @@ def update_splicegraph_junctions(dict_junctions, junc_mtrx, outDir, exp, lock):
             for xx in jlist.values():
                 jg = sg.junction("%s:%s-%s" % (gid, xx.start, xx.end))
                 cov = 0
+
+                if (xx.start==20738848 and xx.end==20738849) or (xx.start==20738943 and xx.start==20738944):
+                    print (gid, xx.start, xx.end, xx.intronic, xx.index, jsum[xx.index])
 
                 if xx.index > 0:
                     cov = jsum[xx.index]
