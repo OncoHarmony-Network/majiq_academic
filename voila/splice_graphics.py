@@ -379,7 +379,7 @@ class ExonGraphic(Experiment):
 
 
 class JunctionGraphic(Experiment):
-    def __init__(self, start, end, junction_type_list, reads_list, transcripts=(),
+    def __init__(self, start, end, junction_type_list=(), reads_list=(), transcripts=(),
                  intron_retention=constants.NONE_IR_TYPE):
         """
         Junction data.
@@ -392,7 +392,7 @@ class JunctionGraphic(Experiment):
         """
 
         # sanity check
-        assert reads_list is None or (len(junction_type_list) == len(reads_list)), 'There is an uneven number of experiments.'
+        # assert reads_list is None or (len(junction_type_list) == len(reads_list)), 'There is an uneven number of experiments.'
 
         super(JunctionGraphic, self).__init__()
         self.start = start
