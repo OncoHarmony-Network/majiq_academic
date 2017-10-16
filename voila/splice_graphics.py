@@ -246,7 +246,7 @@ class GeneGraphic(HDF5):
 
 
 class ExonGraphic(Experiment):
-    def __init__(self, a3, a5, start, end, exon_type_list, coords_extra=list(), intron_retention=None, lsv_type=0,
+    def __init__(self, a3, a5, start, end, exon_type_list=(), coords_extra=list(), intron_retention=None, lsv_type=0,
                  alt_starts=list(), alt_ends=list()):
         """
         ExonGraphic constructor
