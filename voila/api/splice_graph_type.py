@@ -253,7 +253,7 @@ class Gene(SpliceGraphType):
                 e['start'] = e['end'] - 10
             elif e['end'] == -1:
                 etype = constants.EXON_TYPE_MISSING_END
-                e['start'] = e['start'] + 10
+                e['end'] = e['start'] + 10
             elif 'annotated' in e and not exon_has_reads:
                 etype = constants.EXON_TYPE_DB
             elif 'annotated' in e and exon_has_reads:

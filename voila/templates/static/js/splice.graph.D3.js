@@ -77,10 +77,6 @@ function map_exon_list(exons, junctions) {
     var exon_tmp;
     var index_exons_to_update = [];  // For exons_obj that need to be updated (shorted)
 
-    exons.sort(function (e1, e2) {
-        return e1.start - e2.start;
-    });
-
     // First offset (first exon can have long intron)
 
     var offset = reshape_intron({'coords': [0, 0]}, exons[0], reshape_exons);

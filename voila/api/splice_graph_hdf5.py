@@ -65,11 +65,11 @@ class SpliceGraphHDF5:
 
 class Genes(SpliceGraphHDF5):
     def gene(self, id, **kwargs):
-        return Gene(self.hdf5_grp('Gene', id), **kwargs)
+        return Gene(self.hdf5_grp('Genes', id), **kwargs)
 
     @property
     def genes(self):
-        gene_hdf5 = self.hdf5['Gene']
+        gene_hdf5 = self.hdf5['Genes']
         return (Gene(gene_hdf5[id]) for id in gene_hdf5)
 
     def combined_genes(self, experiments):
@@ -102,7 +102,7 @@ class Genes(SpliceGraphHDF5):
         if args and hasattr(args, 'lsv_ids') and args.lsv_ids:
             return (lsv_id.split(':')[0] for lsv_id in args.lsv_ids)
 
-        return self.hdf5['Gene'].keys()
+        return self.hdf5['Genes'].keys()
 
     def get_page_count(self, args):
         gene_count = 0
