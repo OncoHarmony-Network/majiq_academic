@@ -112,7 +112,7 @@ def gene_to_splicegraph(dict_of_genes, dict_junctions, exon_dict, list_introns, 
                                  transcripts=[], intron_retention=True))
 
                 a5 = [len(junc_list)-1]
-                eg = sg.exon('{0}:{1}-{2}'.format(gne_id, info.start, info.end),
+                eg = sg.exon('{0}:{1}-{2}'.format(gne_id, info.start, info.end), annotated=info.annot,
                              a3=a3, a5=a5, start=info.start, end=info.end, coords_extra=(), intron_retention=True)
 
                 exon_list.append(eg)
