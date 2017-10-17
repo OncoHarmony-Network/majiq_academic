@@ -50,6 +50,16 @@ cdef __cross_junctions(AlignedSegment read):
     return cross, jlist, read.reference_end
 
 
+cdef inline bint __valid_intron_read(AlignedSegment read):
+    cdef bint is_cross
+    cdef list junc_list
+    cdef bint bo = __is_unique(read)
+
+    is_cross, junc_list, rend = __cross_junctions(read)
+
+    return bo and not is_cross
+
+
 cpdef int find_introns(str filename, dict list_introns, float intron_threshold, queue, str gname) except -1:
 
     cdef AlignmentFile samfl
@@ -74,8 +84,8 @@ cpdef int find_introns(str filename, dict list_introns, float intron_threshold, 
             ub = i_st + (ii+1)*chunk_len -1
             ub = min(ub, i_nd)
             try:
-                val = samfl.count(contig=chrom, start=lb, stop=ub, until_eof=True, read_callback=__is_unique,
-                                reference=None, end=None)
+                val = samfl.count(contig=chrom, start=lb, stop=ub, until_eof=True, read_callback=__valid_intron_read,
+                                  reference=None, end=None)
             except ValueError as e:
                 #
                 # logging.error('\t[%s]There are no reads in %s:%d-%d' % (info_msg, gne['chromosome'], gne['start'], gne['end']))
@@ -262,6 +272,8 @@ cdef inline bint _match_strand(AlignedSegment read, str gene_strand):
             res = False
     return res
 
+cdef inline int _get_left_index(junc_start, read_start):
+    return junc_start - (read_start + MIN_BP_OVERLAP)
 
 cpdef AlignmentFile open_rnaseq(str samfile):
     return pysam.Samfile(samfile, "rb")
@@ -309,7 +321,7 @@ cdef int __junction_read(AlignedSegment read, list junc_list, int max_readlen, i
                 (junc_end - junc_start < MIN_JUNC_LENGTH):
             continue
 
-        left_ind = max_readlen - (junc_start - r_start) - MIN_BP_OVERLAP + 1
+        left_ind = _get_left_index(junc_start, r_start)
         if (junc_start, junc_end) in junctions:
             ''' update junction and add to list'''
             try:
@@ -325,35 +337,53 @@ cdef int __junction_read(AlignedSegment read, list junc_list, int max_readlen, i
                 continue
 
 
-cdef int __intronic_read(AlignedSegment read, list ref_pos, Intron intron, str gne_id, list junc_list, int max_readlen,
+cdef int __intronic_read(AlignedSegment read, list ref_pos, Intron intron, str gne_id, list junc_list,
                          int effective_len, list matrx, dict junctions) except -1:
 
     cdef int nreads = __get_num_reads(read)
     cdef long r_start = read.pos
     cdef int indx, readlen = len(read.seq)
-    cdef int rel_start, intron_idx, left_ind = max_readlen - (intron.start - r_start) - MIN_BP_OVERLAP
+    cdef int rel_start, intron_idx, left_ind
     cdef int offset = readlen - MIN_BP_OVERLAP
 
-    if intron.start - r_start > readlen:
-        r_start = intron.start - (readlen - MIN_BP_OVERLAP*2) - 1
 
-    if intron.start in ref_pos and intron.start-1 in ref_pos:
+    if intron.start in ref_pos[MIN_BP_OVERLAP:-MIN_BP_OVERLAP] and intron.start-1 in ref_pos[MIN_BP_OVERLAP:-MIN_BP_OVERLAP]:
+        # if (intron.start - r_start -1) > readlen :
+        #     if len(junc_list) >0:
+        #         r_start = (intron.start-1) - (junc_list[0][0] - r_start)
+        #     else:
+        #         return 0
+
+
+        left_ind = _get_left_index(intron.start-1, r_start)
         if intron.junc1 is None:
             try:
                 intron.junc1 = junctions[(intron.start - 1, intron.start)]
             except KeyError:
-                intron.junc1 = Junction(intron.start - 1, intron.start, gne_id, cov_idx=len(matrx), intron=True)
+                intron.junc1 = Junction(intron.start - 1, intron.start, gne_id, cov_idx=0, intron=True)
             intron.junc1_cov = [0] * effective_len
         intron.junc1.update_junction_read(nreads)
+        intron.junc1_cov[left_ind] += nreads
 
-    if intron.end in ref_pos and intron.end+1 in ref_pos:
+    if intron.end in ref_pos[MIN_BP_OVERLAP:-MIN_BP_OVERLAP] and intron.end+1 in ref_pos[MIN_BP_OVERLAP:-MIN_BP_OVERLAP]:
+        # if (intron.end - r_start) > readlen:
+        #     if len(junc_list) >0:
+        #         r_start = intron.end - (junc_list[0][0] - r_start)
+        #     else:
+        #         return 0
+
+        left_ind = _get_left_index(intron.end, r_start)
+
         if intron.junc2 is None:
             try:
                 intron.junc2 = junctions[(intron.end, intron.end+1)]
             except KeyError:
-                intron.junc2 = Junction(intron.end, intron.end+1, gne_id, cov_idx=len(matrx), intron=True)
+                intron.junc2 = Junction(intron.end, intron.end+1, gne_id, cov_idx=0, intron=True)
             intron.junc2_cov = [0] * effective_len
         intron.junc2.update_junction_read(nreads)
+        # print(ref_pos)
+        # print("KKK", left_ind, intron.end, r_start, readlen, junc_list)
+        intron.junc2_cov[left_ind] += nreads
 
 
 
@@ -390,15 +420,15 @@ cdef int _read_sam_or_bam(object gne, AlignmentFile samfl, list matrx, dict junc
             tot_reads += 1
             if is_cross:
               __junction_read(read, junc_list, majiq_config.readLen, effective_len, matrx, junctions)
-
-            ref_pos = read.get_reference_positions()
-            for intron in intron_list:
-                if read.pos >= intron.end:
-                    break
-                elif end_r <= intron.start:
-                    continue
-                __intronic_read(read, ref_pos, intron, gne['id'], junc_list, majiq_config.readLen, effective_len,
-                                matrx, junctions)
+            else:
+                ref_pos = read.get_reference_positions()
+                for intron in intron_list:
+                    if read.pos >= intron.end:
+                        break
+                    elif end_r <= intron.start:
+                        continue
+                    __intronic_read(read, ref_pos, intron, gne['id'], junc_list, effective_len,
+                                    matrx, junctions)
 
         for intron in intron_list:
             if intron.junc1 is None or intron.junc2 is None:
@@ -410,10 +440,12 @@ cdef int _read_sam_or_bam(object gne, AlignmentFile samfl, list matrx, dict junc
 
                 print ("##\nJUNC1 (%s-%s): %s\n" %(intron.junc1.start, intron.junc1.end, intron.junc1.nreads),
                        "JUNC2 (%s-%s): %s" %(intron.junc2.start, intron.junc2.end, intron.junc2.nreads))
-                matrx.append(intron.junc1_cov)
                 intron.junc1.index = len(matrx)
-                matrx.append(intron.junc2_cov)
+                matrx.append(intron.junc1_cov)
+
                 intron.junc2.index = len(matrx)
+                matrx.append(intron.junc2_cov)
+
                 junctions[(intron.junc1.start, intron.junc1.end)] = intron.junc1
                 junctions[(intron.junc2.start, intron.junc2.end)] = intron.junc2
                 ex = intron.to_exon()

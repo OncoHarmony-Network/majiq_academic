@@ -11,6 +11,7 @@ except ImportError:
 
 extensions = [Extension('majiq.src.normalize', ['majiq/src/normalize.pyx'], include_dirs=[numpy.get_include()])]
 extensions += [Extension('majiq.grimoire.junction', ['majiq/grimoire/junction.pyx'])]
+extensions += [Extension('majiq.grimoire.lsv', ['majiq/grimoire/lsv.pyx'], include_dirs=[numpy.get_include()])]
 extensions += [Extension('majiq.grimoire.exon', ['majiq/grimoire/exon.pyx'], include_dirs=[numpy.get_include()])]
 extensions += [Extension('majiq.src.plotting', ['majiq/src/plotting.pyx'])]
 extensions += [Extension('majiq.src.polyfitnb', ['majiq/src/polyfitnb.pyx'], include_dirs=[numpy.get_include()])]

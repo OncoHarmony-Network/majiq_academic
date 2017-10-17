@@ -217,8 +217,8 @@ def parsing_files(sam_file_list, chnk, process_conf, logger):
             out_f.attrs['num_lsvs'] = 0
             out_f.attrs['genome'] = majiq_config.genome
             out_f.attrs['one_over_r'] = fitfunc_r
-            logger.info('Detecting lsvs')
 
+            logger.info('Detecting lsvs')
             np_jjlist = []
             attrs_list = []
 
@@ -229,6 +229,7 @@ def parsing_files(sam_file_list, chnk, process_conf, logger):
                             gene_obj['strand'], majiq_config, out_f, np_jjlist, attrs_list)
                 for jj in dict_junctions[gne_id].values():
                     jj.reset()
+            logger.info('dump samples')
             majiq_io.dump_lsv_coverage(out_f, np_jjlist, attrs_list)
 
             del np_jjlist
