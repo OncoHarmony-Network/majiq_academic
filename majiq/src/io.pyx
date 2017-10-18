@@ -439,9 +439,11 @@ def retrieve_db_info(str gne_id, str out_dir, list list_exons, dict dict_junctio
                 dict_junctions[(ir_attrs['start']-1, ir_attrs['start'])] = Junction(ir_attrs['start']-1,
                                                                                     ir_attrs['start'],
                                                                                     gne_id, default_index,
+                                                                                    intron=True,
                                                                                     annot=ir_attrs['annotated'])
                 dict_junctions[(ir_attrs['end'], ir_attrs['end']+1)] = Junction(ir_attrs['end'], ir_attrs['end']+1,
                                                                                 gne_id, default_index,
+                                                                                intron=True,
                                                                                 annot=ir_attrs['annotated'])
             list_introns.sort(key=lambda xx: (xx.start, xx.end))
 
