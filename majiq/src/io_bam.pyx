@@ -239,7 +239,7 @@ cdef dict __read_juncs_from_bam(str filename, set in_jj, bint stranded):
                 (junc_end - junc_start < MIN_JUNC_LENGTH):
                     continue
             if stranded:
-                strand = '-' if read.is_reverse() else '+'
+                strand = '-' if read.is_reverse else '+'
                 jid = (chrom, strand, junc_start, junc_end)
                 jid2 = (junc_start, junc_end, strand)
             else:

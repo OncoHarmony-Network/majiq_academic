@@ -47,7 +47,7 @@ def gene_to_splicegraph(dict_of_genes, dict_junctions, exon_dict, list_introns, 
         with SpliceGraph(get_builder_splicegraph_filename(majiq_config.outDir), 'a') as sg:
             for jid in sorted(dict_junctions[gne_id].keys()):
                 jj = dict_junctions[gne_id][jid]
-                if jj.intronic : continue
+                if jj.intronic: continue
                 if jj.start == FIRST_LAST_JUNC:
                     alt_empty_starts.append(jj.end)
                     continue
