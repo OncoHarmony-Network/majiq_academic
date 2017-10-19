@@ -231,12 +231,18 @@ class Gene(SpliceGraphType):
             if 'intron_retention' not in e:
                 e['intron_retention'] = 0
 
-        for e in d['exons']:
-            if 'a5' in e:
-                for j_idx in e['a5']:
-                    j = d['junctions'][j_idx]
-                    if j['intron_retention'] > 0:
-                        j['intron_retention'] = constants.IR_TYPE_END
+        # for e in d['exons']:
+        #     if 'a5' in e:
+        #         for j_idx in e['a5']:
+        #             j = d['junctions'][j_idx]
+        #             if j['intron_retention'] > 0:
+        #                 j['intron_retention'] = constants.IR_TYPE_START
+        #
+        #     if 'a3' in e:
+        #         for j_idx in e['a3']:
+        #             j = d['junctions'][j_idx]
+        #             if j['intron_retention'] > 0:
+        #                 j['intron_retention'] = constants.IR_TYPE_END
 
         for e in d['exons']:
 
@@ -249,9 +255,11 @@ class Gene(SpliceGraphType):
             exon_has_reads = any(bool(d['junctions'][j_idx]['reads']) for j_idx in exon_juncs)
 
             if e['start'] == -1:
+                print('yup')
                 etype = constants.EXON_TYPE_MISSING_START
                 e['start'] = e['end'] - 10
             elif e['end'] == -1:
+                print('yup')
                 etype = constants.EXON_TYPE_MISSING_END
                 e['end'] = e['start'] + 10
             elif 'annotated' in e and not exon_has_reads:
@@ -264,5 +272,7 @@ class Gene(SpliceGraphType):
                 etype = constants.EXON_TYPE_RNASEQ
 
             e['exon_type'] = etype
+
+        d['exons'] = sorted(d['exons'], key=lambda e: e['start'])
 
         return d
