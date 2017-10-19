@@ -73,33 +73,46 @@ cdef int new_exon_definition(int start, int end, dict exon_dict, list out_list, 
             out_list.append(ex1)
             new_exons = 1
         else:
-            ex1 = Exon(start, EMPTY_COORD, annot=in_db)
-            exon_dict[(start, start + 2)] = ex1
-            out_list.append(ex1)
+            try:
+                ex1 = exon_dict[(start, start + 10)]
+            except KeyError:
+                ex1 = Exon(start, EMPTY_COORD, annot=in_db)
+                exon_dict[(start, start + 10)] = ex1
+                out_list.append(ex1)
+                new_exons += 1
 
-            ex2 = Exon(EMPTY_COORD, end, annot=in_db)
-            exon_dict[(end - 10, end)] = ex2
-            out_list.append(ex2)
-            new_exons = 2
+            try:
+                ex2 = exon_dict[(end - 10, end)]
+            except KeyError:
+                ex2 = Exon(EMPTY_COORD, end, annot=in_db)
+                exon_dict[(end - 10, end)] = ex2
+                out_list.append(ex2)
+                new_exons += 1
 
 
     else:
         ex2 = ex1
         if start < (ex1.start - MAX_DENOVO_DIFFERENCE):
-            ex1 = Exon(start, EMPTY_COORD, annot=in_db)
-            exon_dict[(start, start + 10)] = ex1
-            out_list.append(ex1)
-            new_exons = 1
+            try:
+                ex1 = exon_dict[(start, start + 10)]
+            except KeyError:
+                ex1 = Exon(start, EMPTY_COORD, annot=in_db)
+                exon_dict[(start, start + 10)] = ex1
+                out_list.append(ex1)
+                new_exons += 1
 
         else:
             if start < ex1.start:
                 ex1.start = start
 
         if end > (ex2.end + MAX_DENOVO_DIFFERENCE):
-            ex2 = Exon(EMPTY_COORD, end, annot=in_db)
-            exon_dict[(end - 10, end)] = ex2
-            out_list.append(ex2)
-            new_exons += 1
+            try:
+                ex2 = exon_dict[(end - 10, end)]
+            except KeyError:
+                ex2 = Exon(EMPTY_COORD, end, annot=in_db)
+                exon_dict[(end - 10, end)] = ex2
+                out_list.append(ex2)
+                new_exons += 1
         else:
             if end > ex2.end:
                 ex2.end = end
