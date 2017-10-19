@@ -981,9 +981,6 @@
 
 
                 var exons_obj = genes_obj.exons;
-                exons_obj.sort(function(e1, e2){
-                    return e1.start - e2.start
-                });
                 var junctions_obj = genes_obj.junctions;
 
 
