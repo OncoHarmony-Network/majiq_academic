@@ -66,7 +66,7 @@ def find_new_introns(file_list, chunk, process_conf, logger):
         list_introns.update({(gne_id, gene_obj['chromosome'], gene_obj['strand'],
                               ex.end + 1, list_exons[gne_id][id_ex + 1].start - 1): 0
                              for id_ex, ex in enumerate(list_exons[gne_id][:-1])
-                             if ex.end + 1 < list_exons[gne_id][id_ex + 1].start - 1})
+                             if ex.end + 3 < list_exons[gne_id][id_ex + 1].start - 1})
 
     for is_junc_file, fname, name in file_list:
         logger.info('READ introns from %s' % fname)
