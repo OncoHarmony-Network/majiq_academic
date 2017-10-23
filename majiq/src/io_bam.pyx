@@ -133,6 +133,7 @@ cpdef int find_introns2(str filename, dict list_introns, float intron_threshold,
 
 cdef str gstrand
 
+import time, datetime
 cpdef int find_introns(str filename, dict list_introns, float intron_threshold, queue, str gname) except -1:
 
     cdef AlignmentFile samfl
@@ -149,7 +150,9 @@ cpdef int find_introns(str filename, dict list_introns, float intron_threshold, 
 
 
     for gne_id, chrom, strand, i_st, i_nd in list_introns.keys():
-        #print(gne_id, chrom, i_st, i_nd)
+        ts = time.time()
+        st = datetime.datetime.fromtimestamp(ts).strftime('%Y-%m-%d %H:%M:%S')
+        print(st, gne_id, chrom, i_st, i_nd)
         intron_len = (i_nd - i_st)
         nchunks = 1 if intron_len <= MIN_INTRON_LEN else num_bins
 
@@ -169,7 +172,9 @@ cpdef int find_introns(str filename, dict list_introns, float intron_threshold, 
                 continue
 
             val /= (ub-lb)
-            b_included = b_included and (val>=intron_threshold)
+            b_included = (val>=intron_threshold)
+            if not b_included:
+                break
 
         if b_included :
             qm = QueueMessage(QUEUE_MESSAGE_BUILD_INTRON, (gne_id, i_st, i_nd, gname), 0)
