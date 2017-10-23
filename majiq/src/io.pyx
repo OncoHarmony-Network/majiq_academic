@@ -144,7 +144,7 @@ cdef int merge_exons(db_f, dict exon_dict) except -1:
                 if ex_end != -1:
                     #print("NEW EXON, ", gne_id, ex_start, ex_end)
                     _dump_exon(db_f, gne_id, ex_start, ex_end)
-                    if nopen > 0:
+                    if nopen > 0 and (ex_end+4) < (coord-1):
                         _dump_intron(db_f, gne_id, ex_end+1, coord-1, annot=True)
                     ex_end = -1
                     nopen = 0
