@@ -169,6 +169,7 @@ cpdef int find_introns(str filename, dict list_introns, float intron_threshold, 
                 val = samfl.count(contig=chrom, start=lb, stop=ub, until_eof=True,
                                   read_callback=__valid_intron_read, reference=None, end=None)
             except ValueError as e:
+                b_included = False
                 break
 
             val /= (ub-lb)
