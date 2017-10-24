@@ -158,7 +158,7 @@ cpdef int find_introns(str filename, dict list_introns, float intron_threshold, 
 
 
         chunk_len = int(intron_len / nchunks)+1
-        b_included = True
+        b_included = False
 
         for ii in range(nchunks):
             lb = i_st + ii*chunk_len
@@ -169,7 +169,7 @@ cpdef int find_introns(str filename, dict list_introns, float intron_threshold, 
                 val = samfl.count(contig=chrom, start=lb, stop=ub, until_eof=True,
                                   read_callback=__valid_intron_read, reference=None, end=None)
             except ValueError as e:
-                continue
+                break
 
             val /= (ub-lb)
             b_included = (val>=intron_threshold)
