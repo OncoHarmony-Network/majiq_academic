@@ -18,14 +18,10 @@ def update_splicegraph_junctions(dict_junctions, junc_mtrx, outDir, exp, lock):
         for gid, jlist in dict_junctions.items():
             for xx in jlist.values():
                 jg = sg.junction("%s:%s-%s" % (gid, xx.start, xx.end))
-                cov = 0
-
-                if (xx.start==20738848 and xx.end==20738849) or (xx.start==20738943 and xx.start==20738944):
-                    print (gid, xx.start, xx.end, xx.intronic, xx.index, jsum[xx.index])
 
                 if xx.index > 0:
                     cov = jsum[xx.index]
-                jg.update_reads(exp, cov)
+                    jg.update_reads(exp, cov)
     lock.release()
 
 

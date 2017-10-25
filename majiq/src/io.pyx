@@ -1,10 +1,6 @@
 import datetime
-import gzip
-from collections import namedtuple
 cimport numpy as np
 import h5py
-import numpy as np
-import urllib.parse as urllib
 import os
 from majiq.grimoire.junction cimport Junction
 from majiq.grimoire.junction import Junction

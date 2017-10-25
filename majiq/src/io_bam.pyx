@@ -370,7 +370,7 @@ cdef int __junction_read(AlignedSegment read, list junc_list, int max_readlen, i
 
                 matrx[junc.index][left_ind] += nreads
             except KeyError:
-                print (junctions.values()[0].gene_id,junc_start, junc_end)
+                # print (junctions.values()[0].gene_id,junc_start, junc_end)
                 continue
 
 cdef int __intronic_read(AlignedSegment read, junc_start, junc_end, list ref_pos, dict junctions,
@@ -470,7 +470,7 @@ cdef int _read_sam_or_bam(object gne, AlignmentFile samfl, list matrx, dict junc
         for read in read_iter:
             is_cross, junc_list, end_r = __cross_junctions(read)
             unique = __is_unique(read)
-            print(read, _match_strand(read, gene_strand=gne['strand']), read.pos < gne['start'], unique)
+            #print(read, _match_strand(read, gene_strand=gne['strand']), read.pos < gne['start'], unique)
             if not _match_strand(read, gene_strand=gne['strand']) or read.pos < gne['start'] or not unique:
                 continue
 
