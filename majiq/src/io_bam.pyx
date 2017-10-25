@@ -63,9 +63,10 @@ cdef inline int __get_num_reads(AlignedSegment read):
 cdef inline bint _match_strand(AlignedSegment read, str gene_strand):
     majiq_config = Config()
     res = True
+    #print(read.is_reverse, read.flag, read.flag & 0x10, read.flag & 0x10 == 0x10, gene_strand, gene_strand == b'+',  gene_strand == '+')
     if majiq_config.strand_specific:
         #TODO: REMOVE
-        if (read.flag & 0x10 == 0x10 and gene_strand == b'+') or (read.flag & 0x10 == 0x00 and gene_strand == b'-'):
+        if (read.flag & 0x10 == 0x10 and gene_strand == '+') or (read.flag & 0x10 == 0x00 and gene_strand == '-'):
             res = True
         else:
             res = False
@@ -150,12 +151,11 @@ cpdef int find_introns(str filename, dict list_introns, float intron_threshold, 
 
 
     for gne_id, chrom, strand, i_st, i_nd in list_introns.keys():
-        ts = time.time()
-        st = datetime.datetime.fromtimestamp(ts).strftime('%Y-%m-%d %H:%M:%S')
-        print(st, gne_id, chrom, i_st, i_nd)
+        # ts = time.time()
+        # st = datetime.datetime.fromtimestamp(ts).strftime('%Y-%m-%d %H:%M:%S')
+        # #print(st, gne_id, chrom, i_st, i_nd)
         intron_len = (i_nd - i_st)
         nchunks = 1 if intron_len <= MIN_INTRON_LEN else num_bins
-
 
         chunk_len = int(intron_len / nchunks)+1
         b_included = False
@@ -370,7 +370,7 @@ cdef int __junction_read(AlignedSegment read, list junc_list, int max_readlen, i
 
                 matrx[junc.index][left_ind] += nreads
             except KeyError:
-
+                print (junctions.values()[0].gene_id,junc_start, junc_end)
                 continue
 
 cdef int __intronic_read(AlignedSegment read, junc_start, junc_end, list ref_pos, dict junctions,
@@ -470,8 +470,10 @@ cdef int _read_sam_or_bam(object gne, AlignmentFile samfl, list matrx, dict junc
         for read in read_iter:
             is_cross, junc_list, end_r = __cross_junctions(read)
             unique = __is_unique(read)
+            print(read, _match_strand(read, gene_strand=gne['strand']), read.pos < gne['start'], unique)
             if not _match_strand(read, gene_strand=gne['strand']) or read.pos < gne['start'] or not unique:
                 continue
+
 
             tot_reads += 1
             if is_cross:
@@ -515,7 +517,6 @@ cdef int _read_sam_or_bam(object gne, AlignmentFile samfl, list matrx, dict junc
 
         return tot_reads
     except ValueError as e:
-        print(e)
         logging.debug('\t[%s]There are no reads in %s:%d-%d' % (info_msg, gne['chromosome'], gne['start'], gne['end']))
         return 0
 
