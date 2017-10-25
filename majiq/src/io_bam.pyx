@@ -390,7 +390,7 @@ cdef int __intronic_read(AlignedSegment read, junc_start, junc_end, list ref_pos
             try:
                 matrx[junc.index][left_ind] += nreads
             except IndexError:
-                print('INDEX ERROR', junc.index, left_ind)
+                print('INDEX ERROR', len(matrx), junc.index, left_ind)
 
         except KeyError:
             return 0
