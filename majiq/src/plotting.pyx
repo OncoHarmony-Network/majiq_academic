@@ -1,5 +1,4 @@
 from matplotlib import use
-from majiq.src.adjustdelta import calc_mixture_pdf, calc_beta_pdf
 use('Agg')
 from matplotlib import pyplot as plt
 from scipy.stats import pearsonr
