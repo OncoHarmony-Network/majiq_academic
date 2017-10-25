@@ -21,7 +21,6 @@ def calc_mixture_pdf(beta_dists):
     return x_pos, np.array(mixture_pdf)
 
 
-
 def calc_beta_pdf(a, b, binsize=0.025):
     x_pos = np.arange(0, 1, binsize)
     beta_pdfs = []
@@ -139,7 +138,7 @@ def EMBetaMixture(D, p0_mix, beta0_mix, num_iter, min_ratio=1e-5, logger=False, 
     logp_mix = np.log(pmix)
 
     logp_D, logp_Dsum, LL, zrow = loglikelihood(D, beta_mix, logp_mix)
-    mplot.plot_all_lsv(D0, beta_mix, pmix, labels, 'iteration 0')
+    plot_all_lsv(D0, beta_mix, pmix, labels, 'iteration 0')
     mplot.save_or_show(plotpath, "iter_0.jun_%s" % nj)
     if logger:
         logger.debug("[NJ:%s] Initial Log_Likelihood %.3f \n" % (nj, LL))
@@ -170,7 +169,7 @@ def EMBetaMixture(D, p0_mix, beta0_mix, num_iter, min_ratio=1e-5, logger=False, 
         LLold = LL
         logp_D, logp_Dsum, LL, zrow = loglikelihood(D, new_beta_mix, np.log(new_pmix))
         if logger: logger.debug("[NJ:%s] EM Iteration %d:\t LL: %.3f\n" % (nj, mm, LL))
-        mplot.plot_all_lsv(D0, beta_mix, pmix, labels, 'iteration %s' % str(mm + 1))
+        plot_all_lsv(D0, beta_mix, pmix, labels, 'iteration %s' % str(mm + 1))
         mplot.save_or_show(plotpath, "iter_%05d.jun_%s" % (mm + 1, nj))
 
         if LL < LLold:
@@ -190,3 +189,66 @@ def EMBetaMixture(D, p0_mix, beta0_mix, num_iter, min_ratio=1e-5, logger=False, 
     return beta_mix, np.array(pmix)
 
 
+
+def plot_combpdf(beta_dists, fig):
+    fig.set_xlim(-1, 1)
+    fig.set_title("Mixture PDF")
+    fig.set_xlabel("PDF")
+    fig.set_ylabel("Density")
+    x_pos, mixture_pdf = calc_mixture_pdf(beta_dists)
+    fig.plot(np.linspace(-1, 1, num=len(mixture_pdf)), mixture_pdf / 2)
+
+
+def plot_mixture(a, b, pi, label_name, fig):
+    fig.set_xlim(-1, 1)
+    points, x_pos = calc_beta_pdf(a, b)
+    fig.set_title("Beta mixtures")
+    fig.set_xlabel("Delta PSI")
+    fig.set_ylabel("Density")
+    fig.plot(np.linspace(-1, 1, num=len(points)), points / 2, label="%s %s" % (label_name, label_beta(a, b, pi)))
+    # legend()
+
+def label_beta(a, b, pi):
+    return "(a=%.2f b=%.2f pi=%.4f)" % (a, b, pi)
+
+def plot_all(a_center, b_center, pi_center, label_center, a_change, b_change, pi_change, label_change, figure_title,
+             deltadata):
+    ax = plt.subplot(2, 2, 1)
+    plot_densities(deltadata, ax)
+    plt.subplot(2, 2, 2)
+    plot_mixture(a_center, b_center, pi_center, label_center)
+    plot_mixture(a_change, b_change, pi_change, label_change)
+    plt.subplot(2, 2, 3)
+    plot_combpdf([[a_center, b_center, pi_center], [a_change, b_change, pi_change]])
+    plt.subplot(2, 2, 4)
+    plot_pi(pi_center, pi_change)
+    plt.suptitle(figure_title, fontsize=24)
+
+def plot_densities(deltadata, ax=None, my_title="Empirical Data"):
+    # deltadata = nan_to_num(deltadata) #substitute nan with zero, because histogram is a shitty function that cant take nans. Shame, shame on histogram. You should be a more manly function and take NaNs without crying, you are part of matplotlib.
+    ax.bar(deltadata[:, 0] - 0.0125, deltadata[:, 1], width=0.025)
+    ax.set_title(my_title)
+    ax.set_xlim(-1, 1)
+    ax.set_xlabel("Delta PSI")
+    ax.set_ylabel("Density")
+
+def plot_pi(p_mixture, fig):
+    fig.set_title("Pi distributions")
+    fig.set_ylim(0, 1)
+    fig.set_ylabel("Weight")
+    fig.bar(np.arange(len(p_mixture)), p_mixture)
+    # fig.set_xticks(arange(2)+0.3, ["Center", "change"], rotation=50)
+    fig.set_xticks(np.arange(2) + 0.3, ["Center", "change"])
+
+def plot_all_lsv(deltadata, beta_params, pmix, labels, figure_title):
+    f, sp = plt.subplots(2, 2)
+    plt.subplots_adjust(hspace=.4)
+    plot_densities(deltadata, sp[0, 0])
+    cmb = []
+    for pl in range(beta_params.shape[0]):
+        plot_mixture(beta_params[pl, 0], beta_params[pl, 1], pmix[pl], labels[pl], sp[0, 1])
+        cmb.append([beta_params[pl, 0], beta_params[pl, 1], pmix[pl]])
+
+    plot_combpdf(cmb, sp[1, 0])
+    plot_pi(pmix, sp[1, 1])
+    plt.suptitle(figure_title, fontsize=24)
