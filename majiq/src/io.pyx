@@ -218,7 +218,7 @@ def junction_to_tmp(gne_id, Junction junc, object hdf5grps):
     h_jnc.attrs['coverage_index'] = junc.index
 
 
-cdef get_extract_lsv_list(list list_of_lsv_id, list file_list, int msamples):
+cdef _get_extract_lsv_list(list list_of_lsv_id, list file_list, int msamples):
     cdef list result = []
     cdef int n_exp = len(file_list)
     cdef str lsv_id, lsv_type, fname
@@ -465,3 +465,6 @@ def dump_bin_file(data, str filename):
         fast_pickler = pickle.Pickler(ofp, protocol=2)
         # fast_pickler.fast = 1
         fast_pickler.dump(data)
+
+def get_extract_lsv_list(list list_of_lsv_id, list file_list, int msamples):
+    return _get_extract_lsv_list(list_of_lsv_id, file_list, msamples)
