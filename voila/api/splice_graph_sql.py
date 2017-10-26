@@ -1,4 +1,5 @@
 import os
+from abc import ABC, abstractmethod
 
 from sqlalchemy import create_engine, event, exists, and_
 from sqlalchemy.orm import sessionmaker
@@ -48,17 +49,40 @@ class SpliceGraphSQL():
         self.session.commit()
 
 
-class Exons(SpliceGraphSQL):
-    class _Exon:
-        def __init__(self, session):
-            self.session = session
+class SpliceGraphType(ABC):
+    def __bool__(self):
+        return self.exists()
 
-        def add(self, gene_id, start, end, **kwargs):
+    def __iter__(self):
+        return self.get().__iter__()
+
+    @abstractmethod
+    def add(self, *args, **kwargs):
+        pass
+
+    @abstractmethod
+    def get(self, *args):
+        pass
+
+    @abstractmethod
+    def exists(self, *args):
+        pass
+
+
+class Exons(SpliceGraphSQL):
+    class _Exon(SpliceGraphType):
+        def __init__(self, session, gene_id, start, end):
+            self.session = session
+            self.gene_id = gene_id
+            self.start = start
+            self.end = end
+
+        def add(self, **kwargs):
             coords_extra = kwargs.pop('coords_extra', [])
             alt_ends = kwargs.pop('alt_ends', [])
             alt_starts = kwargs.pop('alt_starts', [])
 
-            exon = model.Exon(gene_id=gene_id, start=start, end=end, **kwargs)
+            exon = model.Exon(gene_id=self.gene_id, start=self.start, end=self.end, **kwargs)
 
             for ce_start, ce_end in coords_extra:
                 exon.coords_extra.append(model.CoordsExtra(start=int(ce_start), end=int(ce_end)))
@@ -71,16 +95,16 @@ class Exons(SpliceGraphSQL):
 
             return exon
 
-        def update(self, gene_id, start, end, **kwargs):
-            pass
+        def get(self):
+            return self.session.query(model.Exon).get((self.gene_id, self.start, self.end))
 
-        def get(self, gene_id, start, end):
-            # return self.session.query(model.Exon).get('{0}:{1}-{2}'.format(gene_id, start, end))
-            return self.session.query(model.Exon).get((gene_id, start, end))
+        def exists(self, gene_id, start, end):
+            return self.session.query(
+                exists().where(and_(model.Exon.gene_id == gene_id, model.Exon.start == int(start),
+                                    model.Exon.end == int(end)))).scalar()
 
-    @property
-    def exon(self):
-        return self._Exon(self.session)
+    def exon(self, gene_id, start, end):
+        return self._Exon(self.session, gene_id, start, end)
 
     @property
     def exons(self):
@@ -88,14 +112,17 @@ class Exons(SpliceGraphSQL):
 
 
 class Junctions(SpliceGraphSQL):
-    class _Junction:
-        def __init__(self, session):
+    class _Junction(SpliceGraphType):
+        def __init__(self, session, gene_id, start, end):
             self.session = session
+            self.gene_id = gene_id
+            self.start = int(start)
+            self.end = int(end)
 
-        def add(self, gene_id, start, end, **kwargs):
+        def add(self, **kwargs):
             reads = kwargs.pop('reads', [])
 
-            junc = model.Junction(gene_id=gene_id, start=start, end=end, **kwargs)
+            junc = model.Junction(gene_id=self.gene_id, start=self.start, end=self.end, **kwargs)
 
             for r, e in reads:
                 junc.reads.append(model.Reads(reads=int(r), experiment_id=e))
@@ -104,30 +131,21 @@ class Junctions(SpliceGraphSQL):
 
             return junc
 
-        def exists(self, gene_id, start, end):
+        def exists(self):
             return self.session.query(
-                exists().where(and_(model.Junction.gene_id == gene_id, model.Junction.start == start,
-                                    model.Junction.end == end))).scalar()
+                exists().where(and_(model.Junction.gene_id == self.gene_id, model.Junction.start == self.start,
+                                    model.Junction.end == self.end))).scalar()
 
-        def update(self, gene_id, start, end, **kwargs):
-            reads = kwargs.pop('reads', [])
-            j = self.get(gene_id, start, end)
-            for k, v in kwargs.items():
-                setattr(j, k, v)
-            for r, e in reads:
-                j.reads.append(model.Reads(reads=int(r), experiment_id=e))
+        def get(self):
+            return self.session.query(model.Junction).get((self.gene_id, self.start, self.end))
 
-        def get(self, gene_id, start, end):
-            return self.session.query(model.Junction).get((gene_id, start, end))
-
-        def update_reads(self, gene_id, start, end, reads, experiment):
-            r = model.Reads(junction_gene_id=gene_id, junction_start=start, junction_end=end,
-                            experiment_name=experiment, reads=reads)
+        def update_reads(self, reads, experiment):
+            r = model.Reads(junction_gene_id=self.gene_id, junction_start=self.start, junction_end=self.end,
+                            experiment_name=experiment, reads=int(reads))
             self.session.add(r)
 
-    @property
-    def junction(self):
-        return self._Junction(self.session)
+    def junction(self, gene_id, start, end):
+        return self._Junction(self.session, gene_id, start, end)
 
     @property
     def junctions(self):
@@ -135,25 +153,25 @@ class Junctions(SpliceGraphSQL):
 
 
 class Genes(SpliceGraphSQL):
-    class _Gene:
-        def __init__(self, session):
+    class _Gene(SpliceGraphType):
+        def __init__(self, session, gene_id):
             self.session = session
+            self.gene_id = gene_id
 
-        def add(self, gene_id, **kwargs):
-            g = model.Gene(id=gene_id, **kwargs)
+        def add(self, **kwargs):
+            g = model.Gene(id=self.gene_id, **kwargs)
             self.session.add(g)
             return g
 
-        def get(self, gene_id):
-            return self.session.query(model.Gene).get(gene_id)
+        def get(self):
+            return self.session.query(model.Gene).get(self.gene_id)
 
-        def update(self):
-            pass
+        def exists(self):
+            return self.session.query(exists().where(model.Gene.id == self.gene_id)).scalar()
 
     @property
     def genes(self):
         return self.session.query(model.Gene).all()
 
-    @property
-    def gene(self):
-        return self._Gene(self.session)
+    def gene(self, gene_id):
+        return self._Gene(self.session, gene_id)
