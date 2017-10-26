@@ -84,52 +84,55 @@ def parse_denovo_elements(pipe_self, logger):
 
     # nthreads = min(pipe_self.nthreads, len(majiq_config.sam_list))
 
-    lchnksize = math.ceil(len(majiq_config.sam_list) / pipe_self.nthreads)
-    nthreads = min(pipe_self.nthreads, math.ceil(len(majiq_config.sam_list) / lchnksize))
-    logger.info("Create %s processes" % nthreads)
-    pipe_self.lock = [mp.Lock() for _ in range(nthreads)]
-    print (nthreads, len(majiq_config.sam_list), lchnksize)
-    pool1 = mp.Pool(processes=nthreads, initializer=majiq_multi.process_conf, initargs=[find_new_junctions, pipe_self],
-                    maxtasksperchild=1)
-    pool2 = mp.Pool(processes=nthreads, initializer=majiq_multi.process_conf, initargs=[find_new_introns, pipe_self],
-                    maxtasksperchild=1)
+    if majiq_config.denovo:
 
-    [xx.acquire() for xx in pipe_self.lock]
-    pool1.imap_unordered(majiq_multi.process_wrapper,
-                        majiq_multi.chunks(majiq_config.juncfile_list, lchnksize, range(nthreads)))
-    pool1.close()
+        lchnksize = math.ceil(len(majiq_config.sam_list) / pipe_self.nthreads)
+        nthreads = min(pipe_self.nthreads, math.ceil(len(majiq_config.sam_list) / lchnksize))
+        logger.info("Create %s processes" % nthreads)
+        pipe_self.lock = [mp.Lock() for _ in range(nthreads)]
 
-    group_names = {}
-    group_lens = []
-    for xidx, xx in enumerate(majiq_config.tissue_repl.keys()):
-        group_names[xx] = xidx
-        group_lens.append(len(xx))
-    group_lens = np.array(group_lens)
+        pool1 = mp.Pool(processes=nthreads, initializer=majiq_multi.process_conf, initargs=[find_new_junctions, pipe_self],
+                        maxtasksperchild=1)
+        if majiq_config.ir:
+            pool2 = mp.Pool(processes=nthreads, initializer=majiq_multi.process_conf, initargs=[find_new_introns, pipe_self],
+                            maxtasksperchild=1)
 
-    with h5py.File(get_build_temp_db_filename(majiq_config.outDir), "r+") as db_f:
-        denovo_junctions = {}
-        queue_manager(db_f, pipe_self.lock, pipe_self.queue, num_chunks=nthreads, logger=logger,
-                      junctions=denovo_junctions, group_names=group_names)
-        pool1.join()
-        for jj, vv in denovo_junctions.items():
-            #vv /= group_lens
-            if np.any(vv >= min_experiments):
-                #dict_junctions[jj[0]].append(create_junction(jj[1], jj[2], jj[0], 0, annot=False, intron=False))
-                majiq_io.dump_junctions(db_f, jj[0], jj[1], jj[2], annot=False)
+        [xx.acquire() for xx in pipe_self.lock]
+        pool1.imap_unordered(majiq_multi.process_wrapper,
+                            majiq_multi.chunks(majiq_config.juncfile_list, lchnksize, range(nthreads)))
+        pool1.close()
 
-    [xx.acquire() for xx in pipe_self.lock]
-    pool2.imap_unordered(majiq_multi.process_wrapper,
-                         majiq_multi.chunks(majiq_config.juncfile_list, lchnksize, range(nthreads)))
-    pool2.close()
+        group_names = {}
+        group_lens = []
+        for xidx, xx in enumerate(majiq_config.tissue_repl.keys()):
+            group_names[xx] = xidx
+            group_lens.append(len(xx))
+        group_lens = np.array(group_lens)
 
-    with h5py.File(get_build_temp_db_filename(majiq_config.outDir), "r+") as db_f:
-        denovo_introns = {}
-        queue_manager(db_f, pipe_self.lock, pipe_self.queue, num_chunks=nthreads, logger=logger,
-                      introns=denovo_introns, group_names=group_names)
-        pool2.join()
-        for info, vv in denovo_introns.items():
-            if np.any(vv >= min_experiments):
-                majiq_io.dump_intron(db_f, info[0], info[1], info[2], annot=False)
+        with h5py.File(get_build_temp_db_filename(majiq_config.outDir), "r+") as db_f:
+            denovo_junctions = {}
+            queue_manager(db_f, pipe_self.lock, pipe_self.queue, num_chunks=nthreads, logger=logger,
+                          junctions=denovo_junctions, group_names=group_names)
+            pool1.join()
+            for jj, vv in denovo_junctions.items():
+                #vv /= group_lens
+                if np.any(vv >= min_experiments):
+                    majiq_io.dump_junctions(db_f, jj[0], jj[1], jj[2], annot=False)
+
+        if majiq_config.ir:
+            [xx.acquire() for xx in pipe_self.lock]
+            pool2.imap_unordered(majiq_multi.process_wrapper,
+                                 majiq_multi.chunks(majiq_config.juncfile_list, lchnksize, range(nthreads)))
+            pool2.close()
+
+            with h5py.File(get_build_temp_db_filename(majiq_config.outDir), "r+") as db_f:
+                denovo_introns = {}
+                queue_manager(db_f, pipe_self.lock, pipe_self.queue, num_chunks=nthreads, logger=logger,
+                              introns=denovo_introns, group_names=group_names)
+                pool2.join()
+                for info, vv in denovo_introns.items():
+                    if np.any(vv >= min_experiments):
+                        majiq_io.dump_intron(db_f, info[0], info[1], info[2], annot=False)
 
     for gne_id, gene_obj in dict_of_genes.items():
         list_exons[gne_id] = []
@@ -268,7 +271,7 @@ class Builder(BasicPipeline):
         logger.info("Command: %s" % " ".join(sys.argv))
         self.queue = mp.Queue()
 
-        if self.prebam:
+        if not self.use_db:
             p = mp.Process(target=majiq_multi.parallel_lsv_child_calculation,
                            args=(majiq_io.parse_annot, [self.transcripts, majiq_config.outDir],
                                  '%s/tmp' % majiq_config.outDir, 0))
@@ -277,15 +280,11 @@ class Builder(BasicPipeline):
             p.start()
             p.join()
 
-            p = mp.Process(target=majiq_multi.parallel_lsv_child_calculation,
-                           args=(parse_denovo_elements, [self], majiq_config.outDir, 0))
-            logger.info("... retrieve denovo features")
-            p.start()
-            p.join()
-
-
-
-            #parse_denovo_elements(majiq_config.juncfile_list, 0, None, logger)
+        p = mp.Process(target=majiq_multi.parallel_lsv_child_calculation,
+                       args=(parse_denovo_elements, [self], majiq_config.outDir, 0))
+        logger.info("... retrieve denovo features")
+        p.start()
+        p.join()
 
         logger.info("Parsing seq files")
 

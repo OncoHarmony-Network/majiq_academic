@@ -4,7 +4,6 @@ import collections
 import multiprocessing as mp
 
 import majiq.src.io as majiq_io
-import majiq.src.deprecated_io as majiq_deprio
 from majiq.src.basic_pipeline import BasicPipeline, pipeline_run
 from majiq.src.psi import deltapsi_posterior, gen_prior_matrix
 from majiq.src.constants import *
@@ -63,7 +62,7 @@ class DeltaPsi(BasicPipeline):
 
         majiq_logger.create_if_not_exists(self.logger_path)
         logger = majiq_logger.get_logger("%s/deltapsi_majiq.log" % self.logger_path, silent=self.silent,
-                                        debug=self.debug)
+                                         debug=self.debug)
 
         logger.info("Majiq deltapsi v%s" % VERSION)
         logger.info("Command: %s" % " ".join(sys.argv))
