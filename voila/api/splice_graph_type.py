@@ -167,7 +167,12 @@ class Gene(SpliceGraphType):
 
     @property
     def junctions(self):
-        for junc_id in self._hdf5_grp.attrs['junctions'].decode('utf-8').split('\t'):
+        try:
+            juncs = self._hdf5_grp.attrs['junctions']
+        except KeyError:
+            return None
+
+        for junc_id in juncs.decode('utf-8').split('\t'):
             yield Junction(self._hdf5_grp.file['Junctions'][junc_id])
 
     @property
