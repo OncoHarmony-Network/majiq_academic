@@ -471,4 +471,4 @@ def dump_bin_file(data, str filename):
         fast_pickler.dump(data)
 
 def get_extract_lsv_list(list list_of_lsv_id, list file_list, int msamples):
-    return _get_extract_lsv_list(list_of_lsv_id, file_list, msamples)vc
+    return _get_extract_lsv_list(list_of_lsv_id, file_list, msamples)
