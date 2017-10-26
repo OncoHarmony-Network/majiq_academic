@@ -122,7 +122,7 @@ class VoilaHDF5:
         metainfo['experiment_names'] = experiment_names
         metainfo['group_names'] = group_names
 
-        if 'stat_names' in metainfo:
+        if 'stat_names' in self._metainfo():
             metainfo['stat_names'] = self._metainfo()['stat_names'].value
 
         return metainfo
