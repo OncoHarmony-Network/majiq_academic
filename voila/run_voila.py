@@ -5,6 +5,7 @@ import textwrap
 import time
 
 import voila.constants as constants
+from voila.api import SpliceGraph
 from voila.tools import Tools
 from voila.utils.exceptions import VoilaException
 from voila.utils.voila_log import voila_log
@@ -25,6 +26,21 @@ def secs2hms(secs):
     m, s = divmod(secs, 60)
     h, m = divmod(m, 60)
     return "%d:%02d:%02d" % (h, m, s)
+
+
+def check_filter(args):
+    if hasattr(args, 'gene_names'):
+        if hasattr(args, 'splice_graph') and args.splice_graph:
+            with SpliceGraph(args.splice_graph)as sg:
+                for gene in sg.genes:
+                    if gene.name in args.gene_names:
+                        args.gene_ids.append(gene.id)
+                        args.gene_names.remove(gene.name)
+                        if not args.gene_names:
+                            return
+        else:
+            raise VoilaException(
+                'Splice Graph file was not supplied and, therefore, we\'re unable to convert gene names to gene IDs.')
 
 
 def voila_parser():
@@ -123,6 +139,8 @@ def main():
     }
 
     try:
+
+        check_filter(args)
 
         type_analysis[args.type_analysis](args)
 
