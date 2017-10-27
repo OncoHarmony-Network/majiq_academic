@@ -72,11 +72,12 @@ class Genes(SpliceGraphHDF5):
         gene_hdf5 = self.hdf5['Genes']
         return (Gene(gene_hdf5[id]) for id in gene_hdf5)
 
-    def combined_genes(self, experiments):
+    def combined_genes(self, experiments, genes):
         all_experiments = list(self.get_experiments())
         gene_dict = {}
 
-        for gene in self.genes:
+        for gene_id in genes:
+            gene = self.gene(gene_id)
 
             comb_gene = None
 
