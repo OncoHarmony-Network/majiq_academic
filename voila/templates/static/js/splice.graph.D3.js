@@ -318,12 +318,9 @@ function spliceGraphD3() {
                     .duration(100)
                     .ease("linear")
                     .text(function (d) {
-                        if (d.reads) {
-                            if (displayCorrectedReads)
-                                return d.clean_reads;
-                            return d.reads;
-                        }
-                        return '';
+                        if (displayCorrectedReads)
+                            return d.clean_reads;
+                        return d.reads;
                     })
                     .attr("x", function (d) {
                         if (strand === '-')
@@ -334,7 +331,11 @@ function spliceGraphD3() {
                         var posY = (scaleX(d.end) - scaleX(d.start)) / maxJunc * JUNC_AREA * (height - padding[0] - padding[2]);
                         return Math.round(height * JUNC_AREA - 2 - posY + (posY / d.dispersion) * (d.dispersion - 1 ? 1 : 0));
                     })
-                    .style("fill", displayCorrectedReads ? "red" : "black");
+                    .attr('fill', function (d) {
+                        if (d.reads === 0)
+                            return 'transparent';
+                        return displayCorrectedReads ? 'red' : 'black'
+                    });
                 return labels;
             };
 
@@ -836,7 +837,9 @@ function spliceGraphD3() {
                         color_index++;
                         el.classed('highlight-lsv', true);
                         d3.select(d3AllJunctions[junc_index]).classed('highlight-lsv-blurred', false);
-                        d3.select(d3AllReads[junc_index]).classed('highlight-lsv-blurred', false);
+                        d3.select(d3AllReads[junc_index])
+                            .classed('highlight-lsv-blurred', false)
+                            .classed('highlight-lsv', true);
                     });
 
 

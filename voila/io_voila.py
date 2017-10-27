@@ -411,6 +411,14 @@ def het_tab_output(args):
 
             for lsv in v.get_voila_lsvs(args):
 
+                print(lsv.bins)
+                print(lsv.trunc_bins)
+                print(lsv.psi1)
+                print(lsv.trunc_psi1)
+                print(lsv.psi2)
+                print(lsv.trunc_psi2)
+                exit()
+
                 row = get_lsv_info(lsv)
                 row.update(get_lsv_extra_info(lsv))
 

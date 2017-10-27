@@ -158,10 +158,7 @@ class VoilaLsv(LsvGraphic):
     @property
     def means(self):
         ms = self._extend_means(self.trunc_means)
-        if ms is not None:
-            return ms
-
-        if self.bins is not None and self.bins.size > 0:
+        if ms is None and self.bins.size > 0:
             if self.is_delta_psi():
                 ms = [get_expected_dpsi(b) for b in self.bins]
             else:
