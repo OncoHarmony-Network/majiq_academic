@@ -15,11 +15,12 @@ class Deltapsi(Html, VoilaArgs):
         super(Deltapsi, self).__init__(args)
 
         if not args.no_html:
+            copy_static(args)
             with Voila(args.voila_file, 'r') as v:
                 self.metainfo = v.get_metainfo()
             self.render_summaries()
             self.render_index()
-            copy_static(args)
+
 
         if not args.no_tsv:
             io_voila.tab_output(args, self.voila_links)
