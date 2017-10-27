@@ -52,14 +52,15 @@
 
                     <div class="spliceGraphTools">
 
-                        <select class="spliceGraphSelector exp1" autocomplete="off">
-                            {% for nsample in genes_exps_list[0] -%}
-                                <option {% if nsample == "Combined" %}selected="selected"{% endif %}
-                                        value="{{ genes_exps_list[0][nsample][gene_name] | to_json_especial }}">{{ nsample }}
-                                </option>
-                            {%- endfor %}
-                        </select>
-
+                        <label>{{ group_names[0] }} -
+                            <select class="spliceGraphSelector exp1" autocomplete="off">
+                                {% for nsample in genes_exps_list[0] -%}
+                                    <option {% if nsample == "Combined" %}selected="selected"{% endif %}
+                                            value="{{ genes_exps_list[0][nsample][gene_name] | to_json_especial }}">{{ nsample }}
+                                    </option>
+                                {%- endfor %}
+                            </select>
+                        </label>
                         {#                        <label class="toggleSwitch" title="Toggle from raw reads to corrected reads.">#}
                         {#                            RAW CORRECTED#}
                         {#                            <br/>#}
@@ -78,14 +79,15 @@
                     </div>
 
                     <div class="spliceGraphTools">
-
-                        <select class="spliceGraphSelector exp2" autocomplete="off">
-                            {% for nsample in genes_exps_list[1] -%}
-                                <option {% if nsample == "Combined" %}selected="selected"{% endif %}
-                                        value="{{ genes_exps_list[1][nsample][gene_name] | to_json_especial }}">{{ nsample }}
-                                </option>
-                            {%- endfor %}
-                        </select>
+                        <label>{{ group_names[1] }} -
+                            <select class="spliceGraphSelector exp2" autocomplete="off">
+                                {% for nsample in genes_exps_list[1] -%}
+                                    <option {% if nsample == "Combined" %}selected="selected"{% endif %}
+                                            value="{{ genes_exps_list[1][nsample][gene_name] | to_json_especial }}">{{ nsample }}
+                                    </option>
+                                {%- endfor %}
+                            </select>
+                        </label>
                     </div>
 
                     <div class="splice-div-container">
@@ -159,9 +161,8 @@
                                             Highlight
                                         </label>
                                         <label>
-
                                             <input class="weighted" type="checkbox" value="weighted">
-                                            Weighted
+                                            PSI Weighted
                                         </label>
                                     </form>
                                 </td>

@@ -13,7 +13,7 @@ class VoilaHDF5:
     LSVS = 'lsvs'
     ANALYSIS_TYPE = '/analysis_type'
 
-    def __init__(self, voila_file_name, mode):
+    def __init__(self, voila_file_name, mode='r'):
         """
         Parse or edit the voila (quantifier output) file.
         :param voila_file_name: location of voila file
@@ -121,7 +121,9 @@ class VoilaHDF5:
             group_names[idx] = exp
         metainfo['experiment_names'] = experiment_names
         metainfo['group_names'] = group_names
-        metainfo['stat_names'] = self._metainfo()['stat_names'].value
+
+        if 'stat_names' in self._metainfo():
+            metainfo['stat_names'] = self._metainfo()['stat_names'].value
 
         return metainfo
 

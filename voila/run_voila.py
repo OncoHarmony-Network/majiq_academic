@@ -5,7 +5,9 @@ import textwrap
 import time
 
 import voila.constants as constants
+from voila.api import SpliceGraph
 from voila.tools import Tools
+from voila.utils.exceptions import VoilaException
 from voila.utils.voila_log import voila_log
 from voila.view.conditional_table import ConditionalTable
 from voila.view.deltapsi import Deltapsi
@@ -24,6 +26,21 @@ def secs2hms(secs):
     m, s = divmod(secs, 60)
     h, m = divmod(m, 60)
     return "%d:%02d:%02d" % (h, m, s)
+
+
+def check_filter(args):
+    if hasattr(args, 'gene_names'):
+        if hasattr(args, 'splice_graph') and args.splice_graph:
+            with SpliceGraph(args.splice_graph)as sg:
+                for gene in sg.genes:
+                    if gene.name in args.gene_names:
+                        args.gene_ids.append(gene.id)
+                        args.gene_names.remove(gene.name)
+                        if not args.gene_names:
+                            return
+        else:
+            raise VoilaException(
+                'Splice Graph file was not supplied and, therefore, we\'re unable to convert gene names to gene IDs.')
 
 
 def voila_parser():
@@ -102,6 +119,8 @@ def main():
         log_filename = os.path.join(args.logger, log_filename)
     elif hasattr(args, 'output') and args.output:
         log_filename = os.path.join(args.output, log_filename)
+    else:
+        log_filename = None
 
     log = voila_log(filename=log_filename, silent=args.silent, debug=args.debug)
     log.info('Command: {0}'.format(' '.join(sys.argv)))
@@ -119,14 +138,32 @@ def main():
         constants.TOOLS: Tools
     }
 
-    type_analysis[args.type_analysis](args)
+    try:
 
-    if hasattr(args, 'output'):
-        log.info("Voila! Created in: {0}.".format(args.output))
+        check_filter(args)
 
-    # Add elapsed time
-    elapsed_str = secs2hms(time.time() - start_time)
-    log.info("Execution time: {0}.".format(elapsed_str))
+        type_analysis[args.type_analysis](args)
+
+        if hasattr(args, 'output'):
+            log.info("Voila! Created in: {0}.".format(args.output))
+
+        # Add elapsed time
+        elapsed_str = secs2hms(time.time() - start_time)
+        log.info("Execution time: {0}.".format(elapsed_str))
+
+    except KeyboardInterrupt:
+        log.warning('Voila exiting')
+
+    except VoilaException as ve:
+        if args.debug:
+            log.exception(ve)
+        else:
+            log.error(ve)
+        exit(1)
+
+    except Exception as e:
+        log.exception(e)
+        exit(2)
 
 
 if __name__ == '__main__':

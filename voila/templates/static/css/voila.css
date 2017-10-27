@@ -445,7 +445,10 @@ label.toggleSwitch {
 
 form.highlight-lsv label {
     display: inline-block;
-    width: 80px;
+}
+
+form.highlight-lsv {
+    width: 100px;
 }
 
 .spliceDiv {

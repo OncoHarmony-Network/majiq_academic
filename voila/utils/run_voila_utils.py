@@ -122,8 +122,7 @@ def get_output_html(args, file_name=None):
     """
 
     if file_name:
-        return '{0}_{1}.html'.format(os.path.splitext(os.path.split(file_name)[1])[0],
-                                     args.type_analysis.replace("-", "_"))
+        return '{0}.html'.format(os.path.splitext(os.path.split(file_name)[1])[0])
     else:
         return '{0}.html'.format(args.type_analysis.replace("-", "_"))
 

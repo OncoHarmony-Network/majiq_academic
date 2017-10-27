@@ -25,6 +25,7 @@ class Html(object):
 
         with SpliceGraph(self.args.splice_graph) as sg:
             for experiment in experiments:
+
                 genes_exp[experiment] = {}
 
                 for gene_id in genes:
@@ -38,7 +39,7 @@ class Html(object):
 
             # if there are more then 1 experiments, then record the combined data
             if len(experiments) > 1:
-                genes_exp['Combined'] = sg.combined_genes(experiments)
+                genes_exp['Combined'] = sg.combined_genes(experiments, genes)
 
             return OrderedDict(sorted(genes_exp.items(), key=lambda t: t[0]))
 

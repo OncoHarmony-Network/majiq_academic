@@ -233,7 +233,7 @@ cdef _get_extract_lsv_list(list list_of_lsv_id, list file_list, int msamples):
                 try:
                     if lsv_type is None:
                         lsv_type = data['LSVs/%s' % lsv_id].attrs['type']
-                        njunc = len(lsv_type.split(':')) -1
+                        njunc = len(lsv_type.split('|')) -1
                         lsv_cov = np.zeros(shape=(n_exp, njunc, msamples))
 
                     assert data['LSVs/%s' % lsv_id].attrs['type'] == lsv_type, "ERROR lsv_type doesn't match " \
@@ -242,6 +242,7 @@ cdef _get_extract_lsv_list(list list_of_lsv_id, list file_list, int msamples):
                     lsv_cov[fidx] = data[JUNCTIONS_DATASET_NAME][cov[0]:cov[1]]
                 except KeyError:
                     pass
+
 
         qq = quant_lsv(lsv_id, lsv_type, lsv_cov)
         result.append(qq)
@@ -442,7 +443,6 @@ def retrieve_db_info(str gne_id, str out_dir, list list_exons, dict dict_junctio
                                                                                 intron=True,
                                                                                 annot=ir_attrs['annotated'])
             list_introns.sort(key=lambda xx: (xx.start, xx.end))
-
     return njuncs
 
 

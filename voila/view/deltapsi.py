@@ -15,11 +15,12 @@ class Deltapsi(Html, VoilaArgs):
         super(Deltapsi, self).__init__(args)
 
         if not args.no_html:
+            copy_static(args)
             with Voila(args.voila_file, 'r') as v:
                 self.metainfo = v.get_metainfo()
             self.render_summaries()
             self.render_index()
-            copy_static(args)
+
 
         if not args.no_tsv:
             io_voila.tab_output(args, self.voila_links)
@@ -111,6 +112,7 @@ class Deltapsi(Html, VoilaArgs):
         args = self.args
         summaries_subfolder = self.get_summaries_subfolder()
         metainfo = self.metainfo
+        group_names = metainfo['group_names']
 
         with SpliceGraph(args.splice_graph, 'r') as sg:
             gene_experiments_list = sg.get_experiments()
@@ -132,7 +134,6 @@ class Deltapsi(Html, VoilaArgs):
                 log.debug('Write page {0}'.format(page_name))
 
                 with open(os.path.join(summaries_subfolder, page_name), 'w') as html:
-
                     for el in summary_template.generate(
                             page_name=page_name,
                             genes_dict=lsv_dict,
@@ -143,7 +144,8 @@ class Deltapsi(Html, VoilaArgs):
                             table_marks=table_marks,
                             prev_page=prev_page,
                             next_page=next_page,
-                            gtf=args.gtf
+                            gtf=args.gtf,
+                            group_names=group_names
                     ):
                         html.write(el)
 
