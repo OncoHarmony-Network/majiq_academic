@@ -19,11 +19,12 @@ class Experiment(Base):
 class CoordsExtra(Base):
     __tablename__ = 'coords_extra'
     __iter__ = base_iter
+    id = Column(Integer, primary_key=True)
     start = Column(Integer)
     end = Column(Integer)
-    exon_gene_id = Column(String, primary_key=True)
-    exon_start = Column(Integer, primary_key=True)
-    exon_end = Column(Integer, primary_key=True)
+    exon_gene_id = Column(String)
+    exon_start = Column(Integer)
+    exon_end = Column(Integer)
 
     __table_args__ = (
         ForeignKeyConstraint([exon_gene_id, exon_start, exon_end], ['exon.gene_id', 'exon.start', 'exon.end']),)
