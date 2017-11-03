@@ -43,7 +43,7 @@ def gene_to_splicegraph(dict_of_genes, dict_junctions, exon_dict, list_introns, 
         with SpliceGraph(get_builder_splicegraph_filename(majiq_config.outDir), 'a') as sg:
             for jid in sorted(dict_junctions[gne_id].keys()):
                 jj = dict_junctions[gne_id][jid]
-                if jj.intronic: continue
+                # if jj.intronic: continue
                 if jj.start == FIRST_LAST_JUNC:
                     alt_empty_starts.append(jj.end)
                     continue
@@ -100,16 +100,21 @@ def gene_to_splicegraph(dict_of_genes, dict_junctions, exon_dict, list_introns, 
             for info in list_introns[gne_id]:
 
                 intr_coord = int(info.start)-1
-                junc_list.append(sg.junction('%s:%s-%s' % (gne_id, intr_coord, info.start), start=intr_coord,
-                                             end=info.start, transcripts=[],
-                                             intron_retention=voila_const.IR_TYPE_START))
+                # junc_list.append(sg.junction('%s:%s-%s' % (gne_id, intr_coord, info.start), start=intr_coord,
+                #                              end=info.start, transcripts=[],
+                #                              intron_retention=voila_const.IR_TYPE_START))
+                #
+                # a3 = [len(junc_list)-1]
+                # intr_coord = int(info.end)+1
+                # junc_list.append(sg.junction('%s:%s-%s' % (gne_id, info.end, intr_coord), start=info.end, end=intr_coord,
+                #                  transcripts=[], intron_retention=voila_const.IR_TYPE_END))
+                #
+                # a5 = [len(junc_list)-1]
 
-                a3 = [len(junc_list)-1]
-                intr_coord = int(info.end)+1
-                junc_list.append(sg.junction('%s:%s-%s' % (gne_id, info.end, intr_coord), start=info.end, end=intr_coord,
-                                 transcripts=[], intron_retention=voila_const.IR_TYPE_END))
-
-                a5 = [len(junc_list)-1]
+                intr_coord = int(info.start)-1
+                a3 = [junc_l[(intr_coord, info.start)]]
+                intr_coord = int(info.end) + 1
+                a5 = [junc_l[(info.end, intr_coord)]]
                 eg = sg.exon('{0}:{1}-{2}'.format(gne_id, info.start, info.end), annotated=info.annot,
                              a3=a3, a5=a5, start=info.start, end=info.end, coords_extra=(), intron_retention=True)
 

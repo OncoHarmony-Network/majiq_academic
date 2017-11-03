@@ -12,9 +12,7 @@ from majiq.src.multiproc import QueueMessage, process_conf, queue_manager, proce
 
 import majiq.src.logger as majiq_logger
 import majiq.src.multiproc as majiq_multi
-import majiq.src.normalize as majiq_norm
 from majiq.grimoire.exon import detect_exons
-from majiq.grimoire.junction import create_junction
 from majiq.grimoire.lsv import detect_lsvs
 from majiq.src.basic_pipeline import BasicPipeline, pipeline_run
 from majiq.src.config import Config
@@ -174,8 +172,8 @@ def parsing_files(sam_file_list, chnk, process_conf, logger):
         samfl = majiq_io_bam.open_rnaseq("%s/%s.bam" % (majiq_config.sam_dir, sam_file))
         junc_mtrx = [[0] * effective_len]
 
-        gc_pairs = {'GC': [], 'COV': []}
-        gc_matrx = [] if majiq_config.gcnorm else None
+        # gc_pairs = {'GC': [], 'COV': []}
+        # gc_matrx = [] if majiq_config.gcnorm else None
 
         for gne_idx, (gne_id, gene_obj) in enumerate(dict_of_genes.items()):
             if gne_idx % 50 == 0:
@@ -185,15 +183,16 @@ def parsing_files(sam_file_list, chnk, process_conf, logger):
             gene_reads = majiq_io_bam.read_sam_or_bam(gene_obj, samfl, junc_mtrx, dict_junctions[gne_id],
                                                       list_exons[gne_id], list_introns[gne_id],
                                                       info_msg=loop_id, logging=logger)
+
             gene_obj['nreads'] = gene_reads
             if gene_reads == 0:
                 continue
 
-            if majiq_config.gcnorm:
-                for ex in gene_obj.get_exon_list():
-                    if ex.get_gc_content() > 0 and ex.get_coverage() > 0:
-                        gc_pairs['GC'].append(ex.get_gc_content())
-                        gc_pairs['COV'].append(ex.get_coverage())
+            # if majiq_config.gcnorm:
+            #     for ex in gene_obj.get_exon_list():
+            #         if ex.get_gc_content() > 0 and ex.get_coverage() > 0:
+            #             gc_pairs['GC'].append(ex.get_gc_content())
+            #             gc_pairs['COV'].append(ex.get_coverage())
 
         majiq_io_bam.close_rnaseq(samfl)
 
@@ -207,11 +206,6 @@ def parsing_files(sam_file_list, chnk, process_conf, logger):
         fitfunc_r = fit_nb(junc_mtrx[indx, :], "%s/nbfit" % majiq_config.outDir, logger=logger)
 
         with h5py.File('%s/%s.majiq' % (majiq_config.outDir, sam_file), 'w') as out_f:
-            #TODO: keep in mem and fix later
-
-            # out_f.create_dataset(JUNCTIONS_DATASET_NAME, (5000, majiq_config.m), maxshape=(None, majiq_config.m))
-            # out_f.create_dataset('junc_cov', (5000, 2), maxshape=(None, 2))
-
             out_f.attrs['m_samples'] = process_conf.m
             out_f.attrs['sample_id'] = sam_file
             out_f.attrs['date'] = datetime.datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S')

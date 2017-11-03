@@ -64,6 +64,9 @@ cdef int new_exon_definition(int start, int end, dict exon_dict, list out_list, 
         return 0
     ex1 = exon_overlap(exon_dict, start, end)
 
+    if (inbound_j.intronic and outbound_j.intronic):
+        return 0
+
     if ex1 is None:
 
         if (end - start) <= MAX_DENOVO_DIFFERENCE:
@@ -142,11 +145,11 @@ def detect_exons(dict junction_dict, list exon_list):
     cdef bint jtype
 
     for kk, jj in junction_dict.items():
-        if not jj.intronic:
-            if kk[0]>0:
-                junction_list.append((kk[0], True, jj))
-            if kk[1]>0:
-                junction_list.append((kk[1], False, jj))
+        #if not jj.intronic:
+        if kk[0]>0:
+            junction_list.append((kk[0], True, jj))
+        if kk[1]>0:
+            junction_list.append((kk[1], False, jj))
     junction_list.sort(key=lambda jj: jj[0])
 
     for (coord, jtype, jj) in junction_list:
