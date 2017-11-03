@@ -99,6 +99,8 @@ def gene_to_splicegraph(dict_of_genes, dict_junctions, exon_dict, list_introns, 
                                                           alt_starts=alt_start, alt_ends=alt_ends)
                 )
 
+            gene = sg.gene(gne_id).add(name=gne['name'], strand=gne['strand'], chromosome=gne['chromosome'])
+
             for info in list_introns[gne_id]:
                 intr_coord = int(info.start) - 1
                 junc_list.append(
@@ -115,5 +117,7 @@ def gene_to_splicegraph(dict_of_genes, dict_junctions, exon_dict, list_introns, 
 
                 exon_list.append(eg)
 
-            sg.gene(gne_id).add(name=gne['name'], strand=gne['strand'], exons=exon_list, junctions=junc_list,
-                                chromosome=gne['chromosome'])
+            gene.exons = exon_list
+            gene.junctions = junc_list
+            # sg.gene(gne_id).update(name=gne['name'], strand=gne['strand'], exons=exon_list, junctions=junc_list,
+            #                     chromosome=gne['chromosome'])

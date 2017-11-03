@@ -128,7 +128,7 @@ class Junctions(SpliceGraphSQL):
                 junc.reads.append(model.Reads(reads=int(r), experiment_id=e))
 
             self.session.add(junc)
-
+            self.session.commit()
             return junc
 
         def exists(self):
