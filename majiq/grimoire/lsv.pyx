@@ -174,6 +174,8 @@ cdef class LSV:
         cdef str ext_type, prev_ex, exid
         cdef int excount, jidx
         cdef list ss_list
+        cdef list ref_ss
+        cdef set ref_ss_set
 
 
         for junc in jlist:
@@ -197,7 +199,8 @@ cdef class LSV:
         prev_ex = "%s-%s" % (sp_list[0][3].start, sp_list[0][3].end)
         excount = 1
 
-        ref_ss = [junc.start for junc in ref_exon.ob] if ss else [junc.end for junc in ref_exon.ib]
+        ref_ss_set = set([junc.start for junc in ref_exon.ob]) if ss else set([junc.end for junc in ref_exon.ib])
+        ref_ss = sorted(list(ref_ss_set))
 
         for intron, coord, ref_coord, ex, junc in sp_list:
             exid = "%s-%s" % (ex.start, ex.end)
