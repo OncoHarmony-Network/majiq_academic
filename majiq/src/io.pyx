@@ -283,6 +283,7 @@ def extract_lsv_summary(list files, int minnonzero, int min_reads, dict epsi=Non
     if percent == -1:
         percent = nfiles / 2
         percent = percent + 1 if nfiles % 2 != 0 else percent
+    percent = min(int(percent), files)
 
     print (percent)
 
