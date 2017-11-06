@@ -284,6 +284,8 @@ def extract_lsv_summary(list files, int minnonzero, int min_reads, dict epsi=Non
         percent = nfiles / 2
         percent = percent + 1 if nfiles % 2 != 0 else percent
 
+    print (percent)
+
 
     for fidx, ff in enumerate(files):
         if logger:
@@ -309,7 +311,7 @@ def extract_lsv_summary(list files, int minnonzero, int min_reads, dict epsi=Non
             epsi[xx] = epsi[xx] / (epsi[xx].sum() - epsi[xx])
             epsi[xx][np.isnan(epsi[xx])] = 0.5
 
-    lsv_id_list = [xx for xx,yy in lsv_list.items() if np.sum(yy) > percent]
+    lsv_id_list = [xx for xx,yy in lsv_list.items() if np.sum(yy) >= percent]
 
     return lsv_id_list, lsv_graphic
 
