@@ -87,10 +87,6 @@ class Junction(Base):
     reads = relationship('Reads')
     gene = relationship('Gene')
 
-    def update_reads(self, reads, experiment):
-        rs = Reads(junction=self, experiment_name=experiment, reads=reads)
-        self.reads.append(rs)
-
 
 class Exon(Base):
     __tablename__ = 'exon'
@@ -111,9 +107,11 @@ class Exon(Base):
 class Gene(Base):
     __tablename__ = 'gene'
     __iter__ = base_iter
+
     id = Column(String, primary_key=True)
     name = Column(String)
     strand = Column(String)
     chromosome = Column(String)
+
     junctions = relationship('Junction')
     exons = relationship('Exon')

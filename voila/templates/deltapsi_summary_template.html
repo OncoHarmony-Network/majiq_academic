@@ -29,23 +29,24 @@
                     This browser or document mode doesn't support canvas
                 </canvas>
             </div>
-            {% for gene_name, lsvs in genes_dict.items() %}
+            {% for gene_id, lsvs in genes_dict.items() %}
                 {% set gene_index = loop.index - 1 %}
                 <a name="{{ lsvs[0].name }}"></a>
                 <h2>Gene name:
                     {% set experiments = genes_exps_list[0].keys() | list %}
                     {% set first_exp = experiments[0] %}
-                    {{ lsvs[0].name }};{{ lsvs[0].chromosome }}:{{ lsvs[0].strand }}:{{ genes_exps_list[0][first_exp][gene_name].start }}-{{ genes_exps_list[0][first_exp][gene_name].end }};
+                    {% set gene = genes_exps_list[0][first_exp][gene_id] %}
+                    {{ gene.name.decode('utf-8') }};{{ gene.chromosome.decode('utf-8') }}:{{ gene.strand.decode('utf-8') }}:{{ gene.start }}-{{ gene.end }};
 
                     {% if lexps %}
-                        <a href="http://genome.ucsc.edu/cgi-bin/hgTracks?db={{ lexps.genome }}&position={{ lsvs[0].chromosome }}:{{ genes_exps_list[0][first_exp][gene_name].start }}-{{ genes_exps_list[0][first_exp][gene_name].end }}"
+                        <a href="http://genome.ucsc.edu/cgi-bin/hgTracks?db={{ lexps.genome }}&position={{ gene.chromosome.decode('utf-8') }}:{{ gene.start }}-{{ gene.end }}"
                            target="_blank"><img src="static/img/icons/ucsc3.png"
-                                                title="{{ lsvs[0].chromosome }}:{{ genes_exps_list[0][first_exp][gene_name].start }}-{{ genes_exps_list[0][first_exp][gene_name].end }}"/></a>
+                                                title="{{ gene.chromosome.decode('utf-8') }}:{{ gene.start }}-{{ gene.end }}"/></a>
                     {% endif %}
                 </h2>
 
                 <h3 class="gene_id">
-                    Gene ID: {{ gene_name }};
+                    Gene ID: {{ gene_id }};
                 </h3>
 
                 <div class="gene-container">
@@ -56,7 +57,7 @@
                             <select class="spliceGraphSelector exp1" autocomplete="off">
                                 {% for nsample in genes_exps_list[0] -%}
                                     <option {% if nsample == "Combined" %}selected="selected"{% endif %}
-                                            value="{{ genes_exps_list[0][nsample][gene_name] | to_json_especial }}">{{ nsample }}
+                                            value="{{ genes_exps_list[0][nsample][gene_id] | to_json_especial }}">{{ nsample }}
                                     </option>
                                 {%- endfor %}
                             </select>
@@ -83,7 +84,7 @@
                             <select class="spliceGraphSelector exp2" autocomplete="off">
                                 {% for nsample in genes_exps_list[1] -%}
                                     <option {% if nsample == "Combined" %}selected="selected"{% endif %}
-                                            value="{{ genes_exps_list[1][nsample][gene_name] | to_json_especial }}">{{ nsample }}
+                                            value="{{ genes_exps_list[1][nsample][gene_id] | to_json_especial }}">{{ nsample }}
                                     </option>
                                 {%- endfor %}
                             </select>
@@ -95,10 +96,10 @@
                         <div class="spliceDiv delta exp1" id="spliceDivExp1_{{ gene_index }}"
                              data-exon-list=
                                      {% if "Combined" in genes_exps_list[0] %}
-                                         "{{ genes_exps_list[0]["Combined"][gene_name] | to_json_especial }}">
+                                         "{{ genes_exps_list[0]["Combined"][gene_id] | to_json_especial }}">
                                      {% else %}
                                          {% for exp in genes_exps_list[0].values() %}
-                                             "{{ exp[gene_name] | to_json_especial }}">
+                                             "{{ exp[gene_id] | to_json_especial }}">
                                          {% endfor %}
                                      {% endif %}
                         </div>
@@ -106,10 +107,10 @@
                         <div class="spliceDiv delta exp2" id="spliceDivExp2_{{ gene_index }}"
                              data-exon-list=
                                      {% if "Combined" in genes_exps_list[1] %}
-                                         "{{ genes_exps_list[1]["Combined"][gene_name] | to_json_especial }}">
+                                         "{{ genes_exps_list[1]["Combined"][gene_id] | to_json_especial }}">
                                      {% else %}
                                          {% for exp in genes_exps_list[1].values() %}
-                                             "{{ exp[gene_name] | to_json_especial }}">
+                                             "{{ exp[gene_id] | to_json_especial }}">
                                          {% endfor %}
                                      {% endif %}
                         </div>
