@@ -1,10 +1,10 @@
 import os
-from tempfile import NamedTemporaryFile
+import tempfile
 
 from voila import io_voila, constants
 from voila.api import Voila, SpliceGraph
 from voila.utils.exceptions import NoLsvsFound
-from voila.utils.run_voila_utils import table_marks_set, copy_static, get_template_dir
+from voila.utils.run_voila_utils import table_marks_set, copy_static
 from voila.utils.voila_log import voila_log
 from voila.view.html import Html
 from voila.voila_args import VoilaArgs
@@ -20,7 +20,6 @@ class Deltapsi(Html, VoilaArgs):
                 self.metainfo = v.get_metainfo()
             self.render_summaries()
             self.render_index()
-
 
         if not args.no_tsv:
             io_voila.tab_output(args, self.voila_links)
@@ -64,7 +63,9 @@ class Deltapsi(Html, VoilaArgs):
         metainfo = self.metainfo
         index_row_template = env.get_template('deltapsi_index_row.html')
 
-        with NamedTemporaryFile(dir=get_template_dir()) as tmp_index_file:
+        tmp_index_file = tempfile.mkstemp()[1]
+
+        with open(tmp_index_file, 'w') as f:
 
             with Voila(args.voila_file, 'r') as v:
 
@@ -82,10 +83,13 @@ class Deltapsi(Html, VoilaArgs):
                             threshold=args.threshold,
                             lexps=metainfo
                     ):
-                        tmp_index_file.write(bytearray(el, encoding='utf-8'))
+                        # tmp_index_file.write(bytearray(el, encoding='utf-8'))
+                        f.write(el)
 
-            if not tmp_index_file.tell():
+            if not f.tell():
                 raise NoLsvsFound()
+
+        with open(tmp_index_file) as f:
 
             log.debug('Write tmp index to actual index')
 
@@ -93,7 +97,7 @@ class Deltapsi(Html, VoilaArgs):
                 index_template = env.get_template('index_delta_summary_template.html')
                 for el in index_template.generate(
                         lexps=metainfo,
-                        tmp_index_file_name=os.path.basename(tmp_index_file.name),
+                        tmp_index_file=f.read(),
                         table_marks=table_marks_set(lsv_count),
                         lsvs_count=lsv_count,
                         prev_page=None,
@@ -102,6 +106,8 @@ class Deltapsi(Html, VoilaArgs):
                     html.write(el)
 
                 log.debug('End index render')
+
+        os.remove(tmp_index_file)
 
     def render_summaries(self):
         log = voila_log()
