@@ -43,6 +43,8 @@ def gene_to_splicegraph(dict_of_genes, dict_junctions, exon_dict, list_introns, 
         jidx = 0
 
         with SpliceGraph(get_builder_splicegraph_filename(majiq_config.outDir)) as sg:
+            gene = sg.gene(gne_id).add(name=gne['name'], strand=gne['strand'], chromosome=gne['chromosome'])
+
             for jid in sorted(dict_junctions[gne_id].keys()):
                 jj = dict_junctions[gne_id][jid]
                 if jj.intronic: continue
@@ -72,8 +74,8 @@ def gene_to_splicegraph(dict_of_genes, dict_junctions, exon_dict, list_introns, 
                     covered = covered or (jj.nreads > 0)
                     if jj.end in alt_empty_starts:
                         alt_start.append(jj.end)
-                    if jj.start != FIRST_LAST_JUNC:
-                        a3.append(junc_l[(jj.start, jj.end)])
+                    # if jj.start != FIRST_LAST_JUNC:
+                    #     a3.append(junc_l[(jj.start, jj.end)])
 
                 a5 = []
                 alt_ends = []
@@ -81,8 +83,8 @@ def gene_to_splicegraph(dict_of_genes, dict_junctions, exon_dict, list_introns, 
                     covered = covered or (jj.nreads > 0)
                     if jj.start in alt_empty_ends:
                         alt_ends.append(jj.start)
-                    if jj.end != FIRST_LAST_JUNC:
-                        a5.append(junc_l[(jj.start, jj.end)])
+                    # if jj.end != FIRST_LAST_JUNC:
+                    #     a5.append(junc_l[(jj.start, jj.end)])
 
                 extra_coords = []
                 if ex.annot:
@@ -99,7 +101,7 @@ def gene_to_splicegraph(dict_of_genes, dict_junctions, exon_dict, list_introns, 
                                                           alt_starts=alt_start, alt_ends=alt_ends)
                 )
 
-            gene = sg.gene(gne_id).add(name=gne['name'], strand=gne['strand'], chromosome=gne['chromosome'])
+            # gene = sg.gene(gne_id).add(name=gne['name'], strand=gne['strand'], chromosome=gne['chromosome'])
 
             for info in list_introns[gne_id]:
                 intr_coord = int(info.start) - 1
