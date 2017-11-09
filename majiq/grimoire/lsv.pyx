@@ -151,8 +151,7 @@ cdef class LSV:
         cdef list ex_index
         cdef np.ndarray s_lsv, lsv_trs
 
-
-        ex_index = sorted([xx.index for xx in self.junctions])
+        ex_index = [xx.index for xx in self.junctions]
         cover = junc_mtrx[ex_index]
 
         s_lsv = sample_from_junctions(junction_list=cover,
@@ -161,7 +160,6 @@ cdef class LSV:
                                       fitted_one_over_r=fitfunc_r)
 
         lsv_trs = np.array([cover.sum(axis=1), np.count_nonzero(cover, axis=1)]).T
-
         return s_lsv, lsv_trs
 
     cdef str set_type(LSV self, list jlist, Exon ref_exon, str gene_strand, bint ss):
@@ -176,6 +174,8 @@ cdef class LSV:
         cdef str ext_type, prev_ex, exid
         cdef int excount, jidx
         cdef list ss_list
+        cdef list ref_ss
+        cdef set ref_ss_set
 
 
         for junc in jlist:
@@ -199,7 +199,8 @@ cdef class LSV:
         prev_ex = "%s-%s" % (sp_list[0][3].start, sp_list[0][3].end)
         excount = 1
 
-        ref_ss = [junc.start for junc in ref_exon.ob] if ss else [junc.end for junc in ref_exon.ib]
+        ref_ss_set = set([junc.start for junc in ref_exon.ob]) if ss else set([junc.end for junc in ref_exon.ib])
+        ref_ss = sorted(list(ref_ss_set))
 
         for intron, coord, ref_coord, ex, junc in sp_list:
             exid = "%s-%s" % (ex.start, ex.end)
@@ -264,6 +265,7 @@ cdef int _detect_lsvs(list list_exons, np.ndarray junc_mtrx, float fitfunc_r, st
     for ex in list_exons:
         for ii, jjset in enumerate([ex.ib, ex.ob]):
             jjlist = [xx for xx in jjset if not (xx.donor is None or xx.acceptor is None)]
+
 
             if len(jjlist) < 2:
                 continue

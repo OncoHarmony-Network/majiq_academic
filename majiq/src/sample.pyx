@@ -57,7 +57,8 @@ cpdef np.ndarray sample_from_junctions(np.ndarray junction_list, int m, int k, f
             for iternumber in range(m):
                 sampled_mean = np.mean([choice(junction) for _ in range(k)])
                 nb50 = _sample_over_nb(one_over_r=fitted_one_over_r, mu=sampled_mean, num_samples=k)
-                all_samples[i, iternumber] = np.mean(nb50)
-        all_samples = (all_samples + 1) * npos_mult
+                all_samples[i, iternumber] = (np.mean(nb50) + 1) * npos_mult
+
+        # all_samples = (all_samples + 1) * npos_mult
 
     return all_samples

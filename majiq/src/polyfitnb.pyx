@@ -132,7 +132,6 @@ cpdef float fit_nb(np.ndarray junctionl, str outpath, float nbdisp=0.1, object l
         logger.debug("NBFit: Plots will be drawn in %s..." % outpath)
 
     if junctionl.shape[0] < 10:
-        print(junctionl.shape[0])
         logger.warning("Your dataset is not deep enougth to define an apropiate NB factor. The default 0 is given")
         return 0.0
 
@@ -151,12 +150,8 @@ cpdef float fit_nb(np.ndarray junctionl, str outpath, float nbdisp=0.1, object l
 
     pvalues = _calc_pvalues(junctions, one_over_r0, indices)
     ecdf = _get_ecdf(pvalues)
-    # mplot.plot_fitting(ecdf, plotpath, title="NON-Corrected ECDF 1\_r %s" % one_over_r0)
-    # plot_negbinomial_fit(mean_junc, std_junc, fit_function, plotpath, "Before correction")
     score = _score_ecdf(ecdf)
-
     precision_values = [0.1, 0.01, 0.001]
-
     one_over_r = one_over_r0
 
     for i, precision in enumerate(precision_values):

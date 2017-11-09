@@ -87,51 +87,6 @@ cdef inline bint __valid_intron_read(AlignedSegment read):
     return bo and not is_cross and _match_strand(read, gstrand)
 
 
-cpdef int find_introns2(str filename, dict list_introns, float intron_threshold, queue, str gname) except -1:
-
-    cdef AlignmentFile samfl
-    cdef int nchunks, chunk_len
-    cdef bint b_included
-    cdef int intron_len, i_st, i_nd, val, ibin, num_bins = 10
-    cdef str chrom, strand
-    cdef np.ndarray intron_bins
-    cdef PileupColumn pile
-    cdef PileupRead xx
-
-    samfl = open_rnaseq(filename)
-
-
-    for gne_id, chrom, strand, i_st, i_nd in list_introns.keys():
-        print(gne_id, chrom, i_st, i_nd)
-        intron_len = (i_nd - i_st)
-
-        nchunks = 1 if intron_len <= MIN_INTRON_LEN else num_bins
-        intron_bins = np.zeros(shape=nchunks, dtype=np.float)
-
-        chunk_len = int(intron_len / nchunks)+1
-        b_included = True
-
-        try:
-            pile_iter = samfl.pileup(contig=chrom, start=i_st, stop=i_nd, until_eof=True, truncate=True,
-                                     reference=None, end=None)
-
-
-            for pile in pile_iter:
-                val = np.sum([1 for xx in pile.pileups if xx.is_del == True and xx.indel == 0
-                                                          and _match_strand(xx.alignment, strand)])
-
-                ibin = int((pile.reference_pos - i_st)/chunk_len)
-                intron_bins[ibin] += val
-
-            intron_bins /= chunk_len
-            if (intron_bins >=intron_threshold).sum() == nchunks:
-                qm = QueueMessage(QUEUE_MESSAGE_BUILD_INTRON, (gne_id, i_st, i_nd, gname), 0)
-                queue.put(qm, block=True)
-
-        except ValueError as e:
-            continue
-
-
 cdef str gstrand
 
 import time, datetime

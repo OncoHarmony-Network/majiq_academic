@@ -18,11 +18,9 @@ def process_wrapper(args_vals):
                                         silent=process_conf.silent, debug=process_conf.debug)
 
         process_conf.func(vals, chnk, process_conf, logger=logger)
-
         logger.info('Finishing child, %s' % chnk)
 
     except:
-        # majiq_utils.monitor('CHILD %s:: EXCEPT' % chnk)
         traceback.print_exc()
         sys.stdout.flush()
         raise
@@ -46,6 +44,7 @@ def parallel_lsv_child_calculation(func, args, tempdir, chunk):
     args.append(thread_logger)
     func(*args)
     sys.stdout.flush()
+
 
 def chunks(l, n_in, extra):
     """Yield successive n-sized chunks from l.

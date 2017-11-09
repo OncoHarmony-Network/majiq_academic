@@ -129,16 +129,18 @@ class VoilaLsv(LsvGraphic):
 
     @staticmethod
     def _extend_means(means):
-        if means is not None and means.size == 1:
-            # means.append(1 - means[0])
-            means = numpy.append(means, numpy.array(1 - means[0]))
+        if means is not None:
+            means = numpy.array(means)
+            if numpy.size(means, 0) == 1:
+                # means.append(1 - means[0])
+                means = numpy.append(means, numpy.array(1 - means[0]))
         return means
 
     @staticmethod
     def _extend_bins(bins):
         if bins is not None:
             bins = numpy.array(bins)
-            if bins.size == 1:
+            if numpy.size(bins, 0) == 1:
                 # bins.append(bins[-1][::-1])
                 bins = numpy.append(bins, [numpy.flip(bins[-1], 0)], axis=0)
         return bins
