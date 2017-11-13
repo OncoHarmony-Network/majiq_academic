@@ -4,7 +4,7 @@ cimport numpy as np
 import numpy as np
 
 cdef class Exon:
-    def __init__(self, start, end, annot=False):
+    def __init__(self, start, end, annot=False, intronic=False):
         self.start = start
         self.end = end
         self.annot = annot
@@ -12,7 +12,7 @@ cdef class Exon:
         self.db_coords = (start, end)
         self.ib = set()
         self.ob = set()
-        self.intron = False
+        self.intron = intronic
 
 
 cdef class Intron:
@@ -64,10 +64,15 @@ cdef int new_exon_definition(int start, int end, dict exon_dict, list out_list, 
         return 0
     ex1 = exon_overlap(exon_dict, start, end)
 
-    if (inbound_j.intronic and outbound_j.intronic):
-        return 0
+    if inbound_j.intronic and outbound_j.intronic:
+        try:
+            ex1 = exon_dict[(inbound_j.end, outbound_j.start)]
+            ex2 = ex1
 
-    if ex1 is None:
+        except KeyError:
+            return 0
+
+    elif ex1 is None:
 
         if (end - start) <= MAX_DENOVO_DIFFERENCE:
             ex1 = Exon(start, end, annot=in_db)

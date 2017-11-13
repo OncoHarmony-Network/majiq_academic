@@ -97,7 +97,7 @@ def parse_denovo_elements(pipe_self, logger):
 
         [xx.acquire() for xx in pipe_self.lock]
         pool1.imap_unordered(majiq_multi.process_wrapper,
-                            majiq_multi.chunks(majiq_config.juncfile_list, lchnksize, range(nthreads)))
+                             majiq_multi.chunks(majiq_config.juncfile_list, lchnksize, range(nthreads)))
         pool1.close()
 
         group_names = {}

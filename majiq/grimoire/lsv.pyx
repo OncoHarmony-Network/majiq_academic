@@ -212,6 +212,7 @@ cdef class LSV:
 
             if intron:
                 ext_type += "|i"
+                self.junctions.append(junc)
                 continue
 
             if ex is None:
@@ -230,22 +231,6 @@ cdef class LSV:
 
             self.junctions.append(junc)
         return ext_type
-
-    # @staticmethod
-    # cdef junc_cov_to_hdf5(hdf5grp, boots, cov):
-    #
-    #     njunc = boots.shape[0]
-    #     lsv_idx = hdf5grp.attrs['lsv_idx']
-    #     if lsv_idx + njunc > 2:
-    #         shp = hdf5grp[JUNCTIONS_DATASET_NAME].shape
-    #         shp_new = shp[0] + 5000
-    #         hdf5grp[JUNCTIONS_DATASET_NAME].resize((shp_new, shp[1]))
-    #         hdf5grp['junc_cov'].resize((shp_new, 2))
-    #
-    #     hdf5grp[JUNCTIONS_DATASET_NAME][lsv_idx:lsv_idx + njunc] = boots
-    #     hdf5grp['junc_cov'][lsv_idx:lsv_idx + njunc] = cov
-    #
-    #     hdf5grp.attrs['lsv_idx'] = lsv_idx + njunc
 
 
 cdef int _detect_lsvs(list list_exons, np.ndarray junc_mtrx, float fitfunc_r, str gid, str gchrom, str gstrand,

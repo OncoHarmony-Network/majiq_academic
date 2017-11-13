@@ -107,7 +107,7 @@ def queue_manager(output_h5dfp, lock_array, result_queue, num_chunks,
                     kwargs['junctions'][(info_junc[0], info_junc[1], info_junc[2])][gidx] += 1 #val.get_value()[3]
                 except KeyError:
                     kwargs['junctions'][(info_junc[0], info_junc[1], info_junc[2])] = np.zeros(len(kwargs['group_names']))
-                    kwargs['junctions'][(info_junc[0], info_junc[1], info_junc[2])][gidx] = 1#val.get_value()[3]
+                    kwargs['junctions'][(info_junc[0], info_junc[1], info_junc[2])][gidx] = 1 #val.get_value()[3]
 
             elif val.get_type() == QUEUE_MESSAGE_BUILD_INTRON:
                 info_intron = val.get_value()[:-1]
