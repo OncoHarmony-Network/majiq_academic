@@ -45,7 +45,7 @@
 
                         <select class="spliceGraphSelector exp1" autocomplete="off">
                             {% for experiment in experiments -%}
-                                <option value="{{ gene.get_experiment(loop.index0) | to_json_especial }}">
+                                <option value="{{ gene.get_experiment(experiment) | to_json_especial }}">
                                     {{ experiment }}
                                 </option>
                             {%- endfor %}
