@@ -134,14 +134,18 @@ cdef int merge_exons(db_f, dict exon_dict) except -1:
         ex_start = -1
         ex_end = -1
         nopen = 0
+        elem_mtrx = []
+
         for coord, is_start in ex_list:
             #print(coord, is_start, nopen, ex_start, ex_end)
             if is_start:
                 if ex_end != -1:
                     #print("NEW EXON, ", gne_id, ex_start, ex_end)
-                    _dump_exon(db_f, gne_id, ex_start, ex_end)
+                    elem_mtrx.append([ex_start, ex_end, 1, EX_TYPE])
+                    #_dump_exon(db_f, gne_id, ex_start, ex_end)
                     if nopen > 0 and (ex_end+4) < (coord-1):
-                        _dump_intron(db_f, gne_id, ex_end+1, coord-1, annot=True)
+                        elem_mtrx.append([ex_end+1, coord-1, 1, IR_TYPE])
+                        #_dump_intron(db_f, gne_id, ex_end+1, coord-1, annot=True)
                     ex_end = -1
                     nopen = 0
                     ex_start = coord
@@ -155,7 +159,10 @@ cdef int merge_exons(db_f, dict exon_dict) except -1:
 
         if ex_end != -1:
             #print(gne_id, ex_list)
-            _dump_exon(db_f, gne_id, ex_start, ex_end)
+            elem_mtrx.append([ex_start, ex_end, 1, EX_TYPE])
+            # _dump_exon(db_f, gne_id, ex_start, ex_end)
+
+        _dump_elems_list(db_f, gne_id, np.array(elem_mtrx))
 
 
 #######
@@ -179,14 +186,14 @@ cdef int _dump_junctions(db_f, str gne_id, int start, int end, str transcript_id
         h_jnc.attrs['annotated'] = annot
         #h_jnc.attrs['transcript_id_list'] = [transcript_id.encode('utf8')]
 
-cdef int _dump_exon(db_f, str gne_id, int start, int end, bint annot=True) except -1:
-    cdef str jid = '%s/exons/%s-%s' % (gne_id, start, end)
-
-    if jid not in db_f:
-        h_jnc = db_f.create_group(jid)
-        h_jnc.attrs['start'] = start
-        h_jnc.attrs['end'] = end
-        h_jnc.attrs['annot'] = annot
+# cdef int _dump_exon(db_f, str gne_id, int start, int end, bint annot=True) except -1:
+#     cdef str jid = '%s/exons/%s-%s' % (gne_id, start, end)
+#
+#     if jid not in db_f:
+#         h_jnc = db_f.create_group(jid)
+#         h_jnc.attrs['start'] = start
+#         h_jnc.attrs['end'] = end
+#         h_jnc.attrs['annot'] = annot
 
 
 cdef int _dump_gene(db_f, str gne_id, str gne_name, str chrom, str strand, int start, int end) except -1:
@@ -198,14 +205,17 @@ cdef int _dump_gene(db_f, str gne_id, str gne_name, str chrom, str strand, int s
     h_gen.attrs['start'] = start
     h_gen.attrs['end'] = end
 
+cdef int _dump_elems_list(db_f, str gne_id, np.ndarray mtrx) except -1:
+    db_f[gne_id].create_dataset('db_coords', data=mtrx, maxshape=(None, mtrx.shape[1]))
 
-cdef int _dump_intron(db_f, str gne_id, int start, int end, bint annot=False) except -1:
-    cdef str jid = '%s/ir/%s-%s' % (gne_id, start, end)
-    if jid not in db_f:
-        h_jnc = db_f.create_group(jid)
-        h_jnc.attrs['start'] = start
-        h_jnc.attrs['end'] = end
-        h_jnc.attrs['annotated'] = annot
+
+# cdef int _dump_intron(db_f, str gne_id, int start, int end, bint annot=False) except -1:
+#     cdef str jid = '%s/ir/%s-%s' % (gne_id, start, end)
+#     if jid not in db_f:
+#         h_jnc = db_f.create_group(jid)
+#         h_jnc.attrs['start'] = start
+#         h_jnc.attrs['end'] = end
+#         h_jnc.attrs['annotated'] = annot
 
 
 def junction_to_tmp(gne_id, Junction junc, object hdf5grps):
@@ -285,9 +295,6 @@ def extract_lsv_summary(list files, int minnonzero, int min_reads, dict epsi=Non
         percent = percent + 1 if nfiles % 2 != 0 else percent
     percent = min(int(percent), nfiles)
 
-    print (percent)
-
-
     for fidx, ff in enumerate(files):
         if logger:
             logger.info("Parsing file: %s" % ff)
@@ -324,8 +331,8 @@ cpdef int dump_lsv_coverage(out_f, cov_list, attrs_list):
 def dump_junctions(db_f, str gne_id, int start, int end, str transcript_id='', bint annot=False):
     _dump_junctions(db_f, gne_id, start, end, transcript_id, annot=annot)
 
-def dump_intron(db_f, str gne_id, int start, int end, bint annot=False):
-    _dump_intron(db_f, gne_id, start, end, annot=annot)
+# def dump_intron(db_f, str gne_id, int start, int end, bint annot=False):
+#     _dump_intron(db_f, gne_id, start, end, annot=annot)
 
 cpdef int init_majiq_file(str filename, str out_dir, str genome, int msamples):
 
@@ -409,7 +416,7 @@ cpdef np.ndarray get_covered_junctions(str gne_id, dict dict_junctions, list lis
     return junc_mtrx
 
 
-def retrieve_db_info(str gne_id, str out_dir, list list_exons, dict dict_junctions, list list_introns,
+def retrieve_db_info2(str gne_id, str out_dir, list list_exons, dict dict_junctions, list list_introns,
                      int default_index=-1):
 
     cdef dict j_attrs, ex_attrs
@@ -448,6 +455,54 @@ def retrieve_db_info(str gne_id, str out_dir, list list_exons, dict dict_junctio
                                                                                 annot=ir_attrs['annotated'])
             list_introns.sort(key=lambda xx: (xx.start, xx.end))
     return njuncs
+
+
+def retrieve_db_info(str gne_id, str out_dir, dict dict_junctions,list list_exons, list list_introns,
+                     list denovo_ir=[], int default_index=-1):
+
+    cdef dict j_attrs, ex_attrs
+    cdef Junction junc
+    cdef str xx
+    cdef object db_f
+    cdef int njuncs = 0
+
+    if not denovo_ir:
+        mode = 'r'
+    else:
+        mode = 'r+'
+
+    with h5py.File(get_build_temp_db_filename(out_dir), mode=mode) as db_f:
+
+        for xx in db_f['%s/junctions' % gne_id]:
+            j_attrs = dict(db_f['%s/junctions/%s' % (gne_id, xx)].attrs)
+            njuncs +=1
+            dict_junctions[(j_attrs['start'], j_attrs['end'])] = Junction(j_attrs['start'], j_attrs['end'],
+                                                                          gne_id, default_index,
+                                                                          annot=j_attrs['annotated'])
+
+        mtrx = np.array(db_f['%s/db_coords' % gne_id])
+
+        for idx, row in enumerate(mtrx[mtrx[:, 3] == EX_TYPE, :]):
+            list_exons.append(Exon(row[0], row[1], annot=bool(row[2]), db_idx=idx))
+
+        if list_introns is not None:
+            for row in mtrx[mtrx[:, 3] == IR_TYPE, :]:
+                list_introns.append(Intron(row[0], row[1], annot=bool(row[2]), db_idx=-1))
+
+            if denovo_ir:
+                n_mtrx = np.array(denovo_ir)
+                shp = mtrx.shape
+                shp_new = shp[0] + n_mtrx.shape[0]
+                db_f['%s/db_coords' % gne_id].resize((shp_new, shp[1]))
+                db_f['%s/db_coords' % gne_id][shp[0]:] = n_mtrx
+
+                for ir in denovo_ir:
+                    list_introns.append(Intron(ir[0], ir[1], annot=False, db_idx=-1))
+
+
+    return njuncs
+
+
 
 
 def load_bin_file(filename, logger=None):

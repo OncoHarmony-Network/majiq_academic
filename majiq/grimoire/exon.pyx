@@ -4,7 +4,7 @@ cimport numpy as np
 import numpy as np
 
 cdef class Exon:
-    def __init__(self, start, end, annot=False, intronic=False):
+    def __init__(self, start, end, annot=False, intronic=False, db_idx=-1):
         self.start = start
         self.end = end
         self.annot = annot
@@ -13,12 +13,13 @@ cdef class Exon:
         self.ib = set()
         self.ob = set()
         self.intron = intronic
+        self.db_idx = db_idx
 
 
 cdef class Intron:
 
     num_bins = 10
-    def __init__(self, start, end, annot=False):
+    def __init__(self, start, end, annot=False, db_idx=-1):
 
         self.nchunks = 1 if (end-start) <= MIN_INTRON_LEN else self.num_bins
         self.start = start
@@ -29,13 +30,7 @@ cdef class Intron:
         self.junc2 = None
         self.annot = annot
         self.parts = np.zeros(shape=self.nchunks, dtype=float)
-
-    cdef Exon to_exon(self):
-        ex = Exon(self.start, self.end, annot=False)
-        ex.ib.add(self.junc1)
-        ex.ob.add(self.junc2)
-        ex.intron = True
-        return ex
+        self.db_idx = db_idx
 
 
 # def exon_from_intron(gid, start, end, annot, junc1, junc2, list out_list):
@@ -62,6 +57,7 @@ cdef int new_exon_definition(int start, int end, dict exon_dict, list out_list, 
     cdef int new_exons = 0
     if end - start < 1:
         return 0
+
     ex1 = exon_overlap(exon_dict, start, end)
 
     if inbound_j.intronic and outbound_j.intronic:
@@ -195,3 +191,35 @@ def detect_exons(dict junction_dict, list exon_list):
 
     exon_list = sorted(exon_dict.values(), key=lambda ex: ex.start)
     return new_exons
+
+def expand_introns(str gne_id, list list_introns, list list_exons, dict dict_junctions, int default_index=-1):
+
+    for intron in list_introns:
+
+        for ex in list_exons:
+
+            if ex.start<= intron.start <= (ex.end+1):
+                #print('KK1', intron.start, intron.end, ex.start, ex.end)
+                intron.start = ex.end+1
+                donor_ex = ex
+
+            if (ex.start-1)<= intron.end <= ex.end:
+                intron.end = ex.start
+                acceptor_ex = ex
+
+        ir_ex = Exon(intron.start, intron.end, annot=intron.annot, intronic=True)
+        list_exons.append(ir_ex)
+
+        jj = Junction(intron.start-1, intron.start, gne_id, default_index, intron=True, annot=intron.annot)
+        jj.donor = donor_ex
+        jj.acceptor = ir_ex
+        ir_ex.ib.add(jj)
+        donor_ex.ob.add(jj)
+        dict_junctions[(intron.start-1, intron.start)] = jj
+
+        jj = Junction(intron.end, intron.end+1, gne_id, default_index, intron=True, annot=intron.annot)
+        jj.donor = ir_ex
+        jj.acceptor = acceptor_ex
+        ir_ex.ob.add(jj)
+        acceptor_ex.ib.add(jj)
+        dict_junctions[(intron.end, intron.end+1)] = jj

@@ -10,6 +10,7 @@ cdef class Exon:
     cdef public set ib
     cdef public set ob
     cdef public bint intron
+    cdef int db_idx
 
 cdef class Intron:
     cdef public int nchunks
@@ -23,8 +24,7 @@ cdef class Intron:
     cdef public list junc1_cov
     cdef public list junc2_cov
     cdef public np.ndarray parts
-
-    cdef Exon to_exon(self)
+    cdef int db_idx
 
 
 #(156720572, 156721087, True), (156721031, 156721087, True),

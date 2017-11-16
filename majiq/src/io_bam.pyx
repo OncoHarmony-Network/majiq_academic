@@ -278,13 +278,10 @@ def read_juncs(str fname, bint is_junc_file, dict dict_exons, dict dict_genes, d
                     gid = gobj['id']
                     start_sp = [jj.start for ex in dict_exons[gid] for jj in ex.ob if jj.start > 0 and jj.end > 0]
                     end_sp = [jj.end for ex in dict_exons[gid] for jj in ex.ib if jj.start > 0 and jj.end > 0]
-                    #if junc[0] == 20757728 : print [dict_exons[gid]
                     if junc[0] in start_sp or junc[1] in end_sp:
                         found = True
-                        #junc_obj = Junction(junc[0],  junc[1], gid, -1, annot=False)
                         qm = QueueMessage(QUEUE_MESSAGE_BUILD_JUNCTION, (gid, junc[0], junc[1], gname), 0)
                         queue.put(qm, block=True)
-                       #junctions[gobj['id']][junc[:-1]] = junc_obj
                     else:
                         possible_genes.append(gobj)
                     gidx +=1
@@ -351,57 +348,6 @@ cdef int __intronic_read(AlignedSegment read, junc_start, junc_end, list ref_pos
             return 0
 
 
-
-# cdef int __intronic_read(AlignedSegment read, list ref_pos, Intron intron, str gne_id, list junc_list,
-#                          int effective_len, list matrx, dict junctions) except -1:
-#
-#     cdef int nreads = __get_num_reads(read)
-#     cdef long r_start = read.pos
-#     cdef int indx, readlen = len(read.seq)
-#     cdef int rel_start, intron_idx, left_ind
-#     cdef int offset = readlen - MIN_BP_OVERLAP
-#
-#
-#     if intron.start in ref_pos[MIN_BP_OVERLAP:-MIN_BP_OVERLAP] and intron.start-1 in ref_pos[MIN_BP_OVERLAP:-MIN_BP_OVERLAP]:
-#         # if (intron.start - r_start -1) > readlen :
-#         #     if len(junc_list) >0:
-#         #         r_start = (intron.start-1) - (junc_list[0][0] - r_start)
-#         #     else:
-#         #         return 0
-#
-#
-#         left_ind = _get_left_index(intron.start-1, r_start)
-#         if intron.junc1 is None:
-#             try:
-#                 intron.junc1 = junctions[(intron.start - 1, intron.start)]
-#             except KeyError:
-#                 intron.junc1 = Junction(intron.start - 1, intron.start, gne_id, cov_idx=0, intron=True)
-#             intron.junc1_cov = [0] * effective_len
-#         intron.junc1.update_junction_read(nreads)
-#         intron.junc1_cov[left_ind] += nreads
-#
-#     if intron.end in ref_pos[MIN_BP_OVERLAP:-MIN_BP_OVERLAP] and intron.end+1 in ref_pos[MIN_BP_OVERLAP:-MIN_BP_OVERLAP]:
-#         # if (intron.end - r_start) > readlen:
-#         #     if len(junc_list) >0:
-#         #         r_start = intron.end - (junc_list[0][0] - r_start)
-#         #     else:
-#         #         return 0
-#
-#         left_ind = _get_left_index(intron.end, r_start)
-#
-#         if intron.junc2 is None:
-#             try:
-#                 intron.junc2 = junctions[(intron.end, intron.end+1)]
-#             except KeyError:
-#                 intron.junc2 = Junction(intron.end, intron.end+1, gne_id, cov_idx=0, intron=True)
-#             intron.junc2_cov = [0] * effective_len
-#         intron.junc2.update_junction_read(nreads)
-#         # print(ref_pos)
-#         # print("KKK", left_ind, intron.end, r_start, readlen, junc_list)
-#         intron.junc2_cov[left_ind] += nreads
-
-
-
 @cython.boundscheck(False) # turn off bounds-checking for entire function
 @cython.wraparound(True)  # turn on negative index wrapping for entire function
 
@@ -450,29 +396,6 @@ cdef int _read_sam_or_bam(object gne, AlignmentFile samfl, list matrx, dict junc
                     #junc2
                     __intronic_read(read, intron.end, intron.end+1, ref_pos, junctions,
                                     effective_len, matrx)
-        #
-        #
-        # for intron in intron_list:
-        #     if intron.junc1 is None or intron.junc2 is None:
-        #         del intron
-        #         continue
-        #     #
-        #
-        #     if intron.junc1.nreads >= majiq_config.min_denovo and intron.junc2.nreads >= majiq_config.min_denovo:
-        #
-        #         print ("##\nJUNC1 (%s-%s): %s\n" %(intron.junc1.start, intron.junc1.end, intron.junc1.nreads),
-        #                "JUNC2 (%s-%s): %s" %(intron.junc2.start, intron.junc2.end, intron.junc2.nreads))
-        #         intron.junc1.index = len(matrx)
-        #         matrx.append(intron.junc1_cov)
-        #
-        #         intron.junc2.index = len(matrx)
-        #         matrx.append(intron.junc2_cov)
-        #
-        #         junctions[(intron.junc1.start, intron.junc1.end)] = intron.junc1
-        #         junctions[(intron.junc2.start, intron.junc2.end)] = intron.junc2
-        #         ex = intron.to_exon()
-        #         exon_list.append(ex)
-        #         del intron
 
         return tot_reads
     except ValueError as e:
