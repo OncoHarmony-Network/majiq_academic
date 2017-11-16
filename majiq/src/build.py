@@ -130,7 +130,7 @@ def parse_denovo_elements(pipe_self, logger):
                     try:
                         intron_list[xx[0]].append([xx[1], xx[2], 0, IR_TYPE])
                     except KeyError:
-                        intron_list[xx[0]] = [[xx[1], xx[2]], 0, IR_TYPE]
+                        intron_list[xx[0]] = [[xx[1], xx[2], 0, IR_TYPE]]
 
 
     init_splicegraph(get_builder_splicegraph_filename(majiq_config.outDir))
