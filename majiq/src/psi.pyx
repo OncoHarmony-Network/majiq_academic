@@ -129,10 +129,6 @@ cdef tuple _deltapsi_posterior(np.ndarray psi1, np.ndarray psi2, np.ndarray prio
         # log(p(D_T1(m) | psi_T1)) = SUM_t1 T ( log ( P( D_t1 (m) | psi _T1)))
 
         junc = psi1[:, p_idx, m].sum()
-        #TODO: check this
-
-        # all_sample = np.array([psi1[xx, yy, m].sum() for xx in range(num_exp[0]) for yy in range(num_ways)]).sum()
-        # if all_sample - alls1[m] > 0.00001: print (all_sample, psi1[:,:,m].sum(), alls1[m])
         mu_psi1_m.append(float(junc + alpha_0) / (alls1[m] + alpha_0 + beta_0))
         data_given_psi1 = np.log(_prob_data_sample_given_psi(junc, alls1[m], nbins, alpha_0, beta_0))
 
@@ -140,8 +136,6 @@ cdef tuple _deltapsi_posterior(np.ndarray psi1, np.ndarray psi2, np.ndarray prio
         post_psi1 += np.exp(data_given_psi1 - scipy.misc.logsumexp(data_given_psi1))
 
         junc = psi2[:, p_idx, m].sum()
-        # all_sample = np.array([psi2[xx][yy][m] for xx in range(num_exp[1]) for yy in range(num_ways)]).sum()
-        # if all_sample - alls2[m] > 0.00001: print (all_sample, psi2[:,:,m].sum(), alls2[m])
         mu_psi2_m.append(float(junc + alpha_0) / (alls2[m] + alpha_0 + beta_0))
         data_given_psi2 = np.log(_prob_data_sample_given_psi(junc, alls2[m], nbins, alpha_0, beta_0))
 

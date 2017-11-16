@@ -3,12 +3,6 @@ from majiq.src.constants import *
 from voila import constants as voila_const
 from voila.api import SpliceGraph
 
-
-
-# kk1 = {'start': 91006695, 'end': 91006696, 'intron_retention': 1, 'reads_list': b'0\t0\t0\t0\t0\t0'}
-# kk2 = {'start': 91008171, 'end': 91008172, 'intron_retention': 1, 'reads_list': b'44\t13\t26\t13\t15\t13'}
-# {'start': 91013402, 'end': 91013403, 'intron_retention': 1}
-# {'start': 91013490, 'end': 91013491, 'intron_retention': 1}
 def update_splicegraph_junctions(dict_junctions, junc_mtrx, outDir, exp, lock):
 
     jsum = junc_mtrx.sum(axis=1)
@@ -32,8 +26,9 @@ def init_splicegraph(filename):
         sg.add_experiment_names(majiq_config.exp_list)
 
 
-def gene_to_splicegraph(dict_of_genes, dict_junctions, exon_dict, list_introns, majiq_config, lock):
-    for gne_id, gne in dict_of_genes.items():
+# def gene_to_splicegraph(dict_of_genes, dict_junctions, exon_dict, list_introns, majiq_config, lock):
+def gene_to_splicegraph(gne_id, gne, dict_junctions, exon_dict, list_introns, majiq_config, lock):
+    # for gne_id, gne in dict_of_genes.items():
         junc_list = []
         junc_l = {}
         alt_empty_starts = []
@@ -41,9 +36,9 @@ def gene_to_splicegraph(dict_of_genes, dict_junctions, exon_dict, list_introns, 
         jidx = 0
 
         with SpliceGraph(get_builder_splicegraph_filename(majiq_config.outDir), 'a') as sg:
-            for jid in sorted(dict_junctions[gne_id].keys()):
-                jj = dict_junctions[gne_id][jid]
-                # if jj.intronic: continue
+            for jid in sorted(dict_junctions.keys()):
+                jj = dict_junctions[jid]
+
                 if jj.start == FIRST_LAST_JUNC:
                     alt_empty_starts.append(jj.end)
                     continue
@@ -61,7 +56,9 @@ def gene_to_splicegraph(dict_of_genes, dict_junctions, exon_dict, list_introns, 
                 jidx += 1
 
             exon_list = []
-            for ex in sorted(exon_dict[gne_id], key=lambda x: (x.start, x.end)):
+            for ex in sorted(exon_dict, key=lambda x: (x.start, x.end)):
+                if ex.intron:
+                    continue
 
                 covered = False
                 a3 = []
@@ -97,19 +94,7 @@ def gene_to_splicegraph(dict_of_genes, dict_junctions, exon_dict, list_introns, 
                             annotated=ex.annot, alt_starts=alt_start, alt_ends=alt_ends)
                 )
 
-            for info in list_introns[gne_id]:
-
-                intr_coord = int(info.start)-1
-                # junc_list.append(sg.junction('%s:%s-%s' % (gne_id, intr_coord, info.start), start=intr_coord,
-                #                              end=info.start, transcripts=[],
-                #                              intron_retention=voila_const.IR_TYPE_START))
-                #
-                # a3 = [len(junc_list)-1]
-                # intr_coord = int(info.end)+1
-                # junc_list.append(sg.junction('%s:%s-%s' % (gne_id, info.end, intr_coord), start=info.end, end=intr_coord,
-                #                  transcripts=[], intron_retention=voila_const.IR_TYPE_END))
-                #
-                # a5 = [len(junc_list)-1]
+            for info in list_introns:
 
                 intr_coord = int(info.start)-1
                 a3 = [junc_l[(intr_coord, info.start)]]
@@ -119,15 +104,6 @@ def gene_to_splicegraph(dict_of_genes, dict_junctions, exon_dict, list_introns, 
                              a3=a3, a5=a5, start=info.start, end=info.end, coords_extra=(), intron_retention=True)
 
                 exon_list.append(eg)
-
-            # todo: review this code edit.
-            # ggraph = GeneGraphic(gene_id=gne_id, name=gne['name'], strand=gne['strand'], exons=exon_list,
-            #                      junctions=junc_list, chromosome=gne['chromosome'])
-            #
-            # # lock.acquire()
-            # with SpliceGraph(get_builder_splicegraph_filename(majiq_config.outDir), 'r+') as sg:
-            #     sg.add_gene(ggraph)
-            # # lock.release()
             sg.gene(gne_id, name=gne['name'], strand=gne['strand'], exons=exon_list,
                     junctions=junc_list, chromosome=gne['chromosome'])
 

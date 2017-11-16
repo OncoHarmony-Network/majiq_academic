@@ -12,7 +12,7 @@ from majiq.src.multiproc import QueueMessage, process_conf, queue_manager, proce
 
 import majiq.src.logger as majiq_logger
 import majiq.src.multiproc as majiq_multi
-from majiq.grimoire.exon import detect_exons
+from majiq.grimoire.exon import detect_exons, expand_introns
 from majiq.grimoire.lsv import detect_lsvs
 from majiq.src.basic_pipeline import BasicPipeline, pipeline_run
 from majiq.src.config import Config
@@ -36,8 +36,7 @@ def find_new_junctions(file_list, chunk, process_conf, logger):
     for gne_id, gene_obj in dict_of_genes.items():
         list_exons[gne_id] = []
         dict_junctions[gne_id] = {}
-        majiq_io.retrieve_db_info(gne_id, majiq_config.outDir, list_exons[gne_id],
-                                  dict_junctions[gne_id], None)
+        majiq_io.retrieve_db_info(gne_id, majiq_config.outDir, dict_junctions[gne_id], list_exons[gne_id], None)
         detect_exons(dict_junctions[gne_id], list_exons[gne_id])
 
     for is_junc_file, fname, name in file_list:
@@ -49,22 +48,23 @@ def find_new_junctions(file_list, chunk, process_conf, logger):
 def find_new_introns(file_list, chunk, process_conf, logger):
 
     majiq_config = Config()
-    list_exons = {}
-    dict_junctions = {}
     list_introns = {}
     dict_of_genes = majiq_io.retrieve_db_genes(majiq_config.outDir)
     for gne_id, gene_obj in dict_of_genes.items():
-        list_exons[gne_id] = []
-        dict_junctions[gne_id] = {}
-        majiq_io.retrieve_db_info(gne_id, majiq_config.outDir, list_exons[gne_id],
-                                  dict_junctions[gne_id], None)
+        list_exons = []
+        dict_junctions = {}
+        introns = []
+        majiq_io.retrieve_db_info(gne_id, majiq_config.outDir, dict_junctions, list_exons, introns)
+        range_introns = [range(xx.start, xx.end+1) for xx in introns]
+        del introns
 
-    for gne_id, gene_obj in dict_of_genes.items():
-        detect_exons(dict_junctions[gne_id], list_exons[gne_id])
+        detect_exons(dict_junctions, list_exons)
+
         list_introns.update({(gne_id, gene_obj['chromosome'], gene_obj['strand'],
-                              ex.end + 1, list_exons[gne_id][id_ex + 1].start - 1): 0
-                             for id_ex, ex in enumerate(list_exons[gne_id][:-1])
-                             if ex.end + 3 < list_exons[gne_id][id_ex + 1].start - 1})
+                              ex.end + 1, list_exons[id_ex + 1].start - 1): 0
+                             for id_ex, ex in enumerate(list_exons[:-1])
+                             if (ex.end + 3 < list_exons[id_ex + 1].start - 1 and
+                                 not np.any([(ex.end + 1) in xx for xx in range_introns]))})
 
     for is_junc_file, fname, name in file_list:
         logger.info('READ introns from %s' % fname)
@@ -76,9 +76,7 @@ def parse_denovo_elements(pipe_self, logger):
     majiq_config = Config()
     min_experiments = 2 if majiq_config.min_exp == -1 else majiq_config.min_exp
     dict_of_genes = majiq_io.retrieve_db_genes(majiq_config.outDir)
-    list_exons = {}
-    dict_junctions = {}
-    list_introns = {}
+    intron_list = {}
 
     # nthreads = min(pipe_self.nthreads, len(majiq_config.sam_list))
 
@@ -123,27 +121,35 @@ def parse_denovo_elements(pipe_self, logger):
                                  majiq_multi.chunks(majiq_config.juncfile_list, lchnksize, range(nthreads)))
             pool2.close()
 
-            with h5py.File(get_build_temp_db_filename(majiq_config.outDir), "r+") as db_f:
-                denovo_introns = {}
-                queue_manager(db_f, pipe_self.lock, pipe_self.queue, num_chunks=nthreads, logger=logger,
-                              introns=denovo_introns, group_names=group_names)
-                pool2.join()
-                for info, vv in denovo_introns.items():
-                    if np.any(vv >= min_experiments):
-                        majiq_io.dump_intron(db_f, info[0], info[1], info[2], annot=False)
+            new_ir = {}
+            queue_manager(db_f, pipe_self.lock, pipe_self.queue, num_chunks=nthreads, logger=logger,
+                          introns=new_ir, group_names=group_names)
+            pool2.join()
+            for xx in new_ir.keys():
+                if np.any(new_ir[xx] >= min_experiments):
+                    try:
+                        intron_list[xx[0]].append([xx[1], xx[2], 0, IR_TYPE])
+                    except KeyError:
+                        intron_list[xx[0]] = [[xx[1], xx[2]], 0, IR_TYPE]
 
-    for gne_id, gene_obj in dict_of_genes.items():
-        list_exons[gne_id] = []
-        dict_junctions[gne_id] = {}
-        list_introns[gne_id] = []
-        majiq_io.retrieve_db_info(gne_id, majiq_config.outDir, list_exons[gne_id],
-                                  dict_junctions[gne_id],
-                                  list_introns[gne_id])
-        detect_exons(dict_junctions[gne_id], list_exons[gne_id])
 
     init_splicegraph(get_builder_splicegraph_filename(majiq_config.outDir))
 
-    gene_to_splicegraph(dict_of_genes, dict_junctions, list_exons, list_introns, majiq_config, None)
+    for gne_id, gene_obj in dict_of_genes.items():
+        list_exons = []
+        dict_junctions = {}
+        list_introns = []
+
+        try:
+            majiq_io.retrieve_db_info(gne_id, majiq_config.outDir, dict_junctions, list_exons, list_introns,
+                                      denovo_ir=intron_list[gne_id])
+        except KeyError:
+            majiq_io.retrieve_db_info(gne_id, majiq_config.outDir, dict_junctions, list_exons, list_introns)
+
+        detect_exons(dict_junctions, list_exons)
+        if majiq_config.ir:
+            expand_introns(gne_id, list_introns, list_exons, dict_junctions)
+        gene_to_splicegraph(gne_id, gene_obj, dict_junctions, list_exons, list_introns, majiq_config, None)
 
 
 def parsing_files(sam_file_list, chnk, process_conf, logger):
@@ -161,10 +167,11 @@ def parsing_files(sam_file_list, chnk, process_conf, logger):
         list_exons[gne_id] = []
         dict_junctions[gne_id] = {}
         list_introns[gne_id] = []
-        majiq_io.retrieve_db_info(gne_id, majiq_config.outDir, list_exons[gne_id],
-                                  dict_junctions[gne_id],
+        majiq_io.retrieve_db_info(gne_id, majiq_config.outDir, dict_junctions[gne_id], list_exons[gne_id],
                                   list_introns[gne_id], default_index=0)
         detect_exons(dict_junctions[gne_id], list_exons[gne_id])
+        if majiq_config.ir:
+            expand_introns(gne_id, list_introns[gne_id], list_exons[gne_id], dict_junctions[gne_id], default_index=0)
 
     for sam_file in sam_file_list:
         logger.info("[%s] Starting new file" % sam_file)
