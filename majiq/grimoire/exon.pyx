@@ -198,13 +198,13 @@ def expand_introns(str gne_id, list list_introns, list list_exons, dict dict_jun
 
         for ex in list_exons:
 
-            if ex.start<= intron.start <= (ex.end+1):
+            if ex.end != -1 and ex.start<= intron.start <= (ex.end+1) :
                 #print('KK1', intron.start, intron.end, ex.start, ex.end)
-                intron.start = ex.end+1
+                intron.start = ex.end + 1
                 donor_ex = ex
 
-            if (ex.start-1)<= intron.end <= ex.end:
-                intron.end = ex.start
+            if ex.start != -1 and (ex.start-1)<= intron.end <= ex.end:
+                intron.end = ex.start - 1
                 acceptor_ex = ex
 
         ir_ex = Exon(intron.start, intron.end, annot=intron.annot, intronic=True)
