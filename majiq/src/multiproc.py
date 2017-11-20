@@ -54,8 +54,9 @@ def chunks(l, n_chunks):
 
     rem_len = len(l)
     n = 0
+    prev_n = 0
     for ii in range(n_chunks):
-        prev_n = n
+        prev_n += n
         rem_len = rem_len - n
         n = int(rem_len / (n_chunks - ii))
         yield (l[prev_n:prev_n+n], ii)

@@ -342,7 +342,7 @@ def calc_local_weights(divs, rho, local):
         lsv = divs[ii, :]
         for rep, dist in enumerate(lsv):
             p_given_rep = ((divs >= (dist - local)) & (divs <= (dist + local))).mean(axis=0)
-            p_given_signal = rho.dot(p_given_rep)
+            p_given_signal = rho.dot(p_given_rep) / rho.sum()
             cur_wt[ii, rep] = np.clip(p_given_signal / p_given_rep[rep], 0, 1)
     cur_wt = np.array(cur_wt)
     return cur_wt.squeeze()

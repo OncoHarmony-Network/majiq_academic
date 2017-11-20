@@ -34,7 +34,7 @@ class Weights(BasicPipeline):
         self.nbins = 40
         self.weights = 'auto'
 
-        lock_arr = [mp.Lock() for xx in range(self.nthreads)]
+        self.lock = [mp.Lock() for xx in range(self.nthreads)]
         q = mp.Queue()
         lsv_dict, lsv_types, lsv_summarized, meta = majiq_io.extract_lsv_summary(self.files)
 
@@ -42,9 +42,7 @@ class Weights(BasicPipeline):
                                                     minnonzero=self.minpos, min_reads=self.minreads,
                                                     percent=self.min_exp, logger=self.logger)
 
-        lchnksize = max(len(list_of_lsv)/self.nthreads, 1) + 1
-        weights = self.calc_weights(self.weights, self.files, list_of_lsv, lock_arr, lchnksize, q,
-                                    self.name, store=False)
+        weights = self.calc_weights(self.weights, self.files, list_of_lsv, self.lock, q, self.name)
 
         self.logger.info("Weights for %s are %s" %(self.name, weights))
         self.logger.info("Weights calculation ended succesfully!")

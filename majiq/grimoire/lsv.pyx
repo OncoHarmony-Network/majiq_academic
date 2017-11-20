@@ -4,6 +4,7 @@ from majiq.src.constants import *
 from majiq.src.sample import sample_from_junctions
 from majiq.grimoire.exon cimport Exon
 from majiq.grimoire.junction cimport Junction
+from majiq.src.normalize import mark_stacks
 
 from voila.constants import *
 from voila.splice_graphics import ExonGraphic, LsvGraphic, JunctionGraphic
@@ -153,6 +154,8 @@ cdef class LSV:
 
         ex_index = [xx.index for xx in self.junctions]
         cover = junc_mtrx[ex_index]
+
+        mark_stacks(cover, fitfunc_r, majiq_config.markstacks)
 
         s_lsv = sample_from_junctions(junction_list=cover,
                                       m=majiq_config.m,

@@ -70,26 +70,23 @@ class BasicPipeline:
                 self.logger.debug("Fitting NB function with constitutive events...")
             return fit_nb(const_junctions, "%s/nbfit" % self.outDir, self.plotpath, logger=self.logger)
 
-    def calc_weights(self, weight_type, file_list, list_of_lsv, lchnksize, name, store=True, logger=None):
+    def calc_weights(self, weight_type, file_list, list_of_lsv, name, store=True, logger=None):
 
         if weight_type.lower() == WEIGTHS_AUTO and len(file_list) >= 3:
             """ Calculate bootstraps samples and weights """
-
+            nthreads = min(self.nthreads, len(list_of_lsv))
             self.files = file_list
-            pool = mp.Pool(processes=self.nthreads, initializer=process_conf,
+            pool = mp.Pool(processes=nthreads, initializer=process_conf,
                            initargs=[bootstrap_samples_with_divs, self],
                            maxtasksperchild=1)
 
-
             [xx.acquire() for xx in self.lock]
-            pool.map_async(process_wrapper,
-                           chunks(list_of_lsv, lchnksize, extra=range(self.nthreads)))
+            pool.map_async(process_wrapper, chunks(list_of_lsv, nthreads))
             pool.close()
             divs = []
             lsvs = []
             queue_manager(input_h5dfp=None, output_h5dfp=None, lock_array=self.lock, result_queue=self.queue,
-                          num_chunks=self.nthreads, out_inplace=(lsvs, divs),
-                          logger=logger)
+                          num_chunks=nthreads, out_inplace=(lsvs, divs), logger=logger)
             pool.join()
             lsvs = {xx: vv for xx, vv in enumerate(lsvs)}
             divs = np.array(divs)
@@ -97,8 +94,10 @@ class BasicPipeline:
                                      nreps=len(file_list), logger=self.logger)
 
             wgts = calc_local_weights(divs, rho, self.local)
-            if store:
+            if logger is not None:
+                logger.info('Global weights for %s are: %s' % (name, ','.join([str(x) for x in rho])))
 
+            if store:
                 majiq_io.store_weights_bootstrap(lsvs, wgts, file_list, self.outDir, name)
                 wgts = None
             else:

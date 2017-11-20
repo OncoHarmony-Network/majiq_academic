@@ -65,16 +65,16 @@ class CalcPsi(BasicPipeline):
         list_of_lsv, lsv_dict_graph = majiq_io.extract_lsv_summary(self.files, minnonzero=self.minpos,
                                                                    min_reads=self.minreads, percent=self.min_exp,
                                                                    logger=logger)
-
-        lchnksize = max(len(list_of_lsv) / self.nthreads, 1) + 1
-        weights = self.calc_weights(self.weights, self.files, list_of_lsv, self.lock, lchnksize, self.queue, self.name)
+        nthreads = min(self.nthreads, len(list_of_lsv))
+        weights = self.calc_weights(self.weights, self.files, list_of_lsv, self.lock, self.queue, self.name)
         self.weights = weights
 
         if len(list_of_lsv) > 0:
-            pool = mp.Pool(processes=self.nthreads, initializer=process_conf, initargs=[psi_quantification, self],
+
+            pool = mp.Pool(processes=nthreads, initializer=process_conf, initargs=[psi_quantification, self],
                            maxtasksperchild=1)
             [xx.acquire() for xx in self.lock]
-            nthreads = min(self.nthreads, len(list_of_lsv))
+
             pool.map_async(process_wrapper, chunks(list_of_lsv, nthreads))
             pool.close()
             with Voila(get_quantifier_voila_filename(self.outDir, self.name), 'w') as out_h5p:
@@ -82,7 +82,7 @@ class CalcPsi(BasicPipeline):
                 out_h5p.set_analysis_type(ANALYSIS_PSI)
                 out_h5p.add_experiments(group_name=self.name, experiment_names=meta['experiments'])
 
-                queue_manager(out_h5p, self.lock, self.queue, num_chunks=self.nthreads,
+                queue_manager(out_h5p, self.lock, self.queue, num_chunks=nthreads,
                               list_of_lsv_graphics=lsv_dict_graph, logger=logger)
 
             pool.join()

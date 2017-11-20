@@ -89,7 +89,6 @@ cdef inline bint __valid_intron_read(AlignedSegment read):
 
 cdef str gstrand
 
-
 cpdef int find_introns(str filename, dict list_introns, float intron_threshold, queue, str gname) except -1:
 
     cdef AlignedSegment read
@@ -128,8 +127,6 @@ cpdef int find_introns(str filename, dict list_introns, float intron_threshold, 
             except KeyError:
                 detected_introns[(gne_id, i_str, i_end, chk_len)] = np.zeros(shape=nchunks, dtype=np.float)
                 detected_introns[(gne_id, i_str, i_end, chk_len)][offs] += 1
-
-
 
     for introns, cover in detected_introns.items():
         cover = cover/chk_len
