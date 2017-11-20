@@ -50,6 +50,7 @@ def find_new_introns(file_list, chunk, process_conf, logger):
     majiq_config = Config()
     list_introns = {}
     dict_of_genes = majiq_io.retrieve_db_genes(majiq_config.outDir)
+    num_bins = 10
     for gne_id, gene_obj in dict_of_genes.items():
         list_exons = []
         dict_junctions = {}
@@ -60,12 +61,28 @@ def find_new_introns(file_list, chunk, process_conf, logger):
 
         detect_exons(dict_junctions, list_exons)
 
-        list_introns.update({(gne_id, gene_obj['chromosome'], gene_obj['strand'],
-                              ex.end + 1, list_exons[id_ex + 1].start - 1): 0
-                             for id_ex, ex in enumerate(list_exons[:-1])
-                             if (ex.end + 3 < list_exons[id_ex + 1].start - 1
-                                 and ex.end != -1 and list_exons[id_ex + 1].start != -1
-                                 and not np.any([(ex.end + 1) in xx for xx in range_introns]))})
+        for id_ex, ex in enumerate(list_exons[:-1]):
+            if (ex.end + 3 < list_exons[id_ex + 1].start - 1 and ex.end != -1 and list_exons[id_ex + 1].start != -1
+               and not np.any([(ex.end + 1) in xx for xx in range_introns])):
+
+                ilen = (list_exons[id_ex + 1].start - 1) - (ex.end + 1)
+                nchunks = 1 if ilen <= MIN_INTRON_LEN else num_bins
+                chunk_len = int(ilen / nchunks)+1
+
+                try:
+                    list_introns[gene_obj['chromosome']].append((gne_id, gene_obj['strand'], ex.end + 1,
+                                                                list_exons[id_ex + 1].start - 1, nchunks, chunk_len))
+                except KeyError:
+                    list_introns[gene_obj['chromosome']] = [(gne_id, gene_obj['strand'], ex.end + 1,
+                                                                list_exons[id_ex + 1].start - 1, nchunks, chunk_len)]
+
+
+        # list_introns.update({(gne_id, gene_obj['chromosome'], gene_obj['strand'],
+        #                       ex.end + 1, list_exons[id_ex + 1].start - 1): 0
+        #                      for id_ex, ex in enumerate(list_exons[:-1])
+        #                      if (ex.end + 3 < list_exons[id_ex + 1].start - 1
+        #                          and ex.end != -1 and list_exons[id_ex + 1].start != -1
+        #                          and not np.any([(ex.end + 1) in xx for xx in range_introns]))})
 
     for is_junc_file, fname, name in file_list:
         logger.info('READ introns from %s' % fname)
@@ -83,8 +100,7 @@ def parse_denovo_elements(pipe_self, logger):
 
     if majiq_config.denovo:
 
-        lchnksize = math.ceil(len(majiq_config.sam_list) / pipe_self.nthreads)
-        nthreads = min(pipe_self.nthreads, math.ceil(len(majiq_config.sam_list) / lchnksize))
+        nthreads = min(pipe_self.nthreads, len(majiq_config.sam_list))
         logger.info("Create %s processes" % nthreads)
         pipe_self.lock = [mp.Lock() for _ in range(nthreads)]
 
@@ -96,7 +112,7 @@ def parse_denovo_elements(pipe_self, logger):
 
         [xx.acquire() for xx in pipe_self.lock]
         pool1.imap_unordered(majiq_multi.process_wrapper,
-                             majiq_multi.chunks(majiq_config.juncfile_list, lchnksize, range(nthreads)))
+                             majiq_multi.chunks(majiq_config.juncfile_list, nthreads))
         pool1.close()
 
         group_names = {}
@@ -119,7 +135,7 @@ def parse_denovo_elements(pipe_self, logger):
         if majiq_config.ir:
             [xx.acquire() for xx in pipe_self.lock]
             pool2.imap_unordered(majiq_multi.process_wrapper,
-                                 majiq_multi.chunks(majiq_config.juncfile_list, lchnksize, range(nthreads)))
+                                 majiq_multi.chunks(majiq_config.juncfile_list, nthreads))
             pool2.close()
 
             new_ir = {}
@@ -289,17 +305,17 @@ class Builder(BasicPipeline):
         p.join()
 
         logger.info("Parsing seq files")
-
+        self.lock = mp.Lock()
         if self.nthreads > 1:
-            self.lock = mp.Lock()
+
             pool = mp.Pool(processes=self.nthreads,
                            initializer=majiq_multi.process_conf,
                            initargs=[parsing_files, self],
                            maxtasksperchild=1)
 
-            lchnksize = max(int(len(majiq_config.sam_list)/self.nthreads), 1) + 1
+            nthreads = min(self.nthreads, len(majiq_config.sam_list))
             pool.imap_unordered(majiq_multi.process_wrapper,
-                                majiq_multi.chunks(majiq_config.sam_list, lchnksize, range(self.nthreads)))
+                                majiq_multi.chunks(majiq_config.sam_list, nthreads))
             pool.close()
             pool.join()
         else:

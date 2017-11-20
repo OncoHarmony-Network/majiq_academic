@@ -89,56 +89,108 @@ cdef inline bint __valid_intron_read(AlignedSegment read):
 
 cdef str gstrand
 
-import time, datetime
+
 cpdef int find_introns(str filename, dict list_introns, float intron_threshold, queue, str gname) except -1:
 
+    cdef AlignedSegment read
     cdef AlignmentFile samfl
-    cdef int nchunks, chunk_len
-    cdef bint b_included
-    cdef int intron_len, i_st, i_nd, val, ibin, num_bins = 10
-    cdef str chrom, strand
-    cdef np.ndarray intron_bins
-    cdef PileupColumn pile
-    cdef PileupRead xx
-    global gstrand
+    cdef int readlen
+    cdef bint is_cross
+    cdef dict detected_introns = {}
+    cdef list junc_list, chrom_list
+    cdef int i_str, i_end, nchunks, chk_len, offs, rend
+    cdef tuple introns
+    cdef str strand, gne_id
+    cdef np.ndarray cover
 
     samfl = open_rnaseq(filename)
+    read_iter = samfl.fetch(until_eof=True)
 
+    detected_introns = {}
 
-    for gne_id, chrom, strand, i_st, i_nd in list_introns.keys():
-        # ts = time.time()
-        # st = datetime.datetime.fromtimestamp(ts).strftime('%Y-%m-%d %H:%M:%S')
-        # #print(st, gne_id, chrom, i_st, i_nd)
-        intron_len = (i_nd - i_st)
-        nchunks = 1 if intron_len <= MIN_INTRON_LEN else num_bins
+    for read in read_iter:
+        chrom = samfl.getrname(read.reference_id)
+        is_cross, junc_list, rend = __cross_junctions(read)
+        if not __is_unique(read) or is_cross or chrom not in list_introns.keys() :
+            continue
 
-        chunk_len = int(intron_len / nchunks)+1
-        b_included = False
+        overlap = len(read.seq) - MIN_BP_OVERLAP
+        for gne_id, strand, i_str, i_end, nchunks, chk_len in list_introns[chrom]:
 
-        for ii in range(nchunks):
-            lb = i_st + ii*chunk_len
-            ub = i_st + (ii+1)*chunk_len -1
-            ub = min(ub, i_nd)
+            if read.pos <= (i_str - overlap) or not _match_strand(read, gene_strand=strand):
+                break
+            elif read.pos >= i_end:
+                continue
+
+            offs = max(0, int((read.pos - i_str) / chk_len))
             try:
-                gstrand = strand
-                val = samfl.count(contig=chrom, start=lb, stop=ub, until_eof=True,
-                                  read_callback=__valid_intron_read, reference=None, end=None)
-            except ValueError as e:
-                b_included = False
-                break
+                detected_introns[(gne_id, i_str, i_end, chk_len)][offs] += 1
+            except KeyError:
+                detected_introns[(gne_id, i_str, i_end, chk_len)] = np.zeros(shape=nchunks, dtype=np.float)
+                detected_introns[(gne_id, i_str, i_end, chk_len)][offs] += 1
 
-            val /= (ub-lb)
-            b_included = (val>=intron_threshold)
-            if not b_included:
-                break
 
-        if b_included :
-            qm = QueueMessage(QUEUE_MESSAGE_BUILD_INTRON, (gne_id, i_st, i_nd, gname), 0)
-            queue.put(qm, block=True)
-            #list_introns[(gne_id, chrom, strand, i_st, i_nd)] += 1
+
+    for introns, cover in detected_introns.items():
+        cover = cover/chk_len
+        if np.any(cover < intron_threshold):
+            continue
+
+        qm = QueueMessage(QUEUE_MESSAGE_BUILD_INTRON, (introns[0], introns[1], introns[2], gname), 0)
+        queue.put(qm, block=True)
 
     samfl.close()
     return 0
+
+
+
+# cpdef int find_introns2(str filename, dict list_introns, float intron_threshold, queue, str gname) except -1:
+#
+#     cdef AlignmentFile samfl
+#     cdef int nchunks, chunk_len
+#     cdef bint b_included
+#     cdef int intron_len, i_st, i_nd, val, ibin, num_bins = 10
+#     cdef str chrom, strand
+#     cdef np.ndarray intron_bins
+#     cdef PileupColumn pile
+#     cdef PileupRead xx
+#     global gstrand
+#
+#     samfl = open_rnaseq(filename)
+#
+#
+#     for gne_id, chrom, strand, i_st, i_nd in list_introns.keys():
+#
+#         intron_len = (i_nd - i_st)
+#         nchunks = 1 if intron_len <= MIN_INTRON_LEN else num_bins
+#
+#         chunk_len = int(intron_len / nchunks)+1
+#         b_included = False
+#
+#         for ii in range(nchunks):
+#             lb = i_st + ii*chunk_len
+#             ub = i_st + (ii+1)*chunk_len -1
+#             ub = min(ub, i_nd)
+#             try:
+#                 gstrand = strand
+#                 val = samfl.count(contig=chrom, start=lb, stop=ub, until_eof=True,
+#                                   read_callback=__valid_intron_read, reference=None, end=None)
+#             except ValueError as e:
+#                 b_included = False
+#                 break
+#
+#             val /= (ub-lb)
+#             b_included = (val>=intron_threshold)
+#             if not b_included:
+#                 break
+#
+#         if b_included :
+#             qm = QueueMessage(QUEUE_MESSAGE_BUILD_INTRON, (gne_id, i_st, i_nd, gname), 0)
+#             queue.put(qm, block=True)
+#             #list_introns[(gne_id, chrom, strand, i_st, i_nd)] += 1
+#
+#     samfl.close()
+#     return 0
 
 
 cdef inline dict __read_STAR_junc_file(str filename, set in_jj, bint stranded):
@@ -179,10 +231,12 @@ cdef dict __read_juncs_from_bam(str filename, set in_jj, bint stranded):
     cdef int readlen
     cdef bint is_cross
     cdef dict out_dd = {}
-    cdef list junc_list
+    cdef list junc_list, chrom_list
     cdef int junc_start, junc_end, rend
     cdef tuple jid, jid2
     cdef str strand
+
+    chrom_list = [xx[0] for xx in in_jj]
 
     samfl = open_rnaseq(filename)
     read_iter = samfl.fetch(until_eof=True)
@@ -190,9 +244,10 @@ cdef dict __read_juncs_from_bam(str filename, set in_jj, bint stranded):
 
     for read in read_iter:
         is_cross, junc_list, rend = __cross_junctions(read)
-        if not __is_unique(read) or not is_cross:
-            continue
         chrom = samfl.getrname(read.reference_id)
+        if not __is_unique(read) or not is_cross or chrom not in chrom_list:
+            continue
+
         readlen = len(read.seq)
         for junc_start, junc_end in junc_list:
 

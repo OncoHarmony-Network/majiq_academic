@@ -74,8 +74,8 @@ class CalcPsi(BasicPipeline):
             pool = mp.Pool(processes=self.nthreads, initializer=process_conf, initargs=[psi_quantification, self],
                            maxtasksperchild=1)
             [xx.acquire() for xx in self.lock]
-
-            pool.map_async(process_wrapper, chunks(list_of_lsv, lchnksize, extra=range(self.nthreads)))
+            nthreads = min(self.nthreads, len(list_of_lsv))
+            pool.map_async(process_wrapper, chunks(list_of_lsv, nthreads))
             pool.close()
             with Voila(get_quantifier_voila_filename(self.outDir, self.name), 'w') as out_h5p:
                 out_h5p.add_genome(meta['genome'])
