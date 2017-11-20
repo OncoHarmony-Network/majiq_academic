@@ -155,7 +155,7 @@ cdef class LSV:
         ex_index = [xx.index for xx in self.junctions]
         cover = junc_mtrx[ex_index]
 
-        mark_stacks(cover, fitfunc_r, majiq_config.markstacks)
+        mark_stacks(cover, fitfunc_r, majiq_config.pvalue_limit)
 
         s_lsv = sample_from_junctions(junction_list=cover,
                                       m=majiq_config.m,
