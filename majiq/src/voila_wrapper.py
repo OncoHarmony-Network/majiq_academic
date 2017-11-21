@@ -27,7 +27,7 @@ def init_splicegraph(filename):
 
 
 # def gene_to_splicegraph(dict_of_genes, dict_junctions, exon_dict, list_introns, majiq_config, lock):
-def gene_to_splicegraph(gne_id, gne, dict_junctions, exon_dict, list_introns, majiq_config, lock):
+def gene_to_splicegraph(gne_id, gne, dict_junctions, exon_dict, list_introns, majiq_config):
     # for gne_id, gne in dict_of_genes.items():
         junc_list = []
         junc_l = {}

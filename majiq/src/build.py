@@ -149,14 +149,13 @@ def parse_denovo_elements(pipe_self, logger):
                     except KeyError:
                         intron_list[xx[0]] = [[xx[1], xx[2], 0, IR_TYPE]]
 
-
     init_splicegraph(get_builder_splicegraph_filename(majiq_config.outDir))
 
     for gne_id, gene_obj in dict_of_genes.items():
+        logger.info("New Gene %s" % gne_id)
         list_exons = []
         dict_junctions = {}
         list_introns = []
-
         try:
             majiq_io.retrieve_db_info(gne_id, majiq_config.outDir, dict_junctions, list_exons, list_introns,
                                       denovo_ir=intron_list[gne_id])
@@ -166,7 +165,7 @@ def parse_denovo_elements(pipe_self, logger):
         detect_exons(dict_junctions, list_exons)
         if majiq_config.ir:
             expand_introns(gne_id, list_introns, list_exons, dict_junctions)
-        gene_to_splicegraph(gne_id, gene_obj, dict_junctions, list_exons, list_introns, majiq_config, None)
+        gene_to_splicegraph(gne_id, gene_obj, dict_junctions, list_exons, list_introns, majiq_config)
 
 
 def parsing_files(sam_file_list, chnk, process_conf, logger):

@@ -46,28 +46,22 @@ cdef float get_negbinom_pval(float one_over_r, float mu, float x):
 
 @cython.boundscheck(False) # turn off bounds-checking for entire function
 @cython.wraparound(False)  # turn off negative index wrapping for entire function
-cdef list _calc_pvalues(np.ndarray junctions, float one_over_r, object indices_list=None):
-    cdef list pvalues
-    cdef float mu
-    cdef int ljunc, jpos
-    cdef np.ndarray junc
+cdef list _calc_pvalues(np.ndarray junctions, float one_over_r, object indices_list):
+    cdef list pvalues,
+    cdef int njuncs, idx
+    cdef np.ndarray junc_fltr, junc_idxs, vals, mu, xx
 
-    pvalues = []
-    for i, junc in enumerate(junctions):
-        if indices_list is None:
-            junc = junc[junc.nonzero()]
-            jpos = random.choice(junc)
-        else:
-            jpos = junc[indices_list[i]]
+    vals = np.count_nonzero(junctions, axis=1)
+    junc_fltr = junctions[vals > 1]
+    junc_idxs = np.array([xx[indices_list[idx]] for idx, xx in enumerate(junc_fltr)])
+    vals = vals[vals > 1] - 1
+    njuncs = vals.shape[0]
 
-        ljunc = len(junc.nonzero()[0])
-        if ljunc == 1:
-            continue
-        mu = float(junc.sum() - jpos) / float(ljunc - 1)
-        pval = get_negbinom_pval(one_over_r, mu, jpos)
-        pvalues.append(pval)
+    mu = (junc_fltr.sum(axis=1) - junc_idxs) / vals
+    pvalues = [get_negbinom_pval(one_over_r, mu[idx], junc_idxs[idx]) for idx in range(njuncs)]
 
     return pvalues
+
 
 @cython.boundscheck(False) # turn off bounds-checking for entire function
 @cython.wraparound(False)  # turn off negative index wrapping for entire function
@@ -123,7 +117,7 @@ cdef tuple _adjust_fit(float starting_a, np.ndarray junctions, float precision, 
 @cython.boundscheck(False) # turn off bounds-checking for entire function
 @cython.wraparound(False)  # turn off negative index wrapping for entire function
 cpdef float fit_nb(np.ndarray junctionl, str outpath, float nbdisp=0.1, object logger=None) except -1:
-    cdef np.ndarray junctions, indices, mean_junc, std_junc, ecdf
+    cdef np.ndarray indices, mean_junc, std_junc, ecdf
     cdef list precision_values, pvalues
     cdef float one_over_r0, b, one_over_r, score, precision
     cdef int i
@@ -134,8 +128,12 @@ cpdef float fit_nb(np.ndarray junctionl, str outpath, float nbdisp=0.1, object l
     if junctionl.shape[0] < 10:
         logger.warning("Your dataset is not deep enougth to define an apropiate NB factor. The default 0 is given")
         return 0.0
+    if junctionl.shape[0] < 5000:
+        junctions = junctionl
+    else:
+        junctions = junctionl[np.random.choice(junctionl.shape[0], 5000)]
 
-    junctions = masked_less(junctionl, 0.1)
+    #junctions = masked_less(junctionl, 0.1)
     mean_junc = junctions.mean(axis=1)
     std_junc = junctions.std(axis=1)
 
@@ -143,9 +141,7 @@ cpdef float fit_nb(np.ndarray junctionl, str outpath, float nbdisp=0.1, object l
     for i, jj in enumerate(junctions):
         jji = jj.nonzero()
         indices[i] = np.random.choice(jji[0])
-
     # linear regression, retrieve the a and the b plus
-
     one_over_r0, b = np.polyfit(mean_junc, std_junc, 1)
 
     pvalues = _calc_pvalues(junctions, one_over_r0, indices)
