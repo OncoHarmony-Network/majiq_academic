@@ -122,23 +122,25 @@ cdef tuple _deltapsi_posterior(np.ndarray psi1, np.ndarray psi2, np.ndarray prio
     cdef float mu_psi1, mu_psi2
     cdef np.ndarray alls1, alls2
 
-    alls1 = psi1.sum(axis=(0,1))
-    alls2 = psi2.sum(axis=(0,1))
+    alls1 = np.around(psi1.sum(axis=(0,1)))
+    alls2 = np.around(psi2.sum(axis=(0,1)))
 
     for m in range(m_samples):
         # log(p(D_T1(m) | psi_T1)) = SUM_t1 T ( log ( P( D_t1 (m) | psi _T1)))
 
-        junc = psi1[:, p_idx, m].sum()
+        junc = np.around(psi1[:, p_idx, m].sum())
         mu_psi1_m.append(float(junc + alpha_0) / (alls1[m] + alpha_0 + beta_0))
         data_given_psi1 = np.log(_prob_data_sample_given_psi(junc, alls1[m], nbins, alpha_0, beta_0))
+        #print("1", junc, alls1[m], data_given_psi1)
+
 
         psi_v1 = data_given_psi1.reshape(nbins, -1)
         post_psi1 += np.exp(data_given_psi1 - scipy.misc.logsumexp(data_given_psi1))
 
-        junc = psi2[:, p_idx, m].sum()
+
+        junc = np.around(psi2[:, p_idx, m].sum())
         mu_psi2_m.append(float(junc + alpha_0) / (alls2[m] + alpha_0 + beta_0))
         data_given_psi2 = np.log(_prob_data_sample_given_psi(junc, alls2[m], nbins, alpha_0, beta_0))
-
         post_psi2 += np.exp(data_given_psi2 - scipy.misc.logsumexp(data_given_psi2))
         psi_v2 = data_given_psi2.reshape(-1, nbins)
 
@@ -146,6 +148,8 @@ cdef tuple _deltapsi_posterior(np.ndarray psi1, np.ndarray psi2, np.ndarray prio
         posterior += np.exp(A - scipy.misc.logsumexp(A))
 
 
+
+    #print (posterior, post_psi1, mu_psi1_m, m_samples)
     mu_psi1 = np.median(mu_psi1_m)
     mu_psi2 = np.median(mu_psi2_m)
     posterior /= m_samples
@@ -230,8 +234,8 @@ cpdef tuple deltapsi_posterior(np.ndarray psi1, np.ndarray psi2, np.ndarray prio
     alpha_prior, beta_prior = _get_prior_params(lsv_type, num_ways)
     prior_idx = 1 if 'i' in lsv_type else 0
     for p_idx in range(num_ways):
-        vals = _deltapsi_posterior(psi1, psi2, prior_matrix[prior_idx], p_idx, m, num_exp, num_ways, nbins,
-                                   alpha_prior[p_idx], beta_prior[p_idx])
+        vals = _deltapsi_posterior(np.around(psi1, decimals=2), np.around(psi2, decimals=2), prior_matrix[prior_idx],
+                                   p_idx, m, num_exp, num_ways, nbins, alpha_prior[p_idx], beta_prior[p_idx])
 
         mu_psi1.append(vals[0])
         mu_psi2.append(vals[1])
