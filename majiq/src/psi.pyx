@@ -47,7 +47,7 @@ cdef np.ndarray _prob_data_sample_given_psi(float sample, float all_sample, int 
 
     bsize = 1.0 / float(nbins)
     psi_border = np.arange(0, 1.01, bsize)
-    notsample = all_sample - sample
+    notsample = min(0,all_sample - sample)
 
     bincdf = beta.cdf(psi_border, a=sample + alpha_prior, b=notsample + beta_prior)
     bin_test = bincdf[1:] - bincdf[:-1] + 1e-300

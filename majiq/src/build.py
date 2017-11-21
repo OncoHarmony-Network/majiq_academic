@@ -152,7 +152,6 @@ def parse_denovo_elements(pipe_self, logger):
     init_splicegraph(get_builder_splicegraph_filename(majiq_config.outDir))
 
     for gne_id, gene_obj in dict_of_genes.items():
-        logger.info("New Gene %s" % gne_id)
         list_exons = []
         dict_junctions = {}
         list_introns = []
