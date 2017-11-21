@@ -274,9 +274,9 @@ cdef int _detect_lsvs(list list_exons, np.ndarray junc_mtrx, float fitfunc_r, st
             if set(ss.junctions).issubset(set(st.junctions)) and not set(ss.junctions).issuperset(set(st.junctions)):
                 break
         else:
-            b, c = ss.sample_lsvs(junc_mtrx, fitfunc_r=fitfunc_r, majiq_config=majiq_config)
-            np_jjlist.append(b)
-            attrs_list.append(c)
+
+            for xx  in ss.junctions:
+                np_jjlist.append(junc_mtrx[xx.index])
             lsv_idx = ss.to_hdf5(outf, lsv_idx)
             count += 1
 
@@ -285,9 +285,9 @@ cdef int _detect_lsvs(list list_exons, np.ndarray junc_mtrx, float fitfunc_r, st
             if set(st.junctions).issubset(set(ss.junctions)):
                 break
         else:
-            b, c = st.sample_lsvs(junc_mtrx, fitfunc_r=fitfunc_r, majiq_config=majiq_config)
-            np_jjlist.append(b)
-            attrs_list.append(c)
+
+            for xx in st.junctions:
+                np_jjlist.append(junc_mtrx[xx.index])
             lsv_idx = st.to_hdf5(outf, lsv_idx)
             count += 1
 
@@ -303,3 +303,17 @@ cpdef detect_lsvs(list list_exons, np.ndarray junc_mtrx, float fitfunc_r, str gi
 
     _detect_lsvs(list_exons, junc_mtrx, fitfunc_r, gid, gchrom, gstrand, majiq_config, outf, np_jjlist, attrs_list)
 
+
+cpdef tuple sample_junctions(np.ndarray junc_mtrx, float fitfunc_r, object majiq_config):
+    cdef Junction xx
+    cdef list ex_index
+    cdef np.ndarray s_lsv, lsv_trs
+
+    mark_stacks(junc_mtrx, fitfunc_r, majiq_config.pvalue_limit)
+    s_lsv = sample_from_junctions(junction_list=junc_mtrx,
+                                      m=majiq_config.m,
+                                      k=majiq_config.k,
+                                      fitted_one_over_r=fitfunc_r)
+
+    lsv_trs = np.array([junc_mtrx.sum(axis=1), np.count_nonzero(junc_mtrx, axis=1)]).T
+    return s_lsv, lsv_trs

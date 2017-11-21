@@ -13,7 +13,7 @@ from majiq.src.multiproc import QueueMessage, process_conf, queue_manager, proce
 import majiq.src.logger as majiq_logger
 import majiq.src.multiproc as majiq_multi
 from majiq.grimoire.exon import detect_exons, expand_introns
-from majiq.grimoire.lsv import detect_lsvs
+from majiq.grimoire.lsv import detect_lsvs, sample_junctions
 from majiq.src.basic_pipeline import BasicPipeline, pipeline_run
 from majiq.src.config import Config
 from majiq.src.constants import *
@@ -250,7 +250,10 @@ def parsing_files(sam_file_list, chnk, process_conf, logger):
                 for jj in dict_junctions[gne_id].values():
                     jj.reset()
             logger.info('dump samples')
-            majiq_io.dump_lsv_coverage(out_f, np_jjlist, attrs_list)
+
+            vals = sample_junctions(np.array(np_jjlist), fitfunc_r, majiq_config)
+
+            majiq_io.dump_lsv_coverage(out_f, vals[0], vals[1])
 
             del np_jjlist
             del attrs_list

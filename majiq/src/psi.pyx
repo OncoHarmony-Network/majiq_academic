@@ -133,10 +133,8 @@ cdef tuple _deltapsi_posterior(np.ndarray psi1, np.ndarray psi2, np.ndarray prio
         data_given_psi1 = np.log(_prob_data_sample_given_psi(junc, alls1[m], nbins, alpha_0, beta_0))
         #print("1", junc, alls1[m], data_given_psi1)
 
-
         psi_v1 = data_given_psi1.reshape(nbins, -1)
         post_psi1 += np.exp(data_given_psi1 - scipy.misc.logsumexp(data_given_psi1))
-
 
         junc = np.around(psi2[:, p_idx, m].sum())
         mu_psi2_m.append(float(junc + alpha_0) / (alls2[m] + alpha_0 + beta_0))
@@ -146,8 +144,6 @@ cdef tuple _deltapsi_posterior(np.ndarray psi1, np.ndarray psi2, np.ndarray prio
 
         A = (psi_v1 * ones_n + psi_v2 * ones_n.T) + np.log(prior_matrix)
         posterior += np.exp(A - scipy.misc.logsumexp(A))
-
-
 
     #print (posterior, post_psi1, mu_psi1_m, m_samples)
     mu_psi1 = np.median(mu_psi1_m)
