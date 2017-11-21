@@ -193,9 +193,9 @@ cdef class LSV:
             sp_list.append((ex.intron, coord, ref_coord, ex, junc))
 
         if gene_strand == '-':
-            sp_list.sort(key=lambda xx: (-xx[0], xx[1]), reverse=True)
+            sp_list.sort(key=lambda xx: (-xx[0], xx[1], xx[2]), reverse=True)
         else:
-            sp_list.sort(key=lambda xx: (xx[0], xx[1]), reverse=False)
+            sp_list.sort(key=lambda xx: (xx[0], xx[1], xx[2]), reverse=False)
 
         ext_type = 's' if (ss and gene_strand != '-') or (not ss and gene_strand == '-') else 't'
 
