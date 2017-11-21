@@ -46,23 +46,20 @@ def parallel_lsv_child_calculation(func, args, tempdir, chunk):
     sys.stdout.flush()
 
 
-def chunks(l, n_in, extra):
+def chunks(l, n_chunks):
     """Yield successive n-sized chunks from l.
     :param l: list to be split
-    :param n: max length of chunks
+    :param n_chunks: total number of chunks
     """
-    try:
-        idx = -1
-        n = int(n_in)
-        for i in range(0, len(l), n):
-            idx += 1
-            if extra is not None:
-                yield (l[i:i+n], extra[idx])
-            else:
-                yield l[i:i+n]
-    except:
-        print("ERROR: extra value has incorrect size %s" % idx, extra)
-        raise
+
+    rem_len = len(l)
+    n = 0
+    prev_n = 0
+    for ii in range(n_chunks):
+        prev_n += n
+        rem_len = rem_len - n
+        n = int(rem_len / (n_chunks - ii))
+        yield (l[prev_n:prev_n+n], ii)
 
 
 class QueueMessage:

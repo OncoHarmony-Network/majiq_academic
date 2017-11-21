@@ -72,6 +72,7 @@ class DeltaPsi(BasicPipeline):
 
         files = [self.files1, self.files2]
 
+        weights = [None, None]
         self.queue = mp.Queue()
         self.lock = [mp.Lock() for xx in range(self.nthreads)]
 
@@ -81,12 +82,14 @@ class DeltaPsi(BasicPipeline):
         list_of_lsv1, lsv_dict_graph = majiq_io.extract_lsv_summary(self.files1, epsi=lsv_empirical_psi1,
                                                                     minnonzero=self.minpos, min_reads=self.minreads,
                                                                     percent=self.min_exp, logger=logger)
+        weights[0] = self.calc_weights(self.weights[0], self.files1, list_of_lsv1, self.names[0], logger=self.logger)
         logger.info("Group %s: %s LSVs" %(self.names[0], len(list_of_lsv1)))
 
         meta2 = majiq_io.read_meta_info(self.files2)
         list_of_lsv2, lsv_dict_graph = majiq_io.extract_lsv_summary(self.files2, epsi=lsv_empirical_psi2,
                                                                     minnonzero=self.minpos, min_reads=self.minreads,
                                                                     percent=self.min_exp, logger=logger)
+        weights[1] = self.calc_weights(self.weights[1], self.files2, list_of_lsv2, self.names[1], logger=self.logger)
         logger.info("Group %s: %s LSVs" %(self.names[1], len(list_of_lsv1)))
 
         list_of_lsv = list(set(list_of_lsv1).intersection(set(list_of_lsv2)))
@@ -105,21 +108,14 @@ class DeltaPsi(BasicPipeline):
         logger.info("Saving prior matrix for %s..." % self.names)
         majiq_io.dump_bin_file(prior_matrix, get_prior_matrix_filename(self.outDir, self.names))
 
-        lchnksize = max(len(list_of_lsv)/self.nthreads, 1) + 1
-
-        weights = [None, None]
-        for grp_idx, fil in enumerate(files):
-            #TODO: FIX WEIGHTS, maybe just return rho
-            weights[grp_idx] = self.calc_weights(self.weights[grp_idx], fil, list_of_lsv, lchnksize,
-                                                 self.names[grp_idx], logger=logger)
-
         self.weights = weights
         if len(list_of_lsv) > 0:
-
-            pool = mp.Pool(processes=self.nthreads, initializer=process_conf, initargs=[deltapsi_quantification, self],
+            nthreads = min(self.nthreads, len(list_of_lsv))
+            pool = mp.Pool(processes=nthreads, initializer=process_conf, initargs=[deltapsi_quantification, self],
                            maxtasksperchild=1)
             [xx.acquire() for xx in self.lock]
-            pool.map_async(process_wrapper, chunks(list_of_lsv, lchnksize, extra=range(self.nthreads)))
+
+            pool.map_async(process_wrapper, chunks(list_of_lsv, nthreads))
             pool.close()
             with Voila(get_quantifier_voila_filename(self.outDir, self.names, deltapsi=True), 'w') as out_h5p:
                 out_h5p.add_genome(meta1['genome'])
@@ -127,7 +123,7 @@ class DeltaPsi(BasicPipeline):
                 out_h5p.add_experiments(group_name=self.names[0], experiment_names=meta1['experiments'])
                 out_h5p.add_experiments(group_name=self.names[1], experiment_names=meta2['experiments'])
 
-                queue_manager(out_h5p, self.lock, self.queue, num_chunks=self.nthreads, logger=logger,
+                queue_manager(out_h5p, self.lock, self.queue, num_chunks=nthreads, logger=logger,
                               list_of_lsv_graphics=lsv_dict_graph)
 
             pool.join()
