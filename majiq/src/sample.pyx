@@ -31,7 +31,7 @@ cdef np.ndarray _sample_over_nb(float one_over_r, float mu, int num_samples):
         sampl = poisson.rvs(mu, size=num_samples)
     return sampl
 
-cpdef np.ndarray sample_from_junctions(np.ndarray junction_list, int m, int k, float fitted_one_over_r=0.0):
+cdef np.ndarray _sample_from_junctions(np.ndarray junction_list, int m, int k, float fitted_one_over_r=0.0):
     """Given the filtered reads, bootstrap samples from every junction
     :param junction_list:
     :param m:
@@ -62,3 +62,8 @@ cpdef np.ndarray sample_from_junctions(np.ndarray junction_list, int m, int k, f
         # all_samples = (all_samples + 1) * npos_mult
 
     return all_samples
+
+
+
+cpdef np.ndarray sample_from_junctions(np.ndarray junction_list, int m, int k, float fitted_one_over_r=0.0):
+    return _sample_from_junctions(junction_list, m, k, fitted_one_over_r=fitted_one_over_r)

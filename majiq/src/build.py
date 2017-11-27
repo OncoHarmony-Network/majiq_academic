@@ -217,11 +217,8 @@ def parsing_files(sam_file_list, chnk, process_conf, logger):
             #             gc_pairs['COV'].append(ex.get_coverage())
 
         majiq_io_bam.close_rnaseq(samfl)
-
         junc_mtrx = np.array(junc_mtrx)
-        print (sam_file)
         update_splicegraph_junctions(dict_junctions, junc_mtrx, majiq_config.outDir, sam_file, process_conf.lock)
-
         indx = np.arange(junc_mtrx.shape[0])[junc_mtrx.sum(axis=1) >= majiq_config.minreads]
 
         logger.debug("[%s] Fitting NB function with constitutive events..." % sam_file)
@@ -238,26 +235,19 @@ def parsing_files(sam_file_list, chnk, process_conf, logger):
             out_f.attrs['one_over_r'] = fitfunc_r
 
             logger.info('Detecting lsvs')
-            np_jjlist = []
-            attrs_list = []
+            np_jjlist = [np.zeros(effective_len)]
 
             for gne_idx, (gne_id, gene_obj) in enumerate(dict_of_genes.items()):
                 if gene_obj['nreads'] == 0:
                     continue
                 detect_lsvs(list_exons[gne_id], junc_mtrx, fitfunc_r, gne_id, gene_obj['chromosome'],
-                            gene_obj['strand'], majiq_config, out_f, np_jjlist, attrs_list)
+                            gene_obj['strand'], majiq_config, out_f, np_jjlist)
                 for jj in dict_junctions[gne_id].values():
                     jj.reset()
             logger.info('dump samples')
-
             vals = sample_junctions(np.array(np_jjlist), fitfunc_r, majiq_config)
-
             majiq_io.dump_lsv_coverage(out_f, vals[0], vals[1])
-
             del np_jjlist
-            del attrs_list
-
-
 
         # #TODO: GC CONTENT
         # majiq_norm.mark_stacks(junc_mtrx, fitfunc_r, majiq_config.pvalue_limit)
