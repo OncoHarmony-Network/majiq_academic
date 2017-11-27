@@ -1072,7 +1072,6 @@
                 var spliceGraphSelector = d3.select(this.parentNode.parentNode).selectAll('.spliceGraphSelector');
                 spliceGraphSelector.on('change', function () {
                     var parent = this.parentNode.parentNode.parentNode;
-                    console.log(parent);
                     var toogleScale = parent.querySelector('.toogleScale');
                     var spliceDiv;
 

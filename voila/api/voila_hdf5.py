@@ -171,12 +171,22 @@ class VoilaHDF5:
             for lsv_id in self.get_lsv_ids(gene_id):
                 # Search for LSV
                 if not lsv_ids or lsv_id in lsv_ids:
-                    if not threshold or VoilaLsv.is_lsv_changing(self.get_lsv_means(gene_id, lsv_id), threshold):
-                        yield gene_id, lsv_id
+                    try:
+                        if not threshold or VoilaLsv.is_lsv_changing(self.get_lsv_means(gene_id, lsv_id), threshold):
+                            yield gene_id, lsv_id
+                    except Exception:
+                        print(lsv_id)
+                        print(gene_id)
+                        raise
 
     def get_lsv_means(self, gene_id, lsv_id):
         trunc_bins = BinsDataSet(self.hdf5[self.LSVS][gene_id][lsv_id]).decode_list()
         bins = VoilaLsv._extend_bins(trunc_bins)
+        for b in bins:
+            e_dpsi = get_expected_dpsi(b)
+            print(trunc_bins)
+            # print(b)
+            # print(e_dpsi)
         return tuple(get_expected_dpsi(b) for b in bins)
 
     def get_lsv(self, gene_id, lsv_id):

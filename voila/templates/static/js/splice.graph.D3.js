@@ -328,6 +328,7 @@ function spliceGraphD3() {
                         return Math.round((scaleX(d.end) + scaleX(d.start)) / 2);
                     })
                     .attr("y", function (d) {
+                        console.log(d);
                         var posY = (scaleX(d.end) - scaleX(d.start)) / maxJunc * JUNC_AREA * (height - padding[0] - padding[2]);
                         return Math.round(height * JUNC_AREA - 2 - posY + (posY / d.dispersion) * (d.dispersion - 1 ? 1 : 0));
                     })

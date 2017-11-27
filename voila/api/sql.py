@@ -34,7 +34,7 @@ class SQLType(ABC):
 
 
 class SQL:
-    def __init__(self, filename, delete=False, model=None):
+    def __init__(self, filename, model, delete=False, ):
         if delete is True:
             try:
                 os.remove(filename)
