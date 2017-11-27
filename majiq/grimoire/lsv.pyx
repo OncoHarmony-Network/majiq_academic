@@ -39,7 +39,7 @@ cdef class LSV:
         self.chromosome = gene_chromosome
         self.strand = gene_strand
         self.id = "%s:%s:%s-%s" % (gene_id, self.type[0], ex.start, ex.end)
-        self.junctions.sort(key=lambda jj: (jj.start, jj.end))
+        #self.junctions.sort(key=lambda jj: (jj.start, jj.end))
 
 
     def get_visual_lsv(self):
@@ -198,7 +198,6 @@ cdef class LSV:
             sp_list.sort(key=lambda xx: (xx[0], xx[1], xx[2]), reverse=False)
 
         ext_type = 's' if (ss and gene_strand != '-') or (not ss and gene_strand == '-') else 't'
-
         prev_ex = "%s-%s" % (sp_list[0][3].start, sp_list[0][3].end)
         excount = 1
 
@@ -257,7 +256,7 @@ cdef int _detect_lsvs(list list_exons, np.ndarray junc_mtrx, float fitfunc_r, st
 
             if len(jjlist) < 2:
                 continue
-            ex_index = sorted([xx.index for xx in jjlist])
+            ex_index = [xx.index for xx in jjlist]
             ex_mtrx_s = sum_trx[ex_index]
             ex_mtrx_p = pos_trx[ex_index]
 

@@ -152,6 +152,7 @@ class independent(BasicPipeline):
         lchnksize = max(len(list_of_lsv)/self.nthreads, 1) + 1
 
         if len(list_of_lsv) > 0:
+            nthreads = min(self.nthreads, len(list_of_lsv))
             self.queue = mp.Queue()
             self.lock = [mp.Lock() for xx in range(self.nthreads)]
             [xx.acquire() for xx in self.lock]
@@ -159,7 +160,7 @@ class independent(BasicPipeline):
                            initargs=[het_quantification, self],
                            maxtasksperchild=1)
 
-            pool.map_async(process_wrapper, chunks(list_of_lsv, lchnksize, extra=range(self.nthreads)))
+            pool.map_async(process_wrapper,  chunks(list_of_lsv, nthreads))
             pool.close()
             with Voila(get_quantifier_voila_filename(self.outDir, self.names, deltapsi=True), 'w') as out_h5p:
                 out_h5p.add_genome(meta1['genome'])
