@@ -170,9 +170,9 @@ cdef int merge_exons(db_f, dict exon_dict) except -1:
 #######
 
 cdef int _dump_lsv_coverage(out_f, cov_list, attrs_list):
-    out_f.create_dataset(JUNCTIONS_DATASET_NAME, data=np.concatenate(cov_list, axis=0),
+    out_f.create_dataset(JUNCTIONS_DATASET_NAME, data=cov_list,
                          compression='gzip', compression_opts=9)
-    out_f.create_dataset(JUNCTIONS_ATTRS, data=np.concatenate(attrs_list, axis=0),
+    out_f.create_dataset(JUNCTIONS_ATTRS, data=attrs_list,
                          compression='gzip', compression_opts=9)
 
 
@@ -244,7 +244,7 @@ cdef _get_extract_lsv_list(list list_of_lsv_id, list file_list, int msamples):
                     if lsv_type is None:
                         lsv_type = data['LSVs/%s' % lsv_id].attrs['type']
                         njunc = len(lsv_type.split('|')) -1
-                        lsv_cov = np.zeros(shape=(n_exp, njunc, msamples))
+                        lsv_cov = np.zeros(shape=(n_exp, njunc, msamples),  dtype=float)
 
                     assert data['LSVs/%s' % lsv_id].attrs['type'] == lsv_type, "ERROR lsv_type doesn't match " \
                                                                                "for %s" % lsv_id

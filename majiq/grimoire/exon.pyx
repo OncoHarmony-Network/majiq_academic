@@ -212,6 +212,9 @@ def expand_introns(str gne_id, list list_introns, list list_exons, dict dict_jun
                 intron.end = ex_start - 1
                 acceptor_ex = ex
 
+            if ex.start > intron.start and ex.end< intron.end:
+                pass
+
         ir_ex = Exon(intron.start, intron.end, annot=intron.annot, intronic=True)
         list_exons.append(ir_ex)
 

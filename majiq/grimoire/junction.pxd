@@ -5,6 +5,7 @@ cdef class Junction:
     cdef public int end
     cdef public str gene_id
     cdef public int index
+    cdef public int lsv_index
 
     cdef public int nreads
     cdef public object acceptor

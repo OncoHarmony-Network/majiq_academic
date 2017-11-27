@@ -125,7 +125,7 @@ class independent(BasicPipeline):
                 module_ = __import__('majiq.src.stats.' + stats_name.lower(), fromlist=stats_name.title())
                 class_ = getattr(module_, stats_name.title())
                 operator[stats_name] = class_()
-        except ImportError as i_err:
+        except ImportError:
             logger.error("The %s statistic is not one of the available statistics, "
                          "in  [ %s ]" % (stats_name, ' | '.join(all_stats)))
             return
@@ -149,9 +149,8 @@ class independent(BasicPipeline):
         list_of_lsv = list(set(list_of_lsv1).intersection(set(list_of_lsv2)))
         logger.info("Number quantifiable LSVs: %s" % len(list_of_lsv))
 
-        lchnksize = max(len(list_of_lsv)/self.nthreads, 1) + 1
-
         if len(list_of_lsv) > 0:
+            nthreads = min(self.nthreads, len(list_of_lsv))
             self.queue = mp.Queue()
             self.lock = [mp.Lock() for xx in range(self.nthreads)]
             [xx.acquire() for xx in self.lock]
@@ -159,7 +158,7 @@ class independent(BasicPipeline):
                            initargs=[het_quantification, self],
                            maxtasksperchild=1)
 
-            pool.map_async(process_wrapper, chunks(list_of_lsv, lchnksize, extra=range(self.nthreads)))
+            pool.map_async(process_wrapper,  chunks(list_of_lsv, nthreads))
             pool.close()
             with Voila(get_quantifier_voila_filename(self.outDir, self.names, deltapsi=True), 'w') as out_h5p:
                 out_h5p.add_genome(meta1['genome'])

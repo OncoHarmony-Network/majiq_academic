@@ -6,6 +6,7 @@ cdef class Junction:
         self.end = end
         self.gene_id = gene_id
         self.index = cov_idx
+        self.lsv_index = 0
 
         self.nreads = 0
         self.acceptor = None

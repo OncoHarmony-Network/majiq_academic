@@ -13,7 +13,7 @@ from majiq.src.multiproc import QueueMessage, process_conf, queue_manager, proce
 import majiq.src.logger as majiq_logger
 import majiq.src.multiproc as majiq_multi
 from majiq.grimoire.exon import detect_exons, expand_introns
-from majiq.grimoire.lsv import detect_lsvs
+from majiq.grimoire.lsv import detect_lsvs, sample_junctions
 from majiq.src.basic_pipeline import BasicPipeline, pipeline_run
 from majiq.src.config import Config
 from majiq.src.constants import *
@@ -149,14 +149,12 @@ def parse_denovo_elements(pipe_self, logger):
                     except KeyError:
                         intron_list[xx[0]] = [[xx[1], xx[2], 0, IR_TYPE]]
 
-
     init_splicegraph(get_builder_splicegraph_filename(majiq_config.outDir))
 
     for gne_id, gene_obj in dict_of_genes.items():
         list_exons = []
         dict_junctions = {}
         list_introns = []
-
         try:
             majiq_io.retrieve_db_info(gne_id, majiq_config.outDir, dict_junctions, list_exons, list_introns,
                                       denovo_ir=intron_list[gne_id])
@@ -166,7 +164,7 @@ def parse_denovo_elements(pipe_self, logger):
         detect_exons(dict_junctions, list_exons)
         if majiq_config.ir:
             expand_introns(gne_id, list_introns, list_exons, dict_junctions)
-        gene_to_splicegraph(gne_id, gene_obj, dict_junctions, list_exons, list_introns, majiq_config, None)
+        gene_to_splicegraph(gne_id, gene_obj, dict_junctions, list_exons, list_introns, majiq_config)
 
 
 def parsing_files(sam_file_list, chnk, process_conf, logger):
@@ -219,11 +217,8 @@ def parsing_files(sam_file_list, chnk, process_conf, logger):
             #             gc_pairs['COV'].append(ex.get_coverage())
 
         majiq_io_bam.close_rnaseq(samfl)
-
         junc_mtrx = np.array(junc_mtrx)
-        print (sam_file)
         update_splicegraph_junctions(dict_junctions, junc_mtrx, majiq_config.outDir, sam_file, process_conf.lock)
-
         indx = np.arange(junc_mtrx.shape[0])[junc_mtrx.sum(axis=1) >= majiq_config.minreads]
 
         logger.debug("[%s] Fitting NB function with constitutive events..." % sam_file)
@@ -240,23 +235,19 @@ def parsing_files(sam_file_list, chnk, process_conf, logger):
             out_f.attrs['one_over_r'] = fitfunc_r
 
             logger.info('Detecting lsvs')
-            np_jjlist = []
-            attrs_list = []
+            np_jjlist = [np.zeros(effective_len)]
 
             for gne_idx, (gne_id, gene_obj) in enumerate(dict_of_genes.items()):
                 if gene_obj['nreads'] == 0:
                     continue
                 detect_lsvs(list_exons[gne_id], junc_mtrx, fitfunc_r, gne_id, gene_obj['chromosome'],
-                            gene_obj['strand'], majiq_config, out_f, np_jjlist, attrs_list)
+                            gene_obj['strand'], majiq_config, out_f, np_jjlist)
                 for jj in dict_junctions[gne_id].values():
                     jj.reset()
             logger.info('dump samples')
-            majiq_io.dump_lsv_coverage(out_f, np_jjlist, attrs_list)
-
+            vals = sample_junctions(np.array(np_jjlist), fitfunc_r, majiq_config)
+            majiq_io.dump_lsv_coverage(out_f, vals[0], vals[1])
             del np_jjlist
-            del attrs_list
-
-
 
         # #TODO: GC CONTENT
         # majiq_norm.mark_stacks(junc_mtrx, fitfunc_r, majiq_config.pvalue_limit)
