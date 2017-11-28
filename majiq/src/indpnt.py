@@ -20,8 +20,8 @@ def het_quantification(list_of_lsv, chnk, process_conf, logger):
     num_exp = [len(process_conf.files1), len(process_conf.files2)]
 
     f_list = [None, None]
-    f_list[0] = majiq_deprio.get_extract_lsv_list(list_of_lsv, process_conf.files1, process_conf.m_samples)
-    f_list[1] = majiq_deprio.get_extract_lsv_list(list_of_lsv, process_conf.files2, process_conf.m_samples)
+    f_list[0] = majiq_io.get_extract_lsv_list(list_of_lsv, process_conf.files1, process_conf.m_samples)
+    f_list[1] = majiq_io.get_extract_lsv_list(list_of_lsv, process_conf.files2, process_conf.m_samples)
 
     for lidx, lsv_id in enumerate(list_of_lsv):
         if lidx % 50 == 0:

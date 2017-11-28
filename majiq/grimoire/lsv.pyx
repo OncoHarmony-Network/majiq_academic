@@ -149,7 +149,7 @@ cdef class LSV:
 
         h_lsv.attrs['coverage'] = [xx.lsv_index for xx in self.junctions]
         vh_lsv = h_lsv.create_group('visual')
-
+        self.get_visual_lsv().to_hdf5(vh_lsv)
         return lsv_idx
 
     # cdef int to_hdf5(LSV self, hdf5grp, int lsv_idx):
