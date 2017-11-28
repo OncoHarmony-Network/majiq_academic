@@ -130,12 +130,11 @@ cdef int merge_exons(db_f, dict exon_dict) except -1:
 
 
     for gne_id, ex_list in exon_dict.items():
-        ex_list.sort(key=lambda x:x[0])
+        ex_list.sort(key=lambda x:(x[0],x[1]))
         ex_start = -1
         ex_end = -1
         nopen = 0
         elem_mtrx = []
-
         for coord, is_start in ex_list:
             #print(coord, is_start, nopen, ex_start, ex_end)
             if is_start:
