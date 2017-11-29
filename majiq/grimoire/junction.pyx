@@ -23,6 +23,7 @@ cdef class Junction:
     def reset(self):
         self.nreads = 0
         self.index = 0
+        self.lsv_index = 0
 
 
 

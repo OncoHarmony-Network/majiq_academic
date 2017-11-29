@@ -130,12 +130,11 @@ cdef int merge_exons(db_f, dict exon_dict) except -1:
 
 
     for gne_id, ex_list in exon_dict.items():
-        ex_list.sort(key=lambda x:x[0])
+        ex_list.sort(key=lambda x:(x[0],x[1]))
         ex_start = -1
         ex_end = -1
         nopen = 0
         elem_mtrx = []
-
         for coord, is_start in ex_list:
             #print(coord, is_start, nopen, ex_start, ex_end)
             if is_start:
@@ -249,7 +248,8 @@ cdef _get_extract_lsv_list(list list_of_lsv_id, list file_list, int msamples):
                     assert data['LSVs/%s' % lsv_id].attrs['type'] == lsv_type, "ERROR lsv_type doesn't match " \
                                                                                "for %s" % lsv_id
                     cov = data['LSVs/%s' % lsv_id].attrs['coverage']
-                    lsv_cov[fidx] = data[JUNCTIONS_DATASET_NAME][cov[0]:cov[1]]
+                    #lsv_cov[fidx] = data[JUNCTIONS_DATASET_NAME][cov[0]:cov[1]]
+                    lsv_cov[fidx] = np.array([data[JUNCTIONS_DATASET_NAME][xidx] for xidx in cov])
                 except KeyError:
                     pass
 
@@ -282,7 +282,7 @@ def read_meta_info(list_of_files):
     meta['m_samples'] = m_samples
     return meta
 
-def extract_lsv_summary(list files, int minnonzero, int min_reads, dict epsi=None, int percent=-1, object logger=None):
+cpdef extract_lsv_summary(list files, int minnonzero, int min_reads, dict epsi=None, int percent=-1, object logger=None):
     cdef dict lsv_list = {}
     cdef dict lsv_graphic = {}
     cdef int nfiles = len(files)
@@ -300,7 +300,8 @@ def extract_lsv_summary(list files, int minnonzero, int min_reads, dict epsi=Non
             logger.info("Parsing file: %s" % ff)
         data = h5py.File(ff, 'r')
         for xx in data['LSVs']:
-            mtrx = data['junc_cov'][data['LSVs/%s' % xx].attrs['coverage'][0]:data['LSVs/%s' % xx].attrs['coverage'][1]]
+            #mtrx = data['junc_cov'][data['LSVs/%s' % xx].attrs['coverage'][0]:data['LSVs/%s' % xx].attrs['coverage'][1]]
+            mtrx = np.array([data['junc_cov'][xidx] for xidx in data['LSVs/%s' % xx].attrs['coverage']])
             vals = (mtrx[:, 0] >= min_reads * (mtrx[:, 1] >= minnonzero))
             try:
                 lsv_list[xx][fidx] = int(vals.sum() >= 1)
@@ -373,88 +374,88 @@ cpdef int parse_annot(str filename, str out_dir, object logging=None):
         raise
 
 
-cpdef np.ndarray get_covered_junctions(str gne_id, dict dict_junctions, list list_exons, list fitfunc_r, list sam_list,
-                                       int readLen, str out_dir):
-
-    cdef int nexperiments = len(sam_list)
-    cdef dict dd_jj = {}
-    cdef int exp_idx, njunc, idx
-    cdef str jjid
-    cdef Junction junc
-    cdef dict junc_attrs
-    cdef np.ndarray junc_mtrx
-    cdef int eff_readsize = (readLen - 2*MIN_BP_OVERLAP) + 1
-
-    for exp_idx in range(nexperiments):
-        with h5py.File(get_builder_temp_majiq_filename(out_dir, sam_list[exp_idx]), 'r') as fp:
-            fitfunc_r.append(fp.attrs['one_over_r'])
-            try:
-                for jjid in fp[gne_id]:
-                    junc_attrs = dict(fp['%s/%s' % (gne_id, jjid)].attrs)
-                    try:
-                        dd_jj[jjid][exp_idx] = junc_attrs['coverage_index']
-                    except KeyError:
-                        junc = Junction(junc_attrs['start'], junc_attrs['end'], gne_id, -1)
-                        dict_junctions[(junc_attrs['start'], junc_attrs['end'])] = junc
-                        dd_jj[jjid] = [-1] * nexperiments
-                        dd_jj[jjid][exp_idx] = junc_attrs['coverage_index']
-            except KeyError as e:
-                # print('ERROR', e, jjid, junc_attrs)
-                continue
-
-    njunc = len(dd_jj)
-    junc_mtrx = np.zeros(shape=(nexperiments, njunc, eff_readsize), dtype=np.float)
-
-    for exp_idx in range(nexperiments):
-        with h5py.File(get_builder_temp_majiq_filename(out_dir, sam_list[exp_idx]), 'r') as fp:
-            for idx, jjid in enumerate(dd_jj.keys()):
-                if dd_jj[jjid][exp_idx] > -1:
-                    junc_mtrx[exp_idx, idx,] = fp[JUNCTIONS_DATASET_NAME][dd_jj[jjid][exp_idx]]
-                dict_junctions[tuple([int(xx) for xx in jjid.split('-')])].index = idx
-
-    del dd_jj
-    return junc_mtrx
-
-
-def retrieve_db_info2(str gne_id, str out_dir, list list_exons, dict dict_junctions, list list_introns,
-                     int default_index=-1):
-
-    cdef dict j_attrs, ex_attrs
-    cdef Junction junc
-    cdef str xx
-    cdef object db_f
-    cdef int njuncs = 0
-
-    with h5py.File(get_build_temp_db_filename(out_dir), 'r') as db_f:
-        if dict_junctions is not None:
-            for xx in db_f['%s/junctions' % gne_id]:
-                j_attrs = dict(db_f['%s/junctions/%s' % (gne_id, xx)].attrs)
-                njuncs +=1
-                dict_junctions[(j_attrs['start'], j_attrs['end'])] = Junction(j_attrs['start'], j_attrs['end'],
-                                                                              gne_id, default_index,
-                                                                              annot=j_attrs['annotated'])
-
-        for xx in db_f['%s/exons' % gne_id]:
-            ex_attrs = dict(db_f['%s/exons/%s' % (gne_id, xx)].attrs)
-            list_exons.append(Exon(ex_attrs['start'], ex_attrs['end'], annot=ex_attrs['annot']))
-        list_exons.sort(key=lambda xx: (xx.start, xx.end))
-
-        if list_introns is not None and 'ir' in db_f['%s' % gne_id]:
-            for xx in db_f['%s/ir' % gne_id]:
-                ir_attrs = dict(db_f['%s/ir/%s' % (gne_id, xx)].attrs)
-                list_introns.append(Intron(ir_attrs['start'], ir_attrs['end'], annot=ir_attrs['annotated']))
-                list_exons.append(Exon(ir_attrs['start'], ir_attrs['end'], annot=ir_attrs['annotated'], intronic=True))
-                dict_junctions[(ir_attrs['start']-1, ir_attrs['start'])] = Junction(ir_attrs['start']-1,
-                                                                                    ir_attrs['start'],
-                                                                                    gne_id, default_index,
-                                                                                    intron=True,
-                                                                                    annot=ir_attrs['annotated'])
-                dict_junctions[(ir_attrs['end'], ir_attrs['end']+1)] = Junction(ir_attrs['end'], ir_attrs['end']+1,
-                                                                                gne_id, default_index,
-                                                                                intron=True,
-                                                                                annot=ir_attrs['annotated'])
-            list_introns.sort(key=lambda xx: (xx.start, xx.end))
-    return njuncs
+# cpdef np.ndarray get_covered_junctions(str gne_id, dict dict_junctions, list list_exons, list fitfunc_r, list sam_list,
+#                                        int readLen, str out_dir):
+#
+#     cdef int nexperiments = len(sam_list)
+#     cdef dict dd_jj = {}
+#     cdef int exp_idx, njunc, idx
+#     cdef str jjid
+#     cdef Junction junc
+#     cdef dict junc_attrs
+#     cdef np.ndarray junc_mtrx
+#     cdef int eff_readsize = (readLen - 2*MIN_BP_OVERLAP) + 1
+#
+#     for exp_idx in range(nexperiments):
+#         with h5py.File(get_builder_temp_majiq_filename(out_dir, sam_list[exp_idx]), 'r') as fp:
+#             fitfunc_r.append(fp.attrs['one_over_r'])
+#             try:
+#                 for jjid in fp[gne_id]:
+#                     junc_attrs = dict(fp['%s/%s' % (gne_id, jjid)].attrs)
+#                     try:
+#                         dd_jj[jjid][exp_idx] = junc_attrs['coverage_index']
+#                     except KeyError:
+#                         junc = Junction(junc_attrs['start'], junc_attrs['end'], gne_id, -1)
+#                         dict_junctions[(junc_attrs['start'], junc_attrs['end'])] = junc
+#                         dd_jj[jjid] = [-1] * nexperiments
+#                         dd_jj[jjid][exp_idx] = junc_attrs['coverage_index']
+#             except KeyError as e:
+#                 # print('ERROR', e, jjid, junc_attrs)
+#                 continue
+#
+#     njunc = len(dd_jj)
+#     junc_mtrx = np.zeros(shape=(nexperiments, njunc, eff_readsize), dtype=np.float)
+#
+#     for exp_idx in range(nexperiments):
+#         with h5py.File(get_builder_temp_majiq_filename(out_dir, sam_list[exp_idx]), 'r') as fp:
+#             for idx, jjid in enumerate(dd_jj.keys()):
+#                 if dd_jj[jjid][exp_idx] > -1:
+#                     junc_mtrx[exp_idx, idx,] = fp[JUNCTIONS_DATASET_NAME][dd_jj[jjid][exp_idx]]
+#                 dict_junctions[tuple([int(xx) for xx in jjid.split('-')])].index = idx
+#
+#     del dd_jj
+#     return junc_mtrx
+#
+#
+# def retrieve_db_info2(str gne_id, str out_dir, list list_exons, dict dict_junctions, list list_introns,
+#                      int default_index=-1):
+#
+#     cdef dict j_attrs, ex_attrs
+#     cdef Junction junc
+#     cdef str xx
+#     cdef object db_f
+#     cdef int njuncs = 0
+#
+#     with h5py.File(get_build_temp_db_filename(out_dir), 'r') as db_f:
+#         if dict_junctions is not None:
+#             for xx in db_f['%s/junctions' % gne_id]:
+#                 j_attrs = dict(db_f['%s/junctions/%s' % (gne_id, xx)].attrs)
+#                 njuncs +=1
+#                 dict_junctions[(j_attrs['start'], j_attrs['end'])] = Junction(j_attrs['start'], j_attrs['end'],
+#                                                                               gne_id, default_index,
+#                                                                               annot=j_attrs['annotated'])
+#
+#         for xx in db_f['%s/exons' % gne_id]:
+#             ex_attrs = dict(db_f['%s/exons/%s' % (gne_id, xx)].attrs)
+#             list_exons.append(Exon(ex_attrs['start'], ex_attrs['end'], annot=ex_attrs['annot']))
+#         list_exons.sort(key=lambda xx: (xx.start, xx.end))
+#
+#         if list_introns is not None and 'ir' in db_f['%s' % gne_id]:
+#             for xx in db_f['%s/ir' % gne_id]:
+#                 ir_attrs = dict(db_f['%s/ir/%s' % (gne_id, xx)].attrs)
+#                 list_introns.append(Intron(ir_attrs['start'], ir_attrs['end'], annot=ir_attrs['annotated']))
+#                 list_exons.append(Exon(ir_attrs['start'], ir_attrs['end'], annot=ir_attrs['annotated'], intronic=True))
+#                 dict_junctions[(ir_attrs['start']-1, ir_attrs['start'])] = Junction(ir_attrs['start']-1,
+#                                                                                     ir_attrs['start'],
+#                                                                                     gne_id, default_index,
+#                                                                                     intron=True,
+#                                                                                     annot=ir_attrs['annotated'])
+#                 dict_junctions[(ir_attrs['end'], ir_attrs['end']+1)] = Junction(ir_attrs['end'], ir_attrs['end']+1,
+#                                                                                 gne_id, default_index,
+#                                                                                 intron=True,
+#                                                                                 annot=ir_attrs['annotated'])
+#             list_introns.sort(key=lambda xx: (xx.start, xx.end))
+#     return njuncs
 
 
 def retrieve_db_info(str gne_id, str out_dir, dict dict_junctions,list list_exons, list list_introns,

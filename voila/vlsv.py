@@ -118,7 +118,7 @@ class VoilaLsv(LsvGraphic):
                 self.trunc_bins = [collapse_matrix(bins) for bins in self.trunc_bins]
 
             # excl_incl is used to calculate the expected psi
-            if self.means and self.is_delta_psi():
+            if self.is_delta_psi() and self.means:
                 for mean in self.means:
                     if mean < 0:
                         self.excl_incl.append([-mean, 0])
@@ -160,11 +160,12 @@ class VoilaLsv(LsvGraphic):
     @property
     def means(self):
         ms = self._extend_means(self.trunc_means)
-        if ms is None and self.bins.size > 0:
-            if self.is_delta_psi():
-                ms = [get_expected_dpsi(b) for b in self.bins]
-            else:
-                ms = [get_expected_psi(b) for b in self.bins]
+        if self.bins is None:
+            if ms is None and self.bins.size > 0:
+                if self.is_delta_psi():
+                    ms = [get_expected_dpsi(b) for b in self.bins]
+                else:
+                    ms = [get_expected_psi(b) for b in self.bins]
         return ms
 
     @property
