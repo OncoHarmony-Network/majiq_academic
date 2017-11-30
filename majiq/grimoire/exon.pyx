@@ -192,6 +192,7 @@ def detect_exons(dict junction_dict, list exon_list):
     exon_list = sorted(exon_dict.values(), key=lambda ex: ex.start)
     return new_exons
 
+
 def expand_introns(str gne_id, list list_introns, list list_exons, dict dict_junctions, int default_index=-1):
 
     for intron in list_introns:
@@ -208,12 +209,30 @@ def expand_introns(str gne_id, list list_introns, list list_exons, dict dict_jun
                 intron.start = ex_end + 1
                 donor_ex = ex
 
+            if ex.end != -1 and ex.start != -1 and ex.start > intron.start and ex.end< intron.end:
+                ir_ex = Exon(intron.start, ex.end-1, annot=intron.annot, intronic=True)
+                list_exons.append(ir_ex)
+
+                jj = Junction(intron.start-1, intron.start, gne_id, default_index, intron=True, annot=intron.annot)
+                jj.donor = donor_ex
+                jj.acceptor = ir_ex
+                ir_ex.ib.add(jj)
+                donor_ex.ob.add(jj)
+                dict_junctions[(intron.start-1, intron.start)] = jj
+
+                jj = Junction(ex.start-1, ex.start, gne_id, default_index, intron=True, annot=intron.annot)
+                jj.donor = ir_ex
+                jj.acceptor = ex
+                ir_ex.ob.add(jj)
+                ex.ib.add(jj)
+                dict_junctions[(ex.start-1, ex.start)] = jj
+
+                intron.start = ex.end +1
+                donor_ex = ex
+
             if ex.start != -1 and (ex_start-1)<= intron.end <= ex_end:
                 intron.end = ex_start - 1
                 acceptor_ex = ex
-
-            if ex.start > intron.start and ex.end< intron.end:
-                pass
 
         ir_ex = Exon(intron.start, intron.end, annot=intron.annot, intronic=True)
         list_exons.append(ir_ex)
