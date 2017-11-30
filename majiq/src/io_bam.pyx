@@ -61,13 +61,16 @@ cdef inline int __get_num_reads(AlignedSegment read):
 
 
 cdef inline bint _match_strand(AlignedSegment read, str gene_strand):
-    majiq_config = Config()
+    cdef bint res
+    cdef object majiq_config = Config()
     res = True
     #print(read.is_reverse, read.flag, read.flag & 0x10, read.flag & 0x10 == 0x10, gene_strand, gene_strand == b'+',  gene_strand == '+')
     if majiq_config.strand_specific:
         #TODO: REMOVE
-        if (read.flag & 0x10 == 0x10 and gene_strand == '+') or (read.flag & 0x10 == 0x00 and gene_strand == '-'):
-            res = True
+        if read.is_read1:
+            res = (read.flag & 0x10 == 0x10 and gene_strand == '+') or (read.flag & 0x10 == 0x00 and gene_strand == '-')
+        elif read.is_read2:
+            res = (read.flag & 0x10 == 0x10 and gene_strand == '-') or (read.flag & 0x10 == 0x00 and gene_strand == '+')
         else:
             res = False
     return res

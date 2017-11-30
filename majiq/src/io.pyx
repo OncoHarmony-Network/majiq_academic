@@ -1,5 +1,7 @@
 import datetime
 cimport numpy as np
+import numpy as np
+
 import h5py
 import os
 from majiq.grimoire.junction cimport Junction
