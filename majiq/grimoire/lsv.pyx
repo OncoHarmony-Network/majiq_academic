@@ -143,8 +143,8 @@ cdef class LSV:
         h_lsv.attrs['type'] = self.type
         for xx  in self.junctions:
             if xx.lsv_index == 0 and junc_mtrx[xx.index].sum() > 0:
-                xx.lsv_index = lsv_idx
                 lsv_idx += 1
+                xx.lsv_index = lsv_idx
                 np_jjlist.append(junc_mtrx[xx.index])
 
         h_lsv.attrs['coverage'] = [xx.lsv_index for xx in self.junctions]
@@ -269,7 +269,6 @@ cdef int _detect_lsvs(list list_exons, np.ndarray junc_mtrx, float fitfunc_r, st
         for ii, jjset in enumerate([ex.ib, ex.ob]):
             jjlist = [xx for xx in jjset if not (xx.donor is None or xx.acceptor is None)]
 
-
             if len(jjlist) < 2:
                 continue
             ex_index = [xx.index for xx in jjlist]
@@ -321,11 +320,11 @@ cpdef tuple sample_junctions(np.ndarray junc_mtrx, float fitfunc_r, object majiq
     cdef list ex_index
     cdef np.ndarray s_lsv, lsv_trs
 
-    mark_stacks(junc_mtrx, fitfunc_r, majiq_config.pvalue_limit)
+    lsv_trs = np.array([junc_mtrx.sum(axis=1), np.count_nonzero(junc_mtrx, axis=1)]).T
+    #mark_stacks(junc_mtrx, fitfunc_r, majiq_config.pvalue_limit)
     s_lsv = sample_from_junctions(junction_list=junc_mtrx,
                                   m=majiq_config.m,
                                   k=majiq_config.k,
                                   fitted_one_over_r=fitfunc_r)
 
-    lsv_trs = np.array([junc_mtrx.sum(axis=1), np.count_nonzero(junc_mtrx, axis=1)]).T
     return s_lsv, lsv_trs

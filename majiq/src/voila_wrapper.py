@@ -48,7 +48,7 @@ def gene_to_splicegraph(gne_id, gne, dict_junctions, exon_dict, list_introns, ma
 
                 # TODO: add transcripts
                 junc_l[(jj.start, jj.end)] = jidx
-                read_list = [1] * majiq_config.num_experiments
+                read_list = [0] * majiq_config.num_experiments
 
                 junc_list.append(
                     sg.junction('{0}:{1}-{2}'.format(gne_id, jj.start, jj.end), start=jj.start, end=jj.end,

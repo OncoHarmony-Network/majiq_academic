@@ -13,7 +13,8 @@ from majiq.src.multiproc import QueueMessage, process_conf, queue_manager, proce
 import majiq.src.logger as majiq_logger
 import majiq.src.multiproc as majiq_multi
 from majiq.grimoire.exon import detect_exons, expand_introns
-from majiq.grimoire.lsv import detect_lsvs, sample_junctions
+from majiq.grimoire.lsv import detect_lsvs#, sample_junctions
+from majiq.src.deleteme import sample_junctions
 from majiq.src.basic_pipeline import BasicPipeline, pipeline_run
 from majiq.src.config import Config
 from majiq.src.constants import *
