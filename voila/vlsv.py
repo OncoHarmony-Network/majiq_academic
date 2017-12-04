@@ -3,6 +3,7 @@ from collections import defaultdict
 
 import numpy
 import numpy as np
+import scipy.interpolate as sinter
 
 from voila.hdf5 import BinsDataSet, Psi1DataSet, Psi2DataSet
 from voila.hdf5 import HDF5
@@ -480,16 +481,43 @@ def matrix_area(matrix, V=0.2, absolute=True, collapsed_mat=False):
     collapse = matrix
     if not collapsed_mat:
         collapse = collapse_matrix(matrix)
-    # get the delta psi histogram borders based on the size of 'collapse'
-    border = _find_delta_border(V, collapse.shape[0])
-    # grab the values inside the area of interest
-    area = []
-    if V < 0:
-        area.append(collapse[0:border + 1])
-        if absolute:  # if absolute V, pick the other side of the array
-            area.append(collapse[-border - 1:])
+    collapse = np.concatenate(([0], collapse))
+    collapse = np.cumsum(collapse)
+    xbins = np.linspace(0, 1, num=collapse.size)
+    if absolute:
+        Vabs = abs(V)
+        left, right = np.interp([-Vabs, V], xbins, collapse, left=0, right=1)
+        area = left + (1 - right)
     else:
-        area.append(collapse[border:])
-        if absolute and border != 0:  # if absolute V, pick the other side of the array
-            area.append(collapse[0:len(collapse) - border])
-    return sum(area)
+        area = np.interp(V, xbins, collapse, left=0, right=1)
+        if V >= 0:
+            area = 1 - area
+    return area
+
+
+def matrix_area_spline(matrix, V=0.2, absolute=True, collapsed_mat=False, kind=2):
+    """
+    Returns the probability of an event to be above a certain threshold. The absolute flag describes if the value is absolute.
+    :param collapsed_mat: if True, matrix must be 1d, else matrix must be 2d square
+    :param V: threshold
+    :param absolute: if True, calculate two-tailed area
+    :param matrix: list or array of probabilities, must sum to 1
+    :param kind: parameter kind from scipy.interpolate.interp1d
+    :return: probability of delta psi exceeding a certain threshold
+    """
+    collapse = matrix
+    if not collapsed_mat:
+        collapse = collapse_matrix(matrix)
+    collapse = np.concatenate(([0], collapse))
+    collapse = np.cumsum(collapse)
+    xbins = np.linspace(-1, 1, num=collapse.size)
+    spline = sinter.interp1d(xbins, collapse, kind=kind, fill_value=(0, 1), bounds_error=False)
+    if absolute:
+        Vabs = abs(V)
+        left, right = spline([-Vabs, V])
+        area = left + (1 - right)
+    else:
+        area = spline(V)
+        if V >= 0:
+            area = 1 - area
+    return float(area)
