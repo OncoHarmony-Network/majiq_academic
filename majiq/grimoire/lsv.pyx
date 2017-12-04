@@ -141,6 +141,7 @@ cdef class LSV:
         h_lsv = hdf5grp.create_group("LSVs/%s" % self.id)
         h_lsv.attrs['id'] = self.id
         h_lsv.attrs['type'] = self.type
+
         for xx  in self.junctions:
             if xx.lsv_index == 0 and junc_mtrx[xx.index].sum() > 0:
                 lsv_idx += 1
@@ -152,17 +153,7 @@ cdef class LSV:
         self.get_visual_lsv().to_hdf5(vh_lsv)
         return lsv_idx
 
-    # cdef int to_hdf5(LSV self, hdf5grp, int lsv_idx):
-    #     cdef int njunc = len(self.junctions)
-    #
-    #     h_lsv = hdf5grp.create_group("LSVs/%s" % self.id)
-    #     h_lsv.attrs['id'] = self.id
-    #     h_lsv.attrs['type'] = self.type
-    #     h_lsv.attrs['coverage'] = [lsv_idx, lsv_idx + njunc]
-    #
-    #     vh_lsv = h_lsv.create_group('visual')
-    #     self.get_visual_lsv().to_hdf5(vh_lsv)
-    #     return lsv_idx + njunc
+
 
     cdef tuple sample_lsvs(LSV self, np.ndarray junc_mtrx, float fitfunc_r, object majiq_config):
         cdef Junction xx
@@ -321,7 +312,7 @@ cpdef tuple sample_junctions(np.ndarray junc_mtrx, float fitfunc_r, object majiq
     cdef np.ndarray s_lsv, lsv_trs
 
     lsv_trs = np.array([junc_mtrx.sum(axis=1), np.count_nonzero(junc_mtrx, axis=1)]).T
-    #mark_stacks(junc_mtrx, fitfunc_r, majiq_config.pvalue_limit)
+    mark_stacks(junc_mtrx, fitfunc_r, majiq_config.pvalue_limit)
     s_lsv = sample_from_junctions(junction_list=junc_mtrx,
                                   m=majiq_config.m,
                                   k=majiq_config.k,
