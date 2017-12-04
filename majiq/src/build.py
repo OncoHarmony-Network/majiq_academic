@@ -77,13 +77,6 @@ def find_new_introns(file_list, chunk, process_conf, logger):
                                                                 list_exons[id_ex + 1].start - 1, nchunks, chunk_len)]
 
 
-        # list_introns.update({(gne_id, gene_obj['chromosome'], gene_obj['strand'],
-        #                       ex.end + 1, list_exons[id_ex + 1].start - 1): 0
-        #                      for id_ex, ex in enumerate(list_exons[:-1])
-        #                      if (ex.end + 3 < list_exons[id_ex + 1].start - 1
-        #                          and ex.end != -1 and list_exons[id_ex + 1].start != -1
-        #                          and not np.any([(ex.end + 1) in xx for xx in range_introns]))})
-
     for is_junc_file, fname, name in file_list:
         logger.info('READ introns from %s' % fname)
         find_introns(fname, list_introns, majiq_config.min_intronic_cov, process_conf.queue, gname=name)
