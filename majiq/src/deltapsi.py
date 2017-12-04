@@ -42,7 +42,6 @@ def deltapsi_quantification(list_of_lsv, chnk, process_conf, logger):
                                                                                            process_conf.m_samples,
                                                                                            num_exp, process_conf.nbins,
                                                                                            f_list[0][lidx].type)
-
         qm = QueueMessage(QUEUE_MESSAGE_DELTAPSI_RESULT, (post_matrix, posterior_psi1, posterior_psi2,
                                                           mu_psi1, mu_psi2, lsv_id), chnk)
         process_conf.queue.put(qm, block=True)
