@@ -304,7 +304,11 @@ cpdef extract_lsv_summary(list files, int minnonzero, int min_reads, dict epsi=N
         for xx in data['LSVs']:
             #mtrx = data['junc_cov'][data['LSVs/%s' % xx].attrs['coverage'][0]:data['LSVs/%s' % xx].attrs['coverage'][1]]
             mtrx = np.array([data['junc_cov'][xidx] for xidx in data['LSVs/%s' % xx].attrs['coverage']])
-            vals = (mtrx[:, 0] >= min_reads * (mtrx[:, 1] >= minnonzero))
+            try:
+                vals = (mtrx[:, 0] >= min_reads * (mtrx[:, 1] >= minnonzero))
+            except IndexError:
+                continue
+
             try:
                 lsv_list[xx][fidx] = int(vals.sum() >= 1)
                 if epsi is not None:
