@@ -40,7 +40,7 @@ cdef class LSV:
         self.strand = gene_strand
         self.id = "%s:%s:%s-%s" % (gene_id, self.type[0], ex.start, ex.end)
 
-    cdef get_visual_lsv(self):
+    def get_visual_lsv(self):
         cdef list junc_list = []
         cdef list junc_l = []
         cdef list lsv_exon_list = [self.exon]
