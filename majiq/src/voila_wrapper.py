@@ -95,7 +95,8 @@ def gene_to_splicegraph(gne_id, gne, dict_junctions, exon_dict, list_introns, ma
                 )
 
             for info in list_introns:
-
+                if info.skip:
+                    continue
                 intr_coord = int(info.start)-1
                 a3 = [junc_l[(intr_coord, info.start)]]
                 intr_coord = int(info.end) + 1

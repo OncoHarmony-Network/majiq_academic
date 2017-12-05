@@ -18,6 +18,7 @@ cdef class Intron:
     cdef public int end
     cdef public int chunk_len
     cdef public bint annot
+    cdef public bint skip
 
     cdef public Junction junc1
     cdef public Junction junc2

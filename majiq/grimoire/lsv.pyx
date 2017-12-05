@@ -35,10 +35,13 @@ cdef class LSV:
 
         self.exon = ex
         self.type = self.set_type(jncs, ex, gene_strand, ss)
+
         self.gene_id = gene_id
         self.chromosome = gene_chromosome
         self.strand = gene_strand
         self.id = "%s:%s:%s-%s" % (gene_id, self.type[0], ex.start, ex.end)
+        if self.type.endswith('i|i'):
+            raise InvalidLSV("incorrect LSV, too many ir junctions")
 
     def get_visual_lsv(self):
         cdef list junc_list = []
