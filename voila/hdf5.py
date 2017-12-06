@@ -130,7 +130,7 @@ class HDF5(object):
                     setattr(self, key, value)
                 except AttributeError:
                     # TEMPORARILY removing this log because it is killing my voila tools scripts
-                    #log.error('Unable to add {0}:{1} to {2}'.format(key, value, self.__class__.__name__))
+                    # log.error('Unable to add {0}:{1} to {2}'.format(key, value, self.__class__.__name__))
                     # TODO put the log file back when the variances bug is fixed:
                     # https://basecamp.com/2340013/projects/4389998/todos/315585955
                     pass
@@ -270,11 +270,7 @@ class DataSet(object):
                 name=join(datasets_folder, self.ds_name),
                 shape=(0, self.width),
                 dtype=self.dtype,
-                chunks=(1, self.width),
                 maxshape=(None, self.width),
-                compression="gzip",
-                compression_opts=9,
-                shuffle=True,
             )
 
             # store how many objects we've worked with in the HDF5 file
@@ -338,7 +334,6 @@ class ExonTypeDataSet(DataSet):
 
     def validate(self):
         assert self.unsigned_bits('uint8'), 'Exon Type must be unsigned 8 bit integer.'
-
 
 
 class JunctionTypeDataSet(DataSet):
