@@ -23,16 +23,11 @@ def init_splicegraph(filename):
         sg.add_experiment_names(majiq_config.exp_list)
 
 
-# def gene_to_splicegraph(dict_of_genes, dict_junctions, exon_dict, list_introns, majiq_config, lock):
 def gene_to_splicegraph(gne_id, gne, dict_junctions, exon_dict, list_introns, majiq_config):
-    # for gne_id, gne in dict_of_genes.items():
-    junc_list = []
-    junc_l = {}
     alt_empty_starts = []
     alt_empty_ends = []
-    jidx = 0
 
-    with SpliceGraph(get_builder_splicegraph_filename(majiq_config.outDir), 'a') as sg:
+    with SpliceGraph(get_builder_splicegraph_filename(majiq_config.outDir)) as sg:
 
         sg.gene(gne_id).add(
             name=gne['name'],
@@ -51,14 +46,11 @@ def gene_to_splicegraph(gne_id, gne, dict_junctions, exon_dict, list_introns, ma
                 continue
 
             # TODO: add transcripts
-            junc_l[(jj.start, jj.end)] = jidx
 
             sg.junction(gne_id, jj.start, jj.end).add(
                 annotated=jj.annot,
                 intron_retention=jj.intronic
             )
-
-            jidx += 1
 
         for ex in sorted(exon_dict, key=lambda x: (x.start, x.end)):
             if ex.intron:
@@ -84,8 +76,6 @@ def gene_to_splicegraph(gne_id, gne, dict_junctions, exon_dict, list_introns, ma
                 if ex.end > ex.db_coords[1]:
                     extra_coords.append([ex.db_coords[1] + 1, ex.end])
 
-            # ex_start = ex.start if ex.start > -1 else ex.end - 10
-            # ex_end = ex.end if ex.end > -1 else ex.start + 10
             sg.exon(gne_id, ex.start, ex.end).add(
                 coords_extra=extra_coords,
                 intron_retention=False,

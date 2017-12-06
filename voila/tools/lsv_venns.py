@@ -118,8 +118,8 @@ def make_venn(voila_list,
     junctions meeting this to be considered changing
 
     Other Options:
-        no_txt: do not display the numbers nor the labels in the Venn diagram [default: False]
-        compare_genes: Do overlaps / counts at gene level and not LSV level [default: False]
+        no_txt: do not display the numbers nor the labels in the Venn diagram [default_view: False]
+        compare_genes: Do overlaps / counts at gene level and not LSV level [default_view: False]
         remove_non_shared: Remove from consideration LSVs that were not quantified in all dPSI files given to make the
         comparison more fair
         consider_ir_events: should IR LSVs be ignored? (IR is ignored if its dPSI is >= 0.05 in a given LSV)

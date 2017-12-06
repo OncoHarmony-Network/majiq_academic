@@ -61,15 +61,15 @@
  *         Default value: "simple"
  *
  * @option Object headers (optional) An array containing the forces sorting
- *         rules. This option let's you specify a default sorting rule. Default
+ *         rules. This option let's you specify a default_view sorting rule. Default
  *         value: null
  *
  * @option Array sortList (optional) An array containing the forces sorting
- *         rules. This option let's you specify a default sorting rule. Default
+ *         rules. This option let's you specify a default_view sorting rule. Default
  *         value: null
  *
  * @option Array sortForce (optional) An array containing forced sorting rules.
- *         This option let's you specify a default sorting rule, which is
+ *         This option let's you specify a default_view sorting rule, which is
  *         prepended to user-selected rules. Default value: null
  *
  * @option Boolean sortLocaleCompare (optional) Boolean flag indicating whatever
@@ -77,7 +77,7 @@
  *
  *
  * @option Array sortAppend (optional) An array containing forced sorting rules.
- *         This option let's you specify a default sorting rule, which is
+ *         This option let's you specify a default_view sorting rule, which is
  *         appended to user-selected rules. Default value: null
  *
  * @option Boolean widthFixed (optional) Boolean flag indicating if tablesorter
@@ -819,7 +819,7 @@
     // make shortcut
     var ts = $.tablesorter;
 
-    // add default parsers
+    // add default_view parsers
     ts.addParser({
         id: "text",
         is: function (s) {
@@ -942,7 +942,7 @@
             return $(cell).metadata()[p];
         }, type: "numeric"
     });
-    // add default widgets
+    // add default_view widgets
     ts.addWidget({
         id: "zebra",
         format: function (table) {

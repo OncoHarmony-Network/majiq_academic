@@ -45,7 +45,7 @@ class ThisisNonRedundantSets(Tool):
         # parser.add_argument('--prob_dpsi_thresh',
         #                     type=float,
         #                     help=help_mes,
-        #                     default=0.0)
+        #                     default_view=0.0)
         help_mes = "E(PSI) threshold by which to call junctions as utilized. 1.0 essentially means" \
                    "don't use PSI..."
         parser.add_argument('--psi_thresh',

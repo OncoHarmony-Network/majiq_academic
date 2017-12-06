@@ -1,0 +1,4 @@
+.junction:hover {
+    stroke: orange;
+    stroke-width: 3;
+}

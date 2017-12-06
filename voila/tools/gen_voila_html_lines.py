@@ -45,17 +45,17 @@ class ThisisLookup(Tool):
                             '--comparisons',
                             type=str,
                             help=help_mes)
-        help_mes = 'Set this if default location is wrong. Location relative to indir.'
+        help_mes = 'Set this if default_view location is wrong. Location relative to indir.'
         parser.add_argument('--majiq_dpsi_dir',
                             default="majiq/dpsi/",
                             type=str,
                             help=help_mes)
-        help_mes = 'Set this if default location is wrong. Location relative to indir.'
+        help_mes = 'Set this if default_view location is wrong. Location relative to indir.'
         parser.add_argument('--splicegraph_dir',
                             default="build/",
                             type=str,
                             help=help_mes)
-        help_mes = 'Set this if default joiner is wrong.'
+        help_mes = 'Set this if default_view joiner is wrong.'
         parser.add_argument('--comparison_joiner',
                             default="_",
                             type=str,

@@ -25,7 +25,7 @@ class CtrlPsiDictionaryTool(Tool):
                             metavar='INPUT',
                             required=True,
                             help='File path to the input file list containing the paths to all of the .tsv '
-                                 'files that will be used to build the dPSI dictionary. The default option '
+                                 'files that will be used to build the dPSI dictionary. The default_view option '
                                  'assumes that the .tsv file contains a header. [Default: None]')
 
         parser.add_argument('--output',

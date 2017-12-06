@@ -319,16 +319,16 @@ def singly_unique(data,
 
     Arguments:
         data : Quick Import
-        threshold (default 0.05) : dPSI w/in +/-[threshold] of 0 are converted to 0
-        sig_dpsi_thresh (default 0.2) : dPSI thresh for ID'ing sig LSVs
-        sig_prob_thresh (default 0.95) : Prob(dPSI) thresh for ID'ing sig LSVs
+        threshold (default_view 0.05) : dPSI w/in +/-[threshold] of 0 are converted to 0
+        sig_dpsi_thresh (default_view 0.2) : dPSI thresh for ID'ing sig LSVs
+        sig_prob_thresh (default_view 0.95) : Prob(dPSI) thresh for ID'ing sig LSVs
         evaluate_introns : True/False, should intronic LSVs be considered?
-        comparisons (default False) : return list of comparisons corresponding to columns?
-        stringent_prob (default 0) : convert dPSI to 0 if P(dPSI) < stringent_prob_thresh
-            default 0 means no dPSI will be converted to 0 by this argument
+        comparisons (default_view False) : return list of comparisons corresponding to columns?
+        stringent_prob (default_view 0) : convert dPSI to 0 if P(dPSI) < stringent_prob_thresh
+            default_view 0 means no dPSI will be converted to 0 by this argument
             0.95 is very stringent, and will vastly reduce power to detect unique changes
                 however, these unique changes will be highly supported by the RNA seq data!
-        must_reciprocate (default True) : must the uniquely called LSV dPSIs sum to 0?
+        must_reciprocate (default_view True) : must the uniquely called LSV dPSIs sum to 0?
             (CAREFUL: BEHAVIOUR IF SET TO FALSE NOT TESTED YET)
             (not quite 'binary-like' b/c LSV with 4 junctions (2 pos, 2 neg) is reciprocating)
             after converting dPSI to 1,0,-1, checks that the sum for a uniquely called

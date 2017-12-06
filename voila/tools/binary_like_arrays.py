@@ -59,7 +59,7 @@ class ThisisBinaryLikeArrays(Tool):
                             choices={'closer', 'further', 'random'},
                             help=help_mes,
                             default="closer")
-        help_mes = "Flag: also include IR LSVs (default: don't import them)"
+        help_mes = "Flag: also include IR LSVs (default_view: don't import them)"
         parser.add_argument('--also_ir',
                             action='store_true',
                             help=help_mes,
