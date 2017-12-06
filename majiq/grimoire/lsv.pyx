@@ -35,6 +35,11 @@ cdef class LSV:
 
         self.exon = ex
         self.type = self.set_type(jncs, ex, gene_strand, ss)
+        if len(self.junctions) < 2:
+            raise InvalidLSV("not enougth junctions")
+
+        if len(self.type.split('|')) <= 2:
+            print(self.type, self.type[0], ex.start, ex.end, [(xx.start, xx.end) for xx in jncs] )
 
         self.gene_id = gene_id
         self.chromosome = gene_chromosome
@@ -211,7 +216,7 @@ cdef class LSV:
 
 
 cdef int _detect_lsvs(list list_exons, np.ndarray junc_mtrx, float fitfunc_r, str gid, str gchrom, str gstrand,
-                 object majiq_config, outf, list np_jjlist) except -1:
+                 object majiq_config, outf, list np_jjlist, object logger) except -1:
 
     cdef int count = 0
     cdef np.ndarray sum_trx = junc_mtrx.sum(axis=1)
@@ -265,11 +270,22 @@ cdef int _detect_lsvs(list list_exons, np.ndarray junc_mtrx, float fitfunc_r, st
 
 ###API
 
-cpdef detect_lsvs(list list_exons, np.ndarray junc_mtrx, float fitfunc_r, str gid, str gchrom, str gstrand,
-                 object majiq_config, outf, list np_jjlist):
+cpdef detect_lsvs(dict dict_of_genes, dict dict_junctions, dict list_exons, np.ndarray junc_mtrx, float fitfunc_r,
+                  object majiq_config, out_f, list np_jjlist, object logger):
 
-    _detect_lsvs(list_exons, junc_mtrx, fitfunc_r, gid, gchrom, gstrand, majiq_config, outf, np_jjlist)
+    cdef str gne_id
+    cdef int gne_idx
+    cdef dict gene_obj
 
+    for gne_idx, (gne_id, gene_obj) in enumerate(dict_of_genes.items()):
+        if gene_obj['nreads'] == 0:
+            continue
+
+        _detect_lsvs(list_exons[gne_id], junc_mtrx, fitfunc_r, gne_id, gene_obj['chromosome'],
+                     gene_obj['strand'], majiq_config, out_f, np_jjlist, logger)
+        for jj in dict_junctions[gne_id].values():
+            jj.reset()
+        gene_obj['nreads'] = 0
 
 cpdef tuple sample_junctions(np.ndarray junc_mtrx, float fitfunc_r, object majiq_config):
     cdef Junction xx

@@ -35,7 +35,8 @@ def deltapsi_quantification(list_of_lsv, chnk, process_conf, logger):
         if lidx % 50 == 0:
             print("Event %d ..." % lidx)
             sys.stdout.flush()
-
+        if lsv_id == 'ENSMUSG00000038658:t:29579765-29581489':
+            print("KK")
         post_matrix, posterior_psi1, posterior_psi2, mu_psi1, mu_psi2 = deltapsi_posterior(f_list[0][lidx].coverage,
                                                                                            f_list[1][lidx].coverage,
                                                                                            prior_matrix,

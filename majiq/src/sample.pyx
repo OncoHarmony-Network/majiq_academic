@@ -52,8 +52,8 @@ cdef np.ndarray _sample_from_junctions(np.ndarray junction_list, int m, int k, f
 
     for i, junction in enumerate(junction_list):
         junction = junction[junction > 0]
-        if np.count_nonzero(junction) > 0:
-            npos_mult = np.count_nonzero(junction)
+        npos_mult = np.count_nonzero(junction)
+        if npos_mult > 0:
             for iternumber in range(m):
                 sampled_mean = np.mean([choice(junction) for _ in range(k)])
                 nb50 = _sample_over_nb(one_over_r=fitted_one_over_r, mu=sampled_mean, num_samples=k)

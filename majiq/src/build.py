@@ -230,13 +230,9 @@ def parsing_files(sam_file_list, chnk, process_conf, logger):
             logger.info('Detecting lsvs')
             np_jjlist = [np.zeros(effective_len)]
 
-            for gne_idx, (gne_id, gene_obj) in enumerate(dict_of_genes.items()):
-                if gene_obj['nreads'] == 0:
-                    continue
-                detect_lsvs(list_exons[gne_id], junc_mtrx, fitfunc_r, gne_id, gene_obj['chromosome'],
-                            gene_obj['strand'], majiq_config, out_f, np_jjlist)
-                for jj in dict_junctions[gne_id].values():
-                    jj.reset()
+            detect_lsvs(dict_of_genes, dict_junctions, list_exons, junc_mtrx, fitfunc_r, majiq_config, out_f,
+                        np_jjlist, logger)
+
             logger.info('dump samples')
             vals = sample_junctions(np.array(np_jjlist), fitfunc_r, majiq_config)
             majiq_io.dump_lsv_coverage(out_f, vals[0], vals[1])
