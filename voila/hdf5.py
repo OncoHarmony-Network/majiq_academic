@@ -97,7 +97,7 @@ class HDF5(object):
             try:
                 h.attrs[key] = value
             except TypeError as e:
-                # Where the value stored is None, skip it.  This assumes that the default value for the attribute in
+                # Where the value stored is None, skip it.  This assumes that the default_view value for the attribute in
                 # the class is sufficient and that 'None' doesn't have some extra meaning for this attribute.
                 if value is None:
                     pass

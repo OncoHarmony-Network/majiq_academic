@@ -235,8 +235,8 @@ function toolTipD3(begin, end, el) {
 
 function spliceGraphD3() {
 
-    var width = 1000; // default width
-    var height = 160; // default height
+    var width = 1000; // default_view width
+    var height = 160; // default_view height
     var padding = [60, 5, 5, 5];
     var JUNC_AREA = 0.8;
     var EXON_H = Math.round(height * (1 - JUNC_AREA) - padding[2]);
@@ -328,6 +328,7 @@ function spliceGraphD3() {
                         return Math.round((scaleX(d.end) + scaleX(d.start)) / 2);
                     })
                     .attr("y", function (d) {
+                        console.log(d);
                         var posY = (scaleX(d.end) - scaleX(d.start)) / maxJunc * JUNC_AREA * (height - padding[0] - padding[2]);
                         return Math.round(height * JUNC_AREA - 2 - posY + (posY / d.dispersion) * (d.dispersion - 1 ? 1 : 0));
                     })

@@ -250,7 +250,13 @@ class VoilaLsv(LsvGraphic):
         :return: bool
         """
         means = np.array(means)
-        return max(means[means > 0].sum(), abs(means[means < 0].sum())) >= threshold
+        if any(np.isnan(x) for x in means):
+            print(means)
+            raise Exception('found NAN in numpy array')
+        means_gt_zero = means[means > 0]
+        means_sum = means_gt_zero.sum()
+        max_value = max(means_sum, abs(means_sum))
+        return max_value >= threshold
 
     def exclude(self):
         return ['categories', 'trunc_bins', 'trunc_psi1', 'trunc_psi2', 'het']

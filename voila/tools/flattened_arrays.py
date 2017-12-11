@@ -44,7 +44,7 @@ class ThisisLookup(Tool):
                             default="*tsv",
                             type=str,
                             help=help_mes)
-        help_mes = "Flag: DO consider IR LSVs (default is to skip)"
+        help_mes = "Flag: DO consider IR LSVs (default_view is to skip)"
         parser.add_argument('--also_ir',
                             action='store_true',
                             help=help_mes,

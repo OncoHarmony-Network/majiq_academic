@@ -1,15 +1,49 @@
-from sqlalchemy import exists, and_
+import os
+from abc import ABC, abstractmethod
+
+from sqlalchemy import create_engine, event, exists, and_
 from sqlalchemy.orm import sessionmaker
 
 from voila.api import splice_graph_model as model
-from voila.api.sql import SQL, SQLType
+from voila.api.sql import SQL
+from voila.utils.voila_log import voila_log
 
 Session = sessionmaker()
 
 
 class SpliceGraphSQL(SQL):
     def __init__(self, filename, delete=False):
-        super().__init__(filename, delete=delete, model=model)
+        super().__init__(filename, model, delete)
+        self.filename = filename
+        if delete is True:
+            try:
+                os.remove(filename)
+            except FileNotFoundError:
+                pass
+
+        engine = create_engine('sqlite:///{0}'.format(filename))
+        engine.execution_options(stream_results=True)
+        event.listen(engine, 'connect', self._fk_pragma_on_connect)
+        model.Base.metadata.create_all(engine)
+        Session.configure(bind=engine)
+        self.session = Session()
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        self.close()
+
+    @staticmethod
+    def _fk_pragma_on_connect(dbapi_con, con_record):
+        dbapi_con.execute('pragma foreign_keys=ON')
+
+    def close(self):
+        self.commit()
+        self.session.close_all()
+
+    def commit(self):
+        self.session.commit()
 
     def add_experiment_names(self, experiment_names):
         session = self.session
@@ -18,11 +52,39 @@ class SpliceGraphSQL(SQL):
     def get_experiment_names(self):
         return (e for e, in self.session.query(model.Experiment.name).all())
 
+    def check_version(self):
+        voila_log().warning('need to implement check version.')
+
+    def get_experiments(self):
+        return tuple(e[0] for e in self.session.query(model.Experiment.name).all())
+
+
+class SpliceGraphType(ABC):
+    def __bool__(self):
+        return self.exists
+
+    def __iter__(self):
+        return self.get.__iter__()
+
+    @abstractmethod
+    def add(self, *args, **kwargs):
+        pass
+
+    @property
+    @abstractmethod
+    def get(self, *args):
+        pass
+
+    @property
+    @abstractmethod
+    def exists(self):
+        pass
+
 
 class Exons(SpliceGraphSQL):
-    class _Exon(SQLType):
+    class _Exon(SpliceGraphType):
         def __init__(self, session, gene_id, start, end):
-            super().__init__(session)
+            self.session = session
             self.gene_id = gene_id
             self.start = start
             self.end = end
@@ -64,9 +126,9 @@ class Exons(SpliceGraphSQL):
 
 
 class Junctions(SpliceGraphSQL):
-    class _Junction(SQLType):
+    class _Junction(SpliceGraphType):
         def __init__(self, session, gene_id, start, end):
-            super().__init__(session)
+            self.session = session
             self.gene_id = gene_id
             self.start = int(start)
             self.end = int(end)
@@ -83,11 +145,13 @@ class Junctions(SpliceGraphSQL):
 
             return junc
 
+        @property
         def exists(self):
             return self.session.query(
                 exists().where(and_(model.Junction.gene_id == self.gene_id, model.Junction.start == self.start,
                                     model.Junction.end == self.end))).scalar()
 
+        @property
         def get(self):
             return self.session.query(model.Junction).get((self.gene_id, self.start, self.end))
 
@@ -105,9 +169,9 @@ class Junctions(SpliceGraphSQL):
 
 
 class Genes(SpliceGraphSQL):
-    class _Gene(SQLType):
+    class _Gene(SpliceGraphType):
         def __init__(self, session, gene_id):
-            super().__init__(session)
+            self.session = session
             self.gene_id = gene_id
 
         def add(self, **kwargs):
@@ -115,9 +179,11 @@ class Genes(SpliceGraphSQL):
             self.session.add(g)
             return g
 
+        @property
         def get(self):
             return self.session.query(model.Gene).get(self.gene_id)
 
+        @property
         def exists(self):
             return self.session.query(exists().where(model.Gene.id == self.gene_id)).scalar()
 
