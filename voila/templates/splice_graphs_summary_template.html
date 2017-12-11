@@ -21,6 +21,15 @@
         var db = new PouchDB('splice_graph');
         var sg = new SpliceGraph(db);
         $(function () {
+            $(document).on('mouseover', '.junction-grp', function () {
+                $('.junction-grp').css('opacity', 0.1);
+                $(this).css('opacity', '');
+            });
+
+            $(document).on('mouseout', '.junction-grp', function () {
+                $('.junction-grp').css('opacity', '');
+            });
+
             $('.toggle-scale').on('click', function () {
                 var gene_container = this.parentElement.parentElement;
                 var sg_div = gene_container.getElementsByClassName('splice-div')[0];
@@ -132,7 +141,6 @@
                                 class="coordsLabel">-</span>;<strong>
                             Length: </strong><span class="lengthLabel">-;</span></div>
                     </div>
-
                     <div class="splice-div-container">
                         <div class="splice-div exp1 default-view" id="spliceDivExp1_{{ gene_index }}"
                              data-gene-id="{{ gene.id }}"></div>
@@ -141,9 +149,7 @@
                             sg.init(sg_div, '{{ experiments[0] }}');
                         </script>
                     </div>
-
                 </div>
-
             {% endfor %}
         </fieldset>
     </section>
