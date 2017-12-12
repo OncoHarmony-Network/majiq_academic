@@ -229,6 +229,7 @@ cpdef tuple deltapsi_posterior(np.ndarray psi1, np.ndarray psi2, np.ndarray prio
 
     alpha_prior, beta_prior = _get_prior_params(lsv_type, num_ways)
     prior_idx = 1 if 'i' in lsv_type else 0
+
     for p_idx in range(num_ways):
         vals = _deltapsi_posterior(np.around(psi1, decimals=2), np.around(psi2, decimals=2), prior_matrix[prior_idx],
                                    p_idx, m, num_exp, num_ways, nbins, alpha_prior[p_idx], beta_prior[p_idx])

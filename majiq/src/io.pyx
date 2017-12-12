@@ -255,7 +255,6 @@ cdef _get_extract_lsv_list(list list_of_lsv_id, list file_list, int msamples):
                 except KeyError:
                     pass
 
-
         qq = quant_lsv(lsv_id, lsv_type, lsv_cov)
         result.append(qq)
     return result
