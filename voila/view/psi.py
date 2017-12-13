@@ -1,10 +1,10 @@
 import os
-from tempfile import NamedTemporaryFile
+import tempfile
 
 from voila import io_voila, constants
 from voila.api import Voila, SpliceGraph
 from voila.utils.exceptions import NoLsvsFound
-from voila.utils.run_voila_utils import table_marks_set, copy_static, get_template_dir
+from voila.utils.run_voila_utils import table_marks_set, copy_static
 from voila.utils.voila_log import voila_log
 from voila.view.html import Html
 from voila.voila_args import VoilaArgs
@@ -45,7 +45,9 @@ class Psi(Html, VoilaArgs):
         metainfo = self.metainfo
         index_row_template = env.get_template('psi_index_row.html')
 
-        with NamedTemporaryFile(dir=get_template_dir()) as tmp_index_file:
+        tmp_index_file = tempfile.mkstemp()[1]
+
+        with open(tmp_index_file, 'w') as f:
 
             with Voila(args.voila_file, 'r') as v:
 
@@ -62,22 +64,26 @@ class Psi(Html, VoilaArgs):
                             lexps=metainfo,
                             too_many_lsvs=too_many_lsvs
                     ):
-                        tmp_index_file.write(bytearray(el, encoding='utf-8'))
+                        f.write(el)
 
-                if not tmp_index_file.tell():
+                if not f.tell():
                     raise NoLsvsFound()
 
-                with open(os.path.join(args.output, 'index.html'), 'w') as html:
-                    index_template = env.get_template('index_single_summary_template.html')
-                    for el in index_template.generate(
-                            lexps=metainfo,
-                            tmp_index_file_name=os.path.basename(tmp_index_file.name),
-                            lsvs_count=lsv_count,
-                            table_marks=table_marks_set(lsv_count),
-                            prev_page=None,
-                            next_page=None
-                    ):
-                        html.write(el)
+        with open(tmp_index_file) as f:
+
+            with open(os.path.join(args.output, 'index.html'), 'w') as html:
+                index_template = env.get_template('index_single_summary_template.html')
+                for el in index_template.generate(
+                        lexps=metainfo,
+                        tmp_index_file=f.read(),
+                        lsvs_count=lsv_count,
+                        table_marks=table_marks_set(lsv_count),
+                        prev_page=None,
+                        next_page=None
+                ):
+                    html.write(el)
+
+        os.remove(tmp_index_file)
 
     @classmethod
     def arg_parents(cls):
