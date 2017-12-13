@@ -104,13 +104,20 @@ cdef tuple _psi_posterior(psi, int p_idx, int m_samples, int num_exp, int num_wa
 
 @cython.boundscheck(False) # turn off bounds-checking for entire function
 @cython.wraparound(False)  # turn off negative index wrapping for entire function
-cdef tuple _deltapsi_posterior(np.ndarray psi1, np.ndarray psi2, np.ndarray prior_matrix, int p_idx, int m_samples,
-                         list num_exp, int num_ways, int nbins, float alpha_0, float beta_0):
+# cdef tuple _deltapsi_posterior(np.ndarray psi1, np.ndarray psi2, np.ndarray prior_matrix, int p_idx, int m_samples,
+#                          list num_exp, int num_ways, int nbins, float alpha_0, float beta_0) except ? -1:
+cdef int _deltapsi_posterior(np.ndarray psi1, np.ndarray psi2, np.ndarray prior_matrix, int p_idx, int m_samples,
+                             list num_exp, int num_ways, int nbins, float alpha_0, float beta_0,
+                             list return_vals) except -1:
 
-    cdef np.ndarray ones_n = np.ones(shape=(1, nbins), dtype=np.float)
+
     cdef np.ndarray posterior = np.zeros(shape=(nbins, nbins), dtype=np.float)
     cdef np.ndarray post_psi1 = np.zeros(shape=nbins, dtype=np.float)
     cdef np.ndarray post_psi2 = np.zeros(shape=nbins, dtype=np.float)
+    cdef float mu_psi1, mu_psi2
+
+    cdef np.ndarray ones_n = np.ones(shape=(1, nbins), dtype=np.float)
+
     cdef np.ndarray A, psi_v1, psi_v2
     cdef np.ndarray data_given_psi1, data_given_psi2
     cdef list mu_psi1_m = []
@@ -119,7 +126,7 @@ cdef tuple _deltapsi_posterior(np.ndarray psi1, np.ndarray psi2, np.ndarray prio
 
     cdef float junc
     cdef float all_sample
-    cdef float mu_psi1, mu_psi2
+
     cdef np.ndarray alls1, alls2
 
     alls1 = np.around(psi1.sum(axis=(0,1)))
@@ -152,7 +159,15 @@ cdef tuple _deltapsi_posterior(np.ndarray psi1, np.ndarray psi2, np.ndarray prio
     post_psi1 /= m_samples
     post_psi2 /= m_samples
 
-    return mu_psi1, mu_psi2, posterior, post_psi1, post_psi2
+
+    #TODO: delete
+    return_vals[0].append(mu_psi1)
+    return_vals[1].append(mu_psi2)
+    return_vals[2].append(posterior)
+    return_vals[3].append(post_psi1)
+    return_vals[4].append(post_psi2)
+
+    #return mu_psi1, mu_psi2, posterior, post_psi1, post_psi2
 
 @cython.boundscheck(False) # turn off bounds-checking for entire function
 @cython.wraparound(False)  # turn off negative index wrapping for entire function
@@ -214,7 +229,8 @@ cpdef tuple psi_posterior(np.ndarray psi, int m, int num_exp, int nbins, str lsv
 
 @cython.boundscheck(False) # turn off bounds-checking for entire function
 @cython.wraparound(False)  # turn off negative index wrapping for entire function
-cpdef tuple deltapsi_posterior(np.ndarray psi1, np.ndarray psi2, np.ndarray prior_matrix, int m, list num_exp, int nbins,
+#cpdef tuple deltapsi_posterior(np.ndarray psi1, np.ndarray psi2, np.ndarray prior_matrix, int m, list num_exp, int nbins,
+def deltapsi_posterior(np.ndarray psi1, np.ndarray psi2, np.ndarray prior_matrix, int m, list num_exp, int nbins,
                          str lsv_type):
 
     cdef list mu_psi1 = []
@@ -231,14 +247,17 @@ cpdef tuple deltapsi_posterior(np.ndarray psi1, np.ndarray psi2, np.ndarray prio
     prior_idx = 1 if 'i' in lsv_type else 0
 
     for p_idx in range(num_ways):
-        vals = _deltapsi_posterior(np.around(psi1, decimals=2), np.around(psi2, decimals=2), prior_matrix[prior_idx],
-                                   p_idx, m, num_exp, num_ways, nbins, alpha_prior[p_idx], beta_prior[p_idx])
+        # vals = _deltapsi_posterior(np.around(psi1, decimals=2), np.around(psi2, decimals=2), prior_matrix[prior_idx],
+        #                            p_idx, m, num_exp, num_ways, nbins, alpha_prior[p_idx], beta_prior[p_idx])
+        _deltapsi_posterior(np.around(psi1, decimals=2), np.around(psi2, decimals=2), prior_matrix[prior_idx],
+                            p_idx, m, num_exp, num_ways, nbins, alpha_prior[p_idx], beta_prior[p_idx],
+                            return_vals=[mu_psi1, mu_psi2, post_matrix, posterior_psi1, posterior_psi2])
 
-        mu_psi1.append(vals[0])
-        mu_psi2.append(vals[1])
-        post_matrix.append(vals[2])
-        posterior_psi1.append(vals[3])
-        posterior_psi2.append(vals[4])
+        # mu_psi1.append(vals[0])
+        # mu_psi2.append(vals[1])
+        # post_matrix.append(vals[2])
+        # posterior_psi1.append(vals[3])
+        # posterior_psi2.append(vals[4])
 
         if num_ways == 2:
             break
