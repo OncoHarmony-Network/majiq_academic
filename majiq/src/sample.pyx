@@ -1,9 +1,6 @@
-import sys
-from random import choice
-
+from numpy.random  import choice
 import numpy as np
 cimport numpy as np
-import majiq.src.polyfitnb as majiq_fit
 from scipy.stats import nbinom, poisson
 import cython
 
@@ -49,7 +46,7 @@ cdef np.ndarray _sample_from_junctions_old(np.ndarray junction_list, int m, int 
         if npos_mult > 0:
             for iternumber in range(m):
                 sampled_mean = np.mean(choice(junction, k))
-                nb50 = _sample_over_nb(one_over_r=fitted_one_over_r, mu=sampled_mean, num_samples=k)
+                nb50 = _sample_over_nb_loop(one_over_r=fitted_one_over_r, mu=sampled_mean, num_samples=k)
                 all_samples[i, iternumber] = (np.mean(nb50) + 1) * npos_mult
 
         # all_samples = (all_samples + 1) * npos_mult
@@ -59,17 +56,17 @@ cdef np.ndarray _sample_from_junctions_old(np.ndarray junction_list, int m, int 
 
 @cython.boundscheck(False) # turn off bounds-checking for entire function
 @cython.wraparound(False)  # turn off negative index wrapping for entire function
-cdef np.ndarray _sample_over_poisson(float r, float mu, int num_samples):
-    return poisson.rvs(mu, size=num_samples).mean() +1
+cdef inline float _sample_over_poisson(float r, float mu, int num_samples):
+    return poisson.rvs(mu, size=num_samples).mean() + 1
 
 
 
 @cython.boundscheck(False) # turn off bounds-checking for entire function
 @cython.wraparound(False)  # turn off negative index wrapping for entire function
-cdef np.ndarray _sample_over_nb(float r, float mu, int num_samples):
-    cdef np.ndarray p
+cdef inline float _sample_over_nb(float r, float mu, int num_samples):
+    cdef float p
     p = r / (r + mu)
-    return nbinom.rvs(r, p, size=num_samples).mean()+1
+    return nbinom.rvs(r, p, size=num_samples).mean() + 1
 
 
 cdef np.ndarray _sample_from_junctions(np.ndarray junction_list, int m, int k, float fitted_one_over_r=0.0):
@@ -87,8 +84,8 @@ cdef np.ndarray _sample_from_junctions(np.ndarray junction_list, int m, int k, f
     cdef np.ndarray all_samples = np.zeros(shape=(junction_list.shape[0], m), dtype=np.float)
     cdef int npos_mult
     cdef int iternumber
-    cdef float r = 0
-    cdef np.ndarray junction, m_samples_means
+    cdef float m_samples_means, r = 0
+    cdef np.ndarray junction
     cdef int i
 
     if fitted_one_over_r>0:
@@ -101,9 +98,9 @@ cdef np.ndarray _sample_from_junctions(np.ndarray junction_list, int m, int k, f
         junction = junction[junction > 0]
         npos_mult = np.count_nonzero(junction)
         if npos_mult > 0:
-            m_samples_means  = np.array([np.mean(choice(junction, k)) for _ in range(m)])
-            all_samples[i] = np.array([func(r, mu=xx, num_samples=k) * npos_mult for xx in m_samples_means])
-
+            for mm in range(m):
+                m_samples_means  = choice(junction, k).mean()
+                all_samples[i, mm] = func(r, mu=m_samples_means, num_samples=k) * npos_mult
 
     return all_samples
 
