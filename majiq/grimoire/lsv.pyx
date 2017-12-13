@@ -125,7 +125,7 @@ cdef class LSV:
 
         h_lsv.attrs['coverage'] = [xx.lsv_index for xx in self.junctions]
         vh_lsv = h_lsv.create_group('visual')
-        self.get_visual_lsv().to_hdf5(vh_lsv)
+        #self.get_visual_lsv().to_hdf5(vh_lsv)
         return lsv_idx
 
     cdef tuple sample_lsvs(LSV self, np.ndarray junc_mtrx, float fitfunc_r, object majiq_config):
