@@ -77,13 +77,6 @@ def find_new_introns(file_list, chunk, process_conf, logger):
                                                                 list_exons[id_ex + 1].start - 1, nchunks, chunk_len)]
 
 
-        # list_introns.update({(gne_id, gene_obj['chromosome'], gene_obj['strand'],
-        #                       ex.end + 1, list_exons[id_ex + 1].start - 1): 0
-        #                      for id_ex, ex in enumerate(list_exons[:-1])
-        #                      if (ex.end + 3 < list_exons[id_ex + 1].start - 1
-        #                          and ex.end != -1 and list_exons[id_ex + 1].start != -1
-        #                          and not np.any([(ex.end + 1) in xx for xx in range_introns]))})
-
     for is_junc_file, fname, name in file_list:
         logger.info('READ introns from %s' % fname)
         find_introns(fname, list_introns, majiq_config.min_intronic_cov, process_conf.queue, gname=name)
@@ -218,7 +211,7 @@ def parsing_files(sam_file_list, chnk, process_conf, logger):
 
         majiq_io_bam.close_rnaseq(samfl)
         junc_mtrx = np.array(junc_mtrx)
-        update_splicegraph_junctions(dict_junctions, junc_mtrx, majiq_config.outDir, sam_file, process_conf.lock)
+        #update_splicegraph_junctions(dict_junctions, junc_mtrx, majiq_config.outDir, sam_file, process_conf.lock)
         indx = np.arange(junc_mtrx.shape[0])[junc_mtrx.sum(axis=1) >= majiq_config.minreads]
 
         logger.debug("[%s] Fitting NB function with constitutive events..." % sam_file)
@@ -237,13 +230,9 @@ def parsing_files(sam_file_list, chnk, process_conf, logger):
             logger.info('Detecting lsvs')
             np_jjlist = [np.zeros(effective_len)]
 
-            for gne_idx, (gne_id, gene_obj) in enumerate(dict_of_genes.items()):
-                if gene_obj['nreads'] == 0:
-                    continue
-                detect_lsvs(list_exons[gne_id], junc_mtrx, fitfunc_r, gne_id, gene_obj['chromosome'],
-                            gene_obj['strand'], majiq_config, out_f, np_jjlist)
-                for jj in dict_junctions[gne_id].values():
-                    jj.reset()
+            detect_lsvs(dict_of_genes, dict_junctions, list_exons, junc_mtrx, fitfunc_r, majiq_config, out_f,
+                        np_jjlist, logger)
+
             logger.info('dump samples')
             vals = sample_junctions(np.array(np_jjlist), fitfunc_r, majiq_config)
             majiq_io.dump_lsv_coverage(out_f, vals[0], vals[1])

@@ -35,12 +35,18 @@ cdef class LSV:
 
         self.exon = ex
         self.type = self.set_type(jncs, ex, gene_strand, ss)
+        if len(self.junctions) < 2:
+            raise InvalidLSV("not enougth junctions")
+
+        if len(self.type.split('|')) <= 2:
+            print(self.type, self.type[0], ex.start, ex.end, [(xx.start, xx.end) for xx in jncs] )
+
         self.gene_id = gene_id
         self.chromosome = gene_chromosome
         self.strand = gene_strand
         self.id = "%s:%s:%s-%s" % (gene_id, self.type[0], ex.start, ex.end)
-        #self.junctions.sort(key=lambda jj: (jj.start, jj.end))
-
+        if self.type.endswith('i|i'):
+            raise InvalidLSV("incorrect LSV, too many ir junctions")
 
     def get_visual_lsv(self):
         cdef list junc_list = []
@@ -68,24 +74,8 @@ cdef class LSV:
             if jj.donor != self.exon:
                 lsv_exon_list.append(jj.donor)
 
-            if jj.annot and jj.nreads == 0:
-                jtype = JUNCTION_TYPE_DB
-            elif jj.annot and jj.nreads > 0:
-                jtype = JUNCTION_TYPE_DB_RNASEQ
-            else:
-                jtype = JUNCTION_TYPE_RNASEQ
-                # continue
-
-            if jj.donor.intron:
-                ir_type = IR_TYPE_START
-            elif jj.acceptor.intron:
-                ir_type = IR_TYPE_END
-            else:
-                ir_type = NONE_IR_TYPE
-
             junc_l.append((jj.start, jj.end))
-            junc_list.append(JunctionGraphic(jj.start, jj.end, transcripts=[], intron_retention=ir_type))
-        # junc_l = np.asarray(junc_l)
+            junc_list.append(JunctionGraphic(jj.start, jj.end))
         lsv_exon_list.sort(key=lambda x:(x.start, x.end))
 
         for ex in lsv_exon_list:
@@ -111,23 +101,7 @@ cdef class LSV:
                     if jjo.start == jjl[0]:
                         a5.append(jidx)
 
-            if ex.annot and not covered:
-                visual_type = EXON_TYPE_DB
-            elif ex.annot and covered:
-                visual_type = EXON_TYPE_DB_RNASEQ
-            elif not ex.annot and covered:
-                visual_type = EXON_TYPE_RNASEQ
-            else:
-                visual_type = EXON_TYPE_RNASEQ
-
-            extra_coords = []
-            if ex.annot:
-                if ex.start < ex.db_coords[0]:
-                    extra_coords.append([ex.start, ex.db_coords[0] - 1])
-                if ex.end > ex.db_coords[1]:
-                    extra_coords.append([ex.db_coords[1] + 1, ex.end])
-
-            exon_list.append(ExonGraphic(a3, a5, start=ex.start, end=ex.end, coords_extra=extra_coords,
+            exon_list.append(ExonGraphic(a3, a5, start=ex.start, end=ex.end,
                              intron_retention=ex.intron, alt_starts=alt_start, alt_ends=alt_ends))
 
         splice_lsv = LsvGraphic(lsv_type=self.type, start=self.exon.start, end=self.exon.end,
@@ -144,16 +118,15 @@ cdef class LSV:
 
         for xx  in self.junctions:
             if xx.lsv_index == 0 and junc_mtrx[xx.index].sum() > 0:
+
                 lsv_idx += 1
                 xx.lsv_index = lsv_idx
                 np_jjlist.append(junc_mtrx[xx.index])
 
         h_lsv.attrs['coverage'] = [xx.lsv_index for xx in self.junctions]
         vh_lsv = h_lsv.create_group('visual')
-        self.get_visual_lsv().to_hdf5(vh_lsv)
+        #self.get_visual_lsv().to_hdf5(vh_lsv)
         return lsv_idx
-
-
 
     cdef tuple sample_lsvs(LSV self, np.ndarray junc_mtrx, float fitfunc_r, object majiq_config):
         cdef Junction xx
@@ -243,7 +216,7 @@ cdef class LSV:
 
 
 cdef int _detect_lsvs(list list_exons, np.ndarray junc_mtrx, float fitfunc_r, str gid, str gchrom, str gstrand,
-                 object majiq_config, outf, list np_jjlist) except -1:
+                 object majiq_config, outf, list np_jjlist, object logger) except -1:
 
     cdef int count = 0
     cdef np.ndarray sum_trx = junc_mtrx.sum(axis=1)
@@ -288,9 +261,6 @@ cdef int _detect_lsvs(list list_exons, np.ndarray junc_mtrx, float fitfunc_r, st
                 break
         else:
             lsv_idx = st.add_lsv(outf, junc_mtrx, np_jjlist, lsv_idx)
-            # for xx in st.junctions:
-            #     np_jjlist.append(junc_mtrx[xx.index])
-            # lsv_idx = st.to_hdf5(outf, lsv_idx)
             count += 1
 
     outf.attrs['lsv_idx'] = lsv_idx
@@ -300,11 +270,22 @@ cdef int _detect_lsvs(list list_exons, np.ndarray junc_mtrx, float fitfunc_r, st
 
 ###API
 
-cpdef detect_lsvs(list list_exons, np.ndarray junc_mtrx, float fitfunc_r, str gid, str gchrom, str gstrand,
-                 object majiq_config, outf, list np_jjlist):
+cpdef detect_lsvs(dict dict_of_genes, dict dict_junctions, dict list_exons, np.ndarray junc_mtrx, float fitfunc_r,
+                  object majiq_config, out_f, list np_jjlist, object logger):
 
-    _detect_lsvs(list_exons, junc_mtrx, fitfunc_r, gid, gchrom, gstrand, majiq_config, outf, np_jjlist)
+    cdef str gne_id
+    cdef int gne_idx
+    cdef dict gene_obj
 
+    for gne_idx, (gne_id, gene_obj) in enumerate(dict_of_genes.items()):
+        if gene_obj['nreads'] == 0:
+            continue
+
+        _detect_lsvs(list_exons[gne_id], junc_mtrx, fitfunc_r, gne_id, gene_obj['chromosome'],
+                     gene_obj['strand'], majiq_config, out_f, np_jjlist, logger)
+        for jj in dict_junctions[gne_id].values():
+            jj.reset()
+        gene_obj['nreads'] = 0
 
 cpdef tuple sample_junctions(np.ndarray junc_mtrx, float fitfunc_r, object majiq_config):
     cdef Junction xx

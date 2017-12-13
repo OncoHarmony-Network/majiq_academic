@@ -26,7 +26,7 @@ def calcpsi(args):
 def psi_quantification(list_of_lsv, chnk, process_conf, logger):
 
     logger.info("Quantifying LSVs PSI.. %s" % chnk)
-    f_list = majiq_deprio.get_extract_lsv_list(list_of_lsv, process_conf.files)
+    f_list = majiq_io.get_extract_lsv_list(list_of_lsv, process_conf.files1, process_conf.m_samples)
     for lidx, lsv_id in enumerate(list_of_lsv):
         if lidx % 50 == 0:
             print("Event %d ..." % lidx)

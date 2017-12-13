@@ -492,7 +492,7 @@ def matrix_area(matrix, V=0.2, absolute=True, collapsed_mat=False):
     xbins = np.linspace(0, 1, num=collapse.size)
     if absolute:
         Vabs = abs(V)
-        left, right = np.interp([-Vabs, V], xbins, collapse, left=0, right=1)
+        left, right = np.interp([-Vabs, Vabs], xbins, collapse, left=0, right=1)
         area = left + (1 - right)
     else:
         area = np.interp(V, xbins, collapse, left=0, right=1)
@@ -520,7 +520,7 @@ def matrix_area_spline(matrix, V=0.2, absolute=True, collapsed_mat=False, kind=2
     spline = sinter.interp1d(xbins, collapse, kind=kind, fill_value=(0, 1), bounds_error=False)
     if absolute:
         Vabs = abs(V)
-        left, right = spline([-Vabs, V])
+        left, right = spline([-Vabs, Vabs])
         area = left + (1 - right)
     else:
         area = spline(V)

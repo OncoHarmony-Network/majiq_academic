@@ -39,10 +39,10 @@ cdef int __mark_stacks(numpy.ndarray junctions, fitfunc_r, pvalue_limit, logger=
                 mean_rest = 0.5 if copy_junc.mean() is ma.masked else copy_junc.mean() * copy_junc.count()
                 pval = get_negbinom_pval(fitfunc_r, mean_rest, value)
                 if pval < pvalue_limit:
-                    junctions[i, j] = -2
+                    junctions[i, j] = 0
                     minstack = min(minstack, value)
                     numstacks += 1
-    ma.masked_less(junctions, 0)
+    #ma.masked_less(junctions, 0)
 
 cpdef mark_stacks(numpy.ndarray junctions, fitfunc_r, pvalue_limit, logger=None):
     __mark_stacks(junctions, fitfunc_r, pvalue_limit, logger=logger)

@@ -25,6 +25,7 @@ cdef class Intron:
         self.start = start
         self.end = end
         self.chunk_len = int((end-start) / self.nchunks)
+        self.skip = False
 
         self.junc1 = None
         self.junc2 = None
@@ -193,7 +194,13 @@ def detect_exons(dict junction_dict, list exon_list):
     return new_exons
 
 
-def expand_introns(str gne_id, list list_introns, list list_exons, dict dict_junctions, int default_index=-1):
+cpdef expand_introns(str gne_id, list list_introns, list list_exons, dict dict_junctions, int default_index=-1):
+
+    cdef list new_list = []
+    cdef Exon ex, donor_ex, acceptor_ex, ir_ex
+    cdef Junction jj
+    cdef Intron intron
+    cdef int ex_start, ex_end
 
     for intron in list_introns:
 
@@ -204,8 +211,11 @@ def expand_introns(str gne_id, list list_introns, list list_exons, dict dict_jun
             ex_start = ex.start if ex.start != EMPTY_COORD else ex.end-1
             ex_end = ex.end if ex.end != EMPTY_COORD else ex.start+1
 
+            if ex_start <= intron.start and ex_end >= intron.end:
+                intron.skip = True
+                break
+
             if ex.end != EMPTY_COORD and ex_start<= intron.start <= (ex_end+1) :
-                # print(gne_id,'KK1', intron.start, intron.end, ex_start, ex_end)
                 intron.start = ex_end + 1
                 donor_ex = ex
 
@@ -213,7 +223,7 @@ def expand_introns(str gne_id, list list_introns, list list_exons, dict dict_jun
 
                 if ex.end != EMPTY_COORD and ex.start != EMPTY_COORD :
                     ir_ex = Exon(intron.start, ex.end-1, annot=intron.annot, intronic=True)
-                    list_exons.append(ir_ex)
+                    new_list.append(ir_ex)
 
                     jj = Junction(intron.start-1, intron.start, gne_id, default_index, intron=True, annot=intron.annot)
                     jj.donor = donor_ex
@@ -243,8 +253,10 @@ def expand_introns(str gne_id, list list_introns, list list_exons, dict dict_jun
                 intron.end = ex_start - 1
                 acceptor_ex = ex
 
+        if intron.skip:
+            continue
         ir_ex = Exon(intron.start, intron.end, annot=intron.annot, intronic=True)
-        list_exons.append(ir_ex)
+        new_list.append(ir_ex)
 
         jj = Junction(intron.start-1, intron.start, gne_id, default_index, intron=True, annot=intron.annot)
         jj.donor = donor_ex
@@ -259,3 +271,5 @@ def expand_introns(str gne_id, list list_introns, list list_exons, dict dict_jun
         ir_ex.ob.add(jj)
         acceptor_ex.ib.add(jj)
         dict_junctions[(intron.end, intron.end+1)] = jj
+
+    list_exons.extend(new_list)

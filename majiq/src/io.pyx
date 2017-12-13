@@ -255,7 +255,6 @@ cdef _get_extract_lsv_list(list list_of_lsv_id, list file_list, int msamples):
                 except KeyError:
                     pass
 
-
         qq = quant_lsv(lsv_id, lsv_type, lsv_cov)
         result.append(qq)
     return result
@@ -302,9 +301,13 @@ cpdef extract_lsv_summary(list files, int minnonzero, int min_reads, dict epsi=N
             logger.info("Parsing file: %s" % ff)
         data = h5py.File(ff, 'r')
         for xx in data['LSVs']:
-            #mtrx = data['junc_cov'][data['LSVs/%s' % xx].attrs['coverage'][0]:data['LSVs/%s' % xx].attrs['coverage'][1]]
             mtrx = np.array([data['junc_cov'][xidx] for xidx in data['LSVs/%s' % xx].attrs['coverage']])
-            vals = (mtrx[:, 0] >= min_reads * (mtrx[:, 1] >= minnonzero))
+            try:
+                vals = (mtrx[:, 0] >= min_reads * (mtrx[:, 1] >= minnonzero))
+            except IndexError:
+                logger.info("Skipping incorrect lsv %s" % xx)
+                continue
+
             try:
                 lsv_list[xx][fidx] = int(vals.sum() >= 1)
                 if epsi is not None:
@@ -319,8 +322,8 @@ cpdef extract_lsv_summary(list files, int minnonzero, int min_reads, dict epsi=N
     if epsi is not None:
         for xx in epsi.keys():
             epsi[xx] = epsi[xx] / nfiles
-            epsi[xx] = epsi[xx] / (epsi[xx].sum() - epsi[xx])
-            epsi[xx][np.isnan(epsi[xx])] = 0.5
+            epsi[xx] = epsi[xx] / epsi[xx].sum()
+            epsi[xx][np.isnan(epsi[xx])] = 1.0 / nfiles
 
     lsv_id_list = [xx for xx,yy in lsv_list.items() if np.sum(yy) >= percent]
 
