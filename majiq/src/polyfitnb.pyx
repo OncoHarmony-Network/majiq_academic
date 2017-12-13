@@ -20,7 +20,7 @@ cdef np.ndarray _get_ecdf(list pvalues):
 
 @cython.boundscheck(False) # turn off bounds-checking for entire function
 @cython.wraparound(False)  # turn off negative index wrapping for entire function
-cdef float _score_ecdf(np.ndarray ecdf):
+cdef inline float _score_ecdf(np.ndarray ecdf):
     """
     Give a score to a ecdf calculating the deviation from the 45 degree line
     """
@@ -58,9 +58,35 @@ cdef list _calc_pvalues(np.ndarray junctions, float one_over_r, object indices_l
     njuncs = vals.shape[0]
 
     mu = (junc_fltr.sum(axis=1) - junc_idxs) / vals
+    if one_over_r > 0:
+        r = 1 / one_over_r
+        p = r/ (mu +r)
+        pvalues = nbinom.cdf(junc_idxs, r, p)
+    else:
+        pvalues = poisson.cdf(junc_idxs, mu)
+
+    return pvalues
+
+
+@cython.boundscheck(False) # turn off bounds-checking for entire function
+@cython.wraparound(False)  # turn off negative index wrapping for entire function
+cdef list _calc_pvalues_old(np.ndarray junctions, float one_over_r, object indices_list):
+    cdef list pvalues,
+    cdef int njuncs, idx
+    cdef np.ndarray junc_fltr, junc_idxs, vals, mu, xx
+
+    vals = np.count_nonzero(junctions, axis=1)
+    junc_fltr = junctions[vals > 1]
+    junc_idxs = np.array([xx[indices_list[idx]] for idx, xx in enumerate(junc_fltr)])
+    vals = vals[vals > 1] - 1
+    njuncs = vals.shape[0]
+
+    mu = (junc_fltr.sum(axis=1) - junc_idxs) / vals
     pvalues = [get_negbinom_pval(one_over_r, mu[idx], junc_idxs[idx]) for idx in range(njuncs)]
 
     return pvalues
+
+
 
 
 @cython.boundscheck(False) # turn off bounds-checking for entire function
