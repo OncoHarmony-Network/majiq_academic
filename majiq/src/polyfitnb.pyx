@@ -9,7 +9,7 @@ import cython
 
 @cython.boundscheck(False) # turn off bounds-checking for entire function
 @cython.wraparound(False)  # turn off negative index wrapping for entire function
-cdef np.ndarray _get_ecdf(list pvalues):
+cdef np.ndarray _get_ecdf(np.ndarray pvalues):
     cdef int nbins
     cdef np.ndarray hist, bin_edges
 
@@ -46,8 +46,8 @@ cdef float get_negbinom_pval(float one_over_r, float mu, float x):
 
 @cython.boundscheck(False) # turn off bounds-checking for entire function
 @cython.wraparound(False)  # turn off negative index wrapping for entire function
-cdef list _calc_pvalues(np.ndarray junctions, float one_over_r, object indices_list):
-    cdef list pvalues,
+cdef np.ndarray _calc_pvalues(np.ndarray junctions, float one_over_r, object indices_list):
+    cdef np.ndarray pvalues,
     cdef int njuncs, idx
     cdef np.ndarray junc_fltr, junc_idxs, vals, mu, xx
 
@@ -97,8 +97,7 @@ cdef tuple _adjust_fit(float starting_a, np.ndarray junctions, float precision, 
 
     cdef int previous_a = -1
     cdef int idx = 0
-    cdef np.ndarray steps = np.arange(starting_a, 0, - precision)
-    cdef list pvalues, previous_pvalues
+    cdef np.ndarray pvalues, previous_pvalues, steps = np.arange(starting_a, 0, - precision)
     cdef np.ndarray ecdf, previous_ecdf
     cdef float score
 
@@ -143,8 +142,8 @@ cdef tuple _adjust_fit(float starting_a, np.ndarray junctions, float precision, 
 @cython.boundscheck(False) # turn off bounds-checking for entire function
 @cython.wraparound(False)  # turn off negative index wrapping for entire function
 cpdef float fit_nb(np.ndarray junctionl, str outpath, float nbdisp=0.1, object logger=None) except -1:
-    cdef np.ndarray indices, mean_junc, std_junc, ecdf
-    cdef list precision_values, pvalues
+    cdef np.ndarray indices, mean_junc, std_junc, ecdf, pvalues
+    cdef list precision_values
     cdef float one_over_r0, b, one_over_r, score, precision
     cdef int i
 
