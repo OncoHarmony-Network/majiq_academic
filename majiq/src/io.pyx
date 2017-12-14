@@ -187,16 +187,6 @@ cdef int _dump_junctions(db_f, str gne_id, int start, int end, str transcript_id
         h_jnc.attrs['annotated'] = annot
         #h_jnc.attrs['transcript_id_list'] = [transcript_id.encode('utf8')]
 
-# cdef int _dump_exon(db_f, str gne_id, int start, int end, bint annot=True) except -1:
-#     cdef str jid = '%s/exons/%s-%s' % (gne_id, start, end)
-#
-#     if jid not in db_f:
-#         h_jnc = db_f.create_group(jid)
-#         h_jnc.attrs['start'] = start
-#         h_jnc.attrs['end'] = end
-#         h_jnc.attrs['annot'] = annot
-
-
 cdef int _dump_gene(db_f, str gne_id, str gne_name, str chrom, str strand, int start, int end) except -1:
     h_gen = db_f.create_group(gne_id)
     h_gen.attrs['id'] = gne_id
@@ -208,15 +198,6 @@ cdef int _dump_gene(db_f, str gne_id, str gne_name, str chrom, str strand, int s
 
 cdef int _dump_elems_list(db_f, str gne_id, np.ndarray mtrx) except -1:
     db_f[gne_id].create_dataset('db_coords', data=mtrx, maxshape=(None, mtrx.shape[1]))
-
-
-# cdef int _dump_intron(db_f, str gne_id, int start, int end, bint annot=False) except -1:
-#     cdef str jid = '%s/ir/%s-%s' % (gne_id, start, end)
-#     if jid not in db_f:
-#         h_jnc = db_f.create_group(jid)
-#         h_jnc.attrs['start'] = start
-#         h_jnc.attrs['end'] = end
-#         h_jnc.attrs['annotated'] = annot
 
 
 def junction_to_tmp(gne_id, Junction junc, object hdf5grps):

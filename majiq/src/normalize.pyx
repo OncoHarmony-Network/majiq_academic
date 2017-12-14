@@ -1,7 +1,7 @@
 __author__ = 'jordi@biociphers.org'
 import sys
 import numpy as np
-cimport numpy
+cimport numpy as np
 # from scipy import interpolate
 # from scipy.stats.mstats_basic import mquantiles
 # from majiq.src.config import Config
@@ -13,38 +13,57 @@ import cython
 
 @cython.boundscheck(False) # turn off bounds-checking for entire function
 @cython.wraparound(False)  # turn off negative index wrapping for entire function
-cdef int __mark_stacks(numpy.ndarray junctions, fitfunc_r, pvalue_limit, logger=None) except -1:
-    cdef int numstacks = 0
+cdef int __mark_stacks_loop(np.ndarray[np.float_t, ndim=2] junctions, fitfunc_r, pvalue_limit, logger=None) except -1:
     cdef int lidx, i, j
-    cdef float value, pval, mean_rest, minstack
-    cdef numpy.ndarray msk, copy_junc
+    cdef float value, pval, mean_rest
+    cdef np.ndarray[np.float_t, ndim=1] copy_junc
+    cdef np.ndarray[np.int_t, ndim=1] msk
 
     if pvalue_limit < 0:
         return 0
     if logger:
         logger.debug("Marking and masking stacks")
 
-    minstack = sys.maxsize
-    # the minimum value marked as stack
-
     for i in range(junctions.shape[0]):
         if np.count_nonzero(junctions[i]) == 0:
             continue
+        msk = junctions[i] <= 0
         for j in range(junctions.shape[1]):
             value = junctions[i, j]
             if value > 0:
-                msk = junctions[i] <= 0
                 msk[j] = 1
                 copy_junc = ma.masked_array(junctions[i], mask=msk)
                 mean_rest = 0.5 if copy_junc.mean() is ma.masked else copy_junc.mean() * copy_junc.count()
                 pval = get_negbinom_pval(fitfunc_r, mean_rest, value)
                 if pval < pvalue_limit:
                     junctions[i, j] = 0
-                    minstack = min(minstack, value)
-                    numstacks += 1
-    #ma.masked_less(junctions, 0)
 
-cpdef mark_stacks(numpy.ndarray junctions, fitfunc_r, pvalue_limit, logger=None):
+
+from scipy.stats import nbinom, poisson
+
+cdef int __mark_stacks(np.ndarray[np.float_t, ndim=2] junctions, fitfunc_r, pvalue_limit, logger=None) except -1:
+
+    cdef np.ndarray[np.float_t, ndim=2] pvalues
+    cdef np.ndarray[np.float_t, ndim=2] mean_rest
+    cdef np.ndarray[np.int_t, ndim=2] denom
+
+    if pvalue_limit < 0:
+        return 0
+    if logger:
+        logger.debug("Marking and masking stacks")
+    print (fitfunc_r)
+    denom = np.count_nonzero(junctions, axis=1)[:, None] - (junctions > 0)
+    mean_rest = (junctions.sum(axis=1)[:, None] - junctions) / denom
+    mean_rest[np.isnan(mean_rest)] = 0.5
+    if fitfunc_r >0:
+        r = 1/fitfunc_r
+        p = r/(mean_rest + r)
+        pvalues = 1 - nbinom.cdf(junctions, r, p)
+    else:
+        pvalues = 1 - poisson.cdf(junctions, mean_rest)
+    junctions[pvalues<pvalue_limit] = 0
+
+cpdef mark_stacks(np.ndarray[np.float_t, ndim=2] junctions, fitfunc_r, pvalue_limit, logger=None):
     __mark_stacks(junctions, fitfunc_r, pvalue_limit, logger=logger)
 
 

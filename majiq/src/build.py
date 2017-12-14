@@ -27,6 +27,9 @@ def build(args):
     pipeline_run(Builder(args))
 
 
+
+
+
 def find_new_junctions(file_list, chunk, process_conf, logger):
 
     majiq_config = Config()
@@ -203,19 +206,14 @@ def parsing_files(sam_file_list, chnk, process_conf, logger):
             if gene_reads == 0:
                 continue
 
-            # if majiq_config.gcnorm:
-            #     for ex in gene_obj.get_exon_list():
-            #         if ex.get_gc_content() > 0 and ex.get_coverage() > 0:
-            #             gc_pairs['GC'].append(ex.get_gc_content())
-            #             gc_pairs['COV'].append(ex.get_coverage())
-
         majiq_io_bam.close_rnaseq(samfl)
-        junc_mtrx = np.array(junc_mtrx)
+        junc_mtrx = np.array(junc_mtrx, dtype=np.float)
         #update_splicegraph_junctions(dict_junctions, junc_mtrx, majiq_config.outDir, sam_file, process_conf.lock)
         indx = np.arange(junc_mtrx.shape[0])[junc_mtrx.sum(axis=1) >= majiq_config.minreads]
 
         logger.debug("[%s] Fitting NB function with constitutive events..." % sam_file)
         fitfunc_r = fit_nb(junc_mtrx[indx, :], "%s/nbfit" % majiq_config.outDir, logger=logger)
+
 
         with h5py.File('%s/%s.majiq' % (majiq_config.outDir, sam_file), 'w') as out_f:
             out_f.attrs['m_samples'] = process_conf.m
@@ -237,18 +235,6 @@ def parsing_files(sam_file_list, chnk, process_conf, logger):
             vals = sample_junctions(np.array(np_jjlist), fitfunc_r, majiq_config)
             majiq_io.dump_lsv_coverage(out_f, vals[0], vals[1])
             del np_jjlist
-
-        # #TODO: GC CONTENT
-        # majiq_norm.mark_stacks(junc_mtrx, fitfunc_r, majiq_config.pvalue_limit)
-
-        # out_f.create_dataset(JUNCTIONS_DATASET_NAME, data=junc_mtrx, compression='gzip', compression_opts=9)
-        # out_f.create_dataset(JUNCTIONS_DATASET_NAME, data=junc_mtrx, compression='gzip', compression_opts=9)
-        # if majiq_config.gcnorm:
-        #     gc_matrx = np.array(gc_matrx)
-        #     out_f.create_dataset(JUNCTIONS_GC_CONTENT, data=gc_matrx, compression='gzip', compression_opts=9,
-        #                          dtype=np.float)
-        #     factor, meanbins = gc_factor_calculation(gc_pairs, nbins=10)
-        #     out_f.attrs['gc_values'] = (factor, meanbins)
 
 
 class Builder(BasicPipeline):
