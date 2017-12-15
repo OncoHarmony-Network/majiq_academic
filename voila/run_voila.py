@@ -29,7 +29,7 @@ def secs2hms(secs):
 
 
 def check_filter(args):
-    if hasattr(args, 'gene_names'):
+    if hasattr(args, 'gene_names') and args.gene_names:
         if hasattr(args, 'splice_graph') and args.splice_graph:
             with SpliceGraph(args.splice_graph)as sg:
                 for gene in sg.genes:
@@ -111,7 +111,6 @@ def main():
     # if hasattr(args, 'voila_file') and args.voila_file:
     #     with Voila(args.voila_file, 'r') as v:
     #         v.check_analysis_type(args.type_analysis)
-
 
     # set up logging
     log_filename = 'voila.log'
