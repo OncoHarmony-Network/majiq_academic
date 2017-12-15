@@ -10,7 +10,7 @@ cdef class Exon:
     cdef public set ib
     cdef public set ob
     cdef public bint intron
-    cdef int db_idx
+    #cdef int db_idx
 
 cdef class Intron:
     cdef public int nchunks

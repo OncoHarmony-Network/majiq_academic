@@ -125,7 +125,7 @@ cdef class LSV:
 
         h_lsv.attrs['coverage'] = [xx.lsv_index for xx in self.junctions]
         vh_lsv = h_lsv.create_group('visual')
-        #self.get_visual_lsv().to_hdf5(vh_lsv)
+        self.get_visual_lsv().to_hdf5(vh_lsv)
         return lsv_idx
 
     cdef tuple sample_lsvs(LSV self, np.ndarray junc_mtrx, float fitfunc_r, object majiq_config):
@@ -281,8 +281,8 @@ cpdef detect_lsvs(dict dict_of_genes, dict dict_junctions, dict list_exons, np.n
         if gene_obj['nreads'] == 0:
             continue
 
-        _detect_lsvs(list_exons[gne_id], junc_mtrx, fitfunc_r, gne_id, gene_obj['chromosome'],
-                     gene_obj['strand'], majiq_config, out_f, np_jjlist, logger)
+        _detect_lsvs(list_exons[gne_id], junc_mtrx, fitfunc_r, gne_id, gene_obj['chromosome'].decode('UTF-8'),
+                     gene_obj['strand'].decode('UTF-8'), majiq_config, out_f, np_jjlist, logger)
         for jj in dict_junctions[gne_id].values():
             jj.reset()
         gene_obj['nreads'] = 0

@@ -18,14 +18,15 @@ from majiq.src.basic_pipeline import BasicPipeline, pipeline_run
 from majiq.src.config import Config
 from majiq.src.constants import *
 from majiq.src.polyfitnb import fit_nb
-from majiq.src.voila_wrapper import gene_to_splicegraph, init_splicegraph, update_splicegraph_junctions
+from majiq.src.voila_wrapper import generate_splicegraph
+from voila.api import SpliceGraph
+
 import math
 import datetime
 
 
 def build(args):
     pipeline_run(Builder(args))
-
 
 def find_new_junctions(file_list, chunk, process_conf, logger):
 
@@ -36,14 +37,13 @@ def find_new_junctions(file_list, chunk, process_conf, logger):
     for gne_id, gene_obj in dict_of_genes.items():
         list_exons[gne_id] = []
         dict_junctions[gne_id] = {}
-        majiq_io.retrieve_db_info(gne_id, majiq_config.outDir, dict_junctions[gne_id], list_exons[gne_id], None)
+        majiq_io.retrieve_db(gne_id, majiq_config.outDir, dict_junctions[gne_id], list_exons[gne_id], None)
         detect_exons(dict_junctions[gne_id], list_exons[gne_id])
 
     for is_junc_file, fname, name in file_list:
         logger.info('READ JUNCS from %s, %s' % (fname, majiq_config.strand_specific))
         read_juncs(fname, is_junc_file, list_exons, dict_of_genes, dict_junctions,
                    majiq_config.strand_specific, process_conf.queue, gname=name)
-
 
 def find_new_introns(file_list, chunk, process_conf, logger):
 
@@ -55,7 +55,7 @@ def find_new_introns(file_list, chunk, process_conf, logger):
         list_exons = []
         dict_junctions = {}
         introns = []
-        majiq_io.retrieve_db_info(gne_id, majiq_config.outDir, dict_junctions, list_exons, introns)
+        majiq_io.retrieve_db(gne_id, majiq_config.outDir, dict_junctions, list_exons, introns)
         range_introns = [range(xx.start, xx.end+1) for xx in introns]
         del introns
 
@@ -86,78 +86,37 @@ def parse_denovo_elements(pipe_self, logger):
 
     majiq_config = Config()
     min_experiments = 2 if majiq_config.min_exp == -1 else majiq_config.min_exp
-    dict_of_genes = majiq_io.retrieve_db_genes(majiq_config.outDir)
-    intron_list = {}
 
-    # nthreads = min(pipe_self.nthreads, len(majiq_config.sam_list))
+    elem_dict = {}
 
     if majiq_config.denovo:
-
         nthreads = min(pipe_self.nthreads, len(majiq_config.sam_list))
         logger.info("Create %s processes" % nthreads)
         pipe_self.lock = [mp.Lock() for _ in range(nthreads)]
 
-        pool1 = mp.Pool(processes=nthreads, initializer=majiq_multi.process_conf, initargs=[find_new_junctions, pipe_self],
-                        maxtasksperchild=1)
+        pool1 = mp.Pool(processes=nthreads, initializer=majiq_multi.process_conf,
+                        initargs=[find_new_junctions, pipe_self], maxtasksperchild=1)
         if majiq_config.ir:
-            pool2 = mp.Pool(processes=nthreads, initializer=majiq_multi.process_conf, initargs=[find_new_introns, pipe_self],
-                            maxtasksperchild=1)
+            pool2 = mp.Pool(processes=nthreads, initializer=majiq_multi.process_conf,
+                            initargs=[find_new_introns, pipe_self], maxtasksperchild=1)
 
         [xx.acquire() for xx in pipe_self.lock]
         pool1.imap_unordered(majiq_multi.process_wrapper,
                              majiq_multi.chunks(majiq_config.juncfile_list, nthreads))
         pool1.close()
-
-        group_names = {}
-        group_lens = []
-        for xidx, xx in enumerate(majiq_config.tissue_repl.keys()):
-            group_names[xx] = xidx
-            group_lens.append(len(xx))
-        group_lens = np.array(group_lens)
-
-        with h5py.File(get_build_temp_db_filename(majiq_config.outDir), "r+") as db_f:
-            denovo_junctions = {}
-            queue_manager(db_f, pipe_self.lock, pipe_self.queue, num_chunks=nthreads, logger=logger,
-                          junctions=denovo_junctions, group_names=group_names)
-            pool1.join()
-            for jj, vv in denovo_junctions.items():
-                #vv /= group_lens
-                if np.any(vv >= min_experiments):
-                    majiq_io.dump_junctions(db_f, jj[0], jj[1], jj[2], annot=False)
+        group_names = {xx: xidx for xidx, xx in enumerate(majiq_config.tissue_repl.keys())}
+        queue_manager(None, pipe_self.lock, pipe_self.queue, num_chunks=nthreads, logger=logger,
+                      elem_dict=elem_dict, group_names=group_names, min_experients=min_experiments)
+        pool1.join()
 
         if majiq_config.ir:
             [xx.acquire() for xx in pipe_self.lock]
             pool2.imap_unordered(majiq_multi.process_wrapper,
                                  majiq_multi.chunks(majiq_config.juncfile_list, nthreads))
             pool2.close()
-
-            new_ir = {}
-            queue_manager(db_f, pipe_self.lock, pipe_self.queue, num_chunks=nthreads, logger=logger,
-                          introns=new_ir, group_names=group_names)
+            queue_manager(None, pipe_self.lock, pipe_self.queue, num_chunks=nthreads, logger=logger,
+                          elem_dict=elem_dict, group_names=group_names)
             pool2.join()
-            for xx in new_ir.keys():
-                if np.any(new_ir[xx] >= min_experiments):
-                    try:
-                        intron_list[xx[0]].append([xx[1], xx[2], 0, IR_TYPE])
-                    except KeyError:
-                        intron_list[xx[0]] = [[xx[1], xx[2], 0, IR_TYPE]]
-
-    init_splicegraph(get_builder_splicegraph_filename(majiq_config.outDir))
-
-    for gne_id, gene_obj in dict_of_genes.items():
-        list_exons = []
-        dict_junctions = {}
-        list_introns = []
-        try:
-            majiq_io.retrieve_db_info(gne_id, majiq_config.outDir, dict_junctions, list_exons, list_introns,
-                                      denovo_ir=intron_list[gne_id])
-        except KeyError:
-            majiq_io.retrieve_db_info(gne_id, majiq_config.outDir, dict_junctions, list_exons, list_introns)
-
-        detect_exons(dict_junctions, list_exons)
-        if majiq_config.ir:
-            expand_introns(gne_id, list_introns, list_exons, dict_junctions)
-        gene_to_splicegraph(gne_id, gene_obj, dict_junctions, list_exons, list_introns, majiq_config)
 
 
 def parsing_files(sam_file_list, chnk, process_conf, logger):
@@ -175,7 +134,7 @@ def parsing_files(sam_file_list, chnk, process_conf, logger):
         list_exons[gne_id] = []
         dict_junctions[gne_id] = {}
         list_introns[gne_id] = []
-        majiq_io.retrieve_db_info(gne_id, majiq_config.outDir, dict_junctions[gne_id], list_exons[gne_id],
+        majiq_io.retrieve_db(gne_id, majiq_config.outDir, dict_junctions[gne_id], list_exons[gne_id],
                                   list_introns[gne_id], default_index=0)
         detect_exons(dict_junctions[gne_id], list_exons[gne_id])
         if majiq_config.ir:
@@ -187,9 +146,6 @@ def parsing_files(sam_file_list, chnk, process_conf, logger):
         samfl = majiq_io_bam.open_rnaseq("%s/%s.bam" % (majiq_config.sam_dir, sam_file))
         junc_mtrx = [[0] * effective_len]
 
-        # gc_pairs = {'GC': [], 'COV': []}
-        # gc_matrx = [] if majiq_config.gcnorm else None
-
         for gne_idx, (gne_id, gene_obj) in enumerate(dict_of_genes.items()):
             if gne_idx % 50 == 0:
                 logger.info("[%s] Progress %s/%s" % (loop_id, gne_idx, ngenes))
@@ -198,22 +154,18 @@ def parsing_files(sam_file_list, chnk, process_conf, logger):
             gene_reads = majiq_io_bam.read_sam_or_bam(gene_obj, samfl, junc_mtrx, dict_junctions[gne_id],
                                                       list_exons[gne_id], list_introns[gne_id],
                                                       info_msg=loop_id, logging=logger)
-
             gene_obj['nreads'] = gene_reads
             if gene_reads == 0:
                 continue
-
-            # if majiq_config.gcnorm:
-            #     for ex in gene_obj.get_exon_list():
-            #         if ex.get_gc_content() > 0 and ex.get_coverage() > 0:
-            #             gc_pairs['GC'].append(ex.get_gc_content())
-            #             gc_pairs['COV'].append(ex.get_coverage())
+            for jj in dict_junctions[gne_id].values():
+                qm = QueueMessage(QUEUE_MESSAGE_SPLICEGRAPH,
+                                  (gne_id, jj.start, jj.end, np.sum(junc_mtrx[jj.index]), sam_file), chnk)
+                process_conf.queue.put(qm, block=True)
 
         majiq_io_bam.close_rnaseq(samfl)
-        junc_mtrx = np.array(junc_mtrx)
-        #update_splicegraph_junctions(dict_junctions, junc_mtrx, majiq_config.outDir, sam_file, process_conf.lock)
-        indx = np.arange(junc_mtrx.shape[0])[junc_mtrx.sum(axis=1) >= majiq_config.minreads]
+        junc_mtrx = np.array(junc_mtrx, dtype=np.float)
 
+        indx = np.arange(junc_mtrx.shape[0])[junc_mtrx.sum(axis=1) >= majiq_config.minreads]
         logger.debug("[%s] Fitting NB function with constitutive events..." % sam_file)
         fitfunc_r = fit_nb(junc_mtrx[indx, :], "%s/nbfit" % majiq_config.outDir, logger=logger)
 
@@ -237,18 +189,6 @@ def parsing_files(sam_file_list, chnk, process_conf, logger):
             vals = sample_junctions(np.array(np_jjlist), fitfunc_r, majiq_config)
             majiq_io.dump_lsv_coverage(out_f, vals[0], vals[1])
             del np_jjlist
-
-        # #TODO: GC CONTENT
-        # majiq_norm.mark_stacks(junc_mtrx, fitfunc_r, majiq_config.pvalue_limit)
-
-        # out_f.create_dataset(JUNCTIONS_DATASET_NAME, data=junc_mtrx, compression='gzip', compression_opts=9)
-        # out_f.create_dataset(JUNCTIONS_DATASET_NAME, data=junc_mtrx, compression='gzip', compression_opts=9)
-        # if majiq_config.gcnorm:
-        #     gc_matrx = np.array(gc_matrx)
-        #     out_f.create_dataset(JUNCTIONS_GC_CONTENT, data=gc_matrx, compression='gzip', compression_opts=9,
-        #                          dtype=np.float)
-        #     factor, meanbins = gc_factor_calculation(gc_pairs, nbins=10)
-        #     out_f.attrs['gc_values'] = (factor, meanbins)
 
 
 class Builder(BasicPipeline):
@@ -285,18 +225,22 @@ class Builder(BasicPipeline):
         p.join()
 
         logger.info("Parsing seq files")
-        self.lock = mp.Lock()
         if self.nthreads > 1:
-
-            pool = mp.Pool(processes=self.nthreads,
+            nthreads = min(self.nthreads, len(majiq_config.sam_list))
+            self.lock = [mp.Lock() for _ in range(nthreads)]
+            [xx.acquire() for xx in self.lock]
+            pool = mp.Pool(processes=nthreads,
                            initializer=majiq_multi.process_conf,
                            initargs=[parsing_files, self],
                            maxtasksperchild=1)
 
-            nthreads = min(self.nthreads, len(majiq_config.sam_list))
             pool.imap_unordered(majiq_multi.process_wrapper,
                                 majiq_multi.chunks(majiq_config.sam_list, nthreads))
             pool.close()
+            generate_splicegraph(majiq_config)
+            with SpliceGraph(get_builder_splicegraph_filename(majiq_config.outDir), 'r+') as sg:
+                queue_manager(sg, self.lock, self.queue, num_chunks=nthreads, logger=logger)
+
             pool.join()
         else:
             parsing_files(majiq_config.sam_list, 0, process_conf=self, logger=logger)

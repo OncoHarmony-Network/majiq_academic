@@ -7,6 +7,7 @@ from majiq.src import io as majiq_io
 import majiq.src.logger as majiq_logger
 from majiq.src.constants import *
 from voila.vlsv import VoilaLsv
+from majiq.src.voila_wrapper import update_splicegraph_junction
 import traceback
 
 
@@ -20,7 +21,8 @@ def process_wrapper(args_vals):
         process_conf.func(vals, chnk, process_conf, logger=logger)
         logger.info('Finishing child, %s' % chnk)
 
-    except:
+    except Exception as e:
+        logger.exception("Exception ocurred on %s" % process_conf.func.__name__)
         traceback.print_exc()
         sys.stdout.flush()
         raise
@@ -82,6 +84,7 @@ class QueueMessage:
         return self.type
 
 
+
 def process_conf(func, pipeline):
     process_conf.__dict__.update(pipeline.__dict__)
     process_conf.func = func
@@ -91,6 +94,8 @@ def queue_manager(output_h5dfp, lock_array, result_queue, num_chunks,
                   out_inplace=None, logger=None, **kwargs):
 
     nthr_count = 0
+    found = {}
+
     while True:
         try:
 
@@ -101,10 +106,17 @@ def queue_manager(output_h5dfp, lock_array, result_queue, num_chunks,
                 info_junc = val.get_value()[:-1]
                 gidx = kwargs['group_names'][val.get_value()[-1]]
                 try:
-                    kwargs['junctions'][(info_junc[0], info_junc[1], info_junc[2])][gidx] += 1 #val.get_value()[3]
+                    kwargs['junctions'][info_junc][gidx] += 1
                 except KeyError:
-                    kwargs['junctions'][(info_junc[0], info_junc[1], info_junc[2])] = np.zeros(len(kwargs['group_names']))
-                    kwargs['junctions'][(info_junc[0], info_junc[1], info_junc[2])][gidx] = 1 #val.get_value()[3]
+                    kwargs['junctions'][info_junc] = np.zeros(len(kwargs['group_names']))
+                    kwargs['junctions'][info_junc][gidx] = 1
+
+                if kwargs['junctions'][info_junc][gidx] == kwargs['min_experients'] and info_junc not in found:
+                    try:
+                        kwargs['elem_dict'][info_junc[0]].append([info_junc[1], info_junc[2], 0, J_TYPE])
+                    except KeyError:
+                        kwargs['elem_dict'][info_junc[0]] = [[info_junc[1], info_junc[2], 0, J_TYPE]]
+                    found[info_junc] = 1
 
             elif val.get_type() == QUEUE_MESSAGE_BUILD_INTRON:
                 info_intron = val.get_value()[:-1]
@@ -114,6 +126,17 @@ def queue_manager(output_h5dfp, lock_array, result_queue, num_chunks,
                 except KeyError:
                     kwargs['introns'][info_intron] = np.zeros(len(kwargs['group_names']))
                     kwargs['introns'][info_intron][gidx] = 1
+
+                if kwargs['introns'][info_junc][gidx] == kwargs['min_experients'] and info_junc not in found:
+                    try:
+                        kwargs['elem_dict'][info_junc[0]].append([info_junc[1], info_junc[2], 0, IR_TYPE])
+                    except KeyError:
+                        kwargs['elem_dict'][info_junc[0]] = [[info_junc[1], info_junc[2], 0, IR_TYPE]]
+                    found[info_junc] = 1
+
+            elif val.get_type() == QUEUE_MESSAGE_SPLICEGRAPH:
+                info = val.get_value()
+                update_splicegraph_junction(output_h5dfp, info[0], info[1], info[2], info[3], info[4])
 
             elif val.get_type() == QUEUE_MESSAGE_PSI_RESULT:
                 list_of_lsv_graphics = kwargs['list_of_lsv_graphics']
