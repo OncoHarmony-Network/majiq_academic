@@ -1,6 +1,7 @@
 import datetime
 cimport numpy as np
 import numpy as np
+from numpy cimport ndarray
 
 import h5py
 import os
@@ -28,19 +29,17 @@ cdef int _read_gff(str filename, str outDir, object logging=None) except -1:
     :param logging: logger object
     :return: :raise RuntimeError:
     """
-    cdef dict all_genes = {}
+    cdef list all_genes = []
     cdef dict gene_id_dict = {}
     cdef dict trcpt_id_dict = {}
     cdef dict exon_dict = {}
+    cdef dict elem_dict = {}
 
     cdef str chrom, name, strand
     cdef int start, end
     cdef bint bb
     cdef list ind_list
-    # cdef set in_juncs = set()
 
-    #with h5py.File(get_build_temp_db_filename(outDir), "w") as db_f:
-    db_f = h5py.File(get_build_temp_db_filename(outDir), "w")
     for record in parse_gff3(filename):
         chrom = record.seqid
         strand = record.strand
@@ -68,21 +67,15 @@ cdef int _read_gff(str filename, str outDir, object logging=None) except -1:
                 logging.info("Error, Gene doesn't contain one of the ID attribute information values: "
                              "%s" % gene_id_keys)
 
-            _dump_gene(db_f, gene_id, gene_name, chrom, strand, start, end)
             exon_dict[gene_id] = []
-            # gn = Gene(gene_id, gene_name, chrom, strand, start, end)
-            #exist_overlapping_gene(all_genes[chrom], strand, start, end)
+            all_genes.append((gene_id, gene_name, chrom, strand, start, end))
+            elem_dict[gene_id] = []
 
             if gene_id in gene_id_dict:
                 raise RuntimeError('Two Different Genes with the same name %s' % gene_name)
-            try:
-                all_genes[chrom].append([start, end, gene_id])
-            except KeyError:
-                all_genes[chrom] = [[start, end, gene_id]]
             gene_id_dict[gene_id] = gene_id
 
         elif record.type in accepted_transcripts:
-
             if transcript_id_keys not in record.attributes or 'Parent' not in record.attributes:
                 logging.info("Error, Transcript doesn't contain one of the ID or parent attributes"
                              "information values: %s" % transcript_id_keys)
@@ -102,28 +95,29 @@ cdef int _read_gff(str filename, str outDir, object logging=None) except -1:
             try:
                 exon_dict[gn_id].append((start, True))
                 exon_dict[gn_id].append((end, False))
-                # _dump_junctions(db_f, gn_id, last_ss, start, parent_tx_id, annot=True)
                 trcpt_id_dict[parent_tx_id][1].append((start, end))
 
             except KeyError:
                 logging.WARNING("Error, incorrect gff. exon at line %s "
                                 "doesn't have valid mRNA %s" % (0, parent_tx_id))
 
+
     for parent_tx_id, (gn_id, coord_list) in trcpt_id_dict.items():
         last_ss = FIRST_LAST_JUNC
         coord_list.sort(key=lambda x: (x[0], x[1]))
         for xx, yy in coord_list:
-            _dump_junctions(db_f, gn_id, last_ss, xx, parent_tx_id, annot=True)
+            elem_dict[gn_id].append((last_ss, xx, 1, J_TYPE))
             last_ss = yy
-        _dump_junctions(db_f, gn_id, last_ss, FIRST_LAST_JUNC, parent_tx_id, annot=True)
 
-    merge_exons(db_f, exon_dict)
+        elem_dict[gn_id].append((last_ss, FIRST_LAST_JUNC, 1, J_TYPE))
 
-    db_f.close()
+    merge_exons(exon_dict, elem_dict)
+    _dump_elems_list(elem_dict, all_genes, outDir)
+
     del all_genes
 
 
-cdef int merge_exons(db_f, dict exon_dict) except -1:
+cdef int merge_exons(dict exon_dict, dict elem_dict) except -1:
     cdef list ex_list
     cdef str gne_id
     cdef tuple x
@@ -136,17 +130,12 @@ cdef int merge_exons(db_f, dict exon_dict) except -1:
         ex_start = -1
         ex_end = -1
         nopen = 0
-        elem_mtrx = []
         for coord, is_start in ex_list:
-            #print(coord, is_start, nopen, ex_start, ex_end)
             if is_start:
                 if ex_end != -1:
-                    #print("NEW EXON, ", gne_id, ex_start, ex_end)
-                    elem_mtrx.append([ex_start, ex_end, 1, EX_TYPE])
-                    #_dump_exon(db_f, gne_id, ex_start, ex_end)
+                    elem_dict[gne_id].append([ex_start, ex_end, 1, EX_TYPE])
                     if nopen > 0 and (ex_end+4) < (coord-1):
-                        elem_mtrx.append([ex_end+1, coord-1, 1, IR_TYPE])
-                        #_dump_intron(db_f, gne_id, ex_end+1, coord-1, annot=True)
+                        elem_dict[gne_id].append([ex_end+1, coord-1, 1, IR_TYPE])
                     ex_end = -1
                     nopen = 0
                     ex_start = coord
@@ -159,11 +148,10 @@ cdef int merge_exons(db_f, dict exon_dict) except -1:
                 ex_end = coord if coord > ex_end else ex_end
 
         if ex_end != -1:
-            #print(gne_id, ex_list)
-            elem_mtrx.append([ex_start, ex_end, 1, EX_TYPE])
-            # _dump_exon(db_f, gne_id, ex_start, ex_end)
+            elem_dict[gne_id].append([ex_start, ex_end, 1, EX_TYPE])
 
-        _dump_elems_list(db_f, gne_id, np.array(elem_mtrx))
+        # _dump_elems_list(db_f, gne_id, np.array(elem_mtrx))
+        elem_dict[gne_id] = np.array(elem_dict[gne_id])
 
 
 #######
@@ -177,37 +165,27 @@ cdef int _dump_lsv_coverage(out_f, cov_list, attrs_list):
                          compression='gzip', compression_opts=9)
 
 
-cdef int _dump_junctions(db_f, str gne_id, int start, int end, str transcript_id, bint annot=False) except -1:
-    cdef str jid = '%s/junctions/%s-%s' % (gne_id, start, end)
+cdef int _dump_elems_list(dict elem_dict, list gene_info, str outDir) except -1:
 
-    if jid not in db_f:
-        h_jnc = db_f.create_group(jid)
-        h_jnc.attrs['start'] = start
-        h_jnc.attrs['end'] = end
-        h_jnc.attrs['annotated'] = annot
-        #h_jnc.attrs['transcript_id_list'] = [transcript_id.encode('utf8')]
-
-cdef int _dump_gene(db_f, str gne_id, str gne_name, str chrom, str strand, int start, int end) except -1:
-    h_gen = db_f.create_group(gne_id)
-    h_gen.attrs['id'] = gne_id
-    h_gen.attrs['name'] = gne_name
-    h_gen.attrs['chromosome'] = chrom
-    h_gen.attrs['strand'] = strand
-    h_gen.attrs['start'] = start
-    h_gen.attrs['end'] = end
-
-cdef int _dump_elems_list(db_f, str gne_id, np.ndarray mtrx) except -1:
-    db_f[gne_id].create_dataset('db_coords', data=mtrx, maxshape=(None, mtrx.shape[1]))
+    dt=np.dtype('|S250, |S250, |S32, S1, u4, u4')
+    elem_dict['gene_info'] = np.array(gene_info, dtype=dt)
+    np.savez(get_build_temp_db_filename(outDir), **elem_dict)
 
 
-def junction_to_tmp(gne_id, Junction junc, object hdf5grps):
-    cdef str jid = "%s-%s" % (junc.start, junc.end)
-    h_jnc = hdf5grps.create_group('%s/%s' % (gne_id, jid))
-    h_jnc.attrs['id'] = jid
-    h_jnc.attrs['start'] = junc.start
-    h_jnc.attrs['end'] = junc.end
-    h_jnc.attrs['intronic'] = junc.intronic
-    h_jnc.attrs['coverage_index'] = junc.index
+cdef int _read_junction(np.ndarray row, str gne_id, dict jjs, list exs, list irs, int default_index) except -1:
+    jjs[(row[0], row[1])] = Junction(row[0], row[1], gne_id, default_index, annot=bool(row[2]))
+
+
+cdef int _read_exon(np.ndarray row, str gne_id, dict jjs, list exs, list irs, int default_index) except -1:
+    exs.append(Exon(row[0], row[1], annot=bool(row[2])))
+
+
+cdef int _read_ir(np.ndarray row, str gne_id, dict jjs, list exs, list irs, int default_index) except -1:
+    irs.append(Intron(row[0], row[1], annot=bool(row[2]), db_idx=-1))
+
+
+cdef int _pass_ir(np.ndarray row, str gne_id, dict jjs, list exs, list irs, int default_index) except -1:
+    pass
 
 
 cdef _get_extract_lsv_list(list list_of_lsv_id, list file_list, int msamples):
@@ -314,13 +292,6 @@ cpdef extract_lsv_summary(list files, int minnonzero, int min_reads, dict epsi=N
 cpdef int dump_lsv_coverage(out_f, cov_list, attrs_list):
     _dump_lsv_coverage(out_f, cov_list, attrs_list)
 
-
-def dump_junctions(db_f, str gne_id, int start, int end, str transcript_id='', bint annot=False):
-    _dump_junctions(db_f, gne_id, start, end, transcript_id, annot=annot)
-
-# def dump_intron(db_f, str gne_id, int start, int end, bint annot=False):
-#     _dump_intron(db_f, gne_id, start, end, annot=annot)
-
 cpdef int init_majiq_file(str filename, str out_dir, str genome, int msamples):
 
     with h5py.File('%s/%s.majiq' % (out_dir, filename), 'w') as f:
@@ -335,20 +306,6 @@ cpdef int init_majiq_file(str filename, str out_dir, str genome, int msamples):
         f.attrs['num_lsvs'] = 0
         f.attrs['genome'] = genome
 
-cpdef retrieve_db_genes(str out_dir):
-
-    cdef dict dd = {}
-    with h5py.File(get_build_temp_db_filename(out_dir), 'r') as db_f:
-        for ii in db_f:
-            dd[ii] = dict(db_f[ii].attrs)
-    return dd
-
-
-cpdef list get_list_of_genes(str out_dir):
-    cdef list list_of_genes
-    with h5py.File(get_build_temp_db_filename(out_dir), 'r') as db_f:
-        list_of_genes = list(db_f.keys())
-    return list_of_genes
 
 
 cpdef int parse_annot(str filename, str out_dir, object logging=None):
@@ -360,88 +317,76 @@ cpdef int parse_annot(str filename, str out_dir, object logging=None):
         raise
 
 
-# cpdef np.ndarray get_covered_junctions(str gne_id, dict dict_junctions, list list_exons, list fitfunc_r, list sam_list,
-#                                        int readLen, str out_dir):
+cpdef dict retrieve_db_genes(str out_dir):
+
+    cdef list names = ['id', 'name', 'chromosome', 'strand', 'start', 'end']
+    cdef dict dd
+
+    gene_info = np.load('%s.npz' % get_build_temp_db_filename(out_dir))['gene_info']
+    dd = {gene_info[ii][0].decode('UTF-8'):{xx: gene_info[ii][idx]
+                                            for idx, xx in enumerate(names)}
+          for ii in range(gene_info.shape[0])}
+
+    return dd
+
+cpdef int retrieve_db(str gne_id, str out_dir, dict dict_junctions,list list_exons, list list_introns,
+                     list denovo_ir=[], int default_index=-1):
+
+
+    cdef dict gne_dict = {}
+    cdef dict j_attrs, ex_attrs
+    cdef Junction junc
+    cdef str xx
+    cdef object db_f
+    cdef int njuncs = 0
+
+
+    if list_introns is not None:
+        func_list = {EX_TYPE: _read_exon, IR_TYPE: _read_ir, J_TYPE: _read_junction}
+    else:
+        func_list = {EX_TYPE: _read_exon, IR_TYPE: _pass_ir, J_TYPE: _read_junction}
+
+
+    all_files = np.load('%s.npz' % get_build_temp_db_filename(out_dir))
+    mtrx = all_files[gne_id]
+    for i in range(mtrx.shape[0]):
+        func_list[mtrx[i,3]](mtrx[i], gne_id, dict_junctions, list_exons, list_introns,
+                             default_index)
+
+
+    return njuncs
+
 #
-#     cdef int nexperiments = len(sam_list)
-#     cdef dict dd_jj = {}
-#     cdef int exp_idx, njunc, idx
-#     cdef str jjid
-#     cdef Junction junc
-#     cdef dict junc_attrs
-#     cdef np.ndarray junc_mtrx
-#     cdef int eff_readsize = (readLen - 2*MIN_BP_OVERLAP) + 1
-#
-#     for exp_idx in range(nexperiments):
-#         with h5py.File(get_builder_temp_majiq_filename(out_dir, sam_list[exp_idx]), 'r') as fp:
-#             fitfunc_r.append(fp.attrs['one_over_r'])
-#             try:
-#                 for jjid in fp[gne_id]:
-#                     junc_attrs = dict(fp['%s/%s' % (gne_id, jjid)].attrs)
-#                     try:
-#                         dd_jj[jjid][exp_idx] = junc_attrs['coverage_index']
-#                     except KeyError:
-#                         junc = Junction(junc_attrs['start'], junc_attrs['end'], gne_id, -1)
-#                         dict_junctions[(junc_attrs['start'], junc_attrs['end'])] = junc
-#                         dd_jj[jjid] = [-1] * nexperiments
-#                         dd_jj[jjid][exp_idx] = junc_attrs['coverage_index']
-#             except KeyError as e:
-#                 # print('ERROR', e, jjid, junc_attrs)
-#                 continue
-#
-#     njunc = len(dd_jj)
-#     junc_mtrx = np.zeros(shape=(nexperiments, njunc, eff_readsize), dtype=np.float)
-#
-#     for exp_idx in range(nexperiments):
-#         with h5py.File(get_builder_temp_majiq_filename(out_dir, sam_list[exp_idx]), 'r') as fp:
-#             for idx, jjid in enumerate(dd_jj.keys()):
-#                 if dd_jj[jjid][exp_idx] > -1:
-#                     junc_mtrx[exp_idx, idx,] = fp[JUNCTIONS_DATASET_NAME][dd_jj[jjid][exp_idx]]
-#                 dict_junctions[tuple([int(xx) for xx in jjid.split('-')])].index = idx
-#
-#     del dd_jj
-#     return junc_mtrx
+# cpdef dict retrieve_db(str gne_id, str out_dir, dict dict_junctions,list list_exons, list list_introns,
+#                      list denovo_ir=[], int default_index=-1):
 #
 #
-# def retrieve_db_info2(str gne_id, str out_dir, list list_exons, dict dict_junctions, list list_introns,
-#                      int default_index=-1):
-#
+#     cdef dict gne_dict = {}
 #     cdef dict j_attrs, ex_attrs
 #     cdef Junction junc
 #     cdef str xx
 #     cdef object db_f
 #     cdef int njuncs = 0
 #
-#     with h5py.File(get_build_temp_db_filename(out_dir), 'r') as db_f:
-#         if dict_junctions is not None:
-#             for xx in db_f['%s/junctions' % gne_id]:
-#                 j_attrs = dict(db_f['%s/junctions/%s' % (gne_id, xx)].attrs)
-#                 njuncs +=1
-#                 dict_junctions[(j_attrs['start'], j_attrs['end'])] = Junction(j_attrs['start'], j_attrs['end'],
-#                                                                               gne_id, default_index,
-#                                                                               annot=j_attrs['annotated'])
 #
-#         for xx in db_f['%s/exons' % gne_id]:
-#             ex_attrs = dict(db_f['%s/exons/%s' % (gne_id, xx)].attrs)
-#             list_exons.append(Exon(ex_attrs['start'], ex_attrs['end'], annot=ex_attrs['annot']))
-#         list_exons.sort(key=lambda xx: (xx.start, xx.end))
+#     if list_introns is not None:
+#         func_list = {EX_TYPE: _read_exon, IR_TYPE: _read_ir, J_TYPE: _read_junction}
+#     else:
+#         func_list = {EX_TYPE: _read_exon, IR_TYPE: _pass_ir, J_TYPE: _read_junction}
 #
-#         if list_introns is not None and 'ir' in db_f['%s' % gne_id]:
-#             for xx in db_f['%s/ir' % gne_id]:
-#                 ir_attrs = dict(db_f['%s/ir/%s' % (gne_id, xx)].attrs)
-#                 list_introns.append(Intron(ir_attrs['start'], ir_attrs['end'], annot=ir_attrs['annotated']))
-#                 list_exons.append(Exon(ir_attrs['start'], ir_attrs['end'], annot=ir_attrs['annotated'], intronic=True))
-#                 dict_junctions[(ir_attrs['start']-1, ir_attrs['start'])] = Junction(ir_attrs['start']-1,
-#                                                                                     ir_attrs['start'],
-#                                                                                     gne_id, default_index,
-#                                                                                     intron=True,
-#                                                                                     annot=ir_attrs['annotated'])
-#                 dict_junctions[(ir_attrs['end'], ir_attrs['end']+1)] = Junction(ir_attrs['end'], ir_attrs['end']+1,
-#                                                                                 gne_id, default_index,
-#                                                                                 intron=True,
-#                                                                                 annot=ir_attrs['annotated'])
-#             list_introns.sort(key=lambda xx: (xx.start, xx.end))
+#
+#     all_files = np.load(get_build_temp_db_filename(out_dir))
+#     gne_list = all_files['gene_info']
+#     for gne_row in gne_list:
+#         gne_dict[gne_row[0]] = gne_row
+#
+#         mtrx = all_files[gne_id]
+#         for i in range(mtrx.shape[0]):
+#             func_list[mtrx[i,3]](mtrx[i], gne_id, dict_junctions, list_exons, list_introns, default_index)
+#
+#
 #     return njuncs
+
 
 
 def retrieve_db_info(str gne_id, str out_dir, dict dict_junctions,list list_exons, list list_introns,

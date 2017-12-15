@@ -13,7 +13,7 @@ cdef class Exon:
         self.ib = set()
         self.ob = set()
         self.intron = intronic
-        self.db_idx = db_idx
+        #self.db_idx = db_idx
 
 
 cdef class Intron:

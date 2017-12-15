@@ -4,7 +4,6 @@ cimport numpy as np
 from majiq.grimoire.exon cimport Intron
 from majiq.grimoire.junction cimport Junction
 from majiq.grimoire.junction import Junction
-from majiq.src.io import dump_junctions
 from majiq.src.multiproc import QueueMessage
 
 from majiq.src.config import Config
@@ -142,57 +141,6 @@ cpdef int find_introns(str filename, dict list_introns, float intron_threshold, 
     samfl.close()
     return 0
 
-
-
-# cpdef int find_introns2(str filename, dict list_introns, float intron_threshold, queue, str gname) except -1:
-#
-#     cdef AlignmentFile samfl
-#     cdef int nchunks, chunk_len
-#     cdef bint b_included
-#     cdef int intron_len, i_st, i_nd, val, ibin, num_bins = 10
-#     cdef str chrom, strand
-#     cdef np.ndarray intron_bins
-#     cdef PileupColumn pile
-#     cdef PileupRead xx
-#     global gstrand
-#
-#     samfl = open_rnaseq(filename)
-#
-#
-#     for gne_id, chrom, strand, i_st, i_nd in list_introns.keys():
-#
-#         intron_len = (i_nd - i_st)
-#         nchunks = 1 if intron_len <= MIN_INTRON_LEN else num_bins
-#
-#         chunk_len = int(intron_len / nchunks)+1
-#         b_included = False
-#
-#         for ii in range(nchunks):
-#             lb = i_st + ii*chunk_len
-#             ub = i_st + (ii+1)*chunk_len -1
-#             ub = min(ub, i_nd)
-#             try:
-#                 gstrand = strand
-#                 val = samfl.count(contig=chrom, start=lb, stop=ub, until_eof=True,
-#                                   read_callback=__valid_intron_read, reference=None, end=None)
-#             except ValueError as e:
-#                 b_included = False
-#                 break
-#
-#             val /= (ub-lb)
-#             b_included = (val>=intron_threshold)
-#             if not b_included:
-#                 break
-#
-#         if b_included :
-#             qm = QueueMessage(QUEUE_MESSAGE_BUILD_INTRON, (gne_id, i_st, i_nd, gname), 0)
-#             queue.put(qm, block=True)
-#             #list_introns[(gne_id, chrom, strand, i_st, i_nd)] += 1
-#
-#     samfl.close()
-#     return 0
-
-
 cdef inline dict __read_STAR_junc_file(str filename, set in_jj, bint stranded):
 
     cdef dict out_dd = {}
@@ -221,7 +169,6 @@ cdef inline dict __read_STAR_junc_file(str filename, set in_jj, bint stranded):
                         out_dd[tab[0]] = set()
                         out_dd[tab[0]].add((tab[1], tab[2], stnd))
     return out_dd
-
 
 
 cdef dict __read_juncs_from_bam(str filename, set in_jj, bint stranded):
@@ -268,7 +215,6 @@ cdef dict __read_juncs_from_bam(str filename, set in_jj, bint stranded):
             if jid not in in_jj and jid2 not in out_dd[chrom]:
                 out_dd[chrom].add(jid2)
 
-
     return out_dd
 
 
@@ -296,6 +242,7 @@ def read_juncs(str fname, bint is_junc_file, dict dict_exons, dict dict_genes, d
     else:
        new_junctions = __read_juncs_from_bam(fname, set_junctions, stranded)
 
+    print('FIND GENES')
     for chrom, jj_set in new_junctions.items():
         gne_list = sorted([xx for xx in dict_genes.values() if xx['chromosome']==chrom], key=lambda x: (x['start'], x['end']))
         ngenes = len(gne_list)
@@ -425,15 +372,14 @@ cdef int _read_sam_or_bam(object gne, AlignmentFile samfl, list matrx, dict junc
 
         majiq_config = Config()
         effective_len = (majiq_config.readLen - 2*MIN_BP_OVERLAP) + 1
-        read_iter = samfl.fetch(gne['chromosome'], gne['start'], gne['end'], multiple_iterators=False)
+        # print (gne['chromosome'], type(gne['chromosome']), type(gne['chromosome'].decode('UTF-8')))
+        read_iter = samfl.fetch(gne['chromosome'].decode('UTF-8'), gne['start'], gne['end'], multiple_iterators=False)
 
         for read in read_iter:
             is_cross, junc_list, end_r = __cross_junctions(read)
             unique = __is_unique(read)
-            #print(read, _match_strand(read, gene_strand=gne['strand']), read.pos < gne['start'], unique)
-            if not _match_strand(read, gene_strand=gne['strand']) or read.pos < gne['start'] or not unique:
+            if not _match_strand(read, gene_strand=gne['strand'].decode('UTF-8')) or read.pos < gne['start'] or not unique:
                 continue
-
 
             tot_reads += 1
             if is_cross:
@@ -454,7 +400,7 @@ cdef int _read_sam_or_bam(object gne, AlignmentFile samfl, list matrx, dict junc
 
         return tot_reads
     except ValueError as e:
-        logging.debug('\t[%s]There are no reads in %s:%d-%d' % (info_msg, gne['chromosome'], gne['start'], gne['end']))
+        logging.debug('\t[%s]There are no reads in %s:%d-%d' % (info_msg, gne['chromosome'].decode('UTF-8'), gne['start'], gne['end']))
         return 0
 
 
