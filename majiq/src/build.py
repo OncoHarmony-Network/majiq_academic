@@ -128,23 +128,14 @@ def parsing_files(sam_file_list, chnk, process_conf, logger):
     list_exons = []
     dict_junctions = {}
     list_introns = []
+    logger.info('Reading DB')
     dict_of_genes = majiq_io.retrieve(majiq_config.outDir, dict_junctions, list_exons,
                                       list_introns, default_index=0)
     ngenes = len(dict_of_genes)
-
     for gne_id, gene_obj in dict_of_genes.items():
-
         detect_exons(dict_junctions[gne_id], list_exons[gne_id])
         if majiq_config.ir:
             expand_introns(gne_id, list_introns[gne_id], list_exons[gne_id], dict_junctions[gne_id], default_index=0)
-    #     list_exons[gne_id] = []
-    #     dict_junctions[gne_id] = {}
-    #     list_introns[gne_id] = []
-    #     majiq_io.retrieve_db(gne_id, majiq_config.outDir, dict_junctions[gne_id], list_exons[gne_id],
-    #                               list_introns[gne_id], default_index=0)
-    #     detect_exons(dict_junctions[gne_id], list_exons[gne_id])
-    #     if majiq_config.ir:
-    #         expand_introns(gne_id, list_introns[gne_id], list_exons[gne_id], dict_junctions[gne_id], default_index=0)
 
     for sam_file in sam_file_list:
         logger.info("[%s] Starting new file" % sam_file)
