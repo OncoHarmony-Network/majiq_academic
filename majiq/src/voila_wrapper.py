@@ -6,16 +6,18 @@ from majiq.grimoire.exon import detect_exons, expand_introns
 
 def generate_splicegraph(majiq_config):
     init_splicegraph(get_builder_splicegraph_filename(majiq_config.outDir))
+    list_exons = {}
+    dict_junctions = {}
+    list_introns = {}
 
-    dict_of_genes = majiq_io.retrieve_db_genes(majiq_config.outDir)
+    dict_of_genes = majiq_io.retrieve(majiq_config.outDir, dict_junctions, list_exons,
+                                      list_introns, default_index=0)
+
     for gne_id, gene_obj in dict_of_genes.items():
-        list_exons = []
-        dict_junctions = {}
-        list_introns = []
-        majiq_io.retrieve_db(gne_id, majiq_config.outDir, dict_junctions, list_exons, list_introns)
-        detect_exons(dict_junctions, list_exons)
+        detect_exons(dict_junctions[gne_id], list_exons[gne_id])
         if majiq_config.ir:
-            expand_introns(gne_id, list_introns, list_exons, dict_junctions)
+            expand_introns(gne_id, list_introns[gne_id], list_exons[gne_id], dict_junctions[gne_id], default_index=0)
+
         gene_to_splicegraph(gne_id, gene_obj, dict_junctions, list_exons, list_introns, majiq_config)
 
 #
