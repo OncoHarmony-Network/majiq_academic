@@ -115,10 +115,10 @@ cdef int _read_gff(str filename, str outDir, object logging=None) except -1:
     merge_exons(exon_dict, elem_dict)
     _dump_elems_list(elem_dict, all_genes, outDir)
 
-    #test
-    from deleteme import generate_lookuptree
-
-    generate_lookuptree(all_genes)
+    # #test
+    # from deleteme import generate_lookuptree
+    #
+    # generate_lookuptree(all_genes)
     del all_genes
 
 
