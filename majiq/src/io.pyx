@@ -376,18 +376,13 @@ cpdef dict retrieve(str out_dir, dict dict_junctions,list list_exons, list list_
     cdef list names = ['id', 'name', 'chromosome', 'strand', 'start', 'end']
     cdef dict dd
 
-    gene_info = np.load('%s.npz' % get_build_temp_db_filename(out_dir))['gene_info']
-
-
-
-
     if list_introns is not None:
         func_list = {EX_TYPE: _read_exon, IR_TYPE: _read_ir, J_TYPE: _read_junction}
     else:
         func_list = {EX_TYPE: _read_exon, IR_TYPE: _pass_ir, J_TYPE: _read_junction}
 
 
-    all_files = np.load(get_build_temp_db_filename(out_dir))
+    all_files = np.load('%s.npz' % get_build_temp_db_filename(out_dir))
     gne_list = all_files['gene_info']
     for gne_row in gne_list:
         gne_dict[gne_row[0]] = gne_row
