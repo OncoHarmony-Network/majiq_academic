@@ -384,11 +384,14 @@ cpdef dict retrieve(str out_dir, dict dict_junctions,list list_exons, list list_
 
     all_files = np.load('%s.npz' % get_build_temp_db_filename(out_dir))
     gne_list = all_files['gene_info']
+
     for gne_row in gne_list:
         gne_dict[gne_row[0]] = gne_row
         gne_dict[gne_row[0]] = {xx: gne_row[idx]for idx, xx in enumerate(names)}
-
-        mtrx = all_files[gne_row[0]]
+        try:
+            mtrx = all_files[gne_row[0]]
+        except KeyError:
+            continue
         for i in range(mtrx.shape[0]):
             func_list[mtrx[i,3]](mtrx[i], gne_row[0], dict_junctions, list_exons, list_introns, default_index)
 
