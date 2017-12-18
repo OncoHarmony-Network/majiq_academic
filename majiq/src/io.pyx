@@ -387,11 +387,11 @@ cpdef dict retrieve(str out_dir, dict dict_junctions,list list_exons, list list_
 
     for gne_row in gne_list:
         gne_dict[gne_row[0]] = gne_row
-        gne_dict[gne_row[0]] = {xx: gne_row[idx]for idx, xx in enumerate(names)}
         try:
             mtrx = all_files[gne_row[0]]
         except KeyError:
             continue
+        gne_dict[gne_row[0]] = {xx: gne_row[idx]for idx, xx in enumerate(names)}
         for i in range(mtrx.shape[0]):
             func_list[mtrx[i,3]](mtrx[i], gne_row[0], dict_junctions, list_exons, list_introns, default_index)
 
