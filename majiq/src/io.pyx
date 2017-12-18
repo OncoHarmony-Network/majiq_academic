@@ -356,36 +356,34 @@ cpdef int retrieve_db(str gne_id, str out_dir, dict dict_junctions,list list_exo
 
     return njuncs
 
-#
-# cpdef dict retrieve_db(str gne_id, str out_dir, dict dict_junctions,list list_exons, list list_introns,
-#                      list denovo_ir=[], int default_index=-1):
-#
-#
-#     cdef dict gne_dict = {}
-#     cdef dict j_attrs, ex_attrs
-#     cdef Junction junc
-#     cdef str xx
-#     cdef object db_f
-#     cdef int njuncs = 0
-#
-#
-#     if list_introns is not None:
-#         func_list = {EX_TYPE: _read_exon, IR_TYPE: _read_ir, J_TYPE: _read_junction}
-#     else:
-#         func_list = {EX_TYPE: _read_exon, IR_TYPE: _pass_ir, J_TYPE: _read_junction}
-#
-#
-#     all_files = np.load(get_build_temp_db_filename(out_dir))
-#     gne_list = all_files['gene_info']
-#     for gne_row in gne_list:
-#         gne_dict[gne_row[0]] = gne_row
-#
-#         mtrx = all_files[gne_id]
-#         for i in range(mtrx.shape[0]):
-#             func_list[mtrx[i,3]](mtrx[i], gne_id, dict_junctions, list_exons, list_introns, default_index)
-#
-#
-#     return njuncs
+
+cpdef dict retrieve(str out_dir, dict dict_junctions,list list_exons, list list_introns,
+                     list denovo_ir=[], int default_index=-1):
+
+    cdef dict gne_dict = {}
+    cdef dict j_attrs, ex_attrs
+    cdef Junction junc
+    cdef str xx
+    cdef object db_f
+    cdef int njuncs = 0
+
+
+    if list_introns is not None:
+        func_list = {EX_TYPE: _read_exon, IR_TYPE: _read_ir, J_TYPE: _read_junction}
+    else:
+        func_list = {EX_TYPE: _read_exon, IR_TYPE: _pass_ir, J_TYPE: _read_junction}
+
+
+    all_files = np.load(get_build_temp_db_filename(out_dir))
+    gne_list = all_files['gene_info']
+    for gne_row in gne_list:
+        gne_dict[gne_row[0]] = gne_row
+        mtrx = all_files[gne_row[0]]
+        for i in range(mtrx.shape[0]):
+            func_list[mtrx[i,3]](mtrx[i], gne_row[0], dict_junctions, list_exons, list_introns, default_index)
+
+
+    return njuncs
 
 
 
