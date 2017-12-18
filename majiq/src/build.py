@@ -147,7 +147,7 @@ def parsing_files(sam_file_list, chnk, process_conf, logger):
         junc_mtrx = [[0] * effective_len]
 
         for gne_idx, (gne_id, gene_obj) in enumerate(dict_of_genes.items()):
-            if gne_idx % 50 == 0:
+            if gne_idx % int(ngenes/10) == 0:
                 logger.info("[%s] Progress %s/%s" % (loop_id, gne_idx, ngenes))
 
             logger.debug("[%s] Reading BAM files" % gne_id)
