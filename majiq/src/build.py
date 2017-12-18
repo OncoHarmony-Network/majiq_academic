@@ -31,14 +31,16 @@ def build(args):
 def find_new_junctions(file_list, chunk, process_conf, logger):
 
     majiq_config = Config()
-    dict_of_genes = majiq_io.retrieve_db_genes(majiq_config.outDir)
     list_exons = {}
     dict_junctions = {}
+    logger.info('Reading DB')
+    dict_of_genes = majiq_io.retrieve(majiq_config.outDir, dict_junctions, list_exons,
+                                      None, default_index=0)
+
     for gne_id, gene_obj in dict_of_genes.items():
-        list_exons[gne_id] = []
-        dict_junctions[gne_id] = {}
-        majiq_io.retrieve_db(gne_id, majiq_config.outDir, dict_junctions[gne_id], list_exons[gne_id], None)
         detect_exons(dict_junctions[gne_id], list_exons[gne_id])
+        if majiq_config.ir:
+            expand_introns(gne_id, None, list_exons[gne_id], dict_junctions[gne_id], default_index=0)
 
     for is_junc_file, fname, name in file_list:
         logger.info('READ JUNCS from %s, %s' % (fname, majiq_config.strand_specific))
@@ -50,15 +52,22 @@ def find_new_introns(file_list, chunk, process_conf, logger):
 
     majiq_config = Config()
     list_introns = {}
-    dict_of_genes = majiq_io.retrieve_db_genes(majiq_config.outDir)
+
     num_bins = 10
+    list_exons = {}
+    dict_junctions = {}
+    logger.info('Reading DB')
+    dict_of_genes = majiq_io.retrieve(majiq_config.outDir, dict_junctions, list_exons,
+                                      list_introns, default_index=0)
+
     for gne_id, gene_obj in dict_of_genes.items():
-        list_exons = []
-        dict_junctions = {}
-        introns = []
-        majiq_io.retrieve_db(gne_id, majiq_config.outDir, dict_junctions, list_exons, introns)
-        range_introns = [range(xx.start, xx.end+1) for xx in introns]
-        del introns
+        detect_exons(dict_junctions[gne_id], list_exons[gne_id])
+        if majiq_config.ir:
+            expand_introns(gne_id, list_introns[gne_id], list_exons[gne_id], dict_junctions[gne_id], default_index=0)
+
+        majiq_io.retrieve_db(gne_id, majiq_config.outDir, dict_junctions, list_exons, list_introns[gne_id])
+        range_introns = [range(xx.start, xx.end+1) for xx in list_introns[gne_id]]
+        del list_introns[gne_id]
 
         detect_exons(dict_junctions, list_exons)
 
