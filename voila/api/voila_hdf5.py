@@ -182,11 +182,11 @@ class VoilaHDF5:
     def get_lsv_means(self, gene_id, lsv_id):
         trunc_bins = BinsDataSet(self.hdf5[self.LSVS][gene_id][lsv_id]).decode_list()
         bins = VoilaLsv._extend_bins(trunc_bins)
-        for b in bins:
-            e_dpsi = get_expected_dpsi(b)
-            print(trunc_bins)
-            # print(b)
-            # print(e_dpsi)
+        # for b in bins:
+        #     e_dpsi = get_expected_dpsi(b)
+        #     # print(trunc_bins)
+        #     # print(b)
+        #     # print(e_dpsi)
         return tuple(get_expected_dpsi(b) for b in bins)
 
     def get_lsv(self, gene_id, lsv_id):

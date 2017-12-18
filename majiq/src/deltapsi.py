@@ -110,7 +110,9 @@ class DeltaPsi(BasicPipeline):
 
         self.weights = weights
         if len(list_of_lsv) > 0:
+
             nthreads = min(self.nthreads, len(list_of_lsv))
+            print(nthreads, list(chunks(list_of_lsv, nthreads)))
             pool = mp.Pool(processes=nthreads, initializer=process_conf, initargs=[deltapsi_quantification, self],
                            maxtasksperchild=1)
             [xx.acquire() for xx in self.lock]

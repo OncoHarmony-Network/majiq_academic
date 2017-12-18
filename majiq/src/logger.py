@@ -29,7 +29,7 @@ def get_logger(logger_name, silent=False, debug=False):
     logger = logging.getLogger(logger_name)
     formatter = logging.Formatter(logging_format)
 
-    file_handler = logging.FileHandler(logger_name, mode='w')
+    file_handler = logging.FileHandler(logger_name, mode='a')
     file_handler.setFormatter(formatter)
 
     stream_handler = logging.StreamHandler()

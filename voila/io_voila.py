@@ -193,6 +193,16 @@ def load_dpairs(pairwise_dir, majiq_output):
     return lmajiq_pairs, group1_name, group2_name
 
 
+def filter_exons(exons):
+    for exon in exons:
+        if exon.start == -1:
+            yield 'nan', exon.end
+        elif exon.end == -1:
+            yield exon.start, 'nan'
+        else:
+            yield exon.start, exon.end
+
+
 def tab_output(args, voila_links):
     def semicolon_join(value_list):
         return ';'.join(str(x) for x in value_list)
@@ -249,7 +259,7 @@ def tab_output(args, voila_links):
                         '{0}-{1}'.format(junc.start, junc.end) for junc in lsv.junctions
                     ),
                     'Exons coords': semicolon_join(
-                        '{0}-{1}'.format(e.start, e.end) for e in lsv.exons
+                        '{0}-{1}'.format(start, end) for start, end in filter_exons(lsv.exons)
                     ),
                     'Exons Alternative Start': semicolon_join(
                         '|'.join(str(a) for a in e.alt_starts) for e in lsv.exons if e.alt_starts

@@ -1,9 +1,10 @@
-from voila.api import splice_graph_sql as sg, voila_sql as v
+from voila.api.splice_graph_hdf5 import Exons, Junctions, Genes
+from voila.api.voila_hdf5 import VoilaHDF5
 
 
-class SpliceGraph(sg.Genes, sg.Junctions, sg.Exons):
+class SpliceGraph(Genes, Junctions, Exons):
     pass
 
 
-class Voila(v.Exons, v.Junctions, v.Lsvs):
+class Voila(VoilaHDF5):
     pass
