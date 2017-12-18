@@ -45,6 +45,7 @@ def find_new_junctions(file_list, chunk, process_conf, logger):
         read_juncs(fname, is_junc_file, list_exons, dict_of_genes, dict_junctions,
                    majiq_config.strand_specific, process_conf.queue, gname=name)
 
+
 def find_new_introns(file_list, chunk, process_conf, logger):
 
     majiq_config = Config()
@@ -75,7 +76,6 @@ def find_new_introns(file_list, chunk, process_conf, logger):
                 except KeyError:
                     list_introns[gene_obj['chromosome']] = [(gne_id, gene_obj['strand'], ex.end + 1,
                                                                 list_exons[id_ex + 1].start - 1, nchunks, chunk_len)]
-
 
     for is_junc_file, fname, name in file_list:
         logger.info('READ introns from %s' % fname)
