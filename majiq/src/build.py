@@ -216,6 +216,14 @@ class Builder(BasicPipeline):
         logger.info("Command: %s" % " ".join(sys.argv))
         self.queue = mp.Queue()
 
+
+        manager = mp.manager()
+
+        db_genes = manager.dict()
+        db_exons = manager.dict()
+        db_junctions = manager.dict()
+        db_introns = manager.dict()
+
         if not self.use_db:
             p = mp.Process(target=majiq_multi.parallel_lsv_child_calculation,
                            args=(majiq_io.parse_annot, [self.transcripts, majiq_config.outDir],
