@@ -386,23 +386,26 @@ cpdef dict retrieve(str out_dir, dict dict_junctions, dict list_exons, dict list
     gne_list = all_files['gene_info']
 
     for gne_row in gne_list:
-        gne_dict[gne_row[0]] = gne_row
+        gne_id = gne_row[0].decode('UTF-8')
+        gne_dict[gne_id] = gne_row
         try:
-            mtrx = all_files[gne_row[0]]
+            mtrx = all_files[gne_id]
         except KeyError:
+            print('not found gne_dict', gne_row[0])
             continue
 
-        dict_junctions[gne_row[0]] = {}
-        list_exons[gne_row[0]] = []
-        list_introns[gne_row[0]] = []
+        dict_junctions[gne_id] = {}
+        list_exons[gne_id] = []
+        list_introns[gne_id] = []
 
-        gne_dict[gne_row[0]] = {xx: gne_row[idx]for idx, xx in enumerate(names)}
+        gne_dict[gne_id] = {xx: gne_row[idx]for idx, xx in enumerate(names)}
 
         for i in range(mtrx.shape[0]):
-            func_list[mtrx[i,3]](mtrx[i], gne_row[0], dict_junctions[gne_row[0]], list_exons[gne_row[0]],
-                                 list_introns[gne_row[0]], default_index)
+            func_list[mtrx[i,3]](mtrx[i], gne_id, dict_junctions[gne_id], list_exons[gne_id],
+                                 list_introns[gne_id], default_index)
 
     all_files.close()
+    print(list(dict_junctions.keys()))
     return gne_dict
 
 

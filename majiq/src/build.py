@@ -153,7 +153,7 @@ def parsing_files(sam_file_list, chnk, process_conf, logger):
                                                       info_msg=loop_id, logging=logger)
             gene_obj['nreads'] = gene_reads
             if gene_reads == 0:
-                print(gne_id, gene_reads)
+                #print(gne_id, gene_reads)
                 continue
             for jj in dict_junctions[gne_id].values():
                 qm = QueueMessage(QUEUE_MESSAGE_SPLICEGRAPH,
