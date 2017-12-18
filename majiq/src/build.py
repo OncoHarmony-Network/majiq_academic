@@ -125,9 +125,9 @@ def parsing_files(sam_file_list, chnk, process_conf, logger):
 
     effective_len = (majiq_config.readLen - 2*MIN_BP_OVERLAP) + 1
 
-    list_exons = []
+    list_exons = {}
     dict_junctions = {}
-    list_introns = []
+    list_introns = {}
     logger.info('Reading DB')
     dict_of_genes = majiq_io.retrieve(majiq_config.outDir, dict_junctions, list_exons,
                                       list_introns, default_index=0)
