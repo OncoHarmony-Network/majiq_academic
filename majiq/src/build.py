@@ -39,8 +39,6 @@ def find_new_junctions(file_list, chunk, process_conf, logger):
 
     for gne_id, gene_obj in dict_of_genes.items():
         detect_exons(dict_junctions[gne_id], list_exons[gne_id])
-        if majiq_config.ir:
-            expand_introns(gne_id, None, list_exons[gne_id], dict_junctions[gne_id], default_index=0)
 
     for is_junc_file, fname, name in file_list:
         logger.info('READ JUNCS from %s, %s' % (fname, majiq_config.strand_specific))
@@ -56,35 +54,33 @@ def find_new_introns(file_list, chunk, process_conf, logger):
     num_bins = 10
     list_exons = {}
     dict_junctions = {}
+    introns = {}
     logger.info('Reading DB')
     dict_of_genes = majiq_io.retrieve(majiq_config.outDir, dict_junctions, list_exons,
-                                      list_introns, default_index=0)
+                                      introns, default_index=0)
 
     for gne_id, gene_obj in dict_of_genes.items():
         detect_exons(dict_junctions[gne_id], list_exons[gne_id])
-        if majiq_config.ir:
-            expand_introns(gne_id, list_introns[gne_id], list_exons[gne_id], dict_junctions[gne_id], default_index=0)
 
-        majiq_io.retrieve_db(gne_id, majiq_config.outDir, dict_junctions, list_exons, list_introns[gne_id])
-        range_introns = [range(xx.start, xx.end+1) for xx in list_introns[gne_id]]
-        del list_introns[gne_id]
+        range_introns = [range(xx.start, xx.end+1) for xx in introns[gne_id]]
+        del introns[gne_id]
 
         detect_exons(dict_junctions, list_exons)
 
-        for id_ex, ex in enumerate(list_exons[:-1]):
-            if (ex.end + 3 < list_exons[id_ex + 1].start - 1 and ex.end != -1 and list_exons[id_ex + 1].start != -1
+        for id_ex, ex in enumerate(list_exons[gne_id][:-1]):
+            if (ex.end + 3 < list_exons[gne_id][id_ex + 1].start - 1 and ex.end != -1 and list_exons[gne_id][id_ex + 1].start != -1
                and not np.any([(ex.end + 1) in xx for xx in range_introns])):
 
-                ilen = (list_exons[id_ex + 1].start - 1) - (ex.end + 1)
+                ilen = (list_exons[gne_id][id_ex + 1].start - 1) - (ex.end + 1)
                 nchunks = 1 if ilen <= MIN_INTRON_LEN else num_bins
                 chunk_len = int(ilen / nchunks)+1
 
                 try:
                     list_introns[gene_obj['chromosome']].append((gne_id, gene_obj['strand'], ex.end + 1,
-                                                                list_exons[id_ex + 1].start - 1, nchunks, chunk_len))
+                                                                list_exons[gne_id][id_ex + 1].start - 1, nchunks, chunk_len))
                 except KeyError:
                     list_introns[gene_obj['chromosome']] = [(gne_id, gene_obj['strand'], ex.end + 1,
-                                                                list_exons[id_ex + 1].start - 1, nchunks, chunk_len)]
+                                                            list_exons[gne_id][id_ex + 1].start - 1, nchunks, chunk_len)]
 
     for is_junc_file, fname, name in file_list:
         logger.info('READ introns from %s' % fname)
@@ -217,8 +213,7 @@ class Builder(BasicPipeline):
         self.queue = mp.Queue()
 
 
-        manager = mp.manager()
-
+        manager = mp.Manager()
         db_genes = manager.dict()
         db_exons = manager.dict()
         db_junctions = manager.dict()

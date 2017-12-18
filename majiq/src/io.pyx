@@ -396,17 +396,18 @@ cpdef dict retrieve(str out_dir, dict dict_junctions, dict list_exons, dict list
 
         dict_junctions[gne_id] = {}
         list_exons[gne_id] = []
+        gne_dict[gne_id] = {xx: gne_row[idx]for idx, xx in enumerate(names)}
         if list_introns is not None:
             list_introns[gne_id] = []
-
-        gne_dict[gne_id] = {xx: gne_row[idx]for idx, xx in enumerate(names)}
-
-        for i in range(mtrx.shape[0]):
-            func_list[mtrx[i,3]](mtrx[i], gne_id, dict_junctions[gne_id], list_exons[gne_id],
-                                 list_introns[gne_id], default_index)
+            for i in range(mtrx.shape[0]):
+                func_list[mtrx[i,3]](mtrx[i], gne_id, dict_junctions[gne_id], list_exons[gne_id],
+                                     list_introns[gne_id], default_index)
+        else:
+            for i in range(mtrx.shape[0]):
+                func_list[mtrx[i,3]](mtrx[i], gne_id, dict_junctions[gne_id], list_exons[gne_id],
+                                     None, default_index)
 
     all_files.close()
-    print(list(dict_junctions.keys()))
     return gne_dict
 
 

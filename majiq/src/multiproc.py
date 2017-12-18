@@ -29,8 +29,10 @@ def process_wrapper(args_vals):
 
     finally:
         qm = QueueMessage(QUEUE_MESSAGE_END_WORKER, None, chnk)
+        majiq_logger.debug('SENDING END MESSAGE')
         process_conf.queue.put(qm, block=True)
         process_conf.lock[chnk].acquire()
+        majiq_logger.debug('SENDING LOCK RELEASED')
         process_conf.lock[chnk].release()
         process_conf.queue.close()
         majiq_logger.close_logger(logger)
@@ -162,6 +164,7 @@ def queue_manager(output_h5dfp, lock_array, result_queue, num_chunks,
                 out_inplace[1].extend(val.get_value()[1])
 
             elif val.get_type() == QUEUE_MESSAGE_END_WORKER:
+                logger.debug('WORKER DEATH MESSAGE RECEIVED %s (%s/%s)' % (val.get_chunk(), nthr_count, num_chunks))
                 lock_array[val.get_chunk()].release()
                 nthr_count += 1
                 if nthr_count >= num_chunks:

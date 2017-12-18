@@ -18,7 +18,8 @@ def generate_splicegraph(majiq_config):
         if majiq_config.ir:
             expand_introns(gne_id, list_introns[gne_id], list_exons[gne_id], dict_junctions[gne_id], default_index=0)
 
-        gene_to_splicegraph(gne_id, gene_obj, dict_junctions, list_exons, list_introns, majiq_config)
+        gene_to_splicegraph(gne_id, gene_obj, dict_junctions[gne_id], list_exons[gne_id], list_introns[gne_id], 
+                                                        majiq_config)
 
 #
 # def update_splicegraph_junctions(dict_junctions, junc_mtrx, outDir, exp, lock):
