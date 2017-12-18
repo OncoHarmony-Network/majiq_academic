@@ -1298,7 +1298,7 @@ def get_sig_lsv_ids(data,
         prob_d_psi: junction must have a dPSI>= this to be considered
         sum_for_cutoff: If the sum of all +dPSI (that meet probability cutoff)
             is >= Cutoff_dPSI, then include the LSV. Or if abs(sum of dPSI<0) is >= Cutoff_dPSI.
-            This is less conservative than default.
+            This is less conservative than default_view.
         Collapse: if data is quick import, and collapse=True, collapse all sets into
             one big set to return
         throw_no_sig_error: if True, when no sig ids make cutoff, throw error
@@ -2273,7 +2273,7 @@ def impute_missing_lsvs(data,
         a. Copy of an extant LSV ID
         b. Set all junction E(PSI), E(dPSI), and Prob(E(dPSI)) to 0
 
-    impute_with : (default 0) impute missing values with what ?
+    impute_with : (default_view 0) impute missing values with what ?
     InPlace : if True, then the Data is over-written.
     Verbose : print status statements
     Warnings: should warnings be printed?

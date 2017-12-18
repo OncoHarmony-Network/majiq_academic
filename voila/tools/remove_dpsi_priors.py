@@ -306,7 +306,7 @@ def get_num_nonchanging(data,
             value that corresponds to the closer or further junction
             from the reference exon.
         blanked_info: if data comes from blanked (imputed data), you need to provide that info
-        impute_with: what should we impute with? 9 by default
+        impute_with: what should we impute with? 9 by default_view
         as_bools: if True, the results will be True or False
             if False, the results will be the dPSI values with the priors removed
 

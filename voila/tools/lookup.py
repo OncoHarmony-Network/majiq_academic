@@ -182,7 +182,7 @@ class ThisisLookup(Tool):
         to_lookup = io_caleb.get_comparisons(imported)
 
         # coding for readability here...
-        # default is True..
+        # default_view is True..
         abbreviated_bool = True
         if args.dont_abbreviate:
             abbreviated_bool = False
@@ -310,7 +310,7 @@ def lookup(lsv_dictionary,
                 Should the results be returned as a LSV dictionary (False)
                 or as a printable string (True)?
                 or simply printed? ('print')
-            not_found_error: Leave this default...
+            not_found_error: Leave this default_view...
             abbreviated: only print important info
 
         Returns subset of the dictionary pointing with LSVs in the gene.

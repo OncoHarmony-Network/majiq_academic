@@ -1,0 +1,21 @@
+.exon:hover {
+    stroke: orange;
+    fill: orange;
+}
+
+.exon-number {
+    pointer-events: none;
+}
+
+.reads {
+    cursor: default;
+}
+
+.junction-grp:hover .junction {
+    stroke: orange;
+    stroke-width: 3;
+}
+
+.junction-grp:hover .reads {
+    font-size: 14px;
+}
