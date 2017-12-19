@@ -242,7 +242,6 @@ def read_juncs(str fname, bint is_junc_file, dict dict_exons, dict dict_genes, d
     else:
        new_junctions = __read_juncs_from_bam(fname, set_junctions, stranded)
 
-    print('FIND GENES')
     for chrom, jj_set in new_junctions.items():
         gne_list = sorted([xx for xx in dict_genes.values() if xx['chromosome']==chrom], key=lambda x: (x['start'], x['end']))
         ngenes = len(gne_list)
@@ -373,12 +372,12 @@ cdef int _read_sam_or_bam(object gne, AlignmentFile samfl, list matrx, dict junc
         majiq_config = Config()
         effective_len = (majiq_config.readLen - 2*MIN_BP_OVERLAP) + 1
         # print (gne['chromosome'], type(gne['chromosome']), type(gne['chromosome'].decode('UTF-8')))
-        read_iter = samfl.fetch(gne['chromosome'].decode('UTF-8'), gne['start'], gne['end'], multiple_iterators=False)
+        read_iter = samfl.fetch(gne['chromosome'], gne['start'], gne['end'], multiple_iterators=False)
 
         for read in read_iter:
             is_cross, junc_list, end_r = __cross_junctions(read)
             unique = __is_unique(read)
-            if not _match_strand(read, gene_strand=gne['strand'].decode('UTF-8')) or read.pos < gne['start'] or not unique:
+            if not _match_strand(read, gene_strand=gne['strand']) or read.pos < gne['start'] or not unique:
                 continue
 
             tot_reads += 1
@@ -400,7 +399,7 @@ cdef int _read_sam_or_bam(object gne, AlignmentFile samfl, list matrx, dict junc
 
         return tot_reads
     except ValueError as e:
-        logging.debug('\t[%s]There are no reads in %s:%d-%d' % (info_msg, gne['chromosome'].decode('UTF-8'), gne['start'], gne['end']))
+        logging.debug('\t[%s]There are no reads in %s:%d-%d' % (info_msg, gne['chromosome'], gne['start'], gne['end']))
         return 0
 
 

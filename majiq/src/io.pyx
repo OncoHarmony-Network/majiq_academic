@@ -373,7 +373,8 @@ cpdef dict retrieve(str out_dir, dict dict_junctions, dict list_exons, dict list
     cdef object db_f
     cdef int njuncs = 0
 
-    cdef list names = ['id', 'name', 'chromosome', 'strand', 'start', 'end']
+    cdef list names = ['id', 'name', 'chromosome', 'strand']
+    cdef list coords_gene = ['start', 'end']
     cdef dict dd
 
     if list_introns is not None:
@@ -396,7 +397,9 @@ cpdef dict retrieve(str out_dir, dict dict_junctions, dict list_exons, dict list
 
         dict_junctions[gne_id] = {}
         list_exons[gne_id] = []
-        gne_dict[gne_id] = {xx: gne_row[idx]for idx, xx in enumerate(names)}
+        gne_dict[gne_id] = {xx: gne_row[idx].decode('UTF-8') for idx, xx in enumerate(names)}
+        gne_dict[gne_id].update({xx: gne_row[idx+4] for idx, xx in enumerate(coords_gene)})
+
         if list_introns is not None:
             list_introns[gne_id] = []
             for i in range(mtrx.shape[0]):

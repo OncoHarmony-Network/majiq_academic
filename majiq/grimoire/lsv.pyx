@@ -281,8 +281,8 @@ cpdef detect_lsvs(dict dict_of_genes, dict dict_junctions, dict list_exons, np.n
         if gene_obj['nreads'] == 0:
             continue
 
-        _detect_lsvs(list_exons[gne_id], junc_mtrx, fitfunc_r, gne_id, gene_obj['chromosome'].decode('UTF-8'),
-                     gene_obj['strand'].decode('UTF-8'), majiq_config, out_f, np_jjlist, logger)
+        _detect_lsvs(list_exons[gne_id], junc_mtrx, fitfunc_r, gne_id, gene_obj['chromosome'],
+                     gene_obj['strand'], majiq_config, out_f, np_jjlist, logger)
         for jj in dict_junctions[gne_id].values():
             jj.reset()
         gene_obj['nreads'] = 0

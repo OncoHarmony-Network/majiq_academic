@@ -61,11 +61,8 @@ def find_new_introns(file_list, chunk, process_conf, logger):
 
     for gne_id, gene_obj in dict_of_genes.items():
         detect_exons(dict_junctions[gne_id], list_exons[gne_id])
-
         range_introns = [range(xx.start, xx.end+1) for xx in introns[gne_id]]
         del introns[gne_id]
-
-        detect_exons(dict_junctions, list_exons)
 
         for id_ex, ex in enumerate(list_exons[gne_id][:-1]):
             if (ex.end + 3 < list_exons[gne_id][id_ex + 1].start - 1 and ex.end != -1 and list_exons[gne_id][id_ex + 1].start != -1
@@ -120,7 +117,7 @@ def parse_denovo_elements(pipe_self, logger):
                                  majiq_multi.chunks(majiq_config.juncfile_list, nthreads))
             pool2.close()
             queue_manager(None, pipe_self.lock, pipe_self.queue, num_chunks=nthreads, logger=logger,
-                          elem_dict=elem_dict, group_names=group_names)
+                          elem_dict=elem_dict, group_names=group_names, min_experients=min_experiments)
             pool2.join()
 
 
