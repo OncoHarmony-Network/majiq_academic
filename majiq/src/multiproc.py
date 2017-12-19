@@ -97,9 +97,9 @@ def queue_manager(output_h5dfp, lock_array, result_queue, num_chunks,
 
     nthr_count = 0
     found = {}
-    gen_dict  = {}
+    gen_dict = {}
 
-
+    logger.debug('Start Queue Manager')
     while True:
         try:
 

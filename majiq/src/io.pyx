@@ -414,6 +414,11 @@ cpdef dict retrieve(str out_dir, dict dict_junctions, dict list_exons, dict list
     return gne_dict
 
 
+cpdef retrive_db_matrix(str outDir):
+    all_files = np.load('%s.npz' % get_build_temp_db_filename(outDir))
+    return
+
+
 
 def retrieve_db_info(str gne_id, str out_dir, dict dict_junctions,list list_exons, list list_introns,
                      list denovo_ir=[], int default_index=-1):

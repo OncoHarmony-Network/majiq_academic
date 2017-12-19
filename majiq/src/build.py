@@ -106,10 +106,21 @@ def parse_denovo_elements(pipe_self, logger):
         pool1.imap_unordered(majiq_multi.process_wrapper,
                              majiq_multi.chunks(majiq_config.juncfile_list, nthreads))
         pool1.close()
+
+        '''Read '''
+        list_exons = {}
+        dict_junctions = {}
+        introns = {}
+        dict_of_genes = majiq_io.retrieve_db_matrx(majiq_config.outDir)
+
+
         group_names = {xx: xidx for xidx, xx in enumerate(majiq_config.tissue_repl.keys())}
         queue_manager(None, pipe_self.lock, pipe_self.queue, num_chunks=nthreads, logger=logger,
                       elem_dict=elem_dict, group_names=group_names, min_experients=min_experiments)
         pool1.join()
+
+        logger.info('Updating DB')
+        majiq_io.add_elements_db(elem_dict)
 
         if majiq_config.ir:
             [xx.acquire() for xx in pipe_self.lock]
@@ -119,6 +130,9 @@ def parse_denovo_elements(pipe_self, logger):
             queue_manager(None, pipe_self.lock, pipe_self.queue, num_chunks=nthreads, logger=logger,
                           elem_dict=elem_dict, group_names=group_names, min_experients=min_experiments)
             pool2.join()
+
+
+
 
 
 def parsing_files(sam_file_list, chnk, process_conf, logger):
