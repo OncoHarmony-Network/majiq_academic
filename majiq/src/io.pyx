@@ -22,18 +22,18 @@ cdef list gene_name_keys = ['Name', 'gene_name']
 cdef list gene_id_keys = ['ID', 'gene_id']
 
 
-cdef int _read_gff(str filename, str outDir, object logging=None) except -1:
+cdef int _read_gff(str filename, str outDir, object elem_dict,  object all_genes, object logging=None) except -1:
     """
     :param filename: GFF input filename
     :param list_of_genes: List of genes that will be updated with all the gene_id detected on the gff file
     :param logging: logger object
     :return: :raise RuntimeError:
     """
-    cdef list all_genes = []
+    # cdef list all_genes = []
     cdef dict gene_id_dict = {}
     cdef dict trcpt_id_dict = {}
     cdef dict exon_dict = {}
-    cdef dict elem_dict = {}
+    # cdef dict elem_dict = {}
 
     cdef str chrom, name, strand
     cdef int start, end
@@ -68,7 +68,10 @@ cdef int _read_gff(str filename, str outDir, object logging=None) except -1:
                              "%s" % gene_id_keys)
 
             exon_dict[gene_id] = []
-            all_genes.append((gene_id, gene_name, chrom, strand, start, end))
+            #all_genes.append((gene_id, gene_name, chrom, strand, start, end))
+            all_genes[gene_id] = {'id':gene_id, 'name':gene_name, 'chromosome': chrom,
+                                  'strand': strand, 'start': start, 'end':end, 'nreads': 0}
+
             #all_genes[chrom].append((gene_id, gene_name, chrom, strand, start, end))
             elem_dict[gene_id] = []
 
@@ -93,6 +96,7 @@ cdef int _read_gff(str filename, str outDir, object logging=None) except -1:
 
         elif record.type == 'exon':
             parent_tx_id = record.attributes['Parent']
+            gn_id = trcpt_id_dict[parent_tx_id][0]
             try:
                 exon_dict[gn_id].append((start, True))
                 exon_dict[gn_id].append((end, False))
@@ -107,22 +111,17 @@ cdef int _read_gff(str filename, str outDir, object logging=None) except -1:
         last_ss = FIRST_LAST_JUNC
         coord_list.sort(key=lambda x: (x[0], x[1]))
         for xx, yy in coord_list:
-            elem_dict[gn_id].append((last_ss, xx, 1, J_TYPE))
+            tlist = elem_dict[gn_id]
+            #elem_dict[gn_id].append([last_ss, xx, 1, J_TYPE])
+            tlist.append([last_ss, xx, 1, J_TYPE])
+            elem_dict[gn_id] = tlist
             last_ss = yy
 
-        elem_dict[gn_id].append((last_ss, FIRST_LAST_JUNC, 1, J_TYPE))
-
+        elem_dict[gn_id].append([last_ss, FIRST_LAST_JUNC, 1, J_TYPE])
     merge_exons(exon_dict, elem_dict)
-    _dump_elems_list(elem_dict, all_genes, outDir)
-
-    # #test
-    # from deleteme import generate_lookuptree
-    #
-    # generate_lookuptree(all_genes)
-    del all_genes
 
 
-cdef int merge_exons(dict exon_dict, dict elem_dict) except -1:
+cdef int merge_exons(dict exon_dict, object elem_dict) except -1:
     cdef list ex_list
     cdef str gne_id
     cdef tuple x
@@ -156,7 +155,7 @@ cdef int merge_exons(dict exon_dict, dict elem_dict) except -1:
             elem_dict[gne_id].append([ex_start, ex_end, 1, EX_TYPE])
 
         # _dump_elems_list(db_f, gne_id, np.array(elem_mtrx))
-        elem_dict[gne_id] = np.array(elem_dict[gne_id])
+        #elem_dict[gne_id] = np.array(elem_dict[gne_id])
 
 
 #######
@@ -177,19 +176,19 @@ cdef int _dump_elems_list(dict elem_dict, list gene_info, str outDir) except -1:
     np.savez(get_build_temp_db_filename(outDir), **elem_dict)
 
 
-cdef int _read_junction(np.ndarray row, str gne_id, dict jjs, list exs, list irs, int default_index) except -1:
+cdef int _read_junction(list row, str gne_id, dict jjs, list exs, list irs, int default_index) except -1:
     jjs[(row[0], row[1])] = Junction(row[0], row[1], gne_id, default_index, annot=bool(row[2]))
 
 
-cdef int _read_exon(np.ndarray row, str gne_id, dict jjs, list exs, list irs, int default_index) except -1:
+cdef int _read_exon(list row, str gne_id, dict jjs, list exs, list irs, int default_index) except -1:
     exs.append(Exon(row[0], row[1], annot=bool(row[2])))
 
 
-cdef int _read_ir(np.ndarray row, str gne_id, dict jjs, list exs, list irs, int default_index) except -1:
+cdef int _read_ir(list row, str gne_id, dict jjs, list exs, list irs, int default_index) except -1:
     irs.append(Intron(row[0], row[1], annot=bool(row[2]), db_idx=-1))
 
 
-cdef int _pass_ir(np.ndarray row, str gne_id, dict jjs, list exs, list irs, int default_index) except -1:
+cdef int _pass_ir(list row, str gne_id, dict jjs, list exs, list irs, int default_index) except -1:
     pass
 
 
@@ -313,10 +312,10 @@ cpdef int init_majiq_file(str filename, str out_dir, str genome, int msamples):
 
 
 
-cpdef int parse_annot(str filename, str out_dir, object logging=None):
+cpdef int parse_annot(str filename, str out_dir,  object elem_dict,  object all_genes, object logging=None):
 
     try:
-        _read_gff(filename=filename, outDir=out_dir, logging=logging)
+        _read_gff(filename=filename, outDir=out_dir, elem_dict=elem_dict, all_genes=all_genes, logging=logging)
     except Exception as e:
         print e
         raise
@@ -357,14 +356,34 @@ cpdef int retrieve_db(str gne_id, str out_dir, dict dict_junctions,list list_exo
     for i in range(mtrx.shape[0]):
         func_list[mtrx[i,3]](mtrx[i], gne_id, dict_junctions, list_exons, list_introns,
                              default_index)
-
-
     return njuncs
+
+
+cpdef int from_matrix_to_objects( str gne_id, object elem_dicts, dict dict_junctions,
+                                 list list_exons, list list_introns=None, int default_index=-1):
+    cdef dict func_list
+    cdef list elem
+
+    if list_introns is not None:
+        func_list = {EX_TYPE: _read_exon, IR_TYPE: _read_ir, J_TYPE: _read_junction}
+    else:
+        func_list = {EX_TYPE: _read_exon, IR_TYPE: _pass_ir, J_TYPE: _read_junction}
+
+    for elem in elem_dicts:
+        func_list[elem[3]](elem, gne_id, dict_junctions, list_exons,
+                             list_introns, default_index)
+
+
+cpdef int add_elements_mtrx(dict new_elems, object shared_elem_dict):
+
+    for gne, mtrx in new_elems.items():
+        kk = shared_elem_dict[gne]
+        shared_elem_dict[gne] = kk + new_elems[gne]
+        # np.vstack(shared_elem_dict, new_elems)
 
 
 cpdef dict retrieve(str out_dir, dict dict_junctions, dict list_exons, dict list_introns, list denovo_ir=[],
                     int default_index=-1):
-
 
     cdef dict gne_dict = {}
     cdef dict j_attrs, ex_attrs

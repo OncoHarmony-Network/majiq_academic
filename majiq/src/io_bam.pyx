@@ -12,6 +12,7 @@ from pysam.libcalignedsegment cimport PileupColumn, PileupRead
 # from libcpp cimport bool
 import pysam
 import cython
+import sys
 
 # READING BAM FILES
 
@@ -218,7 +219,7 @@ cdef dict __read_juncs_from_bam(str filename, set in_jj, bint stranded):
     return out_dd
 
 
-def read_juncs(str fname, bint is_junc_file, dict dict_exons, dict dict_genes, dict junctions, bint stranded, queue,
+def read_juncs(str fname, bint is_junc_file, dict dict_exons, object dict_genes, dict junctions, bint stranded, queue,
                str gname):
 
     cdef str ln, chrom, gid
@@ -371,7 +372,7 @@ cdef int _read_sam_or_bam(object gne, AlignmentFile samfl, list matrx, dict junc
 
         majiq_config = Config()
         effective_len = (majiq_config.readLen - 2*MIN_BP_OVERLAP) + 1
-        # print (gne['chromosome'], type(gne['chromosome']), type(gne['chromosome'].decode('UTF-8')))
+        # print (gne['chromosome'], type(gne['chromosome']), type(gne['chromosome']))
         read_iter = samfl.fetch(gne['chromosome'], gne['start'], gne['end'], multiple_iterators=False)
 
         for read in read_iter:

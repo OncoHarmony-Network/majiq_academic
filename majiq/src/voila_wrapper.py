@@ -4,38 +4,23 @@ import majiq.src.io as majiq_io
 from voila.api import SpliceGraph
 from majiq.grimoire.exon import detect_exons, expand_introns
 
-def generate_splicegraph(majiq_config):
-    init_splicegraph(get_builder_splicegraph_filename(majiq_config.outDir))
-    list_exons = {}
-    dict_junctions = {}
-    list_introns = {}
 
-    dict_of_genes = majiq_io.retrieve(majiq_config.outDir, dict_junctions, list_exons,
-                                      list_introns, default_index=0)
+def generate_splicegraph(majiq_config, elem_dict, dict_of_genes):
+
+    init_splicegraph(get_builder_splicegraph_filename(majiq_config.outDir))
 
     for gne_id, gene_obj in dict_of_genes.items():
-        detect_exons(dict_junctions[gne_id], list_exons[gne_id])
+        list_exons = []
+        dict_junctions = {}
+        list_introns = []
+        majiq_io.from_matrix_to_objects(gne_id, elem_dict[gne_id], dict_junctions, list_exons, list_introns,
+                                        default_index=0)
+
+        detect_exons(dict_junctions, list_exons)
         if majiq_config.ir:
-            expand_introns(gne_id, list_introns[gne_id], list_exons[gne_id], dict_junctions[gne_id], default_index=0)
+            expand_introns(gne_id, list_introns, list_exons, dict_junctions, default_index=0)
+        gene_to_splicegraph(gne_id, gene_obj, dict_junctions, list_exons, list_introns, majiq_config)
 
-        gene_to_splicegraph(gne_id, gene_obj, dict_junctions[gne_id], list_exons[gne_id], list_introns[gne_id], 
-                                                        majiq_config)
-
-#
-# def update_splicegraph_junctions(dict_junctions, junc_mtrx, outDir, exp, lock):
-#
-#     jsum = junc_mtrx.sum(axis=1)
-#
-#     lock.acquire()
-#     with SpliceGraph(get_builder_splicegraph_filename(outDir), 'r+') as sg:
-#         for gid, jlist in dict_junctions.items():
-#             for xx in jlist.values():
-#                 jg = sg.junction("%s:%s-%s" % (gid, xx.start, xx.end))
-#
-#                 if xx.index > 0:
-#                     cov = jsum[xx.index]
-#                     jg.update_reads(exp, cov)
-#     lock.release()
 
 def update_splicegraph_junction(sg, gene_id, start, end, nreads, exp):
 
