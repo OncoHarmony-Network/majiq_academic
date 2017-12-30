@@ -229,6 +229,7 @@ class Builder(BasicPipeline):
         self.genes_dict = manager.dict()
 
         if self.use_db:
+            logger.info("Loading previously generated db %s" % self.transcripts)
             majiq_io.load_db(self.transcripts, self.elem_dict, self.genes_dict)
         else:
             p = mp.Process(target=majiq_multi.parallel_lsv_child_calculation,

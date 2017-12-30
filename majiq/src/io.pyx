@@ -1,7 +1,4 @@
 import datetime
-cimport numpy as np
-import numpy as np
-from numpy cimport ndarray
 
 import h5py
 import os
@@ -96,8 +93,8 @@ cdef int _read_gff(str filename, str outDir, object elem_dict,  object all_genes
 
         elif record.type == 'exon':
             parent_tx_id = record.attributes['Parent']
-            gn_id = trcpt_id_dict[parent_tx_id][0]
             try:
+                gn_id = trcpt_id_dict[parent_tx_id][0]
                 exon_dict[gn_id].append((start, True))
                 exon_dict[gn_id].append((end, False))
                 trcpt_id_dict[parent_tx_id][1].append((start, end))
@@ -161,6 +158,16 @@ cdef int merge_exons(dict exon_dict, object elem_dict) except -1:
 #######
 # HDF5 API
 #######
+cdef int load_db(str filename, object elem_dict, object genes_dict) except -1:
+    cdef list names = ['id', 'name', 'chromosome', 'strand']
+
+    with open(filename, 'rb') as fp:
+        all_files = np.load(fp)
+    genes_dict = {all_files['gene_info'][ii][0].decode('UTF-8'):{xx: all_files['gene_info'][ii][idx]
+                                                                for idx, xx in enumerate(names)}
+                                                                for ii in range(all_files['gene_info'].shape[0])}
+    for xx in genes_dict.keys():
+        elem_dict[xx] = all_files[xx]
 
 cdef int _dump_lsv_coverage(out_f, cov_list, attrs_list):
     out_f.create_dataset(JUNCTIONS_DATASET_NAME, data=cov_list,
@@ -296,6 +303,7 @@ cpdef extract_lsv_summary(list files, int minnonzero, int min_reads, dict epsi=N
 cpdef int dump_lsv_coverage(out_f, cov_list, attrs_list):
     _dump_lsv_coverage(out_f, cov_list, attrs_list)
 
+
 cpdef int init_majiq_file(str filename, str out_dir, str genome, int msamples):
 
     with h5py.File('%s/%s.majiq' % (out_dir, filename), 'w') as f:
@@ -321,42 +329,42 @@ cpdef int parse_annot(str filename, str out_dir,  object elem_dict,  object all_
         raise
 
 
-cpdef dict retrieve_db_genes(str out_dir):
-
-    cdef list names = ['id', 'name', 'chromosome', 'strand', 'start', 'end']
-    cdef dict dd
-
-    gene_info = np.load('%s.npz' % get_build_temp_db_filename(out_dir))['gene_info']
-    dd = {gene_info[ii][0].decode('UTF-8'):{xx: gene_info[ii][idx]
-                                            for idx, xx in enumerate(names)}
-          for ii in range(gene_info.shape[0])}
-
-    return dd
-
-cpdef int retrieve_db(str gne_id, str out_dir, dict dict_junctions,list list_exons, list list_introns,
-                     list denovo_ir=[], int default_index=-1):
-
-
-    cdef dict gne_dict = {}
-    cdef dict j_attrs, ex_attrs
-    cdef Junction junc
-    cdef str xx
-    cdef object db_f
-    cdef int njuncs = 0
-
-
-    if list_introns is not None:
-        func_list = {EX_TYPE: _read_exon, IR_TYPE: _read_ir, J_TYPE: _read_junction}
-    else:
-        func_list = {EX_TYPE: _read_exon, IR_TYPE: _pass_ir, J_TYPE: _read_junction}
-
-
-    all_files = np.load('%s.npz' % get_build_temp_db_filename(out_dir))
-    mtrx = all_files[gne_id]
-    for i in range(mtrx.shape[0]):
-        func_list[mtrx[i,3]](mtrx[i], gne_id, dict_junctions, list_exons, list_introns,
-                             default_index)
-    return njuncs
+# cpdef dict retrieve_db_genes(str out_dir):
+#
+#     cdef list names = ['id', 'name', 'chromosome', 'strand', 'start', 'end']
+#     cdef dict dd
+#
+#     gene_info = np.load('%s.npz' % get_build_temp_db_filename(out_dir))['gene_info']
+#     dd = {gene_info[ii][0].decode('UTF-8'):{xx: gene_info[ii][idx]
+#                                             for idx, xx in enumerate(names)}
+#           for ii in range(gene_info.shape[0])}
+#
+#     return dd
+#
+# cpdef int retrieve_db(str gne_id, str out_dir, dict dict_junctions,list list_exons, list list_introns,
+#                      list denovo_ir=[], int default_index=-1):
+#
+#
+#     cdef dict gne_dict = {}
+#     cdef dict j_attrs, ex_attrs
+#     cdef Junction junc
+#     cdef str xx
+#     cdef object db_f
+#     cdef int njuncs = 0
+#
+#
+#     if list_introns is not None:
+#         func_list = {EX_TYPE: _read_exon, IR_TYPE: _read_ir, J_TYPE: _read_junction}
+#     else:
+#         func_list = {EX_TYPE: _read_exon, IR_TYPE: _pass_ir, J_TYPE: _read_junction}
+#
+#
+#     all_files = np.load('%s.npz' % get_build_temp_db_filename(out_dir))
+#     mtrx = all_files[gne_id]
+#     for i in range(mtrx.shape[0]):
+#         func_list[mtrx[i,3]](mtrx[i], gne_id, dict_junctions, list_exons, list_introns,
+#                              default_index)
+#     return njuncs
 
 
 cpdef int from_matrix_to_objects( str gne_id, object elem_dicts, dict dict_junctions,
@@ -382,109 +390,108 @@ cpdef int add_elements_mtrx(dict new_elems, object shared_elem_dict):
         # np.vstack(shared_elem_dict, new_elems)
 
 
-cpdef dict retrieve(str out_dir, dict dict_junctions, dict list_exons, dict list_introns, list denovo_ir=[],
-                    int default_index=-1):
-
-    cdef dict gne_dict = {}
-    cdef dict j_attrs, ex_attrs
-    cdef Junction junc
-    cdef str xx
-    cdef object db_f
-    cdef int njuncs = 0
-
-    cdef list names = ['id', 'name', 'chromosome', 'strand']
-    cdef list coords_gene = ['start', 'end']
-    cdef dict dd
-
-    if list_introns is not None:
-        func_list = {EX_TYPE: _read_exon, IR_TYPE: _read_ir, J_TYPE: _read_junction}
-    else:
-        func_list = {EX_TYPE: _read_exon, IR_TYPE: _pass_ir, J_TYPE: _read_junction}
-
-
-    all_files = np.load('%s.npz' % get_build_temp_db_filename(out_dir))
-    gne_list = all_files['gene_info']
-
-    for gne_row in gne_list:
-        gne_id = gne_row[0].decode('UTF-8')
-        gne_dict[gne_id] = gne_row
-        try:
-            mtrx = all_files[gne_id]
-        except KeyError:
-            print('not found gne_dict', gne_row[0])
-            continue
-
-        dict_junctions[gne_id] = {}
-        list_exons[gne_id] = []
-        gne_dict[gne_id] = {xx: gne_row[idx].decode('UTF-8') for idx, xx in enumerate(names)}
-        gne_dict[gne_id].update({xx: gne_row[idx+4] for idx, xx in enumerate(coords_gene)})
-
-        if list_introns is not None:
-            list_introns[gne_id] = []
-            for i in range(mtrx.shape[0]):
-                func_list[mtrx[i,3]](mtrx[i], gne_id, dict_junctions[gne_id], list_exons[gne_id],
-                                     list_introns[gne_id], default_index)
-        else:
-            for i in range(mtrx.shape[0]):
-                func_list[mtrx[i,3]](mtrx[i], gne_id, dict_junctions[gne_id], list_exons[gne_id],
-                                     None, default_index)
-
-    all_files.close()
-    return gne_dict
-
-
-cpdef retrive_db_matrix(str outDir):
-    all_files = np.load('%s.npz' % get_build_temp_db_filename(outDir))
-    return
-
-
-
-def retrieve_db_info(str gne_id, str out_dir, dict dict_junctions,list list_exons, list list_introns,
-                     list denovo_ir=[], int default_index=-1):
-
-    cdef dict j_attrs, ex_attrs
-    cdef Junction junc
-    cdef str xx
-    cdef object db_f
-    cdef int njuncs = 0
-
-    if not denovo_ir:
-        mode = 'r'
-    else:
-        mode = 'r+'
-
-    with h5py.File(get_build_temp_db_filename(out_dir), mode=mode) as db_f:
-
-        for xx in db_f['%s/junctions' % gne_id]:
-            j_attrs = dict(db_f['%s/junctions/%s' % (gne_id, xx)].attrs)
-            njuncs +=1
-            dict_junctions[(j_attrs['start'], j_attrs['end'])] = Junction(j_attrs['start'], j_attrs['end'],
-                                                                          gne_id, default_index,
-                                                                          annot=j_attrs['annotated'])
-
-        mtrx = np.array(db_f['%s/db_coords' % gne_id])
-
-        for idx, row in enumerate(mtrx[mtrx[:, 3] == EX_TYPE, :]):
-            list_exons.append(Exon(row[0], row[1], annot=bool(row[2]), db_idx=idx))
-
-        if list_introns is not None:
-            for row in mtrx[mtrx[:, 3] == IR_TYPE, :]:
-                list_introns.append(Intron(row[0], row[1], annot=bool(row[2]), db_idx=-1))
-
-            if denovo_ir:
-                n_mtrx = np.array(denovo_ir)
-                shp = mtrx.shape
-                shp_new = shp[0] + n_mtrx.shape[0]
-                db_f['%s/db_coords' % gne_id].resize((shp_new, shp[1]))
-                db_f['%s/db_coords' % gne_id][shp[0]:] = n_mtrx
-
-                for ir in denovo_ir:
-                    list_introns.append(Intron(ir[0], ir[1], annot=False, db_idx=-1))
-
-
-    return njuncs
+# cpdef dict retrieve(str out_dir, dict dict_junctions, dict list_exons, dict list_introns, list denovo_ir=[],
+#                     int default_index=-1):
+#
+#     cdef dict gne_dict = {}
+#     cdef dict j_attrs, ex_attrs
+#     cdef Junction junc
+#     cdef str xx
+#     cdef object db_f
+#     cdef int njuncs = 0
+#
+#     cdef list names = ['id', 'name', 'chromosome', 'strand']
+#     cdef list coords_gene = ['start', 'end']
+#     cdef dict dd
+#
+#     if list_introns is not None:
+#         func_list = {EX_TYPE: _read_exon, IR_TYPE: _read_ir, J_TYPE: _read_junction}
+#     else:
+#         func_list = {EX_TYPE: _read_exon, IR_TYPE: _pass_ir, J_TYPE: _read_junction}
+#
+#
+#     all_files = np.load('%s.npz' % get_build_temp_db_filename(out_dir))
+#     gne_list = all_files['gene_info']
+#
+#     for gne_row in gne_list:
+#         gne_id = gne_row[0].decode('UTF-8')
+#         gne_dict[gne_id] = gne_row
+#         try:
+#             mtrx = all_files[gne_id]
+#         except KeyError:
+#             print('not found gne_dict', gne_row[0])
+#             continue
+#
+#         dict_junctions[gne_id] = {}
+#         list_exons[gne_id] = []
+#         gne_dict[gne_id] = {xx: gne_row[idx].decode('UTF-8') for idx, xx in enumerate(names)}
+#         gne_dict[gne_id].update({xx: gne_row[idx+4] for idx, xx in enumerate(coords_gene)})
+#
+#         if list_introns is not None:
+#             list_introns[gne_id] = []
+#             for i in range(mtrx.shape[0]):
+#                 func_list[mtrx[i,3]](mtrx[i], gne_id, dict_junctions[gne_id], list_exons[gne_id],
+#                                      list_introns[gne_id], default_index)
+#         else:
+#             for i in range(mtrx.shape[0]):
+#                 func_list[mtrx[i,3]](mtrx[i], gne_id, dict_junctions[gne_id], list_exons[gne_id],
+#                                      None, default_index)
+#
+#     all_files.close()
+#     return gne_dict
+#
+#
+# cpdef retrive_db_matrix(str outDir):
+#     all_files = np.load('%s.npz' % get_build_temp_db_filename(outDir))
+#     return
+#
+# def retrieve_db_info(str gne_id, str out_dir, dict dict_junctions,list list_exons, list list_introns,
+#                      list denovo_ir=[], int default_index=-1):
+#
+#     cdef dict j_attrs, ex_attrs
+#     cdef Junction junc
+#     cdef str xx
+#     cdef object db_f
+#     cdef int njuncs = 0
+#
+#     if not denovo_ir:
+#         mode = 'r'
+#     else:
+#         mode = 'r+'
+#
+#     with h5py.File(get_build_temp_db_filename(out_dir), mode=mode) as db_f:
+#
+#         for xx in db_f['%s/junctions' % gne_id]:
+#             j_attrs = dict(db_f['%s/junctions/%s' % (gne_id, xx)].attrs)
+#             njuncs +=1
+#             dict_junctions[(j_attrs['start'], j_attrs['end'])] = Junction(j_attrs['start'], j_attrs['end'],
+#                                                                           gne_id, default_index,
+#                                                                           annot=j_attrs['annotated'])
+#
+#         mtrx = np.array(db_f['%s/db_coords' % gne_id])
+#
+#         for idx, row in enumerate(mtrx[mtrx[:, 3] == EX_TYPE, :]):
+#             list_exons.append(Exon(row[0], row[1], annot=bool(row[2]), db_idx=idx))
+#
+#         if list_introns is not None:
+#             for row in mtrx[mtrx[:, 3] == IR_TYPE, :]:
+#                 list_introns.append(Intron(row[0], row[1], annot=bool(row[2]), db_idx=-1))
+#
+#             if denovo_ir:
+#                 n_mtrx = np.array(denovo_ir)
+#                 shp = mtrx.shape
+#                 shp_new = shp[0] + n_mtrx.shape[0]
+#                 db_f['%s/db_coords' % gne_id].resize((shp_new, shp[1]))
+#                 db_f['%s/db_coords' % gne_id][shp[0]:] = n_mtrx
+#
+#                 for ir in denovo_ir:
+#                     list_introns.append(Intron(ir[0], ir[1], annot=False, db_idx=-1))
+#
+#     return njuncs
 
 
+def dump_elements(object genes_dict, object elem_dict, str outDir):
+    _dump_elems_list(elem_dict, genes_dict, outDir)
 
 
 def load_bin_file(filename, logger=None):
@@ -509,3 +516,7 @@ def dump_bin_file(data, str filename):
 
 def get_extract_lsv_list(list list_of_lsv_id, list file_list, int msamples):
     return _get_extract_lsv_list(list_of_lsv_id, file_list, msamples)
+
+
+def load_db(str filename, object elem_dict, object genes_dict):
+    _load_db(filename, elem_dict, genes_dict)
