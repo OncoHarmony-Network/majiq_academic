@@ -29,8 +29,10 @@ def process_wrapper(args_vals):
 
     finally:
         qm = QueueMessage(QUEUE_MESSAGE_END_WORKER, None, chnk)
+        logger.debug('SENDING END MESSAGE')
         process_conf.queue.put(qm, block=True)
         process_conf.lock[chnk].acquire()
+        logger.debug('SENDING LOCK RELEASED')
         process_conf.lock[chnk].release()
         process_conf.queue.close()
         majiq_logger.close_logger(logger)
@@ -95,7 +97,9 @@ def queue_manager(output_h5dfp, lock_array, result_queue, num_chunks,
 
     nthr_count = 0
     found = {}
+    gen_dict = {}
 
+    logger.debug('Start Queue Manager')
     while True:
         try:
 
@@ -106,12 +110,12 @@ def queue_manager(output_h5dfp, lock_array, result_queue, num_chunks,
                 info_junc = val.get_value()[:-1]
                 gidx = kwargs['group_names'][val.get_value()[-1]]
                 try:
-                    kwargs['junctions'][info_junc][gidx] += 1
+                    gen_dict[info_junc][gidx] += 1
                 except KeyError:
-                    kwargs['junctions'][info_junc] = np.zeros(len(kwargs['group_names']))
-                    kwargs['junctions'][info_junc][gidx] = 1
+                    gen_dict[info_junc] = np.zeros(len(kwargs['group_names']))
+                    gen_dict[info_junc][gidx] = 1
 
-                if kwargs['junctions'][info_junc][gidx] == kwargs['min_experients'] and info_junc not in found:
+                if gen_dict[info_junc][gidx] == kwargs['min_experients'] and info_junc not in found:
                     try:
                         kwargs['elem_dict'][info_junc[0]].append([info_junc[1], info_junc[2], 0, J_TYPE])
                     except KeyError:
@@ -122,17 +126,17 @@ def queue_manager(output_h5dfp, lock_array, result_queue, num_chunks,
                 info_intron = val.get_value()[:-1]
                 gidx = kwargs['group_names'][val.get_value()[-1]]
                 try:
-                    kwargs['introns'][info_intron][gidx] += 1
+                    gen_dict[info_intron][gidx] += 1
                 except KeyError:
-                    kwargs['introns'][info_intron] = np.zeros(len(kwargs['group_names']))
-                    kwargs['introns'][info_intron][gidx] = 1
+                    gen_dict[info_intron] = np.zeros(len(kwargs['group_names']))
+                    gen_dict[info_intron][gidx] = 1
 
-                if kwargs['introns'][info_junc][gidx] == kwargs['min_experients'] and info_junc not in found:
+                if gen_dict[info_intron][gidx] == kwargs['min_experients'] and info_intron not in found:
                     try:
-                        kwargs['elem_dict'][info_junc[0]].append([info_junc[1], info_junc[2], 0, IR_TYPE])
+                        kwargs['elem_dict'][info_intron[0]].append([info_intron[1], info_intron[2], 0, IR_TYPE])
                     except KeyError:
-                        kwargs['elem_dict'][info_junc[0]] = [[info_junc[1], info_junc[2], 0, IR_TYPE]]
-                    found[info_junc] = 1
+                        kwargs['elem_dict'][info_intron[0]] = [[info_intron[1], info_intron[2], 0, IR_TYPE]]
+                    found[info_intron] = 1
 
             elif val.get_type() == QUEUE_MESSAGE_SPLICEGRAPH:
                 info = val.get_value()
@@ -162,6 +166,7 @@ def queue_manager(output_h5dfp, lock_array, result_queue, num_chunks,
                 out_inplace[1].extend(val.get_value()[1])
 
             elif val.get_type() == QUEUE_MESSAGE_END_WORKER:
+                logger.debug('WORKER DEATH MESSAGE RECEIVED %s (%s/%s)' % (val.get_chunk(), nthr_count, num_chunks))
                 lock_array[val.get_chunk()].release()
                 nthr_count += 1
                 if nthr_count >= num_chunks:

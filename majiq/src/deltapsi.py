@@ -117,7 +117,7 @@ class DeltaPsi(BasicPipeline):
                            maxtasksperchild=1)
             [xx.acquire() for xx in self.lock]
 
-            pool.map_async(process_wrapper, chunks(list_of_lsv, nthreads))
+            pool.imap_unordered(process_wrapper, chunks(list_of_lsv, nthreads))
             pool.close()
             with Voila(get_quantifier_voila_filename(self.outDir, self.names, deltapsi=True), 'w') as out_h5p:
                 out_h5p.add_genome(meta1['genome'])

@@ -270,7 +270,7 @@ cdef int _detect_lsvs(list list_exons, np.ndarray junc_mtrx, float fitfunc_r, st
 
 ###API
 
-cpdef detect_lsvs(dict dict_of_genes, dict dict_junctions, dict list_exons, np.ndarray junc_mtrx, float fitfunc_r,
+cpdef detect_lsvs(object dict_of_genes, dict dict_junctions, dict list_exons, np.ndarray junc_mtrx, float fitfunc_r,
                   object majiq_config, out_f, list np_jjlist, object logger):
 
     cdef str gne_id
@@ -278,11 +278,9 @@ cpdef detect_lsvs(dict dict_of_genes, dict dict_junctions, dict list_exons, np.n
     cdef dict gene_obj
 
     for gne_idx, (gne_id, gene_obj) in enumerate(dict_of_genes.items()):
-        if gene_obj['nreads'] == 0:
-            continue
-
-        _detect_lsvs(list_exons[gne_id], junc_mtrx, fitfunc_r, gne_id, gene_obj['chromosome'].decode('UTF-8'),
-                     gene_obj['strand'].decode('UTF-8'), majiq_config, out_f, np_jjlist, logger)
+        # if gene_obj['nreads'] > 0:
+        _detect_lsvs(list_exons[gne_id], junc_mtrx, fitfunc_r, gne_id, gene_obj['chromosome'],
+                     gene_obj['strand'], majiq_config, out_f, np_jjlist, logger)
         for jj in dict_junctions[gne_id].values():
             jj.reset()
         gene_obj['nreads'] = 0

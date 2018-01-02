@@ -489,7 +489,7 @@ def matrix_area(matrix, V=0.2, absolute=True, collapsed_mat=False):
         collapse = collapse_matrix(matrix)
     collapse = np.concatenate(([0], collapse))
     collapse = np.cumsum(collapse)
-    xbins = np.linspace(0, 1, num=collapse.size)
+    xbins = np.linspace(-1, 1, num=collapse.size)
     if absolute:
         Vabs = abs(V)
         left, right = np.interp([-Vabs, Vabs], xbins, collapse, left=0, right=1)

@@ -259,6 +259,7 @@ cpdef expand_introns(str gne_id, list list_introns, list list_exons, dict dict_j
         new_list.append(ir_ex)
 
         jj = Junction(intron.start-1, intron.start, gne_id, default_index, intron=True, annot=intron.annot)
+
         jj.donor = donor_ex
         jj.acceptor = ir_ex
         ir_ex.ib.add(jj)

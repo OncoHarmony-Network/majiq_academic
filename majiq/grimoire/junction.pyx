@@ -21,6 +21,7 @@ cdef class Junction:
         return True
 
     def reset(self):
+        # print('in reset')
         self.nreads = 0
         self.index = 0
         self.lsv_index = 0

@@ -40,11 +40,13 @@ MINVAL = 1e-300
 import numpy as np
 EPSILON = np.finfo(np.float64).eps
 
+
 def get_quantifier_voila_filename(outdir, name, deltapsi=False):
     if deltapsi:
         return "%s/%s_%s.deltapsi.voila" % (outdir, name[0], name[1])
     else:
         return "%s/%s.psi.voila" % (outdir, name)
+
 
 def get_prior_matrix_filename(outdir, names):
     return "%s/%s_%s.priormatrix.pkl" % (outdir, names[0], names[1])
