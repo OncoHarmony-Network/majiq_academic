@@ -23,7 +23,9 @@
         $(function () {
             $(document).on('mouseover', '.junction-grp', function () {
                 $('.junction-grp').css('opacity', 0.1);
-                $(this).css('opacity', '');
+                var $this = $(this);
+                $this.css('opacity', '');
+                $this.parent().append($this)
             });
 
             $(document).on('mouseout', '.junction-grp', function () {

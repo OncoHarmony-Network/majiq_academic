@@ -1,4 +1,4 @@
-from voila.api.splice_graph_hdf5 import Exons, Junctions, Genes
+from voila.api.splice_graph_sql import Exons, Junctions, Genes
 from voila.api.voila_hdf5 import VoilaHDF5
 
 
