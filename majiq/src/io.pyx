@@ -12,6 +12,8 @@ from majiq.src.gff import parse_gff3
 from majiq.src.constants import *
 from voila.splice_graphics import LsvGraphic
 import pickle
+import numpy as np
+cimport numpy as np
 
 cdef list accepted_transcripts = ['mRNA', 'transcript']
 cdef str transcript_id_keys = 'ID'
@@ -158,7 +160,7 @@ cdef int merge_exons(dict exon_dict, object elem_dict) except -1:
 #######
 # HDF5 API
 #######
-cdef int load_db(str filename, object elem_dict, object genes_dict) except -1:
+cdef int _load_db(str filename, object elem_dict, object genes_dict) except -1:
     cdef list names = ['id', 'name', 'chromosome', 'strand']
 
     with open(filename, 'rb') as fp:
