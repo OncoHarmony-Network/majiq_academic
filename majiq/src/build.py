@@ -14,6 +14,8 @@ import majiq.src.logger as majiq_logger
 import majiq.src.multiproc as majiq_multi
 from majiq.grimoire.exon import detect_exons, expand_introns
 from majiq.grimoire.lsv import detect_lsvs, sample_junctions
+#from majiq.src.deleteme import sample_from_junctions
+
 from majiq.src.basic_pipeline import BasicPipeline, pipeline_run
 from majiq.src.config import Config
 from majiq.src.constants import *
@@ -129,7 +131,7 @@ def parse_denovo_elements(pself, logger):
             pool2.join()
             majiq_io.add_elements_mtrx(elem_dict, pself.elem_dict)
 
-    majiq_io.dump_elements(pself.genes_dict, pself.elem_dict)
+    majiq_io.dump_elements(pself.genes_dict, pself.elem_dict, pself.outDir)
 
 
 def parsing_files(sam_file_list, chnk, conf, logger):

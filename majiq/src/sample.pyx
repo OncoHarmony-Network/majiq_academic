@@ -71,6 +71,7 @@ cdef inline float _sample_over_nb(float r, float mu, int num_samples):
     p = r / (r + mu)
     return nbinom.rvs(r, p, size=num_samples).mean() + 1
 
+
 cdef np.ndarray _sample_from_junctions(np.ndarray[DTYPE_t, ndim=2] junction_list, int m, int k,
                                        float fitted_one_over_r=0.0):
     """Given the filtered reads, bootstrap samples from every junction
@@ -96,6 +97,7 @@ cdef np.ndarray _sample_from_junctions(np.ndarray[DTYPE_t, ndim=2] junction_list
         func = _sample_over_nb
     else:
         func = _sample_over_poisson
+
 
     for i in range(junction_list.shape[0]):
         junction = junction_list[i][junction_list[i] > 0]

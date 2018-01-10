@@ -178,10 +178,11 @@ cdef int _dump_lsv_coverage(out_f, cov_list, attrs_list):
                          compression='gzip', compression_opts=9)
 
 
-cdef int _dump_elems_list(dict elem_dict, list gene_info, str outDir) except -1:
+cdef int _dump_elems_list(object elem_dict, object gene_info, str outDir) except -1:
 
     dt=np.dtype('|S250, |S250, |S32, S1, u4, u4')
-    elem_dict['gene_info'] = np.array(gene_info, dtype=dt)
+    kk = [(xx['id'], xx['name'], xx['chromosome'], xx['strand'], xx['start'], xx['end']) for xx in gene_info.values()]
+    elem_dict['gene_info'] = np.array(kk, dtype=dt)
     np.savez(get_build_temp_db_filename(outDir), **elem_dict)
 
 
