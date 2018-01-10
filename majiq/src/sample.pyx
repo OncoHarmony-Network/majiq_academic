@@ -3,6 +3,7 @@ import numpy as np
 cimport numpy as np
 from scipy.stats import nbinom, poisson
 import cython
+from quicksect import IntervalNode, Interval, IntervalTree
 
 """
 Sampling from junctions using a Negative Binomial model.
@@ -71,6 +72,7 @@ cdef inline float _sample_over_nb(float r, float mu, int num_samples):
     p = r / (r + mu)
     return nbinom.rvs(r, p, size=num_samples).mean() + 1
 
+
 cdef np.ndarray _sample_from_junctions(np.ndarray[DTYPE_t, ndim=2] junction_list, int m, int k,
                                        float fitted_one_over_r=0.0):
     """Given the filtered reads, bootstrap samples from every junction
@@ -97,6 +99,7 @@ cdef np.ndarray _sample_from_junctions(np.ndarray[DTYPE_t, ndim=2] junction_list
     else:
         func = _sample_over_poisson
 
+
     for i in range(junction_list.shape[0]):
         junction = junction_list[i][junction_list[i] > 0]
         npos_mult = np.count_nonzero(junction)
@@ -112,3 +115,17 @@ cdef np.ndarray _sample_from_junctions(np.ndarray[DTYPE_t, ndim=2] junction_list
 cpdef np.ndarray sample_from_junctions(np.ndarray[DTYPE_t, ndim=2] junction_list, int m, int k,
                                        float fitted_one_over_r=0.0):
     return _sample_from_junctions(junction_list, m, k, fitted_one_over_r=fitted_one_over_r)
+
+
+cpdef dict create_lt(object all_genes):
+    cdef dict td = dict()
+    cdef dict xx
+
+    for xx in all_genes.values():
+        try:
+            td[xx['chromosome']].add(xx['start'], xx['end'], (xx['id'], xx['strand']))
+        except KeyError:
+            td[xx['chromosome']] = IntervalTree()
+            td[xx['chromosome']].add(xx['start'], xx['end'], (xx['id'], xx['strand']))
+
+    return td

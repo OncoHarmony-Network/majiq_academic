@@ -51,10 +51,10 @@ cdef int __mark_stacks(np.ndarray[np.float_t, ndim=2] junctions, fitfunc_r, pval
         return 0
     if logger:
         logger.debug("Marking and masking stacks")
-    print (fitfunc_r)
     denom = np.count_nonzero(junctions, axis=1)[:, None] - (junctions > 0)
-    mean_rest = (junctions.sum(axis=1)[:, None] - junctions) / denom
-    mean_rest[np.isnan(mean_rest)] = 0.5
+    with np.errstate(divide='ignore',invalid='ignore'):
+        mean_rest = (junctions.sum(axis=1)[:, None] - junctions) / denom
+        mean_rest[np.isnan(mean_rest)] = 0.5
     if fitfunc_r >0:
         r = 1/fitfunc_r
         p = r/(mean_rest + r)

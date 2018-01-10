@@ -12,6 +12,9 @@ from majiq.src.gff import parse_gff3
 from majiq.src.constants import *
 from voila.splice_graphics import LsvGraphic
 import pickle
+import numpy as np
+cimport numpy as np
+
 
 cdef list accepted_transcripts = ['mRNA', 'transcript']
 cdef str transcript_id_keys = 'ID'
@@ -158,7 +161,7 @@ cdef int merge_exons(dict exon_dict, object elem_dict) except -1:
 #######
 # HDF5 API
 #######
-cdef int load_db(str filename, object elem_dict, object genes_dict) except -1:
+cdef int _load_db(str filename, object elem_dict, object genes_dict) except -1:
     cdef list names = ['id', 'name', 'chromosome', 'strand']
 
     with open(filename, 'rb') as fp:
@@ -176,10 +179,11 @@ cdef int _dump_lsv_coverage(out_f, cov_list, attrs_list):
                          compression='gzip', compression_opts=9)
 
 
-cdef int _dump_elems_list(dict elem_dict, list gene_info, str outDir) except -1:
+cdef int _dump_elems_list(object elem_dict, object gene_info, str outDir) except -1:
 
     dt=np.dtype('|S250, |S250, |S32, S1, u4, u4')
-    elem_dict['gene_info'] = np.array(gene_info, dtype=dt)
+    kk = [(xx['id'], xx['name'], xx['chromosome'], xx['strand'], xx['start'], xx['end']) for xx in gene_info.values()]
+    elem_dict['gene_info'] = np.array(kk, dtype=dt)
     np.savez(get_build_temp_db_filename(outDir), **elem_dict)
 
 
