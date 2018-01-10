@@ -3,6 +3,7 @@ import numpy as np
 cimport numpy as np
 from scipy.stats import nbinom, poisson
 import cython
+from quicksect import IntervalNode, Interval, IntervalTree
 
 """
 Sampling from junctions using a Negative Binomial model.
@@ -114,3 +115,17 @@ cdef np.ndarray _sample_from_junctions(np.ndarray[DTYPE_t, ndim=2] junction_list
 cpdef np.ndarray sample_from_junctions(np.ndarray[DTYPE_t, ndim=2] junction_list, int m, int k,
                                        float fitted_one_over_r=0.0):
     return _sample_from_junctions(junction_list, m, k, fitted_one_over_r=fitted_one_over_r)
+
+
+cpdef dict create_lt(object all_genes):
+    cdef dict td = dict()
+    cdef dict xx
+
+    for xx in all_genes.values():
+        try:
+            td[xx['chromosome']].add(xx['start'], xx['end'], (xx['id'], xx['strand']))
+        except KeyError:
+            td[xx['chromosome']] = IntervalTree()
+            td[xx['chromosome']].add(xx['start'], xx['end'], (xx['id'], xx['strand']))
+
+    return td

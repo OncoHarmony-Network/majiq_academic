@@ -92,7 +92,7 @@ cdef inline bint __valid_intron_read(AlignedSegment read):
 
 cdef str gstrand
 
-cpdef int find_introns(str filename, dict list_introns, float intron_threshold, queue, str gname) except -1:
+cpdef int find_introns2(str filename, dict list_introns, float intron_threshold, queue, str gname) except -1:
 
     cdef AlignedSegment read
     cdef AlignmentFile samfl
@@ -132,10 +132,59 @@ cpdef int find_introns(str filename, dict list_introns, float intron_threshold, 
                 detected_introns[(gne_id, i_str, i_end, chk_len)][offs] += 1
 
     for introns, cover in detected_introns.items():
-        cover = cover/chk_len
+        cover = cover/introns[3]
         if np.any(cover < intron_threshold):
             continue
 
+        qm = QueueMessage(QUEUE_MESSAGE_BUILD_INTRON, (introns[0], introns[1], introns[2], gname), 0)
+        queue.put(qm, block=True)
+
+    samfl.close()
+    return 0
+
+
+cpdef int find_introns(str filename, object list_introns, float intron_threshold, queue, str gname) except -1:
+
+    cdef AlignedSegment read
+    cdef AlignmentFile samfl
+    cdef int readlen
+    cdef bint is_cross
+    cdef dict detected_introns = {}
+    cdef list junc_list, intron_candidates
+    cdef int i_str, i_end, offs, rend
+    cdef tuple introns
+    cdef np.ndarray cover
+
+    samfl = open_rnaseq(filename)
+    read_iter = samfl.fetch(until_eof=True)
+
+    detected_introns = {}
+
+    for read in read_iter:
+        chrom = samfl.getrname(read.reference_id)
+        is_cross, junc_list, rend = __cross_junctions(read)
+        if not __is_unique(read) or is_cross or chrom not in list_introns.keys() :
+            continue
+
+        overlap = len(read.seq) - MIN_BP_OVERLAP
+        intron_candidates = list_introns[chrom].search(read.pos, read.pos+1)
+
+        for ir in intron_candidates:
+            if not _match_strand(read, gene_strand=ir.data[1]):
+                continue
+            i_str = ir.start - MIN_BP_OVERLAP
+            ir_end = ir.end + MIN_BP_OVERLAP
+            offs = max(0, int((read.pos - i_str) / ir.data[3]))
+            try:
+                detected_introns[(ir.data[0], i_str, ir_end, ir.data[3])][offs] += 1
+            except KeyError:
+                detected_introns[(ir.data[0], i_str, ir_end, ir.data[3])] = np.zeros(shape=ir.data[2], dtype=np.float)
+                detected_introns[(ir.data[0], i_str, ir_end, ir.data[3])][offs] += 1
+
+    for introns, cover in detected_introns.items():
+        cover = cover/introns[3]
+        if np.any(cover < intron_threshold):
+            continue
         qm = QueueMessage(QUEUE_MESSAGE_BUILD_INTRON, (introns[0], introns[1], introns[2], gname), 0)
         queue.put(qm, block=True)
 
@@ -219,7 +268,7 @@ cdef dict __read_juncs_from_bam(str filename, set in_jj, bint stranded):
     return out_dd
 
 
-def read_juncs(str fname, bint is_junc_file, dict dict_exons, object dict_genes, dict junctions, bint stranded, queue,
+def read_juncs2(str fname, bint is_junc_file, dict dict_exons, object dict_genes, dict junctions, bint stranded, queue,
                str gname):
 
     cdef str ln, chrom, gid
@@ -287,6 +336,63 @@ def read_juncs(str fname, bint is_junc_file, dict dict_exons, object dict_genes,
                     else:
                         possible_genes.append(gobj)
                     gidx +=1
+
+def read_juncs(str fname, bint is_junc_file, dict dict_exons, object dict_genes, object dict_gtrees, dict junctions,
+               bint stranded, queue, str gname):
+
+    cdef str ln, chrom, gid
+    cdef list tab
+    cdef Junction jj
+    cdef tuple junc
+    cdef int gidx=0, ngenes=0
+    cdef dict new_junctions
+    cdef set jj_set
+    cdef set set_junctions
+
+    if stranded:
+        set_junctions = set([(dict_genes[gene_id]['chromosome'], dict_genes[gene_id]['strand'], yy.start, yy.end)
+                              for gene_id, xx in junctions.items() for yy in xx.values()])
+    else:
+        set_junctions = set([(dict_genes[gene_id]['chromosome'], '.', yy.start, yy.end)
+                             for gene_id, xx in junctions.items() for yy in xx.values()])
+
+    if is_junc_file:
+       new_junctions = __read_STAR_junc_file(fname, set_junctions, stranded)
+    else:
+       new_junctions = __read_juncs_from_bam(fname, set_junctions, stranded)
+
+    for chrom, jj_set in new_junctions.items():
+
+        found = False
+        for junc in sorted(jj_set):
+            possible_genes = []
+            for gobj in dict_gtrees[chrom].search(junc[0], junc[1]):
+
+                if (stranded and gobj.data[1] != junc[2]) or (gobj.end < junc[1] and gobj.start > junc[0]):
+                    continue
+
+                gid = gobj.data[0]
+
+                start_sp = [jj.start for ex in dict_exons[gid] for jj in ex.ob if jj.start > 0 and jj.end > 0]
+                end_sp = [jj.end for ex in dict_exons[gid] for jj in ex.ib if jj.start > 0 and jj.end > 0]
+
+                if junc[0] in start_sp or junc[1] in end_sp:
+                    found = True
+                    # junc_obj = Junction(junc[0],  junc[1], gid, -1, annot=False)
+                    qm = QueueMessage(QUEUE_MESSAGE_BUILD_JUNCTION, (gid, junc[0], junc[1], gname), 0)
+                    queue.put(qm, block=True)
+                    # junctions[gid][junc[:-1]] = junc_obj
+                else:
+                    possible_genes.append(gid)
+
+
+            if not found and len(possible_genes) > 0:
+                for gid in possible_genes:
+                    # junc_obj = Junction(junc[0],  junc[1], gid, -1, annot=False)
+                    qm = QueueMessage(QUEUE_MESSAGE_BUILD_JUNCTION, (gid, junc[0], junc[1], gname), 0)
+                    queue.put(qm, block=True)
+                    # junctions[gid][junc[:-1]] = junc_obj
+
 
 
 @cython.boundscheck(False) # turn off bounds-checking for entire function

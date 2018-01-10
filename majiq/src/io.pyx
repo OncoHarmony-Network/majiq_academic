@@ -15,7 +15,6 @@ import pickle
 import numpy as np
 cimport numpy as np
 
-from majiq.src.deleteme import create_lt
 
 cdef list accepted_transcripts = ['mRNA', 'transcript']
 cdef str transcript_id_keys = 'ID'
@@ -120,7 +119,6 @@ cdef int _read_gff(str filename, str outDir, object elem_dict,  object all_genes
 
         elem_dict[gn_id].append([last_ss, FIRST_LAST_JUNC, 1, J_TYPE])
     merge_exons(exon_dict, elem_dict)
-    create_lt(all_genes)
 
 
 cdef int merge_exons(dict exon_dict, object elem_dict) except -1:

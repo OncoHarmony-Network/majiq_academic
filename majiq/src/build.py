@@ -14,7 +14,7 @@ import majiq.src.logger as majiq_logger
 import majiq.src.multiproc as majiq_multi
 from majiq.grimoire.exon import detect_exons, expand_introns
 from majiq.grimoire.lsv import detect_lsvs, sample_junctions
-#from majiq.src.deleteme import sample_from_junctions
+from majiq.src.sample import create_lt
 
 from majiq.src.basic_pipeline import BasicPipeline, pipeline_run
 from majiq.src.config import Config
@@ -22,6 +22,8 @@ from majiq.src.constants import *
 from majiq.src.polyfitnb import fit_nb
 from majiq.src.voila_wrapper import generate_splicegraph
 from voila.api import SpliceGraph
+
+from quicksect import IntervalNode, Interval, IntervalTree
 
 import math
 import datetime
@@ -44,10 +46,15 @@ def find_new_junctions(file_list, chunk, conf, logger):
         majiq_io.from_matrix_to_objects(gne_id, conf.elem_dict[gne_id], dict_junctions[gne_id], list_exons[gne_id])
         detect_exons(dict_junctions[gne_id], list_exons[gne_id])
 
+    td = create_lt(conf.genes_dict)
     for is_junc_file, fname, name in file_list:
         logger.info('READ JUNCS from %s, %s' % (fname, majiq_config.strand_specific))
-        read_juncs(fname, is_junc_file, list_exons, conf.genes_dict, dict_junctions,
-                   majiq_config.strand_specific, process_conf.queue, gname=name)
+        # read_juncs2(fname, is_junc_file, list_exons, conf.genes_dict, dict_junctions,
+        #            majiq_config.strand_specific, process_conf.queue, gname=name)
+
+        read_juncs(fname, is_junc_file, list_exons, conf.genes_dict, td, dict_junctions,
+                   majiq_config.strand_specific, conf.queue, gname=name)
+
 
 
 def find_new_introns(file_list, chunk, conf, logger):
@@ -65,24 +72,36 @@ def find_new_introns(file_list, chunk, conf, logger):
         majiq_io.from_matrix_to_objects(gne_id, conf.elem_dict[gne_id], dict_junctions, list_exons, introns)
 
         detect_exons(dict_junctions, list_exons)
-        range_introns = [range(xx.start, xx.end+1) for xx in introns]
+
+        range_introns = IntervalTree()
+        nir = len(introns)
+        [range_introns.add(xx.start, xx.end+1) for xx in introns]
         del introns
 
+        list_introns = dict()
         for id_ex, ex in enumerate(list_exons[:-1]):
             if (ex.end + 3 < list_exons[id_ex + 1].start - 1 and ex.end != -1
-                and list_exons[id_ex + 1].start != -1
-               and not np.any([(ex.end + 1) in xx for xx in range_introns])):
+               and list_exons[id_ex + 1].start != -1) :
+
+                if nir > 0 and len(range_introns.search(ex.end + 1, ex.end + 2)) != 0:
+                    continue
 
                 ilen = (list_exons[id_ex + 1].start - 1) - (ex.end + 1)
                 nchunks = 1 if ilen <= MIN_INTRON_LEN else num_bins
                 chunk_len = int(ilen / nchunks)+1
 
                 try:
-                    list_introns[gene_obj['chromosome']].append((gne_id, gene_obj['strand'], ex.end + 1,
-                                                                list_exons[id_ex + 1].start - 1, nchunks, chunk_len))
+                    list_introns[gene_obj['chromosome']].add(ex.end + MIN_BP_OVERLAP + 1,
+                                                             list_exons[id_ex + 1].start - (MIN_BP_OVERLAP + 1),
+                                                             (gne_id, gene_obj['strand'], nchunks, chunk_len))
+
                 except KeyError:
-                    list_introns[gene_obj['chromosome']] = [(gne_id, gene_obj['strand'], ex.end + 1,
-                                                            list_exons[id_ex + 1].start - 1, nchunks, chunk_len)]
+                    list_introns[gene_obj['chromosome']] = IntervalTree()
+                    list_introns[gene_obj['chromosome']].add(ex.end + MIN_BP_OVERLAP + 1,
+                                                             list_exons[id_ex + 1].start - (MIN_BP_OVERLAP + 1),
+                                                             (gne_id, gene_obj['strand'], nchunks, chunk_len))
+
+        del range_introns
 
     for is_junc_file, fname, name in file_list:
         logger.info('READ introns from %s' % fname)
