@@ -37,11 +37,12 @@ class SpliceGraphSQL(SQL):
     def get_experiment_names(self):
         return (e for e, in self.session.query(model.Experiment.name).all())
 
-    def check_version(self):
+    @staticmethod
+    def check_version():
         voila_log().warning('need to implement check version.')
 
     def get_experiments(self):
-        return tuple(e[0] for e in self.session.query(model.Experiment.name).all())
+        return tuple(e for e, in self.session.query(model.Experiment.name).all())
 
 
 class SpliceGraphType(ABC):
@@ -57,7 +58,7 @@ class SpliceGraphType(ABC):
 
     @property
     @abstractmethod
-    def get(self, *args):
+    def get(self):
         pass
 
     @property
@@ -173,6 +174,8 @@ class Genes(SpliceGraphSQL):
         @property
         def exists(self):
             return self.sql.session.query(exists().where(model.Gene.id == self.gene_id)).scalar()
+
+
 
     @property
     def genes(self):

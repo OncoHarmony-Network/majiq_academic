@@ -1,15 +1,22 @@
-var BoxPlots = function (opts) {
-    var svg_height = 150;
+var BoxPlots = function (db) {
+    this.db = db;
+    this.height = 125;
+    this.histo_width = 80;
+    this.left_padding = 41;
+    this.top_padding = 10;
+    this.bottom_padding = 25;
+    this.svg_height = this.height + this.top_padding + this.bottom_padding
+};
 
-    opts.elements.forEach(function (el) {
-        d3v4.select(el).selectAll('*').remove();
-        d3v4.select(el)
-            .attr('height', svg_height)
-            // .attr('width', '100%')
-            .attr('width', '2000')
-            .violins(JSON.parse(d3v4.select(el).attr('box-plot-data')))
+BoxPlots.prototype.psi = function (el, lsv_id) {
+    var bp = this;
+    this.db.get(lsv_id).then(function (data) {
+        bp.svg = d3.select(el)
+            .attr('width', (data.bins.length * bp.histo_width) + bp.left_padding)
+            .attr('height', bp.svg_height);
+        bp.violins(data);
+        bp.drawYAxis();
     });
-    this.svg_height = svg_height;
 };
 
 translateLsvBins = function (lsvBins) {
@@ -24,65 +31,87 @@ translateLsvBins = function (lsvBins) {
     return tmpBins;
 };
 
-d3v4.selection.prototype.violins = function (data) {
+
+BoxPlots.prototype.drawYAxis = function () {
+    var bp = this;
+    var yScale = d3.scaleLinear()
+        .domain([0, 1])
+        .range([bp.height, 0]);
+
+    return this.svg
+        .append('g')
+        .classed('y-axis', true)
+        .attr('transform', 'translate(' + bp.left_padding + ',' + bp.top_padding + ')')
+        .call(d3.axisLeft(yScale).tickValues([0, .5, 1]))
+        .append('text')
+        .classed('y-axis-label', true)
+        .text('\u03A8')
+        .attr('text-anchor', 'middle')
+        .attr('font-size', 12)
+        .attr('font-family', 'sans-serif')
+        .attr('fill', 'black')
+        .attr('transform', 'rotate(-90) translate(-' + bp.height / 2 + ', -30)');
+};
+
+BoxPlots.prototype.violins = function (data) {
     var colors = new Colors().toRGBArray();
-    var svgHeight = this.svg_height;
-    var histogramWidth = 80;
-    this
-        .selectAll('.group')
-        .data(data)
-        .enter().append('g')
-        .attr('class', 'group')
-        .attr('transform', function (d, i) {
-            return 'translate(' + i * d.length * histogramWidth + ')'
-        })
-        .selectAll('.het-violin')
-        .data(function (d) {
-            return d
-        })
-        .enter().append('g')
-        .attr('class', 'het-violin')
+    var bp = this;
+
+    return this.svg
+        .selectAll('.violin')
+        .data(data.bins)
+        .enter()
+        .append('g')
+        .attr('class', 'violin')
         .each(function (d, i) {
-            var el = d3v4.select(this)
-                .attr('transform', 'translate(' + i * histogramWidth + ',' + svgHeight + ') rotate(-90)')
+            var el = d3.select(this)
+                .attr('transform', 'translate(' + (i * bp.histo_width + bp.left_padding) + ',' + (bp.height + bp.top_padding) + ') rotate(-90)')
                 .attr('fill', colors[i]);
 
             el
                 .append('g')
                 .attr('class', 'histograms')
-                .violinHistograms(d, svgHeight, histogramWidth);
+                .violinHistograms(d, bp.height, bp.histo_width);
 
             el
                 .append('g')
                 .attr('class', 'box-plot')
                 .attr('stroke', 'black')
                 .attr('fill', 'black')
-                .attr('transform', 'translate(0,' + histogramWidth / 2 + ')')
-                .voilinBoxPlots(d, svgHeight);
-        })
+                .attr('transform', 'translate(0,' + bp.histo_width / 2 + ')')
+                .voilinBoxPlots(d, bp.height);
+
+            el
+                .append('g')
+                .attr('class', 'title')
+                .attr('transform', 'rotate(90) translate(' + bp.histo_width / 2 + ', 20)')
+                .append('text')
+                .attr('text-anchor', 'middle')
+                .text(data.means_rounded[i].toFixed(3))
+        });
 };
 
 
-d3v4.selection.prototype.violinHistograms = function (data, height, width) {
-    var bins = d3v4.histogram()
+d3.selection.prototype.violinHistograms = function (data, height, width) {
+    var bins = d3.histogram()
         .domain([0, 1])
-        .thresholds(d3v4.ticks(0, 1, 20))
+        .thresholds(d3.ticks(0, 1, 20))
         (translateLsvBins(data));
 
-    var y = d3v4.scaleLinear()
-        .domain(d3v4.extent(bins, function (d) {
+    var y = d3.scaleLinear()
+        .domain(d3.extent(bins, function (d) {
             return d.length
         }))
         .rangeRound([width / 2, 0]);
 
-    var x = d3v4.scaleLinear()
-        .domain(d3v4.extent(bins, function (d) {
+    var x = d3.scaleLinear()
+        .domain(d3.extent(bins, function (d) {
             return d.x0
         }))
         .rangeRound([0, height]);
 
-    var area = d3v4.area()
-        .curve(d3v4.curveBasis)
+    var area = d3.area()
+        .curve(d3.curveBasis)
         .x(function (d) {
             return x(d.x0)
         })
@@ -107,27 +136,27 @@ d3v4.selection.prototype.violinHistograms = function (data, height, width) {
     return this;
 };
 
-d3v4.selection.prototype.voilinBoxPlots = function (data, height) {
+d3.selection.prototype.voilinBoxPlots = function (data, height) {
     data = translateLsvBins(data);
 
     var width = 10;
 
-    var q = d3v4.scaleQuantile()
+    var q = d3.scaleQuantile()
         .domain([0, 100])
         .range(data);
 
-    var bins = d3v4.histogram()
+    var bins = d3.histogram()
         .domain([0, 1])
-        .thresholds(d3v4.ticks(0, 1, 20))
+        .thresholds(d3.ticks(0, 1, 20))
         (data);
 
-    var y = d3v4.scaleLinear()
-        .domain(d3v4.extent(bins, function (d) {
+    var y = d3.scaleLinear()
+        .domain(d3.extent(bins, function (d) {
             return d.length
         }))
         .range([.5, height]);
 
-    var x = d3v4.scaleLinear()
+    var x = d3.scaleLinear()
         .range([.5, height]);
 
     // box plot center horizontal line
@@ -182,7 +211,7 @@ d3v4.selection.prototype.voilinBoxPlots = function (data, height) {
         .classed('mean', true)
         .attr('fill', 'white')
         .attr('stroke', 'None')
-        .attr('cx', x(d3v4.mean(data)))
+        .attr('cx', x(d3.mean(data)))
         .attr('cy', y(0))
         .attr('r', 2);
 

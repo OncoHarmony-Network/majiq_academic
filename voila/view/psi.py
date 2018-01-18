@@ -1,8 +1,9 @@
 import os
 import tempfile
 
-from voila import io_voila, constants
-from voila.api import Voila, SpliceGraph
+from voila import constants, io_voila
+from voila.api import Matrix
+from voila.api.view_splice_graph import PsiSpliceGraph
 from voila.utils.exceptions import NoLsvsFound
 from voila.utils.run_voila_utils import table_marks_set, copy_static
 from voila.utils.voila_log import voila_log
@@ -20,20 +21,20 @@ class Psi(Html, VoilaArgs):
         super(Psi, self).__init__(args)
 
         if not args.no_html:
-            with Voila(args.voila_file, 'r') as v:
-                self.metainfo = v.get_metainfo()
+            with Matrix(args.voila_file, 'r') as m:
+                self.metadatda = m.metadata
             self.render_summaries()
-            self.render_index()
+            # self.render_index()
             copy_static(args)
 
         if not args.no_tsv:
             io_voila.tab_output(args, self.voila_links)
-
-        if args.gtf:
-            io_voila.generic_feature_format_txt_files(args)
-
-        if args.gff:
-            io_voila.generic_feature_format_txt_files(args, out_gff3=True)
+        #
+        # if args.gtf:
+        #     io_voila.generic_feature_format_txt_files(args)
+        #
+        # if args.gff:
+        #     io_voila.generic_feature_format_txt_files(args, out_gff3=True)
 
     def render_index(self):
         log = voila_log()
@@ -42,19 +43,19 @@ class Psi(Html, VoilaArgs):
 
         args = self.args
         env = self.env
-        metainfo = self.metainfo
+        metainfo = self.metadatda
         index_row_template = env.get_template('psi_index_row.html')
 
         tmp_index_file = tempfile.mkstemp()[1]
 
         with open(tmp_index_file, 'w') as f:
 
-            with Voila(args.voila_file, 'r') as v:
+            with Matrix(args.voila_file, 'r') as m:
 
-                lsv_count = v.get_lsv_count(args)
+                lsv_count = m.get_lsv_count(args)
                 too_many_lsvs = lsv_count > constants.MAX_LSVS_PSI_INDEX
 
-                for index, lsv in enumerate(v.get_voila_lsvs(args)):
+                for index, lsv in enumerate(m.get_voila_lsvs(args)):
                     log.debug('Writing LSV {0} to index'.format(lsv.lsv_id))
 
                     for el in index_row_template.generate(
@@ -98,11 +99,11 @@ class Psi(Html, VoilaArgs):
         summary_template = self.env.get_template("psi_summary_template.html")
         args = self.args
         summaries_subfolder = self.get_summaries_subfolder()
-        metainfo = self.metainfo
-        group_name = metainfo['group_names'][0]
+        metadata = self.metadatda
+        group_name = list(metadata['experiments'].keys())[0]
 
-        with SpliceGraph(args.splice_graph, 'r') as sg:
-            gene_experiments_list = sg.get_experiments()
+        with PsiSpliceGraph(args.splice_graph, 'r') as sg:
+            experiments = sg.get_experiments()
             prev_page = None
             page_count = sg.get_page_count(args)
 
@@ -110,7 +111,7 @@ class Psi(Html, VoilaArgs):
                 page_name = self.get_page_name(index)
                 table_marks = tuple(table_marks_set(len(gene_set)) for gene_set in lsv_dict)
                 next_page = self.get_next_page(index, page_count)
-                experiments = self.gene_experiments(metainfo['experiment_names'][0], genes, gene_experiments_list)
+                # gene_experiments = self.gene_experiments(metadata['experiments'][group_name], genes, experiments)
 
                 self.add_to_voila_links(lsv_dict, page_name)
 
@@ -118,13 +119,15 @@ class Psi(Html, VoilaArgs):
                 with open(os.path.join(summaries_subfolder, page_name), 'w') as html:
 
                     for el in summary_template.generate(
+                            experiments=experiments,
+                            genes=[sg.gene(gene_id) for gene_id in genes],
                             table_marks=table_marks,
-                            genes_dict=lsv_dict,
+                            lsvs=lsv_dict,
                             prev_page=prev_page,
                             next_page=next_page,
                             namePage=page_name,
-                            lexps=metainfo,
-                            genes_exps_list=experiments,
+                            metadata=metadata,
+                            # genes_exps_list=gene_experiments,
                             lsv_text_version=constants.LSV_TEXT_VERSION,
                             gtf=args.gtf,
                             group_name=group_name

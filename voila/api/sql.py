@@ -34,7 +34,10 @@ class SQLType(ABC):
 
 
 class SQL:
-    def __init__(self, filename, model, delete=False, ):
+    def __init__(self, filename, model, delete=False):
+        if not isinstance(delete, bool):
+            Exception('delete must be a boolean value')
+
         if delete is True:
             try:
                 os.remove(filename)

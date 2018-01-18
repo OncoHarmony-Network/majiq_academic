@@ -2,7 +2,8 @@ import os
 import tempfile
 
 from voila import io_voila, constants
-from voila.api import Voila, SpliceGraph
+from voila.api import Voila, Matrix
+from voila.api.view_splice_graph import DeltaPsiSpliceGraph
 from voila.utils.exceptions import NoLsvsFound
 from voila.utils.run_voila_utils import table_marks_set, copy_static
 from voila.utils.voila_log import voila_log
@@ -16,13 +17,13 @@ class Deltapsi(Html, VoilaArgs):
 
         if not args.no_html:
             copy_static(args)
-            with Voila(args.voila_file, 'r') as v:
-                self.metainfo = v.get_metainfo()
+            with Matrix(args.voila_file) as m:
+                self.metadata = m.metadata
             self.render_summaries()
             self.render_index()
 
-        if not args.no_tsv:
-            io_voila.tab_output(args, self.voila_links)
+        # if not args.no_tsv:
+        #     io_voila.tab_output(args, self.voila_links)
 
         if args.gtf:
             io_voila.generic_feature_format_txt_files(args)
@@ -67,7 +68,7 @@ class Deltapsi(Html, VoilaArgs):
 
         with open(tmp_index_file, 'w') as f:
 
-            with Voila(args.voila_file, 'r') as v:
+            with Voila(args.voila_file) as v:
 
                 lsv_count = v.get_lsv_count(args)
                 too_many_lsvs = lsv_count > constants.MAX_LSVS_DELTAPSI_INDEX
@@ -117,13 +118,12 @@ class Deltapsi(Html, VoilaArgs):
         summary_template = self.env.get_template('deltapsi_summary_template.html')
         args = self.args
         summaries_subfolder = self.get_summaries_subfolder()
-        metainfo = self.metainfo
-        group_names = metainfo['group_names']
+        metadata = self.metadata
 
-        with SpliceGraph(args.splice_graph, 'r') as sg:
+        with DeltaPsiSpliceGraph(args.splice_graph) as sg:
             gene_experiments_list = sg.get_experiments()
             prev_page = None
-            page_count = sg.get_page_count(args)
+            page_count = sg.get_page_count()
 
             log.debug('There will be {0} pages of gene summaries'.format(page_count))
 
@@ -131,12 +131,14 @@ class Deltapsi(Html, VoilaArgs):
                 page_name = self.get_page_name(index)
                 table_marks = tuple(table_marks_set(len(gene_set)) for gene_set in lsv_dict)
                 next_page = self.get_next_page(index, page_count)
+                group_names = []
+                experiments = []
 
-                experiments = tuple(
-                    self.gene_experiments(exps, genes, gene_experiments_list) for exps in metainfo['experiment_names'])
+                for group_name, group_exps in metadata['experiments'].items():
+                    group_names.append(group_name)
+                    experiments.append(self.gene_experiments(group_exps, genes, gene_experiments_list))
 
                 self.add_to_voila_links(lsv_dict, page_name)
-
                 log.debug('Write page {0}'.format(page_name))
 
                 with open(os.path.join(summaries_subfolder, page_name), 'w') as html:
@@ -144,7 +146,7 @@ class Deltapsi(Html, VoilaArgs):
                             page_name=page_name,
                             genes_dict=lsv_dict,
                             genes_exps_list=experiments,
-                            lexps=metainfo,
+                            lexps=metadata,
                             threshold=args.threshold,
                             lsv_text_version=constants.LSV_TEXT_VERSION,
                             table_marks=table_marks,
@@ -155,6 +157,6 @@ class Deltapsi(Html, VoilaArgs):
                     ):
                         html.write(el)
 
-                    prev_page = page_name
+                prev_page = page_name
 
-                    log.debug('End summaries render')
+                log.debug('End summaries render')

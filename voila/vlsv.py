@@ -250,9 +250,9 @@ class VoilaLsv(LsvGraphic):
         :return: bool
         """
         means = np.array(means)
-        if any(np.isnan(x) for x in means):
-            print(means)
-            raise Exception('found NAN in numpy array')
+        # if any(np.isnan(x) for x in means):
+        #     print(means)
+        #     raise Exception('found NAN in numpy array')
         means_gt_zero = means[means > 0]
         means_sum = means_gt_zero.sum()
         max_value = max(means_sum, abs(means_sum))

@@ -2,7 +2,7 @@ import os
 from collections import OrderedDict
 
 from voila import constants
-from voila.api import SpliceGraph
+from voila.api.view_splice_graph import HtmlSpliceGraph
 from voila.utils import utils_voila
 from voila.utils.run_voila_utils import get_env, get_output_html
 
@@ -23,7 +23,7 @@ class Html(object):
         genes_exp = {}
         gene_experiments_tuple = tuple(gene_experiments)
 
-        with SpliceGraph(self.args.splice_graph) as sg:
+        with HtmlSpliceGraph(self.args.splice_graph) as sg:
             for experiment in experiments:
 
                 genes_exp[experiment] = {}
@@ -35,19 +35,22 @@ class Html(object):
                     experiment_index = gene_experiments_tuple.index(experiment)
 
                     # get the data needed to render the html
-                    genes_exp[experiment][gene_id] = gene.get_experiment(experiment_index)
+                    genes_exp[experiment][gene_id] = gene.get.get_experiment(experiment_index)
 
             # if there are more then 1 experiments, then record the combined data
             if len(experiments) > 1:
-                genes_exp['Combined'] = sg.combined_genes(experiments, genes)
+                genes_exp['Combined'] = sg.combine_genes(experiments, genes)
 
             return OrderedDict(sorted(genes_exp.items(), key=lambda t: t[0]))
 
     def add_to_voila_links(self, lsv_dict, page_name):
-        for lsvs in lsv_dict.values():
-            for lsv in lsvs:
-                self.voila_links[lsv.name] = '{0}#{1}'.format(os.path.join(constants.SUMMARIES_SUBFOLDER, page_name),
-                                                              lsv.name)
+        for gene_id in lsv_dict.keys():
+            self.voila_links[gene_id] = '{0}#{1}'.format(os.path.join(constants.SUMMARIES_SUBFOLDER, page_name),
+                                                         gene_id)
+            # for lsv in lsvs:
+            #     print(lsv)
+            # self.voila_links[lsv.name] = '{0}#{1}'.format(os.path.join(constants.SUMMARIES_SUBFOLDER, page_name),
+            #                                               lsv.name)
 
     def get_page_name(self, index):
         args = self.args

@@ -56,7 +56,7 @@ def get_env():
         return j.replace('"', '\'')
 
     def to_json(value):
-        j = json.dumps(value)
+        j = json.dumps(value, cls=NumpyEncoder)
         x = replace_quotes(j)
         return x
 

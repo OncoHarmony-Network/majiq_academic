@@ -1,3 +1,31 @@
+/* tools section */
+
+.splice-graph-selectors {
+    display: inline-block
+}
+
+.splice-graph-tools-btns {
+    display: inline-block;
+    vertical-align: middle;
+    height: 18px;
+}
+
+.splice-graph-tools-info {
+    display: inline-block;
+    vertical-align: middle;
+}
+
+.splice-graph-selectors select {
+    display: block
+}
+
+.toggle-scale {
+    object-fit: contain;
+    height: 100%;
+}
+
+/* splice graph section */
+
 .exon:hover {
     stroke: orange;
     fill: orange;
@@ -18,4 +46,9 @@
 
 .junction-grp:hover .reads {
     font-size: 14px;
+}
+
+.splice-graph {
+    width: 1000px;
+    overflow-x: auto;
 }

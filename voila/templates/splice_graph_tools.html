@@ -1,0 +1,37 @@
+<div class="splice-graph-tools">
+
+    <a name="{{ gene.id }}"></a>
+
+    <h2>Gene
+        name: {{ gene.name }}; {{ gene.chromosome }}:{{ gene.strand }}:{{ gene.start }}-{{ gene.end }};</h2>
+
+    <h3 class="gene_id">
+        Gene ID: {{ gene.id }};
+    </h3>
+
+    <div class="splice-graph-selectors">
+        <select title="">
+            {% for experiment in experiments -%}
+                <option value="">
+                    {{ experiment }}
+                </option>
+            {%- endfor %}
+        </select>
+
+    </div>
+
+    <div class="splice-graph-tools-btns">
+        <img class="toggle-scale" src="static/img/icons/solve-icon.png"
+             title="Change between scaled view and a view where introns are trimmed"/>
+        <img class="zoom-in" src="static/img/zoom_in.png" title="Zoom in" alt=""/>
+        <img class="zoom-out" src="static/img/zoom_out.png" title="Zoom out" alt=""/>
+        <img class="zoom-reset" src="static/img/undo.png" title="Zoom reset" alt=""/>
+    </div>
+
+    <div class="splice-graph-tools-info">
+        <strong>Coordinates: </strong>
+        <span class="coordinates">-</span>;
+        <strong> Length: </strong><span class="length"></span>
+    </div>
+
+</div>

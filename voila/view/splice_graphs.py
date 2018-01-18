@@ -12,6 +12,7 @@ class RenderSpliceGraphs(Html, VoilaArgs):
     def __init__(self, args):
         super(RenderSpliceGraphs, self).__init__(args)
         self.render_summaries()
+        copy_static(args, index=False)
 
     @classmethod
     def arg_parents(cls):
@@ -59,7 +60,7 @@ class RenderSpliceGraphs(Html, VoilaArgs):
                     html.write(
                         summary_template.render(
                             page_name=self.get_page_name(index),
-                            genes=[sg.gene(gene_id).get for gene_id in genes],
+                            genes=[sg.gene(gene_id) for gene_id in genes],
                             experiments=experiments,
                             prev_page=prev_page,
                             next_page=next_page
@@ -68,4 +69,4 @@ class RenderSpliceGraphs(Html, VoilaArgs):
 
                 prev_page = page_name
 
-        copy_static(args, index=False)
+

@@ -136,12 +136,12 @@ table.tablesorter thead tr .headerSortDown, table.tablesorter thead tr .headerSo
     shape-rendering: geometricPrecision;
 }
 
-.violin {
-    shape-rendering: geometricPrecision;
-    fill: none !important;
-    stroke: #777;
-    stroke-width: 1px;
-}
+/*.violin {*/
+    /*shape-rendering: geometricPrecision;*/
+    /*fill: none !important;*/
+    /*stroke: #777;*/
+    /*stroke-width: 1px;*/
+/*}*/
 
 .axis path, .axis line {
     fill: none;
