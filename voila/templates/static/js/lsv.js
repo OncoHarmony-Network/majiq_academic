@@ -28,25 +28,29 @@ Lsv.prototype.renderLsvSpliceGraph = function (canvas) {
 
             if (gene) {
                 var exons_gene = gene.exons.filter(function (d) {
-                    // return v.exon_type < 3 && !v.intron_retention;
                     var exon_type = gene.exon_types[d.start][d.end][experiment];
                     return exon_type < 3 && !d.intron_retention;
                 });
             }
 
             if (exon_lsv_coords) {
-                var regex_coords = /[\[|(](\d+?),\s*(\d+?)[\]|)]/.exec(exon_lsv_coords);
-                exon_lsv_coords = [regex_coords[1], regex_coords[2]];
+                var regex_coords = /[\[|(](.+?),\s*(.+?)[\]|)]/.exec(exon_lsv_coords);
+                exon_lsv_coords = regex_coords.slice(1).map(function (x) {
+                    return parseInt(x)
+                });
 
                 // Find LSV exon number in the splice graph
                 var lsv_exon = exons_gene.find(function (element) {
                     return element.start === exon_lsv_coords[0] && element.end === exon_lsv_coords[1]
                 });
-                exon_lsv_number = exons_gene.indexOf(lsv_exon) + 1;
 
-                // If negative strand, complement the exon ordinal
-                if (gene.strand === '-') {
-                    exon_lsv_number = exons_gene.length - exon_lsv_number + 1;
+                if (lsv_exon) {
+                    exon_lsv_number = exons_gene.indexOf(lsv_exon) + 1;
+
+                    // If negative strand, complement the exon ordinal
+                    if (gene.strand === '-') {
+                        exon_lsv_number = exons_gene.length - exon_lsv_number + 1;
+                    }
                 }
             }
 

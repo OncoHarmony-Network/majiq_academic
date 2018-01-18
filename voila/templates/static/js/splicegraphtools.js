@@ -10,17 +10,26 @@ $(document).on('mouseout', '.junction-grp', function () {
 $(document).on('mouseenter', '.exon, .junction-grp, .half-exon', function () {
     var d = d3.select(this).datum();
     var gene_container = $(this).closest('.gene-container');
+    db.get(gene_container.find('.splice-graph').attr('data-gene-id')).then(function (gene) {
+        var experiment = gene_container.find('.splice-graph-selectors option:selected').text().trim();
+        var exon_type;
+        try {
+            exon_type = gene.exon_types[d.start][d.end][experiment];
+        } catch (TypeError) {
+            exon_type = -1
+        }
 
-    if ([4, 5].includes(d.exon_type)) {
-        if (d.exon_type === 4)
-            gene_container.find('.coordinates').text('MISSING' + ' - ' + d.end);
-        else
-            gene_container.find('.coordinates').text(d.start + ' - ' + 'MISSING');
-        gene_container.find('.length').text('UNKNOWN')
-    } else {
-        gene_container.find('.coordinates').text(d.start + ' - ' + d.end);
-        gene_container.find('.length').text(d.end - d.start)
-    }
+        if ([4, 5].includes(exon_type)) {
+            if (exon_type === 4)
+                gene_container.find('.coordinates').text('MISSING' + ' - ' + d.end);
+            else
+                gene_container.find('.coordinates').text(d.start + ' - ' + 'MISSING');
+            gene_container.find('.length').text('UNKNOWN')
+        } else {
+            gene_container.find('.coordinates').text(d.start + ' - ' + d.end);
+            gene_container.find('.length').text(d.end - d.start)
+        }
+    })
 });
 
 $(document).on('change', '.splice-graph-selectors select', function () {

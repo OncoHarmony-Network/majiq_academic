@@ -161,6 +161,7 @@ class Psi(MatrixHdf5):
         def get(self, *args):
             yield 'lsv_id', self.lsv_id
             yield '_id', self.lsv_id
+            yield 'coordinates', self.coordinates
 
             if not args:
                 args = self.fields
@@ -174,6 +175,18 @@ class Psi(MatrixHdf5):
                     yield 'means_rounded', numpy.around(means, decimals=3)
                 else:
                     yield from super().get(key)
+
+        @property
+        def coordinates(self):
+            lsv_coords = self.lsv_id.split(':')[-1]
+            if lsv_coords.startswith('-1'):
+                coords = (-1, lsv_coords.split('-')[-1])
+            elif lsv_coords.endswith('-1'):
+                coords = (lsv_coords.split('-')[0], -1)
+            else:
+                coords = lsv_coords.split('-')
+
+            return list(map(int, coords))
 
         @property
         def gene_id(self):

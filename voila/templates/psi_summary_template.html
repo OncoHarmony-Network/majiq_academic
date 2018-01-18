@@ -19,7 +19,7 @@
     <script src="static/js/splicegraphtools.js"></script>
     <script src="static/js/floatinglegend.js"></script>
     <script src="static/js/lsv.js"></script>
-    <script src="static/js/boxPlots.js"></script>
+    <script src="static/js/lsvplots.js"></script>
     <script src="static/js/colors.js"></script>
     <script>
         var db = new PouchDB('splice_graph');
@@ -110,8 +110,7 @@
                                             data-lsv-type="{{ lsv.lsv_type }}"
                                             data-gene-id="{{ gene.id }}"
                                             data-experiment="{{ experiments[0] }}"
-                                            {% set lsv_coords =  lsv.lsv_id.split(':')[-1].split('-') %}
-                                            data-coord-exon="{{ lsv_coords | map('int') | list }}"
+                                            data-coord-exon="{{ lsv.coordinates }}"
                                             title="{{ lsv.lsv_type }}">
                                         This browser or document mode doesn't support canvas
                                     </canvas>
@@ -139,8 +138,8 @@
                                 </td>
                                 <td>
                                     <p>
-                                        {% set lsv_coordinates = gene.lsv_coordinates(lsv.lsv_id) %}
-                                        <a href="http://genome.ucsc.edu/cgi-bin/hgTracks?org=mouse&db={{ metadata.genome }}&position={{ gene.chromosome }}:{{ lsv_coordinates.start }}-{{ lsv_coordinates.end }}"
+                                        {% set ucsc_coordinates = gene.lsv_ucsc_coordinates(lsv.lsv_id) %}
+                                        <a href="http://genome.ucsc.edu/cgi-bin/hgTracks?org=mouse&db={{ metadata.genome }}&position={{ gene.chromosome }}:{{ ucsc_coordinates.start }}-{{ ucsc_coordinates.end }}"
                                            target="_blank">
                                             <img src="static/img/icons/ucsc3.png"/>
                                         </a>

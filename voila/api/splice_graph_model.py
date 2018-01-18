@@ -299,47 +299,11 @@ class Gene(Base):
             else:
                 return exon.a5
 
-    def lsv_coordinates(self, lsv_id):
-        d = lsv_id.split(self.id)[1].split(':')[1:]
-        try:
-            coordinates = list(map(int, d[1].split('-')))
-        except ValueError:
-            coordinates = [-1, int(d[1].split('-')[-1])]
-
-        start = coordinates[0]
-        end = coordinates[1]
-        is_target = d[0] == 't'
-
-        # print('coords', coordinates)
-
-        if self.strand == '-':
-            return {'start': 0, 'end': 0}
-
-        for exon in self.exons:
-            if exon.start == start and exon.end == end:
-                # print('start', exon.start)
-                # print('end', exon.end)
-                # print('is_target', is_target)
-
-                if is_target:
-                    # print('using a5')
-                    juncs = exon.a5
-                    j = sorted(juncs, key=lambda junc: junc.start)[0]
-                    for start_exon in self.exons:
-                        # if start_exon.start <= j.start <= start_exon.end:
-                        if coord_in_exon(j.start, start_exon):
-                            return {'start': start_exon.view_start, 'end': exon.view_end}
-                else:
-                    # print('using a3')
-                    juncs = exon.a3
-                    j = sorted(juncs, key=lambda junc: junc.end)[-1]
-
-                    for end_exon in self.exons:
-                        # if end_exon.start <= j.end <= end_exon.end:
-                        if coord_in_exon(j.end, end_exon):
-                            return {'start': exon.view_start, 'end': end_exon.view_end}
-
-        return {'start': 0, 'end': 0}
+    def lsv_ucsc_coordinates(self, lsv_id):
+        exons = self.lsv_exons(lsv_id)
+        start_exon = sorted(exons, key=lambda e: e.start)[0]
+        end_exon = sorted(exons, key=lambda e: e.end, reverse=True)[0]
+        return {'start': start_exon.start, 'end': end_exon.end}
 
     def get_experiment(self, experiment_names):
         gene = dict(self)
