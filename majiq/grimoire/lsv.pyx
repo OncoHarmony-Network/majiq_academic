@@ -10,7 +10,7 @@ from voila.constants import *
 from voila.splice_graphics import ExonGraphic, LsvGraphic, JunctionGraphic
 
 
-quant_lsv = collections.namedtuple('quant_lsv', 'id type coverage')
+quant_lsv = collections.namedtuple('quant_lsv', 'id coverage')
 
 ctypedef np.float64_t DTYPE_t
 

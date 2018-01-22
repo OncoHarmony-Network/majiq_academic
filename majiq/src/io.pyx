@@ -1,6 +1,6 @@
 import datetime
 
-import h5py
+# import h5py
 import os
 from majiq.grimoire.junction cimport Junction
 from majiq.grimoire.junction import Junction
@@ -10,7 +10,7 @@ from majiq.grimoire.lsv import quant_lsv
 
 from majiq.src.gff import parse_gff3
 from majiq.src.constants import *
-from voila.splice_graphics import LsvGraphic
+
 import pickle
 import numpy as np
 cimport numpy as np
@@ -204,7 +204,7 @@ cdef int _pass_ir(list row, str gne_id, dict jjs, list exs, list irs, int defaul
     pass
 
 
-cdef _get_extract_lsv_list(list list_of_lsv_id, list file_list, int msamples):
+cdef _get_extract_lsv_list(list list_of_lsv_id, list file_list):
     cdef list result = []
     cdef int n_exp = len(file_list)
     cdef str lsv_id, lsv_type, fname
@@ -216,8 +216,12 @@ cdef _get_extract_lsv_list(list list_of_lsv_id, list file_list, int msamples):
         lsv_cov = None
         for fidx, fname in enumerate(file_list):
             with open(fname, 'rb') as fp:
-                cov = np.load(fp)[lsv_id][:,:-2]
+                try:
+                    cov = np.load(fp)[lsv_id][:,:-2]
+                except KeyError:
+                    continue
             njunc = cov.shape[0]
+            msamples = cov.shape[1]
 
             if lsv_cov is None:
                 lsv_cov = np.zeros(shape=(n_exp, njunc, msamples),  dtype=float)
@@ -232,24 +236,24 @@ cdef _get_extract_lsv_list(list list_of_lsv_id, list file_list, int msamples):
 # API
 ##
 
-def read_meta_info(list_of_files):
-    meta = {'experiments': []}
-    m_samples = None
-    for fl in list_of_files:
-        with h5py.File(fl, 'r') as fp :
-            if m_samples is not None:
-                assert m_samples == fp.attrs['m_samples'], "uneven number of bootstrap samples"
-            else:
-                m_samples = fp.attrs['m_samples']
-            meta['experiments'].append(fp.attrs['sample_id'])
-            try:
-                if meta['genome'] != fp.attrs['genome']:
-                    raise RuntimeError('Combining experiments from different genome assemblies. Exiting')
-            except KeyError:
-                meta['genome'] = fp.attrs['genome']
-                continue
-    meta['m_samples'] = m_samples
-    return meta
+# def read_meta_info(list_of_files):
+#     meta = {'experiments': []}
+#     m_samples = None
+#     for fl in list_of_files:
+#         with h5py.File(fl, 'r') as fp :
+#             if m_samples is not None:
+#                 assert m_samples == fp.attrs['m_samples'], "uneven number of bootstrap samples"
+#             else:
+#                 m_samples = fp.attrs['m_samples']
+#             meta['experiments'].append(fp.attrs['sample_id'])
+#             try:
+#                 if meta['genome'] != fp.attrs['genome']:
+#                     raise RuntimeError('Combining experiments from different genome assemblies. Exiting')
+#             except KeyError:
+#                 meta['genome'] = fp.attrs['genome']
+#                 continue
+#     meta['m_samples'] = m_samples
+#     return meta
 
 cpdef extract_lsv_summary(list files, int minnonzero, int min_reads, object types_dict, dict epsi=None,
                           int percent=-1, object logger=None):
@@ -271,20 +275,21 @@ cpdef extract_lsv_summary(list files, int minnonzero, int min_reads, object type
 
         with open(ff, 'rb') as fp:
             all_files = np.load(fp)
+            # print ([xx for xx in all_files['lsv_types']])
+            lsv_types = {all_files['lsv_types'][ii][0].decode('UTF-8'):all_files['lsv_types'][ii][1].decode('UTF-8')
+                         for ii in range(all_files['lsv_types'].shape[0])}
+            for xx in lsv_types:
+                lsv_data = all_files[xx][:,-2:]
 
-        lsv_types = {xx[0]:xx[1] for xx in all_files['lsv_types']}
-        for xx in lsv_types:
-            lsv_data = all_files[xx][:,-2:]
+                try:
+                    lsv_list[xx] += int(np.any(np.logical_and(lsv_data[:, 0] >= minnonzero, lsv_data[:,1] >= min_reads)))
+                    if epsi is not None:
+                        epsi[xx] += lsv_data[:, 0]
 
-            try:
-                lsv_list[xx] += int(np.any(np.logical_and(lsv_data[:, 0] >= minnonzero, lsv_data[:,1] >= min_reads)))
-                if epsi is not None:
-                    epsi[xx] += lsv_data[:, 0]
-
-            except KeyError:
-                lsv_list[xx] = int(np.any(np.logical_and(lsv_data[:, 0] >= minnonzero, lsv_data[:,1] >= min_reads)))
-                if epsi is not None:
-                    epsi[xx] = lsv_data[:, 0]
+                except KeyError:
+                    lsv_list[xx] = int(np.any(np.logical_and(lsv_data[:, 0] >= minnonzero, lsv_data[:,1] >= min_reads)))
+                    if epsi is not None:
+                        epsi[xx] = lsv_data[:, 0]
 
         types_dict.update(lsv_types)
 
@@ -303,19 +308,19 @@ cpdef int dump_lsv_coverage(out_f, cov_list, attrs_list):
     _dump_lsv_coverage(out_f, cov_list, attrs_list)
 
 
-cpdef int init_majiq_file(str filename, str out_dir, str genome, int msamples):
-
-    with h5py.File('%s/%s.majiq' % (out_dir, filename), 'w') as f:
-        f.create_dataset('junctions', (5000, msamples), maxshape=(None, msamples))
-        f.create_dataset('junc_cov', (5000, 2), maxshape=(None, 2))
-
-        # fill meta info
-        f.attrs['sample_id'] = filename
-        f.attrs['date'] = datetime.datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S')
-        f.attrs['VERSION'] = VERSION
-        f.attrs['lsv_idx'] = 0
-        f.attrs['num_lsvs'] = 0
-        f.attrs['genome'] = genome
+# cpdef int init_majiq_file(str filename, str out_dir, str genome, int msamples):
+#
+#     with h5py.File('%s/%s.majiq' % (out_dir, filename), 'w') as f:
+#         f.create_dataset('junctions', (5000, msamples), maxshape=(None, msamples))
+#         f.create_dataset('junc_cov', (5000, 2), maxshape=(None, 2))
+#
+#         # fill meta info
+#         f.attrs['sample_id'] = filename
+#         f.attrs['date'] = datetime.datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S')
+#         f.attrs['VERSION'] = VERSION
+#         f.attrs['lsv_idx'] = 0
+#         f.attrs['num_lsvs'] = 0
+#         f.attrs['genome'] = genome
 
 
 
@@ -350,7 +355,7 @@ cpdef int add_elements_mtrx(dict new_elems, object shared_elem_dict):
         shared_elem_dict[gne] = kk + new_elems[gne]
 
 
-def dump_elements(object genes_dict, object elem_dict, str outDir):
+cpdef dump_elements(object genes_dict, object elem_dict, str outDir):
     _dump_elems_list(elem_dict, genes_dict, outDir)
 
 
@@ -374,8 +379,8 @@ def dump_bin_file(data, str filename):
         # fast_pickler.fast = 1
         fast_pickler.dump(data)
 
-def get_extract_lsv_list(list list_of_lsv_id, list file_list, int msamples):
-    return _get_extract_lsv_list(list_of_lsv_id, file_list, msamples)
+def get_extract_lsv_list(list list_of_lsv_id, list file_list):
+    return _get_extract_lsv_list(list_of_lsv_id, file_list)
 
 
 def load_db(str filename, object elem_dict, object genes_dict):

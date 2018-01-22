@@ -139,25 +139,16 @@ def queue_manager(output_h5dfp, lock_array, result_queue, num_chunks,
                 update_splicegraph_junction(output_h5dfp, info[0], info[1], info[2], info[3], info[4])
 
             elif val.get_type() == QUEUE_MESSAGE_PSI_RESULT:
-                list_of_lsv_graphics = kwargs['list_of_lsv_graphics']
-                lsv_graph = list_of_lsv_graphics[val.get_value()[-1]]
-                # output_h5dfp.add_lsv(VoilaLsv(bins_list=val.get_value()[0], means_psi1=val.get_value()[1],
-                #                               lsv_graphic=lsv_graph))
-
-                output_h5dfp.psi(lsv_graph.lsv_id).add(lsv_type=lsv_graph.lsv_type,
-                                                       bins=val.get_value()[0],
-                                                       means=val.get_value()[1])
+                results = val.get_value()
+                lsv_type = kwargs['lsv_type'][results[2]]
+                output_h5dfp.psi(results[2]).add(lsv_type=lsv_type, bins=results[0], means=results[1])
 
             elif val.get_type() == QUEUE_MESSAGE_DELTAPSI_RESULT:
-                list_of_lsv_graphics = kwargs['list_of_lsv_graphics']
-                lsv_graph = list_of_lsv_graphics[val.get_value()[-1]]
-                # output_h5dfp.add_lsv(VoilaLsv(bins_list=val.get_value()[0], lsv_graphic=lsv_graph,
-                #                               psi1=val.get_value()[1], psi2=val.get_value()[2],
-                #                               means_psi1=val.get_value()[3], means_psi2=val.get_value()[4]))
-
-                output_h5dfp.delta_psi(lsv_graph.lsv_id).add(bins=val.get_value()[0], psi1=val.get_value()[1],
-                                                             psi2=val.get_value()[2], means_psi1=val.get_value()[3],
-                                                             means_psi2=val.get_value()[4])
+                results = val.get_value()
+                lsv_type = kwargs['lsv_type'][results[2]]
+                output_h5dfp.delta_psi(results[5]).add(lsv_type=lsv_type, bins=val.get_value()[0],
+                                                       psi1=val.get_value()[1], psi2=val.get_value()[2],
+                                                       means_psi1=val.get_value()[3], means_psi2=val.get_value()[4])
 
             elif val.get_type() == QUEUE_MESSAGE_HETER_DELTAPSI:
                 list_of_lsv_graphics = kwargs['list_of_lsv_graphics']

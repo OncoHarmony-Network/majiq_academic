@@ -164,6 +164,8 @@ def parsing_files(sam_file_list, chnk, conf, logger):
     logger.info('Reading DB')
 
     ngenes = len(conf.genes_dict)
+    loop_step = min(1, int(ngenes/10))
+
     for gne_id, gene_obj in conf.genes_dict.items():
         dict_junctions[gne_id] = {}
         list_exons[gne_id] = []
@@ -181,7 +183,7 @@ def parsing_files(sam_file_list, chnk, conf, logger):
         junc_mtrx = [[0] * effective_len]
 
         for gne_idx, (gne_id, gene_obj) in enumerate(conf.genes_dict.items()):
-            if gne_idx % int(ngenes/10) == 0:
+            if gne_idx % loop_step == 0:
                 logger.info("[%s] Progress %s/%s" % (loop_id, gne_idx, ngenes))
 
             logger.debug("[%s] Reading BAM files" % gne_id)
