@@ -86,7 +86,8 @@ $(document).ready(function () {
 
     $('.floatingLegend').each(function () {
         if ($(this)[0].getContext) {
-            splicegraph().renderFloatingLegend($(this)[0]);
+            // splicegraph().renderFloatingLegend($(this)[0]);
+            new FloatingLegend().renderFloatingLegend($(this)[0]);
         }
     });
 

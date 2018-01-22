@@ -12,9 +12,6 @@ var SpliceGraph = function (db) {
     this.zoom = 1;
 
     this.max_height = this.height - 5;
-
-    this.t = d3.transition()
-        .duration(750);
 };
 
 SpliceGraph.prototype.yScale = function () {
@@ -24,10 +21,9 @@ SpliceGraph.prototype.yScale = function () {
     return this.yScale();
 };
 
-SpliceGraph.prototype.xScale = function (default_view, reverse_range) {
+SpliceGraph.prototype.xScale = function (gene, default_view, reverse_range, experiment) {
     var x_dom = [];
     var x_range = [];
-    var gene = this.gene;
     var min_width = 10;
     var max_width = (this.width * this.zoom) - 10;
     var i;
@@ -73,12 +69,13 @@ SpliceGraph.prototype.xScale = function (default_view, reverse_range) {
         offset = 0;
 
 
-        if ([4, 5].includes(e.exon_type)) {
+        if ([4, 5].includes(gene.exon_types[e.start][e.end][experiment])) {
             min = 4;
             max = 4;
         } else {
-            min = 20;
-            max = 50;
+            min = 5;
+            max = 100;
+
         }
 
         if (length < min)
@@ -178,9 +175,10 @@ SpliceGraph.prototype.junctions_no_ir = function (gene, x) {
     var leader;
     var unavailable = [];
     var grps = {};
-    var juncs_no_ir = gene.junctions.filter(function (j) {
-        return !j.intron_retention
-    });
+    var juncs_no_ir = gene.junctions
+        .filter(function (j) {
+            return !j.intron_retention
+        });
 
     juncs_no_ir.forEach(function (a, a_idx) {
         if (!unavailable.includes(a_idx)) {
@@ -219,7 +217,7 @@ SpliceGraph.prototype.init = function (sg_div, experiment) {
     var gene_id = sg_div.getAttribute('data-gene-id');
     var sg = this;
     sg_div.setAttribute('data-zoom', 1.0);
-    this.db.get(gene_id + '_' + experiment).then(function (gene) {
+    this.db.get(gene_id).then(function (gene) {
 
         sg.sg_div = d3.select(sg_div);
         sg.gene = gene;
@@ -234,11 +232,11 @@ SpliceGraph.prototype.init = function (sg_div, experiment) {
         var reversed_range = gene.strand === '-';
 
         var y = sg.yScale();
-        var x = sg.xScale(default_view, reversed_range);
+        var x = sg.xScale(gene, default_view, reversed_range, experiment);
 
         var juncs_no_ir = sg.junctions_no_ir(gene, x);
         var exons = gene.exons.filter(function (d) {
-            return !d.intron_retention && !(d.exon_type === 4 || d.exon_type === 5)
+            return !d.intron_retention && ![4, 5].includes(gene.exon_types[d.start][d.end][experiment])
         });
 
         svg.selectAll('.intron-retention')
@@ -247,20 +245,20 @@ SpliceGraph.prototype.init = function (sg_div, experiment) {
             }))
             .enter()
             .append('polygon')
-            .intron_retention(x, y, exon_height);
+            .intron_retention(x, y, exon_height, gene.exon_types, experiment);
 
 
         svg.selectAll('.exon')
             .data(exons)
             .enter()
             .append('polygon')
-            .exons(x, y, exon_height);
+            .exons(x, y, exon_height, gene.exon_types, experiment);
 
         svg.selectAll('.exon-number')
             .data(exons)
             .enter()
             .append('text')
-            .exon_numbers(x, y, exon_height, font_size, gene.strand, exons.length);
+            .exon_numbers(x, y, exon_height, font_size, gene.strand);
 
         svg.selectAll('.junction-grp')
             .data(juncs_no_ir)
@@ -273,14 +271,28 @@ SpliceGraph.prototype.init = function (sg_div, experiment) {
                     .data([d])
                     .enter()
                     .append('path')
-                    .junctions(x, y, exon_height, gene.strand);
+                    .junctions(x, y, exon_height, gene.strand, gene.reads, gene.junction_types, experiment);
 
                 d3.select(this)
                     .selectAll('.reads')
                     .data([d])
                     .enter()
                     .append('text')
-                    .reads(x, y, exon_height, font_size)
+                    .reads(x, y, exon_height, font_size, gene.reads, experiment);
+
+                d3.select(this)
+                    .selectAll('.ss3p')
+                    .data([d])
+                    .enter()
+                    .append('line')
+                    .ss3p(x, y, exon_height, gene.reads, gene.junction_types, experiment);
+
+                d3.select(this)
+                    .selectAll('.ss5p')
+                    .data([d])
+                    .enter()
+                    .append('line')
+                    .ss5p(x, y, exon_height, gene.reads, gene.junction_types, experiment)
             });
 
         svg.selectAll('.ir-line')
@@ -293,11 +305,11 @@ SpliceGraph.prototype.init = function (sg_div, experiment) {
 
         svg.selectAll('.half-exon')
             .data(gene.exons.filter(function (d) {
-                return d.exon_type === 4 || d.exon_type === 5
+                return [4, 5].includes(gene.exon_types[d.start][d.end][experiment])
             }))
             .enter()
             .append('polyline')
-            .half_exons(x, y, exon_height);
+            .half_exons(x, y, exon_height, gene.exon_types, experiment);
 
         svg.selectAll('.ir-reads')
             .data(gene.junctions.filter(function (j) {
@@ -305,20 +317,60 @@ SpliceGraph.prototype.init = function (sg_div, experiment) {
             }))
             .enter()
             .append('text')
-            .ir_reads(x, y, exon_height, font_size, gene.strand)
+            .ir_reads(x, y, exon_height, font_size, gene.strand, gene.reads, experiment);
 
     })
 };
 
+d3.transition.prototype.ss3p =
+    d3.selection.prototype.ss3p =
+        function (x, y, exon_height, reads, junction_types, experiment) {
+            return this
+                .attr('class', 'ss3p')
+                .attr('x1', function (d) {
+                    return x(d.start)
+                })
+                .attr('x2', function (d) {
+                    return x(d.start)
+                })
+                .splice_site(y, exon_height, reads, junction_types, experiment)
+        };
+
+d3.transition.prototype.ss5p =
+    d3.selection.prototype.ss5p =
+        function (x, y, exon_height, reads, junction_types, experiment) {
+            return this
+                .attr('class', 'ss5p')
+                .attr('x1', function (d) {
+                    return x(d.end)
+                })
+                .attr('x2', function (d) {
+                    return x(d.end)
+                })
+                .splice_site(y, exon_height, reads, junction_types, experiment)
+        };
+
+d3.transition.prototype.splice_site =
+    d3.selection.prototype.splice_site =
+        function (y, exon_height, reads, junction_types, experiment) {
+            return this
+                .attr('y1', y(0))
+                .attr('y2', y(exon_height))
+                .attr('stroke', 'black')
+                .style_junctions(reads, junction_types, experiment)
+                .attr('stroke-dasharray', '2,2')
+
+        };
 
 d3.transition.prototype.ir_reads =
     d3.selection.prototype.ir_reads =
-        function (x, y, exon_height, font_size, strand) {
+        function (x, y, exon_height, font_size, strand, reads, experiment) {
             return this
                 .attr('class', 'ir-reads')
                 .text(function (d) {
-                    if (d.reads)
-                        return d.reads
+                    var r = reads[d.start][d.end][experiment];
+                    if (r)
+                        return r
                 })
                 .attr('x', function (d) {
                     if (strand === '-') {
@@ -353,12 +405,14 @@ d3.transition.prototype.ir_reads =
 
 d3.transition.prototype.half_exons =
     d3.selection.prototype.half_exons =
-        function (x, y, exon_height) {
+        function (x, y, exon_height, exon_types, experiment) {
             return this
                 .attr('class', 'half-exon')
-                .style_exons()
+                .style_exons(exon_types, experiment)
                 .attr('points', function (d) {
-                    if (d.exon_type === 4)
+                    var exon_type = exon_types[d.start][d.end][experiment];
+
+                    if (exon_type === 4)
                         return [
                             [x(d.start), y(0)].join(' '),
                             [x(d.end), y(0)].join(' '),
@@ -366,7 +420,7 @@ d3.transition.prototype.half_exons =
                             [x(d.start), y(exon_height)].join(' ')
                         ].join(', ');
 
-                    if (d.exon_type === 5)
+                    if (exon_type === 5)
                         return [
                             [x(d.end), y(0)].join(' '),
                             [x(d.start), y(0)].join(' '),
@@ -378,12 +432,12 @@ d3.transition.prototype.half_exons =
 
 d3.transition.prototype.style_exons =
     d3.selection.prototype.style_exons =
-        function () {
+        function (exon_types, experiment) {
             return this
                 .attr('fill-opacity', .3)
                 .attr('stroke-linejoin', 'round')
                 .attr('fill', function (d) {
-                    switch (d.exon_type) {
+                    switch (exon_types[d.start][d.end][experiment]) {
                         case 0:
                             return 'grey';
                         case 1:
@@ -395,7 +449,7 @@ d3.transition.prototype.style_exons =
                     }
                 })
                 .attr('stroke', function (d) {
-                    switch (d.exon_type) {
+                    switch (exon_types[d.start][d.end][experiment]) {
                         case 1:
                         case 4:
                         case 5:
@@ -405,7 +459,7 @@ d3.transition.prototype.style_exons =
                     }
                 })
                 .attr('stroke-dasharray', function (d) {
-                    if (d.exon_type === 2) {
+                    if (exon_types[d.start][d.end][experiment] === 2) {
                         return '5, 2'
                     }
                 })
@@ -413,10 +467,10 @@ d3.transition.prototype.style_exons =
 
 d3.transition.prototype.exons =
     d3.selection.prototype.exons =
-        function (x, y, exon_height) {
+        function (x, y, exon_height, exon_types, experiment) {
             return this
                 .attr('class', 'exon')
-                .style_exons()
+                .style_exons(exon_types, experiment)
                 .attr('points', function (d) {
                     return [
                         [x(d.start), y(0)].join(' '),
@@ -430,10 +484,10 @@ d3.transition.prototype.exons =
 
 d3.transition.prototype.intron_retention =
     d3.selection.prototype.intron_retention =
-        function (x, y, exon_height) {
+        function (x, y, exon_height, exon_types, experiment) {
             return this
                 .attr('class', 'intron-retention')
-                .style_exons()
+                .style_exons(exon_types, experiment)
                 .attr('points', function (d) {
                     return [
                         [x(d.start - 1), y(exon_height / 4)].join(' '),
@@ -458,64 +512,76 @@ d3.transition.prototype.exon_numbers =
                 })
                 .attr('y', y((exon_height / 2) - (font_size / 2) + 2))
                 .attr('x', function (d) {
-                    return x(d.start + d.length / 2)
+                    return x(d.start + (d.end - d.start) / 2)
                 })
                 .attr('text-anchor', 'middle')
                 .attr('font-family', 'sans-serif')
                 .attr('font-size', font_size);
         };
 
+d3.transition.prototype.style_junctions =
+    d3.selection.prototype.style_junctions =
+        function (reads, junction_types, experiment) {
+            return this
+                .attr('stroke-width', 1.5)
+                .attr('stroke-dasharray', function (d) {
+                    switch (junction_types[d.start][d.end][experiment]) {
+                        case 3:
+                        case 2:
+                            return '5,2';
+                        case 1:
+                            if (reads[d.start][d.end][experiment] === 0)
+                                return '5,2';
+                    }
+                })
+                .attr('stroke', function (d) {
+                    switch (junction_types[d.start][d.end][experiment]) {
+                        case 3:
+                        case 0:
+                            return 'red';
+                        case 1:
+                            return 'green';
+                        case 2:
+                            return 'grey';
+                        default:
+                            return 'black'
+                    }
+                })
+                .attr('fill', 'None')
+        };
 
 d3.transition.prototype.junctions =
-    d3.selection.prototype.junctions = function (x, y, exon_height, strand) {
-        var junc_height = 20;
-        return this
-            .attr('class', 'junction')
-            .attr('stroke-width', 1.5)
-            .attr('stroke-dasharray', function (d) {
-                switch (d.junction_type) {
-                    case 3:
-                    case 2:
-                        return '5,2';
-                    case 1:
-                        if (d.reads === 0)
-                            return '5,2';
-                }
-            })
-            .attr('stroke', function (d) {
-                switch (d.junction_type) {
-                    case 3:
-                    case 0:
-                        return 'red';
-                    case 1:
-                        return 'green';
-                    case 2:
-                        return 'grey';
-                    default:
-                        return 'black'
-                }
-            })
-            .attr('fill', 'None')
-            .attr('d', function (d) {
-                var sweep_flag = strand === '+' ? 1 : 0;
-                var junc_length = x(d.end) - x(d.start);
-                // where junctions are very long... put them one bin higher.
-                var long_junc = Math.abs(junc_length) > 200 ? 1 : 0;
-                return 'M' + [x(d.start), y(exon_height)].join(',') +
-                    'A' + [junc_length / 2, junc_height * (d.bin + long_junc), 0, 0, sweep_flag, x(d.end), y(exon_height)].join(' ')
-            })
-    };
+    d3.selection.prototype.junctions =
+        function (x, y, exon_height, strand, reads, junction_types, experiment) {
+            var junc_height = 20;
+            return this
+                .attr('class', 'junction')
+                .style_junctions(reads, junction_types, experiment)
+                .attr('d', function (d) {
+                    var sweep_flag = strand === '+' ? 1 : 0;
+                    var junc_length = x(d.end) - x(d.start);
+                    // where junctions are very long... put them one bin higher.
+                    var long_junc = Math.abs(junc_length) > 200 ? 1 : 0;
+                    return 'M' + [x(d.start), y(exon_height)].join(',') +
+                        'A' + [junc_length / 2, junc_height * (d.bin + long_junc), 0, 0, sweep_flag, x(d.end), y(exon_height)].join(' ')
+                })
+        };
 
 
 d3.transition.prototype.reads =
     d3.selection.prototype.reads =
-        function (x, y, exon_height, font_size) {
+        function (x, y, exon_height, font_size, reads, experiment) {
             var junc_height = 20;
             return this
                 .attr('class', 'reads')
                 .text(function (d) {
-                    if (d.reads)
-                        return d.reads
+                    try {
+                        var r = reads[d.start][d.end][experiment];
+                        if (r)
+                            return r
+                    } catch (TypeError) {
+                        return '';
+                    }
                 })
                 .attr('x', function (d) {
                     return x(d.start) + (x(d.end) - x(d.start)) / 2
@@ -566,61 +632,63 @@ d3.transition.prototype.ir_lines =
 
 
 SpliceGraph.prototype.update = function (sg_div, experiment) {
-    var gene_id = sg_div.getAttribute('data-gene-id');
+    // var gene_id = sg_div.getAttribute('data-gene-id');
     var sg = this;
     this.zoom = sg_div.getAttribute('data-zoom');
 
+    this.db.get(sg_div.getAttribute('data-gene-id')).then(function (gene) {
 
-    this.db.get(gene_id + '_' + experiment).then(function (gene) {
         var default_view = sg_div.classList.contains('default-view');
         var svg = d3.select(sg_div).select('svg');
         var y = sg.yScale();
         var exon_height = sg.exon_height;
-        var reverse_range = sg.gene.strand === '-';
-        var x = sg.xScale(default_view, reverse_range);
+        var reverse_range = gene.strand === '-';
+        var x = sg.xScale(gene, default_view, reverse_range);
         var font_size = sg.font_size;
         var juncs_no_ir = sg.junctions_no_ir(gene, x);
 
         svg
             .interrupt()
-            .transition(sg.t)
+            .transition()
             .attr('width', sg.width * sg.zoom);
+
 
         svg.selectAll('.exon')
             .interrupt()
-            .transition(sg.t)
-            .exons(x, y, exon_height);
+            .transition()
+            .exons(x, y, exon_height, gene.exon_types, experiment);
 
         svg.selectAll('.half-exon')
             .interrupt()
-            .transition(sg.t)
-            .half_exons(x, y, exon_height);
+            .transition()
+            .half_exons(x, y, exon_height, gene.exon_types, experiment);
 
         svg.selectAll('.intron-retention')
             .interrupt()
-            .transition(sg.t)
-            .intron_retention(x, y, exon_height);
+            .transition()
+            .intron_retention(x, y, exon_height, gene.exon_types, experiment);
 
         svg.selectAll('.exon-number')
             .interrupt()
-            .transition(sg.t)
+            .transition()
             .exon_numbers(x, y, exon_height, font_size, gene.strand);
 
         svg.selectAll('.junction')
             .interrupt()
             .data(juncs_no_ir)
-            .transition(sg.t)
-            .junctions(x, y, exon_height, gene.strand);
+            .transition()
+            .junctions(x, y, exon_height, gene.strand, gene.reads, gene.junction_types, experiment);
+
 
         svg.selectAll('.reads')
             .interrupt()
             .data(juncs_no_ir)
-            .transition(sg.t)
-            .reads(x, y, exon_height, font_size);
+            .transition()
+            .reads(x, y, exon_height, font_size, gene.reads, experiment);
 
         svg.selectAll('.ir-line')
             .interrupt()
-            .transition(sg.t)
+            .transition()
             .ir_lines(x, y, gene.strand);
 
         svg.selectAll('.ir-reads')
@@ -628,7 +696,20 @@ SpliceGraph.prototype.update = function (sg_div, experiment) {
             .data(gene.junctions.filter(function (d) {
                 return d.intron_retention
             }))
+            .transition()
+            .ir_reads(x, y, exon_height, font_size, gene.strand, gene.reads, experiment);
+
+        svg.selectAll('.ss3p')
+            .interrupt()
+            .data(juncs_no_ir)
             .transition(sg.t)
-            .ir_reads(x, y, exon_height, font_size, gene.strand)
+            .ss3p(x, y, exon_height, gene.reads, gene.junction_types, experiment);
+
+        svg.selectAll('.ss5p')
+            .interrupt()
+            .data(juncs_no_ir)
+            .transition()
+            .ss5p(x, y, exon_height, gene.reads, gene.junction_types, experiment);
     })
+
 };

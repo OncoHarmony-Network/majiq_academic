@@ -1,22 +1,20 @@
-import queue
-import os
-import sys
-
 import multiprocessing as mp
-from majiq.src import io as majiq_io
+import os
+import queue
+import sys
+import traceback
+
 import majiq.src.logger as majiq_logger
 from majiq.src.constants import *
-from voila.vlsv import VoilaLsv
 from majiq.src.voila_wrapper import update_splicegraph_junction
-import traceback
+from voila.vlsv import VoilaLsv
 
 
 def process_wrapper(args_vals):
-
     try:
         vals, chnk = args_vals
         logger = majiq_logger.get_logger("%s/%s.majiq.log" % (process_conf.outDir, chnk),
-                                        silent=process_conf.silent, debug=process_conf.debug)
+                                         silent=process_conf.silent, debug=process_conf.debug)
 
         process_conf.func(vals, chnk, process_conf, logger=logger)
         logger.info('Finishing child, %s' % chnk)
@@ -63,7 +61,7 @@ def chunks(l, n_chunks):
         prev_n += n
         rem_len = rem_len - n
         n = int(rem_len / (n_chunks - ii))
-        yield (l[prev_n:prev_n+n], ii)
+        yield (l[prev_n:prev_n + n], ii)
 
 
 class QueueMessage:
@@ -86,7 +84,6 @@ class QueueMessage:
         return self.type
 
 
-
 def process_conf(func, pipeline):
     process_conf.__dict__.update(pipeline.__dict__)
     process_conf.func = func
@@ -94,7 +91,6 @@ def process_conf(func, pipeline):
 
 def queue_manager(output_h5dfp, lock_array, result_queue, num_chunks,
                   out_inplace=None, logger=None, **kwargs):
-
     nthr_count = 0
     found = {}
     gen_dict = {}
@@ -145,15 +141,23 @@ def queue_manager(output_h5dfp, lock_array, result_queue, num_chunks,
             elif val.get_type() == QUEUE_MESSAGE_PSI_RESULT:
                 list_of_lsv_graphics = kwargs['list_of_lsv_graphics']
                 lsv_graph = list_of_lsv_graphics[val.get_value()[-1]]
-                output_h5dfp.add_lsv(VoilaLsv(bins_list=val.get_value()[0], means_psi1=val.get_value()[1],
-                                              lsv_graphic=lsv_graph))
+                # output_h5dfp.add_lsv(VoilaLsv(bins_list=val.get_value()[0], means_psi1=val.get_value()[1],
+                #                               lsv_graphic=lsv_graph))
+
+                output_h5dfp.psi(lsv_graph.lsv_id).add(lsv_type=lsv_graph.lsv_type,
+                                                       bins=val.get_value()[0],
+                                                       means=val.get_value()[1])
 
             elif val.get_type() == QUEUE_MESSAGE_DELTAPSI_RESULT:
                 list_of_lsv_graphics = kwargs['list_of_lsv_graphics']
                 lsv_graph = list_of_lsv_graphics[val.get_value()[-1]]
-                output_h5dfp.add_lsv(VoilaLsv(bins_list=val.get_value()[0], lsv_graphic=lsv_graph,
-                                              psi1=val.get_value()[1], psi2=val.get_value()[2],
-                                              means_psi1=val.get_value()[3], means_psi2=val.get_value()[4]))
+                # output_h5dfp.add_lsv(VoilaLsv(bins_list=val.get_value()[0], lsv_graphic=lsv_graph,
+                #                               psi1=val.get_value()[1], psi2=val.get_value()[2],
+                #                               means_psi1=val.get_value()[3], means_psi2=val.get_value()[4]))
+
+                output_h5dfp.delta_psi(lsv_graph.lsv_id).add(bins=val.get_value()[0], psi1=val.get_value()[1],
+                                                             psi2=val.get_value()[2], means_psi1=val.get_value()[3],
+                                                             means_psi2=val.get_value()[4])
 
             elif val.get_type() == QUEUE_MESSAGE_HETER_DELTAPSI:
                 list_of_lsv_graphics = kwargs['list_of_lsv_graphics']
@@ -177,4 +181,3 @@ def queue_manager(output_h5dfp, lock_array, result_queue, num_chunks,
             if nthr_count < num_chunks:
                 continue
             break
-

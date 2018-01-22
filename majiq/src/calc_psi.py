@@ -5,12 +5,12 @@ import traceback
 import h5py
 
 import majiq.src.io as majiq_io
-import majiq.src.deprecated_io as majiq_deprio
+from majiq.src.psi import psi_posterior
+
 from majiq.src.basic_pipeline import BasicPipeline, pipeline_run
 from majiq.src.constants import *
 from majiq.src.multiproc import QueueMessage, process_conf, queue_manager, process_wrapper, chunks
-from majiq.src.psi import psi_posterior
-from voila.api import Voila
+from voila.api import Matrix
 from voila.constants import ANALYSIS_PSI
 import majiq.src.logger as majiq_logger
 
@@ -75,16 +75,15 @@ class CalcPsi(BasicPipeline):
         self.weights = weights
 
         if len(list_of_lsv) > 0:
-
             pool = mp.Pool(processes=nthreads, initializer=process_conf, initargs=[psi_quantification, self],
                            maxtasksperchild=1)
             [xx.acquire() for xx in self.lock]
 
             pool.map_async(process_wrapper, chunks(list_of_lsv, nthreads))
             pool.close()
-            with Voila(get_quantifier_voila_filename(self.outDir, self.name), 'w') as out_h5p:
-                out_h5p.add_genome(meta['genome'])
-                out_h5p.set_analysis_type(ANALYSIS_PSI)
+            with Matrix(get_quantifier_voila_filename(self.outDir, self.name), 'w') as out_h5p:
+                out_h5p.genome = meta['genome']
+                out_h5p.analysis_type = ANALYSIS_PSI
                 out_h5p.add_experiments(group_name=self.name, experiment_names=meta['experiments'])
 
                 queue_manager(out_h5p, self.lock, self.queue, num_chunks=nthreads, logger=logger)

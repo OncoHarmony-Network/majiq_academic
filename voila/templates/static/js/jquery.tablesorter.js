@@ -957,7 +957,7 @@
                 // style children rows the same way the parent
                 // row was styled
                 if (!$tr.hasClass(table.config.cssChildRow)) row++;
-                odd = (row % 2 == 0);
+                odd = (row % 2 === 0);
                 $tr.removeClass(
                     table.config.widgetZebra.css[odd ? 0 : 1]).addClass(
                     table.config.widgetZebra.css[odd ? 1 : 0])
@@ -1114,7 +1114,8 @@
             });
 
             $('.lsvLegend', table).each(function () {
-                splicegraph().renderLsvSpliceGraph(this, gene_obj_list[this.id]);
+                // new Lsv().renderLsvSpliceGraph(this, gene_obj_list[this.id]);
+                lsv.renderLsvSpliceGraph(this, gene_obj_list[this.id]);
             });
 
             /**
@@ -1139,7 +1140,7 @@
                             .replace(/'/g, "\"")
                     );
 
-
+                    console.log(lsv_list.bins);
                     var sampled_bins = translate_lsv_bins(lsv_list.bins, 1000);
 
                     var svg = renderViolin($(this).parent()[0].id, sampled_bins, table.id, {

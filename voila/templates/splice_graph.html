@@ -1,0 +1,8 @@
+<div class="splice-graph-container">
+    <div class="splice-graph exp1 default-view" id="spliceDivExp1_{{ gene_index }}"
+         data-gene-id="{{ gene.id }}"></div>
+    <script>
+        var sg_container = document.getElementById('spliceDivExp1_{{ gene_index }}');
+        sg.init(sg_container, '{{ experiments[0] }}');
+    </script>
+</div>

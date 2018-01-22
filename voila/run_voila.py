@@ -81,10 +81,10 @@ def voila_parser():
                           help='Heterogen analysis by gene(s) of interest.',
                           parents=Heterogen.arg_parents())
 
-    parser_tool = subparsers.add_parser(constants.TOOLS,
-                                        help='Various tools.',
-                                        parents=Tools.arg_parents())
-    Tools.add_arguments(parser_tool)
+    # parser_tool = subparsers.add_parser(constants.TOOLS,
+    #                                     help='Various tools.',
+    #                                     parents=Tools.arg_parents())
+    # Tools.add_arguments(parser_tool)
 
     return parser
 

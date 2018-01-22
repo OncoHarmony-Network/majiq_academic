@@ -1,16 +1,15 @@
-import h5py
-import sys
 import collections
 import multiprocessing as mp
+import sys
 
 import majiq.src.io as majiq_io
-from majiq.src.basic_pipeline import BasicPipeline, pipeline_run
 from majiq.src.psi import deltapsi_posterior, gen_prior_matrix
+
+import majiq.src.logger as majiq_logger
+from majiq.src.basic_pipeline import BasicPipeline, pipeline_run
 from majiq.src.constants import *
 from majiq.src.multiproc import QueueMessage, process_conf, queue_manager, process_wrapper, chunks
-import majiq.src.logger as majiq_logger
-
-from voila.api import Voila
+from voila.api import Matrix
 from voila.constants import ANALYSIS_DELTAPSI
 
 
@@ -19,7 +18,6 @@ def deltapsi(args):
 
 
 def deltapsi_quantification(list_of_lsv, chnk, process_conf, logger):
-
     logger.info("Quantifying LSVs PSI.. %s" % chnk)
     num_exp = [len(process_conf.files1), len(process_conf.files1)]
 
@@ -47,7 +45,9 @@ def deltapsi_quantification(list_of_lsv, chnk, process_conf, logger):
                                                           mu_psi1, mu_psi2, lsv_id), chnk)
         process_conf.queue.put(qm, block=True)
 
+
 prior_conf = collections.namedtuple('conf', 'iter plotpath breakiter names binsize')
+
 
 class DeltaPsi(BasicPipeline):
 
@@ -83,14 +83,14 @@ class DeltaPsi(BasicPipeline):
                                                                     minnonzero=self.minpos, min_reads=self.minreads,
                                                                     percent=self.min_exp, logger=logger)
         weights[0] = self.calc_weights(self.weights[0], self.files1, list_of_lsv1, self.names[0], logger=self.logger)
-        logger.info("Group %s: %s LSVs" %(self.names[0], len(list_of_lsv1)))
+        logger.info("Group %s: %s LSVs" % (self.names[0], len(list_of_lsv1)))
 
         meta2 = majiq_io.read_meta_info(self.files2)
         list_of_lsv2, lsv_dict_graph = majiq_io.extract_lsv_summary(self.files2, epsi=lsv_empirical_psi2,
                                                                     minnonzero=self.minpos, min_reads=self.minreads,
                                                                     percent=self.min_exp, logger=logger)
         weights[1] = self.calc_weights(self.weights[1], self.files2, list_of_lsv2, self.names[1], logger=self.logger)
-        logger.info("Group %s: %s LSVs" %(self.names[1], len(list_of_lsv1)))
+        logger.info("Group %s: %s LSVs" % (self.names[1], len(list_of_lsv1)))
 
         list_of_lsv = list(set(list_of_lsv1).intersection(set(list_of_lsv2)))
         logger.info("Number quantifiable LSVs: %s" % len(list_of_lsv))
@@ -110,7 +110,6 @@ class DeltaPsi(BasicPipeline):
 
         self.weights = weights
         if len(list_of_lsv) > 0:
-
             nthreads = min(self.nthreads, len(list_of_lsv))
             print(nthreads, list(chunks(list_of_lsv, nthreads)))
             pool = mp.Pool(processes=nthreads, initializer=process_conf, initargs=[deltapsi_quantification, self],
@@ -119,9 +118,10 @@ class DeltaPsi(BasicPipeline):
 
             pool.imap_unordered(process_wrapper, chunks(list_of_lsv, nthreads))
             pool.close()
-            with Voila(get_quantifier_voila_filename(self.outDir, self.names, deltapsi=True), 'w') as out_h5p:
-                out_h5p.add_genome(meta1['genome'])
-                out_h5p.set_analysis_type(ANALYSIS_DELTAPSI)
+
+            with Matrix(get_quantifier_voila_filename(self.outDir, self.names, deltapsi=True), 'w') as out_h5p:
+                out_h5p.genome = meta1['genome']
+                out_h5p.analysis_type = ANALYSIS_DELTAPSI
                 out_h5p.add_experiments(group_name=self.names[0], experiment_names=meta1['experiments'])
                 out_h5p.add_experiments(group_name=self.names[1], experiment_names=meta2['experiments'])
 
