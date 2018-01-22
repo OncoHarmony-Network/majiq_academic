@@ -12,6 +12,7 @@ from voila.splice_graphics import ExonGraphic, LsvGraphic, JunctionGraphic
 
 quant_lsv = collections.namedtuple('quant_lsv', 'id type coverage')
 
+ctypedef np.float64_t DTYPE_t
 
 class InvalidLSV(Exception):
     def __init__(self, msg):
@@ -109,24 +110,41 @@ cdef class LSV:
                                 strand=self.strand, exons=exon_list, junctions=junc_list)
         return splice_lsv
 
-    cdef int add_lsv(LSV self, hdf5grp, np.ndarray junc_mtrx, list np_jjlist, int lsv_idx):
-        cdef int njunc = len(self.junctions)
+    # cdef int add_lsv_old(LSV self, hdf5grp, np.ndarray junc_mtrx, list np_jjlist, int lsv_idx):
+    #     cdef int njunc = len(self.junctions)
+    #
+    #
+    #
+    #     h_lsv = hdf5grp.create_group("LSVs/%s" % self.id)
+    #     h_lsv.attrs['id'] = self.id
+    #     h_lsv.attrs['type'] = self.type
+    #
+    #     for xx  in self.junctions:
+    #         if xx.lsv_index == 0 and junc_mtrx[xx.index].sum() > 0:
+    #
+    #             lsv_idx += 1
+    #             xx.lsv_index = lsv_idx
+    #             np_jjlist.append(junc_mtrx[xx.index])
+    #
+    #     h_lsv.attrs['coverage'] = [xx.lsv_index for xx in self.junctions]
+    #     # vh_lsv = h_lsv.create_group('visual')
+    #     # self.get_visual_lsv().to_hdf5(vh_lsv)
+    #     return lsv_idx
 
-        h_lsv = hdf5grp.create_group("LSVs/%s" % self.id)
-        h_lsv.attrs['id'] = self.id
-        h_lsv.attrs['type'] = self.type
+
+    cdef int add_lsv(LSV self, np.ndarray junc_mtrx, list type_dict, dict values, float fitfunc_r,
+                     object majiq_config) except -1:
+
+        cdef list val = []
+        cdef Junction xx
+
+        type_dict.append((self.id, self.type))
 
         for xx  in self.junctions:
-            if xx.lsv_index == 0 and junc_mtrx[xx.index].sum() > 0:
+            val.append(junc_mtrx[xx.index])
 
-                lsv_idx += 1
-                xx.lsv_index = lsv_idx
-                np_jjlist.append(junc_mtrx[xx.index])
+        values[self.id] = sample_junctions(np.array(val), fitfunc_r, majiq_config)
 
-        h_lsv.attrs['coverage'] = [xx.lsv_index for xx in self.junctions]
-        vh_lsv = h_lsv.create_group('visual')
-        self.get_visual_lsv().to_hdf5(vh_lsv)
-        return lsv_idx
 
     cdef tuple sample_lsvs(LSV self, np.ndarray junc_mtrx, float fitfunc_r, object majiq_config):
         cdef Junction xx
@@ -216,7 +234,7 @@ cdef class LSV:
 
 
 cdef int _detect_lsvs(list list_exons, np.ndarray junc_mtrx, float fitfunc_r, str gid, str gchrom, str gstrand,
-                 object majiq_config, outf, list np_jjlist, object logger) except -1:
+                 object majiq_config, dict lsv_dict, list type_tlb, object logger) except -1:
 
     cdef int count = 0
     cdef np.ndarray sum_trx = junc_mtrx.sum(axis=1)
@@ -245,14 +263,12 @@ cdef int _detect_lsvs(list list_exons, np.ndarray junc_mtrx, float fitfunc_r, st
                 except InvalidLSV:
                     continue
 
-    lsv_idx = outf.attrs['lsv_idx']
-
     for ss in lsv_list[0]:
         for st in lsv_list[1]:
             if set(ss.junctions).issubset(set(st.junctions)) and not set(ss.junctions).issuperset(set(st.junctions)):
                 break
         else:
-            lsv_idx = ss.add_lsv(outf, junc_mtrx, np_jjlist, lsv_idx)
+            ss.add_lsv(junc_mtrx, type_tlb, lsv_dict, fitfunc_r, majiq_config)
             count += 1
 
     for st in lsv_list[1]:
@@ -260,18 +276,15 @@ cdef int _detect_lsvs(list list_exons, np.ndarray junc_mtrx, float fitfunc_r, st
             if set(st.junctions).issubset(set(ss.junctions)):
                 break
         else:
-            lsv_idx = st.add_lsv(outf, junc_mtrx, np_jjlist, lsv_idx)
+            st.add_lsv(junc_mtrx, type_tlb, lsv_dict, fitfunc_r, majiq_config)
             count += 1
-
-    outf.attrs['lsv_idx'] = lsv_idx
-    outf.attrs['num_lsvs'] = outf.attrs['num_lsvs'] + count
 
     return count
 
 ###API
 
 cpdef detect_lsvs(object dict_of_genes, dict dict_junctions, dict list_exons, np.ndarray junc_mtrx, float fitfunc_r,
-                  object majiq_config, out_f, list np_jjlist, object logger):
+                  object majiq_config, dict lsv_dict, list lsv_type_list, object logger):
 
     cdef str gne_id
     cdef int gne_idx
@@ -280,12 +293,12 @@ cpdef detect_lsvs(object dict_of_genes, dict dict_junctions, dict list_exons, np
     for gne_idx, (gne_id, gene_obj) in enumerate(dict_of_genes.items()):
         # if gene_obj['nreads'] > 0:
         _detect_lsvs(list_exons[gne_id], junc_mtrx, fitfunc_r, gne_id, gene_obj['chromosome'],
-                     gene_obj['strand'], majiq_config, out_f, np_jjlist, logger)
+                     gene_obj['strand'], majiq_config, lsv_dict, lsv_type_list, logger)
         for jj in dict_junctions[gne_id].values():
             jj.reset()
         gene_obj['nreads'] = 0
 
-cpdef tuple sample_junctions(np.ndarray junc_mtrx, float fitfunc_r, object majiq_config):
+cpdef tuple sample_junctions_old(np.ndarray junc_mtrx, float fitfunc_r, object majiq_config):
     cdef Junction xx
     cdef list ex_index
     cdef np.ndarray s_lsv, lsv_trs
@@ -297,4 +310,19 @@ cpdef tuple sample_junctions(np.ndarray junc_mtrx, float fitfunc_r, object majiq
                                   k=majiq_config.k,
                                   fitted_one_over_r=fitfunc_r)
 
-    return s_lsv, lsv_trs
+    return s_lsv
+
+cpdef np.ndarray[DTYPE_t, ndim=2] sample_junctions(np.ndarray junc_mtrx, float fitfunc_r, object majiq_config):
+    cdef Junction xx
+    cdef list ex_index
+    cdef np.ndarray s_lsv, lsv_trs
+
+    mark_stacks(junc_mtrx, fitfunc_r, majiq_config.pvalue_limit)
+    s_lsv = sample_from_junctions(junction_list=junc_mtrx,
+                                  m=majiq_config.m,
+                                  k=majiq_config.k,
+                                  fitted_one_over_r=fitfunc_r)
+
+
+
+    return s_lsv

@@ -23,20 +23,20 @@ def calcpsi(args):
     return pipeline_run(CalcPsi(args))
 
 
-def psi_quantification(list_of_lsv, chnk, process_conf, logger):
+def psi_quantification(list_of_lsv, chnk, conf, logger):
 
     logger.info("Quantifying LSVs PSI.. %s" % chnk)
-    f_list = majiq_io.get_extract_lsv_list(list_of_lsv, process_conf.files, process_conf.m_samples)
+    f_list = majiq_io.get_extract_lsv_list(list_of_lsv, conf.files, conf.m_samples)
     for lidx, lsv_id in enumerate(list_of_lsv):
         if lidx % 50 == 0:
             print("Event %d ..." % lidx)
             sys.stdout.flush()
 
-        psi = np.array(f_list[lidx].coverage) * process_conf.weights[:, None, None]
-        mu_psi, post_psi = psi_posterior(psi, psi.shape[2], len(process_conf.files), process_conf.nbins,
-                                         f_list[lidx].type)
+        psi = np.array(f_list[lidx].coverage) * conf.weights[:, None, None]
+        mu_psi, post_psi = psi_posterior(psi, psi.shape[2], len(conf.files), conf.nbins,
+                                         conf.lsv_type_dict[lidx])
         qm = QueueMessage(QUEUE_MESSAGE_PSI_RESULT, (post_psi, mu_psi, lsv_id), chnk)
-        process_conf.queue.put(qm, block=True)
+        conf.queue.put(qm, block=True)
 
 
 class CalcPsi(BasicPipeline):
@@ -56,15 +56,20 @@ class CalcPsi(BasicPipeline):
         logger.info("Command: %s" % " ".join(sys.argv))
         logger.info("Running Psi ...")
         logger.info("GROUP: %s" % self.files)
+
+        manager = mp.Manager()
+        self.lsv_type_dict = manager.dict()
+
         self.nbins = 40
         self.queue = mp.Queue()
         self.lock = [mp.Lock() for xx in range(self.nthreads)]
 
         meta = majiq_io.read_meta_info(self.files)
         self.m_samples = meta['m_samples']
-        list_of_lsv, lsv_dict_graph = majiq_io.extract_lsv_summary(self.files, minnonzero=self.minpos,
-                                                                   min_reads=self.minreads, percent=self.min_exp,
-                                                                   logger=logger)
+
+        list_of_lsv = majiq_io.extract_lsv_summary(self.files, minnonzero=self.minpos, types_dict=self.lsv_types,
+                                                   min_reads=self.minreads, percent=self.min_exp,
+                                                   logger=logger)
         nthreads = min(self.nthreads, len(list_of_lsv))
         weights = self.calc_weights(self.weights, self.files, list_of_lsv, self.lock, self.queue, self.name)
         self.weights = weights
@@ -82,8 +87,7 @@ class CalcPsi(BasicPipeline):
                 out_h5p.set_analysis_type(ANALYSIS_PSI)
                 out_h5p.add_experiments(group_name=self.name, experiment_names=meta['experiments'])
 
-                queue_manager(out_h5p, self.lock, self.queue, num_chunks=nthreads,
-                              list_of_lsv_graphics=lsv_dict_graph, logger=logger)
+                queue_manager(out_h5p, self.lock, self.queue, num_chunks=nthreads, logger=logger)
 
             pool.join()
 

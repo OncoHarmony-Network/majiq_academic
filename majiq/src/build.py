@@ -204,26 +204,27 @@ def parsing_files(sam_file_list, chnk, conf, logger):
         logger.debug("[%s] Fitting NB function with constitutive events..." % sam_file)
         fitfunc_r = fit_nb(junc_mtrx[indx, :], "%s/nbfit" % majiq_config.outDir, logger=logger)
 
-        with h5py.File('%s/%s.majiq' % (majiq_config.outDir, sam_file), 'w') as out_f:
-            out_f.attrs['m_samples'] = process_conf.m
-            out_f.attrs['sample_id'] = sam_file
-            out_f.attrs['date'] = datetime.datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S')
-            out_f.attrs['VERSION'] = VERSION
-            out_f.attrs['lsv_idx'] = 0
-            out_f.attrs['num_lsvs'] = 0
-            out_f.attrs['genome'] = majiq_config.genome
-            out_f.attrs['one_over_r'] = fitfunc_r
+        # with h5py.File('%s/%s.majiq' % (majiq_config.outDir, sam_file), 'w') as out_f:
+        #     out_f.attrs['m_samples'] = process_conf.m
+        #     out_f.attrs['sample_id'] = sam_file
+        #     out_f.attrs['date'] = datetime.datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S')
+        #     out_f.attrs['VERSION'] = VERSION
 
-            logger.info('Detecting lsvs')
-            np_jjlist = [np.zeros(effective_len)]
 
-            detect_lsvs(conf.genes_dict, dict_junctions, list_exons, junc_mtrx, fitfunc_r, majiq_config, out_f,
-                        np_jjlist, logger)
+        logger.info('Detecting lsvs')
+        lsv_type_list = []
+        lsv_dict = {}
 
-            logger.info('dump samples')
-            vals = sample_junctions(np.array(np_jjlist), fitfunc_r, majiq_config)
-            majiq_io.dump_lsv_coverage(out_f, vals[0], vals[1])
-            del np_jjlist
+        detect_lsvs(conf.genes_dict, dict_junctions, list_exons, junc_mtrx, fitfunc_r, majiq_config, lsv_dict,
+                    lsv_type_list, logger)
+
+        logger.info('dump samples')
+        # vals = sample_junctions(lsv_dict, fitfunc_r, majiq_config)
+        fname = '%s/%s.majiq' % (majiq_config.outDir, sam_file)
+        majiq_io.dump_lsv_coverage(fname, lsv_dict, lsv_type_list)
+
+        del lsv_type_list
+        del lsv_dict
 
 
 class Builder(BasicPipeline):
@@ -289,9 +290,9 @@ class Builder(BasicPipeline):
         else:
             parsing_files(majiq_config.sam_list, 0, conf=self, logger=logger)
 
-        for exp_idx, sam_file in enumerate(majiq_config.sam_list):
-            with h5py.File('%s/%s.majiq' % (majiq_config.outDir, sam_file), 'r+') as f:
-                logger.info('%s LSVs found in %s' % (f.attrs['num_lsvs'], sam_file))
+        # for exp_idx, sam_file in enumerate(majiq_config.sam_list):
+            # with h5py.File('%s/%s.majiq' % (majiq_config.outDir, sam_file), 'r+') as f:
+            #     logger.info('%s LSVs found in %s' % (f.attrs['num_lsvs'], sam_file))
 
         logger.info("MAJIQ Builder is ended succesfully!")
         logger.info("Alakazam! Done.")

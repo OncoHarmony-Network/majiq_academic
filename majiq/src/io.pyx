@@ -16,8 +16,10 @@ import numpy as np
 cimport numpy as np
 
 
-cdef list accepted_transcripts = ['mRNA', 'transcript']
+cdef list accepted_transcripts = ['mRNA', 'transcript', 'lnc_RNA', 'miRNA', 'ncRNA',
+                                  'rRNA', 'scRNA', 'snRNA', 'snoRNA', 'tRNA', 'pseudogenic_transcript']
 cdef str transcript_id_keys = 'ID'
+cdef list accepted_genes = ['gene', 'ncRNA_gene', 'pseudogene']
 cdef list gene_name_keys = ['Name', 'gene_name']
 cdef list gene_id_keys = ['ID', 'gene_id']
 
@@ -46,7 +48,7 @@ cdef int _read_gff(str filename, str outDir, object elem_dict,  object all_genes
         start = record.start
         end = record.end
 
-        if record.type == 'gene':
+        if record.type in accepted_genes:
             for gname_k in gene_name_keys:
                 try:
                     gene_name = record.attributes[gname_k]
@@ -91,8 +93,8 @@ cdef int _read_gff(str filename, str outDir, object elem_dict,  object all_genes
                 trcpt_id_dict[record.attributes['ID']] = [gn_id, []]
 
             except KeyError:
-                logging.info("Error, incorrect gff. mRNA %s doesn't have valid gene %s" % (transcript_name, parent))
-                raise
+                logging.error("Error, incorrect gff. mRNA %s doesn't have valid gene %s" % (transcript_name, parent))
+                #raise
 
         elif record.type == 'exon':
             parent_tx_id = record.attributes['Parent']
@@ -103,8 +105,8 @@ cdef int _read_gff(str filename, str outDir, object elem_dict,  object all_genes
                 trcpt_id_dict[parent_tx_id][1].append((start, end))
 
             except KeyError:
-                logging.WARNING("Error, incorrect gff. exon at line %s "
-                                "doesn't have valid mRNA %s" % (0, parent_tx_id))
+                logging.warning("Error, incorrect gff. exon "
+                                "doesn't have valid mRNA %s" % parent_tx_id)
 
 
     for parent_tx_id, (gn_id, coord_list) in trcpt_id_dict.items():
@@ -172,12 +174,11 @@ cdef int _load_db(str filename, object elem_dict, object genes_dict) except -1:
     for xx in genes_dict.keys():
         elem_dict[xx] = all_files[xx]
 
-cdef int _dump_lsv_coverage(out_f, cov_list, attrs_list):
-    out_f.create_dataset(JUNCTIONS_DATASET_NAME, data=cov_list,
-                         compression='gzip', compression_opts=9)
-    out_f.create_dataset(JUNCTIONS_ATTRS, data=attrs_list,
-                         compression='gzip', compression_opts=9)
-
+cdef int _dump_lsv_coverage(str filename, dict cov_dict, list type_list):
+    dt=np.dtype('|S250, |S250')
+    with open(filename, 'w+b') as ofp:
+        cov_dict['lsv_types'] = np.array(type_list, dtype=dt)
+        np.savez(ofp, **cov_dict)
 
 cdef int _dump_elems_list(object elem_dict, object gene_info, str outDir) except -1:
 
@@ -212,24 +213,17 @@ cdef _get_extract_lsv_list(list list_of_lsv_id, list file_list, int msamples):
 
     for lsv_id in list_of_lsv_id:
         lsv_type = None
+        lsv_cov = None
         for fidx, fname in enumerate(file_list):
+            with open(fname, 'rb') as fp:
+                cov = np.load(fp)[lsv_id][:,:-2]
+            njunc = cov.shape[0]
 
-            with h5py.File(fname, 'r') as data:
-                try:
-                    if lsv_type is None:
-                        lsv_type = data['LSVs/%s' % lsv_id].attrs['type']
-                        njunc = len(lsv_type.split('|')) -1
-                        lsv_cov = np.zeros(shape=(n_exp, njunc, msamples),  dtype=float)
+            if lsv_cov is None:
+                lsv_cov = np.zeros(shape=(n_exp, njunc, msamples),  dtype=float)
 
-                    assert data['LSVs/%s' % lsv_id].attrs['type'] == lsv_type, "ERROR lsv_type doesn't match " \
-                                                                               "for %s" % lsv_id
-                    cov = data['LSVs/%s' % lsv_id].attrs['coverage']
-                    #lsv_cov[fidx] = data[JUNCTIONS_DATASET_NAME][cov[0]:cov[1]]
-                    lsv_cov[fidx] = np.array([data[JUNCTIONS_DATASET_NAME][xidx] for xidx in cov])
-                except KeyError:
-                    pass
-
-        qq = quant_lsv(lsv_id, lsv_type, lsv_cov)
+            lsv_cov[fidx] = cov
+        qq = quant_lsv(lsv_id, lsv_cov)
         result.append(qq)
     return result
 
@@ -257,9 +251,10 @@ def read_meta_info(list_of_files):
     meta['m_samples'] = m_samples
     return meta
 
-cpdef extract_lsv_summary(list files, int minnonzero, int min_reads, dict epsi=None, int percent=-1, object logger=None):
+cpdef extract_lsv_summary(list files, int minnonzero, int min_reads, object types_dict, dict epsi=None,
+                          int percent=-1, object logger=None):
     cdef dict lsv_list = {}
-    cdef dict lsv_graphic = {}
+    cdef dict lsv_types = {}
     cdef int nfiles = len(files)
     cdef int fidx
     cdef str ff, xx
@@ -273,25 +268,25 @@ cpdef extract_lsv_summary(list files, int minnonzero, int min_reads, dict epsi=N
     for fidx, ff in enumerate(files):
         if logger:
             logger.info("Parsing file: %s" % ff)
-        data = h5py.File(ff, 'r')
-        for xx in data['LSVs']:
-            mtrx = np.array([data['junc_cov'][xidx] for xidx in data['LSVs/%s' % xx].attrs['coverage']])
-            try:
-                vals = (mtrx[:, 0] >= min_reads * (mtrx[:, 1] >= minnonzero))
-            except IndexError:
-                logger.info("Skipping incorrect lsv %s" % xx)
-                continue
+
+        with open(ff, 'rb') as fp:
+            all_files = np.load(fp)
+
+        lsv_types = {xx[0]:xx[1] for xx in all_files['lsv_types']}
+        for xx in lsv_types:
+            lsv_data = all_files[xx][:,-2:]
 
             try:
-                lsv_list[xx][fidx] = int(vals.sum() >= 1)
+                lsv_list[xx] += int(np.any(np.logical_and(lsv_data[:, 0] >= minnonzero, lsv_data[:,1] >= min_reads)))
                 if epsi is not None:
-                    epsi[xx] += mtrx[:,0]
-            except:
-                lsv_list[xx]= [0] * nfiles
-                lsv_list[xx][fidx] = int(vals.sum() >= 1)
-                lsv_graphic[xx] = LsvGraphic.easy_from_hdf5(data['LSVs/%s/visual' % xx])
+                    epsi[xx] += lsv_data[:, 0]
+
+            except KeyError:
+                lsv_list[xx] = int(np.any(np.logical_and(lsv_data[:, 0] >= minnonzero, lsv_data[:,1] >= min_reads)))
                 if epsi is not None:
-                    epsi[xx] = mtrx[:,0]
+                    epsi[xx] = lsv_data[:, 0]
+
+        types_dict.update(lsv_types)
 
     if epsi is not None:
         for xx in epsi.keys():
@@ -299,9 +294,9 @@ cpdef extract_lsv_summary(list files, int minnonzero, int min_reads, dict epsi=N
             epsi[xx] = epsi[xx] / epsi[xx].sum()
             epsi[xx][np.isnan(epsi[xx])] = 1.0 / nfiles
 
-    lsv_id_list = [xx for xx,yy in lsv_list.items() if np.sum(yy) >= percent]
+    lsv_id_list = [xx for xx, yy in lsv_list.items() if yy >= percent]
 
-    return lsv_id_list, lsv_graphic
+    return lsv_id_list
 
 
 cpdef int dump_lsv_coverage(out_f, cov_list, attrs_list):
@@ -333,44 +328,6 @@ cpdef int parse_annot(str filename, str out_dir,  object elem_dict,  object all_
         raise
 
 
-# cpdef dict retrieve_db_genes(str out_dir):
-#
-#     cdef list names = ['id', 'name', 'chromosome', 'strand', 'start', 'end']
-#     cdef dict dd
-#
-#     gene_info = np.load('%s.npz' % get_build_temp_db_filename(out_dir))['gene_info']
-#     dd = {gene_info[ii][0].decode('UTF-8'):{xx: gene_info[ii][idx]
-#                                             for idx, xx in enumerate(names)}
-#           for ii in range(gene_info.shape[0])}
-#
-#     return dd
-#
-# cpdef int retrieve_db(str gne_id, str out_dir, dict dict_junctions,list list_exons, list list_introns,
-#                      list denovo_ir=[], int default_index=-1):
-#
-#
-#     cdef dict gne_dict = {}
-#     cdef dict j_attrs, ex_attrs
-#     cdef Junction junc
-#     cdef str xx
-#     cdef object db_f
-#     cdef int njuncs = 0
-#
-#
-#     if list_introns is not None:
-#         func_list = {EX_TYPE: _read_exon, IR_TYPE: _read_ir, J_TYPE: _read_junction}
-#     else:
-#         func_list = {EX_TYPE: _read_exon, IR_TYPE: _pass_ir, J_TYPE: _read_junction}
-#
-#
-#     all_files = np.load('%s.npz' % get_build_temp_db_filename(out_dir))
-#     mtrx = all_files[gne_id]
-#     for i in range(mtrx.shape[0]):
-#         func_list[mtrx[i,3]](mtrx[i], gne_id, dict_junctions, list_exons, list_introns,
-#                              default_index)
-#     return njuncs
-
-
 cpdef int from_matrix_to_objects( str gne_id, object elem_dicts, dict dict_junctions,
                                  list list_exons, list list_introns=None, int default_index=-1):
     cdef dict func_list
@@ -391,107 +348,6 @@ cpdef int add_elements_mtrx(dict new_elems, object shared_elem_dict):
     for gne, mtrx in new_elems.items():
         kk = shared_elem_dict[gne]
         shared_elem_dict[gne] = kk + new_elems[gne]
-        # np.vstack(shared_elem_dict, new_elems)
-
-
-# cpdef dict retrieve(str out_dir, dict dict_junctions, dict list_exons, dict list_introns, list denovo_ir=[],
-#                     int default_index=-1):
-#
-#     cdef dict gne_dict = {}
-#     cdef dict j_attrs, ex_attrs
-#     cdef Junction junc
-#     cdef str xx
-#     cdef object db_f
-#     cdef int njuncs = 0
-#
-#     cdef list names = ['id', 'name', 'chromosome', 'strand']
-#     cdef list coords_gene = ['start', 'end']
-#     cdef dict dd
-#
-#     if list_introns is not None:
-#         func_list = {EX_TYPE: _read_exon, IR_TYPE: _read_ir, J_TYPE: _read_junction}
-#     else:
-#         func_list = {EX_TYPE: _read_exon, IR_TYPE: _pass_ir, J_TYPE: _read_junction}
-#
-#
-#     all_files = np.load('%s.npz' % get_build_temp_db_filename(out_dir))
-#     gne_list = all_files['gene_info']
-#
-#     for gne_row in gne_list:
-#         gne_id = gne_row[0].decode('UTF-8')
-#         gne_dict[gne_id] = gne_row
-#         try:
-#             mtrx = all_files[gne_id]
-#         except KeyError:
-#             print('not found gne_dict', gne_row[0])
-#             continue
-#
-#         dict_junctions[gne_id] = {}
-#         list_exons[gne_id] = []
-#         gne_dict[gne_id] = {xx: gne_row[idx].decode('UTF-8') for idx, xx in enumerate(names)}
-#         gne_dict[gne_id].update({xx: gne_row[idx+4] for idx, xx in enumerate(coords_gene)})
-#
-#         if list_introns is not None:
-#             list_introns[gne_id] = []
-#             for i in range(mtrx.shape[0]):
-#                 func_list[mtrx[i,3]](mtrx[i], gne_id, dict_junctions[gne_id], list_exons[gne_id],
-#                                      list_introns[gne_id], default_index)
-#         else:
-#             for i in range(mtrx.shape[0]):
-#                 func_list[mtrx[i,3]](mtrx[i], gne_id, dict_junctions[gne_id], list_exons[gne_id],
-#                                      None, default_index)
-#
-#     all_files.close()
-#     return gne_dict
-#
-#
-# cpdef retrive_db_matrix(str outDir):
-#     all_files = np.load('%s.npz' % get_build_temp_db_filename(outDir))
-#     return
-#
-# def retrieve_db_info(str gne_id, str out_dir, dict dict_junctions,list list_exons, list list_introns,
-#                      list denovo_ir=[], int default_index=-1):
-#
-#     cdef dict j_attrs, ex_attrs
-#     cdef Junction junc
-#     cdef str xx
-#     cdef object db_f
-#     cdef int njuncs = 0
-#
-#     if not denovo_ir:
-#         mode = 'r'
-#     else:
-#         mode = 'r+'
-#
-#     with h5py.File(get_build_temp_db_filename(out_dir), mode=mode) as db_f:
-#
-#         for xx in db_f['%s/junctions' % gne_id]:
-#             j_attrs = dict(db_f['%s/junctions/%s' % (gne_id, xx)].attrs)
-#             njuncs +=1
-#             dict_junctions[(j_attrs['start'], j_attrs['end'])] = Junction(j_attrs['start'], j_attrs['end'],
-#                                                                           gne_id, default_index,
-#                                                                           annot=j_attrs['annotated'])
-#
-#         mtrx = np.array(db_f['%s/db_coords' % gne_id])
-#
-#         for idx, row in enumerate(mtrx[mtrx[:, 3] == EX_TYPE, :]):
-#             list_exons.append(Exon(row[0], row[1], annot=bool(row[2]), db_idx=idx))
-#
-#         if list_introns is not None:
-#             for row in mtrx[mtrx[:, 3] == IR_TYPE, :]:
-#                 list_introns.append(Intron(row[0], row[1], annot=bool(row[2]), db_idx=-1))
-#
-#             if denovo_ir:
-#                 n_mtrx = np.array(denovo_ir)
-#                 shp = mtrx.shape
-#                 shp_new = shp[0] + n_mtrx.shape[0]
-#                 db_f['%s/db_coords' % gne_id].resize((shp_new, shp[1]))
-#                 db_f['%s/db_coords' % gne_id][shp[0]:] = n_mtrx
-#
-#                 for ir in denovo_ir:
-#                     list_introns.append(Intron(ir[0], ir[1], annot=False, db_idx=-1))
-#
-#     return njuncs
 
 
 def dump_elements(object genes_dict, object elem_dict, str outDir):
