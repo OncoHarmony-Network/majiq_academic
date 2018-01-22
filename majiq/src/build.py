@@ -164,7 +164,7 @@ def parsing_files(sam_file_list, chnk, conf, logger):
     logger.info('Reading DB')
 
     ngenes = len(conf.genes_dict)
-    loop_step = min(1, int(ngenes/10))
+    loop_step = max(1, int(ngenes/10))
 
     for gne_id, gene_obj in conf.genes_dict.items():
         dict_junctions[gne_id] = {}
