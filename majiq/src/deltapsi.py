@@ -11,7 +11,7 @@ from majiq.src.constants import *
 from majiq.src.multiproc import QueueMessage, process_conf, queue_manager, process_wrapper, chunks
 from voila.api import Matrix
 from voila.constants import ANALYSIS_DELTAPSI
-
+import os
 
 def deltapsi(args):
     return pipeline_run(DeltaPsi(args))
@@ -122,7 +122,9 @@ class DeltaPsi(BasicPipeline):
                 # out_h5p.add_experiments(group_name=self.names[0], experiment_names=meta1['experiments'])
                 # out_h5p.add_experiments(group_name=self.names[1], experiment_names=meta2['experiments'])
                 out_h5p.group_names = self.names
-                out_h5p.experiment_names = [self.files1, self.files2]
+                exps1 = [os.path.splitext(os.path.basename(xx))[0] for xx in self.files1]
+                exps2 = [os.path.splitext(os.path.basename(xx))[0] for xx in self.files2]
+                out_h5p.experiment_names = [exps1, exps2]
                 queue_manager(out_h5p, self.lock, self.queue, num_chunks=nthreads, logger=logger,
                               lsv_type=self.lsv_type_dict)
 

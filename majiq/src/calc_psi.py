@@ -13,7 +13,7 @@ from majiq.src.multiproc import QueueMessage, process_conf, queue_manager, proce
 from voila.api import Matrix
 from voila.constants import ANALYSIS_PSI
 import majiq.src.logger as majiq_logger
-
+import os
 
 ################################
 # PSI calculation pipeline     #
@@ -82,7 +82,8 @@ class CalcPsi(BasicPipeline):
             with Matrix(get_quantifier_voila_filename(self.outDir, self.name), 'w') as out_h5p:
 
                 out_h5p.analysis_type = ANALYSIS_PSI
-                out_h5p.add_experiments(group_name=self.name, experiment_names=self.files)
+                exps = [os.path.splitext(os.path.basename(xx))[0] for xx in self.files]
+                out_h5p.add_experiments(group_name=self.name, experiment_names=exps)
 
                 queue_manager(out_h5p, self.lock, self.queue, num_chunks=nthreads, lsv_type=self.lsv_type_dict,
                               logger=logger)
