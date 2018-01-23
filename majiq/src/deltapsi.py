@@ -17,17 +17,16 @@ def deltapsi(args):
     return pipeline_run(DeltaPsi(args))
 
 
-def deltapsi_quantification(list_of_lsv, chnk, process_conf, logger):
-    logger.info("Quantifying LSVs PSI.. %s" % chnk)
-    num_exp = [len(process_conf.files1), len(process_conf.files1)]
+def deltapsi_quantification(list_of_lsv, chnk, conf, logger):
+    logger.info("Quantifying LSVs Delta PSI.. %s" % chnk)
+    num_exp = [len(conf.files1), len(conf.files1)]
 
     f_list = [None, None]
 
-    f_list[0] = majiq_io.get_extract_lsv_list(list_of_lsv, process_conf.files1, process_conf.m_samples)
-    f_list[1] = majiq_io.get_extract_lsv_list(list_of_lsv, process_conf.files2, process_conf.m_samples)
+    f_list[0] = majiq_io.get_extract_lsv_list(list_of_lsv, conf.files1)
+    f_list[1] = majiq_io.get_extract_lsv_list(list_of_lsv, conf.files2)
 
-    prior_matrix = np.array(majiq_io.load_bin_file(get_prior_matrix_filename(process_conf.outDir,
-                                                                             process_conf.names)))
+    prior_matrix = np.array(majiq_io.load_bin_file(get_prior_matrix_filename(conf.outDir, conf.names)))
 
     for lidx, lsv_id in enumerate(list_of_lsv):
         if lidx % 50 == 0:
@@ -35,15 +34,14 @@ def deltapsi_quantification(list_of_lsv, chnk, process_conf, logger):
             sys.stdout.flush()
         if f_list[0][lidx].coverage.shape[1] < 2:
             continue
-        post_matrix, posterior_psi1, posterior_psi2, mu_psi1, mu_psi2 = deltapsi_posterior(f_list[0][lidx].coverage,
-                                                                                           f_list[1][lidx].coverage,
-                                                                                           prior_matrix,
-                                                                                           process_conf.m_samples,
-                                                                                           num_exp, process_conf.nbins,
-                                                                                           f_list[0][lidx].type)
-        qm = QueueMessage(QUEUE_MESSAGE_DELTAPSI_RESULT, (post_matrix, posterior_psi1, posterior_psi2,
+        post_dpsi, post_psi1, post_psi2, mu_psi1, mu_psi2 = deltapsi_posterior(f_list[0][lidx].coverage,
+                                                                               f_list[1][lidx].coverage, prior_matrix,
+                                                                               f_list[0][lidx].coverage.shape[2],
+                                                                               num_exp, conf.nbins,
+                                                                               conf.lsv_type_dict[lsv_id])
+        qm = QueueMessage(QUEUE_MESSAGE_DELTAPSI_RESULT, (post_dpsi, post_psi1, post_psi2,
                                                           mu_psi1, mu_psi2, lsv_id), chnk)
-        process_conf.queue.put(qm, block=True)
+        conf.queue.put(qm, block=True)
 
 
 prior_conf = collections.namedtuple('conf', 'iter plotpath breakiter names binsize')
@@ -76,30 +74,30 @@ class DeltaPsi(BasicPipeline):
         self.queue = mp.Queue()
         self.lock = [mp.Lock() for xx in range(self.nthreads)]
 
+        manager = mp.Manager()
+        self.lsv_type_dict = manager.dict()
+
         lsv_empirical_psi1 = {}
-        lsv_empirical_psi2 = {}
-        meta1 = majiq_io.read_meta_info(self.files1)
-        list_of_lsv1, lsv_dict_graph = majiq_io.extract_lsv_summary(self.files1, epsi=lsv_empirical_psi1,
-                                                                    minnonzero=self.minpos, min_reads=self.minreads,
-                                                                    percent=self.min_exp, logger=logger)
+        list_of_lsv1 = majiq_io.extract_lsv_summary(self.files1, epsi=lsv_empirical_psi1, types_dict=self.lsv_type_dict,
+                                                    minnonzero=self.minpos, min_reads=self.minreads,
+                                                    percent=self.min_exp, logger=logger)
         weights[0] = self.calc_weights(self.weights[0], self.files1, list_of_lsv1, self.names[0], logger=self.logger)
         logger.info("Group %s: %s LSVs" % (self.names[0], len(list_of_lsv1)))
 
-        meta2 = majiq_io.read_meta_info(self.files2)
-        list_of_lsv2, lsv_dict_graph = majiq_io.extract_lsv_summary(self.files2, epsi=lsv_empirical_psi2,
-                                                                    minnonzero=self.minpos, min_reads=self.minreads,
-                                                                    percent=self.min_exp, logger=logger)
+        lsv_empirical_psi2 = {}
+        list_of_lsv2 = majiq_io.extract_lsv_summary(self.files2, epsi=lsv_empirical_psi2, types_dict=self.lsv_type_dict,
+                                                    minnonzero=self.minpos, min_reads=self.minreads,
+                                                    percent=self.min_exp, logger=logger)
         weights[1] = self.calc_weights(self.weights[1], self.files2, list_of_lsv2, self.names[1], logger=self.logger)
+
         logger.info("Group %s: %s LSVs" % (self.names[1], len(list_of_lsv1)))
 
         list_of_lsv = list(set(list_of_lsv1).intersection(set(list_of_lsv2)))
         logger.info("Number quantifiable LSVs: %s" % len(list_of_lsv))
-        assert meta1['m_samples'] == meta2['m_samples'], \
-            "Groups have different number of bootstrap samples(%s,%s)" % (meta1['m_samples'], meta2['m_samples'])
+        # assert meta1['m_samples'] == meta2['m_samples'], \
+        #     "Groups have different number of bootstrap samples(%s,%s)" % (meta1['m_samples'], meta2['m_samples'])
 
-        self.m_samples = meta1['m_samples']
-
-        psi_space, prior_matrix = gen_prior_matrix(lsv_dict_graph, lsv_empirical_psi1, lsv_empirical_psi2,
+        psi_space, prior_matrix = gen_prior_matrix(self.lsv_type_dict, lsv_empirical_psi1, lsv_empirical_psi2,
                                                    self.outDir, names=self.names, breakiter=self.breakiter,
                                                    plotpath=self.plotpath, iter=self.iter, binsize=self.binsize,
                                                    numbins=self.nbins, defaultprior=self.default_prior,
@@ -120,14 +118,13 @@ class DeltaPsi(BasicPipeline):
             pool.close()
 
             with Matrix(get_quantifier_voila_filename(self.outDir, self.names, deltapsi=True), 'w') as out_h5p:
-                out_h5p.genome = meta1['genome']
                 out_h5p.analysis_type = ANALYSIS_DELTAPSI
                 # out_h5p.add_experiments(group_name=self.names[0], experiment_names=meta1['experiments'])
                 # out_h5p.add_experiments(group_name=self.names[1], experiment_names=meta2['experiments'])
                 out_h5p.group_names = self.names
-                out_h5p.experiment_names = [meta1['experiments'], meta2['experiments']]
+                out_h5p.experiment_names = [self.files1, self.files2]
                 queue_manager(out_h5p, self.lock, self.queue, num_chunks=nthreads, logger=logger,
-                              list_of_lsv_graphics=lsv_dict_graph)
+                              lsv_type=self.lsv_type_dict)
 
             pool.join()
 

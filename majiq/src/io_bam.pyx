@@ -378,21 +378,15 @@ def read_juncs(str fname, bint is_junc_file, dict dict_exons, object dict_genes,
 
                 if junc[0] in start_sp or junc[1] in end_sp:
                     found = True
-                    # junc_obj = Junction(junc[0],  junc[1], gid, -1, annot=False)
                     qm = QueueMessage(QUEUE_MESSAGE_BUILD_JUNCTION, (gid, junc[0], junc[1], gname), 0)
                     queue.put(qm, block=True)
-                    # junctions[gid][junc[:-1]] = junc_obj
                 else:
                     possible_genes.append(gid)
 
-
             if not found and len(possible_genes) > 0:
                 for gid in possible_genes:
-                    # junc_obj = Junction(junc[0],  junc[1], gid, -1, annot=False)
                     qm = QueueMessage(QUEUE_MESSAGE_BUILD_JUNCTION, (gid, junc[0], junc[1], gname), 0)
                     queue.put(qm, block=True)
-                    # junctions[gid][junc[:-1]] = junc_obj
-
 
 
 @cython.boundscheck(False) # turn off bounds-checking for entire function

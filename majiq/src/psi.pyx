@@ -369,7 +369,7 @@ def calc_local_weights(divs, rho, local):
 
 @cython.boundscheck(False) # turn off bounds-checking for entire function
 @cython.wraparound(False)  # turn off negative index wrapping for entire function
-cdef tuple _empirical_delta_psi(list list_of_lsv, dict lsv_empirical_psi1, dict lsv_empirical_psi2, dict lsv_graphic):
+cdef tuple _empirical_delta_psi(list list_of_lsv, dict lsv_empirical_psi1, dict lsv_empirical_psi2, dict lsv_type):
     """
     Simple PSI calculation without involving a dirichlet prior, coming from reads from junctions
     """
@@ -379,7 +379,7 @@ cdef tuple _empirical_delta_psi(list list_of_lsv, dict lsv_empirical_psi1, dict 
 
     for lsv in list_of_lsv:
         # Assuming that the type is the same in all the replicas and groups
-        if lsv_graphic[lsv].lsv_type.endswith('i'):
+        if lsv_type[lsv].endswith('i'):
             delta_psi_res = delta_psi_ir
         else:
             delta_psi_res = delta_psi
@@ -401,7 +401,7 @@ def __load_default_prior():
     return data
 
 
-def gen_prior_matrix(dict lsv_dict_graph, dict lsv_empirical_psi1, dict lsv_empirical_psi2, str output, list names,
+def gen_prior_matrix(object lsv_type, dict lsv_empirical_psi1, dict lsv_empirical_psi2, str output, list names,
                      float breakiter, str plotpath, int iter, float binsize, int numbins=20, bint defaultprior=False,
                      int minpercent=-1, object logger=None):
 
@@ -424,7 +424,7 @@ def gen_prior_matrix(dict lsv_dict_graph, dict lsv_empirical_psi1, dict lsv_empi
 
     list_of_lsv = list(set(lsv_empirical_psi1.keys()).intersection(set(lsv_empirical_psi2.keys())))
     logger.debug("'Best set' is %s events" % len(list_of_lsv))
-    best_dpsi, best_dpsi_ir = _empirical_delta_psi(list_of_lsv, lsv_empirical_psi1, lsv_empirical_psi2, lsv_dict_graph)
+    best_dpsi, best_dpsi_ir = _empirical_delta_psi(list_of_lsv, lsv_empirical_psi1, lsv_empirical_psi2, lsv_type)
 
     prior_matrix = [[], []]
     for prior_idx, best_delta_psi in enumerate((best_dpsi, best_dpsi_ir)):

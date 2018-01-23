@@ -307,23 +307,6 @@ cpdef extract_lsv_summary(list files, int minnonzero, int min_reads, object type
 cpdef int dump_lsv_coverage(out_f, cov_list, attrs_list):
     _dump_lsv_coverage(out_f, cov_list, attrs_list)
 
-
-# cpdef int init_majiq_file(str filename, str out_dir, str genome, int msamples):
-#
-#     with h5py.File('%s/%s.majiq' % (out_dir, filename), 'w') as f:
-#         f.create_dataset('junctions', (5000, msamples), maxshape=(None, msamples))
-#         f.create_dataset('junc_cov', (5000, 2), maxshape=(None, 2))
-#
-#         # fill meta info
-#         f.attrs['sample_id'] = filename
-#         f.attrs['date'] = datetime.datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S')
-#         f.attrs['VERSION'] = VERSION
-#         f.attrs['lsv_idx'] = 0
-#         f.attrs['num_lsvs'] = 0
-#         f.attrs['genome'] = genome
-
-
-
 cpdef int parse_annot(str filename, str out_dir,  object elem_dict,  object all_genes, object logging=None):
 
     try:

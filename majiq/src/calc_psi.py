@@ -35,9 +35,7 @@ def psi_quantification(list_of_lsv, chnk, conf, logger):
 
         psi = np.array(f_list[lidx].coverage) * conf.weights[:, None, None]
 
-
-        mu_psi, post_psi = psi_posterior(psi, psi.shape[2], len(conf.files), conf.nbins,
-                                         conf.lsv_type_dict[lsv_id])
+        mu_psi, post_psi = psi_posterior(psi, psi.shape[2], len(conf.files), conf.nbins, conf.lsv_type_dict[lsv_id])
         qm = QueueMessage(QUEUE_MESSAGE_PSI_RESULT, (post_psi, mu_psi, lsv_id), chnk)
         conf.queue.put(qm, block=True)
 
@@ -66,9 +64,6 @@ class CalcPsi(BasicPipeline):
         self.nbins = 40
         self.queue = mp.Queue()
         self.lock = [mp.Lock() for xx in range(self.nthreads)]
-
-        #meta = majiq_io.read_meta_info(self.files)
-        #self.m_samples = meta['m_samples']
 
         list_of_lsv = majiq_io.extract_lsv_summary(self.files, minnonzero=self.minpos, types_dict=self.lsv_type_dict,
                                                    min_reads=self.minreads, percent=self.min_exp,

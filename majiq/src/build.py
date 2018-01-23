@@ -212,7 +212,6 @@ def parsing_files(sam_file_list, chnk, conf, logger):
         #     out_f.attrs['date'] = datetime.datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S')
         #     out_f.attrs['VERSION'] = VERSION
 
-
         logger.info('Detecting lsvs')
         lsv_type_list = []
         lsv_dict = {}
