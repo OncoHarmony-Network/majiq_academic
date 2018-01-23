@@ -80,11 +80,11 @@ class CalcPsi(BasicPipeline):
             pool.map_async(process_wrapper, chunks(list_of_lsv, nthreads))
             pool.close()
             with Matrix(get_quantifier_voila_filename(self.outDir, self.name), 'w') as out_h5p:
-
                 out_h5p.analysis_type = ANALYSIS_PSI
                 exps = [os.path.splitext(os.path.basename(xx))[0] for xx in self.files]
-                out_h5p.add_experiments(group_name=self.name, experiment_names=exps)
-
+                out_h5p.experiment_names = [exps]
+                out_h5p.group_names = [self.name]
+                # out_h5p.add_experiments(group_name=self.name, experiment_names=exps)
                 queue_manager(out_h5p, self.lock, self.queue, num_chunks=nthreads, lsv_type=self.lsv_type_dict,
                               logger=logger)
 

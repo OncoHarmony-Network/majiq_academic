@@ -19,6 +19,13 @@ def base_iter(self):
         yield col, getattr(self, col)
 
 
+class Genome(Base):
+    __tablename__ = 'genome'
+    __iter__ = base_iter
+    id = Column(Integer, primary_key=True)
+    name = Column(String)
+
+
 class Experiment(Base):
     __tablename__ = 'experiment'
     __iter__ = base_iter
@@ -306,6 +313,7 @@ class Gene(Base):
         return {'start': start_exon, 'end': end_exon}
 
     def get_experiment(self, experiment_names):
+        experiment_names = tuple(y for x in experiment_names for y in x)
         gene = dict(self)
 
         gene['_id'] = self.id

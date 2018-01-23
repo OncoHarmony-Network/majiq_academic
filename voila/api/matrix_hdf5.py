@@ -42,14 +42,6 @@ class MatrixHdf5:
         return ':'.join(lsv_id.split(':')[:-2])
 
     @property
-    def genome(self):
-        return self.h['metadata']['genome'].value
-
-    @genome.setter
-    def genome(self, genome):
-        self.h.create_dataset('metadata/genome', data=genome)
-
-    @property
     def analysis_type(self):
         return self.h['metadata']['analysis_type'].value
 
@@ -80,7 +72,6 @@ class MatrixHdf5:
     @property
     def metadata(self):
         return {
-            'genome': self.genome,
             'analysis_type': self.analysis_type,
             'group_names': self.group_names,
             'experiment_names': self.experiment_names

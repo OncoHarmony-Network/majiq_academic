@@ -59,11 +59,9 @@
 
                 <script>
                     db.bulkDocs([
-                        {%- for experiment in experiments %}
-                            {{ gene.get_experiment(experiments) | to_json }},
-                            {%- for lsv in lsvs[gene.id] %}
-                                {{ lsv | to_json }},
-                            {%- endfor %}
+                        {{ gene.get_experiment(metadata.experiment_names) | to_json }},
+                        {%- for lsv in lsvs[gene.id] %}
+                            {{ lsv | to_json }},
                         {%- endfor %}
                     ]).then(function (result) {
                         console.log('successfully loaded data...')
@@ -151,7 +149,7 @@
                                 <td id=" data_td
                                     {{ gene_index }}{{ loop.index }}" class="lsvDeltaCompact primer"
                                     data-lsv-id={{ lsv.lsv_id }} data-threshold="{{ threshold }}"
-                                    genome="{{ metadata.genome }}" lsv-text-version="{{ lsv_text_version }}">
+                                    genome="{{ genome }}" lsv-text-version="{{ lsv_text_version }}">
                                     {# Hidden field to make inclusion/exclusion sortable #}
                                     <p class="hidden">
                                         {% set max_diff = [0.0] %}
@@ -179,7 +177,7 @@
                                 <td>
                                     <p>
                                         {% set ucsc_coordinates = gene.lsv_ucsc_coordinates(lsv.lsv_id) %}
-                                        <a href="http://genome.ucsc.edu/cgi-bin/hgTracks?db={{ metadata.genome }}&position={{ gene.chromosome }}:{{ ucsc_coordinates.start }}-{{ ucsc_coordinates.end }}"
+                                        <a href="http://genome.ucsc.edu/cgi-bin/hgTracks?db={{ genome }}&position={{ gene.chromosome }}:{{ ucsc_coordinates.start }}-{{ ucsc_coordinates.end }}"
                                            target="_blank">
                                             <img src="static/img/icons/ucsc3.png" title="View in UCSC Genome Browser"/>
                                         </a>

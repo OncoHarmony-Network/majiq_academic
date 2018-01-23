@@ -30,19 +30,25 @@ class SpliceGraphSQL(SQL):
             self.session.commit()
             self.session_add_count = 0
 
-    def add_experiment_names(self, experiment_names):
-        session = self.session
-        session.add_all([model.Experiment(name=name) for name in experiment_names])
+    @property
+    def genome(self):
+        return self.session.query(model.Genome.name).one()[0]
 
-    def get_experiment_names(self):
+    @genome.setter
+    def genome(self, g):
+        self.session.add(model.Genome(name=g))
+
+    @property
+    def experiment_names(self):
         return (e for e, in self.session.query(model.Experiment.name).all())
+
+    @experiment_names.setter
+    def experiment_names(self, names):
+        self.session.add_all([model.Experiment(name=name) for name in names])
 
     @staticmethod
     def check_version():
         voila_log().warning('need to implement check version.')
-
-    def get_experiments(self):
-        return tuple(e for e, in self.session.query(model.Experiment.name).all())
 
 
 class SpliceGraphType(ABC):
@@ -145,7 +151,6 @@ class Junctions(SpliceGraphSQL):
             r = model.Reads(junction_gene_id=self.gene_id, junction_start=self.start, junction_end=self.end,
                             experiment_name=experiment, reads=int(reads))
             self.sql.session_add(r)
-            self.sql.session.commit()
 
     def junction(self, gene_id, start, end):
         return self._Junction(self, gene_id, start, end)
@@ -174,8 +179,6 @@ class Genes(SpliceGraphSQL):
         @property
         def exists(self):
             return self.sql.session.query(exists().where(model.Gene.id == self.gene_id)).scalar()
-
-
 
     @property
     def genes(self):

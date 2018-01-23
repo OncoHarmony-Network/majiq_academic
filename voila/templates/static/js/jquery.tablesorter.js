@@ -1169,7 +1169,6 @@
                         svgExclInclRect = lsv.drawDeltaLSVCompactSVG($this[0], data)[0];
                     }
 
-                    console.log(svgExclInclRect);
                     $(svgExclInclRect).on("click", function (e) {
                         console.log('yup')
                         // e.preventDefault();

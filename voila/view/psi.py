@@ -100,9 +100,10 @@ class Psi(Html, VoilaArgs):
         args = self.args
         summaries_subfolder = self.get_summaries_subfolder()
         metadata = self.metadatda
+        database_name = self.database_name()
 
         with PsiSpliceGraph(args.splice_graph, 'r') as sg:
-            experiments = sg.get_experiments()
+            genome = sg.genome
             prev_page = None
             page_count = sg.get_page_count(args)
 
@@ -117,7 +118,6 @@ class Psi(Html, VoilaArgs):
                 with open(os.path.join(summaries_subfolder, page_name), 'w') as html:
 
                     for el in summary_template.generate(
-                            experiments=experiments,
                             genes=[sg.gene(gene_id) for gene_id in genes],
                             table_marks=table_marks,
                             lsvs=lsv_dict,
@@ -127,7 +127,8 @@ class Psi(Html, VoilaArgs):
                             metadata=metadata,
                             lsv_text_version=constants.LSV_TEXT_VERSION,
                             gtf=args.gtf,
-                            database_name=self.database_name()
+                            database_name=database_name,
+                            genome=genome
                     ):
                         html.write(el)
 

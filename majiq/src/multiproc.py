@@ -146,8 +146,11 @@ def queue_manager(output_h5dfp, lock_array, result_queue, num_chunks,
             elif val.get_type() == QUEUE_MESSAGE_DELTAPSI_RESULT:
                 results = val.get_value()
                 lsv_type = kwargs['lsv_type'][results[5]]
-                output_h5dfp.delta_psi(results[5]).add(lsv_type=lsv_type, bins=results[0], psi1=results[1],
-                                                       psi2=results[2], means_psi1=results[3], means_psi2=results[4])
+                # output_h5dfp.delta_psi(results[5]).add(lsv_type=lsv_type, bins=results[0], psi1=results[1],
+                #                                        psi2=results[2], means_psi1=results[3], means_psi2=results[4])
+                output_h5dfp.delta_psi(results[5]).add(lsv_type=lsv_type, bins=results[0],
+                                                       group_bins=[results[1], results[2]],
+                                                       group_means=[results[3], results[4]])
 
             elif val.get_type() == QUEUE_MESSAGE_HETER_DELTAPSI:
                 list_of_lsv_graphics = kwargs['list_of_lsv_graphics']

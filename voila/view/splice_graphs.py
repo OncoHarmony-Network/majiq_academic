@@ -40,9 +40,10 @@ class RenderSpliceGraphs(Html, VoilaArgs):
         output_html = get_output_html(args, args.splice_graph)
         summaries_subfolder = self.get_summaries_subfolder()
         log = voila_log()
+        database_name = self.database_name()
 
         with ViewSpliceGraph(args.splice_graph, 'r') as sg:
-            experiments = sg.get_experiments()
+            metadata = {'experiment_names': [list(sg.experiment_names)], 'group_names': [None]}
             prev_page = None
             page_count = sg.get_page_count(args)
 
@@ -61,12 +62,11 @@ class RenderSpliceGraphs(Html, VoilaArgs):
                         summary_template.render(
                             page_name=self.get_page_name(index),
                             genes=[sg.gene(gene_id) for gene_id in genes],
-                            experiments=experiments,
+                            metadata=metadata,
                             prev_page=prev_page,
-                            next_page=next_page
+                            next_page=next_page,
+                            database_name=database_name,
                         )
                     )
 
                 prev_page = page_name
-
-

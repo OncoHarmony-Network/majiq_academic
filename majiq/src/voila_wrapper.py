@@ -32,7 +32,8 @@ def init_splicegraph(filename):
     majiq_config = Config()
     # erase splice graph file
     with SpliceGraph(filename, delete=True) as sg:
-        sg.add_experiment_names(majiq_config.exp_list)
+        sg.experiment_names = majiq_config.exp_list
+        sg.genome = majiq_config.genome
 
 
 # def gene_to_splicegraph(dict_of_genes, dict_junctions, exon_dict, list_introns, majiq_config, lock):

@@ -121,10 +121,10 @@ class Deltapsi(Html, VoilaArgs):
         metadata = self.metadata
 
         with DeltaPsiSpliceGraph(args.splice_graph) as sg:
-            experiments = sg.get_experiments()
             prev_page = None
             page_count = sg.get_page_count()
-
+            genome = sg.genome
+            database_name = self.database_name()
             log.debug('There will be {0} pages of gene summaries'.format(page_count))
 
             for index, (lsv_dict, genes) in enumerate(sg.get_paginated_genes_with_lsvs(args)):
@@ -155,10 +155,10 @@ class Deltapsi(Html, VoilaArgs):
                             gtf=args.gtf,
                             group_names=group_names,
                             genes=[sg.gene(gene_id) for gene_id in genes],
-                            experiments=experiments,
                             lsvs=lsv_dict,
                             metadata=metadata,
-                            database_name=self.database_name()
+                            database_name=database_name,
+                            genome=genome
 
                     ):
                         html.write(el)

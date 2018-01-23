@@ -50,11 +50,9 @@
 
                 <script>
                     db.bulkDocs([
-                        {%- for experiment in experiments %}
-                            {{ gene.get_experiment(experiments) | to_json }},
-                            {%- for lsv in lsvs[gene.id] %}
-                                {{ lsv | to_json }},
-                            {%- endfor %}
+                        {{ gene.get_experiment(metadata.experiment_names) | to_json }},
+                        {%- for lsv in lsvs[gene.id] %}
+                            {{ lsv | to_json }},
                         {%- endfor %}
                     ]).then(function (result) {
                         console.log('successfully loaded data...')
@@ -109,7 +107,7 @@
                                     <canvas class="lsvLegend" id="{{ gene_index }}" width="200px" height="80px"
                                             data-lsv-type="{{ lsv.lsv_type }}"
                                             data-gene-id="{{ gene.id }}"
-                                            data-experiment="{{ experiments[0] }}"
+                                            data-experiment="{{ metadata.experiment_names[0] }}"
                                             data-coord-exon="{{ lsv.coordinates }}"
                                             title="{{ lsv.lsv_type }}">
                                         This browser or document mode doesn't support canvas
@@ -123,7 +121,7 @@
                                 <td>
                                     <p>
                                         {% set ucsc_coordinates = gene.lsv_ucsc_coordinates(lsv.lsv_id) %}
-                                        <a href="http://genome.ucsc.edu/cgi-bin/hgTracks?org=mouse&db={{ metadata.genome }}&position={{ gene.chromosome }}:{{ ucsc_coordinates.start }}-{{ ucsc_coordinates.end }}"
+                                        <a href="http://genome.ucsc.edu/cgi-bin/hgTracks?org=mouse&db={{ genome }}&position={{ gene.chromosome }}:{{ ucsc_coordinates.start }}-{{ ucsc_coordinates.end }}"
                                            target="_blank">
                                             <img src="static/img/icons/ucsc3.png"/>
                                         </a>
@@ -169,7 +167,6 @@
                     </div>
                 </div>
             {% endfor %}
-
         </fieldset>
     </section>
 {% endblock %}
