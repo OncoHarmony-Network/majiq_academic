@@ -5,6 +5,7 @@ import math
 from voila import constants
 from voila.api import SpliceGraph, Matrix
 from voila.api import splice_graph_model as model
+from voila.api.view_matrix import ViewDeltaPsi, ViewPsi, ViewMatrix
 from voila.utils.exceptions import GeneIdNotFoundInVoilaFile
 from voila.utils.voila_log import voila_log
 
@@ -71,7 +72,7 @@ class PsiSpliceGraph(ViewSpliceGraph):
         gene_list = []
         lsv_dict = {}
 
-        with Matrix(args.voila_file) as m:
+        with ViewMatrix(args.voila_file) as m:
             for gene_id in self.get_gene_ids(args):
                 try:
                     lsvs = tuple(m.get_lsvs(args, gene_id=gene_id))
@@ -92,4 +93,29 @@ class PsiSpliceGraph(ViewSpliceGraph):
 
 
 class DeltaPsiSpliceGraph(PsiSpliceGraph):
-    pass
+    def get_paginated_genes_with_lsvs(self, args):
+        log = voila_log()
+        log.debug('Getting paginated genes with LSVs')
+
+        gene_list = []
+        lsv_dict = {}
+
+        with ViewMatrix(args.voila_file) as m:
+            for gene_id in self.get_gene_ids(args):
+                try:
+                    lsvs = tuple(m.get_lsvs(args, gene_id=gene_id))
+                except GeneIdNotFoundInVoilaFile:
+                    lsvs = None
+
+                if lsvs:
+                    # lsv_dict[gene_id] = tuple(dict(vdp.delta_psi(lsv_id).get()) for lsv_id in lsvs)
+                    lsv_dict[gene_id] = tuple(dict(m.delta_psi(lsv_id).get()) for lsv_id in lsvs)
+                    gene_list.append(gene_id)
+
+                if len(gene_list) == constants.MAX_GENES:
+                    yield lsv_dict, gene_list
+                    gene_list = []
+                    lsv_dict = {}
+
+            if gene_list:
+                yield lsv_dict, gene_list

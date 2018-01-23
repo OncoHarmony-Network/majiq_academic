@@ -8,11 +8,14 @@ var BoxPlots = function (db) {
     this.svg_height = this.height + this.top_padding + this.bottom_padding
 };
 
-BoxPlots.prototype.psi = function (el, lsv_id) {
+BoxPlots.prototype.psi = function (el) {
+    var lsv_id = el.getAttribute('data-lsv-id');
+    var group = el.getAttribute('data-group');
     var bp = this;
     this.db.get(lsv_id).then(function (data) {
+        var bins = data.group_bins[group];
         bp.svg = d3.select(el)
-            .attr('width', (data.bins.length * bp.histo_width) + bp.left_padding)
+            .attr('width', (bins.length * bp.histo_width) + bp.left_padding)
             .attr('height', bp.svg_height);
         bp.violins(data);
         bp.drawYAxis();
@@ -56,10 +59,12 @@ BoxPlots.prototype.drawYAxis = function () {
 BoxPlots.prototype.violins = function (data) {
     var colors = new Colors().toRGBArray();
     var bp = this;
-
+    var group = this.svg.attr('data-group');
+    var bins = data.group_bins[group];
+    var means_rounded = data.group_means_rounded[group];
     return this.svg
         .selectAll('.violin')
-        .data(data.bins)
+        .data(bins)
         .enter()
         .append('g')
         .attr('class', 'violin')
@@ -87,7 +92,7 @@ BoxPlots.prototype.violins = function (data) {
                 .attr('transform', 'rotate(90) translate(' + bp.histo_width / 2 + ', 20)')
                 .append('text')
                 .attr('text-anchor', 'middle')
-                .text(data.means_rounded[i].toFixed(3))
+                .text(means_rounded[i].toFixed(3))
         });
 };
 

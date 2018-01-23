@@ -9,61 +9,71 @@ $(document).on('mouseout', '.junction-grp', function () {
 
 $(document).on('mouseenter', '.exon, .junction-grp, .half-exon', function () {
     var d = d3.select(this).datum();
-    var gene_container = $(this).closest('.gene-container');
-    db.get(gene_container.find('.splice-graph').attr('data-gene-id')).then(function (gene) {
-        var experiment = gene_container.find('.splice-graph-selectors option:selected').text().trim();
+    var splice_graph_tools = $(this).closest('.gene-container').children('.splice-graph-tools');
+    var splice_graph = $(this).closest('.splice-graph');
+    var experiment = splice_graph.attr('data-experiment');
+    var gene_id = splice_graph.attr('data-gene-id');
+
+    db.get(gene_id).then(function (gene) {
         var exon_type;
         try {
             exon_type = gene.exon_types[d.start][d.end][experiment];
         } catch (TypeError) {
             exon_type = -1
         }
-
         if ([4, 5].includes(exon_type)) {
             if (exon_type === 4)
-                gene_container.find('.coordinates').text('MISSING' + ' - ' + d.end);
+                splice_graph_tools.find('.coordinates').text('MISSING' + ' - ' + d.end);
             else
-                gene_container.find('.coordinates').text(d.start + ' - ' + 'MISSING');
-            gene_container.find('.length').text('UNKNOWN')
+                splice_graph_tools.find('.coordinates').text(d.start + ' - ' + 'MISSING');
+            splice_graph_tools.find('.length').text('UNKNOWN')
         } else {
-            gene_container.find('.coordinates').text(d.start + ' - ' + d.end);
-            gene_container.find('.length').text(d.end - d.start)
+            splice_graph_tools.find('.coordinates').text(d.start + ' - ' + d.end);
+            splice_graph_tools.find('.length').text(d.end - d.start)
         }
     })
 });
 
 $(document).on('change', '.splice-graph-selectors select', function () {
-    var gene_container = $(this).closest('.gene-container');
-    var sg_div = gene_container.find('.splice-graph');
-    var experiment = gene_container.find('.splice-graph-selectors select option:selected').text().trim();
-    sg.update(sg_div[0], experiment)
+    var $this = $(this);
+    var group = $this.attr('data-group');
+    var experiment = $this.find(':selected').attr('value');
+    $this
+        .closest('.gene-container')
+        .find('.splice-graph.' + group)
+        .attr('data-experiment', experiment)
+        .each(function () {
+            sg.update(this)
+        })
 });
 
 $(document).on('click', '.toggle-scale', function () {
-    var gene_container = $(this).closest('.gene-container');
-    var splice_graph = gene_container.find('.splice-graph');
-    var experiment = gene_container.find('.splice-graph-selectors select option:selected').text().trim();
-    splice_graph.toggleClass('default-view');
-    sg.update(splice_graph[0], experiment)
+    $(this)
+        .closest('.gene-container')
+        .find('.splice-graph')
+        .toggleClass('default-view')
+        .each(function () {
+            sg.update(this)
+        });
 });
 
 var zoom = function (el, value, reset) {
-    var gene_container = $(el).closest('.gene-container');
-    var experiment = gene_container.find('.splice-graph-selectors select option:selected').text().trim();
-    var sg_div = gene_container.find('.splice-graph');
-    var zoom = sg_div.attr('data-zoom');
-    if (reset) {
-        sg_div.attr('data-zoom', value);
-        sg.update(sg_div[0], experiment)
-    }
-    else {
-        var zoom_value = parseFloat(zoom) + value;
-        if (zoom_value > 0) {
-            sg_div.attr('data-zoom', zoom_value);
-            sg.update(sg_div[0], experiment)
-        }
-    }
-
+    $(el)
+        .closest('.gene-container')
+        .find('.splice-graph')
+        .each(function () {
+            var zoom = this.getAttribute('data-zoom');
+            if (reset) {
+                this.setAttribute('data-zoom', value);
+                sg.update(this)
+            } else {
+                var zoom_value = parseFloat(zoom) + value;
+                if (zoom_value > 0) {
+                    this.setAttribute('data-zoom', zoom_value);
+                    sg.update(this)
+                }
+            }
+        });
 };
 
 $(document).on('click', '.zoom-in', function () {

@@ -1,7 +1,8 @@
 /* tools section */
 
 .splice-graph-selectors {
-    display: inline-block
+    display: inline-block;
+    vertical-align: top
 }
 
 .splice-graph-tools-btns {
@@ -48,7 +49,7 @@
     font-size: 14px;
 }
 
-.splice-graph {
+.splice-graph-container {
     width: 1000px;
     overflow-x: auto;
 }

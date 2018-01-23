@@ -1,6 +1,7 @@
 import itertools
 import json
 import os
+import types
 from distutils.dir_util import copy_tree
 from math import ceil
 
@@ -43,6 +44,8 @@ class NumpyEncoder(json.JSONEncoder):
             return obj.decode('utf-8')
         elif isinstance(obj, (Het, HetGroup)):
             return dict(obj)
+        elif isinstance(obj, types.GeneratorType):
+            return tuple(obj)
         return json.JSONEncoder.default(self, obj)
 
 

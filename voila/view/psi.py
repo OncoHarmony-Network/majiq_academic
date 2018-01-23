@@ -100,7 +100,6 @@ class Psi(Html, VoilaArgs):
         args = self.args
         summaries_subfolder = self.get_summaries_subfolder()
         metadata = self.metadatda
-        group_name = list(metadata['experiments'].keys())[0]
 
         with PsiSpliceGraph(args.splice_graph, 'r') as sg:
             experiments = sg.get_experiments()
@@ -111,7 +110,6 @@ class Psi(Html, VoilaArgs):
                 page_name = self.get_page_name(index)
                 table_marks = tuple(table_marks_set(len(gene_set)) for gene_set in lsv_dict)
                 next_page = self.get_next_page(index, page_count)
-                # gene_experiments = self.gene_experiments(metadata['experiments'][group_name], genes, experiments)
 
                 self.add_to_voila_links(lsv_dict, page_name)
 
@@ -127,10 +125,9 @@ class Psi(Html, VoilaArgs):
                             next_page=next_page,
                             namePage=page_name,
                             metadata=metadata,
-                            # genes_exps_list=gene_experiments,
                             lsv_text_version=constants.LSV_TEXT_VERSION,
                             gtf=args.gtf,
-                            group_name=group_name
+                            database_name=self.database_name()
                     ):
                         html.write(el)
 

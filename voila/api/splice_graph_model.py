@@ -301,9 +301,9 @@ class Gene(Base):
 
     def lsv_ucsc_coordinates(self, lsv_id):
         exons = self.lsv_exons(lsv_id)
-        start_exon = sorted(exons, key=lambda e: e.start)[0]
-        end_exon = sorted(exons, key=lambda e: e.end, reverse=True)[0]
-        return {'start': start_exon.start, 'end': end_exon.end}
+        start_exon = sorted((e.start for e in exons if e.start != -1))[0]
+        end_exon = sorted((e.end for e in exons if e.end != -1), reverse=True)[0]
+        return {'start': start_exon, 'end': end_exon}
 
     def get_experiment(self, experiment_names):
         gene = dict(self)

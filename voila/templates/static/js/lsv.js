@@ -398,11 +398,14 @@ Lsv.prototype.drawLSVCompactStackBars = function (canvas, fillMode) {
 
     if (canvas.getContext) {  // check for support
         var ctx = canvas.getContext("2d");
+        var lsv_id = canvas.getAttribute('data-lsv-id');
+        var group_name = canvas.getAttribute('data-group');
+
         // Clear canvas
         ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-        // var groups_str = '[' + canvas.getAttribute("data-lsv") + ']';
-        this.db.get(canvas.getAttribute('data-lsv-id')).then(function (data) {
+
+        this.db.get(lsv_id).then(function (data) {
             // var groups = JSON.parse(groups_str.replace(/'/g, '"'));
             var groups = [data];
             // Calculate origins_coords
@@ -443,9 +446,9 @@ Lsv.prototype.drawLSVCompactStackBars = function (canvas, fillMode) {
                 var acc_height = 0;
                 var group = groups[count];
 
-                for (var lsv_count = 0; lsv_count < group.bins.length; lsv_count++) {
+                for (var lsv_count = 0; lsv_count < group.group_bins[group_name].length; lsv_count++) {
                     // Calculate the height of the accumulated mean
-                    acc_height += group.means[lsv_count];
+                    acc_height += group.group_means[group_name][lsv_count];
 
                     var coords_gradient = {
                         'x1': origins_coords[count][0] + offset,
@@ -462,7 +465,7 @@ Lsv.prototype.drawLSVCompactStackBars = function (canvas, fillMode) {
                         group,
                         lsv_count,
                         origins_coords[count][0],
-                        origins_coords[count][1] - (acc_height - group.means[lsv_count]) * sub_canvas_pixels[1],
+                        origins_coords[count][1] - (acc_height - group.group_means[group_name][lsv_count]) * sub_canvas_pixels[1],
                         origins_coords[count][0] + sub_canvas_pixels[0],
                         origins_coords[count][1] - (acc_height) * sub_canvas_pixels[1]
                     );
@@ -470,4 +473,133 @@ Lsv.prototype.drawLSVCompactStackBars = function (canvas, fillMode) {
             }
         });
     }
+};
+
+
+Lsv.prototype.drawDeltaLSVCompactSVG = function (el, lsv) {
+    var width = 200;
+    var height = 20;
+    var margin = {top: 1, bottom: 8, left: 2, right: 2};
+    var border_frame = 2;
+    var MIN_DELTAPSI = .05;
+
+    var svgContainer = d3.select(el)
+        .append("svg")
+        .attr("class", "excl-incl-rect")
+        .attr("width", width)
+        .attr("height", height);
+
+    var markerWidth = 6;
+    var markerHeight = 6;
+    var cRadius = 30; // play with the cRadius value
+    var refX = cRadius + (markerWidth * 2);
+    var refY = -Math.sqrt(cRadius);
+
+    // Define arrow markers, right
+    svgContainer.append("defs")
+        .append("marker")
+        .attr("id", "arrowhead-right")
+        .attr("viewBox", "0 -5 5 10")
+        .attr("refX", 5)
+        .attr("refY", 0)
+        .attr("markerWidth", 4)
+        .attr("markerHeight", 3)
+        .attr("orient", "auto")
+        .append("path")
+        .attr("d", "M0,-5L10,0L0,5");
+
+    // Define arrow markers, left
+    svgContainer.append("defs")
+        .append("marker")
+        .attr("id", "arrowhead-left")
+        .attr("viewBox", "-5 -5 5 10")
+        .attr("refX", -5)
+        .attr("refY", 0)
+        .attr("markerWidth", 4)
+        .attr("markerHeight", 3)
+        .attr("orient", "auto")
+        .append("path")
+        .attr("d", "M0,-5L-10,0L0,5");
+
+
+    svgContainer.append("line")
+        .attr("x1", margin.left)
+        .attr("y1", Math.round((height - margin.bottom) / 2))
+        .attr("x2", width - margin.right - margin.left)
+        .attr("y2", Math.round((height - margin.bottom) / 2))
+        .style('stroke', 'black')
+        .style('stroke-width', border_frame)
+        //        .attr("stroke-opacity", .5)
+        .style('fill', 'none')
+        .attr("marker-end", "url(#arrowhead-right)")
+        .attr("marker-start", "url(#arrowhead-left)");
+
+
+    // Draw x-axis ticks
+    svgContainer.append("text")
+        .attr("x", width / 2)
+        .attr("y", height)
+        .attr("text-anchor", "middle")
+        .attr("font-size", "8px")
+        .attr("fill", "black")
+        .text("0");
+
+    // Draw excl-incl bars
+    var last_excl_pos = width / 2,
+        last_incl_pos = width / 2;
+    for (var ii = 0; ii < lsv.excl_incl.length; ii++) {
+        svgContainer.append("rect")
+            .attr("x", last_excl_pos - Math.round((width / 2 - margin.left) * lsv.excl_incl[ii][0]))
+            .attr("y", margin.top)
+            .attr("width", Math.round((width / 2 - margin.left) * lsv.excl_incl[ii][0]))
+            .attr("height", height - margin.bottom - margin.top)
+            .style('fill', getColor(ii, BREWER_PALETTE, 1));
+        svgContainer.append("rect")
+            .attr("x", last_incl_pos)
+            .attr("y", margin.top)
+            .attr("width", Math.round((width / 2 - margin.right) * lsv.excl_incl[ii][1]))
+            .attr("height", height - margin.bottom - margin.top)
+            .style('fill', getColor(ii, BREWER_PALETTE, 1));
+
+        if (lsv.excl_incl[ii][0] < MIN_DELTAPSI && lsv.excl_incl[ii][1] < MIN_DELTAPSI)
+            continue;
+
+        // Draw percentages text
+        if (Math.round((width / 2 - margin.left) * lsv.excl_incl[ii][0]) >= 1) {
+            last_excl_pos -= Math.round((width / 2 - margin.left) * lsv.excl_incl[ii][0]);
+            svgContainer.append("text")
+                .attr("x", last_excl_pos)
+                .attr("y", height)
+                .attr("text-anchor", "middle")
+                .attr("font-size", "9px")
+                .attr("fill", getColor(ii, BREWER_PALETTE, 1))
+                .text(Math.round((width / 2 - margin.left) * lsv.excl_incl[ii][0]));
+
+        }
+
+        if (Math.round((width / 2 - margin.right) * lsv.excl_incl[ii][1]) >= 1) {
+            last_incl_pos += Math.round((width / 2 - margin.right) * lsv.excl_incl[ii][1]);
+            svgContainer.append("text")
+                .attr("x", last_incl_pos)
+                .attr("y", height)
+                .attr("text-anchor", "middle")
+                .attr("font-size", "9px")
+                .attr("fill", getColor(ii, BREWER_PALETTE, 1))
+                .text(Math.round((width / 2 - margin.right) * lsv.excl_incl[ii][1]));
+        }
+    }
+
+    // Draw separator
+    svgContainer.append("line")
+        .attr("x1", width / 2)
+        .attr("y1", 0)
+        .attr("x2", width / 2)
+        .attr("y2", height - margin.bottom + 2)
+        .attr("stroke-width", 2)
+        .attr("stroke-opacity", .8)
+        .attr("stroke", "black");
+
+
+    return svgContainer;
+
 };

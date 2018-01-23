@@ -53,9 +53,6 @@ DEBUG = 1
 # logging
 VOILA_LOG_NAME = '3a4f4528-e572-404e-b143-acff61cee9ed'
 
-# HDF5
-EXPERIMENT_NAMES = 'experiments_names'
-
 # MAJIQ-SPEL
 LSV_TEXT_VERSION = 2
 

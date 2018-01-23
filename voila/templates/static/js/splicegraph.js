@@ -213,8 +213,9 @@ SpliceGraph.prototype.junctions_no_ir = function (gene, x) {
     return juncs_no_ir
 };
 
-SpliceGraph.prototype.init = function (sg_div, experiment) {
+SpliceGraph.prototype.init = function (sg_div) {
     var gene_id = sg_div.getAttribute('data-gene-id');
+    var experiment = sg_div.getAttribute('data-experiment');
     var sg = this;
     sg_div.setAttribute('data-zoom', 1.0);
     this.db.get(gene_id).then(function (gene) {
@@ -631,11 +632,10 @@ d3.transition.prototype.ir_lines =
         };
 
 
-SpliceGraph.prototype.update = function (sg_div, experiment) {
-    // var gene_id = sg_div.getAttribute('data-gene-id');
+SpliceGraph.prototype.update = function (sg_div) {
     var sg = this;
+    var experiment = sg_div.getAttribute('data-experiment');
     this.zoom = sg_div.getAttribute('data-zoom');
-
     this.db.get(sg_div.getAttribute('data-gene-id')).then(function (gene) {
 
         var default_view = sg_div.classList.contains('default-view');

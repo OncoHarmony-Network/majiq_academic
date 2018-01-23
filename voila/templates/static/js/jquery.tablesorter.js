@@ -1,16 +1,3 @@
-/*
- *
- * TableSorter 2.0 - Client-side table sorting with ease!
- * Version 2.0.5b
- * @requires jQuery v1.2.3
- *
- * Copyright (c) 2007 Christian Bach
- * Examples and docs at: http://tablesorter.com
- * Dual licensed under the MIT and GPL licenses:
- * http://www.opensource.org/licenses/mit-license.php
- * http://www.gnu.org/licenses/gpl.html
- *
- */
 /**
  *
  * @description Create a sortable table with multi-column sorting capabilitys
@@ -1166,94 +1153,101 @@
              */
 
             $('.lsvDeltaCompact', table).each(function () {
-                var lsv = JSON.parse($(this)[0].getAttribute("data-lsv").replace(/'/g, '"'));
-                var threshold = $(this)[0].getAttribute("data-threshold");
+                // return;
+                // var lsv = JSON.parse($(this)[0].getAttribute("data-lsv").replace(/'/g, '"'));
+                var lsv_id = this.getAttribute('data-lsv-id');
+                var $this = $(this);
+                db.get(lsv_id).then(function (data) {
+                    var threshold = $this.attr("data-threshold");
 
-                var svg_children = $(this).children(".excl-incl-rect"),
-                    svgExclInclRect;
+                    var svg_children = $(this).children(".excl-incl-rect");
+                    var svgExclInclRect;
 
-                if (svg_children.length) {
-                    svgExclInclRect = svg_children[0];
-                } else {
-                    svgExclInclRect = drawDeltaLSVCompactSVG(this.id, lsv, threshold)[0];
-                }
-
-                $(svgExclInclRect).on("click", function (e) {
-                    e.preventDefault();
-                    $(this).toggle("show");
-
-
-                    // For now: if LSV has 2 ways, show zoomable barchart, otherwise violin boxplots
-                    if (1) { //(lsv.bins.length > 2){
-                        var svgViolin;
-
-                        var svg_children = $(this).parent().children("violin-boxplot");
-
-                        if (svg_children.length) {
-                            svgViolin = svg_children[0];
-                            $(svgViolin).toggle();
-                        } else {
-                            var sampled_bins = translate_delta_lsv_bins(lsv.bins, 1000);
-                            svgViolin = renderViolin($(this).parent()[0].id, sampled_bins, table.id, {
-                                'delta': 1,
-                                'num_bins': lsv.bins[0].length
-                            })[0];
-                        }
-                        $(svgViolin).on("click", function (e) {
-                            e.preventDefault();
-                            $(this).toggle("show");
-                            var lsvCompact = $(this).parent().children(".excl-incl-rect");
-                            if (lsvCompact.length) {
-                                $(lsvCompact[0]).toggle();
-                            }
-                        });
+                    if (svg_children.length) {
+                        svgExclInclRect = svg_children[0];
                     } else {
-                        var parentTd = $(this).parent()[0];
-                        var canvasChildren = $(parentTd).children('.extendedDeltaPsi');
-                        var canvasBarchart,
-                            canvasSettings;
-                        if (canvasChildren.length) {
-                            canvasBarchart = canvasChildren[0];
-                            canvasSettings = initLargeCanvasSettings(lsv.bins[0].length, canvasBarchart);
-                            $(canvasBarchart).toggle();
-                        } else {
-                            canvasBarchart = $('<canvas/>', {
-                                'id': "barchart_" + $(this).closest('td')[0].id,
-                                'class': 'extendedDeltaPsi tooltip',
-                                'Title': 'Mousewheel up/down to zoom in/out'
-                            })[0];
-                            canvasBarchart.width = 419;
-                            canvasBarchart.height = 400;
-                            canvasBarchart.setAttribute('data-lsv', JSON.stringify(lsv));
-                            canvasBarchart.setAttribute('data-threshold', threshold);
-
-                            canvasSettings = initLargeCanvasSettings(lsv.bins[0].length, canvasBarchart);
-                            $(parentTd).append(canvasBarchart);
-                            initExpandedDeltaCanvas(canvasBarchart, canvasSettings);
-
-                            $(canvasBarchart).on("click", function (e) {
-                                e.preventDefault();
-                                $(this).toggle("show");
-                                var lsvCompact = $(this).parent().children(".excl-incl-rect");
-                                if (lsvCompact.length) {
-                                    $(lsvCompact[0]).toggle();
-                                }
-                            });
-
-                            $(canvasBarchart).on('mousewheel', function (event) {
-                                event.preventDefault();
-                                if (event.deltaY > 0) {
-                                    drawExpDeltaWithCanvasId($(this)[0].id, 1, canvasSettings);
-                                } else if (event.deltaY < 0) {
-                                    drawExpDeltaWithCanvasId($(this)[0].id, -1, canvasSettings);
-                                }
-                            });
-
-                            $('.tooltip').tooltipster({
-                                theme: 'tooltipster-shadow'
-                            });
-                        }
+                        svgExclInclRect = lsv.drawDeltaLSVCompactSVG($this[0], data)[0];
                     }
+
+                    console.log(svgExclInclRect);
+                    $(svgExclInclRect).on("click", function (e) {
+                        console.log('yup')
+                        // e.preventDefault();
+                        // $(this).toggle("show");
+                        //
+                        //
+                        // // For now: if LSV has 2 ways, show zoomable barchart, otherwise violin boxplots
+                        // if (1) { //(lsv.bins.length > 2){
+                        //     var svgViolin;
+                        //
+                        //     var svg_children = $(this).parent().children("violin-boxplot");
+                        //
+                        //     if (svg_children.length) {
+                        //         svgViolin = svg_children[0];
+                        //         $(svgViolin).toggle();
+                        //     } else {
+                        //         var sampled_bins = translate_delta_lsv_bins(data.bins, 1000);
+                        //         svgViolin = renderViolin($(this).parent()[0].id, sampled_bins, table.id, {
+                        //             'delta': 1,
+                        //             'num_bins': data.bins[0].length
+                        //         })[0];
+                        //     }
+                        //     $(svgViolin).on("click", function (e) {
+                        //         e.preventDefault();
+                        //         $(this).toggle("show");
+                        //         var lsvCompact = $(this).parent().children(".excl-incl-rect");
+                        //         if (lsvCompact.length) {
+                        //             $(lsvCompact[0]).toggle();
+                        //         }
+                        //     });
+                        // } else {
+                        //     var parentTd = $(this).parent()[0];
+                        //     var canvasChildren = $(parentTd).children('.extendedDeltaPsi');
+                        //     var canvasBarchart,
+                        //         canvasSettings;
+                        //     if (canvasChildren.length) {
+                        //         canvasBarchart = canvasChildren[0];
+                        //         canvasSettings = initLargeCanvasSettings(data.bins[0].length, canvasBarchart);
+                        //         $(canvasBarchart).toggle();
+                        //     } else {
+                        //         canvasBarchart = $('<canvas/>', {
+                        //             'id': "barchart_" + $(this).closest('td')[0].id,
+                        //             'class': 'extendedDeltaPsi tooltip',
+                        //             'Title': 'Mousewheel up/down to zoom in/out'
+                        //         })[0];
+                        //         canvasBarchart.width = 419;
+                        //         canvasBarchart.height = 400;
+                        //         canvasBarchart.setAttribute('data-lsv', JSON.stringify(data));
+                        //         canvasBarchart.setAttribute('data-threshold', threshold);
+                        //
+                        //         canvasSettings = initLargeCanvasSettings(data.bins[0].length, canvasBarchart);
+                        //         $(parentTd).append(canvasBarchart);
+                        //         initExpandedDeltaCanvas(canvasBarchart, canvasSettings);
+                        //
+                        //         $(canvasBarchart).on("click", function (e) {
+                        //             e.preventDefault();
+                        //             $(this).toggle("show");
+                        //             var lsvCompact = $(this).parent().children(".excl-incl-rect");
+                        //             if (lsvCompact.length) {
+                        //                 $(lsvCompact[0]).toggle();
+                        //             }
+                        //         });
+                        //
+                        //         $(canvasBarchart).on('mousewheel', function (event) {
+                        //             event.preventDefault();
+                        //             if (event.deltaY > 0) {
+                        //                 drawExpDeltaWithCanvasId($(this)[0].id, 1, canvasSettings);
+                        //             } else if (event.deltaY < 0) {
+                        //                 drawExpDeltaWithCanvasId($(this)[0].id, -1, canvasSettings);
+                        //             }
+                        //         });
+                        //
+                        //         $('.tooltip').tooltipster({
+                        //             theme: 'tooltipster-shadow'
+                        //         });
+                        //     }
+                        // }
+                    });
                 });
             });
 
@@ -1304,5 +1298,7 @@
             }
 
         }
-    });
-})(jQuery);
+    })
+    ;
+})
+(jQuery);

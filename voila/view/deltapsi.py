@@ -20,7 +20,7 @@ class Deltapsi(Html, VoilaArgs):
             with Matrix(args.voila_file) as m:
                 self.metadata = m.metadata
             self.render_summaries()
-            self.render_index()
+            # self.render_index()
 
         # if not args.no_tsv:
         #     io_voila.tab_output(args, self.voila_links)
@@ -121,7 +121,7 @@ class Deltapsi(Html, VoilaArgs):
         metadata = self.metadata
 
         with DeltaPsiSpliceGraph(args.splice_graph) as sg:
-            gene_experiments_list = sg.get_experiments()
+            experiments = sg.get_experiments()
             prev_page = None
             page_count = sg.get_page_count()
 
@@ -131,12 +131,12 @@ class Deltapsi(Html, VoilaArgs):
                 page_name = self.get_page_name(index)
                 table_marks = tuple(table_marks_set(len(gene_set)) for gene_set in lsv_dict)
                 next_page = self.get_next_page(index, page_count)
-                group_names = []
-                experiments = []
+                group_names = metadata['group_names']
+                # experiments = []
 
-                for group_name, group_exps in metadata['experiments'].items():
-                    group_names.append(group_name)
-                    experiments.append(self.gene_experiments(group_exps, genes, gene_experiments_list))
+                # for group_name, group_exps in metadata['experiments'].items():
+                #     group_names.append(group_name)
+                #     experiments.append(self.gene_experiments(group_exps, genes, gene_experiments_list))
 
                 self.add_to_voila_links(lsv_dict, page_name)
                 log.debug('Write page {0}'.format(page_name))
@@ -145,15 +145,21 @@ class Deltapsi(Html, VoilaArgs):
                     for el in summary_template.generate(
                             page_name=page_name,
                             genes_dict=lsv_dict,
-                            genes_exps_list=experiments,
-                            lexps=metadata,
+                            # genes_exps_list=experiments,
+                            # lexps=metadata,
                             threshold=args.threshold,
                             lsv_text_version=constants.LSV_TEXT_VERSION,
                             table_marks=table_marks,
                             prev_page=prev_page,
                             next_page=next_page,
                             gtf=args.gtf,
-                            group_names=group_names
+                            group_names=group_names,
+                            genes=[sg.gene(gene_id) for gene_id in genes],
+                            experiments=experiments,
+                            lsvs=lsv_dict,
+                            metadata=metadata,
+                            database_name=self.database_name()
+
                     ):
                         html.write(el)
 

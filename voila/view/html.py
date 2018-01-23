@@ -1,4 +1,5 @@
 import os
+import uuid
 from collections import OrderedDict
 
 from voila import constants
@@ -65,3 +66,6 @@ class Html(object):
             return None
         else:
             return self.get_page_name(index + 1)
+
+    def database_name(self):
+        return 'voila_{}'.format(uuid.uuid4().hex)

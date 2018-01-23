@@ -1,8 +1,12 @@
 <div class="splice-graph-container">
-    <div class="splice-graph exp1 default-view" id="spliceDivExp1_{{ gene_index }}"
-         data-gene-id="{{ gene.id }}"></div>
-    <script>
-        var sg_container = document.getElementById('spliceDivExp1_{{ gene_index }}');
-        sg.init(sg_container, '{{ experiments[0] }}');
-    </script>
+    {% for group in metadata.group_names %}
+        {% with experiment = metadata.experiment_names[loop.index0][0] %}
+            <div class="splice-graph exp1 default-view {{ group }}" data-gene-id="{{ gene.id }}"
+                 data-experiment="{{ experiment }}"></div>
+            <script>
+                var sg_container = document.querySelector('.splice-graph.{{ group }}[data-gene-id={{ gene.id }}]');
+                sg.init(sg_container);
+            </script>
+        {% endwith %}
+    {% endfor %}
 </div>

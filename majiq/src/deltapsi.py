@@ -122,9 +122,10 @@ class DeltaPsi(BasicPipeline):
             with Matrix(get_quantifier_voila_filename(self.outDir, self.names, deltapsi=True), 'w') as out_h5p:
                 out_h5p.genome = meta1['genome']
                 out_h5p.analysis_type = ANALYSIS_DELTAPSI
-                out_h5p.add_experiments(group_name=self.names[0], experiment_names=meta1['experiments'])
-                out_h5p.add_experiments(group_name=self.names[1], experiment_names=meta2['experiments'])
-
+                # out_h5p.add_experiments(group_name=self.names[0], experiment_names=meta1['experiments'])
+                # out_h5p.add_experiments(group_name=self.names[1], experiment_names=meta2['experiments'])
+                out_h5p.group_names = self.names
+                out_h5p.experiment_names = [meta1['experiments'], meta2['experiments']]
                 queue_manager(out_h5p, self.lock, self.queue, num_chunks=nthreads, logger=logger,
                               list_of_lsv_graphics=lsv_dict_graph)
 

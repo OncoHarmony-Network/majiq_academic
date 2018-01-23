@@ -11,6 +11,7 @@ import numpy as np
 
 from voila import constants, vlsv
 from voila.api import Voila, Matrix, SpliceGraph
+from voila.api.view_matrix import ViewMatrix
 from voila.constants import JUNCTION_TYPE_RNASEQ
 from voila.hdf5 import HDF5
 from voila.utils import utils_voila
@@ -216,9 +217,9 @@ def tab_output(args, voila_links):
     group2 = None
     tsv_file = join(args.output, output_html.rsplit('.html', 1)[0] + '.tsv')
 
-    with Matrix(args.voila_file, 'r') as m, SpliceGraph(args.splice_graph) as sg:
+    with ViewMatrix(args.voila_file, 'r') as m, SpliceGraph(args.splice_graph) as sg:
         metadata = m.metadata
-        experiment = list(dict(m.experiments).values())[0][0]
+        experiment = m.experiment_names[0][0]
 
         fieldnames = ['#Gene Name', 'Gene ID', 'LSV ID', 'E(PSI) per LSV junction', 'Var(E(PSI)) per LSV junction']
 

@@ -22,7 +22,7 @@
     <script src="static/js/lsvplots.js"></script>
     <script src="static/js/colors.js"></script>
     <script>
-        var db = new PouchDB('splice_graph');
+        var db = new PouchDB('{{ database_name }}');
         var sg = new SpliceGraph(db);
         var lsv = new Lsv(db);
         var bp = new BoxPlots(db);
@@ -65,6 +65,7 @@
 
                 <div class="gene-container">
 
+
                     {% include 'splice_graph_tools.html' %}
                     {% include 'splice_graph.html' %}
 
@@ -89,8 +90,7 @@
                         </tfoot>
                         <tbody>
                         {% for lsv in lsvs[gene.id] %}
-                            <tr class="lsvrow" data-njuncs=""
-                                data-nexons="">
+                            <tr class="lsvrow" data-njuncs="" data-nexons="">
                                 <td>
                                     <form class='highlight-lsv'>
                                         <label>
@@ -116,25 +116,9 @@
                                     </canvas>
                                 </td>
                                 <td id="data_td{{ gene_index }}{{ loop.index }}">
-                                    <canvas class="lsv-single-compact-percentiles primer"
-                                            id="lsv-single-compact{{ loop.index }}" width="50px"
-                                            height="50px"
-                                            data-lsv-id="{{ lsv.lsv_id }}"
-                                            genome="{{ metadata.genome }}"
-                                            lsv-text-version="{{ lsv_text_version }}"
-                                            style="border: solid; border-width: 2pt; border-color: darkgrey;">
-                                        This browser or document mode doesn't support canvas
-                                    </canvas>
-
-                                    <script>
-                                        var el = document.querySelectorAll('.lsv-single-compact-percentiles[data-lsv-id="{{ lsv.lsv_id }}"]')[0];
-                                        lsv.drawLSVCompactStackBars(el, 1);
-                                        var svg = document.createElementNS("http://www.w3.org/2000/svg", 'svg');
-                                        svg.style.display = 'none';
-                                        svg.classList.add('psi-violin-plot');
-                                        bp.psi(svg, '{{ lsv.lsv_id }}');
-                                        el.parentElement.appendChild(svg);
-                                    </script>
+                                    {% with group = metadata.group_names[0] %}
+                                        {% include 'single_compact_percentiles.html' %}
+                                    {% endwith %}
                                 </td>
                                 <td>
                                     <p>
