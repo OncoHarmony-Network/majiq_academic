@@ -1,11 +1,10 @@
+import math
 from itertools import zip_longest
 
-import math
-
 from voila import constants
-from voila.api import SpliceGraph, Matrix
+from voila.api import SpliceGraph
 from voila.api import splice_graph_model as model
-from voila.api.view_matrix import ViewDeltaPsi, ViewPsi, ViewMatrix
+from voila.api.view_matrix import ViewMatrix
 from voila.utils.exceptions import GeneIdNotFoundInVoilaFile
 from voila.utils.voila_log import voila_log
 
@@ -108,7 +107,6 @@ class DeltaPsiSpliceGraph(PsiSpliceGraph):
                     lsvs = None
 
                 if lsvs:
-                    # lsv_dict[gene_id] = tuple(dict(vdp.delta_psi(lsv_id).get()) for lsv_id in lsvs)
                     lsv_dict[gene_id] = tuple(dict(m.delta_psi(lsv_id).get()) for lsv_id in lsvs)
                     gene_list.append(gene_id)
 

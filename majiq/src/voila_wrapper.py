@@ -28,6 +28,7 @@ def update_splicegraph_junction(sg, gene_id, start, end, nreads, exp):
     if -2 not in (start, end):
         sg.junction(gene_id, start, end).update_reads(exp, nreads)
 
+
 def init_splicegraph(filename):
     majiq_config = Config()
     # erase splice graph file
@@ -46,6 +47,8 @@ def gene_to_splicegraph(gne_id, gne, dict_junctions, exon_dict, list_introns, ma
     jidx = 0
 
     with SpliceGraph(get_builder_splicegraph_filename(majiq_config.outDir)) as sg:
+        sg.gene(gne_id).add(name=gne['name'], strand=gne['strand'], chromosome=gne['chromosome'])
+
         for jid in sorted(dict_junctions.keys()):
             jj = dict_junctions[jid]
 
@@ -122,4 +125,3 @@ def gene_to_splicegraph(gne_id, gne, dict_junctions, exon_dict, list_introns, ma
             # exon_list.append(eg)
         # sg.gene(gne_id, name=gne['name'], strand=gne['strand'], exons=exon_list,
         #         junctions=junc_list, chromosome=gne['chromosome'])
-        sg.gene(gne_id).add(name=gne['name'], strand=gne['strand'], chromosome=gne['chromosome'])

@@ -132,11 +132,6 @@ class Deltapsi(Html, VoilaArgs):
                 table_marks = tuple(table_marks_set(len(gene_set)) for gene_set in lsv_dict)
                 next_page = self.get_next_page(index, page_count)
                 group_names = metadata['group_names']
-                # experiments = []
-
-                # for group_name, group_exps in metadata['experiments'].items():
-                #     group_names.append(group_name)
-                #     experiments.append(self.gene_experiments(group_exps, genes, gene_experiments_list))
 
                 self.add_to_voila_links(lsv_dict, page_name)
                 log.debug('Write page {0}'.format(page_name))
@@ -144,9 +139,6 @@ class Deltapsi(Html, VoilaArgs):
                 with open(os.path.join(summaries_subfolder, page_name), 'w') as html:
                     for el in summary_template.generate(
                             page_name=page_name,
-                            genes_dict=lsv_dict,
-                            # genes_exps_list=experiments,
-                            # lexps=metadata,
                             threshold=args.threshold,
                             lsv_text_version=constants.LSV_TEXT_VERSION,
                             table_marks=table_marks,
@@ -159,7 +151,6 @@ class Deltapsi(Html, VoilaArgs):
                             metadata=metadata,
                             database_name=database_name,
                             genome=genome
-
                     ):
                         html.write(el)
 
