@@ -14,11 +14,24 @@ BoxPlots.prototype.psi = function (el) {
     var bp = this;
     this.db.get(lsv_id).then(function (data) {
         var bins = data.group_bins[group];
+        var means_rounded = data.group_means_rounded[group];
         bp.svg = d3.select(el)
             .attr('width', (bins.length * bp.histo_width) + bp.left_padding)
             .attr('height', bp.svg_height);
-        bp.violins(data);
-        bp.drawYAxis();
+        bp.violins(bins, means_rounded);
+        bp.y_axis([0, 1], [0, .5, 1]);
+    });
+};
+
+BoxPlots.prototype.delta_psi = function (el) {
+    var lsv_id = el.getAttribute('data-lsv-id');
+    var bp = this;
+    this.db.get(lsv_id).then(function (data) {
+        bp.svg = d3.select(el)
+            .attr('width', (data.bins.length * bp.histo_width) + bp.left_padding)
+            .attr('height', bp.svg_height);
+        bp.violins(data.bins, data.means_rounded);
+        bp.y_axis([-1, 1], [-1, 0, 1]);
     });
 };
 
@@ -35,17 +48,17 @@ translateLsvBins = function (lsvBins) {
 };
 
 
-BoxPlots.prototype.drawYAxis = function () {
+BoxPlots.prototype.y_axis = function (domain, tick_values) {
     var bp = this;
     var yScale = d3.scaleLinear()
-        .domain([0, 1])
+        .domain(domain)
         .range([bp.height, 0]);
 
     return this.svg
         .append('g')
         .classed('y-axis', true)
         .attr('transform', 'translate(' + bp.left_padding + ',' + bp.top_padding + ')')
-        .call(d3.axisLeft(yScale).tickValues([0, .5, 1]))
+        .call(d3.axisLeft(yScale).tickValues(tick_values))
         .append('text')
         .classed('y-axis-label', true)
         .text('\u03A8')
@@ -56,12 +69,9 @@ BoxPlots.prototype.drawYAxis = function () {
         .attr('transform', 'rotate(-90) translate(-' + bp.height / 2 + ', -30)');
 };
 
-BoxPlots.prototype.violins = function (data) {
+BoxPlots.prototype.violins = function (bins, means_rounded) {
     var colors = new Colors().toRGBArray();
     var bp = this;
-    var group = this.svg.attr('data-group');
-    var bins = data.group_bins[group];
-    var means_rounded = data.group_means_rounded[group];
     return this.svg
         .selectAll('.violin')
         .data(bins)

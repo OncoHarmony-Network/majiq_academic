@@ -61,15 +61,11 @@ class ViewPsi(Psi):
 
         @property
         def means(self):
-            value = next(super().get('means'))[1]
-            return unpack_means(value)
+            return unpack_means(next(super().get('means'))[1])
 
         @property
         def bins(self):
-            value = next(super().get('bins'))[1]
-            if numpy.size(value, 0) == 1:
-                value = numpy.append(value, [numpy.flip(value[-1], 0)], axis=0)
-            return value
+            return unpack_bins(next(super().get('bins'))[1])
 
         @property
         def variances(self):
@@ -177,6 +173,10 @@ class ViewDeltaPsi(DeltaPsi):
                     yield key, {g: group_means[i] for i, g in enumerate(group_names)}
                     yield 'group_means_rounded', {g: numpy.around(group_means[i], decimals=3) for i, g in
                                                   enumerate(group_names)}
+                elif key == 'bins':
+                    yield 'bins', self.bins
+                    yield 'means', self.means
+                    yield 'means_rounded', self.means_rounded
                 else:
                     yield from super().get(key)
 
@@ -199,10 +199,16 @@ class ViewDeltaPsi(DeltaPsi):
 
         @property
         def bins(self):
-            value = next(super().get('bins'))[1]
-            if numpy.size(value, 0) == 1:
-                value = numpy.append(value, [numpy.flip(value[-1], 0)], axis=0)
-            return value
+            return unpack_bins(next(super().get('bins'))[1])
+
+        @property
+        def means(self):
+            for b in self.bins:
+                yield get_expected_dpsi(b)
+
+        @property
+        def means_rounded(self):
+            yield from numpy.around(tuple(self.means), decimals=3)
 
         @property
         def group_bins(self):
