@@ -312,10 +312,9 @@ class Gene(Base):
         end_exon = sorted((e.end for e in exons if e.end != -1), reverse=True)[0]
         return {'start': start_exon, 'end': end_exon}
 
-    def get_experiment(self, experiment_names):
-        experiment_names = tuple(y for x in experiment_names for y in x)
-        gene = dict(self)
+    def get_experiment(self, experiment_names_list):
 
+        gene = dict(self)
         gene['_id'] = self.id
 
         # todo: exons should NOT be sorted.
@@ -328,20 +327,67 @@ class Gene(Base):
         gene['start'] = self.start
         gene['end'] = self.end
 
-        gene['exon_types'] = {exon.view_start: {} for exon in self.exons}
-        for exon in self.exons:
-            gene['exon_types'][exon.view_start][exon.view_end] = {
-                experiment_name: exon.get_exon_type(experiment_name) for experiment_name in experiment_names
-            }
-
-        gene['reads'] = {junc.start: {} for junc in self.junctions}
+        gene['exon_types'] = {}
+        gene['reads'] = {}
         gene['junction_types'] = {junc.start: {} for junc in self.junctions}
-        for junc in self.junctions:
-            gene['reads'][junc.start][junc.end] = {
-                experiment_name: junc.get_reads(experiment_name) for experiment_name in experiment_names
-            }
-            gene['junction_types'][junc.start][junc.end] = {
-                experiment_name: junc.get_junction_type(experiment_name) for experiment_name in experiment_names
-            }
+
+        for experiment_names in experiment_names_list:
+            combined_name = next((n for n in experiment_names if ' Combined' in n), '')
+            experiment_names = experiment_names[experiment_names != combined_name]
+
+            for exon in self.exons:
+                for experiment_name in experiment_names:
+                    try:
+                        exon_start = gene['exon_types'][exon.view_start]
+                    except KeyError:
+                        gene['exon_types'][exon.view_start] = {}
+                        exon_start = gene['exon_types'][exon.view_start]
+
+                    try:
+                        exon_end = exon_start[exon.view_end]
+                    except KeyError:
+                        exon_start[exon.view_end] = {}
+                        exon_end = exon_start[exon.view_end]
+
+                    exon_end[experiment_name] = exon.get_exon_type(experiment_name)
+
+                if combined_name:
+                    exon_end[combined_name] = min(exon_end[x] for x in experiment_names)
+
+            for junc in self.junctions:
+                for experiment_name in experiment_names:
+                    try:
+                        reads_start = gene['reads'][junc.start]
+                    except KeyError:
+                        gene['reads'][junc.start] = {}
+                        reads_start = gene['reads'][junc.start]
+
+                    try:
+                        reads_end = reads_start[junc.end]
+                    except KeyError:
+                        reads_start[junc.end] = {}
+                        reads_end = reads_start[junc.end]
+
+                    reads_end[experiment_name] = junc.get_reads(experiment_name)
+
+                    try:
+                        types_start = gene['junction_types'][junc.start]
+                    except KeyError:
+                        gene['junction_types'][junc.start] = {}
+                        types_start = gene['junction_types'][junc.start]
+
+                    try:
+                        types_end = types_start[junc.end]
+                    except KeyError:
+                        types_start[junc.end] = {}
+                        types_end = types_start[junc.end]
+
+                    types_end[experiment_name] = junc.get_junction_type(experiment_name)
+
+                if combined_name:
+                    reads = gene['reads'][junc.start][junc.end]
+                    junction_types = gene['junction_types'][junc.start][junc.end]
+                    reads[combined_name] = sum(reads[x] for x in experiment_names)
+                    junction_types[combined_name] = min(junction_types[x] for x in experiment_names)
 
         return gene

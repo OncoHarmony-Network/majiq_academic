@@ -2,7 +2,8 @@ import os
 import tempfile
 
 from voila import io_voila, constants
-from voila.api import Voila, Matrix
+from voila.api import Voila
+from voila.api.view_matrix import ViewMatrix
 from voila.api.view_splice_graph import DeltaPsiSpliceGraph
 from voila.utils.exceptions import NoLsvsFound
 from voila.utils.run_voila_utils import table_marks_set, copy_static
@@ -17,7 +18,7 @@ class Deltapsi(Html, VoilaArgs):
 
         if not args.no_html:
             copy_static(args)
-            with Matrix(args.voila_file) as m:
+            with ViewMatrix(args.voila_file) as m:
                 self.metadata = m.metadata
             self.render_summaries()
             # self.render_index()

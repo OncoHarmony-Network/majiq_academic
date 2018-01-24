@@ -3,6 +3,7 @@ import tempfile
 
 from voila import constants, io_voila
 from voila.api import Matrix
+from voila.api.view_matrix import ViewMatrix
 from voila.api.view_splice_graph import PsiSpliceGraph
 from voila.utils.exceptions import NoLsvsFound
 from voila.utils.run_voila_utils import table_marks_set, copy_static
@@ -21,7 +22,7 @@ class Psi(Html, VoilaArgs):
         super(Psi, self).__init__(args)
 
         if not args.no_html:
-            with Matrix(args.voila_file, 'r') as m:
+            with ViewMatrix(args.voila_file, 'r') as m:
                 self.metadatda = m.metadata
             self.render_summaries()
             # self.render_index()

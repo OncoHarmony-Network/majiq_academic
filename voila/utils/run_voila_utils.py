@@ -8,7 +8,6 @@ from math import ceil
 import jinja2
 import numpy
 from jinja2 import Environment, FileSystemLoader
-from markupsafe import escape
 
 from voila import constants
 from voila.constants import EXEC_DIR
@@ -55,51 +54,13 @@ def get_env():
     :return: env variable
     """
 
-    def replace_quotes(j):
-        return j.replace('"', '\'')
-
     def to_json(value):
-        j = json.dumps(value, cls=NumpyEncoder)
-        x = replace_quotes(j)
-        return x
-
-    def to_json_especial(value):
-        x = escape(
-            replace_quotes(
-                json.dumps(value, cls=NumpyEncoder)
-            )
-        )
-        return x
-
-    def to_json_psi1(lsv):
-        return replace_quotes(
-            json.dumps(
-                {
-                    'bins': lsv.psi1,
-                    'means': lsv.means_psi1
-                },
-                cls=NumpyEncoder
-            )
-        )
-
-    def to_json_psi2(lsv):
-        return replace_quotes(
-            json.dumps(
-                {
-                    'bins': lsv.psi2,
-                    'means': lsv.means_psi2
-                },
-                cls=NumpyEncoder
-            )
-        )
+        return json.dumps(value, cls=NumpyEncoder)
 
     env = Environment(extensions=["jinja2.ext.do"], loader=FileSystemLoader(get_template_dir()),
                       undefined=jinja2.StrictUndefined)
     env.filters.update({
         'to_json': to_json,
-        'to_json_especial': to_json_especial,
-        'to_json_psi1': to_json_psi1,
-        'to_json_psi2': to_json_psi2
     })
     return env
 

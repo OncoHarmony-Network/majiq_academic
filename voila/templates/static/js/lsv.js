@@ -455,7 +455,7 @@ Lsv.prototype.drawLSVCompactStackBars = function (canvas, fillMode) {
 
                 for (var lsv_count = 0; lsv_count < group.group_bins[group_name].length; lsv_count++) {
                     // Calculate the height of the accumulated mean
-                    acc_height += group.group_means[group_name][lsv_count];
+                    acc_height += group.group_means_rounded[group_name][lsv_count];
 
                     var coords_gradient = {
                         'x1': origins_coords[count][0] + offset,
@@ -472,7 +472,7 @@ Lsv.prototype.drawLSVCompactStackBars = function (canvas, fillMode) {
                         group,
                         lsv_count,
                         origins_coords[count][0],
-                        origins_coords[count][1] - (acc_height - group.group_means[group_name][lsv_count]) * sub_canvas_pixels[1],
+                        origins_coords[count][1] - (acc_height - group.group_means_rounded[group_name][lsv_count]) * sub_canvas_pixels[1],
                         origins_coords[count][0] + sub_canvas_pixels[0],
                         origins_coords[count][1] - (acc_height) * sub_canvas_pixels[1]
                     );

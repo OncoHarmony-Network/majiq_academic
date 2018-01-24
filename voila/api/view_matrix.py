@@ -18,28 +18,16 @@ def unpack_bins(value):
 
 class ViewPsi(Psi):
     class _ViewPsi(Psi._Psi):
-        def get(self, *args):
+        def get(self):
             yield 'lsv_id', self.lsv_id
             yield '_id', self.lsv_id
-            yield 'coordinates', self.coordinates
+            yield 'coordinates', tuple(self.coordinates)
 
-            if not args:
-                args = self.fields
-
-            group_names = self.matrix_hdf5.group_names
-
-            for key in args:
+            for key in self.fields:
                 if key == 'bins':
-                    bins = self.bins
-                    yield key, bins
-                    yield 'group_bins', {g: bins for i, g in enumerate(group_names)}
+                    yield 'group_bins', dict(self.group_bins)
                 elif key == 'means':
-                    means = self.means
-                    yield key, means
-                    yield 'means_rounded', numpy.around(means, decimals=3)
-                    yield 'group_means', {g: means for i, g in enumerate(group_names)}
-                    yield 'group_means_rounded', {g: numpy.around(means, decimals=3) for i, g in
-                                                  enumerate(group_names)}
+                    yield 'group_means_rounded', dict(self.group_means_rounded)
                 else:
                     yield from super().get(key)
 
@@ -53,30 +41,38 @@ class ViewPsi(Psi):
             else:
                 coords = lsv_coords.split('-')
 
-            return list(map(int, coords))
-
-        @property
-        def gene_id(self):
-            return ':'.join(self.lsv_id.split(':')[:-2])
+            yield from map(int, coords)
 
         @property
         def means(self):
             return unpack_means(next(super().get('means'))[1])
 
         @property
+        def group_means(self):
+            group_names = self.matrix_hdf5.group_names
+            yield group_names[0], self.means
+
+        @property
+        def group_means_rounded(self):
+            for group_name, means in self.group_means:
+                yield group_name, numpy.around(means, decimals=3)
+
+        @property
         def bins(self):
             return unpack_bins(next(super().get('bins'))[1])
 
         @property
-        def variances(self):
-            bins = self.bins
-            means = self.means
+        def group_bins(self):
+            group_names = self.matrix_hdf5.group_names
+            yield group_names[0], self.bins
 
-            if bins is not None and bins.size > 0:
-                for bin in bins:
-                    step_bins = 1.0 / len(bin)
-                    projection_prod = bin * numpy.arange(step_bins / 2, 1, step_bins) ** 2
-                    yield numpy.sum(projection_prod) - means[-1] ** 2
+        @property
+        def variances(self):
+            means = self.means
+            for bin in self.bins:
+                step_bins = 1.0 / len(bin)
+                projection_prod = bin * numpy.arange(step_bins / 2, 1, step_bins) ** 2
+                yield numpy.sum(projection_prod) - means[-1] ** 2
 
         @property
         def lsv_type(self):
@@ -153,37 +149,22 @@ class ViewPsi(Psi):
 
 class ViewDeltaPsi(DeltaPsi):
     class _ViewDeltaPsi(DeltaPsi._DeltaPsi):
-        def get(self, *args):
+        def get(self):
             yield 'lsv_id', self.lsv_id
             yield '_id', self.lsv_id
             yield 'coordinates', self.coordinates
             yield 'excl_incl', self.excl_incl
 
-            if not args:
-                args = self.fields
-
-            group_names = self.matrix_hdf5.group_names
-
-            for key in args:
+            for key in self.fields:
                 if key == 'group_bins':
-                    group_bins = tuple(self.group_bins)
-                    yield key, {g: group_bins[i] for i, g in enumerate(group_names)}
+                    yield key, dict(self.group_bins)
                 elif key == 'group_means':
-                    group_means = tuple(self.group_means)
-                    yield key, {g: group_means[i] for i, g in enumerate(group_names)}
-                    yield 'group_means_rounded', {g: numpy.around(group_means[i], decimals=3) for i, g in
-                                                  enumerate(group_names)}
+                    yield 'group_means_rounded', dict(self.group_means_rounded)
                 elif key == 'bins':
                     yield 'bins', self.bins
-                    yield 'means', self.means
                     yield 'means_rounded', self.means_rounded
                 else:
                     yield from super().get(key)
-
-        @property
-        def group_means(self):
-            for value in next(super().get('group_means'))[1]:
-                yield unpack_means(value)
 
         @property
         def coordinates(self):
@@ -202,23 +183,31 @@ class ViewDeltaPsi(DeltaPsi):
             return unpack_bins(next(super().get('bins'))[1])
 
         @property
+        def group_bins(self):
+            group_names = self.matrix_hdf5.group_names
+            group_bins = next(super().get('group_bins'))[1]
+            for group_name, value in zip(group_names, group_bins):
+                yield group_name, unpack_bins(value)
+
+        @property
         def means(self):
             for b in self.bins:
                 yield get_expected_dpsi(b)
 
         @property
         def means_rounded(self):
-            yield from numpy.around(tuple(self.means), decimals=3)
+            return numpy.around(tuple(self.means), decimals=3)
 
         @property
-        def group_bins(self):
-            for value in next(super().get('group_bins'))[1]:
-                yield unpack_bins(value)
+        def group_means(self):
+            for value in next(super().get('group_means'))[1]:
+                yield unpack_means(value)
 
         @property
-        def means(self):
-            for bin in self.bins:
-                yield get_expected_dpsi(bin)
+        def group_means_rounded(self):
+            group_names = self.matrix_hdf5.group_names
+            for group_name, means in zip(group_names, self.group_means):
+                yield group_name, numpy.around(means, decimals=3)
 
         @property
         def excl_incl(self):
@@ -271,3 +260,14 @@ class ViewMatrix(ViewDeltaPsi, ViewPsi):
                 if not lsv_ids or lsv_id in lsv_ids:
                     if not threshold or VoilaLsv.is_lsv_changing(self.get_lsv_means(lsv_id), threshold):
                         yield lsv_id
+
+    @property
+    def metadata(self):
+        metadata = super().metadata
+        experiment_names = metadata['experiment_names']
+        group_names = super().group_names
+
+        metadata['experiment_names'] = [numpy.insert(exps, 0, '{0} Combined'.format(group)) for exps, group in
+                                        zip(experiment_names, group_names)]
+
+        return metadata
