@@ -109,7 +109,6 @@ class DeltaPsi(BasicPipeline):
         self.weights = weights
         if len(list_of_lsv) > 0:
             nthreads = min(self.nthreads, len(list_of_lsv))
-            print(nthreads, list(chunks(list_of_lsv, nthreads)))
             pool = mp.Pool(processes=nthreads, initializer=process_conf, initargs=[deltapsi_quantification, self],
                            maxtasksperchild=1)
             [xx.acquire() for xx in self.lock]
@@ -119,8 +118,6 @@ class DeltaPsi(BasicPipeline):
 
             with Matrix(get_quantifier_voila_filename(self.outDir, self.names, deltapsi=True), 'w') as out_h5p:
                 out_h5p.analysis_type = ANALYSIS_DELTAPSI
-                # out_h5p.add_experiments(group_name=self.names[0], experiment_names=meta1['experiments'])
-                # out_h5p.add_experiments(group_name=self.names[1], experiment_names=meta2['experiments'])
                 out_h5p.group_names = self.names
                 exps1 = [os.path.splitext(os.path.basename(xx))[0] for xx in self.files1]
                 exps2 = [os.path.splitext(os.path.basename(xx))[0] for xx in self.files2]

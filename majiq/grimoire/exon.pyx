@@ -48,7 +48,7 @@ cdef Exon exon_overlap(dict dd, int st, int end):
     cdef Exon vv
 
     for kk, vv in dd.items():
-        if kk[0] != EMPTY_COORD and kk[1] != EMPTY_COORD and st < kk[1] and end > kk[0]:
+        if vv.start != EMPTY_COORD and vv.end != EMPTY_COORD and st < kk[1] and end > kk[0]:
             return vv
 
 
@@ -147,7 +147,6 @@ def detect_exons(dict junction_dict, list exon_list):
     cdef bint jtype
 
     for kk, jj in junction_dict.items():
-        #if not jj.intronic:
         if kk[0]>0:
             junction_list.append((kk[0], True, jj))
         if kk[1]>0:
