@@ -6,7 +6,7 @@ from majiq.src.constants import *
 # from majiq.src.wght_pipeline import calc_weights
 from majiq.src.indpnt import calc_independent
 from majiq.src.stats import all_stats
-
+import sys
 
 class FRange01(argparse.Action):
     def __call__(self, parser, namespace, values, option_string = None):
@@ -66,14 +66,15 @@ def main():
     buildparser.add_argument('transcripts', action="store", help='Annotation db ')
     buildparser.add_argument('-conf', default=None, required=True,
                              help='Provide study configuration file with all the execution information')
+
     buildparser.add_argument('--disable_gc', dest="gcnorm", action='store_false', default=True,
                              help='Disables GC content normalization [Default: %(default)s]')
-
     buildparser.add_argument('--disable_ir', dest="ir", action='store_false', default=True,
-                             help='Disables intron retention detection [Default: %(default)s]')
+                             help='Disables intron retention detection [Default: ir enabled]')
+
     buildparser.add_argument('--disable_denovo', dest="denovo", action='store_false', default=True,
                              help='Disables denovo detection of junction, splicesites and exons. This will speedup the '
-                                  'execution but reduce the number of LSVs detected. [Default: %(default)s]')
+                                  'execution but reduce the number of LSVs detected. [Default: denovo enabled]')
 
     buildparser.add_argument('--gff_output', dest='gff_output', default="lsvs.gff", action="store",
                              help='Filename where a gff with the lsv events will be generated. [Default: %(default)s]')
@@ -135,8 +136,7 @@ def main():
     psi = new_subparser()
     psi.add_argument('files', nargs='+', help='The experiment files to analyze. You can include more than one '
                                               '(they will all be analyzed independently though) Glob syntax supported.')
-    psi.add_argument('--name', required=True, help="The names that identify each of the experiments. "
-                                                   "[Default: %(default)s]")
+    psi.add_argument('--name', required=True, help="The names that identify each of the experiments.")
     psi.add_argument('--weights', dest="weights", default='None',
                      help='Defines weights for each one of the replicas, for group1 and group2. The expected '
                           'value is --weights [Auto|None|<w1[,w2,..]>]\n'
@@ -150,7 +150,7 @@ def main():
     delta.add_argument('--default_prior', action='store_true', default=False,
                        help="Use a default prior instead of computing it using the empirical data")
     delta.add_argument('--names', nargs='+', required=True,
-                       help="The names that identify each of the experiments. [Default: %(default)s]")
+                       help="The names that identify each of the experiments.")
     delta.add_argument('--binsize', default=0.025, type=int,
                        help='The bins for PSI values. With a --binsize of 0.025 (default), we have 40 bins')
     delta.add_argument('--priorminreads', default=20, type=int,
@@ -223,6 +223,10 @@ def main():
                                                              'groups. This approach does not assume underlying PSI)',
                                              parents=[common, sampling, htrgen])
     parser_heterogen.set_defaults(func=calc_independent)
+
+    if len(sys.argv) == 1:
+        parser.print_help()
+        sys.exit(1)
 
     args = parser.parse_args()
     args.func(args)
