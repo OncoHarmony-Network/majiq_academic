@@ -313,7 +313,6 @@ class Gene(Base):
         return {'start': start_exon, 'end': end_exon}
 
     def get_experiment(self, experiment_names_list):
-
         gene = dict(self)
         gene['_id'] = self.id
 

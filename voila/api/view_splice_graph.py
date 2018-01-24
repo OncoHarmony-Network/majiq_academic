@@ -24,7 +24,7 @@ class ViewSpliceGraph(SpliceGraph):
             return zip_longest(*args, fillvalue=fillvalue)
 
         for page in grouper(self.get_gene_ids(args), constants.MAX_GENES):
-            yield page
+            yield tuple(p for p in page if p is not None)
 
     def get_gene_ids(self, args=None):
         if args and args.gene_ids:
