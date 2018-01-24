@@ -41,9 +41,11 @@ import numpy as np
 EPSILON = np.finfo(np.float64).eps
 
 
-def get_quantifier_voila_filename(outdir, name, deltapsi=False):
+def get_quantifier_voila_filename(outdir, name, deltapsi=False, het=False):
     if deltapsi:
         return "%s/%s_%s.deltapsi.voila" % (outdir, name[0], name[1])
+    elif het:
+        return "%s/%s_%s.het.voila" % (outdir, name[0], name[1])
     else:
         return "%s/%s.psi.voila" % (outdir, name)
 

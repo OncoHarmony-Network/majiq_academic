@@ -40,7 +40,7 @@ cdef int _read_gff(str filename, str outDir, object elem_dict,  object all_genes
     cdef str chrom, name, strand
     cdef int start, end
     cdef bint bb
-    cdef list ind_list
+    cdef list ind_list, tlist
 
     for record in parse_gff3(filename):
         chrom = record.seqid
@@ -110,21 +110,25 @@ cdef int _read_gff(str filename, str outDir, object elem_dict,  object all_genes
 
 
     for parent_tx_id, (gn_id, coord_list) in trcpt_id_dict.items():
+        tlist = elem_dict[gn_id]
         last_ss = FIRST_LAST_JUNC
         coord_list.sort(key=lambda x: (x[0], x[1]))
         for xx, yy in coord_list:
-            tlist = elem_dict[gn_id]
+
             #elem_dict[gn_id].append([last_ss, xx, 1, J_TYPE])
             tlist.append([last_ss, xx, 1, J_TYPE])
-            elem_dict[gn_id] = tlist
+
             last_ss = yy
 
-        elem_dict[gn_id].append([last_ss, FIRST_LAST_JUNC, 1, J_TYPE])
+        #tlist.append([last_ss, xx, 1, J_TYPE])
+        #elem_dict[gn_id].append([last_ss, FIRST_LAST_JUNC, 1, J_TYPE])
+        tlist.append([last_ss, FIRST_LAST_JUNC, 1, J_TYPE])
+        elem_dict[gn_id] = tlist
     merge_exons(exon_dict, elem_dict)
 
 
 cdef int merge_exons(dict exon_dict, object elem_dict) except -1:
-    cdef list ex_list
+    cdef list ex_list, tlist
     cdef str gne_id
     cdef tuple x
     cdef int ex_start, ex_end, nopen, coord
@@ -132,16 +136,17 @@ cdef int merge_exons(dict exon_dict, object elem_dict) except -1:
 
 
     for gne_id, ex_list in exon_dict.items():
-        ex_list.sort(key=lambda x:(x[0],x[1]))
+        tlist = elem_dict[gne_id]
+        ex_list.sort(key=lambda x:(x[0], x[1]))
         ex_start = -1
         ex_end = -1
         nopen = 0
         for coord, is_start in ex_list:
             if is_start:
                 if ex_end != -1:
-                    elem_dict[gne_id].append([ex_start, ex_end, 1, EX_TYPE])
+                    tlist.append([ex_start, ex_end, 1, EX_TYPE])
                     if nopen > 0 and (ex_end+4) < (coord-1):
-                        elem_dict[gne_id].append([ex_end+1, coord-1, 1, IR_TYPE])
+                        tlist.append([ex_end+1, coord-1, 1, IR_TYPE])
                     ex_end = -1
                     nopen = 0
                     ex_start = coord
@@ -154,8 +159,9 @@ cdef int merge_exons(dict exon_dict, object elem_dict) except -1:
                 ex_end = coord if coord > ex_end else ex_end
 
         if ex_end != -1:
-            elem_dict[gne_id].append([ex_start, ex_end, 1, EX_TYPE])
+            tlist.append([ex_start, ex_end, 1, EX_TYPE])
 
+        elem_dict[gne_id] = tlist
         # _dump_elems_list(db_f, gne_id, np.array(elem_mtrx))
         #elem_dict[gne_id] = np.array(elem_dict[gne_id])
 
@@ -270,9 +276,12 @@ cpdef extract_lsv_summary(list files, int minnonzero, int min_reads, object type
     percent = min(int(percent), nfiles)
 
     for fidx, ff in enumerate(files):
+        if not os.path.isfile(ff):
+            logger.error('File %s does not exist. Exiting execution' % ff)
+            exit(-1)
+
         if logger:
             logger.info("Parsing file: %s" % ff)
-
         with open(ff, 'rb') as fp:
             all_files = np.load(fp)
             # print ([xx for xx in all_files['lsv_types']])
