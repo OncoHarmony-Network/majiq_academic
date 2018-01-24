@@ -153,7 +153,7 @@ def detect_exons(dict junction_dict, list exon_list):
         if kk[1]>0:
             junction_list.append((kk[1], False, jj))
     junction_list.sort(key=lambda jj: (jj[0], jj[1]))
-    print(junction_list)
+
     for (coord, jtype, jj) in junction_list:
         if not (jj.is_reliable() or jj.annotated):
             continue
