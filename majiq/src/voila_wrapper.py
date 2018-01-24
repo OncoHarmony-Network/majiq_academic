@@ -83,8 +83,8 @@ def gene_to_splicegraph(gne_id, gne, dict_junctions, exon_dict, list_introns, ma
 
             exon = sg.exon(gne_id, ex.start, ex.end)
             if not exon:
-                exon.add(coords_extra=extra_coords, intron_retention=False, annotated=ex.annot,
-                                                  alt_starts=alt_start, alt_ends=alt_ends)
+                exon.add(coords_extra=extra_coords, intron_retention=False, annotated=ex.annot, alt_starts=alt_start,
+                         alt_ends=alt_ends)
             else:
                 print('duplicate exon:', gne_id, ex.start, ex.end)
 

@@ -4,6 +4,13 @@ $(document).on('click', '.lsv-single-compact-percentiles, .psi-violin-plot', fun
         .animate({height: 'toggle', width: 'toggle'});
 });
 
+$(document).on('click', '.deltapsi-violin-plot, .excl-incl-rect', function () {
+    $(this.parentNode)
+        .children('.deltapsi-violin-plot, .excl-incl-rect')
+        .animate({height: 'toggle', width: 'toggle'});
+});
+
+
 var Lsv = function (db) {
     this.db = db
 };
