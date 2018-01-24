@@ -48,7 +48,7 @@ cdef Exon exon_overlap(dict dd, int st, int end):
     cdef Exon vv
 
     for kk, vv in dd.items():
-        if st < kk[1] and end > kk[0]:
+        if kk[0] != FIRST_LAST_JUNC and kk[1] != FIRST_LAST_JUNC and st < kk[1] and end > kk[0]:
             return vv
 
 
