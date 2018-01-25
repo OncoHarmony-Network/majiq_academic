@@ -1,9 +1,5 @@
 import multiprocessing as mp
 import sys
-import traceback
-
-import h5py
-
 import majiq.src.io as majiq_io
 from majiq.src.psi import psi_posterior
 
@@ -28,12 +24,17 @@ def psi_quantification(list_of_lsv, chnk, conf, logger):
     logger.info("Quantifying LSVs PSI.. %s" % chnk)
     f_list = majiq_io.get_extract_lsv_list(list_of_lsv, conf.files)
 
+    if conf.weights is None:
+        weights = majiq_io.load_weights(list_of_lsv, conf.outDir, conf.name)
+    else:
+        weights = conf.weights
+
     for lidx, lsv_id in enumerate(list_of_lsv):
         if lidx % 50 == 0:
             print("Event %d ..." % lidx)
             sys.stdout.flush()
 
-        psi = np.array(f_list[lidx].coverage) * conf.weights[:, None, None]
+        psi = f_list[lidx].coverage * weights[lsv_id][:, None, None]
 
         mu_psi, post_psi = psi_posterior(psi, psi.shape[2], len(conf.files), conf.nbins, conf.lsv_type_dict[lsv_id])
         qm = QueueMessage(QUEUE_MESSAGE_PSI_RESULT, (post_psi, mu_psi, lsv_id), chnk)
@@ -68,11 +69,11 @@ class CalcPsi(BasicPipeline):
         list_of_lsv = majiq_io.extract_lsv_summary(self.files, minnonzero=self.minpos, types_dict=self.lsv_type_dict,
                                                    min_reads=self.minreads, percent=self.min_exp,
                                                    logger=logger)
-        nthreads = min(self.nthreads, len(list_of_lsv))
-        weights = self.calc_weights(self.weights, self.files, list_of_lsv, self.lock, self.queue, self.name)
-        self.weights = weights
+
+        self.weights = self.calc_weights(self.weights, list_of_lsv, name=self.name, file_list=self.files, logger=logger)
 
         if len(list_of_lsv) > 0:
+            nthreads = min(self.nthreads, len(list_of_lsv))
             pool = mp.Pool(processes=nthreads, initializer=process_conf, initargs=[psi_quantification, self],
                            maxtasksperchild=1)
             [xx.acquire() for xx in self.lock]

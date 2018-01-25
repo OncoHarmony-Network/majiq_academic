@@ -89,8 +89,7 @@ def process_conf(func, pipeline):
     process_conf.func = func
 
 
-def queue_manager(output_h5dfp, lock_array, result_queue, num_chunks,
-                  out_inplace=None, logger=None, **kwargs):
+def queue_manager(output_h5dfp, lock_array, result_queue, num_chunks, out_inplace=None, logger=None, **kwargs):
     nthr_count = 0
     found = {}
     gen_dict = {}
@@ -146,8 +145,6 @@ def queue_manager(output_h5dfp, lock_array, result_queue, num_chunks,
             elif val.get_type() == QUEUE_MESSAGE_DELTAPSI_RESULT:
                 results = val.get_value()
                 lsv_type = kwargs['lsv_type'][results[5]]
-                # output_h5dfp.delta_psi(results[5]).add(lsv_type=lsv_type, bins=results[0], psi1=results[1],
-                #                                        psi2=results[2], means_psi1=results[3], means_psi2=results[4])
                 output_h5dfp.delta_psi(results[5]).add(lsv_type=lsv_type, bins=results[0],
                                                        group_bins=[results[1], results[2]],
                                                        group_means=[results[3], results[4]])
@@ -158,6 +155,7 @@ def queue_manager(output_h5dfp, lock_array, result_queue, num_chunks,
                 output_h5dfp.add_lsv(VoilaLsv(bins_list=None, lsv_graphic=lsv_graph, psi1=None, psi2=None,
                                               means_psi1=None, means_psi2=None, het=val.get_value()[0]))
 
+            #TODO: POSSIBLE REMOVE
             elif val.get_type() == QUEUE_MESSAGE_BOOTSTRAP:
                 out_inplace[0].extend(val.get_value()[0])
                 out_inplace[1].extend(val.get_value()[1])

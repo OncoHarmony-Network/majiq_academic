@@ -1,9 +1,8 @@
 import multiprocessing as mp
-import majiq.src.filter as majiq_filter
 import majiq.src.io as majiq_io
-import majiq.src.utils as majiq_utils
+import majiq.src.logger as majiq_logger
 from majiq.src.basic_pipeline import BasicPipeline, pipeline_run
-
+from majiq.src.constants import *
 
 ################################
 # PSI calculation pipeline     #
@@ -23,28 +22,31 @@ class Weights(BasicPipeline):
         Given a file path with the junctions, return psi distributions.
         write_pickle indicates if a .pickle should be saved in disk
         """
-        majiq_utils.create_if_not_exists(self.logger_path)
-        self.logger = majiq_utils.get_logger("%s/psi_majiq.log" % self.logger_path, silent=self.silent,
-                                             debug=self.debug)
+        majiq_logger.create_if_not_exists(self.logger_path)
+        logger = majiq_logger.get_logger("%s/weights_majiq.log" % self.logger_path, silent=self.silent,
+                                        debug=self.debug)
 
-        self.logger.info("")
-        self.logger.info("Command: %s" % self)
-        self.logger.info("Running Psi ...")
-        self.logger.info("GROUP: %s" % self.files)
+        logger.info("Majiq weights v%s" % VERSION)
+        logger.info("Command: %s" % self)
+        logger.info("Running weights ...")
+        logger.info("GROUP: %s" % self.files)
+
         self.nbins = 40
         self.weights = 'auto'
 
+        manager = mp.Manager()
+        self.lsv_type_dict = manager.dict()
+
         self.lock = [mp.Lock() for xx in range(self.nthreads)]
-        q = mp.Queue()
-        lsv_dict, lsv_types, lsv_summarized, meta = majiq_io.extract_lsv_summary(self.files)
+        self.queue = mp.Queue()
 
-        list_of_lsv = majiq_filter.merge_files_hdf5(lsv_dict=lsv_dict, lsv_summarized=lsv_summarized,
-                                                    minnonzero=self.minpos, min_reads=self.minreads,
-                                                    percent=self.min_exp, logger=self.logger)
+        list_of_lsv = majiq_io.extract_lsv_summary(self.files, minnonzero=self.minpos, types_dict=self.lsv_type_dict,
+                                                   min_reads=self.minreads, percent=self.min_exp,
+                                                   logger=logger)
 
-        weights = self.calc_weights(self.weights, self.files, list_of_lsv, self.lock, q, self.name)
+        weights = self.calc_weights(self.weights, list_of_lsv, name=self.name, file_list=self.files, logger=logger)
 
-        self.logger.info("Weights for %s are %s" %(self.name, weights))
-        self.logger.info("Weights calculation ended succesfully!")
-        self.logger.info("Alakazam! Done.")
+        logger.info("Weights for %s are %s" %(self.name, weights))
+        logger.info("Weights calculation ended succesfully!")
+        logger.info("Alakazam! Done.")
 

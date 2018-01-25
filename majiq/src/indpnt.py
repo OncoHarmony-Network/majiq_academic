@@ -1,9 +1,7 @@
 import multiprocessing as mp
 import sys
-import h5py
 
 import majiq.src.io as majiq_io
-import majiq.src.deprecated_io as majiq_deprio
 import majiq.src.logger as majiq_logger
 from majiq.src.basic_pipeline import BasicPipeline, pipeline_run
 from majiq.src.constants import *
@@ -13,6 +11,7 @@ from majiq.src.stats import operator, all_stats
 from voila.api import Voila
 from voila.constants import ANALYSIS_HETEROGEN
 from voila.vlsv import Het
+import os
 
 
 def het_quantification(list_of_lsv, chnk, process_conf, logger):
@@ -20,8 +19,8 @@ def het_quantification(list_of_lsv, chnk, process_conf, logger):
     num_exp = [len(process_conf.files1), len(process_conf.files2)]
 
     f_list = [None, None]
-    f_list[0] = majiq_io.get_extract_lsv_list(list_of_lsv, process_conf.files1, process_conf.m_samples)
-    f_list[1] = majiq_io.get_extract_lsv_list(list_of_lsv, process_conf.files2, process_conf.m_samples)
+    f_list[0] = majiq_io.get_extract_lsv_list(list_of_lsv, process_conf.files1)
+    f_list[1] = majiq_io.get_extract_lsv_list(list_of_lsv, process_conf.files2)
 
     for lidx, lsv_id in enumerate(list_of_lsv):
         if lidx % 50 == 0:
@@ -111,14 +110,24 @@ class independent(BasicPipeline):
         """
 
         majiq_logger.create_if_not_exists(self.logger_path)
-        logger = majiq_logger.get_logger("%s/deltapsi_majiq.log" % self.logger_path, silent=self.silent,
-                                        debug=self.debug)
+        logger = majiq_logger.get_logger("%s/het_majiq.log" % self.logger_path, silent=self.silent,
+                                         debug=self.debug)
 
         logger.info("Majiq deltapsi heterogeneous v%s" % VERSION)
         logger.info("Command: %s" % " ".join(sys.argv))
         logger.info("GROUP1: %s" % self.files1)
         logger.info("GROUP2: %s" % self.files2)
+
         self.nbins = 40
+
+        manager = mp.Manager()
+        self.lsv_type_dict = manager.dict()
+        self.queue = mp.Queue()
+        self.lock = [mp.Lock() for xx in range(self.nthreads)]
+
+        pool = mp.Pool(processes=self.nthreads, initializer=process_conf,
+                       initargs=[het_quantification, self],
+                       maxtasksperchild=1)
 
         try:
             for stats_name in self.stats:
@@ -130,47 +139,36 @@ class independent(BasicPipeline):
                          "in  [ %s ]" % (stats_name, ' | '.join(all_stats)))
             return
 
-        meta1 = majiq_io.read_meta_info(self.files1)
-        list_of_lsv1, lsv_dict_graph = majiq_io.extract_lsv_summary(self.files1,
-                                                                    minnonzero=self.minpos, min_reads=self.minreads,
-                                                                    percent=self.min_exp, logger=logger)
+        list_of_lsv1 = majiq_io.extract_lsv_summary(self.files1, types_dict=self.lsv_type_dict,
+                                                    minnonzero=self.minpos, min_reads=self.minreads,
+                                                    percent=self.min_exp, logger=logger)
         logger.info("Group %s: %s LSVs" % (self.names[0], len(list_of_lsv1)))
 
-        meta2 = majiq_io.read_meta_info(self.files2)
-        list_of_lsv2, lsv_dict_graph = majiq_io.extract_lsv_summary(self.files2,
-                                                                    minnonzero=self.minpos, min_reads=self.minreads,
-                                                                    percent=self.min_exp, logger=logger)
+        list_of_lsv2 = majiq_io.extract_lsv_summary(self.files2, types_dict=self.lsv_type_dict,
+                                                    minnonzero=self.minpos, min_reads=self.minreads,
+                                                    percent=self.min_exp, logger=logger)
         logger.info("Group %s: %s LSVs" % (self.names[1], len(list_of_lsv1)))
 
-        assert meta1['m_samples'] == meta2['m_samples'], \
-            "Groups have different number of bootstrap samples(%s,%s)" %(meta1['m_samples'], meta2['m_samples'])
-
-        self.m_samples = meta1['m_samples']
         list_of_lsv = list(set(list_of_lsv1).intersection(set(list_of_lsv2)))
         logger.info("Number quantifiable LSVs: %s" % len(list_of_lsv))
 
         if len(list_of_lsv) > 0:
             nthreads = min(self.nthreads, len(list_of_lsv))
-            self.queue = mp.Queue()
-            self.lock = [mp.Lock() for xx in range(self.nthreads)]
             [xx.acquire() for xx in self.lock]
-            pool = mp.Pool(processes=self.nthreads, initializer=process_conf,
-                           initargs=[het_quantification, self],
-                           maxtasksperchild=1)
-
             pool.map_async(process_wrapper,  chunks(list_of_lsv, nthreads))
             pool.close()
             with Voila(get_quantifier_voila_filename(self.outDir, self.names, deltapsi=True), 'w') as out_h5p:
-                out_h5p.add_genome(meta1['genome'])
+
                 out_h5p.set_analysis_type(ANALYSIS_HETEROGEN)
-                out_h5p.add_experiments(self.names[0], experiment_names=meta1['experiments'])
-                out_h5p.add_experiments(self.names[1], experiment_names=meta2['experiments'])
+                out_h5p.group_names = self.names
+                exps1 = [os.path.splitext(os.path.basename(xx))[0] for xx in self.files1]
+                exps2 = [os.path.splitext(os.path.basename(xx))[0] for xx in self.files2]
+                out_h5p.experiment_names = [exps1, exps2]
+
                 out_h5p.add_stat_names(self.stats)
 
-                in_h5p = h5py.File(self.files1[0], 'r')
-                queue_manager(out_h5p, self.lock, self.queue, num_chunks=self.nthreads, logger=logger,
-                              list_of_lsv_graphics=lsv_dict_graph)
-                in_h5p.close()
+                queue_manager(out_h5p, self.lock, self.queue, num_chunks=nthreads, logger=logger,
+                              lsv_type=self.lsv_type_dict)
             pool.join()
 
         logger.info("DeltaPSI Het calculation for %s_%s ended succesfully! Result can be found at %s" % (self.names[0],

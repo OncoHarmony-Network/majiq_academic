@@ -286,7 +286,7 @@ cpdef list heterogen_posterior(list boots, object out_het, int m_samples, int ps
 
 @cython.boundscheck(False) # turn off bounds-checking for entire function
 @cython.wraparound(False)  # turn off negative index wrapping for entire function
-cpdef list divs_from_bootsamples(list lsvs_to_work, int n_replica, float pnorm, int nbins=40):
+cpdef list divs_from_bootsamples(list lsvs_to_work, int n_replica, object lsv_types, float pnorm, int nbins=40):
 
     cdef float bsize, alpha_0, beta_0
     cdef np.ndarray psi_border, psi, med, post_cdf, ldist
@@ -303,7 +303,8 @@ cpdef list divs_from_bootsamples(list lsvs_to_work, int n_replica, float pnorm, 
     for lsv_idx, quant_lsv in enumerate(lsvs_to_work):
         num_ways = quant_lsv.coverage[0].shape[0]
         post_cdf = np.zeros(shape=(n_replica, num_ways, psi_border.shape[0]), dtype=np.float)
-        alpha_prior, beta_prior = _get_prior_params(quant_lsv.type, num_ways)
+        #print(quant_lsv.id, lsv_types[quant_lsv.id])
+        alpha_prior, beta_prior = _get_prior_params(lsv_types[quant_lsv.id], num_ways)
 
         for rr, s_lsv in enumerate(quant_lsv.coverage):
             m_samples = s_lsv.shape[1]

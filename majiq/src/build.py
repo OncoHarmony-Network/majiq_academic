@@ -150,7 +150,7 @@ def parse_denovo_elements(pself, logger):
             pool2.join()
             majiq_io.add_elements_mtrx(elem_dict, pself.elem_dict)
 
-    majiq_io.dump_elements(pself.genes_dict, pself.elem_dict, pself.outDir)
+    majiq_io.dump_db(pself.genes_dict, pself.elem_dict, pself.outDir)
 
 
 def parsing_files(sam_file_list, chnk, conf, logger):
@@ -240,8 +240,7 @@ class Builder(BasicPipeline):
 
     def builder(self, majiq_config):
 
-        logger = majiq_logger.get_logger("%s/majiq.log" % majiq_config.outDir, silent=False,
-                                        debug=self.debug)
+        logger = majiq_logger.get_logger("%s/majiq.log" % majiq_config.outDir, silent=False, debug=self.debug)
         logger.info("Majiq Build v%s" % VERSION)
         logger.info("Command: %s" % " ".join(sys.argv))
         self.queue = mp.Queue()

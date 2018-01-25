@@ -26,6 +26,13 @@ def deltapsi_quantification(list_of_lsv, chnk, conf, logger):
     f_list[0] = majiq_io.get_extract_lsv_list(list_of_lsv, conf.files1)
     f_list[1] = majiq_io.get_extract_lsv_list(list_of_lsv, conf.files2)
 
+    if conf.weights[0] is None:
+        weights1 = majiq_io.load_weights(list_of_lsv, conf.outDir, conf.names[0])
+        weights2 = majiq_io.load_weights(list_of_lsv, conf.outDir, conf.names[1])
+    else:
+        weights1 = conf.weights[0]
+        weights2 = conf.weights[1]
+
     prior_matrix = np.array(majiq_io.load_bin_file(get_prior_matrix_filename(conf.outDir, conf.names)))
 
     for lidx, lsv_id in enumerate(list_of_lsv):
@@ -34,8 +41,11 @@ def deltapsi_quantification(list_of_lsv, chnk, conf, logger):
             sys.stdout.flush()
         if f_list[0][lidx].coverage.shape[1] < 2:
             continue
-        post_dpsi, post_psi1, post_psi2, mu_psi1, mu_psi2 = deltapsi_posterior(f_list[0][lidx].coverage,
-                                                                               f_list[1][lidx].coverage, prior_matrix,
+
+        boots1 = f_list[0][lidx].coverage * weights1[lsv_id][:, None, None]
+        boots2 = f_list[1][lidx].coverage * weights2[lsv_id][:, None, None]
+
+        post_dpsi, post_psi1, post_psi2, mu_psi1, mu_psi2 = deltapsi_posterior(boots1, boots2, prior_matrix,
                                                                                f_list[0][lidx].coverage.shape[2],
                                                                                num_exp, conf.nbins,
                                                                                conf.lsv_type_dict[lsv_id])
@@ -66,36 +76,34 @@ class DeltaPsi(BasicPipeline):
         logger.info("Command: %s" % " ".join(sys.argv))
         logger.info("GROUP1: %s" % self.files1)
         logger.info("GROUP2: %s" % self.files2)
+
         self.nbins = 20
-
-        files = [self.files1, self.files2]
-
-        weights = [None, None]
-        self.queue = mp.Queue()
-        self.lock = [mp.Lock() for xx in range(self.nthreads)]
-
         manager = mp.Manager()
         self.lsv_type_dict = manager.dict()
+        self.lock = [mp.Lock() for xx in range(self.nthreads)]
+        self.queue = mp.Queue()
+
+        weights = [None, None]
 
         lsv_empirical_psi1 = {}
         list_of_lsv1 = majiq_io.extract_lsv_summary(self.files1, epsi=lsv_empirical_psi1, types_dict=self.lsv_type_dict,
                                                     minnonzero=self.minpos, min_reads=self.minreads,
                                                     percent=self.min_exp, logger=logger)
-        weights[0] = self.calc_weights(self.weights[0], self.files1, list_of_lsv1, self.names[0], logger=self.logger)
+        weights[0] = self.calc_weights(self.weights[0], list_of_lsv1, name=self.names[0], file_list=self.files1,
+                                       logger=logger)
         logger.info("Group %s: %s LSVs" % (self.names[0], len(list_of_lsv1)))
 
         lsv_empirical_psi2 = {}
         list_of_lsv2 = majiq_io.extract_lsv_summary(self.files2, epsi=lsv_empirical_psi2, types_dict=self.lsv_type_dict,
                                                     minnonzero=self.minpos, min_reads=self.minreads,
                                                     percent=self.min_exp, logger=logger)
-        weights[1] = self.calc_weights(self.weights[1], self.files2, list_of_lsv2, self.names[1], logger=self.logger)
+        weights[1] = self.calc_weights(self.weights[1], list_of_lsv2, name=self.names[1], file_list=self.files2,
+                                       logger=logger)
 
         logger.info("Group %s: %s LSVs" % (self.names[1], len(list_of_lsv1)))
 
         list_of_lsv = list(set(list_of_lsv1).intersection(set(list_of_lsv2)))
         logger.info("Number quantifiable LSVs: %s" % len(list_of_lsv))
-        # assert meta1['m_samples'] == meta2['m_samples'], \
-        #     "Groups have different number of bootstrap samples(%s,%s)" % (meta1['m_samples'], meta2['m_samples'])
 
         psi_space, prior_matrix = gen_prior_matrix(self.lsv_type_dict, lsv_empirical_psi1, lsv_empirical_psi2,
                                                    self.outDir, names=self.names, breakiter=self.breakiter,
@@ -109,6 +117,7 @@ class DeltaPsi(BasicPipeline):
         self.weights = weights
         if len(list_of_lsv) > 0:
             nthreads = min(self.nthreads, len(list_of_lsv))
+
             pool = mp.Pool(processes=nthreads, initializer=process_conf, initargs=[deltapsi_quantification, self],
                            maxtasksperchild=1)
             [xx.acquire() for xx in self.lock]

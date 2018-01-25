@@ -1,6 +1,5 @@
 import datetime
 
-# import h5py
 import os
 from majiq.grimoire.junction cimport Junction
 from majiq.grimoire.junction import Junction
@@ -210,7 +209,7 @@ cdef int _pass_ir(list row, str gne_id, dict jjs, list exs, list irs, int defaul
     pass
 
 
-cdef _get_extract_lsv_list(list list_of_lsv_id, list file_list):
+cdef list _get_extract_lsv_list(list list_of_lsv_id, list file_list):
     cdef list result = []
     cdef int n_exp = len(file_list)
     cdef str lsv_id, lsv_type, fname
@@ -241,25 +240,6 @@ cdef _get_extract_lsv_list(list list_of_lsv_id, list file_list):
 ####
 # API
 ##
-
-# def read_meta_info(list_of_files):
-#     meta = {'experiments': []}
-#     m_samples = None
-#     for fl in list_of_files:
-#         with h5py.File(fl, 'r') as fp :
-#             if m_samples is not None:
-#                 assert m_samples == fp.attrs['m_samples'], "uneven number of bootstrap samples"
-#             else:
-#                 m_samples = fp.attrs['m_samples']
-#             meta['experiments'].append(fp.attrs['sample_id'])
-#             try:
-#                 if meta['genome'] != fp.attrs['genome']:
-#                     raise RuntimeError('Combining experiments from different genome assemblies. Exiting')
-#             except KeyError:
-#                 meta['genome'] = fp.attrs['genome']
-#                 continue
-#     meta['m_samples'] = m_samples
-#     return meta
 
 cpdef extract_lsv_summary(list files, int minnonzero, int min_reads, object types_dict, dict epsi=None,
                           int percent=-1, object logger=None):
@@ -347,11 +327,8 @@ cpdef int add_elements_mtrx(dict new_elems, object shared_elem_dict):
         shared_elem_dict[gne] = kk + new_elems[gne]
 
 
-cpdef dump_elements(object genes_dict, object elem_dict, str outDir):
-    _dump_elems_list(elem_dict, genes_dict, outDir)
 
-
-def load_bin_file(filename, logger=None):
+cpdef load_bin_file(filename, logger=None):
     if not os.path.exists(filename):
         if logger:
             logger.error('Path %s for loading does not exist' % filename)
@@ -365,15 +342,39 @@ def load_bin_file(filename, logger=None):
     return data
 
 
-def dump_bin_file(data, str filename):
+cpdef dump_bin_file(data, str filename):
     with open(filename, 'wb') as ofp:
         fast_pickler = pickle.Pickler(ofp, protocol=2)
         # fast_pickler.fast = 1
         fast_pickler.dump(data)
 
-def get_extract_lsv_list(list list_of_lsv_id, list file_list):
+cpdef get_extract_lsv_list(list list_of_lsv_id, list file_list):
     return _get_extract_lsv_list(list_of_lsv_id, file_list)
 
 
-def load_db(str filename, object elem_dict, object genes_dict):
+cpdef load_db(str filename, object elem_dict, object genes_dict):
     _load_db(filename, elem_dict, genes_dict)
+
+cpdef dump_db(object genes_dict, object elem_dict, str outDir):
+    _dump_elems_list(elem_dict, genes_dict, outDir)
+
+
+cpdef store_weights(list lsv_list, np.ndarray wgts, str outdir, str name):
+    file_name = get_weights_filename(outdir, name)
+    dd = {xx:wgts[idx] for idx, xx in enumerate(lsv_list)}
+    with open(file_name, 'w+b') as ofp:
+        np.savez(ofp, **dd)
+
+cpdef load_weights(list lsv_list, str outdir, str name):
+    cdef dict out_dict = {}
+    cdef str file_name
+    cdef str xx
+
+    file_name = get_weights_filename(outdir, name)
+    with open(file_name, 'rb') as fp:
+        all_wgts = np.load(fp)
+        for xx in lsv_list:
+            out_dict[xx] = all_wgts[xx]
+
+    return out_dict
+

@@ -3,7 +3,7 @@ from majiq.src.build import build
 from majiq.src.calc_psi import calcpsi
 from majiq.src.deltapsi import deltapsi
 from majiq.src.constants import *
-# from majiq.src.wght_pipeline import calc_weights
+from majiq.src.wght_pipeline import calc_weights
 from majiq.src.indpnt import calc_independent
 from majiq.src.stats import all_stats
 import sys
@@ -49,18 +49,21 @@ def main():
     #common flags (first ones are required)
     common = new_subparser()
     common.add_argument('--nthreads', default=4, type=int, help='Number of threads')
-    common.add_argument('--tmp', default="/tmp/", help='Path to save the temporary files. [Default: %(default)s]')
-    common.add_argument('--output', dest="outDir", required=True, help='Path to save the pickle output to.')
+
+    common.add_argument('-o', '--output', dest="outDir", required=True, help='Path to save the pickle output to.')
     common.add_argument('--logger', default=None, help='Path for the logger. Default is output directory')
     common.add_argument('--silent', action='store_true', default=False, help='Silence the logger.')
-    common.add_argument('--plotpath', default=None,
-                        help='Path to save the plot to, if not provided will show on a matplotlib popup window')
-    common.add_argument('--debug', type=int, default=0,
+
+    common.add_argument('--debug', default=False, action='store_true',
                         help="Activate this flag for debugging purposes, activates logger and jumps some "
-                             "processing steps.")
+                             "processing steps. [Default: %(default)s]")
     common.add_argument('--min_experiments', default=-1, type=float, dest='min_exp',
                         help='Lower threshold for group filters. min_experiments is the minimum number of experiments '
                              'where the different filters check in order to pass an lsv or junction.')
+    #TODO: CHECK  results
+    common.add_argument('--tmp', default="/tmp/", help='Path to save the temporary files. [Default: %(default)s]')
+    common.add_argument('--plotpath', default=None,
+                        help='Path to save the plot to, if not provided will show on a matplotlib popup window')
 
     buildparser = new_subparser()
     buildparser.add_argument('transcripts', action="store", help='Annotation db ')
@@ -136,7 +139,7 @@ def main():
     psi = new_subparser()
     psi.add_argument('files', nargs='+', help='The experiment files to analyze. You can include more than one '
                                               '(they will all be analyzed independently though) Glob syntax supported.')
-    psi.add_argument('--name', required=True, help="The names that identify each of the experiments.")
+    psi.add_argument('-n', '--name', required=True, help="The names that identify each of the experiments.")
     psi.add_argument('--weights', dest="weights", default='None',
                      help='Defines weights for each one of the replicas, for group1 and group2. The expected '
                           'value is --weights [Auto|None|<w1[,w2,..]>]\n'
@@ -149,7 +152,7 @@ def main():
     delta.add_argument('-grp2', dest="files2", nargs='+', required=True)
     delta.add_argument('--default_prior', action='store_true', default=False,
                        help="Use a default prior instead of computing it using the empirical data")
-    delta.add_argument('--names', nargs='+', required=True,
+    delta.add_argument('-n', '--names', nargs='+', required=True,
                        help="The names that identify each of the experiments.")
     delta.add_argument('--binsize', default=0.025, type=int,
                        help='The bins for PSI values. With a --binsize of 0.025 (default), we have 40 bins')
@@ -176,8 +179,8 @@ def main():
     wght = new_subparser()
     wght.add_argument('files', nargs='+', help='The experiment files to analyze. You can include more than one '
                                                '(they will be analyzed independently though) Glob syntax supported.')
-    wght.add_argument('--name', required=True, help="The names that identify each of the experiments. "
-                                                    "[Default: %(default)s]")
+    wght.add_argument('-n', '--name', required=True, help="The names that identify each of the experiments. "
+                                                          "[Default: %(default)s]")
 
     htrgen = new_subparser()
     htrgen.add_argument('-grp1', dest="files1", nargs='+', required=True)
@@ -213,12 +216,12 @@ def main():
                                                                '(1 VS 1 conditions *with* replicas)',
                                               parents=[common, delta, sampling, weights])
     parser_deltagroup.set_defaults(func=deltapsi)
-    #
-    # parser_weights = subparsers.add_parser('weights', help='Calculate weights values given a group of experiment '
-    #                                                        'replicas',
-    #                                        parents=[common, sampling, weights, wght])
-    # parser_weights.set_defaults(func=calc_weights)
-    #
+
+    parser_weights = subparsers.add_parser('weights', help='Calculate weights values given a group of experiment '
+                                                           'replicas',
+                                           parents=[common, sampling, weights, wght])
+    parser_weights.set_defaults(func=calc_weights)
+
     parser_heterogen = subparsers.add_parser('heterogen', help='Calculate Delta PSI values given a pair of experiments '
                                                              'groups. This approach does not assume underlying PSI)',
                                              parents=[common, sampling, htrgen])
