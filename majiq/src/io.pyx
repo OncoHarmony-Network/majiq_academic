@@ -247,7 +247,7 @@ cpdef extract_lsv_summary(list files, int minnonzero, int min_reads, object type
     cdef dict lsv_types = {}
     cdef int nfiles = len(files)
     cdef int fidx
-    cdef str ff, xx
+    cdef str ff,xx
     cdef np.ndarray mtrx, vals
 
     if percent == -1:
@@ -265,11 +265,9 @@ cpdef extract_lsv_summary(list files, int minnonzero, int min_reads, object type
         with open(ff, 'rb') as fp:
             all_files = np.load(fp)
             # print ([xx for xx in all_files['lsv_types']])
-            lsv_types = {all_files['lsv_types'][ii][0].decode('UTF-8'):all_files['lsv_types'][ii][1].decode('UTF-8')
-                         for ii in range(all_files['lsv_types'].shape[0])}
-            for xx in lsv_types:
+            lsv_types = {yy[0].decode('UTF-8'):yy[1].decode('UTF-8') for yy in all_files['lsv_types']}
+            for xx in lsv_types.keys():
                 lsv_data = all_files[xx][:,-2:]
-
                 try:
                     lsv_list[xx] += int(np.any(np.logical_and(lsv_data[:, 0] >= minnonzero, lsv_data[:,1] >= min_reads)))
                     if epsi is not None:

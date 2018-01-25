@@ -370,7 +370,7 @@ def calc_local_weights(divs, rho, local):
 
 @cython.boundscheck(False) # turn off bounds-checking for entire function
 @cython.wraparound(False)  # turn off negative index wrapping for entire function
-cdef tuple _empirical_delta_psi(list list_of_lsv, dict lsv_empirical_psi1, dict lsv_empirical_psi2, dict lsv_type):
+cdef tuple _empirical_delta_psi(list list_of_lsv, dict lsv_empirical_psi1, dict lsv_empirical_psi2, object lsv_type):
     """
     Simple PSI calculation without involving a dirichlet prior, coming from reads from junctions
     """
