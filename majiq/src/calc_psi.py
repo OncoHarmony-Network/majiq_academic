@@ -34,7 +34,7 @@ def psi_quantification(list_of_lsv, chnk, conf, logger):
             print("Event %d ..." % lidx)
             sys.stdout.flush()
 
-        psi = f_list[lidx].coverage * weights[lsv_id][:, None, None]
+        psi = f_list[lsv_id].coverage * weights[lsv_id][:, None, None]
 
         mu_psi, post_psi = psi_posterior(psi, psi.shape[2], len(conf.files), conf.nbins, conf.lsv_type_dict[lsv_id])
         qm = QueueMessage(QUEUE_MESSAGE_PSI_RESULT, (post_psi, mu_psi, lsv_id), chnk)
