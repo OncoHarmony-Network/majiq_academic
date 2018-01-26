@@ -209,8 +209,8 @@ cdef int _pass_ir(list row, str gne_id, dict jjs, list exs, list irs, int defaul
     pass
 
 
-cdef list _get_extract_lsv_list(list list_of_lsv_id, list file_list):
-    cdef list result = []
+cdef dict _get_extract_lsv_list(list list_of_lsv_id, list file_list):
+    cdef list result = {}
     cdef int n_exp = len(file_list)
     cdef str lsv_id, lsv_type, fname
     cdef int fidx
@@ -231,14 +231,21 @@ cdef list _get_extract_lsv_list(list list_of_lsv_id, list file_list):
             result.append(qq)
 
     for fidx, fname in enumerate(file_list[1:]):
-
         with open(fname, 'rb') as fp:
             data = np.load(fp)
-            for lidx, lsv_id in enumerate(list_of_lsv_id):
+            for lsv_id in enumerate(list_of_lsv_id):
                 try:
-                    result[lidx].coverage[fidx] = data[lsv_id][:, :-2]
+                    cov = data[lsv_id][:, :-2]
                 except KeyError:
                     continue
+                try:
+                    result[lsv_id].coverage[fidx] = cov
+                except KeyError:
+                    njunc = cov.shape[0]
+                    msamples = cov.shape[1]
+                    lsv_cov = np.zeros(shape=(n_exp, njunc, msamples),  dtype=float)
+                    lsv_cov[fidx] = cov
+                    result[lsv_id] = quant_lsv(lsv_id, lsv_cov)
 
     return result
 

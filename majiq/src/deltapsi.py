@@ -40,14 +40,14 @@ def deltapsi_quantification(list_of_lsv, chnk, conf, logger):
         if lidx % 50 == 0:
             print("Event %d ..." % lidx)
             sys.stdout.flush()
-        if f_list[0][lidx].coverage.shape[1] < 2:
+        if f_list[0][lsv_id].coverage.shape[1] < 2:
             continue
 
-        boots1 = f_list[0][lidx].coverage * weights1[lsv_id][:, None, None]
-        boots2 = f_list[1][lidx].coverage * weights2[lsv_id][:, None, None]
+        boots1 = f_list[0][lsv_id].coverage * weights1[lsv_id][:, None, None]
+        boots2 = f_list[1][lsv_id].coverage * weights2[lsv_id][:, None, None]
 
         post_dpsi, post_psi1, post_psi2, mu_psi1, mu_psi2 = deltapsi_posterior(boots1, boots2, prior_matrix,
-                                                                               f_list[0][lidx].coverage.shape[2],
+                                                                               boots1.shape[2],
                                                                                num_exp, conf.nbins,
                                                                                conf.lsv_type_dict[lsv_id])
         qm = QueueMessage(QUEUE_MESSAGE_DELTAPSI_RESULT, (post_dpsi, post_psi1, post_psi2,
