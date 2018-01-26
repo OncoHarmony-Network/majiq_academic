@@ -210,7 +210,7 @@ cdef int _pass_ir(list row, str gne_id, dict jjs, list exs, list irs, int defaul
 
 
 cdef dict _get_extract_lsv_list(list list_of_lsv_id, list file_list):
-    cdef list result = {}
+    cdef dict result = {}
     cdef int n_exp = len(file_list)
     cdef str lsv_id, lsv_type, fname
     cdef int fidx
@@ -359,7 +359,7 @@ cpdef dump_bin_file(data, str filename):
         # fast_pickler.fast = 1
         fast_pickler.dump(data)
 
-cpdef get_extract_lsv_list(list list_of_lsv_id, list file_list):
+cpdef dict get_extract_lsv_list(list list_of_lsv_id, list file_list):
     return _get_extract_lsv_list(list_of_lsv_id, file_list)
 
 
