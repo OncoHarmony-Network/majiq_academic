@@ -27,7 +27,7 @@ def psi_quantification(list_of_lsv, chnk, conf, logger):
     if conf.weights is None:
         weights = majiq_io.load_weights(list_of_lsv, conf.outDir, conf.name)
     else:
-        weights = conf.weights
+        weights = {xx: conf.weights for xx in list_of_lsv}
 
     for lidx, lsv_id in enumerate(list_of_lsv):
         if lidx % 50 == 0:

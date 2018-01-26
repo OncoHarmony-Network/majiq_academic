@@ -235,7 +235,10 @@ cdef list _get_extract_lsv_list(list list_of_lsv_id, list file_list):
         with open(fname, 'rb') as fp:
             data = np.load(fp)
             for lidx, lsv_id in enumerate(list_of_lsv_id):
-                result[lidx].coverage[fidx] = data[lsv_id][:, :-2]
+                try:
+                    result[lidx].coverage[fidx] = data[lsv_id][:, :-2]
+                except KeyError:
+                    continue
 
     return result
 
