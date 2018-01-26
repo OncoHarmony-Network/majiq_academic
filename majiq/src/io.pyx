@@ -216,21 +216,7 @@ cdef dict _get_extract_lsv_list(list list_of_lsv_id, list file_list):
     cdef int fidx
     cdef np.ndarray cov, lsv_cov
 
-
-    with open(file_list[0], 'rb') as fp:
-        data = np.load(fp)
-        for lsv_id in list_of_lsv_id:
-            cov = data[lsv_id][:, :-2]
-            njunc = cov.shape[0]
-            msamples = cov.shape[1]
-
-            lsv_cov = np.zeros(shape=(n_exp, njunc, msamples),  dtype=float)
-            lsv_cov[0] = cov
-
-            qq = quant_lsv(lsv_id, lsv_cov)
-            result.append(qq)
-
-    for fidx, fname in enumerate(file_list[1:]):
+    for fidx, fname in enumerate(file_list):
         with open(fname, 'rb') as fp:
             data = np.load(fp)
             for lsv_id in enumerate(list_of_lsv_id):
