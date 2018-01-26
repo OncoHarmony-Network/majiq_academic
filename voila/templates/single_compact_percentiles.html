@@ -9,9 +9,3 @@
     This browser or document mode doesn't support canvas
 </canvas>
 <svg class="psi-violin-plot" data-lsv-id="{{ lsv.lsv_id }}" data-group="{{ group }}" style="display:none;"></svg>
-<script>
-    var el = document.querySelector('.lsv-single-compact-percentiles[data-lsv-id="{{ lsv.lsv_id }}"][data-group="{{ group }}"]');
-    lsv.drawLSVCompactStackBars(el, 1);
-    var svg = document.querySelector('.psi-violin-plot[data-lsv-id="{{ lsv.lsv_id }}"][data-group="{{ group }}"]');
-    bp.psi(svg);
-</script>

@@ -81,19 +81,11 @@ def gene_to_splicegraph(gne_id, gne, dict_junctions, exon_dict, list_introns, ma
                 if ex.end > ex.db_coords[1]:
                     extra_coords.append([ex.db_coords[1] + 1, ex.end])
 
-            exon = sg.exon(gne_id, ex.start, ex.end)
-            if not exon:
-                exon.add(coords_extra=extra_coords, intron_retention=False, annotated=ex.annot, alt_starts=alt_start,
-                         alt_ends=alt_ends)
-            else:
-                print('duplicate exon:', gne_id, ex.start, ex.end)
+            sg.exon(gne_id, ex.start, ex.end).add(coords_extra=extra_coords, intron_retention=False, annotated=ex.annot,
+                                                  alt_starts=alt_start, alt_ends=alt_ends)
 
         for info in list_introns:
             if info.skip:
                 continue
 
-            exon = sg.exon(gne_id, info.start, info.end)
-            if not exon:
-                sg.exon(gne_id, info.start, info.end).add(annotated=info.annot, intron_retention=True)
-            else:
-                print('duplicate exon (introns):', gne_id, info.start, info.end)
+            sg.exon(gne_id, info.start, info.end).add(annotated=info.annot, intron_retention=True)

@@ -32,24 +32,22 @@ Lsv.prototype.renderLsvSpliceGraph = function (canvas) {
             var exon_lsv_number = '';
             var exon_lsv_coords = canvas.getAttribute('data-coord-exon');
             var experiment = canvas.getAttribute('data-experiment');
-
-            if (gene) {
-                var exons_gene = gene.exons.filter(function (d) {
-                    var exon_type = gene.exon_types[d.start][d.end][experiment];
-                    return exon_type < 3 && !d.intron_retention;
-                });
-            }
+            var exons_gene = gene.exons.filter(function (d) {
+                var exon_type = gene.exon_types[d.start][d.end][experiment];
+                return exon_type < 3 && !d.intron_retention;
+            });
 
             if (exon_lsv_coords) {
-                var regex_coords = /[\[|(](.+?),\s*(.+?)[\]|)]/.exec(exon_lsv_coords);
-                exon_lsv_coords = regex_coords.slice(1).map(function (x) {
+                exon_lsv_coords = exon_lsv_coords.split(',').map(function (x) {
                     return parseInt(x)
                 });
+
 
                 // Find LSV exon number in the splice graph
                 var lsv_exon = exons_gene.find(function (element) {
                     return element.start === exon_lsv_coords[0] && element.end === exon_lsv_coords[1]
                 });
+
 
                 if (lsv_exon) {
                     exon_lsv_number = exons_gene.indexOf(lsv_exon) + 1;

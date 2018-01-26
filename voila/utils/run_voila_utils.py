@@ -57,10 +57,14 @@ def get_env():
     def to_json(value):
         return json.dumps(value, cls=NumpyEncoder)
 
+    def to_dict(value):
+        return dict(value)
+
     env = Environment(extensions=["jinja2.ext.do"], loader=FileSystemLoader(get_template_dir()),
                       undefined=jinja2.StrictUndefined)
     env.filters.update({
         'to_json': to_json,
+        'to_dict': to_dict
     })
     return env
 

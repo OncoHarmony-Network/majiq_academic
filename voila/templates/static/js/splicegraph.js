@@ -1,3 +1,13 @@
+$(function () {
+    $('.splice-graph').each(function () {
+        var el = this;
+        loadScript('db/' + el.getAttribute('data-gene-id') + '.js', function () {
+            sg.init(el)
+        })
+
+    })
+});
+
 var SpliceGraph = function (db) {
     this.db = db;
     this.width = 1000;
@@ -54,10 +64,6 @@ SpliceGraph.prototype.xScale = function (gene, default_view, reverse_range, expe
         }
     });
 
-    if (reverse_range) {
-        x_range.reverse()
-    }
-
     // adjust exon sizes
     gene.exons.filter(function (d) {
         return !d.intron_retention
@@ -70,10 +76,10 @@ SpliceGraph.prototype.xScale = function (gene, default_view, reverse_range, expe
 
 
         if ([4, 5].includes(gene.exon_types[e.start][e.end][experiment])) {
-            min = 4;
-            max = 4;
+            min = 1;
+            max = 1;
         } else {
-            min = 5;
+            min = 2;
             max = 100;
 
         }
@@ -101,12 +107,12 @@ SpliceGraph.prototype.xScale = function (gene, default_view, reverse_range, expe
 
 
         if (e.intron_retention) {
-            min = 75;
+            min = 20;
             if (length < min)
                 offset = min - length;
         } else {
-            max = 30;
-            min = 10;
+            max = 10;
+            min = 1;
             if (length > max)
                 offset = max - length;
 

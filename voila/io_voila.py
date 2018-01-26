@@ -246,7 +246,10 @@ def tab_output(args, voila_links):
 
                 for lsv_id in m.get_lsvs(args, gene_id):
 
-                    lsv = m.psi(lsv_id)
+                    if constants.ANALYSIS_DELTAPSI == type_summary:
+                        lsv = m.delta_psi(lsv_id)
+                    else:
+                        lsv = m.psi(lsv_id)
                     lsv_junctions = gene.lsv_junctions(lsv_id)
                     lsv_exons = gene.lsv_exons(lsv_id, lsv_junctions)
 

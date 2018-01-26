@@ -124,22 +124,10 @@
                                 </td>
                                 <td>{{ lsv.lsv_id }}</td>
                                 <td>
-                                    <p style="top:0;" class="hidden">{{ lsv.lsv_type }}</p>
-                                    <canvas class="lsvLegend" id="{{ gene_index }}" width="200px" height="80px"
-                                            data-lsv-type="{{ lsv.lsv_type }}"
-                                            data-coord-exon="{{ lsv.coordinates }}"
-                                            title="{{ lsv.lsv_type }}"
-                                            data-gene-id="{{ gene.id }}">
-                                        This browser or document mode doesn't support canvas
-                                    </canvas>
+                                    {% include 'lsv_cartoon.html' %}
                                 </td>
 
                                 <td id="data_psi1_td{{ gene_index }}{{ loop.index }}">
-                                    {#                                    <canvas class="lsv-single-compact-percentiles"#}
-                                    {#                                            id="lsvSingleCompact_psi1_{{ loop.index }}"#}
-                                    {#                                            width="20px" height="70px" data-lsv="{#{{ lsv|to_json_psi1 }}">#}
-                                    {#                                                                            This browser or document mode doesn't support canvas#}
-                                    {#                                                                        </canvas>#}
                                     {% with group = metadata.group_names[0] %}
                                         {% include 'single_compact_percentiles.html' %}
                                     {% endwith %}

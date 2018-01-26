@@ -7,11 +7,11 @@ from voila import constants
 Base = declarative_base()
 
 
-def coord_in_exon(coord, exon):
-    if -1 in (exon.start, exon.end):
-        return coord in (exon.start, exon.end)
+def exon_contains(self, coord):
+    if -1 in (self.start, self.end):
+        return coord in (self.start, self.end)
     else:
-        return exon.start <= coord <= exon.end
+        return self.start <= coord <= self.end
 
 
 def base_iter(self):
@@ -150,6 +150,7 @@ class Junction(Base):
 class Exon(Base):
     __tablename__ = 'exon'
     __iter__ = base_iter
+    __contains__ = exon_contains
 
     gene_id = Column(String, ForeignKey('gene.id'), primary_key=True)
     start = Column(Integer, primary_key=True)
@@ -170,10 +171,10 @@ class Exon(Base):
                 return
 
             for j in js:
-                if coord_in_exon(j.start, self):
+                if j.start in self:
                     yield j
 
-        return list(a3_filter(self.gene.junctions))
+        yield from a3_filter(self.gene.junctions)
 
     @property
     def a5(self):
@@ -182,10 +183,10 @@ class Exon(Base):
                 return
 
             for j in js:
-                if coord_in_exon(j.end, self):
+                if j.end in self:
                     yield j
 
-        return list(a5_filter(self.gene.junctions))
+        yield from a5_filter(self.gene.junctions)
 
     @property
     def view_start(self):
@@ -268,48 +269,43 @@ class Gene(Base):
         if lsv_junctions is None:
             lsv_junctions = self.lsv_junctions(lsv_id)
 
-        ref_exon = self.lsv_reference_exon(lsv_id)
+        yield self.lsv_reference_exon(lsv_id)
 
-        exons = {ref_exon}
         for junc in lsv_junctions:
             for exon in self.exons:
                 if is_target:
                     if self.strand == '+':
-                        if coord_in_exon(junc.start, exon):
-                            exons.add(exon)
+                        if junc.start in exon:
+                            yield exon
                     else:
-                        if coord_in_exon(junc.end, exon):
-                            exons.add(exon)
+                        if junc.end in exon:
+                            yield exon
                 else:
                     if self.strand == '+':
-                        if coord_in_exon(junc.end, exon):
-                            exons.add(exon)
+                        if junc.end in exon:
+                            yield exon
                     else:
-                        if coord_in_exon(junc.start, exon):
-                            exons.add(exon)
-
-        assert len(set('{}-{}'.format(exon.start, exon.end) for exon in exons)) == len(exons)
-
-        return exons
+                        if junc.start in exon:
+                            yield exon
 
     def lsv_junctions(self, lsv_id):
         is_target = lsv_id.split(':')[-2] == 't'
         exon = self.lsv_reference_exon(lsv_id)
         if is_target:
             if self.strand == '+':
-                return exon.a5
+                yield from exon.a5
             else:
-                return exon.a3
+                yield from exon.a3
         else:
             if self.strand == '+':
-                return exon.a3
+                yield from exon.a3
             else:
-                return exon.a5
+                yield from exon.a5
 
     def lsv_ucsc_coordinates(self, lsv_id):
-        exons = self.lsv_exons(lsv_id)
-        start_exon = sorted((e.start for e in exons if e.start != -1))[0]
-        end_exon = sorted((e.end for e in exons if e.end != -1), reverse=True)[0]
+        exons = tuple(self.lsv_exons(lsv_id))
+        start_exon = sorted(e.start for e in exons if e.start != -1)[0]
+        end_exon = sorted(e.end for e in exons if e.end != -1)[-1]
         return {'start': start_exon, 'end': end_exon}
 
     def get_experiment(self, experiment_names_list):
@@ -328,7 +324,7 @@ class Gene(Base):
 
         gene['exon_types'] = {}
         gene['reads'] = {}
-        gene['junction_types'] = {junc.start: {} for junc in self.junctions}
+        gene['junction_types'] = {}
 
         for experiment_names in experiment_names_list:
             combined_name = next((n for n in experiment_names if ' Combined' in n), '')
