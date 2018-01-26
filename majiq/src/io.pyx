@@ -219,7 +219,7 @@ cdef dict _get_extract_lsv_list(list list_of_lsv_id, list file_list):
     for fidx, fname in enumerate(file_list):
         with open(fname, 'rb') as fp:
             data = np.load(fp)
-            for lsv_id in enumerate(list_of_lsv_id):
+            for lsv_id in list_of_lsv_id:
                 try:
                     cov = data[lsv_id][:, :-2]
                 except KeyError:

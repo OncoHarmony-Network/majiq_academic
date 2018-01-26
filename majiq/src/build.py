@@ -190,7 +190,7 @@ def parsing_files(sam_file_list, chnk, conf, logger):
             gene_reads = majiq_io_bam.read_sam_or_bam(gene_obj, samfl, junc_mtrx, dict_junctions[gne_id],
                                                       list_exons[gne_id], list_introns[gne_id],
                                                       info_msg=loop_id, logging=logger)
-            # gene_obj['nreads'] = gene_reads
+
             if gene_reads == 0:
                 continue
 
