@@ -13,6 +13,7 @@ from voila.api import Matrix
 from voila.constants import ANALYSIS_DELTAPSI
 import os
 
+
 def deltapsi(args):
     return pipeline_run(DeltaPsi(args))
 
@@ -30,8 +31,8 @@ def deltapsi_quantification(list_of_lsv, chnk, conf, logger):
         weights1 = majiq_io.load_weights(list_of_lsv, conf.outDir, conf.names[0])
         weights2 = majiq_io.load_weights(list_of_lsv, conf.outDir, conf.names[1])
     else:
-        weights1 = conf.weights[0]
-        weights2 = conf.weights[1]
+        weights1 = {xx: conf.weights[0] for xx in list_of_lsv}
+        weights2 = {xx: conf.weights[1] for xx in list_of_lsv}
 
     prior_matrix = np.array(majiq_io.load_bin_file(get_prior_matrix_filename(conf.outDir, conf.names)))
 

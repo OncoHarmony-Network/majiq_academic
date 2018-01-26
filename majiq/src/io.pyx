@@ -216,24 +216,27 @@ cdef list _get_extract_lsv_list(list list_of_lsv_id, list file_list):
     cdef int fidx
     cdef np.ndarray cov, lsv_cov
 
-    for lsv_id in list_of_lsv_id:
-        lsv_type = None
-        lsv_cov = None
-        for fidx, fname in enumerate(file_list):
-            with open(fname, 'rb') as fp:
-                try:
-                    cov = np.load(fp)[lsv_id][:,:-2]
-                except KeyError:
-                    continue
+
+    with open(file_list[0], 'rb') as fp:
+        data = np.load(fp)
+        for lsv_id in list_of_lsv_id:
+            cov = data[lsv_id][:, :-2]
             njunc = cov.shape[0]
             msamples = cov.shape[1]
 
-            if lsv_cov is None:
-                lsv_cov = np.zeros(shape=(n_exp, njunc, msamples),  dtype=float)
+            lsv_cov = np.zeros(shape=(n_exp, njunc, msamples),  dtype=float)
+            lsv_cov[0] = cov
 
-            lsv_cov[fidx] = cov
-        qq = quant_lsv(lsv_id, lsv_cov)
-        result.append(qq)
+            qq = quant_lsv(lsv_id, lsv_cov)
+            result.append(qq)
+
+    for fidx, fname in enumerate(file_list[1:]):
+
+        with open(fname, 'rb') as fp:
+            data = np.load(fp)
+            for lidx, lsv_id in enumerate(list_of_lsv_id):
+                result[lidx].coverage[fidx] = data[lsv_id][:, :-2]
+
     return result
 
 
@@ -247,7 +250,7 @@ cpdef extract_lsv_summary(list files, int minnonzero, int min_reads, object type
     cdef dict lsv_types = {}
     cdef int nfiles = len(files)
     cdef int fidx
-    cdef str ff,xx
+    cdef str ff, xx
     cdef np.ndarray mtrx, vals
 
     if percent == -1:
