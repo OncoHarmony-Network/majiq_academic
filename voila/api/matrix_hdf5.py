@@ -13,6 +13,7 @@ def lsv_id_to_gene_id(lsv_id):
 
 class MatrixHdf5:
     def __init__(self, filename, mode='r'):
+        filename = os.path.expanduser(filename)
         self.h = h5py.File(filename, mode, libver='latest')
 
     def __enter__(self):
@@ -77,6 +78,17 @@ class MatrixHdf5:
             'group_names': self.group_names,
             'experiment_names': self.experiment_names
         }
+
+    @property
+    def gene_ids(self):
+        yield from self.h['lsvs'].keys()
+
+    def lsv_ids(self, gene_id):
+        lsvs = self.h['lsvs']
+        try:
+            yield from lsvs[gene_id].keys()
+        except KeyError:
+            return ()
 
 
 class MatrixType(ABC):

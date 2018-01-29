@@ -61,9 +61,9 @@ class ViewPsi(Psi):
         @property
         def variances(self):
             means = self.means
-            for bin in self.bins:
-                step_bins = 1.0 / len(bin)
-                projection_prod = bin * numpy.arange(step_bins / 2, 1, step_bins) ** 2
+            for b in self.bins:
+                step_bins = 1.0 / len(b)
+                projection_prod = b * numpy.arange(step_bins / 2, 1, step_bins) ** 2
                 yield numpy.sum(projection_prod) - means[-1] ** 2
 
         @property
@@ -236,7 +236,7 @@ class ViewMatrix(ViewDeltaPsi, ViewPsi):
             gene_ids = self.get_gene_ids(args)
 
         for gene_id in gene_ids:
-            for lsv_id in self.h['lsvs'][gene_id].keys():
+            for lsv_id in self.lsv_ids(gene_id):
                 # Search for LSV
                 if not lsv_ids or lsv_id in lsv_ids:
                     if not threshold or VoilaLsv.is_lsv_changing(self.get_lsv_means(lsv_id), threshold):
