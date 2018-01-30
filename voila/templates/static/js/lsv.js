@@ -1,12 +1,14 @@
 $(document).on('click', '.lsv-single-compact-percentiles, .psi-violin-plot', function () {
     $(this.parentNode)
         .children('.lsv-single-compact-percentiles, .psi-violin-plot')
+        .stop()
         .animate({height: 'toggle', width: 'toggle'});
 });
 
-$(document).on('click', '.deltapsi-violin-plot, .excl-incl-rect', function () {
-    $(this.parentNode)
+$(document).on('click', '.lsvDeltaCompact', function () {
+    $(this)
         .children('.deltapsi-violin-plot, .excl-incl-rect')
+        .stop()
         .animate({height: 'toggle', width: 'toggle'});
 });
 

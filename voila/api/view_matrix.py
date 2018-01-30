@@ -37,7 +37,7 @@ class ViewPsi(Psi):
 
         @property
         def means(self):
-            return unpack_means(next(super().get('means'))[1])
+            yield from unpack_means(next(super().get('means'))[1])
 
         @property
         def group_means(self):
@@ -47,7 +47,7 @@ class ViewPsi(Psi):
         @property
         def group_means_rounded(self):
             for group_name, means in self.group_means:
-                yield group_name, numpy.around(means, decimals=3)
+                yield group_name, numpy.around(tuple(means), decimals=3)
 
         @property
         def bins(self):
@@ -60,74 +60,22 @@ class ViewPsi(Psi):
 
         @property
         def variances(self):
-            means = self.means
-            for b in self.bins:
-                step_bins = 1.0 / len(b)
+            means = tuple(self.means)
+            for idx, b in enumerate(self.bins):
+                step_bins = 1.0 / b.size
                 projection_prod = b * numpy.arange(step_bins / 2, 1, step_bins) ** 2
-                yield numpy.sum(projection_prod) - means[-1] ** 2
-
-        @property
-        def target(self):
-            return self.lsv_type[0] == 't'
-
-        @property
-        def _prime5(self):
-            lsv_type = self.lsv_type[2:]
-            if lsv_type[-1] == 'i':
-                lsv_type = lsv_type[:-2]
-
-            splice_sites = set(j[0] for j in lsv_type.split('|'))
-            return len(splice_sites) > 1
-
-        @property
-        def _prime3(self):
-            lsv_type = self.lsv_type[2:]
-            if lsv_type[-1] == 'i':
-                lsv_type = lsv_type[:-2]
-
-            exons = {}
-            for x in lsv_type.split('|'):
-                juncs = x[1:].split('.')
-                try:
-                    exons[juncs[0]].add(juncs[1])
-                except KeyError:
-                    exons[juncs[0]] = set(juncs[1])
-
-            for value in exons.values():
-                if len(value) > 1:
-                    return True
-
-            return False
-
-        @property
-        def prime5(self):
-            if self.target:
-                return self._prime5
-            else:
-                return self._prime3
-
-        @property
-        def prime3(self):
-            if self.target:
-                return self._prime3
-            else:
-                return self._prime5
-
-        @property
-        def exon_skipping(self):
-            return self.exon_count > 2
-
-        @property
-        def exon_count(self):
-            lsv_type = self.lsv_type[2:]
-            if lsv_type[-1] == 'i':
-                lsv_type = lsv_type[:-2]
-
-            return len(set(x[1:3] for x in lsv_type.split('|'))) + 1
+                yield numpy.sum(projection_prod) - means[idx] ** 2
+            # variances = []
+            # means = tuple(self.means)
+            # for idx, bin in enumerate(self.bins):
+            #     step_bins = 1.0 / bin.size
+            #     projection_prod = bin * numpy.arange(step_bins / 2, 1, step_bins) ** 2
+            #     variances.append(numpy.sum(projection_prod) - (means[idx] ** 2))
+            # return variances
 
         @property
         def junction_count(self):
-            return numpy.size(self.means, 0)
+            return len(tuple(self.means))
 
     def psi(self, lsv_id):
         return self._ViewPsi(self, lsv_id)
@@ -193,6 +141,10 @@ class ViewDeltaPsi(DeltaPsi):
                     yield [-mean, 0]
                 else:
                     yield [0, mean]
+
+        @property
+        def junction_count(self):
+            return len(tuple(self.means))
 
     def delta_psi(self, lsv_id):
         return self._ViewDeltaPsi(self, lsv_id)

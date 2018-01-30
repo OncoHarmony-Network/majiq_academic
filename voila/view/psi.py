@@ -36,7 +36,9 @@ class Psi(Html, VoilaArgs):
 
         if not args.no_html:
             with ViewMatrix(args.voila_file) as m:
-                self.metadatda = m.metadata
+                self.metadata = m.metadata
+                self.lsv_ids = tuple(m.get_lsvs(args))
+            self.create_db_files()
             self.render_summaries()
             self.render_index()
             copy_static(args)
@@ -50,20 +52,15 @@ class Psi(Html, VoilaArgs):
         # if args.gff:
         #     io_voila.generic_feature_format_txt_files(args, out_gff3=True)
 
-    def render_index(self):
-        log = voila_log()
-        log.info('Render PSI HTML index')
-        log.debug('Start index render')
-
+    def create_db_files(self):
         args = self.args
-        metadata = self.metadatda
+        metadata = self.metadata
+        lsv_ids = self.lsv_ids
+        log = voila_log()
 
         with ViewMatrix(args.voila_file, 'r') as m:
-            lsv_count = m.get_lsv_count(args)
-            lsv_ids = tuple(m.get_lsvs(args))
-            gene_ids = tuple(m.gene_ids)
 
-        too_many_lsvs = lsv_count > constants.MAX_LSVS_PSI_INDEX
+            gene_ids = tuple(m.gene_ids)
 
         try:
             os.makedirs(os.path.join(args.output, 'db'))
@@ -87,7 +84,19 @@ class Psi(Html, VoilaArgs):
 
         log.debug('finished writing db files.')
 
+    def render_index(self):
+        log = voila_log()
+        log.info('Render PSI HTML index')
+        log.debug('Start index render')
+
+        args = self.args
+        metadata = self.metadatda
+        lsv_ids = self.lsv_ids
+
         with ViewMatrix(args.voila_file, 'r') as m, PsiSpliceGraph(args.splice_graph) as sg:
+            lsv_count = m.get_lsv_count(args)
+            too_many_lsvs = lsv_count > constants.MAX_LSVS_PSI_INDEX
+
             with open(os.path.join(args.output, 'index.html'), 'w') as html:
                 index_template = self.env.get_template('index_single_summary_template.html')
                 for el in index_template.generate(

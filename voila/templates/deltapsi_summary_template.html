@@ -35,6 +35,11 @@
         var lsv = new Lsv(db);
         var bp = new BoxPlots(db);
     </script>
+    {% for gene_obj in genes %}
+        {% with gene = gene_obj.get %}
+            <script src="../db/{{ gene.id }}.js"></script>
+        {% endwith %}
+    {% endfor %}
 {% endblock %}
 
 {% block header %}
@@ -52,24 +57,8 @@
             </div>
 
             {% for gene_obj in genes %}
-
                 {% set gene = gene_obj.get %}
                 {% set gene_index = loop.index - 1 %}
-
-
-                <script>
-                    db.bulkDocs([
-                        {{ gene.get_experiment(metadata.experiment_names) | to_json }},
-                        {%- for lsv in lsvs[gene.id] %}
-                            {{ lsv | to_json }},
-                        {%- endfor %}
-                    ]).then(function (result) {
-                        console.log('successfully loaded data...')
-                    }).catch(function (err) {
-                        console.error(err);
-                    });
-                </script>
-
                 <div class="gene-container">
 
                     {% include 'splice_graph_tools.html' %}
@@ -135,33 +124,12 @@
 
 
                                 <td id="data_td{{ gene_index }}{{ loop.index }}" class="lsvDeltaCompact primer"
-                                    data-lsv-id={{ lsv.lsv_id }} data-threshold="{{ threshold }}"
                                     genome="{{ genome }}" lsv-text-version="{{ lsv_text_version }}">
-                                    {# Hidden field to make inclusion/exclusion sortable #}
-                                    <p class="hidden">
-                                        {% set max_diff = [0.0] %}
-                                        {% for excl_incl in lsv.excl_incl %}
-                                            {% if ((excl_incl[0]|abs + excl_incl[1]) > max_diff[-1]) %}
-                                                {% do max_diff.append(excl_incl[0]|abs + excl_incl[1]) %}
-                                            {% endif %}
-                                        {%- endfor %}
-                                        {{ max_diff[-1] }}
-                                    </p>
-                                    <svg class="deltapsi-violin-plot" data-lsv-id="{{ lsv.lsv_id }}"
-                                         style="display:none;"></svg>
-                                    <script>
-                                        var svg = document.querySelector('.deltapsi-violin-plot[data-lsv-id="{{ lsv.lsv_id }}"]');
-                                        bp.delta_psi(svg);
-                                    </script>
+                                    {% include 'delta_compact_percentiles.html' %}
                                 </td>
 
 
                                 <td id="data_psi2_td{{ gene_index }}{{ loop.index }}">
-                                    {#                                    <canvas class="lsvSingleCompactPercentiles"#}
-                                    {#                                            id="lsvSingleCompact_psi2_{{ loop.index }}"#}
-                                    {#                                            width="20px" height="70px">#}
-                                    {#                                        This browser or document mode doesn't support canvas#}
-                                    {#                                    </canvas>#}
                                     {% with group = metadata.group_names[1] %}
                                         {% include 'single_compact_percentiles.html' %}
                                     {% endwith %}

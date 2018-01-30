@@ -33,7 +33,12 @@
     </tr>
     </tfoot>
     <tbody>
-    {{ tmp_index_file }}
+     {% for lsv in lsvs %}
+        {% set gene = genes(lsv.gene_id).get %}
+        {% with index = loop.index0 %}
+            {% include 'deltapsi_index_row.html' %}
+        {% endwith %}
+    {% endfor %}
     </tbody>
 
 {% endblock %}

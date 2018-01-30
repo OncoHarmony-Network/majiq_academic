@@ -138,6 +138,66 @@ class MatrixType(ABC):
     def gene_id(self):
         return lsv_id_to_gene_id(self.lsv_id)
 
+    @property
+    def _prime5(self):
+        lsv_type = self.lsv_type[2:]
+        if lsv_type[-1] == 'i':
+            lsv_type = lsv_type[:-2]
+
+        splice_sites = set(j[0] for j in lsv_type.split('|'))
+        return len(splice_sites) > 1
+
+    @property
+    def _prime3(self):
+        lsv_type = self.lsv_type[2:]
+        if lsv_type[-1] == 'i':
+            lsv_type = lsv_type[:-2]
+
+        exons = {}
+        for x in lsv_type.split('|'):
+            juncs = x[1:].split('.')
+            try:
+                exons[juncs[0]].add(juncs[1])
+            except KeyError:
+                exons[juncs[0]] = set(juncs[1])
+
+        for value in exons.values():
+            if len(value) > 1:
+                return True
+
+        return False
+
+    @property
+    def prime5(self):
+        if self.target:
+            return self._prime5
+        else:
+            return self._prime3
+
+    @property
+    def prime3(self):
+        if self.target:
+            return self._prime3
+        else:
+            return self._prime5
+
+    @property
+    def target(self):
+        return self.lsv_type[0] == 't'
+
+    @property
+    def exon_skipping(self):
+        return self.exon_count > 2
+
+    @property
+    def exon_count(self):
+        lsv_type = self.lsv_type[2:]
+        if lsv_type[-1] == 'i':
+            lsv_type = lsv_type[:-2]
+
+        return len(set(x[1:3] for x in lsv_type.split('|'))) + 1
+
+
 
 class DeltaPsi(MatrixHdf5):
     class _DeltaPsi(MatrixType):
