@@ -1100,9 +1100,30 @@
                 }
             });
 
+
+
+
             $('.lsvLegend', table).each(function () {
-                // new Lsv().renderLsvSpliceGraph(this, gene_obj_list[this.id]);
-                lsv.renderLsvSpliceGraph(this, gene_obj_list[this.id]);
+                var x = this;
+                loadScript('db/' + this.getAttribute('data-gene-id') + '.js', function () {
+                    lsv.renderLsvSpliceGraph(x);
+                });
+
+            });
+
+            $('.lsv-single-compact-percentiles', table).each(function () {
+                var x = this;
+                loadScript('db/' + this.getAttribute('data-lsv-id') + '.js', function () {
+                    lsv.drawLSVCompactStackBars(x, 1);
+                })
+            });
+
+            $('.psi-violin-plot', table).each(function () {
+                var x = this;
+                loadScript('db/' + x.getAttribute('data-lsv-id') + '.js', function () {
+                    bp.psi(x);
+                });
+
             });
 
             /**
@@ -1127,7 +1148,6 @@
                             .replace(/'/g, "\"")
                     );
 
-                    console.log(lsv_list.bins);
                     var sampled_bins = translate_lsv_bins(lsv_list.bins, 1000);
 
                     var svg = renderViolin($(this).parent()[0].id, sampled_bins, table.id, {
@@ -1170,7 +1190,6 @@
                     }
 
                     $(svgExclInclRect).on("click", function (e) {
-                        console.log('yup')
                         // e.preventDefault();
                         // $(this).toggle("show");
                         //

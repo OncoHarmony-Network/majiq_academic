@@ -48,19 +48,6 @@
                 {% set gene = gene_obj.get %}
                 {% set gene_index = loop.index - 1 %}
 
-                <script>
-                    db.bulkDocs([
-                        {{ gene.get_experiment(metadata.experiment_names) | to_json }},
-                        {%- for lsv in lsvs[gene.id] %}
-                            {{ lsv | to_json }},
-                        {%- endfor %}
-                    ]).then(function (result) {
-                        console.log('successfully loaded data...')
-                    }).catch(function (err) {
-                        console.error(err);
-                    });
-                </script>
-
                 <div class="gene-container">
 
 
@@ -103,15 +90,7 @@
                                 </td>
                                 <td>{{ lsv.lsv_id }}</td>
                                 <td>
-                                    <p style="top:0;" class="hidden">{{ lsv.lsv_type }}</p>
-                                    <canvas class="lsvLegend" id="{{ gene_index }}" width="200px" height="80px"
-                                            data-lsv-type="{{ lsv.lsv_type }}"
-                                            data-gene-id="{{ gene.id }}"
-                                            data-experiment="{{ metadata.experiment_names[0] }}"
-                                            data-coord-exon="{{ lsv.coordinates }}"
-                                            title="{{ lsv.lsv_type }}">
-                                        This browser or document mode doesn't support canvas
-                                    </canvas>
+                                    {% include 'lsv_cartoon.html' %}
                                 </td>
                                 <td id="data_td{{ gene_index }}{{ loop.index }}">
                                     {% with group = metadata.group_names[0] %}
@@ -119,13 +98,7 @@
                                     {% endwith %}
                                 </td>
                                 <td>
-                                    <p>
-                                        {% set ucsc_coordinates = gene.lsv_ucsc_coordinates(lsv.lsv_id) %}
-                                        <a href="http://genome.ucsc.edu/cgi-bin/hgTracks?org=mouse&db={{ genome }}&position={{ gene.chromosome }}:{{ ucsc_coordinates.start }}-{{ ucsc_coordinates.end }}"
-                                           target="_blank">
-                                            <img src="static/img/icons/ucsc3.png"/>
-                                        </a>
-                                    </p>
+                                    {% include 'ucsc_link.html' %}
                                     {% if gtf %}
                                         <p>
                                             <a href="../static/doc/lsvs/{{ lsv.lsv_id }}.gtf" target="_blank"><img

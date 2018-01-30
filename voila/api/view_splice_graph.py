@@ -73,10 +73,7 @@ class PsiSpliceGraph(ViewSpliceGraph):
 
         with ViewMatrix(args.voila_file) as m:
             for gene_id in self.get_gene_ids(args):
-                try:
-                    lsvs = tuple(m.get_lsvs(args, gene_id=gene_id))
-                except GeneIdNotFoundInVoilaFile:
-                    lsvs = None
+                lsvs = tuple(m.get_lsvs(args, gene_id=gene_id))
 
                 if lsvs:
                     lsv_dict[gene_id] = tuple(dict(m.psi(lsv_id).get()) for lsv_id in lsvs)

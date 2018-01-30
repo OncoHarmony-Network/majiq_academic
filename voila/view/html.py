@@ -13,6 +13,7 @@ class Html(object):
         self.args = args
         self.voila_links = {}
         self.env = get_env()
+        self._database_name = None
 
     def get_summaries_subfolder(self):
         summaries_subfolder = os.path.join(self.args.output, constants.SUMMARIES_SUBFOLDER)
@@ -68,4 +69,7 @@ class Html(object):
             return self.get_page_name(index + 1)
 
     def database_name(self):
-        return 'voila_{}'.format(uuid.uuid4().hex)
+        if self._database_name is None:
+            self._database_name = 'voila_{}'.format(uuid.uuid4().hex)
+
+        return self._database_name

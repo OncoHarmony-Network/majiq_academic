@@ -7,8 +7,13 @@ import numpy
 from voila.vlsv import collapse_matrix
 
 
+def lsv_id_to_gene_id(lsv_id):
+    return ':'.join(lsv_id.split(':')[:-2])
+
+
 class MatrixHdf5:
     def __init__(self, filename, mode='r'):
+        filename = os.path.expanduser(filename)
         self.h = h5py.File(filename, mode, libver='latest')
 
     def __enter__(self):
@@ -18,7 +23,7 @@ class MatrixHdf5:
         self.h.close()
 
     def add(self, lsv_id, key, value):
-        gene_id = self.lsv_id_to_gene_id(lsv_id)
+        gene_id = lsv_id_to_gene_id(lsv_id)
         self.h.create_dataset(os.path.join('lsvs', gene_id, lsv_id, key), data=value)
 
     def add_multiple(self, lsv_id, **kwargs):
@@ -26,7 +31,7 @@ class MatrixHdf5:
             self.add(lsv_id, key, value)
 
     def get(self, lsv_id, *args):
-        gene_id = self.lsv_id_to_gene_id(lsv_id)
+        gene_id = lsv_id_to_gene_id(lsv_id)
         lsv_grp = self.h['lsvs'][gene_id][lsv_id]
 
         if args:
@@ -36,10 +41,6 @@ class MatrixHdf5:
 
         for key in keys:
             yield key, lsv_grp[key].value
-
-    @staticmethod
-    def lsv_id_to_gene_id(lsv_id):
-        return ':'.join(lsv_id.split(':')[:-2])
 
     @property
     def analysis_type(self):
@@ -71,11 +72,23 @@ class MatrixHdf5:
 
     @property
     def metadata(self):
+
         return {
             'analysis_type': self.analysis_type,
             'group_names': self.group_names,
             'experiment_names': self.experiment_names
         }
+
+    @property
+    def gene_ids(self):
+        yield from self.h['lsvs'].keys()
+
+    def lsv_ids(self, gene_id):
+        lsvs = self.h['lsvs']
+        try:
+            yield from lsvs[gene_id].keys()
+        except KeyError:
+            return ()
 
 
 class MatrixType(ABC):
@@ -102,6 +115,28 @@ class MatrixType(ABC):
 
     def get(self, *args):
         return self.matrix_hdf5.get(self.lsv_id, *args)
+
+    @property
+    def lsv_type(self):
+        if self._lsv_type is None:
+            self._lsv_type = dict(self.get('lsv_type'))['lsv_type']
+        return self._lsv_type
+
+    @property
+    def coordinates(self):
+        lsv_coords = self.lsv_id.split(':')[-1]
+        if lsv_coords.startswith('-1'):
+            coords = (-1, lsv_coords.split('-')[-1])
+        elif lsv_coords.endswith('-1'):
+            coords = (lsv_coords.split('-')[0], -1)
+        else:
+            coords = lsv_coords.split('-')
+
+        return tuple(map(int, coords))
+
+    @property
+    def gene_id(self):
+        return lsv_id_to_gene_id(self.lsv_id)
 
 
 class DeltaPsi(MatrixHdf5):

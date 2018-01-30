@@ -1,11 +1,9 @@
+import errno
 import os
-import tempfile
 
 from voila import constants, io_voila
-from voila.api import Matrix
 from voila.api.view_matrix import ViewMatrix
-from voila.api.view_splice_graph import PsiSpliceGraph
-from voila.utils.exceptions import NoLsvsFound
+from voila.api.view_splice_graph import PsiSpliceGraph, DeltaPsiSpliceGraph
 from voila.utils.run_voila_utils import table_marks_set, copy_static
 from voila.utils.voila_log import voila_log
 from voila.view.html import Html
@@ -25,7 +23,7 @@ class Psi(Html, VoilaArgs):
             with ViewMatrix(args.voila_file, 'r') as m:
                 self.metadatda = m.metadata
             self.render_summaries()
-            # self.render_index()
+            self.render_index()
             copy_static(args)
 
         if not args.no_tsv:
@@ -43,49 +41,52 @@ class Psi(Html, VoilaArgs):
         log.debug('Start index render')
 
         args = self.args
-        env = self.env
-        metainfo = self.metadatda
-        index_row_template = env.get_template('psi_index_row.html')
+        metadata = self.metadatda
 
-        tmp_index_file = tempfile.mkstemp()[1]
+        with ViewMatrix(args.voila_file, 'r') as m, DeltaPsiSpliceGraph(args.splice_graph) as sg:
+            lsv_count = m.get_lsv_count(args)
+            too_many_lsvs = lsv_count > constants.MAX_LSVS_PSI_INDEX
 
-        with open(tmp_index_file, 'w') as f:
+            try:
+                os.makedirs(os.path.join(args.output, 'db'))
+            except OSError as e:
+                if e.errno != errno.EEXIST:
+                    raise
 
-            with Matrix(args.voila_file, 'r') as m:
-
-                lsv_count = m.get_lsv_count(args)
-                too_many_lsvs = lsv_count > constants.MAX_LSVS_PSI_INDEX
-
-                for index, lsv in enumerate(m.get_voila_lsvs(args)):
-                    log.debug('Writing LSV {0} to index'.format(lsv.lsv_id))
-
-                    for el in index_row_template.generate(
-                            lsv=lsv,
-                            index=index,
-                            link=self.voila_links[lsv.name],
-                            lexps=metainfo,
-                            too_many_lsvs=too_many_lsvs
+            for gene in sg.genes:
+                with open(os.path.join(args.output, 'db', '{}.js'.format(gene.id)), 'w') as f:
+                    lsv_db_template = self.env.get_template('gene_db_template.html')
+                    for el in lsv_db_template.generate(
+                            gene=gene.get_experiment(metadata['experiment_names'])
                     ):
                         f.write(el)
 
-                if not f.tell():
-                    raise NoLsvsFound()
-
-        with open(tmp_index_file) as f:
+            for lsv_id in m.get_lsvs(args):
+                with open(os.path.join(args.output, 'db', '{}.js'.format(lsv_id)), 'w') as f:
+                    lsv_db_template = self.env.get_template('lsv_db_template.html')
+                    for el in lsv_db_template.generate(
+                            lsv=m.psi(lsv_id)
+                    ):
+                        f.write(el)
 
             with open(os.path.join(args.output, 'index.html'), 'w') as html:
-                index_template = env.get_template('index_single_summary_template.html')
+                index_template = self.env.get_template('index_single_summary_template.html')
                 for el in index_template.generate(
-                        lexps=metainfo,
-                        tmp_index_file=f.read(),
+                        lexps=metadata,
+                        metadata=metadata,
                         lsvs_count=lsv_count,
                         table_marks=table_marks_set(lsv_count),
                         prev_page=None,
-                        next_page=None
+                        next_page=None,
+                        links=self.voila_links,
+                        genes=sg.gene,
+                        lsvs=[m.psi(lsv_id) for lsv_id in m.get_lsvs(args)],
+                        too_many_lsvs=too_many_lsvs,
+                        database_name=self.database_name(),
+                        genome=sg.genome,
+                        lsv_text_version=constants.LSV_TEXT_VERSION,
                 ):
                     html.write(el)
-
-        os.remove(tmp_index_file)
 
     @classmethod
     def arg_parents(cls):

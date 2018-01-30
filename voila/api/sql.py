@@ -38,6 +38,8 @@ class SQL:
         if not isinstance(delete, bool):
             Exception('delete must be a boolean value')
 
+        filename = os.path.expanduser(filename)
+
         if delete is True:
             try:
                 os.remove(filename)

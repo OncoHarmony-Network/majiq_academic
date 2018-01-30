@@ -18,30 +18,22 @@ def unpack_bins(value):
 
 class ViewPsi(Psi):
     class _ViewPsi(Psi._Psi):
-        def get(self):
+        def get(self, *args):
             yield 'lsv_id', self.lsv_id
             yield '_id', self.lsv_id
             yield 'coordinates', tuple(self.coordinates)
+            yield 'gene_id', self.gene_id
 
-            for key in self.fields:
+            if not args:
+                args = self.fields
+
+            for key in args:
                 if key == 'bins':
                     yield 'group_bins', dict(self.group_bins)
                 elif key == 'means':
                     yield 'group_means_rounded', dict(self.group_means_rounded)
                 else:
                     yield from super().get(key)
-
-        @property
-        def coordinates(self):
-            lsv_coords = self.lsv_id.split(':')[-1]
-            if lsv_coords.startswith('-1'):
-                coords = (-1, lsv_coords.split('-')[-1])
-            elif lsv_coords.endswith('-1'):
-                coords = (lsv_coords.split('-')[0], -1)
-            else:
-                coords = lsv_coords.split('-')
-
-            yield from map(int, coords)
 
         @property
         def means(self):
@@ -69,16 +61,10 @@ class ViewPsi(Psi):
         @property
         def variances(self):
             means = self.means
-            for bin in self.bins:
-                step_bins = 1.0 / len(bin)
-                projection_prod = bin * numpy.arange(step_bins / 2, 1, step_bins) ** 2
+            for b in self.bins:
+                step_bins = 1.0 / len(b)
+                projection_prod = b * numpy.arange(step_bins / 2, 1, step_bins) ** 2
                 yield numpy.sum(projection_prod) - means[-1] ** 2
-
-        @property
-        def lsv_type(self):
-            if self._lsv_type is None:
-                self._lsv_type = next(super().get('lsv_type'))[1]
-            return self._lsv_type
 
         @property
         def target(self):
@@ -149,13 +135,16 @@ class ViewPsi(Psi):
 
 class ViewDeltaPsi(DeltaPsi):
     class _ViewDeltaPsi(DeltaPsi._DeltaPsi):
-        def get(self):
+        def get(self, *args):
             yield 'lsv_id', self.lsv_id
             yield '_id', self.lsv_id
             yield 'coordinates', self.coordinates
             yield 'excl_incl', self.excl_incl
 
-            for key in self.fields:
+            if not args:
+                args = self.fields
+
+            for key in args:
                 if key == 'group_bins':
                     yield key, dict(self.group_bins)
                 elif key == 'group_means':
@@ -165,18 +154,6 @@ class ViewDeltaPsi(DeltaPsi):
                     yield 'means_rounded', self.means_rounded
                 else:
                     yield from super().get(key)
-
-        @property
-        def coordinates(self):
-            lsv_coords = self.lsv_id.split(':')[-1]
-            if lsv_coords.startswith('-1'):
-                coords = (-1, lsv_coords.split('-')[-1])
-            elif lsv_coords.endswith('-1'):
-                coords = (lsv_coords.split('-')[0], -1)
-            else:
-                coords = lsv_coords.split('-')
-
-            return list(map(int, coords))
 
         @property
         def bins(self):
@@ -222,6 +199,10 @@ class ViewDeltaPsi(DeltaPsi):
 
 
 class ViewMatrix(ViewDeltaPsi, ViewPsi):
+
+    def get_lsv_count(self, args):
+        return sum(1 for _ in self.get_lsvs(args))
+
     def get_gene_ids(self, args=None):
         if args:
             if args.gene_ids:
@@ -255,7 +236,7 @@ class ViewMatrix(ViewDeltaPsi, ViewPsi):
             gene_ids = self.get_gene_ids(args)
 
         for gene_id in gene_ids:
-            for lsv_id in self.h['lsvs'][gene_id].keys():
+            for lsv_id in self.lsv_ids(gene_id):
                 # Search for LSV
                 if not lsv_ids or lsv_id in lsv_ids:
                     if not threshold or VoilaLsv.is_lsv_changing(self.get_lsv_means(lsv_id), threshold):

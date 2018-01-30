@@ -8,3 +8,5 @@ build/
 voila/templates/spliceGraphD3.html
 *.log
 voila/sandbox/
+dist/
+majiq.egg-info
