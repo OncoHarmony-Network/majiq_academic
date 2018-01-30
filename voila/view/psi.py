@@ -34,12 +34,12 @@ class Psi(Html, VoilaArgs):
         """
         super(Psi, self).__init__(args)
 
-        # if not args.no_html:
-        #     with ViewMatrix(args.voila_file, 'r') as m:
-        #         self.metadatda = m.metadata
-        #     self.render_summaries()
-        #     self.render_index()
-        #     copy_static(args)
+        if not args.no_html:
+            with ViewMatrix(args.voila_file, 'r') as m:
+                self.metadatda = m.metadata
+            self.render_summaries()
+            self.render_index()
+            copy_static(args)
 
         if not args.no_tsv:
             io_voila.tab_output(args, self.voila_links)
