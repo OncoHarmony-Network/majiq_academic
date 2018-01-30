@@ -61,9 +61,9 @@ def voila_parser():
                           help='Single LSV analysis by gene(s) of interest.',
                           parents=Psi.arg_parents())
 
-    # subparsers.add_parser(constants.ANALYSIS_DELTAPSI,
-    #                       help='Delta LSV analysis by gene(s) of interest.',
-    #                       parents=Deltapsi.arg_parents())
+    subparsers.add_parser(constants.ANALYSIS_DELTAPSI,
+                          help='Delta LSV analysis by gene(s) of interest.',
+                          parents=Deltapsi.arg_parents())
     #
     # subparsers.add_parser(constants.COND_TABLE,
     #                       help='Generate a HTML table with a list of LSVs changing between conditions in multiple '
