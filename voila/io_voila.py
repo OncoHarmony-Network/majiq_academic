@@ -10,7 +10,7 @@ import h5py
 import numpy as np
 
 from voila import constants, vlsv
-from voila.api import Voila, Matrix, SpliceGraph
+from voila.api import Voila, SpliceGraph
 from voila.api.view_matrix import ViewMatrix
 from voila.constants import JUNCTION_TYPE_RNASEQ
 from voila.hdf5 import HDF5
@@ -250,8 +250,9 @@ def tab_output(args, voila_links):
                         lsv = m.delta_psi(lsv_id)
                     else:
                         lsv = m.psi(lsv_id)
-                    lsv_junctions = gene.lsv_junctions(lsv_id)
-                    lsv_exons = gene.lsv_exons(lsv_id, lsv_junctions)
+
+                    lsv_junctions = tuple(gene.lsv_junctions(lsv_id))
+                    lsv_exons = tuple(gene.lsv_exons(lsv_id, lsv_junctions))
 
                     row = {
                         '#Gene Name': gene_dict['name'],
@@ -266,7 +267,8 @@ def tab_output(args, voila_links):
                         'chr': gene_dict['chromosome'],
                         'strand': gene_dict['strand'],
                         'De Novo Junctions': semicolon_join(
-                            int(next(junc.get_junction_types([experiment])) == JUNCTION_TYPE_RNASEQ) for junc in lsv_junctions
+                            int(next(junc.get_junction_types([experiment])) == JUNCTION_TYPE_RNASEQ) for junc in
+                            lsv_junctions
                         ),
                         'Junctions coords': semicolon_join(
                             '{0}-{1}'.format(junc.start, junc.end) for junc in lsv_junctions

@@ -35,7 +35,7 @@ class Psi(Html, VoilaArgs):
         super(Psi, self).__init__(args)
 
         if not args.no_html:
-            with ViewMatrix(args.voila_file, 'r') as m:
+            with ViewMatrix(args.voila_file) as m:
                 self.metadatda = m.metadata
             self.render_summaries()
             self.render_index()
@@ -122,8 +122,6 @@ class Psi(Html, VoilaArgs):
         summaries_subfolder = self.get_summaries_subfolder()
         metadata = self.metadatda
         database_name = self.database_name()
-
-        # with Pool(processes=4) as pool:
 
         with PsiSpliceGraph(args.splice_graph, 'r') as sg:
             genome = sg.genome
