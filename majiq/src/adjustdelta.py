@@ -132,7 +132,8 @@ def EMBetaMixture(D, p0_mix, beta0_mix, num_iter, min_ratio=1e-5, logger=False, 
     c = 1
     a = -1
 
-    if min(D[:, 0]) < 0.0: D[:, 0] = (D[:, 0] + 1) / (c - a)
+    if min(D[:, 0]) < 0.0:
+        D[:, 0] = (D[:, 0] + 1) / (c - a)
     pmix = p0_mix
     beta_mix = beta0_mix
     logp_mix = np.log(pmix)

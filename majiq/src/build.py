@@ -32,6 +32,7 @@ import datetime
 def build(args):
     pipeline_run(Builder(args))
 
+
 def find_new_junctions(file_list, chunk, conf, logger):
 
     majiq_config = Config()
@@ -47,13 +48,15 @@ def find_new_junctions(file_list, chunk, conf, logger):
         detect_exons(dict_junctions[gne_id], list_exons[gne_id])
 
     td = create_lt(conf.genes_dict)
-    for is_junc_file, fname, name in file_list:
-        logger.info('READ JUNCS from %s, %s' % (fname, majiq_config.strand_specific))
-        # read_juncs2(fname, is_junc_file, list_exons, conf.genes_dict, dict_junctions,
-        #            majiq_config.strand_specific, process_conf.queue, gname=name)
-
+    for exp_name, is_junc_file, name in file_list:
+        fname = '%s/%s' % (majiq_config.sam_dir, exp_name)
+        if is_junc_file:
+            fname += '.%s' % JUNC_FILE_FORMAT
+        else:
+            fname += '.%s' % SEQ_FILE_FORMAT
+        logger.info('READ JUNCS from %s' % fname)
         read_juncs(fname, is_junc_file, list_exons, conf.genes_dict, td, dict_junctions,
-                   majiq_config.strand_specific, conf.queue, gname=name)
+                   majiq_config.strand_specific[exp_name], conf.queue, gname=name)
 
 
 
@@ -81,7 +84,7 @@ def find_new_introns(file_list, chunk, conf, logger):
         list_introns = dict()
         for id_ex, ex in enumerate(list_exons[:-1]):
             if (ex.end + 3 < list_exons[id_ex + 1].start - 1 and ex.end != -1
-               and list_exons[id_ex + 1].start != -1) :
+               and list_exons[id_ex + 1].start != -1):
 
                 if nir > 0 and len(range_introns.search(ex.end + 1, ex.end + 2)) != 0:
                     continue
@@ -103,54 +106,15 @@ def find_new_introns(file_list, chunk, conf, logger):
 
         del range_introns
 
-    for is_junc_file, fname, name in file_list:
+    for exp_name, is_junc_file, name in file_list:
+        fname = '%s/%s' % (majiq_config.sam_dir, exp_name)
+        if is_junc_file:
+            fname += '.%s' % JUNC_FILE_FORMAT
+        else:
+            fname += '.%s' % SEQ_FILE_FORMAT
         logger.info('READ introns from %s' % fname)
-        find_introns(fname, list_introns, majiq_config.min_intronic_cov, conf.queue, gname=name)
-
-
-def parse_denovo_elements(pself, logger):
-
-    majiq_config = Config()
-    min_experiments = 2 if majiq_config.min_exp == -1 else majiq_config.min_exp
-
-    elem_dict = {}
-
-    if majiq_config.denovo:
-        nthreads = min(pself.nthreads, len(majiq_config.sam_list))
-        logger.info("Create %s processes" % nthreads)
-        pself.lock = [mp.Lock() for _ in range(nthreads)]
-
-        pool1 = mp.Pool(processes=nthreads, initializer=majiq_multi.process_conf,
-                        initargs=[find_new_junctions, pself], maxtasksperchild=1)
-        if majiq_config.ir:
-            pool2 = mp.Pool(processes=nthreads, initializer=majiq_multi.process_conf,
-                            initargs=[find_new_introns, pself], maxtasksperchild=1)
-
-        [xx.acquire() for xx in pself.lock]
-        pool1.imap_unordered(majiq_multi.process_wrapper,
-                             majiq_multi.chunks(majiq_config.juncfile_list, nthreads))
-        pool1.close()
-
-        group_names = {xx: xidx for xidx, xx in enumerate(majiq_config.tissue_repl.keys())}
-        queue_manager(None, pself.lock, pself.queue, num_chunks=nthreads, logger=logger,
-                      elem_dict=elem_dict, group_names=group_names, min_experients=min_experiments)
-        pool1.join()
-
-        logger.info('Updating DB')
-        majiq_io.add_elements_mtrx(elem_dict, pself.elem_dict)
-
-        if majiq_config.ir:
-            elem_dict = {}
-            [xx.acquire() for xx in pself.lock]
-            pool2.imap_unordered(majiq_multi.process_wrapper,
-                                 majiq_multi.chunks(majiq_config.juncfile_list, nthreads))
-            pool2.close()
-            queue_manager(None, pself.lock, pself.queue, num_chunks=nthreads, logger=logger,
-                          elem_dict=elem_dict, group_names=group_names, min_experients=min_experiments)
-            pool2.join()
-            majiq_io.add_elements_mtrx(elem_dict, pself.elem_dict)
-
-    majiq_io.dump_db(pself.genes_dict, pself.elem_dict, pself.outDir)
+        find_introns(fname, list_introns, majiq_config.min_intronic_cov, conf.queue,
+                     gname=name, stranded=majiq_config.strand_specific[exp_name])
 
 
 def parsing_files(sam_file_list, chnk, conf, logger):
@@ -176,7 +140,7 @@ def parsing_files(sam_file_list, chnk, conf, logger):
         if majiq_config.ir:
             expand_introns(gne_id, list_introns[gne_id], list_exons[gne_id], dict_junctions[gne_id], default_index=0)
 
-    for sam_file in sam_file_list:
+    for sam_file, dd1, dd2 in sam_file_list:
         logger.info("[%s] Starting new file" % sam_file)
         loop_id = sam_file
         samfl = majiq_io_bam.open_rnaseq("%s/%s.bam" % (majiq_config.sam_dir, sam_file))
@@ -189,6 +153,7 @@ def parsing_files(sam_file_list, chnk, conf, logger):
             logger.debug("[%s] Reading BAM files" % gne_id)
             gene_reads = majiq_io_bam.read_sam_or_bam(gene_obj, samfl, junc_mtrx, dict_junctions[gne_id],
                                                       list_exons[gne_id], list_introns[gne_id],
+                                                      stranded=majiq_config.strand_specific[sam_file],
                                                       info_msg=loop_id, logging=logger)
 
             if gene_reads == 0:
@@ -230,6 +195,51 @@ def parsing_files(sam_file_list, chnk, conf, logger):
 
 class Builder(BasicPipeline):
 
+    def parse_denovo_elements(self, logger):
+
+        majiq_config = Config()
+        min_experiments = 2 if majiq_config.min_exp == -1 else majiq_config.min_exp
+
+        elem_dict = {}
+
+        if majiq_config.denovo:
+            logger.info("Retrieve denovo features")
+            nthreads = min(self.nthreads, len(majiq_config.sam_list))
+            logger.info("Create %s processes" % nthreads)
+            self.lock = [mp.Lock() for _ in range(nthreads)]
+
+            pool1 = mp.Pool(processes=nthreads, initializer=majiq_multi.process_conf,
+                            initargs=[find_new_junctions, self], maxtasksperchild=1)
+            if majiq_config.ir:
+                pool2 = mp.Pool(processes=nthreads, initializer=majiq_multi.process_conf,
+                                initargs=[find_new_introns, self], maxtasksperchild=1)
+
+            [xx.acquire() for xx in self.lock]
+            pool1.imap_unordered(majiq_multi.process_wrapper,
+                                 majiq_multi.chunks(majiq_config.sam_list, nthreads))
+            pool1.close()
+
+            group_names = {xx: xidx for xidx, xx in enumerate(majiq_config.tissue_repl.keys())}
+            queue_manager(None, self.lock, self.queue, num_chunks=nthreads, logger=logger,
+                          elem_dict=elem_dict, group_names=group_names, min_experients=min_experiments)
+            pool1.join()
+
+            logger.info('Updating DB')
+            majiq_io.add_elements_mtrx(elem_dict, self.elem_dict)
+
+            if majiq_config.ir:
+                elem_dict = {}
+                [xx.acquire() for xx in self.lock]
+                pool2.imap_unordered(majiq_multi.process_wrapper,
+                                     majiq_multi.chunks(majiq_config.sam_list, nthreads))
+                pool2.close()
+                queue_manager(None, self.lock, self.queue, num_chunks=nthreads, logger=logger,
+                              elem_dict=elem_dict, group_names=group_names, min_experients=min_experiments)
+                pool2.join()
+                majiq_io.add_elements_mtrx(elem_dict, self.elem_dict)
+
+        majiq_io.dump_db(self.genes_dict, self.elem_dict, self.outDir)
+
     def run(self):
         if self.simplify is not None and len(self.simplify) not in (0, 2):
             raise RuntimeError('Simplify requires 2 values type of junctions afected and E(PSI) threshold.')
@@ -245,7 +255,6 @@ class Builder(BasicPipeline):
         logger.info("Command: %s" % " ".join(sys.argv))
         self.queue = mp.Queue()
 
-
         manager = mp.Manager()
         self.elem_dict = manager.dict()
         self.genes_dict = manager.dict()
@@ -254,6 +263,8 @@ class Builder(BasicPipeline):
             logger.info("Loading previously generated db %s" % self.transcripts)
             majiq_io.load_db(self.transcripts, self.elem_dict, self.genes_dict)
         else:
+
+            #majiq_io.parse_annot(self.transcripts, majiq_config.outDir, self.elem_dict, self.genes_dict, logger)
             p = mp.Process(target=majiq_multi.parallel_lsv_child_calculation,
                            args=(majiq_io.parse_annot, [self.transcripts, majiq_config.outDir,
                                                         self.elem_dict, self.genes_dict],
@@ -263,11 +274,14 @@ class Builder(BasicPipeline):
             p.start()
             p.join()
 
-        p = mp.Process(target=majiq_multi.parallel_lsv_child_calculation,
-                       args=(parse_denovo_elements, [self], majiq_config.outDir, 0))
-        logger.info("... retrieve denovo features")
-        p.start()
-        p.join()
+        # p = mp.Process(target=majiq_multi.parallel_lsv_child_calculation,
+        #                args=(parse_denovo_elements, [self], majiq_config.outDir, 0))
+        # logger.info("... retrieve denovo features")
+        #
+        # p.start()
+        # p.join()
+
+        self.parse_denovo_elements(logger)
 
         logger.info("Parsing seq files")
         if self.nthreads > 1:

@@ -35,6 +35,10 @@ class Config(object):
         return setattr(self.instance, name)
 
     class __Config(object):
+
+        def _set_strandness(self, experiment_name, val):
+            self.strand_specific[experiment_name] = val
+
         def __init__(self, filename, params, only_db=False):
 
             self.__dict__.update(params.__dict__)
@@ -44,7 +48,6 @@ class Config(object):
 
             config = configparser.ConfigParser()
             config.read(filename)
-            # TODO: check if filename exists
 
             general = Config.config_section_map(config, "info")
             self.tissue_repl = {}
@@ -54,26 +57,19 @@ class Config(object):
                 os.makedirs(self.outDir)
             self.sam_dir = general['samdir']
             self.genome = general['genome']
-            self.genome_path = general['genome_path']
             self.readLen = int(general['readlen'])
 
-            if 'type' in general:
-                self.strand_specific = (general['type'] == 'strand-specific')
-            else:
-                self.strand_specific = False
-
-            self.simplify_threshold = 0.0
-            self.simplify_type = SIMPLIFY_ALL
-            if self.simplify:
-
-                self.simplify_threshold = float(params.simplify[1])
-                self.simplify_type = self.simplify[0]
-                if self.simplify_type not in (
-                SIMPLIFY_ALL, SIMPLIFY_DB, SIMPLIFY_DENOVO) or not 0 <= self.simplify_threshold <= 1:
-                    raise RuntimeError(
-                        'Error in simplify option, first argument should be "all|denovo|annotated" and second'
-                        ' a float between 0..1')
-            #self.simplify = self.simplify is not None
+            # self.simplify_threshold = 0.0
+            # self.simplify_type = SIMPLIFY_ALL
+            # if self.simplify:
+            #
+            #     self.simplify_threshold = float(params.simplify[1])
+            #     self.simplify_type = self.simplify[0]
+            #     if self.simplify_type not in (
+            #     SIMPLIFY_ALL, SIMPLIFY_DB, SIMPLIFY_DENOVO) or not 0 <= self.simplify_threshold <= 1:
+            #         raise RuntimeError(
+            #             'Error in simplify option, first argument should be "all|denovo|annotated" and second'
+            #             ' a float between 0..1')
 
             exps = Config.config_section_map(config, "experiments")
             self.juncfile_list = []
@@ -84,11 +80,9 @@ class Config(object):
                 for exp in elist:
                     self.exp_list.append(exp)
                     self.tissue_repl[exp_idx].append(count)
-
                     count += 1
 
             self.num_experiments = len(self.exp_list)
-
             self.samfile_name_list = []
             self.sam_list = []
 
@@ -96,19 +90,37 @@ class Config(object):
                 for exp_idx in ind_list:
                     exp = self.exp_list[exp_idx]
                 # for exp_idx, exp in enumerate(self.exp_list):
-                    samfile = "%s/%s.bam" % (self.sam_dir, exp)
+                    samfile = "%s/%s.%s" % (self.sam_dir, exp, SEQ_FILE_FORMAT)
                     if not os.path.exists(samfile):
                         raise RuntimeError("Skipping %s.... not found" % samfile)
-                    baifile = "%s/%s.bam.bai" % (self.sam_dir, exp)
+                    baifile = "%s/%s.%s" % (self.sam_dir, exp, SEQ_INDEX_FILE_FORMAT)
                     if not os.path.exists(baifile):
                         raise RuntimeError("Skipping %s.... not found ( index file for bam file is required)" % baifile)
-                    self.sam_list.append(exp)
+                    juncfile = "%s/%s.%s" % (self.sam_dir, exp, JUNC_FILE_FORMAT)
+                    self.sam_list.append((exp, os.path.exists(juncfile), name))
 
-                    juncfile = "%s/%s.sjdb" % (self.sam_dir, exp)
-                    if not os.path.exists(juncfile):
-                        self.juncfile_list.append((False, samfile, name))
-                    else:
-                        self.juncfile_list.append((True, juncfile, name))
+            opt_dict = {'strandness': self._set_strandness}
+            strandness = {'forward': FWD_STRANDED, 'reverse': REV_STRANDED, 'none': UNSTRANDED}
+            if 'strandness' in general:
+                try:
+                    global_strand = strandness[general['strandness'].lower()]
+                except:
+                    raise RuntimeError('Incorrect Strand-specific option [forward, reverse, none]')
+            else:
+                global_strand = strandness['none']
+            self.strand_specific = {xx: global_strand for xx in self.exp_list}
+
+            opt = Config.config_section_map(config, "opts")
+            for exp_id, opts_list in opt.items():
+                elist = opts_list.split(',')
+                for opt in elist:
+                    op_id, op_val = opt.split(':')
+                    try:
+                        opt_dict[op_id](exp_id, op_val)
+                    except KeyError:
+                        raise RuntimeError('Option %s do not exist. The options available '
+                                           'are %s' % (op_id, ','.join(opt_dict.keys())))
+
             return
 
         def __str__(self):
@@ -117,7 +129,10 @@ class Config(object):
     @staticmethod
     def config_section_map(config_d, section):
         dict1 = {}
-        options = config_d.options(section)
+        try:
+            options = config_d.options(section)
+        except configparser.NoSectionError:
+            return dict1
         for option in options:
             try:
                 dict1[option] = config_d.get(section, option)

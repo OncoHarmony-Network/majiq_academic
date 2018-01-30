@@ -60,19 +60,27 @@ cdef inline int __get_num_reads(AlignedSegment read):
     return 1
 
 
-cdef inline bint _match_strand(AlignedSegment read, str gene_strand):
+cdef inline bint _match_strand(AlignedSegment read, str gene_strand, int stranded):
     cdef bint res
     cdef object majiq_config = Config()
     res = True
-    #print(read.is_reverse, read.flag, read.flag & 0x10, read.flag & 0x10 == 0x10, gene_strand, gene_strand == b'+',  gene_strand == '+')
-    if majiq_config.strand_specific:
-        #TODO: REMOVE
+
+    if stranded == FWD_STRANDED:
+        if read.is_read1:
+            res = (read.flag & 0x10 == 0x10 and gene_strand == '-') or (read.flag & 0x10 == 0x00 and gene_strand == '+')
+        elif read.is_read2:
+            res = (read.flag & 0x10 == 0x10 and gene_strand == '+') or (read.flag & 0x10 == 0x00 and gene_strand == '-')
+        else:
+            res = False
+
+    if stranded == REV_STRANDED:
         if read.is_read1:
             res = (read.flag & 0x10 == 0x10 and gene_strand == '+') or (read.flag & 0x10 == 0x00 and gene_strand == '-')
         elif read.is_read2:
             res = (read.flag & 0x10 == 0x10 and gene_strand == '-') or (read.flag & 0x10 == 0x00 and gene_strand == '+')
         else:
             res = False
+
     return res
 
 
@@ -80,70 +88,11 @@ cdef inline int _get_left_index(junc_start, read_start):
     return junc_start - (read_start + MIN_BP_OVERLAP)
 
 
-cdef inline bint __valid_intron_read(AlignedSegment read):
-    cdef bint is_cross
-    cdef list junc_list
-    cdef bint bo = __is_unique(read)
-
-    is_cross, junc_list, rend = __cross_junctions(read)
-
-    return bo and not is_cross and _match_strand(read, gstrand)
-
-
 cdef str gstrand
 
-cpdef int find_introns2(str filename, dict list_introns, float intron_threshold, queue, str gname) except -1:
 
-    cdef AlignedSegment read
-    cdef AlignmentFile samfl
-    cdef int readlen
-    cdef bint is_cross
-    cdef dict detected_introns = {}
-    cdef list junc_list, chrom_list
-    cdef int i_str, i_end, nchunks, chk_len, offs, rend
-    cdef tuple introns
-    cdef str strand, gne_id
-    cdef np.ndarray cover
-
-    samfl = open_rnaseq(filename)
-    read_iter = samfl.fetch(until_eof=True)
-
-    detected_introns = {}
-
-    for read in read_iter:
-        chrom = samfl.getrname(read.reference_id)
-        is_cross, junc_list, rend = __cross_junctions(read)
-        if not __is_unique(read) or is_cross or chrom not in list_introns.keys() :
-            continue
-
-        overlap = len(read.seq) - MIN_BP_OVERLAP
-        for gne_id, strand, i_str, i_end, nchunks, chk_len in list_introns[chrom]:
-
-            if read.pos <= (i_str - overlap) or not _match_strand(read, gene_strand=strand):
-                break
-            elif read.pos >= i_end:
-                continue
-
-            offs = max(0, int((read.pos - i_str) / chk_len))
-            try:
-                detected_introns[(gne_id, i_str, i_end, chk_len)][offs] += 1
-            except KeyError:
-                detected_introns[(gne_id, i_str, i_end, chk_len)] = np.zeros(shape=nchunks, dtype=np.float)
-                detected_introns[(gne_id, i_str, i_end, chk_len)][offs] += 1
-
-    for introns, cover in detected_introns.items():
-        cover = cover/introns[3]
-        if np.any(cover < intron_threshold):
-            continue
-
-        qm = QueueMessage(QUEUE_MESSAGE_BUILD_INTRON, (introns[0], introns[1], introns[2], gname), 0)
-        queue.put(qm, block=True)
-
-    samfl.close()
-    return 0
-
-
-cpdef int find_introns(str filename, object list_introns, float intron_threshold, queue, str gname) except -1:
+cpdef int find_introns(str filename, object list_introns, float intron_threshold, queue,
+                       str gname, int stranded) except -1:
 
     cdef AlignedSegment read
     cdef AlignmentFile samfl
@@ -170,7 +119,7 @@ cpdef int find_introns(str filename, object list_introns, float intron_threshold
         intron_candidates = list_introns[chrom].search(read.pos, read.pos+1)
 
         for ir in intron_candidates:
-            if not _match_strand(read, gene_strand=ir.data[1]):
+            if not _match_strand(read, gene_strand=ir.data[1], stranded=stranded):
                 continue
             i_str = ir.start - MIN_BP_OVERLAP
             ir_end = ir.end + MIN_BP_OVERLAP
@@ -191,37 +140,37 @@ cpdef int find_introns(str filename, object list_introns, float intron_threshold
     samfl.close()
     return 0
 
-cdef inline dict __read_STAR_junc_file(str filename, set in_jj, bint stranded):
+# cdef inline dict __read_STAR_junc_file(str filename, set in_jj, int stranded):
+#
+#     cdef dict out_dd = {}
+#     cdef dict strand_list
+#     cdef object fp
+#     cdef str ln
+#     cdef list tab
+#     cdef str stnd
+#     cdef tuple jid
+#
+#     if stranded>0:
+#         strand_list = {'1':['+'], '2':['-'], '0':['+', '-'] }
+#     else:
+#         strand_list = {'1':['.'], '2':['.'], '0':['.'] }
+#
+#     with open(filename, 'r') as fp:
+#         for ln in fp.readlines():
+#             tab = ln.strip().split()
+#
+#             for stnd in strand_list[tab[3]]:
+#                 jid = (tab[0], stnd, tab[1], tab[2])
+#                 if jid not in in_jj:
+#                     try:
+#                         out_dd[tab[0]].add((tab[1], tab[2], stnd))
+#                     except KeyError:
+#                         out_dd[tab[0]] = set()
+#                         out_dd[tab[0]].add((tab[1], tab[2], stnd))
+#     return out_dd
 
-    cdef dict out_dd = {}
-    cdef dict strand_list
-    cdef object fp
-    cdef str ln
-    cdef list tab
-    cdef str stnd
-    cdef tuple jid
 
-    if stranded:
-        strand_list = {'1':['+'], '2':['-'], '0':['+', '-'] }
-    else:
-        strand_list = {'1':['.'], '2':['.'], '0':['.'] }
-
-    with open(filename, 'r') as fp:
-        for ln in fp.readlines():
-            tab = ln.strip().split()
-
-            for stnd in strand_list[tab[3]]:
-                jid = (tab[0], stnd, tab[1], tab[2])
-                if jid not in in_jj:
-                    try:
-                        out_dd[tab[0]].add((tab[1], tab[2], stnd))
-                    except KeyError:
-                        out_dd[tab[0]] = set()
-                        out_dd[tab[0]].add((tab[1], tab[2], stnd))
-    return out_dd
-
-
-cdef dict __read_juncs_from_bam(str filename, set in_jj, bint stranded):
+cdef dict __read_juncs_from_bam(str filename, set in_jj, int stranded):
 
     cdef AlignedSegment read
     cdef AlignmentFile samfl
@@ -251,7 +200,8 @@ cdef dict __read_juncs_from_bam(str filename, set in_jj, bint stranded):
             if (junc_start - read.pos >= readlen - MIN_BP_OVERLAP) or (junc_start - read.pos <= MIN_BP_OVERLAP) or \
                 (junc_end - junc_start < MIN_JUNC_LENGTH):
                     continue
-            if stranded:
+
+            if stranded != UNSTRANDED:
                 strand = '-' if read.is_reverse else '+'
                 jid = (chrom, strand, junc_start, junc_end)
                 jid2 = (junc_start, junc_end, strand)
@@ -268,77 +218,8 @@ cdef dict __read_juncs_from_bam(str filename, set in_jj, bint stranded):
     return out_dd
 
 
-def read_juncs2(str fname, bint is_junc_file, dict dict_exons, object dict_genes, dict junctions, bint stranded, queue,
-               str gname):
-
-    cdef str ln, chrom, gid
-    cdef list tab
-    cdef Junction jj
-    cdef tuple junc
-    cdef int gidx=0, ngenes=0
-    cdef dict new_junctions
-    cdef set jj_set
-    cdef set set_junctions
-
-    if stranded:
-        set_junctions = set([(dict_genes[gene_id]['chromosome'], dict_genes[gene_id]['strand'], yy.start, yy.end)
-                              for gene_id, xx in junctions.items() for yy in xx.values()])
-    else:
-        set_junctions = set([(dict_genes[gene_id]['chromosome'], '.', yy.start, yy.end)
-                             for gene_id, xx in junctions.items() for yy in xx.values()])
-
-    if is_junc_file:
-       new_junctions = __read_STAR_junc_file(fname, set_junctions, stranded)
-    else:
-       new_junctions = __read_juncs_from_bam(fname, set_junctions, stranded)
-
-    for chrom, jj_set in new_junctions.items():
-        gne_list = sorted([xx for xx in dict_genes.values() if xx['chromosome']==chrom], key=lambda x: (x['start'], x['end']))
-        ngenes = len(gne_list)
-
-        if stranded:
-            init_gidx = {'+': 0, '-': 0}
-        else:
-            init_gidx = {'.': 0}
-
-        found = False
-        for junc in sorted(jj_set):
-            gidx = init_gidx[junc[2]]
-            possible_genes = []
-            while gidx < ngenes:
-                gobj = gne_list[gidx]
-                if stranded and gobj['strand'] != junc[2]:
-                    gidx += 1
-                    continue
-
-                if gobj['end'] < junc[0]:
-                    gidx += 1
-                    init_gidx[junc[2]] += 1
-                    continue
-
-                if gobj['start'] > junc[1]:
-                    if not found and len(possible_genes) > 0:
-                        for gobj in possible_genes:
-                            junc_obj = Junction(junc[0],  junc[1], gid, -1, annot=False)
-                            qm = QueueMessage(QUEUE_MESSAGE_BUILD_JUNCTION, (gid, junc[0], junc[1], gname), 0)
-                            queue.put(qm, block=True)
-                            junctions[gobj['id']][junc[:-1]] = junc_obj
-
-                    break
-                if gobj['start']<=junc[1] and gobj['end']>= junc[0]:
-                    gid = gobj['id']
-                    start_sp = [jj.start for ex in dict_exons[gid] for jj in ex.ob if jj.start > 0 and jj.end > 0]
-                    end_sp = [jj.end for ex in dict_exons[gid] for jj in ex.ib if jj.start > 0 and jj.end > 0]
-                    if junc[0] in start_sp or junc[1] in end_sp:
-                        found = True
-                        qm = QueueMessage(QUEUE_MESSAGE_BUILD_JUNCTION, (gid, junc[0], junc[1], gname), 0)
-                        queue.put(qm, block=True)
-                    else:
-                        possible_genes.append(gobj)
-                    gidx +=1
-
 def read_juncs(str fname, bint is_junc_file, dict dict_exons, object dict_genes, object dict_gtrees, dict junctions,
-               bint stranded, queue, str gname):
+               int stranded, queue, str gname):
 
     cdef str ln, chrom, gid
     cdef list tab
@@ -349,17 +230,14 @@ def read_juncs(str fname, bint is_junc_file, dict dict_exons, object dict_genes,
     cdef set jj_set
     cdef set set_junctions
 
-    if stranded:
+    if stranded != UNSTRANDED:
         set_junctions = set([(dict_genes[gene_id]['chromosome'], dict_genes[gene_id]['strand'], yy.start, yy.end)
                               for gene_id, xx in junctions.items() for yy in xx.values()])
     else:
         set_junctions = set([(dict_genes[gene_id]['chromosome'], '.', yy.start, yy.end)
                              for gene_id, xx in junctions.items() for yy in xx.values()])
 
-    if is_junc_file:
-       new_junctions = __read_STAR_junc_file(fname, set_junctions, stranded)
-    else:
-       new_junctions = __read_juncs_from_bam(fname, set_junctions, stranded)
+    new_junctions = __read_juncs_from_bam(fname, set_junctions, stranded)
 
     for chrom, jj_set in new_junctions.items():
 
@@ -454,7 +332,7 @@ cdef int __intronic_read(AlignedSegment read, junc_start, junc_end, list ref_pos
 @cython.wraparound(True)  # turn on negative index wrapping for entire function
 
 cdef int _read_sam_or_bam(object gne, AlignmentFile samfl, list matrx, dict junctions, list exon_list, list intron_list,
-                          str info_msg='0', object logging=None) except -1:
+                          str info_msg='0', int stranded=UNSTRANDED, object logging=None) except -1:
 
     cdef unsigned int r_start, junc_start, junc_end, readlen, nc, ng
     cdef AlignedSegment read
@@ -478,7 +356,8 @@ cdef int _read_sam_or_bam(object gne, AlignmentFile samfl, list matrx, dict junc
         for read in read_iter:
             is_cross, junc_list, end_r = __cross_junctions(read)
             unique = __is_unique(read)
-            if not _match_strand(read, gene_strand=gne['strand']) or read.pos < gne['start'] or not unique:
+            if not _match_strand(read, gene_strand=gne['strand'], stranded=stranded) or \
+                            read.pos < gne['start'] or not unique:
                 continue
 
             tot_reads += 1
@@ -513,10 +392,10 @@ cpdef long close_rnaseq(AlignmentFile samfl) except -1:
     samfl.close()
 
 cpdef int read_sam_or_bam(object gne, AlignmentFile samfl, list matrx, dict junctions, list exon_list, list intron_list,
-                          str info_msg='0', object logging=None) except -1:
+                          str info_msg='0',int stranded=UNSTRANDED, object logging=None) except -1:
     cdef int res
     res = _read_sam_or_bam(gne, samfl, matrx, junctions=junctions, exon_list=exon_list, intron_list=intron_list,
-                           info_msg=info_msg, logging=logging)
+                           info_msg=info_msg, stranded=stranded, logging=logging)
     return res
 
 
