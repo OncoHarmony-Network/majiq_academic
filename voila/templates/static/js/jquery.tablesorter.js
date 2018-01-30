@@ -1101,11 +1101,9 @@
             });
 
 
-
-
             $('.lsvLegend', table).each(function () {
                 var x = this;
-                loadScript('db/' + this.getAttribute('data-gene-id') + '.js', function () {
+                loadScript(this.getAttribute('data-gene-id'), function () {
                     lsv.renderLsvSpliceGraph(x);
                 });
 
@@ -1113,14 +1111,14 @@
 
             $('.lsv-single-compact-percentiles', table).each(function () {
                 var x = this;
-                loadScript('db/' + this.getAttribute('data-lsv-id') + '.js', function () {
+                loadScript(this.getAttribute('data-gene-id'), function () {
                     lsv.drawLSVCompactStackBars(x, 1);
                 })
             });
 
             $('.psi-violin-plot', table).each(function () {
                 var x = this;
-                loadScript('db/' + x.getAttribute('data-lsv-id') + '.js', function () {
+                loadScript(x.getAttribute('data-gene-id'), function () {
                     bp.psi(x);
                 });
 

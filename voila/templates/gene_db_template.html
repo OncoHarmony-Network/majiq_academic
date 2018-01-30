@@ -1,3 +1,1 @@
-db.bulkDocs([
-{{ gene | to_json }},
-])
+db.bulkDocs([{{ gene | to_json }},{% for lsv in lsvs %}{{ lsv.get() | to_dict | to_json }},{% endfor %}])

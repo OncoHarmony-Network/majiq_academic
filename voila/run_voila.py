@@ -9,6 +9,7 @@ from voila.api import SpliceGraph
 from voila.tools import Tools
 from voila.utils.exceptions import VoilaException
 from voila.utils.voila_log import voila_log
+from voila.utils.voila_pool import VoilaPool
 from voila.view.conditional_table import ConditionalTable
 from voila.view.deltapsi import Deltapsi
 from voila.view.heterogen import Heterogen
@@ -60,26 +61,26 @@ def voila_parser():
                           help='Single LSV analysis by gene(s) of interest.',
                           parents=Psi.arg_parents())
 
-    subparsers.add_parser(constants.ANALYSIS_DELTAPSI,
-                          help='Delta LSV analysis by gene(s) of interest.',
-                          parents=Deltapsi.arg_parents())
-
-    subparsers.add_parser(constants.COND_TABLE,
-                          help='Generate a HTML table with a list of LSVs changing between conditions in multiple '
-                               'samples.',
-                          parents=ConditionalTable.arg_parents())
-
-    subparsers.add_parser(constants.SPLICE_GRAPHS,
-                          help='Generate only splice graphs.',
-                          parents=RenderSpliceGraphs.arg_parents())
-
-    subparsers.add_parser(constants.LSV_THUMBNAILS,
-                          help='Generate LSV thumbnails.',
-                          parents=LsvThumbnails.arg_parents())
-
-    subparsers.add_parser(constants.ANALYSIS_HETEROGEN,
-                          help='Heterogen analysis by gene(s) of interest.',
-                          parents=Heterogen.arg_parents())
+    # subparsers.add_parser(constants.ANALYSIS_DELTAPSI,
+    #                       help='Delta LSV analysis by gene(s) of interest.',
+    #                       parents=Deltapsi.arg_parents())
+    #
+    # subparsers.add_parser(constants.COND_TABLE,
+    #                       help='Generate a HTML table with a list of LSVs changing between conditions in multiple '
+    #                            'samples.',
+    #                       parents=ConditionalTable.arg_parents())
+    #
+    # subparsers.add_parser(constants.SPLICE_GRAPHS,
+    #                       help='Generate only splice graphs.',
+    #                       parents=RenderSpliceGraphs.arg_parents())
+    #
+    # subparsers.add_parser(constants.LSV_THUMBNAILS,
+    #                       help='Generate LSV thumbnails.',
+    #                       parents=LsvThumbnails.arg_parents())
+    #
+    # subparsers.add_parser(constants.ANALYSIS_HETEROGEN,
+    #                       help='Heterogen analysis by gene(s) of interest.',
+    #                       parents=Heterogen.arg_parents())
 
     # parser_tool = subparsers.add_parser(constants.TOOLS,
     #                                     help='Various tools.',
@@ -95,6 +96,7 @@ def main():
     :return: None
     """
 
+
     # Time execution time
     start_time = time.time()
 
@@ -102,15 +104,6 @@ def main():
 
     # get args
     args = parser.parse_args()
-
-    # conditional splice graph requirement
-    if hasattr(args, 'no_html') and not args.no_html and not args.splice_graph:
-        parser.error('argument --splice-graph is required')
-
-    # # voila must be build for this type analysis
-    # if hasattr(args, 'voila_file') and args.voila_file:
-    #     with Voila(args.voila_file, 'r') as v:
-    #         v.check_analysis_type(args.type_analysis)
 
     # set up logging
     log_filename = 'voila.log'
@@ -125,6 +118,8 @@ def main():
     log.info('Command: {0}'.format(' '.join(sys.argv)))
 
     log.info('Voila {0} v{1}'.format(args.type_analysis, constants.VERSION))
+
+    VoilaPool(4)
 
     # run function for this analysis type
     type_analysis = {

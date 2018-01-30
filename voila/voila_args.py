@@ -1,6 +1,5 @@
 import argparse
 import errno
-import glob
 import os
 
 from majiq.src.logger import create_if_not_exists
@@ -70,8 +69,8 @@ class VoilaArgs:
     @classmethod
     def check_voila_file(cls, value):
         value = cls.check_file(value)
-        with Voila(value, 'r') as v:
-            v.check_version()
+        # with Voila(value, 'r') as v:
+        #     v.check_version()
         return value
 
     @staticmethod
@@ -135,7 +134,10 @@ class VoilaArgs:
             help='Do not write logs to standard out.'
         )
 
-        parser.add_argument('--debug', action='store_true')
+        parser.add_argument(
+            '--debug',
+            action='store_true'
+        )
 
         return parser
 

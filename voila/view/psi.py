@@ -3,11 +3,26 @@ import os
 
 from voila import constants, io_voila
 from voila.api.view_matrix import ViewMatrix
-from voila.api.view_splice_graph import PsiSpliceGraph, DeltaPsiSpliceGraph
-from voila.utils.run_voila_utils import table_marks_set, copy_static
+from voila.api.view_splice_graph import PsiSpliceGraph
+from voila.utils.run_voila_utils import table_marks_set, copy_static, get_env
 from voila.utils.voila_log import voila_log
+from voila.utils.voila_pool import VoilaPool
 from voila.view.html import Html
 from voila.voila_args import VoilaArgs
+
+
+def create_gene_db(gene_ids, args, experiment_names):
+    env = get_env()
+    log = voila_log()
+    with PsiSpliceGraph(args.splice_graph) as sg, ViewMatrix(args.voila_file) as m:
+        for gene_id in gene_ids:
+            log.debug('creating {}'.format(gene_id))
+            with open(os.path.join(args.output, 'db', '{}.js'.format(gene_id)), 'w') as f:
+                for el in env.get_template('gene_db_template.html').generate(
+                        gene=sg.gene(gene_id).get.get_experiment(experiment_names),
+                        lsvs=(m.psi(lsv_id) for lsv_id in m.lsv_ids(gene_id))
+                ):
+                    f.write(el)
 
 
 class Psi(Html, VoilaArgs):
@@ -19,16 +34,16 @@ class Psi(Html, VoilaArgs):
         """
         super(Psi, self).__init__(args)
 
-        if not args.no_html:
-            with ViewMatrix(args.voila_file, 'r') as m:
-                self.metadatda = m.metadata
-            self.render_summaries()
-            self.render_index()
-            copy_static(args)
+        # if not args.no_html:
+        #     with ViewMatrix(args.voila_file, 'r') as m:
+        #         self.metadatda = m.metadata
+        #     self.render_summaries()
+        #     self.render_index()
+        #     copy_static(args)
 
         if not args.no_tsv:
             io_voila.tab_output(args, self.voila_links)
-        #
+
         # if args.gtf:
         #     io_voila.generic_feature_format_txt_files(args)
         #
@@ -43,32 +58,36 @@ class Psi(Html, VoilaArgs):
         args = self.args
         metadata = self.metadatda
 
-        with ViewMatrix(args.voila_file, 'r') as m, DeltaPsiSpliceGraph(args.splice_graph) as sg:
+        with ViewMatrix(args.voila_file, 'r') as m:
             lsv_count = m.get_lsv_count(args)
-            too_many_lsvs = lsv_count > constants.MAX_LSVS_PSI_INDEX
+            lsv_ids = tuple(m.get_lsvs(args))
+            gene_ids = tuple(m.gene_ids)
 
-            try:
-                os.makedirs(os.path.join(args.output, 'db'))
-            except OSError as e:
-                if e.errno != errno.EEXIST:
-                    raise
+        too_many_lsvs = lsv_count > constants.MAX_LSVS_PSI_INDEX
 
-            for gene in sg.genes:
-                with open(os.path.join(args.output, 'db', '{}.js'.format(gene.id)), 'w') as f:
-                    lsv_db_template = self.env.get_template('gene_db_template.html')
-                    for el in lsv_db_template.generate(
-                            gene=gene.get_experiment(metadata['experiment_names'])
-                    ):
-                        f.write(el)
+        try:
+            os.makedirs(os.path.join(args.output, 'db'))
+        except OSError as e:
+            if e.errno != errno.EEXIST:
+                raise
 
-            for lsv_id in m.get_lsvs(args):
-                with open(os.path.join(args.output, 'db', '{}.js'.format(lsv_id)), 'w') as f:
-                    lsv_db_template = self.env.get_template('lsv_db_template.html')
-                    for el in lsv_db_template.generate(
-                            lsv=m.psi(lsv_id)
-                    ):
-                        f.write(el)
+        def chunkify(lst, n):
+            for i in range(n):
+                yield lst[i::n]
 
+        names = metadata['experiment_names']
+        multiple_results = []
+
+        with VoilaPool() as vp:
+            for lsvs, genes in zip(chunkify(lsv_ids, vp.processes), chunkify(gene_ids, vp.processes)):
+                multiple_results.append(vp.pool.apply_async(create_gene_db, (genes, args, names)))
+
+            for res in multiple_results:
+                res.get()
+
+        log.debug('finished writing db files.')
+
+        with ViewMatrix(args.voila_file, 'r') as m, PsiSpliceGraph(args.splice_graph) as sg:
             with open(os.path.join(args.output, 'index.html'), 'w') as html:
                 index_template = self.env.get_template('index_single_summary_template.html')
                 for el in index_template.generate(
@@ -80,7 +99,7 @@ class Psi(Html, VoilaArgs):
                         next_page=None,
                         links=self.voila_links,
                         genes=sg.gene,
-                        lsvs=[m.psi(lsv_id) for lsv_id in m.get_lsvs(args)],
+                        lsvs=(m.psi(lsv_id) for lsv_id in lsv_ids),
                         too_many_lsvs=too_many_lsvs,
                         database_name=self.database_name(),
                         genome=sg.genome,
@@ -103,6 +122,8 @@ class Psi(Html, VoilaArgs):
         summaries_subfolder = self.get_summaries_subfolder()
         metadata = self.metadatda
         database_name = self.database_name()
+
+        # with Pool(processes=4) as pool:
 
         with PsiSpliceGraph(args.splice_graph, 'r') as sg:
             genome = sg.genome

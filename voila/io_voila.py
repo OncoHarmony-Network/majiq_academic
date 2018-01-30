@@ -240,9 +240,9 @@ def tab_output(args, voila_links):
         with open(tsv_file, 'w') as tsv:
             writer = csv.DictWriter(tsv, fieldnames=fieldnames, delimiter='\t')
             writer.writeheader()
-            # for lsv_id in m.get_lsvs(args):
             for gene_id in m.get_gene_ids(args):
                 gene = sg.gene(gene_id).get
+                gene_dict = dict(gene)
 
                 for lsv_id in m.get_lsvs(args, gene_id):
 
@@ -254,8 +254,8 @@ def tab_output(args, voila_links):
                     lsv_exons = gene.lsv_exons(lsv_id, lsv_junctions)
 
                     row = {
-                        '#Gene Name': gene.name,
-                        'Gene ID': gene.id,
+                        '#Gene Name': gene_dict['name'],
+                        'Gene ID': gene_id,
                         'LSV ID': lsv_id,
                         'LSV Type': lsv.lsv_type,
                         'A5SS': lsv.prime5,
@@ -263,10 +263,10 @@ def tab_output(args, voila_links):
                         'ES': lsv.exon_skipping,
                         'Num. Junctions': lsv.junction_count,
                         'Num. Exons': lsv.exon_count,
-                        'chr': gene.chromosome,
-                        'strand': gene.strand,
+                        'chr': gene_dict['chromosome'],
+                        'strand': gene_dict['strand'],
                         'De Novo Junctions': semicolon_join(
-                            int(junc.get_junction_type(experiment) == JUNCTION_TYPE_RNASEQ) for junc in lsv_junctions
+                            int(next(junc.get_junction_types([experiment])) == JUNCTION_TYPE_RNASEQ) for junc in lsv_junctions
                         ),
                         'Junctions coords': semicolon_join(
                             '{0}-{1}'.format(junc.start, junc.end) for junc in lsv_junctions
@@ -309,7 +309,7 @@ def tab_output(args, voila_links):
                         })
 
                     if voila_links:
-                        summary_path = voila_links[gene.id]
+                        summary_path = voila_links[gene_id]
                         if not os.path.isabs(summary_path):
                             summary_path = join(os.getcwd(), args.output, summary_path)
                         row['Voila link'] = "file://{0}".format(summary_path)

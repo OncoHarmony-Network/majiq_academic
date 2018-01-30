@@ -1242,23 +1242,25 @@ function translate_delta_lsv_bins(lsv_bins, num_samples) {
     return adjusted_bins
 }
 
-function loadScript(url, callback) {
-    if (window.location.href.includes('/summaries/')) {
-        url = '../' + url
-    }
+function loadScript(gene_id, callback) {
+    db.get(gene_id).then(callback).catch(function () {
+        var url = 'db/' + gene_id + '.js';
+        if (window.location.href.includes('/summaries/')) {
+            url = '../' + url
+        }
 
-    // Adding the script tag to the head as suggested before
-    var head = document.getElementsByTagName('head')[0];
-    var script = document.createElement('script');
-    script.type = 'text/javascript';
-    script.src = url;
+        // Adding the script tag to the head as suggested before
+        var head = document.getElementsByTagName('head')[0];
+        var script = document.createElement('script');
+        script.type = 'text/javascript';
+        script.src = url;
 
-    // Then bind the event to the callback function.
-    // There are several events for cross browser compatibility.
-    script.onreadystatechange = callback;
-    script.onload = callback;
+        // Then bind the event to the callback function.
+        // There are several events for cross browser compatibility.
+        script.onreadystatechange = callback;
+        script.onload = callback;
 
-    // Fire the loading
-    head.appendChild(script);
-
+        // Fire the loading
+        head.appendChild(script);
+    })
 }

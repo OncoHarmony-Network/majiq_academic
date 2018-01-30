@@ -48,7 +48,8 @@ class SpliceGraphSQL(SQL):
 
     @staticmethod
     def check_version():
-        voila_log().warning('need to implement check version.')
+        # voila_log().warning('need to implement check version.')
+        pass
 
 
 class SpliceGraphType(ABC):

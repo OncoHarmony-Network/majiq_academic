@@ -15,6 +15,7 @@ def voila_log(filename=None, silent=False, debug=False):
     :param silent: if true, then logger will not print to command line
     :return: log
     """
+
     try:
         return Logger.manager.loggerDict[VOILA_LOG_NAME]
     except KeyError:

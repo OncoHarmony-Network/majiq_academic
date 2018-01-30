@@ -1,4 +1,4 @@
-from sqlalchemy import Integer, String, Column, Boolean, ForeignKey, ForeignKeyConstraint
+from sqlalchemy import Integer, String, Column, Boolean, ForeignKey, ForeignKeyConstraint, inspect
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import relationship
 
@@ -72,12 +72,27 @@ class AltEnds(Base):
         ForeignKeyConstraint([exon_gene_id, exon_start, exon_end], ['exon.gene_id', 'exon.start', 'exon.end']),)
 
 
+class ReadsSum(Base):
+    __tablename__ = 'reads_sum'
+    __iter__ = base_iter
+
+    sum = Column(Integer, nullable=False)
+    junction_gene_id = Column(String, primary_key=True)
+    junction_start = Column(Integer, primary_key=True)
+    junction_end = Column(Integer, primary_key=True)
+
+    __table_args__ = (
+        ForeignKeyConstraint([junction_gene_id, junction_start, junction_end],
+                             ['junction.gene_id', 'junction.start', 'junction.end']),)
+
+    junction = relationship('Junction')
+
+
 class Reads(Base):
     __tablename__ = 'reads'
     __iter__ = base_iter
 
     reads = Column(Integer, nullable=False)
-
     experiment_name = Column(String, ForeignKey('experiment.name'), primary_key=True)
     junction_gene_id = Column(String, primary_key=True)
     junction_start = Column(Integer, primary_key=True)
@@ -104,37 +119,30 @@ class Junction(Base):
     reads = relationship('Reads')
     gene = relationship('Gene')
 
-    def get_junction_type(self, experiment_name):
-        reads = self.get_reads(experiment_name)
+    def get_junction_types(self, experiment_names):
+        for experiment_name in experiment_names:
+            reads = self.get_reads(experiment_name)
+            junc_type = constants.JUNCTION_TYPE_RNASEQ
+            if reads == 0 and self.annotated:
+                if self.reads_sum(experiment_names) - reads > 0:
+                    junc_type = constants.JUNCTION_TYPE_DB_OTHER_RNASEQ
+                else:
+                    junc_type = constants.JUNCTION_TYPE_DB
 
-        if self.annotated and reads == 0:
-            reads_sum = sum(r.reads for r in self.reads)
-            if reads_sum - reads > 0:
-                return constants.JUNCTION_TYPE_DB_OTHER_RNASEQ
-            else:
-                return constants.JUNCTION_TYPE_DB
+            if self.annotated and reads > 0:
+                junc_type = constants.JUNCTION_TYPE_DB_RNASEQ
 
-        if self.annotated and reads > 0:
-            return constants.JUNCTION_TYPE_DB_RNASEQ
+            if not self.annotated and reads > 0:
+                junc_type = constants.JUNCTION_TYPE_RNASEQ
 
-        if not self.annotated and reads > 0:
-            return constants.JUNCTION_TYPE_RNASEQ
+            yield experiment_name, junc_type
 
-        return constants.JUNCTION_TYPE_RNASEQ
+    def reads_sum(self, experiment_names):
+        return sum(self.get_reads(e) for e in experiment_names)
 
     def get_reads(self, experiment_name):
-        return next((r.reads for r in self.reads if r.experiment_name == experiment_name), 0)
-
-    def get_experiment(self, experiment_name):
-        junction = dict(self)
-
-        del junction['gene_id']
-
-        junction['reads'] = self.get_reads(experiment_name)
-        junction['junction_type'] = self.get_junction_type(experiment_name)
-        junction['intron_retention'] = self.get_intron_retention_type()
-
-        return junction
+        session = inspect(self).session
+        return session.query(Reads).get((experiment_name, self.gene_id, self.start, self.end)).reads
 
     def get_intron_retention_type(self):
         if self.intron_retention:
@@ -365,19 +373,20 @@ class Gene(Base):
 
                     reads_end[experiment_name] = junc.get_reads(experiment_name)
 
-                    try:
-                        types_start = gene['junction_types'][junc.start]
-                    except KeyError:
-                        gene['junction_types'][junc.start] = {}
-                        types_start = gene['junction_types'][junc.start]
+                try:
+                    types_start = gene['junction_types'][junc.start]
+                except KeyError:
+                    gene['junction_types'][junc.start] = {}
+                    types_start = gene['junction_types'][junc.start]
 
-                    try:
-                        types_end = types_start[junc.end]
-                    except KeyError:
-                        types_start[junc.end] = {}
-                        types_end = types_start[junc.end]
+                try:
+                    types_end = types_start[junc.end]
+                except KeyError:
+                    types_start[junc.end] = {}
+                    types_end = types_start[junc.end]
 
-                    types_end[experiment_name] = junc.get_junction_type(experiment_name)
+                for name, junc_type in junc.get_junction_types(experiment_names):
+                    types_end[name] = junc_type
 
                 if combined_name:
                     reads = gene['reads'][junc.start][junc.end]

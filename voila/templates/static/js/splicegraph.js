@@ -1,7 +1,7 @@
 $(function () {
     $('.splice-graph').each(function () {
         var el = this;
-        loadScript('db/' + el.getAttribute('data-gene-id') + '.js', function () {
+        loadScript(el.getAttribute('data-gene-id'), function () {
             sg.init(el)
         })
 
