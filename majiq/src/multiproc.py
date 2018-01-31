@@ -8,6 +8,7 @@ import majiq.src.logger as majiq_logger
 from majiq.src.constants import *
 from majiq.src.voila_wrapper import update_splicegraph_junction
 from voila.vlsv import VoilaLsv
+import psutil
 
 
 def process_wrapper(args_vals):
@@ -26,6 +27,10 @@ def process_wrapper(args_vals):
         raise
 
     finally:
+        if process_conf.mem_profile:
+            mem_allocated = int(psutil.Process().memory_info().rss)/(1024**2)
+            logger.info("Max Memory used %.2f MB" % mem_allocated)
+
         qm = QueueMessage(QUEUE_MESSAGE_END_WORKER, None, chnk)
         logger.debug('SENDING END MESSAGE')
         process_conf.queue.put(qm, block=True)

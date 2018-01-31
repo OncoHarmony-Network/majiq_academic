@@ -135,14 +135,12 @@ cdef class LSV:
     cdef int add_lsv(LSV self, np.ndarray junc_mtrx, list type_dict, dict values, float fitfunc_r,
                      object majiq_config) except -1:
 
-        cdef list val = []
+        cdef list val
         cdef Junction xx
 
         type_dict.append((self.id, self.type))
 
-        for xx  in self.junctions:
-            val.append(junc_mtrx[xx.index])
-
+        val = [junc_mtrx[xx.index] for xx  in self.junctions]
         values[self.id] = sample_junctions(np.array(val), fitfunc_r, majiq_config)
 
 

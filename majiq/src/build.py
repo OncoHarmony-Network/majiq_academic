@@ -2,7 +2,7 @@ import multiprocessing as mp
 import os
 import sys
 
-import h5py
+import psutil
 
 import majiq.src.io as majiq_io
 from majiq.src.io_bam import read_juncs, find_introns
@@ -309,4 +309,7 @@ class Builder(BasicPipeline):
             #     logger.info('%s LSVs found in %s' % (f.attrs['num_lsvs'], sam_file))
 
         logger.info("MAJIQ Builder is ended succesfully!")
+        if self.mem_profile:
+            mem_allocated = int(psutil.Process().memory_info().rss)/(1024**2)
+            logger.info("Max Memory used %.2f MB" % mem_allocated)
         logger.info("Alakazam! Done.")

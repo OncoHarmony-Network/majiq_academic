@@ -57,6 +57,9 @@ def main():
     common.add_argument('--debug', default=False, action='store_true',
                         help="Activate this flag for debugging purposes, activates logger and jumps some "
                              "processing steps. [Default: %(default)s]")
+    common.add_argument('--mem_profile', default=False, action='store_true',
+                        help="Print memory usage summary at the end of the execution. [Default: %(default)s]")
+
     common.add_argument('--min_experiments', default=-1, type=float, dest='min_exp',
                         help='Lower threshold for group filters. min_experiments is the minimum number of experiments '
                              'where the different filters check in order to pass an lsv or junction.')
