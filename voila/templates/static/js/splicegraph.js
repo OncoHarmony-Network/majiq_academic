@@ -1,10 +1,6 @@
 $(function () {
     $('.splice-graph').each(function () {
-        var el = this;
-        loadScript(el.getAttribute('data-gene-id'), function () {
-            sg.init(el)
-        })
-
+        sg.init(this)
     })
 });
 

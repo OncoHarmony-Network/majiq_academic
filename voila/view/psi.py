@@ -18,7 +18,7 @@ def create_gene_db(gene_ids, args, experiment_names):
             with open(os.path.join(args.output, 'db', '{}.js'.format(gene_id)), 'w') as f:
                 for el in env.get_template('gene_db_template.html').generate(
                         gene=sg.gene(gene_id).get.get_experiment(experiment_names),
-                        lsvs=(m.psi(lsv_id) for lsv_id in m.lsv_ids(gene_id))
+                        lsvs=(m.psi(lsv_id) for lsv_id in m.get_lsv_ids(args, gene_id))
                 ):
                     f.write(el)
 
@@ -84,7 +84,7 @@ class Psi(Html, VoilaArgs):
         metadata = self.metadata
 
         with ViewPsi(args.voila_file) as m, PsiSpliceGraph(args.splice_graph) as sg:
-            lsv_ids = tuple(m.get_lsvs(args))
+            lsv_ids = tuple(m.get_lsv_ids(args))
             lsv_count = m.get_lsv_count(args)
             too_many_lsvs = lsv_count > constants.MAX_LSVS_PSI_INDEX
 
@@ -126,7 +126,7 @@ class Psi(Html, VoilaArgs):
                 page_name = cls.get_page_name(args, index)
                 next_page = cls.get_next_page(args, index, page_count)
                 prev_page = cls.get_prev_page(args, index)
-                lsv_dict = {gene_id: tuple(dict(m.psi(lsv_id).get()) for lsv_id in m.get_lsvs(args, gene_id)) for
+                lsv_dict = {gene_id: tuple(dict(m.psi(lsv_id).get()) for lsv_id in m.get_lsv_ids(args, gene_id)) for
                             gene_id in genes}
                 table_marks = tuple(table_marks_set(len(gene_set)) for gene_set in lsv_dict)
 

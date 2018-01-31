@@ -20,12 +20,11 @@
     <script src="static/js/floatinglegend.js"></script>
     <script src="static/js/lsv.js"></script>
     <script src="static/js/lsvplots.js"></script>
-    <script src="static/js/colors.js"></script>
     <script>
         var db = new PouchDB('{{ database_name }}');
         var sg = new SpliceGraph(db);
         var lsv = new Lsv(db);
-        var bp = new BoxPlots(db);
+        var bp = new LSVPlots(db);
     </script>
 {% endblock %}
 

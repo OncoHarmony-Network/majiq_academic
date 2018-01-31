@@ -142,7 +142,11 @@ class Junction(Base):
 
     def get_reads(self, experiment_name):
         session = inspect(self).session
-        return session.query(Reads).get((experiment_name, self.gene_id, self.start, self.end)).reads
+        r = session.query(Reads).get((experiment_name, self.gene_id, self.start, self.end))
+        try:
+            return r.reads
+        except AttributeError:
+            return 0
 
     def get_intron_retention_type(self):
         if self.intron_retention:

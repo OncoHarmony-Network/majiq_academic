@@ -1,4 +1,4 @@
-var BoxPlots = function (db) {
+var LSVPlots = function (db) {
     this.db = db;
     this.height = 125;
     this.histo_width = 80;
@@ -8,7 +8,15 @@ var BoxPlots = function (db) {
     this.svg_height = this.height + this.top_padding + this.bottom_padding
 };
 
-BoxPlots.prototype.psi = function (el) {
+LSVPlots.prototype.colors = function () {
+    rgb_arr = [];
+    BREWER_PALETTE.forEach(function (color, color_index) {
+        rgb_arr.push('rgb(' + BREWER_PALETTE[color_index % BREWER_PALETTE.length].join(',') + ')')
+    });
+    return rgb_arr
+};
+
+LSVPlots.prototype.psi = function (el) {
     var lsv_id = el.getAttribute('data-lsv-id');
     var group = el.getAttribute('data-group');
     var bp = this;
@@ -20,10 +28,20 @@ BoxPlots.prototype.psi = function (el) {
             .attr('height', bp.svg_height);
         bp.violins(bins, means_rounded);
         bp.y_axis([0, 1], [0, .5, 1]);
+        bp.x_axis();
     });
 };
 
-BoxPlots.prototype.delta_psi = function (el) {
+LSVPlots.prototype.x_axis = function () {
+    // return this.svg
+    //     .append('line')
+    //     .attr('x1',)
+    //     .attr('x2')
+    //     .attr('y1')
+    //     .attr('y2')
+};
+
+LSVPlots.prototype.delta_psi = function (el) {
     var lsv_id = el.getAttribute('data-lsv-id');
     var bp = this;
     this.db.get(lsv_id).then(function (data) {
@@ -48,7 +66,7 @@ translateLsvBins = function (lsvBins) {
 };
 
 
-BoxPlots.prototype.y_axis = function (domain, tick_values) {
+LSVPlots.prototype.y_axis = function (domain, tick_values) {
     var bp = this;
     var yScale = d3.scaleLinear()
         .domain(domain)
@@ -69,8 +87,8 @@ BoxPlots.prototype.y_axis = function (domain, tick_values) {
         .attr('transform', 'rotate(-90) translate(-' + bp.height / 2 + ', -30)');
 };
 
-BoxPlots.prototype.violins = function (bins, means_rounded) {
-    var colors = new Colors().toRGBArray();
+LSVPlots.prototype.violins = function (bins, means_rounded) {
+    var colors = this.colors();
     var bp = this;
     return this.svg
         .selectAll('.violin')

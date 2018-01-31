@@ -82,7 +82,6 @@ class Deltapsi(Html, VoilaArgs):
         with DeltaPsiSpliceGraph(args.splice_graph) as sg, ViewDeltaPsi(args.voila_file) as m:
             lsv_count = m.get_lsv_count(args)
             too_many_lsvs = lsv_count > constants.MAX_LSVS_DELTAPSI_INDEX
-            log.debug('Write tmp index to actual index')
 
             with open(os.path.join(args.output, 'index.html'), 'w') as html:
                 index_template = env.get_template('index_delta_summary_template.html')
@@ -122,7 +121,8 @@ class Deltapsi(Html, VoilaArgs):
                 page_name = cls.get_page_name(args, index)
                 next_page = cls.get_next_page(args, index, page_count)
                 prev_page = cls.get_prev_page(args, index)
-                lsv_dict = {gene_id: tuple(dict(m.delta_psi(lsv_id).get()) for lsv_id in m.get_lsv_ids(args, gene_id)) for
+                lsv_dict = {gene_id: tuple(dict(m.delta_psi(lsv_id).get()) for lsv_id in m.get_lsv_ids(args, gene_id))
+                            for
                             gene_id in genes}
 
                 table_marks = tuple(table_marks_set(len(gene_set)) for gene_set in lsv_dict)
@@ -177,7 +177,6 @@ class Deltapsi(Html, VoilaArgs):
 
         with ViewDeltaPsi(args.voila_file) as m:
             gene_ids = tuple(m.get_gene_ids(args))
-
 
         try:
             os.makedirs(os.path.join(args.output, 'db'))

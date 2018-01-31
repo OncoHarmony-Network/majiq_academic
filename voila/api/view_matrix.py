@@ -91,14 +91,10 @@ class ViewPsi(Psi):
         yield from self.h['lsvs'].keys()
 
     def get_lsv_count(self, args):
-        return len(tuple(self.get_lsvs(args)))
+        return len(tuple(self.get_lsv_ids(args)))
 
-    def get_lsvs(self, args, gene_id=None):
-        lsv_ids, threshold = None, None
+    def get_lsv_ids(self, args, gene_id=None):
         lsv_ids = args.lsv_ids
-
-        if hasattr(args, 'show_all') and not args.show_all:
-            threshold = args.threshold
 
         if gene_id:
             gene_ids = (gene_id,)
@@ -108,8 +104,7 @@ class ViewPsi(Psi):
         for gene_id in gene_ids:
             for lsv_id in self.lsv_ids(gene_id):
                 if not lsv_ids or lsv_id in lsv_ids:
-                    if not threshold or VoilaLsv.is_lsv_changing(self.psi(lsv_id).means, threshold):
-                        yield lsv_id
+                    yield lsv_id
 
     def paginated_genes(self, args):
         def grouper(iterable, n, fillvalue=None):
