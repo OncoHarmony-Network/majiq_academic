@@ -1,6 +1,6 @@
 import numpy
 
-from voila.api.matrix_hdf5 import DeltaPsi, Psi
+from voila.api.matrix_hdf5 import DeltaPsi, Psi, lsv_id_to_gene_id
 from voila.vlsv import get_expected_dpsi, VoilaLsv
 
 
@@ -14,6 +14,29 @@ def unpack_bins(value):
     if numpy.size(value, 0) == 1:
         value = numpy.append(value, [numpy.flip(value[-1], 0)], axis=0)
     return value
+
+
+def get_lsvs(self, args, data, gene_id=None):
+    """
+    Get list of LSVs from voila file.
+    :return: list
+    """
+    lsv_ids, threshold = None, None
+    lsv_ids = args.lsv_ids
+
+    if hasattr(args, 'show_all') and not args.show_all:
+        threshold = args.threshold
+
+    if gene_id:
+        gene_ids = (gene_id,)
+    else:
+        gene_ids = self.get_gene_ids(args)
+
+    for gene_id in gene_ids:
+        for lsv_id in self.lsv_ids(gene_id):
+            if not lsv_ids or lsv_id in lsv_ids:
+                if not threshold or VoilaLsv.is_lsv_changing(data(lsv_id).means, threshold):
+                    yield lsv_id
 
 
 class ViewPsi(Psi):
@@ -65,13 +88,6 @@ class ViewPsi(Psi):
                 step_bins = 1.0 / b.size
                 projection_prod = b * numpy.arange(step_bins / 2, 1, step_bins) ** 2
                 yield numpy.sum(projection_prod) - means[idx] ** 2
-            # variances = []
-            # means = tuple(self.means)
-            # for idx, bin in enumerate(self.bins):
-            #     step_bins = 1.0 / bin.size
-            #     projection_prod = bin * numpy.arange(step_bins / 2, 1, step_bins) ** 2
-            #     variances.append(numpy.sum(projection_prod) - (means[idx] ** 2))
-            # return variances
 
         @property
         def junction_count(self):
@@ -79,6 +95,40 @@ class ViewPsi(Psi):
 
     def psi(self, lsv_id):
         return self._ViewPsi(self, lsv_id)
+
+    def get_gene_ids(self, args):
+        if args.gene_ids:
+            yield from args.gene_ids
+        elif args.lsv_ids:
+            for lsv_id in args.lsv_ids:
+                yield lsv_id_to_gene_id(lsv_id)
+
+        yield from self.h['lsvs'].keys()
+
+    def get_lsv_count(self, args):
+        return len(tuple(self.get_lsvs(args)))
+
+    def get_lsvs(self, args, gene_id=None):
+        """
+        Get list of LSVs from voila file.
+        :return: list
+        """
+        lsv_ids, threshold = None, None
+        lsv_ids = args.lsv_ids
+
+        if hasattr(args, 'show_all') and not args.show_all:
+            threshold = args.threshold
+
+        if gene_id:
+            gene_ids = (gene_id,)
+        else:
+            gene_ids = self.get_gene_ids(args)
+
+        for gene_id in gene_ids:
+            for lsv_id in self.lsv_ids(gene_id):
+                if not lsv_ids or lsv_id in lsv_ids:
+                    if not threshold or VoilaLsv.is_lsv_changing(self.psi(lsv_id).means, threshold):
+                        yield lsv_id
 
 
 class ViewDeltaPsi(DeltaPsi):
@@ -149,38 +199,16 @@ class ViewDeltaPsi(DeltaPsi):
     def delta_psi(self, lsv_id):
         return self._ViewDeltaPsi(self, lsv_id)
 
-
-class ViewMatrix(ViewDeltaPsi, ViewPsi):
-
-    def get_lsv_count(self, args):
-        return sum(1 for _ in self.get_lsvs(args))
-
-    def get_gene_ids(self, args=None):
-        if args:
-            if args.gene_ids:
-                yield from args.gene_ids
-            elif args.lsv_ids:
-                for lsv_id in args.lsv_ids:
-                    yield self.lsv_id_to_gene_id(lsv_id)
-
-        yield from self.h['lsvs'].keys()
-
-    def get_lsv_means(self, lsv_id):
-        bins = next(self.get(lsv_id, 'bins'))[1]
-        for b in bins:
-            yield get_expected_dpsi(b)
-
-    def get_lsvs(self, args=None, gene_id=None):
+    def get_lsvs(self, args, gene_id=None):
         """
         Get list of LSVs from voila file.
         :return: list
         """
         lsv_ids, threshold = None, None
-        if args:
-            lsv_ids = args.lsv_ids
+        lsv_ids = args.lsv_ids
 
-            if hasattr(args, 'show_all') and not args.show_all:
-                threshold = args.threshold
+        if hasattr(args, 'show_all') and not args.show_all:
+            threshold = args.threshold
 
         if gene_id:
             gene_ids = (gene_id,)
@@ -189,10 +217,21 @@ class ViewMatrix(ViewDeltaPsi, ViewPsi):
 
         for gene_id in gene_ids:
             for lsv_id in self.lsv_ids(gene_id):
-                # Search for LSV
                 if not lsv_ids or lsv_id in lsv_ids:
-                    if not threshold or VoilaLsv.is_lsv_changing(self.get_lsv_means(lsv_id), threshold):
+                    if not threshold or VoilaLsv.is_lsv_changing(self.delta_psi(lsv_id).means, threshold):
                         yield lsv_id
+
+    def get_lsv_count(self, args):
+        return len(tuple(self.get_lsvs(args)))
+
+    def get_gene_ids(self, args):
+        if args.gene_ids:
+            yield from args.gene_ids
+        elif args.lsv_ids:
+            for lsv_id in args.lsv_ids:
+                yield lsv_id_to_gene_id(lsv_id)
+
+        yield from self.h['lsvs'].keys()
 
     @property
     def metadata(self):

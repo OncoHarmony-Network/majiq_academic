@@ -11,7 +11,7 @@ import numpy as np
 
 from voila import constants, vlsv
 from voila.api import Voila, SpliceGraph
-from voila.api.view_matrix import ViewMatrix
+from voila.api.view_matrix import ViewDeltaPsi, ViewPsi
 from voila.constants import JUNCTION_TYPE_RNASEQ
 from voila.hdf5 import HDF5
 from voila.utils import utils_voila
@@ -216,6 +216,11 @@ def tab_output(args, voila_links):
     group1 = None
     group2 = None
     tsv_file = join(args.output, output_html.rsplit('.html', 1)[0] + '.tsv')
+
+    if args.type_analysis == constants.ANALYSIS_DELTAPSI:
+        ViewMatrix = ViewDeltaPsi
+    else:
+        ViewMatrix = ViewPsi
 
     with ViewMatrix(args.voila_file, 'r') as m, SpliceGraph(args.splice_graph) as sg:
         metadata = m.metadata

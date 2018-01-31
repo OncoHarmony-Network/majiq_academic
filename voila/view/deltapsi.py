@@ -1,8 +1,9 @@
 import errno
 import os
 
+from voila.api.view_matrix import ViewDeltaPsi
+
 from voila import constants, io_voila
-from voila.api.view_matrix import ViewMatrix
 from voila.api.view_splice_graph import DeltaPsiSpliceGraph
 from voila.utils.run_voila_utils import table_marks_set, copy_static, get_env
 from voila.utils.voila_log import voila_log
@@ -14,7 +15,7 @@ from voila.voila_args import VoilaArgs
 def create_gene_db(gene_ids, args, experiment_names):
     env = get_env()
     log = voila_log()
-    with DeltaPsiSpliceGraph(args.splice_graph) as sg, ViewMatrix(args.voila_file) as m:
+    with DeltaPsiSpliceGraph(args.splice_graph) as sg, ViewDeltaPsi(args.voila_file) as m:
         for gene_id in gene_ids:
             log.debug('creating {}'.format(gene_id))
             with open(os.path.join(args.output, 'db', '{}.js'.format(gene_id)), 'w') as f:
@@ -31,7 +32,7 @@ class Deltapsi(Html, VoilaArgs):
 
         if not args.no_html:
             copy_static(args)
-            with ViewMatrix(args.voila_file) as m:
+            with ViewDeltaPsi(args.voila_file) as m:
                 self.metadata = m.metadata
                 self.lsv_ids = tuple(m.get_lsvs(args))
             self.create_db_files()
@@ -79,7 +80,7 @@ class Deltapsi(Html, VoilaArgs):
         env = self.env
         metadata = self.metadata
 
-        with DeltaPsiSpliceGraph(args.splice_graph) as sg, ViewMatrix(args.voila_file) as m:
+        with DeltaPsiSpliceGraph(args.splice_graph) as sg, ViewDeltaPsi(args.voila_file) as m:
             lsv_count = m.get_lsv_count(args)
             too_many_lsvs = lsv_count > constants.MAX_LSVS_DELTAPSI_INDEX
             log.debug('Write tmp index to actual index')
@@ -160,7 +161,7 @@ class Deltapsi(Html, VoilaArgs):
         lsv_ids = self.lsv_ids
         log = voila_log()
 
-        with ViewMatrix(args.voila_file, 'r') as m:
+        with ViewDeltaPsi(args.voila_file) as m:
 
             gene_ids = tuple(m.gene_ids)
 
