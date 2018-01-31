@@ -90,7 +90,7 @@ class Psi(Html, VoilaArgs):
         log.debug('Start index render')
 
         args = self.args
-        metadata = self.metadatda
+        metadata = self.metadata
         lsv_ids = self.lsv_ids
 
         with ViewMatrix(args.voila_file, 'r') as m, PsiSpliceGraph(args.splice_graph) as sg:
@@ -129,7 +129,7 @@ class Psi(Html, VoilaArgs):
         summary_template = self.env.get_template("psi_summary_template.html")
         args = self.args
         summaries_subfolder = self.get_summaries_subfolder()
-        metadata = self.metadatda
+        metadata = self.metadata
         database_name = self.database_name()
 
         with PsiSpliceGraph(args.splice_graph, 'r') as sg:
