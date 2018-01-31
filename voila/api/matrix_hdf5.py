@@ -72,7 +72,6 @@ class MatrixHdf5:
 
     @property
     def metadata(self):
-
         return {
             'analysis_type': self.analysis_type,
             'group_names': self.group_names,
@@ -196,7 +195,6 @@ class MatrixType(ABC):
             lsv_type = lsv_type[:-2]
 
         return len(set(x[1:3] for x in lsv_type.split('|'))) + 1
-
 
 
 class DeltaPsi(MatrixHdf5):

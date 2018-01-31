@@ -16,29 +16,6 @@ def unpack_bins(value):
     return value
 
 
-def get_lsvs(self, args, data, gene_id=None):
-    """
-    Get list of LSVs from voila file.
-    :return: list
-    """
-    lsv_ids, threshold = None, None
-    lsv_ids = args.lsv_ids
-
-    if hasattr(args, 'show_all') and not args.show_all:
-        threshold = args.threshold
-
-    if gene_id:
-        gene_ids = (gene_id,)
-    else:
-        gene_ids = self.get_gene_ids(args)
-
-    for gene_id in gene_ids:
-        for lsv_id in self.lsv_ids(gene_id):
-            if not lsv_ids or lsv_id in lsv_ids:
-                if not threshold or VoilaLsv.is_lsv_changing(data(lsv_id).means, threshold):
-                    yield lsv_id
-
-
 class ViewPsi(Psi):
     class _ViewPsi(Psi._Psi):
         def get(self, *args):
@@ -83,11 +60,16 @@ class ViewPsi(Psi):
 
         @property
         def variances(self):
-            means = tuple(self.means)
-            for idx, b in enumerate(self.bins):
+            def get_expected_psi(bins):
+                step = 1.0 / bins.size
+                projection_prod = bins * numpy.arange(step / 2, 1, step)
+                return numpy.sum(projection_prod)
+
+            for b in self.bins:
+                epsi = get_expected_psi(b)
                 step_bins = 1.0 / b.size
                 projection_prod = b * numpy.arange(step_bins / 2, 1, step_bins) ** 2
-                yield numpy.sum(projection_prod) - means[idx] ** 2
+                yield numpy.sum(projection_prod) - epsi ** 2
 
         @property
         def junction_count(self):
