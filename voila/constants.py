@@ -3,7 +3,7 @@ import os
 
 import voila
 
-VERSION = '1.0.3'
+VERSION = '1.1.0'
 FILE_VERSION = '0.1'
 ANALYSIS_PSI = 'psi'
 ANALYSIS_PSI_GENE = 'psi-gene'
@@ -38,7 +38,7 @@ IR_TYPE_END = 2
 SUFFIX_SPLICEGRAPH = 'splicegraph'
 DELIMITER = '\t'
 EXTENSION = 'txt'
-MAX_GENES = 3  # Max. 10 genes per page, create as many HTMLs as needed
+MAX_GENES = 10  # Max. 10 genes per page, create as many HTMLs as needed
 MAX_LSVS_DELTAPSI_INDEX = 10000  # Max. LSVs allowed to create full index.html
 MAX_LSVS_HET_INDEX = 10000  # Max. LSVs allowed to create full index.html
 MAX_LSVS_PSI_INDEX = 15000

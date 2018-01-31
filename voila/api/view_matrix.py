@@ -1,5 +1,8 @@
+from itertools import zip_longest
+
 import numpy
 
+from voila import constants
 from voila.api.matrix_hdf5 import DeltaPsi, Psi, lsv_id_to_gene_id
 from voila.vlsv import get_expected_dpsi, VoilaLsv
 
@@ -91,10 +94,6 @@ class ViewPsi(Psi):
         return len(tuple(self.get_lsvs(args)))
 
     def get_lsvs(self, args, gene_id=None):
-        """
-        Get list of LSVs from voila file.
-        :return: list
-        """
         lsv_ids, threshold = None, None
         lsv_ids = args.lsv_ids
 
@@ -111,6 +110,14 @@ class ViewPsi(Psi):
                 if not lsv_ids or lsv_id in lsv_ids:
                     if not threshold or VoilaLsv.is_lsv_changing(self.psi(lsv_id).means, threshold):
                         yield lsv_id
+
+    def paginated_genes(self, args):
+        def grouper(iterable, n, fillvalue=None):
+            args = [iter(iterable)] * n
+            return zip_longest(*args, fillvalue=fillvalue)
+
+        for page in grouper(self.get_gene_ids(args), constants.MAX_GENES):
+            yield tuple(p for p in page if p is not None)
 
 
 class ViewDeltaPsi(DeltaPsi):
@@ -225,3 +232,11 @@ class ViewDeltaPsi(DeltaPsi):
                                         zip(experiment_names, group_names)]
 
         return metadata
+
+    def paginated_genes(self, args):
+        def grouper(iterable, n, fillvalue=None):
+            args = [iter(iterable)] * n
+            return zip_longest(*args, fillvalue=fillvalue)
+
+        for page in grouper(self.get_gene_ids(args), constants.MAX_GENES):
+            yield tuple(p for p in page if p is not None)

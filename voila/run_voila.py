@@ -96,7 +96,6 @@ def main():
     :return: None
     """
 
-
     # Time execution time
     start_time = time.time()
 
@@ -119,7 +118,7 @@ def main():
 
     log.info('Voila {0} v{1}'.format(args.type_analysis, constants.VERSION))
 
-    VoilaPool(4)
+    VoilaPool(args.processes)
 
     # run function for this analysis type
     type_analysis = {
