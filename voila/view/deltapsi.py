@@ -33,7 +33,7 @@ class Deltapsi(Html, VoilaArgs):
             copy_static(args)
             with ViewDeltaPsi(args.voila_file) as m:
                 self.metadata = m.metadata
-                self.lsv_ids = tuple(m.get_lsvs(args))
+                self.lsv_ids = tuple(m.get_lsv_ids(args))
             self.create_db_files()
             self.render_summaries()
             self.render_index()
@@ -122,8 +122,9 @@ class Deltapsi(Html, VoilaArgs):
                 page_name = cls.get_page_name(args, index)
                 next_page = cls.get_next_page(args, index, page_count)
                 prev_page = cls.get_prev_page(args, index)
-                lsv_dict = {gene_id: tuple(dict(m.delta_psi(lsv_id).get()) for lsv_id in m.get_lsvs(args, gene_id)) for
+                lsv_dict = {gene_id: tuple(dict(m.delta_psi(lsv_id).get()) for lsv_id in m.get_lsv_ids(args, gene_id)) for
                             gene_id in genes}
+
                 table_marks = tuple(table_marks_set(len(gene_set)) for gene_set in lsv_dict)
 
                 with open(os.path.join(summaries_subfolder, page_name), 'w') as html:
@@ -175,8 +176,8 @@ class Deltapsi(Html, VoilaArgs):
         log = voila_log()
 
         with ViewDeltaPsi(args.voila_file) as m:
+            gene_ids = tuple(m.get_gene_ids(args))
 
-            gene_ids = tuple(m.gene_ids)
 
         try:
             os.makedirs(os.path.join(args.output, 'db'))

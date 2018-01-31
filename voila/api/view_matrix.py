@@ -119,6 +119,17 @@ class ViewPsi(Psi):
         for page in grouper(self.get_gene_ids(args), constants.MAX_GENES):
             yield tuple(p for p in page if p is not None)
 
+    @property
+    def metadata(self):
+        metadata = super().metadata
+        experiment_names = metadata['experiment_names']
+        group_names = super().group_names
+
+        metadata['experiment_names'] = [numpy.insert(exps, 0, '{0} Combined'.format(group)) for exps, group in
+                                        zip(experiment_names, group_names)]
+
+        return metadata
+
 
 class ViewDeltaPsi(DeltaPsi):
     class _ViewDeltaPsi(DeltaPsi._DeltaPsi):
@@ -188,7 +199,7 @@ class ViewDeltaPsi(DeltaPsi):
     def delta_psi(self, lsv_id):
         return self._ViewDeltaPsi(self, lsv_id)
 
-    def get_lsvs(self, args, gene_id=None):
+    def get_lsv_ids(self, args, gene_id=None):
         """
         Get list of LSVs from voila file.
         :return: list
@@ -211,16 +222,19 @@ class ViewDeltaPsi(DeltaPsi):
                         yield lsv_id
 
     def get_lsv_count(self, args):
-        return len(tuple(self.get_lsvs(args)))
+        return len(tuple(self.get_lsv_ids(args)))
 
     def get_gene_ids(self, args):
         if args.gene_ids:
-            yield from args.gene_ids
+            gene_ids = args.gene_ids
         elif args.lsv_ids:
-            for lsv_id in args.lsv_ids:
-                yield lsv_id_to_gene_id(lsv_id)
+            gene_ids = (lsv_id_to_gene_id(lsv_id) for lsv_id in args.lsv_ids)
+        else:
+            gene_ids = self.h['lsvs'].keys()
 
-        yield from self.h['lsvs'].keys()
+        for gene_id in gene_ids:
+            if any(self.get_lsv_ids(args, gene_id)):
+                yield gene_id
 
     @property
     def metadata(self):
@@ -228,8 +242,9 @@ class ViewDeltaPsi(DeltaPsi):
         experiment_names = metadata['experiment_names']
         group_names = super().group_names
 
-        metadata['experiment_names'] = [numpy.insert(exps, 0, '{0} Combined'.format(group)) for exps, group in
-                                        zip(experiment_names, group_names)]
+        if experiment_names.size > 1:
+            metadata['experiment_names'] = [numpy.insert(exps, 0, '{0} Combined'.format(group)) for exps, group in
+                                            zip(experiment_names, group_names)]
 
         return metadata
 

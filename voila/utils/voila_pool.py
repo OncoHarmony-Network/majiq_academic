@@ -4,8 +4,8 @@ from multiprocessing.pool import Pool
 class VoilaPool:
     class __VoilaPool:
         def __init__(self, processes):
-            self.pool = Pool(processes=processes)
-            self.processes = processes
+            self.processes = int(processes)
+            self.pool = Pool(processes=self.processes)
 
         def __str__(self):
             return repr(self)

@@ -100,7 +100,7 @@ class DeltaPsiSpliceGraph(PsiSpliceGraph):
         with ViewDeltaPsi(args.voila_file) as m:
             for gene_id in self.get_gene_ids(args):
                 try:
-                    lsvs = tuple(m.get_lsvs(args, gene_id=gene_id))
+                    lsvs = tuple(m.get_lsv_ids(args, gene_id=gene_id))
                 except GeneIdNotFoundInVoilaFile:
                     lsvs = None
 
