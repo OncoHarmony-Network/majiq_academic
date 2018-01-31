@@ -1,0 +1,13 @@
+{# Hidden field to make inclusion/exclusion sortable #}
+<p class="hidden">
+    {% set max_diff = [0.0] %}
+    {% for excl_incl in lsv.excl_incl %}
+        {% if ((excl_incl[0]|abs + excl_incl[1]) > max_diff[-1]) %}
+            {% do max_diff.append(excl_incl[0]|abs + excl_incl[1]) %}
+        {% endif %}
+    {%- endfor %}
+    {{ max_diff[-1] }}
+</p>
+<div class="excl-incl-rect" data-gene-id="{{ gene.id }}" data-lsv-id="{{ lsv.lsv_id }}"></div>
+<svg class="deltapsi-violin-plot" data-lsv-id="{{ lsv.lsv_id }}" data-gene-id="{{ gene.id }}"
+     style="display:none;"></svg>

@@ -10,8 +10,8 @@ import h5py
 import numpy as np
 
 from voila import constants, vlsv
-from voila.api import Voila, Matrix, SpliceGraph
-from voila.api.view_matrix import ViewMatrix
+from voila.api import Voila, SpliceGraph
+from voila.api.view_matrix import ViewDeltaPsi, ViewPsi
 from voila.constants import JUNCTION_TYPE_RNASEQ
 from voila.hdf5 import HDF5
 from voila.utils import utils_voila
@@ -217,6 +217,11 @@ def tab_output(args, voila_links):
     group2 = None
     tsv_file = join(args.output, output_html.rsplit('.html', 1)[0] + '.tsv')
 
+    if args.type_analysis == constants.ANALYSIS_DELTAPSI:
+        ViewMatrix = ViewDeltaPsi
+    else:
+        ViewMatrix = ViewPsi
+
     with ViewMatrix(args.voila_file, 'r') as m, SpliceGraph(args.splice_graph) as sg:
         metadata = m.metadata
         experiment = m.experiment_names[0][0]
@@ -242,7 +247,6 @@ def tab_output(args, voila_links):
             writer.writeheader()
             for gene_id in m.get_gene_ids(args):
                 gene = sg.gene(gene_id).get
-                gene_dict = dict(gene)
 
                 for lsv_id in m.get_lsvs(args, gene_id):
 
@@ -250,11 +254,12 @@ def tab_output(args, voila_links):
                         lsv = m.delta_psi(lsv_id)
                     else:
                         lsv = m.psi(lsv_id)
-                    lsv_junctions = gene.lsv_junctions(lsv_id)
-                    lsv_exons = gene.lsv_exons(lsv_id, lsv_junctions)
+
+                    lsv_junctions = tuple(gene.lsv_junctions(lsv_id))
+                    lsv_exons = tuple(gene.lsv_exons(lsv_id, lsv_junctions))
 
                     row = {
-                        '#Gene Name': gene_dict['name'],
+                        '#Gene Name': gene.name,
                         'Gene ID': gene_id,
                         'LSV ID': lsv_id,
                         'LSV Type': lsv.lsv_type,
@@ -263,10 +268,11 @@ def tab_output(args, voila_links):
                         'ES': lsv.exon_skipping,
                         'Num. Junctions': lsv.junction_count,
                         'Num. Exons': lsv.exon_count,
-                        'chr': gene_dict['chromosome'],
-                        'strand': gene_dict['strand'],
+                        'chr': gene.chromosome,
+                        'strand': gene.strand,
                         'De Novo Junctions': semicolon_join(
-                            int(next(junc.get_junction_types([experiment])) == JUNCTION_TYPE_RNASEQ) for junc in lsv_junctions
+                            int(next(junc.get_junction_types([experiment])) == JUNCTION_TYPE_RNASEQ) for junc in
+                            lsv_junctions
                         ),
                         'Junctions coords': semicolon_join(
                             '{0}-{1}'.format(junc.start, junc.end) for junc in lsv_junctions
@@ -274,31 +280,29 @@ def tab_output(args, voila_links):
                         'Exons coords': semicolon_join(
                             '{0}-{1}'.format(start, end) for start, end in filter_exons(lsv_exons)
                         ),
-                        'Exons Alternative Start': semicolon_join(
-                            '|'.join(str(a.coordinate) for a in e.alt_starts) for e in lsv_exons if e.alt_starts
-                        ),
-                        'Exons Alternative End': semicolon_join(
-                            '|'.join(str(a.coordinate) for a in e.alt_ends) for e in lsv_exons if e.alt_ends
-                        ),
                         'IR coords': semicolon_join(
                             '{0}-{1}'.format(e.start, e.end) for e in lsv_exons if e.intron_retention
                         )
                     }
 
                     if constants.ANALYSIS_DELTAPSI == type_summary:
+                        group_means = tuple(lsv.group_means)
+                        excl_incl = tuple(lsv.excl_incl)
+
                         row.update({
                             'E(dPSI) per LSV junction': semicolon_join(
-                                lsv.excl_incl[i][1] - lsv.excl_incl[i][0] for i in range(np.size(lsv.bins, 0))
+                                excl_incl[i][1] - excl_incl[i][0] for i in
+                                range(np.size(lsv.bins, 0))
                             ),
                             'P(|dPSI|>=%.2f) per LSV junction' % args.threshold: semicolon_join(
                                 vlsv.matrix_area(np.array(bin), args.threshold, collapsed_mat=True).sum() for bin in
                                 lsv.bins
                             ),
                             '%s E(PSI)' % group1: semicolon_join(
-                                '%.3f' % i for i in lsv.means_psi1
+                                '%.3f' % i for i in group_means[0]
                             ),
                             '%s E(PSI)' % group2: semicolon_join(
-                                '%.3f' % i for i in lsv.means_psi2
+                                '%.3f' % i for i in group_means[1]
                             )
                         })
 

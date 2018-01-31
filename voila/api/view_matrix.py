@@ -1,6 +1,6 @@
 import numpy
 
-from voila.api.matrix_hdf5 import DeltaPsi, Psi
+from voila.api.matrix_hdf5 import DeltaPsi, Psi, lsv_id_to_gene_id
 from voila.vlsv import get_expected_dpsi, VoilaLsv
 
 
@@ -37,7 +37,7 @@ class ViewPsi(Psi):
 
         @property
         def means(self):
-            return unpack_means(next(super().get('means'))[1])
+            yield from unpack_means(next(super().get('means'))[1])
 
         @property
         def group_means(self):
@@ -47,7 +47,7 @@ class ViewPsi(Psi):
         @property
         def group_means_rounded(self):
             for group_name, means in self.group_means:
-                yield group_name, numpy.around(means, decimals=3)
+                yield group_name, numpy.around(tuple(means), decimals=3)
 
         @property
         def bins(self):
@@ -60,77 +60,57 @@ class ViewPsi(Psi):
 
         @property
         def variances(self):
-            means = self.means
+            def get_expected_psi(bins):
+                step = 1.0 / bins.size
+                projection_prod = bins * numpy.arange(step / 2, 1, step)
+                return numpy.sum(projection_prod)
+
             for b in self.bins:
-                step_bins = 1.0 / len(b)
+                epsi = get_expected_psi(b)
+                step_bins = 1.0 / b.size
                 projection_prod = b * numpy.arange(step_bins / 2, 1, step_bins) ** 2
-                yield numpy.sum(projection_prod) - means[-1] ** 2
-
-        @property
-        def target(self):
-            return self.lsv_type[0] == 't'
-
-        @property
-        def _prime5(self):
-            lsv_type = self.lsv_type[2:]
-            if lsv_type[-1] == 'i':
-                lsv_type = lsv_type[:-2]
-
-            splice_sites = set(j[0] for j in lsv_type.split('|'))
-            return len(splice_sites) > 1
-
-        @property
-        def _prime3(self):
-            lsv_type = self.lsv_type[2:]
-            if lsv_type[-1] == 'i':
-                lsv_type = lsv_type[:-2]
-
-            exons = {}
-            for x in lsv_type.split('|'):
-                juncs = x[1:].split('.')
-                try:
-                    exons[juncs[0]].add(juncs[1])
-                except KeyError:
-                    exons[juncs[0]] = set(juncs[1])
-
-            for value in exons.values():
-                if len(value) > 1:
-                    return True
-
-            return False
-
-        @property
-        def prime5(self):
-            if self.target:
-                return self._prime5
-            else:
-                return self._prime3
-
-        @property
-        def prime3(self):
-            if self.target:
-                return self._prime3
-            else:
-                return self._prime5
-
-        @property
-        def exon_skipping(self):
-            return self.exon_count > 2
-
-        @property
-        def exon_count(self):
-            lsv_type = self.lsv_type[2:]
-            if lsv_type[-1] == 'i':
-                lsv_type = lsv_type[:-2]
-
-            return len(set(x[1:3] for x in lsv_type.split('|'))) + 1
+                yield numpy.sum(projection_prod) - epsi ** 2
 
         @property
         def junction_count(self):
-            return numpy.size(self.means, 0)
+            return len(tuple(self.means))
 
     def psi(self, lsv_id):
         return self._ViewPsi(self, lsv_id)
+
+    def get_gene_ids(self, args):
+        if args.gene_ids:
+            yield from args.gene_ids
+        elif args.lsv_ids:
+            for lsv_id in args.lsv_ids:
+                yield lsv_id_to_gene_id(lsv_id)
+
+        yield from self.h['lsvs'].keys()
+
+    def get_lsv_count(self, args):
+        return len(tuple(self.get_lsvs(args)))
+
+    def get_lsvs(self, args, gene_id=None):
+        """
+        Get list of LSVs from voila file.
+        :return: list
+        """
+        lsv_ids, threshold = None, None
+        lsv_ids = args.lsv_ids
+
+        if hasattr(args, 'show_all') and not args.show_all:
+            threshold = args.threshold
+
+        if gene_id:
+            gene_ids = (gene_id,)
+        else:
+            gene_ids = self.get_gene_ids(args)
+
+        for gene_id in gene_ids:
+            for lsv_id in self.lsv_ids(gene_id):
+                if not lsv_ids or lsv_id in lsv_ids:
+                    if not threshold or VoilaLsv.is_lsv_changing(self.psi(lsv_id).means, threshold):
+                        yield lsv_id
 
 
 class ViewDeltaPsi(DeltaPsi):
@@ -194,41 +174,23 @@ class ViewDeltaPsi(DeltaPsi):
                 else:
                     yield [0, mean]
 
+        @property
+        def junction_count(self):
+            return len(tuple(self.means))
+
     def delta_psi(self, lsv_id):
         return self._ViewDeltaPsi(self, lsv_id)
 
-
-class ViewMatrix(ViewDeltaPsi, ViewPsi):
-
-    def get_lsv_count(self, args):
-        return sum(1 for _ in self.get_lsvs(args))
-
-    def get_gene_ids(self, args=None):
-        if args:
-            if args.gene_ids:
-                yield from args.gene_ids
-            elif args.lsv_ids:
-                for lsv_id in args.lsv_ids:
-                    yield self.lsv_id_to_gene_id(lsv_id)
-
-        yield from self.h['lsvs'].keys()
-
-    def get_lsv_means(self, lsv_id):
-        bins = next(self.get(lsv_id, 'bins'))[1]
-        for b in bins:
-            yield get_expected_dpsi(b)
-
-    def get_lsvs(self, args=None, gene_id=None):
+    def get_lsvs(self, args, gene_id=None):
         """
         Get list of LSVs from voila file.
         :return: list
         """
         lsv_ids, threshold = None, None
-        if args:
-            lsv_ids = args.lsv_ids
+        lsv_ids = args.lsv_ids
 
-            if hasattr(args, 'show_all') and not args.show_all:
-                threshold = args.threshold
+        if hasattr(args, 'show_all') and not args.show_all:
+            threshold = args.threshold
 
         if gene_id:
             gene_ids = (gene_id,)
@@ -237,10 +199,21 @@ class ViewMatrix(ViewDeltaPsi, ViewPsi):
 
         for gene_id in gene_ids:
             for lsv_id in self.lsv_ids(gene_id):
-                # Search for LSV
                 if not lsv_ids or lsv_id in lsv_ids:
-                    if not threshold or VoilaLsv.is_lsv_changing(self.get_lsv_means(lsv_id), threshold):
+                    if not threshold or VoilaLsv.is_lsv_changing(self.delta_psi(lsv_id).means, threshold):
                         yield lsv_id
+
+    def get_lsv_count(self, args):
+        return len(tuple(self.get_lsvs(args)))
+
+    def get_gene_ids(self, args):
+        if args.gene_ids:
+            yield from args.gene_ids
+        elif args.lsv_ids:
+            for lsv_id in args.lsv_ids:
+                yield lsv_id_to_gene_id(lsv_id)
+
+        yield from self.h['lsvs'].keys()
 
     @property
     def metadata(self):

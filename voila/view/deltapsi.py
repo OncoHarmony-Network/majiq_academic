@@ -1,15 +1,29 @@
+import errno
 import os
-import tempfile
 
-from voila import io_voila, constants
-from voila.api import Voila
-from voila.api.view_matrix import ViewMatrix
+from voila.api.view_matrix import ViewDeltaPsi
+
+from voila import constants, io_voila
 from voila.api.view_splice_graph import DeltaPsiSpliceGraph
-from voila.utils.exceptions import NoLsvsFound
-from voila.utils.run_voila_utils import table_marks_set, copy_static
+from voila.utils.run_voila_utils import table_marks_set, copy_static, get_env
 from voila.utils.voila_log import voila_log
+from voila.utils.voila_pool import VoilaPool
 from voila.view.html import Html
 from voila.voila_args import VoilaArgs
+
+
+def create_gene_db(gene_ids, args, experiment_names):
+    env = get_env()
+    log = voila_log()
+    with DeltaPsiSpliceGraph(args.splice_graph) as sg, ViewDeltaPsi(args.voila_file) as m:
+        for gene_id in gene_ids:
+            log.debug('creating {}'.format(gene_id))
+            with open(os.path.join(args.output, 'db', '{}.js'.format(gene_id)), 'w') as f:
+                for el in env.get_template('gene_db_template.html').generate(
+                        gene=sg.gene(gene_id).get.get_experiment(experiment_names),
+                        lsvs=(m.delta_psi(lsv_id) for lsv_id in m.lsv_ids(gene_id))
+                ):
+                    f.write(el)
 
 
 class Deltapsi(Html, VoilaArgs):
@@ -18,19 +32,21 @@ class Deltapsi(Html, VoilaArgs):
 
         if not args.no_html:
             copy_static(args)
-            with ViewMatrix(args.voila_file) as m:
+            with ViewDeltaPsi(args.voila_file) as m:
                 self.metadata = m.metadata
+                self.lsv_ids = tuple(m.get_lsvs(args))
+            self.create_db_files()
             self.render_summaries()
-            # self.render_index()
+            self.render_index()
 
-        # if not args.no_tsv:
-        #     io_voila.tab_output(args, self.voila_links)
+        if not args.no_tsv:
+            io_voila.tab_output(args, self.voila_links)
 
-        if args.gtf:
-            io_voila.generic_feature_format_txt_files(args)
-
-        if args.gff:
-            io_voila.generic_feature_format_txt_files(args, out_gff3=True)
+        # if args.gtf:
+        #     io_voila.generic_feature_format_txt_files(args)
+        #
+        # if args.gff:
+        #     io_voila.generic_feature_format_txt_files(args, out_gff3=True)
 
     @classmethod
     def arg_parents(cls):
@@ -62,54 +78,34 @@ class Deltapsi(Html, VoilaArgs):
         log.debug('Start index render')
         args = self.args
         env = self.env
-        metainfo = self.metainfo
-        index_row_template = env.get_template('deltapsi_index_row.html')
+        metadata = self.metadata
 
-        tmp_index_file = tempfile.mkstemp()[1]
-
-        with open(tmp_index_file, 'w') as f:
-
-            with Voila(args.voila_file) as v:
-
-                lsv_count = v.get_lsv_count(args)
-                too_many_lsvs = lsv_count > constants.MAX_LSVS_DELTAPSI_INDEX
-
-                for index, lsv in enumerate(v.get_voila_lsvs(args)):
-                    log.debug('Writing {0} to index'.format(lsv.lsv_id))
-
-                    for el in index_row_template.generate(
-                            lsv=lsv,
-                            index=index,
-                            link=self.voila_links[lsv.name],
-                            too_many_lsvs=too_many_lsvs,
-                            threshold=args.threshold,
-                            lexps=metainfo
-                    ):
-                        # tmp_index_file.write(bytearray(el, encoding='utf-8'))
-                        f.write(el)
-
-            if not f.tell():
-                raise NoLsvsFound()
-
-        with open(tmp_index_file) as f:
-
+        with DeltaPsiSpliceGraph(args.splice_graph) as sg, ViewDeltaPsi(args.voila_file) as m:
+            lsv_count = m.get_lsv_count(args)
+            too_many_lsvs = lsv_count > constants.MAX_LSVS_DELTAPSI_INDEX
             log.debug('Write tmp index to actual index')
 
             with open(os.path.join(args.output, 'index.html'), 'w') as html:
                 index_template = env.get_template('index_delta_summary_template.html')
                 for el in index_template.generate(
-                        lexps=metainfo,
-                        tmp_index_file=f.read(),
+                        lexps=metadata,
                         table_marks=table_marks_set(lsv_count),
                         lsvs_count=lsv_count,
                         prev_page=None,
-                        next_page=None
+                        next_page=None,
+                        database_name=self.database_name(),
+                        lsvs=(m.delta_psi(lsv_id) for lsv_id in self.lsv_ids),
+                        genes=sg.gene,
+                        links=self.voila_links,
+                        too_many_lsvs=too_many_lsvs,
+                        metadata=metadata,
+                        genome=sg.genome,
+                        lsv_text_version=constants.LSV_TEXT_VERSION,
+                        threshold=args.threshold
                 ):
                     html.write(el)
 
                 log.debug('End index render')
-
-        os.remove(tmp_index_file)
 
     def render_summaries(self):
         log = voila_log()
@@ -158,3 +154,35 @@ class Deltapsi(Html, VoilaArgs):
                 prev_page = page_name
 
                 log.debug('End summaries render')
+
+    def create_db_files(self):
+        args = self.args
+        metadata = self.metadata
+        lsv_ids = self.lsv_ids
+        log = voila_log()
+
+        with ViewDeltaPsi(args.voila_file) as m:
+
+            gene_ids = tuple(m.gene_ids)
+
+        try:
+            os.makedirs(os.path.join(args.output, 'db'))
+        except OSError as e:
+            if e.errno != errno.EEXIST:
+                raise
+
+        def chunkify(lst, n):
+            for i in range(n):
+                yield lst[i::n]
+
+        names = metadata['experiment_names']
+        multiple_results = []
+
+        with VoilaPool() as vp:
+            for lsvs, genes in zip(chunkify(lsv_ids, vp.processes), chunkify(gene_ids, vp.processes)):
+                multiple_results.append(vp.pool.apply_async(create_gene_db, (genes, args, names)))
+
+            for res in multiple_results:
+                res.get()
+
+        log.debug('finished writing db files.')
