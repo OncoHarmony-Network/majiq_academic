@@ -139,6 +139,11 @@ class VoilaArgs:
             action='store_true'
         )
 
+        parser.add_argument(
+            '--processes',
+            default=int(os.cpu_count() / 2)
+        )
+
         return parser
 
     @classmethod

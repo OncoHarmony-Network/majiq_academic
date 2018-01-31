@@ -204,40 +204,28 @@ def filter_exons(exons):
             yield exon.start, exon.end
 
 
-def tab_output(args, voila_links):
+def delta_psi_tab_output(args, voila_links):
     def semicolon_join(value_list):
         return ';'.join(str(x) for x in value_list)
 
     log = voila_log()
     log.info("Creating Tab-delimited output file")
-
     output_html = get_output_html(args, args.voila_file)
-    type_summary = args.type_analysis
-    group1 = None
-    group2 = None
     tsv_file = join(args.output, output_html.rsplit('.html', 1)[0] + '.tsv')
 
-    if args.type_analysis == constants.ANALYSIS_DELTAPSI:
-        ViewMatrix = ViewDeltaPsi
-    else:
-        ViewMatrix = ViewPsi
-
-    with ViewMatrix(args.voila_file, 'r') as m, SpliceGraph(args.splice_graph) as sg:
+    with ViewDeltaPsi(args.voila_file, 'r') as m, SpliceGraph(args.splice_graph) as sg:
         metadata = m.metadata
         experiment = m.experiment_names[0][0]
 
         fieldnames = ['#Gene Name', 'Gene ID', 'LSV ID', 'E(PSI) per LSV junction', 'Var(E(PSI)) per LSV junction']
-
-        if args.type_analysis == constants.ANALYSIS_DELTAPSI:
-            group1 = metadata['group_names'][0]
-            group2 = metadata['group_names'][1]
-            fieldnames = fieldnames[:3] + ['E(dPSI) per LSV junction',
-                                           'P(|dPSI|>=%.2f) per LSV junction' % args.threshold,
-                                           '%s E(PSI)' % group1, '%s E(PSI)' % group2]
+        group1 = metadata['group_names'][0]
+        group2 = metadata['group_names'][1]
+        fieldnames = fieldnames[:3] + ['E(dPSI) per LSV junction',
+                                       'P(|dPSI|>=%.2f) per LSV junction' % args.threshold,
+                                       '%s E(PSI)' % group1, '%s E(PSI)' % group2]
 
         fieldnames += ['LSV Type', 'A5SS', 'A3SS', 'ES', 'Num. Junctions', 'Num. Exons', 'De Novo Junctions', 'chr',
-                       'strand', 'Junctions coords', 'Exons coords', 'Exons Alternative Start', 'Exons Alternative End',
-                       'IR coords']
+                       'strand', 'Junctions coords', 'Exons coords', 'IR coords']
 
         if voila_links:
             fieldnames.append('Voila link')
@@ -248,13 +236,94 @@ def tab_output(args, voila_links):
             for gene_id in m.get_gene_ids(args):
                 gene = sg.gene(gene_id).get
 
+                for lsv_id in m.get_lsv_ids(args, gene_id):
+
+                    lsv = m.delta_psi(lsv_id)
+                    lsv_junctions = tuple(gene.lsv_junctions(lsv_id))
+                    lsv_exons = tuple(gene.lsv_exons(lsv_id, lsv_junctions))
+                    group_means = tuple(lsv.group_means)
+                    excl_incl = tuple(lsv.excl_incl)
+
+                    row = {
+                        '#Gene Name': gene.name,
+                        'Gene ID': gene_id,
+                        'LSV ID': lsv_id,
+                        'LSV Type': lsv.lsv_type,
+                        'A5SS': lsv.prime5,
+                        'A3SS': lsv.prime3,
+                        'ES': lsv.exon_skipping,
+                        'Num. Junctions': lsv.junction_count,
+                        'Num. Exons': lsv.exon_count,
+                        'chr': gene.chromosome,
+                        'strand': gene.strand,
+                        'De Novo Junctions': semicolon_join(
+                            int(next(junc.get_junction_types([experiment])) == JUNCTION_TYPE_RNASEQ) for junc in
+                            lsv_junctions
+                        ),
+                        'Junctions coords': semicolon_join(
+                            '{0}-{1}'.format(junc.start, junc.end) for junc in lsv_junctions
+                        ),
+                        'Exons coords': semicolon_join(
+                            '{0}-{1}'.format(start, end) for start, end in filter_exons(lsv_exons)
+                        ),
+                        'IR coords': semicolon_join(
+                            '{0}-{1}'.format(e.start, e.end) for e in lsv_exons if e.intron_retention
+                        ),
+                        'E(dPSI) per LSV junction': semicolon_join(
+                            excl_incl[i][1] - excl_incl[i][0] for i in
+                            range(np.size(lsv.bins, 0))
+                        ),
+                        'P(|dPSI|>=%.2f) per LSV junction' % args.threshold: semicolon_join(
+                            vlsv.matrix_area(np.array(bin), args.threshold, collapsed_mat=True).sum() for bin in
+                            lsv.bins
+                        ),
+                        '%s E(PSI)' % group1: semicolon_join(
+                            '%.3f' % i for i in group_means[0]
+                        ),
+                        '%s E(PSI)' % group2: semicolon_join(
+                            '%.3f' % i for i in group_means[1]
+                        )
+                    }
+
+                    if voila_links:
+                        summary_path = voila_links[gene_id]
+                        if not os.path.isabs(summary_path):
+                            summary_path = join(os.getcwd(), args.output, summary_path)
+                        row['Voila link'] = "file://{0}".format(summary_path)
+
+                    log.debug('Write TSV row for {0}'.format(lsv_id))
+
+                    writer.writerow(row)
+
+    log.info("Delimited output file successfully created in: %s" % tsv_file)
+
+
+def psi_tab_output(args, voila_links):
+    def semicolon_join(value_list):
+        return ';'.join(str(x) for x in value_list)
+
+    log = voila_log()
+    log.info("Creating Tab-delimited output file")
+
+    output_html = get_output_html(args, args.voila_file)
+    tsv_file = join(args.output, output_html.rsplit('.html', 1)[0] + '.tsv')
+
+    with ViewPsi(args.voila_file, 'r') as m, SpliceGraph(args.splice_graph) as sg:
+        experiment = m.experiment_names[0][0]
+        fieldnames = ['#Gene Name', 'Gene ID', 'LSV ID', 'E(PSI) per LSV junction', 'Var(E(PSI)) per LSV junction',
+                      'LSV Type', 'A5SS', 'A3SS', 'ES', 'Num. Junctions', 'Num. Exons', 'De Novo Junctions', 'chr',
+                      'strand', 'Junctions coords', 'Exons coords', 'IR coords']
+        if voila_links:
+            fieldnames.append('Voila link')
+
+        with open(tsv_file, 'w') as tsv:
+            writer = csv.DictWriter(tsv, fieldnames=fieldnames, delimiter='\t')
+            writer.writeheader()
+            for gene_id in m.get_gene_ids(args):
+                gene = sg.gene(gene_id).get
+
                 for lsv_id in m.get_lsvs(args, gene_id):
-
-                    if constants.ANALYSIS_DELTAPSI == type_summary:
-                        lsv = m.delta_psi(lsv_id)
-                    else:
-                        lsv = m.psi(lsv_id)
-
+                    lsv = m.psi(lsv_id)
                     lsv_junctions = tuple(gene.lsv_junctions(lsv_id))
                     lsv_exons = tuple(gene.lsv_exons(lsv_id, lsv_junctions))
 
@@ -282,35 +351,10 @@ def tab_output(args, voila_links):
                         ),
                         'IR coords': semicolon_join(
                             '{0}-{1}'.format(e.start, e.end) for e in lsv_exons if e.intron_retention
-                        )
+                        ),
+                        'E(PSI) per LSV junction': semicolon_join(lsv.means),
+                        'Var(E(PSI)) per LSV junction': semicolon_join(lsv.variances)
                     }
-
-                    if constants.ANALYSIS_DELTAPSI == type_summary:
-                        group_means = tuple(lsv.group_means)
-                        excl_incl = tuple(lsv.excl_incl)
-
-                        row.update({
-                            'E(dPSI) per LSV junction': semicolon_join(
-                                excl_incl[i][1] - excl_incl[i][0] for i in
-                                range(np.size(lsv.bins, 0))
-                            ),
-                            'P(|dPSI|>=%.2f) per LSV junction' % args.threshold: semicolon_join(
-                                vlsv.matrix_area(np.array(bin), args.threshold, collapsed_mat=True).sum() for bin in
-                                lsv.bins
-                            ),
-                            '%s E(PSI)' % group1: semicolon_join(
-                                '%.3f' % i for i in group_means[0]
-                            ),
-                            '%s E(PSI)' % group2: semicolon_join(
-                                '%.3f' % i for i in group_means[1]
-                            )
-                        })
-
-                    if constants.ANALYSIS_PSI == type_summary:
-                        row.update({
-                            'E(PSI) per LSV junction': semicolon_join(lsv.means),
-                            'Var(E(PSI)) per LSV junction': semicolon_join(lsv.variances)
-                        })
 
                     if voila_links:
                         summary_path = voila_links[gene_id]

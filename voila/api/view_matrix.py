@@ -1,5 +1,8 @@
+from itertools import zip_longest
+
 import numpy
 
+from voila import constants
 from voila.api.matrix_hdf5 import DeltaPsi, Psi, lsv_id_to_gene_id
 from voila.vlsv import get_expected_dpsi, VoilaLsv
 
@@ -91,10 +94,6 @@ class ViewPsi(Psi):
         return len(tuple(self.get_lsvs(args)))
 
     def get_lsvs(self, args, gene_id=None):
-        """
-        Get list of LSVs from voila file.
-        :return: list
-        """
         lsv_ids, threshold = None, None
         lsv_ids = args.lsv_ids
 
@@ -111,6 +110,25 @@ class ViewPsi(Psi):
                 if not lsv_ids or lsv_id in lsv_ids:
                     if not threshold or VoilaLsv.is_lsv_changing(self.psi(lsv_id).means, threshold):
                         yield lsv_id
+
+    def paginated_genes(self, args):
+        def grouper(iterable, n, fillvalue=None):
+            args = [iter(iterable)] * n
+            return zip_longest(*args, fillvalue=fillvalue)
+
+        for page in grouper(self.get_gene_ids(args), constants.MAX_GENES):
+            yield tuple(p for p in page if p is not None)
+
+    @property
+    def metadata(self):
+        metadata = super().metadata
+        experiment_names = metadata['experiment_names']
+        group_names = super().group_names
+
+        metadata['experiment_names'] = [numpy.insert(exps, 0, '{0} Combined'.format(group)) for exps, group in
+                                        zip(experiment_names, group_names)]
+
+        return metadata
 
 
 class ViewDeltaPsi(DeltaPsi):
@@ -181,7 +199,7 @@ class ViewDeltaPsi(DeltaPsi):
     def delta_psi(self, lsv_id):
         return self._ViewDeltaPsi(self, lsv_id)
 
-    def get_lsvs(self, args, gene_id=None):
+    def get_lsv_ids(self, args, gene_id=None):
         """
         Get list of LSVs from voila file.
         :return: list
@@ -204,16 +222,19 @@ class ViewDeltaPsi(DeltaPsi):
                         yield lsv_id
 
     def get_lsv_count(self, args):
-        return len(tuple(self.get_lsvs(args)))
+        return len(tuple(self.get_lsv_ids(args)))
 
     def get_gene_ids(self, args):
         if args.gene_ids:
-            yield from args.gene_ids
+            gene_ids = args.gene_ids
         elif args.lsv_ids:
-            for lsv_id in args.lsv_ids:
-                yield lsv_id_to_gene_id(lsv_id)
+            gene_ids = (lsv_id_to_gene_id(lsv_id) for lsv_id in args.lsv_ids)
+        else:
+            gene_ids = self.h['lsvs'].keys()
 
-        yield from self.h['lsvs'].keys()
+        for gene_id in gene_ids:
+            if any(self.get_lsv_ids(args, gene_id)):
+                yield gene_id
 
     @property
     def metadata(self):
@@ -221,7 +242,16 @@ class ViewDeltaPsi(DeltaPsi):
         experiment_names = metadata['experiment_names']
         group_names = super().group_names
 
-        metadata['experiment_names'] = [numpy.insert(exps, 0, '{0} Combined'.format(group)) for exps, group in
-                                        zip(experiment_names, group_names)]
+        if experiment_names.size > 1:
+            metadata['experiment_names'] = [numpy.insert(exps, 0, '{0} Combined'.format(group)) for exps, group in
+                                            zip(experiment_names, group_names)]
 
         return metadata
+
+    def paginated_genes(self, args):
+        def grouper(iterable, n, fillvalue=None):
+            args = [iter(iterable)] * n
+            return zip_longest(*args, fillvalue=fillvalue)
+
+        for page in grouper(self.get_gene_ids(args), constants.MAX_GENES):
+            yield tuple(p for p in page if p is not None)
