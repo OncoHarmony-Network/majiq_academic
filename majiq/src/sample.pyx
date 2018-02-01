@@ -28,6 +28,7 @@ cdef inline float _sample_over_nb(float r, float mu, int num_samples):
     p = r / (r + mu)
     return nbinom.rvs(r, p, size=num_samples).mean() + 1
 
+
 cdef np.ndarray[DTYPE_t, ndim=2] _bootstrap_samples(np.ndarray[DTYPE_t, ndim=2] junction_list, int m, int k):
     """Given the filtered reads, bootstrap samples from every junction
     :param junction_list:
@@ -51,10 +52,12 @@ cdef np.ndarray[DTYPE_t, ndim=2] _bootstrap_samples(np.ndarray[DTYPE_t, ndim=2] 
         junction = junction_list[i][junction_list[i] > 0]
         npos_mult = np.count_nonzero(junction)
         if npos_mult > 0:
-            km_samples_means  = np.reshape(choice(junction, k*m), (m, k)).mean(axis=1) * npos_mult
+
+            all_samples[i, :m]  = np.reshape(choice(junction, k*m), (m, k)).mean(axis=1) * npos_mult
             all_samples[i, m] = junction_list[i].sum()
             all_samples[i, m+1] = npos_mult
 
+    print(all_samples)
     return all_samples
 
 cdef np.ndarray _sample_from_junctions(np.ndarray[DTYPE_t, ndim=2] junction_list, int m, int k,
