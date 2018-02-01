@@ -183,7 +183,7 @@ class Exon(Base):
                 return
 
             for j in js:
-                if j.start in self:
+                if j.start in self and j.end not in self:
                     yield j
 
         yield from a3_filter(self.gene.junctions)
@@ -195,7 +195,7 @@ class Exon(Base):
                 return
 
             for j in js:
-                if j.end in self:
+                if j.end in self and j.start not in self:
                     yield j
 
         yield from a5_filter(self.gene.junctions)
