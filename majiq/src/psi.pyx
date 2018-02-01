@@ -94,7 +94,7 @@ cdef tuple _psi_posterior(psi, int p_idx, int m_samples, int num_exp, int num_wa
         junc = psi[:, p_idx, m].sum()
         #all_sample = np.array([psi[xx][yy][m].sum() for xx in range(num_exp) for yy in range(num_ways)])
         mu_psi_m.append(float(junc + alpha_0) / (alls[m] + alpha_0 + beta_0))
-        data_given_psi = np.log(_prob_data_sample_given_psi(junc, alls[m].sum(), nbins, alpha_0, beta_0))
+        data_given_psi = np.log(_prob_data_sample_given_psi(junc, alls[m], nbins, alpha_0, beta_0))
         posterior += np.exp(data_given_psi - scipy.misc.logsumexp(data_given_psi))
 
     mu_psi = np.median(mu_psi_m)
