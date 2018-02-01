@@ -85,16 +85,16 @@ cdef tuple _psi_posterior(psi, int p_idx, int m_samples, int num_exp, int num_wa
     cdef np.ndarray posterior = np.zeros(shape=nbins, dtype=np.float)
     cdef np.ndarray data_given_psi
     cdef list mu_psi_m = []
-    cdef float mu_psi
+    cdef float mu_psi, junc
     cdef int m
     cdef np.ndarray alls
     alls = psi.sum(axis=(0,1))
     for m in range(m_samples):
         # log(p(D_T1(m) | psi_T1)) = SUM_t1 T ( log ( P( D_t1 (m) | psi _T1)))
-        junc = psi[:, p_idx, m]
+        junc = psi[:, p_idx, m].sum()
         #all_sample = np.array([psi[xx][yy][m].sum() for xx in range(num_exp) for yy in range(num_ways)])
         mu_psi_m.append(float(junc + alpha_0) / (alls[m] + alpha_0 + beta_0))
-        data_given_psi = np.log(_prob_data_sample_given_psi(junc.sum(), alls[m].sum(), nbins, alpha_0, beta_0))
+        data_given_psi = np.log(_prob_data_sample_given_psi(junc, alls[m].sum(), nbins, alpha_0, beta_0))
         posterior += np.exp(data_given_psi - scipy.misc.logsumexp(data_given_psi))
 
     mu_psi = np.median(mu_psi_m)
