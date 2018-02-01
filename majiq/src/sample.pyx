@@ -57,7 +57,6 @@ cdef np.ndarray[DTYPE_t, ndim=2] _bootstrap_samples(np.ndarray[DTYPE_t, ndim=2] 
             all_samples[i, m] = junction_list[i].sum()
             all_samples[i, m+1] = npos_mult
 
-    print(all_samples)
     return all_samples
 
 cdef np.ndarray _sample_from_junctions(np.ndarray[DTYPE_t, ndim=2] junction_list, int m, int k,
