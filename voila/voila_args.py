@@ -55,21 +55,21 @@ class VoilaArgs:
         :param value: file path
         :return:
         """
-        if not os.path.isfile(value):
+        if not os.path.isfile(os.path.expanduser(value)):
             raise VoilaCantFindFile(value)
         return value
 
     @classmethod
     def check_splice_graph_file(cls, value):
         value = cls.check_file(value)
-        with SpliceGraph(value, 'r') as sg:
+        with SpliceGraph(value) as sg:
             sg.check_version()
         return value
 
     @classmethod
     def check_voila_file(cls, value):
         value = cls.check_file(value)
-        # with Voila(value, 'r') as v:
+        # with Voila(value) as v:
         #     v.check_version()
         return value
 

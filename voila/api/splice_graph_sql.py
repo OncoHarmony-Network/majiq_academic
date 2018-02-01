@@ -5,7 +5,6 @@ from sqlalchemy.orm import sessionmaker
 
 from voila.api import splice_graph_model as model
 from voila.api.sql import SQL
-from voila.utils.voila_log import voila_log
 
 Session = sessionmaker()
 
@@ -89,12 +88,10 @@ class Exons(SpliceGraphSQL):
 
             exon = model.Exon(gene_id=self.gene_id, start=self.start, end=self.end, **kwargs)
 
-            for ce_start, ce_end in coords_extra:
-                exon.coords_extra.append(model.CoordsExtra(start=int(ce_start), end=int(ce_end)))
-            for alt_end in alt_ends:
-                exon.alt_ends.append(model.AltEnds(coordinate=int(alt_end)))
-            for alt_start in alt_starts:
-                exon.alt_starts.append(model.AltStarts(coordinate=int(alt_start)))
+            exon.coords_extra = [model.CoordsExtra(start=int(ce_start), end=int(ce_end)) for ce_start, ce_end in
+                                 coords_extra]
+            exon.alt_ends = [model.AltEnds(coordinate=int(alt_end)) for alt_end in alt_ends]
+            exon.alt_starts = [model.AltStarts(coordinate=int(alt_start)) for alt_start in alt_starts]
 
             self.sql.session_add(exon)
             self.sql.commit(default_commit_on_count)
@@ -131,8 +128,7 @@ class Junctions(SpliceGraphSQL):
 
             junc = model.Junction(gene_id=self.gene_id, start=self.start, end=self.end, **kwargs)
 
-            for r, e in reads:
-                junc.reads.append(model.Reads(reads=int(r), experiment_id=e))
+            junc.reads = [model.Reads(reads=int(r), experiment_name=e) for r, e in reads]
 
             self.sql.session_add(junc)
             self.sql.commit(default_commit_on_count)
@@ -152,6 +148,7 @@ class Junctions(SpliceGraphSQL):
             r = model.Reads(junction_gene_id=self.gene_id, junction_start=self.start, junction_end=self.end,
                             experiment_name=experiment, reads=int(reads))
             self.sql.session_add(r)
+            self.sql.commit(default_commit_on_count)
 
     def junction(self, gene_id, start, end):
         return self._Junction(self, gene_id, start, end)
