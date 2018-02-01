@@ -93,7 +93,7 @@ cdef tuple _psi_posterior(psi, int p_idx, int m_samples, int num_exp, int num_wa
         # log(p(D_T1(m) | psi_T1)) = SUM_t1 T ( log ( P( D_t1 (m) | psi _T1)))
         junc = psi[:, p_idx, m]
         #all_sample = np.array([psi[xx][yy][m].sum() for xx in range(num_exp) for yy in range(num_ways)])
-        mu_psi_m.append(float(junc.sum()) / alls[m].sum())
+        mu_psi_m.append(float(junc + alpha_0) / (alls[m] + alpha_0 + beta_0))
         data_given_psi = np.log(_prob_data_sample_given_psi(junc.sum(), alls[m].sum(), nbins, alpha_0, beta_0))
         posterior += np.exp(data_given_psi - scipy.misc.logsumexp(data_given_psi))
 
