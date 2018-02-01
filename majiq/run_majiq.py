@@ -118,7 +118,7 @@ def main():
 
     buildparser.add_argument('--k', default=50, type=int,
                              help='Number of positions to sample per iteration. [Default: %(default)s]')
-    buildparser.add_argument('--m', default=100, type=int,
+    buildparser.add_argument('--m', default=25, type=int,
                              help='Number of bootstrapping samples. [Default: %(default)s]')
 
 

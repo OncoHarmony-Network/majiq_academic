@@ -28,6 +28,34 @@ cdef inline float _sample_over_nb(float r, float mu, int num_samples):
     p = r / (r + mu)
     return nbinom.rvs(r, p, size=num_samples).mean() + 1
 
+cdef np.ndarray[DTYPE_t, ndim=2] _bootstrap_samples(np.ndarray[DTYPE_t, ndim=2] junction_list, int m, int k):
+    """Given the filtered reads, bootstrap samples from every junction
+    :param junction_list:
+    :param m:
+    :param k:
+    :param discardzeros:
+    :param trimborder:
+    :param fitted_one_over_r:
+    :return:
+
+    """
+
+    cdef np.ndarray[DTYPE_t, ndim=2] all_samples = np.zeros(shape=(junction_list.shape[0], m+2), dtype=np.float)
+    cdef int npos_mult
+    cdef int iternumber
+    cdef float r = 0
+    cdef np.ndarray[DTYPE_t, ndim=1] junction, km_samples_means
+    cdef int i
+
+    for i in range(junction_list.shape[0]):
+        junction = junction_list[i][junction_list[i] > 0]
+        npos_mult = np.count_nonzero(junction)
+        if npos_mult > 0:
+            km_samples_means  = np.reshape(choice(junction, k*m), (m, k)).mean(axis=1) * npos_mult
+            all_samples[i, m] = junction_list[i].sum()
+            all_samples[i, m+1] = npos_mult
+
+    return all_samples
 
 cdef np.ndarray _sample_from_junctions(np.ndarray[DTYPE_t, ndim=2] junction_list, int m, int k,
                                        float fitted_one_over_r=0.0):
@@ -70,9 +98,9 @@ cdef np.ndarray _sample_from_junctions(np.ndarray[DTYPE_t, ndim=2] junction_list
 
 
 
-cpdef np.ndarray sample_from_junctions(np.ndarray[DTYPE_t, ndim=2] junction_list, int m, int k,
+cpdef np.ndarray[DTYPE_t, ndim=2] sample_from_junctions(np.ndarray[DTYPE_t, ndim=2] junction_list, int m, int k,
                                        float fitted_one_over_r=0.0):
-    return _sample_from_junctions(junction_list, m, k, fitted_one_over_r=fitted_one_over_r)
+    return _bootstrap_samples(junction_list, m, k)
 
 
 cpdef dict create_lt(object all_genes):
