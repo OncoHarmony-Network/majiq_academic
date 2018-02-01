@@ -9,8 +9,8 @@ from voila.utils.voila_log import voila_log
 
 Session = sessionmaker()
 
-default_commit_on_count = 100000
-
+#default_commit_on_count = 100000
+default_commit_on_count = 1000
 
 class SpliceGraphSQL(SQL):
     def __init__(self, filename, delete=False):

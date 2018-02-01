@@ -259,6 +259,9 @@ class Builder(BasicPipeline):
         self.elem_dict = manager.dict()
         self.genes_dict = manager.dict()
 
+        mem_allocated = int(psutil.Process().memory_info().rss)/(1024**2)
+        logger.info("PRE DB %.2f MB" % mem_allocated)
+
         if self.use_db:
             logger.info("Loading previously generated db %s" % self.transcripts)
             majiq_io.load_db(self.transcripts, self.elem_dict, self.genes_dict)
@@ -280,8 +283,13 @@ class Builder(BasicPipeline):
         #
         # p.start()
         # p.join()
+        mem_allocated = int(psutil.Process().memory_info().rss)/(1024**2)
+        logger.info("PRE parsed %.2f MB" % mem_allocated)
 
         self.parse_denovo_elements(logger)
+
+        mem_allocated = int(psutil.Process().memory_info().rss) / (1024 ** 2)
+        logger.info("POST parsed %.2f MB" % mem_allocated)
 
         logger.info("Parsing seq files")
         if self.nthreads > 1:
@@ -298,7 +306,8 @@ class Builder(BasicPipeline):
             pool.close()
             generate_splicegraph(majiq_config, self.elem_dict, self.genes_dict)
             with SpliceGraph(get_builder_splicegraph_filename(majiq_config.outDir), 'r+') as sg:
-                queue_manager(sg, self.lock, self.queue, num_chunks=nthreads, logger=logger)
+#            sg = None
+               queue_manager(sg, self.lock, self.queue, num_chunks=nthreads, logger=logger)
 
             pool.join()
         else:
