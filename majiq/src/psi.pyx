@@ -227,6 +227,7 @@ cpdef tuple psi_posterior(np.ndarray psi, int m, int num_exp, int nbins, str lsv
 
     return mu_psi, post_psi
 
+
 @cython.boundscheck(False) # turn off bounds-checking for entire function
 @cython.wraparound(False)  # turn off negative index wrapping for entire function
 #cpdef tuple deltapsi_posterior(np.ndarray psi1, np.ndarray psi2, np.ndarray prior_matrix, int m, list num_exp, int nbins,
