@@ -20,6 +20,7 @@ inc_dirs.extend(pysam.get_include())
 extensions += [Extension('majiq.src.io_bam', ['majiq/src/io_bam.pyx'], include_dirs=inc_dirs)]
 extensions += [Extension('majiq.src.io', ['majiq/src/io.pyx'], include_dirs=inc_dirs)]
 extensions += [Extension('majiq.src.sample', ['majiq/src/sample.pyx'], include_dirs=[numpy.get_include()])]
+extensions += [Extension('majiq.src.adjustdelta', ['majiq/src/adjustdelta.pyx'], include_dirs=[numpy.get_include()])]
 extensions += [Extension('majiq.src.psi', ['majiq/src/psi.pyx'], include_dirs=[numpy.get_include()])]
 
 

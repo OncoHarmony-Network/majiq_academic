@@ -56,8 +56,7 @@ def find_new_junctions(file_list, chunk, conf, logger):
             fname += '.%s' % SEQ_FILE_FORMAT
         logger.info('READ JUNCS from %s' % fname)
         read_juncs(fname, is_junc_file, list_exons, conf.genes_dict, td, dict_junctions,
-                   majiq_config.strand_specific[exp_name], conf.queue, gname=name)
-
+                   majiq_config.strand_specific[exp_name], conf.queue, gname=name, logger=logger)
 
 
 def find_new_introns(file_list, chunk, conf, logger):
@@ -241,8 +240,8 @@ class Builder(BasicPipeline):
         majiq_io.dump_db(self.genes_dict, self.elem_dict, self.outDir)
 
     def run(self):
-        if self.simplify is not None and len(self.simplify) not in (0, 2):
-            raise RuntimeError('Simplify requires 2 values type of junctions afected and E(PSI) threshold.')
+        # if self.simplify is not None and len(self.simplify) not in (0, 2):
+        #     raise RuntimeError('Simplify requires 2 values type of junctions afected and E(PSI) threshold.')
         if not os.path.exists(self.conf):
             raise RuntimeError("Config file %s does not exist" % self.conf)
         majiq_config = Config(self.conf, self)

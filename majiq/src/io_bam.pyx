@@ -218,8 +218,8 @@ cdef dict __read_juncs_from_bam(str filename, set in_jj, int stranded):
     return out_dd
 
 
-def read_juncs(str fname, bint is_junc_file, dict dict_exons, object dict_genes, object dict_gtrees, dict junctions,
-               int stranded, queue, str gname):
+cpdef read_juncs(str fname, bint is_junc_file, dict dict_exons, object dict_genes, object dict_gtrees, dict junctions,
+               int stranded, queue, str gname, object logger):
 
     cdef str ln, chrom, gid
     cdef list tab
@@ -239,6 +239,7 @@ def read_juncs(str fname, bint is_junc_file, dict dict_exons, object dict_genes,
 
     new_junctions = __read_juncs_from_bam(fname, set_junctions, stranded)
 
+    logger.info("DONE READING...")
     for chrom, jj_set in new_junctions.items():
 
         found = False

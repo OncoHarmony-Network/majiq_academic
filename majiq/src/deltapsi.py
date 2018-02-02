@@ -107,8 +107,8 @@ class DeltaPsi(BasicPipeline):
         logger.info("Number quantifiable LSVs: %s" % len(list_of_lsv))
 
         psi_space, prior_matrix = gen_prior_matrix(self.lsv_type_dict, lsv_empirical_psi1, lsv_empirical_psi2,
-                                                   self.outDir, names=self.names, breakiter=self.breakiter,
-                                                   plotpath=self.plotpath, iter=self.iter, binsize=self.binsize,
+                                                   self.outDir, names=self.names, plotpath=self.plotpath,
+                                                   iter=self.prior-iter, binsize=self.binsize,
                                                    numbins=self.nbins, defaultprior=self.default_prior,
                                                    minpercent=self.min_exp, logger=logger)
 

@@ -9,7 +9,7 @@ from quicksect import IntervalNode, Interval, IntervalTree
 Sampling from junctions using a Negative Binomial model.
 """
 LIM = 100
-PSEUDO = 0.0000000001  # EPSILON is too small for some calculations
+cdef float PSEUDO = 0.0000000001  # EPSILON is too small for some calculations
 # DTYPE_t = np.float
 ctypedef np.float64_t DTYPE_t
 
@@ -59,6 +59,7 @@ cdef np.ndarray[DTYPE_t, ndim=2] _bootstrap_samples(np.ndarray[DTYPE_t, ndim=2] 
 
     return all_samples
 
+
 cdef np.ndarray _sample_from_junctions(np.ndarray[DTYPE_t, ndim=2] junction_list, int m, int k,
                                        float fitted_one_over_r=0.0):
     """Given the filtered reads, bootstrap samples from every junction
@@ -69,7 +70,6 @@ cdef np.ndarray _sample_from_junctions(np.ndarray[DTYPE_t, ndim=2] junction_list
     :param trimborder:
     :param fitted_one_over_r:
     :return:
-
     """
 
     cdef np.ndarray[DTYPE_t, ndim=2] all_samples = np.zeros(shape=(junction_list.shape[0], m+2), dtype=np.float)
@@ -97,7 +97,6 @@ cdef np.ndarray _sample_from_junctions(np.ndarray[DTYPE_t, ndim=2] junction_list
             all_samples[i, m+1] = npos_mult
 
     return all_samples
-
 
 
 cpdef np.ndarray[DTYPE_t, ndim=2] sample_from_junctions(np.ndarray[DTYPE_t, ndim=2] junction_list, int m, int k,

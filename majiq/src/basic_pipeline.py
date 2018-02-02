@@ -42,19 +42,17 @@ class BasicPipeline:
 
         self.__dict__.update(args.__dict__)
 
-        if self.plotpath:
-            majiq_logger.create_if_not_exists(self.plotpath)
-        self.logger_path = self.logger
-        if not self.logger_path:
-            self.logger_path = self.outDir
-
-        self.nthreads = args.nthreads
-        self.psi_paths = []
-        self.nchunks = self.nthreads
-        try:
-            self.replica_len = [len(self.files1), len(self.files2)]
-        except AttributeError:
-            pass
+        # if self.plotpath:
+        #     majiq_logger.create_if_not_exists(self.plotpath)
+        # self.logger_path = self.logger
+        # if not self.logger_path:
+        #     self.logger_path = self.outDir
+        self.nthreads = args.nproc
+        #self.psi_paths = []
+        # try:
+        #     self.replica_len = [len(self.files1), len(self.files2)]
+        # except AttributeError:
+        #     pass
 
     def fitfunc(self, const_junctions):
         """Calculate the Negative Binomial function to sample from using the Constitutive events"""

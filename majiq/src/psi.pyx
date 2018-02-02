@@ -404,12 +404,13 @@ def __load_default_prior():
 
 
 def gen_prior_matrix(object lsv_type, dict lsv_empirical_psi1, dict lsv_empirical_psi2, str output, list names,
-                     float breakiter, str plotpath, int iter, float binsize, int numbins=20, bint defaultprior=False,
+                     str plotpath, int iter, float binsize, int numbins=20, bint defaultprior=False,
                      int minpercent=-1, object logger=None):
 
     cdef np.ndarray psi_space, def_mat, lsv, mixture_pdf
     cdef list prior_matrix, list_of_lsv, best_dpsi, best_dpsi_ir, njun_prior, pmat
     cdef int prior_idx, nj
+    cdef np.ndarray best_delta_psi
 
 
     #Start prior matrix
@@ -448,9 +449,8 @@ def gen_prior_matrix(object lsv_type, dict lsv_empirical_psi1, dict lsv_empirica
                 continue
 
             logger.debug("Parametrizing 'best set'...%s", prior_idx)
-            mixture_pdf = majiq_delta.adjustdelta_lsv(best_delta_psi, output, plotpath=plotpath,
-                                                      title=" ".join(names), numiter=iter,
-                                                      breakiter=breakiter, njunc=nj, logger=logger)
+            mixture_pdf = majiq_delta.adjustdelta_lsv(best_delta_psi, num_item=iter, plotpath=plotpath,
+                                                      title=" ".join(names), njunc=nj, logger=logger)
             pmat = []
             for i in range(numbins):
                 pmat.extend(mixture_pdf[numbins - i:(numbins * 2) - i])
@@ -463,7 +463,7 @@ def gen_prior_matrix(object lsv_type, dict lsv_empirical_psi1, dict lsv_empirica
                     prior_matrix[prior_idx] = prior_matrix[0]
                 else:
                     raise ValueError(" The input data does not have enought statistic power in order to calculate "
-                                     "the prior. Check if the input is correct or use the --default_prior option in "
+                                     "the prior. Check if the input is correct or use the --default-prior option in "
                                      " order to use a precomputed prior")
             else:
                 prior_matrix[prior_idx] /= sum(prior_matrix[prior_idx])

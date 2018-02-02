@@ -9,6 +9,8 @@ import numpy as np
 
 __author__ = 'jordi'
 
+def label_beta(a, b, pi):
+    return "(a=%.2f b=%.2f pi=%.4f)" % (a, b, pi)
 
 def save_or_show(plotpath, plotname=None):
     """Generic function that either shows in a popup or saves the figure, depending if a flag was given"""
@@ -18,11 +20,59 @@ def save_or_show(plotpath, plotname=None):
     if plotpath:
         if not os.path.exists(plotpath):
             os.makedirs(plotpath)
-        plt.savefig("%s/%s.png" % (plotpath, plotname.replace(" ", "_")), bbox_inches='tight')
+        plt.savefig("%s/%s.pdf" % (plotpath, plotname.replace(" ", "_")), bbox_inches='tight')
         # WNo spaces allowed, underscores!
         plt.clf()
     else:
         plt.show()
+
+
+# def plot_combpdf(beta_dists, fig):
+#     fig.set_xlim(-1, 1)
+#     fig.set_title("Mixture PDF")
+#     fig.set_xlabel("PDF")
+#     fig.set_ylabel("Density")
+#     x_pos, mixture_pdf = calc_mixture_pdf(beta_dists)
+#     fig.plot(np.linspace(-1, 1, num=len(mixture_pdf)), mixture_pdf / 2)
+
+
+# def _plot_densities(deltadata, ax=None, my_title="Empirical Data"):
+#     ax.bar(deltadata[:, 0] - 0.0125, deltadata[:, 1], width=0.025)
+#     ax.set_title(my_title)
+#     ax.set_xlim(-1, 1)
+#     ax.set_xlabel("Delta PSI")
+#     ax.set_ylabel("Density")
+# #
+#
+# def _plot_pi(p_mixture, fig):
+#     fig.set_title("Pi distributions")
+#     fig.set_ylim(0, 1)
+#     fig.set_ylabel("Weight")
+#     fig.bar(np.arange(len(p_mixture)), p_mixture)
+#     # fig.set_xticks(arange(2)+0.3, ["Center", "change"], rotation=50)
+#     fig.set_xticks(np.arange(2) + 0.3, ["Center", "change"])
+#
+#
+# def _plot_mixture(a, b, points, pi, label_name, fig):
+#     fig.set_xlim(-1, 1)
+#     #points, x_pos = calc_beta_pdf(a, b)
+#     fig.set_title("Beta mixtures")
+#     fig.set_xlabel("Delta PSI")
+#     fig.set_ylabel("Density")
+#     fig.plot(np.linspace(-1, 1, num=len(points)), points / 2, label="%s %s" % (label_name, label_beta(a, b, pi)))
+#
+# def plot_all_lsv(deltadata, beta_params, pmix, labels, figure_title):
+#     f, sp = plt.subplots(2, 2)
+#     plt.subplots_adjust(hspace=.4)
+#     _plot_densities(deltadata, sp[0, 0])
+#     cmb = []
+#     for pl in range(beta_params.shape[0]):
+#         plot_mixture(beta_params[pl, 0], beta_params[pl, 1], pmix[pl], labels[pl], sp[0, 1])
+#         cmb.append([beta_params[pl, 0], beta_params[pl, 1], pmix[pl]])
+#
+#     plot_combpdf(cmb, sp[1, 0])
+#     _plot_pi(pmix, sp[1, 1])
+#     plt.suptitle(figure_title, fontsize=24)
 
 
 def plot_mappability_zeros(junctions, plotpath, numzeros, plotname):
@@ -62,8 +112,6 @@ def plot_fitting(ecdf, plotpath, extra=[], title='', title_extra=[], plotname=No
         else:
             fname = plotname
         save_or_show(plotpath, fname)
-
-
 
 
 def plot_gc_content():
