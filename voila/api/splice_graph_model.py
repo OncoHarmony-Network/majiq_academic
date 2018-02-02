@@ -281,38 +281,45 @@ class Gene(Base):
         if lsv_junctions is None:
             lsv_junctions = self.lsv_junctions(lsv_id)
 
-        yield self.lsv_reference_exon(lsv_id)
+        def find_exons():
+            yield self.lsv_reference_exon(lsv_id)
 
-        for junc in lsv_junctions:
-            for exon in self.exons:
-                if is_target:
-                    if self.strand == '+':
-                        if junc.start in exon:
-                            yield exon
+            for junc in lsv_junctions:
+                for exon in self.exons:
+                    if is_target:
+                        if self.strand == '+':
+                            if junc.start in exon:
+                                yield exon
+                        else:
+                            if junc.end in exon:
+                                yield exon
                     else:
-                        if junc.end in exon:
-                            yield exon
-                else:
-                    if self.strand == '+':
-                        if junc.end in exon:
-                            yield exon
-                    else:
-                        if junc.start in exon:
-                            yield exon
+                        if self.strand == '+':
+                            if junc.end in exon:
+                                yield exon
+                        else:
+                            if junc.start in exon:
+                                yield exon
+
+        yield from sorted(find_exons(), key=lambda e: [e.start, e.end])
 
     def lsv_junctions(self, lsv_id):
         is_target = lsv_id.split(':')[-2] == 't'
         exon = self.lsv_reference_exon(lsv_id)
-        if is_target:
-            if self.strand == '+':
-                yield from exon.a5
+
+        def find_junctions():
+            if is_target:
+                if self.strand == '+':
+                    yield from exon.a5
+                else:
+                    yield from exon.a3
             else:
-                yield from exon.a3
-        else:
-            if self.strand == '+':
-                yield from exon.a3
-            else:
-                yield from exon.a5
+                if self.strand == '+':
+                    yield from exon.a3
+                else:
+                    yield from exon.a5
+
+        yield from sorted(find_junctions(), key=lambda j: [bool(j.intron_retention), j.start, j.end])
 
     def lsv_ucsc_coordinates(self, lsv_id):
         exons = tuple(self.lsv_exons(lsv_id))
