@@ -86,7 +86,7 @@ class MatrixHdf5:
         lsvs = self.h['lsvs']
         try:
             yield from lsvs[gene_id].keys()
-        except KeyError:
+        except (KeyError, ValueError):
             return ()
 
 

@@ -1,9 +1,7 @@
 import os
 import uuid
-from collections import OrderedDict
 
 from voila import constants
-from voila.api.view_splice_graph import HtmlSpliceGraph
 from voila.utils import utils_voila
 from voila.utils.run_voila_utils import get_env, get_output_html
 
@@ -14,31 +12,6 @@ class Html(object):
         self.voila_links = {}
         self.env = get_env()
         self._database_name = None
-
-    def gene_experiments(self, experiments, genes, gene_experiments):
-
-        genes_exp = {}
-        gene_experiments_tuple = tuple(gene_experiments)
-
-        with HtmlSpliceGraph(self.args.splice_graph) as sg:
-            for experiment in experiments:
-
-                genes_exp[experiment] = {}
-
-                for gene_id in genes:
-                    gene = sg.gene(gene_id)
-
-                    # map the metainfo experiment name to the experiment index in the splice graph file.
-                    experiment_index = gene_experiments_tuple.index(experiment)
-
-                    # get the data needed to render the html
-                    genes_exp[experiment][gene_id] = gene.get.get_experiment(experiment_index)
-
-            # if there are more then 1 experiments, then record the combined data
-            if len(experiments) > 1:
-                genes_exp['Combined'] = sg.combine_genes(experiments, genes)
-
-            return OrderedDict(sorted(genes_exp.items(), key=lambda t: t[0]))
 
     def add_to_voila_links(self, lsv_dict, page_name):
         for gene_id in lsv_dict.keys():

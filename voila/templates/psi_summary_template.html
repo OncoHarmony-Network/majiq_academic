@@ -26,6 +26,11 @@
         var lsv = new Lsv(db);
         var bp = new LSVPlots(db);
     </script>
+    {% for gene_obj in genes %}
+        {% with gene = gene_obj.get %}
+            <script src="../db/{{ gene.id }}.js"></script>
+        {% endwith %}
+    {% endfor %}
 {% endblock %}
 
 {% block header %}
