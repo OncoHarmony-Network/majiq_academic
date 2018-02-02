@@ -1,22 +1,17 @@
 import math
 from itertools import zip_longest
 
-from voila.api.view_matrix import ViewDeltaPsi, ViewPsi
-
 from voila import constants
 from voila.api import SpliceGraph
 from voila.api import splice_graph_model as model
+from voila.api.view_matrix import ViewDeltaPsi, ViewPsi
 from voila.utils.exceptions import GeneIdNotFoundInVoilaFile
 from voila.utils.voila_log import voila_log
 
 
 class ViewSpliceGraph(SpliceGraph):
     def get_page_count(self, args):
-
         gene_count = self.session.query(model.Gene).count()
-        if args.limit < gene_count:
-            gene_count = args.limit
-
         return int(math.ceil(gene_count / float(constants.MAX_GENES)))
 
     def get_paginated_genes(self, args):

@@ -8,7 +8,6 @@ from voila.utils.run_voila_utils import table_marks_set, copy_static, get_env
 from voila.utils.voila_log import voila_log
 from voila.utils.voila_pool import VoilaPool
 from voila.view.html import Html
-from voila.voila_args import VoilaArgs
 
 
 def create_gene_db(gene_ids, args, experiment_names):
@@ -25,11 +24,11 @@ def create_gene_db(gene_ids, args, experiment_names):
                     f.write(el)
 
 
-class Deltapsi(Html, VoilaArgs):
+class DeltaPsi(Html):
     def __init__(self, args):
-        super(Deltapsi, self).__init__(args)
+        super(DeltaPsi, self).__init__(args)
 
-        if not args.no_html:
+        if not args.disable_html:
             copy_static(args)
             with ViewDeltaPsi(args.voila_file) as m:
                 self.metadata = m.metadata
@@ -38,7 +37,7 @@ class Deltapsi(Html, VoilaArgs):
             self.render_summaries()
             self.render_index()
 
-        if not args.no_tsv:
+        if not args.disable_tsv:
             io_voila.delta_psi_tab_output(args, self.voila_links)
 
         # if args.gtf:
@@ -46,30 +45,6 @@ class Deltapsi(Html, VoilaArgs):
         #
         # if args.gff:
         #     io_voila.generic_feature_format_txt_files(args, out_gff3=True)
-
-    @classmethod
-    def arg_parents(cls):
-        # base, html, gene_search, lsv_type_search, lsv_id_search, voila_file,
-        #                                parser_delta, multiprocess, output
-
-        parser = cls.get_parser()
-        # Probability threshold used to sum the accumulative probability of inclusion/exclusion.
-        parser.add_argument('--threshold',
-                            type=float,
-                            default=0.2,
-                            help='Filter out LSVs with no junction predicted to change over a certain value (in '
-                                 'percentage).')
-
-        parser.add_argument('--show-all',
-                            dest='show_all',
-                            action='store_true',
-                            default=False,
-                            help='Show all LSVs including those with no junction with significant change predicted.')
-
-        return (
-            cls.base_args(), cls.html_args(), cls.gene_search_args(), cls.lsv_type_search_args(),
-            cls.lsv_id_search_args(), cls.voila_file_args(), cls.multiproccess_args(), cls.output_args(), parser
-        )
 
     def render_index(self):
         log = voila_log()
@@ -174,6 +149,7 @@ class Deltapsi(Html, VoilaArgs):
         args = self.args
         metadata = self.metadata
         log = voila_log()
+        log.info('Create DB files')
 
         with ViewDeltaPsi(args.voila_file) as m:
             gene_ids = tuple(m.get_gene_ids(args))

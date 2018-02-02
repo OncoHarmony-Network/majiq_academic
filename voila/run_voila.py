@@ -1,21 +1,24 @@
 import argparse
+import errno
 import os
 import sys
-import textwrap
 import time
 
 import voila.constants as constants
-from voila.api import SpliceGraph
-from voila.tools import Tools
+from voila.api import SpliceGraph, Matrix
+from voila.api.matrix_hdf5 import lsv_id_to_gene_id
 from voila.utils.exceptions import VoilaException
+from voila.utils.utils_voila import create_if_not_exists
 from voila.utils.voila_log import voila_log
 from voila.utils.voila_pool import VoilaPool
-from voila.view.conditional_table import ConditionalTable
-from voila.view.deltapsi import Deltapsi
-from voila.view.heterogen import Heterogen
-from voila.view.lsv_thumbnails import LsvThumbnails
+from voila.view.deltapsi import DeltaPsi
 from voila.view.psi import Psi
 from voila.view.splice_graphs import RenderSpliceGraphs
+
+
+class VoilaCantFindFile(argparse.ArgumentTypeError):
+    def __init__(self, value):
+        super(VoilaCantFindFile, self).__init__('cannot find file "{0}"'.format(value))
 
 
 def secs2hms(secs):
@@ -29,63 +32,160 @@ def secs2hms(secs):
     return "%d:%02d:%02d" % (h, m, s)
 
 
-def check_filter(args):
-    if hasattr(args, 'gene_names') and args.gene_names:
-        if hasattr(args, 'splice_graph') and args.splice_graph:
-            with SpliceGraph(args.splice_graph)as sg:
-                for gene in sg.genes:
-                    if gene.name in args.gene_names:
-                        args.gene_ids.append(gene.id)
-                        args.gene_names.remove(gene.name)
-                        if not args.gene_names:
-                            return
+def gene_names(args):
+    if args.gene_names:
+        log = voila_log()
+        with SpliceGraph(args.splice_graph) as sg:
+            for gene in sg.genes:
+                if gene.name.lower() in set(n.lower() for n in args.gene_names):
+                    args.gene_ids.append(gene.id)
+                    args.gene_names.remove(gene.name)
+                    log.warning('Gene name "{0}" could not be found in Splice Graph'.format(gene.name))
+                    if not args.gene_names:
+                        return
+
+            if not args.gene_ids:
+                raise VoilaException('None of the gene names could be converted to gene IDs.')
+
+
+def gene_ids(args):
+    if args.gene_ids:
+        log = voila_log()
+        args.gene_ids = list(set(args.gene_ids))
+        with Matrix(args.voila_file) as m:
+            for gene_id in args.gene_ids:
+                if not any(m.lsv_ids(gene_id)):
+                    log.warning('Gene ID "{0}" could not be found in Voila file'.format(gene_id))
+                    args.gene_ids.remove(gene_id)
+
+            if not args.gene_ids:
+                raise VoilaException('None of the gene IDs could be found in the Voila file.')
+
+
+def lsv_ids(args):
+    if args.lsv_ids:
+        args.lsv_ids = list(set(args.lsv_ids))
+        log = voila_log()
+        with Matrix(args.voila_file) as m:
+            for lsv_id in args.lsv_ids:
+                if lsv_id not in set(m.lsv_ids(lsv_id_to_gene_id(lsv_id))):
+                    log.warning('LSV ID "{0}" could not be found in Voila file'.format(lsv_id))
+                    args.lsv_ids.remove(lsv_id)
+
+            if not args.lsv_ids:
+                raise VoilaException('None of the LSV IDs could be found in the Voila file.')
+
+
+def new_subparser():
+    return argparse.ArgumentParser(add_help=False)
+
+
+def check_list_file(value):
+    """
+    Take file, which is a newline separated list of values, and convert it to a list of strings.  Raise error if file
+    doesn't exist.
+    :param value: file path
+    :return: return list of strings
+    """
+    try:
+        with open(value, 'r') as f:
+            return [line.strip() for line in f]
+    except IOError as e:
+        if e.errno == errno.ENOENT:
+            raise VoilaCantFindFile(value)
         else:
-            raise VoilaException(
-                'Splice Graph file was not supplied and, therefore, we\'re unable to convert gene names to gene IDs.')
+            raise
+
+
+def check_dir(value):
+    """
+    check if directory exists.  If not, create it.
+    :param value: directory path
+    :return: value
+    """
+    value = os.path.expanduser(value)
+    create_if_not_exists(value)
+    return value
+
+
+def check_file(value):
+    """
+    Check if file exists.
+    :param value: file path
+    :return:
+    """
+    value = os.path.expanduser(value)
+    if not os.path.isfile(value):
+        raise VoilaCantFindFile(value)
+    return value
+
+
+def check_splice_graph_file(value):
+    value = check_file(value)
+    # with SpliceGraph(value) as sg:
+    #     sg.check_version()
+    return value
+
+
+def check_voila_file(value):
+    value = check_file(value)
+    # with Voila(value) as v:
+    #     v.check_version()
+    return value
 
 
 def voila_parser():
-    parser = argparse.ArgumentParser(formatter_class=argparse.RawDescriptionHelpFormatter,
-                                     description=textwrap.dedent('''
-                VOILA is a visualization package for Alternative Local Splicing Events.
-                -----------------------------------------------------------------------
-
-                '''))
-
+    parser = argparse.ArgumentParser(description='VOILA is a visualization package '
+                                                 'for Alternative Local Splicing Events.')
     parser.add_argument('-v', action='version', version=constants.VERSION)
 
-    subparsers = parser.add_subparsers(dest='type_analysis')
-    subparsers.required = True
+    # splice graph parser
+    splice_graph = new_subparser()
 
-    subparsers.add_parser(constants.ANALYSIS_PSI,
-                          help='Single LSV analysis by gene(s) of interest.',
-                          parents=Psi.arg_parents())
+    splice_graph.add_argument('-s', '--splice-graph', type=check_splice_graph_file, required=True,
+                              help='Path to splice graph file.')
+    splice_graph.add_argument('-o', '--output', type=check_dir, required=True, help='Path for output directory.')
+    splice_graph.add_argument('--logger', help='Path for log files.')
+    splice_graph.add_argument('--silent', action='store_true', help='Do not write logs to standard out.')
+    splice_graph.add_argument('--debug', action='store_true')
+    splice_graph.add_argument('-j', '--nproc', default=int(os.cpu_count() / 2))
+    splice_graph.add_argument('--gene-names-file', dest='gene_names', type=check_list_file, default=[],
+                              help='Location of file that contains a list of common gene names which should remain in the results. One name per line.')
+    splice_graph.add_argument('--gene-names', nargs='*', default=[],
+                              help='Common gene names, separated by spaces, which should remain in the results. e.g. GENE1 GENE2 ...')
+    splice_graph.add_argument('--gene-ids-file', dest='gene_ids', type=check_list_file, default=[],
+                              help='Location of file that contains a list of gene IDs which should remain in the results. One name per line.')
+    splice_graph.add_argument('--gene-ids', nargs='*', default=[],
+                              help='Gene IDs, separated by spaces, which should remain in the results. e.g. GENE_ID1 GENE_ID2 ...')
 
-    subparsers.add_parser(constants.ANALYSIS_DELTAPSI,
-                          help='Delta LSV analysis by gene(s) of interest.',
-                          parents=Deltapsi.arg_parents())
-    #
-    # subparsers.add_parser(constants.COND_TABLE,
-    #                       help='Generate a HTML table with a list of LSVs changing between conditions in multiple '
-    #                            'samples.',
-    #                       parents=ConditionalTable.arg_parents())
-    #
-    # subparsers.add_parser(constants.SPLICE_GRAPHS,
-    #                       help='Generate only splice graphs.',
-    #                       parents=RenderSpliceGraphs.arg_parents())
-    #
-    # subparsers.add_parser(constants.LSV_THUMBNAILS,
-    #                       help='Generate LSV thumbnails.',
-    #                       parents=LsvThumbnails.arg_parents())
-    #
-    # subparsers.add_parser(constants.ANALYSIS_HETEROGEN,
-    #                       help='Heterogen analysis by gene(s) of interest.',
-    #                       parents=Heterogen.arg_parents())
+    # psi parser
+    psi = new_subparser()
+    psi.add_argument('voila_file', type=check_voila_file,
+                     help='Location of majiq\'s voila file.  File should end with ".voila".')
+    psi.add_argument('--gtf', action='store_true', help='Generate GTF (GFF2) files for LSVs.')
+    psi.add_argument('--gff', action='store_true', help='Generate GFF3 files for LSVs.')
+    psi.add_argument('--disable-html', action='store_true', help='Do not write html files.')
+    psi.add_argument('--disable-tsv', action='store_true', help='Do not generate tab-separated values output file.')
+    psi.add_argument('--lsv-types-file', type=check_list_file, dest='lsv_types',
+                     help='Location of file that contains a list of LSV types which should remain in the results. One type per line')
+    psi.add_argument('--lsv-types', nargs='*', default=[], help='LSV types which should remain in the results')
+    psi.add_argument('--lsv-ids-file', type=check_list_file, dest='lsv_ids',
+                     help='Location of file that contains a list of LSV IDs which should remain in the results. One ID per line.')
+    psi.add_argument('--lsv-ids', nargs='*', default=[],
+                     help='LSV IDs, separated by spaces, which should remain in the results. e.g LSV_ID1 LSV_ID2 ...')
 
-    # parser_tool = subparsers.add_parser(constants.TOOLS,
-    #                                     help='Various tools.',
-    #                                     parents=Tools.arg_parents())
-    # Tools.add_arguments(parser_tool)
+    # deltapsi parser
+    deltapsi = new_subparser()
+    deltapsi.add_argument('--threshold', type=float, default=0.2,
+                          help='Filter out LSVs with no junction predicted to change over a certain value (in percentage).')
+    deltapsi.add_argument('--show-all', dest='show_all', action='store_true',
+                          help='Show all LSVs including those with no junction with significant change predicted.')
+
+    # subparsers
+    subparsers = parser.add_subparsers(help='')
+    subparsers.add_parser('splice-graph', parents=[splice_graph]).set_defaults(func=RenderSpliceGraphs)
+    subparsers.add_parser('psi', parents=[splice_graph, psi]).set_defaults(func=Psi)
+    subparsers.add_parser('deltapsi', parents=[splice_graph, psi, deltapsi]).set_defaults(func=DeltaPsi)
 
     return parser
 
@@ -96,19 +196,24 @@ def main():
     :return: None
     """
 
+
+
     # Time execution time
     start_time = time.time()
 
     parser = voila_parser()
+    if len(sys.argv) == 1:
+        parser.print_help()
+        sys.exit(1)
 
     # get args
     args = parser.parse_args()
 
     # set up logging
     log_filename = 'voila.log'
-    if hasattr(args, 'logger') and args.logger:
+    if args.logger:
         log_filename = os.path.join(args.logger, log_filename)
-    elif hasattr(args, 'output') and args.output:
+    elif args.output:
         log_filename = os.path.join(args.output, log_filename)
     else:
         log_filename = None
@@ -116,29 +221,18 @@ def main():
     log = voila_log(filename=log_filename, silent=args.silent, debug=args.debug)
     log.info('Command: {0}'.format(' '.join(sys.argv)))
 
-    log.info('Voila {0} v{1}'.format(args.type_analysis, constants.VERSION))
+    log.info('Voila v{0}'.format(constants.VERSION))
 
-    VoilaPool(args.processes)
-
-    # run function for this analysis type
-    type_analysis = {
-        constants.ANALYSIS_PSI: Psi,
-        constants.ANALYSIS_DELTAPSI: Deltapsi,
-        constants.SPLICE_GRAPHS: RenderSpliceGraphs,
-        constants.COND_TABLE: ConditionalTable,
-        constants.LSV_THUMBNAILS: LsvThumbnails,
-        constants.ANALYSIS_HETEROGEN: Heterogen,
-        constants.TOOLS: Tools
-    }
+    VoilaPool(args.nproc)
 
     try:
+        gene_names(args)
+        gene_ids(args)
+        lsv_ids(args)
 
-        check_filter(args)
+        args.func(args)
 
-        type_analysis[args.type_analysis](args)
-
-        if hasattr(args, 'output'):
-            log.info("Voila! Created in: {0}.".format(args.output))
+        log.info("Voila! Created in: {0}".format(args.output))
 
         # Add elapsed time
         elapsed_str = secs2hms(time.time() - start_time)

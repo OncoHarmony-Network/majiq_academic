@@ -13,8 +13,8 @@ from voila.voila_args import VoilaArgs
 class RenderSpliceGraphs(Html, VoilaArgs):
     def __init__(self, args):
         super(RenderSpliceGraphs, self).__init__(args)
-        self.render_summaries()
         copy_static(args, index=False)
+        self.render_summaries()
 
     @classmethod
     def arg_parents(cls):
@@ -40,7 +40,7 @@ class RenderSpliceGraphs(Html, VoilaArgs):
         summary_template = self.env.get_template('splice_graphs_summary_template.html')
         args = self.args
         output_html = get_output_html(args, args.splice_graph)
-        summaries_subfolder = self.get_summaries_subfolder()
+        summaries_subfolder = self.get_summaries_subfolder(args)
         log = voila_log()
         database_name = self.database_name()
 
@@ -56,13 +56,13 @@ class RenderSpliceGraphs(Html, VoilaArgs):
 
             for index, genes in enumerate(sg.get_paginated_genes(args)):
                 page_name = '{0}_{1}'.format(index, output_html)
-                next_page = self.get_next_page(index, page_count)
+                next_page = self.get_next_page(args, index, page_count)
 
                 log.debug('Writing page {0}'.format(page_name))
                 with open(os.path.join(summaries_subfolder, page_name), 'w') as html:
                     html.write(
                         summary_template.render(
-                            page_name=self.get_page_name(index),
+                            page_name=self.get_page_name(args, index),
                             genes=[sg.gene(gene_id) for gene_id in genes],
                             metadata=metadata,
                             prev_page=prev_page,

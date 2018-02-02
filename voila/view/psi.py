@@ -8,7 +8,6 @@ from voila.utils.run_voila_utils import table_marks_set, copy_static, get_env
 from voila.utils.voila_log import voila_log
 from voila.utils.voila_pool import VoilaPool
 from voila.view.html import Html
-from voila.voila_args import VoilaArgs
 
 
 def create_gene_db(gene_ids, args, experiment_names):
@@ -23,7 +22,7 @@ def create_gene_db(gene_ids, args, experiment_names):
                     f.write(el)
 
 
-class Psi(Html, VoilaArgs):
+class Psi(Html):
     def __init__(self, args):
         """
         Render psi output.
@@ -32,7 +31,7 @@ class Psi(Html, VoilaArgs):
         """
         super(Psi, self).__init__(args)
 
-        if not args.no_html:
+        if not args.disable_html:
             copy_static(args)
             with ViewPsi(args.voila_file) as m:
                 self.metadata = m.metadata
@@ -40,7 +39,7 @@ class Psi(Html, VoilaArgs):
             self.render_summaries()
             self.render_index()
 
-        if not args.no_tsv:
+        if not args.disable_tsv:
             io_voila.psi_tab_output(args, self.voila_links)
 
         # if args.gtf:
@@ -108,11 +107,6 @@ class Psi(Html, VoilaArgs):
                     html.write(el)
 
     @classmethod
-    def arg_parents(cls):
-        return (cls.base_args(), cls.output_args(), cls.html_args(), cls.gene_search_args(), cls.lsv_type_search_args(),
-                cls.lsv_id_search_args(), cls.voila_file_args())
-
-    @classmethod
     def create_summary(cls, metadata, args, database_name, paged):
         summary_template = get_env().get_template("psi_summary_template.html")
         summaries_subfolder = cls.get_summaries_subfolder(args)
@@ -132,7 +126,7 @@ class Psi(Html, VoilaArgs):
 
                 with open(os.path.join(summaries_subfolder, page_name), 'w') as html:
                     for el in summary_template.generate(
-                            genes=(sg.gene(gene_id) for gene_id in genes),
+                            genes=[sg.gene(gene_id) for gene_id in genes],
                             table_marks=table_marks,
                             lsvs=lsv_dict,
                             prev_page=prev_page,

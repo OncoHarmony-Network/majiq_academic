@@ -88,10 +88,13 @@ class Exons(SpliceGraphSQL):
 
             exon = model.Exon(gene_id=self.gene_id, start=self.start, end=self.end, **kwargs)
 
-            exon.coords_extra = [model.CoordsExtra(start=int(ce_start), end=int(ce_end)) for ce_start, ce_end in
-                                 coords_extra]
-            exon.alt_ends = [model.AltEnds(coordinate=int(alt_end)) for alt_end in alt_ends]
-            exon.alt_starts = [model.AltStarts(coordinate=int(alt_start)) for alt_start in alt_starts]
+            for ce_start, ce_end in coords_extra:
+                exon.coords_extra.append(model.CoordsExtra(start=int(ce_start), end=int(ce_end)))
+            for alt_end in alt_ends:
+                exon.alt_ends.append(model.AltEnds(coordinate=int(alt_end)))
+            for alt_start in alt_starts:
+                exon.alt_starts.append(model.AltStarts(coordinate=int(alt_start)))
+
 
             self.sql.session_add(exon)
             self.sql.commit(default_commit_on_count)
@@ -128,7 +131,8 @@ class Junctions(SpliceGraphSQL):
 
             junc = model.Junction(gene_id=self.gene_id, start=self.start, end=self.end, **kwargs)
 
-            junc.reads = [model.Reads(reads=int(r), experiment_name=e) for r, e in reads]
+            for r, e in reads:
+                junc.reads.append(model.Reads(reads=int(r), experiment_name=e))
 
             self.sql.session_add(junc)
             self.sql.commit(default_commit_on_count)

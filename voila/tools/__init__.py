@@ -3,7 +3,6 @@ import inspect
 import os
 
 from voila.tools.tool import Tool
-from voila.voila_args import VoilaArgs
 
 
 class ToolParserEmptyException(Exception):
@@ -20,7 +19,7 @@ class TooManyToolClasses(Exception):
     pass
 
 
-class Tools(VoilaArgs):
+class Tools():
     filter = ('__init__.py', 'tool.py')
     tool_subclass = Tool
     module = 'voila.tools'
@@ -36,10 +35,10 @@ class Tools(VoilaArgs):
         for tool_name in cls.tool_names():
             tool = cls.get_tool(tool_name)
             tool_parser = tool.arguments()
-            base_parser = cls.base_args()
+            # base_parser = cls.base_args()
             if not tool_parser:
                 raise ToolParserEmptyException(tool_name)
-            subparser.add_parser(tool_name, parents=[base_parser, tool_parser], help=tool.help)
+            # subparser.add_parser(tool_name, parents=[base_parser, tool_parser], help=tool.help)
 
     @classmethod
     def validate_tool_file(cls, file_name):
