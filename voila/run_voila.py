@@ -13,7 +13,7 @@ from voila.utils.voila_log import voila_log
 from voila.utils.voila_pool import VoilaPool
 from voila.view.deltapsi import DeltaPsi
 from voila.view.psi import Psi
-from voila.view.splice_graphs import RenderSpliceGraphs
+from voila.view.splice_graph import RenderSpliceGraphs
 
 
 class VoilaCantFindFile(argparse.ArgumentTypeError):
@@ -37,12 +37,12 @@ def gene_names(args):
         log = voila_log()
         with SpliceGraph(args.splice_graph) as sg:
             for gene in sg.genes:
-                if gene.name.lower() in set(n.lower() for n in args.gene_names):
+                if gene.name in set(args.gene_names):
                     args.gene_ids.append(gene.id)
                     args.gene_names.remove(gene.name)
-                    log.warning('Gene name "{0}" could not be found in Splice Graph'.format(gene.name))
-                    if not args.gene_names:
-                        return
+
+            if args.gene_names:
+                log.warning('Some gene names could not be found in Splice Graph: {}'.format(', '.join(args.gene_names)))
 
             if not args.gene_ids:
                 raise VoilaException('None of the gene names could be converted to gene IDs.')
@@ -63,7 +63,7 @@ def gene_ids(args):
 
 
 def lsv_ids(args):
-    if args.lsv_ids:
+    if hasattr(args, 'lsv_ids') and args.lsv_ids:
         args.lsv_ids = list(set(args.lsv_ids))
         log = voila_log()
         with Matrix(args.voila_file) as m:
@@ -195,8 +195,6 @@ def main():
     Main function.
     :return: None
     """
-
-
 
     # Time execution time
     start_time = time.time()

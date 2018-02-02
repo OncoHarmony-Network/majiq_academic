@@ -1,9 +1,10 @@
 import errno
 import os
 
+from voila.api.view_splice_graph import ViewSpliceGraph
+
 from voila import constants, io_voila
 from voila.api.view_matrix import ViewPsi
-from voila.api.view_splice_graph import PsiSpliceGraph
 from voila.utils.run_voila_utils import table_marks_set, copy_static, get_env
 from voila.utils.voila_log import voila_log
 from voila.utils.voila_pool import VoilaPool
@@ -12,7 +13,7 @@ from voila.view.html import Html
 
 def create_gene_db(gene_ids, args, experiment_names):
     env = get_env()
-    with PsiSpliceGraph(args.splice_graph) as sg, ViewPsi(args.voila_file) as m:
+    with ViewSpliceGraph(args.splice_graph) as sg, ViewPsi(args.voila_file) as m:
         for gene_id in gene_ids:
             with open(os.path.join(args.output, 'db', '{}.js'.format(gene_id)), 'w') as f:
                 for el in env.get_template('gene_db_template.html').generate(
@@ -82,7 +83,7 @@ class Psi(Html):
         args = self.args
         metadata = self.metadata
 
-        with ViewPsi(args.voila_file) as m, PsiSpliceGraph(args.splice_graph) as sg:
+        with ViewPsi(args.voila_file) as m, ViewSpliceGraph(args.splice_graph) as sg:
             lsv_ids = tuple(m.get_lsv_ids(args))
             lsv_count = m.get_lsv_count(args)
             too_many_lsvs = lsv_count > constants.MAX_LSVS_PSI_INDEX
@@ -112,9 +113,9 @@ class Psi(Html):
         summaries_subfolder = cls.get_summaries_subfolder(args)
         links = {}
 
-        with PsiSpliceGraph(args.splice_graph, 'r') as sg, ViewPsi(args.voila_file) as m:
+        with ViewSpliceGraph(args.splice_graph, 'r') as sg, ViewPsi(args.voila_file) as m:
             genome = sg.genome
-            page_count = sg.get_page_count(args)
+            page_count = m.get_page_count(args)
 
             for index, genes in paged:
                 page_name = cls.get_page_name(args, index)

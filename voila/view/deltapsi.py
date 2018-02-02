@@ -1,27 +1,14 @@
 import errno
 import os
 
+from voila.api.view_splice_graph import ViewSpliceGraph
+
 from voila import constants, io_voila
 from voila.api.view_matrix import ViewDeltaPsi
-from voila.api.view_splice_graph import DeltaPsiSpliceGraph
 from voila.utils.run_voila_utils import table_marks_set, copy_static, get_env
 from voila.utils.voila_log import voila_log
 from voila.utils.voila_pool import VoilaPool
 from voila.view.html import Html
-
-
-def create_gene_db(gene_ids, args, experiment_names):
-    env = get_env()
-    log = voila_log()
-    with DeltaPsiSpliceGraph(args.splice_graph) as sg, ViewDeltaPsi(args.voila_file) as m:
-        for gene_id in gene_ids:
-            log.debug('creating {}'.format(gene_id))
-            with open(os.path.join(args.output, 'db', '{}.js'.format(gene_id)), 'w') as f:
-                for el in env.get_template('gene_db_template.html').generate(
-                        gene=sg.gene(gene_id).get.get_experiment(experiment_names),
-                        lsvs=(m.delta_psi(lsv_id) for lsv_id in m.lsv_ids(gene_id))
-                ):
-                    f.write(el)
 
 
 class DeltaPsi(Html):
@@ -54,7 +41,7 @@ class DeltaPsi(Html):
         env = self.env
         metadata = self.metadata
 
-        with DeltaPsiSpliceGraph(args.splice_graph) as sg, ViewDeltaPsi(args.voila_file) as m:
+        with ViewSpliceGraph(args.splice_graph) as sg, ViewDeltaPsi(args.voila_file) as m:
             lsv_count = m.get_lsv_count(args)
             too_many_lsvs = lsv_count > constants.MAX_LSVS_DELTAPSI_INDEX
 
@@ -80,6 +67,20 @@ class DeltaPsi(Html):
 
                 log.debug('End index render')
 
+    @staticmethod
+    def create_gene_db(gene_ids, args, experiment_names):
+        env = get_env()
+        log = voila_log()
+        with ViewSpliceGraph(args.splice_graph) as sg, ViewDeltaPsi(args.voila_file) as m:
+            for gene_id in gene_ids:
+                log.debug('creating {}'.format(gene_id))
+                with open(os.path.join(args.output, 'db', '{}.js'.format(gene_id)), 'w') as f:
+                    for el in env.get_template('gene_db_template.html').generate(
+                            gene=sg.gene(gene_id).get.get_experiment(experiment_names),
+                            lsvs=(m.delta_psi(lsv_id) for lsv_id in m.lsv_ids(gene_id))
+                    ):
+                        f.write(el)
+
     @classmethod
     def create_summary(cls, metadata, args, database_name, paged):
 
@@ -88,9 +89,9 @@ class DeltaPsi(Html):
         group_names = metadata['group_names']
         links = {}
 
-        with DeltaPsiSpliceGraph(args.splice_graph, 'r') as sg, ViewDeltaPsi(args.voila_file) as m:
+        with ViewSpliceGraph(args.splice_graph, 'r') as sg, ViewDeltaPsi(args.voila_file) as m:
             genome = sg.genome
-            page_count = sg.get_page_count(args)
+            page_count = m.get_page_count(args)
 
             for index, genes in paged:
                 page_name = cls.get_page_name(args, index)
@@ -169,7 +170,7 @@ class DeltaPsi(Html):
 
         with VoilaPool() as vp:
             for genes in chunkify(gene_ids, vp.processes):
-                multiple_results.append(vp.pool.apply_async(create_gene_db, (genes, args, names)))
+                multiple_results.append(vp.pool.apply_async(self.create_gene_db, (genes, args, names)))
 
             for res in multiple_results:
                 res.get()

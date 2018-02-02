@@ -1,3 +1,4 @@
+import math
 from itertools import zip_longest
 
 import numpy
@@ -125,6 +126,10 @@ class ViewPsi(Psi):
 
         return metadata
 
+    def get_page_count(self, args):
+        gene_count = len(tuple(self.get_gene_ids(args)))
+        return math.ceil(gene_count / constants.MAX_GENES)
+
 
 class ViewDeltaPsi(DeltaPsi):
     class _ViewDeltaPsi(DeltaPsi._DeltaPsi):
@@ -250,3 +255,7 @@ class ViewDeltaPsi(DeltaPsi):
 
         for page in grouper(self.get_gene_ids(args), constants.MAX_GENES):
             yield tuple(p for p in page if p is not None)
+
+    def get_page_count(self, args):
+        gene_count = len(tuple(self.get_gene_ids(args)))
+        return math.ceil(gene_count / constants.MAX_GENES)

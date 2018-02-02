@@ -2,7 +2,7 @@ import os
 
 import numpy
 
-from voila.api.view_splice_graph import ViewSpliceGraph
+from voila.api.view_splice_graph import SpliceGraphViewSpliceGraph
 from voila.utils.exceptions import VoilaException
 from voila.utils.run_voila_utils import get_output_html, copy_static
 from voila.utils.voila_log import voila_log
@@ -44,7 +44,7 @@ class RenderSpliceGraphs(Html, VoilaArgs):
         log = voila_log()
         database_name = self.database_name()
 
-        with ViewSpliceGraph(args.splice_graph, 'r') as sg:
+        with SpliceGraphViewSpliceGraph(args.splice_graph, 'r') as sg:
             metadata = {'experiment_names': numpy.array([list(sg.experiment_names)]), 'group_names': [None]}
             prev_page = None
             page_count = sg.get_page_count(args)
