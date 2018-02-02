@@ -305,7 +305,6 @@ class Builder(BasicPipeline):
             pool.close()
             generate_splicegraph(majiq_config, self.elem_dict, self.genes_dict)
             with SpliceGraph(get_builder_splicegraph_filename(majiq_config.outDir), 'r+') as sg:
-#            sg = None
                queue_manager(sg, self.lock, self.queue, num_chunks=nthreads, logger=logger)
 
             pool.join()

@@ -69,8 +69,8 @@ class DeltaPsi(BasicPipeline):
         write_pickle indicates if a .pickle should be saved in disk
         """
 
-        majiq_logger.create_if_not_exists(self.logger_path)
-        logger = majiq_logger.get_logger("%s/deltapsi_majiq.log" % self.logger_path, silent=self.silent,
+        majiq_logger.create_if_not_exists(self.outDir)
+        logger = majiq_logger.get_logger("%s/deltapsi_majiq.log" %self.outDir, silent=self.silent,
                                          debug=self.debug)
 
         logger.info("Majiq deltapsi v%s" % VERSION)
@@ -108,7 +108,7 @@ class DeltaPsi(BasicPipeline):
 
         psi_space, prior_matrix = gen_prior_matrix(self.lsv_type_dict, lsv_empirical_psi1, lsv_empirical_psi2,
                                                    self.outDir, names=self.names, plotpath=self.plotpath,
-                                                   iter=self.prior-iter, binsize=self.binsize,
+                                                   iter=self.iter, binsize=self.binsize,
                                                    numbins=self.nbins, defaultprior=self.default_prior,
                                                    minpercent=self.min_exp, logger=logger)
 

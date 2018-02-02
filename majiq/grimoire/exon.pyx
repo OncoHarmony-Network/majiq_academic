@@ -151,7 +151,7 @@ def detect_exons(dict junction_dict, list exon_list):
             junction_list.append((kk[0], True, jj))
         if kk[1]>0:
             junction_list.append((kk[1], False, jj))
-    junction_list.sort(key=lambda jj: (jj[0], jj[1]))
+    junction_list.sort(key=lambda jj: (jj[0], -jj[1]))
 
     for (coord, jtype, jj) in junction_list:
         if not (jj.is_reliable() or jj.annotated):
@@ -159,12 +159,13 @@ def detect_exons(dict junction_dict, list exon_list):
         opened = len(opened_exon)
         if jtype:
             if opened > 0:
-                #print('ST1', opened_exon[-1].end, coord)
+
+                # print('ST1', opened_exon[-1].end, coord)
                 new_exons += new_exon_definition(opened_exon[-1].end, coord, exon_dict, exon_list, opened_exon[-1], jj, in_db=False)
                 opened_exon.pop()
             elif opened == 0:
                 if first_3prime is None:
-                    #print('ST2', opened_exon[-1].end, coord)
+                    # print('ST2', opened_exon[-1].end, coord)
                     new_exons += new_exon_definition(jj.start-10, jj.start, exon_dict, exon_list, None, jj)
                     #new_exons += __half_exon('5prime', jj)
                 else:
@@ -175,7 +176,7 @@ def detect_exons(dict junction_dict, list exon_list):
             if opened > 0:
                 if last_5prime is not None:
                     for jj2 in opened_exon:
-                        #print('ST4', opened_exon[-1].end, coord)
+                        # print('ST4', opened_exon[-1].end, coord)
                         new_exons += new_exon_definition(jj2.end, last_5prime.start, exon_dict, exon_list, jj2, last_5prime, in_db=False)
                     last_5prime = None
                     opened_exon = []
@@ -186,7 +187,7 @@ def detect_exons(dict junction_dict, list exon_list):
             opened_exon.append(jj)
 
     for jj in opened_exon:
-        #print('ST5', opened_exon[-1].end, coord)
+        # print('ST5', opened_exon[-1].end, coord)
         new_exons += new_exon_definition(jj.end, jj.end+10, exon_dict, exon_list, jj, None, in_db=False)
 
     exon_list = sorted(exon_dict.values(), key=lambda ex: ex.start)

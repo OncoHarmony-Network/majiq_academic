@@ -161,7 +161,7 @@ def main():
                             "(for the 'best set' calculation). [Default: %(default)s]")
     delta.add_argument('--prior-minnonzero', default=10, type=int,
                        help='Minimum number of positions for the best set.')
-    delta.add_argument('--prior-iter', default=10, type=int, dest=iter,
+    delta.add_argument('--prior-iter', default=10, type=int, dest="iter",
                        help='Max number of iterations of the EM')
 
     delta.add_argument('--weights', dest="weights", nargs=2, default=['None', 'None'],
