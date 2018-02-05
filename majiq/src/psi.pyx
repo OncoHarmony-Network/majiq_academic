@@ -449,7 +449,7 @@ def gen_prior_matrix(object lsv_type, dict lsv_empirical_psi1, dict lsv_empirica
                 continue
 
             logger.debug("Parametrizing 'best set'...%s", prior_idx)
-            mixture_pdf = majiq_delta.adjustdelta_lsv(best_delta_psi, num_item=iter, plotpath=plotpath,
+            mixture_pdf = majiq_delta.adjustdelta_lsv(best_delta_psi, iter, output, plotpath=plotpath,
                                                       title=" ".join(names), njunc=nj, logger=logger)
             pmat = []
             for i in range(numbins):

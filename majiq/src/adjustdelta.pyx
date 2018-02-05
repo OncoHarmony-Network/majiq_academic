@@ -30,8 +30,8 @@ def calculate_beta_params(mean, vari, sample_size):
     return [a, b]
 
 
-cpdef np.ndarray[DTYPE_t, ndim=1] adjustdelta_lsv(np.ndarray[DTYPE_t, ndim=2] deltapsi, int num_iter, str output, str plotpath=None,
-                      str title=None,int  njunc=1, object logger=False):
+cpdef np.ndarray[DTYPE_t, ndim=1] adjustdelta_lsv(np.ndarray[DTYPE_t, ndim=2] deltapsi, int num_iter, str output,
+                                                  str plotpath=None, str title=None,int  njunc=1, object logger=False):
 
     cdef np.ndarray[DTYPE_t, ndim=2] D = np.zeros(shape=(79, 2), dtype=np.float)
     cdef np.ndarray[DTYPE_t, ndim=1] xpos = np.arange(-1 + (0.025 / 2), 1, 0.025)
