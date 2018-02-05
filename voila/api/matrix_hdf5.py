@@ -43,6 +43,14 @@ class MatrixHdf5:
             yield key, lsv_grp[key].value
 
     @property
+    def prior(self):
+        return self.h['prior'].value
+
+    @prior.setter
+    def prior(self, p):
+        self.h.create_dataset('prior', data=collapse_matrix(p))
+
+    @property
     def analysis_type(self):
         return self.h['metadata']['analysis_type'].value
 

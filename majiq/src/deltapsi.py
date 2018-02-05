@@ -129,6 +129,7 @@ class DeltaPsi(BasicPipeline):
             with Matrix(get_quantifier_voila_filename(self.outDir, self.names, deltapsi=True), 'w') as out_h5p:
                 out_h5p.analysis_type = ANALYSIS_DELTAPSI
                 out_h5p.group_names = self.names
+                out_h5p.prior = []
                 exps1 = [os.path.splitext(os.path.basename(xx))[0] for xx in self.files1]
                 exps2 = [os.path.splitext(os.path.basename(xx))[0] for xx in self.files2]
                 out_h5p.experiment_names = [exps1, exps2]

@@ -5,9 +5,8 @@ import types
 from distutils.dir_util import copy_tree
 from math import ceil
 
-import jinja2
 import numpy
-from jinja2 import Environment, FileSystemLoader
+from jinja2 import Environment, FileSystemLoader, StrictUndefined
 
 from voila import constants
 from voila.constants import EXEC_DIR
@@ -60,12 +59,32 @@ def get_env():
     def to_dict(value):
         return dict(value)
 
-    env = Environment(extensions=["jinja2.ext.do"], loader=FileSystemLoader(get_template_dir()),
-                      undefined=jinja2.StrictUndefined)
+    def static(value):
+        print(value)
+        return value
+
+    def js(value):
+        if not value.startswith('http'):
+            value = os.path.join('../static/js', value)
+        return '<script type="text/javascript" src="{}"></script>'.format(value)
+
+    def css(value):
+        return '<link rel="stylesheet" type="text/css" href="{}"/>'.format(os.path.join('../static/css', value))
+
+    env = Environment(extensions=["jinja2.ext.do"],
+                      loader=FileSystemLoader([os.path.join(get_template_dir(), 'summaries'), get_template_dir()]),
+                      undefined=StrictUndefined)
     env.filters.update({
         'to_json': to_json,
-        'to_dict': to_dict
+        'to_dict': to_dict,
     })
+
+    env.globals.update({
+        'js': js,
+        'css': css,
+        'static': static
+    })
+
     return env
 
 
@@ -113,6 +132,7 @@ def grouper(iterable, n, fillvalue=None):
 def copy_static(args, index=True):
     """
     Copy static files to output directory.
+    :param index:
     :param args: command line arguments
     :return: None
     """
