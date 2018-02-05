@@ -387,7 +387,7 @@ cdef tuple _empirical_delta_psi(list list_of_lsv, dict lsv_empirical_psi1, dict 
             delta_psi_res = delta_psi
         delta_psi_res.append(lsv_empirical_psi1[lsv] - lsv_empirical_psi2[lsv])
 
-    return delta_psi, delta_psi_ir
+    return np.array(delta_psi), np.array(delta_psi_ir)
 
 
 def __load_default_prior():
@@ -408,9 +408,9 @@ def gen_prior_matrix(object lsv_type, dict lsv_empirical_psi1, dict lsv_empirica
                      int minpercent=-1, object logger=None):
 
     cdef np.ndarray psi_space, def_mat, lsv, mixture_pdf
-    cdef list prior_matrix, list_of_lsv, best_dpsi, best_dpsi_ir, njun_prior, pmat
+    cdef list prior_matrix, list_of_lsv, njun_prior, pmat
     cdef int prior_idx, nj
-    cdef np.ndarray best_delta_psi
+    cdef np.ndarray best_delta_psi, best_dpsi, best_dpsi_ir
 
 
     #Start prior matrix
