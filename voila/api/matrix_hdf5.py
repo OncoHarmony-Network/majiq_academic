@@ -11,6 +11,7 @@ def lsv_id_to_gene_id(lsv_id):
     return ':'.join(lsv_id.split(':')[:-2])
 
 
+
 class MatrixHdf5:
     def __init__(self, filename, mode='r'):
         filename = os.path.expanduser(filename)
@@ -55,28 +56,26 @@ class MatrixHdf5:
         return self.h['metadata']['analysis_type'].value
 
     @analysis_type.setter
-    def analysis_type(self, analysis_type):
-        self.h.create_dataset('metadata/analysis_type', data=analysis_type)
+    def analysis_type(self, a):
+        self.h.create_dataset('metadata/analysis_type', data=a)
 
     @property
     def group_names(self):
         return self.h['metadata']['group_names'].value
 
     @group_names.setter
-    def group_names(self, names):
+    def group_names(self, n):
         dt = h5py.special_dtype(vlen=numpy.unicode)
-        self.h.create_dataset(os.path.join('metadata', 'group_names'),
-                              data=numpy.array(names, dtype=dt))
+        self.h.create_dataset('metadata/group_names', data=numpy.array(n, dtype=dt))
 
     @property
     def experiment_names(self):
         return self.h['metadata']['experiment_names'].value
 
     @experiment_names.setter
-    def experiment_names(self, names):
+    def experiment_names(self, n):
         dt = h5py.special_dtype(vlen=numpy.unicode)
-        self.h.create_dataset(os.path.join('metadata', 'experiment_names'),
-                              data=numpy.array(names, dtype=dt))
+        self.h.create_dataset('metadata/experiment_names', data=numpy.array(n, dtype=dt))
 
     @property
     def metadata(self):

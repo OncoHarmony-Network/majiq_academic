@@ -326,7 +326,14 @@ class Gene(Base):
                 else:
                     yield from exon.a5
 
-        yield from sorted(find_junctions(), key=lambda j: [bool(j.intron_retention), j.start, j.end])
+        is_neg_strand = self.strand == '-'
+
+        if is_neg_strand:
+            key = lambda j: [not bool(j.intron_retention), j.start, j.end]
+        else:
+            key = lambda j: [bool(j.intron_retention), j.start, j.end]
+
+        yield from sorted(find_junctions(), key=key, reverse=is_neg_strand)
 
     def lsv_ucsc_coordinates(self, lsv_id):
         exons = tuple(self.lsv_exons(lsv_id))
