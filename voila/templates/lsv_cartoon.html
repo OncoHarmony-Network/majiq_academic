@@ -3,7 +3,7 @@
         data-lsv-type="{{ lsv.lsv_type }}"
         data-gene-id="{{ gene.id }}"
         data-experiment="{{ metadata.experiment_names[0][0] }}"
-        data-coord-exon="{{ lsv.coordinates | join(',') }}"
+        data-coord-exon="{{ lsv.reference_exon | join(',') }}"
         title="{{ lsv.lsv_type }}">
     This browser or document mode doesn't support canvas
 </canvas>

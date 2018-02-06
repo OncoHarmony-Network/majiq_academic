@@ -242,6 +242,15 @@ SpliceGraph.prototype.init = function (sg_div) {
             return !d.intron_retention && ![4, 5].includes(gene.exon_types[d.start][d.end][experiment])
         });
 
+        svg.selectAll('.half-exon')
+            .data(gene.exons.filter(function (d) {
+                return [4, 5].includes(gene.exon_types[d.start][d.end][experiment])
+            }))
+            .enter()
+            .append('polyline')
+            .half_exons(x, y, exon_height, gene.exon_types, experiment);
+
+
         svg.selectAll('.intron-retention')
             .data(gene.exons.filter(function (e) {
                 return e.intron_retention
@@ -249,7 +258,6 @@ SpliceGraph.prototype.init = function (sg_div) {
             .enter()
             .append('polygon')
             .intron_retention(x, y, exon_height, gene.exon_types, experiment);
-
 
         svg.selectAll('.exon')
             .data(exons)
@@ -263,34 +271,36 @@ SpliceGraph.prototype.init = function (sg_div) {
             .append('text')
             .exon_numbers(x, y, exon_height, font_size, gene.strand);
 
+
         svg.selectAll('.junction-grp')
             .data(juncs_no_ir)
             .enter()
             .append('g')
             .attr('class', 'junction-grp')
-            .each(function (d, i) {
-                d3.select(this)
+            .each(function (d) {
+                var junction_grp = d3.select(this);
+                junction_grp
                     .selectAll('.junction')
                     .data([d])
                     .enter()
                     .append('path')
                     .junctions(x, y, exon_height, gene.strand, gene.reads, gene.junction_types, experiment);
 
-                d3.select(this)
+                junction_grp
                     .selectAll('.reads')
                     .data([d])
                     .enter()
                     .append('text')
                     .reads(x, y, exon_height, font_size, gene.reads, experiment);
 
-                d3.select(this)
+                junction_grp
                     .selectAll('.ss3p')
                     .data([d])
                     .enter()
                     .append('line')
                     .ss3p(x, y, exon_height, gene.reads, gene.junction_types, experiment);
 
-                d3.select(this)
+                junction_grp
                     .selectAll('.ss5p')
                     .data([d])
                     .enter()
@@ -298,29 +308,30 @@ SpliceGraph.prototype.init = function (sg_div) {
                     .ss5p(x, y, exon_height, gene.reads, gene.junction_types, experiment)
             });
 
-        svg.selectAll('.ir-line')
+        svg.selectAll('.ir-grp')
             .data(gene.junctions.filter(function (j) {
                 return j.intron_retention
             }))
             .enter()
-            .append('polyline')
-            .ir_lines(x, y, gene.strand);
+            .append('g')
+            .attr('class', 'ir-grp')
+            .each(function (d) {
+                var ir_grp = d3.select(this);
+                ir_grp
+                    .selectAll('.ir-lines')
+                    .data([d])
+                    .enter()
+                    .append('polyline')
+                    .ir_lines(x, y, gene.strand);
 
-        svg.selectAll('.half-exon')
-            .data(gene.exons.filter(function (d) {
-                return [4, 5].includes(gene.exon_types[d.start][d.end][experiment])
-            }))
-            .enter()
-            .append('polyline')
-            .half_exons(x, y, exon_height, gene.exon_types, experiment);
+                ir_grp
+                    .selectAll('.ir-reads')
+                    .data([d])
+                    .enter()
+                    .append('text')
+                    .ir_reads(x, y, exon_height, font_size, gene.strand, gene.reads, experiment);
+            });
 
-        svg.selectAll('.ir-reads')
-            .data(gene.junctions.filter(function (j) {
-                return j.intron_retention
-            }))
-            .enter()
-            .append('text')
-            .ir_reads(x, y, exon_height, font_size, gene.strand, gene.reads, experiment);
 
     })
 };

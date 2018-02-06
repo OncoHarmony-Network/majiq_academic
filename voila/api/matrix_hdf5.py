@@ -42,7 +42,6 @@ class MatrixHdf5:
         for key in keys:
             yield key, lsv_grp[key].value
 
-
     @property
     def prior(self):
         return self.h['prior'].value
@@ -129,7 +128,7 @@ class MatrixType(ABC):
         return self._lsv_type
 
     @property
-    def coordinates(self):
+    def reference_exon(self):
         lsv_coords = self.lsv_id.split(':')[-1]
         if lsv_coords.startswith('-1'):
             coords = (-1, lsv_coords.split('-')[-1])
@@ -211,9 +210,11 @@ class DeltaPsi(MatrixHdf5):
             super().__init__(matrix_hdf5, lsv_id, fields)
 
         def add(self, **kwargs):
-            bins_list = kwargs.get('bins', [])
+            bins_list = kwargs.get('bins')
             bins = [collapse_matrix(bins) for bins in bins_list]
             kwargs['bins'] = bins
+            junctions = kwargs.get('junctions')
+            kwargs['junctions'] = junctions.astype(int)
             super().add(**kwargs)
 
     def delta_psi(self, lsv_id):

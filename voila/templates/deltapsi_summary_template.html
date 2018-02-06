@@ -96,12 +96,13 @@
                         </tr>
                         </tfoot>
                         <tbody>
-                        {% for lsv in lsvs[gene.id] %}
+                        {% for lsv_id in lsv_ids[gene.id] %}
+                            {% set lsv = delta_psi_lsv(lsv_id) %}
                             <tr class="lsvrow" data-njuncs="" data-nexons="">
-                                <td>
+                                <td data-lsv-id="{{ lsv.lsv_id }}">
                                     <form class='highlight-lsv'>
                                         <label>
-                                            <input class="highlight" type="checkbox" value="highlight">
+                                            <input class="highlight-btn" type="checkbox" value="highlight">
                                             Highlight
                                         </label>
                                         <label>
@@ -136,7 +137,7 @@
 
                                 <td>
                                     <p>
-                                        {% set ucsc_coordinates = gene.lsv_ucsc_coordinates(lsv.lsv_id) %}
+                                        {% set ucsc_coordinates = gene.lsv_ucsc_coordinates(lsv) %}
                                         <a href="http://genome.ucsc.edu/cgi-bin/hgTracks?db={{ genome }}&position={{ gene.chromosome }}:{{ ucsc_coordinates.start }}-{{ ucsc_coordinates.end }}"
                                            target="_blank">
                                             <img src="static/img/icons/ucsc3.png" title="View in UCSC Genome Browser"/>
@@ -175,7 +176,7 @@
                                         <option value="{{ mark }}">{{ mark }}</option>
                                     {% endif %}
                                 {%- endfor %}
-                                <option value="{{ lsvs|length }}">All</option>
+                                <option value="{{ lsv_ids|length }}">All</option>
                             </select>
                         </form>
                     </div>

@@ -8,8 +8,8 @@ from voila.api.sql import SQL
 
 Session = sessionmaker()
 
-#default_commit_on_count = 100000
-default_commit_on_count = 1000
+default_commit_on_count = 100000
+
 
 class SpliceGraphSQL(SQL):
     def __init__(self, filename, delete=False):
@@ -87,14 +87,9 @@ class Exons(SpliceGraphSQL):
             alt_starts = kwargs.pop('alt_starts', [])
 
             exon = model.Exon(gene_id=self.gene_id, start=self.start, end=self.end, **kwargs)
-
-            for ce_start, ce_end in coords_extra:
-                exon.coords_extra.append(model.CoordsExtra(start=int(ce_start), end=int(ce_end)))
-            for alt_end in alt_ends:
-                exon.alt_ends.append(model.AltEnds(coordinate=int(alt_end)))
-            for alt_start in alt_starts:
-                exon.alt_starts.append(model.AltStarts(coordinate=int(alt_start)))
-
+            exon.coords_extra = [model.CoordsExtra(start=int(s), end=int(e)) for s, e in coords_extra]
+            exon.alt_ends = [model.AltEnds(coordinate=int(alt_end)) for alt_end in alt_ends]
+            exon.alt_starts = [model.AltStarts(coordinate=int(alt_start)) for alt_start in alt_starts]
 
             self.sql.session_add(exon)
             self.sql.commit(default_commit_on_count)
@@ -130,9 +125,7 @@ class Junctions(SpliceGraphSQL):
             reads = kwargs.pop('reads', [])
 
             junc = model.Junction(gene_id=self.gene_id, start=self.start, end=self.end, **kwargs)
-
-            for r, e in reads:
-                junc.reads.append(model.Reads(reads=int(r), experiment_name=e))
+            junc.reads = [model.Reads(reads=int(r), experiment_name=e) for r, e in reads]
 
             self.sql.session_add(junc)
             self.sql.commit(default_commit_on_count)

@@ -25,7 +25,7 @@ class ViewPsi(Psi):
         def get(self, *args):
             yield 'lsv_id', self.lsv_id
             yield '_id', self.lsv_id
-            yield 'coordinates', tuple(self.coordinates)
+            yield 'reference_exon', tuple(self.reference_exon)
             yield 'gene_id', self.gene_id
 
             if not args:
@@ -38,6 +38,10 @@ class ViewPsi(Psi):
                     yield 'group_means_rounded', dict(self.group_means_rounded)
                 else:
                     yield from super().get(key)
+
+        @property
+        def junctions(self):
+            return next(super().get('junctions'))[1]
 
         @property
         def means(self):
@@ -136,7 +140,7 @@ class ViewDeltaPsi(DeltaPsi):
         def get(self, *args):
             yield 'lsv_id', self.lsv_id
             yield '_id', self.lsv_id
-            yield 'coordinates', self.coordinates
+            yield 'reference_exon', self.reference_exon
             yield 'excl_incl', self.excl_incl
 
             if not args:
@@ -152,6 +156,10 @@ class ViewDeltaPsi(DeltaPsi):
                     yield 'means_rounded', self.means_rounded
                 else:
                     yield from super().get(key)
+
+        @property
+        def junctions(self):
+            return next(super().get('junctions'))[1]
 
         @property
         def bins(self):

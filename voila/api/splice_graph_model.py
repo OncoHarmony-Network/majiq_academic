@@ -283,10 +283,11 @@ class Gene(Base):
             if coords_list == [exon.start, exon.end]:
                 return exon
 
-    def lsv_exons(self, lsv_id, lsv_junctions=None):
-        is_target = lsv_id.split(':')[-2] == 't'
+    def lsv_exons(self, lsv, lsv_junctions=None):
+        lsv_id = lsv.lsv_id
         if lsv_junctions is None:
-            lsv_junctions = self.lsv_junctions(lsv_id)
+            lsv_junctions = self.lsv_junctions(lsv)
+        is_target = lsv_id.split(':')[-2] == 't'
 
         def find_exons():
             yield self.lsv_reference_exon(lsv_id)
@@ -310,33 +311,14 @@ class Gene(Base):
 
         yield from sorted(find_exons(), key=lambda e: [e.start, e.end])
 
-    def lsv_junctions(self, lsv_id):
-        is_target = lsv_id.split(':')[-2] == 't'
-        exon = self.lsv_reference_exon(lsv_id)
+    def lsv_junctions(self, lsv):
+        for start, end in lsv.junctions:
+            for junc in self.junctions:
+                if [start, end] == [junc.start, junc.end]:
+                    yield junc
 
-        def find_junctions():
-            if is_target:
-                if self.strand == '+':
-                    yield from exon.a5
-                else:
-                    yield from exon.a3
-            else:
-                if self.strand == '+':
-                    yield from exon.a3
-                else:
-                    yield from exon.a5
-
-        is_neg_strand = self.strand == '-'
-
-        if is_neg_strand:
-            key = lambda j: [not bool(j.intron_retention), j.start, j.end]
-        else:
-            key = lambda j: [bool(j.intron_retention), j.start, j.end]
-
-        yield from sorted(find_junctions(), key=key, reverse=is_neg_strand)
-
-    def lsv_ucsc_coordinates(self, lsv_id):
-        exons = tuple(self.lsv_exons(lsv_id))
+    def lsv_ucsc_coordinates(self, lsv):
+        exons = tuple(self.lsv_exons(lsv))
         start_exon = sorted(e.start for e in exons if e.start != -1)[0]
         end_exon = sorted(e.end for e in exons if e.end != -1)[-1]
         return {'start': start_exon, 'end': end_exon}

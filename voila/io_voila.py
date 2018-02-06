@@ -239,8 +239,9 @@ def delta_psi_tab_output(args, voila_links):
                 for lsv_id in m.view_lsv_ids(args, gene_id):
 
                     lsv = m.delta_psi(lsv_id)
-                    lsv_junctions = tuple(gene.lsv_junctions(lsv_id))
-                    lsv_exons = tuple(gene.lsv_exons(lsv_id, lsv_junctions))
+
+                    lsv_junctions = tuple(gene.lsv_junctions(lsv))
+                    lsv_exons = tuple(gene.lsv_exons(lsv, lsv_junctions))
                     group_means = tuple(lsv.group_means)
                     excl_incl = tuple(lsv.excl_incl)
 
@@ -324,8 +325,8 @@ def psi_tab_output(args, voila_links):
 
                 for lsv_id in m.view_lsv_ids(args, gene_id):
                     lsv = m.psi(lsv_id)
-                    lsv_junctions = tuple(gene.lsv_junctions(lsv_id))
-                    lsv_exons = tuple(gene.lsv_exons(lsv_id, lsv_junctions))
+                    lsv_junctions = tuple(gene.lsv_junctions(lsv))
+                    lsv_exons = tuple(gene.lsv_exons(lsv, lsv_junctions))
 
                     row = {
                         '#Gene Name': gene.name,
