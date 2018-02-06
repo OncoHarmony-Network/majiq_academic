@@ -99,6 +99,13 @@ def calc_independent(args):
 
 
 class independent(BasicPipeline):
+
+    def store_results(self, output_file, results, msg_type, junc_info):
+        pass
+        # lsv_graph = self.lsv_type_dict[results[-1]]
+        # output_h5dfp.add_lsv(VoilaLsv(bins_list=None, lsv_graphic=lsv_graph, psi1=None, psi2=None,
+        #                               means_psi1=None, means_psi2=None, het=val.get_value()[0]))
+
     def run(self):
         self.independent()
 

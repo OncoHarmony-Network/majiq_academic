@@ -42,6 +42,13 @@ def psi_quantification(list_of_lsv, chnk, conf, logger):
 
 
 class CalcPsi(BasicPipeline):
+
+    def store_results(self, output, results, msg_type, extra={}):
+
+        lsv_type = self.lsv_type_dict[results[2]]
+        output.psi(results[2]).add(lsv_type=lsv_type, bins=results[0], means=results[1],
+                                   junctions=extra['junc_info'][results[2]])
+
     def run(self):
         self.calcpsi()
 
@@ -63,7 +70,7 @@ class CalcPsi(BasicPipeline):
         self.lsv_type_dict = manager.dict()
 
         self.nbins = 40
-        self.queue = mp.Queue()
+        self.queue = manager.Queue()
         self.lock = [mp.Lock() for xx in range(self.nthreads)]
         junc_info = {}
         list_of_lsv = majiq_io.extract_lsv_summary(self.files, minnonzero=self.minpos, types_dict=self.lsv_type_dict,
@@ -86,8 +93,8 @@ class CalcPsi(BasicPipeline):
                 out_h5p.experiment_names = [exps]
                 out_h5p.group_names = [self.name]
                 # out_h5p.add_experiments(group_name=self.name, experiment_names=exps)
-                queue_manager(out_h5p, self.lock, self.queue, num_chunks=nthreads, lsv_type=self.lsv_type_dict,
-                              junc_info=junc_info, logger=logger)
+                queue_manager(out_h5p, self.lock, self.queue, num_chunks=nthreads, func=self.store_results,
+                              logger=logger, junc_info=junc_info)
 
             pool.join()
 

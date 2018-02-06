@@ -60,6 +60,14 @@ prior_conf = collections.namedtuple('conf', 'iter plotpath breakiter names binsi
 
 class DeltaPsi(BasicPipeline):
 
+    def store_results(self, output_file, results, msg_type, extra={}):
+
+        lsv_type = self.lsv_type_dict[results[5]]
+        output_file.delta_psi(results[5]).add(lsv_type=lsv_type, bins=results[0],
+                                              group_bins=[results[1], results[2]],
+                                              group_means=[results[3], results[4]],
+                                              junctions=extra['junc_info'][results[5]])
+
     def run(self):
         self.deltapsi()
 
@@ -82,7 +90,7 @@ class DeltaPsi(BasicPipeline):
         manager = mp.Manager()
         self.lsv_type_dict = manager.dict()
         self.lock = [mp.Lock() for xx in range(self.nthreads)]
-        self.queue = mp.Queue()
+        self.queue = manager.Queue()
 
         weights = [None, None]
 
@@ -134,9 +142,9 @@ class DeltaPsi(BasicPipeline):
                 exps1 = [os.path.splitext(os.path.basename(xx))[0] for xx in self.files1]
                 exps2 = [os.path.splitext(os.path.basename(xx))[0] for xx in self.files2]
                 out_h5p.experiment_names = [exps1, exps2]
-                queue_manager(out_h5p, self.lock, self.queue, num_chunks=nthreads, logger=logger, junc_info=junc_info,
-                              lsv_type=self.lsv_type_dict)
-            self.queue.close()
+                queue_manager(out_h5p, self.lock, self.queue, num_chunks=nthreads, func=self.store_results,
+                              logger=logger, junc_info=junc_info)
+
 
             pool.join()
 

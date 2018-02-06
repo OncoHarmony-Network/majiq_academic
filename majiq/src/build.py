@@ -20,9 +20,8 @@ from majiq.src.basic_pipeline import BasicPipeline, pipeline_run
 from majiq.src.config import Config
 from majiq.src.constants import *
 from majiq.src.polyfitnb import fit_nb
-from majiq.src.voila_wrapper import generate_splicegraph
+from majiq.src.voila_wrapper import generate_splicegraph, update_splicegraph_junction
 from voila.api import SpliceGraph
-
 from quicksect import IntervalNode, Interval, IntervalTree
 
 import math
@@ -187,6 +186,46 @@ def parsing_files(sam_file_list, chnk, conf, logger):
 
 
 class Builder(BasicPipeline):
+
+    def store_results(self, output, results, msg_type, extra={}):
+        if msg_type == QUEUE_MESSAGE_BUILD_JUNCTION:
+
+            info_junc = results[:-1]
+            gidx = extra['group_names'][results[-1]]
+            try:
+                extra['gen_dict'][info_junc][gidx] += 1
+            except KeyError:
+                extra['gen_dict'][info_junc] = np.zeros(len(extra['group_names']))
+                extra['gen_dict'][info_junc][gidx] = 1
+
+            if extra['gen_dict'][info_junc][gidx] == extra['min_experients'] and info_junc not in extra['found']:
+                try:
+                    extra['elem_dict'][info_junc[0]].append([info_junc[1], info_junc[2], 0, J_TYPE])
+                except KeyError:
+                    extra['elem_dict'][info_junc[0]] = [[info_junc[1], info_junc[2], 0, J_TYPE]]
+                    extra['found'][info_junc] = 1
+
+        elif msg_type == QUEUE_MESSAGE_BUILD_INTRON:
+            info_intron =results[:-1]
+            gidx = extra['group_names'][results[-1]]
+            try:
+                extra['gen_dict'][info_intron][gidx] += 1
+            except KeyError:
+                extra['gen_dict'][info_intron] = np.zeros(len(extra['group_names']))
+                extra['gen_dict'][info_intron][gidx] = 1
+
+            if extra['gen_dict'][info_intron][gidx] == extra['min_experients'] and info_intron not in extra['found']:
+                try:
+                    extra['elem_dict'][info_intron[0]].append([info_intron[1], info_intron[2], 0, IR_TYPE])
+                except KeyError:
+                    extra['elem_dict'][info_intron[0]] = [[info_intron[1], info_intron[2], 0, IR_TYPE]]
+                    extra['found'][info_intron] = 1
+
+        elif msg_type == QUEUE_MESSAGE_SPLICEGRAPH:
+            info = results
+            update_splicegraph_junction(output, info[0], info[1], info[2], info[3], info[4])
+
+
 
     def parse_denovo_elements(self, logger):
 
