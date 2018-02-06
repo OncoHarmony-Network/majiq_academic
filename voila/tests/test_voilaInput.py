@@ -14,7 +14,7 @@ class TestVoilaInput(TestCase):
     vi = getVI()
 
     def test_get_lsvs(self):
-        self.assertEqual(self.vi.get_lsv_ids(), self.vi.lsvs)
+        self.assertEqual(self.vi.view_lsv_ids(), self.vi.lsvs)
 
     def test_add_lsv(self):
         new_lsv = self.vi.lsvs[0]

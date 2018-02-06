@@ -82,7 +82,7 @@ class ViewPsi(Psi):
     def psi(self, lsv_id):
         return self._ViewPsi(self, lsv_id)
 
-    def get_gene_ids(self, args):
+    def view_gene_ids(self, args):
         if args.gene_ids:
             yield from args.gene_ids
         elif args.lsv_ids:
@@ -91,16 +91,16 @@ class ViewPsi(Psi):
 
         yield from self.h['lsvs'].keys()
 
-    def get_lsv_count(self, args):
-        return len(tuple(self.get_lsv_ids(args)))
+    def view_lsv_count(self, args):
+        return len(tuple(self.view_lsv_ids(args)))
 
-    def get_lsv_ids(self, args, gene_id=None):
+    def view_lsv_ids(self, args, gene_id=None):
         lsv_ids = args.lsv_ids
 
         if gene_id:
             gene_ids = (gene_id,)
         else:
-            gene_ids = self.get_gene_ids(args)
+            gene_ids = self.view_gene_ids(args)
 
         for gene_id in gene_ids:
             for lsv_id in self.lsv_ids(gene_id):
@@ -112,7 +112,7 @@ class ViewPsi(Psi):
             args = [iter(iterable)] * n
             return zip_longest(*args, fillvalue=fillvalue)
 
-        for page in grouper(self.get_gene_ids(args), constants.MAX_GENES):
+        for page in grouper(self.view_gene_ids(args), constants.MAX_GENES):
             yield tuple(p for p in page if p is not None)
 
     @property
@@ -126,8 +126,8 @@ class ViewPsi(Psi):
 
         return metadata
 
-    def get_page_count(self, args):
-        gene_count = len(tuple(self.get_gene_ids(args)))
+    def page_count(self, args):
+        gene_count = len(tuple(self.view_gene_ids(args)))
         return math.ceil(gene_count / constants.MAX_GENES)
 
 
@@ -199,7 +199,7 @@ class ViewDeltaPsi(DeltaPsi):
     def delta_psi(self, lsv_id):
         return self._ViewDeltaPsi(self, lsv_id)
 
-    def get_lsv_ids(self, args, gene_id=None):
+    def view_lsv_ids(self, args, gene_id=None):
         """
         Get list of LSVs from voila file.
         :return: list
@@ -213,7 +213,7 @@ class ViewDeltaPsi(DeltaPsi):
         if gene_id:
             gene_ids = (gene_id,)
         else:
-            gene_ids = self.get_gene_ids(args)
+            gene_ids = self.view_gene_ids(args)
 
         for gene_id in gene_ids:
             for lsv_id in self.lsv_ids(gene_id):
@@ -221,10 +221,10 @@ class ViewDeltaPsi(DeltaPsi):
                     if not threshold or VoilaLsv.is_lsv_changing(self.delta_psi(lsv_id).means, threshold):
                         yield lsv_id
 
-    def get_lsv_count(self, args):
-        return len(tuple(self.get_lsv_ids(args)))
+    def view_lsv_count(self, args):
+        return len(tuple(self.view_lsv_ids(args)))
 
-    def get_gene_ids(self, args):
+    def view_gene_ids(self, args):
         if args.gene_ids:
             gene_ids = args.gene_ids
         elif args.lsv_ids:
@@ -233,7 +233,7 @@ class ViewDeltaPsi(DeltaPsi):
             gene_ids = self.h['lsvs'].keys()
 
         for gene_id in gene_ids:
-            if any(self.get_lsv_ids(args, gene_id)):
+            if any(self.view_lsv_ids(args, gene_id)):
                 yield gene_id
 
     @property
@@ -253,9 +253,9 @@ class ViewDeltaPsi(DeltaPsi):
             args = [iter(iterable)] * n
             return zip_longest(*args, fillvalue=fillvalue)
 
-        for page in grouper(self.get_gene_ids(args), constants.MAX_GENES):
+        for page in grouper(self.view_gene_ids(args), constants.MAX_GENES):
             yield tuple(p for p in page if p is not None)
 
     def get_page_count(self, args):
-        gene_count = len(tuple(self.get_gene_ids(args)))
+        gene_count = len(tuple(self.view_gene_ids(args)))
         return math.ceil(gene_count / constants.MAX_GENES)

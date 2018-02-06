@@ -4,11 +4,12 @@ import queue
 import sys
 import traceback
 
+import psutil
+
 import majiq.src.logger as majiq_logger
 from majiq.src.constants import *
 from majiq.src.voila_wrapper import update_splicegraph_junction
 from voila.vlsv import VoilaLsv
-import psutil
 
 
 def process_wrapper(args_vals):
@@ -28,7 +29,7 @@ def process_wrapper(args_vals):
 
     finally:
         if process_conf.mem_profile:
-            mem_allocated = int(psutil.Process().memory_info().rss)/(1024**2)
+            mem_allocated = int(psutil.Process().memory_info().rss) / (1024 ** 2)
             logger.info("Max Memory used %.2f MB" % mem_allocated)
 
         qm = QueueMessage(QUEUE_MESSAGE_END_WORKER, None, chnk)
@@ -145,14 +146,15 @@ def queue_manager(output_h5dfp, lock_array, result_queue, num_chunks, out_inplac
             elif val.get_type() == QUEUE_MESSAGE_PSI_RESULT:
                 results = val.get_value()
                 lsv_type = kwargs['lsv_type'][results[2]]
-                output_h5dfp.psi(results[2]).add(lsv_type=lsv_type, bins=results[0], means=results[1])
+                output_h5dfp.psi(results[2]).add(lsv_type=lsv_type, bins=results[0], means=results[1], junctions=[[]])
 
             elif val.get_type() == QUEUE_MESSAGE_DELTAPSI_RESULT:
                 results = val.get_value()
                 lsv_type = kwargs['lsv_type'][results[5]]
+
                 output_h5dfp.delta_psi(results[5]).add(lsv_type=lsv_type, bins=results[0],
                                                        group_bins=[results[1], results[2]],
-                                                       group_means=[results[3], results[4]])
+                                                       group_means=[results[3], results[4]], junctions=[[]])
 
             elif val.get_type() == QUEUE_MESSAGE_HETER_DELTAPSI:
                 list_of_lsv_graphics = kwargs['list_of_lsv_graphics']
@@ -160,7 +162,7 @@ def queue_manager(output_h5dfp, lock_array, result_queue, num_chunks, out_inplac
                 output_h5dfp.add_lsv(VoilaLsv(bins_list=None, lsv_graphic=lsv_graph, psi1=None, psi2=None,
                                               means_psi1=None, means_psi2=None, het=val.get_value()[0]))
 
-            #TODO: POSSIBLE REMOVE
+            # TODO: POSSIBLE REMOVE
             elif val.get_type() == QUEUE_MESSAGE_BOOTSTRAP:
                 out_inplace[0].extend(val.get_value()[0])
                 out_inplace[1].extend(val.get_value()[1])

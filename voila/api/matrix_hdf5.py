@@ -11,7 +11,6 @@ def lsv_id_to_gene_id(lsv_id):
     return ':'.join(lsv_id.split(':')[:-2])
 
 
-
 class MatrixHdf5:
     def __init__(self, filename, mode='r'):
         filename = os.path.expanduser(filename)
@@ -42,6 +41,7 @@ class MatrixHdf5:
 
         for key in keys:
             yield key, lsv_grp[key].value
+
 
     @property
     def prior(self):
@@ -207,7 +207,7 @@ class MatrixType(ABC):
 class DeltaPsi(MatrixHdf5):
     class _DeltaPsi(MatrixType):
         def __init__(self, matrix_hdf5, lsv_id):
-            fields = ('bins', 'group_bins', 'group_means', 'lsv_type')
+            fields = ('bins', 'group_bins', 'group_means', 'lsv_type', 'junctions')
             super().__init__(matrix_hdf5, lsv_id, fields)
 
         def add(self, **kwargs):
@@ -223,7 +223,7 @@ class DeltaPsi(MatrixHdf5):
 class Psi(MatrixHdf5):
     class _Psi(MatrixType):
         def __init__(self, matrix_hdf5, lsv_id):
-            fields = ('bins', 'means', 'lsv_type')
+            fields = ('bins', 'means', 'lsv_type', 'junctions')
             super().__init__(matrix_hdf5, lsv_id, fields)
 
     def psi(self, lsv_id):

@@ -17,9 +17,28 @@ class GeneIdNotFoundInVoilaFile(VoilaException):
         Error thrown when Gene ID cannot be foudn in Voila file.
         :param gene_id: 
         """
-        m = 'Gene ID {0} was not found in Voila file'.format(gene_id)
+        m = 'Gene ID "{0}" was not found in Voila file'.format(gene_id)
         super(GeneIdNotFoundInVoilaFile, self).__init__(m)
 
+
+class LsvIdNotFoundInVoilaFile(VoilaException):
+    def __init__(self, lsv_id):
+        """
+        Error thrown when Gene ID cannot be foudn in Voila file.
+        :param lsv_id: 
+        """
+        m = 'LSV ID "{0}" was not found in Voila file'.format(lsv_id)
+        super(LsvIdNotFoundInVoilaFile, self).__init__(m)
+
+
+class AttributeNotFoundInVoilaFile(VoilaException):
+    def __init__(self, lsv_id, attr):
+        """
+        Error thrown when Gene ID cannot be foudn in Voila file.
+        :param lsv_id:
+        """
+        m = 'LSV ID {0} the attribute "{1}" was not found in Voila file'.format(lsv_id, attr)
+        super(AttributeNotFoundInVoilaFile, self).__init__(m)
 
 class NoExonsInGene(VoilaException):
     def __init__(self, gene_id):
@@ -74,6 +93,7 @@ class NotNumpyObject(VoilaException):
     def __init__(self, obj):
         m = 'Must be a numpy object: {0} - {1}'.format(type(obj), obj)
         super(NotNumpyObject, self).__init__(m)
+
 
 class NotCorrectUnsignedBits(VoilaException):
     pass
