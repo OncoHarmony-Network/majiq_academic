@@ -490,9 +490,10 @@ Lsv.prototype.drawDeltaLSVCompactSVG = function (el, lsv) {
     var border_frame = 2;
     var MIN_DELTAPSI = .05;
 
+    d3.select(el).selectAll('*').remove();
+
     var svgContainer = d3.select(el)
         .append("svg")
-        .attr("class", "excl-incl-rect")
         .attr("width", width)
         .attr("height", height);
 

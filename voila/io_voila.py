@@ -233,10 +233,10 @@ def delta_psi_tab_output(args, voila_links):
         with open(tsv_file, 'w') as tsv:
             writer = csv.DictWriter(tsv, fieldnames=fieldnames, delimiter='\t')
             writer.writeheader()
-            for gene_id in m.get_gene_ids(args):
+            for gene_id in m.view_gene_ids(args):
                 gene = sg.gene(gene_id).get
 
-                for lsv_id in m.get_lsv_ids(args, gene_id):
+                for lsv_id in m.view_lsv_ids(args, gene_id):
 
                     lsv = m.delta_psi(lsv_id)
                     lsv_junctions = tuple(gene.lsv_junctions(lsv_id))
@@ -319,10 +319,10 @@ def psi_tab_output(args, voila_links):
         with open(tsv_file, 'w') as tsv:
             writer = csv.DictWriter(tsv, fieldnames=fieldnames, delimiter='\t')
             writer.writeheader()
-            for gene_id in m.get_gene_ids(args):
+            for gene_id in m.view_gene_ids(args):
                 gene = sg.gene(gene_id).get
 
-                for lsv_id in m.get_lsv_ids(args, gene_id):
+                for lsv_id in m.view_lsv_ids(args, gene_id):
                     lsv = m.psi(lsv_id)
                     lsv_junctions = tuple(gene.lsv_junctions(lsv_id))
                     lsv_exons = tuple(gene.lsv_exons(lsv_id, lsv_junctions))

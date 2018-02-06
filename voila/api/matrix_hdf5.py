@@ -42,33 +42,40 @@ class MatrixHdf5:
         for key in keys:
             yield key, lsv_grp[key].value
 
+
+    @property
+    def prior(self):
+        return self.h['prior'].value
+
+    @prior.setter
+    def prior(self, p):
+        self.h.create_dataset('prior', data=collapse_matrix(p))
+
     @property
     def analysis_type(self):
         return self.h['metadata']['analysis_type'].value
 
     @analysis_type.setter
-    def analysis_type(self, analysis_type):
-        self.h.create_dataset('metadata/analysis_type', data=analysis_type)
+    def analysis_type(self, a):
+        self.h.create_dataset('metadata/analysis_type', data=a)
 
     @property
     def group_names(self):
         return self.h['metadata']['group_names'].value
 
     @group_names.setter
-    def group_names(self, names):
+    def group_names(self, n):
         dt = h5py.special_dtype(vlen=numpy.unicode)
-        self.h.create_dataset(os.path.join('metadata', 'group_names'),
-                              data=numpy.array(names, dtype=dt))
+        self.h.create_dataset('metadata/group_names', data=numpy.array(n, dtype=dt))
 
     @property
     def experiment_names(self):
         return self.h['metadata']['experiment_names'].value
 
     @experiment_names.setter
-    def experiment_names(self, names):
+    def experiment_names(self, n):
         dt = h5py.special_dtype(vlen=numpy.unicode)
-        self.h.create_dataset(os.path.join('metadata', 'experiment_names'),
-                              data=numpy.array(names, dtype=dt))
+        self.h.create_dataset('metadata/experiment_names', data=numpy.array(n, dtype=dt))
 
     @property
     def metadata(self):
@@ -200,7 +207,7 @@ class MatrixType(ABC):
 class DeltaPsi(MatrixHdf5):
     class _DeltaPsi(MatrixType):
         def __init__(self, matrix_hdf5, lsv_id):
-            fields = ('bins', 'group_bins', 'group_means', 'lsv_type')
+            fields = ('bins', 'group_bins', 'group_means', 'lsv_type', 'junctions')
             super().__init__(matrix_hdf5, lsv_id, fields)
 
         def add(self, **kwargs):
@@ -216,7 +223,7 @@ class DeltaPsi(MatrixHdf5):
 class Psi(MatrixHdf5):
     class _Psi(MatrixType):
         def __init__(self, matrix_hdf5, lsv_id):
-            fields = ('bins', 'means', 'lsv_type')
+            fields = ('bins', 'means', 'lsv_type', 'junctions')
             super().__init__(matrix_hdf5, lsv_id, fields)
 
     def psi(self, lsv_id):

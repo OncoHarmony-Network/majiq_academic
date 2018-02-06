@@ -122,7 +122,9 @@ class Junction(Base):
     def get_junction_types(self, experiment_names):
         for experiment_name in experiment_names:
             reads = self.get_reads(experiment_name)
+
             junc_type = constants.JUNCTION_TYPE_RNASEQ
+
             if reads == 0 and self.annotated:
                 if self.reads_sum(experiment_names) - reads > 0:
                     junc_type = constants.JUNCTION_TYPE_DB_OTHER_RNASEQ
@@ -148,12 +150,17 @@ class Junction(Base):
         except AttributeError:
             return 0
 
+    def get_experiment(self):
+        j = dict(self)
+        j['intron_retention'] = self.get_intron_retention_type()
+        return j
+
     def get_intron_retention_type(self):
         if self.intron_retention:
-            for exon in (e for e in self.gene.exons if not e.intron_retention):
-                if self.start == exon.end:
+            for exon in filter(lambda e: not e.intron_retention, self.gene.exons):
+                if self.start in exon:
                     return constants.IR_TYPE_START
-                elif self.end == exon.start:
+                elif self.end in exon:
                     return constants.IR_TYPE_END
 
         return self.intron_retention
@@ -319,7 +326,14 @@ class Gene(Base):
                 else:
                     yield from exon.a5
 
-        yield from sorted(find_junctions(), key=lambda j: [bool(j.intron_retention), j.start, j.end])
+        is_neg_strand = self.strand == '-'
+
+        if is_neg_strand:
+            key = lambda j: [not bool(j.intron_retention), j.start, j.end]
+        else:
+            key = lambda j: [bool(j.intron_retention), j.start, j.end]
+
+        yield from sorted(find_junctions(), key=key, reverse=is_neg_strand)
 
     def lsv_ucsc_coordinates(self, lsv_id):
         exons = tuple(self.lsv_exons(lsv_id))
@@ -336,7 +350,7 @@ class Gene(Base):
         exons = sorted(exons, key=lambda e: (e['start'], e['end']))
         gene['exons'] = exons
 
-        gene['junctions'] = tuple(dict(j) for j in self.junctions)
+        gene['junctions'] = tuple(j.get_experiment() for j in self.junctions)
 
         gene['start'] = self.start
         gene['end'] = self.end
@@ -369,6 +383,7 @@ class Gene(Base):
                     exon_end[combined_name] = min(exon_end[x] for x in experiment_names)
 
             for junc in self.junctions:
+
                 for experiment_name in experiment_names:
                     try:
                         reads_start = gene['reads'][junc.start]
