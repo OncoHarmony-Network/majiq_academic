@@ -139,8 +139,8 @@ cdef int _deltapsi_posterior(np.ndarray psi1, np.ndarray psi2, np.ndarray prior_
         mu_psi1_m.append(float(junc + alpha_0) / (alls1[m] + alpha_0 + beta_0))
         data_given_psi1 = np.log(_prob_data_sample_given_psi(junc, alls1[m], nbins, alpha_0, beta_0))
         #print("1", junc, alls1[m], data_given_psi1)
-
         psi_v1 = data_given_psi1.reshape(nbins, -1)
+
         post_psi1 += np.exp(data_given_psi1 - scipy.misc.logsumexp(data_given_psi1))
 
         junc = np.around(psi2[:, p_idx, m].sum())
@@ -449,7 +449,7 @@ def gen_prior_matrix(object lsv_type, dict lsv_empirical_psi1, dict lsv_empirica
                 continue
 
             logger.debug("Parametrizing 'best set'...%s", prior_idx)
-            mixture_pdf = majiq_delta.adjustdelta_lsv(best_delta_psi, iter, output, plotpath=plotpath,
+            mixture_pdf = majiq_delta.adjustdelta(best_delta_psi, iter, output, plotpath=plotpath,
                                                       title=" ".join(names), njunc=nj, logger=logger)
             pmat = []
             for i in range(numbins):
