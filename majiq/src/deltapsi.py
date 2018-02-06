@@ -136,6 +136,7 @@ class DeltaPsi(BasicPipeline):
                 out_h5p.experiment_names = [exps1, exps2]
                 queue_manager(out_h5p, self.lock, self.queue, num_chunks=nthreads, logger=logger, junc_info=junc_info,
                               lsv_type=self.lsv_type_dict)
+            self.queue.close()
 
             pool.join()
 
