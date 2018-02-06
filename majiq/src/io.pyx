@@ -221,7 +221,7 @@ cdef dict _get_extract_lsv_list(list list_of_lsv_id, list file_list):
             data = np.load(fp)
             for lsv_id in list_of_lsv_id:
                 try:
-                    cov = data[lsv_id][:, :-2]
+                    cov = data[lsv_id]
                 except KeyError:
                     continue
                 try:
@@ -240,13 +240,14 @@ cdef dict _get_extract_lsv_list(list list_of_lsv_id, list file_list):
 # API
 ##
 
-cpdef extract_lsv_summary(list files, int minnonzero, int min_reads, object types_dict, dict epsi=None,
-                          int percent=-1, object logger=None):
+cpdef list extract_lsv_summary(list files, int minnonzero, int min_reads, object types_dict, dict junc_info,
+                                dict epsi=None, int percent=-1, object logger=None):
     cdef dict lsv_list = {}
     cdef dict lsv_types = {}
     cdef int nfiles = len(files)
     cdef int fidx
     cdef str ff, xx
+    cdef dict lsv_junc_info = {}
     cdef np.ndarray mtrx, vals
 
     if percent == -1:
@@ -266,18 +267,20 @@ cpdef extract_lsv_summary(list files, int minnonzero, int min_reads, object type
             # print ([xx for xx in all_files['lsv_types']])
             lsv_types = {yy[0].decode('UTF-8'):yy[1].decode('UTF-8') for yy in all_files['lsv_types']}
             for xx in lsv_types.keys():
-                lsv_data = all_files[xx][:,-2:]
+                lsv_data = all_files['info_%s' % xx]
+                lsv_junc_info[xx] = lsv_data[:, :2]
                 try:
-                    lsv_list[xx] += int(np.any(np.logical_and(lsv_data[:, 0] >= minnonzero, lsv_data[:,1] >= min_reads)))
+                    lsv_list[xx] += int(np.any(np.logical_and(lsv_data[:, 3] >= minnonzero, lsv_data[:, 2] >= min_reads)))
                     if epsi is not None:
-                        epsi[xx] += lsv_data[:, 0]
+                        epsi[xx] += lsv_data[:, 2]
 
                 except KeyError:
-                    lsv_list[xx] = int(np.any(np.logical_and(lsv_data[:, 0] >= minnonzero, lsv_data[:,1] >= min_reads)))
+                    lsv_list[xx] = int(np.any(np.logical_and(lsv_data[:, 3] >= minnonzero, lsv_data[:, 2] >= min_reads)))
                     if epsi is not None:
-                        epsi[xx] = lsv_data[:, 0]
+                        epsi[xx] = lsv_data[:, 2]
 
         types_dict.update(lsv_types)
+        junc_info.update(lsv_junc_info)
 
     if epsi is not None:
         for xx in epsi.keys():
@@ -374,4 +377,13 @@ cpdef load_weights(list lsv_list, str outdir, str name):
             out_dict[xx] = all_wgts[xx]
 
     return out_dict
+
+
+#TODO: CHeck how to add metainformat
+cpdef add_metainfo():
+    pass
+            # with h5py.File('%s/%s.majiq' % (majiq_config.outDir, sam_file), 'w') as out_f:
+        #     out_f.attrs['sample_id'] = sam_file
+        #     out_f.attrs['date'] = datetime.datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S')
+        #     out_f.attrs['VERSION'] = VERSION
 

@@ -170,12 +170,6 @@ def parsing_files(sam_file_list, chnk, conf, logger):
         logger.debug("[%s] Fitting NB function with constitutive events..." % sam_file)
         fitfunc_r = fit_nb(junc_mtrx[indx, :], "%s/nbfit" % majiq_config.outDir, logger=logger)
 
-        # with h5py.File('%s/%s.majiq' % (majiq_config.outDir, sam_file), 'w') as out_f:
-        #     out_f.attrs['m_samples'] = process_conf.m
-        #     out_f.attrs['sample_id'] = sam_file
-        #     out_f.attrs['date'] = datetime.datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S')
-        #     out_f.attrs['VERSION'] = VERSION
-
         logger.info('Detecting lsvs')
         lsv_type_list = []
         lsv_dict = {}

@@ -139,6 +139,8 @@ cdef class LSV:
         cdef Junction xx
 
         type_dict.append((self.id, self.type))
+        values['info_%s' % self.id] = np.array([[xx.start, xx.end, junc_mtrx[xx.index].sum(),
+                                                 np.count_nonzero(junc_mtrx[xx.index])] for xx  in self.junctions])
 
         val = [junc_mtrx[xx.index] for xx  in self.junctions]
         values[self.id] = sample_junctions(np.array(val), fitfunc_r, majiq_config)

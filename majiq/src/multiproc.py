@@ -146,7 +146,8 @@ def queue_manager(output_h5dfp, lock_array, result_queue, num_chunks, out_inplac
             elif val.get_type() == QUEUE_MESSAGE_PSI_RESULT:
                 results = val.get_value()
                 lsv_type = kwargs['lsv_type'][results[2]]
-                output_h5dfp.psi(results[2]).add(lsv_type=lsv_type, bins=results[0], means=results[1], junctions=[[]])
+                output_h5dfp.psi(results[2]).add(lsv_type=lsv_type, bins=results[0], means=results[1],
+                                                 junctions=kwargs['junc_info'][results[2]])
 
             elif val.get_type() == QUEUE_MESSAGE_DELTAPSI_RESULT:
                 results = val.get_value()
@@ -154,7 +155,8 @@ def queue_manager(output_h5dfp, lock_array, result_queue, num_chunks, out_inplac
 
                 output_h5dfp.delta_psi(results[5]).add(lsv_type=lsv_type, bins=results[0],
                                                        group_bins=[results[1], results[2]],
-                                                       group_means=[results[3], results[4]], junctions=[[]])
+                                                       group_means=[results[3], results[4]],
+                                                       junctions=kwargs['junc_info'][results[5]])
 
             elif val.get_type() == QUEUE_MESSAGE_HETER_DELTAPSI:
                 list_of_lsv_graphics = kwargs['list_of_lsv_graphics']

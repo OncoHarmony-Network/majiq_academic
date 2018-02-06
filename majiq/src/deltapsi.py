@@ -87,9 +87,10 @@ class DeltaPsi(BasicPipeline):
         weights = [None, None]
 
         lsv_empirical_psi1 = {}
+        junc_info = {}
         list_of_lsv1 = majiq_io.extract_lsv_summary(self.files1, epsi=lsv_empirical_psi1, types_dict=self.lsv_type_dict,
                                                     minnonzero=self.minpos, min_reads=self.minreads,
-                                                    percent=self.min_exp, logger=logger)
+                                                    junc_info=junc_info, percent=self.min_exp, logger=logger)
         weights[0] = self.calc_weights(self.weights[0], list_of_lsv1, name=self.names[0], file_list=self.files1,
                                        logger=logger)
         logger.info("Group %s: %s LSVs" % (self.names[0], len(list_of_lsv1)))
@@ -97,7 +98,7 @@ class DeltaPsi(BasicPipeline):
         lsv_empirical_psi2 = {}
         list_of_lsv2 = majiq_io.extract_lsv_summary(self.files2, epsi=lsv_empirical_psi2, types_dict=self.lsv_type_dict,
                                                     minnonzero=self.minpos, min_reads=self.minreads,
-                                                    percent=self.min_exp, logger=logger)
+                                                    junc_info=junc_info, percent=self.min_exp, logger=logger)
         weights[1] = self.calc_weights(self.weights[1], list_of_lsv2, name=self.names[1], file_list=self.files2,
                                        logger=logger)
 
@@ -133,7 +134,7 @@ class DeltaPsi(BasicPipeline):
                 exps1 = [os.path.splitext(os.path.basename(xx))[0] for xx in self.files1]
                 exps2 = [os.path.splitext(os.path.basename(xx))[0] for xx in self.files2]
                 out_h5p.experiment_names = [exps1, exps2]
-                queue_manager(out_h5p, self.lock, self.queue, num_chunks=nthreads, logger=logger,
+                queue_manager(out_h5p, self.lock, self.queue, num_chunks=nthreads, logger=logger, junc_info=junc_info,
                               lsv_type=self.lsv_type_dict)
 
             pool.join()

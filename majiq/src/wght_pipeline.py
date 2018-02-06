@@ -39,9 +39,9 @@ class Weights(BasicPipeline):
 
         self.lock = [mp.Lock() for xx in range(self.nthreads)]
         self.queue = mp.Queue()
-
+        junc_info = {}
         list_of_lsv = majiq_io.extract_lsv_summary(self.files, minnonzero=self.minpos, types_dict=self.lsv_type_dict,
-                                                   min_reads=self.minreads, percent=self.min_exp,
+                                                   min_reads=self.minreads, percent=self.min_exp, junc_info=junc_info,
                                                    logger=logger)
 
         weights = self.calc_weights(self.weights, list_of_lsv, name=self.name, file_list=self.files, logger=logger)
