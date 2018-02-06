@@ -78,16 +78,17 @@
                         </tr>
                         </tfoot>
                         <tbody>
-                        {% for lsv in lsvs[gene.id] %}
+                        {% for lsv_id in lsv_ids[gene.id] %}
+                            {% set lsv = psi_lsv(lsv_id) %}
                             <tr class="lsvrow" data-njuncs="" data-nexons="">
-                                <td>
+                                <td data-lsv-id="{{ lsv.lsv_id }}">
                                     <form class='highlight-lsv'>
                                         <label>
-                                            <input class="highlight" type="checkbox" value="highlight">
+                                            <input class="highlight-btn" type="checkbox" value="highlight">
                                             Highlight
                                         </label>
                                         <label>
-                                            <input class="weighted" type="checkbox" value="weighted">
+                                            <input class="weighted-btn" type="checkbox" value="weighted">
                                             PSI Weighted
                                         </label>
                                     </form>
@@ -138,7 +139,7 @@
                                         <option value="{{ mark }}">{{ mark }}</option>
                                     {% endif %}
                                 {%- endfor %}
-                                <option value="{{ lsvs[gene.id]|length }}">All</option>
+                                <option value="{{ lsv_ids[gene.id]|length }}">All</option>
                             </select>
                         </form>
                     </div>

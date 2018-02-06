@@ -53,3 +53,11 @@
     width: 1000px;
     overflow-x: auto;
 }
+
+.highlight.lsv {
+    opacity: 1;
+}
+
+.highlight {
+    opacity: 0.1;
+}

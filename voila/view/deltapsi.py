@@ -1,10 +1,9 @@
 import errno
 import os
 
-from voila.api.view_splice_graph import ViewSpliceGraph
-
 from voila import constants, io_voila
 from voila.api.view_matrix import ViewDeltaPsi
+from voila.api.view_splice_graph import ViewSpliceGraph
 from voila.utils.run_voila_utils import table_marks_set, copy_static, get_env
 from voila.utils.voila_log import voila_log
 from voila.utils.voila_pool import VoilaPool
@@ -97,10 +96,7 @@ class DeltaPsi(Html):
                 page_name = cls.get_page_name(args, index)
                 next_page = cls.get_next_page(args, index, page_count)
                 prev_page = cls.get_prev_page(args, index)
-                lsv_dict = {gene_id: tuple(dict(m.delta_psi(lsv_id).get()) for lsv_id in m.view_lsv_ids(args, gene_id))
-                            for
-                            gene_id in genes}
-
+                lsv_dict = {gene_id: tuple(lsv_id for lsv_id in m.view_lsv_ids(args, gene_id)) for gene_id in genes}
                 table_marks = tuple(table_marks_set(len(gene_set)) for gene_set in lsv_dict)
 
                 with open(os.path.join(summaries_subfolder, page_name), 'w') as html:
@@ -114,7 +110,8 @@ class DeltaPsi(Html):
                             gtf=args.gtf,
                             group_names=group_names,
                             genes=[sg.gene(gene_id) for gene_id in genes],
-                            lsvs=lsv_dict,
+                            lsv_ids=lsv_dict,
+                            delta_psi_lsv=m.delta_psi,
                             metadata=metadata,
                             database_name=database_name,
                             genome=genome
