@@ -87,7 +87,7 @@ class CalcPsi(BasicPipeline):
                 out_h5p.group_names = [self.name]
                 # out_h5p.add_experiments(group_name=self.name, experiment_names=exps)
                 queue_manager(out_h5p, self.lock, self.queue, num_chunks=nthreads, lsv_type=self.lsv_type_dict,
-                              logger=logger)
+                              junc_info=junc_info, logger=logger)
 
             pool.join()
 
