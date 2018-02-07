@@ -42,7 +42,7 @@ cdef np.ndarray[DTYPE_t, ndim=2] _bootstrap_samples(np.ndarray[DTYPE_t, ndim=2] 
 
     """
 
-    cdef np.ndarray[DTYPE_t, ndim=2] all_samples = np.zeros(shape=(junction_list.shape[0], m+2), dtype=np.float)
+    cdef np.ndarray[DTYPE_t, ndim=2] all_samples = np.zeros(shape=(junction_list.shape[0], m), dtype=np.float)
     cdef int npos_mult
     cdef int iternumber
     cdef float r = 0
