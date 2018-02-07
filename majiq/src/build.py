@@ -225,8 +225,6 @@ class Builder(BasicPipeline):
             info = results
             update_splicegraph_junction(output, info[0], info[1], info[2], info[3], info[4])
 
-
-
     def parse_denovo_elements(self, logger):
 
         majiq_config = Config()
@@ -252,7 +250,7 @@ class Builder(BasicPipeline):
             pool1.close()
 
             group_names = {xx: xidx for xidx, xx in enumerate(majiq_config.tissue_repl.keys())}
-            queue_manager(None, self.lock, self.queue, num_chunks=nthreads, logger=logger,
+            queue_manager(None, self.lock, self.queue, num_chunks=nthreads, func=self.store_results, logger=logger,
                           elem_dict=elem_dict, group_names=group_names, min_experients=min_experiments)
             pool1.join()
 
@@ -265,7 +263,7 @@ class Builder(BasicPipeline):
                 pool2.imap_unordered(majiq_multi.process_wrapper,
                                      majiq_multi.chunks(majiq_config.sam_list, nthreads))
                 pool2.close()
-                queue_manager(None, self.lock, self.queue, num_chunks=nthreads, logger=logger,
+                queue_manager(None, self.lock, self.queue, num_chunks=nthreads, func=self.store_results, logger=logger,
                               elem_dict=elem_dict, group_names=group_names, min_experients=min_experiments)
                 pool2.join()
                 majiq_io.add_elements_mtrx(elem_dict, self.elem_dict)
@@ -285,9 +283,10 @@ class Builder(BasicPipeline):
         logger = majiq_logger.get_logger("%s/majiq.log" % majiq_config.outDir, silent=False, debug=self.debug)
         logger.info("Majiq Build v%s" % VERSION)
         logger.info("Command: %s" % " ".join(sys.argv))
-        self.queue = mp.Queue()
-
         manager = mp.Manager()
+        self.queue = manager.Queue()
+
+
         self.elem_dict = manager.dict()
         self.genes_dict = manager.dict()
 
@@ -338,7 +337,7 @@ class Builder(BasicPipeline):
             pool.close()
             generate_splicegraph(majiq_config, self.elem_dict, self.genes_dict)
             with SpliceGraph(get_builder_splicegraph_filename(majiq_config.outDir), 'r+') as sg:
-               queue_manager(sg, self.lock, self.queue, num_chunks=nthreads, logger=logger)
+               queue_manager(sg, self.lock, self.queue, num_chunks=nthreads, func=self.store_results, logger=logger)
 
             pool.join()
         else:
