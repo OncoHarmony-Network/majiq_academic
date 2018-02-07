@@ -111,7 +111,7 @@ def queue_manager(output, lock_array, result_queue, num_chunks, func, logger=Non
                     break
 
             else:
-                func(output_file=output, results=val.get_value(), msg_type=val.get_type(), extra=kwargs)
+                func(output=output, results=val.get_value(), msg_type=val.get_type(), extra=kwargs)
 
             del val
 

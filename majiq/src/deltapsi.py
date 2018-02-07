@@ -60,7 +60,7 @@ prior_conf = collections.namedtuple('conf', 'iter plotpath breakiter names binsi
 
 class DeltaPsi(BasicPipeline):
 
-    def store_results(self, output_file, results, msg_type, extra={}):
+    def store_results(self, output, results, msg_type, extra={}):
 
         lsv_type = self.lsv_type_dict[results[5]]
         output_file.delta_psi(results[5]).add(lsv_type=lsv_type, bins=results[0],
