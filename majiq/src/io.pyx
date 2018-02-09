@@ -263,21 +263,21 @@ cpdef list extract_lsv_summary(list files, int minnonzero, int min_reads, object
         if logger:
             logger.info("Parsing file: %s" % ff)
         with open(ff, 'rb') as fp:
-            all_files = np.load(fp)
+            all_files = np.load(fp).T
             # print ([xx for xx in all_files['lsv_types']])
             lsv_types = {yy[0].decode('UTF-8'):yy[1].decode('UTF-8') for yy in all_files['lsv_types']}
             for xx in lsv_types.keys():
                 lsv_data = all_files['info_%s' % xx]
-                lsv_junc_info[xx] = lsv_data[:, :2]
+                lsv_junc_info[xx] = lsv_data[:2]
                 try:
-                    lsv_list[xx] += int(np.any(np.logical_and(lsv_data[:, 3] >= minnonzero, lsv_data[:, 2] >= min_reads)))
+                    lsv_list[xx] += int(np.any(np.logical_and(lsv_data[3] >= minnonzero, lsv_data[2] >= min_reads)))
                     if epsi is not None:
-                        epsi[xx] += lsv_data[:, 2]
+                        epsi[xx] += lsv_data[2]
 
                 except KeyError:
-                    lsv_list[xx] = int(np.any(np.logical_and(lsv_data[:, 3] >= minnonzero, lsv_data[:, 2] >= min_reads)))
+                    lsv_list[xx] = int(np.any(np.logical_and(lsv_data[3] >= minnonzero, lsv_data[2] >= min_reads)))
                     if epsi is not None:
-                        epsi[xx] = lsv_data[:, 2]
+                        epsi[xx] = lsv_data[2]
 
         types_dict.update(lsv_types)
         junc_info.update(lsv_junc_info)
