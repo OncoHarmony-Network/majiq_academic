@@ -73,7 +73,7 @@ class CalcPsi(BasicPipeline):
         self.queue = manager.Queue()
         self.lock = [mp.Lock() for xx in range(self.nthreads)]
         junc_info = {}
-        list_of_lsv = majiq_io.extract_lsv_summary(self.files, minnonzero=self.minpos, types_dict=self.lsv_type_dict,
+        list_of_lsv = majiq_io.extract_lsv_summary(self.files, types_dict=self.lsv_type_dict, minnonzero=self.minpos,
                                                    min_reads=self.minreads, percent=self.min_exp, junc_info=junc_info,
                                                    logger=logger)
 

@@ -115,7 +115,7 @@ def main():
 
     buildparser.add_argument('--k', default=50, type=int,
                              help='Number of positions to sample per iteration. [Default: %(default)s]')
-    buildparser.add_argument('--m', default=25, type=int,
+    buildparser.add_argument('--m', default=30, type=int,
                              help='Number of bootstrapping samples. [Default: %(default)s]')
 
 
@@ -180,7 +180,7 @@ def main():
     htrgen = new_subparser()
     htrgen.add_argument('-grp1', dest="files1", nargs='+', required=True)
     htrgen.add_argument('-grp2', dest="files2", nargs='+', required=True)
-    htrgen.add_argument('--names', nargs='+', required=True,
+    htrgen.add_argument('-n', '--names', nargs='+', required=True,
                         help="The names that identify each of the experiments.")
     htrgen.add_argument('--nsamples', type=int, default=100,
                         help='Number of PSI samples to take per LSV junction. If equal to 1, use expected value only. '

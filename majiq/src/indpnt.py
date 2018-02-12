@@ -14,31 +14,30 @@ from voila.vlsv import Het
 import os
 
 
-def het_quantification(list_of_lsv, chnk, process_conf, logger):
+def het_quantification(list_of_lsv, chnk, conf, logger):
     logger.info("Quantifying LSVs PSI.. %s" % chnk)
-    num_exp = [len(process_conf.files1), len(process_conf.files2)]
+    num_exp = [len(conf.files1), len(conf.files2)]
 
     f_list = [None, None]
-    f_list[0] = majiq_io.get_extract_lsv_list(list_of_lsv, process_conf.files1)
-    f_list[1] = majiq_io.get_extract_lsv_list(list_of_lsv, process_conf.files2)
+    f_list[0] = majiq_io.get_extract_lsv_list(list_of_lsv, conf.files1)
+    f_list[1] = majiq_io.get_extract_lsv_list(list_of_lsv, conf.files2)
 
     for lidx, lsv_id in enumerate(list_of_lsv):
         if lidx % 50 == 0:
             print("Event %d ..." % lidx)
             sys.stdout.flush()
 
-        boots = [np.array(f_list[0][lidx].coverage), np.array(f_list[1][lidx].coverage)]
-        lsv_type = [f_list[0][lidx].type, f_list[1][lidx].type]
+        boots = [np.array(f_list[0][lsv_id].coverage), np.array(f_list[1][lsv_id].coverage)]
         lsv_het = Het()
         msamples = boots[0].shape[2]
         assert boots[0].shape[2] == boots[1].shape[2], "LSV %s, has different types in %s and %s (%s vs %s). " \
                                                        "Please check that the conditions has been build together." \
-                                                       % (lsv_id, process_conf.names[0], process_conf.names[1],
+                                                       % (lsv_id, conf.names[0], conf.names[1],
                                                           boots[0].shape[2], boots[1].shape[2])
-        samps = heterogen_posterior(boots, lsv_het, msamples, process_conf.nsamples, process_conf.vwindow, num_exp,
-                                    process_conf.nbins, lsv_type[0])
+        samps = heterogen_posterior(boots, lsv_het, msamples, conf.nsamples, conf.vwindow, num_exp,
+                                    conf.nbins, conf.lsv_type_dict[lsv_id])
 
-        out_stats = do_test_stats(samps, process_conf.stats, process_conf.minsamps)
+        out_stats = do_test_stats(samps, conf.stats, conf.minsamps)
         for stat_idx in range(out_stats.shape[1]):
             lsv_het.add_junction_stats(out_stats[:, stat_idx])
 
@@ -46,7 +45,7 @@ def het_quantification(list_of_lsv, chnk, process_conf, logger):
             #     break
 
         qm = QueueMessage(QUEUE_MESSAGE_HETER_DELTAPSI, (lsv_het, lsv_id), chnk)
-        process_conf.queue.put(qm, block=True)
+        conf.queue.put(qm, block=True)
 
 
 def do_test_stats(insamps, stats, minsamps):
@@ -100,7 +99,7 @@ def calc_independent(args):
 
 class independent(BasicPipeline):
 
-    def store_results(self, output_file, results, msg_type, junc_info):
+    def store_results(self, output, results, msg_type, extra):
         pass
         # lsv_graph = self.lsv_type_dict[results[-1]]
         # output_h5dfp.add_lsv(VoilaLsv(bins_list=None, lsv_graphic=lsv_graph, psi1=None, psi2=None,
@@ -116,8 +115,8 @@ class independent(BasicPipeline):
         write_pickle indicates if a .pickle should be saved in disk
         """
 
-        majiq_logger.create_if_not_exists(self.logger_path)
-        logger = majiq_logger.get_logger("%s/het_majiq.log" % self.logger_path, silent=self.silent,
+        majiq_logger.create_if_not_exists(self.outDir)
+        logger = majiq_logger.get_logger("%s/het_majiq.log" % self.outDir, silent=self.silent,
                                          debug=self.debug)
 
         logger.info("Majiq deltapsi heterogeneous v%s" % VERSION)
@@ -131,10 +130,8 @@ class independent(BasicPipeline):
         self.lsv_type_dict = manager.dict()
         self.queue = mp.Queue()
         self.lock = [mp.Lock() for xx in range(self.nthreads)]
+        junc_info = {}
 
-        pool = mp.Pool(processes=self.nthreads, initializer=process_conf,
-                       initargs=[het_quantification, self],
-                       maxtasksperchild=1)
 
         try:
             for stats_name in self.stats:
@@ -145,14 +142,17 @@ class independent(BasicPipeline):
             logger.error("The %s statistic is not one of the available statistics, "
                          "in  [ %s ]" % (stats_name, ' | '.join(all_stats)))
             return
-
-        list_of_lsv1 = majiq_io.extract_lsv_summary(self.files1, types_dict=self.lsv_type_dict,
-                                                    minnonzero=self.minpos, min_reads=self.minreads,
+        pool = mp.Pool(processes=self.nthreads, initializer=process_conf,
+                       initargs=[het_quantification, self],
+                       maxtasksperchild=1)
+        print(operator)
+        list_of_lsv1 = majiq_io.extract_lsv_summary(self.files1, types_dict=self.lsv_type_dict, minnonzero=self.minpos,
+                                                    min_reads=self.minreads, junc_info=junc_info,
                                                     percent=self.min_exp, logger=logger)
         logger.info("Group %s: %s LSVs" % (self.names[0], len(list_of_lsv1)))
 
-        list_of_lsv2 = majiq_io.extract_lsv_summary(self.files2, types_dict=self.lsv_type_dict,
-                                                    minnonzero=self.minpos, min_reads=self.minreads,
+        list_of_lsv2 = majiq_io.extract_lsv_summary(self.files2, types_dict=self.lsv_type_dict, minnonzero=self.minpos,
+                                                    min_reads=self.minreads, junc_info=junc_info,
                                                     percent=self.min_exp, logger=logger)
         logger.info("Group %s: %s LSVs" % (self.names[1], len(list_of_lsv1)))
 
@@ -174,8 +174,8 @@ class independent(BasicPipeline):
 
                 out_h5p.add_stat_names(self.stats)
 
-                queue_manager(out_h5p, self.lock, self.queue, num_chunks=nthreads, logger=logger,
-                              lsv_type=self.lsv_type_dict)
+                queue_manager(out_h5p, self.lock, self.queue, num_chunks=nthreads, func=self.store_results,
+                              logger=logger, lsv_type=self.lsv_type_dict)
             pool.join()
 
         logger.info("DeltaPSI Het calculation for %s_%s ended succesfully! Result can be found at %s" % (self.names[0],
