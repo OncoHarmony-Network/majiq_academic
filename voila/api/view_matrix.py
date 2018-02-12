@@ -27,6 +27,7 @@ class ViewPsi(Psi):
             yield '_id', self.lsv_id
             yield 'reference_exon', tuple(self.reference_exon)
             yield 'gene_id', self.gene_id
+            yield 'is_target', self.is_target
 
             if not args:
                 args = self.fields
@@ -142,6 +143,7 @@ class ViewDeltaPsi(DeltaPsi):
             yield '_id', self.lsv_id
             yield 'reference_exon', self.reference_exon
             yield 'excl_incl', self.excl_incl
+            yield 'is_target', self.is_target
 
             if not args:
                 args = self.fields

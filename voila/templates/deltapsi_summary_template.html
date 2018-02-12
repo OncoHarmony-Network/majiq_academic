@@ -28,6 +28,7 @@
     <script src="static/js/floatinglegend.js"></script>
     <script src="static/js/lsv.js"></script>
     <script src="static/js/lsvplots.js"></script>
+    <script src="static/js/colors.js"></script>
     <script>
         var db = new PouchDB('{{ database_name }}');
         var sg = new SpliceGraph(db);
@@ -106,7 +107,7 @@
                                             Highlight
                                         </label>
                                         <label>
-                                            <input class="weighted" type="checkbox" value="weighted">
+                                            <input class="weighted-btn" type="checkbox" value="weighted">
                                             PSI Weighted
                                         </label>
                                     </form>

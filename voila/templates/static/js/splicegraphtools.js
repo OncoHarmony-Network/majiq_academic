@@ -7,7 +7,7 @@ $(document).on('mouseout', '.junction-grp', function () {
     $('.junction-grp').css('opacity', '');
 });
 
-$(document).on('mouseenter', '.exon, .junction-grp, .half-exon', function () {
+$(document).on('mouseenter', '.exon, .junction-grp, .half-exon, .intron-retention', function () {
     var d = d3.select(this).datum();
     var splice_graph_tools = $(this).closest('.gene-container').children('.splice-graph-tools');
     var splice_graph = $(this).closest('.splice-graph');
@@ -35,45 +35,58 @@ $(document).on('mouseenter', '.exon, .junction-grp, .half-exon', function () {
 });
 
 $(document).on('change', '.splice-graph-selectors select', function () {
-    var $this = $(this);
-    var group = $this.attr('data-group');
-    var experiment = $this.find(':selected').attr('value');
-    $this
-        .closest('.gene-container')
-        .find('.splice-graph.' + group)
-        .attr('data-experiment', experiment)
-        .each(function () {
-            sg.update(this)
-        })
+    var group = this.getAttribute('data-group');
+    var experiment = this.options[this.selectedIndex].getAttribute('value');
+    var gene_container = $(this).closest('.gene-container')[0];
+    var splice_graph = gene_container.querySelector('.splice-graph[data-group=' + group + ']');
+    var lsv_ids = get_lsv_ids(gene_container);
+
+    splice_graph.setAttribute('data-experiment', experiment);
+    sg.update(splice_graph, lsv_ids)
 });
+
+var get_lsv_ids = function (gene_container) {
+    var highlights = gene_container.querySelectorAll('.highlight-btn:checked');
+    return Array.from(highlights).reduce(function (acc, el) {
+        var td = el.parentElement.parentElement.parentElement;
+        var lsv_id = td.getAttribute('data-lsv-id');
+        var weighted = td.querySelector('.weighted-btn:checked');
+        acc.push([lsv_id, Boolean(weighted)]);
+        return acc
+    }, []);
+};
+
 
 $(document).on('click', '.toggle-scale', function () {
-    $(this)
-        .closest('.gene-container')
-        .find('.splice-graph')
-        .toggleClass('default-view')
-        .each(function () {
-            sg.update(this)
-        });
+    var gene_container = $(this).closest('.gene-container')[0];
+    var lsv_ids = get_lsv_ids(gene_container);
+    var splice_graphs = gene_container.querySelectorAll('.splice-graph');
+    for (var i = 0; i < splice_graphs.length; i++) {
+        var splice_graph = splice_graphs[i];
+        splice_graph.classList.toggle('default-view');
+        sg.update(splice_graph, lsv_ids)
+    }
 });
 
+
 var zoom = function (el, value, reset) {
-    $(el)
-        .closest('.gene-container')
-        .find('.splice-graph')
-        .each(function () {
-            var zoom = this.getAttribute('data-zoom');
-            if (reset) {
-                this.setAttribute('data-zoom', value);
-                sg.update(this)
-            } else {
-                var zoom_value = parseFloat(zoom) + value;
-                if (zoom_value > 0) {
-                    this.setAttribute('data-zoom', zoom_value);
-                    sg.update(this)
-                }
+    var gene_container = $(el).closest('.gene-container')[0];
+    var lsv_ids = get_lsv_ids(gene_container);
+    var splice_graphs = gene_container.querySelectorAll('.gene-container .splice-graph');
+    for (var i = 0; i < splice_graphs.length; i++) {
+        var splice_graph = splice_graphs[i];
+        var zoom = splice_graph.getAttribute('data-zoom');
+        if (reset) {
+            splice_graph.setAttribute('data-zoom', value);
+            sg.update(splice_graph, lsv_ids)
+        } else {
+            var zoom_value = parseFloat(zoom) + value;
+            if (zoom_value > 0) {
+                splice_graph.setAttribute('data-zoom', zoom_value);
+                sg.update(splice_graph, lsv_ids)
             }
-        });
+        }
+    }
 };
 
 $(document).on('click', '.zoom-in', function () {

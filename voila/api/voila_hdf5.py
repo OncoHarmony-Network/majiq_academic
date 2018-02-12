@@ -30,7 +30,7 @@ class VoilaHDF5:
         self.hdf5 = h5py.File(self.file_name, self.mode)
 
         if self.VERSION not in self.hdf5:
-            if self.mode == constants.FILE_MODE.write:
+            if self.mode == 'w':
                 self.hdf5[self.VERSION] = constants.VOILA_FILE_VERSION
 
         try:

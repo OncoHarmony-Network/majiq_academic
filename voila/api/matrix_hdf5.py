@@ -140,6 +140,10 @@ class MatrixType(ABC):
         return tuple(map(int, coords))
 
     @property
+    def is_target(self):
+        return self.lsv_id.split(':')[-2] == 't'
+
+    @property
     def gene_id(self):
         return lsv_id_to_gene_id(self.lsv_id)
 

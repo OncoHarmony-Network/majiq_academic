@@ -46,7 +46,7 @@ $(document).ready(function () {
     var $sgFilters = $('form#sg-filters');
 
     $("#simplified").on('change', function () {
-        $sgFilters.slideToggle(100).submit();
+        $sgFilters.slideToggle(125).submit();
     });
 
     /**
@@ -60,28 +60,16 @@ $(document).ready(function () {
         var numReads = this.querySelector("[name='numReads']");
         var numReadsValue = parseInt(numReads.value);
         var simplified = document.querySelector("[name='simplified']").checked;
-        var currentNumReads;
-
-        // filter elements with these four classes
-        ['.junction', '.readcounts', '.irlines', '.irreads'].forEach(function (value) {
-            d3.selectAll(value).classed('sgfilter', function (d) {
-                if (!simplified) return false;
-
-                // check read counts toggle button for read counts state
-                // var toggleReadCounts = this.parentNode.parentNode.parentNode.parentNode.querySelector('.readCounts');
-
-                // For now.. we're going to comment this out and add per LSV clean reads after this release.
-                // var displayNormReads = !toggleReadCounts.checked;
-                var displayNormReads = true;
-
-                // get read counts based on this specific splice graphs state
-                var cleanReads = d.clean_reads ? d.clean_reads : 0;
-                currentNumReads = displayNormReads ? d.reads : cleanReads;
-
-                // return if this element should have the 'sgfilter' class
-                return !isNaN(numReadsValue) && currentNumReads <= numReadsValue;
+        if (simplified)
+            d3.selectAll('.junction-grp').classed('simplified', function () {
+                var el = this;
+                var reads = el.querySelector('.reads').textContent;
+                return !isNaN(reads) && reads <= numReadsValue
             });
-        })
+        else
+            Array.from(document.querySelectorAll('.simplified')).forEach(function (el) {
+                el.classList.toggle('simplified')
+            })
     });
 
     $('.floatingLegend').each(function () {

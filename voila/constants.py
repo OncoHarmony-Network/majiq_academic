@@ -59,6 +59,5 @@ LSV_TEXT_VERSION = 2
 SPLICE_GRAPH_FILE_VERSION = 3
 VOILA_FILE_VERSION = 3
 
-FILE_MODE = collections.namedtuple('FILE_MODE', 'read write')('r', 'w')
 
 EXEC_DIR = os.path.dirname(os.path.abspath(voila.__file__))

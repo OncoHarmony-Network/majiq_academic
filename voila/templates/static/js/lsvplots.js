@@ -8,12 +8,8 @@ var LSVPlots = function (db) {
     this.svg_height = this.height + this.top_padding + this.bottom_padding
 };
 
-LSVPlots.prototype.colors = function () {
-    rgb_arr = [];
-    BREWER_PALETTE.forEach(function (color, color_index) {
-        rgb_arr.push('rgb(' + BREWER_PALETTE[color_index % BREWER_PALETTE.length].join(',') + ')')
-    });
-    return rgb_arr
+LSVPlots.prototype.colors = function (color_index) {
+    return 'rgb(' + BREWER_PALETTE[color_index % BREWER_PALETTE.length].join(',') + ')'
 };
 
 LSVPlots.prototype.psi = function (el) {
@@ -88,7 +84,7 @@ LSVPlots.prototype.y_axis = function (domain, tick_values) {
 };
 
 LSVPlots.prototype.violins = function (bins, means_rounded) {
-    var colors = this.colors();
+    var colors = new Colors().brewer;
     var bp = this;
     return this.svg
         .selectAll('.violin')
@@ -99,7 +95,7 @@ LSVPlots.prototype.violins = function (bins, means_rounded) {
         .each(function (d, i) {
             var el = d3.select(this)
                 .attr('transform', 'translate(' + (i * bp.histo_width + bp.left_padding) + ',' + (bp.height + bp.top_padding) + ') rotate(-90)')
-                .attr('fill', colors[i]);
+                .attr('fill', colors(i));
 
             el
                 .append('g')

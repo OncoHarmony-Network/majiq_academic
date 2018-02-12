@@ -27,7 +27,7 @@
 
 /* splice graph section */
 
-.exon:hover {
+.exon:hover, .intron-retention:hover, .half-exon:hover {
     stroke: orange;
     fill: orange;
 }
@@ -40,7 +40,7 @@
     cursor: default;
 }
 
-.junction-grp:hover .junction, .junction-grp:hover .ss3p, .junction-grp:hover .ss5p {
+.junction-grp:hover .junction, .junction-grp:hover .p3, .junction-grp:hover .p5 {
     stroke: orange;
     stroke-width: 3;
 }
@@ -54,10 +54,6 @@
     overflow-x: auto;
 }
 
-.highlight.lsv {
-    opacity: 1;
-}
-
-.highlight {
-    opacity: 0.1;
+.simplified {
+    opacity: 0.05;
 }
