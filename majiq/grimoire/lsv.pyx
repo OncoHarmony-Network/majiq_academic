@@ -132,16 +132,15 @@ cdef class LSV:
     #     return lsv_idx
 
 
-    cdef int add_lsv(LSV self, np.ndarray junc_mtrx, list type_dict, dict values, float fitfunc_r,
+    cdef int add_lsv(LSV self, np.ndarray junc_mtrx, list type_dict, dict values, list junc_info, float fitfunc_r,
                      object majiq_config) except -1:
 
         cdef list val
         cdef Junction xx
 
         type_dict.append((self.id, self.type))
-        values['info_%s' % self.id] = np.array([[xx.start, xx.end, junc_mtrx[xx.index].sum(),
-                                                 np.count_nonzero(junc_mtrx[xx.index])] for xx  in self.junctions])
-
+        [junc_info.append((self.id, xx.start, xx.end, junc_mtrx[xx.index].sum(),
+                           np.count_nonzero(junc_mtrx[xx.index]))) for xx  in self.junctions]
         val = [junc_mtrx[xx.index] for xx  in self.junctions]
         values[self.id] = sample_junctions(np.array(val), fitfunc_r, majiq_config)
 
@@ -234,7 +233,7 @@ cdef class LSV:
 
 
 cdef int _detect_lsvs(list list_exons, np.ndarray junc_mtrx, float fitfunc_r, str gid, str gchrom, str gstrand,
-                 object majiq_config, dict lsv_dict, list type_tlb, object logger) except -1:
+                 object majiq_config, dict lsv_dict, list type_tlb, list junc_info, object logger) except -1:
 
     cdef int count = 0
     cdef np.ndarray sum_trx = junc_mtrx.sum(axis=1)
@@ -268,7 +267,7 @@ cdef int _detect_lsvs(list list_exons, np.ndarray junc_mtrx, float fitfunc_r, st
             if set(ss.junctions).issubset(set(st.junctions)) and not set(ss.junctions).issuperset(set(st.junctions)):
                 break
         else:
-            ss.add_lsv(junc_mtrx, type_tlb, lsv_dict, fitfunc_r, majiq_config)
+            ss.add_lsv(junc_mtrx, type_tlb, lsv_dict, junc_info, fitfunc_r, majiq_config)
             count += 1
 
     for st in lsv_list[1]:
@@ -276,7 +275,7 @@ cdef int _detect_lsvs(list list_exons, np.ndarray junc_mtrx, float fitfunc_r, st
             if set(st.junctions).issubset(set(ss.junctions)):
                 break
         else:
-            st.add_lsv(junc_mtrx, type_tlb, lsv_dict, fitfunc_r, majiq_config)
+            st.add_lsv(junc_mtrx, type_tlb, lsv_dict, junc_info, fitfunc_r, majiq_config)
             count += 1
 
     return count
@@ -284,7 +283,7 @@ cdef int _detect_lsvs(list list_exons, np.ndarray junc_mtrx, float fitfunc_r, st
 ###API
 
 cpdef detect_lsvs(object dict_of_genes, dict dict_junctions, dict list_exons, np.ndarray junc_mtrx, float fitfunc_r,
-                  object majiq_config, dict lsv_dict, list lsv_type_list, object logger):
+                  object majiq_config, dict lsv_dict, list lsv_type_list, list junc_info, object logger):
 
     cdef str gne_id
     cdef int gne_idx
@@ -293,7 +292,7 @@ cpdef detect_lsvs(object dict_of_genes, dict dict_junctions, dict list_exons, np
     for gne_idx, (gne_id, gene_obj) in enumerate(dict_of_genes.items()):
         # if gene_obj['nreads'] > 0:
         _detect_lsvs(list_exons[gne_id], junc_mtrx, fitfunc_r, gne_id, gene_obj['chromosome'],
-                     gene_obj['strand'], majiq_config, lsv_dict, lsv_type_list, logger)
+                     gene_obj['strand'], majiq_config, lsv_dict, lsv_type_list, junc_info, logger)
         for jj in dict_junctions[gne_id].values():
             jj.reset()
         gene_obj['nreads'] = 0

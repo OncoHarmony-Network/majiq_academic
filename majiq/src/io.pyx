@@ -179,10 +179,13 @@ cdef int _load_db(str filename, object elem_dict, object genes_dict) except -1:
     for xx in genes_dict.keys():
         elem_dict[xx] = all_files[xx]
 
-cdef int _dump_lsv_coverage(str filename, dict cov_dict, list type_list):
+cdef int _dump_lsv_coverage(str filename, dict cov_dict, list type_list, list junc_info):
     dt=np.dtype('|S250, |S250')
+
     with open(filename, 'w+b') as ofp:
         cov_dict['lsv_types'] = np.array(type_list, dtype=dt)
+        dt=np.dtype('|S250, u4, u4, f4, f4')
+        cov_dict['junc_info'] = np.array(junc_info, dtype=dt)
         np.savez(ofp, **cov_dict)
 
 cdef int _dump_elems_list(object elem_dict, object gene_info, str outDir) except -1:
@@ -242,13 +245,14 @@ cdef dict _get_extract_lsv_list(list list_of_lsv_id, list file_list):
 
 cpdef list extract_lsv_summary(list files, int minnonzero, int min_reads, object types_dict, dict junc_info,
                                 dict epsi=None, int percent=-1, object logger=None):
-    cdef dict lsv_list = {}
-    cdef dict lsv_types = {}
+    cdef dict lsv_types, lsv_list = {}
+    cdef list lsv_id_list = []
     cdef int nfiles = len(files)
     cdef int fidx
-    cdef str ff, xx
+    cdef str ff
     cdef dict lsv_junc_info = {}
     cdef np.ndarray mtrx, vals
+    cdef np.ndarray jinfo
 
     if percent == -1:
         percent = nfiles / 2
@@ -264,23 +268,38 @@ cpdef list extract_lsv_summary(list files, int minnonzero, int min_reads, object
             logger.info("Parsing file: %s" % ff)
         with open(ff, 'rb') as fp:
             all_files = np.load(fp)
-            # print ([xx for xx in all_files['lsv_types']])
             lsv_types = {yy[0].decode('UTF-8'):yy[1].decode('UTF-8') for yy in all_files['lsv_types']}
-            for xx in lsv_types.keys():
-                lsv_data = all_files['info_%s' % xx].T
-                lsv_junc_info[xx] = lsv_data[:2]
-                try:
-                    lsv_list[xx] += int(np.any(np.logical_and(lsv_data[3] >= minnonzero, lsv_data[2] >= min_reads)))
-                    if epsi is not None:
-                        epsi[xx] += lsv_data[2]
+            jinfo = all_files['junc_info']
 
-                except KeyError:
-                    lsv_list[xx] = int(np.any(np.logical_and(lsv_data[3] >= minnonzero, lsv_data[2] >= min_reads)))
-                    if epsi is not None:
-                        epsi[xx] = lsv_data[2]
+            pre_lsv = jinfo[0][0].decode('UTF-8')
+            lsv_t = False
+            epsi_t = []
+            lsv_junc_info = {zz: [] for zz in lsv_types.keys()}
 
-        types_dict.update(lsv_types)
+            for xx in jinfo:
+                lsv_id = xx[0].decode('UTF-8')
+                lsv_junc_info[lsv_id].append([xx[1], xx[2]])
+
+                if xx[0] == pre_lsv:
+                    lsv_t = lsv_t or (xx[3] >=min_reads and xx[4] >= minnonzero)
+                    if epsi is not None:
+                        epsi_t.append(xx[3])
+                else:
+                    pre_lsv = lsv_id
+                    lsv_t = (xx[3] >=min_reads and xx[4] >= minnonzero)
+                    try:
+                        lsv_list[pre_lsv] += int(lsv_t)
+                        if epsi is not None:
+                            epsi[lsv_id] += np.array(epsi_t)
+                    except KeyError:
+
+                        lsv_list[pre_lsv] = int(lsv_t)
+                        if epsi is not None:
+                            epsi[lsv_id] = np.array(epsi_t)
+                    epsi_t = []
+
         junc_info.update(lsv_junc_info)
+        types_dict.update(lsv_types)
 
     if epsi is not None:
         for xx in epsi.keys():
@@ -288,13 +307,16 @@ cpdef list extract_lsv_summary(list files, int minnonzero, int min_reads, object
             epsi[xx] = epsi[xx] / epsi[xx].sum()
             epsi[xx][np.isnan(epsi[xx])] = 1.0 / nfiles
 
-    lsv_id_list = [xx for xx, yy in lsv_list.items() if yy >= percent]
+    for xx, yy in lsv_list.items():
+        if yy >= percent:
+            lsv_id_list.append(xx)
+        junc_info[xx] = np.array(junc_info[xx])
 
     return lsv_id_list
 
 
-cpdef int dump_lsv_coverage(out_f, cov_list, attrs_list):
-    _dump_lsv_coverage(out_f, cov_list, attrs_list)
+cpdef int dump_lsv_coverage(out_f, cov_list, attrs_list, junc_info):
+    _dump_lsv_coverage(out_f, cov_list, attrs_list, junc_info)
 
 cpdef int parse_annot(str filename, str out_dir,  object elem_dict,  object all_genes, object logging=None):
 

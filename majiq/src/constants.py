@@ -73,7 +73,7 @@ def get_builder_majiq_filename(outdir, name):
 
 
 def get_builder_splicegraph_filename(outdir):
-    return "%s/splicegraph.hdf5" % (outdir)
+    return "%s/splicegraph.sql" % (outdir)
 
 
 def get_weights_filename(outdir, name):

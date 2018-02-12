@@ -172,14 +172,15 @@ def parsing_files(sam_file_list, chnk, conf, logger):
         logger.info('Detecting lsvs')
         lsv_type_list = []
         lsv_dict = {}
+        junc_info = []
 
         detect_lsvs(conf.genes_dict, dict_junctions, list_exons, junc_mtrx, fitfunc_r, majiq_config, lsv_dict,
-                    lsv_type_list, logger)
+                    lsv_type_list, junc_info, logger)
 
         logger.info('dump samples')
         # vals = sample_junctions(lsv_dict, fitfunc_r, majiq_config)
         fname = '%s/%s.majiq' % (majiq_config.outDir, sam_file)
-        majiq_io.dump_lsv_coverage(fname, lsv_dict, lsv_type_list)
+        majiq_io.dump_lsv_coverage(fname, lsv_dict, lsv_type_list, junc_info)
 
         del lsv_type_list
         del lsv_dict
