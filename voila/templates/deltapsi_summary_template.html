@@ -35,10 +35,8 @@
         var lsv = new Lsv(db);
         var bp = new LSVPlots(db);
     </script>
-    {% for gene_obj in genes %}
-        {% with gene = gene_obj.get %}
-            <script src="../db/{{ gene.id }}.js"></script>
-        {% endwith %}
+    {% for gene in genes %}
+        <script src="../db/{{ gene.id }}.js"></script>
     {% endfor %}
 {% endblock %}
 
@@ -56,8 +54,7 @@
                 </canvas>
             </div>
 
-            {% for gene_obj in genes %}
-                {% set gene = gene_obj.get %}
+            {% for gene in genes %}
                 {% set gene_index = loop.index - 1 %}
                 <div class="gene-container">
 
@@ -138,11 +135,7 @@
 
                                 <td>
                                     <p>
-                                        {% set ucsc_coordinates = gene.lsv_ucsc_coordinates(lsv) %}
-                                        <a href="http://genome.ucsc.edu/cgi-bin/hgTracks?db={{ genome }}&position={{ gene.chromosome }}:{{ ucsc_coordinates.start }}-{{ ucsc_coordinates.end }}"
-                                           target="_blank">
-                                            <img src="static/img/icons/ucsc3.png" title="View in UCSC Genome Browser"/>
-                                        </a>
+                                        {% include 'ucsc_link.html' %}
                                         {% if gtf %}
                                             <a href="../static/doc/lsvs/{{ lsv.lsv_id }}.gtf"
                                                target="_blank"><img src="static/img/icons/gtf.png"

@@ -3,7 +3,7 @@ import os
 
 from voila import constants, io_voila
 from voila.api.view_matrix import ViewPsi
-from voila.api.view_splice_graph import ViewSpliceGraph
+from voila.api.view_splice_graph import ViewSpliceGraph, ViewGene
 from voila.utils.run_voila_utils import table_marks_set, copy_static, get_env
 from voila.utils.voila_log import voila_log
 from voila.utils.voila_pool import VoilaPool
@@ -11,15 +11,16 @@ from voila.view.html import Html
 
 
 def create_gene_db(gene_ids, args, experiment_names):
-    env = get_env()
+    template = get_env().get_template('gene_db_template.html')
     with ViewSpliceGraph(args.splice_graph) as sg, ViewPsi(args.voila_file) as m:
         for gene_id in gene_ids:
-            with open(os.path.join(args.output, 'db', '{}.js'.format(gene_id)), 'w') as f:
-                for el in env.get_template('gene_db_template.html').generate(
-                        gene=sg.gene(gene_id).get.get_experiment(experiment_names),
+            with open(os.path.join(args.output, 'db', '{}.js'.format(gene_id)), 'w') as html:
+                html.write(
+                    template.render(
+                        gene=ViewGene(sg.gene(gene_id).get).get_experiment(experiment_names),
                         lsvs=(m.psi(lsv_id) for lsv_id in m.view_lsv_ids(args, gene_id))
-                ):
-                    f.write(el)
+                    )
+                )
 
 
 class Psi(Html):
@@ -89,7 +90,8 @@ class Psi(Html):
 
             with open(os.path.join(args.output, 'index.html'), 'w') as html:
                 index_template = self.env.get_template('index_single_summary_template.html')
-                for el in index_template.generate(
+                html.write(
+                    index_template.render(
                         lexps=metadata,
                         metadata=metadata,
                         lsvs_count=lsv_count,
@@ -102,9 +104,9 @@ class Psi(Html):
                         too_many_lsvs=too_many_lsvs,
                         database_name=self.database_name(),
                         genome=sg.genome,
-                        lsv_text_version=constants.LSV_TEXT_VERSION,
-                ):
-                    html.write(el)
+                        lsv_text_version=constants.LSV_TEXT_VERSION
+                    )
+                )
 
     @classmethod
     def create_summary(cls, metadata, args, database_name, paged):
@@ -124,8 +126,9 @@ class Psi(Html):
                 table_marks = tuple(table_marks_set(len(gene_set)) for gene_set in lsv_dict)
 
                 with open(os.path.join(summaries_subfolder, page_name), 'w') as html:
-                    for el in summary_template.generate(
-                            genes=[sg.gene(gene_id) for gene_id in genes],
+                    html.write(
+                        summary_template.render(
+                            genes=list(sg.gene(gene_id).get for gene_id in genes),
                             table_marks=table_marks,
                             lsv_ids=lsv_dict,
                             psi_lsv=m.psi,
@@ -137,8 +140,8 @@ class Psi(Html):
                             gtf=args.gtf,
                             database_name=database_name,
                             genome=genome
-                    ):
-                        html.write(el)
+                        )
+                    )
 
                 links.update(dict(cls.voila_links(lsv_dict, page_name)))
             return links

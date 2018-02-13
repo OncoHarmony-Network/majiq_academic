@@ -3,7 +3,7 @@ import os
 
 from voila import constants, io_voila
 from voila.api.view_matrix import ViewDeltaPsi
-from voila.api.view_splice_graph import ViewSpliceGraph
+from voila.api.view_splice_graph import ViewSpliceGraph, ViewGene
 from voila.utils.run_voila_utils import table_marks_set, copy_static, get_env
 from voila.utils.voila_log import voila_log
 from voila.utils.voila_pool import VoilaPool
@@ -46,7 +46,8 @@ class DeltaPsi(Html):
 
             with open(os.path.join(args.output, 'index.html'), 'w') as html:
                 index_template = env.get_template('index_delta_summary_template.html')
-                for el in index_template.generate(
+                html.write(
+                    index_template.render(
                         lexps=metadata,
                         table_marks=table_marks_set(lsv_count),
                         lsvs_count=lsv_count,
@@ -61,24 +62,25 @@ class DeltaPsi(Html):
                         genome=sg.genome,
                         lsv_text_version=constants.LSV_TEXT_VERSION,
                         threshold=args.threshold
-                ):
-                    html.write(el)
+                    )
+                )
 
                 log.debug('End index render')
 
     @staticmethod
     def create_gene_db(gene_ids, args, experiment_names):
-        env = get_env()
+        template = get_env().get_template('gene_db_template.html')
         log = voila_log()
         with ViewSpliceGraph(args.splice_graph) as sg, ViewDeltaPsi(args.voila_file) as m:
             for gene_id in gene_ids:
                 log.debug('creating {}'.format(gene_id))
-                with open(os.path.join(args.output, 'db', '{}.js'.format(gene_id)), 'w') as f:
-                    for el in env.get_template('gene_db_template.html').generate(
-                            gene=sg.gene(gene_id).get.get_experiment(experiment_names),
+                with open(os.path.join(args.output, 'db', '{}.js'.format(gene_id)), 'w') as html:
+                    html.write(
+                        template.render(
+                            gene=ViewGene(sg.gene(gene_id).get).get_experiment(experiment_names),
                             lsvs=(m.delta_psi(lsv_id) for lsv_id in m.lsv_ids(gene_id))
-                    ):
-                        f.write(el)
+                        )
+                    )
 
     @classmethod
     def create_summary(cls, metadata, args, database_name, paged):
@@ -100,7 +102,8 @@ class DeltaPsi(Html):
                 table_marks = tuple(table_marks_set(len(gene_set)) for gene_set in lsv_dict)
 
                 with open(os.path.join(summaries_subfolder, page_name), 'w') as html:
-                    for el in summary_template.generate(
+                    html.write(
+                        summary_template.render(
                             page_name=page_name,
                             threshold=args.threshold,
                             lsv_text_version=constants.LSV_TEXT_VERSION,
@@ -109,14 +112,14 @@ class DeltaPsi(Html):
                             next_page=next_page,
                             gtf=args.gtf,
                             group_names=group_names,
-                            genes=[sg.gene(gene_id) for gene_id in genes],
+                            genes=(sg.gene(gene_id).get for gene_id in genes),
                             lsv_ids=lsv_dict,
                             delta_psi_lsv=m.delta_psi,
                             metadata=metadata,
                             database_name=database_name,
                             genome=genome
-                    ):
-                        html.write(el)
+                        )
+                    )
 
                 links.update(dict(cls.voila_links(lsv_dict, page_name)))
 
