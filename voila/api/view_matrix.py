@@ -93,8 +93,8 @@ class ViewPsi(Psi):
         elif args.lsv_ids:
             for lsv_id in args.lsv_ids:
                 yield lsv_id_to_gene_id(lsv_id)
-
-        yield from self.h['lsvs'].keys()
+        else:
+            yield from self.h['lsvs'].keys()
 
     def view_lsv_count(self, args):
         return len(tuple(self.view_lsv_ids(args)))
