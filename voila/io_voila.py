@@ -238,7 +238,7 @@ def delta_psi_tab_output(args, voila_links):
                 gene = sg.gene(gene_id).get
 
                 for lsv_id in m.view_lsv_ids(args, gene_id):
-
+                    log.debug('Write TSV row for {0}'.format(lsv_id))
                     lsv = m.delta_psi(lsv_id)
 
                     lsv_junctions = tuple(ViewGene(gene).lsv_junctions(lsv))
@@ -259,7 +259,8 @@ def delta_psi_tab_output(args, voila_links):
                         'chr': gene.chromosome,
                         'strand': gene.strand,
                         'De Novo Junctions': semicolon_join(
-                            int(next(ViewJunction(junc).get_junction_types([experiment])) == JUNCTION_TYPE_RNASEQ) for junc in
+                            int(next(ViewJunction(junc).junction_types([experiment])) == JUNCTION_TYPE_RNASEQ) for junc
+                            in
                             lsv_junctions
                         ),
                         'Junctions coords': semicolon_join(
@@ -292,8 +293,6 @@ def delta_psi_tab_output(args, voila_links):
                         if not os.path.isabs(summary_path):
                             summary_path = join(os.getcwd(), args.output, summary_path)
                         row['Voila link'] = "file://{0}".format(summary_path)
-
-                    log.debug('Write TSV row for {0}'.format(lsv_id))
 
                     writer.writerow(row)
 
@@ -342,7 +341,8 @@ def psi_tab_output(args, voila_links):
                         'chr': gene.chromosome,
                         'strand': gene.strand,
                         'De Novo Junctions': semicolon_join(
-                            int(next(ViewJunction(junc).get_junction_types([experiment])) == JUNCTION_TYPE_RNASEQ) for junc in
+                            int(next(ViewJunction(junc).junction_types([experiment])) == JUNCTION_TYPE_RNASEQ) for junc
+                            in
                             lsv_junctions
                         ),
                         'Junctions coords': semicolon_join(

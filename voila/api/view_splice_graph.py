@@ -45,9 +45,9 @@ class ViewJunction:
     def __init__(self, junction):
         self.junction = junction
 
-    def get_junction_types(self, experiment_names):
+    def junction_types(self, experiment_names):
         for experiment_name in experiment_names:
-            reads = self.get_reads(experiment_name)
+            reads = self.reads(experiment_name)
 
             junc_type = constants.JUNCTION_TYPE_RNASEQ
 
@@ -66,9 +66,9 @@ class ViewJunction:
             yield experiment_name, junc_type
 
     def reads_sum(self, experiment_names):
-        return sum(self.get_reads(e) for e in experiment_names)
+        return sum(self.reads(e) for e in experiment_names)
 
-    def get_reads(self, experiment_name):
+    def reads(self, experiment_name):
         session = inspect(self.junction).session
         r = session.query(Reads).get((experiment_name, self.junction.gene_id, self.junction.start, self.junction.end))
         try:
@@ -79,6 +79,7 @@ class ViewJunction:
     def get_experiment(self):
         j = dict(self.junction)
         j['intron_retention'] = self.get_intron_retention_type()
+        del j['gene_id']
         return j
 
     def get_intron_retention_type(self):
@@ -109,8 +110,8 @@ class ViewExon:
         return self.exon.end
 
     def has_reads(self, experiment_name):
-        return any(ViewJunction(j).get_reads(experiment_name) > 0 for j in self.exon.a5) or any(
-            ViewJunction(j).get_reads(experiment_name) > 0 for j in self.exon.a3)
+        return any(ViewJunction(j).reads(experiment_name) > 0 for j in self.exon.a5) or any(
+            ViewJunction(j).reads(experiment_name) > 0 for j in self.exon.a3)
 
     def get_exon_type(self, experiment_name):
         if self.exon.start == -1:
@@ -253,7 +254,7 @@ class ViewGene:
                         reads_start[junc.end] = {}
                         reads_end = reads_start[junc.end]
 
-                    reads_end[experiment_name] = view_junc.get_reads(experiment_name)
+                    reads_end[experiment_name] = view_junc.reads(experiment_name)
 
                 try:
                     types_start = gene['junction_types'][junc.start]
@@ -267,7 +268,7 @@ class ViewGene:
                     types_start[junc.end] = {}
                     types_end = types_start[junc.end]
 
-                for name, junc_type in view_junc.get_junction_types(experiment_names):
+                for name, junc_type in view_junc.junction_types(experiment_names):
                     types_end[name] = junc_type
 
                 if combined_name:

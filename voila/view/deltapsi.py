@@ -18,7 +18,6 @@ class DeltaPsi(Html):
             copy_static(args)
             with ViewDeltaPsi(args.voila_file) as m:
                 self.metadata = m.metadata
-                self.lsv_ids = tuple(m.view_lsv_ids(args))
             self.create_db_files()
             self.render_summaries()
             self.render_index()
@@ -54,7 +53,7 @@ class DeltaPsi(Html):
                         prev_page=None,
                         next_page=None,
                         database_name=self.database_name(),
-                        lsvs=(m.delta_psi(lsv_id) for lsv_id in self.lsv_ids),
+                        lsvs=list(m.delta_psi(lsv_id) for lsv_id in m.view_lsv_ids(args)),
                         genes=sg.gene,
                         links=self.voila_links,
                         too_many_lsvs=too_many_lsvs,
@@ -112,7 +111,7 @@ class DeltaPsi(Html):
                             next_page=next_page,
                             gtf=args.gtf,
                             group_names=group_names,
-                            genes=(sg.gene(gene_id).get for gene_id in genes),
+                            genes=list(sg.gene(gene_id).get for gene_id in genes),
                             lsv_ids=lsv_dict,
                             delta_psi_lsv=m.delta_psi,
                             metadata=metadata,

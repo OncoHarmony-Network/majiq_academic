@@ -3,6 +3,7 @@ import multiprocessing as mp
 import sys
 
 import majiq.src.io as majiq_io
+import psutil
 from majiq.src.psi import deltapsi_posterior, gen_prior_matrix
 
 import majiq.src.logger as majiq_logger
@@ -11,7 +12,6 @@ from majiq.src.constants import *
 from majiq.src.multiproc import QueueMessage, process_conf, queue_manager, process_wrapper, chunks
 from voila.api import Matrix
 from voila.constants import ANALYSIS_DELTAPSI
-import psutil
 
 
 def deltapsi(args):
@@ -63,6 +63,8 @@ class DeltaPsi(BasicPipeline):
     def store_results(self, output, results, msg_type, extra={}):
 
         lsv_type = self.lsv_type_dict[results[5]]
+        if 'nan' in results[5]:
+            print('>>>>>>>>>>>>>>>>>>>>>>>>>>', results[5])
         output.delta_psi(results[5]).add(lsv_type=lsv_type, bins=results[0],
                                          group_bins=[results[1], results[2]],
                                          group_means=[results[3], results[4]],
@@ -78,7 +80,7 @@ class DeltaPsi(BasicPipeline):
         """
 
         majiq_logger.create_if_not_exists(self.outDir)
-        logger = majiq_logger.get_logger("%s/deltapsi_majiq.log" %self.outDir, silent=self.silent,
+        logger = majiq_logger.get_logger("%s/deltapsi_majiq.log" % self.outDir, silent=self.silent,
                                          debug=self.debug)
 
         logger.info("Majiq deltapsi v%s" % VERSION)
@@ -145,13 +147,11 @@ class DeltaPsi(BasicPipeline):
                 queue_manager(out_h5p, self.lock, self.queue, num_chunks=nthreads, func=self.store_results,
                               logger=logger, junc_info=junc_info)
 
-
             pool.join()
 
         if self.mem_profile:
-            mem_allocated = int(psutil.Process().memory_info().rss)/(1024**2)
+            mem_allocated = int(psutil.Process().memory_info().rss) / (1024 ** 2)
             logger.info("Max Memory used %.2f MB" % mem_allocated)
-
 
         logger.info("DeltaPSI calculation for %s_%s ended succesfully! Result can be found at %s" % (self.names[0],
                                                                                                      self.names[1],

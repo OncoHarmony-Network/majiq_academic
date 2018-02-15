@@ -53,6 +53,7 @@ class SQL:
 
         self.session = Session()
         self.filename = filename
+        self.session_add_count = 0
 
     def __enter__(self):
         return self
@@ -64,9 +65,15 @@ class SQL:
     def _fk_pragma_on_connect(dbapi_con, con_record):
         dbapi_con.execute('pragma foreign_keys=ON')
 
-    def commit(self):
-        self.session.commit()
+    def commit(self, cmds=0):
+        if self.session_add_count > cmds:
+            self.session.commit()
+            self.session_add_count = 0
 
     def close(self):
-        self.commit()
+        self.session.commit()
         self.session.close_all()
+
+    def add(self, s):
+        self.session_add_count += 1
+        self.session.add(s)

@@ -14,20 +14,7 @@ default_commit_on_count = 100000
 class SpliceGraphSQL(SQL):
     def __init__(self, filename, delete=False):
         super().__init__(filename, model, delete)
-        self.session_add_count = 0
 
-    def session_add(self, s):
-        self.session_add_count += 1
-        self.session.add(s)
-
-    def close(self):
-        self.session.commit()
-        self.session.close_all()
-
-    def commit(self, cmds=0):
-        if self.session_add_count > cmds:
-            self.session.commit()
-            self.session_add_count = 0
 
     @property
     def genome(self):
@@ -91,7 +78,7 @@ class Exons(SpliceGraphSQL):
             exon.alt_ends = [model.AltEnds(coordinate=int(alt_end)) for alt_end in alt_ends]
             exon.alt_starts = [model.AltStarts(coordinate=int(alt_start)) for alt_start in alt_starts]
 
-            self.sql.session_add(exon)
+            self.sql.add(exon)
             self.sql.commit(default_commit_on_count)
             return exon
 
@@ -127,7 +114,7 @@ class Junctions(SpliceGraphSQL):
             junc = model.Junction(gene_id=self.gene_id, start=self.start, end=self.end, **kwargs)
             junc.reads = [model.Reads(reads=int(r), experiment_name=e) for r, e in reads]
 
-            self.sql.session_add(junc)
+            self.sql.add(junc)
             self.sql.commit(default_commit_on_count)
             return junc
 
@@ -144,7 +131,7 @@ class Junctions(SpliceGraphSQL):
         def update_reads(self, experiment, reads):
             r = model.Reads(junction_gene_id=self.gene_id, junction_start=self.start, junction_end=self.end,
                             experiment_name=experiment, reads=int(reads))
-            self.sql.session_add(r)
+            self.sql.add(r)
             self.sql.commit(default_commit_on_count)
 
     def junction(self, gene_id, start, end):
@@ -163,7 +150,7 @@ class Genes(SpliceGraphSQL):
 
         def add(self, **kwargs):
             g = model.Gene(id=self.gene_id, **kwargs)
-            self.sql.session_add(g)
+            self.sql.add(g)
             self.sql.commit(default_commit_on_count)
             return g
 
