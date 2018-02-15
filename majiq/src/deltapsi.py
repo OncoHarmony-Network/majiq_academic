@@ -11,7 +11,7 @@ from majiq.src.constants import *
 from majiq.src.multiproc import QueueMessage, process_conf, queue_manager, process_wrapper, chunks
 from voila.api import Matrix
 from voila.constants import ANALYSIS_DELTAPSI
-import os
+import psutil
 
 
 def deltapsi(args):
@@ -147,6 +147,11 @@ class DeltaPsi(BasicPipeline):
 
 
             pool.join()
+
+        if self.mem_profile:
+            mem_allocated = int(psutil.Process().memory_info().rss)/(1024**2)
+            logger.info("Max Memory used %.2f MB" % mem_allocated)
+
 
         logger.info("DeltaPSI calculation for %s_%s ended succesfully! Result can be found at %s" % (self.names[0],
                                                                                                      self.names[1],

@@ -180,7 +180,7 @@ def parsing_files(sam_file_list, chnk, conf, logger):
         logger.info('dump samples')
         # vals = sample_junctions(lsv_dict, fitfunc_r, majiq_config)
         fname = '%s/%s.majiq' % (majiq_config.outDir, sam_file)
-        majiq_io.dump_lsv_coverage(fname, lsv_dict, lsv_type_list, junc_info)
+        majiq_io.dump_lsv_coverage(fname, lsv_dict, lsv_type_list, junc_info, sam_file)
 
         del lsv_type_list
         del lsv_dict
@@ -347,8 +347,8 @@ class Builder(BasicPipeline):
             # with h5py.File('%s/%s.majiq' % (majiq_config.outDir, sam_file), 'r+') as f:
             #     logger.info('%s LSVs found in %s' % (f.attrs['num_lsvs'], sam_file))
 
-        logger.info("MAJIQ Builder is ended succesfully!")
         if self.mem_profile:
             mem_allocated = int(psutil.Process().memory_info().rss)/(1024**2)
             logger.info("Max Memory used %.2f MB" % mem_allocated)
-        logger.info("Alakazam! Done.")
+        logger.info("MAJIQ Builder is ended succesfully!")
+

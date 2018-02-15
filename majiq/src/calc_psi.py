@@ -9,7 +9,7 @@ from majiq.src.multiproc import QueueMessage, process_conf, queue_manager, proce
 from voila.api import Matrix
 from voila.constants import ANALYSIS_PSI
 import majiq.src.logger as majiq_logger
-import os
+import psutil
 
 ################################
 # PSI calculation pipeline     #
@@ -96,6 +96,9 @@ class CalcPsi(BasicPipeline):
 
             pool.join()
 
+        if self.mem_profile:
+            mem_allocated = int(psutil.Process().memory_info().rss)/(1024**2)
+            logger.info("Max Memory used %.2f MB" % mem_allocated)
         logger.info("PSI calculation for %s ended succesfully! "
                     "Result can be found at %s" % (self.name, self.outDir))
-        logger.info("Alakazam! Done.")
+
