@@ -47,7 +47,7 @@ cdef class LSV:
         self.strand = gene_strand
         stt = ex.start if ex.start > 0 else 'nan'
         end =  ex.end if ex.end > 0 else 'nan'
-        self.id = "%s:%s:%s-%s" % (gene_id, self.type[0], ex.start, ex.end)
+        self.id = "%s:%s:%s-%s" % (gene_id, self.type[0], stt, end)
         if self.type.endswith('i|i'):
             raise InvalidLSV("incorrect LSV, too many ir junctions")
 
