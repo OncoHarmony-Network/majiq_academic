@@ -16,7 +16,7 @@ import multiprocessing as mp
 
 def bootstrap_samples_with_divs(list_of_lsv, chnk, conf, logger):
 
-    lsvs_to_work = majiq_io.get_extract_lsv_list(list_of_lsv, conf.file_list)
+    lsvs_to_work = majiq_io.get_extract_lsv_list(list_of_lsv, conf.file_list, aggr=False)
     divs = divs_from_bootsamples(lsvs_to_work, n_replica=len(conf.file_list), pnorm=1, nbins=conf.nbins,
                                  lsv_types=conf.lsv_type_dict)
     qm = QueueMessage(QUEUE_MESSAGE_BOOTSTRAP, ([xx.id for xx in lsvs_to_work], divs), chnk)

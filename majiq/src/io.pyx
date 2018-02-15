@@ -166,7 +166,7 @@ cdef int merge_exons(dict exon_dict, object elem_dict) except -1:
 
 
 #######
-# HDF5 API
+# io API
 #######
 cdef int _load_db(str filename, object elem_dict, object genes_dict) except -1:
     cdef list names = ['id', 'name', 'chromosome', 'strand']
@@ -179,13 +179,15 @@ cdef int _load_db(str filename, object elem_dict, object genes_dict) except -1:
     for xx in genes_dict.keys():
         elem_dict[xx] = all_files[xx]
 
-cdef int _dump_lsv_coverage(str filename, dict cov_dict, list type_list, list junc_info):
+cdef int _dump_lsv_coverage(str filename, dict cov_dict, list type_list, list junc_info, str exp_name):
     dt=np.dtype('|S250, |S250')
 
     with open(filename, 'w+b') as ofp:
         cov_dict['lsv_types'] = np.array(type_list, dtype=dt)
         dt=np.dtype('|S250, u4, u4, f4, f4')
         cov_dict['junc_info'] = np.array(junc_info, dtype=dt)
+        dt = np.dtype('|S250, |S25')
+        cov_dict['meta'] = np.array([(exp_name, VERSION)], dtype=dt)
         np.savez(ofp, **cov_dict)
 
 cdef int _dump_elems_list(object elem_dict, object gene_info, str outDir) except -1:
@@ -239,12 +241,10 @@ cdef dict _get_extract_lsv_list(list list_of_lsv_id, list file_list):
     return result
 
 
-####
-# API
-##
 
-cpdef list extract_lsv_summary(list files, int minnonzero, int min_reads, object types_dict, dict junc_info,
-                                dict epsi=None, int percent=-1, object logger=None):
+
+cdef list _extract_lsv_summary(list files, int minnonzero, int min_reads, object types_dict, dict junc_info,
+                               list exp_name_list, dict epsi=None, int percent=-1, object logger=None):
     cdef dict lsv_types, lsv_list = {}
     cdef list lsv_id_list = []
     cdef int nfiles = len(files)
@@ -270,6 +270,9 @@ cpdef list extract_lsv_summary(list files, int minnonzero, int min_reads, object
             all_files = np.load(fp)
             lsv_types = {yy[0].decode('UTF-8'):yy[1].decode('UTF-8') for yy in all_files['lsv_types']}
             jinfo = all_files['junc_info']
+            xp = all_files['meta'][0]
+
+            exp_name_list.append(xp[0].decode('UTF-8'))
 
             pre_lsv = jinfo[0][0].decode('UTF-8')
             lsv_t = False
@@ -314,9 +317,20 @@ cpdef list extract_lsv_summary(list files, int minnonzero, int min_reads, object
 
     return lsv_id_list
 
+####
+# API
+##
 
-cpdef int dump_lsv_coverage(out_f, cov_list, attrs_list, junc_info):
-    _dump_lsv_coverage(out_f, cov_list, attrs_list, junc_info)
+cpdef tuple extract_lsv_summary(list files, int minnonzero, int min_reads, object types_dict, dict junc_info,
+                                dict epsi=None, int percent=-1, object logger=None):
+    cdef list r
+    cdef list exp_list = []
+    r = _extract_lsv_summary(files, minnonzero, min_reads, types_dict, junc_info, exp_list, epsi, percent, logger)
+
+    return r, exp_list
+
+cpdef int dump_lsv_coverage(str filename, dict cov_dict, list type_list, list junc_info, str exp_name):
+    _dump_lsv_coverage(filename, cov_dict, type_list, junc_info, exp_name)
 
 cpdef int parse_annot(str filename, str out_dir,  object elem_dict,  object all_genes, object logging=None):
 
@@ -370,8 +384,12 @@ cpdef dump_bin_file(data, str filename):
         # fast_pickler.fast = 1
         fast_pickler.dump(data)
 
-cpdef dict get_extract_lsv_list(list list_of_lsv_id, list file_list):
-    return _get_extract_lsv_list(list_of_lsv_id, file_list)
+cpdef dict get_extract_lsv_list(list list_of_lsv_id, list file_list, bint aggr=True):
+
+    if aggr:
+        return _get_extract_lsv_list(list_of_lsv_id, file_list)
+    else:
+        return _get_extract_lsv_list(list_of_lsv_id, file_list)
 
 
 cpdef load_db(str filename, object elem_dict, object genes_dict):
@@ -399,13 +417,3 @@ cpdef load_weights(list lsv_list, str outdir, str name):
             out_dict[xx] = all_wgts[xx]
 
     return out_dict
-
-
-#TODO: CHeck how to add metainformat
-cpdef add_metainfo():
-    pass
-            # with h5py.File('%s/%s.majiq' % (majiq_config.outDir, sam_file), 'w') as out_f:
-        #     out_f.attrs['sample_id'] = sam_file
-        #     out_f.attrs['date'] = datetime.datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S')
-        #     out_f.attrs['VERSION'] = VERSION
-

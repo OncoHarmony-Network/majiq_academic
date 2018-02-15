@@ -64,9 +64,9 @@ class DeltaPsi(BasicPipeline):
 
         lsv_type = self.lsv_type_dict[results[5]]
         output.delta_psi(results[5]).add(lsv_type=lsv_type, bins=results[0],
-                                              group_bins=[results[1], results[2]],
-                                              group_means=[results[3], results[4]],
-                                              junctions=extra['junc_info'][results[5]])
+                                         group_bins=[results[1], results[2]],
+                                         group_means=[results[3], results[4]],
+                                         junctions=extra['junc_info'][results[5]])
 
     def run(self):
         self.deltapsi()
@@ -96,17 +96,19 @@ class DeltaPsi(BasicPipeline):
 
         lsv_empirical_psi1 = {}
         junc_info = {}
-        list_of_lsv1 = majiq_io.extract_lsv_summary(self.files1, epsi=lsv_empirical_psi1, types_dict=self.lsv_type_dict,
-                                                    minnonzero=self.minpos, min_reads=self.minreads,
-                                                    junc_info=junc_info, percent=self.min_exp, logger=logger)
+        list_of_lsv1, exps1 = majiq_io.extract_lsv_summary(self.files1, epsi=lsv_empirical_psi1,
+                                                           types_dict=self.lsv_type_dict,
+                                                           minnonzero=self.minpos, min_reads=self.minreads,
+                                                           junc_info=junc_info, percent=self.min_exp, logger=logger)
         weights[0] = self.calc_weights(self.weights[0], list_of_lsv1, name=self.names[0], file_list=self.files1,
                                        logger=logger)
         logger.info("Group %s: %s LSVs" % (self.names[0], len(list_of_lsv1)))
 
         lsv_empirical_psi2 = {}
-        list_of_lsv2 = majiq_io.extract_lsv_summary(self.files2, epsi=lsv_empirical_psi2, types_dict=self.lsv_type_dict,
-                                                    minnonzero=self.minpos, min_reads=self.minreads,
-                                                    junc_info=junc_info, percent=self.min_exp, logger=logger)
+        list_of_lsv2, exps2 = majiq_io.extract_lsv_summary(self.files2, epsi=lsv_empirical_psi2,
+                                                           types_dict=self.lsv_type_dict,
+                                                           minnonzero=self.minpos, min_reads=self.minreads,
+                                                           junc_info=junc_info, percent=self.min_exp, logger=logger)
         weights[1] = self.calc_weights(self.weights[1], list_of_lsv2, name=self.names[1], file_list=self.files2,
                                        logger=logger)
 
@@ -139,8 +141,6 @@ class DeltaPsi(BasicPipeline):
                 out_h5p.analysis_type = ANALYSIS_DELTAPSI
                 out_h5p.group_names = self.names
                 out_h5p.prior = []
-                exps1 = [os.path.splitext(os.path.basename(xx))[0] for xx in self.files1]
-                exps2 = [os.path.splitext(os.path.basename(xx))[0] for xx in self.files2]
                 out_h5p.experiment_names = [exps1, exps2]
                 queue_manager(out_h5p, self.lock, self.queue, num_chunks=nthreads, func=self.store_results,
                               logger=logger, junc_info=junc_info)

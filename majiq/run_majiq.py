@@ -82,7 +82,7 @@ def main():
     buildparser.add_argument('--gff-output', dest='gff_output', default="lsvs.gff", action="store",
                              help='Filename where a gff with the lsv events will be generated. [Default: %(default)s]')
 
-    buildparser.add_argument('--min-intronic-cov', default=1.5, type=float,
+    buildparser.add_argument('--min-intronic-cov', default=0.5, type=float,
                              help='Minimum number of reads on average in intronic sites, only for intron retention.'
                                   'Default: %(default)s]')
 

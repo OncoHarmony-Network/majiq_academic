@@ -73,9 +73,9 @@ class CalcPsi(BasicPipeline):
         self.queue = manager.Queue()
         self.lock = [mp.Lock() for xx in range(self.nthreads)]
         junc_info = {}
-        list_of_lsv = majiq_io.extract_lsv_summary(self.files, types_dict=self.lsv_type_dict, minnonzero=self.minpos,
-                                                   min_reads=self.minreads, percent=self.min_exp, junc_info=junc_info,
-                                                   logger=logger)
+        list_of_lsv, exps = majiq_io.extract_lsv_summary(self.files, types_dict=self.lsv_type_dict,
+                                                         minnonzero=self.minpos, min_reads=self.minreads,
+                                                         percent=self.min_exp, junc_info=junc_info, logger=logger)
 
         self.weights = self.calc_weights(self.weights, list_of_lsv, name=self.name, file_list=self.files, logger=logger)
 
@@ -89,10 +89,8 @@ class CalcPsi(BasicPipeline):
             pool.close()
             with Matrix(get_quantifier_voila_filename(self.outDir, self.name), 'w') as out_h5p:
                 out_h5p.analysis_type = ANALYSIS_PSI
-                exps = [os.path.splitext(os.path.basename(xx))[0] for xx in self.files]
                 out_h5p.experiment_names = [exps]
                 out_h5p.group_names = [self.name]
-                # out_h5p.add_experiments(group_name=self.name, experiment_names=exps)
                 queue_manager(out_h5p, self.lock, self.queue, num_chunks=nthreads, func=self.store_results,
                               logger=logger, junc_info=junc_info)
 

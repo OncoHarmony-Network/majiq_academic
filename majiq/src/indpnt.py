@@ -146,14 +146,14 @@ class independent(BasicPipeline):
                        initargs=[het_quantification, self],
                        maxtasksperchild=1)
         print(operator)
-        list_of_lsv1 = majiq_io.extract_lsv_summary(self.files1, types_dict=self.lsv_type_dict, minnonzero=self.minpos,
-                                                    min_reads=self.minreads, junc_info=junc_info,
-                                                    percent=self.min_exp, logger=logger)
+        list_of_lsv1, exps1 = majiq_io.extract_lsv_summary(self.files1, types_dict=self.lsv_type_dict,
+                                                           minnonzero=self.minpos, min_reads=self.minreads,
+                                                           junc_info=junc_info, percent=self.min_exp, logger=logger)
         logger.info("Group %s: %s LSVs" % (self.names[0], len(list_of_lsv1)))
 
-        list_of_lsv2 = majiq_io.extract_lsv_summary(self.files2, types_dict=self.lsv_type_dict, minnonzero=self.minpos,
-                                                    min_reads=self.minreads, junc_info=junc_info,
-                                                    percent=self.min_exp, logger=logger)
+        list_of_lsv2, exps2 = majiq_io.extract_lsv_summary(self.files2, types_dict=self.lsv_type_dict,
+                                                           minnonzero=self.minpos, min_reads=self.minreads,
+                                                           junc_info=junc_info, percent=self.min_exp, logger=logger)
         logger.info("Group %s: %s LSVs" % (self.names[1], len(list_of_lsv1)))
 
         list_of_lsv = list(set(list_of_lsv1).intersection(set(list_of_lsv2)))
@@ -168,8 +168,6 @@ class independent(BasicPipeline):
 
                 out_h5p.set_analysis_type(ANALYSIS_HETEROGEN)
                 out_h5p.group_names = self.names
-                exps1 = [os.path.splitext(os.path.basename(xx))[0] for xx in self.files1]
-                exps2 = [os.path.splitext(os.path.basename(xx))[0] for xx in self.files2]
                 out_h5p.experiment_names = [exps1, exps2]
 
                 out_h5p.add_stat_names(self.stats)

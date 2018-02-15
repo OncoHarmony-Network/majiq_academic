@@ -151,7 +151,7 @@ def parsing_files(sam_file_list, chnk, conf, logger):
             logger.debug("[%s] Reading BAM files" % gne_id)
             gene_reads = majiq_io_bam.read_sam_or_bam(gene_obj, samfl, junc_mtrx, dict_junctions[gne_id],
                                                       list_exons[gne_id], list_introns[gne_id],
-                                                      stranded=majiq_config.strand_specific[sam_file],
+                                                      stranded=majiq_config.strand_specific[sam_file] ,
                                                       info_msg=loop_id, logging=logger)
 
             if gene_reads == 0:
@@ -286,7 +286,6 @@ class Builder(BasicPipeline):
         logger.info("Command: %s" % " ".join(sys.argv))
         manager = mp.Manager()
         self.queue = manager.Queue()
-
 
         self.elem_dict = manager.dict()
         self.genes_dict = manager.dict()
