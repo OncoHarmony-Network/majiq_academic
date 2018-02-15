@@ -63,8 +63,6 @@ class DeltaPsi(BasicPipeline):
     def store_results(self, output, results, msg_type, extra={}):
 
         lsv_type = self.lsv_type_dict[results[5]]
-        if 'nan' in results[5]:
-            print('>>>>>>>>>>>>>>>>>>>>>>>>>>', results[5])
         output.delta_psi(results[5]).add(lsv_type=lsv_type, bins=results[0],
                                          group_bins=[results[1], results[2]],
                                          group_means=[results[3], results[4]],

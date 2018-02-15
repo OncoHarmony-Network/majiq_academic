@@ -178,7 +178,6 @@ def parsing_files(sam_file_list, chnk, conf, logger):
                     lsv_type_list, junc_info, logger)
 
         logger.info('dump samples')
-        # vals = sample_junctions(lsv_dict, fitfunc_r, majiq_config)
         fname = '%s/%s.majiq' % (majiq_config.outDir, sam_file)
         majiq_io.dump_lsv_coverage(fname, lsv_dict, lsv_type_list, junc_info, sam_file)
 

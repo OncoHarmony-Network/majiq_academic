@@ -1,5 +1,3 @@
-import numpy as np
-cimport numpy as np
 from majiq.src.constants import *
 from majiq.src.sample import sample_from_junctions
 from majiq.grimoire.exon cimport Exon
@@ -8,7 +6,7 @@ from majiq.src.normalize import mark_stacks
 
 from voila.constants import *
 from voila.splice_graphics import ExonGraphic, LsvGraphic, JunctionGraphic
-
+import collections
 
 quant_lsv = collections.namedtuple('quant_lsv', 'id coverage')
 
@@ -39,8 +37,8 @@ cdef class LSV:
         if len(self.junctions) < 2:
             raise InvalidLSV("not enougth junctions")
 
-        if len(self.type.split('|')) <= 2:
-            print(self.type, self.type[0], ex.start, ex.end, [(xx.start, xx.end) for xx in jncs] )
+        if len(self.type) >= 250:
+            self.type = NA_LSV
 
         self.gene_id = gene_id
         self.chromosome = gene_chromosome
@@ -112,28 +110,6 @@ cdef class LSV:
                                 strand=self.strand, exons=exon_list, junctions=junc_list)
         return splice_lsv
 
-    # cdef int add_lsv_old(LSV self, hdf5grp, np.ndarray junc_mtrx, list np_jjlist, int lsv_idx):
-    #     cdef int njunc = len(self.junctions)
-    #
-    #
-    #
-    #     h_lsv = hdf5grp.create_group("LSVs/%s" % self.id)
-    #     h_lsv.attrs['id'] = self.id
-    #     h_lsv.attrs['type'] = self.type
-    #
-    #     for xx  in self.junctions:
-    #         if xx.lsv_index == 0 and junc_mtrx[xx.index].sum() > 0:
-    #
-    #             lsv_idx += 1
-    #             xx.lsv_index = lsv_idx
-    #             np_jjlist.append(junc_mtrx[xx.index])
-    #
-    #     h_lsv.attrs['coverage'] = [xx.lsv_index for xx in self.junctions]
-    #     # vh_lsv = h_lsv.create_group('visual')
-    #     # self.get_visual_lsv().to_hdf5(vh_lsv)
-    #     return lsv_idx
-
-
     cdef int add_lsv(LSV self, np.ndarray junc_mtrx, list type_dict, dict values, list junc_info, float fitfunc_r,
                      object majiq_config) except -1:
 
@@ -145,7 +121,6 @@ cdef class LSV:
                            np.count_nonzero(junc_mtrx[xx.index]))) for xx  in self.junctions]
         val = [junc_mtrx[xx.index] for xx  in self.junctions]
         values[self.id] = sample_junctions(np.array(val), fitfunc_r, majiq_config)
-
 
     cdef tuple sample_lsvs(LSV self, np.ndarray junc_mtrx, float fitfunc_r, object majiq_config):
         cdef Junction xx
