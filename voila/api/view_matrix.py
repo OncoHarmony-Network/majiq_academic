@@ -27,6 +27,7 @@ class ViewPsi(Psi):
             yield '_id', self.lsv_id
             yield 'reference_exon', tuple(self.reference_exon)
             yield 'gene_id', self.gene_id
+            yield 'is_target', self.is_target
 
             if not args:
                 args = self.fields
@@ -92,8 +93,8 @@ class ViewPsi(Psi):
         elif args.lsv_ids:
             for lsv_id in args.lsv_ids:
                 yield lsv_id_to_gene_id(lsv_id)
-
-        yield from self.h['lsvs'].keys()
+        else:
+            yield from self.h['lsvs'].keys()
 
     def view_lsv_count(self, args):
         return len(tuple(self.view_lsv_ids(args)))
@@ -142,6 +143,7 @@ class ViewDeltaPsi(DeltaPsi):
             yield '_id', self.lsv_id
             yield 'reference_exon', self.reference_exon
             yield 'excl_incl', self.excl_incl
+            yield 'is_target', self.is_target
 
             if not args:
                 args = self.fields

@@ -12,54 +12,14 @@ $(document).on('click', '.lsvDeltaCompact', function () {
         .animate({height: 'toggle', width: 'toggle'});
 });
 
-$(document).on('change', '.highlight-btn', function () {
-    var checkboxes = $(this).closest('table').find('.highlight-btn:checked');
-    var svgs = $(this).closest('.gene-container').find('.splice-graph svg');
-    if (checkboxes.length) {
-        console.log(svgs);
-        svgs.each(function () {
-            var svg = this;
-            d3.select(this)
-                .selectAll('.exon-grp, .junction-grp, .ir-grp, .intron-retention, .half-exon')
-                .classed('highlight', true);
-            checkboxes.each(function () {
-                db.get($(this).closest('td').attr('data-lsv-id')).then(function (lsv_data) {
-                    d3.select(svg)
-                        .selectAll('.exon-grp')
-                        .classed('lsv', function (d) {
-                            return JSON.stringify(lsv_data.reference_exon) === JSON.stringify([d.start, d.end])
-                        })
-                });
-            });
-        });
-
-        // svgs.each(function () {
-        //     $(this).find('.exon-grp, .junction-grp, .ir-grp, .intron-retention').addClass('highlight');
-        //     $(this).find('.lsv').removeClass('lsv')
-        // });
-        //
-        // checkboxes.each(function () {
-        //     db.get($(this).closest('td').attr('data-lsv-id')).then(function (lsv_data) {
-        //         svgs.each(function () {
-        //             $(this).find('.exon-grp').each(function () {
-        //                 var d = d3.select(this).data()[0];
-        //                 if (JSON.stringify(lsv_data.reference_exon) === JSON.stringify([d.start, d.end])) {
-        //                     $(this).addClass('lsv')
-        //                 }
-        //             })
-        //         })
-        //     })
-        // });
-        //
-        // svgs.each(function () {
-        //     $(this).find('.exon-grp, .junction-grp, .ir-grp, .intron-retention').addClass('highlight')
-        // });
-
-    } else {
-        svgs.each(function () {
-            $(this).find('.lsv, .highlight').removeClass('hide').removeClass('highlight')
-        })
-    }
+$(document).on('change', '.highlight-lsv', function () {
+    var table = this.parentElement.parentElement.parentElement.parentElement;
+    var highlights = table.querySelectorAll('.highlight-btn:checked');
+    var splice_graphs = table.parentElement.querySelectorAll('.splice-graph');
+    var lsv_ids = get_lsv_ids(table);
+    Array.from(splice_graphs).forEach(function (splice_graph) {
+        sg.update(splice_graph, lsv_ids)
+    });
 });
 
 var Lsv = function (db) {

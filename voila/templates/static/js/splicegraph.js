@@ -172,7 +172,7 @@ SpliceGraph.prototype.overlaps = function (grp, j_idx, juncs, x) {
     return rtn
 };
 
-SpliceGraph.prototype.junctions_no_ir = function (gene, x) {
+SpliceGraph.prototype.junctions_no_ir = function (gene) {
     var sg = this;
     var leader;
     var unavailable = [];
@@ -189,7 +189,7 @@ SpliceGraph.prototype.junctions_no_ir = function (gene, x) {
             unavailable.push(leader);
             juncs_no_ir.forEach(function (b, b_idx) {
                 if (!unavailable.includes(b_idx)) {
-                    if (sg.juncs_overlap(juncs_no_ir[leader], b, x)) {
+                    if (sg.juncs_overlap(juncs_no_ir[leader], b, sg.x)) {
                         grps[leader].push(b_idx);
                         unavailable.push(b_idx)
                     }
@@ -218,26 +218,22 @@ SpliceGraph.prototype.junctions_no_ir = function (gene, x) {
 SpliceGraph.prototype.init = function (sg_div) {
     var gene_id = sg_div.getAttribute('data-gene-id');
     var experiment = sg_div.getAttribute('data-experiment');
+    var default_view = sg_div.classList.contains('default-view');
     var sg = this;
+
     sg_div.setAttribute('data-zoom', 1.0);
+
     this.db.get(gene_id).then(function (gene) {
-
-        sg.sg_div = d3.select(sg_div);
-        sg.gene = gene;
-
-        var svg = sg.sg_div.append('svg')
+        var svg = d3.select(sg_div).append('svg')
             .attr('width', sg.width)
             .attr('height', sg.height);
 
-        var exon_height = sg.exon_height;
-        var font_size = sg.font_size;
-        var default_view = sg.sg_div.classed('default-view');
         var reversed_range = gene.strand === '-';
 
-        var y = sg.yScale();
-        var x = sg.xScale(gene, default_view, reversed_range, experiment);
+        sg.yScale();
+        sg.x = sg.xScale(gene, default_view, reversed_range, experiment);
 
-        var juncs_no_ir = sg.junctions_no_ir(gene, x);
+        var juncs_no_ir = sg.junctions_no_ir(gene);
         var exons = gene.exons.filter(function (d) {
             return !d.intron_retention && ![4, 5].includes(gene.exon_types[d.start][d.end][experiment])
         });
@@ -248,7 +244,7 @@ SpliceGraph.prototype.init = function (sg_div) {
             }))
             .enter()
             .append('polyline')
-            .half_exons(x, y, exon_height, gene.exon_types, experiment);
+            .attr('class', 'half-exon');
 
 
         svg.selectAll('.intron-retention')
@@ -257,19 +253,19 @@ SpliceGraph.prototype.init = function (sg_div) {
             }))
             .enter()
             .append('polygon')
-            .intron_retention(x, y, exon_height, gene.exon_types, experiment);
+            .attr('class', 'intron-retention');
 
         svg.selectAll('.exon')
             .data(exons)
             .enter()
             .append('polygon')
-            .exons(x, y, exon_height, gene.exon_types, experiment);
+            .attr('class', 'exon');
 
         svg.selectAll('.exon-number')
             .data(exons)
             .enter()
             .append('text')
-            .exon_numbers(x, y, exon_height, font_size, gene.strand);
+            .attr('class', 'exon-number');
 
 
         svg.selectAll('.junction-grp')
@@ -284,28 +280,28 @@ SpliceGraph.prototype.init = function (sg_div) {
                     .data([d])
                     .enter()
                     .append('path')
-                    .junctions(x, y, exon_height, gene.strand, gene.reads, gene.junction_types, experiment);
+                    .attr('class', 'junction');
 
                 junction_grp
                     .selectAll('.reads')
                     .data([d])
                     .enter()
                     .append('text')
-                    .reads(x, y, exon_height, font_size, gene.reads, experiment);
+                    .attr('class', 'reads');
 
                 junction_grp
-                    .selectAll('.ss3p')
+                    .selectAll('.splice-site.p3')
                     .data([d])
                     .enter()
                     .append('line')
-                    .ss3p(x, y, exon_height, gene.reads, gene.junction_types, experiment);
+                    .attr('class', 'splice-site p3');
 
                 junction_grp
-                    .selectAll('.ss5p')
+                    .selectAll('.splice-site.p5')
                     .data([d])
                     .enter()
                     .append('line')
-                    .ss5p(x, y, exon_height, gene.reads, gene.junction_types, experiment)
+                    .attr('class', 'splice-site p5')
             });
 
         svg.selectAll('.ir-grp')
@@ -318,69 +314,73 @@ SpliceGraph.prototype.init = function (sg_div) {
             .each(function (d) {
                 var ir_grp = d3.select(this);
                 ir_grp
-                    .selectAll('.ir-lines')
+                    .selectAll('.ir-line')
                     .data([d])
                     .enter()
                     .append('polyline')
-                    .ir_lines(x, y, gene.strand);
+                    .attr('class', 'ir-line');
 
                 ir_grp
                     .selectAll('.ir-reads')
                     .data([d])
                     .enter()
                     .append('text')
-                    .ir_reads(x, y, exon_height, font_size, gene.strand, gene.reads, experiment);
+                    .attr('class', 'ir-reads')
             });
+    });
 
-
-    })
+    this.update(sg_div, undefined, 0)
 };
 
 d3.transition.prototype.ss3p =
     d3.selection.prototype.ss3p =
-        function (x, y, exon_height, reads, junction_types, experiment) {
+        function (sg, gene, lsvs) {
             return this
-                .attr('class', 'ss3p')
                 .attr('x1', function (d) {
-                    return x(d.start)
+                    return sg.x(d.start)
                 })
                 .attr('x2', function (d) {
-                    return x(d.start)
+                    return sg.x(d.start)
                 })
-                .splice_site(y, exon_height, reads, junction_types, experiment)
+                .splice_site(sg, gene, lsvs)
         };
 
 d3.transition.prototype.ss5p =
     d3.selection.prototype.ss5p =
-        function (x, y, exon_height, reads, junction_types, experiment) {
+        function (sg, gene, lsvs) {
             return this
-                .attr('class', 'ss5p')
                 .attr('x1', function (d) {
-                    return x(d.end)
+                    return sg.x(d.end)
                 })
                 .attr('x2', function (d) {
-                    return x(d.end)
+                    return sg.x(d.end)
                 })
-                .splice_site(y, exon_height, reads, junction_types, experiment)
+                .splice_site(sg, gene, lsvs)
         };
 
 d3.transition.prototype.splice_site =
     d3.selection.prototype.splice_site =
-        function (y, exon_height, reads, junction_types, experiment) {
+        function (sg, gene, lsvs) {
             return this
-                .attr('y1', y(0))
-                .attr('y2', y(exon_height))
+                .attr('y1', sg.y(0))
+                .attr('y2', sg.y(sg.exon_height))
                 .attr('stroke', 'black')
-                .style_junctions(reads, junction_types, experiment)
-                .attr('stroke-dasharray', '2,2')
+                .style_junctions(sg, gene, lsvs)
 
         };
 
 d3.transition.prototype.ir_reads =
     d3.selection.prototype.ir_reads =
-        function (x, y, exon_height, font_size, strand, reads, experiment) {
+        function (sg, gene, lsvs) {
+            var reads = gene.reads;
+            var experiment = sg.experiment;
+            var x = sg.x;
+            var y = sg.y;
+            var strand = gene.strand;
+            var exon_height = sg.exon_height;
+            var font_size = sg.font_size;
+
             return this
-                .attr('class', 'ir-reads')
                 .text(function (d) {
                     var r = reads[d.start][d.end][experiment];
                     if (r)
@@ -414,15 +414,22 @@ d3.transition.prototype.ir_reads =
                     }
                 })
                 .attr('font-family', 'sans-serif')
-                .attr('font-size', font_size);
+                .attr('font-size', font_size)
+                .highlight_junctions(lsvs)
+
         };
 
 d3.transition.prototype.half_exons =
     d3.selection.prototype.half_exons =
-        function (x, y, exon_height, exon_types, experiment) {
+        function (sg, gene, lsvs) {
+            var exon_types = gene.exon_types;
+            var experiment = sg.experiment;
+            var x = sg.x;
+            var y = sg.y;
+            var exon_height = sg.exon_height;
+
             return this
-                .attr('class', 'half-exon')
-                .style_exons(exon_types, experiment)
+                .style_exons(sg, gene, lsvs)
                 .attr('points', function (d) {
                     var exon_type = exon_types[d.start][d.end][experiment];
 
@@ -441,67 +448,102 @@ d3.transition.prototype.half_exons =
                             [x(d.start), y(exon_height)].join(' '),
                             [x(d.end), y(exon_height)].join(' ')
                         ].join(', ');
-                });
+                })
+                .highlight_exons(lsvs)
         };
 
 d3.transition.prototype.style_exons =
     d3.selection.prototype.style_exons =
-        function (exon_types, experiment) {
+        function (sg, gene, lsvs) {
+            var exon_types = gene.exon_types;
+            var experiment = sg.experiment;
+
             return this
                 .attr('fill-opacity', .3)
                 .attr('stroke-linejoin', 'round')
-                .attr('fill', function (d) {
-                    switch (exon_types[d.start][d.end][experiment]) {
+                .each(function (d) {
+                    if (lsvs.length) {
+                        var colors = new Colors();
+                        var hl = lsvs.reduce(function (acc, lsv) {
+                            if ((lsv.doc.is_target && lsv.doc.reference_exon[0] - 1 === d.end) ||
+                                (!lsv.doc.is_target && lsv.doc.reference_exon[1] + 1 === d.start)) {
+                                acc.push(colors.brewer(lsv.doc.junctions.length - 1));
+                            }
+                            return acc;
+                        }, []);
+
+                        if (hl.length > 1)
+                            return 'black';
+
+                        if (hl.length === 1) {
+                            this.setAttribute('stroke', hl[0]);
+                            this.setAttribute('fill', hl[0]);
+                            this.setAttribute('stroke-dasharray', '');
+                            return
+                        }
+
+                    }
+
+                    var exon_type = exon_types[d.start][d.end][experiment];
+
+                    switch (exon_type) {
                         case 0:
-                            return 'grey';
+                            this.setAttribute('fill', 'grey');
+                            break;
                         case 1:
                         case 4:
                         case 5:
-                            return 'green';
+                            this.setAttribute('fill', 'green');
+                            break;
                         default:
-                            return 'transparent'
+                            this.setAttribute('fill', 'transparent');
                     }
-                })
-                .attr('stroke', function (d) {
-                    switch (exon_types[d.start][d.end][experiment]) {
+
+                    switch (exon_type) {
                         case 1:
                         case 4:
                         case 5:
-                            return 'green';
+                            this.setAttribute('stroke', 'green');
+                            break;
                         default:
-                            return 'black'
+                            this.setAttribute('stroke', 'black');
                     }
-                })
-                .attr('stroke-dasharray', function (d) {
-                    if (exon_types[d.start][d.end][experiment] === 2) {
-                        return '5, 2'
+
+                    switch (exon_type) {
+                        case 2:
+                            this.setAttribute('stroke-dasharray', '5,2')
                     }
                 })
         };
 
 d3.transition.prototype.exons =
     d3.selection.prototype.exons =
-        function (x, y, exon_height, exon_types, experiment) {
+        function (sg, gene, lsvs) {
+            var x = sg.x;
+            var y = sg.y;
+
             return this
-                .attr('class', 'exon')
-                .style_exons(exon_types, experiment)
+                .style_exons(sg, gene, lsvs)
                 .attr('points', function (d) {
                     return [
                         [x(d.start), y(0)].join(' '),
                         [x(d.end), y(0)].join(' '),
-                        [x(d.end), y(exon_height)].join(' '),
-                        [x(d.start), y(exon_height)].join(' ')
+                        [x(d.end), y(sg.exon_height)].join(' '),
+                        [x(d.start), y(sg.exon_height)].join(' ')
                     ].join(', ')
-                });
+                })
+                .highlight_exons(lsvs)
         };
 
 
 d3.transition.prototype.intron_retention =
     d3.selection.prototype.intron_retention =
-        function (x, y, exon_height, exon_types, experiment) {
+        function (sg, gene, lsvs) {
+            var x = sg.x;
+            var y = sg.y;
+            var exon_height = sg.exon_height;
+
             return this
-                .attr('class', 'intron-retention')
-                .style_exons(exon_types, experiment)
                 .attr('points', function (d) {
                     return [
                         [x(d.start - 1), y(exon_height / 4)].join(' '),
@@ -510,14 +552,57 @@ d3.transition.prototype.intron_retention =
                         [x(d.start - 1), y(exon_height * (3 / 4))].join(' ')
                     ].join(', ')
                 })
+                .attr('opacity', function (d) {
+                    if (lsvs.length)
+                        if (lsvs.every(function (lsv) {
+                                if (lsv.doc.is_target)
+                                    return lsv.doc.reference_exon[0] - 1 !== d.end;
+                                else
+                                    return lsv.doc.reference_exon[1] + 1 !== d.start;
+                            }))
+                            return '0.05'
+                })
+                .style_exons(sg, gene, lsvs)
+
         };
+
+d3.transition.prototype.highlight_junctions =
+    d3.selection.prototype.highlight_junctions = function (lsvs) {
+        return this
+            .attr('opacity', function (d) {
+                if (lsvs.length)
+                    if (lsvs.every(function (lsv) {
+                            return lsv.doc.junctions.every(function (junc) {
+                                return JSON.stringify(junc) !== JSON.stringify([d.start, d.end])
+                            })
+                        }))
+                        return '0.05'
+            })
+    };
+
+d3.transition.prototype.highlight_exons =
+    d3.selection.prototype.highlight_exons = function (lsvs) {
+        return this
+            .attr('opacity', function (d) {
+                if (lsvs.length)
+                    if (lsvs.every(function (lsv) {
+                            return JSON.stringify(lsv.doc.reference_exon) !== JSON.stringify([d.start, d.end])
+                        }))
+                        return '0.05';
+            })
+    };
 
 d3.transition.prototype.exon_numbers =
     d3.selection.prototype.exon_numbers =
-        function (x, y, exon_height, font_size, strand) {
+        function (sg, gene, lsvs) {
             var size = this.size();
+            var strand = gene.strand;
+            var y = sg.y;
+            var x = sg.x;
+            var exon_height = sg.exon_height;
+            var font_size = sg.font_size;
+
             return this
-                .attr('class', 'exon-number')
                 .text(function (d, i) {
                     if (strand === '+')
                         return i + 1;
@@ -530,26 +615,93 @@ d3.transition.prototype.exon_numbers =
                 })
                 .attr('text-anchor', 'middle')
                 .attr('font-family', 'sans-serif')
-                .attr('font-size', font_size);
+                .attr('font-size', font_size)
+                .highlight_exons(lsvs)
         };
 
 d3.transition.prototype.style_junctions =
     d3.selection.prototype.style_junctions =
-        function (reads, junction_types, experiment) {
+        function (sg, gene, lsvs) {
+            var colors = new Colors();
+            var experiment = sg.experiment;
+
             return this
-                .attr('stroke-width', 1.5)
+                .attr('stroke-width', function (d) {
+                    if (lsvs.length) {
+                        var hl = lsvs.reduce(function (acc, lsv, idx) {
+                            if (sg.weighted[idx])
+                                acc = acc.concat(lsv.doc.junctions.reduce(function (acc, junc, idx) {
+                                    if (JSON.stringify([d.start, d.end]) === JSON.stringify(junc)) {
+                                        acc.push(lsv.doc.group_means_rounded[sg.group][idx] * 3)
+                                    }
+                                    return acc
+                                }, []));
+                            return acc
+                        }, []);
+
+                        if (hl.length === 1)
+                            return hl[0];
+                    }
+
+                    return 1.5
+                })
                 .attr('stroke-dasharray', function (d) {
-                    switch (junction_types[d.start][d.end][experiment]) {
+
+                    if (lsvs.length) {
+                        if (lsvs.some(function (lsv) {
+                                return lsv.doc.junctions.some(function (junc) {
+                                    return JSON.stringify([d.start, d.end]) === JSON.stringify(junc)
+                                })
+                            })) {
+                            return
+                        }
+                    }
+
+                    if (this.classList.contains('splice-site'))
+                        return '2,2';
+
+                    switch (gene.junction_types[d.start][d.end][experiment]) {
                         case 3:
                         case 2:
                             return '5,2';
                         case 1:
-                            if (reads[d.start][d.end][experiment] === 0)
+                            if (gene.reads[d.start][d.end][experiment] === 0)
                                 return '5,2';
                     }
                 })
+                .attr('opacity', function (d) {
+                    if (lsvs.length) {
+                        if (lsvs.some(function (lsv) {
+                                return lsv.doc.junctions.some(function (junc) {
+                                    return JSON.stringify([d.start, d.end]) === JSON.stringify(junc)
+                                })
+                            })) {
+                            return 'none'
+                        } else {
+                            return '0.05'
+                        }
+                    }
+                    return 'none';
+
+                })
                 .attr('stroke', function (d) {
-                    switch (junction_types[d.start][d.end][experiment]) {
+
+                    var hl = lsvs.reduce(function (acc, lsv) {
+                        return acc.concat(lsv.doc.junctions.reduce(function (acc, junc, idx) {
+                            if (JSON.stringify([d.start, d.end]) === JSON.stringify(junc)) {
+                                acc.push(colors.brewer(idx))
+                            }
+                            return acc
+                        }, []))
+                    }, []);
+
+                    if (hl.length === 1)
+                        return hl[0];
+
+                    if (hl.length > 1)
+                        return 'black';
+
+                    switch (gene.junction_types[d.start][d.end][experiment]) {
                         case 3:
                         case 0:
                             return 'red';
@@ -561,18 +713,21 @@ d3.transition.prototype.style_junctions =
                             return 'black'
                     }
                 })
-                .attr('fill', 'None')
+                .attr('fill', 'none')
+                .highlight_junctions(lsvs)
         };
 
 d3.transition.prototype.junctions =
     d3.selection.prototype.junctions =
-        function (x, y, exon_height, strand, reads, junction_types, experiment) {
+        function (sg, gene, lsvs) {
             var junc_height = 20;
+            var x = sg.x;
+            var y = sg.y;
+            var exon_height = sg.exon_height;
             return this
-                .attr('class', 'junction')
-                .style_junctions(reads, junction_types, experiment)
+                .style_junctions(sg, gene, lsvs)
                 .attr('d', function (d) {
-                    var sweep_flag = strand === '+' ? 1 : 0;
+                    var sweep_flag = gene.strand === '+' ? 1 : 0;
                     var junc_length = x(d.end) - x(d.start);
                     // where junctions are very long... put them one bin higher.
                     var long_junc = Math.abs(junc_length) > 200 ? 1 : 0;
@@ -584,10 +739,16 @@ d3.transition.prototype.junctions =
 
 d3.transition.prototype.reads =
     d3.selection.prototype.reads =
-        function (x, y, exon_height, font_size, reads, experiment) {
+        function (sg, gene, lsvs) {
             var junc_height = 20;
+            var reads = gene.reads;
+            var experiment = sg.experiment;
+            var x = sg.x;
+            var y = sg.y;
+            var exon_height = sg.exon_height;
+            var font_size = sg.font_size;
+
             return this
-                .attr('class', 'reads')
                 .text(function (d) {
                     try {
                         var r = reads[d.start][d.end][experiment];
@@ -608,15 +769,19 @@ d3.transition.prototype.reads =
                 })
                 .attr('text-anchor', 'middle')
                 .attr('font-family', 'sans-serif')
-                .attr('font-size', font_size);
+                .attr('font-size', font_size)
+                .highlight_junctions(lsvs)
         };
 
 
 d3.transition.prototype.ir_lines =
     d3.selection.prototype.ir_lines =
-        function (x, y, strand) {
+        function (sg, gene, lsvs) {
+            var strand = gene.strand;
+            var x = sg.x;
+            var y = sg.y;
+
             return this
-                .attr('class', 'ir-line')
                 .attr('stroke', 'black')
                 .attr('points', function (d) {
                     if (d.intron_retention === 1)
@@ -642,87 +807,109 @@ d3.transition.prototype.ir_lines =
                                 [x(d.end) + 5, y(18)].join(' ')
                             ].join(', ');
                 })
+                .highlight_junctions(lsvs)
         };
 
 
-SpliceGraph.prototype.update = function (sg_div) {
+SpliceGraph.prototype.update = function (sg_div, lsv_ids, duration) {
     var sg = this;
-    var experiment = sg_div.getAttribute('data-experiment');
-    this.zoom = sg_div.getAttribute('data-zoom');
-    this.db.get(sg_div.getAttribute('data-gene-id')).then(function (gene) {
+
+    lsv_ids = !lsv_ids ? [] : lsv_ids;
+    db.allDocs({
+        keys: [sg_div.getAttribute('data-gene-id')].concat(lsv_ids.map(function (x) {
+            return x[0]
+        })),
+        include_docs: true
+    }, function (err, data) {
+
+        if (err)
+            console.error(err);
+
+        var svg = d3.select(sg_div).select('svg');
+        var gene = data.rows[0].doc;
+        var lsvs = data.rows.slice(1);
 
         var default_view = sg_div.classList.contains('default-view');
-        var svg = d3.select(sg_div).select('svg');
-        var y = sg.yScale();
-        var exon_height = sg.exon_height;
         var reverse_range = gene.strand === '-';
-        var x = sg.xScale(gene, default_view, reverse_range);
-        var font_size = sg.font_size;
-        var juncs_no_ir = sg.junctions_no_ir(gene, x);
+
+        sg.zoom = sg_div.getAttribute('data-zoom');
+        sg.experiment = sg_div.getAttribute('data-experiment');
+        sg.x = sg.xScale(gene, default_view, reverse_range, sg.experiment);
+        sg.weighted = lsv_ids.map(function (x) {
+            return x[1]
+        });
+        sg.group = sg_div.getAttribute('data-group');
+
+        var juncs_no_ir = sg.junctions_no_ir(gene);
+
+        var t = d3.transition()
+            .duration(function () {
+                if (duration === undefined)
+                    return 125;
+                return duration
+            });
 
         svg
             .interrupt()
-            .transition()
+            .transition(t)
             .attr('width', sg.width * sg.zoom);
-
 
         svg.selectAll('.exon')
             .interrupt()
-            .transition()
-            .exons(x, y, exon_height, gene.exon_types, experiment);
+            .transition(t)
+            .exons(sg, gene, lsvs);
 
         svg.selectAll('.half-exon')
             .interrupt()
-            .transition()
-            .half_exons(x, y, exon_height, gene.exon_types, experiment);
+            .transition(t)
+            .half_exons(sg, gene, lsvs);
 
         svg.selectAll('.intron-retention')
             .interrupt()
-            .transition()
-            .intron_retention(x, y, exon_height, gene.exon_types, experiment);
+            .transition(t)
+            .intron_retention(sg, gene, lsvs);
 
         svg.selectAll('.exon-number')
             .interrupt()
-            .transition()
-            .exon_numbers(x, y, exon_height, font_size, gene.strand);
+            .transition(t)
+            .exon_numbers(sg, gene, lsvs);
 
         svg.selectAll('.junction')
             .interrupt()
             .data(juncs_no_ir)
-            .transition()
-            .junctions(x, y, exon_height, gene.strand, gene.reads, gene.junction_types, experiment);
-
+            .transition(t)
+            .junctions(sg, gene, lsvs);
 
         svg.selectAll('.reads')
             .interrupt()
             .data(juncs_no_ir)
-            .transition()
-            .reads(x, y, exon_height, font_size, gene.reads, experiment);
+            .transition(t)
+            .reads(sg, gene, lsvs);
 
         svg.selectAll('.ir-line')
             .interrupt()
-            .transition()
-            .ir_lines(x, y, gene.strand);
+            .transition(t)
+            .ir_lines(sg, gene, lsvs);
 
         svg.selectAll('.ir-reads')
             .interrupt()
             .data(gene.junctions.filter(function (d) {
                 return d.intron_retention
             }))
-            .transition()
-            .ir_reads(x, y, exon_height, font_size, gene.strand, gene.reads, experiment);
+            .transition(t)
+            .ir_reads(sg, gene, lsvs);
 
-        svg.selectAll('.ss3p')
+        svg.selectAll('.splice-site.p3')
             .interrupt()
             .data(juncs_no_ir)
-            .transition(sg.t)
-            .ss3p(x, y, exon_height, gene.reads, gene.junction_types, experiment);
+            .transition(t)
+            .ss3p(sg, gene, lsvs);
 
-        svg.selectAll('.ss5p')
+        svg.selectAll('.splice-site.p5')
             .interrupt()
             .data(juncs_no_ir)
-            .transition()
-            .ss5p(x, y, exon_height, gene.reads, gene.junction_types, experiment);
+            .transition(t)
+            .ss5p(sg, gene, lsvs);
     })
 
 };

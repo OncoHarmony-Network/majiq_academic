@@ -9,6 +9,7 @@ import numpy
 from jinja2 import Environment, FileSystemLoader, StrictUndefined
 
 from voila import constants
+from voila.api.view_splice_graph import ViewGene
 from voila.constants import EXEC_DIR
 from voila.utils.voila_log import voila_log
 from voila.vlsv import Het, HetGroup
@@ -82,7 +83,8 @@ def get_env():
     env.globals.update({
         'js': js,
         'css': css,
-        'static': static
+        'static': static,
+        'ViewGene': ViewGene
     })
 
     return env

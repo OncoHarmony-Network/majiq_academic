@@ -63,11 +63,11 @@ class RenderSpliceGraphs(Html, VoilaArgs):
                     html.write(
                         summary_template.render(
                             page_name=self.get_page_name(args, index),
-                            genes=[sg.gene(gene_id) for gene_id in genes],
+                            genes=genes,
                             metadata=metadata,
                             prev_page=prev_page,
                             next_page=next_page,
-                            database_name=database_name,
+                            database_name=database_name
                         )
                     )
 

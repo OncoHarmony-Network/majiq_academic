@@ -12,6 +12,7 @@ import numpy as np
 from voila import constants, vlsv
 from voila.api import Voila, SpliceGraph
 from voila.api.view_matrix import ViewDeltaPsi, ViewPsi
+from voila.api.view_splice_graph import ViewGene, ViewJunction
 from voila.constants import JUNCTION_TYPE_RNASEQ
 from voila.hdf5 import HDF5
 from voila.utils import utils_voila
@@ -240,8 +241,8 @@ def delta_psi_tab_output(args, voila_links):
 
                     lsv = m.delta_psi(lsv_id)
 
-                    lsv_junctions = tuple(gene.lsv_junctions(lsv))
-                    lsv_exons = tuple(gene.lsv_exons(lsv, lsv_junctions))
+                    lsv_junctions = tuple(ViewGene(gene).lsv_junctions(lsv))
+                    lsv_exons = tuple(ViewGene(gene).lsv_exons(lsv, lsv_junctions))
                     group_means = tuple(lsv.group_means)
                     excl_incl = tuple(lsv.excl_incl)
 
@@ -258,7 +259,7 @@ def delta_psi_tab_output(args, voila_links):
                         'chr': gene.chromosome,
                         'strand': gene.strand,
                         'De Novo Junctions': semicolon_join(
-                            int(next(junc.get_junction_types([experiment])) == JUNCTION_TYPE_RNASEQ) for junc in
+                            int(next(ViewJunction(junc).get_junction_types([experiment])) == JUNCTION_TYPE_RNASEQ) for junc in
                             lsv_junctions
                         ),
                         'Junctions coords': semicolon_join(
@@ -325,8 +326,8 @@ def psi_tab_output(args, voila_links):
 
                 for lsv_id in m.view_lsv_ids(args, gene_id):
                     lsv = m.psi(lsv_id)
-                    lsv_junctions = tuple(gene.lsv_junctions(lsv))
-                    lsv_exons = tuple(gene.lsv_exons(lsv, lsv_junctions))
+                    lsv_junctions = tuple(ViewGene(gene).lsv_junctions(lsv))
+                    lsv_exons = tuple(ViewGene(gene).lsv_exons(lsv, lsv_junctions))
 
                     row = {
                         '#Gene Name': gene.name,
@@ -341,7 +342,7 @@ def psi_tab_output(args, voila_links):
                         'chr': gene.chromosome,
                         'strand': gene.strand,
                         'De Novo Junctions': semicolon_join(
-                            int(next(junc.get_junction_types([experiment])) == JUNCTION_TYPE_RNASEQ) for junc in
+                            int(next(ViewJunction(junc).get_junction_types([experiment])) == JUNCTION_TYPE_RNASEQ) for junc in
                             lsv_junctions
                         ),
                         'Junctions coords': semicolon_join(
