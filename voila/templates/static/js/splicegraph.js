@@ -8,24 +8,15 @@ var SpliceGraph = function (db) {
     this.db = db;
     this.width = 1000;
     this.height = 300;
-
-    this.x = {};
-    this.y = null;
     this.junction_height = 25;
     this.exon_height = 20;
     this.font_size = 12;
-
     this.zoom = 1;
-
     this.max_height = this.height - 5;
+    this.x = {};
+    this.y = d3.scaleLinear().domain([0, this.max_height]).range([this.max_height, 0]);
 };
 
-SpliceGraph.prototype.yScale = function () {
-    if (this.y)
-        return this.y;
-    this.y = d3.scaleLinear().domain([0, this.max_height]).range([this.max_height, 0]);
-    return this.yScale();
-};
 
 SpliceGraph.prototype.xScale = function (gene, default_view, reverse_range, experiment) {
     var x_dom = [];
@@ -140,28 +131,8 @@ SpliceGraph.prototype.xScale = function (gene, default_view, reverse_range, expe
     return d3.scaleLinear().domain(x_dom).range(x_range);
 };
 
-
-SpliceGraph.prototype.set_junction_height = function (junctions, x) {
-    junctions.sort(function (a, b) {
-        var a_length = Math.abs(x(a.start) - x(a.end));
-        var b_length = Math.abs(x(b.end) - x(b.start));
-        return b_length - a_length;
-    });
-
-    var binned_junctions = [];
-    while (junctions.length) {
-        var junc = junctions.pop();
-        junctions.forEach(function (j) {
-            if ((j.start <= junc.start) && (j.end >= junc.end))
-                j.bin = Math.max(j.bin, junc.bin + 1);
-        });
-        binned_junctions.push(junc);
-    }
-    return binned_junctions;
-};
-
 SpliceGraph.prototype.distance = function (x, j1, j2) {
-    var y = this.yScale();
+    var y = this.y;
     var x1 = x(j1.start) + (x(j1.end) - x(j1.start)) / 2;
     var x2 = x(j2.start) + (x(j2.end) - x(j2.start)) / 2;
     var y1 = y(this.exon_height + (this.junction_height * j1.bin) + 3);
@@ -169,63 +140,69 @@ SpliceGraph.prototype.distance = function (x, j1, j2) {
     return Math.sqrt(Math.pow(x2 - x1, 2) + Math.pow(y2 - y1, 2));
 };
 
-SpliceGraph.prototype.set_junction_distance = function (junctions, x) {
+SpliceGraph.prototype.junction_bins = function (junctions, reads, x, experiment) {
+    var i;
+    var j;
+    var small_junc;
+    var junc;
+    var changed;
+    var sg = this;
+    var sentinel = 0;
+
+    for (i = 0; i < junctions.length; i++)
+        junctions[i].bin = 1;
+
     junctions.sort(function (a, b) {
         var a_length = Math.abs(x(a.start) - x(a.end));
         var b_length = Math.abs(x(b.end) - x(b.start));
-        return b_length - a_length;
+        return a_length - b_length;
     });
 
-    var distance_junctions = [];
-    var sg = this;
-    var changed = false;
-    while (junctions.length) {
-        var junc = junctions.pop();
-        junctions.forEach(function (j) {
-            if (sg.distance(x, j, junc) < 25) {
-                j.bin += 1;
-                changed = true;
+    do {
+        changed = false;
+        sentinel++;
+
+        // Nest larger junctions around smaller ones.
+        for (i = 0; i < junctions.length; i++) {
+            small_junc = junctions[i];
+            for (j = i + 1; j < junctions.length; j++) {
+                junc = junctions[j];
+                if ((junc.start <= small_junc.start) && (junc.end >= small_junc.end))
+                    junc.bin = Math.max(junc.bin, small_junc.bin + 1);
             }
-        });
-        distance_junctions.push(junc)
-    }
+        }
 
-    return [distance_junctions, changed]
-};
+        // Move junctions that are too close.
+        for (i = 0; i < junctions.length; i++) {
+            small_junc = junctions[i];
+            for (j = i + 1; j < junctions.length; j++) {
+                junc = junctions[j];
+                var small_junc_r = reads[small_junc.start][small_junc.end][experiment];
+                var junc_r = reads[junc.start][junc.end][experiment];
+                var dist = small_junc_r.toString().length + junc_r.toString().length;
+                if (junc.bin === small_junc.bin && sg.distance(x, junc, small_junc) < dist * 4) {
+                    junc.bin += 1;
+                    changed = true;
+                }
+            }
+        }
+    } while (changed && sentinel < 10);
 
-SpliceGraph.prototype.junction_bins = function (junctions, x) {
-    junctions.forEach(function (j) {
-        j.bin = 1;
-    });
-
-    junctions = this.set_junction_height(junctions, x);
-    var distance_junctions = this.set_junction_distance(junctions, x);
-
-    while(distance_junctions[1]){
-        console.log('repeat');
-        junctions = this.set_junction_height(distance_junctions[0], x);
-        distance_junctions = this.set_junction_distance(junctions, x);
-    }
-
-
-    distance_junctions[0].sort(function (a, b) {
+    junctions.sort(function (a, b) {
         return a.start - b.start || a.end - b.end;
     });
 
-    return distance_junctions[0]
+    return junctions
 };
 
-SpliceGraph.prototype.junctions_no_ir = function (gene, x) {
-    var sg = this;
-    var leader;
-    var unavailable = [];
-    var grps = {};
+SpliceGraph.prototype.junctions_no_ir = function (gene, x, experiment) {
+
     var juncs_no_ir = gene.junctions
         .filter(function (j) {
             return !j.intron_retention
         });
 
-    return this.junction_bins(juncs_no_ir, x);
+    return this.junction_bins(juncs_no_ir, gene.reads, x, experiment);
 };
 
 SpliceGraph.prototype.init = function (sg_div) {
@@ -243,10 +220,9 @@ SpliceGraph.prototype.init = function (sg_div) {
 
         var reversed_range = gene.strand === '-';
 
-        sg.yScale();
         sg.x = sg.xScale(gene, default_view, reversed_range, experiment);
 
-        var juncs_no_ir = sg.junctions_no_ir(gene, sg.x);
+        var juncs_no_ir = sg.junctions_no_ir(gene, sg.x, experiment);
         var exons = gene.exons.filter(function (d) {
             return !d.intron_retention && ![4, 5].includes(gene.exon_types[d.start][d.end][experiment])
         });
@@ -856,7 +832,7 @@ SpliceGraph.prototype.update = function (sg_div, lsv_ids, duration) {
         });
         sg.group = sg_div.getAttribute('data-group');
 
-        var juncs_no_ir = sg.junctions_no_ir(gene, sg.x);
+        var juncs_no_ir = sg.junctions_no_ir(gene, sg.x, sg.experiment);
 
         var t = d3.transition()
             .duration(function () {
