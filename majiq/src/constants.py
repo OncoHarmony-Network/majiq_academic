@@ -1,7 +1,4 @@
-VERSION = '1.1.0'
-
-JUNCTIONS_DATASET_NAME = '/junctions'
-JUNCTIONS_ATTRS = '/junc_cov'
+VERSION = '1.1.0b'
 
 JUNC_FILE_FORMAT = 'sjdb'
 SEQ_FILE_FORMAT = 'bam'
@@ -10,8 +7,6 @@ SEQ_INDEX_FILE_FORMAT = 'bam.bai'
 UNSTRANDED = 0
 FWD_STRANDED = 1
 REV_STRANDED = 2
-
-
 
 EX_TYPE = 0
 IR_TYPE = 1
