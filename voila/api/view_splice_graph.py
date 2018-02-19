@@ -144,15 +144,15 @@ class ViewGene:
     def __init__(self, gene):
         self.gene = gene
 
-    def lsv_reference_exon(self, lsv_id):
-        lsv_coords = lsv_id.split(':')[-1]
-        if lsv_coords.startswith('-1'):
-            coords_list = [-1, int(lsv_coords.split('-')[-1])]
-        elif lsv_coords.endswith('-1'):
-            coords_list = [int(lsv_coords.split('-')[0]), -1]
-        else:
-            coords_list = list(map(int, lsv_coords.split('-')))
+    def convert_lsv_to_coords(self, lsv_id):
+        for coord in lsv_id.split(':')[-1].split('-'):
+            if coord == 'nan':
+                yield -1
+            else:
+                yield int(coord)
 
+    def lsv_reference_exon(self, lsv_id):
+        coords_list = list(self.convert_lsv_to_coords(lsv_id))
         for exon in self.gene.exons:
             if coords_list == [exon.start, exon.end]:
                 return exon

@@ -129,15 +129,11 @@ class MatrixType(ABC):
 
     @property
     def reference_exon(self):
-        lsv_coords = self.lsv_id.split(':')[-1]
-        if lsv_coords.startswith('-1'):
-            coords = (-1, lsv_coords.split('-')[-1])
-        elif lsv_coords.endswith('-1'):
-            coords = (lsv_coords.split('-')[0], -1)
-        else:
-            coords = lsv_coords.split('-')
-
-        return tuple(map(int, coords))
+        for coord in self.lsv_id.split(':')[-1].split('-'):
+            if coord == 'nan':
+                yield -1
+            else:
+                yield int(coord)
 
     @property
     def is_target(self):

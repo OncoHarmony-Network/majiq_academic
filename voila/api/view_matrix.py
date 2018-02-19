@@ -238,7 +238,7 @@ class ViewDeltaPsi(DeltaPsi):
         if args.gene_ids:
             gene_ids = args.gene_ids
         elif args.lsv_ids:
-            gene_ids = (lsv_id_to_gene_id(lsv_id) for lsv_id in args.lsv_ids)
+            gene_ids = set(lsv_id_to_gene_id(lsv_id) for lsv_id in args.lsv_ids)
         else:
             gene_ids = self.h['lsvs'].keys()
 

@@ -66,8 +66,8 @@ SpliceGraph.prototype.xScale = function (gene, default_view, reverse_range, expe
         length = end - start;
         offset = 0;
 
-
-        if ([4, 5].includes(gene.exon_types[exon.start][exon.end][experiment])) {
+        var exon_type = gene.exon_types[exon.start][exon.end][experiment];
+        if ([4, 5].includes(exon_type)) {
             min = 1;
             max = 1;
         } else {
@@ -184,8 +184,8 @@ SpliceGraph.prototype.junction_bins = function (junctions, reads, x) {
                 junc = junctions[j];
                 var small_junc_r = reads[small_junc.start][small_junc.end];
                 var junc_r = reads[junc.start][junc.end];
-                var dist = small_junc_r.toString().length + junc_r.toString().length;
-                if (junc.bin === small_junc.bin && sg.distance(x, junc, small_junc) < dist * 4) {
+                var reads_length = small_junc_r.toString().length + junc_r.toString().length;
+                if (junc.bin === small_junc.bin && sg.distance(x, junc, small_junc) < reads_length * 4) {
                     junc.bin += 1;
                     changed = true;
                 }
@@ -420,24 +420,34 @@ d3.transition.prototype.half_exons =
                 .style_exons(sg, gene, lsvs)
                 .attr('points', function (d) {
                     var exon_type = exon_types[d.start][d.end][experiment];
-
                     if (exon_type === 4)
                         return [
-                            [x(d.start), y(0)].join(' '),
+                            [x(d.end - 10), y(0)].join(' '),
                             [x(d.end), y(0)].join(' '),
                             [x(d.end), y(exon_height)].join(' '),
-                            [x(d.start), y(exon_height)].join(' ')
+                            [x(d.end - 10), y(exon_height)].join(' ')
                         ].join(', ');
-
                     if (exon_type === 5)
                         return [
-                            [x(d.end), y(0)].join(' '),
+                            [x(d.start + 10), y(0)].join(' '),
                             [x(d.start), y(0)].join(' '),
                             [x(d.start), y(exon_height)].join(' '),
-                            [x(d.end), y(exon_height)].join(' ')
+                            [x(d.start + 10), y(exon_height)].join(' ')
                         ].join(', ');
                 })
-                .highlight_exons(lsvs)
+                .attr('opacity', function (d) {
+                    if (lsvs.length)
+                        if (lsvs.every(function (lsv) {
+                                if (lsv.doc.reference_exon[1] === -1) {
+                                    return lsv.doc.reference_exon[0] !== d.start
+                                } else if (lsv.doc.reference_exon[0] === -1) {
+                                    return lsv.doc.reference_exon[1] !== d.end
+                                } else {
+                                    return JSON.stringify(lsv.doc.reference_exon) !== JSON.stringify([d.start, d.end])
+                                }
+                            }))
+                            return '0.2';
+                })
         };
 
 d3.transition.prototype.style_exons =
@@ -574,7 +584,9 @@ d3.transition.prototype.highlight_exons =
             .attr('opacity', function (d) {
                 if (lsvs.length)
                     if (lsvs.every(function (lsv) {
+                            // if (!lsv.doc.reference_exon.includes(-1)) {
                             return JSON.stringify(lsv.doc.reference_exon) !== JSON.stringify([d.start, d.end])
+                            // }
                         }))
                         return '0.2';
             })

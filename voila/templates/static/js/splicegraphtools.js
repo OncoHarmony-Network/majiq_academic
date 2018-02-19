@@ -1,6 +1,12 @@
 $(document).on('mouseover', '.junction-grp', function () {
-    $('.junction-grp').css('opacity', 0.2);
-    $(this).css('opacity', '');
+    var container = this.parentElement.parentElement.parentElement;
+    var datum = d3.select(this).datum();
+    d3.select(container)
+        .selectAll('.junction-grp')
+        .style('opacity', function (d) {
+            if (JSON.stringify([datum.start, datum.end]) !== JSON.stringify([d.start, d.end]))
+                return 0.2
+        })
 });
 
 $(document).on('mouseout', '.junction-grp', function () {
