@@ -1,6 +1,6 @@
 var LSVPlots = function (db) {
     this.db = db;
-    this.height = 125;
+    this.height = 126;
     this.histo_width = 80;
     this.left_padding = 41;
     this.top_padding = 10;
@@ -8,44 +8,39 @@ var LSVPlots = function (db) {
     this.svg_height = this.height + this.top_padding + this.bottom_padding
 };
 
-LSVPlots.prototype.colors = function (color_index) {
-    return 'rgb(' + BREWER_PALETTE[color_index % BREWER_PALETTE.length].join(',') + ')'
-};
 
 LSVPlots.prototype.psi = function (el) {
     var lsv_id = el.getAttribute('data-lsv-id');
     var group = el.getAttribute('data-group');
     var bp = this;
+
+
     this.db.get(lsv_id).then(function (data) {
         var bins = data.group_bins[group];
+        var width = bins.length * bp.histo_width;
         var means_rounded = data.group_means_rounded[group];
+
         bp.svg = d3.select(el)
-            .attr('width', (bins.length * bp.histo_width) + bp.left_padding)
+            .attr('width', width + bp.left_padding)
             .attr('height', bp.svg_height);
         bp.violins(bins, means_rounded);
-        bp.y_axis([0, 1], [0, .5, 1]);
-        bp.x_axis();
+        bp.axes([0, 1], [0, .5, 1], width);
     });
 };
 
-LSVPlots.prototype.x_axis = function () {
-    // return this.svg
-    //     .append('line')
-    //     .attr('x1',)
-    //     .attr('x2')
-    //     .attr('y1')
-    //     .attr('y2')
-};
 
 LSVPlots.prototype.delta_psi = function (el) {
     var lsv_id = el.getAttribute('data-lsv-id');
     var bp = this;
+
     this.db.get(lsv_id).then(function (data) {
+        var width = data.bins.length * bp.histo_width;
+
         bp.svg = d3.select(el)
-            .attr('width', (data.bins.length * bp.histo_width) + bp.left_padding)
+            .attr('width', width + bp.left_padding)
             .attr('height', bp.svg_height);
         bp.violins(data.bins, data.means_rounded);
-        bp.y_axis([-1, 1], [-1, 0, 1]);
+        bp.axes([-1, 1], [-1, 0, 1], width);
     });
 };
 
@@ -62,16 +57,16 @@ translateLsvBins = function (lsvBins) {
 };
 
 
-LSVPlots.prototype.y_axis = function (domain, tick_values) {
+LSVPlots.prototype.axes = function (domain, tick_values, width) {
     var bp = this;
-    var yScale = d3.scaleLinear()
-        .domain(domain)
-        .range([bp.height, 0]);
+    var yScale = d3.scaleLinear().domain(domain).range([this.height, 0]);
 
-    return this.svg
+    var g = this.svg
         .append('g')
-        .classed('y-axis', true)
-        .attr('transform', 'translate(' + bp.left_padding + ',' + bp.top_padding + ')')
+        .classed('axes', true)
+        .attr('transform', 'translate(' + bp.left_padding + ',' + bp.top_padding + ')');
+
+    g
         .call(d3.axisLeft(yScale).tickValues(tick_values))
         .append('text')
         .classed('y-axis-label', true)
@@ -81,6 +76,16 @@ LSVPlots.prototype.y_axis = function (domain, tick_values) {
         .attr('font-family', 'sans-serif')
         .attr('fill', 'black')
         .attr('transform', 'rotate(-90) translate(-' + bp.height / 2 + ', -30)');
+    g
+        .append('line')
+        .attr('class', 'x-axis')
+        .attr('x1', 0)
+        .attr('x2', width)
+        .attr('y1', yScale(0) + .5)
+        .attr('y2', yScale(0) + .5)
+        .attr('stroke', 'black');
+
+    return this
 };
 
 LSVPlots.prototype.violins = function (bins, means_rounded) {
