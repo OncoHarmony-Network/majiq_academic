@@ -1,5 +1,5 @@
 $(document).on('mouseover', '.junction-grp', function () {
-    $('.junction-grp').css('opacity', 0.1);
+    $('.junction-grp').css('opacity', 0.2);
     $(this).css('opacity', '');
 });
 

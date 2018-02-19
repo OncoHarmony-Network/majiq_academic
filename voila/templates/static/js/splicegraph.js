@@ -249,17 +249,23 @@ SpliceGraph.prototype.init = function (sg_div) {
             .append('polygon')
             .attr('class', 'intron-retention');
 
-        svg.selectAll('.exon')
+        svg.selectAll('.exon-grp')
             .data(exons)
             .enter()
-            .append('polygon')
-            .attr('class', 'exon');
+            .append('g')
+            .attr('class', 'exon-grp')
+            .each(function (d) {
+                var exon_grp = d3.select(this);
+                exon_grp
+                    .datum(d)
+                    .append('polygon')
+                    .attr('class', 'exon');
 
-        svg.selectAll('.exon-number')
-            .data(exons)
-            .enter()
-            .append('text')
-            .attr('class', 'exon-number');
+                exon_grp
+                    .datum(d)
+                    .append('text')
+                    .attr('class', 'exon-number');
+            });
 
 
         svg.selectAll('.junction-grp')
@@ -269,31 +275,24 @@ SpliceGraph.prototype.init = function (sg_div) {
             .attr('class', 'junction-grp')
             .each(function (d) {
                 var junction_grp = d3.select(this);
+
                 junction_grp
-                    .selectAll('.junction')
-                    .data([d])
-                    .enter()
+                    .datum(d)
                     .append('path')
                     .attr('class', 'junction');
 
                 junction_grp
-                    .selectAll('.reads')
-                    .data([d])
-                    .enter()
+                    .datum(d)
                     .append('text')
                     .attr('class', 'reads');
 
                 junction_grp
-                    .selectAll('.splice-site.p3')
-                    .data([d])
-                    .enter()
+                    .datum(d)
                     .append('line')
                     .attr('class', 'splice-site p3');
 
                 junction_grp
-                    .selectAll('.splice-site.p5')
-                    .data([d])
-                    .enter()
+                    .datum(d)
                     .append('line')
                     .attr('class', 'splice-site p5')
             });
@@ -308,16 +307,12 @@ SpliceGraph.prototype.init = function (sg_div) {
             .each(function (d) {
                 var ir_grp = d3.select(this);
                 ir_grp
-                    .selectAll('.ir-line')
-                    .data([d])
-                    .enter()
+                    .datum(d)
                     .append('polyline')
                     .attr('class', 'ir-line');
 
                 ir_grp
-                    .selectAll('.ir-reads')
-                    .data([d])
-                    .enter()
+                    .datum(d)
                     .append('text')
                     .attr('class', 'ir-reads')
             });
@@ -553,7 +548,7 @@ d3.transition.prototype.intron_retention =
                                 else
                                     return lsv.doc.reference_exon[1] + 1 !== d.start;
                             }))
-                            return '0.05'
+                            return '0.2'
                 })
                 .style_exons(sg, gene, lsvs)
 
@@ -569,7 +564,7 @@ d3.transition.prototype.highlight_junctions =
                                 return JSON.stringify(junc) !== JSON.stringify([d.start, d.end])
                             })
                         }))
-                        return '0.05'
+                        return '0.2'
             })
     };
 
@@ -581,7 +576,7 @@ d3.transition.prototype.highlight_exons =
                     if (lsvs.every(function (lsv) {
                             return JSON.stringify(lsv.doc.reference_exon) !== JSON.stringify([d.start, d.end])
                         }))
-                        return '0.05';
+                        return '0.2';
             })
     };
 
@@ -671,7 +666,7 @@ d3.transition.prototype.style_junctions =
                             })) {
                             return 'none'
                         } else {
-                            return '0.05'
+                            return '0.2'
                         }
                     }
                     return 'none';

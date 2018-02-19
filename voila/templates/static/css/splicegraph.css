@@ -27,9 +27,14 @@
 
 /* splice graph section */
 
-.exon:hover, .intron-retention:hover, .half-exon:hover {
+.exon-grp:hover .exon, .intron-retention:hover, .half-exon:hover {
     stroke: orange;
     fill: orange;
+    opacity: 1;
+}
+
+.exon-grp:hover .exon-number {
+    opacity: 1;
 }
 
 .exon-number {
@@ -43,6 +48,11 @@
 .junction-grp:hover .junction, .junction-grp:hover .p3, .junction-grp:hover .p5 {
     stroke: orange;
     stroke-width: 3;
+    opacity: 1;
+}
+
+.junction-grp:hover .reads {
+    opacity: 1;
 }
 
 .junction-grp:hover .reads {
@@ -55,5 +65,5 @@
 }
 
 .simplified {
-    opacity: 0.05;
+    opacity: 0.2;
 }
