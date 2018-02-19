@@ -2,8 +2,9 @@
 
     <a name="{{ gene.id }}"></a>
 
-    <h2>Gene
-        name: {{ gene.name }}; {{ gene.chromosome }}:{{ gene.strand }}:{{ gene.start }}-{{ gene.end }};</h2>
+    <h2>Gene name: {{ gene.name }}; {{ gene.chromosome }}:{{ gene.strand }}:{{ gene.start }}-{{ gene.end }};
+        {% include 'ucsc_gene_link.html' %}
+    </h2>
 
     <h3 class="gene_id">
         Gene ID: {{ gene.id }};

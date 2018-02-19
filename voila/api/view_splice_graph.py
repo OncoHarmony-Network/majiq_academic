@@ -212,12 +212,19 @@ class ViewGene:
         gene['end'] = self.gene.end
 
         gene['exon_types'] = {}
-        gene['reads'] = {}
         gene['junction_types'] = {}
+        gene['reads'] = {}
 
         for experiment_names in experiment_names_list:
             combined_name = next((n for n in experiment_names if ' Combined' in n), '')
             experiment_names = experiment_names[experiment_names != combined_name]
+
+            for name in experiment_names:
+                gene['reads'][name] = {}
+                gene['junction_types'][name] = {}
+                if combined_name:
+                    gene['reads'][combined_name] = {}
+                    gene['junction_types'][combined_name] = {}
 
             for exon in self.gene.exons:
                 view_exon = ViewExon(exon)
@@ -241,40 +248,30 @@ class ViewGene:
 
             for junc in self.gene.junctions:
                 view_junc = ViewJunction(junc)
+
                 for experiment_name in experiment_names:
                     try:
-                        reads_start = gene['reads'][junc.start]
+                        gene['reads'][experiment_name][junc.start][junc.end] = view_junc.reads(experiment_name)
                     except KeyError:
-                        gene['reads'][junc.start] = {}
-                        reads_start = gene['reads'][junc.start]
-
-                    try:
-                        reads_end = reads_start[junc.end]
-                    except KeyError:
-                        reads_start[junc.end] = {}
-                        reads_end = reads_start[junc.end]
-
-                    reads_end[experiment_name] = view_junc.reads(experiment_name)
-
-                try:
-                    types_start = gene['junction_types'][junc.start]
-                except KeyError:
-                    gene['junction_types'][junc.start] = {}
-                    types_start = gene['junction_types'][junc.start]
-
-                try:
-                    types_end = types_start[junc.end]
-                except KeyError:
-                    types_start[junc.end] = {}
-                    types_end = types_start[junc.end]
+                        gene['reads'][experiment_name][junc.start] = {junc.end: view_junc.reads(experiment_name)}
 
                 for name, junc_type in view_junc.junction_types(experiment_names):
-                    types_end[name] = junc_type
+                    try:
+                        gene['junction_types'][name][junc.start][junc.end] = junc_type
+                    except KeyError:
+                        gene['junction_types'][name][junc.start] = {junc.end: junc_type}
 
                 if combined_name:
-                    reads = gene['reads'][junc.start][junc.end]
-                    junction_types = gene['junction_types'][junc.start][junc.end]
-                    reads[combined_name] = sum(reads[x] for x in experiment_names)
-                    junction_types[combined_name] = min(junction_types[x] for x in experiment_names)
+                    summed_reads = sum(view_junc.reads(n) for n in experiment_names)
+                    try:
+                        gene['reads'][combined_name][junc.start][junc.end] = summed_reads
+                    except KeyError:
+                        gene['reads'][combined_name][junc.start] = {junc.end: summed_reads}
+
+                    combined_type = min(gene['junction_types'][n][junc.start][junc.end] for n in experiment_names)
+                    try:
+                        gene['junction_types'][combined_name][junc.start][junc.end] = combined_type
+                    except KeyError:
+                        gene['junction_types'][combined_name][junc.start] = {junc.end: combined_type}
 
         return gene

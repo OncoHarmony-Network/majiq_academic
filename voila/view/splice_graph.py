@@ -48,6 +48,7 @@ class RenderSpliceGraphs(Html, VoilaArgs):
             metadata = {'experiment_names': numpy.array([list(sg.experiment_names)]), 'group_names': [None]}
             prev_page = None
             page_count = sg.get_page_count(args)
+            genome = sg.genome
 
             log.debug('Page count is {0}'.format(page_count))
 
@@ -67,7 +68,8 @@ class RenderSpliceGraphs(Html, VoilaArgs):
                             metadata=metadata,
                             prev_page=prev_page,
                             next_page=next_page,
-                            database_name=database_name
+                            database_name=database_name,
+                            genome=genome
                         )
                     )
 

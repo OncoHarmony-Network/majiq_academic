@@ -29,6 +29,7 @@ SpliceGraph.prototype.xScale = function (gene, default_view, reverse_range, expe
     var max;
     var min;
     var offset;
+    var exon;
 
     // if we're not using the default view, the x-scale if very simple.
     if (!default_view) {
@@ -42,19 +43,23 @@ SpliceGraph.prototype.xScale = function (gene, default_view, reverse_range, expe
     var x = d3.scaleLinear().domain([gene.start, gene.end]).range([min_width, max_width]);
 
     // get the start and end of each exon/ir for both the domain and range
-    gene.exons.forEach(function (exon) {
+    for (i = 0; i < gene.exons.length; i++) {
+        exon = gene.exons[i];
         if (!exon.intron_retention) {
             x_dom.push(exon.start);
             x_dom.push(exon.end);
             x_range.push(x(exon.start));
             x_range.push(x(exon.end));
         }
-    });
+    }
 
     // adjust exon sizes
-    gene.exons.filter(function (d) {
+    var filterd_exons = gene.exons.filter(function (d) {
         return !d.intron_retention
-    }).forEach(function (e, i) {
+    });
+
+    for (i = 0; i < filterd_exons.length; i++) {
+        exon = filterd_exons[i];
         var start = x_range[i * 2];
         var end_idx = i * 2 + 1;
         var end = x_range[end_idx];
@@ -62,7 +67,7 @@ SpliceGraph.prototype.xScale = function (gene, default_view, reverse_range, expe
         offset = 0;
 
 
-        if ([4, 5].includes(gene.exon_types[e.start][e.end][experiment])) {
+        if ([4, 5].includes(gene.exon_types[exon.start][exon.end][experiment])) {
             min = 1;
             max = 1;
         } else {
@@ -80,20 +85,21 @@ SpliceGraph.prototype.xScale = function (gene, default_view, reverse_range, expe
         if (offset !== 0)
             for (j = end_idx; j < x_range.length; j++)
                 x_range[j] += offset;
-    });
+    }
 
     // adjust spaces between exons
     var ir_count = 0;
-    gene.exons.forEach(function (e, i) {
-        if (e.intron_retention) ir_count++;
+    for (i = 0; i < gene.exons.length; i++) {
+        exon = gene.exons[i];
+        if (exon.intron_retention) ir_count++;
 
-        i -= ir_count;
+        var idx = i - ir_count;
 
-        length = x_range[i * 2 + 2] - x_range[i * 2 + 1];
+        length = x_range[idx * 2 + 2] - x_range[idx * 2 + 1];
         offset = 0;
 
 
-        if (e.intron_retention) {
+        if (exon.intron_retention) {
             min = 20;
             if (length < min)
                 offset = min - length;
@@ -109,10 +115,9 @@ SpliceGraph.prototype.xScale = function (gene, default_view, reverse_range, expe
 
 
         if (offset !== 0)
-            for (j = (i * 2) + 2; j < x_range.length; j++)
+            for (j = (idx * 2) + 2; j < x_range.length; j++)
                 x_range[j] = x_range[j] + offset
-    });
-
+    }
 
     if (reverse_range) {
         x_range.reverse()
@@ -140,7 +145,7 @@ SpliceGraph.prototype.distance = function (x, j1, j2) {
     return Math.sqrt(Math.pow(x2 - x1, 2) + Math.pow(y2 - y1, 2));
 };
 
-SpliceGraph.prototype.junction_bins = function (junctions, reads, x, experiment) {
+SpliceGraph.prototype.junction_bins = function (junctions, reads, x) {
     var i;
     var j;
     var small_junc;
@@ -177,8 +182,8 @@ SpliceGraph.prototype.junction_bins = function (junctions, reads, x, experiment)
             small_junc = junctions[i];
             for (j = i + 1; j < junctions.length; j++) {
                 junc = junctions[j];
-                var small_junc_r = reads[small_junc.start][small_junc.end][experiment];
-                var junc_r = reads[junc.start][junc.end][experiment];
+                var small_junc_r = reads[small_junc.start][small_junc.end];
+                var junc_r = reads[junc.start][junc.end];
                 var dist = small_junc_r.toString().length + junc_r.toString().length;
                 if (junc.bin === small_junc.bin && sg.distance(x, junc, small_junc) < dist * 4) {
                     junc.bin += 1;
@@ -202,7 +207,7 @@ SpliceGraph.prototype.junctions_no_ir = function (gene, x, experiment) {
             return !j.intron_retention
         });
 
-    return this.junction_bins(juncs_no_ir, gene.reads, x, experiment);
+    return this.junction_bins(juncs_no_ir, gene.reads[experiment], x);
 };
 
 SpliceGraph.prototype.init = function (sg_div) {
@@ -361,8 +366,7 @@ d3.transition.prototype.splice_site =
 d3.transition.prototype.ir_reads =
     d3.selection.prototype.ir_reads =
         function (sg, gene, lsvs) {
-            var reads = gene.reads;
-            var experiment = sg.experiment;
+            var reads = gene.reads[sg.experiment];
             var x = sg.x;
             var y = sg.y;
             var strand = gene.strand;
@@ -371,7 +375,7 @@ d3.transition.prototype.ir_reads =
 
             return this
                 .text(function (d) {
-                    var r = reads[d.start][d.end][experiment];
+                    var r = reads[d.start][d.end];
                     if (r)
                         return r
                 })
@@ -649,12 +653,12 @@ d3.transition.prototype.style_junctions =
                     if (this.classList.contains('splice-site'))
                         return '2,2';
 
-                    switch (gene.junction_types[d.start][d.end][experiment]) {
+                    switch (gene.junction_types[experiment][d.start][d.end]) {
                         case 3:
                         case 2:
                             return '5,2';
                         case 1:
-                            if (gene.reads[d.start][d.end][experiment] === 0)
+                            if (gene.reads[experiment][d.start][d.end] === 0)
                                 return '5,2';
                     }
                 })
@@ -690,7 +694,7 @@ d3.transition.prototype.style_junctions =
                     if (hl.length > 1)
                         return 'black';
 
-                    switch (gene.junction_types[d.start][d.end][experiment]) {
+                    switch (gene.junction_types[experiment][d.start][d.end]) {
                         case 3:
                         case 0:
                             return 'red';
@@ -718,11 +722,8 @@ d3.transition.prototype.junctions =
                 .attr('d', function (d) {
                     var sweep_flag = gene.strand === '+' ? 1 : 0;
                     var junc_length = x(d.end) - x(d.start);
-                    // where junctions are very long... put them one bin higher.
-                    // var long_junc = Math.abs(junc_length) > 200 ? 1 : 0;
-                    var long_junc = 0;
                     return 'M' + [x(d.start), y(exon_height)].join(',') +
-                        'A' + [junc_length / 2, sg.junction_height * (d.bin + long_junc), 0, 0, sweep_flag, x(d.end), y(exon_height)].join(' ')
+                        'A' + [junc_length / 2, sg.junction_height * d.bin, 0, 0, sweep_flag, x(d.end), y(exon_height)].join(' ')
                 })
         };
 
@@ -731,8 +732,7 @@ d3.transition.prototype.reads =
     d3.selection.prototype.reads =
         function (sg, gene, lsvs) {
 
-            var reads = gene.reads;
-            var experiment = sg.experiment;
+            var reads = gene.reads[sg.experiment];
             var x = sg.x;
             var y = sg.y;
             var exon_height = sg.exon_height;
@@ -741,7 +741,7 @@ d3.transition.prototype.reads =
             return this
                 .text(function (d) {
                     try {
-                        var r = reads[d.start][d.end][experiment];
+                        var r = reads[d.start][d.end];
                         if (r)
                             return r
                     } catch (TypeError) {
@@ -804,13 +804,16 @@ d3.transition.prototype.ir_lines =
 
 
 SpliceGraph.prototype.update = function (sg_div, lsv_ids, duration) {
-    var sg = this;
-
     lsv_ids = !lsv_ids ? [] : lsv_ids;
+
+    var sg = this;
+    var keys = [sg_div.getAttribute('data-gene-id')].concat(lsv_ids.map(function (x) {
+        return x[0]
+    }));
+
+
     db.allDocs({
-        keys: [sg_div.getAttribute('data-gene-id')].concat(lsv_ids.map(function (x) {
-            return x[0]
-        })),
+        keys: keys,
         include_docs: true
     }, function (err, data) {
 
