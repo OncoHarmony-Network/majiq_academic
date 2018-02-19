@@ -44,7 +44,7 @@ Lsv.prototype.renderLsvSpliceGraph = function (canvas) {
             var exon_lsv_coords = canvas.getAttribute('data-coord-exon');
             var experiment = canvas.getAttribute('data-experiment');
             var exons_gene = gene.exons.filter(function (d) {
-                var exon_type = gene.exon_types[d.start][d.end][experiment];
+                var exon_type = gene.exon_types[experiment][d.start][d.end];
                 return exon_type < 3 && !d.intron_retention;
             });
 
