@@ -189,6 +189,8 @@ cdef dict __read_juncs_from_bam(str filename, set in_jj, int stranded):
 
 
     for read in read_iter:
+        if read.is_unmapped:
+            continue
         is_cross, junc_list, rend = __cross_junctions(read)
         chrom = samfl.getrname(read.reference_id)
         if not __is_unique(read) or not is_cross or chrom not in chrom_list:
