@@ -42,7 +42,6 @@ cdef _find_new_junctions(list file_list, int chunk, object conf, object logger):
         fname = '%s/%s.%s' % (majiq_config.sam_dir, exp_name, SEQ_FILE_FORMAT)
         logger.info('READ JUNCS from %s' % fname)
         bbb = SeqParse(fname, majiq_config.strand_specific[exp_name])
-        logger.info("KKK2")
         bbb.check_junctions(td, set_junctions, majiq_config.strand_specific[exp_name], list_exons,
                             conf.queue, name, logger)
 
@@ -64,13 +63,15 @@ cdef class SeqParse:
     cdef find_junctions(self):
         self.c_iobam.find_junctions()
 
-    cdef check_junctions(self, dict_gtrees, set_junctions, stranded, dict_exons, queue, gname, logger):
+    cdef check_junctions(self, dict_gtrees, map[string, set[string]] set_junctions, stranded, dict_exons,
+                         queue, gname, logger):
         #cdef string chrom
         cdef list junc
 
         logger.info("START READING")
-        self.c_iobam.set_filters(set_junctions)
-        self.c_iobam.find_junctions()
+        with nogil:
+            self.c_iobam.set_filters(set_junctions)
+            self.c_iobam.find_junctions()
         logger.info("DONE READING...")
 
         #for it in self.c_iobam.get_dict():

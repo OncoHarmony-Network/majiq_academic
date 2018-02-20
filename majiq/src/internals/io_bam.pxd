@@ -8,8 +8,8 @@ cdef extern from "io_bam.hpp" namespace "io_bam":
         IOBam() except +
         IOBam(char *, int) except +
         IOBam(char*, int, char*) except +
-        int find_junctions()
+        int find_junctions() nogil
         map[string, Junction] get_dict()
-        void set_filters(map[string, set[string]])
+        void set_filters(map[string, set[string]]) nogil
         map[string, Junction] junc_dict_
 
