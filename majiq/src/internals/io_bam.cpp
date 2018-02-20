@@ -82,7 +82,6 @@ namespace io_bam {
                 const int j_end = read->core.pos + off + ol +1;
                 const int j_start =  read->core.pos + off;
                 try {
-
                     add_junction(chrom, _get_strand(read), j_start, j_end, read_pos);
                 } catch (const std::logic_error& e) {
                     cout << e.what() << '\n';

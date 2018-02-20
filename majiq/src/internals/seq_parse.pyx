@@ -40,7 +40,7 @@ cdef class SeqParse:
                 for yy in xx.values():
                     cs1 = ('%s:.:%s-%s' % (dict_genes[gene_id]['chromosome'], yy.start, yy.end)).encode('utf-8')
                     set_junctions.insert(cs1)
-
+        logger.info("START READING")
         self.c_iobam.set_filters(set_chrom, set_junctions)
         self.c_iobam.find_junctions()
         logger.info("DONE READING...")

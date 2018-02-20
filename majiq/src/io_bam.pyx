@@ -231,7 +231,10 @@ cpdef read_juncs(str fname, bint is_junc_file, dict dict_exons, object dict_gene
     cdef set jj_set
     cdef set set_junctions
 
+    logger("KKK1")
+
     bbb = SeqParse(fname, stranded)
+    logger("KKK2")
     bbb.check_junctions(dict_gtrees, dict_genes, junctions, stranded, dict_exons, queue, gname, logger)
 
     # if stranded != UNSTRANDED:
