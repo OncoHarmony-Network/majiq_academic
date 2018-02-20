@@ -13,6 +13,7 @@ from pysam.libcalignedsegment cimport PileupColumn, PileupRead
 import pysam
 import cython
 import sys
+from majiq.src.internals.seq_parse import SeqParse
 
 # READING BAM FILES
 
@@ -230,42 +231,45 @@ cpdef read_juncs(str fname, bint is_junc_file, dict dict_exons, object dict_gene
     cdef set jj_set
     cdef set set_junctions
 
-    if stranded != UNSTRANDED:
-        set_junctions = set([(dict_genes[gene_id]['chromosome'], dict_genes[gene_id]['strand'], yy.start, yy.end)
-                              for gene_id, xx in junctions.items() for yy in xx.values()])
-    else:
-        set_junctions = set([(dict_genes[gene_id]['chromosome'], '.', yy.start, yy.end)
-                             for gene_id, xx in junctions.items() for yy in xx.values()])
+    bbb = SeqParse(fname, stranded)
+    bbb.check_junctions(dict_gtrees, dict_genes, junctions, stranded, dict_exons, queue, gname, logger)
 
-    new_junctions = __read_juncs_from_bam(fname, set_junctions, stranded)
+    # if stranded != UNSTRANDED:
+    #     set_junctions = set([(dict_genes[gene_id]['chromosome'], dict_genes[gene_id]['strand'], yy.start, yy.end)
+    #                           for gene_id, xx in junctions.items() for yy in xx.values()])
+    # else:
+    #     set_junctions = set([(dict_genes[gene_id]['chromosome'], '.', yy.start, yy.end)
+    #                          for gene_id, xx in junctions.items() for yy in xx.values()])
+    #
+    # new_junctions = __read_juncs_from_bam(fname, set_junctions, stranded)
 
-    logger.info("DONE READING...")
-    for chrom, jj_set in new_junctions.items():
-
-        found = False
-        for junc in sorted(jj_set):
-            possible_genes = []
-            for gobj in dict_gtrees[chrom].search(junc[0], junc[1]):
-
-                if (stranded and gobj.data[1] != junc[2]) or (gobj.end < junc[1] and gobj.start > junc[0]):
-                    continue
-
-                gid = gobj.data[0]
-
-                start_sp = [jj.start for ex in dict_exons[gid] for jj in ex.ob if jj.start > 0 and jj.end > 0]
-                end_sp = [jj.end for ex in dict_exons[gid] for jj in ex.ib if jj.start > 0 and jj.end > 0]
-
-                if junc[0] in start_sp or junc[1] in end_sp:
-                    found = True
-                    qm = QueueMessage(QUEUE_MESSAGE_BUILD_JUNCTION, (gid, junc[0], junc[1], gname), 0)
-                    queue.put(qm, block=True)
-                else:
-                    possible_genes.append(gid)
-
-            if not found and len(possible_genes) > 0:
-                for gid in possible_genes:
-                    qm = QueueMessage(QUEUE_MESSAGE_BUILD_JUNCTION, (gid, junc[0], junc[1], gname), 0)
-                    queue.put(qm, block=True)
+    #logger.info("DONE READING...")
+    # for chrom, jj_set in new_junctions.items():
+    #
+    #     found = False
+    #     for junc in sorted(jj_set):
+    #         possible_genes = []
+    #         for gobj in dict_gtrees[chrom].search(junc[0], junc[1]):
+    #
+    #             if (stranded and gobj.data[1] != junc[2]) or (gobj.end < junc[1] and gobj.start > junc[0]):
+    #                 continue
+    #
+    #             gid = gobj.data[0]
+    #
+    #             start_sp = [jj.start for ex in dict_exons[gid] for jj in ex.ob if jj.start > 0 and jj.end > 0]
+    #             end_sp = [jj.end for ex in dict_exons[gid] for jj in ex.ib if jj.start > 0 and jj.end > 0]
+    #
+    #             if junc[0] in start_sp or junc[1] in end_sp:
+    #                 found = True
+    #                 qm = QueueMessage(QUEUE_MESSAGE_BUILD_JUNCTION, (gid, junc[0], junc[1], gname), 0)
+    #                 queue.put(qm, block=True)
+    #             else:
+    #                 possible_genes.append(gid)
+    #
+    #         if not found and len(possible_genes) > 0:
+    #             for gid in possible_genes:
+    #                 qm = QueueMessage(QUEUE_MESSAGE_BUILD_JUNCTION, (gid, junc[0], junc[1], gname), 0)
+    #                 queue.put(qm, block=True)
 
 
 @cython.boundscheck(False) # turn off bounds-checking for entire function

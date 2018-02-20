@@ -3,13 +3,31 @@ from distutils.core import Extension
 from Cython.Build import cythonize
 from majiq.src.constants import VERSION
 import numpy
+import sys
+import os
 try:
     import pysam
 except ImportError:
     raise Exception('pysam not found; please install pysam first')
 
+compile_args = ['-g', '-std=c++11']
+linker_args = ['-std=c++11']
+if sys.platform == 'darwin':
+    compile_args.append('-stdlib=libc++')
+    linker_args = ['-L/usr/local/opt/llvm/lib']
 
-extensions = [Extension('majiq.src.normalize', ['majiq/src/normalize.pyx'], include_dirs=[numpy.get_include()])]
+pysam_library_path = [os.path.abspath(os.path.join(os.path.dirname(pysam.__file__)))]
+extensions = [Extension('majiq.src.internals.seq_parse',
+                        ['majiq/src/internals/seq_parse.pyx', 'majiq/src/internals/io_bam.cpp'],
+                        include_dirs=['majiq/src/internals'] + pysam.get_include(),
+                        library_dirs=pysam_library_path,
+                        libraries=['htslib'],
+                        runtime_library_dirs=pysam_library_path,
+                        extra_compile_args=compile_args,  extra_link_args=linker_args,
+                        language='c++')]
+
+
+extensions += [Extension('majiq.src.normalize', ['majiq/src/normalize.pyx'], include_dirs=[numpy.get_include()])]
 extensions += [Extension('majiq.grimoire.junction', ['majiq/grimoire/junction.pyx'])]
 extensions += [Extension('majiq.grimoire.lsv', ['majiq/grimoire/lsv.pyx'], include_dirs=[numpy.get_include()])]
 extensions += [Extension('majiq.grimoire.exon', ['majiq/grimoire/exon.pyx'], include_dirs=[numpy.get_include()])]
@@ -21,11 +39,7 @@ extensions += [Extension('majiq.src.io_bam', ['majiq/src/io_bam.pyx'], include_d
 extensions += [Extension('majiq.src.io', ['majiq/src/io.pyx'], include_dirs=inc_dirs)]
 extensions += [Extension('majiq.src.sample', ['majiq/src/sample.pyx'], include_dirs=[numpy.get_include()])]
 extensions += [Extension('majiq.src.adjustdelta', ['majiq/src/adjustdelta.pyx'], include_dirs=[numpy.get_include()])]
-extensions += [Extension('majiq.src.psi', ['majiq/src/psi.pyx'], include_dirs=[numpy.get_include()])]
 
-
-
-include_dirs=pysam.get_include()
 
 setup(
     name="majiq",
