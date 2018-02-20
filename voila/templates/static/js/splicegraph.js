@@ -27,6 +27,10 @@ var array_equal = function (a, b) {
     return true
 };
 
+var coord_in_exon = function (exon, coord) {
+    return coord >= exon.start && coord <= exon.end
+};
+
 SpliceGraph.prototype.xScale = function (gene, default_view, reverse_range, experiment) {
     var x_dom = [];
     var x_range = [];
@@ -444,19 +448,7 @@ d3.transition.prototype.half_exons =
                             [x(d.start + 10), y(exon_height)].join(' ')
                         ].join(', ');
                 })
-                .attr('opacity', function (d) {
-                    if (lsvs.length)
-                        if (lsvs.every(function (lsv) {
-                                if (lsv.doc.reference_exon[1] === -1) {
-                                    return lsv.doc.reference_exon[0] !== d.start
-                                } else if (lsv.doc.reference_exon[0] === -1) {
-                                    return lsv.doc.reference_exon[1] !== d.end
-                                } else {
-                                    return !array_equal(lsv.doc.reference_exon, [d.start, d.end])
-                                }
-                            }))
-                            return '0.2';
-                })
+
         };
 
 d3.transition.prototype.style_exons =
@@ -468,16 +460,40 @@ d3.transition.prototype.style_exons =
             return this
                 .attr('fill-opacity', .3)
                 .attr('stroke-linejoin', 'round')
+                .highlight_exons(lsvs)
                 .each(function (d) {
                     if (lsvs.length) {
+                        if (lsvs.some(function (lsv) {
+                                return array_equal(lsv.doc.reference_exon, [d.start, d.end])
+                            })) {
+                            this.setAttribute('stroke', 'orange');
+                            this.setAttribute('fill', 'orange');
+                            this.setAttribute('stroke-dasharray', '');
+                            return
+                        }
+
                         var colors = new Colors();
                         var hl = lsvs.reduce(function (acc, lsv) {
-                            if ((lsv.doc.is_target && lsv.doc.reference_exon[0] - 1 === d.end) ||
-                                (!lsv.doc.is_target && lsv.doc.reference_exon[1] + 1 === d.start)) {
-                                acc.push(colors.brewer(lsv.doc.junctions.length - 1));
+                            if (gene.strand === '+') {
+                                if (lsv.doc.is_target) {
+                                    if (lsv.doc.reference_exon[0] - 1 === d.end)
+                                        acc.push(colors.brewer(lsv.doc.junctions.length - 1));
+                                } else {
+                                    if (lsv.doc.reference_exon[1] + 1 === d.start)
+                                        acc.push(colors.brewer(lsv.doc.junctions.length - 1));
+                                }
+                            } else {
+                                if (lsv.doc.is_target) {
+                                    if (lsv.doc.reference_exon[1] + 1 === d.start)
+                                        acc.push(colors.brewer(lsv.doc.junctions.length - 1));
+                                } else {
+                                    if (lsv.doc.reference_exon[0] - 1 === d.end)
+                                        acc.push(colors.brewer(lsv.doc.junctions.length - 1));
+                                }
                             }
                             return acc;
                         }, []);
+
 
                         if (hl.length > 1)
                             return 'black';
@@ -539,7 +555,6 @@ d3.transition.prototype.exons =
                         [x(d.start), y(sg.exon_height)].join(' ')
                     ].join(', ')
                 })
-                .highlight_exons(lsvs)
         };
 
 
@@ -559,45 +574,10 @@ d3.transition.prototype.intron_retention =
                         [x(d.start - 1), y(exon_height * (3 / 4))].join(' ')
                     ].join(', ')
                 })
-                .attr('opacity', function (d) {
-                    if (lsvs.length)
-                        if (lsvs.every(function (lsv) {
-                                if (lsv.doc.is_target)
-                                    return lsv.doc.reference_exon[0] - 1 !== d.end;
-                                else
-                                    return lsv.doc.reference_exon[1] + 1 !== d.start;
-                            }))
-                            return '0.2'
-                })
                 .style_exons(sg, gene, lsvs)
 
         };
 
-d3.transition.prototype.highlight_junctions =
-    d3.selection.prototype.highlight_junctions = function (lsvs) {
-        return this
-            .attr('opacity', function (d) {
-                if (lsvs.length)
-                    if (lsvs.every(function (lsv) {
-                            return lsv.doc.junctions.every(function (junc) {
-                                return !array_equal(junc, [d.start, d.end])
-                            })
-                        }))
-                        return '0.2'
-            })
-    };
-
-d3.transition.prototype.highlight_exons =
-    d3.selection.prototype.highlight_exons = function (lsvs) {
-        return this
-            .attr('opacity', function (d) {
-                if (lsvs.length)
-                    if (lsvs.every(function (lsv) {
-                            return !array_equal(lsv.doc.reference_exon, [d.start, d.end])
-                        }))
-                        return '0.2';
-            })
-    };
 
 d3.transition.prototype.exon_numbers =
     d3.selection.prototype.exon_numbers =
@@ -649,58 +629,34 @@ d3.transition.prototype.style_junctions =
                         if (hl.length === 1)
                             return hl[0];
                     }
-
                     return 1.5
                 })
                 .attr('stroke-dasharray', function (d) {
-
-                    if (lsvs.length) {
-                        if (lsvs.some(function (lsv) {
-                                return lsv.doc.junctions.some(function (junc) {
-                                    return array_equal(junc, [d.start, d.end])
-                                })
-                            })) {
-                            return
-                        }
-                    }
-
                     if (this.classList.contains('splice-site'))
                         return '2,2';
 
                     if (gene.reads[experiment][d.start][d.end] === 0)
                         return '5,2';
                 })
-                .attr('opacity', function (d) {
+                .attr('stroke', function (d) {
                     if (lsvs.length) {
-                        if (lsvs.some(function (lsv) {
-                                return lsv.doc.junctions.some(function (junc) {
-                                    return array_equal([d.start, d.end], junc)
-                                })
-                            })) {
-                            return 'none'
-                        } else {
-                            return '0.2'
+
+
+                        var hl = lsvs.reduce(function (acc, lsv) {
+                            return acc.concat(lsv.doc.junctions.reduce(function (acc, junc, idx) {
+                                if (array_equal(junc, [d.start, d.end])) {
+                                    acc.push(colors.brewer(idx))
+                                }
+                                return acc
+                            }, []))
+                        }, []);
+
+                        if (hl.length === 1)
+                            return hl[0];
+                        else if (hl.length > 1) {
+                            return 'black'
                         }
                     }
-                    return 'none';
-
-                })
-                .attr('stroke', function (d) {
-
-                    var hl = lsvs.reduce(function (acc, lsv) {
-                        return acc.concat(lsv.doc.junctions.reduce(function (acc, junc, idx) {
-                            if (array_equal(junc, [d.start, d.end])) {
-                                acc.push(colors.brewer(idx))
-                            }
-                            return acc
-                        }, []))
-                    }, []);
-
-                    if (hl.length === 1)
-                        return hl[0];
-
-                    if (hl.length > 1)
-                        return 'black';
 
                     switch (gene.junction_types[experiment][d.start][d.end]) {
                         case 3:
@@ -717,6 +673,38 @@ d3.transition.prototype.style_junctions =
                 .attr('fill', 'none')
                 .highlight_junctions(lsvs)
         };
+
+d3.transition.prototype.highlight_exons =
+    d3.selection.prototype.highlight_exons = function (lsvs) {
+        return this.attr('opacity', function (d) {
+            if (lsvs.length) {
+                if (lsvs.every(function (lsv) {
+                        return lsv.doc.junctions.every(function (junc) {
+                            return !coord_in_exon(d, junc[0]) && !coord_in_exon(d, junc[1])
+                        })
+                    })) {
+                    return 0.2
+                }
+            }
+            return 1
+        })
+    };
+
+d3.transition.prototype.highlight_junctions =
+    d3.selection.prototype.highlight_junctions = function (lsvs) {
+        return this.attr('opacity', function (d) {
+            if (lsvs.length) {
+                if (lsvs.every(function (lsv) {
+                        return lsv.doc.junctions.every(function (junc) {
+                            return !array_equal(junc, [d.start, d.end])
+                        })
+                    })) {
+                    return 0.2
+                }
+            }
+            return 1
+        })
+    };
 
 d3.transition.prototype.junctions =
     d3.selection.prototype.junctions =
