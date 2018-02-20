@@ -17,6 +17,15 @@ var SpliceGraph = function (db) {
     this.y = d3.scaleLinear().domain([0, this.max_height]).range([this.max_height, 0]);
 };
 
+var array_equal = function (a, b) {
+    if (a.length !== b.length)
+        return false;
+    for (var i = 0, l = a.length; i < l; i++) {
+        if (a[i] !== b[i])
+            return false
+    }
+    return true
+};
 
 SpliceGraph.prototype.xScale = function (gene, default_view, reverse_range, experiment) {
     var x_dom = [];
@@ -443,7 +452,7 @@ d3.transition.prototype.half_exons =
                                 } else if (lsv.doc.reference_exon[0] === -1) {
                                     return lsv.doc.reference_exon[1] !== d.end
                                 } else {
-                                    return JSON.stringify(lsv.doc.reference_exon) !== JSON.stringify([d.start, d.end])
+                                    return !array_equal(lsv.doc.reference_exon, [d.start, d.end])
                                 }
                             }))
                             return '0.2';
@@ -571,7 +580,7 @@ d3.transition.prototype.highlight_junctions =
                 if (lsvs.length)
                     if (lsvs.every(function (lsv) {
                             return lsv.doc.junctions.every(function (junc) {
-                                return JSON.stringify(junc) !== JSON.stringify([d.start, d.end])
+                                return !array_equal(junc, [d.start, d.end])
                             })
                         }))
                         return '0.2'
@@ -584,9 +593,7 @@ d3.transition.prototype.highlight_exons =
             .attr('opacity', function (d) {
                 if (lsvs.length)
                     if (lsvs.every(function (lsv) {
-                            // if (!lsv.doc.reference_exon.includes(-1)) {
-                            return JSON.stringify(lsv.doc.reference_exon) !== JSON.stringify([d.start, d.end])
-                            // }
+                            return !array_equal(lsv.doc.reference_exon, [d.start, d.end])
                         }))
                         return '0.2';
             })
@@ -631,7 +638,7 @@ d3.transition.prototype.style_junctions =
                         var hl = lsvs.reduce(function (acc, lsv, idx) {
                             if (sg.weighted[idx])
                                 acc = acc.concat(lsv.doc.junctions.reduce(function (acc, junc, idx) {
-                                    if (JSON.stringify([d.start, d.end]) === JSON.stringify(junc)) {
+                                    if (array_equal(junc, [d.start, d.end])) {
                                         acc.push(lsv.doc.group_means_rounded[sg.group][idx] * 3)
                                     }
                                     return acc
@@ -650,7 +657,7 @@ d3.transition.prototype.style_junctions =
                     if (lsvs.length) {
                         if (lsvs.some(function (lsv) {
                                 return lsv.doc.junctions.some(function (junc) {
-                                    return JSON.stringify([d.start, d.end]) === JSON.stringify(junc)
+                                    return array_equal(junc, [d.start, d.end])
                                 })
                             })) {
                             return
@@ -667,7 +674,7 @@ d3.transition.prototype.style_junctions =
                     if (lsvs.length) {
                         if (lsvs.some(function (lsv) {
                                 return lsv.doc.junctions.some(function (junc) {
-                                    return JSON.stringify([d.start, d.end]) === JSON.stringify(junc)
+                                    return array_equal([d.start, d.end], junc)
                                 })
                             })) {
                             return 'none'
@@ -682,7 +689,7 @@ d3.transition.prototype.style_junctions =
 
                     var hl = lsvs.reduce(function (acc, lsv) {
                         return acc.concat(lsv.doc.junctions.reduce(function (acc, junc, idx) {
-                            if (JSON.stringify([d.start, d.end]) === JSON.stringify(junc)) {
+                            if (array_equal(junc, [d.start, d.end])) {
                                 acc.push(colors.brewer(idx))
                             }
                             return acc
