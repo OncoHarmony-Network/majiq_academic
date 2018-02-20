@@ -10,7 +10,6 @@ cdef extern from "io_bam.hpp" namespace "io_bam":
         IOBam(char*, int, char*) except +
         int find_junctions()
         map[string, Junction] get_dict()
-        void set_filters(set[string], set[string])
+        void set_filters(map[string, set[string]])
         map[string, Junction] junc_dict_
-
 

@@ -40,7 +40,7 @@ namespace io_bam {
         s2<< end;
         string key = chrom +  ":" + strand + string(":") + s1.str() + "-" + s2.str();
 
-        if (set_prejuncs_.count(key) >0){
+        if (set_prejuncs_[chrom].count(key) >0){
             return;
         }
         else if(junc_dict_.count(key) == 0) {
@@ -64,7 +64,7 @@ namespace io_bam {
         int chr_id = read->core.tid;
         int read_pos = read->core.pos;
         string chrom(header->target_name[chr_id]);
-        if (set_chroms_.count(chrom)==0){
+        if (set_prejuncs_.count(chrom)==0){
             return 0;
         }
         uint32_t *cigar = bam_get_cigar(read);
@@ -143,9 +143,8 @@ namespace io_bam {
 
     }
 
-    void IOBam::set_filters(set<string> set_chroms1, set<string> set_prejuncs1){
-        set_chroms_ = set_chroms1;
-        set_prejuncs_ = set_prejuncs1;
+    void IOBam::set_filters(map<string, set<string>> prejuncs1){
+        set_prejuncs_ = prejuncs1;
     }
 
 //    //Create the junctions vector from the map

@@ -14,7 +14,7 @@ import majiq.src.logger as majiq_logger
 import majiq.src.multiproc as majiq_multi
 from majiq.grimoire.exon import detect_exons, expand_introns
 from majiq.grimoire.lsv import detect_lsvs, sample_junctions
-from majiq.src.sample import create_lt
+
 
 from majiq.src.basic_pipeline import BasicPipeline, pipeline_run
 from majiq.src.config import Config
@@ -24,38 +24,15 @@ from majiq.src.voila_wrapper import generate_splicegraph, update_splicegraph_jun
 from voila.api import SpliceGraph
 from quicksect import IntervalNode, Interval, IntervalTree
 
+from majiq.src.internals.seq_parse import find_new_junctions
+
+
 import math
 import datetime
 
 
 def build(args):
     pipeline_run(Builder(args))
-
-
-def find_new_junctions(file_list, chunk, conf, logger):
-
-    majiq_config = Config()
-    list_exons = {}
-    dict_junctions = {}
-    logger.info('Reading DB')
-
-    for gne_id, gene_obj in conf.genes_dict.items():
-        dict_junctions[gne_id] = {}
-        list_exons[gne_id] = []
-
-        majiq_io.from_matrix_to_objects(gne_id, conf.elem_dict[gne_id], dict_junctions[gne_id], list_exons[gne_id])
-        detect_exons(dict_junctions[gne_id], list_exons[gne_id])
-
-    td = create_lt(conf.genes_dict)
-    for exp_name, is_junc_file, name in file_list:
-        fname = '%s/%s' % (majiq_config.sam_dir, exp_name)
-        if is_junc_file:
-            fname += '.%s' % JUNC_FILE_FORMAT
-        else:
-            fname += '.%s' % SEQ_FILE_FORMAT
-        logger.info('READ JUNCS from %s' % fname)
-        read_juncs(fname, is_junc_file, list_exons, conf.genes_dict, td, dict_junctions,
-                   majiq_config.strand_specific[exp_name], conf.queue, gname=name, logger=logger)
 
 
 def find_new_introns(file_list, chunk, conf, logger):

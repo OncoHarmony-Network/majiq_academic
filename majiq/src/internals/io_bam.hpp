@@ -36,8 +36,7 @@ namespace io_bam{
             int strandness_;
 //            map<string, Junction> junc_dict_;
             string region_;
-            set<string> set_chroms_ ;
-            set<string> set_prejuncs_ ;
+            map<string, set<string>> set_prejuncs_ ;
 
         public:
             map<string, Junction> junc_dict_;
@@ -64,7 +63,7 @@ namespace io_bam{
             void add_junction(string chrom, char strand, int start, int end, int read_pos);
             char _get_strand(bam1_t * read);
             map<string, Junction> get_dict();
-            void set_filters(set<string> set_chroms1, set<string> set_prejuncs1);
+            void set_filters(map<string, set<string>> prejuncs1);
             void set_junction_strand(bam1_t *aln, Junction& j1);
 
     };
