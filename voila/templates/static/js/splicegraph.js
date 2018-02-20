@@ -494,9 +494,12 @@ d3.transition.prototype.style_exons =
                             return acc;
                         }, []);
 
-
-                        if (hl.length > 1)
-                            return 'black';
+                        if (hl.length > 1) {
+                            this.setAttribute('stroke', 'black');
+                            this.setAttribute('fill', 'grey');
+                            this.setAttribute('stroke-dasharray', '');
+                            return
+                        }
 
                         if (hl.length === 1) {
                             this.setAttribute('stroke', hl[0]);
@@ -640,8 +643,6 @@ d3.transition.prototype.style_junctions =
                 })
                 .attr('stroke', function (d) {
                     if (lsvs.length) {
-
-
                         var hl = lsvs.reduce(function (acc, lsv) {
                             return acc.concat(lsv.doc.junctions.reduce(function (acc, junc, idx) {
                                 if (array_equal(junc, [d.start, d.end])) {
