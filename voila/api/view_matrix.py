@@ -22,31 +22,30 @@ def unpack_bins(value):
 
 class ViewPsi(Psi):
     class _ViewPsi(Psi._Psi):
-        def get(self, *args):
+        def get_all(self):
             yield 'lsv_id', self.lsv_id
             yield '_id', self.lsv_id
             yield 'reference_exon', tuple(self.reference_exon)
             yield 'gene_id', self.gene_id
             yield 'is_target', self.is_target
 
-            if not args:
-                args = self.fields
+            fields = list(self.fields)
 
-            for key in args:
-                if key == 'bins':
-                    yield 'group_bins', dict(self.group_bins)
-                elif key == 'means':
-                    yield 'group_means_rounded', dict(self.group_means_rounded)
-                else:
-                    yield from super().get(key)
+            fields.remove('bins')
+            yield 'group_bins', dict(self.group_bins)
+
+            fields.remove('means')
+            yield 'group_means_rounded', dict(self.group_means_rounded)
+
+            yield from self.get_many(fields)
 
         @property
         def junctions(self):
-            return next(super().get('junctions'))[1]
+            return self.get('junctions')
 
         @property
         def means(self):
-            yield from unpack_means(next(super().get('means'))[1])
+            yield from unpack_means(self.get('means'))
 
         @property
         def group_means(self):
@@ -60,7 +59,7 @@ class ViewPsi(Psi):
 
         @property
         def bins(self):
-            return unpack_bins(next(super().get('bins'))[1])
+            return unpack_bins(self.get('bins'))
 
         @property
         def group_bins(self):
@@ -138,39 +137,39 @@ class ViewPsi(Psi):
 
 class ViewDeltaPsi(DeltaPsi):
     class _ViewDeltaPsi(DeltaPsi._DeltaPsi):
-        def get(self, *args):
+        def get_all(self):
             yield 'lsv_id', self.lsv_id
             yield '_id', self.lsv_id
             yield 'reference_exon', self.reference_exon
             yield 'excl_incl', self.excl_incl
             yield 'is_target', self.is_target
 
-            if not args:
-                args = self.fields
+            fields = list(self.fields)
 
-            for key in args:
-                if key == 'group_bins':
-                    yield key, dict(self.group_bins)
-                elif key == 'group_means':
-                    yield 'group_means_rounded', dict(self.group_means_rounded)
-                elif key == 'bins':
-                    yield 'bins', self.bins
-                    yield 'means_rounded', self.means_rounded
-                else:
-                    yield from super().get(key)
+            fields.remove('group_bins')
+            yield 'group_bins', dict(self.group_bins)
+
+            fields.remove('group_means')
+            yield 'group_means_rounded', dict(self.group_means_rounded)
+
+            fields.remove('bins')
+            yield 'bins', self.bins
+            yield 'means_rounded', self.means_rounded
+
+            yield from self.get_many(fields)
 
         @property
         def junctions(self):
-            return next(super().get('junctions'))[1]
+            return self.get('junctions')
 
         @property
         def bins(self):
-            return unpack_bins(next(super().get('bins'))[1])
+            return unpack_bins(self.get('bins'))
 
         @property
         def group_bins(self):
             group_names = self.matrix_hdf5.group_names
-            group_bins = next(super().get('group_bins'))[1]
+            group_bins = self.get('group_bins')
             for group_name, value in zip(group_names, group_bins):
                 yield group_name, unpack_bins(value)
 
@@ -185,7 +184,7 @@ class ViewDeltaPsi(DeltaPsi):
 
         @property
         def group_means(self):
-            for value in next(super().get('group_means'))[1]:
+            for value in self.get('group_means'):
                 yield unpack_means(value)
 
         @property

@@ -170,7 +170,7 @@
                                         <option value="{{ mark }}">{{ mark }}</option>
                                     {% endif %}
                                 {%- endfor %}
-                                <option value="{{ lsv_ids|length }}">All</option>
+                                <option value="{{ lsv_ids[gene.id] | length }}">All</option>
                             </select>
                         </form>
                     </div>

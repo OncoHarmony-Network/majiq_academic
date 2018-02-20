@@ -30,15 +30,14 @@ class MatrixHdf5:
         for key, value in kwargs.items():
             self.add(lsv_id, key, value)
 
-    def get(self, lsv_id, *args):
+    def get(self, lsv_id, key):
         gene_id = lsv_id_to_gene_id(lsv_id)
         lsv_grp = self.h['lsvs'][gene_id][lsv_id]
+        return lsv_grp[key].value
 
-        if args:
-            keys = args
-        else:
-            keys = lsv_grp.keys()
-
+    def get_many(self, lsv_id, keys):
+        gene_id = lsv_id_to_gene_id(lsv_id)
+        lsv_grp = self.h['lsvs'][gene_id][lsv_id]
         for key in keys:
             yield key, lsv_grp[key].value
 
@@ -118,13 +117,16 @@ class MatrixType(ABC):
 
             raise Exception('; '.join(msg))
 
-    def get(self, *args):
-        return self.matrix_hdf5.get(self.lsv_id, *args)
+    def get(self, key):
+        return self.matrix_hdf5.get(self.lsv_id, key)
+
+    def get_many(self, keys):
+        return self.matrix_hdf5.get_many(self.lsv_id, keys)
 
     @property
     def lsv_type(self):
         if self._lsv_type is None:
-            self._lsv_type = dict(self.get('lsv_type'))['lsv_type']
+            self._lsv_type = self.get('lsv_type')
         return self._lsv_type
 
     @property
