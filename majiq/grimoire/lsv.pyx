@@ -3,7 +3,7 @@ from majiq.src.sample import sample_from_junctions
 from majiq.grimoire.exon cimport Exon
 from majiq.grimoire.junction cimport Junction
 from majiq.src.normalize import mark_stacks
-
+cimport numpy as np
 from voila.constants import *
 from voila.splice_graphics import ExonGraphic, LsvGraphic, JunctionGraphic
 import collections
