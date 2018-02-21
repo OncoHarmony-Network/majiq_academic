@@ -3,17 +3,20 @@
 
 #include <iostream>
 
+
 using namespace std;
-class Junction{
+struct Junction{
     public:
         unsigned int nreads;
         int index;
         int lsv_index;
-        bool annot;
-        string chrom;
-        char strand;
+//        bool annot;
+//        string chrom;
+//        char strand;
+        string gene_id;
         unsigned int start;
         unsigned int end;
+        unsigned int n_exps;
 
     public:
         Junction() {
@@ -23,15 +26,17 @@ class Junction{
 
         }
 
-        Junction(string chrom1, char strand1, unsigned int start1, unsigned int end1): chrom(chrom1), strand(strand1),
-                                                                                       start(start1), end(end1){
+        Junction(string gene_id1, unsigned int start1, unsigned int end1): gene_id(gene_id1),
+                                                                           start(start1), end(end1){
             nreads = 0;
+            n_exps = 0;
 
         }
 
 
         void update_junction_read(int n){
             nreads += n;
+            n_exps = 0;
             return;
            }
 

@@ -10,16 +10,17 @@ try:
 except ImportError:
     raise Exception('pysam not found; please install pysam first')
 
-compile_args = ['-g', '-std=c++11']
-linker_args = ['-std=c++11']
+compile_args = ['-g', '-fopenmp', '-std=c++11']
+linker_args = ['-lgomp', '-std=c++11']
 if sys.platform == 'darwin':
     compile_args.append('-stdlib=libc++')
-    linker_args = ['-L/usr/local/opt/llvm/lib']
+    linker_args = ['-L/usr/local/opt/llvm/lib'] + linker_args
 
+include_librs = ['majiq/src/internals', numpy.get_include()] + pysam.get_include()
 pysam_library_path = [os.path.abspath(os.path.join(os.path.dirname(pysam.__file__)))]
 extensions = [Extension('majiq.src.internals.seq_parse',
                         ['majiq/src/internals/seq_parse.pyx', 'majiq/src/internals/io_bam.cpp'],
-                        include_dirs=['majiq/src/internals'] + pysam.get_include(),
+                        include_dirs=include_librs,
                         library_dirs=pysam_library_path,
                         libraries=['htslib'],
                         runtime_library_dirs=pysam_library_path,

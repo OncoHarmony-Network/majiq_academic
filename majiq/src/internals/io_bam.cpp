@@ -38,22 +38,36 @@ namespace io_bam {
 
         s1<< start;
         s2<< end;
+        string gne_id = string("KKK");
+
+        Junction j1;
         string key = chrom +  ":" + strand + string(":") + s1.str() + "-" + s2.str();
 
-        if (set_prejuncs_[chrom].count(key) >0){
+        if ((*set_prejuncs_)[chrom].count(key) >0){
             return;
         }
         else if(junc_dict_.count(key) == 0) {
-            Junction j1 = Junction(chrom, strand, start, end);
+
+            j1 = Junction(gne_id, start, end);
             j1.nreads = 1;
             junc_dict_[key] = j1;
         }
         else {
-            Junction j0 = junc_dict_[key];
-            j0.nreads +=  1;
+            j1 = junc_dict_[key];
+            j1.nreads +=  1;
+        }
+
+        if (j1.nreads == min_experiments_){
+            omp_set_lock(&writelock);
+            if(denovo_juncs_->count(key) == 0){
+                (*denovo_juncs_)[key] = Junction(gne_id, start, end);
+            }
+            (*denovo_juncs_)[key].n_exps += 1;
+            omp_unset_lock(&writelock);
         }
         return;
     }
+
 
 
     int IOBam::parse_read_into_junctions(bam_hdr_t *header, bam1_t *read) {
@@ -64,7 +78,7 @@ namespace io_bam {
         int chr_id = read->core.tid;
         int read_pos = read->core.pos;
         string chrom(header->target_name[chr_id]);
-        if (set_prejuncs_.count(chrom)==0){
+        if ((*set_prejuncs_).count(chrom)==0){
             return 0;
         }
         uint32_t *cigar = bam_get_cigar(read);
@@ -95,7 +109,8 @@ namespace io_bam {
     }
 
     //The workhorse - identifies junctions from BAM
-    int IOBam::find_junctions() {
+    int IOBam::find_junctions(int min_experiments1) {
+        min_experiments_ = min_experiments1;
         cout << "FILE:" << bam_ << "\n";
         if(!bam_.empty()) {
 
@@ -143,15 +158,12 @@ namespace io_bam {
 
     }
 
-    void IOBam::set_filters(map<string, set<string>> prejuncs1){
+    void IOBam::set_filters(map<string, set<string>>* prejuncs1){
         set_prejuncs_ = prejuncs1;
     }
 
-//    //Create the junctions vector from the map
-//    void IOBam::create_junctions_vector() {
-//        for(map<string, Junction> :: iterator it = junctions_.begin(); it != junctions_.end(); it++) {
-//            Junction j1 = it->second;
-//            junctions_vector_.push_back(j1);
-//        }
-//    }
+
+
+
+
 }

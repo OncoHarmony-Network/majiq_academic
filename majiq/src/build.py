@@ -5,8 +5,8 @@ import sys
 import psutil
 
 import majiq.src.io as majiq_io
-from majiq.src.io_bam import read_juncs, find_introns
-import majiq.src.io_bam as majiq_io_bam
+# from majiq.src.io_bam import find_introns
+# import majiq.src.io_bam as majiq_io_bam
 
 from majiq.src.multiproc import QueueMessage, process_conf, queue_manager, process_wrapper
 
@@ -88,8 +88,8 @@ def find_new_introns(file_list, chunk, conf, logger):
         else:
             fname += '.%s' % SEQ_FILE_FORMAT
         logger.info('READ introns from %s' % fname)
-        find_introns(fname, list_introns, majiq_config.min_intronic_cov, conf.queue,
-                     gname=name, stranded=majiq_config.strand_specific[exp_name])
+        # find_introns(fname, list_introns, majiq_config.min_intronic_cov, conf.queue,
+        #              gname=name, stranded=majiq_config.strand_specific[exp_name])
 
 
 def parsing_files(sam_file_list, chnk, conf, logger):
@@ -210,42 +210,43 @@ class Builder(BasicPipeline):
         elem_dict = {}
 
         if majiq_config.denovo:
-            logger.info("Retrieve denovo features")
-            nthreads = min(self.nthreads, len(majiq_config.sam_list))
-            logger.info("Create %s processes" % nthreads)
-            self.lock = [mp.Lock() for _ in range(nthreads)]
-
-            pool1 = mp.Pool(processes=nthreads, initializer=majiq_multi.process_conf,
-                            initargs=[find_new_junctions, self], maxtasksperchild=1)
-            if majiq_config.ir:
-                pool2 = mp.Pool(processes=nthreads, initializer=majiq_multi.process_conf,
-                                initargs=[find_new_introns, self], maxtasksperchild=1)
-
-            [xx.acquire() for xx in self.lock]
-            pool1.imap_unordered(majiq_multi.process_wrapper,
-                                 majiq_multi.chunks(majiq_config.sam_list, nthreads))
-            pool1.close()
-
-            group_names = {xx: xidx for xidx, xx in enumerate(majiq_config.tissue_repl.keys())}
-            queue_manager(None, self.lock, self.queue, num_chunks=nthreads, func=self.store_results, logger=logger,
-                          elem_dict=elem_dict, group_names=group_names, min_experients=min_experiments)
-            pool1.join()
-
-            logger.info('Updating DB')
-            majiq_io.add_elements_mtrx(elem_dict, self.elem_dict)
-
-            if majiq_config.ir:
-                elem_dict = {}
-                [xx.acquire() for xx in self.lock]
-                pool2.imap_unordered(majiq_multi.process_wrapper,
-                                     majiq_multi.chunks(majiq_config.sam_list, nthreads))
-                pool2.close()
-                queue_manager(None, self.lock, self.queue, num_chunks=nthreads, func=self.store_results, logger=logger,
-                              elem_dict=elem_dict, group_names=group_names, min_experients=min_experiments)
-                pool2.join()
-                majiq_io.add_elements_mtrx(elem_dict, self.elem_dict)
-
-        majiq_io.dump_db(self.genes_dict, self.elem_dict, self.outDir)
+            find_new_junctions(majiq_config.sam_list, 0, self, majiq_config, logger)
+        #     logger.info("Retrieve denovo features")
+        #     nthreads = min(self.nthreads, len(majiq_config.sam_list))
+        #     logger.info("Create %s processes" % nthreads)
+        #     self.lock = [mp.Lock() for _ in range(nthreads)]
+        #
+        #     pool1 = mp.Pool(processes=nthreads, initializer=majiq_multi.process_conf,
+        #                     initargs=[find_new_junctions, self], maxtasksperchild=1)
+        #     if majiq_config.ir:
+        #         pool2 = mp.Pool(processes=nthreads, initializer=majiq_multi.process_conf,
+        #                         initargs=[find_new_introns, self], maxtasksperchild=1)
+        #
+        #     [xx.acquire() for xx in self.lock]
+        #     pool1.imap_unordered(majiq_multi.process_wrapper,
+        #                          majiq_multi.chunks(majiq_config.sam_list, nthreads))
+        #     pool1.close()
+        #
+        #     group_names = {xx: xidx for xidx, xx in enumerate(majiq_config.tissue_repl.keys())}
+        #     queue_manager(None, self.lock, self.queue, num_chunks=nthreads, func=self.store_results, logger=logger,
+        #                   elem_dict=elem_dict, group_names=group_names, min_experients=min_experiments)
+        #     pool1.join()
+        #
+        #     logger.info('Updating DB')
+        #     majiq_io.add_elements_mtrx(elem_dict, self.elem_dict)
+        #
+        #     if majiq_config.ir:
+        #         elem_dict = {}
+        #         [xx.acquire() for xx in self.lock]
+        #         pool2.imap_unordered(majiq_multi.process_wrapper,
+        #                              majiq_multi.chunks(majiq_config.sam_list, nthreads))
+        #         pool2.close()
+        #         queue_manager(None, self.lock, self.queue, num_chunks=nthreads, func=self.store_results, logger=logger,
+        #                       elem_dict=elem_dict, group_names=group_names, min_experients=min_experiments)
+        #         pool2.join()
+        #         majiq_io.add_elements_mtrx(elem_dict, self.elem_dict)
+        #
+        # majiq_io.dump_db(self.genes_dict, self.elem_dict, self.outDir)
 
     def run(self):
         # if self.simplify is not None and len(self.simplify) not in (0, 2):
