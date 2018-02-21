@@ -1,18 +1,13 @@
-import pip
-
-pip.main(['install', 'Cython==0.25.2'])
-pip.main(['install', '-r', 'requirements.txt', '-U'])
-
 from setuptools import setup, find_packages
-from distutils.extension import Extension
+from distutils.core import Extension
+from Cython.Build import cythonize
 from majiq.src.constants import VERSION
-from Cython.Distutils import build_ext
 import numpy
-
 try:
     import pysam
 except ImportError:
     raise Exception('pysam not found; please install pysam first')
+
 
 extensions = [Extension('majiq.src.normalize', ['majiq/src/normalize.pyx'], include_dirs=[numpy.get_include()])]
 extensions += [Extension('majiq.grimoire.junction', ['majiq/grimoire/junction.pyx'])]
@@ -28,7 +23,9 @@ extensions += [Extension('majiq.src.sample', ['majiq/src/sample.pyx'], include_d
 extensions += [Extension('majiq.src.adjustdelta', ['majiq/src/adjustdelta.pyx'], include_dirs=[numpy.get_include()])]
 extensions += [Extension('majiq.src.psi', ['majiq/src/psi.pyx'], include_dirs=[numpy.get_include()])]
 
-include_dirs = pysam.get_include()
+
+
+include_dirs=pysam.get_include()
 
 setup(
     name="majiq",
@@ -43,8 +40,7 @@ setup(
     include_package_data=True,
     entry_points={'console_scripts': ['majiq = majiq.run_majiq:main', 'voila = voila.run_voila:main']},
     zip_safe=False,
-    cmdclass={'build_ext': build_ext},
-    ext_modules=extensions,
+    ext_modules=cythonize(extensions),
     classifiers=[
         'Development Status :: 4 - Beta',
         'Environment :: Console',
