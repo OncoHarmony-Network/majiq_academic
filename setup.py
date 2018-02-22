@@ -1,8 +1,6 @@
-from distutils.core import Extension
-
 import numpy
 from Cython.Build import cythonize
-from setuptools import setup, find_packages
+from setuptools import setup, find_packages, Extension
 
 from majiq.src.constants import VERSION
 
