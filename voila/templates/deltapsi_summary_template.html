@@ -121,8 +121,7 @@
                                 </td>
 
 
-                                <td id="data_td{{ gene_index }}{{ loop.index }}" class="lsvDeltaCompact primer"
-                                    genome="{{ genome }}" lsv-text-version="{{ lsv_text_version }}">
+                                <td id="data_td{{ gene_index }}{{ loop.index }}" class="lsvDeltaCompact primer">
                                     {% include 'delta_compact_percentiles.html' %}
                                 </td>
 
@@ -142,11 +141,7 @@
                                                                     title="Go to GTF LSV definition"/></a>
                                         {% endif %}
                                     </p>
-                                    <p>
-                                        <button class="copy-to-clipboard">
-                                            Copy LSV
-                                        </button>
-                                    </p>
+                                    {% include 'copy_lsv.html' %}
                                 </td>
 
                             </tr>

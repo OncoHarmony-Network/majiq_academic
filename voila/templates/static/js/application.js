@@ -20,24 +20,60 @@ CanvasRenderingContext2D.prototype.dashedLine = function (x1, y1, x2, y2, dashLe
 };
 
 $(document).ready(function () {
-    new Clipboard('.copy-to-clipboard', {
-        text: function (trigger) {
-            var primer = $(trigger).parents('tr').find('.primer');
-            var data = {};
-            var lsv = primer.attr('data-lsv');
-            data.lsv = JSON.parse(lsv.replace(/'/g, '"'));
-            data.genome = primer.attr('genome');
-            data.lsv_text_version = primer.attr('lsv-text-version');
+    $('.copy-to-clipboard').each(function () {
+        var lsv_id = this.getAttribute('data-lsv-id');
+        var gene_id = this.getAttribute('data-gene-id');
+        var btn = this;
+        db.allDocs({
+            keys: [lsv_id, gene_id],
+            include_docs: true
+        }, function (err, data) {
+            var lsv = data.rows[0].doc;
+            var gene = data.rows[1].doc;
+            new Clipboard(btn, {
+                text: function (trigger) {
+                    var data = {};
+                    data.sample_names = ['a', 'b'];
+                    data.lsv = {test: 'test'};
+                    data.genome = trigger.getAttribute('data-genome');
+                    data.lsv_text_version = trigger.getAttribute('data-lsv-text-version');
+                    data.splice_graphs = ['g1', 'g2'];
+                    // var spliceDivs = $(trigger).parents('.gene-container').find('.spliceDiv').get();
+                    // data.splice_graphs = spliceDivs.reduce(function (accu, currVal) {
+                    //     accu.push(JSON.parse(currVal.getAttribute('data-exon-list').replace(/'/g, '"')));
+                    //     return accu
+                    // }, []);
 
-            var spliceDivs = $(trigger).parents('.gene-container').find('.spliceDiv').get();
-            data.splice_graphs = spliceDivs.reduce(function (accu, currVal) {
-                accu.push(JSON.parse(currVal.getAttribute('data-exon-list').replace(/'/g, '"')));
-                return accu
-            }, []);
-
-            return JSON.stringify(data).replace(/"/g, '\\"')
-        }
+                    console.log(data);
+                    return JSON.stringify(data).replace(/"/g, '\\"')
+                }
+            })
+        })
     });
+
+    // new Clipboard('.copy-to-clipboard', {
+    //     text: function (trigger) {
+    //         var lsv_id = trigger.getAttribute('data-lsv-id');
+    //         return db.get(lsv_id).then(function (data) {
+    //             return data
+    //         });
+    //
+    //         // var primer = $(trigger).parents('tr').find('.primer');
+    //         // var data = {};
+    //         // var lsv = primer.attr('data-lsv');
+    //         // data.lsv = JSON.parse(lsv.replace(/'/g, '"'));
+    //         // data.genome = primer.attr('genome');
+    //         // data.lsv_text_version = primer.attr('lsv-text-version');
+    //         //
+    //         // var spliceDivs = $(trigger).parents('.gene-container').find('.spliceDiv').get();
+    //         // data.splice_graphs = spliceDivs.reduce(function (accu, currVal) {
+    //         //     accu.push(JSON.parse(currVal.getAttribute('data-exon-list').replace(/'/g, '"')));
+    //         //     return accu
+    //         // }, []);
+    //         //
+    //         // return JSON.stringify(data).replace(/"/g, '\\"')
+    //     }
+    // });
 
     // add sortable functionality to the table
     window.gene_objs = [];

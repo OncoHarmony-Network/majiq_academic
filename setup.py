@@ -1,13 +1,15 @@
-from setuptools import setup, find_packages
 from distutils.core import Extension
-from Cython.Build import cythonize
-from majiq.src.constants import VERSION
+
 import numpy
+from Cython.Build import cythonize
+from setuptools import setup, find_packages
+
+from majiq.src.constants import VERSION
+
 try:
     import pysam
 except ImportError:
     raise Exception('pysam not found; please install pysam first')
-
 
 extensions = [Extension('majiq.src.normalize', ['majiq/src/normalize.pyx'], include_dirs=[numpy.get_include()])]
 extensions += [Extension('majiq.grimoire.junction', ['majiq/grimoire/junction.pyx'])]
@@ -23,9 +25,7 @@ extensions += [Extension('majiq.src.sample', ['majiq/src/sample.pyx'], include_d
 extensions += [Extension('majiq.src.adjustdelta', ['majiq/src/adjustdelta.pyx'], include_dirs=[numpy.get_include()])]
 extensions += [Extension('majiq.src.psi', ['majiq/src/psi.pyx'], include_dirs=[numpy.get_include()])]
 
-
-
-include_dirs=pysam.get_include()
+include_dirs = pysam.get_include()
 
 setup(
     name="majiq",
@@ -40,6 +40,30 @@ setup(
     include_package_data=True,
     entry_points={'console_scripts': ['majiq = majiq.run_majiq:main', 'voila = voila.run_voila:main']},
     zip_safe=False,
+    install_requires=[
+        'appdirs==1.4.3',
+        'click==6.7',
+        'colorama==0.3.9',
+        'cycler==0.10.0',
+        'decorator==4.0.11',
+        'h5py==2.7.0',
+        'Jinja2==2.9.6',
+        'MarkupSafe==1.0',
+        'matplotlib==2.0.2',
+        'networkx==1.11',
+        'numpy==1.13.1',
+        'packaging==16.8',
+        'pyparsing==2.2.0',
+        'pysam==0.12',
+        'python-dateutil==2.6.0',
+        'pytz==2017.2',
+        'scipy==0.19.0',
+        'six==1.10.0',
+        'pandas==0.20.2',
+        'quicksect==0.0.2',
+        'SQLAlchemy==1.2.1',
+        'psutil==5.4.3',
+    ],
     ext_modules=cythonize(extensions),
     classifiers=[
         'Development Status :: 4 - Beta',
