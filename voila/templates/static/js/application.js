@@ -32,48 +32,77 @@ $(document).ready(function () {
             var gene = data.rows[1].doc;
             new Clipboard(btn, {
                 text: function (trigger) {
+                    var sgs = trigger.closest('.gene-container').querySelectorAll('.splice-graph');
                     var data = {};
-                    data.sample_names = ['a', 'b'];
-                    data.lsv = {test: 'test'};
+                    var exons = gene.exons.reduce(function (acc, exon) {
+                        lsv.junctions.forEach(function (junc) {
+                            if (coord_in_exon(exon, junc[0]) || coord_in_exon(exon, junc[1]))
+                                acc.push(exon)
+                        });
+                        return acc;
+                    }, []);
+                    exons = Array.from(new Set(exons));
+
+                    var junctions = gene.junctions.reduce(function (acc, junc) {
+                        exons.forEach(function (exon) {
+
+                            if (coord_in_exon(exon, junc.start) || coord_in_exon(exon, junc.end))
+                                acc.push(junc)
+                        });
+                        return acc
+                    }, []);
+                    junctions = Array.from(new Set(junctions));
+
+                    var exps = Array.from(sgs).reduce(function (acc, sg) {
+                        acc.push(sg.getAttribute('data-experiment'));
+                        return acc
+                    }, []);
+
                     data.genome = trigger.getAttribute('data-genome');
                     data.lsv_text_version = trigger.getAttribute('data-lsv-text-version');
-                    data.splice_graphs = ['g1', 'g2'];
-                    // var spliceDivs = $(trigger).parents('.gene-container').find('.spliceDiv').get();
-                    // data.splice_graphs = spliceDivs.reduce(function (accu, currVal) {
-                    //     accu.push(JSON.parse(currVal.getAttribute('data-exon-list').replace(/'/g, '"')));
-                    //     return accu
-                    // }, []);
+                    data.lsv = {
+                        exons: exons,
+                        junctions: junctions,
+                        lsv_type: lsv.lsv_type,
+                        strand: gene.strand,
+                        chromosome: gene.chromosome,
+                        lsv_id: lsv.lsv_id,
+                        name: gene.name
+                    };
 
-                    console.log(data);
+
+                    data.sample_names = Array.from(sgs).reduce(function (acc, sg) {
+                        acc.push(sg.getAttribute('data-group'));
+                        return acc
+                    }, []);
+
+                    data.lsv.bins = data.sample_names.reduce(function (acc, name) {
+                        acc.push(lsv.group_bins[name]);
+                        return acc;
+                    }, []);
+
+                    data.splice_graphs = exps.reduce(function (acc, exp) {
+                        var juncs_reads = junctions.reduce(function (acc, junc) {
+                            var j = Object.assign({}, junc);
+                            j.reads = gene.reads[exp][j.start][j.end];
+                            acc.push(j);
+                            return acc
+                        }, []);
+
+                        acc.push({
+                            junctions: juncs_reads,
+                            exons: exons
+                        });
+                        return acc
+
+                    }, []);
+
                     return JSON.stringify(data).replace(/"/g, '\\"')
                 }
             })
         })
     });
 
-    // new Clipboard('.copy-to-clipboard', {
-    //     text: function (trigger) {
-    //         var lsv_id = trigger.getAttribute('data-lsv-id');
-    //         return db.get(lsv_id).then(function (data) {
-    //             return data
-    //         });
-    //
-    //         // var primer = $(trigger).parents('tr').find('.primer');
-    //         // var data = {};
-    //         // var lsv = primer.attr('data-lsv');
-    //         // data.lsv = JSON.parse(lsv.replace(/'/g, '"'));
-    //         // data.genome = primer.attr('genome');
-    //         // data.lsv_text_version = primer.attr('lsv-text-version');
-    //         //
-    //         // var spliceDivs = $(trigger).parents('.gene-container').find('.spliceDiv').get();
-    //         // data.splice_graphs = spliceDivs.reduce(function (accu, currVal) {
-    //         //     accu.push(JSON.parse(currVal.getAttribute('data-exon-list').replace(/'/g, '"')));
-    //         //     return accu
-    //         // }, []);
-    //         //
-    //         // return JSON.stringify(data).replace(/"/g, '\\"')
-    //     }
-    // });
 
     // add sortable functionality to the table
     window.gene_objs = [];
