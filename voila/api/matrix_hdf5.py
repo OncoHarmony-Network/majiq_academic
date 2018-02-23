@@ -4,7 +4,7 @@ from abc import ABC, abstractmethod
 import h5py
 import numpy
 
-from src.majiq.voila import constants
+from voila import constants
 from voila.vlsv import collapse_matrix
 
 
