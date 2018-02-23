@@ -4,6 +4,7 @@ from abc import ABC, abstractmethod
 import h5py
 import numpy
 
+from src.majiq.voila import constants
 from voila.vlsv import collapse_matrix
 
 
@@ -147,6 +148,9 @@ class MatrixType(ABC):
 
     @property
     def _prime5(self):
+        if self.lsv_type == constants.NA_LSV:
+            return self.lsv_type
+
         lsv_type = self.lsv_type[2:]
         if lsv_type[-1] == 'i':
             lsv_type = lsv_type[:-2]
@@ -156,6 +160,9 @@ class MatrixType(ABC):
 
     @property
     def _prime3(self):
+        if self.lsv_type == constants.NA_LSV:
+            return self.lsv_type
+
         lsv_type = self.lsv_type[2:]
         if lsv_type[-1] == 'i':
             lsv_type = lsv_type[:-2]
@@ -194,15 +201,25 @@ class MatrixType(ABC):
 
     @property
     def exon_skipping(self):
-        return self.exon_count > 2
+        try:
+            return self.exon_count > 2
+        except TypeError:
+            if self.exon_count == constants.NA_LSV:
+                return constants.NA_LSV
+            raise
 
     @property
     def exon_count(self):
-        lsv_type = self.lsv_type[2:]
-        if lsv_type[-1] == 'i':
-            lsv_type = lsv_type[:-2]
+        try:
+            lsv_type = self.lsv_type[2:]
+            if lsv_type[-1] == 'i':
+                lsv_type = lsv_type[:-2]
 
-        return len(set(x[1:3] for x in lsv_type.split('|'))) + 1
+            return len(set(x[1:3] for x in lsv_type.split('|'))) + 1
+        except IndexError:
+            if self.lsv_type == constants.NA_LSV:
+                return constants.NA_LSV
+            raise
 
 
 class DeltaPsi(MatrixHdf5):
