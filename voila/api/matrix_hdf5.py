@@ -148,38 +148,42 @@ class MatrixType(ABC):
 
     @property
     def _prime5(self):
-        if self.lsv_type == constants.NA_LSV:
-            return self.lsv_type
+        try:
+            lsv_type = self.lsv_type[2:]
+            if lsv_type[-1] == 'i':
+                lsv_type = lsv_type[:-2]
 
-        lsv_type = self.lsv_type[2:]
-        if lsv_type[-1] == 'i':
-            lsv_type = lsv_type[:-2]
-
-        splice_sites = set(j[0] for j in lsv_type.split('|'))
-        return len(splice_sites) > 1
+            splice_sites = set(j[0] for j in lsv_type.split('|'))
+            return len(splice_sites) > 1
+        except IndexError:
+            if self.lsv_type == constants.NA_LSV:
+                return constants.NA_LSV
+            raise
 
     @property
     def _prime3(self):
-        if self.lsv_type == constants.NA_LSV:
-            return self.lsv_type
+        try:
+            lsv_type = self.lsv_type[2:]
+            if lsv_type[-1] == 'i':
+                lsv_type = lsv_type[:-2]
 
-        lsv_type = self.lsv_type[2:]
-        if lsv_type[-1] == 'i':
-            lsv_type = lsv_type[:-2]
+            exons = {}
+            for x in lsv_type.split('|'):
+                juncs = x[1:].split('.')
+                try:
+                    exons[juncs[0]].add(juncs[1])
+                except KeyError:
+                    exons[juncs[0]] = set(juncs[1])
 
-        exons = {}
-        for x in lsv_type.split('|'):
-            juncs = x[1:].split('.')
-            try:
-                exons[juncs[0]].add(juncs[1])
-            except KeyError:
-                exons[juncs[0]] = set(juncs[1])
+            for value in exons.values():
+                if len(value) > 1:
+                    return True
 
-        for value in exons.values():
-            if len(value) > 1:
-                return True
-
-        return False
+            return False
+        except IndexError:
+            if self.lsv_type == constants.NA_LSV:
+                return constants.NA_LSV
+            raise
 
     @property
     def prime5(self):

@@ -5,6 +5,8 @@ import numpy
 
 from voila import constants
 from voila.api.matrix_hdf5 import DeltaPsi, Psi, lsv_id_to_gene_id
+from voila.utils.exceptions import NoLsvsFound
+from voila.utils.voila_log import voila_log
 from voila.vlsv import get_expected_dpsi, VoilaLsv
 
 
@@ -96,7 +98,11 @@ class ViewPsi(Psi):
             yield from self.h['lsvs'].keys()
 
     def view_lsv_count(self, args):
-        return len(tuple(self.view_lsv_ids(args)))
+        value = len(tuple(self.view_lsv_ids(args)))
+        voila_log().info('Found {} LSVs'.format(value))
+        if not value:
+            raise NoLsvsFound()
+        return value
 
     def view_lsv_ids(self, args, gene_id=None):
         lsv_ids = args.lsv_ids
@@ -231,7 +237,11 @@ class ViewDeltaPsi(DeltaPsi):
                         yield lsv_id
 
     def view_lsv_count(self, args):
-        return len(tuple(self.view_lsv_ids(args)))
+        value = len(tuple(self.view_lsv_ids(args)))
+        voila_log().info('Found {} LSVs'.format(value))
+        if not value:
+            raise NoLsvsFound()
+        return value
 
     def view_gene_ids(self, args):
         if args.gene_ids:
