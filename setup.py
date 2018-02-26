@@ -1,8 +1,6 @@
 import numpy
 from Cython.Build import cythonize
-from setuptools import setup, find_packages, Extension
-
-from majiq.src.constants import VERSION
+from setuptools import Extension
 
 try:
     import pysam
@@ -25,6 +23,12 @@ extensions += [Extension('majiq.src.psi', ['majiq/src/psi.pyx'], include_dirs=[n
 
 include_dirs = pysam.get_include()
 
+
+def requirements():
+    with open('requirements.txt') as f:
+        return [l.strip() for l in f.readlines()]
+
+
 setup(
     name="majiq",
     packages=find_packages(),
@@ -38,31 +42,7 @@ setup(
     entry_points={'console_scripts': ['majiq = majiq.run_majiq:main', 'voila = voila.run_voila:main']},
     zip_safe=False,
     ext_modules=cythonize(extensions),
-    install_requires=[
-        'appdirs==1.4.3',
-        'click==6.7',
-        'colorama==0.3.9',
-        'cycler==0.10.0',
-        'Cython==0.25.2',
-        'decorator==4.0.11',
-        'h5py==2.7.0',
-        'Jinja2==2.9.6',
-        'MarkupSafe==1.0',
-        'matplotlib==2.0.2',
-        'networkx==1.11',
-        'numpy==1.13.1',
-        'packaging==16.8',
-        'pyparsing==2.2.0',
-        'pysam==0.12',
-        'python-dateutil==2.6.0',
-        'pytz==2017.2',
-        'scipy==0.19.0',
-        'six==1.10.0',
-        'pandas==0.20.2',
-        'quicksect==0.0.2',
-        'SQLAlchemy==1.2.1',
-        'psutil==5.4.3',
-    ],
+    install_requires=requirements(),
     classifiers=[
         'Development Status :: 4 - Beta',
         'Environment :: Console',
