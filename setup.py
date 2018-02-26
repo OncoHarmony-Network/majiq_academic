@@ -1,6 +1,8 @@
 import numpy
 from Cython.Build import cythonize
-from setuptools import Extension
+from setuptools import Extension, setup, find_packages
+
+from majiq.src.constants import VERSION
 
 try:
     import pysam
