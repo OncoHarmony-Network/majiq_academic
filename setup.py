@@ -28,7 +28,7 @@ include_dirs = pysam.get_include()
 
 def requirements():
     with open('requirements.txt') as f:
-        return [l.strip() for l in f.readlines()]
+        return [l.strip() for l in f.readlines() if l]
 
 
 setup(
