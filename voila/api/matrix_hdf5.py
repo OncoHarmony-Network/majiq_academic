@@ -95,6 +95,18 @@ class MatrixHdf5:
         except (KeyError, ValueError):
             return ()
 
+    @property
+    def file_version(self):
+        metadata = self.h['metadata']
+        try:
+            return metadata['file_version'].value
+        except KeyError:
+            return -1
+
+    @file_version.setter
+    def file_version(self, version):
+        self.h.create_dataset('metadata/file_version', data=version)
+
 
 class MatrixType(ABC):
     @abstractmethod

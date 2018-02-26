@@ -24,6 +24,13 @@ class Genome(Base):
     name = Column(String)
 
 
+class FileVersion(Base):
+    __tablename__ = 'file_version'
+    __iter__ = base_iter
+    id = Column(Integer, primary_key=True)
+    value = Column(Integer)
+
+
 class Experiment(Base):
     __tablename__ = 'experiment'
     __iter__ = base_iter

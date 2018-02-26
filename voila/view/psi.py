@@ -4,23 +4,11 @@ import os
 from voila import constants, io_voila
 from voila.api.view_matrix import ViewPsi
 from voila.api.view_splice_graph import ViewSpliceGraph, ViewGene
+from voila.utils.exceptions import NotPsiVoilaFile
 from voila.utils.run_voila_utils import table_marks_set, copy_static, get_env
 from voila.utils.voila_log import voila_log
 from voila.utils.voila_pool import VoilaPool
 from voila.view.html import Html
-
-
-def create_gene_db(gene_ids, args, experiment_names):
-    template = get_env().get_template('gene_db_template.html')
-    with ViewSpliceGraph(args.splice_graph) as sg, ViewPsi(args.voila_file) as m:
-        for gene_id in gene_ids:
-            with open(os.path.join(args.output, 'db', '{}.js'.format(gene_id)), 'w') as html:
-                html.write(
-                    template.render(
-                        gene=ViewGene(sg.gene(gene_id).get).get_experiment(experiment_names),
-                        lsvs=(m.psi(lsv_id) for lsv_id in m.view_lsv_ids(args, gene_id))
-                    )
-                )
 
 
 class Psi(Html):
@@ -33,21 +21,17 @@ class Psi(Html):
         super(Psi, self).__init__(args)
 
         if not args.disable_html:
-            copy_static(args)
             with ViewPsi(args.voila_file) as m:
+                if m.analysis_type != constants.ANALYSIS_PSI:
+                    raise NotPsiVoilaFile(args.voila_file)
                 self.metadata = m.metadata
+            copy_static(args)
             self.create_db_files()
             self.render_summaries()
             self.render_index()
 
         if not args.disable_tsv:
             io_voila.psi_tab_output(args, self.voila_links)
-
-        # if args.gtf:
-        #     io_voila.generic_feature_format_txt_files(args)
-        #
-        # if args.gff:
-        #     io_voila.generic_feature_format_txt_files(args, out_gff3=True)
 
     def create_db_files(self):
         args = self.args
@@ -68,7 +52,7 @@ class Psi(Html):
 
         with VoilaPool() as vp:
             for genes in self.chunkify(gene_ids, vp.processes):
-                multiple_results.append(vp.pool.apply_async(create_gene_db, (genes, args, names)))
+                multiple_results.append(vp.pool.apply_async(self.create_gene_db, (genes, args, names)))
 
             for res in multiple_results:
                 res.get()
@@ -168,3 +152,16 @@ class Psi(Html):
                 self.voila_links.update(res.get())
 
         log.debug('End summaries render')
+
+    @staticmethod
+    def create_gene_db(gene_ids, args, experiment_names):
+        template = get_env().get_template('gene_db_template.html')
+        with ViewSpliceGraph(args.splice_graph) as sg, ViewPsi(args.voila_file) as m:
+            for gene_id in gene_ids:
+                with open(os.path.join(args.output, 'db', '{}.js'.format(gene_id)), 'w') as html:
+                    html.write(
+                        template.render(
+                            gene=ViewGene(sg.gene(gene_id).get).get_experiment(experiment_names),
+                            lsvs=(m.psi(lsv_id) for lsv_id in m.view_lsv_ids(args, gene_id))
+                        )
+                    )

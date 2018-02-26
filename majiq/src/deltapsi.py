@@ -4,12 +4,13 @@ import sys
 
 import majiq.src.io as majiq_io
 import psutil
-from majiq.src.psi import deltapsi_posterior, gen_prior_matrix
 
 import majiq.src.logger as majiq_logger
 from majiq.src.basic_pipeline import BasicPipeline, pipeline_run
 from majiq.src.constants import *
 from majiq.src.multiproc import QueueMessage, process_conf, queue_manager, process_wrapper, chunks
+from majiq.src.psi import deltapsi_posterior, gen_prior_matrix
+from voila import constants
 from voila.api import Matrix
 from voila.constants import ANALYSIS_DELTAPSI
 
@@ -138,6 +139,7 @@ class DeltaPsi(BasicPipeline):
             pool.close()
 
             with Matrix(get_quantifier_voila_filename(self.outDir, self.names, deltapsi=True), 'w') as out_h5p:
+                out_h5p.file_version = constants.VOILA_FILE_VERSION
                 out_h5p.analysis_type = ANALYSIS_DELTAPSI
                 out_h5p.group_names = self.names
                 out_h5p.prior = []

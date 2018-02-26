@@ -153,43 +153,18 @@ class ViewGene:
 
     def lsv_reference_exon(self, lsv_id):
         coords_list = list(self.convert_lsv_to_coords(lsv_id))
-        for exon in self.gene.exons:
-            if coords_list == [exon.start, exon.end]:
-                return exon
+        return next(exon for exon in self.gene.exons if coords_list == [exon.start, exon.end])
 
     def lsv_exons(self, lsv, lsv_junctions=None):
-        lsv_id = lsv.lsv_id
         if lsv_junctions is None:
             lsv_junctions = self.lsv_junctions(lsv)
-        is_target = lsv_id.split(':')[-2] == 't'
 
-        def find_exons():
-            yield self.lsv_reference_exon(lsv_id)
-
-            for junc in lsv_junctions:
-                for exon in self.gene.exons:
-                    if is_target:
-                        if self.gene.strand == '+':
-                            if junc.start in exon:
-                                yield exon
-                        else:
-                            if junc.end in exon:
-                                yield exon
-                    else:
-                        if self.gene.strand == '+':
-                            if junc.end in exon:
-                                yield exon
-                        else:
-                            if junc.start in exon:
-                                yield exon
-
-        yield from sorted(find_exons(), key=lambda e: [e.start, e.end])
+        exons = {exon for junc in lsv_junctions for exon in self.gene.exons if junc.start in exon or junc.end in exon}
+        yield from sorted(exons, key=lambda e: [e.start, e.end])
 
     def lsv_junctions(self, lsv):
         for start, end in lsv.junctions:
-            for junc in self.gene.junctions:
-                if [start, end] == [junc.start, junc.end]:
-                    yield junc
+            yield next(junc for junc in self.gene.junctions if [start, end] == [junc.start, junc.end])
 
     def lsv_ucsc_coordinates(self, lsv):
         exons = tuple(self.lsv_exons(lsv))

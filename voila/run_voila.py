@@ -7,18 +7,13 @@ import time
 import voila.constants as constants
 from voila.api import SpliceGraph, Matrix
 from voila.api.matrix_hdf5 import lsv_id_to_gene_id
-from voila.utils.exceptions import VoilaException
+from voila.utils.exceptions import VoilaException, VoilaCantFindFile
 from voila.utils.utils_voila import create_if_not_exists
 from voila.utils.voila_log import voila_log
 from voila.utils.voila_pool import VoilaPool
 from voila.view.deltapsi import DeltaPsi
 from voila.view.psi import Psi
 from voila.view.splice_graph import RenderSpliceGraphs
-
-
-class VoilaCantFindFile(argparse.ArgumentTypeError):
-    def __init__(self, value):
-        super(VoilaCantFindFile, self).__init__('cannot find file "{0}"'.format(value))
 
 
 def secs2hms(secs):
@@ -30,6 +25,19 @@ def secs2hms(secs):
     m, s = divmod(secs, 60)
     h, m = divmod(m, 60)
     return "%d:%02d:%02d" % (h, m, s)
+
+
+def file_versions(args):
+    log = voila_log()
+    with SpliceGraph(args.splice_graph) as sg:
+        if sg.file_version != constants.SPLICE_GRAPH_FILE_VERSION:
+            log.warning('Splice Graph may be out of date.  Verify that you\'re running MAJIQ/Voila with the most '
+                        'current versions.')
+
+    with Matrix(args.voila_file) as m:
+        if m.file_version != constants.VOILA_FILE_VERSION:
+            log.warning('Voila file may be out of date.  Verify that you\'re running MAJIQ/Voila with the most '
+                        'current versions.')
 
 
 def gene_names(args):
@@ -120,20 +128,6 @@ def check_file(value):
     return value
 
 
-def check_splice_graph_file(value):
-    value = check_file(value)
-    # with SpliceGraph(value) as sg:
-    #     sg.check_version()
-    return value
-
-
-def check_voila_file(value):
-    value = check_file(value)
-    # with Voila(value) as v:
-    #     v.check_version()
-    return value
-
-
 def voila_parser():
     parser = argparse.ArgumentParser(description='VOILA is a visualization package '
                                                  'for Alternative Local Splicing Events.')
@@ -142,7 +136,7 @@ def voila_parser():
     # splice graph parser
     splice_graph = new_subparser()
 
-    splice_graph.add_argument('-s', '--splice-graph', type=check_splice_graph_file, required=True,
+    splice_graph.add_argument('-s', '--splice-graph', type=check_file, required=True,
                               help='Path to splice graph file.')
     splice_graph.add_argument('-o', '--output', type=check_dir, required=True, help='Path for output directory.')
     splice_graph.add_argument('--logger', help='Path for log files.')
@@ -160,7 +154,7 @@ def voila_parser():
 
     # psi parser
     psi = new_subparser()
-    psi.add_argument('voila_file', type=check_voila_file,
+    psi.add_argument('voila_file', type=check_file,
                      help='Location of majiq\'s voila file.  File should end with ".voila".')
     psi.add_argument('--gtf', action='store_true', help='Generate GTF (GFF2) files for LSVs.')
     psi.add_argument('--gff', action='store_true', help='Generate GFF3 files for LSVs.')
@@ -224,6 +218,7 @@ def main():
     VoilaPool(args.nproc)
 
     try:
+        file_versions(args)
         gene_names(args)
         gene_ids(args)
         lsv_ids(args)
@@ -235,6 +230,8 @@ def main():
         # Add elapsed time
         elapsed_str = secs2hms(time.time() - start_time)
         log.info("Execution time: {0}.".format(elapsed_str))
+
+        VoilaPool().pool.close()
 
     except KeyboardInterrupt:
         log.warning('Voila exiting')

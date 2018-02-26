@@ -4,6 +4,7 @@ import os
 from voila import constants, io_voila
 from voila.api.view_matrix import ViewDeltaPsi
 from voila.api.view_splice_graph import ViewSpliceGraph, ViewGene
+from voila.utils.exceptions import NotDeltaPsiVoilaFile
 from voila.utils.run_voila_utils import table_marks_set, copy_static, get_env
 from voila.utils.voila_log import voila_log
 from voila.utils.voila_pool import VoilaPool
@@ -15,21 +16,18 @@ class DeltaPsi(Html):
         super(DeltaPsi, self).__init__(args)
 
         if not args.disable_html:
-            copy_static(args)
             with ViewDeltaPsi(args.voila_file) as m:
+                if m.analysis_type != constants.ANALYSIS_DELTAPSI:
+                    raise NotDeltaPsiVoilaFile(args.voila_file)
                 self.metadata = m.metadata
+
+            copy_static(args)
             self.create_db_files()
             self.render_summaries()
             self.render_index()
 
         if not args.disable_tsv:
             io_voila.delta_psi_tab_output(args, self.voila_links)
-
-        # if args.gtf:
-        #     io_voila.generic_feature_format_txt_files(args)
-        #
-        # if args.gff:
-        #     io_voila.generic_feature_format_txt_files(args, out_gff3=True)
 
     def render_index(self):
         log = voila_log()
@@ -73,11 +71,12 @@ class DeltaPsi(Html):
         with ViewSpliceGraph(args.splice_graph) as sg, ViewDeltaPsi(args.voila_file) as m:
             for gene_id in gene_ids:
                 log.debug('creating {}'.format(gene_id))
+
                 with open(os.path.join(args.output, 'db', '{}.js'.format(gene_id)), 'w') as html:
                     html.write(
                         template.render(
                             gene=ViewGene(sg.gene(gene_id).get).get_experiment(experiment_names),
-                            lsvs=(m.delta_psi(lsv_id) for lsv_id in m.lsv_ids(gene_id))
+                            lsvs=tuple(m.delta_psi(lsv_id) for lsv_id in m.lsv_ids(gene_id))
                         )
                     )
 

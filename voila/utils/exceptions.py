@@ -1,3 +1,6 @@
+import argparse
+
+
 class VoilaException(Exception):
     pass
 
@@ -39,6 +42,7 @@ class AttributeNotFoundInVoilaFile(VoilaException):
         """
         m = 'LSV ID {0} the attribute "{1}" was not found in Voila file'.format(lsv_id, attr)
         super(AttributeNotFoundInVoilaFile, self).__init__(m)
+
 
 class NoExonsInGene(VoilaException):
     def __init__(self, gene_id):
@@ -97,3 +101,19 @@ class NotNumpyObject(VoilaException):
 
 class NotCorrectUnsignedBits(VoilaException):
     pass
+
+
+class VoilaCantFindFile(argparse.ArgumentTypeError):
+    def __init__(self, value):
+        super(VoilaCantFindFile, self).__init__('cannot find file "{0}"'.format(value))
+
+
+class NotPsiVoilaFile(VoilaException):
+    def __init__(self, file_name):
+        m = 'Voila file has not been quantified using PSI: ' + file_name
+        super().__init__(m)
+
+class NotDeltaPsiVoilaFile(VoilaException):
+    def __init__(self, file_name):
+        m = 'Voila file has not been quantified using DeltaPSI: ' + file_name
+        super().__init__(m)

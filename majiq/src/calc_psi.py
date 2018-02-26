@@ -1,15 +1,18 @@
 import multiprocessing as mp
 import sys
-import majiq.src.io as majiq_io
-from majiq.src.psi import psi_posterior
 
+import majiq.src.io as majiq_io
+import psutil
+
+import majiq.src.logger as majiq_logger
 from majiq.src.basic_pipeline import BasicPipeline, pipeline_run
 from majiq.src.constants import *
 from majiq.src.multiproc import QueueMessage, process_conf, queue_manager, process_wrapper, chunks
+from majiq.src.psi import psi_posterior
+from voila import constants
 from voila.api import Matrix
 from voila.constants import ANALYSIS_PSI
-import majiq.src.logger as majiq_logger
-import psutil
+
 
 ################################
 # PSI calculation pipeline     #
@@ -21,7 +24,6 @@ def calcpsi(args):
 
 
 def psi_quantification(list_of_lsv, chnk, conf, logger):
-
     logger.info("Quantifying LSVs PSI.. %s" % chnk)
     f_list = majiq_io.get_extract_lsv_list(list_of_lsv, conf.files)
 
@@ -89,6 +91,7 @@ class CalcPsi(BasicPipeline):
             pool.map_async(process_wrapper, chunks(list_of_lsv, nthreads))
             pool.close()
             with Matrix(get_quantifier_voila_filename(self.outDir, self.name), 'w') as out_h5p:
+                out_h5p.file_version = constants.VOILA_FILE_VERSION
                 out_h5p.analysis_type = ANALYSIS_PSI
                 out_h5p.experiment_names = [exps]
                 out_h5p.group_names = [self.name]
@@ -98,8 +101,7 @@ class CalcPsi(BasicPipeline):
             pool.join()
 
         if self.mem_profile:
-            mem_allocated = int(psutil.Process().memory_info().rss)/(1024**2)
+            mem_allocated = int(psutil.Process().memory_info().rss) / (1024 ** 2)
             logger.info("Max Memory used %.2f MB" % mem_allocated)
         logger.info("PSI calculation for %s ended succesfully! "
                     "Result can be found at %s" % (self.name, self.outDir))
-

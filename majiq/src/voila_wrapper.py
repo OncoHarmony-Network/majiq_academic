@@ -3,6 +3,7 @@ from majiq.grimoire.exon import detect_exons, expand_introns
 
 from majiq.src.config import Config
 from majiq.src.constants import *
+from voila import constants
 from voila.api import SpliceGraph
 
 
@@ -32,6 +33,7 @@ def init_splicegraph(filename):
 
     # erase splice graph file
     with SpliceGraph(filename, delete=True) as sg:
+        sg.file_version = constants.SPLICE_GRAPH_FILE_VERSION
         sg.experiment_names = majiq_config.exp_list
         sg.genome = majiq_config.genome
 
