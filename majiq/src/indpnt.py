@@ -8,7 +8,6 @@ from majiq.src.constants import *
 from majiq.src.multiproc import QueueMessage, process_conf, queue_manager, process_wrapper, chunks
 from majiq.src.psi import heterogen_posterior
 from majiq.src.stats import operator, all_stats
-from voila.api import Voila
 from voila.constants import ANALYSIS_HETEROGEN
 from voila.vlsv import Het
 import os
@@ -164,16 +163,16 @@ class independent(BasicPipeline):
             [xx.acquire() for xx in self.lock]
             pool.map_async(process_wrapper,  chunks(list_of_lsv, nthreads))
             pool.close()
-            with Voila(get_quantifier_voila_filename(self.outDir, self.names, deltapsi=True), 'w') as out_h5p:
-
-                out_h5p.set_analysis_type(ANALYSIS_HETEROGEN)
-                out_h5p.group_names = self.names
-                out_h5p.experiment_names = [exps1, exps2]
-
-                out_h5p.add_stat_names(self.stats)
-
-                queue_manager(out_h5p, self.lock, self.queue, num_chunks=nthreads, func=self.store_results,
-                              logger=logger, lsv_type=self.lsv_type_dict)
+            # with Voila(get_quantifier_voila_filename(self.outDir, self.names, deltapsi=True), 'w') as out_h5p:
+            #
+            #     out_h5p.set_analysis_type(ANALYSIS_HETEROGEN)
+            #     out_h5p.group_names = self.names
+            #     out_h5p.experiment_names = [exps1, exps2]
+            #
+            #     out_h5p.add_stat_names(self.stats)
+            #
+            #     queue_manager(out_h5p, self.lock, self.queue, num_chunks=nthreads, func=self.store_results,
+            #                   logger=logger, lsv_type=self.lsv_type_dict)
             pool.join()
 
         if self.mem_profile:
