@@ -2,10 +2,10 @@ import errno
 import os
 
 from voila import constants, io_voila
-from voila.api.view_matrix import ViewDeltaPsi
+from voila.api.matrix_hdf5 import lsv_id_to_gene_id
+from voila.api.view_matrix import ViewDeltaPsi, ViewDeltaPsiMatrix
 from voila.api.view_splice_graph import ViewSpliceGraph, ViewGene
-from voila.utils.exceptions import NotDeltaPsiVoilaFile
-from voila.utils.run_voila_utils import table_marks_set, copy_static, get_env
+from voila.exceptions import NotDeltaPsiVoilaFile
 from voila.utils.voila_log import voila_log
 from voila.utils.voila_pool import VoilaPool
 from voila.view.html import Html
@@ -21,7 +21,7 @@ class DeltaPsi(Html):
                     raise NotDeltaPsiVoilaFile(args.voila_file)
                 self.metadata = m.metadata
 
-            copy_static(args)
+            self.copy_static(args)
             self.create_db_files()
             self.render_summaries()
             self.render_index()
@@ -34,25 +34,25 @@ class DeltaPsi(Html):
         log.info('Render Delta PSI HTML index')
         log.debug('Start index render')
         args = self.args
-        env = self.env
         metadata = self.metadata
 
         with ViewSpliceGraph(args.splice_graph) as sg, ViewDeltaPsi(args.voila_file) as m:
-            lsv_count = m.view_lsv_count(args)
+            lsv_count = ViewDeltaPsiMatrix(m).view_lsv_count(args)
             too_many_lsvs = lsv_count > constants.MAX_LSVS_DELTAPSI_INDEX
 
             with open(os.path.join(args.output, 'index.html'), 'w') as html:
-                index_template = env.get_template('index_delta_summary_template.html')
+                index_template = self.get_env().get_template('index_delta_summary_template.html')
                 html.write(
                     index_template.render(
                         lexps=metadata,
-                        table_marks=table_marks_set(lsv_count),
+                        table_marks=self.table_marks_set(lsv_count),
                         lsvs_count=lsv_count,
                         prev_page=None,
                         next_page=None,
-                        database_name=self.database_name(),
-                        lsvs=list(m.delta_psi(lsv_id) for lsv_id in m.view_lsv_ids(args)),
+                        database_name='deltapsi_' + self.database_name(),
+                        lsvs=list(m.delta_psi(lsv_id) for lsv_id in ViewDeltaPsiMatrix(m).view_lsv_ids(args)),
                         genes=sg.gene,
+                        gene_ids=set(lsv_id_to_gene_id(lsv_id) for lsv_id in ViewDeltaPsiMatrix(m).view_lsv_ids(args)),
                         links=self.voila_links,
                         too_many_lsvs=too_many_lsvs,
                         metadata=metadata,
@@ -64,9 +64,9 @@ class DeltaPsi(Html):
 
                 log.debug('End index render')
 
-    @staticmethod
-    def create_gene_db(gene_ids, args, experiment_names):
-        template = get_env().get_template('gene_db_template.html')
+    @classmethod
+    def create_gene_db(cls, gene_ids, args, experiment_names):
+        template = cls.get_env().get_template('gene_db_template.html')
         log = voila_log()
         with ViewSpliceGraph(args.splice_graph) as sg, ViewDeltaPsi(args.voila_file) as m:
             for gene_id in gene_ids:
@@ -76,28 +76,30 @@ class DeltaPsi(Html):
                     html.write(
                         template.render(
                             gene=ViewGene(sg.gene(gene_id).get).get_experiment(experiment_names),
-                            lsvs=tuple(m.delta_psi(lsv_id) for lsv_id in m.lsv_ids(gene_id))
+                            lsvs=tuple(
+                                m.delta_psi(lsv_id) for lsv_id in ViewDeltaPsiMatrix(m).view_gene_lsvs(args, gene_id))
                         )
                     )
 
     @classmethod
     def create_summary(cls, metadata, args, database_name, paged):
-
-        summary_template = get_env().get_template("deltapsi_summary_template.html")
+        summary_template = cls.get_env().get_template("deltapsi_summary_template.html")
         summaries_subfolder = cls.get_summaries_subfolder(args)
         group_names = metadata['group_names']
         links = {}
 
         with ViewSpliceGraph(args.splice_graph, 'r') as sg, ViewDeltaPsi(args.voila_file) as m:
             genome = sg.genome
-            page_count = m.get_page_count(args)
+            page_count = ViewDeltaPsiMatrix(m).page_count(args)
 
             for index, genes in paged:
                 page_name = cls.get_page_name(args, index)
                 next_page = cls.get_next_page(args, index, page_count)
                 prev_page = cls.get_prev_page(args, index)
-                lsv_dict = {gene_id: tuple(lsv_id for lsv_id in m.view_lsv_ids(args, gene_id)) for gene_id in genes}
-                table_marks = tuple(table_marks_set(len(gene_set)) for gene_set in lsv_dict)
+
+                lsv_dict = {gene_id: tuple(lsv_id for lsv_id in ViewDeltaPsiMatrix(m).view_gene_lsvs(args, gene_id)) for
+                            gene_id in genes}
+                table_marks = tuple(cls.table_marks_set(len(gene_set)) for gene_set in lsv_dict)
 
                 with open(os.path.join(summaries_subfolder, page_name), 'w') as html:
                     html.write(
@@ -133,7 +135,7 @@ class DeltaPsi(Html):
         database_name = self.database_name()
 
         with ViewDeltaPsi(args.voila_file) as m:
-            paged_genes = tuple(m.paginated_genes(args))
+            paged_genes = tuple(ViewDeltaPsiMatrix(m).paginated_genes(args))
 
         multiple_results = []
         with VoilaPool() as vp:
@@ -151,7 +153,7 @@ class DeltaPsi(Html):
         log.info('Create DB files')
 
         with ViewDeltaPsi(args.voila_file) as m:
-            gene_ids = tuple(m.view_gene_ids(args))
+            gene_ids = tuple(ViewDeltaPsiMatrix(m).view_gene_ids(args))
 
         try:
             os.makedirs(os.path.join(args.output, 'db'))

@@ -3,17 +3,15 @@ import os
 import numpy
 
 from voila.api.view_splice_graph import SpliceGraphViewSpliceGraph
-from voila.utils.exceptions import VoilaException
-from voila.utils.run_voila_utils import get_output_html, copy_static
+from voila.exceptions import VoilaException
 from voila.utils.voila_log import voila_log
 from voila.view.html import Html
-from voila.voila_args import VoilaArgs
 
 
-class RenderSpliceGraphs(Html, VoilaArgs):
+class RenderSpliceGraphs(Html):
     def __init__(self, args):
         super(RenderSpliceGraphs, self).__init__(args)
-        copy_static(args, index=False)
+        self.copy_static(args, index=False)
         self.render_summaries()
 
     @classmethod
@@ -39,7 +37,7 @@ class RenderSpliceGraphs(Html, VoilaArgs):
         voila_log().info('Rendering Splice Graph HTML output')
         summary_template = self.env.get_template('splice_graphs_summary_template.html')
         args = self.args
-        output_html = get_output_html(args, args.splice_graph)
+        output_html = self.get_output_html(args, args.splice_graph)
         summaries_subfolder = self.get_summaries_subfolder(args)
         log = voila_log()
         database_name = self.database_name()

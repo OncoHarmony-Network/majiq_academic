@@ -4,7 +4,7 @@ $(document).on('mouseover', '.junction-grp', function () {
     d3.select(container)
         .selectAll('.junction-grp')
         .style('opacity', function (d) {
-            if (JSON.stringify([datum.start, datum.end]) !== JSON.stringify([d.start, d.end]))
+            if (datum.start !== d.start || datum.end !== d.end)
                 return 0.2
         })
 });
@@ -23,10 +23,11 @@ $(document).on('mouseenter', '.exon, .junction-grp, .half-exon, .intron-retentio
     db.get(gene_id).then(function (gene) {
         var exon_type;
         try {
-            exon_type = gene.exon_types[d.start][d.end][experiment];
+            exon_type = gene.exon_types[experiment][d.start][d.end];
         } catch (TypeError) {
             exon_type = -1
         }
+        console.log(exon_type);
         if ([4, 5].includes(exon_type)) {
             if (exon_type === 4)
                 splice_graph_tools.find('.coordinates').text('MISSING' + ' - ' + d.end);

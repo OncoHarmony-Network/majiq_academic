@@ -86,14 +86,14 @@ class MatrixHdf5:
 
     @property
     def gene_ids(self):
-        yield from self.h['lsvs'].keys()
+        yield from self.h['lsvs']
 
-    def lsv_ids(self, gene_id):
-        lsvs = self.h['lsvs']
-        try:
-            yield from lsvs[gene_id].keys()
-        except (KeyError, ValueError):
-            return ()
+    def lsv_ids(self, gene_ids=None):
+        if not gene_ids:
+            gene_ids = self.h['lsvs']
+
+        for gene_id in gene_ids:
+            yield from self.h['lsvs'][gene_id]
 
     @property
     def file_version(self):

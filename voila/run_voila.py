@@ -7,7 +7,7 @@ import time
 import voila.constants as constants
 from voila.api import SpliceGraph, Matrix
 from voila.api.matrix_hdf5 import lsv_id_to_gene_id
-from voila.utils.exceptions import VoilaException, VoilaCantFindFile
+from voila.exceptions import VoilaException, VoilaCantFindFile
 from voila.utils.utils_voila import create_if_not_exists
 from voila.utils.voila_log import voila_log
 from voila.utils.voila_pool import VoilaPool
@@ -62,7 +62,7 @@ def gene_ids(args):
         args.gene_ids = list(set(args.gene_ids))
         with Matrix(args.voila_file) as m:
             for gene_id in args.gene_ids:
-                if not any(m.lsv_ids(gene_id)):
+                if not any(m.lsv_ids([gene_id])):
                     log.warning('Gene ID "{0}" could not be found in Voila file'.format(gene_id))
                     args.gene_ids.remove(gene_id)
 
@@ -76,7 +76,7 @@ def lsv_ids(args):
         log = voila_log()
         with Matrix(args.voila_file) as m:
             for lsv_id in args.lsv_ids:
-                if lsv_id not in set(m.lsv_ids(lsv_id_to_gene_id(lsv_id))):
+                if lsv_id not in set(m.lsv_ids([lsv_id_to_gene_id(lsv_id)])):
                     log.warning('LSV ID "{0}" could not be found in Voila file'.format(lsv_id))
                     args.lsv_ids.remove(lsv_id)
 
@@ -172,8 +172,9 @@ def voila_parser():
     deltapsi = new_subparser()
     deltapsi.add_argument('--threshold', type=float, default=0.2,
                           help='Filter out LSVs with no junction predicted to change over a certain value (in percentage).')
-    deltapsi.add_argument('--show-all', dest='show_all', action='store_true',
+    deltapsi.add_argument('--show-all', action='store_true',
                           help='Show all LSVs including those with no junction with significant change predicted.')
+    deltapsi.add_argument('--percent-threshold', type=float, default=None)
 
     # subparsers
     subparsers = parser.add_subparsers(help='')

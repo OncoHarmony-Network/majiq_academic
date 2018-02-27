@@ -6,7 +6,6 @@ from majiq.src.normalize import mark_stacks
 cimport numpy as np
 import numpy as np
 from voila.constants import *
-from voila.splice_graphics import ExonGraphic, LsvGraphic, JunctionGraphic
 import collections
 
 quant_lsv = collections.namedtuple('quant_lsv', 'id coverage')
@@ -50,66 +49,6 @@ cdef class LSV:
         if self.type.endswith('i|i'):
             raise InvalidLSV("incorrect LSV, too many ir junctions")
 
-    def get_visual_lsv(self):
-        cdef list junc_list = []
-        cdef list junc_l = []
-        cdef list lsv_exon_list = [self.exon]
-        cdef list alt_empty_ends = []
-        cdef list alt_empty_starts = []
-        cdef list exon_list = []
-        cdef Junction jj
-        cdef int ir_type
-        cdef bint covered
-        cdef list extra_coords
-        cdef object splice_lsv
-
-        for jj in self.junctions:
-            if jj.start == FIRST_LAST_JUNC:
-                alt_empty_starts.append(jj.end)
-                continue
-            if jj.end == FIRST_LAST_JUNC:
-                alt_empty_ends.append(jj.start)
-                continue
-
-            if jj.acceptor != self.exon:
-                lsv_exon_list.append(jj.acceptor)
-            if jj.donor != self.exon:
-                lsv_exon_list.append(jj.donor)
-
-            junc_l.append((jj.start, jj.end))
-            junc_list.append(JunctionGraphic(jj.start, jj.end))
-        lsv_exon_list.sort(key=lambda x:(x.start, x.end))
-
-        for ex in lsv_exon_list:
-            covered = False
-            a3 = []
-            alt_start = []
-            for jji in set(ex.ib):
-                covered = covered or (jji.nreads > 0)
-                if jji.end in alt_empty_starts:
-                    alt_start.append(jji.end)
-                for jidx, jjl in enumerate(junc_l):
-                    if jji.end == jjl[1]:
-                        a3.append(jidx)
-
-            a5 = []
-            alt_ends = []
-
-            for jjo in set(ex.ob):
-                covered = covered or (jjo.nreads > 0)
-                if jjo.start in alt_empty_starts:
-                    alt_ends.append(jjo.start)
-                for jidx, jjl in enumerate(junc_l):
-                    if jjo.start == jjl[0]:
-                        a5.append(jidx)
-
-            exon_list.append(ExonGraphic(a3, a5, start=ex.start, end=ex.end,
-                             intron_retention=ex.intron, alt_starts=alt_start, alt_ends=alt_ends))
-
-        splice_lsv = LsvGraphic(lsv_type=self.type, start=self.exon.start, end=self.exon.end,
-                                lsv_id=self.id, name=self.gene_id, chromosome=self.chromosome,
-                                strand=self.strand, exons=exon_list, junctions=junc_list)
-        return splice_lsv
 
     cdef int add_lsv(LSV self, np.ndarray junc_mtrx, list type_dict, dict values, list junc_info, float fitfunc_r,
                      object majiq_config) except -1:

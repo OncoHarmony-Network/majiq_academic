@@ -4,10 +4,10 @@ from itertools import zip_longest
 import numpy
 
 from voila import constants
-from voila.api.matrix_hdf5 import DeltaPsi, Psi, lsv_id_to_gene_id
-from voila.utils.exceptions import NoLsvsFound
+from voila.api.matrix_hdf5 import DeltaPsi, Psi
+from voila.exceptions import NoLsvsFound
 from voila.utils.voila_log import voila_log
-from voila.vlsv import get_expected_dpsi, VoilaLsv
+from voila.vlsv import get_expected_dpsi, matrix_area, is_lsv_changing
 
 
 def unpack_means(value):
@@ -88,58 +88,6 @@ class ViewPsi(Psi):
     def psi(self, lsv_id):
         return self._ViewPsi(self, lsv_id)
 
-    def view_gene_ids(self, args):
-        if args.gene_ids:
-            yield from args.gene_ids
-        elif args.lsv_ids:
-            for lsv_id in args.lsv_ids:
-                yield lsv_id_to_gene_id(lsv_id)
-        else:
-            yield from self.h['lsvs'].keys()
-
-    def view_lsv_count(self, args):
-        value = len(tuple(self.view_lsv_ids(args)))
-        voila_log().info('Found {} LSVs'.format(value))
-        if not value:
-            raise NoLsvsFound()
-        return value
-
-    def view_lsv_ids(self, args, gene_id=None):
-        lsv_ids = args.lsv_ids
-
-        if gene_id:
-            gene_ids = (gene_id,)
-        else:
-            gene_ids = self.view_gene_ids(args)
-
-        for gene_id in gene_ids:
-            for lsv_id in self.lsv_ids(gene_id):
-                if not lsv_ids or lsv_id in lsv_ids:
-                    yield lsv_id
-
-    def paginated_genes(self, args):
-        def grouper(iterable, n, fillvalue=None):
-            args = [iter(iterable)] * n
-            return zip_longest(*args, fillvalue=fillvalue)
-
-        for page in grouper(self.view_gene_ids(args), constants.MAX_GENES):
-            yield tuple(p for p in page if p is not None)
-
-    @property
-    def metadata(self):
-        metadata = super().metadata
-        experiment_names = metadata['experiment_names']
-        group_names = super().group_names
-
-        metadata['experiment_names'] = [numpy.insert(exps, 0, '{0} Combined'.format(group)) for exps, group in
-                                        zip(experiment_names, group_names)]
-
-        return metadata
-
-    def page_count(self, args):
-        gene_count = len(tuple(self.view_gene_ids(args)))
-        return math.ceil(gene_count / constants.MAX_GENES)
-
 
 class ViewDeltaPsi(DeltaPsi):
     class _ViewDeltaPsi(DeltaPsi._DeltaPsi):
@@ -214,27 +162,10 @@ class ViewDeltaPsi(DeltaPsi):
     def delta_psi(self, lsv_id):
         return self._ViewDeltaPsi(self, lsv_id)
 
-    def view_lsv_ids(self, args, gene_id=None):
-        """
-        Get list of LSVs from voila file.
-        :return: list
-        """
-        lsv_ids, threshold = None, None
-        lsv_ids = args.lsv_ids
 
-        if hasattr(args, 'show_all') and not args.show_all:
-            threshold = args.threshold
-
-        if gene_id:
-            gene_ids = (gene_id,)
-        else:
-            gene_ids = self.view_gene_ids(args)
-
-        for gene_id in gene_ids:
-            for lsv_id in self.lsv_ids(gene_id):
-                if not lsv_ids or lsv_id in lsv_ids:
-                    if not threshold or VoilaLsv.is_lsv_changing(self.delta_psi(lsv_id).means, threshold):
-                        yield lsv_id
+class ViewMatrix:
+    def __init__(self, matrix):
+        self.matrix = matrix
 
     def view_lsv_count(self, args):
         value = len(tuple(self.view_lsv_ids(args)))
@@ -243,16 +174,27 @@ class ViewDeltaPsi(DeltaPsi):
             raise NoLsvsFound()
         return value
 
+    def view_gene_lsvs(self, args, gene_id):
+        yield from self.valid_lsvs(args, self.matrix.lsv_ids([gene_id]))
+
+    def view_lsv_ids(self, args):
+        if args.lsv_ids:
+            lsv_ids = args.lsv_ids
+        elif args.gene_ids:
+            lsv_ids = self.matrix.lsv_ids(args.gene_ids)
+        else:
+            lsv_ids = self.matrix.lsv_ids()
+
+        yield from self.valid_lsvs(args, lsv_ids)
+
     def view_gene_ids(self, args):
         if args.gene_ids:
             gene_ids = args.gene_ids
-        elif args.lsv_ids:
-            gene_ids = set(lsv_id_to_gene_id(lsv_id) for lsv_id in args.lsv_ids)
         else:
-            gene_ids = self.h['lsvs'].keys()
+            gene_ids = self.matrix.gene_ids
 
         for gene_id in gene_ids:
-            if any(self.view_lsv_ids(args, gene_id)):
+            if any(self.valid_lsvs(args, self.view_gene_lsvs(args, gene_id))):
                 yield gene_id
 
     @property
@@ -275,6 +217,42 @@ class ViewDeltaPsi(DeltaPsi):
         for page in grouper(self.view_gene_ids(args), constants.MAX_GENES):
             yield tuple(p for p in page if p is not None)
 
-    def get_page_count(self, args):
+    def page_count(self, args):
         gene_count = len(tuple(self.view_gene_ids(args)))
         return math.ceil(gene_count / constants.MAX_GENES)
+
+
+class ViewPsiMatrix(ViewMatrix):
+    def valid_lsvs(self, args, lsv_ids):
+        threshold = None
+        percent_threshold = None
+        m_a = matrix_area
+
+        if hasattr(args, 'show_all') and not args.show_all:
+            threshold = args.threshold
+            percent_threshold = args.percent_threshold
+
+        for lsv_id in lsv_ids:
+            dpsi = self.matrix.psi(lsv_id)
+            if not args.lsv_ids or lsv_id in args.lsv_ids:
+                if not threshold or is_lsv_changing(dpsi.means, threshold):
+                    if not percent_threshold or any(m_a(b, collapsed_mat=True) >= percent_threshold for b in dpsi.bins):
+                        yield lsv_id
+
+
+class ViewDeltaPsiMatrix(ViewPsiMatrix):
+    def valid_lsvs(self, args, lsv_ids):
+        threshold = None
+        percent_threshold = None
+        m_a = matrix_area
+
+        if hasattr(args, 'show_all') and not args.show_all:
+            threshold = args.threshold
+            percent_threshold = args.percent_threshold
+
+        for lsv_id in lsv_ids:
+            dpsi = self.matrix.delta_psi(lsv_id)
+            if not args.lsv_ids or lsv_id in args.lsv_ids:
+                if not threshold or is_lsv_changing(dpsi.means, threshold):
+                    if not percent_threshold or any(m_a(b, collapsed_mat=True) >= percent_threshold for b in dpsi.bins):
+                        yield lsv_id

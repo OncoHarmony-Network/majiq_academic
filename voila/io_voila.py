@@ -1,165 +1,19 @@
 import csv
-import itertools
 import os
-from multiprocessing import Manager
-from multiprocessing import Process, Pool
-from multiprocessing.queues import JoinableQueue
 from os.path import join
 
-import h5py
 import numpy as np
 
-from voila import constants, vlsv
-from voila.api import Voila, SpliceGraph
-from voila.api.view_matrix import ViewDeltaPsi, ViewPsi
+from voila import vlsv
+from voila.api import SpliceGraph
+from voila.api.view_matrix import ViewDeltaPsi, ViewPsi, ViewPsiMatrix, ViewDeltaPsiMatrix
 from voila.api.view_splice_graph import ViewGene, ViewJunction
 from voila.constants import JUNCTION_TYPE_RNASEQ
-from voila.hdf5 import HDF5
 from voila.utils import utils_voila
-from voila.utils.run_voila_utils import get_output_html
 from voila.utils.voila_log import voila_log
-from voila.vlsv import VoilaLsv
+from voila.view.html import Html
 
 __author__ = 'abarrera'
-
-
-class VoilaInput(HDF5):
-    """Standard input interface by experiment used by Voila"""
-
-    def __init__(self, lsvs=(), metainfo=None):
-        super(VoilaInput, self).__init__()
-        print('VoilaInput has been deprecated.  Use Voila instead.')
-        self.lsvs = lsvs
-        self.metainfo = metainfo
-
-    def get_lsvs(self):
-        return self.lsvs
-
-    def add_lsv(self, l):
-        self.lsvs.append(l)
-
-    def samples_metainfo(self):
-        """Sample information generator, one by one."""
-        for sample_info in self.metainfo:
-            yield sample_info
-
-    def encode_metainfo(self, h):
-        h = h.create_group('/metainfo')
-        metainfo = self.metainfo.copy()
-
-        experiments1 = h.create_group('experiments1')
-        for index, item in enumerate(metainfo['experiments1']):
-            experiments1.attrs[str(index)] = item
-
-        del metainfo['experiments1']
-
-        if 'group2' in metainfo and 'experiments2' in metainfo:
-            experiments2 = h.create_group('experiments2')
-            for index, item in enumerate(metainfo['experiments2']):
-                experiments2.attrs[str(index)] = item
-
-            del metainfo['experiments2']
-
-        for key in metainfo:
-            h.attrs[key] = metainfo[key]
-
-    def decode_metainfo(self, h):
-        self.metainfo = {}
-        for key in h.attrs:
-            self.metainfo[key] = h.attrs[key]
-
-        for key in h:
-            self.metainfo[key] = [h[key].attrs[attr] for attr in h[key].attrs]
-
-    def exclude(self):
-        return ['metainfo', 'lsvs']
-
-    def to_hdf5(self, h, use_id=True):
-        # metainfo
-        self.encode_metainfo(h)
-
-        # lsvs
-        for lsv in self.lsvs:
-            lsv.to_hdf5(h, use_id)
-
-        super(VoilaInput, self).to_hdf5(h, use_id)
-
-    def from_hdf5(self, h):
-        # metainfo
-        self.decode_metainfo(h['metainfo'])
-
-        # lsvs
-        self.lsvs = [VoilaLsv.easy_from_hdf5(h['lsvs'][lsv_id]) for lsv_id in h['lsvs']]
-
-        return super(VoilaInput, self).from_hdf5(h)
-
-    @classmethod
-    def metainfo_to_hdf5(cls, h, genome, group1, experiments1, group2=None, experiments2=None):
-        metainfo = {'group1': group1, 'experiments1': experiments1, 'genome': genome}
-        if group2 and experiments2:
-            metainfo['experiments2'] = experiments2
-            metainfo['group2'] = group2
-        vi = cls()
-        vi.metainfo = metainfo
-        vi.encode_metainfo(h['/'])
-
-    @classmethod
-    def from_hdf5_file(cls, hdf5_filename, lsv_types=None, lsv_ids=None, gene_names=None):
-        """
-        Create VoilaInput object from HDF5 file.  This will process each of the VoilaLsvs in their own thread using the
-        Producer Consumer design pattern.
-        :param hdf5_filename: HDF5 filename string
-        :return: VoilaInput object
-        """
-
-        def worker():
-            with h5py.File(hdf5_filename, 'r') as h:
-                while True:
-                    id = queue.get()
-                    lsv = VoilaLsv.easy_from_hdf5(h['lsvs'][id])
-
-                    if not lsv_types or lsv.lsv_type in lsv_types:
-                        if not gene_names or lsv.name in gene_names:
-                            if not lsv_ids or lsv.lsv_id in lsv_ids:
-                                manage_dict[id] = lsv
-                    queue.task_done()
-
-        def producer():
-            with h5py.File(hdf5_filename, 'r') as h:
-                for id in h['lsvs']:
-                    queue.put(id)
-
-        log = voila_log()
-        if not os.path.isfile(hdf5_filename):
-            log.error('unable to load file: {0}'.format(hdf5_filename))
-            raise IOError('Voila input file does not exist.')
-
-        log.info('Loading {0}.'.format(hdf5_filename))
-
-        voila_input = VoilaInput()
-
-        queue = JoinableQueue()
-
-        manage_dict = Manager().dict()
-
-        producer_proc = Process(target=producer)
-        producer_proc.daemon = True
-        producer_proc.start()
-
-        pool = Pool(constants.PROCESS_COUNT, worker)
-
-        producer_proc.join()
-        queue.join()
-
-        pool.close()
-        queue.close()
-
-        with h5py.File(hdf5_filename, 'r') as h:
-            voila_input.decode_metainfo(h['metainfo'])
-
-        voila_input.lsvs = manage_dict.values()
-
-        return voila_input
 
 
 def load_dpairs(pairwise_dir, majiq_output):
@@ -211,7 +65,7 @@ def delta_psi_tab_output(args, voila_links):
 
     log = voila_log()
     log.info("Creating Tab-delimited output file")
-    output_html = get_output_html(args, args.voila_file)
+    output_html = Html.get_output_html(args, args.voila_file)
     tsv_file = join(args.output, output_html.rsplit('.html', 1)[0] + '.tsv')
 
     with ViewDeltaPsi(args.voila_file, 'r') as m, SpliceGraph(args.splice_graph) as sg:
@@ -234,10 +88,10 @@ def delta_psi_tab_output(args, voila_links):
         with open(tsv_file, 'w') as tsv:
             writer = csv.DictWriter(tsv, fieldnames=fieldnames, delimiter='\t')
             writer.writeheader()
-            for gene_id in m.view_gene_ids(args):
+            for gene_id in ViewDeltaPsiMatrix(m).view_gene_ids(args):
                 gene = sg.gene(gene_id).get
 
-                for lsv_id in m.view_lsv_ids(args, gene_id):
+                for lsv_id in ViewDeltaPsiMatrix(m).view_gene_lsvs(args, gene_id):
                     log.debug('Write TSV row for {0}'.format(lsv_id))
                     lsv = m.delta_psi(lsv_id)
 
@@ -306,7 +160,7 @@ def psi_tab_output(args, voila_links):
     log = voila_log()
     log.info("Creating Tab-delimited output file")
 
-    output_html = get_output_html(args, args.voila_file)
+    output_html = Html.get_output_html(args, args.voila_file)
     tsv_file = join(args.output, output_html.rsplit('.html', 1)[0] + '.tsv')
 
     with ViewPsi(args.voila_file, 'r') as m, SpliceGraph(args.splice_graph) as sg:
@@ -320,13 +174,16 @@ def psi_tab_output(args, voila_links):
         with open(tsv_file, 'w') as tsv:
             writer = csv.DictWriter(tsv, fieldnames=fieldnames, delimiter='\t')
             writer.writeheader()
-            for gene_id in m.view_gene_ids(args):
-                gene = sg.gene(gene_id).get
+            view_psi_matrix = ViewPsiMatrix(m)
 
-                for lsv_id in m.view_lsv_ids(args, gene_id):
+            for gene_id in view_psi_matrix.view_gene_ids(args):
+                gene = sg.gene(gene_id).get
+                view_gene = ViewGene(gene)
+
+                for lsv_id in view_psi_matrix.view_gene_lsvs(args, gene_id):
                     lsv = m.psi(lsv_id)
-                    lsv_junctions = tuple(ViewGene(gene).lsv_junctions(lsv))
-                    lsv_exons = tuple(ViewGene(gene).lsv_exons(lsv, lsv_junctions))
+                    lsv_junctions = tuple(view_gene.lsv_junctions(lsv))
+                    lsv_exons = tuple(view_gene.lsv_exons(lsv, lsv_junctions))
 
                     row = {
                         '#Gene Name': gene.name,
@@ -371,45 +228,45 @@ def psi_tab_output(args, voila_links):
     log.info("Delimited output file successfully created in: %s" % tsv_file)
 
 
-def generic_feature_format_txt_files(args, out_gff3=False):
-    """
-    Create GFF3 files for each LSV.
-    :param majiq_output: majiq data
-    :param args: parsed input data
-    :param out_gff3: output as a GFF3 file
-    :return: None
-    """
-
-    log = voila_log()
-    output_dir = args.output
-
-    if out_gff3:
-        log.info("Create GFF files for LSVs")
-    else:
-        log.info("Create GTF files for LSVs")
-
-    header = "##gff-version 3"
-
-    odir = join(output_dir, "static/doc/lsvs")
-    utils_voila.create_if_not_exists(odir)
-
-    with Voila(args.voila_file, 'r') as v:
-        for lsv in v.get_voila_lsvs(args):
-            lsv_file_basename = "%s/%s" % (odir, lsv.lsv_id)
-            try:
-                lsv_gff3_str = lsv.to_gff3()
-                utils_voila.gff2gtf(lsv_gff3_str.split('\n'), "%s.gtf" % lsv_file_basename)
-
-                # not accessible from command line
-                if out_gff3:
-                    gff_file = "%s.gff3" % (lsv_file_basename)
-                    with open(gff_file, 'w') as ofile:
-                        ofile.write(header + "\n")
-                        ofile.write(lsv_gff3_str + "\n")
-
-            except UnboundLocalError as e:
-                log.warning("problem generating GTF file for %s" % lsv.id)
-                log.error(e)
+# def generic_feature_format_txt_files(args, out_gff3=False):
+#     """
+#     Create GFF3 files for each LSV.
+#     :param majiq_output: majiq data
+#     :param args: parsed input data
+#     :param out_gff3: output as a GFF3 file
+#     :return: None
+#     """
+#
+#     log = voila_log()
+#     output_dir = args.output
+#
+#     if out_gff3:
+#         log.info("Create GFF files for LSVs")
+#     else:
+#         log.info("Create GTF files for LSVs")
+#
+#     header = "##gff-version 3"
+#
+#     odir = join(output_dir, "static/doc/lsvs")
+#     utils_voila.create_if_not_exists(odir)
+#
+#     with Voila(args.voila_file, 'r') as v:
+#         for lsv in v.get_voila_lsvs(args):
+#             lsv_file_basename = "%s/%s" % (odir, lsv.lsv_id)
+#             try:
+#                 lsv_gff3_str = lsv.to_gff3()
+#                 utils_voila.gff2gtf(lsv_gff3_str.split('\n'), "%s.gtf" % lsv_file_basename)
+#
+#                 # not accessible from command line
+#                 if out_gff3:
+#                     gff_file = "%s.gff3" % (lsv_file_basename)
+#                     with open(gff_file, 'w') as ofile:
+#                         ofile.write(header + "\n")
+#                         ofile.write(lsv_gff3_str + "\n")
+#
+#             except UnboundLocalError as e:
+#                 log.warning("problem generating GTF file for %s" % lsv.id)
+#                 log.error(e)
 
 
 def get_lsv_info_fieldnames():
@@ -463,53 +320,52 @@ def get_lsv_extra_info(lsv):
 def semicolon_join(value_list):
     return ';'.join(str(x) for x in value_list)
 
-
-def het_tab_output(args):
-    voila_log().info('Creating HET TSV file...')
-
-    output_html = get_output_html(args, args.voila_file)
-    tsv_file = join(args.output, output_html.rsplit('.html', 1)[0] + '.tsv')
-
-    with Voila(args.voila_file, 'r') as v:
-
-        metainfo = v.get_metainfo()
-
-        fieldnames = get_lsv_info_fieldnames() + list(metainfo['stat_names']) + get_lsv_extra_info_fieldnames()
-
-        lsv_fieldnames = ['Junction ID'] + list(itertools.chain.from_iterable(metainfo['experiment_names']))
-
-        with open(tsv_file, 'w') as tsvfile:
-            tsv = csv.DictWriter(tsvfile, fieldnames=fieldnames, delimiter='\t')
-            tsv.writeheader()
-
-            for lsv in v.get_voila_lsvs(args):
-                row = get_lsv_info(lsv)
-                row.update(get_lsv_extra_info(lsv))
-
-                for stat_name, junction_stat in zip(metainfo['stat_names'], lsv.het.junction_stats):
-                    row[stat_name] = semicolon_join(junction_stat)
-
-                tsv.writerow(row)
-
-                rows = {}
-
-        for lsv in v.get_voila_lsvs(args):
-
-            for group, experiment_names in zip(lsv.het.groups, metainfo['experiment_names']):
-                for experiment_index, experiment_name in enumerate(experiment_names):
-                    for junction_index, junction_id in enumerate(lsv.junction_ids()):
-
-                        psi = group.get_psi(experiment_index=experiment_index, junction_index=junction_index)
-
-                        try:
-                            rows[junction_id][experiment_name] = psi
-                        except KeyError:
-                            rows[junction_id] = {experiment_name: psi}
-
-            with open(join(args.output, lsv.lsv_id.replace(':', '_') + '.tsv'), 'w') as tsvfile:
-                tsv = csv.DictWriter(tsvfile, fieldnames=lsv_fieldnames, delimiter='\t')
-                tsv.writeheader()
-                for junction_id, row_dict in rows.items():
-                    row = {'Junction ID': junction_id}
-                    row.update({column: value for column, value in row_dict.items()})
-                    tsv.writerow(row)
+# def het_tab_output(args):
+#     voila_log().info('Creating HET TSV file...')
+#
+#     output_html = get_output_html(args, args.voila_file)
+#     tsv_file = join(args.output, output_html.rsplit('.html', 1)[0] + '.tsv')
+#
+#     with Voila(args.voila_file, 'r') as v:
+#
+#         metainfo = v.get_metainfo()
+#
+#         fieldnames = get_lsv_info_fieldnames() + list(metainfo['stat_names']) + get_lsv_extra_info_fieldnames()
+#
+#         lsv_fieldnames = ['Junction ID'] + list(itertools.chain.from_iterable(metainfo['experiment_names']))
+#
+#         with open(tsv_file, 'w') as tsvfile:
+#             tsv = csv.DictWriter(tsvfile, fieldnames=fieldnames, delimiter='\t')
+#             tsv.writeheader()
+#
+#             for lsv in v.get_voila_lsvs(args):
+#                 row = get_lsv_info(lsv)
+#                 row.update(get_lsv_extra_info(lsv))
+#
+#                 for stat_name, junction_stat in zip(metainfo['stat_names'], lsv.het.junction_stats):
+#                     row[stat_name] = semicolon_join(junction_stat)
+#
+#                 tsv.writerow(row)
+#
+#                 rows = {}
+#
+#         for lsv in v.get_voila_lsvs(args):
+#
+#             for group, experiment_names in zip(lsv.het.groups, metainfo['experiment_names']):
+#                 for experiment_index, experiment_name in enumerate(experiment_names):
+#                     for junction_index, junction_id in enumerate(lsv.junction_ids()):
+#
+#                         psi = group.get_psi(experiment_index=experiment_index, junction_index=junction_index)
+#
+#                         try:
+#                             rows[junction_id][experiment_name] = psi
+#                         except KeyError:
+#                             rows[junction_id] = {experiment_name: psi}
+#
+#             with open(join(args.output, lsv.lsv_id.replace(':', '_') + '.tsv'), 'w') as tsvfile:
+#                 tsv = csv.DictWriter(tsvfile, fieldnames=lsv_fieldnames, delimiter='\t')
+#                 tsv.writeheader()
+#                 for junction_id, row_dict in rows.items():
+#                     row = {'Junction ID': junction_id}
+#                     row.update({column: value for column, value in row_dict.items()})
+#                     tsv.writerow(row)

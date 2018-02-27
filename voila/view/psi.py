@@ -2,10 +2,10 @@ import errno
 import os
 
 from voila import constants, io_voila
-from voila.api.view_matrix import ViewPsi
+from voila.api.matrix_hdf5 import lsv_id_to_gene_id
+from voila.api.view_matrix import ViewPsi, ViewPsiMatrix
 from voila.api.view_splice_graph import ViewSpliceGraph, ViewGene
-from voila.utils.exceptions import NotPsiVoilaFile
-from voila.utils.run_voila_utils import table_marks_set, copy_static, get_env
+from voila.exceptions import NotPsiVoilaFile
 from voila.utils.voila_log import voila_log
 from voila.utils.voila_pool import VoilaPool
 from voila.view.html import Html
@@ -25,7 +25,7 @@ class Psi(Html):
                 if m.analysis_type != constants.ANALYSIS_PSI:
                     raise NotPsiVoilaFile(args.voila_file)
                 self.metadata = m.metadata
-            copy_static(args)
+            self.copy_static(args)
             self.create_db_files()
             self.render_summaries()
             self.render_index()
@@ -68,22 +68,23 @@ class Psi(Html):
         metadata = self.metadata
 
         with ViewPsi(args.voila_file) as m, ViewSpliceGraph(args.splice_graph) as sg:
-            lsv_ids = tuple(m.view_lsv_ids(args))
-            lsv_count = m.view_lsv_count(args)
+            lsv_ids = tuple(ViewPsiMatrix(m).view_lsv_ids(args))
+            lsv_count = ViewPsiMatrix(m).view_lsv_count(args)
             too_many_lsvs = lsv_count > constants.MAX_LSVS_PSI_INDEX
 
             with open(os.path.join(args.output, 'index.html'), 'w') as html:
-                index_template = self.env.get_template('index_single_summary_template.html')
+                index_template = self.get_env().get_template('index_single_summary_template.html')
                 html.write(
                     index_template.render(
                         lexps=metadata,
                         metadata=metadata,
                         lsvs_count=lsv_count,
-                        table_marks=table_marks_set(lsv_count),
+                        table_marks=self.table_marks_set(lsv_count),
                         prev_page=None,
                         next_page=None,
                         links=self.voila_links,
                         genes=sg.gene,
+                        gene_ids=set(lsv_id_to_gene_id(lsv_id) for lsv_id in ViewPsiMatrix(m).view_lsv_ids(args)),
                         lsvs=(m.psi(lsv_id) for lsv_id in lsv_ids),
                         too_many_lsvs=too_many_lsvs,
                         database_name=self.database_name(),
@@ -94,20 +95,21 @@ class Psi(Html):
 
     @classmethod
     def create_summary(cls, metadata, args, database_name, paged):
-        summary_template = get_env().get_template("psi_summary_template.html")
+        summary_template = cls.get_env().get_template("psi_summary_template.html")
         summaries_subfolder = cls.get_summaries_subfolder(args)
         links = {}
 
         with ViewSpliceGraph(args.splice_graph, 'r') as sg, ViewPsi(args.voila_file) as m:
             genome = sg.genome
-            page_count = m.page_count(args)
+            page_count = ViewPsiMatrix(m).page_count(args)
 
             for index, genes in paged:
                 page_name = cls.get_page_name(args, index)
                 next_page = cls.get_next_page(args, index, page_count)
                 prev_page = cls.get_prev_page(args, index)
-                lsv_dict = {gene_id: tuple(lsv_id for lsv_id in m.view_lsv_ids(args, gene_id)) for gene_id in genes}
-                table_marks = tuple(table_marks_set(len(gene_set)) for gene_set in lsv_dict)
+                lsv_dict = {gene_id: tuple(lsv_id for lsv_id in ViewPsiMatrix(m).view_gene_lsvs(args, gene_id)) for
+                            gene_id in genes}
+                table_marks = tuple(cls.table_marks_set(len(gene_set)) for gene_set in lsv_dict)
 
                 with open(os.path.join(summaries_subfolder, page_name), 'w') as html:
                     html.write(
@@ -140,7 +142,7 @@ class Psi(Html):
         database_name = self.database_name()
 
         with ViewPsi(args.voila_file) as m:
-            paged_genes = tuple(m.paginated_genes(args))
+            paged_genes = tuple(ViewPsiMatrix(m).paginated_genes(args))
 
         multiple_results = []
         with VoilaPool() as vp:
@@ -153,15 +155,15 @@ class Psi(Html):
 
         log.debug('End summaries render')
 
-    @staticmethod
-    def create_gene_db(gene_ids, args, experiment_names):
-        template = get_env().get_template('gene_db_template.html')
+    @classmethod
+    def create_gene_db(cls, gene_ids, args, experiment_names):
+        template = cls.get_env().get_template('gene_db_template.html')
         with ViewSpliceGraph(args.splice_graph) as sg, ViewPsi(args.voila_file) as m:
             for gene_id in gene_ids:
                 with open(os.path.join(args.output, 'db', '{}.js'.format(gene_id)), 'w') as html:
                     html.write(
                         template.render(
                             gene=ViewGene(sg.gene(gene_id).get).get_experiment(experiment_names),
-                            lsvs=(m.psi(lsv_id) for lsv_id in m.view_lsv_ids(args, gene_id))
+                            lsvs=(m.psi(lsv_id) for lsv_id in ViewPsiMatrix(m).view_gene_lsvs(args, gene_id))
                         )
                     )

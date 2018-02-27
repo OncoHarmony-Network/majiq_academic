@@ -2,33 +2,31 @@ import os
 from tempfile import NamedTemporaryFile
 
 from voila import io_voila, constants
-from voila.api import Voila, SpliceGraph
-from voila.utils.exceptions import NoLsvsFound
-from voila.utils.run_voila_utils import copy_static, get_template_dir, table_marks_set
+from voila.api import SpliceGraph
+from voila.exceptions import NoLsvsFound
 from voila.utils.voila_log import voila_log
 from voila.view.html import Html
-from voila.voila_args import VoilaArgs
 
 
-class Heterogen(Html, VoilaArgs):
+class Heterogen(Html):
     def __init__(self, args):
         super().__init__(args)
         if not args.no_tsv:
             io_voila.het_tab_output(args)
 
-        if not args.no_html:
-            with Voila(args.voila_file, 'r') as v:
-                self.metainfo = v.get_metainfo()
-            self.render_summaries()
-            self.render_index()
-            copy_static(args)
+        # if not args.no_html:
+        #     with Voila(args.voila_file, 'r') as v:
+        #         self.metainfo = v.get_metainfo()
+        #     self.render_summaries()
+        #     self.render_index()
+        #     copy_static(args)
 
-    @classmethod
-    def arg_parents(cls):
-        return (
-            cls.base_args(), cls.html_args(), cls.voila_file_args(), cls.multiproccess_args(), cls.output_args(),
-            cls.lsv_id_search_args(), cls.gene_search_args()
-        )
+    # @classmethod
+    # def arg_parents(cls):
+    #     return (
+    #         cls.base_args(), cls.html_args(), cls.voila_file_args(), cls.multiproccess_args(), cls.output_args(),
+    #         cls.lsv_id_search_args(), cls.gene_search_args()
+    #     )
 
     def render_index(self):
         log = voila_log()
@@ -39,25 +37,26 @@ class Heterogen(Html, VoilaArgs):
         metainfo = self.metainfo
         index_row_template = env.get_template('het_index_row.html')
 
-        with NamedTemporaryFile(dir=get_template_dir()) as tmp_index_file:
+        with NamedTemporaryFile(dir=self.get_template_dir()) as tmp_index_file:
+            lsv_count = None
 
-            with Voila(args.voila_file, 'r') as v:
-
-                lsv_count = v.get_lsv_count(args)
-                too_many_lsvs = lsv_count > constants.MAX_LSVS_HET_INDEX
-
-                for index, lsv in enumerate(v.get_voila_lsvs(args)):
-                    log.debug('Writing {0} to index'.format(lsv.lsv_id))
-
-                    for el in index_row_template.generate(
-                            lsv=lsv,
-                            index=index,
-                            link=self.voila_links[lsv.name],
-                            too_many_lsvs=too_many_lsvs,
-                            threshold=.2,
-                            lexps=metainfo
-                    ):
-                        tmp_index_file.write(bytearray(el, encoding='utf-8'))
+            # with Voila(args.voila_file, 'r') as v:
+            #
+            #     lsv_count = v.get_lsv_count(args)
+            #     too_many_lsvs = lsv_count > constants.MAX_LSVS_HET_INDEX
+            #
+            #     for index, lsv in enumerate(v.get_voila_lsvs(args)):
+            #         log.debug('Writing {0} to index'.format(lsv.lsv_id))
+            #
+            #         for el in index_row_template.generate(
+            #                 lsv=lsv,
+            #                 index=index,
+            #                 link=self.voila_links[lsv.name],
+            #                 too_many_lsvs=too_many_lsvs,
+            #                 threshold=.2,
+            #                 lexps=metainfo
+            #         ):
+            #             tmp_index_file.write(bytearray(el, encoding='utf-8'))
 
             if not tmp_index_file.tell():
                 raise NoLsvsFound()
@@ -69,7 +68,7 @@ class Heterogen(Html, VoilaArgs):
                 for el in index_template.generate(
                         lexps=metainfo,
                         tmp_index_file_name=os.path.basename(tmp_index_file.name),
-                        table_marks=table_marks_set(lsv_count),
+                        table_marks=self.table_marks_set(lsv_count),
                         lsvs_count=lsv_count,
                         prev_page=None,
                         next_page=None
@@ -103,7 +102,7 @@ class Heterogen(Html, VoilaArgs):
                         lsv.box_plot_data = [g.median.tolist() for g in lsv.het.groups]
 
                 page_name = self.get_page_name(index)
-                table_marks = tuple(table_marks_set(len(gene_set)) for gene_set in lsv_dict)
+                table_marks = tuple(self.table_marks_set(len(gene_set)) for gene_set in lsv_dict)
                 next_page = self.get_next_page(index, page_count)
 
                 experiments = tuple(

@@ -20,8 +20,9 @@
         var lsv = new Lsv(db);
         var bp = new LSVPlots(db);
     </script>
-    {% block load_database %}
-    {% endblock %}
+    {% for gene_id in gene_ids %}
+        <script src="db/{{ gene_id }}.js"></script>
+    {% endfor %}
 {% endblock %}
 
 {% block content %}
