@@ -235,8 +235,8 @@ class ViewGene:
                     except KeyError:
                         gene['reads'][combined_name][junc.start] = {junc.end: summed_reads}
 
-        all_exp = list(x for xs in experiment_names_list for x in xs if not x.endswith(' Combined'))
-        comb_exp = list(x for xs in experiment_names_list for x in xs if x.endswith(' Combined'))
+        all_exp = tuple(x for xs in experiment_names_list for x in xs if not x.endswith(' Combined'))
+        comb_exp = tuple(x for xs in experiment_names_list for x in xs if x.endswith(' Combined'))
 
         if comb_exp:
             for junc in self.gene.junctions:

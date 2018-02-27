@@ -19,7 +19,7 @@ class DeltaPsi(Html):
             with ViewDeltaPsi(args.voila_file) as m:
                 if m.analysis_type != constants.ANALYSIS_DELTAPSI:
                     raise NotDeltaPsiVoilaFile(args.voila_file)
-                self.metadata = m.metadata
+                self.metadata = ViewDeltaPsiMatrix(m).metadata
 
             self.copy_static(args)
             self.create_db_files()

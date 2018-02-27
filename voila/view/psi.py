@@ -24,7 +24,7 @@ class Psi(Html):
             with ViewPsi(args.voila_file) as m:
                 if m.analysis_type != constants.ANALYSIS_PSI:
                     raise NotPsiVoilaFile(args.voila_file)
-                self.metadata = m.metadata
+                self.metadata = ViewPsiMatrix(m).metadata
             self.copy_static(args)
             self.create_db_files()
             self.render_summaries()

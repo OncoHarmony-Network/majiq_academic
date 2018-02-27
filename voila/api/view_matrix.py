@@ -174,6 +174,9 @@ class ViewMatrix:
             raise NoLsvsFound()
         return value
 
+    def valid_lsvs(self, args, lsv_ids):
+        raise NotImplementedError()
+
     def view_gene_lsvs(self, args, gene_id):
         yield from self.valid_lsvs(args, self.matrix.lsv_ids([gene_id]))
 
@@ -199,9 +202,9 @@ class ViewMatrix:
 
     @property
     def metadata(self):
-        metadata = super().metadata
+        metadata = self.matrix.metadata
         experiment_names = metadata['experiment_names']
-        group_names = super().group_names
+        group_names = self.matrix.group_names
 
         if experiment_names.size > 1:
             metadata['experiment_names'] = [numpy.insert(exps, 0, '{0} Combined'.format(group)) for exps, group in
