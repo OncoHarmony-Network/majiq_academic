@@ -198,7 +198,7 @@ class Builder(BasicPipeline):
                 extra['gen_dict'][info_junc] = np.zeros(len(extra['group_names']))
                 extra['gen_dict'][info_junc][gidx] = 1
 
-            if extra['gen_dict'][info_junc][gidx] == extra['min_experients'] and info_junc not in extra['found']:
+            if extra['gen_dict'][info_junc][gidx] == extra['min_exps'][results[-1]] and info_junc not in extra['found']:
                 try:
                     extra['elem_dict'][info_junc[0]].append([info_junc[1], info_junc[2], 0, J_TYPE])
                 except KeyError:
@@ -214,7 +214,7 @@ class Builder(BasicPipeline):
                 extra['gen_dict'][info_intron] = np.zeros(len(extra['group_names']))
                 extra['gen_dict'][info_intron][gidx] = 1
 
-            if extra['gen_dict'][info_intron][gidx] == extra['min_experients'] and info_intron not in extra['found']:
+            if extra['gen_dict'][info_intron][gidx] == extra['min_exps'][results[-1]] and info_intron not in extra['found']:
                 try:
                     extra['elem_dict'][info_intron[0]].append([info_intron[1], info_intron[2], 0, IR_TYPE])
                 except KeyError:
@@ -228,7 +228,6 @@ class Builder(BasicPipeline):
     def parse_denovo_elements(self, logger):
 
         majiq_config = Config()
-        min_experiments = 2 if majiq_config.min_exp == -1 else majiq_config.min_exp
 
         elem_dict = {}
 
@@ -251,7 +250,7 @@ class Builder(BasicPipeline):
 
             group_names = {xx: xidx for xidx, xx in enumerate(majiq_config.tissue_repl.keys())}
             queue_manager(None, self.lock, self.queue, num_chunks=nthreads, func=self.store_results, logger=logger,
-                          elem_dict=elem_dict, group_names=group_names, min_experients=min_experiments)
+                          elem_dict=elem_dict, group_names=group_names, min_exps=majiq_config.min_experiments)
             pool1.join()
 
             logger.info('Updating DB')
@@ -264,7 +263,7 @@ class Builder(BasicPipeline):
                                      majiq_multi.chunks(majiq_config.sam_list, nthreads))
                 pool2.close()
                 queue_manager(None, self.lock, self.queue, num_chunks=nthreads, func=self.store_results, logger=logger,
-                              elem_dict=elem_dict, group_names=group_names, min_experients=min_experiments)
+                              elem_dict=elem_dict, group_names=group_names, min_exps=majiq_config.min_experiments)
                 pool2.join()
                 majiq_io.add_elements_mtrx(elem_dict, self.elem_dict)
 
@@ -292,6 +291,9 @@ class Builder(BasicPipeline):
         mem_allocated = int(psutil.Process().memory_info().rss)/(1024**2)
         logger.info("PRE DB %.2f MB" % mem_allocated)
 
+        if not os.path.exists(self.transcripts):
+            logger.error('File %s is not accessible' % self.transcripts)
+
         if self.use_db:
             logger.info("Loading previously generated db %s" % self.transcripts)
             majiq_io.load_db(self.transcripts, self.elem_dict, self.genes_dict)
@@ -307,19 +309,15 @@ class Builder(BasicPipeline):
             p.start()
             p.join()
 
-        # p = mp.Process(target=majiq_multi.parallel_lsv_child_calculation,
-        #                args=(parse_denovo_elements, [self], majiq_config.outDir, 0))
-        # logger.info("... retrieve denovo features")
-        #
-        # p.start()
-        # p.join()
-        mem_allocated = int(psutil.Process().memory_info().rss)/(1024**2)
-        logger.info("PRE parsed %.2f MB" % mem_allocated)
+        if self.mem_profile:
+            mem_allocated = int(psutil.Process().memory_info().rss)/(1024**2)
+            logger.info("PRE parsed %.2f MB" % mem_allocated)
 
         self.parse_denovo_elements(logger)
 
-        mem_allocated = int(psutil.Process().memory_info().rss) / (1024 ** 2)
-        logger.info("POST parsed %.2f MB" % mem_allocated)
+        if self.mem_profile:
+            mem_allocated = int(psutil.Process().memory_info().rss) / (1024 ** 2)
+            logger.info("POST parsed %.2f MB" % mem_allocated)
 
         logger.info("Parsing seq files")
         if self.nthreads > 1:
@@ -335,8 +333,9 @@ class Builder(BasicPipeline):
                                 majiq_multi.chunks(majiq_config.sam_list, nthreads))
             pool.close()
             generate_splicegraph(majiq_config, self.elem_dict, self.genes_dict)
+
             with SpliceGraph(get_builder_splicegraph_filename(majiq_config.outDir), 'r+') as sg:
-               queue_manager(sg, self.lock, self.queue, num_chunks=nthreads, func=self.store_results, logger=logger)
+               err = queue_manager(sg, self.lock, self.queue, num_chunks=nthreads, func=self.store_results, logger=logger)
 
             pool.join()
         else:
@@ -349,5 +348,8 @@ class Builder(BasicPipeline):
         if self.mem_profile:
             mem_allocated = int(psutil.Process().memory_info().rss)/(1024**2)
             logger.info("Max Memory used %.2f MB" % mem_allocated)
-        logger.info("MAJIQ Builder is ended succesfully!")
 
+        if not err:
+            logger.info("MAJIQ Builder is ended succesfully!")
+        else:
+            logger.error('Error Ocurred during child execution, please check child logs')
