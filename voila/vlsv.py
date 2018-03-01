@@ -57,15 +57,17 @@ class HetGroup:
             yield k, v
 
 
+def get_expected_value(bins, left=0, right=1):
+    step = (right - left) / len(bins)
+    return np.arange(left + step / 2, right, step).dot(bins)
+
+
 def get_expected_dpsi(bins):
-    return sum(np.array(bins) * np.arange(-1 + 1. / len(bins), 1., 2. / len(bins)))
+    return get_expected_value(bins, left=-1)
 
 
 def get_expected_psi(bins):
-    bins = np.array(bins)
-    step = 1.0 / bins.size
-    projection_prod = bins * np.arange(step / 2, 1, step)
-    return np.sum(projection_prod)
+    return get_expected_value(bins)
 
 
 def collapse_matrix(matrix):
@@ -95,6 +97,7 @@ def matrix_area(matrix, V=0.2, absolute=True, collapsed_mat=False):
         collapse = collapse_matrix(matrix)
     collapse = np.concatenate(([0], collapse))
     collapse = np.cumsum(collapse)
+    collapse /= collapse[-1]
     xbins = np.linspace(-1, 1, num=collapse.size)
     if absolute:
         Vabs = abs(V)
@@ -104,6 +107,8 @@ def matrix_area(matrix, V=0.2, absolute=True, collapsed_mat=False):
         area = np.interp(V, xbins, collapse, left=0, right=1)
         if V >= 0:
             area = 1 - area
+    if area < np.finfo(float).eps:
+        area = 0
     return area
 
 
