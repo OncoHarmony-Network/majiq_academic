@@ -128,6 +128,10 @@ def check_file(value):
     return value
 
 
+def check_procs(value):
+    return min(os.cpu_count(), max(int(value), 1))
+
+
 def voila_parser():
     parser = argparse.ArgumentParser(description='VOILA is a visualization package '
                                                  'for Alternative Local Splicing Events.')
@@ -142,15 +146,19 @@ def voila_parser():
     splice_graph.add_argument('--logger', help='Path for log files.')
     splice_graph.add_argument('--silent', action='store_true', help='Do not write logs to standard out.')
     splice_graph.add_argument('--debug', action='store_true')
-    splice_graph.add_argument('-j', '--nproc', default=int(os.cpu_count() / 2))
+    splice_graph.add_argument('-j', '--nproc', type=check_procs, default=max(int(os.cpu_count() / 2), 1))
     splice_graph.add_argument('--gene-names-file', dest='gene_names', type=check_list_file, default=[],
-                              help='Location of file that contains a list of common gene names which should remain in the results. One name per line.')
+                              help='Location of file that contains a list of common gene names which should remain in '
+                                   'the results. One name per line.')
     splice_graph.add_argument('--gene-names', nargs='*', default=[],
-                              help='Common gene names, separated by spaces, which should remain in the results. e.g. GENE1 GENE2 ...')
+                              help='Common gene names, separated by spaces, which should remain in the results. e.g. '
+                                   'GENE1 GENE2 ...')
     splice_graph.add_argument('--gene-ids-file', dest='gene_ids', type=check_list_file, default=[],
-                              help='Location of file that contains a list of gene IDs which should remain in the results. One name per line.')
+                              help='Location of file that contains a list of gene IDs which should remain in the '
+                                   'results. One name per line.')
     splice_graph.add_argument('--gene-ids', nargs='*', default=[],
-                              help='Gene IDs, separated by spaces, which should remain in the results. e.g. GENE_ID1 GENE_ID2 ...')
+                              help='Gene IDs, separated by spaces, which should remain in the results. e.g. GENE_ID1 '
+                                   'GENE_ID2 ...')
 
     # psi parser
     psi = new_subparser()
@@ -161,17 +169,20 @@ def voila_parser():
     psi.add_argument('--disable-html', action='store_true', help='Do not write html files.')
     psi.add_argument('--disable-tsv', action='store_true', help='Do not generate tab-separated values output file.')
     psi.add_argument('--lsv-types-file', type=check_list_file, dest='lsv_types',
-                     help='Location of file that contains a list of LSV types which should remain in the results. One type per line')
+                     help='Location of file that contains a list of LSV types which should remain in the results. One '
+                          'type per line')
     psi.add_argument('--lsv-types', nargs='*', default=[], help='LSV types which should remain in the results')
     psi.add_argument('--lsv-ids-file', type=check_list_file, dest='lsv_ids',
-                     help='Location of file that contains a list of LSV IDs which should remain in the results. One ID per line.')
+                     help='Location of file that contains a list of LSV IDs which should remain in the results. One ID '
+                          'per line.')
     psi.add_argument('--lsv-ids', nargs='*', default=[],
                      help='LSV IDs, separated by spaces, which should remain in the results. e.g LSV_ID1 LSV_ID2 ...')
 
     # deltapsi parser
     deltapsi = new_subparser()
     deltapsi.add_argument('--threshold', type=float, default=0.2,
-                          help='Filter out LSVs with no junction predicted to change over a certain value (in percentage).')
+                          help='Filter out LSVs with no junctions predicted to change over a certain value '
+                               '(in percentage). The default is "0.2".')
     deltapsi.add_argument('--show-all', action='store_true',
                           help='Show all LSVs including those with no junction with significant change predicted.')
     deltapsi.add_argument('--percent-threshold', type=float, default=None)

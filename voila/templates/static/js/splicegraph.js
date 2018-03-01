@@ -31,7 +31,7 @@ var coord_in_exon = function (exon, coord) {
     return coord >= exon.start && coord <= exon.end
 };
 
-SpliceGraph.prototype.xScale = function (gene, default_view, reverse_range, experiment) {
+SpliceGraph.prototype.xScale = function (gene, default_view, reverse_range) {
     var x_dom = [];
     var x_range = [];
     var min_width = 10;
@@ -79,8 +79,7 @@ SpliceGraph.prototype.xScale = function (gene, default_view, reverse_range, expe
         length = end - start;
         offset = 0;
 
-        var exon_type = gene.exon_types[experiment][exon.start][exon.end];
-        if ([4, 5].includes(exon_type)) {
+        if (exon.half_exon) {
             min = 1;
             max = 1;
         } else {
@@ -238,16 +237,16 @@ SpliceGraph.prototype.init = function (sg_div) {
 
         var reversed_range = gene.strand === '-';
 
-        sg.x = sg.xScale(gene, default_view, reversed_range, experiment);
+        sg.x = sg.xScale(gene, default_view, reversed_range);
 
         var juncs_no_ir = sg.junctions_no_ir(gene, sg.x, experiment);
         var exons = gene.exons.filter(function (d) {
-            return !d.intron_retention && ![4, 5].includes(gene.exon_types[experiment][d.start][d.end])
+            return !d.intron_retention && !d.half_exon
         });
 
         svg.selectAll('.half-exon')
             .data(gene.exons.filter(function (d) {
-                return [4, 5].includes(gene.exon_types[experiment][d.start][d.end])
+                return Boolean(d.half_exon)
             }))
             .enter()
             .append('polyline')
@@ -423,8 +422,6 @@ d3.transition.prototype.ir_reads =
 d3.transition.prototype.half_exons =
     d3.selection.prototype.half_exons =
         function (sg, gene, lsvs) {
-            var exon_types = gene.exon_types;
-            var experiment = sg.experiment;
             var x = sg.x;
             var y = sg.y;
             var exon_height = sg.exon_height;
@@ -432,15 +429,14 @@ d3.transition.prototype.half_exons =
             return this
                 .style_exons(sg, gene, lsvs)
                 .attr('points', function (d) {
-                    var exon_type = exon_types[experiment][d.start][d.end];
-                    if (exon_type === 4)
+                    if (d.half_exon === 'start')
                         return [
                             [x(d.end - 10), y(0)].join(' '),
                             [x(d.end), y(0)].join(' '),
                             [x(d.end), y(exon_height)].join(' '),
                             [x(d.end - 10), y(exon_height)].join(' ')
                         ].join(', ');
-                    else if (exon_type === 5)
+                    else if (d.half_exon === 'end')
                         return [
                             [x(d.start + 10), y(0)].join(' '),
                             [x(d.start), y(0)].join(' '),
@@ -454,9 +450,6 @@ d3.transition.prototype.half_exons =
 d3.transition.prototype.style_exons =
     d3.selection.prototype.style_exons =
         function (sg, gene, lsvs) {
-            var exon_types = gene.exon_types;
-            var experiment = sg.experiment;
-
             return this
                 .attr('fill-opacity', .3)
                 .attr('stroke-linejoin', 'round')
@@ -510,35 +503,22 @@ d3.transition.prototype.style_exons =
 
                     }
 
-                    var exon_type = exon_types[experiment][d.start][d.end];
-
-                    switch (exon_type) {
-                        case 0:
-                            this.setAttribute('fill', 'grey');
-                            break;
-                        case 1:
-                        case 4:
-                        case 5:
+                    switch (d.color) {
+                        case 'green':
                             this.setAttribute('fill', 'green');
+                            this.setAttribute('stroke', 'green');
+                            break;
+                        case 'grey':
+                            this.setAttribute('fill', 'grey');
+                            this.setAttribute('stroke', 'black');
                             break;
                         default:
                             this.setAttribute('fill', 'transparent');
-                    }
-
-                    switch (exon_type) {
-                        case 1:
-                        case 4:
-                        case 5:
-                            this.setAttribute('stroke', 'green');
-                            break;
-                        default:
                             this.setAttribute('stroke', 'black');
+                            this.setAttribute('stroke-dasharray', '5,2');
+                            break;
                     }
 
-                    switch (exon_type) {
-                        case 2:
-                            this.setAttribute('stroke-dasharray', '5,2')
-                    }
                 })
         };
 
@@ -659,17 +639,7 @@ d3.transition.prototype.style_junctions =
                         }
                     }
 
-                    switch (gene.junction_types[experiment][d.start][d.end]) {
-                        case 3:
-                        case 0:
-                            return 'red';
-                        case 1:
-                            return 'green';
-                        case 2:
-                            return 'grey';
-                        default:
-                            return 'black'
-                    }
+                    return d.color
                 })
                 .attr('fill', 'none')
                 .highlight_junctions(lsvs)
@@ -749,9 +719,6 @@ d3.transition.prototype.reads =
                     return x(d.start) + (x(d.end) - x(d.start)) / 2
                 })
                 .attr('y', function (d) {
-                    // where junctions are very long... put them one bin higher.
-                    // var junc_length = x(d.end) - x(d.start);
-                    // var long_junc = Math.abs(junc_length) > 200 ? 1 : 0;
                     var long_junc = 0;
                     return y(exon_height + (sg.junction_height * (d.bin + long_junc)) + 3)
                 })
@@ -826,7 +793,7 @@ SpliceGraph.prototype.update = function (sg_div, lsv_ids, duration) {
 
         sg.zoom = sg_div.getAttribute('data-zoom');
         sg.experiment = sg_div.getAttribute('data-experiment');
-        sg.x = sg.xScale(gene, default_view, reverse_range, sg.experiment);
+        sg.x = sg.xScale(gene, default_view, reverse_range);
         sg.weighted = lsv_ids.map(function (x) {
             return x[1]
         });

@@ -1,8 +1,7 @@
 <p style="top:0;" class="hidden">{{ lsv.lsv_type }}</p>
-<canvas class="lsvLegend" {#id="{{ gene_index }}"#} width="200px" height="80px"
+<canvas class="lsvLegend"  width="200px" height="80px"
         data-lsv-type="{{ lsv.lsv_type }}"
         data-gene-id="{{ gene.id }}"
-        data-experiment="{{ metadata.experiment_names[0][0] }}"
         data-coord-exon="{{ lsv.reference_exon | join(',') }}"
         title="{{ lsv.lsv_type }}">
     This browser or document mode doesn't support canvas
