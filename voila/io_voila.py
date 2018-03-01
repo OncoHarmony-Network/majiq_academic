@@ -7,7 +7,7 @@ import numpy as np
 from voila import vlsv
 from voila.api import SpliceGraph
 from voila.api.view_matrix import ViewDeltaPsi, ViewPsi, ViewPsiMatrix, ViewDeltaPsiMatrix
-from voila.api.view_splice_graph import ViewGene, ViewJunction
+from voila.api.view_splice_graph import ViewGene
 from voila.constants import JUNCTION_TYPE_RNASEQ
 from voila.utils import utils_voila
 from voila.utils.voila_log import voila_log
@@ -113,9 +113,7 @@ def delta_psi_tab_output(args, voila_links):
                         'chr': gene.chromosome,
                         'strand': gene.strand,
                         'De Novo Junctions': semicolon_join(
-                            int(next(ViewJunction(junc).junction_types([experiment])) == JUNCTION_TYPE_RNASEQ) for junc
-                            in
-                            lsv_junctions
+                            int(not junc.annotated) for junc in lsv_junctions
                         ),
                         'Junctions coords': semicolon_join(
                             '{0}-{1}'.format(junc.start, junc.end) for junc in lsv_junctions
@@ -198,9 +196,7 @@ def psi_tab_output(args, voila_links):
                         'chr': gene.chromosome,
                         'strand': gene.strand,
                         'De Novo Junctions': semicolon_join(
-                            int(next(ViewJunction(junc).junction_types([experiment])) == JUNCTION_TYPE_RNASEQ) for junc
-                            in
-                            lsv_junctions
+                            int(not junc.annotated) for junc in lsv_junctions
                         ),
                         'Junctions coords': semicolon_join(
                             '{0}-{1}'.format(junc.start, junc.end) for junc in lsv_junctions

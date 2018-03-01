@@ -45,28 +45,14 @@ class ViewJunction:
     def __init__(self, junction):
         self.junction = junction
 
-    def junction_types(self, experiment_names):
-        for experiment_name in experiment_names:
-            reads = self.reads(experiment_name)
-
-            junc_type = constants.JUNCTION_TYPE_RNASEQ
-
-            if reads == 0 and self.junction.annotated:
-                if self.reads_sum(experiment_names) - reads > 0:
-                    junc_type = constants.JUNCTION_TYPE_DB_OTHER_RNASEQ
-                else:
-                    junc_type = constants.JUNCTION_TYPE_DB
-
-            if self.junction.annotated and reads > 0:
-                junc_type = constants.JUNCTION_TYPE_DB_RNASEQ
-
-            if not self.junction.annotated and reads > 0:
-                junc_type = constants.JUNCTION_TYPE_RNASEQ
-
-            yield experiment_name, junc_type
-
-    def reads_sum(self, experiment_names):
-        return sum(self.reads(e) for e in experiment_names)
+    def color(self):
+        if self.junction.annotated:
+            if self.junction.has_reads:
+                return 'red'
+            else:
+                return 'grey'
+        else:
+            return 'green'
 
     def reads(self, experiment_name):
         session = inspect(self.junction).session
@@ -79,6 +65,7 @@ class ViewJunction:
     def get_experiment(self):
         j = dict(self.junction)
         j['intron_retention'] = self.get_intron_retention_type()
+        j['color'] = self.color()
         del j['gene_id']
         return j
 
@@ -109,33 +96,25 @@ class ViewExon:
             return self.exon.start + 10
         return self.exon.end
 
-    def has_reads(self, experiment_name):
-        return any(ViewJunction(j).reads(experiment_name) > 0 for j in self.exon.a5) or any(
-            ViewJunction(j).reads(experiment_name) > 0 for j in self.exon.a3)
+    def color(self):
+        if self.exon.annotated:
+            if any(j.has_reads for j in self.exon.a5) or any(j.has_reads for j in self.exon.a5):
+                return 'grey'
+            else:
+                return ''
 
-    def get_exon_type(self, experiment_name):
-        if self.exon.start == -1:
-            return constants.EXON_TYPE_MISSING_START
-        if self.exon.end == -1:
-            return constants.EXON_TYPE_MISSING_END
-
-        has_reads = self.has_reads(experiment_name)
-
-        if self.exon.annotated and not has_reads:
-            return constants.EXON_TYPE_DB
-
-        if self.exon.annotated and has_reads:
-            return constants.EXON_TYPE_DB_RNASEQ
-
-        if not self.exon.annotated and has_reads:
-            return constants.EXON_TYPE_RNASEQ
-
-        return constants.EXON_TYPE_RNASEQ
+        else:
+            return 'green'
 
     def get_experiment(self):
         exon = dict(self.exon)
         exon['start'] = self.view_start
         exon['end'] = self.view_end
+        if self.exon.start == -1:
+            exon['half_exon'] = 'start'
+        elif self.exon.end == -1:
+            exon['half_exon'] = 'end'
+        exon['color'] = self.color()
         del exon['gene_id']
         return exon
 
@@ -180,14 +159,9 @@ class ViewGene:
         exons = tuple(ViewExon(e).get_experiment() for e in self.gene.exons)
         exons = sorted(exons, key=lambda e: (e['start'], e['end']))
         gene['exons'] = exons
-
         gene['junctions'] = tuple(ViewJunction(j).get_experiment() for j in self.gene.junctions)
-
         gene['start'] = self.gene.start
         gene['end'] = self.gene.end
-
-        gene['exon_types'] = {}
-        gene['junction_types'] = {}
         gene['reads'] = {}
 
         for experiment_names in experiment_names_list:
@@ -196,37 +170,16 @@ class ViewGene:
 
             for name in experiment_names:
                 gene['reads'][name] = {}
-                gene['junction_types'][name] = {}
-                gene['exon_types'][name] = {}
                 if combined_name:
-                    gene['exon_types'][combined_name] = {}
                     gene['reads'][combined_name] = {}
-                    gene['junction_types'][combined_name] = {}
-
-            for exon in self.gene.exons:
-                view_exon = ViewExon(exon)
-
-                for experiment_name in experiment_names:
-                    exon_type = view_exon.get_exon_type(experiment_name)
-                    try:
-                        gene['exon_types'][experiment_name][view_exon.view_start][view_exon.view_end] = exon_type
-                    except KeyError:
-                        gene['exon_types'][experiment_name][view_exon.view_start] = {view_exon.view_end: exon_type}
 
             for junc in self.gene.junctions:
                 view_junc = ViewJunction(junc)
-
                 for experiment_name in experiment_names:
                     try:
                         gene['reads'][experiment_name][junc.start][junc.end] = view_junc.reads(experiment_name)
                     except KeyError:
                         gene['reads'][experiment_name][junc.start] = {junc.end: view_junc.reads(experiment_name)}
-
-                for name, junc_type in view_junc.junction_types(experiment_names):
-                    try:
-                        gene['junction_types'][name][junc.start][junc.end] = junc_type
-                    except KeyError:
-                        gene['junction_types'][name][junc.start] = {junc.end: junc_type}
 
                 if combined_name:
                     summed_reads = sum(gene['reads'][n][junc.start][junc.end] for n in experiment_names)
@@ -234,26 +187,5 @@ class ViewGene:
                         gene['reads'][combined_name][junc.start][junc.end] = summed_reads
                     except KeyError:
                         gene['reads'][combined_name][junc.start] = {junc.end: summed_reads}
-
-        all_exp = tuple(x for xs in experiment_names_list for x in xs if not x.endswith(' Combined'))
-        comb_exp = tuple(x for xs in experiment_names_list for x in xs if x.endswith(' Combined'))
-
-        if comb_exp:
-            for junc in self.gene.junctions:
-                for combined_name in comb_exp:
-                    combined_type = min(gene['junction_types'][n][junc.start][junc.end] for n in all_exp)
-                    try:
-                        gene['junction_types'][combined_name][junc.start][junc.end] = combined_type
-                    except KeyError:
-                        gene['junction_types'][combined_name][junc.start] = {junc.end: combined_type}
-
-            for exon in self.gene.exons:
-                view_exon = ViewExon(exon)
-                for combined_name in comb_exp:
-                    comb_type = min(view_exon.get_exon_type(x) for x in experiment_names)
-                    try:
-                        gene['exon_types'][combined_name][view_exon.view_start][view_exon.view_end] = comb_type
-                    except KeyError:
-                        gene['exon_types'][combined_name][view_exon.view_start] = {view_exon.view_end: comb_type}
 
         return gene

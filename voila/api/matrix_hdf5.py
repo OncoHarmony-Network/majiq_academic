@@ -5,6 +5,7 @@ import h5py
 import numpy
 
 from voila import constants
+from voila.exceptions import GeneIdNotFoundInVoilaFile
 from voila.vlsv import collapse_matrix
 
 
@@ -89,11 +90,17 @@ class MatrixHdf5:
         yield from self.h['lsvs']
 
     def lsv_ids(self, gene_ids=None):
+
         if not gene_ids:
             gene_ids = self.h['lsvs']
 
-        for gene_id in gene_ids:
-            yield from self.h['lsvs'][gene_id]
+        lsvs = self.h['lsvs']
+
+        try:
+            for gene_id in gene_ids:
+                yield from lsvs[gene_id]
+        except KeyError:
+            raise GeneIdNotFoundInVoilaFile(gene_id)
 
     @property
     def file_version(self):

@@ -1,6 +1,4 @@
 import numpy as np
-import scipy.interpolate as sinter
-
 
 
 class Het:
@@ -83,23 +81,6 @@ def collapse_matrix(matrix):
     return np.array(collapse)
 
 
-def _find_delta_border(V, numbins):
-    """
-    Finds the border index to which a V corresponds in its delta_space given the number of bins the matrix will have
-    :param V:
-    :param numbins:
-    :return:
-    """
-    delta_space = list(np.linspace(-1, 1, num=numbins + 1))
-    delta_space.pop(0)  # first border to the left is -1, and we are not interested in it
-    # get the index position that corresponds to the V threshold
-    for i, value in enumerate(delta_space):
-        if value > V:
-            return i
-    # if nothing hit, V = 1
-    return numbins
-
-
 def matrix_area(matrix, V=0.2, absolute=True, collapsed_mat=False):
     """
     Returns the probability of an event to be above a certain threshold. The absolute flag describes if the value is absolute.
@@ -124,34 +105,6 @@ def matrix_area(matrix, V=0.2, absolute=True, collapsed_mat=False):
         if V >= 0:
             area = 1 - area
     return area
-
-
-def matrix_area_spline(matrix, V=0.2, absolute=True, collapsed_mat=False, kind=2):
-    """
-    Returns the probability of an event to be above a certain threshold. The absolute flag describes if the value is absolute.
-    :param collapsed_mat: if True, matrix must be 1d, else matrix must be 2d square
-    :param V: threshold
-    :param absolute: if True, calculate two-tailed area
-    :param matrix: list or array of probabilities, must sum to 1
-    :param kind: parameter kind from scipy.interpolate.interp1d
-    :return: probability of delta psi exceeding a certain threshold
-    """
-    collapse = matrix
-    if not collapsed_mat:
-        collapse = collapse_matrix(matrix)
-    collapse = np.concatenate(([0], collapse))
-    collapse = np.cumsum(collapse)
-    xbins = np.linspace(-1, 1, num=collapse.size)
-    spline = sinter.interp1d(xbins, collapse, kind=kind, fill_value=(0, 1), bounds_error=False)
-    if absolute:
-        Vabs = abs(V)
-        left, right = spline([-Vabs, Vabs])
-        area = left + (1 - right)
-    else:
-        area = spline(V)
-        if V >= 0:
-            area = 1 - area
-    return float(area)
 
 
 def is_lsv_changing(means, threshold):
