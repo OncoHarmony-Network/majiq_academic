@@ -10,3 +10,4 @@ voila/templates/spliceGraphD3.html
 voila/sandbox/*
 dist/
 majiq.egg-info
+

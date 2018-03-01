@@ -177,25 +177,6 @@ def main():
     wght.add_argument('-n', '--name', required=True, help="The names that identify each of the experiments. "
                                                           "[Default: %(default)s]")
 
-    htrgen = new_subparser()
-    htrgen.add_argument('-grp1', dest="files1", nargs='+', required=True)
-    htrgen.add_argument('-grp2', dest="files2", nargs='+', required=True)
-    htrgen.add_argument('-n', '--names', nargs='+', required=True,
-                        help="The names that identify each of the experiments.")
-    htrgen.add_argument('--nsamples', type=int, default=100,
-                        help='Number of PSI samples to take per LSV junction. If equal to 1, use expected value only. '
-                             '[Default: %(default)d]')
-    htrgen.add_argument('--vwindow', type=get_vwindow, default=0.0,
-                        help='Width of sample rejection window. If equal to 0, do not reject samples. '
-                             '[Default: %(default)0.02f.]')
-    htrgen.add_argument('--bins', type=get_bins, default=get_bins(40),
-                        help='Fixed-width binning resolution of PSI distributions. [Default: 40')
-    htrgen.add_argument('--stats', nargs='+', default=all_stats,
-                        help='Test statistics to run. [Default: %(default)s]')
-    htrgen.add_argument('--minsamps', type=get_minsamps, default=2,
-                        help='Minimum number of samples that need to be present for an LSV junction in order to '
-                             'perform each test statistic. [Default: %(default)d]')
-
     #calcpsi flags
     subparsers = parser.add_subparsers(help='')
     parser_preprocess = subparsers.add_parser('build', help='Preprocess SAM/BAM files as preparation for the rest of '
