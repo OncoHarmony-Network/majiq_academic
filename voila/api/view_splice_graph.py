@@ -98,7 +98,7 @@ class ViewExon:
 
     def color(self):
         if self.exon.annotated:
-            if any(j.has_reads for j in self.exon.a5) or any(j.has_reads for j in self.exon.a5):
+            if any(j.has_reads for j in self.exon.a5) or any(j.has_reads for j in self.exon.a3):
                 return 'grey'
             else:
                 return ''
