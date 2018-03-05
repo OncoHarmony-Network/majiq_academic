@@ -2,7 +2,7 @@ import os
 
 import voila
 
-VERSION = '1.1.0b1'
+VERSION = '1.1.0'
 FILE_VERSION = '0.1'
 ANALYSIS_PSI = 'psi'
 ANALYSIS_PSI_GENE = 'psi-gene'
@@ -43,7 +43,7 @@ MAX_LSVS_HET_INDEX = 10000  # Max. LSVs allowed to create full index.html
 MAX_LSVS_PSI_INDEX = 15000
 COMBINED_PREFIX = 'ALL_'
 
-# subfolder for full (splicegraph summaries)
+# subfolder for full (splice graph summaries)
 SUMMARIES_SUBFOLDER = 'summaries'
 
 # Debugging

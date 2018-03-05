@@ -185,7 +185,7 @@ def voila_parser():
                                '(in percentage). The default is "0.2".')
     deltapsi.add_argument('--show-all', action='store_true',
                           help='Show all LSVs including those with no junction with significant change predicted.')
-    deltapsi.add_argument('--percent-threshold', type=float, default=None)
+    deltapsi.add_argument('--probability-threshold', type=float, default=None)
 
     # subparsers
     subparsers = parser.add_subparsers(help='')

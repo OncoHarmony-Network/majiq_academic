@@ -174,9 +174,6 @@ class ViewMatrix:
             raise NoLsvsFound()
         return value
 
-    def valid_lsvs(self, args, lsv_ids):
-        raise NotImplementedError()
-
     def view_gene_lsvs(self, args, gene_id):
         yield from self.valid_lsvs(args, self.matrix.lsv_ids([gene_id]))
 
@@ -224,38 +221,43 @@ class ViewMatrix:
         gene_count = len(tuple(self.view_gene_ids(args)))
         return math.ceil(gene_count / constants.MAX_GENES)
 
+    def is_lsv_changing(self, lsv_id, threshold):
+        raise NotImplementedError()
+
+    def passes_probability_threshold(self, lsv_id, probability_threshold):
+        raise NotImplementedError()
+
+    def valid_lsvs(self, args, lsv_ids):
+        threshold = None
+        probability_threshold = None
+
+        if hasattr(args, 'show_all') and not args.show_all:
+            threshold = args.threshold
+            probability_threshold = args.probability_threshold
+
+        for lsv_id in lsv_ids:
+
+            if not args.lsv_ids or lsv_id in args.lsv_ids:
+                if not threshold or self.is_lsv_changing(lsv_id, threshold):
+                    if not probability_threshold or self.passes_probability_threshold(lsv_id, probability_threshold):
+                        yield lsv_id
+
 
 class ViewPsiMatrix(ViewMatrix):
-    def valid_lsvs(self, args, lsv_ids):
-        threshold = None
-        percent_threshold = None
-        m_a = matrix_area
+    def is_lsv_changing(self, lsv_id, threshold):
+        psi = self.matrix.psi(lsv_id)
+        return is_lsv_changing(psi.means, threshold)
 
-        if hasattr(args, 'show_all') and not args.show_all:
-            threshold = args.threshold
-            percent_threshold = args.percent_threshold
-
-        for lsv_id in lsv_ids:
-            dpsi = self.matrix.psi(lsv_id)
-            if not args.lsv_ids or lsv_id in args.lsv_ids:
-                if not threshold or is_lsv_changing(dpsi.means, threshold):
-                    if not percent_threshold or any(m_a(b, collapsed_mat=True) >= percent_threshold for b in dpsi.bins):
-                        yield lsv_id
+    def passes_probability_threshold(self, lsv_id, probability_threshold):
+        psi = self.matrix.psi(lsv_id)
+        return any(matrix_area(b, collapsed_mat=True) >= probability_threshold for b in psi.bins)
 
 
-class ViewDeltaPsiMatrix(ViewPsiMatrix):
-    def valid_lsvs(self, args, lsv_ids):
-        threshold = None
-        percent_threshold = None
-        m_a = matrix_area
+class ViewDeltaPsiMatrix(ViewMatrix):
+    def is_lsv_changing(self, lsv_id, threshold):
+        dpsi = self.matrix.delta_psi(lsv_id)
+        return is_lsv_changing(dpsi.means, threshold)
 
-        if hasattr(args, 'show_all') and not args.show_all:
-            threshold = args.threshold
-            percent_threshold = args.percent_threshold
-
-        for lsv_id in lsv_ids:
-            dpsi = self.matrix.delta_psi(lsv_id)
-            if not args.lsv_ids or lsv_id in args.lsv_ids:
-                if not threshold or is_lsv_changing(dpsi.means, threshold):
-                    if not percent_threshold or any(m_a(b, collapsed_mat=True) >= percent_threshold for b in dpsi.bins):
-                        yield lsv_id
+    def passes_probability_threshold(self, lsv_id, probability_threshold):
+        dpsi = self.matrix.delta_psi(lsv_id)
+        return any(matrix_area(b, collapsed_mat=True) >= probability_threshold for b in dpsi.bins)

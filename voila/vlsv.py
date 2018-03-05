@@ -86,6 +86,7 @@ def collapse_matrix(matrix):
 def matrix_area(matrix, V=0.2, absolute=True, collapsed_mat=False):
     """
     Returns the probability of an event to be above a certain threshold. The absolute flag describes if the value is absolute.
+
     :param collapsed_mat:
     :param V:
     :param absolute:
@@ -115,6 +116,7 @@ def matrix_area(matrix, V=0.2, absolute=True, collapsed_mat=False):
 def is_lsv_changing(means, threshold):
     """
     Return true if lsv is changing based on threshold.
+
     :param threshold: lsv threshold value
     :return: bool
     """
