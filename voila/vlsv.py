@@ -107,8 +107,7 @@ def matrix_area(matrix, V=0.2, absolute=True, collapsed_mat=False):
         area = np.interp(V, xbins, collapse, left=0, right=1)
         if V >= 0:
             area = 1 - area
-    if area < np.finfo(float).eps:
-        area = 0
+    area = np.clip(area, 0, 1)
     return area
 
 
