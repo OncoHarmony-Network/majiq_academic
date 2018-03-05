@@ -86,7 +86,6 @@ def collapse_matrix(matrix):
 def matrix_area(matrix, V=0.2, absolute=True, collapsed_mat=False):
     """
     Returns the probability of an event to be above a certain threshold. The absolute flag describes if the value is absolute.
-
     :param collapsed_mat:
     :param V:
     :param absolute:
@@ -108,8 +107,7 @@ def matrix_area(matrix, V=0.2, absolute=True, collapsed_mat=False):
         area = np.interp(V, xbins, collapse, left=0, right=1)
         if V >= 0:
             area = 1 - area
-    if area < np.finfo(float).eps:
-        area = 0
+    area = np.clip(area, 0, 1)
     return area
 
 
