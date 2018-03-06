@@ -6,7 +6,7 @@ import numpy as np
 
 from voila import vlsv
 from voila.api import SpliceGraph
-from voila.api.view_matrix import ViewDeltaPsi, ViewPsi, ViewPsiMatrix, ViewDeltaPsiMatrix
+from voila.api.view_matrix import ViewDeltaPsi, ViewPsi
 from voila.api.view_splice_graph import ViewGene
 from voila.constants import JUNCTION_TYPE_RNASEQ
 from voila.utils import utils_voila
@@ -68,9 +68,8 @@ def delta_psi_tab_output(args, voila_links):
     output_html = Html.get_output_html(args, args.voila_file)
     tsv_file = join(args.output, output_html.rsplit('.html', 1)[0] + '.tsv')
 
-    with ViewDeltaPsi(args.voila_file, 'r') as m, SpliceGraph(args.splice_graph) as sg:
+    with ViewDeltaPsi(args) as m, SpliceGraph(args.splice_graph) as sg:
         metadata = m.metadata
-        experiment = m.experiment_names[0][0]
 
         fieldnames = ['#Gene Name', 'Gene ID', 'LSV ID', 'E(PSI) per LSV junction', 'Var(E(PSI)) per LSV junction']
         group1 = metadata['group_names'][0]
@@ -88,10 +87,10 @@ def delta_psi_tab_output(args, voila_links):
         with open(tsv_file, 'w') as tsv:
             writer = csv.DictWriter(tsv, fieldnames=fieldnames, delimiter='\t')
             writer.writeheader()
-            for gene_id in ViewDeltaPsiMatrix(m).view_gene_ids(args):
+            for gene_id in m.view_gene_ids():
                 gene = sg.gene(gene_id).get
 
-                for lsv_id in ViewDeltaPsiMatrix(m).view_gene_lsvs(args, gene_id):
+                for lsv_id in m.view_gene_lsvs(gene_id):
                     log.debug('Write TSV row for {0}'.format(lsv_id))
                     lsv = m.delta_psi(lsv_id)
 
@@ -161,8 +160,7 @@ def psi_tab_output(args, voila_links):
     output_html = Html.get_output_html(args, args.voila_file)
     tsv_file = join(args.output, output_html.rsplit('.html', 1)[0] + '.tsv')
 
-    with ViewPsi(args.voila_file, 'r') as m, SpliceGraph(args.splice_graph) as sg:
-        experiment = m.experiment_names[0][0]
+    with ViewPsi(args) as m, SpliceGraph(args.splice_graph) as sg:
         fieldnames = ['#Gene Name', 'Gene ID', 'LSV ID', 'E(PSI) per LSV junction', 'Var(E(PSI)) per LSV junction',
                       'LSV Type', 'A5SS', 'A3SS', 'ES', 'Num. Junctions', 'Num. Exons', 'De Novo Junctions', 'chr',
                       'strand', 'Junctions coords', 'Exons coords', 'IR coords']
@@ -172,13 +170,12 @@ def psi_tab_output(args, voila_links):
         with open(tsv_file, 'w') as tsv:
             writer = csv.DictWriter(tsv, fieldnames=fieldnames, delimiter='\t')
             writer.writeheader()
-            view_psi_matrix = ViewPsiMatrix(m)
 
-            for gene_id in view_psi_matrix.view_gene_ids(args):
+            for gene_id in m.view_gene_ids():
                 gene = sg.gene(gene_id).get
                 view_gene = ViewGene(gene)
 
-                for lsv_id in view_psi_matrix.view_gene_lsvs(args, gene_id):
+                for lsv_id in m.view_gene_lsvs(gene_id):
                     lsv = m.psi(lsv_id)
                     lsv_junctions = tuple(view_gene.lsv_junctions(lsv))
                     lsv_exons = tuple(view_gene.lsv_exons(lsv, lsv_junctions))
@@ -316,52 +313,53 @@ def get_lsv_extra_info(lsv):
 def semicolon_join(value_list):
     return ';'.join(str(x) for x in value_list)
 
-# def het_tab_output(args):
-#     voila_log().info('Creating HET TSV file...')
-#
-#     output_html = get_output_html(args, args.voila_file)
-#     tsv_file = join(args.output, output_html.rsplit('.html', 1)[0] + '.tsv')
-#
-#     with Voila(args.voila_file, 'r') as v:
-#
-#         metainfo = v.get_metainfo()
-#
-#         fieldnames = get_lsv_info_fieldnames() + list(metainfo['stat_names']) + get_lsv_extra_info_fieldnames()
-#
-#         lsv_fieldnames = ['Junction ID'] + list(itertools.chain.from_iterable(metainfo['experiment_names']))
-#
-#         with open(tsv_file, 'w') as tsvfile:
-#             tsv = csv.DictWriter(tsvfile, fieldnames=fieldnames, delimiter='\t')
-#             tsv.writeheader()
-#
-#             for lsv in v.get_voila_lsvs(args):
-#                 row = get_lsv_info(lsv)
-#                 row.update(get_lsv_extra_info(lsv))
-#
-#                 for stat_name, junction_stat in zip(metainfo['stat_names'], lsv.het.junction_stats):
-#                     row[stat_name] = semicolon_join(junction_stat)
-#
-#                 tsv.writerow(row)
-#
-#                 rows = {}
-#
-#         for lsv in v.get_voila_lsvs(args):
-#
-#             for group, experiment_names in zip(lsv.het.groups, metainfo['experiment_names']):
-#                 for experiment_index, experiment_name in enumerate(experiment_names):
-#                     for junction_index, junction_id in enumerate(lsv.junction_ids()):
-#
-#                         psi = group.get_psi(experiment_index=experiment_index, junction_index=junction_index)
-#
-#                         try:
-#                             rows[junction_id][experiment_name] = psi
-#                         except KeyError:
-#                             rows[junction_id] = {experiment_name: psi}
-#
-#             with open(join(args.output, lsv.lsv_id.replace(':', '_') + '.tsv'), 'w') as tsvfile:
-#                 tsv = csv.DictWriter(tsvfile, fieldnames=lsv_fieldnames, delimiter='\t')
-#                 tsv.writeheader()
-#                 for junction_id, row_dict in rows.items():
-#                     row = {'Junction ID': junction_id}
-#                     row.update({column: value for column, value in row_dict.items()})
-#                     tsv.writerow(row)
+
+def het_tab_output(args):
+    voila_log().info('Creating HET TSV file...')
+
+    output_html = get_output_html(args, args.voila_file)
+    tsv_file = join(args.output, output_html.rsplit('.html', 1)[0] + '.tsv')
+
+    with Voila(args.voila_file, 'r') as v:
+
+        metainfo = v.get_metainfo()
+
+        fieldnames = get_lsv_info_fieldnames() + list(metainfo['stat_names']) + get_lsv_extra_info_fieldnames()
+
+        lsv_fieldnames = ['Junction ID'] + list(itertools.chain.from_iterable(metainfo['experiment_names']))
+
+        with open(tsv_file, 'w') as tsvfile:
+            tsv = csv.DictWriter(tsvfile, fieldnames=fieldnames, delimiter='\t')
+            tsv.writeheader()
+
+            for lsv in v.get_voila_lsvs(args):
+                row = get_lsv_info(lsv)
+                row.update(get_lsv_extra_info(lsv))
+
+                for stat_name, junction_stat in zip(metainfo['stat_names'], lsv.het.junction_stats):
+                    row[stat_name] = semicolon_join(junction_stat)
+
+                tsv.writerow(row)
+
+                rows = {}
+
+        for lsv in v.get_voila_lsvs(args):
+
+            for group, experiment_names in zip(lsv.het.groups, metainfo['experiment_names']):
+                for experiment_index, experiment_name in enumerate(experiment_names):
+                    for junction_index, junction_id in enumerate(lsv.junction_ids()):
+
+                        psi = group.get_psi(experiment_index=experiment_index, junction_index=junction_index)
+
+                        try:
+                            rows[junction_id][experiment_name] = psi
+                        except KeyError:
+                            rows[junction_id] = {experiment_name: psi}
+
+            with open(join(args.output, lsv.lsv_id.replace(':', '_') + '.tsv'), 'w') as tsvfile:
+                tsv = csv.DictWriter(tsvfile, fieldnames=lsv_fieldnames, delimiter='\t')
+                tsv.writeheader()
+                for junction_id, row_dict in rows.items():
+                    row = {'Junction ID': junction_id}
+                    row.update({column: value for column, value in row_dict.items()})
+                    tsv.writerow(row)

@@ -23,6 +23,7 @@ class MatrixHdf5:
         :param mode: generally r or w
         """
         filename = os.path.expanduser(filename)
+        self.dt = h5py.special_dtype(vlen=numpy.unicode)
         self.h = h5py.File(filename, mode, libver='latest')
 
     def __enter__(self):
@@ -101,8 +102,7 @@ class MatrixHdf5:
 
     @group_names.setter
     def group_names(self, n):
-        dt = h5py.special_dtype(vlen=numpy.unicode)
-        self.h.create_dataset('metadata/group_names', data=numpy.array(n, dtype=dt))
+        self.h.create_dataset('metadata/group_names', data=numpy.array(n, dtype=self.dt))
 
     @property
     def experiment_names(self):
@@ -110,8 +110,15 @@ class MatrixHdf5:
 
     @experiment_names.setter
     def experiment_names(self, n):
-        dt = h5py.special_dtype(vlen=numpy.unicode)
-        self.h.create_dataset('metadata/experiment_names', data=numpy.array(n, dtype=dt))
+        self.h.create_dataset('metadata/experiment_names', data=numpy.array(n, dtype=self.dt))
+
+    @property
+    def stat_names(self):
+        return self.h['metadata']['stat_names'].value
+
+    @stat_names.setter
+    def stat_names(self, s):
+        self.h.create_dataset('metadata/stat_names', data=numpy.array(s, dtype=self.dt))
 
     @property
     def metadata(self):
@@ -328,8 +335,6 @@ class DeltaPsi(MatrixHdf5):
             bins_list = kwargs.get('bins')
             bins = [collapse_matrix(bins) for bins in bins_list]
             kwargs['bins'] = bins
-            junctions = kwargs.get('junctions')
-            kwargs['junctions'] = junctions.astype(int)
             super().add(**kwargs)
 
     def delta_psi(self, lsv_id):
@@ -362,3 +367,25 @@ class Psi(MatrixHdf5):
         :return:
         """
         return self._Psi(self, lsv_id)
+
+
+class Heterogen(MatrixHdf5):
+    class _Heterogen(MatrixType):
+        def __init__(self, matrix_hdf5, lsv_id):
+            """
+            Store PSI data.
+
+            :param matrix_hdf5: matrix HDF5 object
+            :param lsv_id: unique LSV identifier
+            """
+            fields = ('lsv_type', 'junction_stats', 'groups')
+            super().__init__(matrix_hdf5, lsv_id, fields)
+
+    def heterogen(self, lsv_id):
+        """
+        Accessor function for PSI file.
+
+        :param lsv_id:
+        :return:
+        """
+        return self._Heterogen(self, lsv_id)

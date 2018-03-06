@@ -2,15 +2,17 @@ import multiprocessing as mp
 import sys
 
 import majiq.src.io as majiq_io
+import psutil
+from majiq.src.psi import heterogen_posterior
+
 import majiq.src.logger as majiq_logger
 from majiq.src.basic_pipeline import BasicPipeline, pipeline_run
 from majiq.src.constants import *
 from majiq.src.multiproc import QueueMessage, process_conf, queue_manager, process_wrapper, chunks
-from majiq.src.psi import heterogen_posterior
 from majiq.src.stats import operator, all_stats
+from voila.api import Matrix
 from voila.constants import ANALYSIS_HETEROGEN
 from voila.vlsv import Het
-import os
 
 
 def het_quantification(list_of_lsv, chnk, conf, logger):
@@ -99,10 +101,15 @@ def calc_independent(args):
 class independent(BasicPipeline):
 
     def store_results(self, output, results, msg_type, extra):
-        pass
         # lsv_graph = self.lsv_type_dict[results[-1]]
         # output_h5dfp.add_lsv(VoilaLsv(bins_list=None, lsv_graphic=lsv_graph, psi1=None, psi2=None,
         #                               means_psi1=None, means_psi2=None, het=val.get_value()[0]))
+
+        lsv_id = results[-1]
+        lsv_type = self.lsv_type_dict[lsv_id]
+        groups = []
+        junction_stats = []
+        output.heterogen(lsv_id).add(lsv_type=lsv_type, groups=groups, junction_stats=junction_stats)
 
     def run(self):
         self.independent()
@@ -130,7 +137,6 @@ class independent(BasicPipeline):
         self.queue = mp.Queue()
         self.lock = [mp.Lock() for xx in range(self.nthreads)]
         junc_info = {}
-
 
         try:
             for stats_name in self.stats:
@@ -161,22 +167,19 @@ class independent(BasicPipeline):
         if len(list_of_lsv) > 0:
             nthreads = min(self.nthreads, len(list_of_lsv))
             [xx.acquire() for xx in self.lock]
-            pool.map_async(process_wrapper,  chunks(list_of_lsv, nthreads))
+            pool.map_async(process_wrapper, chunks(list_of_lsv, nthreads))
             pool.close()
-            # with Voila(get_quantifier_voila_filename(self.outDir, self.names, deltapsi=True), 'w') as out_h5p:
-            #
-            #     out_h5p.set_analysis_type(ANALYSIS_HETEROGEN)
-            #     out_h5p.group_names = self.names
-            #     out_h5p.experiment_names = [exps1, exps2]
-            #
-            #     out_h5p.add_stat_names(self.stats)
-            #
-            #     queue_manager(out_h5p, self.lock, self.queue, num_chunks=nthreads, func=self.store_results,
-            #                   logger=logger, lsv_type=self.lsv_type_dict)
+            with Matrix(get_quantifier_voila_filename(self.outDir, self.names, het=True), 'w') as out_h5p:
+                out_h5p.analysis_type = ANALYSIS_HETEROGEN
+                out_h5p.group_names = self.names
+                out_h5p.experiment_names = [exps1, exps2]
+                out_h5p.stat_names = self.stats
+                queue_manager(out_h5p, self.lock, self.queue, num_chunks=nthreads, func=self.store_results,
+                              logger=logger, lsv_type=self.lsv_type_dict)
             pool.join()
 
         if self.mem_profile:
-            mem_allocated = int(psutil.Process().memory_info().rss)/(1024**2)
+            mem_allocated = int(psutil.Process().memory_info().rss) / (1024 ** 2)
             logger.info("Max Memory used %.2f MB" % mem_allocated)
         logger.info("DeltaPSI Het calculation for %s_%s ended succesfully! Result can be found at %s" % (self.names[0],
                                                                                                          self.names[1],

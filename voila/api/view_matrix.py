@@ -7,7 +7,7 @@ from voila import constants
 from voila.api.matrix_hdf5 import DeltaPsi, Psi
 from voila.exceptions import NoLsvsFound
 from voila.utils.voila_log import voila_log
-from voila.vlsv import get_expected_dpsi, matrix_area, is_lsv_changing
+from voila.vlsv import get_expected_dpsi, is_lsv_changing, matrix_area
 
 
 def unpack_means(value):
@@ -22,7 +22,73 @@ def unpack_bins(value):
     return value
 
 
-class ViewPsi(Psi):
+def passes_probability_threshold(bins, probability_threshold):
+    return any(matrix_area(b, collapsed_mat=True) >= probability_threshold for b in bins)
+
+
+class ViewMatrix:
+    @property
+    def view_metadata(self):
+        metadata = self.metadata
+        group_names = self.group_names
+        experiment_names = metadata['experiment_names']
+
+        if experiment_names.size > 1:
+            metadata['experiment_names'] = [numpy.insert(exps, 0, '{0} Combined'.format(group)) for exps, group in
+                                            zip(experiment_names, group_names)]
+
+        return metadata
+
+    def view_lsv_ids(self):
+        args = self.args
+        if args.lsv_ids:
+            lsv_ids = args.lsv_ids
+        elif args.gene_ids:
+            lsv_ids = self.lsv_ids(args.gene_ids)
+        else:
+            lsv_ids = self.lsv_ids()
+
+        yield from self.valid_lsvs(lsv_ids)
+
+    def view_lsv_count(self):
+        value = len(tuple(self.view_lsv_ids()))
+        voila_log().info('Found {} LSVs'.format(value))
+        if not value:
+            raise NoLsvsFound()
+        return value
+
+    def page_count(self):
+        gene_count = len(tuple(self.view_gene_ids()))
+        return math.ceil(gene_count / constants.MAX_GENES)
+
+    def paginated_genes(self):
+        def grouper(iterable, n, fillvalue=None):
+            args = [iter(iterable)] * n
+            return zip_longest(*args, fillvalue=fillvalue)
+
+        for page in grouper(self.view_gene_ids(), constants.MAX_GENES):
+            yield tuple(p for p in page if p is not None)
+
+    def view_gene_ids(self):
+        args = self.args
+        if args.gene_ids:
+            gene_ids = args.gene_ids
+        else:
+            gene_ids = self.gene_ids
+
+        for gene_id in gene_ids:
+            if any(self.valid_lsvs(self.view_gene_lsvs(gene_id))):
+                yield gene_id
+
+    def view_gene_lsvs(self, gene_id):
+        yield from self.valid_lsvs(self.lsv_ids([gene_id]))
+
+
+class ViewPsi(Psi, ViewMatrix):
+    def __init__(self, args):
+        super().__init__(args.voila_file)
+        self.args = args
+
     class _ViewPsi(Psi._Psi):
         def get_all(self):
             yield 'lsv_id', self.lsv_id
@@ -85,11 +151,37 @@ class ViewPsi(Psi):
         def junction_count(self):
             return len(tuple(self.means))
 
+        def is_lsv_changing(self, threshold):
+            return is_lsv_changing(self.means, threshold)
+
+        def passes_probability_threshold(self, probability_threshold):
+            return passes_probability_threshold(self.bins, probability_threshold)
+
     def psi(self, lsv_id):
         return self._ViewPsi(self, lsv_id)
 
+    def valid_lsvs(self, lsv_ids):
+        threshold = None
+        probability_threshold = None
+        args = self.args
 
-class ViewDeltaPsi(DeltaPsi):
+        if hasattr(args, 'show_all') and not args.show_all:
+            threshold = args.threshold
+            probability_threshold = args.probability_threshold
+
+        for lsv_id in lsv_ids:
+            psi = self.psi(lsv_id)
+            if not args.lsv_ids or lsv_id in args.lsv_ids:
+                if not threshold or psi.is_lsv_changing(threshold):
+                    if not probability_threshold or psi.passes_probability_threshold(probability_threshold):
+                        yield lsv_id
+
+
+class ViewDeltaPsi(DeltaPsi, ViewMatrix):
+    def __init__(self, args):
+        super().__init__(args.voila_file)
+        self.args = args
+
     class _ViewDeltaPsi(DeltaPsi._DeltaPsi):
         def get_all(self):
             yield 'lsv_id', self.lsv_id
@@ -159,105 +251,27 @@ class ViewDeltaPsi(DeltaPsi):
         def junction_count(self):
             return len(tuple(self.means))
 
+        def is_lsv_changing(self, threshold):
+            return is_lsv_changing(self.means, threshold)
+
+        def passes_probability_threshold(self, probability_threshold):
+            return passes_probability_threshold(self.bins, probability_threshold)
+
     def delta_psi(self, lsv_id):
         return self._ViewDeltaPsi(self, lsv_id)
 
-
-class ViewMatrix:
-    def __init__(self, matrix):
-        self.matrix = matrix
-
-    def view_lsv_count(self, args):
-        value = len(tuple(self.view_lsv_ids(args)))
-        voila_log().info('Found {} LSVs'.format(value))
-        if not value:
-            raise NoLsvsFound()
-        return value
-
-    def view_gene_lsvs(self, args, gene_id):
-        yield from self.valid_lsvs(args, self.matrix.lsv_ids([gene_id]))
-
-    def view_lsv_ids(self, args):
-        if args.lsv_ids:
-            lsv_ids = args.lsv_ids
-        elif args.gene_ids:
-            lsv_ids = self.matrix.lsv_ids(args.gene_ids)
-        else:
-            lsv_ids = self.matrix.lsv_ids()
-
-        yield from self.valid_lsvs(args, lsv_ids)
-
-    def view_gene_ids(self, args):
-        if args.gene_ids:
-            gene_ids = args.gene_ids
-        else:
-            gene_ids = self.matrix.gene_ids
-
-        for gene_id in gene_ids:
-            if any(self.valid_lsvs(args, self.view_gene_lsvs(args, gene_id))):
-                yield gene_id
-
-    @property
-    def metadata(self):
-        metadata = self.matrix.metadata
-        experiment_names = metadata['experiment_names']
-        group_names = self.matrix.group_names
-
-        if experiment_names.size > 1:
-            metadata['experiment_names'] = [numpy.insert(exps, 0, '{0} Combined'.format(group)) for exps, group in
-                                            zip(experiment_names, group_names)]
-
-        return metadata
-
-    def paginated_genes(self, args):
-        def grouper(iterable, n, fillvalue=None):
-            args = [iter(iterable)] * n
-            return zip_longest(*args, fillvalue=fillvalue)
-
-        for page in grouper(self.view_gene_ids(args), constants.MAX_GENES):
-            yield tuple(p for p in page if p is not None)
-
-    def page_count(self, args):
-        gene_count = len(tuple(self.view_gene_ids(args)))
-        return math.ceil(gene_count / constants.MAX_GENES)
-
-    def is_lsv_changing(self, lsv_id, threshold):
-        raise NotImplementedError()
-
-    def passes_probability_threshold(self, lsv_id, probability_threshold):
-        raise NotImplementedError()
-
-    def valid_lsvs(self, args, lsv_ids):
+    def valid_lsvs(self, lsv_ids):
         threshold = None
         probability_threshold = None
+        args = self.args
 
         if hasattr(args, 'show_all') and not args.show_all:
             threshold = args.threshold
             probability_threshold = args.probability_threshold
 
         for lsv_id in lsv_ids:
-
+            delta_psi = self.delta_psi(lsv_id)
             if not args.lsv_ids or lsv_id in args.lsv_ids:
-                if not threshold or self.is_lsv_changing(lsv_id, threshold):
-                    if not probability_threshold or self.passes_probability_threshold(lsv_id, probability_threshold):
+                if not threshold or delta_psi.is_lsv_changing(threshold):
+                    if not probability_threshold or delta_psi.passes_probability_threshold(probability_threshold):
                         yield lsv_id
-
-
-class ViewPsiMatrix(ViewMatrix):
-    def is_lsv_changing(self, lsv_id, threshold):
-        psi = self.matrix.psi(lsv_id)
-        return is_lsv_changing(psi.means, threshold)
-
-    def passes_probability_threshold(self, lsv_id, probability_threshold):
-        psi = self.matrix.psi(lsv_id)
-        return any(matrix_area(b, collapsed_mat=True) >= probability_threshold for b in psi.bins)
-
-
-class ViewDeltaPsiMatrix(ViewMatrix):
-    def is_lsv_changing(self, lsv_id, threshold):
-        dpsi = self.matrix.delta_psi(lsv_id)
-        return is_lsv_changing(dpsi.means, threshold)
-
-    def passes_probability_threshold(self, lsv_id, probability_threshold):
-        dpsi = self.matrix.delta_psi(lsv_id)
-        return any(matrix_area(b, collapsed_mat=True) >= probability_threshold for b in dpsi.bins)

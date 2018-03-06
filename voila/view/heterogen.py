@@ -1,9 +1,9 @@
 import os
 from tempfile import NamedTemporaryFile
 
-from voila import io_voila, constants
+from voila import constants
 from voila.api import SpliceGraph
-from voila.exceptions import NoLsvsFound
+from voila.exceptions import NoLsvsFound, NotHeterogenVoilaFile
 from voila.utils.voila_log import voila_log
 from voila.view.html import Html
 
@@ -11,10 +11,17 @@ from voila.view.html import Html
 class Heterogen(Html):
     def __init__(self, args):
         super().__init__(args)
-        if not args.no_tsv:
-            io_voila.het_tab_output(args)
+        with ViewHeterogen(args.voila_file) as m:
+            if m.analysis_type != constants.ANALYSIS_PSI:
+                raise NotHeterogenVoilaFile(args.voila_file)
+            self.metadata = ViewHeterogenMatrix(m).metadata
 
-        # if not args.no_html:
+        log = voila_log()
+        # if not args.no_tsv:
+        #     io_voila.het_tab_output(args)
+
+        if not args.no_html:
+            log.warning('No html output.')
         #     with Voila(args.voila_file, 'r') as v:
         #         self.metainfo = v.get_metainfo()
         #     self.render_summaries()

@@ -113,7 +113,14 @@ class NotPsiVoilaFile(VoilaException):
         m = 'Voila file has not been quantified using PSI: ' + file_name
         super().__init__(m)
 
+
 class NotDeltaPsiVoilaFile(VoilaException):
     def __init__(self, file_name):
         m = 'Voila file has not been quantified using DeltaPSI: ' + file_name
+        super().__init__(m)
+
+
+class NotHeterogenVoilaFile(VoilaException):
+    def __init__(self, file_name):
+        m = 'Voila file has not been quantified using Heterogen: ' + file_name
         super().__init__(m)
