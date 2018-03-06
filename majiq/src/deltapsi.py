@@ -4,12 +4,12 @@ import sys
 
 import majiq.src.io as majiq_io
 import psutil
+from majiq.src.psi import deltapsi_posterior, gen_prior_matrix
 
 import majiq.src.logger as majiq_logger
 from majiq.src.basic_pipeline import BasicPipeline, pipeline_run
 from majiq.src.constants import *
 from majiq.src.multiproc import QueueMessage, process_conf, queue_manager, process_wrapper, chunks
-from majiq.src.psi import deltapsi_posterior, gen_prior_matrix
 from voila import constants
 from voila.api import Matrix
 from voila.constants import ANALYSIS_DELTAPSI

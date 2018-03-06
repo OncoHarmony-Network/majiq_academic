@@ -134,11 +134,8 @@ class ViewGene:
         coords_list = list(self.convert_lsv_to_coords(lsv_id))
         return next(exon for exon in self.gene.exons if coords_list == [exon.start, exon.end])
 
-    def lsv_exons(self, lsv, lsv_junctions=None):
-        if lsv_junctions is None:
-            lsv_junctions = self.lsv_junctions(lsv)
-
-        exons = {exon for junc in lsv_junctions for exon in self.gene.exons if junc.start in exon or junc.end in exon}
+    def lsv_exons(self, lsv):
+        exons = {exon for start, end in lsv.junctions for exon in self.gene.exons if start in exon or end in exon}
         yield from sorted(exons, key=lambda e: [e.start, e.end])
 
     def lsv_junctions(self, lsv):

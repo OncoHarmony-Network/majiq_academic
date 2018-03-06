@@ -82,11 +82,11 @@ class MatrixHdf5:
 
     @property
     def prior(self):
-        return self.h['prior'].value
+        return self.h['metadata']['prior'].value
 
     @prior.setter
-    def prior(self, p):
-        self.h.create_dataset('prior', data=collapse_matrix(p))
+    def prior(self, ps):
+        self.h.create_dataset('metadata/prior', data=[collapse_matrix(p) for p in ps])
 
     @property
     def analysis_type(self):
