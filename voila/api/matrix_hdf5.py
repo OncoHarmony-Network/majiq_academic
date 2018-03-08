@@ -6,7 +6,8 @@ import h5py
 import numpy
 
 from voila import constants
-from voila.exceptions import GeneIdNotFoundInVoilaFile, LockRequired
+from voila.exceptions import GeneIdNotFoundInVoilaFile
+from voila.utils.voila_log import voila_log
 from voila.vlsv import collapse_matrix
 
 
@@ -25,8 +26,6 @@ class MatrixHdf5:
         filename = os.path.expanduser(filename)
         self.dt = h5py.special_dtype(vlen=numpy.unicode)
         self.h = h5py.File(filename, mode, libver='latest')
-        if mode[0] in tuple('w', 'a') and lock is None:
-            raise LockRequired(filename)
         self.lock = lock
 
     def __enter__(self):
@@ -41,14 +40,17 @@ class MatrixHdf5:
 
         :param lsv_id: unique LSV identifier
         :param key: key for value
-        :param value: data to store
+        :param data: data to store
         :return: None
         """
         gene_id = lsv_id_to_gene_id(lsv_id)
         name = "lsvs/{0}/{1}/{2}".format(gene_id, lsv_id, key)
-        self.lock.acquire()
-        self.h.create_dataset(name, data=data)
-        self.lock.release()
+        try:
+            self.lock.acquire()
+            self.h.create_dataset(name, data=data)
+            self.lock.release()
+        except AttributeError:
+            self.h.create_dataset(name, data=data)
 
     def add_multiple(self, lsv_id, **kwargs):
         """
