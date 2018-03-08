@@ -33,6 +33,25 @@ class MatrixHdf5:
     def __exit__(self, exc_type, exc_val, exc_tb):
         self.h.close()
 
+    def _add(self, lsv_id: str, key: str, data):
+        gene_id = lsv_id_to_gene_id(lsv_id)
+        try:
+            lsvs_grp = self.h['lsvs']
+        except KeyError:
+            lsvs_grp = self.h.create_group('lsvs')
+
+        try:
+            gene_id_grp = lsvs_grp[gene_id]
+        except KeyError:
+            gene_id_grp = lsvs_grp.create_group(gene_id)
+
+        try:
+            lsv_id_grp = gene_id_grp[lsv_id]
+        except KeyError:
+            lsv_id_grp = gene_id_grp.create_group(lsv_id)
+
+        lsv_id_grp.create_dataset(key, data=data)
+
     def add(self, lsv_id: str, key: str, data):
         """
         Add a key/value pair for a LSV ID.
@@ -42,14 +61,12 @@ class MatrixHdf5:
         :param data: data to store
         :return: None
         """
-        gene_id = lsv_id_to_gene_id(lsv_id)
-        name = "lsvs/{0}/{1}/{2}".format(gene_id, lsv_id, key)
         try:
             self.lock.acquire()
-            self.h.create_dataset(name, data=data)
+            self._add(lsv_id, key, data)
             self.lock.release()
         except AttributeError:
-            self.h.create_dataset(name, data=data)
+            self._add(lsv_id, key, data)
 
     def add_multiple(self, lsv_id, **kwargs):
         """
