@@ -1,5 +1,6 @@
 import os
 from abc import ABC, abstractmethod
+from multiprocessing import Lock
 from typing import List
 
 import h5py
@@ -25,6 +26,7 @@ class MatrixHdf5:
         filename = os.path.expanduser(filename)
         self.dt = h5py.special_dtype(vlen=numpy.unicode)
         self.h = h5py.File(filename, mode, libver='latest')
+        self.lock = Lock()
 
     def __enter__(self):
         return self
@@ -32,7 +34,7 @@ class MatrixHdf5:
     def __exit__(self, exc_type, exc_val, exc_tb):
         self.h.close()
 
-    def add(self, lsv_id: str, key: str, value):
+    def add(self, lsv_id: str, key: str, data):
         """
         Add a key/value pair for a LSV ID.
 
@@ -42,7 +44,10 @@ class MatrixHdf5:
         :return: None
         """
         gene_id = lsv_id_to_gene_id(lsv_id)
-        self.h.create_dataset(os.path.join('lsvs', gene_id, lsv_id, key), data=value)
+        name = "lsvs/{0}/{1}/{2}".format(gene_id, lsv_id, key)
+        self.lock.acquire()
+        self.h.create_dataset(name, data=data)
+        self.lock.release()
 
     def add_multiple(self, lsv_id, **kwargs):
         """
@@ -119,14 +124,6 @@ class MatrixHdf5:
     @stat_names.setter
     def stat_names(self, s):
         self.h.create_dataset('metadata/stat_names', data=numpy.array(s, dtype=self.dt))
-
-    @property
-    def metadata(self):
-        return {
-            'analysis_type': self.analysis_type,
-            'group_names': self.group_names,
-            'experiment_names': self.experiment_names
-        }
 
     @property
     def gene_ids(self):
@@ -216,6 +213,10 @@ class MatrixType(ABC):
         if self._lsv_type is None:
             self._lsv_type = self.get('lsv_type')
         return self._lsv_type
+
+    @property
+    def intron_retention(self):
+        return 'i' == self.lsv_type[-1]
 
     @property
     def reference_exon(self):

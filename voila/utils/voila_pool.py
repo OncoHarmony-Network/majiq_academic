@@ -24,3 +24,7 @@ class VoilaPool:
 
     def __getattr__(self, name):
         return getattr(self.instance, name)
+
+    def close(self):
+        self.pool.close()
+        self.pool.join()

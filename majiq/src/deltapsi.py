@@ -142,7 +142,7 @@ class DeltaPsi(BasicPipeline):
                 out_h5p.file_version = constants.VOILA_FILE_VERSION
                 out_h5p.analysis_type = ANALYSIS_DELTAPSI
                 out_h5p.group_names = self.names
-                out_h5p.prior = []
+                out_h5p.prior = prior_matrix
                 out_h5p.experiment_names = [exps1, exps2]
                 queue_manager(out_h5p, self.lock, self.queue, num_chunks=nthreads, func=self.store_results,
                               logger=logger, junc_info=junc_info)

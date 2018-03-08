@@ -1,7 +1,8 @@
 import math
 from itertools import zip_longest
 
-import numpy
+import numpy as np
+import scipy.special
 
 from voila import constants
 from voila.api.matrix_hdf5 import DeltaPsi, Psi
@@ -11,31 +12,33 @@ from voila.vlsv import get_expected_dpsi, is_lsv_changing, matrix_area
 
 
 def unpack_means(value):
-    if numpy.size(value, 0) == 1:
-        value = numpy.append(value, numpy.array(1 - value[0]))
+    if np.size(value, 0) == 1:
+        value = np.append(value, np.array(1 - value[0]))
     return value
 
 
 def unpack_bins(value):
-    if numpy.size(value, 0) == 1:
-        value = numpy.append(value, [numpy.flip(value[-1], 0)], axis=0)
+    if np.size(value, 0) == 1:
+        value = np.append(value, [np.flip(value[-1], 0)], axis=0)
     return value
 
 
-def passes_probability_threshold(bins, probability_threshold):
-    return any(matrix_area(b, collapsed_mat=True) >= probability_threshold for b in bins)
+def passes_probability_threshold(bins, probability_threshold, threshold):
+    return any(matrix_area(b, threshold=threshold) >= probability_threshold for b in bins)
 
 
 class ViewMatrix:
     @property
     def view_metadata(self):
-        metadata = self.metadata
         group_names = self.group_names
-        experiment_names = metadata['experiment_names']
+        experiment_names = self.experiment_names
+        metadata = {'group_names': group_names}
 
         if experiment_names.size > 1:
-            metadata['experiment_names'] = [numpy.insert(exps, 0, '{0} Combined'.format(group)) for exps, group in
+            metadata['experiment_names'] = [np.insert(exps, 0, '{0} Combined'.format(group)) for exps, group in
                                             zip(experiment_names, group_names)]
+        else:
+            metadata['experiment_names'] = experiment_names
 
         return metadata
 
@@ -123,7 +126,7 @@ class ViewPsi(Psi, ViewMatrix):
         @property
         def group_means_rounded(self):
             for group_name, means in self.group_means:
-                yield group_name, numpy.around(tuple(means), decimals=3)
+                yield group_name, np.around(tuple(means), decimals=3)
 
         @property
         def bins(self):
@@ -138,43 +141,28 @@ class ViewPsi(Psi, ViewMatrix):
         def variances(self):
             def get_expected_psi(bins):
                 step = 1.0 / bins.size
-                projection_prod = bins * numpy.arange(step / 2, 1, step)
-                return numpy.sum(projection_prod)
+                projection_prod = bins * np.arange(step / 2, 1, step)
+                return np.sum(projection_prod)
 
             for b in self.bins:
                 epsi = get_expected_psi(b)
                 step_bins = 1.0 / b.size
-                projection_prod = b * numpy.arange(step_bins / 2, 1, step_bins) ** 2
-                yield numpy.sum(projection_prod) - epsi ** 2
+                projection_prod = b * np.arange(step_bins / 2, 1, step_bins) ** 2
+                yield np.sum(projection_prod) - epsi ** 2
 
         @property
         def junction_count(self):
             return len(tuple(self.means))
 
-        def is_lsv_changing(self, threshold):
-            return is_lsv_changing(self.means, threshold)
-
-        def passes_probability_threshold(self, probability_threshold):
-            return passes_probability_threshold(self.bins, probability_threshold)
-
     def psi(self, lsv_id):
         return self._ViewPsi(self, lsv_id)
 
     def valid_lsvs(self, lsv_ids):
-        threshold = None
-        probability_threshold = None
         args = self.args
 
-        if hasattr(args, 'show_all') and not args.show_all:
-            threshold = args.threshold
-            probability_threshold = args.probability_threshold
-
         for lsv_id in lsv_ids:
-            psi = self.psi(lsv_id)
             if not args.lsv_ids or lsv_id in args.lsv_ids:
-                if not threshold or psi.is_lsv_changing(threshold):
-                    if not probability_threshold or psi.passes_probability_threshold(probability_threshold):
-                        yield lsv_id
+                yield lsv_id
 
 
 class ViewDeltaPsi(DeltaPsi, ViewMatrix):
@@ -183,6 +171,9 @@ class ViewDeltaPsi(DeltaPsi, ViewMatrix):
         self.args = args
 
     class _ViewDeltaPsi(DeltaPsi._DeltaPsi):
+        def __init__(self, matrix_hdf5, lsv_id):
+            super().__init__(matrix_hdf5, lsv_id)
+
         def get_all(self):
             yield 'lsv_id', self.lsv_id
             yield '_id', self.lsv_id
@@ -226,7 +217,7 @@ class ViewDeltaPsi(DeltaPsi, ViewMatrix):
 
         @property
         def means_rounded(self):
-            return numpy.around(tuple(self.means), decimals=3)
+            return np.around(tuple(self.means), decimals=3)
 
         @property
         def group_means(self):
@@ -237,7 +228,7 @@ class ViewDeltaPsi(DeltaPsi, ViewMatrix):
         def group_means_rounded(self):
             group_names = self.matrix_hdf5.group_names
             for group_name, means in zip(group_names, self.group_means):
-                yield group_name, numpy.around(means, decimals=3)
+                yield group_name, np.around(means, decimals=3)
 
         @property
         def excl_incl(self):
@@ -254,8 +245,19 @@ class ViewDeltaPsi(DeltaPsi, ViewMatrix):
         def is_lsv_changing(self, threshold):
             return is_lsv_changing(self.means, threshold)
 
-        def passes_probability_threshold(self, probability_threshold):
-            return passes_probability_threshold(self.bins, probability_threshold)
+        def probability_threshold(self, probability_threshold, threshold):
+            return any(matrix_area(b, threshold=threshold) >= probability_threshold for b in self.bins)
+
+        def high_probability_non_changing(self, probability_threshold, threshold):
+            prior = np.log(self.matrix_hdf5.prior[1 if self.intron_retention else 0])
+
+            def non_changing():
+                for bin in self.bins:
+                    A = np.log(bin) - prior
+                    R = np.exp(A - scipy.special.logsumexp(A))
+                    yield matrix_area(R, threshold=threshold, non_changing=True) >= probability_threshold
+
+            return all(non_changing())
 
     def delta_psi(self, lsv_id):
         return self._ViewDeltaPsi(self, lsv_id)
@@ -265,7 +267,7 @@ class ViewDeltaPsi(DeltaPsi, ViewMatrix):
         probability_threshold = None
         args = self.args
 
-        if hasattr(args, 'show_all') and not args.show_all:
+        if not args.show_all:
             threshold = args.threshold
             probability_threshold = args.probability_threshold
 
@@ -273,5 +275,5 @@ class ViewDeltaPsi(DeltaPsi, ViewMatrix):
             delta_psi = self.delta_psi(lsv_id)
             if not args.lsv_ids or lsv_id in args.lsv_ids:
                 if not threshold or delta_psi.is_lsv_changing(threshold):
-                    if not probability_threshold or delta_psi.passes_probability_threshold(probability_threshold):
+                    if not probability_threshold or delta_psi.probability_threshold(probability_threshold, threshold):
                         yield lsv_id

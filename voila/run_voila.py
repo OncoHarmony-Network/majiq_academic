@@ -184,9 +184,12 @@ def voila_parser():
     deltapsi.add_argument('--threshold', type=float, default=0.2,
                           help='Filter out LSVs with no junctions predicted to change over a certain value '
                                '(in percentage). The default is "0.2".')
+    deltapsi.add_argument('--non-changing-threshold', type=float, default=0.05, help='The default is "0.05".')
     deltapsi.add_argument('--show-all', action='store_true',
                           help='Show all LSVs including those with no junction with significant change predicted.')
-    deltapsi.add_argument('--probability-threshold', type=float, default=None)
+    deltapsi.add_argument('--probability-threshold', required='--high-confidence-non-changing' in sys.argv, type=float,
+                          default=None)
+    deltapsi.add_argument('--high-confidence-non-changing', action='store_true')
 
     # heterogen parser
     heterogen = new_subparser()
@@ -196,7 +199,7 @@ def voila_parser():
     subparsers.add_parser('splice-graph', parents=[splice_graph]).set_defaults(func=RenderSpliceGraphs)
     subparsers.add_parser('psi', parents=[splice_graph, psi]).set_defaults(func=Psi)
     subparsers.add_parser('deltapsi', parents=[splice_graph, psi, deltapsi]).set_defaults(func=DeltaPsi)
-    subparsers.add_parser('heterogen', parents=[splice_graph, psi, deltapsi]).set_defaults(func=Heterogen)
+    subparsers.add_parser('heterogen', parents=[splice_graph, psi, deltapsi, heterogen]).set_defaults(func=Heterogen)
     return parser
 
 
@@ -247,8 +250,6 @@ def main():
         elapsed_str = secs2hms(time.time() - start_time)
         log.info("Execution time: {0}.".format(elapsed_str))
 
-        VoilaPool().pool.close()
-
     except KeyboardInterrupt:
         log.warning('Voila exiting')
 
@@ -262,6 +263,8 @@ def main():
     except Exception as e:
         log.exception(e)
         exit(2)
+
+    VoilaPool().close()
 
 
 if __name__ == '__main__':

@@ -69,7 +69,7 @@ def delta_psi_tab_output(args, voila_links):
     tsv_file = join(args.output, output_html.rsplit('.html', 1)[0] + '.tsv')
 
     with ViewDeltaPsi(args) as m, SpliceGraph(args.splice_graph) as sg:
-        metadata = m.metadata
+        metadata = m.view_metadata
 
         fieldnames = ['#Gene Name', 'Gene ID', 'LSV ID', 'E(PSI) per LSV junction', 'Var(E(PSI)) per LSV junction']
         group1 = metadata['group_names'][0]
@@ -128,8 +128,7 @@ def delta_psi_tab_output(args, voila_links):
                             range(np.size(lsv.bins, 0))
                         ),
                         'P(|dPSI|>=%.2f) per LSV junction' % args.threshold: semicolon_join(
-                            vlsv.matrix_area(np.array(bin), args.threshold, collapsed_mat=True).sum() for bin in
-                            lsv.bins
+                            vlsv.matrix_area(b, threshold=args.threshold).sum() for b in lsv.bins
                         ),
                         '%s E(PSI)' % group1: semicolon_join(
                             '%.3f' % i for i in group_means[0]
