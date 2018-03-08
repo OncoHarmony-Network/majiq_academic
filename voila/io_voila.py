@@ -4,7 +4,6 @@ from os.path import join
 
 import numpy as np
 
-from voila import vlsv
 from voila.api import SpliceGraph
 from voila.api.view_matrix import ViewDeltaPsi, ViewPsi
 from voila.api.view_splice_graph import ViewGene
@@ -12,6 +11,7 @@ from voila.constants import JUNCTION_TYPE_RNASEQ
 from voila.utils import utils_voila
 from voila.utils.voila_log import voila_log
 from voila.view.html import Html
+from voila.vlsv import matrix_area
 
 __author__ = 'abarrera'
 
@@ -76,6 +76,7 @@ def delta_psi_tab_output(args, voila_links):
         group2 = metadata['group_names'][1]
         fieldnames = fieldnames[:3] + ['E(dPSI) per LSV junction',
                                        'P(|dPSI|>=%.2f) per LSV junction' % args.threshold,
+                                       'P(|dPSI|<=%.2f) per LSV junction' % args.non_changing_threshold,
                                        '%s E(PSI)' % group1, '%s E(PSI)' % group2]
 
         fieldnames += ['LSV Type', 'A5SS', 'A3SS', 'ES', 'Num. Junctions', 'Num. Exons', 'De Novo Junctions', 'chr',
@@ -128,7 +129,11 @@ def delta_psi_tab_output(args, voila_links):
                             range(np.size(lsv.bins, 0))
                         ),
                         'P(|dPSI|>=%.2f) per LSV junction' % args.threshold: semicolon_join(
-                            vlsv.matrix_area(b, threshold=args.threshold).sum() for b in lsv.bins
+                            matrix_area(b, threshold=args.threshold).sum() for b in lsv.bins
+                        ),
+                        'P(|dPSI|<=%.2f) per LSV junction' % args.non_changing_threshold: semicolon_join(
+                            matrix_area(b, threshold=args.non_changing_threshold, non_changing=True).sum() for b in
+                            lsv.bins
                         ),
                         '%s E(PSI)' % group1: semicolon_join(
                             '%.3f' % i for i in group_means[0]

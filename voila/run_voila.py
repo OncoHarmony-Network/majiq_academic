@@ -189,7 +189,6 @@ def voila_parser():
                           help='Show all LSVs including those with no junction with significant change predicted.')
     deltapsi.add_argument('--probability-threshold', required='--high-confidence-non-changing' in sys.argv, type=float,
                           default=None)
-    deltapsi.add_argument('--high-confidence-non-changing', action='store_true')
 
     # heterogen parser
     heterogen = new_subparser()

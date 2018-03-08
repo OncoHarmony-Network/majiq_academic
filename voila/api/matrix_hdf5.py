@@ -7,7 +7,6 @@ import numpy
 
 from voila import constants
 from voila.exceptions import GeneIdNotFoundInVoilaFile
-from voila.utils.voila_log import voila_log
 from voila.vlsv import collapse_matrix
 
 
