@@ -1,13 +1,12 @@
 import os
 from abc import ABC, abstractmethod
-from multiprocessing import Lock
 from typing import List
 
 import h5py
 import numpy
 
 from voila import constants
-from voila.exceptions import GeneIdNotFoundInVoilaFile
+from voila.exceptions import GeneIdNotFoundInVoilaFile, LockRequired
 from voila.vlsv import collapse_matrix
 
 
@@ -16,7 +15,7 @@ def lsv_id_to_gene_id(lsv_id):
 
 
 class MatrixHdf5:
-    def __init__(self, filename, mode='r'):
+    def __init__(self, filename, mode='r', lock=None):
         """
         Access voila's HDF5 file.
 
@@ -26,7 +25,9 @@ class MatrixHdf5:
         filename = os.path.expanduser(filename)
         self.dt = h5py.special_dtype(vlen=numpy.unicode)
         self.h = h5py.File(filename, mode, libver='latest')
-        self.lock = Lock()
+        if mode[0] in tuple('w', 'a') and lock is None:
+            raise LockRequired(filename)
+        self.lock = lock
 
     def __enter__(self):
         return self
