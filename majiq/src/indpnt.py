@@ -109,7 +109,9 @@ class independent(BasicPipeline):
         lsv_type = self.lsv_type_dict[lsv_id]
         groups = []
         junction_stats = []
-        output.heterogen(lsv_id).add(lsv_type=lsv_type, groups=groups, junction_stats=junction_stats)
+        junctions = []
+        output.heterogen(lsv_id).add(lsv_type=lsv_type, groups=groups, junction_stats=junction_stats,
+                                     junctions=junctions)
 
     def run(self):
         self.independent()
