@@ -29,23 +29,24 @@ def het_quantification(list_of_lsv, chnk, conf, logger):
             sys.stdout.flush()
 
         boots = [np.array(f_list[0][lsv_id].coverage), np.array(f_list[1][lsv_id].coverage)]
-        lsv_het = Het()
         msamples = boots[0].shape[2]
+        # stat_het = []
+        grp_het = []
         assert boots[0].shape[2] == boots[1].shape[2], "LSV %s, has different types in %s and %s (%s vs %s). " \
                                                        "Please check that the conditions has been build together." \
                                                        % (lsv_id, conf.names[0], conf.names[1],
                                                           boots[0].shape[2], boots[1].shape[2])
-        samps = heterogen_posterior(boots, lsv_het, msamples, conf.nsamples, conf.vwindow, num_exp,
+        samps = heterogen_posterior(boots, grp_het, msamples, conf.nsamples, conf.vwindow, num_exp,
                                     conf.nbins, conf.lsv_type_dict[lsv_id])
 
         out_stats = do_test_stats(samps, conf.stats, conf.minsamps)
-        for stat_idx in range(out_stats.shape[1]):
-            lsv_het.add_junction_stats(out_stats[:, stat_idx])
+        # for stat_idx in range(out_stats.shape[1]):
+        #     stat_het.append(out_stats[:, stat_idx])
 
             # if num_ways == 2:
             #     break
 
-        qm = QueueMessage(QUEUE_MESSAGE_HETER_DELTAPSI, (lsv_het, lsv_id), chnk)
+        qm = QueueMessage(QUEUE_MESSAGE_HETER_DELTAPSI, (out_stats, grp_het, lsv_id), chnk)
         conf.queue.put(qm, block=True)
 
 
@@ -101,17 +102,10 @@ def calc_independent(args):
 class independent(BasicPipeline):
 
     def store_results(self, output, results, msg_type, extra):
-        # lsv_graph = self.lsv_type_dict[results[-1]]
-        # output_h5dfp.add_lsv(VoilaLsv(bins_list=None, lsv_graphic=lsv_graph, psi1=None, psi2=None,
-        #                               means_psi1=None, means_psi2=None, het=val.get_value()[0]))
-
-        lsv_id = results[-1]
+        lsv_id = results[2]
         lsv_type = self.lsv_type_dict[lsv_id]
-        groups = []
-        junction_stats = []
-        junctions = []
-        output.heterogen(lsv_id).add(lsv_type=lsv_type, groups=groups, junction_stats=junction_stats,
-                                     junctions=junctions)
+        output.heterogen(lsv_id).add(lsv_type=lsv_type, groups=results[1], junction_stats=results[0],
+                                     junctions=extra['junc_info'][lsv_id])
 
     def run(self):
         self.independent()

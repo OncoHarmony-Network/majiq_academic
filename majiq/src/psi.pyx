@@ -267,7 +267,7 @@ def deltapsi_posterior(np.ndarray psi1, np.ndarray psi2, np.ndarray prior_matrix
 
 @cython.boundscheck(False) # turn off bounds-checking for entire function
 @cython.wraparound(False)  # turn off negative index wrapping for entire function
-cpdef list heterogen_posterior(list boots, object out_het, int m_samples, int psi_samples, float vwindow, list num_exp,
+cpdef list heterogen_posterior(list boots, list grp_het, int m_samples, int psi_samples, float vwindow, list num_exp,
                           int nbins, str lsv_type):
 
     cdef np.ndarray alpha_prior, beta_prior
@@ -280,7 +280,7 @@ cpdef list heterogen_posterior(list boots, object out_het, int m_samples, int ps
         samps[grp_idx], mean_psi, mu_psi = _heterogen_posterior(boots[grp_idx], m_samples, psi_samples, vwindow,
                                                                 num_exp[grp_idx], nbins, alpha_prior, beta_prior)
 
-        out_het.add_group(mu_psi, mean_psi)
+        grp_het.append((mu_psi, mean_psi))
         #print(grp_idx, mu_psi)
 
     return samps
