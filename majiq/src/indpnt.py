@@ -171,7 +171,7 @@ class independent(BasicPipeline):
                 out_h5p.experiment_names = [exps1, exps2]
                 out_h5p.stat_names = self.stats
                 queue_manager(out_h5p, self.lock, self.queue, num_chunks=nthreads, func=self.store_results,
-                              logger=logger, lsv_type=self.lsv_type_dict)
+                              junc_info=junc_info, logger=logger, lsv_type=self.lsv_type_dict)
             pool.join()
 
         if self.mem_profile:
