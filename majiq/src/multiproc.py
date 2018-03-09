@@ -31,13 +31,14 @@ def process_wrapper(args_vals):
             mem_allocated = int(psutil.Process().memory_info().rss) / (1024 ** 2)
             logger.info("Max Memory used %.2f MB" % mem_allocated)
 
-        # qm = QueueMessage(QUEUE_MESSAGE_END_WORKER, status, chnk)
-        # logger.debug('SENDING END MESSAGE')
-        # process_conf.queue.put(qm, block=True)
-        # process_conf.lock[chnk].acquire()
-        # logger.debug('SENDING LOCK RELEASED')
-        # process_conf.lock[chnk].release()
-        # process_conf.queue.close()
+        if not process_conf.dpsi:
+            qm = QueueMessage(QUEUE_MESSAGE_END_WORKER, status, chnk)
+            logger.debug('SENDING END MESSAGE')
+            process_conf.queue.put(qm, block=True)
+            process_conf.lock[chnk].acquire()
+            logger.debug('SENDING LOCK RELEASED')
+            process_conf.lock[chnk].release()
+            process_conf.queue.close()
         majiq_logger.close_logger(logger)
 
 

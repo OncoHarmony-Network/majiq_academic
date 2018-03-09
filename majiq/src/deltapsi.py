@@ -92,7 +92,7 @@ class DeltaPsi(BasicPipeline):
         logger.info("Command: %s" % " ".join(sys.argv))
         logger.info("GROUP1: %s" % self.files1)
         logger.info("GROUP2: %s" % self.files2)
-
+        self.dpsi = True
         self.nbins = 20
         manager = mp.Manager()
         self.lsv_type_dict = manager.dict()
