@@ -198,10 +198,10 @@ def main():
                                            parents=[common, sampling, weights, wght])
     parser_weights.set_defaults(func=calc_weights)
 
-    parser_heterogen = subparsers.add_parser('heterogen', help='Calculate Delta PSI values given a pair of experiments '
-                                                             'groups. This approach does not assume underlying PSI)',
-                                             parents=[common, sampling, htrgen])
-    parser_heterogen.set_defaults(func=calc_independent)
+    # parser_heterogen = subparsers.add_parser('heterogen', help='Calculate Delta PSI values given a pair of experiments '
+    #                                                          'groups. This approach does not assume underlying PSI)',
+    #                                          parents=[common, sampling, htrgen])
+    # parser_heterogen.set_defaults(func=calc_independent)
 
     if len(sys.argv) == 1:
         parser.print_help()

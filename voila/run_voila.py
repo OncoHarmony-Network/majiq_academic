@@ -181,11 +181,13 @@ def voila_parser():
     # deltapsi parser
     deltapsi = new_subparser()
     deltapsi.add_argument('--threshold', type=float, default=0.2,
-                          help='Filter out LSVs with no junctions predicted to change over a certain value '
-                               '(in percentage). The default is "0.2".')
+                          help='Filter out LSVs with no junctions predicted to change over a certain value. Even when '
+                               'show-all is used this value is still used to calculate the probability in the TSV. The '
+                               'default is "0.2".')
+    deltapsi.add_argument('--non-changing-threshold', type=float, default=0.05, help='The default is "0.05".')
+    deltapsi.add_argument('--probability-threshold', type=float, default=None, help='This is off by default.')
     deltapsi.add_argument('--show-all', action='store_true',
                           help='Show all LSVs including those with no junction with significant change predicted.')
-    deltapsi.add_argument('--percent-threshold', type=float, default=None)
 
     # subparsers
     subparsers = parser.add_subparsers(help='')

@@ -83,32 +83,28 @@ def collapse_matrix(matrix):
     return np.array(collapse)
 
 
-def matrix_area(matrix, V=0.2, absolute=True, collapsed_mat=False):
+def matrix_area(matrix, threshold, non_changing=False):
     """
-    Returns the probability of an event to be above a certain threshold. The absolute flag describes if the value is absolute.
-    :param collapsed_mat:
-    :param V:
-    :param absolute:
+    Returns the probability of an event to be above a certain threshold.
+
+    :param non_changing:
+    :param threshold:
     :param matrix:
     :return:
     """
+
     collapse = matrix
-    if not collapsed_mat:
-        collapse = collapse_matrix(matrix)
     collapse = np.concatenate(([0], collapse))
     collapse = np.cumsum(collapse)
     collapse /= collapse[-1]
     xbins = np.linspace(-1, 1, num=collapse.size)
-    if absolute:
-        Vabs = abs(V)
-        left, right = np.interp([-Vabs, Vabs], xbins, collapse, left=0, right=1)
-        area = left + (1 - right)
+    abs_threshold = abs(threshold)
+    left, right = np.interp([-abs_threshold, abs_threshold], xbins, collapse, left=0, right=1)
+    if non_changing:
+        area = right - left
     else:
-        area = np.interp(V, xbins, collapse, left=0, right=1)
-        if V >= 0:
-            area = 1 - area
-    area = np.clip(area, 0, 1)
-    return area
+        area = left + (1 - right)
+    return np.clip(area, 0, 1)
 
 
 def is_lsv_changing(means, threshold):

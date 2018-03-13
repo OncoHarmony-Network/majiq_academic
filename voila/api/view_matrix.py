@@ -1,24 +1,25 @@
 import math
 from itertools import zip_longest
 
-import numpy
+import numpy as np
+import scipy.special
 
 from voila import constants
 from voila.api.matrix_hdf5 import DeltaPsi, Psi
 from voila.exceptions import NoLsvsFound
 from voila.utils.voila_log import voila_log
-from voila.vlsv import get_expected_dpsi, matrix_area, is_lsv_changing
+from voila.vlsv import get_expected_dpsi, is_lsv_changing, matrix_area
 
 
 def unpack_means(value):
-    if numpy.size(value, 0) == 1:
-        value = numpy.append(value, numpy.array(1 - value[0]))
+    if np.size(value, 0) == 1:
+        value = np.append(value, np.array(1 - value[0]))
     return value
 
 
 def unpack_bins(value):
-    if numpy.size(value, 0) == 1:
-        value = numpy.append(value, [numpy.flip(value[-1], 0)], axis=0)
+    if np.size(value, 0) == 1:
+        value = np.append(value, [np.flip(value[-1], 0)], axis=0)
     return value
 
 
@@ -57,7 +58,7 @@ class ViewPsi(Psi):
         @property
         def group_means_rounded(self):
             for group_name, means in self.group_means:
-                yield group_name, numpy.around(tuple(means), decimals=3)
+                yield group_name, np.around(tuple(means), decimals=3)
 
         @property
         def bins(self):
@@ -72,14 +73,14 @@ class ViewPsi(Psi):
         def variances(self):
             def get_expected_psi(bins):
                 step = 1.0 / bins.size
-                projection_prod = bins * numpy.arange(step / 2, 1, step)
-                return numpy.sum(projection_prod)
+                projection_prod = bins * np.arange(step / 2, 1, step)
+                return np.sum(projection_prod)
 
             for b in self.bins:
                 epsi = get_expected_psi(b)
                 step_bins = 1.0 / b.size
-                projection_prod = b * numpy.arange(step_bins / 2, 1, step_bins) ** 2
-                yield numpy.sum(projection_prod) - epsi ** 2
+                projection_prod = b * np.arange(step_bins / 2, 1, step_bins) ** 2
+                yield np.sum(projection_prod) - epsi ** 2
 
         @property
         def junction_count(self):
@@ -134,7 +135,7 @@ class ViewDeltaPsi(DeltaPsi):
 
         @property
         def means_rounded(self):
-            return numpy.around(tuple(self.means), decimals=3)
+            return np.around(tuple(self.means), decimals=3)
 
         @property
         def group_means(self):
@@ -145,7 +146,7 @@ class ViewDeltaPsi(DeltaPsi):
         def group_means_rounded(self):
             group_names = self.matrix_hdf5.group_names
             for group_name, means in zip(group_names, self.group_means):
-                yield group_name, numpy.around(means, decimals=3)
+                yield group_name, np.around(means, decimals=3)
 
         @property
         def excl_incl(self):
@@ -158,6 +159,17 @@ class ViewDeltaPsi(DeltaPsi):
         @property
         def junction_count(self):
             return len(tuple(self.means))
+
+        @property
+        def intron_retention(self):
+            return self.lsv_type[-1] == 'i'
+
+        def high_probability_non_changing(self, non_changing_threshold):
+            prior = np.log(self.matrix_hdf5.prior[1 if self.intron_retention else 0])
+            for bin in self.bins:
+                A = np.log(bin) - prior
+                R = np.exp(A - scipy.special.logsumexp(A))
+                yield matrix_area(R, non_changing_threshold, non_changing=True)
 
     def delta_psi(self, lsv_id):
         return self._ViewDeltaPsi(self, lsv_id)
@@ -207,7 +219,7 @@ class ViewMatrix:
         group_names = self.matrix.group_names
 
         if experiment_names.size > 1:
-            metadata['experiment_names'] = [numpy.insert(exps, 0, '{0} Combined'.format(group)) for exps, group in
+            metadata['experiment_names'] = [np.insert(exps, 0, '{0} Combined'.format(group)) for exps, group in
                                             zip(experiment_names, group_names)]
 
         return metadata
@@ -228,34 +240,26 @@ class ViewMatrix:
 class ViewPsiMatrix(ViewMatrix):
     def valid_lsvs(self, args, lsv_ids):
         threshold = None
-        percent_threshold = None
-        m_a = matrix_area
 
         if hasattr(args, 'show_all') and not args.show_all:
             threshold = args.threshold
-            percent_threshold = args.percent_threshold
 
         for lsv_id in lsv_ids:
             dpsi = self.matrix.psi(lsv_id)
             if not args.lsv_ids or lsv_id in args.lsv_ids:
                 if not threshold or is_lsv_changing(dpsi.means, threshold):
-                    if not percent_threshold or any(m_a(b, collapsed_mat=True) >= percent_threshold for b in dpsi.bins):
-                        yield lsv_id
+                    yield lsv_id
 
 
 class ViewDeltaPsiMatrix(ViewPsiMatrix):
     def valid_lsvs(self, args, lsv_ids):
         threshold = None
-        percent_threshold = None
-        m_a = matrix_area
 
         if hasattr(args, 'show_all') and not args.show_all:
             threshold = args.threshold
-            percent_threshold = args.percent_threshold
 
         for lsv_id in lsv_ids:
             dpsi = self.matrix.delta_psi(lsv_id)
             if not args.lsv_ids or lsv_id in args.lsv_ids:
                 if not threshold or is_lsv_changing(dpsi.means, threshold):
-                    if not percent_threshold or any(m_a(b, collapsed_mat=True) >= percent_threshold for b in dpsi.bins):
-                        yield lsv_id
+                    yield lsv_id

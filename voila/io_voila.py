@@ -3,6 +3,7 @@ import os
 from os.path import join
 
 import numpy as np
+from voila.vlsv import matrix_area
 
 from voila import vlsv
 from voila.api import SpliceGraph
@@ -60,23 +61,20 @@ def filter_exons(exons):
 
 
 def delta_psi_tab_output(args, voila_links):
-    def semicolon_join(value_list):
-        return ';'.join(str(x) for x in value_list)
-
     log = voila_log()
     log.info("Creating Tab-delimited output file")
     output_html = Html.get_output_html(args, args.voila_file)
     tsv_file = join(args.output, output_html.rsplit('.html', 1)[0] + '.tsv')
 
-    with ViewDeltaPsi(args.voila_file, 'r') as m, SpliceGraph(args.splice_graph) as sg:
+    with ViewDeltaPsi(args.voila_file) as m, SpliceGraph(args.splice_graph) as sg:
         metadata = m.metadata
-        experiment = m.experiment_names[0][0]
 
         fieldnames = ['#Gene Name', 'Gene ID', 'LSV ID', 'E(PSI) per LSV junction', 'Var(E(PSI)) per LSV junction']
         group1 = metadata['group_names'][0]
         group2 = metadata['group_names'][1]
         fieldnames = fieldnames[:3] + ['E(dPSI) per LSV junction',
                                        'P(|dPSI|>=%.2f) per LSV junction' % args.threshold,
+                                       'P(|dPSI|<=%.2f) per LSV junction' % args.non_changing_threshold,
                                        '%s E(PSI)' % group1, '%s E(PSI)' % group2]
 
         fieldnames += ['LSV Type', 'A5SS', 'A3SS', 'ES', 'Num. Junctions', 'Num. Exons', 'De Novo Junctions', 'chr',
@@ -129,8 +127,10 @@ def delta_psi_tab_output(args, voila_links):
                             range(np.size(lsv.bins, 0))
                         ),
                         'P(|dPSI|>=%.2f) per LSV junction' % args.threshold: semicolon_join(
-                            vlsv.matrix_area(np.array(bin), args.threshold, collapsed_mat=True).sum() for bin in
-                            lsv.bins
+                            matrix_area(b, args.threshold) for b in lsv.bins
+                        ),
+                        'P(|dPSI|<=%.2f) per LSV junction' % args.non_changing_threshold: semicolon_join(
+                            lsv.high_probability_non_changing(args.non_changing_threshold)
                         ),
                         '%s E(PSI)' % group1: semicolon_join(
                             '%.3f' % i for i in group_means[0]
