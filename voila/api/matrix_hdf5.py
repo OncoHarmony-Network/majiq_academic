@@ -15,6 +15,8 @@ def lsv_id_to_gene_id(lsv_id):
 
 
 class MatrixHdf5:
+    LSVS = 'lsvs'
+
     def __init__(self, filename, mode='r', lock=None):
         """
         Access voila's HDF5 file.
@@ -33,24 +35,14 @@ class MatrixHdf5:
     def __exit__(self, exc_type, exc_val, exc_tb):
         self.h.close()
 
-    def _add(self, lsv_id: str, key: str, data):
-        gene_id = lsv_id_to_gene_id(lsv_id)
-        try:
-            lsvs_grp = self.h['lsvs']
-        except KeyError:
-            lsvs_grp = self.h.create_group('lsvs')
-
-        try:
-            gene_id_grp = lsvs_grp[gene_id]
-        except KeyError:
-            gene_id_grp = lsvs_grp.create_group(gene_id)
-
-        try:
-            lsv_id_grp = gene_id_grp[lsv_id]
-        except KeyError:
-            lsv_id_grp = gene_id_grp.create_group(lsv_id)
-
-        lsv_id_grp.create_dataset(key, data=data)
+    def add_dataset(self, *args, **kwargs):
+        grp = self.h
+        for k in args[:-1]:
+            try:
+                grp = grp[k]
+            except KeyError:
+                grp = grp.create_group(k)
+        grp.create_dataset(args[-1], **kwargs)
 
     def add(self, lsv_id: str, key: str, data):
         """
@@ -61,12 +53,13 @@ class MatrixHdf5:
         :param data: data to store
         :return: None
         """
+        gene_id = lsv_id_to_gene_id(lsv_id)
         try:
             self.lock.acquire()
-            self._add(lsv_id, key, data)
+            self.add_dataset(self.LSVS, gene_id, lsv_id, key, data=data)
             self.lock.release()
         except AttributeError:
-            self._add(lsv_id, key, data)
+            self.add_dataset(self.LSVS, gene_id, lsv_id, key, data=data)
 
     def add_multiple(self, lsv_id, **kwargs):
         """
@@ -398,7 +391,7 @@ class Heterogen(MatrixHdf5):
             :param matrix_hdf5: matrix HDF5 object
             :param lsv_id: unique LSV identifier
             """
-            fields = ('lsv_type', 'junction_stats', 'groups')
+            fields = ('lsv_type', 'junction_stats', 'mu_psi', 'mean_psi', 'junctions')
             super().__init__(matrix_hdf5, lsv_id, fields)
 
     def heterogen(self, lsv_id):

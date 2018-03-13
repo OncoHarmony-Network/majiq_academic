@@ -1,11 +1,12 @@
 import math
+from abc import ABC, abstractmethod
 from itertools import zip_longest
 
 import numpy as np
 import scipy.special
 
 from voila import constants
-from voila.api.matrix_hdf5 import DeltaPsi, Psi
+from voila.api.matrix_hdf5 import DeltaPsi, Psi, Heterogen
 from voila.exceptions import NoLsvsFound
 from voila.utils.voila_log import voila_log
 from voila.vlsv import get_expected_dpsi, is_lsv_changing, matrix_area
@@ -27,7 +28,17 @@ def passes_probability_threshold(bins, probability_threshold, threshold):
     return any(matrix_area(b, threshold=threshold) >= probability_threshold for b in bins)
 
 
-class ViewMatrix:
+class ViewMatrix(ABC):
+    args = None
+    group_names = None
+    experiment_names = None
+    gene_ids = None
+
+    class _ViewMatrix:
+        @property
+        def junctions(self):
+            return self.get('junctions')
+
     @property
     def view_metadata(self):
         group_names = self.group_names
@@ -41,6 +52,14 @@ class ViewMatrix:
             metadata['experiment_names'] = experiment_names
 
         return metadata
+
+    @abstractmethod
+    def lsv_ids(self, gene_ids=None):
+        return ()
+
+    @abstractmethod
+    def valid_lsvs(self, lsv_ids):
+        return ()
 
     def view_lsv_ids(self):
         args = self.args
@@ -92,7 +111,7 @@ class ViewPsi(Psi, ViewMatrix):
         super().__init__(args.voila_file)
         self.args = args
 
-    class _ViewPsi(Psi._Psi):
+    class _ViewPsi(Psi._Psi, ViewMatrix._ViewMatrix):
         def get_all(self):
             yield 'lsv_id', self.lsv_id
             yield '_id', self.lsv_id
@@ -109,10 +128,6 @@ class ViewPsi(Psi, ViewMatrix):
             yield 'group_means_rounded', dict(self.group_means_rounded)
 
             yield from self.get_many(fields)
-
-        @property
-        def junctions(self):
-            return self.get('junctions')
 
         @property
         def means(self):
@@ -170,7 +185,7 @@ class ViewDeltaPsi(DeltaPsi, ViewMatrix):
         super().__init__(args.voila_file)
         self.args = args
 
-    class _ViewDeltaPsi(DeltaPsi._DeltaPsi):
+    class _ViewDeltaPsi(DeltaPsi._DeltaPsi, ViewMatrix._ViewMatrix):
         def __init__(self, matrix_hdf5, lsv_id):
             super().__init__(matrix_hdf5, lsv_id)
 
@@ -194,10 +209,6 @@ class ViewDeltaPsi(DeltaPsi, ViewMatrix):
             yield 'means_rounded', self.means_rounded
 
             yield from self.get_many(fields)
-
-        @property
-        def junctions(self):
-            return self.get('junctions')
 
         @property
         def bins(self):
@@ -248,32 +259,64 @@ class ViewDeltaPsi(DeltaPsi, ViewMatrix):
         def probability_threshold(self, probability_threshold, threshold):
             return any(matrix_area(b, threshold=threshold) >= probability_threshold for b in self.bins)
 
-        def high_probability_non_changing(self, probability_threshold, threshold):
+        def high_probability_non_changing(self):
             prior = np.log(self.matrix_hdf5.prior[1 if self.intron_retention else 0])
-
-            def non_changing():
-                for bin in self.bins:
-                    A = np.log(bin) - prior
-                    R = np.exp(A - scipy.special.logsumexp(A))
-                    yield matrix_area(R, threshold=threshold, non_changing=True) >= probability_threshold
-
-            return all(non_changing())
+            non_changing_threshold = self.matrix_hdf5.args.non_changing_threshold
+            for bin in self.bins:
+                A = np.log(bin) - prior
+                R = np.exp(A - scipy.special.logsumexp(A))
+                yield matrix_area(R, non_changing_threshold, non_changing=True)
 
     def delta_psi(self, lsv_id):
         return self._ViewDeltaPsi(self, lsv_id)
 
     def valid_lsvs(self, lsv_ids):
         threshold = None
-        probability_threshold = None
         args = self.args
 
         if not args.show_all:
             threshold = args.threshold
-            probability_threshold = args.probability_threshold
 
         for lsv_id in lsv_ids:
             delta_psi = self.delta_psi(lsv_id)
             if not args.lsv_ids or lsv_id in args.lsv_ids:
                 if not threshold or delta_psi.is_lsv_changing(threshold):
-                    if not probability_threshold or delta_psi.probability_threshold(probability_threshold, threshold):
-                        yield lsv_id
+                    yield lsv_id
+
+
+class ViewHeterogen(Heterogen, ViewMatrix):
+    def valid_lsvs(self, lsv_ids):
+        args = self.args
+
+        for lsv_id in lsv_ids:
+            if not args.lsv_ids or lsv_id in args.lsv_ids:
+                yield lsv_id
+
+    def __init__(self, args):
+        super().__init__(args.voila_file)
+        self.args = args
+
+    class _ViewHeterogen(Heterogen._Heterogen, ViewMatrix._ViewMatrix):
+        def __init__(self, matrix_hdf5, lsv_id):
+            super().__init__(matrix_hdf5, lsv_id)
+
+        @property
+        def mean_psi(self):
+            return self.get('mean_psi')
+
+        @property
+        def mu_psi(self):
+            return self.get('mu_psi')
+
+        @property
+        def junction_stats(self):
+            return self.get('junction_stats')
+
+    def heterogen(self, lsv_id):
+        return self._ViewHeterogen(self, lsv_id)
+
+    @property
+    def view_metadata(self):
+        return {**super().view_metadata, **{
+            'stat_names': self.stat_names
+        }}

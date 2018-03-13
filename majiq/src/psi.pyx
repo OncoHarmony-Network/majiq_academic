@@ -276,13 +276,17 @@ cpdef list heterogen_posterior(list boots, list grp_het, int m_samples, int psi_
 
     samps = [None, None]
     alpha_prior, beta_prior = _get_prior_params(lsv_type, num_ways)
+    mu_psi_list = []
+    mean_psi_list = []
     for grp_idx in range(2):
         samps[grp_idx], mean_psi, mu_psi = _heterogen_posterior(boots[grp_idx], m_samples, psi_samples, vwindow,
                                                                 num_exp[grp_idx], nbins, alpha_prior, beta_prior)
 
-        grp_het.append((mu_psi, mean_psi))
+        mu_psi_list.append(mu_psi)
+        mean_psi_list.append(mean_psi)
         #print(grp_idx, mu_psi)
-
+    grp_het.append(mu_psi_list)
+    grp_het.append(mean_psi_list)
     return samps
 
 @cython.boundscheck(False) # turn off bounds-checking for entire function

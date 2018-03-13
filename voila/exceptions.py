@@ -121,8 +121,8 @@ class NotDeltaPsiVoilaFile(VoilaException):
 
 
 class NotHeterogenVoilaFile(VoilaException):
-    def __init__(self, file_name):
-        m = 'Voila file has not been quantified using Heterogen: ' + file_name
+    def __init__(self, args):
+        m = 'Voila file has not been quantified using Heterogen: ' + args.voila_file
         super().__init__(m)
 
 

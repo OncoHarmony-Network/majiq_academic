@@ -4,7 +4,7 @@ import os
 from voila import constants, io_voila
 from voila.api.matrix_hdf5 import lsv_id_to_gene_id
 from voila.api.view_matrix import ViewPsi
-from voila.api.view_splice_graph import ViewSpliceGraph, ViewGene
+from voila.api.view_splice_graph import ViewSpliceGraph
 from voila.exceptions import NotPsiVoilaFile
 from voila.utils.voila_log import voila_log
 from voila.utils.voila_pool import VoilaPool

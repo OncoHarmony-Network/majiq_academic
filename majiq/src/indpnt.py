@@ -11,8 +11,7 @@ from majiq.src.constants import *
 from majiq.src.multiproc import QueueMessage, process_conf, queue_manager, process_wrapper, chunks
 from majiq.src.stats import operator, all_stats
 from voila.api import Matrix
-from voila.constants import ANALYSIS_HETEROGEN
-from voila.vlsv import Het
+from voila.constants import ANALYSIS_HETEROGEN, VOILA_FILE_VERSION
 
 
 def het_quantification(list_of_lsv, chnk, conf, logger):
@@ -43,8 +42,8 @@ def het_quantification(list_of_lsv, chnk, conf, logger):
         # for stat_idx in range(out_stats.shape[1]):
         #     stat_het.append(out_stats[:, stat_idx])
 
-            # if num_ways == 2:
-            #     break
+        # if num_ways == 2:
+        #     break
 
         qm = QueueMessage(QUEUE_MESSAGE_HETER_DELTAPSI, (out_stats, grp_het, lsv_id), chnk)
         conf.queue.put(qm, block=True)
@@ -104,7 +103,9 @@ class independent(BasicPipeline):
     def store_results(self, output, results, msg_type, extra):
         lsv_id = results[2]
         lsv_type = self.lsv_type_dict[lsv_id]
-        output.heterogen(lsv_id).add(lsv_type=lsv_type, groups=results[1], junction_stats=results[0],
+        mu_psi = results[1][0]
+        mean_psi = results[1][1]
+        output.heterogen(lsv_id).add(lsv_type=lsv_type, mu_psi=mu_psi, mean_psi=mean_psi, junction_stats=results[0],
                                      junctions=extra['junc_info'][lsv_id])
 
     def run(self):
@@ -166,6 +167,7 @@ class independent(BasicPipeline):
             pool.map_async(process_wrapper, chunks(list_of_lsv, nthreads))
             pool.close()
             with Matrix(get_quantifier_voila_filename(self.outDir, self.names, het=True), 'w') as out_h5p:
+                out_h5p.file_version = VOILA_FILE_VERSION
                 out_h5p.analysis_type = ANALYSIS_HETEROGEN
                 out_h5p.group_names = self.names
                 out_h5p.experiment_names = [exps1, exps2]

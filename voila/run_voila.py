@@ -35,10 +35,11 @@ def file_versions(args):
             log.warning('Splice Graph may be out of date.  Verify that you\'re running MAJIQ/Voila with the most '
                         'current versions.')
 
-    with Matrix(args.voila_file) as m:
-        if m.file_version != constants.VOILA_FILE_VERSION:
-            log.warning('Voila file may be out of date.  Verify that you\'re running MAJIQ/Voila with the most '
-                        'current versions.')
+    if hasattr(args, 'voila_file'):
+        with Matrix(args.voila_file) as m:
+            if m.file_version != constants.VOILA_FILE_VERSION:
+                log.warning('Voila file may be out of date.  Verify that you\'re running MAJIQ/Voila with the most '
+                            'current versions.')
 
 
 def gene_names(args):
@@ -182,13 +183,12 @@ def voila_parser():
     # deltapsi parser
     deltapsi = new_subparser()
     deltapsi.add_argument('--threshold', type=float, default=0.2,
-                          help='Filter out LSVs with no junctions predicted to change over a certain value '
-                               '(in percentage). The default is "0.2".')
+                          help='Filter out LSVs with no junctions predicted to change over a certain value. Even when '
+                               'show-all is used this value is still used to calculate the probability in the TSV. The '
+                               'default is "0.2".')
     deltapsi.add_argument('--non-changing-threshold', type=float, default=0.05, help='The default is "0.05".')
     deltapsi.add_argument('--show-all', action='store_true',
                           help='Show all LSVs including those with no junction with significant change predicted.')
-    deltapsi.add_argument('--probability-threshold', required='--high-confidence-non-changing' in sys.argv, type=float,
-                          default=None)
 
     # heterogen parser
     heterogen = new_subparser()

@@ -75,7 +75,6 @@ def collapse_matrix(matrix):
     Collapse the diagonals probabilities in 1-D and return them
     """
     collapse = []
-    matrix = np.array(matrix)
     matrix_corner = matrix.shape[0]
     for i in range(-matrix_corner + 1, matrix_corner):
         collapse.append(np.diagonal(matrix, offset=i).sum())
@@ -83,10 +82,9 @@ def collapse_matrix(matrix):
     return np.array(collapse)
 
 
-def matrix_area(matrix, threshold=0.2, non_changing=False):
+def matrix_area(matrix, threshold, non_changing=False):
     """
-    Returns the probability of an event to be above a certain threshold. The absolute flag describes if the value is
-    absolute.
+    Returns the probability of an event to be above a certain threshold.
 
     :param non_changing:
     :param threshold:
@@ -94,16 +92,18 @@ def matrix_area(matrix, threshold=0.2, non_changing=False):
     :return:
     """
 
-    collapse = np.cumsum(matrix)
+    collapse = matrix
+    collapse = np.concatenate(([0], collapse))
+    collapse = np.cumsum(collapse)
     collapse /= collapse[-1]
     xbins = np.linspace(-1, 1, num=collapse.size)
     abs_threshold = abs(threshold)
     left, right = np.interp([-abs_threshold, abs_threshold], xbins, collapse, left=0, right=1)
-    area = left + (1 - right)
-    area = np.clip(area, 0, 1)
     if non_changing:
-        return 1 - area
-    return area
+        area = right - left
+    else:
+        area = left + (1 - right)
+    return np.clip(area, 0, 1)
 
 
 def is_lsv_changing(means, threshold):
