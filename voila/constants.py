@@ -2,7 +2,7 @@ import os
 
 import voila
 
-VERSION = '1.1.0b1'
+VERSION = '1.1.2'
 FILE_VERSION = '0.1'
 ANALYSIS_PSI = 'psi'
 ANALYSIS_PSI_GENE = 'psi-gene'
@@ -56,7 +56,7 @@ VOILA_LOG_NAME = '3a4f4528-e572-404e-b143-acff61cee9ed'
 LSV_TEXT_VERSION = 4
 
 SPLICE_GRAPH_FILE_VERSION = 5
-VOILA_FILE_VERSION = 4
+VOILA_FILE_VERSION = 6
 
 NA_LSV = 'na'
 
