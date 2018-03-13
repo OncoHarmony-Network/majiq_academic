@@ -256,7 +256,10 @@ class ViewDeltaPsi(DeltaPsi, ViewMatrix):
         def is_lsv_changing(self, threshold):
             return is_lsv_changing(self.means, threshold)
 
-        def probability_threshold(self, probability_threshold, threshold):
+        def probability_threshold(self):
+            args = self.matrix_hdf5.args
+            probability_threshold = args.probability_threshold
+            threshold = args.probability_threshold
             return any(matrix_area(b, threshold=threshold) >= probability_threshold for b in self.bins)
 
         def high_probability_non_changing(self):
@@ -272,16 +275,19 @@ class ViewDeltaPsi(DeltaPsi, ViewMatrix):
 
     def valid_lsvs(self, lsv_ids):
         threshold = None
+        probability_threshold = None
         args = self.args
 
         if not args.show_all:
             threshold = args.threshold
+            probability_threshold = args.probability_threshold
 
         for lsv_id in lsv_ids:
             delta_psi = self.delta_psi(lsv_id)
             if not args.lsv_ids or lsv_id in args.lsv_ids:
                 if not threshold or delta_psi.is_lsv_changing(threshold):
-                    yield lsv_id
+                    if not probability_threshold or delta_psi.probability_threshold():
+                        yield lsv_id
 
 
 class ViewHeterogen(Heterogen, ViewMatrix):

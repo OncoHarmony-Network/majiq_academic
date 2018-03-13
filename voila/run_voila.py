@@ -187,6 +187,7 @@ def voila_parser():
                                'show-all is used this value is still used to calculate the probability in the TSV. The '
                                'default is "0.2".')
     deltapsi.add_argument('--non-changing-threshold', type=float, default=0.05, help='The default is "0.05".')
+    deltapsi.add_argument('--probability-threshold', type=float, default=None, help='This is off by default.')
     deltapsi.add_argument('--show-all', action='store_true',
                           help='Show all LSVs including those with no junction with significant change predicted.')
 
