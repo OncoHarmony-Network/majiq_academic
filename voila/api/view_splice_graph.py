@@ -41,7 +41,7 @@ class ViewSpliceGraph(SQL):
             for gene_id in args.gene_ids:
                 yield self.gene(gene_id)
         else:
-            return self.session.query(model.ViewGene).all()
+            yield from self.session.query(model.ViewGene).all()
 
     def get_page_count(self):
         """
