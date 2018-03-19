@@ -1,197 +1,197 @@
 from majiq.src.internals.io_bam cimport IOBam
-from majiq.src.internals.junction cimport Junction
-from majiq.src.multiproc import QueueMessage
+from majiq.src.internals.grimoire cimport Junction, Gene, Exon, LSV, detect_lsvs, detect_exons, boostrap_samples, free_gene
+#
+import cython
 from majiq.src.constants import *
 from libcpp.string cimport string
 from libcpp.set cimport set
 from libcpp.map cimport map
-from libcpp.map cimport pair
+from libcpp.pair cimport pair
+from libcpp.list cimport list as clist
 from libcpp.vector cimport vector
-from majiq.src.sample import create_lt
+
 import majiq.src.io as majiq_io
-from majiq.grimoire.exon import detect_exons
-from majiq.src.config import Config
-import pysam
-
-cimport numpy as np
 from cython.parallel import prange
-cimport openmp
+from numpy.random  import choice
+from scipy.stats import nbinom, poisson
+import numpy as np
+cimport numpy as np
 
-from libc.stdio cimport printf
+ctypedef np.float64_t DTYPE_t
 
+# cdef int __mark_stacks(np.ndarray[np.float_t, ndim=2] junctions, float fitfunc_r, float pvalue_limit) :
 #
-# cdef _find_new_junctions2(list file_list, int chunk, object conf, object logger):
-#     cdef str gne_id
-#     cdef dict gene_obj
-#     cdef string chrom, cs1
-#     cdef map[string, set[string]] set_junctions
+#     cdef np.ndarray[np.float_t, ndim=2] pvalues
+#     cdef np.ndarray[np.float_t, ndim=2] mean_rest
+#     cdef np.ndarray[np.int_t, ndim=2] denom
+#     cdef float r, p
 #
-#     majiq_config = Config()
-#     list_exons = {}
+#     if pvalue_limit <= 0:
+#         return 0
+#     denom = np.count_nonzero(junctions, axis=1)[:, None] - (junctions > 0)
+#     with np.errstate(divide='ignore',invalid='ignore'):
+#         mean_rest = (junctions.sum(axis=1)[:, None] - junctions) / denom
+#         mean_rest[np.isnan(mean_rest)] = 0.5
+#     if fitfunc_r >0:
+#         r = 1/fitfunc_r
+#         p = r/(mean_rest + r)
+#         pvalues = 1 - nbinom.cdf(junctions, r, p)
+#     else:
+#         pvalues = 1 - poisson.cdf(junctions, mean_rest)
+#     junctions[pvalues<pvalue_limit] = 0
 #
-#     logger.info('Reading DB')
 #
+# @cython.boundscheck(False) # turn off bounds-checking for entire function
+# @cython.wraparound(False)  # turn off negative index wrapping for entire function
+# cdef np.ndarray[DTYPE_t, ndim=2] _bootstrap_samples(np.ndarray[DTYPE_t, ndim=2] junction_list, int m, int k):
+#     """Given the filtered reads, bootstrap samples from every junction
+#     :param junction_list:
+#     :param m:
+#     :param k:
+#     :param discardzeros:
+#     :param trimborder:
+#     :param fitted_one_over_r:
+#     :return:
 #
-#     for gne_id, gene_obj in conf.genes_dict.items():
-#         list_exons[gne_id] = []
-#         dict_junctions = {}
-#         chrom = conf.genes_dict[gne_id]['chromosome'].encode('utf-8')
+#     """
 #
-#         majiq_io.from_matrix_to_objects(gne_id, conf.elem_dict[gne_id], dict_junctions, list_exons[gne_id])
-#         # if chrom not in set_junctions:
-#         #
-#         for yy in dict_junctions.keys():
-#             for strnd in ['+', '-', '.']:
-#                 cs1 = ('%s:%s:%s-%s' % (chrom, '+', yy[0], yy[1])).encode('utf-8')
-#                 set_junctions[chrom].insert(cs1)
+#     cdef np.ndarray[DTYPE_t, ndim=2] all_samples = np.zeros(shape=(junction_list.shape[0], m), dtype=np.float)
+#     cdef int npos_mult
+#     cdef int iternumber
+#     cdef float r = 0
+#     cdef np.ndarray[DTYPE_t, ndim=1] junction, km_samples_means
+#     cdef int i
 #
-#         detect_exons(dict_junctions, list_exons[gne_id])
+#     for i in range(junction_list.shape[0]):
+#         junction = junction_list[i][junction_list[i] > 0]
+#         npos_mult = np.count_nonzero(junction)
+#         if npos_mult > 0:
 #
-#     td = create_lt(conf.genes_dict)
-#     for exp_name, is_junc_file, name in file_list:
-#         fname = '%s/%s.%s' % (majiq_config.sam_dir, exp_name, SEQ_FILE_FORMAT)
-#         logger.info('READ JUNCS from %s' % fname)
+#             all_samples[i, :m]  = np.reshape(choice(junction, k*m), (m, k)).mean(axis=1) * npos_mult
+#             # all_samples[i, m] = junction_list[i].sum()
+#             # all_samples[i, m+1] = npos_mult
 #
-#         bbb = SeqParse(fname, majiq_config.strand_specific[exp_name])
-#         bbb.check_junctions(td, set_junctions, majiq_config.strand_specific[exp_name], list_exons,
-#                             conf.queue, name, logger)
-#
-#         # read_juncs(fname, is_junc_file, list_exons, conf.genes_dict, td, dict_junctions,
-#         #            majiq_config.strand_specific[exp_name], conf.queue, gname=name, logger=logger)
-#
+#     return all_samples
+
+
+cdef int _read_junction(list row, string gne_id, map[string, Junction*] jjs, map[string, Exon*] exs,
+                        int nsamples, unsigned int eff_len) except -1:
+    cdef string key = ('%s-%s' % (row[0], row[1])).encode('utf-8')
+    jjs[key] = new Junction(gne_id, row[0], row[1], nsamples, eff_len) #, annot=bool(row[2]))
+
+
+cdef int _read_exon(list row, string gne_id, map[string, Junction*] jjs, map[string, Exon*] exs) except -1:
+    cdef string key = ('%s-%s' % (row[0], row[1])).encode('utf-8')
+    exs[key] = new Exon(row[0], row[1], bool(row[2]))
+
+
+cdef int _pass_ir(list row, str gne_id, map[string, Junction*] jjs, map[string, Exon*] exs) except -1:
+    pass
 
 
 
-cdef _find_new_junctions(list file_list, int chunk, object slf, object conf, object logger):
-    cdef string file
-    cdef map[string, int] strandness
-    cdef vector[pair[string, string]] list_pair_files
-    cdef string chrom, cs1
-    cdef map[string, set[string]] set_junctions
-    cdef map[string, set[int]] prev_3pss
-    cdef map[string, set[int]] prev_5pss
-    cdef map[string, Junction] out_junction
-    cdef unsigned int min_experiments = 2 if conf.min_exp == -1 else conf.min_exp
-    cdef dict elem_dict = {}
-    cdef list data
-    cdef pair[string, string] pr
+cdef from_matrix_to_objects(string gne_id, list elements, map[string, Junction*] out_juncs,
+                             map[string, Exon*] out_exons, int nsamples, unsigned int eff_len,):
+
+    cdef dict func_list
+    cdef list elem
+
+  #  func_list = {EX_TYPE: _read_exon, IR_TYPE: _pass_ir, J_TYPE: _read_junction}
+
+    for elem in elements:
+        if elem[3] == EX_TYPE:
+            _read_exon(elem, gne_id, out_juncs, out_exons)
+        elif elem[3] == J_TYPE:
+            _read_junction(elem, gne_id, out_juncs, out_exons, nsamples, eff_len)
+
+
+
+cdef int _gene_analysis(vector[pair[string, string]] list_pair_files, map[string, int] strandness, int nsamples,
+                        Gene * gg, int ksamples, int msamples, list elements, int nsample, unsigned int min_experiments,
+                        unsigned int eff_len, int minpos, int minreads):
+
+    cdef map[string, Junction*] out_junction
+    cdef int j, count=0
+    cdef map[string, Exon*] exon_map
+    cdef clist[LSV*] out_lsvlist
     cdef IOBam c_iobam
+    cdef float[:, :] boots
+    cdef float * boots_ptr;
+    cdef LSV * lsvObj
+    from_matrix_to_objects(gg.id, elements, out_junction, exon_map, nsample, eff_len)
+
+
+
+    with nogil:
+        for j in range(nsamples):
+            c_iobam = IOBam(list_pair_files[j].first, strandness[list_pair_files[j].first], eff_len, nsamples, j,
+                            out_junction)
+            c_iobam.find_junctions_from_region(gg)
+
+        detect_exons(out_junction, exon_map)
+
+        #TODO: IR detection for later
+
+        count = count + detect_lsvs(out_lsvlist, exon_map, gg, min_experiments, eff_len, minpos, minreads)
+
+        for j in range(nsamples):
+            for lsvObj in out_lsvlist:
+                boots_ptr = boostrap_samples(lsvObj, msamples, ksamples, j, eff_len)
+              #  boots = boots_ptr
+
+        # with gil:
+        #     __mark_stacks(junctions, 0.0, pvalue_limit)
+        #     _bootstrap_samples(junctions, m, k)
+
+        free_gene(gg, out_junction, exon_map)
+
+    return 0
+
+cdef _extract_junctions(list file_list, object genes_dict, object elem_dict, conf, logger):
+
+    cdef int n = len(genes_dict)
+    cdef int nthreads = min(conf.nthreads, len(conf.sam_list))
+    cdef int nsamples = len(file_list)
+    cdef int minpos = conf.minpos
+    cdef int minreads = conf.minreads
     cdef int i
-    cdef int n = len(file_list)
-    cdef int nthreads = min(slf.nthreads, len(conf.sam_list))
+    cdef int k=conf.k, m=conf.m
+    cdef float pvalue_limit=conf.pvalue_limit
 
-    for gne_id, gene_obj in slf.genes_dict.items():
+    cdef unsigned int min_experiments = 1 if conf.min_exp == -1 else conf.min_exp
+    cdef unsigned int eff_len = conf.readLen - 2*MIN_BP_OVERLAP
+    cdef Gene * gg
 
-        chrom = slf.genes_dict[gne_id]['chromosome'].encode('utf-8')
+    cdef map[string, int] strandness
+    cdef vector[Gene * ] gene_list
+    cdef vector[pair[string, string]] list_pair_files
 
-        data = slf.elem_dict[gne_id]#[conf.elem_dict[gne_id][:, 3] == J_TYPE]
+    # cdef vector[Ssite] ss_vec
 
-        for idx in range(len(data)):
-            yy = data[idx]
-            if yy[3] != J_TYPE : continue
-            prev_3pss[gne_id.encode('utf-8')].insert(yy[0])
-            prev_5pss[gne_id.encode('utf-8')].insert(yy[1])
+    # cdef string cs1, region
+    # cdef clist[LSV*] out_lsvlist
+    cdef char st = '+'
 
-            for strnd in ['+', '-', '.']:
-                cs1 = ('%s:%s:%s-%s' % (chrom, '+', yy[0], yy[1])).encode('utf-8')
-                set_junctions[chrom].insert(cs1)
+    for gne_id, gene_obj in genes_dict.items():
+        gg = new Gene(gne_id.encode('utf-8'), gene_obj['name'].encode('utf-8'), gene_obj['chromosome'].encode('utf-8'),
+                      st, gene_obj['start'], gene_obj['end'])
+                      # gene_obj['strand'], gene_obj['start'], gene_obj['end'])
+        gene_list.push_back(gg)
 
     for exp_name, is_junc_file, name in file_list:
         cs1 = ('%s/%s.%s' % (conf.sam_dir, exp_name, SEQ_FILE_FORMAT)).encode('utf-8')
         list_pair_files.push_back((pair[string, string])(cs1, name.encode('utf-8')))
         strandness[cs1] = conf.strand_specific[exp_name]
 
-    print (list_pair_files)
     for i in prange(n, nogil=True, num_threads=nthreads):
-
+        gg = gene_list[i]
         with gil:
-            logger.info('START %s' % list_pair_files[i].first.c_str())
-        printf("IT[%d] %s\n", i, list_pair_files[i].first.c_str())
-        #printf("KK2 %s :: %s\n", list_pair_files[i].first.c_str(), list_pair_files[i].second.c_str())
-        c_iobam = IOBam(list_pair_files[i].first, strandness[list_pair_files[i].first], &out_junction)
-        c_iobam.set_filters(&set_junctions)
-        c_iobam.find_junctions(min_experiments)
-        printf("done[%d] %s\n", i, list_pair_files[i].first.c_str())
-        with gil:
-            logger.info('DONE %s' % list_pair_files[i].first.c_str())
-        #bbb = SeqParse(fit.first, strandness[fit.second], &out_junction)
-        # bbb.check_junctions2(set_junctions, strandness[fit.first], fit.second)
-        # del bbb
-
-    for it in out_junction:
-        if it.second.n_exps < min_experiments: continue
-        try:
-            elem_dict[it.second.gene_id].append([it.second.start, it.second.end, 0, J_TYPE])
-        except KeyError:
-            elem_dict[it.second.gene_id] = [it.second.start, it.second.end, 0, J_TYPE]
-
-    majiq_io.add_elements_mtrx(elem_dict, slf.elem_dict)
-
-
-# cdef class SeqParse:
-#     cdef IOBam c_iobam      # hold a C++ instance which we're wrapping
-#     def __cinit__(self, string bam1, int strandness1, map[string, Junction]* o_jnc_ptr, str regions=None):
-#
-#         if regions is None:
-#             self.c_iobam = IOBam(bam1, strandness1, o_jnc_ptr)
-#         # else:
-#         #     self.c_iobam = IOBam(c_bam1, strandness1, c_regions)
-#
-#
-#     cdef check_junctions2(self, map[string, set[string]] set_junctions, string gname):
-#
-#
-#             self.c_iobam.set_filters(&set_junctions)
-#             self.c_iobam.find_junctions()
-
-
-
-
-
-    # cdef check_junctions(self, dict_gtrees, map[string, set[string]] set_junctions, stranded, dict_exons,
-    #                      queue, gname, logger):
-    #
-    #     with nogil:
-    #         self.c_iobam.set_filters(set_junctions)
-    #         self.c_iobam.find_junctions()
-    #     logger.info("DONE READING...")
-    #
-    #     #for it in self.c_iobam.get_dict():
-    #     for it in self.c_iobam.junc_dict_:
-    #         chrom = it.second.chrom.decode('utf-8')
-    #         if chrom not in dict_gtrees: continue
-    #         found = False
-    #         #for junc in sorted(jj_set):
-    #         possible_genes = []
-    #         for gobj in dict_gtrees[chrom].search(it.second.start, it.second.end):
-    #
-    #             if (stranded and gobj.data[1] != it.second.strand) or (gobj.end < it.second.end and
-    #                                                                    gobj.start > it.second.start):
-    #                 continue
-    #
-    #             gid = gobj.data[0]
-    #
-    #             start_sp = [jj.start for ex in dict_exons[gid] for jj in ex.ob if jj.start > 0 and jj.end > 0]
-    #             end_sp = [jj.end for ex in dict_exons[gid] for jj in ex.ib if jj.start > 0 and jj.end > 0]
-    #
-    #             if it.second.start in start_sp or it.second.end in end_sp:
-    #                 found = True
-    #                 # print((gid, junc[0], junc[1], gname))
-    #                 qm = QueueMessage(QUEUE_MESSAGE_BUILD_JUNCTION, (gid, it.second.start, it.second.end, gname), 0)
-    #                 queue.put(qm, block=True)
-    #             else:
-    #                 possible_genes.append(gid)
-    #
-    #         if not found and len(possible_genes) > 0:
-    #             for gid in possible_genes:
-    #                 # print((gid, junc[0], junc[1], gname))
-    #                 qm = QueueMessage(QUEUE_MESSAGE_BUILD_JUNCTION, (gid, it.second.start, it.second.end, gname), 0)
-    #                 queue.put(qm, block=True)
-
-
+            logger.info("%s/%s - %s" %(i, n, gg.id))
+            _gene_analysis(list_pair_files, strandness, nsamples, gg, conf.k, conf.m, elem_dict[gg.id.decode('utf-8')],
+                           nsamples, min_experiments, eff_len, minpos, minreads)
 
 ## OPEN API FOR PYTHON
 
 def find_new_junctions(list file_list, int chunk, object slf, object conf, object logger):
-    _find_new_junctions(file_list, chunk, slf, conf, logger)
+    _extract_junctions(file_list,  slf.genes_dict, slf.elem_dict, conf, logger)
 

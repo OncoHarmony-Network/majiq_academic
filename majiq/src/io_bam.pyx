@@ -13,7 +13,7 @@ from pysam.libcalignedsegment cimport PileupColumn, PileupRead
 import pysam
 import cython
 import sys
-from majiq.src.internals.seq_parse import SeqParse
+# from majiq.src.internals.seq_parse import SeqParse
 
 # READING BAM FILES
 
