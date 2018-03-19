@@ -6,6 +6,7 @@
 #include <list>
 #include <set>
 #include <random>
+#include <algorithm>
 #include "grimoire.hpp"
 
 using namespace std;
