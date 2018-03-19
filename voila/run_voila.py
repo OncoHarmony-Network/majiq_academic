@@ -34,10 +34,11 @@ def file_versions(args):
             log.warning('Splice Graph may be out of date.  Verify that you\'re running MAJIQ/Voila with the most '
                         'current versions.')
 
-    with Matrix(args.voila_file) as m:
-        if m.file_version != constants.VOILA_FILE_VERSION:
-            log.warning('Voila file may be out of date.  Verify that you\'re running MAJIQ/Voila with the most '
-                        'current versions.')
+    if hasattr(args, 'voila_file'):
+        with Matrix(args.voila_file) as m:
+            if m.file_version != constants.VOILA_FILE_VERSION:
+                log.warning('Voila file may be out of date.  Verify that you\'re running MAJIQ/Voila with the most '
+                            'current versions.')
 
 
 def gene_names(args):

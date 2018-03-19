@@ -35,7 +35,7 @@ class RenderSpliceGraphs(Html):
 
     def render_summaries(self):
         voila_log().info('Rendering Splice Graph HTML output')
-        summary_template = self.env.get_template('splice_graphs_summary_template.html')
+        summary_template = self.get_env().get_template('splice_graphs_summary_template.html')
         args = self.args
         output_html = self.get_output_html(args, args.splice_graph)
         summaries_subfolder = self.get_summaries_subfolder(args)
