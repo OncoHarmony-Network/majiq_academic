@@ -30,14 +30,7 @@ class ViewJunction(Junction):
         except AttributeError:
             return 0
 
-    def get_experiment(self):
-        j = dict(self)
-        j['intron_retention'] = self.get_intron_retention_type()
-        j['color'] = self.color()
-        del j['gene_id']
-        return j
-
-    def get_intron_retention_type(self):
+    def view_intron_retention_type(self):
         if self.intron_retention:
             for exon in filter(lambda e: not e.intron_retention, self.gene.exons):
                 if self.start in exon:
@@ -46,6 +39,14 @@ class ViewJunction(Junction):
                     return constants.IR_TYPE_END
 
         return self.intron_retention
+
+    def __iter__(self):
+        yield 'start', self.start
+        yield 'end', self.end
+        yield 'has_reads', self.has_reads
+        yield 'intron_retention', self.view_intron_retention_type()
+        yield 'annotated', self.annotated
+        yield 'color', self.color()
 
 
 class ViewExon(Exon):
@@ -71,22 +72,30 @@ class ViewExon(Exon):
         else:
             return 'green'
 
-    def get_experiment(self):
-        exon = dict(self)
-        exon['start'] = self.view_start
-        exon['end'] = self.view_end
+    def __iter__(self):
+        yield 'start', self.view_start
+        yield 'end', self.view_end
         if self.start == -1:
-            exon['half_exon'] = 'start'
+            yield 'half_exon', 'start'
         elif self.end == -1:
-            exon['half_exon'] = 'end'
-        exon['color'] = self.color()
-        del exon['gene_id']
-        return exon
+            yield 'half_exon', 'end'
+        yield 'intron_retention', self.intron_retention
+        yield 'annotated', self.annotated
+        yield 'color', self.color()
 
 
 class ViewGene(Gene):
     junctions = relationship('ViewJunction')
     exons = relationship('ViewExon')
+
+    def __iter__(self):
+        yield 'name', self.name
+        yield 'strand', self.strand
+        yield 'chromosome', self.chromosome
+        yield '_id', self.id
+        yield 'id', self.id
+        yield 'start', self.start
+        yield 'end', self.end
 
     @staticmethod
     def convert_lsv_to_coords(lsv_id):
@@ -95,10 +104,6 @@ class ViewGene(Gene):
                 yield -1
             else:
                 yield int(coord)
-
-    def lsv_reference_exon(self, lsv_id):
-        coords_list = list(self.convert_lsv_to_coords(lsv_id))
-        return next(exon for exon in self.exons if coords_list == [exon.start, exon.end])
 
     def lsv_exons(self, lsv):
         exons = {exon for start, end in lsv.junctions for exon in self.exons if start in exon or end in exon}
@@ -109,46 +114,40 @@ class ViewGene(Gene):
             yield next(junc for junc in self.junctions if [start, end] == [junc.start, junc.end])
 
     def lsv_ucsc_coordinates(self, lsv):
-        exons = tuple(self.lsv_exons(lsv))
+        exons = list(self.lsv_exons(lsv))
         start_exon = sorted(e.start for e in exons if e.start != -1)[0]
         end_exon = sorted(e.end for e in exons if e.end != -1)[-1]
         return {'start': start_exon, 'end': end_exon}
 
     def get_experiment(self, experiment_names_list):
-        gene = dict(self)
-        gene['_id'] = self.id
-
-        # todo: exons should NOT be sorted.
-        exons = tuple(e.get_experiment() for e in self.exons)
-        exons = sorted(exons, key=lambda e: (e['start'], e['end']))
-        gene['exons'] = exons
-        gene['junctions'] = tuple(j.get_experiment() for j in self.junctions)
-        gene['start'] = self.start
-        gene['end'] = self.end
-        gene['reads'] = {}
+        reads = {}
 
         for experiment_names in experiment_names_list:
             combined_name = next((n for n in experiment_names if ' Combined' in n), '')
             experiment_names = experiment_names[experiment_names != combined_name]
 
             for name in experiment_names:
-                gene['reads'][name] = {}
+                reads[name] = {}
                 if combined_name:
-                    gene['reads'][combined_name] = {}
+                    reads[combined_name] = {}
 
             for junc in self.junctions:
-                view_junc = junc
                 for experiment_name in experiment_names:
                     try:
-                        gene['reads'][experiment_name][junc.start][junc.end] = view_junc.reads(experiment_name)
+                        reads[experiment_name][junc.start][junc.end] = junc.reads(experiment_name)
                     except KeyError:
-                        gene['reads'][experiment_name][junc.start] = {junc.end: view_junc.reads(experiment_name)}
+                        reads[experiment_name][junc.start] = {junc.end: junc.reads(experiment_name)}
 
                 if combined_name:
-                    summed_reads = sum(gene['reads'][n][junc.start][junc.end] for n in experiment_names)
+                    summed_reads = sum(reads[n][junc.start][junc.end] for n in experiment_names)
                     try:
-                        gene['reads'][combined_name][junc.start][junc.end] = summed_reads
+                        reads[combined_name][junc.start][junc.end] = summed_reads
                     except KeyError:
-                        gene['reads'][combined_name][junc.start] = {junc.end: summed_reads}
+                        reads[combined_name][junc.start] = {junc.end: summed_reads}
+
+        gene = dict(self)
+        gene['exons'] = [dict(e) for e in self.exons]
+        gene['junctions'] = [dict(j) for j in self.junctions]
+        gene['reads'] = reads
 
         return gene

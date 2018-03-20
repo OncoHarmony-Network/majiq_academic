@@ -6,7 +6,7 @@ import numpy as np
 import scipy.special
 
 from voila import constants
-from voila.api.matrix_hdf5 import DeltaPsi, Psi, Heterogen
+from voila.api.matrix_hdf5 import DeltaPsi, Psi, Heterogen, lsv_id_to_gene_id
 from voila.exceptions import NoLsvsFound
 from voila.utils.voila_log import voila_log
 from voila.vlsv import get_expected_dpsi, is_lsv_changing, matrix_area
@@ -59,7 +59,11 @@ class ViewMatrix(ABC):
 
     @abstractmethod
     def valid_lsvs(self, lsv_ids):
-        return ()
+        args = self.args
+        for lsv_id in lsv_ids:
+            if not args.gene_ids or lsv_id_to_gene_id(lsv_id) in args.gene_ids:
+                if not args.lsv_ids or lsv_id in args.lsv_ids:
+                    yield lsv_id
 
     def view_lsv_ids(self):
         args = self.args
@@ -173,11 +177,7 @@ class ViewPsi(Psi, ViewMatrix):
         return self._ViewPsi(self, lsv_id)
 
     def valid_lsvs(self, lsv_ids):
-        args = self.args
-
-        for lsv_id in lsv_ids:
-            if not args.lsv_ids or lsv_id in args.lsv_ids:
-                yield lsv_id
+        yield from super().valid_lsvs(lsv_ids)
 
 
 class ViewDeltaPsi(DeltaPsi, ViewMatrix):
@@ -282,21 +282,16 @@ class ViewDeltaPsi(DeltaPsi, ViewMatrix):
             threshold = args.threshold
             probability_threshold = args.probability_threshold
 
-        for lsv_id in lsv_ids:
+        for lsv_id in super().valid_lsvs(lsv_ids):
             delta_psi = self.delta_psi(lsv_id)
-            if not args.lsv_ids or lsv_id in args.lsv_ids:
-                if not threshold or delta_psi.is_lsv_changing(threshold):
-                    if not probability_threshold or delta_psi.probability_threshold():
-                        yield lsv_id
+            if not threshold or delta_psi.is_lsv_changing(threshold):
+                if not probability_threshold or delta_psi.probability_threshold():
+                    yield lsv_id
 
 
 class ViewHeterogen(Heterogen, ViewMatrix):
     def valid_lsvs(self, lsv_ids):
-        args = self.args
-
-        for lsv_id in lsv_ids:
-            if not args.lsv_ids or lsv_id in args.lsv_ids:
-                yield lsv_id
+        yield from super().valid_lsvs(lsv_ids)
 
     def __init__(self, args):
         super().__init__(args.voila_file)

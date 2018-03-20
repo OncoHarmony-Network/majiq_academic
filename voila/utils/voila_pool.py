@@ -10,6 +10,9 @@ class VoilaPool:
         def __str__(self):
             return repr(self)
 
+        def apply_async(self, *args, **kwargs):
+            return self.pool.apply_async(*args, **kwargs)
+
     instance = None
 
     def __enter__(self):

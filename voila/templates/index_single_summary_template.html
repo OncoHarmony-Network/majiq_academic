@@ -29,7 +29,7 @@
     </tfoot>
     <tbody>
     {% for lsv in lsvs %}
-        {% set gene = genes(lsv.gene_id).get %}
+        {% set gene = genes(lsv.gene_id) %}
         {% with index = loop.index0 %}
             {% include 'psi_index_row.html' %}
         {% endwith %}

@@ -27,15 +27,15 @@ class ViewSpliceGraph(SQL):
     def gene(self, gene_id):
         return self.session.query(model.ViewGene).get(gene_id)
 
-    def get_paginated_genes(self):
+    def view_paginated_genes(self):
         def grouper(iterable, n, fillvalue=None):
             a = [iter(iterable)] * n
             return zip_longest(*a, fillvalue=fillvalue)
 
-        for page in grouper(self.get_genes(), constants.MAX_GENES):
+        for page in grouper(self.view_genes(), constants.MAX_GENES):
             yield tuple(p for p in page if p is not None)
 
-    def get_genes(self):
+    def view_genes(self):
         args = self.args
         if args.gene_ids:
             for gene_id in args.gene_ids:
@@ -43,11 +43,17 @@ class ViewSpliceGraph(SQL):
         else:
             yield from self.session.query(model.ViewGene).all()
 
-    def get_page_count(self):
+    def view_gene_count(self):
+        args = self.args
+        if args.gene_ids:
+            return len(args.gene_ids)
+        else:
+            return self.session.query(model.ViewGene).count()
+
+    def view_page_count(self):
         """
         This page count is only for the splice graph view. Not to be used with anything containing quantified data.
         :param args: arg parse
         :return: number of pages
         """
-        gene_count = len(tuple(self.get_genes()))
-        return math.ceil(gene_count / constants.MAX_GENES)
+        return math.ceil(self.view_gene_count() / constants.MAX_GENES)
