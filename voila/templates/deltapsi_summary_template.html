@@ -31,7 +31,7 @@
     <script src="static/js/lsvplots.js"></script>
     <script src="static/js/colors.js"></script>
     <script>
-        var db = new PouchDB('{{ database_name }}');
+        var db = new PouchDB('{{ database_name }}', {auto_compaction: true});
         var sg = new SpliceGraph(db);
         var lsv = new Lsv(db);
         var bp = new LSVPlots(db);

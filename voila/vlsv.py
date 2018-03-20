@@ -75,7 +75,6 @@ def collapse_matrix(matrix):
     Collapse the diagonals probabilities in 1-D and return them
     """
     collapse = []
-    matrix = np.array(matrix)
     matrix_corner = matrix.shape[0]
     for i in range(-matrix_corner + 1, matrix_corner):
         collapse.append(np.diagonal(matrix, offset=i).sum())
@@ -110,6 +109,7 @@ def matrix_area(matrix, threshold, non_changing=False):
 def is_lsv_changing(means, threshold):
     """
     Return true if lsv is changing based on threshold.
+
     :param threshold: lsv threshold value
     :return: bool
     """

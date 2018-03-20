@@ -1,5 +1,6 @@
 import os
 from abc import ABC, abstractmethod
+from typing import List
 
 import h5py
 import numpy
@@ -14,9 +15,19 @@ def lsv_id_to_gene_id(lsv_id):
 
 
 class MatrixHdf5:
-    def __init__(self, filename, mode='r'):
+    LSVS = 'lsvs'
+
+    def __init__(self, filename, mode='r', lock=None):
+        """
+        Access voila's HDF5 file.
+
+        :param filename: name of voila file
+        :param mode: generally r or w
+        """
         filename = os.path.expanduser(filename)
+        self.dt = h5py.special_dtype(vlen=numpy.unicode)
         self.h = h5py.File(filename, mode, libver='latest')
+        self.lock = lock
 
     def __enter__(self):
         return self
@@ -24,20 +35,63 @@ class MatrixHdf5:
     def __exit__(self, exc_type, exc_val, exc_tb):
         self.h.close()
 
-    def add(self, lsv_id, key, value):
+    def add_dataset(self, *args, **kwargs):
+        grp = self.h
+        for k in args[:-1]:
+            try:
+                grp = grp[k]
+            except KeyError:
+                grp = grp.create_group(k)
+        grp.create_dataset(args[-1], **kwargs)
+
+    def add(self, lsv_id: str, key: str, data):
+        """
+        Add a key/value pair for a LSV ID.
+
+        :param lsv_id: unique LSV identifier
+        :param key: key for value
+        :param data: data to store
+        :return: None
+        """
         gene_id = lsv_id_to_gene_id(lsv_id)
-        self.h.create_dataset(os.path.join('lsvs', gene_id, lsv_id, key), data=value)
+        try:
+            self.lock.acquire()
+            self.add_dataset(self.LSVS, gene_id, lsv_id, key, data=data)
+            self.lock.release()
+        except AttributeError:
+            self.add_dataset(self.LSVS, gene_id, lsv_id, key, data=data)
 
     def add_multiple(self, lsv_id, **kwargs):
+        """
+        Add multiple key/values for a LSV ID.
+
+        :param lsv_id: unique LSV identifier
+        :param kwargs: keyword argument storing key/values
+        :return: None
+        """
         for key, value in kwargs.items():
             self.add(lsv_id, key, value)
 
-    def get(self, lsv_id, key):
+    def get(self, lsv_id: str, key: str):
+        """
+        Retrieve value from file for a LSV ID.
+
+        :param lsv_id: unique LSV identifier
+        :param key: key for value
+        :return: Value
+        """
         gene_id = lsv_id_to_gene_id(lsv_id)
         lsv_grp = self.h['lsvs'][gene_id][lsv_id]
         return lsv_grp[key].value
 
-    def get_many(self, lsv_id, keys):
+    def get_many(self, lsv_id: str, keys: List[str]):
+        """
+        Retrieve many values for a LSV ID.
+
+        :param lsv_id: unique LSV identifier
+        :param keys: list of keys for values
+        :return: Generator of key, values
+        """
         gene_id = lsv_id_to_gene_id(lsv_id)
         lsv_grp = self.h['lsvs'][gene_id][lsv_id]
         for key in keys:
@@ -45,11 +99,11 @@ class MatrixHdf5:
 
     @property
     def prior(self):
-        return self.h['metadata']['prior'].value
+        return self.h['prior'].value
 
     @prior.setter
-    def prior(self, p):
-        self.h.create_dataset('metadata/prior', data=collapse_matrix(p))
+    def prior(self, ps):
+        self.h.create_dataset('metadata/prior', data=[collapse_matrix(p) for p in ps])
 
     @property
     def analysis_type(self):
@@ -65,8 +119,7 @@ class MatrixHdf5:
 
     @group_names.setter
     def group_names(self, n):
-        dt = h5py.special_dtype(vlen=numpy.unicode)
-        self.h.create_dataset('metadata/group_names', data=numpy.array(n, dtype=dt))
+        self.h.create_dataset('metadata/group_names', data=numpy.array(n, dtype=self.dt))
 
     @property
     def experiment_names(self):
@@ -74,16 +127,15 @@ class MatrixHdf5:
 
     @experiment_names.setter
     def experiment_names(self, n):
-        dt = h5py.special_dtype(vlen=numpy.unicode)
-        self.h.create_dataset('metadata/experiment_names', data=numpy.array(n, dtype=dt))
+        self.h.create_dataset('metadata/experiment_names', data=numpy.array(n, dtype=self.dt))
 
     @property
-    def metadata(self):
-        return {
-            'analysis_type': self.analysis_type,
-            'group_names': self.group_names,
-            'experiment_names': self.experiment_names
-        }
+    def stat_names(self):
+        return self.h['metadata']['stat_names'].value
+
+    @stat_names.setter
+    def stat_names(self, s):
+        self.h.create_dataset('metadata/stat_names', data=numpy.array(s, dtype=self.dt))
 
     @property
     def gene_ids(self):
@@ -118,12 +170,25 @@ class MatrixHdf5:
 class MatrixType(ABC):
     @abstractmethod
     def __init__(self, matrix_hdf5, lsv_id, fields):
+        """
+        The analysis type of data found in matrix file.
+
+        :param matrix_hdf5: matrix HDF5 object
+        :param lsv_id: unique LSV identifier
+        :param fields: fields allowed to be stored in this file
+        """
         self.matrix_hdf5 = matrix_hdf5
         self.lsv_id = lsv_id
         self.fields = fields
         self._lsv_type = None
 
     def add(self, **kwargs):
+        """
+        Add key/values to Matrix file.
+
+        :param kwargs: keyword args containing key/values
+        :return: None
+        """
         if all(k in kwargs for k in self.fields) and len(kwargs) == len(self.fields):
             self.matrix_hdf5.add_multiple(self.lsv_id, **kwargs)
         else:
@@ -137,10 +202,22 @@ class MatrixType(ABC):
 
             raise Exception('; '.join(msg))
 
-    def get(self, key):
+    def get(self, key: str):
+        """
+        Retrieve value from Matrix file.
+
+        :param key: Key for value
+        :return: Value
+        """
         return self.matrix_hdf5.get(self.lsv_id, key)
 
-    def get_many(self, keys):
+    def get_many(self, keys: List[str]):
+        """
+        Retrieve many values using list of keys
+
+        :param keys: list of keys for values
+        :return: Generator of key, values
+        """
         return self.matrix_hdf5.get_many(self.lsv_id, keys)
 
     @property
@@ -148,6 +225,10 @@ class MatrixType(ABC):
         if self._lsv_type is None:
             self._lsv_type = self.get('lsv_type')
         return self._lsv_type
+
+    @property
+    def intron_retention(self):
+        return 'i' == self.lsv_type[-1]
 
     @property
     def reference_exon(self):
@@ -248,26 +329,76 @@ class MatrixType(ABC):
 class DeltaPsi(MatrixHdf5):
     class _DeltaPsi(MatrixType):
         def __init__(self, matrix_hdf5, lsv_id):
+            """
+            Store Delta PSI data.
+
+            :param matrix_hdf5: matrix HDF5 object
+            :param lsv_id: unique LSV identifier
+            """
             fields = ('bins', 'group_bins', 'group_means', 'lsv_type', 'junctions')
             super().__init__(matrix_hdf5, lsv_id, fields)
 
         def add(self, **kwargs):
+            """
+            Add keyword arguments specific for Delta PSI data.
+
+            :param kwargs: keyword arguments
+            :return: None
+            """
             bins_list = kwargs.get('bins')
             bins = [collapse_matrix(bins) for bins in bins_list]
             kwargs['bins'] = bins
-            junctions = kwargs.get('junctions')
-            kwargs['junctions'] = junctions.astype(int)
             super().add(**kwargs)
 
     def delta_psi(self, lsv_id):
+        """
+        Accessor function for Delta PSI file.
+
+        :param lsv_id:
+        :return:
+        """
         return self._DeltaPsi(self, lsv_id)
 
 
 class Psi(MatrixHdf5):
     class _Psi(MatrixType):
         def __init__(self, matrix_hdf5, lsv_id):
+            """
+            Store PSI data.
+
+            :param matrix_hdf5: matrix HDF5 object
+            :param lsv_id: unique LSV identifier
+            """
             fields = ('bins', 'means', 'lsv_type', 'junctions')
             super().__init__(matrix_hdf5, lsv_id, fields)
 
     def psi(self, lsv_id):
+        """
+        Accessor function for PSI file.
+
+        :param lsv_id:
+        :return:
+        """
         return self._Psi(self, lsv_id)
+
+
+class Heterogen(MatrixHdf5):
+    class _Heterogen(MatrixType):
+        def __init__(self, matrix_hdf5, lsv_id):
+            """
+            Store PSI data.
+
+            :param matrix_hdf5: matrix HDF5 object
+            :param lsv_id: unique LSV identifier
+            """
+            fields = ('lsv_type', 'junction_stats', 'mu_psi', 'mean_psi', 'junctions')
+            super().__init__(matrix_hdf5, lsv_id, fields)
+
+    def heterogen(self, lsv_id):
+        """
+        Accessor function for PSI file.
+
+        :param lsv_id:
+        :return:
+        """
+        return self._Heterogen(self, lsv_id)

@@ -1,17 +1,22 @@
+import csv
 import errno
 import os
+from multiprocessing import Lock
 
-from voila import constants, io_voila
+from voila import constants
 from voila.api.matrix_hdf5 import lsv_id_to_gene_id
-from voila.api.view_matrix import ViewPsi, ViewPsiMatrix
-from voila.api.view_splice_graph import ViewSpliceGraph, ViewGene
+from voila.api.view_matrix import ViewPsi
+from voila.api.view_splice_graph import ViewSpliceGraph
 from voila.exceptions import NotPsiVoilaFile
 from voila.utils.voila_log import voila_log
 from voila.utils.voila_pool import VoilaPool
 from voila.view.html import Html
+from voila.view.tsv import Tsv
+
+lock = Lock()
 
 
-class Psi(Html):
+class Psi(Html, Tsv):
     def __init__(self, args):
         """
         Render psi output.
@@ -19,26 +24,26 @@ class Psi(Html):
         :return: None
         """
         super(Psi, self).__init__(args)
+        with ViewPsi(args) as m:
+            if m.analysis_type != constants.ANALYSIS_PSI:
+                raise NotPsiVoilaFile(args.voila_file)
+            self.metadata = m.view_metadata
 
         if not args.disable_html:
-            with ViewPsi(args.voila_file) as m:
-                if m.analysis_type != constants.ANALYSIS_PSI:
-                    raise NotPsiVoilaFile(args.voila_file)
-                self.metadata = ViewPsiMatrix(m).metadata
             self.copy_static(args)
             self.create_db_files()
             self.render_summaries()
             self.render_index()
 
         if not args.disable_tsv:
-            io_voila.psi_tab_output(args, self.voila_links)
+            self.psi_tab_output()
 
     def create_db_files(self):
         args = self.args
         metadata = self.metadata
         log = voila_log()
         log.info('Create DB files')
-        with ViewPsi(args.voila_file, 'r') as m:
+        with ViewPsi(args) as m:
             gene_ids = tuple(m.gene_ids)
 
         try:
@@ -52,7 +57,7 @@ class Psi(Html):
 
         with VoilaPool() as vp:
             for genes in self.chunkify(gene_ids, vp.processes):
-                multiple_results.append(vp.pool.apply_async(self.create_gene_db, (genes, args, names)))
+                multiple_results.append(vp.apply_async(self.create_gene_db, (genes, args, names)))
 
             for res in multiple_results:
                 res.get()
@@ -67,9 +72,9 @@ class Psi(Html):
         args = self.args
         metadata = self.metadata
 
-        with ViewPsi(args.voila_file) as m, ViewSpliceGraph(args.splice_graph) as sg:
-            lsv_ids = tuple(ViewPsiMatrix(m).view_lsv_ids(args))
-            lsv_count = ViewPsiMatrix(m).view_lsv_count(args)
+        with ViewPsi(args) as m, ViewSpliceGraph(args) as sg:
+            lsv_ids = tuple(m.view_lsv_ids())
+            lsv_count = m.view_lsv_count()
             too_many_lsvs = lsv_count > constants.MAX_LSVS_PSI_INDEX
 
             with open(os.path.join(args.output, 'index.html'), 'w') as html:
@@ -84,7 +89,7 @@ class Psi(Html):
                         next_page=None,
                         links=self.voila_links,
                         genes=sg.gene,
-                        gene_ids=set(lsv_id_to_gene_id(lsv_id) for lsv_id in ViewPsiMatrix(m).view_lsv_ids(args)),
+                        gene_ids=set(lsv_id_to_gene_id(lsv_id) for lsv_id in m.view_lsv_ids()),
                         lsvs=(m.psi(lsv_id) for lsv_id in lsv_ids),
                         too_many_lsvs=too_many_lsvs,
                         database_name=self.database_name(),
@@ -99,22 +104,22 @@ class Psi(Html):
         summaries_subfolder = cls.get_summaries_subfolder(args)
         links = {}
 
-        with ViewSpliceGraph(args.splice_graph, 'r') as sg, ViewPsi(args.voila_file) as m:
+        with ViewSpliceGraph(args) as sg, ViewPsi(args) as m:
             genome = sg.genome
-            page_count = ViewPsiMatrix(m).page_count(args)
+            page_count = m.page_count()
 
             for index, genes in paged:
                 page_name = cls.get_page_name(args, index)
                 next_page = cls.get_next_page(args, index, page_count)
                 prev_page = cls.get_prev_page(args, index)
-                lsv_dict = {gene_id: tuple(lsv_id for lsv_id in ViewPsiMatrix(m).view_gene_lsvs(args, gene_id)) for
+                lsv_dict = {gene_id: tuple(lsv_id for lsv_id in m.view_gene_lsvs(gene_id)) for
                             gene_id in genes}
                 table_marks = tuple(cls.table_marks_set(len(gene_set)) for gene_set in lsv_dict)
 
                 with open(os.path.join(summaries_subfolder, page_name), 'w') as html:
                     html.write(
                         summary_template.render(
-                            genes=list(sg.gene(gene_id).get for gene_id in genes),
+                            genes=list(sg.gene(gene_id) for gene_id in genes),
                             table_marks=table_marks,
                             lsv_ids=lsv_dict,
                             psi_lsv=m.psi,
@@ -141,14 +146,14 @@ class Psi(Html):
         metadata = self.metadata
         database_name = self.database_name()
 
-        with ViewPsi(args.voila_file) as m:
-            paged_genes = tuple(ViewPsiMatrix(m).paginated_genes(args))
+        with ViewPsi(args) as m:
+            paged_genes = tuple(m.paginated_genes())
 
         multiple_results = []
         with VoilaPool() as vp:
-            for paged in self.chunkify(tuple(enumerate(paged_genes)), vp.processes):
+            for paged in self.chunkify(list(enumerate(paged_genes)), vp.processes):
                 multiple_results.append(
-                    vp.pool.apply_async(self.create_summary, (metadata, args, database_name, paged)))
+                    vp.apply_async(self.create_summary, (metadata, args, database_name, paged)))
 
             for res in multiple_results:
                 self.voila_links.update(res.get())
@@ -158,12 +163,78 @@ class Psi(Html):
     @classmethod
     def create_gene_db(cls, gene_ids, args, experiment_names):
         template = cls.get_env().get_template('gene_db_template.html')
-        with ViewSpliceGraph(args.splice_graph) as sg, ViewPsi(args.voila_file) as m:
-            for gene_id in gene_ids:
-                with open(os.path.join(args.output, 'db', '{}.js'.format(gene_id)), 'w') as html:
+        with ViewSpliceGraph(args) as sg, ViewPsi(args) as m:
+            for gene in sg.genes(gene_ids):
+                with open(os.path.join(args.output, 'db', '{}.js'.format(gene.id)), 'w') as html:
                     html.write(
                         template.render(
-                            gene=ViewGene(sg.gene(gene_id).get).get_experiment(experiment_names),
-                            lsvs=(m.psi(lsv_id) for lsv_id in ViewPsiMatrix(m).view_gene_lsvs(args, gene_id))
+                            gene=gene.get_experiment(experiment_names),
+                            lsvs=(m.psi(lsv_id) for lsv_id in m.view_gene_lsvs(gene.id))
                         )
                     )
+
+    def tsv_row(self, gene_ids, tsv_file, fieldnames):
+        args = self.args
+        voila_links = self.voila_links
+        log = voila_log()
+        with ViewPsi(args) as m, ViewSpliceGraph(args) as sg:
+
+            with open(tsv_file, 'a') as tsv:
+                writer = csv.DictWriter(tsv, fieldnames=fieldnames, delimiter='\t')
+
+                for gene in sg.genes(gene_ids):
+                    for lsv_id in m.view_gene_lsvs(gene.id):
+                        lsv = m.psi(lsv_id)
+                        lsv_junctions = list(gene.lsv_junctions(lsv))
+                        lsv_exons = list(gene.lsv_exons(lsv))
+
+                        row = {
+                            '#Gene Name': gene.name,
+                            'Gene ID': gene.id,
+                            'LSV ID': lsv_id,
+                            'LSV Type': lsv.lsv_type,
+                            'A5SS': lsv.prime5,
+                            'A3SS': lsv.prime3,
+                            'ES': lsv.exon_skipping,
+                            'Num. Junctions': lsv.junction_count,
+                            'Num. Exons': lsv.exon_count,
+                            'chr': gene.chromosome,
+                            'strand': gene.strand,
+                            'De Novo Junctions': self.semicolon_join(
+                                int(not junc.annotated) for junc in lsv_junctions
+                            ),
+                            'Junctions coords': self.semicolon_join(
+                                '{0}-{1}'.format(junc.start, junc.end) for junc in lsv_junctions
+                            ),
+                            'Exons coords': self.semicolon_join(
+                                '{0}-{1}'.format(start, end) for start, end in self.filter_exons(lsv_exons)
+                            ),
+                            'IR coords': self.semicolon_join(
+                                '{0}-{1}'.format(e.start, e.end) for e in lsv_exons if e.intron_retention
+                            ),
+                            'E(PSI) per LSV junction': self.semicolon_join(lsv.means),
+                            'Var(E(PSI)) per LSV junction': self.semicolon_join(lsv.variances)
+                        }
+
+                        if voila_links:
+                            summary_path = voila_links[gene.id]
+                            if not os.path.isabs(summary_path):
+                                summary_path = os.path.join(os.getcwd(), args.output, summary_path)
+                            row['Voila link'] = "file://{0}".format(summary_path)
+
+                        log.debug('Write TSV row for {0}'.format(lsv_id))
+
+                        lock.acquire()
+                        writer.writerow(row)
+                        lock.release()
+
+    def psi_tab_output(self):
+        voila_links = self.voila_links
+
+        fieldnames = ['#Gene Name', 'Gene ID', 'LSV ID', 'E(PSI) per LSV junction', 'Var(E(PSI)) per LSV junction',
+                      'LSV Type', 'A5SS', 'A3SS', 'ES', 'Num. Junctions', 'Num. Exons', 'De Novo Junctions', 'chr',
+                      'strand', 'Junctions coords', 'Exons coords', 'IR coords']
+        if voila_links:
+            fieldnames.append('Voila link')
+
+        self.write_tsv(fieldnames)

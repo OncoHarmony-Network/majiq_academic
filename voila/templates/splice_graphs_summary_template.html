@@ -20,7 +20,7 @@
     <script src="static/js/floatinglegend.js"></script>
     <script src="static/js/colors.js"></script>
     <script>
-        var db = new PouchDB('{{ database_name }}');
+        var db = new PouchDB('{{ database_name }}', {auto_compaction: true});
         var sg = new SpliceGraph(db);
     </script>
 {% endblock %}
@@ -44,8 +44,8 @@
                 {% set gene_index = loop.index - 1 %}
                 <script>
                     db.bulkDocs([
-                        {{ ViewGene(gene).get_experiment(metadata.experiment_names) | to_json }}
-                    ]).then(function (result) {
+                        {{ gene.get_experiment(metadata.experiment_names) | to_json }}
+                    ]).then(function () {
                         console.log('successfully loaded data...')
                     }).catch(function (err) {
                         console.error(err);

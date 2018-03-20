@@ -31,6 +31,10 @@ var coord_in_exon = function (exon, coord) {
     return coord >= exon.start && coord <= exon.end
 };
 
+var start_end_sort = function (a, b) {
+    return a.start - b.start || a.end - b.end;
+};
+
 SpliceGraph.prototype.xScale = function (gene, default_view, reverse_range) {
     var x_dom = [];
     var x_range = [];
@@ -54,6 +58,8 @@ SpliceGraph.prototype.xScale = function (gene, default_view, reverse_range) {
 
     // general x-scale
     var x = d3.scaleLinear().domain([gene.start, gene.end]).range([min_width, max_width]);
+
+    gene.exons.sort(start_end_sort);
 
     // get the start and end of each exon/ir for both the domain and range
     for (i = 0; i < gene.exons.length; i++) {
@@ -196,18 +202,18 @@ SpliceGraph.prototype.junction_bins = function (junctions, reads, x) {
                 junc = junctions[j];
                 var small_junc_r = reads[small_junc.start][small_junc.end];
                 var junc_r = reads[junc.start][junc.end];
-                var reads_length = small_junc_r.toString().length + junc_r.toString().length;
-                if (junc.bin === small_junc.bin && sg.distance(x, junc, small_junc) < reads_length * 4) {
-                    junc.bin += 1;
-                    changed = true;
+                if (small_junc_r && junc_r) {
+                    var reads_length = small_junc_r.toString().length + junc_r.toString().length;
+                    if (junc.bin === small_junc.bin && sg.distance(x, junc, small_junc) < reads_length * 4) {
+                        junc.bin += 1;
+                        changed = true;
+                    }
                 }
             }
         }
     } while (changed && sentinel < 10);
 
-    junctions.sort(function (a, b) {
-        return a.start - b.start || a.end - b.end;
-    });
+    junctions.sort(start_end_sort);
 
     return junctions
 };

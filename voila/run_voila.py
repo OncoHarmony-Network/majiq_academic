@@ -12,6 +12,7 @@ from voila.utils.utils_voila import create_if_not_exists
 from voila.utils.voila_log import voila_log
 from voila.utils.voila_pool import VoilaPool
 from voila.view.deltapsi import DeltaPsi
+from voila.view.heterogen import Heterogen
 from voila.view.psi import Psi
 from voila.view.splice_graph import RenderSpliceGraphs
 
@@ -190,12 +191,15 @@ def voila_parser():
     deltapsi.add_argument('--show-all', action='store_true',
                           help='Show all LSVs including those with no junction with significant change predicted.')
 
+    # heterogen parser
+    heterogen = new_subparser()
+
     # subparsers
     subparsers = parser.add_subparsers(help='')
     subparsers.add_parser('splice-graph', parents=[splice_graph]).set_defaults(func=RenderSpliceGraphs)
     subparsers.add_parser('psi', parents=[splice_graph, psi]).set_defaults(func=Psi)
     subparsers.add_parser('deltapsi', parents=[splice_graph, psi, deltapsi]).set_defaults(func=DeltaPsi)
-
+    subparsers.add_parser('heterogen', parents=[splice_graph, psi, deltapsi, heterogen]).set_defaults(func=Heterogen)
     return parser
 
 
@@ -246,8 +250,6 @@ def main():
         elapsed_str = secs2hms(time.time() - start_time)
         log.info("Execution time: {0}.".format(elapsed_str))
 
-        VoilaPool().pool.close()
-
     except KeyboardInterrupt:
         log.warning('Voila exiting')
 
@@ -261,6 +263,8 @@ def main():
     except Exception as e:
         log.exception(e)
         exit(2)
+
+    VoilaPool().close()
 
 
 if __name__ == '__main__':

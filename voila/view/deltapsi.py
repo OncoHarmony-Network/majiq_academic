@@ -1,43 +1,50 @@
+import csv
 import errno
 import os
+from multiprocessing import Lock
 
-from voila import constants, io_voila
+import numpy as np
+
+from voila import constants
 from voila.api.matrix_hdf5 import lsv_id_to_gene_id
-from voila.api.view_matrix import ViewDeltaPsi, ViewDeltaPsiMatrix
-from voila.api.view_splice_graph import ViewSpliceGraph, ViewGene
+from voila.api.view_matrix import ViewDeltaPsi
+from voila.api.view_splice_graph import ViewSpliceGraph
 from voila.exceptions import NotDeltaPsiVoilaFile
 from voila.utils.voila_log import voila_log
 from voila.utils.voila_pool import VoilaPool
 from voila.view.html import Html
+from voila.view.tsv import Tsv
+from voila.vlsv import matrix_area
+
+lock = Lock()
 
 
-class DeltaPsi(Html):
+class DeltaPsi(Html, Tsv):
     def __init__(self, args):
         super(DeltaPsi, self).__init__(args)
+        with ViewDeltaPsi(args) as m:
+            if m.analysis_type != constants.ANALYSIS_DELTAPSI:
+                raise NotDeltaPsiVoilaFile(args.voila_file)
+            self.view_metadata = m.view_metadata
 
         if not args.disable_html:
-            with ViewDeltaPsi(args.voila_file) as m:
-                if m.analysis_type != constants.ANALYSIS_DELTAPSI:
-                    raise NotDeltaPsiVoilaFile(args.voila_file)
-                self.metadata = ViewDeltaPsiMatrix(m).metadata
-
             self.copy_static(args)
             self.create_db_files()
             self.render_summaries()
             self.render_index()
 
         if not args.disable_tsv:
-            io_voila.delta_psi_tab_output(args, self.voila_links)
+            self.delta_psi_tab_output()
 
     def render_index(self):
         log = voila_log()
         log.info('Render Delta PSI HTML index')
         log.debug('Start index render')
         args = self.args
-        metadata = self.metadata
+        metadata = self.view_metadata
 
-        with ViewSpliceGraph(args.splice_graph) as sg, ViewDeltaPsi(args.voila_file) as m:
-            lsv_count = ViewDeltaPsiMatrix(m).view_lsv_count(args)
+        with ViewSpliceGraph(args) as sg, ViewDeltaPsi(args) as m:
+            lsv_count = m.view_lsv_count()
             too_many_lsvs = lsv_count > constants.MAX_LSVS_DELTAPSI_INDEX
 
             with open(os.path.join(args.output, 'index.html'), 'w') as html:
@@ -50,9 +57,9 @@ class DeltaPsi(Html):
                         prev_page=None,
                         next_page=None,
                         database_name='deltapsi_' + self.database_name(),
-                        lsvs=list(m.delta_psi(lsv_id) for lsv_id in ViewDeltaPsiMatrix(m).view_lsv_ids(args)),
+                        lsvs=list(m.delta_psi(lsv_id) for lsv_id in m.view_lsv_ids()),
                         genes=sg.gene,
-                        gene_ids=set(lsv_id_to_gene_id(lsv_id) for lsv_id in ViewDeltaPsiMatrix(m).view_lsv_ids(args)),
+                        gene_ids=set(lsv_id_to_gene_id(lsv_id) for lsv_id in m.view_lsv_ids()),
                         links=self.voila_links,
                         too_many_lsvs=too_many_lsvs,
                         metadata=metadata,
@@ -68,16 +75,15 @@ class DeltaPsi(Html):
     def create_gene_db(cls, gene_ids, args, experiment_names):
         template = cls.get_env().get_template('gene_db_template.html')
         log = voila_log()
-        with ViewSpliceGraph(args.splice_graph) as sg, ViewDeltaPsi(args.voila_file) as m:
-            for gene_id in gene_ids:
-                log.debug('creating {}'.format(gene_id))
+        with ViewSpliceGraph(args) as sg, ViewDeltaPsi(args) as m:
+            for gene in sg.genes(gene_ids):
+                log.debug('creating {}'.format(gene.id))
 
-                with open(os.path.join(args.output, 'db', '{}.js'.format(gene_id)), 'w') as html:
+                with open(os.path.join(args.output, 'db', '{}.js'.format(gene.id)), 'w') as html:
                     html.write(
                         template.render(
-                            gene=ViewGene(sg.gene(gene_id).get).get_experiment(experiment_names),
-                            lsvs=tuple(
-                                m.delta_psi(lsv_id) for lsv_id in ViewDeltaPsiMatrix(m).view_gene_lsvs(args, gene_id))
+                            gene=gene.get_experiment(experiment_names),
+                            lsvs=tuple(m.delta_psi(lsv_id) for lsv_id in m.view_gene_lsvs(gene.id))
                         )
                     )
 
@@ -88,17 +94,17 @@ class DeltaPsi(Html):
         group_names = metadata['group_names']
         links = {}
 
-        with ViewSpliceGraph(args.splice_graph, 'r') as sg, ViewDeltaPsi(args.voila_file) as m:
+        with ViewSpliceGraph(args) as sg, ViewDeltaPsi(args) as m:
             genome = sg.genome
-            page_count = ViewDeltaPsiMatrix(m).page_count(args)
+            page_count = m.page_count()
 
-            for index, genes in paged:
+            for index, gene_ids in paged:
                 page_name = cls.get_page_name(args, index)
                 next_page = cls.get_next_page(args, index, page_count)
                 prev_page = cls.get_prev_page(args, index)
 
-                lsv_dict = {gene_id: tuple(lsv_id for lsv_id in ViewDeltaPsiMatrix(m).view_gene_lsvs(args, gene_id)) for
-                            gene_id in genes}
+                lsv_dict = {gene_id: tuple(lsv_id for lsv_id in m.view_gene_lsvs(gene_id)) for
+                            gene_id in gene_ids}
                 table_marks = tuple(cls.table_marks_set(len(gene_set)) for gene_set in lsv_dict)
 
                 with open(os.path.join(summaries_subfolder, page_name), 'w') as html:
@@ -112,12 +118,13 @@ class DeltaPsi(Html):
                             next_page=next_page,
                             gtf=args.gtf,
                             group_names=group_names,
-                            genes=list(sg.gene(gene_id).get for gene_id in genes),
+                            genes=list(sg.genes(gene_ids)),
                             lsv_ids=lsv_dict,
                             delta_psi_lsv=m.delta_psi,
                             metadata=metadata,
                             database_name=database_name,
-                            genome=genome
+                            genome=genome,
+                            splice_graph=sg
                         )
                     )
 
@@ -131,11 +138,11 @@ class DeltaPsi(Html):
         log.debug('Start summaries render')
 
         args = self.args
-        metadata = self.metadata
+        metadata = self.view_metadata
         database_name = self.database_name()
 
-        with ViewDeltaPsi(args.voila_file) as m:
-            paged_genes = tuple(ViewDeltaPsiMatrix(m).paginated_genes(args))
+        with ViewDeltaPsi(args) as m:
+            paged_genes = tuple(m.paginated_genes())
 
         multiple_results = []
         with VoilaPool() as vp:
@@ -148,12 +155,12 @@ class DeltaPsi(Html):
 
     def create_db_files(self):
         args = self.args
-        metadata = self.metadata
+        metadata = self.view_metadata
         log = voila_log()
         log.info('Create DB files')
 
-        with ViewDeltaPsi(args.voila_file) as m:
-            gene_ids = tuple(ViewDeltaPsiMatrix(m).view_gene_ids(args))
+        with ViewDeltaPsi(args) as m:
+            gene_ids = tuple(m.view_gene_ids())
 
         try:
             os.makedirs(os.path.join(args.output, 'db'))
@@ -170,9 +177,101 @@ class DeltaPsi(Html):
 
         with VoilaPool() as vp:
             for genes in chunkify(gene_ids, vp.processes):
-                multiple_results.append(vp.pool.apply_async(self.create_gene_db, (genes, args, names)))
+                multiple_results.append(vp.apply_async(self.create_gene_db, (genes, args, names)))
 
             for res in multiple_results:
                 res.get()
 
         log.debug('finished writing db files.')
+
+    def tsv_row(self, gene_ids, tsv_file, fieldnames):
+        voila_links = self.voila_links
+        args = self.args
+        log = voila_log()
+
+        with ViewDeltaPsi(args) as m, ViewSpliceGraph(args) as sg:
+            metadata = m.view_metadata
+            group1 = metadata['group_names'][0]
+            group2 = metadata['group_names'][1]
+
+            with open(tsv_file, 'a') as tsv:
+                writer = csv.DictWriter(tsv, fieldnames=fieldnames, delimiter='\t')
+
+                for gene in sg.genes(gene_ids):
+                    for lsv_id in m.view_gene_lsvs(gene.id):
+                        log.debug('Write TSV row for {0}'.format(lsv_id))
+                        lsv = m.delta_psi(lsv_id)
+
+                        lsv_junctions = list(gene.lsv_junctions(lsv))
+                        lsv_exons = list(gene.lsv_exons(lsv))
+                        group_means = list(lsv.group_means)
+                        excl_incl = list(lsv.excl_incl)
+
+                        row = {
+                            '#Gene Name': gene.name,
+                            'Gene ID': gene.id,
+                            'LSV ID': lsv_id,
+                            'LSV Type': lsv.lsv_type,
+                            'A5SS': lsv.prime5,
+                            'A3SS': lsv.prime3,
+                            'ES': lsv.exon_skipping,
+                            'Num. Junctions': lsv.junction_count,
+                            'Num. Exons': lsv.exon_count,
+                            'chr': gene.chromosome,
+                            'strand': gene.strand,
+                            'De Novo Junctions': self.semicolon_join(
+                                int(not junc.annotated) for junc in lsv_junctions
+                            ),
+                            'Junctions coords': self.semicolon_join(
+                                '{0}-{1}'.format(junc.start, junc.end) for junc in lsv_junctions
+                            ),
+                            'Exons coords': self.semicolon_join(
+                                '{0}-{1}'.format(start, end) for start, end in self.filter_exons(lsv_exons)
+                            ),
+                            'IR coords': self.semicolon_join(
+                                '{0}-{1}'.format(e.start, e.end) for e in lsv_exons if e.intron_retention
+                            ),
+                            'E(dPSI) per LSV junction': self.semicolon_join(
+                                excl_incl[i][1] - excl_incl[i][0] for i in
+                                range(np.size(lsv.bins, 0))
+                            ),
+                            'P(|dPSI|>=%.2f) per LSV junction' % args.threshold: self.semicolon_join(
+                                matrix_area(b, args.threshold) for b in lsv.bins
+                            ),
+                            'P(|dPSI|<=%.2f) per LSV junction' % args.non_changing_threshold: self.semicolon_join(
+                                lsv.high_probability_non_changing()
+                            ),
+                            '%s E(PSI)' % group1: self.semicolon_join(
+                                '%.3f' % i for i in group_means[0]
+                            ),
+                            '%s E(PSI)' % group2: self.semicolon_join(
+                                '%.3f' % i for i in group_means[1]
+                            )
+                        }
+
+                        if voila_links:
+                            summary_path = voila_links[gene.id]
+                            if not os.path.isabs(summary_path):
+                                summary_path = os.path.join(os.getcwd(), args.output, summary_path)
+                            row['Voila link'] = "file://{0}".format(summary_path)
+
+                        lock.acquire()
+                        writer.writerow(row)
+                        lock.release()
+
+    def delta_psi_tab_output(self):
+        args = self.args
+        voila_links = self.voila_links
+        metadata = self.view_metadata
+
+        fieldnames = ['#Gene Name', 'Gene ID', 'LSV ID', 'E(dPSI) per LSV junction',
+                      'P(|dPSI|>=%.2f) per LSV junction' % args.threshold,
+                      'P(|dPSI|<=%.2f) per LSV junction' % args.non_changing_threshold,
+                      '%s E(PSI)' % metadata['group_names'][0], '%s E(PSI)' % metadata['group_names'][1], 'LSV Type',
+                      'A5SS', 'A3SS', 'ES', 'Num. Junctions', 'Num. Exons', 'De Novo Junctions', 'chr',
+                      'strand', 'Junctions coords', 'Exons coords', 'IR coords']
+
+        if voila_links:
+            fieldnames.append('Voila link')
+
+        self.write_tsv(fieldnames)

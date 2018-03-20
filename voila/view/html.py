@@ -6,9 +6,7 @@ from distutils.dir_util import copy_tree
 
 import numpy
 from jinja2 import Environment, FileSystemLoader, StrictUndefined
-
 from voila import constants
-from voila.api.view_splice_graph import ViewGene
 from voila.constants import EXEC_DIR
 from voila.utils import utils_voila
 from voila.utils.voila_log import voila_log
@@ -99,10 +97,6 @@ class Html:
         env.filters.update({
             'to_json': to_json,
             'to_dict': to_dict,
-        })
-
-        env.globals.update({
-            'ViewGene': ViewGene
         })
 
         return env
