@@ -99,7 +99,7 @@ class MatrixHdf5:
 
     @property
     def prior(self):
-        return self.h['prior'].value
+        return self.h['metadata']['prior'].value
 
     @prior.setter
     def prior(self, ps):
