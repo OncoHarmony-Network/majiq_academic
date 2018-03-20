@@ -19,13 +19,13 @@ namespace grimoire{
 
     class Junction{
         public:
-            string gene_id ;
             int start ;
             int end ;
             bool annot ;
             bool intronic ;
             unsigned int n_exps ;
-            unsigned int * nreads ;
+            vector<vector<unsigned int>> nreads_ ;
+            map<pair<unsigned int, unsigned int>, unsigned int> pos_map_ ;
             Exon * acceptor;
             Exon * donor;
 
@@ -33,31 +33,29 @@ namespace grimoire{
                 start = 0 ;
                 end = 0 ;
                 intronic = false ;
-                nreads = (unsigned int *) calloc(1, sizeof(unsigned int)) ;
-            }
-            Junction(string gene_id1, int start1, int end1, int nexp, int eff_len): gene_id(gene_id1), start(start1),
-                                                                                               end(end1), n_exps(nexp){
-                if (start>0 && end>0) {
-//                    cout<< "allocating for " << nexp << " " << eff_len << "\n" ;
-                    nreads = (unsigned int *) calloc(nexp * eff_len, sizeof(unsigned int)) ;
-//                    cout<< "ALLOC DONE\n" ;
-                }
-                intronic = false ;
 
             }
-            ~Junction(){
-                cout<<"Trying to free junc:" << start << "-" << end<< "::"<<nreads << "\n" ;
-                if (start>0 && end>0) {
-//                     free(nreads) ;
+
+            Junction(int start1, int end1, int nexp, int eff_len): start(start1), end(end1), n_exps(nexp){
+
+                for (int i=0; i<nexp; i++){
+                    vector<unsigned int> v ;
+                    nreads_.push_back(v) ;
                 }
-                cout<< "FREE DONE\n" ;
+                intronic = false ;
+            }
+
+            ~Junction(){
+                nreads_.clear() ;
+                pos_map_.clear() ;
             }
 
             string get_key(){
                 return(to_string(start) + "-" + to_string(end)) ;
             }
 
-            void update_junction_read(int read_start, unsigned int exp_index, unsigned int n);
+            void update_junction_read(int read_start, unsigned int exp_index, unsigned int n) ;
+            int length() ;
     };
 
     class Gene{
@@ -68,16 +66,37 @@ namespace grimoire{
             char strand ;
             unsigned int start ;
             unsigned int end ;
+            map<string, Junction*> junc_map ;
+            map<string, Exon*> exon_map ;
 
             Gene(){}
 
             Gene(string id1, string name1, string chromosome1,
                  char strand1, unsigned int start1, unsigned int end1): id(id1), name(name1), chromosome(chromosome1),
-                                                                                                start(start1), end(end1){}
-            ~Gene(){}
+                                                                             strand(strand1), start(start1), end(end1){}
+            void newExonDefinition(int start, int end, Junction *inbound_j, Junction *outbound_j, bool in_db);
 
+            ~Gene(){
+                for(const auto &p2: exon_map){
+                    delete p2.second ;
+                }
+
+                for(const auto &p1: junc_map){
+                    delete p1.second ;
+                }
+            }
+
+            void print_gene(){
+                cout<< id << chromosome <<":"<< start <<"-" << end << "\n";
+            }
+
+//            void add_elements(map<string, Junction*> &junc_map1, map<string, Exon*> &exon_map1){
+//                junc_map = junc_map1 ;
+//                exon_map = exon_map1 ;
+//            }
+
+            void detect_exons();
             string get_region();
-
     };
 
     class Exon{
@@ -90,7 +109,6 @@ namespace grimoire{
             unsigned int db_end ;
             set<Junction *> ib ;
             set<Junction *> ob ;
-
 
             Exon(){}
 
@@ -107,11 +125,13 @@ namespace grimoire{
             Exon(int start1, int end1, bool annot1, bool intron1): start(start1), end(end1),
                                                                                      annot(annot1), intron(intron1),
                                                                                      db_start(start1), db_end(end1){}
+
+            ~Exon(){}
     };
 
     struct Ssite{
 
-        unsigned int coord ;
+        int coord ;
         bool donor_ss ;
         Junction * j ;
 
@@ -126,7 +146,6 @@ namespace grimoire{
             LSV(){}
             LSV(string gene_id1, char strand, Exon* ex, bool ss){
                 bool b = (strand == '+') ;
-                cout << strand << "::"<< to_string(b) ;
                 string t = (ss != b) ? "t" : "s" ;
                 id = gene_id1 + ":" + t + ":" + to_string(ex->start) + "-" + to_string(ex->end) ;
                 junctions = ss? ex->ob: ex->ib ;
@@ -136,12 +155,8 @@ namespace grimoire{
 
 
 
-    int detect_lsvs(list<LSV*> &out_lsvlist, map<string, Exon*> &exon_map, Gene * gObj, unsigned int nexp,
-                    unsigned int eff_len, int minpos, int minreads);
-    void detect_exons(map<string, Junction*> &junc_map, map<string, Exon*> &exon_map);
-
-    void free_gene(Gene * gObj, map<string, Junction*> &junc_map, map<string, Exon*> &exon_map);
-
+    int detect_lsvs(list<LSV*> &out_lsvlist, Gene * gObj, unsigned int nexp, unsigned int eff_len,
+                                                                                            int minpos, int minreads);
     float* boostrap_samples(LSV * lsvObj, int msamples, int ksamples, int exp_idx, int eff_len) ;
 
 }

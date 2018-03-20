@@ -1,5 +1,5 @@
 from majiq.src.internals.io_bam cimport IOBam
-from majiq.src.internals.grimoire cimport Junction, Gene, Exon, LSV, detect_lsvs, detect_exons, boostrap_samples, free_gene
+from majiq.src.internals.grimoire cimport Junction, Gene, Exon, LSV, detect_lsvs, boostrap_samples
 #
 import cython
 from majiq.src.constants import *
@@ -18,6 +18,7 @@ import numpy as np
 cimport numpy as np
 
 ctypedef np.float64_t DTYPE_t
+ctypedef vector[Gene *] gene_vect
 
 # cdef int __mark_stacks(np.ndarray[np.float_t, ndim=2] junctions, float fitfunc_r, float pvalue_limit) :
 #
@@ -74,13 +75,13 @@ ctypedef np.float64_t DTYPE_t
 #     return all_samples
 
 
-cdef int _read_junction(list row, string gne_id, map[string, Junction*] jjs, map[string, Exon*] exs,
+cdef int _read_junction(list row, map[string, Junction*] jjs, map[string, Exon*] exs,
                         int nsamples, unsigned int eff_len) except -1:
     cdef string key = ('%s-%s' % (row[0], row[1])).encode('utf-8')
-    jjs[key] = new Junction(gne_id, row[0], row[1], nsamples, eff_len) #, annot=bool(row[2]))
+    jjs[key] = new Junction(row[0], row[1], nsamples, eff_len) #, annot=bool(row[2]))
 
 
-cdef int _read_exon(list row, string gne_id, map[string, Junction*] jjs, map[string, Exon*] exs) except -1:
+cdef int _read_exon(list row, map[string, Junction*] jjs, map[string, Exon*] exs) except -1:
     cdef string key = ('%s-%s' % (row[0], row[1])).encode('utf-8')
     exs[key] = new Exon(row[0], row[1], bool(row[2]))
 
@@ -90,8 +91,7 @@ cdef int _pass_ir(list row, str gne_id, map[string, Junction*] jjs, map[string, 
 
 
 
-cdef from_matrix_to_objects(string gne_id, list elements, map[string, Junction*] out_juncs,
-                             map[string, Exon*] out_exons, int nsamples, unsigned int eff_len,):
+cdef from_matrix_to_objects(Gene * gg, object elements, int nsamples, unsigned int eff_len):
 
     cdef dict func_list
     cdef list elem
@@ -99,96 +99,96 @@ cdef from_matrix_to_objects(string gne_id, list elements, map[string, Junction*]
   #  func_list = {EX_TYPE: _read_exon, IR_TYPE: _pass_ir, J_TYPE: _read_junction}
 
     for elem in elements:
+        pass
         if elem[3] == EX_TYPE:
-            _read_exon(elem, gne_id, out_juncs, out_exons)
+            _read_exon(elem, gg.junc_map, gg.exon_map)
         elif elem[3] == J_TYPE:
-            _read_junction(elem, gne_id, out_juncs, out_exons, nsamples, eff_len)
+            _read_junction(elem, gg.junc_map, gg.exon_map, nsamples, eff_len)
 
 
 
 cdef int _gene_analysis(vector[pair[string, string]] list_pair_files, map[string, int] strandness, int nsamples,
-                        Gene * gg, int ksamples, int msamples, list elements, int nsample, unsigned int min_experiments,
-                        unsigned int eff_len, int minpos, int minreads):
+                        gene_vect gene_list, int ksamples, int msamples,
+                        unsigned int min_experiments, unsigned int eff_len, int minpos, int minreads) nogil:
 
-    cdef map[string, Junction*] out_junction
     cdef int j, count=0
-    cdef map[string, Exon*] exon_map
     cdef clist[LSV*] out_lsvlist
     cdef IOBam c_iobam
     cdef float[:, :] boots
     cdef float * boots_ptr;
     cdef LSV * lsvObj
-    from_matrix_to_objects(gg.id, elements, out_junction, exon_map, nsample, eff_len)
+    cdef Gene* gg
 
-
-
-    with nogil:
-        for j in range(nsamples):
-            c_iobam = IOBam(list_pair_files[j].first, strandness[list_pair_files[j].first], eff_len, nsamples, j,
-                            out_junction)
+    for j in range(nsamples):
+        c_iobam = IOBam(list_pair_files[j].first, strandness[list_pair_files[j].first], eff_len, nsamples, j)
+        for gg in gene_list:
+            # gg.print_gene()
             c_iobam.find_junctions_from_region(gg)
 
-        detect_exons(out_junction, exon_map)
 
+    for gg in gene_list:
+        gg.detect_exons()
         #TODO: IR detection for later
-
-        count = count + detect_lsvs(out_lsvlist, exon_map, gg, min_experiments, eff_len, minpos, minreads)
-
+        count = count + detect_lsvs(out_lsvlist, gg, min_experiments, eff_len, minpos, minreads)
         for j in range(nsamples):
             for lsvObj in out_lsvlist:
                 boots_ptr = boostrap_samples(lsvObj, msamples, ksamples, j, eff_len)
-              #  boots = boots_ptr
+        del gg
+        # with gil: print ('KK4')
 
-        # with gil:
-        #     __mark_stacks(junctions, 0.0, pvalue_limit)
-        #     _bootstrap_samples(junctions, m, k)
-
-        free_gene(gg, out_junction, exon_map)
-
+    gene_list.clear()
     return 0
 
 cdef _extract_junctions(list file_list, object genes_dict, object elem_dict, conf, logger):
 
     cdef int n = len(genes_dict)
+    cdef int nbatches
     cdef int nthreads = min(conf.nthreads, len(conf.sam_list))
     cdef int nsamples = len(file_list)
     cdef int minpos = conf.minpos
     cdef int minreads = conf.minreads
-    cdef int i
+    cdef int i, j
     cdef int k=conf.k, m=conf.m
     cdef float pvalue_limit=conf.pvalue_limit
-
     cdef unsigned int min_experiments = 1 if conf.min_exp == -1 else conf.min_exp
     cdef unsigned int eff_len = conf.readLen - 2*MIN_BP_OVERLAP
     cdef Gene * gg
 
     cdef map[string, int] strandness
-    cdef vector[Gene * ] gene_list
+    cdef vector[gene_vect] gene_list
     cdef vector[pair[string, string]] list_pair_files
-
-    # cdef vector[Ssite] ss_vec
-
-    # cdef string cs1, region
-    # cdef clist[LSV*] out_lsvlist
+    cdef batchsize = 200;
     cdef char st = '+'
+    cdef int bidx = -1
+    cdef gene_vect vt
+    nbatches = np.ceil(n/batchsize)
 
-    for gne_id, gene_obj in genes_dict.items():
+    for i, (gne_id, gene_obj) in enumerate(genes_dict.items()):
         gg = new Gene(gne_id.encode('utf-8'), gene_obj['name'].encode('utf-8'), gene_obj['chromosome'].encode('utf-8'),
                       st, gene_obj['start'], gene_obj['end'])
+        from_matrix_to_objects(gg, elem_dict[gne_id], nsamples, eff_len)
+        # gg.print_gene()
+
                       # gene_obj['strand'], gene_obj['start'], gene_obj['end'])
-        gene_list.push_back(gg)
+        if i%batchsize == 0 :
+            j = 100 if i+100 < n else n-i
+            bidx += 1
+            vt = gene_vect()
+            gene_list.push_back(vt)
+            # print("PPP")
+        # print("KKK", gne_id, "MM", bidx,"LLL", i%batchsize, "+++", nbatches)
+        gene_list[bidx].push_back(gg)
 
     for exp_name, is_junc_file, name in file_list:
         cs1 = ('%s/%s.%s' % (conf.sam_dir, exp_name, SEQ_FILE_FORMAT)).encode('utf-8')
         list_pair_files.push_back((pair[string, string])(cs1, name.encode('utf-8')))
         strandness[cs1] = conf.strand_specific[exp_name]
 
-    for i in prange(n, nogil=True, num_threads=nthreads):
-        gg = gene_list[i]
+    for i in prange(nbatches, nogil=True, num_threads=nthreads):
         with gil:
-            logger.info("%s/%s - %s" %(i, n, gg.id))
-            _gene_analysis(list_pair_files, strandness, nsamples, gg, conf.k, conf.m, elem_dict[gg.id.decode('utf-8')],
-                           nsamples, min_experiments, eff_len, minpos, minreads)
+            logger.info("%s/%s" %(i, nbatches))
+        _gene_analysis(list_pair_files, strandness, nsamples, gene_list[i], k, m,
+                           min_experiments, eff_len, minpos, minreads)
 
 ## OPEN API FOR PYTHON
 

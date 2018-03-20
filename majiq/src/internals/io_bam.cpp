@@ -31,24 +31,23 @@ namespace io_bam {
         return ((read->core.flag & 0x100) != 0x100);
     }
 
-    void IOBam::add_junction(string gne_id, char strand, int start, int end, int read_pos) {
+    void IOBam::add_junction(Gene* gobj, char strand, int start, int end, int read_pos) {
 
         const unsigned int offset = start - (read_pos+ MIN_BP_OVERLAP) ;
         if (offset >= eff_len_) {
             return ;
         }
-        string key =  gne_id + string(":") + to_string(start) + "-" + to_string(end) ;
-//        cout << "IN ADD JUNC " << nexps_<< " " << eff_len_ <<"\n"<< flush;
-        if(denovo_juncs_.count(key) == 0) {
-            denovo_juncs_[key]= new Junction(gne_id, start, end, nexps_, eff_len_) ;
+        string key =  to_string(start) + "-" + to_string(end) ;
+        if((gobj->junc_map).count(key) == 0) {
+            (gobj->junc_map)[key]= new Junction(start, end, nexps_, eff_len_) ;
         }
-        denovo_juncs_[key]->update_junction_read(read_pos, exp_index,  1) ;
-//        cout << "END ADD JUNC\n"<< flush;
+        (gobj->junc_map)[key]->update_junction_read(read_pos, exp_index,  1) ;
+
         return;
     }
 
 
-    int IOBam::parse_read_into_junctions(string gene_id, bam_hdr_t *header, bam1_t *read) {
+    int IOBam::parse_read_into_junctions(Gene* gobj, bam_hdr_t *header, bam1_t *read) {
         int n_cigar = read->core.n_cigar;
         if (n_cigar <= 1 || !_unique(read)) // max one cigar operation exists(likely all matches)
             return 0;
@@ -72,7 +71,7 @@ namespace io_bam {
                 const int j_end = read->core.pos + off + ol +1;
                 const int j_start =  read->core.pos + off;
                 try {
-                    add_junction(gene_id, _get_strand(read), j_start, j_end, read_pos);
+                    add_junction(gobj, _get_strand(read), j_start, j_end, read_pos);
                 } catch (const std::logic_error& e) {
                     cout << "KKK" << e.what() << '\n';
                 }
@@ -103,8 +102,9 @@ namespace io_bam {
 
             bam_hdr_t *header = sam_hdr_read(in);
             // for(int i; i<N ; i++){
-
+//                cout<< "##2" <<"\n";
                 hts_itr_t *iter = sam_itr_querys(idx, header, gobj->get_region().c_str());
+//                cout<< "##3" <<"\n";
                 if(header == NULL || iter == NULL) {
                     sam_close(in);
                     string msg = "[ERROR]: INVALID Region ";// << region_ << "in " << bam_ << "not found.";
@@ -113,7 +113,8 @@ namespace io_bam {
                 }
                 bam1_t *aln = bam_init1();
                 while(sam_itr_next(in, iter, aln) >= 0) {
-                    parse_read_into_junctions(gobj->id, header, aln);
+//                    cout<< "##3" <<"\n";
+                    parse_read_into_junctions(gobj, header, aln);
                 }
 
             hts_itr_destroy(iter);
