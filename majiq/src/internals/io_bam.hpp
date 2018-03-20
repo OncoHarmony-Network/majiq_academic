@@ -61,8 +61,8 @@ namespace io_bam{
             void create_junctions_vector();
 
             int find_junctions(int min_experiments1);
-            int find_junctions_from_region(Gene * gobj);
-
+//            int find_junctions_from_region(Gene * gobj);
+            int find_junctions_from_region(vector<Gene *> glist);
             int parse_read_into_junctions(bam_hdr_t *header, bam1_t *read);
             int parse_read_into_junctions(Gene* gobj, bam_hdr_t *header, bam1_t *read);
 

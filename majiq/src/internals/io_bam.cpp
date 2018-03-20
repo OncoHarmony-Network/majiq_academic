@@ -84,7 +84,7 @@ namespace io_bam {
     }
 
 
-    int IOBam::find_junctions_from_region(Gene * gobj) {
+    int IOBam::find_junctions_from_region(vector<Gene *> glist) {
 //        cout << "FILE:" << bam_ << "\n";
         if(!bam_.empty()) {
 
@@ -101,22 +101,23 @@ namespace io_bam {
             }
 
             bam_hdr_t *header = sam_hdr_read(in);
-            // for(int i; i<N ; i++){
-//                cout<< "##2" <<"\n";
-                hts_itr_t *iter = sam_itr_querys(idx, header, gobj->get_region().c_str());
-//                cout<< "##3" <<"\n";
+            hts_itr_t *iter ;
+            bam1_t *aln = bam_init1();
+
+            for(const auto &gg:glist){
+                iter = sam_itr_querys(idx, header, gg->get_region().c_str());
                 if(header == NULL || iter == NULL) {
                     sam_close(in);
+                    bam_destroy1(aln);
                     string msg = "[ERROR]: INVALID Region ";// << region_ << "in " << bam_ << "not found.";
-                    return 0;
-//                    throw runtime_error(msg);
-                }
-                bam1_t *aln = bam_init1();
-                while(sam_itr_next(in, iter, aln) >= 0) {
-//                    cout<< "##3" <<"\n";
-                    parse_read_into_junctions(gobj, header, aln);
+                    cout << msg << "\n" ;
+                    continue ;
                 }
 
+                while(sam_itr_next(in, iter, aln) >= 0) {
+                    parse_read_into_junctions(gg, header, aln);
+                }
+            }
             hts_itr_destroy(iter);
             bam_destroy1(aln);
             hts_idx_destroy(idx);

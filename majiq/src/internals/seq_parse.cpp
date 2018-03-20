@@ -3040,7 +3040,7 @@ static int __pyx_f_10majiqHet_C_5majiq_3src_9internals_9seq_parse__gene_analysis
  * 
  *     for j in range(nsamples):             # <<<<<<<<<<<<<<
  *         c_iobam = IOBam(list_pair_files[j].first, strandness[list_pair_files[j].first], eff_len, nsamples, j)
- *         for gg in gene_list:
+ *         # for gg in gene_list:
  */
   __pyx_t_1 = __pyx_v_nsamples;
   for (__pyx_t_2 = 0; __pyx_t_2 < __pyx_t_1; __pyx_t_2+=1) {
@@ -3050,8 +3050,8 @@ static int __pyx_f_10majiqHet_C_5majiq_3src_9internals_9seq_parse__gene_analysis
  * 
  *     for j in range(nsamples):
  *         c_iobam = IOBam(list_pair_files[j].first, strandness[list_pair_files[j].first], eff_len, nsamples, j)             # <<<<<<<<<<<<<<
- *         for gg in gene_list:
- *             # gg.print_gene()
+ *         # for gg in gene_list:
+ *         #     # gg.print_gene()
  */
     try {
       __pyx_t_3 = io_bam::IOBam((__pyx_v_list_pair_files[__pyx_v_j]).first, (__pyx_v_strandness[(__pyx_v_list_pair_files[__pyx_v_j]).first]), __pyx_v_eff_len, __pyx_v_nsamples, __pyx_v_j);
@@ -3067,37 +3067,14 @@ static int __pyx_f_10majiqHet_C_5majiq_3src_9internals_9seq_parse__gene_analysis
     }
     __pyx_v_c_iobam = __pyx_t_3;
 
-    /* "majiqHet_C/majiq/src/internals/seq_parse.pyx":124
- *     for j in range(nsamples):
- *         c_iobam = IOBam(list_pair_files[j].first, strandness[list_pair_files[j].first], eff_len, nsamples, j)
- *         for gg in gene_list:             # <<<<<<<<<<<<<<
- *             # gg.print_gene()
- *             c_iobam.find_junctions_from_region(gg)
- */
-    __pyx_t_4 = __pyx_v_gene_list.begin();
-    for (;;) {
-      if (!(__pyx_t_4 != __pyx_v_gene_list.end())) break;
-      __pyx_t_5 = *__pyx_t_4;
-      ++__pyx_t_4;
-      __pyx_v_gg = __pyx_t_5;
-
-      /* "majiqHet_C/majiq/src/internals/seq_parse.pyx":126
- *         for gg in gene_list:
- *             # gg.print_gene()
- *             c_iobam.find_junctions_from_region(gg)             # <<<<<<<<<<<<<<
+    /* "majiqHet_C/majiq/src/internals/seq_parse.pyx":126
+ *         # for gg in gene_list:
+ *         #     # gg.print_gene()
+ *         c_iobam.find_junctions_from_region(gene_list)             # <<<<<<<<<<<<<<
  * 
  * 
  */
-      __pyx_v_c_iobam.find_junctions_from_region(__pyx_v_gg);
-
-      /* "majiqHet_C/majiq/src/internals/seq_parse.pyx":124
- *     for j in range(nsamples):
- *         c_iobam = IOBam(list_pair_files[j].first, strandness[list_pair_files[j].first], eff_len, nsamples, j)
- *         for gg in gene_list:             # <<<<<<<<<<<<<<
- *             # gg.print_gene()
- *             c_iobam.find_junctions_from_region(gg)
- */
-    }
+    __pyx_v_c_iobam.find_junctions_from_region(__pyx_v_gene_list);
   }
 
   /* "majiqHet_C/majiq/src/internals/seq_parse.pyx":129
@@ -3712,7 +3689,7 @@ static PyObject *__pyx_f_10majiqHet_C_5majiq_3src_9internals_9seq_parse__extract
  *         gg = new Gene(gne_id.encode('utf-8'), gene_obj['name'].encode('utf-8'), gene_obj['chromosome'].encode('utf-8'),
  *                       st, gene_obj['start'], gene_obj['end'])             # <<<<<<<<<<<<<<
  *         from_matrix_to_objects(gg, elem_dict[gne_id], nsamples, eff_len)
- *         gg.print_gene()
+ *         # gg.print_gene()
  */
     __pyx_t_4 = PyObject_GetItem(__pyx_v_gene_obj, __pyx_n_s_start); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 168, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_4);
@@ -3742,7 +3719,7 @@ static PyObject *__pyx_f_10majiqHet_C_5majiq_3src_9internals_9seq_parse__extract
  *         gg = new Gene(gne_id.encode('utf-8'), gene_obj['name'].encode('utf-8'), gene_obj['chromosome'].encode('utf-8'),
  *                       st, gene_obj['start'], gene_obj['end'])
  *         from_matrix_to_objects(gg, elem_dict[gne_id], nsamples, eff_len)             # <<<<<<<<<<<<<<
- *         gg.print_gene()
+ *         # gg.print_gene()
  * 
  */
     __pyx_t_4 = PyObject_GetItem(__pyx_v_elem_dict, __pyx_v_gne_id); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 169, __pyx_L1_error)
@@ -3751,15 +3728,6 @@ static PyObject *__pyx_f_10majiqHet_C_5majiq_3src_9internals_9seq_parse__extract
     __Pyx_GOTREF(__pyx_t_3);
     __Pyx_DECREF(__pyx_t_4); __pyx_t_4 = 0;
     __Pyx_DECREF(__pyx_t_3); __pyx_t_3 = 0;
-
-    /* "majiqHet_C/majiq/src/internals/seq_parse.pyx":170
- *                       st, gene_obj['start'], gene_obj['end'])
- *         from_matrix_to_objects(gg, elem_dict[gne_id], nsamples, eff_len)
- *         gg.print_gene()             # <<<<<<<<<<<<<<
- * 
- *                       # gene_obj['strand'], gene_obj['start'], gene_obj['end'])
- */
-    __pyx_v_gg->print_gene();
 
     /* "majiqHet_C/majiq/src/internals/seq_parse.pyx":173
  * 

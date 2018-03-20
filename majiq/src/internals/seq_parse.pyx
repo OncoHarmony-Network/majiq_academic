@@ -121,9 +121,9 @@ cdef int _gene_analysis(vector[pair[string, string]] list_pair_files, map[string
 
     for j in range(nsamples):
         c_iobam = IOBam(list_pair_files[j].first, strandness[list_pair_files[j].first], eff_len, nsamples, j)
-        for gg in gene_list:
-            # gg.print_gene()
-            c_iobam.find_junctions_from_region(gg)
+        # for gg in gene_list:
+        #     # gg.print_gene()
+        c_iobam.find_junctions_from_region(gene_list)
 
 
     for gg in gene_list:
