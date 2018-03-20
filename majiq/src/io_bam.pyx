@@ -8,7 +8,7 @@ from majiq.src.multiproc import QueueMessage
 
 from majiq.src.config import Config
 from pysam.libcalignmentfile cimport AlignmentFile, AlignedSegment
-from pysam.libcalignedsegment cimport PileupColumn, PileupRead
+# from pysam.libcalignedsegment cimport PileupColumn, PileupRead
 # from libcpp cimport bool
 import pysam
 import cython
