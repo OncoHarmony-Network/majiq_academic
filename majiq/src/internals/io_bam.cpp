@@ -107,8 +107,8 @@ namespace io_bam {
             for(const auto &gg:glist){
                 iter = sam_itr_querys(idx, header, gg->get_region().c_str());
                 if(header == NULL || iter == NULL) {
-                    sam_close(in);
-                    bam_destroy1(aln);
+//                    sam_close(in);
+//                    bam_destroy1(aln);
                     string msg = "[ERROR]: INVALID Region ";// << region_ << "in " << bam_ << "not found.";
                     cout << msg << "\n" ;
                     continue ;
