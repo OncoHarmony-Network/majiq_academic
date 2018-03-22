@@ -72,7 +72,7 @@ def do_test_stats(insamps, stats, minsamps):
     labels = np.concatenate((np.zeros(cts[0]), np.ones(cts[1])), axis=0).astype(int)
     nfiles, njuncs, nsamples = samps.shape
     outstats = np.ones(shape=(njuncs, len(stats)))
-    if all([nsamps > minsamps for nsamps in cts]):
+    if all([nsamps >= minsamps for nsamps in cts]):
         for jn_idx in range(njuncs):
             cur_output = np.zeros(shape=(len(stats), nsamples))
             for samp_idx in range(nsamples):
