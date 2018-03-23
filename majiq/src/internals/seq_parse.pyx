@@ -151,7 +151,7 @@ cdef _find_junctions(list file_list, object genes_dict, object elem_dict, conf, 
     cdef float pvalue_limit=conf.pvalue_limit
     cdef unsigned int min_experiments = 1 if conf.min_exp == -1 else conf.min_exp
     cdef unsigned int eff_len = conf.readLen - 2*MIN_BP_OVERLAP
-    cdef Gene * gg
+    # cdef Gene * gg
 
     cdef map[string, int] strandness
     cdef gene_vect gene_list
@@ -161,15 +161,12 @@ cdef _find_junctions(list file_list, object genes_dict, object elem_dict, conf, 
     cdef IOBam c_iobam
     cdef float[:, :] boots
 
-
-
-
-    for i, (gne_id, gene_obj) in enumerate(genes_dict.items()):
-        gg = new Gene(gne_id.encode('utf-8'), gene_obj['name'].encode('utf-8'), gene_obj['chromosome'].encode('utf-8'),
-                      st, gene_obj['start'], gene_obj['end'])
-        from_matrix_to_objects(gg, elem_dict[gne_id], nsamples, eff_len)
-
-        gene_list.push_back(gg)
+    # for i, (gne_id, gene_obj) in enumerate(genes_dict.items()):
+    #     gg = new Gene(gne_id.encode('utf-8'), gene_obj['name'].encode('utf-8'), gene_obj['chromosome'].encode('utf-8'),
+    #                   st, gene_obj['start'], gene_obj['end'])
+    #     from_matrix_to_objects(gg, elem_dict[gne_id], nsamples, eff_len)
+    #
+    #     gene_list.push_back(gg)
 
     for exp_name, is_junc_file, name in file_list:
         cs1 = ('%s/%s.%s' % (conf.sam_dir, exp_name, SEQ_FILE_FORMAT)).encode('utf-8')
@@ -177,15 +174,16 @@ cdef _find_junctions(list file_list, object genes_dict, object elem_dict, conf, 
         strandness[cs1] = conf.strand_specific[exp_name]
 
     for j in range(nsamples):
+        logger.info('Reading file %s' %(file_list[i]))
         with nogil:
             c_iobam = IOBam(list_pair_files[j].first, strandness[list_pair_files[j].first], eff_len, nsamples, j)
             c_iobam.ParseJunctionsFromFile(list_pair_files[j].first, nthreads)
-
-
+        #    boots_ptr = boostrap_samples(lsvObj, msamples, ksamples, j, eff_len)
+        logger.info('Done Reading file %s' %(file_list[i]))
 ## OPEN API FOR PYTHON
 
-def find_new_junctions(list file_list, int chunk, object slf, object conf, object logger):
+def find_new_junctions2(list file_list, int chunk, object slf, object conf, object logger):
     _extract_junctions(file_list,  slf.genes_dict, slf.elem_dict, conf, logger)
 
-def find_new_junctions2(list file_list, int chunk, object slf, object conf, object logger):
+def find_new_junctions(list file_list, int chunk, object slf, object conf, object logger):
     _find_junctions(file_list,  slf.genes_dict, slf.elem_dict, conf, logger)

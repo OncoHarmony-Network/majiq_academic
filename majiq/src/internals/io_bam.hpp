@@ -38,6 +38,7 @@ namespace io_bam{
             int strandness_;
             unsigned int eff_len_;
             unsigned int exp_index;
+            map<string, Junction*> junc_map ;
             unsigned int nexps_;
 
 //            omp_lock_t writelock;
@@ -57,6 +58,12 @@ namespace io_bam{
             IOBam(string bam1, int strandness1,  unsigned int eff_len1): strandness_(strandness1),  eff_len_(eff_len1){
                 bam_ = string(bam1);
             }
+            ~IOBam(){
+                for(const auto &p1: junc_map){
+                    delete p1.second ;
+                }
+
+            }
 
             void create_junctions_vector();
 
@@ -64,9 +71,11 @@ namespace io_bam{
 //            int find_junctions_from_region(Gene * gobj);
             int find_junctions_from_region(vector<Gene *> glist);
             int parse_read_into_junctions(bam_hdr_t *header, bam1_t *read);
-            int parse_read_into_junctions(Gene* gobj, bam_hdr_t *header, bam1_t *read);
+            void add_junction_from_gene(Gene* gobj, char strand, int start, int end, int read_pos);
 
-            void add_junction(Gene* gobj, char strand, int start, int end, int read_pos);
+            int parse_read_into_junctions(Gene* gobj, bam_hdr_t *header, bam1_t *read);
+            void add_junction(string chrom, char strand, int start, int end, int read_pos);
+
             char _get_strand(bam1_t * read);
             void set_junction_strand(bam1_t *aln, Junction& j1);
             int ParseJunctionsFromFile(string filename, int nthreads) ;

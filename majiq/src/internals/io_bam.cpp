@@ -32,7 +32,7 @@ namespace io_bam {
         return ((read->core.flag & 0x100) != 0x100);
     }
 
-    void IOBam::add_junction(Gene* gobj, char strand, int start, int end, int read_pos) {
+    void IOBam::add_junction_from_gene(Gene* gobj, char strand, int start, int end, int read_pos) {
 
         const unsigned int offset = start - (read_pos+ MIN_BP_OVERLAP) ;
         if (offset >= eff_len_) {
@@ -72,7 +72,7 @@ namespace io_bam {
                 const int j_end = read->core.pos + off + ol +1;
                 const int j_start =  read->core.pos + off;
                 try {
-                    add_junction(gobj, _get_strand(read), j_start, j_end, read_pos);
+                    add_junction_from_gene(gobj, _get_strand(read), j_start, j_end, read_pos);
                 } catch (const std::logic_error& e) {
                     cout << "KKK" << e.what() << '\n';
                 }
@@ -89,7 +89,7 @@ namespace io_bam {
         int exit_code = 0 ;
 //        cout << "FILE:" << bam_ << "\n";
         if(!bam_.empty()) {
-            int nthreads = 16 ;
+            int nthreads = 0 ;
             samFile *in = sam_open(bam_.c_str(), "r");
             if(in == NULL) {
                 string msg = "[ERROR]: Unable to open file";
@@ -149,41 +149,61 @@ namespace io_bam {
     }
 
 
-//    int IOBam::parse_read_into_junctions2(Gene* gobj, bam_hdr_t *header, bam1_t *read) {
-//        int n_cigar = read->core.n_cigar;
-//        if (n_cigar <= 1 || !_unique(read)) // max one cigar operation exists(likely all matches)
-//            return 0;
-//
-//        int chr_id = read->core.tid;
-//        int read_pos = read->core.pos;
-//        string chrom(header->target_name[chr_id]);
-//
-//        uint32_t *cigar = bam_get_cigar(read);
-//
-//        int off = 0;
-//        for (int i = 0; i < n_cigar; ++i) {
-//            char op = bam_cigar_op(cigar[i]);
-//            int ol = bam_cigar_oplen(cigar[i]);
-////            cout<< "##" <<op<< read_pos <<"\n";
-//            if (op == BAM_CMATCH || op == BAM_CDEL || op == BAM_CEQUAL || op == BAM_CDIFF){
-//                 off += ol;
-//            }
-//            else if( op == BAM_CREF_SKIP || off >= MIN_BP_OVERLAP){
-////                cout<< "@@@" << read_pos << "\n";
-//                const int j_end = read->core.pos + off + ol +1;
-//                const int j_start =  read->core.pos + off;
-//                try {
-//                    add_junction(gobj, _get_strand(read), j_start, j_end, read_pos);
-//                } catch (const std::logic_error& e) {
-//                    cout << "KKK" << e.what() << '\n';
-//                }
-//
-//                off += ol;
-//
-//            }
-//        }
-//        return 0;
-//    }
+
+/*
+    READ WHOLE FILE APPROACH
+*/
+
+    void IOBam::add_junction(string chrom, char strand, int start, int end, int read_pos) {
+
+        const unsigned int offset = start - (read_pos+ MIN_BP_OVERLAP) ;
+        if (offset >= eff_len_) {
+            return ;
+        }
+        string key =  chrom + ":" + to_string(start) + "-" + to_string(end) ;
+        if((junc_map).count(key) == 0) {
+            (junc_map)[key]= new Junction(start, end, nexps_, eff_len_) ;
+        }
+        (junc_map)[key]->update_junction_read(read_pos, exp_index,  1) ;
+
+        return;
+    }
+
+
+    int IOBam::parse_read_into_junctions(bam_hdr_t *header, bam1_t *read) {
+        int n_cigar = read->core.n_cigar;
+        if (n_cigar <= 1 || !_unique(read)) // max one cigar operation exists(likely all matches)
+            return 0;
+
+        int chr_id = read->core.tid;
+        int read_pos = read->core.pos;
+        string chrom(header->target_name[chr_id]);
+
+        uint32_t *cigar = bam_get_cigar(read);
+
+        int off = 0;
+        for (int i = 0; i < n_cigar; ++i) {
+            char op = bam_cigar_op(cigar[i]);
+            int ol = bam_cigar_oplen(cigar[i]);
+//            cout<< "##" <<op<< read_pos <<"\n";
+            if (op == BAM_CMATCH || op == BAM_CDEL || op == BAM_CEQUAL || op == BAM_CDIFF){
+                 off += ol;
+            }
+            else if( op == BAM_CREF_SKIP || off >= MIN_BP_OVERLAP){
+//                cout<< "@@@" << read_pos << "\n";
+                const int j_end = read->core.pos + off + ol +1;
+                const int j_start =  read->core.pos + off;
+                try {
+                    add_junction(chrom, _get_strand(read), j_start, j_end, read_pos);
+                } catch (const std::logic_error& e) {
+                    cout << "KKK" << e.what() << '\n';
+                }
+
+                off += ol ;
+            }
+        }
+        return 0;
+    }
 
 
     int IOBam::ParseJunctionsFromFile(string filename, int nthreads){
