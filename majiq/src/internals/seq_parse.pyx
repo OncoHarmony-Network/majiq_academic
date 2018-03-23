@@ -174,12 +174,12 @@ cdef _find_junctions(list file_list, object genes_dict, object elem_dict, conf, 
         strandness[cs1] = conf.strand_specific[exp_name]
 
     for j in range(nsamples):
-        logger.info('Reading file %s' %(file_list[i]))
+        logger.info('Reading file %s' %(file_list[i][0]))
         with nogil:
             c_iobam = IOBam(list_pair_files[j].first, strandness[list_pair_files[j].first], eff_len, nsamples, j)
             c_iobam.ParseJunctionsFromFile(list_pair_files[j].first, nthreads)
         #    boots_ptr = boostrap_samples(lsvObj, msamples, ksamples, j, eff_len)
-        logger.info('Done Reading file %s' %(file_list[i]))
+        logger.info('Done Reading file %s' %(file_list[i][0]))
 ## OPEN API FOR PYTHON
 
 def find_new_junctions2(list file_list, int chunk, object slf, object conf, object logger):
