@@ -69,7 +69,7 @@ namespace io_bam{
             void add_junction(Gene* gobj, char strand, int start, int end, int read_pos);
             char _get_strand(bam1_t * read);
             void set_junction_strand(bam1_t *aln, Junction& j1);
-
+            int ParseJunctionsFromFile(string filename, int nthreads) ;
     };
 }
 #endif

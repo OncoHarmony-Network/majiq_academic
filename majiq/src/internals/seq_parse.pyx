@@ -20,60 +20,6 @@ cimport numpy as np
 ctypedef np.float64_t DTYPE_t
 ctypedef vector[Gene *] gene_vect
 
-# cdef int __mark_stacks(np.ndarray[np.float_t, ndim=2] junctions, float fitfunc_r, float pvalue_limit) :
-#
-#     cdef np.ndarray[np.float_t, ndim=2] pvalues
-#     cdef np.ndarray[np.float_t, ndim=2] mean_rest
-#     cdef np.ndarray[np.int_t, ndim=2] denom
-#     cdef float r, p
-#
-#     if pvalue_limit <= 0:
-#         return 0
-#     denom = np.count_nonzero(junctions, axis=1)[:, None] - (junctions > 0)
-#     with np.errstate(divide='ignore',invalid='ignore'):
-#         mean_rest = (junctions.sum(axis=1)[:, None] - junctions) / denom
-#         mean_rest[np.isnan(mean_rest)] = 0.5
-#     if fitfunc_r >0:
-#         r = 1/fitfunc_r
-#         p = r/(mean_rest + r)
-#         pvalues = 1 - nbinom.cdf(junctions, r, p)
-#     else:
-#         pvalues = 1 - poisson.cdf(junctions, mean_rest)
-#     junctions[pvalues<pvalue_limit] = 0
-#
-#
-# @cython.boundscheck(False) # turn off bounds-checking for entire function
-# @cython.wraparound(False)  # turn off negative index wrapping for entire function
-# cdef np.ndarray[DTYPE_t, ndim=2] _bootstrap_samples(np.ndarray[DTYPE_t, ndim=2] junction_list, int m, int k):
-#     """Given the filtered reads, bootstrap samples from every junction
-#     :param junction_list:
-#     :param m:
-#     :param k:
-#     :param discardzeros:
-#     :param trimborder:
-#     :param fitted_one_over_r:
-#     :return:
-#
-#     """
-#
-#     cdef np.ndarray[DTYPE_t, ndim=2] all_samples = np.zeros(shape=(junction_list.shape[0], m), dtype=np.float)
-#     cdef int npos_mult
-#     cdef int iternumber
-#     cdef float r = 0
-#     cdef np.ndarray[DTYPE_t, ndim=1] junction, km_samples_means
-#     cdef int i
-#
-#     for i in range(junction_list.shape[0]):
-#         junction = junction_list[i][junction_list[i] > 0]
-#         npos_mult = np.count_nonzero(junction)
-#         if npos_mult > 0:
-#
-#             all_samples[i, :m]  = np.reshape(choice(junction, k*m), (m, k)).mean(axis=1) * npos_mult
-#             # all_samples[i, m] = junction_list[i].sum()
-#             # all_samples[i, m+1] = npos_mult
-#
-#     return all_samples
-
 
 cdef int _read_junction(list row, map[string, Junction*] jjs, map[string, Exon*] exs,
                         int nsamples, unsigned int eff_len) except -1:
@@ -190,8 +136,56 @@ cdef _extract_junctions(list file_list, object genes_dict, object elem_dict, con
         _gene_analysis(list_pair_files, strandness, nsamples, gene_list[i], k, m,
                            min_experiments, eff_len, minpos, minreads)
 
+
+
+cdef _find_junctions(list file_list, object genes_dict, object elem_dict, conf, logger):
+
+    cdef int n = len(genes_dict)
+    cdef int nbatches
+    cdef int nthreads = min(conf.nthreads, len(conf.sam_list))
+    cdef int nsamples = len(file_list)
+    cdef int minpos = conf.minpos
+    cdef int minreads = conf.minreads
+    cdef int i, j
+    cdef int k=conf.k, m=conf.m
+    cdef float pvalue_limit=conf.pvalue_limit
+    cdef unsigned int min_experiments = 1 if conf.min_exp == -1 else conf.min_exp
+    cdef unsigned int eff_len = conf.readLen - 2*MIN_BP_OVERLAP
+    cdef Gene * gg
+
+    cdef map[string, int] strandness
+    cdef gene_vect gene_list
+    cdef vector[pair[string, string]] list_pair_files
+    cdef char st = '+'
+    cdef clist[LSV*] out_lsvlist
+    cdef IOBam c_iobam
+    cdef float[:, :] boots
+
+
+
+
+    for i, (gne_id, gene_obj) in enumerate(genes_dict.items()):
+        gg = new Gene(gne_id.encode('utf-8'), gene_obj['name'].encode('utf-8'), gene_obj['chromosome'].encode('utf-8'),
+                      st, gene_obj['start'], gene_obj['end'])
+        from_matrix_to_objects(gg, elem_dict[gne_id], nsamples, eff_len)
+
+        gene_list.push_back(gg)
+
+    for exp_name, is_junc_file, name in file_list:
+        cs1 = ('%s/%s.%s' % (conf.sam_dir, exp_name, SEQ_FILE_FORMAT)).encode('utf-8')
+        list_pair_files.push_back((pair[string, string])(cs1, name.encode('utf-8')))
+        strandness[cs1] = conf.strand_specific[exp_name]
+
+    for j in range(nsamples):
+        with nogil:
+            c_iobam = IOBam(list_pair_files[j].first, strandness[list_pair_files[j].first], eff_len, nsamples, j)
+            c_iobam.ParseJunctionsFromFile(list_pair_files[j].first, nthreads)
+
+
 ## OPEN API FOR PYTHON
 
 def find_new_junctions(list file_list, int chunk, object slf, object conf, object logger):
     _extract_junctions(file_list,  slf.genes_dict, slf.elem_dict, conf, logger)
 
+def find_new_junctions2(list file_list, int chunk, object slf, object conf, object logger):
+    _find_junctions(file_list,  slf.genes_dict, slf.elem_dict, conf, logger)

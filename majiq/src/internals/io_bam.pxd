@@ -14,5 +14,5 @@ cdef extern from "io_bam.hpp" namespace "io_bam":
         int find_junctions_from_region(vector[Gene*] gobj) nogil
         map[string, Junction] get_dict() nogil
         void set_filters(map[string, set[string]]*) nogil
-
+        int ParseJunctionsFromFile(string filename, int nthreads) nogil
 
