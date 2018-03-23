@@ -12,6 +12,7 @@ from libcpp.vector cimport vector
 
 import majiq.src.io as majiq_io
 from cython.parallel import prange
+from libc.stdlib cimport malloc, free
 from numpy.random  import choice
 from scipy.stats import nbinom, poisson
 import numpy as np
@@ -136,6 +137,14 @@ cdef _extract_junctions(list file_list, object genes_dict, object elem_dict, con
         _gene_analysis(list_pair_files, strandness, nsamples, gene_list[i], k, m,
                            min_experiments, eff_len, minpos, minreads)
 
+cdef extern from "numpy/arrayobject.h":
+    void PyArray_ENABLEFLAGS(np.ndarray arr, int flags)
+
+cdef data_to_numpy_array_with_spec(void * ptr, np.npy_intp *N, int dim, object t):
+
+    cdef np.ndarray[DTYPE_t, ndim=2] arr = np.PyArray_SimpleNewFromData(dim, N, t, ptr)
+    PyArray_ENABLEFLAGS(arr, np.NPY_OWNDATA)
+    return arr
 
 
 cdef _find_junctions(list file_list, object genes_dict, object elem_dict, conf, logger):
@@ -160,6 +169,11 @@ cdef _find_junctions(list file_list, object genes_dict, object elem_dict, conf, 
     cdef clist[LSV*] out_lsvlist
     cdef IOBam c_iobam
     cdef float[:, :] boots
+    cdef np.ndarray buff
+    cdef char** j_ids
+    cdef np.npy_intp pn1[2] , pn2[2];
+
+
 
     # for i, (gne_id, gene_obj) in enumerate(genes_dict.items()):
     #     gg = new Gene(gne_id.encode('utf-8'), gene_obj['name'].encode('utf-8'), gene_obj['chromosome'].encode('utf-8'),
@@ -174,12 +188,31 @@ cdef _find_junctions(list file_list, object genes_dict, object elem_dict, conf, 
         strandness[cs1] = conf.strand_specific[exp_name]
 
     for j in range(nsamples):
+        vals = {}
         logger.info('Reading file %s' %(file_list[j][0]))
+        logger.info('np.NPY_STRING  %s ' % np.NPY_STRING)
+        logger.info('np.NPY_FLOAT  %s ' % np.NPY_FLOAT)
         with nogil:
             c_iobam = IOBam(list_pair_files[j].first, strandness[list_pair_files[j].first], eff_len, nsamples, j)
             c_iobam.ParseJunctionsFromFile(list_pair_files[j].first, nthreads)
-        #    boots_ptr = boostrap_samples(lsvObj, msamples, ksamples, j, eff_len)
+            boots_ptr = c_iobam.boostrap_samples(m, k, j_ids)
         logger.info('Done Reading file %s' %(file_list[j][0]))
+        njunc = c_iobam.get_njuncs()
+        # pn1[0] = njunc
+        # pn1[1] = 250
+        # pn2[0] = njunc
+        # pn2[1] = m
+        # vals = {'junc_ids':  data_to_numpy_array_with_spec(j_ids, pn1, 2, np.NPY_STRING),
+        #         'bootstrap': data_to_numpy_array_with_spec(boots_ptr, pn2, 2, np.NPY_FLOAT)}
+        #
+        # out_file = "%s/%s.juncs" % (conf.outDir, file_list[j][0])
+        # with open(out_file, 'w+b') as ofp:
+        #     np.savez(ofp, **vals)
+        #
+        # free(boots_ptr)
+        # free(j_ids)
+        # vals.clear()
+
 ## OPEN API FOR PYTHON
 
 def find_new_junctions2(list file_list, int chunk, object slf, object conf, object logger):
@@ -187,3 +220,6 @@ def find_new_junctions2(list file_list, int chunk, object slf, object conf, obje
 
 def find_new_junctions(list file_list, int chunk, object slf, object conf, object logger):
     _find_junctions(file_list,  slf.genes_dict, slf.elem_dict, conf, logger)
+
+
+

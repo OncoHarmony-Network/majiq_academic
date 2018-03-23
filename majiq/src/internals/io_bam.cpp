@@ -1,9 +1,10 @@
-
+#include <stdlib.h>
 #include <getopt.h>
 #include <iostream>
 #include <iomanip>
 #include <sstream>
 #include <stdexcept>
+#include <random>
 #include "io_bam.hpp"
 #include "htslib/sam.h"
 #include "htslib/hts.h"
@@ -162,7 +163,7 @@ namespace io_bam {
         }
         string key =  chrom + ":" + to_string(start) + "-" + to_string(end) ;
         if((junc_map).count(key) == 0) {
-            (junc_map)[key]= new Junction(start, end, nexps_, eff_len_) ;
+            (junc_map)[key]= new Junction(start, end, 0, eff_len_) ;
         }
         (junc_map)[key]->update_junction_read(read_pos, exp_index,  1) ;
 
@@ -363,7 +364,7 @@ namespace io_bam {
     //        hts_idx_destroy(idx);
     //    } else
         while ((r = sam_read1(in, header, aln)) >= 0) {
-            cout<<"read" << aln->core.tid << " :: " << aln->core.pos << "\n" ;
+//            cout<<"read" << aln->core.tid << " :: " << aln->core.pos << "\n" ;
 
             if (nreads && --nreads == 0)
                 break;
@@ -390,5 +391,38 @@ namespace io_bam {
     }
 
 
+    float* IOBam::boostrap_samples(int msamples, int ksamples, char** out_id){
+        const int njunc = junc_map.size();
+        float * boots = (float*) calloc(njunc*msamples, sizeof(double)) ;
+        out_id = (char**) calloc(njunc*250, sizeof(char)) ;
+
+        int i = 0 ;
+        for (const auto &p : junc_map) {
+            strncpy(out_id[i], (p.first).c_str(), 250);
+//            out_id[jidx] = (p->first).c_str();
+            i += 1 ;
+        }
+
+        #pragma omp parallel for
+        for(int jidx=0; jidx < njunc; jidx++){
+
+            const Junction * const jnc = junc_map[out_id[jidx]] ;
+            default_random_engine generator;
+            uniform_int_distribution<int> distribution(0,jnc->nreads_[0].size());
+            for (int m=0; m<msamples; m++){
+                float lambda = 0;
+                for (int k=0; k<ksamples; k++) lambda += distribution(generator) ;
+                lambda /= ksamples ;
+                boots[jidx, m] = lambda * jnc->nreads_[0].size() ;
+            }
+//            (jnc->nreads_).clear() ;
+//            (jnc->nreads_).shrink_to_fit() ;
+        }
+        return boots ;
+    }
+
+    int IOBam::get_njuncs(){
+        return junc_map.size() ;
+    }
 
 }

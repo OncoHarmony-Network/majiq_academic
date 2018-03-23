@@ -65,20 +65,23 @@ namespace io_bam{
 
             }
 
-            void create_junctions_vector();
+            void create_junctions_vector() ;
 
-            int find_junctions(int min_experiments1);
-//            int find_junctions_from_region(Gene * gobj);
-            int find_junctions_from_region(vector<Gene *> glist);
-            int parse_read_into_junctions(bam_hdr_t *header, bam1_t *read);
-            void add_junction_from_gene(Gene* gobj, char strand, int start, int end, int read_pos);
+            int find_junctions(int min_experiments1) ;
 
-            int parse_read_into_junctions(Gene* gobj, bam_hdr_t *header, bam1_t *read);
-            void add_junction(string chrom, char strand, int start, int end, int read_pos);
+            int find_junctions_from_region(vector<Gene *> glist) ;
+            int parse_read_into_junctions(bam_hdr_t *header, bam1_t *read) ;
+            void add_junction_from_gene(Gene* gobj, char strand, int start, int end, int read_pos) ;
+
+            int parse_read_into_junctions(Gene* gobj, bam_hdr_t *header, bam1_t *read) ;
+            void add_junction(string chrom, char strand, int start, int end, int read_pos) ;
 
             char _get_strand(bam1_t * read);
-            void set_junction_strand(bam1_t *aln, Junction& j1);
+            void set_junction_strand(bam1_t  *aln, Junction& j1) ;
             int ParseJunctionsFromFile(string filename, int nthreads) ;
+
+            float* boostrap_samples(int msamples, int ksamples, char** out_id) ;
+            int get_njuncs() ;
     };
 }
 #endif
