@@ -24,8 +24,10 @@ namespace grimoire{
             bool annot ;
             bool intronic ;
             unsigned int n_exps ;
-            vector<vector<unsigned int>> nreads_ ;
-            map<pair<unsigned int, unsigned int>, unsigned int> pos_map_ ;
+//            vector<vector<unsigned int>> nreads_ ;
+            vector<unsigned int> nreads_ ;
+            map<unsigned int, unsigned int> pos_map_ ;
+//            map<pair<unsigned int, unsigned int>, unsigned int> pos_map_ ;
             Exon * acceptor;
             Exon * donor;
 
@@ -38,10 +40,10 @@ namespace grimoire{
 
             Junction(int start1, int end1, int nexp, int eff_len): start(start1), end(end1), n_exps(nexp){
 
-                for (int i=0; i<nexp; i++){
-                    vector<unsigned int> v ;
-                    nreads_.push_back(v) ;
-                }
+                intronic = false ;
+            }
+            Junction(int start1, int end1, int eff_len): start(start1), end(end1){
+
                 intronic = false ;
             }
 
@@ -54,7 +56,8 @@ namespace grimoire{
                 return(to_string(start) + "-" + to_string(end)) ;
             }
 
-            void update_junction_read(int read_start, unsigned int exp_index, unsigned int n) ;
+//            void update_junction_read(int read_start, unsigned int exp_index, unsigned int n) ;
+            void update_junction_read(int read_start, unsigned int n) ;
             int length() ;
     };
 

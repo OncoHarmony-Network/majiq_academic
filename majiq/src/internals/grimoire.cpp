@@ -13,63 +13,14 @@ using namespace std;
 
 namespace grimoire {
 
-//    float* boostrap_samples2(LSV * lsvObj, int msamples, int ksamples, int exp_idx, int eff_len){
-//        float * boots = (float*) calloc(lsvObj->junctions.size() * eff_len, sizeof(double)) ;
-//        int jidx = 0 ;
-//        for (const auto &jnc: lsvObj->junctions){
-//            vector<int> jj ;
-//            for (int idx=0; idx<eff_len; idx){
-//                const int v = jnc->nreads[exp_idx, idx] ;
-//                if (v > 0) jj.push_back(v) ;
-//            }
-//            default_random_engine generator;
-//            uniform_int_distribution<int> distribution(0,jj.size());
-//
-//            for (int m=0; m<msamples; m++){
-//                float lambda = 0;
-//                for (int k=0; k<ksamples; k++) lambda += distribution(generator) ;
-//                lambda /= ksamples ;
-//                boots[jidx, m] = lambda * jj.size() ;
-//            }
-//            jidx++ ;
-//        }
-//
-//    }
-//
-//    void Junction::update_junction_read2(int read_start, unsigned int exp_idx, unsigned int n){
-//        int offs = start  - (read_start + 8) ;
-////               cout << "vals " << exp_idx<< " " <<offs << "::" <<  nreads[exp_idx, offs] <<"\n" ;
-//        nreads[exp_idx, offs] += n ;
-//        return ;
-//    }
+    void Junction::update_junction_read(int read_start, unsigned int n){
 
-    float* boostrap_samples(LSV * lsvObj, int msamples, int ksamples, int exp_idx, int eff_len){
-        float * boots = (float*) calloc(lsvObj->junctions.size() * eff_len, sizeof(double)) ;
-        int jidx = 0 ;
-        for (const auto &jnc: lsvObj->junctions){
-            default_random_engine generator;
-            uniform_int_distribution<int> distribution(0,jnc->nreads_[exp_idx].size());
-            for (int m=0; m<msamples; m++){
-                float lambda = 0;
-                for (int k=0; k<ksamples; k++) lambda += distribution(generator) ;
-                lambda /= ksamples ;
-                boots[jidx, m] = lambda * jnc->nreads_[exp_idx].size() ;
-            }
-            jidx++ ;
-        }
-        return boots ;
-    }
-
-    void Junction::update_junction_read(int read_start, unsigned int exp_idx, unsigned int n){
-
-        pair<unsigned int, unsigned int> p (exp_idx, read_start) ;
-
-        if (pos_map_.count(p)>0){
-            nreads_[exp_idx][pos_map_[p]] += n ;
+        if (pos_map_.count(read_start)>0){
+            nreads_[pos_map_[read_start]] += n ;
         }else{
 
-            pos_map_[p] =  nreads_[exp_idx].size() ;
-            nreads_[exp_idx].push_back(n) ;
+            pos_map_[read_start] =  nreads_.size() ;
+            nreads_.push_back(n) ;
         }
         return ;
     }
@@ -85,25 +36,6 @@ namespace grimoire {
         bool crd =  (a.coord<b.coord) ;
         bool r = (a.coord == b.coord) && (a.donor_ss > b.donor_ss);
         bool same = (a.coord == b.coord) && (a.donor_ss == b.donor_ss) && ((a.j->length()) < b.j->length()) ;
-
-
-//        bool crd2 =  (b.coord<a.coord) ;
-//        bool r2 = (b.coord == a.coord) && (b.donor_ss > a.donor_ss);
-//        bool same2 = (b.coord == a.coord) && (b.donor_ss == a.donor_ss) && ((b.j->length()) < a.j->length()) ;
-//
-//
-//
-//        if ( (crd || r || same) == (crd2 || r2 || same2)){
-//
-//            cout << "FOUND\n" ;
-//            cout<< "A:" << a.coord<<", "<< a.donor_ss << ", " <<a.j <<"\n" ;
-//            cout<< "B:" << b.coord<<", "<< b.donor_ss << ", " <<b.j <<"\n" ;
-//
-//            cout << "A<B? " << crd << " :: " << r << " :: " << same <<"\n" ;
-//
-//            cout << "CHEL" << (crd || r || same) << " :: " <<  (crd2 || r2 || same2) <<"\n" ;
-//        }
-
         return  crd || r || same ;
     }
 
@@ -285,89 +217,89 @@ namespace grimoire {
         return ;
     }
 
-    inline bool is_lsv(set<Junction*> &juncSet, unsigned int nexp, unsigned int eff_len, int minpos, int minreads){
-        set<Junction*>::iterator juncIt ;
-        unsigned int njuncs = 0 ;
-        for (juncIt = juncSet.begin(); juncIt != juncSet.end(); juncIt++){
-            if (FIRST_LAST_JUNC != (*juncIt)->start) {
-                bool pass = false ;
-                njuncs += 1 ;
-                for (unsigned int i=0; i<= nexp; i++){
-                    const int npos =   (*juncIt)->nreads_[i].size();
-                    int nreads = 0;
-                    for (auto& n : (*juncIt)->nreads_[i])
-                        nreads += n;
-
-                    pass = pass || (npos >= minpos && nreads >= minreads) ;
-                    if (njuncs >1 && pass){
-                        return true ;
-                    }
-                }
-            }
-        }
-        return false;
-    }
+//    inline bool is_lsv(set<Junction*> &juncSet, unsigned int nexp, unsigned int eff_len, int minpos, int minreads){
+//        set<Junction*>::iterator juncIt ;
+//        unsigned int njuncs = 0 ;
+//        for (juncIt = juncSet.begin(); juncIt != juncSet.end(); juncIt++){
+//            if (FIRST_LAST_JUNC != (*juncIt)->start) {
+//                bool pass = false ;
+//                njuncs += 1 ;
+//                for (unsigned int i=0; i<= nexp; i++){
+//                    const int npos =   (*juncIt)->nreads_[i].size();
+//                    int nreads = 0;
+//                    for (auto& n : (*juncIt)->nreads_[i])
+//                        nreads += n;
+//
+//                    pass = pass || (npos >= minpos && nreads >= minreads) ;
+//                    if (njuncs >1 && pass){
+//                        return true ;
+//                    }
+//                }
+//            }
+//        }
+//        return false;
+//    }
 
     int detect_lsvs(list<LSV*> &out_lsvlist, Gene* gObj, unsigned int nexp, unsigned int eff_len, int minpos, int minreads){
 
         int count = 0 ;
-        map<string, Exon*>::iterator exon_mapIt ;
-
-        list<LSV*> lsv_list ;
-        set<pair<set<string>, LSV*>> source ;
-        LSV * lsvObj ;
-        for (exon_mapIt = gObj->exon_map.begin(); exon_mapIt != gObj->exon_map.end(); ++exon_mapIt) {
-            Exon * ex = exon_mapIt->second ;
-            set<Junction*>::iterator juncIt ;
-
-            if (is_lsv(ex->ob, nexp, eff_len, minpos, minreads)) {
-                lsvObj = new LSV(gObj->id, gObj->strand, ex, true) ;
-                set<Junction *>::iterator iter ;
-                set<string> t1 ;
-                for (iter = (lsvObj->junctions).begin(); iter != (lsvObj->junctions).end(); iter ++){
-                    t1.insert((*iter)->get_key()) ;
-                }
-                pair<set<string>, LSV*> _p1 (t1, lsvObj) ;
-                source.insert(_p1) ;
-                lsv_list.push_back(lsvObj) ;
-            }
-
-            if (is_lsv(ex->ib, nexp, eff_len, minpos, minreads)) {
-                lsvObj = new LSV(gObj->id, gObj->strand, ex, false) ;
-                set<Junction *>::iterator iter ;
-                set<string> t1 ;
-                for (iter = (lsvObj->junctions).begin(); iter != (lsvObj->junctions).end(); iter ++){
-                    t1.insert((*iter)->get_key()) ;
-                }
-
-                set<pair<set<string>, LSV*>> ::iterator setIter ;
-                for (setIter = source.begin(); setIter != source.end(); setIter++){
-                    set<string> d1 ;
-                    set<string> d2 ;
-
-                    set_difference((setIter->first).begin(), (setIter->first).end(), t1.begin(), t1.end(), inserter(d1, d1.begin())) ;
-                    set_difference(t1.begin(), t1.end(), (setIter->first).begin(), (setIter->first).end(), inserter(d2, d2.begin())) ;
-
-                    if (d1.size()>0 and d2.size()>0){
-                        lsv_list.push_back(lsvObj) ;
-                    } else if (d1.size() >0 or (d1.size()==0 and d2.size() == 0)){
-                        delete lsvObj ;
-
-                    } else if (d2.size() >0){
-                        lsv_list.push_back(lsvObj) ;
-                        lsv_list.remove(setIter->second) ;
-                    }
-                }
-            }
-        }
-
-//        list<LSV*>::iterator lsvIter ;
+//        map<string, Exon*>::iterator exon_mapIt ;
 //
-//        for (lsvIter=lsv_list.begin(); lsvIter!=lsv_list.end(); lsvIter++){
-//            (*lsvIter)->add_lsv() ;
-//            count += 1 ;
-////            delete lsvIter ;
+//        list<LSV*> lsv_list ;
+//        set<pair<set<string>, LSV*>> source ;
+//        LSV * lsvObj ;
+//        for (exon_mapIt = gObj->exon_map.begin(); exon_mapIt != gObj->exon_map.end(); ++exon_mapIt) {
+//            Exon * ex = exon_mapIt->second ;
+//            set<Junction*>::iterator juncIt ;
+//
+//            if (is_lsv(ex->ob, nexp, eff_len, minpos, minreads)) {
+//                lsvObj = new LSV(gObj->id, gObj->strand, ex, true) ;
+//                set<Junction *>::iterator iter ;
+//                set<string> t1 ;
+//                for (iter = (lsvObj->junctions).begin(); iter != (lsvObj->junctions).end(); iter ++){
+//                    t1.insert((*iter)->get_key()) ;
+//                }
+//                pair<set<string>, LSV*> _p1 (t1, lsvObj) ;
+//                source.insert(_p1) ;
+//                lsv_list.push_back(lsvObj) ;
+//            }
+//
+//            if (is_lsv(ex->ib, nexp, eff_len, minpos, minreads)) {
+//                lsvObj = new LSV(gObj->id, gObj->strand, ex, false) ;
+//                set<Junction *>::iterator iter ;
+//                set<string> t1 ;
+//                for (iter = (lsvObj->junctions).begin(); iter != (lsvObj->junctions).end(); iter ++){
+//                    t1.insert((*iter)->get_key()) ;
+//                }
+//
+//                set<pair<set<string>, LSV*>> ::iterator setIter ;
+//                for (setIter = source.begin(); setIter != source.end(); setIter++){
+//                    set<string> d1 ;
+//                    set<string> d2 ;
+//
+//                    set_difference((setIter->first).begin(), (setIter->first).end(), t1.begin(), t1.end(), inserter(d1, d1.begin())) ;
+//                    set_difference(t1.begin(), t1.end(), (setIter->first).begin(), (setIter->first).end(), inserter(d2, d2.begin())) ;
+//
+//                    if (d1.size()>0 and d2.size()>0){
+//                        lsv_list.push_back(lsvObj) ;
+//                    } else if (d1.size() >0 or (d1.size()==0 and d2.size() == 0)){
+//                        delete lsvObj ;
+//
+//                    } else if (d2.size() >0){
+//                        lsv_list.push_back(lsvObj) ;
+//                        lsv_list.remove(setIter->second) ;
+//                    }
+//                }
+//            }
 //        }
+//
+////        list<LSV*>::iterator lsvIter ;
+////
+////        for (lsvIter=lsv_list.begin(); lsvIter!=lsv_list.end(); lsvIter++){
+////            (*lsvIter)->add_lsv() ;
+////            count += 1 ;
+//////            delete lsvIter ;
+////        }
         return count ;
 
     }

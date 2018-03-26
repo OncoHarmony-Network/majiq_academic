@@ -41,9 +41,9 @@ namespace io_bam {
         }
         string key =  to_string(start) + "-" + to_string(end) ;
         if((gobj->junc_map).count(key) == 0) {
-            (gobj->junc_map)[key]= new Junction(start, end, nexps_, eff_len_) ;
+            (gobj->junc_map)[key]= new Junction(start, end, eff_len_) ;
         }
-        (gobj->junc_map)[key]->update_junction_read(read_pos, exp_index,  1) ;
+//        (gobj->junc_map)[key]->update_junction_read(read_pos, 0,  1) ;
 
         return;
     }
@@ -162,10 +162,13 @@ namespace io_bam {
             return ;
         }
         string key =  chrom + ":" + to_string(start) + "-" + to_string(end) ;
-        if((junc_map).count(key) == 0) {
-            (junc_map)[key]= new Junction(start, end, 0, eff_len_) ;
+        if(junc_map.count(key) == 0) {
+            junc_map[key] = junc_vec.size() ;
+            Junction * v = new Junction(start, end, 0, eff_len_) ;
+            junc_vec.push_back(v) ;
         }
-        (junc_map)[key]->update_junction_read(read_pos, exp_index,  1) ;
+
+        junc_vec[junc_map[key]]->update_junction_read(read_pos, 1) ;
 
         return;
     }
@@ -207,7 +210,7 @@ namespace io_bam {
     }
 
 
-    int IOBam::ParseJunctionsFromFile(string filename, int nthreads){
+    int IOBam::ParseJunctionsFromFile(){
 
         samFile *in;
         int flag = 0, ignore_sam_err = 0;
@@ -226,15 +229,15 @@ namespace io_bam {
     //    if (flag & READ_CRAM) strcat(moder, "c");
     //    else if ((flag & READ_COMPRESSED) == 0) strcat(moder, "b");
     //    in = sam_open(filename, moder) ;
-
-        in = sam_open(filename.c_str(), "rb") ;
+        cout << "FILE:" << bam_ << "\n";
+        in = sam_open(bam_.c_str(), "rb") ;
         if (NULL == in) {
-            fprintf(stderr, "Error opening \"%s\"\n", filename.c_str());
+            fprintf(stderr, "Error opening \"%s\"\n", bam_.c_str());
             return EXIT_FAILURE;
         }
         header = sam_hdr_read(in);
         if (NULL == header) {
-            fprintf(stderr, "Couldn't read header for \"%s\"\n", filename.c_str());
+            fprintf(stderr, "Couldn't read header for \"%s\"\n", bam_.c_str());
             return EXIT_FAILURE;
         }
         header->ignore_sam_err = ignore_sam_err;
@@ -252,8 +255,8 @@ namespace io_bam {
         aln = bam_init1();
 
         htsThreadPool p = {NULL, 0};
-        if (nthreads > 0) {
-            p.pool = hts_tpool_init(nthreads);
+        if (nthreads_ > 0) {
+            p.pool = hts_tpool_init(nthreads_);
             if (!p.pool) {
                 fprintf(stderr, "Error creating thread pool\n");
                 exit_code = 1;
@@ -365,11 +368,11 @@ namespace io_bam {
     //    } else
         while ((r = sam_read1(in, header, aln)) >= 0) {
 //            cout<<"read" << aln->core.tid << " :: " << aln->core.pos << "\n" ;
-
+            parse_read_into_junctions(header, aln) ;
             if (nreads && --nreads == 0)
                 break;
         }
-
+        cout<< "FINISH FILE\n" ;
         // Finishing
 
         if (r < -1) {
@@ -391,38 +394,35 @@ namespace io_bam {
     }
 
 
-    float* IOBam::boostrap_samples(int msamples, int ksamples, char** out_id){
+    int IOBam::boostrap_samples(int msamples, int ksamples, float* boots){
+
+        float * p = boots ;
         const int njunc = junc_map.size();
-        float * boots = (float*) calloc(njunc*msamples, sizeof(double)) ;
-        out_id = (char**) calloc(njunc*250, sizeof(char)) ;
 
-        int i = 0 ;
-        for (const auto &p : junc_map) {
-            strncpy(out_id[i], (p.first).c_str(), 250);
-//            out_id[jidx] = (p->first).c_str();
-            i += 1 ;
-        }
-
-        #pragma omp parallel for
+        #pragma omp parallel for num_threads(nthreads_)
         for(int jidx=0; jidx < njunc; jidx++){
-
-            const Junction * const jnc = junc_map[out_id[jidx]] ;
+            const Junction * const jnc = junc_vec[jidx] ;
+            const int npos = jnc->nreads_.size() ;
             default_random_engine generator;
-            uniform_int_distribution<int> distribution(0,jnc->nreads_[0].size());
+            uniform_int_distribution<int> distribution(0,npos-1);
             for (int m=0; m<msamples; m++){
                 float lambda = 0;
-                for (int k=0; k<ksamples; k++) lambda += distribution(generator) ;
+                for (int k=0; k<ksamples; k++) lambda += jnc->nreads_[distribution(generator)] ;
                 lambda /= ksamples ;
-                boots[jidx, m] = lambda * jnc->nreads_[0].size() ;
+                *p = lambda * npos ;
+                p++ ;
             }
-//            (jnc->nreads_).clear() ;
-//            (jnc->nreads_).shrink_to_fit() ;
         }
-        return boots ;
+
+        return 0 ;
     }
 
     int IOBam::get_njuncs(){
         return junc_map.size() ;
+    }
+
+    const map<string, unsigned int>& IOBam::get_junc_map(){
+        return junc_map ;
     }
 
 }
