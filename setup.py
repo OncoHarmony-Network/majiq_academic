@@ -28,6 +28,7 @@ extensions = [Extension('majiq.src.internals.seq_parse',
                         extra_compile_args=compile_args,  extra_link_args=linker_args,
                         language='c++', gdb_debug=True)]
 
+extensions += [Extension('majiq.src.io', ['majiq/src/io.pyx'], language='c++', include_dirs=include_librs)]
 
 extensions += [Extension('majiq.src.normalize', ['majiq/src/normalize.pyx'], include_dirs=[numpy.get_include()])]
 extensions += [Extension('majiq.grimoire.junction', ['majiq/grimoire/junction.pyx'])]
@@ -37,8 +38,6 @@ extensions += [Extension('majiq.src.plotting', ['majiq/src/plotting.pyx'])]
 extensions += [Extension('majiq.src.polyfitnb', ['majiq/src/polyfitnb.pyx'], include_dirs=[numpy.get_include()])]
 inc_dirs = [numpy.get_include()]
 inc_dirs.extend(pysam.get_include())
-# extensions += [Extension('majiq.src.io_bam', ['majiq/src/io_bam.pyx'], include_dirs=inc_dirs)]
-extensions += [Extension('majiq.src.io', ['majiq/src/io.pyx'], include_dirs=inc_dirs)]
 extensions += [Extension('majiq.src.psi', ['majiq/src/psi.pyx'], include_dirs=inc_dirs)]
 extensions += [Extension('majiq.src.sample', ['majiq/src/sample.pyx'], include_dirs=[numpy.get_include()])]
 extensions += [Extension('majiq.src.adjustdelta', ['majiq/src/adjustdelta.pyx'], include_dirs=[numpy.get_include()])]

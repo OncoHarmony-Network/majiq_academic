@@ -7,6 +7,7 @@
 #include <set>
 #include <random>
 #include <algorithm>
+#include <string>
 #include "grimoire.hpp"
 
 using namespace std;
@@ -217,14 +218,14 @@ namespace grimoire {
         return ;
     }
 
-//    inline bool is_lsv(set<Junction*> &juncSet, unsigned int nexp, unsigned int eff_len, int minpos, int minreads){
+//    inline bool is_lsv(set<Junction*> &juncSet, unsigned int min_exp, int minpos, int minreads){
 //        set<Junction*>::iterator juncIt ;
 //        unsigned int njuncs = 0 ;
 //        for (juncIt = juncSet.begin(); juncIt != juncSet.end(); juncIt++){
 //            if (FIRST_LAST_JUNC != (*juncIt)->start) {
 //                bool pass = false ;
 //                njuncs += 1 ;
-//                for (unsigned int i=0; i<= nexp; i++){
+//                for (unsigned int i=0; i<= min_exp; i++){
 //                    const int npos =   (*juncIt)->nreads_[i].size();
 //                    int nreads = 0;
 //                    for (auto& n : (*juncIt)->nreads_[i])
@@ -239,8 +240,8 @@ namespace grimoire {
 //        }
 //        return false;
 //    }
-
-    int detect_lsvs(list<LSV*> &out_lsvlist, Gene* gObj, unsigned int nexp, unsigned int eff_len, int minpos, int minreads){
+//
+    int detect_lsvs(list<LSV*> &out_lsvlist, Gene* gObj, unsigned int min_exp, int minpos, int minreads){
 
         int count = 0 ;
 //        map<string, Exon*>::iterator exon_mapIt ;
@@ -252,7 +253,7 @@ namespace grimoire {
 //            Exon * ex = exon_mapIt->second ;
 //            set<Junction*>::iterator juncIt ;
 //
-//            if (is_lsv(ex->ob, nexp, eff_len, minpos, minreads)) {
+//            if (is_lsv(ex->ob, min_exp, minpos, minreads)) {
 //                lsvObj = new LSV(gObj->id, gObj->strand, ex, true) ;
 //                set<Junction *>::iterator iter ;
 //                set<string> t1 ;
@@ -264,7 +265,7 @@ namespace grimoire {
 //                lsv_list.push_back(lsvObj) ;
 //            }
 //
-//            if (is_lsv(ex->ib, nexp, eff_len, minpos, minreads)) {
+//            if (is_lsv(ex->ib, min_exp, minpos, minreads)) {
 //                lsvObj = new LSV(gObj->id, gObj->strand, ex, false) ;
 //                set<Junction *>::iterator iter ;
 //                set<string> t1 ;
@@ -292,17 +293,20 @@ namespace grimoire {
 //                }
 //            }
 //        }
+
+//        list<LSV*>::iterator lsvIter ;
 //
-////        list<LSV*>::iterator lsvIter ;
-////
-////        for (lsvIter=lsv_list.begin(); lsvIter!=lsv_list.end(); lsvIter++){
-////            (*lsvIter)->add_lsv() ;
-////            count += 1 ;
-//////            delete lsvIter ;
-////        }
+//        for (lsvIter=lsv_list.begin(); lsvIter!=lsv_list.end(); lsvIter++){
+//            (*lsvIter)->add_lsv() ;
+//            count += 1 ;
+////            delete lsvIter ;
+//        }
         return count ;
 
     }
 
-
+    void sortGeneList(vector<Gene*> &glist) {
+        sort(glist.begin(), glist.end(),[](Gene* a, Gene* b) {
+                                return (a->start < b->start) || (a->start == b->start && a->end < b->end) ;}) ;
+    }
 }

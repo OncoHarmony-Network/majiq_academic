@@ -24,9 +24,10 @@ namespace grimoire{
             bool annot ;
             bool intronic ;
             unsigned int n_exps ;
-//            vector<vector<unsigned int>> nreads_ ;
             vector<unsigned int> nreads_ ;
             map<unsigned int, unsigned int> pos_map_ ;
+//            vector<vector<unsigned int>> nreads_ ;
+
 //            map<pair<unsigned int, unsigned int>, unsigned int> pos_map_ ;
             Exon * acceptor;
             Exon * donor;
@@ -38,22 +39,26 @@ namespace grimoire{
 
             }
 
-            Junction(int start1, int end1, int nexp, int eff_len): start(start1), end(end1), n_exps(nexp){
+//            Junction(int start1, int end1, int nexp, int eff_len): start(start1), end(end1), n_exps(nexp){
+//                intronic = false ;
+//            }
+            Junction(int start1, int end1): start(start1), end(end1){
 
                 intronic = false ;
             }
-            Junction(int start1, int end1, int eff_len): start(start1), end(end1){
-
-                intronic = false ;
-            }
+            Junction(int start1, int end1, bool annot1): start(start1), end(end1), annot(annot1){} ;
 
             ~Junction(){
-                nreads_.clear() ;
-                pos_map_.clear() ;
+                clear_nreads() ;
             }
 
             string get_key(){
                 return(to_string(start) + "-" + to_string(end)) ;
+            }
+
+            void clear_nreads(){
+                nreads_.clear() ;
+                pos_map_.clear() ;
             }
 
 //            void update_junction_read(int read_start, unsigned int exp_index, unsigned int n) ;
@@ -67,8 +72,8 @@ namespace grimoire{
             string name ;
             string chromosome ;
             char strand ;
-            unsigned int start ;
-            unsigned int end ;
+            int start ;
+            int end ;
             map<string, Junction*> junc_map ;
             map<string, Exon*> exon_map ;
 
@@ -108,8 +113,8 @@ namespace grimoire{
             int end ;
             bool annot ;
             bool intron ;
-            unsigned int db_start ;
-            unsigned int db_end ;
+            int db_start ;
+            int db_end ;
             set<Junction *> ib ;
             set<Junction *> ob ;
 
@@ -158,9 +163,8 @@ namespace grimoire{
 
 
 
-    int detect_lsvs(list<LSV*> &out_lsvlist, Gene * gObj, unsigned int nexp, unsigned int eff_len,
-                                                                                            int minpos, int minreads);
+    int detect_lsvs(list<LSV*> &out_lsvlist, Gene * gObj, unsigned int minexp, int minpos, int minreads);
     float* boostrap_samples(LSV * lsvObj, int msamples, int ksamples, int exp_idx, int eff_len) ;
-
+    void sortGeneList(vector<Gene*> &glist) ;
 }
 #endif

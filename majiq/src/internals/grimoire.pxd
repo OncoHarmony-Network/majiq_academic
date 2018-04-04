@@ -7,7 +7,9 @@ from libcpp.list cimport list
 cdef extern from "grimoire.hpp" namespace "grimoire":
     cdef cppclass Junction:
         Junction() except +
-        Junction(int start1, int end1, int nexp, int eff_len) except +
+        Junction(int start1, int end1) except +
+        Junction(int start1, int end1, bint annot1) except +
+        void clear_nreads()
         # ~Junction() except +
         # Junction(string gene_id1, int start1, int end1) except +
         unsigned int nreads;
@@ -58,8 +60,6 @@ cdef extern from "grimoire.hpp" namespace "grimoire":
         LSV(string gene_id1, char strand, Exon* ex, bint ss) except +
 
 
-    int detect_lsvs(list[LSV*] out_lsvlist, Gene* gObj, unsigned int nexp, unsigned int eff_len,
-                    int minpos, int minreads) nogil ;
-
-
+    int detect_lsvs(list[LSV*] out_lsvlist, Gene* gObj, unsigned int minexp, int minpos, int minreads) nogil ;
     float * boostrap_samples(LSV* lsvObj, int msamples, int ksamples, int exp_idx, int eff_len) nogil ;
+    void sortGeneList(vector[Gene*] glist) nogil ;
