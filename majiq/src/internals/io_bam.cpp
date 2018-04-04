@@ -20,9 +20,9 @@ namespace io_bam {
 
     struct CompareIntervals
     {
-       pair<int, int> asInterval( const Gene* g) const // or static
+       pair<int, int> asInterval( const Gene** g) const // or static
        {
-          return {g->start, g->end};
+          return {(*g)->start, (*g)->end};
        }
 
        pair<int, int> asInterval( const Junction *  j) const // or static
@@ -73,7 +73,7 @@ namespace io_bam {
         vector<Gene*> temp_vec ;
 
         while(gObjIt != glist_[chrom].end()){
-            if (!CompareIntervals()(*gObjIt, junc)) break ;
+            if (!CompareIntervals()(gObjIt, junc)) break ;
             if (strand == '.' || strand == (*gObjIt)->strand) {
                 for(const auto &ex: (*gObjIt)->exon_map){
 
