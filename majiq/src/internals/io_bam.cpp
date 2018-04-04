@@ -35,153 +35,6 @@ namespace io_bam {
         return ((read->core.flag & 0x100) != 0x100);
     }
 
-//    void IOBam::add_junction_from_gene(Gene* gobj, char strand, int start, int end, int read_pos) {
-//
-//        const unsigned int offset = start - (read_pos+ MIN_BP_OVERLAP) ;
-//        if (offset >= eff_len_) {
-//            return ;
-//        }
-//        string key =  to_string(start) + "-" + to_string(end) ;
-//
-//        if((gobj->junc_map).count(key) == 0) {
-//            (gobj->junc_map)[key]= new Junction(start, end, eff_len_) ;
-//        }
-////        (gobj->junc_map)[key]->update_junction_read(read_pos, 0,  1) ;
-//
-//        return;
-//    }
-
-
-//    int IOBam::parse_read_into_junctions(Gene* gobj, bam_hdr_t *header, bam1_t *read) {
-//        int n_cigar = read->core.n_cigar;
-//        if (n_cigar <= 1 || !_unique(read)) // max one cigar operation exists(likely all matches)
-//            return 0;
-//
-//        int chr_id = read->core.tid;
-//        int read_pos = read->core.pos;
-//        string chrom(header->target_name[chr_id]);
-//
-//        uint32_t *cigar = bam_get_cigar(read);
-//
-//        int off = 0;
-//        for (int i = 0; i < n_cigar; ++i) {
-//            char op = bam_cigar_op(cigar[i]);
-//            int ol = bam_cigar_oplen(cigar[i]);
-////            cout<< "##" <<op<< read_pos <<"\n";
-//            if (op == BAM_CMATCH || op == BAM_CDEL || op == BAM_CEQUAL || op == BAM_CDIFF){
-//                 off += ol;
-//            }
-//            else if( op == BAM_CREF_SKIP || off >= MIN_BP_OVERLAP){
-////                cout<< "@@@" << read_pos << "\n";
-//                const int j_end = read->core.pos + off + ol +1;
-//                const int j_start =  read->core.pos + off;
-//                try {
-//                    add_junction_from_gene(gobj, _get_strand(read), j_start, j_end, read_pos);
-//                } catch (const std::logic_error& e) {
-//                    cout << "KKK" << e.what() << '\n';
-//                }
-//
-//                off += ol;
-//
-//            }
-//        }
-//        return 0;
-//    }
-
-
-//    int IOBam::find_junctions_from_region(vector<Gene *> glist) {
-//        int exit_code = 0 ;
-////        cout << "FILE:" << bam_ << "\n";
-//        if(!bam_.empty()) {
-//            int nthreads = 0 ;
-//            samFile *in = sam_open(bam_.c_str(), "r");
-//            if(in == NULL) {
-//                string msg = "[ERROR]: Unable to open file";
-//                throw runtime_error(msg);
-//            }
-//
-//            hts_idx_t *idx = sam_index_load(in, bam_.c_str());
-//            if(idx == NULL) {
-//                string msg = "[ERROR]: Unable to open index file from ";
-//                throw runtime_error(msg);
-//            }
-//
-//            bam_hdr_t *header = sam_hdr_read(in);
-//            hts_itr_t *iter ;
-//            bam1_t *aln = bam_init1();
-//
-//            htsThreadPool p = {NULL, 0};
-//            if (nthreads > 0) {
-//                p.pool = hts_tpool_init(nthreads);
-//                if (!p.pool) {
-//                    fprintf(stderr, "Error creating thread pool\n");
-//                    exit_code = 1;
-//                } else {
-//                    hts_set_opt(in,  HTS_OPT_THREAD_POOL, &p);
-//                }
-//            }
-//
-//            for(const auto &gg:glist){
-//                iter = sam_itr_querys(idx, header, gg->get_region().c_str());
-//                if(header == NULL || iter == NULL) {
-////                    sam_close(in);
-////                    bam_destroy1(aln);
-//                    string msg = "[ERROR]: INVALID Region ";// << region_ << "in " << bam_ << "not found.";
-//                    cout << msg << "\n" ;
-//                    continue ;
-//                }
-//
-//                while(sam_itr_next(in, iter, aln) >= 0) {
-//                    parse_read_into_junctions(gg, header, aln);
-//                }
-//            }
-//            hts_itr_destroy(iter);
-//            bam_destroy1(aln);
-//            hts_idx_destroy(idx);
-//            bam_hdr_destroy(header);
-//            sam_close(in);
-//
-//            if (p.pool)
-//                hts_tpool_destroy(p.pool);
-//
-////            for (const auto &p : denovo_juncs_) {
-////                cout << "m[" << p.first << "] = \n";
-////            }
-//
-//        }
-//        return 0;
-//    }
-
-
-
-/*
-    READ WHOLE FILE APPROACH
-*/
-//    std::pair<bool, Gene *> IOBam::GeneSearch(const vector<Gene*>& array, const int start, const int end) {
-//
-//
-//lower_bound (v.begin(), v.end(), junc, juncGeneSearch);
-//
-//
-//
-//        auto lower = array.begin() ;
-//        auto upper = array.end()-1 ;
-//        while (lower <= upper) {
-//            const auto mid = lower + (upper-lower) /2;
-//            if(start <= mid->start)
-//            {
-//                return {true, };
-//            }
-//            if(key < *mid)
-//                upper = mid-1;
-//            else
-//                lower = mid+1;
-//        }
-//
-//    return {false,nullptr} ;
-//    }
-
-
     bool juncGeneSearch(Gene* g, Junction* j){
         return ((g->start <= j->end) && (g->end >= j->start)) ;
     }
@@ -223,6 +76,8 @@ namespace io_bam {
     void IOBam::add_junction(string chrom, char strand, int start, int end, int read_pos) {
 
         const unsigned int offset = start - (read_pos+ MIN_BP_OVERLAP) ;
+        bool newjunc = false ;
+
         if (offset >= eff_len_) {
             return ;
         }
@@ -233,12 +88,14 @@ namespace io_bam {
                 junc_map[key] = junc_vec.size() ;
 
                 Junction * v = new Junction(start, end, false) ;
-        //            find_junction_gene(v) ;
                 junc_vec.push_back(v) ;
+                newjunc = true ;
             }
 
             junc_vec[junc_map[key]]->update_junction_read(read_pos, 1) ;
         }
+
+        find_junction_gene( chrom,  strand, junc_vec[junc_map[key]]) ;
 
         return;
     }
