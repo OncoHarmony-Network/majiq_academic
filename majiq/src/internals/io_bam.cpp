@@ -18,28 +18,31 @@ using namespace std;
 //using namespace interval;
 namespace io_bam {
 
-    struct CompareIntervals
-    {
-       pair<int, int> asInterval( const Gene* g) const // or static
-       {
-          return {(g)->start, (g)->end};
-       }
+//    struct CompareIntervals
+//    {
+//       pair<int, int> asInterval(const vector<Gene *>::iterator &g) const // or static
+//       {
+//          return {(*g)->start, (*g)->end};
+//       }
+//
+//       pair<int, int> asInterval(const Junction * j) const // or static
+//       {
+//            return {j->start, j->end};
+//       }
+//
+//       template< typename T1, typename T2 >
+//       bool operator()( T1 const& t1, T2 const& t2 ) const
+//       {
+//           pair<int,int> p1 = asInterval(t1) ;
+//           pair<int,int> p2 = asInterval(t2) ;
+//           return ((p1.first <= p2.second) && (p1.second >= p2.first)) ;
+//       }
+//    };
 
-       pair<int, int> asInterval( const Junction * j) const // or static
-       {
-            return {j->start, j->end};
-       }
-
-       template< typename T1, typename T2 >
-       bool operator()( T1 const& t1, T2 const& t2 ) const
-       {
-           pair<int,int> p1 = asInterval(t1) ;
-           pair<int,int> p2 = asInterval(t2) ;
-           return ((p1.first <= p2.second) && (p1.second >= p2.first)) ;
-       }
-    };
-
-
+    template< typename T1, typename T2 >
+    bool juncGeneSearch(T1 const& t1, T1 const& t2){
+        return ((t1->start <= t2->end) && (t1->end >= t2->start)) ;
+    }
 
 
 
@@ -61,19 +64,17 @@ namespace io_bam {
         return ((read->core.flag & 0x100) != 0x100);
     }
 
-//    bool juncGeneSearch(Gene* g, Junction* j){
-//        return ((g->start <= j->end) && (g->end >= j->start)) ;
-//    }
+
 
     void IOBam::find_junction_gene(string chrom, char strand, Junction * junc){
         vector<Gene *>::iterator gObjIt ;
-        gObjIt = lower_bound(glist_[chrom].begin(), glist_[chrom].end(), junc, CompareIntervals()) ;
+        gObjIt = lower_bound(glist_[chrom].begin(), glist_[chrom].end(), junc, juncGeneSearch) ;
         bool found = false ;
         const string key = junc->get_key() ;
         vector<Gene*> temp_vec ;
 
         while(gObjIt != glist_[chrom].end()){
-            if (!CompareIntervals()(*gObjIt, junc)) break ;
+            if (!juncGeneSearch(*gObjIt, junc)) break ;
             if (strand == '.' || strand == (*gObjIt)->strand) {
                 for(const auto &ex: (*gObjIt)->exon_map){
 
