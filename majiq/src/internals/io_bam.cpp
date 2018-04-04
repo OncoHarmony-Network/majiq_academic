@@ -40,7 +40,7 @@ namespace io_bam {
 //    };
 
     template< typename T1, typename T2 >
-    bool juncGeneSearch(T1 const& t1, T1 const& t2){
+    bool juncGeneSearch(T1 &t1, T2 &t2){
         return ((t1->start <= t2->end) && (t1->end >= t2->start)) ;
     }
 
@@ -74,7 +74,7 @@ namespace io_bam {
         vector<Gene*> temp_vec ;
 
         while(gObjIt != glist_[chrom].end()){
-            if (!juncGeneSearch(*gObjIt, junc)) break ;
+            if (!juncGeneSearch<Gene*, Junction*>(*gObjIt, junc)) break ;
             if (strand == '.' || strand == (*gObjIt)->strand) {
                 for(const auto &ex: (*gObjIt)->exon_map){
 
