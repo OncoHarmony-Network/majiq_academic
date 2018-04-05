@@ -86,5 +86,6 @@ namespace io_bam{
             const map<string, unsigned int> &get_junc_map() ;
             const vector<Junction *>& get_junc_vec() ;
     };
+    static bool juncGeneSearch(const Gene* t1, const Junction* t2) ;
 }
 #endif
