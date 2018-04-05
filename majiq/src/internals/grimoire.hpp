@@ -6,6 +6,7 @@
 #include <vector>
 #include <set>
 #include <list>
+#include <string>
 
 #define EMPTY_COORD  -1
 #define FIRST_LAST_JUNC  -2
