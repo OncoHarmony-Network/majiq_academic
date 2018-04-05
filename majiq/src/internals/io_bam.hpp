@@ -78,6 +78,7 @@ namespace io_bam{
             char _get_strand(bam1_t * read) ;
             void set_junction_strand(bam1_t  *aln, Junction& j1) ;
             void find_junction_gene(string chrom, char strand, Junction * junc) ;
+            void find_junction_gene(string chrom, char strand, const Junction * junc) ;
             int ParseJunctionsFromFile() ;
 
             int boostrap_samples(int msamples, int ksamples, float* boots) ;
@@ -86,6 +87,7 @@ namespace io_bam{
             const map<string, unsigned int> &get_junc_map() ;
             const vector<Junction *>& get_junc_vec() ;
     };
-    static bool juncGeneSearch(const Gene* t1, const Junction* t2) ;
+
+    bool juncGeneSearch(Gene* t1, Junction* t2) ;
 }
 #endif

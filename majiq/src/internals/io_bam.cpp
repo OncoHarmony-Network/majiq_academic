@@ -40,7 +40,7 @@ namespace io_bam {
     };
 
 
-    static bool juncGeneSearch(const Gene* t1, const Junction* t2){
+    bool juncGeneSearch(Gene* t1, Junction* t2){
         return ((t1->start <= t2->end) && (t1->end >= t2->start)) ;
     }
 
@@ -66,7 +66,7 @@ namespace io_bam {
 
 
 
-    void IOBam::find_junction_gene(string chrom, char strand, const Junction * junc){
+    void IOBam::find_junction_gene(string chrom, char strand, Junction * junc){
         vector<Gene *>::iterator gObjIt ;
         gObjIt = lower_bound(glist_[chrom].begin(), glist_[chrom].end(), junc, juncGeneSearch) ;
         bool found = false ;
