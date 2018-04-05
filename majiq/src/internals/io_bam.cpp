@@ -18,31 +18,45 @@ using namespace std;
 //using namespace interval;
 namespace io_bam {
 
-    struct CompareIntervals
-    {
-       pair<int, int> asInterval(const Gene *g) const // or static
-       {
-          return {g->start, g->end};
-       }
+//    struct CompareIntervals
+//    {
+//       pair<int, int> asInterval(const Gene *g) const // or static
+//       {
+//          return {g->start, g->end};
+//       }
+//
+//       pair<int, int> asInterval(Junction * j) const // or static
+//       {
+//            return {j->start, j->end};
+//       }
+//
+//       template< typename T1, typename T2 >
+//       bool operator()( T1 const t1, T2 const t2 ) const
+//       {
+//           pair<int,int> p1 = asInterval(t1) ;
+//           pair<int,int> p2 = asInterval(t2) ;
+//           return ((p1.first <= p2.second) && (p1.second >= p2.first)) ;
+//       }
+//    };
 
-       pair<int, int> asInterval(Junction * j) const // or static
-       {
-            return {j->start, j->end};
-       }
-
-       template< typename T1, typename T2 >
-       bool operator()( T1 const t1, T2 const t2 ) const
-       {
-           pair<int,int> p1 = asInterval(t1) ;
-           pair<int,int> p2 = asInterval(t2) ;
-           return ((p1.first <= p2.second) && (p1.second >= p2.first)) ;
-       }
-    };
-
-
-    bool juncGeneSearch(Gene* t1, Junction* t2){
+    bool juncinGene(Gene* t1, Junction* t2){
         return ((t1->start <= t2->end) && (t1->end >= t2->start)) ;
     }
+
+    int juncGeneSearch(vector<Gene *> a, int n, Junction * j) {
+        int l = 0 ;
+        int h = n ; // Not n - 1
+        while (l < h) {
+            int mid = (l + h) / 2 ;
+            if (juncinGene(a[mid], j)) {
+                h = mid ;
+            } else {
+                l = mid + 1 ;
+            }
+        }
+        return l;
+    }
+
 
 
 
@@ -65,29 +79,32 @@ namespace io_bam {
     }
 
 
-
     void IOBam::find_junction_gene(string chrom, char strand, Junction * junc){
-        vector<Gene *>::iterator gObjIt ;
-        gObjIt = lower_bound(glist_[chrom].begin(), glist_[chrom].end(), junc, juncGeneSearch) ;
+//        vector<Gene *>::iterator gObjIt ;
+
+//        gObjIt = lower_bound(glist_[chrom].begin(), glist_[chrom].end(), junc, juncGeneSearch, 0) ;
+        const int n = glist_[chrom].size();
+        int i = juncGeneSearch(glist_[chrom], n, junc) ;
         bool found = false ;
         const string key = junc->get_key() ;
         vector<Gene*> temp_vec ;
 
-        while(gObjIt != glist_[chrom].end()){
-            if (!juncGeneSearch(*gObjIt, junc)) break ;
-            if (strand == '.' || strand == (*gObjIt)->strand) {
-                for(const auto &ex: (*gObjIt)->exon_map){
+        while(i< n ){
+            Gene * gObj  = glist_[chrom][i] ;
+            if (!juncinGene(gObj, junc)) break ;
+            if (strand == '.' || strand == gObj->strand) {
+                for(const auto &ex: gObj->exon_map){
 
                     if (((ex.second)->start-500) <= junc->start && ((ex.second)->end+500) >= junc->start){
                         found = true ;
                         #pragma omp critical
-                        (*gObjIt)->junc_map[key] = junc ;
+                        gObj->junc_map[key] = junc ;
 
                     }
-                    else temp_vec.push_back((*gObjIt)) ;
+                    else temp_vec.push_back(gObj) ;
                 }
             }
-            gObjIt++ ;
+            i++ ;
         }
 
         if (found) return ;
