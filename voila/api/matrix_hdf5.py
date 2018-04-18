@@ -25,12 +25,8 @@ class MatrixHdf5:
         :param mode: generally r or w
         """
         filename = os.path.expanduser(filename)
-        self.dt = h5py.special_dtype(vlen=np.unicode)
-        try:
-            self.h = h5py.File(filename, mode, libver='latest')
-        except OSError:
-            print(filename)
-            raise
+        self.dt = h5py.special_dtype(vlen=numpy.unicode)
+        self.h = h5py.File(filename, mode, libver='latest')
 
     def __enter__(self):
         return self
@@ -57,11 +53,7 @@ class MatrixHdf5:
         :return: None
         """
         gene_id = lsv_id_to_gene_id(lsv_id)
-        try:
-            self.add_dataset(self.LSVS, gene_id, lsv_id, key, data=data)
-        except TypeError:
-            print(key)
-            raise
+        self.add_dataset(self.LSVS, gene_id, lsv_id, key, data=data)
 
     def add_multiple(self, lsv_id, **kwargs):
         """

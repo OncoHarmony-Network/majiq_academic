@@ -2,7 +2,7 @@ Cython>=0.27.3
 pysam>=0.14
 numpy>=1.14.1
 cycler==0.10.0
-h5py==2.7.1
+h5py>=2.7.1
 Jinja2==2.10
 MarkupSafe==1.0
 matplotlib==2.1.2
