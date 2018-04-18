@@ -17,7 +17,7 @@ def lsv_id_to_gene_id(lsv_id):
 class MatrixHdf5:
     LSVS = 'lsvs'
 
-    def __init__(self, filename, mode='r', lock=None):
+    def __init__(self, filename, mode='r'):
         """
         Access voila's HDF5 file.
 
@@ -27,7 +27,6 @@ class MatrixHdf5:
         filename = os.path.expanduser(filename)
         self.dt = h5py.special_dtype(vlen=numpy.unicode)
         self.h = h5py.File(filename, mode, libver='latest')
-        self.lock = lock
 
     def __enter__(self):
         return self
@@ -54,12 +53,7 @@ class MatrixHdf5:
         :return: None
         """
         gene_id = lsv_id_to_gene_id(lsv_id)
-        try:
-            self.lock.acquire()
-            self.add_dataset(self.LSVS, gene_id, lsv_id, key, data=data)
-            self.lock.release()
-        except AttributeError:
-            self.add_dataset(self.LSVS, gene_id, lsv_id, key, data=data)
+        self.add_dataset(self.LSVS, gene_id, lsv_id, key, data=data)
 
     def add_multiple(self, lsv_id, **kwargs):
         """
