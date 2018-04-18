@@ -1,0 +1,61 @@
+<div class="splice-graph-tools">
+
+    <a name="{{ gene.id }}"></a>
+
+    <h2>Gene name: {{ gene.name }}; {{ gene.chromosome }}:{{ gene.strand }}:{{ gene.start }}-{{ gene.end }};
+        {% include 'ucsc_gene_link.html' %}
+    </h2>
+
+    <h3 class="gene_id">
+        Gene ID: {{ gene.id }};
+    </h3>
+
+    {#    <div class="splice-graph-selectors">#}
+    {#        <table>#}
+    {#            {%- for group in metadata.group_names %}#}
+    {#                <tr>#}
+    {#                    <td style="text-align: right">{{ group }} -</td>#}
+    {#                    <td>#}
+    {#                        <select data-group="{{ group }}">#}
+    {#                            {%- for experiment in metadata.experiment_names[loop.index0] -%}#}
+    {#                                <option value="{{ experiment }}">#}
+    {#                                    {{ experiment }}#}
+    {#                                </option>#}
+    {#                            {%- endfor %}#}
+    {#                        </select>#}
+    {#                    </td>#}
+    {#                </tr>#}
+    {#            {%- endfor %}#}
+    {#        </table>#}
+    {#    </div>#}
+
+    <div class="tools-column">
+        <form>
+            <table>
+                <tr>
+                    <td style="text-align: right">Group:</td>
+                    <td>
+                        <select class="group" name="group">
+                            {% for group in metadata.group_names %}
+                                <option value="{{ group }}">{{ group }}</option>
+                            {% endfor %}
+                        </select>
+                    </td>
+                </tr>
+                <tr>
+                    <td style="text-align: right">Sample:</td>
+                    <td>
+                        <select class="experiment" name="experiment">
+                            {% for experiment in metadata.experiment_names[0] %}
+                                <option value="{{ experiment }}">{{ experiment }}</option>
+                            {% endfor %}
+                        </select>
+                    </td>
+                </tr>
+            </table>
+            <input type="button" class="add-splice-graph btn-right" value="Add">
+        </form>
+    </div>
+    {% include 'splice_graph_btns.html' %}
+
+</div>

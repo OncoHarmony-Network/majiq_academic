@@ -16,6 +16,55 @@
                 <label><span>from:</span><input type="text" name="nexonsfrom" value="" size="4"></label>
                 <label><span>to:</span><input type="text" name="nexonsto" size="4"><br></label>
             </form>
+
+            <br>
+            <form class="stats bootstrap-frm">
+                Heat Map:
+                {% for stat_name in metadata.stat_names %}
+                    <label>
+                        <input type="radio" class="stat" name="stats"
+                               id="{{ stat_name }}"
+                                {% if loop.first %}
+                               checked="checked"
+                                {% endif %}
+                        > {{ stat_name }}
+                    </label>
+                {% endfor %}
+            </form>
+            <br>
+
+            <form class="violin bootstrap-frm">
+                Violin:
+                {% for x in [['Swarm Plot', 'swarm'],['Box Plots', 'box']] %}
+                    <label>
+                        <input type="radio" class="violin" name="violins"
+                               id="{{ x[1] }}"
+                                {% if loop.first %}
+                               checked="checked"
+                                {% endif %}
+                        > {{ x[0] }}
+                    </label>
+                {% endfor %}
+            </form>
+
+            <br>
+            <form class="bootstrap-frm">
+                <label>
+                    dPSI Scale:
+                    <br>
+                    <svg class="dpsi-scale" width="0"></svg>
+                </label>
+            </form>
+
+            <br>
+            <form class="bootstrap-frm">
+                <label>
+                    Stat Scale:
+                    <br>
+                    <svg class="stat-scale" width="0"></svg>
+                </label>
+            </form>
+
         </fieldset>
 
         {% block sg %}

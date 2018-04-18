@@ -1,17 +1,83 @@
-var LSVPlots = function (db) {
+var LSVPlots = function (el) {
     this.db = db;
     this.height = 126;
     this.histo_width = 80;
     this.left_padding = 41;
     this.top_padding = 10;
     this.bottom_padding = 25;
-    this.svg_height = this.height + this.top_padding + this.bottom_padding
+    this.svg_height = this.height + this.top_padding + this.bottom_padding;
+    this.el = el;
+    this.svg = d3.select(el);
+    this.lsv_id = el.getAttribute('data-lsv-id');
+    this.junc_idx = parseInt(el.getAttribute('data-junction-index'));
+    this.group_names = el.getAttribute('data-group-names') ? el.getAttribute('data-group-names').split(',') : [];
+
+
 };
 
+LSVPlots.prototype.heterogen = function () {
+    var junc_idx = this.junc_idx;
+    var lsvp = this;
 
-LSVPlots.prototype.psi = function (el) {
-    var lsv_id = el.getAttribute('data-lsv-id');
-    var group = el.getAttribute('data-group');
+    db.get(this.lsv_id).then(function (data) {
+        lsvp.bins = data.mean_psi.map(function (arr) {
+            try {
+                return arr[junc_idx]
+            } catch (TypeError) {
+                return []
+            }
+        });
+
+        lsvp.mu_psi = data.mu_psi[junc_idx];
+
+        lsvp.size_svg()
+            .violins()
+            .box_plots()
+            .axes([0, 1], [0, .5, 1], 'E(PSI)')
+            // .swarm()
+    })
+
+
+    // this.db.get(this.lsv_id).then(function (data) {
+
+    //     var group_width = bins.length * bp.histo_width;
+    //     bp.svg.attr('group_width', group_width + bp.left_padding);
+    //     bp.violins(bins, new Colors().brewer_het(junc_idx), group_names);
+    //     bp.axes([0, 1], [0, .5, 1], group_width, 'E(PSI)');
+    //     bp.boxPlots();
+    //     bp.swarm(group_width)
+    // }
+    // )
+};
+
+LSVPlots.prototype.box_plots = function () {
+    var lsvp = this;
+    this.svg.selectAll('.violin')
+        .each(function (d) {
+            d = translateLsvBins(d);
+            if (d.length)
+                d3.select(this)
+                    .append('g')
+                    .attr('class', 'box-plot')
+                    .attr('stroke', 'black')
+                    .attr('fill', 'black')
+                    .attr('transform', 'translate(0,' + lsvp.histo_width / 2 + ')')
+                    .voilinBoxPlots(d, lsvp.height);
+        });
+    return this;
+};
+
+LSVPlots.prototype.size_svg = function () {
+    var lsvp = this;
+    var width = this.bins.length * lsvp.histo_width;
+    lsvp.svg.attr('height', lsvp.svg_height);
+    lsvp.svg.attr('width', width + lsvp.left_padding);
+    return this;
+};
+
+LSVPlots.prototype.psi = function () {
+    var lsv_id = this.el.getAttribute('data-lsv-id');
+    var group = this.el.getAttribute('data-group');
     var bp = this;
 
 
@@ -23,13 +89,14 @@ LSVPlots.prototype.psi = function (el) {
         bp.svg = d3.select(el)
             .attr('width', width + bp.left_padding)
             .attr('height', bp.svg_height);
-        bp.violins(bins, means_rounded);
+        if (bins)
+            bp.violins(bins, new Colors().brewer, means_rounded);
         bp.axes([0, 1], [0, .5, 1], width);
     });
 };
 
 
-LSVPlots.prototype.delta_psi = function (el) {
+LSVPlots.prototype.delta_psi = function () {
     var lsv_id = el.getAttribute('data-lsv-id');
     var bp = this;
 
@@ -39,13 +106,13 @@ LSVPlots.prototype.delta_psi = function (el) {
         bp.svg = d3.select(el)
             .attr('width', width + bp.left_padding)
             .attr('height', bp.svg_height);
-        bp.violins(data.bins, data.means_rounded);
+        bp.violins(data.bins, new Colors().brewer.data.means_rounded);
         bp.axes([-1, 1], [-1, 0, 1], width);
     });
 };
 
 translateLsvBins = function (lsvBins) {
-    var numSamples = 30;
+    var numSamples = 100;
     var tmpBins = [];
     var binsSize = lsvBins.length;
     var numCopies;
@@ -57,10 +124,10 @@ translateLsvBins = function (lsvBins) {
 };
 
 
-LSVPlots.prototype.axes = function (domain, tick_values, width) {
+LSVPlots.prototype.axes = function (domain, tick_values, y_label) {
     var bp = this;
     var yScale = d3.scaleLinear().domain(domain).range([this.height, 0]);
-
+    var width = this.bins.length * this.histo_width;
     var g = this.svg
         .append('g')
         .classed('axes', true)
@@ -70,7 +137,7 @@ LSVPlots.prototype.axes = function (domain, tick_values, width) {
         .call(d3.axisLeft(yScale).tickValues(tick_values))
         .append('text')
         .classed('y-axis-label', true)
-        .text('\u03A8')
+        .text(y_label)
         .attr('text-anchor', 'middle')
         .attr('font-size', 12)
         .attr('font-family', 'sans-serif')
@@ -88,64 +155,65 @@ LSVPlots.prototype.axes = function (domain, tick_values, width) {
     return this
 };
 
-LSVPlots.prototype.violins = function (bins, means_rounded) {
-    var colors = new Colors().brewer;
-    var bp = this;
-    return this.svg
+LSVPlots.prototype.violins = function () {
+    var lsvp = this;
+    var junc_idx = this.junc_idx;
+    var colors = new Colors().brewer_het(junc_idx);
+    var means_rounded = this.group_names;
+
+    lsvp.svg
         .selectAll('.violin')
-        .data(bins)
+        .data(this.bins)
         .enter()
         .append('g')
         .attr('class', 'violin')
         .each(function (d, i) {
+            d = translateLsvBins(d);
+
             var el = d3.select(this)
-                .attr('transform', 'translate(' + (i * bp.histo_width + bp.left_padding) + ',' + (bp.height + bp.top_padding) + ') rotate(-90)')
-                .attr('fill', colors(i));
+                .attr('transform', 'translate(' + (i * lsvp.histo_width + lsvp.left_padding) + ',' + (lsvp.height + lsvp.top_padding) + ') rotate(-90)')
+                .attr('fill', 'transparent')
+                .attr('stroke', colors(i));
 
             el
                 .append('g')
                 .attr('class', 'histograms')
-                .violinHistograms(d, bp.height, bp.histo_width);
+                .violinHistograms(d, lsvp.height, lsvp.histo_width);
 
-            el
-                .append('g')
-                .attr('class', 'box-plot')
-                .attr('stroke', 'black')
-                .attr('fill', 'black')
-                .attr('transform', 'translate(0,' + bp.histo_width / 2 + ')')
-                .voilinBoxPlots(d, bp.height);
 
             el
                 .append('g')
                 .attr('class', 'title')
-                .attr('transform', 'rotate(90) translate(' + bp.histo_width / 2 + ', 20)')
+                .attr('transform', 'rotate(90) translate(' + lsvp.histo_width / 2 + ', 20)')
                 .append('text')
                 .attr('text-anchor', 'middle')
-                .text(means_rounded[i].toFixed(3))
+                .text(means_rounded[i])
         });
+    return this;
 };
 
 
 d3.selection.prototype.violinHistograms = function (data, height, width) {
+
     var bins = d3.histogram()
         .domain([0, 1])
         .thresholds(d3.ticks(0, 1, 20))
-        (translateLsvBins(data));
+        (data);
 
     var y = d3.scaleLinear()
         .domain(d3.extent(bins, function (d) {
             return d.length
         }))
-        .rangeRound([width / 2, 0]);
+        .range([width / 2, 0]);
 
     var x = d3.scaleLinear()
         .domain(d3.extent(bins, function (d) {
             return d.x0
         }))
-        .rangeRound([0, height]);
+        .range([0, height]);
 
     var area = d3.area()
-        .curve(d3.curveBasis)
+        .curve(d3.curveBasisOpen)
         .x(function (d) {
             return x(d.x0)
         })
@@ -161,19 +229,19 @@ d3.selection.prototype.violinHistograms = function (data, height, width) {
         .attr('d', area);
 
     // right violin
-    this.append('path')
-        .datum(bins)
-        .classed('right', true)
-        .attr('transform', 'translate(0,' + width + ') scale(1,-1)')
-        .attr('d', area);
+    // this.append('path')
+    //     .datum(bins)
+    //     .classed('right', true)
+    //     .attr('transform', 'translate(0,' + group_width + ') scale(1,-1)')
+    //     .attr('d', area);
 
     return this;
 };
 
-d3.selection.prototype.voilinBoxPlots = function (data, height) {
-    data = translateLsvBins(data);
 
+d3.selection.prototype.voilinBoxPlots = function (data, height) {
     var width = 10;
+
 
     var q = d3.scaleQuantile()
         .domain([0, 100])
@@ -252,3 +320,51 @@ d3.selection.prototype.voilinBoxPlots = function (data, height) {
     return this;
 };
 
+
+LSVPlots.prototype.swarm = function () {
+    var histo_width = this.histo_width;
+    var left_padding = this.left_padding;
+    var circle_radius = 2;
+    var width = this.bins.length * this.histo_width;
+    var svg = this.svg;
+    var colors = new Colors().brewer_het(this.junc_idx);
+    var x = d3.scaleLinear()
+        .domain([0, 1])
+        .range([this.height, this.top_padding]);
+
+    var swarm_fn = d3.beeswarm()
+        .distributeOn(function (d) {
+            return x(d);
+        })
+        .radius(circle_radius)
+        .orientation('vertical')
+        .side('symetric');
+
+    svg
+        .selectAll('.swarm-group')
+        .data(this.mu_psi)
+        .enter()
+        .append('g')
+        .attr('class', 'swarm-group')
+        .attr('transform', function (d, i) {
+            return 'translate(' + ((histo_width * i) - left_padding) + ')'
+        })
+        .selectAll('circle')
+        .data(function (d) {
+            return swarm_fn
+                .data(d)
+                .arrange();
+        })
+        .enter()
+        .append("circle")
+        .attr('fill', function (d, i) {
+            return colors(0)
+        })
+        .attr("cx", function (bee) {
+            return bee.x + (width / 2) + 2;
+        })
+        .attr("cy", function (bee) {
+            return bee.y;
+        })
+        .attr("r", circle_radius);
+};

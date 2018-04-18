@@ -52,34 +52,34 @@ var get_lsv_ids = function (gene_container) {
 
 
 $(document).on('click', '.toggle-scale', function () {
-    var gene_container = $(this).closest('.gene-container')[0];
+    var gene_container = this.closest('.gene-container');
     var lsv_ids = get_lsv_ids(gene_container);
     var splice_graphs = gene_container.querySelectorAll('.splice-graph');
+
+    gene_container.querySelector('.splice-graph-container').classList.toggle('default-view');
+
     for (var i = 0; i < splice_graphs.length; i++) {
         var splice_graph = splice_graphs[i];
-        splice_graph.classList.toggle('default-view');
         sg.update(splice_graph, lsv_ids)
     }
 });
 
 
 var zoom = function (el, value, reset) {
-    var gene_container = $(el).closest('.gene-container')[0];
+    var gene_container = el.closest('.gene-container');
     var lsv_ids = get_lsv_ids(gene_container);
     var splice_graphs = gene_container.querySelectorAll('.gene-container .splice-graph');
+    var sg_container = gene_container.querySelector('.splice-graph-container');
+    var zoom = sg_container.getAttribute('data-zoom');
+
+    if (reset) {
+        sg_container.setAttribute('data-zoom', value)
+    } else {
+        sg_container.setAttribute('data-zoom', Math.max(1, parseFloat(zoom) + value).toString());
+    }
+
     for (var i = 0; i < splice_graphs.length; i++) {
-        var splice_graph = splice_graphs[i];
-        var zoom = splice_graph.getAttribute('data-zoom');
-        if (reset) {
-            splice_graph.setAttribute('data-zoom', value);
-            sg.update(splice_graph, lsv_ids)
-        } else {
-            var zoom_value = parseFloat(zoom) + value;
-            if (zoom_value > 0) {
-                splice_graph.setAttribute('data-zoom', zoom_value);
-                sg.update(splice_graph, lsv_ids)
-            }
-        }
+        sg.update(splice_graphs[i], lsv_ids)
     }
 };
 

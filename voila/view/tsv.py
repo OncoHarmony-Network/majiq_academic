@@ -2,7 +2,7 @@ import csv
 import os
 from abc import ABC, abstractmethod
 
-from voila.api.view_matrix import ViewHeterogen
+from voila.api.view_matrix import ViewHeterogens
 from voila.utils.voila_log import voila_log
 from voila.utils.voila_pool import VoilaPool
 from voila.view.html import Html
@@ -35,10 +35,10 @@ class Tsv(ABC):
         log.info("Creating Tab-delimited output file")
 
         args = self.args
-        output_html = Html.get_output_html(args, args.voila_file)
+        output_html = Html.get_output_html(args, args.voila_file[0])
         tsv_file = os.path.join(args.output, output_html.rsplit('.html', 1)[0] + '.tsv')
 
-        with ViewHeterogen(args) as m:
+        with ViewHeterogens(args) as m:
             view_gene_ids = list(m.gene_ids)
 
         with open(tsv_file, 'w') as tsv:

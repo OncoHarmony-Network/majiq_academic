@@ -1,5 +1,4 @@
 import csv
-import errno
 import os
 from multiprocessing import Lock
 
@@ -9,7 +8,6 @@ from voila.api.view_matrix import ViewPsi
 from voila.api.view_splice_graph import ViewSpliceGraph
 from voila.exceptions import NotPsiVoilaFile
 from voila.utils.voila_log import voila_log
-from voila.utils.voila_pool import VoilaPool
 from voila.view.html import Html
 from voila.view.tsv import Tsv
 
@@ -24,45 +22,20 @@ class Psi(Html, Tsv):
         :return: None
         """
         super(Psi, self).__init__(args)
+
         with ViewPsi(args) as m:
             if m.analysis_type != constants.ANALYSIS_PSI:
                 raise NotPsiVoilaFile(args.voila_file)
-            self.metadata = m.view_metadata
+            self.view_metadata = m.view_metadata
 
         if not args.disable_html:
-            self.copy_static(args)
-            self.create_db_files()
+            self.copy_static()
+            self.render_dbs()
             self.render_summaries()
             self.render_index()
 
         if not args.disable_tsv:
             self.psi_tab_output()
-
-    def create_db_files(self):
-        args = self.args
-        metadata = self.metadata
-        log = voila_log()
-        log.info('Create DB files')
-        with ViewPsi(args) as m:
-            gene_ids = tuple(m.gene_ids)
-
-        try:
-            os.makedirs(os.path.join(args.output, 'db'))
-        except OSError as e:
-            if e.errno != errno.EEXIST:
-                raise
-
-        names = metadata['experiment_names']
-        multiple_results = []
-
-        with VoilaPool() as vp:
-            for genes in self.chunkify(gene_ids, vp.processes):
-                multiple_results.append(vp.apply_async(self.create_gene_db, (genes, args, names)))
-
-            for res in multiple_results:
-                res.get()
-
-        log.debug('finished writing db files.')
 
     def render_index(self):
         log = voila_log()
@@ -70,7 +43,7 @@ class Psi(Html, Tsv):
         log.debug('Start index render')
 
         args = self.args
-        metadata = self.metadata
+        metadata = self.view_metadata
 
         with ViewPsi(args) as m, ViewSpliceGraph(args) as sg:
             lsv_ids = tuple(m.view_lsv_ids())
@@ -98,10 +71,12 @@ class Psi(Html, Tsv):
                     )
                 )
 
-    @classmethod
-    def create_summary(cls, metadata, args, database_name, paged):
-        summary_template = cls.get_env().get_template("psi_summary_template.html")
-        summaries_subfolder = cls.get_summaries_subfolder(args)
+    def create_summary(self, paged):
+        args = self.args
+        summary_template = self.get_env().get_template("psi_summary_template.html")
+        summaries_subfolder = self.get_summaries_subfolder(args)
+        database_name = self.database_name()
+        metadata = self.view_metadata
         links = {}
 
         with ViewSpliceGraph(args) as sg, ViewPsi(args) as m:
@@ -109,12 +84,12 @@ class Psi(Html, Tsv):
             page_count = m.page_count()
 
             for index, genes in paged:
-                page_name = cls.get_page_name(args, index)
-                next_page = cls.get_next_page(args, index, page_count)
-                prev_page = cls.get_prev_page(args, index)
+                page_name = self.get_page_name(args, index)
+                next_page = self.get_next_page(args, index, page_count)
+                prev_page = self.get_prev_page(args, index)
                 lsv_dict = {gene_id: tuple(lsv_id for lsv_id in m.view_gene_lsvs(gene_id)) for
                             gene_id in genes}
-                table_marks = tuple(cls.table_marks_set(len(gene_set)) for gene_set in lsv_dict)
+                table_marks = tuple(self.table_marks_set(len(gene_set)) for gene_set in lsv_dict)
 
                 with open(os.path.join(summaries_subfolder, page_name), 'w') as html:
                     html.write(
@@ -134,44 +109,36 @@ class Psi(Html, Tsv):
                         )
                     )
 
-                links.update(dict(cls.voila_links(lsv_dict, page_name)))
+                links.update(self.get_voila_links(lsv_dict, page_name))
+
             return links
 
     def render_summaries(self):
-        log = voila_log()
-        log.info('Render PSI HTML summaries')
-        log.debug('Start summaries render')
+        # log = voila_log()
+        # log.info('Render PSI HTML summaries')
+        # log.debug('Start summaries render')
+        #
+        # args = self.args
+        # metadata = self.view_metadata
+        # database_name = self.database_name()
+        #
+        # with ViewPsi(args) as m:
+        #     paged_genes = tuple(m.paginated_genes())
+        #
+        # multiple_results = []
+        # with VoilaPool() as vp:
+        #     for paged in self.chunkify(list(enumerate(paged_genes)), vp.processes):
+        #         multiple_results.append(
+        #             vp.apply_async(self.create_summary, (metadata, args, database_name, paged)))
+        #
+        #     for res in multiple_results:
+        #         self.voila_links.update(res.get())
+        #
+        # log.debug('End summaries render')
+        self.create_summaries(ViewPsi)
 
-        args = self.args
-        metadata = self.metadata
-        database_name = self.database_name()
-
-        with ViewPsi(args) as m:
-            paged_genes = tuple(m.paginated_genes())
-
-        multiple_results = []
-        with VoilaPool() as vp:
-            for paged in self.chunkify(list(enumerate(paged_genes)), vp.processes):
-                multiple_results.append(
-                    vp.apply_async(self.create_summary, (metadata, args, database_name, paged)))
-
-            for res in multiple_results:
-                self.voila_links.update(res.get())
-
-        log.debug('End summaries render')
-
-    @classmethod
-    def create_gene_db(cls, gene_ids, args, experiment_names):
-        template = cls.get_env().get_template('gene_db_template.html')
-        with ViewSpliceGraph(args) as sg, ViewPsi(args) as m:
-            for gene in sg.genes(gene_ids):
-                with open(os.path.join(args.output, 'db', '{}.js'.format(gene.id)), 'w') as html:
-                    html.write(
-                        template.render(
-                            gene=gene.get_experiment(experiment_names),
-                            lsvs=(m.psi(lsv_id) for lsv_id in m.view_gene_lsvs(gene.id))
-                        )
-                    )
+    def render_dbs(self):
+        self.create_db_files(ViewPsi, 'psi')
 
     def tsv_row(self, gene_ids, tsv_file, fieldnames):
         args = self.args

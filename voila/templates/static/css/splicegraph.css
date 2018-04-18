@@ -1,28 +1,26 @@
 /* tools section */
 
-.splice-graph-selectors {
+.tools-column {
     display: inline-block;
     vertical-align: top
 }
 
-.splice-graph-tools-btns {
-    display: inline-block;
+.tools-column select {
+    display: block
+}
+
+.tools-btns {
     vertical-align: middle;
     height: 18px;
-}
-
-.splice-graph-tools-info {
-    display: inline-block;
-    vertical-align: middle;
-}
-
-.splice-graph-selectors select {
-    display: block
 }
 
 .toggle-scale {
     object-fit: contain;
     height: 100%;
+}
+
+.btn-right {
+    float: right;
 }
 
 /* splice graph section */
@@ -62,8 +60,13 @@
 .splice-graph-container {
     width: 1000px;
     overflow-x: auto;
+    padding-bottom: 30px;
 }
 
 .simplified {
     opacity: 0.2;
+}
+
+.splice-graph {
+    padding-top: 10px;
 }

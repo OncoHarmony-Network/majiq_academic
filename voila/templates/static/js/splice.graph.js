@@ -142,7 +142,7 @@ window.splicegraph = function () {
 
     function render_intron(canvas, pixel_factor, margin, percen_intron, coords) {
 
-        var intron_height = (percen_intron * canvas.height) / 2; // canvas.height-2*margin[2];
+        var intron_height = (percen_intron * canvas.height) / 2; // canvas.group_height-2*margin[2];
 
         var ctx = canvas.getContext("2d");
         ctx.strokeStyle = "rgba(0, 0, 0, 0.6)";
@@ -181,7 +181,7 @@ window.splicegraph = function () {
 
     function render_exon(canvas, exon, pixel_factor, margin, percen_exon, counter_exon) {
 
-        var exon_height = percen_exon * canvas.height; // canvas.height-2*margin[2];
+        var exon_height = percen_exon * canvas.height; // canvas.group_height-2*margin[2];
 
         var ctx = canvas.getContext("2d");
         if (exon.type === 1) {
@@ -870,7 +870,7 @@ window.splicegraph = function () {
                     drawDashedLine(ctx, Math.round(coords_x_target_e), Math.round(coords[1]), Math.round(coords_x_target_e), Math.round(coords[1] + exon_height), 2);
                 }
 
-                var junc_h_pos = Math.round(margins[3] * 8 * ss); // Math.round((1 - (Math.abs(coords_x_start_e - coords_x_target_e)/canvas.width)) * (canvas.height*(1-percentage_exon)));
+                var junc_h_pos = Math.round(margins[3] * 8 * ss); // Math.round((1 - (Math.abs(coords_x_start_e - coords_x_target_e)/canvas.group_width)) * (canvas.group_height*(1-percentage_exon)));
                 // junctions lines
                 drawLine(ctx, Math.round(coords_x_start_e), Math.round(coords[1]), Math.round(mid_x), junc_h_pos);
                 drawLine(ctx, Math.round(mid_x), junc_h_pos, Math.round(coords_x_target_e), Math.round(coords[1]));
@@ -1006,7 +1006,7 @@ window.splicegraph = function () {
          */
         $(canvas).on("click", {exon_list: canvas.getAttribute('data-exon-list')}, function (e) {
             e.preventDefault();
-            var my_window = window.open("", "Zoomed Splice Graph", "status=1,width=2000,height=420,scrollbars=yes", true);
+            var my_window = window.open("", "Zoomed Splice Graph", "status=1,group_width=2000,group_height=420,scrollbars=yes", true);
             my_window.document.writeln(
                 '<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">' +
                 '<html>' +
@@ -1032,7 +1032,7 @@ window.splicegraph = function () {
                 '<title>' + $(this)[0].id + '</title>' +
                 '</head>' +
                 '<body>' +
-                '<canvas id="spliceGraph1" class="spliceGraph" width="4000px" height="400px" data-exon-list="' + e.data.exon_list + '">' +
+                '<canvas id="spliceGraph1" class="spliceGraph" group_width="4000px" group_height="400px" data-exon-list="' + e.data.exon_list + '">' +
                 'This browser or document mode doesn\'t support canvas' +
                 '</canvas>' +
                 '</body>' +

@@ -4,8 +4,7 @@ from multiprocessing import Lock
 from tempfile import NamedTemporaryFile
 
 from voila import constants
-from voila.api import SpliceGraph
-from voila.api.view_matrix import ViewHeterogen
+from voila.api.view_matrix import ViewHeterogens
 from voila.api.view_splice_graph import ViewSpliceGraph
 from voila.exceptions import NoLsvsFound, NotHeterogenVoilaFile
 from voila.utils.voila_log import voila_log
@@ -19,22 +18,19 @@ lock = Lock()
 class Heterogen(Html, Tsv):
     def __init__(self, args):
         super().__init__(args)
-        with ViewHeterogen(args) as m:
+        with ViewHeterogens(args) as m:
             if m.analysis_type != constants.ANALYSIS_HETEROGEN:
                 raise NotHeterogenVoilaFile(args)
             self.view_metadata = m.view_metadata
 
-        log = voila_log()
+        if not args.disable_html:
+            self.copy_static()
+            self.render_dbs()
+            self.render_summaries()
+            # self.render_index()
+
         if not args.disable_tsv:
             self.het_tab_output()
-
-        if not args.disable_html:
-            log.warning('No html output.')
-        #     with Voila(args.voila_file, 'r') as v:
-        #         self.metainfo = v.get_metainfo()
-        #     self.render_summaries()
-        #     self.render_index()
-        #     copy_static(args)
 
     # @classmethod
     # def arg_parents(cls):
@@ -92,69 +88,121 @@ class Heterogen(Html, Tsv):
 
                 log.debug('End index render')
 
-    def render_summaries(self):
+    def create_summary(self, paged):
         log = voila_log()
-        log.info('Render Heterogen HTML summaries')
-        log.debug('Start summaries render')
-
-        summary_template = self.env.get_template('het_summary_template.html')
+        metadata = self.view_metadata
         args = self.args
-        summaries_subfolder = self.get_summaries_subfolder()
-        metainfo = self.metainfo
+        database_name = self.database_name()
+        summary_template = self.get_env().get_template("heterogen_summary_template.html")
+        summaries_subfolder = self.get_summaries_subfolder(args)
+        # group_names = metadata['group_names']
+        links = {}
 
-        with SpliceGraph(args.splice_graph, 'r') as sg:
-            gene_experiments_list = sg.get_experiments()
-            prev_page = None
-            page_count = sg.get_page_count(args)
+        with ViewSpliceGraph(args) as sg, ViewHeterogens(args) as m:
+            genome = sg.genome
+            page_count = m.page_count()
 
-            log.debug('There will be {0} pages of gene summaries'.format(page_count))
+            for index, gene_ids in paged:
+                page_name = self.get_page_name(args, index)
+                next_page = self.get_next_page(args, index, page_count)
+                prev_page = self.get_prev_page(args, index)
 
-            for index, (lsv_dict, genes) in enumerate(sg.get_paginated_genes_with_lsvs(args)):
-
-                # todo: fix this... this shouldn't be this way
-                for gene_id, lsvs in lsv_dict.items():
-                    for lsv in lsvs:
-                        lsv.box_plot_data = [g.median.tolist() for g in lsv.het.groups]
-
-                page_name = self.get_page_name(index)
-                table_marks = tuple(self.table_marks_set(len(gene_set)) for gene_set in lsv_dict)
-                next_page = self.get_next_page(index, page_count)
-
-                experiments = tuple(
-                    self.gene_experiments(exps, genes, gene_experiments_list) for exps in metainfo['experiment_names'])
-
-                self.add_to_voila_links(lsv_dict, page_name)
-
-                log.debug('Write page {0}'.format(page_name))
+                lsv_dict = {gene_id: tuple(lsv_id for lsv_id in m.view_gene_lsvs(gene_id)) for
+                            gene_id in gene_ids}
+                # table_marks = tuple(self.table_marks_set(len(gene_set)) for gene_set in lsv_dict)
 
                 with open(os.path.join(summaries_subfolder, page_name), 'w') as html:
-
-                    for el in summary_template.generate(
+                    html.write(
+                        summary_template.render(
                             page_name=page_name,
-                            genes_dict=lsv_dict,
-                            genes_exps_list=experiments,
-                            lexps=metainfo,
-                            threshold=.2,
-                            lsv_text_version=constants.LSV_TEXT_VERSION,
-                            table_marks=table_marks,
+                            genes=list(sg.genes(gene_ids)),
+                            lsv_ids=lsv_dict,
+                            heterogen_lsv=m.heterogen,
+                            metadata=metadata,
+                            database_name=database_name,
+                            genome=genome,
                             prev_page=prev_page,
                             next_page=next_page,
-                            gtf=args.gtf
-                    ):
-                        html.write(el)
+                            # threshold=args.threshold,
+                            # lsv_text_version=constants.LSV_TEXT_VERSION,
+                            # table_marks=table_marks,
+                            # gtf=args.gtf,
+                            # group_names=group_names,
+                            # splice_graph=sg
+                        )
+                    )
+                links.update(self.get_voila_links(lsv_dict, page_name))
 
-                    prev_page = page_name
+            return links
 
-                    log.debug('End summaries render')
+    def render_summaries(self):
+        self.create_summaries(ViewHeterogens)
+
+    # def render_summaries(self):
+    #     log = voila_log()
+    #     log.info('Render Heterogen HTML summaries')
+    #     log.debug('Start summaries render')
+    #
+    #     summary_template = self.get_env.get_template('het_summary_template.html')
+    #     args = self.args
+    #     summaries_subfolder = self.get_summaries_subfolder()
+    #     metainfo = self.metainfo
+    #
+    #     with SpliceGraph(args.splice_graph, 'r') as sg:
+    #         gene_experiments_list = sg.get_experiments()
+    #         prev_page = None
+    #         page_count = sg.get_page_count(args)
+    #
+    #         log.debug('There will be {0} pages of gene summaries'.format(page_count))
+    #
+    #         for index, (lsv_dict, genes) in enumerate(sg.get_paginated_genes_with_lsvs(args)):
+    #
+    #             # todo: fix this... this shouldn't be this way
+    #             for gene_id, lsvs in lsv_dict.items():
+    #                 for lsv in lsvs:
+    #                     lsv.box_plot_data = [g.median.tolist() for g in lsv.het.groups]
+    #
+    #             page_name = self.get_page_name(index)
+    #             table_marks = tuple(self.table_marks_set(len(gene_set)) for gene_set in lsv_dict)
+    #             next_page = self.get_next_page(index, page_count)
+    #
+    #             experiments = tuple(
+    #                 self.gene_experiments(exps, genes, gene_experiments_list) for exps in metainfo['experiment_names'])
+    #
+    #             self.add_to_voila_links(lsv_dict, page_name)
+    #
+    #             log.debug('Write page {0}'.format(page_name))
+    #
+    #             with open(os.path.join(summaries_subfolder, page_name), 'w') as html:
+    #
+    #                 for el in summary_template.generate(
+    #                         page_name=page_name,
+    #                         genes_dict=lsv_dict,
+    #                         genes_exps_list=experiments,
+    #                         lexps=metainfo,
+    #                         threshold=.2,
+    #                         lsv_text_version=constants.LSV_TEXT_VERSION,
+    #                         table_marks=table_marks,
+    #                         prev_page=prev_page,
+    #                         next_page=next_page,
+    #                         gtf=args.gtf
+    #                 ):
+    #                     html.write(el)
+    #
+    #                 prev_page = page_name
+    #
+    #                 log.debug('End summaries render')
+
+    def render_dbs(self):
+        self.create_db_files(ViewHeterogens, 'heterogen')
 
     def tsv_row(self, gene_ids, tsv_file, fieldnames):
         args = self.args
         log = voila_log()
         metadata = self.view_metadata
         group_names = metadata['group_names']
-        stat_names = metadata['stat_names']
 
-        with ViewHeterogen(args) as m, ViewSpliceGraph(args) as sg:
+        with ViewHeterogens(args) as m, ViewSpliceGraph(args) as sg:
             with open(tsv_file, 'a') as tsv:
                 writer = csv.DictWriter(tsv, fieldnames=fieldnames, delimiter='\t')
 
@@ -165,8 +213,7 @@ class Heterogen(Html, Tsv):
                         lsv = m.heterogen(lsv_id)
                         lsv_junctions = list(gene.lsv_junctions(lsv))
                         lsv_exons = list(gene.lsv_exons(lsv))
-                        mean_psi = lsv.mean_psi
-                        junction_stats = lsv.junction_stats.T
+                        mean_psi = list(lsv.mean_psi)
 
                         row = {
                             'Gene Name': gene.name,
@@ -195,10 +242,12 @@ class Heterogen(Html, Tsv):
                         }
 
                         for idx, group in enumerate(group_names):
-                            row['%s E(PSI)' % group] = self.semicolon_join(get_expected_psi(x) for x in mean_psi[idx])
+                            if mean_psi[idx] is not None:
+                                row['%s E(PSI)' % group] = self.semicolon_join(
+                                    get_expected_psi(x) for x in mean_psi[idx])
 
-                        for idx, stat_name in enumerate(stat_names):
-                            row[stat_name] = self.semicolon_join(junction_stats[idx])
+                        for key, value in lsv.junction_stats:
+                            row[key] = self.semicolon_join(value)
 
                         # if voila_links:
                         #     summary_path = voila_links[gene_id]
@@ -211,11 +260,12 @@ class Heterogen(Html, Tsv):
                         lock.release()
 
     def het_tab_output(self):
-        metadata = self.view_metadata
-        fieldnames = ['Gene Name', 'Gene ID', 'LSV ID', 'LSV Type', 'strand', 'chr'] + \
-                     ['%s E(PSI)' % group for group in metadata['group_names']] + \
-                     ['{}'.format(s) for s in metadata['stat_names']] + \
-                     ['A5SS', 'A3SS', 'ES', 'Num. Junctions', 'Num. Exons', 'De Novo Junctions',
-                      'Junctions coords', 'Exons coords', 'IR coords']
+        with ViewHeterogens(self.args) as m:
+            metadata = m.view_metadata
+            fieldnames = ['Gene Name', 'Gene ID', 'LSV ID', 'LSV Type', 'strand', 'chr'] + \
+                         ['%s E(PSI)' % group for group in metadata['group_names']] + \
+                         list(m.junction_stats_column_names) + \
+                         ['A5SS', 'A3SS', 'ES', 'Num. Junctions', 'Num. Exons', 'De Novo Junctions',
+                          'Junctions coords', 'Exons coords', 'IR coords']
 
         self.write_tsv(fieldnames)

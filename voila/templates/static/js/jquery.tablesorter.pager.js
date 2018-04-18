@@ -21,7 +21,7 @@
 					var c = table.config, o = $(table);
 					if(o.offset) {
 						c.container.css({
-							//top: o.offset().top + 1.003*o.height() + 'px',
+							//top: o.offset().top + 1.003*o.group_height() + 'px',
 							//position: 'absolute'
 							top:  '-15px',
 							position: 'relative'

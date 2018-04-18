@@ -141,7 +141,7 @@ SpliceGraph.prototype.xScale = function (gene, default_view, reverse_range) {
         x_range.reverse()
     }
 
-    // scale back to view width
+    // scale back to view group_width
     x = d3.scaleLinear().domain([x_range[0], x_range[x_range.length - 1]]).range([min_width, max_width]);
     x_range = x_range.reduce(function (accu, curr) {
         accu.push(x(curr));
@@ -229,12 +229,32 @@ SpliceGraph.prototype.junctions_no_ir = function (gene, x, experiment) {
 };
 
 SpliceGraph.prototype.init = function (sg_div) {
-    var gene_id = sg_div.getAttribute('data-gene-id');
+    var sg_container = sg_div.closest('.splice-graph-container');
+    var gene_id = sg_container.getAttribute('data-gene-id');
     var experiment = sg_div.getAttribute('data-experiment');
-    var default_view = sg_div.classList.contains('default-view');
+    var default_view = sg_container.classList.contains('default-view');
     var sg = this;
 
-    sg_div.setAttribute('data-zoom', 1.0);
+    var sg_header = d3.select(sg_div).append('div');
+
+    sg_header
+        .append('div')
+        .text(sg_div.getAttribute('group'));
+
+    sg_header
+        .append('button')
+        // .attr('class', 'btn-right')
+        .style('float', 'right')
+        .text('Remove')
+        .on('click', function (d) {
+            var x = this.closest('.splice-graph');
+            x.parentNode.removeChild(x);
+        });
+
+    sg_header
+        .append('div')
+        .text(sg_div.getAttribute('data-group') + ', ' + sg_div.getAttribute('data-experiment'));
+
 
     this.db.get(gene_id).then(function (gene) {
         var svg = d3.select(sg_div).append('svg')
@@ -463,8 +483,8 @@ d3.transition.prototype.style_exons =
                 .each(function (d) {
                     if (lsvs.length) {
                         if (lsvs.some(function (lsv) {
-                                return array_equal(lsv.doc.reference_exon, [d.start, d.end])
-                            })) {
+                            return array_equal(lsv.doc.reference_exon, [d.start, d.end])
+                        })) {
                             this.setAttribute('stroke', 'orange');
                             this.setAttribute('fill', 'orange');
                             this.setAttribute('stroke-dasharray', '');
@@ -602,7 +622,7 @@ d3.transition.prototype.style_junctions =
             var experiment = sg.experiment;
 
             return this
-                .attr('stroke-width', function (d) {
+                .attr('stroke-group_width', function (d) {
                     if (lsvs.length) {
                         var hl = lsvs.reduce(function (acc, lsv, idx) {
                             if (sg.weighted[idx])
@@ -656,10 +676,10 @@ d3.transition.prototype.highlight_exons =
         return this.attr('opacity', function (d) {
             if (lsvs.length) {
                 if (lsvs.every(function (lsv) {
-                        return lsv.doc.junctions.every(function (junc) {
-                            return !coord_in_exon(d, junc[0]) && !coord_in_exon(d, junc[1])
-                        })
-                    })) {
+                    return lsv.doc.junctions.every(function (junc) {
+                        return !coord_in_exon(d, junc[0]) && !coord_in_exon(d, junc[1])
+                    })
+                })) {
                     return 0.2
                 }
             }
@@ -672,10 +692,10 @@ d3.transition.prototype.highlight_junctions =
         return this.attr('opacity', function (d) {
             if (lsvs.length) {
                 if (lsvs.every(function (lsv) {
-                        return lsv.doc.junctions.every(function (junc) {
-                            return !array_equal(junc, [d.start, d.end])
-                        })
-                    })) {
+                    return lsv.doc.junctions.every(function (junc) {
+                        return !array_equal(junc, [d.start, d.end])
+                    })
+                })) {
                     return 0.2
                 }
             }
@@ -776,8 +796,10 @@ d3.transition.prototype.ir_lines =
 SpliceGraph.prototype.update = function (sg_div, lsv_ids, duration) {
     lsv_ids = !lsv_ids ? [] : lsv_ids;
 
+    var sg_container = sg_div.closest('.splice-graph-container');
     var sg = this;
-    var keys = [sg_div.getAttribute('data-gene-id')].concat(lsv_ids.map(function (x) {
+
+    var keys = [sg_container.getAttribute('data-gene-id')].concat(lsv_ids.map(function (x) {
         return x[0]
     }));
 
@@ -794,10 +816,10 @@ SpliceGraph.prototype.update = function (sg_div, lsv_ids, duration) {
         var gene = data.rows[0].doc;
         var lsvs = data.rows.slice(1);
 
-        var default_view = sg_div.classList.contains('default-view');
+        var default_view = sg_container.classList.contains('default-view');
         var reverse_range = gene.strand === '-';
 
-        sg.zoom = sg_div.getAttribute('data-zoom');
+        sg.zoom = sg_container.getAttribute('data-zoom');
         sg.experiment = sg_div.getAttribute('data-experiment');
         sg.x = sg.xScale(gene, default_view, reverse_range);
         sg.weighted = lsv_ids.map(function (x) {

@@ -7,7 +7,7 @@ import time
 import voila.constants as constants
 from voila.api import SpliceGraph, Matrix
 from voila.api.matrix_hdf5 import lsv_id_to_gene_id
-from voila.exceptions import VoilaException, VoilaCantFindFile
+from voila.exceptions import VoilaException, CanNotFindVoilaFile
 from voila.utils.utils_voila import create_if_not_exists
 from voila.utils.voila_log import voila_log
 from voila.utils.voila_pool import VoilaPool
@@ -36,10 +36,11 @@ def file_versions(args):
                         'current versions.')
 
     if hasattr(args, 'voila_file'):
-        with Matrix(args.voila_file) as m:
-            if m.file_version != constants.VOILA_FILE_VERSION:
-                log.warning('Voila file may be out of date.  Verify that you\'re running MAJIQ/Voila with the most '
-                            'current versions.')
+        for f in args.voila_file:
+            with Matrix(f) as m:
+                if m.file_version != constants.VOILA_FILE_VERSION:
+                    log.warning('Voila file may be out of date.  Verify that you\'re running MAJIQ/Voila with the most '
+                                'current versions.')
 
 
 def gene_names(args):
@@ -62,11 +63,12 @@ def gene_ids(args):
     if args.gene_ids:
         log = voila_log()
         args.gene_ids = list(set(args.gene_ids))
-        with Matrix(args.voila_file) as m:
-            for gene_id in args.gene_ids:
-                if not any(m.lsv_ids([gene_id])):
-                    log.warning('Gene ID "{0}" could not be found in Voila file'.format(gene_id))
-                    args.gene_ids.remove(gene_id)
+        for f in args.voila_file:
+            with Matrix(f) as m:
+                for gene_id in args.gene_ids:
+                    if not any(m.lsv_ids([gene_id])):
+                        log.warning('{1}: Gene ID "{0}" could not be found in Voila file'.format(gene_id, f))
+                        args.gene_ids.remove(gene_id)
 
             if not args.gene_ids:
                 raise VoilaException('None of the gene IDs could be found in the Voila file.')
@@ -76,14 +78,20 @@ def lsv_ids(args):
     if hasattr(args, 'lsv_ids') and args.lsv_ids:
         args.lsv_ids = list(set(args.lsv_ids))
         log = voila_log()
-        with Matrix(args.voila_file) as m:
-            for lsv_id in args.lsv_ids:
-                if lsv_id not in set(m.lsv_ids([lsv_id_to_gene_id(lsv_id)])):
-                    log.warning('LSV ID "{0}" could not be found in Voila file'.format(lsv_id))
-                    args.lsv_ids.remove(lsv_id)
+        found_lsvs = set()
+        for f in args.voila_file:
+            with Matrix(f) as m:
+                for lsv_id in args.lsv_ids:
+                    if lsv_id in set(m.lsv_ids([lsv_id_to_gene_id(lsv_id)])):
+                        found_lsvs.add(lsv_id)
 
-            if not args.lsv_ids:
-                raise VoilaException('None of the LSV IDs could be found in the Voila file.')
+        for lsv_id in set(args.lsv_ids) - found_lsvs:
+            log.warning('LSV ID "{0}" could not be found a Voila file'.format(lsv_id))
+
+        if not found_lsvs:
+            raise VoilaException('None of the LSV IDs could be found in a Voila file.')
+
+        args.lsv_ids = list(found_lsvs)
 
 
 def new_subparser():
@@ -102,7 +110,7 @@ def check_list_file(value):
             return [line.strip() for line in f]
     except IOError as e:
         if e.errno == errno.ENOENT:
-            raise VoilaCantFindFile(value)
+            raise CanNotFindVoilaFile(value)
         else:
             raise
 
@@ -118,6 +126,10 @@ def check_dir(value):
     return value
 
 
+def check_voila_dir(value):
+    return [os.path.join(value, f) for f in os.listdir(value) if f.endswith('.voila')]
+
+
 def check_file(value):
     """
     Check if file exists.
@@ -126,7 +138,7 @@ def check_file(value):
     """
     value = os.path.expanduser(value)
     if not os.path.isfile(value):
-        raise VoilaCantFindFile(value)
+        raise CanNotFindVoilaFile(value)
     return value
 
 
@@ -147,8 +159,9 @@ def voila_parser():
     splice_graph.add_argument('-o', '--output', type=check_dir, required=True, help='Path for output directory.')
     splice_graph.add_argument('--logger', help='Path for log files.')
     splice_graph.add_argument('--silent', action='store_true', help='Do not write logs to standard out.')
-    splice_graph.add_argument('--debug', action='store_true')
-    splice_graph.add_argument('-j', '--nproc', type=check_procs, default=max(int(os.cpu_count() / 2), 1))
+    splice_graph.add_argument('--debug', action='store_true', help='Prints extra output for debugging.')
+    splice_graph.add_argument('-j', '--nproc', type=check_procs, default=max(int(os.cpu_count() / 2), 1),
+                              help='Number of processes used to produce output. Default is half of system processes. ')
     splice_graph.add_argument('--gene-names-file', dest='gene_names', type=check_list_file, default=[],
                               help='Location of file that contains a list of common gene names which should remain in '
                                    'the results. One name per line.')
@@ -164,7 +177,7 @@ def voila_parser():
 
     # psi parser
     psi = new_subparser()
-    psi.add_argument('voila_file', type=check_file,
+    psi.add_argument('--voila-file', nargs='+', type=check_file,
                      help='Location of majiq\'s voila file.  File should end with ".voila".')
     psi.add_argument('--gtf', action='store_true', help='Generate GTF (GFF2) files for LSVs.')
     psi.add_argument('--gff', action='store_true', help='Generate GFF3 files for LSVs.')
@@ -193,6 +206,8 @@ def voila_parser():
 
     # heterogen parser
     heterogen = new_subparser()
+    heterogen.add_argument('--voila-dir', help='Directory of majiq\'s voila files.', dest='voila_file',
+                           type=check_voila_dir)
 
     # subparsers
     subparsers = parser.add_subparsers(help='')
@@ -215,7 +230,7 @@ def main():
     parser = voila_parser()
     if len(sys.argv) == 1:
         parser.print_help()
-        sys.exit(1)
+        exit(1)
 
     # get args
     args = parser.parse_args()
@@ -232,7 +247,7 @@ def main():
     log = voila_log(filename=log_filename, silent=args.silent, debug=args.debug)
     log.info('Command: {0}'.format(' '.join(sys.argv)))
 
-    log.info('Voila v{0}'.format(constants.VERSION))
+    log.info('Voila v{}'.format(constants.VERSION))
 
     VoilaPool(args.nproc)
 

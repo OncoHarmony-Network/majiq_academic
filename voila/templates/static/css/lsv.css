@@ -9,3 +9,13 @@
     height: 80px;
 }
 
+.violin-tool-tip, .heat-map-tool-tip {
+    position: absolute;
+    z-index: 10;
+    background-color: rgba(255, 255, 255, .9);
+    border: 1px solid black;
+    border-radius: 2.5px;
+    padding: 4px;
+    font-size: 12px;
+}
+

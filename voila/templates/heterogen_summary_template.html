@@ -1,0 +1,283 @@
+{% extends "sg_lsv_sidebar_template.html" %}
+{% block title %}LSV &Delta;&Psi; Gene Summary{% endblock %}
+
+{% block css %}
+    {#    <link rel="stylesheet" type="text/css" href="static/css/splice.graph.D3.css"/>#}
+    <link rel="stylesheet" type="text/css" href="static/css/bootstrap-frm.css"/>
+    <link rel="stylesheet" type="text/css" href="static/css/splicegraph.css"/>
+    <link rel="stylesheet" type="text/css" href="static/css/lsv.css"/>
+    <style>
+        .lsvLegend {
+            margin: 0;
+        }
+
+        table.hide-plots svg {
+            height: 0;
+        }
+
+
+    </style>
+{% endblock %}
+
+{% block js %}
+    {#    <script src="static/js/splice.graph.js" type="text/javascript" language="javascript"></script>#}
+    {#    <script src="static/js/splice.graph.D3.js" type="text/javascript" language="javascript"></script>#}
+    {#    <script src="static/js/jquery.tablesorter.js" type="text/javascript"></script>#}
+    {#    <script src="static/js/jquery.tablesorter.pager.js" type="text/javascript"></script>#}
+    {#    <script src="static/js/jquery.mousewheel.js" type="text/javascript"></script>#}
+    {#    <script src="static/js/application.js" type="text/javascript"></script>#}
+    {#    <script type="text/javascript" src="static/js/jquery.tooltipster.min.js"></script>#}
+    {#    <script src="static/js/splice.graph.js" type="text/javascript" language="javascript"></script>#}
+    {#    <script src="static/js/splice.graph.D3.js" type="text/javascript" language="javascript"></script>#}
+    <script src="static/js/jquery.tablesorter.js" type="text/javascript"></script>
+    <script src="static/js/jquery.tablesorter.pager.js" type="text/javascript"></script>
+    <script src="static/js/application.js" type="text/javascript"></script>
+    <script src="static/js/jquery.tooltipster.min.js" type="text/javascript"></script>
+    <script src="https://cdn.jsdelivr.net/npm/pouchdb@6.4.3/dist/pouchdb.min.js"></script>
+    <script src="https://d3js.org/d3.v4.min.js"></script>
+    <script src="https://raw.githack.com/Kcnarf/d3-beeswarm/master/build/d3-beeswarm.js"></script>
+    <script src="static/js/splicegraph.js"></script>
+    <script src="static/js/splicegraphtools.js"></script>
+    <script src="static/js/floatinglegend.js"></script>
+    <script src="static/js/lsv.js"></script>
+    <script src="static/js/lsvplots.js"></script>
+    <script src="static/js/colors.js"></script>
+    <script src="static/js/heatmap.js"></script>
+    <script src="static/js/violin.js"></script>
+    <script>
+        var db = new PouchDB('{{ database_name }}', {auto_compaction: true});
+        var sg = new SpliceGraph(db)
+    </script>
+    <script src="../db/metadata.js"></script>
+    {% for gene in genes %}
+        <script src="../db/{{ gene.id }}.js"></script>
+    {% endfor %}
+    <script>
+        $(function () {
+            document.querySelectorAll('.het-violin-plot').forEach(function (el) {
+                new Violin(el)
+            });
+
+            document.querySelectorAll('.lsvLegend').forEach(function (el) {
+                new Lsv(db).renderLsvSpliceGraph(el);
+            });
+
+            document.querySelectorAll('.heat-map').forEach(function (el) {
+                new HeatMap(el).plot()
+            });
+
+            $('form.stats').change(function () {
+                var stat_name = this.querySelector('input:checked').id;
+                document.querySelectorAll('.heat-map').forEach(function (el) {
+                    el.setAttribute('data-stat-name', stat_name);
+                    new HeatMap(el).plot()
+                })
+            });
+
+            $('form.violin').change(function () {
+                var violin_type = this.querySelector('input:checked').id;
+                document.querySelectorAll('.het-violin-plot').forEach(function (el) {
+                    el.setAttribute('data-type', violin_type);
+                    new Violin(el)
+                })
+            });
+
+            $('.lsv').change(function () {
+                var lsv = this.closest('.lsv');
+                lsv.querySelectorAll('table.het-plots').forEach(function (el) {
+                    el.classList.toggle('hide-plots')
+                })
+            });
+
+            $('.group').change(function () {
+                var group = this.value;
+                var exps = d3.select(this.closest('tbody').querySelector('.experiment'));
+                db.get('metadata').then(function (m) {
+                    var exps_names = m.experiment_names[m.group_names.indexOf(group)];
+                    var opts = exps.selectAll('option').data(exps_names);
+                    opts
+                        .enter()
+                        .append('option')
+                        .merge(opts)
+                        .attr('value', function (d) {
+                            return d;
+                        })
+                        .text(function (d) {
+                            return d;
+                        });
+                    opts.exit().remove()
+                })
+            });
+
+            $('.add-splice-graph').click(function () {
+                var f = this.closest('form').elements;
+                var group = f.namedItem('group').value;
+                var exp = f.namedItem('experiment').value;
+                var container = document.querySelector('.splice-graph-container');
+                var d = document.createElement('div');
+                d.classList.add('splice-graph');
+                d.setAttribute('data-group', group);
+                d.setAttribute('data-experiment', exp);
+                container.appendChild(d);
+                sg.init(d);
+            });
+
+            $("table.het-plots").tablesorter({
+                headers: {
+                    0: {
+                        sorter: false
+                    },
+
+                    1: {
+                        sorter: false
+                    },
+                    2: {
+                        sorter: false
+                    }
+                }
+            });
+
+            document.querySelectorAll('.swarm').forEach(function (el) {
+                var height = 161;
+                var width = 281;
+                var circle_radius = 2;
+                var gene_id = el.getAttribute('data-lsv-id');
+                var junc_idx = el.getAttribute('data-junction-index');
+                var svg = d3.select(el)
+                    .attr('height', height)
+                    .attr('width', width);
+
+                var x = d3.scaleLinear()
+                    .domain([0, 1])
+                    .range([height - 10, 10]);
+
+                var swarm_fn = d3.beeswarm()
+                    .distributeOn(function (d) {
+                        return x(d);
+                    })
+                    .radius(circle_radius)
+                    .orientation('vertical');
+
+                db.get(gene_id).then(function (data) {
+                    svg
+                        .selectAll('g')
+                        .data(data.mu_psi[junc_idx])
+                        .enter()
+                        .append('g')
+                        .attr('class', 'swarm-group')
+                        .attr('transform', function (d, i) {
+                            return 'translate(' + (40 * i) + ')'
+                        })
+                        .attr('data-group', function (d) {
+                            return d
+                        })
+                        .selectAll('circle')
+                        .data(function (d) {
+                            return swarm_fn
+                                .data(d)
+                                .arrange();
+                        })
+                        .enter()
+                        .append("circle")
+                        .attr('fill', 'blue')
+                        .attr("cx", function (bee) {
+                            return bee.x + (width / 2);
+                        })
+                        .attr("cy", function (bee) {
+                            return bee.y;
+                        })
+                        .attr("r", circle_radius);
+
+
+                })
+            });
+
+            document.querySelectorAll('.dpsi-scale').forEach(function (el) {
+                new HeatMap(el).dpsi_scale()
+            });
+            document.querySelectorAll('.stat-scale').forEach(function (el) {
+                new HeatMap(el).stat_scale()
+            })
+        });
+
+    </script>
+{% endblock %}
+
+{% block header %}
+    {% if page_name %}Result page: {{ page_name }}{% endif %}
+{% endblock %}
+
+{% block content %}
+    <section>
+        <fieldset class="section-border events-summary">
+            <legend>LSV summary</legend>
+            <div class="floatingCanvas">
+                <canvas class="floatingLegend" width="500px" height="40px">
+                    This browser or document mode doesn't support canvas
+                </canvas>
+            </div>
+
+            {% for gene in genes %}
+                {% set gene_index = loop.index - 1 %}
+                <div class="gene-container">
+
+                    {% include 'het_splice_graph_tools.html' %}
+                    <div class="splice-graph-container default-view" data-zoom="1" data-gene-id="{{ gene.id }}"></div>
+
+                    {% for lsv_id in lsv_ids[gene.id] %}
+                        <div class="lsv">
+                            {% with lsv = heterogen_lsv(lsv_id) %}
+                                <div><b>LSV:</b> {{ lsv.lsv_id }}</div>
+                                <label>
+                                    <table>
+                                        <tr>
+                                            <th>
+                                                <input class="lsv-checkbox" type="checkbox">
+                                            </th>
+                                            <th>
+                                                {% include 'lsv_cartoon.html' %}
+                                            </th>
+                                        </tr>
+                                    </table>
+                                </label>
+
+                                <table class="het-plots tablesorter hide-plots">
+                                    <thead>
+                                    <tr>
+                                        <th>Junctions</th>
+                                        <th>PSI distribution per group</th>
+                                        <th>Pairwise: Significance / dPSI</th>
+                                    </tr>
+                                    </thead>
+                                    <tbody>
+                                    {% for junction in lsv.junctions %}
+                                        <tr data-junction-index="{{ loop.index0 }}">
+                                            <td>
+                                                {{ junction | join('-') }}
+                                            </td>
+
+                                            <td>
+                                                <svg class="het-violin-plot"
+                                                     data-lsv-id="{{ lsv.lsv_id }}"
+                                                     data-type="swarm"
+                                                ></svg>
+                                            </td>
+                                            <td>
+                                                <svg class="heat-map"
+                                                     data-lsv-id="{{ lsv.lsv_id }}"
+                                                     data-stat-name="{{ metadata.stat_names[0] }}"
+                                                ></svg>
+                                            </td>
+                                        </tr>
+                                    {% endfor %}
+                                    </tbody>
+                                </table>
+                            {% endwith %}
+                        </div>
+                    {% endfor %}
+                </div>
+            {% endfor %}
+        </fieldset>
+    </section>
+{% endblock %}
+

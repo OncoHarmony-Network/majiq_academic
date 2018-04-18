@@ -1,5 +1,4 @@
 import csv
-import errno
 import os
 from multiprocessing import Lock
 
@@ -11,7 +10,6 @@ from voila.api.view_matrix import ViewDeltaPsi
 from voila.api.view_splice_graph import ViewSpliceGraph
 from voila.exceptions import NotDeltaPsiVoilaFile
 from voila.utils.voila_log import voila_log
-from voila.utils.voila_pool import VoilaPool
 from voila.view.html import Html
 from voila.view.tsv import Tsv
 from voila.vlsv import matrix_area
@@ -28,8 +26,8 @@ class DeltaPsi(Html, Tsv):
             self.view_metadata = m.view_metadata
 
         if not args.disable_html:
-            self.copy_static(args)
-            self.create_db_files()
+            self.copy_static()
+            self.render_dbs()
             self.render_summaries()
             self.render_index()
 
@@ -71,26 +69,12 @@ class DeltaPsi(Html, Tsv):
 
                 log.debug('End index render')
 
-    @classmethod
-    def create_gene_db(cls, gene_ids, args, experiment_names):
-        template = cls.get_env().get_template('gene_db_template.html')
-        log = voila_log()
-        with ViewSpliceGraph(args) as sg, ViewDeltaPsi(args) as m:
-            for gene in sg.genes(gene_ids):
-                log.debug('creating {}'.format(gene.id))
-
-                with open(os.path.join(args.output, 'db', '{}.js'.format(gene.id)), 'w') as html:
-                    html.write(
-                        template.render(
-                            gene=gene.get_experiment(experiment_names),
-                            lsvs=tuple(m.delta_psi(lsv_id) for lsv_id in m.view_gene_lsvs(gene.id))
-                        )
-                    )
-
-    @classmethod
-    def create_summary(cls, metadata, args, database_name, paged):
-        summary_template = cls.get_env().get_template("deltapsi_summary_template.html")
-        summaries_subfolder = cls.get_summaries_subfolder(args)
+    def create_summary(self, paged):
+        metadata = self.view_metadata
+        args = self.args
+        database_name = self.database_name()
+        summary_template = self.get_env().get_template("deltapsi_summary_template.html")
+        summaries_subfolder = self.get_summaries_subfolder(args)
         group_names = metadata['group_names']
         links = {}
 
@@ -99,13 +83,13 @@ class DeltaPsi(Html, Tsv):
             page_count = m.page_count()
 
             for index, gene_ids in paged:
-                page_name = cls.get_page_name(args, index)
-                next_page = cls.get_next_page(args, index, page_count)
-                prev_page = cls.get_prev_page(args, index)
+                page_name = self.get_page_name(args, index)
+                next_page = self.get_next_page(args, index, page_count)
+                prev_page = self.get_prev_page(args, index)
 
                 lsv_dict = {gene_id: tuple(lsv_id for lsv_id in m.view_gene_lsvs(gene_id)) for
                             gene_id in gene_ids}
-                table_marks = tuple(cls.table_marks_set(len(gene_set)) for gene_set in lsv_dict)
+                table_marks = tuple(self.table_marks_set(len(gene_set)) for gene_set in lsv_dict)
 
                 with open(os.path.join(summaries_subfolder, page_name), 'w') as html:
                     html.write(
@@ -128,61 +112,15 @@ class DeltaPsi(Html, Tsv):
                         )
                     )
 
-                links.update(dict(cls.voila_links(lsv_dict, page_name)))
+                links.update(self.get_voila_links(lsv_dict, page_name))
 
             return links
 
     def render_summaries(self):
-        log = voila_log()
-        log.info('Render Delta PSI HTML summaries')
-        log.debug('Start summaries render')
+        self.create_summaries(ViewDeltaPsi)
 
-        args = self.args
-        metadata = self.view_metadata
-        database_name = self.database_name()
-
-        with ViewDeltaPsi(args) as m:
-            paged_genes = tuple(m.paginated_genes())
-
-        multiple_results = []
-        with VoilaPool() as vp:
-            for paged in self.chunkify(tuple(enumerate(paged_genes)), vp.processes):
-                multiple_results.append(
-                    vp.pool.apply_async(self.create_summary, (metadata, args, database_name, paged)))
-
-            for res in multiple_results:
-                self.voila_links.update(res.get())
-
-    def create_db_files(self):
-        args = self.args
-        metadata = self.view_metadata
-        log = voila_log()
-        log.info('Create DB files')
-
-        with ViewDeltaPsi(args) as m:
-            gene_ids = tuple(m.view_gene_ids())
-
-        try:
-            os.makedirs(os.path.join(args.output, 'db'))
-        except OSError as e:
-            if e.errno != errno.EEXIST:
-                raise
-
-        def chunkify(lst, n):
-            for i in range(n):
-                yield lst[i::n]
-
-        names = metadata['experiment_names']
-        multiple_results = []
-
-        with VoilaPool() as vp:
-            for genes in chunkify(gene_ids, vp.processes):
-                multiple_results.append(vp.apply_async(self.create_gene_db, (genes, args, names)))
-
-            for res in multiple_results:
-                res.get()
-
-        log.debug('finished writing db files.')
+    def render_dbs(self):
+        self.create_db_files(ViewDeltaPsi, 'delta_psi')
 
     def tsv_row(self, gene_ids, tsv_file, fieldnames):
         voila_links = self.voila_links

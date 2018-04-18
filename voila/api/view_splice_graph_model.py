@@ -124,7 +124,7 @@ class ViewGene(Gene):
 
         for experiment_names in experiment_names_list:
             combined_name = next((n for n in experiment_names if ' Combined' in n), '')
-            experiment_names = experiment_names[experiment_names != combined_name]
+            experiment_names = [e for e in experiment_names if e != combined_name]
 
             for name in experiment_names:
                 reads[name] = {}
