@@ -25,7 +25,7 @@ class MatrixHdf5:
         :param mode: generally r or w
         """
         filename = os.path.expanduser(filename)
-        self.dt = h5py.special_dtype(vlen=numpy.unicode)
+        self.dt = h5py.special_dtype(vlen=np.unicode)
         self.h = h5py.File(filename, mode, libver='latest')
 
     def __enter__(self):
