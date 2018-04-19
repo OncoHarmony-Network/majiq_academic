@@ -180,8 +180,6 @@ class Html(ABC):
 
     def create_db_files(self, view_matrix, data_type):
         args = self.args
-        log = voila_log()
-        log.info('Create DB files')
 
         with view_matrix(args) as m:
             gene_ids = tuple(m.view_gene_ids())
@@ -201,8 +199,6 @@ class Html(ABC):
             multiple_results.append(vp.apply_async(self.create_gene_db, (genes, view_matrix, data_type)))
 
         [res.get() for res in multiple_results]
-
-        log.debug('finished writing db files.')
 
     @abstractmethod
     def create_summary(self, paged):

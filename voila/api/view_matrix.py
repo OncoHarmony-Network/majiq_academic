@@ -391,7 +391,9 @@ class ViewHeterogens:
                 try:
                     for psi_d, sample in zip(getattr(het, data_type), het.matrix_hdf5.view_metadata['group_names']):
                         if sample in d:
-                            assert np.array_equal(d[sample], psi_d)
+                            test_shape = min(d[sample].shape, psi_d.shape)
+                            assert np.array_equal(d[sample][0:test_shape[0], 0:test_shape[1]],
+                                                  psi_d[0:test_shape[0], 0:test_shape[1]])
                         else:
                             d[sample] = psi_d
                 except (LsvIdNotFoundInVoilaFile, GeneIdNotFoundInVoilaFile):
