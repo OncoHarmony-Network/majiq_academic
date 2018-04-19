@@ -1,6 +1,6 @@
 var stat_color = d3.scaleLog()
     .base(Math.LN10)
-    .domain([-1, 1e-6, 1])
+    .domain([-1, 1e-10, 1])
     .range(['grey', 'blue', 'white'])
     .interpolate(d3.interpolateCubehelix);
 
@@ -49,7 +49,6 @@ HeatMap.prototype.scale = function (scale) {
         .attr('width', scale_width + 2)
         .attr('height', height);
 
-
     svg.append('g')
         .attr('transform', 'translate(1)')
         .selectAll('line')
@@ -92,8 +91,7 @@ HeatMap.prototype.plot = function () {
     var lsv_id = el.getAttribute('data-lsv-id');
     var junc_idx = el.closest('tr').getAttribute('data-junction-index');
     var stat_name = el.getAttribute('data-stat-name');
-    var cell_size = 35;
-
+    var cell_size = 20;
 
     db.allDocs({
         keys: ['metadata', lsv_id],

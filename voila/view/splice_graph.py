@@ -9,9 +9,15 @@ from voila.view.html import Html
 
 
 class RenderSpliceGraphs(Html):
+    def render_dbs(self):
+        pass
+
+    def create_summary(self, paged):
+        pass
+
     def __init__(self, args):
         super(RenderSpliceGraphs, self).__init__(args)
-        self.copy_static(args, index=False)
+        self.copy_static(False)
         self.render_summaries()
 
     def render_summaries(self):

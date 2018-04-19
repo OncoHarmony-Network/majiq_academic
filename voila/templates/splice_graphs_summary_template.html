@@ -54,9 +54,11 @@
 
                 <div class="gene-container">
                     {% include 'splice_graph_tools.html' %}
-                    {% include 'splice_graph.html' %}
+                    <div class="splice-graph-container default-view" data-zoom="1" data-gene-id="{{ gene.id }}">
+                        <div class="splice-graph" data-group="{{ metadata.group_names[0] }}"
+                             data-experiment="{{ metadata.experiment_names[loop.index0][0] }}"></div>
+                    </div>
                 </div>
-
             {% endfor %}
         </fieldset>
     </section>

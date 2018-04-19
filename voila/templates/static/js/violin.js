@@ -61,13 +61,14 @@ Violin.prototype.histograms = function (color) {
     var junc_idx = this.junc_idx;
     var width = this.dim.group.width;
     var height = this.dim.group.height;
+    var pad = this.dim.group.pad;
     var plot = this.plot;
     var v = this;
 
     db.get(this.lsv_id).then(function (data) {
 
         var x = d3.scaleLinear()
-            .range([width, (2 * width)]);
+            .rangeRound([0, width / 2]);
 
         var y = d3.scaleLinear()
             .range([height, 0]);
@@ -75,14 +76,14 @@ Violin.prototype.histograms = function (color) {
         var area = d3.area()
             .curve(d3.curveCatmullRom)
             .defined(function (d) {
-                if (d > (x.domain()[0]))
+                if (d > (x.domain()[0] + 1e-4))
                     return d;
             })
             .x1(function (d) {
-                return x(d) / 2;
+                return x(d);
             })
             .x0(function (d) {
-                return x(-d) / 2;
+                return -x(d);
             })
             .y(function (d, i) {
                 return y(i);
@@ -97,7 +98,7 @@ Violin.prototype.histograms = function (color) {
             .append('path')
             .attr('class', 'violin')
             .attr('transform', function (d, i) {
-                return v.transform_plot(i)
+                return 'translate(' + ((width / 2) + (i * (width + pad))) + ')'
             })
             .attr('stroke', color)
             .attr('stroke-width', 1)
@@ -183,10 +184,9 @@ Violin.prototype.swarm = function (color) {
             .enter()
             .append("circle")
             .attr('fill', color)
-            .attr('stroke', color)
-            .attr('stroke-width', 1)
+            .attr('stroke', null)
             .attr("cx", function (bee) {
-                return bee.x  + (width / 2);
+                return bee.x + (width / 2);
             })
             .attr("cy", function (bee) {
                 return bee.y;
@@ -196,7 +196,7 @@ Violin.prototype.swarm = function (color) {
                 return d.datum
             })
             .on("mouseover", function (d, i) {
-                d3.select(this).style('fill', 'white');
+                d3.select(this).style('fill', 'orange');
                 tool_tip.selectAll('.value').text(this.getAttribute('data-mu'));
                 var group_idx = parseInt(this.parentNode.getAttribute('data-group-index'));
                 var exp_names = meta.experiment_names[group_idx].reduce(function (acc, curr) {
