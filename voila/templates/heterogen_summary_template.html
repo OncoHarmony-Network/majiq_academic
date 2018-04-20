@@ -46,7 +46,6 @@
     <script src="static/js/violin.js"></script>
     <script>
         var db = new PouchDB('{{ database_name }}', {auto_compaction: true});
-        var sg = new SpliceGraph(db)
     </script>
     <script src="../db/metadata.js"></script>
     {% for gene in genes %}
@@ -119,7 +118,7 @@
                 d.setAttribute('data-group', group);
                 d.setAttribute('data-experiment', exp);
                 container.appendChild(d);
-                sg.init(d);
+                new SpliceGraph(d, {init: true});
             });
 
             $("table.het-plots").tablesorter({

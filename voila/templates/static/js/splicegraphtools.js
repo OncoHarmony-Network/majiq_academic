@@ -36,7 +36,8 @@ $(document).on('change', '.splice-graph-selectors select', function () {
     var lsv_ids = get_lsv_ids(gene_container);
 
     splice_graph.setAttribute('data-experiment', experiment);
-    sg.update(splice_graph, lsv_ids)
+
+    new SpliceGraph(splice_graph, {lsv_ids: lsv_ids})
 });
 
 var get_lsv_ids = function (gene_container) {
@@ -60,7 +61,7 @@ $(document).on('click', '.toggle-scale', function () {
 
     for (var i = 0; i < splice_graphs.length; i++) {
         var splice_graph = splice_graphs[i];
-        sg.update(splice_graph, lsv_ids)
+        new SpliceGraph(splice_graph, {lsv_ids: lsv_ids})
     }
 });
 
@@ -79,7 +80,7 @@ var zoom = function (el, value, reset) {
     }
 
     for (var i = 0; i < splice_graphs.length; i++) {
-        sg.update(splice_graphs[i], lsv_ids)
+        new SpliceGraph(splice_graphs[i], {lsv_ids: lsv_ids})
     }
 };
 
