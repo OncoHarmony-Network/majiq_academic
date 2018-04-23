@@ -63,15 +63,18 @@ def gene_ids(args):
     if args.gene_ids:
         log = voila_log()
         args.gene_ids = list(set(args.gene_ids))
+        found_genes = set()
         for f in args.voila_file:
             with Matrix(f) as m:
                 for gene_id in args.gene_ids:
-                    if not any(m.lsv_ids([gene_id])):
-                        log.warning('{1}: Gene ID "{0}" could not be found in Voila file'.format(gene_id, f))
-                        args.gene_ids.remove(gene_id)
+                    if any(m.lsv_ids([gene_id])):
+                        found_genes.add(gene_id)
 
-            if not args.gene_ids:
-                raise VoilaException('None of the gene IDs could be found in the Voila file.')
+        for gene_id in set(args.gene_ids) - found_genes:
+            log.warning('Gene ID "{0}" could not be found in a Voila file'.format(gene_id))
+
+        if not found_genes:
+            raise VoilaException('None of the gene IDs could be found in a Voila file.')
 
 
 def lsv_ids(args):
@@ -86,7 +89,7 @@ def lsv_ids(args):
                         found_lsvs.add(lsv_id)
 
         for lsv_id in set(args.lsv_ids) - found_lsvs:
-            log.warning('LSV ID "{0}" could not be found a Voila file'.format(lsv_id))
+            log.warning('LSV ID "{0}" could not be found in a Voila file'.format(lsv_id))
 
         if not found_lsvs:
             raise VoilaException('None of the LSV IDs could be found in a Voila file.')

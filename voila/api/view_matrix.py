@@ -474,11 +474,12 @@ class ViewHeterogens:
 
     @property
     def junction_stats_column_names(self):
+        one_het = self.one_heterogen
         for vh in self.view_heterogens:
             meta = vh.view_metadata
             groups = '_'.join(meta['group_names'])
             for name in meta['stat_names']:
-                if self.one_heterogen:
+                if one_het:
                     yield name
                 else:
                     yield '{} {}'.format(groups, name)
