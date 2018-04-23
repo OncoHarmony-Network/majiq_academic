@@ -1,0 +1,7 @@
+<p>
+    {% set ucsc_coordinates = gene.lsv_ucsc_coordinates(lsv) %}
+    <a href="http://genome.ucsc.edu/cgi-bin/hgTracks?org=mouse&db={{ genome }}&position={{ gene.chromosome }}:{{ ucsc_coordinates.start }}-{{ ucsc_coordinates.end }}"
+       target="_blank">
+        <img src="static/img/icons/ucsc3.png"/>
+    </a>
+</p>
