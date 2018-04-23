@@ -433,18 +433,24 @@ class ViewHeterogens:
 
         @property
         def junctions(self):
-            def find_junctions():
-                for h in self.heterogens:
-                    try:
-                        yield h.junctions
-                    except (GeneIdNotFoundInVoilaFile, LsvIdNotFoundInVoilaFile):
-                        pass
+            juncs = None
+            source_file = None
 
-            juncs = find_junctions()
-            junc = next(juncs)
-            for j in juncs:
-                assert (np.array_equal(junc, j))
-            return junc
+            for h in self.heterogens:
+                try:
+
+                    if juncs is None:
+                        juncs = h.junctions
+                        source_file = h.matrix_hdf5.h.filename
+                    if not np.array_equal(juncs, h.junctions):
+                        filename = h.matrix_hdf5.h.filename
+                        voila_log().warning('For junctions in LSV {}, {} and {} do not agree.'.format(self.lsv_id,
+                                                                                                      filename,
+                                                                                                      source_file))
+                except (GeneIdNotFoundInVoilaFile, LsvIdNotFoundInVoilaFile):
+                    pass
+
+            return juncs
 
         @property
         def junction_stats(self):
