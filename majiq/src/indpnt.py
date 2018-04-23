@@ -8,7 +8,7 @@ from majiq.src.constants import *
 from majiq.src.multiproc import QueueMessage, process_conf, queue_manager, process_wrapper, chunks
 from majiq.src.psi import heterogen_posterior
 from majiq.src.stats import operator, all_stats
-from voila.api import Voila
+# from voila.api import Voila
 from voila.constants import ANALYSIS_HETEROGEN
 from voila.vlsv import Het
 import os

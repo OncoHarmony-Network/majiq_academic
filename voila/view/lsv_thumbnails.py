@@ -1,24 +1,23 @@
 from os import path
 
-from voila.utils.run_voila_utils import get_env, copy_static, get_output_html
-from voila.voila_args import VoilaArgs
+from voila.view.html import Html
 
 
-class LsvThumbnails(VoilaArgs):
+class LsvThumbnails():
     def __init__(self, args):
         lsv_thumbnails(args)
 
-    @classmethod
-    def arg_parents(cls):
-        parser = cls.get_parser()
-
-        parser.add_argument('--collapsed',
-                            action='store_true',
-                            default=False,
-                            help='Collapsed LSVs thumbnails in the HTML summary.')
-        return (
-            cls.base_args(), cls.lsv_type_search_args(), cls.output_args(), parser
-        )
+    # @classmethod
+    # def arg_parents(cls):
+    #     parser = cls.get_parser()
+    #
+    #     parser.add_argument('--collapsed',
+    #                         action='store_true',
+    #                         default=False,
+    #                         help='Collapsed LSVs thumbnails in the HTML summary.')
+    #     return (
+    #         cls.base_args(), cls.lsv_type_search_args(), cls.output_args(), parser
+    #     )
 
 
 def lsv_thumbnails(args):
@@ -28,9 +27,9 @@ def lsv_thumbnails(args):
     :return: None
     """
     output_dir = args.output
-    output_html = get_output_html(args)
+    output_html = Html.get_output_html(args)
 
-    env = get_env()
+    env = Html.get_env()
     template_file_name = args.type_analysis.replace("-", "_") + "_summary_template.html"
     sum_template = env.get_template(template_file_name)
 
@@ -42,4 +41,4 @@ def lsv_thumbnails(args):
             )
         )
 
-    copy_static(args)
+    Html.copy_static(args)

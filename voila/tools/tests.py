@@ -2,7 +2,6 @@ import os
 import unittest
 
 from voila.tools import Tool
-from voila.utils.exceptions import VoilaException
 
 
 class Test(Tool):

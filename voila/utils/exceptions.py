@@ -1,3 +1,6 @@
+import argparse
+
+
 class VoilaException(Exception):
     pass
 
@@ -17,28 +20,19 @@ class GeneIdNotFoundInVoilaFile(VoilaException):
         Error thrown when Gene ID cannot be foudn in Voila file.
         :param gene_id: 
         """
-        m = 'Gene ID "{0}" was not found in Voila file'.format(gene_id)
+        m = 'Gene ID {0} was not found in Voila file'.format(gene_id)
         super(GeneIdNotFoundInVoilaFile, self).__init__(m)
 
 
 class LsvIdNotFoundInVoilaFile(VoilaException):
-    def __init__(self, lsv_id):
+    def __init__(self, gene_id):
         """
         Error thrown when Gene ID cannot be foudn in Voila file.
-        :param lsv_id: 
+        :param gene_id:
         """
-        m = 'LSV ID "{0}" was not found in Voila file'.format(lsv_id)
+        m = 'LSV ID {0} was not found in Voila file'.format(gene_id)
         super(LsvIdNotFoundInVoilaFile, self).__init__(m)
 
-
-class AttributeNotFoundInVoilaFile(VoilaException):
-    def __init__(self, lsv_id, attr):
-        """
-        Error thrown when Gene ID cannot be foudn in Voila file.
-        :param lsv_id:
-        """
-        m = 'LSV ID {0} the attribute "{1}" was not found in Voila file'.format(lsv_id, attr)
-        super(AttributeNotFoundInVoilaFile, self).__init__(m)
 
 class NoExonsInGene(VoilaException):
     def __init__(self, gene_id):
@@ -73,27 +67,26 @@ class ExperimentIndexError(VoilaException):
             'Attempted to access an out of range experiment.')
 
 
-class ExperimentUnknowField(VoilaException):
+class ExperimentUnknownField(VoilaException):
     def __init__(self, field):
         """
         Error thrown when attempting to access a class attribute that hasn't been marked as an "experiment" attribute.
         :param field:
         """
-        super(ExperimentUnknowField, self).__init__(
+        super(ExperimentUnknownField, self).__init__(
             '"{0}" might not contain data that has been sorted into a list by experiment.'.format(field))
 
 
-class InValidAnalysisType(VoilaException):
+class DirectoryDoesNotExist(argparse.ArgumentTypeError):
+    def __init__(self, directory):
+        super(DirectoryDoesNotExist, self).__init__('Directory does not exist: {0}'.format(directory))
+
+
+class CannotFindFile(argparse.ArgumentTypeError):
+    def __init__(self, value):
+        super(CannotFindFile, self).__init__('Cannot find file "{0}"'.format(value))
+
+
+class EmptyFilters(VoilaException):
     def __init__(self):
-        m = 'Analysis type is not valid for the Voila file.'
-        super(InValidAnalysisType, self).__init__(m)
-
-
-class NotNumpyObject(VoilaException):
-    def __init__(self, obj):
-        m = 'Must be a numpy object: {0} - {1}'.format(type(obj), obj)
-        super(NotNumpyObject, self).__init__(m)
-
-
-class NotCorrectUnsignedBits(VoilaException):
-    pass
+        super(EmptyFilters, self).__init__('All elements in filters could not be found')

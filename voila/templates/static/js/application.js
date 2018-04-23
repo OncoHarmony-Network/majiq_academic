@@ -20,24 +20,88 @@ CanvasRenderingContext2D.prototype.dashedLine = function (x1, y1, x2, y2, dashLe
 };
 
 $(document).ready(function () {
-    new Clipboard('.copy-to-clipboard', {
-        text: function (trigger) {
-            var primer = $(trigger).parents('tr').find('.primer');
-            var data = {};
-            var lsv = primer.attr('data-lsv');
-            data.lsv = JSON.parse(lsv.replace(/'/g, '"'));
-            data.genome = primer.attr('genome');
-            data.lsv_text_version = primer.attr('lsv-text-version');
+    $('.copy-to-clipboard').each(function () {
+        var lsv_id = this.getAttribute('data-lsv-id');
+        var gene_id = this.getAttribute('data-gene-id');
+        var btn = this;
+        db.allDocs({
+            keys: [lsv_id, gene_id],
+            include_docs: true
+        }, function (err, data) {
+            var lsv = data.rows[0].doc;
+            var gene = data.rows[1].doc;
+            new Clipboard(btn, {
+                text: function (trigger) {
+                    var sgs = trigger.closest('.gene-container').querySelectorAll('.splice-graph');
+                    var data = {};
+                    var exons = gene.exons.reduce(function (acc, exon) {
+                        lsv.junctions.forEach(function (junc) {
+                            if (coord_in_exon(exon, junc[0]) || coord_in_exon(exon, junc[1]))
+                                acc.push(exon)
+                        });
+                        return acc;
+                    }, []);
+                    exons = Array.from(new Set(exons));
 
-            var spliceDivs = $(trigger).parents('.gene-container').find('.spliceDiv').get();
-            data.splice_graphs = spliceDivs.reduce(function (accu, currVal) {
-                accu.push(JSON.parse(currVal.getAttribute('data-exon-list').replace(/'/g, '"')));
-                return accu
-            }, []);
+                    var junctions = gene.junctions.reduce(function (acc, junc) {
+                        exons.forEach(function (exon) {
+                            if (coord_in_exon(exon, junc.start) || coord_in_exon(exon, junc.end))
+                                acc.push(junc)
+                        });
+                        return acc
+                    }, []);
+                    junctions = Array.from(new Set(junctions));
 
-            return JSON.stringify(data).replace(/"/g, '\\"')
-        }
+                    var exps = Array.from(sgs).reduce(function (acc, sg) {
+                        acc.push(sg.getAttribute('data-experiment'));
+                        return acc
+                    }, []);
+
+                    data.genome = trigger.getAttribute('data-genome');
+                    data.lsv_text_version = trigger.getAttribute('data-lsv-text-version');
+                    data.lsv = {
+                        exons: exons,
+                        junctions: junctions,
+                        lsv_type: lsv.lsv_type,
+                        strand: gene.strand,
+                        chromosome: gene.chromosome,
+                        lsv_id: lsv.lsv_id,
+                        name: gene.name
+                    };
+
+
+                    data.sample_names = Array.from(sgs).reduce(function (acc, sg) {
+                        acc.push(sg.getAttribute('data-group'));
+                        return acc
+                    }, []);
+
+                    data.lsv.bins = data.sample_names.reduce(function (acc, name) {
+                        acc.push(lsv.group_bins[name]);
+                        return acc;
+                    }, []);
+
+                    data.splice_graphs = exps.reduce(function (acc, exp) {
+                        var juncs_reads = junctions.reduce(function (acc, junc) {
+                            var j = Object.assign({}, junc);
+                            j.reads = gene.reads[exp][j.start][j.end];
+                            acc.push(j);
+                            return acc
+                        }, []);
+
+                        acc.push({
+                            junctions: juncs_reads,
+                            exons: exons
+                        });
+                        return acc
+
+                    }, []);
+
+                    return JSON.stringify(data).replace(/"/g, '\\"')
+                }
+            })
+        })
     });
+
 
     // add sortable functionality to the table
     window.gene_objs = [];
@@ -242,7 +306,7 @@ function createGradientSinglePlots(ctx, canvas, margins) {
     //create a gradient object from the canvas context
     var gradient = ctx.createLinearGradient(0, 0, canvas.width, 0);
 
-    // Add the colors with fixed stops at 1/4 of the width.
+    // Add the colors with fixed stops at 1/4 of the group_width.
 //    gradient.addColorStop(0, "#0000FF");
 //    gradient.addColorStop(.45, "cyan");
 //    gradient.addColorStop(.50, "#00FF00");
@@ -327,7 +391,7 @@ function drawBarChart(context, bins, settingsCanvasSingle, zoomLevel) {
     for (var i = 0; i < bins.length; i++) {
         var name = i / bins.length;
         var height = parseInt(bins[i] * chartHeight);
-        //if (parseInt(height) > parseInt(maxValue)) height = maxValue;
+        //if (parseInt(group_height) > parseInt(maxValue)) group_height = maxValue;
 
         // Write the data to the chart
         //context.fillStyle = "#b90000";
@@ -508,7 +572,7 @@ function drawLSVCompactStackBars(canvas, fillMode) {
         var groups = JSON.parse(groups_str.replace(/'/g, '"'));
 
         // Calculate origins_coords
-        var header_height = 0; // canvas.height*.1;
+        var header_height = 0; // canvas.group_height*.1;
         var num_groups = groups.length;
 
         var sub_canvas_w = canvas.width / num_groups;
@@ -546,7 +610,7 @@ function drawLSVCompactStackBars(canvas, fillMode) {
             var group = groups[count];
 
             for (var lsv_count = 0; lsv_count < group.bins.length; lsv_count++) {
-                // Calculate the height of the accumulated mean
+                // Calculate the group_height of the accumulated mean
                 acc_height += group.means[lsv_count];
 
                 var coords_gradient = {
@@ -629,7 +693,7 @@ function drawDeltaLSVCompactSVG(htmlElementId, lsv, threshold) {
         .attr("x2", width - margin.right - margin.left)
         .attr("y2", Math.round((height - margin.bottom) / 2))
         .style('stroke', 'black')
-        .style('stroke-width', border_frame)
+        .style('stroke-group_width', border_frame)
         //        .attr("stroke-opacity", .5)
         .style('fill', 'none')
         .attr("marker-end", "url(#arrowhead-right)")
@@ -696,7 +760,7 @@ function drawDeltaLSVCompactSVG(htmlElementId, lsv, threshold) {
         .attr("y1", 0)
         .attr("x2", width / 2)
         .attr("y2", height - margin.bottom + 2)
-        .attr("stroke-width", 2)
+        .attr("stroke-group_width", 2)
         .attr("stroke-opacity", .8)
         .attr("stroke", "black");
 
@@ -722,7 +786,7 @@ function drawDeltaBox(canvas) {
         ctx.lineWidth = 0.5;
         drawRectangle(ctx, 1, 1, canvas.width - 2, canvas.height - margin_bottom, 0); // Canvas box
         // Fill with gradient
-//        ctx.fillStyle=createGradientDeltaPlots(ctx, 0, canvas.width);
+//        ctx.fillStyle=createGradientDeltaPlots(ctx, 0, canvas.group_width);
 
         // draw exclusion/inclusion Box
         ctx.fillStyle = "blue";
@@ -743,10 +807,10 @@ function drawDeltaBox(canvas) {
         ctx.fillText("-" + (excl_incl_set[0] * 100).toFixed(1) + " ", Math.max(halfCanvasWidth - Math.max(parseInt(excl_incl_set[0] * canvas.width / 2), 10), 20), canvas.height);
         ctx.fillStyle = "red";
         ctx.fillStyle = rgbToHex(228, 26, 28); // red
-//        ctx.fillText("1", canvas.width - margin_top, canvas.height);
+//        ctx.fillText("1", canvas.group_width - margin_top, canvas.group_height);
         ctx.fillText("+" + (excl_incl_set[1] * 100).toFixed(1), Math.min(halfCanvasWidth + Math.max(parseInt(excl_incl_set[1] * canvas.width / 2), 10), halfCanvasWidth * 2 - 20), canvas.height);
         ctx.fillStyle = "black";
-//        ctx.fillText("0", halfCanvasWidth, canvas.height);
+//        ctx.fillText("0", halfCanvasWidth, canvas.group_height);
 
 
         // draw middle bar (0)
@@ -1089,7 +1153,7 @@ function renderViolin(htmlElementId, results, tableId, params) {
             .attr("y", probs[3])
             .attr("height", -probs[3] + probs[1]);
 //            .attr("y", probs[3])
-//            .attr("height", probs[1]);
+//            .attr("group_height", probs[1]);
 
         svg.append("circle")
             .attr("class", "boxplot mean")
@@ -1121,9 +1185,9 @@ function renderViolin(htmlElementId, results, tableId, params) {
 //        svg.append("rect")
 //            .attr("class", "boxplot")
 //            .attr("x", x(left))
-//            .attr("width", x(right)-x(left))
+//            .attr("group_width", x(right)-x(left))
 //            .attr("y", probs[3])
-//            .attr("height", -probs[3]+probs[1]);
+//            .attr("group_height", -probs[3]+probs[1]);
 
 
     }
@@ -1140,8 +1204,8 @@ function renderViolin(htmlElementId, results, tableId, params) {
 
 
     var margin = {top: 10, bottom: 30, left: 30, right: 10};
-    var width = 100 * results.length; //element_jq.getAttribute('width');
-    var height = 200; //element_jq.getAttribute('height');
+    var width = 100 * results.length; //element_jq.getAttribute('group_width');
+    var height = 200; //element_jq.getAttribute('group_height');
     var spacing_space = (width - margin.left - margin.right) * .05;
     var boxWidth = Math.round(((width - margin.left - margin.right) - spacing_space) / results.length);
     var boxSpacing = Math.round(spacing_space / results.length);

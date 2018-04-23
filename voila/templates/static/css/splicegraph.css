@@ -1,23 +1,17 @@
 /* tools section */
 
-.splice-graph-selectors {
+.tools-column {
     display: inline-block;
     vertical-align: top
 }
 
-.splice-graph-tools-btns {
-    display: inline-block;
+.tools-column select {
+    display: block
+}
+
+.tools-btns {
     vertical-align: middle;
     height: 18px;
-}
-
-.splice-graph-tools-info {
-    display: inline-block;
-    vertical-align: middle;
-}
-
-.splice-graph-selectors select {
-    display: block
 }
 
 .toggle-scale {
@@ -25,11 +19,20 @@
     height: 100%;
 }
 
+.btn-right {
+    float: right;
+}
+
 /* splice graph section */
 
-.exon:hover, .intron-retention:hover, .half-exon:hover {
+.exon-grp:hover .exon, .intron-retention:hover, .half-exon:hover {
     stroke: orange;
     fill: orange;
+    opacity: 1;
+}
+
+.exon-grp:hover .exon-number {
+    opacity: 1;
 }
 
 .exon-number {
@@ -43,6 +46,11 @@
 .junction-grp:hover .junction, .junction-grp:hover .p3, .junction-grp:hover .p5 {
     stroke: orange;
     stroke-width: 3;
+    opacity: 1;
+}
+
+.junction-grp:hover .reads {
+    opacity: 1;
 }
 
 .junction-grp:hover .reads {
@@ -52,8 +60,13 @@
 .splice-graph-container {
     width: 1000px;
     overflow-x: auto;
+    padding-bottom: 30px;
 }
 
 .simplified {
-    opacity: 0.05;
+    opacity: 0.2;
+}
+
+.splice-graph {
+    padding-top: 10px;
 }

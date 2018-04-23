@@ -1,5 +1,5 @@
 from voila.tools import Tool
-from voila.utils.exceptions import VoilaException
+from voila.exceptions import VoilaException
 
 
 class ExampleException(VoilaException):

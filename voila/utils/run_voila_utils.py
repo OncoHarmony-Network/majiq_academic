@@ -1,18 +1,69 @@
-import itertools
 import json
-import os
-import types
+from collections import OrderedDict
 from distutils.dir_util import copy_tree
+from itertools import izip_longest
 from math import ceil
+from os import path
 
-import numpy
-from jinja2 import Environment, FileSystemLoader, StrictUndefined
+import jinja2
+from jinja2 import Environment, FileSystemLoader
+from markupsafe import escape
 
 from voila import constants
-from voila.api.view_splice_graph import ViewGene
-from voila.constants import EXEC_DIR
+from voila import module_locator
+from voila.api import SpliceGraphs
 from voila.utils.voila_log import voila_log
-from voila.vlsv import Het, HetGroup
+
+EXEC_DIR = module_locator.module_path()
+
+
+def parse_gene_graphics(splice_graph_file, metainfo, gene_ids_list):
+    """
+    Load and combine splice graph files.
+
+    :param splicegraph_flist: list of splice graph files or directory containing splice graphs.
+    :param gene_names_list: list of genes of interest.
+    :param condition_names: ids for condition 1 [and condition 2, in deltapsi].
+    :return: list of genes graphic per condition.
+    """
+    log = voila_log()
+    log.info("Parsing splice graph information files ...")
+
+    genes_exp1_exp2 = []
+
+    with SpliceGraphs(splice_graph_file, 'r') as sg:
+        genes = sg.get_genes_list(gene_ids_list)
+        gene_experiments_list = sg.get_experiments()
+
+    genes.sort()
+
+    for experiments in [metainfo['experiments1'], metainfo.get('experiments2', [])]:
+        genes_exp = {}
+        combined_genes_exp = {}
+
+        for experiment in experiments:
+            genes_exp[experiment] = {}
+
+            for gene in genes:
+                # map the metainfo experiment name to the experiment index in the splice graph file.
+                experiment_index = gene_experiments_list.index(experiment)
+
+                # get the data needed to render the html
+                genes_exp[experiment][gene.gene_id] = gene.get_experiment(experiment_index)
+
+                # record all genes and combine their experiment data
+                combined_genes_exp[gene.gene_id] = gene.combine(experiment_index,
+                                                                combined_genes_exp.get(gene.gene_id, None))
+
+        # if there are more then 1 experiments, then record the combined data
+        if len(experiments) > 1:
+            genes_exp['Combined'] = {gene_id: combined_genes_exp[gene_id] for gene_id in combined_genes_exp}
+
+        genes_exp1_exp2.append(OrderedDict(sorted(genes_exp.items(), key=lambda t: t[0])))
+
+    log.info("Splice graph information files correctly loaded.")
+
+    return genes_exp1_exp2
 
 
 def table_marks_set(size):
@@ -30,22 +81,7 @@ def table_marks_set(size):
 
 
 def get_template_dir():
-    return os.path.join(EXEC_DIR, "templates/")
-
-
-class NumpyEncoder(json.JSONEncoder):
-    def default(self, obj):
-        if isinstance(obj, (numpy.int64, numpy.bool_, numpy.uint8, numpy.uint32)):
-            return obj.item()
-        elif isinstance(obj, numpy.ndarray):
-            return obj.tolist()
-        elif isinstance(obj, numpy.bytes_):
-            return obj.decode('utf-8')
-        elif isinstance(obj, (Het, HetGroup)):
-            return dict(obj)
-        elif isinstance(obj, types.GeneratorType):
-            return tuple(obj)
-        return json.JSONEncoder.default(self, obj)
+    return path.join(EXEC_DIR, "templates/")
 
 
 def get_env():
@@ -54,37 +90,54 @@ def get_env():
     :return: env variable
     """
 
+    def replace_quotes(j):
+        return j.replace('"', '\'')
+
     def to_json(value):
-        return json.dumps(value, cls=NumpyEncoder)
+        return replace_quotes(
+            json.dumps(value.to_dict())
+        )
 
-    def to_dict(value):
-        return dict(value)
+    def to_json_especial(value):
+        return escape(
+            replace_quotes(
+                json.dumps(value)
+            )
+        )
 
-    def static(value):
-        print(value)
-        return value
+    def to_json_psi1(lsv):
+        return replace_quotes(
+            json.dumps(
+                {
+                    'bins': lsv.psi1,
+                    'means': lsv.means_psi1
+                }
+            )
+        )
 
-    def js(value):
-        if not value.startswith('http'):
-            value = os.path.join('../static/js', value)
-        return '<script type="text/javascript" src="{}"></script>'.format(value)
+    def to_json_psi2(lsv):
+        return replace_quotes(
+            json.dumps(
+                {
+                    'bins': lsv.psi2,
+                    'means': lsv.means_psi2
+                }
+            )
+        )
 
-    def css(value):
-        return '<link rel="stylesheet" type="text/css" href="{}"/>'.format(os.path.join('../static/css', value))
+    def include_file(file_name):
+        with open(file_name, 'r') as f:
+            return f.read()
 
-    env = Environment(extensions=["jinja2.ext.do"],
-                      loader=FileSystemLoader([os.path.join(get_template_dir(), 'summaries'), get_template_dir()]),
-                      undefined=StrictUndefined)
+    env = Environment(extensions=["jinja2.ext.do"], loader=FileSystemLoader(get_template_dir()),
+                      undefined=jinja2.StrictUndefined)
+
     env.filters.update({
         'to_json': to_json,
-        'to_dict': to_dict,
-    })
-
-    env.globals.update({
-        'js': js,
-        'css': css,
-        'static': static,
-        'ViewGene': ViewGene
+        'to_json_especial': to_json_especial,
+        'to_json_psi1': to_json_psi1,
+        'to_json_psi2': to_json_psi2,
+        'include_file': include_file
     })
 
     return env
@@ -110,7 +163,7 @@ def get_output_html(args, file_name=None):
     """
 
     if file_name:
-        return '{0}.html'.format(os.path.splitext(os.path.split(file_name)[1])[0])
+        return '{0}_{1}.html'.format(path.splitext(path.split(file_name)[1])[0], args.type_analysis.replace("-", "_"))
     else:
         return '{0}.html'.format(args.type_analysis.replace("-", "_"))
 
@@ -128,22 +181,21 @@ def grouper(iterable, n, fillvalue=None):
     """
 
     args = [iter(iterable)] * n
-    return itertools.zip_longest(fillvalue=fillvalue, *args)
+    return izip_longest(fillvalue=fillvalue, *args)
 
 
 def copy_static(args, index=True):
     """
     Copy static files to output directory.
-    :param index:
     :param args: command line arguments
     :return: None
     """
     log = voila_log()
     log.info("Copy static files from Voila sources")
-    static_dir = os.path.join(get_template_dir(), 'static')
+    static_dir = path.join(EXEC_DIR, 'templates/static')
     if index:
-        copy_tree(static_dir, os.path.join(args.output, 'static'))
-    copy_tree(static_dir, os.path.join(args.output, constants.SUMMARIES_SUBFOLDER, 'static'))
+        copy_tree(static_dir, path.join(args.output, 'static'))
+    copy_tree(static_dir, path.join(args.output, constants.SUMMARIES_SUBFOLDER, 'static'))
 
 
 def get_prev_next_pages(page_number, genes_count, output_html, limit=None):

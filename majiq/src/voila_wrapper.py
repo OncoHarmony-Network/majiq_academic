@@ -41,7 +41,7 @@ def gene_to_splicegraph(gne_id, gne, dict_junctions, exon_dict, list_introns, ma
     alt_empty_ends = []
 
     with SpliceGraph(get_builder_splicegraph_filename(majiq_config.outDir)) as sg:
-        sg.gene(gne_id).add(name=gne['name'], strand=gne['strand'], chromosome=gne['chromosome'])
+        sg.gene(gne_id).add(name=gne.name, strand=gne.strand, chromosome=gne.chromosome)
 
         for jid in sorted(dict_junctions.keys()):
             jj = dict_junctions[jid]

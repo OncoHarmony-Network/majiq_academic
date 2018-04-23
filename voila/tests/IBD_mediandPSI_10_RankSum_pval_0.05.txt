@@ -1,1 +1,0 @@
-#LSV_junc	pval	dPSI	Set1_PSIs	Set2_PSIs	NumQuant_Set1	NumQuant_Set2

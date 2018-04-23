@@ -24,7 +24,7 @@ cdef list gene_name_keys = ['Name', 'gene_name']
 cdef list gene_id_keys = ['ID', 'gene_id']
 
 
-cdef int  _read_gff(str filename, vector[Gene *] glist, object logging) except -1:
+cdef int  read_gff(str filename, vector[Gene *]& glist, object logging) except -1:
     """
     :param filename: GFF input filename
     :param list_of_genes: List of genes that will be updated with all the gene_id detected on the gff file
@@ -109,14 +109,12 @@ cdef int  _read_gff(str filename, vector[Gene *] glist, object logging) except -
         coord_list.sort(key=lambda x: (x[0], x[1]))
         for xx, yy in coord_list:
             key = ('%s-%s' % (last_ss, xx,)).encode('utf-8')
-            all_genes[gene_id].junc_map[key] = new Junction(last_ss, xx, True)
+            all_genes[gene_id].junc_map_[key] = new Junction(last_ss, xx, True)
             last_ss = yy
 
-        all_genes[gene_id].junc_map[key] = new Junction(last_ss, FIRST_LAST_JUNC, True)
+        all_genes[gene_id].junc_map_[key] = new Junction(last_ss, FIRST_LAST_JUNC, True)
 
     merge_exons(exon_dict, all_genes)
-
-    #
     return 0
 
 
@@ -138,7 +136,7 @@ cdef int merge_exons(dict exon_dict, map[string, Gene*]& all_genes) except -1:
             if is_start:
                 if ex_end != -1:
                     key = ('%s-%s' % (ex_start, ex_end,)).encode('utf-8')
-                    all_genes[gne_id].exon_map[key] = new Exon(ex_start, ex_end, True, False)
+                    all_genes[gne_id].exon_map_[key] = new Exon(ex_start, ex_end, True, False)
                     if nopen > 0 and (ex_end+4) < (coord-1):
                         pass
                         #tlist.append([ex_end+1, coord-1, 1, IR_TYPE])
@@ -155,7 +153,7 @@ cdef int merge_exons(dict exon_dict, map[string, Gene*]& all_genes) except -1:
 
         if ex_end != -1:
             key = ('%s-%s' % (ex_start, ex_end,)).encode('utf-8')
-            all_genes[gne_id].exon_map[key] = new Exon(ex_start, ex_end, True, False)
+            all_genes[gne_id].exon_map_[key] = new Exon(ex_start, ex_end, True, False)
 
 
 #######
@@ -172,7 +170,7 @@ cdef int _load_db(str filename, object elem_dict, object genes_dict) except -1:
     for xx in genes_dict.keys():
         elem_dict[xx] = all_files[xx]
 
-cdef int _dump_lsv_coverage(str filename, dict cov_dict, list type_list, list junc_info, str exp_name):
+cdef int dump_lsv_coverage(str filename, dict cov_dict, list type_list, list junc_info, str exp_name):
     dt=np.dtype('|S250, |S250')
 
     with open(filename, 'w+b') as ofp:
@@ -223,6 +221,7 @@ cdef dict _get_extract_lsv_list(list list_of_lsv_id, list file_list):
                 except KeyError:
                     continue
                 try:
+                    # print(lsv_id, result[lsv_id].coverage[fidx].shape)
                     result[lsv_id].coverage[fidx] = cov
                 except KeyError:
                     njunc = cov.shape[0]
@@ -322,8 +321,8 @@ cpdef tuple extract_lsv_summary(list files, int minnonzero, int min_reads, objec
 
     return r, exp_list
 
-cpdef int dump_lsv_coverage(str filename, dict cov_dict, list type_list, list junc_info, str exp_name):
-    _dump_lsv_coverage(filename, cov_dict, type_list, junc_info, exp_name)
+# cpdef int dump_lsv_coverage_wrap(str filename, dict cov_dict, list type_list, list junc_info, str exp_name):
+#     dump_lsv_coverage(filename, cov_dict, type_list, junc_info, exp_name)
 
 # cpdef int from_matrix_to_objects( str gne_id, object elem_dicts, dict dict_junctions,
 #                                  list list_exons, list list_introns=None, int default_index=-1):

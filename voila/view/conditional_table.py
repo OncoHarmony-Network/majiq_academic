@@ -5,62 +5,62 @@ from os import path
 
 import numpy as np
 
-from voila.utils.run_voila_utils import get_env, get_summary_template, copy_static, table_marks_set, get_output_html
 from voila.utils.voila_log import voila_log
-from voila.voila_args import VoilaArgs
+from voila.view.html import Html
 
 
-class ConditionalTable(VoilaArgs):
+class ConditionalTable(Html):
     def __init__(self, args):
+        super().__init__(args)
         conditional_table(args)
 
-    @classmethod
-    def arg_parents(cls):
-        parser = cls.get_parser()
-
-        cls.required_argument(
-            parser,
-            '--cond-pair',
-            nargs=2,
-            metavar='M1 M2',
-            help='Condition pair to compare.'
-        )
-
-        cls.required_argument(
-            parser,
-            '--sample-files',
-            type=cls.check_file,
-            nargs='+',
-            help='Samples Voila output files.')
-
-        cls.required_argument(
-            parser,
-            '--sample-names',
-            dest='sample_names',
-            nargs='+',
-            help='sample names'
-        )
-
-        cls.required_argument(
-            parser,
-            '--pairwise-dir',
-            help='Root directory where the pairwise delta psi VOILA summaries were created.'
-        )
-
-        parser.add_argument('--threshold-change',
-                            type=float,
-                            default=0.2,
-                            help='Threshold used to filter non-changing LSVs.  Default is 0.2.')
-        parser.add_argument('--best-comparisons',
-                            type=int,
-                            help='Filter out all but the best comparisons.  The number remaining is '
-                                 'the user supplied argument.  "Best comparisons" is defined by '
-                                 'comparisons with most agreeing with the least dissagreeing.')
-
-        return (
-            cls.base_args(), cls.html_args(), cls.gene_search_args(), cls.lsv_type_search_args(),
-            cls.lsv_id_search_args(), cls.output_args(), parser
-        )
+    # @classmethod
+    # def arg_parents(cls):
+    #     parser = cls.get_parser()
+    #
+    #     cls.required_argument(
+    #         parser,
+    #         '--cond-pair',
+    #         nargs=2,
+    #         metavar='M1 M2',
+    #         help='Condition pair to compare.'
+    #     )
+    #
+    #     cls.required_argument(
+    #         parser,
+    #         '--sample-files',
+    #         type=cls.check_file,
+    #         nargs='+',
+    #         help='Samples Voila output files.')
+    #
+    #     cls.required_argument(
+    #         parser,
+    #         '--sample-names',
+    #         dest='sample_names',
+    #         nargs='+',
+    #         help='sample names'
+    #     )
+    #
+    #     cls.required_argument(
+    #         parser,
+    #         '--pairwise-dir',
+    #         help='Root directory where the pairwise delta psi VOILA summaries were created.'
+    #     )
+    #
+    #     parser.add_argument('--threshold-change',
+    #                         type=float,
+    #                         default=0.2,
+    #                         help='Threshold used to filter non-changing LSVs.  Default is 0.2.')
+    #     parser.add_argument('--best-comparisons',
+    #                         type=int,
+    #                         help='Filter out all but the best comparisons.  The number remaining is '
+    #                              'the user supplied argument.  "Best comparisons" is defined by '
+    #                              'comparisons with most agreeing with the least dissagreeing.')
+    #
+    #     return (
+    #         cls.base_args(), cls.html_args(), cls.gene_search_args(), cls.lsv_type_search_args(),
+    #         cls.lsv_id_search_args(), cls.output_args(), parser
+    #     )
 
 
 def conditional_table(args):
@@ -92,7 +92,7 @@ def render_html(args, lsvs_dict):
     """
     output_html = "%s_%s_comp_table_%.2f.html" % (args.cond_pair[0], args.cond_pair[1], args.threshold_change)
     sample_names = collect_sample_names(args.sample_names)
-    env = get_env()
+    env = Html.get_env()
     sum_template = get_summary_template(args, env)
     table_marks = table_marks_set(len(lsvs_dict))
 
@@ -265,7 +265,7 @@ def load_dpsi_tab(args):
         lsvs_dict[lsv_idx]['njunc'] = idx_most_freq
 
         exist_expecs = np.array(lsvs_dict[lsv_idx]['expecs'])[(np.array(lsvs_dict[lsv_idx]['expecs']) > -1) & (
-            np.array([abs(xx) for xx in lsvs_dict[lsv_idx]['expecs']]) > thres_change)]
+                np.array([abs(xx) for xx in lsvs_dict[lsv_idx]['expecs']]) > thres_change)]
 
         lsvs_dict[lsv_idx]['ndisagree'] = len(exist_expecs) - max(
             (np.count_nonzero(exist_expecs > 0), np.count_nonzero(exist_expecs <= 0)))
@@ -274,3 +274,14 @@ def load_dpsi_tab(args):
             (np.count_nonzero(exist_expecs > 0), np.count_nonzero(exist_expecs <= 0)))
 
     return lsvs_dict
+
+
+def get_summary_template(args, env):
+    """
+    Get summary template for specific type analysis.
+    :param args: command line arguments
+    :param env: environment variable
+    :return: summary template
+    """
+    template_file_name = args.type_analysis.replace("-", "_") + "_summary_template.html"
+    return env.get_template(template_file_name)

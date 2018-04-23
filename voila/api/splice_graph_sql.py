@@ -1,7 +1,9 @@
 from abc import ABC, abstractmethod
 
 from sqlalchemy import exists, and_
+from sqlalchemy.exc import OperationalError
 from sqlalchemy.orm import sessionmaker
+from sqlalchemy.orm.exc import NoResultFound
 
 from voila.api import splice_graph_model as model
 from voila.api.sql import SQL
@@ -14,7 +16,6 @@ default_commit_on_count = 100000
 class SpliceGraphSQL(SQL):
     def __init__(self, filename, delete=False):
         super().__init__(filename, model, delete)
-
 
     @property
     def genome(self):
@@ -32,10 +33,20 @@ class SpliceGraphSQL(SQL):
     def experiment_names(self, names):
         self.session.add_all([model.Experiment(name=name) for name in names])
 
-    @staticmethod
-    def check_version():
-        # voila_log().warning('need to implement check version.')
-        pass
+    @property
+    def file_version(self):
+        try:
+            return self.session.query(model.FileVersion.value).one()[0]
+        # when file doesn't contain FileVersion table
+        except OperationalError:
+            return -1
+        # no value in table
+        except NoResultFound:
+            return -1
+
+    @file_version.setter
+    def file_version(self, version):
+        self.session.add(model.FileVersion(value=version))
 
 
 class SpliceGraphType(ABC):
@@ -129,9 +140,13 @@ class Junctions(SpliceGraphSQL):
             return self.sql.session.query(model.Junction).get((self.gene_id, self.start, self.end))
 
         def update_reads(self, experiment, reads):
+            if not int(reads):
+                return
+
             r = model.Reads(junction_gene_id=self.gene_id, junction_start=self.start, junction_end=self.end,
                             experiment_name=experiment, reads=int(reads))
             self.sql.add(r)
+            self.get.has_reads = True
             self.sql.commit(default_commit_on_count)
 
     def junction(self, gene_id, start, end):

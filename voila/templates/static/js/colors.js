@@ -28,6 +28,13 @@ Colors.prototype.brewer = function (color_index) {
     return 'rgb(' + this.BREWER_PALETTE[color_index % this.BREWER_PALETTE.length].join(',') + ')'
 };
 
+Colors.prototype.brewer_het = function (color_index) {
+
+    return function () {
+        return 'rgb(' + this.BREWER_PALETTE[color_index % this.BREWER_PALETTE.length].join(',') + ')'
+    };
+};
+
 Colors.prototype.color = function (color_index) {
     return this.colors[color_index % this.colors.length]
 };

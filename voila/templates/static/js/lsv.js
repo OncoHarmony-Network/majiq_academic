@@ -42,10 +42,8 @@ Lsv.prototype.renderLsvSpliceGraph = function (canvas) {
 
             var exon_lsv_number = '';
             var exon_lsv_coords = canvas.getAttribute('data-coord-exon');
-            var experiment = canvas.getAttribute('data-experiment');
             var exons_gene = gene.exons.filter(function (d) {
-                var exon_type = gene.exon_types[d.start][d.end][experiment];
-                return exon_type < 3 && !d.intron_retention;
+                return !d.intron_retention && !d.half_exon
             });
 
             if (exon_lsv_coords) {
@@ -233,7 +231,7 @@ Lsv.prototype.renderLsvSpliceGraph = function (canvas) {
                     drawDashedLine(ctx, Math.round(coords_x_target_e), Math.round(coords[1]), Math.round(coords_x_target_e), Math.round(coords[1] + exon_height), 2);
                 }
 
-                var junc_h_pos = Math.round(margins[3] * 8 * ss); // Math.round((1 - (Math.abs(coords_x_start_e - coords_x_target_e)/canvas.width)) * (canvas.height*(1-percentage_exon)));
+                var junc_h_pos = Math.round(margins[3] * 8 * ss); // Math.round((1 - (Math.abs(coords_x_start_e - coords_x_target_e)/canvas.group_width)) * (canvas.group_height*(1-percentage_exon)));
                 // junctions lines
                 drawLine(ctx, Math.round(coords_x_start_e), Math.round(coords[1]), Math.round(mid_x), junc_h_pos);
                 drawLine(ctx, Math.round(mid_x), junc_h_pos, Math.round(coords_x_target_e), Math.round(coords[1]));
@@ -259,7 +257,7 @@ Lsv.prototype.renderLsvSpliceGraph = function (canvas) {
 
 Lsv.prototype.render_exon = function (canvas, exon, pixel_factor, margin, percen_exon, counter_exon) {
 
-    var exon_height = percen_exon * canvas.height; // canvas.height-2*margin[2];
+    var exon_height = percen_exon * canvas.height; // canvas.group_height-2*margin[2];
 
     var ctx = canvas.getContext("2d");
     if (exon.type === 1) {
@@ -425,7 +423,7 @@ Lsv.prototype.drawLSVCompactStackBars = function (canvas, fillMode) {
             // var groups = JSON.parse(groups_str.replace(/'/g, '"'));
             var groups = [data];
             // Calculate origins_coords
-            var header_height = 0; // canvas.height*.1;
+            var header_height = 0; // canvas.group_height*.1;
             var num_groups = groups.length;
 
             var sub_canvas_w = canvas.width / num_groups;
@@ -463,7 +461,7 @@ Lsv.prototype.drawLSVCompactStackBars = function (canvas, fillMode) {
                 var group = groups[count];
 
                 for (var lsv_count = 0; lsv_count < group.group_bins[group_name].length; lsv_count++) {
-                    // Calculate the height of the accumulated mean
+                    // Calculate the group_height of the accumulated mean
                     acc_height += group.group_means_rounded[group_name][lsv_count];
 
                     var coords_gradient = {
@@ -545,7 +543,7 @@ Lsv.prototype.drawDeltaLSVCompactSVG = function (el, lsv) {
         .attr("x2", width - margin.right - margin.left)
         .attr("y2", Math.round((height - margin.bottom) / 2))
         .style('stroke', 'black')
-        .style('stroke-width', border_frame)
+        .style('stroke-group_width', border_frame)
         //        .attr("stroke-opacity", .5)
         .style('fill', 'none')
         .attr("marker-end", "url(#arrowhead-right)")
@@ -612,7 +610,7 @@ Lsv.prototype.drawDeltaLSVCompactSVG = function (el, lsv) {
         .attr("y1", 0)
         .attr("x2", width / 2)
         .attr("y2", height - margin.bottom + 2)
-        .attr("stroke-width", 2)
+        .attr("stroke-group_width", 2)
         .attr("stroke-opacity", .8)
         .attr("stroke", "black");
 

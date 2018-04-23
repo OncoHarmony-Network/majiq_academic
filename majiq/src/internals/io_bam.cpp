@@ -40,7 +40,7 @@ namespace io_bam {
 //    };
 
     bool juncinGene(Gene* t1, Junction* t2){
-        return ((t1->start <= t2->end) && (t1->end >= t2->start)) ;
+        return ( (t1->get_start() <= t2->get_end()) && (t1->get_end() >= t2->get_start()) ) ;
     }
 
     int juncGeneSearch(vector<Gene *> a, int n, Junction * j) {
@@ -56,9 +56,6 @@ namespace io_bam {
         }
         return l;
     }
-
-
-
 
     char IOBam::_get_strand(bam1_t * read){
         char strn = '.';
@@ -92,13 +89,12 @@ namespace io_bam {
         while(i< n ){
             Gene * gObj  = glist_[chrom][i] ;
             if (!juncinGene(gObj, junc)) break ;
-            if (strand == '.' || strand == gObj->strand) {
-                for(const auto &ex: gObj->exon_map){
-
-                    if (((ex.second)->start-500) <= junc->start && ((ex.second)->end+500) >= junc->start){
+            if (strand == '.' || strand == gObj->get_strand()) {
+                for(const auto &ex: gObj->exon_map_){
+                    if (((ex.second)->get_start()-500) <= junc->get_start() && ((ex.second)->get_end()+500) >= junc->get_start()){
                         found = true ;
                         #pragma omp critical
-                        gObj->junc_map[key] = junc ;
+                        gObj->junc_map_[key] = junc ;
 
                     }
                     else temp_vec.push_back(gObj) ;
@@ -106,13 +102,11 @@ namespace io_bam {
             }
             i++ ;
         }
-
         if (found) return ;
         for(const auto &g: temp_vec){
             #pragma omp critical
-            g->junc_map[key] = junc ;
+            g->junc_map_[key] = junc ;
         }
-
         return ;
     }
 
@@ -126,20 +120,17 @@ namespace io_bam {
         if (offset >= eff_len_) {
             return ;
         }
-        string key =  chrom + ":" + to_string(start) + "-" + to_string(end) ;
+        string key = chrom + ":" + to_string(start) + "-" + to_string(end) ;
         #pragma omp critical
         {
             if(junc_map.count(key) == 0) {
                 junc_map[key] = junc_vec.size() ;
-
                 Junction * v = new Junction(start, end, false) ;
                 junc_vec.push_back(v) ;
                 newjunc = true ;
             }
-
             junc_vec[junc_map[key]]->update_junction_read(read_pos, 1) ;
         }
-
         find_junction_gene( chrom,  strand, junc_vec[junc_map[key]]) ;
 
         return;
@@ -151,30 +142,29 @@ namespace io_bam {
         if (n_cigar <= 1 || !_unique(read)) // max one cigar operation exists(likely all matches)
             return 0;
 
-        int chr_id = read->core.tid;
         int read_pos = read->core.pos;
-        string chrom(header->target_name[chr_id]);
+        string chrom(header->target_name[read->core.tid]);
 
         uint32_t *cigar = bam_get_cigar(read);
 
         int off = 0;
         for (int i = 0; i < n_cigar; ++i) {
-            char op = bam_cigar_op(cigar[i]);
-            int ol = bam_cigar_oplen(cigar[i]);
-//            cout<< "##" <<op<< read_pos <<"\n";
-            if (op == BAM_CMATCH || op == BAM_CDEL || op == BAM_CEQUAL || op == BAM_CDIFF){
+            const char op = bam_cigar_op(cigar[i]);
+            const int ol = bam_cigar_oplen(cigar[i]);
+//            cout << "CIGAR:: " << cigar[i] << "op:"<< to_string(op) << " ol:" << to_string(ol) <<"\n";
+            if (op == BAM_CMATCH || op == BAM_CDEL ||  op == BAM_CEQUAL || op == BAM_CDIFF){
+//            if (op == BAM_CMATCH || op == BAM_CINS || op == BAM_CSOFT_CLIP || op == BAM_CEQUAL || op == BAM_CDIFF){
                  off += ol;
             }
-            else if( op == BAM_CREF_SKIP || off >= MIN_BP_OVERLAP){
-//                cout<< "@@@" << read_pos << "\n";
+            else if( op == BAM_CREF_SKIP && off >= MIN_BP_OVERLAP){
                 const int j_end = read->core.pos + off + ol +1;
                 const int j_start =  read->core.pos + off;
+//                cout << "MMM " << j_start << "-" << j_end << " ::: " << ol <<"\n" ;
                 try {
                     add_junction(chrom, _get_strand(read), j_start, j_end, read_pos);
                 } catch (const std::logic_error& e) {
                     cout << "KKK" << e.what() << '\n';
                 }
-
                 off += ol ;
             }
         }
@@ -274,6 +264,7 @@ namespace io_bam {
         for(int jidx=0; jidx < njunc; jidx++){
             const Junction * const jnc = junc_vec[jidx] ;
             const int npos = jnc->nreads_.size() ;
+
             default_random_engine generator;
             uniform_int_distribution<int> distribution(0,npos-1);
             for (int m=0; m<msamples; m++){

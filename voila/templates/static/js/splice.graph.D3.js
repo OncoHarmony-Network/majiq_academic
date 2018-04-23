@@ -235,8 +235,8 @@ function toolTipD3(begin, end, el) {
 
 function spliceGraphD3() {
 
-    var width = 1000; // default_view width
-    var height = 160; // default_view height
+    var width = 1000; // default_view group_width
+    var height = 160; // default_view group_height
     var padding = [60, 5, 5, 5];
     var JUNC_AREA = 0.8;
     var EXON_H = Math.round(height * (1 - JUNC_AREA) - padding[2]);
@@ -772,7 +772,7 @@ function spliceGraphD3() {
                         el.attr("style", function () {
                             alreadySelected = d3.select(this).classed('highlight-lsv');
                             c = alreadySelected ? "black" : 'rgb(' + BREWER_PALETTE[color_index % BREWER_PALETTE.length].join(',') + ')';
-                            w = !alreadySelected && isWeighted ? ";stroke-width:" + lineWeight : "";
+                            w = !alreadySelected && isWeighted ? ";stroke-group_width:" + lineWeight : "";
                             return 'stroke:' + c + ';fill:' + c + w + ";";
                         })
                     };

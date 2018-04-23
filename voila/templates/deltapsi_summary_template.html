@@ -5,6 +5,7 @@
     {#    <link rel="stylesheet" type="text/css" href="static/css/splice.graph.D3.css"/>#}
     <link rel="stylesheet" type="text/css" href="static/css/bootstrap-frm.css"/>
     <link rel="stylesheet" type="text/css" href="static/css/splicegraph.css"/>
+    <link rel="stylesheet" type="text/css" href="static/css/lsv.css"/>
 {% endblock %}
 
 {% block js %}
@@ -21,7 +22,7 @@
     <script src="static/js/jquery.tablesorter.pager.js" type="text/javascript"></script>
     <script src="static/js/application.js" type="text/javascript"></script>
     <script src="static/js/jquery.tooltipster.min.js" type="text/javascript"></script>
-    <script src="http://cdn.jsdelivr.net/npm/pouchdb@6.4.2/dist/pouchdb.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/pouchdb@6.4.3/dist/pouchdb.min.js"></script>
     <script src="https://d3js.org/d3.v4.min.js"></script>
     <script src="static/js/splicegraph.js"></script>
     <script src="static/js/splicegraphtools.js"></script>
@@ -30,7 +31,7 @@
     <script src="static/js/lsvplots.js"></script>
     <script src="static/js/colors.js"></script>
     <script>
-        var db = new PouchDB('{{ database_name }}');
+        var db = new PouchDB('{{ database_name }}', {auto_compaction: true});
         var sg = new SpliceGraph(db);
         var lsv = new Lsv(db);
         var bp = new LSVPlots(db);
@@ -121,8 +122,7 @@
                                 </td>
 
 
-                                <td id="data_td{{ gene_index }}{{ loop.index }}" class="lsvDeltaCompact primer"
-                                    genome="{{ genome }}" lsv-text-version="{{ lsv_text_version }}">
+                                <td id="data_td{{ gene_index }}{{ loop.index }}" class="lsvDeltaCompact primer">
                                     {% include 'delta_compact_percentiles.html' %}
                                 </td>
 
@@ -135,18 +135,14 @@
 
                                 <td>
                                     <p>
-                                        {% include 'ucsc_link.html' %}
+                                        {% include 'ucsc_lsv_link.html' %}
                                         {% if gtf %}
                                             <a href="../static/doc/lsvs/{{ lsv.lsv_id }}.gtf"
                                                target="_blank"><img src="static/img/icons/gtf.png"
                                                                     title="Go to GTF LSV definition"/></a>
                                         {% endif %}
                                     </p>
-                                    <p>
-                                        <button class="copy-to-clipboard">
-                                            Copy LSV
-                                        </button>
-                                    </p>
+                                    {% include 'copy_lsv.html' %}
                                 </td>
 
                             </tr>
@@ -170,7 +166,7 @@
                                         <option value="{{ mark }}">{{ mark }}</option>
                                     {% endif %}
                                 {%- endfor %}
-                                <option value="{{ lsv_ids|length }}">All</option>
+                                <option value="{{ lsv_ids[gene.id] | length }}">All</option>
                             </select>
                         </form>
                     </div>

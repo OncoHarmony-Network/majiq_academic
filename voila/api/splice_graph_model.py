@@ -24,6 +24,13 @@ class Genome(Base):
     name = Column(String)
 
 
+class FileVersion(Base):
+    __tablename__ = 'file_version'
+    __iter__ = base_iter
+    id = Column(Integer, primary_key=True)
+    value = Column(Integer)
+
+
 class Experiment(Base):
     __tablename__ = 'experiment'
     __iter__ = base_iter
@@ -70,22 +77,6 @@ class AltEnds(Base):
         ForeignKeyConstraint([exon_gene_id, exon_start, exon_end], ['exon.gene_id', 'exon.start', 'exon.end']),)
 
 
-class ReadsSum(Base):
-    __tablename__ = 'reads_sum'
-    __iter__ = base_iter
-
-    sum = Column(Integer, nullable=False)
-    junction_gene_id = Column(String, primary_key=True)
-    junction_start = Column(Integer, primary_key=True)
-    junction_end = Column(Integer, primary_key=True)
-
-    __table_args__ = (
-        ForeignKeyConstraint([junction_gene_id, junction_start, junction_end],
-                             ['junction.gene_id', 'junction.start', 'junction.end']),)
-
-    junction = relationship('Junction')
-
-
 class Reads(Base):
     __tablename__ = 'reads'
     __iter__ = base_iter
@@ -110,6 +101,7 @@ class Junction(Base):
     gene_id = Column(String, ForeignKey('gene.id'), primary_key=True)
     start = Column(Integer, primary_key=True)
     end = Column(Integer, primary_key=True)
+    has_reads = Column(Boolean, default=False)
 
     intron_retention = Column(Integer)
     annotated = Column(Boolean)
@@ -142,7 +134,7 @@ class Exon(Base):
                 return
 
             for j in js:
-                if j.start in self and j.end not in self:
+                if j.start in self:
                     yield j
 
         yield from a3_filter(self.gene.junctions)
@@ -154,7 +146,7 @@ class Exon(Base):
                 return
 
             for j in js:
-                if j.end in self and j.start not in self:
+                if j.end in self:
                     yield j
 
         yield from a5_filter(self.gene.junctions)

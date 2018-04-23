@@ -4,12 +4,8 @@ import errno
 import fnmatch
 import os
 import shutil
-from collections import defaultdict
 
 import numpy as np
-
-from voila.utils.voila_log import voila_log
-from voila.vlsv import VoilaLsv
 
 
 def expected_dpsi(bins):
@@ -28,33 +24,6 @@ def get_prob_delta_psi_greater_v(bins, expected, V=.2):
         if right == bins.size * 2 and w > (expected + abs(expected * V)):
             right = i
     return np.sum(bins[:left] + np.sum(bins[right:]))
-
-
-def lsvs_to_gene_dict(voila_lsvs, metainfo, threshold=.2, show_all=False):
-    log = voila_log()
-    genes_dict = defaultdict(list)
-
-    for i, vlsv in enumerate(voila_lsvs):
-
-        if np.any(np.isnan(vlsv.bins)):
-            log.warning("LSV %s bins contain NaNs" % vlsv.get_id())
-            continue
-
-        if vlsv.is_delta_psi() and not show_all and not vlsv.is_lsv_changing(threshold):
-            continue
-
-        gene_id = vlsv.lsv_id.split(':')[0]
-
-        if vlsv.is_delta_psi():
-            genes_dict[gene_id].append({
-                'lsv': vlsv,
-                'psi1': VoilaLsv(vlsv.psi1),
-                'psi2': VoilaLsv(vlsv.psi2)
-            })
-        else:
-            genes_dict[gene_id].append(vlsv)
-
-    return {'genes_dict': genes_dict, 'meta_exps': metainfo}
 
 
 def copyanything(src, dst):
