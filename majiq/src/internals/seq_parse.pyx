@@ -230,7 +230,7 @@ cdef _find_junctions(list file_list, vector[Gene*] gene_vec,  object conf, objec
 
     for tmp_str, group_list in conf.tissue_repl.items():
         name = tmp_str.encode('utf-8')
-        last_it_grp = len(group_list)
+        last_it_grp = group_list[len(group_list) - 1]
         for j in group_list:
             logger.info('Reading file %s' %(file_list[j][0]))
             bamfile = ('%s/%s.%s' % (conf.sam_dir, file_list[j][0], SEQ_FILE_FORMAT)).encode('utf-8')
@@ -253,7 +253,7 @@ cdef _find_junctions(list file_list, vector[Gene*] gene_vec,  object conf, objec
             for it in j_ids:
                 jvec[it.second].update_flags(minreads, minpos, denovo_thresh, min_experiments)
 
-                # print(it.second, [it.first, jvec[it.second].start, jvec[it.second].end, jvec[it.second].get_sum(), jvec[it.second].get_npos()])
+                # print(file_list[j][0], j, last_it_grp, (j==last_it_grp), it.second, it.first)
                 junc_ids[it.second] = (it.first.decode('utf-8'), jvec[it.second].get_start(), jvec[it.second].get_end(),
                                        jvec[it.second].get_sum(), jvec[it.second].get_npos())
                 jvec[it.second].clear_nreads((j==last_it_grp))
@@ -261,6 +261,7 @@ cdef _find_junctions(list file_list, vector[Gene*] gene_vec,  object conf, objec
             logger.info('Done Reading file %s' %(file_list[j][0]))
             _store_junc_file(boots, junc_ids, file_list[j][0], conf.outDir)
 
+    logger.info("Detecting LSVs")
     for i in prange(n, nogil=True, num_threads=nthreads):
         gg = gene_vec[i]
         gg.detect_exons()
@@ -270,6 +271,7 @@ cdef _find_junctions(list file_list, vector[Gene*] gene_vec,  object conf, objec
         #TODO: IR detection for later
         detect_lsvs(out_lsvlist, gg)
 
+    logger.info("Generating Splicegraph")
     for i in range(n):
         gene_to_splicegraph(gene_vec[i], conf)
 

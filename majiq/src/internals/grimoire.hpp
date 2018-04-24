@@ -65,18 +65,21 @@ namespace grimoire{
                 unsigned int sum_reads = 0 ;
                 for(const auto &r: nreads_)
                     sum_reads += r ;
+
                 if ((nreads_.size() >= num_pos) && (sum_reads >= num_reads)){
-                    flter_cnt_ ++ ;
+                    ++ flter_cnt_ ;
                     bld_fltr_ = bld_fltr_ || (flter_cnt_ >= min_experiments) ;
                 }
-                if (sum_reads >= denovo_thresh && ! annot_){
-                    denovo_cnt_ ++ ;
+//  cout<< this<< "::"<<get_key()<<" min_experiments_thresh: "<< min_experiments<< " filter_count: "<<flter_cnt_<<" npos: " << nreads_.size() << " sum_reads: " << sum_reads << "\n" ;
+// TODO: CHeck for possible only rna-seq
+                if (sum_reads >= denovo_thresh || annot_){
+                    ++ denovo_cnt_  ;
                     denovo_bl_ = denovo_bl_ || (denovo_cnt_ >= min_experiments) ;
                 }
             }
 
             void clear_nreads(bool reset_grp){
-
+//cout<< "RESET JUNC " << reset_grp << "\n" ;
                 nreads_.clear() ;
                 pos_map_.clear() ;
                 flter_cnt_ = 0 ? reset_grp: flter_cnt_ ;

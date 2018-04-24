@@ -206,19 +206,19 @@ namespace grimoire {
     }
 
     inline bool is_lsv(set<Junction*> &juncSet, bool ss){
-        set<Junction*>::iterator juncIt ;
-        int count = 0 ;
-        for (juncIt = juncSet.begin(); juncIt != juncSet.end(); juncIt++){
-            const int coord = ss? (*juncIt)->get_end() : (*juncIt)->get_start() ;
-            if (FIRST_LAST_JUNC != coord && (*juncIt)->get_bld_fltr()) {
+        if (juncSet.size()< 2){
+            return false ;
+        }
+        for(const auto &juncIt:  juncSet){
+//        for (juncIt = juncSet.begin(); juncIt != juncSet.end(); juncIt++){
+            const int coord = ss? juncIt->get_end() : juncIt->get_start() ;
+            if (FIRST_LAST_JUNC != coord && juncIt->get_bld_fltr()) {
 //                cout<< "JUNCS " << coord << "\n" ;
-                if (++count >=2 ){
-//                   cout << "KKKK: " << count << "\n";
-                   return true;
-                   }
+                return true ;
+
             }
         }
-        return false;
+        return false ;
     }
 
     int detect_lsvs(vector<LSV*> &lsv_list, Gene* gObj){
