@@ -173,11 +173,11 @@ cdef int _load_db(str filename, object elem_dict, object genes_dict) except -1:
 
     with open(filename, 'rb') as fp:
         all_files = np.load(fp)
-    genes_dict = {all_files['gene_info'][ii][0].decode('UTF-8'):{xx: all_files['gene_info'][ii][idx]
-                                                                for idx, xx in enumerate(names)}
-                                                                for ii in range(all_files['gene_info'].shape[0])}
-    for xx in genes_dict.keys():
-        elem_dict[xx] = all_files[xx]
+        genes_dict = {all_files['gene_info'][ii][0].decode('UTF-8'):{xx: all_files['gene_info'][ii][idx]
+                                                                    for idx, xx in enumerate(names)}
+                                                                    for ii in range(all_files['gene_info'].shape[0])}
+        for xx in genes_dict.keys():
+            elem_dict[xx] = all_files[xx]
 
 cdef int _dump_lsv_coverage(str filename, dict cov_dict, list type_list, list junc_info, str exp_name):
     dt=np.dtype('|S250, |S250')
