@@ -34,7 +34,7 @@ class SQLType(ABC):
 
 
 class SQL:
-    def __init__(self, filename, model, delete=False):
+    def __init__(self, filename, model, delete=False, nprocs=1):
         if not isinstance(delete, bool):
             Exception('delete must be a boolean value')
 
@@ -46,7 +46,7 @@ class SQL:
             except FileNotFoundError:
                 pass
 
-        engine = create_engine('sqlite:///{0}'.format(filename))
+        engine = create_engine('sqlite:///{0}'.format(filename), connect_args={'timeout': 120})
         event.listen(engine, 'connect', self._fk_pragma_on_connect)
         model.Base.metadata.create_all(engine)
         Session.configure(bind=engine)
@@ -54,6 +54,7 @@ class SQL:
         self.session = Session()
         self.filename = filename
         self.session_add_count = 0
+        self.nprocs = nprocs
 
     def __enter__(self):
         return self
@@ -66,7 +67,7 @@ class SQL:
         dbapi_con.execute('pragma foreign_keys=ON')
 
     def commit(self, cmds=0):
-        if self.session_add_count > cmds:
+        if self.session_add_count > (cmds / self.nprocs):
             self.session.commit()
             self.session_add_count = 0
 

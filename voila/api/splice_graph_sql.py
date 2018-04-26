@@ -10,12 +10,15 @@ from voila.api.sql import SQL
 
 Session = sessionmaker()
 
-default_commit_on_count = 100000
+# default_commit_on_count = 1e2  # 57.22779321670532 57.578933000564575
+default_commit_on_count = 1e3  # 49.11109209060669 46.35532307624817
+# default_commit_on_count = 1e4  # 49.159239053726196
+# default_commit_on_count = 1e5  # 53.34236812591553
 
 
 class SpliceGraphSQL(SQL):
-    def __init__(self, filename, delete=False):
-        super().__init__(filename, model, delete)
+    def __init__(self, filename, delete=False, nprocs=1):
+        super().__init__(filename, model, delete, nprocs)
 
     @property
     def genome(self):
@@ -145,9 +148,11 @@ class Junctions(SpliceGraphSQL):
 
             r = model.Reads(junction_gene_id=self.gene_id, junction_start=self.start, junction_end=self.end,
                             experiment_name=experiment, reads=int(reads))
-            self.sql.add(r)
-            self.get.has_reads = True
-            self.sql.commit(default_commit_on_count)
+
+            with self.sql.session.no_autoflush:
+                self.sql.add(r)
+                self.get.has_reads = True
+                self.sql.commit(default_commit_on_count)
 
     def junction(self, gene_id, start, end):
         return self._Junction(self, gene_id, start, end)
