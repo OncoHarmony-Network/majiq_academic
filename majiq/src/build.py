@@ -119,7 +119,7 @@ def parsing_files(sam_file_list, chnk, conf, logger):
 
     majiq_config = Config()
     effective_len = (majiq_config.readLen - 2*MIN_BP_OVERLAP) + 1
-
+    nthreads = min(conf.nthreads, len(majiq_config.sam_list))
     list_exons = {}
     dict_junctions = {}
     list_introns = {}
@@ -157,12 +157,20 @@ def parsing_files(sam_file_list, chnk, conf, logger):
             if gene_reads == 0:
                 continue
 
-            for jj in dict_junctions[gne_id].values():
-                qm = QueueMessage(QUEUE_MESSAGE_SPLICEGRAPH,
-                                  (gne_id, jj.start, jj.end, np.sum(junc_mtrx[jj.index]), sam_file), chnk)
-                conf.queue.put(qm, block=True)
+            # for jj in dict_junctions[gne_id].values():
+            #     qm = QueueMessage(QUEUE_MESSAGE_SPLICEGRAPH,
+            #                       (gne_id, jj.start, jj.end, np.sum(junc_mtrx[jj.index]), sam_file), chnk)
+            #     conf.queue.put(qm, block=True)
 
         majiq_io_bam.close_rnaseq(samfl)
+
+        conf.lock_sgraph.acquire()
+        conf.lock_sgraph.release()
+        with SpliceGraph(get_builder_splicegraph_filename(majiq_config.outDir), nprocs=nthreads) as sg:
+            for gne_id in conf.genes_dict.keys():
+                for jj in dict_junctions[gne_id].values():
+                    update_splicegraph_junction(sg, gne_id, jj.start, jj.end, np.sum(junc_mtrx[jj.index]), sam_file)
+
         junc_mtrx = np.array(junc_mtrx, dtype=np.float)
 
         indx = np.arange(junc_mtrx.shape[0])[junc_mtrx.sum(axis=1) >= majiq_config.minreads]
@@ -320,10 +328,13 @@ class Builder(BasicPipeline):
             logger.info("POST parsed %.2f MB" % mem_allocated)
 
         logger.info("Parsing seq files")
+        #self.queue = None
         if self.nthreads > 1:
             nthreads = min(self.nthreads, len(majiq_config.sam_list))
             self.lock = [mp.Lock() for _ in range(nthreads)]
             [xx.acquire() for xx in self.lock]
+            self.lock_sgraph = mp.Lock()
+            self.lock_sgraph.acquire()
             pool = mp.Pool(processes=nthreads,
                            initializer=majiq_multi.process_conf,
                            initargs=[parsing_files, self],
@@ -333,9 +344,9 @@ class Builder(BasicPipeline):
                                 majiq_multi.chunks(majiq_config.sam_list, nthreads))
             pool.close()
             generate_splicegraph(majiq_config, self.elem_dict, self.genes_dict)
-
-            with SpliceGraph(get_builder_splicegraph_filename(majiq_config.outDir), 'r+') as sg:
-               err = queue_manager(sg, self.lock, self.queue, num_chunks=nthreads, func=self.store_results, logger=logger)
+            self.lock_sgraph.release()
+            # with SpliceGraph(get_builder_splicegraph_filename(majiq_config.outDir)) as sg:
+            err = queue_manager(None, self.lock, self.queue, num_chunks=nthreads, func=None, logger=logger)
 
             pool.join()
         else:
