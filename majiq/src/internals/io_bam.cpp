@@ -75,65 +75,87 @@ namespace io_bam {
         return ((read->core.flag & 0x100) != 0x100);
     }
 
-
-    void IOBam::find_junction_gene(string chrom, char strand, Junction * junc){
-//        vector<Gene *>::iterator gObjIt ;
-
-//        gObjIt = lower_bound(glist_[chrom].begin(), glist_[chrom].end(), junc, juncGeneSearch, 0) ;
+    void IOBam::find_junction_genes(string chrom, char strand, int start, int end,
+                                    vector<unsigned int> * nreads_ptr ){
         const int n = glist_[chrom].size();
-        int i = juncGeneSearch(glist_[chrom], n, junc) ;
-        bool found = false ;
+        bool found_stage1 = false ;
+        bool found_stage2 = false ;
+        vector<Gene*> temp_vec1 ;
+        vector<Gene*> temp_vec2 ;
+        Junction * junc = new Junction(start, end, false) ;
         const string key = junc->get_key() ;
-        vector<Gene*> temp_vec ;
-
+        int i = juncGeneSearch(glist_[chrom], n, junc) ;
+//cout<<"JUNC: " <<key<< " :: "<< nreads_ptr << "\n" ;
         while(i< n ){
             Gene * gObj  = glist_[chrom][i] ;
+            ++i ;
             if (!juncinGene(gObj, junc)) break ;
             if (strand == '.' || strand == gObj->get_strand()) {
-                for(const auto &ex: gObj->exon_map_){
-                    if (((ex.second)->get_start()-500) <= junc->get_start() && ((ex.second)->get_end()+500) >= junc->get_start()){
-                        found = true ;
-                        #pragma omp critical
-                        gObj->junc_map_[key] = junc ;
-
+                if(gObj->junc_map_.count(key) >0 ){
+                    found_stage1 = true ;
+                    gObj->junc_map_[key]->set_nreads_ptr(nreads_ptr) ;
+                } else if(found_stage1){
+                    continue ;
+                } else {
+                    for(const auto &ex: gObj->exon_map_){
+                        if (((ex.second)->get_start()-500) <= start && ((ex.second)->get_end()+500) >= end){
+                            found_stage2 = true ;
+                            temp_vec1.push_back(gObj) ;
+                        }
+                        else temp_vec2.push_back(gObj) ;
                     }
-                    else temp_vec.push_back(gObj) ;
+
                 }
             }
-            i++ ;
         }
-        if (found) return ;
-        for(const auto &g: temp_vec){
-            #pragma omp critical
-            g->junc_map_[key] = junc ;
+        delete junc ;
+        if (!found_stage1){
+            if (found_stage2){
+                for(const auto &g: temp_vec1){
+                    g->junc_map_[key] = new Junction(start, end, false) ;
+                    g->junc_map_[key]->set_nreads_ptr(nreads_ptr) ;
+                }
+            }else{
+                for(const auto &g: temp_vec2){
+                    g->junc_map_[key] = new Junction(start, end, false) ;
+                    g->junc_map_[key]->set_nreads_ptr(nreads_ptr) ;
+                }
+            }
+        }
+//cout << "npos:: " << nreads_ptr->size() << "\n" ;
+        return ;
+    }
+
+    inline void IOBam::update_junction_read(string key, int read_start, int count) {
+        const string keyp = key + ":" + to_string(read_start) ;
+        const unsigned int index = junc_map[key] ;
+        if (pos_map_.count(keyp)>0){
+            (*(junc_vec[index]))[pos_map_[keyp]] += count ;
+        }else{
+            pos_map_[keyp] = junc_vec[index]->size() ;
+            junc_vec[index]->push_back(count) ;
         }
         return ;
     }
 
 
-
     void IOBam::add_junction(string chrom, char strand, int start, int end, int read_pos) {
 
         const unsigned int offset = start - (read_pos+ MIN_BP_OVERLAP) ;
-        bool newjunc = false ;
+        if (offset >= eff_len_) return ;
 
-        if (offset >= eff_len_) {
-            return ;
-        }
-        string key = chrom + ":" + to_string(start) + "-" + to_string(end) ;
+        string key = chrom + ":" + strand + ":" + to_string(start) + "-" + to_string(end) ;
         #pragma omp critical
         {
             if(junc_map.count(key) == 0) {
                 junc_map[key] = junc_vec.size() ;
-                Junction * v = new Junction(start, end, false) ;
+                vector<unsigned int> *v = new vector<unsigned int>() ;
                 junc_vec.push_back(v) ;
-                newjunc = true ;
+                find_junction_genes(chrom, strand, start, end, v) ;
             }
-            junc_vec[junc_map[key]]->update_junction_read(read_pos, 1) ;
+            update_junction_read(key, read_pos, 1) ;
         }
-        find_junction_gene( chrom,  strand, junc_vec[junc_map[key]]) ;
-
-        return;
+        return ;
     }
 
 
@@ -151,15 +173,12 @@ namespace io_bam {
         for (int i = 0; i < n_cigar; ++i) {
             const char op = bam_cigar_op(cigar[i]);
             const int ol = bam_cigar_oplen(cigar[i]);
-//            cout << "CIGAR:: " << cigar[i] << "op:"<< to_string(op) << " ol:" << to_string(ol) <<"\n";
             if (op == BAM_CMATCH || op == BAM_CDEL ||  op == BAM_CEQUAL || op == BAM_CDIFF){
-//            if (op == BAM_CMATCH || op == BAM_CINS || op == BAM_CSOFT_CLIP || op == BAM_CEQUAL || op == BAM_CDIFF){
                  off += ol;
             }
             else if( op == BAM_CREF_SKIP && off >= MIN_BP_OVERLAP){
                 const int j_end = read->core.pos + off + ol +1;
                 const int j_start =  read->core.pos + off;
-//                cout << "MMM " << j_start << "-" << j_end << " ::: " << ol <<"\n" ;
                 try {
                     add_junction(chrom, _get_strand(read), j_start, j_end, read_pos);
                 } catch (const std::logic_error& e) {
@@ -262,14 +281,15 @@ namespace io_bam {
 
         #pragma omp parallel for num_threads(nthreads_)
         for(int jidx=0; jidx < njunc; jidx++){
-            const Junction * const jnc = junc_vec[jidx] ;
-            const int npos = jnc->nreads_.size() ;
+//            const Junction * const jnc = junc_vec[jidx] ;
+            vector<unsigned int> vec = *(junc_vec[jidx]) ;
+            const int npos = vec.size() ;
 
             default_random_engine generator;
             uniform_int_distribution<int> distribution(0,npos-1);
             for (int m=0; m<msamples; m++){
                 float lambda = 0;
-                for (int k=0; k<ksamples; k++) lambda += jnc->nreads_[distribution(generator)] ;
+                for (int k=0; k<ksamples; k++) lambda += vec[distribution(generator)] ;
                 lambda /= ksamples ;
                 *p = lambda * npos ;
                 p++ ;
@@ -287,8 +307,23 @@ namespace io_bam {
         return junc_map ;
     }
 
-    const vector<Junction *>& IOBam::get_junc_vec(){
-        return junc_vec ;
+//    const vector<Junction *>& IOBam::get_junc_vec(){
+//        return junc_vec ;
+//    }
+
+    int * IOBam::get_junc_vec_summary(){
+        int njunc = junc_map.size() ;
+        int * res = (int *) calloc(2*njunc, sizeof(int)) ;
+
+        #pragma omp parallel for num_threads(nthreads_)
+        for(int jidx=0; jidx < njunc; ++jidx){
+            int ss = 0 ;
+            for(const auto &n: *junc_vec[jidx])
+                ss += n ;
+            res[jidx] = ss ;
+            res[jidx+njunc] = junc_vec[jidx]->size() ;
+        }
+        return res ;
     }
 
 }

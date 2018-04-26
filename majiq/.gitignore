@@ -1,6 +1,7 @@
 *.pyc
 *.c
 *.so
+seq_parse.cpp
 .DS_Store
 .idea
 voila/templates/.idea

@@ -16,8 +16,6 @@ cdef extern from "grimoire.hpp" namespace "grimoire":
         int          get_end() nogil ;
         string       get_key() nogil ;
         string       get_key(Gene * gObj) nogil ;
-        unsigned int get_sum() nogil
-        unsigned int get_npos() nogil
         bint         get_intronic() nogil
         bint         get_annot() nogil
         bint         get_bld_fltr() nogil
@@ -43,6 +41,8 @@ cdef extern from "grimoire.hpp" namespace "grimoire":
         int get_end() nogil ;
         string get_id() nogil ;
         string get_name() nogil ;
+        void update_junc_flags(bint is_last_exp, unsigned int minreads, unsigned int minpos,
+                               unsigned int denovo_thresh, unsigned int min_experiments) nogil ;
         void print_exons() nogil ;
 
         map[string, Junction*] junc_map_ ;

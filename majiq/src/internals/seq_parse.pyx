@@ -201,7 +201,7 @@ cdef _find_junctions(list file_list, vector[Gene*] gene_vec,  object conf, objec
     cdef float pvalue_limit=conf.pvalue_limit
     cdef unsigned int min_experiments = 1 if conf.min_exp == -1 else conf.min_exp
     cdef unsigned int eff_len = conf.readLen - 2*MIN_BP_OVERLAP
-    cdef int strandness
+    cdef int strandness, njunc
     cdef list group_list
     cdef int last_it_grp
 
@@ -213,7 +213,8 @@ cdef _find_junctions(list file_list, vector[Gene*] gene_vec,  object conf, objec
     cdef np.ndarray[np.float32_t, ndim=2, mode="c"] boots
     cdef list junc_ids
 
-    cdef vector[Junction *] jvec
+    cdef int* jvec
+
 
     cdef map[string, gene_vect] gene_list
     cdef map[string, unsigned int] j_ids
@@ -242,21 +243,23 @@ cdef _find_junctions(list file_list, vector[Gene*] gene_vec,  object conf, objec
                 njunc = c_iobam.get_njuncs()
 
             boots = np.zeros(shape=(njunc, m), dtype=np.float32)
-
             with nogil:
                 c_iobam.boostrap_samples(m, k, <np.float32_t *> boots.data)
                 j_ids = c_iobam.get_junc_map()
-                jvec = c_iobam.get_junc_vec()
+                jvec = c_iobam.get_junc_vec_summary()
 
+            logger.info("Update flags")
+            for i in prange(n, nogil=True, num_threads=nthreads):
+                gg = gene_vec[i]
+                gg.update_junc_flags((j==last_it_grp), minreads, minpos, denovo_thresh, min_experiments)
+
+            logger.info("Done Update flags")
             junc_ids = [0] * njunc
-
             for it in j_ids:
-                jvec[it.second].update_flags(minreads, minpos, denovo_thresh, min_experiments)
-
                 # print(file_list[j][0], j, last_it_grp, (j==last_it_grp), it.second, it.first)
-                junc_ids[it.second] = (it.first.decode('utf-8'), jvec[it.second].get_start(), jvec[it.second].get_end(),
-                                       jvec[it.second].get_sum(), jvec[it.second].get_npos())
-                jvec[it.second].clear_nreads((j==last_it_grp))
+                tmp_str = it.first.decode('utf-8').split(':')[2]
+                start, end = (int(xx) for xx in tmp_str.split('-'))
+                junc_ids[it.second] = (it.first.decode('utf-8'), start, end, jvec[it.second], jvec[it.second + njunc])
 
             logger.info('Done Reading file %s' %(file_list[j][0]))
             _store_junc_file(boots, junc_ids, file_list[j][0], conf.outDir)
@@ -264,11 +267,15 @@ cdef _find_junctions(list file_list, vector[Gene*] gene_vec,  object conf, objec
     logger.info("Detecting LSVs")
     for i in prange(n, nogil=True, num_threads=nthreads):
         gg = gene_vec[i]
+        with gil:
+            print('EXON DETECTION', i)
         gg.detect_exons()
         # with gil:
         #     gene_to_splicegraph(gg, conf)
         # gg.print_exons()
         #TODO: IR detection for later
+        with gil:
+            print('LSV DETECTION', i)
         detect_lsvs(out_lsvlist, gg)
 
     logger.info("Generating Splicegraph")

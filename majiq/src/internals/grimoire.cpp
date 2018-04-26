@@ -22,18 +22,6 @@ namespace grimoire {
         return  crd || r || same ;
     }
 
-    void Junction::update_junction_read(int read_start, unsigned int n){
-
-        if (pos_map_.count(read_start)>0){
-            nreads_[pos_map_[read_start]] += n ;
-        }else{
-
-            pos_map_[read_start] =  nreads_.size() ;
-            nreads_.push_back(n) ;
-        }
-        return ;
-    }
-
     string Junction::get_key(Gene * gObj) {
         return(gObj->get_chromosome() + ":" + to_string(start_) + "-" + to_string(end_)) ;
     }
@@ -205,17 +193,15 @@ namespace grimoire {
         return ;
     }
 
-    inline bool is_lsv(set<Junction*> &juncSet, bool ss){
+    bool is_lsv(set<Junction*> &juncSet, bool ss){
         if (juncSet.size()< 2){
             return false ;
         }
+
         for(const auto &juncIt:  juncSet){
-//        for (juncIt = juncSet.begin(); juncIt != juncSet.end(); juncIt++){
             const int coord = ss? juncIt->get_end() : juncIt->get_start() ;
             if (FIRST_LAST_JUNC != coord && juncIt->get_bld_fltr()) {
-//                cout<< "JUNCS " << coord << "\n" ;
-                return true ;
-
+                return 1 ;
             }
         }
         return false ;
@@ -228,37 +214,41 @@ namespace grimoire {
         set<pair<set<string>, LSV*>> source ;
         LSV * lsvObj ;
         set<string> remLsv ;
+        cout << "DETECT LSVS PER GENE1 "<< gObj<<"\n" ;
         for (exon_mapIt = gObj->exon_map_.begin(); exon_mapIt != gObj->exon_map_.end(); ++exon_mapIt) {
             Exon * ex = exon_mapIt->second ;
             set<Junction*>::iterator juncIt ;
             if (is_lsv(ex->ob, true)) {
                 lsvObj = new LSV(gObj, ex, true) ;
-//cout << "DETECT LSVS PER GENE2.5 "<< gObj<<"\n" ;
+cout << "DETECT LSVS PER GENE2.5 "<< gObj<<"\n" ;
                 set<string> t1 ;
-//cout << "DETECT LSVS PER GENE2.6 "<< gObj<<"\n" ;
+cout << "DETECT LSVS PER GENE2.6 "<< gObj<<"\n" ;
                 for (const auto &jl1: lsvObj->get_junctions()){
                     t1.insert(jl1->get_key()) ;
                 }
-//cout << "DETECT LSVS PER GENE2.7 "<< gObj<<"\n" ;
+cout << "DETECT LSVS PER GENE2.7 "<< gObj<<"\n" ;
                 pair<set<string>, LSV*> _p1 (t1, lsvObj) ;
-//cout << "DETECT LSVS PER GENE2.8 "<< gObj<<"\n" ;
+cout << "DETECT LSVS PER GENE2.8 "<< gObj<<"\n" ;
                 source.insert(_p1) ;
-//cout << "DETECT LSVS PER GENE2.9 "<< gObj<<"\n" ;
+cout << "DETECT LSVS PER GENE2.9 "<< gObj<<"\n" ;
                 lsvGenes.push_back(lsvObj) ;
+cout << "DETECT LSVS PER GENE2.95 "<< gObj<<"\n" ;
             }
+cout << "DETECT LSVS PER GENE3 "<< ex->get_start()<< " :: "<<ex->get_end()<<"\n" ;
             if (is_lsv(ex->ib, false)) {
+cout << "DETECT LSVS PER GENE3.1\n" ;
                 lsvObj = new LSV(gObj, ex, false) ;
-//cout << "DETECT LSVS PER GENE3.5\n" ;
+cout << "DETECT LSVS PER GENE3.5\n" ;
                 set<string> t1 ;
-//cout << "DETECT LSVS PER GENE3.6\n" ;
+cout << "DETECT LSVS PER GENE3.6\n" ;
                 for (const auto &jl1: lsvObj->get_junctions()){
                     t1.insert(jl1->get_key()) ;
                 }
-//cout << "DETECT LSVS PER GENE3.7\n" ;
+cout << "DETECT LSVS PER GENE3.7\n" ;
 
                 lsvGenes.push_back(lsvObj) ;
 //                for (const auto &slvs: source){
-//cout << "DETECT LSVS PER GENE6\n" ;
+cout << "DETECT LSVS PER GENE6\n" ;
 //                    set<string> d1 ;
 //                    set<string> d2 ;
 //
@@ -284,7 +274,7 @@ namespace grimoire {
 //        for(const auto &l: lsvGenes){
 //            cout<< "##" << l->get_id() << "\n" ;
 //        }
-//cout << "DETECT LSVS PER GENE9\n" ;
+cout << "DETECT LSVS PER GENE9\n" ;
 
         #pragma omp critical
         for(const auto &l: lsvGenes){
@@ -297,7 +287,7 @@ namespace grimoire {
                 delete l;
             }
         }
-//cout << "DETECT LSVS PER GENE10\n" ;
+cout << "DETECT LSVS PER GENE10\n" ;
         return  0;
 
     }
@@ -436,6 +426,18 @@ namespace grimoire {
 //        cout << "[4] VAL FOR J " << ext_type << "\n" ;
         return ext_type ;
     }
+
+
+    void Gene::update_junc_flags(bool is_last_exp, unsigned int minreads, unsigned int minpos,
+                                  unsigned int denovo_thresh, unsigned int min_experiments){
+//cout << "GENE: " << id_ << "\n" ;
+        for(const auto &p: junc_map_){
+            (p.second)->update_flags(minreads, minpos, denovo_thresh, min_experiments) ;
+            (p.second)->clear_nreads(is_last_exp) ;
+        }
+        return ;
+    }
+
 
     void Gene::print_exons(){
 

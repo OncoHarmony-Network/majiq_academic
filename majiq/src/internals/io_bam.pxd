@@ -1,6 +1,6 @@
 from libcpp.string cimport string
 from libcpp.map cimport map
-from libcpp.set cimport set
+from libcpp.pair cimport pair
 from libcpp.vector cimport vector
 cimport numpy as np
 from majiq.src.internals.interval cimport ITNode
@@ -21,4 +21,5 @@ cdef extern from "io_bam.hpp" namespace "io_bam":
         int get_njuncs() nogil
         map[string, unsigned int] get_junc_map() nogil
         vector[Junction *] get_junc_vec() nogil
+        int * get_junc_vec_summary() nogil ;
 
