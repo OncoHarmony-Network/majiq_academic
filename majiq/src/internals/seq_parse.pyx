@@ -36,7 +36,7 @@ from cpython cimport PyObject, Py_INCREF
 
 
 cdef int _output_lsv_file_single(vector[LSV*] out_lsvlist, str experiment_name, str outDir, int nthreads,
-                       unsigned int msamples):
+                                 unsigned int msamples):
     cdef dict cov_dict = {}
     cdef int nlsv = out_lsvlist.size()
     cdef str out_file, junc_file
@@ -67,7 +67,6 @@ cdef int _output_lsv_file_single(vector[LSV*] out_lsvlist, str experiment_name, 
         del junc_ids
 
         for j in prange(nlsv, nogil=True, num_threads=nthreads):
-
             lsv_ptr = out_lsvlist[j]
             njunc = lsv_ptr.get_num_junctions()
             lsvid = lsv_ptr.get_id()
@@ -212,6 +211,7 @@ cdef _find_junctions(list file_list, vector[Gene*] gene_vec,  object conf, objec
     cdef str tmp_str
     cdef np.ndarray[np.float32_t, ndim=2, mode="c"] boots
     cdef list junc_ids
+    cdef int nlsv
 
     cdef int* jvec
 
@@ -264,15 +264,18 @@ cdef _find_junctions(list file_list, vector[Gene*] gene_vec,  object conf, objec
             logger.info('Done Reading file %s' %(file_list[j][0]))
             _store_junc_file(boots, junc_ids, file_list[j][0], conf.outDir)
 
-    logger.info("Detecting LSVs")
+    logger.info("Detecting LSVs ngenes:%s " % n)
     for i in prange(n, nogil=True, num_threads=nthreads):
         gg = gene_vec[i]
         gg.detect_exons()
         # with gil:
         #     gene_to_splicegraph(gg, conf)
         # gg.print_exons()
+
         #TODO: IR detection for later
-        detect_lsvs(out_lsvlist, gg)
+        nlsv = detect_lsvs(out_lsvlist, gg)
+        with gil:
+            print("GENE: %s %s" % (gg.get_id(), nlsv))
 
     logger.info("Generating Splicegraph")
     # for i in range(n):

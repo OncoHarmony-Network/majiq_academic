@@ -214,41 +214,25 @@ namespace grimoire {
         set<pair<set<string>, LSV*>> source ;
         LSV * lsvObj ;
         set<string> remLsv ;
-//cout << "DETECT LSVS PER GENE1 "<< gObj<<"\n" ;
-        for(const auto &exon_mapIt: gObj->exon_map_){
-//        for (exon_mapIt = gObj->exon_map_.begin(); exon_mapIt != gObj->exon_map_.end(); ++exon_mapIt) {
-//            cout << "DETECT LSVS PER GENE2\n" ;
-            Exon * ex = exon_mapIt.second ;
-//            cout << "DETECT LSVS PER GENE2.1: " << ex <<"\n" ;
-            if (is_lsv(ex->ob, true)) {
-//cout << "DETECT LSVS PER GENE2.2: " << ex <<"\n" ;
-                lsvObj = new LSV(gObj, ex, true) ;
-//cout << "DETECT LSVS PER GENE2.5 "<< gObj<<"\n" ;
-                set<string> t1 ;
-//cout << "DETECT LSVS PER GENE2.6 "<< gObj<<"\n" ;
-                for (const auto &jl1: lsvObj->get_junctions()){
-                    t1.insert(jl1->get_key()) ;
-                }
-//cout << "DETECT LSVS PER GENE2.7 "<< gObj<<"\n" ;
-                pair<set<string>, LSV*> _p1 (t1, lsvObj) ;
-//cout << "DETECT LSVS PER GENE2.8 "<< gObj<<"\n" ;
-                source.insert(_p1) ;
-//cout << "DETECT LSVS PER GENE2.9 "<< gObj<<"\n" ;
-                lsvGenes.push_back(lsvObj) ;
-//cout << "DETECT LSVS PER GENE2.95 "<< gObj<<"\n" ;
-            }
-//cout << "DETECT LSVS PER GENE3 "<< ex->get_start()<< " :: "<<ex->get_end()<<"\n" ;
-            if (is_lsv(ex->ib, false)) {
-//cout << "DETECT LSVS PER GENE3.1\n" ;
-                lsvObj = new LSV(gObj, ex, false) ;
-//cout << "DETECT LSVS PER GENE3.5\n" ;
-                set<string> t1 ;
-//cout << "DETECT LSVS PER GENE3.6\n" ;
-                for (const auto &jl1: lsvObj->get_junctions()){
-                    t1.insert(jl1->get_key()) ;
-                }
-//cout << "DETECT LSVS PER GENE3.7\n" ;
 
+        for(const auto &exon_mapIt: gObj->exon_map_){
+            Exon * ex = exon_mapIt.second ;
+            if (is_lsv(ex->ob, true)) {
+                lsvObj = new LSV(gObj, ex, true) ;
+                set<string> t1 ;
+                for (const auto &jl1: lsvObj->get_junctions()){
+                    t1.insert(jl1->get_key()) ;
+                }
+                pair<set<string>, LSV*> _p1 (t1, lsvObj) ;
+                source.insert(_p1) ;
+                lsvGenes.push_back(lsvObj) ;
+            }
+            if (is_lsv(ex->ib, false)) {
+                lsvObj = new LSV(gObj, ex, false) ;
+                set<string> t1 ;
+                for (const auto &jl1: lsvObj->get_junctions()){
+                    t1.insert(jl1->get_key()) ;
+                }
                 lsvGenes.push_back(lsvObj) ;
 //                for (const auto &slvs: source){
 //cout << "DETECT LSVS PER GENE6\n" ;
@@ -271,18 +255,14 @@ namespace grimoire {
 //                    }
 //                }
             }
-//            cout << "DETECT LSVS PER GENE3.1b\n" ;
         }
 
-//        for(const auto &l: lsvGenes){
-//            cout<< "##" << l->get_id() << "\n" ;
-//        }
-//cout << "DETECT LSVS PER GENE9\n" ;
-
+        int nlsv = 0 ;
         #pragma omp critical
         for(const auto &l: lsvGenes){
 //cout << "DETECT LSVS PER GENE9.5"<< l->get_id() <<"\n" ;
             if (remLsv.count(l->get_id())==0){
+                ++nlsv ;
 //                cout << "DETECT LSVS PER GENE9.7"<< l->get_id() <<"\n" ;
                 lsv_list.push_back(l) ;
             }else{
@@ -291,7 +271,7 @@ namespace grimoire {
             }
         }
 //cout << "DETECT LSVS PER GENE10\n" ;
-        return  0;
+        return  nlsv;
 
     }
 
