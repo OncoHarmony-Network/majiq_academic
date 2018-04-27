@@ -33,8 +33,7 @@ namespace grimoire{
             Exon * donor_;
 
         public:
-            vector<unsigned int> * nreads_ ;
-//            map<unsigned int, unsigned int> * pos_map_ ;
+            int* nreads_ ;
 
             Junction() {}
             Junction(int start1, int end1, bool annot1): start_(start1), end_(end1), annot_(annot1){
@@ -58,40 +57,39 @@ namespace grimoire{
             Exon*   get_acceptor()  { return acceptor_ ; }
             Exon*   get_donor()     { return donor_ ; }
 
-            void  set_nreads_ptr(vector<unsigned int> * nreads1) { nreads_ = nreads1 ; }
+            void  set_nreads_ptr(int * nreads1) { nreads_ = nreads1 ; }
             void  set_acceptor(Exon * acc) { acceptor_ = acc ; }
             void  set_donor(Exon * don) { donor_ = don ; }
 
-            void update_flags(unsigned int num_reads, unsigned int num_pos, unsigned int denovo_thresh,
-                                                                                unsigned int min_experiments){
+            void update_flags(int efflen, unsigned int num_reads, unsigned int num_pos, unsigned int denovo_thresh,
+                              unsigned int min_experiments){
                 if (nreads_ == nullptr ){
                     return ;
                 }
                 unsigned int sum_reads = 0 ;
-                unsigned int npos = nreads_->size() ;
-//cout <<"\tnpos: " << npos << "\n" ;
-                for(const auto &r: *nreads_){
-                    sum_reads += r ;
+                unsigned int npos = 0 ;
+
+                for(int i=0; i<efflen; ++i){
+                    sum_reads += nreads_[i] ;
+                    npos += nreads_[i]? 1 : 0 ;
                 }
-//                cout <<"\tnpos2: " << npos << "\n" ;
+//cout <<"sumreadsnpos: " << sum_reads<< " : "<< npos << "\n" ;
+
                 if (( npos >= num_pos) && (sum_reads >= num_reads)){
                     ++ flter_cnt_ ;
                     bld_fltr_ = bld_fltr_ || (flter_cnt_ >= min_experiments) ;
                 }
-//cout<<get_key()<<" :: "<< sum_reads << " :: "<< npos<< "\n" ;
-// TODO: CHeck for possible only rna-seq
                 if (sum_reads >= denovo_thresh || annot_){
                     ++ denovo_cnt_  ;
                     denovo_bl_ = denovo_bl_ || (denovo_cnt_ >= min_experiments) ;
                 }
-//                 cout<<"\t 3::: "<<get_key()<<" :: "<< sum_reads <<"\n" ;
                 return ;
             }
 
             void clear_nreads(bool reset_grp){
                 nreads_ = nullptr ;
-                flter_cnt_ = 0 ? reset_grp: flter_cnt_ ;
-                denovo_cnt_ = 0 ? reset_grp: denovo_cnt_ ;
+                flter_cnt_ = reset_grp ? 0: flter_cnt_ ;
+                denovo_cnt_ = reset_grp ? 0: denovo_cnt_ ;
             }
 
             void update_junction_read(int read_start, unsigned int n) ;
@@ -168,7 +166,7 @@ namespace grimoire{
             void    newExonDefinition(int start, int end, Junction *inbound_j, Junction *outbound_j, bool in_db) ;
             void    detect_exons() ;
             string  get_region() ;
-            void    update_junc_flags(bool is_last_exp, unsigned int minreads, unsigned int minpos,
+            void    update_junc_flags(int efflen, bool is_last_exp, unsigned int minreads, unsigned int minpos,
                                       unsigned int denovo_thresh, unsigned int min_experiments) ;
 
             void    print_exons() ;
@@ -214,7 +212,6 @@ namespace grimoire{
                 string t = (ss != b) ? "t" : "s" ;
                 id_ = gObj_->get_id() + ":" + t + ":" + to_string(ex->get_start()) + "-" + to_string(ex->get_end()) ;
                 type_ = set_type(ex, ss) ;
-//                cout << "CREATING LSV " << id_ << " :: " << type_ << "\n" ;
             }
             ~LSV(){}
             bool gather_lsv_info (float* source, float* target, list<Jinfo*> &info, map<string, Jinfo> &tlb, unsigned int msample) ;

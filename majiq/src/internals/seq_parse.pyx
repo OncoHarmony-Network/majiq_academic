@@ -251,7 +251,7 @@ cdef _find_junctions(list file_list, vector[Gene*] gene_vec,  object conf, objec
             logger.info("Update flags")
             for i in prange(n, nogil=True, num_threads=nthreads):
                 gg = gene_vec[i]
-                gg.update_junc_flags((j==last_it_grp), minreads, minpos, denovo_thresh, min_experiments)
+                gg.update_junc_flags(eff_len, (j==last_it_grp), minreads, minpos, denovo_thresh, min_experiments)
 
             logger.info("Done Update flags")
             junc_ids = [0] * njunc
@@ -267,20 +267,16 @@ cdef _find_junctions(list file_list, vector[Gene*] gene_vec,  object conf, objec
     logger.info("Detecting LSVs")
     for i in prange(n, nogil=True, num_threads=nthreads):
         gg = gene_vec[i]
-        with gil:
-            print('EXON DETECTION', i)
         gg.detect_exons()
         # with gil:
         #     gene_to_splicegraph(gg, conf)
         # gg.print_exons()
         #TODO: IR detection for later
-        with gil:
-            print('LSV DETECTION', i)
         detect_lsvs(out_lsvlist, gg)
 
     logger.info("Generating Splicegraph")
-    for i in range(n):
-        gene_to_splicegraph(gene_vec[i], conf)
+    # for i in range(n):
+    #     gene_to_splicegraph(gene_vec[i], conf)
 
     logger.info("%s LSV found" % out_lsvlist.size())
     # #Read bootstrap and fill the

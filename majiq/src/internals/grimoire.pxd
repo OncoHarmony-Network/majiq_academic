@@ -41,7 +41,7 @@ cdef extern from "grimoire.hpp" namespace "grimoire":
         int get_end() nogil ;
         string get_id() nogil ;
         string get_name() nogil ;
-        void update_junc_flags(bint is_last_exp, unsigned int minreads, unsigned int minpos,
+        void update_junc_flags(int efflen, bint is_last_exp, unsigned int minreads, unsigned int minpos,
                                unsigned int denovo_thresh, unsigned int min_experiments) nogil ;
         void print_exons() nogil ;
 
