@@ -48,13 +48,13 @@ namespace io_bam {
         int h = n ; // Not n - 1
         while (l < h) {
             int mid = (l + h) / 2 ;
-            if (juncinGene(a[mid], j)) {
+            if (a[mid]->get_start()>=j->get_end()) {
                 h = mid ;
             } else {
-                l = mid + 1 ;
+                l = mid +1 ;
             }
         }
-        return l;
+        return l-1;
     }
 
     char IOBam::_get_strand(bam1_t * read){
@@ -64,7 +64,7 @@ namespace io_bam {
             strn = (((read->core.flag & 0x10) == (0x00 & is_read1(read)))
                     || ((read->core.flag & 0x10) == (0x10 & is_read2(read)))) ? '+' : '-';
 
-        } else if (strandness_ == FWD_STRANDED){
+        } else if (strandness_ == REV_STRANDED){
             strn = (((read->core.flag & 0x10) ==(0x10 & is_read1(read)))
                     || ((read->core.flag & 0x10) == (0x00 & is_read2(read)))) ? '+' : '-';
         }
@@ -85,10 +85,13 @@ namespace io_bam {
         Junction * junc = new Junction(start, end, false) ;
         const string key = junc->get_key() ;
         int i = juncGeneSearch(glist_[chrom], n, junc) ;
-        while(i< n ){
+
+        if(i<0) return ;
+        while(i< n){
             Gene * gObj  = glist_[chrom][i] ;
             ++i ;
-            if (!juncinGene(gObj, junc)) break ;
+            if (gObj->get_start() >= end) break ;
+            if (start< gObj->get_start() || end> gObj->get_end()) continue ;
             if (strand == '.' || strand == gObj->get_strand()) {
                 if(gObj->junc_map_.count(key) >0 ){
                     found_stage1 = true ;
@@ -238,14 +241,12 @@ namespace io_bam {
             }
         }
 
+        int ccjv = 0 ;
         while ((r = sam_read1(in, header, aln)) >= 0) {
-//            cout<<"read" << aln->core.tid << " :: " << aln->core.pos << "\n" ;
             parse_read_into_junctions(header, aln) ;
-            if (nreads && --nreads == 0)
-                break;
+//            if (nreads && --nreads == 0)
+//                break;
         }
-        cout<< "FINISH FILE\n" ;
-        // Finishing
 
         if (r < -1) {
             fprintf(stderr, "Error parsing input.\n");

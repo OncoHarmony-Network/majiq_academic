@@ -73,7 +73,6 @@ namespace grimoire{
                     sum_reads += nreads_[i] ;
                     npos += nreads_[i]? 1 : 0 ;
                 }
-//cout <<"sumreadsnpos: " << sum_reads<< " : "<< npos << "\n" ;
 
                 if (( npos >= num_pos) && (sum_reads >= num_reads)){
                     ++ flter_cnt_ ;
@@ -83,6 +82,10 @@ namespace grimoire{
                     ++ denovo_cnt_  ;
                     denovo_bl_ = denovo_bl_ || (denovo_cnt_ >= min_experiments) ;
                 }
+
+cout << get_key() << " : sumreads npos: " << sum_reads<< " : "<< npos << " denovo_thresh: "<<denovo_thresh
+
+<< " : annot_: " <<  annot_ << "denovo::"<<denovo_bl_<<"\n" ;
                 return ;
             }
 
@@ -161,15 +164,14 @@ namespace grimoire{
             string  get_chromosome(){ return chromosome_ ;}
             char    get_strand()    { return strand_ ;}
             string  get_name()      { return name_ ;}
-
+            string  get_region() ;
+            void    print_exons() ;
+            void    detect_exons() ;
 
             void    newExonDefinition(int start, int end, Junction *inbound_j, Junction *outbound_j, bool in_db) ;
-            void    detect_exons() ;
-            string  get_region() ;
+            void    fill_junc_tlb(map<string, vector<string>> &tlb) ;
             void    update_junc_flags(int efflen, bool is_last_exp, unsigned int minreads, unsigned int minpos,
                                       unsigned int denovo_thresh, unsigned int min_experiments) ;
-
-            void    print_exons() ;
     };
 //            void    print_gene()    { cout<< id_ << chromosome_ <<":"<< start_ <<"-" << end_ << "\n"; }
 

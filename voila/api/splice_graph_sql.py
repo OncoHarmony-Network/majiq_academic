@@ -145,9 +145,11 @@ class Junctions(SpliceGraphSQL):
 
             r = model.Reads(junction_gene_id=self.gene_id, junction_start=self.start, junction_end=self.end,
                             experiment_name=experiment, reads=int(reads))
-            self.sql.add(r)
-            self.get.has_reads = True
-            self.sql.commit(default_commit_on_count)
+
+            if self.sql.session.no_autoflush:
+                self.sql.add(r)
+                self.get.has_reads = True
+                self.sql.commit(default_commit_on_count)
 
     def junction(self, gene_id, start, end):
         return self._Junction(self, gene_id, start, end)

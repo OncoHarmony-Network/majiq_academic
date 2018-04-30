@@ -193,6 +193,24 @@ namespace grimoire {
         return ;
     }
 
+    void Gene::fill_junc_tlb(map<string, vector<string>> &tlb){
+
+        for(const auto &j: junc_map_){
+            if (!(j.second)->get_denovo_bl()) continue ;
+            const string key = chromosome_ + ":" + strand_ + ":" + j.first ;
+            const string key2 = chromosome_ + ":.:" + j.first ;
+            if(tlb.count(key) == 0){
+                tlb[key] = vector<string>() ;
+            }
+            if(tlb.count(key2) == 0){
+                tlb[key2] = vector<string>() ;
+            }
+            tlb[key].push_back(id_) ;
+            tlb[key2].push_back(id_) ;
+        }
+        return ;
+    }
+
     bool is_lsv(set<Junction*> &juncSet, bool ss){
         unsigned int c1 = 0 ;
         unsigned int c2 = 0 ;
@@ -275,9 +293,13 @@ namespace grimoire {
 
     }
 
+    bool islowergene(Gene * a, Gene * b){
+        return (a->get_start() < b->get_start()) || (a->get_start() == b->get_start() && a->get_end() < b->get_end());
+    }
+
     void sortGeneList(vector<Gene*> &glist) {
-        sort(glist.begin(), glist.end(),[](Gene* a, Gene* b) {
-                                return (a->get_start() < b->get_start()) || (a->get_start() == b->get_start() && a->get_end() < b->get_end()) ;}) ;
+        sort(glist.begin(), glist.end(), islowergene) ;
+        return ;
     }
 
     bool LSV::gather_lsv_info(float* source, float* target, list<Jinfo*> &info, map<string, Jinfo> &tlb,

@@ -34,9 +34,12 @@ cdef _store_junc_file(np.ndarray boots, list junc_ids, str experiment_name, str 
 
 from cpython cimport PyObject, Py_INCREF
 
+def update_splicegraph_junction(sg, gene_id, start, end, nreads, exp):
+    if FIRST_LAST_JUNC not in (start, end):
+        sg.junction(gene_id, start, end).update_reads(exp, nreads)
 
-cdef int _output_lsv_file_single(vector[LSV*] out_lsvlist, str experiment_name, str outDir, int nthreads,
-                                 unsigned int msamples):
+cdef int _output_lsv_file_single(vector[LSV*] out_lsvlist, str experiment_name, map[string, vector[string]] tlb_j_g,
+                                 str outDir, int nthreads, unsigned int msamples):
     cdef dict cov_dict = {}
     cdef int nlsv = out_lsvlist.size()
     cdef str out_file, junc_file
@@ -55,136 +58,51 @@ cdef int _output_lsv_file_single(vector[LSV*] out_lsvlist, str experiment_name, 
 
 
     junc_file = "%s/%s.juncs" % (outDir, experiment_name)
+    print("###", junc_file)
     out_file = "%s/%s.majiq" % (outDir, experiment_name)
-    with open(junc_file, 'rb') as fp:
-        all_juncs = np.load(fp)
-        boots = all_juncs['bootstrap']
-        junc_ids = all_juncs['junc_info']
+    with SpliceGraph(get_builder_splicegraph_filename(outDir)) as sg:
+        with open(junc_file, 'rb') as fp:
+            all_juncs = np.load(fp)
+            boots = all_juncs['bootstrap']
+            junc_ids = all_juncs['junc_info']
 
-        ''' If we move towards this solution we can remove elements in Jinfo and make it smaller'''
-        for i in range(junc_ids.shape[0]):
-            tlb_juncs[junc_ids[i][0]] = Jinfo(i, junc_ids[i][1], junc_ids[i][2], junc_ids[i][3], junc_ids[i][4])
-        del junc_ids
+            ''' If we move towards this solution we can remove elements in Jinfo and make it smaller'''
+            #TODO: with tlb_j_g we can filter junctions are no present in this case like smaller annot db
+            for i in range(junc_ids.shape[0]):
 
-        for j in prange(nlsv, nogil=True, num_threads=nthreads):
-            lsv_ptr = out_lsvlist[j]
-            njunc = lsv_ptr.get_num_junctions()
-            lsvid = lsv_ptr.get_id()
-            with gil:
-                cov_dict[lsvid.decode('utf-8')] = np.zeros(shape=(njunc, msamples), dtype=np.float32)
-                type_list.append((lsvid.decode('utf-8'), lsv_ptr.get_type()))
-            junc_idx = 0
-            for junc in lsv_ptr.get_junctions():
-                key = junc.get_key(lsv_ptr.get_gene())
-                if tlb_juncs.count(key) > 0 :
-                    jobj_ptr = tlb_juncs[key]
-                    with gil:
-                        cov_dict[lsvid.decode('utf-8')][junc_idx] = boots[tlb_juncs[key].index]
-                        junc_info.append((lsvid.decode('utf-8'), junc.get_start(), junc.get_end(),
-                                          jobj_ptr.sreads, jobj_ptr.npos))
-                junc_idx = junc_idx + 1
+                tlb_juncs[junc_ids[i][0]] = Jinfo(i, junc_ids[i][1], junc_ids[i][2], junc_ids[i][3], junc_ids[i][4])
+                if tlb_j_g.count(junc_ids[i][0]) > 0 :
+                    for gid in tlb_j_g[junc_ids[i][0]]:
+                        print("ADD COUNT", i, gid.decode('utf-8'), junc_ids[i][1], junc_ids[i][2], junc_ids[i][3], junc_ids[i][0], experiment_name)
+                        update_splicegraph_junction(sg, gid.decode('utf-8'), junc_ids[i][1], junc_ids[i][2], junc_ids[i][3],
+                                                    experiment_name)
+                else:
+                    print("NOT FOuND", junc_ids[i][0])
 
-        majiq_io.dump_lsv_coverage(out_file, cov_dict, type_list, junc_info, experiment_name)
-        tlb_juncs.clear()
+            del junc_ids
+
+            for j in prange(nlsv, nogil=True, num_threads=nthreads):
+                lsv_ptr = out_lsvlist[j]
+                njunc = lsv_ptr.get_num_junctions()
+                lsvid = lsv_ptr.get_id()
+                with gil:
+                    cov_dict[lsvid.decode('utf-8')] = np.zeros(shape=(njunc, msamples), dtype=np.float32)
+                    type_list.append((lsvid.decode('utf-8'), lsv_ptr.get_type()))
+                junc_idx = 0
+                for junc in lsv_ptr.get_junctions():
+                    key = junc.get_key(lsv_ptr.get_gene())
+                    if tlb_juncs.count(key) > 0 :
+                        jobj_ptr = tlb_juncs[key]
+                        with gil:
+                            cov_dict[lsvid.decode('utf-8')][junc_idx] = boots[tlb_juncs[key].index]
+                            junc_info.append((lsvid.decode('utf-8'), junc.get_start(), junc.get_end(),
+                                              jobj_ptr.sreads, jobj_ptr.npos))
+                    junc_idx = junc_idx + 1
+
+            majiq_io.dump_lsv_coverage(out_file, cov_dict, type_list, junc_info, experiment_name)
+            tlb_juncs.clear()
 
     return len(type_list)
-
-# cdef bint _lsv_gather(LSV* lsv_ptr, np.ndarray[np.float32_t, ndim=2, mode="c"] source,
-#                       np.ndarray[np.float32_t, ndim=2, mode="c"] target, map[string, Jinfo] tlb_juncs,
-#                       clist[Jinfo*] junc_info_list, unsigned int msamples):
-#     cdef bint pres
-#     with nogil:
-#         pres = lsv_ptr.gather_lsv_info(<np.float32_t *> source.data, <np.float32_t *> target.data, junc_info_list,
-#                                        tlb_juncs, msamples)
-#     return pres
-#
-# cdef int _output_lsv_file(vector[LSV*] out_lsvlist, str experiment_name, str outDir, int nthreads,
-#                        unsigned int msamples):
-#
-#     cdef dict cov_dict = {}
-#     cdef int nlsv = out_lsvlist.size()
-#     cdef str out_file, junc_file
-#     cdef list type_list = []
-#
-#     cdef clist[Jinfo*] junc_info_list
-#
-#     cdef bint pres
-#     cdef LSV* lsv_ptr
-#     cdef int njunc
-#     cdef Jinfo* jobj_ptr
-#     cdef map[string, Jinfo] tlb_juncs
-#     cdef int i, j
-#
-#     cdef list junc_info = []
-#
-#     cdef np.ndarray[np.float32_t, ndim=2, mode="c"] boots
-#     cdef np.ndarray val
-#     cdef np.ndarray junc_ids
-#     cdef object all_juncs
-#
-#
-#
-#
-#     junc_file = "%s/%s.juncs" % (outDir, experiment_name)
-#     out_file = "%s/%s.majiq" % (outDir, experiment_name)
-#     with open(junc_file, 'rb') as fp:
-#         all_juncs = np.load(fp)
-#         boots = all_juncs['bootstrap']
-#         junc_ids = all_juncs['junc_info']
-#         print ("##1", type(all_juncs['bootstrap']), np.isfortran(all_juncs['bootstrap']))
-#         print ("##2", type(boots.data), np.isfortran(boots))
-#
-#         for i in range(junc_ids.shape[0]):
-#             tlb_juncs[junc_ids[i][0]] = Jinfo(i, junc_ids[i][1], junc_ids[i][2], junc_ids[i][3], junc_ids[i][4])
-#         del junc_ids
-#         for j in prange(nlsv, nogil=True, num_threads=nthreads):
-#
-#             lsv_ptr = out_lsvlist[j]
-#             njunc = lsv_ptr.get_num_junctions()
-#             with gil:
-#                 cov_dict[lsv_ptr.get_id().decode('utf-8')] = np.zeros(shape=(njunc, msamples), dtype=np.float32)
-#                 pres =  _lsv_gather(out_lsvlist[j], boots, cov_dict[lsv_ptr.get_id().decode('utf-8')], tlb_juncs,
-#                                     junc_info_list, msamples)
-#             if not pres:
-#                 continue
-#             with gil:
-#                 type_list.append((lsv_ptr.get_id(),lsv_ptr.get_type()))
-#                 for jobj_ptr in junc_info_list:
-#                     junc_info.append((lsv_ptr.get_id(), jobj_ptr.start, jobj_ptr.end, jobj_ptr.sreads, jobj_ptr.npos))
-#
-#         #     lsv_ptr = out_lsvlist[j]
-#         #     njunc = lsv_ptr.get_num_junctions()
-#         #     with gil:
-#         #         cov_dict[lsv_ptr.get_id().decode('utf-8')] = np.zeros(shape=(njunc, msamples), dtype=np.float32)
-#         #         val_data =
-#         #         # val = np.zeros(shape=(njunc, msamples), dtype=np.float32)
-#         #     pres = lsv_ptr.gather_lsv_info(<np.float32_t *> boots.data, <np.float32_t *> val.data, junc_info_list,
-#         #                                    tlb_juncs, msamples)
-#         #
-#         #         # val_data = <np.float32_t *> pp
-#         #         # val = np.zeros(shape=(njunc, msamples), dtype=np.float32)
-#         #         # print(experiment_name, lsv_ptr.get_id(), njunc, val.shape, lsv_ptr.get_type())
-#         #     # with gil:
-#         #     #     print(pres, experiment_name, lsv_ptr.get_id(), njunc, val.shape, lsv_ptr.get_type())
-#         #
-#         #     if not pres:
-#         #         continue
-#         #     with gil:
-#         #
-#         #
-#         #         # cov_dict[lsv_ptr.get_id().decode('utf-8')] = np.ndarray(shape=(njunc, msamples), dtype=np.float32,
-#         #         #                                                         buffer=val_data, order='C' )
-#         #         Py_INCREF(val.data)
-#         #         cov_dict[lsv_ptr.get_id().decode('utf-8')] = val
-#         #         print("PPPPP", id(cov_dict[lsv_ptr.get_id().decode('utf-8')].data), id(val.data))
-#         #         type_list.append((lsv_ptr.get_id(),lsv_ptr.get_type()))
-#         #         for jobj_ptr in junc_info_list:
-#         #             junc_info.append((lsv_ptr.get_id(), jobj_ptr.start, jobj_ptr.end, jobj_ptr.sreads, jobj_ptr.npos))
-#         #
-#         majiq_io.dump_lsv_coverage(out_file, cov_dict, type_list, junc_info, experiment_name)
-#         tlb_juncs.clear()
-#
-#     return len(type_list)
 
 
 cdef _find_junctions(list file_list, vector[Gene*] gene_vec,  object conf, object logger):
@@ -215,11 +133,13 @@ cdef _find_junctions(list file_list, vector[Gene*] gene_vec,  object conf, objec
 
     cdef int* jvec
 
-
+    cdef pair[string, gene_vect] vector_gene
     cdef map[string, gene_vect] gene_list
     cdef map[string, unsigned int] j_ids
     cdef map[string, int*] junc_summary
     cdef pair[string, unsigned int] it
+
+    cdef map[string, vector[string]] gene_junc_tlb
 
     # print("SIZE", gene_vec.size())
     sortGeneList(gene_vec)
@@ -228,6 +148,9 @@ cdef _find_junctions(list file_list, vector[Gene*] gene_vec,  object conf, objec
         if gene_list.count(gobj.get_chromosome()) == 0:
             gene_list[gobj.get_chromosome()] = gene_vect()
         gene_list[gobj.get_chromosome()].push_back(gobj)
+
+    for vector_gene in gene_list:
+        sortGeneList(vector_gene.second)
 
     for tmp_str, group_list in conf.tissue_repl.items():
         name = tmp_str.encode('utf-8')
@@ -264,29 +187,42 @@ cdef _find_junctions(list file_list, vector[Gene*] gene_vec,  object conf, objec
             logger.info('Done Reading file %s' %(file_list[j][0]))
             _store_junc_file(boots, junc_ids, file_list[j][0], conf.outDir)
 
-    logger.info("Detecting LSVs ngenes:%s " % n)
+    logger.info("Detecting LSVs ngenes: %s " % n)
+
     for i in prange(n, nogil=True, num_threads=nthreads):
         gg = gene_vec[i]
         gg.detect_exons()
+
+        gg.fill_junc_tlb(gene_junc_tlb)
         # with gil:
         #     gene_to_splicegraph(gg, conf)
         # gg.print_exons()
 
         #TODO: IR detection for later
         nlsv = detect_lsvs(out_lsvlist, gg)
-        with gil:
-            print("GENE: %s %s" % (gg.get_id(), nlsv))
+        # with gil:
+        #     logger.info("GENE: %s %s %s" % (gg.get_id(), gg.get_chromosome(), nlsv))
+
+    # import sys
+    # for tt in gene_junc_tlb:
+    #     sys.stdout.write("TLB check %s:" % tt.first)
+    #     for kk in tt.second:
+    #         sys.stdout.write(" %s" %kk)
+    #     sys.stdout.write("\n")
+    #     sys.stdout.flush()
+
 
     logger.info("Generating Splicegraph")
-    # for i in range(n):
-    #     gene_to_splicegraph(gene_vec[i], conf)
+
+    for i in range(n):
+        gene_to_splicegraph(gene_vec[i], conf)
+
+
+    #TODO: Delete gene_list to free mem
 
     logger.info("%s LSV found" % out_lsvlist.size())
-    # #Read bootstrap and fill the
-    logger.info('Storing LSVs files')
     for j in range(nsamples):
-    #
-        cnt = _output_lsv_file_single(out_lsvlist, file_list[j][0], conf.outDir, nthreads, m)
+        cnt = _output_lsv_file_single(out_lsvlist, file_list[j][0], gene_junc_tlb, conf.outDir, nthreads, m)
         logger.info('%s: %d LSVs' %(file_list[j][0], cnt))
 
 
@@ -298,25 +234,28 @@ cdef init_splicegraph(filename):
 
     # erase splice graph file
     with SpliceGraph(filename, delete=True) as sg:
+        print([(xx, type(xx)) for xx in majiq_config.exp_list])
         sg.experiment_names = majiq_config.exp_list
         sg.genome = majiq_config.genome
 
 cdef gene_to_splicegraph(Gene * gne, majiq_config):
 
-    cdef pair[string,Junction *] jj_pair
+    cdef pair[string, Junction *] jj_pair
     cdef Junction * jj
-    cdef pair[string,Exon *] ex_pair
+    cdef pair[string, Exon *] ex_pair
     cdef Exon * ex
+    cdef str gne_id
 
     alt_empty_starts = []
     alt_empty_ends = []
-    gne_id = gne.get_id()
-    # print('GENEID:', gne_id)
+    gne_id = gne.get_id().decode('utf-8')
+    print('GENEID:', gne_id, gne.get_name(), chr(gne.get_strand()), gne.get_chromosome())
     with SpliceGraph(get_builder_splicegraph_filename(majiq_config.outDir)) as sg:
-        sg.gene(gne_id).add(name=gne.get_name(), strand=gne.get_strand(), chromosome=gne.get_chromosome())
+        sg.gene(gne_id).add(name=gne.get_name().decode('utf-8'), strand=chr(gne.get_strand()), chromosome=gne.get_chromosome().decode('utf-8'))
 
         for jj_pair in gne.junc_map_:
             jj = jj_pair.second
+            if not jj.get_denovo_bl(): continue
             if jj.get_start() == FIRST_LAST_JUNC:
                 alt_empty_starts.append(jj.get_end())
                 continue
@@ -326,6 +265,7 @@ cdef gene_to_splicegraph(Gene * gne, majiq_config):
                 continue
 
             # TODO: add transcripts
+            # print('JUNC', gne_id, jj.get_start(), jj.get_end()) ;
             sg.junction(gne_id, jj.get_start(), jj.get_end()).add(annotated=jj.get_annot(),
                                                                   intron_retention=jj.get_intronic())
 
@@ -335,16 +275,13 @@ cdef gene_to_splicegraph(Gene * gne, majiq_config):
             if ex.intron_:
                 continue
 
-            covered = False
             alt_start = []
             for jj in ex.ib:
-                covered = covered or (jj.get_bld_fltr())
                 if jj.get_end() in alt_empty_starts:
                     alt_start.append(jj.get_end())
 
             alt_ends = []
             for jj in ex.ob:
-                covered = covered or (jj.get_bld_fltr())
                 if jj.get_start() in alt_empty_ends:
                     alt_ends.append(jj.get_start())
 
@@ -372,6 +309,7 @@ cdef _core_build(str transcripts, list file_list, object conf, object logger):
     majiq_io.read_gff(transcripts, gene_vec, logger)
     init_splicegraph(get_builder_splicegraph_filename(conf.outDir))
     _find_junctions(file_list, gene_vec, conf, logger)
+
 
 cpdef core_build(str transcripts, list file_list, object conf, object logger):
     _core_build(transcripts, file_list, conf, logger)
