@@ -180,7 +180,7 @@ class ViewPsi(Psi, ViewMatrix):
 
 class ViewDeltaPsi(DeltaPsi, ViewMatrix):
     def __init__(self, args):
-        super().__init__(args.voila_file)
+        super().__init__(args.voila_file[0])
         self.args = args
 
     class _ViewDeltaPsi(DeltaPsi._DeltaPsi, ViewMatrix._ViewMatrix):

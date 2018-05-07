@@ -34,10 +34,7 @@ class SQLType(ABC):
 
 
 class SQL:
-    def __init__(self, filename, model, delete=False, nprocs=1):
-        if not isinstance(delete, bool):
-            Exception('delete must be a boolean value')
-
+    def __init__(self, filename: str, model, delete: bool = False, nprocs: int = 1):
         filename = os.path.expanduser(filename)
 
         if delete is True:

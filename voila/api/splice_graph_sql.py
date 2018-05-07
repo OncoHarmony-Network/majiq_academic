@@ -1,4 +1,5 @@
 from abc import ABC, abstractmethod
+from typing import List
 
 from sqlalchemy import exists, and_
 from sqlalchemy.exc import OperationalError
@@ -10,14 +11,11 @@ from voila.api.sql import SQL
 
 Session = sessionmaker()
 
-# default_commit_on_count = 1e2  # 57.22779321670532 57.578933000564575
-default_commit_on_count = 1e3  # 49.11109209060669 46.35532307624817
-# default_commit_on_count = 1e4  # 49.159239053726196
-# default_commit_on_count = 1e5  # 53.34236812591553
+default_commit_on_count = 1e4
 
 
 class SpliceGraphSQL(SQL):
-    def __init__(self, filename, delete=False, nprocs=1):
+    def __init__(self, filename: str, delete: bool = False, nprocs: int = 1):
         super().__init__(filename, model, delete, nprocs)
 
     @property
@@ -25,7 +23,7 @@ class SpliceGraphSQL(SQL):
         return self.session.query(model.Genome.name).one()[0]
 
     @genome.setter
-    def genome(self, g):
+    def genome(self, g: str):
         self.session.add(model.Genome(name=g))
 
     @property
@@ -33,7 +31,7 @@ class SpliceGraphSQL(SQL):
         return (e for e, in self.session.query(model.Experiment.name).all())
 
     @experiment_names.setter
-    def experiment_names(self, names):
+    def experiment_names(self, names: List[str]):
         self.session.add_all([model.Experiment(name=name) for name in names])
 
     @property
@@ -48,7 +46,7 @@ class SpliceGraphSQL(SQL):
             return -1
 
     @file_version.setter
-    def file_version(self, version):
+    def file_version(self, version: int):
         self.session.add(model.FileVersion(value=version))
 
 
@@ -76,11 +74,11 @@ class SpliceGraphType(ABC):
 
 class Exons(SpliceGraphSQL):
     class _Exon(SpliceGraphType):
-        def __init__(self, sql, gene_id, start, end):
+        def __init__(self, sql, gene_id: str, start: int, end: int):
             self.sql = sql
             self.gene_id = gene_id
-            self.start = int(start)
-            self.end = int(end)
+            self.start = start
+            self.end = end
 
         def add(self, **kwargs):
             coords_extra = kwargs.pop('coords_extra', [])
@@ -106,7 +104,7 @@ class Exons(SpliceGraphSQL):
                 exists().where(and_(model.Exon.gene_id == self.gene_id, model.Exon.start == int(self.start),
                                     model.Exon.end == int(self.end)))).scalar()
 
-    def exon(self, gene_id, start, end):
+    def exon(self, gene_id: str, start: int, end: int):
         return self._Exon(self, gene_id, start, end)
 
     @property
@@ -116,11 +114,11 @@ class Exons(SpliceGraphSQL):
 
 class Junctions(SpliceGraphSQL):
     class _Junction(SpliceGraphType):
-        def __init__(self, sql, gene_id, start, end):
+        def __init__(self, sql, gene_id: str, start: int, end: int):
             self.sql = sql
             self.gene_id = gene_id
-            self.start = int(start)
-            self.end = int(end)
+            self.start = start
+            self.end = end
 
         def add(self, **kwargs):
             reads = kwargs.pop('reads', [])
@@ -142,19 +140,19 @@ class Junctions(SpliceGraphSQL):
         def get(self):
             return self.sql.session.query(model.Junction).get((self.gene_id, self.start, self.end))
 
-        def update_reads(self, experiment, reads):
-            if not int(reads):
+        def update_reads(self, experiment: str, reads: int):
+            if not reads:
                 return
 
             r = model.Reads(junction_gene_id=self.gene_id, junction_start=self.start, junction_end=self.end,
                             experiment_name=experiment, reads=int(reads))
 
             with self.sql.session.no_autoflush:
-                self.sql.add(r)
                 self.get.has_reads = True
+                self.sql.add(r)
                 self.sql.commit(default_commit_on_count)
 
-    def junction(self, gene_id, start, end):
+    def junction(self, gene_id: str, start: int, end: int):
         return self._Junction(self, gene_id, start, end)
 
     @property
@@ -164,7 +162,7 @@ class Junctions(SpliceGraphSQL):
 
 class Genes(SpliceGraphSQL):
     class _Gene(SpliceGraphType):
-        def __init__(self, sql, gene_id):
+        def __init__(self, sql, gene_id: str):
             self.sql = sql
             self.gene_id = gene_id
 
@@ -186,5 +184,5 @@ class Genes(SpliceGraphSQL):
     def genes(self):
         return self.session.query(model.Gene).all()
 
-    def gene(self, gene_id):
+    def gene(self, gene_id: str):
         return self._Gene(self, gene_id)
