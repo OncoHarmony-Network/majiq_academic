@@ -296,8 +296,9 @@ class Builder(BasicPipeline):
         self.elem_dict = manager.dict()
         self.genes_dict = manager.dict()
 
-        mem_allocated = int(psutil.Process().memory_info().rss)/(1024**2)
-        logger.info("PRE DB %.2f MB" % mem_allocated)
+        if self.mem_profile:
+            mem_allocated = int(psutil.Process().memory_info().rss)/(1024**2)
+            logger.info("PRE DB %.2f MB" % mem_allocated)
 
         if not os.path.exists(self.transcripts):
             logger.error('File %s is not accessible' % self.transcripts)

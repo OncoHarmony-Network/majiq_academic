@@ -71,17 +71,18 @@ class Config(object):
             #             'Error in simplify option, first argument should be "all|denovo|annotated" and second'
             #             ' a float between 0..1')
 
-            exps = Config.config_section_map(config, "experiments")
+            exps = Config.config_section_map(config, ""
+                                                     "")
             self.juncfile_list = []
             for exp_idx, lstnames in exps.items():
                 self.tissue_repl[exp_idx] = []
                 # self.juncfile_list[exp_idx] = []
                 elist = lstnames.split(',')
                 for exp in elist:
+
                     self.exp_list.append(exp)
                     self.tissue_repl[exp_idx].append(count)
                     count += 1
-
 
             self.num_experiments = len(self.exp_list)
             self.samfile_name_list = []
@@ -91,7 +92,6 @@ class Config(object):
             for name, ind_list in self.tissue_repl.items():
                 n = min(len(ind_list), np.ceil(len(ind_list)/2))
                 self.min_experiments[name] = int(n) if self.min_exp == -1 else self.min_exp
-                print (len(ind_list), self.min_experiments[name])
                 for exp_idx in ind_list:
                     exp = self.exp_list[exp_idx]
                 # for exp_idx, exp in enumerate(self.exp_list):

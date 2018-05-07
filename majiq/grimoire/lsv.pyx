@@ -173,7 +173,7 @@ cdef int _detect_lsvs(list list_exons, np.ndarray junc_mtrx, float fitfunc_r, st
             ex_mtrx_s = sum_trx[ex_index]
             ex_mtrx_p = pos_trx[ex_index]
 
-            if np.any(np.logical_and(ex_mtrx_s > majiq_config.minpos, ex_mtrx_p > majiq_config.minreads)):
+            if np.any(np.logical_and(ex_mtrx_s >= majiq_config.minpos, ex_mtrx_p >= majiq_config.minreads)):
                 try:
                     lsv_list[ii].append(LSV(gid, gchrom, gstrand, ex, ss=(ii == 1)))
                 except InvalidLSV:

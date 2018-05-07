@@ -41,7 +41,8 @@ def deltapsi_quantification(list_of_lsv, chnk, conf, logger):
         if lidx % 50 == 0:
             print("Event %d ..." % lidx)
             sys.stdout.flush()
-        if f_list[0][lsv_id].coverage.shape[1] < 2:
+        if f_list[0][lsv_id].coverage.shape[1] < 2 or f_list[0][lsv_id].coverage.shape[1] != f_list[1][lsv_id].coverage.shape[1]:
+            logger.info("Skipping Incorrect LSV %s" % lsv_id)
             continue
 
         boots1 = f_list[0][lsv_id].coverage * weights1[lsv_id][:, None, None]
