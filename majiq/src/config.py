@@ -71,8 +71,7 @@ class Config(object):
             #             'Error in simplify option, first argument should be "all|denovo|annotated" and second'
             #             ' a float between 0..1')
 
-            exps = Config.config_section_map(config, ""
-                                                     "")
+            exps = Config.config_section_map(config, "experiments")
             self.juncfile_list = []
             for exp_idx, lstnames in exps.items():
                 self.tissue_repl[exp_idx] = []
