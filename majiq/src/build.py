@@ -211,7 +211,7 @@ class Builder(BasicPipeline):
                     extra['elem_dict'][info_junc[0]].append([info_junc[1], info_junc[2], 0, J_TYPE])
                 except KeyError:
                     extra['elem_dict'][info_junc[0]] = [[info_junc[1], info_junc[2], 0, J_TYPE]]
-                    extra['found'][info_junc] = 1
+                extra['found'][info_junc] = 1
 
         elif msg_type == QUEUE_MESSAGE_BUILD_INTRON:
             info_intron =results[:-1]
@@ -227,7 +227,7 @@ class Builder(BasicPipeline):
                     extra['elem_dict'][info_intron[0]].append([info_intron[1], info_intron[2], 0, IR_TYPE])
                 except KeyError:
                     extra['elem_dict'][info_intron[0]] = [[info_intron[1], info_intron[2], 0, IR_TYPE]]
-                    extra['found'][info_intron] = 1
+                extra['found'][info_intron] = 1
 
         elif msg_type == QUEUE_MESSAGE_SPLICEGRAPH:
             info = results
