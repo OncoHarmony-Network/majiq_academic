@@ -110,7 +110,7 @@ class ViewMatrix(ABC):
 
 class ViewPsi(Psi, ViewMatrix):
     def __init__(self, args):
-        super().__init__(args.voila_file)
+        super().__init__(args.voila_file[0])
         self.args = args
 
     class _ViewPsi(Psi._Psi, ViewMatrix._ViewMatrix):
