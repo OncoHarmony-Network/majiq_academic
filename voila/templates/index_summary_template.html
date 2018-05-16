@@ -15,12 +15,13 @@
     <script src="static/js/lsv.js"></script>
     <script src="static/js/lsvplots.js"></script>
     <script src="static/js/colors.js"></script>
+    <script src="static/js/violin.js"></script>
     <script>
         var db = new PouchDB('{{ database_name }}', {auto_compaction: true});
         var lsv = new Lsv(db);
-        var bp = new LSVPlots(db);
     </script>
     {% if not too_many_lsvs -%}
+        <script src="db/metadata.js"></script>
         {% for gene_id in gene_ids %}
             <script src="db/{{ gene_id }}.js"></script>
         {% endfor %}

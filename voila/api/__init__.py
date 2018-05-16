@@ -1,8 +1,8 @@
 from voila.api.matrix_hdf5 import Psi, DeltaPsi, Heterogen
-from voila.api.splice_graph_sql import Exons, Junctions, Genes
+from voila.api.splice_graph_sql import Exons, Junctions, Genes, IntronRetention
 
 
-class SpliceGraph(Genes, Junctions, Exons):
+class SpliceGraph(Genes, Junctions, Exons, IntronRetention):
     pass
 
 

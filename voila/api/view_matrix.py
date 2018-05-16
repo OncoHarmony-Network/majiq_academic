@@ -49,6 +49,8 @@ class ViewMatrix(ABC):
         else:
             metadata['experiment_names'] = experiment_names
 
+        metadata['_id'] = 'metadata'
+
         return metadata
 
     @abstractmethod

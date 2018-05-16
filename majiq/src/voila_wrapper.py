@@ -57,7 +57,8 @@ def gene_to_splicegraph(gne_id, gne, dict_junctions, exon_dict, list_introns, ma
                 continue
 
             # TODO: add transcripts
-            sg.junction(gne_id, jj.start, jj.end).add(annotated=jj.annot, intron_retention=jj.intronic)
+            if not jj.intronic:
+                sg.junction(gne_id, jj.start, jj.end).add(annotated=jj.annot)
 
         for ex in sorted(exon_dict, key=lambda x: (x.start, x.end)):
             if ex.intron:
@@ -83,11 +84,12 @@ def gene_to_splicegraph(gne_id, gne, dict_junctions, exon_dict, list_introns, ma
                 if ex.end > ex.db_coords[1]:
                     extra_coords.append([ex.db_coords[1] + 1, ex.end])
 
-            sg.exon(gne_id, ex.start, ex.end).add(coords_extra=extra_coords, intron_retention=False, annotated=ex.annot,
-                                                  alt_starts=alt_start, alt_ends=alt_ends)
+            sg.exon(gne_id, ex.start, ex.end).add(coords_extra=extra_coords, annotated=ex.annot, alt_starts=alt_start,
+                                                  alt_ends=alt_ends)
 
         for info in list_introns:
             if info.skip:
                 continue
 
-            sg.exon(gne_id, info.start, info.end).add(annotated=info.annot, intron_retention=True)
+            sg.intron_retention(gne_id, info.start, info.end).add(annotated=info.annot)
+

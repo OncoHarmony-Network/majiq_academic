@@ -166,9 +166,10 @@ class DeltaPsi(Html, Tsv):
                             'Exons coords': self.semicolon_join(
                                 '{0}-{1}'.format(start, end) for start, end in self.filter_exons(lsv_exons)
                             ),
-                            'IR coords': self.semicolon_join(
-                                '{0}-{1}'.format(e.start, e.end) for e in lsv_exons if e.intron_retention
-                            ),
+                            # TODO: this needs to be re-implemented
+                            # 'IR coords': self.semicolon_join(
+                            #     '{0}-{1}'.format(e.start, e.end) for e in lsv_exons if e.intron_retention
+                            # ),
                             'E(dPSI) per LSV junction': self.semicolon_join(
                                 excl_incl[i][1] - excl_incl[i][0] for i in
                                 range(np.size(lsv.bins, 0))

@@ -77,8 +77,8 @@ class AltEnds(Base):
         ForeignKeyConstraint([exon_gene_id, exon_start, exon_end], ['exon.gene_id', 'exon.start', 'exon.end']),)
 
 
-class Reads(Base):
-    __tablename__ = 'reads'
+class JunctionReads(Base):
+    __tablename__ = 'junction_reads'
     __iter__ = base_iter
 
     reads = Column(Integer, nullable=False)
@@ -91,8 +91,21 @@ class Reads(Base):
         ForeignKeyConstraint([junction_gene_id, junction_start, junction_end],
                              ['junction.gene_id', 'junction.start', 'junction.end']),)
 
-    experiment = relationship('Experiment')
-    junction = relationship('Junction')
+
+class IntronRetentionReads(Base):
+    __tablename__ = 'intron_retention_reads'
+    __iter__ = base_iter
+
+    reads = Column(Integer, nullable=False)
+    experiment_name = Column(String, ForeignKey('experiment.name'), primary_key=True)
+    intron_retention_gene_id = Column(String, primary_key=True)
+    intron_retention_start = Column(Integer, primary_key=True)
+    intron_retention_end = Column(Integer, primary_key=True)
+    has_reads = Column(Boolean, default=False)
+
+    __table_args__ = (
+        ForeignKeyConstraint([intron_retention_gene_id, intron_retention_start, intron_retention_end],
+                             ['intron_retention.gene_id', 'intron_retention.start', 'intron_retention.end']),)
 
 
 class Junction(Base):
@@ -102,11 +115,8 @@ class Junction(Base):
     start = Column(Integer, primary_key=True)
     end = Column(Integer, primary_key=True)
     has_reads = Column(Boolean, default=False)
-
-    intron_retention = Column(Integer)
     annotated = Column(Boolean)
 
-    reads = relationship('Reads')
     gene = relationship('Gene')
 
 
@@ -119,12 +129,8 @@ class Exon(Base):
     start = Column(Integer, primary_key=True)
     end = Column(Integer, primary_key=True)
 
-    intron_retention = Column(Integer)
     annotated = Column(Boolean)
 
-    coords_extra = relationship('CoordsExtra')
-    alt_starts = relationship('AltStarts')
-    alt_ends = relationship('AltEnds')
     gene = relationship('Gene')
 
     @property
@@ -152,6 +158,19 @@ class Exon(Base):
         yield from a5_filter(self.gene.junctions)
 
 
+class IntronRetention(Base):
+    __tablename__ = 'intron_retention'
+    __iter__ = base_iter
+
+    gene_id = Column(String, ForeignKey('gene.id'), primary_key=True)
+    start = Column(Integer, primary_key=True)
+    end = Column(Integer, primary_key=True)
+    annotated = Column(Boolean)
+
+    # reads = relationship('IntronRetentionReads')
+    gene = relationship('Gene')
+
+
 class Gene(Base):
     __tablename__ = 'gene'
     __iter__ = base_iter
@@ -162,7 +181,6 @@ class Gene(Base):
     chromosome = Column(String)
 
     junctions = relationship('Junction')
-    exons = relationship('Exon')
 
     @property
     def start(self):
