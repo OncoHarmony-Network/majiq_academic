@@ -1,4 +1,4 @@
-cdef extern from "<sqlite3.h>":
+cdef extern from "sqlite3/sqlite3.h":
     struct sqlite3
 
 cdef sqlite3 *open_db(char *file_name) nogil

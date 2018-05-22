@@ -1,7 +1,7 @@
 from libc.stdio cimport printf, sprintf, fprintf, stderr
 from libc.stdlib cimport malloc, free, abort
 
-cdef extern from "<sqlite3.h>":
+cdef extern from "sqlite3/sqlite3.h":
     struct sqlite3
     int sqlite3_open(const char *filename, sqlite3 ** ppDb) nogil
     int sqlite3_exec(sqlite3*, const char *sql, int (*callback)(void*, int, char**, char**), void *,
