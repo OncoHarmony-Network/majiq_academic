@@ -10,6 +10,8 @@
 #include <string>
 #include "grimoire.hpp"
 
+#include <omp.h>
+
 using namespace std;
 
 namespace grimoire {
@@ -58,7 +60,18 @@ namespace grimoire {
         return nullptr;
     }
 
+/*
+    Gene functions
+*/
 
+    bool islowergene(Gene * a, Gene * b){
+        return (a->get_start() < b->get_start()) || (a->get_start() == b->get_start() && a->get_end() < b->get_end());
+    }
+
+    void sortGeneList(vector<Gene*> &glist) {
+        sort(glist.begin(), glist.end(), islowergene) ;
+        return ;
+    }
 
     void Gene::newExonDefinition(int start, int end, Junction *inbound_j, Junction *outbound_j, bool in_db){
 
@@ -66,15 +79,9 @@ namespace grimoire {
         string key ;
         stringstream s1 ;
         stringstream s2 ;
-        if ((end - start) < 1){
-            return ;
-        }
-
-//        cout << "INPUT:: " << inbound_j << "::" << outbound_j << "\n";
+        if ((end - start) < 1) return ;
 
         ex1 = exonOverlap(exon_map_, start, end) ;
-//        cout << "KKK0:: " << ex1 << ":: " << start << "-" << end << "\n" ;
-
         if (nullptr != inbound_j && nullptr != outbound_j && inbound_j->get_intronic() && outbound_j->get_intronic()) {
             s1 << start ; s2 << end ;
             key = s1.str() + "-" + s2.str() ;
@@ -85,7 +92,6 @@ namespace grimoire {
                 return ;
             }
         } else if (nullptr == ex1){
-//            cout << "KK1\n" ;
             if ((end - start) <= MAX_DENOVO_DIFFERENCE){
                 s1 << start ; s2 << end ;
                 key = s1.str() + "-" + s2.str() ;
@@ -99,9 +105,6 @@ namespace grimoire {
             }
 
         } else {
-
-//            cout << "KK2\n" ;
-
             ex2 = ex1;
             if (start < (ex1->get_start() - MAX_DENOVO_DIFFERENCE)){
                 ex1 = addExon(exon_map_, start, EMPTY_COORD, in_db) ;
@@ -147,11 +150,6 @@ namespace grimoire {
 
         }
         sort(ss_vec.begin(), ss_vec.end(), sort_ss) ;
-
-//        for(const auto & p : ss_vec){
-//            cout<< "##" << p.coord << ", " << p.donor_ss << ", " << p.j << "\n" ;
-//        }
-
         for(const auto & ss : ss_vec){
             if (ss.donor_ss) {
                 if (opened_exon.size() > 0){
@@ -210,6 +208,106 @@ namespace grimoire {
         }
         return ;
     }
+
+    void Gene::update_junc_flags(int efflen, bool is_last_exp, unsigned int minreads, unsigned int minpos,
+                                  unsigned int denovo_thresh, unsigned int min_experiments){
+        for(const auto &p: junc_map_){
+            (p.second)->update_flags(efflen, minreads, minpos, denovo_thresh, min_experiments) ;
+            (p.second)->clear_nreads(is_last_exp) ;
+        }
+        return ;
+    }
+
+    void Gene::detect_introns(vector<Intron*> intronlist){
+
+//int tid = omp_get_thread_num();
+//cout << tid<< " GEN ss_vec for gene:"<< id_ << "\n" ;
+        vector<Ssite> ss_vec ;
+        vector<Junction *> opened_exon ;
+        int start_ir = 0 ;
+        int end_ir = 0 ;
+
+
+
+        for (const auto &jnc : junc_map_){
+            if (!(jnc.second)->get_denovo_bl()) continue ;
+            if ((jnc.second)->get_start() > 0) {
+                Ssite s = {(jnc.second)->get_start(), 1, jnc.second} ;
+                ss_vec.push_back(s) ;
+            }
+            if ((jnc.second)->get_end() > 0) {
+                Ssite s = {(jnc.second)->get_end(), 0, jnc.second} ;
+                ss_vec.push_back(s) ;
+            }
+        }
+        sort(ss_vec.begin(), ss_vec.end(), sort_ss) ;
+//cout << tid<< " Analize ss_vec for gene:"<< id_ << "\n" ;
+        for(const auto & ss : ss_vec){
+            if (ss.donor_ss) {
+                start_ir = ss.coord ;
+
+            } else {
+                if (start_ir <= 0) {
+                    continue ;
+                } else {
+                    end_ir = ss.coord ;
+                    // new intron
+                    // who creates the intron int_ptrs ?
+                    // check if the introns are created in the io_bam functions for bam
+                    #pragma omp critical
+                    {
+                        Intron * irObj = new Intron(start_ir, end_ir, false, this) ;
+                        intronlist.push_back(irObj) ;
+                    }
+
+                    start_ir = 0 ;
+                }
+            }
+        }
+//cout << tid<< " END detect_introns for  gene:"<< id_ << "\n" ;
+    }
+
+    void Gene::add_intron(Intron * inIR_ptr, unsigned int min_exps){
+        bool found = false ;
+
+        for (const auto &ir: intron_vec_){
+            if (ir->get_end() < inIR_ptr->get_start() || ir->get_start() > inIR_ptr->get_end()) continue ;
+            if (ir->get_end() >= inIR_ptr->get_start() && ir->get_start() <= inIR_ptr->get_end()){
+                ir->overlaping_intron(inIR_ptr) ;
+                ir->update_flags(min_exps) ;
+                found = true ;
+            }
+        }
+
+        if(!found){
+            inIR_ptr->update_flags(min_exps) ;
+            intron_vec_.push_back(inIR_ptr) ;
+        }else{
+            delete(inIR_ptr) ;
+        }
+    }
+
+    void Gene::print_exons(){
+
+        for(const auto & ex: exon_map_ ){
+            cout << "EXON:: "<< ex.first << "\n" ;
+            for (const auto & j1: (ex.second)->ib){
+                cout << "<<< " << j1->get_start() << "-" << j1->get_end() << "\n";
+            }
+            for (const auto & j1: (ex.second)->ob){
+                cout << ">>>" << j1->get_start() << "-" << j1->get_end() << "\n";
+            }
+        }
+    }
+
+
+    bool Intron::is_reliable(float min_intron_cov){
+        return true ;
+    }
+
+/*
+    LSV fuctions
+*/
 
     bool is_lsv(set<Junction*> &juncSet, bool ss){
         unsigned int c1 = 0 ;
@@ -278,36 +376,31 @@ namespace grimoire {
         int nlsv = 0 ;
         #pragma omp critical
         for(const auto &l: lsvGenes){
-//cout << "DETECT LSVS PER GENE9.5"<< l->get_id() <<"\n" ;
             if (remLsv.count(l->get_id())==0){
                 ++nlsv ;
-//                cout << "DETECT LSVS PER GENE9.7"<< l->get_id() <<"\n" ;
                 lsv_list.push_back(l) ;
             }else{
-//                cout << "DETECT LSVS PER GENE9.8"<< l->get_id() <<"\n" ;
                 delete l;
             }
         }
-//cout << "DETECT LSVS PER GENE10\n" ;
         return  nlsv;
 
     }
 
-    bool islowergene(Gene * a, Gene * b){
-        return (a->get_start() < b->get_start()) || (a->get_start() == b->get_start() && a->get_end() < b->get_end());
+    bool positive(lsvtype a, lsvtype b){
+        return ( a.coord<b.coord ||
+                (a.coord == b.coord && a.ref_coord<b.ref_coord) ||
+                (a.ex_ptr->get_intron() && !b.ex_ptr->get_intron()) ) ;
     }
 
-    void sortGeneList(vector<Gene*> &glist) {
-        sort(glist.begin(), glist.end(), islowergene) ;
-        return ;
+    bool reverse(lsvtype a, lsvtype b){
+        return ( a.coord>b.coord ||
+                (a.coord == b.coord && a.ref_coord>b.ref_coord) ||
+                (a.ex_ptr->get_intron() && !b.ex_ptr->get_intron()) ) ;
     }
 
     bool LSV::gather_lsv_info(float* source, float* target, list<Jinfo*> &info, map<string, Jinfo> &tlb,
                                                                                   unsigned int msample){
-
-
-//        target = calloc((junctions_.size*msample), sizeof(float)));
-
         float * s1 ;
         float * t1 = target ;
         unsigned int count = 0 ;
@@ -332,18 +425,6 @@ namespace grimoire {
         return count>0 ;
     }
 
-    bool positive(lsvtype a, lsvtype b){
-        return ( a.coord<b.coord ||
-                (a.coord == b.coord && a.ref_coord<b.ref_coord) ||
-                (a.ex_ptr->get_intron() && !b.ex_ptr->get_intron()) ) ;
-    }
-
-    bool reverse(lsvtype a, lsvtype b){
-        return ( a.coord>b.coord ||
-                (a.coord == b.coord && a.ref_coord>b.ref_coord) ||
-                (a.ex_ptr->get_intron() && !b.ex_ptr->get_intron()) ) ;
-    }
-
     string LSV::set_type(Exon* ref_ex, bool ss){
 
         string ref_exon_id = to_string(ref_ex->get_start()) + "-" + to_string(ref_ex->get_end()) ;
@@ -366,23 +447,12 @@ namespace grimoire {
         else sort(sp_list.begin(), sp_list.end(), reverse) ;
 
         string ext_type = (ss != b) ? "t" : "s" ;
-
-//        string prev_ex ;
-//        for (const auto &ptr: sp_list){
-//            if(ptr.ex_ptr == nullptr) continue ;
-//            prev_ex = to_string(ptr.ex_ptr->get_start()) + "-" + to_string(ptr.ex_ptr->get_end()) ;
-//            break ;
-//        }
-
         string prev_ex = to_string(sp_list[0].ex_ptr->get_start()) + "-" + to_string(sp_list[0].ex_ptr->get_end()) ;
         unsigned int excount = 1 ;
         if (ss) for (const auto &j: ref_ex->ob) ref_ss_set.insert(j->get_start()) ;
         else for (const auto &j: ref_ex->ib) ref_ss_set.insert(j->get_end()) ;
 
         unsigned int jidx = 0 ;
-
-//cout << " ## " << gObj_->get_id() << "strand:"<< gObj_->get_strand()<<" SS: "<< ss << " and " << b << "\n" ;
-
 
         for (const auto &ptr: sp_list){
             jidx ++ ;
@@ -421,30 +491,6 @@ namespace grimoire {
             junctions_.push_back(ptr.jun_ptr) ;
         }
         return ext_type ;
-    }
-
-
-    void Gene::update_junc_flags(int efflen, bool is_last_exp, unsigned int minreads, unsigned int minpos,
-                                  unsigned int denovo_thresh, unsigned int min_experiments){
-        for(const auto &p: junc_map_){
-            (p.second)->update_flags(efflen, minreads, minpos, denovo_thresh, min_experiments) ;
-            (p.second)->clear_nreads(is_last_exp) ;
-        }
-        return ;
-    }
-
-
-    void Gene::print_exons(){
-
-        for(const auto & ex: exon_map_ ){
-            cout << "EXON:: "<< ex.first << "\n" ;
-            for (const auto & j1: (ex.second)->ib){
-                cout << "<<< " << j1->get_start() << "-" << j1->get_end() << "\n";
-            }
-            for (const auto & j1: (ex.second)->ob){
-                cout << ">>>" << j1->get_start() << "-" << j1->get_end() << "\n";
-            }
-        }
     }
 }
 

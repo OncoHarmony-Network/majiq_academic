@@ -57,6 +57,28 @@ namespace io_bam {
         return l-1;
     }
 
+    int intronSearch(vector<Intron *> a, int n, const int start_pos) {
+        int l = 0 ;
+        int h = n ; // Not n - 1
+        while (l < h) {
+            int mid = (l + h) / 2 ;
+            if (a[mid]->get_start()>=start_pos) {
+                h = mid ;
+            } else {
+                l = mid +1 ;
+            }
+        }
+        return l-1;
+    }
+
+    inline int* IOBam::new_junc_values(const string key){
+        junc_map[key] = junc_vec.size() ;
+        int* v = (int*) calloc(eff_len_, sizeof(int)) ;
+        junc_vec.push_back(v) ;
+        return v;
+    }
+
+
     char IOBam::_get_strand(bam1_t * read){
         char strn = '.';
 
@@ -143,9 +165,7 @@ namespace io_bam {
         #pragma omp critical
         {
             if(junc_map.count(key) == 0) {
-                junc_map[key] = junc_vec.size() ;
-                int* v = (int*) calloc(eff_len_, sizeof(int)) ;
-                junc_vec.push_back(v) ;
+                int* v = new_junc_values(key) ;
                 find_junction_genes(chrom, strand, start, end, v) ;
             }
             update_junction_read(key, offset, 1) ;
@@ -162,7 +182,7 @@ namespace io_bam {
         int read_pos = read->core.pos;
         string chrom(header->target_name[read->core.tid]);
 
-        uint32_t *cigar = bam_get_cigar(read);
+        uint32_t *cigar = bam_get_cigar(read) ;
 
         int off = 0;
         for (int i = 0; i < n_cigar; ++i) {
@@ -186,26 +206,74 @@ namespace io_bam {
     }
 
 
-    int IOBam::ParseJunctionsFromFile(){
+    int IOBam::parse_read_for_ir(bam_hdr_t *header, bam1_t *read) {
+        int n_cigar = read->core.n_cigar ;
+        if (!_unique(read)) // max one cigar operation exists(likely all matches)
+            return 0;
+        const int read_pos = read->core.pos;
+        const string chrom(header->target_name[read->core.tid]) ;
+        const int  nintrons = intronVec_[chrom].size() ;
+        uint32_t *cigar = bam_get_cigar(read) ;
+
+        int idx = intronSearch(intronVec_[chrom], nintrons, read_pos) ;
+        if (idx<0) return 0 ;
+
+        vector<pair<int, int>> junc_record ;
+        bool junc_found = false ;
+
+        int off = 0;
+        for (int i = 0; i < n_cigar; ++i) {
+            const char op = bam_cigar_op(cigar[i]);
+            const int ol = bam_cigar_oplen(cigar[i]);
+            if (op == BAM_CMATCH || op == BAM_CDEL ||  op == BAM_CEQUAL || op == BAM_CDIFF){
+                 off += ol;
+            }
+            else if( op == BAM_CREF_SKIP && off >= MIN_BP_OVERLAP){
+                junc_found = true ;
+                const int j_end = read->core.pos + off + ol +1;
+                const int j_start =  read->core.pos + off;
+                try {
+                    junc_record.push_back({j_start, j_end}) ;
+                } catch (const std::logic_error& e) {
+                    cout << "ERROR" << e.what() << '\n';
+                }
+                off += ol ;
+            }
+        }
+
+        for(int i=idx; i<nintrons; ++i){
+            Intron * intron = intronVec_[chrom][i] ;
+            for (const auto & j:junc_record){
+                if ((j.first>=intron->get_start() && j.first<= intron->get_end() )
+                    || (j.second>=intron->get_start() && j.second<= intron->get_end())){
+                    junc_found = false ;
+                    break ;
+                }
+            }
+            if (!junc_found){
+                int offset = (int)(read_pos - intron->get_start())/ eff_len_ ;
+                if (intron->read_rates_ == nullptr){
+                    intron->add_read_rates_buff(eff_len_) ;
+                }
+                intron->read_rates_[offset] += 1 ;
+            }
+        }
+        return 0 ;
+    }
+
+
+
+    int IOBam::ParseJunctionsFromFile(bool ir_func){
 
         samFile *in;
-        int flag = 0, ignore_sam_err = 0;
-        char moder[8];
+        int ignore_sam_err = 0;
         bam_hdr_t *header ;
         bam1_t *aln;
 
         int r = 0, exit_code = 0;
         hts_opt *in_opts = NULL;
-        int nreads = 0;
         int extra_hdr_nuls = 0;
-        int multi_reg = 0;
 
-
-    //    strcpy(moder, "r");
-    //    if (flag & READ_CRAM) strcat(moder, "c");
-    //    else if ((flag & READ_COMPRESSED) == 0) strcat(moder, "b");
-    //    in = sam_open(filename, moder) ;
-        cout << "FILE:" << bam_ << "\n";
         in = sam_open(bam_.c_str(), "rb") ;
         if (NULL == in) {
             fprintf(stderr, "Error opening \"%s\"\n", bam_.c_str());
@@ -229,7 +297,6 @@ namespace io_bam {
         }
 
         aln = bam_init1();
-
         htsThreadPool p = {NULL, 0};
         if (nthreads_ > 0) {
             p.pool = hts_tpool_init(nthreads_);
@@ -241,13 +308,14 @@ namespace io_bam {
             }
         }
 
-        int ccjv = 0 ;
-        while ((r = sam_read1(in, header, aln)) >= 0) {
-            parse_read_into_junctions(header, aln) ;
-//            if (nreads && --nreads == 0)
-//                break;
-        }
+        int (IOBam::*parse_func)(bam_hdr_t *, bam1_t *) ;
+        if(ir_func) parse_func = &IOBam::parse_read_for_ir ;
+        else parse_func = &IOBam::parse_read_into_junctions ;
 
+
+        while ((r = sam_read1(in, header, aln)) >= 0) {
+            (this->*parse_func)(header, aln) ;
+        }
         if (r < -1) {
             fprintf(stderr, "Error parsing input.\n");
             exit_code = 1;
@@ -277,7 +345,7 @@ namespace io_bam {
 
             int* vec = junc_vec[jidx] ;
             int npos = 0 ;
-            for(int i=0; i<eff_len_; ++i){
+            for(unsigned int i=0; i<eff_len_; ++i){
                 npos = vec[i]? 1 : 0 ;
             }
             if (npos == 0) continue ;
@@ -303,14 +371,14 @@ namespace io_bam {
     }
 
     int * IOBam::get_junc_vec_summary(){
-        int njunc = junc_map.size() ;
+        int njunc = junc_vec.size() ;
         int * res = (int *) calloc(2*njunc, sizeof(int)) ;
 
         #pragma omp parallel for num_threads(nthreads_)
         for(int jidx=0; jidx < njunc; ++jidx){
             int ss = 0 ;
             int np = 0 ;
-            for(int i=0; i<eff_len_; ++i){
+            for(unsigned int i=0; i<eff_len_; ++i){
                 ss += junc_vec[jidx][i] ;
                 np += junc_vec[jidx][i]? 1 : 0 ;
             }
@@ -319,5 +387,48 @@ namespace io_bam {
         }
         return res ;
     }
+
+    void IOBam::detect_introns(float min_intron_cov, unsigned int min_experiments){
+
+//cout << "INTRON RETENTION START\n" ;
+        for (const auto & it: glist_){
+            if (intronVec_.count(it.first)==0){
+                intronVec_[it.first] = vector<Intron*>() ;
+            }
+            const int n = (it.second).size() ;
+            #pragma omp parallel for num_threads(nthreads_)
+            for(int g_it = 0; g_it<n; g_it++){
+                (it.second)[g_it]->detect_introns(intronVec_[it.first]) ;
+            }
+//cout << " FIN detect_introns " << " / "<<n<<"\n" ;
+        }
+//cout << "PARSING IR\n" ;
+        ParseJunctionsFromFile(true) ;
+cout << "DETECTIon STEP\n" ;
+        for (const auto & it: intronVec_){
+            const int n = (it.second).size() ;
+            #pragma omp parallel for num_threads(nthreads_)
+            for(int idx = 0; idx<n; idx++){
+                Intron * intrn_it = (it.second)[idx] ;
+                bool pass = intrn_it->is_reliable(min_intron_cov) ;
+                if( pass ){
+                    const string key = to_string(intrn_it->get_start()) + "-" + to_string(intrn_it->get_end()) ;
+                    junc_map[key] = junc_vec.size() ;
+                    junc_vec.push_back(intrn_it->read_rates_) ;
+                    (intrn_it->get_gene())->add_intron(intrn_it, min_experiments) ;
+//                    for (int i=0; i< intrn_it->nbins_; i++){
+//                        int count = intrn_it->read_rates_[i] ;
+//                        count = count>0 ? count : 1 ;
+//                        v[i] = intrn_it->read_rates_[i] ;
+//                    }
+
+
+                }
+
+            }
+        }
+cout << "END IR\n" ;
+    }
+
 
 }

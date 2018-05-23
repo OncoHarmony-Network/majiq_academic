@@ -42,7 +42,9 @@ cdef extern from "grimoire.hpp" namespace "grimoire":
         void    print_gene()     nogil ;
         void    print_exons()    nogil ;
         void    detect_exons()   nogil ;
+        void    detect_introns() nogil ;
 
+        void    create_annot_intron(int start_ir, int end_ir) nogil ;
         void    add_elements(map[string, Junction*] junc_map, map[string, Exon*] exon_map) nogil ;
         void    update_junc_flags(int efflen, bint is_last_exp, unsigned int minreads, unsigned int minpos,
                                   unsigned int denovo_thresh, unsigned int min_experiments) nogil ;

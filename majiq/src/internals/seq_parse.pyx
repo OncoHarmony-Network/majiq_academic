@@ -1,5 +1,4 @@
-from majiq.src.internals.io_bam cimport IOBam, gene_vect
-# from majiq.src.internals.interval cimport Interval, ITNode, insert
+from majiq.src.internals.io_bam cimport IOBam, gene_vect_t #, intron_vect_t
 from majiq.src.internals.grimoire cimport Junction, Gene, Exon, LSV, Jinfo, detect_lsvs, boostrap_samples, sortGeneList
 #
 import cython
@@ -14,14 +13,11 @@ cimport openmp
 cimport majiq.src.io as majiq_io
 from cython.parallel import prange
 
-#from cython cimport parallel
 from libc.stdlib cimport calloc, free
 from numpy.random  import choice
 from scipy.stats import nbinom, poisson
 import numpy as np
 cimport numpy as np
-
-
 
 cdef _store_junc_file(np.ndarray boots, list junc_ids, str experiment_name, str outDir):
 
@@ -31,8 +27,6 @@ cdef _store_junc_file(np.ndarray boots, list junc_ids, str experiment_name, str 
     vals['junc_info'] = np.array(junc_ids, dtype=dt)
     with open(out_file, 'w+b') as ofp:
         np.savez(ofp, **vals)
-
-from cpython cimport PyObject, Py_INCREF
 
 def update_splicegraph_junction(sg, gene_id, start, end, nreads, exp):
     if FIRST_LAST_JUNC not in (start, end):
@@ -73,11 +67,12 @@ cdef int _output_lsv_file_single(vector[LSV*] out_lsvlist, str experiment_name, 
                 tlb_juncs[junc_ids[i][0]] = Jinfo(i, junc_ids[i][1], junc_ids[i][2], junc_ids[i][3], junc_ids[i][4])
                 if tlb_j_g.count(junc_ids[i][0]) > 0 :
                     for gid in tlb_j_g[junc_ids[i][0]]:
-                        print("ADD COUNT", i, gid.decode('utf-8'), junc_ids[i][1], junc_ids[i][2], junc_ids[i][3], junc_ids[i][0], experiment_name)
+                        # print("ADD COUNT", i, gid.decode('utf-8'), junc_ids[i][1], junc_ids[i][2], junc_ids[i][3], junc_ids[i][0], experiment_name)
                         update_splicegraph_junction(sg, gid.decode('utf-8'), junc_ids[i][1], junc_ids[i][2], junc_ids[i][3],
                                                     experiment_name)
                 else:
-                    print("NOT FOuND", junc_ids[i][0])
+                    pass
+                    # print("NOT FOuND", junc_ids[i][0])
 
             del junc_ids
 
@@ -113,6 +108,8 @@ cdef _find_junctions(list file_list, vector[Gene*] gene_vec,  object conf, objec
     cdef unsigned int minpos = conf.minpos
     cdef unsigned int minreads = conf.minreads
     cdef unsigned int denovo_thresh= conf.min_denovo
+    cdef float min_ir_cov = conf.min_intronic_cov
+    cdef bint ir = conf.ir
     cdef int i, j
     cdef int k=conf.k, m=conf.m
     cdef float pvalue_limit=conf.pvalue_limit
@@ -133,11 +130,13 @@ cdef _find_junctions(list file_list, vector[Gene*] gene_vec,  object conf, objec
 
     cdef int* jvec
 
-    cdef pair[string, gene_vect] vector_gene
-    cdef map[string, gene_vect] gene_list
+    cdef pair[string, gene_vect_t] vector_gene
+    cdef map[string, gene_vect_t] gene_list
     cdef map[string, unsigned int] j_ids
     cdef map[string, int*] junc_summary
     cdef pair[string, unsigned int] it
+
+    # cdef map[string, intron_vect_t] intron_d
 
     cdef map[string, vector[string]] gene_junc_tlb
 
@@ -146,7 +145,9 @@ cdef _find_junctions(list file_list, vector[Gene*] gene_vec,  object conf, objec
 
     for gobj in gene_vec:
         if gene_list.count(gobj.get_chromosome()) == 0:
-            gene_list[gobj.get_chromosome()] = gene_vect()
+            gene_list[gobj.get_chromosome()] = gene_vect_t()
+            # if ir:
+            #     intron_d[gobj.get_chromosome()] = intron_vect_t()
         gene_list[gobj.get_chromosome()].push_back(gobj)
 
     for vector_gene in gene_list:
@@ -162,8 +163,13 @@ cdef _find_junctions(list file_list, vector[Gene*] gene_vec,  object conf, objec
 
             with nogil:
                 c_iobam = IOBam(bamfile, strandness, eff_len, nthreads, gene_list)
-                c_iobam.ParseJunctionsFromFile()
+                c_iobam.ParseJunctionsFromFile(False)
                 njunc = c_iobam.get_njuncs()
+
+                if ir:
+                    with gil:
+                        logger.info('Detect Intron retention %s' %(file_list[j][0]))
+                    c_iobam.detect_introns(min_ir_cov, min_experiments)
 
             boots = np.zeros(shape=(njunc, m), dtype=np.float32)
             with nogil:
@@ -182,7 +188,7 @@ cdef _find_junctions(list file_list, vector[Gene*] gene_vec,  object conf, objec
                 # print(file_list[j][0], j, last_it_grp, (j==last_it_grp), it.second, it.first)
                 tmp_str = it.first.decode('utf-8').split(':')[2]
                 start, end = (int(xx) for xx in tmp_str.split('-'))
-                junc_ids[it.second] = (it.first.decode('utf-8'), start, end, jvec[it.second], jvec[it.second + njunc])
+                junc_ids[it.second] = (it.first.decode('utf-8'), start, end, jvec[it.second], jvec[it.second + njunc]1)
 
             logger.info('Done Reading file %s' %(file_list[j][0]))
             _store_junc_file(boots, junc_ids, file_list[j][0], conf.outDir)
@@ -272,8 +278,9 @@ cdef gene_to_splicegraph(Gene * gne, majiq_config):
         for ex_pair in gne.exon_map_:
             ex = ex_pair.second
         #for ex in sorted(exon_dict, key=lambda x: (x.start, x.end)):
-            if ex.intron_:
-                continue
+            # if ex.intron_:
+            #     sg.exon(gne_id, ex.start_, ex.end_).add(annotated=ex.annot_, intron_retention=True)
+            #     continue
 
             alt_start = []
             for jj in ex.ib:

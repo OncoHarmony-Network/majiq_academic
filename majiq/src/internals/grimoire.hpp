@@ -11,7 +11,7 @@
 #define EMPTY_COORD  -1
 #define FIRST_LAST_JUNC  -2
 #define MAX_DENOVO_DIFFERENCE 500
-
+#define MIN_INTRON_BINSIZE 1000
 
 using namespace std ;
 
@@ -83,9 +83,8 @@ namespace grimoire{
                     denovo_bl_ = denovo_bl_ || (denovo_cnt_ >= min_experiments) ;
                 }
 
-cout << get_key() << " : sumreads npos: " << sum_reads<< " : "<< npos << " denovo_thresh: "<<denovo_thresh
-
-<< " : annot_: " <<  annot_ << "denovo::"<<denovo_bl_<<"\n" ;
+//cout << get_key() << " : sumreads npos: " << sum_reads<< " : "<< npos << " denovo_thresh: "<<denovo_thresh
+//<< " : annot_: " <<  annot_ << "denovo::"<<denovo_bl_<<"\n" ;
                 return ;
             }
 
@@ -132,6 +131,61 @@ cout << get_key() << " : sumreads npos: " << sum_reads<< " : "<< npos << " denov
             void    set_end(int end1)       { end_ = end1 ; }
     };
 
+    class Intron {
+        private:
+            int     start_ ;
+            int     end_ ;
+            bool    annot_ ;
+            Gene *  gObj_ ;
+            int     flt_count_ ;
+            bool    ir_flag_ ;
+
+
+        public:
+            int *   read_rates_ ;
+            int     nbins_ ;
+
+            Intron () {}
+            Intron (int start1, int end1, bool annot1, Gene* gObj1): start_(start1), end_(end1),
+                                                                     annot_(annot1), gObj_(gObj1){
+
+                flt_count_  = 0 ;
+                ir_flag_    = false ;
+                read_rates_ = nullptr ;
+                nbins_ = 0 ;
+            }
+
+            int     get_start()   { return start_ ; }
+            int     get_end()     { return end_ ; }
+            int     get_annot()   { return annot_ ; }
+            Gene*   get_gene()    { return gObj_ ; }
+
+            void     add_read_rates_buff(int nbins1){
+
+                if ( end_ - start_ >= nbins1 * MIN_INTRON_BINSIZE ) {
+                    nbins_ = nbins1 ;
+                } else {
+                    nbins_ = (end_ - start_) / MIN_INTRON_BINSIZE ;
+
+                }
+
+                read_rates_ = (int*) calloc(nbins_, sizeof(int)) ;
+
+            }
+            bool    is_reliable(float min_intron_cov) ;
+            inline void  update_flags(int min_exps) {
+                flt_count_ += 1 ;
+                ir_flag_ = (flt_count_ >= min_exps) ;
+            }
+
+            void overlaping_intron(Intron * inIR_ptr){
+                start_ = max(start_, inIR_ptr->get_start()) ;
+                end_ = min(end_, inIR_ptr->get_end()) ;
+                read_rates_ = inIR_ptr->read_rates_ ;
+
+            }
+    };
+
     class Gene {
         private:
             string id_ ;
@@ -142,11 +196,12 @@ cout << get_key() << " : sumreads npos: " << sum_reads<< " : "<< npos << " denov
             int end_ ;
 
         public:
-            map<string, Junction*> junc_map_ ;
-            map<string, Exon*> exon_map_ ;
+            map <string, Junction*> junc_map_ ;
+            map <string, Exon*> exon_map_ ;
+            vector <Intron*> intron_vec_ ;
 
 
-            Gene(){}
+            Gene (){}
             Gene(string id1, string name1, string chromosome1,
                  char strand1, unsigned int start1, unsigned int end1): id_(id1), name_(name1), chromosome_(chromosome1),
                                                                              strand_(strand1), start_(start1), end_(end1){}
@@ -167,6 +222,13 @@ cout << get_key() << " : sumreads npos: " << sum_reads<< " : "<< npos << " denov
             string  get_region() ;
             void    print_exons() ;
             void    detect_exons() ;
+            void    detect_introns(vector<Intron*> intronlist) ;
+//            voi d    create_annot_intron(int start_ir, int end_ir) ;
+            void    create_annot_intron(int start_ir, int end_ir){
+                Intron * ir = new Intron(start_ir, end_ir, true, this) ;
+                intron_vec_.push_back(ir) ;
+            }
+            void    add_intron(Intron * inIR_ptr, unsigned int min_exps) ;
 
             void    newExonDefinition(int start, int end, Junction *inbound_j, Junction *outbound_j, bool in_db) ;
             void    fill_junc_tlb(map<string, vector<string>> &tlb) ;
@@ -192,12 +254,16 @@ cout << get_key() << " : sumreads npos: " << sum_reads<< " : "<< npos << " denov
         int             npos ;
     };
 
+
+
     struct lsvtype {
         int         coord ;
         int         ref_coord ;
         Exon *      ex_ptr ;
         Junction *  jun_ptr ;
     };
+
+
 
 
     class LSV{
@@ -228,5 +294,8 @@ cout << get_key() << " : sumreads npos: " << sum_reads<< " : "<< npos << " denov
     bool is_lsv(set<Junction*> &juncSet, bool ss) ;
     int detect_lsvs(vector<LSV*> &out_lsvlist, Gene * gObj);
     void sortGeneList(vector<Gene*> &glist) ;
+
 }
+
 #endif
+
