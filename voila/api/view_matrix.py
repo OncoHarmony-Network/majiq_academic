@@ -49,6 +49,8 @@ class ViewMatrix(ABC):
         else:
             metadata['experiment_names'] = experiment_names
 
+        metadata['_id'] = 'metadata'
+
         return metadata
 
     @abstractmethod
@@ -110,7 +112,7 @@ class ViewMatrix(ABC):
 
 class ViewPsi(Psi, ViewMatrix):
     def __init__(self, args):
-        super().__init__(args.voila_file)
+        super().__init__(args.voila_file[0])
         self.args = args
 
     class _ViewPsi(Psi._Psi, ViewMatrix._ViewMatrix):
@@ -180,7 +182,7 @@ class ViewPsi(Psi, ViewMatrix):
 
 class ViewDeltaPsi(DeltaPsi, ViewMatrix):
     def __init__(self, args):
-        super().__init__(args.voila_file)
+        super().__init__(args.voila_file[0])
         self.args = args
 
     class _ViewDeltaPsi(DeltaPsi._DeltaPsi, ViewMatrix._ViewMatrix):
@@ -433,18 +435,24 @@ class ViewHeterogens:
 
         @property
         def junctions(self):
-            def find_junctions():
-                for h in self.heterogens:
-                    try:
-                        yield h.junctions
-                    except (GeneIdNotFoundInVoilaFile, LsvIdNotFoundInVoilaFile):
-                        pass
+            juncs = None
+            source_file = None
 
-            juncs = find_junctions()
-            junc = next(juncs)
-            for j in juncs:
-                assert (np.array_equal(junc, j))
-            return junc
+            for h in self.heterogens:
+                try:
+
+                    if juncs is None:
+                        juncs = h.junctions
+                        source_file = h.matrix_hdf5.h.filename
+                    if not np.array_equal(juncs, h.junctions):
+                        filename = h.matrix_hdf5.h.filename
+                        voila_log().warning('For junctions in LSV {}, {} and {} do not agree.'.format(self.lsv_id,
+                                                                                                      filename,
+                                                                                                      source_file))
+                except (GeneIdNotFoundInVoilaFile, LsvIdNotFoundInVoilaFile):
+                    pass
+
+            return juncs
 
         @property
         def junction_stats(self):
@@ -468,11 +476,12 @@ class ViewHeterogens:
 
     @property
     def junction_stats_column_names(self):
+        one_het = self.one_heterogen
         for vh in self.view_heterogens:
             meta = vh.view_metadata
             groups = '_'.join(meta['group_names'])
             for name in meta['stat_names']:
-                if self.one_heterogen:
+                if one_het:
                     yield name
                 else:
                     yield '{} {}'.format(groups, name)

@@ -18,7 +18,8 @@ $(document).on('change', '.highlight-lsv', function () {
     var splice_graphs = table.parentElement.querySelectorAll('.splice-graph');
     var lsv_ids = get_lsv_ids(table);
     Array.from(splice_graphs).forEach(function (splice_graph) {
-        sg.update(splice_graph, lsv_ids)
+        console.log(lsv_ids);
+        new SpliceGraph(splice_graph, {lsv_ids: lsv_ids})
     });
 });
 

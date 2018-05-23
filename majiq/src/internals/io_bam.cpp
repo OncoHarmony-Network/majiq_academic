@@ -390,6 +390,8 @@ namespace io_bam {
 
     void IOBam::detect_introns(float min_intron_cov, unsigned int min_experiments){
 
+            junc_limit_index_ = junc_vec.size() ;
+
 //cout << "INTRON RETENTION START\n" ;
         for (const auto & it: glist_){
             if (intronVec_.count(it.first)==0){
@@ -400,11 +402,11 @@ namespace io_bam {
             for(int g_it = 0; g_it<n; g_it++){
                 (it.second)[g_it]->detect_introns(intronVec_[it.first]) ;
             }
-//cout << " FIN detect_introns " << " / "<<n<<"\n" ;
         }
 //cout << "PARSING IR\n" ;
         ParseJunctionsFromFile(true) ;
-cout << "DETECTIon STEP\n" ;
+//cout << "DETECTIon STEP\n" ;
+
         for (const auto & it: intronVec_){
             const int n = (it.second).size() ;
             #pragma omp parallel for num_threads(nthreads_)

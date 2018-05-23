@@ -24,4 +24,5 @@ cdef extern from "io_bam.hpp" namespace "io_bam":
         map[string, unsigned int] get_junc_map() nogil
         vector[Junction *] get_junc_vec() nogil
         int * get_junc_vec_summary() nogil ;
+        unsigned int get_junc_limit_index() nogil;
 

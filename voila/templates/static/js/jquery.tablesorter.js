@@ -1102,26 +1102,30 @@
 
 
             $('.lsvLegend', table).each(function () {
-                lsv.renderLsvSpliceGraph(this);
+                // lsv.renderLsvSpliceGraph(this);
             });
 
             $('.lsv-single-compact-percentiles', table).each(function () {
-                lsv.drawLSVCompactStackBars(this, 1);
+                // lsv.drawLSVCompactStackBars(this, 1);
             });
 
             $('.psi-violin-plot', table).each(function () {
-                bp.psi(this);
+                // bp.psi(this);
+                // new LSVPlots(this).psi()
+                // new Violin(this)
             });
 
             $('.excl-incl-rect', table).each(function () {
                 var x = this;
                 db.get(x.getAttribute('data-lsv-id')).then(function (data) {
-                    lsv.drawDeltaLSVCompactSVG(x, data)
+                    // lsv.drawDeltaLSVCompactSVG(x, data)
                 })
             });
 
             $('.deltapsi-violin-plot', table).each(function () {
-                bp.delta_psi(this);
+                // bp.delta_psi(this);
+                // new LSVPlots(this).delta_psi()
+                // new Violin(this)
             });
 
             /**

@@ -97,6 +97,7 @@ LSVPlots.prototype.psi = function () {
 
 
 LSVPlots.prototype.delta_psi = function () {
+    var el = this.el;
     var lsv_id = el.getAttribute('data-lsv-id');
     var bp = this;
 

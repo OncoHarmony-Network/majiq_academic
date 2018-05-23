@@ -23,7 +23,7 @@ cdef _store_junc_file(np.ndarray boots, list junc_ids, str experiment_name, str 
 
     cdef str out_file = "%s/%s.juncs" % (outDir, experiment_name)
     cdef dict vals = {'bootstrap': boots}
-    dt = np.dtype('S250, u4, u4, f4, f4')
+    dt = np.dtype('S250, u4, u4, f4, f4, u4')
     vals['junc_info'] = np.array(junc_ids, dtype=dt)
     with open(out_file, 'w+b') as ofp:
         np.savez(ofp, **vals)
@@ -127,6 +127,7 @@ cdef _find_junctions(list file_list, vector[Gene*] gene_vec,  object conf, objec
     cdef np.ndarray[np.float32_t, ndim=2, mode="c"] boots
     cdef list junc_ids
     cdef int nlsv
+    cdef unsigned int jlimit
 
     cdef int* jvec
 
@@ -176,6 +177,7 @@ cdef _find_junctions(list file_list, vector[Gene*] gene_vec,  object conf, objec
                 c_iobam.boostrap_samples(m, k, <np.float32_t *> boots.data)
                 j_ids = c_iobam.get_junc_map()
                 jvec = c_iobam.get_junc_vec_summary()
+                jlimit = c_iobam.get_junc_limit_index()
 
             logger.info("Update flags")
             for i in prange(n, nogil=True, num_threads=nthreads):
@@ -188,7 +190,7 @@ cdef _find_junctions(list file_list, vector[Gene*] gene_vec,  object conf, objec
                 # print(file_list[j][0], j, last_it_grp, (j==last_it_grp), it.second, it.first)
                 tmp_str = it.first.decode('utf-8').split(':')[2]
                 start, end = (int(xx) for xx in tmp_str.split('-'))
-                junc_ids[it.second] = (it.first.decode('utf-8'), start, end, jvec[it.second], jvec[it.second + njunc]1)
+                junc_ids[it.second] = (it.first.decode('utf-8'), start, end, jvec[it.second], jvec[it.second + njunc], int(it.second>= jlimit))
 
             logger.info('Done Reading file %s' %(file_list[j][0]))
             _store_junc_file(boots, junc_ids, file_list[j][0], conf.outDir)

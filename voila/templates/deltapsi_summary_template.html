@@ -32,9 +32,6 @@
     <script src="static/js/colors.js"></script>
     <script>
         var db = new PouchDB('{{ database_name }}', {auto_compaction: true});
-        var sg = new SpliceGraph(db);
-        var lsv = new Lsv(db);
-        var bp = new LSVPlots(db);
     </script>
     {% for gene in genes %}
         <script src="../db/{{ gene.id }}.js"></script>

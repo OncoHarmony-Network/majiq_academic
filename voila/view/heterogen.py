@@ -32,13 +32,6 @@ class Heterogen(Html, Tsv):
         if not args.disable_tsv:
             self.het_tab_output()
 
-    # @classmethod
-    # def arg_parents(cls):
-    #     return (
-    #         cls.base_args(), cls.html_args(), cls.voila_file_args(), cls.multiproccess_args(), cls.output_args(),
-    #         cls.lsv_id_search_args(), cls.gene_search_args()
-    #     )
-
     def render_index(self):
         log = voila_log()
         log.info('Render Heterogen HTML index')
@@ -89,7 +82,6 @@ class Heterogen(Html, Tsv):
                 log.debug('End index render')
 
     def create_summary(self, paged):
-        log = voila_log()
         metadata = self.view_metadata
         args = self.args
         database_name = self.database_name()
