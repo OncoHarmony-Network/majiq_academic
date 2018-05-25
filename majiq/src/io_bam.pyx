@@ -32,6 +32,9 @@ cdef __cross_junctions(AlignedSegment read):
     cdef unsigned int num
     cdef unsigned int off
     cdef int junc_end, junc_start
+    cdef int ref_end
+
+    ref_end = -1 if read.reference_end is None else read.reference_end
 
     # if len(jlist) != 0: print "STAR ::",jlist
     # print"THIS IS NOT a WELL defined STAR output"
@@ -48,8 +51,7 @@ cdef __cross_junctions(AlignedSegment read):
             off += num
             cross = True
             # if len(jlist) !=0 : print "NOSTAR:", jlist, read.cigar
-
-    return cross, jlist, read.reference_end
+    return cross, jlist, ref_end
 
 
 cdef inline bint __is_unique(AlignedSegment read):
@@ -112,7 +114,7 @@ cpdef int find_introns(str filename, object list_introns, float intron_threshold
     for read in read_iter:
         chrom = samfl.getrname(read.reference_id)
         is_cross, junc_list, rend = __cross_junctions(read)
-        if not __is_unique(read) or is_cross or chrom not in list_introns.keys() :
+        if not __is_unique(read) or is_cross or chrom not in list_introns.keys() or rend < 0:
             continue
 
         overlap = len(read.seq) - MIN_BP_OVERLAP
