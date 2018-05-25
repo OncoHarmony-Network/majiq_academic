@@ -195,7 +195,7 @@ cdef dict __read_juncs_from_bam(str filename, set in_jj, int stranded):
             continue
         is_cross, junc_list, rend = __cross_junctions(read)
         chrom = samfl.getrname(read.reference_id)
-        if not __is_unique(read) or not is_cross or chrom not in chrom_list:
+        if not __is_unique(read) or not is_cross or chrom not in chrom_list or rend < 0:
             continue
 
         readlen = len(read.seq)
@@ -361,7 +361,7 @@ cdef int _read_sam_or_bam(object gne, AlignmentFile samfl, list matrx, dict junc
         for read in read_iter:
             is_cross, junc_list, end_r = __cross_junctions(read)
             unique = __is_unique(read)
-            if not _match_strand(read, gene_strand=gne['strand'], stranded=stranded) or \
+            if not _match_strand(read, gene_strand=gne['strand'], stranded=stranded) or end_r < 0 or\
                             read.pos < gne['start'] or not unique:
                 continue
 
