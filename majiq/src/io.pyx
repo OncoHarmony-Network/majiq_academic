@@ -107,7 +107,7 @@ cdef int  read_gff(str filename, vector[Gene *]& glist, object logging) except -
     for parent_tx_id, (gene_id, coord_list) in trcpt_id_dict.items():
         last_ss = FIRST_LAST_JUNC
         coord_list.sort(key=lambda x: (x[0], x[1]))
-        if gene_id == 'ENSMUSG00000001419': print (coord_list)
+        if gene_id == 'ENSMUSG00000006498': print (coord_list)
         for xx, yy in coord_list:
             key = ('%s-%s' % (last_ss, xx)).encode('utf-8')
 
@@ -138,9 +138,10 @@ cdef int merge_exons(dict exon_dict, map[string, Gene*]& all_genes) except -1:
             if is_start:
                 if ex_end != -1:
                     key = ('%s-%s' % (ex_start, ex_end)).encode('utf-8')
-                    all_genes[gne_id].exon_map_[key] = new Exon(ex_start, ex_end, True, False)
+                    all_genes[gne_id].exon_map_[key] = new Exon(ex_start, ex_end, True)
                     if nopen > 0 and (ex_end+4) < (coord-1):
-                        all_genes[gne_id].create_annot_intron(ex_end+1, coord-1)
+                       pass
+                        # all_genes[gne_id].create_annot_intron(ex_end+1, coord-1)
                         #tlist.append([ex_end+1, coord-1, 1, IR_TYPE])
                     ex_end = -1
                     nopen = 0
@@ -155,7 +156,7 @@ cdef int merge_exons(dict exon_dict, map[string, Gene*]& all_genes) except -1:
 
         if ex_end != -1:
             key = ('%s-%s' % (ex_start, ex_end)).encode('utf-8')
-            all_genes[gne_id].exon_map_[key] = new Exon(ex_start, ex_end, True, False)
+            all_genes[gne_id].exon_map_[key] = new Exon(ex_start, ex_end, True)
 
 
 #######

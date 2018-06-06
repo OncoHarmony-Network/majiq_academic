@@ -44,7 +44,7 @@ namespace io_bam{
             unsigned int nthreads_;
             map<string, vector<Gene*>> glist_ ;
             map<string, vector<Intron*>> intronVec_ ;
-            unsigned int junc_limit_index ;
+            unsigned int junc_limit_index_ ;
 
         public:
             IOBam(){
@@ -73,7 +73,7 @@ namespace io_bam{
             int parse_read_into_junctions(bam_hdr_t *header, bam1_t *read) ;
             void add_junction(string chrom, char strand, int start, int end, int read_pos) ;
             int* get_junc_vec_summary() ;
-            unsigned int get_junc_limit_index() ;
+            unsigned int get_junc_limit_index() { return junc_limit_index_ ; };
 
 
             char _get_strand(bam1_t * read) ;

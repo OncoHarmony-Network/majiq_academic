@@ -191,17 +191,17 @@ class Junctions(SpliceGraphSQL):
             if not reads:
                 return
 
-            #todo: this shouldn't exist in production
-            if not self.exists:
-                return
+            # #todo: this shouldn't exist in production
+            # if not self.exists:
+            #     return
 
             r = model.JunctionReads(junction_gene_id=self.gene_id, junction_start=self.start, junction_end=self.end,
                                     experiment_name=experiment, reads=reads)
 
-            with self.sql.session.no_autoflush:
-                self.get.has_reads = True
-                self.sql.add(r)
-                self.sql.commit(default_commit_on_count)
+            # with self.sql.session.no_autoflush:
+            self.get.has_reads = True
+            self.sql.add(r)
+            self.sql.commit(default_commit_on_count)
 
     def junction(self, gene_id: str, start: int, end: int):
         return self._Junction(self, gene_id, start, end)

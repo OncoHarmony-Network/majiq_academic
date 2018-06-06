@@ -73,6 +73,10 @@ namespace grimoire {
         return ;
     }
 
+    bool islowerintron(Intron * a, Intron * b){
+        return (a->get_start() < b->get_start()) || (a->get_start() == b->get_start() && a->get_end() < b->get_end());
+    }
+
     void Gene::newExonDefinition(int start, int end, Junction *inbound_j, Junction *outbound_j, bool in_db){
 
         Exon *ex1 = nullptr, *ex2 = nullptr ;
@@ -147,7 +151,6 @@ namespace grimoire {
                 Ssite s = {(jnc.second)->get_end(), 0, jnc.second} ;
                 ss_vec.push_back(s) ;
             }
-
         }
         sort(ss_vec.begin(), ss_vec.end(), sort_ss) ;
         for(const auto & ss : ss_vec){
@@ -287,6 +290,35 @@ namespace grimoire {
         }
     }
 
+    void Gene::connect_introns(){
+
+        sort(intron_vec_.begin(), intron_vec_.end(), islowerintron) ;
+
+        const int n_itrons = intron_vec_.size() ;
+        int intron_index = 0 ;
+        Exon * prev_ex = nullptr ;
+        int ir_start = 0 ;
+
+        for(const auto & ex: exon_map_ ){
+            if (ir_start != 0) {
+                const int ir_end = (ex.second)->get_start() - 1 ;
+    cout << "CONNECT INTRONS: prev_ex: " << prev_ex << " ir_coord: "<< ir_start << " :: " << ir_end << "\n" ;
+                while(intron_index< n_itrons){
+                    Intron * ir_ptr = intron_vec_[intron_index];
+
+                    if (ir_start <= ir_ptr->get_end() && ir_end >= ir_ptr->get_start() && ir_ptr->get_ir_flag()){
+                        prev_ex->ob_irptr = ir_ptr ;
+                        (ex.second)->ib_irptr = ir_ptr ;
+                    }
+                    ++intron_index ;
+                }
+            }
+            ir_start = (ex.second)->get_end() + 1;
+            prev_ex = (ex.second) ;
+        }
+
+    }
+
     void Gene::print_exons(){
 
         for(const auto & ex: exon_map_ ){
@@ -300,6 +332,9 @@ namespace grimoire {
         }
     }
 
+    string Intron::get_key(Gene * gObj) {
+        return(gObj->get_chromosome() + ":" + to_string(start_) + "-" + to_string(end_)) ;
+    }
 
     bool Intron::is_reliable(float min_intron_cov){
         return true ;
@@ -309,9 +344,11 @@ namespace grimoire {
     LSV fuctions
 */
 
-    bool is_lsv(set<Junction*> &juncSet, bool ss){
+    bool is_lsv(Exon * ex, bool ss){
+//cout << "in is_LSVS\n" ;
         unsigned int c1 = 0 ;
         unsigned int c2 = 0 ;
+        set<Junction*> &juncSet = ss? ex->ob : ex->ib ;
         for(const auto &juncIt:  juncSet){
             const int coord = ss? juncIt->get_end() : juncIt->get_start() ;
             c2 += (FIRST_LAST_JUNC != coord) ? 1:0 ;
@@ -319,8 +356,26 @@ namespace grimoire {
                 ++c1 ;
             }
         }
-
+//cout << "intron is_LSVS: "<< ss<<"\n" ;
+        Intron * ir_ptr = ss? ex->ob_irptr : ex->ib_irptr ;
+//cout << "intron is_LSVS ptr: "<< ir_ptr<<"\n" ;
+        if (ir_ptr != nullptr){
+//cout << " is_LSVS in if\n" ;
+            ++c2 ;
+            const int c = ir_ptr->get_ir_flag()? 1 : 0 ;
+            c1 = c1 + c ;
+        }
+//cout << "out is_LSVS\n" ;
         return (c2>1 and c1>0);
+    }
+
+    inline void LSV::get_variations(set<string> &t1){
+        for (const auto &jl1: junctions_){
+            t1.insert(jl1->get_key()) ;
+        }
+        if(ir_ptr_ != nullptr){
+            t1.insert(ir_ptr_->get_key()) ;
+        }
     }
 
     int detect_lsvs(vector<LSV*> &lsv_list, Gene* gObj){
@@ -333,23 +388,25 @@ namespace grimoire {
 
         for(const auto &exon_mapIt: gObj->exon_map_){
             Exon * ex = exon_mapIt.second ;
-            if (is_lsv(ex->ob, true)) {
+//            cout<< "IN 0 :: \n" ;
+            if (is_lsv(ex, true)) {
                 lsvObj = new LSV(gObj, ex, true) ;
                 set<string> t1 ;
-                for (const auto &jl1: lsvObj->get_junctions()){
-                    t1.insert(jl1->get_key()) ;
-                }
+//cout<< "IN 0a :: \n" ;
+                lsvObj->get_variations(t1) ;
+//cout<< "IN 1a :: \n" ;
                 pair<set<string>, LSV*> _p1 (t1, lsvObj) ;
                 source.insert(_p1) ;
                 lsvGenes.push_back(lsvObj) ;
             }
-            if (is_lsv(ex->ib, false)) {
+            if (is_lsv(ex, false)) {
                 lsvObj = new LSV(gObj, ex, false) ;
                 set<string> t1 ;
-                for (const auto &jl1: lsvObj->get_junctions()){
-                    t1.insert(jl1->get_key()) ;
-                }
+//cout<< "IN 0b :: \n" ;
+                lsvObj->get_variations(t1) ;
+//cout<< "IN 1b :: \n" ;
                 lsvGenes.push_back(lsvObj) ;
+
 //                for (const auto &slvs: source){
 //cout << "DETECT LSVS PER GENE6\n" ;
 //                    set<string> d1 ;
@@ -371,8 +428,9 @@ namespace grimoire {
 //                    }
 //                }
             }
+//cout << "NEXT EXON::" << ex->start_ << "-" << ex->end_ << "\n" ;
         }
-
+//cout<< "IN 2 :: \n" ;
         int nlsv = 0 ;
         #pragma omp critical
         for(const auto &l: lsvGenes){
@@ -383,21 +441,22 @@ namespace grimoire {
                 delete l;
             }
         }
+//cout<< "OUT LSV\n" ;
         return  nlsv;
 
     }
 
     bool positive(lsvtype a, lsvtype b){
         return ( a.coord<b.coord ||
-                (a.coord == b.coord && a.ref_coord<b.ref_coord) ||
-                (a.ex_ptr->get_intron() && !b.ex_ptr->get_intron()) ) ;
+                (a.coord == b.coord && a.ref_coord<b.ref_coord)) ;
     }
 
     bool reverse(lsvtype a, lsvtype b){
         return ( a.coord>b.coord ||
-                (a.coord == b.coord && a.ref_coord>b.ref_coord) ||
-                (a.ex_ptr->get_intron() && !b.ex_ptr->get_intron()) ) ;
+                (a.coord == b.coord && a.ref_coord>b.ref_coord)) ;
     }
+
+
 
     bool LSV::gather_lsv_info(float* source, float* target, list<Jinfo*> &info, map<string, Jinfo> &tlb,
                                                                                   unsigned int msample){
@@ -426,18 +485,16 @@ namespace grimoire {
     }
 
     string LSV::set_type(Exon* ref_ex, bool ss){
-
         string ref_exon_id = to_string(ref_ex->get_start()) + "-" + to_string(ref_ex->get_end()) ;
         vector<lsvtype> sp_list ;
         set<unsigned int> ref_ss_set ;
         set<Junction *> junc_list = ss? ref_ex->ob: ref_ex->ib ;
 
         for (const auto &j: junc_list){
-
             Exon * ex = ss? j->get_acceptor() :  j->get_donor() ;
-            if (ex==nullptr) continue ;
             const int coord = ss? j->get_end() : j->get_start() ;
             const int ref_coord = ss ? j->get_start() : j->get_end() ;
+            if (ex==nullptr || coord < 0 || ref_coord < 0) continue ;
             lsvtype lsvtypeobj = {coord, ref_coord, ex, j} ;
             sp_list.push_back(lsvtypeobj) ;
         }
@@ -445,8 +502,8 @@ namespace grimoire {
         bool b = (gObj_->get_strand() == '+') ;
         if (b) sort(sp_list.begin(), sp_list.end(), positive) ;
         else sort(sp_list.begin(), sp_list.end(), reverse) ;
-
         string ext_type = (ss != b) ? "t" : "s" ;
+
         string prev_ex = to_string(sp_list[0].ex_ptr->get_start()) + "-" + to_string(sp_list[0].ex_ptr->get_end()) ;
         unsigned int excount = 1 ;
         if (ss) for (const auto &j: ref_ex->ob) ref_ss_set.insert(j->get_start()) ;
@@ -474,24 +531,83 @@ namespace grimoire {
                  pos = distance(ss_set.begin(), ss_set.find((ptr.jun_ptr)->get_end()))+1 ;
             }else{
                  set<unsigned int> ss_set ;
+//                 cout << "LSV_TYPE 4.5.1 "<<ptr.ex_ptr<<"\n";
                  for (const auto &j: (ptr.ex_ptr)->ob){
                     ss_set.insert(j->get_start()) ;
                  }
                  total = ss_set.size() ;
                  pos = distance(ss_set.begin(), ss_set.find((ptr.jun_ptr)->get_start()))+1 ;
+//                 cout << "LSV_TYPE 4.5.5\n";
 
             }
+//cout << "LSV_TYPE 4.6\n";
             if(prev_ex != exid){
                 prev_ex = exid ;
                 excount += 1 ;
             }
-
+//cout << "LSV_TYPE 4.7\n";
             ext_type = ext_type + "|" + to_string(jidx) + "e" + to_string(excount) + "."
                                 + to_string(pos) + "o" +  to_string(total) ;
+//cout << "LSV_TYPE 4.8\n";
             junctions_.push_back(ptr.jun_ptr) ;
+//cout << "LSV_TYPE 4.9\n";
         }
+
+        if (ir_ptr_ != nullptr) ext_type += "|i" ;
         return ext_type ;
     }
+
+    int GeneSearch(vector<Gene *> & a, int n, int coord) {
+        int l = 0 ;
+        int h = n ; // Not n - 1
+        while (l < h) {
+            int mid = (l + h) / 2 ;
+            if (a[mid]->get_start() >= coord) {
+                h = mid ;
+            } else {
+                l = mid +1 ;
+            }
+        }
+        return l-1;
+    }
+
+    int intronSearch(vector<Intron *> & a, int n, const int start_pos) {
+        int l = 0 ;
+        int h = n ; // Not n - 1
+        while (l < h) {
+            int mid = (l + h) / 2 ;
+            if (a[mid]->get_start()>=start_pos) {
+                h = mid ;
+            } else {
+                l = mid +1 ;
+            }
+        }
+        return l-1;
+    }
+
+
+    vector<Intron *>& find_intron_retention(vector<Gene*> & gene_list, int start, int end){
+        vector<Intron*> ir_vec ;
+        const int n = gene_list.size() ;
+        const int gIdx = GeneSearch(gene_list, n, end) ;
+        if (gIdx <0){ return ir_vec;}
+        if (gene_list[gIdx]->get_start()<= end && gene_list[gIdx]->get_end()>= start){
+            const int nir = (gene_list[gIdx]->intron_vec_).size() ;
+            int irIdx = intronSearch(gene_list[gIdx]->intron_vec_, nir, start);
+            for(int i = irIdx; i<nir; ++i){
+                Intron * irp = gene_list[gIdx]->intron_vec_[i] ;
+                if(irp->get_start()> end){
+                    break ;
+                }
+                if(irp->get_end() < start){
+                    continue ;
+                }
+                ir_vec.push_back(irp) ;
+            }
+        }
+        return ir_vec;
+    }
+
 }
 
 
