@@ -8,6 +8,7 @@ from sqlalchemy.orm.exc import NoResultFound
 
 from voila.api import splice_graph_model as model
 from voila.api.sql import SQL
+from voila.utils.exceptions import IntronRetentionNotFound, JunctionNotFound
 
 Session = sessionmaker()
 
@@ -98,14 +99,22 @@ class IntronRetention(SpliceGraphSQL):
                          model.IntronRetention.end == self.end))).scalar()
 
         def update_reads(self, experiment: str, reads: int):
+            experiment = str(experiment)
+            reads = int(reads)
+
             if not reads:
                 return
 
             r = model.IntronRetentionReads(intron_retention_gene_id=self.gene_id, intron_retention_start=self.start,
                                            intron_retention_end=self.end, experiment_name=experiment, reads=reads)
 
+            self.sql.session.flush()
             with self.sql.session.no_autoflush:
-                self.get.has_reads = True
+                print(type(self.gene_id))
+                try:
+                    self.get.has_reads = True
+                except AttributeError:
+                    raise IntronRetentionNotFound(self)
                 self.sql.add(r)
                 self.sql.commit(default_commit_on_count)
 
@@ -195,7 +204,10 @@ class Junctions(SpliceGraphSQL):
                                     experiment_name=experiment, reads=reads)
 
             with self.sql.session.no_autoflush:
-                self.get.has_reads = True
+                try:
+                    self.get.has_reads = True
+                except AttributeError:
+                    raise JunctionNotFound(self)
                 self.sql.add(r)
                 self.sql.commit(default_commit_on_count)
 

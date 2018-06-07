@@ -90,3 +90,13 @@ class CannotFindFile(argparse.ArgumentTypeError):
 class EmptyFilters(VoilaException):
     def __init__(self):
         super(EmptyFilters, self).__init__('All elements in filters could not be found')
+
+
+class IntronRetentionNotFound(VoilaException):
+    def __init__(self, ir):
+        super().__init__('Intron Retention not found: {} {}-{}'.format(ir.gene_id, ir.start, ir.end))
+
+
+class JunctionNotFound(VoilaException):
+    def __init__(self, junc):
+        super().__init__('Junction not found: {} {}-{}'.format(junc.gene_id, junc.start, junc.end))
