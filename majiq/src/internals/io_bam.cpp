@@ -18,59 +18,6 @@ using namespace std;
 //using namespace interval;
 namespace io_bam {
 
-//    struct CompareIntervals
-//    {
-//       pair<int, int> asInterval(const Gene *g) const // or static
-//       {
-//          return {g->start, g->end};
-//       }
-//
-//       pair<int, int> asInterval(Junction * j) const // or static
-//       {
-//            return {j->start, j->end};
-//       }
-//
-//       template< typename T1, typename T2 >
-//       bool operator()( T1 const t1, T2 const t2 ) const
-//       {
-//           pair<int,int> p1 = asInterval(t1) ;
-//           pair<int,int> p2 = asInterval(t2) ;
-//           return ((p1.first <= p2.second) && (p1.second >= p2.first)) ;
-//       }
-//    };
-
-    bool juncinGene(Gene* t1, Junction* t2){
-        return ( (t1->get_start() <= t2->get_end()) && (t1->get_end() >= t2->get_start()) ) ;
-    }
-
-    int juncGeneSearch(vector<Gene *> a, int n, Junction * j) {
-        int l = 0 ;
-        int h = n ; // Not n - 1
-        while (l < h) {
-            int mid = (l + h) / 2 ;
-            if (a[mid]->get_start()>=j->get_end()) {
-                h = mid ;
-            } else {
-                l = mid +1 ;
-            }
-        }
-        return l-1;
-    }
-
-    int intronSearch(vector<Intron *> a, int n, const int start_pos) {
-        int l = 0 ;
-        int h = n ; // Not n - 1
-        while (l < h) {
-            int mid = (l + h) / 2 ;
-            if (a[mid]->get_start()>=start_pos) {
-                h = mid ;
-            } else {
-                l = mid +1 ;
-            }
-        }
-        return l-1;
-    }
-
     inline int* IOBam::new_junc_values(const string key){
         junc_map[key] = junc_vec.size() ;
         int* v = (int*) calloc(eff_len_, sizeof(int)) ;
@@ -106,7 +53,7 @@ namespace io_bam {
         vector<Gene*> temp_vec2 ;
         Junction * junc = new Junction(start, end, false) ;
         const string key = junc->get_key() ;
-        int i = juncGeneSearch(glist_[chrom], n, junc) ;
+        int i = Gene::RegionSearch(glist_[chrom], n, junc->get_end()) ;
 
         if(i<0) return ;
         while(i< n){
@@ -215,11 +162,10 @@ namespace io_bam {
         const int  nintrons = intronVec_[chrom].size() ;
         uint32_t *cigar = bam_get_cigar(read) ;
 
-        int idx = intronSearch(intronVec_[chrom], nintrons, read_pos) ;
+        int idx = _Region::RegionSearch(intronVec_[chrom], nintrons, read_pos) ;
         if (idx<0) return 0 ;
 
         vector<pair<int, int>> junc_record ;
-        bool junc_found = false ;
 
         int off = 0;
         for (int i = 0; i < n_cigar; ++i) {
@@ -229,7 +175,6 @@ namespace io_bam {
                  off += ol;
             }
             else if( op == BAM_CREF_SKIP && off >= MIN_BP_OVERLAP){
-                junc_found = true ;
                 const int j_end = read->core.pos + off + ol +1;
                 const int j_start =  read->core.pos + off;
                 try {
@@ -240,22 +185,26 @@ namespace io_bam {
                 off += ol ;
             }
         }
-
         for(int i=idx; i<nintrons; ++i){
+            bool junc_found = false ;
             Intron * intron = intronVec_[chrom][i] ;
+            if(intron->get_start()> read_pos) break ;
             for (const auto & j:junc_record){
                 if ((j.first>=intron->get_start() && j.first<= intron->get_end() )
                     || (j.second>=intron->get_start() && j.second<= intron->get_end())){
-                    junc_found = false ;
+                    junc_found = true ;
                     break ;
                 }
             }
             if (!junc_found){
-                int offset = (int)(read_pos - intron->get_start())/ eff_len_ ;
-                if (intron->read_rates_ == nullptr){
-                    intron->add_read_rates_buff(eff_len_) ;
+                #pragma omp critical
+                {
+                    if (intron->read_rates_ == nullptr){
+                        intron->add_read_rates_buff(eff_len_) ;
+                    }
+                    const int offset = (int)(read_pos - intron->get_start()) % intron->nbins_ ;
+                    intron->read_rates_[offset] += 1 ;
                 }
-                intron->read_rates_[offset] += 1 ;
             }
         }
         return 0 ;
@@ -343,10 +292,15 @@ namespace io_bam {
         #pragma omp parallel for num_threads(nthreads_)
         for(int jidx=0; jidx < njunc; jidx++){
 
-            int* vec = junc_vec[jidx] ;
+            vector<int> vec ;
+//            int* vec = junc_vec[jidx] ;
             int npos = 0 ;
+
             for(unsigned int i=0; i<eff_len_; ++i){
-                npos = vec[i]? 1 : 0 ;
+                if (junc_vec[jidx][i]>0){
+                    npos ++ ;
+                    vec.push_back(junc_vec[jidx][i]) ;
+                }
             }
             if (npos == 0) continue ;
             default_random_engine generator;
@@ -363,7 +317,7 @@ namespace io_bam {
     }
 
     int IOBam::get_njuncs(){
-        return junc_map.size() ;
+        return junc_vec.size() ;
     }
 
     const map<string, unsigned int>& IOBam::get_junc_map(){
@@ -392,7 +346,7 @@ namespace io_bam {
 
             junc_limit_index_ = junc_vec.size() ;
 
-//cout << "INTRON RETENTION START\n" ;
+cout << "INTRON RETENTION START\n" ;
         for (const auto & it: glist_){
             if (intronVec_.count(it.first)==0){
                 intronVec_[it.first] = vector<Intron*>() ;
@@ -402,10 +356,10 @@ namespace io_bam {
             for(int g_it = 0; g_it<n; g_it++){
                 (it.second)[g_it]->detect_introns(intronVec_[it.first]) ;
             }
+            sort(intronVec_[it.first].begin(), intronVec_[it.first].end(), Intron::islowerRegion<Intron>) ;
         }
-//cout << "PARSING IR\n" ;
+
         ParseJunctionsFromFile(true) ;
-//cout << "DETECTIon STEP\n" ;
 
         for (const auto & it: intronVec_){
             const int n = (it.second).size() ;
@@ -414,17 +368,12 @@ namespace io_bam {
                 Intron * intrn_it = (it.second)[idx] ;
                 bool pass = intrn_it->is_reliable(min_intron_cov) ;
                 if( pass ){
-                    const string key = to_string(intrn_it->get_start()) + "-" + to_string(intrn_it->get_end()) ;
+
+                    const string key = intrn_it->get_key(intrn_it->get_gene()) ;
                     junc_map[key] = junc_vec.size() ;
                     junc_vec.push_back(intrn_it->read_rates_) ;
+
                     (intrn_it->get_gene())->add_intron(intrn_it, min_experiments) ;
-//                    for (int i=0; i< intrn_it->nbins_; i++){
-//                        int count = intrn_it->read_rates_[i] ;
-//                        count = count>0 ? count : 1 ;
-//                        v[i] = intrn_it->read_rates_[i] ;
-//                    }
-
-
                 }
 
             }

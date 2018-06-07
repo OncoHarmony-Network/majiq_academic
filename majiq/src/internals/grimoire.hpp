@@ -27,6 +27,36 @@ namespace grimoire{
 
             _Region(){}
             _Region(int start1, int end1): start_(start1), end_(end1) {}
+        public:
+            int     get_start()     { return start_ ; }
+            int     get_end()       { return end_ ; }
+
+            template <class myRegion>
+            static int RegionSearch(vector<myRegion *>  &a, int n, int coord) {
+                int l = 0 ;
+                int h = n ; // Not n - 1
+                while (l < h) {
+                    int mid = (l + h) / 2 ;
+                    if (a[mid]->get_start() >= coord) {
+                        h = mid ;
+                    } else {
+                        l = mid +1 ;
+                    }
+                }
+                return l-1;
+            }
+
+            template <class myRegion>
+            static bool islowerRegion(myRegion * a, myRegion * b){
+                return (a->get_start() < b->get_start()) ||
+                        (a->get_start() == b->get_start() && a->get_end() < b->get_end());
+            }
+
+            template <class myRegion>
+            static bool RegionsOverlap(myRegion* t1, myRegion* t2){
+                return ( (t1->get_start() <= t2->get_end()) && (t1->get_end() >= t2->get_start()) ) ;
+            }
+
     };
 
 
@@ -170,11 +200,11 @@ namespace grimoire{
                     nbins_ = nbins1 ;
                 } else {
                     nbins_ = (end_ - start_) / MIN_INTRON_BINSIZE ;
+                    nbins_ = (nbins_ == 0) ? 1 : nbins_ ;
 
                 }
-
-                read_rates_ = (int*) calloc(nbins_, sizeof(int)) ;
-
+//                read_rates_ = (int*) calloc(nbins_, sizeof(int)) ;
+                read_rates_ = (int*) calloc(nbins1, sizeof(int)) ;
             }
             bool  is_reliable(float min_intron_cov) ;
             inline void  update_flags(int min_exps) {
@@ -187,6 +217,7 @@ namespace grimoire{
                 end_ = min(end_, inIR_ptr->get_end()) ;
                 read_rates_ = inIR_ptr->read_rates_ ;
             }
+
 
 
     };
@@ -206,8 +237,8 @@ namespace grimoire{
 
             Gene (){}
             Gene(string id1, string name1, string chromosome1,
-                 char strand1, unsigned int start1, unsigned int end1): id_(id1), name_(name1), chromosome_(chromosome1),
-                                                                             strand_(strand1), _Region(start1, end1){}
+                 char strand1, unsigned int start1, unsigned int end1): _Region(start1, end1), id_(id1), name_(name1),
+                                                                        chromosome_(chromosome1), strand_(strand1){}
             ~Gene(){
                 for(const auto &p2: exon_map_){
                     delete p2.second ;
@@ -231,7 +262,7 @@ namespace grimoire{
             string  get_region() ;
             void    print_exons() ;
             void    detect_exons() ;
-            void    detect_introns(vector<Intron*> intronlist) ;
+            void    detect_introns(vector<Intron*> &intronlist) ;
             void    add_intron(Intron * inIR_ptr, unsigned int min_exps) ;
             void    connect_introns() ;
             void    newExonDefinition(int start, int end, Junction *inbound_j, Junction *outbound_j, bool in_db) ;
@@ -278,9 +309,9 @@ namespace grimoire{
 
                 id_     = gObj_->get_id() + ":" + t + ":" + to_string(ex->get_start()) + "-" + to_string(ex->get_end()) ;
                 ir_ptr_ = ss? ex->ob_irptr : ex->ib_irptr ;
-                cout<< "LSV_TYPE\n";
+//                cout<< "LSV_TYPE\n";
                 type_   = set_type(ex, ss) ;
-                cout << "OUT TYPE\n" ;
+//                cout << "OUT TYPE\n" ;
             }
 
             ~LSV(){}
@@ -309,7 +340,7 @@ namespace grimoire{
     bool is_lsv(Exon * ex, bool ss) ;
     int detect_lsvs(vector<LSV*> &out_lsvlist, Gene * gObj);
     void sortGeneList(vector<Gene*> &glist) ;
-    vector<Intron *>& find_intron_retention(vector<Gene*> &gene_list, int start, int end) ;
+    vector<Intron *> find_intron_retention(vector<Gene*> &gene_list, int start, int end) ;
 
 }
 

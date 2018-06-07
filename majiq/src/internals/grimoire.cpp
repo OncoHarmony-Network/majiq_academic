@@ -25,7 +25,7 @@ namespace grimoire {
     }
 
     string Junction::get_key(Gene * gObj) {
-        return(gObj->get_chromosome() + ":" + to_string(start_) + "-" + to_string(end_)) ;
+        return(gObj->get_chromosome() + ":" + gObj->get_strand() + ":" + to_string(start_) + "-" + to_string(end_)) ;
     }
 
     int Junction::length() { return end_ - start_ ; }
@@ -64,17 +64,9 @@ namespace grimoire {
     Gene functions
 */
 
-    bool islowergene(Gene * a, Gene * b){
-        return (a->get_start() < b->get_start()) || (a->get_start() == b->get_start() && a->get_end() < b->get_end());
-    }
-
     void sortGeneList(vector<Gene*> &glist) {
-        sort(glist.begin(), glist.end(), islowergene) ;
+        sort(glist.begin(), glist.end(), Gene::islowerRegion<Gene>) ;
         return ;
-    }
-
-    bool islowerintron(Intron * a, Intron * b){
-        return (a->get_start() < b->get_start()) || (a->get_start() == b->get_start() && a->get_end() < b->get_end());
     }
 
     void Gene::newExonDefinition(int start, int end, Junction *inbound_j, Junction *outbound_j, bool in_db){
@@ -221,7 +213,7 @@ namespace grimoire {
         return ;
     }
 
-    void Gene::detect_introns(vector<Intron*> intronlist){
+    void Gene::detect_introns(vector<Intron*> &intronlist){
 
 //int tid = omp_get_thread_num();
 //cout << tid<< " GEN ss_vec for gene:"<< id_ << "\n" ;
@@ -235,16 +227,16 @@ namespace grimoire {
         for (const auto &jnc : junc_map_){
             if (!(jnc.second)->get_denovo_bl()) continue ;
             if ((jnc.second)->get_start() > 0) {
-                Ssite s = {(jnc.second)->get_start(), 1, jnc.second} ;
+                Ssite s = {(jnc.second)->get_start(), true, jnc.second} ;
                 ss_vec.push_back(s) ;
             }
             if ((jnc.second)->get_end() > 0) {
-                Ssite s = {(jnc.second)->get_end(), 0, jnc.second} ;
+                Ssite s = {(jnc.second)->get_end(), false, jnc.second} ;
                 ss_vec.push_back(s) ;
             }
         }
         sort(ss_vec.begin(), ss_vec.end(), sort_ss) ;
-//cout << tid<< " Analize ss_vec for gene:"<< id_ << "\n" ;
+//cout << tid<< " Analize ss_vec for gene:"<< id_ << " :: "<< ss_vec.size()<<  "\n" ;
         for(const auto & ss : ss_vec){
             if (ss.donor_ss) {
                 start_ir = ss.coord ;
@@ -292,7 +284,7 @@ namespace grimoire {
 
     void Gene::connect_introns(){
 
-        sort(intron_vec_.begin(), intron_vec_.end(), islowerintron) ;
+        sort(intron_vec_.begin(), intron_vec_.end(), Intron::islowerRegion<Intron>) ;
 
         const int n_itrons = intron_vec_.size() ;
         int intron_index = 0 ;
@@ -300,9 +292,12 @@ namespace grimoire {
         int ir_start = 0 ;
 
         for(const auto & ex: exon_map_ ){
+            const int ex_start = ((ex.second)->get_start() < 0) ? (ex.second)->get_end()-10 : (ex.second)->get_start() ;
+            const int ex_end = ((ex.second)->get_end() < 0) ? (ex.second)->get_start()+10 : (ex.second)->get_end() ;
+
             if (ir_start != 0) {
-                const int ir_end = (ex.second)->get_start() - 1 ;
-    cout << "CONNECT INTRONS: prev_ex: " << prev_ex << " ir_coord: "<< ir_start << " :: " << ir_end << "\n" ;
+                const int ir_end = ex_start - 1 ;
+//    cout << "CONNECT INTRONS: prev_ex: " << prev_ex << " ir_coord: "<< ir_start << " :: " << ir_end << "nintrons: " << n_itrons<< "\n" ;
                 while(intron_index< n_itrons){
                     Intron * ir_ptr = intron_vec_[intron_index];
 
@@ -313,7 +308,7 @@ namespace grimoire {
                     ++intron_index ;
                 }
             }
-            ir_start = (ex.second)->get_end() + 1;
+            ir_start = ex_end + 1;
             prev_ex = (ex.second) ;
         }
 
@@ -333,11 +328,11 @@ namespace grimoire {
     }
 
     string Intron::get_key(Gene * gObj) {
-        return(gObj->get_chromosome() + ":" + to_string(start_) + "-" + to_string(end_)) ;
+        return(gObj->get_chromosome() + ":" + gObj->get_strand() + ":" + to_string(start_) + "-" + to_string(end_)) ;
     }
 
     bool Intron::is_reliable(float min_intron_cov){
-        return true ;
+        return (read_rates_ != nullptr) ;
     }
 
 /*
@@ -557,44 +552,21 @@ namespace grimoire {
         return ext_type ;
     }
 
-    int GeneSearch(vector<Gene *> & a, int n, int coord) {
-        int l = 0 ;
-        int h = n ; // Not n - 1
-        while (l < h) {
-            int mid = (l + h) / 2 ;
-            if (a[mid]->get_start() >= coord) {
-                h = mid ;
-            } else {
-                l = mid +1 ;
-            }
-        }
-        return l-1;
-    }
 
-    int intronSearch(vector<Intron *> & a, int n, const int start_pos) {
-        int l = 0 ;
-        int h = n ; // Not n - 1
-        while (l < h) {
-            int mid = (l + h) / 2 ;
-            if (a[mid]->get_start()>=start_pos) {
-                h = mid ;
-            } else {
-                l = mid +1 ;
-            }
-        }
-        return l-1;
-    }
-
-
-    vector<Intron *>& find_intron_retention(vector<Gene*> & gene_list, int start, int end){
+    vector<Intron *> find_intron_retention(vector<Gene*> & gene_list, int start, int end){
         vector<Intron*> ir_vec ;
         const int n = gene_list.size() ;
-        const int gIdx = GeneSearch(gene_list, n, end) ;
+//cout << "KAKA 1\n";
+        const int gIdx = Gene::RegionSearch(gene_list, n, end) ;
         if (gIdx <0){ return ir_vec;}
         if (gene_list[gIdx]->get_start()<= end && gene_list[gIdx]->get_end()>= start){
+//cout << "KAKA 2\n";
             const int nir = (gene_list[gIdx]->intron_vec_).size() ;
-            int irIdx = intronSearch(gene_list[gIdx]->intron_vec_, nir, start);
+            int irIdx = Intron::RegionSearch(gene_list[gIdx]->intron_vec_, nir, start);
+            if (irIdx <0){ return ir_vec ;}
+//cout << "KAKA 3" << irIdx << "\n";
             for(int i = irIdx; i<nir; ++i){
+//cout << "KAKA 4\n";
                 Intron * irp = gene_list[gIdx]->intron_vec_[i] ;
                 if(irp->get_start()> end){
                     break ;

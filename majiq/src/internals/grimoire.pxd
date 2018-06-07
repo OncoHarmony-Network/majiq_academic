@@ -105,7 +105,7 @@ cdef extern from "grimoire.hpp" namespace "grimoire":
     int detect_lsvs(vector[LSV*] out_lsvlist, Gene* gObj) nogil ;
     float * boostrap_samples(LSV* lsvObj, int msamples, int ksamples, int exp_idx, int eff_len) nogil ;
     void sortGeneList(vector[Gene*] glist) nogil ;
-    vector[Intron *]&  find_intron_retention(vector[Gene*]& gene_list, int start, int end) nogil ;
+    vector[Intron *]  find_intron_retention(vector[Gene*]& gene_list, int start, int end) nogil ;
 
 
 
